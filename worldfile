@@ -9,18 +9,18 @@
 1      showvision
 22     minwin
 1.0    maxvel
-30     minnumcritters
-300    maxnumcritters
-120    initnumcritters
+21     minnumcritters
+90     maxnumcritters
+30     initnumcritters
 60     misccritters
 
 42    positionseed
 42    genomeseed
 
-150    minfoodcount
-345    maxfoodcount
-270    maxfoodgrown
-270    initfoodcount
+75     minfoodcount
+150    maxfoodcount
+120    maxfoodgrown
+120    initfoodcount
 0.2    foodrate
 1      crittersRfood
 100    fit1freq
@@ -126,29 +126,29 @@
 33.33  domainbarrier#1
 66.67  domainbarrier#2
 
-10     domain[0].minnumcritters
-100    domain[0].maxnumcritters
-40     domain[0].initnumcritters
-50     domain[0].minfoodcount
-115    domain[0].maxfoodcount
-90     domain[0].maxfoodgrown
-90     domain[0].initfoodcount
+7      domain[0].minnumcritters
+30     domain[0].maxnumcritters
+10     domain[0].initnumcritters
+25     domain[0].minfoodcount
+50     domain[0].maxfoodcount
+30     domain[0].maxfoodgrown
+30     domain[0].initfoodcount
 
-10     domain[1].minnumcritters
-100    domain[1].maxnumcritters
-40     domain[1].initnumcritters
-50     domain[1].minfoodcount
-115    domain[1].maxfoodcount
-90     domain[1].maxfoodgrown
-90     domain[1].initfoodcount
+7      domain[1].minnumcritters
+30     domain[1].maxnumcritters
+10     domain[1].initnumcritters
+25     domain[1].minfoodcount
+50     domain[1].maxfoodcount
+30     domain[1].maxfoodgrown
+30     domain[1].initfoodcount
 
-10     domain[2].minnumcritters
-100    domain[2].maxnumcritters
-40     domain[2].initnumcritters
-50     domain[2].minfoodcount
-115    domain[2].maxfoodcount
-90     domain[2].maxfoodgrown
-90     domain[2].initfoodcount
+7      domain[2].minnumcritters
+30     domain[2].maxnumcritters
+10     domain[2].initnumcritters
+25     domain[2].minfoodcount
+50     domain[2].maxfoodcount
+30     domain[2].maxfoodgrown
+30     domain[2].initfoodcount
 
 1      binchartgs
 
