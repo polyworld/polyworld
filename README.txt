@@ -16,10 +16,6 @@ original copyright by Apple and open source nature.
 
 To build Polyworld, you will need to:
 
-* download Qt (Open Source Edition)
-* configure Qt (I am currently using -static, so the application
-  can be run on machines without Qt installed, and -thread, though
-  currently threading is not used in Polyworld)
 * mkdir projects
 * cd projects
 * cvs co polyworld (use
@@ -28,8 +24,20 @@ To build Polyworld, you will need to:
   'export CVS_RSH=ssh' and use
   -d:ext:username@cvs.sf.net:/cvsroot/polyworld, substituting your
   own username)
-* ./buildit
-* ln -s .moc moc (only needed if you want to use the Xcode project)
+
+* download Qt (Open Source Edition)
+* configure Qt (I am currently using -static, so the application
+  can be run on machines without Qt installed, and -thread, though
+  currently threading is not used in Polyworld)
+
+(Qt / make method)
+* QT_INCLUDE_DIR=<path to Qt include dirs> QTDIR=<path to Qt distribution> ./buildit
+
+(Xcode method)
+* Setup source roots (in the preferences):
+	- QtInc to the include dir of the Qt distribution 
+	- QtLib to the lib dir of the Qt distribution
+* Build
 
 If you are using Mac OS X, you may at this point prefer to switch
 to using the Polyworld.xcode project for development.  You will

@@ -107,7 +107,6 @@
 				76CBA598062BEDBC001C79E7,
 				76CBA5A3062BEDBC001C79E7,
 				32DBCF6D0370B57F00C91783,
-				76D217D3075E4BCE00DAFCD7,
 				76AA465F073B02C400508D3D,
 			);
 			isa = PBXGroup;
@@ -146,8 +145,7 @@
 			sourceTree = "<group>";
 		};
 		20286C33FDCF999611CA2CEA = {
-			fallbackIsa = PBXFileReference;
-			isa = PBXFrameworkReference;
+			isa = PBXFileReference;
 			lastKnownFileType = wrapper.framework;
 			name = Carbon.framework;
 			path = /System/Library/Frameworks/Carbon.framework;
@@ -177,14 +175,93 @@
 //322
 //323
 //324
+//370
+//371
+//372
+//373
+//374
+		37577665078C8C0600CA4042 = {
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			isa = PBXShellScriptBuildPhase;
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "moc app/Simulation.h -o app/moc_Simulation.cpp\nmoc app/PWApp.h -o app/moc_PWApp.cpp";
+		};
+		37577667078C8C6200CA4042 = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.cpp;
+			path = moc_PWApp.cpp;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		37577668078C8C6200CA4042 = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.cpp;
+			path = moc_Simulation.cpp;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		37577669078C8C6200CA4042 = {
+			fileRef = 37577667078C8C6200CA4042;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		3757766A078C8C6200CA4042 = {
+			fileRef = 37577668078C8C6200CA4042;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		37577841078C8E8100CA4042 = {
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 16;
+			files = (
+				37577842078C8E9900CA4042,
+				37577843078C8E9900CA4042,
+				37577844078C8E9900CA4042,
+			);
+			isa = PBXCopyFilesBuildPhase;
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		37577842078C8E9900CA4042 = {
+			fileRef = 76BB7C9E074D4CE500576391;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		37577843078C8E9900CA4042 = {
+			fileRef = 76CBA5E2062BEE2B001C79E7;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		37577844078C8E9900CA4042 = {
+			fileRef = 76CBA5E3062BEE2B001C79E7;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+//370
+//371
+//372
+//373
+//374
 //4A0
 //4A1
 //4A2
 //4A3
 //4A4
 		4A9504C5FFE6A39111CA0CBA = {
-			buildRules = (
-			);
 			buildSettings = {
 				COPY_PHASE_STRIP = NO;
 				DEBUGGING_SYMBOLS = YES;
@@ -199,8 +276,6 @@
 			name = Development;
 		};
 		4A9504C6FFE6A39111CA0CBA = {
-			buildRules = (
-			);
 			buildSettings = {
 				COPY_PHASE_STRIP = YES;
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
@@ -210,8 +285,7 @@
 			name = Deployment;
 		};
 		4A9504C8FFE6A3BC11CA0CBA = {
-			fallbackIsa = PBXFileReference;
-			isa = PBXFrameworkReference;
+			isa = PBXFileReference;
 			lastKnownFileType = wrapper.framework;
 			name = ApplicationServices.framework;
 			path = /System/Library/Frameworks/ApplicationServices.framework;
@@ -219,8 +293,7 @@
 			sourceTree = "<absolute>";
 		};
 		4A9504CAFFE6A41611CA0CBA = {
-			fallbackIsa = PBXFileReference;
-			isa = PBXFrameworkReference;
+			isa = PBXFileReference;
 			lastKnownFileType = wrapper.framework;
 			name = CoreServices.framework;
 			path = /System/Library/Frameworks/CoreServices.framework;
@@ -643,10 +716,10 @@
 				76AA47F4073B032200508D3D,
 			);
 			isa = PBXGroup;
-			name = "QT headers";
-			path = ../../include;
+			name = qt3;
+			path = "";
 			refType = 4;
-			sourceTree = "<group>";
+			sourceTree = QtInc;
 		};
 		76AA4662073B032100508D3D = {
 			fileEncoding = 30;
@@ -5505,6 +5578,8 @@
 				76CBA564062BED8E001C79E7,
 				76CBA566062BED8E001C79E7,
 				76CBA567062BED8E001C79E7,
+				37577667078C8C6200CA4042,
+				37577668078C8C6200CA4042,
 			);
 			isa = PBXGroup;
 			path = app;
@@ -6485,56 +6560,6 @@
 			settings = {
 			};
 		};
-		76D217D3075E4BCE00DAFCD7 = {
-			children = (
-				76D217D4075E4BCE00DAFCD7,
-			);
-			isa = PBXGroup;
-			path = moc;
-			refType = 4;
-			sourceTree = "<group>";
-		};
-		76D217D4075E4BCE00DAFCD7 = {
-			children = (
-				76D217D5075E4BCE00DAFCD7,
-				76D217D6075E4BCE00DAFCD7,
-			);
-			isa = PBXGroup;
-			name = "release-static-mt";
-			path = "moc/release-static-mt";
-			refType = 2;
-			sourceTree = SOURCE_ROOT;
-		};
-		76D217D5075E4BCE00DAFCD7 = {
-			fileEncoding = 30;
-			isa = PBXFileReference;
-			lastKnownFileType = sourcecode.cpp.cpp;
-			name = moc_PWApp.cpp;
-			path = "moc/release-static-mt/moc_PWApp.cpp";
-			refType = 2;
-			sourceTree = SOURCE_ROOT;
-		};
-		76D217D6075E4BCE00DAFCD7 = {
-			fileEncoding = 30;
-			isa = PBXFileReference;
-			lastKnownFileType = sourcecode.cpp.cpp;
-			name = moc_Simulation.cpp;
-			path = "moc/release-static-mt/moc_Simulation.cpp";
-			refType = 2;
-			sourceTree = SOURCE_ROOT;
-		};
-		76D217D7075E4BCE00DAFCD7 = {
-			fileRef = 76D217D5075E4BCE00DAFCD7;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		76D217D8075E4BCE00DAFCD7 = {
-			fileRef = 76D217D6075E4BCE00DAFCD7;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
 //760
 //761
 //762
@@ -6585,11 +6610,13 @@
 //8D4
 		8D0C4E890486CD37000505A6 = {
 			buildPhases = (
+				37577665078C8C0600CA4042,
 				8D0C4E8A0486CD37000505A6,
 				8D0C4E8C0486CD37000505A6,
 				8D0C4E8F0486CD37000505A6,
 				8D0C4E910486CD37000505A6,
 				8D0C4E940486CD37000505A6,
+				37577841078C8E8100CA4042,
 			);
 			buildRules = (
 			);
@@ -6619,10 +6646,10 @@
 				GCC_WARN_UNUSED_PARAMETER = YES;
 				GCC_WARN_UNUSED_VALUE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				HEADER_SEARCH_PATHS = "../../include /System/Library/Frameworks/OpenGL.framework/Headers /System/Library/Frameworks/AGL.framework";
+				HEADER_SEARCH_PATHS = "$QtInc /System/Library/Frameworks/OpenGL.framework/Headers /System/Library/Frameworks/AGL.framework";
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Applications";
-				LIBRARY_SEARCH_PATHS = ../../lib;
+				LIBRARY_SEARCH_PATHS = $QtLib;
 				LIBRARY_STYLE = Static;
 				OTHER_CFLAGS = "-DQT_ACCESSIBILITY_SUPPORT -DQT_TABLET_SUPPORT -DQT_THREAD_SUPPORT -DQT_NO_DEBUG";
 				OTHER_LDFLAGS = "-lqt-mt -lz";
@@ -7076,8 +7103,8 @@
 				76CBA5DD062BEDBC001C79E7,
 				84ED837C062E7EED00AEEA18,
 				76AA4628073AAF7E00508D3D,
-				76D217D7075E4BCE00DAFCD7,
-				76D217D8075E4BCE00DAFCD7,
+				37577669078C8C6200CA4042,
+				3757766A078C8C6200CA4042,
 			);
 			isa = PBXSourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;

@@ -1289,13 +1289,13 @@ void brain::Update(float energyfraction)
         // inhibitory synapses.
         learningrate = grouplrate[index4(neuron[i].group,neuron[j].group,ii,jj, numneurgroups,2,2)];
         synapse[k].efficacy += learningrate
-                             * (newneuronactivation[i]-0.5)
-                             * (   neuronactivation[j]-0.5);
+                             * (newneuronactivation[i]-0.5f)
+                             * (   neuronactivation[j]-0.5f);
 
-        if (fabs(synapse[k].efficacy) > (0.5 * gMaxWeight))
+        if (fabs(synapse[k].efficacy) > (0.5f * gMaxWeight))
         {
-            synapse[k].efficacy *= 1.0 + (gDecayRate - 1.0)*
-                (fabs(synapse[k].efficacy)-0.5 * gMaxWeight) / (0.5 * gMaxWeight);
+            synapse[k].efficacy *= 1.0f + (gDecayRate - 1.0f)*
+                (fabs(synapse[k].efficacy)-0.5f * gMaxWeight) / (0.5f * gMaxWeight);
             if (synapse[k].efficacy > gMaxWeight)
                 synapse[k].efficacy = gMaxWeight;
             else if (synapse[k].efficacy < -gMaxWeight)
@@ -1306,9 +1306,9 @@ void brain::Update(float energyfraction)
             // not strictly correct for this to be in an else clause,
             // but if lrate is reasonable, efficacy should never change
             // sign with a new magnitude greater than 0.5 * gMaxWeight
-            if (learningrate > 0.0)  // excitatory
+            if (learningrate > 0.0f)  // excitatory
                 synapse[k].efficacy = max(0.0f, synapse[k].efficacy);
-            if (learningrate < 0.0)  // inhibitory
+            if (learningrate < 0.0f)  // inhibitory
                 synapse[k].efficacy = min(-1.e-10f, synapse[k].efficacy);
         }
     }
@@ -1320,12 +1320,12 @@ void brain::Update(float energyfraction)
     for (i = firstnoninputneuron; i < numneurons; i++)
     {
         neuron[i].bias += groupblrate[neuron[i].group]
-                        * (newneuronactivation[i]-0.5)
-                        * 0.5;
+                        * (newneuronactivation[i]-0.5f)
+                        * 0.5f;
         if (fabs(neuron[i].bias) > (0.5 * gMaxWeight))
         {
-            neuron[i].bias *= 1.0 + (gDecayRate - 1.0) *
-                (fabs(neuron[i].bias)-0.5 * gMaxWeight) / (0.5 * gMaxWeight);
+            neuron[i].bias *= 1.0 + (gDecayRate - 1.0f) *
+                (fabs(neuron[i].bias)-0.5f * gMaxWeight) / (0.5f * gMaxWeight);
             if (neuron[i].bias > gMaxWeight)
                 neuron[i].bias = gMaxWeight;
             else if (neuron[i].bias < -gMaxWeight)

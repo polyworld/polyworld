@@ -511,7 +511,9 @@ void genome::CopyGenes(genome* sgenome)
 //---------------------------------------------------------------------------
 float genome::CalcSeperation(genome* g)
 {
-    float sep = 0.0;
+//    float sep = 0.0;
+	int sep = 0;
+	float fsep;
     unsigned char* gi = fGenes;
     unsigned char* gj = g->fGenes;
     
@@ -522,7 +524,7 @@ float genome::CalcSeperation(genome* g)
             short vi, vj;
             vi = binofgray[ * (gi++)];
             vj = binofgray[ * (gj++)];
-            sep += float(abs(vi - vj));
+            sep += abs(vi - vj);
         }
     }
     else
@@ -532,10 +534,10 @@ float genome::CalcSeperation(genome* g)
             short vi, vj;
             vi = * (gi++);
             vj = * (gj++);
-            sep += float(abs(vi - vj));
+            sep += abs(vi - vj);
         }
     }
-    sep /= 255.0 * float(genome::numbytes);
+    fsep = float(sep * genome::numbytes) / 255.0f;
     return sep;
 }
 
