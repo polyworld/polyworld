@@ -350,27 +350,28 @@ void TChartWindow::SetColor(short ic, float r, float g, float b)
 //---------------------------------------------------------------------------
 // TChartWindow::AddPoint
 //---------------------------------------------------------------------------
-void TChartWindow::AddPoint(short ic, float val)
+void TChartWindow::AddPoint( short ic, float val )
 {
     long i;
     long j;
     
-    if (y == NULL)  // first time must allocate space
+    if( y == NULL )  // first time must allocate space
     {
         y = new long[fMaxPoints * fNumCurves];
         Q_CHECK_PTR(y);
     }
     
     if (fNumPoints[ic] == fMaxPoints)
-    {
+	{
         // cut the number (and resolution) of points stored in half
-        for (long jc = 0; jc < fNumCurves; jc++)
+        for( long jc = 0; jc < fNumCurves; jc++ )
         {
-            for (i = 1, j = 2; j < min(fNumPoints[jc], fMaxPoints); i++, j += 2)
+            for( i = 1, j = 2; j < min(fNumPoints[jc], fMaxPoints); i++, j += 2 )
                 y[(jc*fMaxPoints)+i] = y[(jc*fMaxPoints)+j];
             fNumPoints[jc] = i;
         }
         fDecimation++;
+		paintGL();
     }
         
 	y[(long)((ic * fMaxPoints) + fNumPoints[ic])] = (long)((val - fLowV[ic]) * dydv[ic]  +  fLowY);    
