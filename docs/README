@@ -1,0 +1,16 @@
+[Note: This refers to the outdated version of Polyworld released to
+<ftp://ftp.apple.com/research/neural/larryy/polyworld/rev19.tar.Z>
+in 1992.]
+
+Polyworld rev19 release notes.  First official release version.
+
+This version:
+* combines the normal rev18, the optimal foraging code of rev18.of1,
+  the changes needed for running on Apple campus machines, the changes
+  needed for running under Irix 4.0.1, and the Apple copyright notices
+* has new makefile.c and makefile.h to permit easy specification of
+  Irix 3.2 or Irix 4.0.1 (and the AT&T versus SGI c++ compilers that
+  go with them, respectively)
+* has some of the new "smite" code, but is not fully implemented yet
+* note that the optimal foraging code is still a compile-time option
+  (#define OF1)
