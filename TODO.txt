@@ -4,6 +4,11 @@ a good place to start.
 In the short term, certain key user interface functionality must
 still be revived or newly developed, such as:
 
+* fix the ChartWindow's behavior - results do not seem to be averaged into
+  the first half after the second half fills, and the second half is not
+  cleared before points start being plotted into it again (after filling)
+* the main view looks odd on some monitors, with the depth of the world
+  appearing greater than the width of the world
 * make the main view's camera rotate again 
 * get the strip of vision pixels back in the brain monitor window 
 * get the overhead view working again 
