@@ -529,11 +529,11 @@ float genome::CalcSeperation(genome* g)
 		float val_gi[ genome::numbytes ];
 		float val_gj[ genome::numbytes ];
 		short size = 4;
-		float result[ size ];
-	
 
-		long max = local_numbytes / size;
-		long left = local_numbytes - (max * size);
+                long max = local_numbytes / size;
+                long left = local_numbytes - (max * size);
+
+		float result[ max * size ];
 
 		for (long i = 0; i < local_numbytes; i++)
 		{
@@ -548,13 +548,12 @@ float genome::CalcSeperation(genome* g)
 			vector float vGj = vec_ld(size, val_gj + size * i);
 			
 			vector float diff = vec_sub(vGi, vGj);
-			vector float absdiff = vec_abs(diff);
 			
-			vec_st(absdiff, size, result);
+			vec_st(diff, size, result + i * size);
 			
-			fsep += cblas_sasum(size, result, 1);
 		}
 		
+		fsep = cblas_sasum(size * max, result, 1);
 		vector float vGi = vec_ld(left, val_gi + size * max);
 		vector float vGj = vec_ld(left, val_gj + size * max);
 		
