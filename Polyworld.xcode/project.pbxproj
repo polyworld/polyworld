@@ -218,7 +218,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/bash;
-			shellScript = "moc app/Simulation.h -o app/moc_Simulation.cpp\nmoc app/PWApp.h -o app/moc_PWApp.cpp";
+			shellScript = "$QtBin/moc app/Simulation.h -o app/moc_Simulation.cpp\n$QtBin/moc app/PWApp.h -o app/moc_PWApp.cpp";
 		};
 		37577667078C8C6200CA4042 = {
 			fileEncoding = 4;
