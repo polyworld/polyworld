@@ -537,7 +537,7 @@ float genome::CalcSeperation(genome* g)
             sep += abs(vi - vj);
         }
     }
-    fsep = float(sep * genome::numbytes) / 255.0f;
+    fsep = float(sep / (255 * genome::numbytes));
     return sep;
 }
 
