@@ -76,6 +76,7 @@
 			buildStyles = (
 				4A9504C5FFE6A39111CA0CBA,
 				4A9504C6FFE6A39111CA0CBA,
+				37375172078D57F300B1DFA0,
 			);
 			hasScannedForEncodings = 1;
 			isa = PBXProject;
@@ -131,6 +132,7 @@
 		};
 		20286C32FDCF999611CA2CEA = {
 			children = (
+				373751E2078D762B00B1DFA0,
 				76AA4616073AAEFF00508D3D,
 				76CBA7CC062D11C2001C79E7,
 				20286C33FDCF999611CA2CEA,
@@ -180,6 +182,31 @@
 //372
 //373
 //374
+		37375172078D57F300B1DFA0 = {
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				GCC_ALTIVEC_EXTENSIONS = YES;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				ZERO_LINK = NO;
+			};
+			isa = PBXBuildStyle;
+			name = Profiling;
+		};
+		373751E2078D762B00B1DFA0 = {
+			isa = PBXFileReference;
+			lastKnownFileType = wrapper.framework;
+			name = vecLib.framework;
+			path = /System/Library/Frameworks/vecLib.framework;
+			refType = 0;
+			sourceTree = "<absolute>";
+		};
+		373751E3078D762B00B1DFA0 = {
+			fileRef = 373751E2078D762B00B1DFA0;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
 		37577665078C8C0600CA4042 = {
 			buildActionMask = 2147483647;
 			files = (
@@ -6622,6 +6649,7 @@
 			);
 			buildSettings = {
 				FRAMEWORK_SEARCH_PATHS = "";
+				GCC_ALTIVEC_EXTENSIONS = YES;
 				GCC_ENABLE_TRIGRAPHS = NO;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
@@ -7116,6 +7144,7 @@
 				8D0C4E930486CD37000505A6,
 				76CBA7CD062D11C2001C79E7,
 				76AA4617073AAEFF00508D3D,
+				373751E3078D762B00B1DFA0,
 			);
 			isa = PBXFrameworksBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;

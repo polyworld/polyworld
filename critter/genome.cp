@@ -20,6 +20,11 @@
 #include "graybin.h"
 #include "misc.h"
 
+#ifdef __ALTIVEC__
+// veclib
+#include <vecLib/vBLAS.h>
+#endif
+
 using namespace std;
 
 //#define DUMPBITS
@@ -513,19 +518,64 @@ float genome::CalcSeperation(genome* g)
 {
 //    float sep = 0.0;
 	int sep = 0;
-	float fsep;
+	float fsep = 0.f;
     unsigned char* gi = fGenes;
     unsigned char* gj = g->fGenes;
+	long local_numbytes = genome::numbytes;
     
     if (gGrayCoding)
     {
-        for (long i = 0; i < genome::numbytes; i++)
+#ifdef __ALTIVEC__
+		float val_gi[ genome::numbytes ];
+		float val_gj[ genome::numbytes ];
+		short size = 4;
+		float result[ size ];
+	
+
+		long max = local_numbytes / size;
+		long left = local_numbytes - (max * size);
+
+		for (long i = 0; i < local_numbytes; i++)
+		{
+			val_gi[i] = binofgray[gi[i]];
+			val_gj[i] = binofgray[gj[i]];
+		}
+		
+
+		for (long i = 0; i < max; i++)
+		{
+			vector float vGi = vec_ld(size, val_gi + size * i);
+			vector float vGj = vec_ld(size, val_gj + size * i);
+			
+			vector float diff = vec_sub(vGi, vGj);
+			vector float absdiff = vec_abs(diff);
+			
+			vec_st(absdiff, size, result);
+			
+			fsep += cblas_sasum(size, result, 1);
+		}
+		
+		vector float vGi = vec_ld(left, val_gi + size * max);
+		vector float vGj = vec_ld(left, val_gj + size * max);
+		
+		vector float diff = vec_sub(vGi, vGj);
+		vector float absdiff = vec_abs(diff);
+		
+		vec_st(absdiff, left, result);
+		
+		for (long j = 0; j < left ;  j++)
+		{
+			fsep += result[j];
+		}
+#else
+    for (long i = 0; i < genome::numbytes; i++)
         {
             short vi, vj;
             vi = binofgray[ * (gi++)];
             vj = binofgray[ * (gj++)];
             sep += abs(vi - vj);
         }
+#endif
     }
     else
     {
@@ -537,8 +587,13 @@ float genome::CalcSeperation(genome* g)
             sep += abs(vi - vj);
         }
     }
-    fsep = float(sep / (255 * genome::numbytes));
-    return sep;
+#ifdef __ALTIVEC__
+    fsep /= (255.0f * float(local_numbytes));
+    return fsep;
+#else
+	fsep = float(sep / (255 * genome::numbytes));
+    return fsep;
+#endif
 }
 
 
