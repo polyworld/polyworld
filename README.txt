@@ -16,35 +16,54 @@ original copyright by Apple and open source nature.
 
 To build Polyworld, you will need to:
 
-* mkdir projects
-* cd projects
-* cvs co polyworld (use
-  -d:pserver:anonymous@cvs.sf.net:/cvsroot/polyworld unless you are
-  an authorized polyworld developer, in which case you should do an
-  'export CVS_RSH=ssh' and use
-  -d:ext:username@cvs.sf.net:/cvsroot/polyworld, substituting your
-  own username)
+Download and configure Qt (Open Source Edition)
+* visit <http://www.trolltech.com/download/opensource.html> and
+  download the version appropriate to your development platform
+  (sorry, it appears that Windows requires the commercial version)
+* gunzip and gnutar (or use StuffIt Expander) to unpack the archive
+  someplace convenient
+* reading the Qt documentation you will see that you must set
+  some environment variables (such as in your .login or .cshrc file):
+     setenv QTDIR <path to Qt main directory>
+     setenv PATH $QTDIR/bin:$PATH
+     setenv MANPATH $QTDIR/man:`manpath`
+     setenv DYLD_LIBRARY_PATH $QTDIR/lib
+* in order for Polyworld to work with Qt in some alternate
+  configurations, such as a "darwinports" installation, you'll
+  need to set one more environment variable:
+     setenv QT_INCLUDE_DIR <path to Qt include dir>
+* configure Qt by typing something like './configure -thread -static'
+  (I am currently using -static, so the application can be run on
+  machines without Qt installed, and -thread, though threading is
+  is not currently used in Polyworld.  Type './configure -help' for
+  other options.) NOTE: THIS CAN TAKE A GOOD, LONG WHILE!!
+  
+Download Polyworld source (from SourceForge)
+* in an appropriate directory (I use .../qt/projects/), type
+     cvs <cvs-args> co polyworld
+  For <cvs-args>, use:
+     -d:pserver:anonymous@cvs.sf.net:/cvsroot/polyworld
+  unless you are an authorized polyworld developer, in which case
+  you should do an 'export CVS_RSH=ssh' and use:
+     -d:ext:username@cvs.sf.net:/cvsroot/polyworld
+  substituting your own username, of course).  This will
+  create a "polyworld" directory for you, containing all
+  the Polyworld source code.
 
-* download Qt (Open Source Edition)
-* configure Qt (I am currently using -static, so the application
-  can be run on machines without Qt installed, and -thread, though
-  currently threading is not used in Polyworld)
+Build Polyworld (Qt method)
+* type './buildit'
 
-(Qt / make method)
-* QT_INCLUDE_DIR=<path to Qt include dirs> QTDIR=<path to Qt distribution> ./buildit
-
-(Xcode method)
-* Setup source roots (in the preferences):
-	- QtInc to the include dir of the Qt distribution 
-	- QtLib to the lib dir of the Qt distribution
+Build Polyworld (Xcode method)
+* Add some key Qt paths in the Xcode "Source Trees" preferences:
+	- QtInc should point to the include dir of the Qt distribution 
+	- QtLib should point to the lib dir of the Qt distribution
+	- QtBin should point to the bin dir of the Qt distribution
+	("Setting Name" and "Display Name" can be the same; the "Path"
+	depends on your Qt installation.)
 * Build
 
-If you are using Mac OS X, you may at this point prefer to switch
-to using the Polyworld.xcode project for development.  You will
-need to create a symbolic link of worldfile in your build products
-directory (next to the newly built Polyworld.app).  Also be aware
-that the 'buildit' step above produces a Polyworld.app/ in the
-polyworld project directory.  Xcode will also attempt to produce a
+Be aware that the 'buildit' step above produces a Polyworld.app/ in
+the polyworld project directory.  Xcode will also attempt to produce a
 Polyworld.app/.  By default I believe the app is created in a ./build
 subdirectory, so there is no conflict.  And I have had to do enough
 work that is boot-system dependent that I routinely point builds
