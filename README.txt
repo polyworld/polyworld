@@ -19,9 +19,9 @@ To build Polyworld, you will need to:
 Download and configure Qt (Open Source Edition)
 * visit <http://www.trolltech.com/download/opensource.html> and
   download the version appropriate to your development platform
-  (sorry, it appears that Windows requires the commercial version)
-* gunzip and gnutar (or use StuffIt Expander) to unpack the archive
-  someplace convenient
+  (a free Windows version will be available in July 2005)
+* use gunzip and gnutar (or use StuffIt Expander) to unpack the
+  archive someplace convenient (like ~/src)
 * reading the Qt documentation you will see that you must set
   some environment variables (such as in your .login or .cshrc file):
      setenv QTDIR <path to Qt main directory>
@@ -36,7 +36,9 @@ Download and configure Qt (Open Source Edition)
   (I am currently using -static, so the application can be run on
   machines without Qt installed, and -thread, though threading is
   is not currently used in Polyworld.  Type './configure -help' for
-  other options.) NOTE: THIS CAN TAKE A GOOD, LONG WHILE!!
+  other options.) NOTE: This can take several minutes to complete
+* build Qt by typing 'make'
+  NOTE: This can take an hour or more to complete!
   
 Download Polyworld source (from SourceForge)
 * in an appropriate directory (I use .../qt/projects/), type
@@ -49,8 +51,20 @@ Download Polyworld source (from SourceForge)
   substituting your own username, of course).  This will
   create a "polyworld" directory for you, containing all
   the Polyworld source code.
+  
+  Alternatively, if you are a Polyworld developer, you may wish
+  to add these two entries to your .login or .cshrc file (or
+  equivalent for your preferred shell):
+     setenv CVS_RSH ssh
+     setenv CVSROOT :ext:username@cvs.sf.net:/cvsroot/polyworld
+  after which you may simply type
+     cvs co polyworld
+  (cvs honors the CVS_RSH and CVSROOT environment variables, if
+  they are defined, and uses the right communication protocol to
+  talk to the right host)
 
 Build Polyworld (Qt method)
+* enter the polyworld directory by typing 'cd polyworld'
 * type './buildit'
 
 Build Polyworld (Xcode method)
@@ -77,8 +91,14 @@ whatever) project, I will add it to the source directory.  Please
 inform me of any possible conflicts with the Qt/buildit Polyworld.app/.
 
 Running atop Qt, Polyworld should be fully cross-platform (Mac OS
-X, Windows, and Linux), but has, so far, only been built and tested
-on Mac OS X.
+X, Windows, and Linux), but currently is only routinely built and
+tested on Mac OS X.  A build has been successful on Linux, but it
+required a modification to the Polyworld Makefile variables
+INCPATH and LIBS, so they would point to the Linux headers and libs
+instead of the OS X frameworks.  It was also necessary to replace
+my definition of dprintf (with, for example, dbprintf) in app/debug.h
+to avoid a conflict with a system-defined dprintf.  I will try to
+normalize the OS X and Linux builds soon.
 
 Technical details of the algorithms used in Polyworld may be found
 here: <http://pobox.com/~larryy/PolyWorld.html>, particularly in
