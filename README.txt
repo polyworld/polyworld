@@ -28,10 +28,11 @@ Download and configure Qt (Open Source Edition)
      setenv PATH $QTDIR/bin:$PATH
      setenv MANPATH $QTDIR/man:`manpath`
      setenv DYLD_LIBRARY_PATH $QTDIR/lib
-* in order for Polyworld to work with Qt in some alternate
-  configurations, such as a "darwinports" installation, you'll
-  need to set one more environment variable:
+* Polyworld adds one additional required environment variable:
      setenv QT_INCLUDE_DIR <path to Qt include dir>
+  (Normally this is just $(QTDIR)/include, but making it explicit
+  allows us to support some alternative Qt configurations, such
+  as a "darwinports" installation)
 * configure Qt by typing something like './configure -thread -static'
   (I am currently using -static, so the application can be run on
   machines without Qt installed, and -thread, though threading is
