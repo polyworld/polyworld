@@ -93,13 +93,16 @@ inform me of any possible conflicts with the Qt/buildit Polyworld.app/.
 
 Running atop Qt, Polyworld should be fully cross-platform (Mac OS
 X, Windows, and Linux), but currently is only routinely built and
-tested on Mac OS X.  A build has been successful on Linux, but it
-required a modification to the Polyworld Makefile variables
-INCPATH and LIBS, so they would point to the Linux headers and libs
-instead of the OS X frameworks.  It was also necessary to replace
-my definition of dprintf (with, for example, dbprintf) in app/debug.h
-to avoid a conflict with a system-defined dprintf.  I will try to
-normalize the OS X and Linux builds soon.
+tested on Mac OS X.
+
+A build has been successful on Linux, but it required a modification
+to variables INCPATH and LIBS in the Polyworld Makefile (resulting
+from the qmake step in the buildit script), so they would point to
+the Linux headers and libs instead of the OS X frameworks.  I believe
+this is fixed now, but have not yet tested it.  It was also necessary
+to replace my definition of dprintf (with, for example, dbprintf) in
+app/debug.h to avoid a conflict with a system-defined dprintf.  I will
+try to normalize the OS X and Linux builds soon.
 
 Technical details of the algorithms used in Polyworld may be found
 here: <http://pobox.com/~larryy/PolyWorld.html>, particularly in
