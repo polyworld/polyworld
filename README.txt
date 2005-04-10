@@ -22,7 +22,13 @@ Download and configure Qt (Open Source Edition)
   (a free Windows version will be available in July 2005)
 * use gunzip and gnutar (or use StuffIt Expander) to unpack the
   archive someplace convenient (like ~/src)
-* reading the Qt documentation you will see that you must set
+* the Qt documentation suggests renaming the resulting directory
+  to simply "qt", and then within that directory creating a
+  symbolic link:
+     ln -s doc/man man
+  (or, equivalently, after setting up the environment variables
+  below, typing 'ln -s $QTDIR/doc/man $QTDIR/man')
+* reading the Qt documentation you will see that you must also set
   some environment variables (such as in your .login or .cshrc file):
      setenv QTDIR <path to Qt main directory>
      setenv PATH $QTDIR/bin:$PATH
