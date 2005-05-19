@@ -516,8 +516,9 @@ void genome::CopyGenes(genome* sgenome)
 //---------------------------------------------------------------------------
 float genome::CalcSeperation(genome* g)
 {
-//    float sep = 0.0;
+#if ! defined( __ALTIVEC__ )
 	int sep = 0;
+#endif
 	float fsep = 0.f;
     unsigned char* gi = fGenes;
     unsigned char* gj = g->fGenes;

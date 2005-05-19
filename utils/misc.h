@@ -9,6 +9,8 @@
 #ifndef MISC_H
 #define MISC_H
 
+#include <math.h>
+
 #define nl <<"\n"
 #define pnl <<")\n"
 #define qnl <<"\"\n"

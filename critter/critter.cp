@@ -4,6 +4,8 @@
 /* Copyright Apple Computer 1990,1991,1992                          */
 /********************************************************************/
 
+#define DumpStats 1
+
 // Self
 #include "critter.h"
 
@@ -67,6 +69,8 @@ float critter::gCritterFOV;
 float critter::gMaxSizeAdvantage;
 
 cxsortedlist critter::gXSortedCritters;
+
+critter* critter::currentCritter;	// during brain updates
 
 // [TODO] figure out a better way to track critter indices
 bitset<1000> gCritterIndex;
@@ -350,6 +354,9 @@ void critter::grow()
 	
 	// grow the brain from the genome's specifications
     fBrain->Grow(fGenome); 
+#if DumpStats
+	fBrainFuncFile = fBrain->startFunctional( fCritterNumber );
+#endif
 
     // setup the critter's geometry
     SetGeometry();
@@ -514,6 +521,11 @@ void critter::Die()
 	
 	// No longer alive. :(		
 	fAlive = false;
+
+#if DumpStats
+	fBrain->dumpAnatomical( fCritterNumber, fFitness );
+	fBrain->endFunctional( fBrainFuncFile, fFitness );
+#endif
 }
 
 
@@ -609,7 +621,7 @@ void critter::Behave()
 		debugcheck("critter::Behave after DrawCritterPOV");
 	#endif DEBUGCHECK
 
-		if (brain::gRetinaBuf != NULL)
+		if (fBrain->retinaBuf != NULL)
 		{
 			// The POV window must be the current GL context,
 			// when critter::Behave is called, for both the
@@ -622,7 +634,7 @@ void critter::Behave()
 				 		 1,
 				 		 GL_RGBA,
 				 		 GL_BYTE,
-				 		 brain::gRetinaBuf);
+				 		 fBrain->retinaBuf);
 		#ifdef DEBUGCHECK
 			debugcheck("critter::Behave after glReadPixels");
 		#endif DEBUGCHECK
@@ -632,7 +644,7 @@ void critter::Behave()
 			{
 				printf( " " );
 				for( int j = 0; j < 4; j++ )
-					printf( "%02x", brain::gRetinaBuf[i*4 + j] );
+					printf( "%02x", fBrain->retinaBuf[i*4 + j] );
 				
 			}
 			printf( "\n" );
@@ -641,7 +653,11 @@ void critter::Behave()
 	}
 	        
     // now update the brain
+	currentCritter = this;
     fBrain->Update(fEnergy / fMaxEnergy);
+#if DumpStats
+	fBrain->writeFunctional( fBrainFuncFile );
+#endif
 }
 
 

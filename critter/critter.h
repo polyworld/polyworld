@@ -157,6 +157,8 @@ public:
     short ybottom;
     short ytop;
     short ypix;
+	
+	static critter* currentCritter;	// during brain updates
 
 protected:
     void Behave();
@@ -200,6 +202,8 @@ protected:
     gscene fScene;
     frustumXZ fFrustum;
     short fDomain;
+
+	FILE* fBrainFuncFile;
 };
 
 inline void critter::SetVelocity(float x, float y, float z) { fVelocity[0] = x; fVelocity[1] = y; fVelocity[2] = z; }

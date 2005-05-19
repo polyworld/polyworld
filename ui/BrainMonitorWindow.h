@@ -27,6 +27,7 @@ public:
 
 	void StartMonitoring(critter* inCritter);
 	void StopMonitoring();
+    void Draw();
 	
 	void EnableAA();
 	void DisableAA();
@@ -34,6 +35,8 @@ public:
 	virtual void RestoreFromPrefs(long x, long y);
 	
 	void SaveVisibility();
+
+	bool visible;
 
 protected:
 	virtual void initializeGL();
@@ -45,8 +48,6 @@ protected:
     virtual void mouseDoubleClickEvent(QMouseEvent* event);
 	virtual void customEvent(QCustomEvent* event);
 
-    void Draw();
-
 	void SaveDimensions();
 	
     critter* fCritter;
@@ -54,7 +55,6 @@ protected:
     int fPatchHeight;
     
 private:
-
 
 };
 

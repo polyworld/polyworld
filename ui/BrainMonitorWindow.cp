@@ -17,6 +17,7 @@
 #include "brain.h"
 #include "critter.h"
 #include "globals.h"
+#include "Simulation.h"
 
 using namespace std;
 
@@ -52,14 +53,7 @@ TBrainMonitorWindow::~TBrainMonitorWindow()
 //---------------------------------------------------------------------------
 void TBrainMonitorWindow::paintGL()
 {
-	glPushMatrix();
-		glClear(GL_COLOR_BUFFER_BIT);
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-		gluOrtho2D(0.0, width(), 0.0, height());
-		glMatrixMode(GL_MODELVIEW);		
-		Draw();
-	glPopMatrix();
+//	Draw();
 }
 
 
@@ -70,6 +64,7 @@ void TBrainMonitorWindow::initializeGL()
 {
 	qglClearColor(black);
     glShadeModel(GL_SMOOTH);
+//	swapBuffers();
 }
 
 
@@ -155,13 +150,25 @@ void TBrainMonitorWindow::DisableAA()
 // TBrainMonitorWindow::Draw
 //---------------------------------------------------------------------------
 void TBrainMonitorWindow::Draw()
-{	
-	// Clear the window
-	qglClearColor(black);
-
+{
 	if (fCritter == NULL)
 		return;
 			
+	makeCurrent();
+
+#if 0	
+  glPushMatrix();
+	glClear(GL_COLOR_BUFFER_BIT);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	gluOrtho2D(0.0, width(), 0.0, height());
+	glMatrixMode(GL_MODELVIEW);		
+#endif
+
+	// Clear the window
+	qglClearColor( black );
+	glClear( GL_COLOR_BUFFER_BIT );
+
 	// Make sure the window is the proper size
 	const long winWidth = fCritter->Brain()->GetNumNeurons()
 						  * fPatchWidth + 2 * fPatchHeight;						  
@@ -170,25 +177,41 @@ void TBrainMonitorWindow::Draw()
 					   	   
 	if (width() != winWidth && height() != winHeight)
 		setFixedSize(winWidth, winHeight);
-				
+
+#if 0				
 	// Frame the window	
     glLineWidth(3);
 	glRecti(3, 3, width() -3 , height() -3);
+#endif
 
-	// Draw vision buffer
-	glPixelZoom(fPatchWidth, fPatchHeight);
+#if 0
+	dbprintf("%s: Age = %lu, Critter = %lu, retinaBuf(0x%.8x) = (%2x,%2x,%2x,%2x) (%2x,%2x,%2x,%2x) (%2x,%2x,%2x,%2x) (%2x,%2x,%2x,%2x) ...\n",
+			__FUNCTION__,
+			TSimulation::fAge,
+			fCritter->Number(),
+			fCritter->Brain()->retinaBuf,
+			fCritter->Brain()->retinaBuf[0], fCritter->Brain()->retinaBuf[1], fCritter->Brain()->retinaBuf[2], fCritter->Brain()->retinaBuf[3],
+			fCritter->Brain()->retinaBuf[4], fCritter->Brain()->retinaBuf[5], fCritter->Brain()->retinaBuf[6], fCritter->Brain()->retinaBuf[7],
+			fCritter->Brain()->retinaBuf[8], fCritter->Brain()->retinaBuf[9], fCritter->Brain()->retinaBuf[10], fCritter->Brain()->retinaBuf[11],
+			fCritter->Brain()->retinaBuf[12], fCritter->Brain()->retinaBuf[13], fCritter->Brain()->retinaBuf[14], fCritter->Brain()->retinaBuf[15]);
+#endif
 
-	glReadPixels(0,
-				 2 * fPatchWidth,
-				 0,
-				 2 * fPatchHeight,
-				 GL_RGBA,
-				 GL_BYTE,
-				 brain::gRetinaBuf);
-	
-	glPixelZoom(1.0, 1.0);
+	// Frame and draw the actual vision pixels
+	qglColor( gray );
+	glRecti( 2*fPatchWidth-1, 0, (2+brain::retinawidth)*fPatchWidth+1, fPatchHeight );
+	glPixelZoom( float(fPatchWidth), float(fPatchHeight) );
+	glRasterPos2i( 2*fPatchWidth, 0 );
+	glDrawPixels( brain::retinawidth, 1, GL_RGBA, GL_UNSIGNED_BYTE, fCritter->Brain()->retinaBuf );
+	glPixelZoom( 1.0, 1.0 );
 	
 	fCritter->Brain()->Render(fPatchWidth, fPatchHeight);
+
+	swapBuffers();
+	show();
+			
+#if 0
+  glPopMatrix();
+#endif
 }
 
 
@@ -203,7 +226,7 @@ void TBrainMonitorWindow::StartMonitoring(critter* inCritter)
 	fCritter = inCritter;
 	Q_CHECK_PTR(fCritter->Brain());
 	
-	QApplication::postEvent(this, new QCustomEvent(kUpdateEventType));	
+//	QApplication::postEvent(this, new QCustomEvent(kUpdateEventType));	
 }
 
 
@@ -226,8 +249,9 @@ void TBrainMonitorWindow::RestoreFromPrefs(long x, long y)
 	int defHeight = 500;
 	int defX = x;
 	int defY = y;
-	bool visible = true;
 	int titleHeight = 16;
+	
+	visible = true;
 	
 	// Attempt to restore window size and position from prefs
 	// Save size and location to prefs
@@ -263,8 +287,8 @@ void TBrainMonitorWindow::RestoreFromPrefs(long x, long y)
   	setGeometry(position);
 	setFixedSize(defWidth, defHeight);
 	
-	if (visible)
-		show();
+//	if (visible)
+//		show();
 			
 	// Save settings for future restore		
 	SaveDimensions();		
@@ -304,7 +328,7 @@ void TBrainMonitorWindow::SaveVisibility()
 	settings.beginGroup("/windows");
 		settings.beginGroup(name());
 		
-			settings.writeEntry("/visible", isShown());
+			settings.writeEntry("/visible", visible);
 
 		settings.endGroup();
 	settings.endGroup();

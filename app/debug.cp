@@ -16,9 +16,9 @@
 
 void debugcheck(const char* s)
 {
-#ifdef DEBUGCHECK
-	bool caughtError = false;
 	static const char* slast = NULL;
+#if defined(DEBUGCHECK)
+	bool caughtError = false;
 	gpolyobj* critterobj = critter::GetCritterObj();
 	
 	if( critterobj )
@@ -77,11 +77,9 @@ void debugcheck(const char* s)
 		
 		exit(0);
 	}
-	
-    slast = s;
-#else
-	#pragma unused( s )
 #endif        
+
+    slast = s;
 }
 
 

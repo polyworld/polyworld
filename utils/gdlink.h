@@ -4,18 +4,12 @@
 /* Copyright Apple Computer 1990,1991,1992                          */
 /********************************************************************/
 // Generic doubly linked list
-// Use the generic class gdlink(TTYPE) by:
-//
-// declare(gdlink,TTYPE)
-// declare(gdlist,TTYPE)
-// implement(gdlink,TTYPE)
-// implement(gdlist,TTYPE)
-//
-// gdlink(TTYPE) X;
-// gdlist(TTYPE) Y(X);
 
 #ifndef DLINK_H
 #define DLINK_H
+
+#include <iostream>
+#include <stdio.h>
 
 template <class TTYPE>
 class gdlist;
@@ -111,7 +105,7 @@ public: /* for debugging only */
 		if (marcItem)						
 			a = marcItem->e;					
 		else						
-			a = NULL;					
+			a = 0;					
 	}							
 	
 	/* YOU'D BETTER KNOW WHAT YOU'RE DOING IF YOU USE */	
@@ -584,7 +578,7 @@ void gdlist<TTYPE>::remove(const TTYPE a)
 			return;					
 		}							
 	}							
-	cerr << "attempt to remove non-existent TTYPE node\n";
+	std::cerr << "attempt to remove non-existent TTYPE node\n";
 }							
 
 /* unlink the entry corresponding to object a */	
@@ -608,7 +602,7 @@ gdlink<TTYPE>* gdlist<TTYPE>::unlink(const TTYPE a)
 			return templink;				
 		}							
 	}							
-	cerr << "attempt to remove non-existent TTYPE node\n";
+	std::cerr << "attempt to remove non-existent TTYPE node\n";
 }							
 
 /* unlink the link corresponding to link a */		
@@ -632,7 +626,7 @@ gdlink<TTYPE>* gdlist<TTYPE>::unlink(gdlink<TTYPE>* a)
 		}							
 	} while ((currItem = currItem->nextItem) != lastItem->nextItem);		
 	/* wrapped back around to first, so search failed */	
-	cerr << "attempt to remove non-existent TTYPE node\n";
+	std::cerr << "attempt to remove non-existent TTYPE node\n";
 }
 
 #endif DLINK_H

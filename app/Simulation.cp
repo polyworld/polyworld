@@ -34,6 +34,9 @@ static const long kMaxLoops = 1000000;
 static long numglobalcreated = 0;    // needs to be static so we only get warned about influece of global creations once ever
 
 long TSimulation::fMaxCritters;
+long TSimulation::fAge;
+short TSimulation::fOverHeadRank = 1;
+critter* TSimulation::fMonitorCritter = NULL;
 
 //---------------------------------------------------------------------------
 // TSimulation::TSimulation
@@ -53,17 +56,17 @@ TSimulation::TSimulation(TSceneView* sceneView)
 		fLoadState(false),
 		fMonitorCritterRank(0),
 		fMonitorCritterRankOld(0),
-		fMonitoredCritter(NULL),
+//		fMonitorCritter(NULL),
 		fCritterTracking(false),
 		fGroundClearance(0.0),
-		fOverHeadRank(0),
+//		fOverHeadRank(0),
 		fOverHeadRankOld(0),
 		fOverheadCritter(NULL),
 		fChartBorn(true),
 		fChartFitness(true),
 		fChartFoodEnergy(true),
 		fChartPopulation(true),
-		fPrintBrain(false),
+//		fShowBrain(false),
 		fShowTextStatus(true),
 		fNewDeaths(0),
 		fNumberFit(0),
@@ -343,35 +346,42 @@ void TSimulation::Step()
 			}
 		}
 
-//		dprintf( "age=%ld, rank=%d, rankOld=%d, tracking=%s, fittest=%08lx, monitored=%08lx, alive=%s\n",
-//				 fAge, fMonitorCritterRank, fMonitorCritterRankOld, BoolString( fCritterTracking ), (ulong) fCurrentFittestCritter[fMonitorCritterRank-1], (ulong) fMonitoredCritter, BoolString( !(!fMonitoredCritter || !fMonitoredCritter->Alive()) ) );
+//		dbprintf( "age=%ld, rank=%d, rankOld=%d, tracking=%s, fittest=%08lx, monitored=%08lx, alive=%s\n",
+//				  fAge, fMonitorCritterRank, fMonitorCritterRankOld, BoolString( fCritterTracking ), (ulong) fCurrentFittestCritter[fMonitorCritterRank-1], (ulong) fMonitorCritter, BoolString( !(!fMonitorCritter || !fMonitorCritter->Alive()) ) );
 
 		// Brain window
 		if ((fMonitorCritterRank != fMonitorCritterRankOld)
-			 || (fMonitorCritterRank && !fCritterTracking && (fCurrentFittestCritter[fMonitorCritterRank - 1] != fMonitoredCritter))
-			 || (fMonitorCritterRank && fCritterTracking && (!fMonitoredCritter || !fMonitoredCritter->Alive())))
+			 || (fMonitorCritterRank && !fCritterTracking && (fCurrentFittestCritter[fMonitorCritterRank - 1] != fMonitorCritter))
+			 || (fMonitorCritterRank && fCritterTracking && (!fMonitorCritter || !fMonitorCritter->Alive())))
 		{			
-			if (fMonitoredCritter != NULL)
+			if (fMonitorCritter != NULL)
 			{
 				if (fBrainMonitorWindow != NULL)
 					fBrainMonitorWindow->StopMonitoring();
 			}					
 							
-			if (fMonitorCritterRank && fBrainMonitorWindow != NULL && fBrainMonitorWindow->isShown())
+			if (fMonitorCritterRank && fBrainMonitorWindow != NULL && fBrainMonitorWindow->visible)
 			{
 				Q_CHECK_PTR(fBrainMonitorWindow);
-				fMonitoredCritter = fCurrentFittestCritter[fMonitorCritterRank - 1];
-				fBrainMonitorWindow->StartMonitoring(fMonitoredCritter);					
+				fMonitorCritter = fCurrentFittestCritter[fMonitorCritterRank - 1];
+				fBrainMonitorWindow->StartMonitoring(fMonitorCritter);					
 			}
 			else
 			{
-				fMonitoredCritter = NULL;
+				fMonitorCritter = NULL;
 			}
 		
-			fMonitorCritterRankOld = fMonitorCritterRank;
+			fMonitorCritterRankOld = fMonitorCritterRank;			
+		}
+		if( fBrainMonitorWindow && fBrainMonitorWindow->visible /* fBrainMonitorWindow->isShown() */ )
+		{
+			char title[64];
+			sprintf( title, "Brain Monitor (%ld:%ld)", fMonitorCritterRank, fMonitorCritter->Number() );
+			fBrainMonitorWindow->setCaption(QString(title));
+			fBrainMonitorWindow->Draw();
 		}
 	}
-	
+
 #ifdef DEBUGCHECK
 	debugstring[256];
 	sprintf(debugstring,"after extra graphics at age %ld", fAge);
@@ -699,9 +709,9 @@ void TSimulation::InitWorld()
     fCameraRotationRate = 0.09;
     fCameraAngleStart = 0.0;
     fCameraFOV = 90.0;
-	fMonitorCritterRank = 0;
+	fMonitorCritterRank = 1;
 	fMonitorCritterRankOld = 0;
-	fMonitoredCritter = NULL;
+	fMonitorCritter = NULL;
 	fMonitorGeneSeperation = false;
     fRecordGeneSeperation = false;
     
@@ -1820,9 +1830,9 @@ void TSimulation::Death(critter* c)
     fStage.RemoveObject(c);
     
     // Check and see if we are monitoring this guy
-	if (c == fMonitoredCritter)
+	if (c == fMonitorCritter)
 	{
-		fMonitoredCritter = NULL;
+		fMonitorCritter = NULL;
 
 		// Stop monitoring critter brain
 		if (fBrainMonitorWindow != NULL)
@@ -2852,7 +2862,7 @@ void TSimulation::Update()
 		fPopulationWindow->updateGL();
 		//QApplication::postEvent(fPopulationWindow, new QCustomEvent(kUpdateEventType));	
 
-	if (fBrainMonitorWindow != NULL && fBrainMonitorWindow->isShown())
+	if (fBrainMonitorWindow != NULL && fBrainMonitorWindow->visible)
 		fBrainMonitorWindow->updateGL();
 		//QApplication::postEvent(fBrainMonitorWindow, new QCustomEvent(kUpdateEventType));	
 

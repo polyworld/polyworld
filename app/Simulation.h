@@ -24,6 +24,8 @@ class TCritterPOVWindow;
 static const int MAXDOMAINS = 10;
 static const int MAXFITNESSITEMS = 5;
 
+//extern long TSimulation::fAge;
+
 //===========================================================================
 // TSimulation
 //===========================================================================
@@ -53,17 +55,21 @@ public:
 	TCritterPOVWindow* GetCritterPOVWindow() const;
 	TTextStatusWindow* GetStatusWindow() const;
 	
-	bool GetPrintBrain() const;
-	void SetPrintBrain(bool printBrain);
+//	bool GetShowBrain() const;
+//	void SetShowBrain(bool showBrain);
 	long GetMaxCritters() const;
 	static long fMaxCritters;
+	
+//	short OverHeadRank( void );
 	
 	void PopulateStatusList(TStatusList& list);
 	
 	void Step();
 	void Update();
 	
-	long fAge;
+	static long fAge;
+	static short fOverHeadRank;
+	static critter* fMonitorCritter;
 
 private slots:
 	
@@ -110,17 +116,17 @@ private:
 	
 	long fMonitorCritterRank;
 	long fMonitorCritterRankOld;
-	critter* fMonitoredCritter;
+//	critter* fMonitorCritter;
 	bool fCritterTracking;
 	float fGroundClearance;
-	short fOverHeadRank;
+//	short fOverHeadRank;
 	short fOverHeadRankOld;
 	critter* fOverheadCritter;
 	bool fChartBorn;
 	bool fChartFitness;
 	bool fChartFoodEnergy;
 	bool fChartPopulation;
-	bool fPrintBrain;
+//	bool fShowBrain;
 	bool fShowTextStatus;
 	long fNewDeaths;
 	
@@ -229,9 +235,10 @@ inline TBrainMonitorWindow* TSimulation::GetBrainMonitorWindow() const { return 
 inline TBinChartWindow* TSimulation::GetGeneSeperationWindow() const { return fGeneSeperationWindow; }
 inline TCritterPOVWindow* TSimulation::GetCritterPOVWindow() const { return fCritterPOVWindow; }
 inline TTextStatusWindow* TSimulation::GetStatusWindow() const { return fTextStatusWindow; }
-inline bool TSimulation::GetPrintBrain() const { return fPrintBrain; }
-inline void TSimulation::SetPrintBrain(bool printBrain) { fPrintBrain = printBrain; }
+//inline bool TSimulation::GetShowBrain() const { return fBrainMonitorWindow->visible; }
+//inline void TSimulation::SetShowBrain(bool showBrain) { fBrainMonitorWindow->visible = showBrain; }
 inline long TSimulation::GetMaxCritters() const { return fMaxCritters; }
+//inline short TSimulation::OverHeadRank( void ) { return fOverHeadRank; }
 
 
 #endif

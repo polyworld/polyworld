@@ -11,10 +11,10 @@
 
 #define DebugSetRadius 0
 
-#define dprintf( x... ) { fprintf( stderr, x ); fflush( stderr ); }
+#define dbprintf( x... ) { fprintf( stderr, x ); fflush( stderr ); }
 
 #if DebugSetRadius
-	#define srPrint( x... ) dprintf( x )
+	#define srPrint( x... ) dbprintf( x )
 #else
 	#define srPrint( x... )
 #endif

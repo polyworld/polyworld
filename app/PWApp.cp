@@ -239,12 +239,21 @@ void TSceneWindow::ToggleBirthrateWindow()
 //---------------------------------------------------------------------------
 void TSceneWindow::ToggleBrainWindow()
 {
+#if 1
 	Q_CHECK_PTR(fSimulation);
-	fSimulation->SetPrintBrain(!fSimulation->GetPrintBrain());
+	TBrainMonitorWindow* brainWindow = fSimulation->GetBrainMonitorWindow();
+	Q_ASSERT(brainWindow != NULL);
+	brainWindow->visible = !brainWindow->visible;
+	brainWindow->setShown(brainWindow->visible);
+	brainWindow->SaveVisibility();
+#else
+	Q_CHECK_PTR(fSimulation);
+	fSimulation->SetShowBrain(!fSimulation->GetShowBrain());
 	TBrainMonitorWindow* window = fSimulation->GetBrainMonitorWindow();
 	Q_ASSERT(window != NULL);	
-	window->setHidden(fSimulation->GetPrintBrain());
+	window->setHidden(fSimulation->GetShowBrain());
 	window->SaveVisibility();
+#endif
 }
 
 
@@ -552,7 +561,7 @@ void TSceneWindow::windowsMenuAboutToShow()
 	}
 	else
 	{
-		if (brainWindow->isShown())
+		if (brainWindow->visible)
 			fWindowsMenu->changeItem(4, "Hide Brain Monitor");
 		else
 			fWindowsMenu->changeItem(4, "Show Brain Monitor");

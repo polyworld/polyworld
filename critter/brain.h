@@ -71,8 +71,6 @@ public:
 	static void braininit();
 	static void braindestruct();
 	
-	static unsigned char* gRetinaBuf;
-
     brain();
     ~brain();
     
@@ -98,6 +96,11 @@ public:
     short NumGreenNeurons();
     short NumBlueNeurons();
         
+	void dumpAnatomical( long index, float fitness );
+	FILE* startFunctional( long index );
+	void endFunctional( FILE* file, float fitness );
+	void writeFunctional( FILE* file );
+        
     void Render(short patchwidth, short patchheight);
 	
 	// Public globals	
@@ -111,6 +114,9 @@ public:
 	static short retinawidth;
 	static short retinaheight;
 
+	// Each critter/brain gets its own retinaBuf, because they all see different things,
+	// and we only want to do the glReadPixels once (each)
+	unsigned char* retinaBuf;
 
 protected:
 	friend class critter;
