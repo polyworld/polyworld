@@ -120,15 +120,27 @@ void TChartWindow::paintGL()
 {
 	// Prepare the canvas for drawing
 	glPushMatrix();
-		glClear(GL_COLOR_BUFFER_BIT);
+//		glClear(GL_COLOR_BUFFER_BIT);
 		glMatrixMode(GL_PROJECTION);
 		glLoadIdentity();
 		gluOrtho2D(0.0, width(), 0.0, height());
 		glMatrixMode(GL_MODELVIEW);
 		
+//		DrawAxes();
+//	    PlotPoints();
+		Draw();
+	glPopMatrix();
+}
+
+
+//---------------------------------------------------------------------------
+// TChartWindow::Draw()
+//---------------------------------------------------------------------------
+void TChartWindow::Draw()
+{
+		glClear(GL_COLOR_BUFFER_BIT);
 		DrawAxes();
 	    PlotPoints();	
-	glPopMatrix();
 }
 
 
@@ -264,9 +276,9 @@ void TChartWindow::DrawAxes()
     if (fHighV[0] > 1.0 && fHighV[0] == fHighV[0] && fLowV[0] == fLowV[0])
 		sprintf(s, "%ld", long(fLowV[0]));
     else
-        sprintf(s,"%.2f", fLowV[0]);
+        sprintf(s,"%.1f", fLowV[0]);
 	qglColor(white); 
-	renderText(fLowX - metrics.width(s) - 2, fHighY + (metrics.height() / 2), s, font);
+	renderText(fLowX - metrics.width(s) - 2, fHighY + (metrics.height() / 2) + 3, s, font);
 
 	glBegin(GL_LINES);
     	glVertex2f(fLowX - 2, fHighY);
@@ -276,18 +288,15 @@ void TChartWindow::DrawAxes()
     if (fHighV[0] > 1.0 && fHighV[0] == fHighV[0])
         sprintf(s, "%ld", long(fHighV[0]));
     else
-        sprintf(s, "%.2f",fHighV[0]);
+        sprintf(s, "%.1f",fHighV[0]);
 	qglColor(white);        
-	renderText(fLowX - metrics.width(s) - 2, fLowY + (metrics.height() / 2), s, font);
+	renderText(fLowX - metrics.width(s) - 2, fLowY + (metrics.height() / 2) + 3, s, font);
 
-    // display the window title
-	//renderText(fLowX + fHighX - metrics.width(caption()) / 2, fTitleY, caption(), font);
-	
     if (fDecimation)
     {
 		long x = (fLowX + fHighX) / 2;
         long y = fLowY - 2;
-        while ((y + 4) <= (fTitleY - 2))
+        while ((y + 4) <= fHighY)
         {
             glBegin(GL_LINES);
     			glVertex2f(x, y);
@@ -371,6 +380,7 @@ void TChartWindow::AddPoint( short ic, float val )
             fNumPoints[jc] = i;
         }
         fDecimation++;
+		makeCurrent();
 		paintGL();
     }
         
@@ -436,11 +446,11 @@ void TChartWindow::RestoreFromPrefs(long x, long y)
   	setGeometry(position);
 	
 	// Set up default settings
-	fLowX = 50;
-	fHighX = fLowX + width() - 10;
-	fLowY = 10;
-	fHighY = height() - 10;
-	fTitleY = fHighY - 6;
+    fLowX = 25;
+	fHighX = width() - 10; // fLowX + width() - 10;
+    fLowY = 5;
+    fHighY = height() - 10; // height() - 10;
+
 	fMaxPoints = fHighX - fLowX + 1;
     
 	for (short ic = 0; ic < fNumCurves; ic++)
@@ -646,12 +656,10 @@ void TBinChartWindow::RestoreFromPrefs(long x, long y)
 		
 	// Set up display defaults
     fLowX = 50;
-	fHighX = fLowX + width() - 10;
+	fHighX = width() - fLowX; // fLowX + width() - 10;
     fLowY = 10;
-    fHighY = fLowY + width() - 22;
+    fHighY = height() - fLowY - 22; // fLowY + width() - 22;
 	
-	fTitleY = fHighY + 5;
-    
     fMaxPoints = fHighX - fLowX + 1;
     numbins = fHighY - fLowY + 1;
     
@@ -788,6 +796,11 @@ void TBinChartWindow::AddPoint(const float* val, long numval)
         }
         fNumPoints[0] = i;
         fDecimation++;
+		if( isShown() )
+		{
+			makeCurrent();
+			Draw();
+		}
     }
 
 	long koff = fNumPoints[0] * numbins;

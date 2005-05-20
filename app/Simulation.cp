@@ -853,12 +853,14 @@ void TSimulation::InitMonitoringWindows()
 	// Critter birthrate
 	fBornWindow = new TChartWindow(kEnergyWindow);
 	fBornWindow->setCaption(QString("born / (born + created)"));
+	sprintf( fBornWindow->title, "born / (born + created)" );
 	fBornWindow->SetRange(0.0, 1.0);
 	fBornWindow->setFixedSize(TChartWindow::kMaxWidth, TChartWindow::kMaxHeight);
 
 	// Critter fitness		
 	fFitnessWindow = new TChartWindow(kFitnessWindow, 3);
 	fFitnessWindow->setCaption(QString("maxfit, curmaxfit, avgfit"));
+	sprintf( fFitnessWindow->title, "maxfit, curmaxfit, avgfit" );
 	fFitnessWindow->SetRange(0, 0.0, 1.0);
 	fFitnessWindow->SetRange(1, 0.0, 1.0);
 	fFitnessWindow->SetRange(2, 0.0, 1.0);
@@ -870,6 +872,7 @@ void TSimulation::InitMonitoringWindows()
 	// Food energy
 	fFoodEnergyWindow = new TChartWindow(kFoodWindow, 3);
 	fFoodEnergyWindow->setCaption(QString("energy in, total, avg"));
+	sprintf( fFoodEnergyWindow->title, "energy in, total, avg" );
 	fFoodEnergyWindow->SetRange(0, -1.0, 1.0);
 	fFoodEnergyWindow->SetRange(1, -1.0, 1.0);
 	fFoodEnergyWindow->SetRange(2, -1.0, 1.0);
@@ -886,6 +889,7 @@ void TSimulation::InitMonitoringWindows()
 	const short numpop = (fNumDomains < 2) ? 1 : (fNumDomains + 1);
     fPopulationWindow = new TChartWindow(kPopulationWindow, numpop);
 	fPopulationWindow->setCaption("population size");
+	sprintf( fPopulationWindow->title, "population size" );
 	for (int i = 0; i < numpop; i++)
 	{
 		int colorIndex = (i < 3) ? i : 2;
@@ -2640,10 +2644,10 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 	}
 	list.push_back(strdup(t));
 
-    sprintf(t, "miscden = %ld", fMiscNoBirth);
+    sprintf(t, "miscDenials = %ld", fMiscNoBirth);
 	list.push_back(strdup(t));
     
-    sprintf(t,"agecreat = %ld", fLastCreated);
+    sprintf(t,"ageCreate = %ld", fLastCreated);
     if (fNumDomains > 1)
     {
         sprintf(t2," (%ld",fDomains[0].lastcreate);
@@ -2657,7 +2661,7 @@ void TSimulation::PopulateStatusList(TStatusList& list)
     }
 	list.push_back(strdup(t));
 
-	sprintf(t,"maxgapcr = %ld", fGapFromLastCreate);
+	sprintf(t,"maxGapCreate = %ld", fGapFromLastCreate);
 	if (fNumDomains > 1)
 	{
 		sprintf(t2," (%ld",fDomains[0].maxgapcreate);
@@ -2674,39 +2678,39 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 	sprintf(t, "born/total = %.2f", float(fNumberBorn) / float(fNumberCreated + fNumberBorn));
 	list.push_back(strdup(t));
 
-	sprintf(t,"maxfitN = %.2f", fMaxFitness / fTotalFitness);
+	sprintf(t,"maxFitNorm = %.2f", fMaxFitness / fTotalFitness);
 	list.push_back(strdup(t));
 	
-	sprintf(t,"cmaxfitN = %.2f", fCurrentMaxFitness[0] / fTotalFitness);
+	sprintf(t,"currMaxFitNorm = %.2f", fCurrentMaxFitness[0] / fTotalFitness);
 	list.push_back(strdup(t));
 	
-	sprintf(t,"avgfitN = %.2f", fAverageFitness / fTotalFitness);
+	sprintf(t,"avgFitNorm = %.2f", fAverageFitness / fTotalFitness);
 	list.push_back(strdup(t));
 	
-	sprintf(t,"maxfit = %g", fMaxFitness);
+	sprintf(t,"maxFit = %g", fMaxFitness);
 	list.push_back(strdup(t));
 	
-	sprintf(t,"cmaxfit = %g", fCurrentMaxFitness[0]);
+	sprintf(t,"currMaxFit = %g", fCurrentMaxFitness[0]);
 	list.push_back(strdup(t));
 
-	sprintf(t,"avgfit = %g", fAverageFitness);
+	sprintf(t,"avgFit = %g", fAverageFitness);
 	list.push_back(strdup(t));
 
-	sprintf(t,"avgfenergy = %.2f",(fAverageFoodEnergyIn - fAverageFoodEnergyOut) / (fAverageFoodEnergyIn + fAverageFoodEnergyOut));
+	sprintf(t,"avgFoodEnergy = %.2f",(fAverageFoodEnergyIn - fAverageFoodEnergyOut) / (fAverageFoodEnergyIn + fAverageFoodEnergyOut));
 	list.push_back(strdup(t));
 	
-	sprintf(t,"totfenergy = %.2f",(fTotalFoodEnergyIn - fTotalFoodEnergyOut) / (fTotalFoodEnergyIn + fTotalFoodEnergyOut));
+	sprintf(t,"totFoodEnergy = %.2f",(fTotalFoodEnergyIn - fTotalFoodEnergyOut) / (fTotalFoodEnergyIn + fTotalFoodEnergyOut));
 	list.push_back(strdup(t));
 
 	if (fMonitorGeneSeperation)
 	{
-		sprintf(t,"fMaxGeneSeperation = %g", fMaxGeneSeperation);
+		sprintf(t,"maxGeneSeperation = %g", fMaxGeneSeperation);
 		list.push_back(strdup(t));
 		
-		sprintf(t,"fMinGeneSeperation = %g", fMinGeneSeperation);
+		sprintf(t,"minGeneSeperation = %g", fMinGeneSeperation);
 		list.push_back(strdup(t));
 		
-		sprintf(t,"fAverageGeneSeperation = %g", fAverageGeneSeperation);
+		sprintf(t,"avgGeneSeperation = %g", fAverageGeneSeperation);
 		list.push_back(strdup(t));
 	}
 		

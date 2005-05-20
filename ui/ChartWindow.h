@@ -52,6 +52,8 @@ public:
     
     static int kMaxWidth;
 	static int kMaxHeight;
+	
+	char title[256];
 
 protected:
 	virtual void initializeGL();
@@ -68,6 +70,7 @@ protected:
 	void PlotPoint(short ic, long x, long y);
 	void PlotPoint(long x, long y);
 	void DrawAxes();
+	void Draw();
 	
 	void SaveDimensions();
 		
@@ -81,7 +84,6 @@ protected:
 	long fHighY;
 	long fLowX;
 	long fHighX;
-	long fTitleY;
 	float* dydv;
 	Color* fColor;
 	short fDecimation;
