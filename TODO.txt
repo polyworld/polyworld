@@ -10,7 +10,6 @@ still be revived or newly developed, such as:
 * the main view looks odd on some monitors, with the depth of the world
   appearing greater than the width of the world
 * make the main view's camera rotate again 
-* get the strip of vision pixels back in the brain monitor window 
 * get the overhead view working again 
 * get zoom working in the overhead view 
 * allow overhead critter following (and toggle on/off, and set fitness rank)
@@ -42,3 +41,10 @@ by means such as:
 And so on, with all such extensions geared towards providing more
 available niches to foster speciation or to provide mechanisms that
 enhance the evolutionary usefulness of collaboration.
+
+-------------------------------------------------------------------
+
+Recently done:
+
+* get the brain monitor window actually working
+* get the strip of vision pixels back in the brain monitor window 
