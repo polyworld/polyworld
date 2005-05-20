@@ -4,15 +4,14 @@ a good place to start.
 In the short term, certain key user interface functionality must
 still be revived or newly developed, such as:
 
-* fix the ChartWindow's behavior - results do not seem to be averaged into
-  the first half after the second half fills, and the second half is not
-  cleared before points start being plotted into it again (after filling)
+* make the main view's camera rotate again 
 * the main view looks odd on some monitors, with the depth of the world
   appearing greater than the width of the world
-* make the main view's camera rotate again 
 * get the overhead view working again 
 * get zoom working in the overhead view 
 * allow overhead critter following (and toggle on/off, and set fitness rank)
+* get the genetic-spread calculations working again
+* get the genetic-spread graphics working again
 * get the digital movie recording and playback revived (from rev20 or rev21) 
 * make dump files work again (to save state and restart the program) 
 * make a click on a critter highlight its POV sub-window (new) 
@@ -48,3 +47,6 @@ Recently done:
 
 * get the brain monitor window actually working
 * get the strip of vision pixels back in the brain monitor window 
+* fix the ChartWindow's behavior - results do not seem to be averaged into
+  the first half after the second half fills, and the second half is not
+  cleared before points start being plotted into it again (after filling)
