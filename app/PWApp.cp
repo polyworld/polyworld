@@ -430,11 +430,11 @@ void TSceneWindow::RestoreFromPrefs()
 	QDesktopWidget* desktop = QApplication::desktop();
 
 	// Set up some defaults
-	int defWidth = desktop->width();
-	int defHeight = desktop->height();
 	int defX = TChartWindow::kMaxWidth + 3;
 	int titleHeight = 22;
 	int defY = fMenuBar->height() + titleHeight;	
+	int defWidth = desktop->width() - defX;
+	int defHeight = desktop->height() - defY;
 
 	
 	// Attempt to restore window size and position from prefs

@@ -1848,6 +1848,13 @@ void TSimulation::Death(critter* c)
 	// following assumes (requires!) list to be currently pointing to c,
     // and will leave the list pointing to the previous critter
     critter::gXSortedCritters.remove(); // get critter out of the list
+	
+	// Note: For the sake of computational efficiency, I used to never delete a critter,
+	// but "reinit" and reuse them as new critters were born or created.  But Gene made
+	// critters be allocated afresh on birth or creation, so we now need to delete the
+	// old ones here when they die.  Remove this if I ever get a chance to go back to the
+	// more efficient reinit and reuse technique.
+	delete c;
 }
 
 
