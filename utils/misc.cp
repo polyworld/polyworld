@@ -10,6 +10,7 @@
 #include "misc.h"
 
 // System
+#include <mach/mach_time.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -112,3 +113,22 @@ float logistic(float x, float slope)
     return (1.0 / (1.0 + exp(-1 * x * slope)));
 }
 
+double hirestime( void )
+{
+    static uint32_t num = 0;
+    static uint32_t denom = 0;
+    uint64_t now;
+
+    if (denom == 0) {
+            struct mach_timebase_info tbi;
+            kern_return_t r;
+            r = mach_timebase_info(&tbi);
+            if (r != KERN_SUCCESS) {
+                    abort();
+            }
+            num = tbi.numer;
+            denom = tbi.denom;
+    }
+    now = mach_absolute_time();
+    return (double)(now * (double)num / denom / NSEC_PER_SEC);
+}

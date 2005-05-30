@@ -21,8 +21,13 @@
 #include "misc.h"
 
 #ifdef __ALTIVEC__
-// veclib
-#include <vecLib/vBLAS.h>
+	// Turn pw_UseAltivec on to use ALTIVEC if it's available
+	#define pw_UseAltivec 0
+#endif
+
+#if pw_UseAltivec
+	// veclib
+	#include <vecLib/vBLAS.h>
 #endif
 
 using namespace std;
@@ -516,17 +521,20 @@ void genome::CopyGenes(genome* sgenome)
 //---------------------------------------------------------------------------
 float genome::CalcSeperation(genome* g)
 {
-#if ! defined( __ALTIVEC__ )
+#if pw_UseAltivec
+	#warning compiling with ALTIVEC code
+	long local_numbytes = genome::numbytes;
+#else
+	#warning compiling WITHOUT altivec code
 	int sep = 0;
 #endif
 	float fsep = 0.f;
     unsigned char* gi = fGenes;
     unsigned char* gj = g->fGenes;
-	long local_numbytes = genome::numbytes;
     
     if (gGrayCoding)
     {
-#ifdef __ALTIVEC__
+#if pw_UseAltivec
 		float val_gi[ genome::numbytes ];
 		float val_gj[ genome::numbytes ];
 		short size = 4;
@@ -579,7 +587,7 @@ float genome::CalcSeperation(genome* g)
     }
     else
     {
-#ifdef __ALTIVEC__
+#if pw_UseAltivec
 		float val_gi[ genome::numbytes ];
 		float val_gj[ genome::numbytes ];
 		short size = 4;
@@ -630,7 +638,7 @@ float genome::CalcSeperation(genome* g)
         }
 #endif
     }
-#ifdef __ALTIVEC__
+#if pw_UseAltivec
     fsep /= (255.0f * float(local_numbytes));
     return fsep;
 #else

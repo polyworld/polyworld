@@ -37,6 +37,13 @@ long TSimulation::fMaxCritters;
 long TSimulation::fAge;
 short TSimulation::fOverHeadRank = 1;
 critter* TSimulation::fMonitorCritter = NULL;
+double TSimulation::fFramesPerSecondOverall;
+double TSimulation::fSecondsPerFrameOverall;
+double TSimulation::fFramesPerSecondRecent;
+double TSimulation::fSecondsPerFrameRecent;
+double TSimulation::fFramesPerSecondInstantaneous;
+double TSimulation::fSecondsPerFrameInstantaneous;
+double TSimulation::fTimeStart;
 
 //---------------------------------------------------------------------------
 // TSimulation::TSimulation
@@ -190,6 +197,10 @@ void TSimulation::Stop()
 //---------------------------------------------------------------------------
 void TSimulation::Step()
 {
+	#define RecentSteps 10
+	static double	sTimePrevious[RecentSteps];
+	double			timeNow;
+	
 	fAge++;
 	
 	if (fAge > kMaxLoops)
@@ -208,6 +219,41 @@ void TSimulation::Step()
 	debugcheck(debugstring);
 #endif
 
+	// compute some frame rates
+	timeNow = hirestime();
+	if( fAge == 1 )
+	{
+		fFramesPerSecondOverall = 0.;
+		fSecondsPerFrameOverall = 0.;
+
+		fFramesPerSecondRecent = 0.;
+		fSecondsPerFrameRecent = 0.;
+
+		fFramesPerSecondInstantaneous = 0.;
+		fSecondsPerFrameInstantaneous = 0.;
+
+		fTimeStart = timeNow;
+	}
+	else
+	{
+		fFramesPerSecondOverall = fAge / (timeNow - fTimeStart);
+		fSecondsPerFrameOverall = 1. / fFramesPerSecondOverall;
+		
+		if( fAge > RecentSteps )
+		{
+			fFramesPerSecondRecent = RecentSteps / (timeNow - sTimePrevious[RecentSteps-1]);
+			fSecondsPerFrameRecent = 1. / fFramesPerSecondRecent;
+		}
+
+		fFramesPerSecondInstantaneous = 1. / (timeNow - sTimePrevious[0]);
+		fSecondsPerFrameInstantaneous = 1. / fFramesPerSecondInstantaneous;
+
+		int numSteps = fAge < RecentSteps ? fAge : RecentSteps;
+		for( int i = numSteps-1; i > 0; i-- )
+			sTimePrevious[i] = sTimePrevious[i-1];
+	}
+	sTimePrevious[0] = timeNow;
+	
 	if (((fAge - fLastCreated) > fGapFromLastCreate) && (fLastCreated > 0) )
 		fGapFromLastCreate = fAge - fLastCreated;
 
@@ -1101,7 +1147,7 @@ void TSimulation::Interact()
 
                     if (fSmite)
                     {
-                        if (fDomains[kd].numcritters == fDomains[kd].maxnumcritters)
+                        if (fDomains[kd].numcritters >= fDomains[kd].maxnumcritters)
                         {
                             SmiteOne(kd, fSmite);
                         }
@@ -1114,8 +1160,9 @@ void TSimulation::Interact()
                     if ( (fDomains[kd].numcritters < fDomains[kd].maxnumcritters) &&
                          ((critter::gXSortedCritters.count() + newCritters.count()) < fMaxCritters) )
                     {
-                        if ( (fDomains[kd].numbornsincecreated < fMiscCritters) ||
-                             (drand48() < c->MateProbability(d)) )
+                        if( (fMiscCritters < 0) ||									// miscegenation function not being used
+							(fDomains[kd].numbornsincecreated < fMiscCritters) ||	// miscegenation function not in use yet
+							(drand48() < c->MateProbability(d)) )					// miscegenation function allows the birth
                         {
 						#ifdef TEXTTRACE
                             cout << "age " << fAge << ": critters #"
@@ -2720,7 +2767,13 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 		sprintf(t,"avgGeneSeperation = %g", fAverageGeneSeperation);
 		list.push_back(strdup(t));
 	}
-		
+
+	sprintf( t, "Rate %ld (%.2f) %ld (%.2f) %ld (%.2f)",
+				lround( fFramesPerSecondInstantaneous ), fSecondsPerFrameInstantaneous,
+				lround( fFramesPerSecondRecent ), fSecondsPerFrameRecent,
+				lround( fFramesPerSecondOverall ), fSecondsPerFrameOverall );
+	list.push_back(strdup(t));
+
 #if 0
     if (saveToFile)
     {

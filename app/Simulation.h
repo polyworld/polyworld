@@ -70,6 +70,13 @@ public:
 	static long fAge;
 	static short fOverHeadRank;
 	static critter* fMonitorCritter;
+	static double fFramesPerSecondOverall;
+	static double fSecondsPerFrameOverall;
+	static double fFramesPerSecondRecent;
+	static double fSecondsPerFrameRecent;
+	static double fFramesPerSecondInstantaneous;
+	static double fSecondsPerFrameInstantaneous;
+	static double fTimeStart;
 
 private slots:
 	

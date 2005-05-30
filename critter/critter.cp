@@ -4,7 +4,7 @@
 /* Copyright Apple Computer 1990,1991,1992                          */
 /********************************************************************/
 
-#define DumpStats 1
+#define DumpStats 0
 
 // Self
 #include "critter.h"
@@ -268,6 +268,7 @@ critter::critter(TSimulation* sim, gstage* stage)
 //---------------------------------------------------------------------------
 critter::~critter()
 {
+//	delete fPolygon;
 	delete fGenome;
 	delete fBrain;
 }

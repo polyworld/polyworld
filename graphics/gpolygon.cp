@@ -162,16 +162,15 @@ gpolyobj::gpolyobj(char* n, long np, opoly* p)
 
 gpolyobj::~gpolyobj()
 {
-#if 0
+#if 1
 	if (fPolygon != NULL)
 	{
 		for (long i = 0; i < fNumPolygons; i++)
 		{
 			if (fPolygon[i].fVertices != NULL)
 				delete fPolygon[i].fVertices;
-				
-			delete fPolygon;
 		}
+		delete fPolygon;
 	}
 #endif
 }
