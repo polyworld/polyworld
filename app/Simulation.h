@@ -183,6 +183,7 @@ private:
 	long fNumberDiedEnergy;
 	long fNumberDiedFight;
 	long fNumberDiedEdge;
+	long fNumberDiedSmite;
 	long fNumberCreated;
 	long fNumberCreatedRandom;
 	long fNumberCreated1Fit;
@@ -221,8 +222,12 @@ private:
 	float* fGeneSepVals;
 	long fNumGeneSepVals;
 
-	long fSmite;
-	long fMinSmiteAge;
+	float fSmiteFrac;
+	float fSmiteAgeFrac;
+	int fNumLeastFit;
+	int fMaxNumLeastFit;
+	int fNumSmited;
+	critter** fLeastFit;
 	long fBrainMonitorStride;
 	bool fShowVision;
 	bool fGraphics;

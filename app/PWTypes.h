@@ -27,6 +27,10 @@ struct domainstruct
     short jfit;
     genome** fittest;
     float* fitness;
+	int fNumLeastFit;
+	int fMaxNumLeastFit;
+	int fNumSmited;
+	critter** fLeastFit;
 };
 
 #endif

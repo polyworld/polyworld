@@ -1,4 +1,4 @@
-6      version
+7      version
 
 1      docpuwork
 10000  dumpfreq
@@ -174,3 +174,6 @@
 0.0    minfoodenergyatdeath
 
 1      graycoding
+
+0.05   smiteFrac
+0.5    smiteAgeFrac

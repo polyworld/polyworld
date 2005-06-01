@@ -47,6 +47,7 @@ public:
 class critter : public gpolyobj
 {
 	friend void operator>>(const char **, critter&);
+	friend void cxsortedlist::add(critter* a);
 
 public:
 	static void critterinit();
@@ -148,17 +149,21 @@ public:
 	gscene& GetScene();
 	frustumXZ& GetFrustum();
 	static gpolyobj* GetCritterObj();
+	gdlink<critter*>* GetListLink();
+
 	static short povcols;
 	static short povrows;
     static short povwidth;
     static short povheight;
+	static critter* currentCritter;	// during brain updates
+
     short xleft;
     short xright;
     short ybottom;
     short ytop;
     short ypix;
 	
-	static critter* currentCritter;	// during brain updates
+	gdlink<critter*>*	listLink;
 
 protected:
     void Behave();
@@ -202,7 +207,7 @@ protected:
     gscene fScene;
     frustumXZ fFrustum;
     short fDomain;
-
+	
 	FILE* fBrainFuncFile;
 };
 
@@ -250,6 +255,7 @@ inline brain* critter::Brain() { return fBrain; }
 inline gscene& critter::GetScene() { return fScene; }
 inline frustumXZ& critter::GetFrustum() { return fFrustum; }
 inline gpolyobj* critter::GetCritterObj() { return critterobj; }
+inline gdlink<critter*>* critter::GetListLink() { return listLink; }
 
 #endif
 

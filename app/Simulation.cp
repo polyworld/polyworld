@@ -168,6 +168,9 @@ void TSimulation::Stop()
         }
         if (fDomains[id].fitness != NULL)
         	delete fDomains[id].fitness;
+		
+		if( fDomains[id].fLeastFit )
+			delete[] fDomains[id].fLeastFit;
     }
 
 
@@ -180,10 +183,13 @@ void TSimulation::Stop()
 		}		
         delete[] fFittest;
     }
-    
+	
 	if( fFitness != NULL )
 		delete fFitness;
         
+	if( fLeastFit )
+		delete fLeastFit;
+    
     genome::genomedestruct();
     
     brain::braindestruct();
@@ -472,8 +478,16 @@ void TSimulation::Init()
     
     if (fNumberFit > 0)
     {
-		int id;        
-        for (id = 0; id < fNumDomains; id++)
+        fFittest = new genome*[fNumberFit];
+        fFitness = new float[fNumberFit];
+        
+        for (int i = 0; i < fNumberFit; i++)
+        {
+            fFittest[i] = new genome();
+            fFitness[i] = 0.0;
+        }
+		
+        for( int id = 0; id < fNumDomains; id++ )
         {
             fDomains[id].fittest = new genome*[fNumberFit];
             fDomains[id].fitness = new float[fNumberFit];
@@ -484,17 +498,33 @@ void TSimulation::Init()
                 fDomains[id].fitness[i] = 0.0;
             }
         }
-
-        fFittest = new genome*[fNumberFit];
-        fFitness = new float[fNumberFit];
-        
-        for (int i = 0; i < fNumberFit; i++)
-        {
-            fFittest[i] = new genome();
-            fFitness[i] = 0.0;
-        }
     }
     
+	fNumLeastFit = 0;
+	fMaxNumLeastFit = lround( fSmiteFrac * fMaxCritters );
+	
+	if( fMaxNumLeastFit > 0 )
+	{
+		fLeastFit = new critter*[fMaxNumLeastFit];
+		
+		for( int i = 0; i < fMaxNumLeastFit; i++ )
+			fLeastFit[i] = NULL;
+
+        for( int id = 0; id < fNumDomains; id++ )
+        {
+			fDomains[id].fNumLeastFit = 0;
+			fDomains[id].fMaxNumLeastFit = lround( fSmiteFrac * fDomains[id].maxnumcritters );
+			
+			if( fDomains[id].fMaxNumLeastFit > 0 )
+			{
+				fDomains[id].fLeastFit = new critter*[fDomains[id].fMaxNumLeastFit];
+				
+				for( int i = 0; i < fDomains[id].fMaxNumLeastFit; i++ )
+					fDomains[id].fLeastFit[i] = NULL;
+			}
+        }
+	}
+
     // Pass ownership of the cast to the stage [TODO] figure out ownership issues
     fStage.SetCast(&fWorldCast);
 
@@ -534,7 +564,7 @@ void TSimulation::Init()
 					float yaw =  360.0 * drand48();
 					c->setyaw(yaw);
 					
-					critter::gXSortedCritters.add(c);				
+					critter::gXSortedCritters.add(c);	// stores c->listLink
 					c->Domain(id);
 					fDomains[id].numcritters++;
 				}
@@ -582,7 +612,7 @@ void TSimulation::Init()
 				float yaw =  360.0 * drand48();
 				c->setyaw(yaw);
 				
-				critter::gXSortedCritters.add(c);
+				critter::gXSortedCritters.add(c);	// stores c->listLink
 				
 				id = WhichDomain(x, z, 0);
 				c->Domain(id);
@@ -771,6 +801,7 @@ void TSimulation::InitWorld()
     fNumberDiedEnergy = 0;
     fNumberDiedFight = 0;
     fNumberDiedEdge = 0;
+	fNumberDiedSmite = 0;
     fNumberFights = 0;
     fMaxFitness = 0.;
     fAverageFitness = 0.;
@@ -783,7 +814,8 @@ void TSimulation::InitWorld()
     fNumBornSinceCreated = 0;
     fChartGeneSeperation = false; // GeneSeparation (if true, genesepmon must be true)
     fDeathProbability = 0.001;
-    fSmite = 0;
+    fSmiteFrac = 0.05;
+	fSmiteAgeFrac = 0.5;
     fShowVision = true;
     
     fFitI = 0;
@@ -844,7 +876,7 @@ void TSimulation::InitWorld()
     critter::gMaxVelocity = 1.0;
     fMaxCritters = 50;	
     critter::gInitMateWait = 25;
-	fMinSmiteAge = critter::gInitMateWait + fMateWait;
+//	fMinSmiteAge = critter::gInitMateWait + fMateWait;
     critter::gMinCritterSize = 1.0;
     critter::gMinCritterSize = 4.0;
     critter::gMinMaxEnergy = 500.0;
@@ -1053,20 +1085,19 @@ void TSimulation::Interact()
         fCurrentFittestCritter[i] = NULL;
     }
     fAverageFitness = 0.0;
-    
-	// now go through the list, and use the influence radius to determine
-	// all possible interactions
+	fNumSmited = 0;
+	for( i = 0; i < fNumDomains; i++ )
+		fDomains[i].fNumSmited = 0;
 	
+	// Take care of deaths first, plus least-fit determinations
+
+	//cout << "before deaths "; critter::gXSortedCritters.list();	//dbg
 	critter::gXSortedCritters.reset();
-	food::gXSortedFood.reset();
-	
     while (critter::gXSortedCritters.next(c))
     {
-        // determine the domain in which the critter currently is located
+        // Determine the domain in which the critter currently is located
 
         id = c->Domain();
-
-		// take care of death first
 
         if ( (c->Energy() <= 0.0)		||
 			 (c->Age() >= c->MaxAge())  ||
@@ -1094,10 +1125,159 @@ void TSimulation::Interact()
 	#ifdef DEBUGCHECK
         debugcheck("after a death in interact");
 	#endif DEBUGCHECK
+	
+		// Figure out who is least fit, if we're doing smiting to make room for births
+		
+		// Do the bookkeeping for the specific domain, if we're using domains
+		if( (fNumDomains > 0) && (fDomains[id].fMaxNumLeastFit > 0) )
+		{
+			if( (fDomains[id].numcritters > (fDomains[id].maxnumcritters - fDomains[id].fMaxNumLeastFit)) &&	// if there are getting to be too many critters, and
+				(c->Age() >= fSmiteAgeFrac * c->MaxAge()) &&													// the current critter is old enough to consider for smiting, and
+				( (fDomains[id].fNumLeastFit < fDomains[id].fMaxNumLeastFit)	||								// (we haven't filled our quota yet, or
+				  (c->Fitness() < fDomains[id].fLeastFit[fDomains[id].fNumLeastFit-1]->Fitness()) ) )			// the critter is bad enough to displace one already in the queue)
+			{
+				if( fDomains[id].fNumLeastFit == 0 )
+				{
+					// It's the first one, so just store it
+					fDomains[id].fLeastFit[0] = c;
+					fDomains[id].fNumLeastFit++;
+				}
+				else
+				{
+					int i;
+					
+					// Find the position to be replaced
+					for( i = 0; i < fDomains[id].fNumLeastFit; i++ )
+						if( c->Fitness() < fDomains[id].fLeastFit[i]->Fitness() )	// worse than the one in this slot
+							break;
+					
+					if( i < fDomains[id].fNumLeastFit )
+					{
+						// We need to move some of the items in the list down
+						
+						// If there's room left, add a slot
+						if( fDomains[id].fNumLeastFit < fDomains[id].fMaxNumLeastFit )
+							fDomains[id].fNumLeastFit++;
+
+						// move everything up one, from i to end
+						for( int j = fDomains[id].fNumLeastFit-1; j > i; j-- )
+							fDomains[id].fLeastFit[j] = fDomains[id].fLeastFit[j-1];
+
+					}
+					else
+						fDomains[id].fNumLeastFit++;	// we're adding to the end of the list, so increment the count
+					
+					// Store the new i-th worst
+					fDomains[id].fLeastFit[i] = c;
+				}
+			}
+		}
+		
+		// Do the overall bookkeeping, but only if we're not doing it for domains
+		if( (fNumDomains == 0) && (fMaxNumLeastFit > 0) )
+		{
+			if( (critter::gXSortedCritters.count() > (fMaxCritters - fMaxNumLeastFit)) &&	// if there are getting to be too many critters, and
+				(c->Age() >= fSmiteAgeFrac * c->MaxAge()) &&								// the current critter is old enough to consider for smiting, and
+				( (fNumLeastFit < fMaxNumLeastFit)	||										// (we haven't filled our quota yet, or
+				  (c->Fitness() < fLeastFit[fNumLeastFit-1]->Fitness()) ) )					// the critter is bad enough to displace one already in the queue)
+			{
+				if( fNumLeastFit == 0 )
+				{
+					// It's the first one, so just store it
+					fLeastFit[0] = c;
+					fNumLeastFit++;
+				}
+				else
+				{
+					int i;
+					
+					// Find the position to be replaced
+					for( i = 0; i < fNumLeastFit; i++ )
+						if( c->Fitness() < fLeastFit[i]->Fitness() )	// worse than the one in this slot
+							break;
+					
+					if( i < fNumLeastFit )
+					{
+						// We need to move some of the items in the list down
+						
+						// If there's room left, add a slot
+						if( fNumLeastFit < fMaxNumLeastFit )
+							fNumLeastFit++;
+
+						// move everything up one, from i to end
+						for( int j = fNumLeastFit-1; j > i; j-- )
+							fLeastFit[j] = fLeastFit[j-1];
+
+					}
+					else
+						fNumLeastFit++;	// we're adding to the end of the list, so increment the count
+					
+					// Store the new i-th worst
+					fLeastFit[i] = c;
+				}
+			}
+		}
+	}
+
+	//cout << "after deaths1 "; critter::gXSortedCritters.list();	//dbg
+
+#if 0
+	if( fNumDomains > 0 )
+	{
+		// Smite critters as needed in each of the domains
+		for( id = 0; id < fNumDomains; id++ )
+		{
+			if( fDomains[id].fNumLeastFit > 0 )	// if we have any critters available to smite
+			{
+				int numToSmite = fDomains[id].numcritters - (fDomains[id].maxnumcritters - fDomains[id].fMaxNumLeastFit);
+				if( numToSmite > fDomains[id].fNumLeastFit )
+					numToSmite = fDomains[id].fNumLeastFit;
+				if( numToSmite > 0 )	// we have too many critters
+				{
+					// Do the smiting
+					for( int i = 0; i < numToSmite; i++ )
+						Death( fDomains[id].fLeastFit[i] );
+					// No need to update the leastFit bookkeeping, because this is the only place it's used
+				}
+			}
+		}
+	}
+	else
+	{
+		// Smite critters globally (only if this wasn't handled in the domains)
+		if( fNumLeastFit > 0 )	// if we have any critters available to smite
+		{
+			int numToSmite = critter::gXSortedCritters.count() - (fMaxCritters - fMaxNumLeastFit);
+			if( numToSmite > fNumLeastFit )
+				numToSmite = fNumLeastFit;	// we can only smite as many as we have available
+			if( numToSmite > 0 )	// we have too many critters
+			{
+				// Do the smiting
+				for( int i = 0; i < numToSmite; i++ )
+					Death( fLeastFit[i] );
+				// No need to update the leastFit bookkeeping, because this is the only place it's used
+			}
+		}
+	}
+#endif
+
+	// Now go through the list, and use the influence radius to determine
+	// all possible interactions
+	
+	food::gXSortedFood.reset();
+	critter::gXSortedCritters.reset();
+    while (critter::gXSortedCritters.next(c))
+    {
+        // determine the domain in which the critter currently is located
+
+        id = c->Domain();
 
 		// now see if there's an overlap with any other critters
 
+		//cout << "cr" eql c sp "cr->l" eql c->GetListLink() sp "pre-m" eql critter::gXSortedCritters.marcItem;
         critter::gXSortedCritters.mark(); // so can point back to this critter later
+		//cout << " post-m" eql critter::gXSortedCritters.marcItem nlf;
+		
         cDied = FALSE;
         jd = id;
         kd = id;
@@ -1145,17 +1325,25 @@ void TSimulation::Interact()
                                      0.5*(c->z()+d->z()),
                                      kd);
 
-                    if (fSmite)
-                    {
-                        if (fDomains[kd].numcritters >= fDomains[kd].maxnumcritters)
-                        {
-                            SmiteOne(kd, fSmite);
-                        }
-                        else if ((critter::gXSortedCritters.count() + newCritters.count()) >= fMaxCritters)
-                        {
-                            SmiteOne(-1, fSmite);
-                        }
-                    }
+					if( (fDomains[kd].numcritters >= fDomains[kd].maxnumcritters) &&	// too many critters to reproduce withing a bit of smiting
+						(fDomains[kd].fNumLeastFit > fDomains[kd].fNumSmited) )			// we've still got some left that are suitable for smiting
+					{
+						while( ((fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] == c) ||
+								(fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] == d)) &&
+							   (fDomains[kd].fNumSmited < fDomains[kd].fNumLeastFit) )
+						{
+							// We would have smited one of our mating pair, which wouldn't be prudent,
+							// so just step over them and see if there's someone else to smite
+							fDomains[kd].fNumSmited++;
+						}
+						if( fDomains[kd].fNumSmited < fDomains[kd].fNumLeastFit )	// we've still got someone to smite, so do it
+						{
+							Death( fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] );
+							fDomains[kd].fNumSmited++;
+							fNumberDiedSmite++;
+							cout << "********************* SMITE *******************" nlf;	//dbg
+						}
+					}
 
                     if ( (fDomains[kd].numcritters < fDomains[kd].maxnumcritters) &&
                          ((critter::gXSortedCritters.count() + newCritters.count()) < fMaxCritters) )
@@ -1186,7 +1374,7 @@ void TSimulation::Interact()
                             e->setyaw(0.5*(c->yaw() + d->yaw()));   // was (360.0*drand48());
                             e->Domain(kd);
                             fStage.AddObject(e);
-                            newCritters.add(e); // add it to the full list later
+                            newCritters.add(e); // add it to the full list later; the e->listLink that gets auto stored here must be replaced with one from full list below
                             fDomains[kd].numcritters++;
                             fNumberBorn++;
                             fDomains[kd].numborn++;
@@ -1228,8 +1416,10 @@ void TSimulation::Interact()
                         d->damage(cpower * fPower2Energy);
                         if (d->Energy() <= 0.0)
                         {
+							//cout << "before deaths2 "; critter::gXSortedCritters.list();	//dbg
                             Death(d);
                             fNumberDiedFight++;
+							//cout << "after deaths2 "; critter::gXSortedCritters.list();	//dbg
                         }
                         if (c->Energy() <= 0.0)
                         {
@@ -1238,6 +1428,7 @@ void TSimulation::Interact()
                             fNumberDiedFight++;
                             // note: this leaves list pointing to item before c
                             critter::gXSortedCritters.mark();
+							//cout << "after deaths3 "; critter::gXSortedCritters.list();	//dbg
                             cDied = true;
                             break;
                         }
@@ -1413,7 +1604,7 @@ void TSimulation::Interact()
                 newCritter->Domain(id);
                 fStage.AddObject(newCritter);
                 fDomains[id].numcritters++;
-                newCritters.add(newCritter); // add it to the full list later
+                newCritters.add(newCritter); // add it to the full list later; the e->listLink that gets auto stored here must be replaced with one from full list below
             }
         }
 
@@ -1478,7 +1669,7 @@ void TSimulation::Interact()
             fDomains[id].lastcreate = fAge;
             fDomains[id].numcritters++;
             fStage.AddObject(newCritter);
-            newCritters.add(newCritter); // add it to the full list later
+            newCritters.add(newCritter); // add it to the full list later; the e->listLink that gets auto stored here must be replaced with one from full list below
         }
 
 	#ifdef DEBUGCHECK
@@ -1494,6 +1685,7 @@ void TSimulation::Interact()
         bool foundinsertionpt;
         bool oldlistfinished = false;
         critter::gXSortedCritters.reset();
+		newCritters.sort();
         newCritters.reset();
         while (newCritters.next(newCritter))
         {
@@ -1501,7 +1693,7 @@ void TSimulation::Interact()
                 CalculateGeneSeperation(newCritter);
 
             if (oldlistfinished)
-                critter::gXSortedCritters.append(newCritter);
+                newCritter->listLink = critter::gXSortedCritters.append(newCritter);
             else
             {
                 foundinsertionpt = false;
@@ -1509,7 +1701,7 @@ void TSimulation::Interact()
                 {
                     if ( (newCritter->x() - newCritter->radius()) < (oldCritter->x() - oldCritter->radius()) )
                     {
-                        critter::gXSortedCritters.inserthere(newCritter);
+                        newCritter->listLink = critter::gXSortedCritters.inserthere(newCritter);
                         foundinsertionpt = true;
                         break;
                     }
@@ -1517,7 +1709,7 @@ void TSimulation::Interact()
                 if (!foundinsertionpt)
                 {
                     oldlistfinished = true;
-                    critter::gXSortedCritters.append(newCritter);
+                    newCritter->listLink = critter::gXSortedCritters.append(newCritter);
                 }
             }
         }
@@ -1877,6 +2069,9 @@ void TSimulation::Death(critter* c)
     if (c->Fitness() > fMaxFitness)
         fMaxFitness = c->Fitness();
 	
+	// Don't have to update leastFit data structures, because that information is
+	// currently only used in one place in Interact(), immediately after it is computed
+	
 	// Remove critter from world
     fStage.RemoveObject(c);
     
@@ -1894,7 +2089,10 @@ void TSimulation::Death(critter* c)
 	
 	// following assumes (requires!) list to be currently pointing to c,
     // and will leave the list pointing to the previous critter
-    critter::gXSortedCritters.remove(); // get critter out of the list
+	// critter::gXSortedCritters.remove(); // get critter out of the list
+	
+	// Following assumes (requires!) the critter to have stored c->listLink correctly
+	critter::gXSortedCritters.removeFastUnsafe( c->GetListLink() );
 	
 	// Note: For the sake of computational efficiency, I used to never delete a critter,
 	// but "reinit" and reuse them as new critters were born or created.  But Gene made
@@ -2397,10 +2595,10 @@ void TSimulation::ReadWorldFile(const char* filename)
 		return;
 	}
 	
-    in >> fSmite; in >> label;
-    cout << "smite" ses fSmite nl;
-    in >> fMinSmiteAge; in >> label;
-    cout << "minsmiteage" ses fMinSmiteAge nl;
+    in >> fSmiteFrac; in >> label;
+    cout << "smiteFrac" ses fSmiteFrac nl;
+    in >> fSmiteAgeFrac; in >> label;
+    cout << "smiteAgeFrac" ses fSmiteAgeFrac nl;
 
     cout nlf;
 
@@ -2437,6 +2635,7 @@ void TSimulation::Dump()
     out << fNumberDiedEnergy nl;
     out << fNumberDiedFight nl;
     out << fNumberDiedEdge nl;
+	out << fNumberDiedSmite nl;
     out << fNumberBorn nl;
     out << fNumberFights nl;
     out << fMiscNoBirth nl;
@@ -2684,6 +2883,9 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 	sprintf(t," -edge   = %4ld", fNumberDiedEdge);
 	list.push_back(strdup(t));
 
+	sprintf(t," -smite    = %4ld", fNumberDiedSmite);
+	list.push_back(strdup(t));
+	
 	sprintf(t,"food = %ld", food::gXSortedFood.count());
 	if (fNumDomains > 1)
 	{
@@ -2823,6 +3025,7 @@ void TSimulation::PopulateStatusList(TStatusList& list)
         fprintf(statusfile," -energy = %4d\n",fNumberDiedEnergy);
         fprintf(statusfile," -fight  = %4d\n",fNumberDiedFight);
         fprintf(statusfile," -edge   = %4d\n",fNumberDiedEdge);
+        fprintf(statusfile," -smite  = %4d\n",fNumberDiedSmite);
         fprintf(statusfile,"fights = %d\n", numfights);
         fprintf(statusfile,"maxfit = %g\n", fMaxFitness);
         fprintf(statusfile,"food = %d",xsortedfood.count());

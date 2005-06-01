@@ -206,7 +206,7 @@ void critter::critterload(istream&)
         if (critter::critterlist->isone(i))
         {
             (critter::pc[i])->load(in);
-            critter::gXSortedCritters.add(critter::pc[i]);
+            critter::pc[i]->listLink = critter::gXSortedCritters.add(critter::pc[i]);
             globals::worldstage.addobject(critter::pc[i]);
             if ((critter::pc[i])->fIndex != i)
             {
@@ -948,14 +948,14 @@ void cxsortedlist::add(critter* a)
     {
         if ((a->x()-a->radius()) < (o->x()-o->radius()))
         {
-            this->inserthere(a);
+            a->listLink = this->inserthere(a);
             inserted = true;
             break;
         }
     }
     if (!inserted)
     {
-        this->append(a);
+        a->listLink = this->append(a);
     }
 #ifdef DEBUGCALLS
     popproc();
@@ -1016,9 +1016,11 @@ void cxsortedlist::list()
     gdlink<critter*> *savecurr;
     critter* pcrit;
     savecurr = currItem;
+	cout << "c" eql currItem sp "m" eql marcItem sp "l" eql lastItem sp "f" eql lastItem->nextItem << " ";
     this->reset();
+	cout << this->kount << ":";
     while(this->next(pcrit))
-        cout sp pcrit->Number();
+        cout sp pcrit->Number() << "/" << pcrit << "/" << pcrit->GetListLink();
     cout nlf;
     currItem = savecurr;
 #ifdef DEBUGCALLS

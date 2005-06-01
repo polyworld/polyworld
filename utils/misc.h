@@ -22,6 +22,7 @@
 #define sp <<" "<<
 #define sp2 <<"  "<<
 #define ses <<" = "<<
+#define eql <<"="<<
 
 #define forever for (;;)
 

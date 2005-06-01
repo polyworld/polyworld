@@ -84,6 +84,7 @@
 			projectDirPath = "";
 			targets = (
 				8D0C4E890486CD37000505A6,
+				76B2FB68084CE6E9002FBDA1,
 			);
 		};
 		20286C29FDCF999611CA2CEA = {
@@ -207,19 +208,6 @@
 			isa = PBXBuildFile;
 			settings = {
 			};
-		};
-		37577665078C8C0600CA4042 = {
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			isa = PBXShellScriptBuildPhase;
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/bash;
-			shellScript = "$QtBin/moc app/Simulation.h -o app/moc_Simulation.cpp\n$QtBin/moc app/PWApp.h -o app/moc_PWApp.cpp\n#$QtBin/qmake\n";
 		};
 		37577667078C8C6200CA4042 = {
 			fileEncoding = 4;
@@ -5586,6 +5574,49 @@
 			settings = {
 			};
 		};
+		76B2FB67084CE6E9002FBDA1 = {
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			isa = PBXShellScriptBuildPhase;
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "$QtBin/moc app/Simulation.h -o app/moc_Simulation.cpp\n$QtBin/moc app/PWApp.h -o app/moc_PWApp.cpp\n#$QtBin/qmake\nexit 0";
+		};
+		76B2FB68084CE6E9002FBDA1 = {
+			buildPhases = (
+				76B2FB67084CE6E9002FBDA1,
+			);
+			buildSettings = {
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = moc;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = "-Wmost -Wno-four-char-constants -Wno-unknown-pragmas";
+			};
+			dependencies = (
+			);
+			isa = PBXAggregateTarget;
+			name = moc;
+			productName = moc;
+		};
+		76B2FB6F084CE761002FBDA1 = {
+			containerPortal = 20286C28FDCF999611CA2CEA;
+			isa = PBXContainerItemProxy;
+			proxyType = 1;
+			remoteGlobalIDString = 76B2FB68084CE6E9002FBDA1;
+			remoteInfo = moc;
+		};
+		76B2FB70084CE761002FBDA1 = {
+			isa = PBXTargetDependency;
+			target = 76B2FB68084CE6E9002FBDA1;
+			targetProxy = 76B2FB6F084CE761002FBDA1;
+		};
 		76BB7C9E074D4CE500576391 = {
 			fileEncoding = 30;
 			isa = PBXFileReference;
@@ -6638,7 +6669,6 @@
 //8D4
 		8D0C4E890486CD37000505A6 = {
 			buildPhases = (
-				37577665078C8C0600CA4042,
 				8D0C4E8A0486CD37000505A6,
 				8D0C4E8C0486CD37000505A6,
 				8D0C4E8F0486CD37000505A6,
@@ -6690,6 +6720,7 @@
 				WRAPPER_EXTENSION = app;
 			};
 			dependencies = (
+				76B2FB70084CE761002FBDA1,
 			);
 			isa = PBXNativeTarget;
 			name = Polyworld;
