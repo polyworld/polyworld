@@ -5,8 +5,6 @@ In the short term, certain key user interface functionality must
 still be revived or newly developed, such as:
 
 * make the main view's camera rotate again 
-* the main view looks odd on some monitors, with the depth of the world
-  appearing greater than the width of the world
 * get the overhead view working again 
 * get zoom working in the overhead view 
 * allow overhead critter following (and toggle on/off, and set fitness rank)
@@ -45,6 +43,20 @@ enhance the evolutionary usefulness of collaboration.
 
 Recently done:
 
+* add "smite" option so that when the world fills up (to its maximum
+  number of critters), the least fit (that are over 1/2 their maximum
+  lifespan) can be killed to make room for organisms that want to
+  reproduce 5/31/05
+* put the Xcode shell script phase into its own target, so it completes
+  and generates new moc files (or not, as needed) before the dependencies
+  are analyzed for the main Polyworld target 5/31/05
+* fixed a couple massive memory leaks (all known memory leaks are fixed!)
+* made it so the gene separation isn't calculated unless it's needed
+* made it so the miscegenation function is easily turned off
+  (by setting misccritters to -1 in the worldfile--that's the way it's
+  now checked in)
+* added frame rates (instantaneous, recent, overall) in both frames/second
+  and seconds/frame to the text status window
 * get the brain monitor window actually working
 * get the strip of vision pixels back in the brain monitor window 
 * fix the ChartWindow's behavior - results do not seem to be averaged into

@@ -81,6 +81,17 @@ Build Polyworld (Xcode method)
 	- QtBin should point to the bin dir of the Qt distribution
 	("Setting Name" and "Display Name" can be the same; the "Path"
 	depends on your Qt installation.)
+    ***IMPORTANT NOTE*** As of Tiger, Xcode has a bug that causes
+    it to crash when opening the Polyworld.xcode project if these
+    parameters are not defined.  However, you cannot define them
+    without launching Xcode.  A nasty Catch 22.  Well, actually,
+    you could hand edit ~/Library/Preferences/com.apple.xcode.plist,
+    but, fortunately you don't have to go there...  The work-around
+    is to open any other project, that does NOT depend on these
+    paths, and define them in your preferences before attempting
+    to open Polyworld.xcode.  The paths are preferences that persist
+    across all projects for a given user, so this will make it
+    possible to develop Polyworld in Xcode on Tiger. ***END NOTE***
 * Build
 
 Be aware that the 'buildit' step above produces a Polyworld.app/ in
