@@ -517,9 +517,9 @@ void genome::CopyGenes(genome* sgenome)
 
 
 //---------------------------------------------------------------------------
-// genome::CalcSeperation
+// genome::CalcSeparation
 //---------------------------------------------------------------------------
-float genome::CalcSeperation(genome* g)
+float genome::CalcSeparation(genome* g)
 {
 #if pw_UseAltivec
 	#warning compiling with ALTIVEC code
@@ -658,7 +658,7 @@ float genome::MateProbability(genome* g)
     if (gMiscBias == 0.0)
         return 1.0;
         
-    float a = CalcSeperation(g);
+    float a = CalcSeparation(g);
     float cosa = cos(pow(a, gMiscBias) * PI);
     float s = cosa > 0.0 ? 0.5 : -0.5;
     float p = 0.5  +  s * pow(fabs(cosa), gMiscInvisSlope);

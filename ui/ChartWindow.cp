@@ -103,6 +103,7 @@ void TChartWindow::Init(short ncurves)
 			fColor[ic].r = float(ic) / float(fNumCurves-1);
 			fColor[ic].g =      1.  -  0.5 * float(ic) / float(fNumCurves-1);
 			fColor[ic].b = fabs(1.  -  2.0 * float(ic) / float(fNumCurves-1));
+			//printf( "%d of %d: %g %g %g\n", ic, fNumCurves, fColor[ic].r, fColor[ic].g, fColor[ic].b );
 		}
 		else
 		{
@@ -206,6 +207,7 @@ void TChartWindow::PlotPoints()
 {
 	for (short ic = 0; ic < fNumCurves; ic++)
 	{
+		//printf( "plotPoints: %d of %d: %g %g %g\n", ic, fNumCurves, fColor[ic].r, fColor[ic].g, fColor[ic].b );
 		glColor3fv((GLfloat *)&fColor[ic]);
 		glLineWidth(1.0);
 		

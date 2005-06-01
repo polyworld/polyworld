@@ -17,6 +17,7 @@ struct Color
     GLfloat b;
     GLfloat a;
 };
+typedef struct Color Color;
 
 
 #endif

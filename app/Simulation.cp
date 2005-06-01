@@ -55,7 +55,7 @@ TSimulation::TSimulation(TSceneView* sceneView)
 		fFoodEnergyWindow(NULL),
 		fPopulationWindow(NULL),
 		fBrainMonitorWindow(NULL),
-		fGeneSeperationWindow(NULL),
+		fGeneSeparationWindow(NULL),
 		fPaused(false),
 		fDelay(0),
 		fDumpFrequency(500),
@@ -108,8 +108,8 @@ TSimulation::~TSimulation()
 	if (fBrainMonitorWindow != NULL)
 		delete fBrainMonitorWindow;	
 
-	if (fGeneSeperationWindow != NULL)
-		delete fGeneSeperationWindow;
+	if (fGeneSeparationWindow != NULL)
+		delete fGeneSeparationWindow;
 
 	if (fCritterPOVWindow != NULL)
 		delete fCritterPOVWindow;
@@ -440,9 +440,9 @@ void TSimulation::Step()
 	debugcheck(debugstring);
 #endif DEBUGCHECK
 	
-	// Handle tracking gene seperation
-	if (fMonitorGeneSeperation && fRecordGeneSeperation)
-		RecordGeneSeperation();
+	// Handle tracking gene Separation
+	if (fMonitorGeneSeparation && fRecordGeneSeparation)
+		RecordGeneSeparation();
 		
 }
 
@@ -499,7 +499,26 @@ void TSimulation::Init()
             }
         }
     }
-    
+
+#if 1
+	if( fSmiteFrac > 0.0 )
+	{
+        for( int id = 0; id < fNumDomains; id++ )
+        {
+			fDomains[id].fNumLeastFit = 0;
+			fDomains[id].fMaxNumLeastFit = lround( fSmiteFrac * fDomains[id].maxnumcritters );
+			
+			if( fDomains[id].fMaxNumLeastFit > 0 )
+			{
+				fDomains[id].fLeastFit = new critter*[fDomains[id].fMaxNumLeastFit];
+				
+				for( int i = 0; i < fDomains[id].fMaxNumLeastFit; i++ )
+					fDomains[id].fLeastFit[i] = NULL;
+			}
+        }
+	}
+#else
+	// Eliminated all global least-fit structs for efficiency, as I think we always require at least one domain now  -  lsy 6/1/05
 	fNumLeastFit = 0;
 	fMaxNumLeastFit = lround( fSmiteFrac * fMaxCritters );
 	
@@ -524,6 +543,7 @@ void TSimulation::Init()
 			}
         }
 	}
+#endif
 
     // Pass ownership of the cast to the stage [TODO] figure out ownership issues
     fStage.SetCast(&fWorldCast);
@@ -681,21 +701,21 @@ void TSimulation::Init()
 	// TODO add overhead view here
 	
 	
-	// Set up gene seperation monitoring
-	if (fMonitorGeneSeperation)
+	// Set up gene Separation monitoring
+	if (fMonitorGeneSeparation)
     {
 		fGeneSepVals = new float[fMaxCritters * (fMaxCritters - 1) / 2];
         fNumGeneSepVals = 0;
         CalculateGeneSeparationAll();
         
-        if (fRecordGeneSeperation)
+        if (fRecordGeneSeparation)
         {
-            fGeneSeperationFile = fopen("pw.genesep", "w");
-	    	RecordGeneSeperation();
+            fGeneSeparationFile = fopen("pw.genesep", "w");
+	    	RecordGeneSeparation();
         }
         
-		if (fChartGeneSeperation && fGeneSeperationWindow != NULL)
-			fGeneSeperationWindow->AddPoint(fGeneSepVals, fNumGeneSepVals);
+		if (fChartGeneSeparation && fGeneSeparationWindow != NULL)
+			fGeneSeparationWindow->AddPoint(fGeneSepVals, fNumGeneSepVals);
     }
 }
 
@@ -788,8 +808,8 @@ void TSimulation::InitWorld()
 	fMonitorCritterRank = 1;
 	fMonitorCritterRankOld = 0;
 	fMonitorCritter = NULL;
-	fMonitorGeneSeperation = false;
-    fRecordGeneSeperation = false;
+	fMonitorGeneSeparation = false;
+    fRecordGeneSeparation = false;
     
     fNumberCreated = 0;
     fNumberCreatedRandom = 0;
@@ -805,14 +825,15 @@ void TSimulation::InitWorld()
     fNumberFights = 0;
     fMaxFitness = 0.;
     fAverageFitness = 0.;
-    fMiscNoBirth = 0;
+	fBirthDenials = 0;
+    fMiscDenials = 0;
     fLastCreated = 0;
     fGapFromLastCreate = 0;
-    fMinGeneSeperation = 1.e+10;
-    fMaxGeneSeperation = 0.0;
-    fAverageGeneSeperation = 5.e+9;
+    fMinGeneSeparation = 1.e+10;
+    fMaxGeneSeparation = 0.0;
+    fAverageGeneSeparation = 5.e+9;
     fNumBornSinceCreated = 0;
-    fChartGeneSeperation = false; // GeneSeparation (if true, genesepmon must be true)
+    fChartGeneSeparation = false; // GeneSeparation (if true, genesepmon must be true)
     fDeathProbability = 0.001;
     fSmiteFrac = 0.05;
 	fSmiteAgeFrac = 0.5;
@@ -876,7 +897,6 @@ void TSimulation::InitWorld()
     critter::gMaxVelocity = 1.0;
     fMaxCritters = 50;	
     critter::gInitMateWait = 25;
-//	fMinSmiteAge = critter::gInitMateWait + fMateWait;
     critter::gMinCritterSize = 1.0;
     critter::gMinCritterSize = 4.0;
     critter::gMinMaxEnergy = 500.0;
@@ -942,7 +962,7 @@ void TSimulation::InitMonitoringWindows()
 	fFitnessWindow->SetRange(0, 0.0, 1.0);
 	fFitnessWindow->SetRange(1, 0.0, 1.0);
 	fFitnessWindow->SetRange(2, 0.0, 1.0);
-	fFitnessWindow->SetColor(0, 1.0, 1.0,1.0);
+	fFitnessWindow->SetColor(0, 1.0, 1.0, 1.0);
 	fFitnessWindow->SetColor(1, 1.0, 0.3, 0.0);
 	fFitnessWindow->SetColor(2, 0.0, 1.0, 1.0);
 	fFitnessWindow->setFixedSize(TChartWindow::kMaxWidth, TChartWindow::kMaxHeight);	
@@ -957,11 +977,15 @@ void TSimulation::InitMonitoringWindows()
 	fFoodEnergyWindow->setFixedSize(TChartWindow::kMaxWidth, TChartWindow::kMaxHeight);	
 	
 	// Population
-	const Color popColor[3] =
+	const Color popColor[7] =
 	{
 		{ 1.0, 0.0, 0.0, 0.0 },
 		{ 0.0, 1.0, 0.0, 0.0 },
-		{ 0.0, 0.0, 1.0, 0.0 }
+		{ 0.0, 0.0, 1.0, 0.0 },
+		{ 0.0, 1.0, 1.0, 0.0 },
+		{ 1.0, 0.0, 1.0, 0.0 },
+		{ 1.0, 1.0, 0.0, 0.0 },
+		{ 1.0, 1.0, 1.0, 1.0 }
 	};
 	
 	const short numpop = (fNumDomains < 2) ? 1 : (fNumDomains + 1);
@@ -970,7 +994,7 @@ void TSimulation::InitMonitoringWindows()
 	sprintf( fPopulationWindow->title, "population size" );
 	for (int i = 0; i < numpop; i++)
 	{
-		int colorIndex = (i < 3) ? i : 2;
+		int colorIndex = i % 7;
 		fPopulationWindow->SetRange(short(i), 0, fMaxCritters);
 		fPopulationWindow->SetColor(i, popColor[colorIndex]);
 	}
@@ -987,11 +1011,11 @@ void TSimulation::InitMonitoringWindows()
 	fTextStatusWindow = new TTextStatusWindow(this);
 				
 #if 0
-	// Gene seperation
-	fGeneSeperationWindow = new TBinChartWindow(kGeneWindow);
-	fGeneSeperationWindow->setCaption("gene separation");
-	fGeneSeperationWindow->SetRange(0.0, 1.0);
-	fGeneSeperationWindow->SetExponent(0.5);
+	// Gene separation
+	fGeneSeparationWindow = new TBinChartWindow(kGeneWindow);
+	fGeneSeparationWindow->setCaption("gene separation");
+	fGeneSeparationWindow->SetRange(0.0, 1.0);
+	fGeneSeparationWindow->SetExponent(0.5);
 #endif
 		
 	// Tile and show them along the left edge of the screen
@@ -1024,10 +1048,10 @@ void TSimulation::InitMonitoringWindows()
 		topY = fPopulationWindow->frameGeometry().bottom() - titleHeight + 3;
 	}
 	
-	if (fGeneSeperationWindow != NULL)
+	if (fGeneSeparationWindow != NULL)
 	{
-		fGeneSeperationWindow->RestoreFromPrefs(0, topY);
-		topY = fGeneSeperationWindow->frameGeometry().bottom() - titleHeight + 3;
+		fGeneSeparationWindow->RestoreFromPrefs(0, topY);
+		topY = fGeneSeparationWindow->frameGeometry().bottom() - titleHeight + 3;
 	}
 	
 	if (fBrainMonitorWindow != NULL)
@@ -1067,7 +1091,7 @@ void TSimulation::Interact()
 	short kd;
     short fd;
 	bool cDied;
-	bool foodMarked;
+	bool foodMarked = 0;
     float cpower;
     float dpower;
     
@@ -1085,9 +1109,13 @@ void TSimulation::Interact()
         fCurrentFittestCritter[i] = NULL;
     }
     fAverageFitness = 0.0;
-	fNumSmited = 0;
+//	fNumLeastFit = 0;
+//	fNumSmited = 0;
 	for( i = 0; i < fNumDomains; i++ )
+	{
+		fDomains[i].fNumLeastFit = 0;
 		fDomains[i].fNumSmited = 0;
+	}
 	
 	// Take care of deaths first, plus least-fit determinations
 
@@ -1129,10 +1157,11 @@ void TSimulation::Interact()
 		// Figure out who is least fit, if we're doing smiting to make room for births
 		
 		// Do the bookkeeping for the specific domain, if we're using domains
+		// Note: I think we must have at least one domain these days - lsy 6/1/05
 		if( (fNumDomains > 0) && (fDomains[id].fMaxNumLeastFit > 0) )
 		{
 			if( (fDomains[id].numcritters > (fDomains[id].maxnumcritters - fDomains[id].fMaxNumLeastFit)) &&	// if there are getting to be too many critters, and
-				(c->Age() >= fSmiteAgeFrac * c->MaxAge()) &&													// the current critter is old enough to consider for smiting, and
+				(c->Age() >= (fSmiteAgeFrac * c->MaxAge())) &&													// the current critter is old enough to consider for smiting, and
 				( (fDomains[id].fNumLeastFit < fDomains[id].fMaxNumLeastFit)	||								// (we haven't filled our quota yet, or
 				  (c->Fitness() < fDomains[id].fLeastFit[fDomains[id].fNumLeastFit-1]->Fitness()) ) )			// the critter is bad enough to displace one already in the queue)
 			{
@@ -1172,12 +1201,14 @@ void TSimulation::Interact()
 				}
 			}
 		}
-		
+	
+	#if 0
+		// Eliminated for efficiency, as I think we always require at least one domain now  -  lsy 6/1/05
 		// Do the overall bookkeeping, but only if we're not doing it for domains
 		if( (fNumDomains == 0) && (fMaxNumLeastFit > 0) )
 		{
 			if( (critter::gXSortedCritters.count() > (fMaxCritters - fMaxNumLeastFit)) &&	// if there are getting to be too many critters, and
-				(c->Age() >= fSmiteAgeFrac * c->MaxAge()) &&								// the current critter is old enough to consider for smiting, and
+				(c->Age() >= (fSmiteAgeFrac * c->MaxAge())) &&								// the current critter is old enough to consider for smiting, and
 				( (fNumLeastFit < fMaxNumLeastFit)	||										// (we haven't filled our quota yet, or
 				  (c->Fitness() < fLeastFit[fNumLeastFit-1]->Fitness()) ) )					// the critter is bad enough to displace one already in the queue)
 			{
@@ -1217,49 +1248,10 @@ void TSimulation::Interact()
 				}
 			}
 		}
+	#endif
 	}
 
 	//cout << "after deaths1 "; critter::gXSortedCritters.list();	//dbg
-
-#if 0
-	if( fNumDomains > 0 )
-	{
-		// Smite critters as needed in each of the domains
-		for( id = 0; id < fNumDomains; id++ )
-		{
-			if( fDomains[id].fNumLeastFit > 0 )	// if we have any critters available to smite
-			{
-				int numToSmite = fDomains[id].numcritters - (fDomains[id].maxnumcritters - fDomains[id].fMaxNumLeastFit);
-				if( numToSmite > fDomains[id].fNumLeastFit )
-					numToSmite = fDomains[id].fNumLeastFit;
-				if( numToSmite > 0 )	// we have too many critters
-				{
-					// Do the smiting
-					for( int i = 0; i < numToSmite; i++ )
-						Death( fDomains[id].fLeastFit[i] );
-					// No need to update the leastFit bookkeeping, because this is the only place it's used
-				}
-			}
-		}
-	}
-	else
-	{
-		// Smite critters globally (only if this wasn't handled in the domains)
-		if( fNumLeastFit > 0 )	// if we have any critters available to smite
-		{
-			int numToSmite = critter::gXSortedCritters.count() - (fMaxCritters - fMaxNumLeastFit);
-			if( numToSmite > fNumLeastFit )
-				numToSmite = fNumLeastFit;	// we can only smite as many as we have available
-			if( numToSmite > 0 )	// we have too many critters
-			{
-				// Do the smiting
-				for( int i = 0; i < numToSmite; i++ )
-					Death( fLeastFit[i] );
-				// No need to update the leastFit bookkeeping, because this is the only place it's used
-			}
-		}
-	}
-#endif
 
 	// Now go through the list, and use the influence radius to determine
 	// all possible interactions
@@ -1341,13 +1333,14 @@ void TSimulation::Interact()
 							Death( fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] );
 							fDomains[kd].fNumSmited++;
 							fNumberDiedSmite++;
-							cout << "********************* SMITE *******************" nlf;	//dbg
+							//cout << "********************* SMITE *******************" nlf;	//dbg
 						}
 					}
 
                     if ( (fDomains[kd].numcritters < fDomains[kd].maxnumcritters) &&
                          ((critter::gXSortedCritters.count() + newCritters.count()) < fMaxCritters) )
                     {
+						// Still got room for more
                         if( (fMiscCritters < 0) ||									// miscegenation function not being used
 							(fDomains[kd].numbornsincecreated < fMiscCritters) ||	// miscegenation function not in use yet
 							(drand48() < c->MateProbability(d)) )					// miscegenation function allows the birth
@@ -1382,9 +1375,14 @@ void TSimulation::Interact()
                             cout << "age " << fAge << ": critter #" << e->number() << " born" nlf;
 						#endif TEXTTRACE
                         }
-                        else
-                            fMiscNoBirth++;
+                        else	// miscegenation function denied this birth
+						{
+							fBirthDenials++;
+                            fMiscDenials++;
+						}
                     }
+					else	// Too many critters
+						fBirthDenials++;
                 }
 
 			#ifdef DEBUGCHECK
@@ -1538,7 +1536,7 @@ void TSimulation::Interact()
 
     fAverageFitness /= critter::gXSortedCritters.count();
 
-    if (fMonitorGeneSeperation && (fNewDeaths > 0))
+    if (fMonitorGeneSeparation && (fNewDeaths > 0))
         CalculateGeneSeparationAll();
         
 	// now for a little spontaneous generation!
@@ -1685,12 +1683,12 @@ void TSimulation::Interact()
         bool foundinsertionpt;
         bool oldlistfinished = false;
         critter::gXSortedCritters.reset();
-		newCritters.sort();
+//		newCritters.sort();	// not needed, because new critters are always added wih cxsortedlist::add(), which sorts on add
         newCritters.reset();
         while (newCritters.next(newCritter))
         {
-            if (fMonitorGeneSeperation)
-                CalculateGeneSeperation(newCritter);
+            if (fMonitorGeneSeparation)
+                CalculateGeneSeparation(newCritter);
 
             if (oldlistfinished)
                 newCritter->listLink = critter::gXSortedCritters.append(newCritter);
@@ -1720,13 +1718,13 @@ void TSimulation::Interact()
     debugcheck("after newcritters added to critter::gXSortedCritters in interact");
 #endif DEBUGCHECK
 
-    if ((newlifes || fNewDeaths) && fMonitorGeneSeperation)
+    if ((newlifes || fNewDeaths) && fMonitorGeneSeparation)
     {
-        if (fRecordGeneSeperation)
-            RecordGeneSeperation();
+        if (fRecordGeneSeparation)
+            RecordGeneSeparation();
             
-		if (fChartGeneSeperation && fGeneSeperationWindow != NULL)
-			fGeneSeperationWindow->AddPoint(fGeneSepVals, fNumGeneSepVals);
+		if (fChartGeneSeparation && fGeneSeparationWindow != NULL)
+			fGeneSeparationWindow->AddPoint(fGeneSepVals, fNumGeneSepVals);
     }
 
 	// finally, keep the world's food supply going...
@@ -1802,22 +1800,22 @@ void TSimulation::Interact()
 
 
 //---------------------------------------------------------------------------
-// TSimulation::RecordGeneSeperation
+// TSimulation::RecordGeneSeparation
 //---------------------------------------------------------------------------
-void TSimulation::RecordGeneSeperation()
+void TSimulation::RecordGeneSeparation()
 {
-	fprintf(fGeneSeperationFile, "%d %g %g %g\n",
+	fprintf(fGeneSeparationFile, "%d %g %g %g\n",
 			fAge,
-			fMaxGeneSeperation,
-			fMinGeneSeperation,
-			fAverageGeneSeperation);
+			fMaxGeneSeparation,
+			fMinGeneSeparation,
+			fAverageGeneSeparation);
 }
 
 
 //---------------------------------------------------------------------------
-// TSimulation::CalculateGeneSeperation
+// TSimulation::CalculateGeneSeparation
 //---------------------------------------------------------------------------
-void TSimulation::CalculateGeneSeperation(critter* ci)
+void TSimulation::CalculateGeneSeparation(critter* ci)
 {
 	// TODO add assert to validate statement below
 	
@@ -1836,9 +1834,9 @@ void TSimulation::CalculateGeneSeperation(critter* ci)
 	critter::gXSortedCritters.reset();
 	while (critter::gXSortedCritters.next(cj))
     {
-		genesep = ci->Genes()->CalcSeperation(cj->Genes());
-        fMaxGeneSeperation = fmax(genesep, fMaxGeneSeperation);
-        fMinGeneSeperation = fmin(genesep, fMinGeneSeperation);
+		genesep = ci->Genes()->CalcSeparation(cj->Genes());
+        fMaxGeneSeparation = fmax(genesep, fMaxGeneSeparation);
+        fMinGeneSeparation = fmin(genesep, fMinGeneSeparation);
         genesepsum += genesep;
         fGeneSepVals[fNumGeneSepVals++] = genesep;
     }
@@ -1864,7 +1862,7 @@ void TSimulation::CalculateGeneSeperation(critter* ci)
         error(2,tempstring);
     }
     
-    fAverageGeneSeperation = (genesepsum + fAverageGeneSeperation * numgsvalsold) / fNumGeneSepVals;
+    fAverageGeneSeparation = (genesepsum + fAverageGeneSeparation * numgsvalsold) / fNumGeneSepVals;
 	
 	critter::gXSortedCritters.tomark();
 }
@@ -1881,8 +1879,8 @@ void TSimulation::CalculateGeneSeparationAll()
     
     float genesep;
     float genesepsum = 0.0;
-    fMinGeneSeperation = 1.e+10;
-    fMaxGeneSeperation = 0.0;
+    fMinGeneSeparation = 1.e+10;
+    fMaxGeneSeparation = 0.0;
     fNumGeneSepVals = 0;
     
 	critter::gXSortedCritters.reset();
@@ -1892,9 +1890,9 @@ void TSimulation::CalculateGeneSeparationAll()
 
 		while (critter::gXSortedCritters.next(cj))
 		{	
-            genesep = ci->Genes()->CalcSeperation(cj->Genes());
-            fMaxGeneSeperation = max(genesep, fMaxGeneSeperation);
-            fMinGeneSeperation = min(genesep, fMinGeneSeperation);
+            genesep = ci->Genes()->CalcSeparation(cj->Genes());
+            fMaxGeneSeparation = max(genesep, fMaxGeneSeparation);
+            fMinGeneSeparation = min(genesep, fMinGeneSeparation);
             genesepsum += genesep;
             fGeneSepVals[fNumGeneSepVals++] = genesep;
         }
@@ -1913,7 +1911,7 @@ void TSimulation::CalculateGeneSeparationAll()
         error(2, tempstring);
     }
     
-    fAverageGeneSeperation = genesepsum / fNumGeneSepVals;    
+    fAverageGeneSeparation = genesepsum / fNumGeneSepVals;    
 }
 
 
@@ -1989,25 +1987,31 @@ void TSimulation::Death(critter* c)
     if (fCrittersRfood
     	&& ((long)food::gXSortedFood.count() < fMaxFoodCount)
     	&& (fDomains[id].foodcount < fDomains[id].maxfoodcount)
-    	&& (globals::edges || ((c->x() >= 0.0) && (c->x() <=  globals::worldsize)
-    	&& (c->z() <= 0.0) && (c->z() >= -globals::worldsize))))
+    	&& (globals::edges || ((c->x() >= 0.0) && (c->x() <=  globals::worldsize) &&
+    	                       (c->z() <= 0.0) && (c->z() >= -globals::worldsize))) )
     {
         float foodenergy = c->FoodEnergy();
-        if (foodenergy < fMinFoodEnergyAtDeath)
+		
+        if (foodenergy < fMinFoodEnergyAtDeath)	// it will be bumped up to fMinFoodEnergyAtDeath
         {
-            if (fMinFoodEnergyAtDeath >= food::gMinFoodEnergy)
-                fFoodEnergyIn += fMinFoodEnergyAtDeath - foodenergy;
-            else
-                fFoodEnergyOut += foodenergy;
+            if (fMinFoodEnergyAtDeath >= food::gMinFoodEnergy)			// it will get turned into food
+                fFoodEnergyIn += fMinFoodEnergyAtDeath - foodenergy;	// so account for the increase due to the bump (original amount already accounted for)
+            else														// else it'll just be disposed of
+                fFoodEnergyOut += foodenergy;							// so account for the lost energy
                 
             foodenergy = fMinFoodEnergyAtDeath;
         }
+		else	// it will retain its original value (no bump due to the min)
+		{
+			if( foodenergy < food::gMinFoodEnergy )	// it's going to be disposed of
+				fFoodEnergyOut += foodenergy;		// so account for the lost energy
+		}
         
         if (foodenergy >= food::gMinFoodEnergy)
         {
             food* f = new food(foodenergy, c->x(), c->z());
             Q_CHECK_PTR(f);
-			food::gXSortedFood.add(f);  	// dead critter becomes food
+			food::gXSortedFood.add(f);  // dead critter becomes food
 			fStage.AddObject(f);		// put replacement food into the world
 			fDomains[id].foodcount++;
 			f->domain(id);
@@ -2069,8 +2073,37 @@ void TSimulation::Death(critter* c)
     if (c->Fitness() > fMaxFitness)
         fMaxFitness = c->Fitness();
 	
-	// Don't have to update leastFit data structures, because that information is
-	// currently only used in one place in Interact(), immediately after it is computed
+	// Must also update the leastFit data structures, now that they
+	// are used on-demand in the main mate/fight/eat loop in Interact()
+
+#if 0
+	// Eliminated for efficiency, as I think we always require at least one domain now  -  lsy 6/1/05
+	// Update the global leastFit list
+	for( int i = 0; i < fNumLeastFit; i++ )
+	{
+		if( fLeastFit[i] != c )	// not one of our least fit, so just loop again to keep searching
+			continue;
+
+		// one of our least-fit critters died, so pull in the list over it
+		for( int j = i; j < fNumLeastFit-1; j++ )
+			fLeastFit[j] = fLeastFit[j+1];
+		fNumLeastFit--;
+		break;	// c can only appear once in the list, so we're done
+	}
+#endif
+
+	// Update the domain-specific leastFit list (only one, as we know which domain it's in)
+	for( int i = 0; i < fDomains[id].fNumLeastFit; i++ )
+	{
+		if( fDomains[id].fLeastFit[i] != c )	// not one of our least fit, so just loop again to keep searching
+			continue;
+
+		// one of our least-fit critters died, so pull in the list over it
+		for( int j = i; j < fDomains[id].fNumLeastFit-1; j++ )
+			fDomains[id].fLeastFit[j] = fDomains[id].fLeastFit[j+1];
+		fDomains[id].fNumLeastFit--;
+		break;	// c can only appear once in the list, so we're done
+	}
 	
 	// Remove critter from world
     fStage.RemoveObject(c);
@@ -2381,10 +2414,10 @@ void TSimulation::ReadWorldFile(const char* filename)
         return;
 	}
         
-    in >> fMonitorGeneSeperation; in >> label;
-    cout << "genesepmon" ses fMonitorGeneSeperation nl;
-    in >> fRecordGeneSeperation; in >> label;
-    cout << "geneseprec" ses fRecordGeneSeperation nl;
+    in >> fMonitorGeneSeparation; in >> label;
+    cout << "genesepmon" ses fMonitorGeneSeparation nl;
+    in >> fRecordGeneSeparation; in >> label;
+    cout << "geneseprec" ses fRecordGeneSeparation nl;
     cout nlf;
 
     if (version < 3)
@@ -2526,10 +2559,10 @@ void TSimulation::ReadWorldFile(const char* filename)
         return;
 	}
 
-    in >> fChartGeneSeperation; in >> label;
-    cout << "fChartGeneSeperation" ses fChartGeneSeperation nl;
-    if (fChartGeneSeperation)
-        fMonitorGeneSeperation = true;
+    in >> fChartGeneSeparation; in >> label;
+    cout << "fChartGeneSeparation" ses fChartGeneSeparation nl;
+    if (fChartGeneSeparation)
+        fMonitorGeneSeparation = true;
 
     cout nlf;
 
@@ -2638,7 +2671,7 @@ void TSimulation::Dump()
 	out << fNumberDiedSmite nl;
     out << fNumberBorn nl;
     out << fNumberFights nl;
-    out << fMiscNoBirth nl;
+    out << fMiscDenials nl;
     out << fLastCreated nl;
     out << fGapFromLastCreate nl;
     out << fNumBornSinceCreated nl;
@@ -2648,9 +2681,9 @@ void TSimulation::Dump()
     out << fCritterTracking nl;
     out << fOverHeadRank nl;
     out << fOverHeadRankOld nl;
-    out << fMaxGeneSeperation nl;
-    out << fMinGeneSeperation nl;
-    out << fAverageGeneSeperation nl;
+    out << fMaxGeneSeparation nl;
+    out << fMinGeneSeparation nl;
+    out << fAverageGeneSeparation nl;
     out << fMaxFitness nl;
     out << fAverageFitness nl;
     out << fAverageFoodEnergyIn nl;
@@ -2725,8 +2758,8 @@ void TSimulation::Dump()
 	if (fPopulationWindow != NULL)
 		fPopulationWindow->Dump(out);
 
-	if (fGeneSeperationWindow != NULL)
-		fGeneSeperationWindow->Dump(out);
+	if (fGeneSeparationWindow != NULL)
+		fGeneSeparationWindow->Dump(out);
 		
 
     out.flush();
@@ -2800,296 +2833,300 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 	char t2[256];
 	short id;
 	
-	sprintf(t, "age = %ld", fAge);
-	list.push_back(strdup(t));
+	sprintf( t, "age = %ld", fAge );
+	list.push_back( strdup( t ) );
 	
-	sprintf(t,"critters = %4ld", critter::gXSortedCritters.count());
+	sprintf( t, "critters = %4ld", critter::gXSortedCritters.count() );
 	if (fNumDomains > 1)
 	{
-		sprintf(t2, " (%ld",fDomains[0].numcritters);
-		strcat(t, t2);
+		sprintf(t2, " (%ld",fDomains[0].numcritters );
+		strcat(t, t2 );
 		for (id = 1; id < fNumDomains; id++)
 		{
-			sprintf(t2, ", %ld", fDomains[id].numcritters);
-			strcat(t,t2);
+			sprintf(t2, ", %ld", fDomains[id].numcritters );
+			strcat( t, t2 );
 		}
 		
-		strcat(t,")");		
+		strcat(t,")" );		
 	}
-	list.push_back(strdup(t));
+	list.push_back( strdup( t ) );
 
-	sprintf(t, "created  = %4ld", fNumberCreated);
+	sprintf( t, "created  = %4ld", fNumberCreated );
 	if (fNumDomains > 1)
 	{
-		sprintf(t2," (%ld",fDomains[0].numcreated);
-		strcat(t,t2);
+		sprintf( t2, " (%ld",fDomains[0].numcreated );
+		strcat( t, t2 );
 		
 		for (id = 1; id < fNumDomains; id++)
 		{
-			sprintf(t2,",%ld",fDomains[id].numcreated);
-			strcat(t,t2);
+			sprintf( t2, ",%ld",fDomains[id].numcreated );
+			strcat( t, t2 );
 		}
-		strcat(t,")");
+		strcat(t,")" );
 	}
-	list.push_back(strdup(t));
+	list.push_back( strdup( t ) );
 
-	sprintf(t," -random = %4ld", fNumberCreatedRandom);
-	list.push_back(strdup(t));
+	sprintf( t, " -random = %4ld", fNumberCreatedRandom );
+	list.push_back( strdup( t ) );
         
-	sprintf(t," -two    = %4ld", fNumberCreated2Fit);
-	list.push_back(strdup(t));
+	sprintf( t, " -two    = %4ld", fNumberCreated2Fit );
+	list.push_back( strdup( t ) );
 
-	sprintf(t," -one    = %4ld", fNumberCreated1Fit);
-	list.push_back(strdup(t));
+	sprintf( t, " -one    = %4ld", fNumberCreated1Fit );
+	list.push_back( strdup( t ) );
 
-	sprintf(t,"born     = %4ld", fNumberBorn);
+	sprintf( t, "born     = %4ld", fNumberBorn );
 	if (fNumDomains > 1)
 	{
-		sprintf(t2," (%ld",fDomains[0].numborn);
-		strcat(t,t2);
+		sprintf( t2, " (%ld",fDomains[0].numborn );
+		strcat( t, t2 );
 		for (id = 1; id < fNumDomains; id++)
 		{
-			sprintf(t2,",%ld",fDomains[id].numborn);
-			strcat(t,t2);
+			sprintf( t2, ",%ld",fDomains[id].numborn );
+			strcat( t, t2 );
 		}
-		strcat(t,")");
+		strcat(t,")" );
 	}
-	list.push_back(strdup(t));
+	list.push_back( strdup( t ) );
 
-	sprintf(t,"died     = %4ld", fNumberDied);
+	sprintf( t, "died     = %4ld", fNumberDied );
 	if (fNumDomains > 1)
 	{
-		sprintf(t2," (%ld",fDomains[0].numdied);
-		strcat(t,t2);
+		sprintf( t2, " (%ld",fDomains[0].numdied );
+		strcat( t, t2 );
 		for (id = 1; id < fNumDomains; id++)
 		{
-			sprintf(t2,",%ld",fDomains[id].numdied);
-			strcat(t,t2);
+			sprintf( t2, ",%ld",fDomains[id].numdied );
+			strcat( t, t2 );
 		}
-		strcat(t,")");
+		strcat(t,")" );
 	}
-	list.push_back(strdup(t));
+	list.push_back( strdup( t ) );
 
 
-	sprintf(t," -age    = %4ld", fNumberDiedAge);
-	list.push_back(strdup(t));
+	sprintf( t, " -age    = %4ld", fNumberDiedAge );
+	list.push_back( strdup( t ) );
 	
-	sprintf(t," -energy = %4ld", fNumberDiedEnergy);
-	list.push_back(strdup(t));
+	sprintf( t, " -energy = %4ld", fNumberDiedEnergy );
+	list.push_back( strdup( t ) );
 	
-	sprintf(t," -fight  = %4ld", fNumberDiedFight);
-	list.push_back(strdup(t));
+	sprintf( t, " -fight  = %4ld", fNumberDiedFight );
+	list.push_back( strdup( t ) );
 	
-	sprintf(t," -edge   = %4ld", fNumberDiedEdge);
-	list.push_back(strdup(t));
+	sprintf( t, " -edge   = %4ld", fNumberDiedEdge );
+	list.push_back( strdup( t ) );
 
-	sprintf(t," -smite    = %4ld", fNumberDiedSmite);
-	list.push_back(strdup(t));
+	sprintf( t, " -smite    = %4ld", fNumberDiedSmite );
+	list.push_back( strdup( t ) );
 	
-	sprintf(t,"food = %ld", food::gXSortedFood.count());
+	sprintf( t, "food = %ld", food::gXSortedFood.count() );
 	if (fNumDomains > 1)
 	{
-	    sprintf(t2," (%ld",fDomains[0].foodcount);
-	    strcat(t,t2);
+	    sprintf( t2, " (%ld",fDomains[0].foodcount );
+	    strcat( t, t2 );
 	    for (id = 1; id < fNumDomains; id++)
 	    {
-	        sprintf(t2,",%ld",fDomains[id].foodcount);
-	        strcat(t,t2);
+	        sprintf( t2, ",%ld",fDomains[id].foodcount );
+	        strcat( t, t2 );
 	    }
-	    strcat(t,")");
+	    strcat(t,")" );
 	}
-	list.push_back(strdup(t));
+	list.push_back( strdup( t ) );
 
-    sprintf(t, "miscDenials = %ld", fMiscNoBirth);
-	list.push_back(strdup(t));
+    sprintf( t, "birthDenials = %ld", fBirthDenials );
+	list.push_back( strdup( t ) );
     
-    sprintf(t,"ageCreate = %ld", fLastCreated);
+    sprintf( t, "miscDenials = %ld", fMiscDenials );
+	list.push_back( strdup( t ) );
+    
+    sprintf( t, "ageCreate = %ld", fLastCreated );
     if (fNumDomains > 1)
     {
-        sprintf(t2," (%ld",fDomains[0].lastcreate);
-        strcat(t,t2);
+        sprintf( t2, " (%ld",fDomains[0].lastcreate );
+        strcat( t, t2 );
         for (id = 1; id < fNumDomains; id++)
         {
-            sprintf(t2,",%ld",fDomains[id].lastcreate);
-            strcat(t,t2);
+            sprintf( t2, ",%ld",fDomains[id].lastcreate );
+            strcat( t, t2 );
         }
-        strcat(t,")");
+        strcat(t,")" );
     }
-	list.push_back(strdup(t));
+	list.push_back( strdup( t ) );
 
-	sprintf(t,"maxGapCreate = %ld", fGapFromLastCreate);
+	sprintf( t, "maxGapCreate = %ld", fGapFromLastCreate );
 	if (fNumDomains > 1)
 	{
-		sprintf(t2," (%ld",fDomains[0].maxgapcreate);
-	   	strcat(t,t2);
+		sprintf( t2, " (%ld",fDomains[0].maxgapcreate );
+	   	strcat( t, t2 );
 	   	for (id = 1; id < fNumDomains; id++)
 	   	{
-			sprintf(t2,",%ld", fDomains[id].maxgapcreate);
-	       	strcat(t, t2);
+			sprintf( t2, ",%ld", fDomains[id].maxgapcreate );
+	       	strcat(t, t2 );
 	   	}
-	   	strcat(t,")");
+	   	strcat(t,")" );
 	}
-	list.push_back(strdup(t));
+	list.push_back( strdup( t ) );
 
-	sprintf(t, "born/total = %.2f", float(fNumberBorn) / float(fNumberCreated + fNumberBorn));
-	list.push_back(strdup(t));
+	sprintf( t, "born/total = %.2f", float(fNumberBorn) / float(fNumberCreated + fNumberBorn) );
+	list.push_back( strdup( t ) );
 
-	sprintf(t,"maxFitNorm = %.2f", fMaxFitness / fTotalFitness);
-	list.push_back(strdup(t));
+	sprintf( t, "maxFitNorm = %.2f", fMaxFitness / fTotalFitness );
+	list.push_back( strdup( t ) );
 	
-	sprintf(t,"currMaxFitNorm = %.2f", fCurrentMaxFitness[0] / fTotalFitness);
-	list.push_back(strdup(t));
+	sprintf( t, "currMaxFitNorm = %.2f", fCurrentMaxFitness[0] / fTotalFitness );
+	list.push_back( strdup( t ) );
 	
-	sprintf(t,"avgFitNorm = %.2f", fAverageFitness / fTotalFitness);
-	list.push_back(strdup(t));
+	sprintf( t, "avgFitNorm = %.2f", fAverageFitness / fTotalFitness );
+	list.push_back( strdup( t ) );
 	
-	sprintf(t,"maxFit = %g", fMaxFitness);
-	list.push_back(strdup(t));
+	sprintf( t, "maxFit = %g", fMaxFitness );
+	list.push_back( strdup( t ) );
 	
-	sprintf(t,"currMaxFit = %g", fCurrentMaxFitness[0]);
-	list.push_back(strdup(t));
+	sprintf( t, "currMaxFit = %g", fCurrentMaxFitness[0] );
+	list.push_back( strdup( t ) );
 
-	sprintf(t,"avgFit = %g", fAverageFitness);
-	list.push_back(strdup(t));
+	sprintf( t, "avgFit = %g", fAverageFitness );
+	list.push_back( strdup( t ) );
 
-	sprintf(t,"avgFoodEnergy = %.2f",(fAverageFoodEnergyIn - fAverageFoodEnergyOut) / (fAverageFoodEnergyIn + fAverageFoodEnergyOut));
-	list.push_back(strdup(t));
+	sprintf( t, "avgFoodEnergy = %.2f",(fAverageFoodEnergyIn - fAverageFoodEnergyOut) / (fAverageFoodEnergyIn + fAverageFoodEnergyOut) );
+	list.push_back( strdup( t ) );
 	
-	sprintf(t,"totFoodEnergy = %.2f",(fTotalFoodEnergyIn - fTotalFoodEnergyOut) / (fTotalFoodEnergyIn + fTotalFoodEnergyOut));
-	list.push_back(strdup(t));
+	sprintf( t, "totFoodEnergy = %.2f",(fTotalFoodEnergyIn - fTotalFoodEnergyOut) / (fTotalFoodEnergyIn + fTotalFoodEnergyOut) );
+	list.push_back( strdup( t ) );
 
-	if (fMonitorGeneSeperation)
+	if (fMonitorGeneSeparation)
 	{
-		sprintf(t,"maxGeneSeperation = %g", fMaxGeneSeperation);
-		list.push_back(strdup(t));
+		sprintf( t, "maxGeneSeparation = %g", fMaxGeneSeparation );
+		list.push_back( strdup( t ) );
 		
-		sprintf(t,"minGeneSeperation = %g", fMinGeneSeperation);
-		list.push_back(strdup(t));
+		sprintf( t, "minGeneSeparation = %g", fMinGeneSeparation );
+		list.push_back( strdup( t ) );
 		
-		sprintf(t,"avgGeneSeperation = %g", fAverageGeneSeperation);
-		list.push_back(strdup(t));
+		sprintf( t, "avgGeneSeparation = %g", fAverageGeneSeparation );
+		list.push_back( strdup( t ) );
 	}
 
-	sprintf( t, "Rate %ld (%.2f) %ld (%.2f) %ld (%.2f)",
-				lround( fFramesPerSecondInstantaneous ), fSecondsPerFrameInstantaneous,
-				lround( fFramesPerSecondRecent ), fSecondsPerFrameRecent,
-				lround( fFramesPerSecondOverall ), fSecondsPerFrameOverall );
-	list.push_back(strdup(t));
+	sprintf( t, "Rate %2.1f (%2.1f) %2.1f (%2.1f) %2.1f (%2.1f)",
+				fFramesPerSecondInstantaneous, fSecondsPerFrameInstantaneous,
+				fFramesPerSecondRecent,        fSecondsPerFrameRecent,
+				fFramesPerSecondOverall,       fSecondsPerFrameOverall  );
+	list.push_back( strdup( t ) );
 
 #if 0
     if (saveToFile)
     {
-        FILE *statusfile = fopen("pw.stat","w");
-        fprintf(statusfile,"%s\n",filename);
-        fprintf(statusfile,"age = %d\n",age);
-        fprintf(statusfile,"critters = %4d", critter::gXSortedCritters.count());
-        if (numdomains > 1)
+        FILE *statusfile = fopen( "pw.stat", "w" );
+        fprintf( statusfile, "%s\n",filename );
+        fprintf( statusfile, "age = %d\n",age );
+        fprintf( statusfile, "critters = %4d", critter::gXSortedCritters.count() );
+        if( numdomains > 1 )
         {
-            fprintf(statusfile,"  (%4d",domains[0].numcritters);
-            for (id = 1; id < numdomains; id++)
-                fprintf(statusfile,", %4d",domains[id].numcritters);
-            fprintf(statusfile,")");
+            fprintf( statusfile, "  (%4d",domains[0].numcritters );
+            for( id = 1; id < numdomains; id++ )
+                fprintf( statusfile, ", %4d",domains[id].numcritters );
+            fprintf( statusfile, ")" );
         }
-        fprintf(statusfile,"\n");
-        fprintf(statusfile,"created  = %4d",fNumberCreated);
-        if (numdomains > 1)
+        fprintf( statusfile, "\n" );
+        fprintf( statusfile, "created  = %4d",fNumberCreated );
+        if( numdomains > 1 )
         {
-            fprintf(statusfile,"  (%4d",domains[0].numcreated);
-            for (id = 1; id < numdomains; id++)
-                fprintf(statusfile,", %4d",domains[id].numcreated);
-            fprintf(statusfile,")");
+            fprintf( statusfile, "  (%4d",domains[0].numcreated );
+            for( id = 1; id < numdomains; id++ )
+                fprintf( statusfile, ", %4d",domains[id].numcreated );
+            fprintf( statusfile, ")" );
         }
-        fprintf(statusfile,"\n");
-        fprintf(statusfile," -random = %4d\n",fNumberCreatedRandom);
-        fprintf(statusfile," -two    = %4d\n",fNumberCreated2Fit);
-        fprintf(statusfile," -one    = %4d\n",fNumberCreated1Fit);
-        fprintf(statusfile,"born     = %4d", fNumberBorn);
-        if (numdomains > 1)
+        fprintf( statusfile, "\n" );
+        fprintf( statusfile, " -random = %4d\n",fNumberCreatedRandom );
+        fprintf( statusfile, " -two    = %4d\n",fNumberCreated2Fit );
+        fprintf( statusfile, " -one    = %4d\n",fNumberCreated1Fit );
+        fprintf( statusfile, "born     = %4d", fNumberBorn );
+        if( numdomains > 1 )
         {
-            fprintf(statusfile,"  (%4d",domains[0].numborn);
-            for (id = 1; id < numdomains; id++)
-                fprintf(statusfile,", %4d",domains[id].numborn);
-            fprintf(statusfile,")");
+            fprintf( statusfile, "  (%4d",domains[0].numborn );
+            for( id = 1; id < numdomains; id++ )
+                fprintf( statusfile, ", %4d",domains[id].numborn );
+            fprintf( statusfile, ")" );
         }
-        fprintf(statusfile,"\n");
-        fprintf(statusfile,"died     = %4d", fNumberDied);
-        if (numdomains > 1)
+        fprintf( statusfile, "\n" );
+        fprintf( statusfile, "died     = %4d", fNumberDied );
+        if( numdomains > 1 )
         {
-            fprintf(statusfile,"  (%4d",domains[0].numdied);
-            for (id = 1; id < numdomains; id++)
-                fprintf(statusfile,", %4d",domains[id].numdied);
-            fprintf(statusfile,")");
+            fprintf( statusfile, "  (%4d",domains[0].numdied );
+            for( id = 1; id < numdomains; id++ )
+                fprintf( statusfile, ", %4d",domains[id].numdied );
+            fprintf( statusfile, ")" );
         }
-        fprintf(statusfile,"\n");
-        fprintf(statusfile," -age    = %4d\n",fNumberDiedAge);
-        fprintf(statusfile," -energy = %4d\n",fNumberDiedEnergy);
-        fprintf(statusfile," -fight  = %4d\n",fNumberDiedFight);
-        fprintf(statusfile," -edge   = %4d\n",fNumberDiedEdge);
-        fprintf(statusfile," -smite  = %4d\n",fNumberDiedSmite);
-        fprintf(statusfile,"fights = %d\n", numfights);
-        fprintf(statusfile,"maxfit = %g\n", fMaxFitness);
-        fprintf(statusfile,"food = %d",xsortedfood.count());
-        if (numdomains > 1)
+        fprintf( statusfile, "\n" );
+        fprintf( statusfile, " -age    = %4d\n",fNumberDiedAge );
+        fprintf( statusfile, " -energy = %4d\n",fNumberDiedEnergy );
+        fprintf( statusfile, " -fight  = %4d\n",fNumberDiedFight );
+        fprintf( statusfile, " -edge   = %4d\n",fNumberDiedEdge );
+        fprintf( statusfile, " -smite  = %4d\n",fNumberDiedSmite );
+        fprintf( statusfile, "fights = %d\n", numfights );
+        fprintf( statusfile, "maxfit = %g\n", fMaxFitness );
+        fprintf( statusfile, "food = %d",xsortedfood.count() );
+        if( numdomains > 1 )
         {
-            fprintf(statusfile,"  (%4d",domains[0].foodcount);
-            for (id = 1; id < numdomains; id++)
-                fprintf(statusfile,", %4d",domains[id].foodcount);
-            fprintf(statusfile,")");
+            fprintf( statusfile, "  (%4d",domains[0].foodcount );
+            for( id = 1; id < numdomains; id++ )
+                fprintf( statusfile, ", %4d",domains[id].foodcount );
+            fprintf( statusfile, ")" );
         }
-        fprintf(statusfile,"\n");
-        fprintf(statusfile,"miscden = %d\n",fMiscNoBirth);
-        fprintf(statusfile,"agecreat = %d",fLastCreated);
-        if (numdomains > 1)
+        fprintf( statusfile, "\n" );
+		fprintf( statusfile, "birthDenials = %d\n", fBirthDenials );
+        fprintf( statusfile, "miscden = %d\n",fMiscDenials );
+        fprintf( statusfile, "agecreat = %d",fLastCreated );
+        if( numdomains > 1 )
         {
-            fprintf(statusfile,"  (%4d",domains[0].fLastCreated);
-            for (id = 1; id < numdomains; id++)
-                fprintf(statusfile,", %4d",domains[id].fLastCreated);
-            fprintf(statusfile,")");
+            fprintf( statusfile, "  (%4d",domains[0].fLastCreated );
+            for( id = 1; id < numdomains; id++ )
+                fprintf( statusfile, ", %4d",domains[id].fLastCreated );
+            fprintf( statusfile, ")" );
         }
-        fprintf(statusfile,"\n");
-        fprintf(statusfile,"maxgapcr = %d", fGapFromLastCreate);
-        if (numdomains > 1)
+        fprintf( statusfile, "\n" );
+        fprintf( statusfile, "maxgapcr = %d", fGapFromLastCreate );
+        if( numdomains > 1 )
         {
-            fprintf(statusfile,"  (%4d",domains[0].maxgapcreate);
-            for (id = 1; id < numdomains; id++)
-                fprintf(statusfile,", %4d",domains[id].maxgapcreate);
-            fprintf(statusfile,")");
+            fprintf( statusfile, "  (%4d",domains[0].maxgapcreate );
+            for( id = 1; id < numdomains; id++ )
+                fprintf( statusfile, ", %4d",domains[id].maxgapcreate );
+            fprintf( statusfile, ")" );
         }
-        fprintf(statusfile,"\n");
-        fprintf(statusfile,"born/total = %.2f",
-            float(fNumberBorn) / float(fNumberCreated + fNumberBorn));
-        if (numdomains > 1)
+        fprintf( statusfile, "\n" );
+        fprintf( statusfile, "born/total = %.2f",
+            float(fNumberBorn) / float(fNumberCreated + fNumberBorn) );
+        if( numdomains > 1 )
         {
-            fprintf(statusfile,"  (%.2f",
-                float(domains[0].fNumberBorn)/
-                float(domains[0].numcreated+domains[0].numborn));
-            for (id = 1; id < numdomains; id++)
-                fprintf(statusfile,", %.2f",
-                    float(domains[id].numborn)/
-                    float(domains[id].numcreated+domains[id].numborn));
-            fprintf(statusfile,")");
+            fprintf( statusfile, "  (%.2f",
+                float( domains[0].fNumberBorn )/
+                float( domains[0].numcreated + domains[0].numborn ) );
+            for( id = 1; id < numdomains; id++ )
+                fprintf( statusfile, ", %.2f",
+                    float( domains[id].numborn )/
+                    float( domains[id].numcreated + domains[id].numborn ) );
+            fprintf( statusfile, ")" );
         }
-        fprintf(statusfile,"\n");
-        fprintf(statusfile,"maxfitnorm = %.2f\n",fMaxFitness / fTotalFitness);
-        fprintf(statusfile,"curmaxfitnorm = %.2f\n", fCurrentMaxFitness[0] / fTotalFitness);
-        fprintf(statusfile,"avgfitnorm = %.2f\n", fAverageFitness / fTotalFitness);
-        fprintf(statusfile,"maxfit = %g\n",fMaxFitness);
-        fprintf(statusfile,"curmaxfit = %g\n", fCurrentMaxFitness[0]);
-        fprintf(statusfile,"avgfit = %g\n", fAverageFitness);
-        fprintf(statusfile,"average foodenergy flux = %.2f\n",
+        fprintf( statusfile, "\n" );
+        fprintf( statusfile, "maxfitnorm = %.2f\n", fMaxFitness / fTotalFitness );
+        fprintf( statusfile, "curmaxfitnorm = %.2f\n", fCurrentMaxFitness[0] / fTotalFitness );
+        fprintf( statusfile, "avgfitnorm = %.2f\n", fAverageFitness / fTotalFitness );
+        fprintf( statusfile, "maxfit = %g\n", fMaxFitness );
+        fprintf( statusfile, "curmaxfit = %g\n", fCurrentMaxFitness[0] );
+        fprintf( statusfile, "avgfit = %g\n", fAverageFitness );
+        fprintf( statusfile, "average foodenergy flux = %.2f\n",
             (fAverageFoodEnergyIn - fAverageFoodEnergyOut)
-           /(fAverageFoodEnergyIn + fAverageFoodEnergyOut));
-        fprintf(statusfile,"total foodenergy flux = %.2f\n",
+           /(fAverageFoodEnergyIn + fAverageFoodEnergyOut) );
+        fprintf( statusfile, "total foodenergy flux = %.2f\n",
             (fTotalFoodEnergyIn - fTotalFoodEnergyOut)
-           /(fTotalFoodEnergyIn + fTotalFoodEnergyOut));
+           /(fTotalFoodEnergyIn + fTotalFoodEnergyOut) );
         if (genesepmon)
         {
-            fprintf(statusfile,"fMaxGeneSeperation = %g\n",fMaxGeneSeperation);
-            fprintf(statusfile,"fMinGeneSeperation = %g\n",fMinGeneSeperation);
-            fprintf(statusfile,"fAverageGeneSeperation = %g\n",fAverageGeneSeperation);
+            fprintf( statusfile, "fMaxGeneSeparation = %g\n", fMaxGeneSeparation );
+            fprintf( statusfile, "fMinGeneSeparation = %g\n", fMinGeneSeparation );
+            fprintf( statusfile, "fAverageGeneSeparation = %g\n", fAverageGeneSeparation  );
         }
 
-        fclose(statusfile);
+        fclose(statusfile );
     }
 #endif
 }
@@ -3133,9 +3170,9 @@ void TSimulation::Update()
 		fBrainMonitorWindow->updateGL();
 		//QApplication::postEvent(fBrainMonitorWindow, new QCustomEvent(kUpdateEventType));	
 
-	if (fChartGeneSeperation && fGeneSeperationWindow != NULL)
-		fGeneSeperationWindow->updateGL();
-		//QApplication::postEvent(fGeneSeperationWindow, new QCustomEvent(kUpdateEventType));	
+	if (fChartGeneSeparation && fGeneSeparationWindow != NULL)
+		fGeneSeparationWindow->updateGL();
+		//QApplication::postEvent(fGeneSeparationWindow, new QCustomEvent(kUpdateEventType));	
 		
 	if (fShowTextStatus && fTextStatusWindow != NULL)
 		fTextStatusWindow->update();

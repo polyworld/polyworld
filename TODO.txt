@@ -1,21 +1,17 @@
-*** NOTE: The new "smite" code has a bug in it that causes a
-crash after the simulator has run for a while and invoked the
-smite code a few times.  I'll fix it soon. ***
-
 This is not intended as a complete TODO list, but it does represent
 a good place to start.
 
 In the short term, certain key user interface functionality must
 still be revived or newly developed, such as:
 
+* make dump files work again (to save state and restart the program) 
+* write status file again
 * make the main view's camera rotate again 
 * get the overhead view working again 
 * get zoom working in the overhead view 
 * allow overhead critter following (and toggle on/off, and set fitness rank)
-* get the genetic-spread calculations working again
 * get the genetic-spread graphics working again
 * get the digital movie recording and playback revived (from rev20 or rev21) 
-* make dump files work again (to save state and restart the program) 
 * make a click on a critter highlight its POV sub-window (new) 
 * make a click on a POV sub-window highlight the critter (new)
 * make clicks in either place select that critter for brain and overhead
@@ -47,6 +43,9 @@ enhance the evolutionary usefulness of collaboration.
 
 Recently done:
 
+* fixed colors of population graphs
+* fixed bug in smite option (had to be updated on critter death, with
+  new on-demand behavior)
 * add "smite" option so that when the world fills up (to its maximum
   number of critters), the least fit (that are over 1/2 their maximum
   lifespan) can be killed to make room for organisms that want to
@@ -54,6 +53,8 @@ Recently done:
 * put the Xcode shell script phase into its own target, so it completes
   and generates new moc files (or not, as needed) before the dependencies
   are analyzed for the main Polyworld target 5/31/05
+* add code to dump neural net anatomical and functional data for
+  network analysis using Olaf Sporns's tools
 * fixed a couple massive memory leaks (all known memory leaks are fixed!)
 * made it so the gene separation isn't calculated unless it's needed
 * made it so the miscegenation function is easily turned off

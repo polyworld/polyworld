@@ -1,7 +1,3 @@
-*** NOTE: The new "smite" code has a bug in it that causes a
-crash after the simulator has run for a while and invoked the
-smite code a few times.  I'll fix it soon. ***
-
 Welcome to the modern version of Polyworld, an Artificial Life
 system designed as an approach to Artificial Intelligence.  The
 original version was developed while I was working for Alan Kay's

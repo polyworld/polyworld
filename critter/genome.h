@@ -26,7 +26,7 @@ public:
     void Mutate();
     void Crossover(genome* g1, genome* g2, bool mutate);
     void CopyGenes(genome* sgenome);
-    float CalcSeperation(genome* g);
+    float CalcSeparation(genome* g);
     float MateProbability(genome* g);
     
     float MutationRate();

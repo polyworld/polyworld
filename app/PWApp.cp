@@ -350,7 +350,7 @@ void TSceneWindow::TileAllWindows()
 		nextY = window->frameGeometry().bottom() + 1;
 	}
 	
-	// Gene seperation
+	// Gene separation
 	
 
 	// Simulation

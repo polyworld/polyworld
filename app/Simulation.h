@@ -51,7 +51,7 @@ public:
 	TChartWindow* GetEnergyWindow() const;
 	TChartWindow* GetPopulationWindow() const;	
 	TBrainMonitorWindow* GetBrainMonitorWindow() const;	
-	TBinChartWindow* GetGeneSeperationWindow() const;
+	TBinChartWindow* GetGeneSeparationWindow() const;
 	TCritterPOVWindow* GetCritterPOVWindow() const;
 	TTextStatusWindow* GetStatusWindow() const;
 	
@@ -88,8 +88,8 @@ private:
 	
 	void Interact();
 	
-	void RecordGeneSeperation();
-	void CalculateGeneSeperation(critter* ci);
+	void RecordGeneSeparation();
+	void CalculateGeneSeparation(critter* ci);
 	void CalculateGeneSeparationAll();
 	void SmiteOne(short id, short smite);
 	void ijfitinc(short* i, short* j);
@@ -105,7 +105,7 @@ private:
 	TChartWindow* fFoodEnergyWindow;
 	TChartWindow* fPopulationWindow;
 	TBrainMonitorWindow* fBrainMonitorWindow;
-	TBinChartWindow* fGeneSeperationWindow;
+	TBinChartWindow* fGeneSeparationWindow;
 	TCritterPOVWindow* fCritterPOVWindow;
 	TTextStatusWindow* fTextStatusWindow;
 	
@@ -189,7 +189,8 @@ private:
 	long fNumberCreated1Fit;
 	long fNumberCreated2Fit;
 	long fNumberFights;
-	long fMiscNoBirth;
+	long fBirthDenials;
+	long fMiscDenials;
 	long fLastCreated;
 	long fGapFromLastCreate;
 	long fNumBornSinceCreated;
@@ -212,13 +213,13 @@ private:
 	float fDeathProbability;
 
 
-	bool fMonitorGeneSeperation; 	// whether gene-separation will be monitored or not
-	bool fRecordGeneSeperation; 	// whether gene-separation will be recorded or not
-	float fMaxGeneSeperation;
-	float fMinGeneSeperation;
-	float fAverageGeneSeperation;
-	FILE* fGeneSeperationFile;
-	bool fChartGeneSeperation;
+	bool fMonitorGeneSeparation; 	// whether gene-separation will be monitored or not
+	bool fRecordGeneSeparation; 	// whether gene-separation will be recorded or not
+	float fMaxGeneSeparation;
+	float fMinGeneSeparation;
+	float fAverageGeneSeparation;
+	FILE* fGeneSeparationFile;
+	bool fChartGeneSeparation;
 	float* fGeneSepVals;
 	long fNumGeneSepVals;
 
@@ -244,7 +245,7 @@ inline TChartWindow* TSimulation::GetFitnessWindow() const { return fFitnessWind
 inline TChartWindow* TSimulation::GetEnergyWindow() const { return fFoodEnergyWindow; }
 inline TChartWindow* TSimulation::GetPopulationWindow() const { return fPopulationWindow; }
 inline TBrainMonitorWindow* TSimulation::GetBrainMonitorWindow() const { return fBrainMonitorWindow; }
-inline TBinChartWindow* TSimulation::GetGeneSeperationWindow() const { return fGeneSeperationWindow; }
+inline TBinChartWindow* TSimulation::GetGeneSeparationWindow() const { return fGeneSeparationWindow; }
 inline TCritterPOVWindow* TSimulation::GetCritterPOVWindow() const { return fCritterPOVWindow; }
 inline TTextStatusWindow* TSimulation::GetStatusWindow() const { return fTextStatusWindow; }
 //inline bool TSimulation::GetShowBrain() const { return fBrainMonitorWindow->visible; }
