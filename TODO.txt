@@ -1,3 +1,7 @@
+*** NOTE: The new "smite" code has a bug in it that causes a
+crash after the simulator has run for a while and invoked the
+smite code a few times.  I'll fix it soon. ***
+
 This is not intended as a complete TODO list, but it does represent
 a good place to start.
 
