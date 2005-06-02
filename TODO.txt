@@ -6,6 +6,8 @@ still be revived or newly developed, such as:
 
 * make dump files work again (to save state and restart the program) 
 * write status file again
+* brain map window won't close when close button is clicked
+  (selecting Hide Window from the Window menu works fine)
 * make the main view's camera rotate again 
 * get the overhead view working again 
 * get zoom working in the overhead view 
