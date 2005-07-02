@@ -130,3 +130,5 @@ For more details about using cvs to check out source code from
 SourceForge.net, see
 <https://sourceforge.net/docman/display_doc.php?docid=14033&group_id=1>.
 
+Tagged revisions:
+pw08_qt331 - A mostly functional 0.8 version of Polyworld targeted to Qt 3.3.1
