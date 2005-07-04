@@ -12,6 +12,7 @@
 // qt
 #include <qapplication.h>
 #include <qsettings.h>
+#include <qcoreevent.h>
 
 // Local
 #include "brain.h"
@@ -31,11 +32,14 @@ const int kMonitorCritWinHeight = 8;
 // TBrainMonitorWindow::TBrainMonitorWindow
 //---------------------------------------------------------------------------
 TBrainMonitorWindow::TBrainMonitorWindow()
-	:	QGLWidget(NULL, "BrainMonitor", NULL, WStyle_Customize | WStyle_SysMenu | WStyle_Tool),
+//	:	QGLWidget(NULL, "BrainMonitor", NULL, WStyle_Customize | WStyle_SysMenu | WStyle_Tool),
+	:	QGLWidget( NULL, NULL, Qt::WindowSystemMenuHint | Qt::Tool ),
 		fCritter(NULL),
 		fPatchWidth(kMonitorCritWinWidth),
 		fPatchHeight(kMonitorCritWinHeight)
 {
+	setWindowTitle( "BrainMonitor" );
+	windowSettingsName = "BrainMonitor";
 }
 
 
@@ -44,7 +48,7 @@ TBrainMonitorWindow::TBrainMonitorWindow()
 //---------------------------------------------------------------------------
 TBrainMonitorWindow::~TBrainMonitorWindow()
 {
-	SaveDimensions();
+	SaveWindowState();
 }
 
 
@@ -62,8 +66,8 @@ void TBrainMonitorWindow::paintGL()
 //---------------------------------------------------------------------------
 void TBrainMonitorWindow::initializeGL()
 {
-	qglClearColor(black);
-    glShadeModel(GL_SMOOTH);
+	qglClearColor( Qt::black );
+    glShadeModel( GL_SMOOTH );
 //	swapBuffers();
 }
 
@@ -112,16 +116,16 @@ void TBrainMonitorWindow::mouseDoubleClickEvent(QMouseEvent*)
 {
 }
 
-
+#if 0
 //---------------------------------------------------------------------------
 // TBrainMonitorWindow::customEvent
 //---------------------------------------------------------------------------
-void TBrainMonitorWindow::customEvent(QCustomEvent* event)
+void TBrainMonitorWindow::customEvent( QCustomEvent* event )
 {
-	if (event->type() == kUpdateEventType)
+	if( event->type() == kUpdateEventType )
 		updateGL();
 }
-
+#endif
 
 //---------------------------------------------------------------------------
 // TBrainMonitorWindow::EnableAA
@@ -166,7 +170,7 @@ void TBrainMonitorWindow::Draw()
 #endif
 
 	// Clear the window
-	qglClearColor( black );
+	qglClearColor( Qt::black );
 	glClear( GL_COLOR_BUFFER_BIT );
 
 	// Make sure the window is the proper size
@@ -197,7 +201,7 @@ void TBrainMonitorWindow::Draw()
 #endif
 
 	// Frame and draw the actual vision pixels
-	qglColor( gray );
+	qglColor( Qt::gray );
 	glRecti( 2*fPatchWidth-1, 0, (2+brain::retinawidth)*fPatchWidth+1, fPatchHeight );
 	glPixelZoom( float(fPatchWidth), float(fPatchHeight) );
 	glRasterPos2i( 2*fPatchWidth, 0 );
@@ -207,7 +211,8 @@ void TBrainMonitorWindow::Draw()
 	fCritter->Brain()->Render(fPatchWidth, fPatchHeight);
 
 	swapBuffers();
-	show();
+//	if( visible )
+//		show();
 			
 #if 0
   glPopMatrix();
@@ -250,22 +255,25 @@ void TBrainMonitorWindow::RestoreFromPrefs(long x, long y)
 	int defX = x;
 	int defY = y;
 	int titleHeight = 16;
-	
-	visible = true;
+	bool visible = false;	// only window that defaults to !visible
 	
 	// Attempt to restore window size and position from prefs
 	// Save size and location to prefs
 	QSettings settings;
-	settings.setPath(kPrefPath, kPrefSection);
 
-	settings.beginGroup("/windows");
-		settings.beginGroup(name());
+	settings.beginGroup( kWindowsGroupSettingsName );
+		settings.beginGroup( windowSettingsName );
 		
-			defWidth = settings.readNumEntry("/width", defWidth);
-			defHeight = settings.readNumEntry("/height", defHeight);
-			defX = settings.readNumEntry("/x", defX);
-			defY = settings.readNumEntry("/y", defY);
-			visible = settings.readBoolEntry("/visible", visible);
+			if( settings.contains( "width" ) )
+				defWidth = settings.value( "width" ).toInt();
+			if( settings.contains( "height" ) )
+				defHeight = settings.value( "height" ).toInt();
+			if( settings.contains( "x" ) )
+				defX = settings.value( "x" ).toInt();
+			if( settings.contains( "y" ) )
+				defY = settings.value( "y" ).toInt();
+			if( settings.contains( "visible" ) )
+				visible = settings.value( "visible" ).toBool();
 			
 		settings.endGroup();
 	settings.endGroup();
@@ -287,11 +295,21 @@ void TBrainMonitorWindow::RestoreFromPrefs(long x, long y)
   	setGeometry(position);
 	setFixedSize(defWidth, defHeight);
 	
-//	if (visible)
-//		show();
+	if (visible)
+		show();
 			
-	// Save settings for future restore		
-	SaveDimensions();		
+	// Save settings for future restore
+	SaveWindowState();	
+}
+
+
+//---------------------------------------------------------------------------
+// TBrainMonitorWindow::SaveWindowState
+//---------------------------------------------------------------------------
+void TBrainMonitorWindow::SaveWindowState()
+{
+	SaveDimensions();
+	SaveVisibility();
 }
 
 
@@ -302,15 +320,14 @@ void TBrainMonitorWindow::SaveDimensions()
 {
 	// Save size and location to prefs
 	QSettings settings;
-	settings.setPath(kPrefPath, kPrefSection);
 
-	settings.beginGroup("/windows");
-		settings.beginGroup(name());
+	settings.beginGroup( kWindowsGroupSettingsName );
+		settings.beginGroup( windowSettingsName );
 		
-			settings.writeEntry("/width", geometry().width());
-			settings.writeEntry("/height", geometry().height());			
-			settings.writeEntry("/x", geometry().x());
-			settings.writeEntry("/y", geometry().y());
+			settings.setValue( "width", geometry().width() );
+			settings.setValue( "height", geometry().height() );			
+			settings.setValue( "x", geometry().x() );
+			settings.setValue( "y", geometry().y() );
 
 		settings.endGroup();
 	settings.endGroup();
@@ -323,12 +340,11 @@ void TBrainMonitorWindow::SaveDimensions()
 void TBrainMonitorWindow::SaveVisibility()
 {
 	QSettings settings;
-	settings.setPath(kPrefPath, kPrefSection);
 
-	settings.beginGroup("/windows");
-		settings.beginGroup(name());
+	settings.beginGroup( kWindowsGroupSettingsName );
+		settings.beginGroup( windowSettingsName );
 		
-			settings.writeEntry("/visible", visible);
+			settings.setValue( "visible", isVisible() );
 
 		settings.endGroup();
 	settings.endGroup();

@@ -24,7 +24,7 @@ typedef vector<char *> TStatusList;
 
 
 //===========================================================================
-// TestStatusWindow
+// TextStatusWindow
 //===========================================================================
 class TTextStatusWindow : public QWidget
 {
@@ -35,6 +35,9 @@ public:
 	void RestoreFromPrefs(long x, long y);
 
 	void SaveVisibility();
+	
+	static const int kDefaultWidth = 200;
+	static const int kDefaultHeight = 500;
 
 protected:
 	virtual void paintEvent(QPaintEvent* event);
@@ -43,9 +46,11 @@ protected:
     virtual void mouseReleaseEvent(QMouseEvent* event);
     virtual void mouseDoubleClickEvent(QMouseEvent* event);
     
+	void SaveWindowState();
     void SaveDimensions();
         
 private:
+	QString windowSettingsName;
 	TSimulation* fSimulation;
 	bool fSaveToFile;
 	

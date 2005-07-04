@@ -4,6 +4,8 @@
 // qt
 #include <qapplication.h>
 #include <qmainwindow.h>
+//#include <qpopupmenu.h>
+#include <QMenu>
 
 // Local
 #include "Simulation.h"
@@ -12,7 +14,7 @@
 class QMenuBar;
 class QTimer;
 class TSceneView;
-
+class TSimulation;
 
 //===========================================================================
 // TPWApp
@@ -48,7 +50,9 @@ protected:
 	void AddWindowMenu();
 	void AddHelpMenu();
 	
+	void SaveWindowState();
 	void SaveDimensions();
+	void SaveVisibility();
 	void RestoreFromPrefs();
 	
 private slots:
@@ -73,10 +77,21 @@ private slots:
     
 private:
 	QMenuBar* fMenuBar;
-	QPopupMenu* fWindowsMenu;
+	QMenu* fWindowsMenu;
 	
 	TSceneView* fSceneView;
-	TSimulation* fSimulation;	
+	TSimulation* fSimulation;
+	
+	QAction* toggleEnergyWindowAct;
+	QAction* toggleFitnessWindowAct;
+	QAction* togglePopulationWindowAct;
+	QAction* toggleBirthrateWindowAct;
+	QAction* toggleBrainWindowAct;
+	QAction* togglePOVWindowAct;
+	QAction* toggleTextStatusAct;
+	QAction* tileAllWindowsAct;
+
+	QString windowSettingsName;
 };
 
 #endif

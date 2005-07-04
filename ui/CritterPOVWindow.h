@@ -11,10 +11,12 @@
 
 // qt
 #include <qgl.h>
+//#include <QCustomEvent>
 
 // Forward declarations
 class TSimulation;
 class critter;
+//class QCustomEvent;
 
 //===========================================================================
 // TCritterPOVWindow
@@ -38,18 +40,19 @@ protected:
     virtual void mouseMoveEvent(QMouseEvent* event);
     virtual void mouseReleaseEvent(QMouseEvent* event);
     virtual void mouseDoubleClickEvent(QMouseEvent* event);
-	virtual void customEvent(QCustomEvent* event);
+//	virtual void customEvent(QCustomEvent* event);
 
 	void EnableAA();
 	void DisableAA();
 
+	void SaveWindowState();
     void SaveDimensions();
     
     int fSlots;
 	TSimulation* fSimulation;
 
 private:
-
+	QString windowSettingsName;
 
 };
 

@@ -1,15 +1,19 @@
 // Self
 #include "PWApp.h"
+//#include "SceneView.h"
 
 // QT
 #include <qapplication.h>
 #include <qgl.h>
 #include <qlayout.h>
 #include <qmenubar.h>
-#include <qpopupmenu.h>
+//#include <qpopupmenu.h>
+#include <qmenu.h>
 #include <qsettings.h>
 #include <qstatusbar.h>
 #include <qtimer.h>
+
+#include <QDesktopWidget>
 
 // Local
 #include "critter.h"
@@ -37,6 +41,11 @@ int main(int argc, char** argv)
 		return -1;
     }
 	
+	// Establish how are preference settings file will be named
+	QCoreApplication::setOrganizationDomain( "indiana.edu" );
+//	QCoreApplication::setOrganizationName( "indiana" );
+	QCoreApplication::setApplicationName( "polyworld" );
+	
 	// On the Mac, create the default menu bar
 	QMenuBar* gGlobalMenuBar = new QMenuBar();
 
@@ -47,7 +56,7 @@ int main(int argc, char** argv)
 	app.connect(&app, SIGNAL(lastWindowClosed()), &app, SLOT(quit()));
 	
 	// Set window as main widget and show
-	app.setMainWidget(appWindow);
+//	app.setMainWidget(appWindow);
 	
 	// Create simulation timer
 	QTimer* idleTimer = new QTimer(appWindow);
@@ -78,10 +87,15 @@ TPWApp::TPWApp(int argc, char** argv) : QApplication(argc, argv)
 // TSceneWindow::TSceneWindow
 //---------------------------------------------------------------------------
 TSceneWindow::TSceneWindow(QMenuBar* menuBar)
-	:	QMainWindow(0, "Polyworld", WDestructiveClose | WGroupLeader),
+//	:	QMainWindow(0, "Polyworld", WDestructiveClose | WGroupLeader),
+	:	QMainWindow( 0, 0 ),
 		fMenuBar(menuBar),
 		fWindowsMenu(NULL)
-{	
+{
+	setWindowTitle( "Polyworld" );
+	windowSettingsName = "Polyworld";
+//	setAttribute( Qt::WA_DeleteOnClose );
+	
 	setMinimumSize(QSize(200, 200));
 
 	// Create menus.  On the mac, we use the global menu created in the application
@@ -118,7 +132,7 @@ TSceneWindow::~TSceneWindow()
 {
 	delete fSimulation;
 	
-	SaveDimensions();
+	SaveWindowState();
 }
 
 
@@ -138,14 +152,14 @@ void TSceneWindow::closeEvent(QCloseEvent* ce)
 //---------------------------------------------------------------------------
 void TSceneWindow::AddFileMenu()
 {
-    QPopupMenu* menu = new QPopupMenu(this);
-    fMenuBar->insertItem("&File", menu);
-	menu->insertItem("&Open...", this, SLOT(choose()), CTRL+Key_O);
-	menu->insertItem("&Save", this, SLOT(save()), CTRL+Key_S);
-	menu->insertItem("Save &As...", this, SLOT(saveAs()));
-    menu->insertSeparator();
-    menu->insertItem("&Close", this, SLOT(close()), CTRL+Key_W);
-    menu->insertItem("&Quit", qApp, SLOT(closeAllWindows()), CTRL+Key_Q);
+    QMenu* menu = new QMenu( "&File", this );
+    fMenuBar->addMenu( menu );
+	menu->addAction( "&Open...", this, SLOT(choose()), Qt::CTRL+Qt::Key_O );
+	menu->addAction( "&Save", this, SLOT(save()), Qt::CTRL+Qt::Key_S );
+	menu->addAction( "Save &As...", this, SLOT(saveAs()));
+    menu->addSeparator();
+    menu->addAction( "&Close", this, SLOT(close()), Qt::CTRL+Qt::Key_W );
+    menu->addAction( "&Quit", qApp, SLOT(closeAllWindows()), Qt::CTRL+Qt::Key_Q );
 }
 
 
@@ -155,8 +169,8 @@ void TSceneWindow::AddFileMenu()
 void TSceneWindow::AddEditMenu()
 {
 	// Edit menu
-	QPopupMenu* edit = new QPopupMenu(this);
-	fMenuBar->insertItem("&Edit", edit);
+	QMenu* edit = new QMenu( "&Edit", this );
+	fMenuBar->addMenu( edit );
 }
 
 
@@ -166,19 +180,19 @@ void TSceneWindow::AddEditMenu()
 void TSceneWindow::AddWindowMenu()
 {
 	// Window menu
-	fWindowsMenu = new QPopupMenu(this);
+	fWindowsMenu = new QMenu( "&Window", this );
 	connect(fWindowsMenu, SIGNAL(aboutToShow()), this, SLOT(windowsMenuAboutToShow()));
-	fMenuBar->insertItem("&Window", fWindowsMenu);
+	fMenuBar->addMenu( fWindowsMenu );
 	
-	fWindowsMenu->insertItem("Hide Birthrate Monitor", this, SLOT(ToggleBirthrateWindow()), CTRL+Key_1, 0);
-	fWindowsMenu->insertItem("Hide Fitness Monitor", this, SLOT(ToggleFitnessWindow()), CTRL+Key_2, 1);
-	fWindowsMenu->insertItem("Hide Energy Monitor", this, SLOT(ToggleEnergyWindow()), CTRL+Key_3, 2);
-	fWindowsMenu->insertItem("Hide Population Monitor", this, SLOT(TogglePopulationWindow()), CTRL+Key_4, 3);
-	fWindowsMenu->insertItem("Hide Brain Monitor", this, SLOT(ToggleBrainWindow()), CTRL+Key_5, 4);
-	fWindowsMenu->insertItem("Hide Critter POV", this, SLOT(TogglePOVWindow()), CTRL+Key_6, 5);
-	fWindowsMenu->insertItem("Hide Text Status", this, SLOT(ToggleTextStatus()), CTRL+Key_7, 6);
-	fWindowsMenu->insertSeparator();
-	fWindowsMenu->insertItem("Tile Windows", this, SLOT(TileAllWindows()));
+	toggleBirthrateWindowAct = fWindowsMenu->addAction("Hide Birthrate Monitor", this, SLOT(ToggleBirthrateWindow()), Qt::CTRL+Qt::Key_1 );
+	toggleFitnessWindowAct = fWindowsMenu->addAction("Hide Fitness Monitor", this, SLOT(ToggleFitnessWindow()), Qt::CTRL+Qt::Key_2 );
+	toggleEnergyWindowAct = fWindowsMenu->addAction("Hide Energy Monitor", this, SLOT(ToggleEnergyWindow()), Qt::CTRL+Qt::Key_3 );
+	togglePopulationWindowAct = fWindowsMenu->addAction("Hide Population Monitor", this, SLOT(TogglePopulationWindow()), Qt::CTRL+Qt::Key_4 );
+	toggleBrainWindowAct = fWindowsMenu->addAction("Hide Brain Monitor", this, SLOT(ToggleBrainWindow()), Qt::CTRL+Qt::Key_5 );
+	togglePOVWindowAct = fWindowsMenu->addAction("Hide Critter POV", this, SLOT(TogglePOVWindow()), Qt::CTRL+Qt::Key_6 );
+	toggleTextStatusAct = fWindowsMenu->addAction("Hide Text Status", this, SLOT(ToggleTextStatus()), Qt::CTRL+Qt::Key_7 );
+	fWindowsMenu->addSeparator();
+	tileAllWindowsAct = fWindowsMenu->addAction("Tile Windows", this, SLOT(TileAllWindows()));
 }
 
 
@@ -190,7 +204,7 @@ void TSceneWindow::ToggleEnergyWindow()
 	Q_CHECK_PTR(fSimulation);
 	TChartWindow* window = fSimulation->GetEnergyWindow();
 	Q_CHECK_PTR(window);
-	window->setHidden(window->isShown());
+	window->setHidden(window->isVisible());
 	window->SaveVisibility();
 }
 
@@ -203,7 +217,7 @@ void TSceneWindow::ToggleFitnessWindow()
 	Q_CHECK_PTR(fSimulation);
 	TChartWindow* window = fSimulation->GetFitnessWindow();
 	Q_CHECK_PTR(window);
-	window->setHidden(window->isShown());
+	window->setHidden(window->isVisible());
 	window->SaveVisibility();
 }
 
@@ -216,7 +230,7 @@ void TSceneWindow::TogglePopulationWindow()
 	Q_CHECK_PTR(fSimulation);
 	TChartWindow* window = fSimulation->GetPopulationWindow();
 	Q_CHECK_PTR(window);
-	window->setHidden(window->isShown());
+	window->setHidden(window->isVisible());
 	window->SaveVisibility();
 }
 
@@ -227,9 +241,9 @@ void TSceneWindow::TogglePopulationWindow()
 void TSceneWindow::ToggleBirthrateWindow()
 {
 	Q_CHECK_PTR(fSimulation);
-	TChartWindow* window = fSimulation->GetBornWindow();
+	TChartWindow* window = fSimulation->GetBirthrateWindow();
 	Q_CHECK_PTR(window);
-	window->setHidden(window->isShown());
+	window->setHidden(window->isVisible());
 	window->SaveVisibility();	
 }
 
@@ -243,8 +257,8 @@ void TSceneWindow::ToggleBrainWindow()
 	Q_CHECK_PTR(fSimulation);
 	TBrainMonitorWindow* brainWindow = fSimulation->GetBrainMonitorWindow();
 	Q_ASSERT(brainWindow != NULL);
-	brainWindow->visible = !brainWindow->visible;
-	brainWindow->setShown(brainWindow->visible);
+//	brainWindow->visible = !brainWindow->visible;
+	brainWindow->setHidden(brainWindow->isVisible());
 	brainWindow->SaveVisibility();
 #else
 	Q_CHECK_PTR(fSimulation);
@@ -265,7 +279,7 @@ void TSceneWindow::TogglePOVWindow()
 	Q_ASSERT(fSimulation != NULL);
 	TCritterPOVWindow* window = fSimulation->GetCritterPOVWindow();
 	Q_ASSERT(window != NULL);
-	window->setHidden(window->isShown());
+	window->setHidden(window->isVisible());
 	window->SaveVisibility();
 }
 
@@ -278,7 +292,7 @@ void TSceneWindow::ToggleTextStatus()
 	Q_ASSERT(fSimulation != NULL);
 	TTextStatusWindow* window = fSimulation->GetStatusWindow();
 	Q_ASSERT(window != NULL);
-	window->setHidden(window->isShown());
+	window->setHidden(window->isVisible());
 	window->SaveVisibility();
 }
 
@@ -311,7 +325,7 @@ void TSceneWindow::TileAllWindows()
 	Q_CHECK_PTR(fSimulation);
 
 	const int titleHeightLarge = 22;	// frameGeometry().height() - height();
-//	const int titleHeightSmall = 16;
+	const int titleHeightSmall = 16;
 	int nextY = kMenuBarHeight;
 	
 	QDesktopWidget* desktop = QApplication::desktop();
@@ -319,7 +333,7 @@ void TSceneWindow::TileAllWindows()
 	const int leftX = screenSize.x();
 				
 	// Born
-	TChartWindow* window = fSimulation->GetBornWindow();
+	TChartWindow* window = fSimulation->GetBirthrateWindow();
 	if (window != NULL)
 	{
 		window->move(leftX, nextY);
@@ -354,28 +368,42 @@ void TSceneWindow::TileAllWindows()
 	
 
 	// Simulation
-	move(TChartWindow::kMaxWidth + 3, kMenuBarHeight);
-	resize(screenSize.width() - (300 + TChartWindow::kMaxWidth), screenSize.height() - 150);
+	move( TChartWindow::kMaxWidth + 1, kMenuBarHeight );
+	resize( screenSize.width() - (TChartWindow::kMaxWidth + 1), screenSize.height() );
 
 	
 	// POV (place it on top of the top part of the main Simulation window)
 	TCritterPOVWindow* povWindow = fSimulation->GetCritterPOVWindow();
-	int leftEdge = TChartWindow::kMaxWidth + 3;
-	if (povWindow != NULL)
+	int leftEdge = TChartWindow::kMaxWidth + 1;
+	if( povWindow != NULL )
 	{
-		povWindow->move(TChartWindow::kMaxWidth + 3, kMenuBarHeight + titleHeightLarge);
-		leftEdge += povWindow->width() + 3;
+		povWindow->move( leftEdge, kMenuBarHeight + titleHeightLarge );
 	}
 		
 	// Brain monitor
+	// (If there's plenty of room, place it beside the POV window, else
+	// overlap it with the POV window, but leave the POV window title visible)
 	TBrainMonitorWindow* brainWindow = fSimulation->GetBrainMonitorWindow();
-	if (brainWindow != NULL)
-		brainWindow->move(leftEdge, kMenuBarHeight + titleHeightLarge);
+	if( brainWindow != NULL )
+	{
+		if( (screenSize.width() - (leftEdge + povWindow->width())) > 300 )
+		{
+			// fair bit of room left, so place it adjacent to the POV window
+			leftEdge += povWindow->width();
+			nextY = kMenuBarHeight + titleHeightLarge;
+		}
+		else
+		{
+			// not much room left, so overlap it with the POV window
+			nextY = kMenuBarHeight + titleHeightLarge + titleHeightSmall;
+		}
+		brainWindow->move( leftEdge, nextY );
+	}
 
 	// Text status window		
 	TTextStatusWindow* statusWindow = fSimulation->GetStatusWindow();
-	if (statusWindow != NULL)
-		statusWindow->move(geometry().right() + 3, kMenuBarHeight);		
+	if( statusWindow != NULL )
+		statusWindow->move( screenSize.width() - statusWindow->width(), kMenuBarHeight );		
 }
 
 
@@ -387,17 +415,27 @@ void TSceneWindow::TileAllWindows()
 void TSceneWindow::AddHelpMenu()
 {
 	// Add help item
-	fMenuBar->insertSeparator();
-	QPopupMenu* help = new QPopupMenu(this);
-	fMenuBar->insertItem("&Help", help);
+//	fMenuBar->addSeparator();
+	QMenu* help = new QMenu( "&Help", this );
+	fMenuBar->addMenu( help );
 	
 	// Add about item
-	help->insertItem("&About", this, SLOT(about()));
-	help->insertSeparator();
+	help->addAction("&About", this, SLOT(about()));
+	help->addSeparator();
 }
 
 
 #pragma mark -
+
+
+//---------------------------------------------------------------------------
+// TSceneWindow::SaveWindowState
+//---------------------------------------------------------------------------
+void TSceneWindow::SaveWindowState()
+{
+	SaveDimensions();
+	SaveVisibility();
+}
 
 
 //---------------------------------------------------------------------------
@@ -407,15 +445,31 @@ void TSceneWindow::SaveDimensions()
 {
 	// Save size and location to prefs
 	QSettings settings;
-	settings.setPath(kPrefPath, kPrefSection);
   
-	settings.beginGroup("/windows");
-		settings.beginGroup(name());
+	settings.beginGroup( kWindowsGroupSettingsName );
+		settings.beginGroup( windowSettingsName );
 		
-			settings.writeEntry("/width", geometry().width());
-			settings.writeEntry("/height", geometry().height());			
-			settings.writeEntry("/x", geometry().x());
-			settings.writeEntry("/y", geometry().y());
+			settings.setValue( "width", geometry().width() );
+			settings.setValue( "height", geometry().height() );			
+			settings.setValue( "x", geometry().x() );
+			settings.setValue( "y", geometry().y() );
+
+		settings.endGroup();
+	settings.endGroup();
+}
+
+
+//---------------------------------------------------------------------------
+// TSceneWindow::SaveVisibility
+//---------------------------------------------------------------------------
+void TSceneWindow::SaveVisibility()
+{
+	QSettings settings;
+
+	settings.beginGroup( kWindowsGroupSettingsName );
+		settings.beginGroup( windowSettingsName );
+		
+			settings.setValue( "visible", isVisible() );
 
 		settings.endGroup();
 	settings.endGroup();
@@ -430,25 +484,27 @@ void TSceneWindow::RestoreFromPrefs()
 	QDesktopWidget* desktop = QApplication::desktop();
 
 	// Set up some defaults
-	int defX = TChartWindow::kMaxWidth + 3;
+	int defX = TChartWindow::kMaxWidth + 1;
 	int titleHeight = 22;
-	int defY = fMenuBar->height() + titleHeight;	
+	int defY = kMenuBarHeight /*fMenuBar->height()*/ + titleHeight;	
 	int defWidth = desktop->width() - defX;
 	int defHeight = desktop->height() - defY;
 
-	
 	// Attempt to restore window size and position from prefs
 	// Save size and location to prefs
 	QSettings settings;
-	settings.setPath(kPrefPath, kPrefSection);
 
-	settings.beginGroup("/windows");
-		settings.beginGroup(name());
+	settings.beginGroup( kWindowsGroupSettingsName );
+		settings.beginGroup( windowSettingsName );
 		
-			defWidth = settings.readNumEntry("/width", defWidth);
-			defHeight = settings.readNumEntry("/height", defHeight);
-			defX = settings.readNumEntry("/x", defX);
-			defY = settings.readNumEntry("/y", defY);
+			if( settings.contains( "width" ) )
+				defWidth = settings.value( "width" ).toInt();
+			if( settings.contains( "height" ) )
+				defHeight = settings.value( "height" ).toInt();
+			if( settings.contains( "x" ) )
+				defX = settings.value( "x" ).toInt();
+			if( settings.contains( "y" ) )
+				defY = settings.value( "y" ).toInt();
 			
 		settings.endGroup();
 	settings.endGroup();
@@ -462,14 +518,13 @@ void TSceneWindow::RestoreFromPrefs()
 
 	// Set window size and location based on prefs
  	QRect position;
- 	position.setTopLeft(QPoint(defX, defY));
- 	position.setSize(QSize(defWidth, defHeight));
-  	setGeometry(position);
-	setCaption(name());
+ 	position.setTopLeft( QPoint( defX, defY ) );
+ 	position.setSize( QSize( defWidth, defHeight ) );
+  	setGeometry( position );
 	show();
 	
 	// Save settings for future restore		
-	SaveDimensions();		
+	SaveWindowState();		
 }
 
 
@@ -493,18 +548,21 @@ void TSceneWindow::windowsMenuAboutToShow()
 	Q_ASSERT(fWindowsMenu != NULL);
 
 	// Birthrate
-	TChartWindow* window = fSimulation->GetBornWindow();
+	TChartWindow* window = fSimulation->GetBirthrateWindow();
 	if (window == NULL)
 	{
 		// No window. Disable menu
-		fWindowsMenu->setItemEnabled(0, false);	
+		//fWindowsMenu->setItemEnabled(0, false);
+		toggleBirthrateWindowAct->setEnabled( false );	
 	}
 	else
 	{
-		if (window->isShown())
-			fWindowsMenu->changeItem(0, "Hide Birthrate Monitor");
+		if (window->isVisible())
+			//fWindowsMenu->changeItem(0, "Hide Birthrate Monitor");
+			toggleBirthrateWindowAct->setText( "&Hide Birthrate Monitor" );
 		else
-			fWindowsMenu->changeItem(0, "Show Birthrate Monitor");
+			//fWindowsMenu->changeItem(0, "Show Birthrate Monitor");
+			toggleBirthrateWindowAct->setText( "&Show Birthrate Monitor" );
 	}
 
 	// Fitness
@@ -512,14 +570,17 @@ void TSceneWindow::windowsMenuAboutToShow()
 	if (window == NULL)
 	{
 		// No window. Disable menu
-		fWindowsMenu->setItemEnabled(1, false);	
+		//fWindowsMenu->setItemEnabled(1, false);	
+		toggleFitnessWindowAct->setEnabled( false );
 	}
 	else
 	{
-		if (window->isShown())
-			fWindowsMenu->changeItem(1, "Hide Fitness Monitor");
+		if (window->isVisible())
+			//fWindowsMenu->changeItem(1, "Hide Fitness Monitor");
+			toggleFitnessWindowAct->setText( "&Hide Fitness Monitor" );
 		else
-			fWindowsMenu->changeItem(1, "Show Fitness Monitor");
+			//fWindowsMenu->changeItem(1, "Show Fitness Monitor");
+			toggleFitnessWindowAct->setText( "&Show Fitness Monitor" );
 	}
 
 	// Energy
@@ -527,14 +588,17 @@ void TSceneWindow::windowsMenuAboutToShow()
 	if (window == NULL)
 	{
 		// No window. Disable menu
-		fWindowsMenu->setItemEnabled(2, false);	
+		//fWindowsMenu->setItemEnabled(2, false);	
+		toggleEnergyWindowAct->setEnabled( false );
 	}
 	else
 	{
-		if (window->isShown())
-			fWindowsMenu->changeItem(2, "Hide Energy Monitor");
+		if (window->isVisible())
+			//fWindowsMenu->changeItem(2, "Hide Energy Monitor");
+			toggleEnergyWindowAct->setText( "&Hide Energy Monitor" );
 		else
-			fWindowsMenu->changeItem(2, "Show Energy Monitor");
+			//fWindowsMenu->changeItem(2, "Show Energy Monitor");
+			toggleEnergyWindowAct->setText( "&Show Energy Monitor" );
 	}
 
 	// Population
@@ -542,14 +606,17 @@ void TSceneWindow::windowsMenuAboutToShow()
 	if (window == NULL)
 	{
 		// No window. Disable menu
-		fWindowsMenu->setItemEnabled(3, false);	
+		//fWindowsMenu->setItemEnabled(3, false);
+		togglePopulationWindowAct->setEnabled( false );	
 	}
 	else
 	{
-		if (window->isShown())
-			fWindowsMenu->changeItem(3, "Hide Population Monitor");
+		if (window->isVisible())
+			//fWindowsMenu->changeItem(3, "Hide Population Monitor");
+			togglePopulationWindowAct->setText( "&Hide Population Monitor" );
 		else
-			fWindowsMenu->changeItem(3, "Show Population Monitor");
+			//fWindowsMenu->changeItem(3, "Show Population Monitor");
+			togglePopulationWindowAct->setText( "&Show Population Monitor" );
 	}
 	
 	// Brain
@@ -557,14 +624,17 @@ void TSceneWindow::windowsMenuAboutToShow()
 	if (brainWindow == NULL)
 	{
 		// No window. Disable menu
-		fWindowsMenu->setItemEnabled(4, false);	
+		//fWindowsMenu->setItemEnabled(4, false);	
+		toggleBrainWindowAct->setEnabled( false );	
 	}
 	else
 	{
-		if (brainWindow->visible)
-			fWindowsMenu->changeItem(4, "Hide Brain Monitor");
+		if (brainWindow->isVisible())
+			//fWindowsMenu->changeItem(4, "Hide Brain Monitor");
+			toggleBrainWindowAct->setText( "&Hide Brain Monitor" );
 		else
-			fWindowsMenu->changeItem(4, "Show Brain Monitor");
+			//fWindowsMenu->changeItem(4, "Show Brain Monitor");
+			toggleBrainWindowAct->setText( "&Show Brain Monitor" );
 	}
 	
 	// POV
@@ -572,14 +642,17 @@ void TSceneWindow::windowsMenuAboutToShow()
 	if (pov == NULL)
 	{
 		// No window. Disable menu
-		fWindowsMenu->setItemEnabled(5, false);	
+		//fWindowsMenu->setItemEnabled(5, false);	
+		togglePOVWindowAct->setEnabled( false );	
 	}
 	else
 	{
-		if (pov->isShown())
-			fWindowsMenu->changeItem(5, "Hide Critter POV");
+		if (pov->isVisible())
+			//fWindowsMenu->changeItem(5, "Hide Critter POV");
+			togglePOVWindowAct->setText( "&Hide Critter POV" );
 		else
-			fWindowsMenu->changeItem(5, "Show Critter POV");
+			//fWindowsMenu->changeItem(5, "Show Critter POV");
+			togglePOVWindowAct->setText( "&Show Critter POV" );
 	}
 }
 

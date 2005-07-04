@@ -43,11 +43,13 @@ static const int kMaxHeight = kMinHeight;
 // TCritterPOVWindow::TCritterPOVWindow
 //---------------------------------------------------------------------------
 TCritterPOVWindow::TCritterPOVWindow(int numSlots, TSimulation* simulation)
-	:	QGLWidget(NULL, "CritterPOVWindow", NULL, WStyle_Customize | WStyle_SysMenu | WStyle_Tool),
+//	:	QGLWidget(NULL, "CritterPOVWindow", NULL, WStyle_Customize | WStyle_SysMenu | WStyle_Tool),
+	:	QGLWidget( NULL, NULL, Qt::WindowSystemMenuHint | Qt::Tool ),
 		fSlots(numSlots),
 		fSimulation(simulation)
 {
-	setCaption("POV");
+	setWindowTitle( "Critter POV" );
+	windowSettingsName = "CritterPOV";
 }
 
 
@@ -56,7 +58,7 @@ TCritterPOVWindow::TCritterPOVWindow(int numSlots, TSimulation* simulation)
 //---------------------------------------------------------------------------
 TCritterPOVWindow::~TCritterPOVWindow()
 {
-	SaveDimensions();
+	SaveWindowState();
 }
 
 
@@ -66,7 +68,7 @@ TCritterPOVWindow::~TCritterPOVWindow()
 void TCritterPOVWindow::paintGL()
 {
 	// Only called once, on initialization???
-	qglClearColor(black);
+	qglClearColor( Qt::black );
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 #if 0
@@ -194,7 +196,7 @@ void TCritterPOVWindow::mouseDoubleClickEvent(QMouseEvent*)
 {
 }
 
-
+#if 0
 //---------------------------------------------------------------------------
 // TCritterPOVWindow::customEvent
 //---------------------------------------------------------------------------
@@ -203,7 +205,7 @@ void TCritterPOVWindow::customEvent(QCustomEvent* event)
 	if (event->type() == kUpdateEventType)
 		updateGL();
 }
-
+#endif
 
 //---------------------------------------------------------------------------
 // TCritterPOVWindow::RestoreFromPrefs
@@ -223,32 +225,19 @@ void TCritterPOVWindow::RestoreFromPrefs(long x, long y)
 	// Attempt to restore window size and position from prefs
 	// Save size and location to prefs
 	QSettings settings;
-	settings.setPath(kPrefPath, kPrefSection);
 
-	settings.beginGroup("/windows");
-		settings.beginGroup(name());
+	settings.beginGroup( kWindowsGroupSettingsName );
+		settings.beginGroup( windowSettingsName );
 		
-//			defWidth = settings.readNumEntry("/width", defWidth);
-//			defHeight = settings.readNumEntry("/height", defHeight);
-			defX = settings.readNumEntry("/x", defX);
-			defY = settings.readNumEntry("/y", defY);
-			visible = settings.readBoolEntry("/visible", visible);
+			if( settings.contains( "x" ) )
+				defX = settings.value( "x" ).toInt();
+			if( settings.contains( "y" ) )
+				defY = settings.value( "y" ).toInt();
+			if( settings.contains( "visible" ) )
+				visible = settings.value( "visible" ).toBool();
 
 		settings.endGroup();
 	settings.endGroup();
-
-#if 0	
-	// Pin values
-	if (defWidth > kMaxWidth)
-		defWidth = kMaxWidth;	
-	if (defWidth < kMinWidth)
-		defWidth = kMinWidth;
-			
-	if (defHeight > kMaxHeight)
-		defHeight = kMaxHeight;
-	if (defHeight < kMinHeight)
-		defHeight = kMinHeight;
-#endif
 
 	if (defY < kMenuBarHeight + titleHeight)
 		defY = kMenuBarHeight + titleHeight;
@@ -258,8 +247,6 @@ void TCritterPOVWindow::RestoreFromPrefs(long x, long y)
  	position.setTopLeft(QPoint(defX, defY));
  	position.setSize(QSize(defWidth, defHeight));
   	setGeometry(position);
-//	setMinimumSize(kMinWidth, kMinHeight);
-//	setMaximumSize(kMaxWidth, kMaxHeight);
 	setMinimumSize(critter::povheight, critter::povheight);
 	setMaximumSize(critter::povwidth, critter::povwidth);
 	
@@ -267,7 +254,7 @@ void TCritterPOVWindow::RestoreFromPrefs(long x, long y)
 		show();
 	
 	// Save settings for future restore		
-	SaveDimensions();		
+	SaveWindowState();		
 }
 
 
@@ -296,21 +283,30 @@ void TCritterPOVWindow::DisableAA()
 
 
 //---------------------------------------------------------------------------
+// TCritterPOVWindow::SaveWindowState
+//---------------------------------------------------------------------------
+void TCritterPOVWindow::SaveWindowState()
+{
+	SaveDimensions();
+	SaveVisibility();
+}
+
+
+//---------------------------------------------------------------------------
 // TCritterPOVWindow::SaveDimensions
 //---------------------------------------------------------------------------
 void TCritterPOVWindow::SaveDimensions()
 {
 	// Save size and location to prefs
 	QSettings settings;
-	settings.setPath(kPrefPath, kPrefSection);
 
-	settings.beginGroup("/windows");
-		settings.beginGroup(name());
+	settings.beginGroup( kWindowsGroupSettingsName );
+		settings.beginGroup( windowSettingsName );
 		
-			settings.writeEntry("/width", geometry().width());
-			settings.writeEntry("/height", geometry().height());			
-			settings.writeEntry("/x", geometry().x());
-			settings.writeEntry("/y", geometry().y());
+			settings.setValue( "width", geometry().width() );
+			settings.setValue( "height", geometry().height() );			
+			settings.setValue( "x", geometry().x() );
+			settings.setValue( "y", geometry().y() );
 
 		settings.endGroup();
 	settings.endGroup();
@@ -323,12 +319,11 @@ void TCritterPOVWindow::SaveDimensions()
 void TCritterPOVWindow::SaveVisibility()
 {
 	QSettings settings;
-	settings.setPath(kPrefPath, kPrefSection);
 
-	settings.beginGroup("/windows");
-		settings.beginGroup(name());
+	settings.beginGroup( kWindowsGroupSettingsName );
+		settings.beginGroup( windowSettingsName );
 		
-			settings.writeEntry("/visible", isShown());
+			settings.setValue( "visible", isVisible() );
 
 		settings.endGroup();
 	settings.endGroup();

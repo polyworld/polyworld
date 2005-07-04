@@ -16,6 +16,7 @@
 #include <qapplication.h>
 #include <qgl.h>
 #include <qsettings.h>
+#include <QDesktopWidget>
 
 // Local
 #include "error.h"
@@ -34,20 +35,26 @@ int TChartWindow::kMaxHeight = 150;
 //---------------------------------------------------------------------------
 // TChartWindow::TChartWindow
 //---------------------------------------------------------------------------
-TChartWindow::TChartWindow(const char* name)
-	:	QGLWidget(NULL, name, NULL, WStyle_Customize | WStyle_SysMenu | WStyle_Tool)
+TChartWindow::TChartWindow(const char* name, const char* settingsName)
+//	:	QGLWidget(NULL, name, NULL, WStyle_Customize | WStyle_SysMenu | WStyle_Tool)
+	:	QGLWidget( NULL, NULL, Qt::WindowSystemMenuHint | Qt::Tool )
 {
-	Init(1);
+	setWindowTitle( name );
+	windowSettingsName = settingsName;
+	Init( 1 );
 }
 
 
 //---------------------------------------------------------------------------
 // TChartWindow::TChartWindow
 //---------------------------------------------------------------------------
-TChartWindow::TChartWindow(const char* name, short numCurves)
-	:	QGLWidget(NULL, name, NULL, WStyle_Customize | WStyle_SysMenu | WStyle_Tool)
+TChartWindow::TChartWindow(const char* name, const char* settingsName, short numCurves)
+//	:	QGLWidget(NULL, name, NULL, WStyle_Customize | WStyle_SysMenu | WStyle_Tool)
+	:	QGLWidget( NULL, NULL, Qt::WindowSystemMenuHint | Qt::Tool )
 {	
-	Init(numCurves);
+	setWindowTitle( name );
+	windowSettingsName = settingsName;
+	Init( numCurves );
 }
 
 
@@ -57,7 +64,7 @@ TChartWindow::TChartWindow(const char* name, short numCurves)
 //---------------------------------------------------------------------------
 TChartWindow::~TChartWindow()
 {
-	SaveDimensions();
+	SaveWindowState();
 	
 	// Clean up
 	delete y;
@@ -150,8 +157,8 @@ void TChartWindow::Draw()
 //---------------------------------------------------------------------------
 void TChartWindow::initializeGL()
 {
-	qglClearColor(black);
-    glShadeModel(GL_SMOOTH);
+	qglClearColor( Qt::black );
+    glShadeModel( GL_SMOOTH );
 }
 
 
@@ -246,7 +253,7 @@ void TChartWindow::DrawAxes()
 	char s[256];
     long y0;
 
-	qglColor(white);
+	qglColor( Qt::white );
 	
     if ((fLowV[0]<=0.0) && (fHighV[0]>=0.0))
         y0 = (long)((fHighY-fLowY) * (0.0 - fLowV[0]) / (fHighV[0] - fLowV[0]) + fLowY);
@@ -279,7 +286,7 @@ void TChartWindow::DrawAxes()
 		sprintf(s, "%ld", long(fLowV[0]));
     else
         sprintf(s,"%.1f", fLowV[0]);
-	qglColor(white); 
+	qglColor( Qt::white ); 
 	renderText(fLowX - metrics.width(s) - 2, fHighY + (metrics.height() / 2) + 3, s, font);
 
 	glBegin(GL_LINES);
@@ -291,7 +298,7 @@ void TChartWindow::DrawAxes()
         sprintf(s, "%ld", long(fHighV[0]));
     else
         sprintf(s, "%.1f",fHighV[0]);
-	qglColor(white);        
+	qglColor( Qt::white );        
 	renderText(fLowX - metrics.width(s) - 2, fLowY + (metrics.height() / 2) + 3, s, font);
 
     if (fDecimation)
@@ -388,7 +395,7 @@ void TChartWindow::AddPoint( short ic, float val )
         
 	y[(long)((ic * fMaxPoints) + fNumPoints[ic])] = (long)((val - fLowV[ic]) * dydv[ic]  +  fLowY);    
 	
-	if( isShown() )
+	if( isVisible() )
 	{
 		makeCurrent();
 		PlotPoint( ic, fNumPoints[ic] + fLowX, y[(ic * fMaxPoints) + fNumPoints[ic]] );
@@ -413,16 +420,20 @@ void TChartWindow::RestoreFromPrefs(long x, long y)
 	// Attempt to restore window size and position from prefs
 	// Save size and location to prefs
 	QSettings settings;
-	settings.setPath(kPrefPath, kPrefSection);
 
-	settings.beginGroup("/windows");
-		settings.beginGroup(name());
+	settings.beginGroup( kWindowsGroupSettingsName );
+		settings.beginGroup( windowSettingsName );
 		
-			defWidth = settings.readNumEntry("/width", defWidth);
-			defHeight = settings.readNumEntry("/height", defHeight);
-			defX = settings.readNumEntry("/x", defX);
-			defY = settings.readNumEntry("/y", defY);
-			visible = settings.readBoolEntry("/visible", visible);
+			if( settings.contains( "width" ) )
+				defWidth = settings.value( "width" ).toInt();
+			if( settings.contains( "height" ) )
+				defHeight = settings.value( "height" ).toInt();
+			if( settings.contains( "x" ) )
+				defX = settings.value( "x" ).toInt();
+			if( settings.contains( "y" ) )
+				defY = settings.value( "y" ).toInt();
+			if( settings.contains( "visible" ) )
+				visible = settings.value( "visible" ).toBool();
 
 		settings.endGroup();
 	settings.endGroup();
@@ -439,7 +450,7 @@ void TChartWindow::RestoreFromPrefs(long x, long y)
 		defX = 0;
 
 	if (defY < d->y() || defY > d->height())
-		defY = 60;
+		defY = 44;
 
 	// Set window size and location based on prefs
 	setFixedSize(defWidth, defHeight);
@@ -462,7 +473,7 @@ void TChartWindow::RestoreFromPrefs(long x, long y)
 		show();
 		
 	// Save settings for future restore		
-	SaveDimensions();		
+	SaveWindowState();		
 }
 
 
@@ -542,21 +553,30 @@ void TChartWindow::DisableAA()
 
 
 //---------------------------------------------------------------------------
+// TChartWindow::SaveWindowState
+//---------------------------------------------------------------------------
+void TChartWindow::SaveWindowState()
+{
+	SaveDimensions();
+	SaveVisibility();
+}
+
+
+//---------------------------------------------------------------------------
 // TChartWindow::SaveDimensions
 //---------------------------------------------------------------------------
 void TChartWindow::SaveDimensions()
 {
 	// Save size and location to prefs
 	QSettings settings;
-	settings.setPath(kPrefPath, kPrefSection);
 
-	settings.beginGroup("/windows");
-		settings.beginGroup(name());
+	settings.beginGroup( kWindowsGroupSettingsName );
+		settings.beginGroup( windowSettingsName );
 		
-			settings.writeEntry("/width", geometry().width());
-			settings.writeEntry("/height", geometry().height());			
-			settings.writeEntry("/x", geometry().x());
-			settings.writeEntry("/y", geometry().y());
+			settings.setValue( "width", geometry().width() );
+			settings.setValue( "height", geometry().height() );			
+			settings.setValue( "x", geometry().x() );
+			settings.setValue( "y", geometry().y() );
 			
 		settings.endGroup();
 	settings.endGroup();
@@ -569,18 +589,17 @@ void TChartWindow::SaveDimensions()
 void TChartWindow::SaveVisibility()
 {
 	QSettings settings;
-	settings.setPath(kPrefPath, kPrefSection);
 
-	settings.beginGroup("/windows");
-		settings.beginGroup(name());
+	settings.beginGroup( kWindowsGroupSettingsName );
+		settings.beginGroup( windowSettingsName );
 		
-			settings.writeEntry("/visible", isShown());
+			settings.setValue( "visible", isVisible() );
 
 		settings.endGroup();
 	settings.endGroup();
 }
 
-
+#if 0
 //---------------------------------------------------------------------------
 // TChartWindow::customEvent
 //---------------------------------------------------------------------------
@@ -589,7 +608,7 @@ void TChartWindow::customEvent(QCustomEvent* event)
 	if (event->type() == kUpdateEventType)
 		updateGL();
 }
-
+#endif
 
 //===========================================================================
 // TBinChartWindow
@@ -598,8 +617,8 @@ void TChartWindow::customEvent(QCustomEvent* event)
 //---------------------------------------------------------------------------
 // TBinChartWindow::TBinChartWindow
 //---------------------------------------------------------------------------
-TBinChartWindow::TBinChartWindow(const char* name)
-	:	TChartWindow(name)
+TBinChartWindow::TBinChartWindow( const char* name, const char* settingsName )
+	:	TChartWindow( name, settingsName )
 {
 	Init();
 }
@@ -621,16 +640,15 @@ void TBinChartWindow::RestoreFromPrefs(long x, long y)
 	// Attempt to restore window size and position from prefs
 	// Save size and location to prefs
 	QSettings settings;
-	settings.setPath(kPrefPath, kPrefSection);
 
-	settings.beginGroup("/windows");
-		settings.beginGroup(name());
+	settings.beginGroup( kWindowsGroupSettingsName );
+		settings.beginGroup( windowSettingsName );
 		
-			defWidth = settings.readNumEntry("/width", defWidth);
-			defHeight = settings.readNumEntry("/height", defHeight);
-			defX = settings.readNumEntry("/x", defX);
-			defY = settings.readNumEntry("/y", defY);
-			visible = settings.readBoolEntry("/visible", visible);
+			defWidth = settings.value( "width" ).toInt();
+			defHeight = settings.value( "height" ).toInt();
+			defX = settings.value( "x" ).toInt();
+			defY = settings.value( "y" ).toInt();
+			visible = settings.value( "visible" ).toBool();
 			
 		settings.endGroup();
 	settings.endGroup();
@@ -671,7 +689,7 @@ void TBinChartWindow::RestoreFromPrefs(long x, long y)
 		show();
     
 	// Save settings for future restore		
-	SaveDimensions();		    
+	SaveWindowState();		    
 }
 
 
@@ -798,7 +816,7 @@ void TBinChartWindow::AddPoint(const float* val, long numval)
         }
         fNumPoints[0] = i;
         fDecimation++;
-		if( isShown() )
+		if( isVisible() )
 		{
 			makeCurrent();
 			Draw();
@@ -818,7 +836,7 @@ void TBinChartWindow::AddPoint(const float* val, long numval)
         ymx = std::max(ymx, y[koff + k]);
     }
 		
-	if( isShown() )
+	if( isVisible() )
 	{
 		makeCurrent();
 		PlotPoint( fNumPoints[0] + fLowX, &fy[koff] );

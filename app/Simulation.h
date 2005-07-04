@@ -46,7 +46,7 @@ public:
 	
 	gcamera& GetCamera();
 
-	TChartWindow* GetBornWindow() const;
+	TChartWindow* GetBirthrateWindow() const;
 	TChartWindow* GetFitnessWindow() const;
 	TChartWindow* GetEnergyWindow() const;
 	TChartWindow* GetPopulationWindow() const;	
@@ -100,7 +100,7 @@ private:
 	void Dump();
 
 	TSceneView* fSceneView;
-	TChartWindow* fBornWindow;
+	TChartWindow* fBirthrateWindow;
 	TChartWindow* fFitnessWindow;
 	TChartWindow* fFoodEnergyWindow;
 	TChartWindow* fPopulationWindow;
@@ -240,7 +240,7 @@ private:
 };
 
 inline gcamera& TSimulation::GetCamera() { return fCamera; }
-inline TChartWindow* TSimulation::GetBornWindow() const { return fBornWindow; }
+inline TChartWindow* TSimulation::GetBirthrateWindow() const { return fBirthrateWindow; }
 inline TChartWindow* TSimulation::GetFitnessWindow() const { return fFitnessWindow; }
 inline TChartWindow* TSimulation::GetEnergyWindow() const { return fFoodEnergyWindow; }
 inline TChartWindow* TSimulation::GetPopulationWindow() const { return fPopulationWindow; }

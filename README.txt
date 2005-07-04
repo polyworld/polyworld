@@ -7,45 +7,47 @@ this line of research, now that I am a Professor of Informatics at
 Indiana University, and am finally able to once again devote my
 time to this subject.
 
-Polyworld currently runs atop Qt from Trolltech
+Polyworld currently runs atop Qt 4 from Trolltech
 <http://www.trolltech.com/>.  It uses the "Qt Open Source Edition",
 in keeping with its open source nature.  Polyworld itself is open
 sourced under the Apple Public Source License (see the accompanying
 file named LICENSE) through SourceForge.net, in keeping with its
 original copyright by Apple and open source nature.
 
+NOTE:  Polyworld now *requires* Qt 4.x, and will no longer build on
+Qt 3.x.  Temporarily only the "buildit" method for building works;
+the Xcode project will be updated soon.
+
 To build Polyworld, you will need to:
 
 Download and configure Qt (Open Source Edition)
 * visit <http://www.trolltech.com/download/opensource.html> and
   download the version appropriate to your development platform
-  (a free Windows version will be available in July 2005)
+  (open source versions are now available for all major platforms)
 * use gunzip and gnutar (or use StuffIt Expander) to unpack the
   archive someplace convenient (like ~/src)
-* the Qt documentation suggests renaming the resulting directory
-  to simply "qt", and then within that directory creating a
-  symbolic link:
-     ln -s doc/man man
-  (or, equivalently, after setting up the environment variables
-  below, typing 'ln -s $QTDIR/doc/man $QTDIR/man')
-* reading the Qt documentation you will see that you must also set
-  some environment variables (such as in your .login or .cshrc file):
+* you may wish to rename the resulting directory to simply "qt"
+* it may no longer be necessary, but I still set some environment
+  variables (in .login), and do NOT do the recommended "make install",
+  because I prefer to keep all the qt files in one place:
      setenv QTDIR <path to Qt main directory>
      setenv PATH $QTDIR/bin:$PATH
-     setenv MANPATH $QTDIR/man:`manpath`
      setenv DYLD_LIBRARY_PATH $QTDIR/lib
 * Polyworld adds one additional required environment variable:
      setenv QT_INCLUDE_DIR <path to Qt include dir>
   (Normally this is just $(QTDIR)/include, but making it explicit
   allows us to support some alternative Qt configurations, such
   as a "darwinports" installation)
-* configure Qt by typing something like './configure -thread -static'
+* configure Qt by typing something like './configure -static'
   (I am currently using -static, so the application can be run on
-  machines without Qt installed, and -thread, though threading is
-  is not currently used in Polyworld.  Type './configure -help' for
+  machines without Qt installed.  Type './configure -help' for
   other options.) NOTE: This can take several minutes to complete
 * build Qt by typing 'make'
-  NOTE: This can take an hour or more to complete!
+  NOTE: This can take an hour or more to complete!  If you want to
+  speed things up and can live without working copies of all the
+  Qt demos and examples, you can instead type 'make src' and
+  'make tools', to build all and only the pieces needed for
+  actual development.
   
 Download Polyworld source (from SourceForge)
 * in an appropriate directory (I use .../qt/projects/), type
@@ -74,7 +76,7 @@ Build Polyworld (Qt method)
 * enter the polyworld directory by typing 'cd polyworld'
 * type './buildit'
 
-Build Polyworld (Xcode method)
+Build Polyworld (Xcode method) [temporarily broken]
 * Add some key Qt paths in the Xcode "Source Trees" preferences:
 	- QtInc should point to the include dir of the Qt distribution 
 	- QtLib should point to the lib dir of the Qt distribution
@@ -110,16 +112,16 @@ inform me of any possible conflicts with the Qt/buildit Polyworld.app/.
 
 Running atop Qt, Polyworld should be fully cross-platform (Mac OS
 X, Windows, and Linux), but currently is only routinely built and
-tested on Mac OS X.
+tested on Mac OS X.  At a minimum, polyworld.pro needs to be tailored
+to the platform, in order to replace OS X's -framework notation with
+-l library invocations; other libraries may also need to be added.
 
 A build has been successful on Linux, but it required a modification
 to variables INCPATH and LIBS in the Polyworld Makefile (resulting
 from the qmake step in the buildit script), so they would point to
 the Linux headers and libs instead of the OS X frameworks.  I believe
-this is fixed now, but have not yet tested it.  It was also necessary
-to replace my definition of dprintf (with, for example, dbprintf) in
-app/debug.h to avoid a conflict with a system-defined dprintf.  I will
-try to normalize the OS X and Linux builds soon.
+this is fixed now, but have not yet tested it.  I will try to
+normalize the OS X and Linux builds soon.
 
 Technical details of the algorithms used in Polyworld may be found
 here: <http://pobox.com/~larryy/PolyWorld.html>, particularly in
@@ -130,5 +132,5 @@ For more details about using cvs to check out source code from
 SourceForge.net, see
 <https://sourceforge.net/docman/display_doc.php?docid=14033&group_id=1>.
 
-Tagged revisions:
+CVS tagged revisions:
 pw08_qt331 - A mostly functional 0.8 version of Polyworld targeted to Qt 3.3.1

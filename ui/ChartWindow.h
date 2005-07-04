@@ -15,9 +15,12 @@
 
 // qt
 #include <qgl.h>
+//#include <QCustomEvent>
 
 // Local
 #include "graphics.h"
+
+//class QCustomEvent;
 
 //===========================================================================
 // TChartWindow
@@ -25,8 +28,8 @@
 class TChartWindow : public QGLWidget
 {
 public:
-    TChartWindow(const char* name);
-    TChartWindow(const char* name, short numCurves);
+    TChartWindow( const char* name, const char* settingsName );
+    TChartWindow( const char* name, const char* settingsName, short numCurves);
     virtual ~TChartWindow();
     
 	void EnableAA();
@@ -63,7 +66,7 @@ protected:
     virtual void mouseMoveEvent(QMouseEvent* event);
     virtual void mouseReleaseEvent(QMouseEvent* event);
     virtual void mouseDoubleClickEvent(QMouseEvent* event);
-	virtual void customEvent(QCustomEvent* event);
+//	virtual void customEvent(QCustomEvent* event);
 
 	void Init(short ncurves);
 	virtual void PlotPoints();
@@ -72,6 +75,7 @@ protected:
 	void DrawAxes();
 	void Draw();
 	
+	void SaveWindowState();
 	void SaveDimensions();
 		
 	long* y;  // dynamically allocated memory for storing plotted values
@@ -87,9 +91,9 @@ protected:
 	float* dydv;
 	Color* fColor;
 	short fDecimation;
+	QString windowSettingsName;
     
 private:
-
 
 };
 
@@ -112,7 +116,7 @@ inline void TChartWindow::AddPoint(float val) { AddPoint(0,val); }
 class TBinChartWindow : public TChartWindow
 {
 public:
-    TBinChartWindow(const char* name);
+    TBinChartWindow( const char* name, const char* settingsName );
         
     void SetExponent(float e);
     float GetExponent();

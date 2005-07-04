@@ -12,10 +12,12 @@
 
 // qt
 #include <qgl.h>
+//#include <QCustomEvent>
 
 // Forware declarations
 class gscene;
 class TSimulation;
+//class QCustomEvent;
 
 //===========================================================================
 // TSceneView
@@ -40,8 +42,8 @@ protected:
     virtual void mouseMoveEvent(QMouseEvent* event);
     virtual void mouseReleaseEvent(QMouseEvent* event);
     virtual void mouseDoubleClickEvent(QMouseEvent* event);
-	virtual void customEvent(QCustomEvent* event);
-
+//	virtual void customEvent(QCustomEvent* event);
+	
 private:
 	gscene* fScene;
 	TSimulation* fSimulation;

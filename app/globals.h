@@ -33,9 +33,10 @@ static const long yscreensize = YMAXSCREEN + 1;
 static const int MAXLIGHTS = 10;
 
 // Prefs
-static const char kPrefPath[] = "edu.indiana.polyworld";
-static const char kPrefSection[] = "polyworld";
-
+//static const char kPrefPath[] = "edu.indiana.polyworld";
+//static const char kPrefSection[] = "polyworld";
+//static const char kAppSettingsName[] = "polyworld";
+static const char kWindowsGroupSettingsName[] = "windows";
 
 class globals
 {

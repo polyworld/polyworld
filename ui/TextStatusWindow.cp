@@ -31,11 +31,13 @@ using namespace std;
 // TTextStatusWindow::TTextStatusWindow
 //---------------------------------------------------------------------------
 TTextStatusWindow::TTextStatusWindow(TSimulation* simulation)
-	:	QWidget(NULL, "TextStatusWindow", WStyle_Customize | WStyle_SysMenu | WStyle_Tool),
+//	:	QWidget(NULL, "TextStatusWindow", WStyle_Customize | WStyle_SysMenu | WStyle_Tool),
+	:	QWidget( NULL, Qt::WindowSystemMenuHint | Qt::Tool ),
 		fSimulation(simulation),
 		fSaveToFile(false)
 {
-	setCaption("Status");
+	setWindowTitle( "Status" );
+	windowSettingsName = "Status";
 }
 
 
@@ -44,7 +46,7 @@ TTextStatusWindow::TTextStatusWindow(TSimulation* simulation)
 //---------------------------------------------------------------------------
 TTextStatusWindow::~TTextStatusWindow()
 {
-	SaveDimensions();
+	SaveWindowState();
 }
 
 
@@ -61,8 +63,9 @@ void TTextStatusWindow::paintEvent(QPaintEvent* event)
 	
 	// Fill background with black
 	QPainter paint(this);
-	paint.setBackgroundColor(Qt::black);
-	paint.fillRect(event->rect(), Qt::black);
+	QBrush brush( Qt::black );
+//	paint.setBrush( brush );
+	paint.fillRect( event->rect(), brush );
 	
 	// Draw text in white
 	QFont font("LucidaGrande", 12);
@@ -120,8 +123,8 @@ void TTextStatusWindow::mouseDoubleClickEvent(QMouseEvent*)
 //---------------------------------------------------------------------------
 void TTextStatusWindow::RestoreFromPrefs(long x, long y)
 {
-	const int kDefaultWidth = 200;
-	const int kDefaultHeight = 500;
+//	const int kDefaultWidth = 200;
+//	const int kDefaultHeight = 500;
 	
 	// Set up some defaults
 	int defWidth = kDefaultWidth;
@@ -134,16 +137,20 @@ void TTextStatusWindow::RestoreFromPrefs(long x, long y)
 	// Attempt to restore window size and position from prefs
 	// Save size and location to prefs
 	QSettings settings;
-	settings.setPath(kPrefPath, kPrefSection);
 
-	settings.beginGroup("/windows");
-		settings.beginGroup(name());
+	settings.beginGroup( kWindowsGroupSettingsName );
+		settings.beginGroup( windowSettingsName );
 		
-			defWidth = settings.readNumEntry("/width", defWidth);
-			defHeight = settings.readNumEntry("/height", defHeight);
-			defX = settings.readNumEntry("/x", defX);
-			defY = settings.readNumEntry("/y", defY);
-			visible = settings.readBoolEntry("/visible", visible);
+			if( settings.contains( "width" ) )
+				defWidth = settings.value( "width" ).toInt();
+			if( settings.contains( "height" ) )
+				defHeight = settings.value( "height" ).toInt();
+			if( settings.contains( "x" ) )
+				defX = settings.value( "x" ).toInt();
+			if( settings.contains( "y" ) )
+				defY = settings.value( "y" ).toInt();
+			if( settings.contains( "visible" ) )
+				visible = settings.value( "visible" ).toBool();
 
 		settings.endGroup();
 	settings.endGroup();
@@ -169,7 +176,17 @@ void TTextStatusWindow::RestoreFromPrefs(long x, long y)
 		show();
 	
 	// Save settings for future restore		
-	SaveDimensions();		
+	SaveWindowState();		
+}
+
+
+//---------------------------------------------------------------------------
+// TTextStatusWindow::SaveWindowState
+//---------------------------------------------------------------------------
+void TTextStatusWindow::SaveWindowState()
+{
+	SaveDimensions();
+	SaveVisibility();
 }
 
 
@@ -180,15 +197,14 @@ void TTextStatusWindow::SaveDimensions()
 {
 	// Save size and location to prefs
 	QSettings settings;
-	settings.setPath(kPrefPath, kPrefSection);
 
-	settings.beginGroup("/windows");
-		settings.beginGroup(name());
+	settings.beginGroup( kWindowsGroupSettingsName );
+		settings.beginGroup( windowSettingsName );
 		
-			settings.writeEntry("/width", geometry().width());
-			settings.writeEntry("/height", geometry().height());			
-			settings.writeEntry("/x", geometry().x());
-			settings.writeEntry("/y", geometry().y());
+			settings.setValue( "width", geometry().width() );
+			settings.setValue( "height", geometry().height() );			
+			settings.setValue( "x", geometry().x() );
+			settings.setValue( "y", geometry().y() );
 
 		settings.endGroup();
 	settings.endGroup();
@@ -201,12 +217,11 @@ void TTextStatusWindow::SaveDimensions()
 void TTextStatusWindow::SaveVisibility()
 {
 	QSettings settings;
-	settings.setPath(kPrefPath, kPrefSection);
 
-	settings.beginGroup("/windows");
-		settings.beginGroup(name());
+	settings.beginGroup( kWindowsGroupSettingsName );
+		settings.beginGroup( windowSettingsName );
 		
-			settings.writeEntry("/visible", isShown());
+			settings.setValue( "visible", isVisible() );
 
 		settings.endGroup();
 	settings.endGroup();

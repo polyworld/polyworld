@@ -8,6 +8,7 @@
 
 // qt
 #include <qapplication.h>
+#include <QDesktopWidget>
 
 // Local
 #include "barrier.h"
@@ -50,7 +51,7 @@ double TSimulation::fTimeStart;
 //---------------------------------------------------------------------------
 TSimulation::TSimulation(TSceneView* sceneView)
 	:	fSceneView(sceneView),
-		fBornWindow(NULL),
+		fBirthrateWindow(NULL),
 		fFitnessWindow(NULL),
 		fFoodEnergyWindow(NULL),
 		fPopulationWindow(NULL),
@@ -93,8 +94,8 @@ TSimulation::~TSimulation()
 	Stop();
 
 	// Close windows and save prefs
-	if (fBornWindow != NULL)
-		delete fBornWindow;
+	if (fBirthrateWindow != NULL)
+		delete fBirthrateWindow;
 
 	if (fFitnessWindow != NULL)
 		delete fFitnessWindow;
@@ -289,7 +290,7 @@ void TSimulation::Step()
 		fCritterPOVWindow->makeCurrent();
 		
 		// Clear the window's color and depth buffers
-		fCritterPOVWindow->qglClearColor(black);
+		fCritterPOVWindow->qglClearColor( Qt::black );
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
 		critter* c;
@@ -361,15 +362,15 @@ void TSimulation::Step()
 		
 		// Born / (Born + Created) window
 		if (fChartBorn
-			&& fBornWindow != NULL
-		/*  && fBornWindow->isShown() */
+			&& fBirthrateWindow != NULL
+		/*  && fBirthrateWindow->isVisible() */
 			&& ((oldNumBorn != fNumberBorn) || (oldNumCreated != fNumberCreated)))
 		{
-			fBornWindow->AddPoint(float(fNumberBorn) / float(fNumberBorn + fNumberCreated));
+			fBirthrateWindow->AddPoint(float(fNumberBorn) / float(fNumberBorn + fNumberCreated));
 		}
 
 		// Fitness window
-		if( fChartFitness && fFitnessWindow != NULL /* && fFitnessWindow->isShown() */ )
+		if( fChartFitness && fFitnessWindow != NULL /* && fFitnessWindow->isVisible() */ )
 		{
 			fFitnessWindow->AddPoint(0, fMaxFitness / fTotalFitness);
 			fFitnessWindow->AddPoint(1, fCurrentMaxFitness[0] / fTotalFitness);
@@ -377,7 +378,7 @@ void TSimulation::Step()
 		}
 		
 		// Energy flux window
-		if( fChartFoodEnergy && fFoodEnergyWindow != NULL /* && fFoodEnergyWindow->isShown() */ )
+		if( fChartFoodEnergy && fFoodEnergyWindow != NULL /* && fFoodEnergyWindow->isVisible() */ )
 		{
 			fFoodEnergyWindow->AddPoint(0, (fFoodEnergyIn - fFoodEnergyOut) / (fFoodEnergyIn + fFoodEnergyOut));
 			fFoodEnergyWindow->AddPoint(1, (fTotalFoodEnergyIn - fTotalFoodEnergyOut) / (fTotalFoodEnergyIn + fTotalFoodEnergyOut));
@@ -385,7 +386,7 @@ void TSimulation::Step()
 		}
 		
 		// Population window
-		if( fChartPopulation && fPopulationWindow != NULL /* && fPopulationWindow->isShown() */ )
+		if( fChartPopulation && fPopulationWindow != NULL /* && fPopulationWindow->isVisible() */ )
 		{				
 			{
 				fPopulationWindow->AddPoint(0, float(critter::gXSortedCritters.count()));
@@ -412,7 +413,7 @@ void TSimulation::Step()
 					fBrainMonitorWindow->StopMonitoring();
 			}					
 							
-			if (fMonitorCritterRank && fBrainMonitorWindow != NULL && fBrainMonitorWindow->visible)
+			if (fMonitorCritterRank && fBrainMonitorWindow != NULL && fBrainMonitorWindow->isVisible() )
 			{
 				Q_CHECK_PTR(fBrainMonitorWindow);
 				fMonitorCritter = fCurrentFittestCritter[fMonitorCritterRank - 1];
@@ -425,11 +426,11 @@ void TSimulation::Step()
 		
 			fMonitorCritterRankOld = fMonitorCritterRank;			
 		}
-		if( fBrainMonitorWindow && fBrainMonitorWindow->visible /* fBrainMonitorWindow->isShown() */ )
+		if( fBrainMonitorWindow && fBrainMonitorWindow->isVisible() /* fBrainMonitorWindow->isVisible() */ )
 		{
 			char title[64];
 			sprintf( title, "Brain Monitor (%ld:%ld)", fMonitorCritterRank, fMonitorCritter->Number() );
-			fBrainMonitorWindow->setCaption(QString(title));
+			fBrainMonitorWindow->setWindowTitle( QString(title) );
 			fBrainMonitorWindow->Draw();
 		}
 	}
@@ -940,24 +941,19 @@ void TSimulation::InitWorld()
 //
 // Create and display monitoring windows
 //---------------------------------------------------------------------------
-static const char* kEnergyWindow = "PWEnergyWindow";
-static const char* kFitnessWindow = "PWFitnessWindow";
-static const char* kFoodWindow = "PWFoodWindow";
-static const char* kPopulationWindow = "PWPopulationWindow";
-//static const char* kGeneWindow = "PWGeneWindow";
 
 void TSimulation::InitMonitoringWindows()
 {
 	// Critter birthrate
-	fBornWindow = new TChartWindow(kEnergyWindow);
-	fBornWindow->setCaption(QString("born / (born + created)"));
-	sprintf( fBornWindow->title, "born / (born + created)" );
-	fBornWindow->SetRange(0.0, 1.0);
-	fBornWindow->setFixedSize(TChartWindow::kMaxWidth, TChartWindow::kMaxHeight);
+	fBirthrateWindow = new TChartWindow( "born / (born + created)", "Birthrate" );
+//	fBirthrateWindow->setWindowTitle( QString( "born / (born + created)" ) );
+	sprintf( fBirthrateWindow->title, "born / (born + created)" );
+	fBirthrateWindow->SetRange(0.0, 1.0);
+	fBirthrateWindow->setFixedSize(TChartWindow::kMaxWidth, TChartWindow::kMaxHeight);
 
 	// Critter fitness		
-	fFitnessWindow = new TChartWindow(kFitnessWindow, 3);
-	fFitnessWindow->setCaption(QString("maxfit, curmaxfit, avgfit"));
+	fFitnessWindow = new TChartWindow( "maxfit, curmaxfit, avgfit", "Fitness", 3);
+//	fFitnessWindow->setWindowTitle( QString( "maxfit, curmaxfit, avgfit" ) );
 	sprintf( fFitnessWindow->title, "maxfit, curmaxfit, avgfit" );
 	fFitnessWindow->SetRange(0, 0.0, 1.0);
 	fFitnessWindow->SetRange(1, 0.0, 1.0);
@@ -968,8 +964,8 @@ void TSimulation::InitMonitoringWindows()
 	fFitnessWindow->setFixedSize(TChartWindow::kMaxWidth, TChartWindow::kMaxHeight);	
 	
 	// Food energy
-	fFoodEnergyWindow = new TChartWindow(kFoodWindow, 3);
-	fFoodEnergyWindow->setCaption(QString("energy in, total, avg"));
+	fFoodEnergyWindow = new TChartWindow( "energy in, total, avg", "Energy", 3);
+//	fFoodEnergyWindow->setWindowTitle( QString( "energy in, total, avg" ) );
 	sprintf( fFoodEnergyWindow->title, "energy in, total, avg" );
 	fFoodEnergyWindow->SetRange(0, -1.0, 1.0);
 	fFoodEnergyWindow->SetRange(1, -1.0, 1.0);
@@ -989,9 +985,9 @@ void TSimulation::InitMonitoringWindows()
 	};
 	
 	const short numpop = (fNumDomains < 2) ? 1 : (fNumDomains + 1);
-    fPopulationWindow = new TChartWindow(kPopulationWindow, numpop);
-	fPopulationWindow->setCaption("population size");
-	sprintf( fPopulationWindow->title, "population size" );
+    fPopulationWindow = new TChartWindow( "Population", "Population", numpop);
+//	fPopulationWindow->setWindowTitle( "population size" );
+	sprintf( fPopulationWindow->title, "Population" );
 	for (int i = 0; i < numpop; i++)
 	{
 		int colorIndex = i % 7;
@@ -1002,74 +998,71 @@ void TSimulation::InitMonitoringWindows()
 
 	// Brain monitor
 	fBrainMonitorWindow = new TBrainMonitorWindow();
-	fBrainMonitorWindow->setCaption(QString("Brain Monitor"));
+//	fBrainMonitorWindow->setWindowTitle( QString( "Brain Monitor" ) );
 	
 	// Critter POV
-	fCritterPOVWindow = new TCritterPOVWindow(fMaxCritters, this);
+	fCritterPOVWindow = new TCritterPOVWindow( fMaxCritters, this );
 	
 	// Status window
-	fTextStatusWindow = new TTextStatusWindow(this);
+	fTextStatusWindow = new TTextStatusWindow( this );
 				
 #if 0
 	// Gene separation
-	fGeneSeparationWindow = new TBinChartWindow(kGeneWindow);
-	fGeneSeparationWindow->setCaption("gene separation");
+	fGeneSeparationWindow = new TBinChartWindow( "gene separation", "GeneSeparation" );
+//	fGeneSeparationWindow->setWindowTitle( "gene separation" );
 	fGeneSeparationWindow->SetRange(0.0, 1.0);
 	fGeneSeparationWindow->SetExponent(0.5);
 #endif
 		
 	// Tile and show them along the left edge of the screen
-//	const int titleHeight = fBornWindow->frameGeometry().height() - TChartWindow::kMaxHeight;
-	const int titleHeight = fBornWindow->frameGeometry().height() - fBornWindow->geometry().height();
+//	const int titleHeight = fBirthrateWindow->frameGeometry().height() - TChartWindow::kMaxHeight;
+	const int titleHeight = fBirthrateWindow->frameGeometry().height() - fBirthrateWindow->geometry().height();
 
 	int topY = titleHeight + kMenuBarHeight;
 
-	if (fBornWindow != NULL)
+	if (fBirthrateWindow != NULL)
 	{
-		fBornWindow->RestoreFromPrefs(0, topY);
-		topY = fBornWindow->frameGeometry().bottom() - titleHeight + 3;
+		fBirthrateWindow->RestoreFromPrefs(0, topY);
+		topY = fBirthrateWindow->frameGeometry().bottom() + titleHeight + 1;
 	}
 
 	if (fFitnessWindow != NULL)
 	{	
 		fFitnessWindow->RestoreFromPrefs(0, topY);
-		topY = fFitnessWindow->frameGeometry().bottom() - titleHeight + 3;
+		topY = fFitnessWindow->frameGeometry().bottom() + titleHeight + 1;
 	}
 	
 	if (fFoodEnergyWindow != NULL)
 	{		
 		fFoodEnergyWindow->RestoreFromPrefs(0, topY);
-		topY = fFoodEnergyWindow->frameGeometry().bottom() - titleHeight + 3;
+		topY = fFoodEnergyWindow->frameGeometry().bottom() + titleHeight + 1;
 	}
 	
 	if (fPopulationWindow != NULL)
 	{			
 		fPopulationWindow->RestoreFromPrefs(0, topY);
-		topY = fPopulationWindow->frameGeometry().bottom() - titleHeight + 3;
+		topY = fPopulationWindow->frameGeometry().bottom() + titleHeight + 1;
 	}
 	
 	if (fGeneSeparationWindow != NULL)
 	{
 		fGeneSeparationWindow->RestoreFromPrefs(0, topY);
-		topY = fGeneSeparationWindow->frameGeometry().bottom() - titleHeight + 3;
+		topY = fGeneSeparationWindow->frameGeometry().bottom() + titleHeight + 1;
 	}
 	
-	if (fBrainMonitorWindow != NULL)
-	{
-		fBrainMonitorWindow->RestoreFromPrefs(0, titleHeight);
-		topY = fBrainMonitorWindow->frameGeometry().bottom() - titleHeight + 3;
-	}
+	const int mainWindowTitleHeight = 22;
 
 	if (fCritterPOVWindow != NULL)
-	{
-		fCritterPOVWindow->RestoreFromPrefs(0, titleHeight);
-		topY = fCritterPOVWindow->frameGeometry().bottom() - titleHeight + 3;
-	}
+		fCritterPOVWindow->RestoreFromPrefs( fBirthrateWindow->width() + 1, kMenuBarHeight + mainWindowTitleHeight + titleHeight );
 	
+	if (fBrainMonitorWindow != NULL)
+		fBrainMonitorWindow->RestoreFromPrefs( fBirthrateWindow->width() + 1, kMenuBarHeight + mainWindowTitleHeight + titleHeight + titleHeight );
+
 	if (fTextStatusWindow != NULL)
 	{
-		fTextStatusWindow->RestoreFromPrefs(0, titleHeight);
-		topY = fTextStatusWindow->frameGeometry().bottom() - titleHeight + 3;
+		QDesktopWidget* desktop = QApplication::desktop();
+		const QRect& screenSize = desktop->screenGeometry( desktop->primaryScreen() );
+		fTextStatusWindow->RestoreFromPrefs( screenSize.width() - TTextStatusWindow::kDefaultWidth, kMenuBarHeight /*+ mainWindowTitleHeight + titleHeight*/ );
 	}
 }
 
@@ -2746,8 +2739,8 @@ void TSimulation::Dump()
     }
 	
 	// Dump monitor windows
-	if (fBornWindow != NULL)
-		fBornWindow->Dump(out);
+	if (fBirthrateWindow != NULL)
+		fBirthrateWindow->Dump(out);
 
 	if (fFitnessWindow != NULL)
 		fFitnessWindow->Dump(out);
@@ -3150,23 +3143,23 @@ void TSimulation::Update()
 		//QApplication::postEvent(fCritterPOVWindow, new QCustomEvent(kUpdateEventType));	
 	
 	// Update chart windows
-	if (fChartBorn && fBornWindow != NULL && fBornWindow->isShown())
-		fBornWindow->updateGL();
-		//QApplication::postEvent(fBornWindow, new QCustomEvent(kUpdateEventType));	
+	if (fChartBorn && fBirthrateWindow != NULL && fBirthrateWindow->isVisible())
+		fBirthrateWindow->updateGL();
+		//QApplication::postEvent(fBirthrateWindow, new QCustomEvent(kUpdateEventType));	
 			
-	if (fChartFitness && fFitnessWindow != NULL && fFitnessWindow->isShown())
+	if (fChartFitness && fFitnessWindow != NULL && fFitnessWindow->isVisible())
 		fFitnessWindow->updateGL();
 		//QApplication::postEvent(fFitnessWindow, new QCustomEvent(kUpdateEventType));	
 			          
-	if (fChartFoodEnergy && fFoodEnergyWindow != NULL && fFoodEnergyWindow->isShown())
+	if (fChartFoodEnergy && fFoodEnergyWindow != NULL && fFoodEnergyWindow->isVisible())
 		fFoodEnergyWindow->updateGL();
 		//QApplication::postEvent(fFoodEnergyWindow, new QCustomEvent(kUpdateEventType));	
 	
-	if (fChartPopulation && fPopulationWindow != NULL && fPopulationWindow->isShown())
+	if (fChartPopulation && fPopulationWindow != NULL && fPopulationWindow->isVisible())
 		fPopulationWindow->updateGL();
 		//QApplication::postEvent(fPopulationWindow, new QCustomEvent(kUpdateEventType));	
 
-	if (fBrainMonitorWindow != NULL && fBrainMonitorWindow->visible)
+	if (fBrainMonitorWindow != NULL && fBrainMonitorWindow->isVisible())
 		fBrainMonitorWindow->updateGL();
 		//QApplication::postEvent(fBrainMonitorWindow, new QCustomEvent(kUpdateEventType));	
 

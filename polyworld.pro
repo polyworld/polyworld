@@ -44,7 +44,11 @@ INCLUDEPATH +=	. \
 				graphics \
 				ui \
 				utils \
-				$(QT_INCLUDE_DIR)
+				$(QT_INCLUDE_DIR) \
+				$(QT_INCLUDE_DIR)/QtOpenGL \
+				/System/Library/Frameworks/AGL.framework/Versions/A/Headers/
 								
-QMAKE_CFLAGS_DEBUG += -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC		
+QMAKE_CFLAGS_DEBUG += -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC
+
+LIBS	+=	-L$(QTDIR)/lib/ -lQtOpenGL -framework OpenGL -framework AGL
 

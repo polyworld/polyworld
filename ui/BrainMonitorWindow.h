@@ -11,10 +11,11 @@
 
 // qt
 #include <qgl.h>
+//#include <QCustomEvent>
 
 // Forward declarations
 class critter;
-
+//class QCustomEvent;
 
 //===========================================================================
 // TBrainMonitorWindow
@@ -36,7 +37,7 @@ public:
 	
 	void SaveVisibility();
 
-	bool visible;
+//	bool visible;
 
 protected:
 	virtual void initializeGL();
@@ -46,8 +47,9 @@ protected:
     virtual void mouseMoveEvent(QMouseEvent* event);
     virtual void mouseReleaseEvent(QMouseEvent* event);
     virtual void mouseDoubleClickEvent(QMouseEvent* event);
-	virtual void customEvent(QCustomEvent* event);
+//	virtual void customEvent(QCustomEvent* event);
 
+	void SaveWindowState();
 	void SaveDimensions();
 	
     critter* fCritter;
@@ -55,6 +57,7 @@ protected:
     int fPatchHeight;
     
 private:
+	QString windowSettingsName;
 
 };
 

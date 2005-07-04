@@ -27,12 +27,13 @@ using namespace std;
 //---------------------------------------------------------------------------
 // TSceneView::TSceneView
 //---------------------------------------------------------------------------
-TSceneView::TSceneView(QWidget* parent)
-	:	QGLWidget(parent, "SceneView"),
-		fScene(NULL),
-		fSimulation(NULL)
+TSceneView::TSceneView( QWidget* parent )
+	:	QGLWidget( parent, NULL, 0 ),
+		fScene( NULL ),
+		fSimulation( NULL )
 {
-	setMouseTracking(true);
+//	setWindowTitle( "SceneView" );
+	setMouseTracking( true );
 #if 0
 	// TEST
 	// Place controller at bottom left
@@ -160,10 +161,10 @@ void TSceneView::mousePressEvent(QMouseEvent* event)
 //---------------------------------------------------------------------------
 void TSceneView::mouseMoveEvent(QMouseEvent* event)
 {
-	if (fSimulation == NULL)
+	if( fSimulation == NULL )
 		return;
 		
-	if (event->state() & QMouseEvent::LeftButton)
+	if( event->button() & Qt::LeftButton )
 	{
 		gcamera& camera = fSimulation->GetCamera();
 
@@ -216,7 +217,7 @@ void TSceneView::mouseMoveEvent(QMouseEvent* event)
 		camera.setz(z);
 		camera.addyaw(fDynamicYaw);
 	}
-	else if (event->state() & QMouseEvent::RightButton)
+	else if( event->button() & Qt::RightButton )
 	{
 		gcamera& camera = fSimulation->GetCamera();
 
@@ -247,7 +248,7 @@ void TSceneView::mouseDoubleClickEvent(QMouseEvent*)
 {
 }
 
-
+#if 0
 //---------------------------------------------------------------------------
 // TSceneView::customEvent
 //---------------------------------------------------------------------------
@@ -256,7 +257,7 @@ void TSceneView::customEvent(QCustomEvent* event)
 	if (event->type() == kUpdateEventType)
 		updateGL();
 }
-
+#endif
 
 //---------------------------------------------------------------------------
 // TSceneView::EnableAA
