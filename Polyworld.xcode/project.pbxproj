@@ -286,6 +286,7 @@
 				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				OPTIMIZATION_CFLAGS = "-O0";
+				OTHER_LDFLAGS = "-lQtGui_debug -lQtCore_debug -lQtOpenGL_debug -lz";
 				ZERO_LINK = NO;
 			};
 			isa = PBXBuildStyle;
@@ -298,6 +299,7 @@
 				GCC_MODEL_TUNING = G5;
 				GCC_OPTIMIZATION_LEVEL = 3;
 				OTHER_CPLUSPLUSFLAGS = "";
+				OTHER_LDFLAGS = "-lQtGui -lQtCore -lQtOpenGL -lz";
 				ZERO_LINK = NO;
 			};
 			isa = PBXBuildStyle;
@@ -396,7 +398,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "$QtBin/moc app/Simulation.h -o app/moc_Simulation.cpp\n$QtBin/moc app/PWApp.h -o app/moc_PWApp.cpp\n#$QtBin/qmake\nexit 0";
+			shellScript = "if [ app/Simulation.h -nt app/moc_Simulations.cpp ]; then $QtBin/moc app/Simulation.h -o app/moc_Simulation.cpp; fi\nif [ app/PWApp.h      -nt app/moc_PWApp.cpp       ]; then $QtBin/moc app/PWApp.h      -o app/moc_PWApp.cpp     ; fi\nexit 0";
 		};
 		76B2FB68084CE6E9002FBDA1 = {
 			buildPhases = (
@@ -1448,9 +1450,9 @@
 			);
 			isa = PBXGroup;
 			name = qt;
-			path = ../../include;
-			refType = 2;
-			sourceTree = SOURCE_ROOT;
+			path = "";
+			refType = 4;
+			sourceTree = QtInc;
 		};
 		76E27B630877D3DD00F04884 = {
 			children = (
@@ -19435,8 +19437,8 @@
 				INSTALL_PATH = "$(HOME)/Applications";
 				LIBRARY_SEARCH_PATHS = $QtLib;
 				LIBRARY_STYLE = Static;
-				OTHER_CFLAGS = "-DQT_ACCESSIBILITY_SUPPORT -DQT_TABLET_SUPPORT -DQT_THREAD_SUPPORT -DQT_NO_DEBUG";
-				OTHER_LDFLAGS = "-lqt-mt -lz";
+				OTHER_CFLAGS = "-I$(QtInc)/QtGui -DQT_ACCESSIBILITY_SUPPORT -DQT_TABLET_SUPPORT -DQT_NO_DEBUG";
+				OTHER_LDFLAGS = "";
 				OTHER_REZFLAGS = "";
 				PREBINDING = YES;
 				PRODUCT_NAME = Polyworld;

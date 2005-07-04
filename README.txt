@@ -15,8 +15,7 @@ file named LICENSE) through SourceForge.net, in keeping with its
 original copyright by Apple and open source nature.
 
 NOTE:  Polyworld now *requires* Qt 4.x, and will no longer build on
-Qt 3.x.  Temporarily only the "buildit" method for building works;
-the Xcode project will be updated soon.
+Qt 3.x.
 
 To build Polyworld, you will need to:
 
@@ -76,7 +75,7 @@ Build Polyworld (Qt method)
 * enter the polyworld directory by typing 'cd polyworld'
 * type './buildit'
 
-Build Polyworld (Xcode method) [temporarily broken]
+Build Polyworld (Xcode method)
 * Add some key Qt paths in the Xcode "Source Trees" preferences:
 	- QtInc should point to the include dir of the Qt distribution 
 	- QtLib should point to the lib dir of the Qt distribution
