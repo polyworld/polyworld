@@ -634,7 +634,7 @@ void critter::Behave()
 				 		 brain::retinawidth,
 				 		 1,
 				 		 GL_RGBA,
-				 		 GL_BYTE,
+				 		 GL_UNSIGNED_BYTE,
 				 		 fBrain->retinaBuf);
 		#ifdef DEBUGCHECK
 			debugcheck("critter::Behave after glReadPixels");
