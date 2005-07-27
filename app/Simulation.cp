@@ -214,7 +214,7 @@ void TSimulation::Step()
 	}
 	
 	static unsigned long frame = 0;
-	printf( "%s: frame = %lu\n", __FUNCTION__, ++frame );
+//	printf( "%s: frame = %lu\n", __FUNCTION__, ++frame );
 	
 	#define RecentSteps 10
 	static double	sTimePrevious[RecentSteps];
