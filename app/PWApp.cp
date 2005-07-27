@@ -92,7 +92,6 @@ TSceneWindow::TSceneWindow(QMenuBar* menuBar)
 		fMenuBar(menuBar),
 		fWindowsMenu(NULL)
 {
-	setWindowTitle( "Polyworld" );
 	windowSettingsName = "Polyworld";
 //	setAttribute( Qt::WA_DeleteOnClose );
 	
@@ -118,6 +117,11 @@ TSceneWindow::TSceneWindow(QMenuBar* menuBar)
 
 	// Display the main simulation window
 	RestoreFromPrefs();
+
+	// Set the window title, including current window dimensions
+	char tempTitle[64];
+	sprintf( tempTitle, "Polyworld (%d x %d)", width(), height() );
+	setWindowTitle( tempTitle);
 
 	// Create the simulation
 	// NOTE: Must wait until after the above RestoreFromPrefs(), so the window

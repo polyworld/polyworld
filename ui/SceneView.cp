@@ -82,7 +82,8 @@ void TSceneView::SetSimulation(TSimulation* simulation)
 void TSceneView::Draw()
 {
 	static unsigned long frame = 0;
-//	printf( "%s: frame = %lu\n", __FUNCTION__, ++frame );
+	frame++;
+//	printf( "%s: frame = %lu\n", __FUNCTION__, frame );
 	
 	makeCurrent();
 	
