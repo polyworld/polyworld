@@ -266,7 +266,7 @@ private:
 	long fBirthDenials;
 	long fMiscDenials;
 	long fLastCreated;
-	long fGapFromLastCreate;
+	long fMaxGapCreate;
 	long fNumBornSinceCreated;
 	
 	long fMinFoodCount;

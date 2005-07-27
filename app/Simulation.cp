@@ -273,8 +273,8 @@ void TSimulation::Step()
 	}
 	sTimePrevious[0] = timeNow;
 	
-	if (((fAge - fLastCreated) > fGapFromLastCreate) && (fLastCreated > 0) )
-		fGapFromLastCreate = fAge - fLastCreated;
+	if (((fAge - fLastCreated) > fMaxGapCreate) && (fLastCreated > 0) )
+		fMaxGapCreate = fAge - fLastCreated;
 
 	if (fNumDomains > 1)
 	{
@@ -857,7 +857,7 @@ void TSimulation::InitWorld()
 	fBirthDenials = 0;
     fMiscDenials = 0;
     fLastCreated = 0;
-    fGapFromLastCreate = 0;
+    fMaxGapCreate = 0;
     fMinGeneSeparation = 1.e+10;
     fMaxGeneSeparation = 0.0;
     fAverageGeneSeparation = 5.e+9;
@@ -2708,7 +2708,7 @@ void TSimulation::Dump()
     out << fNumberFights nl;
     out << fMiscDenials nl;
     out << fLastCreated nl;
-    out << fGapFromLastCreate nl;
+    out << fMaxGapCreate nl;
     out << fNumBornSinceCreated nl;
 
     out << fMonitorCritterRank nl;
@@ -2988,7 +2988,7 @@ void TSimulation::PopulateStatusList(TStatusList& list)
     }
 	list.push_back( strdup( t ) );
 
-	sprintf( t, "maxGapCreate = %ld", fGapFromLastCreate );
+	sprintf( t, "maxGapCreate = %ld", fMaxGapCreate );
 	if (fNumDomains > 1)
 	{
 		sprintf( t2, " (%ld",fDomains[0].maxgapcreate );
@@ -3119,7 +3119,7 @@ void TSimulation::PopulateStatusList(TStatusList& list)
             fprintf( statusfile, ")" );
         }
         fprintf( statusfile, "\n" );
-        fprintf( statusfile, "maxgapcr = %d", fGapFromLastCreate );
+        fprintf( statusfile, "maxgapcr = %d", fMaxGapCreate );
         if( numdomains > 1 )
         {
             fprintf( statusfile, "  (%4d",domains[0].maxgapcreate );
