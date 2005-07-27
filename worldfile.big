@@ -1,4 +1,4 @@
-6      version
+8      version
 
 1      docpuwork
 10000  dumpfreq
@@ -12,7 +12,7 @@
 30     minnumcritters
 300    maxnumcritters
 120    initnumcritters
-60     misccritters
+-1     misccritters
 
 42    positionseed
 42    genomeseed
@@ -150,7 +150,7 @@
 90     domain[2].maxfoodgrown
 90     domain[2].initfoodcount
 
-1      binchartgs
+0      binchartgs
 
 1      mininternalneurgroups
 5      maxinternalneurgroups
@@ -169,8 +169,13 @@
 0.1    maxneur2energy
 10     numprebirthcycles
 
-0      overheadrank
+1      overheadrank
 0      tracking
 0.0    minfoodenergyatdeath
 
 1      graycoding
+
+0.10   smiteFrac
+0.5    smiteAgeFrac
+
+0      recordMovie
