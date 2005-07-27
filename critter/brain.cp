@@ -1191,7 +1191,7 @@ void brain::Update(float energyfraction)
         {
             avgcolor = 0.0;
             for (short ipix = 0; ipix < xredintwidth; ipix++)
-                avgcolor += retinaBuf[(pixel++) * 4 + 3];
+                avgcolor += retinaBuf[(pixel++) * 4];
             neuronactivation[redneuron+i] = avgcolor / (xredwidth * 255.0);
         }
     }
@@ -1217,7 +1217,7 @@ void brain::Update(float energyfraction)
 #endif PRINTBRAIN
             while (float(pixel) < (endpixloc - 1.0))
             {
-                avgcolor += retinaBuf[(pixel++) * 4 + 3];
+                avgcolor += retinaBuf[(pixel++) * 4];
 #ifdef PRINTBRAIN
                 if (printbrain && (critter::currentCritter == TSimulation::fMonitorCritter))
                 {
@@ -1228,7 +1228,7 @@ void brain::Update(float energyfraction)
 #endif PRINTBRAIN
             }
             
-            avgcolor += (endpixloc - float(pixel)) * retinaBuf[pixel * 4 + 3];
+            avgcolor += (endpixloc - float(pixel)) * retinaBuf[pixel * 4];
             neuronactivation[redneuron + i] = avgcolor / (xredwidth * 255.0);
 #ifdef PRINTBRAIN
             if (printbrain && (critter::currentCritter == TSimulation::fMonitorCritter))
@@ -1238,7 +1238,7 @@ void brain::Update(float energyfraction)
                     printf("Got outside-loop borderline case - red\n");
             }
 #endif PRINTBRAIN
-            avgcolor = (1.0 - (endpixloc - float(pixel))) * retinaBuf[pixel * 4 + 3];
+            avgcolor = (1.0 - (endpixloc - float(pixel))) * retinaBuf[pixel * 4];
 #ifdef PRINTBRAIN
             if (printbrain && (critter::currentCritter == TSimulation::fMonitorCritter))
             {
@@ -1256,7 +1256,7 @@ void brain::Update(float energyfraction)
         {
             avgcolor = 0.0;
             for (short ipix = 0; ipix < xgreenintwidth; ipix++)
-                avgcolor += retinaBuf[(pixel++) * 4 + 2];
+                avgcolor += retinaBuf[(pixel++) * 4 + 1];
             neuronactivation[greenneuron + i] = avgcolor / (xgreenwidth * 255.0);
         }
     }
@@ -1269,7 +1269,7 @@ void brain::Update(float energyfraction)
             endpixloc = xgreenwidth * float(i+1);
             while (float(pixel) < (endpixloc - 1.0))
             {
-                avgcolor += retinaBuf[(pixel++) * 4 + 2];
+                avgcolor += retinaBuf[(pixel++) * 4 + 1];
 #ifdef PRINTBRAIN
                 if (printbrain && (critter::currentCritter == TSimulation::fMonitorCritter))
                 {
@@ -1285,9 +1285,9 @@ void brain::Update(float energyfraction)
                     printf("Got outside-loop borderline case - green\n");
             }
 #endif PRINTBRAIN
-            avgcolor += (endpixloc - float(pixel)) * retinaBuf[pixel * 4 + 2];
+            avgcolor += (endpixloc - float(pixel)) * retinaBuf[pixel * 4 + 1];
             neuronactivation[greenneuron + i] = avgcolor / (xgreenwidth * 255.0);
-            avgcolor = (1.0 - (endpixloc - float(pixel))) * retinaBuf[pixel * 4 + 2];
+            avgcolor = (1.0 - (endpixloc - float(pixel))) * retinaBuf[pixel * 4 + 1];
             pixel++;
         }
     }
@@ -1299,7 +1299,7 @@ void brain::Update(float energyfraction)
         {
             avgcolor = 0.0;
             for (short ipix = 0; ipix < xblueintwidth; ipix++)
-                avgcolor += retinaBuf[(pixel++) * 4 + 1];
+                avgcolor += retinaBuf[(pixel++) * 4 + 2];
             neuronactivation[blueneuron+i] = avgcolor / (xbluewidth * 255.0);
         }
     }
@@ -1313,7 +1313,7 @@ void brain::Update(float energyfraction)
             endpixloc = xbluewidth * float(i + 1);
 			while (float(pixel) < (endpixloc - 1.0 /*+ 1.e-5*/))
             {
-                avgcolor += retinaBuf[(pixel++) * 4 + 1];
+                avgcolor += retinaBuf[(pixel++) * 4 + 2];
 #ifdef PRINTBRAIN
                 if (printbrain && (critter::currentCritter == TSimulation::fMonitorCritter))
                 {
@@ -1333,9 +1333,9 @@ void brain::Update(float energyfraction)
 
             if (pixel < brain::retinawidth)  // TODO How do we end up overflowing?
             {
-				avgcolor += (endpixloc - float(pixel)) * retinaBuf[pixel * 4 + 1];
+				avgcolor += (endpixloc - float(pixel)) * retinaBuf[pixel * 4 + 2];
             	neuronactivation[blueneuron + i] = avgcolor / (xbluewidth * 255.0);
-            	avgcolor = (1.0 - (endpixloc - float(pixel))) * retinaBuf[pixel * 4 + 1];
+            	avgcolor = (1.0 - (endpixloc - float(pixel))) * retinaBuf[pixel * 4 + 2];
             	pixel++;
             }
         }
@@ -1353,15 +1353,15 @@ void brain::Update(float energyfraction)
         printf("retinaBuf [0 - %d]\n",(brain::retinawidth - 1));
         printf("red:");
         
-        for (i = 3; i < (brain::retinawidth * 4); i+=4)
+        for (i = 0; i < (brain::retinawidth * 4); i+=4)
             printf(" %3d", retinaBuf[i]);
         printf("\ngreen:");
         
-        for (i = 2; i < (brain::retinawidth * 4); i+=4)
+        for (i = 1; i < (brain::retinawidth * 4); i+=4)
             printf(" %3d",retinaBuf[i]);
         printf("\nblue:");
         
-        for (i = 1; i < (brain::retinawidth * 4); i+=4)
+        for (i = 2; i < (brain::retinawidth * 4); i+=4)
             printf(" %3d", retinaBuf[i]);
         printf("\n");
     }
