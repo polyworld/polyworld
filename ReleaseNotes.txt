@@ -9,3 +9,6 @@
     movie-player app in qt (without Xcode).  Just 'cd' into the
     PwMoviePlayer directory and type buildit (which just does a qmake
     and make).
+  Note: There is a known bug that results in a little, disembodied,
+    unpopulated MenuBar sitting in the top-left of the movie window;
+    no idea what that's about currently.
