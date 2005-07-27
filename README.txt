@@ -42,11 +42,13 @@ Download and configure Qt (Open Source Edition)
   machines without Qt installed.  Type './configure -help' for
   other options.) NOTE: This can take several minutes to complete
 * build Qt by typing 'make'
-  NOTE: This can take an hour or more to complete!  If you want to
+  NOTE: This can take several hours to complete!  If you want to
   speed things up and can live without working copies of all the
   Qt demos and examples, you can instead type 'make src' and
   'make tools', to build all and only the pieces needed for
-  actual development.
+  actual development.  (You may have to 'cd srs; make' and
+  'cd tools; make' instead of invoking make from the qt
+   directory.)
   
 Download Polyworld source (from SourceForge)
 * in an appropriate directory (I use .../qt/projects/), type
