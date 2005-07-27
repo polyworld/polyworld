@@ -1,4 +1,4 @@
-7      version
+8      version
 
 1      docpuwork
 10000  dumpfreq
@@ -169,11 +169,13 @@
 0.1    maxneur2energy
 10     numprebirthcycles
 
-0      overheadrank
+1      overheadrank
 0      tracking
 0.0    minfoodenergyatdeath
 
 1      graycoding
 
-0.10    smiteFrac
-0.5     smiteAgeFrac
+0.10   smiteFrac
+0.5    smiteAgeFrac
+
+0      recordMovie

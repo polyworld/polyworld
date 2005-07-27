@@ -17,6 +17,7 @@
 #include "globals.h"
 #include "gscene.h"
 #include "Simulation.h"
+#include "PwMovieTools.h"
 
 using namespace std;
 
@@ -30,7 +31,9 @@ using namespace std;
 TSceneView::TSceneView( QWidget* parent )
 	:	QGLWidget( parent, NULL, 0 ),
 		fScene( NULL ),
-		fSimulation( NULL )
+		fSimulation( NULL ),
+		fRecordMovie( false ),
+		fMovieFile( NULL )
 {
 //	setWindowTitle( "SceneView" );
 	setMouseTracking( true );
@@ -74,18 +77,41 @@ void TSceneView::SetSimulation(TSimulation* simulation)
 
 
 //---------------------------------------------------------------------------
-// TSceneView::paintGL
+// TSceneView::Draw
 //---------------------------------------------------------------------------
-void TSceneView::paintGL()
+void TSceneView::Draw()
 {
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	static unsigned long frame = 0;
+	printf( "%s: frame = %lu\n", __FUNCTION__, ++frame );
+	
+	makeCurrent();
+	
+	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
-	if (fScene != NULL)
-	{ 		
+	if( fScene != NULL )
+	{
 		glPushMatrix();
 			fScene->Draw();
 		glPopMatrix();
 	}
+	else
+		printf( "%s: called with fScene = NULL\n", __FUNCTION__ );
+
+	
+	swapBuffers();
+	
+	// Record movie to disk, if desired
+	if( fRecordMovie && (frame > 1) )
+		PwRecordMovie( fMovieFile, 0, 0, width(), height() );
+		
+}
+
+
+//---------------------------------------------------------------------------
+// TSceneView::paintGL
+//---------------------------------------------------------------------------
+void TSceneView::paintGL()
+{
 }
 
 
@@ -94,44 +120,45 @@ void TSceneView::paintGL()
 //---------------------------------------------------------------------------
 void TSceneView::initializeGL()
 {
-	static GLfloat pos[4] = {5.0, 5.0, 10.0, 1.0 };
-    glLightfv(GL_LIGHT0, GL_POSITION, pos);
+	static GLfloat pos[4] = { 5.0, 5.0, 10.0, 1.0 };
+    glLightfv( GL_LIGHT0, GL_POSITION, pos );
     
 	//glEnable(GL_CULL_FACE);
-    glEnable(GL_DEPTH_TEST);
+    glEnable( GL_DEPTH_TEST );
     glEnable( GL_NORMALIZE );
+	setAutoBufferSwap( false );
 }
 
 
 //---------------------------------------------------------------------------
 // TSceneView::resizeGL
 //---------------------------------------------------------------------------
-void TSceneView::resizeGL(int width, int height)
+void TSceneView::resizeGL( int width, int height )
 {
-	glViewport(0, 0, width, height);
+	glViewport( 0, 0, width, height );
 	
-	glMatrixMode(GL_PROJECTION);
+	glMatrixMode( GL_PROJECTION );
 	glLoadIdentity();
 	
 	
-    glMatrixMode(GL_MODELVIEW);
+    glMatrixMode( GL_MODELVIEW );
     glLoadIdentity();
-//	glTranslatef(0.0, -10.0, -40.0);
+//	glTranslatef( 0.0, -10.0, -40.0 );
 #if 0
 	const long zbnear = 0x7FFFFF;
 	const long zbfar = 0x0;
 
-	glDepthRange(zbnear, zbfar);
-	if (zbnear > zbfar)
-		glDepthFunc(GL_EQUAL);
+	glDepthRange( zbnear, zbfar );
+	if( zbnear > zbfar )
+		glDepthFunc( GL_EQUAL );
 #endif
 	// Initialize projection
-	glMatrixMode(GL_PROJECTION);
+	glMatrixMode( GL_PROJECTION );
 	glLoadIdentity();
 //	gluPerspective(45.0, 1.0, 1.0, 200.0);
 	GLfloat w = (float) width / (float) height;
 	GLfloat h = 1.0;
-	glFrustum(-w, w, -h, h, 5.0, 60.0);
+	glFrustum( -w, w, -h, h, 5.0, 60.0 );
 }
    
     

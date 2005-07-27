@@ -1388,8 +1388,7 @@ void brain::Update(float energyfraction)
     {
         printf("  i neuron[i].bias neuronactivation[i] newneuronactivation[i]\n");
         for (i = 0; i < numneurons; i++)
-            printf("%3d  %1.4f  %1.4f  %1.4f\n",
-                i,neuron[i].bias,neuronactivation[i],newneuronactivation[i]);
+            printf( "%3d  %1.4f  %1.4f  %1.4f\n", i, neuron[i].bias, neuronactivation[i], newneuronactivation[i] );
     }
 #endif PRINTBRAIN
 
@@ -1430,8 +1429,8 @@ void brain::Update(float energyfraction)
 
         if (fabs(synapse[k].efficacy) > (0.5f * gMaxWeight))
         {
-            synapse[k].efficacy *= 1.0f + (gDecayRate - 1.0f)*
-                (fabs(synapse[k].efficacy)-0.5f * gMaxWeight) / (0.5f * gMaxWeight);
+            synapse[k].efficacy *= 1.0f - (1.0f - gDecayRate) *
+                (fabs(synapse[k].efficacy) - 0.5f * gMaxWeight) / (0.5f * gMaxWeight);
             if (synapse[k].efficacy > gMaxWeight)
                 synapse[k].efficacy = gMaxWeight;
             else if (synapse[k].efficacy < -gMaxWeight)
@@ -1460,8 +1459,8 @@ void brain::Update(float energyfraction)
                         * 0.5f;
         if (fabs(neuron[i].bias) > (0.5 * gMaxWeight))
         {
-            neuron[i].bias *= 1.0 + (gDecayRate - 1.0f) *
-                (fabs(neuron[i].bias)-0.5f * gMaxWeight) / (0.5f * gMaxWeight);
+            neuron[i].bias *= 1.0 - (1.0f - gDecayRate) *
+                (fabs(neuron[i].bias) - 0.5f * gMaxWeight) / (0.5f * gMaxWeight);
             if (neuron[i].bias > gMaxWeight)
                 neuron[i].bias = gMaxWeight;
             else if (neuron[i].bias < -gMaxWeight)

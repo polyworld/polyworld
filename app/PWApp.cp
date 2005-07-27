@@ -116,12 +116,14 @@ TSceneWindow::TSceneWindow(QMenuBar* menuBar)
 	//QStatusBar* status = statusBar();
 	//status->setSizeGripEnabled(false);
 
-	// Create the simulation
-	fSimulation = new TSimulation(fSceneView);
-	fSceneView->SetSimulation(fSimulation);
-		
 	// Display the main simulation window
 	RestoreFromPrefs();
+
+	// Create the simulation
+	// NOTE: Must wait until after the above RestoreFromPrefs(), so the window
+	// is the right size when we create the TSimulation object below.
+	fSimulation = new TSimulation( fSceneView, this );
+	fSceneView->SetSimulation( fSimulation );		
 }
 
 

@@ -30,9 +30,12 @@ public:
     
     void SetScene(gscene* scene);
     void SetSimulation(TSimulation* simulation);
+	void Draw();
     
 	void EnableAA();
 	void DisableAA();
+	
+	void setRecordMovie( bool recordMovie, FILE* movieFile ) { fRecordMovie = recordMovie; fMovieFile = movieFile; }
 	
 protected:
 	virtual void initializeGL();
@@ -58,6 +61,9 @@ private:
 	float fCameraYaw;
 	float fCameraPitch;
 	float fCameraY;
+	
+	bool fRecordMovie;
+	FILE* fMovieFile;
 };
 
 

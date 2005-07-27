@@ -2,7 +2,7 @@ TEMPLATE	= 	app
 
 CONFIG		+=	qt warn_on debug
 
-SUBDIRS  	=	ui
+SUBDIRS  	=	PwMoviePlayer
 
 HEADERS		= 	app/PWApp.h	\
 				app/Simulation.h
@@ -33,7 +33,8 @@ SOURCES		=	app/debug.cp \
 				ui/TextStatusWindow.cp \				
 				utils/error.cp \
 				utils/indexlist.cp \
-				utils/misc.cp
+				utils/misc.cp \
+				utils/PwMovietools.cp
 																			  	
 TARGET		= 	Polyworld
 

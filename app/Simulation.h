@@ -3,6 +3,9 @@
 
 // qt
 #include <qobject.h>
+#include <qapplication.h>
+#include <qmainwindow.h>
+#include <QMenu>
 
 // Local
 #include "barrier.h"
@@ -20,11 +23,80 @@ class TBrainMonitorWindow;
 class TChartWindow;
 class TSceneView;
 class TCritterPOVWindow;
+//class QMenuBar;
+//class QTimer;
+class TSimulation;
 
 static const int MAXDOMAINS = 10;
 static const int MAXFITNESSITEMS = 5;
 
 //extern long TSimulation::fAge;
+
+
+//===========================================================================
+// TSceneWindow
+//===========================================================================
+class TSceneWindow: public QMainWindow
+{
+	Q_OBJECT
+
+public:
+    TSceneWindow(QMenuBar* menuBar);
+    virtual ~TSceneWindow();
+    
+    void Update();
+
+protected:
+    void closeEvent(QCloseEvent* event);
+    
+	void AddFileMenu();
+	void AddEditMenu();
+	void AddWindowMenu();
+	void AddHelpMenu();
+	
+	void SaveWindowState();
+	void SaveDimensions();
+	void SaveVisibility();
+	void RestoreFromPrefs();
+	
+private slots:
+
+	// File menu
+    void choose() {}
+    void save() {}
+    void saveAs() {}
+    void about() {}    
+    void windowsMenuAboutToShow();    
+    void timeStep();
+    
+    // Window menu
+    void ToggleEnergyWindow();
+    void ToggleFitnessWindow();
+    void TogglePopulationWindow();
+    void ToggleBirthrateWindow();
+	void ToggleBrainWindow();
+	void TogglePOVWindow();
+	void ToggleTextStatus();
+	void TileAllWindows();
+    
+private:
+	QMenuBar* fMenuBar;
+	QMenu* fWindowsMenu;
+	
+	TSceneView* fSceneView;
+	TSimulation* fSimulation;
+	
+	QAction* toggleEnergyWindowAct;
+	QAction* toggleFitnessWindowAct;
+	QAction* togglePopulationWindowAct;
+	QAction* toggleBirthrateWindowAct;
+	QAction* toggleBrainWindowAct;
+	QAction* togglePOVWindowAct;
+	QAction* toggleTextStatusAct;
+	QAction* tileAllWindowsAct;
+
+	QString windowSettingsName;
+};
 
 //===========================================================================
 // TSimulation
@@ -34,7 +106,7 @@ class TSimulation : public QObject
 	Q_OBJECT
 
 public:
-	TSimulation(TSceneView* sceneView);
+	TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow );
 	virtual ~TSimulation();
 	
 	void Start();
@@ -100,6 +172,7 @@ private:
 	void Dump();
 
 	TSceneView* fSceneView;
+	TSceneWindow* fSceneWindow;
 	TChartWindow* fBirthrateWindow;
 	TChartWindow* fFitnessWindow;
 	TChartWindow* fFoodEnergyWindow;
@@ -114,6 +187,7 @@ private:
 	long fDumpFrequency;
 	long fStatusFrequency;
 	bool fLoadState;
+	bool inited;
 	
 	gstage fStage;	
 	TCastList fWorldCast;
@@ -232,6 +306,9 @@ private:
 	long fBrainMonitorStride;
 	bool fShowVision;
 	bool fGraphics;
+	
+	bool fRecordMovie;
+	FILE* fMovieFile;
 	
     gcamera fCamera;
     gpolyobj fGround;

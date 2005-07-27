@@ -22,6 +22,7 @@
 #include "food.h"
 #include "SceneView.h"
 #include "TextStatusWindow.h"
+#include "PwMovieTools.h"
 
 using namespace std;
 
@@ -49,8 +50,9 @@ double TSimulation::fTimeStart;
 //---------------------------------------------------------------------------
 // TSimulation::TSimulation
 //---------------------------------------------------------------------------
-TSimulation::TSimulation(TSceneView* sceneView)
+TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
 	:	fSceneView(sceneView),
+		fSceneWindow(sceneWindow),
 		fBirthrateWindow(NULL),
 		fFitnessWindow(NULL),
 		fFoodEnergyWindow(NULL),
@@ -80,7 +82,8 @@ TSimulation::TSimulation(TSceneView* sceneView)
 		fNumberFit(0),
 		fFittest(NULL),
 		fFitness(NULL),
-		fBrainMonitorStride(25)
+		fBrainMonitorStride(25),
+		inited(false)
 {
 	Init();
 }
@@ -204,6 +207,15 @@ void TSimulation::Stop()
 //---------------------------------------------------------------------------
 void TSimulation::Step()
 {
+	if( !inited )
+	{
+		printf( "%s: called before TSimulation::Init()\n", __FUNCTION__ );
+		return;
+	}
+	
+	static unsigned long frame = 0;
+	printf( "%s: frame = %lu\n", __FUNCTION__, ++frame );
+	
 	#define RecentSteps 10
 	static double	sTimePrevious[RecentSteps];
 	double			timeNow;
@@ -335,7 +347,7 @@ void TSimulation::Step()
 	// Update the various graphical windows
 	if (fGraphics)
 	{
-		fSceneView->updateGL();
+		fSceneView->Draw();
 		
 		// Text Status window
 		fTextStatusWindow->update();
@@ -444,7 +456,6 @@ void TSimulation::Step()
 	// Handle tracking gene Separation
 	if (fMonitorGeneSeparation && fRecordGeneSeparation)
 		RecordGeneSeparation();
-		
 }
 
 
@@ -718,6 +729,23 @@ void TSimulation::Init()
 		if (fChartGeneSeparation && fGeneSeparationWindow != NULL)
 			fGeneSeparationWindow->AddPoint(fGeneSepVals, fNumGeneSepVals);
     }
+	
+	// Set up to record a movie, if requested
+	if( fRecordMovie )
+	{
+		char	movieFileName[256] = "movie.pmv";	// put date and time into the name TODO
+				
+		fMovieFile = fopen( movieFileName, "wb" );
+		if( !fMovieFile )
+		{
+			fprintf( stderr, "Error opening movie file: %s\n", movieFileName );
+			exit( 1 );
+		}
+		
+		fSceneView->setRecordMovie( fRecordMovie, fMovieFile );
+	}
+	
+	inited = true;
 }
 
 
@@ -839,6 +867,8 @@ void TSimulation::InitWorld()
     fSmiteFrac = 0.05;
 	fSmiteAgeFrac = 0.5;
     fShowVision = true;
+	fRecordMovie = false;
+	fMovieFile = NULL;
     
     fFitI = 0;
     fFitJ = 1;
@@ -2146,9 +2176,11 @@ void TSimulation::ReadWorldFile(const char* filename)
     char label[64];
 
     in >> version; in >> label;
+	cout << "version" ses version nl;
 
     if (version < 1)
     {
+		cout nlf;
      	fb.close(); 
         return;
 	}
@@ -2399,10 +2431,10 @@ void TSimulation::ReadWorldFile(const char* filename)
              << x1 cms z1 << ") to (" << x2 cms z2 pnl;
 		barrier::gXSortedBarriers.add(new barrier(x1, z1, x2, z2));
     }
-    cout nlf;
 
     if (version < 2)
     {
+		cout nlf;
      	fb.close(); 
         return;
 	}
@@ -2411,10 +2443,10 @@ void TSimulation::ReadWorldFile(const char* filename)
     cout << "genesepmon" ses fMonitorGeneSeparation nl;
     in >> fRecordGeneSeparation; in >> label;
     cout << "geneseprec" ses fRecordGeneSeparation nl;
-    cout nlf;
 
     if (version < 3)
     {
+		cout nlf;
      	fb.close(); 
         return;
 	}
@@ -2427,10 +2459,10 @@ void TSimulation::ReadWorldFile(const char* filename)
     cout << "fChartFoodEnergy" ses fChartFoodEnergy nl;
     in >> fChartPopulation; in >> label;
     cout << "fChartPopulation" ses fChartPopulation nl;
-    cout nlf;
 
     if (version < 4)
     {
+		cout nlf;
      	fb.close(); 
         return;
 	}
@@ -2544,10 +2576,9 @@ void TSimulation::ReadWorldFile(const char* filename)
         fDomains[id].fitness = NULL;
     }
 
-    cout nlf;
-
     if (version < 5)
     {
+		cout nlf;
      	fb.close(); 
         return;
 	}
@@ -2557,10 +2588,9 @@ void TSimulation::ReadWorldFile(const char* filename)
     if (fChartGeneSeparation)
         fMonitorGeneSeparation = true;
 
-    cout nlf;
-
     if (version < 6)
 	{    
+		cout nlf;
      	fb.close(); 
         return;
 	}
@@ -2617,6 +2647,7 @@ void TSimulation::ReadWorldFile(const char* filename)
 
     if (version < 7)
     {
+		cout nlf;
 		fb.close();
 		return;
 	}
@@ -2626,9 +2657,20 @@ void TSimulation::ReadWorldFile(const char* filename)
     in >> fSmiteAgeFrac; in >> label;
     cout << "smiteAgeFrac" ses fSmiteAgeFrac nl;
 
-    cout nlf;
+	
+	if( version < 8 )
+	{
+		cout nlf;
+		fb.close();
+		return;
+	}
+	
+	in >> fRecordMovie; in >> label;
+	cout << "recordMovie" ses fRecordMovie nl;
 
+	cout nlf;
     fb.close();
+	return;
 }
 
 

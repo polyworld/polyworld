@@ -7,7 +7,6 @@
 /* Copyright Apple Computer 1990,1991,1992                          */
 /********************************************************************/
 //#define DEBUGCHECK
-//#define PRINTBRAIN
 
 #define DebugSetRadius 0
 
