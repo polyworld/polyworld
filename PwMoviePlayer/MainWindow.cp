@@ -32,6 +32,9 @@ MainWindow::MainWindow(const char* windowTitle, const char* windowSettingsNamePa
 	windowSettingsName = windowSettingsNameParam;
 	movieFile = movieFileParam;
 	
+	// Create the main menubar
+	CreateMenus( menuBar() );
+
 	// Read the movieFile header information (version, width, height)
 	// Must be done *before* the RestoreFromPrefs() and the OpenGL setup,
 	// because the movie dimensions define the window dimensions for these movie windows
@@ -43,9 +46,6 @@ MainWindow::MainWindow(const char* windowTitle, const char* windowSettingsNamePa
 	// Set up the OpenGL view
 	glWidget = new GLWidget( this, movieWidth, movieHeight, movieVersion, movieFile );
 	setCentralWidget( glWidget );
-
-	// Create the main menubar
-	CreateMenus( menuBar() );
 }
 
 
