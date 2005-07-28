@@ -8,9 +8,8 @@ still be revived or newly developed, such as:
   relying on updateGL() and paintGL() (cannot depend on rigorous
   synchrony between window updates and simulator time-steps otherwise);
   main window is already converted
-* fix bug in PwMoviePlayer that results in disembodied, unpopulated little
-  MenuBar floating at the top-left of the window (no idea where that's
-  coming from currently)
+* make windows record their position and size changes to the settings
+  file when they are manually moved or resized
 * record all (or a specifiable subset of) Polyworld windows, using the
   new PwRecordMovie/PwMoviePlayer tools (they used to all be embedded
   in a single effective window--the entire Iris screen--but are now
@@ -53,6 +52,9 @@ enhance the evolutionary usefulness of collaboration.
 
 Recently done:
 
+* fix bug in PwMoviePlayer that results in disembodied, unpopulated little
+  MenuBar floating at the top-left of the window (no idea where that's
+  coming from currently)
 * get the digital movie recording and playback revived (from rev20 or rev21) 
 * brain map window won't close when close button is clicked
   (selecting Hide Window from the Window menu works fine)
