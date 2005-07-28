@@ -56,13 +56,11 @@ void GLWidget::initializeGL()
 	glwPrint( "called\n" );
 
 	qglClearColor( Qt::black );
-//	glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 	glViewport( 0, 0, width, height );
 	glMatrixMode( GL_PROJECTION );
 	glLoadIdentity();
 	glOrtho( 0, width, 0, height, -1.0, 1.0 ); 
-//	glMatrixMode(GL_MODELVIEW);
-    glColor4ub( 0, 255, 255, 255 );
+    glColor4ub( 255, 255, 255, 255 );
 	setAutoBufferSwap( false );
 }
 
@@ -115,8 +113,13 @@ void GLWidget::Draw()
 #endif
 	glDrawPixels( width, height, GL_RGBA, GL_UNSIGNED_BYTE, rgbBuf1 );
 
-//	glRecti( frame*10, frame*10, (frame+5)*10, (frame+5)*10 );
+	// Superimpose the frame number
+	QFont font( "Monaco", 10 );
+	char frameString[16];
+	sprintf( frameString, "%8lu", frame );
+	renderText( width - 54, 15, frameString, font );
 
+	// Done drawing, so show it
 	swapBuffers();
 	
 //	sleep( 3 );
