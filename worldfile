@@ -9,7 +9,7 @@
 1      showvision
 22     minwin
 1.0    maxvel
-30     minnumcritters
+60     minnumcritters_30
 300    maxnumcritters
 120    initnumcritters
 -1     misccritters
@@ -17,24 +17,24 @@
 42    positionseed
 42    genomeseed
 
-150    minfoodcount
-345    maxfoodcount
+180    minfoodcount_150
+360    maxfoodcount_345
 270    maxfoodgrown
 270    initfoodcount
-0.2    foodrate
+0.25    foodrate_0.2
 1      crittersRfood
 100    fit1freq
 2      fit2freq
 10     numfit
 10.0   eatfitparam
 100.0  matefitparam
-0.5    movefitparam
+0.05	movefitparam_0.5
 5.0    energyfitparam
-10.0   agefitparam
-200.0  minfoodenergy
-1000.0  maxfoodenergy
-400.0  size2energy
-100.0   eat2consume
+25.0   agefitparam_10.0
+400.0  minfoodenergy_200.0
+2000.0  maxfoodenergy_1000.0
+800.0  size2energy_400.0
+200.0   eat2consume_100.0
 
 0      minintneurons
 0      maxintneurons
@@ -71,10 +71,10 @@
 
 0.01   eat2energy
 0.1    mate2energy
-1.0    fight2energy
+10.0    fight2energy_1.0
 10.0   maxsizepenalty
-0.1    speed2energy
-0.1    yaw2energy
+1.0    speed2energy_0.1
+5.0    yaw2energy_0.1
 0.01   light2energy
 0.001  focus2energy
 0.01   maxsynapse2energy
@@ -126,27 +126,27 @@
 33.33  domainbarrier#1
 66.67  domainbarrier#2
 
-10     domain[0].minnumcritters
+20     domain[0].minnumcritters_10
 100    domain[0].maxnumcritters
 40     domain[0].initnumcritters
-50     domain[0].minfoodcount
-115    domain[0].maxfoodcount
+60     domain[0].minfoodcount_50
+120    domain[0].maxfoodcount_115
 90     domain[0].maxfoodgrown
 90     domain[0].initfoodcount
 
-10     domain[1].minnumcritters
+20     domain[1].minnumcritters_10
 100    domain[1].maxnumcritters
 40     domain[1].initnumcritters
-50     domain[1].minfoodcount
-115    domain[1].maxfoodcount
+60     domain[1].minfoodcount_50
+120    domain[1].maxfoodcount_115
 90     domain[1].maxfoodgrown
 90     domain[1].initfoodcount
 
-10     domain[2].minnumcritters
+20     domain[2].minnumcritters_10
 100    domain[2].maxnumcritters
 40     domain[2].initnumcritters
-50     domain[2].minfoodcount
-115    domain[2].maxfoodcount
+60     domain[2].minfoodcount_50
+120    domain[2].maxfoodcount_115
 90     domain[2].maxfoodgrown
 90     domain[2].initfoodcount
 
@@ -158,10 +158,10 @@
 16     maxeneurpergroup
 1      minineurpergroup
 16     maxineurpergroup
--1.0   minbias;
-1.0    maxbias;
-0.0    minbiaslrate;
-0.2    maxbiaslrate;
+-8.0   minbias_-1.0
+8.0    maxbias_1.0
+0.0    minbiaslrate
+0.2    maxbiaslrate
 0.0    minconnectiondensity
 1.0    maxconnectiondensity
 0.0    mintopologicaldistortion
@@ -178,4 +178,4 @@
 0.10   smiteFrac
 0.5    smiteAgeFrac
 
-0      recordMovie
+1      recordMovie
