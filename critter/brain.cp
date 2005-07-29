@@ -1452,6 +1452,7 @@ void brain::Update(float energyfraction)
     debugcheck("brain::update after updating synapses");
 #endif DEBUGCHECK
 
+#if 0
     for (i = firstnoninputneuron; i < numneurons; i++)
     {
         neuron[i].bias += groupblrate[neuron[i].group]
@@ -1468,9 +1469,10 @@ void brain::Update(float energyfraction)
         }
     }
 
-#ifdef DEBUGCHECK
+  #ifdef DEBUGCHECK
     debugcheck("brain::update after updating biases");
-#endif DEBUGCHECK
+  #endif DEBUGCHECK
+#endif
 
     float* saveneuronactivation = neuronactivation;
     neuronactivation = newneuronactivation;
