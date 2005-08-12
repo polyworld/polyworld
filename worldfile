@@ -14,21 +14,21 @@
 120    initnumcritters
 -1     misccritters
 
-42    positionseed
-42    genomeseed
+0    positionseed_42
+0    genomeseed_42
 
 180    minfoodcount_150
 360    maxfoodcount_345
 270    maxfoodgrown
 270    initfoodcount
-0.25    foodrate_0.2
+0.275    foodrate_0.2
 1      crittersRfood
 100    fit1freq
 2      fit2freq
 10     numfit
 10.0   eatfitparam
 100.0  matefitparam
-0.05	movefitparam_0.5
+0.00	movefitparam_0.5
 5.0    energyfitparam
 25.0   agefitparam_10.0
 400.0  minfoodenergy_200.0
@@ -60,7 +60,7 @@
 0.5    minmaxspeed
 1.5    maxmaxspeed
 1.0    speed2dpos
-80.0    yaw2dyaw
+20.0    yaw2dyaw_80.0
 0.0    minlrate
 0.1    maxlrate
 20.0   minfocus
@@ -71,14 +71,14 @@
 
 0.01   eat2energy
 0.1    mate2energy
-10.0    fight2energy_1.0
+1.0    fight2energy
 10.0   maxsizepenalty
-1.0    speed2energy_0.1
-5.0    yaw2energy_0.1
+2.0    speed2energy_0.1_1.0
+10.0    yaw2energy_0.1_5.0
 0.01   light2energy
 0.001  focus2energy
 0.01   maxsynapse2energy
-0.05   fixedenergydrain
+0.00   fixedenergydrain_0.05
 0.99   decayrate
 
 0.2    eatthreshold
@@ -89,7 +89,7 @@
 
 0.5    logisticslope
 1.0    maxweight
-0.5    initmaxweight
+0.1    initmaxweight_0.5
 0.1    minbitprob
 0.6    maxbitprob
 0.2    critterheight

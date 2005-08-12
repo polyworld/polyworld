@@ -306,7 +306,11 @@ void genome::Randomize(float bitonprob)
 //---------------------------------------------------------------------------
 void genome::Randomize()
 {
+#if DesignerGenes
+	
+#else
 	Randomize(gMinBitProb + drand48() * (gMaxBitProb - gMinBitProb));
+#endif
 }
 
 
@@ -458,7 +462,7 @@ void genome::Crossover(genome* g1, genome* g2, bool mutate)
                 for (bit = 0; bit < 8; bit++)
                 {
                     if (drand48() < mrate)
-                        fGenes[j] ^= char(1 << (7-bit));
+                        fGenes[j] ^= char(1 << (7-bit));	// this goes left to right, corresponding more directly to little-endian machines, but leave it alone (at least for now)
                 }
             }
         }
@@ -474,12 +478,12 @@ void genome::Crossover(genome* g1, genome* g2, bool mutate)
             bit = gCrossoverPoints[i] - (endbyte << 3);
             
             if (first)
-            {
+            {	// this goes left to right, corresponding more directly to little-endian machines, but leave it alone (at least for now)
                 fGenes[endbyte] = char((g2->fGenes[endbyte] & (255 << (8 - bit)))
                    					 | (g1->fGenes[endbyte] & (255 >> bit)));
 			}                  
             else
-            {
+            {	// this goes left to right, corresponding more directly to little-endian machines, but leave it alone (at least for now)
                 fGenes[endbyte] = char((g1->fGenes[endbyte] & (255 << (8 - bit)))
                    					 | (g2->fGenes[endbyte] & (255 >> bit)));
 			}
@@ -496,7 +500,7 @@ void genome::Crossover(genome* g1, genome* g2, bool mutate)
             for (bit = 0; bit < 8; bit++)
             {
                 if (drand48() < mrate)
-                    fGenes[endbyte] ^= char(1 << (7 - bit));
+                    fGenes[endbyte] ^= char(1 << (7 - bit));	// this goes left to right, corresponding more directly to little-endian machines, but leave it alone (at least for now)
             }
         }
     }

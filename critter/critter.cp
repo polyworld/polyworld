@@ -690,6 +690,7 @@ float critter::Update(float moveFitnessParam, float speed2dpos)
     float dx = -dpos * sin(yaw() * DEGTORAD);
     float dz = -dpos * cos(yaw() * DEGTORAD);
     float dyaw = (2.0 * fBrain->Yaw() - 1.0) * fGenome->MaxSpeed() * gYaw2DYaw;
+//printf( "%4ld  %4ld  dyaw = %4.2f b->y = %4.2f, 2*b->y - 1 = %4.2f, g->maxSpeed = %4.2f, y2dy = %4.2f\n", TSimulation::fAge, fCritterNumber, dyaw, fBrain->Yaw(), 2.0*fBrain->Yaw() - 1.0, fGenome->MaxSpeed(), gYaw2DYaw );
 
     addx(dx);
     addz(dz);

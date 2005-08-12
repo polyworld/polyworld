@@ -1115,7 +1115,7 @@ void brain::Grow(genome* g)
         error(2,"Bad neural architecture, numsyn (",numsyn,") not equal to numsynapses (",numsynapses,")");
 
     for (i = 0; i < numneurons; i++)
-        neuronactivation[i] = 0.5;
+        neuronactivation[i] = 0.1;  // 0.5;
 
     energyuse = brain::gNeuralValues.maxneuron2energy * float(numneurons) / float(brain::gNeuralValues.maxneurons)
               + brain::gNeuralValues.maxsynapse2energy * float(numsynapses) / float(brain::gNeuralValues.maxsynapses);
@@ -1377,6 +1377,36 @@ void brain::Update(float energyfraction)
 		}              
         newneuronactivation[i] = logistic(newneuronactivation[i], gLogisticsSlope);
     }
+
+#define DebugBrain 0
+#if DebugBrain
+	static int numDebugBrains = 0;
+	if( (TSimulation::fAge > 1) && (numDebugBrains < 10) )
+	{
+		numDebugBrains++;
+//		if( numDebugBrains > 2 )
+//			exit( 0 );
+		printf( "***** age = %ld *****\n", TSimulation::fAge );
+		printf( "random neuron [%d] = %g\n", randomneuron, neuronactivation[randomneuron] );
+		printf( "energy neuron [%d] = %g\n", energyneuron, neuronactivation[energyneuron] );
+		printf( "red neurons (%d):\n", fNumRedNeurons );
+		for( i = 0; i < fNumRedNeurons; i++ )
+			printf( "    %3d  %2d  %g\n", i+redneuron, i, neuronactivation[i+redneuron] );
+		printf( "green neurons (%d):\n", fNumGreenNeurons );
+		for( i = 0; i < fNumGreenNeurons; i++ )
+			printf( "    %3d  %2d  %g\n", i+greenneuron, i, neuronactivation[i+greenneuron] );
+		printf( "blue neurons (%d):\n", fNumBlueNeurons );
+		for( i = 0; i < fNumBlueNeurons; i++ )
+			printf( "    %3d  %2d  %g\n", i+blueneuron, i, neuronactivation[i+blueneuron] );
+		printf( "internal neurons (%d):\n", numnoninputneurons );
+		for( i = firstnoninputneuron; i < numneurons; i++ )
+		{
+			printf( "    %3d  %g  %g synapses (%ld):\n", i, neuron[i].bias, newneuronactivation[i], neuron[i].endsynapses - neuron[i].startsynapses );
+			for( k = neuron[i].startsynapses; k < neuron[i].endsynapses; k++ )
+				printf( "        %4ld  %2ld  %2d  %g  %g\n", k, k-neuron[i].startsynapses, synapse[k].fromneuron, synapse[k].efficacy, neuronactivation[abs(synapse[k].fromneuron)] );
+		}
+	}
+#endif
 
 #ifdef DEBUGCHECK
     debugcheck("brain::update after updating neurons");
