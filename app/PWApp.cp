@@ -57,7 +57,16 @@ int main(int argc, char** argv)
 	
 	// Set window as main widget and show
 //	app.setMainWidget(appWindow);
-	
+
+#if 0
+	// What's a sigmoid, daddy?
+	for( int i = -15; i < 16; i++ )
+	{
+		float a = logistic( (float) i, brain::gLogisticsSlope );
+		printf( "%3d  %5.2f\n", i, a );
+	}
+#endif
+
 	// Create simulation timer
 	QTimer* idleTimer = new QTimer(appWindow);
 	app.connect(idleTimer, SIGNAL(timeout()), appWindow, SLOT(timeStep()));

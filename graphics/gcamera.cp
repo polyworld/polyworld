@@ -72,7 +72,7 @@ gcamera::gcamera()
     fFixationPoint[2] = 0.0;
     
     fAngle[0] = 0.0;
-    fAngle[1] = 1.0;
+    fAngle[1] = 0.0;
     fAngle[2] = 0.0;
 }
 
@@ -246,7 +246,7 @@ void gcamera::Use()
 		glTranslatef(-fPosition[0], -fPosition[1], -fPosition[2]);
         
         if (fFollowObject != NULL)
-        	fFollowObject->inverseposition();
+        	fFollowObject->inverseposition();		
     }
 }
 

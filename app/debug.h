@@ -9,6 +9,7 @@
 //#define DEBUGCHECK
 
 #define DebugSetRadius 0
+#define TestWorld 0
 
 #define dbprintf( x... ) { fprintf( stderr, x ); fflush( stderr ); }
 

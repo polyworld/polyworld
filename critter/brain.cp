@@ -4,6 +4,8 @@
 /* Copyright Apple Computer 1990,1991,1992                          */
 /********************************************************************/
 
+#define DesignerBrains 0
+
 // Self
 #include "brain.h"
 
@@ -54,6 +56,14 @@ float brain::gLogisticsSlope;
 float brain::gMaxWeight;
 float brain::gInitMaxWeight;
 float brain::gDecayRate;
+
+enum
+{
+	kSynapseTypeEE = 0,
+	kSynapseTypeIE = 1,
+	kSynapseTypeEI = 2,
+	kSynapseTypeII = 3
+};
 
 #pragma mark -
 
@@ -492,6 +502,822 @@ short brain::NearestFreeNeuron(short iin, bool* used, short num, short exclude)
     return iout;
 }
 
+//---------------------------------------------------------------------------
+// brain::GrowDesignedBrain
+//---------------------------------------------------------------------------
+void brain::GrowDesignedBrain( genome* g )
+{
+	// This routine builds a very simple, specific brain, to be used for debugging.
+	// The number of vision neurons is the same for each component of color (NumColorNeurons).
+	// There are no strictly internal neurons; rather inputs are wired directly to outputs.
+	// Red input is wired to the Fight response.  Green input is wired to the Eat response.
+	// Blue input is wired to the Mate response.  All three are wired to the Move response.
+	// The left side of the visual field causes a turn to the left and the right side of the
+	// visual field causes a turn to the right; this is true for all colors.
+	//
+	// It is best if NumColorNeurons is an even number.
+	
+#define NumColorNeurons 4
+
+#define LeftColorNeurons NumColorNeurons>>1
+
+	// Following helper arrays tell how many neurons are in each input and output group
+	// random (1), energy (1), red (NumColorNeurons), green (NumColorNeurons), blue (NumColorNeurons), plus 7 output behaviors (1 each)
+	// The seven behaviors, in order, are:  eat, mate, fight, speed (move), yaw (turn), light, focus
+
+	int numDesignExcNeurons[12] = { 1, 1, NumColorNeurons, NumColorNeurons, NumColorNeurons, 1, 1, 1, 1, 1, 1, 1 };
+	int numDesignInhNeurons[12] = { 1, 1, NumColorNeurons, NumColorNeurons, NumColorNeurons, 1, 1, 1, 1, 1, 1, 1 };
+
+	mygenes = g;	// not that it matters
+	
+	// we only have input and output neural groups in this simplifed brain
+	numneurgroups = brain::gNeuralValues.numinputneurgroups + brain::gNeuralValues.numoutneurgroups;
+
+#ifdef DEBUGBRAINGROW
+    cout << "****************************************************" nlf;
+    cout << "Starting a new brain with numneurgroups = " << numneurgroups nlf;
+#endif DEBUGBRAINGROW
+
+	numinputneurons = 0;
+	short i;
+	// For input neural groups, neurons can be both excitatory and inhibitory,
+	// but we only count them once
+	for( i = 0; i < brain::gNeuralValues.numinputneurgroups; i++ )
+	{
+		firsteneur[i] = numinputneurons;
+		firstineur[i] = numinputneurons;
+		numinputneurons += numDesignExcNeurons[i];
+		if( i > 4 )	// oops!  just a sanity check
+		{
+			printf( "%s: ERROR initializing invalid input neural group (%d)\n", __FUNCTION__, i );
+			exit( 1 );
+		}
+
+	#ifdef DEBUGBRAINGROW
+        cout << "group " << i << " has " << numDesignExcNeurons[i] << " neurons" nlf;
+	#endif DEBUGBRAINGROW
+	}
+	firstnoninputneuron = numinputneurons;
+	
+    // note, group 0 = randomneuron, group 1 = energyneuron
+    // group 2 = redneuron(s)
+	redneuron = energyneuron + 1;
+	fNumRedNeurons = short(numDesignExcNeurons[2]);
+	
+    // group 3 = greenneuron(s)
+    greenneuron = redneuron + fNumRedNeurons;
+    fNumGreenNeurons = short(numDesignExcNeurons[3]);
+    
+    // group 4 = blueneuron(s)
+    blueneuron = greenneuron + fNumGreenNeurons;
+    fNumBlueNeurons = short(numDesignExcNeurons[4]);
+
+    xredwidth = float(brain::retinawidth) / float(fNumRedNeurons);
+    xgreenwidth = float(brain::retinawidth) / float(fNumGreenNeurons);
+    xbluewidth = float(brain::retinawidth) / float(fNumBlueNeurons);
+    
+    xredintwidth = brain::retinawidth / fNumRedNeurons;    
+    if ((xredintwidth * fNumRedNeurons) != brain::retinawidth)
+        xredintwidth = 0;
+        
+    xgreenintwidth = brain::retinawidth / fNumGreenNeurons;
+    if ((xgreenintwidth*fNumGreenNeurons) != brain::retinawidth)
+        xgreenintwidth = 0;
+        
+    xblueintwidth = brain::retinawidth / fNumBlueNeurons;
+    if ((xblueintwidth*fNumBlueNeurons) != brain::retinawidth)
+        xblueintwidth = 0;
+
+#ifdef DEBUGBRAINGROW
+    cout << "fNumRedNeurons, fNumGreenNeurons, fNumBlueNeurons = "
+         << fNumRedNeurons cms fNumGreenNeurons cms fNumBlueNeurons nlf;;
+#endif DEBUGBRAINGROW
+
+	numsynapses = 0;
+	numnoninputneurons = 0;
+	
+	short j, ii;
+	for( i = brain::gNeuralValues.numinputneurgroups; i < numneurgroups; i++ )
+	{
+		// For this simplified, test brain, there are no purely internal neural groups,
+		// so all of these will be output groups, which always consist of a single neuron,
+		// that can play the role of both an excitatory and an inhibitory neuron.
+		firsteneur[i] = numinputneurons + numnoninputneurons;
+		firstineur[i] = numinputneurons + numnoninputneurons;
+		numnoninputneurons++;
+		
+#ifdef DEBUGBRAINGROW
+        cout << "group " << i << " has " << numDesignExcNeurons[i] << " e-neurons" nlf;
+        cout << "  and " << i << " has " << numDesignInhNeurons[i] << " i-neurons" nlf;
+#endif DEBUGBRAINGROW
+
+		// Since we are only dealing with output groups, there is only one neuron in each group,
+		// so the synapse count is just the number of neurons providing input to this group.
+		// But since the presynaptic groups are all input groups, we're going to let them have
+		// both excitatory and inhibitory connections, and then we'll set the synaptic values
+		// to do the right thing.  (So count the incoming neurons twice.)
+		for( j = 0; j < (numneurgroups - brain::gNeuralValues.numoutneurgroups); j++ )
+		{
+			numsynapses += numDesignExcNeurons[j];
+			numsynapses += numDesignInhNeurons[j];	// see comment above
+			if( j > 4 )	// oops!  just a sanity check
+			{
+				printf( "%s: ERROR initializing numsynapses, invalid pre-synaptic group (%d)\n", __FUNCTION__, j );
+				exit( 1 );
+			}
+#ifdef DEBUGBRAINGROW
+            cout << "  from " << j << " to " << i << " there are "
+                 << numDesignExcNeurons[j] << " e-e synapses" nlf;
+            cout << "  from " << j << " to " << i << " there are "
+                 << numDesignInhNeurons[j] << " i-e synapses" nlf;
+            cout << "  from " << j << " to " << i << " there are "
+                 << 0 << " e-i synapses" nlf;
+            cout << "  from " << j << " to " << i << " there are "
+                 << 0 << " i-i synapses" nlf;
+            cout << "  from " << j << " to " << i << " there are "
+                 << numDesignExcNeurons[j] + numDesignInhNeurons[j] << " total synapses" nlf;
+#endif DEBUGBRAINGROW
+		}
+	}
+	
+    numneurons = numnoninputneurons + numinputneurons;
+    if (numneurons > brain::gNeuralValues.maxneurons)
+        error(2,"numneurons (",numneurons,") > maxneurons (", brain::gNeuralValues.maxneurons,") in brain::grow");
+        
+    if (numsynapses > brain::gNeuralValues.maxsynapses)
+        error(2,"numsynapses (",numsynapses,") > maxsynapses (", brain::gNeuralValues.maxsynapses,") in brain::grow");
+
+    // set up the ouput/behavior neurons as the last numoutneur neurons
+    focusneuron = numneurons - 1;
+    lightneuron = focusneuron - 1;
+    yawneuron = lightneuron - 1;
+    speedneuron = yawneuron - 1;
+    fightneuron = speedneuron - 1;
+    mateneuron = fightneuron - 1;
+    eatneuron = mateneuron - 1;
+	
+	numOutputNeurons = 7;
+	firstOutputNeuron = eatneuron;
+
+	AllocateBrainMemory();
+	
+    short ineur, jneur, nneuri, nneurj, joff, disneur;
+    short isyn, newsyn;
+    long  nsynij;
+    float nsynijperneur;
+    long numsyn = 0;
+    short numneur = numinputneurons;
+    float tdij;
+
+    for (i = 0, ineur = 0; i < brain::gNeuralValues.numinputneurgroups; i++)
+    {
+        for (j = 0; j < numDesignExcNeurons[i]; j++, ineur++)
+        {
+            neuron[ineur].group = i;
+            neuron[ineur].bias = 0.0;         // not used
+            neuron[ineur].startsynapses = -1; // not used
+            neuron[ineur].endsynapses = -1;   // not used
+        }
+    }
+
+    for (i = brain::gNeuralValues.numinputneurgroups; i < numneurgroups; i++)
+    {
+#ifdef DEBUGBRAINGROW
+        cout << "For group " << i << ":" nlf;
+#endif DEBUGBRAINGROW
+
+        float groupbias;
+		
+		if( i == (numneurgroups - gNeuralValues.numoutneurgroups + 4) )	// yaw group/neuron
+			groupbias = 0.5;	// keep turning, unless overriden by vision
+		else
+			groupbias = 0.0;	// no bias	// g->Bias(i);
+        groupblrate[i] = 0.0;	// no bias learning	// g->BiasLearningRate(i);
+
+#ifdef DEBUGBRAINGROW
+        cout << "  groupbias = " << groupbias nlf;
+        cout << "  groupbiaslearningrate = " << groupblrate[i] nlf;
+#endif DEBUGBRAINGROW
+
+        for (j = 0; j < numneurgroups; j++)
+        {
+            eeremainder[j] = 0.0;
+            eiremainder[j] = 0.0;
+            iiremainder[j] = 0.0;
+            ieremainder[j] = 0.0;
+
+            grouplrate[index4(i, j, 0, 0, numneurgroups, 2, 2)] = 0.000;	// no learning	// very slow, uniform learning rate, for now
+            grouplrate[index4(i, j, 0, 1, numneurgroups, 2, 2)] = 0.000;	// no learning	// very slow, uniform learning rate, for now
+            grouplrate[index4(i, j, 1, 1, numneurgroups, 2, 2)] = 0.000;	// no learning	// very slow, uniform learning rate, for now
+            grouplrate[index4(i, j, 1, 0, numneurgroups, 2, 2)] = 0.000;	// no learning	// very slow, uniform learning rate, for now
+        }
+
+        // setup all e-neurons for this group
+        nneuri = numDesignExcNeurons[i];
+
+#ifdef DEBUGBRAINGROW
+        cout << "  Setting up " << nneuri << " e-neurons" nlf;
+#endif DEBUGBRAINGROW
+		
+		short ini;	
+        for (ini = 0; ini < nneuri; ini++)
+        {
+            ineur = ini + firsteneur[i];
+
+#ifdef DEBUGBRAINGROW
+            cout << "  For ini, ineur = "
+                 << ini cms ineur << ":" nlf;
+#endif DEBUGBRAINGROW
+
+            neuron[ineur].group = i;
+            neuron[ineur].bias = groupbias;
+            neuron[ineur].startsynapses = numsyn;
+
+#ifdef DEBUGBRAINGROW
+            cout << "    group = " << neuron[ineur].group nlf;
+            cout << "    bias = " << neuron[ineur].bias nlf;
+            cout << "    startsynapses = " << neuron[ineur].startsynapses nlf;
+            cout << "    Setting up e-e connections:" nlf;
+#endif DEBUGBRAINGROW
+
+            // setup all e-e connections for this e-neuron
+            for (j = 0; j < numneurgroups; j++)
+            {
+				// all i-groups are output groups, so if the j-group is an output group,
+				// there should be no connection
+				if( j >= (numneurgroups - brain::gNeuralValues.numoutneurgroups) )	// j is an output group
+				{
+					nneurj = 0;
+					nsynij = 0;
+				}
+				else
+				{
+					nneurj = numDesignExcNeurons[j];	// g->numeneur(j);
+					nsynij = numDesignExcNeurons[j];	// g->numeesynapses(i,j);
+				}
+
+#ifdef DEBUGBRAINGROW
+                cout << "      From group " << j nlf;
+                cout << "      with nneurj, (old)eeremainder = "
+                     << nneurj cms eeremainder[j] nlf;
+#endif DEBUGBRAINGROW
+
+                nsynijperneur = float(nsynij)/float(nneuri);
+                newsyn = short(nsynijperneur + eeremainder[j] + 1.e-5);
+                eeremainder[j] += nsynijperneur - newsyn;
+                tdij = 0.0;	// no topological distortion // g->eetd(i,j);
+
+                joff = short((float(ini) / float(nneuri)) * float(nneurj) - float(newsyn) * 0.5);
+                joff = max<short>(0, min<short>(nneurj - newsyn, joff));
+
+#ifdef DEBUGBRAINGROW
+                cout << "      and nsynij, nsynijperneur, newsyn = "
+                     << nsynij cms nsynijperneur cms newsyn nlf;
+                cout << "      and (new)eeremainder, tdij, joff = "
+                     << eeremainder[j] cms tdij cms joff nlf;
+#endif DEBUGBRAINGROW
+
+                if ((joff + newsyn) > nneurj)
+                {
+                    error(2,"Illegal architecture generated: ",
+                        "more e-e synapses from group ",j,
+                        " to group ",i,
+                        " than there are e-neurons in group ",j);
+                }
+
+                if (newsyn > 0)
+                {
+                    for (ii = 0; ii < nneurj; ii++)
+                        neurused[ii] = false;
+				}
+				
+                for (isyn = 0; isyn < newsyn; isyn++)
+                {
+                    if (drand48() < tdij)
+                    {
+                        disneur = short(nint(rrand(-0.5,0.5)*tdij*nneurj));
+                        jneur = isyn + joff + disneur;
+                        
+                        if (jneur < 0)
+                            jneur += nneurj;
+                        else if (jneur >= nneurj)
+                            jneur -= nneurj;
+                    }
+                    else
+                    {
+                        jneur = isyn + joff;
+					}                      
+
+                    if (((jneur+firsteneur[j]) == ineur) // same neuron or
+                        || neurused[jneur] ) // already connected to this one
+                    {
+                        if (i == j) // same group and neuron type
+                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, ini);
+                        else
+                            jneur = NearestFreeNeuron(jneur,&neurused[0], nneurj, jneur);
+                    }
+
+                    neurused[jneur] = true;
+
+                    jneur += firsteneur[j];
+
+                    synapse[numsyn].fromneuron =  jneur; // + denotes excitatory
+                    synapse[numsyn].toneuron   =  ineur; // + denotes excitatory
+                    
+                    if (ineur == jneur)
+                        synapse[numsyn].efficacy = 0.0;
+                    else
+                        synapse[numsyn].efficacy = DesignedEfficacy( i, j, isyn, kSynapseTypeEE );	// reset this later for the designed brain
+
+#ifdef DEBUGBRAINGROW
+                    cout << "        synapse[" << numsyn
+                         << "].toneur, fromneur, efficacy, lrate = "
+                         << ineur cms jneur cms synapse[numsyn].efficacy nlf;
+#endif DEBUGBRAINGROW
+
+                    numsyn++;
+                }
+            }
+
+            // setup all i-e connections for this e-neuron
+
+#ifdef DEBUGBRAINGROW
+            cout << "    Setting up i-e connections:" nlf;
+#endif DEBUGBRAINGROW
+
+            for (j = 0; j < numneurgroups; j++)
+            {
+				// all i-groups are output groups, so if the j-group is an output group,
+				// there should be no connection
+				if( j >= (numneurgroups - brain::gNeuralValues.numoutneurgroups) )	// j is an output group
+				{
+					nneurj = 0;
+					nsynij = 0;
+				}
+				else
+				{
+					nneurj = numDesignInhNeurons[j];	// g->numineur(j);
+					nsynij = numDesignInhNeurons[j];	// g->numiesynapses(i,j);
+				}
+
+#ifdef DEBUGBRAINGROW
+                cout << "      From group " << j nlf;
+                cout << "      with nneurj, (old)ieremainder = "
+                     << nneurj cms ieremainder[j] nlf;
+#endif DEBUGBRAINGROW
+
+                nsynijperneur = float(nsynij)/float(nneuri);
+                newsyn = short(nsynijperneur + ieremainder[j] + 1.e-5);
+                ieremainder[j] += nsynijperneur - newsyn;
+                tdij = 0.0;	// no topological distortion	// g->ietd(i,j);
+
+                joff = short((float(ini)/float(nneuri)) * float(nneurj)
+                     - float(newsyn) * 0.5);
+                joff = max<short>(0, min<short>(nneurj - newsyn, joff));
+
+#ifdef DEBUGBRAINGROW
+                cout << "      and nsynij, nsynijperneur, newsyn = "
+                     << nsynij cms nsynijperneur cms newsyn nlf;
+                cout << "      and (new)ieremainder, tdij, joff = "
+                     << ieremainder[j] cms tdij cms joff nlf;
+#endif DEBUGBRAINGROW
+
+                if ((joff+newsyn) > nneurj)
+                {
+                    error(2,"Illegal architecture generated: ",
+                        "more i-e synapses from group ",j,
+                        " to group ",i,
+                        " than there are i-neurons in group ",j);
+                }
+
+                if (newsyn > 0)
+                {
+                    for (ii = 0; ii < nneurj; ii++)
+                        neurused[ii] = false;
+				}
+				
+                for (isyn = 0; isyn < newsyn; isyn++)
+                {
+                    if (drand48() < tdij)
+                    {
+                        disneur = short(nint(rrand(-0.5,0.5)*tdij*nneurj));
+                        jneur = isyn + joff + disneur;
+                        if (jneur < 0)
+                            jneur += nneurj;
+                        else if (jneur >= nneurj)
+                            jneur -= nneurj;
+                    }
+                    else
+                    {
+                        jneur = isyn + joff;
+					}                     
+
+                    if ( ((jneur+firstineur[j]) == ineur) // same neuron or
+                        || neurused[jneur] ) // already connected to this one
+                    {
+                        if ((i==j)&&(i==(numneurgroups-1)))//same & output group
+                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, ini);
+                        else
+                            jneur = NearestFreeNeuron(jneur,&neurused[0], nneurj, jneur);
+                    }
+
+                    neurused[jneur] = true;
+
+                    jneur += firstineur[j];
+
+                    synapse[numsyn].fromneuron = -jneur; // - denotes inhibitory
+                    synapse[numsyn].toneuron   =  ineur; // + denotes excitatory
+                    
+                    if (ineur == jneur) // can't happen anymore?
+                        synapse[numsyn].efficacy = 0.0;
+                    else
+                        synapse[numsyn].efficacy = min(-1.e-10, (double) DesignedEfficacy( i, j, isyn, kSynapseTypeIE ));
+
+#ifdef DEBUGBRAINGROW
+                    cout << "        synapse[" << numsyn
+                         << "].toneur, fromneur, efficacy, lrate = "
+                         << ineur cms jneur cms synapse[numsyn].efficacy nlf;
+#endif DEBUGBRAINGROW
+
+                    numsyn++;
+                }
+            }
+
+            neuron[ineur].endsynapses = numsyn;
+            numneur++;
+        }
+
+        // setup all i-neurons for this group
+
+        if (i >= (numneurgroups - brain::gNeuralValues.numoutneurgroups))
+            nneuri = 0;  // output/behavior neurons are e-only postsynaptically
+        else
+            nneuri = numDesignInhNeurons[i];	// g->numineur(i);
+
+#ifdef DEBUGBRAINGROW
+        cout << "  Setting up " << nneuri << " i-neurons" nlf;
+#endif DEBUGBRAINGROW
+
+        for (ini = 0; ini < nneuri; ini++)
+        {
+            ineur = ini + firstineur[i];
+
+#ifdef DEBUGBRAINGROW
+            cout << "  For ini, ineur = "
+                 << ini cms ineur << ":" nlf;
+#endif DEBUGBRAINGROW
+
+            neuron[ineur].group = i;
+            neuron[ineur].bias = groupbias;
+            neuron[ineur].startsynapses = numsyn;
+
+#ifdef DEBUGBRAINGROW
+            cout << "    group = " << neuron[ineur].group nlf;
+            cout << "    bias = " << neuron[ineur].bias nlf;
+            cout << "    startsynapses = " << neuron[ineur].startsynapses nlf;
+            cout << "    Setting up e-i connections:" nlf;
+#endif DEBUGBRAINGROW
+
+            // setup all e-i connections for this i-neuron
+
+            for (j = 0; j < numneurgroups; j++)
+            {
+				// all i-groups are output groups, so if the j-group is an output group,
+				// there should be no connection
+				if( j >= (numneurgroups - brain::gNeuralValues.numoutneurgroups) )	// j is an output group
+				{
+					nneurj = 0;
+					nsynij = 0;
+				}
+				else
+				{
+					nneurj = numDesignExcNeurons[j];	// g->numeneur(j);
+					nsynij = numDesignExcNeurons[j];	// g->numeisynapses(i, j);
+				}
+
+#ifdef DEBUGBRAINGROW
+                cout << "      From group " << j nlf;
+                cout << "      with nneurj, (old)eiremainder = "
+                     << nneurj cms eiremainder[j] nlf;
+#endif DEBUGBRAINGROW
+
+                nsynijperneur = float(nsynij) / float(nneuri);
+                newsyn = short(nsynijperneur + eiremainder[j] + 1.e-5);
+                eiremainder[j] += nsynijperneur - newsyn;
+                tdij = 0.0;	// no topological distortion	// g->eitd(i,j);
+
+                joff = short((float(ini)/float(nneuri)) * float(nneurj) - float(newsyn) * 0.5);
+                joff = max<short>(0, min<short>(nneurj - newsyn, joff));
+
+#ifdef DEBUGBRAINGROW
+                cout << "      and nsynij, nsynijperneur, newsyn = "
+                     << nsynij cms nsynijperneur cms newsyn nlf;
+                cout << "      and (new)eiremainder, tdij, joff = "
+                     << eiremainder[j] cms tdij cms joff nlf;
+#endif DEBUGBRAINGROW
+
+                if ((joff+newsyn) > nneurj)
+                {
+                    error(2,"Illegal architecture generated: ",
+                        "more e-i synapses from group ",j,
+                        " to group ",i,
+                        " than there are e-neurons in group ",j);
+                }
+
+                if (newsyn > 0)
+                {
+                    for (ii = 0; ii < nneurj; ii++)
+                        neurused[ii] = false;
+				}
+				
+                for (isyn = 0; isyn < newsyn; isyn++)
+                {
+                    if (drand48() < tdij)
+                    {
+                        disneur = short(nint(rrand(-0.5,0.5)*tdij*nneurj));
+                        jneur = isyn + joff + disneur;
+                        if (jneur < 0)
+                            jneur += nneurj;
+                        else if (jneur >= nneurj)
+                            jneur -= nneurj;
+                    }
+                    else
+                    {
+                        jneur = isyn + joff;
+					}
+					
+                    if ( ((jneur+firsteneur[j]) == ineur) // same neuron or
+                        || neurused[jneur] ) // already connected to this one
+                    {
+                        if ((i==j)&&(i==(numneurgroups-1)))//same & output group
+                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, ini);
+                        else
+                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, jneur);
+                    }
+
+                    neurused[jneur] = true;
+
+                    jneur += firsteneur[j];
+
+                    synapse[numsyn].fromneuron =  jneur; // + denotes excitatory
+                    synapse[numsyn].toneuron   = -ineur; // - denotes inhibitory
+                    
+                    if (ineur == jneur) // can't happen anymore?
+                        synapse[numsyn].efficacy = 0.0;
+                    else
+                        synapse[numsyn].efficacy = DesignedEfficacy( i, j, isyn, kSynapseTypeEI );
+
+#ifdef DEBUGBRAINGROW
+                    cout << "        synapse[" << numsyn
+                         << "].toneur, fromneur, efficacy, lrate = "
+                         << ineur cms jneur cms synapse[numsyn].efficacy nlf;
+#endif DEBUGBRAINGROW
+
+                    numsyn++;
+                }
+            }
+
+            // setup all i-i connections for this i-neuron
+            for (j = 0; j < numneurgroups; j++)
+            {
+				// all i-groups are output groups, so if the j-group is an output group,
+				// there should be no connection
+				if( j >= (numneurgroups - brain::gNeuralValues.numoutneurgroups) )	// j is an output group
+				{
+					nneurj = 0;
+					nsynij = 0;
+				}
+				else
+				{
+					nneurj = numDesignInhNeurons[j];	// g->numineur(j);
+					nsynij = numDesignInhNeurons[j];	// g->numiisynapses(i,j);
+				}
+
+#ifdef DEBUGBRAINGROW
+                cout << "      From group " << j nlf;
+                cout << "      with nneurj, (old)iiremainder = "
+                     << nneurj cms iiremainder[j] nlf;
+#endif DEBUGBRAINGROW
+
+                nsynijperneur = float(nsynij)/float(nneuri);
+                newsyn = short(nsynijperneur + iiremainder[j] + 1.e-5);
+                iiremainder[j] += nsynijperneur - newsyn;
+                tdij = 0.0;	// no topological distortion	// g->iitd(i,j);
+
+                joff = short((float(ini)/float(nneuri)) * float(nneurj) - float(newsyn) * 0.5);
+                joff = max<short>(0, min<short>(nneurj - newsyn, joff));
+
+#ifdef DEBUGBRAINGROW
+                cout << "      and nsynij, nsynijperneur, newsyn = "
+                     << nsynij cms nsynijperneur cms newsyn nlf;
+                cout << "      and (new)iiremainder, tdij, joff = "
+                     << iiremainder[j] cms tdij cms joff nlf;
+#endif DEBUGBRAINGROW
+
+                if ((joff+newsyn) > nneurj)
+                {
+                    error(2,"Illegal architecture generated: ",
+                        "more i-i synapses from group ",j,
+                        " to group ",i,
+                        " than there are i-neurons in group ",j);
+                }
+
+                if (newsyn > 0)
+                {
+                    for (ii = 0; ii < nneurj; ii++)
+                        neurused[ii] = false;
+				}
+				
+                for (isyn = 0; isyn < newsyn; isyn++)
+                {
+                    if (drand48() < tdij)
+                    {
+                        disneur = short(nint(rrand(-0.5,0.5)*tdij*nneurj));
+                        jneur = isyn + joff + disneur;
+                        if (jneur < 0)
+                            jneur += nneurj;
+                        else if (jneur >= nneurj)
+                            jneur -= nneurj;
+                    }
+                    else
+                    {
+                        jneur = isyn + joff;
+					}
+					
+                    if (((jneur+firstineur[j]) == ineur) // same neuron or
+                        || neurused[jneur] ) // already connected to this one
+                    {
+                        if (i == j) // same group and neuron type
+                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, ini);
+                        else
+                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, jneur);
+                    }
+
+                    neurused[jneur] = true;
+
+                    jneur += firstineur[j];
+
+                    synapse[numsyn].fromneuron = -jneur; // - denotes inhibitory
+                    synapse[numsyn].toneuron   = -ineur; // - denotes inhibitory
+                    
+                    if (ineur == jneur) // can't happen anymore?
+                        synapse[numsyn].efficacy = 0.0;
+                    else
+                        synapse[numsyn].efficacy = min(-1.e-10, (double) DesignedEfficacy( i, j, isyn, kSynapseTypeII ));
+
+#ifdef DEBUGBRAINGROW
+                    cout << "        synapse[" << numsyn
+                         << "].toneur, fromneur, efficacy, lrate = "
+                         << ineur cms jneur cms synapse[numsyn].efficacy nlf;
+#endif DEBUGBRAINGROW
+
+                    numsyn++;
+                }
+            }
+
+            neuron[ineur].endsynapses = numsyn;
+            numneur++;
+        }
+    }
+
+    if (numneur != (numneurons))
+        error(2,"Bad neural architecture, numneur (",numneur,") not equal to numneurons (",numneurons,")");
+
+    if (numsyn != (numsynapses))
+        error(2,"Bad neural architecture, numsyn (",numsyn,") not equal to numsynapses (",numsynapses,")");
+
+    for (i = 0; i < numneurons; i++)
+        neuronactivation[i] = 0.0;	// 0.1	// 0.5;
+
+    energyuse = brain::gNeuralValues.maxneuron2energy * float(numneurons) / float(brain::gNeuralValues.maxneurons)
+              + brain::gNeuralValues.maxsynapse2energy * float(numsynapses) / float(brain::gNeuralValues.maxsynapses);
+
+#ifdef DEBUGCHECK
+    debugcheck("brain::grow after setting up architecture");
+#endif DEBUGCHECK
+
+#if 0
+    // now send some signals through the system
+    // try pure noise for now...
+    for (i = 0; i < gNumPrebirthCycles; i++)
+    {
+        // load up the retinabuf with noise
+        for (j = 0; j < (brain::retinawidth * 4); j++)
+            retinaBuf[j] = (unsigned char)(rrand(0.0, 255.0));
+        Update(drand48());
+    }
+#endif
+}
+
+
+//---------------------------------------------------------------------------
+// brain::DesignedEfficacy
+//---------------------------------------------------------------------------
+#define DebugDesignedEfficacy 0
+#if DebugDesignedEfficacy
+	#define dePrint( x... ) printf( x )
+#else
+	#define dePrint( x... )
+#endif
+float brain::DesignedEfficacy( short toGroup, short fromGroup, short isyn, int synapseType )
+{
+	float efficacy = 0.0;	// may be set < 0.0 for inhibitory connections in caller
+	
+	switch( toGroup )
+	{
+		case 5:	// eat
+			if( (fromGroup == 3) && (synapseType == kSynapseTypeEE) )	// green vision
+			{
+				dePrint( "%s: setting efficacy to %g for green vision connecting to the eat behavior\n", __FUNCTION__, gMaxWeight );
+				efficacy = gMaxWeight;
+			}
+			break;
+		
+		case 6:	// mate
+			if( (fromGroup == 4) && (synapseType == kSynapseTypeEE) )	// blue vision
+			{
+				dePrint( "%s: setting efficacy to %g for blue vision connecting to the mate behavior\n", __FUNCTION__, gMaxWeight );
+				efficacy = gMaxWeight;
+			}
+			break;
+		
+		case 7:	// fight
+			if( (fromGroup == 2) && (synapseType == kSynapseTypeEE) )	// red vision
+			{
+				dePrint( "%s: setting efficacy to %g for red vision connecting to the fight behavior\n", __FUNCTION__, gMaxWeight );
+				efficacy = gMaxWeight;
+			}
+			break;
+		
+		case 8:	// speed (move)
+			if( (fromGroup > 1) && (fromGroup < 5) && (synapseType == kSynapseTypeEE) )	// any vision
+			{
+				dePrint( "%s: setting efficacy to %g for any vision connecting to the move behavior\n", __FUNCTION__, gMaxWeight );
+				efficacy = gMaxWeight;
+			}
+			break;
+		
+		case 9:	// yaw (turn)
+			switch( fromGroup )
+			{
+				case 2:	// red vision
+					if( (isyn < LeftColorNeurons) && ((synapseType == kSynapseTypeIE) || (synapseType == kSynapseTypeII)) )
+					{
+						dePrint( "%s: setting efficacy to %g for left red vision connecting to the turn behavior\n", __FUNCTION__, -gMaxWeight );
+						efficacy = -gMaxWeight;	// input on left forces turn to right (negative yaw)
+					}
+					else if( (isyn >= LeftColorNeurons) && ((synapseType == kSynapseTypeEE) || (synapseType == kSynapseTypeEI)) )
+					{
+						dePrint( "%s: setting efficacy to %g for right red vision connecting to the turn behavior\n", __FUNCTION__, gMaxWeight );
+						efficacy = gMaxWeight;		// input on right forces turn to left (positive yaw)
+					}
+					break;
+					
+				case 3:	// green vision
+					if( (isyn < LeftColorNeurons) && ((synapseType == kSynapseTypeEE) || (synapseType == kSynapseTypeEI)) )
+					{
+						dePrint( "%s: setting efficacy to %g for left green vision connecting to the turn behavior\n", __FUNCTION__, gMaxWeight * 0.5 );
+						efficacy = gMaxWeight * 0.5;	// input on left forces turn to left (positive yaw)
+					}
+					else if( (isyn >= LeftColorNeurons) && ((synapseType == kSynapseTypeIE) || (synapseType == kSynapseTypeII)) )
+					{
+						dePrint( "%s: setting efficacy to %g for right green vision connecting to the turn behavior\n", __FUNCTION__, -gMaxWeight * 0.5 );
+						efficacy = -gMaxWeight * 0.5;		// input on right green forces turn to right (negative yaw)
+					}
+					break;
+				
+				case 4:	// blue vision
+					if( (isyn < LeftColorNeurons) && ((synapseType == kSynapseTypeEE) || (synapseType == kSynapseTypeEI)) )
+					{
+						dePrint( "%s: setting efficacy to %g for left blue vision connecting to the turn behavior\n", __FUNCTION__, gMaxWeight * 0.75 );
+						efficacy = gMaxWeight * 0.75;	// input on left forces turn to left (positive yaw)
+					}
+					else if( (isyn >= LeftColorNeurons) && ((synapseType == kSynapseTypeIE) || (synapseType == kSynapseTypeII)) )
+					{
+						dePrint( "%s: setting efficacy to %g for right blue vision connecting to the turn behavior\n", __FUNCTION__, -gMaxWeight * 0.75 );
+						efficacy = -gMaxWeight * 0.75;		// input on right blue forces turn to right (negative yaw)
+					}
+					break;
+				
+				default:	// ignore other inputs
+					break;
+			}
+			break;
+		
+		case 10:	// light
+			break;
+		
+		case 11:	// focus
+			break;
+		
+		default:
+			printf( "%s: invalid toGroup (%d)\n", __FUNCTION__, toGroup );
+			break;
+	}
+	
+	return( efficacy );
+}
+
 
 //---------------------------------------------------------------------------
 // brain::Grow
@@ -501,6 +1327,11 @@ void brain::Grow(genome* g)
 #ifdef DEBUGCHECK
     debugcheck("brain::grow entry");
 #endif DEBUGCHECK
+
+#if DesignerBrains
+	GrowDesignedBrain( g );
+	return;
+#endif
 
     mygenes = g;
 
@@ -569,7 +1400,7 @@ void brain::Grow(genome* g)
     numnoninputneurons = 0;
     
     short j, ii;
-    for (i = brain::gNeuralValues.numinputneurgroups, ii = 0; i < numneurgroups; i++, ii++)
+    for (i = brain::gNeuralValues.numinputneurgroups; i < numneurgroups; i++)
     {
         firsteneur[i] = numinputneurons + numnoninputneurons;
         if (i < (numneurgroups - brain::gNeuralValues.numoutneurgroups))//output neurons are both e & i
@@ -618,6 +1449,7 @@ void brain::Grow(genome* g)
     fightneuron = speedneuron - 1;
     mateneuron = fightneuron - 1;
     eatneuron = mateneuron - 1;
+	firstOutputNeuron = eatneuron;
 
 #ifdef DEBUGBRAINGROW
     cout << "numneurons = " << numneurons << "  (of " << brain::gNeuralValues.maxneurons pnlf;
@@ -1199,52 +2031,52 @@ void brain::Update(float energyfraction)
     {
         pixel = 0;
         avgcolor = 0.0;
-#ifdef PRINTBRAIN
+	#ifdef PRINTBRAIN
         if (printbrain && (critter::currentCritter == TSimulation::fMonitorCritter))
         {
             printf("xredwidth = %f\n", xredwidth);
         }
-#endif PRINTBRAIN
+	#endif PRINTBRAIN
         for (i = 0; i < fNumRedNeurons; i++)
         {
             endpixloc = xredwidth * float(i+1);
-#ifdef PRINTBRAIN
+		#ifdef PRINTBRAIN
             if (printbrain &&
                 (critter::currentCritter == TSimulation::fMonitorCritter))
             {
                 printf("  neuron %d, endpixloc = %g\n", i, endpixloc);
             }
-#endif PRINTBRAIN
+		#endif PRINTBRAIN
             while (float(pixel) < (endpixloc - 1.0))
             {
                 avgcolor += retinaBuf[(pixel++) * 4];
-#ifdef PRINTBRAIN
+			#ifdef PRINTBRAIN
                 if (printbrain && (critter::currentCritter == TSimulation::fMonitorCritter))
                 {
                     printf("    in loop with pixel %d, avgcolor = %g\n", pixel,avgcolor);
 					if ((float(pixel) < (endpixloc - 1.0)) && (float(pixel) >= (endpixloc - 1.0 - 1.0e-5)))
 						printf("Got in-loop borderline case - red\n");
                 }
-#endif PRINTBRAIN
+			#endif PRINTBRAIN
             }
             
             avgcolor += (endpixloc - float(pixel)) * retinaBuf[pixel * 4];
             neuronactivation[redneuron + i] = avgcolor / (xredwidth * 255.0);
-#ifdef PRINTBRAIN
+		#ifdef PRINTBRAIN
             if (printbrain && (critter::currentCritter == TSimulation::fMonitorCritter))
             {
                 printf("    after loop with pixel %d, avgcolor = %g, color = %g\n", pixel,avgcolor,neuronactivation[redneuron+i]);
                 if ((float(pixel) >= (endpixloc - 1.0)) && (float(pixel) < (endpixloc - 1.0 + 1.0e-5)))
                     printf("Got outside-loop borderline case - red\n");
             }
-#endif PRINTBRAIN
+		#endif PRINTBRAIN
             avgcolor = (1.0 - (endpixloc - float(pixel))) * retinaBuf[pixel * 4];
-#ifdef PRINTBRAIN
+		#ifdef PRINTBRAIN
             if (printbrain && (critter::currentCritter == TSimulation::fMonitorCritter))
             {
                 printf("  before incrementing pixel = %d, avgcolor = %g\n", pixel, avgcolor);
             }
-#endif PRINTBRAIN
+		#endif PRINTBRAIN
             pixel++;
         }
     }
@@ -1270,21 +2102,21 @@ void brain::Update(float energyfraction)
             while (float(pixel) < (endpixloc - 1.0))
             {
                 avgcolor += retinaBuf[(pixel++) * 4 + 1];
-#ifdef PRINTBRAIN
+			#ifdef PRINTBRAIN
                 if (printbrain && (critter::currentCritter == TSimulation::fMonitorCritter))
                 {
                     if ((float(pixel) < (endpixloc - 1.0)) && (float(pixel) >= (endpixloc - 1.0 - 1.0e-5)) )
                         printf("Got in-loop borderline case - green\n");
                 }
-#endif PRINTBRAIN
+			#endif PRINTBRAIN
             }
-#ifdef PRINTBRAIN
+		#ifdef PRINTBRAIN
             if (printbrain && (critter::currentCritter == TSimulation::fMonitorCritter))
             {
                 if ((float(pixel) >= (endpixloc - 1.0)) && (float(pixel) < (endpixloc - 1.0)))
                     printf("Got outside-loop borderline case - green\n");
             }
-#endif PRINTBRAIN
+		#endif PRINTBRAIN
             avgcolor += (endpixloc - float(pixel)) * retinaBuf[pixel * 4 + 1];
             neuronactivation[greenneuron + i] = avgcolor / (xgreenwidth * 255.0);
             avgcolor = (1.0 - (endpixloc - float(pixel))) * retinaBuf[pixel * 4 + 1];
@@ -1314,22 +2146,22 @@ void brain::Update(float energyfraction)
 			while (float(pixel) < (endpixloc - 1.0 /*+ 1.e-5*/))
             {
                 avgcolor += retinaBuf[(pixel++) * 4 + 2];
-#ifdef PRINTBRAIN
+			#ifdef PRINTBRAIN
                 if (printbrain && (critter::currentCritter == TSimulation::fMonitorCritter))
                 {
                     if ((float(pixel) < (endpixloc - 1.0)) && (float(pixel) >= (endpixloc - 1.0 - 1.0e-5)) )
                         printf("Got in-loop borderline case - blue\n");
                 }
-#endif PRINTBRAIN
+			#endif PRINTBRAIN
             }
             
-#ifdef PRINTBRAIN
+		#ifdef PRINTBRAIN
             if (printbrain && (critter::currentCritter == TSimulation::fMonitorCritter))
             {
                 if ((float(pixel) >= (endpixloc - 1.0)) && (float(pixel) < (endpixloc - 1.0 + 1.0e-5)) )
                     printf("Got outside-loop borderline case - blue\n");
             }
-#endif PRINTBRAIN
+		#endif PRINTBRAIN
 
             if (pixel < brain::retinawidth)  // TODO How do we end up overflowing?
             {
@@ -1398,8 +2230,15 @@ void brain::Update(float energyfraction)
 		printf( "blue neurons (%d):\n", fNumBlueNeurons );
 		for( i = 0; i < fNumBlueNeurons; i++ )
 			printf( "    %3d  %2d  %g\n", i+blueneuron, i, neuronactivation[i+blueneuron] );
-		printf( "internal neurons (%d):\n", numnoninputneurons );
-		for( i = firstnoninputneuron; i < numneurons; i++ )
+		printf( "internal neurons (%d):\n", numnoninputneurons-numOutputNeurons );
+		for( i = firstnoninputneuron; i < firstOutputNeuron; i++ )
+		{
+			printf( "    %3d  %g  %g synapses (%ld):\n", i, neuron[i].bias, newneuronactivation[i], neuron[i].endsynapses - neuron[i].startsynapses );
+			for( k = neuron[i].startsynapses; k < neuron[i].endsynapses; k++ )
+				printf( "        %4ld  %2ld  %2d  %g  %g\n", k, k-neuron[i].startsynapses, synapse[k].fromneuron, synapse[k].efficacy, neuronactivation[abs(synapse[k].fromneuron)] );
+		}
+		printf( "output neurons (%d):\n", numOutputNeurons );
+		for( i = firstOutputNeuron; i < numneurons; i++ )
 		{
 			printf( "    %3d  %g  %g synapses (%ld):\n", i, neuron[i].bias, newneuronactivation[i], neuron[i].endsynapses - neuron[i].startsynapses );
 			for( k = neuron[i].startsynapses; k < neuron[i].endsynapses; k++ )
@@ -1421,6 +2260,8 @@ void brain::Update(float energyfraction)
             printf( "%3d  %1.4f  %1.4f  %1.4f\n", i, neuron[i].bias, neuronactivation[i], newneuronactivation[i] );
     }
 #endif PRINTBRAIN
+
+//	printf( "yaw activation = %g\n", newneuronactivation[yawneuron] );
 
     float learningrate;
     for (k = 0; k < numsynapses; k++)
@@ -1513,6 +2354,12 @@ void brain::Update(float energyfraction)
 //---------------------------------------------------------------------------
 // brain::Render
 //---------------------------------------------------------------------------
+#define DebugRender 0
+#if DebugRender
+	#define rPrint( x... ) printf( x )
+#else
+	#define rPrint( x... )
+#endif
 void brain::Render(short patchwidth, short patchheight)
 {
     if ((neuron == NULL) || (synapse == NULL))
@@ -1575,7 +2422,7 @@ void brain::Render(short patchwidth, short patchheight)
             yoff,
             xoff + short(numneurons) * patchwidth,
             yoff + short(numnoninputneurons) * patchwidth);
-
+	rPrint( "**************************************************************\n");
     for (k = 0; k < numsynapses; k++)
     {
         const unsigned char mag = (unsigned char)((gMaxWeight + synapse[k].efficacy) * 127.5 / gMaxWeight);
@@ -1583,8 +2430,22 @@ void brain::Render(short patchwidth, short patchheight)
 		// Fill the rect
 		glColor3ub(mag, mag, mag);
         x1 = xoff + abs(synapse[k].fromneuron)*patchwidth;
-        y1 = yoff + (abs(synapse[k].toneuron)-firstnoninputneuron)*patchwidth;        
-		glRecti(x1, y1, x1 + patchwidth, y1 + patchwidth);
+        y1 = yoff + (abs(synapse[k].toneuron)-firstnoninputneuron)*patchwidth;   
+		rPrint( "%s: k = %ld, eff = %5.2f, mag = %d, x1 = %d, y1 = %d, xoff = %d, yoff = %d, abs(from) = %d, abs(to) = %d, patchwidth = %d, firstnoninputneuron = %d\n",
+				__FUNCTION__, k, synapse[k].efficacy, mag, x1, y1, xoff, yoff, abs(synapse[k].fromneuron), abs(synapse[k].toneuron), patchwidth, firstnoninputneuron );
+
+		if( (synapse[k].fromneuron < firstnoninputneuron) || (synapse[k].fromneuron >= firstOutputNeuron) )	// input or output neuron, so it can be both excitatory and inhibitory
+		{
+			if( synapse[k].efficacy >= 0.0 )	// excitatory
+				glRecti( x1, y1 + patchwidth/2, x1 + patchwidth, y1 + patchwidth );
+			else	// inhibitory
+				glRecti( x1, y1, x1 + patchwidth, y1 + patchwidth/2 );
+		
+		}
+		else	// all other neurons and synapses
+		{
+			glRecti(x1, y1, x1 + patchwidth, y1 + patchwidth );
+		}
 		
 		// Now frame it
 		glColor3ub(0, 0, 0);
@@ -1599,7 +2460,7 @@ void brain::Render(short patchwidth, short patchheight)
 	
 	
 	//
-    // Now highlight the input and output neurons for clarity
+    // Now highlight the neuronal groups for clarity
     //
     
     // Red
@@ -1642,14 +2503,21 @@ void brain::Render(short patchwidth, short patchheight)
         	glVertex2i(x1, y2);        	
 	glEnd();        
 	
-	// Frame the cells
+	// Frame the groups
 	glColor3ub(255, 255, 255);
 	glLineWidth(1.0);	
     x2 = numinputneurons * patchwidth + xoff;
     for (i = brain::gNeuralValues.numinputneurgroups; i < numneurgroups; i++)
     {
+		short numneur;
+		
+		if( i < numneurgroups - 1 )
+			numneur = firsteneur[i+1] - firsteneur[i];
+		else
+			numneur = numneurons - firsteneur[i] + 1;
+		
         x1 = x2;
-        x2 = x1 + (mygenes->numneurons(i)) * patchwidth;
+        x2 = x1 + numneur * patchwidth;	// (mygenes->numneurons(i)) * patchwidth;
         
         glBegin(GL_LINE_LOOP);
         	glVertex2i(x1, y1);
@@ -1665,8 +2533,15 @@ void brain::Render(short patchwidth, short patchheight)
     
     for (i = brain::gNeuralValues.numinputneurgroups; i < numneurgroups; i++)
     {
+		short numneur;
+		
+		if( i < numneurgroups - 1 )
+			numneur = firsteneur[i+1] - firsteneur[i];
+		else
+			numneur = numneurons - firsteneur[i] + 1;
+		
         y1 = y2;
-        y2 = y1 + (mygenes->numneurons(i)) * patchwidth;
+        y2 = y1 + numneur * patchwidth;	// (mygenes->numneurons(i)) * patchwidth;
         
 		glBegin(GL_LINE_LOOP);
         	glVertex2i(x1, y1);

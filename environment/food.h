@@ -62,6 +62,8 @@ public:
 	float energy();
     short domain();
    	void domain(short id);
+	
+	void setenergy(float e);
 
 protected:
     void initfood();

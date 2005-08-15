@@ -526,10 +526,9 @@ void genome::CopyGenes(genome* sgenome)
 float genome::CalcSeparation(genome* g)
 {
 #if pw_UseAltivec
-	#warning compiling with ALTIVEC code
+	#warning compiling with (broken) ALTIVEC code
 	long local_numbytes = genome::numbytes;
 #else
-	#warning compiling WITHOUT altivec code
 	int sep = 0;
 #endif
 	float fsep = 0.f;

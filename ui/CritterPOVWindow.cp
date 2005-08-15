@@ -100,7 +100,7 @@ void TCritterPOVWindow::DrawCritterPOV( critter* c )
 
 	// Do the actual drawing
 	glPushMatrix();
-		c->GetScene().Draw( c->GetFrustum() );
+		c->GetScene().Draw( /*c->GetFrustum()*/ );
 	glPopMatrix();
 }
 

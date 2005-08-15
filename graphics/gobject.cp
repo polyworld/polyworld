@@ -290,9 +290,9 @@ void gobject::inverserotate()
 {
 	if (fRotated)
 	{
-		glRotatef(fAngle[2], 0.0, 0.0, 1.0);	// z
-		glRotatef(fAngle[1], 1.0, 0.0, 0.0); 	// x
-		glRotatef(fAngle[0], 0.0, 1.0, 0.0);	// y
+		glRotatef(-fAngle[2], 0.0, 0.0, 1.0);	// z
+		glRotatef(-fAngle[1], 1.0, 0.0, 0.0); 	// x
+		glRotatef(-fAngle[0], 0.0, 1.0, 0.0);	// y
 	}		
 }
 

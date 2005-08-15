@@ -5,6 +5,8 @@
 /********************************************************************/
 // gmisc.cp: implementation of miscellaneous graphics classes
 
+#define DebugFrustum 0
+
 // System
 #include <gl.h>
 #include <math.h>
@@ -118,7 +120,7 @@ void TGraphicObjectList::Draw(const frustumXZ& fxz)
 		{
 //          float* p = pobj->getposptr();
 //          cout << "  object at (x,z) = (" << p[0] comma p[2] << ") ";
-            if (fxz.Inside(obj->getposptr()))//object position inside frustum?
+            if( fxz.Inside( obj->getposptr() ) )//object position inside frustum?
             {
 //              cout << "IS     ";
                 obj->draw();
@@ -306,23 +308,29 @@ void frameunitcube()
 //-------------------------------------------------------------------------------------------
 void frustumXZ::Set(float x, float z, float ang, float fov)
 {
-//  cout << "frustum being set with (x,z,ang,fov) = ("
-//       << x comma z comma ang comma fov pnlf;
+#if DebugFrustum
+	cout << "frustum being set with (x,z,ang,fov) = ("
+		 << x comma z comma ang comma fov pnlf;
+#endif
     x0 = x;
     z0 = z;
     angmin = fmod((ang - 0.5*fov)*DEGTORAD,TWOPI);
     if (fabs(angmin) > PI) angmin -= (angmin > 0.0) ? TWOPI : (-TWOPI);
     angmax = fmod((ang + 0.5*fov)*DEGTORAD,TWOPI);
     if (fabs(angmax) > PI) angmax -= (angmin > 0.0) ? TWOPI : (-TWOPI);
-//  cout << "resulting frustum is (x0,z0,angmin,angmax) = ("
-//       << x0 comma z0 comma angmin comma angmax pnlf;
+#if DebugFrustum
+	cout << "resulting frustum is (x0,z0,angmin,angmax) = ("
+		 << x0 comma z0 comma angmin comma angmax pnlf;
+#endif
 }
 
 
 void frustumXZ::Set(float x, float z, float ang, float fov, float rad)
 {
-//  cout << "frustum being set with (x,z,ang,fov,rad) = ("
-//       << x comma z comma ang comma fov comma rad pnlf;
+#if DebugFrustum
+	cout << "frustum being set with (x,z,ang,fov,rad) = ("
+		 << x comma z comma ang comma fov comma rad pnlf;
+#endif
     float x1 = x + rad * sin(ang*DEGTORAD) / sin(fov*0.5*DEGTORAD);
     float z1 = z + rad * cos(ang*DEGTORAD) / sin(fov*0.5*DEGTORAD);
     Set(x1, z1, ang, fov);
@@ -335,7 +343,9 @@ static long outfrustum = 0;
 int frustumXZ::Inside(float* p) const
 {
     float ang = atan2(x0 - p[0], z0 - p[2]);
-//  cout << "(ang = " << ang << ") ";
+#if DebugFrustum
+	cout << "ang" ses ang cms "angmin" ses angmin cms "angmax" ses angmax nlf;
+#endif
     if (angmin < angmax)
     {
         if (ang < angmin)

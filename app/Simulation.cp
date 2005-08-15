@@ -439,7 +439,7 @@ void TSimulation::Step()
 		
 			fMonitorCritterRankOld = fMonitorCritterRank;			
 		}
-		if( fBrainMonitorWindow && fBrainMonitorWindow->isVisible() /* fBrainMonitorWindow->isVisible() */ )
+		if( fBrainMonitorWindow && fBrainMonitorWindow->isVisible() && fMonitorCritter && (fAge % fBrainMonitorStride == 0) )
 		{
 			char title[64];
 			sprintf( title, "Brain Monitor (%ld:%ld)", fMonitorCritterRank, fMonitorCritter->Number() );
@@ -484,6 +484,18 @@ void TSimulation::Init()
 	genome::genomeinit();
     brain::braininit();
     critter::critterinit();
+
+	 // Following is part of one way to speed up the graphics
+	 // Note:  this code must agree with the critter sizing in critter::grow()
+	 // and the food sizing in food::initlen().
+
+	float maxcritterlenx = critter::gMaxCritterSize / sqrt(genome::gMinmaxspeed);
+	float maxcritterlenz = critter::gMaxCritterSize * sqrt(genome::gMaxmaxspeed);
+	float maxcritterradius = 0.5 * sqrt(maxcritterlenx*maxcritterlenx + maxcritterlenz*maxcritterlenz);
+	float maxfoodlen = 0.75 * food::gMaxFoodEnergy / food::gSize2Energy;
+	float maxfoodradius = 0.5 * sqrt(maxfoodlen * maxfoodlen * 2.0);
+	critter::gMaxRadius = maxcritterradius > maxfoodradius ?
+						  maxcritterradius : maxfoodradius;
     
     InitMonitoringWindows();
         
@@ -564,7 +576,6 @@ void TSimulation::Init()
 	fFoodEnergyIn = 0.0;
 	fFoodEnergyOut = 0.0;
 
-//	srand48(fPositionSeed);
 	srand48(fGenomeSeed);
 
 	if (!fLoadState)
@@ -592,9 +603,18 @@ void TSimulation::Init()
 					float x = drand48() * (fDomains[id].xsize - 0.02) + fDomains[id].xleft + 0.01;
 					float z = -0.01 - drand48() * (globals::worldsize - 0.02);
 					float y = 0.5 * critter::gCritterHeight;
+				#if TestWorld
+					// evenly distribute the critters
+					x = fDomains[id].xleft  +  0.666 * fDomains[id].xsize;
+					z = - globals::worldsize * ((float) (i+1) / (fDomains[id].initnumcritters + 1));
+				#endif
 					c->settranslation(x, y, z);
 					
 					float yaw =  360.0 * drand48();
+				#if TestWorld
+					// point them all the same way
+					yaw = 95.0;
+				#endif
 					c->setyaw(yaw);
 					
 					critter::gXSortedCritters.add(c);	// stores c->listLink
@@ -602,14 +622,24 @@ void TSimulation::Init()
 					fDomains[id].numcritters++;
 				}
 			}
-										
-			for (int i = 0; i < min((fMaxFoodCount - (long)food::gXSortedFood.count()), fDomains[id].initfoodcount); i++)
+			
+			long maxNewFood = fMaxFoodCount - (long) food::gXSortedFood.count();
+			for (int i = 0; i < min(maxNewFood, fDomains[id].initfoodcount); i++)
 			{
 				food* f = new food::food;
 				Q_CHECK_PTR(f);
+			#if TestWorld
+				f->setenergy( 0.5 * (food::gMinFoodEnergy + food::gMaxFoodEnergy) );
+			#endif
 				
 				fFoodEnergyIn += f->energy();
-				f->setx(drand48() * (fDomains[id].xsize - 0.02) + fDomains[id].xleft + 0.01);
+				float x = drand48() * (fDomains[id].xsize - 0.02) + fDomains[id].xleft + 0.01;
+			#if TestWorld
+				x = fDomains[id].xleft  +  0.333 * fDomains[id].xsize;
+				float z = - globals::worldsize * ((float) (i+1) / (fDomains[id].initfoodcount + 1));
+				f->setz(z);
+			#endif
+				f->setx(x);
 				f->domain(id);
 				
 				fStage.AddObject(f);
@@ -1538,11 +1568,11 @@ void TSimulation::Interact()
 		// keep tabs of current and average fitness for surviving organisms
 
         fAverageFitness += c->Fitness();
-        if (c->Fitness() > fCurrentMaxFitness[MAXFITNESSITEMS-1])
+        if( (c->Fitness() > fCurrentMaxFitness[MAXFITNESSITEMS-1]) || (fCurrentMaxFitness[MAXFITNESSITEMS-1] == 0.0) )
         {
             for (i = 0; i < MAXFITNESSITEMS; i++)
             {
-                if (c->Fitness() > fCurrentMaxFitness[i])
+                if( (c->Fitness() > fCurrentMaxFitness[i]) || (fCurrentMaxFitness[i] == 0.0) )
                 {
                     for (j = MAXFITNESSITEMS-1; j > i; j--)
                     {
@@ -1619,10 +1649,17 @@ void TSimulation::Interact()
 
                 newCritter->grow();
                 fFoodEnergyIn += newCritter->FoodEnergy();
-                newCritter->settranslation(drand48() * fDomains[id].xsize + fDomains[id].xleft,
-										   0.5 * critter::gCritterHeight,
-                                  		   drand48() * -globals::worldsize);
-                newCritter->setyaw(drand48() * 360.0);
+				float x = drand48() * fDomains[id].xsize + fDomains[id].xleft;
+				float y = 0.5 * critter::gCritterHeight;
+				float z = drand48() * -globals::worldsize;
+				float yaw = drand48() * 360.0;
+			#if TestWorld
+				x = fDomains[id].xleft  +  0.666 * fDomains[id].xsize;
+				z = - globals::worldsize * ((float) (i+1) / (fDomains[id].initnumcritters + 1));
+				yaw = 95.0;
+			#endif
+                newCritter->settranslation( x, y, z );
+                newCritter->setyaw( yaw );
                 newCritter->Domain(id);
                 fStage.AddObject(newCritter);
                 fDomains[id].numcritters++;
@@ -2413,12 +2450,12 @@ void TSimulation::ReadWorldFile(const char* filename)
     cout << "fMonitorCritterRank" ses fMonitorCritterRank nl;
     
     in >> ignoreShort3; in >> label;
-    cout << "fMonitorCritWinWidth" ses ignoreShort3 nl;
+    cout << "fMonitorCritWinWidth (ignored)" ses ignoreShort3 nl;
     in >> ignoreShort4; in >> label;
-    cout << "fMonitorCritWinHeight" ses ignoreShort4 nl;
+    cout << "fMonitorCritWinHeight (ignored)" ses ignoreShort4 nl;
     
     in >> fBrainMonitorStride; in >> label;
-    cout << "monstride" ses fBrainMonitorStride nl;
+    cout << "fBrainMonitorStride" ses fBrainMonitorStride nl;
     in >> globals::worldsize; in >> label;
     cout << "worldsize" ses globals::worldsize nl;
     long numbarriers;

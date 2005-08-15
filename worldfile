@@ -9,32 +9,32 @@
 1      showvision
 22     minwin
 1.0    maxvel
-60     minnumcritters_30
+30     minnumcritters
 300    maxnumcritters
 120    initnumcritters
 -1     misccritters
 
-0    positionseed_42
-0    genomeseed_42
+42    positionseed
+42    genomeseed
 
-180    minfoodcount_150
-360    maxfoodcount_345
+150    minfoodcount
+345    maxfoodcount
 270    maxfoodgrown
 270    initfoodcount
-0.275    foodrate_0.2
+0.2    foodrate
 1      crittersRfood
 100    fit1freq
 2      fit2freq
 10     numfit
 10.0   eatfitparam
 100.0  matefitparam
-0.00	movefitparam_0.5
+0.1    movefitparam_0.5
 5.0    energyfitparam
 25.0   agefitparam_10.0
-400.0  minfoodenergy_200.0
-2000.0  maxfoodenergy_1000.0
-800.0  size2energy_400.0
-200.0   eat2consume_100.0
+200.0  minfoodenergy
+1000.0  maxfoodenergy
+400.0  size2energy
+100.0   eat2consume
 
 0      minintneurons
 0      maxintneurons
@@ -73,12 +73,12 @@
 0.1    mate2energy
 1.0    fight2energy
 10.0   maxsizepenalty
-2.0    speed2energy_0.1_1.0
-10.0    yaw2energy_0.1_5.0
+0.1    speed2energy
+0.1    yaw2energy
 0.01   light2energy
 0.001  focus2energy
 0.01   maxsynapse2energy
-0.00   fixedenergydrain_0.05
+0.01   fixedenergydrain_0.05
 0.99   decayrate
 
 0.2    eatthreshold
@@ -88,7 +88,7 @@
 2.0    miscinvslope
 
 0.5    logisticslope
-1.0    maxweight
+8.0    maxweight
 0.1    initmaxweight_0.5
 0.1    minbitprob
 0.6    maxbitprob
@@ -106,9 +106,9 @@
 0.0    camanglestart
 90.    camfov
 1      moncrit
-8      monwidth
-8      monheight
-25     monstride
+8      monwidth_not_used
+8      monheight_not_used
+1      monstride
 100.0  worldsize
 2      numbarriers
 33.33 -100. 33.33 -10. barrierposition
@@ -126,27 +126,27 @@
 33.33  domainbarrier#1
 66.67  domainbarrier#2
 
-20     domain[0].minnumcritters_10
+10     domain[0].minnumcritters
 100    domain[0].maxnumcritters
 40     domain[0].initnumcritters
-60     domain[0].minfoodcount_50
-120    domain[0].maxfoodcount_115
+50     domain[0].minfoodcount
+115    domain[0].maxfoodcount
 90     domain[0].maxfoodgrown
 90     domain[0].initfoodcount
 
-20     domain[1].minnumcritters_10
+10     domain[1].minnumcritters
 100    domain[1].maxnumcritters
 40     domain[1].initnumcritters
-60     domain[1].minfoodcount_50
-120    domain[1].maxfoodcount_115
+50     domain[1].minfoodcount
+115    domain[1].maxfoodcount
 90     domain[1].maxfoodgrown
 90     domain[1].initfoodcount
 
-20     domain[2].minnumcritters_10
+10     domain[2].minnumcritters
 100    domain[2].maxnumcritters
 40     domain[2].initnumcritters
-60     domain[2].minfoodcount_50
-120    domain[2].maxfoodcount_115
+50     domain[2].minfoodcount
+115    domain[2].maxfoodcount
 90     domain[2].maxfoodgrown
 90     domain[2].initfoodcount
 
@@ -161,7 +161,7 @@
 -8.0   minbias_-1.0
 8.0    maxbias_1.0
 0.0    minbiaslrate
-0.2    maxbiaslrate
+0.0    maxbiaslrate_0.2
 0.0    minconnectiondensity
 1.0    maxconnectiondensity
 0.0    mintopologicaldistortion

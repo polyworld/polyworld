@@ -158,6 +158,8 @@ protected:
     short fNumGreenNeurons;
     short fNumBlueNeurons;
     short firstnoninputneuron;
+	short firstOutputNeuron;
+	short numOutputNeurons;
     float xredwidth;
     float xgreenwidth;
     float xbluewidth;
@@ -171,6 +173,9 @@ protected:
     
     void AllocateBrainMemory();
     short NearestFreeNeuron(short iin, bool* used, short num, short exclude);
+	
+	void GrowDesignedBrain( genome* g );
+	float DesignedEfficacy( short toGroup, short fromGroup, short isyn, int synapseType );
 };
 
 //===========================================================================

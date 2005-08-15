@@ -575,7 +575,7 @@ void critter::SetGraphics()
         xright = xleft + brain::retinawidth - 1;
 		ytop = critter::povheight  -  (irow) * (brain::retinaheight + kPOVCellPad)  -  kPOVCellPad  -  1;
 		ybottom = ytop  -  brain::retinaheight  +  1;
-		ypix = ybottom  +  brain::retinaheight / 2  +  1;
+		ypix = ybottom  +  brain::retinaheight / 2;		// +  1;
 
 //		cout << "****povheight" ses povheight cms "retinaheight" ses brain::retinaheight cms "povrows" ses povrows cms "irow" ses irow nl;
 //		cout << "    povwidth " ses povwidth  cms "retinawidth " ses brain::retinawidth  cms "povcols" ses povcols cms "icol" ses icol nl;
@@ -690,7 +690,12 @@ float critter::Update(float moveFitnessParam, float speed2dpos)
     float dx = -dpos * sin(yaw() * DEGTORAD);
     float dz = -dpos * cos(yaw() * DEGTORAD);
     float dyaw = (2.0 * fBrain->Yaw() - 1.0) * fGenome->MaxSpeed() * gYaw2DYaw;
-//printf( "%4ld  %4ld  dyaw = %4.2f b->y = %4.2f, 2*b->y - 1 = %4.2f, g->maxSpeed = %4.2f, y2dy = %4.2f\n", TSimulation::fAge, fCritterNumber, dyaw, fBrain->Yaw(), 2.0*fBrain->Yaw() - 1.0, fGenome->MaxSpeed(), gYaw2DYaw );
+//	printf( "%4ld  %4ld  dyaw = %4.2f b->y = %4.2f, 2*b->y - 1 = %4.2f, g->maxSpeed = %4.2f, y2dy = %4.2f\n",
+//			TSimulation::fAge, fCritterNumber, dyaw, fBrain->Yaw(), 2.0*fBrain->Yaw() - 1.0, fGenome->MaxSpeed(), gYaw2DYaw );
+
+#if TestWorld
+	dx = dz = dyaw = 0.0;
+#endif
 
     addx(dx);
     addz(dz);
@@ -864,6 +869,7 @@ void critter::draw()
 		glScalef(fScale, fScale, fScale);
 		gpolyobj::drawcolpolyrange(0, 4, fNoseColor);
 		gpolyobj::drawcolpolyrange(5, 9, fColor);
+//		fCamera.draw();
 	glPopMatrix();
 }
 
