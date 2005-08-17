@@ -1188,6 +1188,7 @@ void TSimulation::Interact()
 	fCurrentFittestCount = 0;
 	smPrint( "setting fCurrentFittestCount to 0\n" );
     fAverageFitness = 0.0;
+	ulong numAverageFitness = 0;	// need this because we'll only count critters that have lived at least a modest portion of their lifespan (fSmiteAgeFrac)
 //	fNumLeastFit = 0;
 //	fNumSmited = 0;
 	for( i = 0; i < fNumDomains; i++ )
@@ -1605,7 +1606,11 @@ void TSimulation::Interact()
 
 		// keep tabs of current and average fitness for surviving organisms
 
-        fAverageFitness += c->Fitness();
+		if( c->Age() >= (fSmiteAgeFrac * c->MaxAge()) )
+		{
+			fAverageFitness += c->Fitness();
+			numAverageFitness++;
+		}
         if( (fCurrentFittestCount < MAXFITNESSITEMS) || (c->Fitness() > fCurrentMaxFitness[fCurrentFittestCount-1]) )
         {
 			if( (fCurrentFittestCount == 0) || ((c->Fitness() <= fCurrentMaxFitness[fCurrentFittestCount-1]) && (fCurrentFittestCount < MAXFITNESSITEMS)) )	// just append
@@ -1643,7 +1648,8 @@ void TSimulation::Interact()
 
     } // while loop on critters
 
-    fAverageFitness /= critter::gXSortedCritters.count();
+//	fAverageFitness /= critter::gXSortedCritters.count();
+	fAverageFitness /= numAverageFitness;
 
 #if DebugMaxFitness
 	printf( "At age %ld (c,n,fit,c->fit) =", fAge );
