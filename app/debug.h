@@ -19,9 +19,7 @@
 	#define srPrint( x... )
 #endif
 
-#ifdef DEBUGCHECK
 extern void  debugcheck(const char* s);
-#endif DEBUGCHECK
 
 #define BoolString( boolVar ) (boolVar) ? "true" : "false"
 

@@ -1449,6 +1449,8 @@ void brain::Grow(genome* g)
     fightneuron = speedneuron - 1;
     mateneuron = fightneuron - 1;
     eatneuron = mateneuron - 1;
+
+	numOutputNeurons = 7;
 	firstOutputNeuron = eatneuron;
 
 #ifdef DEBUGBRAINGROW
@@ -2312,7 +2314,7 @@ void brain::Update(float energyfraction)
             // not strictly correct for this to be in an else clause,
             // but if lrate is reasonable, efficacy should never change
             // sign with a new magnitude greater than 0.5 * gMaxWeight
-            if (learningrate > 0.0f)  // excitatory
+            if (learningrate >= 0.0f)  // excitatory
                 synapse[k].efficacy = max(0.0f, synapse[k].efficacy);
             if (learningrate < 0.0f)  // inhibitory
                 synapse[k].efficacy = min(-1.e-10f, synapse[k].efficacy);
@@ -2323,20 +2325,20 @@ void brain::Update(float energyfraction)
     debugcheck("brain::update after updating synapses");
 #endif DEBUGCHECK
 
-#if 0
+#if 1
     for (i = firstnoninputneuron; i < numneurons; i++)
     {
         neuron[i].bias += groupblrate[neuron[i].group]
                         * (newneuronactivation[i]-0.5f)
                         * 0.5f;
-        if (fabs(neuron[i].bias) > (0.5 * gMaxWeight))
+        if (fabs(neuron[i].bias) > (0.5 * gNeuralValues.maxbias))
         {
             neuron[i].bias *= 1.0 - (1.0f - gDecayRate) *
-                (fabs(neuron[i].bias) - 0.5f * gMaxWeight) / (0.5f * gMaxWeight);
-            if (neuron[i].bias > gMaxWeight)
-                neuron[i].bias = gMaxWeight;
-            else if (neuron[i].bias < -gMaxWeight)
-                neuron[i].bias = -gMaxWeight;
+                (fabs(neuron[i].bias) - 0.5f * gNeuralValues.maxbias) / (0.5f * gNeuralValues.maxbias);
+            if (neuron[i].bias > gNeuralValues.maxbias)
+                neuron[i].bias = gNeuralValues.maxbias;
+            else if (neuron[i].bias < -gNeuralValues.maxbias)
+                neuron[i].bias = -gNeuralValues.maxbias;
         }
     }
 
@@ -2391,37 +2393,40 @@ void brain::Render(short patchwidth, short patchheight)
     // new, updated values rather than those actually used to compute the
     // neuronal states which are adjacent) in all non-input neurons
     x1 = 0;
-    x2 = patchheight;
-    for (i = 0, y1 = 2*patchheight; i < numnoninputneurons; i++, y1 += patchwidth)
+    x2 = patchwidth;
+    for (i = firstnoninputneuron, y1 = 2*patchheight; i < numneurons; i++, y1 += patchheight)
     {
         const unsigned char mag = (unsigned char)((gMaxWeight + neuron[i].bias) * 127.5 / gMaxWeight);
 		glColor3ub(mag, mag, mag);
-        glRecti(x1, y1, x2, y1 + patchwidth);
+        glRecti(x1, y1, x2, y1 + patchheight);
     }
 
     // this vertical row of elements shows the new states in all the
     // unclamped neurons, including the output neurons
     x1 = x2;
-    x2 = x1 + patchheight;
-    for (i = short(firstnoninputneuron), y1 = 2*patchheight; i < numneurons;
-         i++, y1 += patchwidth)
+    x2 = x1 + patchwidth;
+    for (i = firstnoninputneuron, y1 = 2*patchheight; i < numneurons;
+         i++, y1 += patchheight)
     {
         const unsigned char mag = (unsigned char)(neuronactivation[i] * 255.);
 		glColor3ub(mag, mag, mag);
-        glRecti(x1, y1, x2, y1 + patchwidth);
+        glRecti(x1, y1, x2, y1 + patchheight);
     }
 
     // this array of synaptic strengths unfortunately shows the new, updated
     // values rather than those actually used to map the displayed horizontal
     // row of neuronal values onto the displayed vertical row of values
-    xoff = 2 * patchheight;
+    xoff = 2 * patchwidth;
     yoff = 2 * patchheight;
 
+	// draw the neutral gray background
 	glColor3ub(127, 127, 127);
     glRecti(xoff,
             yoff,
             xoff + short(numneurons) * patchwidth,
-            yoff + short(numnoninputneurons) * patchwidth);
+            yoff + short(numnoninputneurons) * patchheight);
+	
+	glLineWidth( 1.0 );	
 	rPrint( "**************************************************************\n");
     for (k = 0; k < numsynapses; k++)
     {
@@ -2429,34 +2434,65 @@ void brain::Render(short patchwidth, short patchheight)
 
 		// Fill the rect
 		glColor3ub(mag, mag, mag);
-        x1 = xoff + abs(synapse[k].fromneuron)*patchwidth;
-        y1 = yoff + (abs(synapse[k].toneuron)-firstnoninputneuron)*patchwidth;   
-		rPrint( "%s: k = %ld, eff = %5.2f, mag = %d, x1 = %d, y1 = %d, xoff = %d, yoff = %d, abs(from) = %d, abs(to) = %d, patchwidth = %d, firstnoninputneuron = %d\n",
-				__FUNCTION__, k, synapse[k].efficacy, mag, x1, y1, xoff, yoff, abs(synapse[k].fromneuron), abs(synapse[k].toneuron), patchwidth, firstnoninputneuron );
+        x1 = xoff  +   abs(synapse[k].fromneuron) * patchwidth;
+        y1 = yoff  +  (abs(synapse[k].toneuron)-firstnoninputneuron) * patchheight;   
 
-		if( (synapse[k].fromneuron < firstnoninputneuron) || (synapse[k].fromneuron >= firstOutputNeuron) )	// input or output neuron, so it can be both excitatory and inhibitory
+		if( (abs( synapse[k].fromneuron ) < firstnoninputneuron) || (abs( synapse[k].fromneuron ) >= firstOutputNeuron) )	// input or output neuron, so it can be both excitatory and inhibitory
 		{
 			if( synapse[k].efficacy >= 0.0 )	// excitatory
-				glRecti( x1, y1 + patchwidth/2, x1 + patchwidth, y1 + patchwidth );
+			{
+				// fill it
+				glRecti( x1, y1 + patchheight/2, x1 + patchwidth, y1 + patchheight );
+				rPrint( "+" );
+
+				// frame it
+				glColor3ub( 255, 255, 255 );
+				glBegin( GL_LINE_LOOP );
+					glVertex2i( x1, y1 + patchheight/2 );
+					glVertex2i( x1 + patchwidth, y1 + patchheight/2);
+					glVertex2i( x1 + patchwidth, y1 + patchheight );
+					glVertex2i( x1, y1 + patchheight);        	
+				glEnd();       
+			}
 			else	// inhibitory
-				glRecti( x1, y1, x1 + patchwidth, y1 + patchwidth/2 );
-		
+			{
+				// fill it
+				glRecti( x1, y1, x1 + patchwidth, y1 + patchheight/2 );
+				rPrint( "-" );
+
+				// frame it
+				glColor3ub( 0, 0, 0 );
+				glLineWidth( 1.0 );
+				glBegin( GL_LINE_LOOP );
+					glVertex2i( x1, y1 );
+					glVertex2i( x1 + patchwidth, y1 );
+					glVertex2i( x1 + patchwidth, y1 + patchheight/2 );
+					glVertex2i( x1, y1 + patchheight/2 );
+				glEnd();       
+			}
 		}
 		else	// all other neurons and synapses
 		{
-			glRecti(x1, y1, x1 + patchwidth, y1 + patchwidth );
+			// fill it
+			glRecti( x1, y1, x1 + patchwidth, y1 + patchheight );
+			rPrint( " " );
+
+			// frame it
+			if( synapse[k].efficacy >= 0.0 )	// excitatory
+				glColor3ub( 255, 255, 255 );
+			else	// inhibitory
+				glColor3ub( 0, 0, 0 );
+			glLineWidth( 1.0 );
+			glBegin(GL_LINE_LOOP );
+				glVertex2i( x1, y1 );
+				glVertex2i( x1 + patchwidth, y1 );
+				glVertex2i( x1 + patchwidth, y1 + patchheight );
+				glVertex2i( x1, y1 + patchheight );        	
+			glEnd();       
 		}
-		
-		// Now frame it
-		glColor3ub(0, 0, 0);
-        glLineWidth(1.0);	
-	 	glBegin(GL_LINE_LOOP);
-	        	glVertex2i(x1, y1);
-	        	glVertex2i(x1 + patchwidth, y1);
-	        	glVertex2i(x1 + patchwidth, y1 + patchwidth + 1);
-	        	glVertex2i(x1, y1 + patchwidth);        	
-		glEnd();       
-    }
+		rPrint( "k = %ld, eff = %5.2f, mag = %d, x1 = %d, y1 = %d, abs(from) = %d, abs(to) = %d, firstnoninputneuron = %d, firstOutputNeuron = %d\n",
+				k, synapse[k].efficacy, mag, x1, y1, abs(synapse[k].fromneuron), abs(synapse[k].toneuron), firstnoninputneuron, firstOutputNeuron );
+	}
 	
 	
 	//
@@ -2473,10 +2509,10 @@ void brain::Render(short patchwidth, short patchheight)
 	glColor3ub(255, 0, 0);
 	glLineWidth(1.0);	
  	glBegin(GL_LINE_LOOP);
-        	glVertex2i(x1, y1);
-        	glVertex2i(x2 - 1, y1);
-        	glVertex2i(x2 - 1, y2 + 1);
-        	glVertex2i(x1, y2);        	
+		glVertex2i(x1, y1);
+		glVertex2i(x2 - 1, y1);
+		glVertex2i(x2 - 1, y2 + 1);
+		glVertex2i(x1, y2);        	
 	glEnd();        
 
 	// Green
@@ -2485,10 +2521,10 @@ void brain::Render(short patchwidth, short patchheight)
 	glColor3ub(0, 255, 0);
 	glLineWidth(1.0);	
  	glBegin(GL_LINE_LOOP);
-        	glVertex2i(x1, y1);
-        	glVertex2i(x2 - 1, y1);
-        	glVertex2i(x2 - 1, y2 + 1);
-        	glVertex2i(x1, y2);        	
+		glVertex2i(x1, y1);
+		glVertex2i(x2 - 1, y1);
+		glVertex2i(x2 - 1, y2 + 1);
+		glVertex2i(x1, y2);        	
 	glEnd();        
 
 	// Blue
@@ -2497,10 +2533,10 @@ void brain::Render(short patchwidth, short patchheight)
 	glColor3ub(0, 0, 255);
 	glLineWidth(1.0);
  	glBegin(GL_LINE_LOOP);
-        	glVertex2i(x1, y1);
-        	glVertex2i(x2, y1);
-        	glVertex2i(x2, y2 + 1);
-        	glVertex2i(x1, y2);        	
+		glVertex2i(x1, y1);
+		glVertex2i(x2, y1);
+		glVertex2i(x2, y2 + 1);
+		glVertex2i(x1, y2);        	
 	glEnd();        
 	
 	// Frame the groups
@@ -2510,43 +2546,55 @@ void brain::Render(short patchwidth, short patchheight)
     for (i = brain::gNeuralValues.numinputneurgroups; i < numneurgroups; i++)
     {
 		short numneur;
-		
+	
+	#if DesignerBrains
+		// For DesignerBrains, the genes are meaningless, but the architectures
+		// are all the same, so we can use the class static firsteneur to figure things out
 		if( i < numneurgroups - 1 )
 			numneur = firsteneur[i+1] - firsteneur[i];
 		else
 			numneur = numneurons - firsteneur[i] + 1;
-		
+	#else
+		numneur = mygenes->numneurons(i);
+	#endif
+	
         x1 = x2;
-        x2 = x1 + numneur * patchwidth;	// (mygenes->numneurons(i)) * patchwidth;
+        x2 = x1 + numneur * patchwidth;
         
         glBegin(GL_LINE_LOOP);
         	glVertex2i(x1, y1);
         	glVertex2i(x2, y1);
-        	glVertex2i(x2, y2 + 1);
+        	glVertex2i(x2, y2 /*+ 1*/);
         	glVertex2i(x1, y2);        	
         glEnd();
     }
 
-    x1 = patchheight;
-    x2 = x1 + patchheight;
+    x1 = patchwidth;
+    x2 = x1 + patchwidth;
     y2 = yoff;
     
     for (i = brain::gNeuralValues.numinputneurgroups; i < numneurgroups; i++)
     {
 		short numneur;
 		
+	#if DesignerBrains
+		// For DesignerBrains, the genes are meaningless, but the architectures
+		// are all the same, so we can use the class static firsteneur to figure things out
 		if( i < numneurgroups - 1 )
 			numneur = firsteneur[i+1] - firsteneur[i];
 		else
 			numneur = numneurons - firsteneur[i] + 1;
-		
+	#else
+		numneur = mygenes->numneurons(i);
+	#endif
+	
         y1 = y2;
-        y2 = y1 + numneur * patchwidth;	// (mygenes->numneurons(i)) * patchwidth;
+        y2 = y1 + numneur * patchheight;
         
 		glBegin(GL_LINE_LOOP);
         	glVertex2i(x1, y1);
         	glVertex2i(x2, y1);
-        	glVertex2i(x2, y2 + 1);
+        	glVertex2i(x2, y2 /*+ 1*/);
         	glVertex2i(x1, y2);        	
         glEnd();
     }

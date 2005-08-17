@@ -62,7 +62,7 @@ class gdlist {
 public: /* for debugging only */			
 	gdlink<TTYPE> *lastItem;
 	gdlink<TTYPE> *currItem;	
-	gdlink<TTYPE> *marcItem;	
+	gdlink<TTYPE> *markItem;	
 	long kount;		
 	
 	/*	public:	*/		
@@ -86,35 +86,35 @@ public: /* for debugging only */
 	void reset() { currItem = 0; }  /*lsy*/			
 	
 	/* mark current pointer position */	/*lsy*/		
-	void mark() { marcItem = currItem; }  /*lsy*/		
+	void mark() { markItem = currItem; }  /*lsy*/		
 	
 	/* mark prevItem pointer position */	/*lsy*/		
 	void markprev() /*lsy*/
 	{
 		if (currItem)		
 		{
-			marcItem = currItem->prevItem;
-			if (marcItem == lastItem)
-				marcItem = 0;	
+			markItem = currItem->prevItem;
+			if (markItem == lastItem)
+				markItem = 0;	
 		}
 		else		
-			marcItem = 0; /* or should it be = lastItem ? */	
+			markItem = 0; /* or should it be = lastItem ? */	
 	}
 	
 	/* mark lastItem pointer position */	/*lsy*/		
-	void marklast() { marcItem = lastItem; }  /*lsy*/		
+	void marklast() { markItem = lastItem; }  /*lsy*/		
 	
 	/* move current pointer to mark */	/*lsy*/		
-	void tomark() { currItem = marcItem; }			
+	void tomark() { currItem = markItem; }			
 	
 	/* move current pointer to mark */	/*lsy*/		
-	void tomark(TTYPE &a) { currItem = marcItem; getmark(a); }	
+	void tomark(TTYPE &a) { currItem = markItem; getmark(a); }	
 	
 	/* return object at current mark */  /*lsy*/		
 	void getmark(TTYPE &a)
 	{
-		if (marcItem)		
-			a = marcItem->e;	
+		if (markItem)		
+			a = markItem->e;	
 		else		
 			a = 0;	
 	}
@@ -133,6 +133,7 @@ public: /* for debugging only */
 	int next(TTYPE &e);	
 	int prev(TTYPE &e);	
 	int current(TTYPE &e);
+	int last(TTYPE &e);
 	
 	/* move around list, removing links */		
 	int getnext(TTYPE &e); /*lsy*/			
@@ -295,6 +296,20 @@ int gdlist<TTYPE>::current(TTYPE &a)
 		return 0;		
 	
 	a = currItem->e;		
+	return 1;		
+}
+
+/* get the last entry from the list */		
+template <class TTYPE>	
+int gdlist<TTYPE>::last(TTYPE &a)			
+{
+	if ( !lastItem ) // is empty
+	{
+		a = 0;
+		return 0;
+	}
+	
+	a = lastItem->e;		
 	return 1;		
 }
 
@@ -501,6 +516,8 @@ void gdlist<TTYPE>::remove()
 		{
 			currItem->remove();
 			delete currItem;
+			if( markItem == currItem )
+				markItem = 0;
 			currItem = 0;
 			kount--;
 		}
@@ -509,6 +526,8 @@ void gdlist<TTYPE>::remove()
 			prevcurr = currItem->prevItem;
 			currItem->remove();
 			delete currItem;
+			if( markItem == currItem )
+				markItem = prevcurr;
 			currItem = prevcurr;
 			lastItem = currItem;
 			kount--;
@@ -518,6 +537,8 @@ void gdlist<TTYPE>::remove()
 			prevcurr = currItem->prevItem;
 			currItem->remove();
 			delete currItem;
+			if( markItem == currItem )
+				markItem = prevcurr;
 			currItem = prevcurr;
 			kount--;
 		}
@@ -526,7 +547,8 @@ void gdlist<TTYPE>::remove()
 	{
 		currItem = lastItem->nextItem; /* first link */		
 		currItem->remove();	
-		delete currItem;	
+		delete currItem;
+		// leave markItem alone; it it used be 0 (== currItem), it will stay 0
 		currItem = 0;		
 		kount--;		
 	}
@@ -607,6 +629,22 @@ void gdlist<TTYPE>::remove(const TTYPE a)
 	std::cerr << "attempt to remove non-existent TTYPE node\n";
 }
 
+#if 1
+/* remove the link corresponding to item, without checking to see if it is actually in the list! */		
+template <class TTYPE>	
+void gdlist<TTYPE>::removeFastUnsafe(gdlink<TTYPE> *item)			
+{
+	gdlink<TTYPE> *savecurr;
+	savecurr = 0;
+	if( currItem != item )
+		savecurr = currItem;
+	currItem = item;		
+	remove();	// will take care of currItem & markItem if they point to the item being removed
+	if( kount && savecurr )	
+		currItem = savecurr;
+	return;	
+}
+#else
 /* remove the link corresponding to item, without checking to see if it is actually in the list! */		
 template <class TTYPE>	
 void gdlist<TTYPE>::removeFastUnsafe(gdlink<TTYPE> *item)			
@@ -615,14 +653,15 @@ void gdlist<TTYPE>::removeFastUnsafe(gdlink<TTYPE> *item)
 	savecurr = currItem;
 	if( savecurr == item )
 		savecurr = item->prevItem;
-	if( marcItem == item )
-		marcItem = item->prevItem;
+	if( markItem == item )
+		markItem = item->prevItem;
 	currItem = item;		
 	remove();	
 	if (kount)	
 		currItem = savecurr;
 	return;	
 }
+#endif
 
 /* unlink the entry corresponding to object a */	
 template <class TTYPE>	

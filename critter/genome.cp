@@ -4,6 +4,12 @@
 /* Copyright Apple Computer 1990,1991,1992                          */
 /********************************************************************/
 
+#define DesignerGenes 0
+
+#if DesignerGenes
+	#define DesignerGenesOnly 1
+#endif
+
 // Self
 #include "genome.h"
 
@@ -119,8 +125,8 @@ void genome::genomeinit()
     genome::strengthgene = geneVal++;
     genome::sizegene = geneVal++;
     genome::maxspeedgene = geneVal++;
-    genome::mateenergygene = geneVal++;;
-    genome::numphysbytes = geneVal++;
+    genome::mateenergygene = geneVal++;
+    genome::numphysbytes = genome::mateenergygene + 1;	// not geneVal++;
 
     // number of neurons in red vision input group
     genome::numrneurgene = geneVal++;
@@ -147,20 +153,20 @@ void genome::genomeinit()
     // going through a separate, signal-inverting group, primarily
     // for the sake of computational efficiency.
 
-    // Correspondingly, since the last non-input neuronal group is
-    // designated to be the "output" (behavior) group, the number of
+    // Correspondingly, since the last few (7 originally) neuronal groups
+    // are designated to be the "output" (behavior) groups, the number of
     // neurons (again doubling as both excitatory and inhibitory) in
-    // that group is fixed; hence only maxneurgroups-1 specifications
-    // are needed to specify all the non-input group sizes.  On the
-    // other hand, the output group's neurons *are* allowed to feedback
+    // those groups are fixed (1); hence only maxneurgroups-numoutneurgroups
+	// specifications are needed to specify all the non-input group sizes.
+	// On the other hand, the output group's neurons *are* allowed to feedback
     // their activation levels to other non-input groups, hence their
     // inclusion as just another non-input group (rather than
     // separating them as is done with the input groups).
     // Also, the output neurons need a bias and biaslearningrate, just
     // like the rest of the non-input neurons, hence the full number
-    // of maxneurgroups values must be specified for them.
+    // of maxneurgroups values must be specified for those parameters.
 
-    // number of non-input neuronal groups
+    // number of internal neuronal groups
     genome::numneurgroupsgene = genome::numbneurgene + 1;
     
     // number of excitatory neurons (per group)
@@ -300,14 +306,57 @@ void genome::Randomize(float bitonprob)
 	}		              
 }
 
-
 //---------------------------------------------------------------------------
 // genome::Randomize
 //---------------------------------------------------------------------------
 void genome::Randomize()
 {
 #if DesignerGenes
-	
+check crossover point array size, whether the gene value is just non-physiological or not, whether that is account for
+	fGenes[mrategene]			= 0;	// about 0.1
+	fGenes[ncptsgene]			= 127;	// about 5
+	fGenes[lifespangene]		= 127;	// about 750
+	fGenes[idgene]				= 127;	// 127
+	fGenes[strengthgene]		= 127;	// about 1.25
+	fGenes[sizegene]			= 127;	// about 1.25
+	fGenes[maxspeedgene]		= 127;	// about 1.0
+	fGenes[mateenergygene]		= 127;	// about 0.5
+	fGenes[numrneurgene]		= 127;	// about 8 red neurons
+	fGenes[numgneurgene]		= 127;	// about 8 green neurons
+	fGenes[numbneurgene]		= 127;	// about 8 blue neurons
+	fGenes[numneurgroupsgene]	= 0;	// internal neural groups will be zero if mininternalneurgroups is set to zero in worldfile
+	for( int i = 0; i < brain::gNeuralValues.maxinternalneurgroups; i++ )
+	{
+		fGenes[numeneurgene+i]	= 0;	// won't matter if there aren't any
+		fGenes[numineurgene+i]	= 0;	// ditto
+	}
+	for( int i = 0; i < brain::gNeuralValues.maxnoninputneurgroups; i++ )
+	{
+		fGenes[biasgene+i]		= 127;	// about 0.0 bias
+		fGenes[biaslrategene+i]	= 0;	// about 0.0 bias learning rate
+	}
+	for( int i = 0; i < brain::gNeuralValues.maxneurgroups * brain::gNeuralValues.maxnoninputneurgroups; i++ )
+	{
+		fGenes[eecdgene] = 0;	// 1,   but won't matter for the non-existent internal groups
+		fGenes[eicdgene] = 0;	// 1,   but won't matter for the non-existent internal groups
+		fGenes[iicdgene] = 0;	// 1,   but won't matter for the non-existent internal groups
+		fGenes[iecdgene] = 0;	// 1,   but won't matter for the non-existent internal groups
+		fGenes[eelrgene] = 0;	// 0.0, but won't matter for the non-existent internal groups
+		fGenes[eilrgene] = 0;	// 0.0, but won't matter for the non-existent internal groups
+		fGenes[iilrgene] = 0;	// 0.0, but won't matter for the non-existent internal groups
+		fGenes[ielrgene] = 0;	// 0.0, but won't matter for the non-existent internal groups
+		fGenes[eetdgene] = 0;	// 0.0, but won't matter for the non-existent internal groups
+		fGenes[eitdgene] = 0;	// 0.0, but won't matter for the non-existent internal groups
+		fGenes[iitdgene] = 0;	// 0.0, but won't matter for the non-existent internal groups
+		fGenes[ietdgene] = 0;	// 0.0, but won't matter for the non-existent internal groups
+	}
+	// Now establish the few connections we actually want, between the vision neurons and key behaviors
+	fGenes[eecdgene + 1 * brain::gNeuralValues.maxneurgroups + 2] = ;	// from red (2) to 
+
+
+	return interp(GeneValue(eecdgene + (i - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups + j),
+				  brain::gNeuralValues.minconnectiondensity, brain::gNeuralValues.maxconnectiondensity);
+
 #else
 	Randomize(gMinBitProb + drand48() * (gMaxBitProb - gMinBitProb));
 #endif
@@ -343,7 +392,13 @@ void genome::Crossover(genome* g1, genome* g2, bool mutate)
 	Q_ASSERT(g1 != NULL && g2 != NULL);
 	Q_ASSERT(g1 != g2);
 	Q_ASSERT(fGenes != NULL);
-        
+	
+#if DesignerGenesOnly
+	// If we're only allowing the original DesignerGenes, then we can just
+	// return, because 'this' already has those genes, by design.
+	return;
+#endif
+	
     // Randomly select number of crossover points from chosen genome
     long numCrossPoints;
     if (drand48() < 0.5)
@@ -864,7 +919,7 @@ short genome::numneurons(short i)
 //---------------------------------------------------------------------------
 float genome::Bias(short i)
 {
-	return interp(GeneValue(biasgene+i), brain::gNeuralValues.minbias, brain::gNeuralValues.maxbias);
+	return interp(GeneValue(biasgene+i), -brain::gNeuralValues.maxbias, brain::gNeuralValues.maxbias);
 }
 
 
@@ -1172,9 +1227,13 @@ void genome::SetZero()
 //---------------------------------------------------------------------------
 float genome::GeneValue(long byte)
 {
+#if DesignerGenes
+	return( float(fGenes[byte]) / 255.0 );
+#else
 	if (gGrayCoding)
 		return float(binofgray[fGenes[byte]]) / 255.0;
 	else
 		return float(fGenes[byte]) / 255.0;
+#endif
 }
 

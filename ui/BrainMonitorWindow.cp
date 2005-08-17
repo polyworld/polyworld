@@ -57,7 +57,7 @@ TBrainMonitorWindow::~TBrainMonitorWindow()
 //---------------------------------------------------------------------------
 void TBrainMonitorWindow::paintGL()
 {
-	Draw();
+//	Draw();
 }
 
 

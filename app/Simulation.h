@@ -222,6 +222,7 @@ private:
 
 	critter* fCurrentFittestCritter[MAXFITNESSITEMS];
 	float fCurrentMaxFitness[MAXFITNESSITEMS];
+	int fCurrentFittestCount;
 	int fNumberFit;
 	genome** fFittest;
 	float* fFitness;
@@ -303,9 +304,9 @@ private:
 	int fMaxNumLeastFit;
 	int fNumSmited;
 	critter** fLeastFit;
-	long fBrainMonitorStride;
 	bool fShowVision;
 	bool fGraphics;
+	long fBrainMonitorStride;
 	
 	bool fRecordMovie;
 	FILE* fMovieFile;

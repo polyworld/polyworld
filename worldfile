@@ -152,13 +152,13 @@
 
 0      binchartgs
 
-1      mininternalneurgroups
+0      mininternalneurgroups
 5      maxinternalneurgroups
 1      mineneurpergroup
 16     maxeneurpergroup
 1      minineurpergroup
 16     maxineurpergroup
--8.0   minbias_-1.0
+-8.0   minbias_-1.0_unused
 8.0    maxbias_1.0
 0.0    minbiaslrate
 0.0    maxbiaslrate_0.2
@@ -176,6 +176,6 @@
 1      graycoding
 
 0.10   smiteFrac
-0.5    smiteAgeFrac
+0.25   smiteAgeFrac
 
 1      recordMovie

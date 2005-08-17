@@ -77,6 +77,8 @@ void debugcheck(const char* s)
 		
 		exit(0);
 	}
+#else
+	printf( "%s\n", s );
 #endif        
 
     slast = s;

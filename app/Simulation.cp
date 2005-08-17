@@ -1,3 +1,6 @@
+#define DebugMaxFitness 0
+#define TEXTTRACE 0
+#define DebugSmite 0
 
 // Self
 #include "Simulation.h"
@@ -26,8 +29,6 @@
 
 using namespace std;
 
-//#define TEXTTRACE
-
 //===========================================================================
 // TSimulation
 //===========================================================================
@@ -48,6 +49,22 @@ double TSimulation::fSecondsPerFrameInstantaneous;
 double TSimulation::fTimeStart;
 
 //---------------------------------------------------------------------------
+// Macros
+//---------------------------------------------------------------------------
+
+#if TEXTTRACE
+	#define ttPrint( x... ) printf( x )
+#else
+	#define ttPrint( x... )
+#endif
+
+#if DebugSmite
+	#define smPrint( x... ) printf( x )
+#else
+	#define smPrint( x... )
+#endif
+
+//---------------------------------------------------------------------------
 // TSimulation::TSimulation
 //---------------------------------------------------------------------------
 TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
@@ -64,6 +81,7 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
 		fDumpFrequency(500),
 		fStatusFrequency(100),
 		fLoadState(false),
+		inited(false),
 		fMonitorCritterRank(0),
 		fMonitorCritterRankOld(0),
 //		fMonitorCritter(NULL),
@@ -82,8 +100,7 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
 		fNumberFit(0),
 		fFittest(NULL),
 		fFitness(NULL),
-		fBrainMonitorStride(25),
-		inited(false)
+		fBrainMonitorStride(25)
 {
 	Init();
 }
@@ -226,9 +243,7 @@ void TSimulation::Step()
 	if (fAge > kMaxLoops)
 	{
 		// Stop simulation
-	#ifdef TEXTTRACE
-		cout << "Simulation stopped at age " << fAge << nlf;
-	#endif TEXTTRACE
+		ttPrint( "Simulation stopped at age %ld\n", fAge );
 		Stop(); // will set fDone = true
 		return;
 	}
@@ -533,6 +548,8 @@ void TSimulation::Init()
 			fDomains[id].fNumLeastFit = 0;
 			fDomains[id].fMaxNumLeastFit = lround( fSmiteFrac * fDomains[id].maxnumcritters );
 			
+			smPrint( "for domain %d fMaxNumLeastFit = %d\n", id, fDomains[id].fMaxNumLeastFit );
+			
 			if( fDomains[id].fMaxNumLeastFit > 0 )
 			{
 				fDomains[id].fLeastFit = new critter*[fDomains[id].fMaxNumLeastFit];
@@ -547,6 +564,8 @@ void TSimulation::Init()
 	fNumLeastFit = 0;
 	fMaxNumLeastFit = lround( fSmiteFrac * fMaxCritters );
 	
+	smPrint( "globally fMaxNumLeastFit = %d\n", id, fMaxNumLeastFit );
+
 	if( fMaxNumLeastFit > 0 )
 	{
 		fLeastFit = new critter*[fMaxNumLeastFit];
@@ -558,6 +577,8 @@ void TSimulation::Init()
         {
 			fDomains[id].fNumLeastFit = 0;
 			fDomains[id].fMaxNumLeastFit = lround( fSmiteFrac * fDomains[id].maxnumcritters );
+
+			smPrint( "for domain %d fMaxNumLeastFit = %d\n", id, fDomains[id].fMaxNumLeastFit );
 			
 			if( fDomains[id].fMaxNumLeastFit > 0 )
 			{
@@ -921,7 +942,6 @@ void TSimulation::InitWorld()
     brain::gNeuralValues.maxineurpergroup = 8;
 	brain::gNeuralValues.numoutneurgroups = 7;
     brain::gNeuralValues.numinputneurgroups = 5;
-    brain::gNeuralValues.minbias = -1.0;
     brain::gNeuralValues.maxbias = 1.0;
     brain::gNeuralValues.minbiaslrate = 0.0;
     brain::gNeuralValues.maxbiaslrate = 0.2;
@@ -932,7 +952,7 @@ void TSimulation::InitWorld()
     brain::gNeuralValues.maxsynapse2energy = 0.01;
     brain::gNeuralValues.maxneuron2energy = 0.1;
 	
-    genome::gGrayCoding = true;  
+    genome::gGrayCoding = true;
     genome::gMinvispixels = 1;
     genome::gMaxvispixels = 8;
     genome::gMinMutationRate = 0.01;
@@ -1156,12 +1176,17 @@ void TSimulation::Interact()
 	
 	// food list and barrier list should be x-sorted already
 
+#if 0
 	// Clear out fitness per simulation cycle tracking
+	// (No longer necessary, now that we manage fCurrentFittestCount.)
 	for (i = 0; i < MAXFITNESSITEMS; i++)
     {
         fCurrentMaxFitness[i] = 0.0;
         fCurrentFittestCritter[i] = NULL;
     }
+#endif
+	fCurrentFittestCount = 0;
+	smPrint( "setting fCurrentFittestCount to 0\n" );
     fAverageFitness = 0.0;
 //	fNumLeastFit = 0;
 //	fNumSmited = 0;
@@ -1212,10 +1237,15 @@ void TSimulation::Interact()
 		
 		// Do the bookkeeping for the specific domain, if we're using domains
 		// Note: I think we must have at least one domain these days - lsy 6/1/05
+		// The test against average fitness is an attempt to keep fit organisms from being smited, in general,
+		// but it also helps protect against the situation when there are so few potential low-fitness candidates,
+		// due to the age constraint and/or population size, that critters can end up on both the highest fitness
+		// and the lowest fitness lists, which can actually cause a crash (or at least used to).
 		if( (fNumDomains > 0) && (fDomains[id].fMaxNumLeastFit > 0) )
 		{
 			if( (fDomains[id].numcritters > (fDomains[id].maxnumcritters - fDomains[id].fMaxNumLeastFit)) &&	// if there are getting to be too many critters, and
 				(c->Age() >= (fSmiteAgeFrac * c->MaxAge())) &&													// the current critter is old enough to consider for smiting, and
+				(c->Fitness() < fAverageFitness) &&																// the current critter has worse than average fitness,
 				( (fDomains[id].fNumLeastFit < fDomains[id].fMaxNumLeastFit)	||								// (we haven't filled our quota yet, or
 				  (c->Fitness() < fDomains[id].fLeastFit[fDomains[id].fNumLeastFit-1]->Fitness()) ) )			// the critter is bad enough to displace one already in the queue)
 			{
@@ -1224,6 +1254,7 @@ void TSimulation::Interact()
 					// It's the first one, so just store it
 					fDomains[id].fLeastFit[0] = c;
 					fDomains[id].fNumLeastFit++;
+					smPrint( "critter %ld added to least fit list for domain %d at position 0 with fitness %g\n", c->Number(), id, c->Fitness() );
 				}
 				else
 				{
@@ -1252,6 +1283,7 @@ void TSimulation::Interact()
 					
 					// Store the new i-th worst
 					fDomains[id].fLeastFit[i] = c;
+					smPrint( "critter %ld added to least fit list for domain %d at position %d with fitness %g\n", c->Number(), id, i, c->Fitness() );
 				}
 			}
 		}
@@ -1263,6 +1295,7 @@ void TSimulation::Interact()
 		{
 			if( (critter::gXSortedCritters.count() > (fMaxCritters - fMaxNumLeastFit)) &&	// if there are getting to be too many critters, and
 				(c->Age() >= (fSmiteAgeFrac * c->MaxAge())) &&								// the current critter is old enough to consider for smiting, and
+				(c->Fitness() < fAverageFitness) &&											// the current critter has worse than average fitness,
 				( (fNumLeastFit < fMaxNumLeastFit)	||										// (we haven't filled our quota yet, or
 				  (c->Fitness() < fLeastFit[fNumLeastFit-1]->Fitness()) ) )					// the critter is bad enough to displace one already in the queue)
 			{
@@ -1305,11 +1338,29 @@ void TSimulation::Interact()
 	#endif
 	}
 
+#if DebugSmite
+	for( id = 0; id < fNumDomains; id++ )
+	{
+		printf( "At age %ld in domain %d (c,n,c->fit) =", fAge, id );
+		for( i = 0; i < fDomains[id].fNumLeastFit; i++ )
+			printf( " (%08lx,%ld,%5.2f)", (ulong) fDomains[id].fLeastFit[i], fDomains[id].fLeastFit[i]->Number(), fDomains[id].fLeastFit[i]->Fitness() );
+		printf( "\n" );
+	}
+#endif
+
 	//cout << "after deaths1 "; critter::gXSortedCritters.list();	//dbg
 
 	// Now go through the list, and use the influence radius to determine
 	// all possible interactions
-	
+
+#if DebugMaxFitness
+	critter::gXSortedCritters.reset();
+	critter::gXSortedCritters.next( c );
+	critter* lastCritter;
+	critter::gXSortedCritters.last( lastCritter );
+	printf( "%s: at age %ld about to process %ld critters, %ld pieces of food, starting with critter %08lx (%4ld), ending with critter %08lx (%4ld)\n", __FUNCTION__, fAge, critter::gXSortedCritters.count(), food::gXSortedFood.count(), (ulong) c, c->Number(), (ulong) lastCritter, lastCritter->Number() );
+#endif
+
 	food::gXSortedFood.reset();
 	critter::gXSortedCritters.reset();
     while (critter::gXSortedCritters.next(c))
@@ -1340,11 +1391,7 @@ void TSimulation::Interact()
                 // and if we get here then they are also close enough in z,
                 // so must actually worry about their interaction
 
-			#ifdef TEXTTRACE
-                cout << "age " << age
-                     << ": critters #" << c->number() << " & #"
-                                       << d->number() << " close" nlf;
-			#endif TEXTTRACE
+				ttPrint( "age %ld: critters # %ld & %ld are close\n", fAge, c->Number(), d->Number() );
 
                 jd = d->Domain();
 
@@ -1374,11 +1421,12 @@ void TSimulation::Interact()
 					if( (fDomains[kd].numcritters >= fDomains[kd].maxnumcritters) &&	// too many critters to reproduce withing a bit of smiting
 						(fDomains[kd].fNumLeastFit > fDomains[kd].fNumSmited) )			// we've still got some left that are suitable for smiting
 					{
-						while( ((fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] == c) ||
-								(fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] == d)) &&
+						while( ((fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] == c) ||	// trying to smite mommy
+								(fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] == d) ||	// trying to smite daddy
+							   ((fCurrentFittestCount > 0) && (fDomains[kd].fLeastFit[fDomains[kd].fNumSmited]->Fitness() > fCurrentMaxFitness[fCurrentFittestCount-1]))) &&	// trying to smite one of the fittest
 							   (fDomains[kd].fNumSmited < fDomains[kd].fNumLeastFit) )
 						{
-							// We would have smited one of our mating pair, which wouldn't be prudent,
+							// We would have smited one of our mating pair, or one of the fittest, which wouldn't be prudent,
 							// so just step over them and see if there's someone else to smite
 							fDomains[kd].fNumSmited++;
 						}
@@ -1399,11 +1447,7 @@ void TSimulation::Interact()
 							(fDomains[kd].numbornsincecreated < fMiscCritters) ||	// miscegenation function not in use yet
 							(drand48() < c->MateProbability(d)) )					// miscegenation function allows the birth
                         {
-						#ifdef TEXTTRACE
-                            cout << "age " << fAge << ": critters #"
-                                 << c->number() << " & #"
-                                 << d->number() << " mating" nlf;
-						#endif TEXTTRACE
+							ttPrint( "age %ld: critters # %ld & %ld are mating\n", fAge, c->Number(), d->Number() );
                             fNumBornSinceCreated++;
                             fDomains[kd].numbornsincecreated++;
 							
@@ -1425,9 +1469,7 @@ void TSimulation::Interact()
                             fDomains[kd].numcritters++;
                             fNumberBorn++;
                             fDomains[kd].numborn++;
-						#ifdef TEXTTRACE
-                            cout << "age " << fAge << ": critter #" << e->number() << " born" nlf;
-						#endif TEXTTRACE
+							ttPrint( "age %ld: critter # %ld is born\n", fAge, e->Number() );
                         }
                         else	// miscegenation function denied this birth
 						{
@@ -1459,9 +1501,7 @@ void TSimulation::Interact()
 
                     if ( (cpower > 0.0) || (dpower > 0.0) )
                     {
-					#ifdef TEXTTRACE
-                        cout << "age " << age << ": critters #" << c->number() << " & #" << d->number() << " fighting" nlf;
-					#endif TEXTTRACE
+						ttPrint( "age %ld: critters # %ld & %ld are fighting\n", fAge, c->Number(), d->Number() );
                         // somebody wants to fight
                         fNumberFights++;
                         c->damage(dpower * fPower2Energy);
@@ -1534,9 +1574,7 @@ void TSimulation::Interact()
                     if ( fabs(f->z()-c->z()) < (f->radius()+c->radius()) )
                     {
                         // also overlap in z, so they really interact
-					#ifdef TEXTTRACE
-                        cout << "age " << fAge << ": critter #" << c->number() << " eating" nlf;
-					#endif TEXTTRACE
+						ttPrint( "age %ld: critter # %ld is eating\n", fAge, c->Number() );
                         fd = f->domain();
 						fFoodEnergyOut += c->eat(f, fEatFitnessParameter, fEat2Consume, fEatThreshold);
 
@@ -1568,27 +1606,51 @@ void TSimulation::Interact()
 		// keep tabs of current and average fitness for surviving organisms
 
         fAverageFitness += c->Fitness();
-        if( (c->Fitness() > fCurrentMaxFitness[MAXFITNESSITEMS-1]) || (fCurrentMaxFitness[MAXFITNESSITEMS-1] == 0.0) )
+        if( (fCurrentFittestCount < MAXFITNESSITEMS) || (c->Fitness() > fCurrentMaxFitness[fCurrentFittestCount-1]) )
         {
-            for (i = 0; i < MAXFITNESSITEMS; i++)
-            {
-                if( (c->Fitness() > fCurrentMaxFitness[i]) || (fCurrentMaxFitness[i] == 0.0) )
-                {
-                    for (j = MAXFITNESSITEMS-1; j > i; j--)
-                    {
-                        fCurrentMaxFitness[j] = fCurrentMaxFitness[j-1];
-                        fCurrentFittestCritter[j] = fCurrentFittestCritter[j-1];
-                    }
-                    fCurrentMaxFitness[i] = c->Fitness();
-                    fCurrentFittestCritter[i] = c;
-                    break;
-                }
-            }
+			if( (fCurrentFittestCount == 0) || ((c->Fitness() <= fCurrentMaxFitness[fCurrentFittestCount-1]) && (fCurrentFittestCount < MAXFITNESSITEMS)) )	// just append
+			{
+				fCurrentMaxFitness[fCurrentFittestCount] = c->Fitness();
+				fCurrentFittestCritter[fCurrentFittestCount] = c;
+				fCurrentFittestCount++;
+			#if DebugMaxFitness
+				printf( "appended critter %08lx (%4ld) to fittest list at position %d with fitness %g, count = %d\n", (ulong) c, c->Number(), fCurrentFittestCount-1, c->Fitness(), fCurrentFittestCount );
+			#endif
+			}
+			else	// must insert
+			{
+				for( i = 0; i <  fCurrentFittestCount ; i++ )
+				{
+					if( c->Fitness() > fCurrentMaxFitness[i] )
+						break;
+				}
+				
+				for( j = min( fCurrentFittestCount, MAXFITNESSITEMS-1 ); j > i; j-- )
+				{
+					fCurrentMaxFitness[j] = fCurrentMaxFitness[j-1];
+					fCurrentFittestCritter[j] = fCurrentFittestCritter[j-1];
+				}
+				
+				fCurrentMaxFitness[i] = c->Fitness();
+				fCurrentFittestCritter[i] = c;
+				if( fCurrentFittestCount < MAXFITNESSITEMS )
+					fCurrentFittestCount++;
+			#if DebugMaxFitness
+				printf( "inserted critter %08lx (%4ld) into fittest list at position %ld with fitness %g, count = %d\n", (ulong) c, c->Number(), i, c->Fitness(), fCurrentFittestCount );
+			#endif
+			}
         }
 
     } // while loop on critters
 
     fAverageFitness /= critter::gXSortedCritters.count();
+
+#if DebugMaxFitness
+	printf( "At age %ld (c,n,fit,c->fit) =", fAge );
+	for( i = 0; i < fCurrentFittestCount; i++ )
+		printf( " (%08lx,%ld,%5.2f,%5.2f)", (ulong) fCurrentFittestCritter[i], fCurrentFittestCritter[i]->Number(), fCurrentMaxFitness[i], fCurrentFittestCritter[i]->Fitness() );
+	printf( "\n" );
+#endif
 
     if (fMonitorGeneSeparation && (fNewDeaths > 0))
         CalculateGeneSeparationAll();
@@ -2033,10 +2095,8 @@ void TSimulation::Death(critter* c)
 	Q_CHECK_PTR(c);
 	
 	const short id = c->Domain();
-		
-#ifdef TEXTTRACE
-    cout << "age " << fAge << ": critter #" << c->number() << " died" nlf;
-#endif TEXTTRACE
+	
+	ttPrint( "age %ld: critter # %ld has died\n", fAge, c->Number() );
 	
     fNewDeaths++;
     fNumberDied++;
@@ -2160,6 +2220,7 @@ void TSimulation::Death(critter* c)
 			continue;
 
 		// one of our least-fit critters died, so pull in the list over it
+		smPrint( "removing critter %ld from the least fit list for domain %d at position %d with fitness %g (because it died)\n", c->Number(), id, i, c->Fitness() );
 		for( int j = i; j < fDomains[id].fNumLeastFit-1; j++ )
 			fDomains[id].fLeastFit[j] = fDomains[id].fLeastFit[j+1];
 		fDomains[id].fNumLeastFit--;
@@ -2645,8 +2706,9 @@ void TSimulation::ReadWorldFile(const char* filename)
     cout << "minineurpergroup" ses brain::gNeuralValues.minineurpergroup nl;
     in >> brain::gNeuralValues.maxineurpergroup; in >> label;
     cout << "maxineurpergroup" ses brain::gNeuralValues.maxineurpergroup nl;
-    in >> brain::gNeuralValues.minbias; in >> label;
-    cout << "minbias" ses brain::gNeuralValues.minbias nl;
+	float unusedFloat;
+    in >> unusedFloat; in >> label;
+    cout << "minbias (not used)" ses unusedFloat nl;
     in >> brain::gNeuralValues.maxbias; in >> label;
     cout << "maxbias" ses brain::gNeuralValues.maxbias nl;
     in >> brain::gNeuralValues.minbiaslrate; in >> label;

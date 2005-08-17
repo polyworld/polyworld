@@ -233,12 +233,12 @@ void critter::critterload(istream&)
 // critter::critter
 //---------------------------------------------------------------------------
 critter::critter(TSimulation* sim, gstage* stage)
-	:	fSimulation(sim),
+	:	xleft(-1),  		// to show it hasn't been initialized
+		fSimulation(sim),
 		fAlive(false), 		// must grow() to be truly alive
 		fMass(0.0), 		// mass - not used
 		fFitness(0.0),  	// crude guess for keeping minimum population early on
 		fGenome(NULL),
-		xleft(-1),  		// to show it hasn't been initialized
 		fBrain(NULL)
 {
 	Q_CHECK_PTR(sim);
@@ -1023,7 +1023,7 @@ void cxsortedlist::list()
     gdlink<critter*> *savecurr;
     critter* pcrit;
     savecurr = currItem;
-	cout << "c" eql currItem sp "m" eql marcItem sp "l" eql lastItem sp "f" eql lastItem->nextItem << " ";
+	cout << "c" eql currItem sp "m" eql markItem sp "l" eql lastItem sp "f" eql lastItem->nextItem << " ";
     this->reset();
 	cout << this->kount << ":";
     while(this->next(pcrit))

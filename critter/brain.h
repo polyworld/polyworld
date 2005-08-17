@@ -23,7 +23,6 @@ struct NeuralValues
 	short maxinternalneurons;
 	short maxinputneurons;
 	short maxnoninputneurons;
-	float minbias;
 	float maxbias;
 	float minbiaslrate;
 	float maxbiaslrate;
