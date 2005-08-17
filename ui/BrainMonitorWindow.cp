@@ -175,11 +175,11 @@ void TBrainMonitorWindow::Draw()
 
 	// Make sure the window is the proper size
 	const long winWidth = fCritter->Brain()->GetNumNeurons()
-						  * fPatchWidth + 2 * fPatchHeight;						  
+						  * fPatchWidth + 2 * fPatchWidth;						  
 	const long winHeight = fCritter->Brain()->GetNumNonInputNeurons()
-					   	   * fPatchWidth + 2 * fPatchHeight;
+					   	   * fPatchHeight + 2 * fPatchHeight;
 					   	   
-	if (width() != winWidth && height() != winHeight)
+	if (width() != winWidth || height() != winHeight)
 		setFixedSize(winWidth, winHeight);
 
 #if 0				
