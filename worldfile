@@ -91,7 +91,7 @@
 
 0.5    logisticslope
 8.0    maxweight
-1.0    initmaxweight_0.5_0.1
+2.0    initmaxweight_0.5_0.1_1.0
 0.1    minbitprob
 0.6    maxbitprob
 0.2    critterheight
@@ -127,11 +127,6 @@
 
 33.33  domainbarrier#1
 66.67  domainbarrier#2
-
-45    minfoodcount
-120    maxfoodcount
-90    maxfoodgrown
-90    initfoodcount
 
 10     domain[0].minnumcritters
 100    domain[0].maxnumcritters
