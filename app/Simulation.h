@@ -246,6 +246,8 @@ private:
 
 	long fMinNumCritters; 
 	long fInitNumCritters;
+	long fNumberToSeed;
+	float fProbabilityOfMutatingSeeds;
 	float fMinMateFraction;
 	long fMateWait;
 	long fMiscCritters; // number of critters born without intervening creation before miscegenation function kicks in
@@ -297,6 +299,9 @@ private:
 	bool fChartGeneSeparation;
 	float* fGeneSepVals;
 	long fNumGeneSepVals;
+	Stat fLifeSpanStats;
+	Stat fNeuronGroupCountStats;
+	Stat fCurrentNeuronGroupCountStats;
 
 	float fSmiteFrac;
 	float fSmiteAgeFrac;

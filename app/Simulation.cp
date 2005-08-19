@@ -600,49 +600,64 @@ void TSimulation::Init()
 	srand48(fGenomeSeed);
 
 	if (!fLoadState)
-	{		
-		// first handle the individual domains
+	{
+		long numSeededDomain;
+		long numSeededTotal;
 		int id;
+		
+		// first handle the individual domains
 		for (id = 0; id < fNumDomains; id++)
 		{
+			numSeededDomain = 0;	// reset for each domain
+
+			for (int i = 0; i < min((fMaxCritters - (long)critter::gXSortedCritters.count()), fDomains[id].initnumcritters); i++)
 			{
-				for (int i = 0; i < min((fMaxCritters - (long)critter::gXSortedCritters.count()), fDomains[id].initnumcritters); i++)
+				c = critter::getfreecritter(this, &fStage);
+				Q_ASSERT(c != NULL);
+				
+				fNumberCreated++;
+				fNumberCreatedRandom++;
+				fDomains[id].numcreated++;
+				
+				if( numSeededDomain < fDomains[id].numberToSeed )
 				{
-					c = critter::getfreecritter(this, &fStage);
-					Q_ASSERT(c != NULL);
-					
-					fNumberCreated++;
-					fNumberCreatedRandom++;
-					fDomains[id].numcreated++;
-					
-					c->Genes()->Randomize();
-					c->grow();
-					
-					fFoodEnergyIn += c->FoodEnergy();
-					fStage.AddObject(c);
-					
-					float x = drand48() * (fDomains[id].xsize - 0.02) + fDomains[id].xleft + 0.01;
-					float z = -0.01 - drand48() * (globals::worldsize - 0.02);
-					float y = 0.5 * critter::gCritterHeight;
-				#if TestWorld
-					// evenly distribute the critters
-					x = fDomains[id].xleft  +  0.666 * fDomains[id].xsize;
-					z = - globals::worldsize * ((float) (i+1) / (fDomains[id].initnumcritters + 1));
-				#endif
-					c->settranslation(x, y, z);
-					
-					float yaw =  360.0 * drand48();
-				#if TestWorld
-					// point them all the same way
-					yaw = 95.0;
-				#endif
-					c->setyaw(yaw);
-					
-					critter::gXSortedCritters.add(c);	// stores c->listLink
-					c->Domain(id);
-					fDomains[id].numcritters++;
+					c->Genes()->SeedGenes();
+					if( drand48() < fDomains[id].probabilityOfMutatingSeeds )
+						c->Genes()->Mutate();
+					numSeededDomain++;
 				}
+				else
+					c->Genes()->Randomize();
+				c->grow();
+				
+				fFoodEnergyIn += c->FoodEnergy();
+				fStage.AddObject(c);
+				
+				float x = drand48() * (fDomains[id].xsize - 0.02) + fDomains[id].xleft + 0.01;
+				float z = -0.01 - drand48() * (globals::worldsize - 0.02);
+				float y = 0.5 * critter::gCritterHeight;
+			#if TestWorld
+				// evenly distribute the critters
+				x = fDomains[id].xleft  +  0.666 * fDomains[id].xsize;
+				z = - globals::worldsize * ((float) (i+1) / (fDomains[id].initnumcritters + 1));
+			#endif
+				c->settranslation(x, y, z);
+				
+				float yaw =  360.0 * drand48();
+			#if TestWorld
+				// point them all the same way
+				yaw = 95.0;
+			#endif
+				c->setyaw(yaw);
+				
+				critter::gXSortedCritters.add(c);	// stores c->listLink
+
+				c->Domain(id);
+				fDomains[id].numcritters++;
+				fNeuronGroupCountStats.add( c->Brain()->NumNeuronGroups() );
 			}
+			
+			numSeededTotal += numSeededDomain;
 			
 			long maxNewFood = fMaxFoodCount - (long) food::gXSortedFood.count();
 			for (int i = 0; i < min(maxNewFood, fDomains[id].initfoodcount); i++)
@@ -672,36 +687,43 @@ void TSimulation::Init()
 	
 		// Handle global initial creations, if necessary
 		Q_ASSERT(fInitNumCritters <= fMaxCritters);
-				
+		
+		while ((int)critter::gXSortedCritters.count() < fInitNumCritters)
 		{
-			while ((int)critter::gXSortedCritters.count() < fInitNumCritters)
+			c = critter::getfreecritter(this, &fStage);
+			Q_CHECK_PTR(c);
+
+			fNumberCreated++;
+			fNumberCreatedRandom++;
+			
+			if( numSeededTotal < fNumberToSeed )
 			{
-				c = critter::getfreecritter(this, &fStage);
-				Q_CHECK_PTR(c);
-	
-				fNumberCreated++;
-				fNumberCreatedRandom++;
-				
-				c->Genes()->Randomize();
-				c->grow();
-				
-				fFoodEnergyIn += c->FoodEnergy();
-				fStage.AddObject(c);
-				
-				float x =  0.01 + drand48() * (globals::worldsize - 0.02);
-				float z = -0.01 - drand48() * (globals::worldsize - 0.02);
-				float y = 0.5 * critter::gCritterHeight;
-				c->settranslation(x, y, z);
-	
-				float yaw =  360.0 * drand48();
-				c->setyaw(yaw);
-				
-				critter::gXSortedCritters.add(c);	// stores c->listLink
-				
-				id = WhichDomain(x, z, 0);
-				c->Domain(id);
-				fDomains[id].numcritters++;
+				c->Genes()->SeedGenes();
+				if( drand48() < fProbabilityOfMutatingSeeds )
+					c->Genes()->Mutate();
+				numSeededTotal++;
 			}
+			else
+				c->Genes()->Randomize();
+			c->grow();
+			
+			fFoodEnergyIn += c->FoodEnergy();
+			fStage.AddObject(c);
+			
+			float x =  0.01 + drand48() * (globals::worldsize - 0.02);
+			float z = -0.01 - drand48() * (globals::worldsize - 0.02);
+			float y = 0.5 * critter::gCritterHeight;
+			c->settranslation(x, y, z);
+
+			float yaw =  360.0 * drand48();
+			c->setyaw(yaw);
+			
+			critter::gXSortedCritters.add(c);	// stores c->listLink
+			
+			id = WhichDomain(x, z, 0);
+			c->Domain(id);
+			fDomains[id].numcritters++;
+			fNeuronGroupCountStats.add( c->Brain()->NumNeuronGroups() );
 		}
 			
 		while ((int)food::gXSortedFood.count() < fInitialFoodCount)
@@ -846,6 +868,8 @@ void TSimulation::InitWorld()
 	
     fMinNumCritters = 15;
     fInitNumCritters = 15;
+	fNumberToSeed = 0;
+	fProbabilityOfMutatingSeeds = 0.0;
     fMinFoodCount = 15;
     fMaxFoodCount = 50;
     fMaxFoodGrown = 25;
@@ -1198,11 +1222,15 @@ void TSimulation::Interact()
 	}
 	
 	// Take care of deaths first, plus least-fit determinations
+	// Also use this as a convenient place to compute some stats
 
 	//cout << "before deaths "; critter::gXSortedCritters.list();	//dbg
+	fCurrentNeuronGroupCountStats.reset();
 	critter::gXSortedCritters.reset();
     while (critter::gXSortedCritters.next(c))
     {
+		fCurrentNeuronGroupCountStats.add( c->Brain()->NumNeuronGroups() );
+
         // Determine the domain in which the critter currently is located
 
         id = c->Domain();
@@ -1470,6 +1498,7 @@ void TSimulation::Interact()
                             fDomains[kd].numcritters++;
                             fNumberBorn++;
                             fDomains[kd].numborn++;
+							fNeuronGroupCountStats.add( e->Brain()->NumNeuronGroups() );
 							ttPrint( "age %ld: critter # %ld is born\n", fAge, e->Number() );
                         }
                         else	// miscegenation function denied this birth
@@ -1732,6 +1761,7 @@ void TSimulation::Interact()
                 fStage.AddObject(newCritter);
                 fDomains[id].numcritters++;
                 newCritters.add(newCritter); // add it to the full list later; the e->listLink that gets auto stored here must be replaced with one from full list below
+				fNeuronGroupCountStats.add( newCritter->Brain()->NumNeuronGroups() );
             }
         }
 
@@ -1797,6 +1827,7 @@ void TSimulation::Interact()
             fDomains[id].numcritters++;
             fStage.AddObject(newCritter);
             newCritters.add(newCritter); // add it to the full list later; the e->listLink that gets auto stored here must be replaced with one from full list below
+			fNeuronGroupCountStats.add( newCritter->Brain()->NumNeuronGroups() );
         }
 
 	#ifdef DEBUGCHECK
@@ -2108,7 +2139,9 @@ void TSimulation::Death(critter* c)
     fNumberDied++;
     fDomains[id].numdied++;
     fDomains[id].numcritters--;
-    
+	
+	fLifeSpanStats.add( c->Age() );
+	
     c->lastrewards(fEnergyFitnessParameter, fAgeFitnessParameter); // if any
     
     if (fCrittersRfood
@@ -2323,6 +2356,18 @@ void TSimulation::ReadWorldFile(const char* filename)
     cout << "maxnumcritters" ses fMaxCritters nl;
     in >> fInitNumCritters; in >> label;
     cout << "initnumcritters" ses fInitNumCritters nl;
+	if( version >= 9 )
+	{
+		in >> fNumberToSeed; in >> label;
+		cout << "numberToSeed" ses fNumberToSeed nl;
+		in >> fProbabilityOfMutatingSeeds; in >> label;
+		cout << "probabilityOfMutatingSeeds" ses fProbabilityOfMutatingSeeds nl;
+	}
+	else
+	{
+		fNumberToSeed = 0;
+		fProbabilityOfMutatingSeeds = 0.0;
+	}
     in >> fMiscCritters; in >> label;
     cout << "misccritters" ses fMiscCritters nl;
     in >> fPositionSeed; in >> label;
@@ -2608,26 +2653,31 @@ void TSimulation::ReadWorldFile(const char* filename)
         for (id = 0; id < fNumDomains; id++)
         {
             in >> fDomains[id].minnumcritters; in >> label;
-            cout << "minnumcritters in domains[" << id << "]"
-                 ses fDomains[id].minnumcritters nl;
+            cout << "minnumcritters in domains[" << id << "]" ses fDomains[id].minnumcritters nl;
             in >> fDomains[id].maxnumcritters; in >> label;
-            cout << "maxnumcritters in domains[" << id << "]"
-                 ses fDomains[id].maxnumcritters nl;
+            cout << "maxnumcritters in domains[" << id << "]" ses fDomains[id].maxnumcritters nl;
             in >> fDomains[id].initnumcritters; in >> label;
-            cout << "initnumcritters in domains[" << id << "]"
-                 ses fDomains[id].initnumcritters nl;
+            cout << "initnumcritters in domains[" << id << "]" ses fDomains[id].initnumcritters nl;
+			if( version >= 9 )
+			{
+				in >> fDomains[id].numberToSeed; in >> label;
+				cout << "numberToSeed in domains[" << id << "]" ses fDomains[id].numberToSeed nl;
+				in >> fDomains[id].probabilityOfMutatingSeeds; in >> label;
+				cout << "probabilityOfMutatingSeeds in domains [" << id << "]" ses fDomains[id].probabilityOfMutatingSeeds nl;
+			}
+			else
+			{
+				fDomains[id].numberToSeed = 0;
+				fDomains[id].probabilityOfMutatingSeeds = 0.0;
+			}
             in >> fDomains[id].minfoodcount; in >> label;
-            cout << "minfoodcount in domains[" << id << "]"
-                 ses fDomains[id].minfoodcount nl;
+            cout << "minfoodcount in domains[" << id << "]" ses fDomains[id].minfoodcount nl;
             in >> fDomains[id].maxfoodcount; in >> label;
-            cout << "maxfoodcount in domains[" << id << "]"
-                 ses fDomains[id].maxfoodcount nl;
+            cout << "maxfoodcount in domains[" << id << "]" ses fDomains[id].maxfoodcount nl;
             in >> fDomains[id].maxfoodgrown; in >> label;
-            cout << "maxfoodgrown in domains[" << id << "]"
-                 ses fDomains[id].maxfoodgrown nl;
+            cout << "maxfoodgrown in domains[" << id << "]" ses fDomains[id].maxfoodgrown nl;
             in >> fDomains[id].initfoodcount; in >> label;
-            cout << "initfoodcount in domains[" << id << "]"
-                 ses fDomains[id].initfoodcount nl;
+            cout << "initfoodcount in domains[" << id << "]" ses fDomains[id].initfoodcount nl;
             totmaxnumcritters += fDomains[id].maxnumcritters;
             totminnumcritters += fDomains[id].minnumcritters;
         }
@@ -3137,22 +3187,25 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 
 	if (fMonitorGeneSeparation)
 	{
-		sprintf( t, "maxGeneSeparation = %g", fMaxGeneSeparation );
-		list.push_back( strdup( t ) );
-		
-		sprintf( t, "minGeneSeparation = %g", fMinGeneSeparation );
-		list.push_back( strdup( t ) );
-		
-		sprintf( t, "avgGeneSeparation = %g", fAverageGeneSeparation );
+		sprintf( t, "GeneSep = %5.3f [%5.3f, %5.3f]", fAverageGeneSeparation, fMinGeneSeparation, fMaxGeneSeparation );
 		list.push_back( strdup( t ) );
 	}
+
+	sprintf( t, "LifeSpan = %lu ± %lu [%lu, %lu]", nint( fLifeSpanStats.mean() ), nint( fLifeSpanStats.stddev() ), (ulong) fLifeSpanStats.min(), (ulong) fLifeSpanStats.max() );
+	list.push_back( strdup( t ) );
+
+	sprintf( t, "NeurGroups = %lu ± %lu [%lu, %lu]", nint( fNeuronGroupCountStats.mean() ), nint( fNeuronGroupCountStats.stddev() ), (ulong) fNeuronGroupCountStats.min(), (ulong) fNeuronGroupCountStats.max() );
+	list.push_back( strdup( t ) );
+
+	sprintf( t, "CurNeurGroups = %lu ± %lu [%lu, %lu]", nint( fCurrentNeuronGroupCountStats.mean() ), nint( fCurrentNeuronGroupCountStats.stddev() ), (ulong) fCurrentNeuronGroupCountStats.min(), (ulong) fCurrentNeuronGroupCountStats.max() );
+	list.push_back( strdup( t ) );
 
 	sprintf( t, "Rate %2.1f (%2.1f) %2.1f (%2.1f) %2.1f (%2.1f)",
 				fFramesPerSecondInstantaneous, fSecondsPerFrameInstantaneous,
 				fFramesPerSecondRecent,        fSecondsPerFrameRecent,
 				fFramesPerSecondOverall,       fSecondsPerFrameOverall  );
 	list.push_back( strdup( t ) );
-
+	
 #if 0
     if (saveToFile)
     {

@@ -312,7 +312,19 @@ void genome::Randomize(float bitonprob)
 void genome::Randomize()
 {
 #if DesignerGenes
-check crossover point array size, whether the gene value is just non-physiological or not, whether that is account for
+//check crossover point array size, whether the gene value is just non-physiological or not, whether that is account for
+	SeedGenes();
+#else
+	Randomize(gMinBitProb + drand48() * (gMaxBitProb - gMinBitProb));
+#endif
+}
+
+
+//---------------------------------------------------------------------------
+// genome::SeedGenes
+//---------------------------------------------------------------------------
+void genome::SeedGenes()
+{
 	fGenes[mrategene]			= 0;	// about 0.1
 	fGenes[ncptsgene]			= 127;	// about 5
 	fGenes[lifespangene]		= 127;	// about 750
@@ -335,31 +347,42 @@ check crossover point array size, whether the gene value is just non-physiologic
 		fGenes[biasgene+i]		= 127;	// about 0.0 bias
 		fGenes[biaslrategene+i]	= 0;	// about 0.0 bias learning rate
 	}
+	fGenes[biasgene+brain::gNeuralValues.maxinternalneurgroups+1] = 255;	// always want to mate
 	for( int i = 0; i < brain::gNeuralValues.maxneurgroups * brain::gNeuralValues.maxnoninputneurgroups; i++ )
 	{
-		fGenes[eecdgene] = 0;	// 1,   but won't matter for the non-existent internal groups
-		fGenes[eicdgene] = 0;	// 1,   but won't matter for the non-existent internal groups
-		fGenes[iicdgene] = 0;	// 1,   but won't matter for the non-existent internal groups
-		fGenes[iecdgene] = 0;	// 1,   but won't matter for the non-existent internal groups
-		fGenes[eelrgene] = 0;	// 0.0, but won't matter for the non-existent internal groups
-		fGenes[eilrgene] = 0;	// 0.0, but won't matter for the non-existent internal groups
-		fGenes[iilrgene] = 0;	// 0.0, but won't matter for the non-existent internal groups
-		fGenes[ielrgene] = 0;	// 0.0, but won't matter for the non-existent internal groups
-		fGenes[eetdgene] = 0;	// 0.0, but won't matter for the non-existent internal groups
-		fGenes[eitdgene] = 0;	// 0.0, but won't matter for the non-existent internal groups
-		fGenes[iitdgene] = 0;	// 0.0, but won't matter for the non-existent internal groups
-		fGenes[ietdgene] = 0;	// 0.0, but won't matter for the non-existent internal groups
+		fGenes[eecdgene+i] = 0;	// 1,   but won't matter for the non-existent internal groups
+		fGenes[eicdgene+i] = 0;	// 1,   but won't matter for the non-existent internal groups
+		fGenes[iicdgene+i] = 0;	// 1,   but won't matter for the non-existent internal groups
+		fGenes[iecdgene+i] = 0;	// 1,   but won't matter for the non-existent internal groups
+		fGenes[eelrgene+i] = 0;	// 0.0, but won't matter for the non-existent internal groups
+		fGenes[eilrgene+i] = 0;	// 0.0, but won't matter for the non-existent internal groups
+		fGenes[iilrgene+i] = 0;	// 0.0, but won't matter for the non-existent internal groups
+		fGenes[ielrgene+i] = 0;	// 0.0, but won't matter for the non-existent internal groups
+		fGenes[eetdgene+i] = 0;	// 0.0, but won't matter for the non-existent internal groups
+		fGenes[eitdgene+i] = 0;	// 0.0, but won't matter for the non-existent internal groups
+		fGenes[iitdgene+i] = 0;	// 0.0, but won't matter for the non-existent internal groups
+		fGenes[ietdgene+i] = 0;	// 0.0, but won't matter for the non-existent internal groups
 	}
 	// Now establish the few connections we actually want, between the vision neurons and key behaviors
-	fGenes[eecdgene + 1 * brain::gNeuralValues.maxneurgroups + 2] = ;	// from red (2) to 
-
-
-	return interp(GeneValue(eecdgene + (i - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups + j),
-				  brain::gNeuralValues.minconnectiondensity, brain::gNeuralValues.maxconnectiondensity);
-
-#else
-	Randomize(gMinBitProb + drand48() * (gMaxBitProb - gMinBitProb));
-#endif
+	fGenes[eecdgene + (7 - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups + 2] = 255;	// full e-e connectivity from red vision (2) to fight behavior (7)
+	fGenes[eecdgene + (5 - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups + 3] = 255;	// full e-e connectivity from green vision (3) to eat behavior (5)
+	fGenes[eecdgene + (6 - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups + 4] = 255;	// full e-e connectivity from blue vision (4) to mate behavior (6)
+	fGenes[iecdgene + (8 - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups + 2] = 127;	// 1/2  i-e connectivity from red vision (2) to speed (move) behavior (8)
+	fGenes[ietdgene + (8 - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups + 2] = 255;	// maximum topo distortion, so it's random red pixels that force a slow-down
+	fGenes[eecdgene + (8 - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups + 3] = 127;	// 1/2  e-e connectivity from green vision (3) to speed (move) behavior (8)
+	fGenes[eetdgene + (8 - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups + 3] = 255;	// maximum topo distortion, so it's random green pixels that force a speed-up
+	fGenes[eecdgene + (8 - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups + 4] = 127;	// 1/2  e-e connectivity from blue vision (4) to speed (move) behavior (8)
+	fGenes[eetdgene + (8 - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups + 4] = 255;	// maximum topo distortion, so it's random blue pixels that force a speed-up
+	fGenes[eecdgene + (9 - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups + 2] = 127;	// 1/2  e-e connectivity from red vision (2) to yaw behavior (9) [left pixels on causes left turn]
+	fGenes[iecdgene + (9 - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups + 2] = 127;	// 1/2  i-e connectivity from red vision (2) to yaw behavior (9) [some pixels casue right turn, with top. dist.]
+	fGenes[ietdgene + (9 - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups + 2] = 255;	// maximum topo distortion, so some red pixels are likely to connect to right side
+	fGenes[eecdgene + (9 - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups + 3] = 127;	// 1/2  e-e connectivity from green vision (2) to yaw behavior (9) [left pixels on causes left turn]
+	fGenes[iecdgene + (9 - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups + 3] = 127;	// 1/2  i-e connectivity from green vision (2) to yaw behavior (9) [some pixels casue right turn, with top. dist.]
+	fGenes[ietdgene + (9 - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups + 3] = 255;	// maximum topo distortion, so some green pixels are likely to connect to right side
+	fGenes[eecdgene + (9 - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups + 4] = 127;	// 1/2  e-e connectivity from blue vision (2) to yaw behavior (9) [left pixels on causes left turn]
+	fGenes[iecdgene + (9 - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups + 4] = 127;	// 1/2  i-e connectivity from blue vision (2) to yaw behavior (9) [some pixels casue right turn, with top. dist.]
+	fGenes[ietdgene + (9 - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups + 4] = 255;	// maximum topo distortion, so some blue pixels are likely to connect to right side
+//	Print();
 }
 
 
@@ -394,8 +417,8 @@ void genome::Crossover(genome* g1, genome* g2, bool mutate)
 	Q_ASSERT(fGenes != NULL);
 	
 #if DesignerGenesOnly
-	// If we're only allowing the original DesignerGenes, then we can just
-	// return, because 'this' already has those genes, by design.
+	// If we're only allowing the original DesignerGenes, then make sure that's what we get.
+	Randomize();	// will enforce DesignerGenes, if enabled
 	return;
 #endif
 	

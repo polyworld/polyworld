@@ -21,6 +21,7 @@ public:
     void Init(bool randomized = false);
 	void Dump(std::ostream& out);
 	void Load(std::istream& in);
+	void SeedGenes();
     void Randomize();
     void Randomize(float bitonprob);
     void Mutate();

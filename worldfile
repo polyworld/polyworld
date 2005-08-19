@@ -1,4 +1,4 @@
-8      version
+9      version
 
 1      docpuwork
 10000  dumpfreq
@@ -11,17 +11,19 @@
 1.0    maxvel
 30     minnumcritters
 300    maxnumcritters
-120    initnumcritters
+60    initnumcritters
+60    numberToSeed
+0.0    probabilityOfMutatingSeed
 -1     misccritters
 
 42    positionseed
 42    genomeseed
 
-150    minfoodcount
-345    maxfoodcount
-270    maxfoodgrown
-270    initfoodcount
-0.2    foodrate
+45    minfoodcount
+120    maxfoodcount
+90    maxfoodgrown
+90    initfoodcount
+0.1    foodrate
 1      crittersRfood
 100    fit1freq
 2      fit2freq
@@ -56,7 +58,7 @@
 1000.0 maxmaxenergy
 .2     minmateenergy
 .8     maxmatenergy
-0.05   minmatefrac
+0.5   minmatefrac_0.05
 0.5    minmaxspeed
 1.5    maxmaxspeed
 1.0    speed2dpos
@@ -78,7 +80,7 @@
 0.01   light2energy
 0.001  focus2energy
 0.01   maxsynapse2energy
-0.01   fixedenergydrain_0.05
+0.05   fixedenergydrain
 0.99   decayrate
 
 0.2    eatthreshold
@@ -89,7 +91,7 @@
 
 0.5    logisticslope
 8.0    maxweight
-0.1    initmaxweight_0.5
+1.0    initmaxweight_0.5_0.1
 0.1    minbitprob
 0.6    maxbitprob
 0.2    critterheight
@@ -126,29 +128,40 @@
 33.33  domainbarrier#1
 66.67  domainbarrier#2
 
+45    minfoodcount
+120    maxfoodcount
+90    maxfoodgrown
+90    initfoodcount
+
 10     domain[0].minnumcritters
 100    domain[0].maxnumcritters
-40     domain[0].initnumcritters
-50     domain[0].minfoodcount
-115    domain[0].maxfoodcount
-90     domain[0].maxfoodgrown
-90     domain[0].initfoodcount
+20     domain[0].initnumcritters
+20     domain[0].numberToSeed
+0.0    domain[0].probabilityOfMutatingSeed
+15     domain[0].minfoodcount
+40    domain[0].maxfoodcount
+30     domain[0].maxfoodgrown
+30     domain[0].initfoodcount
 
 10     domain[1].minnumcritters
 100    domain[1].maxnumcritters
-40     domain[1].initnumcritters
-50     domain[1].minfoodcount
-115    domain[1].maxfoodcount
-90     domain[1].maxfoodgrown
-90     domain[1].initfoodcount
+20     domain[1].initnumcritters
+20     domain[1].numberToSeed
+0.0    domain[1].probabilityOfMutatingSeed
+15     domain[1].minfoodcount
+40    domain[1].maxfoodcount
+30     domain[1].maxfoodgrown
+30     domain[1].initfoodcount
 
 10     domain[2].minnumcritters
 100    domain[2].maxnumcritters
-40     domain[2].initnumcritters
-50     domain[2].minfoodcount
-115    domain[2].maxfoodcount
-90     domain[2].maxfoodgrown
-90     domain[2].initfoodcount
+20     domain[2].initnumcritters
+20     domain[2].numberToSeed
+0.0    domain[2].probabilityOfMutatingSeed
+15     domain[2].minfoodcount
+40    domain[2].maxfoodcount
+30     domain[2].maxfoodgrown
+30     domain[2].initfoodcount
 
 0      binchartgs
 
@@ -173,9 +186,9 @@
 0      tracking
 0.0    minfoodenergyatdeath
 
-1      graycoding
+0      graycoding
 
 0.10   smiteFrac
-0.25   smiteAgeFrac
+0.25   smiteAgeFrac_affectsAverageFitness
 
 1      recordMovie

@@ -94,6 +94,7 @@ public:
     short NumRedNeurons();
     short NumGreenNeurons();
     short NumBlueNeurons();
+	short NumNeuronGroups();
         
 	void dumpAnatomical( long index, float fitness );
 	FILE* startFunctional( long index );
@@ -195,5 +196,6 @@ inline short brain::GetNumNonInputNeurons() { return numnoninputneurons; }
 inline short brain::NumRedNeurons() { return fNumRedNeurons; }
 inline short brain::NumGreenNeurons() { return fNumGreenNeurons; }
 inline short brain::NumBlueNeurons() { return fNumBlueNeurons; }
+inline short brain::NumNeuronGroups() { return numneurgroups; }
 
 #endif

@@ -11,6 +11,7 @@ struct domainstruct
     long minnumcritters;
     long maxnumcritters;
     long initnumcritters;
+	long numberToSeed;
     long minfoodcount;
     long maxfoodcount;
     long maxfoodgrown;
@@ -23,6 +24,7 @@ struct domainstruct
     long lastcreate;
     long maxgapcreate;
     long foodcount;
+	float probabilityOfMutatingSeeds;
     short ifit;
     short jfit;
     genome** fittest;

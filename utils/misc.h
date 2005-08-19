@@ -9,6 +9,7 @@
 #ifndef MISC_H
 #define MISC_H
 
+#include <float.h>
 #include <math.h>
 
 #define nl <<"\n"
@@ -26,7 +27,7 @@
 
 #define forever for (;;)
 
-#define nint(a) (long((a)+(((a)<0.0)?-0.499999999:0.499999999)))
+#define nint(a) ((long)((a)+(((a)<0.0)?-0.499999999:0.499999999)))
 
 #define interp(x,ylo,yhi) ((ylo)+(x)*((yhi)-(ylo)))
 
@@ -38,6 +39,26 @@
 
 #define getbit(a,b) (((a)>>(b))&1)
 
+class Stat
+{
+public:
+	Stat()					{ reset(); }
+	~Stat()					{}
+	
+	float	mean()			{ if( !count ) return( 0.0 ); return( sum / count ); }
+	float	stddev()		{ if( !count ) return( 0.0 ); register float m = sum / count;  return( sqrt( sum2 / count  -  m * m ) ); }
+	float	min()			{ if( !count ) return( 0.0 ); return( mn ); }
+	float	max()			{ if( !count ) return( 0.0 ); return( mx ); }
+	void	add( float v )	{ sum += v; sum2 += v*v; count++; mn = v < mn ? v : mn; mx = v > mx ? v : mx; }
+	void	reset()			{ mn = FLT_MAX; mx = FLT_MIN; sum = sum2 = count = 0; }
+
+private:
+	float	mn;		// minimum
+	float	mx;		// maximum
+	float	sum;	// sum
+	float	sum2;	// sum of squares
+	long	count;	// count
+};
 
 inline int   sign(int   x) { return (x<0)  ? -1  : 1 ; }
 inline long  sign(long  x) { return (x<0)  ? -1  : 1 ; }

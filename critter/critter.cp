@@ -372,7 +372,7 @@ void critter::grow()
     fNoseColor[0] = fNoseColor[1] = fNoseColor[2] = 0.5;
     
     fAge = 0;
-    fLastMate = -gInitMateWait;
+    fLastMate = gInitMateWait;
     
     fMaxEnergy = gMinMaxEnergy + ((fGenome->Size(gMinCritterSize, gMaxCritterSize) - gMinCritterSize)
     			 * (gMaxMaxEnergy - gMinMaxEnergy) / (gMaxCritterSize - gMinCritterSize) );

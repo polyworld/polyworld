@@ -5,6 +5,7 @@
 /********************************************************************/
 
 #define DesignerBrains 0
+#define DebugBrainGrow 0
 
 // Self
 #include "brain.h"
@@ -24,7 +25,6 @@
 #include "Simulation.h"
 
 
-//#define DEBUGBRAINGROW
 
 
 // Internal globals
@@ -533,10 +533,10 @@ void brain::GrowDesignedBrain( genome* g )
 	// we only have input and output neural groups in this simplifed brain
 	numneurgroups = brain::gNeuralValues.numinputneurgroups + brain::gNeuralValues.numoutneurgroups;
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
     cout << "****************************************************" nlf;
     cout << "Starting a new brain with numneurgroups = " << numneurgroups nlf;
-#endif DEBUGBRAINGROW
+#endif
 
 	numinputneurons = 0;
 	short i;
@@ -553,9 +553,9 @@ void brain::GrowDesignedBrain( genome* g )
 			exit( 1 );
 		}
 
-	#ifdef DEBUGBRAINGROW
+	#if DebugBrainGrow
         cout << "group " << i << " has " << numDesignExcNeurons[i] << " neurons" nlf;
-	#endif DEBUGBRAINGROW
+	#endif
 	}
 	firstnoninputneuron = numinputneurons;
 	
@@ -588,10 +588,10 @@ void brain::GrowDesignedBrain( genome* g )
     if ((xblueintwidth*fNumBlueNeurons) != brain::retinawidth)
         xblueintwidth = 0;
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
     cout << "fNumRedNeurons, fNumGreenNeurons, fNumBlueNeurons = "
          << fNumRedNeurons cms fNumGreenNeurons cms fNumBlueNeurons nlf;;
-#endif DEBUGBRAINGROW
+#endif
 
 	numsynapses = 0;
 	numnoninputneurons = 0;
@@ -606,10 +606,10 @@ void brain::GrowDesignedBrain( genome* g )
 		firstineur[i] = numinputneurons + numnoninputneurons;
 		numnoninputneurons++;
 		
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
         cout << "group " << i << " has " << numDesignExcNeurons[i] << " e-neurons" nlf;
         cout << "  and " << i << " has " << numDesignInhNeurons[i] << " i-neurons" nlf;
-#endif DEBUGBRAINGROW
+#endif
 
 		// Since we are only dealing with output groups, there is only one neuron in each group,
 		// so the synapse count is just the number of neurons providing input to this group.
@@ -625,7 +625,7 @@ void brain::GrowDesignedBrain( genome* g )
 				printf( "%s: ERROR initializing numsynapses, invalid pre-synaptic group (%d)\n", __FUNCTION__, j );
 				exit( 1 );
 			}
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
             cout << "  from " << j << " to " << i << " there are "
                  << numDesignExcNeurons[j] << " e-e synapses" nlf;
             cout << "  from " << j << " to " << i << " there are "
@@ -636,7 +636,7 @@ void brain::GrowDesignedBrain( genome* g )
                  << 0 << " i-i synapses" nlf;
             cout << "  from " << j << " to " << i << " there are "
                  << numDesignExcNeurons[j] + numDesignInhNeurons[j] << " total synapses" nlf;
-#endif DEBUGBRAINGROW
+#endif
 		}
 	}
 	
@@ -682,9 +682,9 @@ void brain::GrowDesignedBrain( genome* g )
 
     for (i = brain::gNeuralValues.numinputneurgroups; i < numneurgroups; i++)
     {
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
         cout << "For group " << i << ":" nlf;
-#endif DEBUGBRAINGROW
+#endif
 
         float groupbias;
 		
@@ -694,10 +694,10 @@ void brain::GrowDesignedBrain( genome* g )
 			groupbias = 0.0;	// no bias	// g->Bias(i);
         groupblrate[i] = 0.0;	// no bias learning	// g->BiasLearningRate(i);
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
         cout << "  groupbias = " << groupbias nlf;
         cout << "  groupbiaslearningrate = " << groupblrate[i] nlf;
-#endif DEBUGBRAINGROW
+#endif
 
         for (j = 0; j < numneurgroups; j++)
         {
@@ -715,30 +715,30 @@ void brain::GrowDesignedBrain( genome* g )
         // setup all e-neurons for this group
         nneuri = numDesignExcNeurons[i];
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
         cout << "  Setting up " << nneuri << " e-neurons" nlf;
-#endif DEBUGBRAINGROW
+#endif
 		
 		short ini;	
         for (ini = 0; ini < nneuri; ini++)
         {
             ineur = ini + firsteneur[i];
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
             cout << "  For ini, ineur = "
                  << ini cms ineur << ":" nlf;
-#endif DEBUGBRAINGROW
+#endif
 
             neuron[ineur].group = i;
             neuron[ineur].bias = groupbias;
             neuron[ineur].startsynapses = numsyn;
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
             cout << "    group = " << neuron[ineur].group nlf;
             cout << "    bias = " << neuron[ineur].bias nlf;
             cout << "    startsynapses = " << neuron[ineur].startsynapses nlf;
             cout << "    Setting up e-e connections:" nlf;
-#endif DEBUGBRAINGROW
+#endif
 
             // setup all e-e connections for this e-neuron
             for (j = 0; j < numneurgroups; j++)
@@ -756,11 +756,11 @@ void brain::GrowDesignedBrain( genome* g )
 					nsynij = numDesignExcNeurons[j];	// g->numeesynapses(i,j);
 				}
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
                 cout << "      From group " << j nlf;
                 cout << "      with nneurj, (old)eeremainder = "
                      << nneurj cms eeremainder[j] nlf;
-#endif DEBUGBRAINGROW
+#endif
 
                 nsynijperneur = float(nsynij)/float(nneuri);
                 newsyn = short(nsynijperneur + eeremainder[j] + 1.e-5);
@@ -770,12 +770,12 @@ void brain::GrowDesignedBrain( genome* g )
                 joff = short((float(ini) / float(nneuri)) * float(nneurj) - float(newsyn) * 0.5);
                 joff = max<short>(0, min<short>(nneurj - newsyn, joff));
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
                 cout << "      and nsynij, nsynijperneur, newsyn = "
                      << nsynij cms nsynijperneur cms newsyn nlf;
                 cout << "      and (new)eeremainder, tdij, joff = "
                      << eeremainder[j] cms tdij cms joff nlf;
-#endif DEBUGBRAINGROW
+#endif
 
                 if ((joff + newsyn) > nneurj)
                 {
@@ -829,11 +829,11 @@ void brain::GrowDesignedBrain( genome* g )
                     else
                         synapse[numsyn].efficacy = DesignedEfficacy( i, j, isyn, kSynapseTypeEE );	// reset this later for the designed brain
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
                     cout << "        synapse[" << numsyn
-                         << "].toneur, fromneur, efficacy, lrate = "
+                         << "].toneur, fromneur, efficacy = "
                          << ineur cms jneur cms synapse[numsyn].efficacy nlf;
-#endif DEBUGBRAINGROW
+#endif
 
                     numsyn++;
                 }
@@ -841,9 +841,9 @@ void brain::GrowDesignedBrain( genome* g )
 
             // setup all i-e connections for this e-neuron
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
             cout << "    Setting up i-e connections:" nlf;
-#endif DEBUGBRAINGROW
+#endif
 
             for (j = 0; j < numneurgroups; j++)
             {
@@ -860,11 +860,11 @@ void brain::GrowDesignedBrain( genome* g )
 					nsynij = numDesignInhNeurons[j];	// g->numiesynapses(i,j);
 				}
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
                 cout << "      From group " << j nlf;
                 cout << "      with nneurj, (old)ieremainder = "
                      << nneurj cms ieremainder[j] nlf;
-#endif DEBUGBRAINGROW
+#endif
 
                 nsynijperneur = float(nsynij)/float(nneuri);
                 newsyn = short(nsynijperneur + ieremainder[j] + 1.e-5);
@@ -875,12 +875,12 @@ void brain::GrowDesignedBrain( genome* g )
                      - float(newsyn) * 0.5);
                 joff = max<short>(0, min<short>(nneurj - newsyn, joff));
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
                 cout << "      and nsynij, nsynijperneur, newsyn = "
                      << nsynij cms nsynijperneur cms newsyn nlf;
                 cout << "      and (new)ieremainder, tdij, joff = "
                      << ieremainder[j] cms tdij cms joff nlf;
-#endif DEBUGBRAINGROW
+#endif
 
                 if ((joff+newsyn) > nneurj)
                 {
@@ -933,11 +933,11 @@ void brain::GrowDesignedBrain( genome* g )
                     else
                         synapse[numsyn].efficacy = min(-1.e-10, (double) DesignedEfficacy( i, j, isyn, kSynapseTypeIE ));
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
                     cout << "        synapse[" << numsyn
-                         << "].toneur, fromneur, efficacy, lrate = "
+                         << "].toneur, fromneur, efficacy = "
                          << ineur cms jneur cms synapse[numsyn].efficacy nlf;
-#endif DEBUGBRAINGROW
+#endif
 
                     numsyn++;
                 }
@@ -954,29 +954,29 @@ void brain::GrowDesignedBrain( genome* g )
         else
             nneuri = numDesignInhNeurons[i];	// g->numineur(i);
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
         cout << "  Setting up " << nneuri << " i-neurons" nlf;
-#endif DEBUGBRAINGROW
+#endif
 
         for (ini = 0; ini < nneuri; ini++)
         {
             ineur = ini + firstineur[i];
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
             cout << "  For ini, ineur = "
                  << ini cms ineur << ":" nlf;
-#endif DEBUGBRAINGROW
+#endif
 
             neuron[ineur].group = i;
             neuron[ineur].bias = groupbias;
             neuron[ineur].startsynapses = numsyn;
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
             cout << "    group = " << neuron[ineur].group nlf;
             cout << "    bias = " << neuron[ineur].bias nlf;
             cout << "    startsynapses = " << neuron[ineur].startsynapses nlf;
             cout << "    Setting up e-i connections:" nlf;
-#endif DEBUGBRAINGROW
+#endif
 
             // setup all e-i connections for this i-neuron
 
@@ -995,11 +995,11 @@ void brain::GrowDesignedBrain( genome* g )
 					nsynij = numDesignExcNeurons[j];	// g->numeisynapses(i, j);
 				}
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
                 cout << "      From group " << j nlf;
                 cout << "      with nneurj, (old)eiremainder = "
                      << nneurj cms eiremainder[j] nlf;
-#endif DEBUGBRAINGROW
+#endif
 
                 nsynijperneur = float(nsynij) / float(nneuri);
                 newsyn = short(nsynijperneur + eiremainder[j] + 1.e-5);
@@ -1009,12 +1009,12 @@ void brain::GrowDesignedBrain( genome* g )
                 joff = short((float(ini)/float(nneuri)) * float(nneurj) - float(newsyn) * 0.5);
                 joff = max<short>(0, min<short>(nneurj - newsyn, joff));
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
                 cout << "      and nsynij, nsynijperneur, newsyn = "
                      << nsynij cms nsynijperneur cms newsyn nlf;
                 cout << "      and (new)eiremainder, tdij, joff = "
                      << eiremainder[j] cms tdij cms joff nlf;
-#endif DEBUGBRAINGROW
+#endif
 
                 if ((joff+newsyn) > nneurj)
                 {
@@ -1067,11 +1067,11 @@ void brain::GrowDesignedBrain( genome* g )
                     else
                         synapse[numsyn].efficacy = DesignedEfficacy( i, j, isyn, kSynapseTypeEI );
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
                     cout << "        synapse[" << numsyn
-                         << "].toneur, fromneur, efficacy, lrate = "
+                         << "].toneur, fromneur, efficacy = "
                          << ineur cms jneur cms synapse[numsyn].efficacy nlf;
-#endif DEBUGBRAINGROW
+#endif
 
                     numsyn++;
                 }
@@ -1093,11 +1093,11 @@ void brain::GrowDesignedBrain( genome* g )
 					nsynij = numDesignInhNeurons[j];	// g->numiisynapses(i,j);
 				}
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
                 cout << "      From group " << j nlf;
                 cout << "      with nneurj, (old)iiremainder = "
                      << nneurj cms iiremainder[j] nlf;
-#endif DEBUGBRAINGROW
+#endif
 
                 nsynijperneur = float(nsynij)/float(nneuri);
                 newsyn = short(nsynijperneur + iiremainder[j] + 1.e-5);
@@ -1107,12 +1107,12 @@ void brain::GrowDesignedBrain( genome* g )
                 joff = short((float(ini)/float(nneuri)) * float(nneurj) - float(newsyn) * 0.5);
                 joff = max<short>(0, min<short>(nneurj - newsyn, joff));
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
                 cout << "      and nsynij, nsynijperneur, newsyn = "
                      << nsynij cms nsynijperneur cms newsyn nlf;
                 cout << "      and (new)iiremainder, tdij, joff = "
                      << iiremainder[j] cms tdij cms joff nlf;
-#endif DEBUGBRAINGROW
+#endif
 
                 if ((joff+newsyn) > nneurj)
                 {
@@ -1165,11 +1165,11 @@ void brain::GrowDesignedBrain( genome* g )
                     else
                         synapse[numsyn].efficacy = min(-1.e-10, (double) DesignedEfficacy( i, j, isyn, kSynapseTypeII ));
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
                     cout << "        synapse[" << numsyn
-                         << "].toneur, fromneur, efficacy, lrate = "
+                         << "].toneur, fromneur, efficacy = "
                          << ineur cms jneur cms synapse[numsyn].efficacy nlf;
-#endif DEBUGBRAINGROW
+#endif
 
                     numsyn++;
                 }
@@ -1337,10 +1337,10 @@ void brain::Grow(genome* g)
 
     numneurgroups = g->NumNeuronGroups();
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
     cout << "****************************************************" nlf;
     cout << "Starting a new brain with numneurgroups = " << numneurgroups nlf;
-#endif DEBUGBRAINGROW
+#endif
 
     numinputneurons = 0;
     
@@ -1351,16 +1351,16 @@ void brain::Grow(genome* g)
         firstineur[i] = numinputneurons; // input neurons double as e & i
         numinputneurons += g->numeneur(i);
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
         cout << "group " << i << " has " << g->numeneur(i) << " neurons" nlf;
-#endif DEBUGBRAINGROW
+#endif
 
     }
     firstnoninputneuron = numinputneurons;
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
     cout << "numinputneurons = " << numinputneurons nlf;
-#endif DEBUGBRAINGROW
+#endif
 
     // note, group 0 = randomneuron, group 1 = energyneuron
     // group 2 = redneuron(s)
@@ -1391,10 +1391,10 @@ void brain::Grow(genome* g)
     if ((xblueintwidth*fNumBlueNeurons) != brain::retinawidth)
         xblueintwidth = 0;
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
     cout << "fNumRedNeurons, fNumGreenNeurons, fNumBlueNeurons = "
          << fNumRedNeurons cms fNumGreenNeurons cms fNumBlueNeurons nlf;;
-#endif DEBUGBRAINGROW
+#endif
 
     numsynapses = 0;
     numnoninputneurons = 0;
@@ -1409,16 +1409,16 @@ void brain::Grow(genome* g)
         firstineur[i] = numinputneurons + numnoninputneurons;
         numnoninputneurons += g->numineur(i);
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
         cout << "group " << i << " has " << g->numeneur(i) << " e-neurons" nlf;
         cout << "  and " << i << " has " << g->numineur(i) << " i-neurons" nlf;
-#endif DEBUGBRAINGROW
+#endif
 
         for (j = 0; j < numneurgroups; j++)
         {
             numsynapses += g->numsynapses(i,j);
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
             cout << "  from " << j << " to " << i << " there are "
                  << g->numeesynapses(i,j) << " e-e synapses" nlf;
             cout << "  from " << j << " to " << i << " there are "
@@ -1429,7 +1429,7 @@ void brain::Grow(genome* g)
                  << g->numiisynapses(i,j) << " i-i synapses" nlf;
             cout << "  from " << j << " to " << i << " there are "
                  << g->numsynapses(i,j) << " total synapses" nlf;
-#endif DEBUGBRAINGROW
+#endif
 
         }
     }
@@ -1453,10 +1453,10 @@ void brain::Grow(genome* g)
 	numOutputNeurons = 7;
 	firstOutputNeuron = eatneuron;
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
     cout << "numneurons = " << numneurons << "  (of " << brain::gNeuralValues.maxneurons pnlf;
     cout << "numsynapses = " << numsynapses << "  (of " << brain::gNeuralValues.maxsynapses pnlf;
-#endif DEBUGBRAINGROW
+#endif
 
 #ifdef DEBUGCHECK
     debugcheck("brain::grow before allocating memory");
@@ -1489,17 +1489,17 @@ void brain::Grow(genome* g)
 
     for (i = brain::gNeuralValues.numinputneurgroups; i < numneurgroups; i++)
     {
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
         cout << "For group " << i << ":" nlf;
-#endif DEBUGBRAINGROW
+#endif
 
         float groupbias = g->Bias(i);
         groupblrate[i] = g->BiasLearningRate(i);
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
         cout << "  groupbias = " << groupbias nlf;
         cout << "  groupbiaslearningrate = " << groupblrate[i] nlf;
-#endif DEBUGBRAINGROW
+#endif
 
         for (j = 0; j < numneurgroups; j++)
         {
@@ -1517,41 +1517,41 @@ void brain::Grow(genome* g)
         // setup all e-neurons for this group
         nneuri = g->numeneur(i);
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
         cout << "  Setting up " << nneuri << " e-neurons" nlf;
-#endif DEBUGBRAINGROW
+#endif
 		
 		short ini;	
         for (ini = 0; ini < nneuri; ini++)
         {
             ineur = ini + firsteneur[i];
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
             cout << "  For ini, ineur = "
                  << ini cms ineur << ":" nlf;
-#endif DEBUGBRAINGROW
+#endif
 
             neuron[ineur].group = i;
             neuron[ineur].bias = groupbias;
             neuron[ineur].startsynapses = numsyn;
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
             cout << "    group = " << neuron[ineur].group nlf;
             cout << "    bias = " << neuron[ineur].bias nlf;
             cout << "    startsynapses = " << neuron[ineur].startsynapses nlf;
             cout << "    Setting up e-e connections:" nlf;
-#endif DEBUGBRAINGROW
+#endif
 
             // setup all e-e connections for this e-neuron
             for (j = 0; j < numneurgroups; j++)
             {
                 nneurj = g->numeneur(j);
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
                 cout << "      From group " << j nlf;
                 cout << "      with nneurj, (old)eeremainder = "
                      << nneurj cms eeremainder[j] nlf;
-#endif DEBUGBRAINGROW
+#endif
 
                 nsynij = g->numeesynapses(i,j);
                 nsynijperneur = float(nsynij)/float(nneuri);
@@ -1562,12 +1562,12 @@ void brain::Grow(genome* g)
                 joff = short((float(ini) / float(nneuri)) * float(nneurj) - float(newsyn) * 0.5);
                 joff = max<short>(0, min<short>(nneurj - newsyn, joff));
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
                 cout << "      and nsynij, nsynijperneur, newsyn = "
                      << nsynij cms nsynijperneur cms newsyn nlf;
                 cout << "      and (new)eeremainder, tdij, joff = "
                      << eeremainder[j] cms tdij cms joff nlf;
-#endif DEBUGBRAINGROW
+#endif
 
                 if ((joff + newsyn) > nneurj)
                 {
@@ -1621,11 +1621,11 @@ void brain::Grow(genome* g)
                     else
                         synapse[numsyn].efficacy = rrand(initminweight, gInitMaxWeight);
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
                     cout << "        synapse[" << numsyn
-                         << "].toneur, fromneur, efficacy, lrate = "
+                         << "].toneur, fromneur, efficacy = "
                          << ineur cms jneur cms synapse[numsyn].efficacy nlf;
-#endif DEBUGBRAINGROW
+#endif
 
                     numsyn++;
                 }
@@ -1633,19 +1633,19 @@ void brain::Grow(genome* g)
 
             // setup all i-e connections for this e-neuron
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
             cout << "    Setting up i-e connections:" nlf;
-#endif DEBUGBRAINGROW
+#endif
 
             for (j = 0; j < numneurgroups; j++)
             {
                 nneurj = g->numineur(j);
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
                 cout << "      From group " << j nlf;
                 cout << "      with nneurj, (old)ieremainder = "
                      << nneurj cms ieremainder[j] nlf;
-#endif DEBUGBRAINGROW
+#endif
 
                 nsynij = g->numiesynapses(i,j);
                 nsynijperneur = float(nsynij)/float(nneuri);
@@ -1657,12 +1657,12 @@ void brain::Grow(genome* g)
                      - float(newsyn) * 0.5);
                 joff = max<short>(0, min<short>(nneurj - newsyn, joff));
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
                 cout << "      and nsynij, nsynijperneur, newsyn = "
                      << nsynij cms nsynijperneur cms newsyn nlf;
                 cout << "      and (new)ieremainder, tdij, joff = "
                      << ieremainder[j] cms tdij cms joff nlf;
-#endif DEBUGBRAINGROW
+#endif
 
                 if ((joff+newsyn) > nneurj)
                 {
@@ -1715,11 +1715,11 @@ void brain::Grow(genome* g)
                     else
                         synapse[numsyn].efficacy = min(-1.e-10, -rrand(initminweight, gInitMaxWeight));
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
                     cout << "        synapse[" << numsyn
-                         << "].toneur, fromneur, efficacy, lrate = "
+                         << "].toneur, fromneur, efficacy = "
                          << ineur cms jneur cms synapse[numsyn].efficacy nlf;
-#endif DEBUGBRAINGROW
+#endif
 
                     numsyn++;
                 }
@@ -1736,29 +1736,29 @@ void brain::Grow(genome* g)
         else
             nneuri = g->numineur(i);
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
         cout << "  Setting up " << nneuri << " i-neurons" nlf;
-#endif DEBUGBRAINGROW
+#endif
 
         for (ini = 0; ini < nneuri; ini++)
         {
             ineur = ini + firstineur[i];
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
             cout << "  For ini, ineur = "
                  << ini cms ineur << ":" nlf;
-#endif DEBUGBRAINGROW
+#endif
 
             neuron[ineur].group = i;
             neuron[ineur].bias = groupbias;
             neuron[ineur].startsynapses = numsyn;
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
             cout << "    group = " << neuron[ineur].group nlf;
             cout << "    bias = " << neuron[ineur].bias nlf;
             cout << "    startsynapses = " << neuron[ineur].startsynapses nlf;
             cout << "    Setting up e-i connections:" nlf;
-#endif DEBUGBRAINGROW
+#endif
 
             // setup all e-i connections for this i-neuron
 
@@ -1766,11 +1766,11 @@ void brain::Grow(genome* g)
             {
                 nneurj = g->numeneur(j);
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
                 cout << "      From group " << j nlf;
                 cout << "      with nneurj, (old)eiremainder = "
                      << nneurj cms eiremainder[j] nlf;
-#endif DEBUGBRAINGROW
+#endif
 
                 nsynij = g->numeisynapses(i, j);
                 nsynijperneur = float(nsynij) / float(nneuri);
@@ -1781,12 +1781,12 @@ void brain::Grow(genome* g)
                 joff = short((float(ini)/float(nneuri)) * float(nneurj) - float(newsyn) * 0.5);
                 joff = max<short>(0, min<short>(nneurj - newsyn, joff));
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
                 cout << "      and nsynij, nsynijperneur, newsyn = "
                      << nsynij cms nsynijperneur cms newsyn nlf;
                 cout << "      and (new)eiremainder, tdij, joff = "
                      << eiremainder[j] cms tdij cms joff nlf;
-#endif DEBUGBRAINGROW
+#endif
 
                 if ((joff+newsyn) > nneurj)
                 {
@@ -1839,11 +1839,11 @@ void brain::Grow(genome* g)
                     else
                         synapse[numsyn].efficacy = rrand(initminweight, gInitMaxWeight);
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
                     cout << "        synapse[" << numsyn
-                         << "].toneur, fromneur, efficacy, lrate = "
+                         << "].toneur, fromneur, efficacy = "
                          << ineur cms jneur cms synapse[numsyn].efficacy nlf;
-#endif DEBUGBRAINGROW
+#endif
 
                     numsyn++;
                 }
@@ -1854,11 +1854,11 @@ void brain::Grow(genome* g)
             {
                 nneurj = g->numineur(j);
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
                 cout << "      From group " << j nlf;
                 cout << "      with nneurj, (old)iiremainder = "
                      << nneurj cms iiremainder[j] nlf;
-#endif DEBUGBRAINGROW
+#endif
 
                 nsynij = g->numiisynapses(i,j);
                 nsynijperneur = float(nsynij)/float(nneuri);
@@ -1869,12 +1869,12 @@ void brain::Grow(genome* g)
                 joff = short((float(ini)/float(nneuri)) * float(nneurj) - float(newsyn) * 0.5);
                 joff = max<short>(0, min<short>(nneurj - newsyn, joff));
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
                 cout << "      and nsynij, nsynijperneur, newsyn = "
                      << nsynij cms nsynijperneur cms newsyn nlf;
                 cout << "      and (new)iiremainder, tdij, joff = "
                      << iiremainder[j] cms tdij cms joff nlf;
-#endif DEBUGBRAINGROW
+#endif
 
                 if ((joff+newsyn) > nneurj)
                 {
@@ -1927,11 +1927,11 @@ void brain::Grow(genome* g)
                     else
                         synapse[numsyn].efficacy = min(-1.e-10, -rrand(initminweight, gInitMaxWeight));
 
-#ifdef DEBUGBRAINGROW
+#if DebugBrainGrow
                     cout << "        synapse[" << numsyn
-                         << "].toneur, fromneur, efficacy, lrate = "
+                         << "].toneur, fromneur, efficacy = "
                          << ineur cms jneur cms synapse[numsyn].efficacy nlf;
-#endif DEBUGBRAINGROW
+#endif
 
                     numsyn++;
                 }
