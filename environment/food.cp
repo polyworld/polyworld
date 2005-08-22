@@ -31,6 +31,10 @@ float food::gMinFoodEnergy;
 float food::gMaxFoodEnergy;
 float food::gSize2Energy;
 
+int food::gNumFoodBands;
+FoodBand* food::gFoodBand;
+float food::gFoodBandZTotal;
+
 
 //===========================================================================
 // food
@@ -152,7 +156,7 @@ void food::initpos()
 {
 	fPosition[0] = drand48() * globals::worldsize;
 	fPosition[1] = 0.5 * fLength[1];
-	fPosition[2] = drand48() * -globals::worldsize;
+	fPosition[2] = FoodWorldZ( drand48() * gFoodBandZTotal );
 }
 
 
@@ -194,6 +198,43 @@ void food::setradius()
 	if( !fRadiusFixed )  //  only set radius anew if not set manually
 		fRadius = sqrt( fLength[0]*fLength[0] + fLength[2]*fLength[2] ) * fRadiusScale * fScale * 0.5;
 	srPrint( "food::%s(): r=%g%s\n", __FUNCTION__, fRadius, fRadiusFixed ? "(fixed)" : "" );
+}
+
+
+//---------------------------------------------------------------------------
+// food::FoodWorldZ
+//---------------------------------------------------------------------------
+float food::FoodWorldZ( float foodBandZ )
+{
+	float worldZ;
+	int i;
+	float dz;
+	float zHigh;	// this, zLow, and foodBandZ are in the continuous coordinates of gFoodBandZTotal in which the random numbers are generated
+	
+	zHigh = 0.0;
+	for( i = 0; i < gNumFoodBands; i++ )
+	{
+		dz = gFoodBand[i].zMax - gFoodBand[i].zMin;
+		zHigh += dz;
+		
+		if( foodBandZ <= zHigh )
+			break;
+	}
+	
+	if( i >= gNumFoodBands )	// not found; shouldn't be possible
+	{
+		cerr << "food generated outside of any food band" nl;
+		worldZ = - globals::worldsize * 0.5;	// stick it in the precise middle; if we get many of these it should be very noticeable
+	}
+	else
+	{
+		float zLow = zHigh - dz;
+		
+		worldZ = gFoodBand[i].zMin  +  (foodBandZ - zLow);	// this is the normalized value
+		worldZ *= globals::worldsize;	// this is the final fully scaled value
+	}
+	
+	return( worldZ );
 }
 
 

@@ -1,30 +1,30 @@
-9      version
+10      version
 
 1      docpuwork
 10000  dumpfreq
-10000  statfreq
+1000   statfreq
 1      edges
 0      wraparound
 1      vision
 1      showvision
 22     minwin
 1.0    maxvel
-30     minnumcritters
+60     minnumcritters
 300    maxnumcritters
-60    initnumcritters
-60    numberToSeed
+90    initnumcritters
+0    numberToSeed
 0.0    probabilityOfMutatingSeed
 -1     misccritters
 
 42    positionseed
 42    genomeseed
 
-45    minfoodcount
+90    minfoodcount
 120    maxfoodcount
 90    maxfoodgrown
 90    initfoodcount
 0.1    foodrate
-1      crittersRfood
+0      crittersRfood
 100    fit1freq
 2      fit2freq
 10     numfit
@@ -128,35 +128,41 @@
 33.33  domainbarrier#1
 66.67  domainbarrier#2
 
-10     domain[0].minnumcritters
+20     domain[0].minnumcritters
 100    domain[0].maxnumcritters
-20     domain[0].initnumcritters
-20     domain[0].numberToSeed
+30     domain[0].initnumcritters
+0     domain[0].numberToSeed
 0.0    domain[0].probabilityOfMutatingSeed
-15     domain[0].minfoodcount
+30     domain[0].minfoodcount
 40    domain[0].maxfoodcount
 30     domain[0].maxfoodgrown
 30     domain[0].initfoodcount
 
-10     domain[1].minnumcritters
+20     domain[1].minnumcritters
 100    domain[1].maxnumcritters
-20     domain[1].initnumcritters
-20     domain[1].numberToSeed
+30     domain[1].initnumcritters
+0     domain[1].numberToSeed
 0.0    domain[1].probabilityOfMutatingSeed
-15     domain[1].minfoodcount
+30     domain[1].minfoodcount
 40    domain[1].maxfoodcount
 30     domain[1].maxfoodgrown
 30     domain[1].initfoodcount
 
-10     domain[2].minnumcritters
+20     domain[2].minnumcritters
 100    domain[2].maxnumcritters
-20     domain[2].initnumcritters
-20     domain[2].numberToSeed
+30     domain[2].initnumcritters
+0     domain[2].numberToSeed
 0.0    domain[2].probabilityOfMutatingSeed
-15     domain[2].minfoodcount
+30     domain[2].minfoodcount
 40    domain[2].maxfoodcount
 30     domain[2].maxfoodgrown
 30     domain[2].initfoodcount
+
+2      numFoodBands
+-1.0   foodBand[0].zMin
+-0.6    foodBand[0].zMax
+-.1    foodBand[1].zMin
+0.0    foodBand[1].zMax
 
 0      binchartgs
 

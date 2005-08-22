@@ -32,7 +32,7 @@ using namespace std;
 //---------------------------------------------------------------------------
 TTextStatusWindow::TTextStatusWindow(TSimulation* simulation)
 //	:	QWidget(NULL, "TextStatusWindow", WStyle_Customize | WStyle_SysMenu | WStyle_Tool),
-	:	QWidget( NULL, Qt::WindowSystemMenuHint | Qt::Tool ),
+	:	QGLWidget( NULL, NULL, Qt::WindowSystemMenuHint | Qt::Tool ),
 		fSimulation(simulation),
 		fSaveToFile(false)
 {
@@ -51,41 +51,91 @@ TTextStatusWindow::~TTextStatusWindow()
 
 
 //---------------------------------------------------------------------------
-// TTextStatusWindow::paintEvent
+// TTextStatusWindow::initializeGL
 //---------------------------------------------------------------------------
-void TTextStatusWindow::paintEvent(QPaintEvent* event)
+void TTextStatusWindow::initializeGL()
+{
+}
+
+
+//---------------------------------------------------------------------------
+// TTextStatusWindow::paintGL
+//---------------------------------------------------------------------------
+void TTextStatusWindow::paintGL()
+{
+}
+
+
+//---------------------------------------------------------------------------
+// TTextStatusWindow::resizeGL
+//---------------------------------------------------------------------------
+void TTextStatusWindow::resizeGL(int width, int height)
+{
+	glViewport(0, 0, width, height);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	gluOrtho2D(0.0, width, 0.0, height);	
+	glMatrixMode(GL_MODELVIEW);
+}
+
+
+//---------------------------------------------------------------------------
+// TTextStatusWindow::Draw
+//---------------------------------------------------------------------------
+void TTextStatusWindow::Draw()
 {
 	Q_ASSERT(fSimulation != NULL);
+	
+	TStatusList::const_iterator iter;
 	
 	// Ask simulation for a vector of status items to display
 	TStatusList statusList;
 	fSimulation->PopulateStatusList(statusList);
 	
-	// Fill background with black
-	QPainter paint(this);
-	QBrush brush( Qt::black );
-//	paint.setBrush( brush );
-	paint.fillRect( event->rect(), brush );
+	// TODO: The following test doesn't work as hoped.  I'd like to avoid
+	// making the window current and drawing into it if the app isn't in
+	// the foreground.  (But we want to continue calling PopulateStatusList(),
+	// because it also prints to our stat file, when appropriate.)
+	if( !updatesEnabled() )
+	{
+		// If we aren't updating the window display, just free the strings
+		iter = statusList.begin();
+		for (; iter != statusList.end(); ++iter)
+			free(*iter);
+		statusList.clear();
+		
+		return;
+	}
+	
+	makeCurrent();
+	
+	// Clear the window to black
+	qglClearColor( Qt::black );
+	glClear( GL_COLOR_BUFFER_BIT );
 	
 	// Draw text in white
-	QFont font("LucidaGrande", 12);
-	paint.setFont(font);
-	paint.setPen(Qt::white);
+	QFont font("LucidaGrande", 12, QFont::DemiBold);
+//	QFont font( "Monaco", 9 );
+//	QFont font("Courier", 10, QFont::Normal);
+	font.setStyleHint( QFont::AnyStyle, QFont::OpenGLCompatible );
+    glColor4ub( 255, 255, 255, 255 );
 	
 	int y = 15;
 			
-	TStatusList::const_iterator iter = statusList.begin();
+	iter = statusList.begin();
 	for (; iter != statusList.end(); ++iter)
 	{
-		paint.drawText(7, y, *iter);
+		renderText( 7, y, *iter, font );
 		free(*iter);
 		y += 15;
 	}
 	
 	statusList.clear();
+	
+	swapBuffers();
 }
 
-
+#if 0
 //---------------------------------------------------------------------------
 // TTextStatusWindow::mousePressEvent
 //---------------------------------------------------------------------------
@@ -116,7 +166,7 @@ void TTextStatusWindow::mouseReleaseEvent(QMouseEvent*)
 void TTextStatusWindow::mouseDoubleClickEvent(QMouseEvent*)
 {
 }
-
+#endif
 
 //---------------------------------------------------------------------------
 // TTextStatusWindow::RestoreFromPrefs

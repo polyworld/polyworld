@@ -366,7 +366,7 @@ void TSimulation::Step()
 		fSceneView->Draw();
 		
 		// Text Status window
-		fTextStatusWindow->update();
+		fTextStatusWindow->Draw();
 		
 		// Overhead window
 		if (fOverHeadRank)
@@ -2730,6 +2730,41 @@ void TSimulation::ReadWorldFile(const char* filename)
         fDomains[id].fittest = NULL;
         fDomains[id].fitness = NULL;
     }
+	
+	if( version >= 10 )
+	{
+		in >> food::gNumFoodBands; in >> label;
+		cout << "numFoodBands" ses food::gNumFoodBands nl;
+		
+		food::gFoodBand = (FoodBand*) malloc( sizeof(FoodBand) * food::gNumFoodBands );
+		Q_CHECK_PTR( food::gFoodBand );
+		
+		food::gFoodBandZTotal = 0.0;
+		for( int i = 0; i < food::gNumFoodBands; i++ )
+		{
+			in >> food::gFoodBand[i].zMin; in >> label;
+			cout << "FoodBand[" << i << "].zMin" ses food::gFoodBand[i].zMin nl;
+			in >> food::gFoodBand[i].zMax; in >> label;
+			cout << "FoodBand[" << i << "].zMax" ses food::gFoodBand[i].zMax nl;
+			
+			food::gFoodBandZTotal += food::gFoodBand[i].zMax - food::gFoodBand[i].zMin;
+		}
+	}
+	else
+	{
+		food::gNumFoodBands = 1;
+		cout << "_numFoodBands" ses food::gNumFoodBands nl;
+		
+		food::gFoodBand = (FoodBand*) malloc( sizeof(FoodBand) * food::gNumFoodBands );
+		Q_CHECK_PTR( food::gFoodBand );
+		
+		food::gFoodBand[0].zMin = -1.0;
+		food::gFoodBand[0].zMax = 0.0;
+		cout << "_FoodBand[0].zMin" ses food::gFoodBand[0].zMin;
+		cout << "_FoodBand[0].zMax" ses food::gFoodBand[0].zMax;
+		
+		food::gFoodBandZTotal = 1.0;
+	}
 
     if (version < 5)
     {
@@ -3023,6 +3058,11 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 	char t[256];
 	char t2[256];
 	short id;
+	static bool setupDone = false;
+	
+	// TODO: If we're neither updating the window, nor writing to the stat file,
+	// then we shouldn't sprintf all these strings, or put them in the list
+	// (but for now, the window always draws anyway, so it's not a big deal)
 	
 	sprintf( t, "age = %ld", fAge );
 	list.push_back( strdup( t ) );
@@ -3107,7 +3147,7 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 	sprintf( t, " -edge   = %4ld", fNumberDiedEdge );
 	list.push_back( strdup( t ) );
 
-	sprintf( t, " -smite    = %4ld", fNumberDiedSmite );
+	sprintf( t, " -smite  = %4ld", fNumberDiedSmite );
 	list.push_back( strdup( t ) );
 	
 	sprintf( t, "food = %ld", food::gXSortedFood.count() );
@@ -3206,123 +3246,32 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 				fFramesPerSecondOverall,       fSecondsPerFrameOverall  );
 	list.push_back( strdup( t ) );
 	
-#if 0
-    if (saveToFile)
+//	printf( "fAge = %lu, fStatusFrequency = %ld, !(fAge %% fStatusFrequency) = %s\n", fAge, fStatusFrequency, BoolString( !(fAge % fStatusFrequency) ) );
+    if( !(fAge % fStatusFrequency) || !setupDone )
     {
-        FILE *statusfile = fopen( "pw.stat", "w" );
-        fprintf( statusfile, "%s\n",filename );
-        fprintf( statusfile, "age = %d\n",age );
-        fprintf( statusfile, "critters = %4d", critter::gXSortedCritters.count() );
-        if( numdomains > 1 )
-        {
-            fprintf( statusfile, "  (%4d",domains[0].numcritters );
-            for( id = 1; id < numdomains; id++ )
-                fprintf( statusfile, ", %4d",domains[id].numcritters );
-            fprintf( statusfile, ")" );
-        }
-        fprintf( statusfile, "\n" );
-        fprintf( statusfile, "created  = %4d",fNumberCreated );
-        if( numdomains > 1 )
-        {
-            fprintf( statusfile, "  (%4d",domains[0].numcreated );
-            for( id = 1; id < numdomains; id++ )
-                fprintf( statusfile, ", %4d",domains[id].numcreated );
-            fprintf( statusfile, ")" );
-        }
-        fprintf( statusfile, "\n" );
-        fprintf( statusfile, " -random = %4d\n",fNumberCreatedRandom );
-        fprintf( statusfile, " -two    = %4d\n",fNumberCreated2Fit );
-        fprintf( statusfile, " -one    = %4d\n",fNumberCreated1Fit );
-        fprintf( statusfile, "born     = %4d", fNumberBorn );
-        if( numdomains > 1 )
-        {
-            fprintf( statusfile, "  (%4d",domains[0].numborn );
-            for( id = 1; id < numdomains; id++ )
-                fprintf( statusfile, ", %4d",domains[id].numborn );
-            fprintf( statusfile, ")" );
-        }
-        fprintf( statusfile, "\n" );
-        fprintf( statusfile, "died     = %4d", fNumberDied );
-        if( numdomains > 1 )
-        {
-            fprintf( statusfile, "  (%4d",domains[0].numdied );
-            for( id = 1; id < numdomains; id++ )
-                fprintf( statusfile, ", %4d",domains[id].numdied );
-            fprintf( statusfile, ")" );
-        }
-        fprintf( statusfile, "\n" );
-        fprintf( statusfile, " -age    = %4d\n",fNumberDiedAge );
-        fprintf( statusfile, " -energy = %4d\n",fNumberDiedEnergy );
-        fprintf( statusfile, " -fight  = %4d\n",fNumberDiedFight );
-        fprintf( statusfile, " -edge   = %4d\n",fNumberDiedEdge );
-        fprintf( statusfile, " -smite  = %4d\n",fNumberDiedSmite );
-        fprintf( statusfile, "fights = %d\n", numfights );
-        fprintf( statusfile, "maxfit = %g\n", fMaxFitness );
-        fprintf( statusfile, "food = %d",xsortedfood.count() );
-        if( numdomains > 1 )
-        {
-            fprintf( statusfile, "  (%4d",domains[0].foodcount );
-            for( id = 1; id < numdomains; id++ )
-                fprintf( statusfile, ", %4d",domains[id].foodcount );
-            fprintf( statusfile, ")" );
-        }
-        fprintf( statusfile, "\n" );
-		fprintf( statusfile, "birthDenials = %d\n", fBirthDenials );
-        fprintf( statusfile, "miscden = %d\n",fMiscDenials );
-        fprintf( statusfile, "agecreat = %d",fLastCreated );
-        if( numdomains > 1 )
-        {
-            fprintf( statusfile, "  (%4d",domains[0].fLastCreated );
-            for( id = 1; id < numdomains; id++ )
-                fprintf( statusfile, ", %4d",domains[id].fLastCreated );
-            fprintf( statusfile, ")" );
-        }
-        fprintf( statusfile, "\n" );
-        fprintf( statusfile, "maxgapcr = %d", fMaxGapCreate );
-        if( numdomains > 1 )
-        {
-            fprintf( statusfile, "  (%4d",domains[0].maxgapcreate );
-            for( id = 1; id < numdomains; id++ )
-                fprintf( statusfile, ", %4d",domains[id].maxgapcreate );
-            fprintf( statusfile, ")" );
-        }
-        fprintf( statusfile, "\n" );
-        fprintf( statusfile, "born/total = %.2f",
-            float(fNumberBorn) / float(fNumberCreated + fNumberBorn) );
-        if( numdomains > 1 )
-        {
-            fprintf( statusfile, "  (%.2f",
-                float( domains[0].fNumberBorn )/
-                float( domains[0].numcreated + domains[0].numborn ) );
-            for( id = 1; id < numdomains; id++ )
-                fprintf( statusfile, ", %.2f",
-                    float( domains[id].numborn )/
-                    float( domains[id].numcreated + domains[id].numborn ) );
-            fprintf( statusfile, ")" );
-        }
-        fprintf( statusfile, "\n" );
-        fprintf( statusfile, "maxfitnorm = %.2f\n", fMaxFitness / fTotalFitness );
-        fprintf( statusfile, "curmaxfitnorm = %.2f\n", fCurrentMaxFitness[0] / fTotalFitness );
-        fprintf( statusfile, "avgfitnorm = %.2f\n", fAverageFitness / fTotalFitness );
-        fprintf( statusfile, "maxfit = %g\n", fMaxFitness );
-        fprintf( statusfile, "curmaxfit = %g\n", fCurrentMaxFitness[0] );
-        fprintf( statusfile, "avgfit = %g\n", fAverageFitness );
-        fprintf( statusfile, "average foodenergy flux = %.2f\n",
-            (fAverageFoodEnergyIn - fAverageFoodEnergyOut)
-           /(fAverageFoodEnergyIn + fAverageFoodEnergyOut) );
-        fprintf( statusfile, "total foodenergy flux = %.2f\n",
-            (fTotalFoodEnergyIn - fTotalFoodEnergyOut)
-           /(fTotalFoodEnergyIn + fTotalFoodEnergyOut) );
-        if (genesepmon)
-        {
-            fprintf( statusfile, "fMaxGeneSeparation = %g\n", fMaxGeneSeparation );
-            fprintf( statusfile, "fMinGeneSeparation = %g\n", fMinGeneSeparation );
-            fprintf( statusfile, "fAverageGeneSeparation = %g\n", fAverageGeneSeparation  );
-        }
+		char statusFileName[256];
+		
+		if( !setupDone )
+		{
+			char cmd[256];
+			sprintf( cmd, "mv -f run run_%ld\n", time(NULL) );
+			system( cmd );
+			system( "mkdir run" );
+			system( "mkdir run/stats" );
+			system( "cp worldfile run/" );
+			setupDone = true;
+		}
+		
+		sprintf( statusFileName, "run/stats/stat.%ld", fAge );
+        FILE *statusFile = fopen( statusFileName, "w" );
+		Q_CHECK_PTR( statusFile );
+		
+		TStatusList::const_iterator iter = list.begin();
+		for( ; iter != list.end(); ++iter )
+			fprintf( statusFile, "%s\n", *iter );
 
-        fclose(statusfile );
+        fclose( statusFile );
     }
-#endif
 }
 
 
@@ -3369,7 +3318,7 @@ void TSimulation::Update()
 		//QApplication::postEvent(fGeneSeparationWindow, new QCustomEvent(kUpdateEventType));	
 		
 	if (fShowTextStatus && fTextStatusWindow != NULL)
-		fTextStatusWindow->update();
+		fTextStatusWindow->Draw();
 		//QApplication::postEvent(fTextStatusWindow, new QCustomEvent(kUpdateEventType));	
 }
 

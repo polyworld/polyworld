@@ -19,6 +19,13 @@ using namespace std;
 #include "gsquare.h"
 //#include "ObjectList.h"
 
+struct FoodBand
+{
+	float zMin;
+	float zMax;
+};
+typedef struct FoodBand FoodBand;
+
 // Forward declarations
 class food;
 
@@ -47,7 +54,9 @@ public:
 	static float gMaxFoodEnergy;
 	static float gSize2Energy; // (converts food/critter size to available energy)
 	static fxsortedlist gXSortedFood;
-		
+	static int gNumFoodBands;
+	static FoodBand* gFoodBand;
+	static float gFoodBandZTotal;
 
     food();
     food(float e);
@@ -73,6 +82,8 @@ protected:
 	void initlen();
 	void initrest();
    	virtual void setradius();
+	
+	float FoodWorldZ( float foodBandZ );
 
     float fEnergy;
     short fDomain;
