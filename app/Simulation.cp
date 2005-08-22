@@ -785,8 +785,43 @@ void TSimulation::Init()
 	fSceneView->SetScene(&fScene);
 	
 	// TODO add overhead view here
+
+#define DebugGenetics 0
+#if DebugGenetics
+	// This little snippet of code confirms that genetic copying, crossover, and mutation are behaving somewhat reasonably
+	critter::gXSortedCritters.reset();
+	critter* c1 = NULL;
+	critter* c2 = NULL;
+	genome* g1 = NULL;
+	genome* g2 = NULL;
+	genome g1c, g1x2, g1x2m;
+	critter::gXSortedCritters.next( c1 );
+	critter::gXSortedCritters.next( c2 );
+	g1 = c1->Genes();
+	g2 = c2->Genes();
+	cout << "************** G1 **************" nl;
+	g1->Print();
+	cout << "************** G2 **************" nl;
+	g2->Print();
+	g1c.CopyGenes( g1 );
+	g1x2.Crossover( g1, g2, false );
+	g1x2m.Crossover( g1, g2, true );
+	cout << "************** G1c **************" nl;
+	g1c.Print();
+	cout << "************** G1x2 **************" nl;
+	g1x2.Print();
+	cout << "************** G1x2m **************" nl;
+	g1x2m.Print();
+	exit(0);
+#endif
 	
-	
+	char cmd[256];
+	sprintf( cmd, "mv -f run run_%ld\n", time(NULL) );
+	system( cmd );
+	system( "mkdir run" );
+	system( "mkdir run/stats" );
+	system( "cp worldfile run/" );
+		
 	// Set up gene Separation monitoring
 	if (fMonitorGeneSeparation)
     {
@@ -796,7 +831,7 @@ void TSimulation::Init()
         
         if (fRecordGeneSeparation)
         {
-            fGeneSeparationFile = fopen("pw.genesep", "w");
+            fGeneSeparationFile = fopen("run/genesep", "w");
 	    	RecordGeneSeparation();
         }
         
@@ -807,7 +842,7 @@ void TSimulation::Init()
 	// Set up to record a movie, if requested
 	if( fRecordMovie )
 	{
-		char	movieFileName[256] = "movie.pmv";	// put date and time into the name TODO
+		char	movieFileName[256] = "run/movie.pmv";	// put date and time into the name TODO
 				
 		fMovieFile = fopen( movieFileName, "wb" );
 		if( !fMovieFile )
@@ -3058,7 +3093,6 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 	char t[256];
 	char t2[256];
 	short id;
-	static bool setupDone = false;
 	
 	// TODO: If we're neither updating the window, nor writing to the stat file,
 	// then we shouldn't sprintf all these strings, or put them in the list
@@ -3247,20 +3281,9 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 	list.push_back( strdup( t ) );
 	
 //	printf( "fAge = %lu, fStatusFrequency = %ld, !(fAge %% fStatusFrequency) = %s\n", fAge, fStatusFrequency, BoolString( !(fAge % fStatusFrequency) ) );
-    if( !(fAge % fStatusFrequency) || !setupDone )
+    if( !(fAge % fStatusFrequency) || (fAge == 1) )
     {
 		char statusFileName[256];
-		
-		if( !setupDone )
-		{
-			char cmd[256];
-			sprintf( cmd, "mv -f run run_%ld\n", time(NULL) );
-			system( cmd );
-			system( "mkdir run" );
-			system( "mkdir run/stats" );
-			system( "cp worldfile run/" );
-			setupDone = true;
-		}
 		
 		sprintf( statusFileName, "run/stats/stat.%ld", fAge );
         FILE *statusFile = fopen( statusFileName, "w" );
