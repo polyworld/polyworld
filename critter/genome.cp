@@ -312,7 +312,7 @@ void genome::Randomize(float bitonprob)
 void genome::Randomize()
 {
 #if DesignerGenes
-//check crossover point array size, whether the gene value is just non-physiological or not, whether that is account for
+//check crossover point array size, whether the gene value is just non-physiological or not, whether that is accounted for
 	SeedGenes();
 #else
 	Randomize(gMinBitProb + drand48() * (gMaxBitProb - gMinBitProb));
@@ -325,6 +325,7 @@ void genome::Randomize()
 //---------------------------------------------------------------------------
 void genome::SeedGenes()
 {
+	// Assumes the minimum number of internal neural groups is 0, and uses binary gene coding (as opposed to gray-coding)
 	fGenes[mrategene]			= 0;	// about 0.1
 	fGenes[ncptsgene]			= 127;	// about 5
 	fGenes[lifespangene]		= 127;	// about 750
@@ -374,14 +375,16 @@ void genome::SeedGenes()
 	fGenes[eecdgene + (8 - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups + 4] = 127;	// 1/2  e-e connectivity from blue vision (4) to speed (move) behavior (8)
 	fGenes[eetdgene + (8 - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups + 4] = 255;	// maximum topo distortion, so it's random blue pixels that force a speed-up
 	fGenes[eecdgene + (9 - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups + 2] = 127;	// 1/2  e-e connectivity from red vision (2) to yaw behavior (9) [left pixels on causes left turn]
-	fGenes[iecdgene + (9 - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups + 2] = 127;	// 1/2  i-e connectivity from red vision (2) to yaw behavior (9) [some pixels casue right turn, with top. dist.]
+	fGenes[iecdgene + (9 - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups + 2] = 127;	// 1/2  i-e connectivity from red vision (2) to yaw behavior (9) [some pixels cause right turn, with top. dist.]
 	fGenes[ietdgene + (9 - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups + 2] = 255;	// maximum topo distortion, so some red pixels are likely to connect to right side
-	fGenes[eecdgene + (9 - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups + 3] = 127;	// 1/2  e-e connectivity from green vision (2) to yaw behavior (9) [left pixels on causes left turn]
-	fGenes[iecdgene + (9 - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups + 3] = 127;	// 1/2  i-e connectivity from green vision (2) to yaw behavior (9) [some pixels casue right turn, with top. dist.]
+	fGenes[eecdgene + (9 - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups + 3] = 127;	// 1/2  e-e connectivity from green vision (3) to yaw behavior (9) [left pixels on causes left turn]
+	fGenes[iecdgene + (9 - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups + 3] = 127;	// 1/2  i-e connectivity from green vision (3) to yaw behavior (9) [some pixels casue right turn, with top. dist.]
 	fGenes[ietdgene + (9 - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups + 3] = 255;	// maximum topo distortion, so some green pixels are likely to connect to right side
-	fGenes[eecdgene + (9 - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups + 4] = 127;	// 1/2  e-e connectivity from blue vision (2) to yaw behavior (9) [left pixels on causes left turn]
-	fGenes[iecdgene + (9 - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups + 4] = 127;	// 1/2  i-e connectivity from blue vision (2) to yaw behavior (9) [some pixels casue right turn, with top. dist.]
+	fGenes[eecdgene + (9 - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups + 4] = 127;	// 1/2  e-e connectivity from blue vision (4) to yaw behavior (9) [left pixels on causes left turn]
+	fGenes[iecdgene + (9 - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups + 4] = 127;	// 1/2  i-e connectivity from blue vision (4) to yaw behavior (9) [some pixels casue right turn, with top. dist.]
 	fGenes[ietdgene + (9 - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups + 4] = 255;	// maximum topo distortion, so some blue pixels are likely to connect to right side
+	fGenes[iecdgene + (7 - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups + 5] = 255;	// full i-e connectivity from eat behavior (5) to fight behavior (7) ["full" is one to one for two behavior groups]
+	fGenes[iecdgene + (7 - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups + 6] = 255;	// full i-e connectivity from mate behavior (6) to fight behavior (7) ["full" is one to one for two behavior groups]
 //	Print();
 }
 
