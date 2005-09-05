@@ -114,20 +114,23 @@ void TTextStatusWindow::Draw()
 	glClear( GL_COLOR_BUFFER_BIT );
 	
 	// Draw text in white
-	QFont font("LucidaGrande", 12, QFont::DemiBold);
+//	QFont font("LucidaGrande", 12, QFont::DemiBold);
+//	QFont font("Andale Mono", 12, QFont::Normal);
+	QFont font("Futura Condensed Medium", 12, QFont::Normal);
 //	QFont font( "Monaco", 9 );
 //	QFont font("Courier", 10, QFont::Normal);
-	font.setStyleHint( QFont::AnyStyle, QFont::OpenGLCompatible );
+//	font.setStyleHint( QFont::AnyStyle, QFont::OpenGLCompatible );
     glColor4ub( 255, 255, 255, 255 );
 	
-	int y = 15;
+#define TextStatusLineHeight 14
+	int y = TextStatusLineHeight;
 			
 	iter = statusList.begin();
 	for (; iter != statusList.end(); ++iter)
 	{
 		renderText( 7, y, *iter, font );
 		free(*iter);
-		y += 15;
+		y += TextStatusLineHeight;
 	}
 	
 	statusList.clear();
