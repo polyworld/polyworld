@@ -37,7 +37,7 @@ static const long kMaxLoops = 1000000;
 static long numglobalcreated = 0;    // needs to be static so we only get warned about influece of global creations once ever
 
 long TSimulation::fMaxCritters;
-long TSimulation::fAge;
+long TSimulation::fStep;
 short TSimulation::fOverHeadRank = 1;
 critter* TSimulation::fMonitorCritter = NULL;
 double TSimulation::fFramesPerSecondOverall;
@@ -68,7 +68,11 @@ double TSimulation::fTimeStart;
 // TSimulation::TSimulation
 //---------------------------------------------------------------------------
 TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
-	:	fSceneView(sceneView),
+	:	fBestSoFarBrainAnatomyRecordFrequency(0),
+		fBestSoFarBrainFunctionRecordFrequency(0),
+		fBrainAnatomyRecordAll(false),
+		fBrainFunctionRecordAll(false),
+		fSceneView(sceneView),
 		fSceneWindow(sceneWindow),
 		fBirthrateWindow(NULL),
 		fFitnessWindow(NULL),
@@ -99,7 +103,6 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
 		fNewDeaths(0),
 		fNumberFit(0),
 		fFittest(NULL),
-		fFitness(NULL),
 		fBrainMonitorStride(25)
 {
 	Init();
@@ -182,13 +185,15 @@ void TSimulation::Stop()
         {
             for (int i = 0; i < fNumberFit; i++)
             {
-                if (fDomains[id].fittest[i] != NULL)
-                    delete fDomains[id].fittest[i];
+				if (fDomains[id].fittest[i])
+				{
+					if (fDomains[id].fittest[i]->genes != NULL)
+						delete fDomains[id].fittest[i]->genes;
+					delete fDomains[id].fittest[i];
+				}
 			}                  
             delete fDomains[id].fittest;
         }
-        if (fDomains[id].fitness != NULL)
-        	delete fDomains[id].fitness;
 		
 		if( fDomains[id].fLeastFit )
 			delete[] fDomains[id].fLeastFit;
@@ -199,15 +204,16 @@ void TSimulation::Stop()
     {
         for (int i = 0; i < fNumberFit; i++)
         {
-			if (fFittest[i] != NULL)
+			if (fFittest[i])
+			{
+				if (fFittest[i]->genes != NULL)
+					delete fFittest[i]->genes;
 				delete fFittest[i];
+			}
 		}		
         delete[] fFittest;
     }
 	
-	if( fFitness != NULL )
-		delete fFitness;
-        
 	if( fLeastFit )
 		delete fLeastFit;
     
@@ -238,25 +244,25 @@ void TSimulation::Step()
 	static double	sTimePrevious[RecentSteps];
 	double			timeNow;
 	
-	fAge++;
+	fStep++;
 	
-	if (fAge > kMaxLoops)
+	if (fStep > kMaxLoops)
 	{
 		// Stop simulation
-		ttPrint( "Simulation stopped at age %ld\n", fAge );
+		ttPrint( "Simulation stopped at age %ld\n", fStep );
 		Stop(); // will set fDone = true
 		return;
 	}
 		
 #ifdef DEBUGCHECK
 	char debugstring[256];
-	sprintf(debugstring, "in main loop at age %ld", fAge);
+	sprintf(debugstring, "in main loop at age %ld", fStep);
 	debugcheck(debugstring);
 #endif
 
 	// compute some frame rates
 	timeNow = hirestime();
-	if( fAge == 1 )
+	if( fStep == 1 )
 	{
 		fFramesPerSecondOverall = 0.;
 		fSecondsPerFrameOverall = 0.;
@@ -271,10 +277,10 @@ void TSimulation::Step()
 	}
 	else
 	{
-		fFramesPerSecondOverall = fAge / (timeNow - fTimeStart);
+		fFramesPerSecondOverall = fStep / (timeNow - fTimeStart);
 		fSecondsPerFrameOverall = 1. / fFramesPerSecondOverall;
 		
-		if( fAge > RecentSteps )
+		if( fStep > RecentSteps )
 		{
 			fFramesPerSecondRecent = RecentSteps / (timeNow - sTimePrevious[RecentSteps-1]);
 			fSecondsPerFrameRecent = 1. / fFramesPerSecondRecent;
@@ -283,23 +289,23 @@ void TSimulation::Step()
 		fFramesPerSecondInstantaneous = 1. / (timeNow - sTimePrevious[0]);
 		fSecondsPerFrameInstantaneous = 1. / fFramesPerSecondInstantaneous;
 
-		int numSteps = fAge < RecentSteps ? fAge : RecentSteps;
+		int numSteps = fStep < RecentSteps ? fStep : RecentSteps;
 		for( int i = numSteps-1; i > 0; i-- )
 			sTimePrevious[i] = sTimePrevious[i-1];
 	}
 	sTimePrevious[0] = timeNow;
 	
-	if (((fAge - fLastCreated) > fMaxGapCreate) && (fLastCreated > 0) )
-		fMaxGapCreate = fAge - fLastCreated;
+	if (((fStep - fLastCreated) > fMaxGapCreate) && (fLastCreated > 0) )
+		fMaxGapCreate = fStep - fLastCreated;
 
 	if (fNumDomains > 1)
 	{
 		for (short id = 0; id < fNumDomains; id++)
 		{
-			if (((fAge - fDomains[id].lastcreate) > fDomains[id].maxgapcreate)
+			if (((fStep - fDomains[id].lastcreate) > fDomains[id].maxgapcreate)
 				  && (fDomains[id].lastcreate > 0))
 			{
-				fDomains[id].maxgapcreate = fAge - fDomains[id].lastcreate;
+				fDomains[id].maxgapcreate = fStep - fDomains[id].lastcreate;
 			}
 		}
 	}
@@ -327,7 +333,7 @@ void TSimulation::Step()
 		{
 		#ifdef DEBUGCHECK
 			debugstring[256];
-			sprintf(debugstring,"in critter loop at age %ld, critnum = %ld", fAge, critnum);
+			sprintf(debugstring,"in critter loop at age %ld, critnum = %ld", fStep, critnum);
 			debugcheck(debugstring);
 			critnum++;
 		#endif DEBUGCHECK
@@ -350,15 +356,15 @@ void TSimulation::Step()
 		
 #ifdef DEBUGCHECK
 	debugstring[256];
-	sprintf(debugstring, "after interact at age %ld", fAge);
+	sprintf(debugstring, "after interact at age %ld", fStep);
 	debugcheck(debugstring);
 #endif DEBUGCHECK
 
 	fTotalFoodEnergyIn += fFoodEnergyIn;
 	fTotalFoodEnergyOut += fFoodEnergyOut;
 
-	fAverageFoodEnergyIn = (float(fAge - 1) * fAverageFoodEnergyIn + fFoodEnergyIn) / float(fAge);
-	fAverageFoodEnergyOut = (float(fAge - 1) * fAverageFoodEnergyOut + fFoodEnergyOut) / float(fAge);
+	fAverageFoodEnergyIn = (float(fStep - 1) * fAverageFoodEnergyIn + fFoodEnergyIn) / float(fStep);
+	fAverageFoodEnergyOut = (float(fStep - 1) * fAverageFoodEnergyOut + fFoodEnergyOut) / float(fStep);
 	
 	// Update the various graphical windows
 	if (fGraphics)
@@ -428,7 +434,7 @@ void TSimulation::Step()
 		}
 
 //		dbprintf( "age=%ld, rank=%d, rankOld=%d, tracking=%s, fittest=%08lx, monitored=%08lx, alive=%s\n",
-//				  fAge, fMonitorCritterRank, fMonitorCritterRankOld, BoolString( fCritterTracking ), (ulong) fCurrentFittestCritter[fMonitorCritterRank-1], (ulong) fMonitorCritter, BoolString( !(!fMonitorCritter || !fMonitorCritter->Alive()) ) );
+//				  fStep, fMonitorCritterRank, fMonitorCritterRankOld, BoolString( fCritterTracking ), (ulong) fCurrentFittestCritter[fMonitorCritterRank-1], (ulong) fMonitorCritter, BoolString( !(!fMonitorCritter || !fMonitorCritter->Alive()) ) );
 
 		// Brain window
 		if ((fMonitorCritterRank != fMonitorCritterRankOld)
@@ -454,7 +460,7 @@ void TSimulation::Step()
 		
 			fMonitorCritterRankOld = fMonitorCritterRank;			
 		}
-		if( fBrainMonitorWindow && fBrainMonitorWindow->isVisible() && fMonitorCritter && (fAge % fBrainMonitorStride == 0) )
+		if( fBrainMonitorWindow && fBrainMonitorWindow->isVisible() && fMonitorCritter && (fStep % fBrainMonitorStride == 0) )
 		{
 			char title[64];
 			sprintf( title, "Brain Monitor (%ld:%ld)", fMonitorCritterRank, fMonitorCritter->Number() );
@@ -465,9 +471,25 @@ void TSimulation::Step()
 
 #ifdef DEBUGCHECK
 	debugstring[256];
-	sprintf(debugstring,"after extra graphics at age %ld", fAge);
+	sprintf(debugstring,"after extra graphics at age %ld", fStep);
 	debugcheck(debugstring);
 #endif DEBUGCHECK
+
+	// Archive the best-ever brain anatomy and function files, if we're doing that
+	if( fBestSoFarBrainAnatomyRecordFrequency && ((fStep % fBestSoFarBrainAnatomyRecordFrequency) == 0) )
+	{
+		char s[256];
+		int limit = fNumberDied < fNumberFit ? fNumberDied : fNumberFit;
+		sprintf( s, "mkdir run/brain/bestSoFar/%ld", fStep );
+		system( s );
+		for( int i = 0; i < limit; i++ )
+		{
+			sprintf( s, "cp run/brain/anatomy/brainAnatomy.%ld run/brain/bestSoFar/%ld/%d.brainAnatomy.%ld", fFittest[i]->critterID, fStep, i, fFittest[i]->critterID );
+			system( s );
+			sprintf( s, "cp run/brain/function/brainFunction.%ld run/brain/bestSoFar/%ld/%d.brainFunction.%ld", fFittest[i]->critterID, fStep, i, fFittest[i]->critterID );
+			system( s );
+		}
+	}
 	
 	// Handle tracking gene Separation
 	if (fMonitorGeneSeparation && fRecordGeneSeparation)
@@ -518,24 +540,26 @@ void TSimulation::Init()
     
     if (fNumberFit > 0)
     {
-        fFittest = new genome*[fNumberFit];
-        fFitness = new float[fNumberFit];
+        fFittest = new FitStruct*[fNumberFit];
         
         for (int i = 0; i < fNumberFit; i++)
         {
-            fFittest[i] = new genome();
-            fFitness[i] = 0.0;
+			fFittest[i] = new FitStruct;
+            fFittest[i]->genes = new genome();
+            fFittest[i]->fitness = 0.0;
+			fFittest[i]->critterID = 0;
         }
 		
         for( int id = 0; id < fNumDomains; id++ )
         {
-            fDomains[id].fittest = new genome*[fNumberFit];
-            fDomains[id].fitness = new float[fNumberFit];
+            fDomains[id].fittest = new FitStruct*[fNumberFit];
             
             for (int i = 0; i < fNumberFit; i++)
             {
-                fDomains[id].fittest[i] = new genome();
-                fDomains[id].fitness[i] = 0.0;
+				fDomains[id].fittest[i] = new FitStruct;
+                fDomains[id].fittest[i]->genes = new genome();
+                fDomains[id].fittest[i]->fitness = 0.0;
+				fDomains[id].fittest[i]->critterID = 0;
             }
         }
     }
@@ -591,6 +615,24 @@ void TSimulation::Init()
 	}
 #endif
 
+	// Set up the run directory and its subsidiaries
+	char cmd[256];
+	sprintf( cmd, "mv -f run run_%ld", time(NULL) );
+	system( cmd );
+	system( "mkdir run" );
+	system( "mkdir run/stats" );
+	if( fBestSoFarBrainAnatomyRecordFrequency || fBestSoFarBrainFunctionRecordFrequency || fBrainAnatomyRecordAll || fBrainFunctionRecordAll )
+	{
+		system( "mkdir run/brain" );
+		if( fBestSoFarBrainAnatomyRecordFrequency || fBrainAnatomyRecordAll )
+			system( "mkdir run/brain/anatomy" );
+		if( fBestSoFarBrainFunctionRecordFrequency || fBrainFunctionRecordAll )
+			system( "mkdir run/brain/function" );
+		if( fBestSoFarBrainAnatomyRecordFrequency || fBestSoFarBrainFunctionRecordFrequency )
+			system( "mkdir run/brain/bestSoFar" );
+	}
+	system( "cp worldfile run/" );
+		
     // Pass ownership of the cast to the stage [TODO] figure out ownership issues
     fStage.SetCast(&fWorldCast);
 
@@ -815,13 +857,6 @@ void TSimulation::Init()
 	exit(0);
 #endif
 	
-	char cmd[256];
-	sprintf( cmd, "mv -f run run_%ld\n", time(NULL) );
-	system( cmd );
-	system( "mkdir run" );
-	system( "mkdir run/stats" );
-	system( "cp worldfile run/" );
-		
 	// Set up gene Separation monitoring
 	if (fMonitorGeneSeparation)
     {
@@ -984,7 +1019,7 @@ void TSimulation::InitWorld()
     fFitI = 0;
     fFitJ = 1;
 		
-	fAge = 0;
+	fStep = 0;
 	globals::worldsize = 100.0;
 
     brain::gMinWin = 22;
@@ -1247,7 +1282,7 @@ void TSimulation::Interact()
 	fCurrentFittestCount = 0;
 	smPrint( "setting fCurrentFittestCount to 0\n" );
     fAverageFitness = 0.0;
-	ulong numAverageFitness = 0;	// need this because we'll only count critters that have lived at least a modest portion of their lifespan (fSmiteAgeFrac)
+	fNumAverageFitness = 0;	// need this because we'll only count critters that have lived at least a modest portion of their lifespan (fSmiteAgeFrac)
 //	fNumLeastFit = 0;
 //	fNumSmited = 0;
 	for( i = 0; i < fNumDomains; i++ )
@@ -1405,7 +1440,7 @@ void TSimulation::Interact()
 #if DebugSmite
 	for( id = 0; id < fNumDomains; id++ )
 	{
-		printf( "At age %ld in domain %d (c,n,c->fit) =", fAge, id );
+		printf( "At age %ld in domain %d (c,n,c->fit) =", fStep, id );
 		for( i = 0; i < fDomains[id].fNumLeastFit; i++ )
 			printf( " (%08lx,%ld,%5.2f)", (ulong) fDomains[id].fLeastFit[i], fDomains[id].fLeastFit[i]->Number(), fDomains[id].fLeastFit[i]->Fitness() );
 		printf( "\n" );
@@ -1422,7 +1457,7 @@ void TSimulation::Interact()
 	critter::gXSortedCritters.next( c );
 	critter* lastCritter;
 	critter::gXSortedCritters.last( lastCritter );
-	printf( "%s: at age %ld about to process %ld critters, %ld pieces of food, starting with critter %08lx (%4ld), ending with critter %08lx (%4ld)\n", __FUNCTION__, fAge, critter::gXSortedCritters.count(), food::gXSortedFood.count(), (ulong) c, c->Number(), (ulong) lastCritter, lastCritter->Number() );
+	printf( "%s: at age %ld about to process %ld critters, %ld pieces of food, starting with critter %08lx (%4ld), ending with critter %08lx (%4ld)\n", __FUNCTION__, fStep, critter::gXSortedCritters.count(), food::gXSortedFood.count(), (ulong) c, c->Number(), (ulong) lastCritter, lastCritter->Number() );
 #endif
 
 	food::gXSortedFood.reset();
@@ -1455,7 +1490,7 @@ void TSimulation::Interact()
                 // and if we get here then they are also close enough in z,
                 // so must actually worry about their interaction
 
-				ttPrint( "age %ld: critters # %ld & %ld are close\n", fAge, c->Number(), d->Number() );
+				ttPrint( "age %ld: critters # %ld & %ld are close\n", fStep, c->Number(), d->Number() );
 
                 jd = d->Domain();
 
@@ -1511,7 +1546,7 @@ void TSimulation::Interact()
 							(fDomains[kd].numbornsincecreated < fMiscCritters) ||	// miscegenation function not in use yet
 							(drand48() < c->MateProbability(d)) )					// miscegenation function allows the birth
                         {
-							ttPrint( "age %ld: critters # %ld & %ld are mating\n", fAge, c->Number(), d->Number() );
+							ttPrint( "age %ld: critters # %ld & %ld are mating\n", fStep, c->Number(), d->Number() );
                             fNumBornSinceCreated++;
                             fDomains[kd].numbornsincecreated++;
 							
@@ -1534,7 +1569,7 @@ void TSimulation::Interact()
                             fNumberBorn++;
                             fDomains[kd].numborn++;
 							fNeuronGroupCountStats.add( e->Brain()->NumNeuronGroups() );
-							ttPrint( "age %ld: critter # %ld is born\n", fAge, e->Number() );
+							ttPrint( "age %ld: critter # %ld is born\n", fStep, e->Number() );
                         }
                         else	// miscegenation function denied this birth
 						{
@@ -1566,7 +1601,7 @@ void TSimulation::Interact()
 
                     if ( (cpower > 0.0) || (dpower > 0.0) )
                     {
-						ttPrint( "age %ld: critters # %ld & %ld are fighting\n", fAge, c->Number(), d->Number() );
+						ttPrint( "age %ld: critters # %ld & %ld are fighting\n", fStep, c->Number(), d->Number() );
                         // somebody wants to fight
                         fNumberFights++;
                         c->damage(dpower * fPower2Energy);
@@ -1639,7 +1674,7 @@ void TSimulation::Interact()
                     if ( fabs(f->z()-c->z()) < (f->radius()+c->radius()) )
                     {
                         // also overlap in z, so they really interact
-						ttPrint( "age %ld: critter # %ld is eating\n", fAge, c->Number() );
+						ttPrint( "age %ld: critter # %ld is eating\n", fStep, c->Number() );
                         fd = f->domain();
 						fFoodEnergyOut += c->eat(f, fEatFitnessParameter, fEat2Consume, fEatThreshold);
 
@@ -1673,7 +1708,7 @@ void TSimulation::Interact()
 		if( c->Age() >= (fSmiteAgeFrac * c->MaxAge()) )
 		{
 			fAverageFitness += c->Fitness();
-			numAverageFitness++;
+			fNumAverageFitness++;
 		}
         if( (fCurrentFittestCount < MAXFITNESSITEMS) || (c->Fitness() > fCurrentMaxFitness[fCurrentFittestCount-1]) )
         {
@@ -1713,10 +1748,11 @@ void TSimulation::Interact()
     } // while loop on critters
 
 //	fAverageFitness /= critter::gXSortedCritters.count();
-	fAverageFitness /= numAverageFitness;
+	if( fNumAverageFitness > 0 )
+		fAverageFitness /= fNumAverageFitness;
 
 #if DebugMaxFitness
-	printf( "At age %ld (c,n,fit,c->fit) =", fAge );
+	printf( "At age %ld (c,n,fit,c->fit) =", fStep );
 	for( i = 0; i < fCurrentFittestCount; i++ )
 		printf( " (%08lx,%ld,%5.2f,%5.2f)", (ulong) fCurrentFittestCritter[i], fCurrentFittestCritter[i]->Number(), fCurrentMaxFitness[i], fCurrentFittestCritter[i]->Fitness() );
 	printf( "\n" );
@@ -1740,8 +1776,8 @@ void TSimulation::Interact()
                 fDomains[id].numcreated++;
                 fNumBornSinceCreated = 0;
                 fDomains[id].numbornsincecreated = 0;
-                fLastCreated = fAge;
-                fDomains[id].lastcreate = fAge;
+                fLastCreated = fStep;
+                fDomains[id].lastcreate = fStep;
                 critter* newCritter = critter::getfreecritter(this, &fStage);
                 Q_CHECK_PTR(newCritter);
                 
@@ -1752,15 +1788,15 @@ void TSimulation::Interact()
                     	&& ((fDomains[id].numcreated / fFitness1Frequency) * fFitness1Frequency == fDomains[id].numcreated) )
                     {
                         // revive 1 fittest
-                        newCritter->Genes()->CopyGenes(fDomains[id].fittest[0]);
+                        newCritter->Genes()->CopyGenes(fDomains[id].fittest[0]->genes);
                         fNumberCreated1Fit++;
                     }
                     else if (fFitness2Frequency
                     		 && ((fDomains[id].numcreated / fFitness2Frequency) * fFitness2Frequency == fDomains[id].numcreated) )
                     {
                         // mate 2 from array of fittest
-                        newCritter->Genes()->Crossover(fDomains[id].fittest[fDomains[id].ifit],
-                            				  		   fDomains[id].fittest[fDomains[id].jfit],
+                        newCritter->Genes()->Crossover(fDomains[id].fittest[fDomains[id].ifit]->genes,
+                            				  		   fDomains[id].fittest[fDomains[id].jfit]->genes,
                             				  		   true);
                         fNumberCreated2Fit++;
                         ijfitinc(&(fDomains[id].ifit), &(fDomains[id].jfit));
@@ -1815,7 +1851,7 @@ void TSimulation::Interact()
                 errorflash(0, "Possible global influence on domains due to minnumcritters");
                 
             fNumBornSinceCreated = 0;
-            fLastCreated = fAge;
+            fLastCreated = fStep;
 
             newCritter = critter::getfreecritter(this, &fStage);
             Q_CHECK_PTR(newCritter);
@@ -1827,13 +1863,13 @@ void TSimulation::Interact()
                 	&& ((numglobalcreated / fFitness1Frequency) * fFitness1Frequency == numglobalcreated))
                 {
                     // revive 1 fittest
-                    newCritter->Genes()->CopyGenes(fFittest[0]);
+                    newCritter->Genes()->CopyGenes(fFittest[0]->genes);
                     fNumberCreated1Fit++;
                 }
                 else if (fFitness2Frequency && ((numglobalcreated / fFitness2Frequency) * fFitness2Frequency == numglobalcreated))
                 {
                     // mate 2 from array of fittest
-                    newCritter->Genes()->Crossover(fFittest[fFitI], fFittest[fFitJ], true);
+                    newCritter->Genes()->Crossover(fFittest[fFitI]->genes, fFittest[fFitJ]->genes, true);
                     fNumberCreated2Fit++;
                     ijfitinc(&fFitI, &fFitJ);
                 }
@@ -1858,7 +1894,7 @@ void TSimulation::Interact()
             id = WhichDomain(newCritter->x(), newCritter->z(), 0);
             newCritter->Domain(id);
             fDomains[id].numcreated++;
-            fDomains[id].lastcreate = fAge;
+            fDomains[id].lastcreate = fStep;
             fDomains[id].numcritters++;
             fStage.AddObject(newCritter);
             newCritters.add(newCritter); // add it to the full list later; the e->listLink that gets auto stored here must be replaced with one from full list below
@@ -2000,7 +2036,7 @@ void TSimulation::Interact()
 void TSimulation::RecordGeneSeparation()
 {
 	fprintf(fGeneSeparationFile, "%d %g %g %g\n",
-			fAge,
+			fStep,
 			fMaxGeneSeparation,
 			fMinGeneSeparation,
 			fAverageGeneSeparation);
@@ -2165,10 +2201,12 @@ void TSimulation::ijfitinc(short* i, short* j)
 void TSimulation::Death(critter* c)
 {
 	Q_CHECK_PTR(c);
+	ulong loserID = 0;	// the way this is used depends on fCritterNumber being 1-based in critter.cp
+	bool oneOfTheBestSoFar = false;
 	
 	const short id = c->Domain();
 	
-	ttPrint( "age %ld: critter # %ld has died\n", fAge, c->Number() );
+	ttPrint( "age %ld: critter # %ld has died\n", fStep, c->Number() );
 	
     fNewDeaths++;
     fNumberDied++;
@@ -2176,9 +2214,12 @@ void TSimulation::Death(critter* c)
     fDomains[id].numcritters--;
 	
 	fLifeSpanStats.add( c->Age() );
+	fLifeSpanRecentStats.add( c->Age() );
 	
+	// Make any final contributions to the critter's overall, lifetime fitness
     c->lastrewards(fEnergyFitnessParameter, fAgeFitnessParameter); // if any
     
+	// If critter's carcass is to become food, make it so here
     if (fCrittersRfood
     	&& ((long)food::gXSortedFood.count() < fMaxFoodCount)
     	&& (fDomains[id].foodcount < fDomains[id].maxfoodcount)
@@ -2216,53 +2257,51 @@ void TSimulation::Death(critter* c)
     {
         fFoodEnergyOut += c->FoodEnergy();
     }
-        
+	
+	// Maintain a list of the fittest critters ever, for use in the online/steady-state GA
     long newfit = 0;
-    genome* savegenome;
-    if (c->Fitness() > fDomains[id].fitness[fNumberFit-1])
+    FitStruct* saveFit;
+    if( c->Fitness() > fDomains[id].fittest[fNumberFit-1]->fitness )
     {
-        for (short i = 0; i < fNumberFit; i++)
+        for( short i = 0; i < fNumberFit; i++ )
         {
-            if (c->Fitness() > fDomains[id].fitness[i])
+            if( c->Fitness() > fDomains[id].fittest[i]->fitness )
 			{
 				newfit = i;
 				break;
 			}
 		}
 		
-        savegenome = fDomains[id].fittest[fNumberFit-1];
-        for (short i = fNumberFit - 1; i > newfit; i--)
-        {
-            fDomains[id].fitness[i] = fDomains[id].fitness[i-1];
+        saveFit = fDomains[id].fittest[fNumberFit-1];				// this is to save the data structure, not its contents
+        for( short i = fNumberFit - 1; i > newfit; i-- )
             fDomains[id].fittest[i] = fDomains[id].fittest[i-1];
-        }
-        fDomains[id].fitness[newfit] = c->Fitness();
-        fDomains[id].fittest[newfit] = savegenome;
-        fDomains[id].fittest[newfit]->CopyGenes(c->Genes());
+        fDomains[id].fittest[newfit] = saveFit;						// reuse the old data structure, but replace its contents...
+        fDomains[id].fittest[newfit]->fitness = c->Fitness();
+        fDomains[id].fittest[newfit]->genes->CopyGenes( c->Genes() );
+		fDomains[id].fittest[newfit]->critterID = c->Number();
     }
     
-    if (c->Fitness() > fFitness[fNumberFit-1])
+    if( c->Fitness() > fFittest[fNumberFit-1]->fitness )
     {
-        for (short i = 0; i < fNumberFit; i++)
+		oneOfTheBestSoFar = true;
+		
+        for( short i = 0; i < fNumberFit; i++ )
         {
-            if (c->Fitness() > fFitness[i])
+            if( c->Fitness() > fFittest[i]->fitness )
 			{
 				newfit = i;
 				break;
 			}
 		}
 				
-        savegenome = fFittest[fNumberFit - 1];
-        
-        for (short i = fNumberFit - 1; i > newfit; i--)
-        {
-            fFitness[i] = fFitness[i - 1];
+		loserID = fFittest[fNumberFit - 1]->critterID;	// this is the ID of the critter that is being booted from the bestSoFar (fFittest[]) list
+        saveFit = fFittest[fNumberFit - 1];		// this is to save the data structure, not its contents
+        for( short i = fNumberFit - 1; i > newfit; i-- )
             fFittest[i] = fFittest[i - 1];
-        }
-        
-        fFitness[newfit] = c->Fitness();
-        fFittest[newfit] = savegenome;
-        fFittest[newfit]->CopyGenes(c->Genes());
+        fFittest[newfit] = saveFit;				// reuse the old data structure, but replace its contents...
+        fFittest[newfit]->fitness = c->Fitness();
+        fFittest[newfit]->genes->CopyGenes( c->Genes() );
+		fFittest[newfit]->critterID = c->Number();
     }
     
     if (c->Fitness() > fMaxFitness)
@@ -2314,7 +2353,42 @@ void TSimulation::Death(critter* c)
 			fBrainMonitorWindow->StopMonitoring();
 	}
 	
+	// If we're recording all anatomies or recording best anatomies and this was one of the fittest critters,
+	// then dump the anatomy to the appropriate location on disk
+	if( fBrainAnatomyRecordAll || (fBestSoFarBrainAnatomyRecordFrequency && oneOfTheBestSoFar) )
+		c->Brain()->dumpAnatomical( c->Number(), c->Fitness() );
+	
+	// If this critter was so good it displaced another critter from the bestSoFar (fFittest[]) list,
+	// then nuke the booted critter's brain anatomy & function recordings
+	if( loserID )	//  depends on fCritterNumber being 1-based in critter.cp
+	{
+		char s[256];
+		if( fBestSoFarBrainAnatomyRecordFrequency && !fBrainAnatomyRecordAll )
+		{
+			sprintf( s, "rm run/brain/anatomy/brainAnatomy.%lu", loserID );
+			//printf( "%lu %s\n", fStep, s );
+			system( s );
+		}
+		if( fBestSoFarBrainFunctionRecordFrequency && !fBrainFunctionRecordAll )
+		{
+			sprintf( s, "rm run/brain/function/brainFunction.%lu", loserID );
+			//printf( "%lu %s\n", fStep, s );
+			system( s );
+		}
+	}
+
+	//printf( "%lu ", fStep );
 	c->Die();
+	
+	// If we're only archiving the best, and this isn't one of them, then nuke its brainFunction recording
+	// NOTE:  Must be done after c->Die(), as that is where the brainFunction file is closed
+	if( fBestSoFarBrainFunctionRecordFrequency && !oneOfTheBestSoFar && !fBrainFunctionRecordAll )
+	{
+		char s[256];
+		sprintf( s, "rm run/brain/function/brainFunction.%lu", c->Number() );
+		//printf( "%lu %s\n", fStep, s );
+		system( s );
+	}
 	
 	// following assumes (requires!) list to be currently pointing to c,
     // and will leave the list pointing to the previous critter
@@ -2763,7 +2837,6 @@ void TSimulation::ReadWorldFile(const char* filename)
         fDomains[id].ifit = 0;
         fDomains[id].jfit = 1;
         fDomains[id].fittest = NULL;
-        fDomains[id].fitness = NULL;
     }
 	
 	if( version >= 10 )
@@ -2891,6 +2964,18 @@ void TSimulation::ReadWorldFile(const char* filename)
 		return;
 	}
 	
+	if( version >= 11 )
+	{
+		in >> fBrainAnatomyRecordAll; in >> label;
+		cout << "brainAnatomyRecordAll" ses fBrainAnatomyRecordAll nl;
+		in >> fBrainFunctionRecordAll; in >> label;
+		cout << "brainFunctionRecordAll" ses fBrainFunctionRecordAll nl;
+		in >> fBestSoFarBrainAnatomyRecordFrequency; in >> label;
+		cout << "bestSoFarBrainAnatomyRecordFrequency" ses fBestSoFarBrainAnatomyRecordFrequency nl;
+		in >> fBestSoFarBrainFunctionRecordFrequency; in >> label;
+		cout << "bestSoFarBrainFunctionRecordFrequency" ses fBestSoFarBrainFunctionRecordFrequency nl;		
+	}
+	
 	in >> fRecordMovie; in >> label;
 	cout << "recordMovie" ses fRecordMovie nl;
 
@@ -2918,7 +3003,7 @@ void TSimulation::Dump()
     sprintf(version, "%s", "pw1");
 
     out << version nl;
-    out << fAge nl;
+    out << fStep nl;
     out << fCameraAngle nl;
     out << fNumberCreated nl;
     out << fNumberCreatedRandom nl;
@@ -2965,8 +3050,9 @@ void TSimulation::Dump()
     out << fFitJ nl;
     for (int index = 0; index < fNumberFit; index++)
     {
-        out << fFitness[index] nl;
-        fFittest[index]->Dump(out);
+		out << fFittest[index]->critterID nl;
+        out << fFittest[index]->fitness nl;
+        fFittest[index]->genes->Dump(out);
     }
 
     out << fNumDomains nl;
@@ -2998,8 +3084,9 @@ void TSimulation::Dump()
             
             for (i = 0; i < numfitid; i++)
             {
-                out << fDomains[id].fitness[i] nl;
-                fDomains[id].fittest[i]->Dump(out);
+				out << fDomains[id].fittest[i]->critterID nl;
+                out << fDomains[id].fittest[i]->fitness nl;
+                fDomains[id].fittest[i]->genes->Dump(out);
             }
         }
         else
@@ -3098,7 +3185,7 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 	// then we shouldn't sprintf all these strings, or put them in the list
 	// (but for now, the window always draws anyway, so it's not a big deal)
 	
-	sprintf( t, "age = %ld", fAge );
+	sprintf( t, "step = %ld", fStep );
 	list.push_back( strdup( t ) );
 	
 	sprintf( t, "critters = %4ld", critter::gXSortedCritters.count() );
@@ -3235,28 +3322,55 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 	sprintf( t, "born/total = %.2f", float(fNumberBorn) / float(fNumberCreated + fNumberBorn) );
 	list.push_back( strdup( t ) );
 
-	sprintf( t, "maxFitNorm = %.2f", fMaxFitness / fTotalFitness );
+	sprintf( t, "Fitness m=%.2f, c=%.2f, a=%.2f", fMaxFitness, fCurrentMaxFitness[0], fAverageFitness );
 	list.push_back( strdup( t ) );
 	
-	sprintf( t, "currMaxFitNorm = %.2f", fCurrentMaxFitness[0] / fTotalFitness );
+	sprintf( t, "NormFit m=%.2f, c=%.2f, a=%.2f", fMaxFitness / fTotalFitness, fCurrentMaxFitness[0] / fTotalFitness, fAverageFitness / fTotalFitness );
 	list.push_back( strdup( t ) );
 	
-	sprintf( t, "avgFitNorm = %.2f", fAverageFitness / fTotalFitness );
+	sprintf( t, "Fittest =" );
+	int fittestCount = min( 5, min( fNumberFit, (int) fNumberDied ));
+	for( int i = 0; i < fittestCount; i++ )
+	{
+		sprintf( t2, " %lu", fFittest[i]->critterID );
+		strcat( t, t2 );
+	}
 	list.push_back( strdup( t ) );
 	
-	sprintf( t, "maxFit = %g", fMaxFitness );
+	if( fittestCount > 0 )
+	{
+		sprintf( t, " " );
+		for( int i = 0; i < fittestCount; i++ )
+		{
+			sprintf( t2, "  %.2f", fFittest[i]->fitness );
+			strcat( t, t2 );
+		}
+		list.push_back( strdup( t ) );
+	}
+	
+	sprintf( t, "CurFit =" );
+	for( int i = 0; i < fCurrentFittestCount; i++ )
+	{
+		sprintf( t2, " %lu", fCurrentFittestCritter[i]->Number() );
+		strcat( t, t2 );
+	}
 	list.push_back( strdup( t ) );
 	
-	sprintf( t, "currMaxFit = %g", fCurrentMaxFitness[0] );
-	list.push_back( strdup( t ) );
-
-	sprintf( t, "avgFit = %g", fAverageFitness );
-	list.push_back( strdup( t ) );
-
-	sprintf( t, "avgFoodEnergy = %.2f",(fAverageFoodEnergyIn - fAverageFoodEnergyOut) / (fAverageFoodEnergyIn + fAverageFoodEnergyOut) );
+	if( fCurrentFittestCount > 0 )
+	{
+		sprintf( t, " " );
+		for( int i = 0; i < fCurrentFittestCount; i++ )
+		{
+			sprintf( t2, "  %.2f", fCurrentFittestCritter[i]->Fitness() );
+			strcat( t, t2 );
+		}
+		list.push_back( strdup( t ) );
+	}
+	
+	sprintf( t, "avgFoodEnergy = %.2f", (fAverageFoodEnergyIn - fAverageFoodEnergyOut) / (fAverageFoodEnergyIn + fAverageFoodEnergyOut) );
 	list.push_back( strdup( t ) );
 	
-	sprintf( t, "totFoodEnergy = %.2f",(fTotalFoodEnergyIn - fTotalFoodEnergyOut) / (fTotalFoodEnergyIn + fTotalFoodEnergyOut) );
+	sprintf( t, "totFoodEnergy = %.2f", (fTotalFoodEnergyIn - fTotalFoodEnergyOut) / (fTotalFoodEnergyIn + fTotalFoodEnergyOut) );
 	list.push_back( strdup( t ) );
 
 	if (fMonitorGeneSeparation)
@@ -3266,6 +3380,9 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 	}
 
 	sprintf( t, "LifeSpan = %lu ± %lu [%lu, %lu]", nint( fLifeSpanStats.mean() ), nint( fLifeSpanStats.stddev() ), (ulong) fLifeSpanStats.min(), (ulong) fLifeSpanStats.max() );
+	list.push_back( strdup( t ) );
+
+	sprintf( t, "RecLifeSpan = %lu ± %lu [%lu, %lu]", nint( fLifeSpanRecentStats.mean() ), nint( fLifeSpanRecentStats.stddev() ), (ulong) fLifeSpanRecentStats.min(), (ulong) fLifeSpanRecentStats.max() );
 	list.push_back( strdup( t ) );
 
 	sprintf( t, "NeurGroups = %lu ± %lu [%lu, %lu]", nint( fNeuronGroupCountStats.mean() ), nint( fNeuronGroupCountStats.stddev() ), (ulong) fNeuronGroupCountStats.min(), (ulong) fNeuronGroupCountStats.max() );
@@ -3280,12 +3397,12 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 				fFramesPerSecondOverall,       fSecondsPerFrameOverall  );
 	list.push_back( strdup( t ) );
 	
-//	printf( "fAge = %lu, fStatusFrequency = %ld, !(fAge %% fStatusFrequency) = %s\n", fAge, fStatusFrequency, BoolString( !(fAge % fStatusFrequency) ) );
-    if( !(fAge % fStatusFrequency) || (fAge == 1) )
+//	printf( "fStep = %lu, fStatusFrequency = %ld, !(fStep %% fStatusFrequency) = %s\n", fStep, fStatusFrequency, BoolString( !(fStep % fStatusFrequency) ) );
+    if( !(fStep % fStatusFrequency) || (fStep == 1) )
     {
 		char statusFileName[256];
 		
-		sprintf( statusFileName, "run/stats/stat.%ld", fAge );
+		sprintf( statusFileName, "run/stats/stat.%ld", fStep );
         FILE *statusFile = fopen( statusFileName, "w" );
 		Q_CHECK_PTR( statusFile );
 		
