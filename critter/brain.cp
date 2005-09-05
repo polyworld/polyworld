@@ -176,16 +176,23 @@ brain::~brain()
 //---------------------------------------------------------------------------
 // brain::dumpAnatomical
 //---------------------------------------------------------------------------
+#define DebugDumpAnatomical 0
+#if DebugDumpAnatomical
+	#define daPrint( x... ) printf( x );
+#else
+	#define daPrint( x... )
+#endif
 void brain::dumpAnatomical( long index, float fitness )
 {
 	FILE*	file;
 	char	filename[256];
-	long	sizeCM;
-	char*	connectionMatrix;
+	size_t	sizeCM;
+	float*	connectionMatrix;
 	short	i,j;
+	double	inverseMaxWeight = 1. / gMaxWeight;
 
 	sizeCM = sizeof( *connectionMatrix ) * numneurons * numneurons;
-	connectionMatrix = (char*) malloc( sizeCM );
+	connectionMatrix = (float*) malloc( sizeCM );
 	if( !connectionMatrix )
 	{
 		fprintf( stderr, "%s: unable to malloc connectionMatrix\n", __FUNCTION__ );
@@ -194,11 +201,11 @@ void brain::dumpAnatomical( long index, float fitness )
 
 	bzero( connectionMatrix, sizeCM );
 
-//printf( "%s: before filling connectionMatrix\n", __FUNCTION__ ); // yucko
+	daPrint( "%s: before filling connectionMatrix\n", __FUNCTION__ );
 
 	// compute the connection matrix
-	// assume for now that columns correspond to presynaptic "from-neurons"
-	// and rows correspond to postsynaptic "to-neurons"
+	// columns correspond to presynaptic "from-neurons"
+	// rows correspond to postsynaptic "to-neurons"
 	long imin = 10000;
 	long imax = -10000;
 	for( i = 0; i < numsynapses; i++ )
@@ -207,10 +214,10 @@ void brain::dumpAnatomical( long index, float fitness )
 		cmIndex = abs(synapse[i].fromneuron) + abs(synapse[i].toneuron) * numneurons;
 		if( cmIndex < 0 )
 		{
-			printf( "cmIndex = %d, i = %d, fromneuron = %d, toneuron = %d, numneurons = %d\n", cmIndex, i, synapse[i].fromneuron, synapse[i].toneuron, numneurons );
+			fprintf( stderr, "cmIndex = %d, i = %d, fromneuron = %d, toneuron = %d, numneurons = %d\n", cmIndex, i, synapse[i].fromneuron, synapse[i].toneuron, numneurons );
 		}
-//printf( "  i=%d, fromneuron=%d, toneuron=%d, cmIndex=%d\n", i, synapse[i].fromneuron, synapse[i].toneuron, cmIndex );
-		connectionMatrix[cmIndex] = 1;
+		daPrint( "  i=%d, fromneuron=%d, toneuron=%d, cmIndex=%d\n", i, synapse[i].fromneuron, synapse[i].toneuron, cmIndex );
+		connectionMatrix[cmIndex] += synapse[i].efficacy;	// the += is so parallel excitatory and inhibitory connections from input and output neurons just sum together
 		if( cmIndex < imin )
 			imin = cmIndex;
 		if( cmIndex > imax )
@@ -222,9 +229,9 @@ void brain::dumpAnatomical( long index, float fitness )
 	if( imax > numneurons*numneurons )
 		fprintf( stderr, "%s: cmIndex > numneurons^2 (%ld > %d)\n", imax, numneurons*numneurons );
 
-//printf( "%s: imin = %ld, imax = %ld, numneurons = %d\n", __FUNCTION__, imin, imax, numneurons );
+	daPrint( "%s: imin = %ld, imax = %ld, numneurons = %d\n", __FUNCTION__, imin, imax, numneurons );
 
-	sprintf( filename, "brainAnatomy.%ld", index );
+	sprintf( filename, "run/brain/anatomy/brainAnatomy.%ld", index );
 	file = fopen( filename, "w" );
 	if( !file )
 	{
@@ -232,28 +239,26 @@ void brain::dumpAnatomical( long index, float fitness )
 		goto bail;
 	}
 
-//printf( "%s: file = %08lx, index = %ld, fitness = %g\n", __FUNCTION__, (char*)file, index, fitness ); // yucko
+	daPrint( "%s: file = %08lx, index = %ld, fitness = %g\n", __FUNCTION__, (char*)file, index, fitness );
 
-	// print the header, with index and fitness
-	fprintf( file, "brain %ld fitness=%g numneurons=%d\n", index, fitness, numneurons );
+	// print the header, with index, fitness, and number of neurons
+	fprintf( file, "brain %ld fitness=%g numneurons=%d maxWeight=%g\n", index, fitness, numneurons, gMaxWeight );
 
 	// print the network architecture
 	for( i = 0; i < numneurons; i++ )	// running over post-synaptic neurons
 	{
 		for( j = 0; j < numneurons; j++ )	// running over pre-synaptic neurons
-		{
-			fprintf( file, "%d ", connectionMatrix[j + i*numneurons] );
-		}
+			fprintf( file, "%+06.4f ", connectionMatrix[j + i*numneurons] * inverseMaxWeight );
 		fprintf( file, ";\n" );
 	}
 
 	fclose( file );
 
-//printf( "%s: done with anatomy file for %ld\n", __FUNCTION__, index ); // yucko
+	daPrint( "%s: done with anatomy file for %ld\n", __FUNCTION__, index );
 
 bail:
 
-//printf( "%s: about to free connectionMatrix = %08lx\n", __FUNCTION__, (char*)connectionMatrix ); // yucko
+	daPrint( "%s: about to free connectionMatrix = %08lx\n", __FUNCTION__, (char*)connectionMatrix );
 
 	free( connectionMatrix );
 }
@@ -266,7 +271,12 @@ FILE* brain::startFunctional( long index )
 	FILE* file;
 	char filename[256];
 
-	sprintf( filename, "brainFunction.%ld", index );
+#define RenameBrainFunctionFile 0
+#if RenameBrainFunctionFile
+	sprintf( filename, "run/brain/function/incomplete.brainFunction.%ld", index );
+#else
+	sprintf( filename, "run/brain/function/brainFunction.%ld", index );
+#endif
 	file = fopen( filename, "w" );
 	if( !file )
 	{
@@ -274,7 +284,7 @@ FILE* brain::startFunctional( long index )
 		goto bail;
 	}
 
-	// print the header, with index and fitness
+	// print the header, with index (critter number) and neuron count
 	fprintf( file, "brainFunction %ld %d\n", index, numneurons );
 
 bail:
@@ -285,13 +295,20 @@ bail:
 //---------------------------------------------------------------------------
 // brain::endFunctional
 //---------------------------------------------------------------------------
-void brain::endFunctional( FILE* file, float fitness )
+void brain::endFunctional( FILE* file, float fitness, long index )
 {
+	char s[256];
+	
 	if( !file )
 		return;
 
 	fprintf( file, "end fitness = %g\n", fitness );
 	fclose( file );
+#if RenameBrainFunctionFile
+	sprintf( s, "mv run/brain/function/incomplete.brainFunction.%ld run/brain/function/brainFunction.%ld", index, index );
+	printf( "%s\n", s );
+	system( s );
+#endif
 }
 
 //---------------------------------------------------------------------------
