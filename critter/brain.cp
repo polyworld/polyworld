@@ -295,10 +295,16 @@ bail:
 //---------------------------------------------------------------------------
 // brain::endFunctional
 //---------------------------------------------------------------------------
+#if RenameBrainFunctionFile
 void brain::endFunctional( FILE* file, float fitness, long index )
+#else
+void brain::endFunctional( FILE* file, float fitness, long __attribute__ ((__unused__)) index )
+#endif
 {
+#if RenameBrainFunctionFile
 	char s[256];
-	
+#endif
+
 	if( !file )
 		return;
 
