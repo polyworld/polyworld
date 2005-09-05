@@ -2,6 +2,7 @@
 #define PWTYPES_H
 
 class genome;
+struct FitStruct;
 
 struct domainstruct
 {
@@ -27,8 +28,7 @@ struct domainstruct
 	float probabilityOfMutatingSeeds;
     short ifit;
     short jfit;
-    genome** fittest;
-    float* fitness;
+    FitStruct** fittest;
 	int fNumLeastFit;
 	int fMaxNumLeastFit;
 	int fNumSmited;
