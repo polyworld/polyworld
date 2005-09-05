@@ -4,8 +4,6 @@
 /* Copyright Apple Computer 1990,1991,1992                          */
 /********************************************************************/
 
-#define DumpStats 0
-
 // Self
 #include "critter.h"
 
@@ -143,7 +141,7 @@ critter* critter::getfreecritter(TSimulation* simulation, gstage* stage)
     // Increase current total of creatures alive
     critter::crittersliving++;
     
-    // Set number to total creatures that have ever lived
+    // Set number to total creatures that have ever lived (note this is 1-based)
     c->fCritterNumber = ++critter::crittersever;
 
 	// Set critter index.  Used for POV drawing.
@@ -354,10 +352,12 @@ void critter::grow()
 	Q_CHECK_PTR(fGenome);
 	
 	// grow the brain from the genome's specifications
-    fBrain->Grow(fGenome); 
-#if DumpStats
-	fBrainFuncFile = fBrain->startFunctional( fCritterNumber );
-#endif
+    fBrain->Grow(fGenome);
+
+	// If we're recording brain function,
+	// open the file to be used to write out neural activity
+	if( fSimulation->fBestSoFarBrainFunctionRecordFrequency || fSimulation->fBrainFunctionRecordAll )
+		fBrainFuncFile = fBrain->startFunctional( fCritterNumber );
 
     // setup the critter's geometry
     SetGeometry();
@@ -523,10 +523,10 @@ void critter::Die()
 	// No longer alive. :(		
 	fAlive = false;
 
-#if DumpStats
-	fBrain->dumpAnatomical( fCritterNumber, fFitness );
-	fBrain->endFunctional( fBrainFuncFile, fFitness );
-#endif
+	// If we're recording brain function, end it here
+	if( fSimulation->fBestSoFarBrainFunctionRecordFrequency || fSimulation->fBrainFunctionRecordAll )
+		fBrain->endFunctional( fBrainFuncFile, fFitness, fCritterNumber );
+	fBrainFuncFile = NULL;
 }
 
 
@@ -656,9 +656,10 @@ void critter::Behave()
     // now update the brain
 	currentCritter = this;
     fBrain->Update(fEnergy / fMaxEnergy);
-#if DumpStats
-	fBrain->writeFunctional( fBrainFuncFile );
-#endif
+
+	// If we're recording brain function, do it here
+	if( fSimulation->fBestSoFarBrainFunctionRecordFrequency || fSimulation->fBrainFunctionRecordAll )
+		fBrain->writeFunctional( fBrainFuncFile );
 }
 
 
