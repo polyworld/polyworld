@@ -1,4 +1,4 @@
-10      version
+11      version
 
 1      docpuwork
 10000  dumpfreq
@@ -191,5 +191,10 @@
 
 0.10   smiteFrac
 0.25   smiteAgeFrac_affectsAverageFitness
+
+0      brainAnatomyRecordAll
+0      brainFunctionRecordAll
+1000     bestSoFarBrainAnatonomyRecordFrequency
+1000     bestSoFarBrainFunctionRecordFrequency
 
 1      recordMovie
