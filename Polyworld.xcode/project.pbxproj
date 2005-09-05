@@ -606,7 +606,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "#echo QtBin = $QtBin\n#echo QtLib = $QtLib\n#echo QtInc = $QtInc\n\nif [ app/Simulation.h -nt app/moc_Simulations.cpp ]; then $QtBin/moc app/Simulation.h -o app/moc_Simulation.cpp; fi\nif [ app/PWApp.h      -nt app/moc_PWApp.cpp       ]; then $QtBin/moc app/PWApp.h      -o app/moc_PWApp.cpp     ; fi\nexit 0";
+			shellScript = "#echo QtBin = $QtBin\n#echo QtLib = $QtLib\n#echo QtInc = $QtInc\n\nif [ app/Simulation.h -nt app/moc_Simulation.cpp ]; then $QtBin/moc app/Simulation.h -o app/moc_Simulation.cpp; fi\nif [ app/PWApp.h      -nt app/moc_PWApp.cpp      ]; then $QtBin/moc app/PWApp.h      -o app/moc_PWApp.cpp     ; fi\nexit 0";
 		};
 		76B2FB68084CE6E9002FBDA1 = {
 			buildPhases = (
