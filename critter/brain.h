@@ -98,7 +98,7 @@ public:
         
 	void dumpAnatomical( long index, float fitness );
 	FILE* startFunctional( long index );
-	void endFunctional( FILE* file, float fitness );
+	void endFunctional( FILE* file, float fitness, long index );
 	void writeFunctional( FILE* file );
         
     void Render(short patchwidth, short patchheight);
