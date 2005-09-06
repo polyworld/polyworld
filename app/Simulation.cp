@@ -8,6 +8,8 @@
 // System
 #include <fstream>
 #include <iostream>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 // qt
 #include <qapplication.h>
@@ -480,6 +482,7 @@ void TSimulation::Step()
 	{
 		char s[256];
 		int limit = fNumberDied < fNumberFit ? fNumberDied : fNumberFit;
+	#if UseSystemCalls
 		sprintf( s, "mkdir run/brain/bestSoFar/%ld", fStep );
 		system( s );
 		for( int i = 0; i < limit; i++ )
@@ -489,6 +492,20 @@ void TSimulation::Step()
 			sprintf( s, "cp run/brain/function/brainFunction.%ld run/brain/bestSoFar/%ld/%d.brainFunction.%ld", fFittest[i]->critterID, fStep, i, fFittest[i]->critterID );
 			system( s );
 		}
+	#else
+		sprintf( s, "run/brain/bestSoFar/%ld", fStep );
+		mkdir( s, PwDirMode );
+		for( int i = 0; i < limit; i++ )
+		{
+			char t[256];	// target (use s for source)
+			sprintf( s, "run/brain/anatomy/brainAnatomy.%ld", fFittest[i]->critterID );
+			sprintf( t, "run/brain/bestSoFar/%ld/%d.brainAnatomy.%ld", fStep, i, fFittest[i]->critterID );
+			link( s, t );
+			sprintf( s, "run/brain/function/brainFunction.%ld", fFittest[i]->critterID );
+			sprintf( t, "run/brain/bestSoFar/%ld/%d.brainFunction.%ld", fStep, i, fFittest[i]->critterID );
+			link( s, t );
+		}
+	#endif
 	}
 	
 	// Handle tracking gene Separation
@@ -616,6 +633,7 @@ void TSimulation::Init()
 #endif
 
 	// Set up the run directory and its subsidiaries
+#if UseSystemCalls
 	char cmd[256];
 	sprintf( cmd, "mv -f run run_%ld", time(NULL) );
 	system( cmd );
@@ -632,7 +650,32 @@ void TSimulation::Init()
 			system( "mkdir run/brain/bestSoFar" );
 	}
 	system( "cp worldfile run/" );
-		
+#else
+	char s[256];
+	// First save the old directory, if it exists
+	sprintf( s, "run_%ld", time(NULL) );
+	(void) rename( "run", s );
+	if( mkdir( "run", PwDirMode ) )
+		fprintf( stderr, "Error making run directory (%d)\n", errno );
+	if( mkdir( "run/stats", PwDirMode ) )
+		fprintf( stderr, "Error making run/stats directory (%d)\n", errno );
+	if( fBestSoFarBrainAnatomyRecordFrequency || fBestSoFarBrainFunctionRecordFrequency || fBrainAnatomyRecordAll || fBrainFunctionRecordAll )
+	{
+		if( mkdir( "run/brain", PwDirMode ) )
+			fprintf( stderr, "Error making run/brain directory (%d)\n", errno );
+		if( fBestSoFarBrainAnatomyRecordFrequency || fBrainAnatomyRecordAll )
+			if( mkdir( "run/brain/anatomy", PwDirMode ) )
+				fprintf( stderr, "Error making run/brain/anatomy directory (%d)\n", errno );
+		if( fBestSoFarBrainFunctionRecordFrequency || fBrainFunctionRecordAll )
+			if( mkdir( "run/brain/function", PwDirMode ) )
+				fprintf( stderr, "Error making run/brain/function directory (%d)\n", errno );
+		if( fBestSoFarBrainAnatomyRecordFrequency || fBestSoFarBrainFunctionRecordFrequency )
+			if( mkdir( "run/brain/bestSoFar", PwDirMode ) )
+				fprintf( stderr, "Error making run/brain/bestSoFar directory (%d)\n", errno );
+	}
+	system( "cp worldfile run/" );
+#endif
+
     // Pass ownership of the cast to the stage [TODO] figure out ownership issues
     fStage.SetCast(&fWorldCast);
 
@@ -2365,15 +2408,27 @@ void TSimulation::Death(critter* c)
 		char s[256];
 		if( fBestSoFarBrainAnatomyRecordFrequency && !fBrainAnatomyRecordAll )
 		{
+		#if UseSystemCalls
 			sprintf( s, "rm run/brain/anatomy/brainAnatomy.%lu", loserID );
 			//printf( "%lu %s\n", fStep, s );
 			system( s );
+		#else
+			sprintf( s, "run/brain/anatomy/brainAnatomy.%lu", loserID );
+			if( unlink( s ) )
+				fprintf( stderr, "Erroring unlinking %s (%ld)\n", s, errno );
+		#endif
 		}
 		if( fBestSoFarBrainFunctionRecordFrequency && !fBrainFunctionRecordAll )
 		{
+		#if UseSystemCalls
 			sprintf( s, "rm run/brain/function/brainFunction.%lu", loserID );
 			//printf( "%lu %s\n", fStep, s );
 			system( s );
+		#else
+			sprintf( s, "run/brain/function/brainFunction.%lu", loserID );
+			if( unlink( s ) )
+				fprintf( stderr, "Erroring unlinking %s (%ld)\n", s, errno );
+		#endif
 		}
 	}
 
@@ -2385,9 +2440,15 @@ void TSimulation::Death(critter* c)
 	if( fBestSoFarBrainFunctionRecordFrequency && !oneOfTheBestSoFar && !fBrainFunctionRecordAll )
 	{
 		char s[256];
+	#if UseSystemCalls
 		sprintf( s, "rm run/brain/function/brainFunction.%lu", c->Number() );
 		//printf( "%lu %s\n", fStep, s );
 		system( s );
+	#else
+		sprintf( s, "run/brain/function/brainFunction.%lu", c->Number() );
+		if( unlink( s ) )
+			fprintf( stderr, "Erroring unlinking %s (%ld)\n", s, errno );
+	#endif
 	}
 	
 	// following assumes (requires!) list to be currently pointing to c,

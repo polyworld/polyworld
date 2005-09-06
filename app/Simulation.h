@@ -30,6 +30,12 @@ class TSimulation;
 static const int MAXDOMAINS = 10;
 static const int MAXFITNESSITEMS = 5;
 
+// Define file mode mask so that users can read+write, group and others can read (but not write)
+#define	PwFileMode ( S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH )
+// Define directory mode mask the same, except you need execute privileges to use as a directory (go fig)
+#define	PwDirMode ( S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH )
+
+
 struct FitStruct
 {
 	ulong	critterID;

@@ -14,6 +14,8 @@
 
 #include <fstream>
 #include <iostream>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 // qt
 #include <qapplication.h>
@@ -271,7 +273,7 @@ FILE* brain::startFunctional( long index )
 	FILE* file;
 	char filename[256];
 
-#define RenameBrainFunctionFile 0
+#define RenameBrainFunctionFile 1
 #if RenameBrainFunctionFile
 	sprintf( filename, "run/brain/function/incomplete.brainFunction.%ld", index );
 #else
@@ -302,7 +304,6 @@ void brain::endFunctional( FILE* file, float fitness, long __attribute__ ((__unu
 #endif
 {
 #if RenameBrainFunctionFile
-	char s[256];
 #endif
 
 	if( !file )
@@ -311,9 +312,17 @@ void brain::endFunctional( FILE* file, float fitness, long __attribute__ ((__unu
 	fprintf( file, "end fitness = %g\n", fitness );
 	fclose( file );
 #if RenameBrainFunctionFile
+	char s[256];
+  #if UseSystemCalls
 	sprintf( s, "mv run/brain/function/incomplete.brainFunction.%ld run/brain/function/brainFunction.%ld", index, index );
 	printf( "%s\n", s );
 	system( s );
+  #else
+	char t[256];
+	sprintf( s, "run/brain/function/incomplete.brainFunction.%ld", index );
+	sprintf( t, "run/brain/function/brainFunction.%ld", index );
+	rename( s, t );
+  #endif
 #endif
 }
 
