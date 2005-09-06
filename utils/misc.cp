@@ -16,6 +16,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/errno.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 
 char* concat(const char* s1, const char* s2)
 {
