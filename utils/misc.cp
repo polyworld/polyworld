@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/errno.h>
 
 char* concat(const char* s1, const char* s2)
 {
@@ -131,4 +132,28 @@ double hirestime( void )
     }
     now = mach_absolute_time();
     return (double)(now * (double)num / denom / NSEC_PER_SEC);
+}
+
+int SetMaximumFiles( long filecount )
+{
+    struct rlimit lim;
+	
+	lim.rlim_cur = lim.rlim_max = (rlim_t) filecount;
+	if( setrlimit( RLIMIT_NOFILE, &lim ) == 0 )
+		return 0;
+	else
+		return errno;
+}
+
+int GetMaximumFiles( long *filecount )
+{
+	struct rlimit lim;
+	
+	if( getrlimit( RLIMIT_NOFILE, &lim ) == 0 )
+	{
+		*filecount = (long) lim.rlim_max;
+		return 0;
+	}
+	else
+		return errno;
 }

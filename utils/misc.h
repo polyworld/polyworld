@@ -80,6 +80,9 @@ inline float fmin(float f1, float f2, float f3, float f4, float f5)
 
 float logistic(float x, float slope);
 
+int SetMaximumFiles( long filecount );
+int GetMaximumFiles( long *filecount );
+
 #ifndef PI
 #define PI M_PI
 #endif PI

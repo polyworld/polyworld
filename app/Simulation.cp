@@ -661,6 +661,10 @@ void TSimulation::Init()
 		fprintf( stderr, "Error making run/stats directory (%d)\n", errno );
 	if( fBestSoFarBrainAnatomyRecordFrequency || fBestSoFarBrainFunctionRecordFrequency || fBrainAnatomyRecordAll || fBrainFunctionRecordAll )
 	{
+		// If we're going to be saving info on all these files, must increase the number allowed open
+		if( SetMaximumFiles( fMaxCritters * 2 ) )	// 2x is overkill, but let's be safe
+			fprintf( stderr, "Error setting maximum files to %d (%d)\n", fMaxCritters * 2, errno );
+
 		if( mkdir( "run/brain", PwDirMode ) )
 			fprintf( stderr, "Error making run/brain directory (%d)\n", errno );
 		if( fBestSoFarBrainAnatomyRecordFrequency || fBrainAnatomyRecordAll )
