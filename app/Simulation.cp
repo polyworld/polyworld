@@ -633,24 +633,6 @@ void TSimulation::Init()
 #endif
 
 	// Set up the run directory and its subsidiaries
-#if UseSystemCalls
-	char cmd[256];
-	sprintf( cmd, "mv -f run run_%ld", time(NULL) );
-	system( cmd );
-	system( "mkdir run" );
-	system( "mkdir run/stats" );
-	if( fBestSoFarBrainAnatomyRecordFrequency || fBestSoFarBrainFunctionRecordFrequency || fBrainAnatomyRecordAll || fBrainFunctionRecordAll )
-	{
-		system( "mkdir run/brain" );
-		if( fBestSoFarBrainAnatomyRecordFrequency || fBrainAnatomyRecordAll )
-			system( "mkdir run/brain/anatomy" );
-		if( fBestSoFarBrainFunctionRecordFrequency || fBrainFunctionRecordAll )
-			system( "mkdir run/brain/function" );
-		if( fBestSoFarBrainAnatomyRecordFrequency || fBestSoFarBrainFunctionRecordFrequency )
-			system( "mkdir run/brain/bestSoFar" );
-	}
-	system( "cp worldfile run/" );
-#else
 	char s[256];
 	// First save the old directory, if it exists
 	sprintf( s, "run_%ld", time(NULL) );
@@ -667,6 +649,11 @@ void TSimulation::Init()
 
 		if( mkdir( "run/brain", PwDirMode ) )
 			fprintf( stderr, "Error making run/brain directory (%d)\n", errno );
+	#define RecordRandomBrainAnatomies 0
+	#if RecordRandomBrainAnatomies
+		if( mkdir( "run/brain/random", PwDirMode ) )
+			fprintf( stderr, "Error making run/brain/random directory (%d)\n", errno );
+	#endif
 		if( fBestSoFarBrainAnatomyRecordFrequency || fBrainAnatomyRecordAll )
 			if( mkdir( "run/brain/anatomy", PwDirMode ) )
 				fprintf( stderr, "Error making run/brain/anatomy directory (%d)\n", errno );
@@ -678,7 +665,6 @@ void TSimulation::Init()
 				fprintf( stderr, "Error making run/brain/bestSoFar directory (%d)\n", errno );
 	}
 	system( "cp worldfile run/" );
-#endif
 
     // Pass ownership of the cast to the stage [TODO] figure out ownership issues
     fStage.SetCast(&fWorldCast);
@@ -699,7 +685,8 @@ void TSimulation::Init()
 		{
 			numSeededDomain = 0;	// reset for each domain
 
-			for (int i = 0; i < min((fMaxCritters - (long)critter::gXSortedCritters.count()), fDomains[id].initnumcritters); i++)
+			int limit = min((fMaxCritters - (long)critter::gXSortedCritters.count()), fDomains[id].initnumcritters);
+			for (int i = 0; i < limit; i++)
 			{
 				c = critter::getfreecritter(this, &fStage);
 				Q_ASSERT(c != NULL);
@@ -744,6 +731,9 @@ void TSimulation::Init()
 				c->Domain(id);
 				fDomains[id].numcritters++;
 				fNeuronGroupCountStats.add( c->Brain()->NumNeuronGroups() );
+			#if RecordRandomBrainAnatomies
+				c->Brain()->dumpAnatomical( "run/brain/random", c->Number(), 0.0 );
+			#endif
 			}
 			
 			numSeededTotal += numSeededDomain;
@@ -1378,6 +1368,18 @@ void TSimulation::Interact()
 	#ifdef DEBUGCHECK
         debugcheck("after a death in interact");
 	#endif DEBUGCHECK
+	
+	#if 0
+		// If we're saving gene stats, compute them here
+		if( fSaveGeneStats )
+		{
+			for( i = 0; i < genome::numbytes; i++ )
+			{
+				genome::gGeneSum[i] += critter->Genome()->fGenes[i];
+				genome::gGeneSum2[i] += critter->Genome()->fGenes[i] * critter->Genome()->fGenes[i];
+			}
+		}
+	#endif
 	
 		// Figure out who is least fit, if we're doing smiting to make room for births
 		
@@ -2403,7 +2405,7 @@ void TSimulation::Death(critter* c)
 	// If we're recording all anatomies or recording best anatomies and this was one of the fittest critters,
 	// then dump the anatomy to the appropriate location on disk
 	if( fBrainAnatomyRecordAll || (fBestSoFarBrainAnatomyRecordFrequency && oneOfTheBestSoFar) )
-		c->Brain()->dumpAnatomical( c->Number(), c->Fitness() );
+		c->Brain()->dumpAnatomical( "run/brain/anatomy", c->Number(), c->Fitness() );
 	
 	// If this critter was so good it displaced another critter from the bestSoFar (fFittest[]) list,
 	// then nuke the booted critter's brain anatomy & function recordings

@@ -96,7 +96,7 @@ public:
     short NumBlueNeurons();
 	short NumNeuronGroups();
         
-	void dumpAnatomical( long index, float fitness );
+	void dumpAnatomical( char* directoryName, long index, float fitness );
 	FILE* startFunctional( long index );
 	void endFunctional( FILE* file, float fitness, long index );
 	void writeFunctional( FILE* file );

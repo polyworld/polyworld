@@ -184,7 +184,7 @@ brain::~brain()
 #else
 	#define daPrint( x... )
 #endif
-void brain::dumpAnatomical( long index, float fitness )
+void brain::dumpAnatomical( char* directoryName, long index, float fitness )
 {
 	FILE*	file;
 	char	filename[256];
@@ -233,7 +233,7 @@ void brain::dumpAnatomical( long index, float fitness )
 
 	daPrint( "%s: imin = %ld, imax = %ld, numneurons = %d\n", __FUNCTION__, imin, imax, numneurons );
 
-	sprintf( filename, "run/brain/anatomy/brainAnatomy.%ld", index );
+	sprintf( filename, "%s/brainAnatomy.%ld", directoryName, index );
 	file = fopen( filename, "w" );
 	if( !file )
 	{
