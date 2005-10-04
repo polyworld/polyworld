@@ -1,4 +1,4 @@
-11      version
+12      version
 
 1      docpuwork
 10000  dumpfreq
@@ -92,8 +92,8 @@
 0.5    logisticslope
 8.0    maxweight
 2.0    initmaxweight_0.5_0.1_1.0
-0.1    minbitprob
-0.6    maxbitprob
+0.1    minbitprob_0.1
+0.6    maxbitprob_0.6
 0.2    critterheight
 0.6    foodheight
 0.2 0.6 0.2 foodcolor
@@ -112,9 +112,7 @@
 8      monheight_not_used
 1      monstride
 100.0  worldsize
-2      numbarriers
-33.33 -100. 33.33 -10. barrierposition
-66.67 -100. 66.67 -10. barrierposition
+0      numbarriers
 
 0      genesepmon
 0      geneseprec
@@ -123,40 +121,7 @@
 1      chartfoodenergy
 1      chartpop
 
-3      numdomains
-
-33.33  domainbarrier#1
-66.67  domainbarrier#2
-
-20     domain[0].minnumcritters
-100    domain[0].maxnumcritters
-30     domain[0].initnumcritters
-0     domain[0].numberToSeed
-0.0    domain[0].probabilityOfMutatingSeed
-30     domain[0].minfoodcount
-40    domain[0].maxfoodcount
-30     domain[0].maxfoodgrown
-30     domain[0].initfoodcount
-
-20     domain[1].minnumcritters
-100    domain[1].maxnumcritters
-30     domain[1].initnumcritters
-0     domain[1].numberToSeed
-0.0    domain[1].probabilityOfMutatingSeed
-30     domain[1].minfoodcount
-40    domain[1].maxfoodcount
-30     domain[1].maxfoodgrown
-30     domain[1].initfoodcount
-
-20     domain[2].minnumcritters
-100    domain[2].maxnumcritters
-30     domain[2].initnumcritters
-0     domain[2].numberToSeed
-0.0    domain[2].probabilityOfMutatingSeed
-30     domain[2].minfoodcount
-40    domain[2].maxfoodcount
-30     domain[2].maxfoodgrown
-30     domain[2].initfoodcount
+1      numdomains
 
 2      numFoodBands
 -1.0   foodBand[0].zMin
@@ -194,6 +159,8 @@
 
 0      brainAnatomyRecordAll
 0      brainFunctionRecordAll
+1      brainAnatomyRecordSeeds
+1      brainFunctionRecordSeeds
 1000     bestSoFarBrainAnatonomyRecordFrequency
 1000     bestSoFarBrainFunctionRecordFrequency
 

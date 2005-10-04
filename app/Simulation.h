@@ -221,6 +221,8 @@ public:
 	int fBestSoFarBrainFunctionRecordFrequency;
 	bool fBrainAnatomyRecordAll;
 	bool fBrainFunctionRecordAll;
+	bool fBrainAnatomyRecordSeeds;
+	bool fBrainFunctionRecordSeeds;
 
 private slots:
 	

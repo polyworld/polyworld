@@ -74,6 +74,8 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
 		fBestSoFarBrainFunctionRecordFrequency(0),
 		fBrainAnatomyRecordAll(false),
 		fBrainFunctionRecordAll(false),
+		fBrainAnatomyRecordSeeds(false),
+		fBrainFunctionRecordSeeds(false),
 		fSceneView(sceneView),
 		fSceneWindow(sceneWindow),
 		fBirthrateWindow(NULL),
@@ -482,17 +484,7 @@ void TSimulation::Step()
 	{
 		char s[256];
 		int limit = fNumberDied < fNumberFit ? fNumberDied : fNumberFit;
-	#if UseSystemCalls
-		sprintf( s, "mkdir run/brain/bestSoFar/%ld", fStep );
-		system( s );
-		for( int i = 0; i < limit; i++ )
-		{
-			sprintf( s, "cp run/brain/anatomy/brainAnatomy.%ld run/brain/bestSoFar/%ld/%d.brainAnatomy.%ld", fFittest[i]->critterID, fStep, i, fFittest[i]->critterID );
-			system( s );
-			sprintf( s, "cp run/brain/function/brainFunction.%ld run/brain/bestSoFar/%ld/%d.brainFunction.%ld", fFittest[i]->critterID, fStep, i, fFittest[i]->critterID );
-			system( s );
-		}
-	#else
+
 		sprintf( s, "run/brain/bestSoFar/%ld", fStep );
 		mkdir( s, PwDirMode );
 		for( int i = 0; i < limit; i++ )
@@ -505,7 +497,6 @@ void TSimulation::Step()
 			sprintf( t, "run/brain/bestSoFar/%ld/%d.brainFunction.%ld", fStep, i, fFittest[i]->critterID );
 			link( s, t );
 		}
-	#endif
 	}
 	
 	// Handle tracking gene Separation
@@ -581,26 +572,8 @@ void TSimulation::Init()
         }
     }
 
-#if 1
-	if( fSmiteFrac > 0.0 )
-	{
-        for( int id = 0; id < fNumDomains; id++ )
-        {
-			fDomains[id].fNumLeastFit = 0;
-			fDomains[id].fMaxNumLeastFit = lround( fSmiteFrac * fDomains[id].maxnumcritters );
-			
-			smPrint( "for domain %d fMaxNumLeastFit = %d\n", id, fDomains[id].fMaxNumLeastFit );
-			
-			if( fDomains[id].fMaxNumLeastFit > 0 )
-			{
-				fDomains[id].fLeastFit = new critter*[fDomains[id].fMaxNumLeastFit];
-				
-				for( int i = 0; i < fDomains[id].fMaxNumLeastFit; i++ )
-					fDomains[id].fLeastFit[i] = NULL;
-			}
-        }
-	}
-#else
+#define AllowZeroDomains 0
+#if AllowZeroDomains
 	// Eliminated all global least-fit structs for efficiency, as I think we always require at least one domain now  -  lsy 6/1/05
 	fNumLeastFit = 0;
 	fMaxNumLeastFit = lround( fSmiteFrac * fMaxCritters );
@@ -630,6 +603,25 @@ void TSimulation::Init()
 			}
         }
 	}
+#else
+	if( fSmiteFrac > 0.0 )
+	{
+        for( int id = 0; id < fNumDomains; id++ )
+        {
+			fDomains[id].fNumLeastFit = 0;
+			fDomains[id].fMaxNumLeastFit = lround( fSmiteFrac * fDomains[id].maxnumcritters );
+			
+			smPrint( "for domain %d fMaxNumLeastFit = %d\n", id, fDomains[id].fMaxNumLeastFit );
+			
+			if( fDomains[id].fMaxNumLeastFit > 0 )
+			{
+				fDomains[id].fLeastFit = new critter*[fDomains[id].fMaxNumLeastFit];
+				
+				for( int i = 0; i < fDomains[id].fMaxNumLeastFit; i++ )
+					fDomains[id].fLeastFit[i] = NULL;
+			}
+        }
+	}
 #endif
 
 	// Set up the run directory and its subsidiaries
@@ -641,7 +633,9 @@ void TSimulation::Init()
 		fprintf( stderr, "Error making run directory (%d)\n", errno );
 	if( mkdir( "run/stats", PwDirMode ) )
 		fprintf( stderr, "Error making run/stats directory (%d)\n", errno );
-	if( fBestSoFarBrainAnatomyRecordFrequency || fBestSoFarBrainFunctionRecordFrequency || fBrainAnatomyRecordAll || fBrainFunctionRecordAll )
+	if( fBestSoFarBrainAnatomyRecordFrequency || fBestSoFarBrainFunctionRecordFrequency ||
+		fBrainAnatomyRecordAll || fBrainFunctionRecordAll ||
+		fBrainAnatomyRecordSeeds || fBrainFunctionRecordSeeds )
 	{
 		// If we're going to be saving info on all these files, must increase the number allowed open
 		if( SetMaximumFiles( fMaxCritters * 2 ) )	// 2x is overkill, but let's be safe
@@ -654,15 +648,26 @@ void TSimulation::Init()
 		if( mkdir( "run/brain/random", PwDirMode ) )
 			fprintf( stderr, "Error making run/brain/random directory (%d)\n", errno );
 	#endif
-		if( fBestSoFarBrainAnatomyRecordFrequency || fBrainAnatomyRecordAll )
+		if( fBestSoFarBrainAnatomyRecordFrequency || fBrainAnatomyRecordAll || fBrainAnatomyRecordSeeds )
 			if( mkdir( "run/brain/anatomy", PwDirMode ) )
 				fprintf( stderr, "Error making run/brain/anatomy directory (%d)\n", errno );
-		if( fBestSoFarBrainFunctionRecordFrequency || fBrainFunctionRecordAll )
+		if( fBestSoFarBrainFunctionRecordFrequency || fBrainFunctionRecordAll || fBrainFunctionRecordSeeds )
 			if( mkdir( "run/brain/function", PwDirMode ) )
 				fprintf( stderr, "Error making run/brain/function directory (%d)\n", errno );
 		if( fBestSoFarBrainAnatomyRecordFrequency || fBestSoFarBrainFunctionRecordFrequency )
 			if( mkdir( "run/brain/bestSoFar", PwDirMode ) )
 				fprintf( stderr, "Error making run/brain/bestSoFar directory (%d)\n", errno );
+		if( fBrainAnatomyRecordSeeds || fBrainFunctionRecordSeeds )
+		{
+			if( mkdir( "run/brain/seeds", PwDirMode ) )
+				fprintf( stderr, "Error making run/brain/seeds directory (%d)\n", errno );
+			if( fBrainAnatomyRecordSeeds )
+				if( mkdir( "run/brain/seeds/anatomy", PwDirMode ) )
+					fprintf( stderr, "Error making run/brain/seeds/anatomy directory (%d)\n", errno );
+			if( fBrainFunctionRecordSeeds )
+				if( mkdir( "run/brain/seeds/function", PwDirMode ) )
+					fprintf( stderr, "Error making run/brain/seeds/function directory (%d)\n", errno );
+		}
 	}
 	system( "cp worldfile run/" );
 
@@ -677,7 +682,7 @@ void TSimulation::Init()
 	if (!fLoadState)
 	{
 		long numSeededDomain;
-		long numSeededTotal;
+		long numSeededTotal = 0;
 		int id;
 		
 		// first handle the individual domains
@@ -1385,6 +1390,7 @@ void TSimulation::Interact()
 		
 		// Do the bookkeeping for the specific domain, if we're using domains
 		// Note: I think we must have at least one domain these days - lsy 6/1/05
+		
 		// The test against average fitness is an attempt to keep fit organisms from being smited, in general,
 		// but it also helps protect against the situation when there are so few potential low-fitness candidates,
 		// due to the age constraint and/or population size, that critters can end up on both the highest fitness
@@ -1436,7 +1442,7 @@ void TSimulation::Interact()
 			}
 		}
 	
-	#if 0
+	#if AllowZeroDomains
 		// Eliminated for efficiency, as I think we always require at least one domain now  -  lsy 6/1/05
 		// Do the overall bookkeeping, but only if we're not doing it for domains
 		if( (fNumDomains == 0) && (fMaxNumLeastFit > 0) )
@@ -2359,7 +2365,7 @@ void TSimulation::Death(critter* c)
 	// Must also update the leastFit data structures, now that they
 	// are used on-demand in the main mate/fight/eat loop in Interact()
 
-#if 0
+#if AllowZeroDomains
 	// Eliminated for efficiency, as I think we always require at least one domain now  -  lsy 6/1/05
 	// Update the global leastFit list
 	for( int i = 0; i < fNumLeastFit; i++ )
@@ -2404,8 +2410,19 @@ void TSimulation::Death(critter* c)
 	
 	// If we're recording all anatomies or recording best anatomies and this was one of the fittest critters,
 	// then dump the anatomy to the appropriate location on disk
-	if( fBrainAnatomyRecordAll || (fBestSoFarBrainAnatomyRecordFrequency && oneOfTheBestSoFar) )
+	if( fBrainAnatomyRecordAll || (fBestSoFarBrainAnatomyRecordFrequency && oneOfTheBestSoFar) || (fBrainAnatomyRecordSeeds && (c->Number() <= fInitNumCritters)) )
 		c->Brain()->dumpAnatomical( "run/brain/anatomy", c->Number(), c->Fitness() );
+		
+	// If this was one of the seed critters and we're recording their anatomies, then save the data in the appropriate directory
+	if( fBrainAnatomyRecordSeeds && (c->Number() <= fInitNumCritters) )
+	{
+		char s[256];	// source
+		char t[256];	// target
+		
+		sprintf( s, "run/brain/anatomy/brainAnatomy.%ld", c->Number() );
+		sprintf( t, "run/brain/seeds/anatomy/brainAnatomy.%ld", c->Number() );
+		link( s, t );
+	}
 	
 	// If this critter was so good it displaced another critter from the bestSoFar (fFittest[]) list,
 	// then nuke the booted critter's brain anatomy & function recordings
@@ -2414,47 +2431,41 @@ void TSimulation::Death(critter* c)
 		char s[256];
 		if( fBestSoFarBrainAnatomyRecordFrequency && !fBrainAnatomyRecordAll )
 		{
-		#if UseSystemCalls
-			sprintf( s, "rm run/brain/anatomy/brainAnatomy.%lu", loserID );
-			//printf( "%lu %s\n", fStep, s );
-			system( s );
-		#else
 			sprintf( s, "run/brain/anatomy/brainAnatomy.%lu", loserID );
 			if( unlink( s ) )
 				fprintf( stderr, "Erroring unlinking %s (%ld)\n", s, errno );
-		#endif
 		}
 		if( fBestSoFarBrainFunctionRecordFrequency && !fBrainFunctionRecordAll )
 		{
-		#if UseSystemCalls
-			sprintf( s, "rm run/brain/function/brainFunction.%lu", loserID );
-			//printf( "%lu %s\n", fStep, s );
-			system( s );
-		#else
 			sprintf( s, "run/brain/function/brainFunction.%lu", loserID );
 			if( unlink( s ) )
 				fprintf( stderr, "Erroring unlinking %s (%ld)\n", s, errno );
-		#endif
 		}
 	}
 
 	//printf( "%lu ", fStep );
 	c->Die();
 	
+	// If this was one of the seed critters and we're recording their functioning, then save the data in the appropriate directory
+	// NOTE:  Must be done after c->Die(), as that is where the brainFunction file is closed
+	if( fBrainFunctionRecordSeeds && (c->Number() <= fInitNumCritters) )
+	{
+		char s[256];	// source
+		char t[256];	// target
+		
+		sprintf( s, "run/brain/function/brainFunction.%ld", c->Number() );
+		sprintf( t, "run/brain/seeds/function/brainFunction.%ld", c->Number() );
+		link( s, t );
+	}
+	
 	// If we're only archiving the best, and this isn't one of them, then nuke its brainFunction recording
 	// NOTE:  Must be done after c->Die(), as that is where the brainFunction file is closed
 	if( fBestSoFarBrainFunctionRecordFrequency && !oneOfTheBestSoFar && !fBrainFunctionRecordAll )
 	{
 		char s[256];
-	#if UseSystemCalls
-		sprintf( s, "rm run/brain/function/brainFunction.%lu", c->Number() );
-		//printf( "%lu %s\n", fStep, s );
-		system( s );
-	#else
 		sprintf( s, "run/brain/function/brainFunction.%lu", c->Number() );
 		if( unlink( s ) )
 			fprintf( stderr, "Erroring unlinking %s (%ld)\n", s, errno );
-	#endif
 	}
 	
 	// following assumes (requires!) list to be currently pointing to c,
@@ -2889,6 +2900,8 @@ void TSimulation::ReadWorldFile(const char* filename)
         fDomains[0].maxfoodcount = fMaxFoodCount;
         fDomains[0].maxfoodgrown = fMaxFoodGrown;
         fDomains[0].initfoodcount = fInitialFoodCount;
+		fDomains[0].numberToSeed = fNumberToSeed;
+		fDomains[0].probabilityOfMutatingSeeds = fProbabilityOfMutatingSeeds;
     }
 
     for (id = 0; id < fNumDomains; id++)
@@ -3037,6 +3050,15 @@ void TSimulation::ReadWorldFile(const char* filename)
 		cout << "brainAnatomyRecordAll" ses fBrainAnatomyRecordAll nl;
 		in >> fBrainFunctionRecordAll; in >> label;
 		cout << "brainFunctionRecordAll" ses fBrainFunctionRecordAll nl;
+		
+		if( version >= 12 )
+		{
+			in >> fBrainAnatomyRecordSeeds; in >> label;
+			cout << "brainAnatomyRecordSeeds" ses fBrainAnatomyRecordSeeds nl;
+			in >> fBrainFunctionRecordSeeds; in >> label;
+			cout << "brainFunctionRecordSeeds" ses fBrainFunctionRecordSeeds nl;
+		}
+		
 		in >> fBestSoFarBrainAnatomyRecordFrequency; in >> label;
 		cout << "bestSoFarBrainAnatomyRecordFrequency" ses fBestSoFarBrainAnatomyRecordFrequency nl;
 		in >> fBestSoFarBrainFunctionRecordFrequency; in >> label;
@@ -3452,10 +3474,10 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 	sprintf( t, "RecLifeSpan = %lu ± %lu [%lu, %lu]", nint( fLifeSpanRecentStats.mean() ), nint( fLifeSpanRecentStats.stddev() ), (ulong) fLifeSpanRecentStats.min(), (ulong) fLifeSpanRecentStats.max() );
 	list.push_back( strdup( t ) );
 
-	sprintf( t, "NeurGroups = %lu ± %lu [%lu, %lu]", nint( fNeuronGroupCountStats.mean() ), nint( fNeuronGroupCountStats.stddev() ), (ulong) fNeuronGroupCountStats.min(), (ulong) fNeuronGroupCountStats.max() );
+	sprintf( t, "NeurGroups = %.1f ± %.1f [%lu, %lu]", fNeuronGroupCountStats.mean(), fNeuronGroupCountStats.stddev(), (ulong) fNeuronGroupCountStats.min(), (ulong) fNeuronGroupCountStats.max() );
 	list.push_back( strdup( t ) );
 
-	sprintf( t, "CurNeurGroups = %lu ± %lu [%lu, %lu]", nint( fCurrentNeuronGroupCountStats.mean() ), nint( fCurrentNeuronGroupCountStats.stddev() ), (ulong) fCurrentNeuronGroupCountStats.min(), (ulong) fCurrentNeuronGroupCountStats.max() );
+	sprintf( t, "CurNeurGroups = %.1f ± %.1f [%lu, %lu]", fCurrentNeuronGroupCountStats.mean(), fCurrentNeuronGroupCountStats.stddev(), (ulong) fCurrentNeuronGroupCountStats.min(), (ulong) fCurrentNeuronGroupCountStats.max() );
 	list.push_back( strdup( t ) );
 
 	sprintf( t, "Rate %2.1f (%2.1f) %2.1f (%2.1f) %2.1f (%2.1f)",

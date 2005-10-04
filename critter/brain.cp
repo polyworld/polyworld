@@ -191,9 +191,10 @@ void brain::dumpAnatomical( char* directoryName, long index, float fitness )
 	size_t	sizeCM;
 	float*	connectionMatrix;
 	short	i,j;
-	double	inverseMaxWeight = 1. / gMaxWeight;
+	float	maxWeight = max( gMaxWeight, gNeuralValues.maxbias );
+	double	inverseMaxWeight = 1. / maxWeight;
 
-	sizeCM = sizeof( *connectionMatrix ) * numneurons * numneurons;
+	sizeCM = sizeof( *connectionMatrix ) * (numneurons+1) * (numneurons+1);	// +1 for bias neuron
 	connectionMatrix = (float*) malloc( sizeCM );
 	if( !connectionMatrix )
 	{
@@ -213,7 +214,7 @@ void brain::dumpAnatomical( char* directoryName, long index, float fitness )
 	for( i = 0; i < numsynapses; i++ )
 	{
 		int cmIndex;
-		cmIndex = abs(synapse[i].fromneuron) + abs(synapse[i].toneuron) * numneurons;
+		cmIndex = abs(synapse[i].fromneuron)  +  abs(synapse[i].toneuron) * (numneurons + 1);	// +1 for bias neuron
 		if( cmIndex < 0 )
 		{
 			fprintf( stderr, "cmIndex = %d, i = %d, fromneuron = %d, toneuron = %d, numneurons = %d\n", cmIndex, i, synapse[i].fromneuron, synapse[i].toneuron, numneurons );
@@ -225,13 +226,24 @@ void brain::dumpAnatomical( char* directoryName, long index, float fitness )
 		if( cmIndex > imax )
 			imax = cmIndex;
 	}
+	
+	// fill in the biases
+	for( i = 0; i < numneurons; i++ )
+	{
+		int cmIndex = numneurons  +  i * (numneurons + 1);
+		connectionMatrix[cmIndex] = neuron[i].bias;
+		if( cmIndex < imin )
+			imin = cmIndex;
+		if( cmIndex > imax )
+			imax = cmIndex;
+	}
 
 	if( imin < 0 )
 		fprintf( stderr, "%s: cmIndex < 0 (%ld)\n", __FUNCTION__, imin );
-	if( imax > numneurons*numneurons )
-		fprintf( stderr, "%s: cmIndex > numneurons^2 (%ld > %d)\n", imax, numneurons*numneurons );
+	if( imax > (numneurons+1)*(numneurons+1) )
+		fprintf( stderr, "%s: cmIndex > (numneurons+1)^2 (%ld > %d)\n", imax, (numneurons+1)*(numneurons+1) );
 
-	daPrint( "%s: imin = %ld, imax = %ld, numneurons = %d\n", __FUNCTION__, imin, imax, numneurons );
+	daPrint( "%s: imin = %ld, imax = %ld, numneurons = %d (+1 for bias)\n", __FUNCTION__, imin, imax, numneurons );
 
 	sprintf( filename, "%s/brainAnatomy.%ld", directoryName, index );
 	file = fopen( filename, "w" );
@@ -244,14 +256,13 @@ void brain::dumpAnatomical( char* directoryName, long index, float fitness )
 	daPrint( "%s: file = %08lx, index = %ld, fitness = %g\n", __FUNCTION__, (char*)file, index, fitness );
 
 	// print the header, with index, fitness, and number of neurons
-	fprintf( file, "brain %ld fitness=%g numneurons=%d maxWeight=%g\n", index, fitness, numneurons, gMaxWeight );
+	fprintf( file, "brain %ld fitness=%g numneurons+1=%d maxWeight=%g maxBias=%g\n", index, fitness, numneurons+1, gMaxWeight, gNeuralValues.maxbias );
 
 	// print the network architecture
-	for( i = 0; i < numneurons; i++ )	// running over post-synaptic neurons
+	for( i = 0; i <= numneurons; i++ )	// running over post-synaptic neurons + bias ('=' because of bias)
 	{
-		for( j = 0; j < numneurons; j++ )	// running over pre-synaptic neurons
-			fprintf( file, "%+06.4f ", connectionMatrix[j + i*numneurons] * inverseMaxWeight );
-		fprintf( file, ";\n" );
+		for( j = 0; j <= numneurons; j++ )	// running over pre-synaptic neurons + bias ('=' because of bias)
+			fprintf( file, "%+06.4f ", connectionMatrix[j + i*(numneurons+1)] * inverseMaxWeight );
 	}
 
 	fclose( file );
@@ -273,12 +284,7 @@ FILE* brain::startFunctional( long index )
 	FILE* file;
 	char filename[256];
 
-#define RenameBrainFunctionFile 1
-#if RenameBrainFunctionFile
 	sprintf( filename, "run/brain/function/incomplete.brainFunction.%ld", index );
-#else
-	sprintf( filename, "run/brain/function/brainFunction.%ld", index );
-#endif
 	file = fopen( filename, "w" );
 	if( !file )
 	{
@@ -297,33 +303,18 @@ bail:
 //---------------------------------------------------------------------------
 // brain::endFunctional
 //---------------------------------------------------------------------------
-#if RenameBrainFunctionFile
 void brain::endFunctional( FILE* file, float fitness, long index )
-#else
-void brain::endFunctional( FILE* file, float fitness, long __attribute__ ((__unused__)) index )
-#endif
 {
-#if RenameBrainFunctionFile
-#endif
-
 	if( !file )
 		return;
 
 	fprintf( file, "end fitness = %g\n", fitness );
 	fclose( file );
-#if RenameBrainFunctionFile
 	char s[256];
-  #if UseSystemCalls
-	sprintf( s, "mv run/brain/function/incomplete.brainFunction.%ld run/brain/function/brainFunction.%ld", index, index );
-	printf( "%s\n", s );
-	system( s );
-  #else
 	char t[256];
 	sprintf( s, "run/brain/function/incomplete.brainFunction.%ld", index );
 	sprintf( t, "run/brain/function/brainFunction.%ld", index );
 	rename( s, t );
-  #endif
-#endif
 }
 
 //---------------------------------------------------------------------------
