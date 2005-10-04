@@ -351,12 +351,14 @@ void critter::grow()
 	Q_CHECK_PTR(fBrain);
 	Q_CHECK_PTR(fGenome);
 	
+	bool recordBrainAnatomy = ( fSimulation->fBestSoFarBrainAnatomyRecordFrequency || fSimulation->fBrainAnatomyRecordAll || (fSimulation->fBrainAnatomyRecordSeeds && (fCritterNumber <= fSimulation->GetInitNumCritters())) );
+	
 	// grow the brain from the genome's specifications
-    fBrain->Grow(fGenome);
+    fBrain->Grow( fGenome, fCritterNumber, recordBrainAnatomy );
 
 	// If we're recording brain function,
 	// open the file to be used to write out neural activity
-	if( fSimulation->fBestSoFarBrainFunctionRecordFrequency || fSimulation->fBrainFunctionRecordAll )
+	if( fSimulation->fBestSoFarBrainFunctionRecordFrequency || fSimulation->fBrainFunctionRecordAll || (fSimulation->fBrainFunctionRecordSeeds && (fCritterNumber <= fSimulation->GetInitNumCritters())) )
 		fBrainFuncFile = fBrain->startFunctional( fCritterNumber );
 
     // setup the critter's geometry
@@ -524,7 +526,7 @@ void critter::Die()
 	fAlive = false;
 
 	// If we're recording brain function, end it here
-	if( fSimulation->fBestSoFarBrainFunctionRecordFrequency || fSimulation->fBrainFunctionRecordAll )
+	if( fSimulation->fBestSoFarBrainFunctionRecordFrequency || fSimulation->fBrainFunctionRecordAll || (fSimulation->fBrainFunctionRecordSeeds && (fCritterNumber <= fSimulation->GetInitNumCritters())) )
 		fBrain->endFunctional( fBrainFuncFile, fFitness, fCritterNumber );
 	fBrainFuncFile = NULL;
 }
@@ -658,7 +660,7 @@ void critter::Behave()
     fBrain->Update(fEnergy / fMaxEnergy);
 
 	// If we're recording brain function, do it here
-	if( fSimulation->fBestSoFarBrainFunctionRecordFrequency || fSimulation->fBrainFunctionRecordAll )
+	if( fSimulation->fBestSoFarBrainFunctionRecordFrequency || fSimulation->fBrainFunctionRecordAll || (fSimulation->fBrainFunctionRecordSeeds && (fCritterNumber <= fSimulation->GetInitNumCritters())) )
 		fBrain->writeFunctional( fBrainFuncFile );
 }
 

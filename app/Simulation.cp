@@ -490,11 +490,17 @@ void TSimulation::Step()
 		for( int i = 0; i < limit; i++ )
 		{
 			char t[256];	// target (use s for source)
-			sprintf( s, "run/brain/anatomy/brainAnatomy.%ld", fFittest[i]->critterID );
-			sprintf( t, "run/brain/bestSoFar/%ld/%d.brainAnatomy.%ld", fStep, i, fFittest[i]->critterID );
+			sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_incept.txt", fFittest[i]->critterID );
+			sprintf( t, "run/brain/bestSoFar/%ld/%d_brainAnatomy_%ld_incept.txt", fStep, i, fFittest[i]->critterID );
 			link( s, t );
-			sprintf( s, "run/brain/function/brainFunction.%ld", fFittest[i]->critterID );
-			sprintf( t, "run/brain/bestSoFar/%ld/%d.brainFunction.%ld", fStep, i, fFittest[i]->critterID );
+			sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_birth.txt", fFittest[i]->critterID );
+			sprintf( t, "run/brain/bestSoFar/%ld/%d_brainAnatomy_%ld_birth.txt", fStep, i, fFittest[i]->critterID );
+			link( s, t );
+			sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_death.txt", fFittest[i]->critterID );
+			sprintf( t, "run/brain/bestSoFar/%ld/%d_brainAnatomy_%ld_death.txt", fStep, i, fFittest[i]->critterID );
+			link( s, t );
+			sprintf( s, "run/brain/function/brainFunction_%ld.txt", fFittest[i]->critterID );
+			sprintf( t, "run/brain/bestSoFar/%ld/%d_brainFunction_%ld.txt", fStep, i, fFittest[i]->critterID );
 			link( s, t );
 		}
 	}
@@ -630,43 +636,43 @@ void TSimulation::Init()
 	sprintf( s, "run_%ld", time(NULL) );
 	(void) rename( "run", s );
 	if( mkdir( "run", PwDirMode ) )
-		fprintf( stderr, "Error making run directory (%d)\n", errno );
+		eprintf( "Error making run directory (%d)\n", errno );
 	if( mkdir( "run/stats", PwDirMode ) )
-		fprintf( stderr, "Error making run/stats directory (%d)\n", errno );
+		eprintf( "Error making run/stats directory (%d)\n", errno );
 	if( fBestSoFarBrainAnatomyRecordFrequency || fBestSoFarBrainFunctionRecordFrequency ||
 		fBrainAnatomyRecordAll || fBrainFunctionRecordAll ||
 		fBrainAnatomyRecordSeeds || fBrainFunctionRecordSeeds )
 	{
 		// If we're going to be saving info on all these files, must increase the number allowed open
 		if( SetMaximumFiles( fMaxCritters * 2 ) )	// 2x is overkill, but let's be safe
-			fprintf( stderr, "Error setting maximum files to %d (%d)\n", fMaxCritters * 2, errno );
+			eprintf( "Error setting maximum files to %d (%d)\n", fMaxCritters * 2, errno );
 
 		if( mkdir( "run/brain", PwDirMode ) )
-			fprintf( stderr, "Error making run/brain directory (%d)\n", errno );
+			eprintf( "Error making run/brain directory (%d)\n", errno );
 	#define RecordRandomBrainAnatomies 0
 	#if RecordRandomBrainAnatomies
 		if( mkdir( "run/brain/random", PwDirMode ) )
-			fprintf( stderr, "Error making run/brain/random directory (%d)\n", errno );
+			eprintf( "Error making run/brain/random directory (%d)\n", errno );
 	#endif
 		if( fBestSoFarBrainAnatomyRecordFrequency || fBrainAnatomyRecordAll || fBrainAnatomyRecordSeeds )
 			if( mkdir( "run/brain/anatomy", PwDirMode ) )
-				fprintf( stderr, "Error making run/brain/anatomy directory (%d)\n", errno );
+				eprintf( "Error making run/brain/anatomy directory (%d)\n", errno );
 		if( fBestSoFarBrainFunctionRecordFrequency || fBrainFunctionRecordAll || fBrainFunctionRecordSeeds )
 			if( mkdir( "run/brain/function", PwDirMode ) )
-				fprintf( stderr, "Error making run/brain/function directory (%d)\n", errno );
+				eprintf( "Error making run/brain/function directory (%d)\n", errno );
 		if( fBestSoFarBrainAnatomyRecordFrequency || fBestSoFarBrainFunctionRecordFrequency )
 			if( mkdir( "run/brain/bestSoFar", PwDirMode ) )
-				fprintf( stderr, "Error making run/brain/bestSoFar directory (%d)\n", errno );
+				eprintf( "Error making run/brain/bestSoFar directory (%d)\n", errno );
 		if( fBrainAnatomyRecordSeeds || fBrainFunctionRecordSeeds )
 		{
 			if( mkdir( "run/brain/seeds", PwDirMode ) )
-				fprintf( stderr, "Error making run/brain/seeds directory (%d)\n", errno );
+				eprintf( "Error making run/brain/seeds directory (%d)\n", errno );
 			if( fBrainAnatomyRecordSeeds )
 				if( mkdir( "run/brain/seeds/anatomy", PwDirMode ) )
-					fprintf( stderr, "Error making run/brain/seeds/anatomy directory (%d)\n", errno );
+					eprintf( "Error making run/brain/seeds/anatomy directory (%d)\n", errno );
 			if( fBrainFunctionRecordSeeds )
 				if( mkdir( "run/brain/seeds/function", PwDirMode ) )
-					fprintf( stderr, "Error making run/brain/seeds/function directory (%d)\n", errno );
+					eprintf( "Error making run/brain/seeds/function directory (%d)\n", errno );
 		}
 	}
 	system( "cp worldfile run/" );
@@ -736,8 +742,9 @@ void TSimulation::Init()
 				c->Domain(id);
 				fDomains[id].numcritters++;
 				fNeuronGroupCountStats.add( c->Brain()->NumNeuronGroups() );
+
 			#if RecordRandomBrainAnatomies
-				c->Brain()->dumpAnatomical( "run/brain/random", c->Number(), 0.0 );
+				c->Brain()->dumpAnatomical( "run/brain/random", "birth", c->Number(), 0.0 );
 			#endif
 			}
 			
@@ -924,7 +931,7 @@ void TSimulation::Init()
 		fMovieFile = fopen( movieFileName, "wb" );
 		if( !fMovieFile )
 		{
-			fprintf( stderr, "Error opening movie file: %s\n", movieFileName );
+			eprintf( "Error opening movie file: %s\n", movieFileName );
 			exit( 1 );
 		}
 		
@@ -2411,7 +2418,18 @@ void TSimulation::Death(critter* c)
 	// If we're recording all anatomies or recording best anatomies and this was one of the fittest critters,
 	// then dump the anatomy to the appropriate location on disk
 	if( fBrainAnatomyRecordAll || (fBestSoFarBrainAnatomyRecordFrequency && oneOfTheBestSoFar) || (fBrainAnatomyRecordSeeds && (c->Number() <= fInitNumCritters)) )
-		c->Brain()->dumpAnatomical( "run/brain/anatomy", c->Number(), c->Fitness() );
+		c->Brain()->dumpAnatomical( "run/brain/anatomy", "death", c->Number(), c->Fitness() );
+	else	// don't want brain anatomies for this critter, so must eliminate the "incept" and "birth" anatomies that were already recorded
+	{
+		char s[256];
+	
+		sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_incept.txt", c->Number() );
+		if( unlink( s ) )
+			eprintf( "Error unlinking %s (%ld)\n", s, errno );
+		sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_birth.txt", c->Number() );
+		if( unlink( s ) )
+			eprintf( "Error unlinking %s (%ld)\n", s, errno );
+	}
 		
 	// If this was one of the seed critters and we're recording their anatomies, then save the data in the appropriate directory
 	if( fBrainAnatomyRecordSeeds && (c->Number() <= fInitNumCritters) )
@@ -2419,8 +2437,14 @@ void TSimulation::Death(critter* c)
 		char s[256];	// source
 		char t[256];	// target
 		
-		sprintf( s, "run/brain/anatomy/brainAnatomy.%ld", c->Number() );
-		sprintf( t, "run/brain/seeds/anatomy/brainAnatomy.%ld", c->Number() );
+		sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_incept.txt", c->Number() );
+		sprintf( t, "run/brain/seeds/anatomy/brainAnatomy_%ld_incept.txt", c->Number() );
+		link( s, t );
+		sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_birth.txt", c->Number() );
+		sprintf( t, "run/brain/seeds/anatomy/brainAnatomy_%ld_birth.txt", c->Number() );
+		link( s, t );
+		sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_death.txt", c->Number() );
+		sprintf( t, "run/brain/seeds/anatomy/brainAnatomy_%ld_death.txt", c->Number() );
 		link( s, t );
 	}
 	
@@ -2431,15 +2455,21 @@ void TSimulation::Death(critter* c)
 		char s[256];
 		if( fBestSoFarBrainAnatomyRecordFrequency && !fBrainAnatomyRecordAll )
 		{
-			sprintf( s, "run/brain/anatomy/brainAnatomy.%lu", loserID );
+			sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_incept.txt", loserID );
 			if( unlink( s ) )
-				fprintf( stderr, "Erroring unlinking %s (%ld)\n", s, errno );
+				eprintf( "Error unlinking %s (%ld)\n", s, errno );
+			sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_birth.txt", loserID );
+			if( unlink( s ) )
+				eprintf( "Error unlinking %s (%ld)\n", s, errno );
+			sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_death.txt", loserID );
+			if( unlink( s ) )
+				eprintf( "Error unlinking %s (%ld)\n", s, errno );
 		}
 		if( fBestSoFarBrainFunctionRecordFrequency && !fBrainFunctionRecordAll )
 		{
-			sprintf( s, "run/brain/function/brainFunction.%lu", loserID );
+			sprintf( s, "run/brain/function/brainFunction_%lu.txt", loserID );
 			if( unlink( s ) )
-				fprintf( stderr, "Erroring unlinking %s (%ld)\n", s, errno );
+				eprintf( "Error unlinking %s (%ld)\n", s, errno );
 		}
 	}
 
@@ -2453,8 +2483,8 @@ void TSimulation::Death(critter* c)
 		char s[256];	// source
 		char t[256];	// target
 		
-		sprintf( s, "run/brain/function/brainFunction.%ld", c->Number() );
-		sprintf( t, "run/brain/seeds/function/brainFunction.%ld", c->Number() );
+		sprintf( s, "run/brain/function/brainFunction_%ld.txt", c->Number() );
+		sprintf( t, "run/brain/seeds/function/brainFunction_%ld.txt", c->Number() );
 		link( s, t );
 	}
 	
@@ -2463,9 +2493,9 @@ void TSimulation::Death(critter* c)
 	if( fBestSoFarBrainFunctionRecordFrequency && !oneOfTheBestSoFar && !fBrainFunctionRecordAll )
 	{
 		char s[256];
-		sprintf( s, "run/brain/function/brainFunction.%lu", c->Number() );
+		sprintf( s, "run/brain/function/brainFunction_%lu.txt", c->Number() );
 		if( unlink( s ) )
-			fprintf( stderr, "Erroring unlinking %s (%ld)\n", s, errno );
+			eprintf( "Error unlinking %s (%ld)\n", s, errno );
 	}
 	
 	// following assumes (requires!) list to be currently pointing to c,

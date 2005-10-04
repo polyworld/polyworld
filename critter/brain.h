@@ -76,7 +76,7 @@ public:
     void Dump(std::ostream& out);
     void Load(std::istream& in);
     void Report();
-    void Grow(genome* g);
+    void Grow( genome* g, long critterNumber, bool recordBrainAnatomy );
     void Update(float energyfraction);
 
     float Random();
@@ -96,7 +96,7 @@ public:
     short NumBlueNeurons();
 	short NumNeuronGroups();
         
-	void dumpAnatomical( char* directoryName, long index, float fitness );
+	void dumpAnatomical( char* directoryName, char* suffix, long index, float fitness );
 	FILE* startFunctional( long index );
 	void endFunctional( FILE* file, float fitness, long index );
 	void writeFunctional( FILE* file );

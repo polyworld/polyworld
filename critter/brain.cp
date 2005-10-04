@@ -184,7 +184,7 @@ brain::~brain()
 #else
 	#define daPrint( x... )
 #endif
-void brain::dumpAnatomical( char* directoryName, long index, float fitness )
+void brain::dumpAnatomical( char* directoryName, char* suffix, long index, float fitness )
 {
 	FILE*	file;
 	char	filename[256];
@@ -245,7 +245,7 @@ void brain::dumpAnatomical( char* directoryName, long index, float fitness )
 
 	daPrint( "%s: imin = %ld, imax = %ld, numneurons = %d (+1 for bias)\n", __FUNCTION__, imin, imax, numneurons );
 
-	sprintf( filename, "%s/brainAnatomy.%ld", directoryName, index );
+	sprintf( filename, "%s/brainAnatomy_%ld_%s.txt", directoryName, index, suffix );
 	file = fopen( filename, "w" );
 	if( !file )
 	{
@@ -263,8 +263,9 @@ void brain::dumpAnatomical( char* directoryName, long index, float fitness )
 	{
 		for( j = 0; j <= numneurons; j++ )	// running over pre-synaptic neurons + bias ('=' because of bias)
 			fprintf( file, "%+06.4f ", connectionMatrix[j + i*(numneurons+1)] * inverseMaxWeight );
+		fprintf( file, ";\n" );
 	}
-
+	
 	fclose( file );
 
 	daPrint( "%s: done with anatomy file for %ld\n", __FUNCTION__, index );
@@ -284,7 +285,7 @@ FILE* brain::startFunctional( long index )
 	FILE* file;
 	char filename[256];
 
-	sprintf( filename, "run/brain/function/incomplete.brainFunction.%ld", index );
+	sprintf( filename, "run/brain/function/incomplete_brainFunction_%ld.txt", index );
 	file = fopen( filename, "w" );
 	if( !file )
 	{
@@ -312,8 +313,8 @@ void brain::endFunctional( FILE* file, float fitness, long index )
 	fclose( file );
 	char s[256];
 	char t[256];
-	sprintf( s, "run/brain/function/incomplete.brainFunction.%ld", index );
-	sprintf( t, "run/brain/function/brainFunction.%ld", index );
+	sprintf( s, "run/brain/function/incomplete_brainFunction_%ld.txt", index );
+	sprintf( t, "run/brain/function/brainFunction_%ld.txt", index );
 	rename( s, t );
 }
 
@@ -1345,7 +1346,7 @@ float brain::DesignedEfficacy( short toGroup, short fromGroup, short isyn, int s
 //---------------------------------------------------------------------------
 // brain::Grow
 //---------------------------------------------------------------------------
-void brain::Grow(genome* g)
+void brain::Grow( genome* g, long critterNumber, bool recordBrainAnatomy )
 {
 #ifdef DEBUGCHECK
     debugcheck("brain::grow entry");
@@ -1981,6 +1982,10 @@ void brain::Grow(genome* g)
     debugcheck("brain::grow after setting up architecture");
 #endif DEBUGCHECK
 
+	// "incept" brain anatomy is as initially generated, with random weights
+	if( recordBrainAnatomy )
+		dumpAnatomical( "run/brain/anatomy", "incept", critterNumber, 0.0 );
+	
     // now send some signals through the system
     // try pure noise for now...
     for (i = 0; i < gNumPrebirthCycles; i++)
@@ -1990,6 +1995,10 @@ void brain::Grow(genome* g)
             retinaBuf[j] = (unsigned char)(rrand(0.0, 255.0));
         Update(drand48());
     }
+	
+	// "birth" anatomy is after gestation (updating with random noise in the inputs for a while)
+	if( recordBrainAnatomy )
+		dumpAnatomical( "run/brain/anatomy", "birth", critterNumber, 0.0 );
 
 #ifdef DEBUGCHECK
     debugcheck("brain::grow after prebirth cycling");

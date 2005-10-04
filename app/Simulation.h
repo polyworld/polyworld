@@ -198,6 +198,7 @@ public:
 //	void SetShowBrain(bool showBrain);
 	long GetMaxCritters() const;
 	static long fMaxCritters;
+	long GetInitNumCritters() const;
 	
 //	short OverHeadRank( void );
 	
@@ -410,6 +411,7 @@ inline TTextStatusWindow* TSimulation::GetStatusWindow() const { return fTextSta
 //inline void TSimulation::SetShowBrain(bool showBrain) { fBrainMonitorWindow->visible = showBrain; }
 inline long TSimulation::GetMaxCritters() const { return fMaxCritters; }
 //inline short TSimulation::OverHeadRank( void ) { return fOverHeadRank; }
+inline long TSimulation::GetInitNumCritters() const { return fInitNumCritters; }
 
 
 #endif

@@ -16,8 +16,8 @@
 0.0    probabilityOfMutatingSeed
 -1     misccritters
 
-42    positionseed
-42    genomeseed
+42    positionseed_not_used
+42    genomeseed_used_for_all
 
 90    minfoodcount
 120    maxfoodcount
