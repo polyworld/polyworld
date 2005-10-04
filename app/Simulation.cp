@@ -2436,16 +2436,28 @@ void TSimulation::Death(critter* c)
 	{
 		char s[256];	// source
 		char t[256];	// target
+		// Determine whether the original needs to stay around or not.  If so, create a hard link for the
+		// copy in "seeds"; if not, just rename (mv) the file into seeds, thus removing it from the original location
+		bool keep = ( fBrainAnatomyRecordAll || (fBestSoFarBrainAnatomyRecordFrequency && oneOfTheBestSoFar) );
 		
 		sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_incept.txt", c->Number() );
 		sprintf( t, "run/brain/seeds/anatomy/brainAnatomy_%ld_incept.txt", c->Number() );
-		link( s, t );
+		if( keep )
+			link( s, t );
+		else
+			rename( s, t );
 		sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_birth.txt", c->Number() );
 		sprintf( t, "run/brain/seeds/anatomy/brainAnatomy_%ld_birth.txt", c->Number() );
-		link( s, t );
+		if( keep )
+			link( s, t );
+		else
+			rename( s, t );
 		sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_death.txt", c->Number() );
 		sprintf( t, "run/brain/seeds/anatomy/brainAnatomy_%ld_death.txt", c->Number() );
-		link( s, t );
+		if( keep )
+			link( s, t );
+		else
+			rename( s, t );
 	}
 	
 	// If this critter was so good it displaced another critter from the bestSoFar (fFittest[]) list,
