@@ -104,10 +104,14 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
 		fChartPopulation(true),
 //		fShowBrain(false),
 		fShowTextStatus(true),
+		fRecordGeneStats(false),
 		fNewDeaths(0),
 		fNumberFit(0),
 		fFittest(NULL),
-		fBrainMonitorStride(25)
+		fBrainMonitorStride(25),
+		fGeneSum(NULL),
+		fGeneSum2(NULL),
+		fGeneStatsFile(NULL)
 {
 	Init();
 }
@@ -119,6 +123,15 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
 TSimulation::~TSimulation()
 {
 	Stop();
+	
+	if( fGeneSum )
+		free( fGeneSum );
+
+	if( fGeneSum2 )
+		free( fGeneSum2 );
+		
+	if( fGeneStatsFile )
+		fclose( fGeneStatsFile );
 
 	// Close windows and save prefs
 	if (fBirthrateWindow != NULL)
@@ -535,7 +548,7 @@ void TSimulation::Init()
 	genome::genomeinit();
     brain::braininit();
     critter::critterinit();
-
+	
 	 // Following is part of one way to speed up the graphics
 	 // Note:  this code must agree with the critter sizing in critter::grow()
 	 // and the food sizing in food::initlen().
@@ -673,6 +686,19 @@ void TSimulation::Init()
 			if( fBrainFunctionRecordSeeds )
 				if( mkdir( "run/brain/seeds/function", PwDirMode ) )
 					eprintf( "Error making run/brain/seeds/function directory (%d)\n", errno );
+		}
+		// If we're going to record the gene means and std devs, we need to allocate a couple of stat arrays
+		if( fRecordGeneStats )
+		{
+			fGeneSum  = (unsigned long*) malloc( sizeof( *fGeneSum  ) * genome::gNumBytes );
+			Q_CHECK_PTR( fGeneSum );
+			fGeneSum2 = (unsigned long*) malloc( sizeof( *fGeneSum2 ) * genome::gNumBytes );
+			Q_CHECK_PTR( fGeneSum2 );
+			
+			fGeneStatsFile = fopen( "run/genestats.txt", "w" );
+			Q_CHECK_PTR( fGeneStatsFile );
+			
+			fprintf( fGeneStatsFile, "%ld\n", genome::gNumBytes );
 		}
 	}
 	system( "cp worldfile run/" );
@@ -1339,7 +1365,17 @@ void TSimulation::Interact()
 		fDomains[i].fNumLeastFit = 0;
 		fDomains[i].fNumSmited = 0;
 	}
-	
+
+	// If we're saving gene stats, zero them out them here
+	if( fRecordGeneStats )
+	{
+		for( i = 0; i < genome::gNumBytes; i++ )
+		{
+			fGeneSum[i] = 0;
+			fGeneSum2[i] = 0;
+		}
+	}
+
 	// Take care of deaths first, plus least-fit determinations
 	// Also use this as a convenient place to compute some stats
 
@@ -1381,17 +1417,15 @@ void TSimulation::Interact()
         debugcheck("after a death in interact");
 	#endif DEBUGCHECK
 	
-	#if 0
 		// If we're saving gene stats, compute them here
-		if( fSaveGeneStats )
+		if( fRecordGeneStats )
 		{
-			for( i = 0; i < genome::numbytes; i++ )
+			for( i = 0; i < genome::gNumBytes; i++ )
 			{
-				genome::gGeneSum[i] += critter->Genome()->fGenes[i];
-				genome::gGeneSum2[i] += critter->Genome()->fGenes[i] * critter->Genome()->fGenes[i];
+				fGeneSum[i] += c->Genes()->GeneUIntValue(i);
+				fGeneSum2[i] += c->Genes()->GeneUIntValue(i) * c->Genes()->GeneUIntValue(i);
 			}
 		}
-	#endif
 	
 		// Figure out who is least fit, if we're doing smiting to make room for births
 		
@@ -1499,6 +1533,21 @@ void TSimulation::Interact()
 	#endif
 	}
 
+	// If we're saving gene stats, record them here
+	if( fRecordGeneStats )
+	{
+		fprintf( fGeneStatsFile, "%ld", fStep );
+		for( i = 0; i < genome::gNumBytes; i++ )
+		{
+			float mean, stddev;
+			
+			mean = (float) fGeneSum[i] / (float) critter::gXSortedCritters.count();
+			stddev = sqrt( (float) fGeneSum2[i] / (float) critter::gXSortedCritters.count()  -  mean * mean );
+			fprintf( fGeneStatsFile, " %.1f,%.1f", mean, stddev );
+		}
+		fprintf( fGeneStatsFile, "\n" );
+	}
+	
 #if DebugSmite
 	for( id = 0; id < fNumDomains; id++ )
 	{
@@ -3105,6 +3154,12 @@ void TSimulation::ReadWorldFile(const char* filename)
 		cout << "bestSoFarBrainAnatomyRecordFrequency" ses fBestSoFarBrainAnatomyRecordFrequency nl;
 		in >> fBestSoFarBrainFunctionRecordFrequency; in >> label;
 		cout << "bestSoFarBrainFunctionRecordFrequency" ses fBestSoFarBrainFunctionRecordFrequency nl;		
+	}
+	
+	if( version >= 12 )
+	{
+		in >> fRecordGeneStats; in >> label;
+		cout << "recordGeneStats" ses fRecordGeneStats nl;
 	}
 	
 	in >> fRecordMovie; in >> label;

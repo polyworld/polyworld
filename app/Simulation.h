@@ -284,6 +284,7 @@ private:
 	bool fChartPopulation;
 //	bool fShowBrain;
 	bool fShowTextStatus;
+	bool fRecordGeneStats;
 	long fNewDeaths;
 	
 	Color fGroundColor;
@@ -391,6 +392,10 @@ private:
 	
 	bool fRecordMovie;
 	FILE* fMovieFile;
+	
+	unsigned long* fGeneSum;	// sum, for computing mean
+	unsigned long* fGeneSum2;	// sum of squares, for computing std. dev.
+	FILE* fGeneStatsFile;
 	
     gcamera fCamera;
     gpolyobj fGround;

@@ -4,12 +4,6 @@
 /* Copyright Apple Computer 1990,1991,1992                          */
 /********************************************************************/
 
-#define DesignerGenes 0
-
-#if DesignerGenes
-	#define DesignerGenesOnly 1
-#endif
-
 // Self
 #include "genome.h"
 
@@ -44,7 +38,7 @@ using namespace std;
 
 // Internal globals
 bool genome::classinited;
-long genome::numbytes;
+long genome::gNumBytes;
 long genome::numphysbytes;
 long genome::mrategene;
 long genome::ncptsgene;
@@ -99,6 +93,8 @@ float genome::gMinmaxspeed;
 float genome::gMaxmaxspeed;
 float genome::gMinlrate;
 float genome::gMaxlrate;
+
+float OneOver255 = 1. / 255.;
 
 
 #pragma mark -
@@ -208,14 +204,14 @@ void genome::genomeinit()
     genome::iitdgene = genome::eitdgene + brain::gNeuralValues.maxneurgroups * brain::gNeuralValues.maxnoninputneurgroups;
     genome::ietdgene = genome::iitdgene + brain::gNeuralValues.maxneurgroups * brain::gNeuralValues.maxnoninputneurgroups;
 
-    genome::numbytes = genome::ietdgene + brain::gNeuralValues.maxneurgroups * brain::gNeuralValues.maxnoninputneurgroups;
+    genome::gNumBytes = genome::ietdgene + brain::gNeuralValues.maxneurgroups * brain::gNeuralValues.maxnoninputneurgroups;
 
     genome::gCrossoverPoints = new long[gMaxNumCpts + 1];
     Q_CHECK_PTR(genome::gCrossoverPoints);
     
 	// may someday want to make the learning rate an evolvable schedule
 	// may also want to support overgrowth and dieback of neural connections,
-	// both here and in the brain class.	
+	// both here and in the brain class.
 }
 
 
@@ -256,7 +252,7 @@ void genome::Init(bool randomized)
     if (!classinited)
         genomeinit();
         
-    fGenes = new unsigned char[genome::numbytes];
+    fGenes = new unsigned char[genome::gNumBytes];
     Q_CHECK_PTR(fGenes);
 
 	if (randomized)       
@@ -269,7 +265,7 @@ void genome::Init(bool randomized)
 //---------------------------------------------------------------------------
 void genome::Dump(std::ostream& out)
 {
-    for (long i = 0; i < genome::numbytes; i++)
+    for (long i = 0; i < genome::gNumBytes; i++)
         out << (int)(fGenes[i]) nl;
 }
 
@@ -280,7 +276,7 @@ void genome::Dump(std::ostream& out)
 void genome::Load(std::istream& in)
 {
     int num = 0;
-    for (long i = 0; i < genome::numbytes; i++)
+    for (long i = 0; i < genome::gNumBytes; i++)
     {
         in >> num;
         fGenes[i] = (unsigned char)num;
@@ -294,7 +290,7 @@ void genome::Load(std::istream& in)
 void genome::Randomize(float bitonprob)
 {
 	// do a random initialization of the bitstring
-    for (long byte = 0; byte < genome::numbytes; byte++)
+    for (long byte = 0; byte < genome::gNumBytes; byte++)
     {
         for (long bit = 0; bit < 8; bit++)
         {
@@ -399,7 +395,7 @@ void genome::SeedGenes()
 void genome::Mutate()
 {
     float rate = MutationRate();
-    for (long byte = 0; byte < genome::numbytes; byte++)
+    for (long byte = 0; byte < genome::gNumBytes; byte++)
     {
         for (long bit = 0; bit < 8; bit++)
         {
@@ -445,7 +441,7 @@ void genome::Crossover(genome* g1, genome* g2, bool mutate)
     
     for (i = 2; i <= numCrossPoints; i++) 
     {
-        long newCrossPoint = long(drand48() * (genome::numbytes - numphysbytes) * 8 - 1) + gCrossoverPoints[1];
+        long newCrossPoint = long(drand48() * (genome::gNumBytes - numphysbytes) * 8 - 1) + gCrossoverPoints[1];
         bool equal;
         do
         {
@@ -457,7 +453,7 @@ void genome::Crossover(genome* g1, genome* g2, bool mutate)
             }
             
             if (equal)
-                newCrossPoint = long(drand48() * (genome::numbytes - numphysbytes) * 8 - 1) + gCrossoverPoints[1];
+                newCrossPoint = long(drand48() * (genome::gNumBytes - numphysbytes) * 8 - 1) + gCrossoverPoints[1];
                 
         } while (equal);
         
@@ -511,13 +507,13 @@ void genome::Crossover(genome* g1, genome* g2, bool mutate)
 		// for copying the end of the genome
         if (i == numCrossPoints + 1)
         {
-            if (endbyte == genome::numbytes - 1)
+            if (endbyte == genome::gNumBytes - 1)
             {
             	// already copied last byte (done) so just get out of the loop
                 break;
 			}             
                 
-            endbyte = genome::numbytes - 1;
+            endbyte = genome::gNumBytes - 1;
         }
         else
         {
@@ -596,7 +592,7 @@ void genome::CopyGenes(genome* sgenome)
 	unsigned char* sg = sgenome->fGenes;
 	unsigned char* tg = fGenes;
 	
-	for (long i = 0; i < genome::numbytes; i++)
+	for (long i = 0; i < genome::gNumBytes; i++)
 		*(tg++) = *(sg++);
 }
 
@@ -608,7 +604,7 @@ float genome::CalcSeparation(genome* g)
 {
 #if pw_UseAltivec
 	#warning compiling with (broken) ALTIVEC code
-	long local_numbytes = genome::numbytes;
+	long local_numbytes = genome::gNumBytes;
 #else
 	int sep = 0;
 #endif
@@ -619,8 +615,8 @@ float genome::CalcSeparation(genome* g)
     if (gGrayCoding)
     {
 #if pw_UseAltivec
-		float val_gi[ genome::numbytes ];
-		float val_gj[ genome::numbytes ];
+		float val_gi[ genome::gNumBytes ];
+		float val_gj[ genome::gNumBytes ];
 		short size = 4;
 
                 long max = local_numbytes / size;
@@ -660,7 +656,7 @@ float genome::CalcSeparation(genome* g)
 			fsep += result[j];
 		}
 #else
-    for (long i = 0; i < genome::numbytes; i++)
+    for (long i = 0; i < genome::gNumBytes; i++)
         {
             short vi, vj;
             vi = binofgray[ * (gi++)];
@@ -672,8 +668,8 @@ float genome::CalcSeparation(genome* g)
     else
     {
 #if pw_UseAltivec
-		float val_gi[ genome::numbytes ];
-		float val_gj[ genome::numbytes ];
+		float val_gi[ genome::gNumBytes ];
+		float val_gj[ genome::gNumBytes ];
 		short size = 4;
 		
 		long max = local_numbytes / size;
@@ -713,7 +709,7 @@ float genome::CalcSeparation(genome* g)
 			fsep += result[j];
 		}
 #else
-        for (long i = 0; i < genome::numbytes; i++)
+        for (long i = 0; i < genome::gNumBytes; i++)
         {
             short vi, vj;
             vi = * (gi++);
@@ -726,7 +722,7 @@ float genome::CalcSeparation(genome* g)
     fsep /= (255.0f * float(local_numbytes));
     return fsep;
 #else
-	fsep = float(sep / (255 * genome::numbytes));
+	fsep = float(sep / (255 * genome::gNumBytes));
     return fsep;
 #endif
 }
@@ -1176,7 +1172,7 @@ float genome::ielr(short i, short j)
 void genome::Print()
 {
 	long lobit = 0;
-	long hibit = genome::numbytes * 8;
+	long hibit = genome::gNumBytes * 8;
 	Print( lobit, hibit );
 }
 
@@ -1230,7 +1226,7 @@ void genome::SetZero(long lobit, long hibit)
 //---------------------------------------------------------------------------
 void genome::SetOne()
 {
-    for (long i = 0; i < genome::numbytes; i++)
+    for (long i = 0; i < genome::gNumBytes; i++)
         fGenes[i] = 0xff;
 }
 
@@ -1240,26 +1236,6 @@ void genome::SetOne()
 //---------------------------------------------------------------------------
 void genome::SetZero()
 {
-    for (long i = 0; i < genome::numbytes; i++)
+    for (long i = 0; i < genome::gNumBytes; i++)
         fGenes[i] = 0;
 }
-
-
-//---------------------------------------------------------------------------
-// genome::GeneValue
-//
-// use of GeneValue(byte) permits use of simple binary encoding
-// or Gray coding.
-//---------------------------------------------------------------------------
-float genome::GeneValue(long byte)
-{
-#if DesignerGenes
-	return( float(fGenes[byte]) / 255.0 );
-#else
-	if (gGrayCoding)
-		return float(binofgray[fGenes[byte]]) / 255.0;
-	else
-		return float(fGenes[byte]) / 255.0;
-#endif
-}
-

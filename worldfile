@@ -1,4 +1,4 @@
-12      version
+13      version
 
 1      docpuwork
 10000  dumpfreq
@@ -163,5 +163,6 @@
 1      brainFunctionRecordSeeds
 1000     bestSoFarBrainAnatonomyRecordFrequency
 1000     bestSoFarBrainFunctionRecordFrequency
+1      recordGeneStats
 
 1      recordMovie

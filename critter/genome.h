@@ -1,9 +1,19 @@
 #ifndef GENOME_H
 #define GENOME_H
 
+#define DesignerGenes 0
+
+#if DesignerGenes
+	#define DesignerGenesOnly 1
+#endif
+
 // System
 #include <iostream>
 
+// Local
+#include "graybin.h"
+
+extern float OneOver255;
 
 //===========================================================================
 // genome
@@ -70,8 +80,11 @@ public:
     void SetOne();
     void SetZero(long lobit, long hibit);
     void SetZero();
-
+    double GeneValue( long byte );
+	unsigned int GeneUIntValue( long byte );
+    
     // External globals
+    static long gNumBytes;
     static float gMinStrength;
     static float gMaxStrength;
 	static float gMinMutationRate;
@@ -95,10 +108,8 @@ public:
 	static float gMinlrate;
 	static float gMaxlrate;
 
-    
 protected:    
     static bool classinited;
-    static long numbytes;
     static long numphysbytes;
     static long mrategene;
     static long ncptsgene;
@@ -130,10 +141,46 @@ protected:
     static long ietdgene;
     static long* gCrossoverPoints;
     
-    float GeneValue(long byte);
-    
     unsigned char* fGenes;
 };
+
+
+//---------------------------------------------------------------------------
+// genome::GeneValue
+//
+// use of GeneValue(byte) permits use of simple binary encoding
+// or Gray coding.
+//---------------------------------------------------------------------------
+inline double genome::GeneValue(long byte)
+{
+#if DesignerGenes
+	return( float(fGenes[byte]) * OneOver255 );
+#else
+	if (gGrayCoding)
+		return( float(binofgray[fGenes[byte]]) * OneOver255 );
+	else
+		return( float(fGenes[byte]) * OneOver255 );
+#endif
+}
+
+//---------------------------------------------------------------------------
+// genome::GeneUIntValue
+//
+// use of GeneIntValue(byte) permits use of simple binary encoding
+// or Gray coding.
+//---------------------------------------------------------------------------
+inline unsigned int genome::GeneUIntValue(long byte)
+{
+#if DesignerGenes
+	return( (unsigned int) fGenes[byte] );
+#else
+	if (gGrayCoding)
+		return( (unsigned int) binofgray[fGenes[byte]] );
+	else
+		return( (unsigned int) fGenes[byte] );
+#endif
+}
+
 
 #endif
 
