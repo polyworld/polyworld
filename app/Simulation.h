@@ -220,6 +220,8 @@ public:
 
 	int fBestSoFarBrainAnatomyRecordFrequency;
 	int fBestSoFarBrainFunctionRecordFrequency;
+	int fBestRecentBrainAnatomyRecordFrequency;
+	int fBestRecentBrainFunctionRecordFrequency;
 	bool fBrainAnatomyRecordAll;
 	bool fBrainFunctionRecordAll;
 	bool fBrainAnatomyRecordSeeds;
@@ -301,6 +303,8 @@ private:
 	int fCurrentFittestCount;
 	int fNumberFit;
 	FitStruct** fFittest;
+	int fNumberRecentFit;
+	FitStruct** fRecentFittest;
 	long fFitness1Frequency;
 	long fFitness2Frequency;
 	short fFitI;

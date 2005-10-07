@@ -1,4 +1,4 @@
-13      version
+14      version
 
 1      docpuwork
 10000  dumpfreq
@@ -27,7 +27,8 @@
 0      crittersRfood
 100    fit1freq
 2      fit2freq
-10     numfit
+10     numFit
+10     numRecentFit
 10.0   eatfitparam
 100.0  matefitparam
 0.1    movefitparam_0.5
@@ -163,6 +164,8 @@
 1      brainFunctionRecordSeeds
 1000     bestSoFarBrainAnatonomyRecordFrequency
 1000     bestSoFarBrainFunctionRecordFrequency
+1000     bestRecentBrainAnatonomyRecordFrequency
+1000     bestRecentBrainFunctionRecordFrequency
 1      recordGeneStats
 
 1      recordMovie

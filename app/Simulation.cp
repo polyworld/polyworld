@@ -72,6 +72,8 @@ double TSimulation::fTimeStart;
 TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
 	:	fBestSoFarBrainAnatomyRecordFrequency(0),
 		fBestSoFarBrainFunctionRecordFrequency(0),
+		fBestRecentBrainAnatomyRecordFrequency(0),
+		fBestRecentBrainFunctionRecordFrequency(0),
 		fBrainAnatomyRecordAll(false),
 		fBrainFunctionRecordAll(false),
 		fBrainAnatomyRecordSeeds(false),
@@ -108,6 +110,8 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
 		fNewDeaths(0),
 		fNumberFit(0),
 		fFittest(NULL),
+		fNumberRecentFit(0),
+		fRecentFittest(NULL),
 		fBrainMonitorStride(25),
 		fGeneSum(NULL),
 		fGeneSum2(NULL),
@@ -229,6 +233,20 @@ void TSimulation::Stop()
 			}
 		}		
         delete[] fFittest;
+    }
+	
+    if( fRecentFittest != NULL )
+    {
+        for( int i = 0; i < fNumberRecentFit; i++ )
+        {
+			if( fRecentFittest[i] )
+			{
+//				if( fRecentFittest[i]->genes != NULL )	// we don't save the genes in the bestRecent list
+//					delete fFittest[i]->genes;
+				delete fRecentFittest[i];
+			}
+		}		
+        delete[] fRecentFittest;
     }
 	
 	if( fLeastFit )
@@ -492,7 +510,7 @@ void TSimulation::Step()
 	debugcheck(debugstring);
 #endif DEBUGCHECK
 
-	// Archive the best-ever brain anatomy and function files, if we're doing that
+	// Archive the bestSoFar brain anatomy and function files, if we're doing that
 	if( fBestSoFarBrainAnatomyRecordFrequency && ((fStep % fBestSoFarBrainAnatomyRecordFrequency) == 0) )
 	{
 		char s[256];
@@ -515,6 +533,69 @@ void TSimulation::Step()
 			sprintf( s, "run/brain/function/brainFunction_%ld.txt", fFittest[i]->critterID );
 			sprintf( t, "run/brain/bestSoFar/%ld/%d_brainFunction_%ld.txt", fStep, i, fFittest[i]->critterID );
 			link( s, t );
+		}
+	}
+	
+	// Archive the bestRecent brain anatomy and function files, if we're doing that
+	if( fBestRecentBrainAnatomyRecordFrequency && ((fStep % fBestRecentBrainAnatomyRecordFrequency) == 0) )
+	{
+		char s[256];
+		int limit = fNumberDied < fNumberRecentFit ? fNumberDied : fNumberRecentFit;
+
+		sprintf( s, "run/brain/bestRecent/%ld", fStep );
+		mkdir( s, PwDirMode );
+		for( int i = 0; i < limit; i++ )
+		{
+			if( fRecentFittest[i]->critterID > 0 )
+			{
+				char t[256];	// target (use s for source)
+				sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_incept.txt", fRecentFittest[i]->critterID );
+				sprintf( t, "run/brain/bestRecent/%ld/%d_brainAnatomy_%ld_incept.txt", fStep, i, fRecentFittest[i]->critterID );
+				link( s, t );
+				sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_birth.txt", fRecentFittest[i]->critterID );
+				sprintf( t, "run/brain/bestRecent/%ld/%d_brainAnatomy_%ld_birth.txt", fStep, i, fRecentFittest[i]->critterID );
+				link( s, t );
+				sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_death.txt", fRecentFittest[i]->critterID );
+				sprintf( t, "run/brain/bestRecent/%ld/%d_brainAnatomy_%ld_death.txt", fStep, i, fRecentFittest[i]->critterID );
+				link( s, t );
+				sprintf( s, "run/brain/function/brainFunction_%ld.txt", fRecentFittest[i]->critterID );
+				sprintf( t, "run/brain/bestRecent/%ld/%d_brainFunction_%ld.txt", fStep, i, fRecentFittest[i]->critterID );
+				link( s, t );
+			}
+		}
+		
+		// Now delete all bestRecent critter files, unless they are also on the bestSoFar list
+		// Also empty the bestRecent list here, so we start over each epoch
+		int limit2 = fNumberDied < fNumberFit ? fNumberDied : fNumberFit;
+		for( int i = 0; i < limit; i++ )
+		{
+			// First determine whether or not each bestRecent critter is in the bestSoFar list or not
+			bool inBestSoFarList = false;
+			for( int j = 0; j < limit2; j++ )
+			{
+				if( fRecentFittest[i]->critterID == fFittest[j]->critterID )
+				{
+					inBestSoFarList = true;
+					break;
+				}
+			}
+			
+			// If each bestRecent critter is NOT in the bestSoFar list, then unlink all its files from their original location
+			if( !inBestSoFarList && (fRecentFittest[i]->critterID > 0) )
+			{
+				sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_incept.txt", fRecentFittest[i]->critterID );
+				unlink( s );
+				sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_birth.txt", fRecentFittest[i]->critterID );
+				unlink( s );
+				sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_death.txt", fRecentFittest[i]->critterID );
+				unlink( s );
+				sprintf( s, "run/brain/function/brainFunction_%ld.txt", fRecentFittest[i]->critterID );
+				unlink( s );
+			}
+			
+			// Empty the bestRecent list by zeroing out critter IDs and fitnesses
+			fRecentFittest[i]->critterID = 0;
+			fRecentFittest[i]->fitness = 0.0;
 		}
 	}
 	
@@ -568,61 +649,47 @@ void TSimulation::Init()
     if (fNumberFit > 0)
     {
         fFittest = new FitStruct*[fNumberFit];
+		Q_CHECK_PTR( fFittest );
         
         for (int i = 0; i < fNumberFit; i++)
         {
 			fFittest[i] = new FitStruct;
+			Q_CHECK_PTR( fFittest[i] );
             fFittest[i]->genes = new genome();
+			Q_CHECK_PTR( fFittest[i]->genes );
             fFittest[i]->fitness = 0.0;
 			fFittest[i]->critterID = 0;
+        }
+		
+        fRecentFittest = new FitStruct*[fNumberRecentFit];
+		Q_CHECK_PTR( fRecentFittest );
+        
+        for (int i = 0; i < fNumberRecentFit; i++)
+        {
+			fRecentFittest[i] = new FitStruct;
+			Q_CHECK_PTR( fRecentFittest[i] );
+            fRecentFittest[i]->genes = NULL;	// new genome();	// we don't save the genes in the bestRecent list
+            fRecentFittest[i]->fitness = 0.0;
+			fRecentFittest[i]->critterID = 0;
         }
 		
         for( int id = 0; id < fNumDomains; id++ )
         {
             fDomains[id].fittest = new FitStruct*[fNumberFit];
+			Q_CHECK_PTR( fDomains[id].fittest );
             
             for (int i = 0; i < fNumberFit; i++)
             {
 				fDomains[id].fittest[i] = new FitStruct;
+				Q_CHECK_PTR( fDomains[id].fittest[i] );
                 fDomains[id].fittest[i]->genes = new genome();
+				Q_CHECK_PTR( fDomains[id].fittest[i]->genes );
                 fDomains[id].fittest[i]->fitness = 0.0;
 				fDomains[id].fittest[i]->critterID = 0;
             }
         }
     }
 
-#define AllowZeroDomains 0
-#if AllowZeroDomains
-	// Eliminated all global least-fit structs for efficiency, as I think we always require at least one domain now  -  lsy 6/1/05
-	fNumLeastFit = 0;
-	fMaxNumLeastFit = lround( fSmiteFrac * fMaxCritters );
-	
-	smPrint( "globally fMaxNumLeastFit = %d\n", id, fMaxNumLeastFit );
-
-	if( fMaxNumLeastFit > 0 )
-	{
-		fLeastFit = new critter*[fMaxNumLeastFit];
-		
-		for( int i = 0; i < fMaxNumLeastFit; i++ )
-			fLeastFit[i] = NULL;
-
-        for( int id = 0; id < fNumDomains; id++ )
-        {
-			fDomains[id].fNumLeastFit = 0;
-			fDomains[id].fMaxNumLeastFit = lround( fSmiteFrac * fDomains[id].maxnumcritters );
-
-			smPrint( "for domain %d fMaxNumLeastFit = %d\n", id, fDomains[id].fMaxNumLeastFit );
-			
-			if( fDomains[id].fMaxNumLeastFit > 0 )
-			{
-				fDomains[id].fLeastFit = new critter*[fDomains[id].fMaxNumLeastFit];
-				
-				for( int i = 0; i < fDomains[id].fMaxNumLeastFit; i++ )
-					fDomains[id].fLeastFit[i] = NULL;
-			}
-        }
-	}
-#else
 	if( fSmiteFrac > 0.0 )
 	{
         for( int id = 0; id < fNumDomains; id++ )
@@ -641,7 +708,6 @@ void TSimulation::Init()
 			}
         }
 	}
-#endif
 
 	// Set up the run directory and its subsidiaries
 	char s[256];
@@ -653,6 +719,7 @@ void TSimulation::Init()
 	if( mkdir( "run/stats", PwDirMode ) )
 		eprintf( "Error making run/stats directory (%d)\n", errno );
 	if( fBestSoFarBrainAnatomyRecordFrequency || fBestSoFarBrainFunctionRecordFrequency ||
+		fBestRecentBrainAnatomyRecordFrequency || fBestRecentBrainFunctionRecordFrequency ||
 		fBrainAnatomyRecordAll || fBrainFunctionRecordAll ||
 		fBrainAnatomyRecordSeeds || fBrainFunctionRecordSeeds )
 	{
@@ -667,15 +734,18 @@ void TSimulation::Init()
 		if( mkdir( "run/brain/random", PwDirMode ) )
 			eprintf( "Error making run/brain/random directory (%d)\n", errno );
 	#endif
-		if( fBestSoFarBrainAnatomyRecordFrequency || fBrainAnatomyRecordAll || fBrainAnatomyRecordSeeds )
+		if( fBestSoFarBrainAnatomyRecordFrequency || fBestRecentBrainAnatomyRecordFrequency || fBrainAnatomyRecordAll || fBrainAnatomyRecordSeeds )
 			if( mkdir( "run/brain/anatomy", PwDirMode ) )
 				eprintf( "Error making run/brain/anatomy directory (%d)\n", errno );
-		if( fBestSoFarBrainFunctionRecordFrequency || fBrainFunctionRecordAll || fBrainFunctionRecordSeeds )
+		if( fBestSoFarBrainFunctionRecordFrequency || fBestRecentBrainFunctionRecordFrequency || fBrainFunctionRecordAll || fBrainFunctionRecordSeeds )
 			if( mkdir( "run/brain/function", PwDirMode ) )
 				eprintf( "Error making run/brain/function directory (%d)\n", errno );
 		if( fBestSoFarBrainAnatomyRecordFrequency || fBestSoFarBrainFunctionRecordFrequency )
 			if( mkdir( "run/brain/bestSoFar", PwDirMode ) )
 				eprintf( "Error making run/brain/bestSoFar directory (%d)\n", errno );
+		if( fBestRecentBrainAnatomyRecordFrequency || fBestRecentBrainFunctionRecordFrequency )
+			if( mkdir( "run/brain/bestRecent", PwDirMode ) )
+				eprintf( "Error making run/brain/bestRecent directory (%d)\n", errno );
 		if( fBrainAnatomyRecordSeeds || fBrainFunctionRecordSeeds )
 		{
 			if( mkdir( "run/brain/seeds", PwDirMode ) )
@@ -1028,6 +1098,7 @@ void TSimulation::InitWorld()
     fFitness2Frequency = 2;
 	fEat2Consume = 20.0;
     fNumberFit = 10;
+	fNumberRecentFit = 10;
     fEatFitnessParameter = 10.0;
     fMateFitnessParameter = 10.0;
     fMoveFitnessParameter = 1.0;
@@ -1482,55 +1553,6 @@ void TSimulation::Interact()
 				}
 			}
 		}
-	
-	#if AllowZeroDomains
-		// Eliminated for efficiency, as I think we always require at least one domain now  -  lsy 6/1/05
-		// Do the overall bookkeeping, but only if we're not doing it for domains
-		if( (fNumDomains == 0) && (fMaxNumLeastFit > 0) )
-		{
-			if( (critter::gXSortedCritters.count() > (fMaxCritters - fMaxNumLeastFit)) &&	// if there are getting to be too many critters, and
-				(c->Age() >= (fSmiteAgeFrac * c->MaxAge())) &&								// the current critter is old enough to consider for smiting, and
-				(c->Fitness() < fAverageFitness) &&											// the current critter has worse than average fitness,
-				( (fNumLeastFit < fMaxNumLeastFit)	||										// (we haven't filled our quota yet, or
-				  (c->Fitness() < fLeastFit[fNumLeastFit-1]->Fitness()) ) )					// the critter is bad enough to displace one already in the queue)
-			{
-				if( fNumLeastFit == 0 )
-				{
-					// It's the first one, so just store it
-					fLeastFit[0] = c;
-					fNumLeastFit++;
-				}
-				else
-				{
-					int i;
-					
-					// Find the position to be replaced
-					for( i = 0; i < fNumLeastFit; i++ )
-						if( c->Fitness() < fLeastFit[i]->Fitness() )	// worse than the one in this slot
-							break;
-					
-					if( i < fNumLeastFit )
-					{
-						// We need to move some of the items in the list down
-						
-						// If there's room left, add a slot
-						if( fNumLeastFit < fMaxNumLeastFit )
-							fNumLeastFit++;
-
-						// move everything up one, from i to end
-						for( int j = fNumLeastFit-1; j > i; j-- )
-							fLeastFit[j] = fLeastFit[j-1];
-
-					}
-					else
-						fNumLeastFit++;	// we're adding to the end of the list, so increment the count
-					
-					// Store the new i-th worst
-					fLeastFit[i] = c;
-				}
-			}
-		}
-	#endif
 	}
 
 	// If we're saving gene stats, record them here
@@ -2312,8 +2334,10 @@ void TSimulation::ijfitinc(short* i, short* j)
 void TSimulation::Death(critter* c)
 {
 	Q_CHECK_PTR(c);
-	ulong loserID = 0;	// the way this is used depends on fCritterNumber being 1-based in critter.cp
+	long loserIDBestSoFar = 0;	// the way this is used depends on fCritterNumber being 1-based in critter.cp
+	long loserIDBestRecent = 0;	// the way this is used depends on fCritterNumber being 1-based in critter.cp
 	bool oneOfTheBestSoFar = false;
+	bool oneOfTheBestRecent = false;
 	
 	const short id = c->Domain();
 	
@@ -2370,6 +2394,7 @@ void TSimulation::Death(critter* c)
     }
 	
 	// Maintain a list of the fittest critters ever, for use in the online/steady-state GA
+	// First on a domain-by-domain basis...
     long newfit = 0;
     FitStruct* saveFit;
     if( c->Fitness() > fDomains[id].fittest[fNumberFit-1]->fitness )
@@ -2392,6 +2417,7 @@ void TSimulation::Death(critter* c)
 		fDomains[id].fittest[newfit]->critterID = c->Number();
     }
     
+	// Then on a whole-world basis...
     if( c->Fitness() > fFittest[fNumberFit-1]->fitness )
     {
 		oneOfTheBestSoFar = true;
@@ -2405,7 +2431,7 @@ void TSimulation::Death(critter* c)
 			}
 		}
 				
-		loserID = fFittest[fNumberFit - 1]->critterID;	// this is the ID of the critter that is being booted from the bestSoFar (fFittest[]) list
+		loserIDBestSoFar = fFittest[fNumberFit - 1]->critterID;	// this is the ID of the critter that is being booted from the bestSoFar (fFittest[]) list
         saveFit = fFittest[fNumberFit - 1];		// this is to save the data structure, not its contents
         for( short i = fNumberFit - 1; i > newfit; i-- )
             fFittest[i] = fFittest[i - 1];
@@ -2418,25 +2444,50 @@ void TSimulation::Death(critter* c)
     if (c->Fitness() > fMaxFitness)
         fMaxFitness = c->Fitness();
 	
+	// Keep a separate list of the recent fittest, purely for data-gathering purposes
+	// "Recent" means since the last archival recording of recent best, as determined by fBestRecentBrainAnatomyRecordFrequency
+	// (Don't bother, if we're not gathering that kind of data)
+    if( fBestRecentBrainAnatomyRecordFrequency && (c->Fitness() > fRecentFittest[fNumberRecentFit-1]->fitness) )
+    {
+		oneOfTheBestRecent = true;
+		
+        for( short i = 0; i < fNumberRecentFit; i++ )
+        {
+			// If the critter booted off of the bestSoFar list happens to remain on the bestRecent list,
+			// then we don't want to let it be unlinked below, so clear loserIDBestSoFar
+			// This loop tests the first part of the fRecentFittest[] list, and the last part is tested
+			// below, so we don't need a separate loop to make this determination
+			if( loserIDBestSoFar == c->Number() )
+				loserIDBestSoFar = 0;
+			
+            if( c->Fitness() > fRecentFittest[i]->fitness )
+			{
+				newfit = i;
+				break;
+			}
+		}
+				
+		loserIDBestRecent = fRecentFittest[fNumberRecentFit - 1]->critterID;	// this is the ID of the critter that is being booted from the bestRecent (fRecentFittest[]) list
+        saveFit = fRecentFittest[fNumberRecentFit - 1];		// this is to save the data structure, not its contents
+        for( short i = fNumberRecentFit - 1; i > newfit; i-- )
+		{
+			// If the critter booted off of the bestSoFar list happens to remain on the bestRecent list,
+			// then we don't want to let it be unlinked below, so clear loserIDBestSoFar
+			// This loop tests the last part of the fRecentFittest[] list, and the first part was tested
+			// above, so we don't need a separate loop to make this determination
+			if( loserIDBestSoFar == c->Number() )
+				loserIDBestSoFar = 0;
+			
+            fRecentFittest[i] = fRecentFittest[i - 1];
+		}
+        fRecentFittest[newfit] = saveFit;				// reuse the old data structure, but replace its contents...
+        fRecentFittest[newfit]->fitness = c->Fitness();
+//		fRecentFittest[newfit]->genes->CopyGenes( c->Genes() );	// we don't save the genes in the bestRecent list
+		fRecentFittest[newfit]->critterID = c->Number();
+    }
+    
 	// Must also update the leastFit data structures, now that they
 	// are used on-demand in the main mate/fight/eat loop in Interact()
-
-#if AllowZeroDomains
-	// Eliminated for efficiency, as I think we always require at least one domain now  -  lsy 6/1/05
-	// Update the global leastFit list
-	for( int i = 0; i < fNumLeastFit; i++ )
-	{
-		if( fLeastFit[i] != c )	// not one of our least fit, so just loop again to keep searching
-			continue;
-
-		// one of our least-fit critters died, so pull in the list over it
-		for( int j = i; j < fNumLeastFit-1; j++ )
-			fLeastFit[j] = fLeastFit[j+1];
-		fNumLeastFit--;
-		break;	// c can only appear once in the list, so we're done
-	}
-#endif
-
 	// Update the domain-specific leastFit list (only one, as we know which domain it's in)
 	for( int i = 0; i < fDomains[id].fNumLeastFit; i++ )
 	{
@@ -2466,7 +2517,11 @@ void TSimulation::Death(critter* c)
 	
 	// If we're recording all anatomies or recording best anatomies and this was one of the fittest critters,
 	// then dump the anatomy to the appropriate location on disk
-	if( fBrainAnatomyRecordAll || (fBestSoFarBrainAnatomyRecordFrequency && oneOfTheBestSoFar) || (fBrainAnatomyRecordSeeds && (c->Number() <= fInitNumCritters)) )
+	if(  fBrainAnatomyRecordAll ||
+		(fBestSoFarBrainAnatomyRecordFrequency && oneOfTheBestSoFar) ||
+		(fBestRecentBrainAnatomyRecordFrequency && oneOfTheBestRecent) ||
+		(fBrainAnatomyRecordSeeds && (c->Number() <= fInitNumCritters))
+	  )
 		c->Brain()->dumpAnatomical( "run/brain/anatomy", "death", c->Number(), c->Fitness() );
 	else	// don't want brain anatomies for this critter, so must eliminate the "incept" and "birth" anatomies that were already recorded
 	{
@@ -2487,7 +2542,7 @@ void TSimulation::Death(critter* c)
 		char t[256];	// target
 		// Determine whether the original needs to stay around or not.  If so, create a hard link for the
 		// copy in "seeds"; if not, just rename (mv) the file into seeds, thus removing it from the original location
-		bool keep = ( fBrainAnatomyRecordAll || (fBestSoFarBrainAnatomyRecordFrequency && oneOfTheBestSoFar) );
+		bool keep = ( fBrainAnatomyRecordAll || (fBestSoFarBrainAnatomyRecordFrequency && oneOfTheBestSoFar) || (fBestRecentBrainAnatomyRecordFrequency && oneOfTheBestRecent) );
 		
 		sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_incept.txt", c->Number() );
 		sprintf( t, "run/brain/seeds/anatomy/brainAnatomy_%ld_incept.txt", c->Number() );
@@ -2511,24 +2566,84 @@ void TSimulation::Death(critter* c)
 	
 	// If this critter was so good it displaced another critter from the bestSoFar (fFittest[]) list,
 	// then nuke the booted critter's brain anatomy & function recordings
-	if( loserID )	//  depends on fCritterNumber being 1-based in critter.cp
+	// Note: A critter may be booted from the bestSoFar list, yet remain on the bestRecent list;
+	// if this happens, loserIDBestSoFar will be reset to zero above, so we won't execute this block
+	// of code and delete files that are needed for the bestRecent data logging
+	if( loserIDBestSoFar )	//  depends on fCritterNumber being 1-based in critter.cp
 	{
 		char s[256];
 		if( fBestSoFarBrainAnatomyRecordFrequency && !fBrainAnatomyRecordAll )
 		{
-			sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_incept.txt", loserID );
+			sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_incept.txt", loserIDBestSoFar );
 			if( unlink( s ) )
 				eprintf( "Error unlinking %s (%ld)\n", s, errno );
-			sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_birth.txt", loserID );
+			sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_birth.txt", loserIDBestSoFar );
 			if( unlink( s ) )
 				eprintf( "Error unlinking %s (%ld)\n", s, errno );
-			sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_death.txt", loserID );
+			sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_death.txt", loserIDBestSoFar );
 			if( unlink( s ) )
 				eprintf( "Error unlinking %s (%ld)\n", s, errno );
 		}
 		if( fBestSoFarBrainFunctionRecordFrequency && !fBrainFunctionRecordAll )
 		{
-			sprintf( s, "run/brain/function/brainFunction_%lu.txt", loserID );
+			sprintf( s, "run/brain/function/brainFunction_%lu.txt", loserIDBestSoFar );
+			if( unlink( s ) )
+				eprintf( "Error unlinking %s (%ld)\n", s, errno );
+		}
+	}
+
+	// If this critter was so good it displaced another critter from the bestSoFar (fFittest[]) list,
+	// then nuke the booted critter's brain anatomy & function recordings
+	// Note: A critter may be booted from the bestSoFar list, yet remain on the bestRecent list;
+	// if this happens, loserIDBestSoFar will be reset to zero above, so we won't execute this block
+	// of code and delete files that are needed for the bestRecent data logging
+	// In the rare case that a critter is simultaneously booted from both best lists,
+	// don't delete it here (so we don't try to delete it more than once)
+	if( loserIDBestSoFar && (loserIDBestSoFar != loserIDBestRecent) )	//  depends on fCritterNumber being 1-based in critter.cp
+	{
+		char s[256];
+		if( !fBrainAnatomyRecordAll )
+		{
+			sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_incept.txt", loserIDBestSoFar );
+			if( unlink( s ) )
+				eprintf( "Error unlinking %s (%ld)\n", s, errno );
+			sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_birth.txt", loserIDBestSoFar );
+			if( unlink( s ) )
+				eprintf( "Error unlinking %s (%ld)\n", s, errno );
+			sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_death.txt", loserIDBestSoFar );
+			if( unlink( s ) )
+				eprintf( "Error unlinking %s (%ld)\n", s, errno );
+		}
+		if( !fBrainFunctionRecordAll )
+		{
+			sprintf( s, "run/brain/function/brainFunction_%lu.txt", loserIDBestSoFar );
+			if( unlink( s ) )
+				eprintf( "Error unlinking %s (%ld)\n", s, errno );
+		}
+	}
+
+	// If this critter was so good it displaced another critter from the bestRecent (fRecentFittest[]) list,
+	// then nuke the booted critter's brain anatomy & function recordings
+	// In the rare case that a critter is simultaneously booted from both best lists,
+	// we will only delete it here
+	if( loserIDBestRecent )	//  depends on fCritterNumber being 1-based in critter.cp
+	{
+		char s[256];
+		if( !fBrainAnatomyRecordAll )
+		{
+			sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_incept.txt", loserIDBestRecent );
+			if( unlink( s ) )
+				eprintf( "Error unlinking %s (%ld)\n", s, errno );
+			sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_birth.txt", loserIDBestRecent );
+			if( unlink( s ) )
+				eprintf( "Error unlinking %s (%ld)\n", s, errno );
+			sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_death.txt", loserIDBestRecent );
+			if( unlink( s ) )
+				eprintf( "Error unlinking %s (%ld)\n", s, errno );
+		}
+		if( !fBrainFunctionRecordAll )
+		{
+			sprintf( s, "run/brain/function/brainFunction_%lu.txt", loserIDBestRecent );
 			if( unlink( s ) )
 				eprintf( "Error unlinking %s (%ld)\n", s, errno );
 		}
@@ -2550,8 +2665,9 @@ void TSimulation::Death(critter* c)
 	}
 	
 	// If we're only archiving the best, and this isn't one of them, then nuke its brainFunction recording
-	// NOTE:  Must be done after c->Die(), as that is where the brainFunction file is closed
-	if( fBestSoFarBrainFunctionRecordFrequency && !oneOfTheBestSoFar && !fBrainFunctionRecordAll )
+	if( (fBestSoFarBrainFunctionRecordFrequency || fBestRecentBrainFunctionRecordFrequency) &&
+		(!oneOfTheBestSoFar && !oneOfTheBestRecent) &&
+		!fBrainFunctionRecordAll )
 	{
 		char s[256];
 		sprintf( s, "run/brain/function/brainFunction_%lu.txt", c->Number() );
@@ -2670,6 +2786,13 @@ void TSimulation::ReadWorldFile(const char* filename)
     cout << "fit2freq" ses fFitness2Frequency nl;
     in >> fNumberFit; in >> label;
     cout << "numfit" ses fNumberFit nl;
+	
+	if( version >= 14 )
+	{
+		in >> fNumberRecentFit; in >> label;
+		cout << "numRecentFit" ses fNumberRecentFit nl;
+	}
+	
     in >> fEatFitnessParameter; in >> label;
     cout << "eatfitparam" ses fEatFitnessParameter nl;
     in >> fMateFitnessParameter; in >> label;
@@ -3153,7 +3276,15 @@ void TSimulation::ReadWorldFile(const char* filename)
 		in >> fBestSoFarBrainAnatomyRecordFrequency; in >> label;
 		cout << "bestSoFarBrainAnatomyRecordFrequency" ses fBestSoFarBrainAnatomyRecordFrequency nl;
 		in >> fBestSoFarBrainFunctionRecordFrequency; in >> label;
-		cout << "bestSoFarBrainFunctionRecordFrequency" ses fBestSoFarBrainFunctionRecordFrequency nl;		
+		cout << "bestSoFarBrainFunctionRecordFrequency" ses fBestSoFarBrainFunctionRecordFrequency nl;
+		
+		if( version >= 14 )
+		{
+			in >> fBestRecentBrainAnatomyRecordFrequency; in >> label;
+			cout << "bestRecentBrainAnatomyRecordFrequency" ses fBestRecentBrainAnatomyRecordFrequency nl;
+			in >> fBestRecentBrainFunctionRecordFrequency; in >> label;
+			cout << "bestRecentBrainFunctionRecordFrequency" ses fBestRecentBrainFunctionRecordFrequency nl;
+		}
 	}
 	
 	if( version >= 12 )
@@ -3239,6 +3370,13 @@ void TSimulation::Dump()
 		out << fFittest[index]->critterID nl;
         out << fFittest[index]->fitness nl;
         fFittest[index]->genes->Dump(out);
+    }
+	out << fNumberRecentFit nl;
+    for (int index = 0; index < fNumberRecentFit; index++)
+    {
+		out << fRecentFittest[index]->critterID nl;
+		out << fRecentFittest[index]->fitness nl;
+//		fRecentFittest[index]->genes->Dump(out);	// we don't save the genes in the bestRecent list
     }
 
     out << fNumDomains nl;
