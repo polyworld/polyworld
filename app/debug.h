@@ -11,10 +11,10 @@
 #define DebugSetRadius 0
 #define TestWorld 0
 
-#define dbprintf( x... ) { fprintf( stderr, x ); fflush( stderr ); }
+#define dbprintf( x... ) ( fprintf( stderr, x ), fflush( stderr ) )
 
 // for error logging:
-#define eprintf( x... ) { fprintf( stderr, "%s/%d: ", __FILE__, __LINE__ ); fprintf( stderr, x ); fflush( stderr ); }
+#define eprintf( x... ) ( fprintf( stderr, "%s/%d: ", __FUNCTION__, __LINE__ ), fprintf( stderr, x ), fflush( stderr ) )
 
 #if DebugSetRadius
 	#define srPrint( x... ) dbprintf( x )

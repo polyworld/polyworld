@@ -66,6 +66,13 @@ double TSimulation::fTimeStart;
 	#define smPrint( x... )
 #endif
 
+#define DebugLinksEtAl 0
+#if DebugLinksEtAl
+	#define link( x... ) ( printf( "link %s to %s (%s/%d)\n", s, t, __FUNCTION__, __LINE__ ), link( x ) )
+	#define unlink( x... ) ( printf( "unlink %s (%s/%d)\n", s, __FUNCTION__, __LINE__ ), unlink( x ) )
+	#define rename( x... ) ( printf( "rename %s to %s (%s/%d)\n", s, t, __FUNCTION__, __LINE__ ), rename( x ) )
+#endif
+
 //---------------------------------------------------------------------------
 // TSimulation::TSimulation
 //---------------------------------------------------------------------------
@@ -523,16 +530,20 @@ void TSimulation::Step()
 			char t[256];	// target (use s for source)
 			sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_incept.txt", fFittest[i]->critterID );
 			sprintf( t, "run/brain/bestSoFar/%ld/%d_brainAnatomy_%ld_incept.txt", fStep, i, fFittest[i]->critterID );
-			link( s, t );
+			if( link( s, t ) )
+				eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
 			sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_birth.txt", fFittest[i]->critterID );
 			sprintf( t, "run/brain/bestSoFar/%ld/%d_brainAnatomy_%ld_birth.txt", fStep, i, fFittest[i]->critterID );
-			link( s, t );
+			if( link( s, t ) )
+				eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
 			sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_death.txt", fFittest[i]->critterID );
 			sprintf( t, "run/brain/bestSoFar/%ld/%d_brainAnatomy_%ld_death.txt", fStep, i, fFittest[i]->critterID );
-			link( s, t );
+			if( link( s, t ) )
+				eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
 			sprintf( s, "run/brain/function/brainFunction_%ld.txt", fFittest[i]->critterID );
 			sprintf( t, "run/brain/bestSoFar/%ld/%d_brainFunction_%ld.txt", fStep, i, fFittest[i]->critterID );
-			link( s, t );
+			if( link( s, t ) )
+				eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
 		}
 	}
 	
@@ -551,16 +562,20 @@ void TSimulation::Step()
 				char t[256];	// target (use s for source)
 				sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_incept.txt", fRecentFittest[i]->critterID );
 				sprintf( t, "run/brain/bestRecent/%ld/%d_brainAnatomy_%ld_incept.txt", fStep, i, fRecentFittest[i]->critterID );
-				link( s, t );
+				if( link( s, t ) )
+					eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
 				sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_birth.txt", fRecentFittest[i]->critterID );
 				sprintf( t, "run/brain/bestRecent/%ld/%d_brainAnatomy_%ld_birth.txt", fStep, i, fRecentFittest[i]->critterID );
-				link( s, t );
+				if( link( s, t ) )
+					eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
 				sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_death.txt", fRecentFittest[i]->critterID );
 				sprintf( t, "run/brain/bestRecent/%ld/%d_brainAnatomy_%ld_death.txt", fStep, i, fRecentFittest[i]->critterID );
-				link( s, t );
+				if( link( s, t ) )
+					eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
 				sprintf( s, "run/brain/function/brainFunction_%ld.txt", fRecentFittest[i]->critterID );
 				sprintf( t, "run/brain/bestRecent/%ld/%d_brainFunction_%ld.txt", fStep, i, fRecentFittest[i]->critterID );
-				link( s, t );
+				if( link( s, t ) )
+					eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
 			}
 		}
 		
@@ -584,13 +599,17 @@ void TSimulation::Step()
 			if( !inBestSoFarList && (fRecentFittest[i]->critterID > 0) )
 			{
 				sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_incept.txt", fRecentFittest[i]->critterID );
-				unlink( s );
+				if( unlink( s ) )
+					eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
 				sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_birth.txt", fRecentFittest[i]->critterID );
-				unlink( s );
+				if( unlink( s ) )
+					eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
 				sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_death.txt", fRecentFittest[i]->critterID );
-				unlink( s );
+				if( unlink( s ) )
+					eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
 				sprintf( s, "run/brain/function/brainFunction_%ld.txt", fRecentFittest[i]->critterID );
-				unlink( s );
+				if( unlink( s ) )
+					eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
 			}
 			
 			// Empty the bestRecent list by zeroing out critter IDs and fitnesses
@@ -711,9 +730,11 @@ void TSimulation::Init()
 
 	// Set up the run directory and its subsidiaries
 	char s[256];
+	char t[256];
 	// First save the old directory, if it exists
-	sprintf( s, "run_%ld", time(NULL) );
-	(void) rename( "run", s );
+	sprintf( s, "run" );
+	sprintf( t, "run_%ld", time(NULL) );
+	(void) rename( s, t );
 	if( mkdir( "run", PwDirMode ) )
 		eprintf( "Error making run directory (%d)\n", errno );
 	if( mkdir( "run/stats", PwDirMode ) )
@@ -1156,8 +1177,8 @@ void TSimulation::InitWorld()
     fNumBornSinceCreated = 0;
     fChartGeneSeparation = false; // GeneSeparation (if true, genesepmon must be true)
     fDeathProbability = 0.001;
-    fSmiteFrac = 0.05;
-	fSmiteAgeFrac = 0.5;
+    fSmiteFrac = 0.10;
+	fSmiteAgeFrac = 0.25;
     fShowVision = true;
 	fRecordMovie = false;
 	fMovieFile = NULL;
@@ -1416,17 +1437,9 @@ void TSimulation::Interact()
 	
 	// food list and barrier list should be x-sorted already
 
-#if 0
-	// Clear out fitness per simulation cycle tracking
-	// (No longer necessary, now that we manage fCurrentFittestCount.)
-	for (i = 0; i < MAXFITNESSITEMS; i++)
-    {
-        fCurrentMaxFitness[i] = 0.0;
-        fCurrentFittestCritter[i] = NULL;
-    }
-#endif
 	fCurrentFittestCount = 0;
 	smPrint( "setting fCurrentFittestCount to 0\n" );
+	float prevAvgFitness = fAverageFitness; // used in smite code, to limit critters that are smitable
     fAverageFitness = 0.0;
 	fNumAverageFitness = 0;	// need this because we'll only count critters that have lived at least a modest portion of their lifespan (fSmiteAgeFrac)
 //	fNumLeastFit = 0;
@@ -1507,11 +1520,12 @@ void TSimulation::Interact()
 		// but it also helps protect against the situation when there are so few potential low-fitness candidates,
 		// due to the age constraint and/or population size, that critters can end up on both the highest fitness
 		// and the lowest fitness lists, which can actually cause a crash (or at least used to).
+//		printf( "%ld id=%ld, domain=%d, maxLeast=%d, numLeast=%d, numCrit=%d, maxCrit-
 		if( (fNumDomains > 0) && (fDomains[id].fMaxNumLeastFit > 0) )
 		{
-			if( (fDomains[id].numcritters > (fDomains[id].maxnumcritters - fDomains[id].fMaxNumLeastFit)) &&	// if there are getting to be too many critters, and
+			if( ((fDomains[id].numcritters > (fDomains[id].maxnumcritters - fDomains[id].fMaxNumLeastFit))) &&	// if there are getting to be too many critters, and
 				(c->Age() >= (fSmiteAgeFrac * c->MaxAge())) &&													// the current critter is old enough to consider for smiting, and
-				(c->Fitness() < fAverageFitness) &&																// the current critter has worse than average fitness,
+				(c->Fitness() < prevAvgFitness) &&																// the current critter has worse than average fitness,
 				( (fDomains[id].fNumLeastFit < fDomains[id].fMaxNumLeastFit)	||								// (we haven't filled our quota yet, or
 				  (c->Fitness() < fDomains[id].fLeastFit[fDomains[id].fNumLeastFit-1]->Fitness()) ) )			// the critter is bad enough to displace one already in the queue)
 			{
@@ -1554,6 +1568,10 @@ void TSimulation::Interact()
 			}
 		}
 	}
+
+// Following debug output is accurate only when there is a single domain
+//	if( fDomains[0].fNumLeastFit > 0 )
+//		printf( "%ld numSmitable = %d out of %d, from %ld critters out of %ld\n", fStep, fDomains[0].fNumLeastFit, fDomains[0].fMaxNumLeastFit, fDomains[0].numcritters, fDomains[0].maxnumcritters );
 
 	// If we're saving gene stats, record them here
 	if( fRecordGeneStats )
@@ -1650,13 +1668,15 @@ void TSimulation::Interact()
                                      0.5*(c->z()+d->z()),
                                      kd);
 
+					bool smited = false;
+					
 					if( (fDomains[kd].numcritters >= fDomains[kd].maxnumcritters) &&	// too many critters to reproduce withing a bit of smiting
 						(fDomains[kd].fNumLeastFit > fDomains[kd].fNumSmited) )			// we've still got some left that are suitable for smiting
 					{
-						while( ((fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] == c) ||	// trying to smite mommy
+						while( (fDomains[kd].fNumSmited < fDomains[kd].fNumLeastFit) &&		// there are any left to smite
+							   ((fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] == c) ||	// trying to smite mommy
 								(fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] == d) ||	// trying to smite daddy
-							   ((fCurrentFittestCount > 0) && (fDomains[kd].fLeastFit[fDomains[kd].fNumSmited]->Fitness() > fCurrentMaxFitness[fCurrentFittestCount-1]))) &&	// trying to smite one of the fittest
-							   (fDomains[kd].fNumSmited < fDomains[kd].fNumLeastFit) )
+							    ((fCurrentFittestCount > 0) && (fDomains[kd].fLeastFit[fDomains[kd].fNumSmited]->Fitness() > fCurrentMaxFitness[fCurrentFittestCount-1]))) )	// trying to smite one of the fittest
 						{
 							// We would have smited one of our mating pair, or one of the fittest, which wouldn't be prudent,
 							// so just step over them and see if there's someone else to smite
@@ -1667,6 +1687,7 @@ void TSimulation::Interact()
 							Death( fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] );
 							fDomains[kd].fNumSmited++;
 							fNumberDiedSmite++;
+							smited = true;
 							//cout << "********************* SMITE *******************" nlf;	//dbg
 						}
 					}
@@ -2350,6 +2371,7 @@ void TSimulation::Death(critter* c)
 	
 	fLifeSpanStats.add( c->Age() );
 	fLifeSpanRecentStats.add( c->Age() );
+	fLifeFractionRecentStats.add( c->Age() / c->MaxAge() );
 	
 	// Make any final contributions to the critter's overall, lifetime fitness
     c->lastrewards(fEnergyFitnessParameter, fAgeFitnessParameter); // if any
@@ -2392,6 +2414,9 @@ void TSimulation::Death(critter* c)
     {
         fFoodEnergyOut += c->FoodEnergy();
     }
+	
+	// Must call Die() for the critter before any of the uses of Fitness() below, so we get the final, true, post-death fitness
+	c->Die();
 	
 	// Maintain a list of the fittest critters ever, for use in the online/steady-state GA
 	// First on a domain-by-domain basis...
@@ -2529,10 +2554,10 @@ void TSimulation::Death(critter* c)
 	
 		sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_incept.txt", c->Number() );
 		if( unlink( s ) )
-			eprintf( "Error unlinking %s (%ld)\n", s, errno );
+			eprintf( "Error (%ld) unlinking \"%s\"\n", errno, s );
 		sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_birth.txt", c->Number() );
 		if( unlink( s ) )
-			eprintf( "Error unlinking %s (%ld)\n", s, errno );
+			eprintf( "Error (%ld) unlinking \"%s\"\n", errno, s );
 	}
 		
 	// If this was one of the seed critters and we're recording their anatomies, then save the data in the appropriate directory
@@ -2547,51 +2572,41 @@ void TSimulation::Death(critter* c)
 		sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_incept.txt", c->Number() );
 		sprintf( t, "run/brain/seeds/anatomy/brainAnatomy_%ld_incept.txt", c->Number() );
 		if( keep )
-			link( s, t );
+		{
+			if( link( s, t ) )
+				eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
+		}
 		else
-			rename( s, t );
+		{
+			if( rename( s, t ) )
+				eprintf( "Error (%d) renaming from \"%s\" to \"%s\"\n", errno, s, t );
+		}
 		sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_birth.txt", c->Number() );
 		sprintf( t, "run/brain/seeds/anatomy/brainAnatomy_%ld_birth.txt", c->Number() );
 		if( keep )
-			link( s, t );
+		{
+			if( link( s, t ) )
+				eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
+		}
 		else
-			rename( s, t );
+		{
+			if( rename( s, t ) )
+				eprintf( "Error (%d) renaming from \"%s\" to \"%s\"\n", errno, s, t );
+		}
 		sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_death.txt", c->Number() );
 		sprintf( t, "run/brain/seeds/anatomy/brainAnatomy_%ld_death.txt", c->Number() );
 		if( keep )
-			link( s, t );
+		{
+			if( link( s, t ) )
+				eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
+		}
 		else
-			rename( s, t );
+		{
+			if( rename( s, t ) )
+				eprintf( "Error (%d) renaming from \"%s\" to \"%s\"\n", errno, s, t );
+		}
 	}
 	
-	// If this critter was so good it displaced another critter from the bestSoFar (fFittest[]) list,
-	// then nuke the booted critter's brain anatomy & function recordings
-	// Note: A critter may be booted from the bestSoFar list, yet remain on the bestRecent list;
-	// if this happens, loserIDBestSoFar will be reset to zero above, so we won't execute this block
-	// of code and delete files that are needed for the bestRecent data logging
-	if( loserIDBestSoFar )	//  depends on fCritterNumber being 1-based in critter.cp
-	{
-		char s[256];
-		if( fBestSoFarBrainAnatomyRecordFrequency && !fBrainAnatomyRecordAll )
-		{
-			sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_incept.txt", loserIDBestSoFar );
-			if( unlink( s ) )
-				eprintf( "Error unlinking %s (%ld)\n", s, errno );
-			sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_birth.txt", loserIDBestSoFar );
-			if( unlink( s ) )
-				eprintf( "Error unlinking %s (%ld)\n", s, errno );
-			sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_death.txt", loserIDBestSoFar );
-			if( unlink( s ) )
-				eprintf( "Error unlinking %s (%ld)\n", s, errno );
-		}
-		if( fBestSoFarBrainFunctionRecordFrequency && !fBrainFunctionRecordAll )
-		{
-			sprintf( s, "run/brain/function/brainFunction_%lu.txt", loserIDBestSoFar );
-			if( unlink( s ) )
-				eprintf( "Error unlinking %s (%ld)\n", s, errno );
-		}
-	}
-
 	// If this critter was so good it displaced another critter from the bestSoFar (fFittest[]) list,
 	// then nuke the booted critter's brain anatomy & function recordings
 	// Note: A critter may be booted from the bestSoFar list, yet remain on the bestRecent list;
@@ -2606,19 +2621,19 @@ void TSimulation::Death(critter* c)
 		{
 			sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_incept.txt", loserIDBestSoFar );
 			if( unlink( s ) )
-				eprintf( "Error unlinking %s (%ld)\n", s, errno );
+				eprintf( "Error (%ld) unlinking \"%s\"\n", errno, s );
 			sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_birth.txt", loserIDBestSoFar );
 			if( unlink( s ) )
-				eprintf( "Error unlinking %s (%ld)\n", s, errno );
+				eprintf( "Error (%ld) unlinking \"%s\"\n", errno, s );
 			sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_death.txt", loserIDBestSoFar );
 			if( unlink( s ) )
-				eprintf( "Error unlinking %s (%ld)\n", s, errno );
+				eprintf( "Error (%ld) unlinking \"%s\"\n", errno, s );
 		}
 		if( !fBrainFunctionRecordAll )
 		{
 			sprintf( s, "run/brain/function/brainFunction_%lu.txt", loserIDBestSoFar );
 			if( unlink( s ) )
-				eprintf( "Error unlinking %s (%ld)\n", s, errno );
+				eprintf( "Error (%ld) unlinking \"%s\"\n", errno, s );
 		}
 	}
 
@@ -2633,25 +2648,22 @@ void TSimulation::Death(critter* c)
 		{
 			sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_incept.txt", loserIDBestRecent );
 			if( unlink( s ) )
-				eprintf( "Error unlinking %s (%ld)\n", s, errno );
+				eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
 			sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_birth.txt", loserIDBestRecent );
 			if( unlink( s ) )
-				eprintf( "Error unlinking %s (%ld)\n", s, errno );
+				eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
 			sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_death.txt", loserIDBestRecent );
 			if( unlink( s ) )
-				eprintf( "Error unlinking %s (%ld)\n", s, errno );
+				eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
 		}
 		if( !fBrainFunctionRecordAll )
 		{
 			sprintf( s, "run/brain/function/brainFunction_%lu.txt", loserIDBestRecent );
 			if( unlink( s ) )
-				eprintf( "Error unlinking %s (%ld)\n", s, errno );
+				eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
 		}
 	}
 
-	//printf( "%lu ", fStep );
-	c->Die();
-	
 	// If this was one of the seed critters and we're recording their functioning, then save the data in the appropriate directory
 	// NOTE:  Must be done after c->Die(), as that is where the brainFunction file is closed
 	if( fBrainFunctionRecordSeeds && (c->Number() <= fInitNumCritters) )
@@ -2661,7 +2673,8 @@ void TSimulation::Death(critter* c)
 		
 		sprintf( s, "run/brain/function/brainFunction_%ld.txt", c->Number() );
 		sprintf( t, "run/brain/seeds/function/brainFunction_%ld.txt", c->Number() );
-		link( s, t );
+		if( link( s, t ) )
+			eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
 	}
 	
 	// If we're only archiving the best, and this isn't one of them, then nuke its brainFunction recording
@@ -2672,7 +2685,7 @@ void TSimulation::Death(critter* c)
 		char s[256];
 		sprintf( s, "run/brain/function/brainFunction_%lu.txt", c->Number() );
 		if( unlink( s ) )
-			eprintf( "Error unlinking %s (%ld)\n", s, errno );
+			eprintf( "Error (%ld) unlinking \"%s\"\n", errno, s );
 	}
 	
 	// following assumes (requires!) list to be currently pointing to c,
@@ -2707,11 +2720,23 @@ void TSimulation::ReadWorldFile(const char* filename)
     short version;
     char label[64];
 
+#define CurrentWorldfileVersion 14
+
     in >> version; in >> label;
 	cout << "version" ses version nl;
+	
+	if( version > CurrentWorldfileVersion )
 
-    if (version < 1)
+    if( (version < 1) || (version > CurrentWorldfileVersion) )
     {
+		if( version <  1 )
+		{
+			eprintf( "Invalid worldfile version (%d) < 1\n", version );
+		}
+		else
+		{
+			eprintf( "Invalid worldfile version (%d) > CurrentWorldfileVersion (%d)\n", version, CurrentWorldfileVersion );
+		}
 		cout nlf;
      	fb.close(); 
         return;
@@ -3250,7 +3275,6 @@ void TSimulation::ReadWorldFile(const char* filename)
     in >> fSmiteAgeFrac; in >> label;
     cout << "smiteAgeFrac" ses fSmiteAgeFrac nl;
 
-	
 	if( version < 8 )
 	{
 		cout nlf;

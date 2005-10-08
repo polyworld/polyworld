@@ -137,6 +137,8 @@ public:
     long LastMate();
     genome* Genes();
     long Number();
+	float TrueFitness();
+	float ProjectedFitness();
     float Fitness();
     virtual void print();
     float FieldOfView();
@@ -246,7 +248,14 @@ inline float critter::MaxEnergy() { return fMaxEnergy; }
 inline long critter::LastMate() { return fLastMate; }
 inline genome* critter::Genes() { return fGenome; }
 inline long critter::Number() { return fCritterNumber; }
-inline float critter::Fitness() { return fFitness; }
+// replace both occurences of 0.8 with actual estimate of fraction of lifespan critter will live
+inline float critter::TrueFitness() { return fFitness; }
+#define UseProjectedFitness 1
+#if UseProjectedFitness
+	inline float critter::Fitness() { return fAlive ? ProjectedFitness() : TrueFitness(); }
+#else
+	inline float critter::Fitness() { return fFitness; }
+#endif
 inline short critter::Domain() { return fDomain; }
 inline void critter::Domain(short id) { fDomain = id; }
 inline bool critter::Alive() const { return fAlive; }

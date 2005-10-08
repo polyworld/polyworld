@@ -59,6 +59,7 @@ public:
 	float	max()			{ if( !count ) return( 0.0 ); return( mx ); }
 	void	add( float v )	{ sum += v; sum2 += v*v; count++; mn = v < mn ? v : mn; mx = v > mx ? v : mx; }
 	void	reset()			{ mn = FLT_MAX; mx = FLT_MIN; sum = sum2 = count = 0; }
+	unsigned long samples() { return( count ); }
 
 private:
 	float	mn;		// minimum
@@ -83,6 +84,7 @@ public:
 	float	max()			{ if( !count ) return( 0.0 ); if( needMax ) recomputeMax(); return( mx ); }
 	void	add( float v )	{ if( count < w ) { sum += v; sum2 += v*v; mn = v < mn ? v : mn; mx = v > mx ? v : mx; history[index++] = v; count++; } else { if( index >= w ) index = 0; sum += v - history[index]; sum2 += v*v - history[index]*history[index]; if( v >= mx ) mx = v; else if( history[index] == mx ) needMax = true; if( v <= mn ) mn = v; else if( history[index] == mn ) needMin = true; history[index++] = v; } }
 	void	reset()			{ mn = FLT_MAX; mx = FLT_MIN; sum = sum2 = count = index = 0; needMin = needMax = false; }
+	unsigned long samples() { return( count ); }
 
 private:
 	float	mn;		// minimum
@@ -226,6 +228,12 @@ public:
 	bool fBrainFunctionRecordAll;
 	bool fBrainAnatomyRecordSeeds;
 	bool fBrainFunctionRecordSeeds;
+	
+	float EnergyFitnessParameter() const;
+	float AgeFitnessParameter() const;
+	float LifeFractionRecent();
+	unsigned long LifeFractionSamples();  // the number of samples upon which LifeFractionRecent() is based
+
 
 private slots:
 	
@@ -383,6 +391,7 @@ private:
 	Stat fNeuronGroupCountStats;
 	Stat fCurrentNeuronGroupCountStats;
 	StatRecent fLifeSpanRecentStats;
+	StatRecent fLifeFractionRecentStats;
 
 	float fSmiteFrac;
 	float fSmiteAgeFrac;
@@ -421,6 +430,10 @@ inline TTextStatusWindow* TSimulation::GetStatusWindow() const { return fTextSta
 inline long TSimulation::GetMaxCritters() const { return fMaxCritters; }
 //inline short TSimulation::OverHeadRank( void ) { return fOverHeadRank; }
 inline long TSimulation::GetInitNumCritters() const { return fInitNumCritters; }
+inline float TSimulation::EnergyFitnessParameter() const { return fEnergyFitnessParameter; }
+inline float TSimulation::AgeFitnessParameter() const { return fAgeFitnessParameter; }
+inline float TSimulation::LifeFractionRecent() { return fLifeFractionRecentStats.mean(); }
+inline unsigned long TSimulation::LifeFractionSamples() { return fLifeFractionRecentStats.samples(); }
 
 
 #endif

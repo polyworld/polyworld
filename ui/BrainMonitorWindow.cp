@@ -157,7 +157,11 @@ void TBrainMonitorWindow::Draw()
 {
 	if (fCritter == NULL)
 		return;
-			
+	
+//	printf( "isVisible() = %s\n", BoolString( isVisible() ) );
+	if( !isVisible() )
+		return;
+	
 	makeCurrent();
 
 #if 0	

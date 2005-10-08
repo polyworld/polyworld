@@ -513,6 +513,19 @@ void critter::lastrewards(float energyFitness, float ageFitness)
     
  
 //---------------------------------------------------------------------------
+// critter::lastrewards
+//---------------------------------------------------------------------------        
+float critter::ProjectedFitness()
+{
+	if( fSimulation->LifeFractionSamples() >= 50 )
+		return( fFitness * fSimulation->LifeFractionRecent() * fGenome->Lifespan() / fAge +
+				fSimulation->EnergyFitnessParameter() * fEnergy / fMaxEnergy +
+				fSimulation->AgeFitnessParameter() * fSimulation->LifeFractionRecent() );
+	else
+		return( fFitness );
+}
+
+//---------------------------------------------------------------------------
 // critter::Die
 //---------------------------------------------------------------------------    
 void critter::Die()
