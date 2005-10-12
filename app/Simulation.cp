@@ -13,7 +13,7 @@
 
 // qt
 #include <qapplication.h>
-#include <QDesktopWidget>
+#include <QDesktopWidget.h>
 
 // Local
 #include "barrier.h"
@@ -114,6 +114,7 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
 //		fShowBrain(false),
 		fShowTextStatus(true),
 		fRecordGeneStats(false),
+		fRecordFoodBandStats(false),
 		fNewDeaths(0),
 		fNumberFit(0),
 		fFittest(NULL),
@@ -122,7 +123,11 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
 		fBrainMonitorStride(25),
 		fGeneSum(NULL),
 		fGeneSum2(NULL),
-		fGeneStatsFile(NULL)
+		fGeneStatsFile(NULL),
+		fNumCrittersNotInOrNearAnyFoodBand(0),
+		fNumCrittersInFoodBand(NULL),
+		fNumCrittersWithin5UnitsOfFoodBand(NULL),
+		fNumCrittersWithin10UnitsOfFoodBand(NULL)
 {
 	Init();
 }
@@ -792,6 +797,18 @@ void TSimulation::Init()
 			fprintf( fGeneStatsFile, "%ld\n", genome::gNumBytes );
 		}
 	}
+
+	//If we're recording the number of critters in or near various foodbands make some stat arrays.
+	if( fRecordFoodBandStats && (food::gNumFoodBands > 0) )
+	{
+			fNumCrittersInFoodBand = (unsigned long*) malloc( sizeof(unsigned long) * food::gNumFoodBands);
+			Q_CHECK_PTR( fNumCrittersInFoodBand );
+			fNumCrittersWithin5UnitsOfFoodBand = (unsigned long*) malloc( sizeof(unsigned long) * food::gNumFoodBands);;
+			Q_CHECK_PTR( fNumCrittersWithin5UnitsOfFoodBand );
+			fNumCrittersWithin10UnitsOfFoodBand = (unsigned long*) malloc( sizeof(unsigned long) * food::gNumFoodBands);;
+			Q_CHECK_PTR( fNumCrittersWithin10UnitsOfFoodBand );
+	}
+	
 	system( "cp worldfile run/" );
 
     // Pass ownership of the cast to the stage [TODO] figure out ownership issues
@@ -1459,6 +1476,19 @@ void TSimulation::Interact()
 			fGeneSum2[i] = 0;
 		}
 	}
+	
+	// zero'ing out the FoodBandNumCritters stats
+	if( fRecordFoodBandStats && (food::gNumFoodBands > 0) )
+	{
+		fNumCrittersNotInOrNearAnyFoodBand = 0;
+
+		for( i = 0; i < food::gNumFoodBands; i++ )
+		{
+			fNumCrittersInFoodBand[i] = 0;
+			fNumCrittersWithin5UnitsOfFoodBand[i] = 0;
+			fNumCrittersWithin10UnitsOfFoodBand[i] = 0;
+		}
+	}
 
 	// Take care of deaths first, plus least-fit determinations
 	// Also use this as a convenient place to compute some stats
@@ -1510,7 +1540,54 @@ void TSimulation::Interact()
 				fGeneSum2[i] += c->Genes()->GeneUIntValue(i) * c->Genes()->GeneUIntValue(i);
 			}
 		}
-	
+		
+		// If we're saving critter-occupancy-of-food-band stats, compute them here
+		if( fRecordFoodBandStats && (food::gNumFoodBands > 0) )
+		{
+			// First check and see if a critter is in or near a foodband.
+			// WARNING: WE MUST MAKE SURE FOODBANDS OR FOODBAND NEIGHBOORHOODS DO NOT OVERLAP!
+			// If Foodbands or neighboorhoods overlap, the critter will still only be counted once, but will be counted as a member of the lowest numbered foodband that it is a member of.
+			bool critterAccountedFor = false;
+			
+			float c_Z = c->z() / globals::worldsize;			// More efficient to divide once now than every time we need to make a comparison
+			float fiveUnits = 5.0 / globals::worldsize;
+			float tenUnits = 10.0 / globals::worldsize;
+			
+			for( int i = 0; i < food::gNumFoodBands; i++ )
+			{
+				// Is it in a band?
+				if( c_Z >= food::gFoodBand[i].zMin && c_Z <= food::gFoodBand[i].zMax )
+				{
+					fNumCrittersInFoodBand[i]++;
+					critterAccountedFor = true;
+//					cout << "Assigned a Critter and it's value is: " << c->z() << endl;
+					break ;
+				}
+				
+				// Is it within 5 units of a band? (inclusive)
+				else if( (c_Z < food::gFoodBand[i].zMin && c_Z >= food::gFoodBand[i].zMin - fiveUnits) || (c_Z > food::gFoodBand[i].zMax && c_Z <= food::gFoodBand[i].zMax + fiveUnits) )
+				{
+					fNumCrittersWithin5UnitsOfFoodBand[i]++;
+					critterAccountedFor = true;
+					break ;
+				}
+				
+				// How about within 10 units of a band? (inclusive)
+				else if( (c_Z < food::gFoodBand[i].zMin && c_Z >= food::gFoodBand[i].zMin - tenUnits) || (c_Z > food::gFoodBand[i].zMax && c_Z <= food::gFoodBand[i].zMax + tenUnits) )
+				{
+					fNumCrittersWithin10UnitsOfFoodBand[i]++;
+					critterAccountedFor = true;
+					break ;
+				}
+			}
+			
+			// Critter wasn't in or near any band of food. 
+			if( critterAccountedFor == false )
+			{
+				fNumCrittersNotInOrNearAnyFoodBand++;
+			}
+		}	
+				
 		// Figure out who is least fit, if we're doing smiting to make room for births
 		
 		// Do the bookkeeping for the specific domain, if we're using domains
@@ -2720,7 +2797,7 @@ void TSimulation::ReadWorldFile(const char* filename)
     short version;
     char label[64];
 
-#define CurrentWorldfileVersion 14
+#define CurrentWorldfileVersion 15
 
     in >> version; in >> label;
 	cout << "version" ses version nl;
@@ -3316,6 +3393,12 @@ void TSimulation::ReadWorldFile(const char* filename)
 		in >> fRecordGeneStats; in >> label;
 		cout << "recordGeneStats" ses fRecordGeneStats nl;
 	}
+
+	if( version >= 15 )
+	{
+		in >> fRecordFoodBandStats; in >> label;
+		cout << "recordFoodBandStats" ses fRecordFoodBandStats nl;
+	}
 	
 	in >> fRecordMovie; in >> label;
 	cout << "recordMovie" ses fRecordMovie nl;
@@ -3745,7 +3828,40 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 				fFramesPerSecondOverall,       fSecondsPerFrameOverall  );
 	list.push_back( strdup( t ) );
 	
-//	printf( "fStep = %lu, fStatusFrequency = %ld, !(fStep %% fStatusFrequency) = %s\n", fStep, fStatusFrequency, BoolString( !(fStep % fStatusFrequency) ) );
+	if( fRecordFoodBandStats && (food::gNumFoodBands > 0) )
+	{
+		unsigned long numCrittersInAnyFoodBand = 0;
+		unsigned long numCrittersWithin5UnitsOfAnyFoodBand = 0;
+		unsigned long numCrittersWithin10UnitsOfAnyFoodBand = 0;
+		float makePercent = 100.0 / critter::gXSortedCritters.count();
+
+		for( int i = 0; i < food::gNumFoodBands; i++ )
+		{
+			sprintf( t, "FB%d %3lu %3lu %3lu  %4.1f %4.1f %4.1f",
+						i,
+						fNumCrittersInFoodBand[i],
+						fNumCrittersInFoodBand[i] + fNumCrittersWithin5UnitsOfFoodBand[i],
+						fNumCrittersInFoodBand[i] + fNumCrittersWithin5UnitsOfFoodBand[i] + fNumCrittersWithin10UnitsOfFoodBand[i],
+						fNumCrittersInFoodBand[i] * makePercent,
+					   (fNumCrittersInFoodBand[i] + fNumCrittersWithin5UnitsOfFoodBand[i]) * makePercent,
+					   (fNumCrittersInFoodBand[i] + fNumCrittersWithin5UnitsOfFoodBand[i] + fNumCrittersWithin10UnitsOfFoodBand[i]) * makePercent );
+			list.push_back( strdup( t ) );
+			
+			numCrittersInAnyFoodBand += fNumCrittersInFoodBand[i];
+			numCrittersWithin5UnitsOfAnyFoodBand += fNumCrittersWithin5UnitsOfFoodBand[i];
+			numCrittersWithin10UnitsOfAnyFoodBand += fNumCrittersWithin10UnitsOfFoodBand[i];
+		}
+
+		sprintf( t, "FB* %3lu %3lu %3lu  %4.1f %4.1f %4.1f",
+					numCrittersInAnyFoodBand,
+					numCrittersInAnyFoodBand + numCrittersWithin5UnitsOfAnyFoodBand,
+					numCrittersInAnyFoodBand + numCrittersWithin5UnitsOfAnyFoodBand + numCrittersWithin10UnitsOfAnyFoodBand,
+					numCrittersInAnyFoodBand * makePercent,
+				   (numCrittersInAnyFoodBand + numCrittersWithin5UnitsOfAnyFoodBand) * makePercent,
+				   (numCrittersInAnyFoodBand + numCrittersWithin5UnitsOfAnyFoodBand + numCrittersWithin10UnitsOfAnyFoodBand) * makePercent );
+		list.push_back( strdup( t ) );
+	}
+	
     if( !(fStep % fStatusFrequency) || (fStep == 1) )
     {
 		char statusFileName[256];

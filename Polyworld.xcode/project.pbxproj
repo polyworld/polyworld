@@ -483,7 +483,7 @@
 		};
 		7668D2E508864A67004158C6 = {
 			isa = PBXFileReference;
-			lastKnownFileType = text.plist.xml;
+			lastKnownFileType = text.xml;
 			path = "PwMoviePlayer-Info.plist";
 			refType = 4;
 			sourceTree = "<group>";

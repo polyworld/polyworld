@@ -5,7 +5,7 @@
 #include <qobject.h>
 #include <qapplication.h>
 #include <qmainwindow.h>
-#include <QMenu>
+#include <QMenu.h>
 
 // Local
 #include "barrier.h"
@@ -295,6 +295,8 @@ private:
 //	bool fShowBrain;
 	bool fShowTextStatus;
 	bool fRecordGeneStats;
+	bool fRecordFoodBandStats;
+
 	long fNewDeaths;
 	
 	Color fGroundColor;
@@ -409,6 +411,11 @@ private:
 	unsigned long* fGeneSum;	// sum, for computing mean
 	unsigned long* fGeneSum2;	// sum of squares, for computing std. dev.
 	FILE* fGeneStatsFile;
+
+	unsigned long fNumCrittersNotInOrNearAnyFoodBand;
+	unsigned long* fNumCrittersInFoodBand;
+	unsigned long* fNumCrittersWithin5UnitsOfFoodBand; 
+	unsigned long* fNumCrittersWithin10UnitsOfFoodBand;
 	
     gcamera fCamera;
     gpolyobj fGround;
@@ -437,5 +444,3 @@ inline unsigned long TSimulation::LifeFractionSamples() { return fLifeFractionRe
 
 
 #endif
-
-

@@ -82,6 +82,7 @@ void TTextStatusWindow::resizeGL(int width, int height)
 //---------------------------------------------------------------------------
 // TTextStatusWindow::Draw
 //---------------------------------------------------------------------------
+#define TextStatusLineHeight 14
 void TTextStatusWindow::Draw()
 {
 	Q_ASSERT(fSimulation != NULL);
@@ -109,6 +110,15 @@ void TTextStatusWindow::Draw()
 	
 	makeCurrent();
 	
+ 	QRect geom = geometry();
+	int newHeight = TextStatusLineHeight * statusList.size()  +  3;
+	if( newHeight != geom.height() )
+	{
+		geom.setHeight( newHeight );
+		setGeometry( geom );
+		setFixedSize( geom.width(), newHeight );	
+	}
+	
 	// Clear the window to black
 	qglClearColor( Qt::black );
 	glClear( GL_COLOR_BUFFER_BIT );
@@ -122,7 +132,6 @@ void TTextStatusWindow::Draw()
 //	font.setStyleHint( QFont::AnyStyle, QFont::OpenGLCompatible );
     glColor4ub( 255, 255, 255, 255 );
 	
-#define TextStatusLineHeight 14
 	int y = TextStatusLineHeight;
 			
 	iter = statusList.begin();
