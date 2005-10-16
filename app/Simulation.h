@@ -14,7 +14,6 @@
 #include "gmisc.h"
 #include "graphics.h"
 #include "gstage.h"
-#include "PWTypes.h"
 #include "TextStatusWindow.h"
 
 // Forward declarations
@@ -35,7 +34,6 @@ static const int MAXFITNESSITEMS = 5;
 // Define directory mode mask the same, except you need execute privileges to use as a directory (go fig)
 #define	PwDirMode ( S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH )
 
-
 struct FitStruct
 {
 	ulong	critterID;
@@ -43,6 +41,62 @@ struct FitStruct
 	genome*	genes;
 };
 typedef struct FitStruct FitStruct;
+
+// DomainFoodBand struct will be used per-band, per-domain
+struct DomainFoodBand
+{
+	long initFoodCount;
+	long minFoodCount;
+	long maxFoodGrown;
+	long maxFoodCount;
+	long foodCount;
+	float initFoodRemainder;
+	float minFoodRemainder;
+	float maxFoodGrownRemainder;
+	float maxFoodRemainder;
+};
+typedef struct DomainFoodBand DomainFoodBand;
+
+struct domainstruct
+{
+    float xleft;
+    float xright;
+    float xsize;
+    long minnumcritters;
+    long maxnumcritters;
+    long initnumcritters;
+	long numberToSeed;
+    long minFoodCount;
+    long maxFoodCount;
+    long maxFoodGrown;
+    long initFoodCount;
+    long numcritters;
+    long numcreated;
+    long numborn;
+    long numbornsincecreated;
+    long numdied;
+    long lastcreate;
+    long maxgapcreate;
+    long foodCount;
+	float probabilityOfMutatingSeeds;
+    short ifit;
+    short jfit;
+    FitStruct** fittest;
+	int fNumLeastFit;
+	int fMaxNumLeastFit;
+	int fNumSmited;
+	critter** fLeastFit;
+	DomainFoodBand* fDomainFoodBand;
+};
+
+// FoodBand struct will be used per-band
+struct FoodBand
+{
+	float zMin;
+	float zMax;
+	float fraction;
+};
+typedef struct FoodBand FoodBand;
 
 //===========================================================================
 // Stat
@@ -182,8 +236,9 @@ public:
 	void Stop();
 	void Pause();
 	
-	short WhichDomain(float x, float z, short d);
-	void SwitchDomain(short newDomain, short oldDomain);
+	short WhichDomain( float x, float z, short d );
+	void SwitchDomain( short newDomain, short oldDomain );
+	int WhichBand( float z );
 	
 	gcamera& GetCamera();
 
@@ -242,6 +297,7 @@ private:
 	void InitNeuralValues();
 	void InitWorld();
 	void InitMonitoringWindows();
+	void InitDomainFoodBands();
 	
 	void Interact();
 	
@@ -362,6 +418,10 @@ private:
 	long fMaxGapCreate;
 	long fNumBornSinceCreated;
 	
+	int fNumFoodBands;
+	FoodBand* fFoodBand;
+	float fFoodBandTotalZ;
+
 	long fMinFoodCount;
 	long fMaxFoodCount;
 	long fMaxFoodGrown;

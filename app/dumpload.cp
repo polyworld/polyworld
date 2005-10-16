@@ -8,7 +8,6 @@
 #include "critter.h"
 #include "error.h"
 #include "graphics.h"
-#include "PWTypes.h"
 #include "Simulation.h"
 
 extern domainstruct domains[MAXDOMAINS];
@@ -108,7 +107,7 @@ void dump()
         out << domains[id].numdied nl;
         out << domains[id].lastcreate nl;
         out << domains[id].maxgapcreate nl;
-        out << domains[id].foodcount nl;
+        out << domains[id].foodCount nl;
         out << domains[id].ifit nl;
         out << domains[id].jfit nl;
 
@@ -201,9 +200,9 @@ void load()
     food* f = NULL;
     if (xsortedfood.count())
         error(2,"xsortedfood list not empty during load");
-    long foodcount = 0;
-    in >> foodcount;
-    for (register long i = 0; i < foodcount; i++)
+    long foodCount = 0;
+    in >> foodCount;
+    for (register long i = 0; i < foodCount; i++)
     {
         f = new food;
         f->load(in);
@@ -243,7 +242,7 @@ void load()
         in >> domains[id].numdied;
         in >> domains[id].lastcreate;
         in >> domains[id].maxgapcreate;
-        in >> domains[id].foodcount;
+        in >> domains[id].foodCount;
         in >> domains[id].ifit;
         in >> domains[id].jfit;
 

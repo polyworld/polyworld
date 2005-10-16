@@ -31,10 +31,6 @@ float food::gMinFoodEnergy;
 float food::gMaxFoodEnergy;
 float food::gSize2Energy;
 
-int food::gNumFoodBands;
-FoodBand* food::gFoodBand;
-float food::gFoodBandZTotal;
-
 
 //===========================================================================
 // food
@@ -156,7 +152,7 @@ void food::initpos()
 {
 	fPosition[0] = drand48() * globals::worldsize;
 	fPosition[1] = 0.5 * fLength[1];
-	fPosition[2] = FoodWorldZ( drand48() * gFoodBandZTotal );
+	fPosition[2] = drand48() * globals::worldsize;
 }
 
 
@@ -200,7 +196,7 @@ void food::setradius()
 	srPrint( "food::%s(): r=%g%s\n", __FUNCTION__, fRadius, fRadiusFixed ? "(fixed)" : "" );
 }
 
-
+#if 0
 //---------------------------------------------------------------------------
 // food::FoodWorldZ
 //---------------------------------------------------------------------------
@@ -236,7 +232,7 @@ float food::FoodWorldZ( float foodBandZ )
 	
 	return( worldZ );
 }
-
+#endif
 
 //-------------------------------------------------------------------------------------------
 // fxsortedlist::add

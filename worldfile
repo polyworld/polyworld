@@ -1,4 +1,4 @@
-15      version
+16      version
 
 1      docpuwork
 10000  dumpfreq
@@ -19,10 +19,10 @@
 42    positionseed_not_used
 42    genomeseed_used_for_all
 
-90    minfoodcount
-120    maxfoodcount
-90    maxfoodgrown
-90    initfoodcount
+90    minFoodCount
+120    maxFoodCount
+90    maxFoodGrown
+90    initFoodCount
 0.1    foodrate
 0      crittersRfood
 100    fit1freq
@@ -126,9 +126,11 @@
 
 2      numFoodBands
 -1.0   foodBand[0].zMin
--0.6    foodBand[0].zMax
+-0.6   foodBand[0].zMax
+0.8    foodBand[0].fraction
 -.1    foodBand[1].zMin
 0.0    foodBand[1].zMax
+0.2    foodBand[1].fraction
 
 0      binchartgs
 
