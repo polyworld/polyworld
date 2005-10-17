@@ -306,16 +306,13 @@ bail:
 //---------------------------------------------------------------------------
 void brain::endFunctional( FILE* file, float fitness, long index )
 {
+#pragma unused( index )
+
 	if( !file )
 		return;
 
 	fprintf( file, "end fitness = %g\n", fitness );
 	fclose( file );
-	char s[256];
-	char t[256];
-	sprintf( s, "run/brain/function/incomplete_brainFunction_%ld.txt", index );
-	sprintf( t, "run/brain/function/brainFunction_%ld.txt", index );
-	rename( s, t );
 }
 
 //---------------------------------------------------------------------------

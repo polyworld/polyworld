@@ -97,7 +97,7 @@ public:
     void SetMass(float f);
     
     virtual void draw();
-    void grow();    
+    void grow( bool recordBrainAnatomy, bool recordBrainFunction );    
     virtual void setradius();    
     float eat(food* f, float eatFitnessParameter, float eat2consume, float eatthreshold);
     void damage(float e);

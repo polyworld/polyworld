@@ -347,23 +347,17 @@ void critter::load(istream& in)
 //---------------------------------------------------------------------------
 // critter::grow
 //---------------------------------------------------------------------------
-void critter::grow()
+void critter::grow( bool recordBrainAnatomy, bool recordBrainFunction )
 {    
 	Q_CHECK_PTR(fBrain);
 	Q_CHECK_PTR(fGenome);
-	
-	bool recordBrainAnatomy = ( fSimulation->fBestSoFarBrainAnatomyRecordFrequency || fSimulation->fBrainAnatomyRecordAll || (fSimulation->fBrainAnatomyRecordSeeds && (fCritterNumber <= fSimulation->GetInitNumCritters())) );
 	
 	// grow the brain from the genome's specifications
     fBrain->Grow( fGenome, fCritterNumber, recordBrainAnatomy );
 
 	// If we're recording brain function,
 	// open the file to be used to write out neural activity
-	if( fSimulation->fBestSoFarBrainFunctionRecordFrequency ||
-		fSimulation->fBestRecentBrainFunctionRecordFrequency ||
-		fSimulation->fBrainFunctionRecordAll ||
-	   (fSimulation->fBrainFunctionRecordSeeds && (fCritterNumber <= fSimulation->GetInitNumCritters()))
-	  )
+	if( recordBrainFunction )
 		fBrainFuncFile = fBrain->startFunctional( fCritterNumber );
 
     // setup the critter's geometry

@@ -304,6 +304,12 @@ private:
 	void RecordGeneSeparation();
 	void CalculateGeneSeparation(critter* ci);
 	void CalculateGeneSeparationAll();
+
+	// Following two functions only determine whether or not we should create the relevant files.
+	// Linking, renaming, and unlinking are handled according to the specific recording options.
+	bool RecordBrainAnatomy( long critterNumber );
+	bool RecordBrainFunction( long critterNumber );
+	
 	void SmiteOne(short id, short smite);
 	void ijfitinc(short* i, short* j);
 		
@@ -501,6 +507,25 @@ inline float TSimulation::EnergyFitnessParameter() const { return fEnergyFitness
 inline float TSimulation::AgeFitnessParameter() const { return fAgeFitnessParameter; }
 inline float TSimulation::LifeFractionRecent() { return fLifeFractionRecentStats.mean(); }
 inline unsigned long TSimulation::LifeFractionSamples() { return fLifeFractionRecentStats.samples(); }
+
+// Following two functions only determine whether or not we should create the relevant files.
+// Linking, renaming, and unlinking are handled according to the specific recording options.
+inline bool TSimulation::RecordBrainAnatomy( long critterNumber )
+{
+	return( fBestSoFarBrainAnatomyRecordFrequency ||
+			fBestRecentBrainAnatomyRecordFrequency ||
+			fBrainAnatomyRecordAll ||
+			(fBrainAnatomyRecordSeeds && (critterNumber <= fInitNumCritters))
+		  );
+}
+inline bool TSimulation::RecordBrainFunction( long critterNumber )
+{
+	return( fBestSoFarBrainFunctionRecordFrequency ||
+			fBestRecentBrainFunctionRecordFrequency ||
+			fBrainFunctionRecordAll ||
+			(fBrainFunctionRecordSeeds && (critterNumber <= fInitNumCritters))
+		  );
+}
 
 
 #endif

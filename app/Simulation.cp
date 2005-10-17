@@ -1,6 +1,8 @@
 #define DebugMaxFitness 0
 #define TEXTTRACE 0
 #define DebugSmite 0
+#define DebugLinksEtAl 0
+#define DebugDomainFoodBands 0
 
 // Self
 #include "Simulation.h"
@@ -79,6 +81,7 @@ inline float AverageAngles( float a, float b )
 	return( c );
 }
 
+
 //---------------------------------------------------------------------------
 // Macros
 //---------------------------------------------------------------------------
@@ -95,11 +98,16 @@ inline float AverageAngles( float a, float b )
 	#define smPrint( x... )
 #endif
 
-#define DebugLinksEtAl 0
 #if DebugLinksEtAl
-	#define link( x... ) ( printf( "link %s to %s (%s/%d)\n", s, t, __FUNCTION__, __LINE__ ), link( x ) )
-	#define unlink( x... ) ( printf( "unlink %s (%s/%d)\n", s, __FUNCTION__, __LINE__ ), unlink( x ) )
-	#define rename( x... ) ( printf( "rename %s to %s (%s/%d)\n", s, t, __FUNCTION__, __LINE__ ), rename( x ) )
+	#define link( x... ) ( printf( "%lu link %s to %s (%s/%d)\n", fStep, s, t, __FUNCTION__, __LINE__ ), link( x ) )
+	#define unlink( x... ) ( printf( "%lu unlink %s (%s/%d)\n", fStep, s, __FUNCTION__, __LINE__ ), unlink( x ) )
+	#define rename( x... ) ( printf( "%lu rename %s to %s (%s/%d)\n", fStep, s, t, __FUNCTION__, __LINE__ ), rename( x ) )
+#endif
+
+#if DebugDomainFoodBands
+	#define dfbPrint( x... ) ( printf( "%lu (%s/%d): ", fStep, __FUNCTION__, __LINE__ ), printf( x ) )
+#else
+	#define dfbPrint( x... )
 #endif
 
 //---------------------------------------------------------------------------
@@ -676,7 +684,7 @@ void TSimulation::Init()
 	
 	// Initialize world state from saved file if present
 	ReadWorldFile("worldfile");
-	     	
+	
 	InitNeuralValues();	 // Must be called before genome and brain init
 	
 	genome::genomeinit();
@@ -878,7 +886,7 @@ void TSimulation::Init()
 				}
 				else
 					c->Genes()->Randomize();
-				c->grow();
+				c->grow( RecordBrainAnatomy( c->Number() ), RecordBrainFunction( c->Number() ) );
 				
 				fFoodEnergyIn += c->FoodEnergy();
 				fStage.AddObject(c);
@@ -913,12 +921,13 @@ void TSimulation::Init()
 			
 			numSeededTotal += numSeededDomain;
 			
-			for( int b = 0; b < fNumFoodBands; b++ )
+			int fd = id;
+			for( int fb = 0; fb < fNumFoodBands; fb++ )
 			{
 				long maxNewFood = fMaxFoodCount - (long) food::gXSortedFood.count();
-				long numNewFood = min( maxNewFood, fDomains[id].fDomainFoodBand[b].initFoodCount );
+				long numNewFood = min( maxNewFood, fDomains[fd].fDomainFoodBand[fb].initFoodCount );
 				
-				for (int i = 0; i < numNewFood; i++)
+				for( int i = 0; i < numNewFood; i++ )
 				{
 					food* f = new food::food;
 					Q_CHECK_PTR(f);
@@ -927,31 +936,33 @@ void TSimulation::Init()
 				#endif
 					
 					fFoodEnergyIn += f->energy();
-					float x = drand48() * (fDomains[id].xsize - 0.02) + fDomains[id].xleft + 0.01;
-					float z = drand48() * (fFoodBand[b].zMax - fFoodBand[b].zMin - 0.02) + fFoodBand[b].zMin + 0.01;
+					float x = drand48() * (fDomains[fd].xsize - 0.02) + fDomains[fd].xleft + 0.01;
+					float z = drand48() * (fFoodBand[fb].zMax - fFoodBand[fb].zMin - 0.02) + fFoodBand[fb].zMin + 0.01;
 				#if TestWorld
-					x = fDomains[id].xleft  +  0.333 * fDomains[id].xsize;
-					z = - globals::worldsize * ((float) (i+1) / (fDomains[id].initFoodCount + 1));
+					x = fDomains[fd].xleft  +  0.333 * fDomains[fd].xsize;
+					z = - globals::worldsize * ((float) (i+1) / (fDomains[fd].initFoodCount + 1));
 				#endif
-					f->setx(x);
-					f->setz(z);
-					f->domain(id);
+					f->setx( x );
+					f->setz( z );
+					f->domain( fd );
+					f->band( fb );
 					
-					fStage.AddObject(f);
+					fStage.AddObject( f );
 					
-					food::gXSortedFood.add(f);
-					fDomains[id].foodCount++;
-					fDomains[id].fDomainFoodBand[b].foodCount++;
+					food::gXSortedFood.add( f );
+					fDomains[fd].foodCount++;
+					fDomains[fd].fDomainFoodBand[fb].foodCount++;
+					dfbPrint( "after initial add of band-based food to domain %d, band %d, at (%5.2f,%6.2f), D.foodCount = %ld, DFB.foodCount = %ld\n", fd, fb, f->x(), f->z(), fDomains[fd].foodCount, fb >= 0 ? fDomains[fd].fDomainFoodBand[fb].foodCount : -1 );
 				}
 			}
 		}
 	
 		// Handle global initial creations, if necessary
-		Q_ASSERT(fInitNumCritters <= fMaxCritters);
+		Q_ASSERT( fInitNumCritters <= fMaxCritters );
 		
-		while ((int)critter::gXSortedCritters.count() < fInitNumCritters)
+		while( (int)critter::gXSortedCritters.count() < fInitNumCritters )
 		{
-			c = critter::getfreecritter(this, &fStage);
+			c = critter::getfreecritter( this, &fStage );
 			Q_CHECK_PTR(c);
 
 			fNumberCreated++;
@@ -966,7 +977,7 @@ void TSimulation::Init()
 			}
 			else
 				c->Genes()->Randomize();
-			c->grow();
+			c->grow( RecordBrainAnatomy( c->Number() ), RecordBrainFunction( c->Number() ) );
 			
 			fFoodEnergyIn += c->FoodEnergy();
 			fStage.AddObject(c);
@@ -987,18 +998,23 @@ void TSimulation::Init()
 			fNeuronGroupCountStats.add( c->Brain()->NumNeuronGroups() );
 		}
 			
-		while ((int)food::gXSortedFood.count() < fInitialFoodCount)
+		while( (int)food::gXSortedFood.count() < fInitialFoodCount )
 		{
+			int fd;
 			food* f = new food::food;
-			Q_CHECK_PTR(f);
+			Q_CHECK_PTR( f );
 			
 			fFoodEnergyIn += f->energy();
-			fStage.AddObject(f);
-			food::gXSortedFood.add(f);
+			fStage.AddObject( f );
+			food::gXSortedFood.add( f );
 			
-			id = WhichDomain(f->x(), f->z(), 0);
-			f->domain(id);
-			fDomains[id].foodCount++;
+			fd = WhichDomain( f->x(), f->z(), 0 );
+			f->domain( fd );
+			fDomains[fd].foodCount++;
+			int fb = WhichBand( f->z() );
+			if( fb >= 0 )
+				fDomains[fd].fDomainFoodBand[fb].foodCount++;
+			dfbPrint( "after initial GLOBAL add of food to domain %d, band %d, at (%5.2f,%6.2f), D.foodCount = %ld, DFB.foodCount = %ld\n", fd, fb, f->x(), f->z(), fDomains[fd].foodCount, fb >= 0 ? fDomains[fd].fDomainFoodBand[fb].foodCount : -1 );
 		}
 	}
 
@@ -1818,7 +1834,7 @@ void TSimulation::Interact()
                             Q_CHECK_PTR(e);
 
                             e->Genes()->Crossover(c->Genes(), d->Genes(), true);
-                            e->grow();
+                            e->grow( RecordBrainAnatomy( e->Number() ), RecordBrainFunction( e->Number() ) );
                             float eenergy = c->mating(fMateFitnessParameter, fMateWait) + d->mating(fMateFitnessParameter, fMateWait);
                             e->Energy(eenergy);
                             e->FoodEnergy(eenergy);
@@ -1935,10 +1951,10 @@ void TSimulation::Interact()
                 }
                 else // we actually have an overlap in x
                 {
-                    if ( fabs(f->z()-c->z()) < (f->radius()+c->radius()) )
+                    if( fabs( f->z() - c->z() ) < ( f->radius() + c->radius() ) )
                     {
                         // also overlap in z, so they really interact
-						ttPrint( "age %ld: critter # %ld is eating\n", fStep, c->Number() );
+						ttPrint( "step %ld: critter # %ld is eating\n", fStep, c->Number() );
                         fd = f->domain();
 						fb = f->band();
 						fFoodEnergyOut += c->eat(f, fEatFitnessParameter, fEat2Consume, fEatThreshold);
@@ -1948,6 +1964,7 @@ void TSimulation::Interact()
 							fDomains[fd].foodCount--;
 							if( fb >= 0 )
 								fDomains[fd].fDomainFoodBand[fb].foodCount--;
+							dfbPrint( "after removing eaten food  from domain %d, band %d, at (%5.2f,%6.2f), D.foodCount = %ld, DFB.foodCount = %ld\n", fd, fb, f->x(), f->z(), fDomains[fd].foodCount, fb >= 0 ? fDomains[fd].fDomainFoodBand[fb].foodCount : -1 );
 							food::gXSortedFood.remove();   // get it out of the list
 							fStage.RemoveObject(f);  // get it out of the world
 							delete f;				// get it out of memory
@@ -2082,7 +2099,7 @@ void TSimulation::Interact()
                     fNumberCreatedRandom++;
                 }
 
-                newCritter->grow();
+                newCritter->grow( RecordBrainAnatomy( newCritter->Number() ), RecordBrainFunction( newCritter->Number() ) );
                 fFoodEnergyIn += newCritter->FoodEnergy();
 				float x = drand48() * fDomains[id].xsize + fDomains[id].xleft;
 				float y = 0.5 * critter::gCritterHeight;
@@ -2154,7 +2171,7 @@ void TSimulation::Interact()
                 fNumberCreatedRandom++;
             }
 
-            newCritter->grow();
+            newCritter->grow( RecordBrainAnatomy( newCritter->Number() ), RecordBrainFunction( newCritter->Number() ) );
             fFoodEnergyIn += newCritter->FoodEnergy();
             newCritter->settranslation(drand48() * globals::worldsize, 0.5 * critter::gCritterHeight, drand48() * -globals::worldsize);
             newCritter->setyaw(drand48() * 360.0);
@@ -2249,6 +2266,7 @@ void TSimulation::Interact()
 						fStage.AddObject( f );
 						fDomains[fd].foodCount++;
 						fDomains[fd].fDomainFoodBand[fb].foodCount++;
+						dfbPrint( "after adding rate-based food to domain %d, band %d, at (%5.2f,%6.2f), D.foodCount = %ld, DFB.foodCount = %ld\n", fd, fb, f->x(), f->z(), fDomains[fd].foodCount, fb >= 0 ? fDomains[fd].fDomainFoodBand[fb].foodCount : -1 );
 					}
 					
 					long newfood = fDomains[fd].fDomainFoodBand[fb].minFoodCount - fDomains[fd].fDomainFoodBand[fb].foodCount;
@@ -2264,6 +2282,7 @@ void TSimulation::Interact()
 						fStage.AddObject( f );
 						fDomains[fd].foodCount++;
 						fDomains[fd].fDomainFoodBand[fb].foodCount++;
+						dfbPrint( "after adding count-based food to domain %d, band %d, at (%5.2f,%6.2f), D.foodCount = %ld, DFB.foodCount = %ld\n", fd, fb, f->x(), f->z(), fDomains[fd].foodCount, fb >= 0 ? fDomains[fd].fDomainFoodBand[fb].foodCount : -1 );
 					}
 				}
             }
@@ -2289,6 +2308,7 @@ void TSimulation::Interact()
                 fDomains[fd].foodCount++;
 				if( fb >= 0 )
 					fDomains[fd].fDomainFoodBand[fb].foodCount++;
+				dfbPrint( "after adding GLOBAL rate-based food to domain %d, band %d, at (%5.2f,%6.2f), D.foodCount = %ld, DFB.foodCount = %ld\n", fd, fb, f->x(), f->z(), fDomains[fd].foodCount, fb >= 0 ? fDomains[fd].fDomainFoodBand[fb].foodCount : -1 );
             }
             
 			const long newfood = fMinFoodCount - food::gXSortedFood.count();
@@ -2305,6 +2325,7 @@ void TSimulation::Interact()
                 fDomains[fd].foodCount++;
 				if( fb >= 0 )
 					fDomains[fd].fDomainFoodBand[fb].foodCount++;
+				dfbPrint( "after adding GLOBAL count-based food to domain %d, band %d, at (%5.2f,%6.2f), D.foodCount = %ld, DFB.foodCount = %ld\n", fd, fb, f->x(), f->z(), fDomains[fd].foodCount, fb >= 0 ? fDomains[fd].fDomainFoodBand[fb].foodCount : -1 );
             }
 		#ifdef DEBUGCHECK
             debugcheck("after global food growth in interact");
@@ -2485,8 +2506,8 @@ void TSimulation::ijfitinc(short* i, short* j)
 void TSimulation::Death(critter* c)
 {
 	Q_CHECK_PTR(c);
-	long loserIDBestSoFar = 0;	// the way this is used depends on fCritterNumber being 1-based in critter.cp
-	long loserIDBestRecent = 0;	// the way this is used depends on fCritterNumber being 1-based in critter.cp
+	unsigned long loserIDBestSoFar = 0;	// the way this is used depends on fCritterNumber being 1-based in critter.cp
+	unsigned long loserIDBestRecent = 0;	// the way this is used depends on fCritterNumber being 1-based in critter.cp
 	bool oneOfTheBestSoFar = false;
 	bool oneOfTheBestRecent = false;
 	
@@ -2532,12 +2553,19 @@ void TSimulation::Death(critter* c)
         
         if (foodenergy >= food::gMinFoodEnergy)
         {
-            food* f = new food(foodenergy, c->x(), c->z());
-            Q_CHECK_PTR(f);
-			food::gXSortedFood.add(f);  // dead critter becomes food
-			fStage.AddObject(f);		// put replacement food into the world
-			fDomains[id].foodCount++;
-			f->domain(id);
+			int fd = id;
+			int fb;
+            food* f = new food( foodenergy, c->x(), c->z() );
+            Q_CHECK_PTR( f );
+			food::gXSortedFood.add( f );	// dead critter becomes food
+			fStage.AddObject( f );			// put replacement food into the world
+			fb = WhichBand( f->z() );
+			f->domain( fd );
+			f->band( fb );
+			fDomains[fd].foodCount++;
+			if( fb >= 0 )
+				fDomains[fd].fDomainFoodBand[fb].foodCount++;
+			dfbPrint( "after adding critter-based food to domain %d, band %d, at (%5.2f,%6.2f), D.foodCount = %ld, DFB.foodCount = %ld\n", fd, fb, f->x(), f->z(), fDomains[fd].foodCount, fb >= 0 ? fDomains[fd].fDomainFoodBand[fb].foodCount : -1 );
         }
     }
     else
@@ -2547,6 +2575,15 @@ void TSimulation::Death(critter* c)
 	
 	// Must call Die() for the critter before any of the uses of Fitness() below, so we get the final, true, post-death fitness
 	c->Die();
+
+	if( RecordBrainFunction( c->Number() ) )
+	{
+		char s[256];
+		char t[256];
+		sprintf( s, "run/brain/function/incomplete_brainFunction_%ld.txt", c->Number() );
+		sprintf( t, "run/brain/function/brainFunction_%ld.txt", c->Number() );
+		rename( s, t );
+	}
 	
 	// Maintain a list of the fittest critters ever, for use in the online/steady-state GA
 	// First on a domain-by-domain basis...
@@ -2612,7 +2649,7 @@ void TSimulation::Death(critter* c)
 			// then we don't want to let it be unlinked below, so clear loserIDBestSoFar
 			// This loop tests the first part of the fRecentFittest[] list, and the last part is tested
 			// below, so we don't need a separate loop to make this determination
-			if( loserIDBestSoFar == c->Number() )
+			if( loserIDBestSoFar == fRecentFittest[i]->critterID )
 				loserIDBestSoFar = 0;
 			
             if( c->Fitness() > fRecentFittest[i]->fitness )
@@ -2630,7 +2667,7 @@ void TSimulation::Death(critter* c)
 			// then we don't want to let it be unlinked below, so clear loserIDBestSoFar
 			// This loop tests the last part of the fRecentFittest[] list, and the first part was tested
 			// above, so we don't need a separate loop to make this determination
-			if( loserIDBestSoFar == c->Number() )
+			if( loserIDBestSoFar == fRecentFittest[i]->critterID )
 				loserIDBestSoFar = 0;
 			
             fRecentFittest[i] = fRecentFittest[i - 1];
@@ -4130,7 +4167,7 @@ void TSimulation::InitDomainFoodBands()
 		}
 		
 		// If integerizing resulted in too many food pieces,
-		// keep removing food pieces until we have enough
+		// keep removing food pieces until we have the right number
 		while( initFoodSum > fDomains[d].initFoodCount )
 		{
 			float minRemainder = 2.0;	// can't be this high
@@ -4151,7 +4188,7 @@ void TSimulation::InitDomainFoodBands()
 		}
 		
 		// If integerizing resulted in too few food pieces,
-		// keep adding food pieces until we have enough
+		// keep adding food pieces until we have the right number
 		while( initFoodSum < fDomains[d].initFoodCount )
 		{
 			float maxRemainder = -2.0;	// can't be this low
