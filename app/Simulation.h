@@ -331,6 +331,7 @@ private:
 	TCritterPOVWindow* fCritterPOVWindow;
 	TTextStatusWindow* fTextStatusWindow;
 	
+	long fMaxSteps;
 	bool fPaused;
 	int fDelay;
 	int fDumpFrequency;
@@ -480,6 +481,8 @@ private:
 	unsigned long* fGeneSum;	// sum, for computing mean
 	unsigned long* fGeneSum2;	// sum of squares, for computing std. dev.
 	FILE* fGeneStatsFile;
+	
+	FILE* fFoodBandStatsFile;
 
 	unsigned long fNumCrittersNotInOrNearAnyFoodBand;
 	unsigned long* fNumCrittersInFoodBand;

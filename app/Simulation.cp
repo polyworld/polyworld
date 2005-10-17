@@ -38,7 +38,6 @@ using namespace std;
 // TSimulation
 //===========================================================================
 
-static const long kMaxLoops = 1000000;
 static long numglobalcreated = 0;    // needs to be static so we only get warned about influece of global creations once ever
 
 long TSimulation::fMaxCritters;
@@ -131,6 +130,7 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
 		fPopulationWindow(NULL),
 		fBrainMonitorWindow(NULL),
 		fGeneSeparationWindow(NULL),
+		fMaxSteps(0),
 		fPaused(false),
 		fDelay(0),
 		fDumpFrequency(500),
@@ -162,6 +162,7 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
 		fGeneSum(NULL),
 		fGeneSum2(NULL),
 		fGeneStatsFile(NULL),
+		fFoodBandStatsFile(NULL),
 		fNumCrittersNotInOrNearAnyFoodBand(0),
 		fNumCrittersInFoodBand(NULL),
 		fNumCrittersWithin5UnitsOfFoodBand(NULL),
@@ -329,16 +330,15 @@ void TSimulation::Step()
 	static double	sTimePrevious[RecentSteps];
 	double			timeNow;
 	
-	fStep++;
-	
-	if (fStep > kMaxLoops)
+	if( fMaxSteps && ((fStep+1) > fMaxSteps) )
 	{
 		// Stop simulation
-		ttPrint( "Simulation stopped at age %ld\n", fStep );
-		Stop(); // will set fDone = true
-		return;
+		printf( "Simulation stopped after step %ld\n", fStep );
+		exit( 0 );
 	}
 		
+	fStep++;
+	
 #ifdef DEBUGCHECK
 	char debugstring[256];
 	sprintf(debugstring, "in main loop at age %ld", fStep);
@@ -845,6 +845,9 @@ void TSimulation::Init()
 			Q_CHECK_PTR( fNumCrittersWithin5UnitsOfFoodBand );
 			fNumCrittersWithin10UnitsOfFoodBand = (unsigned long*) malloc( sizeof(unsigned long) * fNumFoodBands);
 			Q_CHECK_PTR( fNumCrittersWithin10UnitsOfFoodBand );
+			
+			fFoodBandStatsFile = fopen( "run/foodbandstats.txt", "w" );
+			Q_CHECK_PTR( fFoodBandStatsFile );
 	}
 	
 	system( "cp worldfile run/" );
@@ -2376,40 +2379,45 @@ void TSimulation::Interact()
         }
     }
 	
-#if DebugFoodBandCounts
-	int* foodBandCounts;
-	size_t sizeFoodBandCounts = sizeof( *foodBandCounts ) * (fNumFoodBands + 1);	// +1 for non-in-a-food-band case
-
-	foodBandCounts = (int*) malloc( sizeFoodBandCounts );
-	Q_CHECK_PTR( foodBandCounts );
+	static int* foodBandCounts = NULL;
+	static size_t sizeFoodBandCounts;
 	
-	bzero( foodBandCounts, sizeFoodBandCounts );
-	
-	food::gXSortedFood.reset();
-	while( food::gXSortedFood.next( f ) )
+	if( fFoodBandStatsFile )
 	{
-		bool inFoodBand = false;
-		for( fb = 0; fb < fNumFoodBands; fb++ )
+		if( !foodBandCounts )
 		{
-			if( (f->z() >= fFoodBand[fb].zMin) && (f->z() <= fFoodBand[fb].zMax) )
-			{
-				inFoodBand = true;
-				foodBandCounts[fb]++;
-				break;
-			}
+			sizeFoodBandCounts = sizeof( *foodBandCounts ) * (fNumFoodBands + 1);	// +1 for not-in-a-food-band case
+			foodBandCounts = (int*) malloc( sizeFoodBandCounts );
+			Q_CHECK_PTR( foodBandCounts );
 		}
 		
-		if( !inFoodBand )
-			foodBandCounts[fNumFoodBands]++;
+		bzero( foodBandCounts, sizeFoodBandCounts );
+		
+		food::gXSortedFood.reset();
+		while( food::gXSortedFood.next( f ) )
+		{
+			bool inFoodBand = false;
+			for( fb = 0; fb < fNumFoodBands; fb++ )
+			{
+				if( (f->z() >= fFoodBand[fb].zMin) && (f->z() <= fFoodBand[fb].zMax) )
+				{
+					inFoodBand = true;
+					foodBandCounts[fb]++;
+					break;
+				}
+			}
+			
+			if( !inFoodBand )
+				foodBandCounts[fNumFoodBands]++;
+		}
+		
+		fprintf( fFoodBandStatsFile, "%ld: foodBandCounts =", fStep );
+		for( fb = 0; fb < fNumFoodBands; fb++ )
+			fprintf( fFoodBandStatsFile, " %d", foodBandCounts[fb] );
+		fprintf( fFoodBandStatsFile, " (%d)\n", foodBandCounts[fNumFoodBands] );
+		
+		//free( foodBandCounts ); // don't free it anymore, because we only allocated it once
 	}
-	
-	printf( "%ld: foodBandCounts =", fStep );
-	for( fb = 0; fb < fNumFoodBands; fb++ )
-		printf( " %d", foodBandCounts[fb] );
-	printf( " (%d)\n", foodBandCounts[fNumFoodBands] );
-	
-	free( foodBandCounts );
-#endif
 }
 
 
@@ -2965,7 +2973,7 @@ void TSimulation::ReadWorldFile(const char* filename)
     short version;
     char label[64];
 
-#define CurrentWorldfileVersion 17
+#define CurrentWorldfileVersion 18
 
     in >> version; in >> label;
 	cout << "version" ses version nl;
@@ -2987,9 +2995,17 @@ void TSimulation::ReadWorldFile(const char* filename)
         exit( 1 );
 	}
 	
+	if( version >= 18 )
+	{
+		in >> fMaxSteps; in >> label;
+		cout << "maxSteps" ses fMaxSteps nl;
+	}
+	else
+		fMaxSteps = 0;  // don't terminate automatically
+	
 	bool ignoreBool;
     in >> ignoreBool; in >> label;
-    cout << "fDoCPUWork" ses ignoreBool nl;
+    cout << "fDoCPUWork (ignored)" ses ignoreBool nl;
     
     in >> fDumpFrequency; in >> label;
     cout << "fDumpFrequency" ses fDumpFrequency nl;
