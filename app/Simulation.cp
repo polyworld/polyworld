@@ -3,6 +3,7 @@
 #define DebugSmite 0
 #define DebugLinksEtAl 0
 #define DebugDomainFoodBands 0
+#define DebugFoodBandCounts 1
 
 // Self
 #include "Simulation.h"
@@ -2249,15 +2250,16 @@ void TSimulation::Interact()
     {
         for (fd = 0; fd < fNumDomains; fd++)
         {
-			for( fb = 0; fb < fNumFoodBands; fb++ )
+			if( fUseProbabilisticFoodBands )
 			{
-				if (fDomains[fd].fDomainFoodBand[fb].foodCount < fDomains[fd].fDomainFoodBand[fb].maxFoodGrown)
+				if( fDomains[fd].foodCount < fDomains[fd].maxFoodGrown )
 				{
-					float foodprob = (fDomains[fd].fDomainFoodBand[fb].maxFoodGrown - fDomains[fd].fDomainFoodBand[fb].foodCount) * fFoodRate;
-					if (drand48() < foodprob)
+					float foodprob = ( fDomains[fd].maxFoodGrown - fDomains[fd].foodCount ) * fFoodRate;
+					if( drand48() < foodprob )
 					{
 						food* f = new food;
 						fFoodEnergyIn += f->energy();
+						fb = RandomBand();
 						f->setx( drand48() * fDomains[fd].xsize  +  fDomains[fd].xleft );
 						f->setz( drand48() * (fFoodBand[fb].zMax - fFoodBand[fb].zMin)  +  fFoodBand[fb].zMin );
 						f->domain( fd );
@@ -2266,14 +2268,15 @@ void TSimulation::Interact()
 						fStage.AddObject( f );
 						fDomains[fd].foodCount++;
 						fDomains[fd].fDomainFoodBand[fb].foodCount++;
-						dfbPrint( "after adding rate-based food to domain %d, band %d, at (%5.2f,%6.2f), D.foodCount = %ld, DFB.foodCount = %ld\n", fd, fb, f->x(), f->z(), fDomains[fd].foodCount, fb >= 0 ? fDomains[fd].fDomainFoodBand[fb].foodCount : -1 );
+						dfbPrint( "after adding random rate-based food to domain %d, band %d, at (%5.2f,%6.2f), D.foodCount = %ld, DFB.foodCount = %ld\n", fd, fb, f->x(), f->z(), fDomains[fd].foodCount, fb >= 0 ? fDomains[fd].fDomainFoodBand[fb].foodCount : -1 );
 					}
 					
-					long newfood = fDomains[fd].fDomainFoodBand[fb].minFoodCount - fDomains[fd].fDomainFoodBand[fb].foodCount;
-					for (i = 0; i < newfood; i++)
+					long newfood = fDomains[fd].minFoodCount - fDomains[fd].foodCount;
+					for( i = 0; i < newfood; i++ )
 					{
 						food* f = new food;
 						fFoodEnergyIn += f->energy();
+						fb = RandomBand();
 						f->setx( drand48() * fDomains[fd].xsize  +  fDomains[fd].xleft );
 						f->setz( drand48() * (fFoodBand[fb].zMax - fFoodBand[fb].zMin)  +  fFoodBand[fb].zMin );
 						f->domain( fd );
@@ -2282,10 +2285,50 @@ void TSimulation::Interact()
 						fStage.AddObject( f );
 						fDomains[fd].foodCount++;
 						fDomains[fd].fDomainFoodBand[fb].foodCount++;
-						dfbPrint( "after adding count-based food to domain %d, band %d, at (%5.2f,%6.2f), D.foodCount = %ld, DFB.foodCount = %ld\n", fd, fb, f->x(), f->z(), fDomains[fd].foodCount, fb >= 0 ? fDomains[fd].fDomainFoodBand[fb].foodCount : -1 );
+						dfbPrint( "after adding random count-based food to domain %d, band %d, at (%5.2f,%6.2f), D.foodCount = %ld, DFB.foodCount = %ld\n", fd, fb, f->x(), f->z(), fDomains[fd].foodCount, fb >= 0 ? fDomains[fd].fDomainFoodBand[fb].foodCount : -1 );
 					}
 				}
-            }
+			}
+			else
+			{
+				for( fb = 0; fb < fNumFoodBands; fb++ )
+				{
+					if (fDomains[fd].fDomainFoodBand[fb].foodCount < fDomains[fd].fDomainFoodBand[fb].maxFoodGrown)
+					{
+						float foodprob = (fDomains[fd].fDomainFoodBand[fb].maxFoodGrown - fDomains[fd].fDomainFoodBand[fb].foodCount) * fFoodRate;
+						if (drand48() < foodprob)
+						{
+							food* f = new food;
+							fFoodEnergyIn += f->energy();
+							f->setx( drand48() * fDomains[fd].xsize  +  fDomains[fd].xleft );
+							f->setz( drand48() * (fFoodBand[fb].zMax - fFoodBand[fb].zMin)  +  fFoodBand[fb].zMin );
+							f->domain( fd );
+							f->band( fb );
+							food::gXSortedFood.add( f );
+							fStage.AddObject( f );
+							fDomains[fd].foodCount++;
+							fDomains[fd].fDomainFoodBand[fb].foodCount++;
+							dfbPrint( "after adding rate-based food to domain %d, band %d, at (%5.2f,%6.2f), D.foodCount = %ld, DFB.foodCount = %ld\n", fd, fb, f->x(), f->z(), fDomains[fd].foodCount, fb >= 0 ? fDomains[fd].fDomainFoodBand[fb].foodCount : -1 );
+						}
+						
+						long newfood = fDomains[fd].fDomainFoodBand[fb].minFoodCount - fDomains[fd].fDomainFoodBand[fb].foodCount;
+						for (i = 0; i < newfood; i++)
+						{
+							food* f = new food;
+							fFoodEnergyIn += f->energy();
+							f->setx( drand48() * fDomains[fd].xsize  +  fDomains[fd].xleft );
+							f->setz( drand48() * (fFoodBand[fb].zMax - fFoodBand[fb].zMin)  +  fFoodBand[fb].zMin );
+							f->domain( fd );
+							f->band( fb );
+							food::gXSortedFood.add( f );
+							fStage.AddObject( f );
+							fDomains[fd].foodCount++;
+							fDomains[fd].fDomainFoodBand[fb].foodCount++;
+							dfbPrint( "after adding count-based food to domain %d, band %d, at (%5.2f,%6.2f), D.foodCount = %ld, DFB.foodCount = %ld\n", fd, fb, f->x(), f->z(), fDomains[fd].foodCount, fb >= 0 ? fDomains[fd].fDomainFoodBand[fb].foodCount : -1 );
+						}
+					}
+				}
+			}
 		#ifdef DEBUGCHECK
             debugcheck("after domain food growth in interact");
 		#endif DEBUGCHECK
@@ -2332,6 +2375,41 @@ void TSimulation::Interact()
 		#endif DEBUGCHECK
         }
     }
+	
+#if DebugFoodBandCounts
+	int* foodBandCounts;
+	size_t sizeFoodBandCounts = sizeof( *foodBandCounts ) * (fNumFoodBands + 1);	// +1 for non-in-a-food-band case
+
+	foodBandCounts = (int*) malloc( sizeFoodBandCounts );
+	Q_CHECK_PTR( foodBandCounts );
+	
+	bzero( foodBandCounts, sizeFoodBandCounts );
+	
+	food::gXSortedFood.reset();
+	while( food::gXSortedFood.next( f ) )
+	{
+		bool inFoodBand = false;
+		for( fb = 0; fb < fNumFoodBands; fb++ )
+		{
+			if( (f->z() >= fFoodBand[fb].zMin) && (f->z() <= fFoodBand[fb].zMax) )
+			{
+				inFoodBand = true;
+				foodBandCounts[fb]++;
+				break;
+			}
+		}
+		
+		if( !inFoodBand )
+			foodBandCounts[fNumFoodBands]++;
+	}
+	
+	printf( "%ld: foodBandCounts =", fStep );
+	for( fb = 0; fb < fNumFoodBands; fb++ )
+		printf( " %d", foodBandCounts[fb] );
+	printf( " (%d)\n", foodBandCounts[fNumFoodBands] );
+	
+	free( foodBandCounts );
+#endif
 }
 
 
@@ -2887,7 +2965,7 @@ void TSimulation::ReadWorldFile(const char* filename)
     short version;
     char label[64];
 
-#define CurrentWorldfileVersion 16
+#define CurrentWorldfileVersion 17
 
     in >> version; in >> label;
 	cout << "version" ses version nl;
@@ -3446,6 +3524,14 @@ void TSimulation::ReadWorldFile(const char* filename)
 		cout << "_FoodBand[0].zMax" ses "0.0" sopar fFoodBand[0].zMax pnl;
 		cout << "_FoodBand[0].fraction" ses "1.0" nl;
 	}
+	
+	if( version >= 17 )
+	{
+		in >> fUseProbabilisticFoodBands; in >> label;
+		cout << "useProbabilisticFoodBands" ses fUseProbabilisticFoodBands nl;
+	}
+	else
+		fUseProbabilisticFoodBands = false;
 	
 	InitDomainFoodBands();	
 

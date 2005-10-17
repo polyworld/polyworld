@@ -317,6 +317,8 @@ private:
 	
 	void ReadWorldFile(const char* filename);	
 	void Dump();
+	
+	short RandomBand();
 
 	TSceneView* fSceneView;
 	TSceneWindow* fSceneWindow;
@@ -427,6 +429,7 @@ private:
 	int fNumFoodBands;
 	FoodBand* fFoodBand;
 	float fFoodBandTotalZ;
+	bool fUseProbabilisticFoodBands;
 
 	long fMinFoodCount;
 	long fMaxFoodCount;
@@ -525,6 +528,23 @@ inline bool TSimulation::RecordBrainFunction( long critterNumber )
 			fBrainFunctionRecordAll ||
 			(fBrainFunctionRecordSeeds && (critterNumber <= fInitNumCritters))
 		  );
+}
+
+inline short TSimulation::RandomBand()
+{
+	float ranval = drand48();
+	float sumFractions = 0.0;
+	
+	for( short i = 0; i < fNumFoodBands; i++ )
+	{
+		sumFractions += fFoodBand[i].fraction;
+		if( ranval <= sumFractions )
+			return( i );	// this is the band
+	}
+	
+	// shouldn't be possible to reach here, but assume the floating point adds
+	// just failed us by a smidgeon, and return the final food-band
+	return( fNumFoodBands - 1 );
 }
 
 

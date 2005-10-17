@@ -1,4 +1,4 @@
-16      version
+17      version
 
 1      docpuwork
 10000  dumpfreq
@@ -131,6 +131,7 @@
 -.1    foodBand[1].zMin
 0.0    foodBand[1].zMax
 0.2    foodBand[1].fraction
+1      useProbabilisticFoodBands
 
 0      binchartgs
 
