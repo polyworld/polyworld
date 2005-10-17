@@ -4171,7 +4171,7 @@ void TSimulation::InitDomainFoodBands()
 		while( initFoodSum > fDomains[d].initFoodCount )
 		{
 			float minRemainder = 2.0;	// can't be this high
-			int minRemainderBand;
+			int minRemainderBand = 0;
 			
 			for( int b = 0; b < fNumFoodBands; b++ )
 			{
@@ -4192,7 +4192,7 @@ void TSimulation::InitDomainFoodBands()
 		while( initFoodSum < fDomains[d].initFoodCount )
 		{
 			float maxRemainder = -2.0;	// can't be this low
-			int maxRemainderBand;
+			int maxRemainderBand = 0;
 			
 			for( int b = 0; b < fNumFoodBands; b++ )
 			{
@@ -4213,7 +4213,7 @@ void TSimulation::InitDomainFoodBands()
 		while( minFoodSum > fDomains[d].minFoodCount )
 		{
 			float minRemainder = 2.0;	// can't be this high
-			int minRemainderBand;
+			int minRemainderBand = 0;
 			
 			for( int b = 0; b < fNumFoodBands; b++ )
 			{
@@ -4234,7 +4234,7 @@ void TSimulation::InitDomainFoodBands()
 		while( minFoodSum < fDomains[d].minFoodCount )
 		{
 			float maxRemainder = -2.0;	// can't be this low
-			int maxRemainderBand;
+			int maxRemainderBand = 0;
 			
 			for( int b = 0; b < fNumFoodBands; b++ )
 			{
@@ -4255,7 +4255,7 @@ void TSimulation::InitDomainFoodBands()
 		while( maxFoodGrownSum > fDomains[d].maxFoodGrown )
 		{
 			float minRemainder = 2.0;	// can't be this high
-			int minRemainderBand;
+			int minRemainderBand = 0;
 			
 			for( int b = 0; b < fNumFoodBands; b++ )
 			{
@@ -4276,7 +4276,7 @@ void TSimulation::InitDomainFoodBands()
 		while( maxFoodGrownSum < fDomains[d].maxFoodGrown )
 		{
 			float maxRemainder = -2.0;	// can't be this low
-			int maxRemainderBand;
+			int maxRemainderBand = 0;
 			
 			for( int b = 0; b < fNumFoodBands; b++ )
 			{
@@ -4297,7 +4297,7 @@ void TSimulation::InitDomainFoodBands()
 		while( maxFoodSum > fDomains[d].maxFoodCount )
 		{
 			float minRemainder = 2.0;	// can't be this high
-			int minRemainderBand;
+			int minRemainderBand = 0;
 			
 			for( int b = 0; b < fNumFoodBands; b++ )
 			{
@@ -4318,7 +4318,7 @@ void TSimulation::InitDomainFoodBands()
 		while( maxFoodSum < fDomains[d].maxFoodCount )
 		{
 			float maxRemainder = -2.0;	// can't be this low
-			int maxRemainderBand;
+			int maxRemainderBand = 0;
 			
 			for( int b = 0; b < fNumFoodBands; b++ )
 			{
@@ -4334,8 +4334,6 @@ void TSimulation::InitDomainFoodBands()
 			maxFoodSum++;
 		}
 		
-	#define DebugDomainFoodBands 1
-	#if DebugDomainFoodBands
 		printf( "Domain %d\n", d );
 		for( int b = 0; b < fNumFoodBands; b++ )
 		{
@@ -4346,6 +4344,5 @@ void TSimulation::InitDomainFoodBands()
 					fDomains[d].fDomainFoodBand[b].maxFoodGrown,
 					fDomains[d].fDomainFoodBand[b].maxFoodCount );
 		}
-	#endif
 	}
 }

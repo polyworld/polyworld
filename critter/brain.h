@@ -98,7 +98,7 @@ public:
         
 	void dumpAnatomical( char* directoryName, char* suffix, long index, float fitness );
 	FILE* startFunctional( long index );
-	void endFunctional( FILE* file, float fitness, long index );
+	void endFunctional( FILE* file, float fitness );
 	void writeFunctional( FILE* file );
         
     void Render(short patchwidth, short patchheight);

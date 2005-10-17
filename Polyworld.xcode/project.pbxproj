@@ -303,7 +303,7 @@
 				GCC_MODEL_TUNING = G5;
 				GCC_OPTIMIZATION_LEVEL = 3;
 				OTHER_CPLUSPLUSFLAGS = "-DQT_NO_DEBUG";
-				OTHER_LDFLAGS = "-lQtGui -lQtCore -lQtOpenGL -lz";
+				OTHER_LDFLAGS = "-framework QtGui -framework QtCore -framework QtOpenGL -lz";
 				ZERO_LINK = NO;
 			};
 			isa = PBXBuildStyle;
@@ -1818,7 +1818,7 @@
 			buildRules = (
 			);
 			buildSettings = {
-				FRAMEWORK_SEARCH_PATHS = "";
+				FRAMEWORK_SEARCH_PATHS = $QtLib;
 				GCC_ALTIVEC_EXTENSIONS = YES;
 				GCC_ENABLE_TRIGRAPHS = NO;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;

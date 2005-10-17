@@ -304,7 +304,7 @@ bail:
 //---------------------------------------------------------------------------
 // brain::endFunctional
 //---------------------------------------------------------------------------
-void brain::endFunctional( FILE* file, float fitness, long index )
+void brain::endFunctional( FILE* file, float fitness )
 {
 #pragma unused( index )
 

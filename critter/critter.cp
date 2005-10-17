@@ -539,7 +539,7 @@ void critter::Die()
 
 	// If we're recording brain function, end it here
 	if( fBrainFuncFile )
-		fBrain->endFunctional( fBrainFuncFile, fFitness, fCritterNumber );
+		fBrain->endFunctional( fBrainFuncFile, fFitness );
 	fBrainFuncFile = NULL;
 }
 
