@@ -17,6 +17,10 @@ original copyright by Apple and open source nature.
 NOTE:  Polyworld now *requires* Qt 4.x, and will no longer build on
 Qt 3.x.
 
+NOTE:  Polyworld also currently *requires* gcc-3.3, not gcc-4.
+(We hope to change this soon, especially since, as of Tiger,
+gcc-4 is the default in Mac OS X.)
+
 To build Polyworld, you will need to:
 
 Download and configure Qt (Open Source Edition)
