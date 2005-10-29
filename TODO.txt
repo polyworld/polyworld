@@ -55,6 +55,7 @@ enhance the evolutionary usefulness of collaboration.
 
 Recently done:
 
+* set up to get email on cvs commits
 * write status file again
 * fix bug in PwMoviePlayer that results in disembodied, unpopulated little
   MenuBar floating at the top-left of the window (no idea where that's
