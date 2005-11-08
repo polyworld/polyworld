@@ -32,6 +32,9 @@ MainWindow::MainWindow(const char* windowTitle, const char* windowSettingsNamePa
 	windowSettingsName = windowSettingsNameParam;
 	movieFile = movieFileParam;
 	
+	paused = false;
+	step = false;
+	
 	// Create the main menubar
 	CreateMenus( menuBar() );
 
@@ -72,16 +75,48 @@ void MainWindow::ReadMovieFileHeader()
 //---------------------------------------------------------------------------
 void MainWindow::NextFrame()
 {
-#if 0
-	static unsigned long frame;
-	frame++;
-	if( frame == 3 )
+	if( !paused || step )
 	{
-		glWidget->dumpObjectTree();
-		glWidget->dumpObjectInfo();
+		glWidget->Draw();
+		step = false;
 	}
-#endif
-	glWidget->Draw();
+}
+
+//---------------------------------------------------------------------------
+// MainWindow::keyReleaseEvent
+//---------------------------------------------------------------------------
+void MainWindow::keyReleaseEvent( QKeyEvent* event )
+{
+	switch( event->key() )
+	{
+		case Qt::Key_Space:
+			paused = !paused;
+			break;
+		
+		case Qt::Key_Right:
+			if( paused )
+				step = true;
+			else
+			{
+				// should speed up here, but for now just pause and step
+				paused = true;
+				step = true;
+			}
+			break;
+		
+		case Qt::Key_Left:
+			// would like to step backwards in time (if paused) or
+			// slow down (if not paused), but I don't know if it is
+			// possible to step backwards given the way the video
+			// is encoded in the file, and slowing down would take
+			// work, so for now, do nothing
+			event->ignore();
+			break;
+		
+		default:
+			event->ignore();
+			break;
+	}
 }
 
 #if 0

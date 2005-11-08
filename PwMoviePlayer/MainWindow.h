@@ -3,8 +3,9 @@
 
 #define PW_USE_QMAINWINDOW 1
 
-#include <QMainWindow>
 #include <QGLWidget>
+#include <QKeyEvent>
+#include <QMainWindow>
 
 #include "GLWidget.h"
 
@@ -28,6 +29,7 @@ public:
 	void NextFrame();
 
 protected:
+	virtual void keyReleaseEvent( QKeyEvent* event );
 
 private slots:
 	void openFile();
@@ -46,6 +48,9 @@ private:
 	void SaveVisibility();
 	
 	GLWidget*	glWidget;
+	
+	bool		paused;
+	bool		step;
 	
 	FILE*		movieFile;
 	ulong		movieVersion;
