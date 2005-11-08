@@ -24,7 +24,8 @@ class genome
 public:
 	static void genomeinit();
 	static void genomedestruct();
-    
+    static void PrintGeneIndexes( FILE* f );
+
     genome();    
     ~genome();
     
