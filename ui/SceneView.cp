@@ -288,6 +288,15 @@ void TSceneView::customEvent(QCustomEvent* event)
 #endif
 
 //---------------------------------------------------------------------------
+// TSceneView::keyReleaseEvent
+//---------------------------------------------------------------------------
+void TSceneView::keyReleaseEvent( QKeyEvent* event )
+{
+	// handle key presses here someday
+	event->ignore();
+}
+
+//---------------------------------------------------------------------------
 // TSceneView::EnableAA
 //---------------------------------------------------------------------------
 void TSceneView::EnableAA()

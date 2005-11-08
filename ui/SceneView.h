@@ -46,6 +46,7 @@ protected:
     virtual void mouseReleaseEvent(QMouseEvent* event);
     virtual void mouseDoubleClickEvent(QMouseEvent* event);
 //	virtual void customEvent(QCustomEvent* event);
+	virtual void keyReleaseEvent( QKeyEvent* event );
 	
 private:
 	gscene* fScene;
