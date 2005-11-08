@@ -821,20 +821,33 @@ void TSimulation::Init()
 				if( mkdir( "run/brain/seeds/function", PwDirMode ) )
 					eprintf( "Error making run/brain/seeds/function directory (%d)\n", errno );
 		}
-		// If we're going to record the gene means and std devs, we need to allocate a couple of stat arrays
-		if( fRecordGeneStats )
-		{
-			fGeneSum  = (unsigned long*) malloc( sizeof( *fGeneSum  ) * genome::gNumBytes );
-			Q_CHECK_PTR( fGeneSum );
-			fGeneSum2 = (unsigned long*) malloc( sizeof( *fGeneSum2 ) * genome::gNumBytes );
-			Q_CHECK_PTR( fGeneSum2 );
-			
-			fGeneStatsFile = fopen( "run/genestats.txt", "w" );
-			Q_CHECK_PTR( fGeneStatsFile );
-			
-			fprintf( fGeneStatsFile, "%ld\n", genome::gNumBytes );
-		}
 	}
+
+	// If we're going to record the gene means and std devs, we need to allocate a couple of stat arrays
+	if( fRecordGeneStats )
+	{
+		fGeneSum  = (unsigned long*) malloc( sizeof( *fGeneSum  ) * genome::gNumBytes );
+		Q_CHECK_PTR( fGeneSum );
+		fGeneSum2 = (unsigned long*) malloc( sizeof( *fGeneSum2 ) * genome::gNumBytes );
+		Q_CHECK_PTR( fGeneSum2 );
+		
+		fGeneStatsFile = fopen( "run/genestats.txt", "w" );
+		Q_CHECK_PTR( fGeneStatsFile );
+		
+		fprintf( fGeneStatsFile, "%ld\n", genome::gNumBytes );
+	}
+
+#define PrintGeneIndexesFlag 0
+#if PrintGeneIndexesFlag
+	{
+		FILE* f = fopen( "run/geneindex.txt", "w" );
+		Q_CHECK_PTR( f );
+		
+		genome::PrintGeneIndexes( f );	// like call to genome::genomeinit()
+		
+		fclose( f );
+	}
+#endif
 
 	//If we're recording the number of critters in or near various foodbands make some stat arrays.
 	if( fRecordFoodBandStats )
