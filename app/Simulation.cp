@@ -16,7 +16,7 @@
 
 // qt
 #include <qapplication.h>
-#include <QDesktopWidget.h>
+#include <qdesktopwidget.h>
 
 // Local
 #include "barrier.h"

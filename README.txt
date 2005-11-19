@@ -77,9 +77,22 @@ Download Polyworld source (from SourceForge)
   they are defined, and uses the right communication protocol to
   talk to the right host)
 
+Mac versus Linux Installs
+* The default 'polyworld.pro' file works only on Mac.  A special
+  polyworld_linux.pro has been made for Linux.  To successfully
+  build under linux replace the polyworld.pro file by:
+	mv polyworld.pro polyworld_mac.pro
+	mv polyworld_linux.pro polyworld.pro 
+
+
 Build Polyworld (Qt method)
 * enter the polyworld directory by typing 'cd polyworld'
 * type './buildit'
+* The contents of the ./buldit script are simply 'qmake' and 'make'.
+  if for some reason qmake cannot file your polyworld.pro file, in 
+  your ./buildit script simply simply replace 'qmake' with 
+  'qmake polyworld.pro'
+
 
 Build Polyworld (Xcode method)
 * Add some key Qt paths in the Xcode "Source Trees" preferences:

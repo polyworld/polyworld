@@ -1,11 +1,15 @@
 #ifndef SIMULATION_H
 #define SIMULATION_H
 
+#ifdef linux
+#include <errno.h>
+#endif
+
 // qt
 #include <qobject.h>
 #include <qapplication.h>
 #include <qmainwindow.h>
-#include <QMenu.h>
+#include <qmenu.h>
 
 // Local
 #include "barrier.h"

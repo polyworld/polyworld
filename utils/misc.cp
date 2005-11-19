@@ -10,7 +10,11 @@
 #include "misc.h"
 
 // System
+
+#ifndef linux      /* how does one say #ifdef MAC_OSX ? */
 #include <mach/mach_time.h>
+#endif
+
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -118,6 +122,15 @@ float logistic(float x, float slope)
 
 double hirestime( void )
 {
+#ifdef linux
+
+	struct timeval tv;
+	gettimeofday( &tv, NULL );
+
+	return (double)tv.tv_sec + (double)tv.tv_usec/1000000.0;
+
+#else /* this seems to be Apple-specific, referencing "mach"... */
+
     static uint32_t num = 0;
     static uint32_t denom = 0;
     uint64_t now;
@@ -134,6 +147,8 @@ double hirestime( void )
     }
     now = mach_absolute_time();
     return (double)(now * (double)num / denom / NSEC_PER_SEC);
+
+#endif
 }
 
 int SetMaximumFiles( long filecount )

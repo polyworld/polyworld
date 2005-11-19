@@ -27,8 +27,6 @@
 #define sopar <<" ("<<
 #define cpars <<") "<<
 
-#define forever for (;;)
-
 #define nint(a) ((long)((a)+(((a)<0.0)?-0.499999999:0.499999999)))
 
 #define interp(x,ylo,yhi) ((ylo)+(x)*((yhi)-(ylo)))
@@ -87,7 +85,7 @@ int GetMaximumFiles( long *filecount );
 
 #ifndef PI
 #define PI M_PI
-#endif PI
+#endif /*PI*/
 
 #define TWOPI 6.28318530717059647602
 #define HPI M_PI_2

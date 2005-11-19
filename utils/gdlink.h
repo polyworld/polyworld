@@ -167,7 +167,7 @@ public: /* for debugging only */
 	void remove(const TTYPE a);
 	
 	/* remove the link corresponding to item, without checking to see if it is actually in the list! */		
-	void gdlist<TTYPE>::removeFastUnsafe(gdlink<TTYPE> *item);
+	void removeFastUnsafe(gdlink<TTYPE> *item);
 
 	/* unlink & return the entry corresponding to a */	
 	gdlink<TTYPE>* unlink(const TTYPE a);			
@@ -711,4 +711,4 @@ gdlink<TTYPE>* gdlist<TTYPE>::unlink(gdlink<TTYPE>* a)
 	std::cerr << "attempt to remove non-existent TTYPE node\n";
 }
 
-#endif DLINK_H
+#endif /*DLINK_H*/

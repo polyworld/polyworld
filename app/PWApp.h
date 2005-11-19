@@ -12,7 +12,7 @@ class TPWApp : public QApplication
 Q_OBJECT
 
 public:
-	TPWApp(int argc, char** argv);
+	TPWApp(int& argc, char** argv);
 };
 
 #endif

@@ -83,7 +83,7 @@ int main(int argc, char** argv)
 //---------------------------------------------------------------------------
 // TPWApp::TPWApp
 //---------------------------------------------------------------------------
-TPWApp::TPWApp(int argc, char** argv) : QApplication(argc, argv)
+TPWApp::TPWApp(int& argc, char** argv) : QApplication(argc, argv)
 {
 }
 
