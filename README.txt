@@ -84,15 +84,13 @@ Mac versus Linux Installs
 	mv polyworld.pro polyworld_mac.pro
 	mv polyworld_linux.pro polyworld.pro 
 
-
 Build Polyworld (Qt method)
 * enter the polyworld directory by typing 'cd polyworld'
 * type './buildit'
 * The contents of the ./buldit script are simply 'qmake' and 'make'.
-  if for some reason qmake cannot file your polyworld.pro file, in 
-  your ./buildit script simply simply replace 'qmake' with 
+  If for some reason qmake cannot find your polyworld.pro file, in 
+  your ./buildit script simply replace 'qmake' with 
   'qmake polyworld.pro'
-
 
 Build Polyworld (Xcode method)
 * Add some key Qt paths in the Xcode "Source Trees" preferences:
