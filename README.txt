@@ -111,6 +111,16 @@ Build Polyworld (Xcode method)
     across all projects for a given user, so this will make it
     possible to develop Polyworld in Xcode on Tiger. ***END NOTE***
 * Build
+* Note: You can make life a little more convenient by enabling SCM
+    support in Xcode (do a Get Info on the project), select CVS in
+    the menu (should be the default), then click "Edit..." and
+    select ssh (instead of rsh).  You may also want to provide a path
+    to /usr/bin/cvs, instead of the default /usr/bin/ocvs, though I'm
+    not sure whether that is necessary or not.  You may then do a
+    Get Info on any source file, click the SCM tab, and see a list of
+    all the versions and check-in comments.  You can also select any
+    two versions and get diffs or do a compare (using FileMerge or
+    BBEdit, settable in the Preferences), all from the Xcode GUI.
 
 Be aware that the 'buildit' step above produces a Polyworld.app/ in
 the polyworld project directory.  Xcode will also attempt to produce a
