@@ -960,7 +960,7 @@ short genome::numeneur( short i )
 		case 3:
 	        return( nint( interp( GeneValue( numgneurgene ), gMinvispixels, gMaxvispixels ) ) );
 		case 4:	
-	        return( nint( interp( GeneValue( numgneurgene ), gMinvispixels, gMaxvispixels ) ) );
+	        return( nint( interp( GeneValue( numbneurgene ), gMinvispixels, gMaxvispixels ) ) );
 	}
 
 	// We have exhausted all valid neural groups -- we report an error
