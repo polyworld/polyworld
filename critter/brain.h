@@ -160,6 +160,7 @@ protected:
     short firstnoninputneuron;
 	short firstOutputNeuron;
 	short numOutputNeurons;
+	short firstInternalNeuron;
     float xredwidth;
     float xgreenwidth;
     float xbluewidth;
@@ -197,5 +198,12 @@ inline short brain::NumRedNeurons() { return fNumRedNeurons; }
 inline short brain::NumGreenNeurons() { return fNumGreenNeurons; }
 inline short brain::NumBlueNeurons() { return fNumBlueNeurons; }
 inline short brain::NumNeuronGroups() { return numneurgroups; }
+
+// Macros
+
+#define IsInputNeuralGroup( group ) ( (group < brain::gNeuralValues.numinputneurgroups) && (group >= 0) )
+#define IsOutputNeuralGroup( group ) ( (group >= brain::gNeuralValues.numinputneurgroups) && (group < (brain::gNeuralValues.numinputneurgroups + brain::gNeuralValues.numoutneurgroups)) )
+// Note: Following upper-limit check is only a coarse sanity check, rather than a strict upper limit based on the current brain or genome, but using this form allows us to use define these macros for use everywhere
+#define IsInternalNeuralGroup( group ) ( (group >= (brain::gNeuralValues.numinputneurgroups + brain::gNeuralValues.numoutneurgroups)) && (group < brain::gNeuralValues.maxinternalneurgroups) )
 
 #endif

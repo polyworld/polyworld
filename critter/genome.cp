@@ -165,16 +165,16 @@ void genome::genomeinit()
     // number of internal neuronal groups
     genome::numneurgroupsgene = genome::numbneurgene + 1;
     
-    // number of excitatory neurons (per group)
+    // number of excitatory neurons (per internal group)
     genome::numeneurgene = genome::numneurgroupsgene + 1;
     
-    // number of inhibitory neurons (per group)
+    // number of inhibitory neurons (per internal group)
     genome::numineurgene = genome::numeneurgene + brain::gNeuralValues.maxinternalneurgroups;
 
-    // bias level for all neurons in this group
+    // bias level for all neurons in this group (per internal group)
     genome::biasgene = genome::numineurgene + brain::gNeuralValues.maxinternalneurgroups;
     
-    // bias learning rate for all neurons in this group
+    // bias learning rate for all neurons in this group (per internal group)
     genome::biaslrategene = genome::biasgene + brain::gNeuralValues.maxnoninputneurgroups;
 
     // excitatory-to-excitatory connection density        (for pairs of groups)
@@ -924,51 +924,48 @@ float genome::MateEnergy()
 //---------------------------------------------------------------------------
 short genome::NumNeuronGroups()
 {
-	return nint(interp(GeneValue(numneurgroupsgene),
-				brain::gNeuralValues.mininternalneurgroups, brain::gNeuralValues.maxinternalneurgroups))
-				+ brain::gNeuralValues.numinputneurgroups + brain::gNeuralValues.numoutneurgroups;
+	return( nint( interp( GeneValue( numneurgroupsgene ),
+				brain::gNeuralValues.mininternalneurgroups, brain::gNeuralValues.maxinternalneurgroups ) )
+				+ brain::gNeuralValues.numinputneurgroups + brain::gNeuralValues.numoutneurgroups );
 }
 
 
 //---------------------------------------------------------------------------
 // genome::numeneur
+// Returns number of excitatory neurons in group i
 //---------------------------------------------------------------------------
-short genome::numeneur(short i)
+short genome::numeneur( short i )
 {
-    if ((i >= brain::gNeuralValues.numinputneurgroups) && (i < NumNeuronGroups()))
-    {
-        if (i >= (NumNeuronGroups() - brain::gNeuralValues.numoutneurgroups))
-            return 1; // each output (behavior) group has just one neuron
-        else
-            return nint(interp(GeneValue(numeneurgene + i - brain::gNeuralValues.numinputneurgroups),
-                               brain::gNeuralValues.mineneurpergroup, brain::gNeuralValues.maxeneurpergroup));
-    }
-    else if (i == 0)
-    {
-        return 1; // single random neuron
-	}
-    else if (i == 1)
-	{
-        return 1; // single energy neuron
-	}
-    else if (i == 2)
-    {
-        return nint(interp(GeneValue(numrneurgene), gMinvispixels, gMaxvispixels));
-	}
-    else if (i == 3)
-	{
-        return nint(interp(GeneValue(numgneurgene),gMinvispixels, gMaxvispixels));
-	}
-    else if (i == 4)
-	{
-        return nint(interp(GeneValue(numbneurgene),gMinvispixels, gMaxvispixels));
-	}
-    else
-	{
-        error(2, "numeneur called for invalid group number (", i,")");
-	}
+
+	// is it an output neural group?
+	if( IsOutputNeuralGroup( i ) )
+			return( 1 );
 	
-	return -1;
+	// is it an internal neural group?
+	if( IsInternalNeuralGroup( i ) )
+	{
+		return( nint( interp( GeneValue( numeneurgene + i - brain::gNeuralValues.numinputneurgroups - brain::gNeuralValues.numoutneurgroups ),
+				brain::gNeuralValues.mineneurpergroup, brain::gNeuralValues.maxeneurpergroup ) ) );
+	}
+
+	// is it an input neural group?
+	switch( i )
+	{
+		case 0:			// single random neuron
+			return( 1 );
+		case 1:
+			return( 1 );	// single energy neuron			
+		case 2:	
+			return( nint( interp( GeneValue( numrneurgene ), gMinvispixels, gMaxvispixels ) ) );
+		case 3:
+	        return( nint( interp( GeneValue( numgneurgene ), gMinvispixels, gMaxvispixels ) ) );
+		case 4:	
+	        return( nint( interp( GeneValue( numgneurgene ), gMinvispixels, gMaxvispixels ) ) );
+	}
+
+	// We have exhausted all valid neural groups -- we report an error
+    error( 2, "numeneur called for invalid group number (", i, ")" );
+	return( -1 );
 }
 
 
@@ -977,28 +974,38 @@ short genome::numeneur(short i)
 //---------------------------------------------------------------------------
 short genome::numineur(short i)
 {
-    if ((i >= brain::gNeuralValues.numinputneurgroups) && (i < NumNeuronGroups()))
-    {
-        if (i >= (NumNeuronGroups() - brain::gNeuralValues.numoutneurgroups))
-            return 1; // each output (behavior) group has just one neuron
-        else
-            return nint(interp(GeneValue(numineurgene + i - brain::gNeuralValues.numinputneurgroups),
-                               brain::gNeuralValues.minineurpergroup, brain::gNeuralValues.maxineurpergroup));
+
+	// is it an output neural group?
+	if( IsOutputNeuralGroup( i ) )
+			return( 1 );
+
+	// is it an internal neural group?
+	if( IsInternalNeuralGroup( i ) )
+	{
+		return( nint( interp( GeneValue( numineurgene + i - brain::gNeuralValues.numinputneurgroups - brain::gNeuralValues.numoutneurgroups ),
+                brain::gNeuralValues.minineurpergroup, brain::gNeuralValues.maxineurpergroup ) ) );
+	}
+	
+	/* Note that input neural groups always have the same number of excitatory and inhibitory neurons (because they're the same neurons) */
+
+	// is it an input neural group?
+	switch( i )
+	{
+		case 0:			// single random neuron
+			return( 1 );
+		case 1:			// single energy neuron
+			return( 1 );
+		case 2:
+			return( nint( interp( GeneValue( numrneurgene ), gMinvispixels, gMaxvispixels ) ) );
+		case 3:
+			return( nint( interp( GeneValue( numgneurgene ), gMinvispixels, gMaxvispixels ) ) );
+		case 4:
+			return( nint( interp( GeneValue( numbneurgene ), gMinvispixels, gMaxvispixels ) ) );
     }
-    else if (i == 0)
-        return 1; // single random neuron
-    else if (i == 1)
-        return 1; // single energy neuron
-    else if (i == 2)
-        return nint(interp(GeneValue(numrneurgene), gMinvispixels, gMaxvispixels));
-    else if (i == 3)
-        return nint(interp(GeneValue(numgneurgene), gMinvispixels, gMaxvispixels));
-    else if (i == 4)
-        return nint(interp(GeneValue(numbneurgene), gMinvispixels, gMaxvispixels));
-    else
-        error(2,"numineur called for invalid group number (",i,")");
-        
-	return -1;        
+	
+	// We have exhausted all valid neural groups -- we report an error
+    error( 2,"numineur called for invalid group number (", i, ")" );
+	return( -1 );
 }
 
 
@@ -1007,19 +1014,21 @@ short genome::numineur(short i)
 //---------------------------------------------------------------------------
 short genome::numneurons(short i)
 {
-    if ((i >= brain::gNeuralValues.numinputneurgroups) && (i < NumNeuronGroups()))
-    {
-        if (i >= (NumNeuronGroups() - brain::gNeuralValues.numoutneurgroups))
-            return 1; // each output (behavior) group has just one neuron
-        else
-            return (numeneur(i)+numineur(i));
-    }
-    else if (i >= 0)
-        return numeneur(i); // only excitatory
-    else
-        error(2,"numneurons called for invalid group number (",i,")");
-        
-	return -1;        
+	// is it an output neural group?
+    if( IsOutputNeuralGroup( i ) )
+            return( 1 ); // each output group has just one neuron
+	
+	// is it an internal neural group?
+	if( IsInternalNeuralGroup( i ) )
+		return( numeneur( i ) + numineur( i ) );
+
+	// is it an input neural group?
+    if( IsInputNeuralGroup( i ) )	
+        return( numeneur( i ) ); // same neurons are both excitatory and inhibitory, but only count once
+		
+	// Have exhausted all valid choices, throw an error.
+	error( 2,"numneurons called for invalid group number (", i, ")" );
+	return( -1 );
 }
 
 
@@ -1042,7 +1051,7 @@ float genome::BiasLearningRate(short i)
 
 
 //---------------------------------------------------------------------------
-// genome::numesynapses
+// genome::numeesynapses (to group i, from group j)
 //---------------------------------------------------------------------------
 long genome::numeesynapses(short i, short j)
 {
@@ -1051,36 +1060,41 @@ long genome::numeesynapses(short i, short j)
 
 
 //---------------------------------------------------------------------------
-// genome::numeisynapses
+// genome::numeisynapses (to group i, from group j)
 //---------------------------------------------------------------------------
 long genome::numeisynapses(short i, short j)
 {
-	if (i >= (NumNeuronGroups() - brain::gNeuralValues.numoutneurgroups))
-		return 0;
+	// As targets, the output neurons are treated exclusively as excitatory
+	if( IsOutputNeuralGroup( i ) )
+		return( 0 );
 	else
-		return nint(eicd(i,j)*numineur(i)*numeneur(j));
+		return( nint( eicd( i, j ) * numineur( i ) * numeneur( j ) ) );	// no i==j adjustment because these are different types, hence different neurons
 }
 
 
 //---------------------------------------------------------------------------
-// genome::numiisynapses
+// genome::numiisynapses (to group i, from group j)
 //---------------------------------------------------------------------------
 long genome::numiisynapses(short i, short j)
 {
-	if (i >= (NumNeuronGroups() - brain::gNeuralValues.numoutneurgroups))
-		return 0;
+	// As targets, the output neurons are treated exclusively as excitatory
+	if( IsOutputNeuralGroup( i ) )
+		return( 0 );
 	else
-		return nint(iicd(i,j)*numineur(i)*(numineur(j)-((i==j)?1:0)));
+		return( nint( iicd( i, j ) * numineur( i ) * (numineur( j ) - ((i == j) ? 1 : 0)) ) );
 }
 
 
 //---------------------------------------------------------------------------
-// genome::numiesynapses
+// genome::numiesynapses (to group i, from group j)
 //---------------------------------------------------------------------------
 long genome::numiesynapses(short i, short j)
 {
-	return nint(iecd(i,j)*numeneur(i) * (numineur(j) - (((i == j)
-				&& (i >= (NumNeuronGroups() - brain::gNeuralValues.numoutneurgroups))) ? 1 : 0)));
+	// If the source and target groups are the same, and both are an output
+	// group, then this will evaluate to zero.  In all other cases there will
+	// be no i==j adjustment because these are different types, hence different neurons
+	return( nint( iecd(i,j) * numeneur(i) * (numineur(j)
+											- (((i == j) && IsOutputNeuralGroup( i )) ? 1 : 0)) ) );
 }
 
 

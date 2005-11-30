@@ -616,7 +616,7 @@ void brain::GrowDesignedBrain( genome* g )
 	numnoninputneurons = 0;
 	
 	short j, ii;
-	for( i = brain::gNeuralValues.numinputneurgroups; i < numneurgroups; i++ )
+	for(i = brain::gNeuralValues.numinputneurgroups; i < numneurgroups; i++)
 	{
 		// For this simplified, test brain, there are no purely internal neural groups,
 		// so all of these will be output groups, which always consist of a single neuron,
@@ -634,8 +634,8 @@ void brain::GrowDesignedBrain( genome* g )
 		// so the synapse count is just the number of neurons providing input to this group.
 		// But since the presynaptic groups are all input groups, we're going to let them have
 		// both excitatory and inhibitory connections, and then we'll set the synaptic values
-		// to do the right thing.  (So count the incoming neurons twice.)
-		for( j = 0; j < (numneurgroups - brain::gNeuralValues.numoutneurgroups); j++ )
+		// to do the right thing.  (So count connections from the incoming neurons twice.)
+		for( j = 0; j < brain::gNeuralValues.numinputneurgroups; j++ )
 		{
 			numsynapses += numDesignExcNeurons[j];
 			numsynapses += numDesignInhNeurons[j];	// see comment above
@@ -666,17 +666,18 @@ void brain::GrowDesignedBrain( genome* g )
     if (numsynapses > brain::gNeuralValues.maxsynapses)
         error(2,"numsynapses (",numsynapses,") > maxsynapses (", brain::gNeuralValues.maxsynapses,") in brain::grow");
 
-    // set up the ouput/behavior neurons as the last numoutneur neurons
-    focusneuron = numneurons - 1;
-    lightneuron = focusneuron - 1;
-    yawneuron = lightneuron - 1;
-    speedneuron = yawneuron - 1;
-    fightneuron = speedneuron - 1;
-    mateneuron = fightneuron - 1;
-    eatneuron = mateneuron - 1;
+	// set up the ouput/behavior neurons after the input neurons
+    eatneuron = numinputneurons;
+    mateneuron = eatneuron + 1;
+    fightneuron = mateneuron + 1;
+    speedneuron = fightneuron + 1;
+    yawneuron = speedneuron + 1;
+    lightneuron = yawneuron + 1;
+    focusneuron = lightneuron + 1;
 	
 	numOutputNeurons = 7;
 	firstOutputNeuron = eatneuron;
+	firstInternalNeuron = eatneuron + numOutputNeurons;
 
 	AllocateBrainMemory();
 	
@@ -688,7 +689,7 @@ void brain::GrowDesignedBrain( genome* g )
     short numneur = numinputneurons;
     float tdij;
 
-    for (i = 0, ineur = 0; i < brain::gNeuralValues.numinputneurgroups; i++)
+    for (i = 0, ineur = 0; i < brain::gNeuralValues.numinputneurgroups; i++)		//for all input neural groups
     {
         for (j = 0; j < numDesignExcNeurons[i]; j++, ineur++)
         {
@@ -699,7 +700,7 @@ void brain::GrowDesignedBrain( genome* g )
         }
     }
 
-    for (i = brain::gNeuralValues.numinputneurgroups; i < numneurgroups; i++)
+    for (i = brain::gNeuralValues.numinputneurgroups; i < numneurgroups; i++)		//for all behavior (and the non-existent internal) neural groups
     {
 #if DebugBrainGrow
         cout << "For group " << i << ":" nlf;
@@ -707,7 +708,7 @@ void brain::GrowDesignedBrain( genome* g )
 
         float groupbias;
 		
-		if( i == (numneurgroups - gNeuralValues.numoutneurgroups + 4) )	// yaw group/neuron
+		if( i == brain::gNeuralValues.numinputneurgroups + 4 )	// yaw group/neuron		
 			groupbias = 0.5;	// keep turning, unless overriden by vision
 		else
 			groupbias = 0.0;	// no bias	// g->Bias(i);
@@ -764,7 +765,7 @@ void brain::GrowDesignedBrain( genome* g )
             {
 				// all i-groups are output groups, so if the j-group is an output group,
 				// there should be no connection
-				if( j >= (numneurgroups - brain::gNeuralValues.numoutneurgroups) )	// j is an output group
+				if( IsOutputNeuralGroup( j ) )	// j is an output group
 				{
 					nneurj = 0;
 					nsynij = 0;
@@ -830,8 +831,8 @@ void brain::GrowDesignedBrain( genome* g )
                     if (((jneur+firsteneur[j]) == ineur) // same neuron or
                         || neurused[jneur] ) // already connected to this one
                     {
-                        if (i == j) // same group and neuron type
-                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, ini);
+                        if (i == j) // same group and neuron type (because we're doing e->e currently)
+                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, ineur);	// ineur was ini
                         else
                             jneur = NearestFreeNeuron(jneur,&neurused[0], nneurj, jneur);
                     }
@@ -868,7 +869,7 @@ void brain::GrowDesignedBrain( genome* g )
             {
 				// all i-groups are output groups, so if the j-group is an output group,
 				// there should be no connection
-				if( j >= (numneurgroups - brain::gNeuralValues.numoutneurgroups) )	// j is an output group
+				if( IsOutputNeuralGroup( j ) )	// j is an output group
 				{
 					nneurj = 0;
 					nsynij = 0;
@@ -934,8 +935,8 @@ void brain::GrowDesignedBrain( genome* g )
                     if ( ((jneur+firstineur[j]) == ineur) // same neuron or
                         || neurused[jneur] ) // already connected to this one
                     {
-                        if ((i==j)&&(i==(numneurgroups-1)))//same & output group
-                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, ini);
+                        if( (i == j) && IsOutputNeuralGroup( i ) )//same & output group
+                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, ineur);	// ineur was ini
                         else
                             jneur = NearestFreeNeuron(jneur,&neurused[0], nneurj, jneur);
                     }
@@ -968,7 +969,7 @@ void brain::GrowDesignedBrain( genome* g )
 
         // setup all i-neurons for this group
 
-        if (i >= (numneurgroups - brain::gNeuralValues.numoutneurgroups))
+        if( IsOutputNeuralGroup( i ) )
             nneuri = 0;  // output/behavior neurons are e-only postsynaptically
         else
             nneuri = numDesignInhNeurons[i];	// g->numineur(i);
@@ -1003,7 +1004,7 @@ void brain::GrowDesignedBrain( genome* g )
             {
 				// all i-groups are output groups, so if the j-group is an output group,
 				// there should be no connection
-				if( j >= (numneurgroups - brain::gNeuralValues.numoutneurgroups) )	// j is an output group
+				if( IsOutputNeuralGroup( j ) )	// j is an output group
 				{
 					nneurj = 0;
 					nsynij = 0;
@@ -1068,7 +1069,7 @@ void brain::GrowDesignedBrain( genome* g )
                     if ( ((jneur+firsteneur[j]) == ineur) // same neuron or
                         || neurused[jneur] ) // already connected to this one
                     {
-                        if ((i==j)&&(i==(numneurgroups-1)))//same & output group
+                        if( (i == j) && IsOutputNeuralGroup( i ) )	//same & output group
                             jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, ini);
                         else
                             jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, jneur);
@@ -1101,7 +1102,7 @@ void brain::GrowDesignedBrain( genome* g )
             {
 				// all i-groups are output groups, so if the j-group is an output group,
 				// there should be no connection
-				if( j >= (numneurgroups - brain::gNeuralValues.numoutneurgroups) )	// j is an output group
+				if( IsOutputNeuralGroup( j ) )	// j is an output group
 				{
 					nneurj = 0;
 					nsynij = 0;
@@ -1360,10 +1361,10 @@ void brain::Grow( genome* g, long critterNumber, bool recordBrainAnatomy )
     cout << "****************************************************" nlf;
     cout << "Starting a new brain with numneurgroups = " << numneurgroups nlf;
 #endif
-
-    numinputneurons = 0;
     
+	// First establish the starting neuron indexes for the input neuron groups
     short i;
+    numinputneurons = 0;
     for (i = 0; i < brain::gNeuralValues.numinputneurgroups; i++)
     {
         firsteneur[i] = numinputneurons;
@@ -1419,10 +1420,13 @@ void brain::Grow( genome* g, long critterNumber, bool recordBrainAnatomy )
     numnoninputneurons = 0;
     
     short j, ii;
-    for (i = brain::gNeuralValues.numinputneurgroups; i < numneurgroups; i++)
+    for( i = brain::gNeuralValues.numinputneurgroups; i < numneurgroups; i++ )
     {
         firsteneur[i] = numinputneurons + numnoninputneurons;
-        if (i < (numneurgroups - brain::gNeuralValues.numoutneurgroups))//output neurons are both e & i
+
+		// Since output groups are both e & i, we have to be careful and only count
+		// one or the other, but for internal groups we count both
+		if( IsInternalNeuralGroup( i ) )
             numnoninputneurons += g->numeneur(i);
 
         firstineur[i] = numinputneurons + numnoninputneurons;
@@ -1454,23 +1458,24 @@ void brain::Grow( genome* g, long critterNumber, bool recordBrainAnatomy )
     }
     
     numneurons = numnoninputneurons + numinputneurons;
-    if (numneurons > brain::gNeuralValues.maxneurons)
-        error(2,"numneurons (",numneurons,") > maxneurons (", brain::gNeuralValues.maxneurons,") in brain::grow");
+	if( numneurons > brain::gNeuralValues.maxneurons )
+		error( 2, "numneurons (", numneurons, ") > maxneurons (", brain::gNeuralValues.maxneurons, ") in brain::grow" );
         
-    if (numsynapses > brain::gNeuralValues.maxsynapses)
-        error(2,"numsynapses (",numsynapses,") > maxsynapses (", brain::gNeuralValues.maxsynapses,") in brain::grow");
+	if( numsynapses > brain::gNeuralValues.maxsynapses )
+		error( 2, "numsynapses (", numsynapses, ") > maxsynapses (", brain::gNeuralValues.maxsynapses, ") in brain::grow" );
 
-    // set up the ouput/behavior neurons as the last numoutneur neurons
-    focusneuron = numneurons - 1;
-    lightneuron = focusneuron - 1;
-    yawneuron = lightneuron - 1;
-    speedneuron = yawneuron - 1;
-    fightneuron = speedneuron - 1;
-    mateneuron = fightneuron - 1;
-    eatneuron = mateneuron - 1;
+	// set up the ouput/behavior neurons after the input neurons
+    eatneuron = numinputneurons;
+    mateneuron = eatneuron + 1;
+    fightneuron = mateneuron + 1;
+    speedneuron = fightneuron + 1;
+    yawneuron = speedneuron + 1;
+    lightneuron = yawneuron + 1;
+    focusneuron = lightneuron + 1;
 
 	numOutputNeurons = 7;
 	firstOutputNeuron = eatneuron;
+	firstInternalNeuron = eatneuron + numOutputNeurons;
 
 #if DebugBrainGrow
     cout << "numneurons = " << numneurons << "  (of " << brain::gNeuralValues.maxneurons pnlf;
@@ -1622,8 +1627,8 @@ void brain::Grow( genome* g, long critterNumber, bool recordBrainAnatomy )
                     if (((jneur+firsteneur[j]) == ineur) // same neuron or
                         || neurused[jneur] ) // already connected to this one
                     {
-                        if (i == j) // same group and neuron type
-                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, ini);
+                        if (i == j) // same group and neuron type (because we're doing e->e connections currently)
+                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, ineur);	// ineur was ini
                         else
                             jneur = NearestFreeNeuron(jneur,&neurused[0], nneurj, jneur);
                     }
@@ -1716,8 +1721,8 @@ void brain::Grow( genome* g, long critterNumber, bool recordBrainAnatomy )
                     if ( ((jneur+firstineur[j]) == ineur) // same neuron or
                         || neurused[jneur] ) // already connected to this one
                     {
-                        if ((i==j)&&(i==(numneurgroups-1)))//same & output group
-                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, ini);
+                        if( (i == j) && IsOutputNeuralGroup( i ) )	// same & output group
+                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, ineur);	// ineur was ini
                         else
                             jneur = NearestFreeNeuron(jneur,&neurused[0], nneurj, jneur);
                     }
@@ -1750,10 +1755,10 @@ void brain::Grow( genome* g, long critterNumber, bool recordBrainAnatomy )
 
         // setup all i-neurons for this group
 
-        if (i >= (numneurgroups - brain::gNeuralValues.numoutneurgroups))
+        if( IsOutputNeuralGroup( i ) )
             nneuri = 0;  // output/behavior neurons are e-only postsynaptically
         else
-            nneuri = g->numineur(i);
+            nneuri = g->numineur( i );
 
 #if DebugBrainGrow
         cout << "  Setting up " << nneuri << " i-neurons" nlf;
@@ -1840,8 +1845,8 @@ void brain::Grow( genome* g, long critterNumber, bool recordBrainAnatomy )
                     if ( ((jneur+firsteneur[j]) == ineur) // same neuron or
                         || neurused[jneur] ) // already connected to this one
                     {
-                        if ((i==j)&&(i==(numneurgroups-1)))//same & output group
-                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, ini);
+                        if( (i == j) && IsOutputNeuralGroup( i ) )	// same & output group
+                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, ineur);	// ineur was ini
                         else
                             jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, jneur);
                     }
@@ -1928,8 +1933,8 @@ void brain::Grow( genome* g, long critterNumber, bool recordBrainAnatomy )
                     if (((jneur+firstineur[j]) == ineur) // same neuron or
                         || neurused[jneur] ) // already connected to this one
                     {
-                        if (i == j) // same group and neuron type
-                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, ini);
+                        if( i == j ) // same group and neuron type (because we're doing i->i currently)
+                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, ineur);	// ineur was ini
                         else
                             jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, jneur);
                     }
@@ -2018,9 +2023,9 @@ void brain::Update(float energyfraction)
         brainprinted = true;
         printf("neuron (toneuron)  fromneuron   synapse   efficacy\n");
         
-        for (i = firstnoninputneuron; i < numneurons; i++)
+        for( i = firstnoninputneuron; i < numneurons; i++ )
         {
-            for (k = neuron[i].startsynapses; k < neuron[i].endsynapses; k++)
+            for( k = neuron[i].startsynapses; k < neuron[i].endsynapses; k++ )
             {
 				printf("%3d   %3d    %3d    %5ld    %f\n",
 					   i, synapse[k].toneuron, synapse[k].fromneuron,
@@ -2228,10 +2233,10 @@ void brain::Update(float energyfraction)
     }
 #endif PRINTBRAIN
 
-    for (i = firstnoninputneuron; i < numneurons; i++)
+    for( i = firstnoninputneuron; i < numneurons; i++ )
     {
         newneuronactivation[i] = neuron[i].bias;
-        for (k = neuron[i].startsynapses; k < neuron[i].endsynapses; k++)
+        for( k = neuron[i].startsynapses; k < neuron[i].endsynapses; k++ )
         {
             newneuronactivation[i] += synapse[k].efficacy *
                neuronactivation[abs(synapse[k].fromneuron)];
@@ -2259,15 +2264,15 @@ void brain::Update(float energyfraction)
 		printf( "blue neurons (%d):\n", fNumBlueNeurons );
 		for( i = 0; i < fNumBlueNeurons; i++ )
 			printf( "    %3d  %2d  %g\n", i+blueneuron, i, neuronactivation[i+blueneuron] );
-		printf( "internal neurons (%d):\n", numnoninputneurons-numOutputNeurons );
-		for( i = firstnoninputneuron; i < firstOutputNeuron; i++ )
+		printf( "output neurons (%d):\n", numOutputNeurons );
+		for( i = firstOutputNeuron; i < firstInternalNeuron; i++ )
 		{
 			printf( "    %3d  %g  %g synapses (%ld):\n", i, neuron[i].bias, newneuronactivation[i], neuron[i].endsynapses - neuron[i].startsynapses );
 			for( k = neuron[i].startsynapses; k < neuron[i].endsynapses; k++ )
 				printf( "        %4ld  %2ld  %2d  %g  %g\n", k, k-neuron[i].startsynapses, synapse[k].fromneuron, synapse[k].efficacy, neuronactivation[abs(synapse[k].fromneuron)] );
 		}
-		printf( "output neurons (%d):\n", numOutputNeurons );
-		for( i = firstOutputNeuron; i < numneurons; i++ )
+		printf( "internal neurons (%d):\n", numnoninputneurons-numOutputNeurons );
+		for( i = firstInternalNeuron; i < numneurons; i++ )
 		{
 			printf( "    %3d  %g  %g synapses (%ld):\n", i, neuron[i].bias, newneuronactivation[i], neuron[i].endsynapses - neuron[i].startsynapses );
 			for( k = neuron[i].startsynapses; k < neuron[i].endsynapses; k++ )
@@ -2464,7 +2469,7 @@ void brain::Render(short patchwidth, short patchheight)
         x1 = xoff  +   abs(synapse[k].fromneuron) * patchwidth;
         y1 = yoff  +  (abs(synapse[k].toneuron)-firstnoninputneuron) * patchheight;   
 
-		if( (abs( synapse[k].fromneuron ) < firstnoninputneuron) || (abs( synapse[k].fromneuron ) >= firstOutputNeuron) )	// input or output neuron, so it can be both excitatory and inhibitory
+		if( abs( synapse[k].fromneuron ) < firstInternalNeuron )	// input or output neuron, so it can be both excitatory and inhibitory
 		{
 			if( synapse[k].efficacy >= 0.0 )	// excitatory
 			{
@@ -2517,8 +2522,8 @@ void brain::Render(short patchwidth, short patchheight)
 				glVertex2i( x1, y1 + patchheight );        	
 			glEnd();       
 		}
-		rPrint( "k = %ld, eff = %5.2f, mag = %d, x1 = %d, y1 = %d, abs(from) = %d, abs(to) = %d, firstnoninputneuron = %d, firstOutputNeuron = %d\n",
-				k, synapse[k].efficacy, mag, x1, y1, abs(synapse[k].fromneuron), abs(synapse[k].toneuron), firstnoninputneuron, firstOutputNeuron );
+		rPrint( "k = %ld, eff = %5.2f, mag = %d, x1 = %d, y1 = %d, abs(from) = %d, abs(to) = %d, firstOutputNeuron = %d, firstInternalNeuron = %d\n",
+				k, synapse[k].efficacy, mag, x1, y1, abs(synapse[k].fromneuron), abs(synapse[k].toneuron), firstOutputNeuron, firstInternalNeuron );
 	}
 	
 	
