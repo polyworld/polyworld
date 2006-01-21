@@ -1,0 +1,1688 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 42;
+	objects = {
+
+/* Begin PBXAggregateTarget section */
+		76B2FB68084CE6E9002FBDA1 /* moc */ = {
+			isa = PBXAggregateTarget;
+			buildConfigurationList = 76293F090981AF4600D27C6E /* Build configuration list for PBXAggregateTarget "moc" */;
+			buildPhases = (
+				76B2FB67084CE6E9002FBDA1 /* ShellScript */,
+			);
+			buildSettings = {
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = moc;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+			};
+			dependencies = (
+			);
+			name = moc;
+			productName = moc;
+		};
+		76D02AFD0894900E00D89155 /* moc_PwMoviePlayer */ = {
+			isa = PBXAggregateTarget;
+			buildConfigurationList = 76293F130981AF4600D27C6E /* Build configuration list for PBXAggregateTarget "moc_PwMoviePlayer" */;
+			buildPhases = (
+				76D02AFE0894900E00D89155 /* ShellScript */,
+			);
+			buildSettings = {
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = moc;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+			};
+			dependencies = (
+			);
+			name = moc_PwMoviePlayer;
+			productName = moc;
+		};
+/* End PBXAggregateTarget section */
+
+/* Begin PBXBuildFile section */
+		373751E3078D762B00B1DFA0 /* vecLib.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 373751E2078D762B00B1DFA0 /* vecLib.framework */; };
+		37577669078C8C6200CA4042 /* moc_PWApp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 37577667078C8C6200CA4042 /* moc_PWApp.cpp */; };
+		3757766A078C8C6200CA4042 /* moc_Simulation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 37577668078C8C6200CA4042 /* moc_Simulation.cpp */; };
+		37577842078C8E9900CA4042 /* worldfile in CopyFiles */ = {isa = PBXBuildFile; fileRef = 76BB7C9E074D4CE500576391 /* worldfile */; };
+		37577843078C8E9900CA4042 /* critter.obj in CopyFiles */ = {isa = PBXBuildFile; fileRef = 76CBA5E2062BEE2B001C79E7 /* critter.obj */; };
+		37577844078C8E9900CA4042 /* ground.obj in CopyFiles */ = {isa = PBXBuildFile; fileRef = 76CBA5E3062BEE2B001C79E7 /* ground.obj */; };
+		760097E708879D78008CD45B /* MainWindow.h in Resources */ = {isa = PBXBuildFile; fileRef = 760097E608879D78008CD45B /* MainWindow.h */; };
+		7668D1690885AC65004158C6 /* PwMovieTools.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7668D1680885AC65004158C6 /* PwMovieTools.cp */; };
+		7668D16B0885AD07004158C6 /* PwMovieTools.h in Headers */ = {isa = PBXBuildFile; fileRef = 7668D16A0885AD07004158C6 /* PwMovieTools.h */; };
+		7668D2F208864A7E004158C6 /* PwMovieTools.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7668D1680885AC65004158C6 /* PwMovieTools.cp */; };
+		7668D30008864B8A004158C6 /* PwMoviePlayer.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7668D2FF08864B8A004158C6 /* PwMoviePlayer.cp */; };
+		7668D30E088650F0004158C6 /* MainWindow.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7668D30D088650F0004158C6 /* MainWindow.cp */; };
+		769996590742BCF0001B0A65 /* gdlink.h in Headers */ = {isa = PBXBuildFile; fileRef = 769996580742BCF0001B0A65 /* gdlink.h */; };
+		76AA4617073AAEFF00508D3D /* AGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 76AA4616073AAEFF00508D3D /* AGL.framework */; };
+		76AA4628073AAF7E00508D3D /* TextStatusWindow.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76AA4626073AAF7E00508D3D /* TextStatusWindow.cp */; };
+		76AA4629073AAF7E00508D3D /* TextStatusWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = 76AA4627073AAF7E00508D3D /* TextStatusWindow.h */; };
+		76CBA568062BED8E001C79E7 /* debug.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA55D062BED8E001C79E7 /* debug.cp */; };
+		76CBA569062BED8E001C79E7 /* debug.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA55E062BED8E001C79E7 /* debug.h */; };
+		76CBA56B062BED8E001C79E7 /* globals.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA560062BED8E001C79E7 /* globals.cp */; };
+		76CBA56C062BED8E001C79E7 /* globals.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA561062BED8E001C79E7 /* globals.h */; };
+		76CBA56D062BED8E001C79E7 /* PWApp.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA562062BED8E001C79E7 /* PWApp.cp */; };
+		76CBA56E062BED8E001C79E7 /* PWApp.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA563062BED8E001C79E7 /* PWApp.h */; };
+		76CBA571062BED8E001C79E7 /* Simulation.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA566062BED8E001C79E7 /* Simulation.cp */; };
+		76CBA572062BED8E001C79E7 /* Simulation.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA567062BED8E001C79E7 /* Simulation.h */; };
+		76CBA5AD062BEDBC001C79E7 /* brain.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA574062BEDBC001C79E7 /* brain.cp */; };
+		76CBA5AE062BEDBC001C79E7 /* brain.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA575062BEDBC001C79E7 /* brain.h */; };
+		76CBA5AF062BEDBC001C79E7 /* critter.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA576062BEDBC001C79E7 /* critter.cp */; };
+		76CBA5B0062BEDBC001C79E7 /* critter.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA577062BEDBC001C79E7 /* critter.h */; };
+		76CBA5B1062BEDBC001C79E7 /* genome.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA578062BEDBC001C79E7 /* genome.cp */; };
+		76CBA5B2062BEDBC001C79E7 /* genome.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA579062BEDBC001C79E7 /* genome.h */; };
+		76CBA5B3062BEDBC001C79E7 /* barrier.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA57B062BEDBC001C79E7 /* barrier.cp */; };
+		76CBA5B4062BEDBC001C79E7 /* barrier.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA57C062BEDBC001C79E7 /* barrier.h */; };
+		76CBA5B5062BEDBC001C79E7 /* food.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA57D062BEDBC001C79E7 /* food.cp */; };
+		76CBA5B6062BEDBC001C79E7 /* food.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA57E062BEDBC001C79E7 /* food.h */; };
+		76CBA5B7062BEDBC001C79E7 /* graybin.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA57F062BEDBC001C79E7 /* graybin.h */; };
+		76CBA5B8062BEDBC001C79E7 /* gcamera.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA581062BEDBC001C79E7 /* gcamera.cp */; };
+		76CBA5B9062BEDBC001C79E7 /* gcamera.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA582062BEDBC001C79E7 /* gcamera.h */; };
+		76CBA5BA062BEDBC001C79E7 /* glight.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA583062BEDBC001C79E7 /* glight.cp */; };
+		76CBA5BB062BEDBC001C79E7 /* glight.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA584062BEDBC001C79E7 /* glight.h */; };
+		76CBA5BC062BEDBC001C79E7 /* gline.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA585062BEDBC001C79E7 /* gline.cp */; };
+		76CBA5BD062BEDBC001C79E7 /* gline.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA586062BEDBC001C79E7 /* gline.h */; };
+		76CBA5BE062BEDBC001C79E7 /* gmisc.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA587062BEDBC001C79E7 /* gmisc.cp */; };
+		76CBA5BF062BEDBC001C79E7 /* gmisc.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA588062BEDBC001C79E7 /* gmisc.h */; };
+		76CBA5C0062BEDBC001C79E7 /* gobject.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA589062BEDBC001C79E7 /* gobject.cp */; };
+		76CBA5C1062BEDBC001C79E7 /* gobject.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA58A062BEDBC001C79E7 /* gobject.h */; };
+		76CBA5C2062BEDBC001C79E7 /* gpoint.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA58B062BEDBC001C79E7 /* gpoint.cp */; };
+		76CBA5C3062BEDBC001C79E7 /* gpoint.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA58C062BEDBC001C79E7 /* gpoint.h */; };
+		76CBA5C4062BEDBC001C79E7 /* gpolygon.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA58D062BEDBC001C79E7 /* gpolygon.cp */; };
+		76CBA5C5062BEDBC001C79E7 /* gpolygon.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA58E062BEDBC001C79E7 /* gpolygon.h */; };
+		76CBA5C6062BEDBC001C79E7 /* graphics.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA58F062BEDBC001C79E7 /* graphics.h */; };
+		76CBA5C7062BEDBC001C79E7 /* grect.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA590062BEDBC001C79E7 /* grect.cp */; };
+		76CBA5C8062BEDBC001C79E7 /* grect.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA591062BEDBC001C79E7 /* grect.h */; };
+		76CBA5C9062BEDBC001C79E7 /* gscene.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA592062BEDBC001C79E7 /* gscene.cp */; };
+		76CBA5CA062BEDBC001C79E7 /* gscene.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA593062BEDBC001C79E7 /* gscene.h */; };
+		76CBA5CB062BEDBC001C79E7 /* gsquare.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA594062BEDBC001C79E7 /* gsquare.cp */; };
+		76CBA5CC062BEDBC001C79E7 /* gsquare.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA595062BEDBC001C79E7 /* gsquare.h */; };
+		76CBA5CD062BEDBC001C79E7 /* gstage.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA596062BEDBC001C79E7 /* gstage.cp */; };
+		76CBA5CE062BEDBC001C79E7 /* gstage.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA597062BEDBC001C79E7 /* gstage.h */; };
+		76CBA5CF062BEDBC001C79E7 /* BrainMonitorWindow.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA599062BEDBC001C79E7 /* BrainMonitorWindow.cp */; };
+		76CBA5D0062BEDBC001C79E7 /* BrainMonitorWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA59A062BEDBC001C79E7 /* BrainMonitorWindow.h */; };
+		76CBA5D2062BEDBC001C79E7 /* CameraController.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA59C062BEDBC001C79E7 /* CameraController.h */; };
+		76CBA5D3062BEDBC001C79E7 /* ChartWindow.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA59D062BEDBC001C79E7 /* ChartWindow.cp */; };
+		76CBA5D4062BEDBC001C79E7 /* ChartWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA59E062BEDBC001C79E7 /* ChartWindow.h */; };
+		76CBA5D6062BEDBC001C79E7 /* Menu.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA5A0062BEDBC001C79E7 /* Menu.h */; };
+		76CBA5D7062BEDBC001C79E7 /* SceneView.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA5A1062BEDBC001C79E7 /* SceneView.cp */; };
+		76CBA5D8062BEDBC001C79E7 /* SceneView.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA5A2062BEDBC001C79E7 /* SceneView.h */; };
+		76CBA5D9062BEDBC001C79E7 /* error.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA5A4062BEDBC001C79E7 /* error.cp */; };
+		76CBA5DA062BEDBC001C79E7 /* error.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA5A5062BEDBC001C79E7 /* error.h */; };
+		76CBA5DB062BEDBC001C79E7 /* indexlist.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA5A6062BEDBC001C79E7 /* indexlist.cp */; };
+		76CBA5DC062BEDBC001C79E7 /* indexlist.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA5A7062BEDBC001C79E7 /* indexlist.h */; };
+		76CBA5DD062BEDBC001C79E7 /* misc.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA5A8062BEDBC001C79E7 /* misc.cp */; };
+		76CBA5DE062BEDBC001C79E7 /* misc.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA5A9062BEDBC001C79E7 /* misc.h */; };
+		76CBA5DF062BEDBC001C79E7 /* objectlist.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA5AA062BEDBC001C79E7 /* objectlist.h */; };
+		76CBA5E4062BEE2B001C79E7 /* critter.obj in Resources */ = {isa = PBXBuildFile; fileRef = 76CBA5E2062BEE2B001C79E7 /* critter.obj */; };
+		76CBA5E5062BEE2B001C79E7 /* ground.obj in Resources */ = {isa = PBXBuildFile; fileRef = 76CBA5E3062BEE2B001C79E7 /* ground.obj */; };
+		76CBA7CD062D11C2001C79E7 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 76CBA7CC062D11C2001C79E7 /* OpenGL.framework */; };
+		76D02AE30894875A00D89155 /* AGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 76AA4616073AAEFF00508D3D /* AGL.framework */; };
+		76D02AE40894875B00D89155 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 76CBA7CC062D11C2001C79E7 /* OpenGL.framework */; };
+		76D02AE50894875D00D89155 /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 20286C33FDCF999611CA2CEA /* Carbon.framework */; };
+		76D02AE60894875E00D89155 /* libstdc++.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 0249A66BFF388E3F11CA2CEA /* libstdc++.a */; };
+		76D02B050894910800D89155 /* moc_MainWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 76D02B030894910800D89155 /* moc_MainWindow.cpp */; };
+		76D02B060894910800D89155 /* moc_PwMoviePlayer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 76D02B040894910800D89155 /* moc_PwMoviePlayer.cpp */; };
+		76D02CC70894CEE300D89155 /* GLWidget.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76D02CC60894CEE300D89155 /* GLWidget.cp */; };
+		76D02CE40894D30200D89155 /* moc_GLWidget.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 76D02CE30894D30200D89155 /* moc_GLWidget.cpp */; };
+		84ED837C062E7EED00AEEA18 /* CritterPOVWindow.cp in Sources */ = {isa = PBXBuildFile; fileRef = 84ED837A062E7EED00AEEA18 /* CritterPOVWindow.cp */; };
+		84ED837D062E7EED00AEEA18 /* CritterPOVWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = 84ED837B062E7EED00AEEA18 /* CritterPOVWindow.h */; };
+		8D0C4E8D0486CD37000505A6 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 0867D6AAFE840B52C02AAC07 /* InfoPlist.strings */; };
+		8D0C4E920486CD37000505A6 /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 20286C33FDCF999611CA2CEA /* Carbon.framework */; };
+		8D0C4E930486CD37000505A6 /* libstdc++.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 0249A66BFF388E3F11CA2CEA /* libstdc++.a */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXBuildStyle section */
+		37375172078D57F300B1DFA0 /* Profiling */ = {
+			isa = PBXBuildStyle;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				GCC_ALTIVEC_EXTENSIONS = YES;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GENERATE_PROFILING_CODE = YES;
+				ZERO_LINK = NO;
+			};
+			name = Profiling;
+		};
+		4A9504C5FFE6A39111CA0CBA /* Development */ = {
+			isa = PBXBuildStyle;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				DEBUGGING_SYMBOLS = YES;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				OPTIMIZATION_CFLAGS = "-O0";
+				OTHER_LDFLAGS = (
+					"-lQtGui_debug",
+					"-lQtCore_debug",
+					"-lQtOpenGL_debug",
+					"-lz",
+				);
+				ZERO_LINK = NO;
+			};
+			name = Development;
+		};
+		4A9504C6FFE6A39111CA0CBA /* Deployment */ = {
+			isa = PBXBuildStyle;
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_MODEL_TUNING = G5;
+				GCC_OPTIMIZATION_LEVEL = 3;
+				OTHER_CPLUSPLUSFLAGS = "-DQT_NO_DEBUG";
+				OTHER_LDFLAGS = (
+					"-framework",
+					QtGui,
+					"-framework",
+					QtCore,
+					"-framework",
+					QtOpenGL,
+					"-lz",
+				);
+				ZERO_LINK = NO;
+			};
+			name = Deployment;
+		};
+/* End PBXBuildStyle section */
+
+/* Begin PBXContainerItemProxy section */
+		76B2FB6F084CE761002FBDA1 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 20286C28FDCF999611CA2CEA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 76B2FB68084CE6E9002FBDA1;
+			remoteInfo = moc;
+		};
+		76D02B01089490DB00D89155 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 20286C28FDCF999611CA2CEA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 76D02AFD0894900E00D89155;
+			remoteInfo = moc_PwMoviePlayer;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		37577841078C8E8100CA4042 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 16;
+			files = (
+				37577842078C8E9900CA4042 /* worldfile in CopyFiles */,
+				37577843078C8E9900CA4042 /* critter.obj in CopyFiles */,
+				37577844078C8E9900CA4042 /* ground.obj in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		0249A66BFF388E3F11CA2CEA /* libstdc++.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libstdc++.a"; path = "/usr/lib/libstdc++.a"; sourceTree = "<absolute>"; };
+		0867D6ABFE840B52C02AAC07 /* English */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = English; path = English.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		20286C33FDCF999611CA2CEA /* Carbon.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Carbon.framework; path = /System/Library/Frameworks/Carbon.framework; sourceTree = "<absolute>"; };
+		32DBCF6D0370B57F00C91783 /* PolyworldPrefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PolyworldPrefix.pch; sourceTree = "<group>"; };
+		373751E2078D762B00B1DFA0 /* vecLib.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = vecLib.framework; path = /System/Library/Frameworks/vecLib.framework; sourceTree = "<absolute>"; };
+		37577667078C8C6200CA4042 /* moc_PWApp.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = moc_PWApp.cpp; sourceTree = "<group>"; };
+		37577668078C8C6200CA4042 /* moc_Simulation.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = moc_Simulation.cpp; sourceTree = "<group>"; };
+		4A9504C8FFE6A3BC11CA0CBA /* ApplicationServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ApplicationServices.framework; path = /System/Library/Frameworks/ApplicationServices.framework; sourceTree = "<absolute>"; };
+		4A9504CAFFE6A41611CA0CBA /* CoreServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreServices.framework; path = /System/Library/Frameworks/CoreServices.framework; sourceTree = "<absolute>"; };
+		760097BD0887874B008CD45B /* PwMoviePlayer.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = PwMoviePlayer.h; sourceTree = "<group>"; };
+		760097E608879D78008CD45B /* MainWindow.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = MainWindow.h; sourceTree = "<group>"; };
+		7668D1680885AC65004158C6 /* PwMovieTools.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = PwMovieTools.cp; sourceTree = "<group>"; };
+		7668D16A0885AD07004158C6 /* PwMovieTools.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = PwMovieTools.h; sourceTree = "<group>"; };
+		7668D2E308864A66004158C6 /* PwMoviePlayer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PwMoviePlayer.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7668D2E508864A67004158C6 /* PwMoviePlayer-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = "PwMoviePlayer-Info.plist"; sourceTree = "<group>"; };
+		7668D2FF08864B8A004158C6 /* PwMoviePlayer.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = PwMoviePlayer.cp; sourceTree = "<group>"; };
+		7668D30D088650F0004158C6 /* MainWindow.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = MainWindow.cp; sourceTree = "<group>"; };
+		769996580742BCF0001B0A65 /* gdlink.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = gdlink.h; sourceTree = "<group>"; };
+		76AA4616073AAEFF00508D3D /* AGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AGL.framework; path = /System/Library/Frameworks/AGL.framework; sourceTree = "<absolute>"; };
+		76AA4626073AAF7E00508D3D /* TextStatusWindow.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = TextStatusWindow.cp; sourceTree = "<group>"; };
+		76AA4627073AAF7E00508D3D /* TextStatusWindow.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = TextStatusWindow.h; sourceTree = "<group>"; };
+		76BB7C9E074D4CE500576391 /* worldfile */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text; path = worldfile; sourceTree = "<group>"; };
+		76CBA55D062BED8E001C79E7 /* debug.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = debug.cp; sourceTree = "<group>"; };
+		76CBA55E062BED8E001C79E7 /* debug.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = debug.h; sourceTree = "<group>"; };
+		76CBA55F062BED8E001C79E7 /* dumpload.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = dumpload.cp; sourceTree = "<group>"; };
+		76CBA560062BED8E001C79E7 /* globals.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = globals.cp; sourceTree = "<group>"; };
+		76CBA561062BED8E001C79E7 /* globals.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = globals.h; sourceTree = "<group>"; };
+		76CBA562062BED8E001C79E7 /* PWApp.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = PWApp.cp; sourceTree = "<group>"; };
+		76CBA563062BED8E001C79E7 /* PWApp.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = PWApp.h; sourceTree = "<group>"; };
+		76CBA566062BED8E001C79E7 /* Simulation.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = Simulation.cp; sourceTree = "<group>"; };
+		76CBA567062BED8E001C79E7 /* Simulation.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = Simulation.h; sourceTree = "<group>"; };
+		76CBA574062BEDBC001C79E7 /* brain.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = brain.cp; sourceTree = "<group>"; };
+		76CBA575062BEDBC001C79E7 /* brain.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = brain.h; sourceTree = "<group>"; };
+		76CBA576062BEDBC001C79E7 /* critter.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = critter.cp; sourceTree = "<group>"; };
+		76CBA577062BEDBC001C79E7 /* critter.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = critter.h; sourceTree = "<group>"; };
+		76CBA578062BEDBC001C79E7 /* genome.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = genome.cp; sourceTree = "<group>"; };
+		76CBA579062BEDBC001C79E7 /* genome.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = genome.h; sourceTree = "<group>"; };
+		76CBA57B062BEDBC001C79E7 /* barrier.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = barrier.cp; sourceTree = "<group>"; };
+		76CBA57C062BEDBC001C79E7 /* barrier.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = barrier.h; sourceTree = "<group>"; };
+		76CBA57D062BEDBC001C79E7 /* food.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = food.cp; sourceTree = "<group>"; };
+		76CBA57E062BEDBC001C79E7 /* food.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = food.h; sourceTree = "<group>"; };
+		76CBA57F062BEDBC001C79E7 /* graybin.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = graybin.h; sourceTree = "<group>"; };
+		76CBA581062BEDBC001C79E7 /* gcamera.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = gcamera.cp; sourceTree = "<group>"; };
+		76CBA582062BEDBC001C79E7 /* gcamera.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = gcamera.h; sourceTree = "<group>"; };
+		76CBA583062BEDBC001C79E7 /* glight.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = glight.cp; sourceTree = "<group>"; };
+		76CBA584062BEDBC001C79E7 /* glight.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = glight.h; sourceTree = "<group>"; };
+		76CBA585062BEDBC001C79E7 /* gline.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = gline.cp; sourceTree = "<group>"; };
+		76CBA586062BEDBC001C79E7 /* gline.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = gline.h; sourceTree = "<group>"; };
+		76CBA587062BEDBC001C79E7 /* gmisc.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = gmisc.cp; sourceTree = "<group>"; };
+		76CBA588062BEDBC001C79E7 /* gmisc.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = gmisc.h; sourceTree = "<group>"; };
+		76CBA589062BEDBC001C79E7 /* gobject.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = gobject.cp; sourceTree = "<group>"; };
+		76CBA58A062BEDBC001C79E7 /* gobject.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = gobject.h; sourceTree = "<group>"; };
+		76CBA58B062BEDBC001C79E7 /* gpoint.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = gpoint.cp; sourceTree = "<group>"; };
+		76CBA58C062BEDBC001C79E7 /* gpoint.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = gpoint.h; sourceTree = "<group>"; };
+		76CBA58D062BEDBC001C79E7 /* gpolygon.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = gpolygon.cp; sourceTree = "<group>"; };
+		76CBA58E062BEDBC001C79E7 /* gpolygon.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = gpolygon.h; sourceTree = "<group>"; };
+		76CBA58F062BEDBC001C79E7 /* graphics.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = graphics.h; sourceTree = "<group>"; };
+		76CBA590062BEDBC001C79E7 /* grect.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = grect.cp; sourceTree = "<group>"; };
+		76CBA591062BEDBC001C79E7 /* grect.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = grect.h; sourceTree = "<group>"; };
+		76CBA592062BEDBC001C79E7 /* gscene.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = gscene.cp; sourceTree = "<group>"; };
+		76CBA593062BEDBC001C79E7 /* gscene.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = gscene.h; sourceTree = "<group>"; };
+		76CBA594062BEDBC001C79E7 /* gsquare.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = gsquare.cp; sourceTree = "<group>"; };
+		76CBA595062BEDBC001C79E7 /* gsquare.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = gsquare.h; sourceTree = "<group>"; };
+		76CBA596062BEDBC001C79E7 /* gstage.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = gstage.cp; sourceTree = "<group>"; };
+		76CBA597062BEDBC001C79E7 /* gstage.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = gstage.h; sourceTree = "<group>"; };
+		76CBA599062BEDBC001C79E7 /* BrainMonitorWindow.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = BrainMonitorWindow.cp; sourceTree = "<group>"; };
+		76CBA59A062BEDBC001C79E7 /* BrainMonitorWindow.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = BrainMonitorWindow.h; sourceTree = "<group>"; };
+		76CBA59B062BEDBC001C79E7 /* CameraController.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = CameraController.cp; sourceTree = "<group>"; };
+		76CBA59C062BEDBC001C79E7 /* CameraController.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = CameraController.h; sourceTree = "<group>"; };
+		76CBA59D062BEDBC001C79E7 /* ChartWindow.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = ChartWindow.cp; sourceTree = "<group>"; };
+		76CBA59E062BEDBC001C79E7 /* ChartWindow.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = ChartWindow.h; sourceTree = "<group>"; };
+		76CBA59F062BEDBC001C79E7 /* Menu.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = Menu.cp; sourceTree = "<group>"; };
+		76CBA5A0062BEDBC001C79E7 /* Menu.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = Menu.h; sourceTree = "<group>"; };
+		76CBA5A1062BEDBC001C79E7 /* SceneView.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = SceneView.cp; sourceTree = "<group>"; };
+		76CBA5A2062BEDBC001C79E7 /* SceneView.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = SceneView.h; sourceTree = "<group>"; };
+		76CBA5A4062BEDBC001C79E7 /* error.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = error.cp; sourceTree = "<group>"; };
+		76CBA5A5062BEDBC001C79E7 /* error.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = error.h; sourceTree = "<group>"; };
+		76CBA5A6062BEDBC001C79E7 /* indexlist.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = indexlist.cp; sourceTree = "<group>"; };
+		76CBA5A7062BEDBC001C79E7 /* indexlist.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = indexlist.h; sourceTree = "<group>"; };
+		76CBA5A8062BEDBC001C79E7 /* misc.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = misc.cp; sourceTree = "<group>"; };
+		76CBA5A9062BEDBC001C79E7 /* misc.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = misc.h; sourceTree = "<group>"; };
+		76CBA5AA062BEDBC001C79E7 /* objectlist.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = objectlist.h; sourceTree = "<group>"; };
+		76CBA5E2062BEE2B001C79E7 /* critter.obj */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text; path = critter.obj; sourceTree = "<group>"; };
+		76CBA5E3062BEE2B001C79E7 /* ground.obj */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text; path = ground.obj; sourceTree = "<group>"; };
+		76CBA7CC062D11C2001C79E7 /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = /System/Library/Frameworks/OpenGL.framework; sourceTree = "<absolute>"; };
+		76D02B030894910800D89155 /* moc_MainWindow.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = moc_MainWindow.cpp; sourceTree = "<group>"; };
+		76D02B040894910800D89155 /* moc_PwMoviePlayer.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = moc_PwMoviePlayer.cpp; sourceTree = "<group>"; };
+		76D02CC00894CE2800D89155 /* GLWidget.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = GLWidget.h; sourceTree = "<group>"; };
+		76D02CC60894CEE300D89155 /* GLWidget.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = GLWidget.cp; sourceTree = "<group>"; };
+		76D02CE30894D30200D89155 /* moc_GLWidget.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = moc_GLWidget.cpp; sourceTree = "<group>"; };
+		84ED837A062E7EED00AEEA18 /* CritterPOVWindow.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = CritterPOVWindow.cp; sourceTree = "<group>"; };
+		84ED837B062E7EED00AEEA18 /* CritterPOVWindow.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = CritterPOVWindow.h; sourceTree = "<group>"; };
+		8D0C4E960486CD37000505A6 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		8D0C4E970486CD37000505A6 /* Polyworld.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Polyworld.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		7668D2E108864A66004158C6 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				76D02AE30894875A00D89155 /* AGL.framework in Frameworks */,
+				76D02AE40894875B00D89155 /* OpenGL.framework in Frameworks */,
+				76D02AE50894875D00D89155 /* Carbon.framework in Frameworks */,
+				76D02AE60894875E00D89155 /* libstdc++.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8D0C4E910486CD37000505A6 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8D0C4E920486CD37000505A6 /* Carbon.framework in Frameworks */,
+				8D0C4E930486CD37000505A6 /* libstdc++.a in Frameworks */,
+				76CBA7CD062D11C2001C79E7 /* OpenGL.framework in Frameworks */,
+				76AA4617073AAEFF00508D3D /* AGL.framework in Frameworks */,
+				373751E3078D762B00B1DFA0 /* vecLib.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		195DF8CFFE9D517E11CA2CBB /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				8D0C4E970486CD37000505A6 /* Polyworld.app */,
+				7668D2E308864A66004158C6 /* PwMoviePlayer.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		20286C29FDCF999611CA2CEA /* Polyworld */ = {
+			isa = PBXGroup;
+			children = (
+				20286C2AFDCF999611CA2CEA /* Sources */,
+				20286C2CFDCF999611CA2CEA /* Resources */,
+				20286C32FDCF999611CA2CEA /* External Frameworks and Libraries */,
+				195DF8CFFE9D517E11CA2CBB /* Products */,
+				7668D2E508864A67004158C6 /* PwMoviePlayer-Info.plist */,
+			);
+			name = Polyworld;
+			sourceTree = "<group>";
+		};
+		20286C2AFDCF999611CA2CEA /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				76CBA55C062BED8E001C79E7 /* app */,
+				76CBA573062BEDBC001C79E7 /* critter */,
+				76CBA57A062BEDBC001C79E7 /* environment */,
+				76CBA580062BEDBC001C79E7 /* graphics */,
+				76CBA598062BEDBC001C79E7 /* ui */,
+				76CBA5A3062BEDBC001C79E7 /* utils */,
+				32DBCF6D0370B57F00C91783 /* PolyworldPrefix.pch */,
+				7668D2F508864AA3004158C6 /* PwMoviePlayer */,
+			);
+			name = Sources;
+			sourceTree = "<group>";
+		};
+		20286C2CFDCF999611CA2CEA /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				76BB7C9E074D4CE500576391 /* worldfile */,
+				76CBA5E2062BEE2B001C79E7 /* critter.obj */,
+				76CBA5E3062BEE2B001C79E7 /* ground.obj */,
+				8D0C4E960486CD37000505A6 /* Info.plist */,
+				0867D6AAFE840B52C02AAC07 /* InfoPlist.strings */,
+			);
+			name = Resources;
+			sourceTree = "<group>";
+		};
+		20286C32FDCF999611CA2CEA /* External Frameworks and Libraries */ = {
+			isa = PBXGroup;
+			children = (
+				373751E2078D762B00B1DFA0 /* vecLib.framework */,
+				76AA4616073AAEFF00508D3D /* AGL.framework */,
+				76CBA7CC062D11C2001C79E7 /* OpenGL.framework */,
+				20286C33FDCF999611CA2CEA /* Carbon.framework */,
+				4A9504CAFFE6A41611CA0CBA /* CoreServices.framework */,
+				4A9504C8FFE6A3BC11CA0CBA /* ApplicationServices.framework */,
+				0249A66BFF388E3F11CA2CEA /* libstdc++.a */,
+			);
+			name = "External Frameworks and Libraries";
+			sourceTree = "<group>";
+		};
+		7668D2F508864AA3004158C6 /* PwMoviePlayer */ = {
+			isa = PBXGroup;
+			children = (
+				7668D2FF08864B8A004158C6 /* PwMoviePlayer.cp */,
+				760097BD0887874B008CD45B /* PwMoviePlayer.h */,
+				7668D30D088650F0004158C6 /* MainWindow.cp */,
+				760097E608879D78008CD45B /* MainWindow.h */,
+				76D02CC60894CEE300D89155 /* GLWidget.cp */,
+				76D02CC00894CE2800D89155 /* GLWidget.h */,
+				76D02B040894910800D89155 /* moc_PwMoviePlayer.cpp */,
+				76D02B030894910800D89155 /* moc_MainWindow.cpp */,
+				76D02CE30894D30200D89155 /* moc_GLWidget.cpp */,
+			);
+			path = PwMoviePlayer;
+			sourceTree = "<group>";
+		};
+		76CBA55C062BED8E001C79E7 /* app */ = {
+			isa = PBXGroup;
+			children = (
+				76CBA55D062BED8E001C79E7 /* debug.cp */,
+				76CBA55E062BED8E001C79E7 /* debug.h */,
+				76CBA55F062BED8E001C79E7 /* dumpload.cp */,
+				76CBA560062BED8E001C79E7 /* globals.cp */,
+				76CBA561062BED8E001C79E7 /* globals.h */,
+				76CBA562062BED8E001C79E7 /* PWApp.cp */,
+				76CBA563062BED8E001C79E7 /* PWApp.h */,
+				76CBA566062BED8E001C79E7 /* Simulation.cp */,
+				76CBA567062BED8E001C79E7 /* Simulation.h */,
+				37577667078C8C6200CA4042 /* moc_PWApp.cpp */,
+				37577668078C8C6200CA4042 /* moc_Simulation.cpp */,
+			);
+			path = app;
+			sourceTree = "<group>";
+		};
+		76CBA573062BEDBC001C79E7 /* critter */ = {
+			isa = PBXGroup;
+			children = (
+				76CBA574062BEDBC001C79E7 /* brain.cp */,
+				76CBA575062BEDBC001C79E7 /* brain.h */,
+				76CBA576062BEDBC001C79E7 /* critter.cp */,
+				76CBA577062BEDBC001C79E7 /* critter.h */,
+				76CBA578062BEDBC001C79E7 /* genome.cp */,
+				76CBA579062BEDBC001C79E7 /* genome.h */,
+			);
+			path = critter;
+			sourceTree = "<group>";
+		};
+		76CBA57A062BEDBC001C79E7 /* environment */ = {
+			isa = PBXGroup;
+			children = (
+				76CBA57B062BEDBC001C79E7 /* barrier.cp */,
+				76CBA57C062BEDBC001C79E7 /* barrier.h */,
+				76CBA57D062BEDBC001C79E7 /* food.cp */,
+				76CBA57E062BEDBC001C79E7 /* food.h */,
+				76CBA57F062BEDBC001C79E7 /* graybin.h */,
+			);
+			path = environment;
+			sourceTree = "<group>";
+		};
+		76CBA580062BEDBC001C79E7 /* graphics */ = {
+			isa = PBXGroup;
+			children = (
+				76CBA581062BEDBC001C79E7 /* gcamera.cp */,
+				76CBA582062BEDBC001C79E7 /* gcamera.h */,
+				76CBA583062BEDBC001C79E7 /* glight.cp */,
+				76CBA584062BEDBC001C79E7 /* glight.h */,
+				76CBA585062BEDBC001C79E7 /* gline.cp */,
+				76CBA586062BEDBC001C79E7 /* gline.h */,
+				76CBA587062BEDBC001C79E7 /* gmisc.cp */,
+				76CBA588062BEDBC001C79E7 /* gmisc.h */,
+				76CBA589062BEDBC001C79E7 /* gobject.cp */,
+				76CBA58A062BEDBC001C79E7 /* gobject.h */,
+				76CBA58B062BEDBC001C79E7 /* gpoint.cp */,
+				76CBA58C062BEDBC001C79E7 /* gpoint.h */,
+				76CBA58D062BEDBC001C79E7 /* gpolygon.cp */,
+				76CBA58E062BEDBC001C79E7 /* gpolygon.h */,
+				76CBA58F062BEDBC001C79E7 /* graphics.h */,
+				76CBA590062BEDBC001C79E7 /* grect.cp */,
+				76CBA591062BEDBC001C79E7 /* grect.h */,
+				76CBA592062BEDBC001C79E7 /* gscene.cp */,
+				76CBA593062BEDBC001C79E7 /* gscene.h */,
+				76CBA594062BEDBC001C79E7 /* gsquare.cp */,
+				76CBA595062BEDBC001C79E7 /* gsquare.h */,
+				76CBA596062BEDBC001C79E7 /* gstage.cp */,
+				76CBA597062BEDBC001C79E7 /* gstage.h */,
+			);
+			path = graphics;
+			sourceTree = "<group>";
+		};
+		76CBA598062BEDBC001C79E7 /* ui */ = {
+			isa = PBXGroup;
+			children = (
+				76AA4626073AAF7E00508D3D /* TextStatusWindow.cp */,
+				76AA4627073AAF7E00508D3D /* TextStatusWindow.h */,
+				76CBA599062BEDBC001C79E7 /* BrainMonitorWindow.cp */,
+				76CBA59A062BEDBC001C79E7 /* BrainMonitorWindow.h */,
+				76CBA59B062BEDBC001C79E7 /* CameraController.cp */,
+				76CBA59C062BEDBC001C79E7 /* CameraController.h */,
+				76CBA59D062BEDBC001C79E7 /* ChartWindow.cp */,
+				76CBA59E062BEDBC001C79E7 /* ChartWindow.h */,
+				84ED837A062E7EED00AEEA18 /* CritterPOVWindow.cp */,
+				84ED837B062E7EED00AEEA18 /* CritterPOVWindow.h */,
+				76CBA59F062BEDBC001C79E7 /* Menu.cp */,
+				76CBA5A0062BEDBC001C79E7 /* Menu.h */,
+				76CBA5A1062BEDBC001C79E7 /* SceneView.cp */,
+				76CBA5A2062BEDBC001C79E7 /* SceneView.h */,
+			);
+			path = ui;
+			sourceTree = "<group>";
+		};
+		76CBA5A3062BEDBC001C79E7 /* utils */ = {
+			isa = PBXGroup;
+			children = (
+				76CBA5A4062BEDBC001C79E7 /* error.cp */,
+				76CBA5A5062BEDBC001C79E7 /* error.h */,
+				769996580742BCF0001B0A65 /* gdlink.h */,
+				76CBA5A6062BEDBC001C79E7 /* indexlist.cp */,
+				76CBA5A7062BEDBC001C79E7 /* indexlist.h */,
+				76CBA5A8062BEDBC001C79E7 /* misc.cp */,
+				76CBA5A9062BEDBC001C79E7 /* misc.h */,
+				76CBA5AA062BEDBC001C79E7 /* objectlist.h */,
+				7668D1680885AC65004158C6 /* PwMovieTools.cp */,
+				7668D16A0885AD07004158C6 /* PwMovieTools.h */,
+			);
+			path = utils;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		8D0C4E8A0486CD37000505A6 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				76CBA569062BED8E001C79E7 /* debug.h in Headers */,
+				76CBA56C062BED8E001C79E7 /* globals.h in Headers */,
+				76CBA56E062BED8E001C79E7 /* PWApp.h in Headers */,
+				76CBA572062BED8E001C79E7 /* Simulation.h in Headers */,
+				76CBA5AE062BEDBC001C79E7 /* brain.h in Headers */,
+				76CBA5B0062BEDBC001C79E7 /* critter.h in Headers */,
+				76CBA5B2062BEDBC001C79E7 /* genome.h in Headers */,
+				76CBA5B4062BEDBC001C79E7 /* barrier.h in Headers */,
+				76CBA5B6062BEDBC001C79E7 /* food.h in Headers */,
+				76CBA5B7062BEDBC001C79E7 /* graybin.h in Headers */,
+				76CBA5B9062BEDBC001C79E7 /* gcamera.h in Headers */,
+				76CBA5BB062BEDBC001C79E7 /* glight.h in Headers */,
+				76CBA5BD062BEDBC001C79E7 /* gline.h in Headers */,
+				76CBA5BF062BEDBC001C79E7 /* gmisc.h in Headers */,
+				76CBA5C1062BEDBC001C79E7 /* gobject.h in Headers */,
+				76CBA5C3062BEDBC001C79E7 /* gpoint.h in Headers */,
+				76CBA5C5062BEDBC001C79E7 /* gpolygon.h in Headers */,
+				76CBA5C6062BEDBC001C79E7 /* graphics.h in Headers */,
+				76CBA5C8062BEDBC001C79E7 /* grect.h in Headers */,
+				76CBA5CA062BEDBC001C79E7 /* gscene.h in Headers */,
+				76CBA5CC062BEDBC001C79E7 /* gsquare.h in Headers */,
+				76CBA5CE062BEDBC001C79E7 /* gstage.h in Headers */,
+				76CBA5D0062BEDBC001C79E7 /* BrainMonitorWindow.h in Headers */,
+				76CBA5D2062BEDBC001C79E7 /* CameraController.h in Headers */,
+				76CBA5D4062BEDBC001C79E7 /* ChartWindow.h in Headers */,
+				76CBA5D6062BEDBC001C79E7 /* Menu.h in Headers */,
+				76CBA5D8062BEDBC001C79E7 /* SceneView.h in Headers */,
+				76CBA5DA062BEDBC001C79E7 /* error.h in Headers */,
+				76CBA5DC062BEDBC001C79E7 /* indexlist.h in Headers */,
+				76CBA5DE062BEDBC001C79E7 /* misc.h in Headers */,
+				76CBA5DF062BEDBC001C79E7 /* objectlist.h in Headers */,
+				84ED837D062E7EED00AEEA18 /* CritterPOVWindow.h in Headers */,
+				76AA4629073AAF7E00508D3D /* TextStatusWindow.h in Headers */,
+				769996590742BCF0001B0A65 /* gdlink.h in Headers */,
+				7668D16B0885AD07004158C6 /* PwMovieTools.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		7668D2E208864A66004158C6 /* PwMoviePlayer */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 76293F180981AF4600D27C6E /* Build configuration list for PBXNativeTarget "PwMoviePlayer" */;
+			buildPhases = (
+				7668D2DF08864A66004158C6 /* Resources */,
+				7668D2E008864A66004158C6 /* Sources */,
+				7668D2E108864A66004158C6 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			buildSettings = {
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_MODEL_TUNING = G5;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "";
+				HEADER_SEARCH_PATHS = (
+					$QtInc,
+					$QtInc/QtCore,
+					$QtInc/QtGui,
+					$QtInc/QtOpenGL,
+					/System/Library/Frameworks/OpenGL.framework/Headers,
+					/System/Library/Frameworks/AGL.framework,
+				);
+				INFOPLIST_FILE = "PwMoviePlayer-Info.plist";
+				INSTALL_PATH = "$(USER_APPS_DIR)";
+				LIBRARY_SEARCH_PATHS = (
+					$QtLib,
+					/usr/lib/gcc/darwin/3.3,
+				);
+				OTHER_CFLAGS = (
+					"-DQT_ACCESSIBILITY_SUPPORT",
+					"-DQT_TABLET_SUPPORT",
+					"-DQT_NO_DEBUG",
+				);
+				OTHER_LDFLAGS = (
+					"-framework",
+					Carbon,
+				);
+				OTHER_REZFLAGS = "";
+				PREBINDING = YES;
+				PRODUCT_NAME = PwMoviePlayer;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+			};
+			dependencies = (
+				76D02B02089490DB00D89155 /* PBXTargetDependency */,
+			);
+			name = PwMoviePlayer;
+			productName = PwMoviePlayer;
+			productReference = 7668D2E308864A66004158C6 /* PwMoviePlayer.app */;
+			productSettingsXML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<!DOCTYPE plist PUBLIC \"-//Apple Computer//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
+<plist version=\"1.0\">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>English</string>
+	<key>CFBundleExecutable</key>
+	<string>PwMoviePlayer</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.yourcompany.PwMoviePlayer</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+	<key>CFBundleVersion</key>
+	<string>1.0</string>
+</dict>
+</plist>
+";
+			productType = "com.apple.product-type.application";
+		};
+		8D0C4E890486CD37000505A6 /* Polyworld */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 76293F0E0981AF4600D27C6E /* Build configuration list for PBXNativeTarget "Polyworld" */;
+			buildPhases = (
+				8D0C4E8A0486CD37000505A6 /* Headers */,
+				8D0C4E8C0486CD37000505A6 /* Resources */,
+				8D0C4E8F0486CD37000505A6 /* Sources */,
+				8D0C4E910486CD37000505A6 /* Frameworks */,
+				8D0C4E940486CD37000505A6 /* Rez */,
+				37577841078C8E8100CA4042 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			buildSettings = {
+				FRAMEWORK_SEARCH_PATHS = $QtLib;
+				GCC_ALTIVEC_EXTENSIONS = YES;
+				GCC_ENABLE_TRIGRAPHS = NO;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = PolyworldPrefix.pch;
+				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
+				GCC_WARN_CHECK_SWITCH_STATEMENTS = YES;
+				GCC_WARN_EFFECTIVE_CPLUSPLUS_VIOLATIONS = NO;
+				GCC_WARN_FOUR_CHARACTER_CONSTANTS = NO;
+				GCC_WARN_HIDDEN_VIRTUAL_FUNCTIONS = YES;
+				GCC_WARN_INHIBIT_ALL_WARNINGS = NO;
+				GCC_WARN_INITIALIZER_NOT_FULLY_BRACKETED = YES;
+				GCC_WARN_MISSING_PARENTHESES = YES;
+				GCC_WARN_NON_VIRTUAL_DESTRUCTOR = YES;
+				GCC_WARN_PEDANTIC = NO;
+				GCC_WARN_SHADOW = NO;
+				GCC_WARN_SIGN_COMPARE = YES;
+				GCC_WARN_TYPECHECK_CALLS_TO_PRINTF = NO;
+				GCC_WARN_UNINITIALIZED_AUTOS = NO;
+				GCC_WARN_UNKNOWN_PRAGMAS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_LABEL = YES;
+				GCC_WARN_UNUSED_PARAMETER = YES;
+				GCC_WARN_UNUSED_VALUE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = (
+					$QtInc,
+					$QtInc/Qt,
+					$QtInc/QtGui,
+					/System/Library/Frameworks/OpenGL.framework/Headers,
+					/System/Library/Frameworks/AGL.framework,
+				);
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(HOME)/Applications";
+				LIBRARY_SEARCH_PATHS = $QtLib;
+				LIBRARY_STYLE = Static;
+				OTHER_CFLAGS = (
+					"-DQT_ACCESSIBILITY_SUPPORT",
+					"-DQT_TABLET_SUPPORT",
+				);
+				OTHER_LDFLAGS = "";
+				OTHER_REZFLAGS = "";
+				PREBINDING = YES;
+				PRODUCT_NAME = Polyworld;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+				WRAPPER_EXTENSION = app;
+			};
+			dependencies = (
+				76B2FB70084CE761002FBDA1 /* PBXTargetDependency */,
+			);
+			name = Polyworld;
+			productInstallPath = "$(HOME)/Applications";
+			productName = Polyworld;
+			productReference = 8D0C4E970486CD37000505A6 /* Polyworld.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		20286C28FDCF999611CA2CEA /* Project object */ = {
+			isa = PBXProject;
+			buildConfigurationList = 76293F1D0981AF4600D27C6E /* Build configuration list for PBXProject "Polyworld" */;
+			buildSettings = {
+			};
+			buildStyles = (
+				4A9504C5FFE6A39111CA0CBA /* Development */,
+				4A9504C6FFE6A39111CA0CBA /* Deployment */,
+				37375172078D57F300B1DFA0 /* Profiling */,
+			);
+			hasScannedForEncodings = 1;
+			mainGroup = 20286C29FDCF999611CA2CEA /* Polyworld */;
+			projectDirPath = "";
+			targets = (
+				8D0C4E890486CD37000505A6 /* Polyworld */,
+				76B2FB68084CE6E9002FBDA1 /* moc */,
+				7668D2E208864A66004158C6 /* PwMoviePlayer */,
+				76D02AFD0894900E00D89155 /* moc_PwMoviePlayer */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		7668D2DF08864A66004158C6 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				760097E708879D78008CD45B /* MainWindow.h in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8D0C4E8C0486CD37000505A6 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8D0C4E8D0486CD37000505A6 /* InfoPlist.strings in Resources */,
+				76CBA5E4062BEE2B001C79E7 /* critter.obj in Resources */,
+				76CBA5E5062BEE2B001C79E7 /* ground.obj in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXRezBuildPhase section */
+		8D0C4E940486CD37000505A6 /* Rez */ = {
+			isa = PBXRezBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXRezBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		76B2FB67084CE6E9002FBDA1 /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "echo QtBin = $QtBin\necho QtLib = $QtLib\necho QtInc = $QtInc\n\nif [ app/Simulation.h -nt app/moc_Simulation.cpp ]; then $QtBin/moc app/Simulation.h -o app/moc_Simulation.cpp; fi\nif [ app/PWApp.h      -nt app/moc_PWApp.cpp      ]; then $QtBin/moc app/PWApp.h      -o app/moc_PWApp.cpp     ; fi\nexit 0";
+		};
+		76D02AFE0894900E00D89155 /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "#echo QtBin = $QtBin\n#echo QtLib = $QtLib\n#echo QtInc = $QtInc\n\nif [ PwMoviePlayer/PwMoviePlayer.h -nt PwMoviePlayer/moc_PwMoviePlayer.cpp ]; then $QtBin/moc PwMoviePlayer/PwMoviePlayer.h -o PwMoviePlayer/moc_PwMoviePlayer.cpp; fi\nif [ PwMoviePlayer/MainWindow.h    -nt PwMoviePlayer/moc_MainWindow.cpp    ]; then $QtBin/moc PwMoviePlayer/MainWindow.h    -o PwMoviePlayer/moc_MainWindow.cpp   ; fi\nif [ PwMoviePlayer/GLWidget.h      -nt PwMoviePlayer/moc_GLWidget.cpp      ]; then $QtBin/moc PwMoviePlayer/GLWidget.h      -o PwMoviePlayer/moc_GLWidget.cpp     ; fi\nexit 0";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		7668D2E008864A66004158C6 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7668D2F208864A7E004158C6 /* PwMovieTools.cp in Sources */,
+				7668D30008864B8A004158C6 /* PwMoviePlayer.cp in Sources */,
+				7668D30E088650F0004158C6 /* MainWindow.cp in Sources */,
+				76D02B050894910800D89155 /* moc_MainWindow.cpp in Sources */,
+				76D02B060894910800D89155 /* moc_PwMoviePlayer.cpp in Sources */,
+				76D02CC70894CEE300D89155 /* GLWidget.cp in Sources */,
+				76D02CE40894D30200D89155 /* moc_GLWidget.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8D0C4E8F0486CD37000505A6 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				76CBA568062BED8E001C79E7 /* debug.cp in Sources */,
+				76CBA56B062BED8E001C79E7 /* globals.cp in Sources */,
+				76CBA56D062BED8E001C79E7 /* PWApp.cp in Sources */,
+				76CBA571062BED8E001C79E7 /* Simulation.cp in Sources */,
+				76CBA5AD062BEDBC001C79E7 /* brain.cp in Sources */,
+				76CBA5AF062BEDBC001C79E7 /* critter.cp in Sources */,
+				76CBA5B1062BEDBC001C79E7 /* genome.cp in Sources */,
+				76CBA5B3062BEDBC001C79E7 /* barrier.cp in Sources */,
+				76CBA5B5062BEDBC001C79E7 /* food.cp in Sources */,
+				76CBA5B8062BEDBC001C79E7 /* gcamera.cp in Sources */,
+				76CBA5BA062BEDBC001C79E7 /* glight.cp in Sources */,
+				76CBA5BC062BEDBC001C79E7 /* gline.cp in Sources */,
+				76CBA5BE062BEDBC001C79E7 /* gmisc.cp in Sources */,
+				76CBA5C0062BEDBC001C79E7 /* gobject.cp in Sources */,
+				76CBA5C2062BEDBC001C79E7 /* gpoint.cp in Sources */,
+				76CBA5C4062BEDBC001C79E7 /* gpolygon.cp in Sources */,
+				76CBA5C7062BEDBC001C79E7 /* grect.cp in Sources */,
+				76CBA5C9062BEDBC001C79E7 /* gscene.cp in Sources */,
+				76CBA5CB062BEDBC001C79E7 /* gsquare.cp in Sources */,
+				76CBA5CD062BEDBC001C79E7 /* gstage.cp in Sources */,
+				76CBA5CF062BEDBC001C79E7 /* BrainMonitorWindow.cp in Sources */,
+				76CBA5D3062BEDBC001C79E7 /* ChartWindow.cp in Sources */,
+				76CBA5D7062BEDBC001C79E7 /* SceneView.cp in Sources */,
+				76CBA5D9062BEDBC001C79E7 /* error.cp in Sources */,
+				76CBA5DB062BEDBC001C79E7 /* indexlist.cp in Sources */,
+				76CBA5DD062BEDBC001C79E7 /* misc.cp in Sources */,
+				84ED837C062E7EED00AEEA18 /* CritterPOVWindow.cp in Sources */,
+				76AA4628073AAF7E00508D3D /* TextStatusWindow.cp in Sources */,
+				37577669078C8C6200CA4042 /* moc_PWApp.cpp in Sources */,
+				3757766A078C8C6200CA4042 /* moc_Simulation.cpp in Sources */,
+				7668D1690885AC65004158C6 /* PwMovieTools.cp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		76B2FB70084CE761002FBDA1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 76B2FB68084CE6E9002FBDA1 /* moc */;
+			targetProxy = 76B2FB6F084CE761002FBDA1 /* PBXContainerItemProxy */;
+		};
+		76D02B02089490DB00D89155 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 76D02AFD0894900E00D89155 /* moc_PwMoviePlayer */;
+			targetProxy = 76D02B01089490DB00D89155 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+		0867D6AAFE840B52C02AAC07 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				0867D6ABFE840B52C02AAC07 /* English */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		76293F0A0981AF4600D27C6E /* Development */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				DEBUGGING_SYMBOLS = YES;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				OPTIMIZATION_CFLAGS = "-O0";
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = (
+					"-lQtGui_debug",
+					"-lQtCore_debug",
+					"-lQtOpenGL_debug",
+					"-lz",
+				);
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = moc;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+				ZERO_LINK = NO;
+			};
+			name = Development;
+		};
+		76293F0B0981AF4600D27C6E /* Deployment */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_MODEL_TUNING = G5;
+				GCC_OPTIMIZATION_LEVEL = 3;
+				OTHER_CFLAGS = "";
+				OTHER_CPLUSPLUSFLAGS = "-DQT_NO_DEBUG";
+				OTHER_LDFLAGS = (
+					"-framework",
+					QtGui,
+					"-framework",
+					QtCore,
+					"-framework",
+					QtOpenGL,
+					"-lz",
+				);
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = moc;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+				ZERO_LINK = NO;
+			};
+			name = Deployment;
+		};
+		76293F0C0981AF4600D27C6E /* Profiling */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				GCC_ALTIVEC_EXTENSIONS = YES;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GENERATE_PROFILING_CODE = YES;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = moc;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+				ZERO_LINK = NO;
+			};
+			name = Profiling;
+		};
+		76293F0D0981AF4600D27C6E /* Default */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = moc;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+			};
+			name = Default;
+		};
+		76293F0F0981AF4600D27C6E /* Development */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				DEBUGGING_SYMBOLS = YES;
+				FRAMEWORK_SEARCH_PATHS = $QtLib;
+				GCC_ALTIVEC_EXTENSIONS = YES;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_ENABLE_TRIGRAPHS = NO;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = PolyworldPrefix.pch;
+				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
+				GCC_WARN_CHECK_SWITCH_STATEMENTS = YES;
+				GCC_WARN_EFFECTIVE_CPLUSPLUS_VIOLATIONS = NO;
+				GCC_WARN_FOUR_CHARACTER_CONSTANTS = NO;
+				GCC_WARN_HIDDEN_VIRTUAL_FUNCTIONS = YES;
+				GCC_WARN_INHIBIT_ALL_WARNINGS = NO;
+				GCC_WARN_INITIALIZER_NOT_FULLY_BRACKETED = YES;
+				GCC_WARN_MISSING_PARENTHESES = YES;
+				GCC_WARN_NON_VIRTUAL_DESTRUCTOR = YES;
+				GCC_WARN_PEDANTIC = NO;
+				GCC_WARN_SHADOW = NO;
+				GCC_WARN_SIGN_COMPARE = YES;
+				GCC_WARN_TYPECHECK_CALLS_TO_PRINTF = NO;
+				GCC_WARN_UNINITIALIZED_AUTOS = NO;
+				GCC_WARN_UNKNOWN_PRAGMAS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_LABEL = YES;
+				GCC_WARN_UNUSED_PARAMETER = YES;
+				GCC_WARN_UNUSED_VALUE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = (
+					$QtInc,
+					$QtInc/Qt,
+					$QtInc/QtGui,
+					/System/Library/Frameworks/OpenGL.framework/Headers,
+					/System/Library/Frameworks/AGL.framework,
+				);
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(HOME)/Applications";
+				LIBRARY_SEARCH_PATHS = $QtLib;
+				LIBRARY_STYLE = Static;
+				OPTIMIZATION_CFLAGS = "-O0";
+				OTHER_CFLAGS = (
+					"-DQT_ACCESSIBILITY_SUPPORT",
+					"-DQT_TABLET_SUPPORT",
+					"-Wno-deprecated",
+				);
+				OTHER_CPLUSPLUSFLAGS = "$(OTHER_CFLAGS)";
+				OTHER_LDFLAGS = (
+					"-framework",
+					QtCore,
+					"-framework",
+					QtGui,
+					"-framework",
+					QtOpenGL,
+					"-lz",
+				);
+				OTHER_REZFLAGS = "";
+				PREBINDING = YES;
+				PRODUCT_NAME = Polyworld;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+				WRAPPER_EXTENSION = app;
+				ZERO_LINK = NO;
+			};
+			name = Development;
+		};
+		76293F100981AF4600D27C6E /* Deployment */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				FRAMEWORK_SEARCH_PATHS = $QtLib;
+				GCC_ALTIVEC_EXTENSIONS = YES;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_ENABLE_TRIGRAPHS = NO;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_MODEL_TUNING = G5;
+				GCC_OPTIMIZATION_LEVEL = 3;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = PolyworldPrefix.pch;
+				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
+				GCC_WARN_CHECK_SWITCH_STATEMENTS = YES;
+				GCC_WARN_EFFECTIVE_CPLUSPLUS_VIOLATIONS = NO;
+				GCC_WARN_FOUR_CHARACTER_CONSTANTS = NO;
+				GCC_WARN_HIDDEN_VIRTUAL_FUNCTIONS = YES;
+				GCC_WARN_INHIBIT_ALL_WARNINGS = NO;
+				GCC_WARN_INITIALIZER_NOT_FULLY_BRACKETED = YES;
+				GCC_WARN_MISSING_PARENTHESES = YES;
+				GCC_WARN_NON_VIRTUAL_DESTRUCTOR = YES;
+				GCC_WARN_PEDANTIC = NO;
+				GCC_WARN_SHADOW = NO;
+				GCC_WARN_SIGN_COMPARE = YES;
+				GCC_WARN_TYPECHECK_CALLS_TO_PRINTF = NO;
+				GCC_WARN_UNINITIALIZED_AUTOS = NO;
+				GCC_WARN_UNKNOWN_PRAGMAS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_LABEL = YES;
+				GCC_WARN_UNUSED_PARAMETER = YES;
+				GCC_WARN_UNUSED_VALUE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = (
+					$QtInc,
+					$QtInc/Qt,
+					$QtInc/QtGui,
+					/System/Library/Frameworks/OpenGL.framework/Headers,
+					/System/Library/Frameworks/AGL.framework,
+				);
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(HOME)/Applications";
+				LIBRARY_SEARCH_PATHS = $QtLib;
+				LIBRARY_STYLE = Static;
+				OTHER_CFLAGS = (
+					"-DQT_ACCESSIBILITY_SUPPORT",
+					"-DQT_TABLET_SUPPORT",
+					"-Wno-deprecated",
+				);
+				OTHER_CPLUSPLUSFLAGS = (
+					"$(OTHER_CFLAGS)",
+					"-DQT_NO_DEBUG",
+				);
+				OTHER_LDFLAGS = (
+					"-framework",
+					QtCore,
+					"-framework",
+					QtGui,
+					"-framework",
+					QtOpenGL,
+					"-lz",
+				);
+				OTHER_REZFLAGS = "";
+				PREBINDING = YES;
+				PRODUCT_NAME = Polyworld;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+				WRAPPER_EXTENSION = app;
+				ZERO_LINK = NO;
+			};
+			name = Deployment;
+		};
+		76293F110981AF4600D27C6E /* Profiling */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				FRAMEWORK_SEARCH_PATHS = $QtLib;
+				GCC_ALTIVEC_EXTENSIONS = YES;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_ENABLE_TRIGRAPHS = NO;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = PolyworldPrefix.pch;
+				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
+				GCC_WARN_CHECK_SWITCH_STATEMENTS = YES;
+				GCC_WARN_EFFECTIVE_CPLUSPLUS_VIOLATIONS = NO;
+				GCC_WARN_FOUR_CHARACTER_CONSTANTS = NO;
+				GCC_WARN_HIDDEN_VIRTUAL_FUNCTIONS = YES;
+				GCC_WARN_INHIBIT_ALL_WARNINGS = NO;
+				GCC_WARN_INITIALIZER_NOT_FULLY_BRACKETED = YES;
+				GCC_WARN_MISSING_PARENTHESES = YES;
+				GCC_WARN_NON_VIRTUAL_DESTRUCTOR = YES;
+				GCC_WARN_PEDANTIC = NO;
+				GCC_WARN_SHADOW = NO;
+				GCC_WARN_SIGN_COMPARE = YES;
+				GCC_WARN_TYPECHECK_CALLS_TO_PRINTF = NO;
+				GCC_WARN_UNINITIALIZED_AUTOS = NO;
+				GCC_WARN_UNKNOWN_PRAGMAS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_LABEL = YES;
+				GCC_WARN_UNUSED_PARAMETER = YES;
+				GCC_WARN_UNUSED_VALUE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_PROFILING_CODE = YES;
+				HEADER_SEARCH_PATHS = (
+					$QtInc,
+					$QtInc/Qt,
+					$QtInc/QtGui,
+					/System/Library/Frameworks/OpenGL.framework/Headers,
+					/System/Library/Frameworks/AGL.framework,
+				);
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(HOME)/Applications";
+				LIBRARY_SEARCH_PATHS = $QtLib;
+				LIBRARY_STYLE = Static;
+				OTHER_CFLAGS = (
+					"-DQT_ACCESSIBILITY_SUPPORT",
+					"-DQT_TABLET_SUPPORT",
+					"-Wno-deprecated",
+				);
+				OTHER_LDFLAGS = (
+					"-framework",
+					QtCore,
+					"-framework",
+					QtGui,
+					"-framework",
+					QtOpenGL,
+					"-lz",
+				);
+				OTHER_REZFLAGS = "";
+				PREBINDING = YES;
+				PRODUCT_NAME = Polyworld;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+				WRAPPER_EXTENSION = app;
+				ZERO_LINK = NO;
+			};
+			name = Profiling;
+		};
+		76293F120981AF4600D27C6E /* Default */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				FRAMEWORK_SEARCH_PATHS = $QtLib;
+				GCC_ALTIVEC_EXTENSIONS = YES;
+				GCC_ENABLE_TRIGRAPHS = NO;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = PolyworldPrefix.pch;
+				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
+				GCC_WARN_CHECK_SWITCH_STATEMENTS = YES;
+				GCC_WARN_EFFECTIVE_CPLUSPLUS_VIOLATIONS = NO;
+				GCC_WARN_FOUR_CHARACTER_CONSTANTS = NO;
+				GCC_WARN_HIDDEN_VIRTUAL_FUNCTIONS = YES;
+				GCC_WARN_INHIBIT_ALL_WARNINGS = NO;
+				GCC_WARN_INITIALIZER_NOT_FULLY_BRACKETED = YES;
+				GCC_WARN_MISSING_PARENTHESES = YES;
+				GCC_WARN_NON_VIRTUAL_DESTRUCTOR = YES;
+				GCC_WARN_PEDANTIC = NO;
+				GCC_WARN_SHADOW = NO;
+				GCC_WARN_SIGN_COMPARE = YES;
+				GCC_WARN_TYPECHECK_CALLS_TO_PRINTF = NO;
+				GCC_WARN_UNINITIALIZED_AUTOS = NO;
+				GCC_WARN_UNKNOWN_PRAGMAS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_LABEL = YES;
+				GCC_WARN_UNUSED_PARAMETER = YES;
+				GCC_WARN_UNUSED_VALUE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = (
+					$QtInc,
+					$QtInc/Qt,
+					$QtInc/QtGui,
+					/System/Library/Frameworks/OpenGL.framework/Headers,
+					/System/Library/Frameworks/AGL.framework,
+				);
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(HOME)/Applications";
+				LIBRARY_SEARCH_PATHS = $QtLib;
+				LIBRARY_STYLE = Static;
+				OTHER_CFLAGS = (
+					"-DQT_ACCESSIBILITY_SUPPORT",
+					"-DQT_TABLET_SUPPORT",
+					"-Wno-deprecated",
+				);
+				OTHER_LDFLAGS = (
+					"-framework",
+					QtCore,
+					"-framework",
+					QtGui,
+					"-framework",
+					QtOpenGL,
+					"-lz",
+				);
+				OTHER_REZFLAGS = "";
+				PREBINDING = YES;
+				PRODUCT_NAME = Polyworld;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+				WRAPPER_EXTENSION = app;
+			};
+			name = Default;
+		};
+		76293F140981AF4600D27C6E /* Development */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				DEBUGGING_SYMBOLS = YES;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				OPTIMIZATION_CFLAGS = "-O0";
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = (
+					"-lQtGui_debug",
+					"-lQtCore_debug",
+					"-lQtOpenGL_debug",
+					"-lz",
+				);
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = moc;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+				ZERO_LINK = NO;
+			};
+			name = Development;
+		};
+		76293F150981AF4600D27C6E /* Deployment */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_MODEL_TUNING = G5;
+				GCC_OPTIMIZATION_LEVEL = 3;
+				OTHER_CFLAGS = "";
+				OTHER_CPLUSPLUSFLAGS = "-DQT_NO_DEBUG";
+				OTHER_LDFLAGS = (
+					"-framework",
+					QtGui,
+					"-framework",
+					QtCore,
+					"-framework",
+					QtOpenGL,
+					"-lz",
+				);
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = moc;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+				ZERO_LINK = NO;
+			};
+			name = Deployment;
+		};
+		76293F160981AF4600D27C6E /* Profiling */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				GCC_ALTIVEC_EXTENSIONS = YES;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GENERATE_PROFILING_CODE = YES;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = moc;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+				ZERO_LINK = NO;
+			};
+			name = Profiling;
+		};
+		76293F170981AF4600D27C6E /* Default */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = moc;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+			};
+			name = Default;
+		};
+		76293F190981AF4600D27C6E /* Development */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				DEBUGGING_SYMBOLS = YES;
+				FRAMEWORK_SEARCH_PATHS = $QtLib;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_MODEL_TUNING = G5;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "";
+				HEADER_SEARCH_PATHS = (
+					$QtInc,
+					$QtInc/QtCore,
+					$QtInc/QtGui,
+					$QtInc/QtOpenGL,
+					/System/Library/Frameworks/OpenGL.framework/Headers,
+					/System/Library/Frameworks/AGL.framework,
+				);
+				INFOPLIST_FILE = "PwMoviePlayer-Info.plist";
+				INSTALL_PATH = "$(USER_APPS_DIR)";
+				LIBRARY_SEARCH_PATHS = $QtLib;
+				OPTIMIZATION_CFLAGS = "-O0";
+				OTHER_CFLAGS = (
+					"-DQT_ACCESSIBILITY_SUPPORT",
+					"-DQT_TABLET_SUPPORT",
+					"-DQT_NO_DEBUG",
+					"-Wno-deprecated",
+				);
+				OTHER_LDFLAGS = (
+					"-framework",
+					QtGui,
+					"-framework",
+					QtCore,
+					"-framework",
+					QtOpenGL,
+					"-lz",
+				);
+				OTHER_REZFLAGS = "";
+				PREBINDING = YES;
+				PRODUCT_NAME = PwMoviePlayer;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+				ZERO_LINK = NO;
+			};
+			name = Development;
+		};
+		76293F1A0981AF4600D27C6E /* Deployment */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				FRAMEWORK_SEARCH_PATHS = $QtLib;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_MODEL_TUNING = G5;
+				GCC_OPTIMIZATION_LEVEL = 3;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "";
+				HEADER_SEARCH_PATHS = (
+					$QtInc,
+					$QtInc/QtCore,
+					$QtInc/QtGui,
+					$QtInc/QtOpenGL,
+					/System/Library/Frameworks/OpenGL.framework/Headers,
+					/System/Library/Frameworks/AGL.framework,
+				);
+				INFOPLIST_FILE = "PwMoviePlayer-Info.plist";
+				INSTALL_PATH = "$(USER_APPS_DIR)";
+				LIBRARY_SEARCH_PATHS = $QtLib;
+				OTHER_CFLAGS = (
+					"-DQT_ACCESSIBILITY_SUPPORT",
+					"-DQT_TABLET_SUPPORT",
+					"-DQT_NO_DEBUG",
+					"-Wno-deprecated",
+				);
+				OTHER_CPLUSPLUSFLAGS = "-DQT_NO_DEBUG";
+				OTHER_LDFLAGS = (
+					"-framework",
+					QtGui,
+					"-framework",
+					QtCore,
+					"-framework",
+					QtOpenGL,
+					"-lz",
+				);
+				OTHER_REZFLAGS = "";
+				PREBINDING = YES;
+				PRODUCT_NAME = PwMoviePlayer;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+				ZERO_LINK = NO;
+			};
+			name = Deployment;
+		};
+		76293F1B0981AF4600D27C6E /* Profiling */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				FRAMEWORK_SEARCH_PATHS = $QtLib;
+				GCC_ALTIVEC_EXTENSIONS = YES;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_MODEL_TUNING = G5;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "";
+				GENERATE_PROFILING_CODE = YES;
+				HEADER_SEARCH_PATHS = (
+					$QtInc,
+					$QtInc/QtCore,
+					$QtInc/QtGui,
+					$QtInc/QtOpenGL,
+					/System/Library/Frameworks/OpenGL.framework/Headers,
+					/System/Library/Frameworks/AGL.framework,
+				);
+				INFOPLIST_FILE = "PwMoviePlayer-Info.plist";
+				INSTALL_PATH = "$(USER_APPS_DIR)";
+				LIBRARY_SEARCH_PATHS = $QtLib;
+				OTHER_CFLAGS = (
+					"-DQT_ACCESSIBILITY_SUPPORT",
+					"-DQT_TABLET_SUPPORT",
+					"-DQT_NO_DEBUG",
+					"-Wno-deprecated",
+				);
+				OTHER_LDFLAGS = (
+					"-framework",
+					QtGui,
+					"-framework",
+					QtCore,
+					"-framework",
+					QtOpenGL,
+					"-lz",
+				);
+				OTHER_REZFLAGS = "";
+				PREBINDING = YES;
+				PRODUCT_NAME = PwMoviePlayer;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+				ZERO_LINK = NO;
+			};
+			name = Profiling;
+		};
+		76293F1C0981AF4600D27C6E /* Default */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				FRAMEWORK_SEARCH_PATHS = $QtLib;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_MODEL_TUNING = G5;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "";
+				HEADER_SEARCH_PATHS = (
+					$QtInc,
+					$QtInc/QtCore,
+					$QtInc/QtGui,
+					$QtInc/QtOpenGL,
+					/System/Library/Frameworks/OpenGL.framework/Headers,
+					/System/Library/Frameworks/AGL.framework,
+				);
+				INFOPLIST_FILE = "PwMoviePlayer-Info.plist";
+				INSTALL_PATH = "$(USER_APPS_DIR)";
+				LIBRARY_SEARCH_PATHS = $QtLib;
+				OTHER_CFLAGS = (
+					"-DQT_ACCESSIBILITY_SUPPORT",
+					"-DQT_TABLET_SUPPORT",
+					"-DQT_NO_DEBUG",
+					"-Wno-deprecated",
+				);
+				OTHER_LDFLAGS = (
+					"-framework",
+					QtGui,
+					"-framework",
+					QtCore,
+					"-framework",
+					QtOpenGL,
+					"-lz",
+				);
+				OTHER_REZFLAGS = "";
+				PREBINDING = YES;
+				PRODUCT_NAME = PwMoviePlayer;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+			};
+			name = Default;
+		};
+		76293F1E0981AF4600D27C6E /* Development */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = Development;
+		};
+		76293F1F0981AF4600D27C6E /* Deployment */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = Deployment;
+		};
+		76293F200981AF4600D27C6E /* Profiling */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = Profiling;
+		};
+		76293F210981AF4600D27C6E /* Default */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = Default;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		76293F090981AF4600D27C6E /* Build configuration list for PBXAggregateTarget "moc" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				76293F0A0981AF4600D27C6E /* Development */,
+				76293F0B0981AF4600D27C6E /* Deployment */,
+				76293F0C0981AF4600D27C6E /* Profiling */,
+				76293F0D0981AF4600D27C6E /* Default */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Default;
+		};
+		76293F0E0981AF4600D27C6E /* Build configuration list for PBXNativeTarget "Polyworld" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				76293F0F0981AF4600D27C6E /* Development */,
+				76293F100981AF4600D27C6E /* Deployment */,
+				76293F110981AF4600D27C6E /* Profiling */,
+				76293F120981AF4600D27C6E /* Default */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Default;
+		};
+		76293F130981AF4600D27C6E /* Build configuration list for PBXAggregateTarget "moc_PwMoviePlayer" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				76293F140981AF4600D27C6E /* Development */,
+				76293F150981AF4600D27C6E /* Deployment */,
+				76293F160981AF4600D27C6E /* Profiling */,
+				76293F170981AF4600D27C6E /* Default */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Default;
+		};
+		76293F180981AF4600D27C6E /* Build configuration list for PBXNativeTarget "PwMoviePlayer" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				76293F190981AF4600D27C6E /* Development */,
+				76293F1A0981AF4600D27C6E /* Deployment */,
+				76293F1B0981AF4600D27C6E /* Profiling */,
+				76293F1C0981AF4600D27C6E /* Default */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Default;
+		};
+		76293F1D0981AF4600D27C6E /* Build configuration list for PBXProject "Polyworld" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				76293F1E0981AF4600D27C6E /* Development */,
+				76293F1F0981AF4600D27C6E /* Deployment */,
+				76293F200981AF4600D27C6E /* Profiling */,
+				76293F210981AF4600D27C6E /* Default */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Default;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 20286C28FDCF999611CA2CEA /* Project object */;
+}
