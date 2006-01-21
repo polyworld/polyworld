@@ -241,7 +241,7 @@ void brain::dumpAnatomical( char* directoryName, char* suffix, long index, float
 	if( imin < 0 )
 		fprintf( stderr, "%s: cmIndex < 0 (%ld)\n", __FUNCTION__, imin );
 	if( imax > (numneurons+1)*(numneurons+1) )
-		fprintf( stderr, "%s: cmIndex > (numneurons+1)^2 (%ld > %d)\n", imax, (numneurons+1)*(numneurons+1) );
+		fprintf( stderr, "%s: cmIndex > (numneurons+1)^2 (%ld > %d)\n", __FUNCTION__, imax, (numneurons+1)*(numneurons+1) );
 
 	daPrint( "%s: imin = %ld, imax = %ld, numneurons = %d (+1 for bias)\n", __FUNCTION__, imin, imax, numneurons );
 

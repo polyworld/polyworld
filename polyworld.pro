@@ -49,7 +49,7 @@ INCLUDEPATH +=	. \
 				$(QT_INCLUDE_DIR)/QtOpenGL \
 				/System/Library/Frameworks/AGL.framework/Versions/A/Headers/
 								
-QMAKE_CFLAGS_DEBUG += -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC
+QMAKE_CFLAGS_DEBUG += -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC -Wno-deprecated
 
-LIBS	+=	-L$(QTDIR)/lib/ -lQtOpenGL -framework OpenGL -framework AGL
+LIBS	+=	-F$(QTDIR)/lib/ -framework QtOpenGL -framework OpenGL -framework AGL
 

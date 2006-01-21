@@ -229,77 +229,77 @@ void genome::PrintGeneIndexes( FILE* f )
 	}
 	
 	// Physiology genes
-	fprintf( f, "%d\tGeneCount\t%d\tPhysiologyGeneCount\t%d\tNeurophysiologyGeneCount\n", gNumBytes, numphysbytes, gNumBytes - numphysbytes );
-	fprintf( f, "%d\tMutationRate\n", mrategene );
-	fprintf( f, "%d\tControlPointCount\n", ncptsgene );
-	fprintf( f, "%d\tLifeSpan\n", lifespangene );
-	fprintf( f, "%d\tID\n", idgene );
-	fprintf( f, "%d\tStrength\n", strengthgene );
-	fprintf( f, "%d\tSize\n", sizegene );
-	fprintf( f, "%d\tMaxSpeed\n", maxspeedgene );
-	fprintf( f, "%d\tMateEnergyFraction\n", mateenergygene );
+	fprintf( f, "%ld\tGeneCount\t%ld\tPhysiologyGeneCount\t%ld\tNeurophysiologyGeneCount\n", gNumBytes, numphysbytes, gNumBytes - numphysbytes );
+	fprintf( f, "%ld\tMutationRate\n", mrategene );
+	fprintf( f, "%ld\tControlPointCount\n", ncptsgene );
+	fprintf( f, "%ld\tLifeSpan\n", lifespangene );
+	fprintf( f, "%ld\tID\n", idgene );
+	fprintf( f, "%ld\tStrength\n", strengthgene );
+	fprintf( f, "%ld\tSize\n", sizegene );
+	fprintf( f, "%ld\tMaxSpeed\n", maxspeedgene );
+	fprintf( f, "%ld\tMateEnergyFraction\n", mateenergygene );
 
 	// Input (Vision) genes
-	fprintf( f, "%d\tRedNeuronCount\n", numrneurgene );
-	fprintf( f, "%d\tGreenNeuronCount\n", numgneurgene );
-	fprintf( f, "%d\tBlueNeuronCount\n", numbneurgene );;
+	fprintf( f, "%ld\tRedNeuronCount\n", numrneurgene );
+	fprintf( f, "%ld\tGreenNeuronCount\n", numgneurgene );
+	fprintf( f, "%ld\tBlueNeuronCount\n", numbneurgene );;
 
 	// Neurophysiology genes
 	// Per group
 	// Internal groups only
-	fprintf( f, "%d\tInternalNeuronGroupCount\n", numneurgroupsgene );
+	fprintf( f, "%ld\tInternalNeuronGroupCount\n", numneurgroupsgene );
 	for( int i = 0; i < brain::gNeuralValues.maxinternalneurgroups; i++ )
-		fprintf( f, "%d\tExcitatoryNeuronCount_%d\n", numeneurgene+i, i );
+		fprintf( f, "%ld\tExcitatoryNeuronCount_%d\n", numeneurgene+i, i );
 	for( int i = 0; i < brain::gNeuralValues.maxinternalneurgroups; i++ )
-		fprintf( f, "%d\tInhibitoryNeuronCount_%d\n", numineurgene+i, i );
+		fprintf( f, "%ld\tInhibitoryNeuronCount_%d\n", numineurgene+i, i );
 	// Internal plus output groups (all non-input groups)
 	for( int i = 0; i < brain::gNeuralValues.maxnoninputneurgroups; i++ )
-		fprintf( f, "%d\tBias_%d\n", biasgene+i, i );
+		fprintf( f, "%ld\tBias_%d\n", biasgene+i, i );
 	for( int i = 0; i < brain::gNeuralValues.maxnoninputneurgroups; i++ )
-		fprintf( f, "%d\tBiasLearningRate_%d\n", biaslrategene+i, i );
+		fprintf( f, "%ld\tBiasLearningRate_%d\n", biaslrategene+i, i );
 
 	// Per pair of groups
 	// Connection density
 	for( int j = brain::gNeuralValues.numinputneurgroups; j < brain::gNeuralValues.maxneurgroups; j++ )	// target group
 		for( int i = 0; i < brain::gNeuralValues.maxneurgroups; i++ )	// source group
-			fprintf( f, "%d\tEEConnectionDensity_%d->%d\n", eecdgene + i + (j - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups, i, j );
+			fprintf( f, "%ld\tEEConnectionDensity_%d->%d\n", eecdgene + i + (j - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups, i, j );
 	for( int j = brain::gNeuralValues.numinputneurgroups; j < brain::gNeuralValues.maxneurgroups; j++ )	// target group
 		for( int i = 0; i < brain::gNeuralValues.maxneurgroups; i++ )	// source group
-			fprintf( f, "%d\tEIConnectionDensity_%d->%d\n", eicdgene + i + (j - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups, i, j );
+			fprintf( f, "%ld\tEIConnectionDensity_%d->%d\n", eicdgene + i + (j - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups, i, j );
 	for( int j = brain::gNeuralValues.numinputneurgroups; j < brain::gNeuralValues.maxneurgroups; j++ )	// target group
 		for( int i = 0; i < brain::gNeuralValues.maxneurgroups; i++ )	// source group
-			fprintf( f, "%d\tIIConnectionDensity_%d->%d\n", iicdgene + i + (j - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups, i, j );
+			fprintf( f, "%ld\tIIConnectionDensity_%d->%d\n", iicdgene + i + (j - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups, i, j );
 	for( int j = brain::gNeuralValues.numinputneurgroups; j < brain::gNeuralValues.maxneurgroups; j++ )	// target group
 		for( int i = 0; i < brain::gNeuralValues.maxneurgroups; i++ )	// source group
-			fprintf( f, "%d\tIEConnectionDensity_%d->%d\n", iecdgene + i + (j - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups, i, j );
+			fprintf( f, "%ld\tIEConnectionDensity_%d->%d\n", iecdgene + i + (j - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups, i, j );
 
 	// Learning rate
 	for( int j = brain::gNeuralValues.numinputneurgroups; j < brain::gNeuralValues.maxneurgroups; j++ )	// target group
 		for( int i = 0; i < brain::gNeuralValues.maxneurgroups; i++ )	// source group
-			fprintf( f, "%d\tEELearningRate_%d->%d\n", eelrgene + i + (j - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups, i, j );
+			fprintf( f, "%ld\tEELearningRate_%d->%d\n", eelrgene + i + (j - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups, i, j );
 	for( int j = brain::gNeuralValues.numinputneurgroups; j < brain::gNeuralValues.maxneurgroups; j++ )	// target group
 		for( int i = 0; i < brain::gNeuralValues.maxneurgroups; i++ )	// source group
-			fprintf( f, "%d\tEILearningRate_%d->%d\n", eilrgene + i + (j - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups, i, j );
+			fprintf( f, "%ld\tEILearningRate_%d->%d\n", eilrgene + i + (j - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups, i, j );
 	for( int j = brain::gNeuralValues.numinputneurgroups; j < brain::gNeuralValues.maxneurgroups; j++ )	// target group
 		for( int i = 0; i < brain::gNeuralValues.maxneurgroups; i++ )	// source group
-			fprintf( f, "%d\tIILearningRate_%d->%d\n", iilrgene + i + (j - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups, i, j );
+			fprintf( f, "%ld\tIILearningRate_%d->%d\n", iilrgene + i + (j - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups, i, j );
 	for( int j = brain::gNeuralValues.numinputneurgroups; j < brain::gNeuralValues.maxneurgroups; j++ )	// target group
 		for( int i = 0; i < brain::gNeuralValues.maxneurgroups; i++ )	// source group
-			fprintf( f, "%d\tIELearningRate_%d->%d\n", ielrgene + i + (j - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups, i, j );
+			fprintf( f, "%ld\tIELearningRate_%d->%d\n", ielrgene + i + (j - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups, i, j );
 
 	// Topological distortion
 	for( int j = brain::gNeuralValues.numinputneurgroups; j < brain::gNeuralValues.maxneurgroups; j++ )	// target group
 		for( int i = 0; i < brain::gNeuralValues.maxneurgroups; i++ )	// source group
-			fprintf( f, "%d\tEETopologicalDistortion_%d->%d\n", eetdgene + i + (j - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups, i, j );
+			fprintf( f, "%ld\tEETopologicalDistortion_%d->%d\n", eetdgene + i + (j - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups, i, j );
 	for( int j = brain::gNeuralValues.numinputneurgroups; j < brain::gNeuralValues.maxneurgroups; j++ )	// target group
 		for( int i = 0; i < brain::gNeuralValues.maxneurgroups; i++ )	// source group
-			fprintf( f, "%d\tEITopologicalDistortion_%d->%d\n", eitdgene + i + (j - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups, i, j );
+			fprintf( f, "%ld\tEITopologicalDistortion_%d->%d\n", eitdgene + i + (j - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups, i, j );
 	for( int j = brain::gNeuralValues.numinputneurgroups; j < brain::gNeuralValues.maxneurgroups; j++ )	// target group
 		for( int i = 0; i < brain::gNeuralValues.maxneurgroups; i++ )	// source group
-			fprintf( f, "%d\tIITopologicalDistortion_%d->%d\n", iitdgene + i + (j - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups, i, j );
+			fprintf( f, "%ld\tIITopologicalDistortion_%d->%d\n", iitdgene + i + (j - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups, i, j );
 	for( int j = brain::gNeuralValues.numinputneurgroups; j < brain::gNeuralValues.maxneurgroups; j++ )	// target group
 		for( int i = 0; i < brain::gNeuralValues.maxneurgroups; i++ )	// source group
-			fprintf( f, "%d\tIETopologicalDistortion_%d->%d\n", ietdgene + i + (j - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups, i, j );
+			fprintf( f, "%ld\tIETopologicalDistortion_%d->%d\n", ietdgene + i + (j - brain::gNeuralValues.numinputneurgroups) * brain::gNeuralValues.maxneurgroups, i, j );
 }
 
 

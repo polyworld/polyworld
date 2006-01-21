@@ -13,6 +13,7 @@
 #include <iostream>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/errno.h>
 
 // qt
 #include <qapplication.h>
@@ -789,7 +790,7 @@ void TSimulation::Init()
 	{
 		// If we're going to be saving info on all these files, must increase the number allowed open
 		if( SetMaximumFiles( fMaxCritters * 2 ) )	// 2x is overkill, but let's be safe
-			eprintf( "Error setting maximum files to %d (%d)\n", fMaxCritters * 2, errno );
+			eprintf( "Error setting maximum files to %ld (%d)\n", fMaxCritters * 2, errno );
 
 		if( mkdir( "run/brain", PwDirMode ) )
 			eprintf( "Error making run/brain directory (%d)\n", errno );
@@ -2439,7 +2440,7 @@ void TSimulation::Interact()
 //---------------------------------------------------------------------------
 void TSimulation::RecordGeneSeparation()
 {
-	fprintf(fGeneSeparationFile, "%d %g %g %g\n",
+	fprintf(fGeneSeparationFile, "%ld %g %g %g\n",
 			fStep,
 			fMaxGeneSeparation,
 			fMinGeneSeparation,
@@ -2820,10 +2821,10 @@ void TSimulation::Death(critter* c)
 	
 		sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_incept.txt", c->Number() );
 		if( unlink( s ) )
-			eprintf( "Error (%ld) unlinking \"%s\"\n", errno, s );
+			eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
 		sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_birth.txt", c->Number() );
 		if( unlink( s ) )
-			eprintf( "Error (%ld) unlinking \"%s\"\n", errno, s );
+			eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
 	}
 		
 	// If this was one of the seed critters and we're recording their anatomies, then save the data in the appropriate directory
@@ -2887,19 +2888,19 @@ void TSimulation::Death(critter* c)
 		{
 			sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_incept.txt", loserIDBestSoFar );
 			if( unlink( s ) )
-				eprintf( "Error (%ld) unlinking \"%s\"\n", errno, s );
+				eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
 			sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_birth.txt", loserIDBestSoFar );
 			if( unlink( s ) )
-				eprintf( "Error (%ld) unlinking \"%s\"\n", errno, s );
+				eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
 			sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_death.txt", loserIDBestSoFar );
 			if( unlink( s ) )
-				eprintf( "Error (%ld) unlinking \"%s\"\n", errno, s );
+				eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
 		}
 		if( !fBrainFunctionRecordAll )
 		{
 			sprintf( s, "run/brain/function/brainFunction_%lu.txt", loserIDBestSoFar );
 			if( unlink( s ) )
-				eprintf( "Error (%ld) unlinking \"%s\"\n", errno, s );
+				eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
 		}
 	}
 
@@ -2951,7 +2952,7 @@ void TSimulation::Death(critter* c)
 		char s[256];
 		sprintf( s, "run/brain/function/brainFunction_%lu.txt", c->Number() );
 		if( unlink( s ) )
-			eprintf( "Error (%ld) unlinking \"%s\"\n", errno, s );
+			eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
 	}
 	
 	// following assumes (requires!) list to be currently pointing to c,

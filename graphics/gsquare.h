@@ -63,12 +63,12 @@ inline float gsquare::radiusscale() { return fRadiusScale; }
 class gsquaref : public gsquare
 {
 public:
-    gsquaref() { fFilled = true; }
-    gsquaref(char* n) { fFilled = true; }
-    gsquaref(float lx, float ly) { fFilled = true; }
-    gsquaref(char* n, float lx, float ly) { fFilled = true; }
-    gsquaref(float xa, float ya, float xb, float yb) { fFilled = true; }
-    gsquaref(char* n, float xa, float ya, float xb, float yb) { fFilled = true; }
+    gsquaref() : gsquare() { fFilled = true; }
+    gsquaref(char* n) : gsquare( n ) { fFilled = true; }
+    gsquaref(float lx, float ly) : gsquare( lx, ly ) { fFilled = true; }
+    gsquaref(char* n, float lx, float ly) : gsquare( n, lx, ly ) { fFilled = true; }
+    gsquaref(float xa, float ya, float xb, float yb) : gsquare( xa, ya, xb, yb ) { fFilled = true; }
+    gsquaref(char* n, float xa, float ya, float xb, float yb) : gsquare( n, xa, ya, xb, yb ) { fFilled = true; }
 };
 
 
@@ -130,9 +130,9 @@ protected:
 class gboxf : public gbox
 {
 public:
-    gboxf() { }
-    gboxf(float lx, float ly, float lz) { fFilled = true; }
-    gboxf(char* n, float lx, float ly, float lz) { fFilled = true; }    
+    gboxf() { fFilled = true; }
+    gboxf(float lx, float ly, float lz) : gbox( lx, ly, lz ) { fFilled = true; }
+    gboxf(char* n, float lx, float ly, float lz) : gbox( n, lx, ly, lz ) { fFilled = true; }    
 };
 
 
