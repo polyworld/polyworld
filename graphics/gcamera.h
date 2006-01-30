@@ -27,10 +27,10 @@ public:
 	void SetFar(float f);        
 	void SetAspect(float width, float height);
 	void SetAspect(float a);
-// !!! Virgil Fog
+// Virgil Fog
 	void SetFog( bool fog );
 	bool GetFog();
-// !!! End Virgil Fog
+// End Virgil Fog
 	void Use();
     virtual void print();
     
@@ -59,7 +59,6 @@ private:
 	bool fPerspectiveFixed;
 	bool fPerspectiveInUse;
 	bool glFogOn;			// this will be turned on for critters at the Attach() function
-	/// !!! Virgil: note to self -- will probably need to add more variables here for critter cameras
 };
 
 
@@ -81,9 +80,8 @@ inline bool gcamera::PerspectiveSet() { return fPerspectiveInUse; }
 	however setting the glEnable() and glFogi() here didn't seem to carry over to the 
 	gcamera::UsePerspective() function.  I don't know why.
 */
-// inline void gcamera::SetFog(bool fog) { glFogOn = fog; glEnable(GL_FOG); glFogi(GL_FOG_MODE,GL_LINEAR); }
 inline void gcamera::SetFog(bool fog) { glFogOn = fog; }
 inline bool gcamera::GetFog() { return glFogOn; }
-// !!! End Virgil Fog
+// End Virgil Fog
 
 #endif

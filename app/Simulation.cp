@@ -3695,6 +3695,24 @@ void TSimulation::ReadWorldFile(const char* filename)
 		cout << "recordFoodBandStats" ses fRecordFoodBandStats nl;
 	}
 	
+	if( version >= 18 )
+	{
+	
+		// Accepted values are "linear" and "exponential"
+		in >> sFogFunction; in >> label;
+		cout << "FogFunction" ses sFogFunction nl;
+
+		// This value only does something if sFogFunction = "exponential"
+		// Acceptable values are between 0 and 1 (inclusive)
+		in >> fExpFogDensity; in >> label;
+		cout << "ExpFogDensity" ses fExpFogDensity nl;
+
+		// This value only does something if sFogFunction = "linear"
+		// It defines the maximum distance a critter can see.
+		in >> fLinearFogEnd; in >> label;
+		cout << "LinearFogEnd" ses fLinearFogEnd nl;
+	}
+	
 	in >> fRecordMovie; in >> label;
 	cout << "recordMovie" ses fRecordMovie nl;
 

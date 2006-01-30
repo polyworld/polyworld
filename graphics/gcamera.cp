@@ -121,23 +121,33 @@ void gcamera::UsePerspective()
 /*
 	For the fog to have any effect, so far my experience with it says we should either:
 		1) Change the GL_FOG_END so they can't see all the way to the end of the world
-		2) Change to Exponential Fog with some arbitrary fog-density value.  (maybe make it the fog-density genetic?)
-
-		For now, I've left it as exponential with an arbitrary fog-density of 0.2 Anything higher than 0.5 fogged out almost all vision.
+		2) Change to Exponential Fog with some arbitrary fog-density value.  (maybe make it the fog-density genetic?)		
 */
-	// I had tried to change it so that this if-statement isn't computed 
-	// for every UsePerspective() but the values never seemed to carry over.
+
+	//!!!  I had tried to change it so that this if-statement isn't computed 
+	//!!! for every UsePerspective() but the values never seemed to carry over.
 	if( glFogOn )			
 	{
 		glEnable(GL_FOG);				// turn on Fog to give the critters depth perception
 
-//		glFogi(GL_FOG_MODE, GL_LINEAR);	// a linear Fog
-//		glFogf(GL_FOG_START, fNear );	// the "start"   parameter for linear fog
-//		glFogf(GL_FOG_END, fFar );		// the "end"     parameter for linear fog
+//!!!	if( simulation::glFogFunction() == 'linear' )
+//		{
+/*
+!!!			For the GL_FOG_END parameter, I think it would be simpler just to use the variable 'fFar' instead of creating 
+			another worldfile option to configure.  But, your call.  Currently the linear fog end is stored as a
+			separate variable as part of the TSimulation class.
+*/
+//			glFogi(GL_FOG_MODE, GL_LINEAR);
+//			glFogf(GL_FOG_START, fNear );							// fNear is zero by default
+//!!!		glFogf(GL_FOG_END, simulation::glLinearFogEnd() );		// the "end" parameter for linear fog.  
 
+//		}
+//!!!	else if( simulation::glFogFunction() == 'exponential' )
+//		{
+//			glFogi(GL_FOG_MODE,GL_EXP);
+//!!!		glFogf(GL_FOG_DENSITY, simulation::glExpFogDensity() );
+//		}
 
-		glFogi(GL_FOG_MODE, GL_EXP);	// a exponential Fog		
-		glFogf(GL_FOG_DENSITY, 0.2 );	// the "density" parameter for exponential fog.  Must be between [0,1]
 
 	}
 

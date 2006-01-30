@@ -293,6 +293,12 @@ public:
 	float LifeFractionRecent();
 	unsigned long LifeFractionSamples();  // the number of samples upon which LifeFractionRecent() is based
 
+//Virgil Fog
+	string TSimulation::glFogFunction();
+	float TSimulation::glExpFogDensity();
+	float TSimulation::glLinearFogEnd();
+//End Virgil Fog
+
 
 private slots:
 	
@@ -452,7 +458,10 @@ private:
 	float fMinFoodEnergyAtDeath;
 	float fPower2Energy; // controls amount of damage to other critter
 	float fDeathProbability;
-
+	
+	string sFogFunction;
+	float fExpFogDensity;
+	int   fLinearFogEnd;
 
 	bool fMonitorGeneSeparation; 	// whether gene-separation will be monitored or not
 	bool fRecordGeneSeparation; 	// whether gene-separation will be recorded or not
@@ -517,6 +526,14 @@ inline float TSimulation::EnergyFitnessParameter() const { return fEnergyFitness
 inline float TSimulation::AgeFitnessParameter() const { return fAgeFitnessParameter; }
 inline float TSimulation::LifeFractionRecent() { return fLifeFractionRecentStats.mean(); }
 inline unsigned long TSimulation::LifeFractionSamples() { return fLifeFractionRecentStats.samples(); }
+
+//Virgil Fog
+inline string TSimulation::glFogFunction()  { return sFogFunction;   }
+inline float TSimulation::glExpFogDensity() { return fExpFogDensity; }
+inline float TSimulation::glLinearFogEnd()    { return fLinearFogEnd;  }
+
+
+//End Virgil Fog
 
 // Following two functions only determine whether or not we should create the relevant files.
 // Linking, renaming, and unlinking are handled according to the specific recording options.
