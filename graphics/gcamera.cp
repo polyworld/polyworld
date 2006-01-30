@@ -145,7 +145,11 @@ void gcamera::UsePerspective()
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	gluPerspective(fFOV, fAspect, fNear, fFar);
-	
+
+/*
+// Virgil Fog Debugging Info.  I figured you'd want to look at these diagnostics so I left them here for you.
+
+
 	if( glIsEnabled(GL_FOG) )
 	{
 		cout << "GL FOG is enabled!" << endl;
@@ -176,9 +180,9 @@ void gcamera::UsePerspective()
 	}
 	else
 	{
-//		cout << "------------ GL Fog is NOT enabled ---------- " << endl;
+		cout << "------------ GL Fog is NOT enabled ---------- " << endl;
 	}
-	
+*/	
 	
 	fPerspectiveInUse = true;
 }
