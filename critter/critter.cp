@@ -577,6 +577,7 @@ void critter::SetGraphics()
 {
     // setup the camera & window for our critter to see the world in
 	float fovx = FieldOfView();
+
 	fCamera.SetAspect(fovx * brain::retinaheight / (gCritterFOV * brain::retinawidth));
     fCamera.settranslation(0.0, 0.0, -0.5 * fLengthZ);
     
@@ -598,6 +599,7 @@ void critter::SetGraphics()
         fCamera.SetNear(.01);
         fCamera.SetFar(1.5 * globals::worldsize);
         fCamera.SetFOV(gCritterFOV);
+		fCamera.SetFog(true);
         fCamera.AttachTo(this);
     }
 }

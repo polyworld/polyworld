@@ -61,7 +61,8 @@ gcamera::gcamera()
 		fUsingLookAt(false),
 		fFollowObject(NULL),
 		fPerspectiveFixed(false),
-		fPerspectiveInUse(false)
+		fPerspectiveInUse(false),
+		glFogOn(false)				// this will be turned on for cameras attached to critters at the Attach() function
 {
 	fPosition[0] = 0.0;
     fPosition[1] = 0.0;
@@ -90,6 +91,7 @@ gcamera::~gcamera()
 //---------------------------------------------------------------------------
 void gcamera::SetAspect(float width, float height)
 {
+
 	fAspect = float(width) / float(height);
 }
 
@@ -103,6 +105,7 @@ void gcamera::SetAspect(float width, float height)
 //---------------------------------------------------------------------------
 void gcamera::SetPerspective(float fov, float a, float n, float f)
 {
+
 	fFOV = fov;
 	fAspect = a;
 	fNear = n;
@@ -115,9 +118,67 @@ void gcamera::SetPerspective(float fov, float a, float n, float f)
 //---------------------------------------------------------------------------
 void gcamera::UsePerspective()
 {
+/*
+	For the fog to have any effect, so far my experience with it says we should either:
+		1) Change the GL_FOG_END so they can't see all the way to the end of the world
+		2) Change to Exponential Fog with some arbitrary fog-density value.  (maybe make it the fog-density genetic?)
+
+		For now, I've left it as exponential with an arbitrary fog-density of 0.2 Anything higher than 0.5 fogged out almost all vision.
+*/
+	// I had tried to change it so that this if-statement isn't computed 
+	// for every UsePerspective() but the values never seemed to carry over.
+	if( glFogOn )			
+	{
+		glEnable(GL_FOG);				// turn on Fog to give the critters depth perception
+
+//		glFogi(GL_FOG_MODE, GL_LINEAR);	// a linear Fog
+//		glFogf(GL_FOG_START, fNear );	// the "start"   parameter for linear fog
+//		glFogf(GL_FOG_END, fFar );		// the "end"     parameter for linear fog
+
+
+		glFogi(GL_FOG_MODE, GL_EXP);	// a exponential Fog		
+		glFogf(GL_FOG_DENSITY, 0.2 );	// the "density" parameter for exponential fog.  Must be between [0,1]
+
+	}
+
+
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	gluPerspective(fFOV, fAspect, fNear, fFar);
+	
+	if( glIsEnabled(GL_FOG) )
+	{
+		cout << "GL FOG is enabled!" << endl;
+		GLint*   glFogColor   = new GLint;
+		GLint*   glFogIndex   = new GLint;
+		GLfloat* glFogDensity = new GLfloat;
+		GLint*   glFogStart   = new GLint;
+		GLint*   glFogEnd     = new GLint;
+		GLint*   glFogMode    = new GLint;
+
+		glGetIntegerv(GL_FOG_COLOR,glFogColor);
+		glGetIntegerv(GL_FOG_INDEX,glFogIndex);
+		glGetFloatv(GL_FOG_DENSITY,glFogDensity);
+		glGetIntegerv(GL_FOG_START,glFogStart);
+		glGetIntegerv(GL_FOG_END,glFogEnd);
+		glGetIntegerv(GL_FOG_MODE,glFogMode);
+								
+		cout << "Fog Color: "   << *glFogColor  << " // Index: " << *glFogIndex
+			 << " // Density: " << *glFogDensity << " // Start: " << *glFogStart
+			 << " // End: "     << *glFogEnd     << " // Mode: "  << *glFogMode << endl;
+		
+		delete glFogColor;
+		delete glFogIndex;
+		delete glFogDensity;
+		delete glFogStart;
+		delete glFogEnd;
+		delete glFogMode;
+	}
+	else
+	{
+//		cout << "------------ GL Fog is NOT enabled ---------- " << endl;
+	}
+	
 	
 	fPerspectiveInUse = true;
 }
@@ -229,6 +290,7 @@ void gcamera::LookAt(float vx, float vy, float vz, float px, float py, float pz,
 void gcamera::Use()
 {
 	UpdatePerspective();  // will do nothing if (fPerspectiveFixed) is true
+
 	
     if (fUsingLookAt)
     {

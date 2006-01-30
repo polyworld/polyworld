@@ -26,8 +26,12 @@ public:
 	void SetNear(float n);
 	void SetFar(float f);        
 	void SetAspect(float width, float height);
-	void SetAspect(float a);    
-    void Use();
+	void SetAspect(float a);
+// !!! Virgil Fog
+	void SetFog( bool fog );
+	bool GetFog();
+// !!! End Virgil Fog
+	void Use();
     virtual void print();
     
 	void AttachTo(gobject* gobj);
@@ -43,7 +47,7 @@ public:
 	void SetFixationPoint(float x, float y, float z);        
 	void UseLookAt();    
 	void LookAt(float vx, float vy, float vz, float px, float py, float pz, float t);
-        
+	
 private:
 	float fFOV; // short
 	float fAspect;
@@ -54,7 +58,8 @@ private:
 	gobject* fFollowObject;
 	bool fPerspectiveFixed;
 	bool fPerspectiveInUse;
-	        
+	bool glFogOn;			// this will be turned on for critters at the Attach() function
+	/// !!! Virgil: note to self -- will probably need to add more variables here for critter cameras
 };
 
 
@@ -69,5 +74,16 @@ inline void gcamera::SetFar(float f) { fFar = f; }
 inline void gcamera::SetAspect(float a) { fAspect = a; }
 //inline void gcamera::SetTwist(float t) { fAngle[2] = t; }
 inline bool gcamera::PerspectiveSet() { return fPerspectiveInUse; }
+
+// !!! Virgil Fog
+/* I had initially tried to set the GL_FOG parameters hear so that we wouldn't have to spend 
+	the cycles to check the glFogOn variable every time we did a gcamera::UsePerspective(), 
+	however setting the glEnable() and glFogi() here didn't seem to carry over to the 
+	gcamera::UsePerspective() function.  I don't know why.
+*/
+// inline void gcamera::SetFog(bool fog) { glFogOn = fog; glEnable(GL_FOG); glFogi(GL_FOG_MODE,GL_LINEAR); }
+inline void gcamera::SetFog(bool fog) { glFogOn = fog; }
+inline bool gcamera::GetFog() { return glFogOn; }
+// !!! End Virgil Fog
 
 #endif
