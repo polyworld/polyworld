@@ -309,6 +309,9 @@ void TSimulation::Stop()
     brain::braindestruct();
     
     critter::critterdestruct();
+	
+	// Virgil - Complexity -
+	// fclose( file );
 }
 
 
@@ -588,6 +591,9 @@ void TSimulation::Step()
 			sprintf( t, "run/brain/bestSoFar/%ld/%d_brainFunction_%ld.txt", fStep, i, fFittest[i]->critterID );
 			if( link( s, t ) )
 				eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
+			// Complexity - If we want to compute complexity for bestSoFar, do it here (filename is in 't')
+			// test for existence of complexity in fFittest[] before (potentially re-)computing it (just a lookup)
+			// store it in new variable in fFittest[]
 		}
 	}
 	
@@ -620,8 +626,16 @@ void TSimulation::Step()
 				sprintf( t, "run/brain/bestRecent/%ld/%d_brainFunction_%ld.txt", fStep, i, fRecentFittest[i]->critterID );
 				if( link( s, t ) )
 					eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
+				// Virgil - file to use for complexity calculation is the one just above ('t')
+				// store N (limit <= fNumberRecentFit) complexity measures
+				// Complexity - if we compute complexity for fFittest[], check for its existence here,
+				// before (potentially re-)computing it (this is a search over fFittest[], like loop on limit2 below)
 			}
 		}
+		// Virgil - calculate mean and std dev of the stored complexity measures, and write it out to
+		// file:  run/brain/bestRecent/complexity.txt
+		// write out timestep, mean, std. dev.
+		// (timestep is fStep)
 		
 		// Now delete all bestRecent critter files, unless they are also on the bestSoFar list
 		// Also empty the bestRecent list here, so we start over each epoch
@@ -823,6 +837,14 @@ void TSimulation::Init()
 					eprintf( "Error making run/brain/seeds/function directory (%d)\n", errno );
 		}
 	}
+
+#if 0
+	// Virgil - Complexity -
+	if( fLogComplexity )
+	{
+		// fopen the run/brain/bestRecent/complexity.txt file
+	}
+#endif
 
 	// If we're going to record the gene means and std devs, we need to allocate a couple of stat arrays
 	if( fRecordGeneStats )

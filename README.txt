@@ -74,6 +74,14 @@ Download Polyworld source (from SourceForge)
   they are defined, and uses the right communication protocol to
   talk to the right host)
 
+Download, build, and install gsl (from gnu.org)
+* General page for gsl downloading: http://www.gnu.org/software/gsl/#downloading
+* Or obtain directly from: ftp://ftp.gnu.org/gnu/gsl/gsl-1.7.tar.gz
+* Unzip and untar wherever you want
+* Then follow the instructions in "INSTALL"
+  (./configure ; make ; make install)
+  This should install to /usr/local/include and /usr/local/lib.
+
 Mac versus Linux Installs
 * The default 'polyworld.pro' file works only on Mac.  A special
   polyworld_linux.pro has been made for Linux.  To successfully

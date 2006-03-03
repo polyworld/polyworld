@@ -63,6 +63,7 @@
 		37577843078C8E9900CA4042 /* critter.obj in CopyFiles */ = {isa = PBXBuildFile; fileRef = 76CBA5E2062BEE2B001C79E7 /* critter.obj */; };
 		37577844078C8E9900CA4042 /* ground.obj in CopyFiles */ = {isa = PBXBuildFile; fileRef = 76CBA5E3062BEE2B001C79E7 /* ground.obj */; };
 		760097E708879D78008CD45B /* MainWindow.h in Resources */ = {isa = PBXBuildFile; fileRef = 760097E608879D78008CD45B /* MainWindow.h */; };
+		7625064B09B8CA5500C36C36 /* alife_complexity_functions.h in Headers */ = {isa = PBXBuildFile; fileRef = 7625064909B8CA5500C36C36 /* alife_complexity_functions.h */; };
 		7668D1690885AC65004158C6 /* PwMovieTools.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7668D1680885AC65004158C6 /* PwMovieTools.cp */; };
 		7668D16B0885AD07004158C6 /* PwMovieTools.h in Headers */ = {isa = PBXBuildFile; fileRef = 7668D16A0885AD07004158C6 /* PwMovieTools.h */; };
 		7668D2F208864A7E004158C6 /* PwMovieTools.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7668D1680885AC65004158C6 /* PwMovieTools.cp */; };
@@ -247,6 +248,9 @@
 		4A9504CAFFE6A41611CA0CBA /* CoreServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreServices.framework; path = /System/Library/Frameworks/CoreServices.framework; sourceTree = "<absolute>"; };
 		760097BD0887874B008CD45B /* PwMoviePlayer.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = PwMoviePlayer.h; sourceTree = "<group>"; };
 		760097E608879D78008CD45B /* MainWindow.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = MainWindow.h; sourceTree = "<group>"; };
+		7625064909B8CA5500C36C36 /* alife_complexity_functions.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = alife_complexity_functions.h; sourceTree = "<group>"; };
+		7625064A09B8CA5500C36C36 /* probe_activity.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = probe_activity.cpp; path = utils/probe_activity.cpp; sourceTree = "<group>"; };
+		7625066609B8CCE600C36C36 /* probe_activity */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = probe_activity; sourceTree = BUILT_PRODUCTS_DIR; };
 		7668D1680885AC65004158C6 /* PwMovieTools.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = PwMovieTools.cp; sourceTree = "<group>"; };
 		7668D16A0885AD07004158C6 /* PwMovieTools.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = PwMovieTools.h; sourceTree = "<group>"; };
 		7668D2E308864A66004158C6 /* PwMoviePlayer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PwMoviePlayer.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -333,6 +337,13 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		7625066409B8CCE600C36C36 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		7668D2E108864A66004158C6 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -364,6 +375,7 @@
 			children = (
 				8D0C4E970486CD37000505A6 /* Polyworld.app */,
 				7668D2E308864A66004158C6 /* PwMoviePlayer.app */,
+				7625066609B8CCE600C36C36 /* probe_activity */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -391,6 +403,7 @@
 				76CBA5A3062BEDBC001C79E7 /* utils */,
 				32DBCF6D0370B57F00C91783 /* PolyworldPrefix.pch */,
 				7668D2F508864AA3004158C6 /* PwMoviePlayer */,
+				7625065209B8CC5600C36C36 /* probe_activity */,
 			);
 			name = Sources;
 			sourceTree = "<group>";
@@ -419,6 +432,14 @@
 				0249A66BFF388E3F11CA2CEA /* libstdc++.a */,
 			);
 			name = "External Frameworks and Libraries";
+			sourceTree = "<group>";
+		};
+		7625065209B8CC5600C36C36 /* probe_activity */ = {
+			isa = PBXGroup;
+			children = (
+				7625064A09B8CA5500C36C36 /* probe_activity.cpp */,
+			);
+			name = probe_activity;
 			sourceTree = "<group>";
 		};
 		7668D2F508864AA3004158C6 /* PwMoviePlayer */ = {
@@ -534,6 +555,7 @@
 		76CBA5A3062BEDBC001C79E7 /* utils */ = {
 			isa = PBXGroup;
 			children = (
+				7625064909B8CA5500C36C36 /* alife_complexity_functions.h */,
 				76CBA5A4062BEDBC001C79E7 /* error.cp */,
 				76CBA5A5062BEDBC001C79E7 /* error.h */,
 				769996580742BCF0001B0A65 /* gdlink.h */,
@@ -590,12 +612,43 @@
 				76AA4629073AAF7E00508D3D /* TextStatusWindow.h in Headers */,
 				769996590742BCF0001B0A65 /* gdlink.h in Headers */,
 				7668D16B0885AD07004158C6 /* PwMovieTools.h in Headers */,
+				7625064B09B8CA5500C36C36 /* alife_complexity_functions.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
+		7625066509B8CCE600C36C36 /* probe_activity */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7625066D09B8CD0500C36C36 /* Build configuration list for PBXNativeTarget "probe_activity" */;
+			buildPhases = (
+				7625066309B8CCE600C36C36 /* Sources */,
+				7625066409B8CCE600C36C36 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			buildSettings = {
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				GCC_MODEL_TUNING = G5;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "$(SYSTEM_LIBRARY_DIR)/Frameworks/Carbon.framework/Headers/Carbon.h";
+				INSTALL_PATH = "$(HOME)/bin";
+				OTHER_LDFLAGS = (
+					"-framework",
+					Carbon,
+				);
+				PREBINDING = NO;
+				PRODUCT_NAME = probe_activity;
+				ZERO_LINK = YES;
+			};
+			dependencies = (
+			);
+			name = probe_activity;
+			productName = probe_activity;
+			productReference = 7625066609B8CCE600C36C36 /* probe_activity */;
+			productType = "com.apple.product-type.tool";
+		};
 		7668D2E208864A66004158C6 /* PwMoviePlayer */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 76293F180981AF4600D27C6E /* Build configuration list for PBXNativeTarget "PwMoviePlayer" */;
@@ -770,6 +823,7 @@
 				76B2FB68084CE6E9002FBDA1 /* moc */,
 				7668D2E208864A66004158C6 /* PwMoviePlayer */,
 				76D02AFD0894900E00D89155 /* moc_PwMoviePlayer */,
+				7625066509B8CCE600C36C36 /* probe_activity */,
 			);
 		};
 /* End PBXProject section */
@@ -835,6 +889,13 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		7625066309B8CCE600C36C36 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		7668D2E008864A66004158C6 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -914,6 +975,84 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
+		7625066E09B8CD0500C36C36 /* Development */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_MODEL_TUNING = G5;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "$(SYSTEM_LIBRARY_DIR)/Frameworks/Carbon.framework/Headers/Carbon.h";
+				INSTALL_PATH = "$(HOME)/bin";
+				OTHER_LDFLAGS = (
+					"-framework",
+					Carbon,
+				);
+				PREBINDING = NO;
+				PRODUCT_NAME = probe_activity;
+				ZERO_LINK = YES;
+			};
+			name = Development;
+		};
+		7625066F09B8CD0500C36C36 /* Deployment */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_MODEL_TUNING = G5;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "$(SYSTEM_LIBRARY_DIR)/Frameworks/Carbon.framework/Headers/Carbon.h";
+				INSTALL_PATH = "$(HOME)/bin";
+				OTHER_LDFLAGS = (
+					"-framework",
+					Carbon,
+				);
+				PREBINDING = NO;
+				PRODUCT_NAME = probe_activity;
+				ZERO_LINK = NO;
+			};
+			name = Deployment;
+		};
+		7625067009B8CD0500C36C36 /* Profiling */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				GCC_MODEL_TUNING = G5;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "$(SYSTEM_LIBRARY_DIR)/Frameworks/Carbon.framework/Headers/Carbon.h";
+				INSTALL_PATH = "$(HOME)/bin";
+				OTHER_LDFLAGS = (
+					"-framework",
+					Carbon,
+				);
+				PREBINDING = NO;
+				PRODUCT_NAME = probe_activity;
+				ZERO_LINK = YES;
+			};
+			name = Profiling;
+		};
+		7625067109B8CD0500C36C36 /* Default */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				GCC_MODEL_TUNING = G5;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "$(SYSTEM_LIBRARY_DIR)/Frameworks/Carbon.framework/Headers/Carbon.h";
+				INSTALL_PATH = "$(HOME)/bin";
+				OTHER_LDFLAGS = (
+					"-framework",
+					Carbon,
+				);
+				PREBINDING = NO;
+				PRODUCT_NAME = probe_activity;
+				ZERO_LINK = YES;
+			};
+			name = Default;
+		};
 		76293F0A0981AF4600D27C6E /* Development */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1655,6 +1794,17 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		7625066D09B8CD0500C36C36 /* Build configuration list for PBXNativeTarget "probe_activity" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7625066E09B8CD0500C36C36 /* Development */,
+				7625066F09B8CD0500C36C36 /* Deployment */,
+				7625067009B8CD0500C36C36 /* Profiling */,
+				7625067109B8CD0500C36C36 /* Default */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Default;
+		};
 		76293F090981AF4600D27C6E /* Build configuration list for PBXAggregateTarget "moc" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

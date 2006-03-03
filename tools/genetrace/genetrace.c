@@ -2,7 +2,7 @@
 //
 // Reads a genestats.txt file output by Polyworld and outputs a .dat file suitable for MatLab
 //
-// Usage:  genetrace [-d numDigitsToProcess (all)] [-m maxSeparationOfDigits (1)] [digits_file (stdin)]
+// Usage:  genetrace
 
 #define DebugGeneTrace 1
 
