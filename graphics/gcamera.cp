@@ -118,48 +118,13 @@ void gcamera::SetPerspective(float fov, float a, float n, float f)
 //---------------------------------------------------------------------------
 void gcamera::UsePerspective()
 {
-/*
-	For the fog to have any effect, so far my experience with it says we should either:
-		1) Change the GL_FOG_END so they can't see all the way to the end of the world
-		2) Change to Exponential Fog with some arbitrary fog-density value.  (maybe make it the fog-density genetic?)		
-*/
-
-	//!!!  I had tried to change it so that this if-statement isn't computed 
-	//!!! for every UsePerspective() but the values never seemed to carry over.
-	if( glFogOn )			
-	{
-		glEnable(GL_FOG);				// turn on Fog to give the critters depth perception
-
-//!!!	if( simulation::glFogFunction() == 'linear' )
-//		{
-/*
-!!!			For the GL_FOG_END parameter, I think it would be simpler just to use the variable 'fFar' instead of creating 
-			another worldfile option to configure.  But, your call.  Currently the linear fog end is stored as a
-			separate variable as part of the TSimulation class.
-*/
-//			glFogi(GL_FOG_MODE, GL_LINEAR);
-//			glFogf(GL_FOG_START, fNear );							// fNear is zero by default
-//!!!		glFogf(GL_FOG_END, simulation::glLinearFogEnd() );		// the "end" parameter for linear fog.  
-
-//		}
-//!!!	else if( simulation::glFogFunction() == 'exponential' )
-//		{
-//			glFogi(GL_FOG_MODE,GL_EXP);
-//!!!		glFogf(GL_FOG_DENSITY, simulation::glExpFogDensity() );
-//		}
-
-
-	}
-
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	gluPerspective(fFOV, fAspect, fNear, fFar);
+	// Virgil Fog Debugging Info.  I figured you'd want to look at these diagnostics so I left them here for you.
 
 /*
-// Virgil Fog Debugging Info.  I figured you'd want to look at these diagnostics so I left them here for you.
-
-
 	if( glIsEnabled(GL_FOG) )
 	{
 		cout << "GL FOG is enabled!" << endl;
@@ -358,4 +323,42 @@ void gcamera::print()
         cout << "  not attached to any object" nl;
 	}
 }
+//---------------------------------------------------------------------------
+// gcamera::SetFog
+//---------------------------------------------------------------------------    
+void gcamera::SetFog( bool fog, char function, float density, int end )
+{
+	if( fog )			
+	{
+		glEnable(GL_FOG);				// turn on Fog to give the critters depth perception
 
+		if( function == 'L' )		// is it linear?
+		{
+
+//			cout << "Function is Linear. end: " << end << endl;
+			glFogi(GL_FOG_MODE, GL_LINEAR);
+			glFogf(GL_FOG_START, fNear );							// fNear is zero by default
+			glFogf(GL_FOG_END, end );		// the "end" parameter for linear fog.  
+
+		}
+		else if( function == 'E' )
+		{
+//			cout << "Function is Exponential. Density: " << density << endl;
+			glFogi(GL_FOG_MODE,GL_EXP);
+			glFogf(GL_FOG_DENSITY, density );
+		}
+		else
+		{
+			cerr << "Do not know glFogFunction beginning with '" << function << "'" << endl;
+		
+		}
+	}
+	
+	else
+	{
+		glDisable(GL_FOG);		// Turn off the fog if for some reason we ever wanted critters to turn it off.	
+	}
+
+
+
+}

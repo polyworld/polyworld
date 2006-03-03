@@ -3,7 +3,7 @@
 10002  maxSteps
 1      docpuwork
 10000  dumpfreq
-1000   statfreq
+10   statfreq
 1      edges
 0      wraparound
 1      vision
@@ -13,7 +13,7 @@
 60     minnumcritters
 300    maxnumcritters
 90    initnumcritters
-0    numberToSeed
+90    numberToSeed
 0.0    probabilityOfMutatingSeed
 -1     misccritters
 
@@ -114,9 +114,7 @@
 8      monheight_not_used
 1      monstride
 100.0  worldsize
-2      numbarriers
-33.33 -100. 33.33 -10. barrierposition
-66.67 -100. 66.67 -10. barrierposition
+0      numbarriers
 
 0      genesepmon
 0      geneseprec
@@ -162,9 +160,9 @@
 
 2      numFoodBands
 -1.0   foodBand[0].zMin
--0.6   foodBand[0].zMax
+-0.75   foodBand[0].zMax
 0.8    foodBand[0].fraction
--.1    foodBand[1].zMin
+-0.25    foodBand[1].zMin
 0.0    foodBand[1].zMax
 0.2    foodBand[1].fraction
 1      useProbabilisticFoodBands
@@ -208,8 +206,8 @@
 1      recordGeneStats
 1      recordFoodBandStats
 
-linear FogFunction
+exponential FogFunction
 0.1    ExponentialFogDensity
-50     LinearFogEnd
+25     LinearFogEnd
 
-1      recordMovie
+0      recordMovie

@@ -145,6 +145,8 @@
 		8D0C4E8D0486CD37000505A6 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 0867D6AAFE840B52C02AAC07 /* InfoPlist.strings */; };
 		8D0C4E920486CD37000505A6 /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 20286C33FDCF999611CA2CEA /* Carbon.framework */; };
 		8D0C4E930486CD37000505A6 /* libstdc++.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 0249A66BFF388E3F11CA2CEA /* libstdc++.a */; };
+		C5D8635409A83322001FC876 /* complexity_functions.h in Headers */ = {isa = PBXBuildFile; fileRef = C5D8635209A83322001FC876 /* complexity_functions.h */; };
+		C5D8635509A83322001FC876 /* complexity_functions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C5D8635309A83322001FC876 /* complexity_functions.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXBuildStyle section */
@@ -330,6 +332,8 @@
 		84ED837B062E7EED00AEEA18 /* CritterPOVWindow.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = CritterPOVWindow.h; sourceTree = "<group>"; };
 		8D0C4E960486CD37000505A6 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		8D0C4E970486CD37000505A6 /* Polyworld.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Polyworld.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C5D8635209A83322001FC876 /* complexity_functions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = complexity_functions.h; sourceTree = "<group>"; };
+		C5D8635309A83322001FC876 /* complexity_functions.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = complexity_functions.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -459,6 +463,8 @@
 			isa = PBXGroup;
 			children = (
 				76CBA574062BEDBC001C79E7 /* brain.cp */,
+				C5D8635209A83322001FC876 /* complexity_functions.h */,
+				C5D8635309A83322001FC876 /* complexity_functions.cpp */,
 				76CBA575062BEDBC001C79E7 /* brain.h */,
 				76CBA576062BEDBC001C79E7 /* critter.cp */,
 				76CBA577062BEDBC001C79E7 /* critter.h */,
@@ -590,6 +596,7 @@
 				76AA4629073AAF7E00508D3D /* TextStatusWindow.h in Headers */,
 				769996590742BCF0001B0A65 /* gdlink.h in Headers */,
 				7668D16B0885AD07004158C6 /* PwMovieTools.h in Headers */,
+				C5D8635409A83322001FC876 /* complexity_functions.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -884,6 +891,7 @@
 				37577669078C8C6200CA4042 /* moc_PWApp.cpp in Sources */,
 				3757766A078C8C6200CA4042 /* moc_Simulation.cpp in Sources */,
 				7668D1690885AC65004158C6 /* PwMovieTools.cp in Sources */,
+				C5D8635509A83322001FC876 /* complexity_functions.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1051,10 +1059,14 @@
 					$QtInc/QtGui,
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
+					/sw/include,
 				);
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Applications";
-				LIBRARY_SEARCH_PATHS = $QtLib;
+				LIBRARY_SEARCH_PATHS = (
+					$QtLib,
+					/sw/lib,
+				);
 				LIBRARY_STYLE = Static;
 				OPTIMIZATION_CFLAGS = "-O0";
 				OTHER_CFLAGS = (
@@ -1071,6 +1083,9 @@
 					"-framework",
 					QtOpenGL,
 					"-lz",
+					"-lgsl",
+					"-lgslcblas",
+					"-lm",
 				);
 				OTHER_REZFLAGS = "";
 				PREBINDING = YES;
@@ -1125,10 +1140,14 @@
 					$QtInc/QtGui,
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
+					/sw/include,
 				);
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Applications";
-				LIBRARY_SEARCH_PATHS = $QtLib;
+				LIBRARY_SEARCH_PATHS = (
+					$QtLib,
+					/sw/lib,
+				);
 				LIBRARY_STYLE = Static;
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
@@ -1147,6 +1166,9 @@
 					"-framework",
 					QtOpenGL,
 					"-lz",
+					"-lgsl",
+					"-lgslcblas",
+					"-lm",
 				);
 				OTHER_REZFLAGS = "";
 				PREBINDING = YES;
@@ -1201,10 +1223,14 @@
 					$QtInc/QtGui,
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
+					/sw/include,
 				);
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Applications";
-				LIBRARY_SEARCH_PATHS = $QtLib;
+				LIBRARY_SEARCH_PATHS = (
+					$QtLib,
+					/sw/lib,
+				);
 				LIBRARY_STYLE = Static;
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
@@ -1219,6 +1245,9 @@
 					"-framework",
 					QtOpenGL,
 					"-lz",
+					"-lgsl",
+					"-lgslcblas",
+					"-lm",
 				);
 				OTHER_REZFLAGS = "";
 				PREBINDING = YES;
@@ -1269,10 +1298,14 @@
 					$QtInc/QtGui,
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
+					/sw/include,
 				);
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Applications";
-				LIBRARY_SEARCH_PATHS = $QtLib;
+				LIBRARY_SEARCH_PATHS = (
+					$QtLib,
+					/sw/lib,
+				);
 				LIBRARY_STYLE = Static;
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
@@ -1287,6 +1320,9 @@
 					"-framework",
 					QtOpenGL,
 					"-lz",
+					"-lgsl",
+					"-lgslcblas",
+					"-lm",
 				);
 				OTHER_REZFLAGS = "";
 				PREBINDING = YES;

@@ -296,7 +296,7 @@ public:
 //Virgil Fog
 	string TSimulation::glFogFunction();
 	float TSimulation::glExpFogDensity();
-	float TSimulation::glLinearFogEnd();
+	int TSimulation::glLinearFogEnd();
 //End Virgil Fog
 
 
@@ -530,7 +530,7 @@ inline unsigned long TSimulation::LifeFractionSamples() { return fLifeFractionRe
 //Virgil Fog
 inline string TSimulation::glFogFunction()  { return sFogFunction;   }
 inline float TSimulation::glExpFogDensity() { return fExpFogDensity; }
-inline float TSimulation::glLinearFogEnd()    { return fLinearFogEnd;  }
+inline int TSimulation::glLinearFogEnd()    { return fLinearFogEnd;  }
 
 
 //End Virgil Fog

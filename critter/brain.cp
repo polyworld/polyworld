@@ -264,6 +264,14 @@ void brain::dumpAnatomical( char* directoryName, char* suffix, long index, float
 		for( j = 0; j <= numneurons; j++ )	// running over pre-synaptic neurons + bias ('=' because of bias)
 			fprintf( file, "%+06.4f ", connectionMatrix[j + i*(numneurons+1)] * inverseMaxWeight );
 		fprintf( file, ";\n" );
+
+//Begin Virgil
+
+//		for( j = 0; j <= numneurons; j++ )	// running over pre-synaptic neurons + bias ('=' because of bias)
+//			fprintf( file, "%+06.4f ", connectionMatrix[j + i*(numneurons+1)] * inverseMaxWeight );
+
+		
+//End Virgil		
 	}
 	
 	fclose( file );
