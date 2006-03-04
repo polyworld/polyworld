@@ -42,6 +42,9 @@ struct FitStruct
 {
 	ulong	critterID;
 	float	fitness;
+//Virgil	
+	float   Complexity;
+//End Virgil
 	genome*	genes;
 };
 typedef struct FitStruct FitStruct;
@@ -293,11 +296,9 @@ public:
 	float LifeFractionRecent();
 	unsigned long LifeFractionSamples();  // the number of samples upon which LifeFractionRecent() is based
 
-//Virgil Fog
-	string TSimulation::glFogFunction();
+	char TSimulation::glFogFunction();
 	float TSimulation::glExpFogDensity();
 	int TSimulation::glLinearFogEnd();
-//End Virgil Fog
 
 
 private slots:
@@ -459,7 +460,7 @@ private:
 	float fPower2Energy; // controls amount of damage to other critter
 	float fDeathProbability;
 	
-	string sFogFunction;
+	char   fFogFunction;
 	float fExpFogDensity;
 	int   fLinearFogEnd;
 
@@ -527,13 +528,12 @@ inline float TSimulation::AgeFitnessParameter() const { return fAgeFitnessParame
 inline float TSimulation::LifeFractionRecent() { return fLifeFractionRecentStats.mean(); }
 inline unsigned long TSimulation::LifeFractionSamples() { return fLifeFractionRecentStats.samples(); }
 
-//Virgil Fog
-inline string TSimulation::glFogFunction()  { return sFogFunction;   }
+//GL Fog
+inline char TSimulation::glFogFunction()  { return fFogFunction;   }
 inline float TSimulation::glExpFogDensity() { return fExpFogDensity; }
 inline int TSimulation::glLinearFogEnd()    { return fLinearFogEnd;  }
 
 
-//End Virgil Fog
 
 // Following two functions only determine whether or not we should create the relevant files.
 // Linking, renaming, and unlinking are handled according to the specific recording options.

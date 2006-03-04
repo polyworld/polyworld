@@ -32,6 +32,7 @@
 #include "SceneView.h"
 #include "TextStatusWindow.h"
 #include "PwMovieTools.h"
+#include "complexity_functions.h"
 
 using namespace std;
 
@@ -3721,15 +3722,23 @@ void TSimulation::ReadWorldFile(const char* filename)
 	{
 	
 		// Accepted values are "linear" and "exponential"
-		in >> sFogFunction; in >> label;
-		cout << "FogFunction" ses sFogFunction nl;
+		string temp;
+		in >> temp; in >> label;
+		cout << "FogFunction" ses temp nl;
 
-		// This value only does something if sFogFunction = "exponential"
+		if( toupper(temp[0]) == 'E' )			//Exponential
+			fFogFunction = 'E';
+		else if( toupper(temp[0]) == 'L' )		//Linear
+			fFogFunction = 'L';
+		else
+			fFogFunction = 'O';					// No Fog (OFF)
+
+		// This value only does something if Fog Function is exponential
 		// Acceptable values are between 0 and 1 (inclusive)
 		in >> fExpFogDensity; in >> label;
 		cout << "ExpFogDensity" ses fExpFogDensity nl;
 
-		// This value only does something if sFogFunction = "linear"
+		// This value only does something if Fog Function is linear
 		// It defines the maximum distance a critter can see.
 		in >> fLinearFogEnd; in >> label;
 		cout << "LinearFogEnd" ses fLinearFogEnd nl;

@@ -206,8 +206,8 @@
 1      recordGeneStats
 1      recordFoodBandStats
 
-exponential FogFunction
-0.5    ExponentialFogDensity
+linear FogFunction
+0.1    ExponentialFogDensity
 25     LinearFogEnd
 
 0      recordMovie

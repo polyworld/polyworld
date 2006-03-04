@@ -63,7 +63,6 @@
 		37577843078C8E9900CA4042 /* critter.obj in CopyFiles */ = {isa = PBXBuildFile; fileRef = 76CBA5E2062BEE2B001C79E7 /* critter.obj */; };
 		37577844078C8E9900CA4042 /* ground.obj in CopyFiles */ = {isa = PBXBuildFile; fileRef = 76CBA5E3062BEE2B001C79E7 /* ground.obj */; };
 		760097E708879D78008CD45B /* MainWindow.h in Resources */ = {isa = PBXBuildFile; fileRef = 760097E608879D78008CD45B /* MainWindow.h */; };
-		7625064B09B8CA5500C36C36 /* alife_complexity_functions.h in Headers */ = {isa = PBXBuildFile; fileRef = 7625064909B8CA5500C36C36 /* alife_complexity_functions.h */; };
 		7668D1690885AC65004158C6 /* PwMovieTools.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7668D1680885AC65004158C6 /* PwMovieTools.cp */; };
 		7668D16B0885AD07004158C6 /* PwMovieTools.h in Headers */ = {isa = PBXBuildFile; fileRef = 7668D16A0885AD07004158C6 /* PwMovieTools.h */; };
 		7668D2F208864A7E004158C6 /* PwMovieTools.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7668D1680885AC65004158C6 /* PwMovieTools.cp */; };
@@ -146,6 +145,7 @@
 		8D0C4E8D0486CD37000505A6 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 0867D6AAFE840B52C02AAC07 /* InfoPlist.strings */; };
 		8D0C4E920486CD37000505A6 /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 20286C33FDCF999611CA2CEA /* Carbon.framework */; };
 		8D0C4E930486CD37000505A6 /* libstdc++.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 0249A66BFF388E3F11CA2CEA /* libstdc++.a */; };
+		C58654FC09B94E1C000F30F8 /* complexity_functions.h in Headers */ = {isa = PBXBuildFile; fileRef = C58654FB09B94E1C000F30F8 /* complexity_functions.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXBuildStyle section */
@@ -248,7 +248,6 @@
 		4A9504CAFFE6A41611CA0CBA /* CoreServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreServices.framework; path = /System/Library/Frameworks/CoreServices.framework; sourceTree = "<absolute>"; };
 		760097BD0887874B008CD45B /* PwMoviePlayer.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = PwMoviePlayer.h; sourceTree = "<group>"; };
 		760097E608879D78008CD45B /* MainWindow.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = MainWindow.h; sourceTree = "<group>"; };
-		7625064909B8CA5500C36C36 /* alife_complexity_functions.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = alife_complexity_functions.h; sourceTree = "<group>"; };
 		7625064A09B8CA5500C36C36 /* probe_activity.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = probe_activity.cpp; path = utils/probe_activity.cpp; sourceTree = "<group>"; };
 		7625066609B8CCE600C36C36 /* probe_activity */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = probe_activity; sourceTree = BUILT_PRODUCTS_DIR; };
 		7668D1680885AC65004158C6 /* PwMovieTools.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = PwMovieTools.cp; sourceTree = "<group>"; };
@@ -334,6 +333,7 @@
 		84ED837B062E7EED00AEEA18 /* CritterPOVWindow.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = CritterPOVWindow.h; sourceTree = "<group>"; };
 		8D0C4E960486CD37000505A6 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		8D0C4E970486CD37000505A6 /* Polyworld.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Polyworld.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C58654FB09B94E1C000F30F8 /* complexity_functions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = complexity_functions.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -555,12 +555,12 @@
 		76CBA5A3062BEDBC001C79E7 /* utils */ = {
 			isa = PBXGroup;
 			children = (
-				7625064909B8CA5500C36C36 /* alife_complexity_functions.h */,
 				76CBA5A4062BEDBC001C79E7 /* error.cp */,
 				76CBA5A5062BEDBC001C79E7 /* error.h */,
 				769996580742BCF0001B0A65 /* gdlink.h */,
 				76CBA5A6062BEDBC001C79E7 /* indexlist.cp */,
 				76CBA5A7062BEDBC001C79E7 /* indexlist.h */,
+				C58654FB09B94E1C000F30F8 /* complexity_functions.h */,
 				76CBA5A8062BEDBC001C79E7 /* misc.cp */,
 				76CBA5A9062BEDBC001C79E7 /* misc.h */,
 				76CBA5AA062BEDBC001C79E7 /* objectlist.h */,
@@ -612,7 +612,7 @@
 				76AA4629073AAF7E00508D3D /* TextStatusWindow.h in Headers */,
 				769996590742BCF0001B0A65 /* gdlink.h in Headers */,
 				7668D16B0885AD07004158C6 /* PwMovieTools.h in Headers */,
-				7625064B09B8CA5500C36C36 /* alife_complexity_functions.h in Headers */,
+				C58654FC09B94E1C000F30F8 /* complexity_functions.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1190,14 +1190,10 @@
 					$QtInc/QtGui,
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
-					/sw/include,
 				);
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Applications";
-				LIBRARY_SEARCH_PATHS = (
-					$QtLib,
-					/sw/lib,
-				);
+				LIBRARY_SEARCH_PATHS = $QtLib;
 				LIBRARY_STYLE = Static;
 				OPTIMIZATION_CFLAGS = "-O0";
 				OTHER_CFLAGS = (
@@ -1271,14 +1267,10 @@
 					$QtInc/QtGui,
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
-					/sw/include,
 				);
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Applications";
-				LIBRARY_SEARCH_PATHS = (
-					$QtLib,
-					/sw/lib,
-				);
+				LIBRARY_SEARCH_PATHS = $QtLib;
 				LIBRARY_STYLE = Static;
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
@@ -1354,14 +1346,10 @@
 					$QtInc/QtGui,
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
-					/sw/include,
 				);
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Applications";
-				LIBRARY_SEARCH_PATHS = (
-					$QtLib,
-					/sw/lib,
-				);
+				LIBRARY_SEARCH_PATHS = $QtLib;
 				LIBRARY_STYLE = Static;
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
@@ -1429,14 +1417,10 @@
 					$QtInc/QtGui,
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
-					/sw/include,
 				);
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Applications";
-				LIBRARY_SEARCH_PATHS = (
-					$QtLib,
-					/sw/lib,
-				);
+				LIBRARY_SEARCH_PATHS = $QtLib;
 				LIBRARY_STYLE = Static;
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",

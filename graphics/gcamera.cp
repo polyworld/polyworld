@@ -124,7 +124,7 @@ void gcamera::UsePerspective()
 	gluPerspective(fFOV, fAspect, fNear, fFar);
 	// Virgil Fog Debugging Info.  I figured you'd want to look at these diagnostics so I left them here for you.
 
-/*
+
 	if( glIsEnabled(GL_FOG) )
 	{
 		cout << "GL FOG is enabled!" << endl;
@@ -157,7 +157,7 @@ void gcamera::UsePerspective()
 	{
 		cout << "------------ GL Fog is NOT enabled ---------- " << endl;
 	}
-*/	
+	
 	
 	fPerspectiveInUse = true;
 }
@@ -335,7 +335,7 @@ void gcamera::SetFog( bool fog, char function, float density, int end )
 		if( function == 'L' )		// is it linear?
 		{
 
-//			cout << "Function is Linear. end: " << end << endl;
+			cout << "Function is Linear. end: " << end << endl;
 			glFogi(GL_FOG_MODE, GL_LINEAR);
 			glFogf(GL_FOG_START, fNear );							// fNear is zero by default
 			glFogf(GL_FOG_END, end );		// the "end" parameter for linear fog.  
@@ -343,7 +343,7 @@ void gcamera::SetFog( bool fog, char function, float density, int end )
 		}
 		else if( function == 'E' )
 		{
-//			cout << "Function is Exponential. Density: " << density << endl;
+			cout << "Function is Exponential. Density: " << density << endl;
 			glFogi(GL_FOG_MODE,GL_EXP);
 			glFogf(GL_FOG_DENSITY, density );
 		}
@@ -356,6 +356,7 @@ void gcamera::SetFog( bool fog, char function, float density, int end )
 	
 	else
 	{
+		cout << "Disabling GL FOG." << endl;
 		glDisable(GL_FOG);		// Turn off the fog if for some reason we ever wanted critters to turn it off.	
 	}
 

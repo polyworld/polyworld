@@ -600,19 +600,9 @@ void critter::SetGraphics()
         fCamera.SetFar(1.5 * globals::worldsize);
         fCamera.SetFOV(gCritterFOV);
 
-//Virgil Fog
-/*      The if statement below should check whether the GLFog Function is turned on (i.e. not set to 'OFF')
-		and if so flip a flag when the camera is attached to a critter. 
-*/
-	if( fSimulation->glFogFunction() != "off" && fSimulation->glFogFunction() != "OFF" )
-		{
-//			fCamera.SetglFogFunction(  );
-//			fCamera.SetglExpFogDensity(  );
-//			fCamera.SetglLinearFogEnd(  );
-			fCamera.SetFog(true, toupper((fSimulation->glFogFunction())[0]), fSimulation->glExpFogDensity(), fSimulation->glLinearFogEnd() );
-		}
+		if( fSimulation->glFogFunction() != 0 )
+			fCamera.SetFog(true, fSimulation->glFogFunction(), fSimulation->glExpFogDensity(), fSimulation->glLinearFogEnd() );
 		
-//End Virgil Fog
         fCamera.AttachTo(this);
     }
 }
