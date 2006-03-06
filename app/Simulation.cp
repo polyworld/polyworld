@@ -593,7 +593,7 @@ void TSimulation::Step()
 			if( link( s, t ) )
 				eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
 			
-			// Archive the bestSoFar Complexity, if we're doing that.
+			// Generate the bestSoFar Complexity, if we're doing that.
 			if(	RecordComplexity() )
 			{
 				if( fFittest[i]->Complexity == 0.0 )		// if Complexity is zero
@@ -698,7 +698,7 @@ void TSimulation::Step()
 			{
 				if( fRecentFittest[i]->critterID > 0 )
 				{
-//DEBUG				cout << "Adding: " << fRecentFittest[i]->Complexity << "  [" <<  fRecentFittest[i]->critterID << "]" << endl;
+//					cout << "[" <<  fStep << "] " << fRecentFittest[i]->critterID << ": " << fRecentFittest[i]->Complexity << endl;
 					mean += fRecentFittest[i]->Complexity;		// Get Sum of all Complexities
 					count++;
 				}
@@ -715,7 +715,7 @@ void TSimulation::Step()
 			}
 
 		
-			stddev = sqrt(stddev / count);		// note that this stddev is divided by N, not N-1 (MATLAB default).
+			stddev = sqrt(stddev / (count-1) );		// note that this stddev is divided by N-1 (MATLAB default)
 
 //DEBUG			cout << "Mean = " << mean << "  //  StdDev = " << stddev << endl;
 			
@@ -728,7 +728,7 @@ void TSimulation::Step()
 			}
 			
 			//For the first run through this outputs 'nan' for the mean and stddev.  It is yet unknown why.  Maybe the structures aren't yet defined?
-			fprintf( cFile, "%ld	%f %f\n", fStep, mean, stddev);
+			fprintf( cFile, "%ld %f %f\n", fStep, mean, stddev);
 			fclose( cFile );
 			
 		}
