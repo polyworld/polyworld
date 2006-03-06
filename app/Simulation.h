@@ -291,6 +291,10 @@ public:
 	bool fBrainAnatomyRecordSeeds;
 	bool fBrainFunctionRecordSeeds;
 	
+	bool fRecordComplexity;				//Virgil
+//	void setRecordComplexity( bool recordComplexity );	//Virgil
+	bool RecordComplexity();							//Virgil
+	
 	float EnergyFitnessParameter() const;
 	float AgeFitnessParameter() const;
 	float LifeFractionRecent();
@@ -355,6 +359,8 @@ private:
 
 	domainstruct fDomains[MAXDOMAINS];	
 	long fNumDomains;
+	
+
 	
 	long fMonitorCritterRank;
 	long fMonitorCritterRankOld;
@@ -533,6 +539,10 @@ inline char TSimulation::glFogFunction()  { return fFogFunction;   }
 inline float TSimulation::glExpFogDensity() { return fExpFogDensity; }
 inline int TSimulation::glLinearFogEnd()    { return fLinearFogEnd;  }
 
+
+// Complexity - Virgil
+// inline void setRecordComplexity( bool recordComplexity ) { fRecordComplexity = recordComplexity; }
+inline bool TSimulation::RecordComplexity() { return fRecordComplexity; } 
 
 
 // Following two functions only determine whether or not we should create the relevant files.

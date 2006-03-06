@@ -493,9 +493,9 @@
 			isa = PBXGroup;
 			children = (
 				76CBA57B062BEDBC001C79E7 /* barrier.cp */,
+				76CBA57E062BEDBC001C79E7 /* food.h */,
 				76CBA57C062BEDBC001C79E7 /* barrier.h */,
 				76CBA57D062BEDBC001C79E7 /* food.cp */,
-				76CBA57E062BEDBC001C79E7 /* food.h */,
 				76CBA57F062BEDBC001C79E7 /* graybin.h */,
 			);
 			path = environment;

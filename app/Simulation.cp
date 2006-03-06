@@ -592,7 +592,22 @@ void TSimulation::Step()
 			sprintf( t, "run/brain/bestSoFar/%ld/%d_brainFunction_%ld.txt", fStep, i, fFittest[i]->critterID );
 			if( link( s, t ) )
 				eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
-			// Complexity - If we want to compute complexity for bestSoFar, do it here (filename is in 't')
+			
+			// Archive the bestSoFar Complexity, if we're doing that.
+			if(	RecordComplexity() )
+			{
+				if( fFittest[i]->Complexity == 0.0 )		// if Complexity is zero
+				{
+					fFittest[i]->Complexity = CalcComplexity( t );
+//					cout << "[" << fFittest[i]->critterID << "]: Computing Complexity for Critter in fFittest.  Complexity = " << fFittest[i]->Complexity << endl;
+				}
+				else
+				{
+//					cout << "[" << fFittest[i]->critterID << "]: was going to compute Complexity but it was non-zero.  Complexity = " << fFittest[i]->Complexity << endl;
+				}
+			}
+
+			// Virgil Complexity - If we want to compute complexity for bestSoFar, do it here (filename is in 't')
 			// test for existence of complexity in fFittest[] before (potentially re-)computing it (just a lookup)
 			// store it in new variable in fFittest[]
 		}
@@ -627,16 +642,97 @@ void TSimulation::Step()
 				sprintf( t, "run/brain/bestRecent/%ld/%d_brainFunction_%ld.txt", fStep, i, fRecentFittest[i]->critterID );
 				if( link( s, t ) )
 					eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
+
+
+				if(	RecordComplexity() )
+				{
+//DEBUG				cout << ":::BestRecent [" << fRecentFittest[i]->critterID << "]: ";
+
+					bool inBestSoFarList = false;
+					int j;
+					for( j = 0; j < limit; j++ )
+					{
+						if( fRecentFittest[i]->critterID == fFittest[j]->critterID )
+						{
+							inBestSoFarList = true;
+							break;
+						}
+					}
+
+					if( inBestSoFarList )
+					{
+						fRecentFittest[i]->Complexity = fFittest[j]->Complexity;
+//DEBUG					cout << "Had critter in BestSoFarList -- no computing Complexity." << endl;
+					}
+					else
+					{
+						fRecentFittest[i]->Complexity = CalcComplexity( t );
+//DEBUG					cout << "Complexity = " << CalcComplexity( t ) << endl;
+					}
+
 				// Virgil - file to use for complexity calculation is the one just above ('t')
 				// store N (limit <= fNumberRecentFit) complexity measures
 				// Complexity - if we compute complexity for fFittest[], check for its existence here,
 				// before (potentially re-)computing it (this is a search over fFittest[], like loop on limit2 below)
+				}
+
 			}
+
+		
 		}
+		
 		// Virgil - calculate mean and std dev of the stored complexity measures, and write it out to
 		// file:  run/brain/bestRecent/complexity.txt
 		// write out timestep, mean, std. dev.
 		// (timestep is fStep)
+	
+		if( RecordComplexity() )
+		{
+			int limit2 = limit <= fNumberRecentFit ? limit : fNumberRecentFit;
+		
+			double mean=0;
+			double stddev=0;	//Complexity: Time to Average and StdDev the BestRecent List
+			int count=0;		//Keeps a count of the number of entries in fRecentFittest.
+			
+			for( int i=0; i<limit2; i++ )
+			{
+				if( fRecentFittest[i]->critterID > 0 )
+				{
+//DEBUG				cout << "Adding: " << fRecentFittest[i]->Complexity << "  [" <<  fRecentFittest[i]->critterID << "]" << endl;
+					mean += fRecentFittest[i]->Complexity;		// Get Sum of all Complexities
+					count++;
+				}
+			}
+		
+			mean = mean / count;			// Divide by count to get the average
+		
+			for( int i=0; i<limit2; i++ )
+			{
+				if( fRecentFittest[i]->critterID > 0 )
+					{
+					stddev += pow(fRecentFittest[i]->Complexity - mean, 2);		// Get Sum of all Complexities
+					}
+			}
+
+		
+			stddev = sqrt(stddev / count);		// note that this stddev is divided by N, not N-1 (MATLAB default).
+
+//DEBUG			cout << "Mean = " << mean << "  //  StdDev = " << stddev << endl;
+			
+			FILE * cFile;
+			
+			if( (cFile =fopen("run/brain/bestRecent/complexity.txt", "a")) == NULL )
+			{
+				cerr << "could not open run/brain/bestRecent/complexity.txt for writing" << endl;
+				exit(1);
+			}
+			
+			//For the first run through this outputs 'nan' for the mean and stddev.  It is yet unknown why.  Maybe the structures aren't yet defined?
+			fprintf( cFile, "%ld	%f %f\n", fStep, mean, stddev);
+			fclose( cFile );
+			
+		}
+
 		
 		// Now delete all bestRecent critter files, unless they are also on the bestSoFar list
 		// Also empty the bestRecent list here, so we start over each epoch
@@ -674,6 +770,7 @@ void TSimulation::Step()
 			// Empty the bestRecent list by zeroing out critter IDs and fitnesses
 			fRecentFittest[i]->critterID = 0;
 			fRecentFittest[i]->fitness = 0.0;
+			fRecentFittest[i]->Complexity = 0.0;	//Virgil
 		}
 	}
 	
@@ -737,6 +834,7 @@ void TSimulation::Init()
 			Q_CHECK_PTR( fFittest[i]->genes );
             fFittest[i]->fitness = 0.0;
 			fFittest[i]->critterID = 0;
+			fFittest[i]->Complexity = 0.0;		//Virgil
         }
 		
         fRecentFittest = new FitStruct*[fNumberRecentFit];
@@ -749,6 +847,7 @@ void TSimulation::Init()
             fRecentFittest[i]->genes = NULL;	// new genome();	// we don't save the genes in the bestRecent list
             fRecentFittest[i]->fitness = 0.0;
 			fRecentFittest[i]->critterID = 0;
+			fRecentFittest[i]->Complexity = 0.0;		//Virgil
         }
 		
         for( int id = 0; id < fNumDomains; id++ )
@@ -764,6 +863,7 @@ void TSimulation::Init()
 				Q_CHECK_PTR( fDomains[id].fittest[i]->genes );
                 fDomains[id].fittest[i]->fitness = 0.0;
 				fDomains[id].fittest[i]->critterID = 0;
+				fDomains[id].fittest[i]->Complexity = 0.0;		//Virgil
             }
         }
     }
@@ -2754,6 +2854,7 @@ void TSimulation::Death(critter* c)
         fFittest[newfit]->fitness = c->Fitness();
         fFittest[newfit]->genes->CopyGenes( c->Genes() );
 		fFittest[newfit]->critterID = c->Number();
+		fFittest[newfit]->Complexity = 0.0;					// Virgil  -- must zero out Complexity
     }
     
     if (c->Fitness() > fMaxFitness)
@@ -3717,9 +3818,14 @@ void TSimulation::ReadWorldFile(const char* filename)
 		in >> fRecordFoodBandStats; in >> label;
 		cout << "recordFoodBandStats" ses fRecordFoodBandStats nl;
 	}
-	
+
+
 	if( version >= 18 )
 	{
+	
+
+		in >> fRecordComplexity; in >> label;
+		cout << "recordComplexity" ses fRecordComplexity nl;
 	
 		// Accepted values are "linear" and "exponential"
 		string temp;

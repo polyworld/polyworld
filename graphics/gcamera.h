@@ -27,9 +27,7 @@ public:
 	void SetFar(float f);        
 	void SetAspect(float width, float height);
 	void SetAspect(float a);
-// Virgil Fog
 	void SetFog( bool fog, char function, float density, int end );
-// End Virgil Fog
 
 	void Use();
     virtual void print();
