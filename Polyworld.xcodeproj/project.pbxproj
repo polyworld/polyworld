@@ -145,7 +145,7 @@
 		8D0C4E8D0486CD37000505A6 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 0867D6AAFE840B52C02AAC07 /* InfoPlist.strings */; };
 		8D0C4E920486CD37000505A6 /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 20286C33FDCF999611CA2CEA /* Carbon.framework */; };
 		8D0C4E930486CD37000505A6 /* libstdc++.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 0249A66BFF388E3F11CA2CEA /* libstdc++.a */; };
-		C58654FC09B94E1C000F30F8 /* complexity_functions.h in Headers */ = {isa = PBXBuildFile; fileRef = C58654FB09B94E1C000F30F8 /* complexity_functions.h */; };
+		C58654FC09B94E1C000F30F8 /* complexity.h in Headers */ = {isa = PBXBuildFile; fileRef = C58654FB09B94E1C000F30F8 /* complexity.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXBuildStyle section */
@@ -333,7 +333,7 @@
 		84ED837B062E7EED00AEEA18 /* CritterPOVWindow.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = CritterPOVWindow.h; sourceTree = "<group>"; };
 		8D0C4E960486CD37000505A6 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		8D0C4E970486CD37000505A6 /* Polyworld.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Polyworld.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		C58654FB09B94E1C000F30F8 /* complexity_functions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = complexity_functions.h; sourceTree = "<group>"; };
+		C58654FB09B94E1C000F30F8 /* complexity.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = complexity.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -560,7 +560,7 @@
 				769996580742BCF0001B0A65 /* gdlink.h */,
 				76CBA5A6062BEDBC001C79E7 /* indexlist.cp */,
 				76CBA5A7062BEDBC001C79E7 /* indexlist.h */,
-				C58654FB09B94E1C000F30F8 /* complexity_functions.h */,
+				C58654FB09B94E1C000F30F8 /* complexity.h */,
 				76CBA5A8062BEDBC001C79E7 /* misc.cp */,
 				76CBA5A9062BEDBC001C79E7 /* misc.h */,
 				76CBA5AA062BEDBC001C79E7 /* objectlist.h */,
@@ -612,7 +612,7 @@
 				76AA4629073AAF7E00508D3D /* TextStatusWindow.h in Headers */,
 				769996590742BCF0001B0A65 /* gdlink.h in Headers */,
 				7668D16B0885AD07004158C6 /* PwMovieTools.h in Headers */,
-				C58654FC09B94E1C000F30F8 /* complexity_functions.h in Headers */,
+				C58654FC09B94E1C000F30F8 /* complexity.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

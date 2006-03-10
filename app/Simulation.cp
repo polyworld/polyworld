@@ -32,7 +32,7 @@
 #include "SceneView.h"
 #include "TextStatusWindow.h"
 #include "PwMovieTools.h"
-#include "complexity_functions.h"
+#include "complexity.h"
 
 using namespace std;
 
