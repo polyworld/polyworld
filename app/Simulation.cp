@@ -2806,6 +2806,13 @@ void TSimulation::Death(critter* c)
 		sprintf( s, "run/brain/function/incomplete_brainFunction_%ld.txt", c->Number() );
 		sprintf( t, "run/brain/function/brainFunction_%ld.txt", c->Number() );
 		rename( s, t );
+
+		// Virgil - Put calculation of c's complexity here
+		// if( fUsingComplexityAsFitness )
+		// {
+		//     CalcComplexity( ... );
+		//     c->SetFitness( complexity );		// c->fFitness = complexity;
+		// }
 	}
 	
 	// Maintain a list of the fittest critters ever, for use in the online/steady-state GA
