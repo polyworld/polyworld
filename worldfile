@@ -45,7 +45,7 @@
 1      minvispixels
 16     maxvispixels
 0.01   minmrate
-0.1    maxmrate
+0.05   maxmrate_0.01
 2      minnumcpts
 8      maxnumcpts
 500    minlifespan
