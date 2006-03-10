@@ -51,5 +51,5 @@ INCLUDEPATH +=	. \
 								
 QMAKE_CFLAGS_DEBUG += -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC -Wno-deprecated
 
-LIBS	+=	-F$(QTDIR)/lib/ -framework QtOpenGL -framework OpenGL -framework AGL
+LIBS	+=	-F$(QTDIR)/lib/ -framework QtOpenGL -framework OpenGL -framework AGL -lgsl -lgslcblas -lm
 
