@@ -42,9 +42,7 @@ struct FitStruct
 {
 	ulong	critterID;
 	float	fitness;
-//Virgil	
 	float   Complexity;
-//End Virgil
 	genome*	genes;
 };
 typedef struct FitStruct FitStruct;
@@ -291,9 +289,8 @@ public:
 	bool fBrainAnatomyRecordSeeds;
 	bool fBrainFunctionRecordSeeds;
 	
-	bool fRecordComplexity;				//Virgil
-//	void setRecordComplexity( bool recordComplexity );	//Virgil
-	bool RecordComplexity();							//Virgil
+	bool fRecordComplexity;			
+	bool RecordComplexity();
 	
 	float EnergyFitnessParameter() const;
 	float AgeFitnessParameter() const;
@@ -303,6 +300,9 @@ public:
 	char TSimulation::glFogFunction();
 	float TSimulation::glExpFogDensity();
 	int TSimulation::glLinearFogEnd();
+
+
+	bool TSimulation::UsingComplexityAsFitnessFunc();		// Virgil
 
 
 private slots:
@@ -378,6 +378,8 @@ private:
 	bool fShowTextStatus;
 	bool fRecordGeneStats;
 	bool fRecordFoodBandStats;
+	
+	bool fUseComplexityAsFitnessFunc;	//Virgil	
 
 	long fNewDeaths;
 	
@@ -539,10 +541,12 @@ inline char TSimulation::glFogFunction()  { return fFogFunction;   }
 inline float TSimulation::glExpFogDensity() { return fExpFogDensity; }
 inline int TSimulation::glLinearFogEnd()    { return fLinearFogEnd;  }
 
-
-// Complexity - Virgil
-// inline void setRecordComplexity( bool recordComplexity ) { fRecordComplexity = recordComplexity; }
 inline bool TSimulation::RecordComplexity() { return fRecordComplexity; } 
+
+
+//FitnessAsComplexity  Virgil
+inline bool TSimulation::UsingComplexityAsFitnessFunc() { return fUseComplexityAsFitnessFunc; }
+
 
 
 // Following two functions only determine whether or not we should create the relevant files.

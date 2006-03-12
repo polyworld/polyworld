@@ -3,7 +3,7 @@
 10002  maxSteps
 1      docpuwork
 10000  dumpfreq
-10   statfreq
+100    statfreq
 1      edges
 0      wraparound
 1      vision
@@ -199,13 +199,15 @@
 1      brainFunctionRecordAll
 1      brainAnatomyRecordSeeds
 1      brainFunctionRecordSeeds
-100     bestSoFarBrainAnatonomyRecordFrequency
-100     bestSoFarBrainFunctionRecordFrequency
-100     bestRecentBrainAnatonomyRecordFrequency
-100     bestRecentBrainFunctionRecordFrequency
+500     bestSoFarBrainAnatonomyRecordFrequency
+500     bestSoFarBrainFunctionRecordFrequency
+500     bestRecentBrainAnatonomyRecordFrequency
+500     bestRecentBrainFunctionRecordFrequency
 1      recordGeneStats
 1      recordFoodBandStats
 1      recordComplexity
+0      useComplexityAsFitness
+
 
 linear FogFunction
 0.1    ExponentialFogDensity

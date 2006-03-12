@@ -311,8 +311,6 @@ void TSimulation::Stop()
     
     critter::critterdestruct();
 	
-	// Virgil - Complexity -
-	// fclose( file );
 }
 
 
@@ -596,20 +594,19 @@ void TSimulation::Step()
 			// Generate the bestSoFar Complexity, if we're doing that.
 			if(	RecordComplexity() )
 			{
-				if( fFittest[i]->Complexity == 0.0 )		// if Complexity is zero
+				if( fUseComplexityAsFitnessFunc )	// If using Complexity as FitnessFunc we already have this.  Virgil
+				{
+					fFittest[i]->Complexity = fFittest[i]->fitness;
+//DEBUG				cout << "[" << fFittest[i]->critterID << "]::: Am going to compute Complexity again.  Currently Fitness = " << fFittest[i]->fitness << endl;				
+				}
+			
+				if( fFittest[i]->Complexity == 0.0 )		// if Complexity is zero -- means we have to Calculate it
 				{
 					fFittest[i]->Complexity = CalcComplexity( t );
-//					cout << "[" << fFittest[i]->critterID << "]: Computing Complexity for Critter in fFittest.  Complexity = " << fFittest[i]->Complexity << endl;
-				}
-				else
-				{
-//					cout << "[" << fFittest[i]->critterID << "]: was going to compute Complexity but it was non-zero.  Complexity = " << fFittest[i]->Complexity << endl;
+//DEBUG				cout << "[" << fFittest[i]->critterID << "]: Computing Complexity for Critter in fFittest.  Complexity = " << fFittest[i]->Complexity << endl;
 				}
 			}
 
-			// Virgil Complexity - If we want to compute complexity for bestSoFar, do it here (filename is in 't')
-			// test for existence of complexity in fFittest[] before (potentially re-)computing it (just a lookup)
-			// store it in new variable in fFittest[]
 		}
 	}
 	
@@ -646,34 +643,40 @@ void TSimulation::Step()
 
 				if(	RecordComplexity() )
 				{
-//DEBUG				cout << ":::BestRecent [" << fRecentFittest[i]->critterID << "]: ";
-
-					bool inBestSoFarList = false;
-					int j;
-					for( j = 0; j < limit; j++ )
+					if( fUseComplexityAsFitnessFunc )	// If using Complexity as FitnessFunc we've already computed Complexity for this critter. Virgil
 					{
-						if( fRecentFittest[i]->critterID == fFittest[j]->critterID )
+						fRecentFittest[i]->Complexity = fRecentFittest[i]->fitness;
+//						cout << "[" << fRecentFittest[i]->critterID << "]::: Yeehaw! Was going to compute Complexity again but I don't have to.  The Fitness = Complexity = " << fRecentFittest[i]->fitness << endl;				
+					}
+
+					else	// Okay, not using ComplexityAsFitnessFunc, but if the critter is in the BestSoFar list we can get the Complexity from there w/o computing it again.
+					{
+	//DEBUG				cout << ":::BestRecent [" << fRecentFittest[i]->critterID << "]: ";
+
+						bool inBestSoFarList = false;
+						int j;
+						for( j = 0; j < limit; j++ )
 						{
-							inBestSoFarList = true;
-							break;
+							if( fRecentFittest[i]->critterID == fFittest[j]->critterID )
+							{
+								inBestSoFarList = true;
+								break;
+							}
+						}
+
+						// Check to see if we would have already computed the Complexity, if so, dont recompute it.
+						if( inBestSoFarList )
+						{
+							fRecentFittest[i]->Complexity = fFittest[j]->Complexity;
+	//DEBUG					cout << "Had critter in BestSoFarList -- no computing Complexity." << endl;
+						}
+						else
+						{
+							fRecentFittest[i]->Complexity = CalcComplexity( t );
+	//DEBUG					cout << "Complexity = " << CalcComplexity( t ) << endl;
 						}
 					}
 
-					if( inBestSoFarList )
-					{
-						fRecentFittest[i]->Complexity = fFittest[j]->Complexity;
-//DEBUG					cout << "Had critter in BestSoFarList -- no computing Complexity." << endl;
-					}
-					else
-					{
-						fRecentFittest[i]->Complexity = CalcComplexity( t );
-//DEBUG					cout << "Complexity = " << CalcComplexity( t ) << endl;
-					}
-
-				// Virgil - file to use for complexity calculation is the one just above ('t')
-				// store N (limit <= fNumberRecentFit) complexity measures
-				// Complexity - if we compute complexity for fFittest[], check for its existence here,
-				// before (potentially re-)computing it (this is a search over fFittest[], like loop on limit2 below)
 				}
 
 			}
@@ -681,14 +684,11 @@ void TSimulation::Step()
 		
 		}
 		
-		// Virgil - calculate mean and std dev of the stored complexity measures, and write it out to
-		// file:  run/brain/bestRecent/complexity.txt
-		// write out timestep, mean, std. dev.
-		// (timestep is fStep)
-	
+		//Calculate Mean and StdDev of the fRecentFittest Complexities.
 		if( RecordComplexity() )
 		{
 			int limit2 = limit <= fNumberRecentFit ? limit : fNumberRecentFit;
+
 		
 			double mean=0;
 			double stddev=0;	//Complexity: Time to Average and StdDev the BestRecent List
@@ -705,6 +705,10 @@ void TSimulation::Step()
 			}
 		
 			mean = mean / count;			// Divide by count to get the average
+		
+
+			if( ! (mean >= 0) )				// If mean is 'nan', make it zero instead of 'nan'
+				mean = 0;
 		
 			for( int i=0; i<limit2; i++ )
 			{
@@ -727,7 +731,7 @@ void TSimulation::Step()
 				exit(1);
 			}
 			
-			//For the first run through this outputs 'nan' for the mean and stddev.  It is yet unknown why.  Maybe the structures aren't yet defined?
+			// print to complexity.txt
 			fprintf( cFile, "%ld %f %f\n", fStep, mean, stddev);
 			fclose( cFile );
 			
@@ -770,7 +774,7 @@ void TSimulation::Step()
 			// Empty the bestRecent list by zeroing out critter IDs and fitnesses
 			fRecentFittest[i]->critterID = 0;
 			fRecentFittest[i]->fitness = 0.0;
-			fRecentFittest[i]->Complexity = 0.0;	//Virgil
+			fRecentFittest[i]->Complexity = 0.0;
 		}
 	}
 	
@@ -834,7 +838,7 @@ void TSimulation::Init()
 			Q_CHECK_PTR( fFittest[i]->genes );
             fFittest[i]->fitness = 0.0;
 			fFittest[i]->critterID = 0;
-			fFittest[i]->Complexity = 0.0;		//Virgil
+			fFittest[i]->Complexity = 0.0;
         }
 		
         fRecentFittest = new FitStruct*[fNumberRecentFit];
@@ -847,7 +851,7 @@ void TSimulation::Init()
             fRecentFittest[i]->genes = NULL;	// new genome();	// we don't save the genes in the bestRecent list
             fRecentFittest[i]->fitness = 0.0;
 			fRecentFittest[i]->critterID = 0;
-			fRecentFittest[i]->Complexity = 0.0;		//Virgil
+			fRecentFittest[i]->Complexity = 0.0;
         }
 		
         for( int id = 0; id < fNumDomains; id++ )
@@ -863,7 +867,7 @@ void TSimulation::Init()
 				Q_CHECK_PTR( fDomains[id].fittest[i]->genes );
                 fDomains[id].fittest[i]->fitness = 0.0;
 				fDomains[id].fittest[i]->critterID = 0;
-				fDomains[id].fittest[i]->Complexity = 0.0;		//Virgil
+				fDomains[id].fittest[i]->Complexity = 0.0;
             }
         }
     }
@@ -938,14 +942,6 @@ void TSimulation::Init()
 					eprintf( "Error making run/brain/seeds/function directory (%d)\n", errno );
 		}
 	}
-
-#if 0
-	// Virgil - Complexity -
-	if( fLogComplexity )
-	{
-		// fopen the run/brain/bestRecent/complexity.txt file
-	}
-#endif
 
 	// If we're going to record the gene means and std devs, we need to allocate a couple of stat arrays
 	if( fRecordGeneStats )
@@ -2807,12 +2803,13 @@ void TSimulation::Death(critter* c)
 		sprintf( t, "run/brain/function/brainFunction_%ld.txt", c->Number() );
 		rename( s, t );
 
-		// Virgil - Put calculation of c's complexity here
-		// if( fUsingComplexityAsFitness )
-		// {
-		//     CalcComplexity( ... );
-		//     c->SetFitness( complexity );		// c->fFitness = complexity;
-		// }
+
+		// Virgil
+		if ( UsingComplexityAsFitnessFunc() )		// Are we using Complexity as a Fitness Function?  If so, set fitness = Complexity here
+		{
+			c->SetUnusedFitness( c->Fitness() );		// We might want the heuristic fitness later so lets store it somewhere.
+			c->SetFitness( CalcComplexity( t ) );
+		}
 	}
 	
 	// Maintain a list of the fittest critters ever, for use in the online/steady-state GA
@@ -2861,7 +2858,7 @@ void TSimulation::Death(critter* c)
         fFittest[newfit]->fitness = c->Fitness();
         fFittest[newfit]->genes->CopyGenes( c->Genes() );
 		fFittest[newfit]->critterID = c->Number();
-		fFittest[newfit]->Complexity = 0.0;					// Virgil  -- must zero out Complexity
+		fFittest[newfit]->Complexity = 0.0;		// must zero out the Complexity so it is recalculated for the new critter
     }
     
     if (c->Fitness() > fMaxFitness)
@@ -3833,6 +3830,34 @@ void TSimulation::ReadWorldFile(const char* filename)
 
 		in >> fRecordComplexity; in >> label;
 		cout << "recordComplexity" ses fRecordComplexity nl;
+	
+		if( fRecordComplexity )
+		{
+			if( ! fBrainFunctionRecordAll )
+			{
+				cerr << "Warning: Recording Complexity without recording brain function?  That's not going to work.  Turning on recordBrainFunction." nl;
+				fBrainFunctionRecordAll = true;
+			}
+		}
+		
+		in >> fUseComplexityAsFitnessFunc; in >> label;
+		cout << "UseComplexityAsFitnessFunction" ses fUseComplexityAsFitnessFunc nl;
+
+		if( fUseComplexityAsFitnessFunc )
+		{
+			if( ! fRecordComplexity )		//Not Recording Complexity?
+			{
+				cerr << "Warning: Using Complexity as fitness func without recording Complexity. Turning recordComplexity on." nl;
+				fRecordComplexity = true;
+			}
+		
+			if( ! fBrainFunctionRecordAll )
+			{
+				cerr << "Warning: Using Complexity as fitness func without recording brain function.  Turning recordBrainFunction on." nl;
+				fBrainFunctionRecordAll = true;
+			}
+		}
+
 	
 		// Accepted values are "linear" and "exponential"
 		string temp;

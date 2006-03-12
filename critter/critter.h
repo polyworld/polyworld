@@ -167,6 +167,10 @@ public:
 	
 	gdlink<critter*>*	listLink;
 
+	void SetFitness( float value );			// Virgil
+	void SetUnusedFitness( float value );	// Virgil
+	
+
 protected:
     void Behave();
     void NumberToName();
@@ -202,7 +206,9 @@ protected:
     float fVelocity[3];
     float fNoseColor[3];
     
-    float fFitness;  // crude guess for keeping minimum population early on
+    float fFitness;			// crude guess for keeping minimum population early on
+	float fUnusedFitness;	// Virgil: We put the heuristic fitness here when we're using Complexity as a Fitness Function.
+	
     genome* fGenome;
     brain* fBrain;
     gcamera fCamera;
@@ -265,6 +271,9 @@ inline gscene& critter::GetScene() { return fScene; }
 inline frustumXZ& critter::GetFrustum() { return fFrustum; }
 inline gpolyobj* critter::GetCritterObj() { return critterobj; }
 inline gdlink<critter*>* critter::GetListLink() { return listLink; }
+
+inline void critter::SetFitness( float value ) { fFitness = value; } // Virgil
+inline void critter::SetUnusedFitness( float value ) { fUnusedFitness = value; } // Virgil
 
 #endif
 

@@ -62,7 +62,7 @@ gcamera::gcamera()
 		fFollowObject(NULL),
 		fPerspectiveFixed(false),
 		fPerspectiveInUse(false),
-		glFogOn(false)				// this will be turned on for cameras attached to critters at the Attach() function
+		glFogOn(false)				// this will be turned on for cameras attached to critters at the SetGraphics() function
 {
 	fPosition[0] = 0.0;
     fPosition[1] = 0.0;
@@ -122,8 +122,8 @@ void gcamera::UsePerspective()
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	gluPerspective(fFOV, fAspect, fNear, fFar);
-	// Virgil Fog Debugging Info.  I figured you'd want to look at these diagnostics so I left them here for you.
 
+// GL Fog Debugging Info.
 /*
 	if( glIsEnabled(GL_FOG) )
 	{
