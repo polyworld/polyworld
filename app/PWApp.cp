@@ -46,17 +46,14 @@ int main(int argc, char** argv)
 //	QCoreApplication::setOrganizationName( "indiana" );
 	QCoreApplication::setApplicationName( "polyworld" );
 	
-	// On the Mac, create the default menu bar
-	QMenuBar* gGlobalMenuBar = new QMenuBar();
+	// Create the main window (without passing a menubar)
+	TSceneWindow* appWindow = new TSceneWindow();
 
-	// Create the main window
-	TSceneWindow* appWindow = new TSceneWindow(gGlobalMenuBar);
-		
 	// Set up signals
 	app.connect(&app, SIGNAL(lastWindowClosed()), &app, SLOT(quit()));
 	
 	// Set window as main widget and show
-//	app.setMainWidget(appWindow);
+	//app.setMainWidget(appWindow);
 
 #if 0
 	// What's a sigmoid, daddy?
@@ -95,10 +92,9 @@ TPWApp::TPWApp(int& argc, char** argv) : QApplication(argc, argv)
 //---------------------------------------------------------------------------
 // TSceneWindow::TSceneWindow
 //---------------------------------------------------------------------------
-TSceneWindow::TSceneWindow(QMenuBar* menuBar)
+TSceneWindow::TSceneWindow()
 //	:	QMainWindow(0, "Polyworld", WDestructiveClose | WGroupLeader),
 	:	QMainWindow( 0, 0 ),
-		fMenuBar(menuBar),
 		fWindowsMenu(NULL)
 {
 	windowSettingsName = "Polyworld";
@@ -106,10 +102,8 @@ TSceneWindow::TSceneWindow(QMenuBar* menuBar)
 	
 	setMinimumSize(QSize(200, 200));
 
-	// Create menus.  On the mac, we use the global menu created in the application
-	// instance so that we have a global menu bar that spans application windows.
-	// This is the default behavior on MacOS. Do not use the menuBar() method that
-	// QMainWindow provides.  Use the menu member variable instead.
+
+	// Add menus using built-in menubar()
 	AddFileMenu();    
 	AddEditMenu();        
 	AddWindowMenu();
@@ -168,7 +162,7 @@ void TSceneWindow::closeEvent(QCloseEvent* ce)
 void TSceneWindow::AddFileMenu()
 {
     QMenu* menu = new QMenu( "&File", this );
-    fMenuBar->addMenu( menu );
+    menuBar()->addMenu( menu );
 	menu->addAction( "&Open...", this, SLOT(choose()), Qt::CTRL+Qt::Key_O );
 	menu->addAction( "&Save", this, SLOT(save()), Qt::CTRL+Qt::Key_S );
 	menu->addAction( "Save &As...", this, SLOT(saveAs()));
@@ -185,7 +179,7 @@ void TSceneWindow::AddEditMenu()
 {
 	// Edit menu
 	QMenu* edit = new QMenu( "&Edit", this );
-	fMenuBar->addMenu( edit );
+	menuBar()->addMenu( edit );
 }
 
 
@@ -197,7 +191,7 @@ void TSceneWindow::AddWindowMenu()
 	// Window menu
 	fWindowsMenu = new QMenu( "&Window", this );
 	connect(fWindowsMenu, SIGNAL(aboutToShow()), this, SLOT(windowsMenuAboutToShow()));
-	fMenuBar->addMenu( fWindowsMenu );
+	menuBar()->addMenu( fWindowsMenu );
 	
 	toggleBirthrateWindowAct = fWindowsMenu->addAction("Hide Birthrate Monitor", this, SLOT(ToggleBirthrateWindow()), Qt::CTRL+Qt::Key_1 );
 	toggleFitnessWindowAct = fWindowsMenu->addAction("Hide Fitness Monitor", this, SLOT(ToggleFitnessWindow()), Qt::CTRL+Qt::Key_2 );
@@ -432,7 +426,7 @@ void TSceneWindow::AddHelpMenu()
 	// Add help item
 //	fMenuBar->addSeparator();
 	QMenu* help = new QMenu( "&Help", this );
-	fMenuBar->addMenu( help );
+	menuBar()->addMenu( help );
 	
 	// Add about item
 	help->addAction("&About", this, SLOT(about()));

@@ -169,10 +169,10 @@ class TSceneWindow: public QMainWindow
 	Q_OBJECT
 
 public:
-    TSceneWindow(QMenuBar* menuBar);
-    virtual ~TSceneWindow();
-    
-    void Update();
+	TSceneWindow();
+	virtual ~TSceneWindow();
+	
+	void Update();
 
 protected:
     void closeEvent(QCloseEvent* event);
@@ -362,7 +362,6 @@ private:
 	domainstruct fDomains[MAXDOMAINS];	
 	long fNumDomains;
 	
-
 	float fCritterHealingRate;	// Virgil Healing
 	bool fHealing;				// Virgil Healing
 	
