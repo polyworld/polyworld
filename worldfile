@@ -84,6 +84,7 @@
 0.01   maxsynapse2energy
 0.05   fixedenergydrain
 0.99   decayrate
+0.5    critterhealingrate
 
 0.2    eatthreshold
 0.5    matethreshold

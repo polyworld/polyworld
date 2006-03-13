@@ -170,6 +170,7 @@ public:
 	void SetFitness( float value );			// Virgil
 	void SetUnusedFitness( float value );	// Virgil
 	
+	void Heal( float HealingRate, float minFoodEnergy );	//Virgil
 
 protected:
     void Behave();

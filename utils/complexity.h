@@ -580,12 +580,12 @@ Intrinsic (uncorrelated) noise level is set to r.
 
 /* MATLAB CODE: Q = inv(eye(N) - CIJ); */
 	gsl_matrix * eye_N = identity_matrix(N);        // Identity matrix of size N
-	gsl_matrix_sub( eye_N, CIJ );                   // Note that eye_N has now been overwritten with the result!!!
+	gsl_matrix_sub( eye_N, CIJ );                   // Note that eye_N has now been overwritten with the result!!
 
 	//Now to get the inverse...
 	gsl_permutation * P = gsl_permutation_alloc(N);
 	int signum=1;
-	gsl_linalg_LU_decomp( eye_N, P, &signum );	// Note that eye_N has now been (re)overwritten with the LU decomposition!!!
+	gsl_linalg_LU_decomp( eye_N, P, &signum );	// Note that eye_N has now been (re)overwritten with the LU decomposition!!
 
 	gsl_matrix * Q = gsl_matrix_alloc(N,N);
 	gsl_linalg_LU_invert( eye_N, P, Q );		// Q = inv(eye(N) - CIJ)
@@ -687,12 +687,12 @@ Intrinsic (uncorrelated) noise level is set to r.
 
 /* MATLAB CODE: Q = inv(eye(N) - CIJ); */
 	gsl_matrix * eye_N = identity_matrix(N);        // Identity matrix of size N
-	gsl_matrix_sub( eye_N, CIJ );                   // Note that eye_N has now been overwritten with the result!!!
+	gsl_matrix_sub( eye_N, CIJ );                   // Note that eye_N has now been overwritten with the result!!
 
 	//Now to get the inverse...
 	gsl_permutation * P = gsl_permutation_alloc(N);
 	int signum=1;
-	gsl_linalg_LU_decomp( eye_N, P, &signum );	// Note that eye_N has now been (re)overwritten with the LU decomposition!!!
+	gsl_linalg_LU_decomp( eye_N, P, &signum );	// Note that eye_N has now been (re)overwritten with the LU decomposition!!
 
 	gsl_matrix * Q = gsl_matrix_alloc(N,N);
 	gsl_linalg_LU_invert( eye_N, P, Q );		// Q = inv(eye(N) - CIJ)
@@ -841,7 +841,6 @@ long double calcC_det3( gsl_matrix * foreignCOR )
 //DEBUG	cout << "d1 = " << d1 << endl;
 
 
-// !!! Is this testing whether the matrix is singular?  If so, cond() much faster (from MATLAB documentation) !!!
 	while( d1 == 0 )
 	{
 		gsl_matrix_scale( COR, 1.3 );

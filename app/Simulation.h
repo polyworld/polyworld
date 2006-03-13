@@ -303,6 +303,8 @@ public:
 
 
 	bool TSimulation::UsingComplexityAsFitnessFunc();		// Virgil
+	
+	float TSimulation::GetCritterHealingRate();				// Virgil Healing
 
 
 private slots:
@@ -361,6 +363,8 @@ private:
 	long fNumDomains;
 	
 
+	float fCritterHealingRate;	// Virgil Healing
+	bool fHealing;				// Virgil Healing
 	
 	long fMonitorCritterRank;
 	long fMonitorCritterRankOld;
@@ -547,6 +551,7 @@ inline bool TSimulation::RecordComplexity() { return fRecordComplexity; }
 //FitnessAsComplexity  Virgil
 inline bool TSimulation::UsingComplexityAsFitnessFunc() { return fUseComplexityAsFitnessFunc; }
 
+inline float TSimulation::GetCritterHealingRate() { return fCritterHealingRate;	} 
 
 
 // Following two functions only determine whether or not we should create the relevant files.

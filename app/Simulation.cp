@@ -168,7 +168,8 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
 		fNumCrittersNotInOrNearAnyFoodBand(0),
 		fNumCrittersInFoodBand(NULL),
 		fNumCrittersWithin5UnitsOfFoodBand(NULL),
-		fNumCrittersWithin10UnitsOfFoodBand(NULL)
+		fNumCrittersWithin10UnitsOfFoodBand(NULL),
+		fHealing(0)									// Healing by default turned off.
 {
 	Init();
 }
@@ -1874,12 +1875,20 @@ void TSimulation::Interact()
 	printf( "%s: at age %ld about to process %ld critters, %ld pieces of food, starting with critter %08lx (%4ld), ending with critter %08lx (%4ld)\n", __FUNCTION__, fStep, critter::gXSortedCritters.count(), food::gXSortedFood.count(), (ulong) c, c->Number(), (ulong) lastCritter, lastCritter->Number() );
 #endif
 
+//Doing Critter Healing
+	if( fHealing )														// if healing is turned on...
+	{
+		critter::gXSortedCritters.reset();
+		while (critter::gXSortedCritters.next(c))							// for every critter...
+			c->Heal( fCritterHealingRate, 0.0 );							// heal it if FoodEnergy > 2ndParam.
+	}
+
 	food::gXSortedFood.reset();
 	critter::gXSortedCritters.reset();
+
     while (critter::gXSortedCritters.next(c))
     {
-        // determine the domain in which the critter currently is located
-
+		// determine the domain in which the critter currently is located
         id = c->Domain();
 
 		// now see if there's an overlap with any other critters
@@ -3331,6 +3340,16 @@ void TSimulation::ReadWorldFile(const char* filename)
     cout << "fixedenergydrain" ses critter::gFixedEnergyDrain nl;
     in >> brain::gDecayRate; in >> label;
     cout << "decayrate" ses brain::gDecayRate nl;
+
+	if( version >= 18 )
+	{
+		in >> fCritterHealingRate; in >> label;
+		
+		if( fCritterHealingRate > 0.0 )
+			fHealing = 1;					// a bool flag to check to see if healing is turned on is faster than always comparing a float.
+		cout << "CritterHealingRate" ses fCritterHealingRate nl;
+	}
+	
     in >> fEatThreshold; in >> label;
     cout << "eatthreshold" ses fEatThreshold nl;
     in >> fMateThreshold; in >> label;

@@ -1054,3 +1054,22 @@ void cxsortedlist::list()
     popproc();
 #endif DEBUGCALLS
 }
+
+//---------------------------------------------------------------------------
+// critter::Heal
+//---------------------------------------------------------------------------
+void critter::Heal( float HealingRate, float minFoodEnergy)
+{
+
+	// if critter has some FoodEnergy to spare, and critter can receive some Energy.
+	if( ( fFoodEnergy > minFoodEnergy) && (fMaxEnergy > fEnergy) )		
+	{
+		// which is the smallest: healing rate, amount critter can give, or amount critter can receive?
+		float cangive = fminf( HealingRate, fFoodEnergy - minFoodEnergy );
+		float delta = fminf( cangive, fMaxEnergy - fEnergy );
+
+		fFoodEnergy -= delta;					// take delta away from FoodEnergy
+		fEnergy     += delta;					// and add it to Energy
+	}
+
+}
