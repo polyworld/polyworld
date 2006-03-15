@@ -40,7 +40,7 @@ float CalcComplexity( char * fname )
 {
         gsl_matrix * activity = readin_brainfunction__optimized( fname );
 
-        if( activity->size2 > activity->size1 )         //If using __optimized this will always be true.
+        if( activity->size2 > activity->size1 )         //If using __optimized this will never be true.
         {
                 gsl_matrix * temp = gsl_matrix_alloc( activity->size2, activity->size1);
                 gsl_matrix_transpose_memcpy(temp, activity);
@@ -58,31 +58,23 @@ float CalcComplexity( char * fname )
         time(&seed);
         gsl_rng_set(r, seed);
 
-/*
+
         for( unsigned int i=0; i<activity->size1; i++)
         {
                 for( unsigned int j=0; j<activity->size2; j++)
 			gsl_matrix_set(activity, i, j, gsl_matrix_get(activity, i,j) + 0.0001*gsl_ran_ugaussian(r));
         }
-*/
+
         gsl_matrix * o = activity;      // replace this if we're ever going to do the gsamp()'ing.
 
-		// We just calculate the covariance matrix and compute the Complexity of that.  It uses less cycles and the results are identical.
-
-//	print_matrix_row( o, 5 );
-
-//	cout << "==============" << endl;
+// We just calculate the covariance matrix and compute the Complexity of that.  It uses less cycles and the results are identical.
 
         gsl_matrix * COV = mCOV( o );
         
-//	print_matrix_row( COV, 5 );
-
         float Complexity = calcC_det3(COV);
-//		cout << "COR Complexity: " << Complexity << endl;
 		
         gsl_matrix_free(o);
         gsl_matrix_free(COV);
- //       gsl_matrix_free(COR);
 
         return Complexity;
 }
