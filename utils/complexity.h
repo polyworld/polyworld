@@ -31,15 +31,16 @@ bool is_matrix_square( gsl_matrix * );
 vector<string> get_list_of_brainfunction_logfiles( string );
 vector<string> get_list_of_brainanatomy_logfiles( string );
 gsl_matrix * readin_brainfunction( const char* );
+gsl_matrix * readin_brainfunction__optimized( const char* fname );
 gsl_matrix * readin_brainanatomy( const char* );
 gsl_matrix * mCOV( gsl_matrix * );
 float CalcComplexity( char * );
 
 float CalcComplexity( char * fname )
 {
-        gsl_matrix * activity = readin_brainfunction( fname );
+        gsl_matrix * activity = readin_brainfunction__optimized( fname );
 
-        if( activity->size2 > activity->size1 )         //!!! This will basically always be true.
+        if( activity->size2 > activity->size1 )         //If using __optimized this will always be true.
         {
                 gsl_matrix * temp = gsl_matrix_alloc( activity->size2, activity->size1);
                 gsl_matrix_transpose_memcpy(temp, activity);
@@ -57,25 +58,25 @@ float CalcComplexity( char * fname )
         time(&seed);
         gsl_rng_set(r, seed);
 
-
-//        int numrows = activity->size1;
-//        int numcols = activity->size2;
-
-
+/*
         for( unsigned int i=0; i<activity->size1; i++)
         {
                 for( unsigned int j=0; j<activity->size2; j++)
-                {
-                        gsl_matrix_set(activity, i, j, gsl_matrix_get(activity, i,j) + 0.0001*gsl_ran_ugaussian(r));
-                }
+			gsl_matrix_set(activity, i, j, gsl_matrix_get(activity, i,j) + 0.0001*gsl_ran_ugaussian(r));
         }
-
+*/
         gsl_matrix * o = activity;      // replace this if we're ever going to do the gsamp()'ing.
 
 		// We just calculate the covariance matrix and compute the Complexity of that.  It uses less cycles and the results are identical.
 
+//	print_matrix_row( o, 5 );
+
+//	cout << "==============" << endl;
+
         gsl_matrix * COV = mCOV( o );
         
+//	print_matrix_row( COV, 5 );
+
         float Complexity = calcC_det3(COV);
 //		cout << "COR Complexity: " << Complexity << endl;
 		
@@ -366,7 +367,7 @@ gsl_matrix * readin_brainanatomy( const char* fname )
 
 
 /* !!! NOTE: THIS FUNCTION COULD LIKELY BE IMRPOVED BY SWITCHING THE I's and J's WHEN MAKING THE MATRIX*/
-gsl_matrix * readin_brainfunction( const char* fname )
+gsl_matrix * readin_brainfunction__optimized( const char* fname )
 {
 /* This function largely replicates the function of the MATLAB file readin_brainfunction.m (Calculates, but does not return filnum, fitness) */
 
@@ -386,10 +387,6 @@ gsl_matrix * readin_brainfunction( const char* fname )
 		exit(1);
 	}
 
-	fseek( FunctionFile, 0, SEEK_END );
-	int filesize = ftell( FunctionFile );
-//	cout << "filesize = " << filesize << endl;
-	rewind( FunctionFile );
 
 /* MATLAB CODE: 
         % read first line
@@ -408,7 +405,7 @@ gsl_matrix * readin_brainfunction( const char* fname )
 	params = params.substr(14, params.length());
 //DEBUG	cout << "params: " << params << endl;
 
-	string filnum = params.substr( 0, params.find(" ",0));				//filnum actually isn't used anywhere
+//	string filnum = params.substr( 0, params.find(" ",0));				//filnum actually isn't used anywhere
 	string numneu = params.substr( params.find(" ",0)+1, params.length() );
 
 //DEBUG	cout << "filnum = " << filnum << endl;
@@ -429,28 +426,22 @@ gsl_matrix * readin_brainfunction( const char* fname )
 	list<string> FileContents;
 
 	char nextl[200];
-	while( ftell(FunctionFile) < filesize )
+	while( fgets(nextl, 200, FunctionFile) )	// returns null when at end of file
 	{
-		fgets( nextl, 200, FunctionFile );      // get the next line
 		FileContents.push_back( nextl );
 	}
 
 	fclose( FunctionFile );                         // Don't need this anymore.
 
-	// We'll use this in the next MATLAB CODE Section
-	string LastLine = FileContents.back();
-	// End we'll use this later in the next MATLAB CODE Section
+	FileContents.pop_back();                        // get rid of the last line (it's useless).
 
-	FileContents.pop_back();                        // get rid of the last line.
 
-	int numrows = atoi(numneu.c_str());
-	int numcols = int(round( FileContents.size() / numrows ));      // the minus 1 ignores the last line of the file
-
-//DEBUG	cout << "num rows = " << numrows;
-//DEBUG	cout << "num cols = " << numcols;
-
+	int numcols = atoi(numneu.c_str());
+	int numrows = int(round( FileContents.size() / numcols ));
 
 	gsl_matrix * activity = gsl_matrix_alloc(numrows, numcols);
+
+	cout << "Making Activity with sizes " << activity->size1 << ", " << activity->size2 << endl;
 
 	int tcnt=0;
 
@@ -458,15 +449,13 @@ gsl_matrix * readin_brainfunction( const char* fname )
 	for( FileContents_it = FileContents.begin(); FileContents_it != FileContents.end(); FileContents_it++)
 	{
 		int    tstep1 = atoi( ((*FileContents_it).substr( 0, (*FileContents_it).find(" ",0))).c_str() );
-		double tstep2 = atof( ((*FileContents_it).substr( params.find(" ",0)+1, (*FileContents_it).length())).c_str() );
+		float  tstep2 = atof( ((*FileContents_it).substr( params.find(" ",0), (*FileContents_it).length())).c_str() );
 
-//DEBUG         cout << "i: " << tstep1 << "\t" << "j: " << int(ceil(tcnt/numrows)) << endl;
-//DEBUG         cout << tstep1 << "\t" << tstep2 << endl;
 
-//Recall that numrows = int(numneu), and that gsl_matrices start with zero, not 1.
-		gsl_matrix_set( activity, tstep1, int(ceil(tcnt/numrows)), tstep2);
+		gsl_matrix_set( activity, int(ceil(tcnt/numcols)), tstep1, tstep2);
 		tcnt++;
 	}
+
 
 /* MATLAB CODE:
         fitness = str2num(nextl(15:end));
@@ -475,8 +464,6 @@ gsl_matrix * readin_brainfunction( const char* fname )
         Mname = ['M',fname,'.mat'];
 */
 
-//	fitness may be useful later, but right now it's not.
-//	float fitness = atof( LastLine.substr( 14, LastLine.length()).c_str() );		// Nothing uses this.
 
 	return activity;
 }
@@ -1046,3 +1033,124 @@ DEBUG */
 	return Mnew;
 }
 
+
+gsl_matrix * readin_brainfunction( const char* fname )
+{
+/* This function largely replicates the function of the MATLAB file readin_brainfunction.m (Calculates, but does not return filnum, fitness) */
+
+/* MATLAB CODE:
+        % strip fnames of spaces at the end
+        fname = fname(fname~=' ');                      // We don't need to do this.
+
+        % open file
+        fid = fopen(fname,'r');
+        if (fid==-1) fname = fname(1:end-1); fid = fopen(fname,'r'); end;
+*/
+
+	FILE * FunctionFile;
+	if( (FunctionFile = fopen(fname, "rt")) == NULL )
+	{
+		cerr << "Could not open file '" << fname << "' for reading. -- Terminating." << endl;
+		exit(1);
+	}
+
+	fseek( FunctionFile, 0, SEEK_END );
+	int filesize = ftell( FunctionFile );
+//	cout << "filesize = " << filesize << endl;
+	rewind( FunctionFile );
+
+/* MATLAB CODE: 
+        % read first line
+        tline = fgetl(fid);
+        % readin filenumber and cijsize
+        params = tline(15:length(tline));
+        [params] = str3num(params);
+        filnum = params(1);
+        numneu = params(2);
+*/
+	char tline[100];
+	fgets( tline, 100, FunctionFile );
+//DEBUG	cout << "First Line: " << tline << " // Length: " << strlen(tline) << endl;
+
+	string params = tline;
+	params = params.substr(14, params.length());
+//DEBUG	cout << "params: " << params << endl;
+
+	string filnum = params.substr( 0, params.find(" ",0));				//filnum actually isn't used anywhere
+	string numneu = params.substr( params.find(" ",0)+1, params.length() );
+
+//DEBUG	cout << "filnum = " << filnum << endl;
+//DEBUG	cout << "numneu = " << numneu << endl;
+
+/* MATLAB CODE:
+        % start reading in the timesteps
+        nextl = fgetl(fid);
+        tstep = str2num(nextl);  tcnt = 1;
+        while ~isempty(tstep)
+                activity(tstep(1)+1,ceil(tcnt/numneu)) = tstep(2);
+                tcnt = tcnt+1;
+        nextl = fgetl(fid);
+        tstep = str2num(nextl);
+        end;
+*/
+
+	list<string> FileContents;
+
+	char nextl[200];
+	while( ftell(FunctionFile) < filesize )
+	{
+		fgets( nextl, 200, FunctionFile );      // get the next line
+		FileContents.push_back( nextl );
+	}
+
+	fclose( FunctionFile );                         // Don't need this anymore.
+
+	// We'll use this in the next MATLAB CODE Section
+	string LastLine = FileContents.back();
+	// End we'll use this later in the next MATLAB CODE Section
+
+	FileContents.pop_back();                        // get rid of the last line.
+
+	int numrows = atoi(numneu.c_str());
+	int numcols = int(round( FileContents.size() / numrows ));      // the minus 1 ignores the last line of the file
+
+//DEBUG	cout << "num rows = " << numrows;
+//DEBUG	cout << "num cols = " << numcols;
+
+
+	gsl_matrix * activity = gsl_matrix_alloc(numrows, numcols);
+
+	cout << "Making Activity with sizes " << activity->size1 << ", " << activity->size2 << endl;
+
+	int tcnt=0;
+
+	list<string>::iterator FileContents_it;
+	for( FileContents_it = FileContents.begin(); FileContents_it != FileContents.end(); FileContents_it++)
+	{
+		int    tstep1 = atoi( ((*FileContents_it).substr( 0, (*FileContents_it).find(" ",0))).c_str() );
+//		cout << *FileContents_it << endl;
+//		cout << ((*FileContents_it).substr( params.find(" ",0), (*FileContents_it).length())).c_str() << "\t" << atof( ((*FileContents_it).substr( params.find(" ",0), (*FileContents_it).length())).c_str()) << endl;
+
+		float tstep2 = atof( ((*FileContents_it).substr( params.find(" ",0), (*FileContents_it).length())).c_str() );
+
+//DEBUG         cout << "i: " << tstep1 << "\t" << "j: " << int(ceil(tcnt/numrows)) << endl;
+//DEBUG         cout << tstep1 << "\t" << tstep2 << endl;
+
+//Recall that numrows = int(numneu), and that gsl_matrices start with zero, not 1.
+		gsl_matrix_set( activity, tstep1, int(ceil(tcnt/numrows)), tstep2);
+		tcnt++;
+	}
+
+
+/* MATLAB CODE:
+        fitness = str2num(nextl(15:end));
+        eval(['save M',fname,'.mat']);
+        fclose(fid);
+        Mname = ['M',fname,'.mat'];
+*/
+
+//	fitness may be useful later, but right now it's not.
+//	float fitness = atof( LastLine.substr( 14, LastLine.length()).c_str() );		// Nothing uses this.
+
+	return activity;
+}
