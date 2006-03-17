@@ -139,6 +139,7 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
 		fStatusFrequency(100),
 		fLoadState(false),
 		inited(false),
+		fHealing(0),
 		fMonitorCritterRank(0),
 		fMonitorCritterRankOld(0),
 //		fMonitorCritter(NULL),
@@ -168,8 +169,7 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
 		fNumCrittersNotInOrNearAnyFoodBand(0),
 		fNumCrittersInFoodBand(NULL),
 		fNumCrittersWithin5UnitsOfFoodBand(NULL),
-		fNumCrittersWithin10UnitsOfFoodBand(NULL),
-		fHealing(0)									// Healing by default turned off.
+		fNumCrittersWithin10UnitsOfFoodBand(NULL)
 {
 	Init();
 }
@@ -598,13 +598,11 @@ void TSimulation::Step()
 				if( fUseComplexityAsFitnessFunc )	// If using Complexity as FitnessFunc we already have this.  Virgil
 				{
 					fFittest[i]->Complexity = fFittest[i]->fitness;
-//DEBUG				cout << "[" << fFittest[i]->critterID << "]::: Am going to compute Complexity again.  Currently Fitness = " << fFittest[i]->fitness << endl;				
 				}
 			
 				if( fFittest[i]->Complexity == 0.0 )		// if Complexity is zero -- means we have to Calculate it
 				{
 					fFittest[i]->Complexity = CalcComplexity( t );
-//DEBUG				cout << "[" << fFittest[i]->critterID << "]: Computing Complexity for Critter in fFittest.  Complexity = " << fFittest[i]->Complexity << endl;
 				}
 			}
 
@@ -2814,7 +2812,7 @@ void TSimulation::Death(critter* c)
 
 
 		// Virgil
-		if ( UsingComplexityAsFitnessFunc() )		// Are we using Complexity as a Fitness Function?  If so, set fitness = Complexity here
+		if ( fUseComplexityAsFitnessFunc )		// Are we using Complexity as a Fitness Function?  If so, set fitness = Complexity here
 		{
 			c->SetUnusedFitness( c->Fitness() );		// We might want the heuristic fitness later so lets store it somewhere.
 			c->SetFitness( CalcComplexity( t ) );

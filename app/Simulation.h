@@ -302,8 +302,6 @@ public:
 	int TSimulation::glLinearFogEnd();
 
 
-	bool TSimulation::UsingComplexityAsFitnessFunc();		// Virgil
-	
 	float TSimulation::GetCritterHealingRate();				// Virgil Healing
 
 
@@ -546,9 +544,6 @@ inline int TSimulation::glLinearFogEnd()    { return fLinearFogEnd;  }
 
 inline bool TSimulation::RecordComplexity() { return fRecordComplexity; } 
 
-
-//FitnessAsComplexity  Virgil
-inline bool TSimulation::UsingComplexityAsFitnessFunc() { return fUseComplexityAsFitnessFunc; }
 
 inline float TSimulation::GetCritterHealingRate() { return fCritterHealingRate;	} 
 

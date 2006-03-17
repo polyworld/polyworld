@@ -507,7 +507,7 @@ void critter::lastrewards(float energyFitness, float ageFitness)
     
  
 //---------------------------------------------------------------------------
-// critter::lastrewards
+// critter::ProjectedFitness
 //---------------------------------------------------------------------------        
 float critter::ProjectedFitness()
 {

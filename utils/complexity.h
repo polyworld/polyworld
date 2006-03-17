@@ -15,10 +15,11 @@
 
 using namespace std;
 
-long double calcI_det2( gsl_matrix * );
+double calcI_det2( gsl_matrix * );
 gsl_matrix * matrix_crosssection( gsl_matrix * COR, int[], int );
 void print_matrix( gsl_matrix * );
-long double calcC_det3( gsl_matrix * ); // COR is a square Matrix
+double calcC_det3( gsl_matrix * ); // COR is a square Matrix
+double calcC_det3__optimized( gsl_matrix * foreignCOR );		// this one needs to remade.
 gsl_matrix * identity_matrix( int );
 void print_matrix_row(gsl_matrix *, int);
 void print_matrix_column(gsl_matrix *, int);
@@ -34,13 +35,17 @@ gsl_matrix * readin_brainfunction( const char* );
 gsl_matrix * readin_brainfunction__optimized( const char* fname );
 gsl_matrix * readin_brainanatomy( const char* );
 gsl_matrix * mCOV( gsl_matrix * );
-float CalcComplexity( char * );
+double CalcComplexity( char * );
 
-float CalcComplexity( char * fname )
+double CalcComplexity( char * fname )
 {
-        gsl_matrix * activity = readin_brainfunction__optimized( fname );
+	gsl_matrix * activity = readin_brainfunction__optimized( fname );
+//	gsl_matrix * activity = readin_brainfunction( fname );
 
-        if( activity->size2 > activity->size1 )         //If using __optimized this will never be true.
+
+	// Warning: this may not be the thing we want to do if the #steps alive < #numneurons.
+
+        if( activity->size2 > activity->size1 )         //If using __optimized this will almost never be true.
         {
                 gsl_matrix * temp = gsl_matrix_alloc( activity->size2, activity->size1);
                 gsl_matrix_transpose_memcpy(temp, activity);
@@ -58,11 +63,10 @@ float CalcComplexity( char * fname )
         time(&seed);
         gsl_rng_set(r, seed);
 
-
         for( unsigned int i=0; i<activity->size1; i++)
         {
-                for( unsigned int j=0; j<activity->size2; j++)
-			gsl_matrix_set(activity, i, j, gsl_matrix_get(activity, i,j) + 0.0001*gsl_ran_ugaussian(r));
+			for( unsigned int j=0; j<activity->size2; j++)
+				gsl_matrix_set(activity, i, j, gsl_matrix_get(activity, i,j) + 0.0001*gsl_ran_ugaussian(r));
         }
 
         gsl_matrix * o = activity;      // replace this if we're ever going to do the gsamp()'ing.
@@ -70,10 +74,12 @@ float CalcComplexity( char * fname )
 // We just calculate the covariance matrix and compute the Complexity of that.  It uses less cycles and the results are identical.
 
         gsl_matrix * COV = mCOV( o );
-        
-        float Complexity = calcC_det3(COV);
+	gsl_matrix_free(o);			// don't need this anymore
+
+
+	double Complexity = calcC_det3__optimized(COV);
+//	double Complexity = calcC_det3(COV);
 		
-        gsl_matrix_free(o);
         gsl_matrix_free(COV);
 
         return Complexity;
@@ -125,7 +131,8 @@ gsl_matrix * mCOV( gsl_matrix * M )
 /*
 The input matrix may not be square, but the output will always be squaire NxN matrix where N is the number of columns in the input matrix. 
 */
-	gsl_matrix * COV = gsl_matrix_calloc( M->size2, M->size2);
+	gsl_matrix * COV = gsl_matrix_alloc( M->size2, M->size2);
+//	gsl_matrix * COV = gsl_matrix_calloc( M->size2, M->size2);
 
 	double array_col_i[M->size1];	// The GSL covariance function takes arrays
 	double array_col_j[M->size1];	// The GSL covariance function takes arrays
@@ -168,7 +175,6 @@ The input matrix may not be square, but the output will always be squaire NxN ma
 vector<string> get_list_of_brainanatomy_logfiles( string directory_name )
 {
 
-//	char* directory_name = "/Users/virgil/alife_complexity/olaf_fixedPatches15/brain/bestRecent/1000/";
 	char* Function_string = "_brainAnatomy_";        //  _brainFunction_
 	vector<string> z;
 	struct dirent *entry;
@@ -340,10 +346,6 @@ gsl_matrix * readin_brainanatomy( const char* fname )
 
 	// We don't need to tranpose the matrix because we reversed the i's and j's from the MATLAB code.
 
-//DEBUG	print_matrix_row(cij, 30);
-//DEBUG	print_matrix_row(cij, 31);
-//DEBUG	print_matrix_row(cij, 32);
-
 
 /* MATLAB CODE:
 	eval(['save M',fname,'.mat']);
@@ -358,7 +360,6 @@ gsl_matrix * readin_brainanatomy( const char* fname )
 }
 
 
-/* !!! NOTE: THIS FUNCTION COULD LIKELY BE IMRPOVED BY SWITCHING THE I's and J's WHEN MAKING THE MATRIX*/
 gsl_matrix * readin_brainfunction__optimized( const char* fname )
 {
 /* This function largely replicates the function of the MATLAB file readin_brainfunction.m (Calculates, but does not return filnum, fitness) */
@@ -400,8 +401,8 @@ gsl_matrix * readin_brainfunction__optimized( const char* fname )
 //	string filnum = params.substr( 0, params.find(" ",0));				//filnum actually isn't used anywhere
 	string numneu = params.substr( params.find(" ",0)+1, params.length() );
 
-//DEBUG	cout << "filnum = " << filnum << endl;
-//DEBUG	cout << "numneu = " << numneu << endl;
+//	cout << "filnum = " << filnum << endl;
+//	cout << "numneu = " << numneu << endl;
 
 /* MATLAB CODE:
         % start reading in the timesteps
@@ -433,16 +434,17 @@ gsl_matrix * readin_brainfunction__optimized( const char* fname )
 
 	gsl_matrix * activity = gsl_matrix_alloc(numrows, numcols);
 
-	cout << "Making Activity with sizes " << activity->size1 << ", " << activity->size2 << endl;
 
 	int tcnt=0;
 
 	list<string>::iterator FileContents_it;
 	for( FileContents_it = FileContents.begin(); FileContents_it != FileContents.end(); FileContents_it++)
 	{
-		int    tstep1 = atoi( ((*FileContents_it).substr( 0, (*FileContents_it).find(" ",0))).c_str() );
-		float  tstep2 = atof( ((*FileContents_it).substr( params.find(" ",0), (*FileContents_it).length())).c_str() );
+		int thespace = (*FileContents_it).find(" ",0);
 
+		int    tstep1 = atoi( ((*FileContents_it).substr( 0, thespace)).c_str() );
+		double  tstep2 = atof( ((*FileContents_it).substr( thespace, (*FileContents_it).length())).c_str() );
+//		cout << (*FileContents_it) << "\t [" << int(ceil(tcnt/numcols)) << "," << tstep1 << "] = " << tstep2 << endl;
 
 		gsl_matrix_set( activity, int(ceil(tcnt/numcols)), tstep1, tstep2);
 		tcnt++;
@@ -463,7 +465,6 @@ gsl_matrix * readin_brainfunction__optimized( const char* fname )
 vector<string> get_list_of_brainfunction_logfiles( string directory_name )
 {
 
-//	char* directory_name = "/Users/virgil/alife_complexity/olaf_fixedPatches15/brain/bestRecent/1000/";
 	char* Function_string = "_brainFunction_";        //  _brainFunction_
 	vector<string> z;
 	struct dirent *entry;
@@ -801,12 +802,21 @@ gsl_matrix * identity_matrix( int N )
 	return z;
 }
 
-long double calcC_det3( gsl_matrix * foreignCOR )
+double calcC_det3( gsl_matrix * foreignCOR )
 {
 	gsl_matrix * COR = gsl_matrix_alloc( foreignCOR->size1, foreignCOR->size2 );	// We do this so we don't overwrite the passed matrix COR
 	gsl_matrix_memcpy( COR, foreignCOR );
+
+/* MATLAB CODE:
+	N = size(COR,1);
+*/
+
 	int N = COR->size1;
-	double d1;
+
+
+/* MATLAB CODE:
+	d1 = det( COR );
+*/
 
 	// These next few lines are nessecary to compute the Determinant of COR.
 	gsl_matrix * ludecomp = gsl_matrix_alloc( N, N );
@@ -814,27 +824,44 @@ long double calcC_det3( gsl_matrix * foreignCOR )
 	gsl_permutation * P = gsl_permutation_alloc(N);
 	int signum = 1;
 	gsl_linalg_LU_decomp( ludecomp, P, &signum );
-	d1 = gsl_linalg_LU_det( ludecomp, signum );
+	double d1 = fabs( gsl_linalg_LU_det( ludecomp, 1 ) );		//fabs() not in MATLAB code, but is nessecary sometimes.
 	gsl_permutation_free(P);
 
-//DEBUG	cout << "d1 = " << d1 << endl;
 
+/* MATLAB CODE:
+	while ~ d1
+ 	   COR = COR.*1.3;
+ 	   d1 = det(COR);
+	end
+*/
 
 	while( d1 == 0 )
 	{
 		gsl_matrix_scale( COR, 1.3 );
-		d1 = gsl_linalg_LU_det( COR, 1);
+		d1 = fabs( gsl_linalg_LU_det( COR, 1) );	// fabs() not in MATLAB code, but is nessecary sometimes.
 	}
+
 
 	gsl_matrix_scale( COR, 1 / exp(log(d1)/N) );	// MATLAB: COR = COR./exp(log(d1)/N);
 
-//DEBUG	cout << "Scaled Matrix" << endl;
-//DEBUG	print_matrix(COR);
 
-	long double I_n = calcI_det2(COR);
-	long double I_n1[N];
+/* MATLAB CODE:
+	% calculate I at level N
+	I_n = calcI_det2(COR);
 
-//DEBUG	cout << "I_n: " << I_n << endl;
+	% calculate I at level N-1
+	I_n1 = zeros(1,N);
+	for i=1:N
+		vv = ones(1,N);
+		vv(i) = 0;
+		[a b c] = find(vv==1);
+		I_n1(i) = calcI_det2(COR(b,b));
+	end;
+*/
+
+
+	double I_n = calcI_det2(COR);
+	double I_n1[N];
 
 	for( int i=0;i<N;i++ )
 	{
@@ -845,42 +872,117 @@ long double calcC_det3( gsl_matrix * foreignCOR )
 
 		for( int j=0;j<N;j++ )
 		{
-//			cout << "-- Value of j: " << j;
 			if( j < i )
-			{
-//				cout << "--- Adding to Array b";
-				b[j] = j;
-			}
+				b[j] = j;		
 			else if( j > i )
-			{
 				b[j-1] = j;
-			}
+		
 		}
 
 //DEBUG		cout << "b: "; for( int j=0;j<b_length;j++ ) { cout << b[j] << " "; } cout << endl;
-
-/*
-        At this point we have a vector vv which has all of the indexes except for i
-        In the old MATLAB code this equivilant to: 
-                for i=1:N
-                   vv = ones(1,N);                      
-                   vv(i) = 0;
-                   [a b c] = find(vv==1)                
-                end;
-*/
 
 
 		//Technically we don't have to store this array, but for now lets stay consistent with the MATLAB code
 		I_n1[i] = calcI_det2( matrix_crosssection( COR, b, b_length ) );
 	}
 
-	long double sumI_n1=0;
+	double sumI_n1=0;
 	for( int i=0;i<N;i++) { sumI_n1 += I_n1[i]; }
 
-	long double C = I_n - I_n/N - sumI_n1/N;
 
+	double C = I_n - I_n/N - sumI_n1/N;
 	return C;
 }
+
+double calcC_det3__optimized( gsl_matrix * foreignCOR )
+{
+	gsl_matrix * COR = gsl_matrix_alloc( foreignCOR->size1, foreignCOR->size2 );	// We do this so we don't overwrite the passed matrix COR
+	gsl_matrix_memcpy( COR, foreignCOR );
+
+/* MATLAB CODE:
+	N = size(COR,1);
+*/
+
+	int N = COR->size1;
+
+
+/* MATLAB CODE:
+	d1 = det( COR );
+*/
+
+	// These next few lines are nessecary to compute the Determinant of COR.
+	gsl_matrix * ludecomp = gsl_matrix_alloc( N, N );
+	gsl_matrix_memcpy( ludecomp, COR );		//make a copy so we don't overwrite COR when we decomp
+	gsl_permutation * P = gsl_permutation_alloc(N);
+	int signum = 1;
+	gsl_linalg_LU_decomp( ludecomp, P, &signum );
+	double d1 = fabs( gsl_linalg_LU_det( ludecomp, 1 ) );		//fabs() not in MATLAB code, but is nessecary sometimes.
+	gsl_permutation_free(P);
+
+
+/* MATLAB CODE:
+	while ~ d1
+ 	   COR = COR.*1.3;
+ 	   d1 = det(COR);
+	end
+*/
+	while( d1 == 0 )
+	{
+		gsl_matrix_scale( COR, 1.3 );
+		d1 = fabs( gsl_linalg_LU_det( COR, 1) );	// fabs() not in MATLAB code, but is nessecary sometimes.
+	}
+
+
+	gsl_matrix_scale( COR, 1 / exp(log(d1)/N) );	// MATLAB: COR = COR./exp(log(d1)/N);
+
+
+/* MATLAB CODE:
+	% calculate I at level N
+	I_n = calcI_det2(COR);
+
+	% calculate I at level N-1
+	I_n1 = zeros(1,N);
+	for i=1:N
+		vv = ones(1,N);
+		vv(i) = 0;
+		[a b c] = find(vv==1);
+		I_n1(i) = calcI_det2(COR(b,b));
+	end;
+*/
+
+
+	double I_n = calcI_det2(COR);
+	double sumI_n1=0;
+
+	for( int i=0;i<N;i++ )
+	{
+		int b[N-1];
+		int b_length = N-1;
+
+//DEBUG		cout << endl << "Value of i: " << i << "\t";
+
+		for( int j=0;j<N;j++ )
+		{
+			if( j < i )
+				b[j] = j;		
+			else if( j > i )
+				b[j-1] = j;
+		
+		}
+
+//DEBUG		cout << "b: "; for( int j=0;j<b_length;j++ ) { cout << b[j] << " "; } cout << endl;
+
+
+//obviated	I_n1[i] = calcI_det2( matrix_crosssection( COR, b, b_length ) );
+		sumI_n1 += calcI_det2( matrix_crosssection( COR, b, b_length ) );
+	}
+
+//obviated	double sumI_n1=0;
+//obviated	for( int i=0;i<N;i++) { sumI_n1 += I_n1[i]; }
+
+return( I_n - (I_n + sumI_n1)/N );
+}
+
 
 void print_matrix( gsl_matrix * M )
 {
@@ -898,7 +1000,7 @@ void print_matrix( gsl_matrix * M )
 }
 
 // !!! This could be made faster simply by taking the Determinant of COR as an input instead of COR itself. !!!
-long double calcI_det2(gsl_matrix * COR)
+double calcI_det2(gsl_matrix * COR)
 {
 /* MATLAB CODE:
 	function [I] = calcI_det2(COR)
@@ -926,17 +1028,12 @@ long double calcI_det2(gsl_matrix * COR)
 	gsl_permutation * P = gsl_permutation_alloc(COR->size1);
 	int signum = 1;
 	gsl_linalg_LU_decomp( ludecomp, P, &signum );
-	long double det = gsl_linalg_LU_det( ludecomp, signum );
+	double det = gsl_linalg_LU_det( ludecomp, signum );
 	gsl_permutation_free(P);
 
-//	cout << ":::detCOR: " << det << endl;
 	det = fabs(det);
-//	cout << ":::logdetCOR: " << (long double) logl(det) << endl;
-//	cout << ":::logdetCORover2: " << (long double) logl(det)/2 << endl;
 
-//	double I;
-	return( -1 * (long double) logl(det) / 2 );
-//	return I;
+	return( -1 * (double) log(det) / 2 );
 }
 
 /*
@@ -956,8 +1053,8 @@ gsl_matrix * matrix_crosssection(gsl_matrix * Minput, int* thearray, int thearra
 	else                                { Minput_size = Minput->size2; }	//If Minput isn't square,
 										//we only use the least of these.
 
-	//calloc() initially sets all entries to zero
-	gsl_matrix * Mnew = gsl_matrix_alloc( thearray_length, thearray_length );	//Initially sets all to zero.
+	// Define our matrix to return
+	gsl_matrix * Mnew = gsl_matrix_alloc( thearray_length, thearray_length );
 
 /*
 	index is the position within thearray (the index in Mnew)
@@ -970,8 +1067,6 @@ gsl_matrix * matrix_crosssection(gsl_matrix * Minput, int* thearray, int thearra
 		int i = thearray[index];
 
 				
-		// Apparently in GSL columns are horizontal and rows are vertical.
-		
 		gsl_vector_view row_i = gsl_matrix_row(    Minput, i );	//this could perhaps be made more efficient by getting submatrixes of that row
 		gsl_vector_view col_i = gsl_matrix_column( Minput, i ); //this could perhaps be made more efficient by getting submatrixes of that col
 
@@ -1015,10 +1110,6 @@ DEBUG */
 
 		}
 
-//		gsl_matrix_set( Mnew, index, index, gsl_matrix_get(Minput, i, i) );	//Set the Diagonal
-
-	
-//		cout << "Setting Mnew[" << i << "," << i << "]: " << gsl_matrix_get(Minput,thearray[i],thearray[i]) << endl;
 	}
 
 //DEBUG	cout << "Number Comparisons: " << number_comparisons << endl;
@@ -1062,7 +1153,6 @@ gsl_matrix * readin_brainfunction( const char* fname )
 */
 	char tline[100];
 	fgets( tline, 100, FunctionFile );
-//DEBUG	cout << "First Line: " << tline << " // Length: " << strlen(tline) << endl;
 
 	string params = tline;
 	params = params.substr(14, params.length());
@@ -1112,18 +1202,13 @@ gsl_matrix * readin_brainfunction( const char* fname )
 
 	gsl_matrix * activity = gsl_matrix_alloc(numrows, numcols);
 
-	cout << "Making Activity with sizes " << activity->size1 << ", " << activity->size2 << endl;
-
 	int tcnt=0;
 
 	list<string>::iterator FileContents_it;
 	for( FileContents_it = FileContents.begin(); FileContents_it != FileContents.end(); FileContents_it++)
 	{
 		int    tstep1 = atoi( ((*FileContents_it).substr( 0, (*FileContents_it).find(" ",0))).c_str() );
-//		cout << *FileContents_it << endl;
-//		cout << ((*FileContents_it).substr( params.find(" ",0), (*FileContents_it).length())).c_str() << "\t" << atof( ((*FileContents_it).substr( params.find(" ",0), (*FileContents_it).length())).c_str()) << endl;
-
-		float tstep2 = atof( ((*FileContents_it).substr( params.find(" ",0), (*FileContents_it).length())).c_str() );
+		double tstep2 = atof( ((*FileContents_it).substr( (*FileContents_it).find(" ",0), (*FileContents_it).length())).c_str() );
 
 //DEBUG         cout << "i: " << tstep1 << "\t" << "j: " << int(ceil(tcnt/numrows)) << endl;
 //DEBUG         cout << tstep1 << "\t" << tstep2 << endl;
