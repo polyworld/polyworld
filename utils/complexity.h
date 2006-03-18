@@ -53,7 +53,7 @@ double CalcComplexity( char * fname )
                 activity = temp;                // activity = activity'
                 gsl_matrix_free(temp2);
         }
-/*
+
         const gsl_rng_type * T;
         gsl_rng * r;
         gsl_rng_env_setup();
@@ -69,7 +69,7 @@ double CalcComplexity( char * fname )
 				gsl_matrix_set(activity, i, j, gsl_matrix_get(activity, i,j) + 0.00001*gsl_ran_ugaussian(r));	// we can do smaller values
 //				gsl_matrix_set(activity, i, j, gsl_matrix_get(activity, i,j) + 0.0001*gsl_ran_ugaussian(r));
         }
-*/
+
         gsl_matrix * o = activity;      // replace this if we're ever going to do the gsamp()'ing.
 
 // We just calculate the covariance matrix and compute the Complexity of that.  It uses less cycles and the results are identical.
@@ -445,9 +445,8 @@ gsl_matrix * readin_brainfunction__optimized( const char* fname )
 
 		int    tstep1 = atoi( ((*FileContents_it).substr( 0, thespace)).c_str() );
 		double  tstep2 = atof( ((*FileContents_it).substr( thespace, (*FileContents_it).length())).c_str() );
-//		cout << (*FileContents_it) << "\t [" << int(ceil(tcnt/numcols)) << "," << tstep1 << "] = " << tstep2 << endl;
+//		cout << (*FileContents_it) << "\t [" << tcnt/numcols << "," << tstep1 << "] = " << tstep2 << endl;
 
-//		gsl_matrix_set( activity, int(ceil(tcnt/numcols)), tstep1, tstep2);
 		gsl_matrix_set( activity, tcnt/numcols, tstep1, tstep2);
 		tcnt++;
 	}
@@ -1212,7 +1211,7 @@ gsl_matrix * readin_brainfunction( const char* fname )
 		int    tstep1 = atoi( ((*FileContents_it).substr( 0, (*FileContents_it).find(" ",0))).c_str() );
 		double tstep2 = atof( ((*FileContents_it).substr( (*FileContents_it).find(" ",0), (*FileContents_it).length())).c_str() );
 
-//DEBUG         cout << "i: " << tstep1 << "\t" << "j: " << int(ceil(tcnt/numrows)) << endl;
+//DEBUG         cout << "i: " << tstep1 << "\t" << "j: " << tcnt/numrows << endl;
 //DEBUG         cout << tstep1 << "\t" << tstep2 << endl;
 
 //Recall that numrows = int(numneu), and that gsl_matrices start with zero, not 1.
