@@ -30,7 +30,8 @@ SOURCES		=	app/debug.cp \
 				ui/ChartWindow.cp \
 				ui/CritterPOVWindow.cp \
 				ui/SceneView.cp \
-				ui/TextStatusWindow.cp \				
+				ui/TextStatusWindow.cp \
+				ui/OverheadView.cp \ 
 				utils/error.cp \
 				utils/indexlist.cp \
 				utils/misc.cp \
@@ -38,18 +39,53 @@ SOURCES		=	app/debug.cp \
 																			  	
 TARGET		= 	Polyworld
 
-INCLUDEPATH +=	. \
-				app \
-				critter \
-				environment \
-				graphics \
-				ui \
-				utils \
-				$(QT_INCLUDE_DIR) \
-				$(QT_INCLUDE_DIR)/QtOpenGL \
-				/System/Library/Frameworks/AGL.framework/Versions/A/Headers/
+macx {
+	INCLUDEPATH +=	. \
+					app \
+					critter \
+					environment \
+					graphics \
+					ui \
+					utils \
+					$(QT_INCLUDE_DIR) \
+					$(QT_INCLUDE_DIR)/QtOpenGL \
+					/System/Library/Frameworks/AGL.framework/Versions/A/Headers/
+} else unix {
+	INCLUDEPATH +=	. \
+					app \
+					critter \
+					environment \
+					graphics \
+					ui \
+					utils \
+					$(QT_INCLUDE_DIR) \
+					$(QT_INCLUDE_DIR)/QtOpenGL \
+					$(QT_INCLUDE_DIR)/QtCore \
+					$(QT_INCLUDE_DIR)/QtGui \
+					/usr/include/GL/
+} else win32 {
+	INCLUDEPATH +=	. \
+					app \
+					critter \
+					environment \
+					graphics \
+					ui \
+					utils \
+					$(QT_INCLUDE_DIR) \
+					$(QT_INCLUDE_DIR)/QtOpenGL				
+}
 								
 QMAKE_CFLAGS_DEBUG += -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC -Wno-deprecated
+QMAKE_CFLAGS += -Wno-deprecated
 
-LIBS	+=	-F$(QTDIR)/lib/ -framework QtOpenGL -framework OpenGL -framework AGL -lgsl -lgslcblas -lm
+macx {
+	LIBS	+=	-F$(QTDIR)/lib/ -framework QtOpenGL -framework OpenGL -framework AGL -lgsl -lgslcblas -lm
+} else unix {
+	LIBS	+=	-L$(QTDIR)/lib/ -lQtOpenGL -lgsl -lgslcblas
+} else win32 {
+	message(Not building on Windows yet)
+}
 
+!macx:!unix:!win32 {
+	message(Unknown platform - NOT Mac OS X or Windows or Unix)
+}
