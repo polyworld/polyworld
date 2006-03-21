@@ -19,12 +19,14 @@
 #include "graphics.h"
 #include "gstage.h"
 #include "TextStatusWindow.h"
+#include "OverheadView.h"
 
 // Forward declarations
 class TBinChartWindow;
 class TBrainMonitorWindow;
 class TChartWindow;
 class TSceneView;
+class TOverheadView;
 class TCritterPOVWindow;
 //class QMenuBar;
 //class QTimer;
@@ -202,6 +204,7 @@ private slots:
     void ToggleFitnessWindow();
     void TogglePopulationWindow();
     void ToggleBirthrateWindow();
+    void ToggleOverheadWindow();
 	void ToggleBrainWindow();
 	void TogglePOVWindow();
 	void ToggleTextStatus();
@@ -212,6 +215,7 @@ private:
 	QMenu* fWindowsMenu;
 	
 	TSceneView* fSceneView;
+	TOverheadView* fOverheadWindow; //CMB 3/17/06
 	TSimulation* fSimulation;
 	
 	QAction* toggleEnergyWindowAct;
@@ -221,6 +225,7 @@ private:
 	QAction* toggleBrainWindowAct;
 	QAction* togglePOVWindowAct;
 	QAction* toggleTextStatusAct;
+	QAction* toggleOverheadWindowAct;
 	QAction* tileAllWindowsAct;
 
 	QString windowSettingsName;
@@ -246,6 +251,7 @@ public:
 	int WhichBand( float z );
 	
 	gcamera& GetCamera();
+	gcamera& GetOverheadCamera();
 
 	TChartWindow* GetBirthrateWindow() const;
 	TChartWindow* GetFitnessWindow() const;
@@ -255,6 +261,7 @@ public:
 	TBinChartWindow* GetGeneSeparationWindow() const;
 	TCritterPOVWindow* GetCritterPOVWindow() const;
 	TTextStatusWindow* GetStatusWindow() const;
+	TOverheadView*   GetOverheadWindow() const;
 	
 //	bool GetShowBrain() const;
 //	void SetShowBrain(bool showBrain);
@@ -270,8 +277,12 @@ public:
 	void Update();
 	
 	static long fStep;
-	static short fOverHeadRank;
-	static critter* fMonitorCritter;
+	bool fCritterTracking;		//Moving to public for access to sceneview and keypress (CMB 3/19/06)
+	long fMonitorCritterRank;	//Moving to public for access to sceneview and keypress (CMB 3/19/06)
+	long fMonitorCritterRankOld;
+	bool fRotateWorld;		//Turn world rotation on or off (CMB 3/19/06)
+	static short fOverHeadRank;    	
+	static critter* fMonitorCritter;	
 	static double fFramesPerSecondOverall;
 	static double fSecondsPerFrameOverall;
 	static double fFramesPerSecondRecent;
@@ -337,6 +348,7 @@ private:
 
 	TSceneView* fSceneView;
 	TSceneWindow* fSceneWindow;
+	TOverheadView* fOverheadWindow;      //CMB 3/17/06
 	TChartWindow* fBirthrateWindow;
 	TChartWindow* fFitnessWindow;
 	TChartWindow* fFoodEnergyWindow;
@@ -363,10 +375,10 @@ private:
 	float fCritterHealingRate;	// Virgil Healing
 	bool fHealing;				// Virgil Healing
 	
-	long fMonitorCritterRank;
-	long fMonitorCritterRankOld;
+	//long fMonitorCritterRank;
+	//long fMonitorCritterRankOld;
 //	critter* fMonitorCritter;
-	bool fCritterTracking;
+	//bool fCritterTracking;
 	float fGroundClearance;
 //	short fOverHeadRank;
 	short fOverHeadRankOld;
@@ -513,12 +525,15 @@ private:
 	unsigned long* fNumCrittersWithin10UnitsOfFoodBand;
 	
     gcamera fCamera;
+    gcamera fOverheadCamera;
     gpolyobj fGround;
     TSetList fWorldSet;	
-	gscene fScene;
+    gscene fScene;
+    gscene fOverheadScene;
 };
 
 inline gcamera& TSimulation::GetCamera() { return fCamera; }
+inline gcamera& TSimulation::GetOverheadCamera() { return fOverheadCamera; } //CMB 3/17/06
 inline TChartWindow* TSimulation::GetBirthrateWindow() const { return fBirthrateWindow; }
 inline TChartWindow* TSimulation::GetFitnessWindow() const { return fFitnessWindow; }
 inline TChartWindow* TSimulation::GetEnergyWindow() const { return fFoodEnergyWindow; }
@@ -526,6 +541,7 @@ inline TChartWindow* TSimulation::GetPopulationWindow() const { return fPopulati
 inline TBrainMonitorWindow* TSimulation::GetBrainMonitorWindow() const { return fBrainMonitorWindow; }
 inline TBinChartWindow* TSimulation::GetGeneSeparationWindow() const { return fGeneSeparationWindow; }
 inline TCritterPOVWindow* TSimulation::GetCritterPOVWindow() const { return fCritterPOVWindow; }
+inline TOverheadView* TSimulation::GetOverheadWindow() const { return fOverheadWindow; }
 inline TTextStatusWindow* TSimulation::GetStatusWindow() const { return fTextStatusWindow; }
 //inline bool TSimulation::GetShowBrain() const { return fBrainMonitorWindow->visible; }
 //inline void TSimulation::SetShowBrain(bool showBrain) { fBrainMonitorWindow->visible = showBrain; }

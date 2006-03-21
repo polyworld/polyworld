@@ -140,7 +140,7 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
 		fLoadState(false),
 		inited(false),
 		fHealing(0),
-		fMonitorCritterRank(0),
+//		fMonitorCritterRank(0),
 		fMonitorCritterRankOld(0),
 //		fMonitorCritter(NULL),
 		fCritterTracking(false),
@@ -169,7 +169,8 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
 		fNumCrittersNotInOrNearAnyFoodBand(0),
 		fNumCrittersInFoodBand(NULL),
 		fNumCrittersWithin5UnitsOfFoodBand(NULL),
-		fNumCrittersWithin10UnitsOfFoodBand(NULL)
+		fNumCrittersWithin10UnitsOfFoodBand(NULL),
+		fRotateWorld(false)
 {
 	Init();
 }
@@ -215,6 +216,9 @@ TSimulation::~TSimulation()
 
 	if (fTextStatusWindow != NULL)
 		delete fTextStatusWindow;
+	
+	if (fOverheadWindow != NULL)
+		delete fOverheadWindow;
 }
 
 
@@ -477,11 +481,11 @@ void TSimulation::Step()
 			
 			if (fOverheadCritter != NULL)
 			{
-				//camera[1].setx(fOverheadCritter->x());
-				//camera[1].setz(fOverheadCritter->z()); TODO
+				fOverheadCamera.setx(fOverheadCritter->x());
+                                fOverheadCamera.setz(fOverheadCritter->z());
 			}
-		}	
-//		fOverHeadWindow->updateGL(); TODO
+		}
+		fOverheadWindow->Draw();
 		
 		// Born / (Born + Created) window
 		if (fChartBorn
@@ -780,6 +784,16 @@ void TSimulation::Step()
 	// Handle tracking gene Separation
 	if (fMonitorGeneSeparation && fRecordGeneSeparation)
 		RecordGeneSeparation();
+		
+	//Rotate the world a bit each time step... (CMB 3/10/06)
+	if (fRotateWorld)
+	{
+		fCameraAngle += fCameraRotationRate;
+		float camrad = fCameraAngle * DEGTORAD;
+		fCamera.settranslation((0.5+fCameraRadius*sin(camrad))*globals::worldsize, fCameraHeight*globals::worldsize,(-.5+fCameraRadius*cos(camrad))*
+globals::worldsize);
+	}
+
 }
 
 
@@ -1170,34 +1184,45 @@ void TSimulation::Init()
 	while( barrier::gXSortedBarriers.next(b) )
 		fWorldSet.Add(b);
 
-	// Set up scene and camera		
-	fScene.SetStage(&fStage);
-	fScene.SetCamera(&fCamera);
+	// Set up scene and camera
+        fScene.SetStage(&fStage);
+        fScene.SetCamera(&fCamera);
+        fCamera.SetPerspective(fCameraFOV, fSceneView->width() / fSceneView->height(), 0.01, 1.5 * globals::worldsize);	
+	 
+	//The main camera will rotate around the world, so we need to set up the angle and translation  (CMB 03/10/06)
+        fCameraAngle = fCameraAngleStart;
+        float camrad = fCameraAngle * DEGTORAD;
+        fCamera.settranslation((0.5 + fCameraRadius * sin(camrad)) * globals::worldsize,
+                            fCameraHeight * globals::worldsize, (-0.5 + fCameraRadius * cos(camrad)) * globals::worldsize);
 
-	fCamera.SetPerspective(fCameraFOV,
-						   fSceneView->width() / fSceneView->height(),
-						   .01,
-						   1.5 * globals::worldsize);
-						   
-    const float cameraRadius = fCameraAngleStart * DEGTORAD;
-    fCamera.settranslation((0.5 + fCameraRadius * sin(cameraRadius)) * globals::worldsize,
-                            fCameraHeight * globals::worldsize,
-						    (-0.5 + fCameraRadius * cos(cameraRadius)) * globals::worldsize);
-
-    if (fCameraRotationRate == 0.0)
-		fCamera.SetFixationPoint(0.5 * globals::worldsize, 0.0, -0.5 * globals::worldsize);
-    else
-        fCamera.SetRotation(0.0, -fCameraFOV / 3.0, 0.0);
-
-    fCamera.setcolor(fCameraColor);
-    fStage.AddObject(&fCamera);
-
+    	
+        fCamera.SetRotation(0.0, -fCameraFOV / 3.0, 0.0);	
+	fCamera.setcolor(fCameraColor);
+        fCamera.UseLookAt();
+        fStage.AddObject(&fCamera);
 	
-	// Add scene to scene view
-	Q_CHECK_PTR(fSceneView);		
-	fSceneView->SetScene(&fScene);
 	
-	// TODO add overhead view here
+	//Set up the overhead camera view (CMB 3/13/06)
+        // Set up overhead scene and overhead camera
+        fOverheadScene.SetStage(&fStage);
+        fOverheadScene.SetCamera(&fOverheadCamera);
+
+        //Set up the overhead camera (CMB 3/13/06)
+        fOverheadCamera.setcolor(fCameraColor);
+	fOverheadCamera.SetFog(false, glFogFunction(), glExpFogDensity(), glLinearFogEnd() );
+        fOverheadCamera.SetPerspective(fCameraFOV, fSceneView->width() / fSceneView->height(),0.01, 1.5 * globals::worldsize);
+        fOverheadCamera.settranslation(0.5*globals::worldsize, 0.2*globals::worldsize,-0.5*globals::worldsize);
+        fOverheadCamera.SetRotation(0.0, -fCameraFOV, 0.0);
+        //fOverheadCamera.UseLookAt();
+   
+        //Add the overhead camera into the scene (CMB 3/13/06)
+        fStage.AddObject(&fOverheadCamera);
+
+        // Add scene to scene view and to overhead view
+        Q_CHECK_PTR(fSceneView);
+        fSceneView->SetScene(&fScene);
+        fOverheadWindow->SetScene( &fOverheadScene);  //Set up overhead view (CMB 3/13/06)
+        
 
 #define DebugGenetics 0
 #if DebugGenetics
@@ -1387,6 +1412,7 @@ void TSimulation::InitWorld()
     fShowVision = true;
 	fRecordMovie = false;
 	fMovieFile = NULL;
+    fRotateWorld = false;	//Boolean for enabling or disabling world roation (CMB 3/19/06)
     
     fFitI = 0;
     fFitJ = 1;
@@ -1552,7 +1578,10 @@ void TSimulation::InitMonitoringWindows()
 	
 	// Status window
 	fTextStatusWindow = new TTextStatusWindow( this );
-				
+	 
+	//Overhead window
+	fOverheadWindow = new TOverheadView(this);			
+
 #if 0
 	// Gene separation
 	fGeneSeparationWindow = new TBinChartWindow( "gene separation", "GeneSeparation" );
@@ -1611,6 +1640,11 @@ void TSimulation::InitMonitoringWindows()
 		const QRect& screenSize = desktop->screenGeometry( desktop->primaryScreen() );
 		fTextStatusWindow->RestoreFromPrefs( screenSize.width() - TTextStatusWindow::kDefaultWidth, kMenuBarHeight /*+ mainWindowTitleHeight + titleHeight*/ );
 	}
+ 	
+	//Open overhead window CMB 3/17/06
+	if (fOverheadWindow != NULL)                
+		fOverheadWindow->RestoreFromPrefs( fBirthrateWindow->width() + 1, kMenuBarHeight + mainWindowTitleHeight + titleHeight + titleHeight );
+                //(screenleft,screenleft+.75*xscreensize, screenbottom,screenbottom+(5./6.)*yscreensize);
 }
 
 //---------------------------------------------------------------------------

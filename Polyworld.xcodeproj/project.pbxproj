@@ -72,6 +72,8 @@
 		76AA4617073AAEFF00508D3D /* AGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 76AA4616073AAEFF00508D3D /* AGL.framework */; };
 		76AA4628073AAF7E00508D3D /* TextStatusWindow.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76AA4626073AAF7E00508D3D /* TextStatusWindow.cp */; };
 		76AA4629073AAF7E00508D3D /* TextStatusWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = 76AA4627073AAF7E00508D3D /* TextStatusWindow.h */; };
+		76C2315009D0B4AA00EB652A /* OverheadView.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76C2314E09D0B4AA00EB652A /* OverheadView.cp */; };
+		76C2315109D0B4AA00EB652A /* OverheadView.h in Headers */ = {isa = PBXBuildFile; fileRef = 76C2314F09D0B4AA00EB652A /* OverheadView.h */; };
 		76CBA568062BED8E001C79E7 /* debug.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA55D062BED8E001C79E7 /* debug.cp */; };
 		76CBA569062BED8E001C79E7 /* debug.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA55E062BED8E001C79E7 /* debug.h */; };
 		76CBA56B062BED8E001C79E7 /* globals.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA560062BED8E001C79E7 /* globals.cp */; };
@@ -261,6 +263,8 @@
 		76AA4626073AAF7E00508D3D /* TextStatusWindow.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = TextStatusWindow.cp; sourceTree = "<group>"; };
 		76AA4627073AAF7E00508D3D /* TextStatusWindow.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = TextStatusWindow.h; sourceTree = "<group>"; };
 		76BB7C9E074D4CE500576391 /* worldfile */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text; path = worldfile; sourceTree = "<group>"; };
+		76C2314E09D0B4AA00EB652A /* OverheadView.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = OverheadView.cp; sourceTree = "<group>"; };
+		76C2314F09D0B4AA00EB652A /* OverheadView.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = OverheadView.h; sourceTree = "<group>"; };
 		76CBA55D062BED8E001C79E7 /* debug.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = debug.cp; sourceTree = "<group>"; };
 		76CBA55E062BED8E001C79E7 /* debug.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = debug.h; sourceTree = "<group>"; };
 		76CBA55F062BED8E001C79E7 /* dumpload.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = dumpload.cp; sourceTree = "<group>"; };
@@ -534,8 +538,6 @@
 		76CBA598062BEDBC001C79E7 /* ui */ = {
 			isa = PBXGroup;
 			children = (
-				76AA4626073AAF7E00508D3D /* TextStatusWindow.cp */,
-				76AA4627073AAF7E00508D3D /* TextStatusWindow.h */,
 				76CBA599062BEDBC001C79E7 /* BrainMonitorWindow.cp */,
 				76CBA59A062BEDBC001C79E7 /* BrainMonitorWindow.h */,
 				76CBA59B062BEDBC001C79E7 /* CameraController.cp */,
@@ -546,8 +548,12 @@
 				84ED837B062E7EED00AEEA18 /* CritterPOVWindow.h */,
 				76CBA59F062BEDBC001C79E7 /* Menu.cp */,
 				76CBA5A0062BEDBC001C79E7 /* Menu.h */,
+				76C2314E09D0B4AA00EB652A /* OverheadView.cp */,
+				76C2314F09D0B4AA00EB652A /* OverheadView.h */,
 				76CBA5A1062BEDBC001C79E7 /* SceneView.cp */,
 				76CBA5A2062BEDBC001C79E7 /* SceneView.h */,
+				76AA4626073AAF7E00508D3D /* TextStatusWindow.cp */,
+				76AA4627073AAF7E00508D3D /* TextStatusWindow.h */,
 			);
 			path = ui;
 			sourceTree = "<group>";
@@ -613,6 +619,7 @@
 				769996590742BCF0001B0A65 /* gdlink.h in Headers */,
 				7668D16B0885AD07004158C6 /* PwMovieTools.h in Headers */,
 				C58654FC09B94E1C000F30F8 /* complexity.h in Headers */,
+				76C2315109D0B4AA00EB652A /* OverheadView.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -866,8 +873,12 @@
 			files = (
 			);
 			inputPaths = (
+				"$(SRCROOT)/app/PWApp.h",
+				"$(SRCROOT)/app/Simulation.h",
 			);
 			outputPaths = (
+				"$(SRCROOT)/app/mov_PWApp.cpp",
+				"$(SRCROOT)/app/moc_Simulation.cpp",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -945,6 +956,7 @@
 				37577669078C8C6200CA4042 /* moc_PWApp.cpp in Sources */,
 				3757766A078C8C6200CA4042 /* moc_Simulation.cpp in Sources */,
 				7668D1690885AC65004158C6 /* PwMovieTools.cp in Sources */,
+				76C2315009D0B4AA00EB652A /* OverheadView.cp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

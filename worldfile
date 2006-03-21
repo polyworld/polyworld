@@ -188,7 +188,7 @@
 10     numprebirthcycles
 
 1      overheadrank
-0      tracking
+1      tracking
 0.0    minfoodenergyatdeath
 
 0      graycoding
@@ -214,4 +214,4 @@ linear FogFunction
 0.1    ExponentialFogDensity
 25     LinearFogEnd
 
-0      recordMovie
+1      recordMovie

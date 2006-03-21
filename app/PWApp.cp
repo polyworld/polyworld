@@ -200,6 +200,7 @@ void TSceneWindow::AddWindowMenu()
 	toggleBrainWindowAct = fWindowsMenu->addAction("Hide Brain Monitor", this, SLOT(ToggleBrainWindow()), Qt::CTRL+Qt::Key_5 );
 	togglePOVWindowAct = fWindowsMenu->addAction("Hide Critter POV", this, SLOT(TogglePOVWindow()), Qt::CTRL+Qt::Key_6 );
 	toggleTextStatusAct = fWindowsMenu->addAction("Hide Text Status", this, SLOT(ToggleTextStatus()), Qt::CTRL+Qt::Key_7 );
+	toggleOverheadWindowAct = fWindowsMenu->addAction("Hide Overhead Window", this, SLOT(ToggleOverheadWindow()), Qt::CTRL+Qt::Key_8 );
 	fWindowsMenu->addSeparator();
 	tileAllWindowsAct = fWindowsMenu->addAction("Tile Windows", this, SLOT(TileAllWindows()));
 }
@@ -300,6 +301,18 @@ void TSceneWindow::ToggleTextStatus()
 {
 	Q_ASSERT(fSimulation != NULL);
 	TTextStatusWindow* window = fSimulation->GetStatusWindow();
+	Q_ASSERT(window != NULL);
+	window->setHidden(window->isVisible());
+	window->SaveVisibility();
+}
+
+//---------------------------------------------------------------------------
+// TSceneWindow::ToggleOverheadWindow
+//---------------------------------------------------------------------------
+void TSceneWindow::ToggleOverheadWindow()
+{
+	Q_ASSERT(fSimulation != NULL);
+	TOverheadView* window = fSimulation->GetOverheadWindow();
 	Q_ASSERT(window != NULL);
 	window->setHidden(window->isVisible());
 	window->SaveVisibility();
@@ -412,7 +425,28 @@ void TSceneWindow::TileAllWindows()
 	// Text status window		
 	TTextStatusWindow* statusWindow = fSimulation->GetStatusWindow();
 	if( statusWindow != NULL )
-		statusWindow->move( screenSize.width() - statusWindow->width(), kMenuBarHeight );		
+		statusWindow->move( screenSize.width() - statusWindow->width(), kMenuBarHeight );
+	
+	// OverheadWindow (CMB 3/19/06
+	//  Not sure really where to put it at this point.  So put it where the brain window usually goes.  Adjust later
+	// (If there's plenty of room, place it beside the POV window, else
+	// overlap it with the POV window, but leave the POV window title visible)
+	TOverheadView* overheadWindow = fSimulation->GetOverheadWindow();
+	if( overheadWindow != NULL )
+	{
+		if( (screenSize.width() - (leftEdge + povWindow->width())) > 300 )
+		{
+			// fair bit of room left, so place it adjacent to the POV window
+			leftEdge += povWindow->width();
+			nextY = kMenuBarHeight + titleHeightLarge;
+		}
+		else
+		{
+			// not much room left, so overlap it with the POV window
+			nextY = kMenuBarHeight + titleHeightLarge + titleHeightSmall;
+		}
+		overheadWindow->move( leftEdge, nextY );
+	}
 }
 
 
@@ -662,6 +696,21 @@ void TSceneWindow::windowsMenuAboutToShow()
 		else
 			//fWindowsMenu->changeItem(5, "Show Critter POV");
 			togglePOVWindowAct->setText( "&Show Critter POV" );
+	}
+	
+	// OverheadView
+	TOverheadView* overheadWindow = fSimulation->GetOverheadWindow();
+	if (overheadWindow == NULL)
+	{
+		// No window. Disable menu		
+		toggleOverheadWindowAct->setEnabled( false );	
+	}
+	else
+	{
+		if (overheadWindow->isVisible())			
+			toggleOverheadWindowAct->setText( "&Hide Overhead Window" );
+		else			
+			toggleOverheadWindowAct->setText( "&Show Overhead Window" );
 	}
 }
 

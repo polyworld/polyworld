@@ -81,6 +81,11 @@ Download, build, and install gsl (from gnu.org)
 * Then follow the instructions in "INSTALL"
   (./configure ; make ; make install)
   This should install to /usr/local/include and /usr/local/lib.
+* If Polyworld complains that it can not find the shared file libgsl.so.0
+  Refer to: http://www.gnu.org/software/gsl/manual/gsl-ref_2.html
+  The following steps should be followed: 
+	$ LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH 
+	$ export LD_LIBRARY_PATH
 
 Mac versus Linux Installs
 * The default 'polyworld.pro' file works only on Mac.  A special
