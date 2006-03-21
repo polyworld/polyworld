@@ -9,6 +9,8 @@
 #ifndef SCENEVIEW_H
 #define SCENEVIEW_H
 
+// unix
+#include <stdio.h>
 
 // qt
 #include <qgl.h>
