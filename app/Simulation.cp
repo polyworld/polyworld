@@ -1185,45 +1185,44 @@ void TSimulation::Init()
 		fWorldSet.Add(b);
 
 	// Set up scene and camera
-        fScene.SetStage(&fStage);
-        fScene.SetCamera(&fCamera);
-        fCamera.SetPerspective(fCameraFOV, fSceneView->width() / fSceneView->height(), 0.01, 1.5 * globals::worldsize);	
+	fScene.SetStage(&fStage);
+	fScene.SetCamera(&fCamera);
+	fCamera.SetPerspective(fCameraFOV, fSceneView->width() / fSceneView->height(), 0.01, 1.5 * globals::worldsize);	
 	 
 	//The main camera will rotate around the world, so we need to set up the angle and translation  (CMB 03/10/06)
-        fCameraAngle = fCameraAngleStart;
-        float camrad = fCameraAngle * DEGTORAD;
-        fCamera.settranslation((0.5 + fCameraRadius * sin(camrad)) * globals::worldsize,
-                            fCameraHeight * globals::worldsize, (-0.5 + fCameraRadius * cos(camrad)) * globals::worldsize);
+	fCameraAngle = fCameraAngleStart;
+	float camrad = fCameraAngle * DEGTORAD;
+	fCamera.settranslation((0.5 + fCameraRadius * sin(camrad)) * globals::worldsize,
+						fCameraHeight * globals::worldsize, (-0.5 + fCameraRadius * cos(camrad)) * globals::worldsize);
 
-    	
-        fCamera.SetRotation(0.0, -fCameraFOV / 3.0, 0.0);	
+//	fCamera.SetRotation(0.0, -fCameraFOV / 3.0, 0.0);	
 	fCamera.setcolor(fCameraColor);
-        fCamera.UseLookAt();
-        fStage.AddObject(&fCamera);
-	
+	fCamera.UseLookAt();
+	fCamera.SetFixationPoint(0.5 * globals::worldsize, 0.0, -0.5 * globals::worldsize);	
+	fCamera.SetRotation(0.0, 90, 0.0);  	
+	fStage.AddObject(&fCamera);
 	
 	//Set up the overhead camera view (CMB 3/13/06)
-        // Set up overhead scene and overhead camera
-        fOverheadScene.SetStage(&fStage);
-        fOverheadScene.SetCamera(&fOverheadCamera);
+	// Set up overhead scene and overhead camera
+	fOverheadScene.SetStage(&fStage);
+	fOverheadScene.SetCamera(&fOverheadCamera);
 
-        //Set up the overhead camera (CMB 3/13/06)
-        fOverheadCamera.setcolor(fCameraColor);
+	//Set up the overhead camera (CMB 3/13/06)
+	fOverheadCamera.setcolor(fCameraColor);
 	fOverheadCamera.SetFog(false, glFogFunction(), glExpFogDensity(), glLinearFogEnd() );
-        fOverheadCamera.SetPerspective(fCameraFOV, fSceneView->width() / fSceneView->height(),0.01, 1.5 * globals::worldsize);
-        fOverheadCamera.settranslation(0.5*globals::worldsize, 0.2*globals::worldsize,-0.5*globals::worldsize);
-        fOverheadCamera.SetRotation(0.0, -fCameraFOV, 0.0);
-        //fOverheadCamera.UseLookAt();
-   
-        //Add the overhead camera into the scene (CMB 3/13/06)
-        fStage.AddObject(&fOverheadCamera);
+	fOverheadCamera.SetPerspective(fCameraFOV, fSceneView->width() / fSceneView->height(),0.01, 1.5 * globals::worldsize);
+	fOverheadCamera.settranslation(0.5*globals::worldsize, 0.2*globals::worldsize,-0.5*globals::worldsize);
+	fOverheadCamera.SetRotation(0.0, -fCameraFOV, 0.0);
+	//fOverheadCamera.UseLookAt();
 
-        // Add scene to scene view and to overhead view
-        Q_CHECK_PTR(fSceneView);
-        fSceneView->SetScene(&fScene);
-        fOverheadWindow->SetScene( &fOverheadScene);  //Set up overhead view (CMB 3/13/06)
+	//Add the overhead camera into the scene (CMB 3/13/06)
+	fStage.AddObject(&fOverheadCamera);
+
+	// Add scene to scene view and to overhead view
+	Q_CHECK_PTR(fSceneView);
+	fSceneView->SetScene(&fScene);
+	fOverheadWindow->SetScene( &fOverheadScene);  //Set up overhead view (CMB 3/13/06)
         
-
 #define DebugGenetics 0
 #if DebugGenetics
 	// This little snippet of code confirms that genetic copying, crossover, and mutation are behaving somewhat reasonably
@@ -1375,6 +1374,7 @@ void TSimulation::InitWorld()
     fCameraRadius = 0.6;
     fCameraHeight = 0.35;
     fCameraRotationRate = 0.09;
+    fRotateWorld = (fCameraRotationRate != 0.0);	//Boolean for enabling or disabling world roation (CMB 3/19/06)
     fCameraAngleStart = 0.0;
     fCameraFOV = 90.0;
 	fMonitorCritterRank = 1;
@@ -1412,7 +1412,6 @@ void TSimulation::InitWorld()
     fShowVision = true;
 	fRecordMovie = false;
 	fMovieFile = NULL;
-    fRotateWorld = false;	//Boolean for enabling or disabling world roation (CMB 3/19/06)
     
     fFitI = 0;
     fFitJ = 1;
@@ -3432,6 +3431,7 @@ void TSimulation::ReadWorldFile(const char* filename)
     cout << "camheight" ses fCameraHeight nl;
     in >> fCameraRotationRate; in >> label;
     cout << "camrotationrate" ses fCameraRotationRate nl;
+    fRotateWorld = (fCameraRotationRate != 0.0);	//Boolean for enabling or disabling world roation (CMB 3/19/06)
     in >> fCameraAngleStart; in >> label;
     cout << "camanglestart" ses fCameraAngleStart nl;
     in >> fCameraFOV; in >> label;
