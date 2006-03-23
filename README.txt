@@ -158,7 +158,8 @@ Running Polyworld - Keyboard Controls:
 	r	- Toggle Camera Rotation
 	1-5	- Select 1st through 5th fittest critter for overhead monitoring
 	t	- Track currently selected agent until it dies (rather than switching when the most the fit critters change)
-
+	+/=	- Zoom in Overhead view
+	-	- Zoom out Overhead view
 
 
 ---
