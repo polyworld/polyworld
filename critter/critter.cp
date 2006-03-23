@@ -600,7 +600,7 @@ void critter::SetGraphics()
         fCamera.SetFar(1.5 * globals::worldsize);
         fCamera.SetFOV(gCritterFOV);
 
-		if( fSimulation->glFogFunction() != 0 )
+		if( fSimulation->glFogFunction() != 'O' )
 			fCamera.SetFog(true, fSimulation->glFogFunction(), fSimulation->glExpFogDensity(), fSimulation->glLinearFogEnd() );
 		
         fCamera.AttachTo(this);
