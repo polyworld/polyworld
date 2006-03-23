@@ -154,6 +154,14 @@ tested on Mac OS X.  At a minimum, polyworld.pro needs to be tailored
 to the platform, in order to replace OS X's -framework notation with
 -l library invocations; other libraries may also need to be added.
 
+Running Polyworld - Keyboard Controls:
+	r	- Toggle Camera Rotation
+	1-5	- Select 1st through 5th fittest critter for overhead monitoring
+	t	- Track currently selected agent until it dies (rather than switching when the most the fit critters change)
+
+
+
+---
 Technical details of the algorithms used in Polyworld may be found
 here: <http://pobox.com/~larryy/PolyWorld.html>, particularly in
 the technical paper here:
