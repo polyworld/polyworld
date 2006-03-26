@@ -9,7 +9,7 @@
     <keywords>
       <keyword>Qt</keyword>
     </keywords>
-    <projectdirectory>.</projectdirectory>
+    <projectdirectory>file:/home/cullen/src/qt/projects/polyworld</projectdirectory>
     <absoluteprojectpath>false</absoluteprojectpath>
     <description/>
     <ignoreparts/>
@@ -98,7 +98,7 @@
     <run>
       <directoryradio>executable</directoryradio>
       <customdirectory>/</customdirectory>
-      <mainprogram/>
+      <mainprogram>Polyworld</mainprogram>
       <programargs/>
       <terminal>false</terminal>
       <autocompile>true</autocompile>
@@ -114,6 +114,8 @@
       <prio>0</prio>
       <envvars>
         <envvar value="-g3 00" name="debugger" />
+        <envvar value="/usr/new/" name="QTDIR" />
+        <envvar value="/usr/new/include/" name="QT_INCLUDE_DIR" />
       </envvars>
     </make>
   </kdevtrollproject>
@@ -151,4 +153,8 @@
     </creategettersetter>
     <references/>
   </kdevcppsupport>
+  <ctagspart>
+    <customArguments/>
+    <customTagfilePath/>
+  </ctagspart>
 </kdevelop>

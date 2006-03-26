@@ -485,6 +485,18 @@ void TSimulation::Step()
                                 fOverheadCamera.setz(fOverheadCritter->z());
 			}
 		}
+		//Update the title of the overhead window with the rank, critter number and whether or not we are tracking (T) (CMB 3/26/06)
+		if( fOverheadWindow && fOverheadWindow->isVisible() && fOverheadCritter)
+		{
+			char overheadTitle[64];
+			if (fCritterTracking)
+			{
+			    sprintf( overheadTitle, "Overhead View (T%ld:%ld)", fOverHeadRank, fOverheadCritter->Number() );
+			}else{			    
+			    sprintf( overheadTitle, "Overhead View (%ld:%ld)", fOverHeadRank, fOverheadCritter->Number() );
+			}
+			fOverheadWindow->setWindowTitle( QString(overheadTitle) );			
+		}
 		fOverheadWindow->Draw();
 		
 		// Born / (Born + Created) window
@@ -553,10 +565,16 @@ void TSimulation::Step()
 		
 			fMonitorCritterRankOld = fMonitorCritterRank;			
 		}
+		//Added T for title if we are in tracking mode (CMB 3/26/06)
 		if( fBrainMonitorWindow && fBrainMonitorWindow->isVisible() && fMonitorCritter && (fStep % fBrainMonitorStride == 0) )
 		{
 			char title[64];
-			sprintf( title, "Brain Monitor (%ld:%ld)", fMonitorCritterRank, fMonitorCritter->Number() );
+			if (fCritterTracking)
+			{
+			    sprintf( title, "Brain Monitor (T%ld:%ld)", fMonitorCritterRank, fMonitorCritter->Number() );
+			}else{			    
+			    sprintf( title, "Brain Monitor (%ld:%ld)", fMonitorCritterRank, fMonitorCritter->Number() );
+			}			
 			fBrainMonitorWindow->setWindowTitle( QString(title) );
 			fBrainMonitorWindow->Draw();
 		}

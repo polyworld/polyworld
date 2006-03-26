@@ -177,7 +177,8 @@ public:
 	void Update();
 
 protected:
-    void closeEvent(QCloseEvent* event);
+    void closeEvent(QCloseEvent* event);    
+    virtual void keyReleaseEvent( QKeyEvent* event ); //Moved here from SceneView (CMB 3/26/06)
     
 	void AddFileMenu();
 	void AddEditMenu();

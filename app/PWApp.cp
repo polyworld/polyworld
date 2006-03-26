@@ -130,7 +130,7 @@ TSceneWindow::TSceneWindow()
 	// NOTE: Must wait until after the above RestoreFromPrefs(), so the window
 	// is the right size when we create the TSimulation object below.
 	fSimulation = new TSimulation( fSceneView, this );
-	fSceneView->SetSimulation( fSimulation );		
+	fSceneView->SetSimulation( fSimulation );
 }
 
 
@@ -153,6 +153,105 @@ void TSceneWindow::closeEvent(QCloseEvent* ce)
 	ce->accept();
 }
 
+//---------------------------------------------------------------------------
+// TSceneWindow::keyPressEvent
+//---------------------------------------------------------------------------
+void TSceneWindow::keyReleaseEvent(QKeyEvent* event)
+{
+	if( fSimulation == NULL )
+		return;			
+	gcamera& ovCamera = fSimulation->GetOverheadCamera();
+	gcamera& mCamera = fSimulation->GetCamera();
+	switch (event->key())
+    	{
+	case Qt::Key_Equal :      		//Zoom into the simulation	  
+    	case Qt::Key_Plus :      		//Zoom into the simulation	  
+          if ((ovCamera.GetFOV()/1.5) >= 2.)
+          {
+               ovCamera.SetFOV(ovCamera.GetFOV()/1.5);                
+          }
+          break;
+    	case Qt::Key_Minus :		       //Zoom out of the simulation	  
+          if ((ovCamera.GetFOV()*1.5) < 179.)
+          {
+               ovCamera.SetFOV(ovCamera.GetFOV()*1.5);                
+          }
+      	  break;
+	case Qt:: Key_R:			//Start or stop the world from turning. CMB 3/19/06
+	  if(fSimulation->fRotateWorld)
+	  {
+	  	fSimulation->fRotateWorld = false;		
+	  }
+	  else
+	  {
+	  	fSimulation->fRotateWorld = true;
+		mCamera.SetFixationPoint(0.5 * globals::worldsize, 0.0, -0.5 * globals::worldsize);	
+		mCamera.SetRotation(0.0, 90, 0.0);  	
+	  }
+	break;
+	case Qt::Key_T:	
+	  //If it is enabled, disable, otherwise; re-enable (CMB 3/26/06)
+	  if (fSimulation->fCritterTracking)
+	  {
+	  	fSimulation->fCritterTracking = false;	  
+	  }
+	  else
+	  {
+	  	fSimulation->fCritterTracking = true;	  
+	  }
+          if (fSimulation->fCritterTracking)
+          {
+          	if (!fSimulation->fOverHeadRank)
+                {
+                    if (fSimulation->fMonitorCritterRank)
+                      fSimulation->fOverHeadRank = fSimulation->fMonitorCritterRank;
+                    else
+                      fSimulation->fOverHeadRank = 1;
+                }
+          }
+          else
+          {
+              fSimulation->fOverHeadRank = 0;
+              ovCamera.setx( 0.5*globals::worldsize);
+              ovCamera.setz(-0.5*globals::worldsize);
+	      ovCamera.SetFOV(90.);
+          }
+	  break;	
+	case Qt::Key_0 :		       //Just overhead view
+          fSimulation->fOverHeadRank = 0;
+	  ovCamera.setx( 0.5*globals::worldsize);
+          ovCamera.setz(-0.5*globals::worldsize);
+	  ovCamera.SetFOV(90.);
+      	  break;    	      	  	  	  	  	  
+	case Qt::Key_1 :		       //Nth Fit 1
+          fSimulation->fOverHeadRank = 1;
+	  if (fSimulation->fMonitorCritterRank)
+		fSimulation->fMonitorCritterRank = fSimulation->fOverHeadRank;
+      	  break;    	      
+	case Qt::Key_2 :		       //Nth Fit 2
+          fSimulation->fOverHeadRank = 2;
+	  if (fSimulation->fMonitorCritterRank)
+		fSimulation->fMonitorCritterRank = fSimulation->fOverHeadRank;	  
+      	  break;    	      
+	case Qt::Key_3 :		       //Nth Fit 3
+          fSimulation->fOverHeadRank = 3;
+	  if (fSimulation->fMonitorCritterRank)
+		fSimulation->fMonitorCritterRank = fSimulation->fOverHeadRank;	  
+      	  break;    	      
+	case Qt::Key_4 :		       //Nth Fit 4
+          fSimulation->fOverHeadRank = 4;
+	  if (fSimulation->fMonitorCritterRank)
+		fSimulation->fMonitorCritterRank = fSimulation->fOverHeadRank;	  
+      	  break;    	      
+	case Qt::Key_5 :		       //Nth Fit 5
+          fSimulation->fOverHeadRank = 5;
+	  if (fSimulation->fMonitorCritterRank)
+		fSimulation->fMonitorCritterRank = fSimulation->fOverHeadRank;	  
+      	  break;    	      		  
+    	default:
+      	  event->ignore();
+    	}
+}
 
 #pragma mark -
 
