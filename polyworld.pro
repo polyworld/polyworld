@@ -50,7 +50,7 @@ macx {
 					$(QT_INCLUDE_DIR) \
 					$(QT_INCLUDE_DIR)/QtOpenGL \
 					/System/Library/Frameworks/AGL.framework/Versions/A/Headers/
-} else unix {
+} unix {
 	INCLUDEPATH +=	. \
 					app \
 					critter \
@@ -63,7 +63,7 @@ macx {
 					$(QT_INCLUDE_DIR)/QtCore \
 					$(QT_INCLUDE_DIR)/QtGui \
 					/usr/include/GL/
-} else win32 {
+} win32 {
 	INCLUDEPATH +=	. \
 					app \
 					critter \
@@ -80,9 +80,9 @@ QMAKE_CFLAGS += -Wno-deprecated
 
 macx {
 	LIBS	+=	-F$(QTDIR)/lib/ -framework QtOpenGL -framework OpenGL -framework AGL -lgsl -lgslcblas -lm
-} else unix {
+} unix {
 	LIBS	+=	-L$(QTDIR)/lib/ -lQtOpenGL -lgsl -lgslcblas
-} else win32 {
+} win32 {
 	message(Not building on Windows yet)
 }
 
