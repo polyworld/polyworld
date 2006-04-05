@@ -116,7 +116,14 @@ inline float AverageAngles( float a, float b )
 // TSimulation::TSimulation
 //---------------------------------------------------------------------------
 TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
-	:	fBestSoFarBrainAnatomyRecordFrequency(0),
+	:
+		fCritterTracking(false),
+//		fMonitorCritterRank(0),
+		fMonitorCritterRankOld(0),
+		fRotateWorld(false),
+//		fOverHeadRank(0),
+//		fMonitorCritter(NULL),
+		fBestSoFarBrainAnatomyRecordFrequency(0),
 		fBestSoFarBrainFunctionRecordFrequency(0),
 		fBestRecentBrainAnatomyRecordFrequency(0),
 		fBestRecentBrainFunctionRecordFrequency(0),
@@ -124,6 +131,7 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
 		fBrainFunctionRecordAll(false),
 		fBrainAnatomyRecordSeeds(false),
 		fBrainFunctionRecordSeeds(false),
+
 		fSceneView(sceneView),
 		fSceneWindow(sceneWindow),
 		fBirthrateWindow(NULL),
@@ -139,15 +147,12 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
 		fStatusFrequency(100),
 		fLoadState(false),
 		inited(false),
+
 		fHealing(0),
-//		fMonitorCritterRank(0),
-		fMonitorCritterRankOld(0),
-//		fMonitorCritter(NULL),
-		fCritterTracking(false),
 		fGroundClearance(0.0),
-//		fOverHeadRank(0),
 		fOverHeadRankOld(0),
 		fOverheadCritter(NULL),
+
 		fChartBorn(true),
 		fChartFitness(true),
 		fChartFoodEnergy(true),
@@ -169,8 +174,7 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
 		fNumCrittersNotInOrNearAnyFoodBand(0),
 		fNumCrittersInFoodBand(NULL),
 		fNumCrittersWithin5UnitsOfFoodBand(NULL),
-		fNumCrittersWithin10UnitsOfFoodBand(NULL),
-		fRotateWorld(false)
+		fNumCrittersWithin10UnitsOfFoodBand(NULL)
 {
 	Init();
 }
@@ -491,9 +495,9 @@ void TSimulation::Step()
 			char overheadTitle[64];
 			if (fCritterTracking)
 			{
-			    sprintf( overheadTitle, "Overhead View (T%ld:%ld)", fOverHeadRank, fOverheadCritter->Number() );
+			    sprintf( overheadTitle, "Overhead View (T%ld:%ld)", (long int) fOverHeadRank, fOverheadCritter->Number() );
 			}else{			    
-			    sprintf( overheadTitle, "Overhead View (%ld:%ld)", fOverHeadRank, fOverheadCritter->Number() );
+			    sprintf( overheadTitle, "Overhead View (%ld:%ld)", (long int) fOverHeadRank, fOverheadCritter->Number() );
 			}
 			fOverheadWindow->setWindowTitle( QString(overheadTitle) );			
 		}

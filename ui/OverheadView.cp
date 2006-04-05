@@ -30,9 +30,10 @@ using namespace std;
 // TOverheadView::TOverheadView
 //---------------------------------------------------------------------------
 TOverheadView::TOverheadView( TSimulation* simulation )
-	:	QGLWidget( NULL, NULL, Qt::WindowSystemMenuHint | Qt::Tool ),		
-		fSimulation(simulation),
+	:	
+		QGLWidget( NULL, NULL, Qt::WindowSystemMenuHint | Qt::Tool ),		
 		fScene( NULL ),
+		fSimulation(simulation),
 		fRecordMovie( false ),
 		fMovieFile( NULL )
 {
