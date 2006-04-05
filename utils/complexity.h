@@ -39,6 +39,8 @@ double CalcComplexity( char * );
 
 double CalcComplexity( char * fname )
 {
+
+
 	gsl_matrix * activity = readin_brainfunction__optimized( fname );
 //	gsl_matrix * activity = readin_brainfunction( fname );
 
@@ -897,6 +899,10 @@ double calcC_det3( gsl_matrix * foreignCOR )
 
 double calcC_det3__optimized( gsl_matrix * foreignCOR )
 {
+//	int status;
+//	gsl_set_error_handler_off();
+
+
 	gsl_matrix * COR = gsl_matrix_alloc( foreignCOR->size1, foreignCOR->size2 );	// We do this so we don't overwrite the passed matrix COR
 	gsl_matrix_memcpy( COR, foreignCOR );
 
@@ -919,6 +925,7 @@ double calcC_det3__optimized( gsl_matrix * foreignCOR )
 	gsl_linalg_LU_decomp( ludecomp, P, &signum );
 	double d1 = fabs( gsl_linalg_LU_det( ludecomp, 1 ) );		//fabs() not in MATLAB code, but is nessecary sometimes.
 	gsl_permutation_free(P);
+	gsl_matrix_free( ludecomp );					// don't need you anymore
 
 
 /* MATLAB CODE:
@@ -974,14 +981,12 @@ double calcC_det3__optimized( gsl_matrix * foreignCOR )
 //DEBUG		cout << "b: "; for( int j=0;j<b_length;j++ ) { cout << b[j] << " "; } cout << endl;
 
 
-//obviated	I_n1[i] = calcI_det2( matrix_crosssection( COR, b, b_length ) );
 		sumI_n1 += calcI_det2( matrix_crosssection( COR, b, b_length ) );
 	}
 
-//obviated	double sumI_n1=0;
-//obviated	for( int i=0;i<N;i++) { sumI_n1 += I_n1[i]; }
+	gsl_matrix_free( COR );
 
-return( I_n - (I_n + sumI_n1)/N );
+	return( I_n - (I_n + sumI_n1)/N );
 }
 
 
@@ -1030,7 +1035,9 @@ double calcI_det2(gsl_matrix * COR)
 	int signum = 1;
 	gsl_linalg_LU_decomp( ludecomp, P, &signum );
 	double det = gsl_linalg_LU_det( ludecomp, signum );
+
 	gsl_permutation_free(P);
+	gsl_matrix_free( ludecomp );
 
 	det = fabs(det);
 
