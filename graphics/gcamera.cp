@@ -332,7 +332,7 @@ void gcamera::SetFog( bool fog, char function, float density, int end )
 	{
 		glEnable(GL_FOG);				// turn on Fog to give the critters depth perception
 
-		if( function == 'L' )		// is it linear?
+		if( function == 'L' )		// is it Linear?
 		{
 
 //			cout << "Function is Linear. end: " << end << endl;
@@ -341,16 +341,15 @@ void gcamera::SetFog( bool fog, char function, float density, int end )
 			glFogf(GL_FOG_END, end );		// the "end" parameter for linear fog.  
 
 		}
-		else if( function == 'E' )
+		else if( function == 'E' )			// is it Exponential?
 		{
 //			cout << "Function is Exponential. Density: " << density << endl;
 			glFogi(GL_FOG_MODE,GL_EXP);
 			glFogf(GL_FOG_DENSITY, density );
 		}
-		else
+		else if( function != 'O' )			// is it not Off ?
 		{
 			cerr << "Do not know glFogFunction beginning with '" << function << "'" << endl;
-		
 		}
 	}
 	
