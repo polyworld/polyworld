@@ -118,10 +118,8 @@
 		76CBA5CE062BEDBC001C79E7 /* gstage.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA597062BEDBC001C79E7 /* gstage.h */; };
 		76CBA5CF062BEDBC001C79E7 /* BrainMonitorWindow.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA599062BEDBC001C79E7 /* BrainMonitorWindow.cp */; };
 		76CBA5D0062BEDBC001C79E7 /* BrainMonitorWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA59A062BEDBC001C79E7 /* BrainMonitorWindow.h */; };
-		76CBA5D2062BEDBC001C79E7 /* CameraController.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA59C062BEDBC001C79E7 /* CameraController.h */; };
 		76CBA5D3062BEDBC001C79E7 /* ChartWindow.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA59D062BEDBC001C79E7 /* ChartWindow.cp */; };
 		76CBA5D4062BEDBC001C79E7 /* ChartWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA59E062BEDBC001C79E7 /* ChartWindow.h */; };
-		76CBA5D6062BEDBC001C79E7 /* Menu.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA5A0062BEDBC001C79E7 /* Menu.h */; };
 		76CBA5D7062BEDBC001C79E7 /* SceneView.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA5A1062BEDBC001C79E7 /* SceneView.cp */; };
 		76CBA5D8062BEDBC001C79E7 /* SceneView.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA5A2062BEDBC001C79E7 /* SceneView.h */; };
 		76CBA5D9062BEDBC001C79E7 /* error.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA5A4062BEDBC001C79E7 /* error.cp */; };
@@ -606,9 +604,7 @@
 				76CBA5CC062BEDBC001C79E7 /* gsquare.h in Headers */,
 				76CBA5CE062BEDBC001C79E7 /* gstage.h in Headers */,
 				76CBA5D0062BEDBC001C79E7 /* BrainMonitorWindow.h in Headers */,
-				76CBA5D2062BEDBC001C79E7 /* CameraController.h in Headers */,
 				76CBA5D4062BEDBC001C79E7 /* ChartWindow.h in Headers */,
-				76CBA5D6062BEDBC001C79E7 /* Menu.h in Headers */,
 				76CBA5D8062BEDBC001C79E7 /* SceneView.h in Headers */,
 				76CBA5DA062BEDBC001C79E7 /* error.h in Headers */,
 				76CBA5DC062BEDBC001C79E7 /* indexlist.h in Headers */,
