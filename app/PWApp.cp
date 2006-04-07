@@ -56,12 +56,93 @@ int main(int argc, char** argv)
 	//app.setMainWidget(appWindow);
 
 #if 0
-	// What's a sigmoid, daddy?
-	for( int i = -15; i < 16; i++ )
+	// What's a "sigmoid", daddy?
+	#define MinLogisticSlope 0.2
+	#define MaxLogisticSlope 2.0
+	#define DeltaLogisticSlope 0.3
+	#define MinSum -16
+	#define MaxSum 16
+	#define DeltaSum 1
+	for( float slope = MinLogisticSlope; slope < MaxLogisticSlope + DeltaLogisticSlope*0.1; slope += DeltaLogisticSlope )
 	{
-		float a = logistic( (float) i, brain::gLogisticsSlope );
-		printf( "%3d  %5.2f\n", i, a );
+		printf( "\t%g", slope );
 	}
+	printf( "\n" );
+	for( int i = MinSum; i < MaxSum + DeltaSum; i += DeltaSum )
+	{
+		printf( "%d", i );
+		for( float slope = MinLogisticSlope; slope < MaxLogisticSlope + DeltaLogisticSlope*0.1; slope += DeltaLogisticSlope )
+		{
+			float a = logistic( (float) i, slope );
+			printf( "\t%g", a );
+		}
+		printf( "\n" );
+	}
+	#define MinBias -10.0
+	#define MaxBias 10.0
+	#define DeltaBias 5.0
+	for( float bias = MinBias; bias < MaxBias + DeltaBias*0.1; bias += DeltaBias )
+	{
+		printf( "\t%g", bias );
+	}
+	printf( "\n" );
+	for( int i = MinSum; i < MaxSum + DeltaSum; i += DeltaSum )
+	{
+		printf( "%d", i );
+		for( float bias = MinBias; bias < MaxBias + DeltaBias*0.1; bias += DeltaBias )
+		{
+			float a = biasedLogistic( (float) i, bias, brain::gLogisticsSlope );
+			printf( "\t%g", a );
+		}
+		printf( "\n" );
+	}
+	#undef MinBias
+	#undef MaxBias
+	#undef DeltaBias
+	
+	// What's "misogyny", daddy?  That's "miscegenation", son.
+	#define MinBias 0.5
+	#define MaxBias 1.5
+	#define DeltaBias 0.5
+	#define MinSlope 0.25
+	#define MaxSlope 0.75
+	#define DeltaSlope 0.25
+	#define MinX 0.0
+	#define MaxX 1.0
+	#define DeltaX 0.1
+	// print bias column headers
+	for( float bias = MinBias; bias < MaxBias + DeltaBias*0.1; bias += DeltaBias )
+	{
+		for( float slope = MinSlope; slope < MaxSlope + DeltaSlope*0.1; slope += DeltaSlope )
+			printf( "\t%g", bias );
+	}
+	printf( "\n" );
+	// print slope column headers
+	for( float bias = MinBias; bias < MaxBias + DeltaBias*0.1; bias += DeltaBias )
+	{
+		for( float slope = MinSlope; slope < MaxSlope + DeltaSlope*0.1; slope += DeltaSlope )
+			printf( "\t%g", slope );
+	}
+	printf( "\n" );
+	// print the independent variable and function values
+	for( float x = MinX; x < MaxX + DeltaX*0.1; x += DeltaX )
+	{
+		printf( "%g", x );
+		for( float bias = MinBias; bias < MaxBias + DeltaBias*0.1; bias += DeltaBias )
+		{
+			for( float slope = MinSlope; slope < MaxSlope + DeltaSlope*0.1; slope += DeltaSlope )
+			{
+				float invSlope = 1.0 / slope;
+				float cosx = cos( pow( x, bias ) * PI );
+				float s = cosx > 0.0 ? 0.5 : -0.5;
+				float y = 0.5  +  s * pow( fabs( cosx ), invSlope );
+				printf( "\t%g", y );
+			}
+		}
+		printf( "\n" );
+	}
+	if( 1 )
+		exit( 0 );
 #endif
 
 	// Create simulation timer
