@@ -120,6 +120,11 @@ float logistic(float x, float slope)
     return (1.0 / (1.0 + exp(-1 * x * slope)));
 }
 
+float biasedLogistic(float x, float bias, float slope)
+{
+    return (1.0 / (1.0 + exp(-1 * (x+bias) * slope)));
+}
+
 double hirestime( void )
 {
 #ifdef linux
