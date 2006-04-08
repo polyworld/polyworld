@@ -88,14 +88,7 @@ Download, build, and install gsl (from gnu.org)
 	$ export LD_LIBRARY_PATH
 
 Mac versus Linux Installs
-* The default 'polyworld.pro' file works only on Mac.  A special
-  polyworld_linux.pro has been made for Linux.  To successfully
-  build under linux replace the polyworld.pro file by:
-	mv polyworld.pro polyworld_mac.pro
-	mv polyworld_linux.pro polyworld.pro 
-  (Qt supports platform-specific conditionals in the .pro files,
-  so as soon as someone can get around to it, we can eliminate
-  this step.)
+* The default 'polyworld.pro' file now works for both Mac & Linux.
 
 Build Polyworld (Qt method)
 * enter the polyworld directory by typing 'cd polyworld'
