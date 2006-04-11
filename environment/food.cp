@@ -24,12 +24,12 @@
 using namespace std;
 
 // External globals
-fxsortedlist food::gXSortedFood;
 float food::gFoodHeight;
 Color food::gFoodColor;
 float food::gMinFoodEnergy;
 float food::gMaxFoodEnergy;
 float food::gSize2Energy;
+float food::gMaxFoodRadius;
 
 
 //===========================================================================
@@ -42,6 +42,9 @@ float food::gSize2Energy;
 //-------------------------------------------------------------------------------------------
 food::food()
 {
+	/* Set object type to be FOODTYPE */
+	setType(FOODTYPE);
+
 	initfood();
 }
 
@@ -233,64 +236,3 @@ float food::FoodWorldZ( float foodBandZ )
 	return( worldZ );
 }
 #endif
-
-//-------------------------------------------------------------------------------------------
-// fxsortedlist::add
-//-------------------------------------------------------------------------------------------           
-void fxsortedlist::add(food* a)
-{
-    bool inserted = false;
-    food* o;
-	
-    this->reset();
-    while (this->next(o))
-    {
-        if ((a->x()-a->radius()) < (o->x()-o->radius()))
-        {
-            this->inserthere(a);
-            inserted = true;
-            break;
-        }
-    }
-    if (!inserted)
-		this->append(a);
-}
-
-
-//-------------------------------------------------------------------------------------------
-// fxsortedlist::sort
-//-------------------------------------------------------------------------------------------           
-void fxsortedlist::sort()
-{
-// This technique assumes that the list is almost entirely sorted at the start
-// Hopefully, with some reasonable frame-to-frame coherency, this will be true!
-// Actually, food is static, except for newly grown food, for now.
-    gdlink<food*> *savecurr;
-	
-    food* o = NULL;
-    food* p = NULL;
-    food* b = NULL;
-    this->reset();
-    this->next(p);
-    savecurr = currItem;
-    while (this->next(o))
-    {
-        if ((o->x()-o->radius()) < (p->x()-p->radius()))
-        {
-            gdlink<food*> *link = this->unlink();  // at o, just unlink it
-            currItem = savecurr;  // back up to previous one directly
-            while (this->prev(b)) // then use iterator to move back again
-                if ((b->x()-b->radius()) < (o->x()-o->radius()))
-                    break; // until we have one that starts before o
-            if (currItem)  // we did find one, and didn't run off beginning of list
-                this->appendhere(link);
-            else  // we have a new head of the list
-                this->insert(link);
-            currItem = savecurr;
-            o = p;
-        }
-        p = o;
-        savecurr = currItem;
-    }
-}
-

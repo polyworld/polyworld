@@ -18,6 +18,8 @@
 #include "gscene.h"
 #include "gstage.h"
 #include "misc.h"
+#include "objectxsortedlist.h"
+
 
 // Forward declarations
 class critter;
@@ -28,26 +30,11 @@ class TSimulation;
 #define kPOVCellPad 2
 
 //===========================================================================
-// TSortedCritterList
-//===========================================================================
-
-class cxsortedlist : public gdlist<critter*>
-{
-public:
-    cxsortedlist() { }
-    ~cxsortedlist() { }
-    void add(critter* a);
-    void sort();
-    void list();
-};
-
-//===========================================================================
 // critter
 //===========================================================================
 class critter : public gpolyobj
 {
 	friend void operator>>(const char **, critter&);
-	friend void cxsortedlist::add(critter* a);
 
 public:
 	static void critterinit();
@@ -80,8 +67,7 @@ public:
 	static float gMaxFocus;
 	static float gCritterFOV;
 	static float gMaxSizeAdvantage;
-	static cxsortedlist gXSortedCritters;
-	    
+
     critter(TSimulation* simulation, gstage* stage);
     virtual ~critter();
     
@@ -151,7 +137,7 @@ public:
 	gscene& GetScene();
 	frustumXZ& GetFrustum();
 	static gpolyobj* GetCritterObj();
-	gdlink<critter*>* GetListLink();
+//	gdlink<critter*>* GetListLink();
 
 	static short povcols;
 	static short povrows;
@@ -164,8 +150,8 @@ public:
     short ybottom;
     short ytop;
     short ypix;
-	
-	gdlink<critter*>*	listLink;
+
+    //gdlink<critter*>* listLink;
 
 	void SetFitness( float value );			// Virgil
 	void SetUnusedFitness( float value );	// Virgil
@@ -271,7 +257,7 @@ inline brain* critter::Brain() { return fBrain; }
 inline gscene& critter::GetScene() { return fScene; }
 inline frustumXZ& critter::GetFrustum() { return fFrustum; }
 inline gpolyobj* critter::GetCritterObj() { return critterobj; }
-inline gdlink<critter*>* critter::GetListLink() { return listLink; }
+//inline gdlink<critter*>* critter::GetListLink() { return listLink; }
 
 inline void critter::SetFitness( float value ) { fFitness = value; } // Virgil
 inline void critter::SetUnusedFitness( float value ) { fUnusedFitness = value; } // Virgil

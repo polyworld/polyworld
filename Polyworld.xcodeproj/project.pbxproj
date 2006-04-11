@@ -140,6 +140,9 @@
 		76D02B060894910800D89155 /* moc_PwMoviePlayer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 76D02B040894910800D89155 /* moc_PwMoviePlayer.cpp */; };
 		76D02CC70894CEE300D89155 /* GLWidget.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76D02CC60894CEE300D89155 /* GLWidget.cp */; };
 		76D02CE40894D30200D89155 /* moc_GLWidget.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 76D02CE30894D30200D89155 /* moc_GLWidget.cpp */; };
+		76D32E0F09E62F9200394ACE /* objectxsortedlist.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76D32E0D09E62F9200394ACE /* objectxsortedlist.cp */; };
+		76D32E1009E62F9200394ACE /* objectxsortedlist.h in Headers */ = {isa = PBXBuildFile; fileRef = 76D32E0E09E62F9200394ACE /* objectxsortedlist.h */; };
+		76D32E1909E62FDC00394ACE /* brick.h in Headers */ = {isa = PBXBuildFile; fileRef = 76D32E1709E62FDC00394ACE /* brick.h */; };
 		84ED837C062E7EED00AEEA18 /* CritterPOVWindow.cp in Sources */ = {isa = PBXBuildFile; fileRef = 84ED837A062E7EED00AEEA18 /* CritterPOVWindow.cp */; };
 		84ED837D062E7EED00AEEA18 /* CritterPOVWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = 84ED837B062E7EED00AEEA18 /* CritterPOVWindow.h */; };
 		8D0C4E8D0486CD37000505A6 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 0867D6AAFE840B52C02AAC07 /* InfoPlist.strings */; };
@@ -331,6 +334,10 @@
 		76D02CC00894CE2800D89155 /* GLWidget.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = GLWidget.h; sourceTree = "<group>"; };
 		76D02CC60894CEE300D89155 /* GLWidget.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = GLWidget.cp; sourceTree = "<group>"; };
 		76D02CE30894D30200D89155 /* moc_GLWidget.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = moc_GLWidget.cpp; sourceTree = "<group>"; };
+		76D32E0D09E62F9200394ACE /* objectxsortedlist.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = objectxsortedlist.cp; sourceTree = "<group>"; };
+		76D32E0E09E62F9200394ACE /* objectxsortedlist.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = objectxsortedlist.h; sourceTree = "<group>"; };
+		76D32E1609E62FDC00394ACE /* brick.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = brick.cp; sourceTree = "<group>"; };
+		76D32E1709E62FDC00394ACE /* brick.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = brick.h; sourceTree = "<group>"; };
 		84ED837A062E7EED00AEEA18 /* CritterPOVWindow.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = CritterPOVWindow.cp; sourceTree = "<group>"; };
 		84ED837B062E7EED00AEEA18 /* CritterPOVWindow.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = CritterPOVWindow.h; sourceTree = "<group>"; };
 		8D0C4E960486CD37000505A6 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -495,9 +502,11 @@
 			isa = PBXGroup;
 			children = (
 				76CBA57B062BEDBC001C79E7 /* barrier.cp */,
-				76CBA57E062BEDBC001C79E7 /* food.h */,
 				76CBA57C062BEDBC001C79E7 /* barrier.h */,
+				76D32E1609E62FDC00394ACE /* brick.cp */,
+				76D32E1709E62FDC00394ACE /* brick.h */,
 				76CBA57D062BEDBC001C79E7 /* food.cp */,
+				76CBA57E062BEDBC001C79E7 /* food.h */,
 				76CBA57F062BEDBC001C79E7 /* graybin.h */,
 			);
 			path = environment;
@@ -559,15 +568,17 @@
 		76CBA5A3062BEDBC001C79E7 /* utils */ = {
 			isa = PBXGroup;
 			children = (
+				C58654FB09B94E1C000F30F8 /* complexity.h */,
 				76CBA5A4062BEDBC001C79E7 /* error.cp */,
 				76CBA5A5062BEDBC001C79E7 /* error.h */,
 				769996580742BCF0001B0A65 /* gdlink.h */,
 				76CBA5A6062BEDBC001C79E7 /* indexlist.cp */,
 				76CBA5A7062BEDBC001C79E7 /* indexlist.h */,
-				C58654FB09B94E1C000F30F8 /* complexity.h */,
 				76CBA5A8062BEDBC001C79E7 /* misc.cp */,
 				76CBA5A9062BEDBC001C79E7 /* misc.h */,
 				76CBA5AA062BEDBC001C79E7 /* objectlist.h */,
+				76D32E0D09E62F9200394ACE /* objectxsortedlist.cp */,
+				76D32E0E09E62F9200394ACE /* objectxsortedlist.h */,
 				7668D1680885AC65004158C6 /* PwMovieTools.cp */,
 				7668D16A0885AD07004158C6 /* PwMovieTools.h */,
 			);
@@ -616,6 +627,8 @@
 				7668D16B0885AD07004158C6 /* PwMovieTools.h in Headers */,
 				C58654FC09B94E1C000F30F8 /* complexity.h in Headers */,
 				76C2315109D0B4AA00EB652A /* OverheadView.h in Headers */,
+				76D32E1009E62F9200394ACE /* objectxsortedlist.h in Headers */,
+				76D32E1909E62FDC00394ACE /* brick.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -953,6 +966,7 @@
 				3757766A078C8C6200CA4042 /* moc_Simulation.cpp in Sources */,
 				7668D1690885AC65004158C6 /* PwMovieTools.cp in Sources */,
 				76C2315009D0B4AA00EB652A /* OverheadView.cp in Sources */,
+				76D32E0F09E62F9200394ACE /* objectxsortedlist.cp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

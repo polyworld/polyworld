@@ -1,9 +1,3 @@
-/********************************************************************/
-/* PolyWorld:  An Artificial Life Ecological Simulator              */
-/* by Larry Yaeger                                                  */
-/* Copyright Apple Computer 1990,1991,1992                          */
-/********************************************************************/
-
 // Self
 #include "gobject.h"
 
@@ -51,6 +45,7 @@ void gobject::init()
 	fColor[1] = rand() / 32767.0;
 	fColor[2] = rand() / 32767.0;
 	fColor[3] = 0.;
+	listLink = NULL;
 }
  
     

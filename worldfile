@@ -27,7 +27,7 @@
 0.1    foodrate
 0      crittersRfood
 100    fit1freq
-2      fit2freq
+1      fit2freq
 10     numFit
 10     numRecentFit
 10.0   eatfitparam
@@ -84,7 +84,7 @@
 0.01   maxsynapse2energy
 0.05   fixedenergydrain
 0.99   decayrate
-0.5    critterhealingrate
+0.0    critterhealingrate
 
 0.2    eatthreshold
 0.5    matethreshold
@@ -124,40 +124,7 @@
 1      chartfoodenergy
 1      chartpop
 
-3      numdomains
-
-33.33  domainbarrier#1
-66.67  domainbarrier#2
-
-20     domain[0].minnumcritters
-100    domain[0].maxnumcritters
-30     domain[0].initnumcritters
-0     domain[0].numberToSeed
-0.0    domain[0].probabilityOfMutatingSeed
-30     domain[0].minfoodcount
-40    domain[0].maxfoodcount
-30     domain[0].maxfoodgrown
-30     domain[0].initfoodcount
-
-20     domain[1].minnumcritters
-100    domain[1].maxnumcritters
-30     domain[1].initnumcritters
-0     domain[1].numberToSeed
-0.0    domain[1].probabilityOfMutatingSeed
-30     domain[1].minfoodcount
-40    domain[1].maxfoodcount
-30     domain[1].maxfoodgrown
-30     domain[1].initfoodcount
-
-20     domain[2].minnumcritters
-100    domain[2].maxnumcritters
-30     domain[2].initnumcritters
-0     domain[2].numberToSeed
-0.0    domain[2].probabilityOfMutatingSeed
-30     domain[2].minfoodcount
-40    domain[2].maxfoodcount
-30     domain[2].maxfoodgrown
-30     domain[2].initfoodcount
+1      numdomains
 
 2      numFoodBands
 -1.0   foodBand[0].zMin
@@ -197,20 +164,20 @@
 0.25   smiteAgeFrac_affectsAverageFitness
 
 0      brainAnatomyRecordAll
-1      brainFunctionRecordAll
+0      brainFunctionRecordAll
 1      brainAnatomyRecordSeeds
 1      brainFunctionRecordSeeds
-500     bestSoFarBrainAnatonomyRecordFrequency
-500     bestSoFarBrainFunctionRecordFrequency
-500     bestRecentBrainAnatonomyRecordFrequency
-500     bestRecentBrainFunctionRecordFrequency
+1000     bestSoFarBrainAnatonomyRecordFrequency
+1000     bestSoFarBrainFunctionRecordFrequency
+1000     bestRecentBrainAnatonomyRecordFrequency
+1000     bestRecentBrainFunctionRecordFrequency
 1      recordGeneStats
 1      recordFoodBandStats
-1      recordComplexity
+0      recordComplexity
 0      useComplexityAsFitness
 
 
-linear FogFunction
+off    FogFunction
 0.1    ExponentialFogDensity
 25     LinearFogEnd
 

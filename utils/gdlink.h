@@ -1,7 +1,6 @@
 /********************************************************************/
 /* PolyWorld:  An Artificial Life Ecological Simulator              */
 /* by Larry Yaeger                                                  */
-/* Copyright Apple Computer 1990,1991,1992                          */
 /********************************************************************/
 // Generic doubly linked list
 
@@ -160,15 +159,15 @@ public: /* for debugging only */
 	/* remove the current entry */			
 	void remove();	
 	
-	/* unlink & return the current entry */		
-	gdlink<TTYPE>* unlink();
-	
 	/* remove the entry corresponding to a */		
 	void remove(const TTYPE a);
 	
 	/* remove the link corresponding to item, without checking to see if it is actually in the list! */		
-	void removeFastUnsafe(gdlink<TTYPE> *item);
+	void remove(gdlink<TTYPE> *item);
 
+	/* unlink & return the current entry */		
+	gdlink<TTYPE>* unlink();
+	
 	/* unlink & return the entry corresponding to a */	
 	gdlink<TTYPE>* unlink(const TTYPE a);			
 	
@@ -558,6 +557,63 @@ void gdlist<TTYPE>::remove()
 	return;
 }
 
+/* remove the entry corresponding to a */		
+template <class TTYPE>	
+void gdlist<TTYPE>::remove(const TTYPE a)			
+{
+	gdlink<TTYPE> *savecurr;
+	savecurr = currItem;	
+	currItem = 0;		
+	TTYPE temp;		
+	while (this->next(temp))
+	{
+		if (temp == a)	
+		{
+			if (savecurr == currItem)
+				savecurr = currItem->prevItem;	
+			remove();	
+			if (kount)	
+				currItem = savecurr;
+			return;	
+		}
+	}
+	std::cerr << "attempt to remove non-existent TTYPE node\n";
+}
+
+#if 1
+/* remove the link corresponding to item, without checking to see if it is actually in the list! */		
+template <class TTYPE>	
+void gdlist<TTYPE>::remove( gdlink<TTYPE> *item )
+{
+	gdlink<TTYPE> *savecurr;
+	savecurr = 0;
+	if( currItem != item )
+		savecurr = currItem;
+	currItem = item;		
+	remove();	// will take care of currItem & markItem if they point to the item being removed
+	if( kount && savecurr )	
+		currItem = savecurr;
+	return;	
+}
+#else
+/* remove the link corresponding to item, without checking to see if it is actually in the list! */		
+template <class TTYPE>	
+void gdlist<TTYPE>::remove( gdlink<TTYPE> *item )			
+{
+	gdlink<TTYPE> *savecurr;
+	savecurr = currItem;
+	if( savecurr == item )
+		savecurr = item->prevItem;
+	if( markItem == item )
+		markItem = item->prevItem;
+	currItem = item;		
+	remove();	
+	if( kount )	
+		currItem = savecurr;
+	return;	
+}
+#endif
+
 /* unlink & return the current entry */			
 template <class TTYPE>	
 gdlink<TTYPE>* gdlist<TTYPE>::unlink()			
@@ -605,63 +661,6 @@ gdlink<TTYPE>* gdlist<TTYPE>::unlink()
 		lastItem = 0;
 	return savecurr;	
 }
-
-/* remove the entry corresponding to a */		
-template <class TTYPE>	
-void gdlist<TTYPE>::remove(const TTYPE a)			
-{
-	gdlink<TTYPE> *savecurr;
-	savecurr = currItem;	
-	currItem = 0;		
-	TTYPE temp;		
-	while (this->next(temp))
-	{
-		if (temp == a)	
-		{
-			if (savecurr == currItem)
-				savecurr = currItem->prevItem;	
-			remove();	
-			if (kount)	
-				currItem = savecurr;
-			return;	
-		}
-	}
-	std::cerr << "attempt to remove non-existent TTYPE node\n";
-}
-
-#if 1
-/* remove the link corresponding to item, without checking to see if it is actually in the list! */		
-template <class TTYPE>	
-void gdlist<TTYPE>::removeFastUnsafe(gdlink<TTYPE> *item)			
-{
-	gdlink<TTYPE> *savecurr;
-	savecurr = 0;
-	if( currItem != item )
-		savecurr = currItem;
-	currItem = item;		
-	remove();	// will take care of currItem & markItem if they point to the item being removed
-	if( kount && savecurr )	
-		currItem = savecurr;
-	return;	
-}
-#else
-/* remove the link corresponding to item, without checking to see if it is actually in the list! */		
-template <class TTYPE>	
-void gdlist<TTYPE>::removeFastUnsafe(gdlink<TTYPE> *item)			
-{
-	gdlink<TTYPE> *savecurr;
-	savecurr = currItem;
-	if( savecurr == item )
-		savecurr = item->prevItem;
-	if( markItem == item )
-		markItem = item->prevItem;
-	currItem = item;		
-	remove();	
-	if (kount)	
-		currItem = savecurr;
-	return;	
-}
-#endif
 
 /* unlink the entry corresponding to object a */	
 template <class TTYPE>	

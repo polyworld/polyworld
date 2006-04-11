@@ -66,8 +66,6 @@ float critter::gMaxFocus;
 float critter::gCritterFOV;
 float critter::gMaxSizeAdvantage;
 
-cxsortedlist critter::gXSortedCritters;
-
 critter* critter::currentCritter;	// during brain updates
 
 // [TODO] figure out a better way to track critter indices
@@ -191,8 +189,10 @@ void critter::critterload(istream&)
     if (i)
         error(2,"critter::pc[] array not empty during critterload");
         
-    if (critter::gXSortedCritters.count())
-        error(2,"gXSortedCritters list not empty during critterload");
+    //    if (critter::gXSortedCritters.count())
+    //        error(2,"gXSortedCritters list not empty during critterload");
+    if (allxsortedlist::gXSortedAll.getCount(CRITTERTYPE))
+        error(2,"gXSortedAll list not empty during critterload");
         
     long numcrittersallocated = 0;
     in >> numcrittersallocated;
@@ -204,7 +204,8 @@ void critter::critterload(istream&)
         if (critter::critterlist->isone(i))
         {
             (critter::pc[i])->load(in);
-            critter::pc[i]->listLink = critter::gXSortedCritters.add(critter::pc[i]);
+            //critter::pc[i]->listLink = critter::gXSortedCritters.add(critter::pc[i]);
+	    	critter::pc[i]->listLink = allxsortedlist::gXSortedAll.add(critter::pc[i]);
             globals::worldstage.addobject(critter::pc[i]);
             if ((critter::pc[i])->fIndex != i)
             {
@@ -242,6 +243,9 @@ critter::critter(TSimulation* sim, gstage* stage)
 {
 	Q_CHECK_PTR(sim);
 	Q_CHECK_PTR(stage);
+	
+	/* Set object type to be CRITTERTYPE */
+	setType(CRITTERTYPE);
 	
 	if (!gClassInited)
 		critterinit();
@@ -353,7 +357,7 @@ void critter::grow( bool recordBrainAnatomy, bool recordBrainFunction )
 	Q_CHECK_PTR(fGenome);
 	
 	// grow the brain from the genome's specifications
-    fBrain->Grow( fGenome, fCritterNumber, recordBrainAnatomy );
+	fBrain->Grow( fGenome, fCritterNumber, recordBrainAnatomy );
 
 	// If we're recording brain function,
 	// open the file to be used to write out neural activity
@@ -959,101 +963,6 @@ void critter::NumberToName()
 	this->SetName(tempstring);
 }
 
-
-//---------------------------------------------------------------------------
-// cxsortedlist::add
-//---------------------------------------------------------------------------
-void cxsortedlist::add(critter* a)
-{
-#ifdef DEBUGCALLS
-    pushproc("cxsortedlist::add");
-#endif DEBUGCALLS
-    bool inserted = false;
-    critter* o;
-    this->reset();
-    while (this->next(o))
-    {
-        if ((a->x()-a->radius()) < (o->x()-o->radius()))
-        {
-            a->listLink = this->inserthere(a);
-            inserted = true;
-            break;
-        }
-    }
-    if (!inserted)
-    {
-        a->listLink = this->append(a);
-    }
-#ifdef DEBUGCALLS
-    popproc();
-#endif DEBUGCALLS
-}
-
-
-//---------------------------------------------------------------------------
-// cxsortedlist::sort
-//---------------------------------------------------------------------------
-void cxsortedlist::sort()
-{
-#ifdef DEBUGCALLS
-    pushproc("cxsortedlist::sort");
-#endif DEBUGCALLS
-// This technique assumes that the list is almost entirely sorted at the start
-// Hopefully, with some reasonable frame-to-frame coherency, this will be true!
-    gdlink<critter*> *savecurr;
-    critter* o = NULL;
-    critter* p = NULL;
-    critter* b = NULL;
-    this->reset();
-    this->next(p);
-    savecurr = currItem;
-    while (this->next(o))
-    {
-        if ((o->x() - o->radius()) < (p->x() - p->radius()))
-        {
-            gdlink<critter*>* link = this->unlink();  // at o, just unlink
-            currItem = savecurr;  // back up to previous one directly
-            while (this->prev(b)) // then use iterator to move back again
-                if ((b->x() - b->radius()) < (o->x() - o->radius()))
-                    break; // until we have one that starts before o
-            if (currItem)  // we did find one, and didn't run off beginning of list
-                this->appendhere(link);
-            else  // we have a new head of the list
-                this->insert(link);
-            currItem = savecurr;
-            o = p;
-        }
-        p = o;
-        savecurr = currItem;
-    }
-#ifdef DEBUGCALLS
-    popproc();
-#endif DEBUGCALLS
-}
-
-
-//---------------------------------------------------------------------------
-// cxsortedlist::list
-//---------------------------------------------------------------------------
-void cxsortedlist::list()
-{
-#ifdef DEBUGCALLS
-    pushproc("cxsortedlist::list");
-#endif DEBUGCALLS
-    gdlink<critter*> *savecurr;
-    critter* pcrit;
-    savecurr = currItem;
-	cout << "c" eql currItem sp "m" eql markItem sp "l" eql lastItem sp "f" eql lastItem->nextItem << " ";
-    this->reset();
-	cout << this->kount << ":";
-    while(this->next(pcrit))
-        cout sp pcrit->Number() << "/" << pcrit << "/" << pcrit->GetListLink();
-    cout nlf;
-    currItem = savecurr;
-#ifdef DEBUGCALLS
-    popproc();
-#endif DEBUGCALLS
-}
 
 //---------------------------------------------------------------------------
 // critter::Heal

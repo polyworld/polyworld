@@ -73,7 +73,8 @@ void TCritterPOVWindow::paintGL()
 
 #if 0
 	critter* c = NULL;
-	while (critter::gXSortedCritters.next(c))
+    //	while (critter::gXSortedCritters.next(c))
+    while (critter::gXSortedAll.nextObj(CRITTERTYPE, c))
 		DrawCritterPOV( c );
 #endif
 }

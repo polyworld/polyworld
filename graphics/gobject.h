@@ -9,6 +9,11 @@
 #ifndef GOBJECT_H
 #define GOBJECT_H
 
+/* gobject possible types */
+#define CRITTERTYPE 0
+#define FOODTYPE 1
+#define BRICKTYPE 2
+
 // System
 #include <gl.h>
 #include <iostream>
@@ -17,7 +22,7 @@
 // Local
 #include "error.h"
 #include "graphics.h"
-
+#include "gdlink.h"
 
 // Orientation, like with gcameras, is handled by yaw, pitch, and roll
 // (rotate-y, rotate-x, rotate-z) applied in that order.
@@ -98,7 +103,14 @@ public:
     void inversetranslate();
     void inverserotate();
     void inverseposition();
-    
+
+    /* Get and set the objects type (CRITTERTYPE, FOODTYPE, or BRICKTYPE) */
+    int getType();
+    void setType(int newType);
+
+    gdlink<gobject*>* listLink;    
+    gdlink<gobject*>* GetListLink();
+
 private:
     bool fRotated;
 
@@ -117,6 +129,7 @@ protected:
     float fColor[4];  // default color (r,g,b,t) if no material is bound
     char* fName;
     float fRadius;  // for sphere of influence
+    int objType;  // CRITTERTYPE, FOODTYPE, or BRICKTYPE
 };
 
 inline void gobject::setx(float x) { fPosition[0] = x; }
@@ -148,6 +161,9 @@ inline float gobject::x() { return fPosition[0]; }
 inline float gobject::y() { return fPosition[1]; }
 inline float gobject::z() { return fPosition[2]; }
 inline float gobject::radius() { return fRadius; }
+inline int gobject::getType() { return objType; }
+inline void gobject::setType(int newType) { objType = newType; }
+inline gdlink<gobject*>* gobject::GetListLink() { return listLink; }
 
 #endif
 

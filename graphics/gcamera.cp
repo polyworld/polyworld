@@ -358,7 +358,4 @@ void gcamera::SetFog( bool fog, char function, float density, int end )
 //		cout << "Disabling GL FOG." << endl;
 		glDisable(GL_FOG);		// Turn off the fog if for some reason we ever wanted critters to turn it off.	
 	}
-
-
-
 }

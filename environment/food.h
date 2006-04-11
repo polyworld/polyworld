@@ -22,18 +22,6 @@ using namespace std;
 // Forward declarations
 class food;
 
-//===========================================================================
-// TSortedFoodList
-//===========================================================================
-
-class fxsortedlist : public gdlist<food*>
-{
-public:
-    fxsortedlist() { }
-    ~fxsortedlist() { }
-    void add(food* a);
-    void sort();
-};
 
 //===========================================================================
 // food
@@ -46,7 +34,8 @@ public:
 	static float gMinFoodEnergy;
 	static float gMaxFoodEnergy;
 	static float gSize2Energy; // (converts food/critter size to available energy)
-	static fxsortedlist gXSortedFood;
+	static float gMaxFoodRadius;	// only for TotalCompatibilityMode in TSimulation::Interact()
+//	static fxsortedlist gXSortedFood;
 
     food();
     food(float e);

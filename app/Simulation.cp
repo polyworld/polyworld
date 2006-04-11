@@ -4,6 +4,16 @@
 #define DebugLinksEtAl 0
 #define DebugDomainFoodBands 0
 #define DebugFoodBandCounts 1
+#define DebugShowSort 0
+#define DebugShowBirths 0
+#define DebugShowEating 0
+
+// CompatibilityMode makes the new code with a single x-sorted list behave *almost* identically to the old code.
+// Discrepancies still arise due to the old food list never being re-sorted and critters at the exact same x location
+// not always ending up sorted in the same order.  [Food centers remain sorted as long as they exist, but these lists
+// are actually sorted on x at the left edge (x increases from left to right) of the objects, which changes as the
+// food is eaten and shrinks.]
+#define CompatibilityMode 1
 
 // Self
 #include "Simulation.h"
@@ -33,6 +43,8 @@
 #include "TextStatusWindow.h"
 #include "PwMovieTools.h"
 #include "complexity.h"
+
+#include "objectxsortedlist.h"
 
 using namespace std;
 
@@ -110,6 +122,18 @@ inline float AverageAngles( float a, float b )
 	#define dfbPrint( x... ) ( printf( "%lu (%s/%d): ", fStep, __FUNCTION__, __LINE__ ), printf( x ) )
 #else
 	#define dfbPrint( x... )
+#endif
+
+#if DebugShowBirths
+	#define birthPrint( x... ) printf( x )
+#else
+	#define birthPrint( x... )
+#endif
+
+#if DebugShowEating
+	#define eatPrint( x... ) printf( x )
+#else
+	#define eatPrint( x... )
 #endif
 
 //---------------------------------------------------------------------------
@@ -240,24 +264,21 @@ void TSimulation::Start()
 //---------------------------------------------------------------------------
 void TSimulation::Stop()
 {
-	// delete all food
-	food* f = NULL;
-	food::gXSortedFood.reset();
-	while (food::gXSortedFood.next(f))
-		delete f;
-	food::gXSortedFood.clear();
+	// delete all objects
+	gobject* gob = NULL;
 
-	// delete all barriers
-	barrier* b = NULL;
-	barrier::gXSortedBarriers.reset();
-	while (barrier::gXSortedBarriers.next(b))
-		delete b;
-	barrier::gXSortedBarriers.clear();
-	
+	// delete all non-critters
+	objectxsortedlist::gXSortedObjects.reset();
+	while (objectxsortedlist::gXSortedObjects.next(gob))
+		if (gob->getType() != CRITTERTYPE)
+		{
+			//delete gob;	// ??? why aren't these being deleted?  do we need to delete them by type?  make the destructor virtual?  what???
+		}
 	// delete all critters
 	// all the critters are deleted in critterdestruct
 	// rather than cycling through them in xsortedcritters here
-	critter::gXSortedCritters.clear();
+	objectxsortedlist::gXSortedObjects.clear();
+
 	
 	// TODO who owns items on stage?
 	fStage.Clear();
@@ -319,7 +340,6 @@ void TSimulation::Stop()
     brain::braindestruct();
     
     critter::critterdestruct();
-	
 }
 
 
@@ -338,7 +358,7 @@ void TSimulation::Step()
 	frame++;
 //	printf( "%s: frame = %lu\n", __FUNCTION__, frame );
 	
-	#define RecentSteps 10
+#define RecentSteps 10
 	static double	sTimePrevious[RecentSteps];
 	double			timeNow;
 	
@@ -425,8 +445,8 @@ void TSimulation::Step()
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
 		critter* c;
-		critter::gXSortedCritters.reset();
-		while (critter::gXSortedCritters.next(c))
+		objectxsortedlist::gXSortedObjects.reset();
+		while (objectxsortedlist::gXSortedObjects.nextObj(CRITTERTYPE, (gobject**)&c))
 		{
 		#ifdef DEBUGCHECK
 			debugstring[256];
@@ -532,7 +552,7 @@ void TSimulation::Step()
 		if( fChartPopulation && fPopulationWindow != NULL /* && fPopulationWindow->isVisible() */ )
 		{				
 			{
-				fPopulationWindow->AddPoint(0, float(critter::gXSortedCritters.count()));
+				fPopulationWindow->AddPoint(0, float(objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE)));
 			}				
 			
 			if (fNumDomains > 1)
@@ -583,6 +603,9 @@ void TSimulation::Step()
 			fBrainMonitorWindow->Draw();
 		}
 	}
+
+// xxx
+//sleep( 10 );
 
 #ifdef DEBUGCHECK
 	debugstring[256];
@@ -853,6 +876,7 @@ void TSimulation::Init()
 	float maxcritterradius = 0.5 * sqrt(maxcritterlenx*maxcritterlenx + maxcritterlenz*maxcritterlenz);
 	float maxfoodlen = 0.75 * food::gMaxFoodEnergy / food::gSize2Energy;
 	float maxfoodradius = 0.5 * sqrt(maxfoodlen * maxfoodlen * 2.0);
+	food::gMaxFoodRadius = maxfoodradius;
 	critter::gMaxRadius = maxcritterradius > maxfoodradius ?
 						  maxcritterradius : maxfoodradius;
     
@@ -1039,7 +1063,7 @@ void TSimulation::Init()
 		{
 			numSeededDomain = 0;	// reset for each domain
 
-			int limit = min((fMaxCritters - (long)critter::gXSortedCritters.count()), fDomains[id].initnumcritters);
+			int limit = min((fMaxCritters - (long)objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE)), fDomains[id].initnumcritters);
 			for (int i = 0; i < limit; i++)
 			{
 				c = critter::getfreecritter(this, &fStage);
@@ -1058,6 +1082,7 @@ void TSimulation::Init()
 				}
 				else
 					c->Genes()->Randomize();
+
 				c->grow( RecordBrainAnatomy( c->Number() ), RecordBrainFunction( c->Number() ) );
 				
 				fFoodEnergyIn += c->FoodEnergy();
@@ -1080,7 +1105,7 @@ void TSimulation::Init()
 			#endif
 				c->setyaw(yaw);
 				
-				critter::gXSortedCritters.add(c);	// stores c->listLink
+				objectxsortedlist::gXSortedObjects.add(c);	// stores c->listLink
 
 				c->Domain(id);
 				fDomains[id].numcritters++;
@@ -1096,7 +1121,7 @@ void TSimulation::Init()
 			int fd = id;
 			for( int fb = 0; fb < fNumFoodBands; fb++ )
 			{
-				long maxNewFood = fMaxFoodCount - (long) food::gXSortedFood.count();
+				long maxNewFood = fMaxFoodCount - (long) objectxsortedlist::gXSortedObjects.getCount(FOODTYPE);
 				long numNewFood = min( maxNewFood, fDomains[fd].fDomainFoodBand[fb].initFoodCount );
 				
 				for( int i = 0; i < numNewFood; i++ )
@@ -1121,7 +1146,7 @@ void TSimulation::Init()
 					
 					fStage.AddObject( f );
 					
-					food::gXSortedFood.add( f );
+					objectxsortedlist::gXSortedObjects.add( f );
 					fDomains[fd].foodCount++;
 					fDomains[fd].fDomainFoodBand[fb].foodCount++;
 					dfbPrint( "after initial add of band-based food to domain %d, band %d, at (%5.2f,%6.2f), D.foodCount = %ld, DFB.foodCount = %ld\n", fd, fb, f->x(), f->z(), fDomains[fd].foodCount, fb >= 0 ? fDomains[fd].fDomainFoodBand[fb].foodCount : -1 );
@@ -1132,7 +1157,7 @@ void TSimulation::Init()
 		// Handle global initial creations, if necessary
 		Q_ASSERT( fInitNumCritters <= fMaxCritters );
 		
-		while( (int)critter::gXSortedCritters.count() < fInitNumCritters )
+		while( (int)objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE) < fInitNumCritters )
 		{
 			c = critter::getfreecritter( this, &fStage );
 			Q_CHECK_PTR(c);
@@ -1162,7 +1187,7 @@ void TSimulation::Init()
 			float yaw =  360.0 * drand48();
 			c->setyaw(yaw);
 			
-			critter::gXSortedCritters.add(c);	// stores c->listLink
+			objectxsortedlist::gXSortedObjects.add(c);	// stores c->listLink
 			
 			id = WhichDomain(x, z, 0);
 			c->Domain(id);
@@ -1170,7 +1195,7 @@ void TSimulation::Init()
 			fNeuronGroupCountStats.add( c->Brain()->NumNeuronGroups() );
 		}
 			
-		while( (int)food::gXSortedFood.count() < fInitialFoodCount )
+		while( (int)objectxsortedlist::gXSortedObjects.getCount(FOODTYPE) < fInitialFoodCount )
 		{
 			int fd;
 			food* f = new food::food;
@@ -1178,7 +1203,7 @@ void TSimulation::Init()
 			
 			fFoodEnergyIn += f->energy();
 			fStage.AddObject( f );
-			food::gXSortedFood.add( f );
+			objectxsortedlist::gXSortedObjects.add( f );
 			
 			fd = WhichDomain( f->x(), f->z(), 0 );
 			f->domain( fd );
@@ -1243,19 +1268,19 @@ void TSimulation::Init()
 	// Add scene to scene view and to overhead view
 	Q_CHECK_PTR(fSceneView);
 	fSceneView->SetScene(&fScene);
-	fOverheadWindow->SetScene( &fOverheadScene);  //Set up overhead view (CMB 3/13/06)
+	fOverheadWindow->SetScene( &fOverheadScene );  //Set up overhead view (CMB 3/13/06)
         
 #define DebugGenetics 0
 #if DebugGenetics
 	// This little snippet of code confirms that genetic copying, crossover, and mutation are behaving somewhat reasonably
-	critter::gXSortedCritters.reset();
+	objectxsortedlist::gXSortedObjects.reset();
 	critter* c1 = NULL;
 	critter* c2 = NULL;
 	genome* g1 = NULL;
 	genome* g2 = NULL;
 	genome g1c, g1x2, g1x2m;
-	critter::gXSortedCritters.next( c1 );
-	critter::gXSortedCritters.next( c2 );
+	objectxsortedlist::gXSortedObjects.nextObj(CRITTERTYPE, c1 );
+	objectxsortedlist::gXSortedObjects.nextObj(CRITTERTYPE, c2 );
 	g1 = c1->Genes();
 	g2 = c2->Genes();
 	cout << "************** G1 **************" nl;
@@ -1676,9 +1701,10 @@ void TSimulation::Interact()
     critter* c = NULL;
     critter* d = NULL;
 	critter* newCritter = NULL;
-	critter* oldCritter = NULL;
-    food* f = NULL;
-    cxsortedlist newCritters;
+//	critter* oldCritter = NULL;
+	food* f = NULL;
+	//cxsortedlist newCritters;
+	int newlifes = 0;
 	long i;
 	long j;
     short id = 0;
@@ -1687,16 +1713,36 @@ void TSimulation::Interact()
     short fd;
 	short fb;
 	bool cDied;
-	bool foodMarked = 0;
-    float cpower;
-    float dpower;
+//	bool foodMarked = 0;
+	bool ateBackwardFood;
+	float cpower;
+	float dpower;
     
 	fNewDeaths = 0;
 
-	// first x-sort all the critters
-	critter::gXSortedCritters.sort();
-	
-	// food list and barrier list should be x-sorted already
+	// first x-sort all the objects
+	objectxsortedlist::gXSortedObjects.sort();
+
+#if DebugShowSort
+	if( fStep == 1 )
+		printf( "food::gMaxFoodRadius = %g\n", food::gMaxFoodRadius );
+//	if( fStep > 59 )
+//		exit( 0 );
+	objectxsortedlist::gXSortedObjects.reset();
+	printf( "********** critters at step %ld **********\n", fStep );
+	while( objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &c ) )
+	{
+		printf( "  # %ld edge=%g at (%g,%g) rad=%g\n", c->Number(), c->x() - c->radius(), c->x(), c->z(), c->radius() );
+		fflush( stdout );
+	}
+	objectxsortedlist::gXSortedObjects.reset();
+	printf( "********** food at step %ld **********\n", fStep );
+	while( objectxsortedlist::gXSortedObjects.nextObj( FOODTYPE, (gobject**) &f ) )
+	{
+		printf( "  edge=%g at (%g,%g) rad=%g\n", f->x() - f->radius(), f->x(), f->z(), f->radius() );
+		fflush( stdout );
+	}
+#endif
 
 	fCurrentFittestCount = 0;
 	smPrint( "setting fCurrentFittestCount to 0\n" );
@@ -1739,9 +1785,10 @@ void TSimulation::Interact()
 
 	//cout << "before deaths "; critter::gXSortedCritters.list();	//dbg
 	fCurrentNeuronGroupCountStats.reset();
-	critter::gXSortedCritters.reset();
-    while (critter::gXSortedCritters.next(c))
+	objectxsortedlist::gXSortedObjects.reset();
+    while( objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &c ) )
     {
+
 		fCurrentNeuronGroupCountStats.add( c->Brain()->NumNeuronGroups() );
 
         // Determine the domain in which the critter currently is located
@@ -1898,8 +1945,8 @@ void TSimulation::Interact()
 		{
 			float mean, stddev;
 			
-			mean = (float) fGeneSum[i] / (float) critter::gXSortedCritters.count();
-			stddev = sqrt( (float) fGeneSum2[i] / (float) critter::gXSortedCritters.count()  -  mean * mean );
+			mean = (float) fGeneSum[i] / (float) objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE);
+			stddev = sqrt( (float) fGeneSum2[i] / (float) objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE)  -  mean * mean );
 			fprintf( fGeneStatsFile, " %.1f,%.1f", mean, stddev );
 		}
 		fprintf( fGeneStatsFile, "\n" );
@@ -1921,47 +1968,50 @@ void TSimulation::Interact()
 	// all possible interactions
 
 #if DebugMaxFitness
-	critter::gXSortedCritters.reset();
-	critter::gXSortedCritters.next( c );
+	objectxsortedlist::gXSortedObjects.reset();
+	objectxsortedlist::gXSortedObjects.nextObj(CRITTERTYPE, c);
 	critter* lastCritter;
-	critter::gXSortedCritters.last( lastCritter );
-	printf( "%s: at age %ld about to process %ld critters, %ld pieces of food, starting with critter %08lx (%4ld), ending with critter %08lx (%4ld)\n", __FUNCTION__, fStep, critter::gXSortedCritters.count(), food::gXSortedFood.count(), (ulong) c, c->Number(), (ulong) lastCritter, lastCritter->Number() );
+	objectxsortedlist::gXSortedObjects.lastObj(CRITTERTYPE, (gobject**) &lastCritter );
+	printf( "%s: at age %ld about to process %ld critters, %ld pieces of food, starting with critter %08lx (%4ld), ending with critter %08lx (%4ld)\n", __FUNCTION__, fStep, objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE), objectxsortedlist::gXSortedObjects.getCount(FOODTYPE), (ulong) c, c->Number(), (ulong) lastCritter, lastCritter->Number() );
 #endif
 
-//Doing Critter Healing
-	if( fHealing )														// if healing is turned on...
+	// Do Critter Healing
+	if( fHealing )	// if healing is turned on...
 	{
-		critter::gXSortedCritters.reset();
-		while (critter::gXSortedCritters.next(c))							// for every critter...
-			c->Heal( fCritterHealingRate, 0.0 );							// heal it if FoodEnergy > 2ndParam.
+		objectxsortedlist::gXSortedObjects.reset();
+    	while( objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &c) )	// for every critter...
+			c->Heal( fCritterHealingRate, 0.0 );										// heal it if FoodEnergy > 2ndParam.
 	}
 
-	food::gXSortedFood.reset();
-	critter::gXSortedCritters.reset();
-
-    while (critter::gXSortedCritters.next(c))
+	objectxsortedlist::gXSortedObjects.reset();
+    while( objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &c ) )
     {
+		// Check for new critter.  If totally new (never updated), skip this critter.
+		// This is because newly born critters get added directly to the main list,
+		// and we might try to process them immediately after being born, but we
+		// don't want to do that until the next time step.
+		if( c->Age() <= 0 )
+			continue;
+
 		// determine the domain in which the critter currently is located
         id = c->Domain();
 
 		// now see if there's an overlap with any other critters
 
-		//cout << "cr" eql c sp "cr->l" eql c->GetListLink() sp "pre-m" eql critter::gXSortedCritters.marcItem;
-        critter::gXSortedCritters.mark(); // so can point back to this critter later
-		//cout << " post-m" eql critter::gXSortedCritters.marcItem nlf;
+		objectxsortedlist::gXSortedObjects.setMark( CRITTERTYPE ); // so can point back to this critter later
 		
         cDied = FALSE;
         jd = id;
         kd = id;
 
-        while (critter::gXSortedCritters.next(d)) // to end of list or...
+        while( objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &d ) ) // to end of list or...
         {
-            if ( (d->x() - d->radius()) >= (c->x() + c->radius()) )
+            if( (d->x() - d->radius()) >= (c->x() + c->radius()) )
                 break;  // this guy (& everybody else in list) is too far away
 
             // so if we get here, then c & d are close enough in x to interact
 
-            if ( fabs(d->z() - c->z()) < (d->radius() + c->radius()) )
+            if( fabs(d->z() - c->z()) < (d->radius() + c->radius()) )
             {
                 // and if we get here then they are also close enough in z,
                 // so must actually worry about their interaction
@@ -2018,7 +2068,7 @@ void TSimulation::Interact()
 					}
 
                     if ( (fDomains[kd].numcritters < fDomains[kd].maxnumcritters) &&
-                         ((critter::gXSortedCritters.count() + newCritters.count()) < fMaxCritters) )
+                         (objectxsortedlist::gXSortedObjects.getCount( CRITTERTYPE ) < fMaxCritters) )
                     {
 						// Still got room for more
                         if( (fMiscCritters < 0) ||									// miscegenation function not being used
@@ -2043,12 +2093,18 @@ void TSimulation::Interact()
                             e->setyaw( AverageAngles(c->yaw(), d->yaw()) );	// wrong: 0.5*(c->yaw() + d->yaw()));   // was (360.0*drand48());
                             e->Domain(kd);
                             fStage.AddObject(e);
-                            newCritters.add(e); // add it to the full list later; the e->listLink that gets auto stored here must be replaced with one from full list below
+							objectxsortedlist::gXSortedObjects.add(e); // Add the new critter directly to the list of objects (no new critter list); the e->listLink that gets auto stored here should be valid immediately
+							newlifes++;
+							//newCritters.add(e); // add it to the full list later; the e->listLink that gets auto stored here must be replaced with one from full list below
                             fDomains[kd].numcritters++;
                             fNumberBorn++;
                             fDomains[kd].numborn++;
 							fNeuronGroupCountStats.add( e->Brain()->NumNeuronGroups() );
 							ttPrint( "age %ld: critter # %ld is born\n", fStep, e->Number() );
+							birthPrint( "step %ld: critter # %ld born to %ld & %ld, at (%g,%g,%g), yaw=%g, energy=%g, domain %d (%d & %d), neurgroups=%d\n",
+										fStep, e->Number(), c->Number(), d->Number(), e->x(), e->y(), e->z(), e->yaw(), e->Energy(), kd, id, jd, e->Brain()->NumNeuronGroups() );
+							//if( fStep > 50 )
+							//	exit( 0 );
                         }
                         else	// miscegenation function denied this birth
 						{
@@ -2094,11 +2150,11 @@ void TSimulation::Interact()
                         }
                         if (c->Energy() <= 0.0)
                         {
-                            critter::gXSortedCritters.tomark(); // point back to c
+							objectxsortedlist::gXSortedObjects.toMark( CRITTERTYPE ); // point back to c
                             Death(c);
                             fNumberDiedFight++;
-                            // note: this leaves list pointing to item before c
-                            critter::gXSortedCritters.mark();
+                            // note: this leaves list pointing to item before c, and markedCritter set to previous critter
+                            //objectxsortedlist::gXSortedObjects.setMarkPrevious( CRITTERTYPE );	// if previous object was a critter, this would step one too far back, I think - lsy
 							//cout << "after deaths3 "; critter::gXSortedCritters.list();	//dbg
                             cDied = true;
                             break;
@@ -2117,73 +2173,131 @@ void TSimulation::Interact()
         debugcheck("after all critter interactions in interact");
 	#endif DEBUGCHECK
 
-        if (cDied)
+        if( cDied )
 			continue; // nothing else to do with c, it's gone!
-		
-        critter::gXSortedCritters.tomark(); // point critter list back to c
-
+	
 		// they finally get to eat (couldn't earlier to keep from conferring
 		// a special advantage on critters early in the sorted list)
 
-        fd = id;
-        while (food::gXSortedFood.next(f))
+		// Just to be slightly more like the old multi-x-sorted list version of the code, look backwards first
+
+		// set the list back to the critter mark, so we can look backward from that point
+		objectxsortedlist::gXSortedObjects.toMark( CRITTERTYPE ); // point list back to c
+	
+		// look for food in the -x direction
+		ateBackwardFood = false;
+	#if CompatibilityMode
+		// go backwards in the list until we reach a place where even the largest possible piece of food
+		// would entirely precede our critter, and no smaller piece of food sorting after it, but failing
+		// to reach the critter can prematurely terminate the scan back (hence the factor of 2.0),
+		// so we can then search forward from there
+		while( objectxsortedlist::gXSortedObjects.prevObj( FOODTYPE, (gobject**) &f ) )
+			if( (f->x() + 2.0*food::gMaxFoodRadius) < (c->x() - c->radius()) )
+				break;
+	#else CompatibilityMode
+        while( objectxsortedlist::gXSortedObjects.prevObj( FOODTYPE, (gobject**) &f ) )
         {
-            if ( (f->x() + f->radius()) > (c->x() - c->radius()) )
-            {
-                // end of food comes after beginning of critter
-                if (!foodMarked) // first time only
-                {
-                    foodMarked = true;
-                    food::gXSortedFood.markprev();   // mark previous item in list
-                }
-                if ( (f->x() - f->radius()) > (c->x() + c->radius()) )
-                {
-                    // beginning of food comes after end of critter,
-                    // so there is no overlap, and we can stop searching
-                    // for this critter's possible foods
+			if( (f->x() + f->radius()) < (c->x() - c->radius()) )
+			{
+				// end of food comes before beginning of critter, so there is no overlap
+				// if we've gone so far back that the largest possible piece of food could not overlap us,
+				// then we can stop searching for this critter's possible foods in the backward direction
+				if( (f->x() + 2.0*food::gMaxFoodRadius) < (c->x() - c->radius()) )
+					break;  // so get out of the backward food while loop
+			}
+			else
+			{
+				// beginning of food comes before end of critter, so there is overlap in x
+				// time to check for overlap in z
+				if( fabs( f->z() - c->z() ) < ( f->radius() + c->radius() ) )
+				{
+					// also overlap in z, so they really interact
+					ttPrint( "step %ld: critter # %ld is eating\n", fStep, c->Number() );
+					fd = f->domain();
+					fb = f->band();
+					float foodEaten = c->eat( f, fEatFitnessParameter, fEat2Consume, fEatThreshold );
+					fFoodEnergyOut += foodEaten;
+					
+					eatPrint( "at step %ld, critter %ld at (%g,%g) with rad=%g wasted %g units of food at (%g,%g) with rad=%g\n", fStep, c->Number(), c->x(), c->z(), c->radius(), foodEaten, f->x(), f->z(), f->radius() );
 
-                    // first, set the sorted food list back to the marked
-                    // item which immediately preceeds the first possible
-                    // food item for this, and therefore the next, critter
-                    food::gXSortedFood.tomark();
-                    break;  // then get out of the sorted food while loop
-                }
-                else // we actually have an overlap in x
-                {
-                    if( fabs( f->z() - c->z() ) < ( f->radius() + c->radius() ) )
-                    {
-                        // also overlap in z, so they really interact
+					if (f->energy() <= 0.0)  // all gone
+					{
+						fDomains[fd].foodCount--;
+						if( fb >= 0 )
+							fDomains[fd].fDomainFoodBand[fb].foodCount--;
+						dfbPrint( "after removing eaten food  from domain %d, band %d, at (%5.2f,%6.2f), D.foodCount = %ld, DFB.foodCount = %ld\n", fd, fb, f->x(), f->z(), fDomains[fd].foodCount, fb >= 0 ? fDomains[fd].fDomainFoodBand[fb].foodCount : -1 );
+						objectxsortedlist::gXSortedObjects.removeCurrentObject();   // get it out of the list
+						fStage.RemoveObject( f );  // get it out of the world
+						delete f;				// get it out of memory
+					}
+
+					// but this guy only gets to eat from one food source
+					ateBackwardFood = true;
+					break;  // so get out of the backward food while loop
+				}
+			}
+		}	// backward while loop on food
+	#endif CompatibilityMode
+	
+		if( !ateBackwardFood )
+		{
+		#if ! CompatibilityMode
+			// set the list back to the critter mark, so we can look forward from that point
+			objectxsortedlist::gXSortedObjects.toMark( CRITTERTYPE ); // point list back to c
+		#endif
+		
+			// look for food in the +x direction
+			while( objectxsortedlist::gXSortedObjects.nextObj( FOODTYPE, (gobject**) &f ) )
+			{
+				if( (f->x() - f->radius()) > (c->x() + c->radius()) )
+				{
+					// beginning of food comes after end of critter, so there is no overlap,
+					// and we can stop searching for this critter's possible foods in the forward direction
+					break;  // so get out of the forward food while loop
+				}
+				else
+				{
+		#if CompatibilityMode
+					if( ((f->x() + f->radius()) > (c->x() - c->radius()))  &&		// end of food comes after beginning of critter, and
+						(fabs( f->z() - c->z() ) < (f->radius() + c->radius())) )	// there is overlap in z
+		#else
+					// beginning of food comes before end of critter, so there is overlap in x
+					// time to check for overlap in z
+					if( fabs( f->z() - c->z() ) < (f->radius() + c->radius()) )
+		#endif
+					{
+						// also overlap in z, so they really interact
 						ttPrint( "step %ld: critter # %ld is eating\n", fStep, c->Number() );
-                        fd = f->domain();
+						fd = f->domain();
 						fb = f->band();
-						fFoodEnergyOut += c->eat(f, fEatFitnessParameter, fEat2Consume, fEatThreshold);
+						float foodEaten = c->eat( f, fEatFitnessParameter, fEat2Consume, fEatThreshold );
+						fFoodEnergyOut += foodEaten;
+						
+						eatPrint( "at step %ld, critter %ld at (%g,%g) with rad=%g wasted %g units of food at (%g,%g) with rad=%g\n", fStep, c->Number(), c->x(), c->z(), c->radius(), foodEaten, f->x(), f->z(), f->radius() );
 
-                        if (f->energy() <= 0.0)  // all gone
-                        {
+						if (f->energy() <= 0.0)  // all gone
+						{
 							fDomains[fd].foodCount--;
 							if( fb >= 0 )
 								fDomains[fd].fDomainFoodBand[fb].foodCount--;
 							dfbPrint( "after removing eaten food  from domain %d, band %d, at (%5.2f,%6.2f), D.foodCount = %ld, DFB.foodCount = %ld\n", fd, fb, f->x(), f->z(), fDomains[fd].foodCount, fb >= 0 ? fDomains[fd].fDomainFoodBand[fb].foodCount : -1 );
-							food::gXSortedFood.remove();   // get it out of the list
-							fStage.RemoveObject(f);  // get it out of the world
+							objectxsortedlist::gXSortedObjects.removeCurrentObject();   // get it out of the list
+							fStage.RemoveObject( f );  // get it out of the world
 							delete f;				// get it out of memory
-                        }
-                        // whether this food item is completely used up or not,
-                        // must set the sorted food list back to the marked
-                        // item which immediately preceeded f, so either f,
-                        // or the next item in the list, will be available
-                        // to the next critter
-                        food::gXSortedFood.tomark();
+						}
 
-                        // but this guy only gets to eat from one food source
-                        break;  // so get out of the sorted food while loop
-                    }
-                }
-            }
-        } // while loop on food
+						// but this guy only gets to eat from one food source
+						break;  // so get out of the forward food while loop
+					}
+				}
+			} // forward while loop on food
 
+		}
+	
+		objectxsortedlist::gXSortedObjects.toMark( CRITTERTYPE ); // point list back to c
+		
 	#ifdef DEBUGCHECK
-        debugcheck("after eating in interact");
+        debugcheck( "after eating in interact" );
 	#endif DEBUGCHECK
 
 		// keep tabs of current and average fitness for surviving organisms
@@ -2246,7 +2360,7 @@ void TSimulation::Interact()
         
 	// now for a little spontaneous generation!
 	
-    if (((long)(critter::gXSortedCritters.count() + newCritters.count())) < fMaxCritters)
+    if (((long)(objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE))) < fMaxCritters)
     {
         // provided there are less than the maximum number of critters already
 
@@ -2314,7 +2428,9 @@ void TSimulation::Interact()
                 newCritter->Domain(id);
                 fStage.AddObject(newCritter);
                 fDomains[id].numcritters++;
-                newCritters.add(newCritter); // add it to the full list later; the e->listLink that gets auto stored here must be replaced with one from full list below
+				objectxsortedlist::gXSortedObjects.add(newCritter);
+				newlifes++;
+                //newCritters.add(newCritter); // add it to the full list later; the e->listLink that gets auto stored here must be replaced with one from full list below
 				fNeuronGroupCountStats.add( newCritter->Brain()->NumNeuronGroups() );
             }
         }
@@ -2325,7 +2441,7 @@ void TSimulation::Interact()
 		
 		// then deal with global creation if necessary
 
-        while (((long)(critter::gXSortedCritters.count() + newCritters.count())) < fMinNumCritters)
+        while (((long)(objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE))) < fMinNumCritters)
         {
             fNumberCreated++;
             numglobalcreated++;
@@ -2380,7 +2496,9 @@ void TSimulation::Interact()
             fDomains[id].lastcreate = fStep;
             fDomains[id].numcritters++;
             fStage.AddObject(newCritter);
-            newCritters.add(newCritter); // add it to the full list later; the e->listLink that gets auto stored here must be replaced with one from full list below
+	    	objectxsortedlist::gXSortedObjects.add(newCritter); // add new critter to list of all objejcts; the newCritter->listLink that gets auto stored here should be valid immediately
+	    	newlifes++;
+            //newCritters.add(newCritter); // add it to the full list later; the e->listLink that gets auto stored here must be replaced with one from full list below
 			fNeuronGroupCountStats.add( newCritter->Brain()->NumNeuronGroups() );
         }
 
@@ -2391,12 +2509,15 @@ void TSimulation::Interact()
         
 	// now add the new critters to the existing list
 	
+    /* New creatures are now added directly to the list of objects
+       So below block of code is unnecessary
+
     const int newlifes = newCritters.count();
     if (newlifes > 0)
     {
         bool foundinsertionpt;
         bool oldlistfinished = false;
-        critter::gXSortedCritters.reset();
+        objectxsortedlist::gXSortedObjects.reset();
 //		newCritters.sort();	// not needed, because new critters are always added wih cxsortedlist::add(), which sorts on add
         newCritters.reset();
         while (newCritters.next(newCritter))
@@ -2405,15 +2526,15 @@ void TSimulation::Interact()
                 CalculateGeneSeparation(newCritter);
 
             if (oldlistfinished)
-                newCritter->listLink = critter::gXSortedCritters.append(newCritter);
+                newCritter->listLink = objectxsortedlist::gXSortedObjects.append(newCritter);
             else
             {
                 foundinsertionpt = false;
-                while (critter::gXSortedCritters.next(oldCritter))
+                while (objectxsortedlist::gXSortedObjects.nextObj(CRITTERTYPE, oldCritter))
                 {
                     if ( (newCritter->x() - newCritter->radius()) < (oldCritter->x() - oldCritter->radius()) )
                     {
-                        newCritter->listLink = critter::gXSortedCritters.inserthere(newCritter);
+                        newCritter->listLink = objectxsortedlist::gXSortedObjects.inserthere(newCritter);
                         foundinsertionpt = true;
                         break;
                     }
@@ -2421,13 +2542,13 @@ void TSimulation::Interact()
                 if (!foundinsertionpt)
                 {
                     oldlistfinished = true;
-                    newCritter->listLink = critter::gXSortedCritters.append(newCritter);
+                    newCritter->listLink = objectxsortedlist::gXSortedObjects.append(newCritter);
                 }
             }
         }
         newCritters.clear();
     }
-
+	*/
 #ifdef DEBUGCHECK
     debugcheck("after newcritters added to critter::gXSortedCritters in interact");
 #endif DEBUGCHECK
@@ -2444,7 +2565,7 @@ void TSimulation::Interact()
 	// finally, keep the world's food supply going...
 
 	// first deal with the individual domains
-    if ((long)food::gXSortedFood.count() < fMaxFoodCount) // can't create if too many overall
+    if ((long)objectxsortedlist::gXSortedObjects.getCount(FOODTYPE) < fMaxFoodCount) // can't create if too many overall
     {
         for (fd = 0; fd < fNumDomains; fd++)
         {
@@ -2462,7 +2583,7 @@ void TSimulation::Interact()
 						f->setz( drand48() * (fFoodBand[fb].zMax - fFoodBand[fb].zMin)  +  fFoodBand[fb].zMin );
 						f->domain( fd );
 						f->band( fb );
-						food::gXSortedFood.add( f );
+						objectxsortedlist::gXSortedObjects.add( f );
 						fStage.AddObject( f );
 						fDomains[fd].foodCount++;
 						fDomains[fd].fDomainFoodBand[fb].foodCount++;
@@ -2479,7 +2600,7 @@ void TSimulation::Interact()
 						f->setz( drand48() * (fFoodBand[fb].zMax - fFoodBand[fb].zMin)  +  fFoodBand[fb].zMin );
 						f->domain( fd );
 						f->band( fb );
-						food::gXSortedFood.add( f );
+						objectxsortedlist::gXSortedObjects.add( f );
 						fStage.AddObject( f );
 						fDomains[fd].foodCount++;
 						fDomains[fd].fDomainFoodBand[fb].foodCount++;
@@ -2502,7 +2623,7 @@ void TSimulation::Interact()
 							f->setz( drand48() * (fFoodBand[fb].zMax - fFoodBand[fb].zMin)  +  fFoodBand[fb].zMin );
 							f->domain( fd );
 							f->band( fb );
-							food::gXSortedFood.add( f );
+							objectxsortedlist::gXSortedObjects.add( f );
 							fStage.AddObject( f );
 							fDomains[fd].foodCount++;
 							fDomains[fd].fDomainFoodBand[fb].foodCount++;
@@ -2518,7 +2639,7 @@ void TSimulation::Interact()
 							f->setz( drand48() * (fFoodBand[fb].zMax - fFoodBand[fb].zMin)  +  fFoodBand[fb].zMin );
 							f->domain( fd );
 							f->band( fb );
-							food::gXSortedFood.add( f );
+							objectxsortedlist::gXSortedObjects.add( f );
 							fStage.AddObject( f );
 							fDomains[fd].foodCount++;
 							fDomains[fd].fDomainFoodBand[fb].foodCount++;
@@ -2533,9 +2654,9 @@ void TSimulation::Interact()
         }
 
 		// then deal with the global food supply if necessary
-        if( (long)food::gXSortedFood.count() < fMaxFoodGrown ) // can get higher due to deaths
+        if( (long)objectxsortedlist::gXSortedObjects.getCount(FOODTYPE) < fMaxFoodGrown ) // can get higher due to deaths
         {
-            const float foodprob = (fMaxFoodGrown - food::gXSortedFood.count()) * fFoodRate;
+            const float foodprob = (fMaxFoodGrown - objectxsortedlist::gXSortedObjects.getCount(FOODTYPE)) * fFoodRate;
             if( drand48() < foodprob )
             {
                 food* f = new food;
@@ -2544,7 +2665,7 @@ void TSimulation::Interact()
 				fb = WhichBand( f->z() );
                 f->domain( fd );
 				f->band( fb );
-                food::gXSortedFood.add( f );
+                objectxsortedlist::gXSortedObjects.add( f );
                 fStage.AddObject( f );
                 fDomains[fd].foodCount++;
 				if( fb >= 0 )
@@ -2552,7 +2673,7 @@ void TSimulation::Interact()
 				dfbPrint( "after adding GLOBAL rate-based food to domain %d, band %d, at (%5.2f,%6.2f), D.foodCount = %ld, DFB.foodCount = %ld\n", fd, fb, f->x(), f->z(), fDomains[fd].foodCount, fb >= 0 ? fDomains[fd].fDomainFoodBand[fb].foodCount : -1 );
             }
             
-			const long newfood = fMinFoodCount - food::gXSortedFood.count();
+			const long newfood = fMinFoodCount - objectxsortedlist::gXSortedObjects.getCount(FOODTYPE);
             for( i = 0; i < newfood; i++ )
             {
                 food* f = new food;
@@ -2561,7 +2682,7 @@ void TSimulation::Interact()
 				fb = WhichBand( f->z() );
                 f->domain( fd );
 				f->band( fb );
-                food::gXSortedFood.add( f );
+                objectxsortedlist::gXSortedObjects.add( f );
                 fStage.AddObject( f );
                 fDomains[fd].foodCount++;
 				if( fb >= 0 )
@@ -2588,8 +2709,8 @@ void TSimulation::Interact()
 		
 		bzero( foodBandCounts, sizeFoodBandCounts );
 		
-		food::gXSortedFood.reset();
-		while( food::gXSortedFood.next( f ) )
+		objectxsortedlist::gXSortedObjects.reset();
+		while( objectxsortedlist::gXSortedObjects.nextObj(FOODTYPE, (gobject**)&f) )
 		{
 			bool inFoodBand = false;
 			for( fb = 0; fb < fNumFoodBands; fb++ )
@@ -2641,15 +2762,16 @@ void TSimulation::CalculateGeneSeparation(critter* ci)
     // there before exit so it can be invoked during the insertion of the
     // newcritters list into the existing gSortedCritters list.
 	
-	critter::gXSortedCritters.mark();
+    //objectxsortedlist::gXSortedObjects.mark();
+    objectxsortedlist::gXSortedObjects.setMark( CRITTERTYPE );
 	
     critter* cj = NULL;
     float genesep;
     float genesepsum = 0.0;
     long numgsvalsold = fNumGeneSepVals;
         
-	critter::gXSortedCritters.reset();
-	while (critter::gXSortedCritters.next(cj))
+	objectxsortedlist::gXSortedObjects.reset();
+	while (objectxsortedlist::gXSortedObjects.nextObj(CRITTERTYPE, (gobject**)&cj))
     {
 		genesep = ci->Genes()->CalcSeparation(cj->Genes());
         fMaxGeneSeparation = fmax(genesep, fMaxGeneSeparation);
@@ -2658,7 +2780,7 @@ void TSimulation::CalculateGeneSeparation(critter* ci)
         fGeneSepVals[fNumGeneSepVals++] = genesep;
     }
     
-    long n = critter::gXSortedCritters.count();
+    long n = objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE);
     if (numgsvalsold != (n * (n - 1) / 2))
     {
 		char tempstring[256];
@@ -2681,7 +2803,8 @@ void TSimulation::CalculateGeneSeparation(critter* ci)
     
     fAverageGeneSeparation = (genesepsum + fAverageGeneSeparation * numgsvalsold) / fNumGeneSepVals;
 	
-	critter::gXSortedCritters.tomark();
+    //objectxsortedlist::gXSortedObjects.tomark();
+    objectxsortedlist::gXSortedObjects.toMark(CRITTERTYPE);
 }
 
 
@@ -2700,12 +2823,12 @@ void TSimulation::CalculateGeneSeparationAll()
     fMaxGeneSeparation = 0.0;
     fNumGeneSepVals = 0;
     
-	critter::gXSortedCritters.reset();
-	while (critter::gXSortedCritters.next(ci))
+    objectxsortedlist::gXSortedObjects.reset();
+    while (objectxsortedlist::gXSortedObjects.nextObj(CRITTERTYPE, (gobject**)&ci))
     {
-		critter::gXSortedCritters.mark();
+		objectxsortedlist::gXSortedObjects.setMark(CRITTERTYPE);
 
-		while (critter::gXSortedCritters.next(cj))
+		while (objectxsortedlist::gXSortedObjects.nextObj(CRITTERTYPE, (gobject**)&cj))
 		{	
             genesep = ci->Genes()->CalcSeparation(cj->Genes());
             fMaxGeneSeparation = max(genesep, fMaxGeneSeparation);
@@ -2713,11 +2836,12 @@ void TSimulation::CalculateGeneSeparationAll()
             genesepsum += genesep;
             fGeneSepVals[fNumGeneSepVals++] = genesep;
         }
-		critter::gXSortedCritters.tomark();
+		//objectxsortedlist::gXSortedObjects.tomark();
+		objectxsortedlist::gXSortedObjects.toMark(CRITTERTYPE);
     }
     
     // n * (n - 1) / 2 is how many calculations were made
-	long n = critter::gXSortedCritters.count();
+	long n = objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE);
     if (fNumGeneSepVals != (n * (n - 1) / 2))
     {
 		char tempstring[256];
@@ -2810,7 +2934,7 @@ void TSimulation::Death(critter* c)
     
 	// If critter's carcass is to become food, make it so here
     if (fCrittersRfood
-    	&& ((long)food::gXSortedFood.count() < fMaxFoodCount)
+    	&& ((long)objectxsortedlist::gXSortedObjects.getCount(FOODTYPE) < fMaxFoodCount)
     	&& (fDomains[id].foodCount < fDomains[id].maxFoodCount)
     	&& (globals::edges || ((c->x() >= 0.0) && (c->x() <=  globals::worldsize) &&
     	                       (c->z() <= 0.0) && (c->z() >= -globals::worldsize))) )
@@ -2838,7 +2962,7 @@ void TSimulation::Death(critter* c)
 			int fb;
             food* f = new food( foodenergy, c->x(), c->z() );
             Q_CHECK_PTR( f );
-			food::gXSortedFood.add( f );	// dead critter becomes food
+			objectxsortedlist::gXSortedObjects.add( f );	// dead critter becomes food
 			fStage.AddObject( f );			// put replacement food into the world
 			fb = WhichBand( f->z() );
 			f->domain( fd );
@@ -2985,7 +3109,7 @@ void TSimulation::Death(critter* c)
 	}
 	
 	// Remove critter from world
-    fStage.RemoveObject(c);
+    fStage.RemoveObject( c );
     
     // Check and see if we are monitoring this guy
 	if (c == fMonitorCritter)
@@ -3148,9 +3272,12 @@ void TSimulation::Death(critter* c)
 	// following assumes (requires!) list to be currently pointing to c,
     // and will leave the list pointing to the previous critter
 	// critter::gXSortedCritters.remove(); // get critter out of the list
+	// objectxsortedlist::gXSortedObjects.removeCurrentObject(); // get critter out of the list
 	
 	// Following assumes (requires!) the critter to have stored c->listLink correctly
-	critter::gXSortedCritters.removeFastUnsafe( c->GetListLink() );
+	//critter::gXSortedCritters.removeFastUnsafe( c->GetListLink() );
+	objectxsortedlist::gXSortedObjects.removeObjectWithLink( (gobject*) c );
+
 	
 	// Note: For the sake of computational efficiency, I used to never delete a critter,
 	// but "reinit" and reuse them as new critters were born or created.  But Gene made
@@ -4018,10 +4145,10 @@ void TSimulation::Dump()
 
     critter::critterdump(out);
 
-    out << food::gXSortedFood.count() nl;
+    out << objectxsortedlist::gXSortedObjects.getCount(FOODTYPE) nl;
 	food* f = NULL;
-	food::gXSortedFood.reset();
-	while (food::gXSortedFood.next(f))
+	objectxsortedlist::gXSortedObjects.reset();
+	while (objectxsortedlist::gXSortedObjects.nextObj(FOODTYPE, (gobject**)&f))
 		f->dump(out);
 					
     out << fNumberFit nl;
@@ -4191,7 +4318,7 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 	sprintf( t, "step = %ld", fStep );
 	list.push_back( strdup( t ) );
 	
-	sprintf( t, "critters = %4ld", critter::gXSortedCritters.count() );
+	sprintf( t, "critters = %4d", objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE) );
 	if (fNumDomains > 1)
 	{
 		sprintf(t2, " (%ld",fDomains[0].numcritters );
@@ -4274,7 +4401,7 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 	sprintf( t, " -smite  = %4ld", fNumberDiedSmite );
 	list.push_back( strdup( t ) );
 	
-	sprintf( t, "food = %ld", food::gXSortedFood.count() );
+	sprintf( t, "food = %d", objectxsortedlist::gXSortedObjects.getCount(FOODTYPE) );
 	if (fNumDomains > 1)
 	{
 	    sprintf( t2, " (%ld",fDomains[0].foodCount );
@@ -4405,7 +4532,7 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 		unsigned long numCrittersInAnyFoodBand = 0;
 		unsigned long numCrittersWithin5UnitsOfAnyFoodBand = 0;
 		unsigned long numCrittersWithin10UnitsOfAnyFoodBand = 0;
-		float makePercent = 100.0 / critter::gXSortedCritters.count();
+		float makePercent = 100.0 / objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE);
 
 		for( int i = 0; i < fNumFoodBands; i++ )
 		{

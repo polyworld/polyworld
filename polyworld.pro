@@ -35,7 +35,8 @@ SOURCES		=	app/debug.cp \
 				utils/error.cp \
 				utils/indexlist.cp \
 				utils/misc.cp \
-				utils/PwMovietools.cp
+				utils/PwMovieTools.cp \
+				utils/objectxsortedlist.cp
 																			  	
 TARGET		= 	Polyworld
 
