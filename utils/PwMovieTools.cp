@@ -742,7 +742,7 @@ void unrlediff4( register unsigned long *rle,
 					if( version < 100 )	// PPC on PPC
 						currentrgb = ((long) (*srle) << 24) | ((long) *(srle+1) << 8) | AlphaMask_RGBA;
 					else				// Intel on PPC
-						currentrgb = (*srle >> 8) | ((long) *(srle+1) << 8) | AlphaMask_RGBA;	// ???
+						currentrgb = ((long) (*srle & 0xff00) << 16) | ((long) *(srle+1) << 8) | AlphaMask_RGBA;
 				  #else
 					if( version > 100 )	// Intel on Intel
 						currentrgb = (*srle & 0xff) | ((long) *(srle+1) << 8) | AlphaMask_RGBA;
