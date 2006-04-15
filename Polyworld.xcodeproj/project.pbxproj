@@ -997,6 +997,226 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
+		760EF64209EF188F00C0FAA5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_MODEL_TUNING = G5;
+				GCC_OPTIMIZATION_LEVEL = 3;
+				OTHER_CFLAGS = "";
+				OTHER_CPLUSPLUSFLAGS = "-DQT_NO_DEBUG";
+				OTHER_LDFLAGS = (
+					"-framework",
+					QtGui,
+					"-framework",
+					QtCore,
+					"-framework",
+					QtOpenGL,
+					"-lz",
+				);
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = moc;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+				ZERO_LINK = NO;
+			};
+			name = Release;
+		};
+		760EF64309EF188F00C0FAA5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				FRAMEWORK_SEARCH_PATHS = $QtLib;
+				GCC_ALTIVEC_EXTENSIONS = YES;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_ENABLE_TRIGRAPHS = NO;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_MODEL_TUNING = G5;
+				GCC_OPTIMIZATION_LEVEL = 3;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = PolyworldPrefix.pch;
+				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
+				GCC_WARN_CHECK_SWITCH_STATEMENTS = YES;
+				GCC_WARN_EFFECTIVE_CPLUSPLUS_VIOLATIONS = NO;
+				GCC_WARN_FOUR_CHARACTER_CONSTANTS = NO;
+				GCC_WARN_HIDDEN_VIRTUAL_FUNCTIONS = YES;
+				GCC_WARN_INHIBIT_ALL_WARNINGS = NO;
+				GCC_WARN_INITIALIZER_NOT_FULLY_BRACKETED = YES;
+				GCC_WARN_MISSING_PARENTHESES = YES;
+				GCC_WARN_NON_VIRTUAL_DESTRUCTOR = YES;
+				GCC_WARN_PEDANTIC = NO;
+				GCC_WARN_SHADOW = NO;
+				GCC_WARN_SIGN_COMPARE = YES;
+				GCC_WARN_TYPECHECK_CALLS_TO_PRINTF = NO;
+				GCC_WARN_UNINITIALIZED_AUTOS = NO;
+				GCC_WARN_UNKNOWN_PRAGMAS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_LABEL = YES;
+				GCC_WARN_UNUSED_PARAMETER = YES;
+				GCC_WARN_UNUSED_VALUE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = (
+					$QtInc,
+					$QtInc/Qt,
+					$QtInc/QtGui,
+					/System/Library/Frameworks/OpenGL.framework/Headers,
+					/System/Library/Frameworks/AGL.framework,
+				);
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(HOME)/Applications";
+				LIBRARY_SEARCH_PATHS = $QtLib;
+				LIBRARY_STYLE = Static;
+				OTHER_CFLAGS = (
+					"-DQT_ACCESSIBILITY_SUPPORT",
+					"-DQT_TABLET_SUPPORT",
+					"-Wno-deprecated",
+				);
+				OTHER_CPLUSPLUSFLAGS = (
+					"$(OTHER_CFLAGS)",
+					"-DQT_NO_DEBUG",
+				);
+				OTHER_LDFLAGS = (
+					"-framework",
+					QtCore,
+					"-framework",
+					QtGui,
+					"-framework",
+					QtOpenGL,
+					"-lz",
+					"-lgsl",
+					"-lgslcblas",
+					"-lm",
+				);
+				OTHER_REZFLAGS = "";
+				PREBINDING = YES;
+				PRODUCT_NAME = Polyworld;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+				WRAPPER_EXTENSION = app;
+				ZERO_LINK = NO;
+			};
+			name = Release;
+		};
+		760EF64409EF188F00C0FAA5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_MODEL_TUNING = G5;
+				GCC_OPTIMIZATION_LEVEL = 3;
+				OTHER_CFLAGS = "";
+				OTHER_CPLUSPLUSFLAGS = "-DQT_NO_DEBUG";
+				OTHER_LDFLAGS = (
+					"-framework",
+					QtGui,
+					"-framework",
+					QtCore,
+					"-framework",
+					QtOpenGL,
+					"-lz",
+				);
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = moc;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+				ZERO_LINK = NO;
+			};
+			name = Release;
+		};
+		760EF64509EF188F00C0FAA5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				FRAMEWORK_SEARCH_PATHS = $QtLib;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_MODEL_TUNING = G5;
+				GCC_OPTIMIZATION_LEVEL = 3;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "";
+				HEADER_SEARCH_PATHS = (
+					$QtInc,
+					$QtInc/QtCore,
+					$QtInc/QtGui,
+					$QtInc/QtOpenGL,
+					/System/Library/Frameworks/OpenGL.framework/Headers,
+					/System/Library/Frameworks/AGL.framework,
+				);
+				INFOPLIST_FILE = "PwMoviePlayer-Info.plist";
+				INSTALL_PATH = "$(USER_APPS_DIR)";
+				LIBRARY_SEARCH_PATHS = $QtLib;
+				OTHER_CFLAGS = (
+					"-DQT_ACCESSIBILITY_SUPPORT",
+					"-DQT_TABLET_SUPPORT",
+					"-DQT_NO_DEBUG",
+					"-Wno-deprecated",
+				);
+				OTHER_CPLUSPLUSFLAGS = "-DQT_NO_DEBUG";
+				OTHER_LDFLAGS = (
+					"-framework",
+					QtGui,
+					"-framework",
+					QtCore,
+					"-framework",
+					QtOpenGL,
+					"-lz",
+				);
+				OTHER_REZFLAGS = "";
+				PREBINDING = YES;
+				PRODUCT_NAME = PwMoviePlayer;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+				ZERO_LINK = NO;
+			};
+			name = Release;
+		};
+		760EF64609EF188F00C0FAA5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_MODEL_TUNING = G5;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "$(SYSTEM_LIBRARY_DIR)/Frameworks/Carbon.framework/Headers/Carbon.h";
+				INSTALL_PATH = "$(HOME)/bin";
+				OTHER_LDFLAGS = (
+					"-framework",
+					Carbon,
+				);
+				PREBINDING = NO;
+				PRODUCT_NAME = probe_activity;
+				ZERO_LINK = NO;
+			};
+			name = Release;
+		};
+		760EF64709EF188F00C0FAA5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = (
+					ppc,
+					i386,
+				);
+			};
+			name = Release;
+		};
 		7625066E09B8CD0500C36C36 /* Development */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1019,7 +1239,7 @@
 			};
 			name = Development;
 		};
-		7625066F09B8CD0500C36C36 /* Deployment */ = {
+		7625066F09B8CD0500C36C36 /* Optimized */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COPY_PHASE_STRIP = YES;
@@ -1037,7 +1257,7 @@
 				PRODUCT_NAME = probe_activity;
 				ZERO_LINK = NO;
 			};
-			name = Deployment;
+			name = Optimized;
 		};
 		7625067009B8CD0500C36C36 /* Profiling */ = {
 			isa = XCBuildConfiguration;
@@ -1104,7 +1324,7 @@
 			};
 			name = Development;
 		};
-		76293F0B0981AF4600D27C6E /* Deployment */ = {
+		76293F0B0981AF4600D27C6E /* Optimized */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COPY_PHASE_STRIP = YES;
@@ -1132,7 +1352,7 @@
 				);
 				ZERO_LINK = NO;
 			};
-			name = Deployment;
+			name = Optimized;
 		};
 		76293F0C0981AF4600D27C6E /* Profiling */ = {
 			isa = XCBuildConfiguration;
@@ -1250,7 +1470,7 @@
 			};
 			name = Development;
 		};
-		76293F100981AF4600D27C6E /* Deployment */ = {
+		76293F100981AF4600D27C6E /* Optimized */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COPY_PHASE_STRIP = YES;
@@ -1327,7 +1547,7 @@
 				WRAPPER_EXTENSION = app;
 				ZERO_LINK = NO;
 			};
-			name = Deployment;
+			name = Optimized;
 		};
 		76293F110981AF4600D27C6E /* Profiling */ = {
 			isa = XCBuildConfiguration;
@@ -1503,7 +1723,7 @@
 			};
 			name = Development;
 		};
-		76293F150981AF4600D27C6E /* Deployment */ = {
+		76293F150981AF4600D27C6E /* Optimized */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COPY_PHASE_STRIP = YES;
@@ -1531,7 +1751,7 @@
 				);
 				ZERO_LINK = NO;
 			};
-			name = Deployment;
+			name = Optimized;
 		};
 		76293F160981AF4600D27C6E /* Profiling */ = {
 			isa = XCBuildConfiguration;
@@ -1624,7 +1844,7 @@
 			};
 			name = Development;
 		};
-		76293F1A0981AF4600D27C6E /* Deployment */ = {
+		76293F1A0981AF4600D27C6E /* Optimized */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COPY_PHASE_STRIP = YES;
@@ -1673,7 +1893,7 @@
 				);
 				ZERO_LINK = NO;
 			};
-			name = Deployment;
+			name = Optimized;
 		};
 		76293F1B0981AF4600D27C6E /* Profiling */ = {
 			isa = XCBuildConfiguration;
@@ -1779,11 +1999,11 @@
 			};
 			name = Development;
 		};
-		76293F1F0981AF4600D27C6E /* Deployment */ = {
+		76293F1F0981AF4600D27C6E /* Optimized */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 			};
-			name = Deployment;
+			name = Optimized;
 		};
 		76293F200981AF4600D27C6E /* Profiling */ = {
 			isa = XCBuildConfiguration;
@@ -1804,7 +2024,8 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				7625066E09B8CD0500C36C36 /* Development */,
-				7625066F09B8CD0500C36C36 /* Deployment */,
+				7625066F09B8CD0500C36C36 /* Optimized */,
+				760EF64609EF188F00C0FAA5 /* Release */,
 				7625067009B8CD0500C36C36 /* Profiling */,
 				7625067109B8CD0500C36C36 /* Default */,
 			);
@@ -1815,7 +2036,8 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				76293F0A0981AF4600D27C6E /* Development */,
-				76293F0B0981AF4600D27C6E /* Deployment */,
+				76293F0B0981AF4600D27C6E /* Optimized */,
+				760EF64209EF188F00C0FAA5 /* Release */,
 				76293F0C0981AF4600D27C6E /* Profiling */,
 				76293F0D0981AF4600D27C6E /* Default */,
 			);
@@ -1826,7 +2048,8 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				76293F0F0981AF4600D27C6E /* Development */,
-				76293F100981AF4600D27C6E /* Deployment */,
+				76293F100981AF4600D27C6E /* Optimized */,
+				760EF64309EF188F00C0FAA5 /* Release */,
 				76293F110981AF4600D27C6E /* Profiling */,
 				76293F120981AF4600D27C6E /* Default */,
 			);
@@ -1837,7 +2060,8 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				76293F140981AF4600D27C6E /* Development */,
-				76293F150981AF4600D27C6E /* Deployment */,
+				76293F150981AF4600D27C6E /* Optimized */,
+				760EF64409EF188F00C0FAA5 /* Release */,
 				76293F160981AF4600D27C6E /* Profiling */,
 				76293F170981AF4600D27C6E /* Default */,
 			);
@@ -1848,7 +2072,8 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				76293F190981AF4600D27C6E /* Development */,
-				76293F1A0981AF4600D27C6E /* Deployment */,
+				76293F1A0981AF4600D27C6E /* Optimized */,
+				760EF64509EF188F00C0FAA5 /* Release */,
 				76293F1B0981AF4600D27C6E /* Profiling */,
 				76293F1C0981AF4600D27C6E /* Default */,
 			);
@@ -1859,7 +2084,8 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				76293F1E0981AF4600D27C6E /* Development */,
-				76293F1F0981AF4600D27C6E /* Deployment */,
+				76293F1F0981AF4600D27C6E /* Optimized */,
+				760EF64709EF188F00C0FAA5 /* Release */,
 				76293F200981AF4600D27C6E /* Profiling */,
 				76293F210981AF4600D27C6E /* Default */,
 			);
