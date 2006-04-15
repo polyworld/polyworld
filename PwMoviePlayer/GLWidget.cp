@@ -72,12 +72,12 @@ void GLWidget::Draw()
 	frame++;
 //	printf( "%s: frame # %lu\n", __FUNCTION__, frame );
 	
-	if( frame < 1 )
-		return;
+//	if( frame < 1 )
+//		return;
 	
 	makeCurrent();
 	
-	if( readrle( movieFile, rleBuf, firstFrame ? 0 : movieVersion ) )	// 0 = success, other = failure
+	if( readrle( movieFile, rleBuf, movieVersion, firstFrame ) )	// 0 = success, other = failure
 		return;
 	
 	glClear( GL_COLOR_BUFFER_BIT );

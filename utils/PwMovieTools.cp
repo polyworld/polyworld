@@ -18,10 +18,18 @@
 #define HIGHBITOFF 0x7fffffff
 #define HIGHBITONSHORT 0x8000
 #define HIGHBITOFFSHORT 0x7fff
-#define AlphaMask_ABGR 0xff000000
-#define AlphaMask_RGBA 0x000000ff
-#define NoAlphaMask_ABGR 0x00ffffff
-#define NoAlphaMask_RGBA 0xffffff00
+
+#if __BIG_ENDIAN__
+	#define AlphaMask_ABGR 0xff000000
+	#define AlphaMask_RGBA 0x000000ff
+	#define NoAlphaMask_ABGR 0x00ffffff
+	#define NoAlphaMask_RGBA 0xffffff00
+#else
+	#define AlphaMask_ABGR 0x000000ff
+	#define AlphaMask_RGBA 0xff000000
+	#define NoAlphaMask_ABGR 0xffffff00
+	#define NoAlphaMask_RGBA 0x00ffffff
+#endif
 
 #if PMP_DEBUG
 	#define pmpPrint( x... ) { printf( "%s: ", __FUNCTION__ ); printf( x ); }
@@ -94,9 +102,25 @@ void PwRecordMovie( FILE *f, long xleft, long ybottom, long width, long height )
 //---------------------------------------------------------------------------
 void PwReadMovieHeader( FILE *f, unsigned long* version, unsigned long* width, unsigned long* height )
 {
-	fread( (char*) version, sizeof( *version ), 1, f );
+	fread( (char*) version, sizeof( version ), 1, f );
+	*version = ntohl( *version );	// we always write, and therefore must read, the version as big-endian, for historical reasons (all else is native endian)
+	
 	fread( (char*) width,   sizeof( *width   ), 1, f );
 	fread( (char*) height,  sizeof( *height  ), 1, f );
+	
+#if __BIG_ENDIAN__
+	if( *version > 100 )
+	{
+		*width = OSSwapInt32( *width );
+		*height = OSSwapInt32( *height );
+	}
+#else
+	if( *version < 100 )
+	{
+		*width = OSSwapInt32( *width );
+		*height = OSSwapInt32( *height );
+	}
+#endif
 	
 	pmpPrint( "version = %lu, width = %lu, height = %lu\n", *version, *width, *height );
 }
@@ -105,13 +129,15 @@ void PwReadMovieHeader( FILE *f, unsigned long* version, unsigned long* width, u
 //---------------------------------------------------------------------------
 // PwWriteMovieHeader
 //---------------------------------------------------------------------------
-void PwWriteMovieHeader( FILE *f, unsigned long version, unsigned long width, unsigned long height )
+void PwWriteMovieHeader( FILE *f, unsigned long hostVersion, unsigned long width, unsigned long height )
 {
+	uint32_t version = htonl( hostVersion );	// we always write the version big-endian, for historical reasons (all else is native endian)
 	fwrite( &version, sizeof( version ), 1, f );
+	
 	fwrite( &width,   sizeof( width ),   1, f );
 	fwrite( &height,  sizeof( height ),  1, f );
 
-	pmpPrint( "version = %lu, width = %lu, height = %lu\n", version, width, height );
+	pmpPrint( "version = %lu, width = %lu, height = %lu\n", hostVersion, width, height );
 }
 
 
@@ -163,21 +189,31 @@ void unrle( register unsigned long *rle,
 			 unsigned long currentrgb;
     register unsigned long *rgbend;
     register unsigned long *rgbendmax;
+	register unsigned long len;
 
-    rleend = rle + *rle;  // no +1 (due to length) because they come in pairs
+	// Don't byte swap initial *rle (len), because it was already swapped in readrle()
+	len = *rle;
+    rleend = rle + len;  // no +1 (due to length) because they come in pairs
+	//printf( "rle = %p, rleend = %p, len = %lu, rleend - rle = %lu\n", rle, rleend, len, (unsigned long)(rleend - rle) );
 	rle++;
     rgbendmax = rgb + width*height;
 
     while( rle < rleend )
 	{
-	#if PMP_DEBUG
-		unsigned long len = *rle;
+		len = *rle;
+	#if __BIG_ENDIAN__
+		if( version > 100 )
+			len = OSSwapInt32( len );
+	#else
+		if( version < 100 )
+			len = OSSwapInt32( len );
 	#endif
-        rgbend = rgb + *rle++;
+        rgbend = rgb + len;
+		rle++;
         if( rgbend > rgbendmax )
             rgbend = rgbendmax;
-        currentrgb = *rle++;
-		pmpPrint( "run of %lu pixels = %08lx\n", len, currentrgb );
+        currentrgb = *rle;
+		rle++;
 		if( version < 5 )	// from Iris, so it was ABGR, but we need RGBA, so reverse bytes
 		{
 			unsigned long abgr = currentrgb;
@@ -186,18 +222,33 @@ void unrle( register unsigned long *rle,
 			for( int i = 0; i < 4; i++ )
 				after[i] = before[3-i];
 		}
+		pmpPrint( "run of %lu pixels = %08lx\n", len, currentrgb );
         while( rgb < rgbend )
            *rgb++ = currentrgb;
     }
 }
 
 
-int readrle( register FILE *f, register unsigned long *rle, register unsigned long version )
+int readrle( register FILE *f, register unsigned long *rle, register unsigned long version, register bool firstFrame )
 {
 	register unsigned long n;
 	static bool shown;	// will initialize to false
 
 	n = fread( (char *) (rle), sizeof( *rle ), 1, f );
+	
+//	printf( "*rle as read = %lu (0x%08lx), *rle swapped = %u (0x%08x), version = %lu\n", *rle, *rle, OSSwapInt32( *rle ), OSSwapInt32( *rle ), version );
+//	exit( 0 );
+	
+#if __BIG_ENDIAN__
+	// If this is PPC reading Intel data, then we have to swap bytes
+	if( version > 100 )
+		*rle = OSSwapInt32( *rle );
+#else
+	// If this is Intel reading PPC data, then we have to swap bytes
+	if( version < 100 )
+		*rle = OSSwapInt32( *rle );
+#endif
+	
 	if( n != 1 )
 	{
 		if( !shown )
@@ -207,7 +258,7 @@ int readrle( register FILE *f, register unsigned long *rle, register unsigned lo
 		}
 		return( 1 );
 	}
-	if( version < 4 )
+	if( firstFrame || (version < 4) )
 	{
 		n = fread( (char *) &(rle[1]), sizeof( *rle ), rle[0], f );
 		pmpPrint( "read %lu longs\n", n+1 );
@@ -519,6 +570,8 @@ void rlediff4( register unsigned long *rgbnew,
             n++;
             if( n == (1 << 15) )	// have to save now cause we only use shorts
 			{
+				// Note: We encode n-1, to eek out one extra pixel, since a run of zero pixels is not possible
+				pmpPrint( "unchanged run of %4ld (0x%04lx) pixels (0x%08lx) encoded as 0x%04x\n", n, n, *(rgbnew-1), (unsigned short) (n-1) | HIGHBITONSHORT );
                 *srle++ = (unsigned short) (n-1) | HIGHBITONSHORT;
                 len += 1;
                 n = 0;
@@ -526,6 +579,8 @@ void rlediff4( register unsigned long *rgbnew,
         }
         if( n > 0 )
 		{
+			// Note: We encode n-1, to eek out one extra pixel, since a run of zero pixels is not possible
+			pmpPrint( "unchanged run of %4ld (0x%04lx) pixels (0x%08lx) encoded as 0x%04x\n", n, n, *(rgbnew-1), (unsigned short) (n-1) | HIGHBITONSHORT );
             *srle++ = (unsigned short) (n-1) | HIGHBITONSHORT;
             len += 1;
         }
@@ -561,12 +616,19 @@ void rlediff4( register unsigned long *rgbnew,
                     n++;
                     if( n == 128 )	// have to save now cause we use 7bits+1
 					{
+						// Note: We encode n-1, to eek out one extra pixel, since a run of zero pixels is not possible
+						pmpPrint( "  changed run of %4ld pixels (0x%08lx) encoded as 0x%04lx.%04lx\n", n, currentrgb, ((n-1) << 8) | (currentrgb & 0x000000ff), (currentrgb >> 8) & 0x0000ffff );
 					#if ABGR
                         *srle++ = (unsigned short) ( ((n-1) << 8) | (currentrgb >> 16) );
                         *srle++ = (unsigned short) (currentrgb & 0x0000ffff);
 					#else
+					  #if __BIG_ENDIAN__
                         *srle++ = (unsigned short) ( ((n-1) << 8) | (currentrgb >> 24) );	// store n & r
                         *srle++ = (unsigned short) ( (currentrgb >> 8) & 0x0000ffff );		// store g & b
+					  #else
+                        *srle++ = (unsigned short) ( ((n-1) << 8) | (currentrgb & 0x000000ff) );	// store n & r
+                        *srle++ = (unsigned short) ( (currentrgb >> 8) & 0x0000ffff );				// store g & b
+					  #endif
 					#endif
                         len += 2;
                         n = 0;
@@ -574,12 +636,19 @@ void rlediff4( register unsigned long *rgbnew,
                 }
                 if( n > 0 )
 				{
+					// Note: We encode n-1, to eek out one extra pixel, since a run of zero pixels is not possible
+					pmpPrint( "  changed run of %4ld pixels (0x%08lx) encoded as 0x%04lx.%04lx\n", n, currentrgb, ((n-1) << 8) | (currentrgb & 0x000000ff), (currentrgb >> 8) & 0x0000ffff );
 				#if ABGR
 					*srle++ = (unsigned short) ( ((n-1) << 8) | (currentrgb >> 16) );
 					*srle++ = (unsigned short) (currentrgb & 0x0000ffff);
 				#else
+				  #if __BIG_ENDIAN__
 					*srle++ = (unsigned short) ( ((n-1) << 8) | (currentrgb >> 24) );	// store n & r
 					*srle++ = (unsigned short) ( (currentrgb >> 8) & 0x0000ffff );		// store g & b
+				  #else
+					*srle++ = (unsigned short) ( ((n-1) << 8) | (currentrgb & 0x000000ff) );	// store n & r
+					*srle++ = (unsigned short) ( (currentrgb >> 8) & 0x0000ffff );				// store g & b
+				  #endif
 				#endif
                     len += 2;
                 }
@@ -604,6 +673,7 @@ void unrlediff4( register unsigned long *rle,
     register unsigned short *srleend;
 
     srle = (unsigned short *) (rle + 1);
+	// Don't byte swap this initial *rle (len), because it has already been swapped in readrle()
     srleend = srle + *rle;
 	pmpPrint( "rle = %08lx, srle = %08lx, *rle = %lu, srleend = %08lx\n", (unsigned long) rle, (unsigned long) srle, *rle, (unsigned long) srleend );
 
@@ -611,16 +681,47 @@ void unrlediff4( register unsigned long *rle,
 
     while( srle < srleend )
 	{
-        if( *srle & HIGHBITONSHORT )	// It's a run of unchanged pixels
+		register unsigned short len;
+		
+		len = *srle;
+		//printf( "len = %u (0x%04x), len_swapped&off = %u (0x%04x), len>>8 = %u, len&0x00ff = %u\n",
+		//		len, len, OSSwapInt16( len ) & HIGHBITOFFSHORT, OSSwapInt16( len ) & HIGHBITOFFSHORT, len>>8, len&0x00ff );
+
+		#if __BIG_ENDIAN__
+			if( version > 100 )
+				len = OSSwapInt16( len );
+		#else
+			if( version < 100 )
+				len = OSSwapInt16( len );
+		#endif
+
+        if( len & HIGHBITONSHORT )	// It's a run of unchanged pixels
 		{
-			pmpPrint( "unchanged run of %4d pixels\n", (*srle & HIGHBITOFFSHORT) + 1 );
-            rgb += (*srle++ & HIGHBITOFFSHORT) + 1;
+			len &= HIGHBITOFFSHORT;	// clear the high bit
+			
+			// Note: We encode n-1, to eek out one extra pixel, since a run of zero pixels is not possible
+			pmpPrint( "unchanged run of %4d pixels (0x%08lx)\n", len + 1, *(rgb+1) );
+            rgb += len + 1;
+			srle++;
         }
         else	// It's a regular RLE run
 		{
             if( srle < srleend - 1 )	// -1 so must be a long left
 			{
-                rgbend = rgb + (*srle >> 8) + 1;
+				register unsigned short n;
+				// Note: We encode n-1, to eek out one extra pixel, since a run of zero pixels is not possible
+			#if __BIG_ENDIAN__
+				if( version > 100 )
+					n = (*srle & 0x00ff) + 1;
+				else
+					n = (*srle >> 8) + 1;
+			#else
+				if( version < 100 )
+					n = (*srle & 0x00ff) + 1;
+				else
+					n = (*srle >> 8) + 1;
+			#endif
+				rgbend = rgb + n;
                 if( rgbend > rgbendmax )
                     rgbend = rgbendmax;
 				if( version < 5 )	// from Iris, so it was ABGR, but we need RGBA, so reverse bytes
@@ -637,10 +738,20 @@ void unrlediff4( register unsigned long *rle,
 				#if ABGR
 					currentrgb = AlphaMask_ABGR | ((long) (*srle) << 16) | *(srle+1);
 				#else
-					currentrgb = ((long) (*srle) << 24) | ((long) *(srle+1) << 8) | AlphaMask_RGBA;
+				  #if __BIG_ENDIAN__
+					if( version < 100 )	// PPC on PPC
+						currentrgb = ((long) (*srle) << 24) | ((long) *(srle+1) << 8) | AlphaMask_RGBA;
+					else				// Intel on PPC
+						currentrgb = (*srle >> 8) | ((long) *(srle+1) << 8) | AlphaMask_RGBA;	// ???
+				  #else
+					if( version > 100 )	// Intel on Intel
+						currentrgb = (*srle & 0xff) | ((long) *(srle+1) << 8) | AlphaMask_RGBA;
+					else				// PPC on Intel
+						currentrgb = (*srle >> 8) | ((long) *(srle+1) << 8) | AlphaMask_RGBA;
+				  #endif
 				#endif
 				}
-				pmpPrint( "  changed run of %4d pixels (0x%08lx)\n", (*srle >> 8) + 1, currentrgb );
+				pmpPrint( "  changed run of %4d pixels (0x%08lx)\n", n, currentrgb );
                 srle += 2;
                 while( rgb < rgbend )
                    *rgb++ = currentrgb;
