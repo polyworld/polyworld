@@ -54,6 +54,7 @@ double CalcComplexity( char * fname )
                 gsl_matrix * temp2 = activity;
                 activity = temp;                // activity = activity'
                 gsl_matrix_free(temp2);
+		gsl_matrix_free(temp);
         }
 
         const gsl_rng_type * T;
@@ -72,6 +73,8 @@ double CalcComplexity( char * fname )
 //				gsl_matrix_set(activity, i, j, gsl_matrix_get(activity, i,j) + 0.0001*gsl_ran_ugaussian(r));
         }
 
+	gsl_rng_free( r );
+
         gsl_matrix * o = activity;      // replace this if we're ever going to do the gsamp()'ing.
 
 // We just calculate the covariance matrix and compute the Complexity of that.  It uses less cycles and the results are identical.
@@ -84,6 +87,7 @@ double CalcComplexity( char * fname )
 //	double Complexity = calcC_det3(COV);
 		
         gsl_matrix_free(COV);
+
 
         return Complexity;
 }
@@ -886,7 +890,9 @@ double calcC_det3( gsl_matrix * foreignCOR )
 
 
 		//Technically we don't have to store this array, but for now lets stay consistent with the MATLAB code
-		I_n1[i] = calcI_det2( matrix_crosssection( COR, b, b_length ) );
+		gsl_matrix * Xed_COR =  matrix_crosssection( COR, b, b_length );
+		I_n1[i] = calcI_det2( Xed_COR );
+		gsl_matrix_free( Xed_COR );		//!!! this should solve the big memory leak problem
 	}
 
 	double sumI_n1=0;
@@ -981,7 +987,11 @@ double calcC_det3__optimized( gsl_matrix * foreignCOR )
 //DEBUG		cout << "b: "; for( int j=0;j<b_length;j++ ) { cout << b[j] << " "; } cout << endl;
 
 
-		sumI_n1 += calcI_det2( matrix_crosssection( COR, b, b_length ) );
+
+		gsl_matrix * Xed_COR =  matrix_crosssection( COR, b, b_length );
+		sumI_n1 += calcI_det2( Xed_COR );
+		gsl_matrix_free( Xed_COR );		//!!! this should solve the big memory leak problem
+//		sumI_n1 += calcI_det2( matrix_crosssection( COR, b, b_length ) );
 	}
 
 	gsl_matrix_free( COR );
@@ -1038,6 +1048,7 @@ double calcI_det2(gsl_matrix * COR)
 
 	gsl_permutation_free(P);
 	gsl_matrix_free( ludecomp );
+//	gsl_matrix_free( COR );		// this isn't the real COR (which we still need.  This is the cross_section'ed COR, which we no longer need.
 
 	det = fabs(det);
 

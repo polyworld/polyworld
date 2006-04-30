@@ -755,17 +755,21 @@ void TSimulation::Step()
 			mean = mean / count;			// Divide by count to get the average
 		
 
-			if( ! (mean >= 0) )				// If mean is 'nan', make it zero instead of 'nan'
-				mean = 0;
-		
-			for( int i=0; i<limit2; i++ )
+			if( ! (mean >= 0) )			// If mean is 'nan', make it zero instead of 'nan'  -- Only true before any agents have died.
 			{
-				if( fRecentFittest[i]->critterID > 0 )
-					{
-					stddev += pow(fRecentFittest[i]->Complexity - mean, 2);		// Get Sum of all Complexities
-					}
+				mean = 0;
+				stddev = 0;
 			}
-
+			else						// Calculate the stddev (You'll do this except when before an agent has died)
+			{
+				for( int i=0; i<limit2; i++ )
+				{
+					if( fRecentFittest[i]->critterID > 0 )
+						{
+						stddev += pow(fRecentFittest[i]->Complexity - mean, 2);		// Get Sum of all Complexities
+						}
+				}
+			}
 		
 			stddev = sqrt(stddev / (count-1) );		// note that this stddev is divided by N-1 (MATLAB default)
 
