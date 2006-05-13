@@ -295,7 +295,7 @@ void TSimulation::Stop()
 						delete fDomains[id].fittest[i]->genes;
 					delete fDomains[id].fittest[i];
 				}
-			}                  
+			}
             delete fDomains[id].fittest;
         }
 		
@@ -334,11 +334,11 @@ void TSimulation::Stop()
 	
 	if( fLeastFit )
 		delete fLeastFit;
-    
+
     genome::genomedestruct();
-    
+
     brain::braindestruct();
-    
+
     critter::critterdestruct();
 }
 
@@ -516,7 +516,7 @@ void TSimulation::Step()
 			if (fCritterTracking)
 			{
 			    sprintf( overheadTitle, "Overhead View (T%ld:%ld)", (long int) fOverHeadRank, fOverheadCritter->Number() );
-			}else{			    
+			}else{			
 			    sprintf( overheadTitle, "Overhead View (%ld:%ld)", (long int) fOverHeadRank, fOverheadCritter->Number() );
 			}
 			fOverheadWindow->setWindowTitle( QString(overheadTitle) );			
@@ -596,7 +596,7 @@ void TSimulation::Step()
 			if (fCritterTracking)
 			{
 			    sprintf( title, "Brain Monitor (T%ld:%ld)", fMonitorCritterRank, fMonitorCritter->Number() );
-			}else{			    
+			}else{			
 			    sprintf( title, "Brain Monitor (%ld:%ld)", fMonitorCritterRank, fMonitorCritter->Number() );
 			}			
 			fBrainMonitorWindow->setWindowTitle( QString(title) );
@@ -856,9 +856,9 @@ void TSimulation::Init()
 {
  	// Set up graphical constructs
     "ground.obj" >> fGround;
-    
+
     srand(1);
-    
+
     // Initialize world with default values
     InitWorld();
 	
@@ -883,16 +883,16 @@ void TSimulation::Init()
 	food::gMaxFoodRadius = maxfoodradius;
 	critter::gMaxRadius = maxcritterradius > maxfoodradius ?
 						  maxcritterradius : maxfoodradius;
-    
+
     InitMonitoringWindows();
-        
+
     critter* c = NULL;
-    
+
     if (fNumberFit > 0)
     {
         fFittest = new FitStruct*[fNumberFit];
 		Q_CHECK_PTR( fFittest );
-        
+
         for (int i = 0; i < fNumberFit; i++)
         {
 			fFittest[i] = new FitStruct;
@@ -906,7 +906,7 @@ void TSimulation::Init()
 		
         fRecentFittest = new FitStruct*[fNumberRecentFit];
 		Q_CHECK_PTR( fRecentFittest );
-        
+
         for (int i = 0; i < fNumberRecentFit; i++)
         {
 			fRecentFittest[i] = new FitStruct;
@@ -921,7 +921,7 @@ void TSimulation::Init()
         {
             fDomains[id].fittest = new FitStruct*[fNumberFit];
 			Q_CHECK_PTR( fDomains[id].fittest );
-            
+
             for (int i = 0; i < fNumberFit; i++)
             {
 				fDomains[id].fittest[i] = new FitStruct;
@@ -1229,7 +1229,7 @@ void TSimulation::Init()
     fGround.setcolor(fGroundColor);
     fWorldSet.Add(&fGround);
     fStage.SetSet(&fWorldSet);
-    
+
 	// Add barriers
 	barrier* b = NULL;
 	while( barrier::gXSortedBarriers.next(b) )
@@ -1239,7 +1239,7 @@ void TSimulation::Init()
 	fScene.SetStage(&fStage);
 	fScene.SetCamera(&fCamera);
 	fCamera.SetPerspective(fCameraFOV, fSceneView->width() / fSceneView->height(), 0.01, 1.5 * globals::worldsize);	
-	 
+	
 	//The main camera will rotate around the world, so we need to set up the angle and translation  (CMB 03/10/06)
 	fCameraAngle = fCameraAngleStart;
 	float camrad = fCameraAngle * DEGTORAD;
@@ -1273,7 +1273,7 @@ void TSimulation::Init()
 	Q_CHECK_PTR(fSceneView);
 	fSceneView->SetScene(&fScene);
 	fOverheadWindow->SetScene( &fOverheadScene );  //Set up overhead view (CMB 3/13/06)
-        
+
 #define DebugGenetics 0
 #if DebugGenetics
 	// This little snippet of code confirms that genetic copying, crossover, and mutation are behaving somewhat reasonably
@@ -1309,13 +1309,13 @@ void TSimulation::Init()
 		fGeneSepVals = new float[fMaxCritters * (fMaxCritters - 1) / 2];
         fNumGeneSepVals = 0;
         CalculateGeneSeparationAll();
-        
+
         if (fRecordGeneSeparation)
         {
             fGeneSeparationFile = fopen("run/genesep", "w");
 	    	RecordGeneSeparation();
         }
-        
+
 		if (fChartGeneSeparation && fGeneSeparationWindow != NULL)
 			fGeneSeparationWindow->AddPoint(fGeneSepVals, fNumGeneSepVals);
     }
@@ -1354,7 +1354,7 @@ void TSimulation::InitNeuralValues()
     brain::gNeuralValues.maxinputneurons = genome::gMaxvispixels * 3 + 2;
     brain::gNeuralValues.maxnoninputneurons = brain::gNeuralValues.maxinternalneurons + brain::gNeuralValues.numoutneurgroups;
     brain::gNeuralValues.maxneurons = brain::gNeuralValues.maxinternalneurons + brain::gNeuralValues.maxinputneurons + brain::gNeuralValues.numoutneurgroups;
-    
+
     // the 2's are due to the input & output neurons
     //     doubling as e & i presynaptically
     // the 3's are due to the output neurons also acting as e-neurons
@@ -1433,7 +1433,7 @@ void TSimulation::InitWorld()
 	fMonitorCritter = NULL;
 	fMonitorGeneSeparation = false;
     fRecordGeneSeparation = false;
-    
+
     fNumberCreated = 0;
     fNumberCreatedRandom = 0;
     fNumberCreated1Fit = 0;
@@ -1463,7 +1463,7 @@ void TSimulation::InitWorld()
     fShowVision = true;
 	fRecordMovie = false;
 	fMovieFile = NULL;
-    
+
     fFitI = 0;
     fFitJ = 1;
 		
@@ -1550,12 +1550,12 @@ void TSimulation::InitWorld()
     food::gFoodColor.r = 0.2;
     food::gFoodColor.g = 0.6;
     food::gFoodColor.b = 0.2;
-    
+
     barrier::gBarrierHeight = 5.0;
     barrier::gBarrierColor.r = 0.35;
     barrier::gBarrierColor.g = 0.25;
     barrier::gBarrierColor.b = 0.15;
-  
+
 }
 
 
@@ -1628,7 +1628,7 @@ void TSimulation::InitMonitoringWindows()
 	
 	// Status window
 	fTextStatusWindow = new TTextStatusWindow( this );
-	 
+	
 	//Overhead window
 	fOverheadWindow = new TOverheadView(this);			
 
@@ -1692,7 +1692,7 @@ void TSimulation::InitMonitoringWindows()
 	}
  	
 	//Open overhead window CMB 3/17/06
-	if (fOverheadWindow != NULL)                
+	if (fOverheadWindow != NULL)
 		fOverheadWindow->RestoreFromPrefs( fBirthrateWindow->width() + 1, kMenuBarHeight + mainWindowTitleHeight + titleHeight + titleHeight );
                 //(screenleft,screenleft+.75*xscreensize, screenbottom,screenbottom+(5./6.)*yscreensize);
 }
@@ -1701,7 +1701,7 @@ void TSimulation::InitMonitoringWindows()
 // TSimulation::Interact
 //---------------------------------------------------------------------------
 void TSimulation::Interact()
-{       
+{
     critter* c = NULL;
     critter* d = NULL;
 	critter* newCritter = NULL;
@@ -1721,7 +1721,7 @@ void TSimulation::Interact()
 	bool ateBackwardFood;
 	float cpower;
 	float dpower;
-    
+
 	fNewDeaths = 0;
 
 	// first x-sort all the objects
@@ -1872,7 +1872,7 @@ void TSimulation::Interact()
 				}
 			}
 			
-			// Critter wasn't in or near any band of food. 
+			// Critter wasn't in or near any band of food.
 			if( critterAccountedFor == false )
 			{
 				fNumCrittersNotInOrNearAnyFoodBand++;
@@ -2361,7 +2361,7 @@ void TSimulation::Interact()
 
     if (fMonitorGeneSeparation && (fNewDeaths > 0))
         CalculateGeneSeparationAll();
-        
+
 	// now for a little spontaneous generation!
 	
     if (((long)(objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE))) < fMaxCritters)
@@ -2381,7 +2381,7 @@ void TSimulation::Interact()
                 fDomains[id].lastcreate = fStep;
                 critter* newCritter = critter::getfreecritter(this, &fStage);
                 Q_CHECK_PTR(newCritter);
-                
+
                 if ( fNumberFit && (fDomains[id].numdied >= fNumberFit) )
                 {
                     // the list exists and is full
@@ -2449,10 +2449,10 @@ void TSimulation::Interact()
         {
             fNumberCreated++;
             numglobalcreated++;
-            
+
             if ((numglobalcreated == 1) && (fNumDomains > 1))
                 errorflash(0, "Possible global influence on domains due to minnumcritters");
-                
+
             fNumBornSinceCreated = 0;
             fLastCreated = fStep;
 
@@ -2510,7 +2510,7 @@ void TSimulation::Interact()
         debugcheck("after global creations in interact");
 	#endif DEBUGCHECK
     }
-        
+
 	// now add the new critters to the existing list
 	
     /* New creatures are now added directly to the list of objects
@@ -2561,7 +2561,7 @@ void TSimulation::Interact()
     {
         if (fRecordGeneSeparation)
             RecordGeneSeparation();
-            
+
 		if (fChartGeneSeparation && fGeneSeparationWindow != NULL)
 			fGeneSeparationWindow->AddPoint(fGeneSepVals, fNumGeneSepVals);
     }
@@ -2676,7 +2676,7 @@ void TSimulation::Interact()
 					fDomains[fd].fDomainFoodBand[fb].foodCount++;
 				dfbPrint( "after adding GLOBAL rate-based food to domain %d, band %d, at (%5.2f,%6.2f), D.foodCount = %ld, DFB.foodCount = %ld\n", fd, fb, f->x(), f->z(), fDomains[fd].foodCount, fb >= 0 ? fDomains[fd].fDomainFoodBand[fb].foodCount : -1 );
             }
-            
+
 			const long newfood = fMinFoodCount - objectxsortedlist::gXSortedObjects.getCount(FOODTYPE);
             for( i = 0; i < newfood; i++ )
             {
@@ -2773,7 +2773,7 @@ void TSimulation::CalculateGeneSeparation(critter* ci)
     float genesep;
     float genesepsum = 0.0;
     long numgsvalsold = fNumGeneSepVals;
-        
+
 	objectxsortedlist::gXSortedObjects.reset();
 	while (objectxsortedlist::gXSortedObjects.nextObj(CRITTERTYPE, (gobject**)&cj))
     {
@@ -2783,7 +2783,7 @@ void TSimulation::CalculateGeneSeparation(critter* ci)
         genesepsum += genesep;
         fGeneSepVals[fNumGeneSepVals++] = genesep;
     }
-    
+
     long n = objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE);
     if (numgsvalsold != (n * (n - 1) / 2))
     {
@@ -2794,7 +2794,7 @@ void TSimulation::CalculateGeneSeparation(critter* ci)
 				numgsvalsold,", ",n,", ", n * (n - 1) / 2);
 		error(2, tempstring);
     }
-    
+
     if (fNumGeneSepVals != (n * (n + 1) / 2))
     {
 		char tempstring[256];
@@ -2804,7 +2804,7 @@ void TSimulation::CalculateGeneSeparation(critter* ci)
 				fNumGeneSepVals,", ",n,", ",n*(n+1)/2);
         error(2,tempstring);
     }
-    
+
     fAverageGeneSeparation = (genesepsum + fAverageGeneSeparation * numgsvalsold) / fNumGeneSepVals;
 	
     //objectxsortedlist::gXSortedObjects.tomark();
@@ -2820,13 +2820,13 @@ void TSimulation::CalculateGeneSeparationAll()
 {
     critter* ci = NULL;
     critter* cj = NULL;
-    
+
     float genesep;
     float genesepsum = 0.0;
     fMinGeneSeparation = 1.e+10;
     fMaxGeneSeparation = 0.0;
     fNumGeneSepVals = 0;
-    
+
     objectxsortedlist::gXSortedObjects.reset();
     while (objectxsortedlist::gXSortedObjects.nextObj(CRITTERTYPE, (gobject**)&ci))
     {
@@ -2843,7 +2843,7 @@ void TSimulation::CalculateGeneSeparationAll()
 		//objectxsortedlist::gXSortedObjects.tomark();
 		objectxsortedlist::gXSortedObjects.toMark(CRITTERTYPE);
     }
-    
+
     // n * (n - 1) / 2 is how many calculations were made
 	long n = objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE);
     if (fNumGeneSepVals != (n * (n - 1) / 2))
@@ -2855,8 +2855,8 @@ void TSimulation::CalculateGeneSeparationAll()
             fNumGeneSepVals,", ",n,", ",n * (n - 1) / 2);
         error(2, tempstring);
     }
-    
-    fAverageGeneSeparation = genesepsum / fNumGeneSepVals;    
+
+    fAverageGeneSeparation = genesepsum / fNumGeneSepVals;
 }
 
 
@@ -2892,15 +2892,15 @@ void TSimulation::SmiteOne(short /*id*/, short /*smite*/)
 void TSimulation::ijfitinc(short* i, short* j)
 {
     (*j)++;
-    
+
     if ((*j) == (*i))
         (*j)++;
-        
+
     if ((*j) > fNumberFit - 1)
     {
         (*j) = 0;
         (*i)++;
-        
+
         if ((*i) > fNumberFit - 1)
             (*i) = min(1, fNumberFit - 1);
     }
@@ -2935,7 +2935,7 @@ void TSimulation::Death(critter* c)
 	
 	// Make any final contributions to the critter's overall, lifetime fitness
     c->lastrewards(fEnergyFitnessParameter, fAgeFitnessParameter); // if any
-    
+
 	// If critter's carcass is to become food, make it so here
     if (fCrittersRfood
     	&& ((long)objectxsortedlist::gXSortedObjects.getCount(FOODTYPE) < fMaxFoodCount)
@@ -2951,7 +2951,7 @@ void TSimulation::Death(critter* c)
                 fFoodEnergyIn += fMinFoodEnergyAtDeath - foodenergy;	// so account for the increase due to the bump (original amount already accounted for)
             else														// else it'll just be disposed of
                 fFoodEnergyOut += foodenergy;							// so account for the lost energy
-                
+
             foodenergy = fMinFoodEnergyAtDeath;
         }
 		else	// it will retain its original value (no bump due to the min)
@@ -2959,7 +2959,7 @@ void TSimulation::Death(critter* c)
 			if( foodenergy < food::gMinFoodEnergy )	// it's going to be disposed of
 				fFoodEnergyOut += foodenergy;		// so account for the lost energy
 		}
-        
+
         if (foodenergy >= food::gMinFoodEnergy)
         {
 			int fd = id;
@@ -3025,7 +3025,7 @@ void TSimulation::Death(critter* c)
         fDomains[id].fittest[newfit]->genes->CopyGenes( c->Genes() );
 		fDomains[id].fittest[newfit]->critterID = c->Number();
     }
-    
+
 	// Then on a whole-world basis...
     if( c->Fitness() > fFittest[fNumberFit-1]->fitness )
     {
@@ -3050,7 +3050,7 @@ void TSimulation::Death(critter* c)
 		fFittest[newfit]->critterID = c->Number();
 		fFittest[newfit]->Complexity = 0.0;		// must zero out the Complexity so it is recalculated for the new critter
     }
-    
+
     if (c->Fitness() > fMaxFitness)
         fMaxFitness = c->Fitness();
 	
@@ -3095,7 +3095,7 @@ void TSimulation::Death(critter* c)
 //		fRecentFittest[newfit]->genes->CopyGenes( c->Genes() );	// we don't save the genes in the bestRecent list
 		fRecentFittest[newfit]->critterID = c->Number();
     }
-    
+
 	// Must also update the leastFit data structures, now that they
 	// are used on-demand in the main mate/fight/eat loop in Interact()
 	// Update the domain-specific leastFit list (only one, as we know which domain it's in)
@@ -3114,7 +3114,7 @@ void TSimulation::Death(critter* c)
 	
 	// Remove critter from world
     fStage.RemoveObject( c );
-    
+
     // Check and see if we are monitoring this guy
 	if (c == fMonitorCritter)
 	{
@@ -3326,7 +3326,7 @@ void TSimulation::ReadWorldFile(const char* filename)
 			eprintf( "Invalid worldfile version (%d) > CurrentWorldfileVersion (%d)\n", version, CurrentWorldfileVersion );
 		}
 		cout nlf;
-     	fb.close(); 
+     	fb.close();
         exit( 1 );
 	}
 	
@@ -3341,7 +3341,7 @@ void TSimulation::ReadWorldFile(const char* filename)
 	bool ignoreBool;
     in >> ignoreBool; in >> label;
     cout << "fDoCPUWork (ignored)" ses ignoreBool nl;
-    
+
     in >> fDumpFrequency; in >> label;
     cout << "fDumpFrequency" ses fDumpFrequency nl;
     in >> fStatusFrequency; in >> label;
@@ -3353,9 +3353,9 @@ void TSimulation::ReadWorldFile(const char* filename)
     in >> globals::wraparound; in >> label;
     cout << "wraparound" ses globals::wraparound nl;
 
-    in >> critter::gVision; in >> label;    
+    in >> critter::gVision; in >> label;
     if (!fGraphics)
-        critter::gVision = false;        
+        critter::gVision = false;
     cout << "vision" ses critter::gVision nl;
     in >> fShowVision; in >> label;
     if (!fGraphics)
@@ -3433,7 +3433,7 @@ void TSimulation::ReadWorldFile(const char* filename)
     cout << "size2energy" ses food::gSize2Energy nl;
     in >> fEat2Consume; in >> label;
     cout << "eat2consume" ses fEat2Consume nl;
-    
+
     int ignoreShort1, ignoreShort2, ignoreShort3, ignoreShort4;
     in >> ignoreShort1; in >> label;
     cout << "minintneurons" ses ignoreShort1 nl;
@@ -3441,7 +3441,7 @@ void TSimulation::ReadWorldFile(const char* filename)
     cout << "maxintneurons" ses ignoreShort2 nl;
     // note: minintneurons & maxintneurons are no longer used
     cout << "note: minintneurons & maxintneurons are no longer used" nl;
-    
+
     in >> genome::gMinvispixels; in >> label;
     cout << "minvispixels" ses genome::gMinvispixels nl;
     in >> genome::gMaxvispixels; in >> label;
@@ -3593,12 +3593,12 @@ void TSimulation::ReadWorldFile(const char* filename)
     if (!fGraphics)
         fMonitorCritterRank = 0; // cannot monitor critter brain without graphics
     cout << "fMonitorCritterRank" ses fMonitorCritterRank nl;
-    
+
     in >> ignoreShort3; in >> label;
     cout << "fMonitorCritWinWidth (ignored)" ses ignoreShort3 nl;
     in >> ignoreShort4; in >> label;
     cout << "fMonitorCritWinHeight (ignored)" ses ignoreShort4 nl;
-    
+
     in >> fBrainMonitorStride; in >> label;
     cout << "fBrainMonitorStride" ses fBrainMonitorStride nl;
     in >> globals::worldsize; in >> label;
@@ -3618,10 +3618,10 @@ void TSimulation::ReadWorldFile(const char* filename)
     if (version < 2)
     {
 		cout nlf;
-     	fb.close(); 
+     	fb.close();
         return;
 	}
-        
+
     in >> fMonitorGeneSeparation; in >> label;
     cout << "genesepmon" ses fMonitorGeneSeparation nl;
     in >> fRecordGeneSeparation; in >> label;
@@ -3630,7 +3630,7 @@ void TSimulation::ReadWorldFile(const char* filename)
     if (version < 3)
     {
 		cout nlf;
-     	fb.close(); 
+     	fb.close();
         return;
 	}
 
@@ -3646,7 +3646,7 @@ void TSimulation::ReadWorldFile(const char* filename)
     if (version < 4)
     {
 		cout nlf;
-     	fb.close(); 
+     	fb.close();
         return;
 	}
 
@@ -3900,7 +3900,7 @@ void TSimulation::ReadWorldFile(const char* filename)
     if (version < 5)
     {
 		cout nlf;
-     	fb.close(); 
+     	fb.close();
         return;
 	}
 
@@ -3910,9 +3910,9 @@ void TSimulation::ReadWorldFile(const char* filename)
         fMonitorGeneSeparation = true;
 
     if (version < 6)
-	{    
+	{
 		cout nlf;
-     	fb.close(); 
+     	fb.close();
         return;
 	}
 
@@ -3947,11 +3947,11 @@ void TSimulation::ReadWorldFile(const char* filename)
     cout << "maxtopologicaldistortion" ses brain::gNeuralValues.maxtopologicaldistortion nl;
     in >> brain::gNeuralValues.maxneuron2energy; in >> label;
     cout << "maxneuron2energy" ses brain::gNeuralValues.maxneuron2energy nl;
-    
+
     in >> brain::gNumPrebirthCycles; in >> label;
     cout << "numprebirthcycles" ses brain::gNumPrebirthCycles nl;
 
-    InitNeuralValues();  
+    InitNeuralValues();
 
     cout << "maxneurgroups" ses brain::gNeuralValues.maxneurgroups nl;
     cout << "maxneurons" ses brain::gNeuralValues.maxneurons nl;
@@ -4107,7 +4107,7 @@ void TSimulation::Dump()
         error(1, "Unable to dump state to \"pw.dump\" file");
         return;
     }
-    
+
     ostream out(&fb);
     char version[16];
     sprintf(version, "%s", "pw1");
@@ -4198,7 +4198,7 @@ void TSimulation::Dump()
                     break;
             }
             out << numfitid nl;
-            
+
             for (i = 0; i < numfitid; i++)
             {
 				out << fDomains[id].fittest[i]->critterID nl;
@@ -4354,7 +4354,7 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 
 	sprintf( t, " -random = %4ld", fNumberCreatedRandom );
 	list.push_back( strdup( t ) );
-        
+
 	sprintf( t, " -two    = %4ld", fNumberCreated2Fit );
 	list.push_back( strdup( t ) );
 
@@ -4421,10 +4421,10 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 
     sprintf( t, "birthDenials = %ld", fBirthDenials );
 	list.push_back( strdup( t ) );
-    
+
     sprintf( t, "miscDenials = %ld", fMiscDenials );
 	list.push_back( strdup( t ) );
-    
+
     sprintf( t, "ageCreate = %ld", fLastCreated );
     if (fNumDomains > 1)
     {
@@ -4607,7 +4607,7 @@ void TSimulation::Update()
 	if (fChartFitness && fFitnessWindow != NULL && fFitnessWindow->isVisible())
 		fFitnessWindow->updateGL();
 		//QApplication::postEvent(fFitnessWindow, new QCustomEvent(kUpdateEventType));	
-			          
+			
 	if (fChartFoodEnergy && fFoodEnergyWindow != NULL && fFoodEnergyWindow->isVisible())
 		fFoodEnergyWindow->updateGL();
 		//QApplication::postEvent(fFoodEnergyWindow, new QCustomEvent(kUpdateEventType));	
@@ -4853,3 +4853,4 @@ void TSimulation::InitDomainFoodBands()
 		}
 	}
 }
+
