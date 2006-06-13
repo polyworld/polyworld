@@ -7,6 +7,7 @@
 #define DebugShowSort 0
 #define DebugShowBirths 0
 #define DebugShowEating 0
+#define DebugGeneticAlgorithm 1
 
 // CompatibilityMode makes the new code with a single x-sorted list behave *almost* identically to the old code.
 // Discrepancies still arise due to the old food list never being re-sorted and critters at the exact same x location
@@ -14,6 +15,8 @@
 // are actually sorted on x at the left edge (x increases from left to right) of the objects, which changes as the
 // food is eaten and shrinks.]
 #define CompatibilityMode 1
+
+#define UseMaxSpeedAsFitness 0
 
 // Self
 #include "Simulation.h"
@@ -134,6 +137,12 @@ inline float AverageAngles( float a, float b )
 	#define eatPrint( x... ) printf( x )
 #else
 	#define eatPrint( x... )
+#endif
+
+#if DebugGeneticAlgorithm
+	#define gaPrint( x... ) printf( x )
+#else
+	#define gaPrint( x... )
 #endif
 
 //---------------------------------------------------------------------------
@@ -2391,6 +2400,7 @@ void TSimulation::Interact()
                         // revive 1 fittest
                         newCritter->Genes()->CopyGenes(fDomains[id].fittest[0]->genes);
                         fNumberCreated1Fit++;
+						gaPrint( "%5ld: domain %d creation from one fittest (%4lu) %4ld\n", fStep, id, fDomains[id].fittest[0]->critterID, fNumberCreated1Fit );
                     }
                     else if (fFitness2Frequency
                     		 && ((fDomains[id].numcreated / fFitness2Frequency) * fFitness2Frequency == fDomains[id].numcreated) )
@@ -2400,6 +2410,7 @@ void TSimulation::Interact()
                             				  		   fDomains[id].fittest[fDomains[id].jfit]->genes,
                             				  		   true);
                         fNumberCreated2Fit++;
+						gaPrint( "%5ld: domain %d creation from two (%d, %d) fittest (%4lu, %4lu) %4ld\n", fStep, id, fDomains[id].ifit, fDomains[id].jfit, fDomains[id].fittest[fDomains[id].ifit]->critterID, fDomains[id].fittest[fDomains[id].jfit]->critterID, fNumberCreated2Fit );
                         ijfitinc(&(fDomains[id].ifit), &(fDomains[id].jfit));
                     }
                     else
@@ -2407,6 +2418,7 @@ void TSimulation::Interact()
                         // otherwise, just generate a random, hopeful monster
                         newCritter->Genes()->Randomize();
                         fNumberCreatedRandom++;
+						gaPrint( "%5ld: domain %d creation random (%4ld)\n", fStep, id, fNumberCreatedRandom );
                     }
                 }
                 else
@@ -2414,6 +2426,7 @@ void TSimulation::Interact()
                     // otherwise, just generate a random, hopeful monster
                     newCritter->Genes()->Randomize();
                     fNumberCreatedRandom++;
+					gaPrint( "%5ld: domain %d creation random early (%4ld)\n", fStep, id, fNumberCreatedRandom );
                 }
 
                 newCritter->grow( RecordBrainAnatomy( newCritter->Number() ), RecordBrainFunction( newCritter->Number() ) );
@@ -2459,7 +2472,7 @@ void TSimulation::Interact()
             newCritter = critter::getfreecritter(this, &fStage);
             Q_CHECK_PTR(newCritter);
 
-            if (fNumberFit && fNumberDied >= fNumberFit)
+            if (fNumberFit && (fNumberDied >= fNumberFit))
             {
                 // the list exists and is full
                 if (fFitness1Frequency
@@ -2468,12 +2481,14 @@ void TSimulation::Interact()
                     // revive 1 fittest
                     newCritter->Genes()->CopyGenes(fFittest[0]->genes);
                     fNumberCreated1Fit++;
+					gaPrint( "%5ld: global creation from one fittest (%4lu) %4ld\n", fStep, fFittest[0]->critterID, fNumberCreated1Fit );
                 }
                 else if (fFitness2Frequency && ((numglobalcreated / fFitness2Frequency) * fFitness2Frequency == numglobalcreated))
                 {
                     // mate 2 from array of fittest
                     newCritter->Genes()->Crossover(fFittest[fFitI]->genes, fFittest[fFitJ]->genes, true);
                     fNumberCreated2Fit++;
+					gaPrint( "%5ld: global creation from two (%d, %d) fittest (%4lu, %4lu) %4ld\n", fStep, fFitI, fFitJ, fFittest[fFitI]->critterID, fFittest[fFitJ]->critterID, fNumberCreated2Fit );
                     ijfitinc(&fFitI, &fFitJ);
                 }
                 else
@@ -2481,6 +2496,7 @@ void TSimulation::Interact()
                     // otherwise, just generate a random, hopeful monster
                     newCritter->Genes()->Randomize();
                     fNumberCreatedRandom++;
+					gaPrint( "%5ld: global creation random (%4ld)\n", fStep, fNumberCreatedRandom );
                 }
             }
             else
@@ -2488,6 +2504,7 @@ void TSimulation::Interact()
                 // otherwise, just generate a random, hopeful monster
                 newCritter->Genes()->Randomize();
                 fNumberCreatedRandom++;
+				gaPrint( "%5ld: global creation random early (%4ld)\n", fStep, fNumberCreatedRandom );
             }
 
             newCritter->grow( RecordBrainAnatomy( newCritter->Number() ), RecordBrainFunction( newCritter->Number() ) );
@@ -2902,7 +2919,10 @@ void TSimulation::ijfitinc(short* i, short* j)
         (*i)++;
 
         if ((*i) > fNumberFit - 1)
-            (*i) = min(1, fNumberFit - 1);
+		{
+            (*i) = 0;	// min(1, fNumberFit - 1);
+			(*j) = 1;
+		}
     }
 }
 
@@ -2993,12 +3013,15 @@ void TSimulation::Death(critter* c)
 		sprintf( t, "run/brain/function/brainFunction_%ld.txt", c->Number() );
 		rename( s, t );
 
-
 		// Virgil
 		if ( fUseComplexityAsFitnessFunc )		// Are we using Complexity as a Fitness Function?  If so, set fitness = Complexity here
 		{
 			c->SetUnusedFitness( c->Fitness() );		// We might want the heuristic fitness later so lets store it somewhere.
+		#if UseMaxSpeedAsFitness
+			c->SetFitness( 0.01 / (c->MaxSpeed() + 0.01) );
+		#else
 			c->SetFitness( CalcComplexity( t ) );
+		#endif
 		}
 	}
 	
@@ -3024,6 +3047,7 @@ void TSimulation::Death(critter* c)
         fDomains[id].fittest[newfit]->fitness = c->Fitness();
         fDomains[id].fittest[newfit]->genes->CopyGenes( c->Genes() );
 		fDomains[id].fittest[newfit]->critterID = c->Number();
+		gaPrint( "%5ld: new domain %d fittest[%ld] id=%4ld fitness=%7.3f\n", fStep, id, newfit, c->Number(), c->Fitness() );
     }
 
 	// Then on a whole-world basis...
@@ -3049,6 +3073,7 @@ void TSimulation::Death(critter* c)
         fFittest[newfit]->genes->CopyGenes( c->Genes() );
 		fFittest[newfit]->critterID = c->Number();
 		fFittest[newfit]->Complexity = 0.0;		// must zero out the Complexity so it is recalculated for the new critter
+		gaPrint( "%5ld: new global   fittest[%ld] id=%4ld fitness=%7.3f\n", fStep, newfit, c->Number(), c->Fitness() );
     }
 
     if (c->Fitness() > fMaxFitness)
