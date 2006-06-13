@@ -253,7 +253,10 @@ critter::critter(TSimulation* sim, gstage* stage)
 	fVelocity[0] = 0.0;
 	fVelocity[1] = 0.0;
 	fVelocity[2] = 0.0;
-			
+	
+	fSpeed = 0.0;
+	fMaxSpeed = 0.0;
+
 	fGenome = new genome();
 	Q_CHECK_PTR(fGenome);
 	
@@ -879,6 +882,11 @@ float critter::Update(float moveFitnessParam, float speed2dpos)
 
     fVelocity[0] = x() - LastX();
     fVelocity[2] = z() - LastZ();
+
+	fSpeed = sqrt( fVelocity[0]*fVelocity[0] + fVelocity[2]*fVelocity[2] );
+	
+	if( fSpeed > fMaxSpeed )
+		fMaxSpeed = fSpeed;
 
 	rewardmovement(moveFitnessParam, speed2dpos);
     

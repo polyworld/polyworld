@@ -107,6 +107,8 @@ public:
     float VelocityX();
     float VelocityY();
     float VelocityZ();
+	float Speed();
+	float MaxSpeed();
     float Mass();
     float SizeAdvantage();
     float Energy();
@@ -192,7 +194,10 @@ protected:
     float fLastPosition[3];
     float fVelocity[3];
     float fNoseColor[3];
-    
+
+	float fSpeed;
+	float fMaxSpeed;
+
     float fFitness;			// crude guess for keeping minimum population early on
 	float fUnusedFitness;	// Virgil: We put the heuristic fitness here when we're using Complexity as a Fitness Function.
 	
@@ -225,6 +230,8 @@ inline float critter::Velocity(short i) { return fVelocity[i]; }
 inline float critter::VelocityX() { return fVelocity[0]; }
 inline float critter::VelocityY() { return fVelocity[1]; }
 inline float critter::VelocityZ() { return fVelocity[2]; }
+inline float critter::Speed() { return fSpeed; }
+inline float critter::MaxSpeed() { return fMaxSpeed; }
 inline float critter::Mass() { return fMass; }
 inline float critter::SizeAdvantage() { return fSizeAdvantage; }
 inline float critter::Energy() { return fEnergy; }
