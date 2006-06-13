@@ -54,7 +54,7 @@ double CalcComplexity( char * fname )
                 gsl_matrix * temp2 = activity;
                 activity = temp;                // activity = activity'
                 gsl_matrix_free(temp2);
-		gsl_matrix_free(temp);
+//		gsl_matrix_free(temp);  don't free temp = activity before we use it!  (it gets freed as 'o', below)
         }
 
         const gsl_rng_type * T;
