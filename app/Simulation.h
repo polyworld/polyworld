@@ -302,8 +302,7 @@ public:
 	bool fBrainFunctionRecordSeeds;
 	
 	bool fRecordComplexity;			
-	bool RecordComplexity();
-	
+
 	float EnergyFitnessParameter() const;
 	float AgeFitnessParameter() const;
 	float LifeFractionRecent();
@@ -559,7 +558,6 @@ inline char TSimulation::glFogFunction()  { return fFogFunction;   }
 inline float TSimulation::glExpFogDensity() { return fExpFogDensity; }
 inline int TSimulation::glLinearFogEnd()    { return fLinearFogEnd;  }
 
-inline bool TSimulation::RecordComplexity() { return fRecordComplexity; } 
 
 
 inline float TSimulation::GetCritterHealingRate() { return fCritterHealingRate;	} 

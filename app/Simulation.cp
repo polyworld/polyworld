@@ -651,16 +651,19 @@ void TSimulation::Step()
 				eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
 			
 			// Generate the bestSoFar Complexity, if we're doing that.
-			if(	RecordComplexity() )
+			if(	fRecordComplexity )
 			{
 				if( fUseComplexityAsFitnessFunc )	// If using Complexity as FitnessFunc we already have this.  Virgil
 				{
 					fFittest[i]->Complexity = fFittest[i]->fitness;
 				}
 			
+			
 				if( fFittest[i]->Complexity == 0.0 )		// if Complexity is zero -- means we have to Calculate it
 				{
-					fFittest[i]->Complexity = CalcComplexity( t );
+					char AnatFilename[256];
+					sprintf( AnatFilename, "run/brain/anatomy/brainAnatomy_%ld_death.txt", fFittest[i]->critterID );
+					fFittest[i]->Complexity = CalcComplexity( t, AnatFilename, 'P' );		// Complexity of Processing Units Only
 				}
 			}
 
@@ -698,7 +701,7 @@ void TSimulation::Step()
 					eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
 
 
-				if(	RecordComplexity() )
+				if(	fRecordComplexity )
 				{
 					if( fUseComplexityAsFitnessFunc )	// If using Complexity as FitnessFunc we've already computed Complexity for this critter. Virgil
 					{
@@ -729,7 +732,10 @@ void TSimulation::Step()
 						}
 						else
 						{
-							fRecentFittest[i]->Complexity = CalcComplexity( t );
+							char AnatFilename[256];
+							sprintf( AnatFilename, "run/brain/anatomy/brainAnatomy_%ld_death.txt", fFittest[i]->critterID );
+							fRecentFittest[i]->Complexity = CalcComplexity( t, AnatFilename, 'P' );		// Complexity of Processing Units Only
+//							fRecentFittest[i]->Complexity = CalcComplexity( t );
 	//DEBUG					cout << "Complexity = " << CalcComplexity( t ) << endl;
 						}
 					}
@@ -742,7 +748,7 @@ void TSimulation::Step()
 		}
 		
 		//Calculate Mean and StdDev of the fRecentFittest Complexities.
-		if( RecordComplexity() )
+		if( fRecordComplexity )
 		{
 			int limit2 = limit <= fNumberRecentFit ? limit : fNumberRecentFit;
 
@@ -3020,7 +3026,9 @@ void TSimulation::Death(critter* c)
 		#if UseMaxSpeedAsFitness
 			c->SetFitness( 0.01 / (c->MaxSpeed() + 0.01) );
 		#else
-			c->SetFitness( CalcComplexity( t ) );
+			char AnatFilename[256];
+			sprintf( AnatFilename, "run/brain/anatomy/brainAnatomy_%ld_death.txt", c->Number() );
+			c->SetFitness( CalcComplexity(t, AnatFilename, 'P') );
 		#endif
 		}
 	}
@@ -4067,6 +4075,12 @@ void TSimulation::ReadWorldFile(const char* filename)
 				cerr << "Warning: Recording Complexity without recording brain function?  That's not going to work.  Turning on recordBrainFunction." nl;
 				fBrainFunctionRecordAll = true;
 			}
+			
+			if( ! fBrainAnatomyRecordAll )
+			{
+				cerr << "Warning: Recording Complexity without recording brain anatomy?  That's not going to work.  Turning on recordBrainAnatomy." nl;
+				fBrainAnatomyRecordAll = true;				
+			}
 		}
 		
 		in >> fUseComplexityAsFitnessFunc; in >> label;
@@ -4085,6 +4099,13 @@ void TSimulation::ReadWorldFile(const char* filename)
 				cerr << "Warning: Using Complexity as fitness func without recording brain function.  Turning recordBrainFunction on." nl;
 				fBrainFunctionRecordAll = true;
 			}
+
+			if( ! fBrainAnatomyRecordAll )
+			{
+				cerr << "Warning: Recording Complexity without recording brain anatomy?  That's not going to work.  Turning on recordBrainAnatomy." nl;
+				fBrainAnatomyRecordAll = true;				
+			}
+
 		}
 
 	

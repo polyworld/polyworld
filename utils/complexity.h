@@ -35,14 +35,14 @@ gsl_matrix * readin_brainfunction( const char* );
 gsl_matrix * readin_brainfunction__optimized( const char* fname );
 gsl_matrix * readin_brainanatomy( const char* );
 gsl_matrix * mCOV( gsl_matrix * );
-double CalcComplexity( char * );
+double CalcComplexity( char * , char *, char );
 
-double CalcComplexity( char * fname )
+double CalcComplexity( char * fnameAct, char * fnameAnat, char part )
 {
+	part = toupper( part );			// capitalize it
 
-
-	gsl_matrix * activity = readin_brainfunction__optimized( fname );
-//	gsl_matrix * activity = readin_brainfunction( fname );
+	gsl_matrix * activity = readin_brainfunction__optimized( fnameAct );
+//	gsl_matrix * activity = readin_brainfunction( fnameAct );
 
 
 	// Warning: this may not be the thing we want to do if the #steps alive < #numneurons.
@@ -54,7 +54,6 @@ double CalcComplexity( char * fname )
                 gsl_matrix * temp2 = activity;
                 activity = temp;                // activity = activity'
                 gsl_matrix_free(temp2);
-//		gsl_matrix_free(temp);  don't free temp = activity before we use it!  (it gets freed as 'o', below)
         }
 
         const gsl_rng_type * T;
@@ -77,19 +76,124 @@ double CalcComplexity( char * fname )
 
         gsl_matrix * o = activity;      // replace this if we're ever going to do the gsamp()'ing.
 
-// We just calculate the covariance matrix and compute the Complexity of that.  It uses less cycles and the results are identical.
+// We just calculate the covariance matrix and compute the Complexity of that instead of using the correlation matrix.  It uses less cycles and the results are identical.
 
         gsl_matrix * COV = mCOV( o );
 	gsl_matrix_free(o);			// don't need this anymore
 
+	double Complexity;
 
-	double Complexity = calcC_det3__optimized(COV);
-//	double Complexity = calcC_det3(COV);
-		
-        gsl_matrix_free(COV);
+	if( part == 'A' )	// All
+	{
+		double Complexity = calcC_det3__optimized(COV);
+		gsl_matrix_free( COV );
+	//	double Complexity = calcC_det3(COV);
+		return Complexity;
+	}
+	else if( part == 'P' )	// Processing
+	{
+		gsl_matrix * cij = readin_brainanatomy( fnameAnat );
+		gsl_matrix * CIJ = gsl_matrix_alloc(cij->size1-1, cij->size2-1);                // is minus 1 because we toss out the bias neuron
+		int side_length = cij->size1;           //matrix cij is square so we only need 1 side.
 
 
-        return Complexity;
+		// toss out the bias neuron
+		for(int i=0; i < side_length-1; i++)
+		{
+			for(int j=0; j < side_length-1; j++)
+			{
+				if( gsl_matrix_get(cij, i, j) != 0 )
+					gsl_matrix_set(CIJ, j, i, 1);           // Here we swap the i's and j's so we transpose the matrix for free
+				else
+					gsl_matrix_set(CIJ, j, i, 0);           // Here we swap the i's nad j's so we transpose the matrix for free
+			}
+		}
+
+		side_length = CIJ->size1;
+
+		vector<int> tempPro_id;
+
+		for(int i=0; i< side_length; i++)
+		{
+			float column_total = 0;
+			for(int j=0; j< side_length; j++)
+			{
+				column_total += gsl_matrix_get(CIJ, j, i);
+			}
+
+			if( column_total != 0 )
+				tempPro_id.push_back( i );
+		}
+
+		int Pro = tempPro_id.size();
+
+		int Pro_id[Pro];
+		for(int i=0; i< Pro; i++ ) { Pro_id[i] = tempPro_id[i]; }
+
+
+		gsl_matrix * Xed_COR = matrix_crosssection( COV, Pro_id, Pro );
+//		cout << "Pro_Xed_COR: " << Xed_COR->size1 << " x " << Xed_COR->size2 << endl;
+		float Cplx_Pro = calcC_det3( Xed_COR );
+		gsl_matrix_free( Xed_COR );
+        	gsl_matrix_free(COV);
+
+		return Cplx_Pro;
+	}
+	else if( part == 'I' )	// Input
+	{
+		gsl_matrix * cij = readin_brainanatomy( fnameAnat );
+		gsl_matrix * CIJ = gsl_matrix_alloc(cij->size1-1, cij->size2-1);                // is minus 1 because we toss out the bias neuron
+		int side_length = cij->size1;           //matrix cij is square so we only need 1 side.
+
+		// toss out the bias neuron
+		for(int i=0; i < side_length-1; i++)
+		{
+			for(int j=0; j < side_length-1; j++)
+			{
+				if( gsl_matrix_get(cij, i, j) != 0 )
+					gsl_matrix_set(CIJ, j, i, 1);           // Here we swap the i's and j's so we transpose the matrix for free
+				else
+					gsl_matrix_set(CIJ, j, i, 0);           // Here we swap the i's nad j's so we transpose the matrix for free
+			}
+       	}
+
+
+		side_length = CIJ->size1;
+
+		vector<int> tempInp_id;
+
+		for(int i=0; i< side_length; i++)
+		{
+			float column_total = 0;
+			for(int j=0; j< side_length; j++)
+			{
+				column_total += gsl_matrix_get(CIJ, j, i);
+			}
+
+			if( column_total == 0 )
+				tempInp_id.push_back( i );
+		}
+
+		int Inp = tempInp_id.size();
+		int Inp_id[Inp];
+
+		for(int i=0; i< Inp; i++ ) { Inp_id[i] = tempInp_id[i]; }
+
+
+		gsl_matrix * Xed_COR = matrix_crosssection( COV, Inp_id, Inp );
+//		cout << "Inp_Xed_COR: " << Xed_COR->size1 << " x " << Xed_COR->size2 << endl;
+		float Cplx_Inp = calcC_det3( Xed_COR );
+		gsl_matrix_free( Xed_COR );
+		gsl_matrix_free( COV );
+		return Cplx_Inp;
+	}
+//========
+	else
+	{
+		cerr << "Do not know value for CalcComplexity() argument 3 '" << part << "'\n";
+		exit(1);
+	}
+
 }
 
 gsl_matrix * COVtoCOR( gsl_matrix * COV )
@@ -136,7 +240,7 @@ gsl_matrix * COVtoCOR( gsl_matrix * COV )
 gsl_matrix * mCOV( gsl_matrix * M )
 {
 /*
-The input matrix may not be square, but the output will always be squaire NxN matrix where N is the number of columns in the input matrix. 
+The input matrix may not be square, but the output will always be square NxN matrix where N is the number of columns in the input matrix. 
 */
 	gsl_matrix * COV = gsl_matrix_alloc( M->size2, M->size2);
 //	gsl_matrix * COV = gsl_matrix_calloc( M->size2, M->size2);
