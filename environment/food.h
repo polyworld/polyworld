@@ -19,6 +19,8 @@ using namespace std;
 #include "gsquare.h"
 //#include "ObjectList.h"
 
+#include "FoodPatch.h"
+
 // Forward declarations
 class food;
 
@@ -48,12 +50,14 @@ public:
 	float eat(float e);
     
 	float energy();
-    short domain();
-   	void domain(short id);
-	short band();
-	void band(short ib);
 	
 	void setenergy(float e);
+
+	void setPatch(FoodPatch* fp);
+	FoodPatch* getPatch();
+
+	short domain();
+	void domain(short id);
 
 protected:
     void initfood();
@@ -64,21 +68,22 @@ protected:
 	void initrest();
    	virtual void setradius();
 	
-//	float FoodWorldZ( float foodBandZ );
-
     float fEnergy;
     short fDomain;
-	short fBand;
+
+	FoodPatch* patch; // pointer to this food's patch
+
 };
 
 //===========================================================================
 // inlines
 //===========================================================================
 inline float food::energy() { return fEnergy; }
+inline void food::setPatch(FoodPatch* fp) { patch=fp; }
+inline FoodPatch* food::getPatch() { return patch; }
 inline short food::domain() { return fDomain; }
 inline void food::domain(short id) { fDomain = id; }
-inline short food::band() { return fBand; }
-inline void food::band(short ib) { fBand = ib; }
+
 
 #endif
 

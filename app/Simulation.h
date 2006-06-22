@@ -40,6 +40,9 @@ static const int MAXFITNESSITEMS = 5;
 // Define directory mode mask the same, except you need execute privileges to use as a directory (go fig)
 #define	PwDirMode ( S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH )
 
+#define CurrentWorldfileVersion 19
+
+
 struct FitStruct
 {
 	ulong	critterID;
@@ -49,34 +52,41 @@ struct FitStruct
 };
 typedef struct FitStruct FitStruct;
 
-// DomainFoodBand struct will be used per-band, per-domain
-struct DomainFoodBand
-{
-	long initFoodCount;
-	long minFoodCount;
-	long maxFoodGrown;
-	long maxFoodCount;
-	long foodCount;
-	float initFoodRemainder;
-	float minFoodRemainder;
-	float maxFoodGrownRemainder;
-	float maxFoodRemainder;
-};
-typedef struct DomainFoodBand DomainFoodBand;
 
-struct domainstruct
+//===========================================================================
+// Domain
+//===========================================================================
+class Domain
 {
-    float xleft;
-    float xright;
-    float xsize;
+ public:
+	Domain();
+	~Domain();
+	
+    float centerX;
+    float centerZ;
+    float absoluteSizeX;
+    float absoluteSizeZ;
+    float sizeX;
+    float sizeZ;
+    float startX;
+    float startZ;
+    float endX;
+    float endZ;
+    int numFoodPatches;
+    int numBrickPatches;
+    float fraction;
+    float foodRate;
+    int foodCount;
+    int initFoodCount;
+    int minFoodCount;
+    int maxFoodCount;
+    int maxFoodGrownCount;
+	FoodPatch* fFoodPatches;
+	BrickPatch* fBrickPatches;
     long minnumcritters;
     long maxnumcritters;
     long initnumcritters;
 	long numberToSeed;
-    long minFoodCount;
-    long maxFoodCount;
-    long maxFoodGrown;
-    long initFoodCount;
     long numcritters;
     long numcreated;
     long numborn;
@@ -84,7 +94,6 @@ struct domainstruct
     long numdied;
     long lastcreate;
     long maxgapcreate;
-    long foodCount;
 	float probabilityOfMutatingSeeds;
     short ifit;
     short jfit;
@@ -93,17 +102,35 @@ struct domainstruct
 	int fMaxNumLeastFit;
 	int fNumSmited;
 	critter** fLeastFit;
-	DomainFoodBand* fDomainFoodBand;
+	
+	FoodPatch* whichFoodPatch( float x, float z );
 };
 
-// FoodBand struct will be used per-band
-struct FoodBand
+inline Domain::Domain()
 {
-	float zMin;
-	float zMax;
-	float fraction;
-};
-typedef struct FoodBand FoodBand;
+	foodCount = 0;
+}
+
+inline Domain::~Domain()
+{
+}
+
+inline FoodPatch* Domain::whichFoodPatch( float x, float z )
+{
+	FoodPatch* fp = NULL;
+	
+	for( int i = 0; i < numFoodPatches; i++ )
+	{
+		if( fFoodPatches[i].pointIsInside( x, z, 0.0 ) )
+		{
+			fp = &(fFoodPatches[i]);
+			break;
+		}
+	}
+	
+	return( fp );
+}
+
 
 //===========================================================================
 // Stat
@@ -249,7 +276,6 @@ public:
 	
 	short WhichDomain( float x, float z, short d );
 	void SwitchDomain( short newDomain, short oldDomain );
-	int WhichBand( float z );
 	
 	gcamera& GetCamera();
 	gcamera& GetOverheadCamera();
@@ -315,6 +341,8 @@ public:
 
 	float TSimulation::GetCritterHealingRate();				// Virgil Healing
 
+	int getRandomPatch(int domainNumber);
+	Domain fDomains[MAXDOMAINS];	
 
 private slots:
 	
@@ -323,7 +351,6 @@ private:
 	void InitNeuralValues();
 	void InitWorld();
 	void InitMonitoringWindows();
-	void InitDomainFoodBands();
 	
 	void Interact();
 	
@@ -344,7 +371,6 @@ private:
 	void ReadWorldFile(const char* filename);	
 	void Dump();
 	
-	short RandomBand();
 
 	TSceneView* fSceneView;
 	TSceneWindow* fSceneWindow;
@@ -369,7 +395,6 @@ private:
 	gstage fStage;	
 	TCastList fWorldCast;
 
-	domainstruct fDomains[MAXDOMAINS];	
 	long fNumDomains;
 	
 	float fCritterHealingRate;	// Virgil Healing
@@ -390,7 +415,7 @@ private:
 //	bool fShowBrain;
 	bool fShowTextStatus;
 	bool fRecordGeneStats;
-	bool fRecordFoodBandStats;
+	bool fRecordFoodPatchStats;
 	
 	bool fUseComplexityAsFitnessFunc;	//Virgil	
 
@@ -459,10 +484,13 @@ private:
 	long fMaxGapCreate;
 	long fNumBornSinceCreated;
 	
-	int fNumFoodBands;
-	FoodBand* fFoodBand;
-	float fFoodBandTotalZ;
-	bool fUseProbabilisticFoodBands;
+	bool fUseProbabilisticFoodPatches;
+	int fNumFoodPatches;
+	FoodPatch* fFoodPatches;
+
+	int fNumBrickPatches;
+	BrickPatch* fBrickPatches;
+
 
 	long fMinFoodCount;
 	long fMaxFoodCount;
@@ -477,6 +505,7 @@ private:
 	float fAverageFoodEnergyIn;
 	float fAverageFoodEnergyOut;
 	float fEat2Consume; // (converts eat neuron value to energy consumed)
+	int fFoodPatchOuterRange;
 	float fMinFoodEnergyAtDeath;
 	float fPower2Energy; // controls amount of damage to other critter
 	float fDeathProbability;
@@ -517,12 +546,10 @@ private:
 	unsigned long* fGeneSum2;	// sum of squares, for computing std. dev.
 	FILE* fGeneStatsFile;
 	
-	FILE* fFoodBandStatsFile;
+	FILE* fFoodPatchStatsFile;
 
-	unsigned long fNumCrittersNotInOrNearAnyFoodBand;
-	unsigned long* fNumCrittersInFoodBand;
-	unsigned long* fNumCrittersWithin5UnitsOfFoodBand; 
-	unsigned long* fNumCrittersWithin10UnitsOfFoodBand;
+	unsigned long fNumCrittersNotInOrNearAnyFoodPatch;
+	unsigned long* fNumCrittersInFoodPatch;
 	
     gcamera fCamera;
     gcamera fOverheadCamera;
@@ -580,23 +607,6 @@ inline bool TSimulation::RecordBrainFunction( long critterNumber )
 			fBrainFunctionRecordAll ||
 			(fBrainFunctionRecordSeeds && (critterNumber <= fInitNumCritters))
 		  );
-}
-
-inline short TSimulation::RandomBand()
-{
-	float ranval = drand48();
-	float sumFractions = 0.0;
-	
-	for( short i = 0; i < fNumFoodBands; i++ )
-	{
-		sumFractions += fFoodBand[i].fraction;
-		if( ranval <= sumFractions )
-			return( i );	// this is the band
-	}
-	
-	// shouldn't be possible to reach here, but assume the floating point adds
-	// just failed us by a smidgeon, and return the final food-band
-	return( fNumFoodBands - 1 );
 }
 
 

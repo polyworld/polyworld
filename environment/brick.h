@@ -2,8 +2,8 @@
 //	File:		brick.h
 //---------------------------------------------------------------------------
 
-//#ifndef BRICK_H
-//#define BRICK_H
+#ifndef BRICK_H
+#define BRICK_H
 
 // System
 #include <iostream>
@@ -13,9 +13,10 @@ using namespace std;
 // Local
 #include "gdlink.h"
 #include "gsquare.h"
+#include "BrickPatch.h"
 
 // Forward declarations
-//class brick;
+class brick;
 
 
 
@@ -27,32 +28,30 @@ class brick : public gboxf
  public:
 	static float gBrickHeight;
 	static Color gBrickColor;
-	static float gMinBrickEnergy;
-	static float gMaxBrickEnergy;
 
-	float requiredEnergy;
+	BrickPatch* myBrickPatch;
 	
 	brick();
-	brick(float e);
-	brick(float e, float x, float z);
+	brick( float x, float z );
 	~brick();
     
 	void dump(ostream& out);
 	void load(istream& in);
     
 	float pickup(float e);
+
+	void setPatch( BrickPatch* bp );
     
  protected:
-	void initbrick();
-	void initbrick(float e);
-	void initbrick(float e, float x, float z);
-	void initpos();
-	void initlen();
-	void initrest();
-   	virtual void setradius();
-	
+	void initBrick();
+	void initBrick( float x, float z );
+	void initBrick( float x, float y, float z );
+
+#if 0
+	void setRadius();
+#endif
 };
 
+inline void brick::setPatch( BrickPatch* bp ) { myBrickPatch = bp; }
 
-
-
+#endif

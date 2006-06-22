@@ -37,26 +37,17 @@ Color brick::gBrickColor;
 //-------------------------------------------------------------------------------------------
 brick::brick()
 {
-	setType(BRICKTYPE);
-	initbrick();
+	setType( BRICKTYPE );
+	initBrick();
 }
 
 
 //-------------------------------------------------------------------------------------------
 // brick::brick
 //-------------------------------------------------------------------------------------------
-brick::brick(float e)
+brick::brick( float x, float z )
 {
-	initbrick(e);
-}
-
-
-//-------------------------------------------------------------------------------------------
-// brick::brick
-//-------------------------------------------------------------------------------------------
-brick::brick(float e, float x, float z)
-{
-	initbrick(e, x, z);
+	initBrick( x, z );
 }
 
 
@@ -71,9 +62,8 @@ brick::~brick()
 //-------------------------------------------------------------------------------------------
 // brick::dump
 //-------------------------------------------------------------------------------------------
-void brick::dump(ostream& out)
+void brick::dump( ostream& out )
 {
-    out << fEnergy nl;
     out << fPosition[0] sp fPosition[1] sp fPosition[2] nl;
 }
 
@@ -83,93 +73,49 @@ void brick::dump(ostream& out)
 //-------------------------------------------------------------------------------------------
 void brick::load(istream& in)
 {
-    in >> fEnergy;
-    in >> fPosition[0] >> fPosition[1] >> fPosition[2];
+	float x, y, z;
+	
+    in >> x >> y >> z;
 
-    initlen();
+    initBrick( x, y, z );
 }
 
 
 
 //-------------------------------------------------------------------------------------------
-// brick::initbrick
+// brick::initBrick
 //-------------------------------------------------------------------------------------------
-void brick::initbrick()
+void brick::initBrick()
 {
-	requiredEnergy = drand48() * (gMaxBrickEnergy - gMinBrickEnergy) + gMinBrickEnergy;
-	initlen();
-	initpos();
-	initrest();
+	initBrick( drand48() * globals::worldsize, drand48() * globals::worldsize );
 }
 
 
 //-------------------------------------------------------------------------------------------
-// brick::initbrick
+// brick::initBrick
 //-------------------------------------------------------------------------------------------
-void brick::initbrick(float e)
+void brick::initBrick( float x, float z )
 {
-	fEnergy = e;
-	initlen();
-	initpos();
-	initrest();
-}
-
-
-//-------------------------------------------------------------------------------------------
-// brick::initbrick
-//-------------------------------------------------------------------------------------------
-void brick::initbrick(float e, float x, float z)
-{
-	fEnergy = e;
-	initlen();
-	fPosition[0] = x;
-	fPosition[1] = 0.5 * fLength[1];
-	fPosition[2] = z;
-	initrest();
+	initBrick( x, 0.5 * gBrickHeight, z );
 }
  
 
 //-------------------------------------------------------------------------------------------
-// brick::initpos
-//-------------------------------------------------------------------------------------------    
-void brick::initpos()
-{
-	fPosition[0] = drand48() * globals::worldsize;
-	fPosition[1] = 0.5 * fLength[1];
-	fPosition[2] = drand48() * globals::worldsize;
-}
-
-
+// brick::initBrick
 //-------------------------------------------------------------------------------------------
-// brick::initlen
-//-------------------------------------------------------------------------------------------       
-void brick::initlen()
+void brick::initBrick( float x, float y, float z )
 {
-	float lxz = 0.75 * fEnergy / gSize2Energy;
-	float ly = gBrickHeight;
-	setlen(lxz,ly,lxz);
+	fPosition[0] = x;
+	fPosition[1] = y;
+	fPosition[2] = z;
+	
+	setlen( gBrickHeight, gBrickHeight, gBrickHeight );
+	
+	setcolor( gBrickColor );
 }
+ 
 
-
-//-------------------------------------------------------------------------------------------
-// brick::initrest
-//-------------------------------------------------------------------------------------------           
-void brick::initrest()
-{
-	setcolor(gBrickColor);
-}
-
-
-//-------------------------------------------------------------------------------------------
-// brick::setenergy
-//-------------------------------------------------------------------------------------------           
-void brick::setenergy(float e)
-{
-	fEnergy = e;
-	initlen();
-}
-
-
+#if 0
 //-------------------------------------------------------------------------------------------
 // brick::setradius
 //-------------------------------------------------------------------------------------------           
@@ -179,4 +125,4 @@ void brick::setradius()
 		fRadius = sqrt( fLength[0]*fLength[0] + fLength[2]*fLength[2] ) * fRadiusScale * fScale * 0.5;
 	srPrint( "brick::%s(): r=%g%s\n", __FUNCTION__, fRadius, fRadiusFixed ? "(fixed)" : "" );
 }
-
+#endif

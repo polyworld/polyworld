@@ -16,6 +16,10 @@ SOURCES		=	app/debug.cp \
 				critter/genome.cp \
 				environment/barrier.cp \
 				environment/food.cp \
+				environment/brick.cp \
+				environment/FoodPatch.cp \
+				environment/BrickPatch.cp \
+				environment/Patch.cp \
 				graphics/gcamera.cp \
 				graphics/glight.cp \
 				graphics/gline.cp \
@@ -36,11 +40,13 @@ SOURCES		=	app/debug.cp \
 				utils/indexlist.cp \
 				utils/misc.cp \
 				utils/PwMovieTools.cp \
-				utils/objectxsortedlist.cp
+				utils/objectxsortedlist.cp \
+				utils/distributions.cp
 																			  	
 TARGET		= 	Polyworld
 
 macx {
+	message(compiling for Mac OS X)
 	INCLUDEPATH +=	. \
 					app \
 					critter \
@@ -54,6 +60,7 @@ macx {
 }
 
 unix:!macx {
+	message(compiling for Linux)
 	INCLUDEPATH +=	. \
 					app \
 					critter \
@@ -69,6 +76,7 @@ unix:!macx {
 }
 
 win32 {
+	message(compiling for Windows)
 	INCLUDEPATH +=	. \
 					app \
 					critter \

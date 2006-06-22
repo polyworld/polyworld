@@ -863,6 +863,32 @@ float critter::Update(float moveFitnessParam, float speed2dpos)
         } // end of barrier comes after beginning of critter
     } // while (barrier::gXSortedBarriers.next(b))
 	
+/*
+	// Note (lsy):  The following is terribly inefficient.  We only need to search backwards and forwards
+	// for a short distance around the critter, to see if it has hit any bricks.  See the equivalent code
+	// for a critter encountering food in Simulation::Interact().  It is the tiniest bit tricky, requiring
+	// you to look farther back than you might think intuitively.
+	//
+	// Now go through all the bricks to check for intersections
+	brick* br;
+	objectxsortedlist::gXSortedObjects.reset();
+	while (objectxsortedlist::gXSortedObjects.nextObj(BRICKTYPE, (gobject**)&br)){
+		if( (br->xmax() > (    x() - FF * radius())) || (br->xmax() > (LastX() - FF * radius())) )
+	        {
+			// end of barrier comes after beginning of critter
+			// in either its new or old position
+		if( (br->xmin() > (    x() + FF * radius())) && (br->xmin() > (LastX() + FF * radius())) )
+	        {
+			// beginning of barrier comes after end of critter,
+			// in both new and old positions,
+			// so there is no overlap, and we can stop searching
+			// for this critter's possible barrier overlaps
+			break;  // get out of the sorted barriers while loop
+            });
+
+	}
+*/
+
 #if 0
 	TODO
 	// Do a check

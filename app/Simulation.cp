@@ -48,6 +48,10 @@
 #include "complexity.h"
 
 #include "objectxsortedlist.h"
+#include "Patch.h"
+#include "FoodPatch.h"
+#include "BrickPatch.h"
+#include "brick.h"
 
 using namespace std;
 
@@ -193,7 +197,7 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
 //		fShowBrain(false),
 		fShowTextStatus(true),
 		fRecordGeneStats(false),
-		fRecordFoodBandStats(false),
+		fRecordFoodPatchStats(false),
 		fNewDeaths(0),
 		fNumberFit(0),
 		fFittest(NULL),
@@ -203,11 +207,8 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
 		fGeneSum(NULL),
 		fGeneSum2(NULL),
 		fGeneStatsFile(NULL),
-		fFoodBandStatsFile(NULL),
-		fNumCrittersNotInOrNearAnyFoodBand(0),
-		fNumCrittersInFoodBand(NULL),
-		fNumCrittersWithin5UnitsOfFoodBand(NULL),
-		fNumCrittersWithin10UnitsOfFoodBand(NULL)
+		fFoodPatchStatsFile(NULL),
+		fNumCrittersNotInOrNearAnyFoodPatch(0)
 {
 	Init();
 }
@@ -463,7 +464,11 @@ void TSimulation::Step()
 			debugcheck(debugstring);
 			critnum++;
 		#endif DEBUGCHECK
+			// Set mark on current critter since we need to check for bricks
+			// in the list in order to find intersections of critters and bricks
+			objectxsortedlist::gXSortedObjects.setMark(CRITTERTYPE);
 			fFoodEnergyOut += c->Update(fMoveFitnessParameter, critter::gSpeed2DPosition);
+			objectxsortedlist::gXSortedObjects.toMark(CRITTERTYPE);
 		}
 		
 		// Swap buffers for the critter POV window when they're all done
@@ -658,7 +663,6 @@ void TSimulation::Step()
 					fFittest[i]->Complexity = fFittest[i]->fitness;
 				}
 			
-			
 				if( fFittest[i]->Complexity == 0.0 )		// if Complexity is zero -- means we have to Calculate it
 				{
 					char AnatFilename[256];
@@ -780,9 +784,9 @@ void TSimulation::Step()
 				for( int i=0; i<limit2; i++ )
 				{
 					if( fRecentFittest[i]->critterID > 0 )
-						{
+					{
 						stddev += pow(fRecentFittest[i]->Complexity - mean, 2);		// Get Sum of all Complexities
-						}
+					}
 				}
 			}
 		
@@ -1047,18 +1051,11 @@ void TSimulation::Init()
 	}
 #endif
 
-	//If we're recording the number of critters in or near various foodbands make some stat arrays.
-	if( fRecordFoodBandStats )
+	//If we're recording the number of critters in or near various foodpatches, then open the stat file
+	if( fRecordFoodPatchStats )
 	{
-			fNumCrittersInFoodBand = (unsigned long*) malloc( sizeof(unsigned long) * fNumFoodBands);
-			Q_CHECK_PTR( fNumCrittersInFoodBand );
-			fNumCrittersWithin5UnitsOfFoodBand = (unsigned long*) malloc( sizeof(unsigned long) * fNumFoodBands);
-			Q_CHECK_PTR( fNumCrittersWithin5UnitsOfFoodBand );
-			fNumCrittersWithin10UnitsOfFoodBand = (unsigned long*) malloc( sizeof(unsigned long) * fNumFoodBands);
-			Q_CHECK_PTR( fNumCrittersWithin10UnitsOfFoodBand );
-			
-			fFoodBandStatsFile = fopen( "run/foodbandstats.txt", "w" );
-			Q_CHECK_PTR( fFoodBandStatsFile );
+			fFoodPatchStatsFile = fopen( "run/foodpatchstats.txt", "w" );
+			Q_CHECK_PTR( fFoodPatchStatsFile );
 	}
 	
 	system( "cp worldfile run/" );
@@ -1107,8 +1104,9 @@ void TSimulation::Init()
 				fFoodEnergyIn += c->FoodEnergy();
 				fStage.AddObject(c);
 				
-				float x = drand48() * (fDomains[id].xsize - 0.02) + fDomains[id].xleft + 0.01;
-				float z = -0.01 - drand48() * (globals::worldsize - 0.02);
+				float x = drand48() * (fDomains[id].absoluteSizeX - 0.02) + fDomains[id].startX + 0.01;
+				float z = drand48() * (fDomains[id].absoluteSizeZ - 0.02) + fDomains[id].startZ + 0.01;
+				//float z = -0.01 - drand48() * (globals::worldsize - 0.02);
 				float y = 0.5 * critter::gCritterHeight;
 			#if TestWorld
 				// evenly distribute the critters
@@ -1136,41 +1134,6 @@ void TSimulation::Init()
 			}
 			
 			numSeededTotal += numSeededDomain;
-			
-			int fd = id;
-			for( int fb = 0; fb < fNumFoodBands; fb++ )
-			{
-				long maxNewFood = fMaxFoodCount - (long) objectxsortedlist::gXSortedObjects.getCount(FOODTYPE);
-				long numNewFood = min( maxNewFood, fDomains[fd].fDomainFoodBand[fb].initFoodCount );
-				
-				for( int i = 0; i < numNewFood; i++ )
-				{
-					food* f = new food::food;
-					Q_CHECK_PTR(f);
-				#if TestWorld
-					f->setenergy( 0.5 * (food::gMinFoodEnergy + food::gMaxFoodEnergy) );
-				#endif
-					
-					fFoodEnergyIn += f->energy();
-					float x = drand48() * (fDomains[fd].xsize - 0.02) + fDomains[fd].xleft + 0.01;
-					float z = drand48() * (fFoodBand[fb].zMax - fFoodBand[fb].zMin - 0.02) + fFoodBand[fb].zMin + 0.01;
-				#if TestWorld
-					x = fDomains[fd].xleft  +  0.333 * fDomains[fd].xsize;
-					z = - globals::worldsize * ((float) (i+1) / (fDomains[fd].initFoodCount + 1));
-				#endif
-					f->setx( x );
-					f->setz( z );
-					f->domain( fd );
-					f->band( fb );
-					
-					fStage.AddObject( f );
-					
-					objectxsortedlist::gXSortedObjects.add( f );
-					fDomains[fd].foodCount++;
-					fDomains[fd].fDomainFoodBand[fb].foodCount++;
-					dfbPrint( "after initial add of band-based food to domain %d, band %d, at (%5.2f,%6.2f), D.foodCount = %ld, DFB.foodCount = %ld\n", fd, fb, f->x(), f->z(), fDomains[fd].foodCount, fb >= 0 ? fDomains[fd].fDomainFoodBand[fb].foodCount : -1 );
-				}
-			}
 		}
 	
 		// Handle global initial creations, if necessary
@@ -1214,24 +1177,33 @@ void TSimulation::Init()
 			fNeuronGroupCountStats.add( c->Brain()->NumNeuronGroups() );
 		}
 			
-		while( (int)objectxsortedlist::gXSortedObjects.getCount(FOODTYPE) < fInitialFoodCount )
+		// Add food to the food patches until they each have their initFoodCount number of food pieces
+		for (int domainNumber = 0; domainNumber < fNumDomains; domainNumber++)
 		{
-			int fd;
-			food* f = new food::food;
-			Q_CHECK_PTR( f );
-			
-			fFoodEnergyIn += f->energy();
-			fStage.AddObject( f );
-			objectxsortedlist::gXSortedObjects.add( f );
-			
-			fd = WhichDomain( f->x(), f->z(), 0 );
-			f->domain( fd );
-			fDomains[fd].foodCount++;
-			int fb = WhichBand( f->z() );
-			if( fb >= 0 )
-				fDomains[fd].fDomainFoodBand[fb].foodCount++;
-			dfbPrint( "after initial GLOBAL add of food to domain %d, band %d, at (%5.2f,%6.2f), D.foodCount = %ld, DFB.foodCount = %ld\n", fd, fb, f->x(), f->z(), fDomains[fd].foodCount, fb >= 0 ? fDomains[fd].fDomainFoodBand[fb].foodCount : -1 );
+			for (int foodPatchNumber=0; foodPatchNumber< fDomains[domainNumber].numFoodPatches; foodPatchNumber++)
+			{
+				for (int j=0; j<fDomains[domainNumber].fFoodPatches[foodPatchNumber].initFoodCount; j++)
+				{
+					if (fDomains[domainNumber].foodCount < fDomains[domainNumber].maxFoodCount)
+					{
+						fFoodEnergyIn += fDomains[domainNumber].fFoodPatches[foodPatchNumber].addFood();
+						fDomains[domainNumber].foodCount++;
+					}
+				}
+			}
 		}
+
+	#if 0
+		// Add initial bricks 
+		for (int i=0; i<fNumBrickPatches; i++)
+		{
+			for (int j=0; j<fBrickPatches[i].brickCount; j++)
+			{
+				fBrickPatches[i].addBrick();
+			}
+
+		}
+	#endif
 	}
 
     fTotalFoodEnergyIn = fFoodEnergyIn;
@@ -1571,6 +1543,10 @@ void TSimulation::InitWorld()
     barrier::gBarrierColor.g = 0.25;
     barrier::gBarrierColor.b = 0.15;
 
+	brick::gBrickHeight = 0.5;
+	brick::gBrickColor.r = 0.6;
+	brick::gBrickColor.g = 0.2;
+	brick::gBrickColor.b = 0.2;  
 }
 
 
@@ -1729,8 +1705,6 @@ void TSimulation::Interact()
     short id = 0;
 	short jd;
 	short kd;
-    short fd;
-	short fb;
 	bool cDied;
 //	bool foodMarked = 0;
 	bool ateBackwardFood;
@@ -1786,16 +1760,17 @@ void TSimulation::Interact()
 		}
 	}
 	
-	// zero'ing out the FoodBandNumCritters stats
-	if( fRecordFoodBandStats )
+	// reset all the FoodPatch critter counts to 0
+	if( fRecordFoodPatchStats )
 	{
-		fNumCrittersNotInOrNearAnyFoodBand = 0;
+		fNumCrittersNotInOrNearAnyFoodPatch = 0;
 
-		for( i = 0; i < fNumFoodBands; i++ )
+		for( int domainNumber = 0; domainNumber < fNumDomains; domainNumber++ )
 		{
-			fNumCrittersInFoodBand[i] = 0;
-			fNumCrittersWithin5UnitsOfFoodBand[i] = 0;
-			fNumCrittersWithin10UnitsOfFoodBand[i] = 0;
+			for( int foodPatchNumber = 0; foodPatchNumber < fDomains[domainNumber].numFoodPatches; foodPatchNumber++ )
+			{
+				fDomains[domainNumber].fFoodPatches[foodPatchNumber].resetCritterCounts();
+			}
 		}
 	}
 
@@ -1852,47 +1827,22 @@ void TSimulation::Interact()
 		}
 		
 		// If we're saving critter-occupancy-of-food-band stats, compute them here
-		if( fRecordFoodBandStats )
+		if( fRecordFoodPatchStats )
 		{
-			// First check and see if a critter is in or near a foodband.
-			// WARNING: WE MUST MAKE SURE FOODBANDS OR FOODBAND NEIGHBOORHOODS DO NOT OVERLAP!
-			// If Foodbands or neighboorhoods overlap, the critter will still only be counted once, but will be counted as a member of the lowest numbered foodband that it is a member of.
-			bool critterAccountedFor = false;
-			
-			for( int i = 0; i < fNumFoodBands; i++ )
-			{
-				// Is it in a band?
-				if( c->z() >= fFoodBand[i].zMin && c->z() <= fFoodBand[i].zMax )
+			// Count critters inside FoodPatches
+			// Also: Count critters outside FoodPatches, but within fFoodPatchOuterRange
+			for (int domainNumber = 0; domainNumber < fNumDomains; domainNumber++){
+				for( int foodPatchNumber = 0; foodPatchNumber < fDomains[domainNumber].numFoodPatches; foodPatchNumber++ )
 				{
-					fNumCrittersInFoodBand[i]++;
-					critterAccountedFor = true;
-//					cout << "Assigned a Critter and it's value is: " << c->z() << endl;
-					break ;
+					// if critter is inside, then update FoodPatch's critterInsideCount
+					fDomains[domainNumber].fFoodPatches[foodPatchNumber].checkIfCritterIsInside(c->x(), c->z());  
+
+					// if critter is inside the outerrange, then update FoodPatch's critterOuterRangeCount
+					fDomains[domainNumber].fFoodPatches[foodPatchNumber].checkIfCritterIsInsideNeighborhood(c->x(), c->z());  
 				}
-				
-				// Is it within 5 units of a band? (inclusive)
-				else if( (c->z() < fFoodBand[i].zMin && c->z() >= fFoodBand[i].zMin - 5.0) || (c->z() > fFoodBand[i].zMax && c->z() <= fFoodBand[i].zMax + 5.0) )
-				{
-					fNumCrittersWithin5UnitsOfFoodBand[i]++;
-					critterAccountedFor = true;
-					break ;
-				}
-				
-				// How about within 10 units of a band? (inclusive)
-				else if( (c->z() < fFoodBand[i].zMin && c->z() >= fFoodBand[i].zMin - 10.0) || (c->z() > fFoodBand[i].zMax && c->z() <= fFoodBand[i].zMax + 10.0) )
-				{
-					fNumCrittersWithin10UnitsOfFoodBand[i]++;
-					critterAccountedFor = true;
-					break ;
-				}
-			}
-			
-			// Critter wasn't in or near any band of food.
-			if( critterAccountedFor == false )
-			{
-				fNumCrittersNotInOrNearAnyFoodBand++;
 			}
 		}	
+		
 				
 		// Figure out who is least fit, if we're doing smiting to make room for births
 		
@@ -2232,8 +2182,6 @@ void TSimulation::Interact()
 				{
 					// also overlap in z, so they really interact
 					ttPrint( "step %ld: critter # %ld is eating\n", fStep, c->Number() );
-					fd = f->domain();
-					fb = f->band();
 					float foodEaten = c->eat( f, fEatFitnessParameter, fEat2Consume, fEatThreshold );
 					fFoodEnergyOut += foodEaten;
 					
@@ -2241,10 +2189,10 @@ void TSimulation::Interact()
 
 					if (f->energy() <= 0.0)  // all gone
 					{
-						fDomains[fd].foodCount--;
-						if( fb >= 0 )
-							fDomains[fd].fDomainFoodBand[fb].foodCount--;
-						dfbPrint( "after removing eaten food  from domain %d, band %d, at (%5.2f,%6.2f), D.foodCount = %ld, DFB.foodCount = %ld\n", fd, fb, f->x(), f->z(), fDomains[fd].foodCount, fb >= 0 ? fDomains[fd].fDomainFoodBand[fb].foodCount : -1 );
+						// A food was used up so remove it from the patch count and domain count
+						(f->getPatch())->foodCount--;
+						fDomains[f->domain()].foodCount--;
+
 						objectxsortedlist::gXSortedObjects.removeCurrentObject();   // get it out of the list
 						fStage.RemoveObject( f );  // get it out of the world
 						delete f;				// get it out of memory
@@ -2287,8 +2235,6 @@ void TSimulation::Interact()
 					{
 						// also overlap in z, so they really interact
 						ttPrint( "step %ld: critter # %ld is eating\n", fStep, c->Number() );
-						fd = f->domain();
-						fb = f->band();
 						float foodEaten = c->eat( f, fEatFitnessParameter, fEat2Consume, fEatThreshold );
 						fFoodEnergyOut += foodEaten;
 						
@@ -2296,10 +2242,10 @@ void TSimulation::Interact()
 
 						if (f->energy() <= 0.0)  // all gone
 						{
-							fDomains[fd].foodCount--;
-							if( fb >= 0 )
-								fDomains[fd].fDomainFoodBand[fb].foodCount--;
-							dfbPrint( "after removing eaten food  from domain %d, band %d, at (%5.2f,%6.2f), D.foodCount = %ld, DFB.foodCount = %ld\n", fd, fb, f->x(), f->z(), fDomains[fd].foodCount, fb >= 0 ? fDomains[fd].fDomainFoodBand[fb].foodCount : -1 );
+							// A food was used up so remove it from the patch count and domain count
+							(f->getPatch())->foodCount--;
+							fDomains[f->domain()].foodCount--;
+
 							objectxsortedlist::gXSortedObjects.removeCurrentObject();   // get it out of the list
 							fStage.RemoveObject( f );  // get it out of the world
 							delete f;				// get it out of memory
@@ -2437,9 +2383,9 @@ void TSimulation::Interact()
 
                 newCritter->grow( RecordBrainAnatomy( newCritter->Number() ), RecordBrainFunction( newCritter->Number() ) );
                 fFoodEnergyIn += newCritter->FoodEnergy();
-				float x = drand48() * fDomains[id].xsize + fDomains[id].xleft;
+				float x = drand48() * (fDomains[id].absoluteSizeX - 0.02) + fDomains[id].startX + 0.01;
+				float z = drand48() * (fDomains[id].absoluteSizeZ - 0.02) + fDomains[id].startZ + 0.01;
 				float y = 0.5 * critter::gCritterHeight;
-				float z = drand48() * -globals::worldsize;
 				float yaw = drand48() * 360.0;
 			#if TestWorld
 				x = fDomains[id].xleft  +  0.666 * fDomains[id].xsize;
@@ -2478,24 +2424,24 @@ void TSimulation::Interact()
             newCritter = critter::getfreecritter(this, &fStage);
             Q_CHECK_PTR(newCritter);
 
-            if (fNumberFit && (fNumberDied >= fNumberFit))
+            if( fNumberFit && (fNumberDied >= fNumberFit) )
             {
                 // the list exists and is full
-                if (fFitness1Frequency
-                	&& ((numglobalcreated / fFitness1Frequency) * fFitness1Frequency == numglobalcreated))
+                if( fFitness1Frequency
+                	&& ((numglobalcreated / fFitness1Frequency) * fFitness1Frequency == numglobalcreated) )
                 {
                     // revive 1 fittest
-                    newCritter->Genes()->CopyGenes(fFittest[0]->genes);
+                    newCritter->Genes()->CopyGenes( fFittest[0]->genes );
                     fNumberCreated1Fit++;
 					gaPrint( "%5ld: global creation from one fittest (%4lu) %4ld\n", fStep, fFittest[0]->critterID, fNumberCreated1Fit );
                 }
-                else if (fFitness2Frequency && ((numglobalcreated / fFitness2Frequency) * fFitness2Frequency == numglobalcreated))
+                else if( fFitness2Frequency && ((numglobalcreated / fFitness2Frequency) * fFitness2Frequency == numglobalcreated) )
                 {
                     // mate 2 from array of fittest
-                    newCritter->Genes()->Crossover(fFittest[fFitI]->genes, fFittest[fFitJ]->genes, true);
+                    newCritter->Genes()->Crossover( fFittest[fFitI]->genes, fFittest[fFitJ]->genes, true );
                     fNumberCreated2Fit++;
 					gaPrint( "%5ld: global creation from two (%d, %d) fittest (%4lu, %4lu) %4ld\n", fStep, fFitI, fFitJ, fFittest[fFitI]->critterID, fFittest[fFitJ]->critterID, fNumberCreated2Fit );
-                    ijfitinc(&fFitI, &fFitJ);
+                    ijfitinc( &fFitI, &fFitJ );
                 }
                 else
                 {
@@ -2590,177 +2536,94 @@ void TSimulation::Interact()
     }
 
 	// finally, keep the world's food supply going...
-
-	// first deal with the individual domains
-    if ((long)objectxsortedlist::gXSortedObjects.getCount(FOODTYPE) < fMaxFoodCount) // can't create if too many overall
-    {
-        for (fd = 0; fd < fNumDomains; fd++)
-        {
-			if( fUseProbabilisticFoodBands )
+	// Go through each of the food patches and bring them up to minFoodCount size
+	// and create a new piece based on the foodRate probability
+	if ((long)objectxsortedlist::gXSortedObjects.getCount(FOODTYPE) < fMaxFoodCount) 
+	{
+		for (int domainNumber=0; domainNumber < fNumDomains; domainNumber++)
+		{
+			if (fUseProbabilisticFoodPatches)
 			{
-				if( fDomains[fd].foodCount < fDomains[fd].maxFoodGrown )
+				if (fDomains[domainNumber].foodCount < fDomains[domainNumber].maxFoodGrownCount)	// ??? Matt used .maxFoodCount here, but it should be maxFoodGrown, right? (like it was before patches)
 				{
-					float foodprob = ( fDomains[fd].maxFoodGrown - fDomains[fd].foodCount ) * fFoodRate;
-					if( drand48() < foodprob )
+					float probAdd = (fDomains[domainNumber].maxFoodGrownCount - fDomains[domainNumber].foodCount) * 	fDomains[domainNumber].foodRate;
+					if (drand48() < probAdd)
 					{
-						food* f = new food;
-						fFoodEnergyIn += f->energy();
-						fb = RandomBand();
-						f->setx( drand48() * fDomains[fd].xsize  +  fDomains[fd].xleft );
-						f->setz( drand48() * (fFoodBand[fb].zMax - fFoodBand[fb].zMin)  +  fFoodBand[fb].zMin );
-						f->domain( fd );
-						f->band( fb );
-						objectxsortedlist::gXSortedObjects.add( f );
-						fStage.AddObject( f );
-						fDomains[fd].foodCount++;
-						fDomains[fd].fDomainFoodBand[fb].foodCount++;
-						dfbPrint( "after adding random rate-based food to domain %d, band %d, at (%5.2f,%6.2f), D.foodCount = %ld, DFB.foodCount = %ld\n", fd, fb, f->x(), f->z(), fDomains[fd].foodCount, fb >= 0 ? fDomains[fd].fDomainFoodBand[fb].foodCount : -1 );
+						// Add food to a patch in the domain (chosen based on the patch's fraction)
+						int patchNumber = getRandomPatch(domainNumber);
+						fFoodEnergyIn += fDomains[domainNumber].fFoodPatches[patchNumber].addFood();
+						fDomains[domainNumber].foodCount++;
+					}
+
+					// Grow by the integer part of the foodRate of the domain
+					int foodToGrow = (int)fDomains[domainNumber].foodRate; 
+					for (int i=0; i<foodToGrow; i++)
+					{
+						int patchNumber = getRandomPatch(domainNumber);
+						fFoodEnergyIn += fDomains[domainNumber].fFoodPatches[patchNumber].addFood();
+						fDomains[domainNumber].foodCount++;
 					}
 					
-					long newfood = fDomains[fd].minFoodCount - fDomains[fd].foodCount;
-					for( i = 0; i < newfood; i++ )
+					int newFood = fDomains[domainNumber].minFoodCount - fDomains[domainNumber].foodCount;
+					for (int i=0; i<newFood; i++)
 					{
-						food* f = new food;
-						fFoodEnergyIn += f->energy();
-						fb = RandomBand();
-						f->setx( drand48() * fDomains[fd].xsize  +  fDomains[fd].xleft );
-						f->setz( drand48() * (fFoodBand[fb].zMax - fFoodBand[fb].zMin)  +  fFoodBand[fb].zMin );
-						f->domain( fd );
-						f->band( fb );
-						objectxsortedlist::gXSortedObjects.add( f );
-						fStage.AddObject( f );
-						fDomains[fd].foodCount++;
-						fDomains[fd].fDomainFoodBand[fb].foodCount++;
-						dfbPrint( "after adding random count-based food to domain %d, band %d, at (%5.2f,%6.2f), D.foodCount = %ld, DFB.foodCount = %ld\n", fd, fb, f->x(), f->z(), fDomains[fd].foodCount, fb >= 0 ? fDomains[fd].fDomainFoodBand[fb].foodCount : -1 );
+						int patchNumber = getRandomPatch(domainNumber);
+						fFoodEnergyIn += fDomains[domainNumber].fFoodPatches[patchNumber].addFood();
+						fDomains[domainNumber].foodCount++;
 					}
 				}
 			}
-			else
+			else 
 			{
-				for( fb = 0; fb < fNumFoodBands; fb++ )
+				for( int patchNumber = 0; patchNumber < fDomains[domainNumber].numFoodPatches; patchNumber++ )
 				{
-					if (fDomains[fd].fDomainFoodBand[fb].foodCount < fDomains[fd].fDomainFoodBand[fb].maxFoodGrown)
+
+					if( fDomains[domainNumber].fFoodPatches[patchNumber].foodCount < fDomains[domainNumber].fFoodPatches[patchNumber].maxFoodGrownCount )
 					{
-						float foodprob = (fDomains[fd].fDomainFoodBand[fb].maxFoodGrown - fDomains[fd].fDomainFoodBand[fb].foodCount) * fFoodRate;
-						if (drand48() < foodprob)
+
+						float probAdd = (fDomains[domainNumber].fFoodPatches[patchNumber].maxFoodGrownCount - fDomains[domainNumber].fFoodPatches[patchNumber].foodCount) * fDomains[domainNumber].fFoodPatches[patchNumber].growthRate;
+
+						if (drand48() < probAdd)
 						{
-							food* f = new food;
-							fFoodEnergyIn += f->energy();
-							f->setx( drand48() * fDomains[fd].xsize  +  fDomains[fd].xleft );
-							f->setz( drand48() * (fFoodBand[fb].zMax - fFoodBand[fb].zMin)  +  fFoodBand[fb].zMin );
-							f->domain( fd );
-							f->band( fb );
-							objectxsortedlist::gXSortedObjects.add( f );
-							fStage.AddObject( f );
-							fDomains[fd].foodCount++;
-							fDomains[fd].fDomainFoodBand[fb].foodCount++;
-							dfbPrint( "after adding rate-based food to domain %d, band %d, at (%5.2f,%6.2f), D.foodCount = %ld, DFB.foodCount = %ld\n", fd, fb, f->x(), f->z(), fDomains[fd].foodCount, fb >= 0 ? fDomains[fd].fDomainFoodBand[fb].foodCount : -1 );
+							fFoodEnergyIn += fDomains[domainNumber].fFoodPatches[patchNumber].addFood();
+							fDomains[domainNumber].foodCount++;
 						}
-						
-						long newfood = fDomains[fd].fDomainFoodBand[fb].minFoodCount - fDomains[fd].fDomainFoodBand[fb].foodCount;
-						for (i = 0; i < newfood; i++)
+
+						// Grow by the integer part of the growthRate
+						int foodToGrow = (int)fDomains[domainNumber].fFoodPatches[patchNumber].growthRate; 
+						for (int i=0; i<foodToGrow; i++)
 						{
-							food* f = new food;
-							fFoodEnergyIn += f->energy();
-							f->setx( drand48() * fDomains[fd].xsize  +  fDomains[fd].xleft );
-							f->setz( drand48() * (fFoodBand[fb].zMax - fFoodBand[fb].zMin)  +  fFoodBand[fb].zMin );
-							f->domain( fd );
-							f->band( fb );
-							objectxsortedlist::gXSortedObjects.add( f );
-							fStage.AddObject( f );
-							fDomains[fd].foodCount++;
-							fDomains[fd].fDomainFoodBand[fb].foodCount++;
-							dfbPrint( "after adding count-based food to domain %d, band %d, at (%5.2f,%6.2f), D.foodCount = %ld, DFB.foodCount = %ld\n", fd, fb, f->x(), f->z(), fDomains[fd].foodCount, fb >= 0 ? fDomains[fd].fDomainFoodBand[fb].foodCount : -1 );
+							fFoodEnergyIn += fDomains[domainNumber].fFoodPatches[patchNumber].addFood();
+							fDomains[domainNumber].foodCount++;
+						}
+
+
+						int newFood = fDomains[domainNumber].fFoodPatches[patchNumber].minFoodCount - fDomains[domainNumber].fFoodPatches[patchNumber].foodCount;
+						for (int i=0; i<newFood; i++)
+						{
+							fFoodEnergyIn += fDomains[domainNumber].fFoodPatches[patchNumber].addFood();
+							fDomains[domainNumber].foodCount++;
 						}
 					}
 				}
 			}
-		#ifdef DEBUGCHECK
-            debugcheck("after domain food growth in interact");
-		#endif DEBUGCHECK
-        }
-
-		// then deal with the global food supply if necessary
-        if( (long)objectxsortedlist::gXSortedObjects.getCount(FOODTYPE) < fMaxFoodGrown ) // can get higher due to deaths
-        {
-            const float foodprob = (fMaxFoodGrown - objectxsortedlist::gXSortedObjects.getCount(FOODTYPE)) * fFoodRate;
-            if( drand48() < foodprob )
-            {
-                food* f = new food;
-                fFoodEnergyIn += f->energy();
-                fd = WhichDomain( f->x(), f->z(), 0 );
-				fb = WhichBand( f->z() );
-                f->domain( fd );
-				f->band( fb );
-                objectxsortedlist::gXSortedObjects.add( f );
-                fStage.AddObject( f );
-                fDomains[fd].foodCount++;
-				if( fb >= 0 )
-					fDomains[fd].fDomainFoodBand[fb].foodCount++;
-				dfbPrint( "after adding GLOBAL rate-based food to domain %d, band %d, at (%5.2f,%6.2f), D.foodCount = %ld, DFB.foodCount = %ld\n", fd, fb, f->x(), f->z(), fDomains[fd].foodCount, fb >= 0 ? fDomains[fd].fDomainFoodBand[fb].foodCount : -1 );
-            }
-
-			const long newfood = fMinFoodCount - objectxsortedlist::gXSortedObjects.getCount(FOODTYPE);
-            for( i = 0; i < newfood; i++ )
-            {
-                food* f = new food;
-                fFoodEnergyIn += f->energy();
-                fd = WhichDomain( f->x(), f->z(), 0 );
-				fb = WhichBand( f->z() );
-                f->domain( fd );
-				f->band( fb );
-                objectxsortedlist::gXSortedObjects.add( f );
-                fStage.AddObject( f );
-                fDomains[fd].foodCount++;
-				if( fb >= 0 )
-					fDomains[fd].fDomainFoodBand[fb].foodCount++;
-				dfbPrint( "after adding GLOBAL count-based food to domain %d, band %d, at (%5.2f,%6.2f), D.foodCount = %ld, DFB.foodCount = %ld\n", fd, fb, f->x(), f->z(), fDomains[fd].foodCount, fb >= 0 ? fDomains[fd].fDomainFoodBand[fb].foodCount : -1 );
-            }
-		#ifdef DEBUGCHECK
-            debugcheck("after global food growth in interact");
-		#endif DEBUGCHECK
-        }
-    }
-	
-	static int* foodBandCounts = NULL;
-	static size_t sizeFoodBandCounts;
-	
-	if( fFoodBandStatsFile )
-	{
-		if( !foodBandCounts )
-		{
-			sizeFoodBandCounts = sizeof( *foodBandCounts ) * (fNumFoodBands + 1);	// +1 for not-in-a-food-band case
-			foodBandCounts = (int*) malloc( sizeFoodBandCounts );
-			Q_CHECK_PTR( foodBandCounts );
 		}
-		
-		bzero( foodBandCounts, sizeFoodBandCounts );
-		
-		objectxsortedlist::gXSortedObjects.reset();
-		while( objectxsortedlist::gXSortedObjects.nextObj(FOODTYPE, (gobject**)&f) )
-		{
-			bool inFoodBand = false;
-			for( fb = 0; fb < fNumFoodBands; fb++ )
-			{
-				if( (f->z() >= fFoodBand[fb].zMin) && (f->z() <= fFoodBand[fb].zMax) )
-				{
-					inFoodBand = true;
-					foodBandCounts[fb]++;
-					break;
-				}
-			}
-			
-			if( !inFoodBand )
-				foodBandCounts[fNumFoodBands]++;
-		}
-		
-		fprintf( fFoodBandStatsFile, "%ld: foodBandCounts =", fStep );
-		for( fb = 0; fb < fNumFoodBands; fb++ )
-			fprintf( fFoodBandStatsFile, " %d", foodBandCounts[fb] );
-		fprintf( fFoodBandStatsFile, " (%d)\n", foodBandCounts[fNumFoodBands] );
-		
-		//free( foodBandCounts ); // don't free it anymore, because we only allocated it once
 	}
+
+
+	if (fFoodPatchStatsFile)
+	{
+		fprintf( fFoodPatchStatsFile, "%ld: foodPatchCounts =", fStep );
+		for (int domainNumber=0; domainNumber < fNumDomains; domainNumber++)
+		{
+			for (int patchNumber = 0; patchNumber < fDomains[domainNumber].numFoodPatches; patchNumber++)
+			{
+				fprintf( fFoodPatchStatsFile, " %d", fDomains[domainNumber].fFoodPatches[patchNumber].foodCount );
+			}
+		}
+		fprintf( fFoodPatchStatsFile, "\n");
+	}
+
 }
 
 
@@ -2962,10 +2825,13 @@ void TSimulation::Death(critter* c)
 	// Make any final contributions to the critter's overall, lifetime fitness
     c->lastrewards(fEnergyFitnessParameter, fAgeFitnessParameter); // if any
 
+	FoodPatch* fp;
+	
 	// If critter's carcass is to become food, make it so here
     if (fCrittersRfood
     	&& ((long)objectxsortedlist::gXSortedObjects.getCount(FOODTYPE) < fMaxFoodCount)
-    	&& (fDomains[id].foodCount < fDomains[id].maxFoodCount)
+		&& (fDomains[id].foodCount < fDomains[id].maxFoodCount)	// ??? Matt had commented this out; why?
+		&& ((fp = fDomains[id].whichFoodPatch( c->x(), c->z() )) && (fp->foodCount < fp->maxFoodCount))	// ??? Matt had nothing like this here; why?
     	&& (globals::edges || ((c->x() >= 0.0) && (c->x() <=  globals::worldsize) &&
     	                       (c->z() <= 0.0) && (c->z() >= -globals::worldsize))) )
     {
@@ -2988,12 +2854,16 @@ void TSimulation::Death(critter* c)
 
         if (foodenergy >= food::gMinFoodEnergy)
         {
-			int fd = id;
-			int fb;
             food* f = new food( foodenergy, c->x(), c->z() );
             Q_CHECK_PTR( f );
 			objectxsortedlist::gXSortedObjects.add( f );	// dead critter becomes food
 			fStage.AddObject( f );			// put replacement food into the world
+		#if 1
+			if( fp )
+				fp->foodCount++;
+			fDomains[id].foodCount++;
+		#else
+			// ??? Matt had removed all of this, and not provided the above equivalent
 			fb = WhichBand( f->z() );
 			f->domain( fd );
 			f->band( fb );
@@ -3001,6 +2871,7 @@ void TSimulation::Death(critter* c)
 			if( fb >= 0 )
 				fDomains[fd].fDomainFoodBand[fb].foodCount++;
 			dfbPrint( "after adding critter-based food to domain %d, band %d, at (%5.2f,%6.2f), D.foodCount = %ld, DFB.foodCount = %ld\n", fd, fb, f->x(), f->z(), fDomains[fd].foodCount, fb >= 0 ? fDomains[fd].fDomainFoodBand[fb].foodCount : -1 );
+		#endif
         }
     }
     else
@@ -3010,6 +2881,17 @@ void TSimulation::Death(critter* c)
 	
 	// Must call Die() for the critter before any of the uses of Fitness() below, so we get the final, true, post-death fitness
 	c->Die();
+
+#define HackForProcessingUnitComplexity 1
+
+#if HackForProcessingUnitComplexity
+	if(  fBrainAnatomyRecordAll					||
+		 fBestSoFarBrainAnatomyRecordFrequency	||
+		 fBestRecentBrainAnatomyRecordFrequency	||
+		(fBrainAnatomyRecordSeeds && (c->Number() <= fInitNumCritters))
+	  )
+		c->Brain()->dumpAnatomical( "run/brain/anatomy", "death", c->Number(), c->Fitness() );
+#endif
 
 	if( RecordBrainFunction( c->Number() ) )
 	{
@@ -3165,7 +3047,11 @@ void TSimulation::Death(critter* c)
 		(fBestRecentBrainAnatomyRecordFrequency && oneOfTheBestRecent) ||
 		(fBrainAnatomyRecordSeeds && (c->Number() <= fInitNumCritters))
 	  )
+	{
+	#if ! HackForProcessingUnitComplexity
 		c->Brain()->dumpAnatomical( "run/brain/anatomy", "death", c->Number(), c->Fitness() );
+	#endif
+	}
 	else	// don't want brain anatomies for this critter, so must eliminate the "incept" and "birth" anatomies that were already recorded
 	{
 		char s[256];
@@ -3176,6 +3062,18 @@ void TSimulation::Death(critter* c)
 		sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_birth.txt", c->Number() );
 		if( unlink( s ) )
 			eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
+
+	#if HackForProcessingUnitComplexity
+		// Turns out we didn't want the "death" anatomy either, but we saved it above for the complexity measure
+		if( (fBestSoFarBrainAnatomyRecordFrequency  && !oneOfTheBestSoFar  && (!fBestRecentBrainAnatomyRecordFrequency || !oneOfTheBestRecent))	||
+			(fBestRecentBrainAnatomyRecordFrequency	&& !oneOfTheBestRecent && (!fBestSoFarBrainAnatomyRecordFrequency  || !oneOfTheBestSoFar ))
+		  )
+		{
+			sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_death.txt", c->Number() );
+			if( unlink( s ) )
+				eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
+		}
+	#endif
 	}
 		
 	// If this was one of the seed critters and we're recording their anatomies, then save the data in the appropriate directory
@@ -3341,7 +3239,8 @@ void TSimulation::ReadWorldFile(const char* filename)
     short version;
     char label[64];
 
-#define CurrentWorldfileVersion 18
+// Moved to Simulation.h
+//#define CurrentWorldfileVersion 18
 
     in >> version; in >> label;
 	cout << "version" ses version nl;
@@ -3700,141 +3599,219 @@ void TSimulation::ReadWorldFile(const char* filename)
     }
 
     short id;
-   	fDomains[0].xleft = 0.0;
-    for (id = 0; id < fNumDomains - 1; id++)
-    {
-        in >> fDomains[id].xright; in >> label;
-        cout << "barrier between domains " << id << " and " << (id+1)
-             << " is at x = " << fDomains[id].xright nl;
-        fDomains[id].xsize = fDomains[id].xright - fDomains[id].xleft;
-        fDomains[id+1].xleft = fDomains[id].xright;
-    }
-    fDomains[id].xright = globals::worldsize;
-    fDomains[id].xsize = fDomains[id].xright - fDomains[id].xleft;
+	long totmaxnumcritters = 0;
+	long totminnumcritters = 0;
+	
+	for (id = 0; id < fNumDomains; id++)
+	{
+		in >> fDomains[id].minnumcritters; in >> label;
+		cout << "minnumcritters in domains[" << id << "]" ses fDomains[id].minnumcritters nl;
+		in >> fDomains[id].maxnumcritters; in >> label;
+		cout << "maxnumcritters in domains[" << id << "]" ses fDomains[id].maxnumcritters nl;
+		in >> fDomains[id].initnumcritters; in >> label;
+		cout << "initnumcritters in domains[" << id << "]" ses fDomains[id].initnumcritters nl;
+		if( version >= 9 )
+		{
+			in >> fDomains[id].numberToSeed; in >> label;
+			cout << "numberToSeed in domains[" << id << "]" ses fDomains[id].numberToSeed nl;
+			in >> fDomains[id].probabilityOfMutatingSeeds; in >> label;
+			cout << "probabilityOfMutatingSeeds in domains [" << id << "]" ses fDomains[id].probabilityOfMutatingSeeds nl;
+		}
+		else
+		{
+			fDomains[id].numberToSeed = 0;
+			fDomains[id].probabilityOfMutatingSeeds = 0.0;
+		}
+		if (version >= 19)
+		{
+			in >> fDomains[id].centerX; in >> label;
+			cout << "centerX of domains[" << id << "]" ses fDomains[id].centerX nl;
+			in >> fDomains[id].centerZ; in >> label;
+			cout << "centerZ of domains[" << id << "]" ses fDomains[id].centerZ nl;
+			in >> fDomains[id].sizeX; in >> label;
+			cout << "sizeX of domains[" << id << "]" ses fDomains[id].sizeX nl;
+			in >> fDomains[id].sizeZ; in >> label;
+			cout << "sizeZ of domains[" << id << "]" ses fDomains[id].sizeZ nl;
 
-    if (fNumDomains > 1)
-    {
-        long totmaxnumcritters = 0;
-        long totminnumcritters = 0;
-		long totInitFoodCount = 0;
-		long totMinFoodCount = 0;
-		long totMaxFoodGrown = 0;
-		long totMaxFoodCount = 0;
-		
-        for (id = 0; id < fNumDomains; id++)
-        {
-            in >> fDomains[id].minnumcritters; in >> label;
-            cout << "minnumcritters in domains[" << id << "]" ses fDomains[id].minnumcritters nl;
-            in >> fDomains[id].maxnumcritters; in >> label;
-            cout << "maxnumcritters in domains[" << id << "]" ses fDomains[id].maxnumcritters nl;
-            in >> fDomains[id].initnumcritters; in >> label;
-            cout << "initnumcritters in domains[" << id << "]" ses fDomains[id].initnumcritters nl;
-			if( version >= 9 )
-			{
-				in >> fDomains[id].numberToSeed; in >> label;
-				cout << "numberToSeed in domains[" << id << "]" ses fDomains[id].numberToSeed nl;
-				in >> fDomains[id].probabilityOfMutatingSeeds; in >> label;
-				cout << "probabilityOfMutatingSeeds in domains [" << id << "]" ses fDomains[id].probabilityOfMutatingSeeds nl;
-			}
-			else
-			{
-				fDomains[id].numberToSeed = 0;
-				fDomains[id].probabilityOfMutatingSeeds = 0.0;
-			}
+			fDomains[id].absoluteSizeX = globals::worldsize * fDomains[id].sizeX;
+			fDomains[id].absoluteSizeZ = globals::worldsize * fDomains[id].sizeZ;
+
+			fDomains[id].startX = fDomains[id].centerX * globals::worldsize - (fDomains[id].absoluteSizeX / 2.0);
+			fDomains[id].startZ = - fDomains[id].centerZ * globals::worldsize - (fDomains[id].absoluteSizeZ / 2.0);
+
+			fDomains[id].endX = fDomains[id].centerX * globals::worldsize + (fDomains[id].absoluteSizeX / 2.0);
+			fDomains[id].endZ = - fDomains[id].centerZ * globals::worldsize + (fDomains[id].absoluteSizeZ / 2.0);
+
+			printf("NEW DOMAIN\n");
+			printf("\tstartX: %.2f\n", fDomains[id].startX);
+			printf("\tstartZ: %.2f\n", fDomains[id].startZ);
+			printf("\tendX: %.2f\n", fDomains[id].endX);
+			printf("\tendZ: %.2f\n", fDomains[id].endZ);
+			printf("\tabsoluteX: %.2f\n", fDomains[id].absoluteSizeX);
+			printf("\tabsoluteZ: %.2f\n", fDomains[id].absoluteSizeZ);
+
+			in >> fDomains[id].numFoodPatches; in >> label;
+			cout << "numFoodPatches of domains[" << id << "]" ses fDomains[id].numFoodPatches nl;
+			in >> fDomains[id].numBrickPatches; in >> label;
+			cout << "numBrickPatches of domains[" << id << "]" ses fDomains[id].numBrickPatches nl;
+			in >> fDomains[id].foodRate; in >> label;
+			cout << "foodRate of domains[" << id << "]" ses fDomains[id].foodRate nl;
+			in >> fDomains[id].initFoodCount; in >> label;
+			cout << "initFoodCount of domains[" << id << "]" ses fDomains[id].initFoodCount nl;
             in >> fDomains[id].minFoodCount; in >> label;
-            cout << "minFoodCount in domains[" << id << "]" ses fDomains[id].minFoodCount nl;
+			cout << "minFoodCount of domains[" << id << "]" ses fDomains[id].minFoodCount nl;
             in >> fDomains[id].maxFoodCount; in >> label;
-            cout << "maxFoodCount in domains[" << id << "]" ses fDomains[id].maxFoodCount nl;
-            in >> fDomains[id].maxFoodGrown; in >> label;
-            cout << "maxFoodGrown in domains[" << id << "]" ses fDomains[id].maxFoodGrown nl;
-            in >> fDomains[id].initFoodCount; in >> label;
-            cout << "initFoodCount in domains[" << id << "]" ses fDomains[id].initFoodCount nl;
-            totmaxnumcritters += fDomains[id].maxnumcritters;
-            totminnumcritters += fDomains[id].minnumcritters;
-			totInitFoodCount += fDomains[id].initFoodCount;
-			totMinFoodCount += fDomains[id].minFoodCount;
-			totMaxFoodGrown += fDomains[id].maxFoodGrown;
-			totMaxFoodCount += fDomains[id].maxFoodCount;
-        }
-        if (totmaxnumcritters > fMaxCritters)
-        {
-			char tempstring[256];
-            sprintf(tempstring,"%s %ld %s %ld %s",
-                "The maximum number of organisms in the world (",
-                fMaxCritters,
-                ") is < the maximum summed over domains (",
-				totmaxnumcritters,
-                "), so there may still be some indirect global influences.");
-            errorflash(0, tempstring);
-        }
-        if (totminnumcritters < fMinNumCritters)
-        {
-			char tempstring[256];
-            sprintf(tempstring,"%s %ld %s %ld %s",
-                "The minimum number of organisms in the world (",
-                fMinNumCritters,
-                ") is > the minimum summed over domains (",
-                totminnumcritters,
-                "), so there may still be some indirect global influences.");
-            errorflash(0,tempstring);
-        }
-        if (totInitFoodCount != fInitialFoodCount)
-        {
-			char tempstring[256];
-            sprintf(tempstring,"%s %ld %s %ld %s",
-                "The initial number of food pieces in the world (",
-                fInitialFoodCount,
-                ") is != the initial number of food pieces summed over domains (",
-                totInitFoodCount,
-                "), so there may be some unwanted global influences.");
-            errorflash(0,tempstring);
-        }
-        if (totMinFoodCount != fMinFoodCount)
-        {
-			char tempstring[256];
-            sprintf(tempstring,"%s %ld %s %ld %s",
-                "The minimum number of food pieces in the world (",
-                fMinFoodCount,
-                ") is != the minimum number of food pieces summed over domains (",
-                totMinFoodCount,
-                "), so there may be some unwanted global influences.");
-            errorflash(0,tempstring);
-        }
-        if (totMaxFoodGrown != fMaxFoodGrown)
-        {
-			char tempstring[256];
-            sprintf(tempstring,"%s %ld %s %ld %s",
-                "The maximum number of food pieces grown in the world (",
-                fMaxFoodGrown,
-                ") is != the maximum number of food pieces grown summed over domains (",
-                totMaxFoodGrown,
-                "), so there may be some unwanted global influences.");
-            errorflash(0,tempstring);
-        }
-        if (totMaxFoodCount != fMaxFoodCount)
-        {
-			char tempstring[256];
-            sprintf(tempstring,"%s %ld %s %ld %s",
-                "The maximum number of food pieces in the world (",
-                fMaxFoodCount,
-                ") is != the maximum number of food pieces summed over domains (",
-                totMaxFoodCount,
-                "), so there may be some unwanted global influences.");
-            errorflash(0,tempstring);
-        }
-    }
-    else
-    {
-        fDomains[0].minnumcritters = fMinNumCritters;
-        fDomains[0].maxnumcritters = fMaxCritters;
-        fDomains[0].initnumcritters = fInitNumCritters;
-        fDomains[0].minFoodCount = fMinFoodCount;
-        fDomains[0].maxFoodCount = fMaxFoodCount;
-        fDomains[0].maxFoodGrown = fMaxFoodGrown;
-        fDomains[0].initFoodCount = fInitialFoodCount;
-		fDomains[0].numberToSeed = fNumberToSeed;
-		fDomains[0].probabilityOfMutatingSeeds = fProbabilityOfMutatingSeeds;
-    }
+			cout << "maxFoodCount of domains[" << id << "]" ses fDomains[id].maxFoodCount nl;
+			in >> fDomains[id].maxFoodGrownCount; in >> label;
+			cout << "maxFoodGrownCount of domains[" << id << "]" ses fDomains[id].maxFoodGrownCount nl;
+
+
+			// Create an array of FoodPatches
+			fDomains[id].fFoodPatches = new FoodPatch[fDomains[id].numFoodPatches];
+			float patchFractionSpecified = 0.0;
+
+			for (int i = 0; i < fDomains[id].numFoodPatches; i++)
+			{
+				float tmpFraction, tmpRate;
+				float centerX, centerZ;  // should be from 0.0 -> 1.0
+				float sizeX, sizeZ;  // should be from 0.0 -> 1.0
+				float nhsize;
+				int initFood, minFood, maxFood, maxFoodGrown;
+				int shape, distribution;
+
+				in >> tmpFraction; in >> label;
+				cout << "tmpFraction" ses tmpFraction nl;
+				in >> tmpRate; in >> label;
+				cout << "tmpRate" ses tmpRate nl;
+				in >> initFood; in >> label;
+				cout << "initFood" ses initFood nl;
+				in >> minFood; in >> label;
+				cout << "minFood" ses minFood nl;
+				in >> maxFood; in >> label;
+				cout << "maxFood" ses maxFood nl;
+				in >> maxFoodGrown; in >> label;
+				cout << "maxFoodGrown" ses maxFoodGrown nl;
+				in >> centerX; in >> label;
+				cout << "centerX" ses centerX nl;
+				in >> centerZ; in >> label;
+				cout << "centerZ" ses centerZ nl;
+				in >> sizeX; in >> label;
+				cout << "sizeX" ses sizeX nl;
+				in >> sizeZ; in >> label;
+				cout << "sizeZ" ses sizeZ nl;
+				in >> shape; in >> label;
+				cout << "shape" ses shape nl;
+				in >> distribution; in >> label;
+				cout << "distribution" ses distribution nl;
+				in >> nhsize; in >> label;
+				cout << "neighborhoodSize" ses nhsize nl;
+
+				// If we have a legitimate fraction specified, see if we need to set the food limits
+				if( tmpFraction > 0.0 )
+				{
+					// Check for negative values...if found then use global food counts and this patch's fraction
+					if (initFood < 0) initFood = (int)(tmpFraction * fDomains[id].initFoodCount);
+					if (minFood < 0) minFood = (int)(tmpFraction * fDomains[id].minFoodCount);
+					if (maxFood < 0) maxFood = (int)(tmpFraction * fDomains[id].maxFoodCount);
+					if (maxFoodGrown < 0) maxFoodGrown = (int)(tmpFraction * fDomains[id].maxFoodGrownCount);
+				}
+
+				// Check if rate is 0.0...if so, then set this patch's rate to the domain's rate
+				if (tmpRate == 0.0)
+					tmpRate = fDomains[id].foodRate;
+
+				fDomains[id].fFoodPatches[i].init(centerX, centerZ, sizeX, sizeZ, tmpRate, initFood, minFood, maxFood, maxFoodGrown, tmpFraction, shape, distribution, nhsize, &fStage, &(fDomains[id]), id);
+
+				patchFractionSpecified += tmpFraction;
+
+			}
+
+			// If all the fractions are 0.0, then set fractions based on patch area
+			if (patchFractionSpecified == 0.0)
+			{
+				float totalArea = 0.0;
+				// First calculate the total area from all the patches
+				for (int i=0; i<fDomains[id].numFoodPatches; i++)
+				{
+					totalArea += fDomains[id].fFoodPatches[i].getArea();
+				}
+				// Then calculate the fraction for each patch
+				for (int i=0; i<fDomains[id].numFoodPatches; i++)
+				{
+					float newFraction = fDomains[id].fFoodPatches[i].getArea() / totalArea;
+					fDomains[id].fFoodPatches[i].setInitCounts((int)(newFraction * fDomains[id].initFoodCount), (int)(newFraction * fDomains[id].minFoodCount), (int)(newFraction * fDomains[id].maxFoodCount), (int)(newFraction * fDomains[id].maxFoodGrownCount), newFraction);
+					patchFractionSpecified += newFraction;
+				}
+			}
+			
+			// Make sure fractions add up to 1.0
+			if (patchFractionSpecified != 1.0)
+			{
+				printf("Patch Fractions sum to %f\n", patchFractionSpecified);
+				printf("FoodPatch fractions do not sum to 1!\n");
+				exit(1);
+			}
+
+			// Create an array of BrickPatches
+			fDomains[id].fBrickPatches = new BrickPatch[fDomains[id].numBrickPatches];
+			for (int i = 0; i < fDomains[id].numBrickPatches; i++)
+			{
+				float centerX, centerZ;  // should be from 0.0 -> 1.0
+				float sizeX, sizeZ;  // should be from 0.0 -> 1.0
+				float nhsize;
+				int shape, distribution, brickCount;
+
+				in >> centerX; in >> label;
+				cout << "centerX" ses centerX nl;
+				in >> centerZ; in >> label;
+				cout << "centerZ" ses centerZ nl;
+				in >> sizeX; in >> label;
+				cout << "sizeX" ses sizeX nl;
+				in >> sizeZ; in >> label;
+				cout << "sizeZ" ses sizeZ nl;
+				in >> brickCount; in >> label;
+				cout << "brickCount" ses brickCount nl;
+				in >> shape; in >> label;
+				cout << "shape" ses shape nl;
+				in >> distribution; in >> label;
+				cout << "distribution" ses distribution nl;
+				in >> nhsize; in >> label;
+				cout << "neighborhoodSize" ses nhsize nl;
+
+				fDomains[id].fBrickPatches[i].init(centerX, centerZ, sizeX, sizeZ, brickCount, shape, distribution, nhsize, &fStage, &(fDomains[id]), id);
+			}
+
+		}
+
+		totmaxnumcritters += fDomains[id].maxnumcritters;
+		totminnumcritters += fDomains[id].minnumcritters;
+	}
+
+
+	if (totmaxnumcritters > fMaxCritters)
+	{
+		char tempstring[256];
+		sprintf(tempstring,"%s %ld %s %ld %s",
+			"The maximum number of organisms in the world (",
+			fMaxCritters,
+			") is < the maximum summed over domains (",
+			totmaxnumcritters,
+			"), so there may still be some indirect global influences.");
+		errorflash(0, tempstring);
+	}
+	if (totminnumcritters < fMinNumCritters)
+	{
+		char tempstring[256];
+		sprintf(tempstring,"%s %ld %s %ld %s",
+			"The minimum number of organisms in the world (",
+			fMinNumCritters,
+			") is > the minimum summed over domains (",
+			totminnumcritters,
+			"), so there may still be some indirect global influences.");
+		errorflash(0,tempstring);
+	}
+
+
 
     for (id = 0; id < fNumDomains; id++)
     {
@@ -3845,90 +3822,18 @@ void TSimulation::ReadWorldFile(const char* filename)
         fDomains[id].numdied = 0;
         fDomains[id].lastcreate = 0;
         fDomains[id].maxgapcreate = 0;
-        fDomains[id].foodCount = 0;
         fDomains[id].ifit = 0;
         fDomains[id].jfit = 1;
         fDomains[id].fittest = NULL;
-    }
-	
-	if( version >= 10 )
-	{
-		in >> fNumFoodBands; in >> label;
-		cout << "numFoodBands" ses fNumFoodBands nl;
-		
-		if( fNumFoodBands > 0 )
-		{
-			float totalFoodFraction = 0.0;
-			fFoodBandTotalZ = 0.0;
-			
-			fFoodBand = (FoodBand*) malloc( sizeof(FoodBand) * fNumFoodBands );
-			Q_CHECK_PTR( fFoodBand );
-			
-			for( int i = 0; i < fNumFoodBands; i++ )
-			{
-				float val;
-				
-				in >> val; in >> label;
-				fFoodBand[i].zMin = val * globals::worldsize;
-				cout << "FoodBand[" << i << "].zMin" ses val sopar fFoodBand[i].zMin pnl;
-				
-				in >> val; in >> label;
-				fFoodBand[i].zMax = val * globals::worldsize;
-				cout << "FoodBand[" << i << "].zMax" ses val sopar fFoodBand[i].zMax pnl;
-				
-				fFoodBandTotalZ += fFoodBand[i].zMax - fFoodBand[i].zMin;
-				
-				if( version >= 16 )
-				{
-					in >> fFoodBand[i].fraction; in >> label;
-					cout << "FoodBand[" << i << "].fraction" ses fFoodBand[i].fraction nl;
-				}
-				else
-					fFoodBand[i].fraction = 1.0;
-				
-				totalFoodFraction += fFoodBand[i].fraction;
-			}
-			
-			if( floor( totalFoodFraction + 1.e-5 ) != 1 )
-			{
-				cerr << "*** Total food fraction does not equal 1.0 (probably an error) ***" nl;
-			}
-		}
-	}
-	
-	if( (fNumFoodBands <= 0) || (version < 10) )
-	{
-		if( version >= 10 )
-		{
-			cout << "numFoodBands must be 1 or greater; setting to 1 band, extending over entire world" nl;
-		}
-		
-		fNumFoodBands = 1;
-		cout << "_numFoodBands" ses fNumFoodBands nl;
-		
-		fFoodBand = (FoodBand*) malloc( sizeof(FoodBand) * fNumFoodBands );
-		Q_CHECK_PTR( fFoodBand );
-		
-		fFoodBand[0].zMin = -globals::worldsize;
-		fFoodBand[0].zMax = 0.0;
-		fFoodBand[0].fraction = 1.0;
-		
-		fFoodBandTotalZ = globals::worldsize;
-		
-		cout << "_FoodBand[0].zMin" ses "-1.0" sopar fFoodBand[0].zMin pnl;
-		cout << "_FoodBand[0].zMax" ses "0.0" sopar fFoodBand[0].zMax pnl;
-		cout << "_FoodBand[0].fraction" ses "1.0" nl;
 	}
 	
 	if( version >= 17 )
 	{
-		in >> fUseProbabilisticFoodBands; in >> label;
-		cout << "useProbabilisticFoodBands" ses fUseProbabilisticFoodBands nl;
+		in >> fUseProbabilisticFoodPatches; in >> label;
+		cout << "useProbabilisticFoodPatches" ses fUseProbabilisticFoodPatches nl;
 	}
 	else
-		fUseProbabilisticFoodBands = false;
-	
-	InitDomainFoodBands();	
+		fUseProbabilisticFoodPatches = false;
 
     if (version < 5)
     {
@@ -4056,8 +3961,8 @@ void TSimulation::ReadWorldFile(const char* filename)
 
 	if( version >= 15 )
 	{
-		in >> fRecordFoodBandStats; in >> label;
-		cout << "recordFoodBandStats" ses fRecordFoodBandStats nl;
+		in >> fRecordFoodPatchStats; in >> label;
+		cout << "recordFoodPatchStats" ses fRecordFoodPatchStats nl;
 	}
 
 
@@ -4228,7 +4133,6 @@ void TSimulation::Dump()
         out << fDomains[id].numdied nl;
         out << fDomains[id].lastcreate nl;
         out << fDomains[id].maxgapcreate nl;
-        out << fDomains[id].foodCount nl;
         out << fDomains[id].ifit nl;
         out << fDomains[id].jfit nl;
 
@@ -4298,26 +4202,14 @@ static int DomainError(float x, float z, short d, short nd)
 //---------------------------------------------------------------------------
 short TSimulation::WhichDomain(float x, float z, short d)
 {
-	if (((x >= fDomains[d].xleft) && (x <= fDomains[d].xright))
-		|| ((d == 0) && (x <= fDomains[d].xright))
-		|| ((d == fNumDomains-1) && (x >= fDomains[d].xleft)))
-		return d;
-		
-	short nd = d;
-	for (short i = 0; i < fNumDomains - 1; i++)
+	for (short i = 0; i < fNumDomains; i++)
 	{
-		nd++;
-		
-		if (nd > (fNumDomains - 1))
-			nd = 0;
-			
-		if (((x >= fDomains[nd].xleft) && (x <= fDomains[nd].xright))
-			|| ((nd == 0) && (x <= fDomains[nd].xright))
-			|| ((nd == fNumDomains - 1) && (x >= fDomains[nd].xleft)) )
-			return nd;
+		if (((x >= fDomains[i].startX) && (x <= fDomains[i].endX)) && 
+			((z >= fDomains[i].startZ) && (z <= fDomains[i].endZ)))
+			return i;
 	}
-		
-	return DomainError(x, z, d, nd);
+
+	return DomainError(x, z, d, d);
 }
 
 
@@ -4332,23 +4224,6 @@ void TSimulation::SwitchDomain(short newDomain, short oldDomain)
 		
 	fDomains[newDomain].numcritters++;
 	fDomains[oldDomain].numcritters--;
-}
-
-
-//---------------------------------------------------------------------------
-// TSimulation::WhichBand
-//---------------------------------------------------------------------------
-int TSimulation::WhichBand( float z )
-{
-	for( int b = 0; b < fNumFoodBands; b++ )
-	{
-		if( (z >= fFoodBand[b].zMin) && (z <= fFoodBand[b].zMax) )
-		{
-			return( b );
-		}
-	}
-	
-	return( -1 );	// not found in a band (shouldn't be possible, unless global and domain counts are messed up, or crittersRfood and one died outside a food band)
 }
 
 
@@ -4449,20 +4324,6 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 	list.push_back( strdup( t ) );
 
 	sprintf( t, " -smite  = %4ld", fNumberDiedSmite );
-	list.push_back( strdup( t ) );
-	
-	sprintf( t, "food = %d", objectxsortedlist::gXSortedObjects.getCount(FOODTYPE) );
-	if (fNumDomains > 1)
-	{
-	    sprintf( t2, " (%ld",fDomains[0].foodCount );
-	    strcat( t, t2 );
-	    for (id = 1; id < fNumDomains; id++)
-	    {
-	        sprintf( t2, ",%ld",fDomains[id].foodCount );
-	        strcat( t, t2 );
-	    }
-	    strcat(t,")" );
-	}
 	list.push_back( strdup( t ) );
 
     sprintf( t, "birthDenials = %ld", fBirthDenials );
@@ -4577,38 +4438,63 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 				fFramesPerSecondOverall,       fSecondsPerFrameOverall  );
 	list.push_back( strdup( t ) );
 	
-	if( fRecordFoodBandStats )
+	if( fRecordFoodPatchStats )
 	{
-		unsigned long numCrittersInAnyFoodBand = 0;
-		unsigned long numCrittersWithin5UnitsOfAnyFoodBand = 0;
-		unsigned long numCrittersWithin10UnitsOfAnyFoodBand = 0;
-		float makePercent = 100.0 / objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE);
+		int numCrittersInAnyFoodPatchInAnyDomain = 0;
+		int numCrittersInOuterRangesInAnyDomain = 0;
 
-		for( int i = 0; i < fNumFoodBands; i++ )
+		for( int domainNumber = 0; domainNumber < fNumDomains; domainNumber++ )
 		{
-			sprintf( t, "FB%d %3lu %3lu %3lu  %4.1f %4.1f %4.1f",
-						i,
-						fNumCrittersInFoodBand[i],
-						fNumCrittersInFoodBand[i] + fNumCrittersWithin5UnitsOfFoodBand[i],
-						fNumCrittersInFoodBand[i] + fNumCrittersWithin5UnitsOfFoodBand[i] + fNumCrittersWithin10UnitsOfFoodBand[i],
-						fNumCrittersInFoodBand[i] * makePercent,
-					   (fNumCrittersInFoodBand[i] + fNumCrittersWithin5UnitsOfFoodBand[i]) * makePercent,
-					   (fNumCrittersInFoodBand[i] + fNumCrittersWithin5UnitsOfFoodBand[i] + fNumCrittersWithin10UnitsOfFoodBand[i]) * makePercent );
+			sprintf( t, "Domain %d", domainNumber);
 			list.push_back( strdup( t ) );
 			
-			numCrittersInAnyFoodBand += fNumCrittersInFoodBand[i];
-			numCrittersWithin5UnitsOfAnyFoodBand += fNumCrittersWithin5UnitsOfFoodBand[i];
-			numCrittersWithin10UnitsOfAnyFoodBand += fNumCrittersWithin10UnitsOfFoodBand[i];
+			int numCrittersInAnyFoodPatch = 0;
+			int numCrittersInOuterRanges = 0;
+
+			for( int i = 0; i < fDomains[domainNumber].numFoodPatches; i++ )
+			{
+				numCrittersInAnyFoodPatch += fDomains[domainNumber].fFoodPatches[i].critterInsideCount;
+				numCrittersInOuterRanges += fDomains[domainNumber].fFoodPatches[i].critterNeighborhoodCount;
+			}
+			
+			float makePercent = 100.0 / fDomains[domainNumber].numcritters;;
+			float makePercentNorm = 100.0 / numCrittersInAnyFoodPatch;
+
+			for( int i = 0; i < fDomains[domainNumber].numFoodPatches; i++ )
+			{
+				sprintf( t, "  FP%d %3d %3d  %4.1f %4.1f  %4.1f",
+						 i,
+						 fDomains[domainNumber].fFoodPatches[i].critterInsideCount,
+						 fDomains[domainNumber].fFoodPatches[i].critterInsideCount + fDomains[domainNumber].fFoodPatches[i].critterNeighborhoodCount,
+						 fDomains[domainNumber].fFoodPatches[i].critterInsideCount * makePercent,
+						(fDomains[domainNumber].fFoodPatches[i].critterInsideCount + fDomains[domainNumber].fFoodPatches[i].critterNeighborhoodCount) * makePercent,
+						 fDomains[domainNumber].fFoodPatches[i].critterInsideCount * makePercentNorm );
+				list.push_back( strdup( t ) );
+			}
+			
+			
+			sprintf( t, "  FP* %3d %3d  %4.1f %4.1f 100.0",
+					 numCrittersInAnyFoodPatch,
+					 numCrittersInAnyFoodPatch + numCrittersInOuterRanges,
+					 numCrittersInAnyFoodPatch * makePercent,
+					(numCrittersInAnyFoodPatch + numCrittersInOuterRanges) * makePercent );
+			list.push_back( strdup( t ) );
+
+			numCrittersInAnyFoodPatchInAnyDomain += numCrittersInAnyFoodPatch;
+			numCrittersInOuterRangesInAnyDomain += numCrittersInOuterRanges;
 		}
 
-		sprintf( t, "FB* %3lu %3lu %3lu  %4.1f %4.1f %4.1f",
-					numCrittersInAnyFoodBand,
-					numCrittersInAnyFoodBand + numCrittersWithin5UnitsOfAnyFoodBand,
-					numCrittersInAnyFoodBand + numCrittersWithin5UnitsOfAnyFoodBand + numCrittersWithin10UnitsOfAnyFoodBand,
-					numCrittersInAnyFoodBand * makePercent,
-				   (numCrittersInAnyFoodBand + numCrittersWithin5UnitsOfAnyFoodBand) * makePercent,
-				   (numCrittersInAnyFoodBand + numCrittersWithin5UnitsOfAnyFoodBand + numCrittersWithin10UnitsOfAnyFoodBand) * makePercent );
-		list.push_back( strdup( t ) );
+		if( fNumDomains > 1 )
+		{
+			float makePercent = 100.0 / objectxsortedlist::gXSortedObjects.getCount( CRITTERTYPE );
+
+			sprintf( t, "**FP* %3d %3d  %4.1f %4.1f 100.0",
+					 numCrittersInAnyFoodPatchInAnyDomain,
+					 numCrittersInAnyFoodPatchInAnyDomain + numCrittersInOuterRangesInAnyDomain,
+					 numCrittersInAnyFoodPatchInAnyDomain * makePercent,
+					(numCrittersInAnyFoodPatchInAnyDomain + numCrittersInOuterRangesInAnyDomain) * makePercent );
+			list.push_back( strdup( t ) );
+		}
 	}
 	
     if( !(fStep % fStatusFrequency) || (fStep == 1) )
@@ -4675,228 +4561,23 @@ void TSimulation::Update()
 		//QApplication::postEvent(fTextStatusWindow, new QCustomEvent(kUpdateEventType));	
 }
 
-//---------------------------------------------------------------------------
-// TSimulation::InitDomainFoodBands
-//
-// Initialize all the per-domain, per-food-band data structures.
-//---------------------------------------------------------------------------
-void TSimulation::InitDomainFoodBands()
+
+int TSimulation::getRandomPatch( int domainNumber )
 {
-	for( int d = 0; d < fNumDomains; d++ )
+	float ranval = drand48();
+	float sumFractions = 0.0;
+				
+	for( short i = 0; i < fDomains[domainNumber].numFoodPatches; i++ )
 	{
-		int initFoodSum = 0;
-		int minFoodSum = 0;
-		int maxFoodGrownSum = 0;
-		int maxFoodSum = 0;
-		
-		fDomains[d].fDomainFoodBand = (DomainFoodBand*) malloc( sizeof( DomainFoodBand ) * fNumFoodBands );
-		Q_CHECK_PTR( fDomains[d].fDomainFoodBand );
-		
-		for( int b = 0; b < fNumFoodBands; b++ )
-		{
-			double count;
-
-			count = fDomains[d].initFoodCount * fFoodBand[b].fraction;
-			fDomains[d].fDomainFoodBand[b].initFoodCount = nint( count );
-			fDomains[d].fDomainFoodBand[b].initFoodRemainder = count - fDomains[d].fDomainFoodBand[b].initFoodCount;
-			initFoodSum += fDomains[d].fDomainFoodBand[b].initFoodCount;
-			
-			count = fDomains[d].minFoodCount * fFoodBand[b].fraction;
-			fDomains[d].fDomainFoodBand[b].minFoodCount = nint( count );
-			fDomains[d].fDomainFoodBand[b].minFoodRemainder = count - fDomains[d].fDomainFoodBand[b].minFoodCount;
-			minFoodSum += fDomains[d].fDomainFoodBand[b].minFoodCount;
-			
-			count = fDomains[d].maxFoodGrown * fFoodBand[b].fraction;
-			fDomains[d].fDomainFoodBand[b].maxFoodGrown = nint( count );
-			fDomains[d].fDomainFoodBand[b].maxFoodGrownRemainder = count - fDomains[d].fDomainFoodBand[b].maxFoodGrown;
-			maxFoodGrownSum += fDomains[d].fDomainFoodBand[b].maxFoodGrown;
-			
-			count = fDomains[d].maxFoodCount * fFoodBand[b].fraction;
-			fDomains[d].fDomainFoodBand[b].maxFoodCount = nint( count );
-			fDomains[d].fDomainFoodBand[b].maxFoodRemainder = count - fDomains[d].fDomainFoodBand[b].maxFoodCount;
-			maxFoodSum += fDomains[d].fDomainFoodBand[b].maxFoodCount;
-			
-			fDomains[d].fDomainFoodBand[b].foodCount = 0;
-		}
-		
-		// If integerizing resulted in too many food pieces,
-		// keep removing food pieces until we have the right number
-		while( initFoodSum > fDomains[d].initFoodCount )
-		{
-			float minRemainder = 2.0;	// can't be this high
-			int minRemainderBand = 0;
-			
-			for( int b = 0; b < fNumFoodBands; b++ )
-			{
-				if( fDomains[d].fDomainFoodBand[b].initFoodRemainder < minRemainder )
-				{
-					minRemainder = fDomains[d].fDomainFoodBand[b].initFoodRemainder;
-					minRemainderBand = b;
-					fDomains[d].fDomainFoodBand[b].initFoodRemainder += 1.0;
-				}
-			}
-			
-			fDomains[d].fDomainFoodBand[minRemainderBand].initFoodCount--;
-			initFoodSum--;
-		}
-		
-		// If integerizing resulted in too few food pieces,
-		// keep adding food pieces until we have the right number
-		while( initFoodSum < fDomains[d].initFoodCount )
-		{
-			float maxRemainder = -2.0;	// can't be this low
-			int maxRemainderBand = 0;
-			
-			for( int b = 0; b < fNumFoodBands; b++ )
-			{
-				if( fDomains[d].fDomainFoodBand[b].initFoodRemainder > maxRemainder )
-				{
-					maxRemainder = fDomains[d].fDomainFoodBand[b].initFoodRemainder;
-					maxRemainderBand = b;
-					fDomains[d].fDomainFoodBand[b].initFoodRemainder -= 1.0;
-				}
-			}
-			
-			fDomains[d].fDomainFoodBand[maxRemainderBand].initFoodCount++;
-			initFoodSum++;
-		}
-
-		// If integerizing resulted in too many food pieces,
-		// keep removing food pieces until we have enough
-		while( minFoodSum > fDomains[d].minFoodCount )
-		{
-			float minRemainder = 2.0;	// can't be this high
-			int minRemainderBand = 0;
-			
-			for( int b = 0; b < fNumFoodBands; b++ )
-			{
-				if( fDomains[d].fDomainFoodBand[b].minFoodRemainder < minRemainder )
-				{
-					minRemainder = fDomains[d].fDomainFoodBand[b].minFoodRemainder;
-					minRemainderBand = b;
-					fDomains[d].fDomainFoodBand[b].minFoodRemainder += 1.0;
-				}
-			}
-			
-			fDomains[d].fDomainFoodBand[minRemainderBand].minFoodCount--;
-			minFoodSum--;
-		}
-		
-		// If integerizing resulted in too few food pieces,
-		// keep adding food pieces until we have enough
-		while( minFoodSum < fDomains[d].minFoodCount )
-		{
-			float maxRemainder = -2.0;	// can't be this low
-			int maxRemainderBand = 0;
-			
-			for( int b = 0; b < fNumFoodBands; b++ )
-			{
-				if( fDomains[d].fDomainFoodBand[b].minFoodRemainder > maxRemainder )
-				{
-					maxRemainder = fDomains[d].fDomainFoodBand[b].minFoodRemainder;
-					maxRemainderBand = b;
-					fDomains[d].fDomainFoodBand[b].minFoodRemainder -= 1.0;
-				}
-			}
-			
-			fDomains[d].fDomainFoodBand[maxRemainderBand].minFoodCount++;
-			minFoodSum++;
-		}
-
-		// If integerizing resulted in too many food pieces,
-		// keep removing food pieces until we have enough
-		while( maxFoodGrownSum > fDomains[d].maxFoodGrown )
-		{
-			float minRemainder = 2.0;	// can't be this high
-			int minRemainderBand = 0;
-			
-			for( int b = 0; b < fNumFoodBands; b++ )
-			{
-				if( fDomains[d].fDomainFoodBand[b].maxFoodGrownRemainder < minRemainder )
-				{
-					minRemainder = fDomains[d].fDomainFoodBand[b].maxFoodGrownRemainder;
-					minRemainderBand = b;
-					fDomains[d].fDomainFoodBand[b].maxFoodGrownRemainder += 1.0;
-				}
-			}
-			
-			fDomains[d].fDomainFoodBand[minRemainderBand].maxFoodGrown--;
-			maxFoodGrownSum--;
-		}
-		
-		// If integerizing resulted in too few food pieces,
-		// keep adding food pieces until we have enough
-		while( maxFoodGrownSum < fDomains[d].maxFoodGrown )
-		{
-			float maxRemainder = -2.0;	// can't be this low
-			int maxRemainderBand = 0;
-			
-			for( int b = 0; b < fNumFoodBands; b++ )
-			{
-				if( fDomains[d].fDomainFoodBand[b].maxFoodGrownRemainder > maxRemainder )
-				{
-					maxRemainder = fDomains[d].fDomainFoodBand[b].maxFoodGrownRemainder;
-					maxRemainderBand = b;
-					fDomains[d].fDomainFoodBand[b].maxFoodGrownRemainder -= 1.0;
-				}
-			}
-			
-			fDomains[d].fDomainFoodBand[maxRemainderBand].maxFoodGrown++;
-			maxFoodGrownSum++;
-		}
-
-		// If integerizing resulted in too many food pieces,
-		// keep removing food pieces until we have enough
-		while( maxFoodSum > fDomains[d].maxFoodCount )
-		{
-			float minRemainder = 2.0;	// can't be this high
-			int minRemainderBand = 0;
-			
-			for( int b = 0; b < fNumFoodBands; b++ )
-			{
-				if( fDomains[d].fDomainFoodBand[b].maxFoodRemainder < minRemainder )
-				{
-					minRemainder = fDomains[d].fDomainFoodBand[b].maxFoodRemainder;
-					minRemainderBand = b;
-					fDomains[d].fDomainFoodBand[b].maxFoodRemainder += 1.0;
-				}
-			}
-			
-			fDomains[d].fDomainFoodBand[minRemainderBand].maxFoodCount--;
-			maxFoodSum--;
-		}
-		
-		// If integerizing resulted in too few food pieces,
-		// keep adding food pieces until we have enough
-		while( maxFoodSum < fDomains[d].maxFoodCount )
-		{
-			float maxRemainder = -2.0;	// can't be this low
-			int maxRemainderBand = 0;
-			
-			for( int b = 0; b < fNumFoodBands; b++ )
-			{
-				if( fDomains[d].fDomainFoodBand[b].maxFoodRemainder > maxRemainder )
-				{
-					maxRemainder = fDomains[d].fDomainFoodBand[b].maxFoodRemainder;
-					maxRemainderBand = b;
-					fDomains[d].fDomainFoodBand[b].maxFoodRemainder -= 1.0;
-				}
-			}
-			
-			fDomains[d].fDomainFoodBand[maxRemainderBand].maxFoodCount++;
-			maxFoodSum++;
-		}
-		
-		printf( "Domain %d\n", d );
-		for( int b = 0; b < fNumFoodBands; b++ )
-		{
-			printf( "  FoodBand %d: init=%ld, min=%ld, maxGrown=%ld, max=%ld\n",
-					b,
-					fDomains[d].fDomainFoodBand[b].initFoodCount,
-					fDomains[d].fDomainFoodBand[b].minFoodCount,
-					fDomains[d].fDomainFoodBand[b].maxFoodGrown,
-					fDomains[d].fDomainFoodBand[b].maxFoodCount );
-		}
+		sumFractions += fDomains[domainNumber].fFoodPatches[i].fraction;
+		if( ranval <= sumFractions )
+			return( i );    // this is the patch
 	}
+	
+	// Shouldn't get here
+	int patch = floor( ranval * fDomains[domainNumber].numFoodPatches );
+	if( patch >= fDomains[domainNumber].numFoodPatches )
+		patch  = fDomains[domainNumber].numFoodPatches - 1;
+	fprintf( stderr, "%s: ranval of %g failed to end up in any food patch; assigning patch #%d\n", __FUNCTION__, ranval, patch );
+	return( patch );
 }
-

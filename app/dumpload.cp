@@ -10,7 +10,7 @@
 #include "graphics.h"
 #include "Simulation.h"
 
-extern domainstruct domains[MAXDOMAINS];
+extern Domain domains[MAXDOMAINS];
 
 extern short moncritrank;
 extern short moncritrankold;

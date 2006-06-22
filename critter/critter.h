@@ -69,7 +69,7 @@ public:
 	static float gMaxSizeAdvantage;
 
     critter(TSimulation* simulation, gstage* stage);
-    virtual ~critter();
+    ~critter();
     
     void dump(std::ostream& out);
     void load(std::istream& in);
