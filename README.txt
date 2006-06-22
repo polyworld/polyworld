@@ -67,7 +67,7 @@ Download Polyworld source (from SourceForge)
   to add these two entries to your .login or .cshrc file (or
   equivalent for your preferred shell):
      setenv CVS_RSH ssh
-     setenv CVSROOT :ext:username@cvs.sf.net:/cvsroot/polyworld
+     setenv CVSROOT :ext:username@polyworld.cvs.sf.net:/cvsroot/polyworld
   after which you may simply type
      cvs co polyworld
   (cvs honors the CVS_RSH and CVSROOT environment variables, if
