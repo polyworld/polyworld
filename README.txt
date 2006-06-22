@@ -7,18 +7,12 @@ this line of research, now that I am a Professor of Informatics at
 Indiana University, and am finally able to once again devote my
 time to this subject.
 
-Polyworld currently runs atop Qt 4.1 from Trolltech
+Polyworld currently runs atop Qt 4.1 (or later) from Trolltech
 <http://www.trolltech.com/>.  It uses the "Qt Open Source Edition",
 in keeping with its open source nature.  Polyworld itself is open
 sourced under the Apple Public Source License (see the accompanying
 file named LICENSE) through SourceForge.net, in keeping with its
 original copyright by Apple and open source nature.
-
-NOTE:  Polyworld now *requires* Qt 4.x, and will no longer build on
-Qt 3.x.
-
-NOTE:  Polyworld now works with gcc-4.0 and Xcode 2.2.
-(For Xcode 2.2, use Polyworld.xcodeproj, instead of Polyworld.xcode.)
 
 To build Polyworld, you will need to:
 
@@ -75,8 +69,9 @@ Download Polyworld source (from SourceForge)
   talk to the right host)
 
 Download, build, and install gsl (from gnu.org)
+IMPORTANT NOTE: Intel Macs may require gsl 1.8 or higher.
 * General page for gsl downloading: http://www.gnu.org/software/gsl/#downloading
-* Or obtain directly from: ftp://ftp.gnu.org/gnu/gsl/gsl-1.7.tar.gz
+* Or obtain directly from: ftp://ftp.gnu.org/gnu/gsl/gsl-1.8.tar.gz
 * Unzip and untar wherever you want
 * Then follow the instructions in "INSTALL"
   (./configure ; make ; make install)
@@ -98,23 +93,13 @@ Build Polyworld (Qt method)
   'qmake polyworld.pro')
 
 Build Polyworld (Xcode method)
+* Open the Polyworld.xcodeproj project in Xcode
 * Add some key Qt paths in the Xcode "Source Trees" preferences:
 	- QtInc should point to the include dir of the Qt distribution 
 	- QtLib should point to the lib dir of the Qt distribution
 	- QtBin should point to the bin dir of the Qt distribution
 	("Setting Name" and "Display Name" can be the same; the "Path"
 	depends on your Qt installation.)
-    ***IMPORTANT NOTE*** As of Tiger, Xcode has a bug that causes
-    it to crash when opening the Polyworld.xcode project if these
-    parameters are not defined.  However, you cannot define them
-    without launching Xcode.  A nasty Catch 22.  Well, actually,
-    you could hand edit ~/Library/Preferences/com.apple.xcode.plist,
-    but, fortunately you don't have to go there...  The work-around
-    is to open any other project, that does NOT depend on these
-    paths, and define them in your preferences before attempting
-    to open Polyworld.xcode.  The paths are preferences that persist
-    across all projects for a given user, so this will make it
-    possible to develop Polyworld in Xcode on Tiger. ***END NOTE***
 * Build
 * Note: You can make life a little more convenient by enabling SCM
     support in Xcode (do a Get Info on the project), select CVS in
@@ -128,14 +113,10 @@ Build Polyworld (Xcode method)
     BBEdit, settable in the Preferences), all from the Xcode GUI.
 
 Be aware that the 'buildit' step above produces a Polyworld.app/ in
-the polyworld project directory.  Xcode will also attempt to produce a
-Polyworld.app/.  By default I believe the app is created in a ./build
-subdirectory, so there is no conflict.  And I have had to do enough
-work that is boot-system dependent that I routinely point builds
-to a /build directory on the boot disk, for which there is no
-conflict.  But if your default build products directory is the same
-as the one containing the .xcode project, then you could have a
-conflict.
+the polyworld project directory.  Xcode will produce a Polyworld.app/
+in whatever build products directory you specify.  Normally there is
+no conflict.  You just need to be aware of which one you are working
+with.
 
 If someone provides an equivalent Codewarrior or Visual Studio (or
 whatever) project, I will add it to the source directory.  Please
@@ -143,14 +124,14 @@ inform me of any possible conflicts with the Qt/buildit Polyworld.app/.
 
 Running atop Qt, Polyworld should be fully cross-platform (Mac OS
 X, Windows, and Linux), but currently is only routinely built and
-tested on Mac OS X.  At a minimum, polyworld.pro needs to be tailored
-to the platform, in order to replace OS X's -framework notation with
--l library invocations; other libraries may also need to be added.
+tested on Mac OS X and Linux.  At a minimum, polyworld.pro needs to be
+tailored to the platform, in order to replace OS X's -framework notation
+with -l library invocations; other libraries may also need to be added.
 
 Running Polyworld - Keyboard Controls:
 	r	- Toggle Camera Rotation
 	1-5	- Select 1st through 5th fittest critter for overhead monitoring
-	t	- Track currently selected agent until it dies (rather than switching when the most the fit critters change)
+	t	- Track currently selected agent until it dies (rather than switching when the most-fit critters change)
 	+/=	- Zoom in Overhead view
 	-	- Zoom out Overhead view
 
@@ -158,12 +139,11 @@ Running Polyworld - Keyboard Controls:
 ---
 Technical details of the algorithms used in Polyworld may be found
 here: <http://pobox.com/~larryy/PolyWorld.html>, particularly in
-the technical paper here:
-<ftp://ftp.beanblossom.in.us/pub/PolyWorld/Yaeger.ALife3.pdf>.
+the technical paper here: <http://www.beanblossom.in.us/larryy/Yaeger.ALife3.pdf>
 
 For more details about using cvs to check out source code from
-SourceForge.net, see
-<https://sourceforge.net/docman/display_doc.php?docid=14033&group_id=1>.
+SourceForge.net, see <https://sourceforge.net/docman/display_doc.php?docid=14033&group_id=1>.
 
 CVS tagged revisions:
 pw08_qt331 - A mostly functional 0.8 version of Polyworld targeted to Qt 3.3.1
+
