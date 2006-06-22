@@ -81,7 +81,7 @@ double CalcComplexity( char * fnameAct, char * fnameAnat, char part )
         gsl_matrix * COV = mCOV( o );
 	gsl_matrix_free(o);			// don't need this anymore
 
-	double Complexity;
+//	double Complexity;
 
 	if( part == 'A' )	// All
 	{
