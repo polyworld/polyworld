@@ -3237,7 +3237,7 @@ void TSimulation::ReadWorldFile(const char* filename)
 	
 	istream in(&fb);
     short version;
-    char label[64];
+    char label[128];
 
 // Moved to Simulation.h
 //#define CurrentWorldfileVersion 18
