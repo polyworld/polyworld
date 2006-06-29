@@ -665,9 +665,10 @@ void TSimulation::Step()
 			
 				if( fFittest[i]->Complexity == 0.0 )		// if Complexity is zero -- means we have to Calculate it
 				{
-					char AnatFilename[256];
-					sprintf( AnatFilename, "run/brain/anatomy/brainAnatomy_%ld_death.txt", fFittest[i]->critterID );
-					fFittest[i]->Complexity = CalcComplexity( t, AnatFilename, 'P' );		// Complexity of Processing Units Only
+//					char AnatFilename[256];
+//					sprintf( AnatFilename, "run/brain/anatomy/brainAnatomy_%ld_death.txt", fFittest[i]->critterID );
+					fFittest[i]->Complexity = CalcComplexity( t, 'P' );		// Complexity of Processing Units Only
+					cout << "[COMPLEXITY] Critter: " << fFittest[i]->critterID << "\t Processing Complexity: " << fFittest[i]->Complexity << endl;
 				}
 			}
 
@@ -736,11 +737,10 @@ void TSimulation::Step()
 						}
 						else
 						{
-							char AnatFilename[256];
-							sprintf( AnatFilename, "run/brain/anatomy/brainAnatomy_%ld_death.txt", fFittest[i]->critterID );
-							fRecentFittest[i]->Complexity = CalcComplexity( t, AnatFilename, 'P' );		// Complexity of Processing Units Only
-//							fRecentFittest[i]->Complexity = CalcComplexity( t );
-	//DEBUG					cout << "Complexity = " << CalcComplexity( t ) << endl;
+//							char AnatFilename[256];
+//							sprintf( AnatFilename, "run/brain/anatomy/brainAnatomy_%ld_death.txt", fFittest[i]->critterID );
+							fRecentFittest[i]->Complexity = CalcComplexity( t, 'P' );		// Complexity of Processing Units Only
+							cout << "[COMPLEXITY] Critter: " << fRecentFittest[i]->critterID << "\t Processing Complexity: " << fRecentFittest[i]->Complexity << endl;
 						}
 					}
 
@@ -2908,9 +2908,7 @@ void TSimulation::Death(critter* c)
 		#if UseMaxSpeedAsFitness
 			c->SetFitness( 0.01 / (c->MaxSpeed() + 0.01) );
 		#else
-			char AnatFilename[256];
-			sprintf( AnatFilename, "run/brain/anatomy/brainAnatomy_%ld_death.txt", c->Number() );
-			c->SetFitness( CalcComplexity(t, AnatFilename, 'P') );
+			c->SetFitness( CalcComplexity(t, 'P') );
 		#endif
 		}
 	}
@@ -4575,7 +4573,7 @@ int TSimulation::getRandomPatch( int domainNumber )
 	}
 	
 	// Shouldn't get here
-	int patch = floor( ranval * fDomains[domainNumber].numFoodPatches );
+	int patch = int( floor( ranval * fDomains[domainNumber].numFoodPatches ) );
 	if( patch >= fDomains[domainNumber].numFoodPatches )
 		patch  = fDomains[domainNumber].numFoodPatches - 1;
 	fprintf( stderr, "%s: ranval of %g failed to end up in any food patch; assigning patch #%d\n", __FUNCTION__, ranval, patch );

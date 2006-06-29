@@ -202,8 +202,8 @@
 0.10   smiteFrac
 0.25   smiteAgeFrac_affectsAverageFitness
 
-0      brainAnatomyRecordAll
-0      brainFunctionRecordAll
+1      brainAnatomyRecordAll
+1      brainFunctionRecordAll
 1      brainAnatomyRecordSeeds
 1      brainFunctionRecordSeeds
 1000     bestSoFarBrainAnatonomyRecordFrequency
@@ -213,7 +213,7 @@
 1      recordGeneStats
 1      recordFoodPatchStats
 1      recordComplexity
-1      useComplexityAsFitness
+0      useComplexityAsFitness
 
 
 Linear    FogFunction_Exponential_Linear_Off

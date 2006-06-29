@@ -31,166 +31,92 @@ gsl_matrix * COVtoCOR( gsl_matrix * COV );			//function overloaded for when we d
 bool is_matrix_square( gsl_matrix * );
 vector<string> get_list_of_brainfunction_logfiles( string );
 vector<string> get_list_of_brainanatomy_logfiles( string );
-gsl_matrix * readin_brainfunction( const char* );
-gsl_matrix * readin_brainfunction__optimized( const char* fname );
+gsl_matrix * readin_brainfunction( const char* , int& );
+gsl_matrix * readin_brainfunction__optimized( const char* , int& );
 gsl_matrix * readin_brainanatomy( const char* );
 gsl_matrix * mCOV( gsl_matrix * );
-double CalcComplexity( char * , char *, char );
+double CalcComplexity( char * ,char );
 
-double CalcComplexity( char * fnameAct, char * fnameAnat, char part )
+double CalcComplexity( char * fnameAct, char part )
 {
 	part = toupper( part );			// capitalize it
+	int numinputneurons = 0;		// this value will be defined by readin_brainfunction()
 
-	gsl_matrix * activity = readin_brainfunction__optimized( fnameAct );
-//	gsl_matrix * activity = readin_brainfunction( fnameAct );
-
+	gsl_matrix * activity = readin_brainfunction__optimized( fnameAct, numinputneurons );
 
 	// Warning: this may not be the thing we want to do if the #steps alive < #numneurons.
 
-        if( activity->size2 > activity->size1 )         //If using __optimized this will almost never be true.
-        {
-                gsl_matrix * temp = gsl_matrix_alloc( activity->size2, activity->size1);
-                gsl_matrix_transpose_memcpy(temp, activity);
-                gsl_matrix * temp2 = activity;
-                activity = temp;                // activity = activity'
-                gsl_matrix_free(temp2);
-        }
+    if( activity->size2 > activity->size1 )         //If using __optimized this will almost never be true.
+    {
+		gsl_matrix * temp = gsl_matrix_alloc( activity->size2, activity->size1);
+        gsl_matrix_transpose_memcpy(temp, activity);
+        gsl_matrix * temp2 = activity;
+        activity = temp;                // activity = activity'
+        gsl_matrix_free(temp2);
+    }
 
-        const gsl_rng_type * T;
-        gsl_rng * r;
-        gsl_rng_env_setup();
-        T = gsl_rng_mt19937;
-        r = gsl_rng_alloc(T);
-        time_t seed;
-        time(&seed);
-        gsl_rng_set(r, seed);
 
-        for( unsigned int i=0; i<activity->size1; i++)
-        {
-			for( unsigned int j=0; j<activity->size2; j++)
-				gsl_matrix_set(activity, i, j, gsl_matrix_get(activity, i,j) + 0.00001*gsl_ran_ugaussian(r));	// we can do smaller values
-//				gsl_matrix_set(activity, i, j, gsl_matrix_get(activity, i,j) + 0.0001*gsl_ran_ugaussian(r));
-        }
+     const gsl_rng_type * T;
+     gsl_rng * r;
+     gsl_rng_env_setup();
+     T = gsl_rng_mt19937;
+     r = gsl_rng_alloc(T);
+     time_t seed;
+     time(&seed);
+     gsl_rng_set(r, seed);
+
+     for( unsigned int i=0; i<activity->size1; i++)
+     {
+		for( unsigned int j=0; j<activity->size2; j++)
+			gsl_matrix_set(activity, i, j, gsl_matrix_get(activity, i,j) + 0.00001*gsl_ran_ugaussian(r));	// we can do smaller values
+//			gsl_matrix_set(activity, i, j, gsl_matrix_get(activity, i,j) + 0.0001*gsl_ran_ugaussian(r));
+     }
 
 	gsl_rng_free( r );
 
-        gsl_matrix * o = activity;      // replace this if we're ever going to do the gsamp()'ing.
+    gsl_matrix * o = activity;      // replace this if we're ever going to do the gsamp()'ing.
 
-// We just calculate the covariance matrix and compute the Complexity of that instead of using the correlation matrix.  It uses less cycles and the results are identical.
-
-        gsl_matrix * COV = mCOV( o );
+	// We just calculate the covariance matrix and compute the Complexity of that instead of using the correlation matrix.  It uses less cycles and the results are identical.
+    gsl_matrix * COV = mCOV( o );
 	gsl_matrix_free(o);			// don't need this anymore
 
-//	double Complexity;
 
 	if( part == 'A' )	// All
 	{
 		double Complexity = calcC_det3__optimized(COV);
 		gsl_matrix_free( COV );
-	//	double Complexity = calcC_det3(COV);
 		return Complexity;
 	}
 	else if( part == 'P' )	// Processing
 	{
-		gsl_matrix * cij = readin_brainanatomy( fnameAnat );
-		gsl_matrix * CIJ = gsl_matrix_alloc(cij->size1-1, cij->size2-1);                // is minus 1 because we toss out the bias neuron
-		int side_length = cij->size1;           //matrix cij is square so we only need 1 side.
-
-
-		// toss out the bias neuron
-		for(int i=0; i < side_length-1; i++)
-		{
-			for(int j=0; j < side_length-1; j++)
-			{
-				if( gsl_matrix_get(cij, i, j) != 0 )
-					gsl_matrix_set(CIJ, j, i, 1);           // Here we swap the i's and j's so we transpose the matrix for free
-				else
-					gsl_matrix_set(CIJ, j, i, 0);           // Here we swap the i's nad j's so we transpose the matrix for free
-			}
-		}
-
-		side_length = CIJ->size1;
-
-		vector<int> tempPro_id;
-
-		for(int i=0; i< side_length; i++)
-		{
-			float column_total = 0;
-			for(int j=0; j< side_length; j++)
-			{
-				column_total += gsl_matrix_get(CIJ, j, i);
-			}
-
-			if( column_total != 0 )
-				tempPro_id.push_back( i );
-		}
-
-		int Pro = tempPro_id.size();
-
+		int Pro = COV->size1 - numinputneurons;
 		int Pro_id[Pro];
-		for(int i=0; i< Pro; i++ ) { Pro_id[i] = tempPro_id[i]; }
-
+		for(int i=0; i<Pro; i++ ) { Pro_id[i] = numinputneurons+i; }
 
 		gsl_matrix * Xed_COR = matrix_crosssection( COV, Pro_id, Pro );
-//		cout << "Pro_Xed_COR: " << Xed_COR->size1 << " x " << Xed_COR->size2 << endl;
 		float Cplx_Pro = calcC_det3( Xed_COR );
 		gsl_matrix_free( Xed_COR );
-        	gsl_matrix_free(COV);
+     	gsl_matrix_free(COV);
 
 		return Cplx_Pro;
 	}
 	else if( part == 'I' )	// Input
 	{
-		gsl_matrix * cij = readin_brainanatomy( fnameAnat );
-		gsl_matrix * CIJ = gsl_matrix_alloc(cij->size1-1, cij->size2-1);                // is minus 1 because we toss out the bias neuron
-		int side_length = cij->size1;           //matrix cij is square so we only need 1 side.
-
-		// toss out the bias neuron
-		for(int i=0; i < side_length-1; i++)
-		{
-			for(int j=0; j < side_length-1; j++)
-			{
-				if( gsl_matrix_get(cij, i, j) != 0 )
-					gsl_matrix_set(CIJ, j, i, 1);           // Here we swap the i's and j's so we transpose the matrix for free
-				else
-					gsl_matrix_set(CIJ, j, i, 0);           // Here we swap the i's nad j's so we transpose the matrix for free
-			}
-       	}
-
-
-		side_length = CIJ->size1;
-
-		vector<int> tempInp_id;
-
-		for(int i=0; i< side_length; i++)
-		{
-			float column_total = 0;
-			for(int j=0; j< side_length; j++)
-			{
-				column_total += gsl_matrix_get(CIJ, j, i);
-			}
-
-			if( column_total == 0 )
-				tempInp_id.push_back( i );
-		}
-
-		int Inp = tempInp_id.size();
+		int Inp = numinputneurons;
 		int Inp_id[Inp];
-
-		for(int i=0; i< Inp; i++ ) { Inp_id[i] = tempInp_id[i]; }
-
+		for(int i=0; i< Inp; i++ ) { Inp_id[i] = i; }
 
 		gsl_matrix * Xed_COR = matrix_crosssection( COV, Inp_id, Inp );
-//		cout << "Inp_Xed_COR: " << Xed_COR->size1 << " x " << Xed_COR->size2 << endl;
 		float Cplx_Inp = calcC_det3( Xed_COR );
 		gsl_matrix_free( Xed_COR );
 		gsl_matrix_free( COV );
+
 		return Cplx_Inp;
 	}
 //========
 	else
 	{
-		cerr << "Do not know value for CalcComplexity() argument 3 '" << part << "'\n";
+		cerr << "Do not know value for CalcComplexity() argument 2 '" << part << "'\n";
 		exit(1);
 	}
 
@@ -369,10 +295,10 @@ gsl_matrix * readin_brainanatomy( const char* fname )
 	fgets( tline, 200, AnatomyFile );
 //DEBUG cout << "First Line: " << tline << " // Length: " << strlen(tline) << endl;
 
-        string str_tline = tline;
+    string str_tline = tline;
 	str_tline.erase(0,6);		//Remove the beginning "brain "
-	int filnum = atoi( (str_tline.substr(0, str_tline.find(" ",0)).c_str()) );
-	cout << "filnum = " << filnum << endl;
+//	int filnum = atoi( (str_tline.substr(0, str_tline.find(" ",0)).c_str()) );
+//	cout << "filnum = " << filnum << endl;
 
 	str_tline.erase( 0, str_tline.find(" ",0)+1);	// We're done with the filnum, lets move on.
 
@@ -471,7 +397,7 @@ gsl_matrix * readin_brainanatomy( const char* fname )
 }
 
 
-gsl_matrix * readin_brainfunction__optimized( const char* fname )
+gsl_matrix * readin_brainfunction__optimized( const char* fname, int& numinputneurons )
 {
 /* This function largely replicates the function of the MATLAB file readin_brainfunction.m (Calculates, but does not return filnum, fitness) */
 
@@ -503,17 +429,19 @@ gsl_matrix * readin_brainfunction__optimized( const char* fname )
 */
 	char tline[100];
 	fgets( tline, 100, FunctionFile );
-//DEBUG	cout << "First Line: " << tline << " // Length: " << strlen(tline) << endl;
+//	cout << "First Line: " << tline << " // Length: " << strlen(tline) << endl;
 
 	string params = tline;
 	params = params.substr(14, params.length());
-//DEBUG	cout << "params: " << params << endl;
 
 //	string filnum = params.substr( 0, params.find(" ",0));				//filnum actually isn't used anywhere
-	string numneu = params.substr( params.find(" ",0)+1, params.length() );
+	params.erase( 0, params.find(" ",0)+1 );						//Remove the filnum
 
-//	cout << "filnum = " << filnum << endl;
-//	cout << "numneu = " << numneu << endl;
+//	string numneu = params.substr( 0 , params.find(" ",0) );
+	params.erase( 0, params.find(" ",0)+1 );						//Remove the numneu
+
+	numinputneurons = atoi( (params.substr(0,params.find(" ",0))).c_str() );
+
 
 /* MATLAB CODE:
         % start reading in the timesteps
@@ -555,7 +483,6 @@ gsl_matrix * readin_brainfunction__optimized( const char* fname )
 
 		int    tstep1 = atoi( ((*FileContents_it).substr( 0, thespace)).c_str() );
 		double  tstep2 = atof( ((*FileContents_it).substr( thespace, (*FileContents_it).length())).c_str() );
-//		cout << (*FileContents_it) << "\t [" << tcnt/numcols << "," << tstep1 << "] = " << tstep2 << endl;
 
 		gsl_matrix_set( activity, tcnt/numcols, tstep1, tstep2);
 		tcnt++;
@@ -580,8 +507,6 @@ vector<string> get_list_of_brainfunction_logfiles( string directory_name )
 	vector<string> z;
 	struct dirent *entry;
 
-//DEBUG	cout << "Directory: " << directory_name << endl;
-
 	DIR * DIRECTORY;
 	if( (DIRECTORY = opendir(directory_name.c_str())) == NULL )
 	{
@@ -592,7 +517,6 @@ vector<string> get_list_of_brainfunction_logfiles( string directory_name )
 
 	while((entry = readdir(DIRECTORY)) != NULL)
 	{
-//		cout << "File: " << buffer << endl;
 
 	// Get all brainfunction filenames, but exclude those that are matlab files.
 		if( (strstr(entry->d_name, Function_string) != NULL) && (strstr(entry->d_name, ".txt.mat") == NULL) )
@@ -602,17 +526,10 @@ vector<string> get_list_of_brainfunction_logfiles( string directory_name )
 		}
 	}
 
-//	cout << "My List: " << endl;
-
-//	for(int i=0; i<z.size(); i++)
-//	{
-//		cout << z[i] << endl;
-//	}
-
 	if( (closedir(DIRECTORY)) == -1)
 	{
-	cerr << "Could not closedir('" << directory_name << "').  -- Terminating." << endl;
-	exit(1);
+		cerr << "Could not closedir('" << directory_name << "').  -- Terminating." << endl;
+		exit(1);
 	}
 
 	return z;
@@ -1240,7 +1157,7 @@ DEBUG */
 }
 
 
-gsl_matrix * readin_brainfunction( const char* fname )
+gsl_matrix * readin_brainfunction( const char* fname, int& numinputneurons )
 {
 /* This function largely replicates the function of the MATLAB file readin_brainfunction.m (Calculates, but does not return filnum, fitness) */
 
@@ -1279,13 +1196,18 @@ gsl_matrix * readin_brainfunction( const char* fname )
 
 	string params = tline;
 	params = params.substr(14, params.length());
-//DEBUG	cout << "params: " << params << endl;
 
 	string filnum = params.substr( 0, params.find(" ",0));				//filnum actually isn't used anywhere
-	string numneu = params.substr( params.find(" ",0)+1, params.length() );
+	params.erase( 0, params.find(" ",0)+1 );						//Remove the filnum
 
-//DEBUG	cout << "filnum = " << filnum << endl;
-//DEBUG	cout << "numneu = " << numneu << endl;
+	string numneu = params.substr( 0 , params.find(" ",0) );
+	params.erase( 0, params.find(" ",0)+1 );						//Remove the numneu
+
+	numinputneurons = atoi( (params.substr(0,params.find(" ",0))).c_str() );
+
+//	cout << "filnum = " << filnum << endl;
+//	cout << "numneu = " << numneu << endl;
+//	cout << "numinputneurons = " << numinputneurons << endl;
 
 /* MATLAB CODE:
         % start reading in the timesteps
@@ -1333,10 +1255,7 @@ gsl_matrix * readin_brainfunction( const char* fname )
 		int    tstep1 = atoi( ((*FileContents_it).substr( 0, (*FileContents_it).find(" ",0))).c_str() );
 		double tstep2 = atof( ((*FileContents_it).substr( (*FileContents_it).find(" ",0), (*FileContents_it).length())).c_str() );
 
-//DEBUG         cout << "i: " << tstep1 << "\t" << "j: " << tcnt/numrows << endl;
-//DEBUG         cout << tstep1 << "\t" << tstep2 << endl;
-
-//Recall that numrows = int(numneu), and that gsl_matrices start with zero, not 1.
+		//Recall that numrows = int(numneu), and that gsl_matrices start with zero, not 1.
 		gsl_matrix_set( activity, tstep1, tcnt/numrows, tstep2);
 		tcnt++;
 	}

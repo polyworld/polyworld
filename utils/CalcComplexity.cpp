@@ -16,18 +16,23 @@ int main( int argc, char *argv[] )
 		exit(0);
 	}
 
-	else if( argc != 2 )		// More than 1 argument ?
-	{
-		cout << "You may specify only ONE brainfunction logfile to compute the Complexity of." << endl;
-		exit(0);
-	}
+//	else if( argc != 2 )		// More than 1 argument ?
+//	{
+//		cout << "You may specify only ONE brainfunction logfile to compute the Complexity of." << endl;
+//		exit(0);
+//	}
 
 //	cout << "LogFile = " << argv[1] << endl;
 
 	double Complexity = 0;
-	Complexity = CalcComplexity( argv[ 1 ] );
+	Complexity = CalcComplexity( argv[ 1 ] , 'A' );
+	cout << "Complexity (All) =\t" << Complexity << endl;
 
-	cout << "Complexity = " << Complexity << endl;
+	Complexity = CalcComplexity( argv[ 1 ] , 'P' );
+	cout << "Complexity (Processing) =\t" << Complexity << endl;
+
+	Complexity = CalcComplexity( argv[ 1 ] , 'I' );
+	cout << "Complexity (Input) =\t" << Complexity << endl;
 
 	return 0;
 }
