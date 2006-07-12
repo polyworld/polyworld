@@ -437,7 +437,7 @@ gsl_matrix * readin_brainfunction__optimized( const char* fname, int& numinputne
 //	string filnum = params.substr( 0, params.find(" ",0));				//filnum actually isn't used anywhere
 	params.erase( 0, params.find(" ",0)+1 );						//Remove the filnum
 
-//	string numneu = params.substr( 0 , params.find(" ",0) );
+	string numneu = params.substr( 0 , params.find(" ",0) );
 	params.erase( 0, params.find(" ",0)+1 );						//Remove the numneu
 
 	numinputneurons = atoi( (params.substr(0,params.find(" ",0))).c_str() );

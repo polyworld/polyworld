@@ -136,23 +136,6 @@
 		C58654FC09B94E1C000F30F8 /* complexity.h in Headers */ = {isa = PBXBuildFile; fileRef = C58654FB09B94E1C000F30F8 /* complexity.h */; };
 /* End PBXBuildFile section */
 
-/* Begin PBXBuildStyle section */
-		C59F54F20A534E1500FB0D27 /* Development */ = {
-			isa = PBXBuildStyle;
-			buildSettings = {
-				COPY_PHASE_STRIP = NO;
-			};
-			name = Development;
-		};
-		C59F54F30A534E1500FB0D27 /* Deployment */ = {
-			isa = PBXBuildStyle;
-			buildSettings = {
-				COPY_PHASE_STRIP = YES;
-			};
-			name = Deployment;
-		};
-/* End PBXBuildStyle section */
-
 /* Begin PBXContainerItemProxy section */
 		76B2FB6F084CE761002FBDA1 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -663,12 +646,6 @@
 		20286C28FDCF999611CA2CEA /* Project object */ = {
 			isa = PBXProject;
 			buildConfigurationList = 76293F1D0981AF4600D27C6E /* Build configuration list for PBXProject "Polyworld" */;
-			buildSettings = {
-			};
-			buildStyles = (
-				C59F54F20A534E1500FB0D27 /* Development */,
-				C59F54F30A534E1500FB0D27 /* Deployment */,
-			);
 			hasScannedForEncodings = 1;
 			mainGroup = 20286C29FDCF999611CA2CEA /* Polyworld */;
 			projectDirPath = "";

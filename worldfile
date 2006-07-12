@@ -1,4 +1,4 @@
-19      version
+20      version
 
 10002  maxSteps
 1      docpuwork
@@ -214,7 +214,8 @@
 1      recordFoodPatchStats
 1      recordComplexity
 0      useComplexityAsFitness
-
+1      recordAdamiComplexity
+500    AdamiComplexityRecordFrequency
 
 Linear    FogFunction_Exponential_Linear_Off
 0.1    ExponentialFogDensity
