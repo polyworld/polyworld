@@ -48,7 +48,7 @@ double CalcComplexity( char * fnameAct, char part )
 
     if( activity->size2 > activity->size1 )         //If using __optimized this will almost never be true.
     {
-		gsl_matrix * temp = gsl_matrix_alloc( activity->size2, activity->size1);
+	gsl_matrix * temp = gsl_matrix_alloc( activity->size2, activity->size1);
         gsl_matrix_transpose_memcpy(temp, activity);
         gsl_matrix * temp2 = activity;
         activity = temp;                // activity = activity'
@@ -74,11 +74,11 @@ double CalcComplexity( char * fnameAct, char part )
 
 	gsl_rng_free( r );
 
-    gsl_matrix * o = activity;      // replace this if we're ever going to do the gsamp()'ing.
+	gsl_matrix * o = activity;      // replace this if we're ever going to do the gsamp()'ing.
 
 	// We just calculate the covariance matrix and compute the Complexity of that instead of using the correlation matrix.  It uses less cycles and the results are identical.
-    gsl_matrix * COV = mCOV( o );
-	gsl_matrix_free(o);			// don't need this anymore
+	gsl_matrix * COV = mCOV( o );
+	gsl_matrix_free( o );			// don't need this anymore
 
 
 	if( part == 'A' )	// All
@@ -93,10 +93,15 @@ double CalcComplexity( char * fnameAct, char part )
 		int Pro_id[Pro];
 		for(int i=0; i<Pro; i++ ) { Pro_id[i] = numinputneurons+i; }
 
+//		cout << "Pro = " << Pro << ":\t";
+//		for(int i=0; i<Pro; i++) { cout << Pro_id[i] << " "; }
+//		cout << endl;
+
 		gsl_matrix * Xed_COR = matrix_crosssection( COV, Pro_id, Pro );
-		float Cplx_Pro = calcC_det3( Xed_COR );
+
+		float Cplx_Pro = calcC_det3__optimized( Xed_COR );
 		gsl_matrix_free( Xed_COR );
-     	gsl_matrix_free(COV);
+	     	gsl_matrix_free( COV );
 
 		return Cplx_Pro;
 	}
@@ -106,8 +111,14 @@ double CalcComplexity( char * fnameAct, char part )
 		int Inp_id[Inp];
 		for(int i=0; i< Inp; i++ ) { Inp_id[i] = i; }
 
+//		cout << "Inp = " << Inp << ":\t";
+//		for(int i=0; i<Inp; i++) { cout << Inp_id[i] << " "; }
+//		cout << endl;
+
 		gsl_matrix * Xed_COR = matrix_crosssection( COV, Inp_id, Inp );
-		float Cplx_Inp = calcC_det3( Xed_COR );
+
+		float Cplx_Inp = calcC_det3__optimized( Xed_COR );
+
 		gsl_matrix_free( Xed_COR );
 		gsl_matrix_free( COV );
 
@@ -1093,66 +1104,31 @@ gsl_matrix * matrix_crosssection(gsl_matrix * Minput, int* thearray, int thearra
 	else                                { Minput_size = Minput->size2; }	//If Minput isn't square,
 										//we only use the least of these.
 
+
 	// Define our matrix to return
-	gsl_matrix * Mnew = gsl_matrix_alloc( thearray_length, thearray_length );
+	gsl_matrix * Mnew = gsl_matrix_alloc( thearray_length, thearray_length );		// defines matrix with rows/columns [0 ... thearray_length-1]
 
-/*
-	index is the position within thearray (the index in Mnew)
-	i     is the value of index WITHIN thearray (the index in Minput)
-*/
 
-//DEBUG	int number_comparisons=0;
-	for( int index=0; index<thearray_length; index++ )
+	for( int row=0; row<thearray_length; row++ )
 	{
-		int i = thearray[index];
-
+		int col=0;
 				
-		gsl_vector_view row_i = gsl_matrix_row(    Minput, i );	//this could perhaps be made more efficient by getting submatrixes of that row
-		gsl_vector_view col_i = gsl_matrix_column( Minput, i ); //this could perhaps be made more efficient by getting submatrixes of that col
+		gsl_vector_view row_i = gsl_matrix_row(    Minput, thearray[row] );	//this could perhaps be made more efficient by getting submatrixes of that row
 
+//		cout << "Length of Minput row_i" << "(" << i << "): " << (&row_i.vector)->size << " // Values in row_i: ";
+//		for(int temp=0; temp < (&row_i.vector)->size; temp++ )
+//		{
+//			cout << gsl_vector_get( &row_i.vector,	temp) << " ";
+//		}
+//		cout << endl;
 
-		//Since we're only interested in the square properties, one of these variables could be eliminated if we were clever about it.
-		int row_length = (&row_i.vector)->size;
-		int col_length = (&col_i.vector)->size;
-
-/* DEBUG 
-		cout << "Length of row_i" << "(" << i << "): " << (&row_i.vector)->size << " // Values in row_i: ";
-		for(int temp=0; temp < (&row_i.vector)->size; temp++ )
+		for( int j=0; j< thearray_length; j++ )
 		{
-			cout << gsl_vector_get( &row_i.vector,	temp) << " ";
+			gsl_matrix_set( Mnew, row, col, gsl_vector_get(&row_i.vector, thearray[j]) );
+			col++;
 		}
-		cout << endl;
-DEBUG */
-
-
-		int count = 0;
-		for(int index_going_through_row = index+count; index_going_through_row < row_length; index_going_through_row++)
-		{
-			if( index_going_through_row == thearray[index+count] )
-			{
-				gsl_matrix_set(Mnew, index, index+count, gsl_vector_get(&row_i.vector, index_going_through_row) );
-				count++;
-			}
-//DEBUG			number_comparisons++;
-
-		}
-
-
-		count = 1;		//We have already set the diagonal in the previous row_i loop so here we can begin with count=1;
-		for(int index_going_through_col = index+count; index_going_through_col < col_length; index_going_through_col++)
-		{
-			if( index_going_through_col == thearray[index+count] )
-			{
-				gsl_matrix_set(Mnew, index+count, index, gsl_vector_get(&col_i.vector, index_going_through_col) );
-				count++;
-			}
-//DEBUG			number_comparisons++;
-
-		}
-
 	}
 
-//DEBUG	cout << "Number Comparisons: " << number_comparisons << endl;
 	return Mnew;
 }
 
