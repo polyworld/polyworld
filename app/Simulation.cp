@@ -671,8 +671,6 @@ void TSimulation::Step()
 			
 				if( fFittest[i]->Complexity == 0.0 )		// if Complexity is zero -- means we have to Calculate it
 				{
-//					char AnatFilename[256];
-//					sprintf( AnatFilename, "run/brain/anatomy/brainAnatomy_%ld_death.txt", fFittest[i]->critterID );
 					fFittest[i]->Complexity = CalcComplexity( t, 'P' );		// Complexity of Processing Units Only
 					cout << "[COMPLEXITY] Critter: " << fFittest[i]->critterID << "\t Processing Complexity: " << fFittest[i]->Complexity << endl;
 				}
@@ -861,9 +859,15 @@ void TSimulation::Step()
 			FILE * FileOneBit;
 			FILE * FileTwoBit;
 			FILE * FileFourBit;
+			FILE * FileSummary;
 
+			float SumInformationOneBit = 0;
+			float SumInformationTwoBit = 0;
+			float SumInformationFourBit = 0;
+			
 			float entropyOneBit[8];
 			float informationOneBit[8];
+			
 			float entropyTwoBit[4];
 			float informationTwoBit[4];
 			float entropyFourBit[2];
@@ -886,22 +890,29 @@ void TSimulation::Step()
 				cerr << "could not open run/genome/AdamiComplexity-4bit.txt for writing [2].  Exiting." << endl;
 				exit(1);
 			}
+			if( (FileSummary = fopen("run/genome/AdamiComplexity-summary.txt", "a")) == NULL )
+			{
+				cerr << "could not open run/genome/AdamiComplexity-summary.txt for writing [2].  Exiting." << endl;
+				exit(1);
+			}
 
 
 			fprintf( FileOneBit,  "%ld:", fStep );		// write the timestep on the beginning of the line
 			fprintf( FileTwoBit,  "%ld:", fStep );		// write the timestep on the beginning of the line
 			fprintf( FileFourBit, "%ld:", fStep );		// write the timestep on the beginning of the line
-
+			fprintf( FileSummary, "%ld ", fStep );		// write the timestep on the beginning of the line
+			
 			int numcritters = objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE);
 
 			bool bits[numcritters][8];
 		
 			for( int gene = 0; gene < genome::gNumBytes; gene++ )			// for each gene ...
 			{
+				int count = 0;
 				while( objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &c ) )	// for each critter ...
 				{
-					int count = 0;
 					genevalue = c->Genes()->GeneUIntValue(gene);
+
 					
 					if( genevalue >= 128 ) { bits[count][0]=true; genevalue -= 128; } else { bits[count][0] = false; }
 					if( genevalue >= 64  ) { bits[count][1]=true; genevalue -= 64; }  else { bits[count][1] = false; }
@@ -911,8 +922,10 @@ void TSimulation::Step()
 					if( genevalue >= 4   ) { bits[count][5]=true; genevalue -= 4; }   else { bits[count][5] = false; }
 					if( genevalue >= 2   ) { bits[count][6]=true; genevalue -= 2; }   else { bits[count][6] = false; }
 					if( genevalue == 1   ) { bits[count][7]=true; }                   else { bits[count][7] = false; }
+
 					count++;
 				}
+				
 				
 				/* PRINT THE BYTE UNDER CONSIDERATION */
 				
@@ -922,7 +935,7 @@ void TSimulation::Step()
 					int number_of_ones=0;
 					
 					for( int critter=0; critter<numcritters; critter++ )
-						if( bits[critter][i] ) { number_of_ones++; }		// if critter has a 1 in the column, increment number_of_ones
+						if( bits[critter][i] == true ) { number_of_ones++; }		// if critter has a 1 in the column, increment number_of_ones
 										
 					float prob_1 = (float) number_of_ones / (float) numcritters;
 					float prob_0 = 1.0 - prob_1;
@@ -937,6 +950,7 @@ void TSimulation::Step()
 					
 					entropyOneBit[i] = -1 * ( (prob_0 * logprob_0) + (prob_1 * logprob_1) );			// calculating the entropy for this bit...
 					informationOneBit[i] = 1.0 - entropyOneBit[i];										// 1.0 = maxentropy
+					SumInformationOneBit += informationOneBit[i];
 //DEBUG				cout << "Gene" << gene << "_bit[" << i << "]: probs =\t{" << prob_0 << "," << prob_1 << "}\tEntropy =\t" << entropyOneBit[i] << " bits\t\tInformation =\t" << informationOneBit[i] << endl;
 				}
 			
@@ -946,6 +960,7 @@ void TSimulation::Step()
 
 
 				/* DOING TWO BIT WINDOW */
+
 				for( int i=0; i<4; i++ )		// for each window 2-bits wide...
 				{
 					int number_of[4];
@@ -975,14 +990,14 @@ void TSimulation::Step()
 					{
 						prob[j] = (float) number_of[j] / (float) numcritters;
 						if( prob[j] == 0.0 ) { logprob[j] = 0.0; }
-						else { logprob[j] = log2(prob[j]) / log2(4); }
-//						else { logprob[j] = log2(prob[j]); }				// if you want entropy in terms of bits instead of mers use this line
+						else { logprob[j] = log2(prob[j]); }						// in units of mers
 
 						sum += prob[j] * logprob[j];						// H(X) = -1 * SUM{ p(x) * log p(x) }
 					}
 
 					entropyTwoBit[i] = (sum * -1);							// multiplying the sum by -1 to get the Entropy
-					informationTwoBit[i] = 1.0 - entropyTwoBit[i];			// since we're in units of mers, maxentroopy is always 1.0
+					informationTwoBit[i] = 2.0 - entropyTwoBit[i];			// since we're in units of mers, maxentroopy is always 1.0
+					SumInformationTwoBit += informationTwoBit[i];
 
 //DEBUG				cout << "Gene" << gene << "_window2bit[" << i << "]: probs =\t{" << prob[0] << "," << prob[1] << "," << prob[2] << "," << prob[3] << "}\tEntropy =\t" << entropyTwoBit[i] << " mers\t\tInformation =\t" << informationTwoBit[i] << endl;
 				}
@@ -991,12 +1006,12 @@ void TSimulation::Step()
 
 
 				/* DOING FOUR BIT WINDOW */
+
 				for( int i=0; i<2; i++ )		// for each window four-bits wide...
 				{
 					int number_of[16];
 					for( int j=0; j<16; j++) { number_of[j] = 0; }		// zero out the array
 
-//					cout << "Got Here! [3]" << endl; cout.flush();
 					
 					for( int critter=0; critter<numcritters; critter++ )
 					{
@@ -1068,20 +1083,19 @@ void TSimulation::Step()
 					{
 						prob[j] = (float) number_of[j] / (float) numcritters;
 						if( prob[j] == 0.0 ) { logprob[j] = 0.0; }
-						else { logprob[j] = log2(prob[j]) / log2(16); }
-//						else { logprob[j] = log2(prob[j]); }			// if you want entropy in terms of bits instead of mers use this line
+						else { logprob[j] = log2(prob[j]); }
 
 						sum += prob[j] * logprob[j];						// H(X) = -1 * SUM{ p(x) * log p(x) }
 					}
 					
 					entropyFourBit[i] = (sum * -1);							// multiplying the sum by -1 to get the Entropy
-					informationFourBit[i] = 1.0 - entropyFourBit[i];		// since we're in units of mers, maxentroopy is always 1.0
-
+					informationFourBit[i] = 4.0 - entropyFourBit[i];		// since we're in units of mers, maxentroopy is always 1.0
+					SumInformationFourBit += informationFourBit[i];
 //DEBUG				cout << "Gene" << gene << "_window4bit[" << i << "]: probs =\t{" << prob[0] << "," << prob[1] << "," << prob[2] << "," << prob[3] << "," << prob[4] << "," << 
 //DEBUG					prob[5] << "," << prob[6] << "," << prob[7] << "," << prob[8] << "," << prob[9] << "," << prob[10] << "," << prob[11] << "," << 
 //DEBUG					prob[12] << "," << prob[13] << "," << prob[14] << "," << prob[15] << "}\tEntropy =\t" << entropyFourBit[i] << " mers\t\tInformation =\t" << informationFourBit[i] << endl;
 				}
-				
+
 				fprintf( FileFourBit, " %.4f %.4f", informationFourBit[0], informationFourBit[1] );
 	
 
@@ -1090,24 +1104,18 @@ void TSimulation::Step()
 			fprintf( FileOneBit,  "\n" );		// end the line
 			fprintf( FileTwoBit,  "\n" );		// end the line
 			fprintf( FileFourBit, "\n" );		// end the line
-
+			fprintf( FileSummary, "%.4f %.4f %.4f\n", SumInformationOneBit, SumInformationTwoBit, SumInformationFourBit );		// write the timestep on the beginning of the line
 
 			// Done computing AdamiComplexity.  Close our log files.
 			fclose( FileOneBit );
 			fclose( FileTwoBit );
 			fclose( FileFourBit );
+			fclose( FileSummary );
 	}
 
 
-
-
-
-
-
-
-	
 	// Handle tracking gene Separation
-	if (fMonitorGeneSeparation && fRecordGeneSeparation)
+	if( fMonitorGeneSeparation && fRecordGeneSeparation )
 		RecordGeneSeparation();
 		
 	//Rotate the world a bit each time step... (CMB 3/10/06)
@@ -1305,7 +1313,6 @@ void TSimulation::Init()
 			cerr << "could not open run/genome/AdamiComplexity-2bit.txt for writing [1]. Exiting." << endl;
 			exit(1);
 		}
-		
 		fprintf( File, "BitsInGenome: %ld WindowSize: 2\n", genome::gNumBytes * 8 );		// write the number of bits into the top of the file.
 		fclose( File );
 
@@ -1315,10 +1322,16 @@ void TSimulation::Init()
 			cerr << "could not open run/genome/AdamiComplexity-4bit.txt for writing [1]. Exiting." << endl;
 			exit(1);
 		}
-		
 		fprintf( File, "BitsInGenome: %ld WindowSize: 4\n", genome::gNumBytes * 8 );		// write the number of bits into the top of the file.
 		fclose( File );
-		
+
+		if( (File = fopen("run/genome/AdamiComplexity-summary.txt", "a")) == NULL )
+		{
+			cerr << "could not open run/genome/AdamiComplexity-summary.txt for writing [1]. Exiting." << endl;
+			exit(1);
+		}
+		fprintf( File, "Timestep 1bit 2bit 4bit\n" );
+		fclose( File );
 	}
 
 	// If we're going to record the gene means and std devs, we need to allocate a couple of stat arrays
