@@ -65,12 +65,11 @@ double CalcComplexity( char * fnameAct, char part )
      time(&seed);
      gsl_rng_set(r, seed);
 
-     for( unsigned int i=0; i<activity->size1; i++)
-     {
+	for( unsigned int i=0; i<activity->size1; i++)
+	{
 		for( unsigned int j=0; j<activity->size2; j++)
 			gsl_matrix_set(activity, i, j, gsl_matrix_get(activity, i,j) + 0.00001*gsl_ran_ugaussian(r));	// we can do smaller values
-//			gsl_matrix_set(activity, i, j, gsl_matrix_get(activity, i,j) + 0.0001*gsl_ran_ugaussian(r));
-     }
+	}
 
 	gsl_rng_free( r );
 
@@ -180,7 +179,6 @@ gsl_matrix * mCOV( gsl_matrix * M )
 The input matrix may not be square, but the output will always be square NxN matrix where N is the number of columns in the input matrix. 
 */
 	gsl_matrix * COV = gsl_matrix_alloc( M->size2, M->size2);
-//	gsl_matrix * COV = gsl_matrix_calloc( M->size2, M->size2);
 
 	double array_col_i[M->size1];	// The GSL covariance function takes arrays
 	double array_col_j[M->size1];	// The GSL covariance function takes arrays
@@ -1022,8 +1020,7 @@ double calcC_det3__optimized( gsl_matrix * foreignCOR )
 
 		gsl_matrix * Xed_COR =  matrix_crosssection( COR, b, b_length );
 		sumI_n1 += calcI_det2( Xed_COR );
-		gsl_matrix_free( Xed_COR );		//!!! this should solve the big memory leak problem
-//		sumI_n1 += calcI_det2( matrix_crosssection( COR, b, b_length ) );
+		gsl_matrix_free( Xed_COR );		// this should solve the big memory leak problem
 	}
 
 	gsl_matrix_free( COR );
@@ -1096,24 +1093,15 @@ matrix_crosssection() takes 3 arguments:
 
 	The returned matrix will be square.
 */
-gsl_matrix * matrix_crosssection(gsl_matrix * Minput, int* thearray, int thearray_length )
+gsl_matrix * matrix_crosssection( gsl_matrix * Minput, int* thearray, int thearray_length )
 {
-	int Minput_size;
-
-	if( Minput->size1 < Minput->size2 ) { Minput_size = Minput->size1; }
-	else                                { Minput_size = Minput->size2; }	//If Minput isn't square,
-										//we only use the least of these.
-
-
 	// Define our matrix to return
-	gsl_matrix * Mnew = gsl_matrix_alloc( thearray_length, thearray_length );		// defines matrix with rows/columns [0 ... thearray_length-1]
+	gsl_matrix * Mnew = gsl_matrix_alloc( thearray_length, thearray_length ); // defines a matrix with rows/columns [0 ... thearray_length-1]
 
 
 	for( int row=0; row<thearray_length; row++ )
 	{
-		int col=0;
-				
-		gsl_vector_view row_i = gsl_matrix_row(    Minput, thearray[row] );	//this could perhaps be made more efficient by getting submatrixes of that row
+		gsl_vector_view row_i = gsl_matrix_row( Minput, thearray[row] );	
 
 //		cout << "Length of Minput row_i" << "(" << i << "): " << (&row_i.vector)->size << " // Values in row_i: ";
 //		for(int temp=0; temp < (&row_i.vector)->size; temp++ )
@@ -1122,10 +1110,9 @@ gsl_matrix * matrix_crosssection(gsl_matrix * Minput, int* thearray, int thearra
 //		}
 //		cout << endl;
 
-		for( int j=0; j< thearray_length; j++ )
+		for( int col=0; col<thearray_length; col++ )
 		{
-			gsl_matrix_set( Mnew, row, col, gsl_vector_get(&row_i.vector, thearray[j]) );
-			col++;
+			gsl_matrix_set( Mnew, row, col, gsl_vector_get(&row_i.vector, thearray[col]) );
 		}
 	}
 
