@@ -409,7 +409,7 @@ void genome::Randomize()
 void genome::SeedGenes()
 {
 	// Assumes the minimum number of internal neural groups is 0, and uses binary gene coding (as opposed to gray-coding)
-	fGenes[mrategene]			= 0;	// about 0.1
+	fGenes[mrategene]			= 127;	// about 0.025
 	fGenes[ncptsgene]			= 127;	// about 5
 	fGenes[lifespangene]		= 127;	// about 750
 	fGenes[idgene]				= 127;	// 127
