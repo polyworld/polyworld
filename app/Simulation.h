@@ -40,7 +40,7 @@ static const int MAXFITNESSITEMS = 5;
 // Define directory mode mask the same, except you need execute privileges to use as a directory (go fig)
 #define	PwDirMode ( S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH )
 
-#define CurrentWorldfileVersion 20
+#define CurrentWorldfileVersion 21
 
 
 struct FitStruct
@@ -532,6 +532,7 @@ private:
 	StatRecent fLifeSpanRecentStats;
 	StatRecent fLifeFractionRecentStats;
 
+	char  fSmiteMode;		// 'R' = Random; 'L' = Leastfit
 	float fSmiteFrac;
 	float fSmiteAgeFrac;
 	int fNumLeastFit;

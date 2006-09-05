@@ -27,6 +27,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/errno.h>
+#include <assert.h>
 
 // qt
 #include <qapplication.h>
@@ -1754,6 +1755,7 @@ void TSimulation::InitWorld()
     fNumBornSinceCreated = 0;
     fChartGeneSeparation = false; // GeneSeparation (if true, genesepmon must be true)
     fDeathProbability = 0.001;
+	fSmiteMode = 'L';
     fSmiteFrac = 0.10;
 	fSmiteAgeFrac = 0.25;
     fShowVision = true;
@@ -2086,7 +2088,7 @@ void TSimulation::Interact()
 	// Take care of deaths first, plus least-fit determinations
 	// Also use this as a convenient place to compute some stats
 
-	//cout << "before deaths "; critter::gXSortedCritters.list();	//dbg
+//cout << "before deaths "; critter::gXSortedCritters.list();	//dbg
 	fCurrentNeuronGroupCountStats.reset();
 	objectxsortedlist::gXSortedObjects.reset();
     while( objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &c ) )
@@ -2322,26 +2324,62 @@ void TSimulation::Interact()
                                      kd);
 
 					bool smited = false;
-					
-					if( (fDomains[kd].numcritters >= fDomains[kd].maxnumcritters) &&	// too many critters to reproduce withing a bit of smiting
-						(fDomains[kd].fNumLeastFit > fDomains[kd].fNumSmited) )			// we've still got some left that are suitable for smiting
+
+					if( fSmiteMode == 'L' )		// smite the least fit
 					{
-						while( (fDomains[kd].fNumSmited < fDomains[kd].fNumLeastFit) &&		// there are any left to smite
-							   ((fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] == c) ||	// trying to smite mommy
-								(fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] == d) ||	// trying to smite daddy
-							    ((fCurrentFittestCount > 0) && (fDomains[kd].fLeastFit[fDomains[kd].fNumSmited]->Fitness() > fCurrentMaxFitness[fCurrentFittestCount-1]))) )	// trying to smite one of the fittest
+						if( (fDomains[kd].numcritters >= fDomains[kd].maxnumcritters) &&	// too many critters to reproduce withing a bit of smiting
+							(fDomains[kd].fNumLeastFit > fDomains[kd].fNumSmited) )			// we've still got some left that are suitable for smiting
 						{
-							// We would have smited one of our mating pair, or one of the fittest, which wouldn't be prudent,
-							// so just step over them and see if there's someone else to smite
-							fDomains[kd].fNumSmited++;
+							while( (fDomains[kd].fNumSmited < fDomains[kd].fNumLeastFit) &&		// there are any left to smite
+								((fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] == c) ||	// trying to smite mommy
+									(fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] == d) ||	// trying to smite daddy
+									((fCurrentFittestCount > 0) && (fDomains[kd].fLeastFit[fDomains[kd].fNumSmited]->Fitness() > fCurrentMaxFitness[fCurrentFittestCount-1]))) )	// trying to smite one of the fittest
+							{
+								// We would have smited one of our mating pair, or one of the fittest, which wouldn't be prudent,
+								// so just step over them and see if there's someone else to smite
+								fDomains[kd].fNumSmited++;
+							}
+							if( fDomains[kd].fNumSmited < fDomains[kd].fNumLeastFit )	// we've still got someone to smite, so do it
+							{
+								Death( fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] );
+								fDomains[kd].fNumSmited++;
+								fNumberDiedSmite++;
+								smited = true;
+								//cout << "********************* SMITE *******************" nlf;	//dbg
+							}
 						}
-						if( fDomains[kd].fNumSmited < fDomains[kd].fNumLeastFit )	// we've still got someone to smite, so do it
+					}
+					else
+					{
+						if( (fDomains[kd].numcritters >= fDomains[kd].maxnumcritters) && (objectxsortedlist::gXSortedObjects.getCount( CRITTERTYPE ) >= fMaxCritters) )
 						{
-							Death( fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] );
-							fDomains[kd].fNumSmited++;
-							fNumberDiedSmite++;
-							smited = true;
-							//cout << "********************* SMITE *******************" nlf;	//dbg
+							/* Random Smiting: Steps
+							1) get pointer of a random critter
+							2) check that the pointer isn't mommy or daddy
+							3) check that we wouldn't be commiting infanticide.  If we would be committing infanticide, just give up the entire attempt at smitting -- Otherwise we can get infinite loops if the entire population consisted of young'ens.
+							4) Death( random_critter_pointer )
+							*/
+							
+							critter *randcritter = NULL;
+
+							do		// 1) get the pointer of a random critter...
+							{
+								int random_index = int(round( drand48() * fDomains[kd].numcritters ));		// I think a call to fDomains[kd].numcritters is faster than objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE)
+
+								objectxsortedlist::gXSortedObjects.reset();		// reset the list incase we need to do this multiple times.
+								for(int i=0; i<random_index; i++)
+									objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &randcritter );
+																
+							} while( randcritter->Number() == c->Number() || randcritter->Number() == d->Number() );		// 2) if randcritter is too young, or mommy or daddy, try again.
+							
+							if( randcritter->Age() > (fSmiteAgeFrac * randcritter->MaxAge()) )								// 3) only critters that are old enough get the death penalty.  If it's not old enough, just give up the smite attempt.
+							{
+								// 4) Smite it!
+								fDomains[kd].fNumSmited++;
+								fNumberDiedSmite++;
+								smited = true;
+								Death( randcritter );
+							}
 						}
 					}
 
@@ -4218,8 +4256,14 @@ void TSimulation::ReadWorldFile(const char* filename)
 		fb.close();
 		return;
 	}
-	
+	if( version >= 21 )
+	{
+		in >> fSmiteMode; in >> label;
+		cout << "smiteMode" ses fSmiteMode nl;
+		assert( fSmiteMode == 'L' || fSmiteMode == 'R' );		// fSmiteMode must be either 'L' or 'R'
+	}
     in >> fSmiteFrac; in >> label;
+	
     cout << "smiteFrac" ses fSmiteFrac nl;
     in >> fSmiteAgeFrac; in >> label;
     cout << "smiteAgeFrac" ses fSmiteAgeFrac nl;

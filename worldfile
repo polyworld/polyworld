@@ -1,8 +1,8 @@
-20      version
+21      version
 
 10002  maxSteps
 1      docpuwork
-10000  dumpfreq
+1000   dumpfreq
 100    statfreq
 1      edges
 0      wraparound
@@ -11,9 +11,9 @@
 22     minwin
 1.0    maxvel
 100     minnumcritters
-100    maxnumcritters
+300    maxnumcritters
 100    initnumcritters
-0    numberToSeed
+100    numberToSeed
 1.0    probabilityOfMutatingSeed
 -1     misccritters
 
@@ -87,7 +87,7 @@
 0.0    critterhealingrate
 
 0.2    eatthreshold
-1.5    matethreshold
+0.5    matethreshold
 0.2    fightthreshold
 1.0    miscbias
 2.0    miscinvslope
@@ -104,7 +104,7 @@
 0.35 0.25 0.15 barriercolor
 0.10 0.15 0.05 groundcolor
 0.0    groundclearance
-1.0 1.0 1.0 cameracolor
+0.3 0.3 0.3 cameracolor
 0.6    camradius
 0.35   camheight
 0.09   camrotationrate
@@ -127,9 +127,9 @@
 1      numdomains
 
 100	domain[0].minCritters
-100	domain[0].maxCritters
+300	domain[0].maxCritters
 100	domain[0].initCritters
-0	domain[0].numberToSeed
+100	domain[0].numberToSeed
 1.0	domain[0].probabilityOfMutatingSeeds
 0.5	domain[0].centerX	
 0.5	domain[0].centerZ	
@@ -199,6 +199,7 @@
 
 0      graycoding
 
+L      smiteMode_R=random|L=leastfit
 0.10   smiteFrac
 0.25   smiteAgeFrac_affectsAverageFitness
 
@@ -219,6 +220,6 @@
 
 Linear    FogFunction_Exponential_Linear_Off
 0.1    ExponentialFogDensity
-20     LinearFogEnd
+33     LinearFogEnd
 
 1      recordMovie
