@@ -165,6 +165,7 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
 		fBestSoFarBrainFunctionRecordFrequency(0),
 		fBestRecentBrainAnatomyRecordFrequency(0),
 		fBestRecentBrainFunctionRecordFrequency(0),
+		fRecordBirthsDeaths(false),
 		fBrainAnatomyRecordAll(false),
 		fBrainFunctionRecordAll(false),
 		fBrainAnatomyRecordSeeds(false),
@@ -1334,6 +1335,18 @@ void TSimulation::Init()
 		fprintf( File, "Timestep 1bit 2bit 4bit\n" );
 		fclose( File );
 	}
+	
+	if( fRecordBirthsDeaths )
+	{
+		FILE * File;
+		if( (File = fopen("run/BirthsDeaths.log", "a")) == NULL )
+		{
+			cerr << "could not open run/genome/AdamiComplexity-summary.txt for writing [1]. Exiting." << endl;
+			exit(1);
+		}
+		fprintf( File, "%% Timestep Event Critter# Parent1 Parent2\n" );
+		fclose( File );
+	}
 
 	// If we're going to record the gene means and std devs, we need to allocate a couple of stat arrays
 	if( fRecordGeneStats )
@@ -2421,6 +2434,20 @@ void TSimulation::Interact()
 										fStep, e->Number(), c->Number(), d->Number(), e->x(), e->y(), e->z(), e->yaw(), e->Energy(), kd, id, jd, e->Brain()->NumNeuronGroups() );
 							//if( fStep > 50 )
 							//	exit( 0 );
+							if( fRecordBirthsDeaths )
+							{
+								FILE * File;
+							
+								if( (File = fopen("run/BirthsDeaths.log", "a")) == NULL )
+								{
+									cerr << "could not open run/BirthsDeaths.log for writing [1]. Exiting." << endl;
+									exit(1);
+								}
+								
+								fprintf(File, "%ld BIRTH %ld %ld %ld\n", fStep, e->Number(), c->Number(), d->Number() );
+								
+								fclose(File);
+							}
                         }
                         else	// miscegenation function denied this birth
 						{
@@ -2748,6 +2775,18 @@ void TSimulation::Interact()
 				newlifes++;
                 //newCritters.add(newCritter); // add it to the full list later; the e->listLink that gets auto stored here must be replaced with one from full list below
 				fNeuronGroupCountStats.add( newCritter->Brain()->NumNeuronGroups() );
+				
+				if( fRecordBirthsDeaths )
+				{
+					FILE * File;
+					if( (File = fopen("run/BirthsDeaths.log", "a")) == NULL )
+					{
+						cerr << "could not open run/genome/AdamiComplexity-summary.txt for writing [1]. Exiting." << endl;
+						exit(1);
+					}
+					fprintf( File, "%ld CREATION %ld\n", fStep, newCritter->Number() );
+					fclose( File );
+				}
             }
         }
 
@@ -2820,6 +2859,19 @@ void TSimulation::Interact()
 	    	newlifes++;
             //newCritters.add(newCritter); // add it to the full list later; the e->listLink that gets auto stored here must be replaced with one from full list below
 			fNeuronGroupCountStats.add( newCritter->Brain()->NumNeuronGroups() );
+
+			if( fRecordBirthsDeaths )
+			{
+				FILE * File;
+				if( (File = fopen("run/BirthsDeaths.log", "a")) == NULL )
+				{
+					cerr << "could not open run/genome/AdamiComplexity-summary.txt for writing [1]. Exiting." << endl;
+					exit(1);
+				}
+				fprintf( File, "%ld CREATION %ld\n", fStep, newCritter->Number() );
+				fclose( File );
+			}
+						
         }
 
 	#ifdef DEBUGCHECK
@@ -3548,6 +3600,20 @@ void TSimulation::Death(critter* c)
 		if( unlink( s ) )
 			eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
 	}
+
+	if( fRecordBirthsDeaths )		// are we recording births, deaths, and creations?  If so, this critter will be included.
+	{
+		FILE * File;
+		
+		if( (File = fopen("run/BirthsDeaths.log", "a")) == NULL )
+		{
+			cerr << "could not open run/genome/run/BirthsDeaths.log for writing [1].  Exiting." << endl;
+			exit(1);
+		}
+		
+		fprintf( File, "%ld DEATH %ld\n", fStep, c->Number() );
+		fclose( File );
+	}
 	
 	// following assumes (requires!) list to be currently pointing to c,
     // and will leave the list pointing to the previous critter
@@ -4274,6 +4340,11 @@ void TSimulation::ReadWorldFile(const char* filename)
 		fb.close();
 		return;
 	}
+	if( version >= 22 )
+	{
+		in >> fRecordBirthsDeaths; in >> label;
+		assert( fRecordBirthsDeaths == true || fRecordBirthsDeaths == false);
+	}
 	
 	if( version >= 11 )
 	{
@@ -4385,7 +4456,8 @@ void TSimulation::ReadWorldFile(const char* filename)
 			fFogFunction = 'L';
 		else
 			fFogFunction = 'O';					// No Fog (OFF)
-
+		
+		assert( (fFogFunction == 'O' || fFogFunction == 'E' || fFogFunction == 'L') );
 		// This value only does something if Fog Function is exponential
 		// Acceptable values are between 0 and 1 (inclusive)
 		in >> fExpFogDensity; in >> label;

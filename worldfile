@@ -1,4 +1,4 @@
-21      version
+22      version
 
 10002  maxSteps
 1      docpuwork
@@ -13,7 +13,7 @@
 100     minnumcritters
 300    maxnumcritters
 100    initnumcritters
-100    numberToSeed
+100     numberToSeed
 1.0    probabilityOfMutatingSeed
 -1     misccritters
 
@@ -203,10 +203,12 @@ L      smiteMode_R=random|L=leastfit
 0.10   smiteFrac
 0.25   smiteAgeFrac_affectsAverageFitness
 
-1      brainAnatomyRecordAll
-1      brainFunctionRecordAll
-1      brainAnatomyRecordSeeds
-1      brainFunctionRecordSeeds
+
+1	recordBirthsDeaths
+1       brainAnatomyRecordAll
+1       brainFunctionRecordAll
+1       brainAnatomyRecordSeeds
+1       brainFunctionRecordSeeds
 1000     bestSoFarBrainAnatonomyRecordFrequency
 1000     bestSoFarBrainFunctionRecordFrequency
 1000     bestRecentBrainAnatonomyRecordFrequency
