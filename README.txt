@@ -83,7 +83,14 @@ IMPORTANT NOTE: Intel Macs may require gsl 1.8 or higher.
 	$ export LD_LIBRARY_PATH
 
 Mac versus Linux Installs
-* The default 'polyworld.pro' file now works for both Mac & Linux.
+* The default 'polyworld.pro' file now works for both Mac & Linux,
+  except for PwMovieTools.cp, which refers to some byte-swapping
+  functions/macros use to deal with the endian-ness change between
+  PowerPC and Intel (currently this can be worked around by creating
+  stub macros for these half dozen functions/macros, and it just
+  means you won't be able to record or play back movies).  I need
+  to create macros for OSSwapInt16(), OSSwapInt32(), ntohl() and
+  htonl() to get Linux back to compiling correctly out of the box.
 
 Build Polyworld (Qt method)
 * enter the polyworld directory by typing 'cd polyworld'

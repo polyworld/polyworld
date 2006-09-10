@@ -4,7 +4,17 @@ a good place to start.
 In the short term, certain key user interface functionality must
 still be revived or newly developed, such as:
 
-* make the main view's camera rotate again 
+* create macro equivalents for OSSwapInt16(), OSSwapInt32(), htonl(),
+  and ntohl(), so Linux can use the PwMovieTools
+* when an agent is killed and its carcass is to become food, it is
+  inserted into the x-sorted object list with add(), which searches
+  through the entire list to figure out where to do the insertion;
+  since we already know where we are in the x-sorted list (whereever
+  the dying critter is), we shouldn't have to do that!
+  An "addNear( newLink, nearLink )" function should do the trick;
+  it should save and restore currItem, then we can eliminate the
+  explicity code to do so in Interact() in Simulation.cp.
+* same as above for newborn critters
 * make windows record their position and size changes to the settings
   file when they are manually moved or resized
 * make dump files work again (to save state and restart the program) 
@@ -51,6 +61,7 @@ enhance the evolutionary usefulness of collaboration.
 
 Recently done:
 
+* make the main view's camera rotate again 
 * set up to get email on cvs commits (improved x7 - use activitymail)
 * write status file again
 * fix bug in PwMoviePlayer that results in disembodied, unpopulated little
