@@ -42,9 +42,6 @@ float food::gMaxFoodRadius;
 //-------------------------------------------------------------------------------------------
 food::food()
 {
-	/* Set object type to be FOODTYPE */
-	setType(FOODTYPE);
-
 	initfood();
 }
 
@@ -175,6 +172,7 @@ void food::initlen()
 //-------------------------------------------------------------------------------------------           
 void food::initrest()
 {
+	setType(FOODTYPE);
 	setcolor(gFoodColor);
 }
 

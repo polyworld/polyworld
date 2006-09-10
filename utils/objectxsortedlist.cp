@@ -11,6 +11,14 @@
 #include "objectxsortedlist.h"
 #include "critter.h"
 
+#define DebugCounts 0
+
+#if DebugCounts
+	#define cntPrint( x... ) printf( x )
+#else
+	#define cntPrint( x... )
+#endif
+
 using namespace std;
 
 
@@ -149,13 +157,19 @@ void objectxsortedlist::add( gobject* a )
     switch( a->getType() )
 	{
 		case CRITTERTYPE:
-			(this->critterCount)++;
+			cntPrint( "%s: incrementing critterCount from %d to %d\n", __func__, critterCount, critterCount + 1 );
+			critterCount++;
 			break;
 		case FOODTYPE:
-			(this->foodCount)++;
+			cntPrint( "%s: incrementing foodCount from %d to %d\n", __func__, foodCount, foodCount + 1 );
+			foodCount++;
 			break;
 		case BRICKTYPE:
-			(this->brickCount)++;
+			cntPrint( "%s: incrementing brickCount from %d to %d\n", __func__, brickCount, brickCount + 1 );
+			brickCount++;
+			break;
+		default:
+			fprintf( stderr, "%s() called for x-sorted object list with invalid object type (%d)\n", __func__, a->getType() );
 			break;
     }
 
@@ -187,7 +201,8 @@ void objectxsortedlist::removeCurrentObject()
 			gdlink<gobject*> *tempItem;
 
 			case CRITTERTYPE:
-				(this->critterCount)--;
+				cntPrint( "%s: decrementing critterCount from %d to %d\n", __func__, critterCount, critterCount - 1 );
+				critterCount--;
 				tempItem = currItem;
 				while( (markedCritter == currItem) && (markedCritter != 0) )
 				{
@@ -203,7 +218,8 @@ void objectxsortedlist::removeCurrentObject()
 				break;
 
 			case FOODTYPE:
-				(this->foodCount)--;
+				cntPrint( "%s: decrementing foodCount from %d to %d\n", __func__, foodCount, foodCount - 1 );
+				foodCount--;
 				tempItem = currItem;
 				while( (markedFood == currItem) && (markedFood != 0) )
 				{
@@ -212,14 +228,15 @@ void objectxsortedlist::removeCurrentObject()
 					else
 					{
 						tempItem = tempItem->prevItem;				// back up one item in the list
-						if( tempItem->e->getType() == CRITTERTYPE )	// if it's of the right type,
+						if( tempItem->e->getType() == FOODTYPE )	// if it's of the right type,
 							markedFood = tempItem;					// mark it (and that will kick us out of the loop)
 					}
 				}
 				break;
 
 			case BRICKTYPE:
-				(this->brickCount)--;
+				cntPrint( "%s: decrementing brickCount from %d to %d\n", __func__, brickCount, brickCount - 1 );
+				brickCount--;
 				tempItem = currItem;
 				while( (markedBrick == currItem) && (markedBrick != 0) )
 				{
@@ -228,7 +245,7 @@ void objectxsortedlist::removeCurrentObject()
 					else
 					{
 						tempItem = tempItem->prevItem;				// back up one item in the list
-						if( tempItem->e->getType() == CRITTERTYPE )	// if it's of the right type,
+						if( tempItem->e->getType() == BRICKTYPE )	// if it's of the right type,
 							markedBrick = tempItem;					// mark it (and that will kick us out of the loop)
 					}
 				}
@@ -241,6 +258,11 @@ void objectxsortedlist::removeCurrentObject()
 
 		// Actually remove the object from the list
 		this->remove();
+		
+		if( kount != (critterCount + foodCount + brickCount) )
+		{
+			printf( "kount (%ld) != critterCount (%d) + foodCount (%d) + brickCount (%d)\n", kount, critterCount, foodCount, brickCount );
+		}
     }
 }
 

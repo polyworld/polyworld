@@ -7,7 +7,7 @@
 #ifndef DLINK_H
 #define DLINK_H
 
-#define DebugGDL 1
+#define DebugGDL 0
 
 #include <iostream>
 #include <stdio.h>
@@ -342,8 +342,9 @@ int gdlist<TTYPE>::getnext(TTYPE &a)
 	else
 		f->remove();	
 	
-	delete f;		
-	kount--;		
+	delete f;
+	gdlPrint( "%s: decrementing kount from %ld to %ld\n", __func__, kount, kount - 1 );	
+	kount--;	
 	return 1;		
 }
 
@@ -378,6 +379,7 @@ int gdlist<TTYPE>::getprev(TTYPE &a)
 		f->remove();	
 	
 	delete f;		
+	gdlPrint( "%s: decrementing kount from %ld to %ld\n", __func__, kount, kount - 1 );	
 	kount--;		
 	return 1;		
 }
@@ -397,6 +399,7 @@ gdlink<TTYPE>* gdlist<TTYPE>::insert(const TTYPE a)
 		lastItem = l;
 		lastItem->nextItem = lastItem->prevItem = lastItem;
 	}
+	gdlPrint( "%s: incrementing kount from %ld to %ld\n", __func__, kount, kount + 1 );	
 	kount++;
 	
 	return( l );
@@ -413,6 +416,7 @@ void gdlist<TTYPE>::insert(gdlink<TTYPE>* l)
 		lastItem = l;		
 		lastItem->nextItem = lastItem->prevItem = lastItem;			
 	}
+	gdlPrint( "%s: incrementing kount from %ld to %ld\n", __func__, kount, kount + 1 );	
 	kount++;		
 }
 
@@ -445,12 +449,13 @@ gdlink<TTYPE>* gdlist<TTYPE>::inserthere(const TTYPE a)
 	{
 		l = new gdlink<TTYPE>( a );
 		
-		currItem->insert( l );
+		currItem->insert( l );	// does not kount
+		gdlPrint( "%s: incrementing kount from %ld to %ld\n", __func__, kount, kount + 1 );	
 		kount++;
 	}
 	else
 	{
-		l = this->insert( a );
+		l = this->insert( a );	// increments kount
 	}
 	return( l );
 }
@@ -462,11 +467,12 @@ void gdlist<TTYPE>::inserthere(gdlink<TTYPE>* l)
 {
 	if (currItem)		
 	{
-		currItem->insert(l);	
-		kount++;		
+		currItem->insert(l);	// does not increment kount
+		gdlPrint( "%s: incrementing kount from %ld to %ld\n", __func__, kount, kount + 1 );	
+		kount++;
 	}
 	else
-		this->insert(l);	
+		this->insert(l);	// increments kount
 }
 
 /* append an entry after the current location in list */
@@ -480,6 +486,7 @@ gdlink<TTYPE>* gdlist<TTYPE>::appendhere( const TTYPE a )
 	{
 		l = new gdlink<TTYPE>( a );
 		currItem->append( l );		
+		gdlPrint( "%s: incrementing kount from %ld to %ld\n", __func__, kount, kount + 1 );	
 		kount++;		
 	}
 	else
@@ -496,6 +503,7 @@ void gdlist<TTYPE>::appendhere( gdlink<TTYPE>* a )
 	if( currItem )
 	{
 		currItem->append( a );	
+		gdlPrint( "%s: incrementing kount from %ld to %ld\n", __func__, kount, kount + 1 );	
 		kount++;		
 	}
 	else		
@@ -518,6 +526,7 @@ void gdlist<TTYPE>::remove()
 			if( markItem == currItem )
 				markItem = 0;
 			currItem = 0;
+			gdlPrint( "%s-1: decrementing kount from %ld to %ld\n", __func__, kount, kount - 1 );	
 			kount--;
 		}
 		else if (currItem == lastItem) /* lastItem link */		
@@ -529,6 +538,7 @@ void gdlist<TTYPE>::remove()
 				markItem = prevcurr;
 			currItem = prevcurr;
 			lastItem = currItem;
+			gdlPrint( "%s-2: decrementing kount from %ld to %ld\n", __func__, kount, kount - 1 );	
 			kount--;
 		}
 		else		
@@ -539,6 +549,7 @@ void gdlist<TTYPE>::remove()
 			if( markItem == currItem )
 				markItem = prevcurr;
 			currItem = prevcurr;
+			gdlPrint( "%s-3: decrementing kount from %ld to %ld\n", __func__, kount, kount - 1 );	
 			kount--;
 		}
 	}
@@ -549,6 +560,7 @@ void gdlist<TTYPE>::remove()
 		delete currItem;
 		// leave markItem alone; it it used be 0 (== currItem), it will stay 0
 		currItem = 0;		
+		gdlPrint( "%s-4: decrementing kount from %ld to %ld\n", __func__, kount, kount - 1 );	
 		kount--;		
 	}
 	if (!kount)
@@ -629,6 +641,7 @@ gdlink<TTYPE>* gdlist<TTYPE>::unlink()
 			currItem->remove();
 			savecurr = currItem;
 			currItem = 0;	
+			gdlPrint( "%s-1: decrementing kount from %ld to %ld\n", __func__, kount, kount - 1 );	
 			kount--;	
 		}
 		else if (currItem == lastItem) /* lastItem link */		
@@ -638,6 +651,7 @@ gdlink<TTYPE>* gdlist<TTYPE>::unlink()
 			savecurr = currItem;
 			currItem = prevcurr;
 			lastItem = currItem;	
+			gdlPrint( "%s-2: decrementing kount from %ld to %ld\n", __func__, kount, kount - 1 );	
 			kount--;	
 		}
 		else		
@@ -646,6 +660,7 @@ gdlink<TTYPE>* gdlist<TTYPE>::unlink()
 			currItem->remove();
 			savecurr = currItem;
 			currItem = prevcurr;
+			gdlPrint( "%s-3: decrementing kount from %ld to %ld\n", __func__, kount, kount - 1 );	
 			kount--;	
 		}
 	}
@@ -655,6 +670,7 @@ gdlink<TTYPE>* gdlist<TTYPE>::unlink()
 		currItem->remove();	
 		savecurr = currItem;	
 		currItem = 0;		
+		gdlPrint( "%s-4: decrementing kount from %ld to %ld\n", __func__, kount, kount - 1 );	
 		kount--;		
 	}
 	if (!kount)

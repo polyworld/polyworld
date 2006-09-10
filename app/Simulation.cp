@@ -3,11 +3,10 @@
 #define DebugSmite 0
 #define DebugLinksEtAl 0
 #define DebugDomainFoodBands 0
-#define DebugFoodBandCounts 1
 #define DebugShowSort 0
 #define DebugShowBirths 0
 #define DebugShowEating 0
-#define DebugGeneticAlgorithm 1
+#define DebugGeneticAlgorithm 0
 
 // CompatibilityMode makes the new code with a single x-sorted list behave *almost* identically to the old code.
 // Discrepancies still arise due to the old food list never being re-sorted and critters at the exact same x location
@@ -2299,6 +2298,12 @@ void TSimulation::Interact()
 
         while( objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &d ) ) // to end of list or...
         {
+			if( d == c )
+			{
+				printf( "d == c\n" );
+				continue;
+			}
+			
             if( (d->x() - d->radius()) >= (c->x() + c->radius()) )
                 break;  // this guy (& everybody else in list) is too far away
 
@@ -2422,7 +2427,9 @@ void TSimulation::Interact()
                             e->setyaw( AverageAngles(c->yaw(), d->yaw()) );	// wrong: 0.5*(c->yaw() + d->yaw()));   // was (360.0*drand48());
                             e->Domain(kd);
                             fStage.AddObject(e);
+							gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();
 							objectxsortedlist::gXSortedObjects.add(e); // Add the new critter directly to the list of objects (no new critter list); the e->listLink that gets auto stored here should be valid immediately
+							objectxsortedlist::gXSortedObjects.setcurr( saveCurr );
 							newlifes++;
 							//newCritters.add(e); // add it to the full list later; the e->listLink that gets auto stored here must be replaced with one from full list below
                             fDomains[kd].numcritters++;
@@ -2617,7 +2624,9 @@ void TSimulation::Interact()
 						if (f->energy() <= 0.0)  // all gone
 						{
 							// A food was used up so remove it from the patch count and domain count
-							(f->getPatch())->foodCount--;
+							FoodPatch* fp = f->getPatch();
+							if( fp )
+								fp->foodCount--;
 							fDomains[f->domain()].foodCount--;
 
 							objectxsortedlist::gXSortedObjects.removeCurrentObject();   // get it out of the list
@@ -3255,11 +3264,19 @@ void TSimulation::Death(critter* c)
         {
             food* f = new food( foodenergy, c->x(), c->z() );
             Q_CHECK_PTR( f );
+			gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();
 			objectxsortedlist::gXSortedObjects.add( f );	// dead critter becomes food
+			objectxsortedlist::gXSortedObjects.setcurr( saveCurr );
 			fStage.AddObject( f );			// put replacement food into the world
 		#if 1
 			if( fp )
+			{
 				fp->foodCount++;
+				f->setPatch( fp );
+			}
+			else
+				fprintf( stderr, "food created with no affiliated FoodPatch\n" );
+			f->domain( id );
 			fDomains[id].foodCount++;
 		#else
 			// ??? Matt had removed all of this, and not provided the above equivalent
