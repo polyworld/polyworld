@@ -4069,6 +4069,16 @@ void TSimulation::ReadWorldFile(const char* filename)
 
 			fDomains[id].endX = fDomains[id].centerX * globals::worldsize + (fDomains[id].absoluteSizeX / 2.0);
 			fDomains[id].endZ = - fDomains[id].centerZ * globals::worldsize + (fDomains[id].absoluteSizeZ / 2.0);
+			
+			// clean up for floating point precision a little
+			if( fDomains[id].startX < 0.0001 )
+				fDomains[id].startX = 0.0;
+			if( fDomains[id].startZ > -0.0001 )
+				fDomains[id].startZ = 0.0;
+			if( fDomains[id].endX > globals::worldsize * 0.9999 )
+				fDomains[id].endX = globals::worldsize;
+			if( fDomains[id].endZ < -globals::worldsize * 0.9999 )
+				fDomains[id].endZ = -globals::worldsize;
 
 			printf("NEW DOMAIN\n");
 			printf("\tstartX: %.2f\n", fDomains[id].startX);
@@ -4632,21 +4642,6 @@ void TSimulation::Dump()
 
 
 //---------------------------------------------------------------------------
-// TSimulation::DomainError
-//---------------------------------------------------------------------------
-static int DomainError(float x, float z, short d, short nd)
-{
-	char errorString[256];
-	sprintf(errorString,"%s (%g, %g) %s %d, %d",
-			"WhichDomain failed to find any domain for point at (x, z) = ",
-			x, z, " & d, nd = ", d, nd);
-	error(2, errorString);
-	
-	return -1; // not really returning, as error(2,...) will abort
-}
-
-
-//---------------------------------------------------------------------------
 // TSimulation::WhichDomain
 //---------------------------------------------------------------------------
 short TSimulation::WhichDomain(float x, float z, short d)
@@ -4658,7 +4653,21 @@ short TSimulation::WhichDomain(float x, float z, short d)
 			return i;
 	}
 
-	return DomainError(x, z, d, d);
+	// If we reach here, we failed to find a domain, so kvetch and quit
+	
+	char errorString[256];
+	
+	printf( "Domain not found in %ld domains, located at:\n", fNumDomains );
+	for( int i = 0; i < fNumDomains; i++ )
+		printf( "  %d: ranging over x = (%f -> %f) and z = (%f -> %f)\n",
+				i, fDomains[i].startX, fDomains[i].endX, fDomains[i].startZ, fDomains[i].endZ );
+	
+	sprintf(errorString,"%s (%g, %g) %s %d, %ld",
+			"WhichDomain failed to find any domain for point at (x, z) = ",
+			x, z, " & d, nd = ", d, fNumDomains);
+	error(2, errorString);
+	
+	return( -1 );	// not really returning, as error(2,...) will abort
 }
 
 
@@ -4700,6 +4709,21 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 		for (id = 1; id < fNumDomains; id++)
 		{
 			sprintf(t2, ", %ld", fDomains[id].numcritters );
+			strcat( t, t2 );
+		}
+		
+		strcat(t,")" );		
+	}
+	list.push_back( strdup( t ) );
+
+	sprintf( t, "food = %4d", objectxsortedlist::gXSortedObjects.getCount(FOODTYPE) );
+	if (fNumDomains > 1)
+	{
+		sprintf(t2, " (%d",fDomains[0].foodCount );
+		strcat(t, t2 );
+		for (id = 1; id < fNumDomains; id++)
+		{
+			sprintf(t2, ", %d", fDomains[id].foodCount );
 			strcat( t, t2 );
 		}
 		
