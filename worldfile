@@ -10,21 +10,21 @@
 1      showvision
 22     minwin
 1.0    maxvel
-100    minnumcritters
+90     minnumcritters
 300    maxnumcritters
 150    initnumcritters
-50     numberToSeed
-1.0    probabilityOfMutatingSeed
+45     numberToSeed
+0.5    probabilityOfMutatingSeed
 -1     misccritters
 
 42    positionseed_not_used
 42    genomeseed_used_for_all
 
-45    minFoodCount
-120   maxFoodCount
-90    maxFoodGrown
-90    initFoodCount
-0.1    foodrate
+150    minFoodCount
+345    maxFoodCount
+270    maxFoodGrown
+270    initFoodCount
+0.2    foodrate
 1      crittersRfood
 100    fit1freq
 2      fit2freq
@@ -126,25 +126,24 @@
 1      chartfoodenergy
 1      chartpop
 
-1      numdomains
+3      numdomains
 
-100	domain[0].minCritters
-300	domain[0].maxCritters
-150	domain[0].initCritters
-50	domain[0].numberToSeed
-1.0	domain[0].probabilityOfMutatingSeeds
-0.5	domain[0].centerX	
+30	domain[0].minCritters
+100	domain[0].maxCritters
+50	domain[0].initCritters
+15	domain[0].numberToSeed
+0.5	domain[0].probabilityOfMutatingSeeds
+0.166667	domain[0].centerX	
 0.5	domain[0].centerZ	
-1.0	domain[0].sizeX
+0.333333	domain[0].sizeX
 1.0	domain[0].sizeZ
 1	domain[0].numFoodPatches
 0	domain[0].numBrickPatches
-0.1	domain[0].foodRate
+0.2	domain[0].foodRate
 90	domain[0].initFoodCount
-45	domain[0].minFoodCount
-120	domain[0].maxFoodCount
+50	domain[0].minFoodCount
+115	domain[0].maxFoodCount
 90	domain[0].maxFoodGrownCount
-
 
 0.0	domain[0].foodPatch[0].fraction
 0.0	domain[0].foodPatch[0].growthRate
@@ -159,6 +158,68 @@
 0	domain[0].foodPatch[0].areaShape_0=rectangular|1=elliptical
 0	domain[0].foodPatch[0].distribution_0=uniform|1=linear|2=gaussian
 0	domain[0].foodPatch[0].neighborhoodSize
+
+30	domain[1].minCritters
+100	domain[1].maxCritters
+50	domain[1].initCritters
+15	domain[1].numberToSeed
+0.5	domain[1].probabilityOfMutatingSeeds
+0.5	domain[1].centerX	
+0.5	domain[1].centerZ	
+0.333333	domain[1].sizeX
+1.0	domain[1].sizeZ
+1	domain[1].numFoodPatches
+0	domain[1].numBrickPatches
+0.2	domain[1].foodRate
+90	domain[1].initFoodCount
+50	domain[1].minFoodCount
+115	domain[1].maxFoodCount
+90	domain[1].maxFoodGrownCount
+
+0.0	domain[1].foodPatch[0].fraction
+0.0	domain[1].foodPatch[0].growthRate
+-1	domain[1].foodPatch[0].initFoodCount
+-1	domain[1].foodPatch[0].minFoodCount
+-1	domain[1].foodPatch[0].maxFoodCount
+-1	domain[1].foodPatch[0].maxFoodGrownCount
+0.5	domain[1].foodPatch[0].centerX
+0.5	domain[1].foodPatch[0].centerZ
+1.0	domain[1].foodPatch[0].sizeX
+1.0	domain[1].foodPatch[0].sizeZ
+0	domain[1].foodPatch[0].areaShape_0=rectangular|1=elliptical
+0	domain[1].foodPatch[0].distribution_0=uniform|1=linear|2=gaussian
+0	domain[1].foodPatch[0].neighborhoodSize
+
+30	domain[2].minCritters
+100	domain[2].maxCritters
+50	domain[2].initCritters
+15	domain[2].numberToSeed
+0.5	domain[2].probabilityOfMutatingSeeds
+0.833333	domain[2].centerX	
+0.5	domain[2].centerZ	
+0.333333	domain[2].sizeX
+1.0	domain[2].sizeZ
+1	domain[2].numFoodPatches
+0	domain[2].numBrickPatches
+0.2	domain[2].foodRate
+90	domain[2].initFoodCount
+50	domain[2].minFoodCount
+115	domain[2].maxFoodCount
+90	domain[2].maxFoodGrownCount
+
+0.0	domain[2].foodPatch[0].fraction
+0.0	domain[2].foodPatch[0].growthRate
+-1	domain[2].foodPatch[0].initFoodCount
+-1	domain[2].foodPatch[0].minFoodCount
+-1	domain[2].foodPatch[0].maxFoodCount
+-1	domain[2].foodPatch[0].maxFoodGrownCount
+0.5	domain[2].foodPatch[0].centerX
+0.5	domain[2].foodPatch[0].centerZ
+1.0	domain[2].foodPatch[0].sizeX
+1.0	domain[2].foodPatch[0].sizeZ
+0	domain[2].foodPatch[0].areaShape_0=rectangular|1=elliptical
+0	domain[2].foodPatch[0].distribution_0=uniform|1=linear|2=gaussian
+0	domain[2].foodPatch[0].neighborhoodSize
 
 1	useProbabilisticFoodPatches
 
