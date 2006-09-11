@@ -28,6 +28,7 @@
 #include "misc.h"
 #include "Simulation.h"
 
+#define StepsToDrainEnergyDueToPopulation 250
 
 #pragma mark -
 
@@ -60,11 +61,14 @@ float critter::gMaxRadius;
 float critter::gMaxVelocity;
 float critter::gMinMaxEnergy;
 float critter::gMaxMaxEnergy;
+float critter::gAvgMaxEnergy;
 float critter::gYaw2DYaw;
 float critter::gMinFocus;
 float critter::gMaxFocus;
 float critter::gCritterFOV;
 float critter::gMaxSizeAdvantage;
+double critter::gPopulationPenalty;
+
 
 critter* critter::currentCritter;	// during brain updates
 
@@ -86,6 +90,10 @@ void critter::critterinit()
     critter::critterobj = new gpolyobj();
     "critter.obj" >> (*(critter::critterobj));
 	critter::critterobj->SetName("critterobj");
+	if( StepsToDrainEnergyDueToPopulation )
+		critter::gPopulationPenalty = 1.0 / StepsToDrainEnergyDueToPopulation;
+	else
+		critter::gPopulationPenalty = 0.0;	// 0 Steps... ==> 0 penalty
 	
 	// If we decide we want the width W (in cells) to be a multiple of N (call it I)
 	// and we want the aspect ratio of W to height H (in cells) to be at least A,
@@ -737,7 +745,8 @@ float critter::Update(float moveFitnessParam, float speed2dpos)
                      + fBrain->BrainEnergy()
                      + gFixedEnergyDrain;
 
-    float denergy = energyused * fGenome->Strength();
+    double denergy = energyused * fGenome->Strength();
+	denergy += gPopulationPenalty * gAvgMaxEnergy;
     fEnergy -= denergy;
     fFoodEnergy -= denergy;
 

@@ -62,11 +62,13 @@ public:
 	static float gMaxVelocity;
 	static float gMinMaxEnergy;
 	static float gMaxMaxEnergy;
+	static float gAvgMaxEnergy;
 	static float gYaw2DYaw;
 	static float gMinFocus;
 	static float gMaxFocus;
 	static float gCritterFOV;
 	static float gMaxSizeAdvantage;
+	static double gPopulationPenalty;
 
     critter(TSimulation* simulation, gstage* stage);
     ~critter();
