@@ -461,6 +461,16 @@ void TSimulation::Step()
 		fCritterPOVWindow->qglClearColor( Qt::black );
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
+		// Calculate the population-penalty on energy drain, to keep the population in check
+		double populationPenaltyFraction = critter::gMaxPopulationPenaltyFraction *
+										   (float) (objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE) - fMinNumCritters) /
+										   (float) (                    fMaxCritters                         - fMinNumCritters);
+		if( populationPenaltyFraction < 0.0 )
+			populationPenaltyFraction = 0.0;
+		if( populationPenaltyFraction > critter::gMaxPopulationPenaltyFraction )
+			populationPenaltyFraction = critter::gMaxPopulationPenaltyFraction;
+		critter::gPopulationEnergyPenalty = populationPenaltyFraction * critter::gMidMaxEnergy;
+		
 		critter* c;
 		objectxsortedlist::gXSortedObjects.reset();
 		while (objectxsortedlist::gXSortedObjects.nextObj(CRITTERTYPE, (gobject**)&c))
@@ -1835,7 +1845,7 @@ void TSimulation::InitWorld()
     critter::gMinCritterSize = 4.0;
     critter::gMinMaxEnergy = 500.0;
     critter::gMaxMaxEnergy = 1000.0;
-	critter::gAvgMaxEnergy = 0.5 * (critter::gMinMaxEnergy)  +  0.5 * (critter::gMaxMaxEnergy);
+	critter::gMidMaxEnergy = 0.5 * (critter::gMinMaxEnergy)  +  0.5 * (critter::gMaxMaxEnergy);
     critter::gSpeed2DPosition = 1.0;
     critter::gYaw2DYaw = 1.0;
     critter::gMinFocus = 20.0;
@@ -3835,7 +3845,7 @@ void TSimulation::ReadWorldFile(const char* filename)
     cout << "minmaxenergy" ses critter::gMinMaxEnergy nl;
     in >> critter::gMaxMaxEnergy; in >> label;
     cout << "maxmaxenergy" ses critter::gMaxMaxEnergy nl;
-	critter::gAvgMaxEnergy = 0.5 * (critter::gMinMaxEnergy)  +  0.5 * (critter::gMaxMaxEnergy);
+	critter::gMidMaxEnergy = 0.5 * (critter::gMinMaxEnergy)  +  0.5 * (critter::gMaxMaxEnergy);
     in >> genome::gMinmateenergy; in >> label;
     cout << "minmateenergy" ses genome::gMinmateenergy nl;
     in >> genome::gMaxmateenergy; in >> label;
