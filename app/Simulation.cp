@@ -470,6 +470,9 @@ void TSimulation::Step()
 		if( populationPenaltyFraction > critter::gMaxPopulationPenaltyFraction )
 			populationPenaltyFraction = critter::gMaxPopulationPenaltyFraction;
 		critter::gPopulationEnergyPenalty = populationPenaltyFraction * critter::gMidMaxEnergy;
+//		printf( "step=%4ld, pop=%3d, maxPopPenaltyFraction=%g, midMaxEnergy=%g, popPenaltyFraction=%g, popEnergyPenalty=%g\n",
+//				fStep, objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE), critter::gMaxPopulationPenaltyFraction,
+//				critter::gMidMaxEnergy, populationPenaltyFraction, critter::gPopulationEnergyPenalty );
 		
 		critter* c;
 		objectxsortedlist::gXSortedObjects.reset();

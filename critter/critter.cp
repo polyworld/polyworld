@@ -28,7 +28,7 @@
 #include "misc.h"
 #include "Simulation.h"
 
-#define StepsToDrainEnergyDueToPopulation 250
+#define StepsToDrainEnergyDueToPopulation 500
 
 #pragma mark -
 
@@ -394,10 +394,12 @@ void critter::grow( bool recordBrainAnatomy, bool recordBrainFunction )
     
     fMaxEnergy = gMinMaxEnergy + ((fGenome->Size(gMinCritterSize, gMaxCritterSize) - gMinCritterSize)
     			 * (gMaxMaxEnergy - gMinMaxEnergy) / (gMaxCritterSize - gMinCritterSize) );
-    
+	
     fEnergy = fMaxEnergy;
 	
 	fFoodEnergy = fMaxEnergy;
+	
+//	printf( "%s: energy initialized to %g\n", __func__, fEnergy );
     
     fSpeed2Energy = gSpeed2Energy * fGenome->MaxSpeed()
 				     * (fGenome->Size(gMinCritterSize, gMaxCritterSize) - gMinCritterSize) * (gMaxSizePenalty - 1.0)
@@ -748,7 +750,9 @@ float critter::Update(float moveFitnessParam, float speed2dpos)
                      + gFixedEnergyDrain;
 
     double denergy = energyused * fGenome->Strength();
-	denergy += gPopulationEnergyPenalty * gMidMaxEnergy;
+//	printf( "%s: energy consumed = %g + ", __func__, denergy );
+	denergy += gPopulationEnergyPenalty;
+//	printf( "%g = %g\n", gPopulatonEnergyPenalty, denergy );
     fEnergy -= denergy;
     fFoodEnergy -= denergy;
 
