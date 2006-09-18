@@ -28,47 +28,54 @@
 #include "misc.h"
 #include "Simulation.h"
 
-#define StepsToDrainEnergyDueToPopulation 150
-
 #pragma mark -
 
-// Critter globals
-bool critter::gClassInited;
-long critter::crittersever;
-long critter::crittersliving;
-gpolyobj* critter::critterobj;
-short critter::povcols;
-short critter::povrows;
-short critter::povwidth;
-short critter::povheight;
+// UniformPopulationEnergyPenalty controls whether or not the population energy penalty
+// is the same for all agents (1) or based on each agent's own maximum energy capacity (0).
+// It is off by default.
+#define UniformPopulationEnergyPenalty 0
 
-float critter::gCritterHeight;
-float critter::gMinCritterSize;
-float critter::gMaxCritterSize;
-float critter::gEat2Energy;
-float critter::gMate2Energy;
-float critter::gFight2Energy;
-float critter::gMaxSizePenalty;
-float critter::gSpeed2Energy;
-float critter::gYaw2Energy;
-float critter::gLight2Energy;
-float critter::gFocus2Energy;
-float critter::gFixedEnergyDrain;
-bool critter::gVision;
-long critter::gInitMateWait;
-float critter::gSpeed2DPosition;
-float critter::gMaxRadius;
-float critter::gMaxVelocity;
-float critter::gMinMaxEnergy;
-float critter::gMaxMaxEnergy;
-float critter::gMidMaxEnergy;
-float critter::gYaw2DYaw;
-float critter::gMinFocus;
-float critter::gMaxFocus;
-float critter::gCritterFOV;
-float critter::gMaxSizeAdvantage;
-double critter::gMaxPopulationPenaltyFraction;
-double critter::gPopulationEnergyPenalty;
+// Critter globals
+bool		critter::gClassInited;
+long		critter::crittersever;
+long		critter::crittersliving;
+gpolyobj*	critter::critterobj;
+short		critter::povcols;
+short		critter::povrows;
+short		critter::povwidth;
+short		critter::povheight;
+
+float		critter::gCritterHeight;
+float		critter::gMinCritterSize;
+float		critter::gMaxCritterSize;
+float		critter::gEat2Energy;
+float		critter::gMate2Energy;
+float		critter::gFight2Energy;
+float		critter::gMaxSizePenalty;
+float		critter::gSpeed2Energy;
+float		critter::gYaw2Energy;
+float		critter::gLight2Energy;
+float		critter::gFocus2Energy;
+float		critter::gFixedEnergyDrain;
+bool		critter::gVision;
+long		critter::gInitMateWait;
+float		critter::gSpeed2DPosition;
+float		critter::gMaxRadius;
+float		critter::gMaxVelocity;
+float		critter::gMinMaxEnergy;
+float		critter::gMaxMaxEnergy;
+float		critter::gYaw2DYaw;
+float		critter::gMinFocus;
+float		critter::gMaxFocus;
+float		critter::gCritterFOV;
+float		critter::gMaxSizeAdvantage;
+int			critter::gNumDepletionSteps;
+
+// critter::gNumDepletionSteps and critter:gMaxPopulationFraction must both be initialized to zero
+// for backward compatibility, and we depend on that fact in ReadWorldFile(), so don't change it
+
+double		critter::gMaxPopulationPenaltyFraction = 0;
+double		critter::gPopulationPenaltyFraction = 0.0;
 
 
 critter* critter::currentCritter;	// during brain updates
@@ -91,11 +98,6 @@ void critter::critterinit()
     critter::critterobj = new gpolyobj();
     "critter.obj" >> (*(critter::critterobj));
 	critter::critterobj->SetName("critterobj");
-	if( StepsToDrainEnergyDueToPopulation )
-		critter::gMaxPopulationPenaltyFraction = 1.0 / StepsToDrainEnergyDueToPopulation;
-	else
-		critter::gMaxPopulationPenaltyFraction = 0.0;	// 0 Steps... ==> 0 penalty
-	critter::gPopulationEnergyPenalty = 0.0;	// unless computed otherwise
 	
 	// If we decide we want the width W (in cells) to be a multiple of N (call it I)
 	// and we want the aspect ratio of W to height H (in cells) to be at least A,
@@ -751,8 +753,14 @@ float critter::Update(float moveFitnessParam, float speed2dpos)
 
     double denergy = energyused * fGenome->Strength();
 //	printf( "%s: energy consumed = %g + ", __func__, denergy );
-	denergy += gPopulationEnergyPenalty;
-//	printf( "%g = %g\n", gPopulatonEnergyPenalty, denergy );
+	double populationEnergyPenalty;
+#if UniformPopulationEnergyPenalty
+	populationEnergyPenalty = gPopulationPenaltyFraction * 0.5 * (gMaxMaxEnergy + gMinMaxEnergy);
+#else
+	populationEnergyPenalty = gPopulationPenaltyFraction * fMaxEnergy;
+#endif
+	denergy += populationEnergyPenalty;
+//	printf( "%g = %g\n", populationEnergyPenalty, denergy );
     fEnergy -= denergy;
     fFoodEnergy -= denergy;
 
