@@ -248,14 +248,14 @@
 
 0      graycoding
 
-L      smiteMode_R=random|L=leastfit
+R      smiteMode_R=random|L=leastfit
 0.10   smiteFrac
 0.25   smiteAgeFrac_affectsAverageFitness
 
 
 1	recordBirthsDeaths
-1       brainAnatomyRecordAll
-1       brainFunctionRecordAll
+0       brainAnatomyRecordAll
+0       brainFunctionRecordAll
 1       brainAnatomyRecordSeeds
 1       brainFunctionRecordSeeds
 1000     bestSoFarBrainAnatonomyRecordFrequency
