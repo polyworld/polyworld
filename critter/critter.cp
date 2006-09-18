@@ -28,7 +28,7 @@
 #include "misc.h"
 #include "Simulation.h"
 
-#define StepsToDrainEnergyDueToPopulation 500
+#define StepsToDrainEnergyDueToPopulation 150
 
 #pragma mark -
 
