@@ -1,12 +1,15 @@
-#define DebugMaxFitness 0
+// The first batch of Debug flags below are the common ones to enable for figuring out problems in the Interact()
+
 #define TEXTTRACE 0
-#define DebugSmite 0
-#define DebugLinksEtAl 0
-#define DebugDomainFoodBands 0
 #define DebugShowSort 0
 #define DebugShowBirths 0
 #define DebugShowEating 0
 #define DebugGeneticAlgorithm 0
+#define DebugSmite 0
+
+#define DebugMaxFitness 0
+#define DebugLinksEtAl 0
+#define DebugDomainFoodBands 0
 
 // CompatibilityMode makes the new code with a single x-sorted list behave *almost* identically to the old code.
 // Discrepancies still arise due to the old food list never being re-sorted and critters at the exact same x location
@@ -1353,7 +1356,7 @@ void TSimulation::Init()
 		FILE * File;
 		if( (File = fopen("run/BirthsDeaths.log", "a")) == NULL )
 		{
-			cerr << "could not open run/genome/AdamiComplexity-summary.txt for writing [1]. Exiting." << endl;
+			cerr << "could not open run/BirthsDeaths.log for writing [1]. Exiting." << endl;
 			exit(1);
 		}
 		fprintf( File, "%% Timestep Event Critter# Parent1 Parent2\n" );
@@ -2383,6 +2386,10 @@ void TSimulation::Interact()
 					}
 					else
 					{
+						// Yikes.  This is bad for several reasons.
+						// * It doesn't even bother to try to smite within the same domain
+						// * It runs through a random fraction of the entire x-sorted list at least once for each smiting (expensive!)
+						// * It messes with the very x-sorted list we are looping on, without managing it in any way
 						if( (fDomains[kd].numcritters >= fDomains[kd].maxnumcritters) && (objectxsortedlist::gXSortedObjects.getCount( CRITTERTYPE ) >= fMaxCritters) )
 						{
 							/* Random Smiting: Steps
