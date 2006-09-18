@@ -11,6 +11,8 @@
 #define DebugLinksEtAl 0
 #define DebugDomainFoodBands 0
 
+#define CurrentWorldfileVersion 23
+
 // CompatibilityMode makes the new code with a single x-sorted list behave *almost* identically to the old code.
 // Discrepancies still arise due to the old food list never being re-sorted and critters at the exact same x location
 // not always ending up sorted in the same order.  [Food centers remain sorted as long as they exist, but these lists
@@ -465,17 +467,21 @@ void TSimulation::Step()
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
 		// Calculate the population-penalty on energy drain, to keep the population in check
-		double populationPenaltyFraction = critter::gMaxPopulationPenaltyFraction *
-										   (float) (objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE) - fMinNumCritters) /
-										   (float) (                    fMaxCritters                         - fMinNumCritters);
-		if( populationPenaltyFraction < 0.0 )
-			populationPenaltyFraction = 0.0;
-		if( populationPenaltyFraction > critter::gMaxPopulationPenaltyFraction )
-			populationPenaltyFraction = critter::gMaxPopulationPenaltyFraction;
-		critter::gPopulationEnergyPenalty = populationPenaltyFraction * critter::gMidMaxEnergy;
-//		printf( "step=%4ld, pop=%3d, maxPopPenaltyFraction=%g, midMaxEnergy=%g, popPenaltyFraction=%g, popEnergyPenalty=%g\n",
-//				fStep, objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE), critter::gMaxPopulationPenaltyFraction,
-//				critter::gMidMaxEnergy, populationPenaltyFraction, critter::gPopulationEnergyPenalty );
+		if( fMaxCritters > fInitNumCritters )
+		{
+			critter::gPopulationPenaltyFraction = critter::gMaxPopulationPenaltyFraction *
+												  (float) (objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE) - fInitNumCritters) /
+												  (float) (                    fMaxCritters                         - fInitNumCritters);
+			if( critter::gPopulationPenaltyFraction < 0.0 )
+				critter::gPopulationPenaltyFraction = 0.0;
+			if( critter::gPopulationPenaltyFraction > critter::gMaxPopulationPenaltyFraction )
+				critter::gPopulationPenaltyFraction = critter::gMaxPopulationPenaltyFraction;
+		}
+		else
+			critter::gPopulationPenaltyFraction = 0.0;
+//		printf( "step=%4ld, pop=%3d, initPop=%3ld, maxPopPenaltyFraction=%g, popPenaltyFraction=%g\n",
+//				fStep, objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE), fInitNumCritters,
+//				critter::gMaxPopulationPenaltyFraction, critter::gPopulationPenaltyFraction );
 		
 		critter* c;
 		objectxsortedlist::gXSortedObjects.reset();
@@ -1851,7 +1857,6 @@ void TSimulation::InitWorld()
     critter::gMinCritterSize = 4.0;
     critter::gMinMaxEnergy = 500.0;
     critter::gMaxMaxEnergy = 1000.0;
-	critter::gMidMaxEnergy = 0.5 * (critter::gMinMaxEnergy)  +  0.5 * (critter::gMaxMaxEnergy);
     critter::gSpeed2DPosition = 1.0;
     critter::gYaw2DYaw = 1.0;
     critter::gMinFocus = 20.0;
@@ -3688,9 +3693,6 @@ void TSimulation::ReadWorldFile(const char* filename)
     short version;
     char label[128];
 
-// Moved to Simulation.h
-//#define CurrentWorldfileVersion 18
-
     in >> version; in >> label;
 	cout << "version" ses version nl;
 	
@@ -3855,7 +3857,6 @@ void TSimulation::ReadWorldFile(const char* filename)
     cout << "minmaxenergy" ses critter::gMinMaxEnergy nl;
     in >> critter::gMaxMaxEnergy; in >> label;
     cout << "maxmaxenergy" ses critter::gMaxMaxEnergy nl;
-	critter::gMidMaxEnergy = 0.5 * (critter::gMinMaxEnergy)  +  0.5 * (critter::gMaxMaxEnergy);
     in >> genome::gMinmateenergy; in >> label;
     cout << "minmateenergy" ses genome::gMinmateenergy nl;
     in >> genome::gMaxmateenergy; in >> label;
@@ -4382,6 +4383,22 @@ void TSimulation::ReadWorldFile(const char* filename)
     cout << "smiteFrac" ses fSmiteFrac nl;
     in >> fSmiteAgeFrac; in >> label;
     cout << "smiteAgeFrac" ses fSmiteAgeFrac nl;
+	
+	// critter::gNumDepletionSteps and critter:gMaxPopulationFraction must both be initialized to zero
+	// for backward compatibility, and we depend on that fact here, so don't change it
+	if( version >= 23 )
+	{
+		in >> critter::gNumDepletionSteps; in >> label;
+		cout << "NumDepletionSteps" ses critter::gNumDepletionSteps nl;
+		if( critter::gNumDepletionSteps )
+			critter::gMaxPopulationPenaltyFraction = 1.0 / (float) critter::gNumDepletionSteps;
+		cout << ".MaxPopulationPenaltyFraction" ses critter::gMaxPopulationPenaltyFraction nl;
+	}
+	else
+	{
+		cout << "+NumDepletionSteps" ses critter::gNumDepletionSteps nl;
+		cout << ".MaxPopulationPenaltyFraction" ses critter::gMaxPopulationPenaltyFraction nl;
+	}
 
 	if( version < 8 )
 	{
@@ -4446,16 +4463,40 @@ void TSimulation::ReadWorldFile(const char* filename)
 	
 		if( fRecordComplexity )
 		{
-			if( ! fBrainFunctionRecordAll )
+			if( ! fBestSoFarBrainFunctionRecordFrequency )
 			{
-				cerr << "Warning: Recording Complexity without recording brain function?  That's not going to work.  Turning on recordBrainFunction." nl;
-				fBrainFunctionRecordAll = true;
+				if( fBestSoFarBrainAnatomyRecordFrequency )
+					fBestSoFarBrainFunctionRecordFrequency = fBestSoFarBrainAnatomyRecordFrequency;
+				else
+					fBestSoFarBrainFunctionRecordFrequency = 1000;
+				cerr << "Warning: Recording Complexity without recording \"best so far\" brain function?  That's not going to work.  Setting BestSoFarBrainFunctionRecordFrequency to " << fBestSoFarBrainFunctionRecordFrequency nl;
 			}
 			
-			if( ! fBrainAnatomyRecordAll )
+			if( ! fBestSoFarBrainAnatomyRecordFrequency )
 			{
-				cerr << "Warning: Recording Complexity without recording brain anatomy?  That's not going to work.  Turning on recordBrainAnatomy." nl;
-				fBrainAnatomyRecordAll = true;				
+				if( fBestSoFarBrainFunctionRecordFrequency )
+					fBestSoFarBrainAnatomyRecordFrequency = fBestSoFarBrainFunctionRecordFrequency;
+				else
+					fBestSoFarBrainAnatomyRecordFrequency = 1000;				
+				cerr << "Warning: Recording Complexity without recording \"best so far\" brain anatomy?  That's not going to work.  Setting BestSoFarBrainAnatomyRecordFrequency to " << fBestSoFarBrainAnatomyRecordFrequency nl;
+			}
+
+			if( ! fBestRecentBrainFunctionRecordFrequency )
+			{
+				if( fBestRecentBrainAnatomyRecordFrequency )
+					fBestRecentBrainFunctionRecordFrequency = fBestRecentBrainAnatomyRecordFrequency;
+				else
+					fBestRecentBrainFunctionRecordFrequency = 1000;
+				cerr << "Warning: Recording Complexity without recording \"best so far\" brain function?  That's not going to work.  Setting BestRecentBrainFunctionRecordFrequency to " << fBestRecentBrainFunctionRecordFrequency nl;
+			}
+			
+			if( ! fBestRecentBrainAnatomyRecordFrequency )
+			{
+				if( fBestRecentBrainFunctionRecordFrequency )
+					fBestRecentBrainAnatomyRecordFrequency = fBestRecentBrainFunctionRecordFrequency;
+				else
+					fBestRecentBrainAnatomyRecordFrequency = 1000;				
+				cerr << "Warning: Recording Complexity without recording \"best so far\" brain anatomy?  That's not going to work.  Setting BestRecentBrainAnatomyRecordFrequency to " << fBestRecentBrainAnatomyRecordFrequency nl;
 			}
 		}
 		
