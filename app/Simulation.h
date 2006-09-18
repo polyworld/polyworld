@@ -40,8 +40,6 @@ static const int MAXFITNESSITEMS = 5;
 // Define directory mode mask the same, except you need execute privileges to use as a directory (go fig)
 #define	PwDirMode ( S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH )
 
-#define CurrentWorldfileVersion 22
-
 
 struct FitStruct
 {
