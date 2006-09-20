@@ -2391,38 +2391,38 @@ void TSimulation::Interact()
 					}
 					else
 					{
-						// Yikes.  This is bad for several reasons.
-						// * It doesn't even bother to try to smite within the same domain
-						// * It runs through a random fraction of the entire x-sorted list at least once for each smiting (expensive!)
-						// * It messes with the very x-sorted list we are looping on, without managing it in any way
-						if( (fDomains[kd].numcritters >= fDomains[kd].maxnumcritters) && (objectxsortedlist::gXSortedObjects.getCount( CRITTERTYPE ) >= fMaxCritters) )
+						// If necessary, smite a random critter in this domain
+						if( fDomains[kd].numcritters >= fDomains[kd].maxnumcritters )
 						{
-							/* Random Smiting: Steps
-							1) get pointer of a random critter
-							2) check that the pointer isn't mommy or daddy
-							3) check that we wouldn't be commiting infanticide.  If we would be committing infanticide, just give up the entire attempt at smitting -- Otherwise we can get infinite loops if the entire population consisted of young'ens.
-							4) Death( random_critter_pointer )
-							*/
-							
-							critter *randcritter = NULL;
+							int i = 0;
+							critter* testCritter;
+							critter* randCritter = NULL;
+							int randomIndex = int( round( drand48() * fDomains[kd].numcritters ) );	// pick from this domain
 
-							do		// 1) get the pointer of a random critter...
+							gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();	// save the state of the x-sorted list
+
+							// As written, randCritter may not actually be the randomIndex-th critter in the domain, but it will be close,
+							// and as long as there's a single legitimate critter for smiting (right domain, old enough, and not one of the
+							// parents), we will find and smite it
+							objectxsortedlist::gXSortedObjects.reset();
+							while( (i < randomIndex) && objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &testCritter ) )
 							{
-								int random_index = int(round( drand48() * fDomains[kd].numcritters ));		// I think a call to fDomains[kd].numcritters is faster than objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE)
-
-								objectxsortedlist::gXSortedObjects.reset();		// reset the list incase we need to do this multiple times.
-								for(int i=0; i<random_index; i++)
-									objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &randcritter );
+								// Only count it if it's from the right domain, it's old enough, and it's not one of the parents
+								if( (testCritter->Domain() != kd) || (testCritter->Age() > fSmiteAgeFrac*testCritter->MaxAge()) || (testCritter->Number() == c->Number()) || (testCritter->Number() == d->Number())  )
+									continue;
+								
+								randCritter = testCritter;	// as long as there's a single legitimate critter for smiting, randCriter will be non-NULL
+								i++;
+							}
 																
-							} while( randcritter->Number() == c->Number() || randcritter->Number() == d->Number() );		// 2) if randcritter is too young, or mommy or daddy, try again.
+							objectxsortedlist::gXSortedObjects.setcurr( saveCurr );	// restore the state of the x-sorted list
 							
-							if( randcritter->Age() > (fSmiteAgeFrac * randcritter->MaxAge()) )								// 3) only critters that are old enough get the death penalty.  If it's not old enough, just give up the smite attempt.
+							if( randCritter )	// if we found any legitimately smitable critter...
 							{
-								// 4) Smite it!
 								fDomains[kd].fNumSmited++;
 								fNumberDiedSmite++;
 								smited = true;
-								Death( randcritter );
+								Death( randCritter );
 							}
 						}
 					}
