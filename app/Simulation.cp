@@ -1328,7 +1328,7 @@ void TSimulation::Init()
 			cerr << "could not open run/genome/AdamiComplexity-1bit.txt for writing [1]. Exiting." << endl;
 			exit(1);
 		}
-		fprintf( File, "BitsInGenome: %ld WindowSize: 1\n", genome::gNumBytes * 8 );		// write the number of bits into the top of the file.
+		fprintf( File, "%% BitsInGenome: %ld WindowSize: 1\n", genome::gNumBytes * 8 );		// write the number of bits into the top of the file.
 		fclose( File );
 
 		if( (File = fopen("run/genome/AdamiComplexity-2bit.txt", "a")) == NULL )
@@ -1336,7 +1336,7 @@ void TSimulation::Init()
 			cerr << "could not open run/genome/AdamiComplexity-2bit.txt for writing [1]. Exiting." << endl;
 			exit(1);
 		}
-		fprintf( File, "BitsInGenome: %ld WindowSize: 2\n", genome::gNumBytes * 8 );		// write the number of bits into the top of the file.
+		fprintf( File, "%% BitsInGenome: %ld WindowSize: 2\n", genome::gNumBytes * 8 );		// write the number of bits into the top of the file.
 		fclose( File );
 
 
@@ -1345,7 +1345,7 @@ void TSimulation::Init()
 			cerr << "could not open run/genome/AdamiComplexity-4bit.txt for writing [1]. Exiting." << endl;
 			exit(1);
 		}
-		fprintf( File, "BitsInGenome: %ld WindowSize: 4\n", genome::gNumBytes * 8 );		// write the number of bits into the top of the file.
+		fprintf( File, "%% BitsInGenome: %ld WindowSize: 4\n", genome::gNumBytes * 8 );		// write the number of bits into the top of the file.
 		fclose( File );
 
 		if( (File = fopen("run/genome/AdamiComplexity-summary.txt", "a")) == NULL )
@@ -1353,7 +1353,7 @@ void TSimulation::Init()
 			cerr << "could not open run/genome/AdamiComplexity-summary.txt for writing [1]. Exiting." << endl;
 			exit(1);
 		}
-		fprintf( File, "Timestep 1bit 2bit 4bit\n" );
+		fprintf( File, "%% Timestep 1bit 2bit 4bit\n" );
 		fclose( File );
 	}
 	
