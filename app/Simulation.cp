@@ -4392,6 +4392,8 @@ void TSimulation::ReadWorldFile(const char* filename)
 		cout << "NumDepletionSteps" ses critter::gNumDepletionSteps nl;
 		if( critter::gNumDepletionSteps )
 			critter::gMaxPopulationPenaltyFraction = 1.0 / (float) critter::gNumDepletionSteps;
+		
+		in >> critter::gMaxPopulationPenaltyFraction; in >> label;
 		cout << ".MaxPopulationPenaltyFraction" ses critter::gMaxPopulationPenaltyFraction nl;
 	}
 	else
@@ -4410,6 +4412,7 @@ void TSimulation::ReadWorldFile(const char* filename)
 	{
 		in >> fRecordBirthsDeaths; in >> label;
 		assert( fRecordBirthsDeaths == true || fRecordBirthsDeaths == false);
+		cout << "RecordBirthsDeaths" ses int(fRecordBirthsDeaths) nl;
 	}
 	
 	if( version >= 11 )
@@ -4534,20 +4537,22 @@ void TSimulation::ReadWorldFile(const char* filename)
 			cout << "AdamiComplexityRecordFrequency" ses fAdamiComplexityRecordFrequency nl;
 		}
 		
-	
-		// Accepted values are "linear" and "exponential"
-		string temp;
-		in >> temp; in >> label;
-		cout << "FogFunction" ses temp nl;
+	}	
 
-		if( toupper(temp[0]) == 'E' )			//Exponential
+	if( version >= 18 )
+	{
+		in >> fFogFunction; in >> label;
+		
+		if( toupper(fFogFunction) == 'E' )			//Exponential
 			fFogFunction = 'E';
-		else if( toupper(temp[0]) == 'L' )		//Linear
+		else if( toupper(fFogFunction) == 'L' )			//Linear
 			fFogFunction = 'L';
 		else
-			fFogFunction = 'O';					// No Fog (OFF)
-		
+			fFogFunction = 'O';				// No Fog (OFF)
+
 		assert( (fFogFunction == 'O' || fFogFunction == 'E' || fFogFunction == 'L') );
+		cout << "FogFunction" ses fFogFunction nl;
+	
 		// This value only does something if Fog Function is exponential
 		// Acceptable values are between 0 and 1 (inclusive)
 		in >> fExpFogDensity; in >> label;
@@ -4557,7 +4562,9 @@ void TSimulation::ReadWorldFile(const char* filename)
 		// It defines the maximum distance a critter can see.
 		in >> fLinearFogEnd; in >> label;
 		cout << "LinearFogEnd" ses fLinearFogEnd nl;
-	}
+
+	}	
+	
 	
 	in >> fRecordMovie; in >> label;
 	cout << "recordMovie" ses fRecordMovie nl;
