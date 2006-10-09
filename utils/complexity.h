@@ -11,7 +11,9 @@
 #include <gsl/gsl_statistics_double.h>
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
+#include <assert.h>
 
+#define IgnoreCrittersThatLivedLessThan_N_Timesteps 150
 
 using namespace std;
 
@@ -44,7 +46,18 @@ double CalcComplexity( char * fnameAct, char part )
 
 	gsl_matrix * activity = readin_brainfunction__optimized( fnameAct, numinputneurons );
 
-	// Warning: this may not be the thing we want to do if the #steps alive < #numneurons.
+
+//	return activity->size1 - activity->size2;
+
+//	if( activity->size2 > activity->size1 )
+//	{
+//		cout << "Nope!";
+//		return -1;
+
+//	}
+    // Warning: this may not be the thing we want to do if the #steps alive < #numneurons.
+/*
+    assert( activity->size2 < activity->size1 );
 
     if( activity->size2 > activity->size1 )         //If using __optimized this will almost never be true.
     {
@@ -54,7 +67,12 @@ double CalcComplexity( char * fnameAct, char part )
         activity = temp;                // activity = activity'
         gsl_matrix_free(temp2);
     }
+*/
 
+     if( activity->size1 < IgnoreCrittersThatLivedLessThan_N_Timesteps )
+     {
+	return 0;
+     }
 
      const gsl_rng_type * T;
      gsl_rng * r;
@@ -88,7 +106,9 @@ double CalcComplexity( char * fnameAct, char part )
 	}
 	else if( part == 'P' )	// Processing
 	{
-		int Pro = COV->size1 - numinputneurons;
+//		cout << "size of COV Matrix: " << COV->size1 << " x " << COV->size2 << endl;
+//		int Pro = COV->size1 - numinputneurons;
+		int Pro = COV->size1 - numinputneurons - 1;	// the extra -1 is to subtract out the bias neuron
 		int Pro_id[Pro];
 		for(int i=0; i<Pro; i++ ) { Pro_id[i] = numinputneurons+i; }
 
