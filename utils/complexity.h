@@ -47,19 +47,11 @@ double CalcComplexity( char * fnameAct, char part )
 	gsl_matrix * activity = readin_brainfunction__optimized( fnameAct, numinputneurons );
 
 
-//	return activity->size1 - activity->size2;
+	// If critter lived less timesteps than it has neurons, return Complexity = 0.0.
+    if( activity->size2 > activity->size1 || activity->size1 < IgnoreCrittersThatLivedLessThan_N_Timesteps ) { return 0; }
 
-//	if( activity->size2 > activity->size1 )
-//	{
-//		cout << "Nope!";
-//		return -1;
-
-//	}
-    // Warning: this may not be the thing we want to do if the #steps alive < #numneurons.
 /*
-    assert( activity->size2 < activity->size1 );
-
-    if( activity->size2 > activity->size1 )         //If using __optimized this will almost never be true.
+    If( activity->size2 > activity->size1 )         //If using __optimized this will never be true for any brain we care about.  If not using __optimized it will always be true for any brain we care about (Brain we care about is defined as any brain that has lived longer than it's number of neurons.)
     {
 	gsl_matrix * temp = gsl_matrix_alloc( activity->size2, activity->size1);
         gsl_matrix_transpose_memcpy(temp, activity);
@@ -68,11 +60,6 @@ double CalcComplexity( char * fnameAct, char part )
         gsl_matrix_free(temp2);
     }
 */
-
-     if( activity->size1 < IgnoreCrittersThatLivedLessThan_N_Timesteps )
-     {
-	return 0;
-     }
 
      const gsl_rng_type * T;
      gsl_rng * r;
@@ -94,21 +81,28 @@ double CalcComplexity( char * fnameAct, char part )
 	gsl_matrix * o = activity;      // replace this if we're ever going to do the gsamp()'ing.
 
 	// We just calculate the covariance matrix and compute the Complexity of that instead of using the correlation matrix.  It uses less cycles and the results are identical.
-	gsl_matrix * COV = mCOV( o );
+	gsl_matrix * COVwithbias = mCOV( o );
 	gsl_matrix_free( o );			// don't need this anymore
+
+
+	// Now time to through away the bias neuron from the COVwithbias matrix.
+	int numNeurons = COVwithbias->size1 - 1;
+	int Neurons[numNeurons];
+	for( int i=0;i<numNeurons;i++ ) { Neurons[i] = i; }
+	gsl_matrix * COV = matrix_crosssection( COVwithbias, Neurons, numNeurons );	// no more bias now!
+	gsl_matrix_free( COVwithbias );
 
 
 	if( part == 'A' )	// All
 	{
-		double Complexity = calcC_det3__optimized(COV);
+		double Complexity = calcC_det3__optimized( COV );
 		gsl_matrix_free( COV );
 		return Complexity;
 	}
 	else if( part == 'P' )	// Processing
 	{
 //		cout << "size of COV Matrix: " << COV->size1 << " x " << COV->size2 << endl;
-//		int Pro = COV->size1 - numinputneurons;
-		int Pro = COV->size1 - numinputneurons - 1;	// the extra -1 is to subtract out the bias neuron
+		int Pro = COV->size1 - numinputneurons;
 		int Pro_id[Pro];
 		for(int i=0; i<Pro; i++ ) { Pro_id[i] = numinputneurons+i; }
 
@@ -117,10 +111,10 @@ double CalcComplexity( char * fnameAct, char part )
 //		cout << endl;
 
 		gsl_matrix * Xed_COR = matrix_crosssection( COV, Pro_id, Pro );
+	     	gsl_matrix_free( COV );
 
 		float Cplx_Pro = calcC_det3__optimized( Xed_COR );
 		gsl_matrix_free( Xed_COR );
-	     	gsl_matrix_free( COV );
 
 		return Cplx_Pro;
 	}
@@ -135,11 +129,11 @@ double CalcComplexity( char * fnameAct, char part )
 //		cout << endl;
 
 		gsl_matrix * Xed_COR = matrix_crosssection( COV, Inp_id, Inp );
+		gsl_matrix_free( COV );
 
 		float Cplx_Inp = calcC_det3__optimized( Xed_COR );
 
 		gsl_matrix_free( Xed_COR );
-		gsl_matrix_free( COV );
 
 		return Cplx_Inp;
 	}
@@ -500,6 +494,24 @@ gsl_matrix * readin_brainfunction__optimized( const char* fname, int& numinputne
 	int numcols = atoi(numneu.c_str());
 	int numrows = int(round( FileContents.size() / numcols ));
 
+	if( float(numrows) - (FileContents.size() / numcols) != 0.0 )
+	{
+		cerr << "Warning: #lines (" << FileContents.size() << ") in brainFunction file '" << fname << "' is not an even multiple of #neurons (" << numcols << ").  brainFunction file may be corrupt." << endl;
+	}
+
+	// Make sure the matrix isn't invalid.
+	if( numcols <= 0 )
+	{
+		cerr << "brainFunction file '" << fname << "' is corrupt.  Number of columns is zero." << endl;
+		exit(1);
+	}
+	if( numrows <= 0 )
+	{
+		cerr << "brainFunction file '" << fname << "' is corrupt.  Number of rows is zero." << endl;
+		exit(1);
+	}
+
+	assert( numcols > 0 && numrows > 0 );		// double checking that we're not going to allocate an impossible matrix.
 	gsl_matrix * activity = gsl_matrix_alloc(numrows, numcols);
 
 
