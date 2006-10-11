@@ -14,6 +14,7 @@
 #include <assert.h>
 
 #define IgnoreCrittersThatLivedLessThan_N_Timesteps 150
+#define MaxNumTimeStepsToComputeComplexityOver 500
 
 using namespace std;
 
@@ -37,7 +38,154 @@ gsl_matrix * readin_brainfunction( const char* , int& );
 gsl_matrix * readin_brainfunction__optimized( const char* , int& );
 gsl_matrix * readin_brainanatomy( const char* );
 gsl_matrix * mCOV( gsl_matrix * );
-double CalcComplexity( char * ,char );
+
+gsl_matrix * gsamp( gsl_matrix_view x );
+int qsort_compare_double( const void *a, const void *b);
+int qsort_compare_rows0( const void *a, const void *b );
+int qsort_compare_rows1( const void *a, const void *b );
+double CalcComplexity( char * , char );
+
+int qsort_compare_double( const void *a, const void *b )
+{
+	if( *(double*)a < *(double*)b ) { return -1; }
+	else if( *(double*)a == *(double*)b ) { return 0; }
+	else { return 1; }
+}
+
+int qsort_compare_rows0( const void *a, const void *b )
+{
+/* Sorts gsl_vectors in ascending order by their first entry (entry 0) */
+	if(  gsl_vector_get( *(gsl_vector**)a, 0 )  <  gsl_vector_get( *(gsl_vector**)b, 0 )  ) { return -1; }
+	else if( gsl_vector_get( *(gsl_vector**)a, 0) == gsl_vector_get( *(gsl_vector**)b, 0) ) { return 0; }
+	else { return 1; }
+}
+
+int qsort_compare_rows1( const void *a, const void *b )
+{
+/* Sorts gsl_vectors in ascending order by their second entry (entry 1) */
+	if(  gsl_vector_get( *(gsl_vector**)a, 1 )  <  gsl_vector_get( *(gsl_vector**)b, 1 )  ) { return -1; }
+	else if( gsl_vector_get( *(gsl_vector**)a, 1) == gsl_vector_get( *(gsl_vector**)b, 1) ) { return 0; }
+	else { return 1; }
+}
+
+/*
+gsamp() function, a re-implementation of gsamp.m
+
+Description: Creates a timeseries with same rank order as the input but with Gaussian amp.
+
+Note: For efficiency, this gsamp() function is slightly different from gsamp.m.  It receives a tranpose and outputs a transpose of the matrix received/outputted by the MATLAB gsamp(). I.e.     A = some matrix      B = gsamp(A)
+	MATLAB: B' = gsamp(A')
+	C++: B = gsamp(A)
+*/
+gsl_matrix * gsamp( gsl_matrix_view x )
+{
+
+/* MATLAB:	[r,c] = size(x);	*/
+	int r = (&x.matrix)->size1;
+	int c = (&x.matrix)->size2;
+
+
+/* MATLAB:
+	if r < c
+		x = x.';
+	end;
+*/
+
+	if( r < c )
+	{
+		cerr << "gsamp: There are more cols than rows.  gsamp() requires that each neuron be a column.  We could do a tranpose here and continue, but considering the rest of the code this situation should be impossible as the matrix is already aligned.  So, there's probably something deeply wrong -- exiting.";
+		exit(1);
+	}
+
+
+/* MATLAB: [n, cc] = size(x); */
+	int n  = (&x.matrix)->size1;
+	int cc = (&x.matrix)->size2;
+
+/* MATLAB: m = 2^nextpow2(n)*/
+	int m = int( pow(2,  int(ceil(log2(n)))  ) );
+
+/* MATLAB: yy=zeros(n,cc); 		Here there is a bug in the MATLAB code.  It should say 'y', not 'yy'*/
+	gsl_matrix * y = gsl_matrix_calloc( n, cc );
+
+/* MATLAB:
+	for i=1:cc	%create a gaussian timeseries with the same rank-order of x
+		z=zeros(n,3); gs = sortrows( randn(n,1) , 1 );
+		z(:,1)=x(:,i); z(:,2)=[1:n]'; z=sortrows(z,1);
+		z(:,3)=gs; z=sortrows(z,2); y(:,i)=z(:,3);
+	end
+*/
+	// first must setup the random number generator
+	const gsl_rng_type * T;
+	gsl_rng * rr;
+	gsl_rng_env_setup();
+	T = gsl_rng_mt19937;
+	rr = gsl_rng_alloc(T);
+	time_t seed;
+	time(&seed);
+	gsl_rng_set(rr, seed);
+
+	// this is nessecary for switching the columns around amoung the x, z, and y matrices
+	gsl_vector * tempcol = gsl_vector_alloc(n);
+
+	for( int i=0; i<cc; i++ )
+	{
+//MATLAB	z=zeros(n,3);
+		gsl_matrix * z = gsl_matrix_calloc( n, 3 );
+
+//MATLAB	gs = sortrows( randn(n,1) , 1 );
+		double gs[n]; for( int j=0; j<n; j++ ) { gs[j] = gsl_ran_ugaussian(rr); }
+		qsort( gs, n, sizeof(double), qsort_compare_double);
+
+//MATLAB	z(:,1)=x(:,i); z(:,2)=[1:n]'; z=sortrows(z,1);
+		gsl_matrix_get_col( tempcol, &x.matrix, i );			// get i'th column of X
+		gsl_matrix_set_col( z, 0, tempcol );				// put i'th column of X into z's first column
+
+		// there may be an error here.  In Matlab it's supposed to be [1:n], but this is [0:n-1]
+		for( int j=0; j<n; j++ ) { gsl_matrix_set( z, j, 1, j ); }	// z(:,2)=[1:n]';
+
+		// now we must sort the rows of z by the first column.  First must pull out all of the rows, and put them into an array of vector_views.
+		gsl_vector * zrows[n];
+ 		for( int j=0; j<n; j++ ) { zrows[j] = gsl_vector_calloc(3); }		// all rows are initially zero.
+
+		for( int j=0; j<n; j++ ) { gsl_matrix_get_row( zrows[j], z, j ); }	// get the rows
+//			for( int j=0; j<n; j++ ) { cout << "Row " << j << ", element 0: " << gsl_vector_get( zrows[j], 0 ) << endl; }
+		qsort( zrows, n, sizeof(zrows[0]), qsort_compare_rows0 );		// sort the rows by column 0
+//			for( int j=0; j<n; j++ ) { cout << "Row " << j << ", element 0: " << gsl_vector_get( zrows[j], 0 ) << endl; }
+		for( int j=0; j<n; j++ ) { gsl_matrix_set_row( z, j, zrows[j] ); }	// overwrite z with the sorted rows
+
+//MATLAB        z(:,3)=gs; z=sortrows(z,2); y(:,i)=z(:,3);
+		for( int j=0; j<n; j++ ) { gsl_matrix_set( z, j, 2, gs[j] ); }		// z(:,3) = gs;
+
+
+		// now we must sort matrix z by the second column.  As before, pull out all of the rows, call qsort, them put them back in.
+		for( int j=0; j<n; j++ ) { gsl_matrix_get_row( zrows[j], z, j ); }	// get the rows
+		qsort( zrows, n, sizeof(zrows[0]), qsort_compare_rows1 );		// sort the rows by column 1
+		for( int j=0; j<n; j++ ) { gsl_matrix_set_row( z, j, zrows[j] ); }	// overwrite z with the sorted rows
+
+		for( int j=0; j<n; j++ ) { gsl_vector_free( zrows[j] ); }		// done with the temp sorting rows.  set them free.
+
+
+//		y(:,i)=z(:,3);
+		gsl_matrix_get_col( tempcol, z, 2);	// get column 2 from matrix 'z'...
+		gsl_matrix_set_col( y, i, tempcol );	// and assign it to the i'th column of matrix 'y'
+
+		gsl_matrix_free( z );			// we're done with our temp matrix z now.
+	}
+	gsl_vector_free( tempcol );
+        gsl_rng_free( rr );
+
+
+	if( r < c )
+	{
+		cout << "end of gsamp(): r < c -- this should be impossible." << endl;
+		exit(1);
+	}
+
+
+
+	return y;
+}
 
 double CalcComplexity( char * fnameAct, char part )
 {
@@ -47,19 +195,9 @@ double CalcComplexity( char * fnameAct, char part )
 	gsl_matrix * activity = readin_brainfunction__optimized( fnameAct, numinputneurons );
 
 
-	// If critter lived less timesteps than it has neurons, return Complexity = 0.0.
+    // If critter lived less timesteps than it has neurons, return Complexity = 0.0.
     if( activity->size2 > activity->size1 || activity->size1 < IgnoreCrittersThatLivedLessThan_N_Timesteps ) { return 0; }
 
-/*
-    If( activity->size2 > activity->size1 )         //If using __optimized this will never be true for any brain we care about.  If not using __optimized it will always be true for any brain we care about (Brain we care about is defined as any brain that has lived longer than it's number of neurons.)
-    {
-	gsl_matrix * temp = gsl_matrix_alloc( activity->size2, activity->size1);
-        gsl_matrix_transpose_memcpy(temp, activity);
-        gsl_matrix * temp2 = activity;
-        activity = temp;                // activity = activity'
-        gsl_matrix_free(temp2);
-    }
-*/
 
      const gsl_rng_type * T;
      gsl_rng * r;
@@ -78,7 +216,36 @@ double CalcComplexity( char * fnameAct, char part )
 
 	gsl_rng_free( r );
 
-	gsl_matrix * o = activity;      // replace this if we're ever going to do the gsamp()'ing.
+
+/*	MATLAB CODE:
+	o = gsamp( activity( size(activity,1) - min(500,size(activity,1)) + 1:size(activity,1) ,:)');
+*/
+
+	int numrows = int(activity->size1);
+	int numcols = int(activity->size2);
+	int beginning_timestep = 0;
+
+//	cout << "size(Activity) = " << activity->size1 << " x " << activity->size2 << endl;
+	// this next line puts a cap on the max number of timesteps to compute complexity over.  
+	if( numrows > MaxNumTimeStepsToComputeComplexityOver ) { beginning_timestep = numrows - MaxNumTimeStepsToComputeComplexityOver; }
+
+
+//	cout << "We going to allocate a matrix_view with size: " << activity->size1 - beginning_timestep << " x " << numcols << endl;
+	gsl_matrix_view subset_of_activity = gsl_matrix_submatrix( activity, beginning_timestep, 0, numrows - beginning_timestep , numcols );
+//debug	print_matrix_row( &subset_of_activity.matrix, (&subset_of_activity.matrix)->size1 - 1);
+
+//	cout << "size(subset_of_activity) [before gsamp()] = " << (&subset_of_activity.matrix)->size1 << " x " << (&subset_of_activity.matrix)->size2 << endl;
+
+	gsl_matrix * o = gsamp( subset_of_activity );
+
+	gsl_matrix_free( activity );			// done with activity.  Just need the gsamp()'ed matrix 'o' now.
+
+//	cout << "size(o) = " << o->size1 << " x " << o->size2 << endl;
+//debug	cout << "Array Size = " << array_size << endl;
+//debug	cout << "Beginning Timestep = " << beginning_timestep << endl;
+
+
+
 
 	// We just calculate the covariance matrix and compute the Complexity of that instead of using the correlation matrix.  It uses less cycles and the results are identical.
 	gsl_matrix * COVwithbias = mCOV( o );
