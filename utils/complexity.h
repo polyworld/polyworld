@@ -103,7 +103,7 @@ gsl_matrix * gsamp( gsl_matrix_view x )
 	int cc = (&x.matrix)->size2;
 
 /* MATLAB: m = 2^nextpow2(n)*/
-	int m = int( pow(2,  int(ceil(log2(n)))  ) );
+//	int m = int( pow(2,  int(ceil(log2(n)))  ) );
 
 /* MATLAB: yy=zeros(n,cc); 		Here there is a bug in the MATLAB code.  It should say 'y', not 'yy'*/
 	gsl_matrix * y = gsl_matrix_calloc( n, cc );
@@ -125,7 +125,7 @@ gsl_matrix * gsamp( gsl_matrix_view x )
 	time(&seed);
 	gsl_rng_set(rr, seed);
 
-	// this is nessecary for switching the columns around amoung the x, z, and y matrices
+	// this is nessecary for switching the columns around among the x, z, and y matrices
 	gsl_vector * tempcol = gsl_vector_alloc(n);
 
 	for( int i=0; i<cc; i++ )
@@ -142,9 +142,11 @@ gsl_matrix * gsamp( gsl_matrix_view x )
 		gsl_matrix_set_col( z, 0, tempcol );				// put i'th column of X into z's first column
 
 		// there may be an error here.  In Matlab it's supposed to be [1:n], but this is [0:n-1]
-		for( int j=0; j<n; j++ ) { gsl_matrix_set( z, j, 1, j ); }	// z(:,2)=[1:n]';
+		for( int j=1; j<=n; j++ ) { gsl_matrix_set( z, j-1, 1, j ); }	// z(:,2)=[1:n]';
 
-		// now we must sort the rows of z by the first column.  First must pull out all of the rows, and put them into an array of vector_views.
+//		print_matrix_column( z, 0 );
+
+		// now we must sort the rows of z by the first (0th) column.  First must pull out all of the rows, and put them into an array of vectors.
 		gsl_vector * zrows[n];
  		for( int j=0; j<n; j++ ) { zrows[j] = gsl_vector_calloc(3); }		// all rows are initially zero.
 
@@ -154,21 +156,21 @@ gsl_matrix * gsamp( gsl_matrix_view x )
 //			for( int j=0; j<n; j++ ) { cout << "Row " << j << ", element 0: " << gsl_vector_get( zrows[j], 0 ) << endl; }
 		for( int j=0; j<n; j++ ) { gsl_matrix_set_row( z, j, zrows[j] ); }	// overwrite z with the sorted rows
 
+
 //MATLAB        z(:,3)=gs; z=sortrows(z,2); y(:,i)=z(:,3);
 		for( int j=0; j<n; j++ ) { gsl_matrix_set( z, j, 2, gs[j] ); }		// z(:,3) = gs;
 
 
-		// now we must sort matrix z by the second column.  As before, pull out all of the rows, call qsort, them put them back in.
+		// now we must sort matrix z by the second (1'th) column.  As before, pull out all of the rows, call qsort, them put them back in.
 		for( int j=0; j<n; j++ ) { gsl_matrix_get_row( zrows[j], z, j ); }	// get the rows
 		qsort( zrows, n, sizeof(zrows[0]), qsort_compare_rows1 );		// sort the rows by column 1
 		for( int j=0; j<n; j++ ) { gsl_matrix_set_row( z, j, zrows[j] ); }	// overwrite z with the sorted rows
 
 		for( int j=0; j<n; j++ ) { gsl_vector_free( zrows[j] ); }		// done with the temp sorting rows.  set them free.
 
-
 //		y(:,i)=z(:,3);
 		gsl_matrix_get_col( tempcol, z, 2);	// get column 2 from matrix 'z'...
-		gsl_matrix_set_col( y, i, tempcol );	// and assign it to the i'th column of matrix 'y'
+		gsl_matrix_set_col( y, i, tempcol );	// and put the 2nd column of 'z' into the i'th column of matrix 'y'
 
 		gsl_matrix_free( z );			// we're done with our temp matrix z now.
 	}
@@ -181,8 +183,6 @@ gsl_matrix * gsamp( gsl_matrix_view x )
 		cout << "end of gsamp(): r < c -- this should be impossible." << endl;
 		exit(1);
 	}
-
-
 
 	return y;
 }
@@ -207,6 +207,7 @@ double CalcComplexity( char * fnameAct, char part )
      time_t seed;
      time(&seed);
      gsl_rng_set(r, seed);
+
 
 	for( unsigned int i=0; i<activity->size1; i++)
 	{
@@ -236,9 +237,19 @@ double CalcComplexity( char * fnameAct, char part )
 
 //	cout << "size(subset_of_activity) [before gsamp()] = " << (&subset_of_activity.matrix)->size1 << " x " << (&subset_of_activity.matrix)->size2 << endl;
 
-	gsl_matrix * o = gsamp( subset_of_activity );
+//	gsl_matrix * o = activity;
 
-	gsl_matrix_free( activity );			// done with activity.  Just need the gsamp()'ed matrix 'o' now.
+/*
+	gsl_matrix * o = gsl_matrix_alloc( (&subset_of_activity.matrix)->size1, (&subset_of_activity.matrix)->size2 );
+	gsl_matrix_memcpy( o, (&subset_of_activity.matrix) );
+	gsl_matrix_free( activity );
+*/
+//	print_matrix_row( (&subset_of_activity.matrix), 4 );
+
+
+	gsl_matrix * o = gsamp( subset_of_activity );
+	gsl_matrix_free( activity );
+
 
 //	cout << "size(o) = " << o->size1 << " x " << o->size2 << endl;
 //debug	cout << "Array Size = " << array_size << endl;
@@ -280,6 +291,8 @@ double CalcComplexity( char * fnameAct, char part )
 		gsl_matrix * Xed_COR = matrix_crosssection( COV, Pro_id, Pro );
 	     	gsl_matrix_free( COV );
 
+//		cout << "Processing: size of Xed_COR: " << Xed_COR->size1 << " x " << Xed_COR->size2 << endl;
+
 		float Cplx_Pro = calcC_det3__optimized( Xed_COR );
 		gsl_matrix_free( Xed_COR );
 
@@ -298,6 +311,7 @@ double CalcComplexity( char * fnameAct, char part )
 		gsl_matrix * Xed_COR = matrix_crosssection( COV, Inp_id, Inp );
 		gsl_matrix_free( COV );
 
+//		cout << "Input: size of Xed_COR: " << Xed_COR->size1 << " x " << Xed_COR->size2 << endl;
 		float Cplx_Inp = calcC_det3__optimized( Xed_COR );
 
 		gsl_matrix_free( Xed_COR );
