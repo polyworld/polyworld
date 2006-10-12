@@ -14,7 +14,7 @@
 #include <assert.h>
 
 #define IgnoreCrittersThatLivedLessThan_N_Timesteps 150
-#define MaxNumTimeStepsToComputeComplexityOver 500
+#define MaxNumTimeStepsToComputeComplexityOver 0		// set this to a positive value to only compute Complexity over the final N timestesps of an agent's life.
 
 using namespace std;
 
@@ -189,6 +189,7 @@ gsl_matrix * gsamp( gsl_matrix_view x )
 
 double CalcComplexity( char * fnameAct, char part )
 {
+
 	part = toupper( part );			// capitalize it
 	int numinputneurons = 0;		// this value will be defined by readin_brainfunction()
 
@@ -228,8 +229,13 @@ double CalcComplexity( char * fnameAct, char part )
 
 //	cout << "size(Activity) = " << activity->size1 << " x " << activity->size2 << endl;
 	// this next line puts a cap on the max number of timesteps to compute complexity over.  
-	if( numrows > MaxNumTimeStepsToComputeComplexityOver ) { beginning_timestep = numrows - MaxNumTimeStepsToComputeComplexityOver; }
 
+	// If we have a cap on the maximum number of timesteps to compute complexity over, run this:
+	if( MaxNumTimeStepsToComputeComplexityOver > 0 )
+	{
+		if( numrows > MaxNumTimeStepsToComputeComplexityOver )
+			beginning_timestep = numrows - MaxNumTimeStepsToComputeComplexityOver;
+	}
 
 //	cout << "We going to allocate a matrix_view with size: " << activity->size1 - beginning_timestep << " x " << numcols << endl;
 	gsl_matrix_view subset_of_activity = gsl_matrix_submatrix( activity, beginning_timestep, 0, numrows - beginning_timestep , numcols );
