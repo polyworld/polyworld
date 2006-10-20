@@ -2389,7 +2389,7 @@ void TSimulation::Interact()
 							}
 						}
 					}
-					else
+					else				/// RANDOM SMITE
 					{
 						// If necessary, smite a random critter in this domain
 						if( fDomains[kd].numcritters >= fDomains[kd].maxnumcritters )
@@ -2419,12 +2419,35 @@ void TSimulation::Interact()
 							
 							if( randCritter )	// if we found any legitimately smitable critter...
 							{
+								if( (fCurrentFittestCount > 0) && (randCritter->Fitness() > fCurrentMaxFitness[fCurrentFittestCount-1]) )	// trying to smite a fit critter
+								{
+									int havePastRandCritter = 0;
+									for( int i=0; i<fCurrentFittestCount; i++ )
+									{
+										if( fCurrentFittestCritter[i] != randCritter )
+											fCurrentFittestCritter[ (i-havePastRandCritter) ] = fCurrentFittestCritter[i];
+										else
+											havePastRandCritter = 1;
+									}
+								
+									if( havePastRandCritter == 1 )		// this should always be true, but lets make sure.
+									{
+										fCurrentFittestCritter[ (fCurrentFittestCount-1) ] = NULL;	// Null out the last critter in the list, just to be polite
+										fCurrentFittestCount = fCurrentFittestCount - 1;		// decrement the number of critters in the list now that we've removed randCritter from it.
+									}
+								}
+
 								fDomains[kd].fNumSmited++;
 								fNumberDiedSmite++;
 								smited = true;
 								Death( randCritter );
 							}
+							
 						}
+						
+						
+						
+						
 					}
 
                     if ( (fDomains[kd].numcritters < fDomains[kd].maxnumcritters) &&
