@@ -13,6 +13,7 @@
 #include <gsl/gsl_randist.h>
 #include <assert.h>
 
+#define useGSAMP 1
 #define IgnoreCrittersThatLivedLessThan_N_Timesteps 150
 #define MaxNumTimeStepsToComputeComplexityOver 0		// set this to a positive value to only compute Complexity over the final N timestesps of an agent's life.
 
@@ -195,20 +196,25 @@ double CalcComplexity( char * fnameAct, char part )
 
 	gsl_matrix * activity = readin_brainfunction__optimized( fnameAct, numinputneurons );
 
-
     // If critter lived less timesteps than it has neurons, return Complexity = 0.0.
     if( activity->size2 > activity->size1 || activity->size1 < IgnoreCrittersThatLivedLessThan_N_Timesteps ) { return 0; }
 
 
-     const gsl_rng_type * T;
-     gsl_rng * r;
-     gsl_rng_env_setup();
-     T = gsl_rng_mt19937;
-     r = gsl_rng_alloc(T);
-     time_t seed;
-     time(&seed);
-     gsl_rng_set(r, seed);
 
+
+    gsl_matrix * o;			// we don't need this guy yet but we will in a bit.  We need to define him here so the useGSAMP can assign to it.
+
+
+    if( ! useGSAMP )			// if we are NOT using GSAMP, we need to be doing this to prevent nasty imaginary eigenvectors and divide by zero's.  With GSAMP doing this is slightly bad as it will offset the ordinal ordering in some cases.  I.e. a column of all zeros.
+    {
+	const gsl_rng_type * T;
+	gsl_rng * r;
+	gsl_rng_env_setup();
+	T = gsl_rng_mt19937;
+	r = gsl_rng_alloc(T);
+	time_t seed;
+	time(&seed);
+	gsl_rng_set(r, seed);
 
 	for( unsigned int i=0; i<activity->size1; i++)
 	{
@@ -217,7 +223,10 @@ double CalcComplexity( char * fnameAct, char part )
 	}
 
 	gsl_rng_free( r );
-
+	o = activity;	// assign the slightly nosified activity matrix to 'o'.
+     }
+     else		// If we ARE using GSAMP.
+     {
 
 /*	MATLAB CODE:
 	o = gsamp( activity( size(activity,1) - min(500,size(activity,1)) + 1:size(activity,1) ,:)');
@@ -243,25 +252,15 @@ double CalcComplexity( char * fnameAct, char part )
 
 //	cout << "size(subset_of_activity) [before gsamp()] = " << (&subset_of_activity.matrix)->size1 << " x " << (&subset_of_activity.matrix)->size2 << endl;
 
-//	gsl_matrix * o = activity;
 
-/*
-	gsl_matrix * o = gsl_matrix_alloc( (&subset_of_activity.matrix)->size1, (&subset_of_activity.matrix)->size2 );
-	gsl_matrix_memcpy( o, (&subset_of_activity.matrix) );
+	o = gsamp( subset_of_activity );
 	gsl_matrix_free( activity );
-*/
-//	print_matrix_row( (&subset_of_activity.matrix), 4 );
-
-
-	gsl_matrix * o = gsamp( subset_of_activity );
-	gsl_matrix_free( activity );
-
-
 //	cout << "size(o) = " << o->size1 << " x " << o->size2 << endl;
 //debug	cout << "Array Size = " << array_size << endl;
-//debug	cout << "Beginning Timestep = " << beginning_timestep << endl;
+//	cout << "Beginning Timestep = " << beginning_timestep << endl;
 
 
+      }
 
 
 	// We just calculate the covariance matrix and compute the Complexity of that instead of using the correlation matrix.  It uses less cycles and the results are identical.
@@ -697,6 +696,7 @@ gsl_matrix * readin_brainfunction__optimized( const char* fname, int& numinputne
 		cerr << "brainFunction file '" << fname << "' is corrupt.  Number of rows is zero." << endl;
 		exit(1);
 	}
+
 
 	assert( numcols > 0 && numrows > 0 );		// double checking that we're not going to allocate an impossible matrix.
 	gsl_matrix * activity = gsl_matrix_alloc(numrows, numcols);
