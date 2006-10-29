@@ -202,9 +202,6 @@ double CalcComplexity( char * fnameAct, char part )
     // If critter lived less timesteps than it has neurons, return Complexity = 0.0.
     if( activity->size2 > activity->size1 || activity->size1 < IgnoreCrittersThatLivedLessThan_N_Timesteps ) { return 0.0; }
 
-
-
-
     gsl_matrix * o;			// we don't need this guy yet but we will in a bit.  We need to define him here so the useGSAMP can assign to it.
 
 
@@ -694,21 +691,21 @@ gsl_matrix * readin_brainfunction__optimized( const char* fname, int& numinputne
 	// Make sure the matrix isn't invalid.  If it is, return NULL.
 	if( numcols <= 0 )
 	{
-		cerr << "brainFunction file '" << fname << "' is corrupt.  Number of columns is zero." << endl;
+//		cerr << "brainFunction file '" << fname << "' is corrupt.  Number of columns is zero." << endl;
 		activity = NULL;
 		return activity;
 	}
 	if( numrows <= 0 )
 	{
-		cerr << "brainFunction file '" << fname << "' is corrupt.  Number of rows is zero." << endl;
+//		cerr << "brainFunction file '" << fname << "' is corrupt.  Number of rows is zero." << endl;
 		activity = NULL;
 		return activity;
 	}
 
 
 	assert( numcols > 0 && numrows > 0 );		// double checking that we're not going to allocate an impossible matrix.
-	activity = gsl_matrix_alloc(numrows, numcols);
 
+	activity = gsl_matrix_alloc(numrows, numcols);
 
 	int tcnt=0;
 
@@ -716,11 +713,11 @@ gsl_matrix * readin_brainfunction__optimized( const char* fname, int& numinputne
 	for( FileContents_it = FileContents.begin(); FileContents_it != FileContents.end(); FileContents_it++)
 	{
 		int thespace = (*FileContents_it).find(" ",0);
-
 		int    tstep1 = atoi( ((*FileContents_it).substr( 0, thespace)).c_str() );
 		double  tstep2 = atof( ((*FileContents_it).substr( thespace, (*FileContents_it).length())).c_str() );
 
-		gsl_matrix_set( activity, tcnt/numcols, tstep1, tstep2);
+		gsl_matrix_set( activity, int(tcnt/numcols), tstep1, tstep2);
+//		cout << "set (" << int(tcnt/numcols) << "," << tstep1 << ") to " << tstep2 << " Matrix Size: " << numrows << "x" << numcols << "||| thespace = " << thespace << endl;
 		tcnt++;
 	}
 
