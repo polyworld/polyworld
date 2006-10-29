@@ -196,8 +196,11 @@ double CalcComplexity( char * fnameAct, char part )
 
 	gsl_matrix * activity = readin_brainfunction__optimized( fnameAct, numinputneurons );
 
+    // if had an invalid brain file, return 0.
+    if( activity == NULL ) { return 0.0; }
+
     // If critter lived less timesteps than it has neurons, return Complexity = 0.0.
-    if( activity->size2 > activity->size1 || activity->size1 < IgnoreCrittersThatLivedLessThan_N_Timesteps ) { return 0; }
+    if( activity->size2 > activity->size1 || activity->size1 < IgnoreCrittersThatLivedLessThan_N_Timesteps ) { return 0.0; }
 
 
 
@@ -685,21 +688,26 @@ gsl_matrix * readin_brainfunction__optimized( const char* fname, int& numinputne
 		cerr << "Warning: #lines (" << FileContents.size() << ") in brainFunction file '" << fname << "' is not an even multiple of #neurons (" << numcols << ").  brainFunction file may be corrupt." << endl;
 	}
 
-	// Make sure the matrix isn't invalid.
+
+	gsl_matrix * activity = NULL;
+
+	// Make sure the matrix isn't invalid.  If it is, return NULL.
 	if( numcols <= 0 )
 	{
 		cerr << "brainFunction file '" << fname << "' is corrupt.  Number of columns is zero." << endl;
-		exit(1);
+		activity = NULL;
+		return activity;
 	}
 	if( numrows <= 0 )
 	{
 		cerr << "brainFunction file '" << fname << "' is corrupt.  Number of rows is zero." << endl;
-		exit(1);
+		activity = NULL;
+		return activity;
 	}
 
 
 	assert( numcols > 0 && numrows > 0 );		// double checking that we're not going to allocate an impossible matrix.
-	gsl_matrix * activity = gsl_matrix_alloc(numrows, numcols);
+	activity = gsl_matrix_alloc(numrows, numcols);
 
 
 	int tcnt=0;
