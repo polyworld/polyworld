@@ -13,9 +13,18 @@
 #include <gsl/gsl_randist.h>
 #include <assert.h>
 
-#define useGSAMP 1
-#define IgnoreCrittersThatLivedLessThan_N_Timesteps 150
+#define FLAG_useGSAMP 1
+
+// Virgil Suggests the Following Options:
+#define FLAG_subtractBias 1
+#define IgnoreCrittersThatLivedLessThan_N_Timesteps 200
 #define MaxNumTimeStepsToComputeComplexityOver 0		// set this to a positive value to only compute Complexity over the final N timestesps of an agent's life.
+
+// Estimated Options from Olaf's MATLAB Code
+// #define FLAG_subtractBias 0
+// #define MaxNumTimeStepsToComputeComplexityOver 500		// set this to a positive value to only compute Complexity over the final N timestesps of an agent's life.
+// #define IgnoreCrittersThatLivedLessThan_N_Timesteps 0
+
 
 using namespace std;
 
@@ -205,7 +214,7 @@ double CalcComplexity( char * fnameAct, char part )
     gsl_matrix * o;			// we don't need this guy yet but we will in a bit.  We need to define him here so the useGSAMP can assign to it.
 
 
-    if( ! useGSAMP )			// if we are NOT using GSAMP, we need to be doing this to prevent nasty imaginary eigenvectors and divide by zero's.  With GSAMP doing this is slightly bad as it will offset the ordinal ordering in some cases.  I.e. a column of all zeros.
+    if( ! FLAG_useGSAMP )			// if we are NOT using GSAMP, we need to be doing this to prevent nasty imaginary eigenvectors and divide by zero's.  With GSAMP doing this is slightly bad as it will offset the ordinal ordering in some cases.  I.e. a column of all zeros.
     {
 	const gsl_rng_type * T;
 	gsl_rng * r;
@@ -267,13 +276,19 @@ double CalcComplexity( char * fnameAct, char part )
 	gsl_matrix * COVwithbias = mCOV( o );
 	gsl_matrix_free( o );			// don't need this anymore
 
-
-	// Now time to through away the bias neuron from the COVwithbias matrix.
-	int numNeurons = COVwithbias->size1 - 1;
-	int Neurons[numNeurons];
-	for( int i=0;i<numNeurons;i++ ) { Neurons[i] = i; }
-	gsl_matrix * COV = matrix_crosssection( COVwithbias, Neurons, numNeurons );	// no more bias now!
-	gsl_matrix_free( COVwithbias );
+	gsl_matrix * COV;
+	if( FLAG_subtractBias )
+	{
+		// Now time to through away the bias neuron from the COVwithbias matrix.
+		int numNeurons = COVwithbias->size1 - 1;
+		int Neurons[numNeurons];
+		for( int i=0;i<numNeurons;i++ ) { Neurons[i] = i; }
+		COV = matrix_crosssection( COVwithbias, Neurons, numNeurons );	// no more bias now!
+		gsl_matrix_free( COVwithbias );
+	}
+	else {
+		COV = COVwithbias;
+	}
 
 
 	if( part == 'A' )	// All
@@ -284,6 +299,7 @@ double CalcComplexity( char * fnameAct, char part )
 	}
 	else if( part == 'P' )	// Processing
 	{
+		if( numinputneurons == 0 ) { return -1; }
 //		cout << "size of COV Matrix: " << COV->size1 << " x " << COV->size2 << endl;
 		int Pro = COV->size1 - numinputneurons;
 		int Pro_id[Pro];
@@ -305,6 +321,8 @@ double CalcComplexity( char * fnameAct, char part )
 	}
 	else if( part == 'I' )	// Input
 	{
+		if( numinputneurons == 0 ) { return -1; }
+
 		int Inp = numinputneurons;
 		int Inp_id[Inp];
 		for(int i=0; i< Inp; i++ ) { Inp_id[i] = i; }
@@ -649,8 +667,10 @@ gsl_matrix * readin_brainfunction__optimized( const char* fname, int& numinputne
 	string numneu = params.substr( 0 , params.find(" ",0) );
 	params.erase( 0, params.find(" ",0)+1 );						//Remove the numneu
 
-	numinputneurons = atoi( (params.substr(0,params.find(" ",0))).c_str() );
-
+	if( params.find(" ",0) != string::npos )
+	{
+		numinputneurons = atoi( (params.substr(0,params.find(" ",0))).c_str() );
+	}
 
 /* MATLAB CODE:
         % start reading in the timesteps
