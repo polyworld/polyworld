@@ -818,7 +818,7 @@ void TSimulation::Step()
 			}
 		
 			stddev = sqrt(stddev / (count-1) );		// note that this stddev is divided by N-1 (MATLAB default)
-
+			double StandardError = stddev / sqrt(count);
 //DEBUG			cout << "Mean = " << mean << "  //  StdDev = " << stddev << endl;
 			
 			FILE * cFile;
@@ -830,7 +830,7 @@ void TSimulation::Step()
 			}
 			
 			// print to complexity.txt
-			fprintf( cFile, "%ld %f %f\n", fStep, mean, stddev);
+			fprintf( cFile, "%ld %f %f %f %d\n", fStep, mean, stddev, StandardError, count );
 			fclose( cFile );
 			
 		}
