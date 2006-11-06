@@ -667,10 +667,7 @@ gsl_matrix * readin_brainfunction__optimized( const char* fname, int& numinputne
 	string numneu = params.substr( 0 , params.find(" ",0) );
 	params.erase( 0, params.find(" ",0)+1 );						//Remove the numneu
 
-	if( params.find(" ",0) != string::npos )
-	{
-		numinputneurons = atoi( (params.substr(0,params.find(" ",0))).c_str() );
-	}
+	numinputneurons = atoi( (params.substr(0,params.find(" ",0))).c_str() );
 
 /* MATLAB CODE:
         % start reading in the timesteps
@@ -699,6 +696,8 @@ gsl_matrix * readin_brainfunction__optimized( const char* fname, int& numinputne
 
 	int numcols = atoi(numneu.c_str());
 	int numrows = int(round( FileContents.size() / numcols ));
+	if( numcols == numinputneurons ) { numinputneurons = 0; }	// make sure there was a numinputneurons
+
 
 	if( float(numrows) - (FileContents.size() / numcols) != 0.0 )
 	{
