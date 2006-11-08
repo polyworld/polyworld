@@ -13,14 +13,14 @@
 #include <gsl/gsl_randist.h>
 #include <assert.h>
 
-#define FLAG_useGSAMP 1
-
 // Virgil Suggests the Following Options:
+#define FLAG_useGSAMP 1
 #define FLAG_subtractBias 1
 #define IgnoreCrittersThatLivedLessThan_N_Timesteps 200
 #define MaxNumTimeStepsToComputeComplexityOver 0		// set this to a positive value to only compute Complexity over the final N timestesps of an agent's life.
 
 // Estimated Options from Olaf's MATLAB Code
+// #define FLAG_useGSAMP 1
 // #define FLAG_subtractBias 0
 // #define MaxNumTimeStepsToComputeComplexityOver 500		// set this to a positive value to only compute Complexity over the final N timestesps of an agent's life.
 // #define IgnoreCrittersThatLivedLessThan_N_Timesteps 0
@@ -213,9 +213,7 @@ double CalcComplexity( char * fnameAct, char part )
 
     gsl_matrix * o;			// we don't need this guy yet but we will in a bit.  We need to define him here so the useGSAMP can assign to it.
 
-
-    if( ! FLAG_useGSAMP )			// if we are NOT using GSAMP, we need to be doing this to prevent nasty imaginary eigenvectors and divide by zero's.  With GSAMP doing this is slightly bad as it will offset the ordinal ordering in some cases.  I.e. a column of all zeros.
-    {
+/* Now to inject a little bit of noise into the activity matrix */
 	const gsl_rng_type * T;
 	gsl_rng * r;
 	gsl_rng_env_setup();
@@ -226,21 +224,17 @@ double CalcComplexity( char * fnameAct, char part )
 	gsl_rng_set(r, seed);
 
 	for( unsigned int i=0; i<activity->size1; i++)
-	{
 		for( unsigned int j=0; j<activity->size2; j++)
 			gsl_matrix_set(activity, i, j, gsl_matrix_get(activity, i,j) + 0.00001*gsl_ran_ugaussian(r));	// we can do smaller values
-	}
+	
 
 	gsl_rng_free( r );
-	o = activity;	// assign the slightly nosified activity matrix to 'o'.
-     }
-     else		// If we ARE using GSAMP.
-     {
 
+    if( FLAG_useGSAMP )		// If we're GSAMP'ing, do that now.
+    {
 /*	MATLAB CODE:
 	o = gsamp( activity( size(activity,1) - min(500,size(activity,1)) + 1:size(activity,1) ,:)');
 */
-
 	int numrows = int(activity->size1);
 	int numcols = int(activity->size2);
 	int beginning_timestep = 0;
