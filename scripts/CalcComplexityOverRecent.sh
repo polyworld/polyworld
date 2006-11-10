@@ -67,8 +67,8 @@ fi
 
 done | tee AvrComplexity.plt
 
+# if AvrComplexity is empty, we should delete it.
 if [ ! -s 'AvrComplexity.plt' ]
 then
 	rm AvrComplexity.plt
 fi
-# if AvrComplexity is empty, we should delete it.

@@ -31,14 +31,22 @@ interval=$(echo "$2" | awk 'int($0) == $0 { print $0 }')	# setting the interval 
 if [ -z "$interval" ]
 then
 	echo "Determing interval dynamically...";
-	interval=$(ls -1 "$directory/brain/bestRecent" | awk 'int($1) == $1 { print $0 }' | sort -n | head -1)
+	interval=$(ls -1 "$directory/brain/bestRecent" | awk 'int($1) == $1 && int($1) > 0 { print $0 }' | sort -n | head -1)
 
 	if [ -z "$interval" ]
 	then
 		echo "I couldn't determine the timestep interval in brain/bestRecent.  Maybe the directory '$directory/brain/bestRecent' is empty?  You can force-specify an interval as \$2"
 		exit;
 	fi
+	if [ "$interval" -le 0 ]
+	then
+		echo "Got a corrupt value ('$interval') for the interval.  You can force-specify the interval as \$2"
+		exit;
+	fi
 fi
+######## Get the Number of Seed Critters (so we'll know to ignore these)
+# TODO later.
+
 
 ### If we're missing some files that are only in bestRecent (for some unknown reason), hard link those to brain/function/, in the appropriate format.
 NumMoved=0
@@ -53,7 +61,7 @@ do
 		if [ ! -r "${directory}/brain/function/$formatted_filename" ]
 		then
 			ln "$filename" "${directory}/brain/function/$formatted_filename"
-			echo "Made brain/function/$formatted_filename"
+			echo "Made brain/function/$formatted_filename from $filename"
 			NumMoved=$(echo "$NumMoved + 1" | bc)
 		fi
 	done
@@ -76,8 +84,6 @@ fi
 	fi
 	mkdir "$directory/brain/Recent"
 ##########
-# interval=$(ls -1 "$directory/brain/bestRecent" | awk 'int($1) == $1 { print $0 }' | sort -n | head -1)
-
 echo "Interval = $interval"
 
 # get all entries for 'DEATH'	TODO: If we ever start recording a 'SMITE' event as different from a 'DEATH' event, we should probably include SMITE too.
@@ -124,3 +130,5 @@ do
 
 done
 printf "\r                                              \rDone!\n"
+echo "Making the Seeds..."
+./MakeSeedsRecent.sh "${directory}"
