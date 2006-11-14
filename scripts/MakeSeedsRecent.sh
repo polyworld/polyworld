@@ -4,6 +4,9 @@
 
 # remove any trailing slashes from the run directory
 directory=$(echo "${1}" | sed -e 's/\/*$//')
+numseedcritters=$(echo "${2}" | awk '{ print int($0) }')
+echo "You have force-specified the number of seed critters to '$numseedcritters'"
+
 if [ ! -d "$directory" ]
 then
         echo "You must specify a polyworld 'run/' directory to generate timestep '0' in brain/bestRecent, brain/bestSoFar, and brain/Recent.";
@@ -13,7 +16,10 @@ fi
 if [ ! -f "$directory/BirthsDeaths.log" ]
 then
         echo "Need a BirthsDeaths.log file, and I don't see any file '$directory/BirthDeaths.log'."; 
-        exit;
+        if [ "$numseedcritters" -le 0 ] # if we haven't forced-specified a number of seed critters, exit.
+	then
+		exit;
+	fi
 fi
 
 if [ ! -d "$directory/brain/function" ]
@@ -60,8 +66,13 @@ else
 fi
 
 
-numseedcrittersplusone=$(grep ' BIRTH ' ${directory}/BirthsDeaths.log | head -n 1 | cut -d' ' -f3)
-numseedcritters=$(echo "$numseedcrittersplusone - 1" | bc)
+# if we didn't force specify a number of seed critters determine it now
+if [ -z "${numseedcritters}" ]
+then
+	echo "Determining number of seed critters dyanmically...."
+	numseedcrittersplusone=$(grep ' BIRTH ' ${directory}/BirthsDeaths.log | head -n 1 | cut -d' ' -f3)
+	numseedcritters=$(echo "$numseedcrittersplusone - 1" | bc)
+fi
 
 echo "Number of Seed Critters = $numseedcritters"
 
