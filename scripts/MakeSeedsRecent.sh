@@ -5,7 +5,10 @@
 # remove any trailing slashes from the run directory
 directory=$(echo "${1}" | sed -e 's/\/*$//')
 numseedcritters=$(echo "${2}" | awk '{ print int($0) }')
-echo "You have force-specified the number of seed critters to '$numseedcritters'"
+if [ "$numseedcritters" -gt 0 ]
+then
+	echo "You have force-specified the number of seed critters to '$numseedcritters'"
+fi
 
 if [ ! -d "$directory" ]
 then
