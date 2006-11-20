@@ -1,5 +1,5 @@
 #!/bin/sh
-CALC_COMPLEXITY="/polyworld/utils/CalcComplexity"
+CALC_COMPLEXITY="$pol/utils/CalcComplexity"
 
 # If the CalcComplexity command-line tool isn't compiled, compile it.
 if [ ! -x "$CALC_COMPLEXITY" ]

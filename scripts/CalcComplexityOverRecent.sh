@@ -1,6 +1,6 @@
 #!/bin/sh
 
-CALC_COMPLEXITY_OVER_DIRECTORY="/polyworld/scripts/CalcComplexityOverDirectory.sh"
+CALC_COMPLEXITY_OVER_DIRECTORY="$pol/scripts/CalcComplexityOverDirectory.sh"
 
 # Make sure we're taking an argument
 if [ -z "$1" ]
