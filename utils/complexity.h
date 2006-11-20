@@ -13,18 +13,28 @@
 #include <gsl/gsl_randist.h>
 #include <assert.h>
 
-// Virgil Suggests the Following Options:
-#define FLAG_useGSAMP 1
-#define FLAG_subtractBias 1
-#define IgnoreCrittersThatLivedLessThan_N_Timesteps 200
-#define MaxNumTimeStepsToComputeComplexityOver 0		// set this to a positive value to only compute Complexity over the final N timestesps of an agent's life.
+// Turn on no more than one of the *Options flags
+#define VirgilOptions 0
+#define OlafOptions 1
 
-// Estimated Options from Olaf's MATLAB Code
-// #define FLAG_useGSAMP 1
-// #define FLAG_subtractBias 0
-// #define MaxNumTimeStepsToComputeComplexityOver 500		// set this to a positive value to only compute Complexity over the final N timestesps of an agent's life.
-// #define IgnoreCrittersThatLivedLessThan_N_Timesteps 0
-
+#if VirgilOptions
+	// Virgil Suggests the Following Options:
+	#define FLAG_useGSAMP 1
+	#define FLAG_subtractBias 1
+	#define IgnoreCrittersThatLivedLessThan_N_Timesteps 200
+	#define MaxNumTimeStepsToComputeComplexityOver 0		// set this to a positive value to only compute Complexity over the final N timestesps of an agent's life.
+#elif OlafOptions
+	// Estimated Options from Olaf's MATLAB Code
+	#define FLAG_useGSAMP 1
+	#define FLAG_subtractBias 1
+	#define IgnoreCrittersThatLivedLessThan_N_Timesteps 0
+	#define MaxNumTimeStepsToComputeComplexityOver 500		// set this to a positive value to only compute Complexity over the final N timestesps of an agent's life.
+#else
+	#define FLAG_useGSAMP 1
+	#define FLAG_subtractBias 1
+	#define IgnoreCrittersThatLivedLessThan_N_Timesteps 0
+	#define MaxNumTimeStepsToComputeComplexityOver 500		// set this to a positive value to only compute Complexity over the final N timestesps of an agent's life.
+#endif
 
 using namespace std;
 
