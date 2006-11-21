@@ -270,7 +270,7 @@ L      smiteMode_R=random|L=leastfit
 1      recordAdamiComplexity
 500    AdamiComplexityRecordFrequency
 
-Linear    FogFunction_Exponential_Linear_Off
+L		FogFunction_O=Off|L=Linear|E=Exponential
 0.1    ExponentialFogDensity
 33     LinearFogEnd
 

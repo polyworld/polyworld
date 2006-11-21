@@ -115,9 +115,7 @@
 8      monheight_not_used
 1      monstride
 100.0  worldsize
-2      numbarriers
-33.33 -100. 33.33 -10. barrierposition
-66.67 -100. 66.67 -10. barrierposition
+0      numbarriers
 
 0      genesepmon
 0      geneseprec
@@ -221,7 +219,7 @@ L      smiteMode_R=random|L=leastfit
 1      recordAdamiComplexity
 500    AdamiComplexityRecordFrequency
 
-Linear    FogFunction_Exponential_Linear_Off
+L		FogFunction_O=Off|L=Linear|E=Exponential
 0.1    ExponentialFogDensity
 33     LinearFogEnd
 
