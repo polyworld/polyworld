@@ -20,7 +20,7 @@
 // food is eaten and shrinks.]
 #define CompatibilityMode 1
 
-#define UseMaxSpeedAsFitness 0
+#define UseMaxSpeedAsFitness 1
 
 // Self
 #include "Simulation.h"
@@ -4415,8 +4415,6 @@ void TSimulation::ReadWorldFile(const char* filename)
 		cout << "NumDepletionSteps" ses critter::gNumDepletionSteps nl;
 		if( critter::gNumDepletionSteps )
 			critter::gMaxPopulationPenaltyFraction = 1.0 / (float) critter::gNumDepletionSteps;
-		
-		in >> critter::gMaxPopulationPenaltyFraction; in >> label;
 		cout << ".MaxPopulationPenaltyFraction" ses critter::gMaxPopulationPenaltyFraction nl;
 	}
 	else
@@ -4434,8 +4432,7 @@ void TSimulation::ReadWorldFile(const char* filename)
 	if( version >= 22 )
 	{
 		in >> fRecordBirthsDeaths; in >> label;
-		assert( fRecordBirthsDeaths == true || fRecordBirthsDeaths == false);
-		cout << "RecordBirthsDeaths" ses int(fRecordBirthsDeaths) nl;
+		cout << "RecordBirthsDeaths" ses fRecordBirthsDeaths nl;
 	}
 	
 	if( version >= 11 )
@@ -4491,38 +4488,38 @@ void TSimulation::ReadWorldFile(const char* filename)
 		{
 			if( ! fBestSoFarBrainFunctionRecordFrequency )
 			{
-				if( fBestSoFarBrainAnatomyRecordFrequency )
-					fBestSoFarBrainFunctionRecordFrequency = fBestSoFarBrainAnatomyRecordFrequency;
+				if( fBestRecentBrainFunctionRecordFrequency )
+					fBestSoFarBrainFunctionRecordFrequency = fBestRecentBrainFunctionRecordFrequency;
 				else
 					fBestSoFarBrainFunctionRecordFrequency = 1000;
-				cerr << "Warning: Recording Complexity without recording \"best so far\" brain function?  That's not going to work.  Setting BestSoFarBrainFunctionRecordFrequency to " << fBestSoFarBrainFunctionRecordFrequency nl;
+				cerr << "Warning: Attempted to record Complexity without recording \"best so far\" brain function.  Setting BestSoFarBrainFunctionRecordFrequency to " << fBestSoFarBrainFunctionRecordFrequency nl;
 			}
 			
 			if( ! fBestSoFarBrainAnatomyRecordFrequency )
 			{
-				if( fBestSoFarBrainFunctionRecordFrequency )
-					fBestSoFarBrainAnatomyRecordFrequency = fBestSoFarBrainFunctionRecordFrequency;
+				if( fBestRecentBrainAnatomyRecordFrequency )
+					fBestSoFarBrainAnatomyRecordFrequency = fBestRecentBrainAnatomyRecordFrequency;
 				else
 					fBestSoFarBrainAnatomyRecordFrequency = 1000;				
-				cerr << "Warning: Recording Complexity without recording \"best so far\" brain anatomy?  That's not going to work.  Setting BestSoFarBrainAnatomyRecordFrequency to " << fBestSoFarBrainAnatomyRecordFrequency nl;
+				cerr << "Warning: Attempted to record Complexity without recording \"best so far\" brain anatomy.  Setting BestSoFarBrainAnatomyRecordFrequency to " << fBestSoFarBrainAnatomyRecordFrequency nl;
 			}
 
 			if( ! fBestRecentBrainFunctionRecordFrequency )
 			{
-				if( fBestRecentBrainAnatomyRecordFrequency )
-					fBestRecentBrainFunctionRecordFrequency = fBestRecentBrainAnatomyRecordFrequency;
+				if( fBestSoFarBrainAnatomyRecordFrequency )
+					fBestRecentBrainFunctionRecordFrequency = fBestSoFarBrainAnatomyRecordFrequency;
 				else
 					fBestRecentBrainFunctionRecordFrequency = 1000;
-				cerr << "Warning: Recording Complexity without recording \"best so far\" brain function?  That's not going to work.  Setting BestRecentBrainFunctionRecordFrequency to " << fBestRecentBrainFunctionRecordFrequency nl;
+				cerr << "Warning: Attempted to record Complexity without recording \"best recent\" brain function.  Setting BestRecentBrainFunctionRecordFrequency to " << fBestRecentBrainFunctionRecordFrequency nl;
 			}
 			
 			if( ! fBestRecentBrainAnatomyRecordFrequency )
 			{
-				if( fBestRecentBrainFunctionRecordFrequency )
-					fBestRecentBrainAnatomyRecordFrequency = fBestRecentBrainFunctionRecordFrequency;
+				if( fBestSoFarBrainAnatomyRecordFrequency )
+					fBestRecentBrainAnatomyRecordFrequency = fBestSoFarBrainAnatomyRecordFrequency;
 				else
 					fBestRecentBrainAnatomyRecordFrequency = 1000;				
-				cerr << "Warning: Recording Complexity without recording \"best so far\" brain anatomy?  That's not going to work.  Setting BestRecentBrainAnatomyRecordFrequency to " << fBestRecentBrainAnatomyRecordFrequency nl;
+				cerr << "Warning: Attempted to record Complexity without recording \"best recent\" brain anatomy.  Setting BestRecentBrainAnatomyRecordFrequency to " << fBestRecentBrainAnatomyRecordFrequency nl;
 			}
 		}
 		
@@ -4533,19 +4530,19 @@ void TSimulation::ReadWorldFile(const char* filename)
 		{
 			if( ! fRecordComplexity )		//Not Recording Complexity?
 			{
-				cerr << "Warning: Using Complexity as fitness func without recording Complexity. Turning recordComplexity on." nl;
+				cerr << "Warning: Attempted to use Complexity as fitness func without recording Complexity.  Turning on RecordComplexity." nl;
 				fRecordComplexity = true;
 			}
 		
 			if( ! fBrainFunctionRecordAll )	//Not recording BrainFunction?
 			{
-				cerr << "Warning: Using Complexity as fitness func without recording brain function.  Turning recordBrainFunction on." nl;
+				cerr << "Warning: Attempted to use Complexity as fitness func without recording brain function.  Turning on RecordBrainFunctionAll." nl;
 				fBrainFunctionRecordAll = true;
 			}
 
 			if( ! fBrainAnatomyRecordAll )
 			{
-				cerr << "Warning: Recording Complexity without recording brain anatomy?  That's not going to work.  Turning on recordBrainAnatomy." nl;
+				cerr << "Warning: Attempted to use Complexity as fitness func without recording brain anatomy.  Turning on RecordBrainAnatomyAll." nl;
 				fBrainAnatomyRecordAll = true;				
 			}
 
