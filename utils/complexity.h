@@ -26,7 +26,7 @@
 #elif OlafOptions
 	// Estimated Options from Olaf's MATLAB Code
 	#define FLAG_useGSAMP 1
-	#define FLAG_subtractBias 1
+	#define FLAG_subtractBias 0
 	#define IgnoreCrittersThatLivedLessThan_N_Timesteps 0
 	#define MaxNumTimeStepsToComputeComplexityOver 500		// set this to a positive value to only compute Complexity over the final N timestesps of an agent's life.
 #else
