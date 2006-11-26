@@ -2,7 +2,7 @@
 #define SIMULATION_H
 
 #ifdef linux
-#include <errno.h>
+	#include <errno.h>
 #endif
 
 // qt
@@ -300,7 +300,16 @@ public:
 	
 	void Step();
 	void Update();
-	
+
+	void SetNextLockstepEvent();	// function to read the next event from LOCKSTEP-BirthsDeaths.log
+	#if LockStepWithBirthsDeathsLog
+		FILE * LockstepFile;		// Define a file pointer to our LOCKSTEP-BirthsDeaths.log
+		int LockstepTimestep;		// Timestep at which the next event in LOCKSTEP-BirthDeaths.log occurs
+		int LockstepNumDeathsAtTimestep;	// How many critters died at this LockstepTimestep?
+		int LockstepNumBirthsAtTimestep;	// how many critters were born at LockstepTimestep?
+	#endif
+
+
 	static long fStep;
 	bool fCritterTracking;		//Moving to public for access to sceneview and keypress (CMB 3/19/06)
 	long fMonitorCritterRank;	//Moving to public for access to sceneview and keypress (CMB 3/19/06)
@@ -327,9 +336,9 @@ public:
 	bool fBrainAnatomyRecordSeeds;
 	bool fBrainFunctionRecordSeeds;
 	
-	bool fRecordComplexity;
+	bool fRecordComplexity;				// record the Olaf Functional Complexity (neural)
 
-	bool fRecordAdamiComplexity;
+	bool fRecordAdamiComplexity;		// record the Adami Physical Complexity  (genetic)
 	int fAdamiComplexityRecordFrequency;
 	
 	float EnergyFitnessParameter() const;
