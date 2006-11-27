@@ -240,7 +240,7 @@
 0.0    mintopologicaldistortion
 1.0    maxtopologicaldistortion
 0.1    maxneur2energy
-10     numprebirthcycles
+25     numprebirthcycles
 
 1      overheadrank
 1      tracking
