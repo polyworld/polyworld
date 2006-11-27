@@ -1383,6 +1383,13 @@ void TSimulation::Init()
 #if LockStepWithBirthsDeathsLog
 
 		cout << "*** Running in LOCKSTEP MODE with file 'LOCKSTEP-BirthsDeaths.log' ***" << endl;
+
+		// checking some worldfile variables.
+		if( fMateWait > 0.0 )
+			cout << "Warning: fMateWait is set to " << fMateWait << ", but you probably want it set to zero.  With a non-zero fMateWait it's possible that none of the critters are allowed to give birth as required by a BIRTH event." << endl;
+		if( fMinMateFraction > 0.0 )
+			cout << "Warning: fMinMateFraction is set to " << fMinMateFraction << ", but you probably want it set to zero.  With a non-zero fMinMateFraction it's possible that none of the critters are allowed to give birth as required by a BIRTH event." << endl;
+
 	
 		if( (LockstepFile = fopen("LOCKSTEP-BirthsDeaths.log", "r")) == NULL )
 		{
@@ -1390,9 +1397,10 @@ void TSimulation::Init()
 			exit(1);
 		}
 		
-		char LockstepLine[255];
-		int currentpos=0;
-		
+		char LockstepLine[512];
+		int currentpos=0;			// current position in LockstepFile.
+
+		// bypass any header information
 		while( (fgets(LockstepLine, sizeof(LockstepLine), LockstepFile)) != NULL )
 		{
 			if( LockstepLine[0] == '#' || LockstepLine[0] == '%' ) { currentpos = ftell( LockstepFile ); continue; 	}				// if the line begins with a '#' or '%' (implying it is a header line), skip it.
@@ -1406,7 +1414,7 @@ void TSimulation::Init()
 		}
 		
 		system( "cp LOCKSTEP-BirthsDeaths.log run/" );		// copy the LOCKSTEP file into the run/ directory.
-		SetNextLockstepEvent();			// setup for the first timestep in which Birth/Death events occurred.
+		SetNextLockstepEvent();								// setup for the first timestep in which Birth/Death events occurred.
 
 #endif
 
@@ -2171,7 +2179,7 @@ void TSimulation::Interact()
 	#if LockStepWithBirthsDeathsLog
 		if( LockstepTimestep == fStep )
 		{
-			cout << "Timestep is " << fStep << ".  Triggering " << LockstepNumDeathsAtTimestep << " random deaths..." << endl;
+			cout << "t" << fStep << ":  Triggering " << LockstepNumDeathsAtTimestep << " random deaths..." << endl;
 		
 			for( int count=0; count<LockstepNumDeathsAtTimestep; count++ )
 			{
@@ -2181,51 +2189,50 @@ void TSimulation::Interact()
 				critter* randCritter = NULL;
 //				int randomIndex = int( round( drand48() * fDomains[kd].numcritters ) );	// pick from this domain
 				int randomIndex = int( round( drand48() * numcritters ) );
-				gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();	// save the state of the x-sorted list
+				
+				gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();	// save the state of the x-sorted list V???
 
 				// As written, randCritter may not actually be the randomIndex-th critter in the domain, but it will be close,
 				// and as long as there's a single legitimate critter for smiting (right domain, old enough, and not one of the
 				// parents), we will find and smite it
 				objectxsortedlist::gXSortedObjects.reset();
-				while( (i < randomIndex) && objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &testCritter ) )
+				
+				while( (i <= randomIndex) && objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &testCritter ) )		// must be <= because randomIndex could be Zero.
 				{
 					// no qualifications for this critter.  It doesn't even need to be old enough to smite.
 					randCritter = testCritter;	// as long as there's a single legitimate critter for smiting, randCriter will be non-NULL
 					i++;
 				}
-																
-				objectxsortedlist::gXSortedObjects.setcurr( saveCurr );	// restore the state of the x-sorted list
-							
-				if( randCritter )	// if we found any legitimately smitable critter...
-				{
-					if( (fCurrentFittestCount > 0) && (randCritter->Fitness() > fCurrentMaxFitness[fCurrentFittestCount-1]) )	// trying to smite a fit critter
-					{
-						int havePastRandCritter = 0;
-						for( int i=0; i<fCurrentFittestCount; i++ )
-						{
-							if( fCurrentFittestCritter[i] != randCritter )
-								fCurrentFittestCritter[ (i-havePastRandCritter) ] = fCurrentFittestCritter[i];
-							else
-								havePastRandCritter = 1;
-						}
-								
-						if( havePastRandCritter == 1 )		// this should always be true, but lets make sure.
-						{
-							fCurrentFittestCritter[ (fCurrentFittestCount-1) ] = NULL;	// Null out the last critter in the list, just to be polite
-							fCurrentFittestCount = fCurrentFittestCount - 1;		// decrement the number of critters in the list now that we've removed randCritter from it.
-						}
-					}
 
-					Death( randCritter );
-					cout << "- Killed critter " << randCritter->Number() << "\t RandIndex= " << randomIndex << endl;
+				objectxsortedlist::gXSortedObjects.setcurr( saveCurr );	// restore the state of the x-sorted list  V???
+				
+				assert( randCritter != NULL );		// In we're in LOCKSTEP mode, we should *always* have a critter to kill.  If we don't kill a critter, then we are no longer in sync in the LOCKSTEP-BirthsDeaths.log
+				
+				// trying we're smiting a critter that is on the Fittest Lists, we need to remove it from the list to avoid de-referencing a pointer to an invalid (dead) critter.
+				if( (fCurrentFittestCount > 0) && (randCritter->Fitness() > fCurrentMaxFitness[fCurrentFittestCount-1]) )
+				{
+					int havePastRandCritter = 0;
+					for( int i=0; i<fCurrentFittestCount; i++ )
+					{
+						if( fCurrentFittestCritter[i] != randCritter )
+							fCurrentFittestCritter[ (i-havePastRandCritter) ] = fCurrentFittestCritter[i];
+						else
+							havePastRandCritter = 1;
+					}
+								
+					if( havePastRandCritter == 1 )		// this should always be true, but lets make sure.
+					{
+						fCurrentFittestCritter[ (fCurrentFittestCount-1) ] = NULL;	// Null out the last critter in the list, just to be polite
+						fCurrentFittestCount = fCurrentFittestCount - 1;		// decrement the number of critters in the list now that we've removed randCritter from it.
+					}
 				}
-				else { cout << "- Found no legitimatly smitable critters!" << endl; }
+
+				Death( randCritter );
+				cout << "- Killed critter " << randCritter->Number() << "\t RandIndex= " << randomIndex << endl;
 							
-			}
-			
-//			SetNextLockstepEvent();
-			
-		}
+			}	// end of for loop
+						
+		}	// end of if( LockstepTimestep == fStep )
 		
 	#endif
 
@@ -2236,26 +2243,26 @@ void TSimulation::Interact()
 
 		fCurrentNeuronGroupCountStats.add( c->Brain()->NumNeuronGroups() );
 
-        // Determine the domain in which the critter currently is located
+        id = c->Domain();						// Determine the domain in which the critter currently is located
+	
+	// If we're not in LOCKSTEP mode, do the Deaths due to Age, Energy, or Edges. 
+	#if ! LockStepWithBirthsDeathsLog
+		if ( (c->Energy() <= 0.0)		||
+			(c->Age() >= c->MaxAge())  ||
+			((!globals::edges) && ((c->x() < 0.0) || (c->x() >  globals::worldsize) ||
+										(c->z() > 0.0) || (c->z() < -globals::worldsize))) )
+		{
+			if (c->Age() >= c->MaxAge())
+				fNumberDiedAge++;
+			else if (c->Energy() <= 0.0)
+				fNumberDiedEnergy++;
+			else
+				fNumberDiedEdge++;
 
-        id = c->Domain();
-
-        if ( (c->Energy() <= 0.0)		||
-			 (c->Age() >= c->MaxAge())  ||
-             ((!globals::edges) && ((c->x() < 0.0) || (c->x() >  globals::worldsize) ||
-									(c->z() > 0.0) || (c->z() < -globals::worldsize))) )
-        {
-            if (c->Age() >= c->MaxAge())
-                fNumberDiedAge++;
-            else if (c->Energy() <= 0.0)
-                fNumberDiedEnergy++;
-            else
-                fNumberDiedEdge++;
-			#if ! LockStepWithBirthsDeathsLog
-				Death(c);
-			#endif
-            continue; // nothing else to do for this poor schmo
-        }
+			Death(c);
+			continue; // nothing else to do for this poor schmo
+		}
+	#endif
 
 	#ifdef OF1
         if ( (id == 0) && (drand48() < fDeathProb) )
@@ -2406,153 +2413,146 @@ void TSimulation::Interact()
 			c->Heal( fCritterHealingRate, 0.0 );										// heal it if FoodEnergy > 2ndParam.
 	}
 
-					#if LockStepWithBirthsDeathsLog
-						if( LockstepTimestep == fStep )
-						{
-							cout << "Timestep is " << fStep << ".  Triggering " << LockstepNumBirthsAtTimestep << " random births..." << endl;
-							cout.flush();
-							critter* c = NULL;		// mommy
-							critter* d = NULL;		// daddy
-							
-							for( int count=0; count<LockstepNumBirthsAtTimestep; count++ ) 
-							{
-								
-								/* select mommy. */
+	#if LockStepWithBirthsDeathsLog
+		if( LockstepTimestep == fStep )
+		{
+			cout << "t" << fStep << ":  Triggering " << LockstepNumBirthsAtTimestep << " random births..." << endl;
 
-								int i = 0;
-								int numcritters = objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE);
-								critter* testCritter = NULL;
-				//				int randomIndex = int( round( drand48() * fDomains[kd].numcritters ) );	// pick from this domain
-								int randomIndex = int( round( drand48() * numcritters ) );
-								
-								
-								gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();	// save the state of the x-sorted list   ???
+			critter* c = NULL;		// mommy
+			critter* d = NULL;		// daddy
+			
+			
+			for( int count=0; count<LockstepNumBirthsAtTimestep; count++ ) 
+			{
+				/* select mommy. */
 
-								// As written, randCritter may not actually be the randomIndex-th critter in the domain, but it will be close,
-								// and as long as there's a single legitimate critter for smiting (right domain, old enough, and not one of the
-								// parents), we will find and smite it
-								objectxsortedlist::gXSortedObjects.reset();
-								while( (i <= randomIndex) && objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &testCritter ) )
-								{
-									// If it hasn't been long enough, or doesn't have enough energy, skip.
-									if( ((testCritter->Age() - testCritter->LastMate()) < fMateWait) ||
-										(testCritter->Energy() < fMinMateFraction * testCritter->MaxEnergy()) )
-										continue;
-
-									c = testCritter;	// as long as there's a single legitimate critter for mating, Mommy will be non-NULL
-									i++;
-								}
-																								
-								objectxsortedlist::gXSortedObjects.setcurr( saveCurr );	// restore the state of the x-sorted list                   ???
-
-								/* select daddy. */
-
-								i = 0;
-								randomIndex = int( round( drand48() * numcritters ) );
-								
-								saveCurr = objectxsortedlist::gXSortedObjects.getcurr();	// save the state of the x-sorted list   ???
-
-								// As written, randCritter may not actually be the randomIndex-th critter in the domain, but it will be close,
-								// and as long as there's a single legitimate critter for smiting (right domain, old enough, and not one of the
-								// parents), we will find and smite it
-								objectxsortedlist::gXSortedObjects.reset();
-								cout << "** randomIndexDaddy = " << randomIndex << endl;
-								cout << "trying critters: ";
-								while( (i <= randomIndex) && objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &testCritter ) )
-								{
-									cout << testCritter->Number() << " ";
-									// If it hasn't been long enough, or doesn't have enough energy, or is mommy, skip.
-									if( ((testCritter->Age() - testCritter->LastMate()) < fMateWait) ||
-										(testCritter->Energy() < (fMinMateFraction * testCritter->MaxEnergy())) ||
-										(testCritter->Number() == c->Number()) )
-										{
-											cout << endl;
-											if( testCritter->Number() == c->Number() )
-												cout << "critter " << testCritter->Number() << " couldn't mate because it was mommy." << endl;
-											continue;
-										}
-									
-									d = testCritter;	// as long as there's another single legitimate critter for mating, Daddy will be non-NULL
-									i++;
-								}
-								objectxsortedlist::gXSortedObjects.setcurr( saveCurr );	// restore the state of the x-sorted list                   ???	
+				int i = 0;
 				
-								if( c == NULL || d == NULL )
-								{
-									if( c == NULL )
-										cout << "***** c is null! Not enough critters!!!******" << endl;
-									if( d == NULL )
-										cout << "***** d is null! Not enough critters!!!******" << endl;
-									exit(1);
-								}
+				int numcritters = objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE);
+				assert( numcritters < fMaxCritters );			// Since we've already done all the deaths that occurred at this timestep, we should always have enough room to process the births that happened at this timestep.
+				
+				critter* testCritter = NULL;
+				//int randomIndex = int( round( drand48() * fDomains[kd].numcritters ) );	// pick from this domain V???
+				int randomIndex = int( round( drand48() * numcritters ) );
 								
-								cout << endl << "* I have selected Mommy(" << c->Number() << ") and Daddy(" << d->Number() << ").\tpopulationsize=" << numcritters << "\tfMateWait=" << fMateWait << "\tfMinMateFraction="<< fMinMateFraction<< endl;
-								
-								// === Okay, we've selected our parents, now time to birth our critter.
-								
-								// In Lockstep mode, we have no guarentee that the parents are spatially close together.
-								// Therefore, we must select a "dominant" parent.  The child will be born in the Domain and the position of the dominant parent.
-								critter* dominantParent = NULL;
-								int ZeroOrOne = int( round( drand48() ) );
-								if( ZeroOrOne == 0 )
-									dominantParent = c;
-								else
-									dominantParent = d;
-								
-								kd = WhichDomain(dominantParent->x(), dominantParent->z(), kd);
+//				gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();	// save the state of the x-sorted list   V???
 
-								ttPrint( "age %ld: critters # %ld & %ld are mating\n", fStep, c->Number(), d->Number() );
-								fNumBornSinceCreated++;
-								fDomains[kd].numbornsincecreated++;
-							
-								critter* e = critter::getfreecritter(this, &fStage);
-								Q_CHECK_PTR(e);
+				// As written, randCritter may not actually be the randomIndex-th critter in the domain, but it will be close,
+				// and as long as there's a single legitimate critter for smiting (right domain, old enough, and not one of the
+				// parents), we will find and smite it
+				objectxsortedlist::gXSortedObjects.reset();
+				while( (i <= randomIndex) && objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &testCritter ) )
+				{
+					// If it hasn't been long enough, or doesn't have enough energy, skip.
+					if( ((testCritter->Age() - testCritter->LastMate()) < fMateWait) ||
+						(testCritter->Energy() < fMinMateFraction * testCritter->MaxEnergy()) )
+						continue;
 
-								e->Genes()->Crossover(c->Genes(), d->Genes(), true);
-								e->grow( RecordBrainAnatomy( e->Number() ), RecordBrainFunction( e->Number() ) );
-								float eenergy = c->mating(fMateFitnessParameter, fMateWait) + d->mating(fMateFitnessParameter, fMateWait);
-								e->Energy(eenergy);
-								e->FoodEnergy(eenergy);
-								e->settranslation( dominantParent->x(), dominantParent->y(), dominantParent->z() );
-								e->setyaw( AverageAngles(c->yaw(), d->yaw()) );	// wrong: 0.5*(c->yaw() + d->yaw()));   // was (360.0*drand48());
-								e->Domain(kd);
-								fStage.AddObject(e);
-								saveCurr = objectxsortedlist::gXSortedObjects.getcurr();
-								objectxsortedlist::gXSortedObjects.add(e); // Add the new critter directly to the list of objects (no new critter list); the e->listLink that gets auto stored here should be valid immediately
-								objectxsortedlist::gXSortedObjects.setcurr( saveCurr );
-							
-								newlifes++;
-								//newCritters.add(e); // add it to the full list later; the e->listLink that gets auto stored here must be replaced with one from full list below
-								fDomains[kd].numcritters++;
-								fNumberBorn++;
-								fDomains[kd].numborn++;
-								fNeuronGroupCountStats.add( e->Brain()->NumNeuronGroups() );
-								ttPrint( "age %ld: critter # %ld is born\n", fStep, e->Number() );
-								birthPrint( "step %ld: critter # %ld born to %ld & %ld, at (%g,%g,%g), yaw=%g, energy=%g, domain %d (%d & %d), neurgroups=%d\n",
-										fStep, e->Number(), c->Number(), d->Number(), e->x(), e->y(), e->z(), e->yaw(), e->Energy(), kd, id, jd, e->Brain()->NumNeuronGroups() );
-							//if( fStep > 50 )
-							//	exit( 0 );
-								if( fRecordBirthsDeaths )
-								{
-									FILE * File;
-							
-									if( (File = fopen("run/BirthsDeaths.log", "a")) == NULL )
-									{
-										cerr << "could not open run/BirthsDeaths.log for writing [1]. Exiting." << endl;
-										exit(1);
-									}
+					c = testCritter;	// as long as there's a single legitimate critter for mating, Mommy will be non-NULL
+					i++;
+				}
+
+//				objectxsortedlist::gXSortedObjects.setcurr( saveCurr );	// restore the state of the x-sorted list                   V???
+
+				/* select daddy. */
+
+				i = 0;
+				randomIndex = int( round( drand48() * numcritters ) );
 								
-									fprintf(File, "%ld BIRTH %ld %ld %ld\n", fStep, e->Number(), c->Number(), d->Number() );
-									fclose(File);
-								}
+//				saveCurr = objectxsortedlist::gXSortedObjects.getcurr();	// save the state of the x-sorted list   V???
+
+				// As written, randCritter may not actually be the randomIndex-th critter in the domain, but it will be close,
+				// and as long as there's a single legitimate critter for smiting (right domain, old enough, and not one of the
+				// parents), we will find and smite it
+				objectxsortedlist::gXSortedObjects.reset();
+//debug			cout << "* Trying critters: ";
+				while( (i <= randomIndex) && objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &testCritter ) )
+				{
+//debug				cout << testCritter->Number() << " ";
+					// If it hasn't been long enough, or doesn't have enough energy, or is mommy, skip.
+					if( ((testCritter->Age() - testCritter->LastMate()) < fMateWait) ||
+						(testCritter->Energy() < (fMinMateFraction * testCritter->MaxEnergy())) ||
+						(testCritter->Number() == c->Number()) )
+						{
+//debug						if( testCritter->Number() == c->Number() )
+//debug							cout << endl << "critter " << testCritter->Number() << " couldn't mate because it was mommy." << endl;
+							continue;
+						}
+									
+						d = testCritter;	// as long as there's another single legitimate critter for mating, Daddy will be non-NULL
+						i++;
+				}
+//				objectxsortedlist::gXSortedObjects.setcurr( saveCurr );	// restore the state of the x-sorted list                   V???	
+				
+				assert( c != NULL && d != NULL );				// If for some reason we can't select parents, then we'll become out of sync with LOCKSTEP-BirthDeaths.log
+												
+				cout << "* I have selected Mommy(" << c->Number() << ") and Daddy(" << d->Number() << ").\tpopulationsize=" << numcritters  << endl;
 								
-								
-							}	// end of 'for( int count=0; count<LockstepNumBirthsAtTimestep; count++ )'  loop
-							
-							SetNextLockstepEvent();
-						} // end of 'if( LockstepTimestep == fStep )'
+				/* === We've selected our parents, now time to birth our critter. */
 					
-					#endif
+				// In Lockstep mode, we have are probably not spatially close together.
+				// Therefore, we must select a "dominant" parent.  The child will be born in the Domain and at the position of the dominant parent.
+				critter* dominantParent = NULL;
+				int ZeroOrOne = int( round( drand48() ) );
+				if( ZeroOrOne == 0 )
+					dominantParent = c;			//mommy is dominant
+				else
+					dominantParent = d;			//daddy is dominant
+
+								
+				kd = WhichDomain(dominantParent->x(), dominantParent->z(), kd);
+
+				ttPrint( "age %ld: critters # %ld & %ld are mating\n", fStep, c->Number(), d->Number() );
+				fNumBornSinceCreated++;
+				fDomains[kd].numbornsincecreated++;
+						
+				critter* e = critter::getfreecritter(this, &fStage);
+				Q_CHECK_PTR(e);
+
+				e->Genes()->Crossover(c->Genes(), d->Genes(), true);
+				e->grow( RecordBrainAnatomy( e->Number() ), RecordBrainFunction( e->Number() ) );
+				float eenergy = c->mating(fMateFitnessParameter, fMateWait) + d->mating(fMateFitnessParameter, fMateWait);
+				e->Energy(eenergy);
+				e->FoodEnergy(eenergy);
+				e->settranslation( dominantParent->x(), dominantParent->y(), dominantParent->z() );
+				e->setyaw( AverageAngles(c->yaw(), d->yaw()) );	// wrong: 0.5*(c->yaw() + d->yaw()));   // was (360.0*drand48());
+				e->Domain(kd);
+				fStage.AddObject(e);
+				gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();
+				objectxsortedlist::gXSortedObjects.add(e); // Add the new critter directly to the list of objects (no new critter list); the e->listLink that gets auto stored here should be valid immediately
+				objectxsortedlist::gXSortedObjects.setcurr( saveCurr );
+							
+				newlifes++;
+				//newCritters.add(e); // add it to the full list later; the e->listLink that gets auto stored here must be replaced with one from full list below
+				fDomains[kd].numcritters++;
+				fNumberBorn++;
+				fDomains[kd].numborn++;
+				fNeuronGroupCountStats.add( e->Brain()->NumNeuronGroups() );
+				ttPrint( "age %ld: critter # %ld is born\n", fStep, e->Number() );
+				birthPrint( "step %ld: critter # %ld born to %ld & %ld, at (%g,%g,%g), yaw=%g, energy=%g, domain %d (%d & %d), neurgroups=%d\n",
+					fStep, e->Number(), c->Number(), d->Number(), e->x(), e->y(), e->z(), e->yaw(), e->Energy(), kd, id, jd, e->Brain()->NumNeuronGroups() );
+
+				if( fRecordBirthsDeaths )		// If we're recording birth and death events, record the birth of our newborn.
+				{
+					FILE * File;
+					
+					if( (File = fopen("run/BirthsDeaths.log", "a")) == NULL )
+					{
+						cerr << "could not open run/BirthsDeaths.log for writing [2]. Exiting." << endl;
+						exit(1);
+					}
+							
+					fprintf(File, "%ld BIRTH %ld %ld %ld\n", fStep, e->Number(), c->Number(), d->Number() );
+					fclose(File);
+				}
+											
+			}	// end of loop 'for( int count=0; count<LockstepNumBirthsAtTimestep; count++ )'
+							
+			SetNextLockstepEvent();		// set the timestep, NumBirths, and NumDeaths for the next Lockstep events.
+			
+		} // end of 'if( LockstepTimestep == fStep )'
+					
+	#endif
 
 
 
@@ -2612,7 +2612,7 @@ void TSimulation::Interact()
                      (kd == 1) && (jd == 1) ) // in the safe domain
 
 			#elif LockStepWithBirthsDeathsLog
-				if( false )							// just don't do any of this.
+				if( false )							// If we're in LOCKSTEP, we've already taken care of deaths and births.  So, don't do any of this smiting/mating business.
 
 			#else
                 if ( (c->Mate() > fMateThreshold) &&
@@ -2645,13 +2645,11 @@ void TSimulation::Interact()
 							}
 							if( fDomains[kd].fNumSmited < fDomains[kd].fNumLeastFit )	// we've still got someone to smite, so do it
 							{
-								#if ! LockStepWithBirthsDeathsLog
 									Death( fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] );
 									fDomains[kd].fNumSmited++;
 									fNumberDiedSmite++;
 									smited = true;
 									//cout << "********************* SMITE *******************" nlf;	//dbg
-								#endif
 							}
 						}
 					}
@@ -2671,7 +2669,7 @@ void TSimulation::Interact()
 							// and as long as there's a single legitimate critter for smiting (right domain, old enough, and not one of the
 							// parents), we will find and smite it
 							objectxsortedlist::gXSortedObjects.reset();
-//	!!! Larry, check this please.  It should be i <= randomIndex, NOT i < randomIndex -- correct?  randomIndex can be zero.
+//	V!!! Larry, check this please.  This should be i <= randomIndex, NOT i < randomIndex -- correct?  randomIndex can be zero.  If it is zero, that means it won't smite even if there is a smite'able critter.
 							while( (i <= randomIndex) && objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &testCritter ) )
 							{
 								// Only count it if it's from the right domain, it's old enough, and it's not one of the parents
@@ -2811,16 +2809,13 @@ void TSimulation::Interact()
                         if (d->Energy() <= 0.0)
                         {
 							//cout << "before deaths2 "; critter::gXSortedCritters.list();	//dbg
-							#if ! LockStepWithBirthsDeathsLog							
 								Death(d);
 								fNumberDiedFight++;
-							#endif
 							//cout << "after deaths2 "; critter::gXSortedCritters.list();	//dbg
                         }
                         if (c->Energy() <= 0.0)
                         {
 							objectxsortedlist::gXSortedObjects.toMark( CRITTERTYPE ); // point back to c
-							#if ! LockStepWithBirthsDeathsLog							
 								Death(c);
 								fNumberDiedFight++;
 
@@ -2829,7 +2824,6 @@ void TSimulation::Interact()
 								//cout << "after deaths3 "; critter::gXSortedCritters.list();	//dbg
 								cDied = true;
 								break;
-							#endif
                         }
                     }
                 }
@@ -5422,11 +5416,11 @@ void TSimulation::SetNextLockstepEvent()
 {
 
 	#if LockStepWithBirthsDeathsLog
-		if( ! feof( LockstepFile) )		// get the next event only if the LOCKSTEP-BirthsDeaths.log still has entries in it.
+		if( ! feof( LockstepFile) )				// get the next event only if the LOCKSTEP-BirthsDeaths.log still has entries in it.
 		{
 			const char *delimiters = " ";		//a single space is the field delimiter
 
-			char LockstepLine[255];
+			char LockstepLine[512];				// making this big incase we add longer lines in the future.
 			fgets( LockstepLine, sizeof(LockstepLine), LockstepFile );
 			
 			LockstepTimestep = atoi( strtok( LockstepLine, delimiters ) );		// token => timestep
@@ -5442,30 +5436,30 @@ void TSimulation::SetNextLockstepEvent()
 				nexttimestep = 0;
 				LockstepEvent = (strtok( NULL, delimiters ))[0];    // token => event
 
+				//TODO: Add support for the 'GENERATION' event.  Note a GENERATION event cannot be identical to a BIRTH event.  They must be made from the Fittest list.
 				if( LockstepEvent == 'B' ) { LockstepNumBirthsAtTimestep++; }
 				else if( LockstepEvent == 'D' ) { LockstepNumDeathsAtTimestep++; }
 				else { cerr << "ERROR/SetNextLockstepEvent(): Currently only support events 'DEATH' and 'BIRTH' for the Lockstep file.  Exiting."; exit(1); }
 				
 				currentpos = ftell( LockstepFile );
 
-//				int critternum = atoi( strtok( NULL, delimiters ) );
 				//=======================
 							
 				if( (fgets(LockstepLine, sizeof(LockstepLine), LockstepFile)) != NULL )		// if LOCKSTEP-BirthsDeaths.log still has entries in it, nexttimestep is the timestep of the next line.
 					nexttimestep = atoi( strtok( LockstepLine, delimiters ) );    // token => timestep
 				
 			   } while( LockstepTimestep == nexttimestep );
-//			   cout << "nexttimestep = " << nexttimestep << "\t currentpos = " << currentpos << endl;
 			
 			// reset to the beginning of the next timestep
 			fseek( LockstepFile, currentpos, 0 );
-			cout << "SetNextLockstepEvent()\\ Timestep: " << LockstepTimestep << "\tDeath: " << LockstepNumDeathsAtTimestep << "\tBirth: " << LockstepNumBirthsAtTimestep << endl;
+			cout << "SetNextLockstepEvent()/ Timestep: " << LockstepTimestep << "\tDeaths: " << LockstepNumDeathsAtTimestep << "\tBirths: " << LockstepNumBirthsAtTimestep << endl;
 
 		}
 		
 	#else
-		// if LockstepWithBirthsDeathsLog is not set, do nothing and return
-		return;
+		// if SetNextLockstepEvent() is called w/o LockStepWithBirthsDeathsLog turned on, error and exit.
+		cerr << "ERROR: You called SetNextLockstepEvent() and 'LockStepWithBirthsDeathsLog' isn't set to 1.  Though not fatal, it's certain that you didn't intend to do this.  Exiting." << endl;
+		exit(1);
 	#endif
 
 }
