@@ -42,7 +42,7 @@ int main()
         end;
 */
 
-	if( activity->size2 > activity->size1 )		//!!! This will basically always be true.
+	if( activity->size2 > activity->size1 )		//This will basically always be true.
 	{
 		gsl_matrix * temp = gsl_matrix_alloc( activity->size2, activity->size1);
 		gsl_matrix_transpose_memcpy(temp, activity);
@@ -88,7 +88,7 @@ int main()
         o = o';
 
         % length of time used for "early" vs. "late" (birth/death) comparisons
-        deltat = min(200,size(activity,1));		//!!! This code doesn't make sense.
+        deltat = min(200,size(activity,1));
         o_birth = o(1:deltat,:);
         o_death = o(end-deltat+1:end,:);
         activity_birth = activity(1:deltat,:);			//this code makes no sense. They will be the same as activity
@@ -110,8 +110,8 @@ int main()
 	gsl_matrix * activity_birth = &(MV_activity_birth.matrix);
 	gsl_matrix * activity_death = &(MV_activity_death.matrix);
 
-	gsl_matrix * o_birth = activity_birth;		//!!! This will be replaced if we ever start gsamp()'ing
-	gsl_matrix * o_death = activity_death;		//!!! This will be replaced if we ever start gsamp()'ing
+	gsl_matrix * o_birth = activity_birth;		//This can be replaced with gsamp()'ing
+	gsl_matrix * o_death = activity_death;		//This can be replaced with gsamp()'ing
 
 /* MATLAB CODE:
         % sum of activity (always use raw numbers)
