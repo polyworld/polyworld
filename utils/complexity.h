@@ -356,12 +356,11 @@ double CalcComplexity( char * fnameAct, char part )
 
 gsl_matrix * COVtoCOR( gsl_matrix * COV )
 {
-/* WARNING: COV may not be square!!! */
-
 /* MATLAB CODE: COR = COV ./ ( sqrt(diag(COV)) * sqrt(diag(COV))'); */
 
 	int N = COV->size1;
-
+	assert( COV->size1 == COV->size2 );		// make sure COV is square.
+	
 	gsl_matrix * COR = gsl_matrix_alloc( COV->size1, COV->size2 );
 
 	// We use our own function here because GSL's diag returns a vector
@@ -602,7 +601,7 @@ gsl_matrix * readin_brainanatomy( const char* fname )
 	for(int i=0; i<numneu; i++)
 	{
 		fgets( cijline, 5000, AnatomyFile );      		// get the next line
-		string str_cijline = cijline;				// !!! This sort of thing could probably be optimized, but I'm not sure how.
+		string str_cijline = cijline;					//This sort of thing could probably be optimized, but I'm not sure how.
 	
 //DEBUG		cout << "str_cijline[" << i << "]: " << str_cijline;	
 		for(int j=0; j<numneu; j++)
@@ -1169,7 +1168,7 @@ double calcC_det3( gsl_matrix * foreignCOR )
 		//Technically we don't have to store this array, but for now lets stay consistent with the MATLAB code
 		gsl_matrix * Xed_COR =  matrix_crosssection( COR, b, b_length );
 		I_n1[i] = calcI_det2( Xed_COR );
-		gsl_matrix_free( Xed_COR );		//!!! this should solve the big memory leak problem
+		gsl_matrix_free( Xed_COR );		//this should solve the big memory leak problem
 	}
 
 	double sumI_n1=0;
@@ -1291,7 +1290,7 @@ void print_matrix( gsl_matrix * M )
 	}
 }
 
-// !!! This could be made faster simply by taking the Determinant of COR as an input instead of COR itself. !!!
+
 double calcI_det2(gsl_matrix * COR)
 {
 /* MATLAB CODE:
