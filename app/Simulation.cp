@@ -2173,68 +2173,66 @@ void TSimulation::Interact()
 	// Take care of deaths first, plus least-fit determinations
 	// Also use this as a convenient place to compute some stats
 
-//cout << "before deaths "; critter::gXSortedCritters.list();	//dbg
+	//cout << "before deaths "; critter::gXSortedCritters.list();	//dbg
 	
+#if LockStepWithBirthsDeathsLog
 	// if we are running in Lockstep with a LOCKSTEP-BirthDeaths.log, we kill our critters here.
-	#if LockStepWithBirthsDeathsLog
-		if( LockstepTimestep == fStep )
+	if( LockstepTimestep == fStep )
+	{
+		cout << "t" << fStep << ":  Triggering " << LockstepNumDeathsAtTimestep << " random deaths..." << endl;
+	
+		for( int count = 0; count < LockstepNumDeathsAtTimestep; count++ )
 		{
-			cout << "t" << fStep << ":  Triggering " << LockstepNumDeathsAtTimestep << " random deaths..." << endl;
-		
-			for( int count=0; count<LockstepNumDeathsAtTimestep; count++ )
+			int i = 0;
+			int numcritters = objectxsortedlist::gXSortedObjects.getCount( CRITTERTYPE );
+			critter* testCritter;
+			critter* randCritter = NULL;
+//				int randomIndex = int( floor( drand48() * fDomains[kd].numcritters ) );	// pick from this domain
+			int randomIndex = int( floor( drand48() * numcritters ) );
+			gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();	// save the state of the x-sorted list
+
+			// As written, randCritter may not actually be the randomIndex-th critter in the domain, but it will be close,
+			// and as long as there's a single legitimate critter for killing (right domain, old enough, and not one of the
+			// parents), we will find and smite it
+			objectxsortedlist::gXSortedObjects.reset();
+			while( (i <= randomIndex) && objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &testCritter ) )
 			{
-				int i = 0;
-				int numcritters = objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE);
-				critter* testCritter;
-				critter* randCritter = NULL;
-//				int randomIndex = int( round( drand48() * fDomains[kd].numcritters ) );	// pick from this domain
-				int randomIndex = int( round( drand48() * numcritters ) );
-				
-				gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();	// save the state of the x-sorted list V???
+				// no qualifications for this critter.  It doesn't even need to be old enough to smite.
+				randCritter = testCritter;	// as long as there's a single legitimate critter for killing, randCriter will be non-NULL
+				i++;
+			}
 
-				// As written, randCritter may not actually be the randomIndex-th critter in the domain, but it will be close,
-				// and as long as there's a single legitimate critter for smiting (right domain, old enough, and not one of the
-				// parents), we will find and smite it
-				objectxsortedlist::gXSortedObjects.reset();
-				
-				while( (i <= randomIndex) && objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &testCritter ) )		// must be <= because randomIndex could be Zero.
+			objectxsortedlist::gXSortedObjects.setcurr( saveCurr );	// restore the state of the x-sorted list  V???
+			
+			assert( randCritter != NULL );		// In we're in LOCKSTEP mode, we should *always* have a critter to kill.  If we don't kill a critter, then we are no longer in sync in the LOCKSTEP-BirthsDeaths.log
+			
+			// If we're killing a critter that is on the Fittest Lists, we need to remove it from the list to avoid de-referencing a pointer to an invalid (dead) critter.
+			if( (fCurrentFittestCount > 0) && (randCritter->Fitness() >= fCurrentMaxFitness[fCurrentFittestCount-1]) )
+			{
+				int havePastRandCritter = 0;
+				for( int i = 0; i < fCurrentFittestCount; i++ )
 				{
-					// no qualifications for this critter.  It doesn't even need to be old enough to smite.
-					randCritter = testCritter;	// as long as there's a single legitimate critter for smiting, randCriter will be non-NULL
-					i++;
+					if( fCurrentFittestCritter[i] != randCritter )
+						fCurrentFittestCritter[ (i-havePastRandCritter) ] = fCurrentFittestCritter[i];
+					else
+						havePastRandCritter = 1;
 				}
-
-				objectxsortedlist::gXSortedObjects.setcurr( saveCurr );	// restore the state of the x-sorted list  V???
-				
-				assert( randCritter != NULL );		// In we're in LOCKSTEP mode, we should *always* have a critter to kill.  If we don't kill a critter, then we are no longer in sync in the LOCKSTEP-BirthsDeaths.log
-				
-				// trying we're smiting a critter that is on the Fittest Lists, we need to remove it from the list to avoid de-referencing a pointer to an invalid (dead) critter.
-				if( (fCurrentFittestCount > 0) && (randCritter->Fitness() > fCurrentMaxFitness[fCurrentFittestCount-1]) )
-				{
-					int havePastRandCritter = 0;
-					for( int i=0; i<fCurrentFittestCount; i++ )
-					{
-						if( fCurrentFittestCritter[i] != randCritter )
-							fCurrentFittestCritter[ (i-havePastRandCritter) ] = fCurrentFittestCritter[i];
-						else
-							havePastRandCritter = 1;
-					}
-								
-					if( havePastRandCritter == 1 )		// this should always be true, but lets make sure.
-					{
-						fCurrentFittestCritter[ (fCurrentFittestCount-1) ] = NULL;	// Null out the last critter in the list, just to be polite
-						fCurrentFittestCount = fCurrentFittestCount - 1;		// decrement the number of critters in the list now that we've removed randCritter from it.
-					}
-				}
-
-				Death( randCritter );
-				cout << "- Killed critter " << randCritter->Number() << "\t RandIndex= " << randomIndex << endl;
 							
-			}	// end of for loop
+				if( havePastRandCritter == 1 )		// this should always be true, but lets make sure.
+				{
+					fCurrentFittestCritter[ (fCurrentFittestCount-1) ] = NULL;	// Null out the last critter in the list, just to be polite
+					fCurrentFittestCount--;		// decrement the number of critters in the list now that we've removed randCritter from it.
+				}
+			}
+
+			Death( randCritter );
+			cout << "- Killed critter " << randCritter->Number() << "\t RandIndex= " << randomIndex << endl;
 						
-		}	// end of if( LockstepTimestep == fStep )
-		
-	#endif
+		}	// end of for loop
+					
+	}	// end of if( LockstepTimestep == fStep )
+	
+#endif
 
 	fCurrentNeuronGroupCountStats.reset();
 	objectxsortedlist::gXSortedObjects.reset();
@@ -2245,23 +2243,22 @@ void TSimulation::Interact()
 
         id = c->Domain();						// Determine the domain in which the critter currently is located
 	
-	// If we're not in LOCKSTEP mode, do the Deaths due to Age, Energy, or Edges. 
 	#if ! LockStepWithBirthsDeathsLog
-		if ( (c->Energy() <= 0.0)		||
-			(c->Age() >= c->MaxAge())  ||
-			((!globals::edges) && ((c->x() < 0.0) || (c->x() >  globals::worldsize) ||
-										(c->z() > 0.0) || (c->z() < -globals::worldsize))) )
-		{
-			if (c->Age() >= c->MaxAge())
-				fNumberDiedAge++;
-			else if (c->Energy() <= 0.0)
-				fNumberDiedEnergy++;
-			else
-				fNumberDiedEdge++;
-
-			Death(c);
-			continue; // nothing else to do for this poor schmo
-		}
+		// If we're running in LockStep mode, don't allow any natural deaths
+        if ( (c->Energy() <= 0.0)		||
+			 (c->Age() >= c->MaxAge())  ||
+             ((!globals::edges) && ((c->x() < 0.0) || (c->x() >  globals::worldsize) ||
+									(c->z() > 0.0) || (c->z() < -globals::worldsize))) )
+        {
+            if (c->Age() >= c->MaxAge())
+                fNumberDiedAge++;
+            else if (c->Energy() <= 0.0)
+                fNumberDiedEnergy++;
+            else
+                fNumberDiedEdge++;
+				Death(c);
+            continue; // nothing else to do for this poor schmo
+        }
 	#endif
 
 	#ifdef OF1
@@ -2610,10 +2607,9 @@ void TSimulation::Interact()
                      (c->Energy() > fMinMateFraction * c->MaxEnergy()) &&
                      (d->Energy() > fMinMateFraction * d->MaxEnergy()) && // and energy
                      (kd == 1) && (jd == 1) ) // in the safe domain
-
 			#elif LockStepWithBirthsDeathsLog
-				if( false )							// If we're in LOCKSTEP, we've already taken care of deaths and births.  So, don't do any of this smiting/mating business.
-
+				// If we're running in LockStep mode, don't allow any natural births
+				if( false )							// just don't do any of this.
 			#else
                 if ( (c->Mate() > fMateThreshold) &&
                      (d->Mate() > fMateThreshold) &&          // it takes two!
@@ -2645,11 +2641,11 @@ void TSimulation::Interact()
 							}
 							if( fDomains[kd].fNumSmited < fDomains[kd].fNumLeastFit )	// we've still got someone to smite, so do it
 							{
-									Death( fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] );
-									fDomains[kd].fNumSmited++;
-									fNumberDiedSmite++;
-									smited = true;
-									//cout << "********************* SMITE *******************" nlf;	//dbg
+								Death( fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] );
+								fDomains[kd].fNumSmited++;
+								fNumberDiedSmite++;
+								smited = true;
+								//cout << "********************* SMITE *******************" nlf;	//dbg
 							}
 						}
 					}
@@ -2661,7 +2657,7 @@ void TSimulation::Interact()
 							int i = 0;
 							critter* testCritter;
 							critter* randCritter = NULL;
-							int randomIndex = int( round( drand48() * fDomains[kd].numcritters ) );	// pick from this domain
+							int randomIndex = int( floor( drand48() * fDomains[kd].numcritters ) );	// pick from this domain
 
 							gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();	// save the state of the x-sorted list
 
@@ -2669,7 +2665,6 @@ void TSimulation::Interact()
 							// and as long as there's a single legitimate critter for smiting (right domain, old enough, and not one of the
 							// parents), we will find and smite it
 							objectxsortedlist::gXSortedObjects.reset();
-//	V!!! Larry, check this please.  This should be i <= randomIndex, NOT i < randomIndex -- correct?  randomIndex can be zero.  If it is zero, that means it won't smite even if there is a smite'able critter.
 							while( (i <= randomIndex) && objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &testCritter ) )
 							{
 								// Only count it if it's from the right domain, it's old enough, and it's not one of the parents
@@ -2806,25 +2801,28 @@ void TSimulation::Interact()
                         fNumberFights++;
                         c->damage(dpower * fPower2Energy);
                         d->damage(cpower * fPower2Energy);
+					#if ! LockStepWithBirthsDeathsLog							
+						// If we're running in LockStep mode, don't allow any natural deaths
                         if (d->Energy() <= 0.0)
                         {
 							//cout << "before deaths2 "; critter::gXSortedCritters.list();	//dbg
-								Death(d);
-								fNumberDiedFight++;
+							Death(d);
+							fNumberDiedFight++;
 							//cout << "after deaths2 "; critter::gXSortedCritters.list();	//dbg
                         }
                         if (c->Energy() <= 0.0)
                         {
 							objectxsortedlist::gXSortedObjects.toMark( CRITTERTYPE ); // point back to c
-								Death(c);
-								fNumberDiedFight++;
+							Death(c);
+							fNumberDiedFight++;
 
-								// note: this leaves list pointing to item before c, and markedCritter set to previous critter
-								//objectxsortedlist::gXSortedObjects.setMarkPrevious( CRITTERTYPE );	// if previous object was a critter, this would step one too far back, I think - lsy
-								//cout << "after deaths3 "; critter::gXSortedCritters.list();	//dbg
-								cDied = true;
-								break;
+							// note: this leaves list pointing to item before c, and markedCritter set to previous critter
+							//objectxsortedlist::gXSortedObjects.setMarkPrevious( CRITTERTYPE );	// if previous object was a critter, this would step one too far back, I think - lsy
+							//cout << "after deaths3 "; critter::gXSortedCritters.list();	//dbg
+							cDied = true;
+							break;
                         }
+					#endif
                     }
                 }
 
@@ -5416,11 +5414,11 @@ void TSimulation::SetNextLockstepEvent()
 {
 
 	#if LockStepWithBirthsDeathsLog
-		if( ! feof( LockstepFile) )				// get the next event only if the LOCKSTEP-BirthsDeaths.log still has entries in it.
+		if( ! feof( LockstepFile ) )			// get the next event only if the LOCKSTEP-BirthsDeaths.log still has entries in it.
 		{
-			const char *delimiters = " ";		//a single space is the field delimiter
+			const char *delimiters = " ";		// a single space is the field delimiter
 
-			char LockstepLine[512];				// making this big incase we add longer lines in the future.
+			char LockstepLine[512];				// making this big in case we add longer lines in the future.
 			fgets( LockstepLine, sizeof(LockstepLine), LockstepFile );
 			
 			LockstepTimestep = atoi( strtok( LockstepLine, delimiters ) );		// token => timestep
