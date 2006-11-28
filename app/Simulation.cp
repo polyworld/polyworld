@@ -2631,9 +2631,9 @@ void TSimulation::Interact()
 							(fDomains[kd].fNumLeastFit > fDomains[kd].fNumSmited) )			// we've still got some left that are suitable for smiting
 						{
 							while( (fDomains[kd].fNumSmited < fDomains[kd].fNumLeastFit) &&		// there are any left to smite
-								((fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] == c) ||	// trying to smite mommy
-									(fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] == d) ||	// trying to smite daddy
-									((fCurrentFittestCount > 0) && (fDomains[kd].fLeastFit[fDomains[kd].fNumSmited]->Fitness() > fCurrentMaxFitness[fCurrentFittestCount-1]))) )	// trying to smite one of the fittest
+								  ((fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] == c) ||	// trying to smite mommy
+								   (fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] == d) ||	// trying to smite daddy
+								   ((fCurrentFittestCount > 0) && (fDomains[kd].fLeastFit[fDomains[kd].fNumSmited]->Fitness() >= fCurrentMaxFitness[fCurrentFittestCount-1]))) )	// trying to smite one of the fittest
 							{
 								// We would have smited one of our mating pair, or one of the fittest, which wouldn't be prudent,
 								// so just step over them and see if there's someone else to smite
@@ -2679,10 +2679,10 @@ void TSimulation::Interact()
 							
 							if( randCritter )	// if we found any legitimately smitable critter...
 							{
-								if( (fCurrentFittestCount > 0) && (randCritter->Fitness() > fCurrentMaxFitness[fCurrentFittestCount-1]) )	// trying to smite a fit critter
+								if( (fCurrentFittestCount > 0) && (randCritter->Fitness() >= fCurrentMaxFitness[fCurrentFittestCount-1]) )	// trying to smite a fit critter
 								{
 									int havePastRandCritter = 0;
-									for( int i=0; i<fCurrentFittestCount; i++ )
+									for( int i = 0; i < fCurrentFittestCount; i++ )
 									{
 										if( fCurrentFittestCritter[i] != randCritter )
 											fCurrentFittestCritter[ (i-havePastRandCritter) ] = fCurrentFittestCritter[i];
