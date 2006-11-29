@@ -146,10 +146,10 @@
 
 0.2	domain[0].foodPatch[0].fraction
 0.0	domain[0].foodPatch[0].growthRate
--1	domain[0].foodPatch[0].initFoodCount
--1	domain[0].foodPatch[0].minFoodCount
--1	domain[0].foodPatch[0].maxFoodCount
--1	domain[0].foodPatch[0].maxFoodGrownCount
+18	domain[0].foodPatch[0].initFoodCount
+0	domain[0].foodPatch[0].minFoodCount
+120	domain[0].foodPatch[0].maxFoodCount
+90	domain[0].foodPatch[0].maxFoodGrownCount
 0.5	domain[0].foodPatch[0].centerX
 0.05	domain[0].foodPatch[0].centerZ
 1.0	domain[0].foodPatch[0].sizeX
@@ -160,10 +160,10 @@
 
 0.8	domain[0].foodPatch[0].fraction
 0.0	domain[0].foodPatch[0].growthRate
--1	domain[0].foodPatch[0].initFoodCount
--1	domain[0].foodPatch[0].minFoodCount
--1	domain[0].foodPatch[0].maxFoodCount
--1	domain[0].foodPatch[0].maxFoodGrownCount
+72	domain[0].foodPatch[0].initFoodCount
+0	domain[0].foodPatch[0].minFoodCount
+120	domain[0].foodPatch[0].maxFoodCount
+90	domain[0].foodPatch[0].maxFoodGrownCount
 0.5	domain[0].foodPatch[0].centerX
 0.8	domain[0].foodPatch[0].centerZ
 1.0	domain[0].foodPatch[0].sizeX
@@ -202,10 +202,10 @@
 R      smiteMode_R=random|L=leastfit
 0.10   smiteFrac
 0.25   smiteAgeFrac_affectsAverageFitness
-150    NumDepletionSteps
+225    NumDepletionSteps
 
 
-1		recordBirthsDeaths
+1	recordBirthsDeaths
 0       brainAnatomyRecordAll
 1       brainFunctionRecordAll
 1       brainAnatomyRecordSeeds
