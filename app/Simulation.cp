@@ -25,7 +25,7 @@
 // food is eaten and shrinks.]
 #define CompatibilityMode 1
 
-#define UseMaxSpeedAsFitness 1
+#define UseMaxSpeedAsFitness 0
 
 // Self
 #include "Simulation.h"
