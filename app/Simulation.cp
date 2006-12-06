@@ -11,8 +11,8 @@
 #define DebugDomainFoodBands 0
 
 
-//  Reads in a file 'LOCKSTEP-BirthsDeath.log' and makes all deaths/births in sync with it.  All Births and Deaths are random.
-#define LockStepWithBirthsDeathsLog 0
+//  Reads in a file 'LOCKSTEP-BirthsDeaths.log' and makes all births and deaths in sync with it.  All births and deaths involve random critters.
+#define LockStepWithBirthsDeathsLog 1
 
 
 
@@ -2192,14 +2192,17 @@ void TSimulation::Interact()
 			gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();	// save the state of the x-sorted list
 
 			// As written, randCritter may not actually be the randomIndex-th critter in the domain, but it will be close,
-			// and as long as there's a single legitimate critter for killing (right domain, old enough, and not one of the
-			// parents), we will find and smite it
+			// and as long as there's a single legitimate critter for killing, we will find and kill it
 			objectxsortedlist::gXSortedObjects.reset();
-			while( (i <= randomIndex) && objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &testCritter ) )
+			while( objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &testCritter ) )
 			{
 				// no qualifications for this critter.  It doesn't even need to be old enough to smite.
 				randCritter = testCritter;	// as long as there's a single legitimate critter for killing, randCriter will be non-NULL
+
 				i++;
+				
+				if( i > randomIndex )	// don't need to test for non-NULL randCritter, as it is always non-NULL by the time we reach here
+					break;
 			}
 
 			objectxsortedlist::gXSortedObjects.setcurr( saveCurr );	// restore the state of the x-sorted list  V???
@@ -2432,55 +2435,52 @@ void TSimulation::Interact()
 				//int randomIndex = int( round( drand48() * fDomains[kd].numcritters ) );	// pick from this domain V???
 				int randomIndex = int( round( drand48() * numcritters ) );
 								
-//				gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();	// save the state of the x-sorted list   V???
-
 				// As written, randCritter may not actually be the randomIndex-th critter in the domain, but it will be close,
-				// and as long as there's a single legitimate critter for smiting (right domain, old enough, and not one of the
-				// parents), we will find and smite it
+				// and as long as there's a single legitimate critter for mating (right domain, long enough since last mating, and
+				// has enough energy), we will find and use it
 				objectxsortedlist::gXSortedObjects.reset();
-				while( (i <= randomIndex) && objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &testCritter ) )
+				while( objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &testCritter ) )
 				{
-					// If it hasn't been long enough, or doesn't have enough energy, skip.
-					if( ((testCritter->Age() - testCritter->LastMate()) < fMateWait) ||
-						(testCritter->Energy() < fMinMateFraction * testCritter->MaxEnergy()) )
-						continue;
+					// If it has been long enough, and it has enough energy, allow it.
+					if( ((testCritter->Age() - testCritter->LastMate()) >= fMateWait) &&
+						(testCritter->Energy() >= fMinMateFraction * testCritter->MaxEnergy()) )
+						c = testCritter;	// as long as there's a single legitimate critter for mating, Mommy will be non-NULL
 
-					c = testCritter;	// as long as there's a single legitimate critter for mating, Mommy will be non-NULL
 					i++;
+					
+					if( (i > randomIndex) && (c != NULL) )
+						break;
 				}
-
-//				objectxsortedlist::gXSortedObjects.setcurr( saveCurr );	// restore the state of the x-sorted list                   V???
 
 				/* select daddy. */
 
 				i = 0;
 				randomIndex = int( round( drand48() * numcritters ) );
 								
-//				saveCurr = objectxsortedlist::gXSortedObjects.getcurr();	// save the state of the x-sorted list   V???
-
 				// As written, randCritter may not actually be the randomIndex-th critter in the domain, but it will be close,
-				// and as long as there's a single legitimate critter for smiting (right domain, old enough, and not one of the
-				// parents), we will find and smite it
+				// and as long as there's a single legitimate critter for mating (right domain, long enough since last mating, and
+				// has enough energy, plus not the same as the mommy), we will find and use it
 				objectxsortedlist::gXSortedObjects.reset();
 //debug			cout << "* Trying critters: ";
-				while( (i <= randomIndex) && objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &testCritter ) )
+				while( objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &testCritter ) )
 				{
 //debug				cout << testCritter->Number() << " ";
-					// If it hasn't been long enough, or doesn't have enough energy, or is mommy, skip.
-					if( ((testCritter->Age() - testCritter->LastMate()) < fMateWait) ||
-						(testCritter->Energy() < (fMinMateFraction * testCritter->MaxEnergy())) ||
-						(testCritter->Number() == c->Number()) )
-						{
-//debug						if( testCritter->Number() == c->Number() )
-//debug							cout << endl << "critter " << testCritter->Number() << " couldn't mate because it was mommy." << endl;
-							continue;
-						}
-									
+					// If it has been long enough, and it has enough energy, and it's not mommmy, allow it.
+					if( ((testCritter->Age() - testCritter->LastMate()) >= fMateWait) &&
+						(testCritter->Energy() >= (fMinMateFraction * testCritter->MaxEnergy())) &&
+						(testCritter->Number() != c->Number()) )
+					{
+//debug					if( testCritter->Number() == c->Number() )
+//debug						cout << endl << "critter " << testCritter->Number() << " couldn't mate because it was mommy." << endl;
 						d = testCritter;	// as long as there's another single legitimate critter for mating, Daddy will be non-NULL
-						i++;
+					}
+
+					i++;
+						
+					if( (i > randomIndex) && (d != NULL) )
+						break;
 				}
-//				objectxsortedlist::gXSortedObjects.setcurr( saveCurr );	// restore the state of the x-sorted list                   V???	
-				
+
 				assert( c != NULL && d != NULL );				// If for some reason we can't select parents, then we'll become out of sync with LOCKSTEP-BirthDeaths.log
 												
 				cout << "* I have selected Mommy(" << c->Number() << ") and Daddy(" << d->Number() << ").\tpopulationsize=" << numcritters  << endl;
@@ -2667,12 +2667,14 @@ void TSimulation::Interact()
 							objectxsortedlist::gXSortedObjects.reset();
 							while( (i <= randomIndex) && objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &testCritter ) )
 							{
-								// Only count it if it's from the right domain, it's old enough, and it's not one of the parents
-								if( (testCritter->Domain() != kd) || (testCritter->Age() > fSmiteAgeFrac*testCritter->MaxAge()) || (testCritter->Number() == c->Number()) || (testCritter->Number() == d->Number())  )
-									continue;
-								
-								randCritter = testCritter;	// as long as there's a single legitimate critter for smiting, randCriter will be non-NULL
+								// If it's from the right domain, it's old enough, and it's not one of the parents, allow it
+								if( (testCritter->Domain() == kd) && (testCritter->Age() > fSmiteAgeFrac*testCritter->MaxAge()) && (testCritter->Number() != c->Number()) || (testCritter->Number() == d->Number())  )
+									randCritter = testCritter;	// as long as there's a single legitimate critter for smiting, randCriter will be non-NULL
+
 								i++;
+								
+								if( (i > randomIndex) && (randCritter != NULL) )
+									break;
 							}
 																
 							objectxsortedlist::gXSortedObjects.setcurr( saveCurr );	// restore the state of the x-sorted list
@@ -3202,48 +3204,6 @@ void TSimulation::Interact()
 	#endif DEBUGCHECK
     }
 
-	// now add the new critters to the existing list
-	
-    /* New creatures are now added directly to the list of objects
-       So below block of code is unnecessary
-
-    const int newlifes = newCritters.count();
-    if (newlifes > 0)
-    {
-        bool foundinsertionpt;
-        bool oldlistfinished = false;
-        objectxsortedlist::gXSortedObjects.reset();
-//		newCritters.sort();	// not needed, because new critters are always added wih cxsortedlist::add(), which sorts on add
-        newCritters.reset();
-        while (newCritters.next(newCritter))
-        {
-            if (fMonitorGeneSeparation)
-                CalculateGeneSeparation(newCritter);
-
-            if (oldlistfinished)
-                newCritter->listLink = objectxsortedlist::gXSortedObjects.append(newCritter);
-            else
-            {
-                foundinsertionpt = false;
-                while (objectxsortedlist::gXSortedObjects.nextObj(CRITTERTYPE, oldCritter))
-                {
-                    if ( (newCritter->x() - newCritter->radius()) < (oldCritter->x() - oldCritter->radius()) )
-                    {
-                        newCritter->listLink = objectxsortedlist::gXSortedObjects.inserthere(newCritter);
-                        foundinsertionpt = true;
-                        break;
-                    }
-                }
-                if (!foundinsertionpt)
-                {
-                    oldlistfinished = true;
-                    newCritter->listLink = objectxsortedlist::gXSortedObjects.append(newCritter);
-                }
-            }
-        }
-        newCritters.clear();
-    }
-	*/
 #ifdef DEBUGCHECK
     debugcheck("after newcritters added to critter::gXSortedCritters in interact");
 #endif DEBUGCHECK
