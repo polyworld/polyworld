@@ -2487,21 +2487,7 @@ void TSimulation::Interact()
 								
 				/* === We've selected our parents, now time to birth our critter. */
 					
-				// In Lockstep mode, we have are probably not spatially close together.
-				// Therefore, we must select a "dominant" parent.  The child will be born in the Domain and at the position of the dominant parent.
-				critter* dominantParent = NULL;
-				int ZeroOrOne = int( round( drand48() ) );
-				if( ZeroOrOne == 0 )
-					dominantParent = c;			//mommy is dominant
-				else
-					dominantParent = d;			//daddy is dominant
-
-								
-				kd = WhichDomain(dominantParent->x(), dominantParent->z(), kd);
-
 				ttPrint( "age %ld: critters # %ld & %ld are mating\n", fStep, c->Number(), d->Number() );
-				fNumBornSinceCreated++;
-				fDomains[kd].numbornsincecreated++;
 						
 				critter* e = critter::getfreecritter(this, &fStage);
 				Q_CHECK_PTR(e);
@@ -2511,8 +2497,13 @@ void TSimulation::Interact()
 				float eenergy = c->mating(fMateFitnessParameter, fMateWait) + d->mating(fMateFitnessParameter, fMateWait);
 				e->Energy(eenergy);
 				e->FoodEnergy(eenergy);
-				e->settranslation( dominantParent->x(), dominantParent->y(), dominantParent->z() );
-				e->setyaw( AverageAngles(c->yaw(), d->yaw()) );	// wrong: 0.5*(c->yaw() + d->yaw()));   // was (360.0*drand48());
+				float x =  0.01 + drand48() * (globals::worldsize - 0.02);
+				float z = -0.01 - drand48() * (globals::worldsize - 0.02);
+				float y = 0.5 * critter::gCritterHeight;
+				e->settranslation(x, y, z);
+				float yaw =  360.0 * drand48();
+				c->setyaw(yaw);
+				kd = WhichDomain(x, z, 0);
 				e->Domain(kd);
 				fStage.AddObject(e);
 				gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();
@@ -2520,10 +2511,11 @@ void TSimulation::Interact()
 				objectxsortedlist::gXSortedObjects.setcurr( saveCurr );
 							
 				newlifes++;
-				//newCritters.add(e); // add it to the full list later; the e->listLink that gets auto stored here must be replaced with one from full list below
 				fDomains[kd].numcritters++;
 				fNumberBorn++;
 				fDomains[kd].numborn++;
+				fNumBornSinceCreated++;
+				fDomains[kd].numbornsincecreated++;
 				fNeuronGroupCountStats.add( e->Brain()->NumNeuronGroups() );
 				ttPrint( "age %ld: critter # %ld is born\n", fStep, e->Number() );
 				birthPrint( "step %ld: critter # %ld born to %ld & %ld, at (%g,%g,%g), yaw=%g, energy=%g, domain %d (%d & %d), neurgroups=%d\n",
