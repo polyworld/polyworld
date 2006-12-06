@@ -216,7 +216,7 @@ R      smiteMode_R=random|L=leastfit
 1000     bestRecentBrainFunctionRecordFrequency
 1      recordGeneStats
 1      recordFoodPatchStats
-1      recordComplexity
+0      recordComplexity
 0      useComplexityAsFitness
 1      recordAdamiComplexity
 200    AdamiComplexityRecordFrequency
