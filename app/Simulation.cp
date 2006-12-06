@@ -5372,52 +5372,54 @@ int TSimulation::getRandomPatch( int domainNumber )
 
 void TSimulation::SetNextLockstepEvent()
 {
+	const char *delimiters = " ";		// a single space is the field delimiter
+	char LockstepLine[512];				// making this big in case we add longer lines in the future.
 
-	#if LockStepWithBirthsDeathsLog
-		if( ! feof( LockstepFile ) )			// get the next event only if the LOCKSTEP-BirthsDeaths.log still has entries in it.
+#if LockStepWithBirthsDeathsLog
+	LockstepNumDeathsAtTimestep = 0;
+	LockstepNumBirthsAtTimestep = 0;
+
+	if( fgets( LockstepLine, sizeof(LockstepLine), LockstepFile ) )			// get the next event, if the LOCKSTEP-BirthsDeaths.log still has entries in it.
+	{
+		LockstepTimestep = atoi( strtok( LockstepLine, delimiters ) );		// token => timestep
+		assert( LockstepTimestep > 0 );										// if we get a >= zero timestep something is definitely wrong.
+
+		int currentpos;
+		int nexttimestep;
+		char LockstepEvent;
+
+		do
 		{
-			const char *delimiters = " ";		// a single space is the field delimiter
+			nexttimestep = 0;
+			LockstepEvent = (strtok( NULL, delimiters ))[0];    // token => event
 
-			char LockstepLine[512];				// making this big in case we add longer lines in the future.
-			fgets( LockstepLine, sizeof(LockstepLine), LockstepFile );
+			//TODO: Add support for the 'GENERATION' event.  Note a GENERATION event cannot be identical to a BIRTH event.  They must be made from the Fittest list.
+			if( LockstepEvent == 'B' )
+				LockstepNumBirthsAtTimestep++;
+			else if( LockstepEvent == 'D' )
+				LockstepNumDeathsAtTimestep++;
+			else
+			{
+				cerr << "ERROR/SetNextLockstepEvent(): Currently only support events 'DEATH' and 'BIRTH' for the Lockstep file.  Exiting.";
+				exit(1);
+			}
 			
-			LockstepTimestep = atoi( strtok( LockstepLine, delimiters ) );		// token => timestep
-			assert( LockstepTimestep > 0 );										// if we get a >= zero timestep something is definitely wrong.
+			currentpos = ftell( LockstepFile );
 
-			int currentpos;
-			int nexttimestep;
-			char LockstepEvent;
-			LockstepNumDeathsAtTimestep = 0;
-			LockstepNumBirthsAtTimestep = 0;
-
-			do {
-				nexttimestep = 0;
-				LockstepEvent = (strtok( NULL, delimiters ))[0];    // token => event
-
-				//TODO: Add support for the 'GENERATION' event.  Note a GENERATION event cannot be identical to a BIRTH event.  They must be made from the Fittest list.
-				if( LockstepEvent == 'B' ) { LockstepNumBirthsAtTimestep++; }
-				else if( LockstepEvent == 'D' ) { LockstepNumDeathsAtTimestep++; }
-				else { cerr << "ERROR/SetNextLockstepEvent(): Currently only support events 'DEATH' and 'BIRTH' for the Lockstep file.  Exiting."; exit(1); }
-				
-				currentpos = ftell( LockstepFile );
-
-				//=======================
-							
-				if( (fgets(LockstepLine, sizeof(LockstepLine), LockstepFile)) != NULL )		// if LOCKSTEP-BirthsDeaths.log still has entries in it, nexttimestep is the timestep of the next line.
-					nexttimestep = atoi( strtok( LockstepLine, delimiters ) );    // token => timestep
-				
-			   } while( LockstepTimestep == nexttimestep );
+			//=======================
+						
+			if( (fgets(LockstepLine, sizeof(LockstepLine), LockstepFile)) != NULL )		// if LOCKSTEP-BirthsDeaths.log still has entries in it, nexttimestep is the timestep of the next line.
+				nexttimestep = atoi( strtok( LockstepLine, delimiters ) );    // token => timestep
 			
-			// reset to the beginning of the next timestep
-			fseek( LockstepFile, currentpos, 0 );
-			cout << "SetNextLockstepEvent()/ Timestep: " << LockstepTimestep << "\tDeaths: " << LockstepNumDeathsAtTimestep << "\tBirths: " << LockstepNumBirthsAtTimestep << endl;
-
-		}
+		} while( LockstepTimestep == nexttimestep );
 		
-	#else
-		// if SetNextLockstepEvent() is called w/o LockStepWithBirthsDeathsLog turned on, error and exit.
-		cerr << "ERROR: You called SetNextLockstepEvent() and 'LockStepWithBirthsDeathsLog' isn't set to 1.  Though not fatal, it's certain that you didn't intend to do this.  Exiting." << endl;
-		exit(1);
-	#endif
-
+		// reset to the beginning of the next timestep
+		fseek( LockstepFile, currentpos, 0 );
+		cout << "SetNextLockstepEvent()/ Timestep: " << LockstepTimestep << "\tDeaths: " << LockstepNumDeathsAtTimestep << "\tBirths: " << LockstepNumBirthsAtTimestep << endl;
+	}
+#else
+	// if SetNextLockstepEvent() is called w/o LockStepWithBirthsDeathsLog turned on, error and exit.
+	cerr << "ERROR: You called SetNextLockstepEvent() and 'LockStepWithBirthsDeathsLog' isn't set to 1.  Though not fatal, it's certain that you didn't intend to do this.  Exiting." << endl;
+	exit(1);
+#endif
 }
