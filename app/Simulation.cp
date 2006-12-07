@@ -12,7 +12,7 @@
 
 
 //  Reads in a file 'LOCKSTEP-BirthsDeaths.log' and makes all births and deaths in sync with it.  All births and deaths involve random critters.
-#define LockStepWithBirthsDeathsLog 1
+#define LockStepWithBirthsDeathsLog 0
 
 
 
