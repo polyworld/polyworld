@@ -10,11 +10,11 @@
 #define DebugLinksEtAl 0
 #define DebugDomainFoodBands 0
 
+#define MinDebugStep 0
+#define MaxDebugStep INT_MAX
 
 //  Reads in a file 'LOCKSTEP-BirthsDeaths.log' and makes all births and deaths in sync with it.  All births and deaths involve random critters.
 #define LockStepWithBirthsDeathsLog 0
-
-
 
 #define CurrentWorldfileVersion 23
 
@@ -118,43 +118,37 @@ inline float AverageAngles( float a, float b )
 //---------------------------------------------------------------------------
 
 #if TEXTTRACE
-	#define ttPrint( x... ) printf( x )
+	#define ttPrint( x... ) { if( (fStep >= MinDebugStep) && (fStep <= MaxDebugStep) ) printf( x ); }
 #else
 	#define ttPrint( x... )
 #endif
 
 #if DebugSmite
-	#define smPrint( x... ) printf( x )
+	#define smPrint( x... ) { if( (fStep >= MinDebugStep) && (fStep <= MaxDebugStep) ) printf( x ); }
 #else
 	#define smPrint( x... )
 #endif
 
 #if DebugLinksEtAl
-	#define link( x... ) ( printf( "%lu link %s to %s (%s/%d)\n", fStep, s, t, __FUNCTION__, __LINE__ ), link( x ) )
-	#define unlink( x... ) ( printf( "%lu unlink %s (%s/%d)\n", fStep, s, __FUNCTION__, __LINE__ ), unlink( x ) )
-	#define rename( x... ) ( printf( "%lu rename %s to %s (%s/%d)\n", fStep, s, t, __FUNCTION__, __LINE__ ), rename( x ) )
-#endif
-
-#if DebugDomainFoodBands
-	#define dfbPrint( x... ) ( printf( "%lu (%s/%d): ", fStep, __FUNCTION__, __LINE__ ), printf( x ) )
-#else
-	#define dfbPrint( x... )
+	#define link( x... ) { if( (fStep >= MinDebugStep) && (fStep <= MaxDebugStep) ) { ( printf( "%lu link %s to %s (%s/%d)\n", fStep, s, t, __FUNCTION__, __LINE__ ), link( x ) ) } }
+	#define unlink( x... ) { if( (fStep >= MinDebugStep) && (fStep <= MaxDebugStep) ) { ( printf( "%lu unlink %s (%s/%d)\n", fStep, s, __FUNCTION__, __LINE__ ), unlink( x ) ) } }
+	#define rename( x... ) { if( (fStep >= MinDebugStep) && (fStep <= MaxDebugStep) ) { ( printf( "%lu rename %s to %s (%s/%d)\n", fStep, s, t, __FUNCTION__, __LINE__ ), rename( x ) ) } }
 #endif
 
 #if DebugShowBirths
-	#define birthPrint( x... ) printf( x )
+	#define birthPrint( x... ) { if( (fStep >= MinDebugStep) && (fStep <= MaxDebugStep) ) printf( x ); }
 #else
 	#define birthPrint( x... )
 #endif
 
 #if DebugShowEating
-	#define eatPrint( x... ) printf( x )
+	#define eatPrint( x... ) { if( (fStep >= MinDebugStep) && (fStep <= MaxDebugStep) ) printf( x ); }
 #else
 	#define eatPrint( x... )
 #endif
 
 #if DebugGeneticAlgorithm
-	#define gaPrint( x... ) printf( x )
+	#define gaPrint( x... ) { if( (fStep >= MinDebugStep) && (fStep <= MaxDebugStep) ) printf( x ); }
 #else
 	#define gaPrint( x... )
 #endif
@@ -2115,21 +2109,22 @@ void TSimulation::Interact()
 #if DebugShowSort
 	if( fStep == 1 )
 		printf( "food::gMaxFoodRadius = %g\n", food::gMaxFoodRadius );
-//	if( fStep > 59 )
-//		exit( 0 );
-	objectxsortedlist::gXSortedObjects.reset();
-	printf( "********** critters at step %ld **********\n", fStep );
-	while( objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &c ) )
+	if( (fStep >= MinDebugStep) && (fStep <= MaxDebugStep) )
 	{
-		printf( "  # %ld edge=%g at (%g,%g) rad=%g\n", c->Number(), c->x() - c->radius(), c->x(), c->z(), c->radius() );
-		fflush( stdout );
-	}
-	objectxsortedlist::gXSortedObjects.reset();
-	printf( "********** food at step %ld **********\n", fStep );
-	while( objectxsortedlist::gXSortedObjects.nextObj( FOODTYPE, (gobject**) &f ) )
-	{
-		printf( "  edge=%g at (%g,%g) rad=%g\n", f->x() - f->radius(), f->x(), f->z(), f->radius() );
-		fflush( stdout );
+		objectxsortedlist::gXSortedObjects.reset();
+		printf( "********** critters at step %ld **********\n", fStep );
+		while( objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &c ) )
+		{
+			printf( "  # %ld edge=%g at (%g,%g) rad=%g\n", c->Number(), c->x() - c->radius(), c->x(), c->z(), c->radius() );
+			fflush( stdout );
+		}
+		objectxsortedlist::gXSortedObjects.reset();
+		printf( "********** food at step %ld **********\n", fStep );
+		while( objectxsortedlist::gXSortedObjects.nextObj( FOODTYPE, (gobject**) &f ) )
+		{
+			printf( "  edge=%g at (%g,%g) rad=%g\n", f->x() - f->radius(), f->x(), f->z(), f->radius() );
+			fflush( stdout );
+		}
 	}
 #endif
 
@@ -2247,7 +2242,7 @@ void TSimulation::Interact()
         id = c->Domain();						// Determine the domain in which the critter currently is located
 	
 	#if ! LockStepWithBirthsDeathsLog
-		// If we're running in LockStep mode, don't allow any natural deaths
+		// If we're not running in LockStep mode, allow natural deaths
         if ( (c->Energy() <= 0.0)		||
 			 (c->Age() >= c->MaxAge())  ||
              ((!globals::edges) && ((c->x() < 0.0) || (c->x() >  globals::worldsize) ||
@@ -2383,12 +2378,15 @@ void TSimulation::Interact()
 	}
 	
 #if DebugSmite
-	for( id = 0; id < fNumDomains; id++ )
+	if( (fStep >= MinDebugStep) && (fStep <= MaxDebugStep) )
 	{
-		printf( "At age %ld in domain %d (c,n,c->fit) =", fStep, id );
-		for( i = 0; i < fDomains[id].fNumLeastFit; i++ )
-			printf( " (%08lx,%ld,%5.2f)", (ulong) fDomains[id].fLeastFit[i], fDomains[id].fLeastFit[i]->Number(), fDomains[id].fLeastFit[i]->Fitness() );
-		printf( "\n" );
+		for( id = 0; id < fNumDomains; id++ )
+		{
+			printf( "At age %ld in domain %d (c,n,c->fit) =", fStep, id );
+			for( i = 0; i < fDomains[id].fNumLeastFit; i++ )
+				printf( " (%08lx,%ld,%5.2f)", (ulong) fDomains[id].fLeastFit[i], fDomains[id].fLeastFit[i]->Number(), fDomains[id].fLeastFit[i]->Fitness() );
+			printf( "\n" );
+		}
 	}
 #endif
 
@@ -2398,11 +2396,14 @@ void TSimulation::Interact()
 	// all possible interactions
 
 #if DebugMaxFitness
-	objectxsortedlist::gXSortedObjects.reset();
-	objectxsortedlist::gXSortedObjects.nextObj(CRITTERTYPE, c);
-	critter* lastCritter;
-	objectxsortedlist::gXSortedObjects.lastObj(CRITTERTYPE, (gobject**) &lastCritter );
-	printf( "%s: at age %ld about to process %ld critters, %ld pieces of food, starting with critter %08lx (%4ld), ending with critter %08lx (%4ld)\n", __FUNCTION__, fStep, objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE), objectxsortedlist::gXSortedObjects.getCount(FOODTYPE), (ulong) c, c->Number(), (ulong) lastCritter, lastCritter->Number() );
+	if( (fStep >= MinDebugStep) && (fStep <= MaxDebugStep) )
+	{
+		objectxsortedlist::gXSortedObjects.reset();
+		objectxsortedlist::gXSortedObjects.nextObj(CRITTERTYPE, c);
+		critter* lastCritter;
+		objectxsortedlist::gXSortedObjects.lastObj(CRITTERTYPE, (gobject**) &lastCritter );
+		printf( "%s: at age %ld about to process %ld critters, %ld pieces of food, starting with critter %08lx (%4ld), ending with critter %08lx (%4ld)\n", __FUNCTION__, fStep, objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE), objectxsortedlist::gXSortedObjects.getCount(FOODTYPE), (ulong) c, c->Number(), (ulong) lastCritter, lastCritter->Number() );
+	}
 #endif
 
 	// Do Critter Healing
@@ -2633,6 +2634,7 @@ void TSimulation::Interact()
 							}
 							if( fDomains[kd].fNumSmited < fDomains[kd].fNumLeastFit )	// we've still got someone to smite, so do it
 							{
+								smPrint( "About to smite least-fit critter #%d in domain %d\n", fDomains[kd].fLeastFit[fDomains[kd].fNumSmited]->Number(), kd );
 								Death( fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] );
 								fDomains[kd].fNumSmited++;
 								fNumberDiedSmite++;
@@ -2660,10 +2662,13 @@ void TSimulation::Interact()
 							while( (i <= randomIndex) && objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &testCritter ) )
 							{
 								// If it's from the right domain, it's old enough, and it's not one of the parents, allow it
-								if( (testCritter->Domain() == kd) && (testCritter->Age() > fSmiteAgeFrac*testCritter->MaxAge()) && (testCritter->Number() != c->Number()) || (testCritter->Number() == d->Number())  )
-									randCritter = testCritter;	// as long as there's a single legitimate critter for smiting, randCriter will be non-NULL
-
-								i++;
+								if( testCritter->Domain() == kd )
+								{
+									i++;	// if it's in the right domain, increment even if we're not allowed to smite it
+									
+									if( (testCritter->Age() > fSmiteAgeFrac*testCritter->MaxAge()) && (testCritter->Number() != c->Number()) && (testCritter->Number() != d->Number()) )
+										randCritter = testCritter;	// as long as there's a single legitimate critter for smiting in this domain, randCriter will be non-NULL
+								}
 								
 								if( (i > randomIndex) && (randCritter != NULL) )
 									break;
@@ -3534,7 +3539,6 @@ void TSimulation::Death(critter* c)
 			objectxsortedlist::gXSortedObjects.add( f );	// dead critter becomes food
 			objectxsortedlist::gXSortedObjects.setcurr( saveCurr );
 			fStage.AddObject( f );			// put replacement food into the world
-		#if 1
 			if( fp )
 			{
 				fp->foodCount++;
@@ -3544,16 +3548,6 @@ void TSimulation::Death(critter* c)
 				fprintf( stderr, "food created with no affiliated FoodPatch\n" );
 			f->domain( id );
 			fDomains[id].foodCount++;
-		#else
-			// ??? Matt had removed all of this, and not provided the above equivalent
-			fb = WhichBand( f->z() );
-			f->domain( fd );
-			f->band( fb );
-			fDomains[fd].foodCount++;
-			if( fb >= 0 )
-				fDomains[fd].fDomainFoodBand[fb].foodCount++;
-			dfbPrint( "after adding critter-based food to domain %d, band %d, at (%5.2f,%6.2f), D.foodCount = %ld, DFB.foodCount = %ld\n", fd, fb, f->x(), f->z(), fDomains[fd].foodCount, fb >= 0 ? fDomains[fd].fDomainFoodBand[fb].foodCount : -1 );
-		#endif
         }
     }
     else
@@ -5364,10 +5358,10 @@ int TSimulation::getRandomPatch( int domainNumber )
 
 void TSimulation::SetNextLockstepEvent()
 {
+#if LockStepWithBirthsDeathsLog
 	const char *delimiters = " ";		// a single space is the field delimiter
 	char LockstepLine[512];				// making this big in case we add longer lines in the future.
 
-#if LockStepWithBirthsDeathsLog
 	LockstepNumDeathsAtTimestep = 0;
 	LockstepNumBirthsAtTimestep = 0;
 
