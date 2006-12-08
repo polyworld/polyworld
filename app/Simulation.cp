@@ -2204,25 +2204,6 @@ void TSimulation::Interact()
 			
 			assert( randCritter != NULL );		// In we're in LOCKSTEP mode, we should *always* have a critter to kill.  If we don't kill a critter, then we are no longer in sync in the LOCKSTEP-BirthsDeaths.log
 			
-			// If we're killing a critter that is on the Fittest Lists, we need to remove it from the list to avoid de-referencing a pointer to an invalid (dead) critter.
-			if( (fCurrentFittestCount > 0) && (randCritter->Fitness() >= fCurrentMaxFitness[fCurrentFittestCount-1]) )
-			{
-				int havePastRandCritter = 0;
-				for( int i = 0; i < fCurrentFittestCount; i++ )
-				{
-					if( fCurrentFittestCritter[i] != randCritter )
-						fCurrentFittestCritter[ (i-havePastRandCritter) ] = fCurrentFittestCritter[i];
-					else
-						havePastRandCritter = 1;
-				}
-							
-				if( havePastRandCritter == 1 )		// this should always be true, but lets make sure.
-				{
-					fCurrentFittestCritter[ (fCurrentFittestCount-1) ] = NULL;	// Null out the last critter in the list, just to be polite
-					fCurrentFittestCount--;		// decrement the number of critters in the list now that we've removed randCritter from it.
-				}
-			}
-
 			Death( randCritter );
 			cout << "- Killed critter " << randCritter->Number() << "\t RandIndex= " << randomIndex << endl;
 						
@@ -2254,7 +2235,7 @@ void TSimulation::Interact()
                 fNumberDiedEnergy++;
             else
                 fNumberDiedEdge++;
-				Death(c);
+			Death(c);
             continue; // nothing else to do for this poor schmo
         }
 	#endif
@@ -2678,24 +2659,6 @@ void TSimulation::Interact()
 							
 							if( randCritter )	// if we found any legitimately smitable critter...
 							{
-								if( (fCurrentFittestCount > 0) && (randCritter->Fitness() >= fCurrentMaxFitness[fCurrentFittestCount-1]) )	// trying to smite a fit critter
-								{
-									int havePastRandCritter = 0;
-									for( int i = 0; i < fCurrentFittestCount; i++ )
-									{
-										if( fCurrentFittestCritter[i] != randCritter )
-											fCurrentFittestCritter[ (i-havePastRandCritter) ] = fCurrentFittestCritter[i];
-										else
-											havePastRandCritter = 1;
-									}
-								
-									if( havePastRandCritter == 1 )		// this should always be true, but lets make sure.
-									{
-										fCurrentFittestCritter[ (fCurrentFittestCount-1) ] = NULL;	// Null out the last critter in the list, just to be polite
-										fCurrentFittestCount = fCurrentFittestCount - 1;		// decrement the number of critters in the list now that we've removed randCritter from it.
-									}
-								}
-
 								fDomains[kd].fNumSmited++;
 								fNumberDiedSmite++;
 								smited = true;
@@ -2801,7 +2764,7 @@ void TSimulation::Interact()
                         c->damage(dpower * fPower2Energy);
                         d->damage(cpower * fPower2Energy);
 					#if ! LockStepWithBirthsDeathsLog							
-						// If we're running in LockStep mode, don't allow any natural deaths
+						// If we're not running in LockStep mode, allow natural deaths
                         if (d->Energy() <= 0.0)
                         {
 							//cout << "before deaths2 "; critter::gXSortedCritters.list();	//dbg
@@ -3586,6 +3549,25 @@ void TSimulation::Death(critter* c)
 		#else
 			c->SetFitness( CalcComplexity(t, 'P') );
 		#endif
+		}
+	}
+	
+	// Maintain the current-fittest list
+	if( (fCurrentFittestCount > 0) && (c->Fitness() >= fCurrentMaxFitness[fCurrentFittestCount-1]) )	// a current-fittest critter is dying
+	{
+		int haveFitCritter = 0;
+		for( int i = 0; i < fCurrentFittestCount; i++ )
+		{
+			if( fCurrentFittestCritter[i] != c )
+				fCurrentFittestCritter[ (i-haveFitCritter) ] = fCurrentFittestCritter[i];
+			else
+				haveFitCritter = 1;
+		}
+	
+		if( haveFitCritter == 1 )		// this should usually be true, but lets make sure.
+		{
+			fCurrentFittestCritter[ (fCurrentFittestCount-1) ] = NULL;	// Null out the last critter in the list, just to be polite
+			fCurrentFittestCount--;		// decrement the number of critters in the list now that we've removed the recently deceased critter (c) from it.
 		}
 	}
 	
