@@ -70,7 +70,7 @@ fi
 
 
 # if we didn't force specify a number of seed critters determine it now
-if [ -z "${numseedcritters}" ]
+if [ "${numseedcritters}" -le 0 ]
 then
 	echo "Determining number of seed critters dyanmically...."
 	numseedcrittersplusone=$(grep ' BIRTH ' ${directory}/BirthsDeaths.log | head -n 1 | cut -d' ' -f3)
