@@ -593,12 +593,6 @@ inline float TSimulation::AgeFitnessParameter() const { return fAgeFitnessParame
 inline float TSimulation::LifeFractionRecent() { return fLifeFractionRecentStats.mean(); }
 inline unsigned long TSimulation::LifeFractionSamples() { return fLifeFractionRecentStats.samples(); }
 
-//GL Fog
-inline char TSimulation::glFogFunction()  { return fFogFunction;   }
-inline float TSimulation::glExpFogDensity() { return fExpFogDensity; }
-inline int TSimulation::glLinearFogEnd()    { return fLinearFogEnd;  }
-
-
 
 inline float TSimulation::GetCritterHealingRate() { return fCritterHealingRate;	} 
 

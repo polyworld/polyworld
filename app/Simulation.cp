@@ -209,11 +209,14 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
 		fShowTextStatus(true),
 		fRecordGeneStats(false),
 		fRecordFoodPatchStats(false),
+
 		fNewDeaths(0),
 		fNumberFit(0),
 		fFittest(NULL),
+
 		fNumberRecentFit(0),
 		fRecentFittest(NULL),
+		fFogFunction('O'),
 		fBrainMonitorStride(25),
 		fGeneSum(NULL),
 		fGeneSum2(NULL),
@@ -4765,6 +4768,8 @@ void TSimulation::ReadWorldFile(const char* filename)
 
 		assert( (fFogFunction == 'O' || fFogFunction == 'E' || fFogFunction == 'L') );
 		cout << "FogFunction" ses fFogFunction nl;
+		assert( glFogFunction() == fFogFunction );
+			
 	
 		// This value only does something if Fog Function is exponential
 		// Acceptable values are between 0 and 1 (inclusive)
@@ -5391,3 +5396,15 @@ void TSimulation::SetNextLockstepEvent()
 	exit(1);
 #endif
 }
+
+//GL Fog
+char TSimulation::glFogFunction()
+{
+//	if( fFogFunction == 'O' || fFogFunction == 'L' || fFogFunction == 'E' )
+		return fFogFunction;
+//	else
+//		return 'O';
+}
+
+float TSimulation::glExpFogDensity() { return fExpFogDensity; }
+int TSimulation::glLinearFogEnd()    { return fLinearFogEnd;  }
