@@ -2419,13 +2419,13 @@ void TSimulation::Interact()
 				int randomIndex = int( round( drand48() * numcritters ) );
 								
 				// As written, randCritter may not actually be the randomIndex-th critter in the domain, but it will be close,
-				// and as long as there's a single legitimate critter for mating (right domain, long enough since last mating, and
-				// has enough energy), we will find and use it
+				// and as long as there's a single legitimate critter for mating (right domain, long enough since last mating,
+				// and long enough since birth) we will find and use it
 				objectxsortedlist::gXSortedObjects.reset();
 				while( objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &testCritter ) )
 				{
-					// Only constraint (and that probably doesn't matter) is that it's not one freshly birthed this time step
-					if( testCritter->Age() > 0 )
+					// Make sure it's old enough (anything except just birthed), and it has been long enough since it mated
+					if( (testCritter->Age() > 0) && ((testCritter->Age() - testCritter->LastMate()) > fMateWait) )
 						c = testCritter;	// as long as there's a single legitimate critter for mating, Mommy will be non-NULL
 					
 					i++;
@@ -2445,8 +2445,8 @@ void TSimulation::Interact()
 				objectxsortedlist::gXSortedObjects.reset();
 				while( objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &testCritter ) )
 				{
-					// If not just birthed and not the same as mommy, it'll do for daddy.
-					if( (testCritter->Age() > 0) && (testCritter->Number() != c->Number()) )
+					// If it was not just birthed, it has been long enough since it mated, and it's not the same as mommy, it'll do for daddy.
+					if( (testCritter->Age() > 0) && ((testCritter->Age() - testCritter->LastMate()) > fMateWait) && (testCritter->Number() != c->Number()) )
 						d = testCritter;	// as long as there's another single legitimate critter for mating, Daddy will be non-NULL
 
 					i++;
