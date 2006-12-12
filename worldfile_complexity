@@ -51,7 +51,7 @@
 500    minlifespan
 1000   maxlifespan
 25     matewait
-25     initmatewait
+0      initmatewait
 0.5    minstrength
 2.0    maxstrength
 0.5    minsize
