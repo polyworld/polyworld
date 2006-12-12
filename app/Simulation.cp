@@ -2425,7 +2425,7 @@ void TSimulation::Interact()
 				while( objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &testCritter ) )
 				{
 					// Make sure it's old enough (anything except just birthed), and it has been long enough since it mated
-					if( (testCritter->Age() > 0) && ((testCritter->Age() - testCritter->LastMate()) > fMateWait) )
+					if( (testCritter->Age() > 0) && ((testCritter->Age() - testCritter->LastMate()) >= fMateWait) )
 						c = testCritter;	// as long as there's a single legitimate critter for mating, Mommy will be non-NULL
 					
 					i++;
@@ -2446,7 +2446,7 @@ void TSimulation::Interact()
 				while( objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &testCritter ) )
 				{
 					// If it was not just birthed, it has been long enough since it mated, and it's not the same as mommy, it'll do for daddy.
-					if( (testCritter->Age() > 0) && ((testCritter->Age() - testCritter->LastMate()) > fMateWait) && (testCritter->Number() != c->Number()) )
+					if( (testCritter->Age() > 0) && ((testCritter->Age() - testCritter->LastMate()) >= fMateWait) && (testCritter->Number() != c->Number()) )
 						d = testCritter;	// as long as there's another single legitimate critter for mating, Daddy will be non-NULL
 
 					i++;
