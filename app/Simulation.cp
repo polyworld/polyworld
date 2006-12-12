@@ -9,6 +9,7 @@
 #define DebugMaxFitness 0
 #define DebugLinksEtAl 0
 #define DebugDomainFoodBands 0
+#define DebugLockStep 0
 
 #define MinDebugStep 0
 #define MaxDebugStep INT_MAX
@@ -151,6 +152,12 @@ inline float AverageAngles( float a, float b )
 	#define gaPrint( x... ) { if( (fStep >= MinDebugStep) && (fStep <= MaxDebugStep) ) printf( x ); }
 #else
 	#define gaPrint( x... )
+#endif
+
+#if DebugLockStep
+	#define lsPrint( x... ) { if( (fStep >= MinDebugStep) && (fStep <= MaxDebugStep) ) printf( x ); }
+#else
+	#define lsPrint( x... )
 #endif
 
 //---------------------------------------------------------------------------
@@ -1381,13 +1388,6 @@ void TSimulation::Init()
 
 		cout << "*** Running in LOCKSTEP MODE with file 'LOCKSTEP-BirthsDeaths.log' ***" << endl;
 
-		// checking some worldfile variables.
-		if( fMateWait > 0.0 )
-			cout << "Warning: fMateWait is set to " << fMateWait << ", but you probably want it set to zero.  With a non-zero fMateWait it's possible that none of the critters are allowed to give birth as required by a BIRTH event." << endl;
-		if( fMinMateFraction > 0.0 )
-			cout << "Warning: fMinMateFraction is set to " << fMinMateFraction << ", but you probably want it set to zero.  With a non-zero fMinMateFraction it's possible that none of the critters are allowed to give birth as required by a BIRTH event." << endl;
-
-	
 		if( (LockstepFile = fopen("LOCKSTEP-BirthsDeaths.log", "r")) == NULL )
 		{
 			cerr << "ERROR/Init(): Could not open 'LOCKSTEP-BirthsDeaths.log' for reading. Exiting." << endl;
@@ -1789,8 +1789,8 @@ void TSimulation::InitWorld()
 					+ fMoveFitnessParameter
 					+ fEnergyFitnessParameter
 					+ fAgeFitnessParameter;
-    fMateWait = 25;
     fMinMateFraction = 0.05;
+	fMateWait = 25;
     fPower2Energy = 2.5;
 	fEatThreshold = 0.2;
     fMateThreshold = 0.5;
@@ -1899,7 +1899,7 @@ void TSimulation::InitWorld()
 	fGraphics = true;
     critter::gVision = true;
     critter::gMaxVelocity = 1.0;
-    fMaxCritters = 50;	
+    fMaxCritters = 50;
     critter::gInitMateWait = 25;
     critter::gMinCritterSize = 1.0;
     critter::gMinCritterSize = 4.0;
@@ -2170,15 +2170,13 @@ void TSimulation::Interact()
 
 	// Take care of deaths first, plus least-fit determinations
 	// Also use this as a convenient place to compute some stats
-
-	//cout << "before deaths "; critter::gXSortedCritters.list();	//dbg
 	
 #if LockStepWithBirthsDeathsLog
 	// if we are running in Lockstep with a LOCKSTEP-BirthDeaths.log, we kill our critters here.
 	if( LockstepTimestep == fStep )
 	{
-		cout << "t" << fStep << ":  Triggering " << LockstepNumDeathsAtTimestep << " random deaths..." << endl;
-	
+		lsPrint( "t%d: Triggering %d random deaths...\n", fStep, LockstepNumDeathsAtTimestep );
+		
 		for( int count = 0; count < LockstepNumDeathsAtTimestep; count++ )
 		{
 			int i = 0;
@@ -2208,8 +2206,8 @@ void TSimulation::Interact()
 			assert( randCritter != NULL );		// In we're in LOCKSTEP mode, we should *always* have a critter to kill.  If we don't kill a critter, then we are no longer in sync in the LOCKSTEP-BirthsDeaths.log
 			
 			Death( randCritter );
-			cout << "- Killed critter " << randCritter->Number() << "\t RandIndex= " << randomIndex << endl;
-						
+			
+			lsPrint( "- Killed critter %d, randomIndex = %d\n", randCritter->Number(), randomIndex );						
 		}	// end of for loop
 					
 	}	// end of if( LockstepTimestep == fStep )
@@ -2401,7 +2399,7 @@ void TSimulation::Interact()
 	#if LockStepWithBirthsDeathsLog
 		if( LockstepTimestep == fStep )
 		{
-			cout << "t" << fStep << ":  Triggering " << LockstepNumBirthsAtTimestep << " random births..." << endl;
+			lsPrint( "t%d: Triggering %d random births...\n", fStep, LockstepNumBirthsAtTimestep );
 
 			critter* c = NULL;		// mommy
 			critter* d = NULL;		// daddy
@@ -2426,11 +2424,10 @@ void TSimulation::Interact()
 				objectxsortedlist::gXSortedObjects.reset();
 				while( objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &testCritter ) )
 				{
-					// If it has been long enough, and it has enough energy, allow it.
-					if( ((testCritter->Age() - testCritter->LastMate()) >= fMateWait) &&
-						(testCritter->Energy() >= fMinMateFraction * testCritter->MaxEnergy()) )
+					// Only constraint (and that probably doesn't matter) is that it's not one freshly birthed this time step
+					if( testCritter->Age() > 0 )
 						c = testCritter;	// as long as there's a single legitimate critter for mating, Mommy will be non-NULL
-
+					
 					i++;
 					
 					if( (i > randomIndex) && (c != NULL) )
@@ -2446,19 +2443,11 @@ void TSimulation::Interact()
 				// and as long as there's a single legitimate critter for mating (right domain, long enough since last mating, and
 				// has enough energy, plus not the same as the mommy), we will find and use it
 				objectxsortedlist::gXSortedObjects.reset();
-//debug			cout << "* Trying critters: ";
 				while( objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &testCritter ) )
 				{
-//debug				cout << testCritter->Number() << " ";
-					// If it has been long enough, and it has enough energy, and it's not mommmy, allow it.
-					if( ((testCritter->Age() - testCritter->LastMate()) >= fMateWait) &&
-						(testCritter->Energy() >= (fMinMateFraction * testCritter->MaxEnergy())) &&
-						(testCritter->Number() != c->Number()) )
-					{
-//debug					if( testCritter->Number() == c->Number() )
-//debug						cout << endl << "critter " << testCritter->Number() << " couldn't mate because it was mommy." << endl;
+					// If not just birthed and not the same as mommy, it'll do for daddy.
+					if( (testCritter->Age() > 0) && (testCritter->Number() != c->Number()) )
 						d = testCritter;	// as long as there's another single legitimate critter for mating, Daddy will be non-NULL
-					}
 
 					i++;
 						
@@ -2468,11 +2457,11 @@ void TSimulation::Interact()
 
 				assert( c != NULL && d != NULL );				// If for some reason we can't select parents, then we'll become out of sync with LOCKSTEP-BirthDeaths.log
 												
-				cout << "* I have selected Mommy(" << c->Number() << ") and Daddy(" << d->Number() << ").\tpopulationsize=" << numcritters  << endl;
-								
+				lsPrint( "* I have selected Mommy(%ld) and Daddy(%ld). Population size = %d\n", c->Number(), d->Number(), numcritters );
+				
 				/* === We've selected our parents, now time to birth our critter. */
 					
-				ttPrint( "age %ld: critters # %ld & %ld are mating\n", fStep, c->Number(), d->Number() );
+				ttPrint( "age %ld: critters # %ld & %ld are mating randomly\n", fStep, c->Number(), d->Number() );
 						
 				critter* e = critter::getfreecritter(this, &fStage);
 				Q_CHECK_PTR(e);
@@ -2480,6 +2469,9 @@ void TSimulation::Interact()
 				e->Genes()->Crossover(c->Genes(), d->Genes(), true);
 				e->grow( RecordBrainAnatomy( e->Number() ), RecordBrainFunction( e->Number() ) );
 				float eenergy = c->mating(fMateFitnessParameter, fMateWait) + d->mating(fMateFitnessParameter, fMateWait);
+				float minenergy = fMinMateFraction * ( c->MaxEnergy() + d->MaxEnergy() ) * 0.5;	// just a modest, reasonable amount; this doesn't really matter in lockstep mode
+				if( eenergy < minenergy )
+					eenergy = minenergy;
 				e->Energy(eenergy);
 				e->FoodEnergy(eenergy);
 				float x =  0.01 + drand48() * (globals::worldsize - 0.02);
@@ -2491,9 +2483,7 @@ void TSimulation::Interact()
 				kd = WhichDomain(x, z, 0);
 				e->Domain(kd);
 				fStage.AddObject(e);
-				gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();
 				objectxsortedlist::gXSortedObjects.add(e); // Add the new critter directly to the list of objects (no new critter list); the e->listLink that gets auto stored here should be valid immediately
-				objectxsortedlist::gXSortedObjects.setcurr( saveCurr );
 							
 				newlifes++;
 				fDomains[kd].numcritters++;
@@ -5388,7 +5378,7 @@ void TSimulation::SetNextLockstepEvent()
 		
 		// reset to the beginning of the next timestep
 		fseek( LockstepFile, currentpos, 0 );
-		cout << "SetNextLockstepEvent()/ Timestep: " << LockstepTimestep << "\tDeaths: " << LockstepNumDeathsAtTimestep << "\tBirths: " << LockstepNumBirthsAtTimestep << endl;
+		lsPrint( "SetNextLockstepEvent()/ Timestep: %d\tDeaths: %d\tBirths: %d\n", LockstepTimestep, LockstepNumDeathsAtTimestep, LockstepNumBirthsAtTimestep );
 	}
 #else
 	// if SetNextLockstepEvent() is called w/o LockStepWithBirthsDeathsLog turned on, error and exit.
