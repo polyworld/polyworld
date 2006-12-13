@@ -5361,9 +5361,15 @@ void TSimulation::SetNextLockstepEvent()
 				LockstepNumBirthsAtTimestep++;
 			else if( LockstepEvent == 'D' )
 				LockstepNumDeathsAtTimestep++;
+			else if( LockstepEvent == 'C' )
+			{
+				LockstepNumBirthsAtTimestep++;
+				cerr << "t" << LockstepTimestep << ": Warning: a CREATION event occured, but we're simply going to treat it as a random BIRTH." << endl;
+			}
 			else
 			{
-				cerr << "ERROR/SetNextLockstepEvent(): Currently only support events 'DEATH' and 'BIRTH' for the Lockstep file.  Exiting.";
+				cerr << "ERROR/SetNextLockstepEvent(): Currently only support events 'DEATH', 'BIRTH', and 'CREATION' events in the Lockstep file.  Exiting.";
+				cerr << "Latest Event: '" << LockstepEvent << "'" << endl;
 				exit(1);
 			}
 			
