@@ -293,8 +293,8 @@ FILE* brain::startFunctional( long index )
 		goto bail;
 	}
 
-	// print the header, with index (critter number), neuron count, and number of input neurons
-	fprintf( file, "brainFunction %ld %d %d\n", index, numneurons, numinputneurons );
+	// print the header, with index (critter number), neuron count, number of input neurons, and number of synapses
+	fprintf( file, "brainFunction %ld %d %d %ld\n", index, numneurons, numinputneurons, numsynapses );
 
 bail:
 
