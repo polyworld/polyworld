@@ -89,12 +89,32 @@ echo "Interval = $interval"
 # get all entries for 'DEATH'	TODO: If we ever start recording a 'SMITE' event as different from a 'DEATH' event, we should probably include SMITE too.
 data=$(grep "DEATH" "$directory/BirthsDeaths.log" | grep -v '^[#%]')
 
+
+
+# For efficiency, we will create all of the destination directories first.
+echo "Determining the bins for the Recent/ directory..."
+lastevent=$(echo "$data" | tail -n 1 | cut -f1 -d' ')
+last_binned_time_of_death=$(echo "" | awk -v time_of_death="$lastevent" -v interval="$interval" '{ if(time_of_death % interval == 0) { print int(time_of_death); } else { print ( (int(time_of_death / interval) + 1) * interval ); } }' )
+
+echo "- LastDeath = $lastevent; LastDeathBinned = $last_binned_time_of_death"
+currentstep="${interval}"
+echo -n "Creating directories: brain/Recent/" 
+while [ "${currentstep}" -le "${last_binned_time_of_death}" ]
+do
+	mkdir "$directory/brain/Recent/$currentstep"
+	if [ -d "$directory/brain/Recent/$currentstep" ]	# did we make the directory?
+	then
+		echo -n "$currentstep "
+	fi
+	currentstep=$(echo "$currentstep + $interval" | bc)
+done; echo ""	# the 'echo ""' makes a newline.
+
+# Finished making our Recent/ bins.  Now put all of our critters into their Recent/ bins
 echo "$data" | while read event
 do
 	critternum=$(echo "$event" | cut -d' ' -f3)	# get the critternum
 	time_of_death=$(echo "$event" | cut -d' ' -f1)	# get the actual timestep of death
-	num_intervals=$(echo "" | awk -v time_of_death="$time_of_death" -v interval="$interval" '{ if(time_of_death % interval == 0) { print int(time_of_death / interval); } else { print (int(time_of_death / interval) + 1); } }' )
-	binned_time_of_death=$(echo "$num_intervals * $interval" | bc)
+	binned_time_of_death=$(echo "" | awk -v time_of_death="$time_of_death" -v interval="$interval" '{ if(time_of_death % interval == 0) { print int(time_of_death); } else { print ( (int(time_of_death / interval) + 1) * interval ); } }' )
 
 #	echo "--- $event ---"
 #	echo "critternum = $critternum  ::: timestep of death = $time_of_death"
@@ -110,6 +130,14 @@ do
 		continue;	# skip this entry
 	fi
 
+	# Is the brainFunction file invalid?  If so, skip it.
+	isInvalid=$(grep -o 'maxBias' ${directory}/brain/function/brainFunction_${critternum}.txt)
+	if [ ! -z "${isInvalid}" ]
+	then
+		echo " ** 'brain/function/brainFunction_${critternum}.txt' is invalid.  Not linking it into brain/Recent **";
+		continue;
+	fi
+
 	# Now that we know that the file exists, make sure the critter lived for at least a single timestep.
 #	numlines=$(cat "$directory/brain/function/brainFunction_${critternum}.txt" | wc -l | tr -d ' ')
 #	if [ "$numlines" == 2 ]
@@ -118,12 +146,6 @@ do
 #		continue;	# skip this entry
 #	fi
 
-	
-	# The source brainFunction file exists, now time to make the destination directory.
-	if [ ! -d "$directory/brain/Recent/$binned_time_of_death" ]
-	then
-		mkdir "$directory/brain/Recent/$binned_time_of_death"
-	fi
 
 	# Source file exists, made the destination directory, Lets link it!
 	ln -s "$directory/brain/function/brainFunction_${critternum}.txt" "${directory}/brain/Recent/${binned_time_of_death}/brainFunction_${critternum}.txt"
@@ -132,3 +154,13 @@ done
 printf "\r                                              \rDone!\n"
 echo "Making the Seeds..."
 ./MakeSeedsRecent.sh "${directory}"
+
+echo "Checking for invalid brainFunction files in brain/bestRecent..."
+Invalids=$(grep -R -c 'maxBias' ${directory}/brain/bestRecent/ | grep -v 'brainAnatomy' | grep -v ':0$')
+if [ ! -z "${Invalids}" ]
+then
+	echo "** WARNING: Found Invalid brainFunction files in brain/bestRecent! **"
+	echo "$Invalids"
+else
+	echo "No invalids brainFunction files found in brain/bestRecent."
+fi
