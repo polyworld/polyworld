@@ -1,10 +1,14 @@
 // genetrace.c
 //
-// Reads a genestats.txt file output by Polyworld and outputs a .dat file suitable for MatLab
+// Reads a genestats.txt file output by Polyworld and outputs a .dat file suitable for MatLab.
+// #defines are currently used to determine what is computed; someday do this via the command-line arguments.
 //
 // Usage:  genetrace
 
-#define DebugGeneTrace 1
+#define DebugGeneTrace 0
+
+// By default, this program computes mean learning rate; use the following #define constants to compute anything else.
+#define ComputeConnectionDensity 0
 
 #include <stdio.h>
 #include <stdarg.h>
@@ -26,8 +30,7 @@ void usage( char* arg0 );
 void args( int argc, char** argv, int* something );
 
 #define NumGenes 2494
-#define FirstLearningRateGene 862
-#define LastLearningRateGene 1677
+
 // input neuron groups:  r, g, b, energy, random
 #define NumInputNeuronGroups 5
 // output neuron groups:  eat, mate, fight, move, turn, light, focus
@@ -35,13 +38,31 @@ void args( int argc, char** argv, int* something );
 #define MinInternalNeuronGroups 0
 #define MaxInternalNeuronGroups 5
 
-#define MinLearningRate 0.0
-#define MaxLearningRate 0.1
-
 #define ReportFrequency 1000
 
 int MaxNeuronGroups = NumInputNeuronGroups + MaxInternalNeuronGroups + NumOutputNeuronGroups;
 double OneOver255 = 1.0 / 255.0;
+
+#define FirstConnectionDensityGene 46
+#define LastConnectionDensityGene 861
+#define MinConnectionDensity 0.0
+#define MaxConnectionDensity 1.0
+#define FirstLearningRateGene 862
+#define LastLearningRateGene 1677
+#define MinLearningRate 0.0
+#define MaxLearningRate 0.1
+
+#if ComputeConnectionDensity
+	#define FirstGene FirstConnectionDensityGene
+	#define LastGene LastConnectionDensityGene
+	#define MinGeneValue MinConnectionDensity
+	#define MaxGeneValue MaxConnectionDensity
+#else
+	#define FirstGene FirstLearningRateGene
+	#define LastGene LastLearningRateGene
+	#define MinGeneValue MinLearningRate
+	#define MaxGeneValue MaxLearningRate
+#endif
 
 int main( int argc, char **argv )
 {
@@ -53,16 +74,16 @@ int main( int argc, char **argv )
 	char**	val;
 	int		numInternalNeuronGroups;
 	int		numNeuronGroups;
-	int		EELRGeneOffset;
-	int		EILRGeneOffset;
-	int		IILRGeneOffset;
-	int		IELRGeneOffset;
+	int		EEGeneOffset;
+	int		EIGeneOffset;
+	int		IIGeneOffset;
+	int		IEGeneOffset;
 	int		nextGeneOffset;
 	int		lastGeneOffset;
 	int		i;
 	int		j;
 	int		line = 0;
-	double	meanRate;
+	double	meanValue;
 	
 	// Read arguments
 	args( argc, argv, &something );
@@ -87,7 +108,8 @@ int main( int argc, char **argv )
 	free( s );
 	
 	line++;
-	
+
+#if DebugGeneTrace
 	printf( "This trace only valid under the following conditions:\n" );
 	printf( "  NumGenes = %d (confirmed)\n", NumGenes );
 	printf( "  NumInputNeuronGroups = %d\n", NumInputNeuronGroups );
@@ -98,16 +120,21 @@ int main( int argc, char **argv )
 	printf( "  MaxLearningRate = %03.1f\n", MaxLearningRate );
 	printf( "  FirstLearningRateGene = %d\n", FirstLearningRateGene );
 	printf( "  LastLearningRateGene = %d\n", LastLearningRateGene );
-	
-	EELRGeneOffset = FirstLearningRateGene * 2;	// *2 to skip std. dev. values
-	EILRGeneOffset = EELRGeneOffset  +  MaxNeuronGroups * (MaxNeuronGroups - NumInputNeuronGroups) * 2;	// *2 to skip std. dev. values
-	IILRGeneOffset = EILRGeneOffset  +  MaxNeuronGroups * (MaxNeuronGroups - NumInputNeuronGroups) * 2;	// *2 to skip std. dev. values
-	IELRGeneOffset = IILRGeneOffset  +  MaxNeuronGroups * (MaxNeuronGroups - NumInputNeuronGroups) * 2;	// *2 to skip std. dev. values
-	nextGeneOffset = IELRGeneOffset  +  MaxNeuronGroups * (MaxNeuronGroups - NumInputNeuronGroups) * 2;	// *2 to skip std. dev. values
+	printf( "  MinConnectionDensity = %03.1f\n", MinConnectionDensity );
+	printf( "  MaxConnectionDensity = %03.1f\n", MaxConnectionDensity );
+	printf( "  FirstConnectionDensityGene = %d\n", FirstConnectionDensityGene );
+	printf( "  LastConnectionDensityGene = %d\n", LastConnectionDensityGene );
+#endif
+
+	EEGeneOffset = FirstGene * 2;	// *2 to skip std. dev. values
+	EIGeneOffset = EEGeneOffset  +  MaxNeuronGroups * (MaxNeuronGroups - NumInputNeuronGroups) * 2;	// *2 to skip std. dev. values
+	IIGeneOffset = EIGeneOffset  +  MaxNeuronGroups * (MaxNeuronGroups - NumInputNeuronGroups) * 2;	// *2 to skip std. dev. values
+	IEGeneOffset = IIGeneOffset  +  MaxNeuronGroups * (MaxNeuronGroups - NumInputNeuronGroups) * 2;	// *2 to skip std. dev. values
+	nextGeneOffset = IEGeneOffset  +  MaxNeuronGroups * (MaxNeuronGroups - NumInputNeuronGroups) * 2;	// *2 to skip std. dev. values
 	lastGeneOffset = nextGeneOffset - 2;
-	if( (lastGeneOffset/2) != LastLearningRateGene )
+	if( (lastGeneOffset/2) != LastGene )
 	{
-		fprintf( stderr, "failed sanity check, lastGeneOffset/2 (%d) != LastLearningRateGene (%d)\n", lastGeneOffset/2, LastLearningRateGene );
+		fprintf( stderr, "failed sanity check, lastGeneOffset/2 (%d) != LastGene (%d)\n", lastGeneOffset/2, LastGene );
 		exit( 1 );
 	}
 
@@ -134,7 +161,7 @@ int main( int argc, char **argv )
 		if( (step == 1) || (step % ReportFrequency == 0) )
 		{
 			char**	v;
-			int		numRates;
+			int		numValues;
 			double	geneValue;
 			
 			// Break up the input string into space-, tab-, or comma-separated values
@@ -150,39 +177,39 @@ int main( int argc, char **argv )
 			dbgPrintf( "at step %d, numNeuronGroups: input = %d, internal = %d, output = %d, total = %d, max = %d\n",
 						step, NumInputNeuronGroups, numInternalNeuronGroups, NumOutputNeuronGroups, numNeuronGroups, MaxNeuronGroups );
 			
-			meanRate = 0.0;
-			numRates = 0;
+			meanValue = 0.0;
+			numValues = 0;
 			for( i = NumInputNeuronGroups; i < numNeuronGroups; i++ )	// target group
 			{
 				for( j = 0; j < numNeuronGroups; j++ )	// source group
 				{
-					double	rate;
+					double	value;
 					int		groupPairIndex = ((i - NumInputNeuronGroups) * MaxNeuronGroups + j) * 2;	//*2 to skip std. dev. values
 					// e-e
-					geneValue = atof( val[EELRGeneOffset + groupPairIndex] );
-					rate = interp( geneValue * OneOver255, MinLearningRate, MaxLearningRate );
-					meanRate += rate;
-					numRates++;
+					geneValue = atof( val[EEGeneOffset + groupPairIndex] );
+					value = interp( geneValue * OneOver255, MinGeneValue, MaxGeneValue );
+					meanValue += value;
+					numValues++;
 					// e-i
-					geneValue = atof( val[EILRGeneOffset + groupPairIndex] );
-					rate = interp( geneValue * OneOver255, MinLearningRate, MaxLearningRate );
-					meanRate += rate;
-					numRates++;
+					geneValue = atof( val[EIGeneOffset + groupPairIndex] );
+					value = interp( geneValue * OneOver255, MinGeneValue, MaxGeneValue );
+					meanValue += value;
+					numValues++;
 					// i-i
-					geneValue = atof( val[IILRGeneOffset + groupPairIndex] );
-					rate = interp( geneValue * OneOver255, MinLearningRate, MaxLearningRate );
-					meanRate += rate;
-					numRates++;
+					geneValue = atof( val[IIGeneOffset + groupPairIndex] );
+					value = interp( geneValue * OneOver255, MinGeneValue, MaxGeneValue );
+					meanValue += value;
+					numValues++;
 					// i-e
-					geneValue = atof( val[IELRGeneOffset + groupPairIndex] );
-					rate = interp( geneValue * OneOver255, MinLearningRate, MaxLearningRate );
-					meanRate += rate;
-					numRates++;
+					geneValue = atof( val[IEGeneOffset + groupPairIndex] );
+					value = interp( geneValue * OneOver255, MinGeneValue, MaxGeneValue );
+					meanValue += value;
+					numValues++;
 				}
 			}
-			meanRate /= numRates;
+			meanValue /= numValues;
 
-			printf( "%g\n", meanRate );
+			printf( "%d\t%g\n", step, meanValue );
 		}
 		
 		free( s );
