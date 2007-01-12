@@ -202,7 +202,7 @@
 R      smiteMode_R=random|L=leastfit
 0.10   smiteFrac
 0.25   smiteAgeFrac_affectsAverageFitness
-200    NumDepletionSteps_150
+000    NumDepletionSteps_150
 
 
 1	recordBirthsDeaths
