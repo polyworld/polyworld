@@ -206,7 +206,7 @@ R      smiteMode_R=random|L=leastfit
 
 
 1	recordBirthsDeaths
-0       brainAnatomyRecordAll
+1       brainAnatomyRecordAll
 1       brainFunctionRecordAll
 1       brainAnatomyRecordSeeds
 1       brainFunctionRecordSeeds
