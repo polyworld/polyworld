@@ -103,7 +103,8 @@ grep "DEATH" "$directory/BirthsDeaths.log" | grep -v '^[#%]' > $TMPFILE
 echo "Determining the bins for the Recent/ directory..."
 # lastevent=$(echo "$data" | tail -n 1 | cut -f1 -d' ')
 lastevent=$(cat "$TMPFILE" | tail -n 1 | cut -f1 -d' ')
-last_binned_time_of_death=$(echo "" | awk -v time_of_death="$lastevent" -v interval="$interval" '{ if(time_of_death % interval == 0) { print int(time_of_death); } else { print ( (int(time_of_death / interval) + 1) * interval ); } }' )
+#last_binned_time_of_death=$(echo "" | awk -v time_of_death="$lastevent" -v interval="$interval" '{ if(time_of_death % interval == 0) { print int(time_of_death); } else { print ( (int(time_of_death / interval) + 1) * interval ); } }' )
+last_binned_time_of_death=$(echo "" | awk -v time_of_death="$lastevent" -v interval="$interval" '{ print ( int(time_of_death / interval) * interval ); }' )
 
 echo "- LastDeath = $lastevent; LastDeathBinned = $last_binned_time_of_death"
 currentstep="${interval}"
@@ -124,7 +125,8 @@ cat "$TMPFILE" | while read event
 do
 	critternum=$(echo "$event" | cut -d' ' -f3)	# get the critternum
 	time_of_death=$(echo "$event" | cut -d' ' -f1)	# get the actual timestep of death
-	binned_time_of_death=$(echo "" | awk -v time_of_death="$time_of_death" -v interval="$interval" '{ if(time_of_death % interval == 0) { print int(time_of_death); } else { print ( (int(time_of_death / interval) + 1) * interval ); } }' )
+#	binned_time_of_death=$(echo "" | awk -v time_of_death="$time_of_death" -v interval="$interval" '{ if(time_of_death % interval == 0) { print int(time_of_death); } else { print ( (int(time_of_death / interval) + 1) * interval ); } }' )
+	binned_time_of_death=$(echo "" | awk -v time_of_death="$time_of_death" -v interval="$interval" '{ print ( int(time_of_death / interval) * interval ); }' )
 
 #	echo "--- $event ---"
 #	echo "critternum = $critternum  ::: timestep of death = $time_of_death"
