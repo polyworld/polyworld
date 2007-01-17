@@ -1,6 +1,8 @@
 #!/bin/sh
+TMPFILE=",data"
 
 directory=$(echo "${1}" | sed -e 's/\/*$//')
+
 if [ ! -d "$directory" ]
 then
 	echo "You must specify a polyworld 'run/' directory to make the bestRecent bins with the entire population.";
@@ -8,6 +10,12 @@ then
 fi
 
 # remove any trailing slashes from the run directory
+
+if [ -z "$TMPFILE" ]
+then
+	echo "You must define a variable 'TMPFILE' within this script.  Exiting."
+	exit;
+fi
 
 if [ ! -f "$directory/BirthsDeaths.log" ]
 then
@@ -87,13 +95,14 @@ fi
 echo "Interval = $interval"
 
 # get all entries for 'DEATH'	TODO: If we ever start recording a 'SMITE' event as different from a 'DEATH' event, we should probably include SMITE too.
-data=$(grep "DEATH" "$directory/BirthsDeaths.log" | grep -v '^[#%]')
-
+# data=$(grep "DEATH" "$directory/BirthsDeaths.log" | grep -v '^[#%]')
+grep "DEATH" "$directory/BirthsDeaths.log" | grep -v '^[#%]' > $TMPFILE
 
 
 # For efficiency, we will create all of the destination directories first.
 echo "Determining the bins for the Recent/ directory..."
-lastevent=$(echo "$data" | tail -n 1 | cut -f1 -d' ')
+# lastevent=$(echo "$data" | tail -n 1 | cut -f1 -d' ')
+lastevent=$(cat "$TMPFILE" | tail -n 1 | cut -f1 -d' ')
 last_binned_time_of_death=$(echo "" | awk -v time_of_death="$lastevent" -v interval="$interval" '{ if(time_of_death % interval == 0) { print int(time_of_death); } else { print ( (int(time_of_death / interval) + 1) * interval ); } }' )
 
 echo "- LastDeath = $lastevent; LastDeathBinned = $last_binned_time_of_death"
@@ -110,7 +119,8 @@ do
 done; echo ""	# the 'echo ""' makes a newline.
 
 # Finished making our Recent/ bins.  Now put all of our critters into their Recent/ bins
-echo "$data" | while read event
+# echo "$data" | while read event
+cat "$TMPFILE" | while read event
 do
 	critternum=$(echo "$event" | cut -d' ' -f3)	# get the critternum
 	time_of_death=$(echo "$event" | cut -d' ' -f1)	# get the actual timestep of death
@@ -151,6 +161,9 @@ do
 	ln -s "$directory/brain/function/brainFunction_${critternum}.txt" "${directory}/brain/Recent/${binned_time_of_death}/brainFunction_${critternum}.txt"
 
 done
+
+rm "$TMPFILE"		# kill the TMPFILE.
+
 printf "\r                                              \rDone!\n"
 echo "Making the Seeds..."
 ./MakeSeedsRecent.sh "${directory}"
