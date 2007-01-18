@@ -1,5 +1,7 @@
 #!/bin/sh
 TMPFILE=",data"
+DELETE_DIRECTORIES_WITH_LESS_THAN_N_FILES="10"
+echo "Will delete bins with less than $DELETE_DIRECTORIES_WITH_LESS_THAN_N_FILES files."
 
 directory=$(echo "${1}" | sed -e 's/\/*$//')
 
@@ -95,16 +97,14 @@ fi
 echo "Interval = $interval"
 
 # get all entries for 'DEATH'	TODO: If we ever start recording a 'SMITE' event as different from a 'DEATH' event, we should probably include SMITE too.
-# data=$(grep "DEATH" "$directory/BirthsDeaths.log" | grep -v '^[#%]')
 grep "DEATH" "$directory/BirthsDeaths.log" | grep -v '^[#%]' > $TMPFILE
 
 
 # For efficiency, we will create all of the destination directories first.
 echo "Determining the bins for the Recent/ directory..."
-# lastevent=$(echo "$data" | tail -n 1 | cut -f1 -d' ')
 lastevent=$(cat "$TMPFILE" | tail -n 1 | cut -f1 -d' ')
-#last_binned_time_of_death=$(echo "" | awk -v time_of_death="$lastevent" -v interval="$interval" '{ if(time_of_death % interval == 0) { print int(time_of_death); } else { print ( (int(time_of_death / interval) + 1) * interval ); } }' )
-last_binned_time_of_death=$(echo "" | awk -v time_of_death="$lastevent" -v interval="$interval" '{ print ( int(time_of_death / interval) * interval ); }' )
+last_binned_time_of_death=$(echo "" | awk -v time_of_death="$lastevent" -v interval="$interval" '{ if(time_of_death % interval == 0) { print int(time_of_death); } else { print ( (int(time_of_death / interval) + 1) * interval ); } }' )
+# last_binned_time_of_death=$(echo "" | awk -v time_of_death="$lastevent" -v interval="$interval" '{ print ( int(time_of_death / interval) * interval ); }' )
 
 echo "- LastDeath = $lastevent; LastDeathBinned = $last_binned_time_of_death"
 currentstep="${interval}"
@@ -120,13 +120,12 @@ do
 done; echo ""	# the 'echo ""' makes a newline.
 
 # Finished making our Recent/ bins.  Now put all of our critters into their Recent/ bins
-# echo "$data" | while read event
 cat "$TMPFILE" | while read event
 do
 	critternum=$(echo "$event" | cut -d' ' -f3)	# get the critternum
 	time_of_death=$(echo "$event" | cut -d' ' -f1)	# get the actual timestep of death
-#	binned_time_of_death=$(echo "" | awk -v time_of_death="$time_of_death" -v interval="$interval" '{ if(time_of_death % interval == 0) { print int(time_of_death); } else { print ( (int(time_of_death / interval) + 1) * interval ); } }' )
-	binned_time_of_death=$(echo "" | awk -v time_of_death="$time_of_death" -v interval="$interval" '{ print ( int(time_of_death / interval) * interval ); }' )
+	binned_time_of_death=$(echo "" | awk -v time_of_death="$time_of_death" -v interval="$interval" '{ if(time_of_death % interval == 0) { print int(time_of_death); } else { print ( (int(time_of_death / interval) + 1) * interval ); } }' )
+#	binned_time_of_death=$(echo "" | awk -v time_of_death="$time_of_death" -v interval="$interval" '{ binned = (int(time_of_death / interval) * interval); if( binned != 0 ) { print binned } else { print interval }; }' )
 
 #	echo "--- $event ---"
 #	echo "critternum = $critternum  ::: timestep of death = $time_of_death"
@@ -165,8 +164,28 @@ do
 done
 
 rm "$TMPFILE"		# kill the TMPFILE.
-
 printf "\r                                              \rDone!\n"
+
+
+## Put critters into the bins.  Now, if we any bins with too few critters, delete the bins.
+currentstep="${interval}"
+echo "Checking for bins that have too few critters..." 
+while [ "${currentstep}" -le "${last_binned_time_of_death}" ]
+do
+	numcritters=$(ls -1 "$directory/brain/Recent/$currentstep" | wc -l )
+	
+	if [ "${numcritters}" -le "${DELETE_DIRECTORIES_WITH_LESS_THAN_N_FILES}" ]		# too few critters?
+	then
+		rm -rf "$directory/brain/Recent/$currentstep"
+		echo "- Deleted directory $currentstep for having only $numcritters critters.  You reqired at least ${DELETE_DIRECTORIES_WITH_LESS_THAN_N_FILES} critters."
+	fi
+	currentstep=$(echo "$currentstep + $interval" | bc)
+done;
+echo "Finished checking for bins that have too few critters."
+
+
+## Now to make the seed critters.
+
 echo "Making the Seeds..."
 ./MakeSeedsRecent.sh "${directory}"
 
