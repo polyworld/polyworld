@@ -7,6 +7,14 @@
 #define DesignerBrains 0
 #define DebugBrainGrow 0
 
+// IntegrateVision, if turned on, will cause the vision neurons to slowly
+// integrate what is rendered in front of them into their input neural activation.
+// They will do so at a rate defined by TauVision, adjusting color like this:
+//     new = TauVision * image  +  (1.0 - TauVision) * old
+// IntegrateVision is traditionally off, and TauVision will initially be 0.2.
+#define IntegrateVision 0
+#define TauVision 0.2
+
 // Self
 #include "brain.h"
 
@@ -2206,6 +2214,11 @@ void brain::Update(float energyfraction)
             }
         }
     }
+
+#if IntegrateVision
+	for( i = redneuron; i < redneuron + fNumRedNeurons + fNumGreenNeurons + fNumBlueNeurons; i++ )
+		neuronactivation[i] = TauVision * neuronactivation[i]  +  (1.0 - TauVision) * newneuronactivation[i];
+#endif
 
 #ifdef DEBUGCHECK
     debugcheck("brain::update after updating vision");
