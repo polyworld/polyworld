@@ -29,7 +29,7 @@ FL_fitness=$(echo "$firstline" | cut -d' ' -f3 | cut -d'=' -f2)
 FL_numneurons=$(echo "$firstline" | cut -d' ' -f4 | cut -d'=' -f2)
 
 # This is a little nuts.  But here's the idea.  1) cat file. 2) space->newline. 3) strip lines not beginning with +/-. 4) remove zeros. 5) get count. 6) strip whitespace from result.
-numedges=$(cat brainAnatomy_11077_death.txt | tr ' ' '\n' | grep '^[\+\-]' | grep -v '^[\+\-]0.0000[0]*$' | wc -l | sed -e 's/[^0-9]//g')
+numedges=$(cat ${BAfile} | tr ' ' '\n' | grep '^[\+\-]' | grep -v '^[\+\-]0.0000[0]*$' | wc -l | sed -e 's/[^0-9]//g')
 
 if [ "$numedges" -le 0 ]
 then
