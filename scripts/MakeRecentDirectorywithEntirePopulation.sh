@@ -1,5 +1,11 @@
 #!/bin/sh
-TMPFILE=",data"
+TMPFILE=data_`date +%y%m%d_%H%M%S`
+if [ -e $TMPFILE ]
+then
+	echo "TMPFILE already exists, exiting"
+	exit
+fi
+
 DELETE_DIRECTORIES_WITH_LESS_THAN_N_FILES="10"
 echo "Will delete bins with less than $DELETE_DIRECTORIES_WITH_LESS_THAN_N_FILES files."
 
