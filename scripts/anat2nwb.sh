@@ -38,10 +38,10 @@ then
 fi
 
 echo "// firstline = $firstline" > $NWBfile
-echo "// id = $FL_critterid" >> $NWBfile
-echo "// fitness = $FL_fitness" >> $NWBfile
-echo "// numneu = $FL_numneurons" >> $NWBfile
-echo "// numedges = $numedges" >> $NWBfile
+# echo "// id = $FL_critterid" >> $NWBfile
+# echo "// fitness = $FL_fitness" >> $NWBfile
+# echo "// numneu = $FL_numneurons" >> $NWBfile
+# echo "// numedges = $numedges" >> $NWBfile
 
 echo "*Nodes $FL_numneurons" >> $NWBfile
 echo "*DirectedEdges $numedges" >> $NWBfile
