@@ -35,6 +35,11 @@
 	#define IgnoreCrittersThatLivedLessThan_N_Timesteps 0
 	#define MaxNumTimeStepsToComputeComplexityOver 500		// set this to a positive value to only compute Complexity over the final N timestesps of an agent's life.
 #endif
+/*
+   If both CalcComplexity's ignore_timesteps_after AND MaxNumTimeStepsToComputeComplexityOver are defined, it will:
+	First, reduce the matrix to only the first ignore_timesteps_after timesteps.
+	Second, read only the first MaxNumTimeStepsToComputeComplexityOver timesteps
+*/
 
 using namespace std;
 
@@ -55,7 +60,7 @@ bool is_matrix_square( gsl_matrix * );
 vector<string> get_list_of_brainfunction_logfiles( string );
 vector<string> get_list_of_brainanatomy_logfiles( string );
 gsl_matrix * readin_brainfunction( const char* , int& );
-gsl_matrix * readin_brainfunction__optimized( const char* , int& );
+gsl_matrix * readin_brainfunction__optimized( const char* , int&, int );
 gsl_matrix * readin_brainanatomy( const char* );
 gsl_matrix * mCOV( gsl_matrix * );
 
@@ -63,7 +68,7 @@ gsl_matrix * gsamp( gsl_matrix_view x );
 int qsort_compare_double( const void *a, const void *b);
 int qsort_compare_rows0( const void *a, const void *b );
 int qsort_compare_rows1( const void *a, const void *b );
-double CalcComplexity( char * , char );
+double CalcComplexity( char * , char, int );
 
 int qsort_compare_double( const void *a, const void *b )
 {
@@ -207,13 +212,13 @@ gsl_matrix * gsamp( gsl_matrix_view x )
 	return y;
 }
 
-double CalcComplexity( char * fnameAct, char part )
+double CalcComplexity( char * fnameAct, char part, int ignore_timesteps_after )
 {
 
 	part = toupper( part );			// capitalize it
 	int numinputneurons = 0;		// this value will be defined by readin_brainfunction()
 
-	gsl_matrix * activity = readin_brainfunction__optimized( fnameAct, numinputneurons );
+	gsl_matrix * activity = readin_brainfunction__optimized( fnameAct, numinputneurons, ignore_timesteps_after );
 
     // if had an invalid brain file, return 0.
     if( activity == NULL ) { return 0.0; }
@@ -627,9 +632,11 @@ gsl_matrix * readin_brainanatomy( const char* fname )
 }
 
 
-gsl_matrix * readin_brainfunction__optimized( const char* fname, int& numinputneurons )
+gsl_matrix * readin_brainfunction__optimized( const char* fname, int& numinputneurons, int ignore_timesteps_after )
 {
-/* This function largely replicates the function of the MATLAB file readin_brainfunction.m (Calculates, but does not return filnum, fitness) */
+/* This function largely replicates the function of the MATLAB file readin_brainfunction.m (Calculates, but does not return filnum, fitness).  This function has also been extended to take a parameter that calculates complexity only over the first 'ignore_timesteps_after' of an agent's lifetime.
+*/
+	assert( ignore_timesteps_after >= 0 );		// just to be safe.
 
 /* MATLAB CODE:
         % strip fnames of spaces at the end
@@ -700,53 +707,73 @@ gsl_matrix * readin_brainfunction__optimized( const char* fname, int& numinputne
 	{
 		FileContents.pop_back();                        // get rid of the last line (in complete files, it's useless).
 	}
+	
 
 	int numrows = int(round( FileContents.size() / numcols ));
 	if( numcols == numinputneurons ) { numinputneurons = 0; }	// make sure there was a numinputneurons
-
 
 	if( (float(numrows) - (FileContents.size() / numcols)) != 0.0 )
 	{
 		cerr << "Warning: #lines (" << FileContents.size() << ") in brainFunction file '" << fname << "' is not an even multiple of #neurons (" << numcols << ").  brainFunction file may be corrupt." << endl;
 	}
 
+//	cout << "numrows= " << numrows << "       numcols=" << numcols << endl;
+
+	if( ignore_timesteps_after > 0 ) 	// if we are only looking at the first N timestep's of an agent's life...
+	{
+		numrows = min( numrows, ignore_timesteps_after ); //
+		ignore_timesteps_after = min( numrows, ignore_timesteps_after ); //If ignore_timesteps is too big, make it small.
+	}
+
+	cout << "numrows= " << numrows << "       numcols=" << numcols << endl;
 
 	gsl_matrix * activity = NULL;
 
 	// Make sure the matrix isn't invalid.  If it is, return NULL.
-	if( numcols <= 0 )
+	if( numcols <= 0 || numrows <= 0)
 	{
 //		cerr << "brainFunction file '" << fname << "' is corrupt.  Number of columns is zero." << endl;
 		activity = NULL;
 		return activity;
 	}
-	if( numrows <= 0 )
-	{
-//		cerr << "brainFunction file '" << fname << "' is corrupt.  Number of rows is zero." << endl;
-		activity = NULL;
-		return activity;
-	}
-
 
 	assert( numcols > 0 && numrows > 0 );		// double checking that we're not going to allocate an impossible matrix.
-
 	activity = gsl_matrix_alloc(numrows, numcols);
 
 	int tcnt=0;
 
 	list<string>::iterator FileContents_it;
-	for( FileContents_it = FileContents.begin(); FileContents_it != FileContents.end(); FileContents_it++)
+
+	// For efficiency, we have a DIFFERENT FOR LOOP depending on whether ignore_timesteps_after is set.
+	if( ignore_timesteps_after == 0 )	// read in the entire agent's lifetime
 	{
-		int thespace = (*FileContents_it).find(" ",0);
-		int    tstep1 = atoi( ((*FileContents_it).substr( 0, thespace)).c_str() );
-		double  tstep2 = atof( ((*FileContents_it).substr( thespace, (*FileContents_it).length())).c_str() );
-
-		gsl_matrix_set( activity, int(tcnt/numcols), tstep1, tstep2);
-//		cout << "set (" << int(tcnt/numcols) << "," << tstep1 << ") to " << tstep2 << " Matrix Size: " << numrows << "x" << numcols << "||| thespace = " << thespace << endl;
-		tcnt++;
+		for( FileContents_it = FileContents.begin(); FileContents_it != FileContents.end(); FileContents_it++)
+		{
+			int thespace = (*FileContents_it).find(" ",0);
+			int    tstep1 = atoi( ((*FileContents_it).substr( 0, thespace)).c_str() );
+			double  tstep2 = atof( ((*FileContents_it).substr( thespace, (*FileContents_it).length())).c_str() );
+	
+			gsl_matrix_set( activity, int(tcnt/numcols), tstep1, tstep2);
+//			cout << "set (" << int(tcnt/numcols) << "," << tstep1 << ") to " << tstep2 << " Matrix Size: " << numrows << "x" << numcols << "||| thespace = " << thespace << endl;
+			tcnt++;
+		}
 	}
+	else	// read in the agent's lifetime only up until ignore_timesteps_after
+	{
+		for( FileContents_it = FileContents.begin(); int(tcnt/numcols) < ignore_timesteps_after; FileContents_it++)
+		{
+			int thespace = (*FileContents_it).find(" ",0);
+			int    tstep1 = atoi( ((*FileContents_it).substr( 0, thespace)).c_str() );
+			double  tstep2 = atof( ((*FileContents_it).substr( thespace, (*FileContents_it).length())).c_str() );
+	
+			gsl_matrix_set( activity, int(tcnt/numcols), tstep1, tstep2);
+//			cout << "set (" << int(tcnt/numcols) << "," << tstep1 << ") to " << tstep2 << " Matrix Size: " << numrows << "x" << numcols << "||| thespace = " << thespace << endl;
+			tcnt++;
+		}
 
 
+
+	}
 /* MATLAB CODE:
         fitness = str2num(nextl(15:end));
         eval(['save M',fname,'.mat']);
