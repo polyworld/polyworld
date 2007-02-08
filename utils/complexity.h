@@ -694,15 +694,18 @@ gsl_matrix * readin_brainfunction__optimized( const char* fname, int& numinputne
 
 	fclose( FunctionFile );                         // Don't need this anymore.
 
-	FileContents.pop_back();                        // get rid of the last line (it's useless).
-
-
 	int numcols = atoi(numneu.c_str());
+
+	if( FileContents.size() % numcols )		// This will be true anytime we are dealing with a complete brainfunction file.  It will FAIL to be true if we processing an incomplete brainfunction file.
+	{
+		FileContents.pop_back();                        // get rid of the last line (in complete files, it's useless).
+	}
+
 	int numrows = int(round( FileContents.size() / numcols ));
 	if( numcols == numinputneurons ) { numinputneurons = 0; }	// make sure there was a numinputneurons
 
 
-	if( float(numrows) - (FileContents.size() / numcols) != 0.0 )
+	if( (float(numrows) - (FileContents.size() / numcols)) != 0.0 )
 	{
 		cerr << "Warning: #lines (" << FileContents.size() << ") in brainFunction file '" << fname << "' is not an even multiple of #neurons (" << numcols << ").  brainFunction file may be corrupt." << endl;
 	}
