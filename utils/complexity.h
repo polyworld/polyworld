@@ -717,15 +717,11 @@ gsl_matrix * readin_brainfunction__optimized( const char* fname, int& numinputne
 		cerr << "Warning: #lines (" << FileContents.size() << ") in brainFunction file '" << fname << "' is not an even multiple of #neurons (" << numcols << ").  brainFunction file may be corrupt." << endl;
 	}
 
-//	cout << "numrows= " << numrows << "       numcols=" << numcols << endl;
-
 	if( ignore_timesteps_after > 0 ) 	// if we are only looking at the first N timestep's of an agent's life...
 	{
 		numrows = min( numrows, ignore_timesteps_after ); //
 		ignore_timesteps_after = min( numrows, ignore_timesteps_after ); //If ignore_timesteps is too big, make it small.
 	}
-
-	cout << "numrows= " << numrows << "       numcols=" << numcols << endl;
 
 	gsl_matrix * activity = NULL;
 
