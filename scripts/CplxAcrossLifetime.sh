@@ -3,7 +3,7 @@
 BEGIN_AT_TIMESTEP=100
 SAMPLE_EVERY=25
 
-CALC_COMPLEXITY="/polyworld/utils/CalcComplexity"
+CALC_COMPLEXITY="$pol/utils/CalcComplexity"
 GNUPLOT="/sw/bin/gnuplot"
 
 BF_FILE="$1"
