@@ -709,7 +709,7 @@ void TSimulation::Step()
 			
 				if( fFittest[i]->Complexity == 0.0 )		// if Complexity is zero -- means we have to Calculate it
 				{
-					fFittest[i]->Complexity = CalcComplexity( t, 'P' );		// Complexity of Processing Units Only
+					fFittest[i]->Complexity = CalcComplexity( t, 'P', 0 );		// Complexity of Processing Units Only, all time steps
 					cout << "[COMPLEXITY] Critter: " << fFittest[i]->critterID << "\t Processing Complexity: " << fFittest[i]->Complexity << endl;
 				}
 			}
@@ -781,7 +781,7 @@ void TSimulation::Step()
 						{
 //							char AnatFilename[256];
 //							sprintf( AnatFilename, "run/brain/anatomy/brainAnatomy_%ld_death.txt", fFittest[i]->critterID );
-							fRecentFittest[i]->Complexity = CalcComplexity( t, 'P' );		// Complexity of Processing Units Only
+							fRecentFittest[i]->Complexity = CalcComplexity( t, 'P', 0 );		// Complexity of Processing Units Only, all time steps
 							cout << "[COMPLEXITY] Critter: " << fRecentFittest[i]->critterID << "\t Processing Complexity: " << fRecentFittest[i]->Complexity << endl;
 						}
 					}
@@ -1431,13 +1431,13 @@ void TSimulation::Init()
 		fprintf( fGeneStatsFile, "%ld\n", genome::gNumBytes );
 	}
 
-#define PrintGeneIndexesFlag 0
+#define PrintGeneIndexesFlag 1
 #if PrintGeneIndexesFlag
 	{
 		FILE* f = fopen( "run/geneindex.txt", "w" );
 		Q_CHECK_PTR( f );
 		
-		genome::PrintGeneIndexes( f );	// like call to genome::genomeinit()
+		genome::PrintGeneIndexes( f );
 		
 		fclose( f );
 	}
@@ -3540,7 +3540,7 @@ void TSimulation::Death(critter* c)
 		#if UseMaxSpeedAsFitness
 			c->SetFitness( 0.01 / (c->MaxSpeed() + 0.01) );
 		#else
-			c->SetFitness( CalcComplexity(t, 'P') );
+			c->SetFitness( CalcComplexity(t, 'P', 0) );
 		#endif
 		}
 	}
