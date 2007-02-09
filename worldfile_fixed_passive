@@ -13,7 +13,7 @@
 60     minnumcritters
 300    maxnumcritters
 90     initnumcritters
-90     numberToSeed
+0     numberToSeed
 0.0    probabilityOfMutatingSeed
 -1     misccritters
 
