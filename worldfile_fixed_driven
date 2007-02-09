@@ -130,7 +130,7 @@
 60	domain[0].minCritters
 300	domain[0].maxCritters
 90	domain[0].initCritters
-90	domain[0].numberToSeed
+0	domain[0].numberToSeed
 0.0	domain[0].probabilityOfMutatingSeeds
 0.5	domain[0].centerX	
 0.5	domain[0].centerZ	
