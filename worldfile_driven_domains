@@ -1,4 +1,4 @@
-23      version
+24      version
 
 20001  maxSteps
 1      docpuwork
@@ -295,6 +295,7 @@ R      smiteMode_R=random|L=leastfit
 0.10   smiteFrac
 0.25   smiteAgeFrac_affectsAverageFitness
 150    NumDepletionSteps
+1      applyLowPopulationAdvantage
 
 
 1	recordBirthsDeaths
