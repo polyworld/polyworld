@@ -76,6 +76,7 @@ int			critter::gNumDepletionSteps;
 
 double		critter::gMaxPopulationPenaltyFraction = 0;
 double		critter::gPopulationPenaltyFraction = 0.0;
+double		critter::gLowPopulationAdvantageFactor = 1.0;
 
 
 critter* critter::currentCritter;	// during brain updates
@@ -477,6 +478,7 @@ float critter::eat(food* f, float eatFitnessParameter, float eat2consume, float 
 //---------------------------------------------------------------------------    
 void critter::damage(float e)
 {
+	e *= gLowPopulationAdvantageFactor;
 	fEnergy -= (e<fEnergy) ? e : fEnergy;
 }
 
@@ -760,6 +762,7 @@ float critter::Update(float moveFitnessParam, float speed2dpos)
 	populationEnergyPenalty = gPopulationPenaltyFraction * fMaxEnergy;
 #endif
 	denergy += populationEnergyPenalty;
+	denergy *= gLowPopulationAdvantageFactor;	// if population is getting too low, reduce energy consumption
 //	printf( "%g = %g\n", populationEnergyPenalty, denergy );
     fEnergy -= denergy;
     fFoodEnergy -= denergy;

@@ -70,6 +70,7 @@ public:
 	static int		gNumDepletionSteps;
 	static double	gMaxPopulationPenaltyFraction;
 	static double	gPopulationPenaltyFraction;
+	static double	gLowPopulationAdvantageFactor;
 
     critter(TSimulation* simulation, gstage* stage);
     ~critter();

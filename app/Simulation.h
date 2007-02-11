@@ -336,6 +336,8 @@ public:
 	bool fBrainAnatomyRecordSeeds;
 	bool fBrainFunctionRecordSeeds;
 	
+	bool fApplyLowPopulationAdvantage;
+	
 	bool fRecordComplexity;				// record the Olaf Functional Complexity (neural)
 
 	bool fRecordAdamiComplexity;		// record the Adami Physical Complexity  (genetic)

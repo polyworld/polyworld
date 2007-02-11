@@ -17,7 +17,7 @@
 //  Reads in a file 'LOCKSTEP-BirthsDeaths.log' and makes all births and deaths in sync with it.  All births and deaths involve random critters.
 #define LockStepWithBirthsDeathsLog 0
 
-#define CurrentWorldfileVersion 23
+#define CurrentWorldfileVersion 24
 
 // CompatibilityMode makes the new code with a single x-sorted list behave *almost* identically to the old code.
 // Discrepancies still arise due to the old food list never being re-sorted and critters at the exact same x location
@@ -180,6 +180,7 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
 		fBrainFunctionRecordAll(false),
 		fBrainAnatomyRecordSeeds(false),
 		fBrainFunctionRecordSeeds(false),
+		fApplyLowPopulationAdvantage(false),
 
 		fRecordComplexity(false),
 
@@ -481,7 +482,7 @@ void TSimulation::Step()
 		fCritterPOVWindow->qglClearColor( Qt::black );
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
-		// Calculate the population-penalty on energy drain, to keep the population in check
+		// Calculate the population-penalty low-population-advantage on energy drain, to keep the population in check
 		if( fMaxCritters > fInitNumCritters )
 		{
 			critter::gPopulationPenaltyFraction = critter::gMaxPopulationPenaltyFraction *
@@ -491,12 +492,25 @@ void TSimulation::Step()
 				critter::gPopulationPenaltyFraction = 0.0;
 			if( critter::gPopulationPenaltyFraction > critter::gMaxPopulationPenaltyFraction )
 				critter::gPopulationPenaltyFraction = critter::gMaxPopulationPenaltyFraction;
+			critter::gLowPopulationAdvantageFactor = 1.0;
 		}
 		else
+		{
 			critter::gPopulationPenaltyFraction = 0.0;
-//		printf( "step=%4ld, pop=%3d, initPop=%3ld, maxPopPenaltyFraction=%g, popPenaltyFraction=%g\n",
-//				fStep, objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE), fInitNumCritters,
-//				critter::gMaxPopulationPenaltyFraction, critter::gPopulationPenaltyFraction );
+			if( fApplyLowPopulationAdvantage )
+			{
+				critter::gLowPopulationAdvantageFactor = 1.0 -
+													  (float) (fInitNumCritters - objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE)) /
+													  (float) (fInitNumCritters - fMinNumCritters);
+				if( critter::gLowPopulationAdvantageFactor < 0.0 )
+					critter::gLowPopulationAdvantageFactor = 0.0;
+				if( critter::gLowPopulationAdvantageFactor > 1.0 )
+					critter::gLowPopulationAdvantageFactor = 1.0;
+			}
+		}
+//		printf( "step=%4ld, pop=%3d, initPop=%3ld, minPop=%2ld maxPopPenaltyFraction=%g, popPenaltyFraction=%g, lowPopAdvantageFactor=%g\n",
+//				fStep, objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE), fInitNumCritters, fMinNumCritters,
+//				critter::gMaxPopulationPenaltyFraction, critter::gPopulationPenaltyFraction, critter::gLowPopulationAdvantageFactor );
 		
 		critter* c;
 		objectxsortedlist::gXSortedObjects.reset();
@@ -4607,6 +4621,17 @@ void TSimulation::ReadWorldFile(const char* filename)
 	{
 		cout << "+NumDepletionSteps" ses critter::gNumDepletionSteps nl;
 		cout << ".MaxPopulationPenaltyFraction" ses critter::gMaxPopulationPenaltyFraction nl;
+	}
+	
+	if( version >= 24 )
+	{
+		in >> fApplyLowPopulationAdvantage; in >> label;
+		cout << "ApplyLowPopulationAdvantage" ses fApplyLowPopulationAdvantage nl;
+	}
+	else
+	{
+		fApplyLowPopulationAdvantage = false;
+		cout << "+ApplyLowPopulationAdvantage" ses fApplyLowPopulationAdvantage nl;
 	}
 
 	if( version < 8 )
