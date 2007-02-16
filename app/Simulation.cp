@@ -486,7 +486,7 @@ void TSimulation::Step()
 		// Assume global settings apply, until we know better
 		long numCritters = objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE);
 		long initNumCritters = fInitNumCritters;
-		long minNumCritters = fMinNumCritters;
+		long minNumCritters = fMinNumCritters  +  lround( 0.1 * (fInitNumCritters - fMinNumCritters) );	// 10% buffer, to help prevent reaching actual min value and invoking GA
 		long maxNumCritters = fMaxCritters;
 		long excess = objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE) - fInitNumCritters;	// global excess
 
@@ -500,7 +500,7 @@ void TSimulation::Step()
 				{
 					numCritters = fDomains[id].numCritters;
 					initNumCritters = fDomains[id].initNumCritters;
-					minNumCritters = fDomains[id].minNumCritters;
+					minNumCritters = fDomains[id].minNumCritters  +  lround( 0.1 * (fDomains[id].initNumCritters - fDomains[id].minNumCritters) );	// 10% buffer, to help prevent reaching actual min value and invoking GA
 					maxNumCritters = fDomains[id].maxNumCritters;
 					excess = domainExcess;
 				}
@@ -2265,20 +2265,26 @@ void TSimulation::Interact()
 	
 	#if ! LockStepWithBirthsDeathsLog
 		// If we're not running in LockStep mode, allow natural deaths
-        if ( (c->Energy() <= 0.0)		||
-			 (c->Age() >= c->MaxAge())  ||
-             ((!globals::edges) && ((c->x() < 0.0) || (c->x() >  globals::worldsize) ||
-									(c->z() > 0.0) || (c->z() < -globals::worldsize))) )
-        {
-            if (c->Age() >= c->MaxAge())
-                fNumberDiedAge++;
-            else if (c->Energy() <= 0.0)
-                fNumberDiedEnergy++;
-            else
-                fNumberDiedEdge++;
-			Death(c);
-            continue; // nothing else to do for this poor schmo
-        }
+		// If we're not using the LowPopulationAdvantage to prevent the population getting to low,
+		// or there are enough agents that we can still afford to lose one (globally & in critter's domain)...
+		if( !fApplyLowPopulationAdvantage ||
+			((objectxsortedlist::gXSortedObjects.getCount( CRITTERTYPE ) > fMinNumCritters) && (fDomains[c->Domain()].numCritters > fDomains[c->Domain()].minNumCritters)) )
+		{
+			if ( (c->Energy() <= 0.0)		||
+				 (c->Age() >= c->MaxAge())  ||
+				 ((!globals::edges) && ((c->x() < 0.0) || (c->x() >  globals::worldsize) ||
+										(c->z() > 0.0) || (c->z() < -globals::worldsize))) )
+			{
+				if (c->Age() >= c->MaxAge())
+					fNumberDiedAge++;
+				else if (c->Energy() <= 0.0)
+					fNumberDiedEnergy++;
+				else
+					fNumberDiedEdge++;
+				Death(c);
+				continue; // nothing else to do for this poor schmo
+			}
+		}
 	#endif
 
 	#ifdef OF1
