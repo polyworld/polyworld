@@ -490,28 +490,13 @@ void TSimulation::Step()
 		long maxNumCritters = fMaxCritters;
 		long excess = objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE) - fInitNumCritters;	// global excess
 
-		if( fApplyLowPopulationAdvantage )
+		// Use the lowest excess value to produce the most help or the least penalty
+		if( fNumDomains > 1 )
 		{
 			for( int id = 0; id < fNumDomains; id++ )
 			{
 				long domainExcess = fDomains[id].numCritters - fDomains[id].initNumCritters;
 				if( domainExcess < excess )	// This is the domain that is in the worst shape
-				{
-					numCritters = fDomains[id].numCritters;
-					initNumCritters = fDomains[id].initNumCritters;
-					minNumCritters = fDomains[id].minNumCritters;
-					maxNumCritters = fDomains[id].maxNumCritters;
-					excess = domainExcess;
-				}
-			}
-		}
-		
-		if( excess > 0 )
-		{
-			for( int id = 0; id < fNumDomains; id++ )
-			{
-				long domainExcess = fDomains[id].numCritters - fDomains[id].initNumCritters;
-				if( domainExcess > excess )	// This is the domain that has the most number of excess critters
 				{
 					numCritters = fDomains[id].numCritters;
 					initNumCritters = fDomains[id].initNumCritters;
