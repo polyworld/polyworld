@@ -291,10 +291,10 @@
 
 0      graycoding
 
-R      smiteMode_R=random|L=leastfit
+O      smiteMode_R=random|L=leastfit|O=off
 0.10   smiteFrac
 0.25   smiteAgeFrac_affectsAverageFitness
-150    NumDepletionSteps
+100    NumDepletionSteps_150
 1      applyLowPopulationAdvantage
 
 
