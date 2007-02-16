@@ -81,11 +81,11 @@ class Domain
     int maxFoodGrownCount;
 	FoodPatch* fFoodPatches;
 	BrickPatch* fBrickPatches;
-    long minnumcritters;
-    long maxnumcritters;
-    long initnumcritters;
+    long minNumCritters;
+    long maxNumCritters;
+    long initNumCritters;
 	long numberToSeed;
-    long numcritters;
+    long numCritters;
     long numcreated;
     long numborn;
     long numbornsincecreated;

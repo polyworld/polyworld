@@ -482,34 +482,75 @@ void TSimulation::Step()
 		fCritterPOVWindow->qglClearColor( Qt::black );
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
-		// Calculate the population-penalty low-population-advantage on energy drain, to keep the population in check
-		if( fMaxCritters > fInitNumCritters )
+		// These are the critter counts to be used in applying either the LowPopulationAdvantage or the (high) PopulationPenalty
+		// Assume global settings apply, until we know better
+		long numCritters = objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE);
+		long initNumCritters = fInitNumCritters;
+		long minNumCritters = fMinNumCritters;
+		long maxNumCritters = fMaxCritters;
+		long excess = objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE) - fInitNumCritters;	// global excess
+
+		if( fApplyLowPopulationAdvantage )
 		{
-			critter::gPopulationPenaltyFraction = critter::gMaxPopulationPenaltyFraction *
-												  (float) (objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE) - fInitNumCritters) /
-												  (float) (                    fMaxCritters                         - fInitNumCritters);
-			if( critter::gPopulationPenaltyFraction < 0.0 )
-				critter::gPopulationPenaltyFraction = 0.0;
-			if( critter::gPopulationPenaltyFraction > critter::gMaxPopulationPenaltyFraction )
-				critter::gPopulationPenaltyFraction = critter::gMaxPopulationPenaltyFraction;
-			critter::gLowPopulationAdvantageFactor = 1.0;
+			for( int id = 0; id < fNumDomains; id++ )
+			{
+				long domainExcess = fDomains[id].numCritters - fDomains[id].initNumCritters;
+				if( domainExcess < excess )	// This is the domain that is in the worst shape
+				{
+					numCritters = fDomains[id].numCritters;
+					initNumCritters = fDomains[id].initNumCritters;
+					minNumCritters = fDomains[id].minNumCritters;
+					maxNumCritters = fDomains[id].maxNumCritters;
+					excess = domainExcess;
+				}
+			}
 		}
-		else
+		
+		if( excess > 0 )
 		{
-			critter::gPopulationPenaltyFraction = 0.0;
+			for( int id = 0; id < fNumDomains; id++ )
+			{
+				long domainExcess = fDomains[id].numCritters - fDomains[id].initNumCritters;
+				if( domainExcess > excess )	// This is the domain that has the most number of excess critters
+				{
+					numCritters = fDomains[id].numCritters;
+					initNumCritters = fDomains[id].initNumCritters;
+					minNumCritters = fDomains[id].minNumCritters;
+					maxNumCritters = fDomains[id].maxNumCritters;
+					excess = domainExcess;
+				}
+			}
+		}
+		
+		// If the population is too low, globally or in any domain, then either help it or leave it alone
+		if( excess < 0 )
+		{
+			critter::gPopulationPenaltyFraction = 0.0;	// we're not applying the high population penalty
+
+			// If we want to help it, apply the low population advantage
 			if( fApplyLowPopulationAdvantage )
 			{
-				critter::gLowPopulationAdvantageFactor = 1.0 -
-													  (float) (fInitNumCritters - objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE)) /
-													  (float) (fInitNumCritters - fMinNumCritters);
+				critter::gLowPopulationAdvantageFactor = 1.0 - (float) (initNumCritters - numCritters) / (initNumCritters - minNumCritters);
 				if( critter::gLowPopulationAdvantageFactor < 0.0 )
 					critter::gLowPopulationAdvantageFactor = 0.0;
 				if( critter::gLowPopulationAdvantageFactor > 1.0 )
 					critter::gLowPopulationAdvantageFactor = 1.0;
 			}
 		}
-//		printf( "step=%4ld, pop=%3d, initPop=%3ld, minPop=%2ld maxPopPenaltyFraction=%g, popPenaltyFraction=%g, lowPopAdvantageFactor=%g\n",
-//				fStep, objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE), fInitNumCritters, fMinNumCritters,
+		else	// population is greater than initial level everywhere
+		{
+			critter::gLowPopulationAdvantageFactor = 1.0;	// we're not applying the low population advantage
+
+			// apply the high population penalty (if the max-penalty is non-zero)
+			critter::gPopulationPenaltyFraction = critter::gMaxPopulationPenaltyFraction * (numCritters - initNumCritters) / (maxNumCritters - initNumCritters);
+			if( critter::gPopulationPenaltyFraction < 0.0 )
+				critter::gPopulationPenaltyFraction = 0.0;
+			if( critter::gPopulationPenaltyFraction > critter::gMaxPopulationPenaltyFraction )
+				critter::gPopulationPenaltyFraction = critter::gMaxPopulationPenaltyFraction;
+		}
+		
+//		printf( "step=%4ld, pop=%3d, initPop=%3ld, minPop=%2ld, maxPop=%3ld, maxPopPenaltyFraction=%g, popPenaltyFraction=%g, lowPopAdvantageFactor=%g\n",
+//				fStep, numCritters, initNumCritters, minNumCritters, maxNumCritters,
 //				critter::gMaxPopulationPenaltyFraction, critter::gPopulationPenaltyFraction, critter::gLowPopulationAdvantageFactor );
 		
 		critter* c;
@@ -630,7 +671,7 @@ void TSimulation::Step()
 			if (fNumDomains > 1)
 			{
 				for (int id = 0; id < fNumDomains; id++)
-					fPopulationWindow->AddPoint((id + 1), float(fDomains[id].numcritters));
+					fPopulationWindow->AddPoint((id + 1), float(fDomains[id].numCritters));
 			}
 		}
 
@@ -1276,7 +1317,7 @@ void TSimulation::Init()
         for( int id = 0; id < fNumDomains; id++ )
         {
 			fDomains[id].fNumLeastFit = 0;
-			fDomains[id].fMaxNumLeastFit = lround( fSmiteFrac * fDomains[id].maxnumcritters );
+			fDomains[id].fMaxNumLeastFit = lround( fSmiteFrac * fDomains[id].maxNumCritters );
 			
 			smPrint( "for domain %d fMaxNumLeastFit = %d\n", id, fDomains[id].fMaxNumLeastFit );
 			
@@ -1485,7 +1526,7 @@ void TSimulation::Init()
 		{
 			numSeededDomain = 0;	// reset for each domain
 
-			int limit = min((fMaxCritters - (long)objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE)), fDomains[id].initnumcritters);
+			int limit = min((fMaxCritters - (long)objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE)), fDomains[id].initNumCritters);
 			for (int i = 0; i < limit; i++)
 			{
 				c = critter::getfreecritter(this, &fStage);
@@ -1517,7 +1558,7 @@ void TSimulation::Init()
 			#if TestWorld
 				// evenly distribute the critters
 				x = fDomains[id].xleft  +  0.666 * fDomains[id].xsize;
-				z = - globals::worldsize * ((float) (i+1) / (fDomains[id].initnumcritters + 1));
+				z = - globals::worldsize * ((float) (i+1) / (fDomains[id].initNumCritters + 1));
 			#endif
 				c->settranslation(x, y, z);
 				
@@ -1531,7 +1572,7 @@ void TSimulation::Init()
 				objectxsortedlist::gXSortedObjects.add(c);	// stores c->listLink
 
 				c->Domain(id);
-				fDomains[id].numcritters++;
+				fDomains[id].numCritters++;
 				fNeuronGroupCountStats.add( c->Brain()->NumNeuronGroups() );
 
 			#if RecordRandomBrainAnatomies
@@ -1579,7 +1620,7 @@ void TSimulation::Init()
 			
 			id = WhichDomain(x, z, 0);
 			c->Domain(id);
-			fDomains[id].numcritters++;
+			fDomains[id].numCritters++;
 			fNeuronGroupCountStats.add( c->Brain()->NumNeuronGroups() );
 		}
 			
@@ -2308,7 +2349,7 @@ void TSimulation::Interact()
 //		printf( "%ld id=%ld, domain=%d, maxLeast=%d, numLeast=%d, numCrit=%d, maxCrit-
 		if( (fNumDomains > 0) && (fDomains[id].fMaxNumLeastFit > 0) )
 		{
-			if( ((fDomains[id].numcritters > (fDomains[id].maxnumcritters - fDomains[id].fMaxNumLeastFit))) &&	// if there are getting to be too many critters, and
+			if( ((fDomains[id].numCritters > (fDomains[id].maxNumCritters - fDomains[id].fMaxNumLeastFit))) &&	// if there are getting to be too many critters, and
 				(c->Age() >= (fSmiteAgeFrac * c->MaxAge())) &&													// the current critter is old enough to consider for smiting, and
 				(c->Fitness() < prevAvgFitness) &&																// the current critter has worse than average fitness,
 				( (fDomains[id].fNumLeastFit < fDomains[id].fMaxNumLeastFit)	||								// (we haven't filled our quota yet, or
@@ -2356,7 +2397,7 @@ void TSimulation::Interact()
 
 // Following debug output is accurate only when there is a single domain
 //	if( fDomains[0].fNumLeastFit > 0 )
-//		printf( "%ld numSmitable = %d out of %d, from %ld critters out of %ld\n", fStep, fDomains[0].fNumLeastFit, fDomains[0].fMaxNumLeastFit, fDomains[0].numcritters, fDomains[0].maxnumcritters );
+//		printf( "%ld numSmitable = %d out of %d, from %ld critters out of %ld\n", fStep, fDomains[0].fNumLeastFit, fDomains[0].fMaxNumLeastFit, fDomains[0].numCritters, fDomains[0].maxNumCritters );
 
 	// If we're saving gene stats, record them here
 	if( fRecordGeneStats )
@@ -2425,12 +2466,12 @@ void TSimulation::Interact()
 
 				int i = 0;
 				
-				int numcritters = objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE);
-				assert( numcritters < fMaxCritters );			// Since we've already done all the deaths that occurred at this timestep, we should always have enough room to process the births that happened at this timestep.
+				int numCritters = objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE);
+				assert( numCritters < fMaxCritters );			// Since we've already done all the deaths that occurred at this timestep, we should always have enough room to process the births that happened at this timestep.
 				
 				critter* testCritter = NULL;
-				//int randomIndex = int( round( drand48() * fDomains[kd].numcritters ) );	// pick from this domain V???
-				int randomIndex = int( round( drand48() * numcritters ) );
+				//int randomIndex = int( round( drand48() * fDomains[kd].numCritters ) );	// pick from this domain V???
+				int randomIndex = int( round( drand48() * numCritters ) );
 								
 				// As written, randCritter may not actually be the randomIndex-th critter in the domain, but it will be close,
 				// and as long as there's a single legitimate critter for mating (right domain, long enough since last mating,
@@ -2451,7 +2492,7 @@ void TSimulation::Interact()
 				/* select daddy. */
 
 				i = 0;
-				randomIndex = int( round( drand48() * numcritters ) );
+				randomIndex = int( round( drand48() * numCritters ) );
 								
 				// As written, randCritter may not actually be the randomIndex-th critter in the domain, but it will be close,
 				// and as long as there's a single legitimate critter for mating (right domain, long enough since last mating, and
@@ -2471,7 +2512,7 @@ void TSimulation::Interact()
 
 				assert( c != NULL && d != NULL );				// If for some reason we can't select parents, then we'll become out of sync with LOCKSTEP-BirthDeaths.log
 												
-				lsPrint( "* I have selected Mommy(%ld) and Daddy(%ld). Population size = %d\n", c->Number(), d->Number(), numcritters );
+				lsPrint( "* I have selected Mommy(%ld) and Daddy(%ld). Population size = %d\n", c->Number(), d->Number(), numCritters );
 				
 				/* === We've selected our parents, now time to birth our critter. */
 					
@@ -2500,7 +2541,7 @@ void TSimulation::Interact()
 				objectxsortedlist::gXSortedObjects.add(e); // Add the new critter directly to the list of objects (no new critter list); the e->listLink that gets auto stored here should be valid immediately
 							
 				newlifes++;
-				fDomains[kd].numcritters++;
+				fDomains[kd].numCritters++;
 				fNumberBorn++;
 				fDomains[kd].numborn++;
 				fNumBornSinceCreated++;
@@ -2608,7 +2649,7 @@ void TSimulation::Interact()
 
 					if( fSmiteMode == 'L' )		// smite the least fit
 					{
-						if( (fDomains[kd].numcritters >= fDomains[kd].maxnumcritters) &&	// too many critters to reproduce withing a bit of smiting
+						if( (fDomains[kd].numCritters >= fDomains[kd].maxNumCritters) &&	// too many critters to reproduce withing a bit of smiting
 							(fDomains[kd].fNumLeastFit > fDomains[kd].fNumSmited) )			// we've still got some left that are suitable for smiting
 						{
 							while( (fDomains[kd].fNumSmited < fDomains[kd].fNumLeastFit) &&		// there are any left to smite
@@ -2631,15 +2672,15 @@ void TSimulation::Interact()
 							}
 						}
 					}
-					else				/// RANDOM SMITE
+					else if( fSmiteMode == 'R' )				/// RANDOM SMITE
 					{
 						// If necessary, smite a random critter in this domain
-						if( fDomains[kd].numcritters >= fDomains[kd].maxnumcritters )
+						if( fDomains[kd].numCritters >= fDomains[kd].maxNumCritters )
 						{
 							int i = 0;
 							critter* testCritter;
 							critter* randCritter = NULL;
-							int randomIndex = int( floor( drand48() * fDomains[kd].numcritters ) );	// pick from this domain
+							int randomIndex = int( floor( drand48() * fDomains[kd].numCritters ) );	// pick from this domain
 
 							gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();	// save the state of the x-sorted list
 
@@ -2677,7 +2718,7 @@ void TSimulation::Interact()
 					}
 
 					
-                    if ( (fDomains[kd].numcritters < fDomains[kd].maxnumcritters) &&
+                    if ( (fDomains[kd].numCritters < fDomains[kd].maxNumCritters) &&
                          (objectxsortedlist::gXSortedObjects.getCount( CRITTERTYPE ) < fMaxCritters) )
                     {
 						// Still got room for more
@@ -2709,7 +2750,7 @@ void TSimulation::Interact()
 							
 							newlifes++;
 							//newCritters.add(e); // add it to the full list later; the e->listLink that gets auto stored here must be replaced with one from full list below
-                            fDomains[kd].numcritters++;
+                            fDomains[kd].numCritters++;
                             fNumberBorn++;
                             fDomains[kd].numborn++;
 							fNeuronGroupCountStats.add( e->Brain()->NumNeuronGroups() );
@@ -2998,7 +3039,7 @@ void TSimulation::Interact()
 		// first deal with the individual domains
         for (id = 0; id < fNumDomains; id++)
         {
-            while (fDomains[id].numcritters < fDomains[id].minnumcritters)
+            while (fDomains[id].numCritters < fDomains[id].minNumCritters)
             {
                 fNumberCreated++;
                 fDomains[id].numcreated++;
@@ -3055,14 +3096,14 @@ void TSimulation::Interact()
 				float yaw = drand48() * 360.0;
 			#if TestWorld
 				x = fDomains[id].xleft  +  0.666 * fDomains[id].xsize;
-				z = - globals::worldsize * ((float) (i+1) / (fDomains[id].initnumcritters + 1));
+				z = - globals::worldsize * ((float) (i+1) / (fDomains[id].initNumCritters + 1));
 				yaw = 95.0;
 			#endif
                 newCritter->settranslation( x, y, z );
                 newCritter->setyaw( yaw );
                 newCritter->Domain(id);
                 fStage.AddObject(newCritter);
-                fDomains[id].numcritters++;
+                fDomains[id].numCritters++;
 				objectxsortedlist::gXSortedObjects.add(newCritter);
 				newlifes++;
                 //newCritters.add(newCritter); // add it to the full list later; the e->listLink that gets auto stored here must be replaced with one from full list below
@@ -3094,7 +3135,7 @@ void TSimulation::Interact()
             numglobalcreated++;
 
             if ((numglobalcreated == 1) && (fNumDomains > 1))
-                errorflash(0, "Possible global influence on domains due to minnumcritters");
+                errorflash(0, "Possible global influence on domains due to minNumCritters");
 
             fNumBornSinceCreated = 0;
             fLastCreated = fStep;
@@ -3145,7 +3186,7 @@ void TSimulation::Interact()
             newCritter->Domain(id);
             fDomains[id].numcreated++;
             fDomains[id].lastcreate = fStep;
-            fDomains[id].numcritters++;
+            fDomains[id].numCritters++;
             fStage.AddObject(newCritter);
 	    	objectxsortedlist::gXSortedObjects.add(newCritter); // add new critter to list of all objejcts; the newCritter->listLink that gets auto stored here should be valid immediately
 	    	newlifes++;
@@ -3465,7 +3506,7 @@ void TSimulation::Death(critter* c)
     fNewDeaths++;
     fNumberDied++;
     fDomains[id].numdied++;
-    fDomains[id].numcritters--;
+    fDomains[id].numCritters--;
 	
 	fLifeSpanStats.add( c->Age() );
 	fLifeSpanRecentStats.add( c->Age() );
@@ -3972,11 +4013,11 @@ void TSimulation::ReadWorldFile(const char* filename)
     in >> critter::gMaxVelocity; in >> label;
     cout << "maxvel" ses critter::gMaxVelocity nl;
     in >> fMinNumCritters; in >> label;
-    cout << "minnumcritters" ses fMinNumCritters nl;
+    cout << "minNumCritters" ses fMinNumCritters nl;
     in >> fMaxCritters; in >> label;
-    cout << "maxnumcritters" ses fMaxCritters nl;
+    cout << "maxNumCritters" ses fMaxCritters nl;
     in >> fInitNumCritters; in >> label;
-    cout << "initnumcritters" ses fInitNumCritters nl;
+    cout << "initNumCritters" ses fInitNumCritters nl;
 	if( version >= 9 )
 	{
 		in >> fNumberToSeed; in >> label;
@@ -4057,9 +4098,9 @@ void TSimulation::ReadWorldFile(const char* filename)
     in >> genome::gMaxMutationRate; in >> label;
     cout << "maxmrate" ses genome::gMaxMutationRate nl;
     in >> genome::gMinNumCpts; in >> label;
-    cout << "minnumcpts" ses genome::gMinNumCpts nl;
+    cout << "minNumCpts" ses genome::gMinNumCpts nl;
     in >> genome::gMaxNumCpts; in >> label;
-    cout << "maxnumcpts" ses genome::gMaxNumCpts nl;
+    cout << "maxNumCpts" ses genome::gMaxNumCpts nl;
     in >> genome::gMinLifeSpan; in >> label;
     cout << "minlifespan" ses genome::gMinLifeSpan nl;
     in >> genome::gMaxLifeSpan; in >> label;
@@ -4278,12 +4319,12 @@ void TSimulation::ReadWorldFile(const char* filename)
 	
 	for (id = 0; id < fNumDomains; id++)
 	{
-		in >> fDomains[id].minnumcritters; in >> label;
-		cout << "minnumcritters in domains[" << id << "]" ses fDomains[id].minnumcritters nl;
-		in >> fDomains[id].maxnumcritters; in >> label;
-		cout << "maxnumcritters in domains[" << id << "]" ses fDomains[id].maxnumcritters nl;
-		in >> fDomains[id].initnumcritters; in >> label;
-		cout << "initnumcritters in domains[" << id << "]" ses fDomains[id].initnumcritters nl;
+		in >> fDomains[id].minNumCritters; in >> label;
+		cout << "minNumCritters in domains[" << id << "]" ses fDomains[id].minNumCritters nl;
+		in >> fDomains[id].maxNumCritters; in >> label;
+		cout << "maxNumCritters in domains[" << id << "]" ses fDomains[id].maxNumCritters nl;
+		in >> fDomains[id].initNumCritters; in >> label;
+		cout << "initNumCritters in domains[" << id << "]" ses fDomains[id].initNumCritters nl;
 		if( version >= 9 )
 		{
 			in >> fDomains[id].numberToSeed; in >> label;
@@ -4467,8 +4508,8 @@ void TSimulation::ReadWorldFile(const char* filename)
 
 		}
 
-		totmaxnumcritters += fDomains[id].maxnumcritters;
-		totminnumcritters += fDomains[id].minnumcritters;
+		totmaxnumcritters += fDomains[id].maxNumCritters;
+		totminnumcritters += fDomains[id].minNumCritters;
 	}
 
 
@@ -4499,7 +4540,7 @@ void TSimulation::ReadWorldFile(const char* filename)
 
     for (id = 0; id < fNumDomains; id++)
     {
-        fDomains[id].numcritters = 0;
+        fDomains[id].numCritters = 0;
         fDomains[id].numcreated = 0;
         fDomains[id].numborn = 0;
         fDomains[id].numbornsincecreated = 0;
@@ -4599,7 +4640,7 @@ void TSimulation::ReadWorldFile(const char* filename)
 	{
 		in >> fSmiteMode; in >> label;
 		cout << "smiteMode" ses fSmiteMode nl;
-		assert( fSmiteMode == 'L' || fSmiteMode == 'R' );		// fSmiteMode must be either 'L' or 'R'
+		assert( fSmiteMode == 'L' || fSmiteMode == 'R' || fSmiteMode == 'O' );		// fSmiteMode must be 'L', 'R', or 'O'
 	}
     in >> fSmiteFrac; in >> label;
 	
@@ -4888,7 +4929,7 @@ void TSimulation::Dump()
     out << fNumDomains nl;
     for (int id = 0; id < fNumDomains; id++)
     {
-        out << fDomains[id].numcritters nl;
+        out << fDomains[id].numCritters nl;
         out << fDomains[id].numcreated nl;
         out << fDomains[id].numborn nl;
         out << fDomains[id].numbornsincecreated nl;
@@ -4983,8 +5024,8 @@ void TSimulation::SwitchDomain(short newDomain, short oldDomain)
 {
 	Q_ASSERT(newDomain != oldDomain);
 		
-	fDomains[newDomain].numcritters++;
-	fDomains[oldDomain].numcritters--;
+	fDomains[newDomain].numCritters++;
+	fDomains[oldDomain].numCritters--;
 }
 
 
@@ -5007,11 +5048,11 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 	sprintf( t, "critters = %4d", objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE) );
 	if (fNumDomains > 1)
 	{
-		sprintf(t2, " (%ld",fDomains[0].numcritters );
+		sprintf(t2, " (%ld",fDomains[0].numCritters );
 		strcat(t, t2 );
 		for (id = 1; id < fNumDomains; id++)
 		{
-			sprintf(t2, ", %ld", fDomains[id].numcritters );
+			sprintf(t2, ", %ld", fDomains[id].numCritters );
 			strcat( t, t2 );
 		}
 		
@@ -5233,7 +5274,7 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 				numCrittersInOuterRanges += fDomains[domainNumber].fFoodPatches[i].critterNeighborhoodCount;
 			}
 			
-			float makePercent = 100.0 / fDomains[domainNumber].numcritters;;
+			float makePercent = 100.0 / fDomains[domainNumber].numCritters;
 			float makePercentNorm = 100.0 / numCrittersInAnyFoodPatch;
 
 			for( int i = 0; i < fDomains[domainNumber].numFoodPatches; i++ )
