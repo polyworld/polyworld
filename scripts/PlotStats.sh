@@ -156,6 +156,7 @@ set xlabel 'Timestep'
 # set ylabel '${GNUPLOT_ylabel}'
 set grid
 set xrange [0:${LAST_TIMESTEP}]
+set mxtics 5
 set title "${run_dir}\n${GNUPLOT_ylabel}"
 ${GNUPLOT_plotstring}
 
