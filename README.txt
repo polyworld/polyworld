@@ -49,10 +49,10 @@ Download Polyworld source (from SourceForge)
 * in an appropriate directory (I use .../qt/projects/), type
      cvs <cvs-args> co polyworld
   For <cvs-args>, use:
-     -d:pserver:anonymous@cvs.sf.net:/cvsroot/polyworld
+     -d:pserver:anonymous@polyworld.cvs.sf.net:/cvsroot/polyworld
   unless you are an authorized polyworld developer, in which case
   you should do an 'export CVS_RSH=ssh' and use:
-     -d:ext:username@cvs.sf.net:/cvsroot/polyworld
+     -d:ext:username@polyworld.cvs.sf.net:/cvsroot/polyworld
   substituting your own username, of course).  This will
   create a "polyworld" directory for you, containing all
   the Polyworld source code.
