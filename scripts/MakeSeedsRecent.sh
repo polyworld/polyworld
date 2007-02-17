@@ -87,7 +87,7 @@ then
 	while [ $critter -le $numseedcritters ]
 	do
 		filename="brainFunction_$critter.txt"
-		ln -s "${directory}/brain/function/$filename" "${directory}/brain/Recent/0/$filename"
+		ln "${directory}/brain/function/$filename" "${directory}/brain/Recent/0/$filename"
 		critter=$(echo "$critter + 1" | bc)
 	done
 fi

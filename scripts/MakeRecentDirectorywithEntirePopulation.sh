@@ -165,7 +165,7 @@ do
 
 
 	# Source file exists, made the destination directory, Lets link it!
-	ln -s "$directory/brain/function/brainFunction_${critternum}.txt" "${directory}/brain/Recent/${binned_time_of_death}/brainFunction_${critternum}.txt"
+	ln "$directory/brain/function/brainFunction_${critternum}.txt" "${directory}/brain/Recent/${binned_time_of_death}/brainFunction_${critternum}.txt"
 
 done
 
