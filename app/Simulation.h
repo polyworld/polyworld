@@ -301,13 +301,12 @@ public:
 	void Step();
 	void Update();
 
-	void SetNextLockstepEvent();	// function to read the next event from LOCKSTEP-BirthsDeaths.log
-	#if LockStepWithBirthsDeathsLog
-		FILE * LockstepFile;		// Define a file pointer to our LOCKSTEP-BirthsDeaths.log
-		int LockstepTimestep;		// Timestep at which the next event in LOCKSTEP-BirthDeaths.log occurs
-		int LockstepNumDeathsAtTimestep;	// How many critters died at this LockstepTimestep?
-		int LockstepNumBirthsAtTimestep;	// how many critters were born at LockstepTimestep?
-	#endif
+	bool fLockStepWithBirthsDeathsLog;	// Are we running in lockstep mode?
+	FILE * fLockstepFile;				// Define a file pointer to our LOCKSTEP-BirthsDeaths.log
+	int fLockstepTimestep;				// Timestep at which the next event in LOCKSTEP-BirthDeaths.log occurs
+	int fLockstepNumDeathsAtTimestep;	// How many critters died at this LockstepTimestep?
+	int fLockstepNumBirthsAtTimestep;	// how many critters were born at LockstepTimestep?
+	void SetNextLockstepEvent();		// function to read the next event from LOCKSTEP-BirthsDeaths.log
 
 
 	static long fStep;
