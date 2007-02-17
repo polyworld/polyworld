@@ -69,12 +69,12 @@ float		critter::gMinFocus;
 float		critter::gMaxFocus;
 float		critter::gCritterFOV;
 float		critter::gMaxSizeAdvantage;
-int			critter::gNumDepletionSteps;
 
 // critter::gNumDepletionSteps and critter:gMaxPopulationFraction must both be initialized to zero
 // for backward compatibility, and we depend on that fact in ReadWorldFile(), so don't change it
 
-double		critter::gMaxPopulationPenaltyFraction = 0;
+int			critter::gNumDepletionSteps = 0;
+double		critter::gMaxPopulationPenaltyFraction = 0.0;
 double		critter::gPopulationPenaltyFraction = 0.0;
 double		critter::gLowPopulationAdvantageFactor = 1.0;
 
