@@ -2,7 +2,7 @@
 
 0		LockStepWithBirthsDeathsLog
 
-20001  maxSteps
+50001  maxSteps
 1      docpuwork
 1000   dumpfreq
 100    statfreq
@@ -206,7 +206,7 @@
 O      smiteMode_R=random|L=leastfit|O=off
 0.10   smiteFrac
 0.25   smiteAgeFrac_affectsAverageFitness
-100    NumDepletionSteps_150
+150    NumDepletionSteps_150
 1      applyLowPopulationAdvantage
 
 
