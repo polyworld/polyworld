@@ -199,6 +199,7 @@ void brain::dumpAnatomical( char* directoryName, char* suffix, long index, float
 	size_t	sizeCM;
 	float*	connectionMatrix;
 	short	i,j;
+	long	s;
 	float	maxWeight = max( gMaxWeight, gNeuralValues.maxbias );
 	double	inverseMaxWeight = 1. / maxWeight;
 
@@ -219,16 +220,16 @@ void brain::dumpAnatomical( char* directoryName, char* suffix, long index, float
 	// rows correspond to postsynaptic "to-neurons"
 	long imin = 10000;
 	long imax = -10000;
-	for( i = 0; i < numsynapses; i++ )
+	for( s = 0; s < numsynapses; s++ )
 	{
 		int cmIndex;
-		cmIndex = abs(synapse[i].fromneuron)  +  abs(synapse[i].toneuron) * (numneurons + 1);	// +1 for bias neuron
+		cmIndex = abs(synapse[s].fromneuron)  +  abs(synapse[s].toneuron) * (numneurons + 1);	// +1 for bias neuron
 		if( cmIndex < 0 )
 		{
-			fprintf( stderr, "cmIndex = %d, i = %d, fromneuron = %d, toneuron = %d, numneurons = %d\n", cmIndex, i, synapse[i].fromneuron, synapse[i].toneuron, numneurons );
+			fprintf( stderr, "cmIndex = %d, s = %ld, fromneuron = %d, toneuron = %d, numneurons = %d\n", cmIndex, s, synapse[s].fromneuron, synapse[s].toneuron, numneurons );
 		}
-		daPrint( "  i=%d, fromneuron=%d, toneuron=%d, cmIndex=%d\n", i, synapse[i].fromneuron, synapse[i].toneuron, cmIndex );
-		connectionMatrix[cmIndex] += synapse[i].efficacy;	// the += is so parallel excitatory and inhibitory connections from input and output neurons just sum together
+		daPrint( "  s=%d, fromneuron=%d, toneuron=%d, cmIndex=%d\n", s, synapse[s].fromneuron, synapse[s].toneuron, cmIndex );
+		connectionMatrix[cmIndex] += synapse[s].efficacy;	// the += is so parallel excitatory and inhibitory connections from input and output neurons just sum together
 		if( cmIndex < imin )
 			imin = cmIndex;
 		if( cmIndex > imax )
