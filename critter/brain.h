@@ -4,6 +4,22 @@
 // Local
 #include "objectlist.h"
 
+#define USE_BIAS				true
+#define SPIKING_MODEL			false
+#define SpikingActivation       25.0
+#define BIAS_INJECTED_VOLTAGE   208.0
+#define STDP_RESET				.1
+#define STDP_DEGRADATION_SCALER .95
+#define STDP_DEPRESSION_SCALER	.5
+#define BrainStepsPerWorldStep  50
+#define MaxFiringRatePerSecond  260.0
+#define MinFiringRatePerSecond  0.0
+#define SpikingParameter_a      0.02
+#define SpikingParameter_b      0.2
+#define SpikingParameter_c      -65
+#define SpikingParameter_d      6
+#define NumOutputNeurons 7
+
 struct NeuralValues
 {
 	short minneurons;
@@ -45,6 +61,12 @@ struct neuronstruct
     float bias;
     long  startsynapses;
     long  endsynapses;
+#if SPIKING_MODEL	
+	float v;              //!<represents the membrane potential of the neuron 
+	float u;			  //!<the membranes recovery period			
+	float STDP;           //!<spike-timing-dependent plasticity,
+	short maxfiringcount; //explain later if works
+#endif
 };
 
 
@@ -53,6 +75,9 @@ struct synapsestruct
     float efficacy;   // > 0 for excitatory, < 0 for inhibitory
     short fromneuron; // > 0 for excitatory, < 0 for inhibitory
     short toneuron;   // > 0 for excitatory, < 0 for inhibitory
+#if SPIKING_MODEL
+	float delta;  //!from iz intead of effecting weights directly
+#endif	
 };
 
 
@@ -78,6 +103,7 @@ public:
     void Report();
     void Grow( genome* g, long critterNumber, bool recordBrainAnatomy );
     void Update(float energyfraction);
+	void UpdateSpikes(float energyfraction, FILE* fHandle);	
 
     float Random();
     float Eat();
@@ -117,6 +143,7 @@ public:
 	// Each critter/brain gets its own retinaBuf, because they all see different things,
 	// and we only want to do the glReadPixels once (each)
 	unsigned char* retinaBuf;
+	float scale_latest_spikes;
 
 protected:
 	friend class critter;
@@ -149,6 +176,7 @@ protected:
     short focusneuron;
     float* groupblrate;
     float* grouplrate;
+	float* outputActivation;
 	neuronstruct* neuron;
     synapsestruct* synapse;
     float* neuronactivation;

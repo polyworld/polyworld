@@ -2542,6 +2542,15 @@ void TSimulation::Interact()
 				birthPrint( "step %ld: critter # %ld born to %ld & %ld, at (%g,%g,%g), yaw=%g, energy=%g, domain %d (%d & %d), neurgroups=%d\n",
 					fStep, e->Number(), c->Number(), d->Number(), e->x(), e->y(), e->z(), e->yaw(), e->Energy(), kd, id, jd, e->Brain()->NumNeuronGroups() );
 
+
+#if SPIKING_MODEL
+				if (drand48() >= .5)
+					e->Brain()->scale_latest_spikes = c->Brain()->scale_latest_spikes;
+				else
+					e->Brain()->scale_latest_spikes = d->Brain()->scale_latest_spikes;
+				printf("%f\n", e->Brain()->scale_latest_spikes);
+#endif
+
 				if( fRecordBirthsDeaths )		// If we're recording birth and death events, record the birth of our newborn.
 				{
 					FILE * File;
@@ -2746,6 +2755,13 @@ void TSimulation::Interact()
 										fStep, e->Number(), c->Number(), d->Number(), e->x(), e->y(), e->z(), e->yaw(), e->Energy(), kd, id, jd, e->Brain()->NumNeuronGroups() );
 							//if( fStep > 50 )
 							//	exit( 0 );
+#if SPIKING_MODEL
+						if (drand48() >= .5)
+							e->Brain()->scale_latest_spikes = c->Brain()->scale_latest_spikes;
+						else
+							e->Brain()->scale_latest_spikes = d->Brain()->scale_latest_spikes;
+						printf("%f\n", e->Brain()->scale_latest_spikes);
+#endif							
 							if( fRecordBirthsDeaths )
 							{
 								FILE * File;
@@ -3059,6 +3075,7 @@ void TSimulation::Interact()
                         fNumberCreated2Fit++;
 						gaPrint( "%5ld: domain %d creation from two (%d, %d) fittest (%4lu, %4lu) %4ld\n", fStep, id, fDomains[id].ifit, fDomains[id].jfit, fDomains[id].fittest[fDomains[id].ifit]->critterID, fDomains[id].fittest[fDomains[id].jfit]->critterID, fNumberCreated2Fit );
                         ijfitinc(&(fDomains[id].ifit), &(fDomains[id].jfit));
+						
                     }
                     else
                     {

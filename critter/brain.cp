@@ -444,8 +444,13 @@ void brain::AllocateBrainMemory()
 	free(synapse);
 	free(groupblrate);
 	free(grouplrate);
+#if SPIKING_MODEL
+		neuron = (neuronstruct *)calloc(numneurons, sizeof(neuronstruct));
+		outputActivation=(float *)calloc(NumOutputNeurons, sizeof(float));
+#else
+		neuron = (neuronstruct *)calloc(numneurons, sizeof(neuronstruct));
+#endif
 
-    neuron = (neuronstruct *)calloc(numneurons, sizeof(neuronstruct));
     Q_CHECK_PTR(neuron);
 
 	neuronactivation = (float *)calloc(numneurons, sizeof(float));
@@ -698,6 +703,20 @@ void brain::GrowDesignedBrain( genome* g )
     short numneur = numinputneurons;
     float tdij;
 
+#if SPIKING_MODEL
+		for (i = 0, ineur = 0; i < brain::gNeuralValues.numinputneurgroups; i++)
+		{
+			for (j = 0; j < numDesignExcNeurons[i]; j++, ineur++)
+			{
+				neuron[ineur].group           = i;
+				neuron[ineur].bias            = 0.0; // not used
+				neuron[ineur].startsynapses   = -1;  // not used
+				neuron[ineur].endsynapses     = -1;  // not used
+				neuron[ineur].v               = -70;
+				neuron[ineur].u               = -14;
+			}
+		}
+#else
     for (i = 0, ineur = 0; i < brain::gNeuralValues.numinputneurgroups; i++)		//for all input neural groups
     {
         for (j = 0; j < numDesignExcNeurons[i]; j++, ineur++)
@@ -708,6 +727,7 @@ void brain::GrowDesignedBrain( genome* g )
             neuron[ineur].endsynapses = -1;   // not used
         }
     }
+#endif
 
     for (i = brain::gNeuralValues.numinputneurgroups; i < numneurgroups; i++)		//for all behavior (and the non-existent internal) neural groups
     {
@@ -1980,9 +2000,31 @@ void brain::Grow( genome* g, long critterNumber, bool recordBrainAnatomy )
 
     if (numsyn != (numsynapses))
         error(2,"Bad neural architecture, numsyn (",numsyn,") not equal to numsynapses (",numsynapses,")");
+	
+		// debug ira  --- why initialize to any of these values?
+#if SPIKING_MODEL
+	for(i=0; i<firstnoninputneuron; i++)
+		neuronactivation[i] = SpikingActivation;  
+		
+	for (i=i; i < numneurons; i++)
+	{		
+			neuronactivation[i] = SpikingActivation; 
+			neuron[i].v=-70.0;
+			neuron[i].u=-14.0;
+			neuron[i].maxfiringcount  = 1;
+			if (!scale_latest_spikes)
+				scale_latest_spikes = (random() % 10)/10.;//ira fix me later
+	}		
+	
+	for (i = 0; i < numOutputNeurons; i++)
+		outputActivation[i]= 0.0;	// fmax((double)neuron[acc+firstOutputNeuron].bias / brain::gNeuralValues.maxbias, 0.0);
+		
+	outputActivation[yawneuron-firstOutputNeuron] = 0.5;	// equivalent to 0.0 for the yaw/turn neuron
 
+#else
     for (i = 0; i < numneurons; i++)
         neuronactivation[i] = 0.1;  // 0.5;
+#endif
 
     energyuse = brain::gNeuralValues.maxneuron2energy * float(numneurons) / float(brain::gNeuralValues.maxneurons)
               + brain::gNeuralValues.maxsynapse2energy * float(numsynapses) / float(brain::gNeuralValues.maxsynapses);
@@ -2002,7 +2044,11 @@ void brain::Grow( genome* g, long critterNumber, bool recordBrainAnatomy )
         // load up the retinabuf with noise
         for (j = 0; j < (brain::retinawidth * 4); j++)
             retinaBuf[j] = (unsigned char)(rrand(0.0, 255.0));
-        Update(drand48());
+#if SPIKING_MODEL
+			UpdateSpikes(drand48(),NULL);
+#else	
+			Update(drand48());
+#endif		
     }
 	
 	// "birth" anatomy is after gestation (updating with random noise in the inputs for a while)
@@ -2646,3 +2692,676 @@ void brain::Render(short patchwidth, short patchheight)
     }
 }
 
+//#############################################################################################################################################
+//Spiking Neuron Model Below...Watch out!
+//#############################################################################################################################################
+
+//#####################################################################################################
+//Update spikes
+//#####################################################################################################
+#if SPIKING_MODEL
+void brain::UpdateSpikes(float energyfraction, FILE * fHandle)
+{	
+	unsigned char spikeMatrix[numneurons][BrainStepsPerWorldStep];  //assuming BrainStepsPerWorldStep = 100
+	for (int j=0; j <  numneurons; j++)
+		for (int i = 0; i< BrainStepsPerWorldStep; i++)
+			spikeMatrix[j][i] = '0';
+	
+#ifdef DEBUGCHECK
+    debugcheck("brain::Update entry");
+#endif DEBUGCHECK
+	float inputFiringProbability[numinputneurons];
+	static long loop_counter=0;
+    short i, j, n_steps;
+    long k;
+	float u,v,activation;
+    if ((neuron == NULL) || (synapse == NULL) || (neuronactivation == NULL))
+        return;
+	int outputNeuronFiringCounter[numOutputNeurons];
+	loop_counter++;
+	short NeuronFiringCounter[numneurons];
+	
+#if IraDebug	
+	//???????????????????????????????????????????????????????????????????????????????
+	//debug stuff	
+	if (critterID<4)
+		printf("critter %d entering update\n", critterID);
+	else
+	{
+		for (i = 0; i < numOutputNeurons; i++)
+			neuronactivation[i+firstOutputNeuron]=0;
+		neuronactivation[yawneuron]=.5;	
+		return;
+	}	
+	//???????????????????????????????????????????????????????????????????????????????
+#endif
+	
+
+	for (i = 0; i < numneurons; i++)
+		NeuronFiringCounter[i]=0;						//since we start a new brain step reset firing counter
+		
+	//Further down in the code I turn output neuron activation into firing rates.  This has to be done because
+	//the rest of polyworld expects, roughly firing rates from output neurons.  However the outputneurons in 
+	//polyworld have connections to other neurons in polyworld and therefore their activation level should adhere 
+	//to the constant SpikingActivation which the non output neurons all adhere to.  This way we all spiking
+	//activtions in the brain update are uniform.
+	for (i = 0; i < numOutputNeurons; i++)
+	{
+		outputNeuronFiringCounter[i]=0;
+		if(neuron[i+firstOutputNeuron].v>=30)	
+			neuronactivation[i+firstOutputNeuron]=SpikingActivation;//previously had this as one....eeek!
+		else
+			neuronactivation[i+firstOutputNeuron]=0;
+	}
+	
+#ifdef PRINTBRAIN
+    if (printbrain && TSimulation::fOverHeadRank && !brainprinted && critter::currentCritter == TSimulation::fMonitorCritter)
+    {
+        brainprinted = true;
+        printf("neuron (toneuron)  fromneuron   synapse   efficacy\n");
+        
+        for (i = firstnoninputneuron; i < numneurons; i++)
+        {
+            for (k = neuron[i].startsynapses; k < neuron[i].endsynapses; k++)
+            {
+				printf("%3d   %3d    %3d    %5ld    %f\n",
+					   i, synapse[k].toneuron, synapse[k].fromneuron,
+					   k, synapse[k].efficacy); 
+            }
+        }
+        printf("fNumRedNeurons, fNumGreenNeurons, fNumBlueNeurons = %d, %d, %d\n",
+			   fNumRedNeurons, fNumGreenNeurons, fNumBlueNeurons);
+		
+        printf("xredwidth, xgreenwidth, xbluewidth = %g, %g, %g\n",
+			   xredwidth, xgreenwidth, xbluewidth);
+		
+        printf("xredintwidth, xgreenintwidth, xblueintwidth = %d, %d, %d\n",
+			   xredintwidth, xgreenintwidth, xblueintwidth);
+    }
+#endif PRINTBRAIN
+	
+	//#############################################################################################################
+//    inputFiringProbability[randomneuron] = drand48() * MaxFiringRatePerSecond * SecondsPerBrainStep;
+	inputFiringProbability[randomneuron] = drand48();
+	neuronactivation[randomneuron] = 0;
+//    inputFiringProbability[energyneuron] = energyfraction * MaxFiringRatePerSecond * SecondsPerBrainStep;
+    inputFiringProbability[energyneuron] = energyfraction;
+	neuronactivation[energyneuron] = 0;
+	//#############################################################################################################    
+    short pixel;
+    float avgcolor;
+    float endpixloc;
+    
+    if (xredintwidth)
+    {
+		//######################################################################################################################
+		
+        pixel = 0;
+        for (i = 0; i < fNumRedNeurons; i++)
+        {
+            avgcolor = 0.0;
+            for (short ipix = 0; ipix < xredintwidth; ipix++)
+                avgcolor += retinaBuf[(pixel++) * 4];
+			// instead of computing the old activation level, we now compute spikes/brainStep
+			// we compute it as old-activation * MaxFiringRatePerSecond spikes/sec * SecondsPerBrainStep sec/brainStep
+			// we do the same for every color input neuron (whether integer width or not)
+			
+//            inputFiringProbability[redneuron+i] = (avgcolor / (xredwidth * 255.0)) * MaxFiringRatePerSecond * SecondsPerBrainStep;
+            inputFiringProbability[redneuron+i] = (avgcolor / (xredwidth * 255.0));
+			neuronactivation[redneuron + i] = 0;
+			//			printf( "red brightness[%d] = %g, probability of firing = %g\n", i, (avgcolor / (xredwidth * 255.0)), newneuronactivation[redneuron+i] );
+			//######################################################################################################################			
+        }
+    }
+    else
+    {
+        pixel = 0;
+        avgcolor = 0.0;
+#ifdef PRINTBRAIN
+        if (printbrain && (critter::currentCritter == TSimulation::fMonitorCritter))
+        {
+            printf("xredwidth = %f\n", xredwidth);
+        }
+#endif PRINTBRAIN
+        for (i = 0; i < fNumRedNeurons; i++)
+        {
+            endpixloc = xredwidth * float(i+1);
+#ifdef PRINTBRAIN
+            if (printbrain &&
+                (critter::currentCritter == TSimulation::fMonitorCritter))
+            {
+                printf("  neuron %d, endpixloc = %g\n", i, endpixloc);
+            }
+#endif PRINTBRAIN
+            while (float(pixel) < (endpixloc - 1.0))
+            {
+                avgcolor += retinaBuf[(pixel++) * 4];
+#ifdef PRINTBRAIN
+                if (printbrain && (critter::currentCritter == TSimulation::fMonitorCritter))
+                {
+                    printf("    in loop with pixel %d, avgcolor = %g\n", pixel,avgcolor);
+					if ((float(pixel) < (endpixloc - 1.0)) && (float(pixel) >= (endpixloc - 1.0 - 1.0e-5)))
+						printf("Got in-loop borderline case - red\n");
+                }
+#endif PRINTBRAIN			
+            }
+			//######################################################################################################################            
+            avgcolor += (endpixloc - float(pixel)) * retinaBuf[pixel * 4];
+//            inputFiringProbability[redneuron + i] = (avgcolor / (xredwidth * 255.0)) * MaxFiringRatePerSecond * SecondsPerBrainStep;
+            inputFiringProbability[redneuron + i] = (avgcolor / (xredwidth * 255.0));
+			neuronactivation[redneuron + i] = 0;
+			//			printf( "red brightness[%d] = %g, probability of firing = %g\n", i, (avgcolor / (xredwidth * 255.0)), newneuronactivation[redneuron+i] );
+			//######################################################################################################################			
+#ifdef PRINTBRAIN
+            if (printbrain && (critter::currentCritter == TSimulation::fMonitorCritter))
+            {
+                printf("    after loop with pixel %d, avgcolor = %g, color = %g\n", pixel,avgcolor,newneuronactivation[redneuron+i]);
+                if ((float(pixel) >= (endpixloc - 1.0)) && (float(pixel) < (endpixloc - 1.0 + 1.0e-5)))
+                    printf("Got outside-loop borderline case - red\n");
+            }
+#endif PRINTBRAIN
+            avgcolor = (1.0 - (endpixloc - float(pixel))) * retinaBuf[pixel * 4];
+#ifdef PRINTBRAIN
+            if (printbrain && (critter::currentCritter == TSimulation::fMonitorCritter))
+            {
+                printf("  before incrementing pixel = %d, avgcolor = %g\n", pixel, avgcolor);
+            }
+#endif PRINTBRAIN
+            pixel++;
+        }
+    }
+	//make spiking
+	// make the firing rate = old-activation * MaxFiringRatePerSecond
+    if (xgreenintwidth)
+    {
+		//######################################################################################################################
+        pixel = 0;
+        for (i = 0; i < fNumGreenNeurons; i++)
+        {
+            avgcolor = 0.0;
+            for (short ipix = 0; ipix < xgreenintwidth; ipix++)
+                avgcolor += retinaBuf[(pixel++) * 4 + 1];
+//            inputFiringProbability[greenneuron + i] = (avgcolor / (xgreenwidth * 255.0)) * MaxFiringRatePerSecond * SecondsPerBrainStep;
+            inputFiringProbability[greenneuron + i] = (avgcolor / (xgreenwidth * 255.0));
+			neuronactivation[greenneuron + i] = 0;
+			//######################################################################################################################			
+        }
+    }
+    else
+    {
+        pixel = 0;
+        avgcolor = 0.0;
+        for (i = 0; i < fNumGreenNeurons; i++)
+        {
+            endpixloc = xgreenwidth * float(i+1);
+            while (float(pixel) < (endpixloc - 1.0))
+            {
+                avgcolor += retinaBuf[(pixel++) * 4 + 1];
+#ifdef PRINTBRAIN
+                if (printbrain && (critter::currentCritter == TSimulation::fMonitorCritter))
+                {
+                    if ((float(pixel) < (endpixloc - 1.0)) && (float(pixel) >= (endpixloc - 1.0 - 1.0e-5)) )
+                        printf("Got in-loop borderline case - green\n");
+                }
+#endif PRINTBRAIN
+            }
+#ifdef PRINTBRAIN
+            if (printbrain && (critter::currentCritter == TSimulation::fMonitorCritter))
+            {
+                if ((float(pixel) >= (endpixloc - 1.0)) && (float(pixel) < (endpixloc - 1.0)))
+                    printf("Got outside-loop borderline case - green\n");
+            }
+#endif PRINTBRAIN
+			//######################################################################################################################	
+            avgcolor += (endpixloc - float(pixel)) * retinaBuf[pixel * 4 + 1];
+//            inputFiringProbability[greenneuron + i] = (avgcolor / (xgreenwidth * 255.0)) * MaxFiringRatePerSecond * SecondsPerBrainStep;
+            inputFiringProbability[greenneuron + i] = (avgcolor / (xgreenwidth * 255.0));
+			neuronactivation[greenneuron + i] = 0;
+            avgcolor = (1.0 - (endpixloc - float(pixel))) * retinaBuf[pixel * 4 + 1];
+            pixel++;
+			//######################################################################################################################			
+        }
+    }
+	
+    if (xblueintwidth)
+    {
+        pixel = 0;
+        for (i = 0; i < fNumBlueNeurons; i++)
+        {
+			//######################################################################################################################		
+            avgcolor = 0.0;
+            for (short ipix = 0; ipix < xblueintwidth; ipix++)
+                avgcolor += retinaBuf[(pixel++) * 4 + 2];
+//            inputFiringProbability[blueneuron+i] = (avgcolor / (xbluewidth * 255.0)) * MaxFiringRatePerSecond * SecondsPerBrainStep;
+            inputFiringProbability[blueneuron+i] = (avgcolor / (xbluewidth * 255.0));
+			neuronactivation[blueneuron + i] = 0;
+			//######################################################################################################################			
+        }
+    }
+    else
+    {
+        pixel = 0;
+        avgcolor = 0.0;
+        
+        for (i = 0; i < fNumBlueNeurons; i++)
+        {
+            endpixloc = xbluewidth * float(i + 1);
+			while (float(pixel) < (endpixloc - 1.0 /*+ 1.e-5*/))
+            {
+                avgcolor += retinaBuf[(pixel++) * 4 + 2];
+#ifdef PRINTBRAIN
+                if (printbrain && (critter::currentCritter == TSimulation::fMonitorCritter))
+                {
+                    if ((float(pixel) < (endpixloc - 1.0)) && (float(pixel) >= (endpixloc - 1.0 - 1.0e-5)) )
+                        printf("Got in-loop borderline case - blue\n");
+                }
+#endif PRINTBRAIN
+            }
+            
+#ifdef PRINTBRAIN
+            if (printbrain && (critter::currentCritter == TSimulation::fMonitorCritter))
+            {
+                if ((float(pixel) >= (endpixloc - 1.0)) && (float(pixel) < (endpixloc - 1.0 + 1.0e-5)) )
+                    printf("Got outside-loop borderline case - blue\n");
+            }
+#endif PRINTBRAIN
+			//######################################################################################################################
+            if (pixel < brain::retinawidth)  // TODO How do we end up overflowing?
+            {
+				avgcolor += (endpixloc - float(pixel)) * retinaBuf[pixel * 4 + 2];
+//            	inputFiringProbability[blueneuron + i] = (avgcolor / (xbluewidth * 255.0)) * MaxFiringRatePerSecond * SecondsPerBrainStep;
+            	inputFiringProbability[blueneuron + i] = (avgcolor / (xbluewidth * 255.0));
+            	neuronactivation[blueneuron + i] = 0;
+            	avgcolor = (1.0 - (endpixloc - float(pixel))) * retinaBuf[pixel * 4 + 2];
+            	pixel++;
+				//######################################################################################################################				
+            }
+        }
+    }
+	
+#ifdef DEBUGCHECK
+    debugcheck("brain::update after updating vision");
+#endif DEBUGCHECK
+	
+#ifdef PRINTBRAIN
+    if (printbrain && TSimulation::fOverHeadRank &&
+        (critter::currentCritter == TSimulation::fMonitorCritter))
+    {
+		//        printf("***** age = %ld ****** overheadrank = %d ******\n", TSimulation::fAge, TSimulation::fOverHeadRank);
+        printf("retinaBuf [0 - %d]\n",(brain::retinawidth - 1));
+        printf("red:");
+        
+        for (i = 0; i < (brain::retinawidth * 4); i+=4)
+            printf(" %3d", retinaBuf[i]);
+        printf("\ngreen:");
+        
+        for (i = 1; i < (brain::retinawidth * 4); i+=4)
+            printf(" %3d",retinaBuf[i]);
+        printf("\nblue:");
+        
+        for (i = 2; i < (brain::retinawidth * 4); i+=4)
+            printf(" %3d", retinaBuf[i]);
+        printf("\n");
+    }
+#endif PRINTBRAIN
+	
+	//######################################################################################################################
+	//INNER BRAIN
+	//This is the code for the inner neuron's activation calculations and update rules for synapses onto
+	//each neuron.
+	//Note I treat newneuronactivation as input to Izhikevich's voltage equasions
+	//######################################################################################################################
+	//scale the bias learning rate
+    float* saveneuronactivation = neuronactivation;
+	
+	//calculate activity in each neuron i then learn for each synapse in i
+	long synapsesToDepress[numsynapses];
+	int numSynapsesToDepress = 0, startSynapsesToDepress = 0;
+	short fromNeuron = 0;
+	for (n_steps = 0; n_steps < BrainStepsPerWorldStep; n_steps++)
+	{		
+		numSynapsesToDepress = startSynapsesToDepress = 0;
+		//determine if the input neuron stochastically fires
+		//not that the newneuronactivation must contain the threshold calculated earlier thats why we have saveneuronactivation
+		
+		//now here I scan though the list of input neurons.  They should have a firing probability,  see inputFiringProbability above,
+		//that we can generate a random number, check against that random number to see if the inputFiringProbability is less than the 
+		//number, if so we have exeded the probability theshold and can force the neuron to fire.  Otherwise force the activation to zero.
+		for (i = 0; i < firstnoninputneuron; i++)
+		{
+//			printf("input firing prob = %f\n", inputFiringProbability[i]);
+			if( drand48() < inputFiringProbability[i])
+			{
+			
+				spikeMatrix[i][n_steps] = '1'; //This is strictly for debug printout purposes
+				newneuronactivation[i] = SpikingActivation;
+				NeuronFiringCounter[i]++;
+				neuron[i].v=31;              //hack for stdp
+			}
+
+			else
+			{
+				newneuronactivation[i] = 0.0;
+				neuron[i].v= -30; //or any value less than 30 for that matter
+			}	
+		}
+
+		//here we itterate though the non-input neurons
+		for (i = firstnoninputneuron; i < numneurons; i++)
+		{
+			//The bias seemed to be negatively affecting timing in out learning rule which corelates timing with 
+			//how stronly you learned.  Forcing the neuron to spike based on bias could cause associations that have 
+			//nothing to do with the the incoming synapses causing the neuron to fire, but rather the bias causing the
+			//nueron to fire and all incoming sysnapses would be attenuated or bolstered whether they helped to cause
+			//a action potential or not.
+			newneuronactivation[i] = .0;
+
+			startSynapsesToDepress = numSynapsesToDepress;
+	        //cycle through each synapse k for a given neuron i
+			for (k = neuron[i].startsynapses; k < neuron[i].endsynapses; k++)
+			{
+				fromNeuron = (short)abs(synapse[k].fromneuron);  //grab a synapse's from neuron
+				activation = neuronactivation[fromNeuron];		 //grab its activation		
+				//see if the synapse is active if so add it's value to the activation and location to the container
+				if ( activation )  //see if its active
+				{        
+					newneuronactivation[i] += synapse[k].efficacy * activation; //add it to the neuron's overall activation
+					synapsesToDepress[numSynapsesToDepress++]=k;  //need this for stdp learning rule
+				}       
+
+			}
+			
+			v = neuron[i].v;                        //get the current membrane potential
+		
+			//test to see if a spike had previously occured. If it did set a flag saying it just spiked
+			//then reset the membrane potential and recovery variable. 	
+			if (v>=30.)
+			{										  
+				neuron[i].v =  (double) SpikingParameter_c;	  //reset the membrane potential
+				neuron[i].u += (double) SpikingParameter_d;	  //reset the recovery variable
+				v = neuron[i].v;			
+			}	
+				
+			u=neuron[i].u;
+			
+#if USE_BIAS			
+			//stochastically generate bias
+			if (drand48() < (1.0 / (1.0 + exp(-1 * neuron[i].bias * .5))))
+				newneuronactivation[i] += BIAS_INJECTED_VOLTAGE;
+#endif				
+			
+			//Calculate Izhikevich's formula for voltage.  I don't understand why he does it twice, but 
+			//I have learned not to mess with things in he does that you don't understand.  Obviously there
+			//is a reason he does it this way.
+			
+			neuron[i].v = v + (.5 * ((0.04 * v * v) + (5 * v) + 140-neuron[i].u + newneuronactivation[i]));
+//change later all v should be neuron[i].v otherwise it is the same assignment as above....dummy!
+//			neuron[i].v = v + (.5 * ((0.04 * v * v) + (5 * v) + 140-neuron[i].u + newneuronactivation[i]));
+			neuron[i].u += SpikingParameter_a * (SpikingParameter_b * v - neuron[i].u);
+					
+			//##############################################################################################################
+			//If the membrane potetial is high enough that means an action potential will be generated.  Here we have a 
+			//high enough voltage to generate an action potential.  This means that all the synapses (i or e) that 
+			//contributed to the firing of the neuron are to be updated.  Here, in a generic Hebbian fasion we itterate 
+			//through a list of synapses that just fired and stenghten each connection in that list, based on each synapses 
+			//individual learing rate.
+			//##############################################################################################################
+			if(neuron[i].v >= 30.)
+			{
+				numSynapsesToDepress = startSynapsesToDepress;			//since we fired there is no need to depress
+				spikeMatrix[i][n_steps] = '1';							//printout matrix gets a one for a spike
+				NeuronFiringCounter[i]++;								//we fired thus we increment
+				if(i < firstInternalNeuron && i >= firstOutputNeuron)	//see if it's an output neuron
+					outputNeuronFiringCounter[i - firstOutputNeuron]++; //keep track of the total number of spike for output firing rate
+				newneuronactivation[i]=SpikingActivation;               //v>30 means a firing!
+				
+
+
+				/*The learning algorithm here has 2 steps
+				
+				This is step one.
+				The neuron has fired thus it rewards every incoming conection.  If the fromNeuron 
+				has recently fired it's stdp will be proportionally large to it's temporal difference
+				from when the toNeuron fires, which it fires now.  The leads into somewhat of a debate
+				because neurons keep getting rewarded if this neuron keeps firing, and they shouldn't
+				because when the toNeuron resets, the current that caused it to fire is disipated and 
+				thus has no role in causing the neuron to fire again in other time steps.  On way to 
+				around this is to set up two STDPs on for potentiation and one for depression, then clear
+				each one when learning takes place.  But thats one more float for each synapse in each 
+				brain in each critter and I have made the spiking neurons end of the code bulky enought.
+				Here is an example how learning takes place when Z fires.
+					
+				Step 1                Step 2                  Step 3                 Step 4
+				STDP multipled by     STDP *= .95,			  STDP *= .95,           STDP *= .95, 
+				.95.                  B & C fire.             B & C's STDPs reset	 B's STDPs reset
+				A fires               A's STDP reset to .1    B fires again          Potentiation takes place
+				A(0.0)-^->             A(0.1)--->             A(.095)--->             A(.090)--->
+				B(0.0)--->  Z(0.0)     B(0.0)-^->  Z(0.0)     B(0.1)-^->  Z(0.0)      B(0.1)---->  Z(0.0)-^->
+				C(0.0)--->             C(0.0)-^->             C(0.1)--->              C(.095)--->
+			
+				Keep in mind that we are only demontrating learning for Z.  On step four since z has fired
+				potentiation must take place.  Supposing that A B and C are all the synapses that connect to
+				Z we simply itterate through all synapes and potentiate each synapses delta by the STDP of 
+				the from neuron.  Thus in step four synpase(A-->Z).delta will be incremented by .09, 
+				synpase(B-->Z).delta by .1 and synpase(A-->Z).delta by .09.  At the end of a brain step the 
+				deltas will come back into play.
+				*/
+				
+				//this took a while to spot, or rather took larry going "oh it's a delta" and me "huh?".  
+				//what Izhikevich does in his code is to give an STDP value to each synapse.  					
+					    
+				for( k = neuron[i].startsynapses; k < neuron[i].endsynapses; k++ )			
+					synapse[k].delta += neuron[synapse[k].fromneuron].STDP;	//I have fired reward all my incoming conections
+			
+			}
+			// there is no spike thus default activation for the neuron is 0	
+			else
+				newneuronactivation[i] = 0.;  
+		}
+
+		/*
+		
+		Step 1                Step 2                  Step 3                 Step 4
+	    STDP multipled by     STDP *= .95,			  STDP *= .95,           STDP *= .95, 
+		.95.                  Z again fires           nobody fires nothing	 Z fires as does A and B
+		Z fires, helps B      none other fires        happens              
+		fire
+		      -^-> A(0.02)            -^-> A(0.019)             ---> A(.018)           -^->A(.1)
+		Z(0.0)-^-> B(0.1)       Z(0.1)-^-> B(0.95)      Z(0.095)---> B(0.09)    Z(0.09)-^->B(0.1)
+		      -^-> C(.095)            -^->  C(0.09)             ---> C(.095)           -^-> C(.81)
+	
+		Alright this sequence is very unlikely to happen most likely Z will only fire 10 times a brain step here it 
+		fires 3 to demonstrate what I feel is a problem of the algorithm.  Step z fires.  Synapse(Z-A) is depressed
+		by .02, synapse(Z-B) is depressed because B just fired and it is handled as a special case, however we have a 
+		huge depression for synapse(Z-C) because Z fired right after C previously fired which is what we want.
+		Step 2 Synapse(Z-A) -= .019 synapse(Z-B) -= .95, and synapse(Z-C) -= .09.  Step 3 nothing happens.  
+		synapse(Z-A) and synapse(Z-B) are not depressed because of both A and B firing.  My doubt again come into play
+		here, in this extremely rare situation, synapse(Z-C) is repeatedly being punsished by C never firing...on the
+		other hand that could be exactly how our neurons work, I really don't know.  Notice here that neuron Z's STDP
+		never affects the depression calculations.   
+		*/			
+		float stdp = 0;
+		synapsestruct * syn;		
+		k=0;
+		for(i = 0; i < numSynapsesToDepress; i++)
+		{
+			syn = &synapse[synapsesToDepress[i]];
+			stdp = neuron[syn->toneuron].STDP;
+	
+			//check to see if a given synapses to neuron has just fired
+			//otherwise we have to punish the incoming synapse. 
+			if (neuron[syn->toneuron].v < 30.)  //this should never happen since we swap numSynapsesToDepress with startNumSynapses to depress;
+			syn->delta -= stdp; //punish by the to neurons stdp timer		
+		}
+		
+		saveneuronactivation = neuronactivation;
+		neuronactivation = newneuronactivation;
+		newneuronactivation = saveneuronactivation;
+		//I feel this must be done here sorry no other exp  
+		//I did have it outside the brainsteps........how stupid!
+		for (i = 0; i < numneurons; i++)	
+		{
+			if(neuron[i].v>30)
+				neuron[i].STDP = STDP_RESET;
+			else		
+				neuron[i].STDP *= STDP_DEGRADATION_SCALER;	
+		}
+
+	}//end brainsteps
+	
+	 	
+	//now this is where learning actually takes place.  It's here that we take the delta's we've been modifying
+	//this whole time and actually use them to modify the efficacy of the synapses.  The reason we wait to modify
+	//the actual synapse efficacies until all brain steps is complete is two fold one Izhikevich does it and two
+	//for the sake of efficiency.
+	float learningrate, half_max_weight = .5f * gMaxWeight, one_minus_decay = 1. - gDecayRate;
+	int ii,jj;
+				
+    for (k = 0; k < numsynapses; k++)
+    {
+        if (synapse[k].toneuron >= 0) // 0 can't happen it's an input neuron
+        {
+            i = synapse[k].toneuron;
+            ii = 0;
+        }
+        else
+        {
+            i = -synapse[k].toneuron;
+            ii = 1;
+        }
+        if ( (synapse[k].fromneuron > 0) ||
+            ((synapse[k].toneuron  == 0) && (synapse[k].efficacy >= 0.0)) )
+        {
+            j = synapse[k].fromneuron;
+            jj = 0;
+        }
+        else
+        {
+            j = -synapse[k].fromneuron;
+            jj = 1;
+        }
+
+        learningrate = grouplrate[index4(neuron[i].group,neuron[j].group,ii,jj, numneurgroups,2,2)];		
+		synapse[k].delta *= .9; //cheating a little
+		if (synapse[k].efficacy >= 0)
+			synapse[k].efficacy += (.01 + synapse[k].delta * learningrate);// * delta t; need a delta t 
+		else
+			synapse[k].efficacy -= (.01 + synapse[k].delta * learningrate);
+
+        if (fabs(synapse[k].efficacy) > (0.5f * gMaxWeight))
+        {
+            synapse[k].efficacy *= 1.0f - (1.0f - gDecayRate) *
+                (fabs(synapse[k].efficacy) - 0.5f * gMaxWeight) / (0.5f * gMaxWeight);
+            if (synapse[k].efficacy > gMaxWeight)
+                synapse[k].efficacy = gMaxWeight;
+            else if (synapse[k].efficacy < -gMaxWeight)
+                synapse[k].efficacy = -gMaxWeight;
+        }
+        else
+        {
+            if (learningrate >= 0.0f)  // excitatory
+                synapse[k].efficacy = max(0.0f, synapse[k].efficacy);
+            if (learningrate < 0.0f)  // inhibitory
+                synapse[k].efficacy = min(-1.e-10f, synapse[k].efficacy);
+        }
+    }
+
+/*
+        learningrate = grouplrate[index4(neuron[i].group,neuron[j].group,ii,jj, numneurgroups,2,2)];
+		synapse[k].delta *= .9; //cheating a little iz did it
+		if (synapse[k].efficacy >= 0)
+		{
+			synapse[k].efficacy += .01 + synapse[k].delta * learningrate;// * delta t; need a delta t 
+			if (synapse[k].efficacy > gMaxWeight)
+                synapse[k].efficacy = gMaxWeight - (one_minus_decay);
+			else if (synapse[k].efficacy > half_max_weight)
+				synapse[k].efficacy *= 1.0f - (one_minus_decay) * (synapse[k].efficacy - half_max_weight) / (half_max_weight);
+			else
+				synapse[k].efficacy = max(0.0f, synapse[k].efficacy);
+		}
+		else 
+		{
+			synapse[k].efficacy -= .01 + synapse[k].delta * learningrate;
+			if (synapse[k].efficacy < -gMaxWeight)
+                synapse[k].efficacy = -gMaxWeight + (one_minus_decay);
+			else if(synapse[k].efficacy < -half_max_weight)
+			//fix me later should be a      +
+				synapse[k].efficacy *= 1.0f - one_minus_decay * (fabs(synapse[k].efficacy) - half_max_weight) / half_max_weight;
+			else
+				synapse[k].efficacy = min(-1.e-10f, synapse[k].efficacy);
+		
+		}
+	}
+*/
+	
+
+	//simulation.cpp readworldfile
+	//when you change bump the version number
+	//when version < new version then set spiking to false.
+	//tsimulation object might want fUseSpikingModel or something similair.	
+
+	// compute smoothed output unit activation levels
+	
+	float currentActivationLevel[numOutputNeurons], scale_total_spikes = 1.0-scale_latest_spikes;
+	for (i = 0; i < numOutputNeurons; i++)
+	{
+		neuron[i+firstOutputNeuron].maxfiringcount = max(outputNeuronFiringCounter[i], (int) neuron[i+firstOutputNeuron].maxfiringcount);
+
+#if USE_BIAS		
+		currentActivationLevel[i]=fmin(1.0, (double)outputNeuronFiringCounter[i] / (double)BrainStepsPerWorldStep);
+#else
+		currentActivationLevel[i]=fmin(1.0, (double)outputNeuronFiringCounter[i] / (double)neuron[i+firstOutputNeuron].maxfiringcount);
+#endif
+		outputActivation[i] = scale_total_spikes * outputActivation[i]  +  scale_latest_spikes * currentActivationLevel[i];
+
+		neuronactivation[i+firstOutputNeuron] = outputActivation[i];
+
+	}
+
+
+//###################################################################################################################################	
+	
+	
+	//	ira added not used no bias as of yet
+#if USE_BIAS	
+	for (i = firstnoninputneuron; i < numneurons; i++)
+    {
+        neuron[i].bias += groupblrate[neuron[i].group]
+                        * (newneuronactivation[i]-0.5f)
+                        * 0.5f;
+        if (fabs(neuron[i].bias) > (0.5 * gNeuralValues.maxbias))
+        {
+            neuron[i].bias *= 1.0 - (1.0f - gDecayRate) *
+                (fabs(neuron[i].bias) - 0.5f * gNeuralValues.maxbias) / (0.5f * gNeuralValues.maxbias);
+            if (neuron[i].bias > gNeuralValues.maxbias)
+                neuron[i].bias = gNeuralValues.maxbias;
+            else if (neuron[i].bias < -gNeuralValues.maxbias)
+                neuron[i].bias = -gNeuralValues.maxbias;
+        }
+    }
+#endif
+
+//watch your ass buddy I got a damn sigbus here check out run_sigbus do I need to lock the file
+//this can't be threaded.  I did switch moniters maybe that cause the error?????
+#if 1
+	if(fHandle)
+	{
+		for(int i = 0; i < firstOutputNeuron; i++ )
+		{
+			fprintf( fHandle, "%d %1.4f ", i, (float)NeuronFiringCounter[i]/BrainStepsPerWorldStep);
+			for(int j=0; j<BrainStepsPerWorldStep; j++)
+				fprintf( fHandle, "%c", spikeMatrix[i][j] );
+			fprintf( fHandle, "\n");
+		}
+		for (int i = firstOutputNeuron; i < numneurons; i++)
+		{
+			fprintf( fHandle, "%d %1.4f ", i, neuronactivation[i]);
+			for(int j=0; j<BrainStepsPerWorldStep; j++)
+				fprintf( fHandle, "%c", spikeMatrix[i][j] );
+			fprintf( fHandle, "\n");
+		}
+
+	}
+#endif	
+}	
+#endif
