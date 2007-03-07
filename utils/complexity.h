@@ -69,6 +69,7 @@ int qsort_compare_double( const void *a, const void *b);
 int qsort_compare_rows0( const void *a, const void *b );
 int qsort_compare_rows1( const void *a, const void *b );
 double CalcComplexity( char * , char, int );
+double CalcComplexityWithMatrix( gsl_matrix*, char, int );
 
 int qsort_compare_double( const void *a, const void *b )
 {
@@ -215,16 +216,22 @@ gsl_matrix * gsamp( gsl_matrix_view x )
 double CalcComplexity( char * fnameAct, char part, int ignore_timesteps_after )
 {
 
-	part = toupper( part );			// capitalize it
 	int numinputneurons = 0;		// this value will be defined by readin_brainfunction()
 
 	gsl_matrix * activity = readin_brainfunction__optimized( fnameAct, numinputneurons, ignore_timesteps_after );
 
+	return( CalcComplexityWithMatrix( activity, part, numinputneurons ) );
+}
+
+double CalcComplexityWithMatrix( gsl_matrix * activity, char part, int numinputneurons )
+{
     // if had an invalid brain file, return 0.
     if( activity == NULL ) { return 0.0; }
 
     // If critter lived less timesteps than it has neurons, return Complexity = 0.0.
     if( activity->size2 > activity->size1 || activity->size1 < IgnoreCrittersThatLivedLessThan_N_Timesteps ) { return 0.0; }
+
+	part = toupper( part );			// capitalize it
 
     gsl_matrix * o;			// we don't need this guy yet but we will in a bit.  We need to define him here so the useGSAMP can assign to it.
 
@@ -634,7 +641,11 @@ gsl_matrix * readin_brainanatomy( const char* fname )
 
 gsl_matrix * readin_brainfunction__optimized( const char* fname, int& numinputneurons, int ignore_timesteps_after )
 {
-/* This function largely replicates the function of the MATLAB file readin_brainfunction.m (Calculates, but does not return filnum, fitness).  This function has also been extended to take a parameter that calculates complexity only over the first 'ignore_timesteps_after' of an agent's lifetime.
+/* This function largely replicates the function of the MATLAB file
+   readin_brainfunction.m (Calculates, but does not return filnum,
+   fitness).  This function has also been extended to take a parameter
+   that calculates complexity only over the first 'ignore_timesteps_after'
+   of an agent's lifetime.
 */
 	assert( ignore_timesteps_after >= 0 );		// just to be safe.
 
