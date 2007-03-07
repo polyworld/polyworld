@@ -48,25 +48,49 @@ echo "- Timestep Interval=$TIMESTEP_INTERVAL"
 # the sed here is to properly escape any hyphens in the input before they goto grep
 params=$(echo "$TO_GET" | sed -e 's/-/\\-/g' | tr -s ',' '\n')		# the -s here is important to collapse multiple comas. ',,'->','
 
+# if there is NOT a '#' on the end of each param, put them in here.
+params=$(for param in ${params}	
+do
+	has_crunch=$(echo "$param" | grep -o '#[0-9]*$')
+	if [ -z "$has_crunch" ]
+	then
+		with_crunch=$(echo "${param}#1")
+	else
+		with_crunch=$param
+	fi
+
+	echo "$with_crunch"
+done)
+
+# Make a whole new param array that DOES NOT have the crunches
+params_withoutcrunch=$(for param in ${params}
+do
+	echo "$param" | sed -e 's/#[0-9]*$//'
+done)
+
+
 # Check to make sure all of the specified parameters exist within the stat.#### files, and that they only specify a single line.
 exit_error=0
 number_of_parameters=0
 for param in ${params}
 do
+	# Take off the crunch
+	param_withoutcrunch=$(echo "$param" | sed -e 's/#[0-9]*$//')
+
 	number_of_parameters=$(echo "$number_of_parameters + 1" | bc)
-	number=$(grep -c "^[ ]*$param[^A-Za-z]*=" ${STATS_DIR}/stat.1)
+	number=$(grep -c "^[ ]*$param_withoutcrunch[^A-Za-z]*" ${STATS_DIR}/stat.1)
 
 	echo "- param${number_of_parameters}=$param"
 
 	if [ "$number" -le "0" ]		# I know techincally it should be 'eq' not 'le', but if there's a negative we shouldn't continue then either.
 	then
-		echo "Error: I did not see a value '$param' in '${STATS_DIR}/stat.1"
+		echo "Error: I did not see a value '$param_withoutcrunch' in '${STATS_DIR}/stat.1"
 		exit_error=1
 
 	elif [ "$number" -ge "2" ]
 	then
-		echo "The parameter '$param' is ambiguous.  Possibilities: "
-		grep "^[ ]*$param[^A-Za-z]*=" $STATS_DIR/stat.1 | sed -e 's/=.*$//g'
+		echo "The parameter '$param_withoutcrunch' is ambiguous.  Possibilities: "
+		grep "^[ ]*$param_withoutcrunch[^A-Za-z]*" $STATS_DIR/stat.1
 		exit_error=1
 	fi
 
@@ -94,19 +118,28 @@ fi
 echo "- Grepping through $STATS_DIR..."
 echo "${params}" | awk -v TIMESTEP_INTERVAL="$TIMESTEP_INTERVAL" -v LAST_TIMESTEP="$LAST_TIMESTEP" -v STATS_DIR="$STATS_DIR" '
 {
-	param=$0;		# set the param
+	split($0,temp,"#");
+	param=temp[1];
+	column=temp[2];
+
+	# HACK ALERT!! -- If param has a number [0-9], in it, we must increment the column by 1.  This is to prevent us accidentially from printing the number within the param.
+	if( match(param, "[0-9]") ) { column = column + 1; }
 
 	# do the first timestep
-	"grep \"^[ ]*" param "[^A-Za-z]*=\" " STATS_DIR "/stat.1 | cut -d\"=\" -f2 | sed -e \"s/^[ ]*//\" | sed -e \"s/[^0-9\.].*$//g\"" | getline DATA["t1_" NR];
+	# Steps: 1) Grep for the param; 2) strip everything except for numbers and spaces; 3) collapse multiple spaces; 4) remove any leading spaces; 5) get the intended column; 6) store into variable
+	"grep \"^[ ]*" param "[^A-Za-z]*\" " STATS_DIR "/stat.1 | sed -e \"s/[^0-9\. ]//g\" | tr -s \" \" | sed -e \"s/^[ ]*//\" | cut -d\" \" -f" column | getline DATA["t1_" NR];
+	close("grep \"^[ ]*" param "[^A-Za-z]*\" " STATS_DIR "/stat.1 | sed -e \"s/[^0-9\. ]//g\" | tr -s \" \" | sed -e \"s/^[ ]*//\" | cut -d\" \" -f" column);
+
 #	print "t1______" param "=" DATA["t1_" NR];
-	close("grep \"^[ ]*" param "[^A-Za-z]*=\" " STATS_DIR "/stat.1 | cut -d\"=\" -f2 | sed -e \"s/^[ ]*//\" | sed -e \"s/[^0-9\.].*$//g\"");
 
 	# do all the other timesteps
 	for( current_timestep=TIMESTEP_INTERVAL; current_timestep <= LAST_TIMESTEP; current_timestep += TIMESTEP_INTERVAL )
 	{
-		"grep \"^[ ]*" param "[^A-Za-z]*=\" " STATS_DIR "/stat." current_timestep  " | cut -d\"=\" -f2 | sed -e \"s/^[ ]*//\" | sed -e \"s/[^0-9\.].*$//g\"" | getline DATA["t" current_timestep "_" NR]
-		close("grep \"^[ ]*" param "[^A-Za-z]*=\" " STATS_DIR "/stat." current_timestep  " | cut -d\"=\" -f2 | sed -e \"s/^[ ]*//\" | sed -e \"s/[^0-9\.].*$//g\"");
-	#	print "t" current_timestep "______" param "=" DATA["t" current_timestep "_" NR]
+
+		"grep \"^[ ]*" param "[^A-Za-z]*\" " STATS_DIR "/stat." current_timestep " | sed -e \"s/[^0-9\. ]//g\" | tr -s \" \" | sed -e \"s/^[ ]*//\" | cut -d\" \" -f" column | getline DATA["t" current_timestep "_" NR];
+		close("grep \"^[ ]*" param "[^A-Za-z]*\" " STATS_DIR "/stat." current_timestep " | sed -e \"s/[^0-9\. ]//g\" | tr -s \" \" | sed -e \"s/^[ ]*//\" | cut -d\" \" -f" column);
+
+#		print "t" current_timestep "______" param "=" DATA["t" current_timestep "_" NR]
 
 	}
 
@@ -125,8 +158,10 @@ echo "${params}" | awk -v TIMESTEP_INTERVAL="$TIMESTEP_INTERVAL" -v LAST_TIMESTE
 		for( i=1; i<=NR; i++ ) { printf "%s\t", DATA["t" current_timestep "_" i]; }
 		printf "\n"
 	}
-
 }' > ,temp
+
+echo "Humancheck -- beginning of plotfile:"
+head -n 5 ,temp
 
 #### Okay, we've now put all of our data into ,temp.  Time to plot it!
 echo "- Plotting..."
@@ -155,8 +190,8 @@ ${GNUPLOT} << EOF
 set xlabel 'Timestep'
 # set ylabel '${GNUPLOT_ylabel}'
 set grid
-set xrange [0:${LAST_TIMESTEP}]
 set mxtics 5
+set xrange [0:${LAST_TIMESTEP}]
 set title "${run_dir}\n${GNUPLOT_ylabel}"
 ${GNUPLOT_plotstring}
 
