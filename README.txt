@@ -5,7 +5,11 @@ Vivarium Program at Apple Computer.  This version was heavily updated
 and adapted by Gene Ragan, Nicolas Zinovieff, and myself, to further
 this line of research, now that I am a Professor of Informatics at
 Indiana University, and am finally able to once again devote my
-time to this subject.
+time to this subject.  Virgil Griffith has been an important
+contributor and collaborator, particularly in the implementation
+of Olaf Sporns's complexity measure and various scripts.  Matt
+Ira implemented the first version of a spiking neuron model in
+Polyworld due to Izhikevich.
 
 Polyworld currently runs atop Qt 4.1 (or later) from Trolltech
 <http://www.trolltech.com/>.  It uses the "Qt Open Source Edition",
@@ -81,6 +85,13 @@ IMPORTANT NOTE: Intel Macs may require gsl 1.8 or higher.
   The following steps should be followed: 
 	$ LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH 
 	$ export LD_LIBRARY_PATH
+
+Copy the nominal worldfile (worldfile_nominal) to a file called just worldfile
+  When run (and when built in Xcode) Polyworld requires a local file called
+  "worldfile" for all of its run-time parameter settings.  There are a number
+  of different worldfile_* files for different experimental conditions in the
+  source base.  One of them needs to be copied to a "worldfile", with
+  "worldfile_nominal" being a reasonable place to start.
 
 Mac versus Linux Installs
 * The default 'polyworld.pro' file now works for both Mac & Linux,
