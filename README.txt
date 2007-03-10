@@ -8,8 +8,10 @@ Indiana University, and am finally able to once again devote my
 time to this subject.  Virgil Griffith has been an important
 contributor and collaborator, particularly in the implementation
 of Olaf Sporns's complexity measure and various scripts.  Matt
-Ira implemented the first version of a spiking neuron model in
-Polyworld due to Izhikevich.
+Whitehead implemented FoodPatches and consolidated the multiple
+x-sorted lists into a single x-sored list.  Matt Ira implementedt
+the first version of a spiking neuron model in Polyworld after
+Izhikevich.
 
 Polyworld currently runs atop Qt 4.1 (or later) from Trolltech
 <http://www.trolltech.com/>.  It uses the "Qt Open Source Edition",
