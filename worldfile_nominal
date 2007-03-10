@@ -160,9 +160,10 @@
 0		domain[0].foodPatch[0].areaShape_0=rectangular|1=elliptical
 0		domain[0].foodPatch[0].distribution_0=uniform|1=linear|2=gaussian
 0		domain[0].foodPatch[0].neighborhoodSize
-200		domain[0].foodPatch[0].period
-0.33333	domain[0].foodPatch[0].onFraction
+0		domain[0].foodPatch[0].period
+1.0		domain[0].foodPatch[0].onFraction
 0.0		domain[0].foodPatch[0].phase
+0		domain[0].foodPatch[0].removeFood
 
 30		domain[1].minCritters
 100		domain[1].maxCritters
@@ -194,9 +195,10 @@
 0		domain[1].foodPatch[0].areaShape_0=rectangular|1=elliptical
 0		domain[1].foodPatch[0].distribution_0=uniform|1=linear|2=gaussian
 0		domain[1].foodPatch[0].neighborhoodSize
-200		domain[1].foodPatch[0].period
-0.33333	domain[1].foodPatch[0].onFraction
-0.33333	domain[1].foodPatch[0].phase
+0		domain[1].foodPatch[0].period
+1.0		domain[1].foodPatch[0].onFraction
+0.0		domain[1].foodPatch[0].phase
+0		domain[1].foodPatch[0].removeFood
 
 30		domain[2].minCritters
 100		domain[2].maxCritters
@@ -228,9 +230,10 @@
 0		domain[2].foodPatch[0].areaShape_0=rectangular|1=elliptical
 0		domain[2].foodPatch[0].distribution_0=uniform|1=linear|2=gaussian
 0		domain[2].foodPatch[0].neighborhoodSize
-200		domain[2].foodPatch[0].period
-0.33333	domain[2].foodPatch[0].onFraction
-0.66667	domain[2].foodPatch[0].phase
+0		domain[2].foodPatch[0].period
+1.0		domain[2].foodPatch[0].onFraction
+0.0		domain[2].foodPatch[0].phase
+0		domain[2].foodPatch[0].removeFood
 
 1		useProbabilisticFoodPatches
 
