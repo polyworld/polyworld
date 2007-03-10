@@ -14,7 +14,7 @@
 #define MinDebugStep 0
 #define MaxDebugStep INT_MAX
 
-#define CurrentWorldfileVersion 25
+#define CurrentWorldfileVersion 26
 
 // CompatibilityMode makes the new code with a single x-sorted list behave *almost* identically to the old code.
 // Discrepancies still arise due to the old food list never being re-sorted and critters at the exact same x location
@@ -1202,7 +1202,51 @@ void TSimulation::Step()
 		fCamera.settranslation((0.5+fCameraRadius*sin(camrad))*globals::worldsize, fCameraHeight*globals::worldsize,(-.5+fCameraRadius*cos(camrad))*
 globals::worldsize);
 	}
+	
+	// If any dynamic food patches destroy their food when turned off, take care of it here
+	if( fFoodRemovalNeeded )
+	{
+		// Get a list of patches needing food removal currently
+		int numPatchesNeedingRemoval = 0;
+		for( int domain = 0; domain < fNumDomains; domain++ )
+		{
+			for( int patch = 0; patch < fDomains[domain].numFoodPatches; patch++ )
+			{
+				// printf( "%2ld: d=%d, p=%d, on=%d, on1=%d, r=%d\n", fStep, domain, patch, fDomains[domain].fFoodPatches[patch].on( fStep ), fDomains[domain].fFoodPatches[patch].on( fStep+1 ), fDomains[domain].fFoodPatches[patch].removeFood );
+				// If the patch is on now, but off in the next time step, and it is supposed to remove its food when it is off...
+				if( fDomains[domain].fFoodPatches[patch].on( fStep ) && !fDomains[domain].fFoodPatches[patch].on( fStep+1 ) && fDomains[domain].fFoodPatches[patch].removeFood )
+				{
+					fFoodPatchesNeedingRemoval[numPatchesNeedingRemoval++] = &(fDomains[domain].fFoodPatches[patch]);
+				}
+			}
+		}
+		
+		if( numPatchesNeedingRemoval > 0 )
+		{
+			food* f;
+			
+			// There are patches currently needing removal, so do it
+			objectxsortedlist::gXSortedObjects.reset();
+			while( objectxsortedlist::gXSortedObjects.nextObj( FOODTYPE, (gobject**) &f ) )
+			{
+				for( int i = 0; i < numPatchesNeedingRemoval; i++ )
+				{
+					if( f->getPatch() == fFoodPatchesNeedingRemoval[i] )
+					{
+						// This piece of food is in a patch performing food removal, so get rid of it
+						(f->getPatch())->foodCount--;
+						fDomains[f->domain()].foodCount--;
 
+						objectxsortedlist::gXSortedObjects.removeCurrentObject();   // get it out of the list
+						fStage.RemoveObject( f );  // get it out of the world
+						delete f;				// get it out of memory
+						
+						break;	// found patch and deleted food, so get out of patch loop
+					}
+				}
+			}
+		}
+	}
 }
 
 
@@ -1609,26 +1653,35 @@ void TSimulation::Init()
 		}
 			
 		// Add food to the food patches until they each have their initFoodCount number of food pieces
-		for (int domainNumber = 0; domainNumber < fNumDomains; domainNumber++)
+		for( int domainNumber = 0; domainNumber < fNumDomains; domainNumber++ )
 		{
-			for (int foodPatchNumber=0; foodPatchNumber< fDomains[domainNumber].numFoodPatches; foodPatchNumber++)
+			int numFoodPatchesGrown = 0;
+			
+			for( int foodPatchNumber = 0; foodPatchNumber < fDomains[domainNumber].numFoodPatches; foodPatchNumber++ )
 			{
-				for (int j=0; j<fDomains[domainNumber].fFoodPatches[foodPatchNumber].initFoodCount; j++)
+				if( fDomains[domainNumber].fFoodPatches[foodPatchNumber].on( 0 ) )
 				{
-					if (fDomains[domainNumber].foodCount < fDomains[domainNumber].maxFoodCount)
+					for( int j = 0; j < fDomains[domainNumber].fFoodPatches[foodPatchNumber].initFoodCount; j++ )
 					{
-						fFoodEnergyIn += fDomains[domainNumber].fFoodPatches[foodPatchNumber].addFood();
-						fDomains[domainNumber].foodCount++;
+						if( fDomains[domainNumber].foodCount < fDomains[domainNumber].maxFoodCount )
+						{
+							fFoodEnergyIn += fDomains[domainNumber].fFoodPatches[foodPatchNumber].addFood();
+							fDomains[domainNumber].foodCount++;
+						}
 					}
+					fDomains[domainNumber].fFoodPatches[foodPatchNumber].initFoodGrown( true );
+					numFoodPatchesGrown++;
 				}
 			}
+			
+			fDomains[domainNumber].allFoodPatchesGrown = ( numFoodPatchesGrown >= fDomains[domainNumber].numFoodPatches );
 		}
 
 	#if 0
 		// Add initial bricks 
-		for (int i=0; i<fNumBrickPatches; i++)
+		for( int i = 0; i < fNumBrickPatches; i++ )
 		{
-			for (int j=0; j<fBrickPatches[i].brickCount; j++)
+			for( int j = 0; j < fBrickPatches[i].brickCount; j++ )
 			{
 				fBrickPatches[i].addBrick();
 			}
@@ -3233,38 +3286,83 @@ void TSimulation::Interact()
 	// finally, keep the world's food supply going...
 	// Go through each of the food patches and bring them up to minFoodCount size
 	// and create a new piece based on the foodRate probability
-	if ((long)objectxsortedlist::gXSortedObjects.getCount(FOODTYPE) < fMaxFoodCount) 
+	if( (long)objectxsortedlist::gXSortedObjects.getCount(FOODTYPE) < fMaxFoodCount ) 
 	{
-		for (int domainNumber=0; domainNumber < fNumDomains; domainNumber++)
+		for( int domainNumber = 0; domainNumber < fNumDomains; domainNumber++ )
 		{
-			if (fUseProbabilisticFoodPatches)
+			// If there are any dynamic food patches that have not yet had their initial growth,
+			// see if they're ready to grow now
+			if( ! fDomains[domainNumber].allFoodPatchesGrown )
 			{
-				if (fDomains[domainNumber].foodCount < fDomains[domainNumber].maxFoodGrownCount)	// ??? Matt used .maxFoodCount here, but it should be maxFoodGrown, right? (like it was before patches)
+				// Keep track of how many patches have had their initial growth
+				int numPatchesGrown = 0;
+				
+				// If there are dynamic food patches that have not yet had their initial growth,
+				// and they are now active, perform the initial growth now
+				for( int patchNumber = 0; patchNumber < fDomains[domainNumber].numFoodPatches; patchNumber++ )
 				{
-					float probAdd = (fDomains[domainNumber].maxFoodGrownCount - fDomains[domainNumber].foodCount) * 	fDomains[domainNumber].foodRate;
-					if (drand48() < probAdd)
+					if( fDomains[domainNumber].fFoodPatches[patchNumber].initFoodGrown() )
+						numPatchesGrown++;
+					else if( fDomains[domainNumber].fFoodPatches[patchNumber].on( fStep ) )
+					{
+						for( int j = 0; j < fDomains[domainNumber].fFoodPatches[patchNumber].initFoodCount; j++ )
+						{
+							if( fDomains[domainNumber].foodCount < fDomains[domainNumber].maxFoodCount )
+							{
+								fFoodEnergyIn += fDomains[domainNumber].fFoodPatches[patchNumber].addFood();
+								fDomains[domainNumber].foodCount++;
+							}
+						}
+						fDomains[domainNumber].fFoodPatches[patchNumber].initFoodGrown( true );
+						numPatchesGrown++;
+					}
+				}
+				
+				if( numPatchesGrown >= fDomains[domainNumber].numFoodPatches )
+					fDomains[domainNumber].allFoodPatchesGrown = true;
+			}
+
+			if( fUseProbabilisticFoodPatches )
+			{
+				if( fDomains[domainNumber].foodCount < fDomains[domainNumber].maxFoodGrownCount )
+				{
+					float probAdd = (fDomains[domainNumber].maxFoodGrownCount - fDomains[domainNumber].foodCount) * fDomains[domainNumber].foodRate;
+					if( drand48() < probAdd )
 					{
 						// Add food to a patch in the domain (chosen based on the patch's fraction)
-						int patchNumber = getRandomPatch(domainNumber);
-						fFoodEnergyIn += fDomains[domainNumber].fFoodPatches[patchNumber].addFood();
-						fDomains[domainNumber].foodCount++;
+						int patchNumber = getRandomPatch( domainNumber );
+						if( patchNumber >= 0 )
+						{
+							fFoodEnergyIn += fDomains[domainNumber].fFoodPatches[patchNumber].addFood();
+							fDomains[domainNumber].foodCount++;
+						}
 					}
 
 					// Grow by the integer part of the foodRate of the domain
 					int foodToGrow = (int)fDomains[domainNumber].foodRate; 
-					for (int i=0; i<foodToGrow; i++)
+					for( int i = 0; i < foodToGrow; i++ )
 					{
-						int patchNumber = getRandomPatch(domainNumber);
-						fFoodEnergyIn += fDomains[domainNumber].fFoodPatches[patchNumber].addFood();
-						fDomains[domainNumber].foodCount++;
+						int patchNumber = getRandomPatch( domainNumber );
+						if( patchNumber >= 0 )
+						{
+							fFoodEnergyIn += fDomains[domainNumber].fFoodPatches[patchNumber].addFood();
+							fDomains[domainNumber].foodCount++;
+						}
+						else
+							break;	// no active patches in this domain, so give up
 					}
 					
 					int newFood = fDomains[domainNumber].minFoodCount - fDomains[domainNumber].foodCount;
-					for (int i=0; i<newFood; i++)
+					for( int i = 0; i < newFood; i++ )
 					{
 						int patchNumber = getRandomPatch(domainNumber);
-						fFoodEnergyIn += fDomains[domainNumber].fFoodPatches[patchNumber].addFood();
-						fDomains[domainNumber].foodCount++;
+						if( patchNumber >= 0 )
+						{
+							fFoodEnergyIn += fDomains[domainNumber].fFoodPatches[patchNumber].addFood();
+							fDomains[domainNumber].foodCount++;
+						}
+						else
+							break;	// no active patches in this domain, so give up
 					}
 				}
 			}
@@ -3272,32 +3370,33 @@ void TSimulation::Interact()
 			{
 				for( int patchNumber = 0; patchNumber < fDomains[domainNumber].numFoodPatches; patchNumber++ )
 				{
-
-					if( fDomains[domainNumber].fFoodPatches[patchNumber].foodCount < fDomains[domainNumber].fFoodPatches[patchNumber].maxFoodGrownCount )
+					if( fDomains[domainNumber].fFoodPatches[patchNumber].on( fStep ) )
 					{
-
-						float probAdd = (fDomains[domainNumber].fFoodPatches[patchNumber].maxFoodGrownCount - fDomains[domainNumber].fFoodPatches[patchNumber].foodCount) * fDomains[domainNumber].fFoodPatches[patchNumber].growthRate;
-
-						if (drand48() < probAdd)
+						if( fDomains[domainNumber].fFoodPatches[patchNumber].foodCount < fDomains[domainNumber].fFoodPatches[patchNumber].maxFoodGrownCount )
 						{
-							fFoodEnergyIn += fDomains[domainNumber].fFoodPatches[patchNumber].addFood();
-							fDomains[domainNumber].foodCount++;
-						}
 
-						// Grow by the integer part of the growthRate
-						int foodToGrow = (int)fDomains[domainNumber].fFoodPatches[patchNumber].growthRate; 
-						for (int i=0; i<foodToGrow; i++)
-						{
-							fFoodEnergyIn += fDomains[domainNumber].fFoodPatches[patchNumber].addFood();
-							fDomains[domainNumber].foodCount++;
-						}
+							float probAdd = (fDomains[domainNumber].fFoodPatches[patchNumber].maxFoodGrownCount - fDomains[domainNumber].fFoodPatches[patchNumber].foodCount) * fDomains[domainNumber].fFoodPatches[patchNumber].growthRate;
 
+							if( drand48() < probAdd )
+							{
+								fFoodEnergyIn += fDomains[domainNumber].fFoodPatches[patchNumber].addFood();
+								fDomains[domainNumber].foodCount++;
+							}
 
-						int newFood = fDomains[domainNumber].fFoodPatches[patchNumber].minFoodCount - fDomains[domainNumber].fFoodPatches[patchNumber].foodCount;
-						for (int i=0; i<newFood; i++)
-						{
-							fFoodEnergyIn += fDomains[domainNumber].fFoodPatches[patchNumber].addFood();
-							fDomains[domainNumber].foodCount++;
+							// Grow by the integer part of the growthRate
+							int foodToGrow = (int) fDomains[domainNumber].fFoodPatches[patchNumber].growthRate; 
+							for( int i = 0; i < foodToGrow; i++ )
+							{
+								fFoodEnergyIn += fDomains[domainNumber].fFoodPatches[patchNumber].addFood();
+								fDomains[domainNumber].foodCount++;
+							}
+
+							int newFood = fDomains[domainNumber].fFoodPatches[patchNumber].minFoodCount - fDomains[domainNumber].fFoodPatches[patchNumber].foodCount;
+							for( int i = 0; i < newFood; i++ )
+							{
+								fFoodEnergyIn += fDomains[domainNumber].fFoodPatches[patchNumber].addFood();
+								fDomains[domainNumber].foodCount++;
+							}
 						}
 					}
 				}
@@ -3305,20 +3404,18 @@ void TSimulation::Interact()
 		}
 	}
 
-
-	if (fFoodPatchStatsFile)
+	if( fFoodPatchStatsFile )
 	{
 		fprintf( fFoodPatchStatsFile, "%ld: foodPatchCounts =", fStep );
-		for (int domainNumber=0; domainNumber < fNumDomains; domainNumber++)
+		for( int domainNumber = 0; domainNumber < fNumDomains; domainNumber++ )
 		{
-			for (int patchNumber = 0; patchNumber < fDomains[domainNumber].numFoodPatches; patchNumber++)
+			for( int patchNumber = 0; patchNumber < fDomains[domainNumber].numFoodPatches; patchNumber++ )
 			{
 				fprintf( fFoodPatchStatsFile, " %d", fDomains[domainNumber].fFoodPatches[patchNumber].foodCount );
 			}
 		}
 		fprintf( fFoodPatchStatsFile, "\n");
 	}
-
 }
 
 
@@ -4330,6 +4427,7 @@ void TSimulation::ReadWorldFile(const char* filename)
     short id;
 	long totmaxnumcritters = 0;
 	long totminnumcritters = 0;
+	int	numFoodPatchesNeedingRemoval = 0;
 	
 	for (id = 0; id < fNumDomains; id++)
 	{
@@ -4372,13 +4470,13 @@ void TSimulation::ReadWorldFile(const char* filename)
 			fDomains[id].endZ = - fDomains[id].centerZ * globals::worldsize + (fDomains[id].absoluteSizeZ / 2.0);
 			
 			// clean up for floating point precision a little
-			if( fDomains[id].startX < 0.0001 )
+			if( fDomains[id].startX < 0.0006 )
 				fDomains[id].startX = 0.0;
-			if( fDomains[id].startZ > -0.0001 )
+			if( fDomains[id].startZ > -0.0006 )
 				fDomains[id].startZ = 0.0;
-			if( fDomains[id].endX > globals::worldsize * 0.9999 )
+			if( fDomains[id].endX > globals::worldsize * 0.9994 )
 				fDomains[id].endX = globals::worldsize;
-			if( fDomains[id].endZ < -globals::worldsize * 0.9999 )
+			if( fDomains[id].endZ < -globals::worldsize * 0.9994 )
 				fDomains[id].endZ = -globals::worldsize;
 
 			printf("NEW DOMAIN\n");
@@ -4403,8 +4501,7 @@ void TSimulation::ReadWorldFile(const char* filename)
 			cout << "maxFoodCount of domains[" << id << "]" ses fDomains[id].maxFoodCount nl;
 			in >> fDomains[id].maxFoodGrownCount; in >> label;
 			cout << "maxFoodGrownCount of domains[" << id << "]" ses fDomains[id].maxFoodGrownCount nl;
-
-
+			
 			// Create an array of FoodPatches
 			fDomains[id].fFoodPatches = new FoodPatch[fDomains[id].numFoodPatches];
 			float patchFractionSpecified = 0.0;
@@ -4417,6 +4514,9 @@ void TSimulation::ReadWorldFile(const char* filename)
 				float nhsize;
 				int initFood, minFood, maxFood, maxFoodGrown;
 				int shape, distribution;
+				int period;
+				float onFraction, phase;
+				bool removeFood;
 
 				in >> tmpFraction; in >> label;
 				cout << "tmpFraction" ses tmpFraction nl;
@@ -4444,7 +4544,31 @@ void TSimulation::ReadWorldFile(const char* filename)
 				cout << "distribution" ses distribution nl;
 				in >> nhsize; in >> label;
 				cout << "neighborhoodSize" ses nhsize nl;
-
+				if( version >= 26 )
+				{
+					in >> period; in >> label;
+					cout << "period" ses period nl;
+					in >> onFraction; in >> label;
+					cout << "onFraction" ses onFraction nl;
+					in >> phase; in >> label;
+					cout << "phase" ses phase nl;
+					in >> removeFood; in >> label;
+					cout << "removeFood" ses removeFood nl;
+					if( removeFood )
+						numFoodPatchesNeedingRemoval++;
+				}
+				else
+				{
+					period = 0;
+					cout << "+period" ses period nl;
+					onFraction = 1.0;
+					cout << "+onFraction" ses onFraction nl;
+					phase = 0.0;
+					cout << "+phase" ses phase nl;
+					removeFood = false;
+					cout << "+removeFood" ses removeFood nl;
+				}
+				
 				// If we have a legitimate fraction specified, see if we need to set the food limits
 				if( tmpFraction > 0.0 )
 				{
@@ -4459,7 +4583,7 @@ void TSimulation::ReadWorldFile(const char* filename)
 				if (tmpRate == 0.0)
 					tmpRate = fDomains[id].foodRate;
 
-				fDomains[id].fFoodPatches[i].init(centerX, centerZ, sizeX, sizeZ, tmpRate, initFood, minFood, maxFood, maxFoodGrown, tmpFraction, shape, distribution, nhsize, &fStage, &(fDomains[id]), id);
+				fDomains[id].fFoodPatches[i].init(centerX, centerZ, sizeX, sizeZ, tmpRate, initFood, minFood, maxFood, maxFoodGrown, tmpFraction, shape, distribution, nhsize, period, onFraction, phase, removeFood, &fStage, &(fDomains[id]), id);
 
 				patchFractionSpecified += tmpFraction;
 
@@ -4550,8 +4674,15 @@ void TSimulation::ReadWorldFile(const char* filename)
 		errorflash(0,tempstring);
 	}
 
-
-
+	if( numFoodPatchesNeedingRemoval > 0 )
+	{
+		// Allocate a maximally sized array to keep a list of food patches needing their food removed
+		fFoodPatchesNeedingRemoval = new FoodPatch*[numFoodPatchesNeedingRemoval];
+		fFoodRemovalNeeded = true;
+	}
+	else
+		fFoodRemovalNeeded = false;
+	
     for (id = 0; id < fNumDomains; id++)
     {
         fDomains[id].numCritters = 0;
@@ -5433,21 +5564,43 @@ void TSimulation::Update()
 
 int TSimulation::getRandomPatch( int domainNumber )
 {
-	float ranval = drand48();
-	float sumFractions = 0.0;
-				
-	for( short i = 0; i < fDomains[domainNumber].numFoodPatches; i++ )
-	{
-		sumFractions += fDomains[domainNumber].fFoodPatches[i].fraction;
-		if( ranval <= sumFractions )
-			return( i );    // this is the patch
-	}
+	int patch;
+	float ranval;
+	float maxFractions = 0.0;
 	
-	// Shouldn't get here
-	int patch = int( floor( ranval * fDomains[domainNumber].numFoodPatches ) );
-	if( patch >= fDomains[domainNumber].numFoodPatches )
-		patch  = fDomains[domainNumber].numFoodPatches - 1;
-	fprintf( stderr, "%s: ranval of %g failed to end up in any food patch; assigning patch #%d\n", __FUNCTION__, ranval, patch );
+	// Since not all patches may be "on", we need to calculate the maximum fraction
+	// attainable by those patches that are on, and therefore allowed to grow food
+	for( short i = 0; i < fDomains[domainNumber].numFoodPatches; i++ )
+		if( fDomains[domainNumber].fFoodPatches[i].on( fStep ) )
+			maxFractions += fDomains[domainNumber].fFoodPatches[i].fraction;
+	
+	if( maxFractions > 0.0 )	// there is an active patch in this domain
+	{
+		float sumFractions = 0.0;
+		
+		// Weight the random value by the maximum attainable fraction, so we always get
+		// a valid patch selection (if possible--they could all be off)
+		ranval = drand48() * maxFractions;
+
+		for( short i = 0; i < fDomains[domainNumber].numFoodPatches; i++ )
+		{
+			if( fDomains[domainNumber].fFoodPatches[i].on( fStep ) )
+			{
+				sumFractions += fDomains[domainNumber].fFoodPatches[i].fraction;
+				if( ranval <= sumFractions )
+					return( i );    // this is the patch
+			}
+		}
+	
+		// Shouldn't get here
+		patch = int( floor( ranval * fDomains[domainNumber].numFoodPatches ) );
+		if( patch >= fDomains[domainNumber].numFoodPatches )
+			patch  = fDomains[domainNumber].numFoodPatches - 1;
+		fprintf( stderr, "%s: ranval of %g failed to end up in any food patch; assigning patch #%d\n", __FUNCTION__, ranval, patch );
+	}
+	else
+		patch = -1;	// no patches are active in this domain
+	
 	return( patch );
 }
 

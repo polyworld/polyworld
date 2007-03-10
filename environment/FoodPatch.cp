@@ -34,7 +34,7 @@ FoodPatch::FoodPatch()
 //-------------------------------------------------------------------------------------------
 // FoodPatch::FoodPatch
 //-------------------------------------------------------------------------------------------
-void FoodPatch::init(float x, float z, float sx, float sz, float rate, int initFood, int minFood, int maxFood, int maxFoodGrown, float patchFraction, int shape, int distrib, float nhsize, gstage* fs, Domain* dm, int domainNumber){
+void FoodPatch::init(float x, float z, float sx, float sz, float rate, int initFood, int minFood, int maxFood, int maxFoodGrown, float patchFraction, int shape, int distrib, float nhsize, float inPeriod, float inOnFraction, float inPhase, bool inRemoveFood, gstage* fs, Domain* dm, int domainNumber){
     
 	initBase(x, z,  sx, sz, shape, distrib, nhsize, fs, dm, domainNumber);
 
@@ -42,18 +42,25 @@ void FoodPatch::init(float x, float z, float sx, float sz, float rate, int initF
 	growthRate = rate;
  	initFoodCount = initFood;
 	foodCount = 0;
+	foodGrown = false;
 
 	minFoodCount = minFood;
  	maxFoodCount = maxFood;
 	maxFoodGrownCount = maxFoodGrown;
+	
+	period = inPeriod;
+	inversePeriod = 1. / period;
+	onFraction = inOnFraction;
+	phase = inPhase;
+	removeFood = inRemoveFood;
 
 #if DebugFoodPatches
 	if( patchFraction > 0.0 )
-		printf( "initing FOOD patch at (%.2f, %.2f) with size (%.2f, %.2f), frac=%g, init=%d, min=%d, max=%d, maxGrow=%d\n",
-				startX, startZ, sizeX, sizeZ, fraction, initFoodCount, minFoodCount, maxFoodCount, maxFoodGrownCount );
+		printf( "initing FOOD patch at (%.2f, %.2f) with size (%.2f, %.2f), frac=%g, init=%d, min=%d, max=%d, maxGrow=%d, period=%d, onFraction=%g, phase=%g, removeFood=%d\n",
+				startX, startZ, sizeX, sizeZ, fraction, initFoodCount, minFoodCount, maxFoodCount, maxFoodGrownCount, period, onFraction, phase, removeFood );
 	else
-		printf( "initing FOOD patch at (%.2f, %.2f) with size (%.2f, %.2f), limits to be determined\n",
-				startX, startZ, sizeX, sizeZ );
+		printf( "initing FOOD patch at (%.2f, %.2f) with size (%.2f, %.2f), period=%d, onFraction=%g, phase=%g, removeFood=%d; limits to be determined\n",
+				startX, startZ, sizeX, sizeZ, period, onFraction, phase, removeFood );
 #endif
 }
 

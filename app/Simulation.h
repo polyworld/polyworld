@@ -79,6 +79,7 @@ class Domain
     int minFoodCount;
     int maxFoodCount;
     int maxFoodGrownCount;
+	bool allFoodPatchesGrown;
 	FoodPatch* fFoodPatches;
 	BrickPatch* fBrickPatches;
     long minNumCritters;
@@ -100,7 +101,7 @@ class Domain
 	int fMaxNumLeastFit;
 	int fNumSmited;
 	critter** fLeastFit;
-	
+
 	FoodPatch* whichFoodPatch( float x, float z );
 };
 
@@ -498,8 +499,10 @@ private:
 	long fNumBornSinceCreated;
 	
 	bool fUseProbabilisticFoodPatches;
+	bool fFoodRemovalNeeded;
 	int fNumFoodPatches;
 	FoodPatch* fFoodPatches;
+	FoodPatch** fFoodPatchesNeedingRemoval;
 
 	int fNumBrickPatches;
 	BrickPatch* fBrickPatches;
