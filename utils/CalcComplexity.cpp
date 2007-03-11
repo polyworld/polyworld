@@ -4,10 +4,15 @@
 // Run with: ./CalcComplexity.o <path/to/brainfunction/filename.txt>
 // Ex:       ./CalcComplexity.o /polyworld/run/brain/function/brainFunction_99.txt
 
-#define WARN_IF_COMPUTING_COMPLEXITY_OVER_LESSTHAN_N_TIMESTEPS 200
+//set me to 200 for a Olaf-recommended value.
+#define WARN_IF_COMPUTING_COMPLEXITY_OVER_LESSTHAN_N_TIMESTEPS 0
+#define CalcAll 1
+#define CalcProcessing 1
+#define CalcInput 0
 
 #include <iostream.h>
 #include "complexity.h"
+
 
 int main( int argc, char *argv[] )
 {
@@ -30,13 +35,23 @@ int main( int argc, char *argv[] )
 
 //	cout << "LogFile = " << argv[1] << endl;
 	double Complexity = 0;
-	Complexity = CalcComplexity( argv[ 1 ] , 'A', ignore_timesteps_after );
+	if( CalcAll )
+		Complexity = CalcComplexity( argv[ 1 ] , 'A', ignore_timesteps_after );
+	else
+		Complexity = -2;
+
 	cout << "Complexity (All) =\t" << Complexity << endl;
 
-	Complexity = CalcComplexity( argv[ 1 ] , 'P', ignore_timesteps_after );
+	if( CalcProcessing )
+		Complexity = CalcComplexity( argv[ 1 ] , 'P', ignore_timesteps_after );
+	else
+		Complexity = -2;
 	cout << "Complexity (Processing) =\t" << Complexity << endl;
 
-	Complexity = CalcComplexity( argv[ 1 ] , 'I', ignore_timesteps_after );
+	if( CalcInput )
+		Complexity = CalcComplexity( argv[ 1 ] , 'I', ignore_timesteps_after );
+	else
+		Complexity = -2;
 	cout << "Complexity (Input) =\t" << Complexity << endl;
                 
 	return 0;
