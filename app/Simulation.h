@@ -79,7 +79,7 @@ class Domain
     int minFoodCount;
     int maxFoodCount;
     int maxFoodGrownCount;
-	bool allFoodPatchesGrown;
+	int numFoodPatchesGrown;
 	FoodPatch* fFoodPatches;
 	BrickPatch* fBrickPatches;
     long minNumCritters;

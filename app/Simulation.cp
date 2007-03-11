@@ -1201,52 +1201,7 @@ void TSimulation::Step()
 		float camrad = fCameraAngle * DEGTORAD;
 		fCamera.settranslation((0.5+fCameraRadius*sin(camrad))*globals::worldsize, fCameraHeight*globals::worldsize,(-.5+fCameraRadius*cos(camrad))*
 globals::worldsize);
-	}
-	
-	// If any dynamic food patches destroy their food when turned off, take care of it here
-	if( fFoodRemovalNeeded )
-	{
-		// Get a list of patches needing food removal currently
-		int numPatchesNeedingRemoval = 0;
-		for( int domain = 0; domain < fNumDomains; domain++ )
-		{
-			for( int patch = 0; patch < fDomains[domain].numFoodPatches; patch++ )
-			{
-				// printf( "%2ld: d=%d, p=%d, on=%d, on1=%d, r=%d\n", fStep, domain, patch, fDomains[domain].fFoodPatches[patch].on( fStep ), fDomains[domain].fFoodPatches[patch].on( fStep+1 ), fDomains[domain].fFoodPatches[patch].removeFood );
-				// If the patch is on now, but off in the next time step, and it is supposed to remove its food when it is off...
-				if( fDomains[domain].fFoodPatches[patch].on( fStep ) && !fDomains[domain].fFoodPatches[patch].on( fStep+1 ) && fDomains[domain].fFoodPatches[patch].removeFood )
-				{
-					fFoodPatchesNeedingRemoval[numPatchesNeedingRemoval++] = &(fDomains[domain].fFoodPatches[patch]);
-				}
-			}
-		}
-		
-		if( numPatchesNeedingRemoval > 0 )
-		{
-			food* f;
-			
-			// There are patches currently needing removal, so do it
-			objectxsortedlist::gXSortedObjects.reset();
-			while( objectxsortedlist::gXSortedObjects.nextObj( FOODTYPE, (gobject**) &f ) )
-			{
-				for( int i = 0; i < numPatchesNeedingRemoval; i++ )
-				{
-					if( f->getPatch() == fFoodPatchesNeedingRemoval[i] )
-					{
-						// This piece of food is in a patch performing food removal, so get rid of it
-						(f->getPatch())->foodCount--;
-						fDomains[f->domain()].foodCount--;
-
-						objectxsortedlist::gXSortedObjects.removeCurrentObject();   // get it out of the list
-						fStage.RemoveObject( f );  // get it out of the world
-						delete f;				// get it out of memory
-						
-						break;	// found patch and deleted food, so get out of patch loop
-					}
-				}
-			}
-		}
-	}
+	}	
 }
 
 
@@ -1655,7 +1610,7 @@ void TSimulation::Init()
 		// Add food to the food patches until they each have their initFoodCount number of food pieces
 		for( int domainNumber = 0; domainNumber < fNumDomains; domainNumber++ )
 		{
-			int numFoodPatchesGrown = 0;
+			fDomains[domainNumber].numFoodPatchesGrown = 0;
 			
 			for( int foodPatchNumber = 0; foodPatchNumber < fDomains[domainNumber].numFoodPatches; foodPatchNumber++ )
 			{
@@ -1670,11 +1625,9 @@ void TSimulation::Init()
 						}
 					}
 					fDomains[domainNumber].fFoodPatches[foodPatchNumber].initFoodGrown( true );
-					numFoodPatchesGrown++;
+					fDomains[domainNumber].numFoodPatchesGrown++;
 				}
 			}
-			
-			fDomains[domainNumber].allFoodPatchesGrown = ( numFoodPatchesGrown >= fDomains[domainNumber].numFoodPatches );
 		}
 
 	#if 0
@@ -3292,18 +3245,13 @@ void TSimulation::Interact()
 		{
 			// If there are any dynamic food patches that have not yet had their initial growth,
 			// see if they're ready to grow now
-			if( ! fDomains[domainNumber].allFoodPatchesGrown )
+			if( fDomains[domainNumber].numFoodPatchesGrown < fDomains[domainNumber].numFoodPatches )
 			{
-				// Keep track of how many patches have had their initial growth
-				int numPatchesGrown = 0;
-				
 				// If there are dynamic food patches that have not yet had their initial growth,
 				// and they are now active, perform the initial growth now
 				for( int patchNumber = 0; patchNumber < fDomains[domainNumber].numFoodPatches; patchNumber++ )
 				{
-					if( fDomains[domainNumber].fFoodPatches[patchNumber].initFoodGrown() )
-						numPatchesGrown++;
-					else if( fDomains[domainNumber].fFoodPatches[patchNumber].on( fStep ) )
+					if( !fDomains[domainNumber].fFoodPatches[patchNumber].initFoodGrown() && fDomains[domainNumber].fFoodPatches[patchNumber].on( fStep ) )
 					{
 						for( int j = 0; j < fDomains[domainNumber].fFoodPatches[patchNumber].initFoodCount; j++ )
 						{
@@ -3314,12 +3262,9 @@ void TSimulation::Interact()
 							}
 						}
 						fDomains[domainNumber].fFoodPatches[patchNumber].initFoodGrown( true );
-						numPatchesGrown++;
+						fDomains[domainNumber].numFoodPatchesGrown++;
 					}
 				}
-				
-				if( numPatchesGrown >= fDomains[domainNumber].numFoodPatches )
-					fDomains[domainNumber].allFoodPatchesGrown = true;
 			}
 
 			if( fUseProbabilisticFoodPatches )
@@ -3398,6 +3343,52 @@ void TSimulation::Interact()
 								fDomains[domainNumber].foodCount++;
 							}
 						}
+					}
+				}
+			}
+		}
+	}
+
+	// If any dynamic food patches destroy their food when turned off, take care of it here
+	if( fFoodRemovalNeeded )
+	{
+		// Get a list of patches needing food removal currently
+		int numPatchesNeedingRemoval = 0;
+		for( int domain = 0; domain < fNumDomains; domain++ )
+		{
+			for( int patch = 0; patch < fDomains[domain].numFoodPatches; patch++ )
+			{
+				// printf( "%2ld: d=%d, p=%d, on=%d, on1=%d, r=%d\n", fStep, domain, patch, fDomains[domain].fFoodPatches[patch].on( fStep ), fDomains[domain].fFoodPatches[patch].on( fStep+1 ), fDomains[domain].fFoodPatches[patch].removeFood );
+				// If the patch is on now, but off in the next time step, and it is supposed to remove its food when it is off...
+				if( fDomains[domain].fFoodPatches[patch].on( fStep ) && !fDomains[domain].fFoodPatches[patch].on( fStep+1 ) && fDomains[domain].fFoodPatches[patch].removeFood )
+				{
+					fFoodPatchesNeedingRemoval[numPatchesNeedingRemoval++] = &(fDomains[domain].fFoodPatches[patch]);
+				}
+			}
+		}
+		
+		if( numPatchesNeedingRemoval > 0 )
+		{
+			food* f;
+			
+			// There are patches currently needing removal, so do it
+			objectxsortedlist::gXSortedObjects.reset();
+			while( objectxsortedlist::gXSortedObjects.nextObj( FOODTYPE, (gobject**) &f ) )
+			{
+				for( int i = 0; i < numPatchesNeedingRemoval; i++ )
+				{
+					if( f->getPatch() == fFoodPatchesNeedingRemoval[i] )
+					{
+						// This piece of food is in a patch performing food removal, so get rid of it
+						(f->getPatch())->foodCount--;
+						fDomains[f->domain()].foodCount--;
+						fFoodEnergyOut += f->energy();
+						
+						objectxsortedlist::gXSortedObjects.removeCurrentObject();   // get it out of the list
+						fStage.RemoveObject( f );  // get it out of the world
+						delete f;				// get it out of memory
+						
+						break;	// found patch and deleted food, so get out of patch loop
 					}
 				}
 			}
