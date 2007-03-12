@@ -1,0 +1,62 @@
+This file is a place to maintain cross-platform notes on experiments--naming
+conventions, parameter selections, motivations, and maybe some results.  In
+the early days I did this routinely, but fell out of practice, and now hope to
+resume the practice.  -  larryy 3/12/07
+
+Files marked _driven and _passive (adopting the terms used by McShea) related
+to runs comparing complexity with and without natural selection (NS). I
+believe worldfile_driven_original captures the original parameter set used for
+these studies, though many permutations were tried.
+
+_hard simply increases the high-population penalty (changes NumDepletionSteps
+from 200 to 100)
+
+_domains added two barriers and divided the world into three domains. This was
+done in an attempt to make it more difficult for a solution to emerge and take
+over the entire population (and delay the onset of maxPop), back when I
+thought NS was selecting for complexity faster than genetic drift (GD), and
+that driven complexity rose faster initially, but crossed over passive
+complexity at approximately the time the population maxed out.  (I no longer
+think this is what is going on.)  There was a problem with these runs, which
+is that in order to make the emergence of a solution more difficult, sims
+would tend to see the population plunge to its minimum, at which point either
+the steady-state GA would kick in, thus contaminating the results with
+evolution guided by the heuristic fitness function, or the low-population
+advantage would produce immortal idiots (agents that live forever, but do not
+produce sufficient or sufficiently varied offspring to ever get any better).
+This problem was particularly driven by population minima within individual
+domains--even after one or two domains had maximal populations, a low
+population in one domain could continue to invoke the steady-state GA.
+Hence...
+
+_barriers uses two barriers (like _domains), but only one domain.  This fixed
+the minPop / steady-state GA problem, and did delay the onset of maxPop.  It
+even seemed to show driven complexity riding above passive complexity for a
+longer time and still crossing over at about the time of maxPop.  So this
+initially strongly supported the original thinking (that NS increased
+complexity faster than GD).
+
+_fixed and _fbs# are fixed-brain-size runs.  Observing a strong correlation
+between brain size and complexity, I wanted to run some sims with fixed brain
+sizes, and try to tease out other contributions to complexity growth.  The
+fbs# runs were a particular suite of runs defined in the worldfiles_070301
+files.  Only the first and last (majority of it anyway) runs were ever
+performed.  They took enormous amounts of time and disk space, and priority
+was given to the _df# runs once I realized what was actually going on in
+these driven vs. passive runs (at least I think I understand them now--
+complexity is going up at about the same rate in NS and GD until a solution
+is achieved in the NS runs, at which point the population tends to widely
+adopt this solution and mean complexity drops or levels off to the
+corresponding solution's complexity, a kind of local optimum).
+
+_df# runs use "dynamic food patches".  The patches turn on and off so food
+moves around the world, requiring the agents to evolve a slightly more
+complex behavior and hopefully a measurable increase in complexity of their
+neural dynamics.  Jury is still out on this one.  I do get successful
+populations, though, with the agents still circling furiously while they're
+in the active patch, but running fairly rapidly over to the new patch when
+the food location shifts.  Not sure complexity is going to be substantially
+different, however, since the number of neural groups initially climbs
+faster (than static food patches), but eventually drops off to about the
+same level, suggesting a pure stimulus-response solution was found, albeit
+belatedly.
