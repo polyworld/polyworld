@@ -49,14 +49,14 @@ is achieved in the NS runs, at which point the population tends to widely
 adopt this solution and mean complexity drops or levels off to the
 corresponding solution's complexity, a kind of local optimum).
 
-_df# runs use "dynamic food patches".  The patches turn on and off so food
-moves around the world, requiring the agents to evolve a slightly more
-complex behavior and hopefully a measurable increase in complexity of their
-neural dynamics.  Jury is still out on this one.  I do get successful
-populations, though, with the agents still circling furiously while they're
-in the active patch, but running fairly rapidly over to the new patch when
-the food location shifts.  Not sure complexity is going to be substantially
-different, however, since the number of neural groups initially climbs
-faster (than static food patches), but eventually drops off to about the
-same level, suggesting a pure stimulus-response solution was found, albeit
-belatedly.
+_df# runs (and the checked-in _dynfood worldfile) use "dynamic food patches". 
+The patches turn on and off so food moves around the world, requiring the
+agents to evolve a slightly more complex behavior and hopefully a measurable
+increase in complexity of their neural dynamics.  Jury is still out on this
+one.  I do get successful populations, though, with the agents still circling
+furiously while they're in the active patch, but running fairly rapidly over
+to the new patch when the food location shifts.  Not sure complexity is going
+to be substantially different, however, since the number of neural groups
+initially climbs faster (than static food patches), but eventually drops off
+to about the same level, suggesting a pure stimulus-response solution was
+found, albeit belatedly.
