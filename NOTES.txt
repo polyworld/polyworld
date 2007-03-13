@@ -60,3 +60,19 @@ to be substantially different, however, since the number of neural groups
 initially climbs faster (than static food patches), but eventually drops off
 to about the same level, suggesting a pure stimulus-response solution was
 found, albeit belatedly.
+
+_df1 moves the food too quickly (every 50 time steps), so a good enough
+strategy was to wander aimlessly and wait for the food to come to you.
+
+_df2 moves the food every 200 time steps--approximately the mean lifespan of
+the agents (why is this so low, given the max lifespan ranging from 500 to
+1000?).  It achieved populations that successfully followed the food.  But
+their driven complexity was hardly any different from that of agents in the
+static food world.
+
+_df3 will attempt to isolate the food partially by barriers, to see if it is
+possible to evolve something more complicated than a simplel stimulus-response
+behavior.  Given the large swings in population evidenced in _df2, I have
+doubts about whether a successful population will evolve (but, then, I had
+doubts about their ability to evolve to follow dynamic food patches, and that
+was achieved fairly easily).
