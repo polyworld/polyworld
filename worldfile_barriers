@@ -1,8 +1,8 @@
-25      version
+27      version
 
 0		LockStepWithBirthsDeathsLog
 
-50001  maxSteps
+40001  maxSteps
 1      docpuwork
 1000   dumpfreq
 100    statfreq
@@ -54,7 +54,7 @@
 500    minlifespan
 1000   maxlifespan
 25     matewait
-25     initmatewait
+0		initmatewait
 0.5    minstrength
 2.0    maxstrength
 0.5    minsize
@@ -118,9 +118,11 @@
 8      monheight_not_used
 1      monstride
 100.0  worldsize
-2      numbarriers
-33.33 -100. 33.33 -10. barrierposition
-66.67 -100. 66.67 -10. barrierposition
+2								numbarriers
+1								barrier[0].numKeyFrames
+0     33.33 -100. 33.33 -10.	barrier[0].keyFrame[0]_t_x1_z1_x2_z2
+1								barrier[1].numKeyFrames
+0     66.67 -100. 66.67 -10.	barrier[1].keyFrame[0]_t_x1_z1_x2_z2
 
 0      genesepmon
 0      geneseprec
@@ -161,20 +163,28 @@
 0	domain[0].foodPatch[0].areaShape_0=rectangular|1=elliptical
 0	domain[0].foodPatch[0].distribution_0=uniform|1=linear|2=gaussian
 10	domain[0].foodPatch[0].neighborhoodSize
+0		domain[0].foodPatch[0].period
+1.0		domain[0].foodPatch[0].onFraction
+0.0		domain[0].foodPatch[0].phase
+0		domain[0].foodPatch[0].removeFood
 
-0.8	domain[0].foodPatch[0].fraction
-0.0	domain[0].foodPatch[0].growthRate
-72	domain[0].foodPatch[0].initFoodCount
-0	domain[0].foodPatch[0].minFoodCount
-120	domain[0].foodPatch[0].maxFoodCount
-90	domain[0].foodPatch[0].maxFoodGrownCount
-0.5	domain[0].foodPatch[0].centerX
-0.8	domain[0].foodPatch[0].centerZ
-1.0	domain[0].foodPatch[0].sizeX
-0.4	domain[0].foodPatch[0].sizeZ
-0	domain[0].foodPatch[0].areaShape_0=rectangular|1=elliptical
-0	domain[0].foodPatch[0].distribution_0=uniform|1=linear|2=gaussian
-10	domain[0].foodPatch[0].neighborhoodSize
+0.8	domain[0].foodPatch[1].fraction
+0.0	domain[0].foodPatch[1].growthRate
+72	domain[0].foodPatch[1].initFoodCount
+0	domain[0].foodPatch[1].minFoodCount
+120	domain[0].foodPatch[1].maxFoodCount
+90	domain[0].foodPatch[1].maxFoodGrownCount
+0.5	domain[0].foodPatch[1].centerX
+0.8	domain[0].foodPatch[1].centerZ
+1.0	domain[0].foodPatch[1].sizeX
+0.4	domain[0].foodPatch[1].sizeZ
+0	domain[0].foodPatch[1].areaShape_0=rectangular|1=elliptical
+0	domain[0].foodPatch[1].distribution_0=uniform|1=linear|2=gaussian
+10	domain[0].foodPatch[1].neighborhoodSize
+0		domain[0].foodPatch[1].period
+1.0		domain[0].foodPatch[1].onFraction
+0.0		domain[0].foodPatch[1].phase
+0		domain[0].foodPatch[1].removeFood
 
 1	useProbabilisticFoodPatches
 
