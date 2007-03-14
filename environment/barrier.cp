@@ -161,6 +161,8 @@ void barrier::update( long step )
 //---------------------------------------------------------------------------
 void barrier::position( float xa, float za, float xb, float zb )
 {
+//	printf( "barrier::position( xa=%g, za=%g, xb=%g, zb=%g )\n", xa, za, xb, zb );
+	
 	if( fVertices != NULL )
 	{
 		float x1;
