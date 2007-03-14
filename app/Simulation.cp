@@ -4369,9 +4369,8 @@ void TSimulation::ReadWorldFile(const char* filename)
 		{
 			int numKeyFrames;
 			in >> numKeyFrames >> label;
-			cout << "numKeyFrames[" << i << "]" ses numKeyFrames nl;
-			barrier* b = NULL;
-			b = new barrier( numKeyFrames );
+			cout << "barrier[" << i << "].numKeyFrames" ses numKeyFrames nl;
+			barrier* b = new barrier( numKeyFrames );
 			for( int j = 0; j < numKeyFrames; j++ )
 			{
 				long t;
