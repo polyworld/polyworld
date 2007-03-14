@@ -4598,12 +4598,12 @@ void TSimulation::ReadWorldFile(const char* filename)
 				}
 			}
 			
-			// Make sure fractions add up to 1.0
-			if (patchFractionSpecified != 1.0)
+			// Make sure fractions add up to 1.0 (allowing a little slop for floating point precision)
+			if( (patchFractionSpecified < 0.99999) || (patchFractionSpecified > 1.00001) )
 			{
-				printf("Patch Fractions sum to %f\n", patchFractionSpecified);
-				printf("FoodPatch fractions do not sum to 1!\n");
-				exit(1);
+				printf( "Patch Fractions sum to %f\n", patchFractionSpecified );
+				printf( "FoodPatch fractions do not sum to 1!\n" );
+				exit( 1 );
 			}
 
 			// Create an array of BrickPatches
