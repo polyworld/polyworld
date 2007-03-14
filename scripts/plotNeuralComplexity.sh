@@ -9,6 +9,9 @@
 # CONFIGURABLE OPTIONS
 GNUPLOT="/sw/bin/gnuplot"
 FILENAME="AvrComplexity.plt"
+GNUPLOT_ylabel="Neural Complexity"
+GNUPLOT_labelparams='font "Times,20"'
+GNUPLOT_titleparams='font "Times,20"'
 # Don't modify anything beneath here
 ########################################################################################################
 
@@ -28,6 +31,10 @@ fi
 if [ ! -d "$RUN_DIR" ]
 then
 	echo "You must specify a polyworld run/ directory."
+        echo "Usage: ./plotNeuralComplexity.sh <run_directory> [API]"
+        echo "Where [API] specifies which groups of neurons (All, Processing, Input) you want to plot.  If no options are specified the default is to plot them all."
+        echo "Ex: ./plotNeuralComplexity <run_directory> AP              -- plots NeuralComplexity of All neurons and Processing neurons"
+        echo "Ex: ./plotNeuralComplexity <run_directory> PI              -- plots NeuralComplexity of Processing neurons and Input neurons"
 	exit;
 fi
 
@@ -84,7 +91,6 @@ fi
 
 # Plotting BestRecent
 GNUPLOT_plotstring="plot"
-GNUPLOT_ylabel="Neural Complexity"
 
 if [ "$PLOT_BESTRECENT" ]
 then
@@ -116,11 +122,12 @@ then
 
 	# Okay, lets plot!
 ${GNUPLOT} << EOF
-set xlabel 'Timestep'
-set ylabel '${GNUPLOT_ylabel}'
+set xlabel 'Timestep' ${GNUPLOT_labelparams}
+set ylabel '${GNUPLOT_ylabel}' ${GNUPLOT_labelparams}
 set grid
+set bar 0
 set mxtics 5
-set title "${GNUPLOT_title}"
+set title "${GNUPLOT_title}" ${GNUPLOT_titleparams}
 ${GNUPLOT_plotstring}
 EOF
 fi
@@ -128,7 +135,6 @@ fi
 
 # Plotting BestRecent
 GNUPLOT_plotstring="plot"
-GNUPLOT_ylabel="Neural Complexity"
 
 if [ "$PLOT_RECENT" ]
 then
@@ -158,11 +164,12 @@ then
 
 	# Okay, lets plot!
 ${GNUPLOT} << EOF
-set xlabel 'Timestep'
-set ylabel '${GNUPLOT_ylabel}'
+set xlabel 'Timestep' ${GNUPLOT_labelparams}
+set ylabel '${GNUPLOT_ylabel}' ${GNUPLOT_labelparams}
 set grid
+set bar 0
 set mxtics 5
-set title "${GNUPLOT_title}"
+set title "${GNUPLOT_title}" ${GNUPLOT_titleparams}
 ${GNUPLOT_plotstring}
 EOF
 fi
