@@ -14,7 +14,7 @@
 #define MinDebugStep 0
 #define MaxDebugStep INT_MAX
 
-#define CurrentWorldfileVersion 26
+#define CurrentWorldfileVersion 27
 
 // CompatibilityMode makes the new code with a single x-sorted list behave *almost* identically to the old code.
 // Discrepancies still arise due to the old food list never being re-sorted and critters at the exact same x location
@@ -471,6 +471,13 @@ void TSimulation::Step()
 	long critnum = 0;
 #endif
 
+	// Update the barriers, now that they can be dynamic
+	barrier* b;
+	barrier::gXSortedBarriers.reset();
+	while( barrier::gXSortedBarriers.next( b ) )
+		b->update( fStep );
+	barrier::gXSortedBarriers.xsort();
+
 	// Update all critters, using their neurally controlled behaviors
 	{
 		// Make the critter POV window the current GL context
@@ -486,7 +493,7 @@ void TSimulation::Step()
 		long initNumCritters = fInitNumCritters;
 		long minNumCritters = fMinNumCritters  +  lround( 0.1 * (fInitNumCritters - fMinNumCritters) );	// 10% buffer, to help prevent reaching actual min value and invoking GA
 		long maxNumCritters = fMaxCritters;
-		long excess = objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE) - fInitNumCritters;	// global excess
+		long excess = numCritters - fInitNumCritters;	// global excess
 
 		// Use the lowest excess value to produce the most help or the least penalty
 		if( fNumDomains > 1 )
@@ -508,7 +515,7 @@ void TSimulation::Step()
 		// If the population is too low, globally or in any domain, then either help it or leave it alone
 		if( excess < 0 )
 		{
-			critter::gPopulationPenaltyFraction = 0.0;	// we're not applying the high population penalty
+			critter::gPopulationPenaltyFraction = 0.0;	// we're not currently applying the high population penalty
 
 			// If we want to help it, apply the low population advantage
 			if( fApplyLowPopulationAdvantage )
@@ -522,7 +529,7 @@ void TSimulation::Step()
 		}
 		else	// population is greater than initial level everywhere
 		{
-			critter::gLowPopulationAdvantageFactor = 1.0;	// we're not applying the low population advantage
+			critter::gLowPopulationAdvantageFactor = 1.0;	// we're not currently applying the low population advantage
 
 			// apply the high population penalty (if the max-penalty is non-zero)
 			critter::gPopulationPenaltyFraction = critter::gMaxPopulationPenaltyFraction * (numCritters - initNumCritters) / (maxNumCritters - initNumCritters);
@@ -4353,17 +4360,41 @@ void TSimulation::ReadWorldFile(const char* filename)
     in >> globals::worldsize; in >> label;
     cout << "worldsize" ses globals::worldsize nl;
     long numbarriers;
-    float x1; float z1; float x2; float z2;
+    float x1, z1, x2, z2;
     in >> numbarriers; in >> label;
     cout << "numbarriers = " << numbarriers nl;
-    for (long i = 0; i < numbarriers; i++)
-    {
-        in >> x1 >> z1 >> x2 >> z2 >> label;
-        cout << "barrier #" << i << " position = ("
-             << x1 cms z1 << ") to (" << x2 cms z2 pnl;
-		barrier::gXSortedBarriers.add(new barrier(x1, z1, x2, z2));
-    }
-
+	if( version >= 27 )
+	{
+		for( int i = 0; i < numbarriers; i++ )
+		{
+			int numKeyFrames;
+			in >> numKeyFrames >> label;
+			cout << "numKeyFrames[" << i << "]" ses numKeyFrames nl;
+			barrier* b = NULL;
+			b = new barrier( numKeyFrames );
+			for( int j = 0; j < numKeyFrames; j++ )
+			{
+				long t;
+				in >> t >> x1 >> z1 >> x2 >> z2 >> label;
+				cout << "barrier[" << i << "].keyFrame[" << j << "]" ses t sp x1 sp z1 sp x2 sp z2 nl;
+				b->setKeyFrame( t, x1, z1, x2, z2 );
+			}
+			barrier::gXSortedBarriers.add( b );
+		}
+	}
+	else
+	{
+		for( int i = 0; i < numbarriers; i++ )
+		{
+			in >> x1 >> z1 >> x2 >> z2 >> label;
+			cout << "barrier #" << i << " position = ("
+				 << x1 cms z1 << ") to (" << x2 cms z2 pnl;
+			barrier* b = new barrier( 1 );
+			b->setKeyFrame( 0, x1, z1, x2, z2 );
+			barrier::gXSortedBarriers.add( b );
+		}
+	}
+	
     if (version < 2)
     {
 		cout nlf;

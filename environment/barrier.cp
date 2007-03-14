@@ -32,53 +32,136 @@ Color barrier::gBarrierColor;
 //---------------------------------------------------------------------------
 // barrier::barrier
 //---------------------------------------------------------------------------
-barrier::barrier()
+barrier::barrier( int keyFrameCount )
 {
-	init(0., 0., 0., -1.);
+	numKeyFrames = keyFrameCount;
+	numKeyFramesSet = 0;
+	currentKeyFrame = 0;
+	if( numKeyFrames > 0 )
+	{
+		keyFrame = new KeyFrame[numKeyFrames];
+		if( !keyFrame )
+			error( 1, "Insufficient memory to setup barrier keyFrames" );
+	}
+	else
+	{
+		error( 1, "Invalid number of barrier keyFrames (", numKeyFrames, ")" );
+		keyFrame = NULL;
+	}
+
+	fNumPoints = 4;
+	setcolor(gBarrierColor);
+
+	fVertices = new float[12];  
+	if( !fVertices )
+		error( 1, "Insufficient memory to setup barrier vertices" );
+
+	xSortNeeded = false;
 }
 
 
 //---------------------------------------------------------------------------
-// barrier::barrier
-//---------------------------------------------------------------------------
-barrier::barrier(float xa, float za, float xb, float zb)
-{
-	init(xa, za, xb, zb);
-}
-
-
-//---------------------------------------------------------------------------
-// barrier::barrier
+// barrier::~barrier
 //---------------------------------------------------------------------------
 barrier::~barrier()
 {
-	if (fVertices != NULL)
+	if( keyFrame )
+		delete keyFrame;
+	
+	if( fVertices )
 		delete fVertices;
 }
 
 
 //---------------------------------------------------------------------------
-// barrier::init
+// barrier::setKeyFrame
 //---------------------------------------------------------------------------
-void barrier::init(float xa, float za, float xb, float zb)
+void barrier::setKeyFrame( long step, float xa, float za, float xb, float zb )
 {
-	fNumPoints = 4;
-	setcolor(gBarrierColor);
-	fVertices = new float[12];
-  
-	if (fVertices == NULL)
-		error(1,"Insufficient memory to setup barrier vertices");
+	if( keyFrame )
+	{
+		if( numKeyFramesSet < numKeyFrames )
+		{
+			// If it's the first keyframe or time is correctly increasing monotonically...
+			if( (numKeyFramesSet == 0) || (step > keyFrame[numKeyFramesSet-1].step) )
+			{
+				keyFrame[numKeyFramesSet].step = step;
+				keyFrame[numKeyFramesSet].xa   = xa;
+				keyFrame[numKeyFramesSet].za   = za;
+				keyFrame[numKeyFramesSet].xb   = xb;
+				keyFrame[numKeyFramesSet].zb   = zb;
+				
+				if( numKeyFramesSet == 0 )	// first one
+				{
+					position( xa, za, xb, zb );	// initialize the barrier's position
+				}
+				else if( !xSortNeeded )
+				{
+					if( (keyFrame[numKeyFramesSet].xa != keyFrame[numKeyFramesSet-1].xa) ||
+						(keyFrame[numKeyFramesSet].xb != keyFrame[numKeyFramesSet-1].xb) )
+						xSortNeeded = true;
+				}
+
+				numKeyFramesSet++;
+			}
+			else
+				error( 1, "Barrier keyframes specified out of temporal sequence" );
+		}
+		else
+			error( 1, "More barrier keyframes specified than requested for allocation" );
+	}
+}
+
+
+//---------------------------------------------------------------------------
+// barrier::update
+//---------------------------------------------------------------------------
+void barrier::update( long step )
+{
+	// If the barrier is static or something went wrong allocating the keyframes
+	// or we've stepped beyond the final keyframe, then there's nothing to do
+	if( (numKeyFrames <= 1) || !keyFrame || (step > keyFrame[numKeyFramesSet].step) )
+		return;
+
+	// Note:  Since we guaranteed that the keyframe time steps were specified
+	// in monotonically increasing order in setKeyFrame() and we only reach here
+	// if we are not past the end of the last keyFrame, and we only update
+	// currentKeyFrame after we're done processing an update for a given step,
+	// there should always be a *next* keyframe available for us to test against.
+
+	// If we've reached the next key frame, have to do some special updating
+	if( step == keyFrame[currentKeyFrame+1].step )
+	{
+		int i = ++currentKeyFrame;
+		
+		position( keyFrame[i].xa, keyFrame[i].za, keyFrame[i].xb, keyFrame[i].zb );
+	}
 	else
-		position(xa, za, xb, zb);
-}    
+	{
+		int i = currentKeyFrame;
+		int j = i + 1;
+		
+		// If there's any change in x or z from one keyframe to the next...
+		if( (keyFrame[i].xa != keyFrame[j].xa) || (keyFrame[i].za != keyFrame[j].za) ||
+			(keyFrame[i].xb != keyFrame[j].xb) || (keyFrame[i].zb != keyFrame[j].zb) )
+		{
+			float fraction = (float) (step - keyFrame[i].step) / (keyFrame[j].step - keyFrame[i].step);
+			float xa = keyFrame[i].xa  +  fraction * (keyFrame[j].xa - keyFrame[i].xa);
+			float xb = keyFrame[i].xb  +  fraction * (keyFrame[j].xb - keyFrame[i].xb);
+			float za = keyFrame[i].za  +  fraction * (keyFrame[j].za - keyFrame[i].za);
+			float zb = keyFrame[i].zb  +  fraction * (keyFrame[j].zb - keyFrame[i].zb);
+			position( xa, za, xb, zb );
+		}
+	}
+}
 
 
 //---------------------------------------------------------------------------
 // barrier::position
 //---------------------------------------------------------------------------
-void barrier::position(float xa, float za, float xb, float zb)
+void barrier::position( float xa, float za, float xb, float zb )
 {
-	if (fVertices != NULL)
+	if( fVertices != NULL )
 	{
 		float x1;
 		float x2;
@@ -90,7 +173,7 @@ void barrier::position(float xa, float za, float xb, float zb)
 		fVertices[ 6] = xb; fVertices[ 7] = gBarrierHeight; fVertices[ 8] = zb;
 		fVertices[ 9] = xb; fVertices[10] = 0.; 			fVertices[11] = zb;
 		
-		if (xa < xb)
+		if( xa < xb )
 		{
 			xmn = x1 = xa;
 			xmx = x2 = xb;
@@ -105,7 +188,7 @@ void barrier::position(float xa, float za, float xb, float zb)
 			z2 = za;
 		}
 		
-		if (za < zb)
+		if( za < zb )
 		{
 			zmn = za;
 			zmx = zb;
@@ -119,13 +202,20 @@ void barrier::position(float xa, float za, float xb, float zb)
 		a = z2 - z1;
 		b = x1 - x2;
 		c = x2 * z1  -  x1 * z2;
-		f = 1. / sqrt(a*a + b*b);
+		if( (a == 0.0) && (b == 0.0) )
+		{
+			// zero-size barrier, so distance is meaningless; make it very large
+			c = 1.0;
+			f = 1.0e+10;
+		}
+		else
+			f = 1. / sqrt( a*a + b*b );
 		sna = -b * f;
 		
-		if (a < 0.)
+		if( a < 0. )
 			sna *= -1.;
 			
-		csa =  abs((int)(a * f));
+		csa =  abs( (int) (a * f) );
 	}
 }
 
@@ -168,17 +258,22 @@ void bxsortedlist::add(barrier* newBarrier)
         
     if (!inserted)
 		append(newBarrier);
+	
+	// If any barrier says it needs to be x-sorted, then they all must be
+	if( !needXSort )
+		needXSort = newBarrier->needXSort();
 }
 
 
 //---------------------------------------------------------------------------
-// TSortedBarrierList::Sort
+// TSortedBarrierList::actuallyXSort
 //---------------------------------------------------------------------------
-void bxsortedlist::sort()
+void bxsortedlist::actuallyXSort()
 {
 	// This technique assumes that the list is almost entirely sorted at the start
 	// Hopefully, with some reasonable frame-to-frame coherency, this will be true!
-	// Actually, barriers are expected to be static.
+	// Actually, barriers are expected to be static.  Well, they used to be until
+	// I added keyFrames, so they could be dynamic...
     gdlink<barrier*> *savecurr;
     barrier* o = NULL;
     barrier* p = NULL;
