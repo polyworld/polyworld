@@ -120,7 +120,7 @@ void barrier::update( long step )
 {
 	// If the barrier is static or something went wrong allocating the keyframes
 	// or we've stepped beyond the final keyframe, then there's nothing to do
-	if( (numKeyFrames <= 1) || !keyFrame || (step > keyFrame[numKeyFramesSet].step) )
+	if( (numKeyFrames <= 1) || !keyFrame || (step > keyFrame[numKeyFramesSet-1].step) )
 		return;
 
 	// Note:  Since we guaranteed that the keyframe time steps were specified
