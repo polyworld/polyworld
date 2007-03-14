@@ -75,4 +75,20 @@ possible to evolve something more complicated than a simplel stimulus-response
 behavior.  Given the large swings in population evidenced in _df2, I have
 doubts about whether a successful population will evolve (but, then, I had
 doubts about their ability to evolve to follow dynamic food patches, and that
-was achieved fairly easily).
+was achieved fairly easily). ... As feared, barriers blocking all view of the
+food failed to produce anything of value, complexity-wise.  Interestingly, the
+cycle I picked was *just* fast enough that agents did populate one of the
+three barrier-separated regions.  They'd almost die out, then the food would
+come back, and they'd procreate like crazy, reaching the maximum population,
+then the food would go away and numbers would crash. Interesting cycle, but
+not what we're looking for.  (Although I am curious to see if the repeated
+population bottlenecks produced anything substantially different than a normal
+run.)
+
+_df4 uses another new capability--dynamic barriers.  The setup is like _df3,
+but the barriers start out at zero depth and gradually grow in, reaching 60%
+of the depth of the world (the food goes to 50% of the depth of the world)
+only after 30,000 time steps.  The idea is to introduce the barriers slowly,
+so critters can first evolve to follow the food, then evolve the ability to
+circumvent the barriers.  Still no guarantee they'll get there, of course, but
+at least now there's hope.
