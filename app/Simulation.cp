@@ -5050,21 +5050,21 @@ void TSimulation::ReadWorldFile(const char* filename)
 	// If this is a complexity-as-fitness run, then we need to force certain parameter values (and warn the user)
 	if( fUseComplexityAsFitnessFunc )
 	{
-		fInitNumCritters = fMaxCritters;	// population starts at maximum
-		fMinNumCritters = fMaxCritters;		// population stays at mximum
-		fNumberToSeed = rint( fMaxCritters * (float) fNumberToSeed / fInitNumCritters );	// same proportion as originally specified
+		fNumberToSeed = rint( fMaxCritters * (float) fNumberToSeed / fInitNumCritters );	// same proportion as originally specified (must calculate before changing fInitNumCritters)
 		if( fNumberToSeed > fMaxCritters )	// just to be safe
 			fNumberToSeed = fMaxCritters;
+		fInitNumCritters = fMaxCritters;	// population starts at maximum
+		fMinNumCritters = fMaxCritters;		// population stays at mximum
 		fProbabilityOfMutatingSeeds = 1.0;	// so there is variation in the initial population
 		fMateThreshold = 1.5;				// so they can't reproduce on their own
 
 		for( int i = 0; i < fNumDomains; i++ )	// over all domains
 		{
-			fDomains[i].initNumCritters = fDomains[i].maxNumCritters;	// population starts at maximum
-			fDomains[i].minNumCritters  = fDomains[i].maxNumCritters;	// population stays at maximum
-			fDomains[i].numberToSeed = rint( fDomains[i].maxNumCritters * (float) fDomains[i].numberToSeed / fDomains[i].initNumCritters );	// same proportion as originally specified
+			fDomains[i].numberToSeed = rint( fDomains[i].maxNumCritters * (float) fDomains[i].numberToSeed / fDomains[i].initNumCritters );	// same proportion as originally specified (must calculate before changing fInitNumCritters)
 			if( fDomains[i].numberToSeed > fDomains[i].maxNumCritters )	// just to be safe
 				fDomains[i].numberToSeed = fDomains[i].maxNumCritters;
+			fDomains[i].initNumCritters = fDomains[i].maxNumCritters;	// population starts at maximum
+			fDomains[i].minNumCritters  = fDomains[i].maxNumCritters;	// population stays at maximum
 			fDomains[i].probabilityOfMutatingSeeds = 1.0;				// so there is variation in the initial population
 		}
 
