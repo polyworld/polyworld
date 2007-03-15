@@ -5078,7 +5078,7 @@ void TSimulation::ReadWorldFile(const char* filename)
 		cout << "  InitNumCritters" ses fInitNumCritters nl;
 		cout << "  MinNumCritters" ses fMinNumCritters nl;
 		cout << "  NumberToSeed" ses fNumberToSeed nl;
-		cout << "  ProbabilityOfMutatingSeeds" ses fProbabilityOfMutatingSeeds;
+		cout << "  ProbabilityOfMutatingSeeds" ses fProbabilityOfMutatingSeeds nl;
 		cout << "  MateThreshold" ses fMateThreshold nl;
 		for( int i = 0; i < fNumDomains; i++ )
 		{
