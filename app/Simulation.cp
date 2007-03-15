@@ -5046,6 +5046,53 @@ void TSimulation::ReadWorldFile(const char* filename)
 		cout << "  .MaxPopulationPenaltyFraction" ses critter::gMaxPopulationPenaltyFraction nl;
 		cout << "  ApplyLowPopulationAdvantage" ses fApplyLowPopulationAdvantage nl;
 	}
+	
+	// If this is a complexity-as-fitness run, then we need to force certain parameter values (and warn the user)
+	if( fUseComplexityAsFitnessFunc )
+	{
+		fInitNumCritters = fMaxCritters;	// population starts at maximum
+		fMinNumCritters = fMaxCritters;		// population stays at mximum
+		fNumberToSeed = rint( fMaxCritters * (float) fNumberToSeed / fInitNumCritters );	// same proportion as originally specified
+		if( fNumberToSeed > fMaxCritters )	// just to be safe
+			fNumberToSeed = fMaxCritters;
+		fProbabilityOfMutatingSeeds = 1.0;	// so there is variation in the initial population
+		fMateThreshold = 1.5;				// so they can't reproduce on their own
+
+		for( int i = 0; i < fNumDomains; i++ )	// over all domains
+		{
+			fDomains[i].initNumCritters = fDomains[i].maxNumCritters;	// population starts at maximum
+			fDomains[i].minNumCritters  = fDomains[i].maxNumCritters;	// population stays at maximum
+			fDomains[i].numberToSeed = rint( fDomains[i].maxNumCritters * (float) fDomains[i].numberToSeed / fDomains[i].initNumCritters );	// same proportion as originally specified
+			if( fDomains[i].numberToSeed > fDomains[i].maxNumCritters )	// just to be safe
+				fDomains[i].numberToSeed = fDomains[i].maxNumCritters;
+			fDomains[i].probabilityOfMutatingSeeds = 1.0;				// so there is variation in the initial population
+		}
+
+		critter::gNumDepletionSteps = 0;				// turn off the high-population penalty
+		critter::gMaxPopulationPenaltyFraction = 0.0;	// ditto
+		fApplyLowPopulationAdvantage = false;			// turn off the low-population advantage
+		
+		fRecordComplexity = true;						// record it, since we have to compute it
+
+		cout << "Due to running with Complexity as the fitness function, the following parameter values have been forcibly reset as indicated:" nl;
+		cout << "  InitNumCritters" ses fInitNumCritters nl;
+		cout << "  MinNumCritters" ses fMinNumCritters nl;
+		cout << "  NumberToSeed" ses fNumberToSeed nl;
+		cout << "  ProbabilityOfMutatingSeeds" ses fProbabilityOfMutatingSeeds;
+		cout << "  MateThreshold" ses fMateThreshold nl;
+		for( int i = 0; i < fNumDomains; i++ )
+		{
+			cout << "  Domain " << i << ":" nl;
+			cout << "    initNumCritters" ses fDomains[i].initNumCritters nl;
+			cout << "    minNumCritters" ses fDomains[i].minNumCritters nl;
+			cout << "    numberToSeed" ses fDomains[i].numberToSeed nl;
+			cout << "    probabilityOfMutatingSeeds" ses fDomains[i].probabilityOfMutatingSeeds nl;
+		}
+		cout << "  NumDepletionSteps" ses critter::gNumDepletionSteps nl;
+		cout << "  .MaxPopulationPenaltyFraction" ses critter::gMaxPopulationPenaltyFraction nl;
+		cout << "  ApplyLowPopulationAdvantage" ses fApplyLowPopulationAdvantage nl;
+		cout << "  RecordComplexity" ses fRecordComplexity nl;
+	}
 
 	cout nlf;
     fb.close();
