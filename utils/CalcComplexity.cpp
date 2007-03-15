@@ -6,7 +6,7 @@
 
 //set me to 200 for a Olaf-recommended value.
 #define WARN_IF_COMPUTING_COMPLEXITY_OVER_LESSTHAN_N_TIMESTEPS 0
-#define CalcAll 1
+#define CalcAll 0
 #define CalcProcessing 1
 #define CalcInput 0
 
