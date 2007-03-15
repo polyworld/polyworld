@@ -527,7 +527,7 @@ void TSimulation::Step()
 					critter::gLowPopulationAdvantageFactor = 1.0;
 			}
 		}
-		else	// population is greater than initial level everywhere
+		else if( excess > 0 )	// population is greater than initial level everywhere
 		{
 			critter::gLowPopulationAdvantageFactor = 1.0;	// we're not currently applying the low population advantage
 
