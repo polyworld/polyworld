@@ -91,4 +91,50 @@ of the depth of the world (the food goes to 50% of the depth of the world)
 only after 30,000 time steps.  The idea is to introduce the barriers slowly,
 so critters can first evolve to follow the food, then evolve the ability to
 circumvent the barriers.  Still no guarantee they'll get there, of course, but
-at least now there's hope.
+at least now there's hope.  Nope.  _df4 seemed to come close, but ultimately
+produced agents that just sat and waited for the food to come to them.  So...
+
+In _df2, the overall period was 800 steps, and food spent 200 steps in each
+site (there were four sites).  Agents migrated nicely.
+
+In _df4, the overall period was 600 steps, and food spent 200 steps in each
+site (there were only three sites).  Agents ended up waiting for the food to
+come to them.
+
+In _df5, the overall period is 900 steps, with food spending 300 steps in each
+site (still three sites).  I think that will tip the scales.  We'll see.  I
+also increased the high-population penalty (reduced NumDepletionSteps from 150
+to 100), because they were so successful at reproducing that while there ended
+up being 23294 agents born, there were 94766 birth-denials.  I don't like that
+ratio at all.  (Smite is still turned off.)  I think this is one of the
+reasons the wait-for-it solution so completely wiped out the run-to-it
+solution, even though both were evident for a while in df4.
+
+_df5 produced migrating agents until the barrier became too long.  Agents
+never learned to go around it effectively, finally settling for waiting for
+the food to come to them.  (The low-population-advantage makes this possible,
+by reducing energy consumption and even extending life as the population
+reaches a minimum.)
+
+_df6 is like _df2 (4 patches, in the corners, each lasting for 200 steps of
+an 800 step cycle), but has a barrier that grows between two of the patches.
+However, it doesn't start growing for 10K steps, by which time I know a
+stable migrating pattern has emerged from the _df2 run, and then it grows to
+just 40% of the world's depth (rather than 60% as in _df4 and _df5) by
+t=30K steps.  Maybe this will let them retain their migrating pattern and
+just get better at it.  If this doesn't work, I'm not sure what else to try.
+_df6 is running on Aden 3/16/07.
+
+(I am also running _df5 again with spiking neurons, just for the heck of it,
+on Pinky, while I wait to see what _df6 does and try to think about where to
+go next.)
+
+During the various df# runs, I also ran simple driven and passive runs with
+a lower mutation rate.  These _low_mrate runs demonstrated a stability to the
+relation between the early phases of driven and passive complexity growth.
+Both went at about the same rate, but at a slower rate than in the higher
+mutation rate runs.  They ultimately joined up with the higher mutation rate
+curves, just taking longer to get there.  Of mild interest is the fact that
+a complexity-as-fitness run with a lower mutation rate reached an even higher
+level of complexity than the complexity-as-fitness run with the original
+higher mutation rate.
