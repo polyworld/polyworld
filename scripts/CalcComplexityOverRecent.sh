@@ -27,7 +27,7 @@ fi
 	# list the timesteps, make sure they are all integers, and sort them by number.
 	ls -1 | awk 'int($1) == $1 { print $0 }' | sort -n | while read timestep
 	do
-#		echo "directory: $timestep"
+#		echo "directory: $timestep (`date`)"
 		# the 1st awk at the end strips any comment (beginning with a '#' or '%') lines, and any blank lines
 		# the 2nd awk at the end strips out any values where the Complexity is 0.0.
 		data=$(${CALC_COMPLEXITY_OVER_DIRECTORY} ${directory}/${timestep} | awk '$0 !~ /^[\#\%]/ && $0 != "" { print $0 }' | awk '$2 != 0 && $3 != 0 && $4 != 0 { print $0 }')
