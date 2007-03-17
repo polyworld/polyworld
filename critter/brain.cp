@@ -3186,11 +3186,12 @@ void brain::UpdateSpikes(float energyfraction, FILE * fHandle)
 		for(i = 0; i < numSynapsesToDepress; i++)
 		{
 			syn = &synapse[synapsesToDepress[i]];
-			stdp = neuron[syn->toneuron].STDP;
+			int toneuron = abs(syn->toneuron);
+			stdp = neuron[toneuron].STDP;
 	
 			//check to see if a given synapses to neuron has just fired
 			//otherwise we have to punish the incoming synapse. 
-			if (neuron[syn->toneuron].v < 30.)  //this should never happen since we swap numSynapsesToDepress with startNumSynapses to depress;
+			if (neuron[toneuron].v < 30.)  //this should never happen since we swap numSynapsesToDepress with startNumSynapses to depress;
 			syn->delta -= stdp; //punish by the to neurons stdp timer		
 		}
 		
