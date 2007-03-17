@@ -138,3 +138,11 @@ curves, just taking longer to get there.  Of mild interest is the fact that
 a complexity-as-fitness run with a lower mutation rate reached an even higher
 level of complexity than the complexity-as-fitness run with the original
 higher mutation rate.
+
+_df6 also had problems with the barrier, but not as much, of course, since it
+didn't quite cut off all access to the food.  Some of the agents seemed to
+just be finding the patch on the other side of the barrier when the food
+moved again.  So I am trying...
+
+_df7 is like _df6, except the food stays in each location twice as long.  So
+the total cycle is 1600 steps, instead of 800 steps.
