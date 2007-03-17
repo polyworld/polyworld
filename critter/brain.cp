@@ -15,6 +15,13 @@
 #define SlowVision 0
 #define TauVision 0.2
 
+#define GaussianOutputNeurons 0
+#if GaussianOutputNeurons
+	#define GaussianActivationMean 0.0
+	#define GaussianActivationStandardDeviation 1.5
+	#define GaussianActivationVariance (GaussianActivationStandardDeviation * GaussianActivationStandardDeviation)
+#endif
+
 // Self
 #include "brain.h"
 
@@ -2293,14 +2300,51 @@ void brain::Update(float energyfraction)
     }
 #endif PRINTBRAIN
 
-    for( i = firstnoninputneuron; i < numneurons; i++ )
-    {
+//	float minExcitation = FLT_MAX;
+//	float maxExcitation = -FLT_MAX;
+//	float avgExcitation = 0.0;
+//	float minActivation = FLT_MAX;
+//	float maxActivation = -FLT_MAX;
+//	float avgActivation = 0.0;
+
+	for( i = firstOutputNeuron; i < firstInternalNeuron; i++ )
+	{
         newneuronactivation[i] = neuron[i].bias;
         for( k = neuron[i].startsynapses; k < neuron[i].endsynapses; k++ )
         {
             newneuronactivation[i] += synapse[k].efficacy *
                neuronactivation[abs(synapse[k].fromneuron)];
 		}              
+//		if( newneuronactivation[i] < minExcitation )
+//			minExcitation = newneuronactivation[i];
+//		if( newneuronactivation[i] > maxExcitation )
+//			maxExcitation = newneuronactivation[i];
+//		avgExcitation += newneuronactivation[i];
+	#if GaussianOutputNeurons
+        newneuronactivation[i] = gaussian( newneuronactivation[i], GaussianActivationMean, GaussianActivationVariance );
+	#else
+        newneuronactivation[i] = logistic( newneuronactivation[i], gLogisticsSlope );
+	#endif
+//		if( newneuronactivation[i] < minActivation )
+//			minActivation = newneuronactivation[i];
+//		if( newneuronactivation[i] > maxActivation )
+//			maxActivation = newneuronactivation[i];
+//		avgActivation += newneuronactivation[i];
+	}
+//	avgExcitation /= numOutputNeurons;
+//	avgActivation /= numOutputNeurons;
+
+//	printf( "X:  min=%6.1f  max=%6.1f  avg=%6.1f\n", minExcitation, maxExcitation, avgExcitation );
+//	printf( "X:  min=%6.1f  max=%6.1f  avg=%6.1f\n", minActivation, maxActivation, avgActivation );
+
+    for( i = firstInternalNeuron; i < numneurons; i++ )
+    {
+        newneuronactivation[i] = neuron[i].bias;
+        for( k = neuron[i].startsynapses; k < neuron[i].endsynapses; k++ )
+        {
+            newneuronactivation[i] += synapse[k].efficacy *
+               neuronactivation[abs(synapse[k].fromneuron)];
+		}
         newneuronactivation[i] = logistic(newneuronactivation[i], gLogisticsSlope);
     }
 

@@ -80,6 +80,7 @@ inline float fmin(float f1, float f2, float f3, float f4, float f5)
 
 float logistic(float x, float slope);
 float biasedLogistic(float x, float bias, float slope);
+float gaussian( float x, float mean, float variance );
 
 int SetMaximumFiles( long filecount );
 int GetMaximumFiles( long *filecount );

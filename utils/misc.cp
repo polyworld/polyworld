@@ -125,6 +125,13 @@ float biasedLogistic(float x, float bias, float slope)
     return (1.0 / (1.0 + exp(-1 * (x+bias) * slope)));
 }
 
+
+float gaussian( float x, float mean, float variance )
+{
+    return( exp( -(x-mean)*(x-mean) / variance ) );
+}
+
+
 double hirestime( void )
 {
 #ifdef linux
