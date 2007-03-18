@@ -5,15 +5,13 @@
 # CONFIGURABLE PARAMETERS
 ############################################################
 DOT="/usr/local/graphviz-2.12/bin/dot"
-SCCMAP="/usr/local/graphviz-2.12/bin/sccmap"
-
-#DOT_FILLCOLORS="whitesmoke deeppink1 firebrick1 hotpink1 indianred1 lightsalmon maroon orangered1 palevioletred1 pink1 salmon1 red1 forestgreen"
-DOT_FILLCOLORS="whitesmoke deeppink1 orange cyan1 forestgreen"
+DONT_DISPLAY_AGENTS_WITH_LESSTHAN_N_OFFSPRING=1
+DOT_FILLCOLORS="whitesmoke beige lightpink1 lightcyan1 orange palegreen1 forestgreen"
+CHILD_DEPTH_IS_AVERAGE_OF_PARENTS_PLUSONE=1		# If this is not 1, the child's depth = max(parent1,parent2) + 1
 PLOT_FORMAT="pdf"	# pdf, png, etc.
 DOTFILE_PARAMS="
 	nodesep=0.2;				// minimum node separation (in inches).
 //	height=0.7;
-//	edge [color=Blue, style=dashed, arrowhead=normal];
 	concentrate=true;			// handy!  Collapse 2 edges into a single edge.
 	ranksep=equally;			// ranks should be equally distant from one another
 	center=true;				// center the graph on the page
@@ -27,6 +25,7 @@ DOTFILE_PARAMS="
 	rankdir=TB;			// Print from top to bottom (the default)
 	"
 # DON'T EDIT ANYTHING PAST THIS UNLESS YOU KNOW WHAT YOU'RE DOING.
+#SCCMAP="/usr/local/graphviz-2.12/bin/sccmap"		# Not currently used.
 ############################################################
 ############################################################
 BDfile=$(echo "${1}" | sed -e 's/\/$//')       # removing any trailing slash
@@ -82,50 +81,92 @@ numseedcritters=$(echo "$FL_firstchild - 1" | bc)
 echo "- Num Seed Critters = $numseedcritters"
 
 
-#past -> 1978 -> 1980 -> 1982 -> 1983 -> 1985 -> 1986 -> 
-# 1987 -> 1988 -> 1989 -> 1990 -> "future"; 
-
-
-
-# Only look at lines that are BIRTH events, and then only get columns 3, 4, and 5.
 {
 echo "digraph hierarchy {"
 echo "${DOTFILE_PARAMS}"
-grep ' BIRTH ' ${BDfile} | cut -d' ' -f3,4,5 | awk -v DOT_FILLCOLORS="${DOT_FILLCOLORS}" -v firstchild="${FL_firstchild}" -F' ' '
+
+# Only look at lines that are BIRTH events, and then only get columns 3, 4, and 5, use awk to figure out how many children each critter has, do any stripping, and then pipe that result into another awk program.
+grep ' BIRTH ' ${BDfile} | cut -d' ' -f3,4,5 | awk -v DONT_DISPLAY_AGENTS_WITH_LESSTHAN_N_OFFSPRING="${DONT_DISPLAY_AGENTS_WITH_LESSTHAN_N_OFFSPRING}" -F' ' '
+# This part figuresg how many children each critter has...
 BEGIN { 
-	DEPTHS[0]="";		# (index=0...MAXDEPTHS) -- which critters are at each depth
-	CRITTER[0]="";		# (index=critternum) -- depth of a particular critter
 	NUMCHILDREN[0]="";	# (index=critternum) -- number of children a particular critter had
-	MAXDEPTH=0;		# Holds the highest critterdepth that we encounter.
 	MAXCRITTERNUM=0;	# Holds the highest critternum that we encounter.
-	for( i=1; i<firstchild; i++ ) { DEPTHS[0] = DEPTHS[0] " " i; CRITTER[i]=0; }
 	}
 
 # Main program
 {
 	critternum=$1;
 
-	# critterdepth is the average of the depth of the parents, rounded, plus one.
-	critterdepth= int( ((CRITTER[$2] + CRITTER[$3]) / 2) + 0.5) + 1;
-
-	# update MAXCRITTERNUM to the new highest critternum
-	if( critternum > MAXCRITTERNUM ) {
-		MAXCRITTERNUM=critternum;
-	}
-
-	# update MAXDEPTH to the new max, make the first node (for the timeline)
-	if( critterdepth > MAXDEPTH ) {
-		MAXDEPTH=critterdepth;
-	}
-
 	NUMCHILDREN[$2]++;
-	NUMCHILDREN[$3]++;
+	NUMCHILDREN[$3]++;	
 
+	PARENT1[$1]=$2;
+	PARENT2[$1]=$3;
+	
+	# update MAXCRITTERNUM to the new highest critternum
+	if( critternum > MAXCRITTERNUM ) { MAXCRITTERNUM=critternum; }
+}
+
+END {
+	#output the stream to the next awk script
+	for( i=1; i<=MAXCRITTERNUM; i++ )
+	{
+		numchildren=NUMCHILDREN[i];
+		if( numchildren == "" ) { numchildren = 0; }
+		
+		if( numchildren >= DONT_DISPLAY_AGENTS_WITH_LESSTHAN_N_OFFSPRING )		# only print the agents with enough children.
+		{
+			print i " " PARENT1[i] " " PARENT2[i] " " numchildren
+		}
+	}
+
+}' | tee ,intermediate | awk -v DOT_FILLCOLORS="${DOT_FILLCOLORS}" -v firstchild="${FL_firstchild}" -F' ' '
+BEGIN { 
+	DEPTHS[0]="";		# (index=0...MAXDEPTHS) -- which critters are at each depth
+	CRITTER[0]="";		# (index=critternum) -- depth of a particular critter
+	NUMCHILDREN[0]="";	# (index=critternum) -- number of children a particular critter had
+	MAXDEPTH=0;		# Holds the highest critterdepth that we encounter.
+	MAXCRITTERNUM=0;	# Holds the highest critternum that we encounter.
+#	for( i=1; i<firstchild; i++ ) { DEPTHS[0] = DEPTHS[0] " " i; CRITTER[i]=0; }
+	numcolors = split( DOT_FILLCOLORS, ColorsArray, " ");	# create our array of possible agent colors
+	}
+
+# Main program
+{
+	critternum=$1;
+	####################################################################################
+	# define NUMCHILDREN and critterdepth for the SEED critters...
+	if( critternum < firstchild )
+	{
+		NUMCHILDREN[critternum]=$2;
+		critterdepth=0;
+	}
+	else	# This is for the non-seed critters
+	{
+		NUMCHILDREN[critternum]=$4;
+	#	critterdepth= int( ((CRITTER[$2] + CRITTER[$3]) / 2) + 0.5) + 1;	# critterdepth is the average of the depth of the parents, rounded, plus one.
+		if( CRITTER[$2] >= CRITTER[$3] ) { critterdepth=CRITTER[$2] + 1; } else { critterdepth=CRITTER[$3] + 1; }
+	}
+	####################################################################################
 	DEPTHS[critterdepth]=DEPTHS[critterdepth] " " critternum;
 	CRITTER[critternum]=critterdepth
 
-#	print "critterdepth= " critterdepth
-	print "{ " $2 " " $3 " }->" critternum
+	if( critternum >= firstchild )			# dont print connections going to the SEED critters.
+	{
+		print "{ " $2 " " $3 " }->" critternum
+	}
+	####################################################################################
+	# print the Agent Colors... 
+	numoffspring=NUMCHILDREN[critternum];
+	colorindex=numoffspring + 1;
+	if( colorindex > numcolors ) { colorindex = numcolors; }
+#	print critternum "[ color=\"" ColorsArray[colorindex] "\", style=filled, label=\"g" critternum "\\n" numoffspring "\" ];";
+	print critternum "[ color=\"" ColorsArray[colorindex] "\", style=filled, label=\"g" critterdepth "\\n" numoffspring "\" ];";
+	####################################################################################
+	# update MAXCRITTERNUM to the new highest critternum
+	if( critternum > MAXCRITTERNUM ) { MAXCRITTERNUM=critternum; }
+	# update MAXDEPTH to the new max, make the first node (for the timeline)
+	if( critterdepth > MAXDEPTH ) { MAXDEPTH=critterdepth; }
 
 }
 
@@ -139,27 +180,6 @@ END {
 	# The final children also have a special rank.
 	print "{rank=max;" DEPTHS[MAXDEPTH] " }";	# print the SEEDs, they have a special rank.  These could also be "rank=sink", but rank=max is more robustly aesthetic.
 
-	####################################################################################
-	####################################################################################
-	####################################################################################
-
-	# Get out ColorsArray in order so we can colorize agents based on how many children they had.
-	numcolors = split( DOT_FILLCOLORS, ColorsArray, " ");
-
-	for( i=0; i<=MAXCRITTERNUM; i++ ) {
-		numchildren=NUMCHILDREN[i];
-	
-		# if the critter has more children than there are colors, set this critter to the highest color
-		if( numchildren == "" ) { numchildren = 0; }
-		colorindex=numchildren + 1;
-		if( colorindex > numcolors ) { colorindex = numcolors; }
-
-		print i "[ color=\"" ColorsArray[colorindex] "\", style=filled, label=" numchildren "]; // numchildren=" numchildren;
-		print i "[ color=\"" ColorsArray[colorindex] "\", style=filled ]; // numchildren=" numchildren;
-#		124[ color=\"firebrick1\", style=filled]
-#		print "# CRITTER_" i "	" NUMCHILDREN[i];
-#		label="makea\nstring"
-	}
 }'
 echo "}"
 } > ',temp'
@@ -175,8 +195,7 @@ open ${PLOTfile}
 #${DOT} ',sccmap' -T${PLOT_FORMAT} -o sccmap.pdf
 #echo "- Made sccmap.pdf.  Bringing up the plot.."
 #open sccmap.pdf
-
-
-# rm ,temp
-# echo "- Deleted ',temp'"
+rm ,intermediate
+rm ,temp
+echo "- Deleted ',temp'"
 echo "Done!"
