@@ -125,6 +125,7 @@ ${GNUPLOT} << EOF
 set xlabel 'Timestep' ${GNUPLOT_labelparams}
 set ylabel '${GNUPLOT_ylabel}' ${GNUPLOT_labelparams}
 set grid
+set key outside
 set bar 0
 set mxtics 5
 set title "${GNUPLOT_title}" ${GNUPLOT_titleparams}
@@ -167,6 +168,7 @@ ${GNUPLOT} << EOF
 set xlabel 'Timestep' ${GNUPLOT_labelparams}
 set ylabel '${GNUPLOT_ylabel}' ${GNUPLOT_labelparams}
 set grid
+set key outside
 set bar 0
 set mxtics 5
 set title "${GNUPLOT_title}" ${GNUPLOT_titleparams}
