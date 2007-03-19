@@ -1,0 +1,263 @@
+#!/bin/sh
+########################################################################################################
+# CONFIGURABLE OPTIONS
+GNUPLOT="/sw/bin/gnuplot"
+HIGHEST_BEHAVIOR_NEURON="7"
+GNUPLOT_SMOOTHING="1"			# Plot the smoothed plot as well?  (0 or 1)
+GNUPLOT_smoothingoption="csplines"	# 'csplines' and 'bezier' are reasonable options
+GNUPLOT_SCALEPLOT_BY="1.2"		# Change the size of the plot here.  1.0 = 846x594 pt = 11.75x8.25 in
+GNUPLOT_linewidth="1.5"			# 1 is too small, 2 is too thick.
+GNUPLOT_labelparams='font "Times,20"'
+GNUPLOT_titleparams='font "Times,18"'
+# Don't modify anything beneath here unless you know what you're doing
+########################################################################################################
+# if no parameters given, output usage.
+if [ -z "${1}" ]
+then
+	echo "This program takes: 
+	./plotNeuron <range> <brainFunction_file|directory>
+	possible values for <range>: N; A; N-N; b[1-$HIGHEST_BEHAVIOR_NEURON]; N-b[1-$HIGHEST_BEHAVIOR_NEURON]; b[1-$HIGHEST_BEHAVIOR_NEURON]-b[1-$HIGHEST_BEHAVIOR_NEURON]
+	  A = All neurons
+	  b[1-$HIGHEST_BEHAVIOR_NEURON] = behavior neurons 1-$HIGHEST_BEHAVIOR_NEURON
+	  N = neuron with index N, counting from zero"
+	exit;
+fi
+########################################################################################################
+# if the user goofed and put the brainfunction file before the parameters, put them in the correct order.
+if [ -d "${1}" -o -f "${1}" ]
+then
+	TO_GET=$(echo "${2}" | sed -e 's/[^\A0123456789b\-]//g' | sed -e 's/\-[\-]*/\-/')	# remove anything not b,[0-9],-,A then collapse any double --'s
+	BFfile=$(echo "${1}" | sed -e 's/\/$//')	# remove any trailing slash
+else
+	TO_GET=$(echo "${1}" | sed -e 's/[^\A0123456789b\-]//g' | sed -e 's/\-[\-]*/\-/')	# remove anything not b,[0-9],-,A then collapse any double --'s
+	BFfile=$(echo "${2}" | sed -e 's/\/$//')	# remove any trailing slash
+fi
+##############################
+# echo "TO_GET=$TO_GET"
+if [ ! -x "${GNUPLOT}" ]
+then
+	echo "Gnuplot at '${GNUPLOT}' isn't executable.  Change the variable or make it so.";
+	exit;
+fi
+
+if [ -d ${BFfile} ]
+then
+	echo "We do not support directories yet."
+	exit;
+fi
+
+if [ ! -f ${BFfile} ]
+then
+	echo "The 2nd argument must be either a brainFunction file or a directory."
+	exit;
+fi
+
+#################################################################### Do we have a list?  If not, make a single-valued list.  If we have a 'b#-#', make it 'b#-b#'
+temp=$(echo "$TO_GET" | grep -o '-')
+if [ ! "$temp" = "-" ]
+then
+	TO_GET="${TO_GET}-${TO_GET}"
+else
+	temp=$(echo "$TO_GET" | cut -f1 -d'-' | grep -o 'b[0-9]*')
+	if [ -n "$temp" ] 	# If the first value is a b#, transform it into 'b#-b#'
+	then
+		temp2=$(echo "$TO_GET" | cut -f2 -d'-' | grep -o '[0-9]'$)
+		TO_GET="${temp}-b${temp2}"
+	fi
+fi
+####################################################################
+
+# Now, figure out what the real neuron values are.
+N1=$(echo "$TO_GET" | cut -f1 -d'-')
+N2=$(echo "$TO_GET" | cut -f2 -d'-')
+
+echo "- N1=$N1; N2=$N2"
+
+maxindex=$(head -n 1 ${BFfile} | cut -f3 -d' '); maxindex=$(echo "$maxindex - 1" | bc);	# because it's zero-based we subtract 1.
+lastinputindex=$(head -n 1 ${BFfile} | cut -f4 -d' '); lastinputindex=$(echo "$lastinputindex - 1" | bc);	# because it's zero-based we subtract 1.
+
+#################################################################### DEFINE VARIABLES FOR DETERMINING THE INDEX OF N1 and N2.
+flag_behavior_N1=$(echo "$N1" | grep -o 'b')
+flag_behavior_N2=$(echo "$N2" | grep -o 'b')
+firstbehaviorindex=$(echo "$lastinputindex + 1" | bc)
+echo "- maxindex=${maxindex}; lastinputindex=$lastinputindex; firstbehaviorindex=$firstbehaviorindex"
+
+# DEFINE THE INDEX FOR N1
+if [ -n "${flag_behavior_N1}" ]	# is N1 a behavior neuron?
+then
+	N1_number=$(echo "$N1" | tr -d 'b')
+	if [ "$N1_number" -gt "$HIGHEST_BEHAVIOR_NEURON" -o "$N1_number" -le "0" ]	# b[#] must be >0 and <=HIGHEST_BEHAVIOR_NEURON
+	then
+		echo "* ERROR: Behavior groups can only be b[1-${HIGHEST_BEHAVIOR_NEURON}].  You specified 'b${N1_number}'. Exiting.";
+		exit;
+	fi
+	indexN1=$(echo "${firstbehaviorindex} + ${N1_number} - 1" | bc)			# minus 1 because b1=>firstbehaviorindex.
+
+elif [ "$N1" = "A" ]	# N1 is not a behavior neuron, but it is an 'A'
+then
+	N1=0
+	N2=$maxindex
+	indexN1=0
+	indexN2=$maxindex
+else
+        if [ "$N1" -gt "$maxindex" -o "$N1" -lt "0" ]
+        then
+                echo "* ERROR: Neuron ranges must lie within [0,$maxindex].  You specified [$N1,$N2].  Exiting."
+                exit;
+        fi
+
+	indexN1=$N1
+fi
+
+##############################################  DETERMINE INDEX FOR N2
+if [ -n "${flag_behavior_N2}" ] # is N2 a behavior neuron?
+then
+	N2_number=$(echo "$N2" | tr -d 'b')
+	if [ "$N2_number" -gt "$HIGHEST_BEHAVIOR_NEURON" -o "$N2_number" -le "0" ]	# b[#] must be >0 and <=HIGHEST_BEHAVIOR_NEURON
+	then
+		echo "* ERROR: Behavior groups can only be b[1-${HIGHEST_BEHAVIOR_NEURON}].  You specified 'b${N2_number}'. Exiting.";
+		exit;
+	fi
+	indexN2=$(echo "${firstbehaviorindex} + ${N2_number} - 1" | bc)
+else
+        if [ "$N2" -gt "$maxindex" -o "$N2" -lt "0" ]
+        then
+                echo "* ERROR: Neuron ranges must lie within [0,$maxindex].  You specified [$N1,$N2].  Exiting."
+                exit;
+        fi
+	indexN2=$N2
+fi
+################################################################## Ensure that indexN1 <= indexN2
+if [ "$indexN1" -ge "$indexN2" ]
+then
+	temp=$indexN2
+	indexN2=$indexN1
+	indexN1=$temp
+fi
+
+echo "- indexN1=$indexN1; indexN2=$indexN2"
+################################################################## Create the 'neuronnames' array.  This is needed to make pretty plots.
+
+# Define special labels for the behavior neurons.
+indexEat=$firstbehaviorindex; indexMate=$(echo "$firstbehaviorindex + 1" | bc); indexFight=$(echo "$firstbehaviorindex + 2" | bc); indexSpeed=$(echo "$firstbehaviorindex + 3" | bc); indexYaw=$(echo "$firstbehaviorindex + 4" | bc); indexLight=$(echo "$firstbehaviorindex + 5" | bc); indexFocus=$(echo "$firstbehaviorindex + 6" | bc); 
+neuronnames=""
+indexN=$indexN1
+
+while [ "$indexN" -le "$indexN2" ]
+do
+	if [ "$indexN" -eq $indexEat ]
+	then
+		neuronnames="${neuronnames}eatneuron "
+	elif [ "$indexN" -eq $indexMate ]
+	then
+		neuronnames="${neuronnames}mateneuron "
+	elif [ "$indexN" -eq $indexFight ]
+	then
+		neuronnames="${neuronnames}fightneuron "
+	elif [ "$indexN" -eq $indexSpeed ]
+	then
+		neuronnames="${neuronnames}speedneuron "
+	elif [ "$indexN" -eq $indexYaw ]
+	then
+		neuronnames="${neuronnames}yawneuron "
+	elif [ "$indexN" -eq $indexLight ]
+	then
+		neuronnames="${neuronnames}lightneuron "
+	elif [ "$indexN" -eq $indexFocus ]
+	then
+		neuronnames="${neuronnames}focusneuron "
+	else
+		neuronnames="${neuronnames}n${indexN} "
+	fi
+	indexN=$(echo "$indexN + 1" | bc)
+done
+
+# strip the extra space off the end of $neuronnames.
+neuronnames=$(echo "${neuronnames}" | sed -e 's/[ ]*$//')		# remove any trailing spaces
+echo "- neuronnames=$neuronnames"
+##################################################################
+# Okay, we've validated and defined our ranges for N1 and N2 and we've prepared our GNUplot labels.  Now lets plot.
+timestepborn=$(head -n 1 ${BFfile} | cut -f6 -d' '); # !!! revisit this later to make sure this is correct.
+if [ -z "$timestepborn" ]	# If timestepborn wasn't defined in the brainFunction file, set it to zero.
+then
+	timestepborn=0;
+fi
+
+echo "- Processing ${BFfile}..."
+awk -v timestepborn="${timestepborn}" -v indexN1="${indexN1}" -v indexN2="${indexN2}" -F' ' '
+BEGIN { currenttimestep=timestepborn; DATA[0] = ""; }
+{
+	if( $1 == "brainFunction" ) { next; }		# skip the header line
+
+	neuron=$1;
+	activity=$2
+	if( neuron >= indexN1 && neuron <= indexN2 )	# If we are plotting this neuron...
+	{
+		DATA[currenttimestep] = DATA[currenttimestep] activity "	";
+	}
+	
+	# If we are on N2, remove the final tab, and increment the currenttimestep.
+	if( $1 == indexN2 )
+	{
+		DATA[currenttimestep]=substr( DATA[currenttimestep], 1, length(DATA[currenttimestep]) - 1);	# chop the last character (a tab)
+		currenttimestep++;										# increment the timestep
+	}
+	
+}
+END {
+	for( step=timestepborn; step<currenttimestep; step++ )
+	{
+		print step "	" DATA[step]
+	}
+}
+' ${BFfile} > /tmp/,$$.plt;			# dont let '$$' scare you.  It's just the process id and makes for a convenient temp filename.
+
+timestepdeath=$(tail -n 1 "/tmp/,$$.plt" | cut -f1 -d'	')	# Get the lasttimestep to be plotted
+echo "- critter lifetime: [${timestepborn}-${timestepdeath}]"
+####################################  Finished making our temp file, time to plot!
+#echo "- Humancheck: beginning of plotfile:"
+#head -n 5 /tmp/,$$.plt;
+echo "- Plotting /tmp/,$$.plt..."
+
+# Because we have a variable number of things that we could be plotting, we have to dynamically generate the plot string in shellscript before passing it to GNUplot.
+GNUPLOT_plotstring="plot"; GNUPLOT_plotstring_smooth="plot";
+
+GNUPLOT_title="${BFfile}\n${neuronnames}  smoothing=off"
+GNUPLOT_title_smooth="${BFfile}\n${neuronnames}  smoothing=$GNUPLOT_smoothingoption"
+column=2;
+GNUPLOT_SIZEX=$(echo "(846 * $GNUPLOT_SCALEPLOT_BY) / 1" | bc)	# the / 1 truncates to an integer
+GNUPLOT_SIZEY=$(echo "(594 * $GNUPLOT_SCALEPLOT_BY) / 1" | bc)	# the / 1 truncates to an integer
+
+for neuronname in ${neuronnames}
+do
+	GNUPLOT_plotstring="$GNUPLOT_plotstring '/tmp/,$$.plt' using 1:$column w l lw $GNUPLOT_linewidth title '$neuronname',"
+	GNUPLOT_plotstring_smooth="$GNUPLOT_plotstring_smooth '/tmp/,$$.plt' using 1:$column w l lw $GNUPLOT_linewidth smooth "$GNUPLOT_smoothingoption" title '$neuronname',"
+
+	column=$(echo "$column + 1 " | bc)
+done
+
+# take off the final comas
+GNUPLOT_plotstring=$(echo "$GNUPLOT_plotstring" | sed -e 's/,$//')
+GNUPLOT_plotstring_smooth=$(echo "$GNUPLOT_plotstring_smooth" | sed -e 's/,$//')
+
+# Okay, lets plot!
+${GNUPLOT} << EOF
+
+set terminal aqua 0 title "$numneurons" size $GNUPLOT_SIZEX $GNUPLOT_SIZEY fsize 15
+set title "${GNUPLOT_title}" ${GNUPLOT_titleparams}
+set xlabel 'Timestep' ${GNUPLOT_labelparams}
+set ylabel 'Activation' ${GNUPLOT_labelparams}
+set border 10
+set grid
+set key outside
+set ytics 0.2
+# set mxtics 5
+set yrange [0.0:1.0];	# offsetting slightly lets us see the lines at the edges better.
+set xrange [$timestepborn:$timestepdeath]
+${GNUPLOT_plotstring}
+
+# Now plot the Smoothed plot if we're doing that.
+if( $GNUPLOT_SMOOTHING == 1 ) set terminal aqua 1 title "$numneurons" size $GNUPLOT_SIZEX $GNUPLOT_SIZEY fsize 15; set title "${GNUPLOT_title_smooth}" ${GNUPLOT_titleparams}; ${GNUPLOT_plotstring_smooth}
+EOF
+
+echo "Done!"
