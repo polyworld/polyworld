@@ -12,7 +12,7 @@ GNUPLOT_titleparams='font "Times,18"'
 # Don't modify anything beneath here unless you know what you're doing
 ########################################################################################################
 # if no parameters given, output usage.
-if [ -z "${1}" ]
+if [ -z "${1}" -o "$#" -ne "2" ]
 then
 	echo "This program takes: 
 	./plotNeuron <range> <brainFunction_file|directory>
