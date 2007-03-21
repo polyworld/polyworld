@@ -309,8 +309,8 @@ FILE* brain::startFunctional( long index )
 		goto bail;
 	}
 
-	// print the header, with index (critter number), neuron count, number of input neurons, and number of synapses
-	fprintf( file, "brainFunction %ld %d %d %ld\n", index, numneurons, numinputneurons, numsynapses );
+	// print the header, with index (critter number), neuron count, number of input neurons, number of synapses, timestep born
+	fprintf( file, "brainFunction %ld %d %d %ld %ld\n", index, numneurons, numinputneurons, numsynapses, TSimulation::fStep );
 
 bail:
 
