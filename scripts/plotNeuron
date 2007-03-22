@@ -1,7 +1,7 @@
 #!/bin/sh
 ########################################################################################################
 # CONFIGURABLE OPTIONS
-GNUPLOT="/sw/bin/gnuplot"
+GNUPLOT="/usr/local/bin/gnuplot"
 HIGHEST_BEHAVIOR_NEURON="7"
 GNUPLOT_SMOOTHING="1"			# Plot the smoothed plot as well?  (0 or 1)
 GNUPLOT_smoothingoption="csplines"	# 'csplines' and 'bezier' are reasonable options
@@ -11,11 +11,19 @@ GNUPLOT_labelparams='font "Times,20"'
 GNUPLOT_titleparams='font "Times,18"'
 # Don't modify anything beneath here unless you know what you're doing
 ########################################################################################################
-# if no parameters given, output usage.
-if [ -z "${1}" -o "$#" -ne "2" ]
+tempfile="/tmp/,$$.plt"
+#### THIS IS FOR MPLOT############################
+flag_mplot=$(echo "${3}" | grep -o 'mplot')
+if [ "$#" -eq "3" -a -n "$flag_mplot" ]		# is this an mplot case?
+then
+	mplot_filename=$(echo "${3}" | sed -e 's/mplot\=//')
+	# put the name of the .plt file into mplot filename
+	echo "$tempfile" >> $mplot_filename
+#### END THIS IS FOR MPLOT############################
+elif [ -z "${1}" -o "$#" -ne "2" ]		# if no parameters given, output usage.
 then
 	echo "This program takes: 
-	./plotNeuron <range> <brainFunction_file|directory>
+	./plotNeuron <range> <brainFunction_file>
 	possible values for <range>: N; A; N-N; b[1-$HIGHEST_BEHAVIOR_NEURON]; N-b[1-$HIGHEST_BEHAVIOR_NEURON]; b[1-$HIGHEST_BEHAVIOR_NEURON]-b[1-$HIGHEST_BEHAVIOR_NEURON]
 	  A = All neurons
 	  b[1-$HIGHEST_BEHAVIOR_NEURON] = behavior neurons 1-$HIGHEST_BEHAVIOR_NEURON
@@ -40,15 +48,9 @@ then
 	exit;
 fi
 
-if [ -d ${BFfile} ]
-then
-	echo "We do not support directories yet."
-	exit;
-fi
-
 if [ ! -f ${BFfile} ]
 then
-	echo "The 2nd argument must be either a brainFunction file or a directory."
+	echo "The 2nd argument must be a brainFunction file."
 	exit;
 fi
 
@@ -71,10 +73,17 @@ fi
 N1=$(echo "$TO_GET" | cut -f1 -d'-')
 N2=$(echo "$TO_GET" | cut -f2 -d'-')
 
-echo "- N1=$N1; N2=$N2"
+#echo "- N1=$N1; N2=$N2"
 
 maxindex=$(head -n 1 ${BFfile} | cut -f3 -d' '); maxindex=$(echo "$maxindex - 1" | bc);	# because it's zero-based we subtract 1.
 lastinputindex=$(head -n 1 ${BFfile} | cut -f4 -d' '); lastinputindex=$(echo "$lastinputindex - 1" | bc);	# because it's zero-based we subtract 1.
+
+# Sanity check
+if [ -z "$maxindex" -o -z "$lastinputindex" ]
+then
+	echo "$BFfile does not seem to be a brainFunction file.  Exiting."
+	exit;
+fi
 
 #################################################################### DEFINE VARIABLES FOR DETERMINING THE INDEX OF N1 and N2.
 flag_behavior_N1=$(echo "$N1" | grep -o 'b')
@@ -134,8 +143,7 @@ then
 	indexN2=$indexN1
 	indexN1=$temp
 fi
-
-echo "- indexN1=$indexN1; indexN2=$indexN2"
+echo "- N1: $N1 -> $indexN1; N2: $N2 -> $indexN2"
 ################################################################## Create the 'neuronnames' array.  This is needed to make pretty plots.
 
 # Define special labels for the behavior neurons.
@@ -183,7 +191,7 @@ then
 	timestepborn=0;
 fi
 
-echo "- Processing ${BFfile}..."
+# echo "- Processing ${BFfile}..."
 awk -v timestepborn="${timestepborn}" -v indexN1="${indexN1}" -v indexN2="${indexN2}" -F' ' '
 BEGIN { currenttimestep=timestepborn; DATA[0] = ""; }
 {
@@ -210,14 +218,14 @@ END {
 		print step "	" DATA[step]
 	}
 }
-' ${BFfile} > /tmp/,$$.plt;			# dont let '$$' scare you.  It's just the process id and makes for a convenient temp filename.
+' ${BFfile} > $tempfile;
 
-timestepdeath=$(tail -n 1 "/tmp/,$$.plt" | cut -f1 -d'	')	# Get the lasttimestep to be plotted
+timestepdeath=$(tail -n 1 "$tempfile" | cut -f1 -d'	')	# Get the lasttimestep to be plotted
 echo "- critter lifetime: [${timestepborn}-${timestepdeath}]"
 ####################################  Finished making our temp file, time to plot!
 #echo "- Humancheck: beginning of plotfile:"
-#head -n 5 /tmp/,$$.plt;
-echo "- Plotting /tmp/,$$.plt..."
+#head -n 5 $tempfile;
+echo "- Plotting $tempfile..."
 
 # Because we have a variable number of things that we could be plotting, we have to dynamically generate the plot string in shellscript before passing it to GNUplot.
 GNUPLOT_plotstring="plot"; GNUPLOT_plotstring_smooth="plot";
@@ -240,6 +248,36 @@ done
 GNUPLOT_plotstring=$(echo "$GNUPLOT_plotstring" | sed -e 's/,$//')
 GNUPLOT_plotstring_smooth=$(echo "$GNUPLOT_plotstring_smooth" | sed -e 's/,$//')
 
+
+############ THIS IS FOR MPLOT
+# we are now going to put the settings for the mplot subplot into $tempfile...
+if [ -n "$flag_mplot" ]
+then
+# lines preceded by '#mplot ' get used when doing an multiplot
+mplot_settings="
+#mplot set title '${BFfile}' offset 0,-1
+#mplot unset xlabel
+#mplot unset ylabel
+#mplot set border 10
+#mplot set grid
+#mplot set key at screen 0.5,1 horizontal spacing 1
+#mplot set ytics 0.25
+#mplot set yrange [0.0:1.0];
+#mplot set xrange [$timestepborn:$timestepdeath]
+#mplotnormal ${GNUPLOT_plotstring}
+#mplotsmooth ${GNUPLOT_plotstring_smooth}
+"
+	echo "$mplot_settings" >> $tempfile
+#mplot set key outside top center horizontal spacing 1 samplen 3
+#mplot set key outside at screen 0,1
+
+#	$tempfile
+#	$mplot_filename
+#	
+	exit;
+fi
+############ END THIS IS FOR MPLOT
+
 # Okay, lets plot!
 ${GNUPLOT} << EOF
 
@@ -252,7 +290,7 @@ set grid
 set key outside
 set ytics 0.2
 # set mxtics 5
-set yrange [0.0:1.0];	# offsetting slightly lets us see the lines at the edges better.
+set yrange [0.0:1.0];
 set xrange [$timestepborn:$timestepdeath]
 ${GNUPLOT_plotstring}
 
