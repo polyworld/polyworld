@@ -51,7 +51,7 @@ do
 		break;
 	fi
 	echo "- Running: '$plotNeuron $TO_GET $BFfile mplot=$mplot_filename'..."
-	$plotNeuron $TO_GET $BFfile mplot=$mplot_filename
+	$plotNeuron $TO_GET $BFfile mplot=$mplot_filename > /dev/null
 	numfilesprocessed=$(echo "$numfilesprocessed + 1" | bc)
 done
 ########################################################################
@@ -61,7 +61,7 @@ GNUPLOT_COMMANDS="
 # the beginning commands to setup the multiplot
 reset
 set terminal aqua 0 size $GNUPLOT_SIZEX $GNUPLOT_SIZEY
-set multiplot layout $dimX, $dimY title ''
+set multiplot layout $dimX, $dimY title '$directory/'
 set tmargin 1.5
 "
 
@@ -108,7 +108,7 @@ GNUPLOT_COMMANDS="
 # the beginning commands to setup the multiplot
 reset
 set terminal aqua 0 size $GNUPLOT_SIZEX $GNUPLOT_SIZEY
-set multiplot layout $dimX, $dimY title 'SMOOTHED'
+set multiplot layout $dimX, $dimY title '$directory/ (SMOOTHED)'
 set tmargin 1.5
 "
 plotsettings=""

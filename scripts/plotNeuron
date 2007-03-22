@@ -253,14 +253,15 @@ GNUPLOT_plotstring_smooth=$(echo "$GNUPLOT_plotstring_smooth" | sed -e 's/,$//')
 # we are now going to put the settings for the mplot subplot into $tempfile...
 if [ -n "$flag_mplot" ]
 then
+mplot_title=$(echo "$BFfile" | sed -e 's/.*\///g')
 # lines preceded by '#mplot ' get used when doing an multiplot
 mplot_settings="
-#mplot set title '${BFfile}' offset 0,-1
+#mplot set title '${mplot_title}' offset 0,-1
 #mplot unset xlabel
 #mplot unset ylabel
 #mplot set border 10
 #mplot set grid
-#mplot set key at screen 0.5,1 horizontal spacing 1
+#mplot set key at screen 1,1 right horizontal spacing 1
 #mplot set ytics 0.25
 #mplot set yrange [0.0:1.0];
 #mplot set xrange [$timestepborn:$timestepdeath]
@@ -278,7 +279,7 @@ mplot_settings="
 fi
 ############ END THIS IS FOR MPLOT
 
-# Okay, lets plot!
+# Okay, lets plot normally!
 ${GNUPLOT} << EOF
 
 set terminal aqua 0 title "$numneurons" size $GNUPLOT_SIZEX $GNUPLOT_SIZEY fsize 15
