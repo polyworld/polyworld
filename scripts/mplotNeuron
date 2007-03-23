@@ -63,6 +63,8 @@ reset
 set terminal aqua 0 size $GNUPLOT_SIZEX $GNUPLOT_SIZEY
 set multiplot layout $dimX, $dimY title '$directory/'
 set tmargin 1.5
+set format y ''
+set label \"Y axes are [0,1.0]\nGenerated `date +%Y-%m-%d` by `whoami`\" at screen 0.001,0.98 left
 "
 
 numfilesprocessed=0
@@ -91,6 +93,7 @@ ${plotsettings}"
 done
 
 GNUPLOT_COMMANDS="${GNUPLOT_COMMANDS}
+set label \"Generated `date +%Y-%m-%d` by `whoami` \n Y axes is [0,1.0]\" at screen 0.3,0.7 left
 unset multiplot"
 
 # now lets plot!
@@ -110,6 +113,8 @@ reset
 set terminal aqua 0 size $GNUPLOT_SIZEX $GNUPLOT_SIZEY
 set multiplot layout $dimX, $dimY title '$directory/ (SMOOTHED)'
 set tmargin 1.5
+set format y ''
+set label \"Y axes are [0,1.0]\nGenerated `date +%Y-%m-%d` by `whoami`\" at screen 0.001,0.98 left
 "
 plotsettings=""
 # now to get their logfiles..
