@@ -9,6 +9,9 @@ GNUPLOT_SCALEPLOT_BY="1.2"		# Change the size of the plot here.  1.0 = 846x594 p
 GNUPLOT_linewidth="1.5"			# 1 is too small, 2 is too thick.
 GNUPLOT_labelparams='font "Times,20"'
 GNUPLOT_titleparams='font "Times,18"'
+GNUPLOT_fightneuron_lt="1"		# color will always be RED
+GNUPLOT_eatneuron_lt="2"		# color will always be GREEN
+GNUPLOT_mateneuron_lt="3"		# color will always be BLUE
 # Don't modify anything beneath here unless you know what you're doing
 ########################################################################################################
 tempfile="/tmp/,$$.plt"
@@ -236,12 +239,26 @@ column=2;
 GNUPLOT_SIZEX=$(echo "(846 * $GNUPLOT_SCALEPLOT_BY) / 1" | bc)	# the / 1 truncates to an integer
 GNUPLOT_SIZEY=$(echo "(594 * $GNUPLOT_SCALEPLOT_BY) / 1" | bc)	# the / 1 truncates to an integer
 
+current_lt=4					# begin counting linetypes at 4 because lt's [1,3] are taken up.
 for neuronname in ${neuronnames}
 do
-	GNUPLOT_plotstring="$GNUPLOT_plotstring '/tmp/,$$.plt' using 1:$column w l lw $GNUPLOT_linewidth title '$neuronname',"
-	GNUPLOT_plotstring_smooth="$GNUPLOT_plotstring_smooth '/tmp/,$$.plt' using 1:$column w l lw $GNUPLOT_linewidth smooth "$GNUPLOT_smoothingoption" title '$neuronname',"
+	if [ "$neuronname" = "eatneuron" ]	# force eatneuron to have GREEN color
+	then
+		linetype="lt $GNUPLOT_eatneuron_lt"
+	elif [ "$neuronname" = "fightneuron" ]	# force fightneuron to have RED color
+	then
+		linetype="lt $GNUPLOT_fightneuron_lt"
+	elif [ "$neuronname" = "mateneuron" ]	# force mateneuron to have BLUE color
+	then
+		linetype="lt $GNUPLOT_mateneuron_lt"
+	else
+		linetype="lt $current_lt"
+	fi
+	GNUPLOT_plotstring="$GNUPLOT_plotstring '/tmp/,$$.plt' using 1:$column w l $linetype lw $GNUPLOT_linewidth title '$neuronname',"
+	GNUPLOT_plotstring_smooth="$GNUPLOT_plotstring_smooth '/tmp/,$$.plt' using 1:$column w l $linetype lw $GNUPLOT_linewidth smooth "$GNUPLOT_smoothingoption" title '$neuronname',"
 
 	column=$(echo "$column + 1 " | bc)
+	current_lt=$(echo "$current_lt + 1" | bc)
 done
 
 # take off the final comas
