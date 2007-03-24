@@ -188,7 +188,7 @@ neuronnames=$(echo "${neuronnames}" | sed -e 's/[ ]*$//')		# remove any trailing
 echo "- neuronnames=$neuronnames"
 ##################################################################
 # Okay, we've validated and defined our ranges for N1 and N2 and we've prepared our GNUplot labels.  Now lets plot.
-timestepborn=$(head -n 1 ${BFfile} | cut -f6 -d' '); # !!! revisit this later to make sure this is correct.
+timestepborn=$(head -n 1 ${BFfile} | cut -f6 -d' '); # revisit this later to make sure this is correct.
 if [ -z "$timestepborn" ]	# If timestepborn wasn't defined in the brainFunction file, set it to zero.
 then
 	timestepborn=0;
@@ -239,9 +239,23 @@ column=2;
 GNUPLOT_SIZEX=$(echo "(846 * $GNUPLOT_SCALEPLOT_BY) / 1" | bc)	# the / 1 truncates to an integer
 GNUPLOT_SIZEY=$(echo "(594 * $GNUPLOT_SCALEPLOT_BY) / 1" | bc)	# the / 1 truncates to an integer
 
-current_lt=4					# begin counting linetypes at 4 because lt's [1,3] are taken up.
+
+########################################################################
+# PLOT LINE COLORS:
+# Okay, the code for this is odd, but the idea is simple.
+# If this plot contains an eat, mate, or fight neuron, they WILL be rendered in green, blue, and red colored lines, respectively.
+# If the plot does NOT contain an eat, mate, or fight neuron, other neurons ARE allowed to be represented as a Green/Red/Blue line.
+# Note that this code will assume that:
+# $GNUPLOT_fightneuron_lt < $GNUPLOT_eatneuron_lt < GNUPLOT_mateneuron_lt.  However, if this assumption isn't true the worst that will happen the colors won't be perfect, but the graph will still be correct.
+########################################################################
+flag_haveFIGHTneuron=$(echo "$neuronnames" | grep -o 'fightneuron')
+flag_haveEATneuron=$(echo "$neuronnames" | grep -o 'eatneuron')
+flag_haveMATEneuron=$(echo "$neuronnames" | grep -o 'mateneuron')
+current_lt=0					# begin at color0, but we're going to increment current_lt before we use it.
 for neuronname in ${neuronnames}
 do
+	echo "neuronname=$neuronname" >&2
+
 	if [ "$neuronname" = "eatneuron" ]	# force eatneuron to have GREEN color
 	then
 		linetype="lt $GNUPLOT_eatneuron_lt"
@@ -252,19 +266,36 @@ do
 	then
 		linetype="lt $GNUPLOT_mateneuron_lt"
 	else
+		current_lt=$(echo "$current_lt + 1" | bc)
+
+		# Okay, we have established that we ARE NOT plotting any of the specially colored neurons.  Note that these CANNOT be else if.  They must be a sequence of IFs.
+		if [ -n "$flag_haveFIGHTneuron" -a "$current_lt" -eq "$GNUPLOT_fightneuron_lt" ]	# Have a FIGHT neuron, but we're not plotting it right now and we're on its color.  Change the color
+		then
+			current_lt=$(echo "$current_lt + 1" | bc)
+		fi
+		if [ -n "$flag_haveEATneuron" -a "$current_lt" -eq "$GNUPLOT_eatneuron_lt" ]	# Have a EAT neuron, but we're not plotting it right now and we're on its color.  Change the color
+		then
+			current_lt=$(echo "$current_lt + 1" | bc)
+		fi
+		if [ -n "$flag_haveMATEneuron" -a "$current_lt" -eq "$GNUPLOT_mateneuron_lt" ]	# Have a MATE neuron, but we're not plotting it right now and we're on its color.  Change the color
+		then
+			current_lt=$(echo "$current_lt + 1" | bc)
+		fi
+
 		linetype="lt $current_lt"
 	fi
+
 	GNUPLOT_plotstring="$GNUPLOT_plotstring '/tmp/,$$.plt' using 1:$column w l $linetype lw $GNUPLOT_linewidth title '$neuronname',"
 	GNUPLOT_plotstring_smooth="$GNUPLOT_plotstring_smooth '/tmp/,$$.plt' using 1:$column w l $linetype lw $GNUPLOT_linewidth smooth "$GNUPLOT_smoothingoption" title '$neuronname',"
 
 	column=$(echo "$column + 1 " | bc)
-	current_lt=$(echo "$current_lt + 1" | bc)
 done
 
 # take off the final comas
 GNUPLOT_plotstring=$(echo "$GNUPLOT_plotstring" | sed -e 's/,$//')
 GNUPLOT_plotstring_smooth=$(echo "$GNUPLOT_plotstring_smooth" | sed -e 's/,$//')
 
+echo "GNUPLOT_string='$GNUPLOT_plotstring'"
 
 ############ THIS IS FOR MPLOT
 # we are now going to put the settings for the mplot subplot into $tempfile...

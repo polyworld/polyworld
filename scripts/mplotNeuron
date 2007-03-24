@@ -20,7 +20,9 @@ then
         possible values for <range>: N; A; N-N; b[1-$HIGHEST_BEHAVIOR_NEURON]; N-b[1-$HIGHEST_BEHAVIOR_NEURON]; b[1-$HIGHEST_BEHAVIOR_NEURON]-b[1-$HIGHEST_BEHAVIOR_NEURON]
           A = All neurons
           b[1-$HIGHEST_BEHAVIOR_NEURON] = behavior neurons 1-$HIGHEST_BEHAVIOR_NEURON
-          N = neuron with index N, counting from zero"
+          N = neuron with index N, counting from zero
+
+          WARNING: mplotNeuron *assumes* that the Legend for the first critter applies to the entire plot.  This assumption could be *WRONG* if you specify './mplotNeurons <X>x<Y> <N1>-<N2> <directory>' where a neuron within N1...N2 is a behavior neuron for a critter, but is a not a behavior neuron (or even a different behavior neuron) for another critter."
 	exit;
 fi
 
@@ -64,7 +66,9 @@ set terminal aqua 0 size $GNUPLOT_SIZEX $GNUPLOT_SIZEY
 set multiplot layout $dimX, $dimY title '$directory/'
 set tmargin 1.5
 set format y ''
-set label \"Y axes are [0,1.0]\nGenerated `date +%Y-%m-%d` by `whoami`\" at screen 0.001,0.98 left
+set label \"Y axes = [0,1.0]\nGenerated `date +%Y-%m-%d` by `whoami`\" at screen 0.001,0.98 left
+set xtics scale 0.0
+
 "
 
 numfilesprocessed=0
@@ -94,6 +98,7 @@ done
 
 GNUPLOT_COMMANDS="${GNUPLOT_COMMANDS}
 set label \"Generated `date +%Y-%m-%d` by `whoami` \n Y axes is [0,1.0]\" at screen 0.3,0.7 left
+set xtics scale 0.0
 unset multiplot"
 
 # now lets plot!
@@ -114,7 +119,7 @@ set terminal aqua 0 size $GNUPLOT_SIZEX $GNUPLOT_SIZEY
 set multiplot layout $dimX, $dimY title '$directory/ (SMOOTHED)'
 set tmargin 1.5
 set format y ''
-set label \"Y axes are [0,1.0]\nGenerated `date +%Y-%m-%d` by `whoami`\" at screen 0.001,0.98 left
+set label \"Y axes = [0,1.0]\nGenerated `date +%Y-%m-%d` by `whoami`\" at screen 0.001,0.98 left
 "
 plotsettings=""
 # now to get their logfiles..
