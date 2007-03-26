@@ -1,4 +1,4 @@
-26      version
+28      version
 
 0	LockStepWithBirthsDeathsLog
 
@@ -118,8 +118,10 @@
 1      monstride
 100.0  worldsize
 2      numbarriers
-33.33 -100. 33.33 -10. barrierposition
-66.67 -100. 66.67 -10. barrierposition
+1								barrier[0].numKeyFrames
+0     33.33 -100. 33.33 -10.	barrier[0].keyFrame[0]_t_x1_z1_x2_z2
+1								barrier[1].numKeyFrames
+0     66.67 -100. 66.67 -10.	barrier[1].keyFrame[0]_t_x1_z1_x2_z2
 
 0      genesepmon
 0      geneseprec
@@ -280,8 +282,8 @@ L      smiteMode_R=random|L=leastfit
 1000     bestRecentBrainFunctionRecordFrequency
 1      recordGeneStats
 0      recordFoodPatchStats
-1      recordComplexity
-0      useComplexityAsFitness
+0      recordComplexity
+O      useComplexityAsFitness_O=off|P=processing|A=all|I=input|D=processing-input
 1      recordAdamiComplexity
 500    AdamiComplexityRecordFrequency
 

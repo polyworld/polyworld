@@ -1,4 +1,4 @@
-27      version
+28      version
 
 0		LockStepWithBirthsDeathsLog
 
@@ -232,7 +232,7 @@ O      smiteMode_R=random|L=leastfit|O=off
 1      recordGeneStats
 1      recordFoodPatchStats
 0      recordComplexity
-0      useComplexityAsFitness
+O      useComplexityAsFitness_O=off|P=processing|A=all|I=input|D=processing-input
 1      recordAdamiComplexity
 200    AdamiComplexityRecordFrequency
 
