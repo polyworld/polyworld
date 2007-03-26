@@ -431,7 +431,7 @@ private:
 	bool fRecordGeneStats;
 	bool fRecordFoodPatchStats;
 	
-	bool fUseComplexityAsFitnessFunc;	//Virgil	
+	char fUseComplexityAsFitnessFunc;	//Virgil	
 
 	long fNewDeaths;
 	

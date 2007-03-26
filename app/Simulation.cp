@@ -14,7 +14,7 @@
 #define MinDebugStep 0
 #define MaxDebugStep INT_MAX
 
-#define CurrentWorldfileVersion 27
+#define CurrentWorldfileVersion 28
 
 // CompatibilityMode makes the new code with a single x-sorted list behave *almost* identically to the old code.
 // Discrepancies still arise due to the old food list never being re-sorted and critters at the exact same x location
@@ -747,7 +747,7 @@ void TSimulation::Step()
 			// Generate the bestSoFar Complexity, if we're doing that.
 			if(	fRecordComplexity )
 			{
-				if( fUseComplexityAsFitnessFunc )	// If using Complexity as FitnessFunc we already have this.  Virgil
+				if( fUseComplexityAsFitnessFunc != 'O' )	// If using Complexity as FitnessFunc we already have this.  Virgil
 				{
 					fFittest[i]->Complexity = fFittest[i]->fitness;
 				}
@@ -795,7 +795,7 @@ void TSimulation::Step()
 
 				if(	fRecordComplexity )
 				{
-					if( fUseComplexityAsFitnessFunc )	// If using Complexity as FitnessFunc we've already computed Complexity for this critter. Virgil
+					if( fUseComplexityAsFitnessFunc != 'O' )	// If using Complexity as FitnessFunc we've already computed Complexity for this critter. Virgil
 					{
 						fRecentFittest[i]->Complexity = fRecentFittest[i]->fitness;
 //						cout << "[" << fRecentFittest[i]->critterID << "]::: Yeehaw! Was going to compute Complexity again but I don't have to.  The Fitness = Complexity = " << fRecentFittest[i]->fitness << endl;				
@@ -3689,13 +3689,20 @@ void TSimulation::Death(critter* c)
 		rename( s, t );
 
 		// Virgil
-		if ( fUseComplexityAsFitnessFunc )		// Are we using Complexity as a Fitness Function?  If so, set fitness = Complexity here
+		if ( fUseComplexityAsFitnessFunc != 'O' )		// Are we using Complexity as a Fitness Function?  If so, set fitness = Complexity here
 		{
 			c->SetUnusedFitness( c->Fitness() );		// We might want the heuristic fitness later so lets store it somewhere.
 		#if UseMaxSpeedAsFitness
 			c->SetFitness( 0.01 / (c->MaxSpeed() + 0.01) );
 		#else
-			c->SetFitness( CalcComplexity(t, 'P', 0) );
+			if( fUseComplexityAsFitnessFunc == 'D' )	// special case the difference of complexities case
+			{
+				float pComplexity = CalcComplexity( t, 'P', 0 );
+				float iComplexity = CalcComplexity( t, 'I', 0 );
+				c->SetFitness( pComplexity - iComplexity );
+			}
+			else	// otherwise, fUseComplexityAsFitnessFunc has the right letter in it
+				c->SetFitness( CalcComplexity( t, fUseComplexityAsFitnessFunc, 0 ) );
 		#endif
 		}
 	}
@@ -4942,9 +4949,16 @@ void TSimulation::ReadWorldFile(const char* filename)
 		}
 		
 		in >> fUseComplexityAsFitnessFunc; in >> label;
+		if( version < 28 )
+		{
+			if( fUseComplexityAsFitnessFunc == '0' )	// zero used to mean off
+				fUseComplexityAsFitnessFunc = 'O';
+			else
+				fUseComplexityAsFitnessFunc = 'P';	// on used to assume processing complexity
+		}
 		cout << "UseComplexityAsFitnessFunction" ses fUseComplexityAsFitnessFunc nl;
 
-		if( fUseComplexityAsFitnessFunc )
+		if( fUseComplexityAsFitnessFunc != 'O' )
 		{
 			if( ! fRecordComplexity )		//Not Recording Complexity?
 			{
@@ -5048,7 +5062,7 @@ void TSimulation::ReadWorldFile(const char* filename)
 	}
 	
 	// If this is a complexity-as-fitness run, then we need to force certain parameter values (and warn the user)
-	if( fUseComplexityAsFitnessFunc )
+	if( fUseComplexityAsFitnessFunc != 'O' )
 	{
 		fNumberToSeed = rint( fMaxCritters * (float) fNumberToSeed / fInitNumCritters );	// same proportion as originally specified (must calculate before changing fInitNumCritters)
 		if( fNumberToSeed > fMaxCritters )	// just to be safe
