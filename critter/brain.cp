@@ -22,6 +22,8 @@
 	#define GaussianActivationVariance (GaussianActivationStandardDeviation * GaussianActivationStandardDeviation)
 #endif
 
+#define TauNN 0
+
 // Self
 #include "brain.h"
 
@@ -2323,7 +2325,12 @@ void brain::Update(float energyfraction)
 	#if GaussianOutputNeurons
         newneuronactivation[i] = gaussian( newneuronactivation[i], GaussianActivationMean, GaussianActivationVariance );
 	#else
+	  #if TauNN
+		float tau = 0.1;	// also try tauMin + (tauMax - tauMin) * genome->ID() / 255;
+        newneuronactivation[i] = (1.0 - tau) * neuronactivation[i]  +  tau * logistic( newneuronactivation[i], gLogisticsSlope );
+	  #else
         newneuronactivation[i] = logistic( newneuronactivation[i], gLogisticsSlope );
+	  #endif
 	#endif
 //		if( newneuronactivation[i] < minActivation )
 //			minActivation = newneuronactivation[i];
