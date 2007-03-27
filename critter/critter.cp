@@ -35,6 +35,8 @@
 // It is off by default.
 #define UniformPopulationEnergyPenalty 0
 
+#define UseLightForOpposingYawHack 0
+
 // Critter globals
 bool		critter::gClassInited;
 long		critter::crittersever;
@@ -732,7 +734,11 @@ float critter::Update(float moveFitnessParam, float speed2dpos)
 
     float dx = -dpos * sin(yaw() * DEGTORAD);
     float dz = -dpos * cos(yaw() * DEGTORAD);
+#if UseLightForOpposingYawHack
+    float dyaw = (fBrain->Yaw() - fBrain->Light()) * fGenome->MaxSpeed() * gYaw2DYaw;
+#else
     float dyaw = (2.0 * fBrain->Yaw() - 1.0) * fGenome->MaxSpeed() * gYaw2DYaw;
+#endif
 //	printf( "%4ld  %4ld  dyaw = %4.2f b->y = %4.2f, 2*b->y - 1 = %4.2f, g->maxSpeed = %4.2f, y2dy = %4.2f\n",
 //			TSimulation::fAge, fCritterNumber, dyaw, fBrain->Yaw(), 2.0*fBrain->Yaw() - 1.0, fGenome->MaxSpeed(), gYaw2DYaw );
 
