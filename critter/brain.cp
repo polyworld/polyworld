@@ -273,8 +273,12 @@ void brain::dumpAnatomical( char* directoryName, char* suffix, long index, float
 
 	daPrint( "%s: file = %08lx, index = %ld, fitness = %g\n", __FUNCTION__, (char*)file, index, fitness );
 
+	short lRindex = redneuron + fNumRedNeurons - 1;
+	short lGindex = greenneuron + fNumGreenNeurons - 1 ;
+	short lBindex = blueneuron + fNumBlueNeurons - 1;
+
 	// print the header, with index, fitness, and number of neurons
-	fprintf( file, "brain %ld fitness=%g numneurons+1=%d maxWeight=%g maxBias=%g\n", index, fitness, numneurons+1, gMaxWeight, gNeuralValues.maxbias );
+	fprintf( file, "brain %ld fitness=%g numneurons+1=%d maxWeight=%g maxBias=%g redinput=%d-%d greeninput=%d-%d blueinput=%d-%d\n", index, fitness, numneurons+1, gMaxWeight, gNeuralValues.maxbias, redneuron, lRindex, greenneuron, lGindex, blueneuron, lBindex );
 
 	// print the network architecture
 	for( i = 0; i <= numneurons; i++ )	// running over post-synaptic neurons + bias ('=' because of bias)
@@ -305,15 +309,21 @@ FILE* brain::startFunctional( long index )
 
 	sprintf( filename, "run/brain/function/incomplete_brainFunction_%ld.txt", index );
 	file = fopen( filename, "w" );
+
+
+	short lRindex = redneuron + fNumRedNeurons - 1;
+	short lGindex = greenneuron + fNumGreenNeurons - 1 ;
+	short lBindex = blueneuron + fNumBlueNeurons - 1;
+
 	if( !file )
 	{
 		fprintf( stderr, "%s: could not open file %s\n", __FUNCTION__, filename );
 		goto bail;
 	}
 
-	// print the header, with index (critter number), neuron count, number of input neurons, number of synapses, timestep born
-	fprintf( file, "brainFunction %ld %d %d %ld %ld\n", index, numneurons, numinputneurons, numsynapses, TSimulation::fStep );
-
+	// print the header, with index (critter number), neuron count, number of input neurons, number of synapses, timestep born, firstredneuron, lastredneuron, firstgreenneuron, lastgreeneuron, firstblueneuron, lastblueneuron
+	fprintf( file, "brainFunction %ld %d %d %ld %ld %d-%d %d-%d %d-%d\n", index, numneurons, numinputneurons, numsynapses, TSimulation::fStep, redneuron, lRindex, greenneuron, lGindex, blueneuron, lBindex );
+	
 bail:
 
 	return( file );
