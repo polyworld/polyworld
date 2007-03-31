@@ -146,3 +146,18 @@ moved again.  So I am trying...
 
 _df7 is like _df6, except the food stays in each location twice as long.  So
 the total cycle is 1600 steps, instead of 800 steps.
+
+_df8 and its various manifestations (also known as df?) are like df4, except
+the barriers are static for 10K steps, and then grow in (to 40% of the world)
+by 30K steps.  Food is in three dynamic patches with an overall period of 900.
+Various experiments were run with this configuration including LightAsYaw,
+TauNN, Complexity_F30, and Complexity_F30_P-I.  _df8 used population numbers
+that largely avoided the bottleneck and inadvertantly routinely mutated the
+seeds.
+
+_df9 is like _df8, but using a new parameter, EatMateSpan, which specified the
+amount of time after having last eaten that an agent is allowed to mate.  In
+all previous runs this has effectively been infinite.  _df9 uses 50.  This was
+done in an attempt to favor selection of agents that migrated to dynamic food
+patches rather than waiting for the food to come around or nearby again.  I
+also eliminated the mutation of the seed population.
