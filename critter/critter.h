@@ -89,7 +89,7 @@ public:
     virtual void draw();
     void grow( bool recordBrainAnatomy, bool recordBrainFunction );    
     virtual void setradius();    
-    float eat(food* f, float eatFitnessParameter, float eat2consume, float eatthreshold);
+    float eat(food* f, float eatFitnessParameter, float eat2consume, float eatthreshold, long step);
     void damage(float e);
     float MateProbability(critter* c);
     float mating(float fitness, long wait);
@@ -127,6 +127,7 @@ public:
     long MaxAge();
     float MaxEnergy();
     long LastMate();
+	long LastEat();
     genome* Genes();
     long Number();
 	float TrueFitness();
@@ -182,6 +183,7 @@ protected:
     long fCritterNumber;
     long fAge;
     long fLastMate;
+	long fLastEat;
     
     float fEnergy;
     float fFoodEnergy;
@@ -250,6 +252,7 @@ inline long critter::Age() { return fAge; }
 inline long critter::MaxAge() { return fGenome->Lifespan(); }
 inline float critter::MaxEnergy() { return fMaxEnergy; }
 inline long critter::LastMate() { return fLastMate; }
+inline long critter::LastEat() { return fLastEat; }
 inline genome* critter::Genes() { return fGenome; }
 inline long critter::Number() { return fCritterNumber; }
 // replace both occurences of 0.8 with actual estimate of fraction of lifespan critter will live

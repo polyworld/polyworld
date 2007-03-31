@@ -14,7 +14,7 @@
 #define MinDebugStep 0
 #define MaxDebugStep INT_MAX
 
-#define CurrentWorldfileVersion 28
+#define CurrentWorldfileVersion 29
 
 // CompatibilityMode makes the new code with a single x-sorted list behave *almost* identically to the old code.
 // Discrepancies still arise due to the old food list never being re-sorted and critters at the exact same x location
@@ -67,7 +67,7 @@ using namespace std;
 // TSimulation
 //===========================================================================
 
-static long numglobalcreated = 0;    // needs to be static so we only get warned about influece of global creations once ever
+static long numglobalcreated = 0;    // needs to be static so we only get warned about influence of global creations once ever
 
 long TSimulation::fMaxCritters;
 long TSimulation::fStep;
@@ -1843,6 +1843,7 @@ void TSimulation::InitWorld()
 					+ fAgeFitnessParameter;
     fMinMateFraction = 0.05;
 	fMateWait = 25;
+	fEatMateSpan = 0;
     fPower2Energy = 2.5;
 	fEatThreshold = 0.2;
     fMateThreshold = 0.5;
@@ -2639,6 +2640,7 @@ void TSimulation::Interact()
                      ((d->Age() - d->LastMate()) >= fMateWait) &&  // and some time
                      (c->Energy() > fMinMateFraction * c->MaxEnergy()) &&
                      (d->Energy() > fMinMateFraction * d->MaxEnergy()) && // and energy
+					 ((fEatMateSpan == 0) || ((c->LastEat()-fStep < fEatMateSpan) && (d->LastEat()-fStep < fEatMateSpan))) &&	// and they've eaten recently enough (if we're enforcing that)
                      (kd == 1) && (jd == 1) ) // in the safe domain
 			#else
                 if( !fLockStepWithBirthsDeathsLog &&
@@ -2647,7 +2649,8 @@ void TSimulation::Interact()
 					((c->Age() - c->LastMate()) >= fMateWait) &&
 					((d->Age() - d->LastMate()) >= fMateWait) &&  // and some time
 					(c->Energy() > fMinMateFraction * c->MaxEnergy()) &&
-					(d->Energy() > fMinMateFraction * d->MaxEnergy()) ) // and energy
+					(d->Energy() > fMinMateFraction * d->MaxEnergy()) &&	// and energy
+					((fEatMateSpan == 0) || ((fStep-c->LastEat() < fEatMateSpan) && (fStep-d->LastEat() < fEatMateSpan))) )	// and they've eaten recently enough (if we're enforcing that)
 			#endif
                 {
                     kd = WhichDomain(0.5*(c->x()+d->x()),
@@ -2904,7 +2907,7 @@ void TSimulation::Interact()
 				{
 					// also overlap in z, so they really interact
 					ttPrint( "step %ld: critter # %ld is eating\n", fStep, c->Number() );
-					float foodEaten = c->eat( f, fEatFitnessParameter, fEat2Consume, fEatThreshold );
+					float foodEaten = c->eat( f, fEatFitnessParameter, fEat2Consume, fEatThreshold, fStep );
 					fFoodEnergyOut += foodEaten;
 					
 					eatPrint( "at step %ld, critter %ld at (%g,%g) with rad=%g wasted %g units of food at (%g,%g) with rad=%g\n", fStep, c->Number(), c->x(), c->z(), c->radius(), foodEaten, f->x(), f->z(), f->radius() );
@@ -2957,7 +2960,7 @@ void TSimulation::Interact()
 					{
 						// also overlap in z, so they really interact
 						ttPrint( "step %ld: critter # %ld is eating\n", fStep, c->Number() );
-						float foodEaten = c->eat( f, fEatFitnessParameter, fEat2Consume, fEatThreshold );
+						float foodEaten = c->eat( f, fEatFitnessParameter, fEat2Consume, fEatThreshold, fStep );
 						fFoodEnergyOut += foodEaten;
 						
 						eatPrint( "at step %ld, critter %ld at (%g,%g) with rad=%g wasted %g units of food at (%g,%g) with rad=%g\n", fStep, c->Number(), c->x(), c->z(), c->radius(), foodEaten, f->x(), f->z(), f->radius() );
@@ -4225,6 +4228,16 @@ void TSimulation::ReadWorldFile(const char* filename)
     cout << "matewait" ses fMateWait nl;
     in >> critter::gInitMateWait; in >> label;
     cout << "initmatewait" ses critter::gInitMateWait nl;
+	if( version >= 29 )
+	{
+		in >> fEatMateSpan; in >> label;
+		cout << "EatMateSpan" ses fEatMateSpan nl;
+	}
+	else
+	{
+		fEatMateSpan = 0;
+		cout << "+EatMateSpan" ses fEatMateSpan nl;
+	}
     in >> genome::gMinStrength; in >> label;
     cout << "minstrength" ses genome::gMinStrength nl;
     in >> genome::gMaxStrength; in >> label;

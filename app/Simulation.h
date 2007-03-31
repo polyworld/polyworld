@@ -478,6 +478,7 @@ private:
 	long fMateWait;
 	long fMiscCritters; // number of critters born without intervening creation before miscegenation function kicks in
 	float fMateThreshold;
+	long fEatMateSpan;
 	float fFightThreshold;
 	
 	long fNumberBorn;

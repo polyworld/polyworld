@@ -271,6 +271,7 @@ critter::critter(TSimulation* sim, gstage* stage)
 	
 	fSpeed = 0.0;
 	fMaxSpeed = 0.0;
+	fLastEat = 0;
 
 	fGenome = new genome();
 	Q_CHECK_PTR(fGenome);
@@ -441,7 +442,7 @@ void critter::setradius()
 //
 //	Return the amount of food energy actually lost to the world (if any)
 //---------------------------------------------------------------------------
-float critter::eat(food* f, float eatFitnessParameter, float eat2consume, float eatthreshold)
+float critter::eat(food* f, float eatFitnessParameter, float eat2consume, float eatthreshold, long step)
 {
 	Q_CHECK_PTR(f);
 	
@@ -469,6 +470,9 @@ float critter::eat(food* f, float eatFitnessParameter, float eat2consume, float 
 		}
 				
 		fFitness += eatFitnessParameter * actuallyeat / (eat2consume * fGenome->Lifespan());
+		
+		if( actuallyeat > 0.0 )
+			fLastEat = step;
 	}
 	
 	return result;
