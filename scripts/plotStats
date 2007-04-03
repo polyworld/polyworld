@@ -12,38 +12,35 @@ import sys, getopt, os.path, re, os
 ################################################################################
 # some global variables:
 GNUPLOT_SETTINGS="""
-#set term aqua dashed   # gives AquaTerm the ability to plot dashed lines.  (If you're not on Mac, comment this line out)
-set termoption enhanced
+set termoption noenhanced
 set key outside         # if we have a legend, put it outside the graph
 set key at screen 1,1 right horizontal spacing 1
-set bar 0.2             # if we are going to print errorbars, make smaller horizontal knobs on the ends.
+set bar 0.0             # if we are going to print errorbars, make the knobs at the end small (0.0 is equivalent to yerrorlines)
 set mxtics 5            # make small little tics along the x-axis
 set xlabel 'Timestep' font 'Times,15'
 set grid
+set datafile missing '?'	# unknown values are '?'
 set style line 99 lc rgb \"gray\" lw 1		# used when there is not a legend
 set style line 100 lc rgb \"black\" lw 3	# used for the AVERAGE line
+set style line 101 lc rgb \"black\" lw 1 pointsize 0.0	# used for the STDERR bars
 """
 
 flag_plotSmooth=1
 GNUPLOT_SMOOTHING_FUNCTION='csplines' 		# reasonable smoothing options are: csplines, acsplines, bezier, sbezier
 
 GNUPLOT_MULTIPLOTSETTINGS="""
-#set multiplot layout 4, 2 title 'multiplot'
 set key at screen 1,1 right horizontal spacing 1
 set bar 0.2             # if we are going to print errorbars, make smaller horizontal knobs on the ends.
 set mxtics 2            # make small little tics along the x-axis
 set grid
-set style line 99 lc rgb \"gray\" lw 1		# used when there is not a legend
-set style line 100 lc rgb \"black\" lw 4	# used for the AVERAGE line
 ###
 set tmargin 1.5
-set format y ''
-set label \"Y axes = [0,1.0]\nGenerated `date +%Y-%m-%d` by `whoami`\" at screen 0.001,0.98 left
+#set format y ''
+set label "Generated `date +%Y-%m-%d` by `whoami`" at screen 0.001,0.98 left
 set xtics scale 0.0				# no xtics, they get in the way
 ###
-#mplot set title '${mplot_title}' offset 0,-1
 unset xlabel
-#unset ylabel			# we have to keep the ylabel this time
+unset ylabel
 set border 10
 #mplot set xrange [$timestepborn:$timestepdeath]
 ###
@@ -61,40 +58,41 @@ flag_multiplot = 0
 ###############
 PASSED_DIRECTORY=''
 multiplotDimX = 0
-multiplotY = 0
+multiplotDimY = 0
 RUN_DIRS=()
 PARAMS=[]
 PARAMS_withoutcrunch=[]
 ################################################################################
 def print_usage_and_exit():
 	print """
-SYNOPSIS: compare plot Stats from the run/stats/ directory
-       cplotStats [-lmep] directory params
+USAGE 
+       plotStats [-lmep] directory param1[,param2,param3]
 
 DESCRIPTION
-       cplotStats creates graphs of neural complexity from one or more Polyworld run directories.  <directory> 
+       plotStats plots statistics from one or more Polyworld run/stats/ directories.
 
 OPTIONS
        -l      A legend is to be drawn and different line types (colors?) are to be used.  Lines will be labeled
                in the legend using the names of the run directories (after stripping any leading numbers). If not
                -l, all lines will be printed in the same identical gray color. (default off)
        
-       -m      The mean of the collection of values at each time step will be computed and drawn. (default off)
+       -m      The mean of each param will be computed and drawn. (default off)
                If the worldfile 'statfreq' is different across runs, the mean will be computed for the timesteps
                in the first directory.  For example, if the first run/ directory had statfreq=100, but another run/
-               directory had a statfreq=50, the mean would only be computed every 100 timesteps.  This is a feature.
+               directory had a statfreq=50, the mean would only be computed every 100 timesteps.  This is a feature
+               to control the temporal precision of the average line.
 
-       -e      StdError bars for the mean will be drawn. (default off)
+       -e      Standard Error bars for the mean will be drawn. (default off)
 
        -p      Data points will be drawn on the lines.  (default off)
 
-       -MXxY      Multiplot!
+       -MXxY   Multiplot putting each run/ directory on it's own graph.  (default off)
 
 	"""
 	sys.exit(1)
 ####################################
 def GET_GNUPLOT_DYNAMIC_SETTINGS():
-	global flag_plotPoints, flag_plotLegend
+	global flag_plotPoints, flag_plotLegend, flag_multiplot, multiplotDimX, multiplotY
 	global RUN_DIRS, PARAMS, IDENTICAL_LINE_WIDTH
 
 	settings = [ ]
@@ -110,16 +108,20 @@ def GET_GNUPLOT_DYNAMIC_SETTINGS():
 		
 	else:	settings.append("unset key")					# if no legend, unset the legend
 
-	if not flag_plotPoints:
+	if flag_plotPoints:
+		settings.append("set style data linespoints")
+	else:
 		settings.append("set pointsize 0.0")		# set pointsize isn't yet supported by AquaTerm but it probably will someday
+		settings.append("set style data lines")
+
+	if flag_multiplot:
+		settings.append( "set multiplot layout %s, %s title '%s'" % ( multiplotDimY, multiplotDimX, PASSED_DIRECTORY ) ) 
+		settings.append( GNUPLOT_MULTIPLOTSETTINGS )	# put in the multiplot settings on top of the regular settings
 
 	return '\n'.join(settings)
 #####################################
 def GET_GNUPLOT_PLOTSTRING():
-	global RUN_DIRS, PARAMS, tempfilename, flag_plotPoints, flag_plotLegend, flag_plotMean, flag_plotErrorbars, flag_plotSmooth
-
-	if flag_plotPoints: plotwith='linespoints'
-	else: plotwith='lines'
+	global RUN_DIRS, PARAMS, tempfilename, flag_plotLegend, flag_plotMean, flag_plotErrorbars, flag_plotSmooth
 
 	num_rundir_lines= len(PARAMS) * len(RUN_DIRS)
 	if flag_plotLegend: linestyles = range(1, num_rundir_lines + 1)		# linestyles will be a list of integers indicating the line colors we're going to plot
@@ -129,31 +131,65 @@ def GET_GNUPLOT_PLOTSTRING():
 	plotstring = [ ]
 	plotstringsmooth=[ ]
 	column = 2					# we begin at column 2 because column 1 is the timesteps
+
 	for param in PARAMS:
 		for RUN_DIR in RUN_DIRS:
 			# to space space, for the legend titles we only use the part of RUN_DIR *after* the last '/' 
-			plotstring.append ("'%s' using 1:%s ls %s w %s title '%s'" % (tempfilename, column, linestyles[0], plotwith, param + '\_\_' + (RUN_DIR.split('/'))[-1] ) )
+			plotstring.append ("'%s' using 1:%s linestyle %s title '%s'" % (tempfilename, column, linestyles[0], param + '__' + (RUN_DIR.split('/'))[-1] ) )
 			linestyles.pop(0)		# removes the first item in the list
 			column += 1			# increment the column
 
 	if flag_plotMean:
 		for param in PARAMS:
-			plotstring.append ("'%s' using 1:%s ls 100 w %s title '%s'" % (tempfilename, column, plotwith, param + '\_\_AVERAGE') )
+			plotstring.append ("'%s' using 1:%s linestyle 100 title '%s'" % (tempfilename, column, param + '__AVERAGE') )
 
 			if not flag_plotErrorbars:		# if Errorbars are NOT on, goto the next column is an AVERAGE
 				column += 1
 			else:					# if Errorbars are turned on, plot them and the next AVERAGE is TWO columns down.
-				plotstring.append ("'%s' using 1:%s:%s ls 100 w yerrorbars notitle" % (tempfilename, column, column + 1) )
+				plotstring.append ("'%s' using 1:%s:%s linestyle 101 w yerrorbars notitle" % (tempfilename, column, column + 1) )
 				column += 2
 
-	# Okay, we've made our regular plotstring, now to make the smoothed plotstring (if we're doing that)
-	if flag_plotSmooth:
-		global GNUPLOT_SMOOTHING_FUNCTION
-		for line in plotstring:
+	# Okay, we've made our regular plotstring, now to make the smoothed plotstring.  We always make the string, even if we don't always plot it.
+	global GNUPLOT_SMOOTHING_FUNCTION
+	for line in plotstring:
+		if 'yerrorbars' in line:		# the yerrorbars style doesnt support smoothing
+			plotstringsmooth.append( line )
+		else:
 			plotstringsmooth.append( line + ' smooth %s' % ( GNUPLOT_SMOOTHING_FUNCTION ))
 
+	# Okay, we've made our regular plostring, but now we're going to completely transform it if we're multiplotting...
+	if flag_multiplot:
+		mplotstrings=[]
+		mplotstringssmooth=[]
+		for i in range(0, len(RUN_DIRS)):
+			miniplottitle=(RUN_DIR.split('/')[-1]).replace('_','_')
+			mplotstrings.append( 'set title "%s" offset 0,-1' % (miniplottitle) )		# set the title for each mini-graph	
+			mplotstringssmooth.append( 'set title "%s" offset 0,-1' % (miniplottitle) )
+			######
+			mplotstrings.append( 'plot ' + ', '.join( plotstring[i:num_rundir_lines:len(RUN_DIRS)] ) )	# make the plotstring
+			mplotstringssmooth.append( 'plot ' + ', '.join( plotstringsmooth[i:num_rundir_lines:len(RUN_DIRS)] ) )
+			#######
+			regularlinestyles=re.findall("linestyle [0-9]*", mplotstrings[-1]) 		# fix the linestyles within the plotstring we just appended
+			currentstyle=1
+			for regularlinestyle in regularlinestyles:
+				mplotstrings[-1] = mplotstrings[-1].replace( regularlinestyle, 'linestyle %s' % (currentstyle) )
+				mplotstringssmooth[-1] = mplotstringssmooth[-1].replace( regularlinestyle, 'linestyle %s' % (currentstyle) )
+				currentstyle += 1
 
-	return 'plot ' + ', '.join( plotstring ), 'plot ' + ', '.join( plotstringsmooth)		# begin with 'plot' and join each line to be plotted with a coma.
+		plotstring = '\n'.join( mplotstrings )				# join into a single line
+		plotstringsmooth= '\n'.join( mplotstringssmooth )
+
+		# now do a string replace for each PARAM to make the Legends right
+		for param in PARAMS:
+			plotstring = re.sub("title '%s[^']*'" % (param), "title '%s'" % (param), plotstring )
+			plotstringsmooth = re.sub("title '%s[^']*'" % (param), "title '%s'" % (param), plotstringsmooth )
+
+	else:			# if multiplot is NOT turned on, just join the strings.
+		plotstring='plot ' + ', '.join( plotstring )			 # begin with 'plot' and join each line to be plotted with a coma.
+		plotstringsmooth='plot ' + ', '.join( plotstringsmooth)		 # begin with 'plot' and join each line to be plotted with a coma.
+
+
+	return plotstring, plotstringsmooth
 ######################################
 def sample_stderr( list ):
 	N = len(list)
@@ -179,8 +215,7 @@ def check_parameters( argv ):
 #	print "opts=%s" % ( opts )
 #	print "args=%s" % ( args)
 
-	global flag_plotLegend, flag_plotErrorbars, flag_multiplot, flag_plotMean, flag_plotPoints, PASSED_DIRECTORY	# grant access to the global variables we're going to modify
-
+	global flag_plotLegend, flag_plotErrorbars, flag_multiplot, flag_plotMean, flag_plotPoints, PASSED_DIRECTORY, multiplotDimX, multiplotDimY	# grant access to the global variables we're going to modify
 	# Set our plot flags
 	for opt in opts:
 
@@ -428,12 +463,15 @@ print "Finished writing to '%s'." % ( tempfilename )
 # Plot the unsmoothed
 gnufile = open( gnufilename, 'w' ) 
 gnufile.write( "%s\n%s\n%s\n" % ( GNUPLOT_SETTINGS, GET_GNUPLOT_DYNAMIC_SETTINGS(), GET_GNUPLOT_PLOTSTRING()[0] ) )
+if flag_multiplot: gnufile.write( "unset multiplot\n" )	
 gnufile.close()
 os.system( 'gnuplot '+ gnufilename )
+
 
 if flag_plotSmooth:		# Second, plot the smoothed in a new window (if we're doing that)
 	gnufileS = open( gnufilename + 'S', 'w' )
 	gnufileS.write( """%s\nset label "Smoothed with '%s'" at screen 0.001,0.03 left\n%s\n%s\n""" % ( GNUPLOT_SETTINGS, GNUPLOT_SMOOTHING_FUNCTION, GET_GNUPLOT_DYNAMIC_SETTINGS(), GET_GNUPLOT_PLOTSTRING()[1] ) )
+	if flag_multiplot: gnufileS.write( "unset multiplot\n" )	
 	gnufileS.close()
 os.system( 'gnuplot '+ gnufilename + 'S' )
 
