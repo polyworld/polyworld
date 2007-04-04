@@ -195,12 +195,13 @@ def GET_GNUPLOT_PLOTSTRING():
 			mplotstringssmooth.append( 'plot ' + ', '.join( plotstringsmooth[i:num_rundir_lines:len(RUN_DIRS)] ) )
 			
 			# fix the linestyles within the plotstring we just made
-			regularlinestyles=re.findall("linestyle [0-9]*", mplotstrings[-1])
-			currentstyle=1
-			for regularlinestyle in regularlinestyles:
-				mplotstrings[-1] = mplotstrings[-1].replace( regularlinestyle, 'linestyle %s' % (currentstyle) )
-				mplotstringssmooth[-1] = mplotstringssmooth[-1].replace( regularlinestyle, 'linestyle %s' % (currentstyle) )
-				currentstyle += 1
+			if flag_plotLegend:
+				regularlinestyles=re.findall("linestyle [0-9]*", mplotstrings[-1])
+				currentstyle=1
+				for regularlinestyle in regularlinestyles:
+					mplotstrings[-1] = mplotstrings[-1].replace( regularlinestyle, 'linestyle %s' % (currentstyle) )
+					mplotstringssmooth[-1] = mplotstringssmooth[-1].replace( regularlinestyle, 'linestyle %s' % (currentstyle) )
+					currentstyle += 1
 		
 		# and join it all into one lovely string separated by newlines
 		plotstring = '\n'.join( mplotstrings )
@@ -443,15 +444,12 @@ for param in PARAMS:
 # Now Lets Plot!
 ##########################################################################################################################################
 
-# First, build a definitive lists of all timesteps we have in our DATA meta-dictionary
-print "- MAXTIMESTEP = %s" % ( MAXTIMESTEP )
+# First, build the definitive list of all timesteps we could have in our DATA meta-dictionary
 timesteps=[ 1 ]
-
 timesteps.extend( range(MINSTATFREQ, MAXTIMESTEP+MINSTATFREQ, MINSTATFREQ) )
 o = open( tempfilename , 'w' )			# open a tempfile at /tmp/,<pid>.plt
 
 # print the header for the tempfile
-
 # Format for the tempfile is:  timestep param1run1 param1run2 param1run3 param2run1 param2run3 param2run3 param1AVR param1STDERR param2AVR param2STDERR
 # In words: param1 comes, then param2 comes, then param1 AVR/STDERR and param2 AVR/STDERR
 tempcol=2
@@ -459,7 +457,6 @@ for param in PARAMS:
 	for RUN_DIR in RUN_DIRS:
 		o.write( "# col %s: param='%s' dir=%s\n" % ( tempcol, param, RUN_DIR ) )
 		tempcol += 1
-
 if flag_plotMean:
 	for param in PARAMS:
 		o.write( "# col %s: param='%s' AVERAGE\n" % ( tempcol, param ) )
@@ -467,9 +464,6 @@ if flag_plotMean:
 		if flag_plotErrorbars:
 			o.write( "# col %s: param='%s' STDERR\n" % ( tempcol, param ) )
 			tempcol += 1
-
-# for archival purposes write the gnuplot program to the top of the line
-o.write( ("\n%s\n-----\n%s\n------\n%s\n" % (GNUPLOT_SETTINGS, GET_GNUPLOT_DYNAMIC_SETTINGS(), GET_GNUPLOT_PLOTSTRING())).replace('\n', '\n#').rstrip('#') )
 
 ########################## finished printing the header for the tempfile.  Now lets print the actual data!
 for t in timesteps:
