@@ -30,8 +30,8 @@ GNUPLOT_SMOOTHING_FUNCTION='csplines' 		# reasonable smoothing options are: cspl
 GNUPLOT_MULTIPLOTSETTINGS="""
 set key at screen 1,1 right horizontal spacing 1	# even though this is already set in the regular GNUPLOT settings, you have to do it again here -- you just do.
 set bar 0.2             # if we are going to print errorbars, make smaller horizontal knobs on the ends.
-set mxtics 2            # make small little tics along the x-axis
-set grid
+#set mxtics 5            # make small little tics along the x-axis
+set grid noxtics	# turn off the grid on the xtics, it just creates clutter anyway
 ###
 set tmargin 1.5
 #set format y ''
@@ -61,6 +61,7 @@ RUN_DIRS=()
 PARAMS=[]
 PARAMS_withoutcrunch=[]
 GNUPLOT_TOPRIGHT_LABEL=[]
+multiplotmaxtimesteps={} # we only use this if we're multiplotting.  It lets us set the range and xtics for each plot invidually to make them pretty
 ################################################################################
 def print_usage_and_exit():
 	print """
@@ -119,6 +120,9 @@ def GET_GNUPLOT_DYNAMIC_SETTINGS():
 	if flag_multiplot:
 		settings.append( "set multiplot layout %s, %s title '%s'" % ( multiplotDimY, multiplotDimX, PASSED_DIRECTORY ) ) 
 		settings.append( GNUPLOT_MULTIPLOTSETTINGS )	# put in the multiplot settings on top of the regular settings
+	else:
+		global MAXTIMESTEP
+		settings.append("set xrange [0:%s]" % (MAXTIMESTEP) )
 
 	return '\n'.join(settings)
 #####################################
@@ -128,7 +132,7 @@ def GET_GNUPLOT_END_SETTINGS():
 	z = []
 		
 	if flag_multiplot: z.append( "unset multiplot" )
-	z.append( "raise" )
+	z.append( "raise" )			# this causes the most recent plot come to the front of the desktop.
 
 	return '\n'.join(z)
 #####################################
@@ -171,27 +175,38 @@ def GET_GNUPLOT_PLOTSTRING():
 
 	# Okay, we've made our regular plostring, but now we're going to completely transform it if we're multiplotting...
 	if flag_multiplot:
+		global multiplotmaxtimesteps
 		mplotstrings=[]
 		mplotstringssmooth=[]
 		for i in range(0, len(RUN_DIRS)):
+			# set the title for each miniplot
 			miniplottitle=(RUN_DIRS[i].split('/')[-1]).replace('_','_')
-			mplotstrings.append( 'set title "%s" offset 0,-1' % (miniplottitle) )		# set the title for each mini-graph	
+			mplotstrings.append( 'set title "%s" offset 0,-1' % (miniplottitle) )			
 			mplotstringssmooth.append( 'set title "%s" offset 0,-1' % (miniplottitle) )
-			######
-			mplotstrings.append( 'plot ' + ', '.join( plotstring[i:num_rundir_lines:len(RUN_DIRS)] ) )	# make the plotstring
+
+			# set the xrange and xtics for each miniplot
+			mplotstrings.append( 'set xrange[0:%s]' % (multiplotmaxtimesteps[RUN_DIRS[i]]) )	
+			mplotstrings.append( 'set xtics 0, %s' % (multiplotmaxtimesteps[RUN_DIRS[i]]) )
+			mplotstringssmooth.append( 'set xrange[0:%s]' % (multiplotmaxtimesteps[RUN_DIRS[i]]) )
+			mplotstringssmooth.append( 'set xtics 0, %s' % (multiplotmaxtimesteps[RUN_DIRS[i]]) )
+
+			# make the plotstrings
+			mplotstrings.append( 'plot ' + ', '.join( plotstring[i:num_rundir_lines:len(RUN_DIRS)] ) )
 			mplotstringssmooth.append( 'plot ' + ', '.join( plotstringsmooth[i:num_rundir_lines:len(RUN_DIRS)] ) )
-			#######
-			regularlinestyles=re.findall("linestyle [0-9]*", mplotstrings[-1]) 		# fix the linestyles within the plotstring we just appended
+			
+			# fix the linestyles within the plotstring we just made
+			regularlinestyles=re.findall("linestyle [0-9]*", mplotstrings[-1])
 			currentstyle=1
 			for regularlinestyle in regularlinestyles:
 				mplotstrings[-1] = mplotstrings[-1].replace( regularlinestyle, 'linestyle %s' % (currentstyle) )
 				mplotstringssmooth[-1] = mplotstringssmooth[-1].replace( regularlinestyle, 'linestyle %s' % (currentstyle) )
 				currentstyle += 1
-
-		plotstring = '\n'.join( mplotstrings )				# join into a single line
+		
+		# and join it all into one lovely string separated by newlines
+		plotstring = '\n'.join( mplotstrings )
 		plotstringsmooth= '\n'.join( mplotstringssmooth )
 
-		# now do a string replace for each PARAM to make the Legends right
+		# now do a string replace for each PARAM to make the Legends not have the run/ directory in them.
 		for param in PARAMS:
 			plotstring = re.sub("title '%s[^']*'" % (param), "title '%s'" % (param), plotstring )
 			plotstringsmooth = re.sub("title '%s[^']*'" % (param), "title '%s'" % (param), plotstringsmooth )
@@ -363,11 +378,15 @@ for param in PARAMS:
 	if re.search( '[0-9 \.\-]', param_withoutcrunch):		# CAREFUL.  This regex MUST be the exact inverse of variable 'sed_out'
 		column = column + 1		# hack to get the correct column if our parameter has a number in it.
 
+	print param + ': ',
+
 	for RUN_DIR in RUN_DIRS:
 		DATAkey = param + '~~' + RUN_DIR
 		DATA[ DATAkey ] = { }					# create a dictionary of dictionaries
 
-		print "grepping %s ____ %s" % ( param, RUN_DIR )
+		print "%s..." % ( RUN_DIR ),
+		sys.stdout.flush()
+
 		files = os.listdir( RUN_DIR + '/stats/' )
 		timesteps = [ ]
 		for statfile in files:					# go through each file in run/stats/ to make sure it is a stat.#### file
@@ -376,7 +395,10 @@ for param in PARAMS:
 
 		timesteps.sort()
 
-		if timesteps[-1] > MAXTIMESTEP: MAXTIMESTEP = timesteps[-1]		# this is for later
+		if RUN_DIR not in multiplotmaxtimesteps:				# this is for the xrange dynamic setting for multiplots
+			multiplotmaxtimesteps[RUN_DIR]=timesteps[-1]
+
+		if timesteps[-1] > MAXTIMESTEP: MAXTIMESTEP = timesteps[-1]		# this is for later, as well as the xrange[] dynamic setting
 
 #		print "timesteps='%s'" % ( timesteps )
 		for timestep in timesteps:
@@ -391,7 +413,7 @@ for param in PARAMS:
 
 #			print "cmd=%s result=%s column=%s value=%s" % ( cmd, result, column, value )
 			DATA[ DATAkey ][ timestep ] = value
-#			print "DATA[%s][%s] = %s" % ( DATAkey, timestep, DATA[DATAkey][timestep] )
+	print ""	# print a newline
 
 	if flag_plotMean:							# if we're plotting the mean compute that now.
 		DATA[ param + '~~AVERAGE'] = {}					# make a new dictionary for the average
