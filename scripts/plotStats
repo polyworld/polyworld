@@ -33,7 +33,8 @@ set bar 0.2             # if we are going to print errorbars, make smaller horiz
 #set mxtics 5            # make small little tics along the x-axis
 set grid noxtics	# turn off the grid on the xtics, it just creates clutter anyway
 ###
-set tmargin 1.5
+set tmargin 1.5		# enlarge plots by allowing them to creep up closer to the title (1.5 seems about right)
+set bmargin 1.5		# enlarge plots by allowing them to recede down closer to the margins (1.5 seems about right)
 #set format y ''
 #set format x ''
 set xtics scale 0.0				# no xtics, they get in the way
@@ -195,7 +196,7 @@ def GET_GNUPLOT_PLOTSTRING():
 			mplotstringssmooth.append( 'plot ' + ', '.join( plotstringsmooth[i:num_rundir_lines:len(RUN_DIRS)] ) )
 			
 			# fix the linestyles within the plotstring we just made
-			if flag_plotLegend:
+			if flag_plotLegend:	# if plot Legend is not on we don't care about the linecolors
 				regularlinestyles=re.findall("linestyle [0-9]*", mplotstrings[-1])
 				currentstyle=1
 				for regularlinestyle in regularlinestyles:
@@ -356,7 +357,7 @@ def get_minstatfreq(run_dirs):
 	return minstatfreq
 ########################################################################################################################		
 ########################################################################################################################		
-########################################################################################################################		
+#######################################################################################################################		
 ### Real program begins here
 
 check_parameters( sys.argv[1:] );		# don't send it the first item in the sys.argv list because that's this programs filename
