@@ -2,7 +2,6 @@
 ################################################################################
 # CONFIGURABLE PARAMETERS
 ################################################################################
-# !!! make function that looks at the statfreq of each file and exits if they are not all the same.
 # you can edit these as well, but you probably don't want to
 # DO NOT EDIT ANYTHING BENEATH HERE UNLESS YOU KNOW WHAT YOU'RE DOING
 ################################################################################
@@ -20,36 +19,35 @@ set mxtics 5            # make small little tics along the x-axis
 set xlabel 'Timestep' font 'Times,15'
 set grid
 set datafile missing '?'	# unknown values are '?'
-set style line 99 lc rgb \"gray\" lw 1		# used when there is not a legend
-set style line 100 lc rgb \"black\" lw 3	# used for the AVERAGE line
-set style line 101 lc rgb \"black\" lw 1 pointsize 0.0	# used for the STDERR bars
+set style line 99 lc rgb "gray" lw 1		# used when there is not a legend
+set style line 100 lc rgb "black" lw 3	# used for the AVERAGE line
+set style line 101 lc rgb "black" lw 1 pointsize 0.0	# used for the STDERR bars
 """
 
 flag_plotSmooth=1
 GNUPLOT_SMOOTHING_FUNCTION='csplines' 		# reasonable smoothing options are: csplines, acsplines, bezier, sbezier
 
 GNUPLOT_MULTIPLOTSETTINGS="""
-set key at screen 1,1 right horizontal spacing 1
+set key at screen 1,1 right horizontal spacing 1	# even though this is already set in the regular GNUPLOT settings, you have to do it again here -- you just do.
 set bar 0.2             # if we are going to print errorbars, make smaller horizontal knobs on the ends.
 set mxtics 2            # make small little tics along the x-axis
 set grid
 ###
 set tmargin 1.5
 #set format y ''
-set label "Generated `date +%Y-%m-%d` by `whoami`" at screen 0.001,0.98 left
+#set format x ''
 set xtics scale 0.0				# no xtics, they get in the way
 ###
 unset xlabel
 unset ylabel
 set border 10
-#mplot set xrange [$timestepborn:$timestepdeath]
 ###
 """
 COLORED_LINE_WIDTH=1.5
 IDENTICAL_LINE_WIDTH=0.8
 ##################
-tempfilename='/tmp/,%s.plt' % ( os.getpid() )		# this file will contain the raw data
-gnufilename='/tmp/,%s.gnuplot' % ( os.getpid() )	# this file will contain gnuplot commands
+tempfilename='/tmp/,plotStats_%s.plt' % ( os.getpid() )		# this file will contain the raw data
+gnufilename='/tmp/,plotStats_%s.gnuplot' % ( os.getpid() )	# this file will contain gnuplot commands
 flag_plotPoints = 0
 flag_plotMean = 0
 flag_plotErrorbars = 0
@@ -62,11 +60,12 @@ multiplotDimY = 0
 RUN_DIRS=()
 PARAMS=[]
 PARAMS_withoutcrunch=[]
+GNUPLOT_TOPRIGHT_LABEL=[]
 ################################################################################
 def print_usage_and_exit():
 	print """
 USAGE 
-       plotStats [-lmep] directory param1[,param2,param3]
+       plotStats [-lmep] [-MXxY] directory param1[,param2,param3]
 
 DESCRIPTION
        plotStats plots statistics from one or more Polyworld run/stats/ directories.
@@ -93,7 +92,7 @@ OPTIONS
 ####################################
 def GET_GNUPLOT_DYNAMIC_SETTINGS():
 	global flag_plotPoints, flag_plotLegend, flag_multiplot, multiplotDimX, multiplotY
-	global RUN_DIRS, PARAMS, IDENTICAL_LINE_WIDTH
+	global RUN_DIRS, PARAMS, IDENTICAL_LINE_WIDTH, GNUPLOT_TOPRIGHT_LABEL
 
 	settings = [ ]
 	settings.append( "set title '%s'" % (PASSED_DIRECTORY) )	# set the title
@@ -114,11 +113,24 @@ def GET_GNUPLOT_DYNAMIC_SETTINGS():
 		settings.append("set pointsize 0.0")		# set pointsize isn't yet supported by AquaTerm but it probably will someday
 		settings.append("set style data lines")
 
+	# make the TopRight Label
+        settings.append( 'set label "%s" at screen 0.001,0.98 left' % ('\\n'.join(GNUPLOT_TOPRIGHT_LABEL)) )
+
 	if flag_multiplot:
 		settings.append( "set multiplot layout %s, %s title '%s'" % ( multiplotDimY, multiplotDimX, PASSED_DIRECTORY ) ) 
 		settings.append( GNUPLOT_MULTIPLOTSETTINGS )	# put in the multiplot settings on top of the regular settings
 
 	return '\n'.join(settings)
+#####################################
+# This function specifies the stuff to include at the end of the very end of the plot.
+def GET_GNUPLOT_END_SETTINGS():
+	global flag_multiplot
+	z = []
+		
+	if flag_multiplot: z.append( "unset multiplot" )
+	z.append( "raise" )
+
+	return '\n'.join(z)
 #####################################
 def GET_GNUPLOT_PLOTSTRING():
 	global RUN_DIRS, PARAMS, tempfilename, flag_plotLegend, flag_plotMean, flag_plotErrorbars, flag_plotSmooth
@@ -162,7 +174,7 @@ def GET_GNUPLOT_PLOTSTRING():
 		mplotstrings=[]
 		mplotstringssmooth=[]
 		for i in range(0, len(RUN_DIRS)):
-			miniplottitle=(RUN_DIR.split('/')[-1]).replace('_','_')
+			miniplottitle=(RUN_DIRS[i].split('/')[-1]).replace('_','_')
 			mplotstrings.append( 'set title "%s" offset 0,-1' % (miniplottitle) )		# set the title for each mini-graph	
 			mplotstringssmooth.append( 'set title "%s" offset 0,-1' % (miniplottitle) )
 			######
@@ -230,7 +242,6 @@ def check_parameters( argv ):
 		elif '-M' in opt:
 			flag_multiplot = 1
 			multiplotDimX, multiplotDimY = map(int, (opt[1]).split('x'))
-			print "X=%s    Y=%s"  % ( multiplotDimX, multiplotDimY )
 		else:
 			print "* Error: Do not know argument '%s'" % (opt)
 			print_usage_and_exit()
@@ -278,16 +289,14 @@ def check_parameters( argv ):
 		print_usage_and_exit()
 
 	if os.path.isfile( directory + '/stats/stat.1' ): 	# if 'directory' is itself a run/ directory, just use that.
-		print "'%s' is a run/ directory" % ( directory )
 		RUN_DIRS += ( directory, )
 	else:						# 'directory' is a directory, but is NOT a run/ directory itself.  Is it a list of run directories?
-		print "is NOT a run/ directory."
 		for potential_rundir in os.listdir( directory ):
 			# if potential_directory is a run/ directory, add it.
 			if os.path.isfile( directory + '/' + potential_rundir + '/stats/stat.1' ):	RUN_DIRS += ( directory + '/' + potential_rundir, )
 
 	if flag_multiplot and len(RUN_DIRS) > multiplotDimX * multiplotDimY:		# if multiplot is turned on only go up to dimX*dimY
-		print "* Warning: There are %s directories in %s, but multiplot can only plot %s plots -- only using the first %s." % ( len(RUN_DIRS), PASSED_DIRECTORY, multiplotDimX * multiplotDimY, multiplotDimX * multiplotDimY )
+		print "* Warning: There are %s run/ directories in %s, but multiplot can only plot %s plots -- only using the first %s." % ( len(RUN_DIRS), PASSED_DIRECTORY, multiplotDimX * multiplotDimY, multiplotDimX * multiplotDimY )
 		RUN_DIRS = RUN_DIRS[:multiplotDimX * multiplotDimY]
 
 #	print "RUN_DIRS= %s" % ( RUN_DIRS, )
@@ -336,12 +345,14 @@ def get_minstatfreq(run_dirs):
 
 check_parameters( sys.argv[1:] );		# don't send it the first item in the sys.argv list because that's this programs filename
 MINSTATFREQ = get_minstatfreq( RUN_DIRS )	# this will be used at the end when making the .plt file
+GNUPLOT_TOPRIGHT_LABEL.append( "Generated `date +%Y-%m-%d` by `whoami`")
+
 MAXTIMESTEP = 0					# this will be used at the end when making the .plt file
 
 # Print some data for the user.
 print """- plotPoints=%s plotMean=%s plotErrorbars=%s plotLegend=%s""" % ( flag_plotPoints, flag_plotMean, flag_plotErrorbars, flag_plotLegend )
 print "- RUN_DIRS= %s" % ( RUN_DIRS, )
-print "- params=%s    statfreq=%s" % (PARAMS, MINSTATFREQ )
+print "- params=%s" % (PARAMS)
 
 DATA = { }
 sed_out= "[^0-9 \.\-]"
@@ -462,17 +473,15 @@ print "Finished writing to '%s'." % ( tempfilename )
 
 # Plot the unsmoothed
 gnufile = open( gnufilename, 'w' ) 
-gnufile.write( "%s\n%s\n%s\n" % ( GNUPLOT_SETTINGS, GET_GNUPLOT_DYNAMIC_SETTINGS(), GET_GNUPLOT_PLOTSTRING()[0] ) )
-if flag_multiplot: gnufile.write( "unset multiplot\n" )	
+gnufile.write( "%s\n%s\n%s\n%s\n" % ( GNUPLOT_SETTINGS, GET_GNUPLOT_DYNAMIC_SETTINGS(), GET_GNUPLOT_PLOTSTRING()[0], GET_GNUPLOT_END_SETTINGS() ) )
 gnufile.close()
 os.system( 'gnuplot '+ gnufilename )
 
-
 if flag_plotSmooth:		# Second, plot the smoothed in a new window (if we're doing that)
+	GNUPLOT_TOPRIGHT_LABEL.append( "Smoothed with '%s'" % (GNUPLOT_SMOOTHING_FUNCTION) )
 	gnufileS = open( gnufilename + 'S', 'w' )
-	gnufileS.write( """%s\nset label "Smoothed with '%s'" at screen 0.001,0.03 left\n%s\n%s\n""" % ( GNUPLOT_SETTINGS, GNUPLOT_SMOOTHING_FUNCTION, GET_GNUPLOT_DYNAMIC_SETTINGS(), GET_GNUPLOT_PLOTSTRING()[1] ) )
-	if flag_multiplot: gnufileS.write( "unset multiplot\n" )	
+	gnufileS.write( "%s\n%s\n%s\n%s\n" % ( GNUPLOT_SETTINGS, GET_GNUPLOT_DYNAMIC_SETTINGS(), GET_GNUPLOT_PLOTSTRING()[1], GET_GNUPLOT_END_SETTINGS() ) )
 	gnufileS.close()
-os.system( 'gnuplot '+ gnufilename + 'S' )
+	os.system( 'gnuplot '+ gnufilename + 'S' )
 
 print "Done!"
