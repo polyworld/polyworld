@@ -1,6 +1,11 @@
 // Command line tool to calculate the Complexity of a brainfunction file.
 // Compile with: g++ CalcComplexity.cpp -lgsl -lgslcblas -lm -o CalcComplexity
-
+// Return values:
+// >0	actual complexity
+// 0	not enough timesteps in critterlifetime
+// -1	there was no value for numimputneurons in the BrainFunction file
+// -2	User specified not to calculate this value
+ 
 //set me to 200 for a Olaf-recommended value.
 #define WARN_IF_COMPUTING_COMPLEXITY_OVER_LESSTHAN_N_TIMESTEPS 0
 
