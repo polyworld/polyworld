@@ -29,7 +29,7 @@ GNUPLOT_SMOOTHING_FUNCTION='csplines' 		# reasonable smoothing options are: cspl
 
 GNUPLOT_MULTIPLOTSETTINGS="""
 set key at screen 1,1 right horizontal spacing 1	# even though this is already set in the regular GNUPLOT settings, you have to do it again here -- you just do.
-set bar 0.2             # if we are going to print errorbars, make smaller horizontal knobs on the ends.
+set bar 0.0             # if we are going to print errorbars, make smaller horizontal knobs on the ends.
 #set mxtics 5            # make small little tics along the x-axis
 set grid noxtics	# turn off the grid on the xtics, it just creates clutter anyway
 ###
