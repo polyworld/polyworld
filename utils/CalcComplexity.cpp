@@ -3,8 +3,8 @@
 // Return values:
 // >0	actual complexity
 // 0	not enough timesteps in critterlifetime
-// -1	there was no value for numimputneurons in the BrainFunction file
-// -2	User specified not to calculate this value
+// -1	User specified not to calculate this value
+// -2	there was no value for numimputneurons in the BrainFunction file
  
 //set me to 200 for a Olaf-recommended value.
 #define WARN_IF_COMPUTING_COMPLEXITY_OVER_LESSTHAN_N_TIMESTEPS 0
@@ -75,20 +75,20 @@ int main( int argc, char *argv[] )
 	if( CalcAll )
 		Complexity = CalcComplexity( argv[ 1 ] , 'A', ignore_timesteps_after );
 	else
-		Complexity = -2;
+		Complexity = -1;
 
 	cout << "Complexity (All) =\t" << Complexity << endl;
 
 	if( CalcProcessing )
 		Complexity = CalcComplexity( argv[ 1 ] , 'P', ignore_timesteps_after );
 	else
-		Complexity = -2;
+		Complexity = -1;
 	cout << "Complexity (Processing) =\t" << Complexity << endl;
 
 	if( CalcInput )
 		Complexity = CalcComplexity( argv[ 1 ] , 'I', ignore_timesteps_after );
 	else
-		Complexity = -2;
+		Complexity = -1;
 	cout << "Complexity (Input) =\t" << Complexity << endl;
                 
 	return 0;

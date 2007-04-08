@@ -14,8 +14,8 @@
 #include <assert.h>
 
 // Turn on no more than one of the *Options flags
-#define VirgilOptions 0
-#define OlafOptions 1
+#define VirgilOptions 1
+#define OlafOptions 0
 
 #if VirgilOptions
 	// Virgil Suggests the Following Options:
@@ -231,7 +231,7 @@ double CalcComplexityWithMatrix( gsl_matrix * activity, char part, int numinputn
     // If critter lived less timesteps than it has neurons, return Complexity = 0.0.
     if( activity->size2 > activity->size1 || activity->size1 < IgnoreCrittersThatLivedLessThan_N_Timesteps ) { return 0.0; }
 
-	part = toupper( part );			// capitalize it
+    part = toupper( part );			// capitalize it
 
     gsl_matrix * o;			// we don't need this guy yet but we will in a bit.  We need to define him here so the useGSAMP can assign to it.
 
@@ -315,7 +315,7 @@ double CalcComplexityWithMatrix( gsl_matrix * activity, char part, int numinputn
 	}
 	else if( part == 'P' )	// Processing
 	{
-		if( numinputneurons == 0 ) { return -1; }
+		if( numinputneurons == 0 ) { return -2; }
 //		cout << "size of COV Matrix: " << COV->size1 << " x " << COV->size2 << endl;
 		int Pro = COV->size1 - numinputneurons;
 		int Pro_id[Pro];
@@ -337,7 +337,7 @@ double CalcComplexityWithMatrix( gsl_matrix * activity, char part, int numinputn
 	}
 	else if( part == 'I' )	// Input
 	{
-		if( numinputneurons == 0 ) { return -1; }
+		if( numinputneurons == 0 ) { return -2; }
 
 		int Inp = numinputneurons;
 		int Inp_id[Inp];
