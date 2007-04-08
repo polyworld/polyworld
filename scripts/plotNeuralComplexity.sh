@@ -9,7 +9,7 @@
 # CONFIGURABLE OPTIONS
 GNUPLOT="/sw/bin/gnuplot"
 FILENAME="AvrComplexity.plt"
-GNUPLOT_ylabel="Neural Complexity"
+GNUPLOT_ylabel="Average Neural Complexity"
 GNUPLOT_labelparams='font "Times,20"'
 GNUPLOT_titleparams='font "Times,20"'
 # Don't modify anything beneath here
@@ -129,6 +129,7 @@ set key outside
 set bar 0
 set mxtics 5
 set title "${GNUPLOT_title}" ${GNUPLOT_titleparams}
+#set title "Neural Complexity over time - entire population"
 ${GNUPLOT_plotstring}
 EOF
 fi
@@ -171,7 +172,8 @@ set grid
 set key outside
 set bar 0
 set mxtics 5
-set title "${GNUPLOT_title}" ${GNUPLOT_titleparams}
+#set title "${GNUPLOT_title}" ${GNUPLOT_titleparams}
+set title "Neural Complexity over time - entire population" ${GNUPLOT_titleparams}
 ${GNUPLOT_plotstring}
 EOF
 fi

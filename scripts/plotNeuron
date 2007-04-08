@@ -254,7 +254,6 @@ flag_haveMATEneuron=$(echo "$neuronnames" | grep -o 'mateneuron')
 current_lt=0					# begin at color0, but we're going to increment current_lt before we use it.
 for neuronname in ${neuronnames}
 do
-	echo "neuronname=$neuronname" >&2
 
 	if [ "$neuronname" = "eatneuron" ]	# force eatneuron to have GREEN color
 	then

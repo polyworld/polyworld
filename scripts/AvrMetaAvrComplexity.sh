@@ -10,7 +10,7 @@ fi
 metaplotfile="$1"
 column1=$(cat "$metaplotfile" | cut -f1 | sort -n | uniq)
 
-timesteps=$(echo "$column1" | awk '{ if( $0 == int($0)) { print $0 } }')
+timesteps=$(echo "$column1" | awk '{ if( $0 == int($0)) { print $0 } }')	# only consider the integers, no strings, no decimals.
 
 echo "$timesteps" | tr '\n' ' ' | awk '{ print "Timesteps: " $0 }'
 

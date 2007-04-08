@@ -111,7 +111,8 @@ set xlabel 'Timestep' ${GNUPLOT_labelparams}
 set ylabel '${GNUPLOT_ylabel}' ${GNUPLOT_labelparams}
 set grid
 set mxtics 5
-set title "${GNUPLOT_title}" ${GNUPLOT_titleparams}
+#set title "${GNUPLOT_title}" ${GNUPLOT_titleparams}
+set title "Genetic complexity over time" ${GNUPLOT_titleparams}
 ${GNUPLOT_plotstring}
 EOF
 
