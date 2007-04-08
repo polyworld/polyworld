@@ -1,0 +1,174 @@
+#!/usr/bin/python
+### Configurable parameters
+#CALC_COMPLEXITY_OVER_DIRECTORY="./CalcComplexityOverDirectory.sh"
+CALC_COMPLEXITY="../utils/CalcComplexity"
+OutputFilename='AvrComplexity.plt'
+#### Don't modify anything beneath here unless you know what you're doing
+import sys, os
+### Now some global variables
+PASSED_DIRECTORY=''
+ComplexitiesToGet='API'
+####
+def print_usage_and_exit():
+	print """
+        USAGE: ./CalcComplexityOverRecent Recent|bestRecent [API]
+
+	This script takes a single argument -- a Recent or bestRecent Polyworld directory.
+        Upon exiting it will leave a file 'AvrComplexity.plt' in the specified
+        directory with statistics on the OlafComplexity at each timestep.
+
+	The second argument is optional.  It specifies whether you want to compute the
+        average complexity of the All, Processing, or Input programs.  By default
+        it calculates the OlafComplexity of all three.
+	"""
+	sys.exit(1)
+####################################################################################
+####################################################################################
+def check_parameters( argv ):
+	global PASSED_DIRECTORY
+	
+	if len(argv) not in [1, 2]:		# if we don't have 1 or 2 parameters, exit.
+		print_usage_and_exit()
+
+	if len(argv) == 2:			# there are two arguments, meaning the CalcAll, CalcProcessing, and CalcInput are being specified.
+		global ComplexitiesToGet
+		ComplexitiesToGet=''
+		if 'A' in argv[1]: ComplexitiesToGet += 'A'
+		if 'P' in argv[1]: ComplexitiesToGet += 'P'
+		if 'I' in argv[1]: ComplexitiesToGet += 'I'
+
+	if not os.path.isfile( CALC_COMPLEXITY ):	# ensure CALC_COMPLEXITY exists.
+		print "* Error: '%s' does not exist.  Fix it." %( CALC_COMPLEXITY )
+		sys.exit(1)
+
+	PASSED_DIRECTORY=argv[0].rstrip('/')		# remove the trailing slash
+
+	if not os.path.isdir( PASSED_DIRECTORY ):	# if the passed parameter is not a directory, exit.
+		print "* Error: '%s' isn't a directory." % ( PASSED_DIRECTORY )
+		print_usage_and_exit()
+####################################################################################
+####################################################################################
+# In addition to returning the median, get_median() also returns the upper and lower half of the list
+# Note that this function ASSUMES THE LIST IS ALREADY SORTED.
+####################################################################################
+def get_median( listofnumbers ):
+
+	length=len(listofnumbers)
+	lenover2=int(length / 2)
+
+	middle1=listofnumbers[ lenover2 ]			# this number is the answer if the length is ODD, and half of the answer is the length is EVEN
+	lowerhalf=listofnumbers[: lenover2 ]	# first half of the numbers
+
+		
+	if length % 2 == 0:			# if the length of the list is an EVEN number
+		upperhalf=listofnumbers[ lenover2 :]
+		middle2=listofnumbers[ (lenover2 - 1) ]
+		median = (middle1 + middle2) / 2.0
+	else:						# the length of the list is an ODD number, so simply return the middle number.
+		upperhalf=listofnumbers[(lenover2+1) :]	# second half of the numbers
+		median = middle1
+
+#	print "nums=%s" % ( listofnumbers )
+#	print "median=%s" % ( median )
+#	print "lowerhalf=%s" % ( lowerhalf )	
+#	print "upperhalf=%s" % ( upperhalf )
+	
+	return median, lowerhalf, upperhalf
+####################################################################################
+####################################################################################
+def sample_mean( list ):
+        N = float(len(list))
+        mean = sum(list) / N
+        SSE=0
+        for item in list:
+                SSE += (item - mean)**2.0
+
+        try: variance = SSE / (N-1)
+        except: variance = 0
+
+        stderr = ( variance ** 0.5 ) / (N**0.5) # stderr = stddev / sqrt(N)
+
+        return mean, stderr
+####################################################################################
+####################################################################################
+
+check_parameters(sys.argv[1:])
+
+print "PASSED_DIRECTORY = %s" %(PASSED_DIRECTORY)
+outputfile = open( PASSED_DIRECTORY + '/' + OutputFilename, 'w' )
+outputfile.write('#Timestep\tAq1\tAq2\tAq3\tAq4\tAq5\tAmean\tAstderr\tAsampsize\tPq1\tPq2\tPq3\tPq4\tPq5\tPmean\tPstderr\tPsampsize\tIq1\tIq2\tIq3\tIq4\tIq5\tImean\tIstderr\tIsampsize\n')
+
+timesteps = []
+# list all of the timesteps, make sure they are all integers (and directories), then sort them by number.
+for potential_timestep in os.listdir( PASSED_DIRECTORY ):
+	if not potential_timestep.isdigit(): continue					# if timestep IS NOT a digit (note, 0 is considered a digit), skip.
+	if not os.path.isdir( PASSED_DIRECTORY + '/' + potential_timestep ): continue	# if the timestep isn't a directory, skip it.
+
+	timesteps.append( potential_timestep )						# add timestep to our list
+
+timesteps = map(int, timesteps)
+timesteps.sort()									# sort the timesteps, lowest numbers come first.
+
+# We've made our timesteps, now to make our DATA containing the complexities.
+DATA={ }
+print "Final Timestep: %s" % ( max(timesteps) )
+print "Processing:",
+for t in timesteps:
+	timestep_directory=PASSED_DIRECTORY + '/' + str(t)
+	print '%s...' % (t),
+	sys.stdout.flush()
+
+
+	DATA[ str(t) + '_ALL' ] = [ ]
+	DATA[ str(t) + '_PRO' ] = [ ]
+	DATA[ str(t) + '_INP' ] = [ ]
+
+	for potential_brainFunction_file in os.listdir( timestep_directory ):
+		if not 'brainFunction' in potential_brainFunction_file:		# if it's not a brainFunction file, skip it
+			continue;
+
+#		print "Trying file '%s'..." % ( potential_brainFunction_file )
+		cmd="%s %s/%s %s" % ( CALC_COMPLEXITY, timestep_directory, potential_brainFunction_file, ComplexitiesToGet )
+		CritterComplexities = os.popen(cmd).readlines()
+		
+		for line in CritterComplexities:
+			complexity_i = line.split('\t')[1].rstrip('\n')
+			if   'All'        in line: DATA[ str(t) + '_ALL' ].append( complexity_i )
+			elif 'Processing' in line: DATA[ str(t) + '_PRO' ].append( complexity_i )
+			elif 'Input'      in line: DATA[ str(t) + '_INP' ].append( complexity_i )
+			else:
+				print "* Error: The output of CalcComplexity has been modified in an incompatible way."
+				sys.exit(1)
+
+	list_to_print = [ t ]				# begin the line with timestep t
+# This loop doesn't do anything vital to the logic, it is solely for cleanup and prepartion for the next loop
+	for keypiece in ( '_ALL', '_PRO', '_INP' ):
+		DATAkey = str(t) + keypiece
+		DATA[ DATAkey ] = map( float, DATA[ DATAkey ] ) # convert to floats just to make sure we're going to sort right.
+		DATA[ DATAkey ].sort()
+		while DATA[ DATAkey ].count(0.0): DATA[ DATAkey ].remove(0.0)	# remove any 0.0 from the list.  (0.0 means the critter didnt live long enough, so dont include it)
+
+#		print "list=%s" % ( list_to_print )
+
+		DATAkey = str(t) + keypiece
+#		print "DATA[%s]=%s" % ( DATAkey, DATA[DATAkey] )
+		minimum=min( DATA[ DATAkey ] )
+		maximum=max( DATA[ DATAkey ] )
+		mean, mean_stderr = sample_mean( DATA[ DATAkey ] )
+		median,lowerhalf,upperhalf=get_median( DATA[ DATAkey ] )
+		q1=get_median( lowerhalf )[0]
+		q3=get_median( upperhalf )[0]
+		list_to_print.append( "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s" % ( minimum, q1, median, q3, maximum, mean, mean_stderr, len( DATA[DATAkey] ) ) )
+		del DATA[ str(t) + keypiece ]		# delete the timestep, we dont need it anymore.
+#		del DATA[ DATAkey ]			# delete the raw data, we don't need it anymore.
+#		print "list=%s" % ( list_to_print )
+#		print "%s\t%s\t%s\t%s\t%s\t%s\t%s" % ( minimum, q1, median, q3, maximum, mean, mean_stderr )
+
+	list_to_print = map(str, list_to_print)
+	outputfile.write( '\t'.join( list_to_print ) )
+	outputfile.write('\n')				
+	outputfile.flush()
+
+outputfile.close()
+
+print "Done!"
