@@ -18,10 +18,17 @@ fi
 
 if [ ! -f "$directory/BirthsDeaths.log" ]
 then
-        echo "Need a BirthsDeaths.log file, and I don't see any file '$directory/BirthDeaths.log'."; 
-        if [ "$numseedcritters" -le 0 ] # if we haven't forced-specified a number of seed critters, exit.
+	# Welp, no BirthsDeaths, can we get it from the worldfile?
+	if [ -f "$directory/worldfile" ]
 	then
-		exit;
+		numseedcritters=$(grep 'initnumcritters' "$directory/worldfile" | awk -F' ' '{ print $1 }')
+	else
+        	echo "* Need a BirthsDeaths.log or worldfile, and I don't see any file '$directory/BirthDeaths.log'."; 
+		if [ "$numseedcritters" -le 0 ] # if we haven't forced-specified a number of seed critters, exit.
+		then
+			echo "Exiting."
+			exit;
+		fi
 	fi
 fi
 
