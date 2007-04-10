@@ -78,14 +78,12 @@ fi
 
 
 # if we didn't force specify a number of seed critters determine it now
-if [ "${numseedcritters}" -le 0 ]
+if [ "${numseedcritters}" -le 0 -a -f "$directory/BirthsDeaths.log" ]
 then
 	echo "Determining number of seed critters dyanmically...."
 	numseedcrittersplusone=$(grep ' BIRTH ' ${directory}/BirthsDeaths.log | head -n 1 | cut -d' ' -f3)
 	numseedcritters=$(echo "$numseedcrittersplusone - 1" | bc)
-fi
-
-if [ "${numseedcritters}" -le 0 ]	# is it STILL <= 0 ?
+elif [ "${numseedcritters}" -le 0 -a -f "$directory/LOCKSTEP-BirthsDeaths.log" ]	# is it STILL <= 0 ?
 then
 	echo "Determining number of seed critters dyanmically...."
 	numseedcrittersplusone=$(grep ' BIRTH ' ${directory}/LOCKSTEP-BirthsDeaths.log | head -n 1 | cut -d' ' -f3)
