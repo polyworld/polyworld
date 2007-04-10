@@ -94,7 +94,8 @@ def sample_mean( list ):
 
 check_parameters(sys.argv[1:])
 
-print "PASSED_DIRECTORY = %s" %(PASSED_DIRECTORY)
+print "- PASSED_DIRECTORY='%s'" %(PASSED_DIRECTORY)
+print "- output='%s'" % (PASSED_DIRECTORY + '/' + OutputFilename)
 outputfile = open( PASSED_DIRECTORY + '/' + OutputFilename, 'w' )
 outputfile.write('#Timestep\tAq1\tAq2\tAq3\tAq4\tAq5\tAmean\tAstderr\tAsampsize\tPq1\tPq2\tPq3\tPq4\tPq5\tPmean\tPstderr\tPsampsize\tIq1\tIq2\tIq3\tIq4\tIq5\tImean\tIstderr\tIsampsize\n')
 
@@ -152,12 +153,16 @@ for t in timesteps:
 
 		DATAkey = str(t) + keypiece
 #		print "DATA[%s]=%s" % ( DATAkey, DATA[DATAkey] )
-		minimum=min( DATA[ DATAkey ] )
-		maximum=max( DATA[ DATAkey ] )
-		mean, mean_stderr = sample_mean( DATA[ DATAkey ] )
-		median,lowerhalf,upperhalf=get_median( DATA[ DATAkey ] )
-		q1=get_median( lowerhalf )[0]
-		q3=get_median( upperhalf )[0]
+		try:
+			minimum=min( DATA[ DATAkey ] )
+			maximum=max( DATA[ DATAkey ] )
+			mean, mean_stderr = sample_mean( DATA[ DATAkey ] )
+			median,lowerhalf,upperhalf=get_median( DATA[ DATAkey ] )
+			q1=get_median( lowerhalf )[0]
+			q3=get_median( upperhalf )[0]
+		except ValueError:
+			minimum, maximum, mean, mean_stderr, q1, q3, median = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+
 		list_to_print.append( "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s" % ( minimum, q1, median, q3, maximum, mean, mean_stderr, len( DATA[DATAkey] ) ) )
 		del DATA[ str(t) + keypiece ]		# delete the timestep, we dont need it anymore.
 #		del DATA[ DATAkey ]			# delete the raw data, we don't need it anymore.
