@@ -16,7 +16,7 @@ then
         exit;
 fi
 
-if [ ! -f "$directory/BirthsDeaths.log" ]
+if [ ! -f "$directory/BirthsDeaths.log" -a ! -f "$directory/LOCKSTEP-BirthsDeaths.log"]
 then
 	# Welp, no BirthsDeaths, can we get it from the worldfile?
 	if [ -f "$directory/worldfile" ]
@@ -83,6 +83,14 @@ then
 	numseedcrittersplusone=$(grep ' BIRTH ' ${directory}/BirthsDeaths.log | head -n 1 | cut -d' ' -f3)
 	numseedcritters=$(echo "$numseedcrittersplusone - 1" | bc)
 fi
+
+if [ "${numseedcritters}" -le 0 ]	# is it STILL <= 0 ?
+then
+	echo "Determining number of seed critters dyanmically...."
+	numseedcrittersplusone=$(grep ' BIRTH ' ${directory}/LOCKSTEP-BirthsDeaths.log | head -n 1 | cut -d' ' -f3)
+	numseedcritters=$(echo "$numseedcrittersplusone - 1" | bc)
+fi
+
 
 echo "Number of Seed Critters = $numseedcritters"
 
