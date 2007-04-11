@@ -84,7 +84,8 @@ if [ "${numseedcritters}" -le 0 -a -f "$directory/worldfile" ]
 then
 	echo "Determining number of seed critters dyanmically from the worldfile..."
 	numseedcritters=$(grep 'initnumcritters' "$directory/worldfile" | awk -F' ' '{ print $1 }')
-elif [ "${numseedcritters}" -le 0 -a -f "$directory/BirthsDeaths.log" ]
+fi
+if [ "${numseedcritters}" -le 0 -a -f "$directory/BirthsDeaths.log" ]
 then
 	echo "Determining number of seed critters dyanmically from the BirthsDeaths.log..."
 	numseedcrittersplusone=$(grep ' BIRTH ' ${directory}/BirthsDeaths.log | head -n 1 | cut -d' ' -f3)
