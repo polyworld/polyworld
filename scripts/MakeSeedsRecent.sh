@@ -33,7 +33,6 @@ then
 	fi
 fi
 
-#numseedcritters=$(grep 'initnumcritters' "$directory/worldfile" | awk -F' ' '{ print $1 }')
 
 if [ ! -d "$directory/brain/function" ]
 then
@@ -80,6 +79,11 @@ fi
 
 
 # if we didn't force specify a number of seed critters determine it now
+if [ "${numseedcritters}" -le 0 -a -d "$directory/brain/function/seeds" ] 
+then
+	echo "Determining number of seed critters dyanmically from the $directory/brain/seeds/function/..."
+	numseedcritters=$(ls -1 "$directory/brain/seeds/function/" | wc -l | tr -d ' ')
+fi
 if [ "${numseedcritters}" -le 0 -a -f "$directory/worldfile" ]
 then
 	echo "Determining number of seed critters dyanmically from the worldfile..."
