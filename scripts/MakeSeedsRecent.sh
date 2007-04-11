@@ -21,17 +21,19 @@ then
 	# Welp, no BirthsDeaths, can we get it from the worldfile?
 	if [ -f "$directory/worldfile" ]
 	then
-		numseedcritters=$(grep 'initnumcritters' "$directory/worldfile" | awk -F' ' '{ print $1 }')
-	elif [ ! -f "$directory/LOCKSTEP-BirthsDeaths.log" ]
-	then
-        	echo "* Need a BirthsDeaths.log or worldfile, and I don't see any file '$directory/BirthDeaths.log'."; 
-		if [ "$numseedcritters" -le 0 ] # if we haven't forced-specified a number of seed critters, exit.
+		if [ ! -f "$directory/LOCKSTEP-BirthsDeaths.log" ]
 		then
-			echo "Exiting."
-			exit;
+			if [ "$numseedcritters" -le 0 ] # if we haven't forced-specified a number of seed critters, exit.
+			then
+       	 			echo "* Error: Need a BirthsDeaths.log or worldfile, and I don't see any file '$directory/BirthDeaths.log'."; 
+				echo "Exiting."
+				exit;
+			fi
 		fi
 	fi
 fi
+
+#numseedcritters=$(grep 'initnumcritters' "$directory/worldfile" | awk -F' ' '{ print $1 }')
 
 if [ ! -d "$directory/brain/function" ]
 then
@@ -78,14 +80,18 @@ fi
 
 
 # if we didn't force specify a number of seed critters determine it now
-if [ "${numseedcritters}" -le 0 -a -f "$directory/BirthsDeaths.log" ]
+if [ "${numseedcritters}" -le 0 -a -f "$directory/worldfile" ]
 then
-	echo "Determining number of seed critters dyanmically...."
+	echo "Determining number of seed critters dyanmically from the worldfile..."
+	numseedcritters=$(grep 'initnumcritters' "$directory/worldfile" | awk -F' ' '{ print $1 }')
+elif [ "${numseedcritters}" -le 0 -a -f "$directory/BirthsDeaths.log" ]
+then
+	echo "Determining number of seed critters dyanmically from the BirthsDeaths.log..."
 	numseedcrittersplusone=$(grep ' BIRTH ' ${directory}/BirthsDeaths.log | head -n 1 | cut -d' ' -f3)
 	numseedcritters=$(echo "$numseedcrittersplusone - 1" | bc)
 elif [ "${numseedcritters}" -le 0 -a -f "$directory/LOCKSTEP-BirthsDeaths.log" ]	# is it STILL <= 0 ?
 then
-	echo "Determining number of seed critters dyanmically...."
+	echo "Determining number of seed critters dyanmically from the LOCKSTEP-BirthsDeaths.log..."
 	numseedcrittersplusone=$(grep ' BIRTH ' ${directory}/LOCKSTEP-BirthsDeaths.log | head -n 1 | cut -d' ' -f3)
 	numseedcritters=$(echo "$numseedcrittersplusone - 1" | bc)
 fi
