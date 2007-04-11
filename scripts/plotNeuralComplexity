@@ -10,6 +10,7 @@ import sys, getopt, os.path, re, os
 # Finished loading libraries
 ################################################################################
 # some global variables:
+GNUPLOT_TERMINAL='aqua'		# set this to x11 if your under linux.
 GNUPLOT_SETTINGS="""
 set termoption noenhanced
 set key outside         # if we have a legend, put it outside the graph
@@ -23,9 +24,9 @@ set datafile missing '?'	# unknown values are '?'
 #set mxtics 5            # make small little tics along the x-axis
 
 ### Okay, I know all of this is really verbose, but the are static settings, so I include them here.
-set style line 1 linetype 1 linewidth 1 pointsize 1.0 # 1st colored meanline/meanpoint
-set style line 2 linetype 2 linewidth 1 pointsize 1.0 # 2nd colored meanline/meanpoint
-set style line 3 linetype 3 linewidth 1 pointsize 1.0 # 3rd colored meanline/meanpoint
+set style line 1 linetype 1 linewidth 1.5 pointsize 1.0 # 1st colored meanline/meanpoint
+set style line 2 linetype 2 linewidth 1.5 pointsize 1.0 # 2nd colored meanline/meanpoint
+set style line 3 linetype 3 linewidth 1.5 pointsize 1.0 # 3rd colored meanline/meanpoint
 
 set style line 501 linetype 1 linewidth 1 			# 1st colored Whisker
 set style line 502 linetype 2 linewidth 1 			# 2nd colored Whisker
@@ -171,15 +172,34 @@ def get_median( listofnumbers ):
 #	print "upperhalf=%s" % ( upperhalf )
         
         return median, lowerhalf, upperhalf
+######################################################################################
+# GET_GNUPLOT_PLOTSTRING_SMOOTH -- this function calls the function GET_GNUPLOT_PLOTSTRING, and then some manipulations to make the SMOOTHED plotstring
+#######################################################################################
+def GET_GNUPLOT_PLOTSTRING_SMOOTH( filename, Avrfilename ):
+	global GNUPLOT_SMOOTHING_FUNCTION, flag_plotMean, flag_plotMean_AVERAGE
+
+	rawarray = GET_GNUPLOT_PLOTSTRING( filename, Avrfilename ).split(', ')
+
+	if flag_plotMean or flag_plotMean_AVERAGE:		# only do this if we have lines to begin with!
+		for i in range(0, len(rawarray) ):
+			# make sure that it's not candlesticks, not yerrorbars, and (is an averageline OR is a meanline) and only using #:#
+			if 'candlesticks' not in rawarray[i] and 'yerrorbars' not in rawarray[i] and ('meta-mean' in rawarray[i] or flag_plotMean) and re.search( 'using [0-9]+:[0-9]+[^:]', rawarray[i] ):
+				print "- smoothing: %s" % ( rawarray[i] )
+				rawarray[i] += " smooth %s" % (GNUPLOT_SMOOTHING_FUNCTION )
+
+	smoothstring =	', '.join( rawarray )
+
+	return smoothstring
+
 #######################################################################################
 def GET_GNUPLOT_DYNAMIC_SETTINGS( RecentOrbestRecent ):
 	global flag_plotPoints, flag_plotLegend, flag_multiplot, multiplotDimX, multiplotY
-	global RUN_DIRS, PARAMS, IDENTICAL_LINE_WIDTH, GNUPLOT_TOPRIGHT_LABEL
-	global numplotsmade
+	global RUN_DIRS, PARAMS, IDENTICAL_LINE_WIDTH, GNUPLOT_TOPRIGHT_LABEL, MAXTIMESTEP
+	global numplotsmade, GNUPLOT_TERMINAL, flag_plotMean, flag_plotMean_AVERAGE
 	settings = [ ]
 
 	
-	settings.append("set terminal aqua %s" % ( numplotsmade ) )
+	settings.append("set terminal %s %s" % ( GNUPLOT_TERMINAL, numplotsmade ) )
 	numplotsmade += 1
 
 
@@ -187,6 +207,9 @@ def GET_GNUPLOT_DYNAMIC_SETTINGS( RecentOrbestRecent ):
 
 	if not flag_plotLegend:
 		settings.append("unset key")					# if no legend, unset the legend
+
+	if not flag_multiplot:
+		settings.append( "set xrange [0:%s]" % (MAXTIMESTEP) )
 
 	# We are plotting the mean as a line, point, or both?
 	if flag_plotPoints and flag_plotMean:
@@ -301,21 +324,21 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename ):
 		else: temp = [ 100, 100, 100 ]
 
 		if flag_plotAll:
-			plotstring.append("'%s' using 1:7 linestyle %s title 'meta-mean All'" % (Avrfilename, temp[0]) )
+			plotstring.append("'%s' using 1:7 with lines linestyle %s title 'meta-mean All'" % (Avrfilename, temp[0]) )
 			temp.pop(0)
-			if flag_plotErrorbars: 
+			if flag_plotErrorbars_AVERAGE: 
 				plotstring.append("'' using 1:7:8 with yerrorbars linestyle %s notitle" % (temp[0]))
 				temp.pop(0)
 		if flag_plotProcessing:
-			plotstring.append("'%s' using 1:15 linestyle %s title 'meta-mean Pro'" % (Avrfilename, temp[0]) )
+			plotstring.append("'%s' using 1:15 with lines linestyle %s title 'meta-mean Pro'" % (Avrfilename, temp[0]) )
 			temp.pop(0)
-			if flag_plotErrorbars: 
+			if flag_plotErrorbars_AVERAGE: 
 				plotstring.append("'' using 1:15:16 with yerrorbars linestyle %s notitle" % (temp[0]))
 				temp.pop(0)
 		if flag_plotInput:
-			plotstring.append("'%s' using 1:23 linestyle %s title 'meta-mean Inp'" % (Avrfilename, temp[0]) )
+			plotstring.append("'%s' using 1:23 with lines linestyle %s title 'meta-mean Inp'" % (Avrfilename, temp[0]) )
 			temp.pop(0)
-			if flag_plotErrorbars: 
+			if flag_plotErrorbars_AVERAGE: 
 				plotstring.append("'' using 1:23:24 with yerrorbars linestyle %s notitle" % (temp[0]))
 				temp.pop(0)
 
@@ -329,14 +352,6 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename ):
 	return plotstring
 
 """
-	# Okay, we've made our regular plotstring, now to make the smoothed plotstring.  We always make the string, even if we don't always plot it.
-	global GNUPLOT_SMOOTHING_FUNCTION
-	for line in plotstring:
-		if 'yerrorbars' in line:		# the yerrorbars style doesnt support smoothing
-			plotstringsmooth.append( line )
-		else:
-			plotstringsmooth.append( line + ' smooth %s' % ( GNUPLOT_SMOOTHING_FUNCTION ))
-
 	# Okay, we've made our regular plostring, but now we're going to completely transform it if we're multiplotting...
 	if flag_multiplot:
 		global multiplotmaxtimesteps
@@ -507,7 +522,7 @@ print "- plotMeanAverage=%s plotErrorbarsAverage=%s plotWhiskersAverage=%s" % ( 
 print "- plotAll=%s plotProcessing=%s plotInput=%s" % ( flag_plotAll, flag_plotProcessing, flag_plotInput )
 
 averagetimestepinterval = get_bestRecentBrainFunctionRecordFrequency( RUN_DIRS['bestRecent'][0]  )
-print "- Average interval = %s" % (averagetimestepinterval)
+print "- AverageInterval=%s" % (averagetimestepinterval),
 
 
 DATA = { 'bestRecent': {}, 'Recent': {} }	# make a dictionary of dictionaries
@@ -537,7 +552,7 @@ for whichrecent in RUN_DIRS:
 # Open the file that we're going to store the data on the averages.
 for whichrecent in ('bestRecent','Recent'):
 	tempfile=open( tempfilename + '.' + whichrecent, 'w' )
-	print " - tempfilename=%s" % ( tempfilename + '.' + whichrecent )
+	print "tempfilename=%s" % ( tempfilename + '.' + whichrecent ),
 	for t in [0] + range(averagetimestepinterval,MAXTIMESTEP+averagetimestepinterval,averagetimestepinterval):
 		list_to_print = [ t ]
 		for area in ('All','Pro','Inp'):
@@ -548,7 +563,10 @@ for whichrecent in ('bestRecent','Recent'):
 			q1=get_median( lowerhalf )[0]
 			q3=get_median( upperhalf )[0]
 			mean, mean_stderr = sample_mean( DATA[ whichrecent ][t][area] )
-			list_to_print.append( "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s" % ( minimum, q1, median, q3, maximum, mean, mean_stderr, len( DATA[whichrecent][t][area]) ) )
+			if DATA[whichrecent][t][area] == ['']: numsamples=0
+			else: numsamples=len(DATA[whichrecent][t][area])
+
+			list_to_print.append( "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s" % ( minimum, q1, median, q3, maximum, mean, mean_stderr, numsamples ) )
 			del DATA[whichrecent][t][area]		# Don't need this anymore
 		list_to_print = map(str, list_to_print)
 		tempfile.write( '\t'.join( list_to_print ) )
@@ -558,7 +576,7 @@ for whichrecent in ('bestRecent','Recent'):
 
 #tempfilename='/tmp/,plotNeuralComplexity_%s.plt' % ( os.getpid() )		# this file will contain the raw data
 	
-print "maxtimestep=%s" % ( MAXTIMESTEP )
+print "- maxtimestep=%s" % ( MAXTIMESTEP )
 outputcontents = [ GNUPLOT_SETTINGS ]
 
 for whichrecent in RUN_DIRS:
@@ -566,14 +584,40 @@ for whichrecent in RUN_DIRS:
 #		print "rundir=%s" % ( rundir )
 		filename = rundir + '/brain/' + whichrecent + '/' + inputplotfilename
 		Avrfilename =  tempfilename + '.' + whichrecent
+
+		# plot the regular one
+#		outputcontents.append( GNUPLOT_SETTINGS )
 		outputcontents.append( GET_GNUPLOT_DYNAMIC_SETTINGS( whichrecent ) )
 		outputcontents.append( GET_GNUPLOT_PLOTSTRING(filename, Avrfilename) )
+	
+#		if flag_plotSmooth:		# now plot the smoothed one (if we're doing that)
+#			outputcontents.append( GNUPLOT_SETTINGS )
+ #       		GNUPLOT_TOPRIGHT_LABEL.append( "Smoothed with '%s'" % (GNUPLOT_SMOOTHING_FUNCTION) )
+#			outputcontents.append( GET_GNUPLOT_DYNAMIC_SETTINGS( whichrecent ) )
+#			outputcontents.append( GET_GNUPLOT_PLOTSTRING_SMOOTH(filename, Avrfilename) )
+#			GNUPLOT_TOPRIGHT_LABEL.pop(-1)	# take off the smoothed
+
 	outputcontents.append( GET_GNUPLOT_END_SETTINGS() )
+
+
+if flag_plotSmooth:
+	outputcontents.append("reset")	# clear everything
+	outputcontents.append( GNUPLOT_SETTINGS )	# load the old settings back
+        GNUPLOT_TOPRIGHT_LABEL.append( "Smoothed with '%s'" % (GNUPLOT_SMOOTHING_FUNCTION) )
+
+	for whichrecent in RUN_DIRS:
+		for rundir in RUN_DIRS[whichrecent]:
+			filename = rundir + '/brain/' + whichrecent + '/' + inputplotfilename
+			Avrfilename =  tempfilename + '.' + whichrecent
+			outputcontents.append( GET_GNUPLOT_DYNAMIC_SETTINGS( whichrecent ) )
+			outputcontents.append( GET_GNUPLOT_PLOTSTRING_SMOOTH(filename, Avrfilename) )
+
+		outputcontents.append( GET_GNUPLOT_END_SETTINGS() )
 
 outputfileGNU=open( outputfilenameGNU, 'w' )
 outputfileGNU.write( '\n'.join(outputcontents) )
 outputfileGNU.close()
-print "- Executing gnuplot commands in '%s'" % ( outputfilenameGNU )
+print "- Executing '%s'" % ( outputfilenameGNU )
 os.system( 'gnuplot '+ outputfilenameGNU )
 
 """
