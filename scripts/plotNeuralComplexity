@@ -252,109 +252,109 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename ):
 	plotstring = [ ]
 	plotstringsmooth=[ ]
 	
-	if flag_plotWhiskers:	# are we doing the whiskers for each one?
-		if flag_plotLegend: temp = [ 501, 51, 502, 52, 503, 53 ]
-		else:	temp = [ 96, 97, 96, 97, 96, 97 ]
+	if filename:
+		if flag_plotWhiskers:	# are we doing the whiskers for each one?
+			if flag_plotLegend: temp = [ 501, 51, 502, 52, 503, 53 ]
+			else:	temp = [ 96, 97, 96, 97, 96, 97 ]
 
-		if flag_plotAll:	# and we're plotting the inputs...
-			plotstring.append("'%s' using 1:3:2:6:5 with candlesticks whiskerbars linestyle %s title 'All', '' using 1:4:4:4:4 with candlesticks linestyle %s notitle" % (filename, temp[0], temp[1] ))
-			temp.pop(0)
-			temp.pop(0)
-
-		if flag_plotProcessing:	
-			plotstring.append("'%s' using 1:11:10:14:13 with candlesticks whiskerbars linestyle %s title 'Processing', '' using 1:12:12:12:12 with candlesticks linestyle %s notitle" % (filename, temp[0], temp[1] ))
-			temp.pop(0)
-			temp.pop(0)
-
-		if flag_plotInput:	
-			plotstring.append("'%s' using 1:19:18:22:21 with candlesticks whiskerbars linestyle %s title 'Input', '' using 1:20:20:20:20 with candlesticks linestyle %s notitle" % (filename, temp[0], temp[1] ))
-			temp.pop(0)
-			temp.pop(0)
-
-	if flag_plotMean or flag_plotPoints:
-
-		if flag_plotLegend: 
-			if flag_plotErrorbars: temp = [ 1, 54, 2, 55, 3, 56 ]
-			else: temp = [ 1, 2, 3 ]
-		else:
-			if flag_plotErrorbars: temp = [ 99, 98, 99, 98, 99, 98 ]
-			else: temp = [ 99, 99, 99 ]
-
-		if flag_plotAll:
-			plotstring.append("'%s' using 1:7 linestyle %s title 'mean All'" % (filename, temp[0]) )
-			temp.pop(0)
-			if flag_plotErrorbars: 
-				plotstring.append("'' using 1:7:8 with yerrorbars linestyle %s notitle" % (temp[0]))
+			if flag_plotAll:	# and we're plotting the inputs...
+				plotstring.append("'%s' using 1:3:2:6:5 with candlesticks whiskerbars linestyle %s title 'All', '' using 1:4:4:4:4 with candlesticks linestyle %s notitle" % (filename, temp[0], temp[1] ))
 				temp.pop(0)
-		if flag_plotProcessing:
-			plotstring.append("'%s' using 1:15 linestyle %s title 'mean Pro'" % (filename, temp[0]) )
-			temp.pop(0)
-			if flag_plotErrorbars: 
-				plotstring.append("'' using 1:15:16 with yerrorbars linestyle %s notitle" % (temp[0]))
-				temp.pop(0)
-		if flag_plotInput:
-			plotstring.append("'%s' using 1:23 linestyle %s title 'mean Inp'" % (filename, temp[0]) )
-			temp.pop(0)
-			if flag_plotErrorbars: 
-				plotstring.append("'' using 1:23:24 with yerrorbars linestyle %s notitle" % (temp[0]))
 				temp.pop(0)
 
-		if flag_plotWhiskers:	# if we are plotting Whiskers, go back through the plotstring and remove some titles
-			for i in range(len(plotstring)):
-				if "title 'mean " in plotstring[i]: plotstring[i] = re.sub("title 'mean [^']*'", 'notitle' ,plotstring[i])
-
-	##### NOW FOR THE AVERAGES ###########
-	if flag_plotWhiskers_AVERAGE:	# are we doing the whiskers for the AVERAGE?
-		temp = [ 103, 102, 103, 102, 103, 102 ]
-
-		if flag_plotAll:	# and we're plotting the inputs...
-			plotstring.append("'%s' using 1:3:2:6:5 with candlesticks whiskerbars linestyle %s title 'All means', '' using 1:4:4:4:4 with candlesticks linestyle %s notitle" % (Avrfilename, temp[0], temp[1] ))
-			temp.pop(0)
-			temp.pop(0)
-
-		if flag_plotProcessing:	
-			plotstring.append("'%s' using 1:11:10:14:13 with candlesticks whiskerbars linestyle %s title 'Processing means', '' using 1:12:12:12:12 with candlesticks linestyle %s notitle" % (Avrfilename, temp[0], temp[1] ))
-			temp.pop(0)
-			temp.pop(0)
-
-		if flag_plotInput:	
-			plotstring.append("'%s' using 1:19:18:22:21 with candlesticks whiskerbars linestyle %s title 'Input means', '' using 1:20:20:20:20 with candlesticks linestyle %s notitle" % (Avrfilename, temp[0], temp[1] ))
-			temp.pop(0)
-			temp.pop(0)
-
-	if flag_plotMean_AVERAGE:
-
-		if flag_plotErrorbars_AVERAGE: temp = [ 100, 101, 100, 101, 100, 101 ]
-		else: temp = [ 100, 100, 100 ]
-
-		if flag_plotAll:
-			plotstring.append("'%s' using 1:7 with lines linestyle %s title 'meta-mean All'" % (Avrfilename, temp[0]) )
-			temp.pop(0)
-			if flag_plotErrorbars_AVERAGE: 
-				plotstring.append("'' using 1:7:8 with yerrorbars linestyle %s notitle" % (temp[0]))
+			if flag_plotProcessing:	
+				plotstring.append("'%s' using 1:11:10:14:13 with candlesticks whiskerbars linestyle %s title 'Processing', '' using 1:12:12:12:12 with candlesticks linestyle %s notitle" % (filename, temp[0], temp[1] ))
 				temp.pop(0)
-		if flag_plotProcessing:
-			plotstring.append("'%s' using 1:15 with lines linestyle %s title 'meta-mean Pro'" % (Avrfilename, temp[0]) )
-			temp.pop(0)
-			if flag_plotErrorbars_AVERAGE: 
-				plotstring.append("'' using 1:15:16 with yerrorbars linestyle %s notitle" % (temp[0]))
-				temp.pop(0)
-		if flag_plotInput:
-			plotstring.append("'%s' using 1:23 with lines linestyle %s title 'meta-mean Inp'" % (Avrfilename, temp[0]) )
-			temp.pop(0)
-			if flag_plotErrorbars_AVERAGE: 
-				plotstring.append("'' using 1:23:24 with yerrorbars linestyle %s notitle" % (temp[0]))
 				temp.pop(0)
 
-		if flag_plotWhiskers_AVERAGE:	# if we are plotting Whiskers, go back through the plotstring and remove some titles
-			for i in range(len(plotstring)):
-				if "title 'meta-mean " in plotstring[i]: plotstring[i] = re.sub("title 'meta-mean [^']*'", 'notitle' ,plotstring[i])
+			if flag_plotInput:	
+				plotstring.append("'%s' using 1:19:18:22:21 with candlesticks whiskerbars linestyle %s title 'Input', '' using 1:20:20:20:20 with candlesticks linestyle %s notitle" % (filename, temp[0], temp[1] ))
+				temp.pop(0)
+				temp.pop(0)
 
+		if flag_plotMean or flag_plotPoints:
 
+			if flag_plotLegend: 
+				if flag_plotErrorbars: temp = [ 1, 54, 2, 55, 3, 56 ]
+				else: temp = [ 1, 2, 3 ]
+			else:
+				if flag_plotErrorbars: temp = [ 99, 98, 99, 98, 99, 98 ]
+				else: temp = [ 99, 99, 99 ]
 
+			if flag_plotAll:
+				plotstring.append("'%s' using 1:7 linestyle %s title 'mean All'" % (filename, temp[0]) )
+				temp.pop(0)
+				if flag_plotErrorbars: 
+					plotstring.append("'' using 1:7:8 with yerrorbars linestyle %s notitle" % (temp[0]))
+					temp.pop(0)
+			if flag_plotProcessing:
+				plotstring.append("'%s' using 1:15 linestyle %s title 'mean Pro'" % (filename, temp[0]) )
+				temp.pop(0)
+				if flag_plotErrorbars: 
+					plotstring.append("'' using 1:15:16 with yerrorbars linestyle %s notitle" % (temp[0]))
+					temp.pop(0)
+			if flag_plotInput:
+				plotstring.append("'%s' using 1:23 linestyle %s title 'mean Inp'" % (filename, temp[0]) )
+				temp.pop(0)
+				if flag_plotErrorbars: 
+					plotstring.append("'' using 1:23:24 with yerrorbars linestyle %s notitle" % (temp[0]))
+					temp.pop(0)
+	
+			if flag_plotWhiskers:	# if we are plotting Whiskers, go back through the plotstring and remove some titles
+				for i in range(len(plotstring)):
+					if "title 'mean " in plotstring[i]: plotstring[i] = re.sub("title 'mean [^']*'", 'notitle' ,plotstring[i])
+	if Avrfilename:	
+		##### NOW FOR THE AVERAGES ###########
+		if flag_plotWhiskers_AVERAGE:	# are we doing the whiskers for the AVERAGE?
+			temp = [ 103, 102, 103, 102, 103, 102 ]
+	
+			if flag_plotAll:	# and we're plotting the inputs...
+				plotstring.append("'%s' using 1:3:2:6:5 with candlesticks whiskerbars linestyle %s title 'All means', '' using 1:4:4:4:4 with candlesticks linestyle %s notitle" % (Avrfilename, temp[0], temp[1] ))
+				temp.pop(0)
+				temp.pop(0)
+	
+			if flag_plotProcessing:	
+				plotstring.append("'%s' using 1:11:10:14:13 with candlesticks whiskerbars linestyle %s title 'Processing means', '' using 1:12:12:12:12 with candlesticks linestyle %s notitle" % (Avrfilename, temp[0], temp[1] ))
+				temp.pop(0)
+				temp.pop(0)
+	
+			if flag_plotInput:	
+				plotstring.append("'%s' using 1:19:18:22:21 with candlesticks whiskerbars linestyle %s title 'Input means', '' using 1:20:20:20:20 with candlesticks linestyle %s notitle" % (Avrfilename, temp[0], temp[1] ))
+				temp.pop(0)
+				temp.pop(0)
+	
+		if flag_plotMean_AVERAGE:
+	
+			if flag_plotErrorbars_AVERAGE: temp = [ 100, 101, 100, 101, 100, 101 ]
+			else: temp = [ 100, 100, 100 ]
+	
+			if flag_plotAll:
+				plotstring.append("'%s' using 1:7 with lines linestyle %s title 'meta-mean All'" % (Avrfilename, temp[0]) )
+				temp.pop(0)
+				if flag_plotErrorbars_AVERAGE: 
+					plotstring.append("'' using 1:7:8 with yerrorbars linestyle %s notitle" % (temp[0]))
+					temp.pop(0)
+			if flag_plotProcessing:
+				plotstring.append("'%s' using 1:15 with lines linestyle %s title 'meta-mean Pro'" % (Avrfilename, temp[0]) )
+				temp.pop(0)
+				if flag_plotErrorbars_AVERAGE: 
+					plotstring.append("'' using 1:15:16 with yerrorbars linestyle %s notitle" % (temp[0]))
+					temp.pop(0)
+			if flag_plotInput:
+				plotstring.append("'%s' using 1:23 with lines linestyle %s title 'meta-mean Inp'" % (Avrfilename, temp[0]) )
+				temp.pop(0)
+				if flag_plotErrorbars_AVERAGE: 
+					plotstring.append("'' using 1:23:24 with yerrorbars linestyle %s notitle" % (temp[0]))
+					temp.pop(0)
+	
+			if flag_plotWhiskers_AVERAGE:	# if we are plotting Whiskers, go back through the plotstring and remove some titles
+				for i in range(len(plotstring)):
+					if "title 'meta-mean " in plotstring[i]: plotstring[i] = re.sub("title 'meta-mean [^']*'", 'notitle' ,plotstring[i])
+		
+	
 	plotstring = ', '.join(plotstring) + ','
 	return plotstring
-
+	
 """
 	# Okay, we've made our regular plostring, but now we're going to completely transform it if we're multiplotting...
 	if flag_multiplot:
@@ -600,9 +600,11 @@ for whichrecent in RUN_DIRS:
 	plotstring = ['plot']
 	for rundir in RUN_DIRS[whichrecent]:
 		filename = rundir + '/brain/' + whichrecent + '/' + inputplotfilename
-		Avrfilename =  tempfilename + '.' + whichrecent
 		# plot the regular one
-		plotstring.append( GET_GNUPLOT_PLOTSTRING(filename, Avrfilename) )
+#		plotstring.append( GET_GNUPLOT_PLOTSTRING(filename, Avrfilename) )
+		plotstring.append( GET_GNUPLOT_PLOTSTRING(filename, '') )
+	Avrfilename =  tempfilename + '.' + whichrecent
+	plotstring.append( GET_GNUPLOT_PLOTSTRING('', Avrfilename) )
 
 	outputcontents.append( ' '.join(plotstring).rstrip(',') )
 
@@ -619,7 +621,7 @@ if flag_plotSmooth:	# We've finished all of the regular plots, now to do the smo
 			filename = rundir + '/brain/' + whichrecent + '/' + inputplotfilename
 			Avrfilename =  tempfilename + '.' + whichrecent
 			outputcontents.append( GET_GNUPLOT_DYNAMIC_SETTINGS( whichrecent ) )
-			outputcontents.append( GET_GNUPLOT_PLOTSTRING_SMOOTH(filename, Avrfilename) )
+		outputcontents.append( GET_GNUPLOT_PLOTSTRING_SMOOTH(filename, Avrfilename) )
 
 		outputcontents.append( GET_GNUPLOT_END_SETTINGS() )
 
