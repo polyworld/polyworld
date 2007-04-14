@@ -32,9 +32,9 @@ set style line 501 linetype 1 linewidth 1.5		# 1st colored Whisker
 set style line 502 linetype 2 linewidth 1.5		# 2nd colored Whisker
 set style line 503 linetype 3 linewidth 1.5 		# 3rd colored Whisker
 
-set border 15 linetype 501 linewidth 0
-set border 15 linetype 502 linewidth 0
-set border 15 linetype 503 linewidth 0
+# set border 15 linetype 501 linewidth 0
+# set border 15 linetype 502 linewidth 0
+# set border 15 linetype 503 linewidth 0
 
 set style line 51 linetype 1 linewidth 3			# 1st Whisker median
 set style line 52 linetype 2 linewidth 3			# 2nd Whisker median
@@ -352,7 +352,7 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename ):
 
 
 
-	plotstring = 'plot ' + ', '.join(plotstring)
+	plotstring = ', '.join(plotstring) + ','
 	return plotstring
 
 """
@@ -557,9 +557,14 @@ for whichrecent in RUN_DIRS:
 			if t > MAXTIMESTEP: MAXTIMESTEP = t
 #			print "linearray=%s" % (line_array ) 
 
+for whichrecent in RUN_DIRS.keys():				# if we have no entries in this Recent/bestRecent, delete it.
+	if len( DATA[whichrecent] ) == 0:
+		del RUN_DIRS[whichrecent]
 
 # Open the file that we're going to store the data on the averages.
-for whichrecent in ('bestRecent','Recent'):
+#for whichrecent in ('bestRecent','Recent'):
+for whichrecent in RUN_DIRS:
+
 	tempfile=open( tempfilename + '.' + whichrecent, 'w' )
 	print "tempfilename=%s" % ( tempfilename + '.' + whichrecent ),
 	for t in [0] + range(averagetimestepinterval,MAXTIMESTEP+averagetimestepinterval,averagetimestepinterval):
@@ -576,7 +581,7 @@ for whichrecent in ('bestRecent','Recent'):
 			else: numsamples=len(DATA[whichrecent][t][area])
 
 			list_to_print.append( "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s" % ( minimum, q1, median, q3, maximum, mean, mean_stderr, numsamples ) )
-			del DATA[whichrecent][t][area]		# Don't need this anymore
+#			del DATA[whichrecent][t][area]		# Don't need this anymore
 		list_to_print = map(str, list_to_print)
 		tempfile.write( '\t'.join( list_to_print ) )
 		tempfile.write('\n')
@@ -590,13 +595,16 @@ print "- maxtimestep=%s" % ( MAXTIMESTEP )
 outputcontents = [ GNUPLOT_SETTINGS ]	# begin our .gnuplot file with the static settings.
 
 for whichrecent in RUN_DIRS:
+
+	outputcontents.append( GET_GNUPLOT_DYNAMIC_SETTINGS( whichrecent ) )	# Make a different plot for Recent/bestRecent
+	plotstring = ['plot']
 	for rundir in RUN_DIRS[whichrecent]:
 		filename = rundir + '/brain/' + whichrecent + '/' + inputplotfilename
 		Avrfilename =  tempfilename + '.' + whichrecent
-
 		# plot the regular one
-		outputcontents.append( GET_GNUPLOT_DYNAMIC_SETTINGS( whichrecent ) )
-		outputcontents.append( GET_GNUPLOT_PLOTSTRING(filename, Avrfilename) )
+		plotstring.append( GET_GNUPLOT_PLOTSTRING(filename, Avrfilename) )
+
+	outputcontents.append( ' '.join(plotstring).rstrip(',') )
 
 	outputcontents.append( GET_GNUPLOT_END_SETTINGS() )
 
@@ -621,149 +629,4 @@ outputfileGNU.close()
 print "- Executing '%s'" % ( outputfilenameGNU )
 os.system( 'gnuplot '+ outputfilenameGNU )
 
-"""
-MINSTATFREQ = get_minstatfreq( RUN_DIRS )	# this will be used at the end when making the .plt file
-GNUPLOT_TOPRIGHT_LABEL.append( "Generated `date +%Y-%m-%d` by `whoami`")
-
-MAXTIMESTEP = 0					# this will be used at the end when making the .plt file
-
-# Print some data for the user.
-
-DATA = { }
-sed_out= "[^0-9 \.\-]"
-for param in PARAMS:
-	param_withoutcrunch = param.rstrip('0123456789').rstrip('#')	# take off the numbers, then take off the '#'
-
-	column = int( param.replace( param_withoutcrunch + "#", '' ) )
-	if re.search( '[0-9 \.\-]', param_withoutcrunch):		# CAREFUL.  This regex MUST be the exact inverse of variable 'sed_out'
-		column = column + 1		# hack to get the correct column if our parameter has a number in it.
-
-	print param + ': ',
-
-	for RUN_DIR in RUN_DIRS:
-		DATAkey = param + '~~' + RUN_DIR
-		DATA[ DATAkey ] = { }					# create a dictionary of dictionaries
-
-		print "%s..." % ( RUN_DIR ),
-		sys.stdout.flush()
-
-		files = os.listdir( RUN_DIR + '/stats/' )
-		timesteps = [ ]
-		for statfile in files:					# go through each file in run/stats/ to make sure it is a stat.#### file
-			if re.match( 'stat\.[0-9]', statfile ):	# statfile matches the format of: stat.#### ...
-				timesteps.append( int(statfile.lstrip('stat\.')) )
-
-		timesteps.sort()
-
-		if RUN_DIR not in multiplotmaxtimesteps:				# this is for the xrange dynamic setting for multiplots
-			multiplotmaxtimesteps[RUN_DIR]=timesteps[-1]
-
-		if timesteps[-1] > MAXTIMESTEP: MAXTIMESTEP = timesteps[-1]		# this is for later, as well as the xrange[] dynamic setting
-
-#		print "timesteps='%s'" % ( timesteps )
-		for timestep in timesteps:
-			cmd = "grep '^[ ]*%s[ 	]' %s/stats/stat.%s | sed -e 's/%s//g'| tr -s ' '" % ( param_withoutcrunch, RUN_DIR, timestep, sed_out )	# create our grep command
-			# join into a string; remove tabs, newlines, and spaces from the beginning and end; then split by spaces back into a list.
-			result = "".join( os.popen(cmd).readlines() ).strip("\n 	").split(' ')
-
-			if column > len(result):
-				print "* Error: You specified column '%s', but there are only %s columns for parameter '%s'.  Exiting." % ( column, len(result), param_withoutcrunch)
-				sys.exit(1)
-			value = result[column-1]			# lists are zero based.  So decrement column by 1.
-
-#			print "cmd=%s result=%s column=%s value=%s" % ( cmd, result, column, value )
-			DATA[ DATAkey ][ timestep ] = value
-	print ""	# print a newline
-
-	if flag_plotMean:							# if we're plotting the mean compute that now.
-		DATA[ param + '~~AVERAGE'] = {}					# make a new dictionary for the average
-		if flag_plotErrorbars: DATA[ param + '~~AVERAGE_STDERR'] = {}	# make dictionary for the StdErr bars on the mean, (if we're doing that)
-
-		meantimesteps= map( int, DATA[ param + '~~' + RUN_DIRS[0] ].keys() )	# get the timesteps from the first directory; convert to ints; assign to 'timesteps'
-		meantimesteps.sort()
-#debug		print "meantimesteps=%s" % ( meantimesteps )
-
-
-		for t in meantimesteps:						# foreach timestep in the first RUN_DIR...
-			samples=[ ]						
-			for RUN_DIR in RUN_DIRS:
-				DATAkey = param + '~~' + RUN_DIR		# for convenience so we dont have to keep specifying it manually
-
-				if t in DATA[ DATAkey ]:			# if the RUN_DIR has a value for the timestep we're interested in (in all non-pathological cases this will be true 100% of the time)...
-					samples.append( float(DATA[ DATAkey ][t]) )	
-				else:
-					print "* Warning: run/ directory '%s' does not have timestep %s -- not including it in any averages for timestep %s." % ( RUN_DIR, t, t )
-
-			DATA[ param + '~~AVERAGE' ][t] = sum(samples ) / len(samples)				# store the average into the DATA meta-dictionary
-			if flag_plotErrorbars: DATA[ param + '~~AVERAGE_STDERR'  ][t] =  sample_stderr( samples ) 	# store the stderr into DATA meta-dictionary
-
-#			print "DATA[%s~~AVERAGE][%s]=%s" % ( param, t, DATA[param + '~~AVERAGE'][t] )
-##########################################################################################################################################
-# Okay, we've made out DATA dictionary with all params/runs, param averages, and param stderrs.
-# Now Lets Plot!
-##########################################################################################################################################
-
-# First, build a definitive lists of all timesteps we have in our DATA meta-dictionary
-print "- MAXTIMESTEP = %s" % ( MAXTIMESTEP )
-timesteps=[ 1 ]
-
-timesteps.extend( range(MINSTATFREQ, MAXTIMESTEP+MINSTATFREQ, MINSTATFREQ) )
-o = open( tempfilename , 'w' )			# open a tempfile at /tmp/,<pid>.plt
-
-# print the header for the tempfile
-
-# Format for the tempfile is:  timestep param1run1 param1run2 param1run3 param2run1 param2run3 param2run3 param1AVR param1STDERR param2AVR param2STDERR
-# In words: param1 comes, then param2 comes, then param1 AVR/STDERR and param2 AVR/STDERR
-tempcol=2
-for param in PARAMS:
-	for RUN_DIR in RUN_DIRS:
-		o.write( "# col %s: param='%s' dir=%s\n" % ( tempcol, param, RUN_DIR ) )
-		tempcol += 1
-
-if flag_plotMean:
-	for param in PARAMS:
-		o.write( "# col %s: param='%s' AVERAGE\n" % ( tempcol, param ) )
-		tempcol += 1
-		if flag_plotErrorbars:
-			o.write( "# col %s: param='%s' STDERR\n" % ( tempcol, param ) )
-			tempcol += 1
-
-# for archival purposes write the gnuplot program to the top of the line
-o.write( ("\n%s\n-----\n%s\n------\n%s\n" % (GNUPLOT_SETTINGS, GET_GNUPLOT_DYNAMIC_SETTINGS(), GET_GNUPLOT_PLOTSTRING())).replace('\n', '\n#').rstrip('#') )
-
-########################## finished printing the header for the tempfile.  Now lets print the actual data!
-for t in timesteps:
-	line_to_write = [ '%s\t' % ( t ) ]				# each line begins with the timestep
-	for param in PARAMS:	
-		for RUN_DIR in RUN_DIRS:
-			DATAkey="%s~~%s" % ( param, RUN_DIR )		# so we don't have to keep making this
-			if t not in DATA[ DATAkey ]:			# if there is no value for timestep t...put a question mark there
-				line_to_write.append( '?\t' )
-			else:
-				line_to_write.append( '%s\t' % ( DATA[ DATAkey ][t] ) )
-
-	if flag_plotMean:						# put the averages after all of the RUN_DIR values, if we're doing that.
-		for param in PARAMS:
-			line_to_write.append( '%s\t' % (DATA[ param + '~~AVERAGE' ][t]) )
-			if flag_plotErrorbars: line_to_write.append( '%s\t' % (DATA[ param + '~~AVERAGE_STDERR' ][t]) )
-				
-	line_to_write[-1] = line_to_write[-1].rstrip("\t")			# strip the final tab from the line.		
-	o.write( "".join(line_to_write) + "\n" )
-
-o.close()
-print "Finished writing to '%s'." % ( tempfilename )
-
-# Plot the unsmoothed
-gnufile = open( gnufilename, 'w' ) 
-gnufile.write( "%s\n%s\n%s\n%s\n" % ( GNUPLOT_SETTINGS, GET_GNUPLOT_DYNAMIC_SETTINGS(), GET_GNUPLOT_PLOTSTRING()[0], GET_GNUPLOT_END_SETTINGS() ) )
-gnufile.close()
-os.system( 'gnuplot '+ gnufilename )
-
-if flag_plotSmooth:		# Second, plot the smoothed in a new window (if we're doing that)
-	GNUPLOT_TOPRIGHT_LABEL.append( "Smoothed with '%s'" % (GNUPLOT_SMOOTHING_FUNCTION) )
-	gnufileS = open( gnufilename + 'S', 'w' )
-	gnufileS.write( "%s\n%s\n%s\n%s\n" % ( GNUPLOT_SETTINGS, GET_GNUPLOT_DYNAMIC_SETTINGS(), GET_GNUPLOT_PLOTSTRING()[1], GET_GNUPLOT_END_SETTINGS() ) )
-	gnufileS.close()
-	os.system( 'gnuplot '+ gnufilename + 'S' )
-"""
 print "Done!"
