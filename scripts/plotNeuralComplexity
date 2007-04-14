@@ -28,9 +28,9 @@ set style line 1 linetype 1 linewidth 1.5 pointsize 1.0 # 1st colored meanline/m
 set style line 2 linetype 2 linewidth 1.5 pointsize 1.0 # 2nd colored meanline/meanpoint
 set style line 3 linetype 3 linewidth 1.5 pointsize 1.0 # 3rd colored meanline/meanpoint
 
-set style line 501 linetype 1 linewidth 1.5 			# 1st colored Whisker
-set style line 502 linetype 2 linecolor linewidth 1.5		# 2nd colored Whisker
-set style line 503 linetype 3 linecolor linewidth 1.5 		# 3rd colored Whisker
+set style line 501 linetype 1 linewidth 1.5		# 1st colored Whisker
+set style line 502 linetype 2 linewidth 1.5		# 2nd colored Whisker
+set style line 503 linetype 3 linewidth 1.5 		# 3rd colored Whisker
 
 set border 15 linetype 501 linewidth 0
 set border 15 linetype 502 linewidth 0
