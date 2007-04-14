@@ -525,7 +525,12 @@ print "- plotPoints=%s plotMean=%s plotErrorbars=%s plotWhiskers=%s plotLegend=%
 print "- plotMeanAverage=%s plotErrorbarsAverage=%s plotWhiskersAverage=%s" % ( flag_plotMean_AVERAGE, flag_plotErrorbars_AVERAGE, flag_plotWhiskers_AVERAGE )
 print "- plotAll=%s plotProcessing=%s plotInput=%s" % ( flag_plotAll, flag_plotProcessing, flag_plotInput )
 
-averagetimestepinterval = get_bestRecentBrainFunctionRecordFrequency( RUN_DIRS['bestRecent'][0]  )
+if len(RUN_DIRS['bestRecent']): averagetimestepinterval = get_bestRecentBrainFunctionRecordFrequency( RUN_DIRS['bestRecent'][0]  )
+elif: len(RUN_DIRS['Recent']): averagetimestepinterval = get_bestRecentBrainFunctionRecordFrequency( RUN_DIRS['Recent'][0]  )
+else:
+	print "* Error: Everything is empty!"
+	sys.exit(1)
+
 print "- AverageInterval=%s" % (averagetimestepinterval),
 
 
