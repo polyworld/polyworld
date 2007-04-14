@@ -18,8 +18,8 @@ set key at screen 1,1 right horizontal spacing 1
 set xlabel 'Timestep' font 'Times,15'
 set ylabel 'Neural Complexity' font 'Times,15'
 set grid
-set style fill solid 0.25		# this number specifies the opacity of the filled in box.
-set boxwidth 0.6 relative		# 1.0 is the whisker-boxes touching
+set style fill solid 0.3		# this number specifies the opacity of the filled in box.
+set boxwidth 0.50 relative		# 1.0 is the whisker-boxes touching
 set datafile missing '?'	# unknown values are '?'
 #set mxtics 5            # make small little tics along the x-axis
 
@@ -28,9 +28,13 @@ set style line 1 linetype 1 linewidth 1.5 pointsize 1.0 # 1st colored meanline/m
 set style line 2 linetype 2 linewidth 1.5 pointsize 1.0 # 2nd colored meanline/meanpoint
 set style line 3 linetype 3 linewidth 1.5 pointsize 1.0 # 3rd colored meanline/meanpoint
 
-set style line 501 linetype 1 linewidth 1 			# 1st colored Whisker
-set style line 502 linetype 2 linewidth 1 			# 2nd colored Whisker
-set style line 503 linetype 3 linewidth 1 			# 3rd colored Whisker
+set style line 501 linetype 1 linewidth 1.5 			# 1st colored Whisker
+set style line 502 linetype 2 linecolor linewidth 1.5		# 2nd colored Whisker
+set style line 503 linetype 3 linecolor linewidth 1.5 		# 3rd colored Whisker
+
+set border 15 linetype 501 linewidth 0
+set border 15 linetype 502 linewidth 0
+set border 15 linetype 503 linewidth 0
 
 set style line 51 linetype 1 linewidth 3			# 1st Whisker median
 set style line 52 linetype 2 linewidth 3			# 2nd Whisker median
@@ -55,7 +59,7 @@ set style line 102 lc rgb "black" linewidth 3			# AVERAGE Whisker's median
 
 # Default plotting stats
 flag_plotWhiskerbars=True
-flag_plotSmooth=True
+flag_plotSmooth=False
 GNUPLOT_SMOOTHING_FUNCTION='csplines' 		# reasonable smoothing options are: csplines, acsplines, bezier, sbezier
 inputplotfilename='AvrComplexity.plt'
 outputfilenameGNU="/tmp/,plotNeuralComplexity_" + str(os.getpid()) + ".gnuplot"
@@ -91,9 +95,9 @@ flag_plotWhiskers		= False
 flag_plotWhiskers_AVERAGE	= False
 flag_plotMean_AVERAGE		= False
 flag_plotErrorbars_AVERAGE	= False
-flag_plotProcessing=False
-flag_plotInput=False
-flag_plotAll=False
+flag_plotProcessing		= False
+flag_plotInput			= False
+flag_plotAll			= False
 flag_multiplot 			= False
 ###############
 numplotsmade=0
@@ -574,33 +578,25 @@ for whichrecent in ('bestRecent','Recent'):
 		tempfile.flush()
 	tempfile.close()
 
-#tempfilename='/tmp/,plotNeuralComplexity_%s.plt' % ( os.getpid() )		# this file will contain the raw data
-	
 print "- maxtimestep=%s" % ( MAXTIMESTEP )
-outputcontents = [ GNUPLOT_SETTINGS ]
+
+# Okay, now we've finished creating our data for the meta-means, now lets make our .gnuplot file
+	
+outputcontents = [ GNUPLOT_SETTINGS ]	# begin our .gnuplot file with the static settings.
 
 for whichrecent in RUN_DIRS:
 	for rundir in RUN_DIRS[whichrecent]:
-#		print "rundir=%s" % ( rundir )
 		filename = rundir + '/brain/' + whichrecent + '/' + inputplotfilename
 		Avrfilename =  tempfilename + '.' + whichrecent
 
 		# plot the regular one
-#		outputcontents.append( GNUPLOT_SETTINGS )
 		outputcontents.append( GET_GNUPLOT_DYNAMIC_SETTINGS( whichrecent ) )
 		outputcontents.append( GET_GNUPLOT_PLOTSTRING(filename, Avrfilename) )
-	
-#		if flag_plotSmooth:		# now plot the smoothed one (if we're doing that)
-#			outputcontents.append( GNUPLOT_SETTINGS )
- #       		GNUPLOT_TOPRIGHT_LABEL.append( "Smoothed with '%s'" % (GNUPLOT_SMOOTHING_FUNCTION) )
-#			outputcontents.append( GET_GNUPLOT_DYNAMIC_SETTINGS( whichrecent ) )
-#			outputcontents.append( GET_GNUPLOT_PLOTSTRING_SMOOTH(filename, Avrfilename) )
-#			GNUPLOT_TOPRIGHT_LABEL.pop(-1)	# take off the smoothed
 
 	outputcontents.append( GET_GNUPLOT_END_SETTINGS() )
 
 
-if flag_plotSmooth:
+if flag_plotSmooth:	# We've finished all of the regular plots, now to do the smoothed plots (if we're doing that)
 	outputcontents.append("reset")	# clear everything
 	outputcontents.append( GNUPLOT_SETTINGS )	# load the old settings back
         GNUPLOT_TOPRIGHT_LABEL.append( "Smoothed with '%s'" % (GNUPLOT_SMOOTHING_FUNCTION) )
