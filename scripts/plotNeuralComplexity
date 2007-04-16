@@ -58,7 +58,7 @@ set style line 102 linetype -1 linewidth 3			# AVERAGE Whisker's median
 
 # Default plotting stats
 flag_plotWhiskerbars=True
-flag_plotSmooth=False
+flag_plotSmooth=True
 GNUPLOT_SMOOTHING_FUNCTION='csplines' 		# reasonable smoothing options are: csplines, acsplines, bezier, sbezier
 inputplotfilename='AvrComplexity.plt'
 outputfilenameGNU="/tmp/,plotNeuralComplexity_" + str(os.getpid()) + ".gnuplot"
@@ -66,13 +66,15 @@ outputfilenameGNU="/tmp/,plotNeuralComplexity_" + str(os.getpid()) + ".gnuplot"
 GNUPLOT_MULTIPLOTSETTINGS="""
 set key at screen 1,1 right horizontal spacing 1	# even though this is already set in the regular GNUPLOT settings, you have to do it again here -- you just do.
 set bar 0.2             # if we are going to print errorbars, make smaller horizontal knobs on the ends.
-#set mxtics 5            # make small little tics along the x-axis
 set grid noxtics	# turn off the grid on the xtics, it just creates clutter anyway
 ###
-set tmargin 1.5
+set tmargin 1.0
+set bmargin 0.8
+set xtics scale 0.0 offset 0,0.5
+#set ytics scale 0.1
+set ytics autofreq
 #set format y ''
 #set format x ''
-set xtics scale 0.0				# no xtics, they get in the way
 ###
 unset xlabel
 unset ylabel
@@ -130,7 +132,7 @@ OPTIONS
 
        -p      Draw the points that make up the '-n' mean line(s). (default off)
 
-       -MXxY   Multiplot putting each run/ directory on it's own graph.  (default off)
+       -MXxY   Multiplot putting each run/ directory on it's own graph.  Does not plot -WNE. (default off)
 
        -A      Plot NeuralComplexity across 'All' neurons. (default off)
 
@@ -140,8 +142,28 @@ OPTIONS
 
 	"""
 	sys.exit(1)
+####################################################################################
+####################################################################################
+####################################################################################
+def CONVERT_TO_MULTIPLOT( plotstring ):
+	global inputplotfilename, tempfilename
 
-####################################
+	mp_plotstring = []
+	mp_plotstring.append('set autoscale')
+	for i in range(len(plotstring)):
+		if tempfilename in plotstring[i] or plotstring[i] == '':
+			plotstring.pop(i)		# remove any lines about the AVERAGE
+
+	for i in range(len(plotstring)):
+		plotfilename = re.findall("^\'[^\']*%s\'" % (inputplotfilename) ,plotstring[i])[0].strip("'")
+		minititle = plotfilename.replace("/brain/Recent/" + inputplotfilename,'').replace("/brain/bestRecent/" + inputplotfilename,'')	# strip /brain/bestRecent/AvrComplexity.plt or /brain/Recent/AvrComplexity.plt.
+		mp_plotstring.append( 'set title "%s" offset 0,-1' % ( minititle ) )
+
+		plotstring[i] = 'plot ' + plotstring[i]
+#		print "%s: %s" % (i, plotstring[i])
+		mp_plotstring.append( plotstring[i] )
+
+	return '\n'.join( mp_plotstring )
 ####################################################################################
 # In addition to returning the median, get_median() also returns the upper and lower half of the list
 # Note that this function ASSUMES THE LIST IS ALREADY SORTED.
@@ -188,7 +210,7 @@ def GET_GNUPLOT_PLOTSTRING_SMOOTH( filename, Avrfilename ):
 		for i in range(0, len(rawarray) ):
 			# make sure that it's not candlesticks, not yerrorbars, and (is an averageline OR is a meanline) and only using #:#
 			if 'candlesticks' not in rawarray[i] and 'yerrorbars' not in rawarray[i] and ('meta-mean' in rawarray[i] or flag_plotMean) and re.search( 'using [0-9]+:[0-9]+[^:]', rawarray[i] ):
-				print "- smoothing: %s" % ( rawarray[i] )
+#				print "- smoothing: %s" % ( rawarray[i] )
 				rawarray[i] = rawarray[i].rstrip(', ')
 				rawarray[i] += " smooth %s" % (GNUPLOT_SMOOTHING_FUNCTION )
 
@@ -212,7 +234,7 @@ def GET_GNUPLOT_DYNAMIC_SETTINGS( RecentOrbestRecent ):
 	numplotsmade += 1
 
 
-	settings.append( 'set title "%s -- %s"' % (PASSED_DIRECTORY, RecentOrbestRecent) )	# set the title
+	if not flag_multiplot: settings.append( 'set title "%s -- %s"' % (PASSED_DIRECTORY, RecentOrbestRecent) )	# set the title
 
 	# Define our ylabel
 	ylabel = "NeuralComplexity: "
@@ -241,7 +263,7 @@ def GET_GNUPLOT_DYNAMIC_SETTINGS( RecentOrbestRecent ):
         settings.append( 'set label "%s" at screen 0.001,0.98 left' % ('\\n'.join(GNUPLOT_TOPRIGHT_LABEL)) )
 
 	if flag_multiplot:
-		settings.append( "set multiplot layout %s, %s title '%s'" % ( multiplotDimY, multiplotDimX, PASSED_DIRECTORY ) ) 
+		settings.append( "set multiplot layout %s, %s title '%s -- %s'" % ( multiplotDimY, multiplotDimX, PASSED_DIRECTORY, RecentOrbestRecent ) ) 
 		settings.append( GNUPLOT_MULTIPLOTSETTINGS )	# put in the multiplot settings on top of the regular settings
 
 	return '\n'.join(settings)
@@ -471,7 +493,8 @@ def check_parameters( argv ):
 			flag_plotInput = True
 		elif '-M' in opt:
 			flag_multiplot = True
-			multiplotDimX, multiplotDimY = map(int, (opt[1]).split('x'))
+			try: multiplotDimX, multiplotDimY = map(int, (opt[1]).split('x'))
+			except ValueError: print_usage_and_exit()
 		else:
 			print "* Error: Do not know argument '%s'" % (opt)
 			print_usage_and_exit()
@@ -495,20 +518,20 @@ def check_parameters( argv ):
 		print "* Error: '%s' isn't a directory." % ( PASSED_DIRECTORY )
 		print_usage_and_exit()
 
-	for i in RUN_DIRS:
-		if os.path.isfile( PASSED_DIRECTORY + '/brain/'+ i + '/' + inputplotfilename ): 	# if 'directory' is itself a run/ directory, just use that.
-			RUN_DIRS[i].append( PASSED_DIRECTORY )
+	for whichrecent in RUN_DIRS:
+		if os.path.isfile( PASSED_DIRECTORY + '/brain/'+ whichrecent + '/' + inputplotfilename ): 	# if 'directory' is itself a run/ directory, just use that.
+			RUN_DIRS[whichrecent].append( PASSED_DIRECTORY )
 
 		else:						# 'directory' is a directory, but is NOT a run/ directory itself.  Is it a list of run directories?
 			for potential_rundir in os.listdir( PASSED_DIRECTORY ):
-				if os.path.isfile( PASSED_DIRECTORY + '/' + potential_rundir + '/brain/' + i + '/' + inputplotfilename ):
-					RUN_DIRS[i].append( PASSED_DIRECTORY + '/' + potential_rundir )	# if potential_directory is a run/ directory, add it.
+				if os.path.isfile( PASSED_DIRECTORY + '/' + potential_rundir + '/brain/' + whichrecent + '/' + inputplotfilename ):
+					RUN_DIRS[whichrecent].append( PASSED_DIRECTORY + '/' + potential_rundir )	# if potential_directory is a run/ directory, add it.
 
-		if flag_multiplot and len(RUN_DIRS[i]) > multiplotDimX * multiplotDimY:		# if multiplot is turned on only go up to dimX*dimY
-			print "* Warning: There are %s run/ directories in %s, but multiplot can only plot %s plots -- only using the first %s." % ( len(RUN_DIRS[i]), PASSED_DIRECTORY, multiplotDimX * multiplotDimY, multiplotDimX * multiplotDimY )
-			RUN_DIRS[i] = RUN_DIRS[i][: (multiplotDimX * multiplotDimY)]
+		if flag_multiplot and len(RUN_DIRS[whichrecent]) > multiplotDimX * multiplotDimY:		# if multiplot is turned on only go up to dimX*dimY
+			print "* Warning: There are %s run/ directories in %s, but multiplot can only plot %s plots -- only using the first %s." % ( len(RUN_DIRS[whichrecent]), PASSED_DIRECTORY, multiplotDimX * multiplotDimY, multiplotDimX * multiplotDimY )
+			RUN_DIRS[whichrecent] = RUN_DIRS[whichrecent][: (multiplotDimX * multiplotDimY)]
 
-		print "%sRUN_DIRS=%s" % ( i, RUN_DIRS[i] )
+		print "RUN_DIRS[%s]=%s" % ( whichrecent, RUN_DIRS[whichrecent] )
 
 	if not RUN_DIRS['bestRecent'] and not RUN_DIRS['Recent']:
 		print "* Error: There were no Polyworld run/ directories in %s." % ( PASSED_DIRECTORY )
@@ -626,10 +649,15 @@ for whichrecent in RUN_DIRS:
 		filename = rundir + '/brain/' + whichrecent + '/' + inputplotfilename
 		plotstring.append( GET_GNUPLOT_PLOTSTRING(filename, '') )
 
-	Avrfilename =  tempfilename + '.' + whichrecent
-	plotstring.append( GET_GNUPLOT_PLOTSTRING('', Avrfilename) )		# plot the Averages last because they are important and we want them to be laid on top of the graph
+	if flag_plotWhiskers_AVERAGE or flag_plotMean_AVERAGE or flag_plotErrorbars_AVERAGE:
+		Avrfilename =  tempfilename + '.' + whichrecent
+		plotstring.append( GET_GNUPLOT_PLOTSTRING('', Avrfilename) )		# plot the Averages last because they are important and we want them to be laid on top of the graph
 
-	outputcontents.append( 'plot ' + ', '.join(plotstring).rstrip(', ') )
+	if flag_multiplot:
+		multiplot_plotstring = CONVERT_TO_MULTIPLOT( plotstring )
+		outputcontents.append( multiplot_plotstring )
+	else:
+		outputcontents.append( 'plot ' + ', '.join(plotstring) )
 
 	outputcontents.append( GET_GNUPLOT_END_SETTINGS() )
 
@@ -647,11 +675,19 @@ if flag_plotSmooth:	# We've finished all of the regular plots, now to do the smo
 			filename = rundir + '/brain/' + whichrecent + '/' + inputplotfilename
 			plotstring.append( GET_GNUPLOT_PLOTSTRING_SMOOTH(filename, '') )
 
-		Avrfilename =  tempfilename + '.' + whichrecent
-		plotstring.append( GET_GNUPLOT_PLOTSTRING_SMOOTH('', Avrfilename) )
 
-		outputcontents.append( 'plot ' + ', '.join(plotstring) )
-		outputcontents.append( GET_GNUPLOT_END_SETTINGS() )
+        if flag_plotWhiskers_AVERAGE or flag_plotMean_AVERAGE or flag_plotErrorbars_AVERAGE:
+                Avrfilename =  tempfilename + '.' + whichrecent
+                plotstring.append( GET_GNUPLOT_PLOTSTRING('', Avrfilename) )            # plot the Averages last because they are important and we want them to be laid on top of the graph
+
+        if flag_multiplot:
+                multiplot_plotstring = CONVERT_TO_MULTIPLOT( plotstring )
+                outputcontents.append( multiplot_plotstring )
+        else:
+                outputcontents.append( 'plot ' + ', '.join(plotstring) )
+
+        outputcontents.append( GET_GNUPLOT_END_SETTINGS() )
+
 
 outputfileGNU=open( outputfilenameGNU, 'w' )
 outputfileGNU.write( '\n'.join(outputcontents) )
