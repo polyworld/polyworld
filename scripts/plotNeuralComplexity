@@ -16,7 +16,6 @@ set termoption noenhanced
 set key outside         # if we have a legend, put it outside the graph
 set key at screen 1,1 right horizontal spacing 1
 set xlabel 'Timestep' font 'Times,15'
-set ylabel 'Neural Complexity' font 'Times,15'
 set grid
 set style fill solid 0.3		# this number specifies the opacity of the filled in box.
 set boxwidth 0.50 relative		# 1.0 is the whisker-boxes touching
@@ -44,15 +43,15 @@ set style line 54 linetype 1 linewidth 1 pointtype 0 		# 1st meanline's stderr
 set style line 55 linetype 2 linewidth 1 pointtype 0 		# 2nd meanline's stderr
 set style line 56 linetype 3 linewidth 1 pointtype 0 		# 3rd meanline's stderr
 
-set style line 96 lc rgb "gray" linewidth 1			# Whisker when there is no legend
-set style line 97 lc rgb "gray" linewidth 3 			# Whisker's median when there is no legend
-set style line 98 lc rgb "gray" linewidth 1 pointtype 0		# meanline's STDERR bars when there is no legend
-set style line 99 lc rgb "gray" linewidth 1 pointsize 1.0	# meanline/meanpoint when there is no legend
+set style line 96 linetype 0 linewidth 1			# Whisker when there is no legend
+set style line 97 linetype 0 linewidth 3 			# Whisker's median when there is no legend
+set style line 98 linetype 0 linewidth 1 pointtype 0		# meanline's STDERR bars when there is no legend
+set style line 99 linetype 0 linewidth 1 pointsize 1.0	# meanline/meanpoint when there is no legend
 
-set style line 100 lc rgb "black" linewidth 3 pointsize 2.0	# AVERAGE meanline/meanpoint
-set style line 101 lc rgb "black" linewidth 1 pointtype 0	# AVERAGE meanline's stderr ars
-set style line 103 lc rgb "black" linewidth 1.5			# AVERAGE Whisker
-set style line 102 lc rgb "black" linewidth 3			# AVERAGE Whisker's median
+set style line 100 linetype -1 linewidth 3 pointsize 2.0	# AVERAGE meanline/meanpoint
+set style line 101 linetype -1 linewidth 1 pointtype 0	# AVERAGE meanline's stderr ars
+set style line 103 linetype -1 linewidth 1.5			# AVERAGE Whisker
+set style line 102 linetype -1 linewidth 3			# AVERAGE Whisker's median
 
 ### END linestyle verbosity
 """
@@ -63,8 +62,6 @@ flag_plotSmooth=False
 GNUPLOT_SMOOTHING_FUNCTION='csplines' 		# reasonable smoothing options are: csplines, acsplines, bezier, sbezier
 inputplotfilename='AvrComplexity.plt'
 outputfilenameGNU="/tmp/,plotNeuralComplexity_" + str(os.getpid()) + ".gnuplot"
-
-width_of_meanlines=2
 
 GNUPLOT_MULTIPLOTSETTINGS="""
 set key at screen 1,1 right horizontal spacing 1	# even though this is already set in the regular GNUPLOT settings, you have to do it again here -- you just do.
@@ -82,9 +79,8 @@ unset ylabel
 set border 10
 ###
 """
-COLORED_LINE_WIDTH=1.5
-IDENTICAL_LINE_WIDTH=0.8
-##################
+
+flag_have_previously_plotted_a_file = False
 tempfilename='/tmp/,plotNeuralComplexity_%s.plt' % ( os.getpid() )		# this file will contain the raw data
 gnufilename='/tmp/,plotNeuralComplexity_%s.gnuplot' % ( os.getpid() )	# this file will contain gnuplot commands
 flag_plotPoints 		= False
@@ -122,6 +118,7 @@ OPTIONS
                -l, all lines will be printed in the same identical gray color. (default off)
        
        -w/W    Box-and-Whiskers plot. 'w' signifies display each run as a whiskers plot. 'W' displays the averages all runs as a whiskers plot. (default off)
+               '-W' is only useful if you are plotting over >=5 run/ directories. 
 
        -n/N    The mean of each param will be computed and drawn as a line. (-n: default on, -N: default off)
                If the timestep interval in 'AvrComplexity.plt' is different across runs, the mean will be computed for the timesteps
@@ -131,7 +128,7 @@ OPTIONS
 
        -e/E    Standard Error bars for the mean will be drawn. (default off)
 
-       -p      Draw the 'meanpoints' (default off)
+       -p      Draw the points that make up the '-n' mean line(s). (default off)
 
        -MXxY   Multiplot putting each run/ directory on it's own graph.  (default off)
 
@@ -153,6 +150,9 @@ def get_median( listofnumbers ):
 
         length=len(listofnumbers)
         lenover2=int(length / 2)
+
+	listofnumbers = map( float, listofnumbers )	# convert them all to float
+	listofnumbers.sort()				# sort them.
 
 #	print "- length=%s lenover2=%s" % ( length, lenover2)
 	
@@ -189,7 +189,11 @@ def GET_GNUPLOT_PLOTSTRING_SMOOTH( filename, Avrfilename ):
 			# make sure that it's not candlesticks, not yerrorbars, and (is an averageline OR is a meanline) and only using #:#
 			if 'candlesticks' not in rawarray[i] and 'yerrorbars' not in rawarray[i] and ('meta-mean' in rawarray[i] or flag_plotMean) and re.search( 'using [0-9]+:[0-9]+[^:]', rawarray[i] ):
 				print "- smoothing: %s" % ( rawarray[i] )
+				rawarray[i] = rawarray[i].rstrip(', ')
 				rawarray[i] += " smooth %s" % (GNUPLOT_SMOOTHING_FUNCTION )
+
+		if len( rawarray ) == 1:
+			rawarray[0] += ', '
 
 	smoothstring =	', '.join( rawarray )
 
@@ -200,6 +204,7 @@ def GET_GNUPLOT_DYNAMIC_SETTINGS( RecentOrbestRecent ):
 	global flag_plotPoints, flag_plotLegend, flag_multiplot, multiplotDimX, multiplotY
 	global RUN_DIRS, PARAMS, IDENTICAL_LINE_WIDTH, GNUPLOT_TOPRIGHT_LABEL, MAXTIMESTEP
 	global numplotsmade, GNUPLOT_TERMINAL, flag_plotMean, flag_plotMean_AVERAGE
+	global flag_plotAll, flag_plotProcessing, flag_plotInput
 	settings = [ ]
 
 	
@@ -208,6 +213,14 @@ def GET_GNUPLOT_DYNAMIC_SETTINGS( RecentOrbestRecent ):
 
 
 	settings.append( 'set title "%s -- %s"' % (PASSED_DIRECTORY, RecentOrbestRecent) )	# set the title
+
+	# Define our ylabel
+	ylabel = "NeuralComplexity: "
+	if flag_plotAll: ylabel += 'All, '
+	if flag_plotProcessing: ylabel += 'Processing, '
+	if flag_plotInput: ylabel += 'Input, '
+	settings.append("set ylabel '%s' font 'Times,15'" % (ylabel.rstrip(', ')) )	# take off the trailing coma and space before using.
+	# done defining the ylabel
 
 	if not flag_plotLegend:
 		settings.append("unset key")					# if no legend, unset the legend
@@ -246,33 +259,43 @@ def GET_GNUPLOT_END_SETTINGS():
 #####################################
 
 def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename ):
-	global RUN_DIRS, flag_plotLegend, flag_plotWhiskers, flag_plotMean, flag_plotErrorbars, flag_plotSmooth, flag_plotWhiskers_AVERAGE, flag_plotMean_AVERAGE, flag_plotErrorbars_AVERAGE, flag_plotAll, flag_plotProcessing, flag_plotInput
+	global RUN_DIRS, flag_plotLegend, flag_plotWhiskers, flag_plotMean, flag_plotErrorbars, flag_plotSmooth, flag_plotWhiskers_AVERAGE, flag_plotMean_AVERAGE, flag_plotErrorbars_AVERAGE, flag_plotAll, flag_plotProcessing, flag_plotInput, flag_have_previously_plotted_a_file
 
 
 	plotstring = [ ]
-	plotstringsmooth=[ ]
 	
 	if filename:
 		if flag_plotWhiskers:	# are we doing the whiskers for each one?
+			if flag_have_previously_plotted_a_file:
+				Atitle, Ptitle, Ititle = ('','','')
+			else:
+				flag_have_previously_plotted_a_file = True
+				Atitle,Ptitle,Ititle=('All','Processing','Input')
+
 			if flag_plotLegend: temp = [ 501, 51, 502, 52, 503, 53 ]
 			else:	temp = [ 96, 97, 96, 97, 96, 97 ]
 
 			if flag_plotAll:	# and we're plotting the inputs...
-				plotstring.append("'%s' using 1:3:2:6:5 with candlesticks whiskerbars linestyle %s title 'All', '' using 1:4:4:4:4 with candlesticks linestyle %s notitle" % (filename, temp[0], temp[1] ))
+				plotstring.append("'%s' using 1:3:2:6:5 with candlesticks whiskerbars linestyle %s title '%s', '' using 1:4:4:4:4 with candlesticks linestyle %s notitle" % (filename, temp[0], Atitle, temp[1] ))
 				temp.pop(0)
 				temp.pop(0)
 
 			if flag_plotProcessing:	
-				plotstring.append("'%s' using 1:11:10:14:13 with candlesticks whiskerbars linestyle %s title 'Processing', '' using 1:12:12:12:12 with candlesticks linestyle %s notitle" % (filename, temp[0], temp[1] ))
+				plotstring.append("'%s' using 1:11:10:14:13 with candlesticks whiskerbars linestyle %s title '%s', '' using 1:12:12:12:12 with candlesticks linestyle %s notitle" % (filename, temp[0], Ptitle, temp[1] ))
 				temp.pop(0)
 				temp.pop(0)
 
 			if flag_plotInput:	
-				plotstring.append("'%s' using 1:19:18:22:21 with candlesticks whiskerbars linestyle %s title 'Input', '' using 1:20:20:20:20 with candlesticks linestyle %s notitle" % (filename, temp[0], temp[1] ))
+				plotstring.append("'%s' using 1:19:18:22:21 with candlesticks whiskerbars linestyle %s title '%s', '' using 1:20:20:20:20 with candlesticks linestyle %s notitle" % (filename, temp[0], Ititle, temp[1] ))
 				temp.pop(0)
 				temp.pop(0)
 
 		if flag_plotMean or flag_plotPoints:
+			if flag_have_previously_plotted_a_file:
+				Atitle, Ptitle, Ititle = ('','','')
+			else:			
+				flag_have_previously_plotted_a_file = True
+				Atitle,Ptitle,Ititle=('mean All','mean Processing','mean Input')
 
 			if flag_plotLegend: 
 				if flag_plotErrorbars: temp = [ 1, 54, 2, 55, 3, 56 ]
@@ -282,30 +305,29 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename ):
 				else: temp = [ 99, 99, 99 ]
 
 			if flag_plotAll:
-				plotstring.append("'%s' using 1:7 linestyle %s title 'mean All'" % (filename, temp[0]) )
+				plotstring.append("'%s' using 1:7 linestyle %s title '%s'" % (filename, temp[0], Atitle) )
 				temp.pop(0)
 				if flag_plotErrorbars: 
 					plotstring.append("'' using 1:7:8 with yerrorbars linestyle %s notitle" % (temp[0]))
 					temp.pop(0)
 			if flag_plotProcessing:
-				plotstring.append("'%s' using 1:15 linestyle %s title 'mean Pro'" % (filename, temp[0]) )
+				plotstring.append("'%s' using 1:15 linestyle %s title '%s'" % (filename, temp[0], Ptitle) )
 				temp.pop(0)
 				if flag_plotErrorbars: 
 					plotstring.append("'' using 1:15:16 with yerrorbars linestyle %s notitle" % (temp[0]))
 					temp.pop(0)
+
 			if flag_plotInput:
-				plotstring.append("'%s' using 1:23 linestyle %s title 'mean Inp'" % (filename, temp[0]) )
+				plotstring.append("'%s' using 1:23 linestyle %s title '%s'" % (filename, temp[0], Ititle) )
 				temp.pop(0)
 				if flag_plotErrorbars: 
 					plotstring.append("'' using 1:23:24 with yerrorbars linestyle %s notitle" % (temp[0]))
 					temp.pop(0)
 	
-			if flag_plotWhiskers:	# if we are plotting Whiskers, go back through the plotstring and remove some titles
-				for i in range(len(plotstring)):
-					if "title 'mean " in plotstring[i]: plotstring[i] = re.sub("title 'mean [^']*'", 'notitle' ,plotstring[i])
 	if Avrfilename:	
 		##### NOW FOR THE AVERAGES ###########
 		if flag_plotWhiskers_AVERAGE:	# are we doing the whiskers for the AVERAGE?
+
 			temp = [ 103, 102, 103, 102, 103, 102 ]
 	
 			if flag_plotAll:	# and we're plotting the inputs...
@@ -324,35 +346,33 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename ):
 				temp.pop(0)
 	
 		if flag_plotMean_AVERAGE:
-	
+                        if flag_plotWhiskers_AVERAGE:   # if we are plotting Whiskers, go back through the plotstring and remove some titles
+				Atitle, Ptitle, Ititle = ('', '', '')
+			else:
+				Atitle, Ptitle, Ititle = ('meta-mean All', 'meta-mean Pro', 'meta-mean Inp')
 			if flag_plotErrorbars_AVERAGE: temp = [ 100, 101, 100, 101, 100, 101 ]
 			else: temp = [ 100, 100, 100 ]
 	
 			if flag_plotAll:
-				plotstring.append("'%s' using 1:7 with lines linestyle %s title 'meta-mean All'" % (Avrfilename, temp[0]) )
+				plotstring.append("'%s' using 1:7 with lines linestyle %s title '%s'" % (Avrfilename, temp[0], Atitle) )
 				temp.pop(0)
 				if flag_plotErrorbars_AVERAGE: 
 					plotstring.append("'' using 1:7:8 with yerrorbars linestyle %s notitle" % (temp[0]))
 					temp.pop(0)
 			if flag_plotProcessing:
-				plotstring.append("'%s' using 1:15 with lines linestyle %s title 'meta-mean Pro'" % (Avrfilename, temp[0]) )
+				plotstring.append("'%s' using 1:15 with lines linestyle %s title '%s'" % (Avrfilename, temp[0], Ptitle) )
 				temp.pop(0)
 				if flag_plotErrorbars_AVERAGE: 
 					plotstring.append("'' using 1:15:16 with yerrorbars linestyle %s notitle" % (temp[0]))
 					temp.pop(0)
 			if flag_plotInput:
-				plotstring.append("'%s' using 1:23 with lines linestyle %s title 'meta-mean Inp'" % (Avrfilename, temp[0]) )
+				plotstring.append("'%s' using 1:23 with lines linestyle %s title '%s'" % (Avrfilename, temp[0], Ititle) )
 				temp.pop(0)
 				if flag_plotErrorbars_AVERAGE: 
 					plotstring.append("'' using 1:23:24 with yerrorbars linestyle %s notitle" % (temp[0]))
 					temp.pop(0)
-	
-			if flag_plotWhiskers_AVERAGE:	# if we are plotting Whiskers, go back through the plotstring and remove some titles
-				for i in range(len(plotstring)):
-					if "title 'meta-mean " in plotstring[i]: plotstring[i] = re.sub("title 'meta-mean [^']*'", 'notitle' ,plotstring[i])
-		
-	
-	plotstring = ', '.join(plotstring) + ','
+
+	plotstring = ', '.join(plotstring)
 	return plotstring
 	
 """
@@ -488,7 +508,7 @@ def check_parameters( argv ):
 			print "* Warning: There are %s run/ directories in %s, but multiplot can only plot %s plots -- only using the first %s." % ( len(RUN_DIRS[i]), PASSED_DIRECTORY, multiplotDimX * multiplotDimY, multiplotDimX * multiplotDimY )
 			RUN_DIRS[i] = RUN_DIRS[i][: (multiplotDimX * multiplotDimY)]
 
-		print "%sRUN_DIRS= %s" % ( i, RUN_DIRS[i] )
+		print "%sRUN_DIRS=%s" % ( i, RUN_DIRS[i] )
 
 	if not RUN_DIRS['bestRecent'] and not RUN_DIRS['Recent']:
 		print "* Error: There were no Polyworld run/ directories in %s." % ( PASSED_DIRECTORY )
@@ -521,9 +541,9 @@ def get_bestRecentBrainFunctionRecordFrequency( run_dir ):
 ### Real program begins here
 
 check_parameters( sys.argv[1:] )		# don't send it the first item in the sys.argv list because that's this programs filename
-print "- plotPoints=%s plotMean=%s plotErrorbars=%s plotWhiskers=%s plotLegend=%s" % ( flag_plotPoints, flag_plotMean, flag_plotErrorbars, flag_plotWhiskers, flag_plotLegend )
-print "- plotMeanAverage=%s plotErrorbarsAverage=%s plotWhiskersAverage=%s" % ( flag_plotMean_AVERAGE, flag_plotErrorbars_AVERAGE, flag_plotWhiskers_AVERAGE )
-print "- plotAll=%s plotProcessing=%s plotInput=%s" % ( flag_plotAll, flag_plotProcessing, flag_plotInput )
+#print "- plotPoints=%s plotMean=%s plotErrorbars=%s plotWhiskers=%s plotLegend=%s" % ( flag_plotPoints, flag_plotMean, flag_plotErrorbars, flag_plotWhiskers, flag_plotLegend )
+#print "- plotMeanAverage=%s plotErrorbarsAverage=%s plotWhiskersAverage=%s" % ( flag_plotMean_AVERAGE, flag_plotErrorbars_AVERAGE, flag_plotWhiskers_AVERAGE )
+#print "- plotAll=%s plotProcessing=%s plotInput=%s" % ( flag_plotAll, flag_plotProcessing, flag_plotInput )
 
 if len(RUN_DIRS['bestRecent']): averagetimestepinterval = get_bestRecentBrainFunctionRecordFrequency( RUN_DIRS['bestRecent'][0]  )
 elif len(RUN_DIRS['Recent']): averagetimestepinterval = get_bestRecentBrainFunctionRecordFrequency( RUN_DIRS['Recent'][0]  )
@@ -544,6 +564,10 @@ for whichrecent in RUN_DIRS:
 			if line.startswith('#'):	# if the line is a comment (begins with #)
 				continue;
 			line_array=line.split('\t')
+			if len( line_array ) < 24:
+				print "* Error: Did not find enough columns in file '%s'.  Only found %s columns." % ( filename, len(line_array) )
+				sys.exit(1)
+
 			t = int(line_array[0])
 			if t not in DATA[whichrecent]:
 				DATA[whichrecent][t] = {}
@@ -595,18 +619,17 @@ print "- maxtimestep=%s" % ( MAXTIMESTEP )
 outputcontents = [ GNUPLOT_SETTINGS ]	# begin our .gnuplot file with the static settings.
 
 for whichrecent in RUN_DIRS:
-
 	outputcontents.append( GET_GNUPLOT_DYNAMIC_SETTINGS( whichrecent ) )	# Make a different plot for Recent/bestRecent
-	plotstring = ['plot']
+	plotstring = []
+
 	for rundir in RUN_DIRS[whichrecent]:
 		filename = rundir + '/brain/' + whichrecent + '/' + inputplotfilename
-		# plot the regular one
-#		plotstring.append( GET_GNUPLOT_PLOTSTRING(filename, Avrfilename) )
 		plotstring.append( GET_GNUPLOT_PLOTSTRING(filename, '') )
-	Avrfilename =  tempfilename + '.' + whichrecent
-	plotstring.append( GET_GNUPLOT_PLOTSTRING('', Avrfilename) )
 
-	outputcontents.append( ' '.join(plotstring).rstrip(',') )
+	Avrfilename =  tempfilename + '.' + whichrecent
+	plotstring.append( GET_GNUPLOT_PLOTSTRING('', Avrfilename) )		# plot the Averages last because they are important and we want them to be laid on top of the graph
+
+	outputcontents.append( 'plot ' + ', '.join(plotstring).rstrip(', ') )
 
 	outputcontents.append( GET_GNUPLOT_END_SETTINGS() )
 
@@ -614,15 +637,20 @@ for whichrecent in RUN_DIRS:
 if flag_plotSmooth:	# We've finished all of the regular plots, now to do the smoothed plots (if we're doing that)
 	outputcontents.append("reset")	# clear everything
 	outputcontents.append( GNUPLOT_SETTINGS )	# load the old settings back
+	flag_have_previously_plotted_a_file = False		# this is to make our key come back on the smoothed plot
         GNUPLOT_TOPRIGHT_LABEL.append( "Smoothed with '%s'" % (GNUPLOT_SMOOTHING_FUNCTION) )
 
 	for whichrecent in RUN_DIRS:
+		outputcontents.append( GET_GNUPLOT_DYNAMIC_SETTINGS( whichrecent ) )
+		plotstring = []
 		for rundir in RUN_DIRS[whichrecent]:
 			filename = rundir + '/brain/' + whichrecent + '/' + inputplotfilename
-			Avrfilename =  tempfilename + '.' + whichrecent
-			outputcontents.append( GET_GNUPLOT_DYNAMIC_SETTINGS( whichrecent ) )
-		outputcontents.append( GET_GNUPLOT_PLOTSTRING_SMOOTH(filename, Avrfilename) )
+			plotstring.append( GET_GNUPLOT_PLOTSTRING_SMOOTH(filename, '') )
 
+		Avrfilename =  tempfilename + '.' + whichrecent
+		plotstring.append( GET_GNUPLOT_PLOTSTRING_SMOOTH('', Avrfilename) )
+
+		outputcontents.append( 'plot ' + ', '.join(plotstring) )
 		outputcontents.append( GET_GNUPLOT_END_SETTINGS() )
 
 outputfileGNU=open( outputfilenameGNU, 'w' )
