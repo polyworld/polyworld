@@ -36,6 +36,7 @@
 #define UniformPopulationEnergyPenalty 0
 
 #define UseLightForOpposingYawHack 0
+#define DirectYaw 0
 
 // Critter globals
 bool		critter::gClassInited;
@@ -752,7 +753,11 @@ float critter::Update(float moveFitnessParam, float speed2dpos)
 
     addx(dx);
     addz(dz);
+#if DirectYaw
+	setyaw( fBrain->Yaw() * 360.0 );
+#else
     addyaw(dyaw);
+#endif
     
     float energyused = fBrain->Eat()   * gEat2Energy
                      + fBrain->Mate()  * gMate2Energy
