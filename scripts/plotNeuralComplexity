@@ -70,6 +70,7 @@ set grid noxtics	# turn off the grid on the xtics, it just creates clutter anywa
 ###
 set tmargin 1.0
 set bmargin 0.8
+set lmargin 6.0
 set xtics scale 0.0 offset 0,0.5
 #set ytics scale 0.1
 set ytics autofreq
@@ -149,14 +150,28 @@ def CONVERT_TO_MULTIPLOT( plotstring ):
 	global inputplotfilename, tempfilename
 
 	mp_plotstring = []
-	mp_plotstring.append('set autoscale')
-	for i in range(len(plotstring)):
-		if tempfilename in plotstring[i] or plotstring[i] == '':
-			plotstring.pop(i)		# remove any lines about the AVERAGE
+#	mp_plotstring.append('set autoscale xfix')
+	try:
+		for i in range(len(plotstring)):
+			if tempfilename in plotstring[i] or plotstring[i] == '':
+				plotstring.pop(i)		# remove any lines about the AVERAGE
+	except IndexError:
+		print "* Error: You didn't specify anything that multiplot can plot!"
+		sys.exit(1)
 
 	for i in range(len(plotstring)):
 		plotfilename = re.findall("^\'[^\']*%s\'" % (inputplotfilename) ,plotstring[i])[0].strip("'")
-		minititle = plotfilename.replace("/brain/Recent/" + inputplotfilename,'').replace("/brain/bestRecent/" + inputplotfilename,'')	# strip /brain/bestRecent/AvrComplexity.plt or /brain/Recent/AvrComplexity.plt.
+
+		# this little section makes the x-axis pretty
+		plotfile = open( plotfilename )
+		finaltimestep_of_this_miniplot = plotfile.readlines()[-1].split("\t")[0]
+		print "finaltimestep=%s" % ( finaltimestep_of_this_miniplot )
+		mp_plotstring.append("set xrange [0:%s]" % (finaltimestep_of_this_miniplot) )
+		mp_plotstring.append("set xtics 0,%s,%s" % (finaltimestep_of_this_miniplot, finaltimestep_of_this_miniplot) )
+		# end section that makes the x-axis pretty
+
+		minititle = plotfilename.replace("/brain/Recent/" + inputplotfilename,'').replace("/brain/bestRecent/" + inputplotfilename,'')	# strip /brain/bestRecent/AvrComplexity.plt or /brain/Recent/AvrComplexity.plt
+		minititle = minititle.split('/')[-1]	# now only get the directory part
 		mp_plotstring.append( 'set title "%s" offset 0,-1' % ( minititle ) )
 
 		plotstring[i] = 'plot ' + plotstring[i]
@@ -214,8 +229,7 @@ def GET_GNUPLOT_PLOTSTRING_SMOOTH( filename, Avrfilename ):
 				rawarray[i] = rawarray[i].rstrip(', ')
 				rawarray[i] += " smooth %s" % (GNUPLOT_SMOOTHING_FUNCTION )
 
-		if len( rawarray ) == 1:
-			rawarray[0] += ', '
+#	print "rawarray=%s" % (rawarray)
 
 	smoothstring =	', '.join( rawarray )
 
@@ -263,7 +277,7 @@ def GET_GNUPLOT_DYNAMIC_SETTINGS( RecentOrbestRecent ):
         settings.append( 'set label "%s" at screen 0.001,0.98 left' % ('\\n'.join(GNUPLOT_TOPRIGHT_LABEL)) )
 
 	if flag_multiplot:
-		settings.append( "set multiplot layout %s, %s title '%s -- %s'" % ( multiplotDimY, multiplotDimX, PASSED_DIRECTORY, RecentOrbestRecent ) ) 
+		settings.append( "set multiplot layout %s, %s title '%s/ -- %s'" % ( multiplotDimY, multiplotDimX, PASSED_DIRECTORY, RecentOrbestRecent ) ) 
 		settings.append( GNUPLOT_MULTIPLOTSETTINGS )	# put in the multiplot settings on top of the regular settings
 
 	return '\n'.join(settings)
@@ -653,6 +667,8 @@ for whichrecent in RUN_DIRS:
 		Avrfilename =  tempfilename + '.' + whichrecent
 		plotstring.append( GET_GNUPLOT_PLOTSTRING('', Avrfilename) )		# plot the Averages last because they are important and we want them to be laid on top of the graph
 
+        for dummycounter in range( plotstring.count('') ): plotstring.remove('')        # remove all blank entries from the plotstring.  They shouldnt have cropped in, but lets be sure.
+
 	if flag_multiplot:
 		multiplot_plotstring = CONVERT_TO_MULTIPLOT( plotstring )
 		outputcontents.append( multiplot_plotstring )
@@ -679,6 +695,8 @@ if flag_plotSmooth:	# We've finished all of the regular plots, now to do the smo
         if flag_plotWhiskers_AVERAGE or flag_plotMean_AVERAGE or flag_plotErrorbars_AVERAGE:
                 Avrfilename =  tempfilename + '.' + whichrecent
                 plotstring.append( GET_GNUPLOT_PLOTSTRING('', Avrfilename) )            # plot the Averages last because they are important and we want them to be laid on top of the graph
+
+        for dummycounter in range( plotstring.count('') ): plotstring.remove('')        # remove all blank entries from the plotstring.  They shouldnt have cropped in, but lets be sure.
 
         if flag_multiplot:
                 multiplot_plotstring = CONVERT_TO_MULTIPLOT( plotstring )
