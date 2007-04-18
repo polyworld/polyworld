@@ -3253,7 +3253,7 @@ void brain::UpdateSpikes(float energyfraction, FILE * fHandle)
 			//check to see if a given synapses to neuron has just fired
 			//otherwise we have to punish the incoming synapse. 
 			if (neuron[toneuron].v < 30.)  //this should never happen since we swap numSynapsesToDepress with startNumSynapses to depress;
-			syn->delta -= stdp; //punish by the to neurons stdp timer		
+				syn->delta -= stdp; //punish by the to neurons stdp timer		
 		}
 		
 		saveneuronactivation = neuronactivation;
