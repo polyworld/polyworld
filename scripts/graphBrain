@@ -79,7 +79,7 @@ def check_parameters( argv ):
 		firstline = templines[0].rstrip('\n')
 		brainAnatomyfile.close()			# done with the file for now.
 
-		print "- headerline='%s'" % (firstline)
+#		print "- headerline='%s'" % (firstline)
 		if not firstline.startswith('brain '):
 			print "* Error: '%s' is not a polyworld brainAnatomy file." % (filename)
 			sys.exit(1)
@@ -129,13 +129,11 @@ def check_parameters( argv ):
 #	print "span=%s width=%s" % ( span, width )
 	WEIGHT_THRESHOLDS=( IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN + 3*width, IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN + 2*width, IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN + width, IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN )
 
-	################	
 	return filename
 ########################################################################################################################################################
 # remove_deadends_from_cxnmatrix - removes any dead strands from the matrix.
 ########################################################################################################################################################
 def remove_deadends_from_cxnmatrix( PRUNED_MATRIX ):
-	global HEADERDATA, IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN, KEEP_DEADEND_NEURONS
 	deadends = []
 	
 	while 1:	# run this loop at least once...
@@ -189,23 +187,13 @@ CXN_MATRIX = []		# this will hold the connection matrix
 for i in range( len(filelines) ):	# for each line in the brainFunction file...
 	CXN_MATRIX.append( map(float, filelines[i].split(' ')) ) # split up each fileline by spaces, and convert the values to a float
 
-deadendneurons=[]
-
-# if KEEP_DEAD_NEURONS is on, this will still determine the deadendneurons but they will not be removed from the matrix.
-# Remove connections to the "deadend" internal neurons (if there are any).  If KEEP_DEADEND_NEURONS is True the the deadendneuron will simply be empty
+# if KEEP_DEAD_NEURONS is on, this will still determine the deadendneurons for coloring purposes but the CXN_MATRIX will be unaltered.
 tempCXN_MATRIX = copy.deepcopy(CXN_MATRIX)
 PRUNED_MATRIX, deadendneurons = remove_deadends_from_cxnmatrix( tempCXN_MATRIX )
 print "- deadendneurons=%s" % ( deadendneurons )
 
-if not KEEP_DEADEND_NEURONS:
-	print "- USING THE PRUNED MATRIX."
-	CXN_MATRIX = PRUNED_MATRIX
+if not KEEP_DEADEND_NEURONS: CXN_MATRIX = PRUNED_MATRIX
 else:	del PRUNED_MATRIX
-
-#for dead in deadendneurons:
-#	print "CXN_MATRIX[%s][:]=%s" % (dead,CXN_MATRIX[dead])
-
-
 # Finished making our connection matrix.  Now to start creating the .dot file
 
 ## Make the label for our graph
