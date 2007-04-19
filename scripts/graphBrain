@@ -1,0 +1,260 @@
+#!/usr/bin/python
+################################################################################################################################################
+# Things you might want to configure
+################################################################################################################################################
+DOT='/usr/local/graphviz-2.12/bin/dot'
+GRAPH_FORMAT="pdf"       # pdf, png, etc.
+IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN=0.20
+DOTFILE_PARAMS="""
+nodesep=0.2;                            // minimum node separation (in inches).
+//      height=0.7;
+//ranksep=equally;                        // ranks should be equally distant from one another
+center=true;                            // center the graph on the page
+clusterrank=local			  // clusters do not influence a node's rank.  (For this particular graph we take care of it all with sinks and source)
+node [fontname=Helvetica, shape=doublecircle];         //this is the default style that will be used for all internal neurons
+edge [arrowhead=dot, sametail];               //sametail seems like it would be nice, but it puts arrows going inside the trapezoids -- lame.
+rankdir=BT;                     // Print from bottom to top
+labeljust="l"			// label goes on the Left
+labelloc="t"			// label goes on the Top
+"""
+styles_behaviorneurons='height=0.75, shape=tripleoctagon, color="whitesmoke", style=filled'
+styles_rgbinputneurons='style=filled, label="", shape=triangle, style=diagonals, style=rounded, constraint=false' # the constraint stops graphviz from whining
+styles_randandenergyneuron='shape=diamond, style=filled, color="beige"'
+
+styles_internalneurons_excitatory='color="palegreen1", style=filled'
+styles_internalneurons_inhibitory='color="pink", style=filled'
+
+BEHAVIOR_NEURONS = ('eat', 'mate', 'fight', 'speed', 'yaw', 'light', 'focus') # in the order they are neuronally
+################################################################################################################################################
+# Some global variables.  You could change these, but you probably dont want to.
+import sys, getopt, os.path, re, os
+HEADERDATA = {}
+tempfilename = "/tmp/,graphBrain_%s.dot" % ( os.getpid() )
+WEIGHT_THRESHOLDS = ('',)
+WEIGHT_STYLES=('bold', 'solid','dashed','dotted')
+# Don't change anything beneath here unless you know what you're doing
+
+################################################################################################################################################
+# This function prints out the help information
+################################################################################################################################################
+def print_usage_and_exit():
+        print """
+USAGE 
+       graphBrain brainAnatomyfile
+
+DESCRIPTION
+       graphBrain uses graphviz to make a directed graph of a polyworld brain from its brainAnatomy file.
+       It takes a single argument, a brainAnatomy file.
+
+OPTIONS
+       -t<x>   Threshold.  Ignore all connections with absolute value less than x.  Default threshold=%s
+	""" % ( IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN )
+	sys.exit(1)
+################################################################################################################################################
+################################################################################################################################################
+################################################################################################################################################
+def check_parameters( argv ):
+	global HEADERDATA, BEHAVIOR_NEURONS, tempfilename, IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN, WEIGHT_THRESHOLDS
+
+	if os.path.isfile( tempfilename ):
+		print "* Warning: tempfile '%s' already exists.  Deleting it." % (tempfilename)
+		os.remove( tempfilename )		# if our tempfile is already in use, get rid of it.
+
+	try: opts, args = getopt.getopt( argv, "t:")
+	except getopt.GetoptError: print_usage_and_exit() 
+
+#	print "opts=%s" % ( opts )
+#	print "args=%s" % ( args)
+
+	for opt in opts:
+		if '-t' in opt: IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN = float(opt[1])
+	
+	filename=args[0]
+
+	try:
+		brainAnatomyfile=open( filename )		# check to make sure the file really is a brainAnatomy file
+		templines = brainAnatomyfile.readlines()
+		BAnumlines = len( templines ) - 1	# the - 1 is to subtract the headerline
+		firstline = templines[0].rstrip('\n')
+		brainAnatomyfile.close()			# done with the file for now.
+
+		print "- headerline='%s'" % (firstline)
+		if not firstline.startswith('brain '):
+			print "* Error: '%s' is not a polyworld brainAnatomy file." % (filename)
+			sys.exit(1)
+	except IOError:
+		print "* Error: There was no file '%s'" % (filename)
+
+	firstline = firstline.split(' ')
+	for param in firstline:
+		if '=' not in param: continue		# if there is no equals, skip this entry
+		pname, pvalue = param.split('=')
+		
+		# do some filtering here before putting the values into our headerdata 
+		if pname == 'numneurons+1':
+			pname = 'numneurons'
+			pvalue = int(pvalue)		# numneurons is special, it needs to be an int
+		elif pname in ('redinput','greeninput','blueinput'):
+			firstindex, lastindex = map(int, pvalue.split('-') )	# get #-#.  These are also special, and should be ints
+			pvalue = range( firstindex, lastindex + 1)		# + 1 is because the range in the firstline is inclusive
+		else:
+			pvalue = float(pvalue)
+		# finished filtering
+
+		HEADERDATA[pname] = pvalue
+	# now to tack on some values into HEADERDATA at the end:
+	firstoutputneuron = max(HEADERDATA['blueinput']) + 1
+	HEADERDATA['randneuron'] = 0
+	HEADERDATA['energyneuron'] = 1
+	HEADERDATA['inputneurons'] = range( 0, firstoutputneuron )	# + 1 because the highest index is inclusive
+	HEADERDATA['outputneurons'] = range( firstoutputneuron, firstoutputneuron + len(BEHAVIOR_NEURONS) )
+	HEADERDATA['internalneurons'] = range( firstoutputneuron + len(BEHAVIOR_NEURONS), HEADERDATA['numneurons'] )
+	HEADERDATA['noninputneurons'] = range( firstoutputneuron, HEADERDATA['numneurons'] )
+
+	for i in range(len(BEHAVIOR_NEURONS)): 				# define the index for each behavior neuron
+		HEADERDATA[ BEHAVIOR_NEURONS[i] ] = firstoutputneuron + i
+
+	if HEADERDATA['numneurons'] != BAnumlines:
+		print "* Error: I saw %s lines in file '%s', but the headerline says there are %s neurons." % ( BAnumlines, filename, HEADERDATA['numneurons'] )
+		sys.exit(1)
+
+#	for element in HEADERDATA:
+#		print "element=%s value=%s" % (element, HEADERDATA[element])
+	
+	# There are always 4 different weight categories.  We set the boundries for those here.
+	span = 1.0 - IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN
+	width = span / 4.0
+#	print "span=%s width=%s" % ( span, width )
+	WEIGHT_THRESHOLDS=( IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN + 3*width, IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN + 2*width, IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN + width, IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN )
+
+	################	
+	return filename
+########################################################################################################################################################
+# REAL PROGRAM BEGINS HERE
+########################################################################################################################################################
+filename = check_parameters( sys.argv[1:] )                # don't send it the first item in the sys.argv list because that's this programs filename
+
+print "- Ignoring weights <= %s " % (IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN)
+# read the inputfile
+BAfile = open(filename)
+filelines = BAfile.readlines()
+BAfile.close()
+
+# clean up the input file (remove the headerline, remove the newlines)
+filelines.pop(0)
+for i in range(len(filelines)):
+	filelines[i] = filelines[i].rstrip('; \n')
+# finished cleaning up the inputlines
+
+# Now to make our connection matrix
+CXN_MATRIX = []		# this will hold the connection matrix
+for i in range( len(filelines) ):	# for each line in the brainFunction file...
+	CXN_MATRIX.append( map(float, filelines[i].split(' ')) ) # split up each fileline by spaces, and convert the values to a float
+
+# Finished making our connection matrix.  Now to start creating the .dot file
+
+## Make the label for our graph
+graph_label="filename=%s\\nignore weights <= %s\\nfitness=%s\\nmaxWeight=%s\\nmaxBias=%s" % ( filename, IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN, HEADERDATA['fitness'], HEADERDATA['maxWeight'], HEADERDATA['maxBias'])
+## Finished making label for our graph
+
+# create the outputcontents list and put in the basic settings
+outputcontents = []	# this list will contain everything we're going to dump to the .dot file
+outputcontents.append( 'digraph hierarchy {' )
+outputcontents.append( 'label="%s"' % (graph_label) )
+outputcontents.append( DOTFILE_PARAMS )
+
+# make the colors and shapes for the randneuron and energyneuron.
+#rand_and_energy_styles=', '.join(styles_randandenergyneurons)
+for i in (HEADERDATA['randneuron'], HEADERDATA['energyneuron']):
+	if i == HEADERDATA['randneuron']: label="random"
+	else: label="energy"
+	outputcontents.append('%s[ label="%s", %s ];' % ( i, label, styles_randandenergyneuron ) )
+
+# make the colors and shapes for the red, green, and blue input neurons.
+for i in HEADERDATA['inputneurons']:
+	if i in HEADERDATA['redinput']: color="red"
+	elif i in HEADERDATA['blueinput']: color="blue"
+	elif i in HEADERDATA['greeninput']: color="green"
+	elif i == HEADERDATA['randneuron'] or HEADERDATA['energyneuron']: continue
+	else:
+		print "* Error: neuron '%s' is supposedly an inputneuron, but it wasn't the random, energy, or within the red/green/blue neurons." % ( i )
+		sys.exit(1)
+	outputcontents.append( '%s[ color="%s", %s ];' % (i, color, styles_rgbinputneurons) )
+
+# make the boxes around the red, green, and blue inputneurons
+for colorinput in ('redinput','greeninput','blueinput'):
+	# make the redinput cluster
+	outputcontents.append( 'subgraph cluster%s {' % ( colorinput ) )
+	outputcontents.append( '\n'.join(map(str, HEADERDATA[colorinput])) )
+	outputcontents.append( 'label="%s";' % (colorinput + 's') )
+	outputcontents.append( '}')
+
+# make the labels, colors, and shapes for the behavioral neurons
+for i in HEADERDATA['outputneurons']:
+	index_within_behavior_neurons = i - min(HEADERDATA['outputneurons'])
+	label = ( BEHAVIOR_NEURONS[index_within_behavior_neurons] )
+	outputcontents.append( '%s[ label="%s", %s ];' % (i, label, styles_behaviorneurons) )
+
+
+# make the colors for the excitatory and inhibtory neurons.
+for fromneuron in HEADERDATA['internalneurons']:
+	for toneuron in HEADERDATA['noninputneurons']:
+		if CXN_MATRIX[toneuron][fromneuron] > 0.0: 	# fromneuron is EXCITATORY
+			outputcontents.append('%s[ %s ] ' % (fromneuron, styles_internalneurons_excitatory) )
+#			print "neuron '%s' is EXCITATORY" % (fromneuron )
+			break
+		elif CXN_MATRIX[toneuron][fromneuron] < 0.0:	# fromneuron is INHIBITORY
+			outputcontents.append('%s[ %s ] ' % (fromneuron, styles_internalneurons_inhibitory) )
+#			print "neuron '%s' is INHIBITORY" % ( fromneuron )
+			break
+
+# Put the inputneurons as the source and the output neurons as the sink
+outputcontents.append("{rank=source; %s }" % ( ' '.join(map(str,HEADERDATA['inputneurons']))  ))
+outputcontents.append("{rank=sink; %s }" %  ( ' '.join( map(str,HEADERDATA['outputneurons']))  ))
+
+
+# Make the connections
+for toneuron in range( HEADERDATA['numneurons'] ):
+	fromneurons_excitatory = []
+	fromneurons_inhibitory = []
+	for potential_fromneuron in range( HEADERDATA['numneurons'] ):
+		# ignore connections less than the threshold.
+		if abs(CXN_MATRIX[toneuron][potential_fromneuron]) <= IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN: continue;
+		
+		# now to determine the weight of this connection
+		for i in range(len(WEIGHT_THRESHOLDS)):		# begin at the highest index and work our way down to i
+			if abs(CXN_MATRIX[toneuron][potential_fromneuron]) > WEIGHT_THRESHOLDS[i]:
+				weight=len(WEIGHT_THRESHOLDS) - i
+				style, arrowsize = ( WEIGHT_STYLES[i], float(weight) )  # in addition to the weight, the arrow should also be larger for higher connections
+				break
+		# Okay, we got our weight, now what color is it?
+		if CXN_MATRIX[toneuron][potential_fromneuron] > 0.0:	color='green'
+		elif CXN_MATRIX[toneuron][potential_fromneuron] < 0.0:	color='red'
+		
+		# and now to print it.
+		outputcontents.append( '{ %s }->%s [weight=%s, style=%s, color=%s, arrowsize=%s ];' % ( potential_fromneuron,toneuron,weight,style,color,arrowsize ) )
+
+#	if fromneurons_excitatory:
+#		fromneurons_excitatory = map(str, fromneurons_excitatory)
+#		outputcontents.append( "{ %s }->%s [color=red];" % (' '.join( fromneurons_excitatory ), toneuron) )
+
+#	if fromneurons_inhibitory:
+#		fromneurons_inhibitory = map(str, fromneurons_inhibitory)
+#		outputcontents.append( "{ %s }->%s [color=green];" % (' '.join( fromneurons_inhibitory), toneuron) )
+
+
+outputcontents.append( '}' )
+
+# print "===============\n%s\n=============" % ( '\n'.join(outputcontents) )
+
+outputfile = open( tempfilename, 'w' )
+outputfile.write( '\n'.join(outputcontents) )
+outputfile.close()
+
+print "- Made tempfile '%s', making graph..." % ( tempfilename )
+os.system( "%s %s -T%s -o %s" % (DOT,tempfilename, GRAPH_FORMAT, tempfilename + '.' + GRAPH_FORMAT) )
+os.system("open %s" % (tempfilename + '.' + GRAPH_FORMAT) )
+print "Done!"
+
+
+
