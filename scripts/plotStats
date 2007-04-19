@@ -24,7 +24,7 @@ set style line 100 lc rgb "black" lw 3	# used for the AVERAGE line
 set style line 101 lc rgb "black" lw 1 pointsize 0.0	# used for the STDERR bars
 """
 
-flag_plotSmooth=1
+flag_plotSmooth=0
 GNUPLOT_SMOOTHING_FUNCTION='csplines' 		# reasonable smoothing options are: csplines, acsplines, bezier, sbezier
 
 GNUPLOT_MULTIPLOTSETTINGS="""
@@ -86,10 +86,12 @@ OPTIONS
        -e      Standard Error bars for the mean will be drawn. (default off)
 
        -p      Data points will be drawn on the lines.  (default off)
+      
+       -s      Make a smoothed version of the plot using algorithm '%s'.  (default off)
 
        -MXxY   Multiplot putting each run/ directory on it's own graph.  (default off)
 
-	"""
+	""" % (GNUPLOT_SMOOTHING_FUNCTION)
 	sys.exit(1)
 ####################################
 def GET_GNUPLOT_DYNAMIC_SETTINGS():
@@ -237,7 +239,7 @@ def sample_stderr( list ):
 
 def check_parameters( argv ):
 	try:
-		opts, args = getopt.getopt( argv, "elmpM:")
+		opts, args = getopt.getopt( argv, "selmpM:")
 	except getopt.GetoptError: 
 		print_usage_and_exit() 
 
@@ -245,11 +247,14 @@ def check_parameters( argv ):
 #	print "args=%s" % ( args)
 
 	global flag_plotLegend, flag_plotErrorbars, flag_multiplot, flag_plotMean, flag_plotPoints, PASSED_DIRECTORY, multiplotDimX, multiplotDimY	# grant access to the global variables we're going to modify
+	global flag_plotSmooth
 	# Set our plot flags
 	for opt in opts:
 
 		if '-l' in opt:
 			flag_plotLegend = 1
+		elif '-s' in opt:
+			flag_plotSmooth=1
 		elif '-e' in opt:
 			flag_plotErrorbars = 1
 		elif '-m' in opt:
