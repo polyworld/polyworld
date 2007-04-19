@@ -23,12 +23,13 @@ styles_internalneurons_inhibitory='color="pink", style=filled'
 ################################################################################################################################################
 # Some global variables.  You could change these, but it's probably a bad idea.
 ################################################################################################################################################
-import sys, getopt, os.path, re, os
+import sys, getopt, os.path, re, os, copy
 tempfilename = "/tmp/,graphBrain_%s.dot" % ( os.getpid() )
 WEIGHT_THRESHOLDS = ('',)
 WEIGHT_STYLES=('bold', 'solid','dashed','dotted')
 BEHAVIOR_NEURONS = ('eat', 'mate', 'fight', 'speed', 'yaw', 'light', 'focus') # in the order they are neuronally
 HEADERDATA = {}
+KEEP_DEADEND_NEURONS=False
 # Don't change anything beneath here unless you know what you're doing
 ################################################################################################################################################
 # This function prints out the help information
@@ -44,19 +45,23 @@ DESCRIPTION
 
 OPTIONS
        -t<x>   Threshold.  Ignore all connections with absolute value less than x.  Default threshold=%s
+
+       -k      Keep dead-end neurons.  By default "dead-end neurons", neurons that have no connections
+               greater than Threshold coming out of them are removed from the graph.  This lets you display
+               the connections to the dead-end neurons.  Deadends are colored in white. (default off)
 	""" % ( IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN )
 	sys.exit(1)
 ################################################################################################################################################
 ################################################################################################################################################
 ################################################################################################################################################
 def check_parameters( argv ):
-	global HEADERDATA, BEHAVIOR_NEURONS, tempfilename, IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN, WEIGHT_THRESHOLDS
+	global HEADERDATA, BEHAVIOR_NEURONS, tempfilename, IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN, WEIGHT_THRESHOLDS, KEEP_DEADEND_NEURONS
 
 	if os.path.isfile( tempfilename ):
 		print "* Warning: tempfile '%s' already exists.  Deleting it." % (tempfilename)
 		os.remove( tempfilename )		# if our tempfile is already in use, get rid of it.
 
-	try: opts, args = getopt.getopt( argv, "t:")
+	try: opts, args = getopt.getopt( argv, "kt:")
 	except getopt.GetoptError: print_usage_and_exit() 
 
 #	print "opts=%s" % ( opts )
@@ -64,7 +69,7 @@ def check_parameters( argv ):
 
 	for opt in opts:
 		if '-t' in opt: IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN = float(opt[1])
-	
+		if '-k' in opt: KEEP_DEADEND_NEURONS = True
 	filename=args[0]
 
 	try:
@@ -106,6 +111,7 @@ def check_parameters( argv ):
 	HEADERDATA['outputneurons'] = range( firstoutputneuron, firstoutputneuron + len(BEHAVIOR_NEURONS) )
 	HEADERDATA['internalneurons'] = range( firstoutputneuron + len(BEHAVIOR_NEURONS), HEADERDATA['numneurons'] )
 	HEADERDATA['noninputneurons'] = range( firstoutputneuron, HEADERDATA['numneurons'] )
+	HEADERDATA['neurons'] = range( 0, HEADERDATA['numneurons'] )
 
 	for i in range(len(BEHAVIOR_NEURONS)): 				# define the index for each behavior neuron
 		HEADERDATA[ BEHAVIOR_NEURONS[i] ] = firstoutputneuron + i
@@ -125,6 +131,42 @@ def check_parameters( argv ):
 
 	################	
 	return filename
+########################################################################################################################################################
+# remove_deadends_from_cxnmatrix - removes any dead strands from the matrix.
+########################################################################################################################################################
+def remove_deadends_from_cxnmatrix( PRUNED_MATRIX ):
+	global HEADERDATA, IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN, KEEP_DEADEND_NEURONS
+	deadends = []
+	
+	while 1:	# run this loop at least once...
+		old_deadendsize=len(deadends)
+#		print "Beginning a pass... len(deadends)=%s deadends=%s" % (len(deadends), deadends)
+
+		for fromneuron in HEADERDATA['internalneurons']:	# only internal neurons can be deadends
+			found_outboundcxn=False
+			for toneuron in HEADERDATA['noninputneurons']:
+				if abs(PRUNED_MATRIX[toneuron][fromneuron]) > IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN:
+					found_outboundcxn=True
+					break
+
+			if not found_outboundcxn and fromneuron not in deadends:		# fromneuron is indeed a deadend neuron, and isn't already in deadends
+				deadendneuron = fromneuron
+				#print "- %s is deadend." % ( deadendneuron )
+
+				# set all connections FROM the deadend to Zero
+				for toneuron in HEADERDATA['noninputneurons']: PRUNED_MATRIX[toneuron][deadendneuron] = 0.0
+				# set all connections TO the deadend to Zero
+				for fromneuron in HEADERDATA['neurons']: PRUNED_MATRIX[deadendneuron][fromneuron] = 0.0
+				deadends.append( deadendneuron )	# add deadendneuron to the list
+
+		# if no more deadends, break the while
+		if len(deadends) == old_deadendsize:
+			break		
+	
+	deadends.sort()			# sort the deadends once we've finished
+
+	return PRUNED_MATRIX, deadends
+
 ########################################################################################################################################################
 # REAL PROGRAM BEGINS HERE
 ########################################################################################################################################################
@@ -147,10 +189,27 @@ CXN_MATRIX = []		# this will hold the connection matrix
 for i in range( len(filelines) ):	# for each line in the brainFunction file...
 	CXN_MATRIX.append( map(float, filelines[i].split(' ')) ) # split up each fileline by spaces, and convert the values to a float
 
+deadendneurons=[]
+
+# if KEEP_DEAD_NEURONS is on, this will still determine the deadendneurons but they will not be removed from the matrix.
+# Remove connections to the "deadend" internal neurons (if there are any).  If KEEP_DEADEND_NEURONS is True the the deadendneuron will simply be empty
+tempCXN_MATRIX = copy.deepcopy(CXN_MATRIX)
+PRUNED_MATRIX, deadendneurons = remove_deadends_from_cxnmatrix( tempCXN_MATRIX )
+print "- deadendneurons=%s" % ( deadendneurons )
+
+if not KEEP_DEADEND_NEURONS:
+	print "- USING THE PRUNED MATRIX."
+	CXN_MATRIX = PRUNED_MATRIX
+else:	del PRUNED_MATRIX
+
+#for dead in deadendneurons:
+#	print "CXN_MATRIX[%s][:]=%s" % (dead,CXN_MATRIX[dead])
+
+
 # Finished making our connection matrix.  Now to start creating the .dot file
 
 ## Make the label for our graph
-graph_label="filename=%s\\nignore weights <= %s\\nfitness=%s\\nmaxWeight=%s\\nmaxBias=%s" % ( filename, IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN, HEADERDATA['fitness'], HEADERDATA['maxWeight'], HEADERDATA['maxBias'])
+graph_label="filename=%s\\nignore weights <= %s\\nfitness=%s\\nmaxWeight=%s\\nmaxBias=%s\\ndeadendneurons=%s (~%s%%)" % ( filename, IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN, HEADERDATA['fitness'], HEADERDATA['maxWeight'], HEADERDATA['maxBias'], len(deadendneurons), len(deadendneurons) * 100 / HEADERDATA['numneurons'] )
 ## Finished making label for our graph
 
 # create the outputcontents list and put in the basic settings
@@ -177,6 +236,7 @@ for i in HEADERDATA['inputneurons']:
 		sys.exit(1)
 	outputcontents.append( '%s[ color="%s", %s ];' % (i, color, styles_rgbinputneurons) )
 
+
 # make the boxes around the red, green, and blue inputneurons
 for colorinput in ('redinput','greeninput','blueinput'):
 	# make the redinput cluster
@@ -194,8 +254,14 @@ for i in HEADERDATA['outputneurons']:
 
 # make the colors for the excitatory and inhibtory neurons.
 for fromneuron in HEADERDATA['internalneurons']:
+
+	if fromneuron in deadendneurons: continue;	# if this neuron is a deadend neuron we don't want to color it.
+
 	for toneuron in HEADERDATA['noninputneurons']:
-		if CXN_MATRIX[toneuron][fromneuron] > 0.0: 	# fromneuron is EXCITATORY
+		if toneuron in deadendneurons: continue; # if this fromneuron only has cxns to deadendneurons, we dont want to color it
+		if abs(CXN_MATRIX[toneuron][fromneuron]) <= IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN: continue;
+
+		elif CXN_MATRIX[toneuron][fromneuron] > 0.0: 	# fromneuron is EXCITATORY
 			outputcontents.append('%s[ %s ] ' % (fromneuron, styles_internalneurons_excitatory) )
 #			print "neuron '%s' is EXCITATORY" % (fromneuron )
 			break
@@ -211,8 +277,6 @@ outputcontents.append("{rank=sink; %s }" %  ( ' '.join( map(str,HEADERDATA['outp
 
 # Make the connections
 for toneuron in range( HEADERDATA['numneurons'] ):
-	fromneurons_excitatory = []
-	fromneurons_inhibitory = []
 	for potential_fromneuron in range( HEADERDATA['numneurons'] ):
 		# ignore connections less than the threshold.
 		if abs(CXN_MATRIX[toneuron][potential_fromneuron]) <= IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN: continue;
@@ -221,7 +285,7 @@ for toneuron in range( HEADERDATA['numneurons'] ):
 		for i in range(len(WEIGHT_THRESHOLDS)):		# begin at the highest index and work our way down to i
 			if abs(CXN_MATRIX[toneuron][potential_fromneuron]) > WEIGHT_THRESHOLDS[i]:
 				weight=len(WEIGHT_THRESHOLDS) - i
-				style, arrowsize = ( WEIGHT_STYLES[i], float(weight) )  # in addition to the weight, the arrow should also be larger for higher connections
+				style, arrowsize = ( WEIGHT_STYLES[i], float(weight) * 0.75 )  # in addition to the weight, the arrow should also be larger for higher connections
 				break
 		# Okay, we got our weight, now what color is it?
 		if CXN_MATRIX[toneuron][potential_fromneuron] > 0.0:	color='green'
