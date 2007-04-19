@@ -7,12 +7,10 @@ GRAPH_FORMAT="pdf"       # pdf, png, etc.
 IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN=0.20
 DOTFILE_PARAMS="""
 nodesep=0.2;                            // minimum node separation (in inches).
-//      height=0.7;
-//ranksep=equally;                        // ranks should be equally distant from one another
 center=true;                            // center the graph on the page
-clusterrank=local			  // clusters do not influence a node's rank.  (For this particular graph we take care of it all with sinks and source)
+//clusterrank=local			  // currently experimenting with this in attempts to get rid of the warnings
 node [fontname=Helvetica, shape=doublecircle];         //this is the default style that will be used for all internal neurons
-edge [arrowhead=dot, sametail];               //sametail seems like it would be nice, but it puts arrows going inside the trapezoids -- lame.
+edge [arrowhead=dot];               //sametail seems like it would be nice, but it puts arrows going inside the trapezoids -- lame.
 rankdir=BT;                     // Print from bottom to top
 labeljust="l"			// label goes on the Left
 labelloc="t"			// label goes on the Top
@@ -20,20 +18,18 @@ labelloc="t"			// label goes on the Top
 styles_behaviorneurons='height=0.75, shape=tripleoctagon, color="whitesmoke", style=filled'
 styles_rgbinputneurons='style=filled, label="", shape=triangle, style=diagonals, style=rounded, constraint=false' # the constraint stops graphviz from whining
 styles_randandenergyneuron='shape=diamond, style=filled, color="beige"'
-
 styles_internalneurons_excitatory='color="palegreen1", style=filled'
 styles_internalneurons_inhibitory='color="pink", style=filled'
-
-BEHAVIOR_NEURONS = ('eat', 'mate', 'fight', 'speed', 'yaw', 'light', 'focus') # in the order they are neuronally
 ################################################################################################################################################
-# Some global variables.  You could change these, but you probably dont want to.
+# Some global variables.  You could change these, but it's probably a bad idea.
+################################################################################################################################################
 import sys, getopt, os.path, re, os
-HEADERDATA = {}
 tempfilename = "/tmp/,graphBrain_%s.dot" % ( os.getpid() )
 WEIGHT_THRESHOLDS = ('',)
 WEIGHT_STYLES=('bold', 'solid','dashed','dotted')
+BEHAVIOR_NEURONS = ('eat', 'mate', 'fight', 'speed', 'yaw', 'light', 'focus') # in the order they are neuronally
+HEADERDATA = {}
 # Don't change anything beneath here unless you know what you're doing
-
 ################################################################################################################################################
 # This function prints out the help information
 ################################################################################################################################################
@@ -233,15 +229,6 @@ for toneuron in range( HEADERDATA['numneurons'] ):
 		
 		# and now to print it.
 		outputcontents.append( '{ %s }->%s [weight=%s, style=%s, color=%s, arrowsize=%s ];' % ( potential_fromneuron,toneuron,weight,style,color,arrowsize ) )
-
-#	if fromneurons_excitatory:
-#		fromneurons_excitatory = map(str, fromneurons_excitatory)
-#		outputcontents.append( "{ %s }->%s [color=red];" % (' '.join( fromneurons_excitatory ), toneuron) )
-
-#	if fromneurons_inhibitory:
-#		fromneurons_inhibitory = map(str, fromneurons_inhibitory)
-#		outputcontents.append( "{ %s }->%s [color=green];" % (' '.join( fromneurons_inhibitory), toneuron) )
-
 
 outputcontents.append( '}' )
 
