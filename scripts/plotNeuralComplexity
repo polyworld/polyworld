@@ -58,7 +58,7 @@ set style line 102 linetype -1 linewidth 3			# AVERAGE Whisker's median
 
 # Default plotting stats
 flag_plotWhiskerbars=True
-flag_plotSmooth=True
+flag_plotSmooth=False
 GNUPLOT_SMOOTHING_FUNCTION='csplines' 		# reasonable smoothing options are: csplines, acsplines, bezier, sbezier
 inputplotfilename='AvrComplexity.plt'
 outputfilenameGNU="/tmp/,plotNeuralComplexity_" + str(os.getpid()) + ".gnuplot"
@@ -133,6 +133,8 @@ OPTIONS
 
        -p      Draw the points that make up the '-n' mean line(s). (default off)
 
+       -s      Make a separate plot with the lines smoothed with '%s'. (default off)
+
        -MXxY   Multiplot putting each run/ directory on it's own graph.  Does not plot -WNE. (default off)
 
        -A      Plot NeuralComplexity across 'All' neurons. (default off)
@@ -141,7 +143,7 @@ OPTIONS
 
        -I      Plot NeuralComplexity across 'Input' neurons. (default off)
 
-	"""
+	""" % (GNUPLOT_SMOOTHING_FUNCTION)
 	sys.exit(1)
 ####################################################################################
 ####################################################################################
@@ -471,7 +473,7 @@ def sample_mean( list ):
 	return mean, stderr
 
 def check_parameters( argv ):
-	try: opts, args = getopt.getopt( argv, "enwENWlpAPIM:")
+	try: opts, args = getopt.getopt( argv, "esnwENWlpAPIM:")
 	except getopt.GetoptError: print_usage_and_exit() 
 
 #	print "opts=%s" % ( opts )
@@ -479,12 +481,14 @@ def check_parameters( argv ):
 
 	global flag_plotLegend, flag_plotErrorbars, flag_multiplot, flag_plotMean, flag_plotPoints, PASSED_DIRECTORY, multiplotDimX, multiplotDimY	# grant access to the global variables we're going to modify
 	global flag_plotErrorbars_AVERAGE, flag_plotMean_AVERAGE, flag_plotWhiskers, flag_plotWhiskers_AVERAGE
-	global flag_plotAll, flag_plotProcessing, flag_plotInput
+	global flag_plotAll, flag_plotProcessing, flag_plotInput, flag_plotSmooth
 	# Set our plot flags
 	for opt in opts:
 
 		if   '-e' in opt:
 			flag_plotErrorbars = True
+		elif '-s' in opt:
+			flag_plotSmooth = True
 		elif '-n' in opt:
 			flag_plotMean = True
 		elif '-w' in opt:
