@@ -15,21 +15,25 @@ rankdir=BT;                     // Print from bottom to top
 labeljust="l"			// label goes on the Left
 labelloc="t"			// label goes on the Top
 """
-styles_behaviorneurons='height=0.75, shape=tripleoctagon, color="whitesmoke", style=filled'
-styles_rgbinputneurons='style=filled, label="", shape=triangle, style=diagonals, style=rounded, constraint=false' # the constraint stops graphviz from whining
-styles_randandenergyneuron='shape=diamond, style=filled, color="beige"'
+styles_behaviorneurons='height=0.75, shape=tripleoctagon, color="slategray1", style=filled'
+#styles_rgbinputneurons='style=filled, label="", shape=triangle, style=diagonals, style=rounded, constraint=false' # the constraint stops graphviz from whining
+styles_rgbinputneurons='style=filled, shape=triangle, style=diagonals, style=rounded, constraint=false' # the constraint stops graphviz from whining
+styles_randandenergyneuron='shape=diamond, style=filled, color="beige", width=1.5'
 styles_internalneurons_excitatory='color="palegreen1", style=filled'
-styles_internalneurons_inhibitory='color="pink", style=filled'
+styles_internalneurons_inhibitory='color="pink", style=filled'        
+styles_biasneuron='shape=diamond, style=filled, color="beige", label="\ bias\ ", width=1.5'
+MAX_ARROWSIZE = 3.0
 ################################################################################################################################################
 # Some global variables.  You could change these, but it's probably a bad idea.
 ################################################################################################################################################
-import sys, getopt, os.path, re, os, copy
+import sys, getopt, os.path, re, os, copy, math
 tempfilename = "/tmp/,graphBrain_%s.dot" % ( os.getpid() )
-WEIGHT_THRESHOLDS = ('',)
-WEIGHT_STYLES=('bold', 'solid','dashed','dotted')
+WEIGHT_STYLES=('dotted', 'dashed','solid','bold')
 BEHAVIOR_NEURONS = ('eat', 'mate', 'fight', 'speed', 'yaw', 'light', 'focus') # in the order they are neuronally
 HEADERDATA = {}
 KEEP_DEADEND_NEURONS=False
+WEIGHT_THRESHOLD_METHOD='FORCED'
+ARROW_MULTIPLIER = MAX_ARROWSIZE**2 - 1
 # Don't change anything beneath here unless you know what you're doing
 ################################################################################################################################################
 # This function prints out the help information
@@ -49,19 +53,27 @@ OPTIONS
        -k      Keep dead-end neurons.  By default "dead-end neurons", neurons that have no connections
                greater than Threshold coming out of them are removed from the graph.  This lets you display
                the connections to the dead-end neurons.  Deadends are colored in white. (default off)
+
+       -l{pnf} There are 4 different linestyles (dotted, dashed, solid, and bolid).  This option determines
+               how weights are assigned to a linestyle.
+               
+               '-p': "Pure" -- bins are simple and pure, that is: [ 0, .25, .5, .75 ]
+               '-n': "Normalized" -- after thresholding, bins are normalized between the min/max edgeweights.  [ min, (max-min)*.25, (max-min)*.5, (max-min)*.75 ]
+               '-f': "Forced" -- Alter the bins such that an approximately equal number of edges are in each bin. (default)
+
 	""" % ( IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN )
 	sys.exit(1)
 ################################################################################################################################################
 ################################################################################################################################################
 ################################################################################################################################################
 def check_parameters( argv ):
-	global HEADERDATA, BEHAVIOR_NEURONS, tempfilename, IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN, WEIGHT_THRESHOLDS, KEEP_DEADEND_NEURONS
+	global HEADERDATA, BEHAVIOR_NEURONS, tempfilename, IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN, WEIGHT_THRESHOLDS, KEEP_DEADEND_NEURONS, WEIGHT_THRESHOLD_METHOD
 
 	if os.path.isfile( tempfilename ):
 		print "* Warning: tempfile '%s' already exists.  Deleting it." % (tempfilename)
 		os.remove( tempfilename )		# if our tempfile is already in use, get rid of it.
 
-	try: opts, args = getopt.getopt( argv, "kt:")
+	try: opts, args = getopt.getopt( argv, "kt:l:")
 	except getopt.GetoptError: print_usage_and_exit() 
 
 #	print "opts=%s" % ( opts )
@@ -69,7 +81,17 @@ def check_parameters( argv ):
 
 	for opt in opts:
 		if '-t' in opt: IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN = float(opt[1])
-		if '-k' in opt: KEEP_DEADEND_NEURONS = True
+		elif '-k' in opt: KEEP_DEADEND_NEURONS = True
+		elif '-l' in opt:
+			if 'p'   in opt:
+				WEIGHT_THRESHOLD_METHOD = 'PURE'
+			elif 'n' in opt:
+				WEIGHT_THRESHOLD_METHOD = 'NORMALIZED'
+			elif 'f' in opt:
+				WEIGHT_THRESHOLD_METHOD = 'FORCED'
+			else:
+				print "* Error: Do not know parameter '%s'." % (opt[1])
+				print_usage_and_exit()
 	filename=args[0]
 
 	try:
@@ -107,10 +129,11 @@ def check_parameters( argv ):
 	firstoutputneuron = max(HEADERDATA['blueinput']) + 1
 	HEADERDATA['randneuron'] = 0
 	HEADERDATA['energyneuron'] = 1
+	HEADERDATA['biasneuron'] = HEADERDATA['numneurons'] - 1
 	HEADERDATA['inputneurons'] = range( 0, firstoutputneuron )	# + 1 because the highest index is inclusive
 	HEADERDATA['outputneurons'] = range( firstoutputneuron, firstoutputneuron + len(BEHAVIOR_NEURONS) )
-	HEADERDATA['internalneurons'] = range( firstoutputneuron + len(BEHAVIOR_NEURONS), HEADERDATA['numneurons'] )
-	HEADERDATA['noninputneurons'] = range( firstoutputneuron, HEADERDATA['numneurons'] )
+	HEADERDATA['internalneurons'] = range( firstoutputneuron + len(BEHAVIOR_NEURONS), HEADERDATA['numneurons'] - 1 ) # the -1 is to not get the biasneuron
+	HEADERDATA['noninputneurons'] = range( firstoutputneuron, HEADERDATA['numneurons'] - 1 ) # -1 is to not get the biasneuron
 	HEADERDATA['neurons'] = range( 0, HEADERDATA['numneurons'] )
 
 	for i in range(len(BEHAVIOR_NEURONS)): 				# define the index for each behavior neuron
@@ -120,16 +143,74 @@ def check_parameters( argv ):
 		print "* Error: I saw %s lines in file '%s', but the headerline says there are %s neurons." % ( BAnumlines, filename, HEADERDATA['numneurons'] )
 		sys.exit(1)
 
-#	for element in HEADERDATA:
-#		print "element=%s value=%s" % (element, HEADERDATA[element])
+#	for element in HEADERDATA: print "element=%s value=%s" % (element, HEADERDATA[element])
 	
-	# There are always 4 different weight categories.  We set the boundries for those here.
-	span = 1.0 - IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN
-	width = span / 4.0
-#	print "span=%s width=%s" % ( span, width )
-	WEIGHT_THRESHOLDS=( IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN + 3*width, IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN + 2*width, IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN + width, IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN )
-
 	return filename
+
+########################################################################################################################################################
+# make_weight_thresholds - given the matrix it calculates the weight thresholds such that an equal number of edges will be placed into each bin.
+########################################################################################################################################################
+def make_weight_thresholds( CXN_MATRIX ):
+	global HEADERDATA, IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN, WEIGHT_STYLES, WEIGHT_THRESHOLD_METHOD
+
+	if WEIGHT_THRESHOLD_METHOD == 'PURE':
+		thresholds=[0.0, 0.25, 0.5, 0.75]	       # (0, 0.25]: dotted // (0.25, 0.5]: dashed // (0.5,0.75]: solid // (0.75,1.0]: bold
+		return thresholds
+
+	edges = []
+	# There are always 4 different weight categories.  We set the boundries for those here.
+#	span = 1.0 - IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN
+#	width = span / 4.0
+#	print "span=%s width=%s" % ( span, width )
+#	WEIGHT_THRESHOLDS=( 1.0, IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN + 3*width, IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN + 2*width, IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN + width, IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN )
+
+	# first, put each edge into a list
+	for i in HEADERDATA['neurons']:
+		for j in HEADERDATA['neurons']:
+			if abs(CXN_MATRIX[i][j]) > IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN:
+				edges.append( abs(CXN_MATRIX[i][j]) )
+
+
+	if WEIGHT_THRESHOLD_METHOD == 'NORMALIZED':
+		maximum, minimum = ( max(edges), min(edges) )
+		weightspan = maximum - minimum
+		binwidth = weightspan / 4.0
+		thresholds = [ IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN, minimum + binwidth, minimum + binwidth*2, minimum + binwidth*3 ]
+		return thresholds
+
+	edges.append( IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN )	# ugly hack to make the edge-cases right
+	edges.sort()
+
+	numedges, numbins = ( len(edges) - 1, len(WEIGHT_STYLES) )	# the - 1 is required to cancel out the appended IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN
+	
+#	print "numedges=%s edges=%s" % ( numedges, edges )
+	edges_in_bins = [int(numedges / numbins)] * numbins
+	
+	remainder = numedges % sum(edges_in_bins)
+
+	for i in range(remainder):		# starting at the lowerest bin, increment numedges in each bin until all of the remainders are gone
+		edges_in_bins[i] += 1
+
+	print "edges_in_bins=%s" % (edges_in_bins)
+	edgeindices = []
+	for i in range(numbins):
+		edgeindices.append( sum(edges_in_bins[:i]) )
+
+	print "edgeindices=%s" % ( edgeindices)
+	thresholds=[]
+	for edgeindex in edgeindices: thresholds.append( edges[edgeindex] )
+
+#	edges_in_each_bin={}
+#	for i in range(5): edges_in_each_bin[i] = []
+
+#	for edge in edges:
+#		for i in range(len(thresholds)):
+#			threshold = thresholds[i]
+#			if edge > threshold:
+#				edges_in_each_bin[numbins - i ].append( edge )
+#				break
+
+	return thresholds
 ########################################################################################################################################################
 # remove_deadends_from_cxnmatrix - removes any dead strands from the matrix.
 ########################################################################################################################################################
@@ -186,15 +267,38 @@ for i in range(len(filelines)):
 CXN_MATRIX = []		# this will hold the connection matrix
 for i in range( len(filelines) ):	# for each line in the brainFunction file...
 	CXN_MATRIX.append( map(float, filelines[i].split(' ')) ) # split up each fileline by spaces, and convert the values to a float
+#	print "%s=%s" % ( i, filelines[i].split(' ') )
+
+
 
 # if KEEP_DEAD_NEURONS is on, this will still determine the deadendneurons for coloring purposes but the CXN_MATRIX will be unaltered.
 tempCXN_MATRIX = copy.deepcopy(CXN_MATRIX)
 PRUNED_MATRIX, deadendneurons = remove_deadends_from_cxnmatrix( tempCXN_MATRIX )
-print "- deadendneurons=%s" % ( deadendneurons )
-
 if not KEEP_DEADEND_NEURONS: CXN_MATRIX = PRUNED_MATRIX
 else:	del PRUNED_MATRIX
+
+# Now make our Linestyle Weight Thresholds...
+WEIGHT_THRESHOLDS = make_weight_thresholds( CXN_MATRIX )
+
+print "THRESHOLDS = %s" % (WEIGHT_THRESHOLDS)
 # Finished making our connection matrix.  Now to start creating the .dot file
+
+#### First for some stats to give the user an idea how long the graph generation is going to take
+print "- deadendneurons=%s" % ( deadendneurons )
+
+# calculate the number of edges that will be printed in this graph
+if KEEP_DEADEND_NEURONS: numnodes_to_display = HEADERDATA['numneurons']
+else: numnodes_to_display = HEADERDATA['numneurons'] - len( deadendneurons )
+numedges=0
+for i in HEADERDATA['neurons']:
+	for j in HEADERDATA['neurons']:
+		if abs(CXN_MATRIX[i][j]) > IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN:
+			numedges += 1
+
+
+print "- numnodes=%s" % (numnodes_to_display)
+print "- numedges=%s" % (numedges)
+#### Finished printing stats
 
 ## Make the label for our graph
 graph_label="filename=%s\\nignore weights <= %s\\nfitness=%s\\nmaxWeight=%s\\nmaxBias=%s\\ndeadendneurons=%s (~%s%%)" % ( filename, IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN, HEADERDATA['fitness'], HEADERDATA['maxWeight'], HEADERDATA['maxBias'], len(deadendneurons), len(deadendneurons) * 100 / HEADERDATA['numneurons'] )
@@ -223,6 +327,9 @@ for i in HEADERDATA['inputneurons']:
 		print "* Error: neuron '%s' is supposedly an inputneuron, but it wasn't the random, energy, or within the red/green/blue neurons." % ( i )
 		sys.exit(1)
 	outputcontents.append( '%s[ color="%s", %s ];' % (i, color, styles_rgbinputneurons) )
+
+# make the color and shape for the bias neuron
+outputcontents.append( '%s[ %s ];' % (HEADERDATA['biasneuron'],styles_biasneuron) )
 
 
 # make the boxes around the red, green, and blue inputneurons
@@ -259,21 +366,33 @@ for fromneuron in HEADERDATA['internalneurons']:
 			break
 
 # Put the inputneurons as the source and the output neurons as the sink
-outputcontents.append("{rank=source; %s }" % ( ' '.join(map(str,HEADERDATA['inputneurons']))  ))
+outputcontents.append("{rank=source; %s }" % ( ' '.join(map(str,HEADERDATA['inputneurons'] + [HEADERDATA['biasneuron']]))  ))
 outputcontents.append("{rank=sink; %s }" %  ( ' '.join( map(str,HEADERDATA['outputneurons']))  ))
 
-
+weightstest={}
+for line in WEIGHT_STYLES:
+	weightstest[line] = []
 # Make the connections
 for toneuron in range( HEADERDATA['numneurons'] ):
 	for potential_fromneuron in range( HEADERDATA['numneurons'] ):
 		# ignore connections less than the threshold.
 		if abs(CXN_MATRIX[toneuron][potential_fromneuron]) <= IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN: continue;
 		
-		# now to determine the weight of this connection
-		for i in range(len(WEIGHT_THRESHOLDS)):		# begin at the highest index and work our way down to i
-			if abs(CXN_MATRIX[toneuron][potential_fromneuron]) > WEIGHT_THRESHOLDS[i]:
-				weight=len(WEIGHT_THRESHOLDS) - i
-				style, arrowsize = ( WEIGHT_STYLES[i], float(weight) * 0.75 )  # in addition to the weight, the arrow should also be larger for higher connections
+		edgeweight = abs(CXN_MATRIX[toneuron][potential_fromneuron])
+		# now to determine the bin for this connection
+		numbins = len(WEIGHT_STYLES)
+		for i in range(numbins-1,-1,-1):		# begin at the highest index and work our way down to 0.  For i in 3...0
+			if edgeweight > WEIGHT_THRESHOLDS[i]:
+				weight, style = ( i + 1, WEIGHT_STYLES[i] ) # weight is a value from 4...1
+				arrowsize = math.sqrt( 1 + (ARROW_MULTIPLIER * edgeweight))
+
+#				if weight == 3:
+#					print "solid cxn: %s->%s" % ( potential_fromneuron, toneuron )
+				weightstest[style].append( edgeweight )
+
+#				distance_from_threshold = edgeweight - WEIGHT_THRESHOLDS[i+1]
+#				arrowsize = math.sqrt( weight + (distance_from_threshold / weightspan) )
+#				arrowsize = math.sqrt(weight * 0.75)
 				break
 		# Okay, we got our weight, now what color is it?
 		if CXN_MATRIX[toneuron][potential_fromneuron] > 0.0:	color='green'
@@ -283,6 +402,10 @@ for toneuron in range( HEADERDATA['numneurons'] ):
 		outputcontents.append( '{ %s }->%s [weight=%s, style=%s, color=%s, arrowsize=%s ];' % ( potential_fromneuron,toneuron,weight,style,color,arrowsize ) )
 
 outputcontents.append( '}' )
+
+for weight in weightstest:
+	weightstest[weight].sort()
+	print "line=%s numedges=%s" % ( weight, len(weightstest[weight]) )
 
 # print "===============\n%s\n=============" % ( '\n'.join(outputcontents) )
 
