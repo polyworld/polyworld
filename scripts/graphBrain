@@ -16,13 +16,12 @@ labeljust="l"			// label goes on the Left
 labelloc="t"			// label goes on the Top
 """
 styles_behaviorneurons='height=0.75, shape=tripleoctagon, color="slategray1", style=filled'
-#styles_rgbinputneurons='style=filled, label="", shape=triangle, style=diagonals, style=rounded, constraint=false' # the constraint stops graphviz from whining
-styles_rgbinputneurons='style=filled, shape=triangle, style=diagonals, style=rounded, constraint=false' # the constraint stops graphviz from whining
+styles_rgbinputneurons='style=filled, label="", shape=triangle, style=diagonals, style=rounded, constraint=false' # the constraint stops graphviz from whining
 styles_randandenergyneuron='shape=diamond, style=filled, color="beige", width=1.5'
 styles_internalneurons_excitatory='color="palegreen1", style=filled'
 styles_internalneurons_inhibitory='color="pink", style=filled'        
 styles_biasneuron='shape=diamond, style=filled, color="beige", label="\ bias\ ", width=1.5'
-MAX_ARROWSIZE = 3.0
+MAX_ARROWSIZE = 3.5		# to determine the arrowsize, the weights are continuously mapped onto the set: [0,MAX_ARROWSIZE]
 ################################################################################################################################################
 # Some global variables.  You could change these, but it's probably a bad idea.
 ################################################################################################################################################
@@ -34,6 +33,7 @@ HEADERDATA = {}
 KEEP_DEADEND_NEURONS=False
 WEIGHT_THRESHOLD_METHOD='FORCED'
 ARROW_MULTIPLIER = MAX_ARROWSIZE**2 - 1
+edges = []
 # Don't change anything beneath here unless you know what you're doing
 ################################################################################################################################################
 # This function prints out the help information
@@ -157,23 +157,15 @@ def make_weight_thresholds( CXN_MATRIX ):
 		thresholds=[0.0, 0.25, 0.5, 0.75]	       # (0, 0.25]: dotted // (0.25, 0.5]: dashed // (0.5,0.75]: solid // (0.75,1.0]: bold
 		return thresholds
 
-	edges = []
-	# There are always 4 different weight categories.  We set the boundries for those here.
-#	span = 1.0 - IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN
-#	width = span / 4.0
-#	print "span=%s width=%s" % ( span, width )
-#	WEIGHT_THRESHOLDS=( 1.0, IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN + 3*width, IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN + 2*width, IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN + width, IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN )
-
-	# first, put each edge into a list
 	for i in HEADERDATA['neurons']:
 		for j in HEADERDATA['neurons']:
 			if abs(CXN_MATRIX[i][j]) > IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN:
 				edges.append( abs(CXN_MATRIX[i][j]) )
 
+	maximum, minimum = ( max(edges), min(edges) )
+	weightspan = maximum - minimum
 
 	if WEIGHT_THRESHOLD_METHOD == 'NORMALIZED':
-		maximum, minimum = ( max(edges), min(edges) )
-		weightspan = maximum - minimum
 		binwidth = weightspan / 4.0
 		thresholds = [ IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN, minimum + binwidth, minimum + binwidth*2, minimum + binwidth*3 ]
 		return thresholds
@@ -191,24 +183,14 @@ def make_weight_thresholds( CXN_MATRIX ):
 	for i in range(remainder):		# starting at the lowerest bin, increment numedges in each bin until all of the remainders are gone
 		edges_in_bins[i] += 1
 
-	print "edges_in_bins=%s" % (edges_in_bins)
+#	print "edges_in_bins=%s" % (edges_in_bins)
 	edgeindices = []
 	for i in range(numbins):
 		edgeindices.append( sum(edges_in_bins[:i]) )
 
-	print "edgeindices=%s" % ( edgeindices)
+#	print "edgeindices=%s" % ( edgeindices)
 	thresholds=[]
 	for edgeindex in edgeindices: thresholds.append( edges[edgeindex] )
-
-#	edges_in_each_bin={}
-#	for i in range(5): edges_in_each_bin[i] = []
-
-#	for edge in edges:
-#		for i in range(len(thresholds)):
-#			threshold = thresholds[i]
-#			if edge > threshold:
-#				edges_in_each_bin[numbins - i ].append( edge )
-#				break
 
 	return thresholds
 ########################################################################################################################################################
@@ -278,9 +260,9 @@ if not KEEP_DEADEND_NEURONS: CXN_MATRIX = PRUNED_MATRIX
 else:	del PRUNED_MATRIX
 
 # Now make our Linestyle Weight Thresholds...
-WEIGHT_THRESHOLDS = make_weight_thresholds( CXN_MATRIX )
+WEIGHT_THRESHOLDS  = make_weight_thresholds( CXN_MATRIX )
 
-print "THRESHOLDS = %s" % (WEIGHT_THRESHOLDS)
+print "- linestyle thresholds=%s" % (WEIGHT_THRESHOLDS)
 # Finished making our connection matrix.  Now to start creating the .dot file
 
 #### First for some stats to give the user an idea how long the graph generation is going to take
@@ -372,6 +354,7 @@ outputcontents.append("{rank=sink; %s }" %  ( ' '.join( map(str,HEADERDATA['outp
 weightstest={}
 for line in WEIGHT_STYLES:
 	weightstest[line] = []
+
 # Make the connections
 for toneuron in range( HEADERDATA['numneurons'] ):
 	for potential_fromneuron in range( HEADERDATA['numneurons'] ):
@@ -384,15 +367,9 @@ for toneuron in range( HEADERDATA['numneurons'] ):
 		for i in range(numbins-1,-1,-1):		# begin at the highest index and work our way down to 0.  For i in 3...0
 			if edgeweight > WEIGHT_THRESHOLDS[i]:
 				weight, style = ( i + 1, WEIGHT_STYLES[i] ) # weight is a value from 4...1
-				arrowsize = math.sqrt( 1 + (ARROW_MULTIPLIER * edgeweight))
-
-#				if weight == 3:
-#					print "solid cxn: %s->%s" % ( potential_fromneuron, toneuron )
+				arrowsize = edgeweight * MAX_ARROWSIZE
 				weightstest[style].append( edgeweight )
-
-#				distance_from_threshold = edgeweight - WEIGHT_THRESHOLDS[i+1]
-#				arrowsize = math.sqrt( weight + (distance_from_threshold / weightspan) )
-#				arrowsize = math.sqrt(weight * 0.75)
+#				print "weight=%s arrowsize=%s" % ( edgeweight, arrowsize)
 				break
 		# Okay, we got our weight, now what color is it?
 		if CXN_MATRIX[toneuron][potential_fromneuron] > 0.0:	color='green'
@@ -403,9 +380,9 @@ for toneuron in range( HEADERDATA['numneurons'] ):
 
 outputcontents.append( '}' )
 
-for weight in weightstest:
+for weight in ('dotted','dashed','solid','bold'):
 	weightstest[weight].sort()
-	print "line=%s numedges=%s" % ( weight, len(weightstest[weight]) )
+	print "-- %s edges=%s" % ( weight, len(weightstest[weight]) )
 
 # print "===============\n%s\n=============" % ( '\n'.join(outputcontents) )
 
