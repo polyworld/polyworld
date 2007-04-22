@@ -42,6 +42,8 @@ MainWindow::MainWindow(const char* windowTitle, const char* windowSettingsNamePa
 	// Must be done *before* the RestoreFromPrefs() and the OpenGL setup,
 	// because the movie dimensions define the window dimensions for these movie windows
 	ReadMovieFileHeader();
+
+	printf( "movieWidth = %lu, movieHeight = %lu\n", movieWidth, movieHeight );
 	
 	// Display the main simulation window
 	RestoreFromPrefs();

@@ -5077,7 +5077,7 @@ void TSimulation::ReadWorldFile(const char* filename)
 	// If this is a complexity-as-fitness run, then we need to force certain parameter values (and warn the user)
 	if( fUseComplexityAsFitnessFunc != 'O' )
 	{
-		fNumberToSeed = rint( fMaxCritters * (float) fNumberToSeed / fInitNumCritters );	// same proportion as originally specified (must calculate before changing fInitNumCritters)
+		fNumberToSeed = lrint( fMaxCritters * (float) fNumberToSeed / fInitNumCritters );	// same proportion as originally specified (must calculate before changing fInitNumCritters)
 		if( fNumberToSeed > fMaxCritters )	// just to be safe
 			fNumberToSeed = fMaxCritters;
 		fInitNumCritters = fMaxCritters;	// population starts at maximum
@@ -5087,7 +5087,7 @@ void TSimulation::ReadWorldFile(const char* filename)
 
 		for( int i = 0; i < fNumDomains; i++ )	// over all domains
 		{
-			fDomains[i].numberToSeed = rint( fDomains[i].maxNumCritters * (float) fDomains[i].numberToSeed / fDomains[i].initNumCritters );	// same proportion as originally specified (must calculate before changing fInitNumCritters)
+			fDomains[i].numberToSeed = lrint( fDomains[i].maxNumCritters * (float) fDomains[i].numberToSeed / fDomains[i].initNumCritters );	// same proportion as originally specified (must calculate before changing fInitNumCritters)
 			if( fDomains[i].numberToSeed > fDomains[i].maxNumCritters )	// just to be safe
 				fDomains[i].numberToSeed = fDomains[i].maxNumCritters;
 			fDomains[i].initNumCritters = fDomains[i].maxNumCritters;	// population starts at maximum

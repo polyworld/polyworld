@@ -47,7 +47,7 @@ class FoodPatch : public Patch
 	float update();
 	float addFood();
 	void setInitCounts( int initFood, int minFood, int maxFood, int maxFoodGrown, float newFraction );
-	void init( float x, float z, float sx, float sz, float rate, int initFood, int minFood, int maxFood, int maxFoodGrown, float patchFraction, int shape, int distribution, float nhsize, float inPeriod, float inOnFraction, float inPhase, bool inRemoveFood, gstage* fStage, Domain* dm, int domainNumber );
+	void init( float x, float z, float sx, float sz, float rate, int initFood, int minFood, int maxFood, int maxFoodGrown, float patchFraction, int shape, int distribution, float nhsize, int inPeriod, float inOnFraction, float inPhase, bool inRemoveFood, gstage* fStage, Domain* dm, int domainNumber );
 	bool on( long step );
 	bool initFoodGrown();
 	void initFoodGrown( bool setInitFoodGrown );
@@ -59,7 +59,7 @@ inline bool FoodPatch::on( long step )
 		return( true );
 	
 	float floatCycles = step * inversePeriod;
-	int intCycles = int(floatCycles);
+	int intCycles = (int) floatCycles;
 	float cycleFraction = floatCycles  -  intCycles;
 	if( (cycleFraction >= phase) && (cycleFraction < (phase + onFraction)) )
 		return( true );

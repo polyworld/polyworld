@@ -34,7 +34,7 @@ FoodPatch::FoodPatch()
 //-------------------------------------------------------------------------------------------
 // FoodPatch::FoodPatch
 //-------------------------------------------------------------------------------------------
-void FoodPatch::init(float x, float z, float sx, float sz, float rate, int initFood, int minFood, int maxFood, int maxFoodGrown, float patchFraction, int shape, int distrib, float nhsize, float inPeriod, float inOnFraction, float inPhase, bool inRemoveFood, gstage* fs, Domain* dm, int domainNumber){
+void FoodPatch::init(float x, float z, float sx, float sz, float rate, int initFood, int minFood, int maxFood, int maxFoodGrown, float patchFraction, int shape, int distrib, float nhsize, int inPeriod, float inOnFraction, float inPhase, bool inRemoveFood, gstage* fs, Domain* dm, int domainNumber){
     
 	initBase(x, z,  sx, sz, shape, distrib, nhsize, fs, dm, domainNumber);
 
