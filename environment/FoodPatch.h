@@ -59,7 +59,7 @@ inline bool FoodPatch::on( long step )
 		return( true );
 	
 	float floatCycles = step * inversePeriod;
-	int intCycles = floatCycles;
+	int intCycles = int(floatCycles);
 	float cycleFraction = floatCycles  -  intCycles;
 	if( (cycleFraction >= phase) && (cycleFraction < (phase + onFraction)) )
 		return( true );
