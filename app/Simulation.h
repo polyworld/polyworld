@@ -543,6 +543,7 @@ private:
 	Stat fLifeSpanStats;
 	Stat fNeuronGroupCountStats;
 	Stat fCurrentNeuronGroupCountStats;
+	Stat fCurrentNeuronCountStats;
 	StatRecent fLifeSpanRecentStats;
 	StatRecent fLifeFractionRecentStats;
 

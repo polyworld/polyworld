@@ -2267,11 +2267,13 @@ void TSimulation::Interact()
 	}
 
 	fCurrentNeuronGroupCountStats.reset();
+	fCurrentNeuronCountStats.reset();
 	objectxsortedlist::gXSortedObjects.reset();
     while( objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &c ) )
     {
 
 		fCurrentNeuronGroupCountStats.add( c->Brain()->NumNeuronGroups() );
+		fCurrentNeuronCountStats.add( c->Brain()->GetNumNeurons() );
 
         id = c->Domain();						// Determine the domain in which the critter currently is located
 	
@@ -5519,6 +5521,9 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 	list.push_back( strdup( t ) );
 
 	sprintf( t, "RecLifeSpan = %lu ± %lu [%lu, %lu]", nint( fLifeSpanRecentStats.mean() ), nint( fLifeSpanRecentStats.stddev() ), (ulong) fLifeSpanRecentStats.min(), (ulong) fLifeSpanRecentStats.max() );
+	list.push_back( strdup( t ) );
+
+	sprintf( t, "CurNeurons = %.1f ± %.1f [%lu, %lu]", fCurrentNeuronCountStats.mean(), fCurrentNeuronCountStats.stddev(), (ulong) fCurrentNeuronCountStats.min(), (ulong) fCurrentNeuronCountStats.max() );
 	list.push_back( strdup( t ) );
 
 	sprintf( t, "NeurGroups = %.1f ± %.1f [%lu, %lu]", fNeuronGroupCountStats.mean(), fNeuronGroupCountStats.stddev(), (ulong) fNeuronGroupCountStats.min(), (ulong) fNeuronGroupCountStats.max() );
