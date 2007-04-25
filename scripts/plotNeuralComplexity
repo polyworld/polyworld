@@ -43,6 +43,12 @@ set style line 54 linetype 1 linewidth 1 pointtype 0 		# 1st meanline's stderr
 set style line 55 linetype 2 linewidth 1 pointtype 0 		# 2nd meanline's stderr
 set style line 56 linetype 3 linewidth 1 pointtype 0 		# 3rd meanline's stderr
 
+set style line 601 linetype 4 linewidth 1.5			# 1st colored maxline
+set style line 602 linetype 5 linewidth 1.5			# 2nd colored maxline
+set style line 603 linetype 6 linewidth 1.5			# 3rd colored maxline
+set style line 604 linetype 7 linewidth 1 pointsize 1.0		# maxline when there is no legend
+set style line 605 linetype 8 linewidth 2 pointsize 2.0		# AVERAGE maxline
+
 set style line 96 linetype 0 linewidth 1			# Whisker when there is no legend
 set style line 97 linetype 0 linewidth 3 			# Whisker's median when there is no legend
 set style line 98 linetype 0 linewidth 1 pointtype 0		# meanline's STDERR bars when there is no legend
@@ -84,6 +90,7 @@ set border 10
 """
 
 flag_have_previously_plotted_a_file = False
+flag_have_previously_plotted_a_max = False
 tempfilename='/tmp/,plotNeuralComplexity_%s.plt' % ( os.getpid() )		# this file will contain the raw data
 gnufilename='/tmp/,plotNeuralComplexity_%s.gnuplot' % ( os.getpid() )	# this file will contain gnuplot commands
 flag_plotPoints 		= False
@@ -97,6 +104,8 @@ flag_plotErrorbars_AVERAGE	= False
 flag_plotProcessing		= False
 flag_plotInput			= False
 flag_plotAll			= False
+flag_plotMax			= False
+flag_plotMax_AVERAGE		= False
 flag_multiplot 			= False
 ###############
 numplotsmade=0
@@ -130,6 +139,8 @@ OPTIONS
                to control the temporal precision of the average line.
 
        -e/E    Standard Error bars for the mean will be drawn. (default off)
+
+       -x/X    Maximums (the top of the whiskers) will be drawn as a line. (default off)
 
        -p      Draw the points that make up the '-n' mean line(s). (default off)
 
@@ -219,14 +230,15 @@ def get_median( listofnumbers ):
 # GET_GNUPLOT_PLOTSTRING_SMOOTH -- this function calls the function GET_GNUPLOT_PLOTSTRING, and then some manipulations to make the SMOOTHED plotstring
 #######################################################################################
 def GET_GNUPLOT_PLOTSTRING_SMOOTH( filename, Avrfilename ):
-	global GNUPLOT_SMOOTHING_FUNCTION, flag_plotMean, flag_plotMean_AVERAGE
+	global GNUPLOT_SMOOTHING_FUNCTION, flag_plotMean, flag_plotMean_AVERAGE, flag_plotMax, flag_plotMax_AVERAGE
 
 	rawarray = GET_GNUPLOT_PLOTSTRING( filename, Avrfilename ).split(', ')
 
-	if flag_plotMean or flag_plotMean_AVERAGE:		# only do this if we have lines to begin with!
+	if flag_plotMean or flag_plotMean_AVERAGE or flag_plotMax or flag_plotMax_AVERAGE:		# only do this if we have lines to begin with!
 		for i in range(0, len(rawarray) ):
 			# make sure that it's not candlesticks, not yerrorbars, and (is an averageline OR is a meanline) and only using #:#
-			if 'candlesticks' not in rawarray[i] and 'yerrorbars' not in rawarray[i] and ('meta-mean' in rawarray[i] or flag_plotMean) and re.search( 'using [0-9]+:[0-9]+[^:]', rawarray[i] ):
+#			if 'candlesticks' not in rawarray[i] and 'yerrorbars' not in rawarray[i] and ('meta-mean' in rawarray[i] or flag_plotMean) and re.search( 'using [0-9]+:[0-9]+[^:]', rawarray[i] ):
+			if 'candlesticks' not in rawarray[i] and 'yerrorbars' not in rawarray[i] and re.search( 'using [0-9]+:[0-9]+[^:]', rawarray[i] ):
 #				print "- smoothing: %s" % ( rawarray[i] )
 				rawarray[i] = rawarray[i].rstrip(', ')
 				rawarray[i] += " smooth %s" % (GNUPLOT_SMOOTHING_FUNCTION )
@@ -267,9 +279,9 @@ def GET_GNUPLOT_DYNAMIC_SETTINGS( RecentOrbestRecent ):
 		settings.append( "set xrange [0:%s]" % (MAXTIMESTEP) )
 
 	# We are plotting the mean as a line, point, or both?
-	if flag_plotPoints and flag_plotMean:
+	if flag_plotPoints and (flag_plotMean or flag_plotMax):
 		settings.append("set style data linespoints")
-	elif flag_plotMean:
+	elif flag_plotMean or flag_plotMax:
 		settings.append("set pointsize 0.0")		# set pointsize isn't yet supported by AquaTerm but it probably will someday
 		settings.append("set style data lines")
 	elif flag_plotPoints:
@@ -297,8 +309,8 @@ def GET_GNUPLOT_END_SETTINGS():
 #####################################
 
 def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename ):
-	global RUN_DIRS, flag_plotLegend, flag_plotWhiskers, flag_plotMean, flag_plotErrorbars, flag_plotSmooth, flag_plotWhiskers_AVERAGE, flag_plotMean_AVERAGE, flag_plotErrorbars_AVERAGE, flag_plotAll, flag_plotProcessing, flag_plotInput, flag_have_previously_plotted_a_file
-
+	global RUN_DIRS, flag_plotLegend, flag_plotWhiskers, flag_plotMean, flag_plotErrorbars, flag_plotSmooth, flag_plotWhiskers_AVERAGE, flag_plotMean_AVERAGE, flag_plotErrorbars_AVERAGE, flag_plotAll, flag_plotProcessing, flag_plotInput, flag_have_previously_plotted_a_file, flag_have_previously_plotted_a_max
+	global  flag_plotMax, flag_plotMax_AVERAGE	
 
 	plotstring = [ ]
 	
@@ -361,7 +373,30 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename ):
 				if flag_plotErrorbars: 
 					plotstring.append("'' using 1:23:24 with yerrorbars linestyle %s notitle" % (temp[0]))
 					temp.pop(0)
-	
+
+
+                if flag_plotMax:   # are we doing the MAX for each one?
+                        if flag_have_previously_plotted_a_max:
+                                Atitle, Ptitle, Ititle = ('','','')
+                        else:
+                                flag_have_previously_plotted_a_max = True
+                                Atitle,Ptitle,Ititle=('maxAll','maxProcessing','maxInput')
+
+                        if flag_plotLegend: temp = [ 601, 602, 603 ]
+                        else:   temp = [ 604, 604, 604 ]
+
+
+			if flag_plotAll:
+				plotstring.append("'%s' using 1:6 linestyle %s title '%s'" % (filename, temp[0], Atitle) )
+				temp.pop(0)
+			if flag_plotProcessing:
+				plotstring.append("'%s' using 1:14 linestyle %s title '%s'" % (filename, temp[0], Ptitle) )
+				temp.pop(0)
+			if flag_plotInput:
+				plotstring.append("'%s' using 1:22 linestyle %s title '%s'" % (filename, temp[0], Ititle) )
+				temp.pop(0)
+
+
 	if Avrfilename:	
 		##### NOW FOR THE AVERAGES ###########
 		if flag_plotWhiskers_AVERAGE:	# are we doing the whiskers for the AVERAGE?
@@ -384,7 +419,7 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename ):
 				temp.pop(0)
 	
 		if flag_plotMean_AVERAGE:
-                        if flag_plotWhiskers_AVERAGE:   # if we are plotting Whiskers, go back through the plotstring and remove some titles
+                        if flag_plotWhiskers_AVERAGE:   # if we plotted Whiskers, dont makes keys for the averages
 				Atitle, Ptitle, Ititle = ('', '', '')
 			else:
 				Atitle, Ptitle, Ititle = ('meta-mean All', 'meta-mean Pro', 'meta-mean Inp')
@@ -410,6 +445,21 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename ):
 					plotstring.append("'' using 1:23:24 with yerrorbars linestyle %s notitle" % (temp[0]))
 					temp.pop(0)
 
+                if flag_plotMax_AVERAGE:   # are we doing the MAX for each one?
+			Atitle,Ptitle,Ititle=('max-mmAll','max-mmProcessing','max-mmInput')
+
+                        temp = [ 605, 605, 605 ]
+
+			if flag_plotAll:
+				plotstring.append("'%s' using 1:6 linestyle %s title '%s'" % (Avrfilename, temp[0], Atitle) )
+				temp.pop(0)
+			if flag_plotProcessing:
+				plotstring.append("'%s' using 1:14 linestyle %s title '%s'" % (Avrfilename, temp[0], Ptitle) )
+				temp.pop(0)
+			if flag_plotInput:
+				plotstring.append("'%s' using 1:22 linestyle %s title '%s'" % (Avrfilename, temp[0], Ititle) )
+				temp.pop(0)
+	
 	plotstring = ', '.join(plotstring)
 	return plotstring
 	
@@ -473,7 +523,7 @@ def sample_mean( list ):
 	return mean, stderr
 
 def check_parameters( argv ):
-	try: opts, args = getopt.getopt( argv, "esnwENWlpAPIM:")
+	try: opts, args = getopt.getopt( argv, "esnwENWlpAPIxXM:")
 	except getopt.GetoptError: print_usage_and_exit() 
 
 #	print "opts=%s" % ( opts )
@@ -482,6 +532,7 @@ def check_parameters( argv ):
 	global flag_plotLegend, flag_plotErrorbars, flag_multiplot, flag_plotMean, flag_plotPoints, PASSED_DIRECTORY, multiplotDimX, multiplotDimY	# grant access to the global variables we're going to modify
 	global flag_plotErrorbars_AVERAGE, flag_plotMean_AVERAGE, flag_plotWhiskers, flag_plotWhiskers_AVERAGE
 	global flag_plotAll, flag_plotProcessing, flag_plotInput, flag_plotSmooth
+	global flag_plotMax, flag_plotMax_AVERAGE
 	# Set our plot flags
 	for opt in opts:
 
@@ -501,6 +552,10 @@ def check_parameters( argv ):
 			flag_plotWhiskers_AVERAGE = True
 		elif '-l' in opt:
 			flag_plotLegend = True
+		elif '-x' in opt:
+			flag_plotMax = True
+		elif '-X' in opt:
+			flag_plotMax_AVERAGE = True
 		elif '-p' in opt:
 			flag_plotPoints = True
 		elif '-A' in opt:
@@ -520,7 +575,7 @@ def check_parameters( argv ):
 	# Some default settings if the user doesn't specify anything...
 	if not flag_plotInput and not flag_plotAll: flag_plotProcessing = True	# if no -[API] is specified, assume -P.
 
-	if not flag_plotWhiskers and not flag_plotWhiskers_AVERAGE and not flag_plotMean_AVERAGE and not flag_plotPoints:
+	if not flag_plotWhiskers and not flag_plotMax and not flag_plotWhiskers_AVERAGE and not flag_plotMean_AVERAGE and not flag_plotPoints:
 		flag_plotMean = True						# if nothing to plot is specified, plot the meanlines.
 
 	# If we don't have a single argument, exit.
@@ -660,6 +715,7 @@ print "- maxtimestep=%s" % ( MAXTIMESTEP )
 outputcontents = [ GNUPLOT_SETTINGS ]	# begin our .gnuplot file with the static settings.
 
 for whichrecent in RUN_DIRS:
+	flag_have_previously_plotted_a_file, flag_have_previously_plotted_a_max = (False, False)
 	outputcontents.append( GET_GNUPLOT_DYNAMIC_SETTINGS( whichrecent ) )	# Make a different plot for Recent/bestRecent
 	plotstring = []
 
@@ -667,7 +723,7 @@ for whichrecent in RUN_DIRS:
 		filename = rundir + '/brain/' + whichrecent + '/' + inputplotfilename
 		plotstring.append( GET_GNUPLOT_PLOTSTRING(filename, '') )
 
-	if flag_plotWhiskers_AVERAGE or flag_plotMean_AVERAGE or flag_plotErrorbars_AVERAGE:
+	if flag_plotWhiskers_AVERAGE or flag_plotMean_AVERAGE or flag_plotErrorbars_AVERAGE or flag_plotMax_AVERAGE:
 		Avrfilename =  tempfilename + '.' + whichrecent
 		plotstring.append( GET_GNUPLOT_PLOTSTRING('', Avrfilename) )		# plot the Averages last because they are important and we want them to be laid on top of the graph
 
@@ -685,18 +741,19 @@ for whichrecent in RUN_DIRS:
 if flag_plotSmooth:	# We've finished all of the regular plots, now to do the smoothed plots (if we're doing that)
 	outputcontents.append("reset")	# clear everything
 	outputcontents.append( GNUPLOT_SETTINGS )	# load the old settings back
-	flag_have_previously_plotted_a_file = False		# this is to make our key come back on the smoothed plot
         GNUPLOT_TOPRIGHT_LABEL.append( "Smoothed with '%s'" % (GNUPLOT_SMOOTHING_FUNCTION) )
 
 	for whichrecent in RUN_DIRS:
+		flag_have_previously_plotted_a_file, flag_have_previously_plotted_a_max = (False, False)
 		outputcontents.append( GET_GNUPLOT_DYNAMIC_SETTINGS( whichrecent ) )
 		plotstring = []
+
 		for rundir in RUN_DIRS[whichrecent]:
 			filename = rundir + '/brain/' + whichrecent + '/' + inputplotfilename
 			plotstring.append( GET_GNUPLOT_PLOTSTRING_SMOOTH(filename, '') )
 
 
-        if flag_plotWhiskers_AVERAGE or flag_plotMean_AVERAGE or flag_plotErrorbars_AVERAGE:
+        if flag_plotWhiskers_AVERAGE or flag_plotMean_AVERAGE or flag_plotErrorbars_AVERAGE or flag_plotMax_AVERAGE:
                 Avrfilename =  tempfilename + '.' + whichrecent
                 plotstring.append( GET_GNUPLOT_PLOTSTRING('', Avrfilename) )            # plot the Averages last because they are important and we want them to be laid on top of the graph
 
