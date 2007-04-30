@@ -43,14 +43,14 @@ set style line 601 linetype 4 linewidth 1.5			# 1st colored maxline
 set style line 602 linetype 5 linewidth 1.5			# 2nd colored maxline
 set style line 603 linetype 6 linewidth 1.5			# 3rd colored maxline
 set style line 604 linetype 7 linewidth 1 pointsize 1.0		# maxline when there is no legend
-set style line 605 linetype 8 linewidth 3 pointsize 2.0		# AVERAGE maxline
+set style line 605 linetype -1 linewidth 3 pointsize 0.0	# AVERAGE maxline
 
 set style line 96 linetype 0 linewidth 1			# Whisker when there is no legend
 set style line 97 linetype 0 linewidth 3 			# Whisker's median when there is no legend
 set style line 98 linetype 0 linewidth 1 pointtype 0		# meanline's STDERR bars when there is no legend
 set style line 99 linetype 0 linewidth 1 pointsize 1.0	# meanline/meanpoint when there is no legend
 
-set style line 100 linetype -1 linewidth 3 pointsize 2.0	# AVERAGE meanline/meanpoint
+set style line 100 linetype -1 linewidth 3 pointsize 0.0	# AVERAGE meanline/meanpoint
 set style line 101 linetype -1 linewidth 1 pointtype 0	# AVERAGE meanline's stderr ars
 set style line 103 linetype -1 linewidth 1.5			# AVERAGE Whisker
 set style line 102 linetype -1 linewidth 3			# AVERAGE Whisker's median
@@ -140,7 +140,7 @@ OPTIONS
 
        -X      The Mean of the -x's will be drawn as a thick line.  This is *not* the max of the mean's (the top of the -W). (default off)
 
-       -p      Draw the points that make up the '-n' mean line(s). (default off)
+       -p      Draw the points on either the meanline or the maxline. (default off)
 
        -s      Make a separate plot with the lines smoothed with '%s'. (default off)
 
@@ -338,7 +338,7 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename ):
 				temp.pop(0)
 				temp.pop(0)
 
-		if flag_plotMean or flag_plotPoints:
+		if flag_plotMean:
 			if flag_have_previously_plotted_a_file:
 				Atitle, Ptitle, Ititle = ('','','')
 			else:			
@@ -449,13 +449,13 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename ):
                         temp = [ 605, 605, 605 ]
 
 			if flag_plotAll:
-				plotstring.append("'%s' using 1:26 linestyle %s title '%s'" % (Avrfilename, temp[0], Atitle) )
+				plotstring.append("'%s' using 1:26 with lines linestyle %s title '%s'" % (Avrfilename, temp[0], Atitle) )
 				temp.pop(0)
 			if flag_plotProcessing:
-				plotstring.append("'%s' using 1:28 linestyle %s title '%s'" % (Avrfilename, temp[0], Ptitle) )
+				plotstring.append("'%s' using 1:28 with lines linestyle %s title '%s'" % (Avrfilename, temp[0], Ptitle) )
 				temp.pop(0)
 			if flag_plotInput:
-				plotstring.append("'%s' using 1:30 linestyle %s title '%s'" % (Avrfilename, temp[0], Ititle) )
+				plotstring.append("'%s' using 1:30 with lines linestyle %s title '%s'" % (Avrfilename, temp[0], Ititle) )
 				temp.pop(0)
 	
 	plotstring = ', '.join(plotstring)
