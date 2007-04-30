@@ -31,10 +31,6 @@ set style line 501 linetype 1 linewidth 1.5		# 1st colored Whisker
 set style line 502 linetype 2 linewidth 1.5		# 2nd colored Whisker
 set style line 503 linetype 3 linewidth 1.5 		# 3rd colored Whisker
 
-# set border 15 linetype 501 linewidth 0
-# set border 15 linetype 502 linewidth 0
-# set border 15 linetype 503 linewidth 0
-
 set style line 51 linetype 1 linewidth 3			# 1st Whisker median
 set style line 52 linetype 2 linewidth 3			# 2nd Whisker median
 set style line 53 linetype 3 linewidth 3			# 3rd Whisker median
@@ -47,7 +43,7 @@ set style line 601 linetype 4 linewidth 1.5			# 1st colored maxline
 set style line 602 linetype 5 linewidth 1.5			# 2nd colored maxline
 set style line 603 linetype 6 linewidth 1.5			# 3rd colored maxline
 set style line 604 linetype 7 linewidth 1 pointsize 1.0		# maxline when there is no legend
-set style line 605 linetype 8 linewidth 2 pointsize 2.0		# AVERAGE maxline
+set style line 605 linetype 8 linewidth 3 pointsize 2.0		# AVERAGE maxline
 
 set style line 96 linetype 0 linewidth 1			# Whisker when there is no legend
 set style line 97 linetype 0 linewidth 3 			# Whisker's median when there is no legend
@@ -140,7 +136,9 @@ OPTIONS
 
        -e/E    Standard Error bars for the mean will be drawn. (default off)
 
-       -x/X    Maximums (the top of the whiskers) will be drawn as a line. (default off)
+       -x      Maximums (the top of the individual whiskers) will be drawn as a line. (default off)
+
+       -X      The Mean of the -x's will be drawn as a thick line.  This is *not* the max of the mean's (the top of the -W). (default off)
 
        -p      Draw the points that make up the '-n' mean line(s). (default off)
 
@@ -451,62 +449,19 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename ):
                         temp = [ 605, 605, 605 ]
 
 			if flag_plotAll:
-				plotstring.append("'%s' using 1:6 linestyle %s title '%s'" % (Avrfilename, temp[0], Atitle) )
+				plotstring.append("'%s' using 1:26 linestyle %s title '%s'" % (Avrfilename, temp[0], Atitle) )
 				temp.pop(0)
 			if flag_plotProcessing:
-				plotstring.append("'%s' using 1:14 linestyle %s title '%s'" % (Avrfilename, temp[0], Ptitle) )
+				plotstring.append("'%s' using 1:28 linestyle %s title '%s'" % (Avrfilename, temp[0], Ptitle) )
 				temp.pop(0)
 			if flag_plotInput:
-				plotstring.append("'%s' using 1:22 linestyle %s title '%s'" % (Avrfilename, temp[0], Ititle) )
+				plotstring.append("'%s' using 1:30 linestyle %s title '%s'" % (Avrfilename, temp[0], Ititle) )
 				temp.pop(0)
 	
 	plotstring = ', '.join(plotstring)
 	return plotstring
 	
-"""
-	# Okay, we've made our regular plostring, but now we're going to completely transform it if we're multiplotting...
-	if flag_multiplot:
-		global multiplotmaxtimesteps
-		mplotstrings=[]
-		mplotstringssmooth=[]
-		for i in range(0, len(RUN_DIRS)):
-			# set the title for each miniplot
-			miniplottitle=(RUN_DIRS[i].split('/')[-1]).replace('_','_')
-			mplotstrings.append( 'set title "%s" offset 0,-1' % (miniplottitle) )			
-			mplotstringssmooth.append( 'set title "%s" offset 0,-1' % (miniplottitle) )
 
-			# set the xrange and xtics for each miniplot
-			mplotstrings.append( 'set xrange[0:%s]' % (multiplotmaxtimesteps[RUN_DIRS[i]]) )	
-			mplotstrings.append( 'set xtics 0, %s' % (multiplotmaxtimesteps[RUN_DIRS[i]]) )
-			mplotstringssmooth.append( 'set xrange[0:%s]' % (multiplotmaxtimesteps[RUN_DIRS[i]]) )
-			mplotstringssmooth.append( 'set xtics 0, %s' % (multiplotmaxtimesteps[RUN_DIRS[i]]) )
-
-			# make the plotstrings
-			mplotstrings.append( 'plot ' + ', '.join( plotstring[i:num_rundir_lines:len(RUN_DIRS)] ) )
-			mplotstringssmooth.append( 'plot ' + ', '.join( plotstringsmooth[i:num_rundir_lines:len(RUN_DIRS)] ) )
-""" # END
-""" # BEGIN			
-			# fix the linestyles within the plotstring we just made
-			regularlinestyles=re.findall("linestyle [0-9]*", mplotstrings[-1])
-			currentstyle=1
-			for regularlinestyle in regularlinestyles:
-				mplotstrings[-1] = mplotstrings[-1].replace( regularlinestyle, 'linestyle %s' % (currentstyle) )
-				mplotstringssmooth[-1] = mplotstringssmooth[-1].replace( regularlinestyle, 'linestyle %s' % (currentstyle) )
-				currentstyle += 1
-		
-		# and join it all into one lovely string separated by newlines
-		plotstring = '\n'.join( mplotstrings )
-		plotstringsmooth= '\n'.join( mplotstringssmooth )
-		# now do a string replace for each PARAM to make the Legends not have the run/ directory in them.
-		for param in PARAMS:
-			plotstring = re.sub("title '%s[^']*'" % (param), "title '%s'" % (param), plotstring )
-			plotstringsmooth = re.sub("title '%s[^']*'" % (param), "title '%s'" % (param), plotstringsmooth )
-
-	else:			# if multiplot is NOT turned on, just join the strings.
-		plotstring='plot ' + ', '.join( plotstring )			 # begin with 'plot' and join each line to be plotted with a coma.
-		plotstringsmooth='plot ' + ', '.join( plotstringsmooth)		 # begin with 'plot' and join each line to be plotted with a coma.
-
-""" # END
 ######################################
 
 def sample_mean( list ):
@@ -651,6 +606,7 @@ print "- AverageInterval=%s" % (averagetimestepinterval),
 
 
 DATA = { 'bestRecent': {}, 'Recent': {} }	# make a dictionary of dictionaries
+MAXDATA = { 'bestRecent': {}, 'Recent': {} }	# make a dictionary of dictionaries
 MAXTIMESTEP=0
 for whichrecent in RUN_DIRS:
 	for rundir in RUN_DIRS[whichrecent]:
@@ -671,9 +627,21 @@ for whichrecent in RUN_DIRS:
 				DATA[whichrecent][t]['All']=[]
 				DATA[whichrecent][t]['Inp']=[]
 
-			DATA[whichrecent][t]['All'].append( line_array[6 ] ) 
+				MAXDATA[whichrecent][t] = {}
+				MAXDATA[whichrecent][t]['Pro']=[]
+				MAXDATA[whichrecent][t]['All']=[]
+				MAXDATA[whichrecent][t]['Inp']=[]
+
+			# make the list of means
+			DATA[whichrecent][t]['All'].append( line_array[6 ] )
 			DATA[whichrecent][t]['Pro'].append( line_array[14] )
 			DATA[whichrecent][t]['Inp'].append( line_array[22] )
+
+			# make the list of maximum's
+			MAXDATA[whichrecent][t]['All'].append( line_array[5 ] ) 
+			MAXDATA[whichrecent][t]['Pro'].append( line_array[13] )
+			MAXDATA[whichrecent][t]['Inp'].append( line_array[21] )
+
 			if t > MAXTIMESTEP: MAXTIMESTEP = t
 #			print "linearray=%s" % (line_array ) 
 
@@ -701,6 +669,12 @@ for whichrecent in RUN_DIRS:
 			else: numsamples=len(DATA[whichrecent][t][area])
 
 			list_to_print.append( "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s" % ( minimum, q1, median, q3, maximum, mean, mean_stderr, numsamples ) )
+
+		for area in ('All','Pro','Inp'):	# we break the format and put the mean and stderr of the MAX's at the end because initially we didnt know that we were going to do that.
+			MAXDATA[whichrecent][t][area] = map( float, MAXDATA[whichrecent][t][area] )	# make sure they are all floats so we comparing correctly.
+			meanmax, max_stderr = sample_mean( MAXDATA[whichrecent][t][area] )
+			list_to_print.append( "%s\t%s" % (meanmax, max_stderr) )
+
 #			del DATA[whichrecent][t][area]		# Don't need this anymore
 		list_to_print = map(str, list_to_print)
 		tempfile.write( '\t'.join( list_to_print ) )
