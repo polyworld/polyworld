@@ -1,0 +1,133 @@
+#!/usr/bin/python
+import sys, getopt, os
+import common_functions
+########################################################################################################
+# CONFIGURABLE OPTIONS
+FILENAME="genome/AdamiComplexity-summary.txt"
+GNUPLOT_ylabel="Adami Complexity (bits)"
+GNUPLOT_title="Genetic complexity over time"
+plotOnebit, plotTwobit, plotFourbit = True, False, False
+LINEWIDTH=1.5
+tempfilename = "/tmp/,plotAdamiComplexity_%s.gnuplot" % ( os.getpid() )
+# Don't modify anything beneath here
+GNUPLOT_ymin, GNUPLOT_ymax, GNUPLOT_xmin, GNUPLOT_xmax = '*','*','*','*'
+GNUPLOT_KEY="at screen 0.5,0.960 center horizontal spacing 1 width 0"
+GNUPLOT_BARE_TITLES=0
+########################################################################################################
+
+FILENAMES = []
+GNUPLOT_TITLES, GNUPLOT_LINETYPES = {}, {}
+
+def print_usage_and_exit():
+	print """
+	This script will output the graph of the AdamiComplexity of any given number of run/ directories.
+
+	Useage: ./plotAdamiComplexity [-124] run1/ [run2/]
+
+	Options:
+	-1		Plot 1-bit (default on)
+	-2		Plot 2-bit (default off)
+	-4		Plot 4-bit (default off)
+	-b		Use 'bare' titles (don't append n-bit to the end)
+	-t"<string>"	Title of the plot
+	-x<int>		lowest X-value to show
+	-X<int>		highest X-value to show
+	-y<int>		lowest Y-value to show
+	-Y<int>		highest Y-value to show
+	-K"<string>"	GNUPLOTcommands for positioning the key
+	"""
+	sys.exit(1)
+
+
+def check_parameters( argv ):
+	global plotOnebit, plotTwobit, plotFourbit, FILENAMES, FILENAME, GNUPLOT_TITLES, GNUPLOT_title, GNUPLOT_ymin, GNUPLOT_ymax, GNUPLOT_xmin, GNUPLOT_xmax, GNUPLOT_LINETYPES, GNUPLOT_KEY, GNUPLOT_BARE_TITLES
+
+	# getopt insists that all parameters come BEFORE the arguments.  So lets ensure that now.
+	for element in argv[:]:
+		if element.startswith('-'):     # is this element a parameter?
+			print "MOVING TO FRONT!! element=%s" % ( element )
+			argv.remove(element)
+			argv.insert(0, element) # put the element at the beginning of the list
+
+	try: opts, args = getopt.getopt( argv, "124t:x:X:y:Y:K:b")
+	except getopt.GetoptError: print_usage_and_exit()
+
+        # Set our plot flags
+	for opt, value in opts:
+		if '-1' in opt: plotOnebit = not plotOnebit
+		elif '-2' in opt: plotTwobit = not plotTwobit
+		elif '-4' in opt: plotFourbit = not plotFourbit
+		elif '-t' in opt: GNUPLOT_title = value
+		elif '-x' in opt: GNUPLOT_xmin = value
+		elif '-X' in opt: GNUPLOT_xmax = value
+		elif '-b' in opt: GNUPLOT_BARE_TITLES = 1
+		elif '-y' in opt: GNUPLOT_ymin = value
+		elif '-Y' in opt: GNUPLOT_ymax = value
+		elif '-K' in opt: GNUPLOT_KEY = value
+
+	if not args: print_usage_and_exit()
+
+	for arg in args[:]:		# for each argument
+		arg = arg.rstrip('/')	# remove the slash
+		if not os.path.isdir( arg ): args.remove( arg )			# remove all arguments that aren't directories
+		else:
+			filename = os.path.abspath(arg) + '/' + FILENAME
+			FILENAMES.append( filename )				# else, put it into the FILENAMES
+			GNUPLOT_TITLES[filename] = arg				# the arg will be the title
+
+			# if this is a PASSIVE RUN, make it dashed.
+			LockStepWithBirthsDeaths = int( common_functions.read_worldfile_parameter( arg + '/worldfile', 'LockStepWithBirthsDeathsLog' ) )
+
+			print "LOCKSTEPwithBirths=%s" % ( LockStepWithBirthsDeaths ) 
+			if LockStepWithBirthsDeaths: GNUPLOT_LINETYPES[filename] = '2'
+			else: GNUPLOT_LINETYPES[filename] = '1'
+
+check_parameters( sys.argv[1:] )                # don't send it the first item in the sys.argv list because that's this programs filename
+
+print "FILENAMES=%s" % ( FILENAMES )
+
+
+
+GNUPLOT_SETTINGS="""
+set term aqua dashed dl 0.5
+set ylabel '%s' font "Times,15"
+set xlabel 'Timestep' font "Times,15"
+set grid
+set mxtics 5
+set title '%s' font "Times,20"
+set xrange[%s:%s]
+set yrange[%s:%s]
+set key %s
+""" % ( GNUPLOT_ylabel, GNUPLOT_title, GNUPLOT_xmin, GNUPLOT_xmax, GNUPLOT_ymin, GNUPLOT_ymax, GNUPLOT_KEY )
+
+linecolor, plotstring = 1, ['plot']
+for filename in FILENAMES:
+	if plotOnebit:
+		if GNUPLOT_BARE_TITLES: title = GNUPLOT_TITLES[filename]
+		else: title = '%s: 1-bit' % ( GNUPLOT_TITLES[filename])
+		plotstring.append( "'%s' using 1:2 with lines linecolor %s linetype %s linewidth %s title '%s'," % ( filename, linecolor, GNUPLOT_LINETYPES[filename], LINEWIDTH, title) )
+		linecolor += 1
+	if plotTwobit:
+		if GNUPLOT_BARE_TITLES: title = GNUPLOT_TITLES[filename]
+		else: title = '%s: 1-bit' % ( GNUPLOT_TITLES[filename])
+		plotstring.append( "'%s' using 1:3 with lines linecolor %s linetype %s linewidth %s title '%s'," % ( filename, linecolor, GNUPLOT_LINETYPES[filename], LINEWIDTH, title) )
+		linecolor += 1
+	if plotFourbit:
+		if GNUPLOT_BARE_TITLES: title = GNUPLOT_TITLES[filename]
+		else: title = '%s: 1-bit' % ( GNUPLOT_TITLES[filename])
+		plotstring.append( "'%s' using 1:4 with lines linecolor %s linetype %s linewidth %s title '%s'," % ( filename, linecolor, GNUPLOT_LINETYPES[filename], LINEWIDTH, title) )
+		linecolor += 1
+
+plotstring = ' '.join(plotstring).rstrip(', ')
+
+print "plotstring=%s" % ( plotstring )
+tempfile=open( tempfilename, 'w' )
+tempfile.write( GNUPLOT_SETTINGS )
+tempfile.write( "\n" )
+tempfile.write( plotstring )
+tempfile.close()
+print "- Executing '%s'" % ( tempfilename )
+os.system( 'gnuplot '+ tempfilename )
+
+print "Done!"
+
