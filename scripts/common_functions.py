@@ -4,8 +4,7 @@ import os, sys
 
 # Return a value from the worldfile parameter.  If it is not found the value is False
 def read_worldfile_parameter( worldfilename, parameter ):
-
-	print "worldfilename='%s'  parameter='%s'" % ( worldfilename, parameter )
+#	print "worldfilename='%s'  parameter='%s'" % ( worldfilename, parameter )
 	value = False
 
 	if not os.path.isfile( worldfilename ):
