@@ -884,12 +884,16 @@
 					$QtInc,
 					$QtInc/Qt,
 					$QtInc/QtGui,
+					/sw/include,
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
 				);
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Applications";
-				LIBRARY_SEARCH_PATHS = $QtLib;
+				LIBRARY_SEARCH_PATHS = (
+					$QtLib,
+					/sw/lib,
+				);
 				LIBRARY_STYLE = Static;
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
@@ -1250,12 +1254,16 @@
 					$QtInc,
 					$QtInc/Qt,
 					$QtInc/QtGui,
+					/sw/include,
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
 				);
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Applications";
-				LIBRARY_SEARCH_PATHS = $QtLib;
+				LIBRARY_SEARCH_PATHS = (
+					$QtLib,
+					/sw/lib,
+				);
 				LIBRARY_STYLE = Static;
 				OPTIMIZATION_CFLAGS = "-O0";
 				OTHER_CFLAGS = (
@@ -1327,12 +1335,16 @@
 					$QtInc,
 					$QtInc/Qt,
 					$QtInc/QtGui,
+					/sw/include,
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
 				);
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Applications";
-				LIBRARY_SEARCH_PATHS = $QtLib;
+				LIBRARY_SEARCH_PATHS = (
+					$QtLib,
+					/sw/lib,
+				);
 				LIBRARY_STYLE = Static;
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
@@ -1406,12 +1418,16 @@
 					$QtInc,
 					$QtInc/Qt,
 					$QtInc/QtGui,
+					/sw/include,
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
 				);
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Applications";
-				LIBRARY_SEARCH_PATHS = $QtLib;
+				LIBRARY_SEARCH_PATHS = (
+					$QtLib,
+					/sw/lib,
+				);
 				LIBRARY_STYLE = Static;
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
@@ -1477,12 +1493,16 @@
 					$QtInc,
 					$QtInc/Qt,
 					$QtInc/QtGui,
+					/sw/include,
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
 				);
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Applications";
-				LIBRARY_SEARCH_PATHS = $QtLib;
+				LIBRARY_SEARCH_PATHS = (
+					$QtLib,
+					/sw/lib,
+				);
 				LIBRARY_STYLE = Static;
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",

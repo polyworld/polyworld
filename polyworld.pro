@@ -56,6 +56,7 @@ macx {
 					utils \
 					$(QT_INCLUDE_DIR) \
 					$(QT_INCLUDE_DIR)/QtOpenGL \
+					/sw/include \
 					/System/Library/Frameworks/AGL.framework/Versions/A/Headers/
 }
 
@@ -92,7 +93,7 @@ QMAKE_CFLAGS_DEBUG += -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC -Wno-deprecated
 QMAKE_CFLAGS += -Wno-deprecated
 
 macx {
-	LIBS	+=	-F$(QTDIR)/lib/ -framework QtOpenGL -framework OpenGL -framework AGL -lgsl -lgslcblas -lm
+	LIBS	+=	-F$(QTDIR)/lib/ -L/sw/lib -framework QtOpenGL -framework OpenGL -framework AGL -lgsl -lgslcblas -lm
 }
 
 unix:!macx {
