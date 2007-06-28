@@ -291,7 +291,7 @@ def GET_GNUPLOT_DYNAMIC_SETTINGS( RecentOrbestRecent ):
 	settings = [ ]
 
 	
-	settings.append("set terminal %s %s dashed dl 0.5" % ( GNUPLOT_TERMINAL, numplotsmade ) )
+	settings.append("set terminal %s %s title '%s' dashed dl 0.5" % ( GNUPLOT_TERMINAL, numplotsmade, PASSED_DIRECTORY ) )
 	numplotsmade += 1
 
 
