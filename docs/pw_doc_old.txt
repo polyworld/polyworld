@@ -1,0 +1,70 @@
+To invoke PolyWorld...
+
+pw -l -g -d delay -f worldfilename -w width,height -p screenleft,screenbottom
+   -v[3][p] -r -s startrecordframe -b blackframes -m
+
+	-l :  load from pw.dump file
+	-g :  no graphics (debug from non-SGI terminal only)
+	-d :  use "delay" seconds to slow down simulation
+	-f :  input "worldfilename" instead of "worldfile"
+	-w :  set window "width" and "height"
+	-p :  set window position to "screenleft,screenbottom"
+	-v :  run in video mode (cg2)
+	-v3:  run in video mode (cg3)
+	-vp:  run in "practice" video mode (video screensize, but 60Hz)
+	-r :  record to videotape/videodisc (run "record" program)
+	-s :  resume recording at frame "startrecordframe"
+	-b :  begin recording with "blackframes" of black
+ *	-m :  record a movie file "pw.movie" (of frame-differenced,
+		run-length-encoded frames)
+
+ * rev20 only
+
+----------------------------------------------------------------------------
+
+Input to PolyWorld (pw):
+
+By default pw will read "worldfile" at startup.
+By using the -f option, pw can read any file for input.
+By convention, *.wf are the various worldfiles.
+
+----------------------------------------------------------------------------
+
+Special commands within PolyWorld:
+
+ESC     :  exits saving state
+ESC ESC :  exits without saving state
+space	:  pause & unpause
+b	:  brain-monitor display toggle
+d	:  delay toggle
+r	:  refresh display
+s	:  step (one time-step *when paused*)
+t	:  tracking mode toggle (track single organism till it dies versus
+	                         track current Nth fittest organism)
+0	:  overhead window to pure overhead
+1	:  overhead window follows 1st fittest organism
+2	:  overhead window follows 2nd fittest organism
+3	:  overhead window follows 3rd fittest organism
+4	:  overhead window follows 4th fittest organism
+5	:  overhead window follows 5th fittest organism
++	:  zoom in in overhead window
+-	:  zoom out in overhead window
+
+----------------------------------------------------------------------------
+
+Other tools...
+
+* movie -- a tool to play back movie files created by pw.
+	For best results, run PolyWorld at about 1/4 screen size, by
+	invoking it with the -w 640,480 command-line argument.  Frame rates
+	of 25 to 30 frames/sec are typical with 1/4 screen movies; full-
+	screen movies only run at about 3 frames/sec.
+
+  movie -f filename -e
+
+	-f : read from "filename" instead of the default ("pw.movie")
+	-e : use "enter to advance" mode (single step by pressing Enter)
+
+* rev20 only
+
+----------------------------------------------------------------------------

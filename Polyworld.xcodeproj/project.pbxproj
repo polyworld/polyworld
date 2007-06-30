@@ -38,82 +38,47 @@
 		37577842078C8E9900CA4042 /* worldfile in CopyFiles */ = {isa = PBXBuildFile; fileRef = 76BB7C9E074D4CE500576391 /* worldfile */; };
 		37577843078C8E9900CA4042 /* critter.obj in CopyFiles */ = {isa = PBXBuildFile; fileRef = 76CBA5E2062BEE2B001C79E7 /* critter.obj */; };
 		37577844078C8E9900CA4042 /* ground.obj in CopyFiles */ = {isa = PBXBuildFile; fileRef = 76CBA5E3062BEE2B001C79E7 /* ground.obj */; };
-		760097E708879D78008CD45B /* MainWindow.h in Resources */ = {isa = PBXBuildFile; fileRef = 760097E608879D78008CD45B /* MainWindow.h */; };
 		7624C7CE0A4A0CD5006A2B7C /* BrickPatch.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7624C7C80A4A0CD5006A2B7C /* BrickPatch.cp */; };
-		7624C7CF0A4A0CD5006A2B7C /* BrickPatch.h in Headers */ = {isa = PBXBuildFile; fileRef = 7624C7C90A4A0CD5006A2B7C /* BrickPatch.h */; };
 		7624C7D00A4A0CD5006A2B7C /* FoodPatch.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7624C7CA0A4A0CD5006A2B7C /* FoodPatch.cp */; };
-		7624C7D10A4A0CD5006A2B7C /* FoodPatch.h in Headers */ = {isa = PBXBuildFile; fileRef = 7624C7CB0A4A0CD5006A2B7C /* FoodPatch.h */; };
 		7624C7D20A4A0CD5006A2B7C /* Patch.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7624C7CC0A4A0CD5006A2B7C /* Patch.cp */; };
-		7624C7D30A4A0CD5006A2B7C /* Patch.h in Headers */ = {isa = PBXBuildFile; fileRef = 7624C7CD0A4A0CD5006A2B7C /* Patch.h */; };
 		7624C7F10A4A204A006A2B7C /* distributions.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7624C7EE0A4A204A006A2B7C /* distributions.cp */; };
-		7624C7F20A4A204A006A2B7C /* distributions.h in Headers */ = {isa = PBXBuildFile; fileRef = 7624C7EF0A4A204A006A2B7C /* distributions.h */; };
-		7624C7F30A4A204A006A2B7C /* graybin.h in Headers */ = {isa = PBXBuildFile; fileRef = 7624C7F00A4A204A006A2B7C /* graybin.h */; };
+		7655B2E80C35D35D0065C0A1 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 8D0C4E960486CD37000505A6 /* Info.plist */; };
+		7655B4E70C35DF040065C0A1 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 7655B4E60C35DF040065C0A1 /* Info.plist */; };
+		7655B5160C35DF710065C0A1 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 7655B5140C35DF710065C0A1 /* InfoPlist.strings */; };
 		7668D1690885AC65004158C6 /* PwMovieTools.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7668D1680885AC65004158C6 /* PwMovieTools.cp */; };
-		7668D16B0885AD07004158C6 /* PwMovieTools.h in Headers */ = {isa = PBXBuildFile; fileRef = 7668D16A0885AD07004158C6 /* PwMovieTools.h */; };
 		7668D2F208864A7E004158C6 /* PwMovieTools.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7668D1680885AC65004158C6 /* PwMovieTools.cp */; };
 		7668D30008864B8A004158C6 /* PwMoviePlayer.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7668D2FF08864B8A004158C6 /* PwMoviePlayer.cp */; };
 		7668D30E088650F0004158C6 /* MainWindow.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7668D30D088650F0004158C6 /* MainWindow.cp */; };
 		767A61770A4A21AC00A88B62 /* brick.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76D32E1609E62FDC00394ACE /* brick.cp */; };
-		769996590742BCF0001B0A65 /* gdlink.h in Headers */ = {isa = PBXBuildFile; fileRef = 769996580742BCF0001B0A65 /* gdlink.h */; };
 		76AA4617073AAEFF00508D3D /* AGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 76AA4616073AAEFF00508D3D /* AGL.framework */; };
 		76AA4628073AAF7E00508D3D /* TextStatusWindow.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76AA4626073AAF7E00508D3D /* TextStatusWindow.cp */; };
-		76AA4629073AAF7E00508D3D /* TextStatusWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = 76AA4627073AAF7E00508D3D /* TextStatusWindow.h */; };
 		76C2315009D0B4AA00EB652A /* OverheadView.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76C2314E09D0B4AA00EB652A /* OverheadView.cp */; };
-		76C2315109D0B4AA00EB652A /* OverheadView.h in Headers */ = {isa = PBXBuildFile; fileRef = 76C2314F09D0B4AA00EB652A /* OverheadView.h */; };
 		76CBA568062BED8E001C79E7 /* debug.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA55D062BED8E001C79E7 /* debug.cp */; };
-		76CBA569062BED8E001C79E7 /* debug.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA55E062BED8E001C79E7 /* debug.h */; };
 		76CBA56B062BED8E001C79E7 /* globals.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA560062BED8E001C79E7 /* globals.cp */; };
-		76CBA56C062BED8E001C79E7 /* globals.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA561062BED8E001C79E7 /* globals.h */; };
 		76CBA56D062BED8E001C79E7 /* PWApp.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA562062BED8E001C79E7 /* PWApp.cp */; };
-		76CBA56E062BED8E001C79E7 /* PWApp.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA563062BED8E001C79E7 /* PWApp.h */; };
 		76CBA571062BED8E001C79E7 /* Simulation.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA566062BED8E001C79E7 /* Simulation.cp */; };
-		76CBA572062BED8E001C79E7 /* Simulation.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA567062BED8E001C79E7 /* Simulation.h */; };
 		76CBA5AD062BEDBC001C79E7 /* brain.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA574062BEDBC001C79E7 /* brain.cp */; };
-		76CBA5AE062BEDBC001C79E7 /* brain.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA575062BEDBC001C79E7 /* brain.h */; };
 		76CBA5AF062BEDBC001C79E7 /* critter.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA576062BEDBC001C79E7 /* critter.cp */; };
-		76CBA5B0062BEDBC001C79E7 /* critter.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA577062BEDBC001C79E7 /* critter.h */; };
 		76CBA5B1062BEDBC001C79E7 /* genome.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA578062BEDBC001C79E7 /* genome.cp */; };
-		76CBA5B2062BEDBC001C79E7 /* genome.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA579062BEDBC001C79E7 /* genome.h */; };
 		76CBA5B3062BEDBC001C79E7 /* barrier.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA57B062BEDBC001C79E7 /* barrier.cp */; };
-		76CBA5B4062BEDBC001C79E7 /* barrier.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA57C062BEDBC001C79E7 /* barrier.h */; };
 		76CBA5B5062BEDBC001C79E7 /* food.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA57D062BEDBC001C79E7 /* food.cp */; };
-		76CBA5B6062BEDBC001C79E7 /* food.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA57E062BEDBC001C79E7 /* food.h */; };
 		76CBA5B8062BEDBC001C79E7 /* gcamera.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA581062BEDBC001C79E7 /* gcamera.cp */; };
-		76CBA5B9062BEDBC001C79E7 /* gcamera.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA582062BEDBC001C79E7 /* gcamera.h */; };
 		76CBA5BA062BEDBC001C79E7 /* glight.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA583062BEDBC001C79E7 /* glight.cp */; };
-		76CBA5BB062BEDBC001C79E7 /* glight.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA584062BEDBC001C79E7 /* glight.h */; };
 		76CBA5BC062BEDBC001C79E7 /* gline.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA585062BEDBC001C79E7 /* gline.cp */; };
-		76CBA5BD062BEDBC001C79E7 /* gline.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA586062BEDBC001C79E7 /* gline.h */; };
 		76CBA5BE062BEDBC001C79E7 /* gmisc.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA587062BEDBC001C79E7 /* gmisc.cp */; };
-		76CBA5BF062BEDBC001C79E7 /* gmisc.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA588062BEDBC001C79E7 /* gmisc.h */; };
 		76CBA5C0062BEDBC001C79E7 /* gobject.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA589062BEDBC001C79E7 /* gobject.cp */; };
-		76CBA5C1062BEDBC001C79E7 /* gobject.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA58A062BEDBC001C79E7 /* gobject.h */; };
 		76CBA5C2062BEDBC001C79E7 /* gpoint.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA58B062BEDBC001C79E7 /* gpoint.cp */; };
-		76CBA5C3062BEDBC001C79E7 /* gpoint.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA58C062BEDBC001C79E7 /* gpoint.h */; };
 		76CBA5C4062BEDBC001C79E7 /* gpolygon.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA58D062BEDBC001C79E7 /* gpolygon.cp */; };
-		76CBA5C5062BEDBC001C79E7 /* gpolygon.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA58E062BEDBC001C79E7 /* gpolygon.h */; };
-		76CBA5C6062BEDBC001C79E7 /* graphics.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA58F062BEDBC001C79E7 /* graphics.h */; };
 		76CBA5C7062BEDBC001C79E7 /* grect.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA590062BEDBC001C79E7 /* grect.cp */; };
-		76CBA5C8062BEDBC001C79E7 /* grect.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA591062BEDBC001C79E7 /* grect.h */; };
 		76CBA5C9062BEDBC001C79E7 /* gscene.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA592062BEDBC001C79E7 /* gscene.cp */; };
-		76CBA5CA062BEDBC001C79E7 /* gscene.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA593062BEDBC001C79E7 /* gscene.h */; };
 		76CBA5CB062BEDBC001C79E7 /* gsquare.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA594062BEDBC001C79E7 /* gsquare.cp */; };
-		76CBA5CC062BEDBC001C79E7 /* gsquare.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA595062BEDBC001C79E7 /* gsquare.h */; };
 		76CBA5CD062BEDBC001C79E7 /* gstage.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA596062BEDBC001C79E7 /* gstage.cp */; };
-		76CBA5CE062BEDBC001C79E7 /* gstage.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA597062BEDBC001C79E7 /* gstage.h */; };
 		76CBA5CF062BEDBC001C79E7 /* BrainMonitorWindow.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA599062BEDBC001C79E7 /* BrainMonitorWindow.cp */; };
-		76CBA5D0062BEDBC001C79E7 /* BrainMonitorWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA59A062BEDBC001C79E7 /* BrainMonitorWindow.h */; };
 		76CBA5D3062BEDBC001C79E7 /* ChartWindow.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA59D062BEDBC001C79E7 /* ChartWindow.cp */; };
-		76CBA5D4062BEDBC001C79E7 /* ChartWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA59E062BEDBC001C79E7 /* ChartWindow.h */; };
 		76CBA5D7062BEDBC001C79E7 /* SceneView.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA5A1062BEDBC001C79E7 /* SceneView.cp */; };
-		76CBA5D8062BEDBC001C79E7 /* SceneView.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA5A2062BEDBC001C79E7 /* SceneView.h */; };
 		76CBA5D9062BEDBC001C79E7 /* error.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA5A4062BEDBC001C79E7 /* error.cp */; };
-		76CBA5DA062BEDBC001C79E7 /* error.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA5A5062BEDBC001C79E7 /* error.h */; };
 		76CBA5DB062BEDBC001C79E7 /* indexlist.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA5A6062BEDBC001C79E7 /* indexlist.cp */; };
-		76CBA5DC062BEDBC001C79E7 /* indexlist.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA5A7062BEDBC001C79E7 /* indexlist.h */; };
 		76CBA5DD062BEDBC001C79E7 /* misc.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA5A8062BEDBC001C79E7 /* misc.cp */; };
-		76CBA5DE062BEDBC001C79E7 /* misc.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA5A9062BEDBC001C79E7 /* misc.h */; };
-		76CBA5DF062BEDBC001C79E7 /* objectlist.h in Headers */ = {isa = PBXBuildFile; fileRef = 76CBA5AA062BEDBC001C79E7 /* objectlist.h */; };
 		76CBA5E4062BEE2B001C79E7 /* critter.obj in Resources */ = {isa = PBXBuildFile; fileRef = 76CBA5E2062BEE2B001C79E7 /* critter.obj */; };
 		76CBA5E5062BEE2B001C79E7 /* ground.obj in Resources */ = {isa = PBXBuildFile; fileRef = 76CBA5E3062BEE2B001C79E7 /* ground.obj */; };
 		76CBA7CD062D11C2001C79E7 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 76CBA7CC062D11C2001C79E7 /* OpenGL.framework */; };
@@ -126,14 +91,10 @@
 		76D02CC70894CEE300D89155 /* GLWidget.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76D02CC60894CEE300D89155 /* GLWidget.cp */; };
 		76D02CE40894D30200D89155 /* moc_GLWidget.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 76D02CE30894D30200D89155 /* moc_GLWidget.cpp */; };
 		76D32E0F09E62F9200394ACE /* objectxsortedlist.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76D32E0D09E62F9200394ACE /* objectxsortedlist.cp */; };
-		76D32E1009E62F9200394ACE /* objectxsortedlist.h in Headers */ = {isa = PBXBuildFile; fileRef = 76D32E0E09E62F9200394ACE /* objectxsortedlist.h */; };
-		76D32E1909E62FDC00394ACE /* brick.h in Headers */ = {isa = PBXBuildFile; fileRef = 76D32E1709E62FDC00394ACE /* brick.h */; };
 		84ED837C062E7EED00AEEA18 /* CritterPOVWindow.cp in Sources */ = {isa = PBXBuildFile; fileRef = 84ED837A062E7EED00AEEA18 /* CritterPOVWindow.cp */; };
-		84ED837D062E7EED00AEEA18 /* CritterPOVWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = 84ED837B062E7EED00AEEA18 /* CritterPOVWindow.h */; };
 		8D0C4E8D0486CD37000505A6 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 0867D6AAFE840B52C02AAC07 /* InfoPlist.strings */; };
 		8D0C4E920486CD37000505A6 /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 20286C33FDCF999611CA2CEA /* Carbon.framework */; };
 		8D0C4E930486CD37000505A6 /* libstdc++.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 0249A66BFF388E3F11CA2CEA /* libstdc++.a */; };
-		C58654FC09B94E1C000F30F8 /* complexity.h in Headers */ = {isa = PBXBuildFile; fileRef = C58654FB09B94E1C000F30F8 /* complexity.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -191,10 +152,11 @@
 		7624C7F00A4A204A006A2B7C /* graybin.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = graybin.h; sourceTree = "<group>"; };
 		7625064A09B8CA5500C36C36 /* probe_activity.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = probe_activity.cpp; path = utils/probe_activity.cpp; sourceTree = "<group>"; };
 		7625066609B8CCE600C36C36 /* probe_activity */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = probe_activity; sourceTree = BUILT_PRODUCTS_DIR; };
+		7655B4E60C35DF040065C0A1 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text.xml; name = Info.plist; path = PwMoviePlayer/Info.plist; sourceTree = "<group>"; };
+		7655B5150C35DF710065C0A1 /* English */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = English; path = PwMoviePlayer/English.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		7668D1680885AC65004158C6 /* PwMovieTools.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = PwMovieTools.cp; sourceTree = "<group>"; };
 		7668D16A0885AD07004158C6 /* PwMovieTools.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = PwMovieTools.h; sourceTree = "<group>"; };
 		7668D2E308864A66004158C6 /* PwMoviePlayer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PwMoviePlayer.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		7668D2E508864A67004158C6 /* PwMoviePlayer-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = "PwMoviePlayer-Info.plist"; sourceTree = "<group>"; };
 		7668D2FF08864B8A004158C6 /* PwMoviePlayer.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = PwMoviePlayer.cp; sourceTree = "<group>"; };
 		7668D30D088650F0004158C6 /* MainWindow.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = MainWindow.cp; sourceTree = "<group>"; };
 		769996580742BCF0001B0A65 /* gdlink.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = gdlink.h; sourceTree = "<group>"; };
@@ -329,11 +291,12 @@
 		20286C29FDCF999611CA2CEA /* Polyworld */ = {
 			isa = PBXGroup;
 			children = (
+				7655B5140C35DF710065C0A1 /* InfoPlist.strings */,
+				7655B4E60C35DF040065C0A1 /* Info.plist */,
 				20286C2AFDCF999611CA2CEA /* Sources */,
 				20286C2CFDCF999611CA2CEA /* Resources */,
 				20286C32FDCF999611CA2CEA /* External Frameworks and Libraries */,
 				195DF8CFFE9D517E11CA2CBB /* Products */,
-				7668D2E508864A67004158C6 /* PwMoviePlayer-Info.plist */,
 			);
 			name = Polyworld;
 			sourceTree = "<group>";
@@ -532,57 +495,6 @@
 		};
 /* End PBXGroup section */
 
-/* Begin PBXHeadersBuildPhase section */
-		8D0C4E8A0486CD37000505A6 /* Headers */ = {
-			isa = PBXHeadersBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				76CBA569062BED8E001C79E7 /* debug.h in Headers */,
-				76CBA56C062BED8E001C79E7 /* globals.h in Headers */,
-				76CBA56E062BED8E001C79E7 /* PWApp.h in Headers */,
-				76CBA572062BED8E001C79E7 /* Simulation.h in Headers */,
-				76CBA5AE062BEDBC001C79E7 /* brain.h in Headers */,
-				76CBA5B0062BEDBC001C79E7 /* critter.h in Headers */,
-				76CBA5B2062BEDBC001C79E7 /* genome.h in Headers */,
-				76CBA5B4062BEDBC001C79E7 /* barrier.h in Headers */,
-				76CBA5B6062BEDBC001C79E7 /* food.h in Headers */,
-				76CBA5B9062BEDBC001C79E7 /* gcamera.h in Headers */,
-				76CBA5BB062BEDBC001C79E7 /* glight.h in Headers */,
-				76CBA5BD062BEDBC001C79E7 /* gline.h in Headers */,
-				76CBA5BF062BEDBC001C79E7 /* gmisc.h in Headers */,
-				76CBA5C1062BEDBC001C79E7 /* gobject.h in Headers */,
-				76CBA5C3062BEDBC001C79E7 /* gpoint.h in Headers */,
-				76CBA5C5062BEDBC001C79E7 /* gpolygon.h in Headers */,
-				76CBA5C6062BEDBC001C79E7 /* graphics.h in Headers */,
-				76CBA5C8062BEDBC001C79E7 /* grect.h in Headers */,
-				76CBA5CA062BEDBC001C79E7 /* gscene.h in Headers */,
-				76CBA5CC062BEDBC001C79E7 /* gsquare.h in Headers */,
-				76CBA5CE062BEDBC001C79E7 /* gstage.h in Headers */,
-				76CBA5D0062BEDBC001C79E7 /* BrainMonitorWindow.h in Headers */,
-				76CBA5D4062BEDBC001C79E7 /* ChartWindow.h in Headers */,
-				76CBA5D8062BEDBC001C79E7 /* SceneView.h in Headers */,
-				76CBA5DA062BEDBC001C79E7 /* error.h in Headers */,
-				76CBA5DC062BEDBC001C79E7 /* indexlist.h in Headers */,
-				76CBA5DE062BEDBC001C79E7 /* misc.h in Headers */,
-				76CBA5DF062BEDBC001C79E7 /* objectlist.h in Headers */,
-				84ED837D062E7EED00AEEA18 /* CritterPOVWindow.h in Headers */,
-				76AA4629073AAF7E00508D3D /* TextStatusWindow.h in Headers */,
-				769996590742BCF0001B0A65 /* gdlink.h in Headers */,
-				7668D16B0885AD07004158C6 /* PwMovieTools.h in Headers */,
-				C58654FC09B94E1C000F30F8 /* complexity.h in Headers */,
-				76C2315109D0B4AA00EB652A /* OverheadView.h in Headers */,
-				76D32E1009E62F9200394ACE /* objectxsortedlist.h in Headers */,
-				76D32E1909E62FDC00394ACE /* brick.h in Headers */,
-				7624C7CF0A4A0CD5006A2B7C /* BrickPatch.h in Headers */,
-				7624C7D10A4A0CD5006A2B7C /* FoodPatch.h in Headers */,
-				7624C7D30A4A0CD5006A2B7C /* Patch.h in Headers */,
-				7624C7F20A4A204A006A2B7C /* distributions.h in Headers */,
-				7624C7F30A4A204A006A2B7C /* graybin.h in Headers */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXHeadersBuildPhase section */
-
 /* Begin PBXNativeTarget section */
 		7625066509B8CCE600C36C36 /* probe_activity */ = {
 			isa = PBXNativeTarget;
@@ -622,7 +534,6 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 76293F0E0981AF4600D27C6E /* Build configuration list for PBXNativeTarget "Polyworld" */;
 			buildPhases = (
-				8D0C4E8A0486CD37000505A6 /* Headers */,
 				8D0C4E8C0486CD37000505A6 /* Resources */,
 				8D0C4E8F0486CD37000505A6 /* Sources */,
 				8D0C4E910486CD37000505A6 /* Frameworks */,
@@ -664,7 +575,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				760097E708879D78008CD45B /* MainWindow.h in Resources */,
+				7655B4E70C35DF040065C0A1 /* Info.plist in Resources */,
+				7655B5160C35DF710065C0A1 /* InfoPlist.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -672,6 +584,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7655B2E80C35D35D0065C0A1 /* Info.plist in Resources */,
 				8D0C4E8D0486CD37000505A6 /* InfoPlist.strings in Resources */,
 				76CBA5E4062BEE2B001C79E7 /* critter.obj in Resources */,
 				76CBA5E5062BEE2B001C79E7 /* ground.obj in Resources */,
@@ -814,6 +727,14 @@
 			name = InfoPlist.strings;
 			sourceTree = "<group>";
 		};
+		7655B5140C35DF710065C0A1 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				7655B5150C35DF710065C0A1 /* English */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
@@ -895,6 +816,7 @@
 					/sw/lib,
 				);
 				LIBRARY_STYLE = Static;
+				OBJROOT = "$(PROJECT_DIR)/../polyworld_related/build";
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
 					"-DQT_TABLET_SUPPORT",
@@ -920,6 +842,7 @@
 				PREBINDING = NO;
 				PRODUCT_NAME = Polyworld;
 				SECTORDER_FLAGS = "";
+				SYMROOT = "$(PROJECT_DIR)/../polyworld_related/build";
 				WARNING_CFLAGS = (
 					"-Wmost",
 					"-Wno-four-char-constants",
@@ -979,9 +902,10 @@
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
 				);
-				INFOPLIST_FILE = "PwMoviePlayer-Info.plist";
+				INFOPLIST_FILE = "";
 				INSTALL_PATH = "$(USER_APPS_DIR)";
 				LIBRARY_SEARCH_PATHS = $QtLib;
+				OBJROOT = "$(PROJECT_DIR)/../polyworld_related/build";
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
 					"-DQT_TABLET_SUPPORT",
@@ -1002,6 +926,7 @@
 				PREBINDING = YES;
 				PRODUCT_NAME = PwMoviePlayer;
 				SECTORDER_FLAGS = "";
+				SYMROOT = "$(PROJECT_DIR)/../polyworld_related/build";
 				WARNING_CFLAGS = (
 					"-Wmost",
 					"-Wno-four-char-constants",
@@ -1265,6 +1190,7 @@
 					/sw/lib,
 				);
 				LIBRARY_STYLE = Static;
+				OBJROOT = "$(PROJECT_DIR)/../polyworld_related/build";
 				OPTIMIZATION_CFLAGS = "-O0";
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
@@ -1288,6 +1214,7 @@
 				PREBINDING = NO;
 				PRODUCT_NAME = Polyworld;
 				SECTORDER_FLAGS = "";
+				SYMROOT = "$(PROJECT_DIR)/../polyworld_related/build";
 				WARNING_CFLAGS = (
 					"-Wmost",
 					"-Wno-four-char-constants",
@@ -1346,6 +1273,7 @@
 					/sw/lib,
 				);
 				LIBRARY_STYLE = Static;
+				OBJROOT = "$(PROJECT_DIR)/../polyworld_related/build";
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
 					"-DQT_TABLET_SUPPORT",
@@ -1371,6 +1299,7 @@
 				PREBINDING = NO;
 				PRODUCT_NAME = Polyworld;
 				SECTORDER_FLAGS = "";
+				SYMROOT = "$(PROJECT_DIR)/../polyworld_related/build";
 				WARNING_CFLAGS = (
 					"-Wmost",
 					"-Wno-four-char-constants",
@@ -1429,6 +1358,7 @@
 					/sw/lib,
 				);
 				LIBRARY_STYLE = Static;
+				OBJROOT = "$(PROJECT_DIR)/../polyworld_related/build";
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
 					"-DQT_TABLET_SUPPORT",
@@ -1450,6 +1380,7 @@
 				PREBINDING = NO;
 				PRODUCT_NAME = Polyworld;
 				SECTORDER_FLAGS = "";
+				SYMROOT = "$(PROJECT_DIR)/../polyworld_related/build";
 				WARNING_CFLAGS = (
 					"-Wmost",
 					"-Wno-four-char-constants",
@@ -1504,6 +1435,7 @@
 					/sw/lib,
 				);
 				LIBRARY_STYLE = Static;
+				OBJROOT = "$(PROJECT_DIR)/../polyworld_related/build";
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
 					"-DQT_TABLET_SUPPORT",
@@ -1525,6 +1457,7 @@
 				PREBINDING = NO;
 				PRODUCT_NAME = Polyworld;
 				SECTORDER_FLAGS = "";
+				SYMROOT = "$(PROJECT_DIR)/../polyworld_related/build";
 				WARNING_CFLAGS = (
 					"-Wmost",
 					"-Wno-four-char-constants",
@@ -1652,9 +1585,10 @@
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
 				);
-				INFOPLIST_FILE = "PwMoviePlayer-Info.plist";
+				INFOPLIST_FILE = "";
 				INSTALL_PATH = "$(USER_APPS_DIR)";
 				LIBRARY_SEARCH_PATHS = $QtLib;
+				OBJROOT = "$(PROJECT_DIR)/../polyworld_related/build";
 				OPTIMIZATION_CFLAGS = "-O0";
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
@@ -1675,6 +1609,7 @@
 				PREBINDING = YES;
 				PRODUCT_NAME = PwMoviePlayer;
 				SECTORDER_FLAGS = "";
+				SYMROOT = "$(PROJECT_DIR)/../polyworld_related/build";
 				WARNING_CFLAGS = (
 					"-Wmost",
 					"-Wno-four-char-constants",
@@ -1703,9 +1638,10 @@
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
 				);
-				INFOPLIST_FILE = "PwMoviePlayer-Info.plist";
+				INFOPLIST_FILE = "";
 				INSTALL_PATH = "$(USER_APPS_DIR)";
 				LIBRARY_SEARCH_PATHS = $QtLib;
+				OBJROOT = "$(PROJECT_DIR)/../polyworld_related/build";
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
 					"-DQT_TABLET_SUPPORT",
@@ -1726,6 +1662,7 @@
 				PREBINDING = YES;
 				PRODUCT_NAME = PwMoviePlayer;
 				SECTORDER_FLAGS = "";
+				SYMROOT = "$(PROJECT_DIR)/../polyworld_related/build";
 				WARNING_CFLAGS = (
 					"-Wmost",
 					"-Wno-four-char-constants",
@@ -1756,9 +1693,10 @@
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
 				);
-				INFOPLIST_FILE = "PwMoviePlayer-Info.plist";
+				INFOPLIST_FILE = "";
 				INSTALL_PATH = "$(USER_APPS_DIR)";
 				LIBRARY_SEARCH_PATHS = $QtLib;
+				OBJROOT = "$(PROJECT_DIR)/../polyworld_related/build";
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
 					"-DQT_TABLET_SUPPORT",
@@ -1778,6 +1716,7 @@
 				PREBINDING = YES;
 				PRODUCT_NAME = PwMoviePlayer;
 				SECTORDER_FLAGS = "";
+				SYMROOT = "$(PROJECT_DIR)/../polyworld_related/build";
 				WARNING_CFLAGS = (
 					"-Wmost",
 					"-Wno-four-char-constants",
@@ -1803,9 +1742,10 @@
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
 				);
-				INFOPLIST_FILE = "PwMoviePlayer-Info.plist";
+				INFOPLIST_FILE = "";
 				INSTALL_PATH = "$(USER_APPS_DIR)";
 				LIBRARY_SEARCH_PATHS = $QtLib;
+				OBJROOT = "$(PROJECT_DIR)/../polyworld_related/build";
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
 					"-DQT_TABLET_SUPPORT",
@@ -1825,6 +1765,7 @@
 				PREBINDING = YES;
 				PRODUCT_NAME = PwMoviePlayer;
 				SECTORDER_FLAGS = "";
+				SYMROOT = "$(PROJECT_DIR)/../polyworld_related/build";
 				WARNING_CFLAGS = (
 					"-Wmost",
 					"-Wno-four-char-constants",
