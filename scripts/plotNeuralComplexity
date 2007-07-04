@@ -94,8 +94,7 @@ LINESTYLES={
 
 
 # Default plotting stats
-flag_plotWhiskerbars=True
-flag_plotSmooth=False
+flag_plotWhiskerbars, flag_plotSmooth = True, False
 GNUPLOT_SMOOTHING_FUNCTION='csplines' 		# reasonable smoothing options are: csplines, acsplines, bezier, sbezier
 inputplotfilename='AvrComplexity.plt'
 outputfilenameGNU="/tmp/,plotNeuralComplexity_" + str(os.getpid()) + ".gnuplot"
@@ -124,25 +123,11 @@ flag_have_previously_plotted_a_file = False
 flag_have_previously_plotted_a_max = False
 tempfilename='/tmp/,plotNeuralComplexity_%s.plt' % ( os.getpid() )		# this file will contain the raw data
 gnufilename='/tmp/,plotNeuralComplexity_%s.gnuplot' % ( os.getpid() )	# this file will contain gnuplot commands
-flag_plotPoints 		= False
-flag_plotMean 			= False
-flag_plotErrorbars		= False
-flag_plotLegend			= False
-flag_plotWhiskers		= False
-flag_plotWhiskers_AVERAGE	= False
-flag_plotMean_AVERAGE		= False
-flag_plotErrorbars_AVERAGE	= False
-flag_plotProcessing		= False
-flag_plotInput			= False
-flag_plotAll			= False
-flag_plotMax			= False
-flag_plotMax_AVERAGE		= False
-flag_multiplot 			= False
+flag_plotPoints, flag_plotMean, flag_plotErrorbars, flag_plotLegend, flag_plotWhiskers, flag_plotWhiskers_AVERAGE, flag_plotMean_AVERAGE, flag_plotErrorbars_AVERAGE, flag_plotProcessing, flag_plotInput, flag_plotAll, flag_plotMax, flag_plotMax_AVERAGE, flag_multiplot = False, False, False, False, False, False, False, False, False, False, False, False, False, False
 ###############
 numplotsmade=0
 PASSED_DIRECTORY=''
-multiplotDimX = 0
-multiplotDimY = 0
+multiplotDimX,multiplotDimY = 0, 0
 RUN_DIRS={ 'bestRecent': [], 'Recent': [] }
 GNUPLOT_TOPRIGHT_LABEL=[ "Generated `date +%Y-%m-%d` by `whoami`" ]
 multiplotmaxtimesteps={} # we only use this if we're multiplotting.  It lets us set the range and xtics for each plot invidually to make them pretty
@@ -290,8 +275,8 @@ def GET_GNUPLOT_DYNAMIC_SETTINGS( RecentOrbestRecent ):
 	global flag_plotAll, flag_plotProcessing, flag_plotInput
 	settings = [ ]
 
-	
-	settings.append("set terminal %s %s title '%s' dashed dl 0.5" % ( GNUPLOT_TERMINAL, numplotsmade, PASSED_DIRECTORY ) )
+
+	settings.append("set terminal %s %s title '%s' dashed dl 0.5" % ( GNUPLOT_TERMINAL, numplotsmade, PASSED_DIRECTORY ) )	
 	numplotsmade += 1
 
 
@@ -525,43 +510,26 @@ def check_parameters( argv ):
 	global flag_plotAll, flag_plotProcessing, flag_plotInput, flag_plotSmooth
 	global flag_plotMax, flag_plotMax_AVERAGE
 	# Set our plot flags
-	for opt in opts:
-
-		if   '-e' in opt:
-			flag_plotErrorbars = True
-		elif '-s' in opt:
-			flag_plotSmooth = True
-		elif '-n' in opt:
-			flag_plotMean = True
-		elif '-w' in opt:
-			flag_plotWhiskers = True
-		elif '-E' in opt:
-			flag_plotErrorbars_AVERAGE = True
-		elif '-N' in opt:
-			flag_plotMean_AVERAGE = True
-		elif '-W' in opt:
-			flag_plotWhiskers_AVERAGE = True
-		elif '-l' in opt:
-			flag_plotLegend = True
-		elif '-x' in opt:
-			flag_plotMax = True
-		elif '-X' in opt:
-			flag_plotMax_AVERAGE = True
-		elif '-p' in opt:
-			flag_plotPoints = True
-		elif '-A' in opt:
-			flag_plotAll = True
-		elif '-P' in opt:
-			flag_plotProcessing = True
-		elif '-I' in opt:
-			flag_plotInput = True
+	for opt, value in opts:
+		if   '-e' in opt: flag_plotErrorbars = True
+		elif '-s' in opt: flag_plotSmooth = True
+		elif '-n' in opt: flag_plotMean = True
+		elif '-w' in opt: flag_plotWhiskers = True
+		elif '-E' in opt: flag_plotErrorbars_AVERAGE = True
+		elif '-N' in opt: flag_plotMean_AVERAGE = True
+		elif '-W' in opt: flag_plotWhiskers_AVERAGE = True
+		elif '-l' in opt: flag_plotLegend = True
+		elif '-x' in opt: flag_plotMax = True
+		elif '-X' in opt: flag_plotMax_AVERAGE = True
+		elif '-p' in opt: flag_plotPoints = True
+		elif '-A' in opt: flag_plotAll = True
+		elif '-P' in opt: flag_plotProcessing = True
+		elif '-I' in opt: flag_plotInput = True
 		elif '-M' in opt:
 			flag_multiplot = True
-			try: multiplotDimX, multiplotDimY = map(int, (opt[1]).split('x'))
+			try: multiplotDimX, multiplotDimY = map(int, (value).split('x'))
 			except ValueError: print_usage_and_exit()
-		else:
-			print "* Error: Do not know argument '%s'" % (opt)
-			print_usage_and_exit()
+
 
 	# Some default settings if the user doesn't specify anything...
 	if not flag_plotInput and not flag_plotAll: flag_plotProcessing = True	# if no -[API] is specified, assume -P.
