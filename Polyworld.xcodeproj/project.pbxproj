@@ -151,7 +151,7 @@
 		7624C7EF0A4A204A006A2B7C /* distributions.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = distributions.h; sourceTree = "<group>"; };
 		7624C7F00A4A204A006A2B7C /* graybin.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = graybin.h; sourceTree = "<group>"; };
 		7625064A09B8CA5500C36C36 /* probe_activity.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = probe_activity.cpp; path = utils/probe_activity.cpp; sourceTree = "<group>"; };
-		7625066609B8CCE600C36C36 /* probe_activity */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = probe_activity; sourceTree = BUILT_PRODUCTS_DIR; };
+		7625066609B8CCE600C36C36 /* probe_activity */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "compiled.mach-o.executable"; path = probe_activity; sourceTree = BUILT_PRODUCTS_DIR; };
 		7655B4E60C35DF040065C0A1 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text.xml; name = Info.plist; path = PwMoviePlayer/Info.plist; sourceTree = "<group>"; };
 		7655B5150C35DF710065C0A1 /* English */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = English; path = PwMoviePlayer/English.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		7668D1680885AC65004158C6 /* PwMovieTools.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = PwMovieTools.cp; sourceTree = "<group>"; };
@@ -619,7 +619,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "echo QtBin = $QtBin\necho QtLib = $QtLib\necho QtInc = $QtInc\n\nif [ app/Simulation.h -nt app/moc_Simulation.cpp ]; then $QtBin/moc app/Simulation.h -o app/moc_Simulation.cpp; fi\nif [ app/PWApp.h      -nt app/moc_PWApp.cpp      ]; then $QtBin/moc app/PWApp.h      -o app/moc_PWApp.cpp     ; fi\nexit 0";
+			shellScript = "if [ app/Simulation.h -nt app/moc_Simulation.cpp ]; then $QT/bin/moc app/Simulation.h -o app/moc_Simulation.cpp; fi\nif [ app/PWApp.h      -nt app/moc_PWApp.cpp      ]; then $QT/bin/moc app/PWApp.h      -o app/moc_PWApp.cpp     ; fi\nexit 0";
 		};
 		76D02AFE0894900E00D89155 /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -632,7 +632,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "#echo QtBin = $QtBin\n#echo QtLib = $QtLib\n#echo QtInc = $QtInc\n\nif [ PwMoviePlayer/PwMoviePlayer.h -nt PwMoviePlayer/moc_PwMoviePlayer.cpp ]; then $QtBin/moc PwMoviePlayer/PwMoviePlayer.h -o PwMoviePlayer/moc_PwMoviePlayer.cpp; fi\nif [ PwMoviePlayer/MainWindow.h    -nt PwMoviePlayer/moc_MainWindow.cpp    ]; then $QtBin/moc PwMoviePlayer/MainWindow.h    -o PwMoviePlayer/moc_MainWindow.cpp   ; fi\nif [ PwMoviePlayer/GLWidget.h      -nt PwMoviePlayer/moc_GLWidget.cpp      ]; then $QtBin/moc PwMoviePlayer/GLWidget.h      -o PwMoviePlayer/moc_GLWidget.cpp     ; fi\nexit 0";
+			shellScript = "if [ PwMoviePlayer/PwMoviePlayer.h -nt PwMoviePlayer/moc_PwMoviePlayer.cpp ]; then $QT/bin/moc PwMoviePlayer/PwMoviePlayer.h -o PwMoviePlayer/moc_PwMoviePlayer.cpp; fi\nif [ PwMoviePlayer/MainWindow.h    -nt PwMoviePlayer/moc_MainWindow.cpp    ]; then $QT/bin/moc PwMoviePlayer/MainWindow.h    -o PwMoviePlayer/moc_MainWindow.cpp   ; fi\nif [ PwMoviePlayer/GLWidget.h      -nt PwMoviePlayer/moc_GLWidget.cpp      ]; then $QT/bin/moc PwMoviePlayer/GLWidget.h      -o PwMoviePlayer/moc_GLWidget.cpp     ; fi\nexit 0";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -772,7 +772,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COPY_PHASE_STRIP = YES;
-				FRAMEWORK_SEARCH_PATHS = $QtLib;
+				FRAMEWORK_SEARCH_PATHS = $QT/lib;
 				GCC_ALTIVEC_EXTENSIONS = YES;
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_ENABLE_TRIGRAPHS = NO;
@@ -802,9 +802,9 @@
 				GCC_WARN_UNUSED_VALUE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = (
-					$QtInc,
-					$QtInc/Qt,
-					$QtInc/QtGui,
+					$QT/include,
+					$QT/include/Qt,
+					$QT/include/QtGui,
 					/sw/include,
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
@@ -812,7 +812,7 @@
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Applications";
 				LIBRARY_SEARCH_PATHS = (
-					$QtLib,
+					$QT/lib,
 					/sw/lib,
 				);
 				LIBRARY_STYLE = Static;
@@ -887,7 +887,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COPY_PHASE_STRIP = YES;
-				FRAMEWORK_SEARCH_PATHS = $QtLib;
+				FRAMEWORK_SEARCH_PATHS = $QT/lib;
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
 				GCC_MODEL_TUNING = G5;
@@ -895,16 +895,16 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "";
 				HEADER_SEARCH_PATHS = (
-					$QtInc,
-					$QtInc/QtCore,
-					$QtInc/QtGui,
-					$QtInc/QtOpenGL,
+					$QT/include,
+					$QT/include/QtCore,
+					$QT/include/QtGui,
+					$QT/include/QtOpenGL,
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
 				);
 				INFOPLIST_FILE = "";
 				INSTALL_PATH = "$(USER_APPS_DIR)";
-				LIBRARY_SEARCH_PATHS = $QtLib;
+				LIBRARY_SEARCH_PATHS = $QT/lib;
 				OBJROOT = "$(PROJECT_DIR)/../polyworld_related/build";
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
@@ -1146,7 +1146,7 @@
 			buildSettings = {
 				COPY_PHASE_STRIP = NO;
 				DEBUGGING_SYMBOLS = YES;
-				FRAMEWORK_SEARCH_PATHS = $QtLib;
+				FRAMEWORK_SEARCH_PATHS = $QT/lib;
 				GCC_ALTIVEC_EXTENSIONS = YES;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
@@ -1176,9 +1176,9 @@
 				GCC_WARN_UNUSED_VALUE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = (
-					$QtInc,
-					$QtInc/Qt,
-					$QtInc/QtGui,
+					$QT/include,
+					$QT/include/Qt,
+					$QT/include/QtGui,
 					/sw/include,
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
@@ -1186,7 +1186,7 @@
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Applications";
 				LIBRARY_SEARCH_PATHS = (
-					$QtLib,
+					$QT/lib,
 					/sw/lib,
 				);
 				LIBRARY_STYLE = Static;
@@ -1229,7 +1229,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COPY_PHASE_STRIP = YES;
-				FRAMEWORK_SEARCH_PATHS = $QtLib;
+				FRAMEWORK_SEARCH_PATHS = $QT/lib;
 				GCC_ALTIVEC_EXTENSIONS = YES;
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_ENABLE_TRIGRAPHS = NO;
@@ -1259,9 +1259,9 @@
 				GCC_WARN_UNUSED_VALUE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = (
-					$QtInc,
-					$QtInc/Qt,
-					$QtInc/QtGui,
+					$QT/include,
+					$QT/include/Qt,
+					$QT/include/QtGui,
 					/sw/include,
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
@@ -1269,7 +1269,7 @@
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Applications";
 				LIBRARY_SEARCH_PATHS = (
-					$QtLib,
+					$QT/lib,
 					/sw/lib,
 				);
 				LIBRARY_STYLE = Static;
@@ -1315,7 +1315,7 @@
 			buildSettings = {
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
-				FRAMEWORK_SEARCH_PATHS = $QtLib;
+				FRAMEWORK_SEARCH_PATHS = $QT/lib;
 				GCC_ALTIVEC_EXTENSIONS = YES;
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_ENABLE_TRIGRAPHS = NO;
@@ -1344,9 +1344,9 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				GENERATE_PROFILING_CODE = YES;
 				HEADER_SEARCH_PATHS = (
-					$QtInc,
-					$QtInc/Qt,
-					$QtInc/QtGui,
+					$QT/include,
+					$QT/include/Qt,
+					$QT/include/QtGui,
 					/sw/include,
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
@@ -1354,7 +1354,7 @@
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Applications";
 				LIBRARY_SEARCH_PATHS = (
-					$QtLib,
+					$QT/lib,
 					/sw/lib,
 				);
 				LIBRARY_STYLE = Static;
@@ -1394,7 +1394,7 @@
 		76293F120981AF4600D27C6E /* Default */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				FRAMEWORK_SEARCH_PATHS = $QtLib;
+				FRAMEWORK_SEARCH_PATHS = $QT/lib;
 				GCC_ALTIVEC_EXTENSIONS = YES;
 				GCC_ENABLE_TRIGRAPHS = NO;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
@@ -1421,9 +1421,9 @@
 				GCC_WARN_UNUSED_VALUE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = (
-					$QtInc,
-					$QtInc/Qt,
-					$QtInc/QtGui,
+					$QT/include,
+					$QT/include/Qt,
+					$QT/include/QtGui,
 					/sw/include,
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
@@ -1431,7 +1431,7 @@
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Applications";
 				LIBRARY_SEARCH_PATHS = (
-					$QtLib,
+					$QT/lib,
 					/sw/lib,
 				);
 				LIBRARY_STYLE = Static;
@@ -1569,7 +1569,7 @@
 			buildSettings = {
 				COPY_PHASE_STRIP = NO;
 				DEBUGGING_SYMBOLS = YES;
-				FRAMEWORK_SEARCH_PATHS = $QtLib;
+				FRAMEWORK_SEARCH_PATHS = $QT/lib;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
@@ -1578,16 +1578,16 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "";
 				HEADER_SEARCH_PATHS = (
-					$QtInc,
-					$QtInc/QtCore,
-					$QtInc/QtGui,
-					$QtInc/QtOpenGL,
+					$QT/include,
+					$QT/include/QtCore,
+					$QT/include/QtGui,
+					$QT/include/QtOpenGL,
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
 				);
 				INFOPLIST_FILE = "";
 				INSTALL_PATH = "$(USER_APPS_DIR)";
-				LIBRARY_SEARCH_PATHS = $QtLib;
+				LIBRARY_SEARCH_PATHS = $QT/lib;
 				OBJROOT = "$(PROJECT_DIR)/../polyworld_related/build";
 				OPTIMIZATION_CFLAGS = "-O0";
 				OTHER_CFLAGS = (
@@ -1623,7 +1623,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COPY_PHASE_STRIP = YES;
-				FRAMEWORK_SEARCH_PATHS = $QtLib;
+				FRAMEWORK_SEARCH_PATHS = $QT/lib;
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
 				GCC_MODEL_TUNING = G5;
@@ -1631,16 +1631,16 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "";
 				HEADER_SEARCH_PATHS = (
-					$QtInc,
-					$QtInc/QtCore,
-					$QtInc/QtGui,
-					$QtInc/QtOpenGL,
+					$QT/include,
+					$QT/include/QtCore,
+					$QT/include/QtGui,
+					$QT/include/QtOpenGL,
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
 				);
 				INFOPLIST_FILE = "";
 				INSTALL_PATH = "$(USER_APPS_DIR)";
-				LIBRARY_SEARCH_PATHS = $QtLib;
+				LIBRARY_SEARCH_PATHS = $QT/lib;
 				OBJROOT = "$(PROJECT_DIR)/../polyworld_related/build";
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
@@ -1677,7 +1677,7 @@
 			buildSettings = {
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
-				FRAMEWORK_SEARCH_PATHS = $QtLib;
+				FRAMEWORK_SEARCH_PATHS = $QT/lib;
 				GCC_ALTIVEC_EXTENSIONS = YES;
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
@@ -1686,16 +1686,16 @@
 				GCC_PREFIX_HEADER = "";
 				GENERATE_PROFILING_CODE = YES;
 				HEADER_SEARCH_PATHS = (
-					$QtInc,
-					$QtInc/QtCore,
-					$QtInc/QtGui,
-					$QtInc/QtOpenGL,
+					$QT/include,
+					$QT/include/QtCore,
+					$QT/include/QtGui,
+					$QT/include/QtOpenGL,
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
 				);
 				INFOPLIST_FILE = "";
 				INSTALL_PATH = "$(USER_APPS_DIR)";
-				LIBRARY_SEARCH_PATHS = $QtLib;
+				LIBRARY_SEARCH_PATHS = $QT/lib;
 				OBJROOT = "$(PROJECT_DIR)/../polyworld_related/build";
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
@@ -1729,22 +1729,22 @@
 		76293F1C0981AF4600D27C6E /* Default */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				FRAMEWORK_SEARCH_PATHS = $QtLib;
+				FRAMEWORK_SEARCH_PATHS = $QT/lib;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
 				GCC_MODEL_TUNING = G5;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "";
 				HEADER_SEARCH_PATHS = (
-					$QtInc,
-					$QtInc/QtCore,
-					$QtInc/QtGui,
-					$QtInc/QtOpenGL,
+					$QT/include,
+					$QT/include/QtCore,
+					$QT/include/QtGui,
+					$QT/include/QtOpenGL,
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
 				);
 				INFOPLIST_FILE = "";
 				INSTALL_PATH = "$(USER_APPS_DIR)";
-				LIBRARY_SEARCH_PATHS = $QtLib;
+				LIBRARY_SEARCH_PATHS = $QT/lib;
 				OBJROOT = "$(PROJECT_DIR)/../polyworld_related/build";
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",

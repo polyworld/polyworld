@@ -54,8 +54,8 @@ macx {
 					graphics \
 					ui \
 					utils \
-					$(QT_INCLUDE_DIR) \
-					$(QT_INCLUDE_DIR)/QtOpenGL \
+					$(QT)/include \
+					$(QT)/include/QtOpenGL \
 					/sw/include \
 					/System/Library/Frameworks/AGL.framework/Versions/A/Headers/
 }
@@ -69,10 +69,10 @@ unix:!macx {
 					graphics \
 					ui \
 					utils \
-					$(QT_INCLUDE_DIR) \
-					$(QT_INCLUDE_DIR)/QtOpenGL \
-					$(QT_INCLUDE_DIR)/QtCore \
-					$(QT_INCLUDE_DIR)/QtGui \
+					$(QT)/include \
+					$(QT)/include/QtOpenGL \
+					$(QT)/include/QtCore \
+					$(QT)/include/QtGui \
 					/usr/include/GL/
 }
 
@@ -85,19 +85,19 @@ win32 {
 					graphics \
 					ui \
 					utils \
-					$(QT_INCLUDE_DIR) \
-					$(QT_INCLUDE_DIR)/QtOpenGL				
+					$(QT)/include \
+					$(QT)/include/QtOpenGL				
 }
 								
 QMAKE_CFLAGS_DEBUG += -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC -Wno-deprecated
 QMAKE_CFLAGS += -Wno-deprecated
 
 macx {
-	LIBS	+=	-F$(QTDIR)/lib/ -L/sw/lib -framework QtOpenGL -framework OpenGL -framework AGL -lgsl -lgslcblas -lm
+	LIBS	+=	-F$(QT)/lib/ -L/sw/lib -framework QtOpenGL -framework OpenGL -framework AGL -lgsl -lgslcblas -lm
 }
 
 unix:!macx {
-	LIBS	+=	-L$(QTDIR)/lib/ -lQtOpenGL -lgsl -lgslcblas
+	LIBS	+=	-L$(QT)/lib/ -lQtOpenGL -lgsl -lgslcblas
 }
 
 win32 {
