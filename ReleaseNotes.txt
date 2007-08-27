@@ -1,3 +1,5 @@
+SORRY, BUT THESE ARE WOEFULLY OUT OF DATE AND ARE BEST IGNORED.
+
 26 July 2005 -
   Added PwMovieRecord functionality to Polyworld.  Just set new
     "recordMovie" option to 1 in worldfile, to record a highly compressed,
