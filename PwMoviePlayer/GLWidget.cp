@@ -16,13 +16,22 @@
 	#define glwPrint( x... )
 #endif
 
-GLWidget::GLWidget( QWidget *parent, unsigned long widthParam, unsigned long heightParam, unsigned long movieVersionParam, FILE* movieFileParam )
+GLWidget::GLWidget( QWidget *parent, unsigned long widthParam, unsigned long heightParam, unsigned long movieVersionParam,
+					FILE* movieFileParam, char** legendParam, unsigned long endFrameParam, double frameRateParam )
 	: QGLWidget( parent )
 {
 	width = widthParam;
+//	printf( "%s: width = %lu\n", __func__, width );
+
+	if( width == 0 )
+		return;
+	
 	height = heightParam;
 	movieVersion = movieVersionParam;
 	movieFile = movieFileParam;
+	legend = legendParam;
+	endFrame = endFrameParam;
+	frameRate = frameRateParam;
 
 	glwPrint( "width = %lu, height = %lu\n", width, height );
 
@@ -66,19 +75,45 @@ void GLWidget::initializeGL()
 
 void GLWidget::Draw()
 {
-	static bool firstFrame = true;
-	static unsigned long frame;
+#define RecentSteps 10
+	static bool				firstFrame = true;
+	static unsigned long	frame;
+	static double			timePrevious;
+	double					timeNow;	
+	
+	if( width == 0 )
+		return;
 	
 	frame++;
 //	printf( "%s: frame # %lu\n", __FUNCTION__, frame );
 	
-//	if( frame < 1 )
-//		return;
+	if( endFrame && (frame > endFrame) )
+		exit( 0 );	
+	
+	if( frameRate )
+	{
+		double	deltaTime;
+		double	ifr = 1.0 / frameRate;
+		
+		timeNow = hirestime();
+		deltaTime = timeNow - timePrevious;
+		
+		if( deltaTime < ifr )	// too soon, so delay
+		{
+//			printf( "%4lu: t=%g, dt=%g, ifr=%g, s=%g\n", frame, timeNow, deltaTime, ifr, (ifr-deltaTime)*1000000 );
+			usleep( (ifr - deltaTime) * 1000000 );
+		}
+		
+		timePrevious = hirestime();
+	}
 	
 	makeCurrent();
 	
 	if( readrle( movieFile, rleBuf, movieVersion, firstFrame ) )	// 0 = success, other = failure
-		return;
+	{
+		exit( 0 );
+//		return;
+	}
 	
 	glClear( GL_COLOR_BUFFER_BIT );
 
@@ -111,14 +146,48 @@ void GLWidget::Draw()
 		printf( "\n" );
 	}
 #endif
+
+#if 0
+// Halve the number of pixels
+	int newWidth= width / 2;
+	int newHeight = height / 2;
+	for( int j = 0; j < newHeight; j++ )
+	{
+		for( int i = 0; i < newWidth; i++ )
+		{
+			rgbBuf1[i + j*newWidth] = round( 0.25 * (rgbBuf1[2*j*width + 2*i] + rgbBuf1[2*j*width + 2*i + 1] + rgbBuf1[(2*j+1)*width + 2*i] + rgbBuf1[(2*j+1)*width + 2*i + 1] ) );
+		}
+	}
+	glDrawPixels( newWidth, newHeight, GL_RGBA, GL_UNSIGNED_BYTE, rgbBuf1 );
+#else
 	glDrawPixels( width, height, GL_RGBA, GL_UNSIGNED_BYTE, rgbBuf1 );
+#endif
 
 	// Superimpose the frame number
 	QFont font( "Monaco", 10 );
 	char frameString[16];
 	sprintf( frameString, "%8lu", frame );
 	renderText( width - 54, 15, frameString, font );
+	
+	// Draw the legend
+	if( legend )
+	{
+		int i = 0;
+		int y = 24;
 
+		QFont font2( "Arial", 12 );
+		QFont font3( "Arial", 20 );
+		while( legend[i] )
+		{
+			if( i == 0 )
+				renderText( 10, y, legend[i], font2 );
+			else
+				renderText( 10, y, legend[i], font3 );
+			i++;
+			y += 24;
+		}
+	}
+	
 	// Done drawing, so show it
 	swapBuffers();
 	

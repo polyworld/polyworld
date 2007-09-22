@@ -25,9 +25,17 @@
 //---------------------------------------------------------------------------
 // MainWindow::MainWindow
 //---------------------------------------------------------------------------
-MainWindow::MainWindow(const char* windowTitle, const char* windowSettingsNameParam, const Qt::WFlags windowFlags, FILE* movieFileParam )
+MainWindow::MainWindow(const char* windowTitle, const char* windowSettingsNameParam, const Qt::WFlags windowFlags,
+						FILE* movieFileParam, char** legend, unsigned long endFrame, double frameRate )
 	:	QMainWindow( NULL, windowFlags )
 {
+//	printf( "%s: movieFileParam = %p\n", __func__, movieFileParam );
+	if( !movieFileParam )
+	{
+		movieWidth = 0;
+		return;
+	}
+	
 	setWindowTitle( windowTitle );
 	windowSettingsName = windowSettingsNameParam;
 	movieFile = movieFileParam;
@@ -43,13 +51,13 @@ MainWindow::MainWindow(const char* windowTitle, const char* windowSettingsNamePa
 	// because the movie dimensions define the window dimensions for these movie windows
 	ReadMovieFileHeader();
 
-	printf( "movieWidth = %lu, movieHeight = %lu\n", movieWidth, movieHeight );
+//	printf( "movieWidth = %lu, movieHeight = %lu\n", movieWidth, movieHeight );
 	
 	// Display the main simulation window
 	RestoreFromPrefs();
 
 	// Set up the OpenGL view
-	glWidget = new GLWidget( this, movieWidth, movieHeight, movieVersion, movieFile );
+	glWidget = new GLWidget( this, movieWidth, movieHeight, movieVersion, movieFile, legend, endFrame, frameRate );
 	setCentralWidget( glWidget );
 }
 
@@ -77,7 +85,8 @@ void MainWindow::ReadMovieFileHeader()
 //---------------------------------------------------------------------------
 void MainWindow::NextFrame()
 {
-	if( !paused || step )
+//	printf( "%s\n", __func__ );
+	if( movieFile && (!paused || step) )
 	{
 		glWidget->Draw();
 		step = false;

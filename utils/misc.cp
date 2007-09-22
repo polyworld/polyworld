@@ -132,37 +132,6 @@ float gaussian( float x, float mean, float variance )
 }
 
 
-double hirestime( void )
-{
-#ifdef linux
-
-	struct timeval tv;
-	gettimeofday( &tv, NULL );
-
-	return (double)tv.tv_sec + (double)tv.tv_usec/1000000.0;
-
-#else /* this seems to be Apple-specific, referencing "mach"... */
-
-    static uint32_t num = 0;
-    static uint32_t denom = 0;
-    uint64_t now;
-
-    if (denom == 0) {
-            struct mach_timebase_info tbi;
-            kern_return_t r;
-            r = mach_timebase_info(&tbi);
-            if (r != KERN_SUCCESS) {
-                    abort();
-            }
-            num = tbi.numer;
-            denom = tbi.denom;
-    }
-    now = mach_absolute_time();
-    return (double)(now * (double)num / denom / NSEC_PER_SEC);
-
-#endif
-}
-
 int SetMaximumFiles( long filecount )
 {
     struct rlimit lim;

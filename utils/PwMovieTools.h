@@ -78,4 +78,7 @@ void unrlediff4( register unsigned long *rle,
 
 int readrle( register FILE *f, register unsigned long *rle, register unsigned long version, register bool firstFrame );
 
+char* sgets( char* string, size_t size, FILE* file );
+double hirestime( void );
+
 #endif

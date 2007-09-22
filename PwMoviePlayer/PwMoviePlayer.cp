@@ -20,11 +20,10 @@
 #include "PwMovieTools.h"
 #include "MainWindow.h"
 
-#if __BIG_ENDIAN__
+#define MaxLegendLines 10
+#define MaxLegendLength 80
+
 char defaultMovieFileName[] = "movie.pmv";
-#else
-char defaultMovieFileName[] = "movie.pmv";	// "movie.pwm";
-#endif
 
 int main( int argc, char **argv )
 {
@@ -68,24 +67,127 @@ int main( int argc, char **argv )
 //---------------------------------------------------------------------------
 PMPApp::PMPApp(int argc, char** argv) : QApplication(argc, argv)
 {
-    char *movieFileName = NULL;
+    char*			movieFileName	= NULL;
+	char*			legendFileName	= NULL;
+	char**			legend			= NULL;
+	unsigned long	endFrame		= 0;
+	double			frameRate		= 0.0;
+	int				arg				= 1;
+		
+	while( arg < argc )
+	{
+		if( argv[arg][0] == '-' )
+		{
+			switch( argv[arg][1] )
+			{
+				case 'f':
+					arg++;
+					movieFileName = (char*) malloc( strlen( argv[arg] ) + 1 );
+					if( movieFileName )
+						strcpy( movieFileName, argv[arg] );
+					else
+						fprintf( stderr, "Unable to allocate %lu bytes of memory for movieFileName\n", strlen( argv[arg] ) + 1 );
+					break;
+				
+				case 'l':
+					arg++;
+					legendFileName = (char*) malloc( strlen( argv[arg] ) + 1 );
+					if( legendFileName )
+					{
+						strcpy( legendFileName, argv[arg] );
+//						printf( "legendFileName = %s\n", legendFileName );
+					}
+					else
+						fprintf( stderr, "Unable to allocate %lu bytes of memory for legendFileName\n", strlen( argv[arg] ) + 1 );
+					break;
+				
+				case 'e':
+					arg++;
+					endFrame = strtoul( argv[arg], NULL, 10 );
+//					printf( "endFrame = %lu\n", endFrame );
+					break;
+				
+				case 'r':
+					arg++;
+					frameRate = atof( argv[arg] );
+					break;
+				
+				default:
+					fprintf( stderr, "Unknown argument -%c\n", argv[arg][1] );
+					break;
+			}
+		}
+		else
+		{
+			fprintf( stderr, "Unknown argument %s\n", argv[arg] );
+		}
+		arg++;
+	}
 
     if (movieFileName == NULL)
         movieFileName = defaultMovieFileName;
 
     mainMovieFile = fopen( movieFileName, "rb" );
 
-    if( !mainMovieFile )
+    if( mainMovieFile )
+	{
+		// read text for legend from legendFileName
+		if( legendFileName )
+		{
+			FILE* legendFile = fopen( legendFileName, "r" );
+			
+			if( legendFile )
+			{
+				legend = (char**) malloc( (MaxLegendLines+1) * sizeof( char* ) );	// +1 to have NULL terminating pointer
+
+				if( legend )
+				{
+					int i;
+					
+					for( i = 0; i < MaxLegendLines; i++ )
+					{
+						char* test;
+						
+						legend[i] = (char*) malloc( MaxLegendLength + 1 );	// +1 for null terminator
+						if( legend[i] )
+						{
+							test = sgets( legend[i], MaxLegendLength+1, legendFile );
+							if( !test )
+							{
+								free( legend[i] );
+								break;
+							}
+//							printf( "legend[%d] = %s\n", i, legend[i] );
+						}
+						else
+						{
+							fprintf( stderr, "Unable to allocate %d bytes of memory for legend[%d]\n", MaxLegendLength + 1, i );
+							break;
+						}
+					}
+					legend[i] = NULL;
+				}
+				else
+				{
+					fprintf( stderr, "Unable to allocate %lu bytes of memory for legend\n", (MaxLegendLines+1) * sizeof( char* ) );
+				}
+			}
+			else
+			{
+				fprintf( stderr, "Unable to open legend file \"%s\"\n", legendFileName );
+			}
+		}
+	}
+	else
 	{
         fprintf( stderr, "unable to open movie file \"%s\"\n", movieFileName );
-        exit(1);
     }
 
-	// Establish how are preference settings file will be named
+	// Establish how our preference settings file will be named
 	QCoreApplication::setOrganizationDomain( "indiana.edu" );
 	QCoreApplication::setApplicationName( "pwmovieplayer" );
 	
-	mainWindow = new MainWindow( "Polyworld MoviePlayer", "Main", 0, mainMovieFile );
+	mainWindow = new MainWindow( "Polyworld MoviePlayer", "Main", 0, mainMovieFile, legend, endFrame, frameRate );
 	mainWindow->show();
 	
 	// Create playback timer
@@ -100,7 +202,8 @@ PMPApp::PMPApp(int argc, char** argv) : QApplication(argc, argv)
 //---------------------------------------------------------------------------
 PMPApp::~PMPApp()
 {
-	fclose( mainMovieFile );
+	if( mainMovieFile )
+		fclose( mainMovieFile );
 }
 
 
@@ -110,6 +213,10 @@ PMPApp::~PMPApp()
 void PMPApp::NextFrame()
 {
 	static unsigned long frame;
+	
+	if( !mainMovieFile )
+		exit( 0 );
+	
 	frame++;
 #if 0
 	if( frame == 3 )

@@ -9,6 +9,11 @@
 #define PMP_DEBUG 0
 
 #include <stdlib.h>
+#include <string.h>
+#include <sys/time.h>
+#ifndef linux      /* how does one say #ifdef MAC_OSX ? */
+#include <mach/mach_time.h>
+#endif
 
 #include <gl.h>
 
@@ -251,7 +256,7 @@ int readrle( register FILE *f, register unsigned long *rle, register unsigned lo
 	
 	if( n != 1 )
 	{
-		if( !shown )
+		if( !shown && !feof( f ) )
 		{
 			fprintf( stderr, "%s: while reading length, read %lu longs\n", __FUNCTION__, n);
 			shown = true;
@@ -758,6 +763,58 @@ void unrlediff4( register unsigned long *rle,
             }
         }
     }
+}
+
+
+char* sgets( char* string, size_t size, FILE* file )
+{
+	char* returnValue;
+	
+	returnValue = fgets( string, size, file );
+	
+//	printf( "%s: size = %lu, string = %s, returnValue = %p\n", __func__, size, string, returnValue );
+	
+	if( returnValue )
+	{
+		if( string[strlen(string) - 1] == '\n' )
+			string[strlen(string) - 1]  = '\0';
+		else
+			while( fgetc( file ) != '\n' );
+	}	
+	
+	return( returnValue );
+}
+
+
+double hirestime( void )
+{
+#ifdef linux
+
+	struct timeval tv;
+	gettimeofday( &tv, NULL );
+
+	return (double)tv.tv_sec + (double)tv.tv_usec/1000000.0;
+
+#else /* this seems to be Apple-specific, referencing "mach"... */
+
+    static uint32_t num = 0;
+    static uint32_t denom = 0;
+    uint64_t now;
+
+    if (denom == 0) {
+            struct mach_timebase_info tbi;
+            kern_return_t r;
+            r = mach_timebase_info(&tbi);
+            if (r != KERN_SUCCESS) {
+                    abort();
+            }
+            num = tbi.numer;
+            denom = tbi.denom;
+    }
+    now = mach_absolute_time();
+    return (double)(now * (double)num / denom / NSEC_PER_SEC);
+
+#endif
 }
 
 

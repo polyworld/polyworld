@@ -56,8 +56,6 @@ char* concat(const char* s1, const char* s2, const char* s3, const char* s4, con
 char* itoa(long i);
 char* ftoa(float f);
 
-double hirestime( void );
-
 inline float fmax(float f1, float f2)
     { return (f2>f1) ? f2 : f1; }
 inline float fmax(float f1, float f2, float f3)

@@ -23,7 +23,8 @@ class MainWindow : public QWidget
 	Q_OBJECT
 
 public:
-	MainWindow(const char* windowTitle, const char* windowSettingsNameParam, const Qt::WFlags windowFlags, FILE* movieFileParam );
+	MainWindow(const char* windowTitle, const char* windowSettingsNameParam, const Qt::WFlags windowFlags,
+				FILE* movieFileParam, char** legend, unsigned long endFrame, double frameRate );
 	~MainWindow();
 	
 	void NextFrame();
