@@ -58,81 +58,6 @@ set style line 102 linetype -1 linewidth 3			# AVERAGE Whisker's median
 
 ### END linestyle verbosity
 """
-if COLOR:
-	LINESTYLES={
-			# Colored
-			'ColoredMeanline1'      : "linecolor rgb 'cyan' linewidth 1.5",
-			'ColoredMeanline2'      : "linecolor rgb 'pink' linewidth 1.5",
-			'ColoredMeanline3'      : "linecolor rgb 'black' linewidth 1.5",
-			'ColoredMeanlineStderr1'        : "linecolor rgb 'midnight-blue' linewidth 1 pointtype 0",
-			'ColoredMeanlineStderr2'        : "linecolor rgb 'magenta' linewidth 1 pointtype 0",
-			'ColoredMeanlineStderr3'        : "linecolor rgb 'black' linewidth 1 pointtype 0",
-	
-	#        'ColoredWhisker1'               : "linecolor rgb 'red' linewidth 1.5",
-	#        'ColoredWhisker2'               : "linecolor rgb 'green' linewidth 1.5",
-	#        'ColoredWhisker3'               : "linecolor rgb 'blue' linewidth 1.5",
-	#        'ColoredWhiskerMedian1' : "linecolor rgb 'red' linewidth 3",
-	#        'ColoredWhiskerMedian2' : "linecolor rgb 'green' linewidth 3",
-	#        'ColoredWhiskerMedian3' : "linecolor rgb 'blue' linewidth 3",
-	
-			'ColoredMaxline1'                : "linecolor rgb 'voilet' linewidth 1.5",
-			'ColoredMaxline2'                : "linecolor rgb 'orange' linewidth 1.5",
-			'ColoredMaxline3'                : "linecolor rgb 'black' linewidth 1.5",
-	
-			# No Legend
-	#        'NolegendWhisker'               : "linecolor rgb 'gray' linewidth 1",
-	#        'NolegendWhiskerMedian' : "linecolor rgb 'gray' linewidth 3",
-			'NolegendMeanline'      : "rgb 'gray' linewidth 1 pointsize 1.0",
-			'NolegendMeanlineStderr'        : "rgb 'gray' linewidth 1 pointtype 0",
-			'NolegendMaxline'               : "rgb 'gray' linewidth 1 pointsize 1.0",
-			
-			# AVERAGE lines
-			'AvrMaxline'            : "linecolor rgb 'gray40' linewidth 3",
-			'AvrMeanline1'           : "linecolor rgb 'blue' linewidth 3",
-			'AvrMeanline2'			: "linecolor rgb 'red' linewidth 3",
-			'AvrMeanlineStderr'     : "linecolor rgb 'black' linewidth 1 pointtype 0",
-	#        'AvrWhisker'            : "linecolor rgb 'black' linewidth 1.5",
-	#        'AvrWhiskerMedian'      : "linecolor rgb 'black' linewidth 3"
-	}
-	LINETYPE = { 'Driven': 1, 'Passive': 1 }
-else:
-	LINESTYLES={
-			# Colored
-			'ColoredMeanline1'      : "linecolor rgb 'gray' linewidth 1.5",
-			'ColoredMeanline2'      : "linecolor rgb 'gray' linewidth 1.5",
-			'ColoredMeanline3'      : "linecolor rgb 'black' linewidth 1.5",
-			'ColoredMeanlineStderr1'        : "linecolor rgb 'midnight-blue' linewidth 1 pointtype 0",
-			'ColoredMeanlineStderr2'        : "linecolor rgb 'magenta' linewidth 1 pointtype 0",
-			'ColoredMeanlineStderr3'        : "linecolor rgb 'black' linewidth 1 pointtype 0",
-	
-	#        'ColoredWhisker1'               : "linecolor rgb 'red' linewidth 1.5",
-	#        'ColoredWhisker2'               : "linecolor rgb 'green' linewidth 1.5",
-	#        'ColoredWhisker3'               : "linecolor rgb 'blue' linewidth 1.5",
-	#        'ColoredWhiskerMedian1' : "linecolor rgb 'red' linewidth 3",
-	#        'ColoredWhiskerMedian2' : "linecolor rgb 'green' linewidth 3",
-	#        'ColoredWhiskerMedian3' : "linecolor rgb 'blue' linewidth 3",
-	
-			'ColoredMaxline1'                : "linecolor rgb 'gray' linewidth 1.5",
-			'ColoredMaxline2'                : "linecolor rgb 'gray' linewidth 1.5",
-			'ColoredMaxline3'                : "linecolor rgb 'black' linewidth 1.5",
-	
-			# No Legend
-	#        'NolegendWhisker'               : "linecolor rgb 'gray' linewidth 1",
-	#        'NolegendWhiskerMedian' : "linecolor rgb 'gray' linewidth 3",
-			'NolegendMeanline'      : "rgb 'gray' linewidth 1 pointsize 1.0",
-			'NolegendMeanlineStderr'        : "rgb 'gray' linewidth 1 pointtype 0",
-			'NolegendMaxline'               : "rgb 'gray' linewidth 1 pointsize 1.0",
-			
-			# AVERAGE lines
-			'AvrMaxline'            : "linecolor rgb 'gray40' linewidth 3",
-			'AvrMeanline1'           : "linecolor rgb 'black' linewidth 3",
-			'AvrMeanline2'			: "linecolor rgb 'black' linewidth 3",
-			'AvrMeanlineStderr'     : "linecolor rgb 'black' linewidth 1 pointtype 0",
-	#        'AvrWhisker'            : "linecolor rgb 'black' linewidth 1.5",
-	#        'AvrWhiskerMedian'      : "linecolor rgb 'black' linewidth 3"
-	}
-	LINETYPE = { 'Driven': 1, 'Passive': 2 }
-
 # Default plotting stats
 flag_plotWhiskerbars, flag_plotSmooth = True, False
 GNUPLOT_SMOOTHING_FUNCTION='csplines' 		# reasonable smoothing options are: csplines, acsplines, bezier, sbezier
@@ -163,7 +88,7 @@ flag_have_previously_plotted_a_file = False
 flag_have_previously_plotted_a_max = False
 tempfilename='/tmp/,plotNeuralComplexity_%s.plt' % ( os.getpid() )		# this file will contain the raw data
 gnufilename='/tmp/,plotNeuralComplexity_%s.gnuplot' % ( os.getpid() )	# this file will contain gnuplot commands
-flag_plotPoints, flag_plotMean, flag_plotErrorbars, flag_plotLegend, flag_plotWhiskers, flag_plotWhiskers_AVERAGE, flag_plotMean_AVERAGE, flag_plotErrorbars_AVERAGE, flag_plotProcessing, flag_plotInput, flag_plotAll, flag_plotMax, flag_plotMax_AVERAGE, flag_multiplot = False, False, False, True, False, False, False, False, False, False, False, False, False, False
+flag_color, flag_plotPoints, flag_plotMean, flag_plotErrorbars, flag_plotLegend, flag_plotWhiskers, flag_plotWhiskers_AVERAGE, flag_plotMean_AVERAGE, flag_plotErrorbars_AVERAGE, flag_plotProcessing, flag_plotInput, flag_plotAll, flag_plotMax, flag_plotMax_AVERAGE, flag_multiplot = False, False, False, False, True, False, False, False, False, False, False, False, False, False, False
 ###############
 numplotsmade=0
 PASSED_DIRECTORY=''
@@ -181,6 +106,8 @@ DESCRIPTION
        plotNeuralComplexityComparison plots the Olafcomplexity from one or more Polyworld run/ directories. Data from driven and passive runs are plotted in different colors to allow comparison.
 
 OPTIONS
+       -c      Use color, instead of solid and dashed lines for Driven vs. Passive comparison
+       
        -l      A legend is to be drawn and different colors are are used the All/Processing/Input lines.  Lines will be labeled
                in the legend using the names of the run directories (after stripping any leading numbers). If not
                -l, all lines will be printed in the same identical gray color. (default off)
@@ -576,19 +503,20 @@ def sample_mean( list ):
 	return mean, stderr
 
 def check_parameters( argv ):
-	try: opts, args = getopt.getopt( argv, "esnwENWlpAPIxXM:")
+	try: opts, args = getopt.getopt( argv, "cesnwENWlpAPIxXM:")
 	except getopt.GetoptError: print_usage_and_exit() 
 
 #	print "opts=%s" % ( opts )
 #	print "args=%s" % ( args)
 
-	global flag_plotLegend, flag_plotErrorbars, flag_multiplot, flag_plotMean, flag_plotPoints, PASSED_DIRECTORY, multiplotDimX, multiplotDimY	# grant access to the global variables we're going to modify
+	global flag_color, flag_plotLegend, flag_plotErrorbars, flag_multiplot, flag_plotMean, flag_plotPoints, PASSED_DIRECTORY, multiplotDimX, multiplotDimY	# grant access to the global variables we're going to modify
 	global flag_plotErrorbars_AVERAGE, flag_plotMean_AVERAGE, flag_plotWhiskers, flag_plotWhiskers_AVERAGE
 	global flag_plotAll, flag_plotProcessing, flag_plotInput, flag_plotSmooth
 	global flag_plotMax, flag_plotMax_AVERAGE
 	# Set our plot flags
 	for opt, value in opts:
-		if   '-e' in opt: flag_plotErrorbars = True
+		if   '-c' in opt: flag_color = True
+		elif '-e' in opt: flag_plotErrorbars = True
 		elif '-s' in opt: flag_plotSmooth = True
 		elif '-n' in opt: flag_plotMean = True
 		elif '-w' in opt: flag_plotWhiskers = True
@@ -699,6 +627,81 @@ def get_bestRecentBrainFunctionRecordFrequency( run_dir ):
 #	print "sys.argv[1:] = %s" % ( sys.argv[1:] )
 ########### COME BACK TO THIS ABOVE LATER
 check_parameters( sys.argv[1:] )		# don't send it the first item in the sys.argv list because that's this programs filename
+
+if flag_color:
+	LINESTYLES={
+			# Colored
+			'ColoredMeanline1'      : "linecolor rgb 'cyan' linewidth 1.5",
+			'ColoredMeanline2'      : "linecolor rgb 'pink' linewidth 1.5",
+			'ColoredMeanline3'      : "linecolor rgb 'black' linewidth 1.5",
+			'ColoredMeanlineStderr1'        : "linecolor rgb 'midnight-blue' linewidth 1 pointtype 0",
+			'ColoredMeanlineStderr2'        : "linecolor rgb 'magenta' linewidth 1 pointtype 0",
+			'ColoredMeanlineStderr3'        : "linecolor rgb 'black' linewidth 1 pointtype 0",
+	
+	#        'ColoredWhisker1'               : "linecolor rgb 'red' linewidth 1.5",
+	#        'ColoredWhisker2'               : "linecolor rgb 'green' linewidth 1.5",
+	#        'ColoredWhisker3'               : "linecolor rgb 'blue' linewidth 1.5",
+	#        'ColoredWhiskerMedian1' : "linecolor rgb 'red' linewidth 3",
+	#        'ColoredWhiskerMedian2' : "linecolor rgb 'green' linewidth 3",
+	#        'ColoredWhiskerMedian3' : "linecolor rgb 'blue' linewidth 3",
+	
+			'ColoredMaxline1'                : "linecolor rgb 'voilet' linewidth 1.5",
+			'ColoredMaxline2'                : "linecolor rgb 'orange' linewidth 1.5",
+			'ColoredMaxline3'                : "linecolor rgb 'black' linewidth 1.5",
+	
+			# No Legend
+	#        'NolegendWhisker'               : "linecolor rgb 'gray' linewidth 1",
+	#        'NolegendWhiskerMedian' : "linecolor rgb 'gray' linewidth 3",
+			'NolegendMeanline'      : "rgb 'gray' linewidth 1 pointsize 1.0",
+			'NolegendMeanlineStderr'        : "rgb 'gray' linewidth 1 pointtype 0",
+			'NolegendMaxline'               : "rgb 'gray' linewidth 1 pointsize 1.0",
+			
+			# AVERAGE lines
+			'AvrMaxline'            : "linecolor rgb 'gray40' linewidth 3",
+			'AvrMeanline1'           : "linecolor rgb 'blue' linewidth 3",
+			'AvrMeanline2'			: "linecolor rgb 'red' linewidth 3",
+			'AvrMeanlineStderr'     : "linecolor rgb 'black' linewidth 1 pointtype 0",
+	#        'AvrWhisker'            : "linecolor rgb 'black' linewidth 1.5",
+	#        'AvrWhiskerMedian'      : "linecolor rgb 'black' linewidth 3"
+	}
+	LINETYPE = { 'Driven': 1, 'Passive': 1 }
+else:
+	LINESTYLES={
+			# Colored
+			'ColoredMeanline1'      : "linecolor rgb 'gray' linewidth 1.5",
+			'ColoredMeanline2'      : "linecolor rgb 'gray' linewidth 1.5",
+			'ColoredMeanline3'      : "linecolor rgb 'black' linewidth 1.5",
+			'ColoredMeanlineStderr1'        : "linecolor rgb 'midnight-blue' linewidth 1 pointtype 0",
+			'ColoredMeanlineStderr2'        : "linecolor rgb 'magenta' linewidth 1 pointtype 0",
+			'ColoredMeanlineStderr3'        : "linecolor rgb 'black' linewidth 1 pointtype 0",
+	
+	#        'ColoredWhisker1'               : "linecolor rgb 'red' linewidth 1.5",
+	#        'ColoredWhisker2'               : "linecolor rgb 'green' linewidth 1.5",
+	#        'ColoredWhisker3'               : "linecolor rgb 'blue' linewidth 1.5",
+	#        'ColoredWhiskerMedian1' : "linecolor rgb 'red' linewidth 3",
+	#        'ColoredWhiskerMedian2' : "linecolor rgb 'green' linewidth 3",
+	#        'ColoredWhiskerMedian3' : "linecolor rgb 'blue' linewidth 3",
+	
+			'ColoredMaxline1'                : "linecolor rgb 'gray' linewidth 1.5",
+			'ColoredMaxline2'                : "linecolor rgb 'gray' linewidth 1.5",
+			'ColoredMaxline3'                : "linecolor rgb 'black' linewidth 1.5",
+	
+			# No Legend
+	#        'NolegendWhisker'               : "linecolor rgb 'gray' linewidth 1",
+	#        'NolegendWhiskerMedian' : "linecolor rgb 'gray' linewidth 3",
+			'NolegendMeanline'      : "rgb 'gray' linewidth 1 pointsize 1.0",
+			'NolegendMeanlineStderr'        : "rgb 'gray' linewidth 1 pointtype 0",
+			'NolegendMaxline'               : "rgb 'gray' linewidth 1 pointsize 1.0",
+			
+			# AVERAGE lines
+			'AvrMaxline'            : "linecolor rgb 'gray40' linewidth 3",
+			'AvrMeanline1'           : "linecolor rgb 'black' linewidth 3",
+			'AvrMeanline2'			: "linecolor rgb 'black' linewidth 3",
+			'AvrMeanlineStderr'     : "linecolor rgb 'black' linewidth 1 pointtype 0",
+	#        'AvrWhisker'            : "linecolor rgb 'black' linewidth 1.5",
+	#        'AvrWhiskerMedian'      : "linecolor rgb 'black' linewidth 3"
+	}
+	LINETYPE = { 'Driven': 1, 'Passive': 2 }
 
 #print "- plotPoints=%s plotMean=%s plotErrorbars=%s plotWhiskers=%s plotLegend=%s" % ( flag_plotPoints, flag_plotMean, flag_plotErrorbars, flag_plotWhiskers, flag_plotLegend )
 #print "- plotMeanAverage=%s plotErrorbarsAverage=%s plotWhiskersAverage=%s" % ( flag_plotMean_AVERAGE, flag_plotErrorbars_AVERAGE, flag_plotWhiskers_AVERAGE )
