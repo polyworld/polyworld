@@ -1,0 +1,295 @@
+#!/usr/bin/python
+################################################################################
+# CONFIGURABLE PARAMETERS
+################################################################################
+# you can edit these as well, but you probably don't want to
+# DO NOT EDIT ANYTHING BENEATH HERE UNLESS YOU KNOW WHAT YOU'RE DOING
+################################################################################
+# Load our Libraries
+import sys, getopt, os.path, re, os
+# Finished loading libraries
+################################################################################
+# some global variables:
+GNUPLOT_TERMINAL='aqua'		# set this to x11 if your under linux.
+GNUPLOT_SETTINGS="""
+set hidden3d
+set termoption noenhanced
+set key outside         # if we have a legend, put it outside the graph
+set key at screen 1,1 right horizontal spacing 1
+set xlabel 'Timestep' font 'Times,15'
+set zlabel 'Percentage' font 'Times,15'
+#set zr [0:100]
+set grid
+set style fill solid 0.3		# this number specifies the opacity of the filled in box.
+set boxwidth 0.50 relative		# 1.0 is the whisker-boxes touching
+set datafile missing '?'	# unknown values are '?'
+#set mxtics 5            # make small little tics along the x-axis
+
+"""
+
+
+# Default plotting stats
+inputplotfilename='ComplexityHistRaw.plt'
+outputfilenameGNU="/tmp/,plotNeuralComplexity_" + str(os.getpid()) + ".gnuplot"
+
+flag_have_previously_plotted_a_file = False
+flag_have_previously_plotted_a_max = False
+flag_getRAW = True
+tempfilename='/tmp/,plotNeuralComplexity_%s.plt' % ( os.getpid() )		# this file will contain the raw data
+gnufilename='/tmp/,plotNeuralComplexity_%s.gnuplot' % ( os.getpid() )	# this file will contain gnuplot commands
+flag_plotPoints, flag_plotMean, flag_plotErrorbars, flag_plotLegend, flag_plotWhiskers, flag_plotWhiskers_AVERAGE, flag_plotMean_AVERAGE, flag_plotErrorbars_AVERAGE, flag_plotProcessing, flag_plotInput, flag_plotAll, flag_plotMax, flag_plotMax_AVERAGE, flag_multiplot = False, False, False, False, False, False, False, False, False, False, False, False, False, False
+###############
+numplotsmade=0
+PASSED_DIRECTORY=''
+RUN_DIRS=[]
+GNUPLOT_TOPRIGHT_LABEL=[ "Generated `date +%Y-%m-%d` by `whoami`" ]
+################################################################################
+def print_usage_and_exit():
+	print """
+USAGE 
+       plotNeuralComplexityHistogram -[API] directory
+
+DESCRIPTION
+       plotNeuralComplexityHistogram plots the Olafcomplexity distributions from one or more Polyworld run/ directories.
+
+OPTIONS
+
+       -A      Plot NeuralComplexity Histogram across 'All' neurons. (default off)
+
+       -P      Plot NeuralComplexity Histogram across 'Processing' neurons. (default on)
+
+       -I      Plot NeuralComplexity Histogram across 'Input' neurons. (default off)
+       
+       -N      Plot NeuralComplexity Histogram normalized by timestep. (default off)
+
+	"""
+	sys.exit(1)
+####################################################################################
+####################################################################################
+####################################################################################
+def GET_GNUPLOT_DYNAMIC_SETTINGS( RecentOrbestRecent ):
+	global RUN_DIRS, PARAMS, IDENTICAL_LINE_WIDTH, GNUPLOT_TOPRIGHT_LABEL, MAXTIMESTEP
+	global numplotsmade, GNUPLOT_TERMINAL, ytics
+	global flag_plotAll, flag_plotProcessing, flag_plotInput
+	settings = [ ]
+
+
+	settings.append("set terminal %s %s title '%s' dashed dl 0.5" % ( GNUPLOT_TERMINAL, numplotsmade, PASSED_DIRECTORY ) )	
+	numplotsmade += 1
+
+
+	settings.append( 'set title "%s -- %s"' % (PASSED_DIRECTORY, RecentOrbestRecent) )	# set the title
+
+	# Define our ylabel
+	ylabel = "NeuralComplexity: "
+	if flag_plotAll: ylabel += 'All, '
+	if flag_plotProcessing: ylabel += 'Processing, '
+	if flag_plotInput: ylabel += 'Input, '
+	settings.append("set ylabel '%s' font 'Times,15'" % (ylabel.rstrip(', ')) )	# take off the trailing coma and space before using.
+	settings.append("set yrange [-.5:%s]" % (NUMBINS - .5))
+	settings.append("set ytics (%s)" % (ytics))
+	settings.append("set ticslevel 0")
+	# done defining the ylabel
+
+	settings.append("set pointsize 0.0")		# set pointsize isn't yet supported by AquaTerm but it probably will someday
+	settings.append("set style data lines")
+
+	# make the TopRight Label
+	settings.append( 'set label "%s" at screen 0.001,0.98 left' % ('\\n'.join(GNUPLOT_TOPRIGHT_LABEL)) )
+
+	return '\n'.join(settings)
+#####################################
+
+def check_parameters( argv ):
+	global PASSED_DIRECTORY, inputplotfilename
+	try: opts, args = getopt.getopt( argv, "esnwENWlpAPIxXM:")
+	except getopt.GetoptError: print_usage_and_exit() 
+
+#	print "opts=%s" % ( opts )
+#	print "args=%s" % ( args)
+
+	global flag_plotAll, flag_plotProcessing, flag_plotInput, flag_getRAW
+	# Set our plot flags
+	for opt, value in opts:
+		if '-A' in opt: flag_plotAll = True
+		elif '-P' in opt: flag_plotProcessing = True
+		elif '-I' in opt: flag_plotInput = True
+		elif 'N' in opt: inputplotfilename = inputplotfilename.replace('Raw', 'Norm')
+
+	# Some default settings if the user doesn't specify anything...
+	if not flag_plotInput and not flag_plotAll: flag_plotProcessing = True	# if no -[API] is specified, assume -P.
+
+	# If we don't have a single argument, exit.
+	if len(args) != 1: print_usage_and_exit()
+	
+	PASSED_DIRECTORY = args[0].rstrip( '/' )	# removing any trailing slash
+
+
+############################### Finished the parsing of the input parameters, now to look at the RUN_DIRS
+
+	global RUN_DIRS
+
+	if not os.path.isdir( PASSED_DIRECTORY ):			# if the passed directory wasn't a directory, exit.
+		print "* Error: '%s' isn't a directory." % ( PASSED_DIRECTORY )
+		print_usage_and_exit()
+
+	if os.path.isfile( PASSED_DIRECTORY + '/brain/Recent/' + inputplotfilename ): 	# if 'directory' is itself a run/ directory, just use that.
+		RUN_DIRS.append( PASSED_DIRECTORY )
+		
+	else:						# 'directory' is a directory, but is NOT a run/ directory itself.  Is it a list of run directories?
+		for potential_rundir in os.listdir( PASSED_DIRECTORY ):
+			if os.path.isfile( PASSED_DIRECTORY + '/' + potential_rundir + '/brain/Recent/' + inputplotfilename ):
+				RUN_DIRS.append( PASSED_DIRECTORY +  '/' + potential_rundir )
+
+	print "RUN_DIRS=%s" % ( RUN_DIRS )
+	
+	if not RUN_DIRS:
+		print "* Error: There were no Polyworld run/ directories in %s." % ( PASSED_DIRECTORY )
+		sys.exit(1)
+
+##################################################################################
+#This function gets the bestRecentBrainFunctionRecordFrequency as specified in the worldfile for a given run/ directory.
+##################################################################################
+def get_bestRecentBrainFunctionRecordFrequency( run_dir ):
+	bestRecentBrainFunctionRecordFrequency=-1
+
+	try:
+		worldfile = open( run_dir + '/worldfile' )
+		for line in worldfile:
+			if 'bestRecentBrainFunctionRecordFrequency' in line:
+				bestRecentBrainFunctionRecordFrequency = int( re.match('([0-9]*)', line).groups(0)[0] )	
+		worldfile.close()
+	except:
+		print "* Error: Could not open '%s/worldfile'. Exiting." % ( run_dir )
+		sys.exit(1)
+
+	if bestRecentBrainFunctionRecordFrequency == -1:
+		print "* Error: Couldn't find a value for 'bestRecentBrainFunctionRecordFrequency' in %s/worldfile.  Exiting." % (run_dir)
+		sys.exit(1)
+		
+	return bestRecentBrainFunctionRecordFrequency
+	
+########################################################################################
+def AddLists( TotalData, ThisData ):
+
+	global NUMBINS, MAXTIMESTEP
+	newlist = [0]
+		
+	for index in range(len(ThisData)):
+		if index%(NUMBINS+1)  == 0:
+			if ThisData[index] > MAXTIMESTEP: MAXTIMESTEP = ThisData[index]
+			newlist.append( int(ThisData[index]) )
+		else:
+			newlist.append( int(TotalData[index]) + int(ThisData[index]) )
+	
+	print TotalData
+	print ThisData
+	print newlist
+	
+	newlist.remove(0)
+	
+	return newlist
+	
+########################################################################################################################		
+########################################################################################################################		
+########################################################################################################################		
+### Real program begins here
+
+check_parameters( sys.argv[1:] )		# don't send it the first item in the sys.argv list because that's this programs filename
+
+if len(RUN_DIRS): averagetimestepinterval = get_bestRecentBrainFunctionRecordFrequency( RUN_DIRS[0]  )
+elif len(RUN_DIRS): averagetimestepinterval = get_bestRecentBrainFunctionRecordFrequency( RUN_DIRS[0]  )
+else:
+	print "* Error: Everything is empty!"
+	sys.exit(1)
+
+print "- AverageInterval=%s" % (averagetimestepinterval),
+
+if flag_plotAll: whichtype = 0
+elif flag_plotProcessing: whichtype = 1
+else: whichtype = 2
+
+MAXTIMESTEP=0
+NUMBINS=0
+DATA = [0]
+
+for rundir in RUN_DIRS:
+
+	filename = rundir + '/brain/Recent/' + inputplotfilename
+
+	inputplotfile = open( filename )
+	thiswhichtype = whichtype
+	for line in inputplotfile:
+		if line.startswith('#'):	# if the line is a comment (begins with #)
+			if line.startswith('#numbins'):
+				line_array=line.split('=')
+				NUMBINS = int( line_array[1] )
+			if line.startswith('#ALLMAX'):
+				line_array=line.split('=')
+				ALLMAX = float( line_array[1] )
+			if line.startswith('#PROMAX'):
+				line_array=line.split('=')
+				PROMAX = float( line_array[1] )
+			if line.startswith('#INPMAX'):
+				line_array=line.split('=')
+				INPMAX = float( line_array[1] )
+			continue;
+		if(thiswhichtype == 0):
+			line_array=line.split('\t')
+			if DATA == [0]:
+				DATA = line_array
+			else:
+				print DATA
+				DATA = AddLists(DATA, line_array )
+				print DATA
+			break
+		else:
+			thiswhichtype -= 1
+
+print "- maxtimestep=%s" % ( MAXTIMESTEP )
+print "- numbins=%s" % ( NUMBINS )
+
+tempfile=open( tempfilename, 'w' )
+print "tempfilename=%s" % ( tempfilename )
+
+thistimestep = DATA[0]
+for index in range(1, len(DATA)):
+	if index%(NUMBINS+1) == 0:
+		thistimestep = DATA[index]
+		tempfile.write( "\n" )
+#		print "\n"
+	else:
+		tempfile.write( "%s\t%s\t%s\n" % ( thistimestep, int((index%(NUMBINS+1))-1), DATA[index] ) )
+#		print "%s\t%s\t%s\n" % ( thistimestep, int((index%(NUMBINS+1))-1), DATA[index] )
+tempfile.flush()
+tempfile.close()
+
+outputcontents = [ GNUPLOT_SETTINGS ]	# begin our .gnuplot file with the static settings.
+
+flag_have_previously_plotted_a_file, flag_have_previously_plotted_a_max = (False, False)
+
+if flag_plotAll:
+	MAX = ALLMAX
+if flag_plotProcessing:
+	MAX = PROMAX
+else:
+	MAX = INPMAX
+binlength = MAX/NUMBINS
+#generate ytics
+ytics = '"0" -.5, '
+for i in range(NUMBINS):
+	ytics += '"%s" %s, ' % (round(binlength*(i+.5),2), i)
+ytics += '"%s" %s' % (round(MAX, 2), NUMBINS-.5)
+
+outputcontents.append( GET_GNUPLOT_DYNAMIC_SETTINGS('Complexity Histogram' ) )	# Make a different plot for Recent/bestRecent
+
+outputcontents.append( "splot '%s'with lines" % tempfilename )
+
+outputfileGNU=open( outputfilenameGNU, 'w' )
+outputfileGNU.write( '\n'.join(outputcontents) )
+outputfileGNU.close()
+print "- Executing '%s'" % ( outputfilenameGNU )
+os.system( 'gnuplot '+ outputfilenameGNU )
+
+print "Done!"
+
