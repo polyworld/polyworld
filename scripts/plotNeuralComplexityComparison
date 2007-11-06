@@ -1,7 +1,8 @@
 #!/usr/bin/python
+from math import sqrt
 ################################################################################
 # CONFIGURABLE PARAMETERS
-COLOR = False
+TCRIT = 1.833	# 95% confidence for 9 degrees of freedom (10 pairs of points)
 ################################################################################
 # you can edit these as well, but you probably don't want to
 # DO NOT EDIT ANYTHING BENEATH HERE UNLESS YOU KNOW WHAT YOU'RE DOING
@@ -86,9 +87,26 @@ set border 10
 
 flag_have_previously_plotted_a_file = False
 flag_have_previously_plotted_a_max = False
-tempfilename='/tmp/,plotNeuralComplexity_%s.plt' % ( os.getpid() )		# this file will contain the raw data
-gnufilename='/tmp/,plotNeuralComplexity_%s.gnuplot' % ( os.getpid() )	# this file will contain gnuplot commands
-flag_color, flag_plotPoints, flag_plotMean, flag_plotErrorbars, flag_plotLegend, flag_plotWhiskers, flag_plotWhiskers_AVERAGE, flag_plotMean_AVERAGE, flag_plotErrorbars_AVERAGE, flag_plotProcessing, flag_plotInput, flag_plotAll, flag_plotMax, flag_plotMax_AVERAGE, flag_multiplot = False, False, False, False, True, False, False, False, False, False, False, False, False, False, False
+tempfilename = '/tmp/,plotNeuralComplexity_%s.plt' % ( os.getpid() )		# this file will contain the raw data
+gnufilename = '/tmp/,plotNeuralComplexity_%s.gnuplot' % ( os.getpid() )	# this file will contain gnuplot commands
+ttestfilename = '/tmp/,plotNeuralComplexity_%s_ttest.plt' % ( os.getpid() )		# this file will contain the raw data
+flag_color = False
+flag_plotPoints = False
+flag_plotMean = False
+flag_plotErrorbars = False
+flag_plotLegend = True
+flag_plotWhiskers = False
+flag_plotWhiskers_AVERAGE = False
+flag_plotMean_AVERAGE = False
+flag_plotErrorbars_AVERAGE = False
+flag_plotProcessing = False
+flag_plotInput = False
+flag_plotAll = False
+flag_plotMax = False
+flag_plotMax_AVERAGE = False
+flag_multiplot = False
+flag_plotTTest = False
+theUnits = 'Pro'
 ###############
 numplotsmade=0
 PASSED_DIRECTORY=''
@@ -103,7 +121,7 @@ USAGE
        plotNeuralComplexityComparison [-lmep] [-MXxY] -[API] directory
 
 DESCRIPTION
-       plotNeuralComplexityComparison plots the Olafcomplexity from one or more Polyworld run/ directories. Data from driven and passive runs are plotted in different colors to allow comparison.
+       plotNeuralComplexityComparison plots the Olafcomplexity from one or more Polyworld run/ directories. Data from driven and passive runs are plotted in different line styles or colors to allow comparison.
 
 OPTIONS
        -c      Use color, instead of solid and dashed lines for Driven vs. Passive comparison
@@ -111,6 +129,8 @@ OPTIONS
        -l      A legend is to be drawn and different colors are are used the All/Processing/Input lines.  Lines will be labeled
                in the legend using the names of the run directories (after stripping any leading numbers). If not
                -l, all lines will be printed in the same identical gray color. (default off)
+       
+       -t      Draw the T-test values and T*
        
        -w/W    Box-and-Whiskers plot. 'w' signifies display each run as a whiskers plot. 'W' displays the averages all runs as a whiskers plot. (default off)
                '-W' is only useful if you are plotting over >=5 run/ directories. 
@@ -503,7 +523,7 @@ def sample_mean( list ):
 	return mean, stderr
 
 def check_parameters( argv ):
-	try: opts, args = getopt.getopt( argv, "cesnwENWlpAPIxXM:")
+	try: opts, args = getopt.getopt( argv, "ctesnwENWlpAPIxXM:")
 	except getopt.GetoptError: print_usage_and_exit() 
 
 #	print "opts=%s" % ( opts )
@@ -512,10 +532,11 @@ def check_parameters( argv ):
 	global flag_color, flag_plotLegend, flag_plotErrorbars, flag_multiplot, flag_plotMean, flag_plotPoints, PASSED_DIRECTORY, multiplotDimX, multiplotDimY	# grant access to the global variables we're going to modify
 	global flag_plotErrorbars_AVERAGE, flag_plotMean_AVERAGE, flag_plotWhiskers, flag_plotWhiskers_AVERAGE
 	global flag_plotAll, flag_plotProcessing, flag_plotInput, flag_plotSmooth
-	global flag_plotMax, flag_plotMax_AVERAGE
+	global flag_plotMax, flag_plotMax_AVERAGE, flag_plotTTest, theUnits
 	# Set our plot flags
 	for opt, value in opts:
 		if   '-c' in opt: flag_color = True
+		elif '-t' in opt: flag_plotTTest = True
 		elif '-e' in opt: flag_plotErrorbars = True
 		elif '-s' in opt: flag_plotSmooth = True
 		elif '-n' in opt: flag_plotMean = True
@@ -527,14 +548,13 @@ def check_parameters( argv ):
 		elif '-x' in opt: flag_plotMax = True
 		elif '-X' in opt: flag_plotMax_AVERAGE = True
 		elif '-p' in opt: flag_plotPoints = True
-		elif '-A' in opt: flag_plotAll = True
-		elif '-P' in opt: flag_plotProcessing = True
-		elif '-I' in opt: flag_plotInput = True
+		elif '-A' in opt: flag_plotAll = True; theUnits = 'All'
+		elif '-P' in opt: flag_plotProcessing = True; theUnits = 'Pro'
+		elif '-I' in opt: flag_plotInput = True; theUnits = 'Inp'
 		elif '-M' in opt:
 			flag_multiplot = True
 			try: multiplotDimX, multiplotDimY = map(int, (value).split('x'))
 			except ValueError: print_usage_and_exit()
-
 
 	# Some default settings if the user doesn't specify anything...
 	if not flag_plotInput and not flag_plotAll: flag_plotProcessing = True	# if no -[API] is specified, assume -P.
@@ -544,6 +564,11 @@ def check_parameters( argv ):
 
 	# If we don't have a single argument, exit.
 	if len(args) != 1: print_usage_and_exit()
+	
+	# For this "Comparison" script, we can only plot one area of neural units at a time
+	if (flag_plotAll and (flag_plotProcessing or flag_plotInput)) or (flag_plotProcessing and flag_plotInput):
+		print "Can only plot one of All, Processing, or Input units at a time"
+		print_usage_and_exit()
 	
 	PASSED_DIRECTORY = args[0].rstrip( '/' )	# removing any trailing slash
 
@@ -716,8 +741,9 @@ else:
 print "- AverageInterval=%s" % (averagetimestepinterval),
 
 
-DATA = { 'bestRecent': {'Driven': {}, 'Passive': {} }, 'Recent': {'Driven': {}, 'Passive': {} } }	# make a dictionary of dictionaries
-MAXDATA = { 'bestRecent': {'Driven': {}, 'Passive': {} }, 'Recent': {'Driven': {}, 'Passive': {} } }	# make a dictionary of dictionaries
+DATA = { 'bestRecent': { 'Driven': {}, 'Passive': {} }, 'Recent': { 'Driven': {}, 'Passive': {} } }	# make a dictionary of dictionaries
+MAXDATA = { 'bestRecent': { 'Driven': {}, 'Passive': {} }, 'Recent': { 'Driven': {}, 'Passive': {} } }	# make a dictionary of dictionaries
+DIFF = { 'bestRecent': { 'Mean': {}, 'StdDev': {}, 'Sig': {}, 'T': {} }, 'Recent': { 'Mean': {}, 'StdDev': {}, 'Sig': {}, 'T': {} } }
 MAXTIMESTEP=0
 for whichrecent in RUN_DIRS:
 	for whichtype in RUN_DIRS[whichrecent]:
@@ -735,14 +761,21 @@ for whichrecent in RUN_DIRS:
 				t = int(line_array[0])
 				if t not in DATA[whichrecent][whichtype]:
 					DATA[whichrecent][whichtype][t] = {}
-					DATA[whichrecent][whichtype][t]['Pro']=[]
-					DATA[whichrecent][whichtype][t]['All']=[]
-					DATA[whichrecent][whichtype][t]['Inp']=[]
+					DATA[whichrecent][whichtype][t]['Pro'] = []
+					DATA[whichrecent][whichtype][t]['All'] = []
+					DATA[whichrecent][whichtype][t]['Inp'] = []
 
 					MAXDATA[whichrecent][whichtype][t] = {}
-					MAXDATA[whichrecent][whichtype][t]['Pro']=[]
-					MAXDATA[whichrecent][whichtype][t]['All']=[]
-					MAXDATA[whichrecent][whichtype][t]['Inp']=[]
+					MAXDATA[whichrecent][whichtype][t]['Pro'] = []
+					MAXDATA[whichrecent][whichtype][t]['All'] = []
+					MAXDATA[whichrecent][whichtype][t]['Inp'] = []
+					
+					if whichtype == "Driven":
+						for whichkey in ( "Mean", "StdDev", "Sig", "T" ):
+							DIFF[whichrecent][whichkey][t] = {}
+							DIFF[whichrecent][whichkey][t]['All'] = {}
+							DIFF[whichrecent][whichkey][t]['Pro'] = {}
+							DIFF[whichrecent][whichkey][t]['Inp'] = {}
 
 				# make the list of means
 				DATA[whichrecent][whichtype][t]['All'].append( line_array[6 ] )
@@ -761,6 +794,55 @@ for whichrecent in RUN_DIRS:
 	for whichtype in RUN_DIRS[whichrecent].keys():				# if we have no entries in this Recent/bestRecent, delete it.
 		if len( DATA[whichrecent][whichtype] ) == 0:
 			del RUN_DIRS[whichrecent][whichtype]
+
+# Calculate statistical significance with a paired/dependent Student's T-test
+# Also compute independent Welch's T-test someday.
+ttestMax = 0.0
+for whichrecent in RUN_DIRS:
+#	print "\n%s:" % ( whichrecent )
+	for area in ( 'All','Pro','Inp' ):
+#		print "\t%s:" % ( area )
+		whichtype = "Driven"
+		for t in DATA[whichrecent][whichtype]:
+#			print "\t\t%d:" % ( t )
+			diffSum = 0.0
+			runIndex = 0
+			for rundir in RUN_DIRS[whichrecent]["Driven"]:
+#				print "\t\t\t%s (%d): Cd = %g, Cp = %g" % ( rundir, runIndex, float( DATA[whichrecent]["Driven"][t][area][runIndex] ), float( DATA[whichrecent]["Passive"][t][area][runIndex] ) )
+				diffSum += float( DATA[whichrecent]["Driven"][t][area][runIndex] ) - float( DATA[whichrecent]["Passive"][t][area][runIndex] )
+				runIndex += 1
+			numRuns = runIndex;
+			if numRuns > 0:
+				diffMean = diffSum / numRuns
+				devSum = 0.0
+				runIndex = 0
+				for rundir in RUN_DIRS[whichrecent]["Driven"]:
+					delta = float( DATA[whichrecent]["Driven"][t][area][runIndex] ) - float( DATA[whichrecent]["Passive"][t][area][runIndex] ) - diffMean
+					devSum += delta * delta
+					runIndex += 1
+				diffStdDev = sqrt( devSum / numRuns )
+				ttest = (abs( diffMean ) / diffStdDev) * sqrt( numRuns - 1 )
+			else:
+#				print "whichrecent=%s, t=%g, area=%s" % ( whichrecent, t, area )
+				diffMean = 0.0
+				diffStdDev = 0.0
+				ttest = 0.0
+			DIFF[whichrecent]["Mean"][t][area] = diffMean
+			DIFF[whichrecent]["StdDev"][t][area] = diffStdDev
+			DIFF[whichrecent]["T"][t][area] = ttest
+			if ttest >= TCRIT:
+				DIFF[whichrecent]["Sig"][t][area] = "+"
+			else:
+				DIFF[whichrecent]["Sig"][t][area] = "-"
+			if ttest > ttestMax: ttestMax = ttest
+#			print "m = %g, s = %g, tt = %g, %s" % ( diffMean, diffStdDev, ttest, DIFF[whichrecent]["Sig"][t][area] )
+ttestFile = open( ttestfilename, 'w' )
+ttestFile.write( "#time\tT\n" )
+timeIndexes = DIFF["Recent"]["T"].keys()
+timeIndexes.sort()
+for t in timeIndexes:
+	ttestFile.write( "%d\t%g\n" % ( t, DIFF["Recent"]["T"][t][theUnits] ) )
+ttestFile.close()
 
 # Open the file that we're going to store the data on the averages.
 #for whichrecent in ('bestRecent','Recent'):
@@ -806,6 +888,13 @@ flag_have_previously_plotted_a_file, flag_have_previously_plotted_a_max = (False
 outputcontents.append( GET_GNUPLOT_DYNAMIC_SETTINGS( whichrecent + ' -- Driven vs Passive Complexity' ) )	# Make a different plot for Recent/bestRecent
 plotstring = []
 
+# Add statistical significance data
+if flag_plotTTest :
+	outputcontents.append( "set y2range [0:%g]\n" % ( ttestMax * 3 ) )	# makes the maximum T-test value reach 1/3 the height of the graph
+	outputcontents.append( "set y2label 'Dependent Student''s T-test (p < 0.05)' font 'Times,15'\n" )
+	outputcontents.append( "set y2tics out ( \"T*\" %g )" % ( TCRIT ) )
+	plotstring.append( "%g axes x1y2 notitle linewidth 1 linetype 5 linecolor rgb 'gray40', '%s' axes x1y2 notitle linewidth 1 linetype 3 linecolor rgb 'gray40'" % ( TCRIT, ttestfilename ) )
+
 for whichrecent in RUN_DIRS:
 	for whichtype in RUN_DIRS[whichrecent]:
 		for rundir in RUN_DIRS[whichrecent][whichtype]:
@@ -825,7 +914,6 @@ else:
 	outputcontents.append( 'plot ' + ', '.join(plotstring) )
 
 outputcontents.append( GET_GNUPLOT_END_SETTINGS() )
-
 
 if flag_plotSmooth:	# We've finished all of the regular plots, now to do the smoothed plots (if we're doing that)
 	outputcontents.append("reset")	# clear everything
