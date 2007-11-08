@@ -781,7 +781,7 @@ for whichrecent in RUN_DIRS:
 				DATA[whichrecent][whichtype][t]['All'].append( line_array[6 ] )
 				DATA[whichrecent][whichtype][t]['Pro'].append( line_array[14] )
 				DATA[whichrecent][whichtype][t]['Inp'].append( line_array[22] )
-
+				
 				# make the list of maximum's
 				MAXDATA[whichrecent][whichtype][t]['All'].append( line_array[5 ] ) 
 				MAXDATA[whichrecent][whichtype][t]['Pro'].append( line_array[13] )
@@ -789,6 +789,16 @@ for whichrecent in RUN_DIRS:
 
 				if t > MAXTIMESTEP: MAXTIMESTEP = t
 #				print "linearray=%s" % (line_array ) 
+
+#for whichrecent in RUN_DIRS:
+#	for whichtype in RUN_DIRS[whichrecent]:
+#		runIndex = 0
+#		for rundir in RUN_DIRS[whichrecent][whichtype]:
+#			for t in DATA[whichrecent][whichtype]:
+#				for area in ( 'All', 'Pro', 'Inp' ):
+#					print "%s.%s.%s.%d.%s.%d.C = " % ( rundir, whichrecent, whichtype, t, area, runIndex ) ,
+#					print "%s" % ( DATA[whichrecent][whichtype][t][area][runIndex] )
+#			runIndex += 1
 
 for whichrecent in RUN_DIRS:
 	for whichtype in RUN_DIRS[whichrecent].keys():				# if we have no entries in this Recent/bestRecent, delete it.
@@ -808,7 +818,8 @@ for whichrecent in RUN_DIRS:
 			diffSum = 0.0
 			runIndex = 0
 			for rundir in RUN_DIRS[whichrecent]["Driven"]:
-#				print "\t\t\t%s (%d): Cd = %g, Cp = %g" % ( rundir, runIndex, float( DATA[whichrecent]["Driven"][t][area][runIndex] ), float( DATA[whichrecent]["Passive"][t][area][runIndex] ) )
+#				print "\t\t\t%s (%d):" % ( rundir, runIndex ) ,
+#				print " Cd = %g, Cp = %g" % ( float( DATA[whichrecent]["Driven"][t][area][runIndex] ), float( DATA[whichrecent]["Passive"][t][area][runIndex] ) )
 				diffSum += float( DATA[whichrecent]["Driven"][t][area][runIndex] ) - float( DATA[whichrecent]["Passive"][t][area][runIndex] )
 				runIndex += 1
 			numRuns = runIndex;
@@ -820,7 +831,7 @@ for whichrecent in RUN_DIRS:
 					delta = float( DATA[whichrecent]["Driven"][t][area][runIndex] ) - float( DATA[whichrecent]["Passive"][t][area][runIndex] ) - diffMean
 					devSum += delta * delta
 					runIndex += 1
-				diffStdDev = sqrt( devSum / numRuns )
+				diffStdDev = sqrt( devSum / (numRuns-1) )
 				ttest = (abs( diffMean ) / diffStdDev) * sqrt( numRuns - 1 )
 			else:
 #				print "whichrecent=%s, t=%g, area=%s" % ( whichrecent, t, area )
@@ -890,10 +901,14 @@ plotstring = []
 
 # Add statistical significance data
 if flag_plotTTest :
-	outputcontents.append( "set y2range [0:%g]\n" % ( ttestMax * 3 ) )	# makes the maximum T-test value reach 1/3 the height of the graph
+	outputcontents.append( "set y2range [0:%g]\n" % ( ttestMax * 4 ) )	# makes the maximum T-test value reach 1/4 the height of the graph
 	outputcontents.append( "set y2label 'Dependent Student''s T-test (p < 0.05)' font 'Times,15'\n" )
 	outputcontents.append( "set y2tics out ( \"T*\" %g )" % ( TCRIT ) )
 	plotstring.append( "%g axes x1y2 notitle linewidth 1 linetype 5 linecolor rgb 'gray40', '%s' axes x1y2 notitle linewidth 1 linetype 3 linecolor rgb 'gray40'" % ( TCRIT, ttestfilename ) )
+#	outputcontents.append( "set y2label 'Dependent Student''s T-test' font 'Times,15'\n" )
+#	outputcontents.append( "set y2tics out ( \"T* (p<0.05)\" %g )" % ( TCRIT ) )
+#	outputcontents.append( "set y2tics add ( \"T* (p<0.01)\" %g )" % ( 2.821 ) )
+#	plotstring.append( "%g axes x1y2 notitle linewidth 1 linetype 5 linecolor rgb 'gray40', %g axes x1y2 notitle linewidth 1 linetype 5 linecolor rgb 'gray40', '%s' axes x1y2 notitle linewidth 1 linetype 3 linecolor rgb 'gray40'" % ( TCRIT, 2.821, ttestfilename ) )
 
 for whichrecent in RUN_DIRS:
 	for whichtype in RUN_DIRS[whichrecent]:
