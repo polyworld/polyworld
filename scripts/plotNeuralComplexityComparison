@@ -744,6 +744,7 @@ print "- AverageInterval=%s" % (averagetimestepinterval),
 DATA = { 'bestRecent': { 'Driven': {}, 'Passive': {} }, 'Recent': { 'Driven': {}, 'Passive': {} } }	# make a dictionary of dictionaries
 MAXDATA = { 'bestRecent': { 'Driven': {}, 'Passive': {} }, 'Recent': { 'Driven': {}, 'Passive': {} } }	# make a dictionary of dictionaries
 DIFF = { 'bestRecent': { 'Mean': {}, 'StdDev': {}, 'Sig': {}, 'T': {} }, 'Recent': { 'Mean': {}, 'StdDev': {}, 'Sig': {}, 'T': {} } }
+MAXDIFF = { 'bestRecent': { 'Mean': {}, 'StdDev': {}, 'Sig': {}, 'T': {} }, 'Recent': { 'Mean': {}, 'StdDev': {}, 'Sig': {}, 'T': {} } }
 MAXTIMESTEP=0
 for whichrecent in RUN_DIRS:
 	for whichtype in RUN_DIRS[whichrecent]:
@@ -776,6 +777,10 @@ for whichrecent in RUN_DIRS:
 							DIFF[whichrecent][whichkey][t]['All'] = {}
 							DIFF[whichrecent][whichkey][t]['Pro'] = {}
 							DIFF[whichrecent][whichkey][t]['Inp'] = {}
+							MAXDIFF[whichrecent][whichkey][t] = {}
+							MAXDIFF[whichrecent][whichkey][t]['All'] = {}
+							MAXDIFF[whichrecent][whichkey][t]['Pro'] = {}
+							MAXDIFF[whichrecent][whichkey][t]['Inp'] = {}
 
 				# make the list of means
 				DATA[whichrecent][whichtype][t]['All'].append( line_array[6 ] )
@@ -808,6 +813,7 @@ for whichrecent in RUN_DIRS:
 # Calculate statistical significance with a paired/dependent Student's T-test
 # Also compute independent Welch's T-test someday.
 ttestMax = 0.0
+maxTTestMax = 0.0
 for whichrecent in RUN_DIRS:
 #	print "\n%s:" % ( whichrecent )
 	for area in ( 'All','Pro','Inp' ):
@@ -816,28 +822,39 @@ for whichrecent in RUN_DIRS:
 		for t in DATA[whichrecent][whichtype]:
 #			print "\t\t%d:" % ( t )
 			diffSum = 0.0
+			diffSumMax = 0.0
 			runIndex = 0
 			for rundir in RUN_DIRS[whichrecent]["Driven"]:
 #				print "\t\t\t%s (%d):" % ( rundir, runIndex ) ,
 #				print " Cd = %g, Cp = %g" % ( float( DATA[whichrecent]["Driven"][t][area][runIndex] ), float( DATA[whichrecent]["Passive"][t][area][runIndex] ) )
 				diffSum += float( DATA[whichrecent]["Driven"][t][area][runIndex] ) - float( DATA[whichrecent]["Passive"][t][area][runIndex] )
+				diffSumMax += float( MAXDATA[whichrecent]["Driven"][t][area][runIndex] ) - float( MAXDATA[whichrecent]["Passive"][t][area][runIndex] )
 				runIndex += 1
 			numRuns = runIndex;
 			if numRuns > 0:
 				diffMean = diffSum / numRuns
+				diffMeanMax = diffSumMax / numRuns
 				devSum = 0.0
+				devSumMax = 0.0
 				runIndex = 0
 				for rundir in RUN_DIRS[whichrecent]["Driven"]:
 					delta = float( DATA[whichrecent]["Driven"][t][area][runIndex] ) - float( DATA[whichrecent]["Passive"][t][area][runIndex] ) - diffMean
 					devSum += delta * delta
+					delta = float( MAXDATA[whichrecent]["Driven"][t][area][runIndex] ) - float( MAXDATA[whichrecent]["Passive"][t][area][runIndex] ) - diffMeanMax
+					devSumMax += delta * delta
 					runIndex += 1
 				diffStdDev = sqrt( devSum / (numRuns-1) )
+				diffStdDevMax = sqrt( devSumMax / (numRuns-1) )
 				ttest = (abs( diffMean ) / diffStdDev) * sqrt( numRuns - 1 )
+				maxTTest = (abs( diffMeanMax ) / diffStdDevMax) * sqrt( numRuns - 1 )
 			else:
 #				print "whichrecent=%s, t=%g, area=%s" % ( whichrecent, t, area )
 				diffMean = 0.0
+				diffMeanMax = 0.0
 				diffStdDev = 0.0
+				diffStdDevMax = 0.0
 				ttest = 0.0
+				maxTTest = 0.0
 			DIFF[whichrecent]["Mean"][t][area] = diffMean
 			DIFF[whichrecent]["StdDev"][t][area] = diffStdDev
 			DIFF[whichrecent]["T"][t][area] = ttest
@@ -846,6 +863,14 @@ for whichrecent in RUN_DIRS:
 			else:
 				DIFF[whichrecent]["Sig"][t][area] = "-"
 			if ttest > ttestMax: ttestMax = ttest
+			MAXDIFF[whichrecent]["Mean"][t][area] = diffMeanMax
+			MAXDIFF[whichrecent]["StdDev"][t][area] = diffStdDevMax
+			MAXDIFF[whichrecent]["T"][t][area] = maxTTest
+			if maxTTest >= TCRIT:
+				MAXDIFF[whichrecent]["Sig"][t][area] = "+"
+			else:
+				MAXDIFF[whichrecent]["Sig"][t][area] = "-"
+			if maxTTest > maxTTestMax: maxTTestMax = maxTTest
 #			print "m = %g, s = %g, tt = %g, %s" % ( diffMean, diffStdDev, ttest, DIFF[whichrecent]["Sig"][t][area] )
 ttestFile = open( ttestfilename, 'w' )
 ttestFile.write( "#time\tT\n" )
@@ -855,7 +880,15 @@ for t in timeIndexes:
 	ttestFile.write( "%d\t%g\n" % ( t, DIFF["Recent"]["T"][t][theUnits] ) )
 ttestFile.close()
 
-# Open the file that we're going to store the data on the averages.
+ttestFile = open( ttestfilename+"Max", 'w' )
+ttestFile.write( "#time\tT\n" )
+timeIndexes = DIFF["Recent"]["T"].keys()
+timeIndexes.sort()
+for t in timeIndexes:
+	ttestFile.write( "%d\t%g\n" % ( t, MAXDIFF["Recent"]["T"][t][theUnits] ) )
+ttestFile.close()
+
+# Open the file where we're going to store the data on the averages.
 #for whichrecent in ('bestRecent','Recent'):
 for whichrecent in RUN_DIRS:
 	for whichtype in RUN_DIRS[whichrecent]:
@@ -901,14 +934,24 @@ plotstring = []
 
 # Add statistical significance data
 if flag_plotTTest :
-	outputcontents.append( "set y2range [0:%g]\n" % ( ttestMax * 4 ) )	# makes the maximum T-test value reach 1/4 the height of the graph
-	outputcontents.append( "set y2label 'Dependent Student''s T-test (p < 0.05)' font 'Times,15'\n" )
-	outputcontents.append( "set y2tics out ( \"T*\" %g )" % ( TCRIT ) )
-	plotstring.append( "%g axes x1y2 notitle linewidth 1 linetype 5 linecolor rgb 'gray40', '%s' axes x1y2 notitle linewidth 1 linetype 3 linecolor rgb 'gray40'" % ( TCRIT, ttestfilename ) )
-#	outputcontents.append( "set y2label 'Dependent Student''s T-test' font 'Times,15'\n" )
-#	outputcontents.append( "set y2tics out ( \"T* (p<0.05)\" %g )" % ( TCRIT ) )
-#	outputcontents.append( "set y2tics add ( \"T* (p<0.01)\" %g )" % ( 2.821 ) )
-#	plotstring.append( "%g axes x1y2 notitle linewidth 1 linetype 5 linecolor rgb 'gray40', %g axes x1y2 notitle linewidth 1 linetype 5 linecolor rgb 'gray40', '%s' axes x1y2 notitle linewidth 1 linetype 3 linecolor rgb 'gray40'" % ( TCRIT, 2.821, ttestfilename ) )
+	if flag_plotMax:
+		outputcontents.append( "set y2range [0:%g]\n" % ( ttestMax * 4 ) )	# makes the maximum T-test value reach 1/4 the height of the graph
+		outputcontents.append( "set y2label 'Dependent Student''s T-test (p < 0.05)' font 'Times,15'\n" )
+		outputcontents.append( "set y2tics out ( \"T*\" %g )" % ( TCRIT ) )
+		plotstring.append( "%g axes x1y2 notitle linewidth 1 linetype 5 linecolor rgb 'gray40', '%s' axes x1y2 notitle linewidth 1 linetype 3 linecolor rgb 'gray40'" % ( TCRIT, ttestfilename+"Max" ) )
+#		outputcontents.append( "set y2label 'Dependent Student''s T-test' font 'Times,15'\n" )
+#		outputcontents.append( "set y2tics out ( \"T* (p<0.05)\" %g )" % ( TCRIT ) )
+#		outputcontents.append( "set y2tics add ( \"T* (p<0.01)\" %g )" % ( 2.821 ) )
+#		plotstring.append( "%g axes x1y2 notitle linewidth 1 linetype 5 linecolor rgb 'gray40', %g axes x1y2 notitle linewidth 1 linetype 5 linecolor rgb 'gray40', '%s' axes x1y2 notitle linewidth 1 linetype 3 linecolor rgb 'gray40'" % ( TCRIT, 2.821, ttestfilename ) )
+	else:
+		outputcontents.append( "set y2range [0:%g]\n" % ( ttestMax * 4 ) )	# makes the maximum T-test value reach 1/4 the height of the graph
+		outputcontents.append( "set y2label 'Dependent Student''s T-test (p < 0.05)' font 'Times,15'\n" )
+		outputcontents.append( "set y2tics out ( \"T*\" %g )" % ( TCRIT ) )
+		plotstring.append( "%g axes x1y2 notitle linewidth 1 linetype 5 linecolor rgb 'gray40', '%s' axes x1y2 notitle linewidth 1 linetype 3 linecolor rgb 'gray40'" % ( TCRIT, ttestfilename ) )
+#		outputcontents.append( "set y2label 'Dependent Student''s T-test' font 'Times,15'\n" )
+#		outputcontents.append( "set y2tics out ( \"T* (p<0.05)\" %g )" % ( TCRIT ) )
+#		outputcontents.append( "set y2tics add ( \"T* (p<0.01)\" %g )" % ( 2.821 ) )
+#		plotstring.append( "%g axes x1y2 notitle linewidth 1 linetype 5 linecolor rgb 'gray40', %g axes x1y2 notitle linewidth 1 linetype 5 linecolor rgb 'gray40', '%s' axes x1y2 notitle linewidth 1 linetype 3 linecolor rgb 'gray40'" % ( TCRIT, 2.821, ttestfilename ) )
 
 for whichrecent in RUN_DIRS:
 	for whichtype in RUN_DIRS[whichrecent]:
