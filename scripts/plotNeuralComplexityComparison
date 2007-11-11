@@ -383,12 +383,12 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename, linetype=1 ):
 				Atitle,Ptitle,Ititle=('mean All','mean Processing','mean Input')
 
 			# for these we do not use numbered linestyles because then we can't make them dashed for the second directory
-                        if flag_plotLegend:
-                                if flag_plotErrorbars: temp = [ LINESTYLES[thislinestyle], LINESTYLES['ColoredMeanlineStderr1'], LINESTYLES['ColoredMeanline2'], LINESTYLES['ColoredMeanlineStderr2'], LINESTYLES['ColoredMeanline3'], LINESTYLES['ColoredMeanlineStderr3'] ]
-                                else: temp = [ LINESTYLES[thislinestyle], LINESTYLES['ColoredMeanline2'], LINESTYLES['ColoredMeanline3'] ]
-                        else:
-                                if flag_plotErrorbars: temp = [ LINESTYLES['NolegendMeanline'], LINESTYLES['NolegendMeanlineStderr'] ] * 3
-                                else: temp = [ LINESTYLES['NolegendMeanline'] ] * 3
+			if flag_plotLegend:
+				if flag_plotErrorbars: temp = [ LINESTYLES[thislinestyle], LINESTYLES['ColoredMeanlineStderr1'], LINESTYLES['ColoredMeanline2'], LINESTYLES['ColoredMeanlineStderr2'], LINESTYLES['ColoredMeanline3'], LINESTYLES['ColoredMeanlineStderr3'] ]
+				else: temp = [ LINESTYLES[thislinestyle], LINESTYLES['ColoredMeanline2'], LINESTYLES['ColoredMeanline3'] ]
+			else:
+				if flag_plotErrorbars: temp = [ LINESTYLES['NolegendMeanline'], LINESTYLES['NolegendMeanlineStderr'] ] * 3
+				else: temp = [ LINESTYLES['NolegendMeanline'] ] * 3
 
 			if flag_plotAll:
 				plotstring.append("'%s' using 1:7 %s linetype %s notitle" % (filename, temp[0], linetype) )
@@ -411,17 +411,18 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename, linetype=1 ):
 					temp.pop(0)
 
 
-                if flag_plotMax:   # are we doing the MAX for each one?
-                        if flag_have_previously_plotted_a_max:
-                                Atitle, Ptitle, Ititle = ('','','')
-                        else:
-                                flag_have_previously_plotted_a_max = True
-                                Atitle,Ptitle,Ititle=('maxAll','maxProcessing','maxInput')
+		if flag_plotMax:   # are we doing the MAX for each one?
+			if flag_have_previously_plotted_a_max:
+				Atitle, Ptitle, Ititle = ('','','')
+			else:
+				flag_have_previously_plotted_a_max = True
+#				Atitle,Ptitle,Ititle=('maxAll','maxProcessing','maxInput')
+				Atitle, Ptitle, Ititle = ('','','')
 
-                        if flag_plotLegend: temp = [ LINESTYLES['ColoredMaxline1'], LINESTYLES['ColoredMaxline2'], LINESTYLES['ColoredMaxline3'] ]
-                        else:   temp = [ LINESTYLES['NolegendMaxline'] ] * 3
-
-
+			if flag_plotLegend: temp = [ LINESTYLES[thislinestyle], LINESTYLES['ColoredMaxline1'], LINESTYLES['ColoredMaxline2'], LINESTYLES['ColoredMaxline3'] ]
+			else:   temp = [ LINESTYLES['NolegendMaxline'] ] * 3
+	
+	
 			if flag_plotAll:
 				plotstring.append("'%s' using 1:6 %s linetype %s title '%s'" % (filename, temp[0], linetype, Atitle) )
 				temp.pop(0)
@@ -489,7 +490,7 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename, linetype=1 ):
 					temp.pop(0)
 
                 if flag_plotMax_AVERAGE:   # are we doing the MAX for each one?
-			Atitle,Ptitle,Ititle=('max-mmAll','max-mmProcessing','max-mmInput')
+			Atitle,Ptitle,Ititle=('max-mmAll',thistitle,'max-mmInput')
 
                         temp = [ LINESTYLES['AvrMaxline'] ] * 3
 
