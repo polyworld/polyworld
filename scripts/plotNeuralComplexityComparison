@@ -87,6 +87,7 @@ set border 10
 
 flag_have_previously_plotted_a_file = False
 flag_have_previously_plotted_a_max = False
+flag_have_previously_plotted_a_min = False
 tempfilename = '/tmp/,plotNeuralComplexity_%s.plt' % ( os.getpid() )		# this file will contain the raw data
 gnufilename = '/tmp/,plotNeuralComplexity_%s.gnuplot' % ( os.getpid() )	# this file will contain gnuplot commands
 ttestfilename = '/tmp/,plotNeuralComplexity_%s_ttest.plt' % ( os.getpid() )		# this file will contain the raw data
@@ -94,7 +95,7 @@ flag_color = False
 flag_plotPoints = False
 flag_plotMean = False
 flag_plotErrorbars = False
-flag_plotLegend = True
+flag_plotLegend = False
 flag_plotWhiskers = False
 flag_plotWhiskers_AVERAGE = False
 flag_plotMean_AVERAGE = False
@@ -104,6 +105,8 @@ flag_plotInput = False
 flag_plotAll = False
 flag_plotMax = False
 flag_plotMax_AVERAGE = False
+flag_plotMin = False
+flag_plotMin_AVERAGE = False
 flag_multiplot = False
 flag_plotTTest = False
 theUnits = 'Pro'
@@ -121,7 +124,9 @@ USAGE
        plotNeuralComplexityComparison [-lmep] [-MXxY] -[API] directory
 
 DESCRIPTION
-       plotNeuralComplexityComparison plots the Olafcomplexity from one or more Polyworld run/ directories. Data from driven and passive runs are plotted in different line styles or colors to allow comparison.
+       plotNeuralComplexityComparison plots the Olafcomplexity from one or more Polyworld run/ directories.
+       Data from driven and passive runs are plotted in different line styles or colors to allow comparison.
+       You must specify at least one of -m, -M, -x, -X, -n, -N, -w, -W, or -p.
 
 OPTIONS
        -c      Use color, instead of solid and dashed lines for Driven vs. Passive comparison
@@ -135,7 +140,7 @@ OPTIONS
        -w/W    Box-and-Whiskers plot. 'w' signifies display each run as a whiskers plot. 'W' displays the averages all runs as a whiskers plot. (default off)
                '-W' is only useful if you are plotting over >=5 run/ directories. 
 
-       -n/N    The mean of each param will be computed and drawn as a line. (-n: default on, -N: default off)
+       -m/M    The mean of each param will be computed and drawn as a line. (default off)
                If the timestep interval in 'AvrComplexity.plt' is different across runs, the mean will be computed for the timesteps
                in the first directory.  For example, if the first run/ directory had an interval=1000, but another AvrComplexity.plt
                had interval=500, the mean would only be computed every 1000 timesteps.  This is a feature
@@ -143,9 +148,9 @@ OPTIONS
 
        -e/E    Standard Error bars for the mean will be drawn. (default off)
 
-       -x      Maximums (the top of the individual whiskers) will be drawn as a line. (default off)
+       -x/X    Draw the population max lines (x) and/or the average of all population maxima (X). (default off)
 
-       -X      The Mean of the -x's will be drawn as a thick line.  This is *not* the max of the mean's (the top of the -W). (default off)
+       -n/N    Draw the population min lines (n) and/or the average of all population minima (N). (default off)
 
        -p      Draw the points on either the meanline or the maxline. (default off)
 
@@ -235,7 +240,10 @@ def get_median( listofnumbers ):
 # GET_GNUPLOT_PLOTSTRING_SMOOTH -- this function calls the function GET_GNUPLOT_PLOTSTRING, and then some manipulations to make the SMOOTHED plotstring
 #######################################################################################
 def GET_GNUPLOT_PLOTSTRING_SMOOTH( filename, Avrfilename, linetype=1 ):
-	global GNUPLOT_SMOOTHING_FUNCTION, flag_plotMean, flag_plotMean_AVERAGE, flag_plotMax, flag_plotMax_AVERAGE
+	global GNUPLOT_SMOOTHING_FUNCTION
+	global flag_plotMean, flag_plotMean_AVERAGE
+	global flag_plotMax,  flag_plotMax_AVERAGE
+	global flag_plotMin,  flag_plotMin_AVERAGE
 
 	rawarray = GET_GNUPLOT_PLOTSTRING( filename, Avrfilename, linetype).split(', ')
 
@@ -284,9 +292,9 @@ def GET_GNUPLOT_DYNAMIC_SETTINGS( RecentOrbestRecent ):
 		settings.append( "set xrange [0:%s]" % (MAXTIMESTEP) )
 
 	# We are plotting the mean as a line, point, or both?
-	if flag_plotPoints and (flag_plotMean or flag_plotMax):
+	if flag_plotPoints and (flag_plotMean or flag_plotMax or flag_plotMin):
 		settings.append("set style data linespoints")
-	elif flag_plotMean or flag_plotMax:
+	elif flag_plotMean or flag_plotMax or flag_plotMin:
 		settings.append("set pointsize 0.0")		# set pointsize isn't yet supported by AquaTerm but it probably will someday
 		settings.append("set style data lines")
 	elif flag_plotPoints:
@@ -332,9 +340,17 @@ def read_worldfile_parameter( worldfilename, parameter ):
 #####################################
 
 def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename, linetype=1 ):
-	global RUN_DIRS, flag_plotLegend, flag_plotWhiskers, flag_plotMean, flag_plotErrorbars, flag_plotSmooth, flag_plotWhiskers_AVERAGE, flag_plotMean_AVERAGE, flag_plotErrorbars_AVERAGE, flag_plotAll, flag_plotProcessing, flag_plotInput, flag_have_previously_plotted_a_file, flag_have_previously_plotted_a_max
-	global  flag_plotMax, flag_plotMax_AVERAGE, LINESTYLES	
-
+	global RUN_DIRS, flag_plotLegend, flag_plotWhiskers, flag_plotErrorbars, flag_plotSmooth, flag_plotWhiskers_AVERAGE, flag_plotErrorbars_AVERAGE, flag_plotAll, flag_plotProcessing, flag_plotInput
+	global LINESTYLES	
+	global flag_plotMean, flag_plotMean_AVERAGE
+	global flag_plotMax,  flag_plotMax_AVERAGE
+	global flag_plotMin,  flag_plotMin_AVERAGE
+	global flag_have_previously_plotted_a_file
+	global flag_have_previously_plotted_a_max
+	global flag_have_previously_plotted_a_min
+	
+	print "filename = %s, Avrfilename = %s" % ( filename, Avrfilename )
+	
 	plotstring = [ ]
 	
 	if filename:
@@ -412,16 +428,14 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename, linetype=1 ):
 
 
 		if flag_plotMax:   # are we doing the MAX for each one?
-			if flag_have_previously_plotted_a_max:
+			if flag_have_previously_plotted_a_file or flag_have_previously_plotted_a_max or flag_have_previously_plotted_a_min:
 				Atitle, Ptitle, Ititle = ('','','')
 			else:
 				flag_have_previously_plotted_a_max = True
-#				Atitle,Ptitle,Ititle=('maxAll','maxProcessing','maxInput')
-				Atitle, Ptitle, Ititle = ('','','')
+				Atitle,Ptitle,Ititle=('maxAll','maxProcessing','maxInput')
 
 			if flag_plotLegend: temp = [ LINESTYLES[thislinestyle], LINESTYLES['ColoredMaxline1'], LINESTYLES['ColoredMaxline2'], LINESTYLES['ColoredMaxline3'] ]
 			else:   temp = [ LINESTYLES['NolegendMaxline'] ] * 3
-	
 	
 			if flag_plotAll:
 				plotstring.append("'%s' using 1:6 %s linetype %s title '%s'" % (filename, temp[0], linetype, Atitle) )
@@ -431,6 +445,27 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename, linetype=1 ):
 				temp.pop(0)
 			if flag_plotInput:
 				plotstring.append("'%s' using 1:22 %s linetype %s title '%s'" % (filename, temp[0], linetype, Ititle) )
+				temp.pop(0)
+
+
+		if flag_plotMin:   # are we doing the MIN for each one?
+			if flag_have_previously_plotted_a_file or flag_have_previously_plotted_a_max or flag_have_previously_plotted_a_min:
+				Atitle, Ptitle, Ititle = ('','','')
+			else:
+				flag_have_previously_plotted_a_min = True
+				Atitle,Ptitle,Ititle=('minAll','minProcessing','minInput')
+
+			if flag_plotLegend: temp = [ LINESTYLES[thislinestyle], LINESTYLES['ColoredMaxline1'], LINESTYLES['ColoredMaxline2'], LINESTYLES['ColoredMaxline3'] ]
+			else:   temp = [ LINESTYLES['NolegendMaxline'] ] * 3
+	
+			if flag_plotAll:
+				plotstring.append("'%s' using 1:2 %s linetype %s title '%s'" % (filename, temp[0], linetype, Atitle) )
+				temp.pop(0)
+			if flag_plotProcessing:
+				plotstring.append("'%s' using 1:10 %s linetype %s title '%s'" % (filename, temp[0], linetype, Ptitle) )
+				temp.pop(0)
+			if flag_plotInput:
+				plotstring.append("'%s' using 1:18 %s linetype %s title '%s'" % (filename, temp[0], linetype, Ititle) )
 				temp.pop(0)
 
 
@@ -463,7 +498,7 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename, linetype=1 ):
 				temp.pop(0)
 	
 		if flag_plotMean_AVERAGE:
-                        if flag_plotWhiskers_AVERAGE:   # if we plotted Whiskers, dont makes keys for the averages
+			if flag_plotWhiskers_AVERAGE:   # if we plotted Whiskers, dont makes keys for the averages
 				Atitle, Ptitle, Ititle = ('', '', '')
 			else:
 				Atitle, Ptitle, Ititle = ('meta-mean All', thistitle, 'meta-mean Inp')
@@ -489,10 +524,13 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename, linetype=1 ):
 					plotstring.append("'' using 1:23:24 with yerrorbars %s linetype %s notitle" % (temp[0], linetype))
 					temp.pop(0)
 
-                if flag_plotMax_AVERAGE:   # are we doing the MAX for each one?
-			Atitle,Ptitle,Ititle=('max-mmAll',thistitle,'max-mmInput')
+		if flag_plotMax_AVERAGE:   # are we doing the MAX for each one?
+			if flag_plotWhiskers_AVERAGE or flag_plotMean_AVERAGE:   # if we plotted Whiskers or Mean, dont makes keys for the Max
+				Atitle, Ptitle, Ititle = ('', '', '')
+			else:
+				Atitle,Ptitle,Ititle=('max-mmAll',thistitle,'max-mmInput')
 
-                        temp = [ LINESTYLES['AvrMaxline'] ] * 3
+			temp = [ LINESTYLES['AvrMaxline'] ] * 3
 
 			if flag_plotAll:
 				plotstring.append("'%s' using 1:26 with lines %s linetype %s title '%s'" % (Avrfilename, temp[0], linetype, Atitle) )
@@ -502,6 +540,24 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename, linetype=1 ):
 				temp.pop(0)
 			if flag_plotInput:
 				plotstring.append("'%s' using 1:30 with lines %s linetype %s title '%s'" % (Avrfilename, temp[0], linetype, Ititle) )
+				temp.pop(0)
+	
+		if flag_plotMin_AVERAGE:   # are we doing the MIN for each one?
+			if flag_plotWhiskers_AVERAGE or flag_plotMean_AVERAGE or flag_plotMax_AVERAGE:   # if we plotted Whiskers or Mean, dont makes keys for the Min
+				Atitle, Ptitle, Ititle = ('', '', '')
+			else:
+				Atitle,Ptitle,Ititle=('min-mmAll',thistitle,'min-mmInput')
+
+			temp = [ LINESTYLES['AvrMaxline'] ] * 3
+
+			if flag_plotAll:
+				plotstring.append("'%s' using 1:32 with lines %s linetype %s title '%s'" % (Avrfilename, temp[0], linetype, Atitle) )
+				temp.pop(0)
+			if flag_plotProcessing:
+				plotstring.append("'%s' using 1:34 with lines %s linetype %s title '%s'" % (Avrfilename, temp[0], linetype, Ptitle) )
+				temp.pop(0)
+			if flag_plotInput:
+				plotstring.append("'%s' using 1:36 with lines %s linetype %s title '%s'" % (Avrfilename, temp[0], linetype, Ititle) )
 				temp.pop(0)
 	
 	plotstring = ', '.join(plotstring)
@@ -524,7 +580,7 @@ def sample_mean( list ):
 	return mean, stderr
 
 def check_parameters( argv ):
-	try: opts, args = getopt.getopt( argv, "ctesnwENWlpAPIxXM:")
+	try: opts, args = getopt.getopt( argv, "ctesnwENWlpAPIxXmMG:")
 	except getopt.GetoptError: print_usage_and_exit() 
 
 #	print "opts=%s" % ( opts )
@@ -533,26 +589,28 @@ def check_parameters( argv ):
 	global flag_color, flag_plotLegend, flag_plotErrorbars, flag_multiplot, flag_plotMean, flag_plotPoints, PASSED_DIRECTORY, multiplotDimX, multiplotDimY	# grant access to the global variables we're going to modify
 	global flag_plotErrorbars_AVERAGE, flag_plotMean_AVERAGE, flag_plotWhiskers, flag_plotWhiskers_AVERAGE
 	global flag_plotAll, flag_plotProcessing, flag_plotInput, flag_plotSmooth
-	global flag_plotMax, flag_plotMax_AVERAGE, flag_plotTTest, theUnits
+	global flag_plotMax, flag_plotMax_AVERAGE, flag_plotTTest, theUnits, flag_plotMin, flag_plotMin_AVERAGE
 	# Set our plot flags
 	for opt, value in opts:
 		if   '-c' in opt: flag_color = True
 		elif '-t' in opt: flag_plotTTest = True
-		elif '-e' in opt: flag_plotErrorbars = True
 		elif '-s' in opt: flag_plotSmooth = True
-		elif '-n' in opt: flag_plotMean = True
 		elif '-w' in opt: flag_plotWhiskers = True
-		elif '-E' in opt: flag_plotErrorbars_AVERAGE = True
-		elif '-N' in opt: flag_plotMean_AVERAGE = True
 		elif '-W' in opt: flag_plotWhiskers_AVERAGE = True
-		elif '-l' in opt: flag_plotLegend = True
+		elif '-e' in opt: flag_plotErrorbars = True
+		elif '-E' in opt: flag_plotErrorbars_AVERAGE = True
+		elif '-m' in opt: flag_plotMean = True
+		elif '-M' in opt: flag_plotMean_AVERAGE = True
 		elif '-x' in opt: flag_plotMax = True
 		elif '-X' in opt: flag_plotMax_AVERAGE = True
+		elif '-n' in opt: flag_plotMin = True
+		elif '-N' in opt: flag_plotMin_AVERAGE = True
 		elif '-p' in opt: flag_plotPoints = True
 		elif '-A' in opt: flag_plotAll = True; theUnits = 'All'
 		elif '-P' in opt: flag_plotProcessing = True; theUnits = 'Pro'
 		elif '-I' in opt: flag_plotInput = True; theUnits = 'Inp'
-		elif '-M' in opt:
+		elif '-l' in opt: flag_plotLegend = True
+		elif '-G' in opt:
 			flag_multiplot = True
 			try: multiplotDimX, multiplotDimY = map(int, (value).split('x'))
 			except ValueError: print_usage_and_exit()
@@ -560,8 +618,8 @@ def check_parameters( argv ):
 	# Some default settings if the user doesn't specify anything...
 	if not flag_plotInput and not flag_plotAll: flag_plotProcessing = True	# if no -[API] is specified, assume -P.
 
-	if not flag_plotWhiskers and not flag_plotMax and not flag_plotWhiskers_AVERAGE and not flag_plotMean_AVERAGE and not flag_plotPoints:
-		flag_plotMean = True						# if nothing to plot is specified, plot the meanlines.
+	if not flag_plotWhiskers and not flag_plotMean and not flag_plotMax and not flag_plotMin and not flag_plotWhiskers_AVERAGE and not flag_plotMean_AVERAGE and not flag_plotMax_AVERAGE and not flag_plotMin_AVERAGE and not flag_plotPoints:
+		print_usage_and_exit()						# nothing is specified to plot is specified, so bail.
 
 	# If we don't have a single argument, exit.
 	if len(args) != 1: print_usage_and_exit()
@@ -744,8 +802,10 @@ print "- AverageInterval=%s" % (averagetimestepinterval),
 
 DATA = { 'bestRecent': { 'Driven': {}, 'Passive': {} }, 'Recent': { 'Driven': {}, 'Passive': {} } }	# make a dictionary of dictionaries
 MAXDATA = { 'bestRecent': { 'Driven': {}, 'Passive': {} }, 'Recent': { 'Driven': {}, 'Passive': {} } }	# make a dictionary of dictionaries
+MINDATA = { 'bestRecent': { 'Driven': {}, 'Passive': {} }, 'Recent': { 'Driven': {}, 'Passive': {} } }	# make a dictionary of dictionaries
 DIFF = { 'bestRecent': { 'Mean': {}, 'StdDev': {}, 'Sig': {}, 'T': {} }, 'Recent': { 'Mean': {}, 'StdDev': {}, 'Sig': {}, 'T': {} } }
 MAXDIFF = { 'bestRecent': { 'Mean': {}, 'StdDev': {}, 'Sig': {}, 'T': {} }, 'Recent': { 'Mean': {}, 'StdDev': {}, 'Sig': {}, 'T': {} } }
+MINDIFF = { 'bestRecent': { 'Mean': {}, 'StdDev': {}, 'Sig': {}, 'T': {} }, 'Recent': { 'Mean': {}, 'StdDev': {}, 'Sig': {}, 'T': {} } }
 MAXTIMESTEP=0
 for whichrecent in RUN_DIRS:
 	for whichtype in RUN_DIRS[whichrecent]:
@@ -772,26 +832,42 @@ for whichrecent in RUN_DIRS:
 					MAXDATA[whichrecent][whichtype][t]['All'] = []
 					MAXDATA[whichrecent][whichtype][t]['Inp'] = []
 					
+					MINDATA[whichrecent][whichtype][t] = {}
+					MINDATA[whichrecent][whichtype][t]['Pro'] = []
+					MINDATA[whichrecent][whichtype][t]['All'] = []
+					MINDATA[whichrecent][whichtype][t]['Inp'] = []
+					
 					if whichtype == "Driven":
 						for whichkey in ( "Mean", "StdDev", "Sig", "T" ):
 							DIFF[whichrecent][whichkey][t] = {}
 							DIFF[whichrecent][whichkey][t]['All'] = {}
 							DIFF[whichrecent][whichkey][t]['Pro'] = {}
 							DIFF[whichrecent][whichkey][t]['Inp'] = {}
+							
 							MAXDIFF[whichrecent][whichkey][t] = {}
 							MAXDIFF[whichrecent][whichkey][t]['All'] = {}
 							MAXDIFF[whichrecent][whichkey][t]['Pro'] = {}
 							MAXDIFF[whichrecent][whichkey][t]['Inp'] = {}
+							
+							MINDIFF[whichrecent][whichkey][t] = {}
+							MINDIFF[whichrecent][whichkey][t]['All'] = {}
+							MINDIFF[whichrecent][whichkey][t]['Pro'] = {}
+							MINDIFF[whichrecent][whichkey][t]['Inp'] = {}
 
 				# make the list of means
-				DATA[whichrecent][whichtype][t]['All'].append( line_array[6 ] )
+				DATA[whichrecent][whichtype][t]['All'].append( line_array[ 6] )
 				DATA[whichrecent][whichtype][t]['Pro'].append( line_array[14] )
 				DATA[whichrecent][whichtype][t]['Inp'].append( line_array[22] )
 				
 				# make the list of maximum's
-				MAXDATA[whichrecent][whichtype][t]['All'].append( line_array[5 ] ) 
+				MAXDATA[whichrecent][whichtype][t]['All'].append( line_array[ 5] ) 
 				MAXDATA[whichrecent][whichtype][t]['Pro'].append( line_array[13] )
 				MAXDATA[whichrecent][whichtype][t]['Inp'].append( line_array[21] )
+
+				# make the list of minimum's
+				MINDATA[whichrecent][whichtype][t]['All'].append( line_array[ 1] ) 
+				MINDATA[whichrecent][whichtype][t]['Pro'].append( line_array[ 9] )
+				MINDATA[whichrecent][whichtype][t]['Inp'].append( line_array[17] )
 
 				if t > MAXTIMESTEP: MAXTIMESTEP = t
 #				print "linearray=%s" % (line_array ) 
@@ -815,6 +891,7 @@ for whichrecent in RUN_DIRS:
 # Also compute independent Welch's T-test someday.
 ttestMax = 0.0
 maxTTestMax = 0.0
+minTTestMax = 0.0
 for whichrecent in RUN_DIRS:
 #	print "\n%s:" % ( whichrecent )
 	for area in ( 'All','Pro','Inp' ):
@@ -824,38 +901,49 @@ for whichrecent in RUN_DIRS:
 #			print "\t\t%d:" % ( t )
 			diffSum = 0.0
 			diffSumMax = 0.0
+			diffSumMin = 0.0
 			runIndex = 0
 			for rundir in RUN_DIRS[whichrecent]["Driven"]:
 #				print "\t\t\t%s (%d):" % ( rundir, runIndex ) ,
 #				print " Cd = %g, Cp = %g" % ( float( DATA[whichrecent]["Driven"][t][area][runIndex] ), float( DATA[whichrecent]["Passive"][t][area][runIndex] ) )
 				diffSum += float( DATA[whichrecent]["Driven"][t][area][runIndex] ) - float( DATA[whichrecent]["Passive"][t][area][runIndex] )
 				diffSumMax += float( MAXDATA[whichrecent]["Driven"][t][area][runIndex] ) - float( MAXDATA[whichrecent]["Passive"][t][area][runIndex] )
+				diffSumMin += float( MINDATA[whichrecent]["Driven"][t][area][runIndex] ) - float( MINDATA[whichrecent]["Passive"][t][area][runIndex] )
 				runIndex += 1
 			numRuns = runIndex;
 			if numRuns > 0:
 				diffMean = diffSum / numRuns
 				diffMeanMax = diffSumMax / numRuns
+				diffMeanMin = diffSumMin / numRuns
 				devSum = 0.0
 				devSumMax = 0.0
+				devSumMin = 0.0
 				runIndex = 0
 				for rundir in RUN_DIRS[whichrecent]["Driven"]:
 					delta = float( DATA[whichrecent]["Driven"][t][area][runIndex] ) - float( DATA[whichrecent]["Passive"][t][area][runIndex] ) - diffMean
 					devSum += delta * delta
 					delta = float( MAXDATA[whichrecent]["Driven"][t][area][runIndex] ) - float( MAXDATA[whichrecent]["Passive"][t][area][runIndex] ) - diffMeanMax
 					devSumMax += delta * delta
+					delta = float( MINDATA[whichrecent]["Driven"][t][area][runIndex] ) - float( MINDATA[whichrecent]["Passive"][t][area][runIndex] ) - diffMeanMin
+					devSumMin += delta * delta
 					runIndex += 1
 				diffStdDev = sqrt( devSum / (numRuns-1) )
 				diffStdDevMax = sqrt( devSumMax / (numRuns-1) )
+				diffStdDevMin = sqrt( devSumMin / (numRuns-1) )
 				ttest = (abs( diffMean ) / diffStdDev) * sqrt( numRuns - 1 )
 				maxTTest = (abs( diffMeanMax ) / diffStdDevMax) * sqrt( numRuns - 1 )
+				minTTest = (abs( diffMeanMin ) / diffStdDevMin) * sqrt( numRuns - 1 )
 			else:
 #				print "whichrecent=%s, t=%g, area=%s" % ( whichrecent, t, area )
 				diffMean = 0.0
 				diffMeanMax = 0.0
+				diffMeanMin = 0.0
 				diffStdDev = 0.0
 				diffStdDevMax = 0.0
+				diffStdDevMin = 0.0
 				ttest = 0.0
 				maxTTest = 0.0
+				minTTest = 0.0
 			DIFF[whichrecent]["Mean"][t][area] = diffMean
 			DIFF[whichrecent]["StdDev"][t][area] = diffStdDev
 			DIFF[whichrecent]["T"][t][area] = ttest
@@ -864,6 +952,7 @@ for whichrecent in RUN_DIRS:
 			else:
 				DIFF[whichrecent]["Sig"][t][area] = "-"
 			if ttest > ttestMax: ttestMax = ttest
+			
 			MAXDIFF[whichrecent]["Mean"][t][area] = diffMeanMax
 			MAXDIFF[whichrecent]["StdDev"][t][area] = diffStdDevMax
 			MAXDIFF[whichrecent]["T"][t][area] = maxTTest
@@ -872,6 +961,15 @@ for whichrecent in RUN_DIRS:
 			else:
 				MAXDIFF[whichrecent]["Sig"][t][area] = "-"
 			if maxTTest > maxTTestMax: maxTTestMax = maxTTest
+			
+			MINDIFF[whichrecent]["Mean"][t][area] = diffMeanMin
+			MINDIFF[whichrecent]["StdDev"][t][area] = diffStdDevMin
+			MINDIFF[whichrecent]["T"][t][area] = minTTest
+			if minTTest >= TCRIT:
+				MINDIFF[whichrecent]["Sig"][t][area] = "+"
+			else:
+				MINDIFF[whichrecent]["Sig"][t][area] = "-"
+			if minTTest > minTTestMax: minTTestMax = minTTest
 #			print "m = %g, s = %g, tt = %g, %s" % ( diffMean, diffStdDev, ttest, DIFF[whichrecent]["Sig"][t][area] )
 ttestFile = open( ttestfilename, 'w' )
 ttestFile.write( "#time\tT\n" )
@@ -916,6 +1014,11 @@ for whichrecent in RUN_DIRS:
 				meanmax, max_stderr = sample_mean( MAXDATA[whichrecent][whichtype][t][area] )
 				list_to_print.append( "%s\t%s" % (meanmax, max_stderr) )
 
+			for area in ('All','Pro','Inp'):	# we break the format and put the mean and stderr of the MIN's at the end because initially we didnt know that we were going to do that.
+				MINDATA[whichrecent][whichtype][t][area] = map( float, MINDATA[whichrecent][whichtype][t][area] )	# make sure they are all floats so we comparing correctly.
+				meanmin, min_stderr = sample_mean( MINDATA[whichrecent][whichtype][t][area] )
+				list_to_print.append( "%s\t%s" % (meanmin, min_stderr) )
+
 #				del DATA[whichrecent][t][area]		# Don't need this anymore
 			list_to_print = map(str, list_to_print)
 			tempfile.write( '\t'.join( list_to_print ) )
@@ -929,12 +1032,22 @@ print "- maxtimestep=%s" % ( MAXTIMESTEP )
 	
 outputcontents = [ GNUPLOT_SETTINGS ]	# begin our .gnuplot file with the static settings.
 
-flag_have_previously_plotted_a_file, flag_have_previously_plotted_a_max = (False, False)
+flag_have_previously_plotted_a_file, flag_have_previously_plotted_a_max, flag_have_previously_plotted_a_min = (False, False, False)
 outputcontents.append( GET_GNUPLOT_DYNAMIC_SETTINGS( whichrecent + ' -- Driven vs Passive Complexity' ) )	# Make a different plot for Recent/bestRecent
 plotstring = []
 
 # Add statistical significance data
 if flag_plotTTest :
+	if flag_plotMean:
+		outputcontents.append( "set y2range [0:%g]\n" % ( ttestMax * 4 ) )	# makes the maximum T-test value reach 1/4 the height of the graph
+		outputcontents.append( "set y2label 'Dependent Student''s T-test (p < 0.05)' font 'Times,15'\n" )
+		outputcontents.append( "set y2tics out ( \"T*\" %g )" % ( TCRIT ) )
+		plotstring.append( "%g axes x1y2 notitle linewidth 1 linetype 5 linecolor rgb 'gray40', '%s' axes x1y2 notitle linewidth 1 linetype 3 linecolor rgb 'gray40'" % ( TCRIT, ttestfilename ) )
+#		outputcontents.append( "set y2label 'Dependent Student''s T-test' font 'Times,15'\n" )
+#		outputcontents.append( "set y2tics out ( \"T* (p<0.05)\" %g )" % ( TCRIT ) )
+#		outputcontents.append( "set y2tics add ( \"T* (p<0.01)\" %g )" % ( 2.821 ) )
+#		plotstring.append( "%g axes x1y2 notitle linewidth 1 linetype 5 linecolor rgb 'gray40', %g axes x1y2 notitle linewidth 1 linetype 5 linecolor rgb 'gray40', '%s' axes x1y2 notitle linewidth 1 linetype 3 linecolor rgb 'gray40'" % ( TCRIT, 2.821, ttestfilename ) )
+
 	if flag_plotMax:
 		outputcontents.append( "set y2range [0:%g]\n" % ( ttestMax * 4 ) )	# makes the maximum T-test value reach 1/4 the height of the graph
 		outputcontents.append( "set y2label 'Dependent Student''s T-test (p < 0.05)' font 'Times,15'\n" )
@@ -944,11 +1057,12 @@ if flag_plotTTest :
 #		outputcontents.append( "set y2tics out ( \"T* (p<0.05)\" %g )" % ( TCRIT ) )
 #		outputcontents.append( "set y2tics add ( \"T* (p<0.01)\" %g )" % ( 2.821 ) )
 #		plotstring.append( "%g axes x1y2 notitle linewidth 1 linetype 5 linecolor rgb 'gray40', %g axes x1y2 notitle linewidth 1 linetype 5 linecolor rgb 'gray40', '%s' axes x1y2 notitle linewidth 1 linetype 3 linecolor rgb 'gray40'" % ( TCRIT, 2.821, ttestfilename ) )
-	else:
+
+	if flag_plotMin:
 		outputcontents.append( "set y2range [0:%g]\n" % ( ttestMax * 4 ) )	# makes the maximum T-test value reach 1/4 the height of the graph
 		outputcontents.append( "set y2label 'Dependent Student''s T-test (p < 0.05)' font 'Times,15'\n" )
 		outputcontents.append( "set y2tics out ( \"T*\" %g )" % ( TCRIT ) )
-		plotstring.append( "%g axes x1y2 notitle linewidth 1 linetype 5 linecolor rgb 'gray40', '%s' axes x1y2 notitle linewidth 1 linetype 3 linecolor rgb 'gray40'" % ( TCRIT, ttestfilename ) )
+		plotstring.append( "%g axes x1y2 notitle linewidth 1 linetype 5 linecolor rgb 'gray40', '%s' axes x1y2 notitle linewidth 1 linetype 3 linecolor rgb 'gray40'" % ( TCRIT, ttestfilename+"Min" ) )
 #		outputcontents.append( "set y2label 'Dependent Student''s T-test' font 'Times,15'\n" )
 #		outputcontents.append( "set y2tics out ( \"T* (p<0.05)\" %g )" % ( TCRIT ) )
 #		outputcontents.append( "set y2tics add ( \"T* (p<0.01)\" %g )" % ( 2.821 ) )
@@ -960,7 +1074,7 @@ for whichrecent in RUN_DIRS:
 			filename = rundir + '/brain/' + whichrecent + '/' + inputplotfilename
 			plotstring.append( GET_GNUPLOT_PLOTSTRING(filename, '', LINETYPE[whichtype]) )
 
-		if flag_plotWhiskers_AVERAGE or flag_plotMean_AVERAGE or flag_plotErrorbars_AVERAGE or flag_plotMax_AVERAGE:
+		if flag_plotWhiskers_AVERAGE or flag_plotMean_AVERAGE or flag_plotErrorbars_AVERAGE or flag_plotMax_AVERAGE or flag_plotMin_AVERAGE:
 			Avrfilename =  tempfilename + '.' + whichrecent + whichtype
 			plotstring.append( GET_GNUPLOT_PLOTSTRING('', Avrfilename, LINETYPE[whichtype]) )		# plot the Averages last because they are important and we want them to be laid on top of the graph
 
@@ -990,7 +1104,7 @@ if flag_plotSmooth:	# We've finished all of the regular plots, now to do the smo
 				plotstring.append( GET_GNUPLOT_PLOTSTRING_SMOOTH(filename, '') )
 
 
-	        if flag_plotWhiskers_AVERAGE or flag_plotMean_AVERAGE or flag_plotErrorbars_AVERAGE or flag_plotMax_AVERAGE:
+	        if flag_plotWhiskers_AVERAGE or flag_plotMean_AVERAGE or flag_plotErrorbars_AVERAGE or flag_plotMax_AVERAGE or flag_plotMin_AVERAGE:
 	                Avrfilename =  tempfilename + '.' + whichrecent + whichtype
 	                plotstring.append( GET_GNUPLOT_PLOTSTRING('', Avrfilename, 1) )            # plot the Averages last because they are important and we want them to be laid on top of the graph
 
