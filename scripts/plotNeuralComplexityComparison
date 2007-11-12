@@ -349,7 +349,7 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename, linetype=1 ):
 	global flag_have_previously_plotted_a_max
 	global flag_have_previously_plotted_a_min
 	
-	print "filename = %s, Avrfilename = %s" % ( filename, Avrfilename )
+#	print "filename = %s, Avrfilename = %s" % ( filename, Avrfilename )
 	
 	plotstring = [ ]
 	
@@ -367,7 +367,7 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename, linetype=1 ):
 			thislinestyle = 'ColoredMeanline2'
 
 		if flag_plotWhiskers:	# are we doing the whiskers for each one?
-			if flag_have_previously_plotted_a_file:
+			if flag_have_previously_plotted_a_file or flag_plotMean_AVERAGE or flag_plotMax_AVERAGE or flag_plotMin_AVERAGE:
 				Atitle, Ptitle, Ititle = ('','','')
 			else:
 				flag_have_previously_plotted_a_file = True
@@ -392,7 +392,7 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename, linetype=1 ):
 				temp.pop(0)
 
 		if flag_plotMean:
-			if flag_have_previously_plotted_a_file:
+			if flag_have_previously_plotted_a_file or flag_plotMean_AVERAGE or flag_plotMax_AVERAGE or flag_plotMin_AVERAGE:
 				Atitle, Ptitle, Ititle = ('','','')
 			else:			
 				flag_have_previously_plotted_a_file = True
@@ -428,7 +428,7 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename, linetype=1 ):
 
 
 		if flag_plotMax:   # are we doing the MAX for each one?
-			if flag_have_previously_plotted_a_file or flag_have_previously_plotted_a_max or flag_have_previously_plotted_a_min:
+			if flag_have_previously_plotted_a_file or flag_have_previously_plotted_a_max or flag_have_previously_plotted_a_min or flag_plotMean_AVERAGE or flag_plotMax_AVERAGE or flag_plotMin_AVERAGE:
 				Atitle, Ptitle, Ititle = ('','','')
 			else:
 				flag_have_previously_plotted_a_max = True
@@ -449,7 +449,7 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename, linetype=1 ):
 
 
 		if flag_plotMin:   # are we doing the MIN for each one?
-			if flag_have_previously_plotted_a_file or flag_have_previously_plotted_a_max or flag_have_previously_plotted_a_min:
+			if flag_have_previously_plotted_a_file or flag_have_previously_plotted_a_max or flag_have_previously_plotted_a_min or flag_plotMean_AVERAGE or flag_plotMax_AVERAGE or flag_plotMin_AVERAGE:
 				Atitle, Ptitle, Ititle = ('','','')
 			else:
 				flag_have_previously_plotted_a_min = True
@@ -530,7 +530,8 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename, linetype=1 ):
 			else:
 				Atitle,Ptitle,Ititle=('max-mmAll',thistitle,'max-mmInput')
 
-			temp = [ LINESTYLES['AvrMaxline'] ] * 3
+			if flag_plotErrorbars_AVERAGE: temp = [ LINESTYLES[metameanline],  LINESTYLES['AvrMeanlineStderr'] ] * 3
+			else: temp = [ LINESTYLES[metameanline] ] * 3
 
 			if flag_plotAll:
 				plotstring.append("'%s' using 1:26 with lines %s linetype %s title '%s'" % (Avrfilename, temp[0], linetype, Atitle) )
@@ -548,7 +549,8 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename, linetype=1 ):
 			else:
 				Atitle,Ptitle,Ititle=('min-mmAll',thistitle,'min-mmInput')
 
-			temp = [ LINESTYLES['AvrMaxline'] ] * 3
+			if flag_plotErrorbars_AVERAGE: temp = [ LINESTYLES[metameanline],  LINESTYLES['AvrMeanlineStderr'] ] * 3
+			else: temp = [ LINESTYLES[metameanline] ] * 3
 
 			if flag_plotAll:
 				plotstring.append("'%s' using 1:32 with lines %s linetype %s title '%s'" % (Avrfilename, temp[0], linetype, Atitle) )
