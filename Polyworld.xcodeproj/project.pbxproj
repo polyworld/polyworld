@@ -572,9 +572,11 @@
 		20286C28FDCF999611CA2CEA /* Project object */ = {
 			isa = PBXProject;
 			buildConfigurationList = 76293F1D0981AF4600D27C6E /* Build configuration list for PBXProject "Polyworld" */;
+			compatibilityVersion = "Xcode 2.4";
 			hasScannedForEncodings = 1;
 			mainGroup = 20286C29FDCF999611CA2CEA /* Polyworld */;
 			projectDirPath = "";
+			projectRoot = "";
 			targets = (
 				8D0C4E890486CD37000505A6 /* Polyworld */,
 				76B2FB68084CE6E9002FBDA1 /* moc */,
