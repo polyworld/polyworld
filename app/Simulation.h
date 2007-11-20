@@ -348,12 +348,12 @@ public:
 	float LifeFractionRecent();
 	unsigned long LifeFractionSamples();  // the number of samples upon which LifeFractionRecent() is based
 
-	char TSimulation::glFogFunction();
-	float TSimulation::glExpFogDensity();
-	int TSimulation::glLinearFogEnd();
+	char glFogFunction();
+	float glExpFogDensity();
+	int glLinearFogEnd();
 
 
-	float TSimulation::GetCritterHealingRate();				// Virgil Healing
+	float GetCritterHealingRate();				// Virgil Healing
 
 	int getRandomPatch(int domainNumber);
 	Domain fDomains[MAXDOMAINS];	

@@ -656,7 +656,7 @@ void critter::Behave()
 {
 #ifdef DEBUGCHECK
     debugcheck("critter::Behave entry");
-#endif DEBUGCHECK
+#endif // DEBUGCHECK
 
     if (gVision)
     {
@@ -669,7 +669,7 @@ void critter::Behave()
 		fSimulation->GetCritterPOVWindow()->DrawCritterPOV( this );
 	#ifdef DEBUGCHECK
 		debugcheck("critter::Behave after DrawCritterPOV");
-	#endif DEBUGCHECK
+	#endif // DEBUGCHECK
 
 		if (fBrain->retinaBuf != NULL)
 		{
@@ -687,7 +687,7 @@ void critter::Behave()
 				 		 fBrain->retinaBuf);
 		#ifdef DEBUGCHECK
 			debugcheck("critter::Behave after glReadPixels");
-		#endif DEBUGCHECK
+		#endif // DEBUGCHECK
 		#if 0
 			printf( "retina pixels:" );
 			for( int i = 0; i < brain::retinawidth; i++ )
@@ -723,7 +723,7 @@ float critter::Update(float moveFitnessParam, float speed2dpos)
 {
 #ifdef DEBUGCHECK
     debugcheck("critter::Update entry");
-#endif DEBUGCHECK
+#endif // DEBUGCHECK
 
 	float energyUsed = 0;
 	

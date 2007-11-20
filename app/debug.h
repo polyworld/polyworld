@@ -26,7 +26,7 @@ extern void  debugcheck(const char* s);
 
 #define BoolString( boolVar ) (boolVar) ? "true" : "false"
 
-#endif DEBUG_H
+#endif //  DEBUG_H
 
 
 

@@ -8,9 +8,14 @@
 
 #define PMP_DEBUG 0
 
+// TODO implement these
+#define OSSwapInt32(x) (x)
+#define OSSwapInt16(x) (x)
+
 #include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
+#include <netinet/in.h>
 #ifndef linux      /* how does one say #ifdef MAC_OSX ? */
 #include <mach/mach_time.h>
 #endif

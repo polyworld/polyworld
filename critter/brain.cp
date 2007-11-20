@@ -66,7 +66,7 @@ static float initminweight = 0.0; // could read this in
 #ifdef PRINTBRAIN
 	bool printbrain = true;
 	bool brainprinted = false;
-#endif PRINTBRAIN
+#endif // PRINTBRAIN
 
 // External globals
 NeuralValues brain::gNeuralValues;
@@ -263,6 +263,10 @@ void brain::dumpAnatomical( char* directoryName, char* suffix, long index, float
 
 	daPrint( "%s: imin = %ld, imax = %ld, numneurons = %d (+1 for bias)\n", __FUNCTION__, imin, imax, numneurons );
 
+	short lRindex = redneuron + fNumRedNeurons - 1;
+	short lGindex = greenneuron + fNumGreenNeurons - 1 ;
+	short lBindex = blueneuron + fNumBlueNeurons - 1;
+
 	sprintf( filename, "%s/brainAnatomy_%ld_%s.txt", directoryName, index, suffix );
 	file = fopen( filename, "w" );
 	if( !file )
@@ -272,10 +276,6 @@ void brain::dumpAnatomical( char* directoryName, char* suffix, long index, float
 	}
 
 	daPrint( "%s: file = %08lx, index = %ld, fitness = %g\n", __FUNCTION__, (char*)file, index, fitness );
-
-	short lRindex = redneuron + fNumRedNeurons - 1;
-	short lGindex = greenneuron + fNumGreenNeurons - 1 ;
-	short lBindex = blueneuron + fNumBlueNeurons - 1;
 
 	// print the header, with index, fitness, and number of neurons
 	fprintf( file, "brain %ld fitness=%g numneurons+1=%d maxWeight=%g maxBias=%g redinput=%d-%d greeninput=%d-%d blueinput=%d-%d\n", index, fitness, numneurons+1, gMaxWeight, gNeuralValues.maxbias, redneuron, lRindex, greenneuron, lGindex, blueneuron, lBindex );
@@ -1262,7 +1262,7 @@ void brain::GrowDesignedBrain( genome* g )
 
 #ifdef DEBUGCHECK
     debugcheck("brain::grow after setting up architecture");
-#endif DEBUGCHECK
+#endif // DEBUGCHECK
 
 #if 0
     // now send some signals through the system
@@ -1394,7 +1394,7 @@ void brain::Grow( genome* g, long critterNumber, bool recordBrainAnatomy )
 {
 #ifdef DEBUGCHECK
     debugcheck("brain::grow entry");
-#endif DEBUGCHECK
+#endif // DEBUGCHECK
 
 #if DesignerBrains
 	GrowDesignedBrain( g );
@@ -1532,13 +1532,13 @@ void brain::Grow( genome* g, long critterNumber, bool recordBrainAnatomy )
 
 #ifdef DEBUGCHECK
     debugcheck("brain::grow before allocating memory");
-#endif DEBUGCHECK
+#endif // DEBUGCHECK
 
 	AllocateBrainMemory(); // if needed
 
 #ifdef DEBUGCHECK
     debugcheck("brain::grow after allocating memory");
-#endif DEBUGCHECK
+#endif // DEBUGCHECK
 
     short ineur, jneur, nneuri, nneurj, joff, disneur;
     short isyn, newsyn;
@@ -2050,7 +2050,7 @@ void brain::Grow( genome* g, long critterNumber, bool recordBrainAnatomy )
 
 #ifdef DEBUGCHECK
     debugcheck("brain::grow after setting up architecture");
-#endif DEBUGCHECK
+#endif // DEBUGCHECK
 
 	// "incept" brain anatomy is as initially generated, with random weights
 	if( recordBrainAnatomy )
@@ -2067,7 +2067,7 @@ void brain::Grow( genome* g, long critterNumber, bool recordBrainAnatomy )
 			UpdateSpikes(drand48(),NULL);
 #else	
 			Update(drand48());
-#endif		
+#endif
     }
 	
 	// "birth" anatomy is after gestation (updating with random noise in the inputs for a while)
@@ -2076,7 +2076,7 @@ void brain::Grow( genome* g, long critterNumber, bool recordBrainAnatomy )
 
 #ifdef DEBUGCHECK
     debugcheck("brain::grow after prebirth cycling");
-#endif DEBUGCHECK
+#endif // DEBUGCHECK
 }
 
 
@@ -2084,7 +2084,7 @@ void brain::Update(float energyfraction)
 {	 
 #ifdef DEBUGCHECK
     debugcheck("brain::Update entry");
-#endif DEBUGCHECK
+#endif // DEBUGCHECK
 
     short i,j,ii,jj;
     long k;
@@ -2115,7 +2115,7 @@ void brain::Update(float energyfraction)
         printf("xredintwidth, xgreenintwidth, xblueintwidth = %d, %d, %d\n",
                 xredintwidth, xgreenintwidth, xblueintwidth);
     }
-#endif PRINTBRAIN
+#endif // PRINTBRAIN
 
     neuronactivation[randomneuron] = drand48();
     neuronactivation[energyneuron] = energyfraction;
@@ -2144,7 +2144,7 @@ void brain::Update(float energyfraction)
         {
             printf("xredwidth = %f\n", xredwidth);
         }
-	#endif PRINTBRAIN
+	#endif // PRINTBRAIN
         for (i = 0; i < fNumRedNeurons; i++)
         {
             endpixloc = xredwidth * float(i+1);
@@ -2154,7 +2154,7 @@ void brain::Update(float energyfraction)
             {
                 printf("  neuron %d, endpixloc = %g\n", i, endpixloc);
             }
-		#endif PRINTBRAIN
+		#endif // PRINTBRAIN
             while (float(pixel) < (endpixloc - 1.0))
             {
                 avgcolor += retinaBuf[(pixel++) * 4];
@@ -2165,7 +2165,7 @@ void brain::Update(float energyfraction)
 					if ((float(pixel) < (endpixloc - 1.0)) && (float(pixel) >= (endpixloc - 1.0 - 1.0e-5)))
 						printf("Got in-loop borderline case - red\n");
                 }
-			#endif PRINTBRAIN
+			#endif // PRINTBRAIN
             }
             
             avgcolor += (endpixloc - float(pixel)) * retinaBuf[pixel * 4];
@@ -2177,14 +2177,14 @@ void brain::Update(float energyfraction)
                 if ((float(pixel) >= (endpixloc - 1.0)) && (float(pixel) < (endpixloc - 1.0 + 1.0e-5)))
                     printf("Got outside-loop borderline case - red\n");
             }
-		#endif PRINTBRAIN
+		#endif // PRINTBRAIN
             avgcolor = (1.0 - (endpixloc - float(pixel))) * retinaBuf[pixel * 4];
 		#ifdef PRINTBRAIN
             if (printbrain && (critter::currentCritter == TSimulation::fMonitorCritter))
             {
                 printf("  before incrementing pixel = %d, avgcolor = %g\n", pixel, avgcolor);
             }
-		#endif PRINTBRAIN
+		#endif // PRINTBRAIN
             pixel++;
         }
     }
@@ -2216,7 +2216,7 @@ void brain::Update(float energyfraction)
                     if ((float(pixel) < (endpixloc - 1.0)) && (float(pixel) >= (endpixloc - 1.0 - 1.0e-5)) )
                         printf("Got in-loop borderline case - green\n");
                 }
-			#endif PRINTBRAIN
+			#endif // PRINTBRAIN
             }
 		#ifdef PRINTBRAIN
             if (printbrain && (critter::currentCritter == TSimulation::fMonitorCritter))
@@ -2224,7 +2224,7 @@ void brain::Update(float energyfraction)
                 if ((float(pixel) >= (endpixloc - 1.0)) && (float(pixel) < (endpixloc - 1.0)))
                     printf("Got outside-loop borderline case - green\n");
             }
-		#endif PRINTBRAIN
+		#endif // PRINTBRAIN
             avgcolor += (endpixloc - float(pixel)) * retinaBuf[pixel * 4 + 1];
             neuronactivation[greenneuron + i] = avgcolor / (xgreenwidth * 255.0);
             avgcolor = (1.0 - (endpixloc - float(pixel))) * retinaBuf[pixel * 4 + 1];
@@ -2260,7 +2260,7 @@ void brain::Update(float energyfraction)
                     if ((float(pixel) < (endpixloc - 1.0)) && (float(pixel) >= (endpixloc - 1.0 - 1.0e-5)) )
                         printf("Got in-loop borderline case - blue\n");
                 }
-			#endif PRINTBRAIN
+			#endif // PRINTBRAIN
             }
             
 		#ifdef PRINTBRAIN
@@ -2269,7 +2269,7 @@ void brain::Update(float energyfraction)
                 if ((float(pixel) >= (endpixloc - 1.0)) && (float(pixel) < (endpixloc - 1.0 + 1.0e-5)) )
                     printf("Got outside-loop borderline case - blue\n");
             }
-		#endif PRINTBRAIN
+		#endif // PRINTBRAIN
 
             if (pixel < brain::retinawidth)  // TODO How do we end up overflowing?
             {
@@ -2288,7 +2288,7 @@ void brain::Update(float energyfraction)
 
 #ifdef DEBUGCHECK
     debugcheck("brain::update after updating vision");
-#endif DEBUGCHECK
+#endif // DEBUGCHECK
 
 #ifdef PRINTBRAIN
     if (printbrain && TSimulation::fOverHeadRank &&
@@ -2310,7 +2310,7 @@ void brain::Update(float energyfraction)
             printf(" %3d", retinaBuf[i]);
         printf("\n");
     }
-#endif PRINTBRAIN
+#endif // PRINTBRAIN
 
 //	float minExcitation = FLT_MAX;
 //	float maxExcitation = -FLT_MAX;
@@ -2404,7 +2404,7 @@ void brain::Update(float energyfraction)
 
 #ifdef DEBUGCHECK
     debugcheck("brain::update after updating neurons");
-#endif DEBUGCHECK
+#endif // DEBUGCHECK
 
 #ifdef PRINTBRAIN
     if (printbrain && TSimulation::fOverHeadRank &&
@@ -2414,7 +2414,7 @@ void brain::Update(float energyfraction)
         for (i = 0; i < numneurons; i++)
             printf( "%3d  %1.4f  %1.4f  %1.4f\n", i, neuron[i].bias, neuronactivation[i], newneuronactivation[i] );
     }
-#endif PRINTBRAIN
+#endif // PRINTBRAIN
 
 //	printf( "yaw activation = %g\n", newneuronactivation[yawneuron] );
 
@@ -2476,7 +2476,7 @@ void brain::Update(float energyfraction)
 
 #ifdef DEBUGCHECK
     debugcheck("brain::update after updating synapses");
-#endif DEBUGCHECK
+#endif // DEBUGCHECK
 
 #if 1
     for (i = firstnoninputneuron; i < numneurons; i++)
@@ -2497,7 +2497,7 @@ void brain::Update(float energyfraction)
 
   #ifdef DEBUGCHECK
     debugcheck("brain::update after updating biases");
-  #endif DEBUGCHECK
+  #endif // DEBUGCHECK
 #endif
 
     float* saveneuronactivation = neuronactivation;
@@ -2770,7 +2770,7 @@ void brain::UpdateSpikes(float energyfraction, FILE * fHandle)
 	
 #ifdef DEBUGCHECK
     debugcheck("brain::Update entry");
-#endif DEBUGCHECK
+#endif // DEBUGCHECK
 	float inputFiringProbability[numinputneurons];
 	static long loop_counter=0;
     short i, j, n_steps;
@@ -2839,7 +2839,7 @@ void brain::UpdateSpikes(float energyfraction, FILE * fHandle)
         printf("xredintwidth, xgreenintwidth, xblueintwidth = %d, %d, %d\n",
 			   xredintwidth, xgreenintwidth, xblueintwidth);
     }
-#endif PRINTBRAIN
+#endif // PRINTBRAIN
 	
 	//#############################################################################################################
 //    inputFiringProbability[randomneuron] = drand48() * MaxFiringRatePerSecond * SecondsPerBrainStep;
@@ -2883,7 +2883,7 @@ void brain::UpdateSpikes(float energyfraction, FILE * fHandle)
         {
             printf("xredwidth = %f\n", xredwidth);
         }
-#endif PRINTBRAIN
+#endif // PRINTBRAIN
         for (i = 0; i < fNumRedNeurons; i++)
         {
             endpixloc = xredwidth * float(i+1);
@@ -2893,7 +2893,7 @@ void brain::UpdateSpikes(float energyfraction, FILE * fHandle)
             {
                 printf("  neuron %d, endpixloc = %g\n", i, endpixloc);
             }
-#endif PRINTBRAIN
+#endif // PRINTBRAIN
             while (float(pixel) < (endpixloc - 1.0))
             {
                 avgcolor += retinaBuf[(pixel++) * 4];
@@ -2904,7 +2904,7 @@ void brain::UpdateSpikes(float energyfraction, FILE * fHandle)
 					if ((float(pixel) < (endpixloc - 1.0)) && (float(pixel) >= (endpixloc - 1.0 - 1.0e-5)))
 						printf("Got in-loop borderline case - red\n");
                 }
-#endif PRINTBRAIN			
+#endif // PRINTBRAIN			
             }
 			//######################################################################################################################            
             avgcolor += (endpixloc - float(pixel)) * retinaBuf[pixel * 4];
@@ -2920,14 +2920,14 @@ void brain::UpdateSpikes(float energyfraction, FILE * fHandle)
                 if ((float(pixel) >= (endpixloc - 1.0)) && (float(pixel) < (endpixloc - 1.0 + 1.0e-5)))
                     printf("Got outside-loop borderline case - red\n");
             }
-#endif PRINTBRAIN
+#endif // PRINTBRAIN
             avgcolor = (1.0 - (endpixloc - float(pixel))) * retinaBuf[pixel * 4];
 #ifdef PRINTBRAIN
             if (printbrain && (critter::currentCritter == TSimulation::fMonitorCritter))
             {
                 printf("  before incrementing pixel = %d, avgcolor = %g\n", pixel, avgcolor);
             }
-#endif PRINTBRAIN
+#endif // PRINTBRAIN
             pixel++;
         }
     }
@@ -2964,7 +2964,7 @@ void brain::UpdateSpikes(float energyfraction, FILE * fHandle)
                     if ((float(pixel) < (endpixloc - 1.0)) && (float(pixel) >= (endpixloc - 1.0 - 1.0e-5)) )
                         printf("Got in-loop borderline case - green\n");
                 }
-#endif PRINTBRAIN
+#endif // PRINTBRAIN
             }
 #ifdef PRINTBRAIN
             if (printbrain && (critter::currentCritter == TSimulation::fMonitorCritter))
@@ -2972,7 +2972,7 @@ void brain::UpdateSpikes(float energyfraction, FILE * fHandle)
                 if ((float(pixel) >= (endpixloc - 1.0)) && (float(pixel) < (endpixloc - 1.0)))
                     printf("Got outside-loop borderline case - green\n");
             }
-#endif PRINTBRAIN
+#endif // PRINTBRAIN
 			//######################################################################################################################	
             avgcolor += (endpixloc - float(pixel)) * retinaBuf[pixel * 4 + 1];
 //            inputFiringProbability[greenneuron + i] = (avgcolor / (xgreenwidth * 255.0)) * MaxFiringRatePerSecond * SecondsPerBrainStep;
@@ -3016,7 +3016,7 @@ void brain::UpdateSpikes(float energyfraction, FILE * fHandle)
                     if ((float(pixel) < (endpixloc - 1.0)) && (float(pixel) >= (endpixloc - 1.0 - 1.0e-5)) )
                         printf("Got in-loop borderline case - blue\n");
                 }
-#endif PRINTBRAIN
+#endif // PRINTBRAIN
             }
             
 #ifdef PRINTBRAIN
@@ -3025,7 +3025,7 @@ void brain::UpdateSpikes(float energyfraction, FILE * fHandle)
                 if ((float(pixel) >= (endpixloc - 1.0)) && (float(pixel) < (endpixloc - 1.0 + 1.0e-5)) )
                     printf("Got outside-loop borderline case - blue\n");
             }
-#endif PRINTBRAIN
+#endif // PRINTBRAIN
 			//######################################################################################################################
             if (pixel < brain::retinawidth)  // TODO How do we end up overflowing?
             {
@@ -3042,7 +3042,7 @@ void brain::UpdateSpikes(float energyfraction, FILE * fHandle)
 	
 #ifdef DEBUGCHECK
     debugcheck("brain::update after updating vision");
-#endif DEBUGCHECK
+#endif // DEBUGCHECK
 	
 #ifdef PRINTBRAIN
     if (printbrain && TSimulation::fOverHeadRank &&
@@ -3064,7 +3064,7 @@ void brain::UpdateSpikes(float energyfraction, FILE * fHandle)
             printf(" %3d", retinaBuf[i]);
         printf("\n");
     }
-#endif PRINTBRAIN
+#endif // PRINTBRAIN
 	
 	//######################################################################################################################
 	//INNER BRAIN
@@ -3149,7 +3149,7 @@ void brain::UpdateSpikes(float energyfraction, FILE * fHandle)
 			//stochastically generate bias
 			if (drand48() < (1.0 / (1.0 + exp(-1 * neuron[i].bias * .5))))
 				newneuronactivation[i] += BIAS_INJECTED_VOLTAGE;
-#endif				
+#endif
 			
 			//Calculate Izhikevich's formula for voltage.  I don't understand why he does it twice, but 
 			//I have learned not to mess with things in he does that you don't understand.  Obviously there
@@ -3424,6 +3424,6 @@ void brain::UpdateSpikes(float energyfraction, FILE * fHandle)
 		}
 
 	}
-#endif	
+#endif
 }	
 #endif

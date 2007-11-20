@@ -71,7 +71,7 @@ PMPApp::PMPApp(int argc, char** argv) : QApplication(argc, argv)
 	char*			legendFileName	= NULL;
 	char**			legend			= NULL;
 	unsigned long	endFrame		= 0;
-	double			frameRate		= 0.0;
+	double			frameRate		= 75.0;
 	int				arg				= 1;
 		
 	while( arg < argc )

@@ -56,7 +56,7 @@ class barrier : public gpoly
 public:
 	static float gBarrierHeight;
 	static Color gBarrierColor;
-	static bxsortedlist barrier::gXSortedBarriers;	
+	static bxsortedlist gXSortedBarriers;	
 
     barrier( int keyFrameCount );
     ~barrier();

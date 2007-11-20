@@ -2,6 +2,8 @@ TEMPLATE	= 	app
 
 CONFIG		+=	qt warn_on debug
 
+QT              += opengl
+
 SUBDIRS  	=	PwMoviePlayer
 
 HEADERS		= 	app/PWApp.h	\
