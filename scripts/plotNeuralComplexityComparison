@@ -278,7 +278,7 @@ def GET_GNUPLOT_DYNAMIC_SETTINGS( RecentOrbestRecent ):
 
 
 	#if not flag_multiplot: settings.append( 'set title "%s -- %s"' % (PASSED_DIRECTORY, RecentOrbestRecent) )	# set the title
-	if not flag_multiplot: settings.append( 'set title "%s"' % (RecentOrbestRecent) )	# set the title
+	if not flag_multiplot: settings.append( 'set title "%s" font "Times,20' % (RecentOrbestRecent) )	# set the title
 
 	# Define our ylabel
 	ylabel = "NeuralComplexity: "
@@ -1043,7 +1043,7 @@ outputcontents = [ GNUPLOT_SETTINGS ]	# begin our .gnuplot file with the static 
 
 flag_have_previously_plotted_a_file, flag_have_previously_plotted_a_max, flag_have_previously_plotted_a_min = (False, False, False)
 #outputcontents.append( GET_GNUPLOT_DYNAMIC_SETTINGS( whichrecent + ' -- Driven vs Passive Complexity' ) )	# Make a different plot for Recent/bestRecent
-outputcontents.append( GET_GNUPLOT_DYNAMIC_SETTINGS( 'Driven vs Passive Complexity -- Max' ) )
+outputcontents.append( GET_GNUPLOT_DYNAMIC_SETTINGS( 'Driven vs Passive Complexity -- Mean' ) )
 plotstring = []
 
 # Add statistical significance data
