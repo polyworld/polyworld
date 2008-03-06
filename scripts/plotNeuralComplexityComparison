@@ -2,7 +2,9 @@
 from math import sqrt
 ################################################################################
 # CONFIGURABLE PARAMETERS
+#TCRIT = 2.132	# 95% confidence for 4 degrees of freedom (5 pairs of points)
 TCRIT = 1.833	# 95% confidence for 9 degrees of freedom (10 pairs of points)
+#TCRIT = 1.796	# 95% confidence for 11 degrees of freedom (12 pairs of points)
 ################################################################################
 # you can edit these as well, but you probably don't want to
 # DO NOT EDIT ANYTHING BENEATH HERE UNLESS YOU KNOW WHAT YOU'RE DOING
@@ -115,7 +117,7 @@ numplotsmade=0
 PASSED_DIRECTORY=''
 multiplotDimX,multiplotDimY = 0, 0
 RUN_DIRS={ 'Recent': { 'Driven': [], 'Passive': [] }, 'bestRecent': { 'Driven': [], 'Passive': [] } }
-GNUPLOT_TOPRIGHT_LABEL=[ "Generated `date +%Y-%m-%d` by `whoami`" ]
+GNUPLOT_TOPRIGHT_LABEL=[]#[ "Generated `date +%Y-%m-%d` by `whoami`" ]
 multiplotmaxtimesteps={} # we only use this if we're multiplotting.  It lets us set the range and xtics for each plot invidually to make them pretty
 ################################################################################
 def print_usage_and_exit():
@@ -275,7 +277,8 @@ def GET_GNUPLOT_DYNAMIC_SETTINGS( RecentOrbestRecent ):
 	numplotsmade += 1
 
 
-	if not flag_multiplot: settings.append( 'set title "%s -- %s"' % (PASSED_DIRECTORY, RecentOrbestRecent) )	# set the title
+	#if not flag_multiplot: settings.append( 'set title "%s -- %s"' % (PASSED_DIRECTORY, RecentOrbestRecent) )	# set the title
+	if not flag_multiplot: settings.append( 'set title "%s"' % (RecentOrbestRecent) )	# set the title
 
 	# Define our ylabel
 	ylabel = "NeuralComplexity: "
@@ -570,6 +573,7 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename, linetype=1 ):
 
 def sample_mean( list ):
 	N = len(list)
+#	print "N = %d" % ( N )
 	mean = sum(list) / N
 
 	SSE=0
@@ -671,6 +675,9 @@ def check_parameters( argv ):
 	if not RUN_DIRS['Recent']['Driven'] and not RUN_DIRS['Recent']['Passive'] and not RUN_DIRS['bestRecent']['Driven'] and not RUN_DIRS['bestRecent']['Passive']:
 		print "* Error: There were no Polyworld run/ directories in %s." % ( PASSED_DIRECTORY )
 		sys.exit(1)
+	
+	#RUN_DIRS
+	#sys.exit(0)
 
 ##################################################################################
 #This function gets the bestRecentBrainFunctionRecordFrequency as specified in the worldfile for a given run/ directory.
@@ -1035,7 +1042,8 @@ print "- maxtimestep=%s" % ( MAXTIMESTEP )
 outputcontents = [ GNUPLOT_SETTINGS ]	# begin our .gnuplot file with the static settings.
 
 flag_have_previously_plotted_a_file, flag_have_previously_plotted_a_max, flag_have_previously_plotted_a_min = (False, False, False)
-outputcontents.append( GET_GNUPLOT_DYNAMIC_SETTINGS( whichrecent + ' -- Driven vs Passive Complexity' ) )	# Make a different plot for Recent/bestRecent
+#outputcontents.append( GET_GNUPLOT_DYNAMIC_SETTINGS( whichrecent + ' -- Driven vs Passive Complexity' ) )	# Make a different plot for Recent/bestRecent
+outputcontents.append( GET_GNUPLOT_DYNAMIC_SETTINGS( 'Driven vs Passive Complexity -- Max' ) )
 plotstring = []
 
 # Add statistical significance data
@@ -1099,6 +1107,7 @@ if flag_plotSmooth:	# We've finished all of the regular plots, now to do the smo
 		for whichtype in RUN_DIRS[whichrecent]:
 			flag_have_previously_plotted_a_file, flag_have_previously_plotted_a_max = (False, False)
 			outputcontents.append( GET_GNUPLOT_DYNAMIC_SETTINGS( whichrecent + ' - Driven vs Passive Complexity' ) )
+			#outputcontents.append( GET_GNUPLOT_DYNAMIC_SETTINGS( 'Driven vs Passive Complexity' ) )
 			plotstring = []
 
 			for rundir in RUN_DIRS[whichrecent][whichtype]:

@@ -14,14 +14,17 @@ GNUPLOT_TERMINAL='aqua'		# set this to x11 if your under linux.
 GNUPLOT_SETTINGS="""
 set hidden3d
 set termoption noenhanced
-set key outside         # if we have a legend, put it outside the graph
-set key at screen 1,1 right horizontal spacing 1
-set xlabel 'Timestep' font 'Times,15'
-set zlabel 'Percentage' font 'Times,15'
+#set key outside         # if we have a legend, put it outside the graph
+#set key at screen 1,1 right horizontal spacing 1
+set nokey
+set xlabel 'Timestep' font 'Times,20'
+set zlabel '%' 7.0,0.0 font 'Times,20'
+set xtics font 'Times,18'
+set ztics font 'Times,18'
+#set format y '. %4.2f"
 #set zr [0:100]
 set grid
-set style fill solid 0.3		# this number specifies the opacity of the filled in box.
-set boxwidth 0.50 relative		# 1.0 is the whisker-boxes touching
+#set style fill solid 0.3		# this number specifies the opacity of the filled in box.
 set datafile missing '?'	# unknown values are '?'
 #set mxtics 5            # make small little tics along the x-axis
 
@@ -67,27 +70,28 @@ OPTIONS
 ####################################################################################
 ####################################################################################
 ####################################################################################
-def GET_GNUPLOT_DYNAMIC_SETTINGS( RecentOrbestRecent ):
+def GET_GNUPLOT_DYNAMIC_SETTINGS( Title ):
 	global RUN_DIRS, PARAMS, IDENTICAL_LINE_WIDTH, GNUPLOT_TOPRIGHT_LABEL, MAXTIMESTEP
 	global numplotsmade, GNUPLOT_TERMINAL, ytics
 	global flag_plotAll, flag_plotProcessing, flag_plotInput
 	settings = [ ]
 
 
-	settings.append("set terminal %s %s title '%s' dashed dl 0.5" % ( GNUPLOT_TERMINAL, numplotsmade, PASSED_DIRECTORY ) )	
+	settings.append("set terminal %s %s title '%s' dashed dl 0.5" % ( GNUPLOT_TERMINAL, numplotsmade, PASSED_DIRECTORY ) )
+	#settings.append("set offset 5")
 	numplotsmade += 1
 
 
-	settings.append( 'set title "%s -- %s"' % (PASSED_DIRECTORY, RecentOrbestRecent) )	# set the title
+	settings.append( 'set title "%s" font "Times,22"' % ( Title ) )	# set the title
 
 	# Define our ylabel
-	ylabel = "NeuralComplexity: "
-	if flag_plotAll: ylabel += 'All, '
-	if flag_plotProcessing: ylabel += 'Processing, '
-	if flag_plotInput: ylabel += 'Input, '
-	settings.append("set ylabel '%s' font 'Times,15'" % (ylabel.rstrip(', ')) )	# take off the trailing coma and space before using.
+	ylabel = "Complexity"
+	#if flag_plotAll: ylabel += ': All, '
+	#if flag_plotProcessing: ylabel += ': Processing, '
+	#if flag_plotInput: ylabel += ': Input, '
+	settings.append("set ylabel '%s' -4.0,0.0 font 'Times,20'" % (ylabel.rstrip(', ')) )	# take off the trailing coma and space before using.
 	settings.append("set yrange [-.5:%s]" % (NUMBINS - .5))
-	settings.append("set ytics (%s)" % (ytics))
+	settings.append("set ytics (%s) font 'Times,18'" % (ytics))
 	settings.append("set ticslevel 0")
 	# done defining the ylabel
 
@@ -95,7 +99,7 @@ def GET_GNUPLOT_DYNAMIC_SETTINGS( RecentOrbestRecent ):
 	settings.append("set style data lines")
 
 	# make the TopRight Label
-	settings.append( 'set label "%s" at screen 0.001,0.98 left' % ('\\n'.join(GNUPLOT_TOPRIGHT_LABEL)) )
+	#settings.append( 'set label "%s" at screen 0.001,0.98 left' % ('\\n'.join(GNUPLOT_TOPRIGHT_LABEL)) )
 
 	return '\n'.join(settings)
 #####################################
@@ -276,14 +280,19 @@ else:
 	MAX = INPMAX
 binlength = MAX/NUMBINS
 #generate ytics
-ytics = '"0" -.5, '
-for i in range(NUMBINS):
+#ytics = '"0" -.5, '
+#for i in range(NUMBINS):
+#	ytics += '"%s" %s, ' % (round(binlength*(i+.5),2), i)
+#ytics += '"%s" %s' % (round(MAX, 2), NUMBINS-.5)
+ytics = ''
+for i in range(NUMBINS-1):
 	ytics += '"%s" %s, ' % (round(binlength*(i+.5),2), i)
-ytics += '"%s" %s' % (round(MAX, 2), NUMBINS-.5)
+ytics += '"%s" %s' % (round(binlength*(NUMBINS-.5),2), NUMBINS-1)
 
-outputcontents.append( GET_GNUPLOT_DYNAMIC_SETTINGS('Complexity Histogram' ) )	# Make a different plot for Recent/bestRecent
+#outputcontents.append( GET_GNUPLOT_DYNAMIC_SETTINGS( 'Complexity Histogram' ) )
+outputcontents.append( GET_GNUPLOT_DYNAMIC_SETTINGS( '' ) )
 
-outputcontents.append( "splot '%s'with lines" % tempfilename )
+outputcontents.append( "splot '%s' with lines" % tempfilename )
 
 outputfileGNU=open( outputfilenameGNU, 'w' )
 outputfileGNU.write( '\n'.join(outputcontents) )

@@ -4,10 +4,10 @@
 ############################################################
 # CONFIGURABLE PARAMETERS
 ############################################################
-DOT="/usr/local/graphviz-2.12/bin/dot"
+DOT="/usr/local/graphviz/bin/dot"
 DONT_DISPLAY_AGENTS_WITH_LESSTHAN_N_OFFSPRING=1
 DOT_FILLCOLORS="whitesmoke beige lightpink1 lightcyan1 orange palegreen1 forestgreen"
-CHILD_DEPTH_IS_AVERAGE_OF_PARENTS_PLUSONE=1		# If this is not 1, the child's depth = max(parent1,parent2) + 1
+#CHILD_DEPTH_IS_AVERAGE_OF_PARENTS_PLUSONE=0		# If this is not 1, the child's depth = max(parent1,parent2) + 1
 PLOT_FORMAT="pdf"	# pdf, png, etc.
 DOTFILE_PARAMS="
 	nodesep=0.2;				// minimum node separation (in inches).
@@ -25,7 +25,7 @@ DOTFILE_PARAMS="
 	rankdir=TB;			// Print from top to bottom (the default)
 	"
 # DON'T EDIT ANYTHING PAST THIS UNLESS YOU KNOW WHAT YOU'RE DOING.
-#SCCMAP="/usr/local/graphviz-2.12/bin/sccmap"		# Not currently used.
+#SCCMAP="/usr/local/graphviz/bin/sccmap"		# Not currently used.
 ############################################################
 ############################################################
 BDfile=$(echo "${1}" | sed -e 's/\/$//')       # removing any trailing slash
@@ -179,11 +179,12 @@ END {
 		}
 	# The final children also have a special rank.
 	print "{rank=max;" DEPTHS[MAXDEPTH] " }";	# print the SEEDs, they have a special rank.  These could also be "rank=sink", but rank=max is more robustly aesthetic.
-
+#	print "MAXDEPTH = " MAXDEPTH;
 }'
 echo "}"
 } > ',temp'
 echo "- Made temp .dot file ',temp'"
+#exit;
 echo "- Generating '${PLOTfile}'..."
 ${DOT} ',temp' -T${PLOT_FORMAT} -o ${PLOTfile}
 echo "- Made ${PLOTfile}.  Bringing up the plot.."
