@@ -4,8 +4,8 @@ import common_functions
 ########################################################################################################
 # CONFIGURABLE OPTIONS
 FILENAME="genome/AdamiComplexity-summary.txt"
-GNUPLOT_ylabel="Adami Complexity (bits)"
-GNUPLOT_title="Genetic consistency over time"
+GNUPLOT_ylabel="Genomic Consistency (bits)"
+GNUPLOT_title="Genomic consistency over time"
 plotOnebit, plotTwobit, plotFourbit = True, False, False
 LINEWIDTH=1.5
 MEANLINEWIDTH=3
