@@ -496,6 +496,20 @@ void genome::Mutate()
 //---------------------------------------------------------------------------
 // genome::Crossover
 //---------------------------------------------------------------------------
+// Nominally straightforward, this is complicated by our desire
+// to copy neural architecture bits from an existing, valid neural group.
+// In some cases a larger value of numNeurGroups may come from one parent and
+// the bulk of the architecture bits from the other parent.  In this case we
+// want to copy the bits from the higher-numbered groups from the parent
+// that contributed the larger numNeurGroups.  Somewhat similarly, if a
+// mutation causes numNeurGroups to increase, we want to copy the
+// architecture bits from existing groups.  This produces a mostly neutral
+// mutation, which subsequent selection can then adapt and specialize.
+// 
+// NOTE: I am not going to attempt the above until the genome has been
+// reorganized to keep all genes associated with a neural group together
+// on the genome.
+//---------------------------------------------------------------------------
 void genome::Crossover(genome* g1, genome* g2, bool mutate)
 {
 	Q_ASSERT(g1 != NULL && g2 != NULL);
