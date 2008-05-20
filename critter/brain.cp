@@ -2478,22 +2478,25 @@ void brain::Update(float energyfraction)
     debugcheck("brain::update after updating synapses");
 #endif // DEBUGCHECK
 
-#if 1
-    for (i = firstnoninputneuron; i < numneurons; i++)
-    {
-        neuron[i].bias += groupblrate[neuron[i].group]
-                        * (newneuronactivation[i]-0.5f)
-                        * 0.5f;
-        if (fabs(neuron[i].bias) > (0.5 * gNeuralValues.maxbias))
-        {
-            neuron[i].bias *= 1.0 - (1.0f - gDecayRate) *
-                (fabs(neuron[i].bias) - 0.5f * gNeuralValues.maxbias) / (0.5f * gNeuralValues.maxbias);
-            if (neuron[i].bias > gNeuralValues.maxbias)
-                neuron[i].bias = gNeuralValues.maxbias;
-            else if (neuron[i].bias < -gNeuralValues.maxbias)
-                neuron[i].bias = -gNeuralValues.maxbias;
-        }
-    }
+#if 0
+	if( gNeuralValues.maxbiaslrate > 0.0 )
+	{
+		for (i = firstnoninputneuron; i < numneurons; i++)
+		{
+			neuron[i].bias += groupblrate[neuron[i].group]
+							* (newneuronactivation[i]-0.5f)
+							* 0.5f;
+			if (fabs(neuron[i].bias) > (0.5 * gNeuralValues.maxbias))
+			{
+				neuron[i].bias *= 1.0 - (1.0f - gDecayRate) *
+					(fabs(neuron[i].bias) - 0.5f * gNeuralValues.maxbias) / (0.5f * gNeuralValues.maxbias);
+				if (neuron[i].bias > gNeuralValues.maxbias)
+					neuron[i].bias = gNeuralValues.maxbias;
+				else if (neuron[i].bias < -gNeuralValues.maxbias)
+					neuron[i].bias = -gNeuralValues.maxbias;
+			}
+		}
+	}
 
   #ifdef DEBUGCHECK
     debugcheck("brain::update after updating biases");
