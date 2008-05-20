@@ -13,7 +13,7 @@ still be revived or newly developed, such as:
   the dying critter is), we shouldn't have to do that!
   An "addNear( newLink, nearLink )" function should do the trick;
   it should save and restore currItem, then we can eliminate the
-  explicity code to do so in Interact() in Simulation.cp.
+  explicit code to do so in Interact() in Simulation.cp.
 * same as above for newborn critters
 * make windows record their position and size changes to the settings
   file when they are manually moved or resized
