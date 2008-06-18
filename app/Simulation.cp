@@ -1682,7 +1682,7 @@ void TSimulation::Init()
 	fCamera.UseLookAt();
 	fCamera.SetFixationPoint(0.5 * globals::worldsize, 0.0, -0.5 * globals::worldsize);	
 	fCamera.SetRotation(0.0, 90, 0.0);  	
-	fStage.AddObject(&fCamera);
+//	fStage.AddObject(&fCamera);
 	
 	//Set up the overhead camera view (CMB 3/13/06)
 	// Set up overhead scene and overhead camera
@@ -1698,7 +1698,7 @@ void TSimulation::Init()
 	//fOverheadCamera.UseLookAt();
 
 	//Add the overhead camera into the scene (CMB 3/13/06)
-	fStage.AddObject(&fOverheadCamera);
+//	fStage.AddObject(&fOverheadCamera);
 
 	// Add scene to scene view and to overhead view
 	Q_CHECK_PTR(fSceneView);
