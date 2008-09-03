@@ -1669,7 +1669,7 @@ void TSimulation::Init()
 	// Set up scene and camera
 	fScene.SetStage(&fStage);
 	fScene.SetCamera(&fCamera);
-	fCamera.SetPerspective(fCameraFOV, fSceneView->width() / fSceneView->height(), 0.01, 1.5 * globals::worldsize);	
+	fCamera.SetPerspective(fCameraFOV, (float)fSceneView->width() / (float)fSceneView->height(), 0.01, 1.5 * globals::worldsize);	
 	
 	//The main camera will rotate around the world, so we need to set up the angle and translation  (CMB 03/10/06)
 	fCameraAngle = fCameraAngleStart;
@@ -1692,7 +1692,7 @@ void TSimulation::Init()
 	//Set up the overhead camera (CMB 3/13/06)
 	fOverheadCamera.setcolor(fCameraColor);
 //	fOverheadCamera.SetFog(false, glFogFunction(), glExpFogDensity(), glLinearFogEnd() );
-	fOverheadCamera.SetPerspective(fCameraFOV, fSceneView->width() / fSceneView->height(),0.01, 1.5 * globals::worldsize);
+	fOverheadCamera.SetPerspective(fCameraFOV, (float)fSceneView->width() / (float)fSceneView->height(),0.01, 1.5 * globals::worldsize);
 	fOverheadCamera.settranslation(0.5*globals::worldsize, 0.2*globals::worldsize,-0.5*globals::worldsize);
 	fOverheadCamera.SetRotation(0.0, -fCameraFOV, 0.0);
 	//fOverheadCamera.UseLookAt();
