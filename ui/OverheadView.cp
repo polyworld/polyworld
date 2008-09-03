@@ -132,7 +132,8 @@ void TOverheadView::initializeGL()
 void TOverheadView::resizeGL( int width, int height )
 {
 	glViewport( 0, 0, width, height );
-	
+
+#if 1
 	glMatrixMode( GL_PROJECTION );
 	glLoadIdentity();
 	
@@ -140,6 +141,7 @@ void TOverheadView::resizeGL( int width, int height )
     glMatrixMode( GL_MODELVIEW );
     glLoadIdentity();
 //	glTranslatef( 0.0, -10.0, -40.0 );
+#endif
 #if 0
 	const long zbnear = 0x7FFFFF;
 	const long zbfar = 0x0;
@@ -154,6 +156,7 @@ void TOverheadView::resizeGL( int width, int height )
 //	gluPerspective(45.0, 1.0, 1.0, 200.0);
 	GLfloat w = (float) width / (float) height;
 	GLfloat h = 1.0;
+//	printf( "w = %g, h = %g, width = %d, height = %d\n", w, h, width, height );
 	glFrustum( -w, w, -h, h, 5.0, 60.0 );
 }
     

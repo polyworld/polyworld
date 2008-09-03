@@ -1691,7 +1691,7 @@ void TSimulation::Init()
 
 	//Set up the overhead camera (CMB 3/13/06)
 	fOverheadCamera.setcolor(fCameraColor);
-	fOverheadCamera.SetFog(false, glFogFunction(), glExpFogDensity(), glLinearFogEnd() );
+//	fOverheadCamera.SetFog(false, glFogFunction(), glExpFogDensity(), glLinearFogEnd() );
 	fOverheadCamera.SetPerspective(fCameraFOV, fSceneView->width() / fSceneView->height(),0.01, 1.5 * globals::worldsize);
 	fOverheadCamera.settranslation(0.5*globals::worldsize, 0.2*globals::worldsize,-0.5*globals::worldsize);
 	fOverheadCamera.SetRotation(0.0, -fCameraFOV, 0.0);
@@ -2525,7 +2525,7 @@ void TSimulation::Interact()
 					
 				ttPrint( "age %ld: critters # %ld & %ld are mating randomly\n", fStep, c->Number(), d->Number() );
 						
-				critter* e = critter::getfreecritter(this, &fStage);
+				critter* e = critter::getfreecritter( this, &fStage );
 				Q_CHECK_PTR(e);
 
 				e->Genes()->Crossover(c->Genes(), d->Genes(), true);

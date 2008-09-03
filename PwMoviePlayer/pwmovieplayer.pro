@@ -14,16 +14,45 @@ SOURCES		=	PwMoviePlayer.cp \
 																			  	
 TARGET		= 	PwMoviePlayer
 
-INCLUDEPATH +=	. \
-				.. \
-				../utils \
-				$(QT)/include \
-				$(QT)/include/QtOpenGL \
-				$(QT)/include/QtGui \
-				$(QT)/include/QtCore \
-				/System/Library/Frameworks/AGL.framework/Versions/A/Headers
-								
-QMAKE_CFLAGS_DEBUG += -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC
+macx {
+	message(compiling for Mac OS X)
+	INCLUDEPATH +=	. \
+					.. \
+					../utils \
+					$(QT)/include \
+					$(QT)/include/QtOpenGL \
+					$(QT)/include/QtGui \
+					$(QT)/include/QtCore \
+					/System/Library/Frameworks/AGL.framework/Versions/A/Headers
+}
 
-LIBS	+=	-L$(QT)/lib -F$(QT)/lib -framework QtOpenGL -framework OpenGL -framework AGL
+unix:!macx {
+	message(compiling for Linux)
+	INCLUDEPATH +=	. \
+					.. \
+					../utils \
+					$(QT)/include \
+					$(QT)/include/QtOpenGL \
+					$(QT)/include/QtCore \
+					$(QT)/include/QtGui \
+					/usr/include/GL/
+}
 
+QMAKE_CFLAGS_DEBUG += -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC -Wno-deprecated
+QMAKE_CFLAGS += -Wno-deprecated
+
+macx {
+	LIBS +=	-L$(QT)/lib -F$(QT)/lib -framework QtOpenGL -framework OpenGL -framework AGL
+}
+
+unix:!macx {
+	LIBS += -L$(QT)/lib/ -lQtOpenGL -lgsl -lgslcblas
+}
+
+win32 {
+	message(Not building on Windows yet)
+}
+
+!macx:!unix:!win32 {
+	message(Unknown platform - NOT Mac OS X or Windows or Unix)
+}

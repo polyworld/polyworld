@@ -157,7 +157,7 @@
 		7624C7F00A4A204A006A2B7C /* graybin.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = graybin.h; sourceTree = "<group>"; };
 		7625064A09B8CA5500C36C36 /* probe_activity.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = probe_activity.cpp; path = utils/probe_activity.cpp; sourceTree = "<group>"; };
 		7625066609B8CCE600C36C36 /* probe_activity */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = probe_activity; sourceTree = BUILT_PRODUCTS_DIR; };
-		7655B4E60C35DF040065C0A1 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text.xml; name = Info.plist; path = PwMoviePlayer/Info.plist; sourceTree = "<group>"; };
+		7655B4E60C35DF040065C0A1 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text.plist.xml; name = Info.plist; path = PwMoviePlayer/Info.plist; sourceTree = "<group>"; };
 		7655B5150C35DF710065C0A1 /* English */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = English; path = PwMoviePlayer/English.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		7668D1680885AC65004158C6 /* PwMovieTools.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = PwMovieTools.cp; sourceTree = "<group>"; };
 		7668D16A0885AD07004158C6 /* PwMovieTools.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = PwMovieTools.h; sourceTree = "<group>"; };
@@ -1099,7 +1099,6 @@
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
-				OPTIMIZATION_CFLAGS = "-O0";
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = (
 					"-lQtGui_debug",
@@ -1237,7 +1236,6 @@
 				);
 				LIBRARY_STYLE = Static;
 				OBJROOT = "$(PROJECT_DIR)/../polyworld_related/build";
-				OPTIMIZATION_CFLAGS = "-O0";
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
 					"-DQT_TABLET_SUPPORT",
@@ -1522,7 +1520,6 @@
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
-				OPTIMIZATION_CFLAGS = "-O0";
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = (
 					"-lQtGui_debug",
@@ -1635,7 +1632,6 @@
 				INSTALL_PATH = "$(USER_APPS_DIR)";
 				LIBRARY_SEARCH_PATHS = $QT/lib;
 				OBJROOT = "$(PROJECT_DIR)/../polyworld_related/build";
-				OPTIMIZATION_CFLAGS = "-O0";
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
 					"-DQT_TABLET_SUPPORT",
@@ -1853,7 +1849,6 @@
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
-				OPTIMIZATION_CFLAGS = "-O0";
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = (
 					"-lQtGui_debug",
@@ -1924,7 +1919,6 @@
 				);
 				LIBRARY_STYLE = Static;
 				OBJROOT = "$(PROJECT_DIR)/../polyworld_related/build";
-				OPTIMIZATION_CFLAGS = "-O0";
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
 					"-DQT_TABLET_SUPPORT",
@@ -1965,7 +1959,6 @@
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
-				OPTIMIZATION_CFLAGS = "-O0";
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = (
 					"-lQtGui_debug",
@@ -2013,7 +2006,6 @@
 					$QTS/lib,
 				);
 				OBJROOT = "$(PROJECT_DIR)/../polyworld_related/build";
-				OPTIMIZATION_CFLAGS = "-O0";
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
 					"-DQT_TABLET_SUPPORT",

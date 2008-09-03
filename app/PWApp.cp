@@ -191,8 +191,8 @@ TSceneWindow::TSceneWindow()
 	AddHelpMenu();
 	        	
 	// Create scene rendering view
-	fSceneView = new TSceneView(this);	
-	setCentralWidget(fSceneView);
+	fSceneView = new TSceneView( this );	
+	setCentralWidget( fSceneView );
 	fSceneView->show();
 	
 	// Create the status bar at the bottom
@@ -205,7 +205,7 @@ TSceneWindow::TSceneWindow()
 	// Set the window title, including current window dimensions
 	char tempTitle[64];
 	sprintf( tempTitle, "Polyworld (%d x %d)", width(), height() );
-	setWindowTitle( tempTitle);
+	setWindowTitle( tempTitle );
 
 	// Create the simulation
 	// NOTE: Must wait until after the above RestoreFromPrefs(), so the window
