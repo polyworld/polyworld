@@ -29,6 +29,11 @@ int main( int argc, char **argv )
 {
 //	Q_INIT_RESOURCE(application);
 
+	// Create application instance.
+	// Moved this call above hasOpenGL() call due to Linux requirement
+	// of PMPApp being created prior to call (CMB 3/7/08)
+	PMPApp app( argc, argv );
+
 	// It is important the we have OpenGL support
     if (!QGLFormat::hasOpenGL())
     {
@@ -36,9 +41,6 @@ int main( int argc, char **argv )
 		return -1;
     }
 	
-	// Create application instance
-	PMPApp app( argc, argv );
-
 #if 0
 	// Just confirms behavior of shift and mask on big-endian and little-endian machines is the same
 	for( int i = 0; i < 1000; i += 16 )
