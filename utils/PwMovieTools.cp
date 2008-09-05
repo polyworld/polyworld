@@ -8,16 +8,15 @@
 
 #define PMP_DEBUG 0
 
-// TODO implement these
-#define OSSwapInt32(x) (x)
-#define OSSwapInt16(x) (x)
-
 #include <stdlib.h>
 #include <string.h>
-#include <sys/time.h>
-#include <netinet/in.h>
-#ifndef linux      /* how does one say #ifdef MAC_OSX ? */
-#include <mach/mach_time.h>
+#if __APPLE__
+	#include <mach/mach_time.h>
+	#include <libkern/OSByteOrder.h>
+#else	// #elif linux
+	#include <byteswap.h>
+	#include <netinet/in.h>
+	#include <sys/time.h>
 #endif
 
 #include <gl.h>
@@ -45,6 +44,14 @@
 	#define pmpPrint( x... ) { printf( "%s: ", __FUNCTION__ ); printf( x ); }
 #else
 	#define pmpPrint( x... )
+#endif
+
+#if __APPLE__
+	#define SwapInt32(x) OSSwapInt32(x)
+	#define SwapInt16(x) OSSwapInt16(x)
+#else	// #elif linux
+	#define SwapInt32(x) bswap_32(x)
+	#define SwapInt16(x) bswap_16(x)
 #endif
 
 void PwRecordMovie( FILE *f, long xleft, long ybottom, long width, long height )
@@ -121,14 +128,14 @@ void PwReadMovieHeader( FILE *f, unsigned long* version, unsigned long* width, u
 #if __BIG_ENDIAN__
 	if( *version > 100 )
 	{
-		*width = OSSwapInt32( *width );
-		*height = OSSwapInt32( *height );
+		*width = SwapInt32( *width );
+		*height = SwapInt32( *height );
 	}
 #else
 	if( *version < 100 )
 	{
-		*width = OSSwapInt32( *width );
-		*height = OSSwapInt32( *height );
+		*width = SwapInt32( *width );
+		*height = SwapInt32( *height );
 	}
 #endif
 	
@@ -213,10 +220,10 @@ void unrle( register unsigned long *rle,
 		len = *rle;
 	#if __BIG_ENDIAN__
 		if( version > 100 )
-			len = OSSwapInt32( len );
+			len = SwapInt32( len );
 	#else
 		if( version < 100 )
-			len = OSSwapInt32( len );
+			len = SwapInt32( len );
 	#endif
         rgbend = rgb + len;
 		rle++;
@@ -246,17 +253,17 @@ int readrle( register FILE *f, register unsigned long *rle, register unsigned lo
 
 	n = fread( (char *) (rle), sizeof( *rle ), 1, f );
 	
-//	printf( "*rle as read = %lu (0x%08lx), *rle swapped = %u (0x%08x), version = %lu\n", *rle, *rle, OSSwapInt32( *rle ), OSSwapInt32( *rle ), version );
+//	printf( "*rle as read = %lu (0x%08lx), *rle swapped = %u (0x%08x), version = %lu\n", *rle, *rle, SwapInt32( *rle ), SwapInt32( *rle ), version );
 //	exit( 0 );
 	
 #if __BIG_ENDIAN__
 	// If this is PPC reading Intel data, then we have to swap bytes
 	if( version > 100 )
-		*rle = OSSwapInt32( *rle );
+		*rle = SwapInt32( *rle );
 #else
 	// If this is Intel reading PPC data, then we have to swap bytes
 	if( version < 100 )
-		*rle = OSSwapInt32( *rle );
+		*rle = SwapInt32( *rle );
 #endif
 	
 	if( n != 1 )
@@ -695,14 +702,14 @@ void unrlediff4( register unsigned long *rle,
 		
 		len = *srle;
 		//printf( "len = %u (0x%04x), len_swapped&off = %u (0x%04x), len>>8 = %u, len&0x00ff = %u\n",
-		//		len, len, OSSwapInt16( len ) & HIGHBITOFFSHORT, OSSwapInt16( len ) & HIGHBITOFFSHORT, len>>8, len&0x00ff );
+		//		len, len, SwapInt16( len ) & HIGHBITOFFSHORT, SwapInt16( len ) & HIGHBITOFFSHORT, len>>8, len&0x00ff );
 
 		#if __BIG_ENDIAN__
 			if( version > 100 )
-				len = OSSwapInt16( len );
+				len = SwapInt16( len );
 		#else
 			if( version < 100 )
-				len = OSSwapInt16( len );
+				len = SwapInt16( len );
 		#endif
 
         if( len & HIGHBITONSHORT )	// It's a run of unchanged pixels
