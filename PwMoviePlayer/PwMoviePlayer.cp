@@ -1,5 +1,5 @@
 // System
-#include <libc.h>
+//#include <libc.h>
 #include <stdio.h>
 #include <gl.h>
 #include <sys/types.h>
