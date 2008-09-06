@@ -3,10 +3,10 @@
 #include <gsl/gsl_vector.h>
 #include <gsl/gsl_linalg.h>
 #include <math.h>
-#include <list.h>
-#include <vector.h>
+#include <list>
+#include <vector>
 #include <dirent.h>
-#include <string.h>
+#include <string>
 #include <stdlib.h>
 #include <gsl/gsl_statistics_double.h>
 #include <gsl/gsl_rng.h>

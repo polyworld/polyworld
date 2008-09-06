@@ -2,6 +2,7 @@
 #include "gobject.h"
 
 // System
+#include <cstring>
 #include <fstream>
 #include <iostream>
 

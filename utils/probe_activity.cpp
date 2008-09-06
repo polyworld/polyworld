@@ -1,11 +1,11 @@
-#include <iostream.h>
+#include <iostream>
 #include <string>
 #include <string.h>
 #include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <vector.h>
-#include <list.h>
+#include <vector>
+#include <list>
 #include "alife_complexity_functions.h"
 
 #include <gsl/gsl_rng.h>

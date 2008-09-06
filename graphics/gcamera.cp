@@ -11,12 +11,14 @@
 // System
 #include <gl.h>
 #include <glu.h>
-#include <iostream.h>
+#include <iostream>
 #include <stdlib.h>
 
 // Local
 #include "misc.h"
 #include "graphics.h"
+
+using namespace std;
 
 
 // Internal defaults

@@ -2,7 +2,7 @@
 #define CRITTER_H
 
 // System
-#include <algobase.h>
+#include <algorithm>
 
 // qt
 #include <qrect.h>

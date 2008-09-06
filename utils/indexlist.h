@@ -11,7 +11,7 @@
 
 // System
 #include <stdlib.h>
-#include <iostream.h>
+#include <iostream>
 
 class indexlist
 {
@@ -19,8 +19,8 @@ public:
     indexlist(long l, long h);
     ~indexlist();
     
-	void dump(ostream& out);
-	void load(istream& in);
+	void dump(std::ostream& out);
+	void load(std::istream& in);
 	
     long getindex();
     void freeindex(long i);

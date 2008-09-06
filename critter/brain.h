@@ -1,6 +1,10 @@
 #ifndef BRAIN_H
 #define BRAIN_H
 
+// Global
+#include <istream>
+#include <ostream>
+
 // Local
 #include "objectlist.h"
 
@@ -122,7 +126,7 @@ public:
     short NumBlueNeurons();
 	short NumNeuronGroups();
         
-	void dumpAnatomical( char* directoryName, char* suffix, long index, float fitness );
+	void dumpAnatomical( const char* directoryName, const char* suffix, long index, float fitness );
 	FILE* startFunctional( long index );
 	void endFunctional( FILE* file, float fitness );
 	void writeFunctional( FILE* file );

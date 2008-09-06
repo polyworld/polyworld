@@ -201,7 +201,7 @@ brain::~brain()
 #else
 	#define daPrint( x... )
 #endif
-void brain::dumpAnatomical( char* directoryName, char* suffix, long index, float fitness )
+void brain::dumpAnatomical( const char* directoryName, const char* suffix, long index, float fitness )
 {
 	FILE*	file;
 	char	filename[256];
