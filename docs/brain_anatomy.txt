@@ -1,0 +1,41 @@
+Anatomy files:
+
+There are two lines of identifiers, counts, and indexes.  The first line always starts with "brain" and the agent ID number.  The remaining values are identified by variableName=value pairs.
+
+fitness - the ad hoc heuristic fitness (not terribly important currently)
+numneurons+1 - the number of neurons plus one for the bias neuron (this is
+    how many columns and rows there are in the weight matrix)
+maxWeight - neuron to neuron weights range from -maxWeight to +maxWeight
+maxBias - neuron biases range from -maxBias to +maxBias
+redinput - start and end neuron indexes for the red component of vision
+greeninput - start and end neuron indexes for the green component of vision
+blueinput - start and end neuron indexes for the blue component of vision
+
+Then follows the weight matrix, with the rows indicating the target (post-synaptic) neurons and the columns indicating the source (pre-synaptic) neurons.  The neurons are listed (both row-wise and column-wise) in the following sequence:
+
+Index  Name    Count
+  0    random    1
+  1    energy    1
+       red       fNumRedNeurons
+       green     fNumGreenNeurons
+       blue      fNumBlueNeurons
+       eat       1
+       mate      1
+       fight     1
+       move      1
+       turn      1
+       light     1
+       focus     1
+       internal  numneurons-numinputneurons-numOutputNeurons
+       bias      1
+
+numinputneurons = fNumRedNeurons + fNumGreenNeurons + fNumBlueNeurons + 2
+numOutputNeurons = 7
+numneurons and fNum<Color>Neurons counts are determined in brain::grow(),
+    from the genetics
+
+The bias and input neurons have no inputs, hence all the zeroes.
+
+In the network, the input and output neurons can have *both* excitatory and inhibitory outgoing connections, but for the anatomical weight matrices they are simply summed to present a single connection strength for a particular target neuron (which is what happens in the neural calculations, so this is technically correct).
+
+Each row/line is terminated with a semicolon.
