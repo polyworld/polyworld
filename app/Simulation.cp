@@ -14,7 +14,7 @@
 #define MinDebugStep 0
 #define MaxDebugStep INT_MAX
 
-#define CurrentWorldfileVersion 29
+#define CurrentWorldfileVersion 30
 
 // CompatibilityMode makes the new code with a single x-sorted list behave *almost* identically to the old code.
 // Discrepancies still arise due to the old food list never being re-sorted and critters at the exact same x location
@@ -22,8 +22,6 @@
 // are actually sorted on x at the left edge (x increases from left to right) of the objects, which changes as the
 // food is eaten and shrinks.]
 #define CompatibilityMode 1
-
-#define UseMaxSpeedAsFitness 0
 
 // Self
 #include "Simulation.h"
@@ -384,19 +382,21 @@ void TSimulation::Stop()
 //---------------------------------------------------------------------------
 void TSimulation::Step()
 {
+#define RecentSteps 10
+	static double	sTimePrevious[RecentSteps];
+	static unsigned long frame = 0;
+	double			timeNow;
+	long			oldNumBorn;
+	long			oldNumCreated;
+
 	if( !inited )
 	{
 		printf( "%s: called before TSimulation::Init()\n", __FUNCTION__ );
 		return;
 	}
 	
-	static unsigned long frame = 0;
 	frame++;
 //	printf( "%s: frame = %lu\n", __FUNCTION__, frame );
-	
-#define RecentSteps 10
-	static double	sTimePrevious[RecentSteps];
-	double			timeNow;
 	
 	if( fMaxSteps && ((fStep+1) > fMaxSteps) )
 	{
@@ -564,9 +564,11 @@ void TSimulation::Step()
 		fCritterPOVWindow->swapBuffers();
 	}
 
-					
-	long oldNumBorn = fNumberBorn;
-	long oldNumCreated = fNumberCreated;
+	if( fHeuristicFitnessWeight != 0.0 )
+		oldNumBorn = fNumberBornVirtual;
+	else
+		oldNumBorn = fNumberBorn;
+	oldNumCreated = fNumberCreated;
 	
 //  if( fDoCPUWork )
 	{
@@ -630,17 +632,30 @@ void TSimulation::Step()
 		if (fChartBorn
 			&& fBirthrateWindow != NULL
 		/*  && fBirthrateWindow->isVisible() */
-			&& ((oldNumBorn != fNumberBorn) || (oldNumCreated != fNumberCreated)))
+		   )
 		{
-			fBirthrateWindow->AddPoint(float(fNumberBorn) / float(fNumberBorn + fNumberCreated));
+			bool newBirths;
+			float birthRatio;
+			if( fHeuristicFitnessWeight != 0.0 )
+			{
+				newBirths = oldNumBorn != fNumberBornVirtual;
+				birthRatio = float( fNumberBornVirtual ) / float( fNumberBornVirtual + fNumberCreated );
+			}
+			else
+			{
+				newBirths = oldNumBorn != fNumberBorn;
+				birthRatio = float( fNumberBorn ) / float( fNumberBorn + fNumberCreated );
+			}
+			if( newBirths || (oldNumCreated != fNumberCreated) )
+				fBirthrateWindow->AddPoint( birthRatio );
 		}
 
 		// Fitness window
 		if( fChartFitness && fFitnessWindow != NULL /* && fFitnessWindow->isVisible() */ )
 		{
-			fFitnessWindow->AddPoint(0, fMaxFitness / fTotalFitness);
-			fFitnessWindow->AddPoint(1, fCurrentMaxFitness[0] / fTotalFitness);
-			fFitnessWindow->AddPoint(2, fAverageFitness / fTotalFitness);
+			fFitnessWindow->AddPoint(0, fMaxFitness );
+			fFitnessWindow->AddPoint(1, fCurrentMaxFitness[0] );
+			fFitnessWindow->AddPoint(2, fAverageFitness );
 		}
 		
 		// Energy flux window
@@ -745,17 +760,15 @@ void TSimulation::Step()
 				eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
 			
 			// Generate the bestSoFar Complexity, if we're doing that.
+			// Note that we calculate complexity for the Processing units only, by default,
+			// but if we're using complexity as a fitness function then fFittest[i]->complexity
+			// could be any of the available types of complexity (including certain differences).
 			if(	fRecordComplexity )
 			{
-				if( fUseComplexityAsFitnessFunc != 'O' )	// If using Complexity as FitnessFunc we already have this.  Virgil
+				if( fFittest[i]->complexity == 0.0 )		// if Complexity is zero it means we have to Calculate it
 				{
-					fFittest[i]->Complexity = fFittest[i]->fitness;
-				}
-			
-				if( fFittest[i]->Complexity == 0.0 )		// if Complexity is zero -- means we have to Calculate it
-				{
-					fFittest[i]->Complexity = CalcComplexity( t, 'P', 0 );		// Complexity of Processing Units Only, all time steps
-					cout << "[COMPLEXITY] Critter: " << fFittest[i]->critterID << "\t Processing Complexity: " << fFittest[i]->Complexity << endl;
+					fFittest[i]->complexity = CalcComplexity( t, 'P', 0 );		// Complexity of Processing Units Only, all time steps
+					cout << "[COMPLEXITY] Critter: " << fFittest[i]->critterID << "\t Processing Complexity: " << fFittest[i]->complexity << endl;
 				}
 			}
 
@@ -792,49 +805,16 @@ void TSimulation::Step()
 				if( link( s, t ) )
 					eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
 
-
 				if(	fRecordComplexity )
 				{
-					if( fUseComplexityAsFitnessFunc != 'O' )	// If using Complexity as FitnessFunc we've already computed Complexity for this critter. Virgil
+					if( fRecentFittest[i]->complexity == 0.0 )		// if Complexity is zero it means we have to Calculate it
 					{
-						fRecentFittest[i]->Complexity = fRecentFittest[i]->fitness;
-//						cout << "[" << fRecentFittest[i]->critterID << "]::: Yeehaw! Was going to compute Complexity again but I don't have to.  The Fitness = Complexity = " << fRecentFittest[i]->fitness << endl;				
+						fRecentFittest[i]->complexity = CalcComplexity( t, 'P', 0 );		// Complexity of Processing Units Only, all time steps
+						cout << "[COMPLEXITY] Critter: " << fRecentFittest[i]->critterID << "\t Processing Complexity: " << fRecentFittest[i]->complexity << endl;
 					}
-
-					else	// Okay, not using ComplexityAsFitnessFunc, but if the critter is in the BestSoFar list we can get the Complexity from there w/o computing it again.
-					{
-	//DEBUG				cout << ":::BestRecent [" << fRecentFittest[i]->critterID << "]: ";
-
-						bool inBestSoFarList = false;
-						int j;
-						for( j = 0; j < limit; j++ )
-						{
-							if( fRecentFittest[i]->critterID == fFittest[j]->critterID )
-							{
-								inBestSoFarList = true;
-								break;
-							}
-						}
-
-						// Check to see if we would have already computed the Complexity, if so, dont recompute it.
-						if( inBestSoFarList )
-						{
-							fRecentFittest[i]->Complexity = fFittest[j]->Complexity;
-	//DEBUG					cout << "Had critter in BestSoFarList -- no computing Complexity." << endl;
-						}
-						else
-						{
-//							char AnatFilename[256];
-//							sprintf( AnatFilename, "run/brain/anatomy/brainAnatomy_%ld_death.txt", fFittest[i]->critterID );
-							fRecentFittest[i]->Complexity = CalcComplexity( t, 'P', 0 );		// Complexity of Processing Units Only, all time steps
-							cout << "[COMPLEXITY] Critter: " << fRecentFittest[i]->critterID << "\t Processing Complexity: " << fRecentFittest[i]->Complexity << endl;
-						}
-					}
-
 				}
 
 			}
-
 		
 		}
 		
@@ -842,7 +822,6 @@ void TSimulation::Step()
 		if( fRecordComplexity )
 		{
 			int limit2 = limit <= fNumberRecentFit ? limit : fNumberRecentFit;
-
 		
 			double mean=0;
 			double stddev=0;	//Complexity: Time to Average and StdDev the BestRecent List
@@ -852,8 +831,8 @@ void TSimulation::Step()
 			{
 				if( fRecentFittest[i]->critterID > 0 )
 				{
-//					cout << "[" <<  fStep << "] " << fRecentFittest[i]->critterID << ": " << fRecentFittest[i]->Complexity << endl;
-					mean += fRecentFittest[i]->Complexity;		// Get Sum of all Complexities
+//					cout << "[" <<  fStep << "] " << fRecentFittest[i]->critterID << ": " << fRecentFittest[i]->complexity << endl;
+					mean += fRecentFittest[i]->complexity;		// Get Sum of all Complexities
 					count++;
 				}
 			}
@@ -872,7 +851,7 @@ void TSimulation::Step()
 				{
 					if( fRecentFittest[i]->critterID > 0 )
 					{
-						stddev += pow(fRecentFittest[i]->Complexity - mean, 2);		// Get Sum of all Complexities
+						stddev += pow(fRecentFittest[i]->complexity - mean, 2);		// Get Sum of all Complexities
 					}
 				}
 			}
@@ -895,7 +874,6 @@ void TSimulation::Step()
 			
 		}
 
-		
 		// Now delete all bestRecent critter files, unless they are also on the bestSoFar list
 		// Also empty the bestRecent list here, so we start over each epoch
 		int limit2 = fNumberDied < fNumberFit ? fNumberDied : fNumberFit;
@@ -932,7 +910,7 @@ void TSimulation::Step()
 			// Empty the bestRecent list by zeroing out critter IDs and fitnesses
 			fRecentFittest[i]->critterID = 0;
 			fRecentFittest[i]->fitness = 0.0;
-			fRecentFittest[i]->Complexity = 0.0;
+			fRecentFittest[i]->complexity = 0.0;
 		}
 	}
 	
@@ -1039,8 +1017,6 @@ void TSimulation::Step()
 			
 				fprintf( FileOneBit, " %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f", informationOneBit[0], informationOneBit[1], informationOneBit[2], informationOneBit[3], informationOneBit[4], 
 					informationOneBit[5], informationOneBit[6], informationOneBit[7] );
-
-
 
 				/* DOING TWO BIT WINDOW */
 
@@ -1180,7 +1156,6 @@ void TSimulation::Step()
 				}
 
 				fprintf( FileFourBit, " %.4f %.4f", informationFourBit[0], informationFourBit[1] );
-	
 
 			}
 
@@ -1267,7 +1242,7 @@ void TSimulation::Init()
 			Q_CHECK_PTR( fFittest[i]->genes );
             fFittest[i]->fitness = 0.0;
 			fFittest[i]->critterID = 0;
-			fFittest[i]->Complexity = 0.0;
+			fFittest[i]->complexity = 0.0;
         }
 		
         fRecentFittest = new FitStruct*[fNumberRecentFit];
@@ -1280,7 +1255,7 @@ void TSimulation::Init()
             fRecentFittest[i]->genes = NULL;	// new genome();	// we don't save the genes in the bestRecent list
             fRecentFittest[i]->fitness = 0.0;
 			fRecentFittest[i]->critterID = 0;
-			fRecentFittest[i]->Complexity = 0.0;
+			fRecentFittest[i]->complexity = 0.0;
         }
 		
         for( int id = 0; id < fNumDomains; id++ )
@@ -1296,7 +1271,7 @@ void TSimulation::Init()
 				Q_CHECK_PTR( fDomains[id].fittest[i]->genes );
                 fDomains[id].fittest[i]->fitness = 0.0;
 				fDomains[id].fittest[i]->critterID = 0;
-				fDomains[id].fittest[i]->Complexity = 0.0;
+				fDomains[id].fittest[i]->complexity = 0.0;
             }
         }
     }
@@ -1836,7 +1811,7 @@ void TSimulation::InitWorld()
     fMoveFitnessParameter = 1.0;
     fEnergyFitnessParameter = 1.0;
     fAgeFitnessParameter = 1.0;
- 	fTotalFitness = fEatFitnessParameter
+ 	fTotalHeuristicFitness = fEatFitnessParameter
 					+ fMateFitnessParameter
 					+ fMoveFitnessParameter
 					+ fEnergyFitnessParameter
@@ -1871,6 +1846,7 @@ void TSimulation::InitWorld()
     fNumberCreated1Fit = 0;
     fNumberCreated2Fit = 0;
     fNumberBorn = 0;
+	fNumberBornVirtual = 0;
     fNumberDied = 0;
     fNumberDiedAge = 0;
     fNumberDiedEnergy = 0;
@@ -2357,16 +2333,16 @@ void TSimulation::Interact()
 		{
 			if( ((fDomains[id].numCritters > (fDomains[id].maxNumCritters - fDomains[id].fMaxNumLeastFit))) &&	// if there are getting to be too many critters, and
 				(c->Age() >= (fSmiteAgeFrac * c->MaxAge())) &&													// the current critter is old enough to consider for smiting, and
-				(c->Fitness() < prevAvgFitness) &&																// the current critter has worse than average fitness,
+				(c->HeuristicFitness() < prevAvgFitness) &&																// the current critter has worse than average fitness,
 				( (fDomains[id].fNumLeastFit < fDomains[id].fMaxNumLeastFit)	||								// (we haven't filled our quota yet, or
-				  (c->Fitness() < fDomains[id].fLeastFit[fDomains[id].fNumLeastFit-1]->Fitness()) ) )			// the critter is bad enough to displace one already in the queue)
+				  (c->HeuristicFitness() < fDomains[id].fLeastFit[fDomains[id].fNumLeastFit-1]->HeuristicFitness()) ) )			// the critter is bad enough to displace one already in the queue)
 			{
 				if( fDomains[id].fNumLeastFit == 0 )
 				{
 					// It's the first one, so just store it
 					fDomains[id].fLeastFit[0] = c;
 					fDomains[id].fNumLeastFit++;
-					smPrint( "critter %ld added to least fit list for domain %d at position 0 with fitness %g\n", c->Number(), id, c->Fitness() );
+					smPrint( "critter %ld added to least fit list for domain %d at position 0 with fitness %g\n", c->Number(), id, c->HeuristicFitness() );
 				}
 				else
 				{
@@ -2374,7 +2350,7 @@ void TSimulation::Interact()
 					
 					// Find the position to be replaced
 					for( i = 0; i < fDomains[id].fNumLeastFit; i++ )
-						if( c->Fitness() < fDomains[id].fLeastFit[i]->Fitness() )	// worse than the one in this slot
+						if( c->HeuristicFitness() < fDomains[id].fLeastFit[i]->HeuristicFitness() )	// worse than the one in this slot
 							break;
 					
 					if( i < fDomains[id].fNumLeastFit )
@@ -2395,7 +2371,7 @@ void TSimulation::Interact()
 					
 					// Store the new i-th worst
 					fDomains[id].fLeastFit[i] = c;
-					smPrint( "critter %ld added to least fit list for domain %d at position %d with fitness %g\n", c->Number(), id, i, c->Fitness() );
+					smPrint( "critter %ld added to least fit list for domain %d at position %d with fitness %g\n", c->Number(), id, i, c->HeuristicFitness() );
 				}
 			}
 		}
@@ -2427,7 +2403,7 @@ void TSimulation::Interact()
 		{
 			printf( "At age %ld in domain %d (c,n,c->fit) =", fStep, id );
 			for( i = 0; i < fDomains[id].fNumLeastFit; i++ )
-				printf( " (%08lx,%ld,%5.2f)", (ulong) fDomains[id].fLeastFit[i], fDomains[id].fLeastFit[i]->Number(), fDomains[id].fLeastFit[i]->Fitness() );
+				printf( " (%08lx,%ld,%5.2f)", (ulong) fDomains[id].fLeastFit[i], fDomains[id].fLeastFit[i]->Number(), fDomains[id].fLeastFit[i]->HeuristicFitness() );
 			printf( "\n" );
 		}
 	}
@@ -2530,7 +2506,7 @@ void TSimulation::Interact()
 
 				e->Genes()->Crossover(c->Genes(), d->Genes(), true);
 				e->grow( RecordBrainAnatomy( e->Number() ), RecordBrainFunction( e->Number() ) );
-				float eenergy = c->mating(fMateFitnessParameter, fMateWait) + d->mating(fMateFitnessParameter, fMateWait);
+				float eenergy = c->mating( fMateFitnessParameter, fMateWait ) + d->mating( fMateFitnessParameter, fMateWait );
 				float minenergy = fMinMateFraction * ( c->MaxEnergy() + d->MaxEnergy() ) * 0.5;	// just a modest, reasonable amount; this doesn't really matter in lockstep mode
 				if( eenergy < minenergy )
 					eenergy = minenergy;
@@ -2624,7 +2600,13 @@ void TSimulation::Interact()
 
             // so if we get here, then c & d are close enough in x to interact
 
-            if( fabs(d->z() - c->z()) < (d->radius() + c->radius()) )
+			// We used to test only on delta z at this point, thereby using manhattan distance to permit interaction
+			// now modified to use actual distances to tighten things up a little (particularly visible in "toy world"
+			// simulations).  Since we are basing interactions on circumscribing circles, agents may still interact
+			// without having an actual overlap of polygons, but using actual distances reduces the range over which
+			// this may happen and should reduce the number of such incidents.
+//			if( fabs(d->z() - c->z()) < (d->radius() + c->radius()) )
+			if( sqrt( (d->x()-c->x())*(d->x()-c->x()) + (d->z()-c->z())*(d->z()-c->z()) ) <= (d->radius() + c->radius()) )
             {
                 // and if we get here then they are also close enough in z,
                 // so must actually worry about their interaction
@@ -2635,17 +2617,18 @@ void TSimulation::Interact()
 
 				// now take care of mating
 
+				// first test to see if these two critters are attempting to mate and allowed to do so (based on their own states)
 			#ifdef OF1
-                if ( (c->Mate() > fMateThreshold) &&
-                     (d->Mate() > fMateThreshold) &&          // it takes two!
-                     ((c->Age() - c->LastMate()) >= fMateWait) &&
-                     ((d->Age() - d->LastMate()) >= fMateWait) &&  // and some time
-                     (c->Energy() > fMinMateFraction * c->MaxEnergy()) &&
-                     (d->Energy() > fMinMateFraction * d->MaxEnergy()) && // and energy
+				if ( (c->Mate() > fMateThreshold) &&
+					 (d->Mate() > fMateThreshold) &&          // it takes two!
+					 ((c->Age() - c->LastMate()) >= fMateWait) &&
+					 ((d->Age() - d->LastMate()) >= fMateWait) &&  // and some time
+					 (c->Energy() > fMinMateFraction * c->MaxEnergy()) &&
+					 (d->Energy() > fMinMateFraction * d->MaxEnergy()) && // and energy
 					 ((fEatMateSpan == 0) || ((c->LastEat()-fStep < fEatMateSpan) && (d->LastEat()-fStep < fEatMateSpan))) &&	// and they've eaten recently enough (if we're enforcing that)
-                     (kd == 1) && (jd == 1) ) // in the safe domain
+					 (kd == 1) && (jd == 1) ) // in the safe domain
 			#else
-                if( !fLockStepWithBirthsDeathsLog &&
+				if( !fLockStepWithBirthsDeathsLog &&
 					(c->Mate() > fMateThreshold) &&
 					(d->Mate() > fMateThreshold) &&          // it takes two!
 					((c->Age() - c->LastMate()) >= fMateWait) &&
@@ -2654,156 +2637,184 @@ void TSimulation::Interact()
 					(d->Energy() > fMinMateFraction * d->MaxEnergy()) &&	// and energy
 					((fEatMateSpan == 0) || ((fStep-c->LastEat() < fEatMateSpan) && (fStep-d->LastEat() < fEatMateSpan))) )	// and they've eaten recently enough (if we're enforcing that)
 			#endif
-                {
-                    kd = WhichDomain(0.5*(c->x()+d->x()),
-                                     0.5*(c->z()+d->z()),
-                                     kd);
-
-					bool smited = false;
-
-					if( fSmiteMode == 'L' )		// smite the least fit
-					{
-						if( (fDomains[kd].numCritters >= fDomains[kd].maxNumCritters) &&	// too many critters to reproduce withing a bit of smiting
-							(fDomains[kd].fNumLeastFit > fDomains[kd].fNumSmited) )			// we've still got some left that are suitable for smiting
-						{
-							while( (fDomains[kd].fNumSmited < fDomains[kd].fNumLeastFit) &&		// there are any left to smite
-								  ((fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] == c) ||	// trying to smite mommy
-								   (fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] == d) ||	// trying to smite daddy
-								   ((fCurrentFittestCount > 0) && (fDomains[kd].fLeastFit[fDomains[kd].fNumSmited]->Fitness() >= fCurrentMaxFitness[fCurrentFittestCount-1]))) )	// trying to smite one of the fittest
-							{
-								// We would have smited one of our mating pair, or one of the fittest, which wouldn't be prudent,
-								// so just step over them and see if there's someone else to smite
-								fDomains[kd].fNumSmited++;
-							}
-							if( fDomains[kd].fNumSmited < fDomains[kd].fNumLeastFit )	// we've still got someone to smite, so do it
-							{
-								smPrint( "About to smite least-fit critter #%d in domain %d\n", fDomains[kd].fLeastFit[fDomains[kd].fNumSmited]->Number(), kd );
-								Death( fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] );
-								fDomains[kd].fNumSmited++;
-								fNumberDiedSmite++;
-								smited = true;
-								//cout << "********************* SMITE *******************" nlf;	//dbg
-							}
-						}
-					}
-					else if( fSmiteMode == 'R' )				/// RANDOM SMITE
-					{
-						// If necessary, smite a random critter in this domain
-						if( fDomains[kd].numCritters >= fDomains[kd].maxNumCritters )
-						{
-							int i = 0;
-							critter* testCritter;
-							critter* randCritter = NULL;
-							int randomIndex = int( floor( drand48() * fDomains[kd].numCritters ) );	// pick from this domain
-
-							gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();	// save the state of the x-sorted list
-
-							// As written, randCritter may not actually be the randomIndex-th critter in the domain, but it will be close,
-							// and as long as there's a single legitimate critter for smiting (right domain, old enough, and not one of the
-							// parents), we will find and smite it
-							objectxsortedlist::gXSortedObjects.reset();
-							while( (i <= randomIndex) && objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &testCritter ) )
-							{
-								// If it's from the right domain, it's old enough, and it's not one of the parents, allow it
-								if( testCritter->Domain() == kd )
-								{
-									i++;	// if it's in the right domain, increment even if we're not allowed to smite it
-									
-									if( (testCritter->Age() > fSmiteAgeFrac*testCritter->MaxAge()) && (testCritter->Number() != c->Number()) && (testCritter->Number() != d->Number()) )
-										randCritter = testCritter;	// as long as there's a single legitimate critter for smiting in this domain, randCriter will be non-NULL
-								}
-								
-								if( (i > randomIndex) && (randCritter != NULL) )
-									break;
-							}
-																
-							objectxsortedlist::gXSortedObjects.setcurr( saveCurr );	// restore the state of the x-sorted list
-							
-							if( randCritter )	// if we found any legitimately smitable critter...
-							{
-								fDomains[kd].fNumSmited++;
-								fNumberDiedSmite++;
-								smited = true;
-								Death( randCritter );
-							}
-							
-						}
-						
-					}
-
+				{
+					// the critters are mate-worthy, so now deal with other conditions...
 					
-                    if ( (fDomains[kd].numCritters < fDomains[kd].maxNumCritters) &&
-                         (objectxsortedlist::gXSortedObjects.getCount( CRITTERTYPE ) < fMaxCritters) )
-                    {
-						// Still got room for more
-                        if( (fMiscCritters < 0) ||									// miscegenation function not being used
-							(fDomains[kd].numbornsincecreated < fMiscCritters) ||	// miscegenation function not in use yet
-							(drand48() < c->MateProbability(d)) )					// miscegenation function allows the birth
-                        {
-							ttPrint( "age %ld: critters # %ld & %ld are mating\n", fStep, c->Number(), d->Number() );
-                            fNumBornSinceCreated++;
-                            fDomains[kd].numbornsincecreated++;
-							
-                            critter* e = critter::getfreecritter(this, &fStage);
-                            Q_CHECK_PTR(e);
-
-                            e->Genes()->Crossover(c->Genes(), d->Genes(), true);
-                            e->grow( RecordBrainAnatomy( e->Number() ), RecordBrainFunction( e->Number() ) );
-                            float eenergy = c->mating(fMateFitnessParameter, fMateWait) + d->mating(fMateFitnessParameter, fMateWait);
-                            e->Energy(eenergy);
-                            e->FoodEnergy(eenergy);
-                            e->settranslation(0.5*(c->x() + d->x()),
-                                              0.5*(c->y() + d->y()),
-                                              0.5*(c->z() + d->z()));
-                            e->setyaw( AverageAngles(c->yaw(), d->yaw()) );	// wrong: 0.5*(c->yaw() + d->yaw()));   // was (360.0*drand48());
-                            e->Domain(kd);
-                            fStage.AddObject(e);
-							gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();
-							objectxsortedlist::gXSortedObjects.add(e); // Add the new critter directly to the list of objects (no new critter list); the e->listLink that gets auto stored here should be valid immediately
-							objectxsortedlist::gXSortedObjects.setcurr( saveCurr );
-							
-							newlifes++;
-							//newCritters.add(e); // add it to the full list later; the e->listLink that gets auto stored here must be replaced with one from full list below
-                            fDomains[kd].numCritters++;
-                            fNumberBorn++;
-                            fDomains[kd].numborn++;
-							fNeuronGroupCountStats.add( e->Brain()->NumNeuronGroups() );
-							ttPrint( "age %ld: critter # %ld is born\n", fStep, e->Number() );
-							birthPrint( "step %ld: critter # %ld born to %ld & %ld, at (%g,%g,%g), yaw=%g, energy=%g, domain %d (%d & %d), neurgroups=%d\n",
-										fStep, e->Number(), c->Number(), d->Number(), e->x(), e->y(), e->z(), e->yaw(), e->Energy(), kd, id, jd, e->Brain()->NumNeuronGroups() );
-							//if( fStep > 50 )
-							//	exit( 0 );
-#if SPIKING_MODEL
-						if (drand48() >= .5)
-							e->Brain()->scale_latest_spikes = c->Brain()->scale_latest_spikes;
+					// test for steady-state GA vs. natural selection
+					if( (fHeuristicFitnessWeight != 0.0) || (fComplexityFitnessWeight != 0.0) )
+					{
+						// we're using the steady state GA (instead of natural selection)
+						if( fHeuristicFitnessWeight != 0.0 )
+						{
+							// we're using the heuristic fitness function, so allow virtual offspring
+							// (count would-be offspring towards fitness, but don't actually instantiate them)
+							(void) c->mating( fMateFitnessParameter, fMateWait );
+							(void) d->mating( fMateFitnessParameter, fMateWait );
+							cout << "t=" << fStep sp "mating c=" << c->Number() sp "(m=" << c->Mate() << ",lm=" << c->LastMate() << ",e=" << c->Energy() << ",x=" << c->x() << ",z=" << c->z() << ",r=" << c->radius() << ")" nl;
+							cout << "          & d=" << d->Number() sp "(m=" << d->Mate() << ",lm=" << d->LastMate() << ",e=" << d->Energy() << ",x=" << d->x() << ",z=" << d->z() << ",r=" << d->radius() << ")" nl;
+							if( sqrt((d->x()-c->x())*(d->x()-c->x())+(d->z()-c->z())*(d->z()-c->z())) > (d->radius()+c->radius()) )
+								cout << "            ***** no overlap *****" nl;
+							fNumberBornVirtual++;
+						}
 						else
-							e->Brain()->scale_latest_spikes = d->Brain()->scale_latest_spikes;
-						printf("%f\n", e->Brain()->scale_latest_spikes);
-#endif							
-							if( fRecordBirthsDeaths )
+						{
+							// we're not using the heuristic fitness function, so just disable the mating process altogether
+						}
+					}
+					else
+					{
+						// we're using natural selection (or are lockstepped to a previous natural selection run),
+						// so proceed with the normal mating process (attempt to mate for offspring production if there's room)
+						kd = WhichDomain(0.5*(c->x()+d->x()),
+										 0.5*(c->z()+d->z()),
+										 kd);
+
+						bool smited = false;
+
+						if( fSmiteMode == 'L' )		// smite the least fit
+						{
+							if( (fDomains[kd].numCritters >= fDomains[kd].maxNumCritters) &&	// too many critters to reproduce withing a bit of smiting
+								(fDomains[kd].fNumLeastFit > fDomains[kd].fNumSmited) )			// we've still got some left that are suitable for smiting
 							{
-								FILE * File;
-							
-								if( (File = fopen("run/BirthsDeaths.log", "a")) == NULL )
+								while( (fDomains[kd].fNumSmited < fDomains[kd].fNumLeastFit) &&		// there are any left to smite
+									  ((fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] == c) ||	// trying to smite mommy
+									   (fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] == d) ||	// trying to smite daddy
+									   ((fCurrentFittestCount > 0) && (fDomains[kd].fLeastFit[fDomains[kd].fNumSmited]->HeuristicFitness() >= fCurrentMaxFitness[fCurrentFittestCount-1]))) )	// trying to smite one of the fittest
 								{
-									cerr << "could not open run/BirthsDeaths.log for writing [1]. Exiting." << endl;
-									exit(1);
+									// We would have smited one of our mating pair, or one of the fittest, which wouldn't be prudent,
+									// so just step over them and see if there's someone else to smite
+									fDomains[kd].fNumSmited++;
+								}
+								if( fDomains[kd].fNumSmited < fDomains[kd].fNumLeastFit )	// we've still got someone to smite, so do it
+								{
+									smPrint( "About to smite least-fit critter #%d in domain %d\n", fDomains[kd].fLeastFit[fDomains[kd].fNumSmited]->Number(), kd );
+									Death( fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] );
+									fDomains[kd].fNumSmited++;
+									fNumberDiedSmite++;
+									smited = true;
+									//cout << "********************* SMITE *******************" nlf;	//dbg
+								}
+							}
+						}
+						else if( fSmiteMode == 'R' )				/// RANDOM SMITE
+						{
+							// If necessary, smite a random critter in this domain
+							if( fDomains[kd].numCritters >= fDomains[kd].maxNumCritters )
+							{
+								int i = 0;
+								critter* testCritter;
+								critter* randCritter = NULL;
+								int randomIndex = int( floor( drand48() * fDomains[kd].numCritters ) );	// pick from this domain
+
+								gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();	// save the state of the x-sorted list
+
+								// As written, randCritter may not actually be the randomIndex-th critter in the domain, but it will be close,
+								// and as long as there's a single legitimate critter for smiting (right domain, old enough, and not one of the
+								// parents), we will find and smite it
+								objectxsortedlist::gXSortedObjects.reset();
+								while( (i <= randomIndex) && objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &testCritter ) )
+								{
+									// If it's from the right domain, it's old enough, and it's not one of the parents, allow it
+									if( testCritter->Domain() == kd )
+									{
+										i++;	// if it's in the right domain, increment even if we're not allowed to smite it
+										
+										if( (testCritter->Age() > fSmiteAgeFrac*testCritter->MaxAge()) && (testCritter->Number() != c->Number()) && (testCritter->Number() != d->Number()) )
+											randCritter = testCritter;	// as long as there's a single legitimate critter for smiting in this domain, randCriter will be non-NULL
+									}
+									
+									if( (i > randomIndex) && (randCritter != NULL) )
+										break;
+								}
+																	
+								objectxsortedlist::gXSortedObjects.setcurr( saveCurr );	// restore the state of the x-sorted list
+								
+								if( randCritter )	// if we found any legitimately smitable critter...
+								{
+									fDomains[kd].fNumSmited++;
+									fNumberDiedSmite++;
+									smited = true;
+									Death( randCritter );
 								}
 								
-								fprintf(File, "%ld BIRTH %ld %ld %ld\n", fStep, e->Number(), c->Number(), d->Number() );
-								
-								fclose(File);
 							}
-                        }
-                        else	// miscegenation function denied this birth
-						{
-							fBirthDenials++;
-                            fMiscDenials++;
+							
 						}
-                    }
-					else	// Too many critters
-						fBirthDenials++;
-                }
+
+						
+						if ( (fDomains[kd].numCritters < fDomains[kd].maxNumCritters) &&
+							 (objectxsortedlist::gXSortedObjects.getCount( CRITTERTYPE ) < fMaxCritters) )
+						{
+							// Still got room for more
+							if( (fMiscCritters < 0) ||									// miscegenation function not being used
+								(fDomains[kd].numbornsincecreated < fMiscCritters) ||	// miscegenation function not in use yet
+								(drand48() < c->MateProbability(d)) )					// miscegenation function allows the birth
+							{
+								ttPrint( "age %ld: critters # %ld & %ld are mating\n", fStep, c->Number(), d->Number() );
+								fNumBornSinceCreated++;
+								fDomains[kd].numbornsincecreated++;
+								
+								critter* e = critter::getfreecritter(this, &fStage);
+								Q_CHECK_PTR(e);
+
+								e->Genes()->Crossover(c->Genes(), d->Genes(), true);
+								e->grow( RecordBrainAnatomy( e->Number() ), RecordBrainFunction( e->Number() ) );
+								float eenergy = c->mating( fMateFitnessParameter, fMateWait ) + d->mating( fMateFitnessParameter, fMateWait );
+								e->Energy(eenergy);
+								e->FoodEnergy(eenergy);
+								e->settranslation(0.5*(c->x() + d->x()),
+												  0.5*(c->y() + d->y()),
+												  0.5*(c->z() + d->z()));
+								e->setyaw( AverageAngles(c->yaw(), d->yaw()) );	// wrong: 0.5*(c->yaw() + d->yaw()));   // was (360.0*drand48());
+								e->Domain(kd);
+								fStage.AddObject(e);
+								gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();
+								objectxsortedlist::gXSortedObjects.add(e); // Add the new critter directly to the list of objects (no new critter list); the e->listLink that gets auto stored here should be valid immediately
+								objectxsortedlist::gXSortedObjects.setcurr( saveCurr );
+								
+								newlifes++;
+								//newCritters.add(e); // add it to the full list later; the e->listLink that gets auto stored here must be replaced with one from full list below
+								fDomains[kd].numCritters++;
+								fNumberBorn++;
+								fDomains[kd].numborn++;
+								fNeuronGroupCountStats.add( e->Brain()->NumNeuronGroups() );
+								ttPrint( "age %ld: critter # %ld is born\n", fStep, e->Number() );
+								birthPrint( "step %ld: critter # %ld born to %ld & %ld, at (%g,%g,%g), yaw=%g, energy=%g, domain %d (%d & %d), neurgroups=%d\n",
+											fStep, e->Number(), c->Number(), d->Number(), e->x(), e->y(), e->z(), e->yaw(), e->Energy(), kd, id, jd, e->Brain()->NumNeuronGroups() );
+								//if( fStep > 50 )
+								//	exit( 0 );
+	#if SPIKING_MODEL
+							if (drand48() >= .5)
+								e->Brain()->scale_latest_spikes = c->Brain()->scale_latest_spikes;
+							else
+								e->Brain()->scale_latest_spikes = d->Brain()->scale_latest_spikes;
+							printf("%f\n", e->Brain()->scale_latest_spikes);
+	#endif							
+								if( fRecordBirthsDeaths )
+								{
+									FILE * File;
+								
+									if( (File = fopen("run/BirthsDeaths.log", "a")) == NULL )
+									{
+										cerr << "could not open run/BirthsDeaths.log for writing [1]. Exiting." << endl;
+										exit(1);
+									}
+									
+									fprintf(File, "%ld BIRTH %ld %ld %ld\n", fStep, e->Number(), c->Number(), d->Number() );
+									
+									fclose(File);
+								}
+							}
+							else	// miscegenation function denied this birth
+							{
+								fBirthDenials++;
+								fMiscDenials++;
+							}
+						}
+						else	// Too many critters
+							fBirthDenials++;
+					}	// steady-state GA vs. natural selection
+                }	// if critters are trying to mate
 			
 			
 
@@ -2998,25 +3009,25 @@ void TSimulation::Interact()
 
 		if( c->Age() >= (fSmiteAgeFrac * c->MaxAge()) )
 		{
-			fAverageFitness += c->Fitness();
+			fAverageFitness += c->HeuristicFitness();	// will divide by fTotalHeuristicFitness later
 			fNumAverageFitness++;
 		}
-        if( (fCurrentFittestCount < MAXFITNESSITEMS) || (c->Fitness() > fCurrentMaxFitness[fCurrentFittestCount-1]) )
+        if( (fCurrentFittestCount < MAXFITNESSITEMS) || (c->HeuristicFitness() > fCurrentMaxFitness[fCurrentFittestCount-1]) )
         {
-			if( (fCurrentFittestCount == 0) || ((c->Fitness() <= fCurrentMaxFitness[fCurrentFittestCount-1]) && (fCurrentFittestCount < MAXFITNESSITEMS)) )	// just append
+			if( (fCurrentFittestCount == 0) || ((c->HeuristicFitness() <= fCurrentMaxFitness[fCurrentFittestCount-1]) && (fCurrentFittestCount < MAXFITNESSITEMS)) )	// just append
 			{
-				fCurrentMaxFitness[fCurrentFittestCount] = c->Fitness();
+				fCurrentMaxFitness[fCurrentFittestCount] = c->HeuristicFitness();
 				fCurrentFittestCritter[fCurrentFittestCount] = c;
 				fCurrentFittestCount++;
 			#if DebugMaxFitness
-				printf( "appended critter %08lx (%4ld) to fittest list at position %d with fitness %g, count = %d\n", (ulong) c, c->Number(), fCurrentFittestCount-1, c->Fitness(), fCurrentFittestCount );
+				printf( "appended critter %08lx (%4ld) to fittest list at position %d with fitness %g, count = %d\n", (ulong) c, c->Number(), fCurrentFittestCount-1, c->HeuristicFitness(), fCurrentFittestCount );
 			#endif
 			}
 			else	// must insert
 			{
 				for( i = 0; i <  fCurrentFittestCount ; i++ )
 				{
-					if( c->Fitness() > fCurrentMaxFitness[i] )
+					if( c->HeuristicFitness() > fCurrentMaxFitness[i] )
 						break;
 				}
 				
@@ -3026,12 +3037,12 @@ void TSimulation::Interact()
 					fCurrentFittestCritter[j] = fCurrentFittestCritter[j-1];
 				}
 				
-				fCurrentMaxFitness[i] = c->Fitness();
+				fCurrentMaxFitness[i] = c->HeuristicFitness();
 				fCurrentFittestCritter[i] = c;
 				if( fCurrentFittestCount < MAXFITNESSITEMS )
 					fCurrentFittestCount++;
 			#if DebugMaxFitness
-				printf( "inserted critter %08lx (%4ld) into fittest list at position %ld with fitness %g, count = %d\n", (ulong) c, c->Number(), i, c->Fitness(), fCurrentFittestCount );
+				printf( "inserted critter %08lx (%4ld) into fittest list at position %ld with fitness %g, count = %d\n", (ulong) c, c->Number(), i, c->HeuristicFitness(), fCurrentFittestCount );
 			#endif
 			}
         }
@@ -3040,12 +3051,12 @@ void TSimulation::Interact()
 
 //	fAverageFitness /= critter::gXSortedCritters.count();
 	if( fNumAverageFitness > 0 )
-		fAverageFitness /= fNumAverageFitness;
+		fAverageFitness /= fNumAverageFitness * fTotalHeuristicFitness;
 
 #if DebugMaxFitness
 	printf( "At age %ld (c,n,fit,c->fit) =", fStep );
 	for( i = 0; i < fCurrentFittestCount; i++ )
-		printf( " (%08lx,%ld,%5.2f,%5.2f)", (ulong) fCurrentFittestCritter[i], fCurrentFittestCritter[i]->Number(), fCurrentMaxFitness[i], fCurrentFittestCritter[i]->Fitness() );
+		printf( " (%08lx,%ld,%5.2f,%5.2f)", (ulong) fCurrentFittestCritter[i], fCurrentFittestCritter[i]->Number(), fCurrentMaxFitness[i], fCurrentFittestCritter[i]->HeuristicFitness() );
 	printf( "\n" );
 #endif
 
@@ -3682,7 +3693,7 @@ void TSimulation::Death(critter* c)
 		 fBestRecentBrainAnatomyRecordFrequency	||
 		(fBrainAnatomyRecordSeeds && (c->Number() <= fInitNumCritters))
 	  )
-		c->Brain()->dumpAnatomical( "run/brain/anatomy", "death", c->Number(), c->Fitness() );
+		c->Brain()->dumpAnatomical( "run/brain/anatomy", "death", c->Number(), c->HeuristicFitness() );
 #endif
 
 	if( RecordBrainFunction( c->Number() ) )
@@ -3694,26 +3705,24 @@ void TSimulation::Death(critter* c)
 		rename( s, t );
 
 		// Virgil
-		if ( fUseComplexityAsFitnessFunc != 'O' )		// Are we using Complexity as a Fitness Function?  If so, set fitness = Complexity here
+		if ( fComplexityFitnessWeight > 0 )		// Are we using Complexity as a Fitness Function?  If so, set fitness = Complexity here
 		{
-			c->SetUnusedFitness( c->Fitness() );		// We might want the heuristic fitness later so lets store it somewhere.
-		#if UseMaxSpeedAsFitness
-			c->SetFitness( 0.01 / (c->MaxSpeed() + 0.01) );
-		#else
-			if( fUseComplexityAsFitnessFunc == 'D' )	// special case the difference of complexities case
+			if( fComplexityType == 'D' )	// special case the difference of complexities case
 			{
 				float pComplexity = CalcComplexity( t, 'P', 0 );
 				float iComplexity = CalcComplexity( t, 'I', 0 );
-				c->SetFitness( pComplexity - iComplexity );
+				c->SetComplexity( pComplexity - iComplexity );
 			}
-			else	// otherwise, fUseComplexityAsFitnessFunc has the right letter in it
-				c->SetFitness( CalcComplexity( t, fUseComplexityAsFitnessFunc, 0 ) );
-		#endif
+			else if( fComplexityType != 'Z' )	// avoid special hack case to evolve towards zero max velocity, for testing purposes only
+			{
+				// otherwise, fComplexityType has the right letter in it
+				c->SetComplexity( CalcComplexity( t, fComplexityType, 0 ) );
+			}
 		}
 	}
 	
-	// Maintain the current-fittest list
-	if( (fCurrentFittestCount > 0) && (c->Fitness() >= fCurrentMaxFitness[fCurrentFittestCount-1]) )	// a current-fittest critter is dying
+	// Maintain the current-fittest list based on heuristic fitness
+	if( (fCurrentFittestCount > 0) && (c->HeuristicFitness() >= fCurrentMaxFitness[fCurrentFittestCount-1]) )	// a current-fittest critter is dying
 	{
 		int haveFitCritter = 0;
 		for( int i = 0; i < fCurrentFittestCount; i++ )
@@ -3731,15 +3740,17 @@ void TSimulation::Death(critter* c)
 		}
 	}
 	
-	// Maintain a list of the fittest critters ever, for use in the online/steady-state GA
+	// Maintain a list of the fittest critters ever, for use in the online/steady-state GA,
+	// based on complete fitness, however it is currently being calculated
 	// First on a domain-by-domain basis...
     long newfit = 0;
     FitStruct* saveFit;
-    if( c->Fitness() > fDomains[id].fittest[fNumberFit-1]->fitness )
+	float cFitness = Fitness( c );
+    if( cFitness > fDomains[id].fittest[fNumberFit-1]->fitness )
     {
         for( short i = 0; i < fNumberFit; i++ )
         {
-            if( c->Fitness() > fDomains[id].fittest[i]->fitness )
+            if( cFitness > fDomains[id].fittest[i]->fitness )
 			{
 				newfit = i;
 				break;
@@ -3750,20 +3761,21 @@ void TSimulation::Death(critter* c)
         for( short i = fNumberFit - 1; i > newfit; i-- )
             fDomains[id].fittest[i] = fDomains[id].fittest[i-1];
         fDomains[id].fittest[newfit] = saveFit;						// reuse the old data structure, but replace its contents...
-        fDomains[id].fittest[newfit]->fitness = c->Fitness();
+        fDomains[id].fittest[newfit]->fitness = cFitness;
         fDomains[id].fittest[newfit]->genes->CopyGenes( c->Genes() );
 		fDomains[id].fittest[newfit]->critterID = c->Number();
-		gaPrint( "%5ld: new domain %d fittest[%ld] id=%4ld fitness=%7.3f\n", fStep, id, newfit, c->Number(), c->Fitness() );
+		fDomains[id].fittest[newfit]->complexity = c->Complexity();
+		gaPrint( "%5ld: new domain %d fittest[%ld] id=%4ld fitness=%7.3f complexity=%7.3f\n", fStep, id, newfit, c->Number(), cFitness, c->Complexity() );
     }
 
 	// Then on a whole-world basis...
-    if( c->Fitness() > fFittest[fNumberFit-1]->fitness )
+    if( cFitness > fFittest[fNumberFit-1]->fitness )
     {
 		oneOfTheBestSoFar = true;
 		
         for( short i = 0; i < fNumberFit; i++ )
         {
-            if( c->Fitness() > fFittest[i]->fitness )
+            if( cFitness > fFittest[i]->fitness )
 			{
 				newfit = i;
 				break;
@@ -3775,20 +3787,21 @@ void TSimulation::Death(critter* c)
         for( short i = fNumberFit - 1; i > newfit; i-- )
             fFittest[i] = fFittest[i - 1];
         fFittest[newfit] = saveFit;				// reuse the old data structure, but replace its contents...
-        fFittest[newfit]->fitness = c->Fitness();
+        fFittest[newfit]->fitness = cFitness;
         fFittest[newfit]->genes->CopyGenes( c->Genes() );
 		fFittest[newfit]->critterID = c->Number();
-		fFittest[newfit]->Complexity = 0.0;		// must zero out the Complexity so it is recalculated for the new critter
-		gaPrint( "%5ld: new global   fittest[%ld] id=%4ld fitness=%7.3f\n", fStep, newfit, c->Number(), c->Fitness() );
+		fFittest[newfit]->complexity = c->Complexity();
+		gaPrint( "%5ld: new global   fittest[%ld] id=%4ld fitness=%7.3f complexity=%7.3f\n", fStep, newfit, c->Number(), cFitness, c->Complexity() );
     }
 
-    if (c->Fitness() > fMaxFitness)
-        fMaxFitness = c->Fitness();
+    if (cFitness > fMaxFitness)
+        fMaxFitness = cFitness;
 	
-	// Keep a separate list of the recent fittest, purely for data-gathering purposes
+	// Keep a separate list of the recent fittest, purely for data-gathering purposes,
+	// also based on complete fitness, however it is being currently being calculated
 	// "Recent" means since the last archival recording of recent best, as determined by fBestRecentBrainAnatomyRecordFrequency
 	// (Don't bother, if we're not gathering that kind of data)
-    if( fBestRecentBrainAnatomyRecordFrequency && (c->Fitness() > fRecentFittest[fNumberRecentFit-1]->fitness) )
+    if( fBestRecentBrainAnatomyRecordFrequency && (cFitness > fRecentFittest[fNumberRecentFit-1]->fitness) )
     {
 		oneOfTheBestRecent = true;
 		
@@ -3801,7 +3814,7 @@ void TSimulation::Death(critter* c)
 			if( loserIDBestSoFar == fRecentFittest[i]->critterID )
 				loserIDBestSoFar = 0;
 			
-            if( c->Fitness() > fRecentFittest[i]->fitness )
+            if( cFitness > fRecentFittest[i]->fitness )
 			{
 				newfit = i;
 				break;
@@ -3822,13 +3835,15 @@ void TSimulation::Death(critter* c)
             fRecentFittest[i] = fRecentFittest[i - 1];
 		}
         fRecentFittest[newfit] = saveFit;				// reuse the old data structure, but replace its contents...
-        fRecentFittest[newfit]->fitness = c->Fitness();
+        fRecentFittest[newfit]->fitness = cFitness;
 //		fRecentFittest[newfit]->genes->CopyGenes( c->Genes() );	// we don't save the genes in the bestRecent list
 		fRecentFittest[newfit]->critterID = c->Number();
+		fRecentFittest[newfit]->complexity = c->Complexity();
     }
 
 	// Must also update the leastFit data structures, now that they
 	// are used on-demand in the main mate/fight/eat loop in Interact()
+	// As these are used during the critter's life, they must be based on the heuristic fitness function.
 	// Update the domain-specific leastFit list (only one, as we know which domain it's in)
 	for( int i = 0; i < fDomains[id].fNumLeastFit; i++ )
 	{
@@ -3836,7 +3851,7 @@ void TSimulation::Death(critter* c)
 			continue;
 
 		// one of our least-fit critters died, so pull in the list over it
-		smPrint( "removing critter %ld from the least fit list for domain %d at position %d with fitness %g (because it died)\n", c->Number(), id, i, c->Fitness() );
+		smPrint( "removing critter %ld from the least fit list for domain %d at position %d with fitness %g (because it died)\n", c->Number(), id, i, c->HeuristicFitness() );
 		for( int j = i; j < fDomains[id].fNumLeastFit-1; j++ )
 			fDomains[id].fLeastFit[j] = fDomains[id].fLeastFit[j+1];
 		fDomains[id].fNumLeastFit--;
@@ -3865,7 +3880,7 @@ void TSimulation::Death(critter* c)
 	  )
 	{
 	#if ! HackForProcessingUnitComplexity
-		c->Brain()->dumpAnatomical( "run/brain/anatomy", "death", c->Number(), c->Fitness() );
+		c->Brain()->dumpAnatomical( "run/brain/anatomy", "death", c->Number(), c->HeuristicFitness() );
 	#endif
 	}
 	else	// don't want brain anatomies for this critter, so must eliminate the "incept" and "birth" anatomies that were already recorded
@@ -4040,7 +4055,6 @@ void TSimulation::Death(critter* c)
 	// objectxsortedlist::gXSortedObjects.removeCurrentObject(); // get critter out of the list
 	
 	// Following assumes (requires!) the critter to have stored c->listLink correctly
-	//critter::gXSortedCritters.removeFastUnsafe( c->GetListLink() );
 	objectxsortedlist::gXSortedObjects.removeObjectWithLink( (gobject*) c );
 
 	
@@ -4052,6 +4066,51 @@ void TSimulation::Death(critter* c)
 	delete c;
 }
 
+
+//-------------------------------------------------------------------------------------------
+// TSimulation::Fitness
+//-------------------------------------------------------------------------------------------
+float TSimulation::Fitness( critter* c )
+{
+	float fitness = 0.0;
+	
+	if( c->Alive() )
+	{
+		cerr << "Error: Simulation's Fitness(critter) function called while critter is still alive" nl;
+		exit(1);
+	}
+	
+	if( fComplexityFitnessWeight == 0.0 )	// complexity as fitness is turned off
+	{
+		fitness = c->HeuristicFitness() / fTotalHeuristicFitness;
+	}
+	else if( fComplexityType == 'Z' )	// hack to evolve towards zero velocity, for testing purposes only
+	{
+		fitness = 0.01 / (c->MaxSpeed() + 0.01);
+	}
+	else	// we are using complexity as a fitness function (and may be using heuristic fitness too)
+	{
+		if( c->Complexity() == 0.0 )
+		{
+			char filename[256];
+			sprintf( filename, "run/brain/function/brainFunction_%ld.txt", c->Number() );
+			if( fComplexityType == 'D' )	// difference between I and P complexity being used for fitness
+			{
+				float pComplexity = CalcComplexity( filename, 'P', 0 );
+				float iComplexity = CalcComplexity( filename, 'I', 0 );
+				c->SetComplexity( pComplexity - iComplexity );
+			}
+			else	// fComplexityType contains the appropriate character to select the type of complexity
+				c->SetComplexity( CalcComplexity( filename, fComplexityType, 0 ) );
+		}
+		// fitness is normalized (by the sum of the weights) after doing a weighted sum of normalized heuristic fitness and complexity
+		// (Complexity runs between 0.0 and 1.0 in the early simulations.  Is there a way to guarantee this?  Do we want to?)
+		fitness = (fHeuristicFitnessWeight*c->HeuristicFitness()/fTotalHeuristicFitness + fComplexityFitnessWeight*c->Complexity()) / (fHeuristicFitnessWeight+fComplexityFitnessWeight);
+		cout << "fitness" eql fitness sp "hwt" eql fHeuristicFitnessWeight sp "hf" eql c->HeuristicFitness()/fTotalHeuristicFitness sp "cwt" eql fComplexityFitnessWeight sp "cf" eql c->Complexity() nl;
+	}
+	
+	return( fitness );
+}
 
 //-------------------------------------------------------------------------------------------
 // TSimulation::ReadWorldFile
@@ -4192,7 +4251,7 @@ void TSimulation::ReadWorldFile(const char* filename)
     cout << "energyfitparam" ses fEnergyFitnessParameter nl;
     in >> fAgeFitnessParameter; in >> label;
     cout << "agefitparam" ses fAgeFitnessParameter nl;
-  	fTotalFitness = fEatFitnessParameter + fMateFitnessParameter + fMoveFitnessParameter + fEnergyFitnessParameter + fAgeFitnessParameter;
+  	fTotalHeuristicFitness = fEatFitnessParameter + fMateFitnessParameter + fMoveFitnessParameter + fEnergyFitnessParameter + fAgeFitnessParameter;
     in >> food::gMinFoodEnergy; in >> label;
     cout << "minfoodenergy" ses food::gMinFoodEnergy nl;
     in >> food::gMaxFoodEnergy; in >> label;
@@ -4963,38 +5022,51 @@ void TSimulation::ReadWorldFile(const char* filename)
 			}
 		}
 		
-		in >> fUseComplexityAsFitnessFunc; in >> label;
+		in >> fComplexityType; in >> label;
 		if( version < 28 )
 		{
-			if( fUseComplexityAsFitnessFunc == '0' )	// zero used to mean off
-				fUseComplexityAsFitnessFunc = 'O';
+			if( fComplexityType == '0' )	// zero used to mean off
+				fComplexityType = 'O';
 			else
-				fUseComplexityAsFitnessFunc = 'P';	// on used to assume processing complexity
+				fComplexityType = 'P';	// on used to assume processing complexity
 		}
-		cout << "UseComplexityAsFitnessFunction" ses fUseComplexityAsFitnessFunc nl;
+		cout << "complexityType" ses fComplexityType nl;
 
-		if( fUseComplexityAsFitnessFunc != 'O' )
+		if( version >= 30 )
+		{
+			in >> fComplexityFitnessWeight; in >> label;
+			in >> fHeuristicFitnessWeight; in >> label;
+		}
+		else
+		{
+			if( fComplexityType == 'O' )		// 'O' meant complexity as a fitness function was off
+				fComplexityFitnessWeight = 0.0;	// so set the complexity fitness weight to zero (turn it off)
+			else
+				fComplexityFitnessWeight = 1.0;	// any other complexity type used to mean use it as the fitness function
+			fHeuristicFitnessWeight = 0.0;		// heuristic fitness as an actual fitness function didn't used to exist
+		}
+		cout << "complexityFitnessWeight" ses fComplexityFitnessWeight nl;
+		cout << "heuristicFitnessWeight" ses fHeuristicFitnessWeight nl;
+
+		if( fComplexityFitnessWeight > 0.0 )
 		{
 			if( ! fRecordComplexity )		//Not Recording Complexity?
 			{
 				cerr << "Warning: Attempted to use Complexity as fitness func without recording Complexity.  Turning on RecordComplexity." nl;
 				fRecordComplexity = true;
 			}
-		
 			if( ! fBrainFunctionRecordAll )	//Not recording BrainFunction?
 			{
 				cerr << "Warning: Attempted to use Complexity as fitness func without recording brain function.  Turning on RecordBrainFunctionAll." nl;
 				fBrainFunctionRecordAll = true;
 			}
-
 			if( ! fBrainAnatomyRecordAll )
 			{
 				cerr << "Warning: Attempted to use Complexity as fitness func without recording brain anatomy.  Turning on RecordBrainAnatomyAll." nl;
 				fBrainAnatomyRecordAll = true;				
 			}
-
 		}
-
+		
 		if( version >= 20 )
 		{
 			in >> fRecordAdamiComplexity; in >> label;
@@ -5076,8 +5148,8 @@ void TSimulation::ReadWorldFile(const char* filename)
 		cout << "  ApplyLowPopulationAdvantage" ses fApplyLowPopulationAdvantage nl;
 	}
 	
-	// If this is a complexity-as-fitness run, then we need to force certain parameter values (and warn the user)
-	if( fUseComplexityAsFitnessFunc != 'O' )
+	// If this is a steady-state GA run, then we need to force certain parameter values (and warn the user)
+	if( (fHeuristicFitnessWeight != 0.0) || (fComplexityFitnessWeight != 0) )
 	{
 		fNumberToSeed = lrint( fMaxCritters * (float) fNumberToSeed / fInitNumCritters );	// same proportion as originally specified (must calculate before changing fInitNumCritters)
 		if( fNumberToSeed > fMaxCritters )	// just to be safe
@@ -5085,7 +5157,7 @@ void TSimulation::ReadWorldFile(const char* filename)
 		fInitNumCritters = fMaxCritters;	// population starts at maximum
 		fMinNumCritters = fMaxCritters;		// population stays at mximum
 		fProbabilityOfMutatingSeeds = 1.0;	// so there is variation in the initial population
-		fMateThreshold = 1.5;				// so they can't reproduce on their own
+//		fMateThreshold = 1.5;				// so they can't reproduce on their own
 
 		for( int i = 0; i < fNumDomains; i++ )	// over all domains
 		{
@@ -5101,14 +5173,12 @@ void TSimulation::ReadWorldFile(const char* filename)
 		critter::gMaxPopulationPenaltyFraction = 0.0;	// ditto
 		fApplyLowPopulationAdvantage = false;			// turn off the low-population advantage
 		
-		fRecordComplexity = true;						// record it, since we have to compute it
-
-		cout << "Due to running with Complexity as the fitness function, the following parameter values have been forcibly reset as indicated:" nl;
+		cout << "Due to running as a steady-state GA with a fitness function, the following parameter values have been forcibly reset as indicated:" nl;
 		cout << "  InitNumCritters" ses fInitNumCritters nl;
 		cout << "  MinNumCritters" ses fMinNumCritters nl;
 		cout << "  NumberToSeed" ses fNumberToSeed nl;
 		cout << "  ProbabilityOfMutatingSeeds" ses fProbabilityOfMutatingSeeds nl;
-		cout << "  MateThreshold" ses fMateThreshold nl;
+//		cout << "  MateThreshold" ses fMateThreshold nl;
 		for( int i = 0; i < fNumDomains; i++ )
 		{
 			cout << "  Domain " << i << ":" nl;
@@ -5120,7 +5190,13 @@ void TSimulation::ReadWorldFile(const char* filename)
 		cout << "  NumDepletionSteps" ses critter::gNumDepletionSteps nl;
 		cout << "  .MaxPopulationPenaltyFraction" ses critter::gMaxPopulationPenaltyFraction nl;
 		cout << "  ApplyLowPopulationAdvantage" ses fApplyLowPopulationAdvantage nl;
-		cout << "  RecordComplexity" ses fRecordComplexity nl;
+		
+		if( fComplexityFitnessWeight != 0.0 )
+		{
+			cout << "Due to running with Complexity as a fitness function, the following parameter values have been forcibly reset as indicated:" nl;
+			fRecordComplexity = true;						// record it, since we have to compute it
+			cout << "  RecordComplexity" ses fRecordComplexity nl;
+		}
 	}
 
 	cout nlf;
@@ -5160,6 +5236,7 @@ void TSimulation::Dump()
     out << fNumberDiedEdge nl;
 	out << fNumberDiedSmite nl;
     out << fNumberBorn nl;
+	out << fNumberBornVirtual nl;
     out << fNumberFights nl;
     out << fMiscDenials nl;
     out << fLastCreated nl;
@@ -5392,6 +5469,12 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 		strcat(t,")" );
 	}
 	list.push_back( strdup( t ) );
+	
+	if( fHeuristicFitnessWeight != 0.0 )
+	{
+		sprintf( t, "born(v)  = %4ld", fNumberBornVirtual );
+		list.push_back( strdup( t ) );
+	}
 
 	sprintf( t, "died     = %4ld", fNumberDied );
 	if (fNumDomains > 1)
@@ -5457,14 +5540,17 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 	}
 	list.push_back( strdup( t ) );
 
-	sprintf( t, "born/total = %.2f", float(fNumberBorn) / float(fNumberCreated + fNumberBorn) );
+	if( fHeuristicFitnessWeight != 0.0 )
+		sprintf( t, "born(v)/(c+bv) = %.2f", float(fNumberBornVirtual) / float(fNumberCreated + fNumberBornVirtual) );
+	else
+		sprintf( t, "born/total = %.2f", float(fNumberBorn) / float(fNumberCreated + fNumberBorn) );
 	list.push_back( strdup( t ) );
 
-	sprintf( t, "Fitness m=%.2f, c=%.2f, a=%.2f", fMaxFitness, fCurrentMaxFitness[0], fAverageFitness );
+	sprintf( t, "Fitness m=%.2f, c=%.2f, a=%.2f", fMaxFitness, fCurrentMaxFitness[0] / fTotalHeuristicFitness, fAverageFitness );
 	list.push_back( strdup( t ) );
 	
-	sprintf( t, "NormFit m=%.2f, c=%.2f, a=%.2f", fMaxFitness / fTotalFitness, fCurrentMaxFitness[0] / fTotalFitness, fAverageFitness / fTotalFitness );
-	list.push_back( strdup( t ) );
+//	sprintf( t, "NormFit m=%.2f, c=%.2f, a=%.2f", fMaxFitness / fTotalHeuristicFitness, fCurrentMaxFitness[0] / fTotalHeuristicFitness, fAverageFitness / fTotalHeuristicFitness );
+//	list.push_back( strdup( t ) );
 	
 	sprintf( t, "Fittest =" );
 	int fittestCount = min( 5, min( fNumberFit, (int) fNumberDied ));
@@ -5499,7 +5585,7 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 		sprintf( t, " " );
 		for( int i = 0; i < fCurrentFittestCount; i++ )
 		{
-			sprintf( t2, "  %.2f", fCurrentFittestCritter[i]->Fitness() );
+			sprintf( t2, "  %.2f", fCurrentFittestCritter[i]->HeuristicFitness() / fTotalHeuristicFitness );
 			strcat( t, t2 );
 		}
 		list.push_back( strdup( t ) );

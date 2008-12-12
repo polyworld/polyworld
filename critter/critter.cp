@@ -252,7 +252,7 @@ critter::critter(TSimulation* sim, gstage* stage)
 		fSimulation(sim),
 		fAlive(false), 		// must grow() to be truly alive
 		fMass(0.0), 		// mass - not used
-		fFitness(0.0),  	// crude guess for keeping minimum population early on
+		fHeuristicFitness(0.0),  	// crude guess for keeping minimum population early on
 		fGenome(NULL),
 		fBrain(NULL),
 		fBrainFuncFile(NULL)
@@ -316,7 +316,7 @@ void critter::dump(ostream& out)
     out << fLastPosition[0] sp fLastPosition[1] sp fLastPosition[2] nl;
     out << fVelocity[0] sp fVelocity[1] sp fVelocity[2] nl;
     out << fNoseColor[0] sp fNoseColor[1] sp fNoseColor[2] nl;
-    out << fFitness nl;
+    out << fHeuristicFitness nl;
 
     gobject::dump(out);
 
@@ -349,7 +349,7 @@ void critter::load(istream& in)
     in >> fLastPosition[0] >> fLastPosition[1] >> fLastPosition[2];
     in >> fVelocity[0] >> fVelocity[1] >> fVelocity[2];
     in >> fNoseColor[0] >> fNoseColor[1] >> fNoseColor[2];
-    in >> fFitness;
+    in >> fHeuristicFitness;
 
     gobject::load(in);
 
@@ -470,7 +470,7 @@ float critter::eat(food* f, float eatFitnessParameter, float eat2consume, float 
 			fFoodEnergy = fMaxEnergy;
 		}
 				
-		fFitness += eatFitnessParameter * actuallyeat / (eat2consume * fGenome->Lifespan());
+		fHeuristicFitness += eatFitnessParameter * actuallyeat / (eat2consume * fGenome->Lifespan());
 		
 		if( actuallyeat > 0.0 )
 			fLastEat = step;
@@ -501,11 +501,17 @@ float critter::MateProbability(critter* c)
 
 //---------------------------------------------------------------------------
 // critter::mating
+//
+// Note:  This function must remain valid whether we are doing a virtual
+// or a real birth
 //---------------------------------------------------------------------------    
-float critter::mating(float fitness, long wait)
+float critter::mating( float mateFitnessParam, long mateWait )
 {
 	fLastMate = fAge;
-	fFitness += fitness * wait / fGenome->Lifespan();
+	
+	if( mateWait <= 0 )
+		mateWait = 1;
+	fHeuristicFitness += mateFitnessParam * mateWait / fGenome->Lifespan();
 	
 	float mymateenergy = fGenome->MateEnergy() * fEnergy;	
 	fEnergy -= mymateenergy;
@@ -520,7 +526,7 @@ float critter::mating(float fitness, long wait)
 //---------------------------------------------------------------------------        
 void critter::rewardmovement(float moveFitnessParam, float speed2dpos)
 {
-	fFitness += moveFitnessParam
+	fHeuristicFitness += moveFitnessParam
 				* (fabs(fPosition[0] - fLastPosition[0]) + fabs(fPosition[2] - fLastPosition[2]))
 				/ (fGenome->MaxSpeed() * speed2dpos * fGenome->Lifespan());
 }
@@ -531,22 +537,22 @@ void critter::rewardmovement(float moveFitnessParam, float speed2dpos)
 //---------------------------------------------------------------------------        
 void critter::lastrewards(float energyFitness, float ageFitness)
 {
-    fFitness += energyFitness * fEnergy / fMaxEnergy
+    fHeuristicFitness += energyFitness * fEnergy / fMaxEnergy
               + ageFitness * fAge / fGenome->Lifespan();
 }
     
  
 //---------------------------------------------------------------------------
-// critter::ProjectedFitness
+// critter::ProjectedHeuristicFitness
 //---------------------------------------------------------------------------        
-float critter::ProjectedFitness()
+float critter::ProjectedHeuristicFitness()
 {
 	if( fSimulation->LifeFractionSamples() >= 50 )
-		return( fFitness * fSimulation->LifeFractionRecent() * fGenome->Lifespan() / fAge +
+		return( fHeuristicFitness * fSimulation->LifeFractionRecent() * fGenome->Lifespan() / fAge +
 				fSimulation->EnergyFitnessParameter() * fEnergy / fMaxEnergy +
 				fSimulation->AgeFitnessParameter() * fSimulation->LifeFractionRecent() );
 	else
-		return( fFitness );
+		return( fHeuristicFitness );
 }
 
 //---------------------------------------------------------------------------
@@ -569,7 +575,7 @@ void critter::Die()
 
 	// If we're recording brain function, end it here
 	if( fBrainFuncFile )
-		fBrain->endFunctional( fBrainFuncFile, fFitness );
+		fBrain->endFunctional( fBrainFuncFile, fHeuristicFitness );
 	fBrainFuncFile = NULL;
 }
 
@@ -988,7 +994,7 @@ void critter::print()
     cout << "  fLengthX = " << fLengthX nl;
     cout << "  fLengthZ = " << fLengthZ nl;
     cout << "  fVelocity[0], fVelocity[2] = " << fVelocity[0] cms fVelocity[2] nl;
-    cout << "  fFitness = " << fFitness nl;
+    cout << "  fHeuristicFitness = " << fHeuristicFitness nl;
     
     if (fGenome != NULL)
     {

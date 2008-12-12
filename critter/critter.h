@@ -92,7 +92,7 @@ public:
     float eat(food* f, float eatFitnessParameter, float eat2consume, float eatthreshold, long step);
     void damage(float e);
     float MateProbability(critter* c);
-    float mating(float fitness, long wait);
+    float mating( float mateFitnessParam, long mateWait );
     void rewardmovement(float moveFitnessParam, float speed2dpos);
     void lastrewards(float energyFitness, float ageFitness);
     void Die();
@@ -130,9 +130,10 @@ public:
 	long LastEat();
     genome* Genes();
     long Number();
-	float TrueFitness();
-	float ProjectedFitness();
-    float Fitness();
+	float CurrentHeuristicFitness();
+	float ProjectedHeuristicFitness();
+	float HeuristicFitness();
+    float Complexity();
     virtual void print();
     float FieldOfView();
     short Domain();
@@ -160,8 +161,7 @@ public:
 
     //gdlink<critter*>* listLink;
 
-	void SetFitness( float value );			// Virgil
-	void SetUnusedFitness( float value );	// Virgil
+	void SetComplexity( float value );
 	
 	void Heal( float HealingRate, float minFoodEnergy );	//Virgil
 
@@ -204,8 +204,8 @@ protected:
 	float fSpeed;
 	float fMaxSpeed;
 
-    float fFitness;			// crude guess for keeping minimum population early on
-	float fUnusedFitness;	// Virgil: We put the heuristic fitness here when we're using Complexity as a Fitness Function.
+    float fHeuristicFitness;	// rough estimate along evolutionary biology lines
+	float fComplexity;
 	
     genome* fGenome;
     brain* fBrain;
@@ -256,12 +256,12 @@ inline long critter::LastEat() { return fLastEat; }
 inline genome* critter::Genes() { return fGenome; }
 inline long critter::Number() { return fCritterNumber; }
 // replace both occurences of 0.8 with actual estimate of fraction of lifespan critter will live
-inline float critter::TrueFitness() { return fFitness; }
-#define UseProjectedFitness 1
-#if UseProjectedFitness
-	inline float critter::Fitness() { return fAlive ? ProjectedFitness() : TrueFitness(); }
+inline float critter::CurrentHeuristicFitness() { return fHeuristicFitness; }
+#define UseProjectedHeuristicFitness 1
+#if UseProjectedHeuristicFitness
+	inline float critter::HeuristicFitness() { return fAlive ? ProjectedHeuristicFitness() : CurrentHeuristicFitness(); }
 #else
-	inline float critter::Fitness() { return fFitness; }
+	inline float critter::HeuristicFitness() { return CurrentHeuristicFitness(); }
 #endif
 inline short critter::Domain() { return fDomain; }
 inline void critter::Domain(short id) { fDomain = id; }
@@ -273,8 +273,8 @@ inline frustumXZ& critter::GetFrustum() { return fFrustum; }
 inline gpolyobj* critter::GetCritterObj() { return critterobj; }
 //inline gdlink<critter*>* critter::GetListLink() { return listLink; }
 
-inline void critter::SetFitness( float value ) { fFitness = value; } // Virgil
-inline void critter::SetUnusedFitness( float value ) { fUnusedFitness = value; } // Virgil
+inline void critter::SetComplexity( float value ) { fComplexity = value; }
+inline float critter::Complexity() { return fComplexity; }
 
 #endif
 

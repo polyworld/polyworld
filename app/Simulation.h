@@ -45,7 +45,7 @@ struct FitStruct
 {
 	ulong	critterID;
 	float	fitness;
-	float   Complexity;
+	float   complexity;
 	genome*	genes;
 };
 typedef struct FitStruct FitStruct;
@@ -96,11 +96,11 @@ class Domain
 	float probabilityOfMutatingSeeds;
     short ifit;
     short jfit;
-    FitStruct** fittest;
+    FitStruct** fittest;	// based on complete fitness, however it is being calculated in Fitness(c)
 	int fNumLeastFit;
 	int fMaxNumLeastFit;
 	int fNumSmited;
-	critter** fLeastFit;
+	critter** fLeastFit;	// based on heuristic fitness
 
 	FoodPatch* whichFoodPatch( float x, float z );
 };
@@ -381,6 +381,7 @@ private:
 	void ijfitinc(short* i, short* j);
 		
 	void Death(critter* inCritter);
+	float Fitness( critter* c );
 	
 	void ReadWorldFile(const char* filename);	
 	void Dump();
@@ -431,7 +432,9 @@ private:
 	bool fRecordGeneStats;
 	bool fRecordFoodPatchStats;
 	
-	char fUseComplexityAsFitnessFunc;	//Virgil	
+	char fComplexityType;
+	float fComplexityFitnessWeight;
+	float fHeuristicFitnessWeight;
 
 	long fNewDeaths;
 	
@@ -444,13 +447,13 @@ private:
 	float fCameraAngle;
 	float fCameraFOV;
 
-	critter* fCurrentFittestCritter[MAXFITNESSITEMS];
-	float fCurrentMaxFitness[MAXFITNESSITEMS];
+	critter* fCurrentFittestCritter[MAXFITNESSITEMS];	// based on heuristic fitness
+	float fCurrentMaxFitness[MAXFITNESSITEMS];	// based on heuristic fitness
 	int fCurrentFittestCount;
 	int fNumberFit;
-	FitStruct** fFittest;
+	FitStruct** fFittest;	// based on the complete fitness, however it is being calculated in Fitness(c)
 	int fNumberRecentFit;
-	FitStruct** fRecentFittest;
+	FitStruct** fRecentFittest;	// based on the complete fitness, however it is being calculated in Fitness(c)
 	long fFitness1Frequency;
 	long fFitness2Frequency;
 	short fFitI;
@@ -464,7 +467,7 @@ private:
 	float fMaxFitness;
 	ulong fNumAverageFitness;
 	float fAverageFitness;
-	float fTotalFitness;
+	float fTotalHeuristicFitness;
 	float fMateFitnessParameter;
 	float fMoveFitnessParameter;
 	float fEnergyFitnessParameter;
@@ -482,6 +485,7 @@ private:
 	float fFightThreshold;
 	
 	long fNumberBorn;
+	long fNumberBornVirtual;
 	long fNumberDied;
 	long fNumberDiedAge;
 	long fNumberDiedEnergy;
@@ -553,7 +557,7 @@ private:
 	int fNumLeastFit;
 	int fMaxNumLeastFit;
 	int fNumSmited;
-	critter** fLeastFit;
+	critter** fLeastFit;	// based on heuristic fitness
 	bool fShowVision;
 	bool fGraphics;
 	long fBrainMonitorStride;

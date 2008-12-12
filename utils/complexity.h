@@ -14,8 +14,8 @@
 #include <assert.h>
 
 // Turn on no more than one of the *Options flags
-#define VirgilOptions 1
-#define OlafOptions 0
+#define VirgilOptions 0
+#define OlafOptions 1
 
 #if VirgilOptions
 	// Virgil Suggests the Following Options:
