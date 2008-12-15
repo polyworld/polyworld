@@ -769,7 +769,7 @@ float critter::Update(float moveFitnessParam, float speed2dpos)
                      + fBrain->Mate()  * gMate2Energy
                      + fBrain->Fight() * gFight2Energy
                      + fBrain->Speed() * fSpeed2Energy
-                     + fBrain->Yaw()   * fYaw2Energy
+                     + fabs(2.0*fBrain->Yaw() - 1.0) * fYaw2Energy
                      + fBrain->Light() * gLight2Energy
                      + fBrain->BrainEnergy()
                      + gFixedEnergyDrain;
