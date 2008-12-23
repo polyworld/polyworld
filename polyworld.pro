@@ -91,10 +91,12 @@ win32 {
 					$(QT)/include/QtOpenGL				
 }
 								
-QMAKE_CFLAGS_DEBUG += -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC -Wno-deprecated
+QMAKE_CFLAGS_DEBUG += -D_GLIBCXX_DEBUG_PEDANTIC -Wno-deprecated
 QMAKE_CFLAGS += -Wno-deprecated
 
 macx {
+    # _GLIBCXX_DEBUG causes gdb problems on linux (bad in-memory datastructure layouts)
+	QMAKE_CFLAGS_DEBUG += -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC -Wno-deprecated
 	LIBS	+=	-F$(QT)/lib/ -L/sw/lib -framework QtOpenGL -framework OpenGL -framework AGL -lgsl -lgslcblas -lm
 }
 
