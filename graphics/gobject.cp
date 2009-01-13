@@ -5,6 +5,7 @@
 #include <cstring>
 #include <fstream>
 #include <iostream>
+#include <stdlib.h>
 
 // Local
 #include "gmisc.h"

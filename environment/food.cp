@@ -112,7 +112,7 @@ float food::eat(float e)
 //-------------------------------------------------------------------------------------------
 void food::initfood()
 {
-	fEnergy = drand48() * (gMaxFoodEnergy - gMinFoodEnergy) + gMinFoodEnergy;
+	fEnergy = randpw() * (gMaxFoodEnergy - gMinFoodEnergy) + gMinFoodEnergy;
 	initlen();
 	initpos();
 	initrest();
@@ -150,9 +150,9 @@ void food::initfood(float e, float x, float z)
 //-------------------------------------------------------------------------------------------    
 void food::initpos()
 {
-	fPosition[0] = drand48() * globals::worldsize;
+	fPosition[0] = randpw() * globals::worldsize;
 	fPosition[1] = 0.5 * fLength[1];
-	fPosition[2] = drand48() * globals::worldsize;
+	fPosition[2] = randpw() * globals::worldsize;
 }
 
 

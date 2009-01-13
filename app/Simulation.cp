@@ -1504,7 +1504,7 @@ void TSimulation::Init()
 				if( numSeededDomain < fDomains[id].numberToSeed )
 				{
 					c->Genes()->SeedGenes();
-					if( drand48() < fDomains[id].probabilityOfMutatingSeeds )
+					if( randpw() < fDomains[id].probabilityOfMutatingSeeds )
 						c->Genes()->Mutate();
 					numSeededDomain++;
 				}
@@ -1516,9 +1516,9 @@ void TSimulation::Init()
 				fFoodEnergyIn += c->FoodEnergy();
 				fStage.AddObject(c);
 				
-				float x = drand48() * (fDomains[id].absoluteSizeX - 0.02) + fDomains[id].startX + 0.01;
-				float z = drand48() * (fDomains[id].absoluteSizeZ - 0.02) + fDomains[id].startZ + 0.01;
-				//float z = -0.01 - drand48() * (globals::worldsize - 0.02);
+				float x = randpw() * (fDomains[id].absoluteSizeX - 0.02) + fDomains[id].startX + 0.01;
+				float z = randpw() * (fDomains[id].absoluteSizeZ - 0.02) + fDomains[id].startZ + 0.01;
+				//float z = -0.01 - randpw() * (globals::worldsize - 0.02);
 				float y = 0.5 * critter::gCritterHeight;
 			#if TestWorld
 				// evenly distribute the critters
@@ -1527,7 +1527,7 @@ void TSimulation::Init()
 			#endif
 				c->settranslation(x, y, z);
 				
-				float yaw =  360.0 * drand48();
+				float yaw =  360.0 * randpw();
 			#if TestWorld
 				// point them all the same way
 				yaw = 95.0;
@@ -1562,7 +1562,7 @@ void TSimulation::Init()
 			if( numSeededTotal < fNumberToSeed )
 			{
 				c->Genes()->SeedGenes();
-				if( drand48() < fProbabilityOfMutatingSeeds )
+				if( randpw() < fProbabilityOfMutatingSeeds )
 					c->Genes()->Mutate();
 				numSeededTotal++;
 			}
@@ -1573,12 +1573,12 @@ void TSimulation::Init()
 			fFoodEnergyIn += c->FoodEnergy();
 			fStage.AddObject(c);
 			
-			float x =  0.01 + drand48() * (globals::worldsize - 0.02);
-			float z = -0.01 - drand48() * (globals::worldsize - 0.02);
+			float x =  0.01 + randpw() * (globals::worldsize - 0.02);
+			float z = -0.01 - randpw() * (globals::worldsize - 0.02);
 			float y = 0.5 * critter::gCritterHeight;
 			c->settranslation(x, y, z);
 
-			float yaw =  360.0 * drand48();
+			float yaw =  360.0 * randpw();
 			c->setyaw(yaw);
 			
 			objectxsortedlist::gXSortedObjects.add(c);	// stores c->listLink
@@ -2213,8 +2213,8 @@ void TSimulation::Interact()
 				int numcritters = objectxsortedlist::gXSortedObjects.getCount( CRITTERTYPE );
 				critter* testCritter;
 				critter* randCritter = NULL;
-	//				int randomIndex = int( floor( drand48() * fDomains[kd].numcritters ) );	// pick from this domain
-				int randomIndex = int( floor( drand48() * numcritters ) );
+	//				int randomIndex = int( floor( randpw() * fDomains[kd].numcritters ) );	// pick from this domain
+				int randomIndex = int( floor( randpw() * numcritters ) );
 				gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();	// save the state of the x-sorted list
 
 				// As written, randCritter may not actually be the randomIndex-th critter in the domain, but it will be close,
@@ -2279,7 +2279,7 @@ void TSimulation::Interact()
 		}
 
 	#ifdef OF1
-        if ( (id == 0) && (drand48() < fDeathProb) )
+        if ( (id == 0) && (randpw() < fDeathProb) )
         {
             Death(c);
             continue;
@@ -2453,8 +2453,8 @@ void TSimulation::Interact()
 				assert( numCritters < fMaxCritters );			// Since we've already done all the deaths that occurred at this timestep, we should always have enough room to process the births that happened at this timestep.
 				
 				critter* testCritter = NULL;
-				//int randomIndex = int( round( drand48() * fDomains[kd].numCritters ) );	// pick from this domain V???
-				int randomIndex = int( round( drand48() * numCritters ) );
+				//int randomIndex = int( round( randpw() * fDomains[kd].numCritters ) );	// pick from this domain V???
+				int randomIndex = int( round( randpw() * numCritters ) );
 								
 				// As written, randCritter may not actually be the randomIndex-th critter in the domain, but it will be close,
 				// and as long as there's a single legitimate critter for mating (right domain, long enough since last mating,
@@ -2475,7 +2475,7 @@ void TSimulation::Interact()
 				/* select daddy. */
 
 				i = 0;
-				randomIndex = int( round( drand48() * numCritters ) );
+				randomIndex = int( round( randpw() * numCritters ) );
 								
 				// As written, randCritter may not actually be the randomIndex-th critter in the domain, but it will be close,
 				// and as long as there's a single legitimate critter for mating (right domain, long enough since last mating, and
@@ -2512,11 +2512,11 @@ void TSimulation::Interact()
 					eenergy = minenergy;
 				e->Energy(eenergy);
 				e->FoodEnergy(eenergy);
-				float x =  0.01 + drand48() * (globals::worldsize - 0.02);
-				float z = -0.01 - drand48() * (globals::worldsize - 0.02);
+				float x =  0.01 + randpw() * (globals::worldsize - 0.02);
+				float z = -0.01 - randpw() * (globals::worldsize - 0.02);
 				float y = 0.5 * critter::gCritterHeight;
 				e->settranslation(x, y, z);
-				float yaw =  360.0 * drand48();
+				float yaw =  360.0 * randpw();
 				c->setyaw(yaw);
 				kd = WhichDomain(x, z, 0);
 				e->Domain(kd);
@@ -2536,7 +2536,7 @@ void TSimulation::Interact()
 
 
 #if SPIKING_MODEL
-				if (drand48() >= .5)
+				if (randpw() >= .5)
 					e->Brain()->scale_latest_spikes = c->Brain()->scale_latest_spikes;
 				else
 					e->Brain()->scale_latest_spikes = d->Brain()->scale_latest_spikes;
@@ -2704,7 +2704,7 @@ void TSimulation::Interact()
 								int i = 0;
 								critter* testCritter;
 								critter* randCritter = NULL;
-								int randomIndex = int( floor( drand48() * fDomains[kd].numCritters ) );	// pick from this domain
+								int randomIndex = int( floor( randpw() * fDomains[kd].numCritters ) );	// pick from this domain
 
 								gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();	// save the state of the x-sorted list
 
@@ -2748,7 +2748,7 @@ void TSimulation::Interact()
 							// Still got room for more
 							if( (fMiscCritters < 0) ||									// miscegenation function not being used
 								(fDomains[kd].numbornsincecreated < fMiscCritters) ||	// miscegenation function not in use yet
-								(drand48() < c->MateProbability(d)) )					// miscegenation function allows the birth
+								(randpw() < c->MateProbability(d)) )					// miscegenation function allows the birth
 							{
 								ttPrint( "age %ld: critters # %ld & %ld are mating\n", fStep, c->Number(), d->Number() );
 								fNumBornSinceCreated++;
@@ -2765,7 +2765,7 @@ void TSimulation::Interact()
 								e->settranslation(0.5*(c->x() + d->x()),
 												  0.5*(c->y() + d->y()),
 												  0.5*(c->z() + d->z()));
-								e->setyaw( AverageAngles(c->yaw(), d->yaw()) );	// wrong: 0.5*(c->yaw() + d->yaw()));   // was (360.0*drand48());
+								e->setyaw( AverageAngles(c->yaw(), d->yaw()) );	// wrong: 0.5*(c->yaw() + d->yaw()));   // was (360.0*randpw());
 								e->Domain(kd);
 								fStage.AddObject(e);
 								gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();
@@ -2784,7 +2784,7 @@ void TSimulation::Interact()
 								//if( fStep > 50 )
 								//	exit( 0 );
 	#if SPIKING_MODEL
-							if (drand48() >= .5)
+							if (randpw() >= .5)
 								e->Brain()->scale_latest_spikes = c->Brain()->scale_latest_spikes;
 							else
 								e->Brain()->scale_latest_spikes = d->Brain()->scale_latest_spikes;
@@ -3124,10 +3124,10 @@ void TSimulation::Interact()
 
                 newCritter->grow( RecordBrainAnatomy( newCritter->Number() ), RecordBrainFunction( newCritter->Number() ) );
                 fFoodEnergyIn += newCritter->FoodEnergy();
-				float x = drand48() * (fDomains[id].absoluteSizeX - 0.02) + fDomains[id].startX + 0.01;
-				float z = drand48() * (fDomains[id].absoluteSizeZ - 0.02) + fDomains[id].startZ + 0.01;
+				float x = randpw() * (fDomains[id].absoluteSizeX - 0.02) + fDomains[id].startX + 0.01;
+				float z = randpw() * (fDomains[id].absoluteSizeZ - 0.02) + fDomains[id].startZ + 0.01;
 				float y = 0.5 * critter::gCritterHeight;
-				float yaw = drand48() * 360.0;
+				float yaw = randpw() * 360.0;
 			#if TestWorld
 				x = fDomains[id].xleft  +  0.666 * fDomains[id].xsize;
 				z = - globals::worldsize * ((float) (i+1) / (fDomains[id].initNumCritters + 1));
@@ -3214,8 +3214,8 @@ void TSimulation::Interact()
 
             newCritter->grow( RecordBrainAnatomy( newCritter->Number() ), RecordBrainFunction( newCritter->Number() ) );
             fFoodEnergyIn += newCritter->FoodEnergy();
-            newCritter->settranslation(drand48() * globals::worldsize, 0.5 * critter::gCritterHeight, drand48() * -globals::worldsize);
-            newCritter->setyaw(drand48() * 360.0);
+            newCritter->settranslation(randpw() * globals::worldsize, 0.5 * critter::gCritterHeight, randpw() * -globals::worldsize);
+            newCritter->setyaw(randpw() * 360.0);
             id = WhichDomain(newCritter->x(), newCritter->z(), 0);
             newCritter->Domain(id);
             fDomains[id].numcreated++;
@@ -3295,7 +3295,7 @@ void TSimulation::Interact()
 				if( fDomains[domainNumber].foodCount < fDomains[domainNumber].maxFoodGrownCount )
 				{
 					float probAdd = (fDomains[domainNumber].maxFoodGrownCount - fDomains[domainNumber].foodCount) * fDomains[domainNumber].foodRate;
-					if( drand48() < probAdd )
+					if( randpw() < probAdd )
 					{
 						// Add food to a patch in the domain (chosen based on the patch's fraction)
 						int patchNumber = getRandomPatch( domainNumber );
@@ -3345,7 +3345,7 @@ void TSimulation::Interact()
 
 							float probAdd = (fDomains[domainNumber].fFoodPatches[patchNumber].maxFoodGrownCount - fDomains[domainNumber].fFoodPatches[patchNumber].foodCount) * fDomains[domainNumber].fFoodPatches[patchNumber].growthRate;
 
-							if( drand48() < probAdd )
+							if( randpw() < probAdd )
 							{
 								fFoodEnergyIn += fDomains[domainNumber].fFoodPatches[patchNumber].addFood();
 								fDomains[domainNumber].foodCount++;
@@ -5766,7 +5766,7 @@ int TSimulation::getRandomPatch( int domainNumber )
 		
 		// Weight the random value by the maximum attainable fraction, so we always get
 		// a valid patch selection (if possible--they could all be off)
-		ranval = drand48() * maxFractions;
+		ranval = randpw() * maxFractions;
 
 		for( short i = 0; i < fDomains[domainNumber].numFoodPatches; i++ )
 		{

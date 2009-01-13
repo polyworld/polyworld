@@ -31,7 +31,8 @@
 
 #define interp(x,ylo,yhi) ((ylo)+(x)*((yhi)-(ylo)))
 
-#define rrand(lo,hi) (interp(drand48(),(lo),(hi)))
+#define randpw() drand48()
+#define rrand(lo,hi) (interp(randpw(),(lo),(hi)))
 
 #define index2(i,j,nj) ((i)*(nj)+(j))
 #define index3(i,j,k,nj,nk) ((i)*(nj)*(nk)+(j)*(nk)+(k))

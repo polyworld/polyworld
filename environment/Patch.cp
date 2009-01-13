@@ -87,8 +87,8 @@ void  Patch::setPoint( float* x, float* z )
 	{
 		if( distribution == UNIFORM )
 		{
-		    *x = startX  +  sizeX * drand48();
-		    *z = startZ  +  sizeZ * drand48();
+		    *x = startX  +  sizeX * randpw();
+		    *z = startZ  +  sizeZ * randpw();
 		}
 		else if( distribution == LINEAR )
 		{
@@ -110,12 +110,12 @@ void  Patch::setPoint( float* x, float* z )
 		float b = sizeZ / 2.0;
 		if( distribution == UNIFORM )
 		{
-			*x = startX  +  sizeX * drand48();
-			*z = startZ  +  sizeZ * drand48();
+			*x = startX  +  sizeX * randpw();
+			*z = startZ  +  sizeZ * randpw();
 			while( ((*x - centerX) * (*x - centerX) / (a * a) + (*z - centerZ) * (*z - centerZ) / (b * b)) > 1.0 )
 			{
-				*x = startX  +  sizeX * drand48();
-				*z = startZ  +  sizeZ * drand48();
+				*x = startX  +  sizeX * randpw();
+				*z = startZ  +  sizeZ * randpw();
 			}
 		}
 		else if( distribution == LINEAR )

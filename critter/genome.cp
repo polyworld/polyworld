@@ -9,6 +9,7 @@
 
 // System
 #include <iostream>
+#include <stdlib.h>
 
 // qt
 #include <qapplication.h>
@@ -381,7 +382,7 @@ void genome::Randomize(float bitonprob)
     {
         for (long bit = 0; bit < 8; bit++)
         {
-            if (drand48() < bitonprob)
+            if (randpw() < bitonprob)
                 fGenes[byte] |= char(1 << (7-bit));
             else
                 fGenes[byte] &= char(255 ^ (1 << (7-bit)));
@@ -398,7 +399,7 @@ void genome::Randomize()
 //check crossover point array size, whether the gene value is just non-physiological or not, whether that is accounted for
 	SeedGenes();
 #else
-	Randomize(gMinBitProb + drand48() * (gMaxBitProb - gMinBitProb));
+	Randomize(gMinBitProb + randpw() * (gMaxBitProb - gMinBitProb));
 #endif
 }
 
@@ -486,7 +487,7 @@ void genome::Mutate()
     {
         for (long bit = 0; bit < 8; bit++)
         {
-            if (drand48() < rate)
+            if (randpw() < rate)
                 fGenes[byte] ^= char(1 << (7-bit));
         }
     }
@@ -524,13 +525,13 @@ void genome::Crossover(genome* g1, genome* g2, bool mutate)
 	
     // Randomly select number of crossover points from chosen genome
     long numCrossPoints;
-    if (drand48() < 0.5)
+    if (randpw() < 0.5)
         numCrossPoints = g1->CrossoverPoints();
     else
 		numCrossPoints = g2->CrossoverPoints();
     
     // guarantee crossover in "physiology" genes
-    gCrossoverPoints[0] = long(drand48() * numphysbytes * 8 - 1);
+    gCrossoverPoints[0] = long(randpw() * numphysbytes * 8 - 1);
     gCrossoverPoints[1] = numphysbytes * 8;
 
 	// Sanity checking
@@ -542,7 +543,7 @@ void genome::Crossover(genome* g1, genome* g2, bool mutate)
     
     for (i = 2; i <= numCrossPoints; i++) 
     {
-        long newCrossPoint = long(drand48() * (genome::gNumBytes - numphysbytes) * 8 - 1) + gCrossoverPoints[1];
+        long newCrossPoint = long(randpw() * (genome::gNumBytes - numphysbytes) * 8 - 1) + gCrossoverPoints[1];
         bool equal;
         do
         {
@@ -554,7 +555,7 @@ void genome::Crossover(genome* g1, genome* g2, bool mutate)
             }
             
             if (equal)
-                newCrossPoint = long(drand48() * (genome::gNumBytes - numphysbytes) * 8 - 1) + gCrossoverPoints[1];
+                newCrossPoint = long(randpw() * (genome::gNumBytes - numphysbytes) * 8 - 1) + gCrossoverPoints[1];
                 
         } while (equal);
         
@@ -590,7 +591,7 @@ void genome::Crossover(genome* g1, genome* g2, bool mutate)
 	float mrate = 0.0;
     if (mutate)
     {
-        if (drand48() < 0.5)
+        if (randpw() < 0.5)
             mrate = g1->MutationRate();
         else
             mrate = g2->MutationRate();
@@ -599,7 +600,7 @@ void genome::Crossover(genome* g1, genome* g2, bool mutate)
     long begbyte = 0;
     long endbyte = -1;
     long bit;
-    bool first = (drand48() < 0.5);
+    bool first = (randpw() < 0.5);
     const genome* g;
     
 	// now do crossover using the ordered pts
@@ -639,7 +640,7 @@ void genome::Crossover(genome* g1, genome* g2, bool mutate)
                 fGenes[j] = g->fGenes[j];    // copy from the appropriate genome
                 for (bit = 0; bit < 8; bit++)
                 {
-                    if (drand48() < mrate)
+                    if (randpw() < mrate)
                         fGenes[j] ^= char(1 << (7-bit));	// this goes left to right, corresponding more directly to little-endian machines, but leave it alone (at least for now)
                 }
             }
@@ -677,7 +678,7 @@ void genome::Crossover(genome* g1, genome* g2, bool mutate)
         {
             for (bit = 0; bit < 8; bit++)
             {
-                if (drand48() < mrate)
+                if (randpw() < mrate)
                     fGenes[endbyte] ^= char(1 << (7 - bit));	// this goes left to right, corresponding more directly to little-endian machines, but leave it alone (at least for now)
             }
         }

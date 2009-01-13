@@ -18,9 +18,13 @@
 
 // System
 #include <ostream>
+#include <stdlib.h>
 
 // qt
 #include <qapplication.h>
+
+// Polyworld
+#include "misc.h"
 
 using namespace std;
 
@@ -56,9 +60,9 @@ float getLinear( float slope, float yIntercept )
 {
     float x, y, z;
 	
-    x = drand48();
+    x = randpw();
     y = linearPDF( x, slope, yIntercept );
-    z = drand48();
+    z = randpw();
     if( (z < y) && (z >= 0.0) && (z <= 1.0) )
 		return( x );
 	else
@@ -69,9 +73,9 @@ float getNormal( float sigma, float mu )
 {
     float x, y, z;
 	
-    x = drand48();
+    x = randpw();
     y = normalPDF( x, sigma, mu );
-    z = drand48();
+    z = randpw();
     if( (z < y) && (z >= 0.0) && (z <= 1.0) )
 		return( x );
     else

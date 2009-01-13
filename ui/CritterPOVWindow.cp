@@ -85,7 +85,7 @@ void TCritterPOVWindow::paintGL()
 //---------------------------------------------------------------------------
 void TCritterPOVWindow::DrawCritterPOV( critter* c )
 {
-#if 1
+#if 0
 	// Set up coordinate system
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
