@@ -17,6 +17,10 @@
 #define VirgilOptions 0
 #define OlafOptions 1
 
+// Note:  The bias neuron is not recorded in the brain function files, as it is always 1.0.
+// So I don't think turning on FLAG_subtractBias is ever a good idea, unless the subroutine
+// that reads brain function files in this code creates this constant entry.  -  larryy
+
 #if VirgilOptions
 	// Virgil Suggests the Following Options:
 	#define FLAG_useGSAMP 1
@@ -70,6 +74,11 @@ int qsort_compare_rows0( const void *a, const void *b );
 int qsort_compare_rows1( const void *a, const void *b );
 double CalcComplexity( char * , char, int );
 double CalcComplexityWithMatrix( gsl_matrix*, char, int );
+
+static bool RandSeeded = false;
+static const gsl_rng_type * T = gsl_rng_mt19937;
+static gsl_rng * randNumGen;
+#define Seed 42
 
 int qsort_compare_double( const void *a, const void *b )
 {
@@ -141,16 +150,14 @@ gsl_matrix * gsamp( gsl_matrix_view x )
 		z(:,3)=gs; z=sortrows(z,2); y(:,i)=z(:,3);
 	end
 */
-	// first must setup the random number generator
-	const gsl_rng_type * T;
-	gsl_rng * rr;
-	gsl_rng_env_setup();
-	T = gsl_rng_mt19937;
-	rr = gsl_rng_alloc(T);
-	time_t seed;
-	time(&seed);
-	gsl_rng_set(rr, seed);
-
+	if( ! RandSeeded )
+	{
+		// first must setup the random number generator
+		gsl_rng_env_setup();
+		randNumGen = gsl_rng_alloc(T);
+		gsl_rng_set(randNumGen, Seed);
+	}
+	
 	// this is nessecary for switching the columns around among the x, z, and y matrices
 	gsl_vector * tempcol = gsl_vector_alloc(n);
 
@@ -160,7 +167,7 @@ gsl_matrix * gsamp( gsl_matrix_view x )
 		gsl_matrix * z = gsl_matrix_calloc( n, 3 );
 
 //MATLAB	gs = sortrows( randn(n,1) , 1 );
-		double gs[n]; for( int j=0; j<n; j++ ) { gs[j] = gsl_ran_ugaussian(rr); }
+		double gs[n]; for( int j=0; j<n; j++ ) { gs[j] = gsl_ran_ugaussian(randNumGen); }
 		qsort( gs, n, sizeof(double), qsort_compare_double);
 
 //MATLAB	z(:,1)=x(:,i); z(:,2)=[1:n]'; z=sortrows(z,1);
@@ -201,8 +208,6 @@ gsl_matrix * gsamp( gsl_matrix_view x )
 		gsl_matrix_free( z );			// we're done with our temp matrix z now.
 	}
 	gsl_vector_free( tempcol );
-        gsl_rng_free( rr );
-
 
 	if( r < c )
 	{
@@ -236,21 +241,18 @@ double CalcComplexityWithMatrix( gsl_matrix * activity, char part, int numinputn
     gsl_matrix * o;			// we don't need this guy yet but we will in a bit.  We need to define him here so the useGSAMP can assign to it.
 
 /* Now to inject a little bit of noise into the activity matrix */
-	const gsl_rng_type * T;
-	gsl_rng * r;
-	gsl_rng_env_setup();
-	T = gsl_rng_mt19937;
-	r = gsl_rng_alloc(T);
-	time_t seed;
-	time(&seed);
-	gsl_rng_set(r, seed);
 
+	if( ! RandSeeded )
+	{
+		// first must setup the random number generator
+		gsl_rng_env_setup();
+		randNumGen = gsl_rng_alloc(T);
+		gsl_rng_set(randNumGen, Seed);
+	}
+	
 	for( unsigned int i=0; i<activity->size1; i++)
 		for( unsigned int j=0; j<activity->size2; j++)
-			gsl_matrix_set(activity, i, j, gsl_matrix_get(activity, i,j) + 0.00001*gsl_ran_ugaussian(r));	// we can do smaller values
-	
-
-	gsl_rng_free( r );
+			gsl_matrix_set(activity, i, j, gsl_matrix_get(activity, i,j) + 0.00001*gsl_ran_ugaussian(randNumGen));	// we can do smaller values
 
     if( FLAG_useGSAMP )		// If we're GSAMP'ing, do that now.
     {
