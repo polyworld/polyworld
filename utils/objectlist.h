@@ -16,8 +16,8 @@ public:
 			
 	virtual void Add(T item) { push_back(item); }		
 	virtual void Sort() {}
-	virtual void Remove(T& item) { remove(item); }
-	virtual void Remove(T* pitem) { remove(*pitem); }
+	virtual void Remove(T& item) { remove((char*)item); }
+	virtual void Remove(T* pitem) { remove((char*)pitem); }
 
 };
 
