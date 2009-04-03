@@ -236,7 +236,7 @@ void gstage::RemoveLight(glight* pl)
 {
 	Q_CHECK_PTR(fLightList);
 
-#if 0
+#if 1
 	fLightList->Remove(pl);
 #else
 	TGraphicsLightList::iterator iter = find(fLightList->begin(), fLightList->end(), pl);
@@ -253,7 +253,7 @@ void gstage::RemoveObject(gobject* po)
 {
 	Q_CHECK_PTR(fCastList);
 
-#if 0
+#if 1
 	fCastList->Remove(po);
 #else
 	TCastList::iterator iter = find(fCastList->begin(), fCastList->end(), po);
