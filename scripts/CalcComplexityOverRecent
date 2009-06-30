@@ -151,8 +151,8 @@ for t in timesteps:
 			data = datafile.readline()
 			data = float(data)
 			if data != -1:	# complexity of type c has already been calculated!
-			print c + ' has already been calculated for this timestep. ',
-			AlreadyHave += c
+				print c + ' has already been calculated for this timestep. ',
+				AlreadyHave += c
 			datafile.close()
                         
         print "AlreadyHave =", AlreadyHave
