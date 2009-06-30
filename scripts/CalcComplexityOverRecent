@@ -6,7 +6,7 @@ OutputFilename='AvrComplexity.plt'
 OutputFilename2='ComplexityHist.plt'
 #### Don't modify anything beneath here unless you know what you're doing
 import sys, os
-### Now some global variables
+### Now initialize some global variables
 PASSED_DIRECTORY=''
 ComplexitiesToGet='API'
 NUMBINS = 11
@@ -34,12 +34,12 @@ def check_parameters( argv ):
 
 	if len(argv) == 2:			# there are two arguments, meaning the CalcAll, CalcProcessing, and CalcInput are being specified.
 		global ComplexitiesToGet
-		ComplexitiesToGet=''
+		ComplexitiesToGet=''	# re-initialize the default one
 		if 'A' in argv[1]: ComplexitiesToGet += 'A'
 		if 'P' in argv[1]: ComplexitiesToGet += 'P'
 		if 'I' in argv[1]: ComplexitiesToGet += 'I'
 		
-		if ComplexitiesToGet == '': ComplexitiesToGet = 'API'
+		if ComplexitiesToGet == '': ComplexitiesToGet = 'API'	# get the default set
 		
 		argv[1] = argv[1].strip('-API')
 		if argv[1].isdigit(): NUMBINS = int(argv[1])
@@ -104,7 +104,12 @@ check_parameters(sys.argv[1:])
 print "- PASSED_DIRECTORY='%s'" %(PASSED_DIRECTORY)
 print "- output='%s'" % (PASSED_DIRECTORY + '/' + OutputFilename)
 outputfile = open( PASSED_DIRECTORY + '/' + OutputFilename, 'w' )
-outputfile.write('#Timestep\tAq1\tAq2\tAq3\tAq4\tAq5\tAmean\tAstderr\tAsampsize\tPq1\tPq2\tPq3\tPq4\tPq5\tPmean\tPstderr\tPsampsize\tIq1\tIq2\tIq3\tIq4\tIq5\tImean\tIstderr\tIsampsize\n')
+if 'B' in ComplexitiesToGet:
+        outputfile.write('#version=1\n')
+        outputfile.write('#Timestep\tAq1\tAq2\tAq3\tAq4\tAq5\tAmean\tAstderr\tAsampsize\tPq1\tPq2\tPq3\tPq4\tPq5\tPmean\tPstderr\tPsampsize\tIq1\tIq2\tIq3\tIq4\tIq5\tImean\tIstderr\tIsampsize\tBq1\tBq2\tBq3\tBq4\tBq5\tBmean\tBstderr\tBsampsize\n')
+else:
+        outputfile.write('#version=0\n')
+        outputfile.write('#Timestep\tAq1\tAq2\tAq3\tAq4\tAq5\tAmean\tAstderr\tAsampsize\tPq1\tPq2\tPq3\tPq4\tPq5\tPmean\tPstderr\tPsampsize\tIq1\tIq2\tIq3\tIq4\tIq5\tImean\tIstderr\tIsampsize\n')
 
 timesteps = []
 # list all of the timesteps, make sure they are all integers (and directories), then sort them by number.
@@ -138,47 +143,60 @@ for t in timesteps:
 	DATA[ str(t) + '_PRO' ] = [ ]
 	DATA[ str(t) + '_INP' ] = [ ]
 	
-	GetLater = ''
+	AlreadyHave = ''
 	for c in [ 'A', 'P', 'I' ]:
-		if c in ComplexitiesToGet:
-			if os.path.isfile( timestep_directory + '/complexity_' + c + '.txt' ):
-				print c + ' has already been calculated for this timestep. ',
-				GetLater += c
-		
-	if ComplexitiesToGet != GetLater:
+		filename = timestep_directory + '/complexity_' + c + '.txt'
+		if os.path.isfile( filename ):
+			datafile = open(filename, 'r')
+			data = datafile.readline()
+			data = float(data)
+			if data != -1:	# complexity of type c has already been calculated!
+			print c + ' has already been calculated for this timestep. ',
+			AlreadyHave += c
+			datafile.close()
+                        
+        print "AlreadyHave =", AlreadyHave
+        ComplexitiesToGet = ComplexitiesToGet.strip(AlreadyHave)
+        print "ComplexitiesToGet =", ComplexitiesToGet
+
+	if ComplexitiesToGet:
+                
 		for potential_brainFunction_file in os.listdir( timestep_directory ):
 			if not 'brainFunction' in potential_brainFunction_file:		# if it's not a brainFunction file, skip it
 				continue;
 
 #			print "Trying file '%s'..." % ( potential_brainFunction_file )
-			cmd="%s %s/%s %s" % ( CALC_COMPLEXITY, timestep_directory, potential_brainFunction_file, ComplexitiesToGet.strip(GetLater) )
+			cmd="%s %s/%s %s" % ( CALC_COMPLEXITY, timestep_directory, potential_brainFunction_file, ComplexitiesToGet)
 			CritterComplexities = os.popen(cmd).readlines()
 		
 			for line in CritterComplexities:
 				complexity_i = line.split('\t')[1].rstrip('\n')
-				if   'All'        in line:
-					DATA[ str(t) + '_ALL' ].append( complexity_i )
-					datafile = open( timestep_directory + '/complexity_A.txt', 'a' )
-					datafile.write( complexity_i + '\n' )
-					datafile.flush()
-					datafile.close()
-				elif 'Processing' in line:
-					DATA[ str(t) + '_PRO' ].append( complexity_i )
-					datafile = open( timestep_directory + '/complexity_P.txt', 'a' )
-					datafile.write( complexity_i + '\n' )
-					datafile.flush()
-					datafile.close()
-				elif 'Input'      in line:
-					DATA[ str(t) + '_INP' ].append( complexity_i )
-					datafile = open( timestep_directory + '/complexity_I.txt', 'a' )
-					datafile.write( complexity_i + '\n' )
-					datafile.flush()
-					datafile.close()
+				if   'All'        in line :
+					if 'A' in ComplexitiesToGet:
+						DATA[ str(t) + '_ALL' ].append( complexity_i )
+						datafile = open( timestep_directory + '/complexity_A.txt', 'a' )
+						datafile.write( complexity_i + '\n' )
+						datafile.flush()
+						datafile.close()
+				elif 'Processing' in line :
+					if 'P' in ComplexitiesToGet:
+						DATA[ str(t) + '_PRO' ].append( complexity_i )
+						datafile = open( timestep_directory + '/complexity_P.txt', 'a' )
+						datafile.write( complexity_i + '\n' )
+						datafile.flush()
+						datafile.close()
+				elif 'Input'      in line :
+					if 'I' in ComplexitiesToGet:
+						DATA[ str(t) + '_INP' ].append( complexity_i )
+						datafile = open( timestep_directory + '/complexity_I.txt', 'a' )
+						datafile.write( complexity_i + '\n' )
+						datafile.flush()
+						datafile.close()
 				else:
 					print "* Error: The output of CalcComplexity has been modified in an incompatible way."
 					sys.exit(1)
 				
-	for c in GetLater:
+	for c in AlreadyHave:
 		datafile = open( timestep_directory + '/complexity_' + c + '.txt', 'r' )
 		if c == 'A': thistype = str(t) + '_ALL'
 		elif c == 'P': thistype = str(t) + '_PRO'
@@ -202,15 +220,15 @@ for t in timesteps:
 			minimum=min( DATA[ DATAkey ] )
 			maximum=max( DATA[ DATAkey ] )
 
-			if keypiece == '_ALL':
-				ALLMAX[ str(t) ] = maximum
-				ALLMIN[ str(t) ] = minimum
-			elif keypiece == '_PRO':
-				PROMAX[ str(t) ] = maximum
-				PROMIN[ str(t) ] = minimum
-			else:
-				INPMAX[ str(t) ] = maximum
-				INPMIN[ str(t) ] = minimum
+#			if keypiece == '_ALL':
+#				ALLMAX[ str(t) ] = maximum
+#				ALLMIN[ str(t) ] = minimum
+#			elif keypiece == '_PRO':
+#				PROMAX[ str(t) ] = maximum
+#				PROMIN[ str(t) ] = minimum
+#			else:
+#				INPMAX[ str(t) ] = maximum
+#				INPMIN[ str(t) ] = minimum
 
 			mean, mean_stderr = sample_mean( DATA[ DATAkey ] )
 			median,lowerhalf,upperhalf=get_median( DATA[ DATAkey ] )
@@ -218,6 +236,16 @@ for t in timesteps:
 			q3=get_median( upperhalf )[0]
 		except ValueError:
 			minimum, maximum, mean, mean_stderr, q1, q3, median = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+
+		if keypiece == '_ALL':
+			ALLMAX[ str(t) ] = maximum
+			ALLMIN[ str(t) ] = minimum
+		elif keypiece == '_PRO':
+			PROMAX[ str(t) ] = maximum
+			PROMIN[ str(t) ] = minimum
+		else:
+			INPMAX[ str(t) ] = maximum
+			INPMIN[ str(t) ] = minimum
 
 		list_to_print.append( "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s" % ( minimum, q1, median, q3, maximum, mean, mean_stderr, len( DATA[DATAkey] ) ) )
 #		del DATA[ str(t) + keypiece ]		# delete the timestep, we dont need it anymore.
@@ -232,6 +260,7 @@ for t in timesteps:
 
 outputfile.close()
 
+# begin writing the next outputfile
 outputfile = open( PASSED_DIRECTORY + '/' + OutputFilename2.replace( '.', 'Norm.'), 'w' )
 outputfile.write('#version=1\n#numbins=%s\n' % (NUMBINS) )
 
@@ -248,23 +277,26 @@ for t in timesteps:
 	for i in range(NUMBINS):
 		BINS[ str(t) + '_INP' ].append(0)
 
-	for crittercomplexity in DATA[ str(t) + '_ALL' ]:
-		thisbin = int(((crittercomplexity - ALLMIN[ str(t) ])/(ALLMAX[ str(t) ] - ALLMIN[ str(t) ]))*NUMBINS)
-		if thisbin >= NUMBINS: thisbin -= 1
-		BINS[ str(t) + '_ALL' ][ thisbin ]  += 1
-	for crittercomplexity in DATA[ str(t) + '_PRO' ]:
-		thisbin = int(((crittercomplexity - PROMIN[ str(t) ])/(PROMAX[ str(t) ] - PROMIN[ str(t) ]))*NUMBINS)
-		if thisbin >= NUMBINS: thisbin -= 1
-		BINS[ str(t) + '_PRO' ][ thisbin ]  += 1
-	for crittercomplexity in DATA[ str(t) + '_INP' ]:
-		thisbin = int(((crittercomplexity - INPMIN[ str(t) ])/(INPMAX[ str(t) ] - INPMIN[ str(t) ]))*NUMBINS)
-		if thisbin >= NUMBINS: thisbin -= 1
-		BINS[ str(t) + '_INP' ][ thisbin ]  += 1
+	if ALLMAX[ str(t) ] > ALLMIN[ str(t) ]:
+		for crittercomplexity in DATA[ str(t) + '_ALL' ]:
+			thisbin = int(((crittercomplexity - ALLMIN[ str(t) ])/(ALLMAX[ str(t) ] - ALLMIN[ str(t) ]))*NUMBINS)
+			if thisbin >= NUMBINS: thisbin -= 1
+			BINS[ str(t) + '_ALL' ][ thisbin ]  += 1
+	if PROMAX[ str(t) ] > PROMIN[ str(t) ]:
+		for crittercomplexity in DATA[ str(t) + '_PRO' ]:
+			thisbin = int(((crittercomplexity - PROMIN[ str(t) ])/(PROMAX[ str(t) ] - PROMIN[ str(t) ]))*NUMBINS)
+			if thisbin >= NUMBINS: thisbin -= 1
+			BINS[ str(t) + '_PRO' ][ thisbin ]  += 1
+	if INPMAX[ str(t) ] > INPMIN[ str(t) ]:
+		for crittercomplexity in DATA[ str(t) + '_INP' ]:
+			thisbin = int(((crittercomplexity - INPMIN[ str(t) ])/(INPMAX[ str(t) ] - INPMIN[ str(t) ]))*NUMBINS)
+			if thisbin >= NUMBINS: thisbin -= 1
+			BINS[ str(t) + '_INP' ][ thisbin ]  += 1
 
 ALLTOTAL = {}
 PROTOTAL = {}
 INPTOTAL = {}
-for t in timesteps:
+for t in timesteps:	# t= 0, 1000, 2000,...
 	ALLTOTAL[ str(t) ] = 0
 	PROTOTAL[ str(t) ] = 0
 	INPTOTAL[ str(t) ] = 0
@@ -278,21 +310,24 @@ for t in timesteps:
 		INPTOTAL[ str(t) ] += bincount
 
 for t in timesteps:
-	outputfile.write('%s\t' % (t))
-	for bincount in BINS[ str(t) + '_ALL' ]:
-		outputfile.write('%s\t' % (100*bincount/ALLTOTAL[ str(t) ]))
+	if ALLTOTAL[ str(t) ]:
+		outputfile.write('%s\t' % (t))
+		for bincount in BINS[ str(t) + '_ALL' ]:
+			outputfile.write('%s\t' % (100*bincount/ALLTOTAL[ str(t) ]))
 
 outputfile.write('\n')
 for t in timesteps:
-	outputfile.write('%s\t' % (t))
-	for bincount in BINS[ str(t) + '_PRO' ]:
-		outputfile.write('%s\t' % (100*bincount/PROTOTAL[ str(t) ]))
+	if PROTOTAL[ str(t) ]:
+		outputfile.write('%s\t' % (t))
+		for bincount in BINS[ str(t) + '_PRO' ]:
+			outputfile.write('%s\t' % (100*bincount/PROTOTAL[ str(t) ]))
 
 outputfile.write('\n')
 for t in timesteps:
-	outputfile.write('%s\t' % (t))
-	for bincount in BINS[ str(t) + '_INP' ]:
-		outputfile.write('%s\t' % (100*bincount/INPTOTAL[ str(t) ]))
+	if INPTOTAL[ str(t) ]:
+		outputfile.write('%s\t' % (t))
+		for bincount in BINS[ str(t) + '_INP' ]:
+			outputfile.write('%s\t' % (100*bincount/INPTOTAL[ str(t) ]))
 
 outputfile.flush()
 outputfile.close()
@@ -330,35 +365,41 @@ for t in timesteps:
 	for i in range(NUMBINS):
 		BINS[ str(t) + '_INP' ].append(0)
 
-	for crittercomplexity in DATA[ str(t) + '_ALL' ]:
-		thisbin = int(((crittercomplexity - ALLMINGLOBAL)/(ALLMAXGLOBAL - ALLMINGLOBAL))*NUMBINS)
-		if thisbin >= NUMBINS: thisbin -= 1
-		BINS[ str(t) + '_ALL' ][ thisbin ]  += 1
-	for crittercomplexity in DATA[ str(t) + '_PRO' ]:
-		thisbin = int(((crittercomplexity - PROMINGLOBAL)/(PROMAXGLOBAL - PROMINGLOBAL))*NUMBINS)
-		if thisbin >= NUMBINS: thisbin -= 1
-		BINS[ str(t) + '_PRO' ][ thisbin ]  += 1
-	for crittercomplexity in DATA[ str(t) + '_INP' ]:
-		thisbin = int(((crittercomplexity - INPMINGLOBAL)/(INPMAXGLOBAL - INPMINGLOBAL))*NUMBINS)
-		if thisbin >= NUMBINS: thisbin -= 1
-		BINS[ str(t) + '_INP' ][ thisbin ]  += 1
+	if ALLMAXGLOBAL > ALLMINGLOBAL:
+		for crittercomplexity in DATA[ str(t) + '_ALL' ]:
+			thisbin = int(((crittercomplexity - ALLMINGLOBAL)/(ALLMAXGLOBAL - ALLMINGLOBAL))*NUMBINS)
+			if thisbin >= NUMBINS: thisbin -= 1
+			BINS[ str(t) + '_ALL' ][ thisbin ]  += 1
+	if PROMAXGLOBAL > PROMINGLOBAL:
+		for crittercomplexity in DATA[ str(t) + '_PRO' ]:
+			thisbin = int(((crittercomplexity - PROMINGLOBAL)/(PROMAXGLOBAL - PROMINGLOBAL))*NUMBINS)
+			if thisbin >= NUMBINS: thisbin -= 1
+			BINS[ str(t) + '_PRO' ][ thisbin ]  += 1
+	if INPMAXGLOBAL > INPMINGLOBAL:
+		for crittercomplexity in DATA[ str(t) + '_INP' ]:
+			thisbin = int(((crittercomplexity - INPMINGLOBAL)/(INPMAXGLOBAL - INPMINGLOBAL))*NUMBINS)
+			if thisbin >= NUMBINS: thisbin -= 1
+			BINS[ str(t) + '_INP' ][ thisbin ]  += 1
 
 for t in timesteps:
-	outputfile.write('%s\t' % (t))
-	for bincount in BINS[ str(t) + '_ALL' ]:
-		outputfile.write('%s\t' % (100*bincount/ALLTOTAL[ str(t) ]))
-
-outputfile.write('\n')
-for t in timesteps:
-	outputfile.write('%s\t' % (t))
-	for bincount in BINS[ str(t) + '_PRO' ]:
-		outputfile.write('%s\t' % (100*bincount/PROTOTAL[ str(t) ]))
+	if ALLTOTAL[ str(t) ]:
+		outputfile.write('%s\t' % (t))
+		for bincount in BINS[ str(t) + '_ALL' ]:
+			outputfile.write('%s\t' % (100*bincount/ALLTOTAL[ str(t) ]))
 
 outputfile.write('\n')
 for t in timesteps:
-	outputfile.write('%s\t' % (t))
-	for bincount in BINS[ str(t) + '_INP' ]:
-		outputfile.write('%s\t' % (100*bincount/INPTOTAL[ str(t) ]))
+	if PROTOTAL[ str(t) ]:
+		outputfile.write('%s\t' % (t))
+		for bincount in BINS[ str(t) + '_PRO' ]:
+			outputfile.write('%s\t' % (100*bincount/PROTOTAL[ str(t) ]))
+
+outputfile.write('\n')
+for t in timesteps:
+	if INPTOTAL[ str(t) ]:
+		outputfile.write('%s\t' % (t))
+		for bincount in BINS[ str(t) + '_INP' ]:
+			outputfile.write('%s\t' % (100*bincount/INPTOTAL[ str(t) ]))
 
 outputfile.flush()
 outputfile.close()
