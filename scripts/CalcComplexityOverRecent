@@ -106,7 +106,7 @@ check_parameters(sys.argv[1:])
 print "- PASSED_DIRECTORY='%s'" %(PASSED_DIRECTORY)
 print "- output='%s'" % (PASSED_DIRECTORY + '/' + OutputFilename)
 outputfile = open( PASSED_DIRECTORY + '/' + OutputFilename, 'w' )
-outputfile.write('#version=%d\n', CurrentVersion)
+outputfile.write('#version=%d\n' % (CurrentVersion) )
 outputfile.write('#Timestep\tAq1\tAq2\tAq3\tAq4\tAq5\tAmean\tAstderr\tAsampsize\tPq1\tPq2\tPq3\tPq4\tPq5\tPmean\tPstderr\tPsampsize\tIq1\tIq2\tIq3\tIq4\tIq5\tImean\tIstderr\tIsampsize\tBq1\tBq2\tBq3\tBq4\tBq5\tBmean\tBstderr\tBsampsize\tHBq1\tHBq2\tHBq3\tHBq4\tHBq5\tHBmean\tHBstderr\tHBsampsize\n')
 
 timesteps = []
