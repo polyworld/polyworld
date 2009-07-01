@@ -16,6 +16,7 @@
 // Turn on no more than one of the *Options flags
 #define VirgilOptions 0
 #define OlafOptions 1
+#define numbehaviorneurons 7                  //modification: adding output neuron numbers
 
 // Note:  The bias neuron is not recorded in the brain function files, as it is always 1.0.
 // So I don't think turning on FLAG_subtractBias is ever a good idea, unless the subroutine
@@ -26,18 +27,18 @@
 	#define FLAG_useGSAMP 1
 	#define FLAG_subtractBias 1
 	#define IgnoreCrittersThatLivedLessThan_N_Timesteps 200
-	#define MaxNumTimeStepsToComputeComplexityOver 500		// set this to a positive value to only compute Complexity over the final N timestesps of an agent's life.
+	#define MaxNumTimeStepsToComputeComplexityOver 500		// set this to a positive value to only compute Complexity over the final N timesteps of an agent's life.
 #elif OlafOptions
 	// Estimated Options from Olaf's MATLAB Code
 	#define FLAG_useGSAMP 1
 	#define FLAG_subtractBias 0
 	#define IgnoreCrittersThatLivedLessThan_N_Timesteps 0
-	#define MaxNumTimeStepsToComputeComplexityOver 500		// set this to a positive value to only compute Complexity over the final N timestesps of an agent's life.
+	#define MaxNumTimeStepsToComputeComplexityOver 500		// set this to a positive value to only compute Complexity over the final N timesteps of an agent's life.
 #else
 	#define FLAG_useGSAMP 1
 	#define FLAG_subtractBias 1
 	#define IgnoreCrittersThatLivedLessThan_N_Timesteps 0
-	#define MaxNumTimeStepsToComputeComplexityOver 500		// set this to a positive value to only compute Complexity over the final N timestesps of an agent's life.
+	#define MaxNumTimeStepsToComputeComplexityOver 500		// set this to a positive value to only compute Complexity over the final N timesteps of an agent's life.
 #endif
 /*
    If both CalcComplexity's ignore_timesteps_after AND MaxNumTimeStepsToComputeComplexityOver are defined, it will:
@@ -72,8 +73,8 @@ gsl_matrix * gsamp( gsl_matrix_view x );
 int qsort_compare_double( const void *a, const void *b);
 int qsort_compare_rows0( const void *a, const void *b );
 int qsort_compare_rows1( const void *a, const void *b );
-double CalcComplexity( char * , char, int );
-double CalcComplexityWithMatrix( gsl_matrix*, char, int );
+double CalcComplexity( char * , char *, int );//The most important function
+double CalcComplexityWithMatrix( gsl_matrix*, char *, int );
 
 static bool RandSeeded = false;
 static const gsl_rng_type * T = gsl_rng_mt19937;
@@ -218,9 +219,9 @@ gsl_matrix * gsamp( gsl_matrix_view x )
 	return y;
 }
 
-double CalcComplexity( char * fnameAct, char part, int ignore_timesteps_after )
+double CalcComplexity( char * fnameAct, char * part, int ignore_timesteps_after )
 {
-
+	//printf( "%s( %s, %s, %d )\n", __func__, fnameAct, part, ignore_timesteps_after );
 	int numinputneurons = 0;		// this value will be defined by readin_brainfunction()
 
 	gsl_matrix * activity = readin_brainfunction__optimized( fnameAct, numinputneurons, ignore_timesteps_after );
@@ -228,16 +229,18 @@ double CalcComplexity( char * fnameAct, char part, int ignore_timesteps_after )
 	return( CalcComplexityWithMatrix( activity, part, numinputneurons ) );
 }
 
-double CalcComplexityWithMatrix( gsl_matrix * activity, char part, int numinputneurons )
+double CalcComplexityWithMatrix( gsl_matrix * activity, char * part, int numinputneurons )
 {
     // if had an invalid brain file, return 0.
     if( activity == NULL ) { return 0.0; }
 
     // If critter lived less timesteps than it has neurons, return Complexity = 0.0.
     if( activity->size2 > activity->size1 || activity->size1 < IgnoreCrittersThatLivedLessThan_N_Timesteps ) { return 0.0; }
-
-    part = toupper( part );			// capitalize it
-
+	
+	for( unsigned int i = 0; i < strlen( part ); i++ )
+	{
+		part[i] = toupper( part[i] );			// capitalize it
+	}
     gsl_matrix * o;			// we don't need this guy yet but we will in a bit.  We need to define him here so the useGSAMP can assign to it.
 
 /* Now to inject a little bit of noise into the activity matrix */
@@ -308,64 +311,114 @@ double CalcComplexityWithMatrix( gsl_matrix * activity, char part, int numinputn
 		COV = COVwithbias;
 	}
 
-
-	if( part == 'A' )	// All
+	int flag_All = 0;
+	int flag_Pro = 0;
+	int flag_Inp = 0;
+	int flag_Beh = 0;
+	int flag_Hea = 0;
+	
+	int PstartIndex = numinputneurons;
+	int PnumIndex = COV->size1 - numinputneurons;
+	int Pro_id[PnumIndex];
+	
+	int IstartIndex = 0;
+	int InumIndex = numinputneurons;
+	int Inp_id[InumIndex];
+	
+	int BstartIndex = numinputneurons;
+	int BnumIndex = numbehaviorneurons;
+	int Beh_id[BnumIndex];
+	
+	int Hea_id = 1;
+	
+	// store the index of neurons related to the string complexity type
+	int *Com_id = new int[COV->size1];
+	
+	if( numinputneurons == 0 ) {return -2; }
+	
+	for( unsigned int j = 0; j < strlen( part ); j++ )
+	{
+		char complexityType = part[j];
+		
+		
+		switch(complexityType)
+		{
+			case'A':
+				flag_All = 1;
+				break;
+			case'P':
+				flag_Pro = 1;
+		
+				for(int i=0; i<PnumIndex; i++ ) { Pro_id[i] = PstartIndex+i; }
+				break;
+			case'I':
+				flag_Inp = 1;
+			
+				for(int i=0; i<InumIndex; i++ ) { Inp_id[i] = IstartIndex+i; }
+				break;
+			case'B':
+				flag_Beh = 1;
+				for(int i=0; i<BnumIndex; i++ ) { Beh_id[i] = BstartIndex+i; }
+				break;
+			case'H':
+				flag_Hea = 1;
+				break;
+			default:
+				fprintf( stderr, "%s: Invalid complexity type (%c)\n",
+						__FUNCTION__, complexityType );
+				exit( 1 );
+		}
+	}
+		
+	if (flag_All == 1)
 	{
 		double Complexity = calcC_det3__optimized( COV );
 		gsl_matrix_free( COV );
 		return Complexity;
 	}
-	else if( part == 'P' )	// Processing
+	
+	int curIndex = 0;
+	if (flag_Inp == 1)
 	{
-		if( numinputneurons == 0 ) { return -2; }
-//		cout << "size of COV Matrix: " << COV->size1 << " x " << COV->size2 << endl;
-		int Pro = COV->size1 - numinputneurons;
-		int Pro_id[Pro];
-		for(int i=0; i<Pro; i++ ) { Pro_id[i] = numinputneurons+i; }
-
-//		cout << "Pro = " << Pro << ":\t";
-//		for(int i=0; i<Pro; i++) { cout << Pro_id[i] << " "; }
-//		cout << endl;
-
-		gsl_matrix * Xed_COR = matrix_crosssection( COV, Pro_id, Pro );
-	     	gsl_matrix_free( COV );
-
-//		cout << "Processing: size of Xed_COR: " << Xed_COR->size1 << " x " << Xed_COR->size2 << endl;
-
-		float Cplx_Pro = calcC_det3__optimized( Xed_COR );
-		gsl_matrix_free( Xed_COR );
-
-		return Cplx_Pro;
+		int j = 0;
+		for(int i=curIndex;i<(InumIndex+curIndex);i++) {Com_id[i] = Inp_id[j++];}
+		curIndex = InumIndex + curIndex;
 	}
-	else if( part == 'I' )	// Input
+	
+	
+	if (flag_Hea == 1 && flag_Inp == 0)
 	{
-		if( numinputneurons == 0 ) { return -2; }
-
-		int Inp = numinputneurons;
-		int Inp_id[Inp];
-		for(int i=0; i< Inp; i++ ) { Inp_id[i] = i; }
-
-//		cout << "Inp = " << Inp << ":\t";
-//		for(int i=0; i<Inp; i++) { cout << Inp_id[i] << " "; }
-//		cout << endl;
-
-		gsl_matrix * Xed_COR = matrix_crosssection( COV, Inp_id, Inp );
-		gsl_matrix_free( COV );
-
-//		cout << "Input: size of Xed_COR: " << Xed_COR->size1 << " x " << Xed_COR->size2 << endl;
-		float Cplx_Inp = calcC_det3__optimized( Xed_COR );
-
-		gsl_matrix_free( Xed_COR );
-
-		return Cplx_Inp;
+	    Com_id[0] = Hea_id;
+		curIndex = 1;
 	}
-//========
-	else
+	
+	if (flag_Pro == 1)
 	{
-		cerr << "Do not know value for CalcComplexity() argument 2 '" << part << "'\n";
-		exit(1);
+		
+		int j = 0;
+		for(int i=curIndex;i<(PnumIndex+curIndex);i++){Com_id[i] = Pro_id[j++];}
+		curIndex = PnumIndex+curIndex;
+		
 	}
+			
+	if (flag_Beh == 1 && flag_Pro == 0)
+    {
+		int j = 0;
+		for(int i=curIndex;i<(BnumIndex+curIndex);i++) {Com_id[i] = Beh_id[j++];}
+		curIndex = BnumIndex + curIndex;
+	}
+	
+	int numCom = curIndex;
 
+	gsl_matrix * Xed_COR = matrix_crosssection( COV, Com_id, numCom );
+	gsl_matrix_free( COV );
+	
+	float Cplx_Com = calcC_det3__optimized( Xed_COR );
+	gsl_matrix_free( Xed_COR );
+	
+	delete[] Com_id;
+	Com_id = NULL;
+	return Cplx_Com;				
 }
 
 gsl_matrix * COVtoCOR( gsl_matrix * COV )
