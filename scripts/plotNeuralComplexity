@@ -13,14 +13,14 @@ import sys, getopt, os.path, re, os
 GNUPLOT_TERMINAL='aqua'		# set this to x11 if your under linux.
 GNUPLOT_SETTINGS="""
 set termoption noenhanced
-set key outside         # if we have a legend, put it outside the graph
+set key outside			# if we have a legend, put it outside the graph
 set key at screen 1,1 right horizontal spacing 1
 set xlabel 'Timestep' font 'Times,15'
 set grid
 set style fill solid 0.3		# this number specifies the opacity of the filled in box.
 set boxwidth 0.50 relative		# 1.0 is the whisker-boxes touching
 set datafile missing '?'	# unknown values are '?'
-#set mxtics 5            # make small little tics along the x-axis
+#set mxtics 5			 # make small little tics along the x-axis
 
 ### Okay, I know all of this is really verbose, but the are static settings, so I include them here.
 set style line 1 linetype 1 linewidth 1.5 pointsize 1.0 # 1st colored meanline/meanpoint
@@ -33,9 +33,9 @@ set style line 5 linetype 5 linewidth 1.5 pointsize 1.0 # 5th colored meanline/m
 
 set style line 501 linetype 1 linewidth 1.5		# 1st colored Whisker
 set style line 502 linetype 2 linewidth 1.5		# 2nd colored Whisker
-set style line 503 linetype 3 linewidth 1.5 		# 3rd colored Whisker
-set style line 504 linetype 4 linewidth 1.5 		# 4th colored Whisker
-set style line 505 linetype 5 linewidth 1.5 		# 5th colored Whisker
+set style line 503 linetype 3 linewidth 1.5			# 3rd colored Whisker
+set style line 504 linetype 4 linewidth 1.5			# 4th colored Whisker
+set style line 505 linetype 5 linewidth 1.5			# 5th colored Whisker
 
 
 
@@ -47,11 +47,11 @@ set style line 55 linetype 5 linewidth 3			# 5th Whisker median
 
 
 
-set style line 56 linetype 1 linewidth 1 pointtype 0 		# 1st meanline's stderr 
-set style line 57 linetype 2 linewidth 1 pointtype 0 		# 2nd meanline's stderr
-set style line 58 linetype 3 linewidth 1 pointtype 0 		# 3rd meanline's stderr
-set style line 59 linetype 4 linewidth 1 pointtype 0 		# 4th meanline's stderr
-set style line 60 linetype 5 linewidth 1 pointtype 0 		# 5th meanline's stderr
+set style line 56 linetype 1 linewidth 1 pointtype 0		# 1st meanline's stderr 
+set style line 57 linetype 2 linewidth 1 pointtype 0		# 2nd meanline's stderr
+set style line 58 linetype 3 linewidth 1 pointtype 0		# 3rd meanline's stderr
+set style line 59 linetype 4 linewidth 1 pointtype 0		# 4th meanline's stderr
+set style line 60 linetype 5 linewidth 1 pointtype 0		# 5th meanline's stderr
 
 
 
@@ -64,7 +64,7 @@ set style line 606 linetype 9 linewidth 1 pointsize 1.0		# maxline when there is
 set style line 607 linetype -1 linewidth 3 pointsize 0.0	# AVERAGE maxline
 
 set style line 96 linetype 0 linewidth 1			# Whisker when there is no legend
-set style line 97 linetype 0 linewidth 3 			# Whisker's median when there is no legend
+set style line 97 linetype 0 linewidth 3			# Whisker's median when there is no legend
 set style line 98 linetype 0 linewidth 1 pointtype 0		# meanline's STDERR bars when there is no legend
 set style line 99 linetype 0 linewidth 1 pointsize 1.0	# meanline/meanpoint when there is no legend
 
@@ -76,58 +76,58 @@ set style line 102 linetype -1 linewidth 3			# AVERAGE Whisker's median
 ### END linestyle verbosity
 """
 LINESTYLES={
-        # Colored
-        'ColoredMeanline1'      : "linecolor rgb 'red' linewidth 1.5",
-        'ColoredMeanline2'      : "linecolor rgb 'green' linewidth 1.5",
-        'ColoredMeanline3'      : "linecolor rgb 'blue' linewidth 1.5",
-        'ColoredMeanline4'      : "linecolor rgb 'yellow' linewidth 1.5",
-        'ColoredMeanline5'      : "linecolor rgb 'orange' linewidth 1.5",
-        
-        'ColoredMeanlineStderr1'        : "linecolor rgb 'red' linewidth 1 pointtype 0",
-        'ColoredMeanlineStderr2'        : "linecolor rgb 'green' linewidth 1 pointtype 0",
-        'ColoredMeanlineStderr3'        : "linecolor rgb 'blue' linewidth 1 pointtype 0",
-        'ColoredMeanlineStderr4'        : "linecolor rgb 'yellow' linewidth 1 pointtype 0",
-        'ColoredMeanlineStderr5'        : "linecolor rgb 'orange' linewidth 1 pointtype 0",
+		# Colored
+		'ColoredMeanline1'		: "linecolor rgb 'red' linewidth 1.5",
+		'ColoredMeanline2'		: "linecolor rgb 'green' linewidth 1.5",
+		'ColoredMeanline3'		: "linecolor rgb 'blue' linewidth 1.5",
+		'ColoredMeanline4'		: "linecolor rgb 'yellow' linewidth 1.5",
+		'ColoredMeanline5'		: "linecolor rgb 'orange' linewidth 1.5",
+		
+		'ColoredMeanlineStderr1'		: "linecolor rgb 'red' linewidth 1 pointtype 0",
+		'ColoredMeanlineStderr2'		: "linecolor rgb 'green' linewidth 1 pointtype 0",
+		'ColoredMeanlineStderr3'		: "linecolor rgb 'blue' linewidth 1 pointtype 0",
+		'ColoredMeanlineStderr4'		: "linecolor rgb 'yellow' linewidth 1 pointtype 0",
+		'ColoredMeanlineStderr5'		: "linecolor rgb 'orange' linewidth 1 pointtype 0",
 
-#        'ColoredWhisker1'               : "linecolor rgb 'red' linewidth 1.5",
-#        'ColoredWhisker2'               : "linecolor rgb 'green' linewidth 1.5",
-#        'ColoredWhisker3'               : "linecolor rgb 'blue' linewidth 1.5",
-#        'ColoredWhiskerMedian1' : "linecolor rgb 'red' linewidth 3",
-#        'ColoredWhiskerMedian2' : "linecolor rgb 'green' linewidth 3",
-#        'ColoredWhiskerMedian3' : "linecolor rgb 'blue' linewidth 3",
+#		 'ColoredWhisker1'				 : "linecolor rgb 'red' linewidth 1.5",
+#		 'ColoredWhisker2'				 : "linecolor rgb 'green' linewidth 1.5",
+#		 'ColoredWhisker3'				 : "linecolor rgb 'blue' linewidth 1.5",
+#		 'ColoredWhiskerMedian1' : "linecolor rgb 'red' linewidth 3",
+#		 'ColoredWhiskerMedian2' : "linecolor rgb 'green' linewidth 3",
+#		 'ColoredWhiskerMedian3' : "linecolor rgb 'blue' linewidth 3",
 
-        'ColoredMaxline1'                : "linecolor rgb 'purple' linewidth 1.5",
-        'ColoredMaxline2'                : "linecolor rgb 'cyan' linewidth 1.5",
-        'ColoredMaxline3'                : "linecolor rgb 'orange' linewidth 1.5",
-        'ColoredMaxline4'                : "linecolor tgb 'black' linewidth 1.5",
-        'ColoredMaxline5'                : "linecolor tgb 'gray' linewidth 1.5",
+		'ColoredMaxline1'				 : "linecolor rgb 'purple' linewidth 1.5",
+		'ColoredMaxline2'				 : "linecolor rgb 'cyan' linewidth 1.5",
+		'ColoredMaxline3'				 : "linecolor rgb 'orange' linewidth 1.5",
+		'ColoredMaxline4'				 : "linecolor tgb 'black' linewidth 1.5",
+		'ColoredMaxline5'				 : "linecolor tgb 'gray' linewidth 1.5",
 
 
-        # No Legend
-#        'NolegendWhisker'               : "linecolor rgb 'gray' linewidth 1",
-#        'NolegendWhiskerMedian' : "linecolor rgb 'gray' linewidth 3",
-        'NolegendMeanline'      : "rgb 'gray' linewidth 1 pointsize 1.0",
-        'NolegendMeanlineStderr'        : "rgb 'gray' linewidth 1 pointtype 0",
-        'NolegendMaxline'               : "rgb 'midnight-blue' linewidth 1 pointsize 1.0",
-        
-        # AVERAGE lines
-        'AvrMaxline'            : "linecolor rgb 'gray40' linewidth 3",
-        'AvrMeanline'           : "linecolor rgb 'black' linewidth 3",
-        'AvrMeanlineStderr'     : "linecolor rgb 'black' linewidth 1 pointtype 0",
-#        'AvrWhisker'            : "linecolor rgb 'black' linewidth 1.5",
-#        'AvrWhiskerMedian'      : "linecolor rgb 'black' linewidth 3"
+		# No Legend
+#		 'NolegendWhisker'				 : "linecolor rgb 'gray' linewidth 1",
+#		 'NolegendWhiskerMedian' : "linecolor rgb 'gray' linewidth 3",
+		'NolegendMeanline'		: "rgb 'gray' linewidth 1 pointsize 1.0",
+		'NolegendMeanlineStderr'		: "rgb 'gray' linewidth 1 pointtype 0",
+		'NolegendMaxline'				: "rgb 'midnight-blue' linewidth 1 pointsize 1.0",
+		
+		# AVERAGE lines
+		'AvrMaxline'			: "linecolor rgb 'gray40' linewidth 3",
+		'AvrMeanline'			: "linecolor rgb 'black' linewidth 3",
+		'AvrMeanlineStderr'		: "linecolor rgb 'black' linewidth 1 pointtype 0",
+#		 'AvrWhisker'			 : "linecolor rgb 'black' linewidth 1.5",
+#		 'AvrWhiskerMedian'		 : "linecolor rgb 'black' linewidth 3"
 }
 
 
 # Default plotting stats
 flag_plotWhiskerbars, flag_plotSmooth = True, False
-GNUPLOT_SMOOTHING_FUNCTION='csplines' 		# reasonable smoothing options are: csplines, acsplines, bezier, sbezier
+GNUPLOT_SMOOTHING_FUNCTION='csplines'		# reasonable smoothing options are: csplines, acsplines, bezier, sbezier
 inputplotfilename='AvrComplexity.plt'
 outputfilenameGNU="/tmp/,plotNeuralComplexity_" + str(os.getpid()) + ".gnuplot"
 
 GNUPLOT_MULTIPLOTSETTINGS="""
 set key at screen 1,1 right horizontal spacing 1	# even though this is already set in the regular GNUPLOT settings, you have to do it again here -- you just do.
-set bar 0.2             # if we are going to print errorbars, make smaller horizontal knobs on the ends.
+set bar 0.2				# if we are going to print errorbars, make smaller horizontal knobs on the ends.
 set grid noxtics	# turn off the grid on the xtics, it just creates clutter anyway
 ###
 set tmargin 1.0
@@ -156,54 +156,55 @@ PASSED_DIRECTORY=''
 multiplotDimX,multiplotDimY = 0, 0
 RUN_DIRS={ 'bestRecent': [], 'Recent': [] }
 GNUPLOT_TOPRIGHT_LABEL=[ "Generated `date +%Y-%m-%d` by `whoami`" ]
-multiplotmaxtimesteps={} # we only use this if we're multiplotting.  It lets us set the range and xtics for each plot invidually to make them pretty
+multiplotmaxtimesteps={} # we only use this if we're multiplotting.	 It lets us set the range and xtics for each plot invidually to make them pretty
 ################################################################################
 def print_usage_and_exit():
 	print """
 USAGE 
-       plotNeuralComplexity [-lmep] [-MXxY] -[A P I B] [--HB] directory
+	   plotNeuralComplexity [-lmep] [-MXxY] -[A P I B] [--HB] directory
 
 DESCRIPTION
-       plotNeuralComplexity plots the Olafcomplexity from one or more Polyworld run/ directories.
+	   plotNeuralComplexity plots the Olafcomplexity from one or more Polyworld run/ directories.
 
 OPTIONS
-       -l      A legend is to be drawn and different colors are are used the All/Processing/Input lines.  Lines will be labeled
-               in the legend using the names of the run directories (after stripping any leading numbers). If not
-               -l, all lines will be printed in the same identical gray color. (default off)
-       
-       -w/W    Box-and-Whiskers plot. 'w' signifies display each run as a whiskers plot. 'W' displays the averages all runs as a whiskers plot. (default off)
-               '-W' is only useful if you are plotting over >=5 run/ directories. 
+	   -l	   A legend is to be drawn and different colors are are used the All/Processing/Input lines.  Lines will be labeled
+			   in the legend using the names of the run directories (after stripping any leading numbers). If not
+			   -l, all lines will be printed in the same identical gray color. (default off)
+	   
+	   -w/W	   Box-and-Whiskers plot. 'w' signifies display each run as a whiskers plot. 'W' displays the averages all runs as a whiskers plot. (default off)
+			   '-W' is only useful if you are plotting over >=5 run/ directories. 
 
-       -n/N    The mean of each param will be computed and drawn as a line. (-n: default on, -N: default off)
-               If the timestep interval in 'AvrComplexity.plt' is different across runs, the mean will be computed for the timesteps
-               in the first directory.  For example, if the first run/ directory had an interval=1000, but another AvrComplexity.plt
-               had interval=500, the mean would only be computed every 1000 timesteps.  This is a feature
-               to control the temporal precision of the average line.
+	   -n/N	   The mean of each param will be computed and drawn as a line. (-n: default on, -N: default off)
+			   If the timestep interval in 'AvrComplexity.plt' is different across runs, the mean will be computed for the timesteps
+			   in the first directory.	For example, if the first run/ directory had an interval=1000, but another AvrComplexity.plt
+			   had interval=500, the mean would only be computed every 1000 timesteps.	This is a feature
+			   to control the temporal precision of the average line.
 
-       -e/E    Standard Error bars for the mean will be drawn. (default off)
+	   -e/E	   Standard Error bars for the mean will be drawn. (default off)
 
-       -x      Maximums (the top of the individual whiskers) will be drawn as a line. (default off)
+	   -x	   Maximums (the top of the individual whiskers) will be drawn as a line. (default off)
 
-       -X      The Mean of the -x's will be drawn as a thick line.  This is *not* the max of the mean's (the top of the -W). (default off)
+	   -X	   The Mean of the -x's will be drawn as a thick line.	This is *not* the max of the mean's (the top of the -W). (default off)
 
-       -p      Draw the points on either the meanline or the maxline. (default off)
+	   -p	   Draw the points on either the meanline or the maxline. (default off)
 
-       -s      Make a separate plot with the lines smoothed with '%s'. (default off)
+	   -s	   Make a separate plot with the lines smoothed with '%s'. (default off)
 
-       -MXxY   Multiplot putting each run/ directory on it's own graph.  Does not plot -WNE. (default off)
+	   -MXxY   Multiplot putting each run/ directory on it's own graph.	 Does not plot -WNE. (default off)
 
-       -A      Plot NeuralComplexity across 'All' neurons. (default off)
+	   -A	   Plot NeuralComplexity across 'All' neurons. (default off)
 
-       -P      Plot NeuralComplexity across 'Processing' neurons. (default on)
+	   -P	   Plot NeuralComplexity across 'Processing' neurons. (default on)
 
-       -I      Plot NeuralComplexity across 'Input' neurons. (default off)
+	   -I	   Plot NeuralComplexity across 'Input' neurons. (default off)
 
-       -B      Plot NeuralComplexity across 'Behavior' neurons. (default off)
+	   -B	   Plot NeuralComplexity across 'Behavior' neurons. (default off)
 
-       --HB     Plot NeuralComplexity across 'Health' + 'Behavior' neurons. (default off)
+	   --HB		Plot NeuralComplexity across 'Health' + 'Behavior' neurons. (default off)
 
 	""" % (GNUPLOT_SMOOTHING_FUNCTION)
 	sys.exit(1)
+
 ####################################################################################
 ####################################################################################
 ####################################################################################
@@ -240,29 +241,30 @@ def CONVERT_TO_MULTIPLOT( plotstring ):
 		mp_plotstring.append( plotstring[i] )
 
 	return '\n'.join( mp_plotstring )
+
 ####################################################################################
 # In addition to returning the median, get_median() also returns the upper and lower half of the list
 # Note that this function ASSUMES THE LIST IS ALREADY SORTED.
 ####################################################################################
 def get_median( listofnumbers ):
 
-        length=len(listofnumbers)
-        lenover2=int(length / 2)
+	length=len(listofnumbers)
+	lenover2=int(length / 2)
 
-	listofnumbers = map( float, listofnumbers )	# convert them all to float
+	listofnumbers = map( float, listofnumbers ) # convert them all to float
 	listofnumbers.sort()				# sort them.
 
 #	print "- length=%s lenover2=%s" % ( length, lenover2)
 	
-	middle1=listofnumbers[ lenover2 ]                       # this number is the answer if the length is ODD, and half of the answer is the length is EVEN
-	lowerhalf=listofnumbers[: lenover2 ]    # first half of the numbers
+	middle1=listofnumbers[ lenover2 ]						# this number is the answer if the length is ODD, and half of the answer is the length is EVEN
+	lowerhalf=listofnumbers[: lenover2 ]	# first half of the numbers
 
-                
-	if length % 2 == 0:                     # if the length of the list is an EVEN number
+				
+	if length % 2 == 0:						# if the length of the list is an EVEN number
 		upperhalf=listofnumbers[ lenover2 :]
 		middle2=listofnumbers[ (lenover2 - 1) ]
 		median = (middle1 + middle2) / 2.0
-	else:                                           # the length of the list is an ODD number, so simply return the middle number.
+	else:											# the length of the list is an ODD number, so simply return the middle number.
 		upperhalf=listofnumbers[(lenover2+1) :] # second half of the numbers
 		median = middle1
 	if lowerhalf == []: lowerhalf = [ median ]
@@ -270,10 +272,11 @@ def get_median( listofnumbers ):
 
 #	print "nums=%s" % ( listofnumbers )
 #	print "median=%s" % ( median )
-#	print "lowerhalf=%s" % ( lowerhalf )    
+#	print "lowerhalf=%s" % ( lowerhalf )	
 #	print "upperhalf=%s" % ( upperhalf )
-        
-        return median, lowerhalf, upperhalf
+		
+	return median, lowerhalf, upperhalf
+
 ######################################################################################
 # GET_GNUPLOT_PLOTSTRING_SMOOTH -- this function calls the function GET_GNUPLOT_PLOTSTRING, and then some manipulations to make the SMOOTHED plotstring
 #######################################################################################
@@ -319,7 +322,7 @@ def GET_GNUPLOT_DYNAMIC_SETTINGS( RecentOrbestRecent ):
 	if flag_plotInput: ylabel += 'Input, '
 	if flag_plotBehavior: ylabel += 'Behavior, '
 	if flag_plotHealthBehavior: ylabel += 'HealthBehavior, '
-	settings.append("set ylabel '%s' font 'Times,15'" % (ylabel.rstrip(', ')) )	# take off the trailing coma and space before using.
+	settings.append("set ylabel '%s' font 'Times,15'" % (ylabel.rstrip(', ')) ) # take off the trailing coma and space before using.
 	# done defining the ylabel
 
 	if not flag_plotLegend:
@@ -338,13 +341,14 @@ def GET_GNUPLOT_DYNAMIC_SETTINGS( RecentOrbestRecent ):
 		settings.append("set style data points")
 
 	# make the TopRight Label
-        settings.append( 'set label "%s" at screen 0.001,0.98 left' % ('\\n'.join(GNUPLOT_TOPRIGHT_LABEL)) )
+		settings.append( 'set label "%s" at screen 0.001,0.98 left' % ('\\n'.join(GNUPLOT_TOPRIGHT_LABEL)) )
 
 	if flag_multiplot:
 		settings.append( "set multiplot layout %s, %s title '%s/ -- %s'" % ( multiplotDimY, multiplotDimX, PASSED_DIRECTORY, RecentOrbestRecent ) ) 
 		settings.append( GNUPLOT_MULTIPLOTSETTINGS )	# put in the multiplot settings on top of the regular settings
 
 	return '\n'.join(settings)
+
 #####################################
 # This function specifies the stuff to include at the end of the very end of the plot.
 def GET_GNUPLOT_END_SETTINGS():
@@ -356,11 +360,11 @@ def GET_GNUPLOT_END_SETTINGS():
 
 	return '\n'.join(z)
 	# END
-#####################################
 
+#####################################
 def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename, linetype=1 ):
 	global RUN_DIRS, flag_plotLegend, flag_plotWhiskers, flag_plotMean, flag_plotErrorbars, flag_plotSmooth, flag_plotWhiskers_AVERAGE, flag_plotMean_AVERAGE, flag_plotErrorbars_AVERAGE, flag_plotAll, flag_plotProcessing, flag_plotInput, flag_plotBehavior, flag_plotHealthBehavior, flag_have_previously_plotted_a_file, flag_have_previously_plotted_a_max
-	global  flag_plotMax, flag_plotMax_AVERAGE, LINESTYLES	
+	global	flag_plotMax, flag_plotMax_AVERAGE, LINESTYLES	
 
 	plotstring = [ ]
 	
@@ -380,7 +384,7 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename, linetype=1 ):
 				temp.pop(0)
 				temp.pop(0)
 
-			if flag_plotProcessing:	
+			if flag_plotProcessing: 
 				plotstring.append("'%s' using 1:11:10:14:13 with candlesticks whiskerbars linestyle %s title '%s', '' using 1:12:12:12:12 with candlesticks linestyle %s notitle" % (filename, temp[0], Ptitle, temp[1] ))
 				temp.pop(0)
 				temp.pop(0)
@@ -395,7 +399,7 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename, linetype=1 ):
 				temp.pop(0)
 				temp.pop(0)
 
-			if flag_plotHealthBehavior:	
+			if flag_plotHealthBehavior: 
 				plotstring.append("'%s' using 1:35:34:38:37 with candlesticks whiskerbars linestyle %s title '%s', '' using 1:36:36:36:36 with candlesticks linestyle %s notitle" % (filename, temp[0], HBtitle, temp[1] ))
 				temp.pop(0)
 				temp.pop(0)
@@ -406,14 +410,14 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename, linetype=1 ):
 			else:			
 				flag_have_previously_plotted_a_file = True
 				Atitle,Ptitle,Ititle,Btitle,HBtitle=('mean All','mean Processing','mean Input','mean Behavior','mean HealthBehavior')
-                        
+						
 			# for these we do not use numbered linestyles because then we can't make them dashed for the second directory
-                        if flag_plotLegend:
-                                if flag_plotErrorbars: temp = [ LINESTYLES['ColoredMeanline1'], LINESTYLES['ColoredMeanlineStderr1'], LINESTYLES['ColoredMeanline2'], LINESTYLES['ColoredMeanlineStderr2'], LINESTYLES['ColoredMeanline3'], LINESTYLES['ColoredMeanlineStderr3'], LINESTYLES['ColoredMeanline4'], LINESTYLES['ColoredMeanlineStderr4'],LINESTYLES['ColoredMeanline5'], LINESTYLES['ColoredMeanlineStderr5'] ]
-                                else: temp = [ LINESTYLES['ColoredMeanline1'], LINESTYLES['ColoredMeanline2'], LINESTYLES['ColoredMeanline3'], LINESTYLES['ColoredMeanline4'], LINESTYLES['ColoredMeanline5']]
-                        else:
-                                if flag_plotErrorbars: temp = [ LINESTYLES['NolegendMeanline'], LINESTYLES['NolegendMeanlineStderr'] ] * 5
-                                else: temp = [ LINESTYLES['NolegendMeanline'] ] * 5
+			if flag_plotLegend:
+					if flag_plotErrorbars: temp = [ LINESTYLES['ColoredMeanline1'], LINESTYLES['ColoredMeanlineStderr1'], LINESTYLES['ColoredMeanline2'], LINESTYLES['ColoredMeanlineStderr2'], LINESTYLES['ColoredMeanline3'], LINESTYLES['ColoredMeanlineStderr3'], LINESTYLES['ColoredMeanline4'], LINESTYLES['ColoredMeanlineStderr4'],LINESTYLES['ColoredMeanline5'], LINESTYLES['ColoredMeanlineStderr5'] ]
+					else: temp = [ LINESTYLES['ColoredMeanline1'], LINESTYLES['ColoredMeanline2'], LINESTYLES['ColoredMeanline3'], LINESTYLES['ColoredMeanline4'], LINESTYLES['ColoredMeanline5']]
+			else:
+					if flag_plotErrorbars: temp = [ LINESTYLES['NolegendMeanline'], LINESTYLES['NolegendMeanlineStderr'] ] * 5
+					else: temp = [ LINESTYLES['NolegendMeanline'] ] * 5
 
 			if flag_plotAll:
 				plotstring.append("'%s' using 1:7 %s linetype %s title '%s'" % (filename, temp[0], linetype, Atitle) )
@@ -442,7 +446,7 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename, linetype=1 ):
 					plotstring.append("'' using 1:31:32 with yerrorbars %s linetype %s notitle" % (temp[0], linetype))
 					temp.pop(0)
 
-                        if flag_plotHealthBehavior:
+			if flag_plotHealthBehavior:
 				plotstring.append("'%s' using 1:39 %s linetype %s title '%s'" % (filename, temp[0], linetype, HBtitle) )
 				temp.pop(0)
 				if flag_plotErrorbars: 
@@ -450,16 +454,15 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename, linetype=1 ):
 					temp.pop(0)
 
 
-                if flag_plotMax:   # are we doing the MAX for each one?
-					if flag_have_previously_plotted_a_max:
-						Atitle, Ptitle, Ititle, Btitle, HBtitle = ('','','','','')
-					else:
-						flag_have_previously_plotted_a_max = True
-						Atitle,Ptitle,Ititle,Btitle,HBtitle=('maxAll','maxProcessing','maxInput','maxBehavior','maxHealthBehavior')
+		if flag_plotMax:   # are we doing the MAX for each one?
+			if flag_have_previously_plotted_a_max:
+				Atitle, Ptitle, Ititle, Btitle, HBtitle = ('','','','','')
+			else:
+				flag_have_previously_plotted_a_max = True
+				Atitle,Ptitle,Ititle,Btitle,HBtitle=('maxAll','maxProcessing','maxInput','maxBehavior','maxHealthBehavior')
 
-					if flag_plotLegend: temp = [ LINESTYLES['ColoredMaxline1'], LINESTYLES['ColoredMaxline2'], LINESTYLES['ColoredMaxline3'], LINESTYLES['ColoredMaxline4'], LINESTYLES['ColoredMaxline5'] ]
-					else:   temp = [ LINESTYLES['NolegendMaxline'] ] * 5
-
+			if flag_plotLegend: temp = [ LINESTYLES['ColoredMaxline1'], LINESTYLES['ColoredMaxline2'], LINESTYLES['ColoredMaxline3'], LINESTYLES['ColoredMaxline4'], LINESTYLES['ColoredMaxline5'] ]
+			else:	temp = [ LINESTYLES['NolegendMaxline'] ] * 5
 
 			if flag_plotAll:
 				plotstring.append("'%s' using 1:6 %s linetype %s title '%s'" % (filename, temp[0], linetype, Atitle) )
@@ -478,7 +481,7 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename, linetype=1 ):
 				temp.pop(0)
 
 
-	if Avrfilename:	
+	if Avrfilename: 
 		##### NOW FOR THE AVERAGES ###########
 		if flag_plotWhiskers_AVERAGE:	# are we doing the whiskers for the AVERAGE?
 
@@ -489,7 +492,7 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename, linetype=1 ):
 				temp.pop(0)
 				temp.pop(0)
 	
-			if flag_plotProcessing:	
+			if flag_plotProcessing: 
 				plotstring.append("'%s' using 1:11:10:14:13 with candlesticks whiskerbars linestyle %s title 'Processing means', '' using 1:12:12:12:12 with candlesticks linestyle %s notitle" % (Avrfilename, temp[0], temp[1] ))
 				temp.pop(0)
 				temp.pop(0)
@@ -504,17 +507,17 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename, linetype=1 ):
 				temp.pop(0)
 				temp.pop(0)
 
-                        if flag_plotHealthBehavior:	
+			if flag_plotHealthBehavior: 
 				plotstring.append("'%s' using 1:35:34:38:37 with candlesticks whiskerbars linestyle %s title 'Behavior means', '' using 1:36:36:36:36 with candlesticks linestyle %s notitle" % (Avrfilename, temp[0], temp[1] ))
 				temp.pop(0)
 				temp.pop(0)
 	
 		if flag_plotMean_AVERAGE:
-                        if flag_plotWhiskers_AVERAGE:   # if we plotted Whiskers, dont makes keys for the averages
+			if flag_plotWhiskers_AVERAGE:	# if we plotted Whiskers, dont makes keys for the averages
 				Atitle, Ptitle, Ititle, Btitle, HBtitle = ('', '', '', '', '')
 			else:
 				Atitle, Ptitle, Ititle, Btitle, HBtitle = ('meta-mean All', 'meta-mean Pro', 'meta-mean Inp', 'meta-mean Beh', 'meta-mean HeaBeh')
-			if flag_plotErrorbars_AVERAGE: temp = [ LINESTYLES['AvrMeanline'],  LINESTYLES['AvrMeanlineStderr'] ] * 5
+			if flag_plotErrorbars_AVERAGE: temp = [ LINESTYLES['AvrMeanline'],	LINESTYLES['AvrMeanlineStderr'] ] * 5
 			else: temp = [ LINESTYLES['AvrMeanline'] ] * 5
 	
 			if flag_plotAll:
@@ -548,9 +551,9 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename, linetype=1 ):
 					plotstring.append("'' using 1:39:40 with yerrorbars %s linetype %s notitle" % (temp[0], linetype))
 					temp.pop(0)
 
-			if flag_plotMax_AVERAGE:   # are we doing the MAX for each one?
-				Atitle,Ptitle,Ititle,Btitle,HBtitle=('max-mmAll','max-mmProcessing','max-mmInput','max-mmBehavior', 'max-mmHealthBehavior')
-				temp = [ LINESTYLES['AvrMaxline'] ] * 5
+		if flag_plotMax_AVERAGE:   # are we doing the MAX for each one?
+			Atitle,Ptitle,Ititle,Btitle,HBtitle=('max-mmAll','max-mmProcessing','max-mmInput','max-mmBehavior', 'max-mmHealthBehavior')
+			temp = [ LINESTYLES['AvrMaxline'] ] * 5
 
 			if flag_plotAll:
 				plotstring.append("'%s' using 1:26 with lines %s linetype %s title '%s'" % (Avrfilename, temp[0], linetype, Atitle) )
@@ -584,7 +587,7 @@ def sample_mean( list ):
 	try: variance = SSE / (N-1)
 	except: variance = 0
 
-	stderr = ( variance ** 0.5 ) / (N**0.5)	# stderr = stddev / sqrt(N)
+	stderr = ( variance ** 0.5 ) / (N**0.5) # stderr = stddev / sqrt(N)
 	return mean, stderr
 
 def check_parameters( argv ):
@@ -600,7 +603,7 @@ def check_parameters( argv ):
 	global flag_plotMax, flag_plotMax_AVERAGE
 	# Set our plot flags
 	for opt, value in opts:
-		if   '-e' in opt: flag_plotErrorbars = True
+		if	 '-e' in opt: flag_plotErrorbars = True
 		elif '-s' in opt: flag_plotSmooth = True
 		elif '-n' in opt: flag_plotMean = True
 		elif '-w' in opt: flag_plotWhiskers = True
@@ -642,7 +645,7 @@ def check_parameters( argv ):
 		print_usage_and_exit()
 
 	for whichrecent in RUN_DIRS:
-		if os.path.isfile( PASSED_DIRECTORY + '/brain/'+ whichrecent + '/' + inputplotfilename ): 	# if 'directory' is itself a run/ directory, just use that.
+		if os.path.isfile( PASSED_DIRECTORY + '/brain/'+ whichrecent + '/' + inputplotfilename ):	# if 'directory' is itself a run/ directory, just use that.
 			RUN_DIRS[whichrecent].append( PASSED_DIRECTORY )
 
 		else:						# 'directory' is a directory, but is NOT a run/ directory itself.  Is it a list of run directories?
@@ -670,14 +673,14 @@ def get_bestRecentBrainFunctionRecordFrequency( run_dir ):
 		worldfile = open( run_dir + '/worldfile' )
 		for line in worldfile:
 			if 'bestRecentBrainFunctionRecordFrequency' in line:
-				bestRecentBrainFunctionRecordFrequency = int( re.match('([0-9]*)', line).groups(0)[0] )	
+				bestRecentBrainFunctionRecordFrequency = int( re.match('([0-9]*)', line).groups(0)[0] ) 
 		worldfile.close()
 	except:
 		print "* Error: Could not open '%s/worldfile'. Exiting." % ( run_dir )
 		sys.exit(1)
 
 	if bestRecentBrainFunctionRecordFrequency == -1:
-		print "* Error: Couldn't find a value for 'bestRecentBrainFunctionRecordFrequency' in %s/worldfile.  Exiting." % (run_dir)
+		print "* Error: Couldn't find a value for 'bestRecentBrainFunctionRecordFrequency' in %s/worldfile.	 Exiting." % (run_dir)
 		sys.exit(1)
 		
 	return bestRecentBrainFunctionRecordFrequency
@@ -692,7 +695,7 @@ KnownVersions = [0, 1]
 # Going to make our OPTS and ARGS lists here.
 #OPTS, ARGS= ([], [])
 #for element in sys.argv[1:]:
-#	if element.startswith('-'):	OPTS.append( element )
+#	if element.startswith('-'): OPTS.append( element )
 #	else: ARGS.append( element )
 ##print "OPTS=%s" % ( OPTS )  
 ##print "ARGS=%s" % ( ARGS )
@@ -707,7 +710,7 @@ check_parameters( sys.argv[1:] )		# don't send it the first item in the sys.argv
 #print "- plotMeanAverage=%s plotErrorbarsAverage=%s plotWhiskersAverage=%s" % ( flag_plotMean_AVERAGE, flag_plotErrorbars_AVERAGE, flag_plotWhiskers_AVERAGE )
 #print "- plotAll=%s plotProcessing=%s plotInput=%s" % ( flag_plotAll, flag_plotProcessing, flag_plotInput )
 
-if len(RUN_DIRS['bestRecent']): averagetimestepinterval = get_bestRecentBrainFunctionRecordFrequency( RUN_DIRS['bestRecent'][0]  )
+if len(RUN_DIRS['bestRecent']): averagetimestepinterval = get_bestRecentBrainFunctionRecordFrequency( RUN_DIRS['bestRecent'][0]	 )
 elif len(RUN_DIRS['Recent']): averagetimestepinterval = get_bestRecentBrainFunctionRecordFrequency( RUN_DIRS['Recent'][0]  )
 else:
 	print "* Error: Everything is empty!"
@@ -736,7 +739,7 @@ for whichrecent in RUN_DIRS:
 				print 'AvrComplexity.plt has an unknown version (' + str(version) + ')'
 				print 'Exiting'
 				sys.exit(1)
-                
+				
 		for line in inputplotfile:
 			if line.startswith('#'):	# if the line is a comment (begins with #)
 				continue;
@@ -791,7 +794,7 @@ for whichrecent in RUN_DIRS:
 			list_to_print.append( "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s" % ( minimum, q1, median, q3, maximum, mean, mean_stderr, numsamples ) )
 
 		for region in Regions:	# we break the format and put the mean and stderr of the MAX's at the end because initially we didnt know that we were going to do that.
-			MAXDATA[whichrecent][t][region] = map( float, MAXDATA[whichrecent][t][region] )	# make sure they are all floats so we comparing correctly.
+			MAXDATA[whichrecent][t][region] = map( float, MAXDATA[whichrecent][t][region] ) # make sure they are all floats so we comparing correctly.
 			meanmax, max_stderr = sample_mean( MAXDATA[whichrecent][t][region] )
 			list_to_print.append( "%s\t%s" % (meanmax, max_stderr) )
 
@@ -821,7 +824,7 @@ for whichrecent in RUN_DIRS:
 		Avrfilename =  tempfilename + '.' + whichrecent
 		plotstring.append( GET_GNUPLOT_PLOTSTRING('', Avrfilename, 1) )		# plot the Averages last because they are important and we want them to be laid on top of the graph
 
-        for dummycounter in range( plotstring.count('') ): plotstring.remove('')        # remove all blank entries from the plotstring.  They shouldnt have cropped in, but lets be sure.
+		for dummycounter in range( plotstring.count('') ): plotstring.remove('')		# remove all blank entries from the plotstring.	 They shouldnt have cropped in, but lets be sure.
 
 	if flag_multiplot:
 		multiplot_plotstring = CONVERT_TO_MULTIPLOT( plotstring )
@@ -832,10 +835,10 @@ for whichrecent in RUN_DIRS:
 	outputcontents.append( GET_GNUPLOT_END_SETTINGS() )
 
 
-if flag_plotSmooth:	# We've finished all of the regular plots, now to do the smoothed plots (if we're doing that)
+if flag_plotSmooth: # We've finished all of the regular plots, now to do the smoothed plots (if we're doing that)
 	outputcontents.append("reset")	# clear everything
 	outputcontents.append( GNUPLOT_SETTINGS )	# load the old settings back
-        GNUPLOT_TOPRIGHT_LABEL.append( "Smoothed with '%s'" % (GNUPLOT_SMOOTHING_FUNCTION) )
+	GNUPLOT_TOPRIGHT_LABEL.append( "Smoothed with '%s'" % (GNUPLOT_SMOOTHING_FUNCTION) )
 
 	for whichrecent in RUN_DIRS:
 		flag_have_previously_plotted_a_file, flag_have_previously_plotted_a_max = (False, False)
@@ -847,19 +850,19 @@ if flag_plotSmooth:	# We've finished all of the regular plots, now to do the smo
 			plotstring.append( GET_GNUPLOT_PLOTSTRING_SMOOTH(filename, '') )
 
 
-        if flag_plotWhiskers_AVERAGE or flag_plotMean_AVERAGE or flag_plotErrorbars_AVERAGE or flag_plotMax_AVERAGE:
-                Avrfilename =  tempfilename + '.' + whichrecent
-                plotstring.append( GET_GNUPLOT_PLOTSTRING('', Avrfilename, 1) )            # plot the Averages last because they are important and we want them to be laid on top of the graph
+		if flag_plotWhiskers_AVERAGE or flag_plotMean_AVERAGE or flag_plotErrorbars_AVERAGE or flag_plotMax_AVERAGE:
+				Avrfilename =  tempfilename + '.' + whichrecent
+				plotstring.append( GET_GNUPLOT_PLOTSTRING('', Avrfilename, 1) )			   # plot the Averages last because they are important and we want them to be laid on top of the graph
 
-        for dummycounter in range( plotstring.count('') ): plotstring.remove('')        # remove all blank entries from the plotstring.  They shouldnt have cropped in, but lets be sure.
+		for dummycounter in range( plotstring.count('') ): plotstring.remove('')		# remove all blank entries from the plotstring.	 They shouldnt have cropped in, but lets be sure.
 
-        if flag_multiplot:
-                multiplot_plotstring = CONVERT_TO_MULTIPLOT( plotstring )
-                outputcontents.append( multiplot_plotstring )
-        else:
-                outputcontents.append( 'plot ' + ', '.join(plotstring) )
+		if flag_multiplot:
+				multiplot_plotstring = CONVERT_TO_MULTIPLOT( plotstring )
+				outputcontents.append( multiplot_plotstring )
+		else:
+				outputcontents.append( 'plot ' + ', '.join(plotstring) )
 
-        outputcontents.append( GET_GNUPLOT_END_SETTINGS() )
+		outputcontents.append( GET_GNUPLOT_END_SETTINGS() )
 
 
 outputfileGNU=open( outputfilenameGNU, 'w' )
