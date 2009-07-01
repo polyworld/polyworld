@@ -1,4 +1,5 @@
 #!/usr/bin/python
+CurrentVersion=1
 ### Configurable parameters
 #CALC_COMPLEXITY_OVER_DIRECTORY="./CalcComplexityOverDirectory.sh"
 CALC_COMPLEXITY="../utils/CalcComplexity"
@@ -8,20 +9,22 @@ OutputFilename2='ComplexityHist.plt'
 import sys, os
 ### Now initialize some global variables
 PASSED_DIRECTORY=''
-ComplexitiesToGet='API'
+ComplexitiesToGet=['A', 'P', 'I', 'B', 'HB']
 NUMBINS = 11
 ####
 def print_usage_and_exit():
 	print """
-        USAGE: ./CalcComplexityOverRecent Recent|bestRecent [API]
+        USAGE: ./CalcComplexityOverRecent Recent|bestRecent [A P I B HB] [NumBins]
 
 	This script takes a single argument -- a Recent or bestRecent Polyworld directory.
         Upon exiting it will leave two files, 'AvrComplexity.plt' and 'ComplexityHist.plt' in the specified
         directory with statistics on the OlafComplexity at each timestep.
 
 	The second argument is optional.  It specifies whether you want to compute the
-        average complexity of the All, Processing, or Input programs.  By default
-        it calculates the OlafComplexity of all three.
+        average complexity of the All, Processing, Input, Behavior, or Health+Behavior neurons.  By default
+        it calculates the OlafComplexity of all five.
+        
+    The third argument is optional.  It specifies the number of bins to be used for histograms.
 	"""
 	sys.exit(1)
 ####################################################################################
@@ -29,20 +32,19 @@ def print_usage_and_exit():
 def check_parameters( argv ):
 	global PASSED_DIRECTORY, NUMBINS
 
-	if len(argv) not in [1, 2]:		# if we don't have 1 or 2 parameters, exit.
+	if len(argv) < 1:		# if we don't have parameters, exit.
 		print_usage_and_exit()
 
-	if len(argv) == 2:			# there are two arguments, meaning the CalcAll, CalcProcessing, and CalcInput are being specified.
+	if len(argv) > 1:			# there are at least two arguments, meaning the CalcAll, CalcProcessing, CalcInput, and CalcBehavior options are being specified.
 		global ComplexitiesToGet
-		ComplexitiesToGet=''	# re-initialize the default one
-		if 'A' in argv[1]: ComplexitiesToGet += 'A'
-		if 'P' in argv[1]: ComplexitiesToGet += 'P'
-		if 'I' in argv[1]: ComplexitiesToGet += 'I'
+		ComplexitiesToGet=[]	# re-initialize the defaults
+		for i in range(1, len(argv)):
+			ComplexitiesToGet.append(argv[i])
 		
-		if ComplexitiesToGet == '': ComplexitiesToGet = 'API'	# get the default set
+		if ComplexitiesToGet == []: ComplexitiesToGet = ['A', 'P', 'I', 'B', 'HB']	# get the default set
 		
-		argv[1] = argv[1].strip('-API')
-		if argv[1].isdigit(): NUMBINS = int(argv[1])
+		# There may be a trailing parameter which specifies the number of bins to use for the histograms
+		if argv[len(argv)-1].isdigit(): NUMBINS = int(argv[len(argv)-1])
 		
 	if not os.path.isfile( CALC_COMPLEXITY ):	# ensure CALC_COMPLEXITY exists.
 		print "* Error: '%s' does not exist.  Fix it." %( CALC_COMPLEXITY )
@@ -104,12 +106,8 @@ check_parameters(sys.argv[1:])
 print "- PASSED_DIRECTORY='%s'" %(PASSED_DIRECTORY)
 print "- output='%s'" % (PASSED_DIRECTORY + '/' + OutputFilename)
 outputfile = open( PASSED_DIRECTORY + '/' + OutputFilename, 'w' )
-if 'B' in ComplexitiesToGet:
-        outputfile.write('#version=1\n')
-        outputfile.write('#Timestep\tAq1\tAq2\tAq3\tAq4\tAq5\tAmean\tAstderr\tAsampsize\tPq1\tPq2\tPq3\tPq4\tPq5\tPmean\tPstderr\tPsampsize\tIq1\tIq2\tIq3\tIq4\tIq5\tImean\tIstderr\tIsampsize\tBq1\tBq2\tBq3\tBq4\tBq5\tBmean\tBstderr\tBsampsize\n')
-else:
-        outputfile.write('#version=0\n')
-        outputfile.write('#Timestep\tAq1\tAq2\tAq3\tAq4\tAq5\tAmean\tAstderr\tAsampsize\tPq1\tPq2\tPq3\tPq4\tPq5\tPmean\tPstderr\tPsampsize\tIq1\tIq2\tIq3\tIq4\tIq5\tImean\tIstderr\tIsampsize\n')
+outputfile.write('#version=%d\n', CurrentVersion)
+outputfile.write('#Timestep\tAq1\tAq2\tAq3\tAq4\tAq5\tAmean\tAstderr\tAsampsize\tPq1\tPq2\tPq3\tPq4\tPq5\tPmean\tPstderr\tPsampsize\tIq1\tIq2\tIq3\tIq4\tIq5\tImean\tIstderr\tIsampsize\tBq1\tBq2\tBq3\tBq4\tBq5\tBmean\tBstderr\tBsampsize\tHBq1\tHBq2\tHBq3\tHBq4\tHBq5\tHBmean\tHBstderr\tHBsampsize\n')
 
 timesteps = []
 # list all of the timesteps, make sure they are all integers (and directories), then sort them by number.
@@ -128,6 +126,10 @@ PROMIN = {}
 PROMAX = {}
 INPMIN = {}
 INPMAX = {}
+BEHMIN = {}
+BEHMAX = {}
+HEABEHMIN = {}
+HEABEHMAX = {}
 
 # We've made our timesteps, now to make our DATA containing the complexities.
 DATA={ }
@@ -142,71 +144,83 @@ for t in timesteps:
 	DATA[ str(t) + '_ALL' ] = [ ]
 	DATA[ str(t) + '_PRO' ] = [ ]
 	DATA[ str(t) + '_INP' ] = [ ]
+	DATA[ str(t) + '_BEH' ] = [ ]
+	DATA[ str(t) + '_HEA_BEH' ] = [ ]
 	
-	AlreadyHave = ''
-	for c in [ 'A', 'P', 'I' ]:
+	AlreadyHave = []
+	for c in [ 'A', 'P', 'I', 'B', 'HB']:
 		filename = timestep_directory + '/complexity_' + c + '.txt'
 		if os.path.isfile( filename ):
 			datafile = open(filename, 'r')
 			data = datafile.readline()
 			data = float(data)
-			if data != -1:	# complexity of type c has already been calculated!
+			if data >= 0:	# complexity of type c has already been calculated!
 				print c + ' has already been calculated for this timestep. ',
-				AlreadyHave += c
+				AlreadyHave.append(c)
 			datafile.close()
                         
-        print "AlreadyHave =", AlreadyHave
-        ComplexitiesToGet = ComplexitiesToGet.strip(AlreadyHave)
-        print "ComplexitiesToGet =", ComplexitiesToGet
+	for c in AlreadyHave:
+		if c in ComplexitiesToGet:
+			ComplexitiesToGet.remove(c)
+
+	print "AlreadyHave =", AlreadyHave
+	print "ComplexitiesToGet =", ComplexitiesToGet
 
 	if ComplexitiesToGet:
-                
 		for potential_brainFunction_file in os.listdir( timestep_directory ):
 			if not 'brainFunction' in potential_brainFunction_file:		# if it's not a brainFunction file, skip it
 				continue;
 
 #			print "Trying file '%s'..." % ( potential_brainFunction_file )
-			cmd="%s %s/%s %s" % ( CALC_COMPLEXITY, timestep_directory, potential_brainFunction_file, ComplexitiesToGet)
-			CritterComplexities = os.popen(cmd).readlines()
+			for Comstring in ComplexitiesToGet:
+				cmd="%s %s/%s %s" % ( CALC_COMPLEXITY, timestep_directory, potential_brainFunction_file, Comstring)
 		
-			for line in CritterComplexities:
-				complexity_i = line.split('\t')[1].rstrip('\n')
-				if   'All'        in line :
-					if 'A' in ComplexitiesToGet:
-						DATA[ str(t) + '_ALL' ].append( complexity_i )
-						datafile = open( timestep_directory + '/complexity_A.txt', 'a' )
-						datafile.write( complexity_i + '\n' )
-						datafile.flush()
-						datafile.close()
-				elif 'Processing' in line :
-					if 'P' in ComplexitiesToGet:
-						DATA[ str(t) + '_PRO' ].append( complexity_i )
-						datafile = open( timestep_directory + '/complexity_P.txt', 'a' )
-						datafile.write( complexity_i + '\n' )
-						datafile.flush()
-						datafile.close()
-				elif 'Input'      in line :
-					if 'I' in ComplexitiesToGet:
-						DATA[ str(t) + '_INP' ].append( complexity_i )
-						datafile = open( timestep_directory + '/complexity_I.txt', 'a' )
-						datafile.write( complexity_i + '\n' )
-						datafile.flush()
-						datafile.close()
-				else:
-					print "* Error: The output of CalcComplexity has been modified in an incompatible way."
-					sys.exit(1)
-				
+				CritterComplexities = os.popen(cmd).readlines()#get output from CalcComplexity_new.cpp
+		  #      print CritterComplexities
+				for line in CritterComplexities:
+					complexity_i = line.split('\t')[1].rstrip('\n')
+					data_t = str(t)
+					data_fname = '/complexity_'
+
+					if 'All' in line:
+						data_t += '_ALL'
+						data_fname += 'A'
+					if 'Input' in line:
+						data_t += '_INP'
+						data_fname += 'I'
+					if 'Health' in line:
+						data_t += '_HEA'
+						data_fname += 'H'
+					if 'Processing' in line:
+						data_t += '_PRO'
+						data_fname += 'P'
+					if 'Behavior' in line:
+						data_t += '_BEH'
+						data_fname += 'B'
+					if data_t == str(t):
+						print "* Error: The output of CalcComplexity has been modified in an incompatible way."
+						sys.exit(1)
+
+					data_fname += '.txt'
+					DATA[ data_t ].append(complexity_i)
+					datafile = open(timestep_directory + data_fname, 'a')
+					datafile.write(complexity_i + '\n')
+					datafile.flush()
+					datafile.close()
+							
 	for c in AlreadyHave:
 		datafile = open( timestep_directory + '/complexity_' + c + '.txt', 'r' )
 		if c == 'A': thistype = str(t) + '_ALL'
 		elif c == 'P': thistype = str(t) + '_PRO'
-		else: thistype = str(t) + '_INP'
+		elif c == 'I': thistype = str(t) + '_INP'
+		elif c == 'B': thistype = str(t) + '_BEH'
+		elif c == 'HB': thistype = str(t) + '_HEA_BEH'
 		for line in datafile:
 			DATA[ thistype ].append( line.rstrip('\n') )
 
 	list_to_print = [ t ]				# begin the line with timestep t
 # This loop doesn't do anything vital to the logic, it is solely for cleanup and prepartion for the next loop
-	for keypiece in ( '_ALL', '_PRO', '_INP' ):
+	for keypiece in ( '_ALL', '_PRO', '_INP', '_BEH', '_HEA_BEH' ):
 		DATAkey = str(t) + keypiece
 		DATA[ DATAkey ] = map( float, DATA[ DATAkey ] ) # convert to floats just to make sure we're going to sort right.
 		DATA[ DATAkey ].sort()
@@ -220,15 +234,21 @@ for t in timesteps:
 			minimum=min( DATA[ DATAkey ] )
 			maximum=max( DATA[ DATAkey ] )
 
-#			if keypiece == '_ALL':
-#				ALLMAX[ str(t) ] = maximum
-#				ALLMIN[ str(t) ] = minimum
-#			elif keypiece == '_PRO':
-#				PROMAX[ str(t) ] = maximum
-#				PROMIN[ str(t) ] = minimum
-#			else:
-#				INPMAX[ str(t) ] = maximum
-#				INPMIN[ str(t) ] = minimum
+##			if keypiece == '_ALL':
+##				ALLMAX[ str(t) ] = maximum
+##				ALLMIN[ str(t) ] = minimum
+##			elif keypiece == '_PRO':
+##				PROMAX[ str(t) ] = maximum
+##				PROMIN[ str(t) ] = minimum
+##			elif keypiece == '_INP':
+##				INPMAX[ str(t) ] = maximum
+##				INPMIN[ str(t) ] = minimum
+##			elif keypiece == '_BEH':
+##				BEHMAX[ str(t) ] = maximum
+##				BEHMIN[ str(t) ] = minimum
+##			elif keypiece == '_HEA_BEH':
+##                                HEABEHMAX[ str(t) ] = maximum
+##                                HEABEHMIN[ str(t) ] = minimum
 
 			mean, mean_stderr = sample_mean( DATA[ DATAkey ] )
 			median,lowerhalf,upperhalf=get_median( DATA[ DATAkey ] )
@@ -243,9 +263,15 @@ for t in timesteps:
 		elif keypiece == '_PRO':
 			PROMAX[ str(t) ] = maximum
 			PROMIN[ str(t) ] = minimum
-		else:
+		elif keypiece == '_INP':
 			INPMAX[ str(t) ] = maximum
 			INPMIN[ str(t) ] = minimum
+		elif keypiece == '_BEH':
+			BEHMAX[ str(t) ] = maximum
+			BEHMIN[ str(t) ] = minimum
+		elif keypiece == '_HEA_BEH':
+			HEABEHMAX[ str(t) ] = maximum
+			HEABEHMIN[ str(t) ] = minimum
 
 		list_to_print.append( "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s" % ( minimum, q1, median, q3, maximum, mean, mean_stderr, len( DATA[DATAkey] ) ) )
 #		del DATA[ str(t) + keypiece ]		# delete the timestep, we dont need it anymore.
@@ -262,7 +288,7 @@ outputfile.close()
 
 # begin writing the next outputfile
 outputfile = open( PASSED_DIRECTORY + '/' + OutputFilename2.replace( '.', 'Norm.'), 'w' )
-outputfile.write('#version=1\n#numbins=%s\n' % (NUMBINS) )
+outputfile.write('#version=%d\n#numbins=%s\n' % (CurrentVersion, NUMBINS) )
 
 BINS = { }
 
@@ -276,6 +302,12 @@ for t in timesteps:
 	BINS[ str(t) + '_INP' ] = [ ]
 	for i in range(NUMBINS):
 		BINS[ str(t) + '_INP' ].append(0)
+	BINS[ str(t) + '_BEH' ] = [ ]
+	for i in range(NUMBINS):
+		BINS[ str(t) + '_BEH' ].append(0)
+	BINS[ str(t) + '_HEA_BEH' ] = [ ]
+	for i in range(NUMBINS):
+		BINS[ str(t) + '_HEA_BEH' ].append(0)
 
 	if ALLMAX[ str(t) ] > ALLMIN[ str(t) ]:
 		for crittercomplexity in DATA[ str(t) + '_ALL' ]:
@@ -292,14 +324,30 @@ for t in timesteps:
 			thisbin = int(((crittercomplexity - INPMIN[ str(t) ])/(INPMAX[ str(t) ] - INPMIN[ str(t) ]))*NUMBINS)
 			if thisbin >= NUMBINS: thisbin -= 1
 			BINS[ str(t) + '_INP' ][ thisbin ]  += 1
+	if BEHMAX[ str(t) ] > BEHMIN[ str(t) ]:
+		for crittercomplexity in DATA[ str(t) + '_BEH' ]:
+			thisbin = int(((crittercomplexity - BEHMIN[ str(t) ])/(BEHMAX[ str(t) ] - BEHMIN[ str(t) ]))*NUMBINS)
+			if thisbin >= NUMBINS: thisbin -= 1
+			BINS[ str(t) + '_BEH' ][ thisbin ]  += 1
+	if HEABEHMAX[ str(t) ] > HEABEHMIN[ str(t) ]:
+		for crittercomplexity in DATA[ str(t) + '_HEA_BEH' ]:
+			thisbin = int(((crittercomplexity - HEABEHMIN[ str(t) ])/(HEABEHMAX[ str(t) ] - HEABEHMIN[ str(t) ]))*NUMBINS)
+			if thisbin >= NUMBINS: thisbin -= 1
+			BINS[ str(t) + '_HEA_BEH' ][ thisbin ]  += 1
 
 ALLTOTAL = {}
 PROTOTAL = {}
 INPTOTAL = {}
+BEHTOTAL = {}
+HEABEHTOTAL = {}
+
 for t in timesteps:	# t= 0, 1000, 2000,...
 	ALLTOTAL[ str(t) ] = 0
 	PROTOTAL[ str(t) ] = 0
 	INPTOTAL[ str(t) ] = 0
+	BEHTOTAL[ str(t) ] = 0
+	HEABEHTOTAL[ str(t) ] =0
+	
 
 for t in timesteps:
 	for bincount in BINS[ str(t) + '_ALL' ]:
@@ -308,6 +356,10 @@ for t in timesteps:
 		PROTOTAL[ str(t) ] += bincount
 	for bincount in BINS[ str(t) + '_INP' ]:
 		INPTOTAL[ str(t) ] += bincount
+	for bincount in BINS[ str(t) + '_BEH' ]:
+		BEHTOTAL[ str(t) ] += bincount
+	for bincount in BINS[ str(t) + '_HEA_BEH']:
+		HEABEHTOTAL[ str(t) ] += bincount
 
 for t in timesteps:
 	if ALLTOTAL[ str(t) ]:
@@ -329,11 +381,25 @@ for t in timesteps:
 		for bincount in BINS[ str(t) + '_INP' ]:
 			outputfile.write('%s\t' % (100*bincount/INPTOTAL[ str(t) ]))
 
+outputfile.write('\n')
+for t in timesteps:
+	if BEHTOTAL[ str(t) ]:
+		outputfile.write('%s\t' % (t))
+		for bincount in BINS[ str(t) + '_BEH' ]:
+			outputfile.write('%s\t' % (100*bincount/BEHTOTAL[ str(t) ]))
+
+outputfile.write('\n')
+for t in timesteps:
+	if HEABEHTOTAL[ str(t) ]:
+		outputfile.write('%s\t' % (t))
+		for bincount in BINS[ str(t) + '_HEA_BEH' ]:
+			outputfile.write('%s\t' % (100*bincount/HEABEHTOTAL[ str(t) ]))
+
 outputfile.flush()
 outputfile.close()
 
 outputfile = open( PASSED_DIRECTORY + '/' + OutputFilename2.replace( '.', 'Raw.'), 'w' )
-outputfile.write('#version=1\n#numbins=%s\n' % (NUMBINS) )
+outputfile.write('#version=%d\n#numbins=%s\n' % (CurrentVersion, NUMBINS) )
 
 ALLMAXGLOBAL = ALLMAX[ '0' ]
 ALLMINGLOBAL = ALLMIN[ '0' ]
@@ -341,6 +407,10 @@ PROMAXGLOBAL = PROMAX[ '0' ]
 PROMINGLOBAL = PROMIN[ '0' ]
 INPMAXGLOBAL = INPMAX[ '0' ]
 INPMINGLOBAL = INPMIN[ '0' ]
+BEHMAXGLOBAL = BEHMAX[ '0' ]
+BEHMINGLOBAL = BEHMIN[ '0' ]
+HEABEHMAXGLOBAL = HEABEHMAX[ '0' ]
+HEABEHMINGLOBAL = HEABEHMIN[ '0' ]
 
 for t in timesteps:
 	if ALLMAX[ str(t) ] > ALLMAXGLOBAL: ALLMAXGLOBAL = ALLMAX[ str(t) ]
@@ -349,8 +419,12 @@ for t in timesteps:
 	if PROMIN[ str(t) ] < PROMINGLOBAL: PROMINGLOBAL = PROMIN[ str(t) ]
 	if INPMAX[ str(t) ] > INPMAXGLOBAL: INPMAXGLOBAL = INPMAX[ str(t) ]
 	if INPMIN[ str(t) ] < INPMINGLOBAL: INPMINGLOBAL = INPMIN[ str(t) ]
+	if BEHMAX[ str(t) ] > BEHMAXGLOBAL: BEHMAXGLOBAL = BEHMAX[ str(t) ]
+	if BEHMIN[ str(t) ] < BEHMINGLOBAL: BEHMINGLOBAL = BEHMIN[ str(t) ]
+	if HEABEHMAX[ str(t) ] > HEABEHMAXGLOBAL: HEABEHMAXGLOBAL = HEABEHMAX[ str(t) ]
+	if HEABEHMIN[ str(t) ] < HEABEHMINGLOBAL: HEABEHMINGLOBAL = HEABEHMIN[ str(t) ]
 
-outputfile.write('#ALLMAX=%s\n#PROMAX=%s\n#INPMAX=%s\n' % (ALLMAXGLOBAL, PROMAXGLOBAL, INPMAXGLOBAL))
+outputfile.write('#ALLMAX=%s\n#PROMAX=%s\n#INPMAX=%s\n#BEHMAX=%s\n#HEABEHMAX=%s\n' % (ALLMAXGLOBAL, PROMAXGLOBAL, INPMAXGLOBAL, BEHMAXGLOBAL, HEABEHMAXGLOBAL))
 
 BINS = { }
 
@@ -364,6 +438,12 @@ for t in timesteps:
 	BINS[ str(t) + '_INP' ] = [ ]
 	for i in range(NUMBINS):
 		BINS[ str(t) + '_INP' ].append(0)
+	BINS[ str(t) + '_BEH' ] = [ ]
+	for i in range(NUMBINS):
+		BINS[ str(t) + '_BEH' ].append(0)
+	BINS[ str(t) + '_HEA_BEH' ] = [ ]
+	for i in range(NUMBINS):
+		BINS[ str(t) + '_HEA_BEH' ].append(0)
 
 	if ALLMAXGLOBAL > ALLMINGLOBAL:
 		for crittercomplexity in DATA[ str(t) + '_ALL' ]:
@@ -380,6 +460,16 @@ for t in timesteps:
 			thisbin = int(((crittercomplexity - INPMINGLOBAL)/(INPMAXGLOBAL - INPMINGLOBAL))*NUMBINS)
 			if thisbin >= NUMBINS: thisbin -= 1
 			BINS[ str(t) + '_INP' ][ thisbin ]  += 1
+	if BEHMAXGLOBAL > BEHMINGLOBAL:
+		for crittercomplexity in DATA[ str(t) + '_BEH' ]:
+			thisbin = int(((crittercomplexity - BEHMINGLOBAL)/(BEHMAXGLOBAL - BEHMINGLOBAL))*NUMBINS)
+			if thisbin >= NUMBINS: thisbin -= 1
+			BINS[ str(t) + '_BEH' ][ thisbin ]  += 1
+	if HEABEHMAXGLOBAL > HEABEHMINGLOBAL:
+		for crittercomplexity in DATA[ str(t) + '_HEA_BEH' ]:
+			thisbin = int(((crittercomplexity - HEABEHMINGLOBAL)/(HEABEHMAXGLOBAL - HEABEHMINGLOBAL))*NUMBINS)
+			if thisbin >= NUMBINS: thisbin -= 1
+			BINS[ str(t) + '_HEA_BEH' ][ thisbin ]  += 1
 
 for t in timesteps:
 	if ALLTOTAL[ str(t) ]:
@@ -400,6 +490,20 @@ for t in timesteps:
 		outputfile.write('%s\t' % (t))
 		for bincount in BINS[ str(t) + '_INP' ]:
 			outputfile.write('%s\t' % (100*bincount/INPTOTAL[ str(t) ]))
+
+outputfile.write('\n')
+for t in timesteps:
+	if BEHTOTAL[ str(t) ]:
+		outputfile.write('%s\t' % (t))
+		for bincount in BINS[ str(t) + '_BEH' ]:
+			outputfile.write('%s\t' % (100*bincount/BEHTOTAL[ str(t) ]))
+
+outputfile.write('\n')
+for t in timesteps:
+	if HEABEHTOTAL[ str(t) ]:
+		outputfile.write('%s\t' % (t))
+		for bincount in BINS[ str(t) + '_HEA_BEH' ]:
+			outputfile.write('%s\t' % (100*bincount/HEABEHTOTAL[ str(t) ]))
 
 outputfile.flush()
 outputfile.close()

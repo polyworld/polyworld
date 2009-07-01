@@ -26,24 +26,42 @@ set datafile missing '?'	# unknown values are '?'
 set style line 1 linetype 1 linewidth 1.5 pointsize 1.0 # 1st colored meanline/meanpoint
 set style line 2 linetype 2 linewidth 1.5 pointsize 1.0 # 2nd colored meanline/meanpoint
 set style line 3 linetype 3 linewidth 1.5 pointsize 1.0 # 3rd colored meanline/meanpoint
+set style line 4 linetype 4 linewidth 1.5 pointsize 1.0 # 4th colored meanline/meanpoint
+set style line 5 linetype 5 linewidth 1.5 pointsize 1.0 # 5th colored meanline/meanpoint
+
+
 
 set style line 501 linetype 1 linewidth 1.5		# 1st colored Whisker
 set style line 502 linetype 2 linewidth 1.5		# 2nd colored Whisker
 set style line 503 linetype 3 linewidth 1.5 		# 3rd colored Whisker
+set style line 504 linetype 4 linewidth 1.5 		# 4th colored Whisker
+set style line 505 linetype 5 linewidth 1.5 		# 5th colored Whisker
+
+
 
 set style line 51 linetype 1 linewidth 3			# 1st Whisker median
 set style line 52 linetype 2 linewidth 3			# 2nd Whisker median
 set style line 53 linetype 3 linewidth 3			# 3rd Whisker median
+set style line 54 linetype 4 linewidth 3			# 4th Whisker median
+set style line 55 linetype 5 linewidth 3			# 5th Whisker median
 
-set style line 54 linetype 1 linewidth 1 pointtype 0 		# 1st meanline's stderr 
-set style line 55 linetype 2 linewidth 1 pointtype 0 		# 2nd meanline's stderr
-set style line 56 linetype 3 linewidth 1 pointtype 0 		# 3rd meanline's stderr
+
+
+set style line 56 linetype 1 linewidth 1 pointtype 0 		# 1st meanline's stderr 
+set style line 57 linetype 2 linewidth 1 pointtype 0 		# 2nd meanline's stderr
+set style line 58 linetype 3 linewidth 1 pointtype 0 		# 3rd meanline's stderr
+set style line 59 linetype 4 linewidth 1 pointtype 0 		# 4th meanline's stderr
+set style line 60 linetype 5 linewidth 1 pointtype 0 		# 5th meanline's stderr
+
+
 
 set style line 601 linetype 4 linewidth 1.5			# 1st colored maxline
 set style line 602 linetype 5 linewidth 1.5			# 2nd colored maxline
 set style line 603 linetype 6 linewidth 1.5			# 3rd colored maxline
-set style line 604 linetype 7 linewidth 1 pointsize 1.0		# maxline when there is no legend
-set style line 605 linetype -1 linewidth 3 pointsize 0.0	# AVERAGE maxline
+set style line 604 linetype 7 linewidth 1.5			# 4th colored maxline
+set style line 605 linetype 8 linewidth 1.5			# 5th colored maxline
+set style line 606 linetype 9 linewidth 1 pointsize 1.0		# maxline when there is no legend
+set style line 607 linetype -1 linewidth 3 pointsize 0.0	# AVERAGE maxline
 
 set style line 96 linetype 0 linewidth 1			# Whisker when there is no legend
 set style line 97 linetype 0 linewidth 3 			# Whisker's median when there is no legend
@@ -62,9 +80,14 @@ LINESTYLES={
         'ColoredMeanline1'      : "linecolor rgb 'red' linewidth 1.5",
         'ColoredMeanline2'      : "linecolor rgb 'green' linewidth 1.5",
         'ColoredMeanline3'      : "linecolor rgb 'blue' linewidth 1.5",
+        'ColoredMeanline4'      : "linecolor rgb 'yellow' linewidth 1.5",
+        'ColoredMeanline5'      : "linecolor rgb 'orange' linewidth 1.5",
+        
         'ColoredMeanlineStderr1'        : "linecolor rgb 'red' linewidth 1 pointtype 0",
         'ColoredMeanlineStderr2'        : "linecolor rgb 'green' linewidth 1 pointtype 0",
         'ColoredMeanlineStderr3'        : "linecolor rgb 'blue' linewidth 1 pointtype 0",
+        'ColoredMeanlineStderr4'        : "linecolor rgb 'yellow' linewidth 1 pointtype 0",
+        'ColoredMeanlineStderr5'        : "linecolor rgb 'orange' linewidth 1 pointtype 0",
 
 #        'ColoredWhisker1'               : "linecolor rgb 'red' linewidth 1.5",
 #        'ColoredWhisker2'               : "linecolor rgb 'green' linewidth 1.5",
@@ -76,6 +99,9 @@ LINESTYLES={
         'ColoredMaxline1'                : "linecolor rgb 'purple' linewidth 1.5",
         'ColoredMaxline2'                : "linecolor rgb 'cyan' linewidth 1.5",
         'ColoredMaxline3'                : "linecolor rgb 'orange' linewidth 1.5",
+        'ColoredMaxline4'                : "linecolor tgb 'black' linewidth 1.5",
+        'ColoredMaxline5'                : "linecolor tgb 'gray' linewidth 1.5",
+
 
         # No Legend
 #        'NolegendWhisker'               : "linecolor rgb 'gray' linewidth 1",
@@ -123,7 +149,7 @@ flag_have_previously_plotted_a_file = False
 flag_have_previously_plotted_a_max = False
 tempfilename='/tmp/,plotNeuralComplexity_%s.plt' % ( os.getpid() )		# this file will contain the raw data
 gnufilename='/tmp/,plotNeuralComplexity_%s.gnuplot' % ( os.getpid() )	# this file will contain gnuplot commands
-flag_plotPoints, flag_plotMean, flag_plotErrorbars, flag_plotLegend, flag_plotWhiskers, flag_plotWhiskers_AVERAGE, flag_plotMean_AVERAGE, flag_plotErrorbars_AVERAGE, flag_plotProcessing, flag_plotInput, flag_plotAll, flag_plotMax, flag_plotMax_AVERAGE, flag_multiplot = False, False, False, False, False, False, False, False, False, False, False, False, False, False
+flag_plotPoints, flag_plotMean, flag_plotErrorbars, flag_plotLegend, flag_plotWhiskers, flag_plotWhiskers_AVERAGE, flag_plotMean_AVERAGE, flag_plotErrorbars_AVERAGE, flag_plotProcessing, flag_plotInput, flag_plotAll, flag_plotBehavior, flag_plotHealthBehavior, flag_plotMax, flag_plotMax_AVERAGE, flag_multiplot = False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False
 ###############
 numplotsmade=0
 PASSED_DIRECTORY=''
@@ -135,7 +161,7 @@ multiplotmaxtimesteps={} # we only use this if we're multiplotting.  It lets us 
 def print_usage_and_exit():
 	print """
 USAGE 
-       plotNeuralComplexity [-lmep] [-MXxY] -[API] directory
+       plotNeuralComplexity [-lmep] [-MXxY] -[A P I B] [--HB] directory
 
 DESCRIPTION
        plotNeuralComplexity plots the Olafcomplexity from one or more Polyworld run/ directories.
@@ -171,6 +197,10 @@ OPTIONS
        -P      Plot NeuralComplexity across 'Processing' neurons. (default on)
 
        -I      Plot NeuralComplexity across 'Input' neurons. (default off)
+
+       -B      Plot NeuralComplexity across 'Behavior' neurons. (default off)
+
+       --HB     Plot NeuralComplexity across 'Health' + 'Behavior' neurons. (default off)
 
 	""" % (GNUPLOT_SMOOTHING_FUNCTION)
 	sys.exit(1)
@@ -272,7 +302,7 @@ def GET_GNUPLOT_DYNAMIC_SETTINGS( RecentOrbestRecent ):
 	global flag_plotPoints, flag_plotLegend, flag_multiplot, multiplotDimX, multiplotY
 	global RUN_DIRS, PARAMS, IDENTICAL_LINE_WIDTH, GNUPLOT_TOPRIGHT_LABEL, MAXTIMESTEP
 	global numplotsmade, GNUPLOT_TERMINAL, flag_plotMean, flag_plotMean_AVERAGE
-	global flag_plotAll, flag_plotProcessing, flag_plotInput
+	global flag_plotAll, flag_plotProcessing, flag_plotInput, flag_plotBehavior, flag_plotHealthBehavior
 	settings = [ ]
 
 
@@ -287,6 +317,8 @@ def GET_GNUPLOT_DYNAMIC_SETTINGS( RecentOrbestRecent ):
 	if flag_plotAll: ylabel += 'All, '
 	if flag_plotProcessing: ylabel += 'Processing, '
 	if flag_plotInput: ylabel += 'Input, '
+	if flag_plotBehavior: ylabel += 'Behavior, '
+	if flag_plotHealthBehavior: ylabel += 'HealthBehavior, '
 	settings.append("set ylabel '%s' font 'Times,15'" % (ylabel.rstrip(', ')) )	# take off the trailing coma and space before using.
 	# done defining the ylabel
 
@@ -327,7 +359,7 @@ def GET_GNUPLOT_END_SETTINGS():
 #####################################
 
 def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename, linetype=1 ):
-	global RUN_DIRS, flag_plotLegend, flag_plotWhiskers, flag_plotMean, flag_plotErrorbars, flag_plotSmooth, flag_plotWhiskers_AVERAGE, flag_plotMean_AVERAGE, flag_plotErrorbars_AVERAGE, flag_plotAll, flag_plotProcessing, flag_plotInput, flag_have_previously_plotted_a_file, flag_have_previously_plotted_a_max
+	global RUN_DIRS, flag_plotLegend, flag_plotWhiskers, flag_plotMean, flag_plotErrorbars, flag_plotSmooth, flag_plotWhiskers_AVERAGE, flag_plotMean_AVERAGE, flag_plotErrorbars_AVERAGE, flag_plotAll, flag_plotProcessing, flag_plotInput, flag_plotBehavior, flag_plotHealthBehavior, flag_have_previously_plotted_a_file, flag_have_previously_plotted_a_max
 	global  flag_plotMax, flag_plotMax_AVERAGE, LINESTYLES	
 
 	plotstring = [ ]
@@ -335,13 +367,13 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename, linetype=1 ):
 	if filename:
 		if flag_plotWhiskers:	# are we doing the whiskers for each one?
 			if flag_have_previously_plotted_a_file:
-				Atitle, Ptitle, Ititle = ('','','')
+				Atitle, Ptitle, Ititle, Btitle, HBtitle = ('','','','','')
 			else:
 				flag_have_previously_plotted_a_file = True
-				Atitle,Ptitle,Ititle=('All','Processing','Input')
+				Atitle,Ptitle,Ititle,Btitle,HBtitle=('All','Processing','Input','Behavior','HealthBehavior')
 
-			if flag_plotLegend: temp = [ 501, 51, 502, 52, 503, 53 ]
-			else:	temp = [ 96, 97, 96, 97, 96, 97 ]
+			if flag_plotLegend: temp = [ 501, 51, 502, 52, 503, 53, 504, 54, 505, 55 ]
+			else:	temp = [ 96, 97, 96, 97, 96, 97, 96, 97, 96, 97 ]
 
 			if flag_plotAll:	# and we're plotting the inputs...
 				plotstring.append("'%s' using 1:3:2:6:5 with candlesticks whiskerbars linestyle %s title '%s', '' using 1:4:4:4:4 with candlesticks linestyle %s notitle" % (filename, temp[0], Atitle, temp[1] ))
@@ -358,20 +390,30 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename, linetype=1 ):
 				temp.pop(0)
 				temp.pop(0)
 
+			if flag_plotBehavior:	
+				plotstring.append("'%s' using 1:27:26:30:29 with candlesticks whiskerbars linestyle %s title '%s', '' using 1:28:28:28:28 with candlesticks linestyle %s notitle" % (filename, temp[0], Btitle, temp[1] ))
+				temp.pop(0)
+				temp.pop(0)
+
+			if flag_plotHealthBehavior:	
+				plotstring.append("'%s' using 1:35:34:38:37 with candlesticks whiskerbars linestyle %s title '%s', '' using 1:36:36:36:36 with candlesticks linestyle %s notitle" % (filename, temp[0], HBtitle, temp[1] ))
+				temp.pop(0)
+				temp.pop(0)
+
 		if flag_plotMean:
 			if flag_have_previously_plotted_a_file:
-				Atitle, Ptitle, Ititle = ('','','')
+				Atitle, Ptitle, Ititle, Btitle, HBtitle = ('','','','','')
 			else:			
 				flag_have_previously_plotted_a_file = True
-				Atitle,Ptitle,Ititle=('mean All','mean Processing','mean Input')
-
+				Atitle,Ptitle,Ititle,Btitle,HBtitle=('mean All','mean Processing','mean Input','mean Behavior','mean HealthBehavior')
+                        
 			# for these we do not use numbered linestyles because then we can't make them dashed for the second directory
                         if flag_plotLegend:
-                                if flag_plotErrorbars: temp = [ LINESTYLES['ColoredMeanline1'], LINESTYLES['ColoredMeanlineStderr1'], LINESTYLES['ColoredMeanline2'], LINESTYLES['ColoredMeanlineStderr2'], LINESTYLES['ColoredMeanline3'], LINESTYLES['ColoredMeanlineStderr3'] ]
-                                else: temp = [ LINESTYLES['ColoredMeanline1'], LINESTYLES['ColoredMeanline2'], LINESTYLES['ColoredMeanline3'] ]
+                                if flag_plotErrorbars: temp = [ LINESTYLES['ColoredMeanline1'], LINESTYLES['ColoredMeanlineStderr1'], LINESTYLES['ColoredMeanline2'], LINESTYLES['ColoredMeanlineStderr2'], LINESTYLES['ColoredMeanline3'], LINESTYLES['ColoredMeanlineStderr3'], LINESTYLES['ColoredMeanline4'], LINESTYLES['ColoredMeanlineStderr4'],LINESTYLES['ColoredMeanline5'], LINESTYLES['ColoredMeanlineStderr5'] ]
+                                else: temp = [ LINESTYLES['ColoredMeanline1'], LINESTYLES['ColoredMeanline2'], LINESTYLES['ColoredMeanline3'], LINESTYLES['ColoredMeanline4'], LINESTYLES['ColoredMeanline5']]
                         else:
-                                if flag_plotErrorbars: temp = [ LINESTYLES['NolegendMeanline'], LINESTYLES['NolegendMeanlineStderr'] ] * 3
-                                else: temp = [ LINESTYLES['NolegendMeanline'] ] * 3
+                                if flag_plotErrorbars: temp = [ LINESTYLES['NolegendMeanline'], LINESTYLES['NolegendMeanlineStderr'] ] * 5
+                                else: temp = [ LINESTYLES['NolegendMeanline'] ] * 5
 
 			if flag_plotAll:
 				plotstring.append("'%s' using 1:7 %s linetype %s title '%s'" % (filename, temp[0], linetype, Atitle) )
@@ -393,16 +435,30 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename, linetype=1 ):
 					plotstring.append("'' using 1:23:24 with yerrorbars %s linetype %s notitle" % (temp[0], linetype))
 					temp.pop(0)
 
+			if flag_plotBehavior:
+				plotstring.append("'%s' using 1:31 %s linetype %s title '%s'" % (filename, temp[0], linetype, Btitle) )
+				temp.pop(0)
+				if flag_plotErrorbars: 
+					plotstring.append("'' using 1:31:32 with yerrorbars %s linetype %s notitle" % (temp[0], linetype))
+					temp.pop(0)
+
+                        if flag_plotHealthBehavior:
+				plotstring.append("'%s' using 1:39 %s linetype %s title '%s'" % (filename, temp[0], linetype, HBtitle) )
+				temp.pop(0)
+				if flag_plotErrorbars: 
+					plotstring.append("'' using 1:39:40 with yerrorbars %s linetype %s notitle" % (temp[0], linetype))
+					temp.pop(0)
+
 
                 if flag_plotMax:   # are we doing the MAX for each one?
-                        if flag_have_previously_plotted_a_max:
-                                Atitle, Ptitle, Ititle = ('','','')
-                        else:
-                                flag_have_previously_plotted_a_max = True
-                                Atitle,Ptitle,Ititle=('maxAll','maxProcessing','maxInput')
+					if flag_have_previously_plotted_a_max:
+						Atitle, Ptitle, Ititle, Btitle, HBtitle = ('','','','','')
+					else:
+						flag_have_previously_plotted_a_max = True
+						Atitle,Ptitle,Ititle,Btitle,HBtitle=('maxAll','maxProcessing','maxInput','maxBehavior','maxHealthBehavior')
 
-                        if flag_plotLegend: temp = [ LINESTYLES['ColoredMaxline1'], LINESTYLES['ColoredMaxline2'], LINESTYLES['ColoredMaxline3'] ]
-                        else:   temp = [ LINESTYLES['NolegendMaxline'] ] * 3
+					if flag_plotLegend: temp = [ LINESTYLES['ColoredMaxline1'], LINESTYLES['ColoredMaxline2'], LINESTYLES['ColoredMaxline3'], LINESTYLES['ColoredMaxline4'], LINESTYLES['ColoredMaxline5'] ]
+					else:   temp = [ LINESTYLES['NolegendMaxline'] ] * 5
 
 
 			if flag_plotAll:
@@ -414,13 +470,19 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename, linetype=1 ):
 			if flag_plotInput:
 				plotstring.append("'%s' using 1:22 %s linetype %s title '%s'" % (filename, temp[0], linetype, Ititle) )
 				temp.pop(0)
+			if flag_plotBehavior:
+				plotstring.append("'%s' using 1:30 %s linetype %s title '%s'" % (filename, temp[0], linetype, Btitle) )
+				temp.pop(0)
+			if flag_plotHealthBehavior:
+				plotstring.append("'%s' using 1:38 %s linetype %s title '%s'" % (filename, temp[0], linetype, HBtitle) )
+				temp.pop(0)
 
 
 	if Avrfilename:	
 		##### NOW FOR THE AVERAGES ###########
 		if flag_plotWhiskers_AVERAGE:	# are we doing the whiskers for the AVERAGE?
 
-			temp = [ 103, 102, 103, 102, 103, 102 ]
+			temp = [ 103, 102, 103, 102, 103, 102, 103, 102, 103, 102 ]
 	
 			if flag_plotAll:	# and we're plotting the inputs...
 				plotstring.append("'%s' using 1:3:2:6:5 with candlesticks whiskerbars linestyle %s title 'All means', '' using 1:4:4:4:4 with candlesticks linestyle %s notitle" % (Avrfilename, temp[0], temp[1] ))
@@ -436,14 +498,24 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename, linetype=1 ):
 				plotstring.append("'%s' using 1:19:18:22:21 with candlesticks whiskerbars linestyle %s title 'Input means', '' using 1:20:20:20:20 with candlesticks linestyle %s notitle" % (Avrfilename, temp[0], temp[1] ))
 				temp.pop(0)
 				temp.pop(0)
+
+			if flag_plotBehavior:	
+				plotstring.append("'%s' using 1:27:26:30:29 with candlesticks whiskerbars linestyle %s title 'Behavior means', '' using 1:28:28:28:28 with candlesticks linestyle %s notitle" % (Avrfilename, temp[0], temp[1] ))
+				temp.pop(0)
+				temp.pop(0)
+
+                        if flag_plotHealthBehavior:	
+				plotstring.append("'%s' using 1:35:34:38:37 with candlesticks whiskerbars linestyle %s title 'Behavior means', '' using 1:36:36:36:36 with candlesticks linestyle %s notitle" % (Avrfilename, temp[0], temp[1] ))
+				temp.pop(0)
+				temp.pop(0)
 	
 		if flag_plotMean_AVERAGE:
                         if flag_plotWhiskers_AVERAGE:   # if we plotted Whiskers, dont makes keys for the averages
-				Atitle, Ptitle, Ititle = ('', '', '')
+				Atitle, Ptitle, Ititle, Btitle, HBtitle = ('', '', '', '', '')
 			else:
-				Atitle, Ptitle, Ititle = ('meta-mean All', 'meta-mean Pro', 'meta-mean Inp')
-			if flag_plotErrorbars_AVERAGE: temp = [ LINESTYLES['AvrMeanline'],  LINESTYLES['AvrMeanlineStderr'] ] * 3
-			else: temp = [ LINESTYLES['AvrMeanline'] ] * 3
+				Atitle, Ptitle, Ititle, Btitle, HBtitle = ('meta-mean All', 'meta-mean Pro', 'meta-mean Inp', 'meta-mean Beh', 'meta-mean HeaBeh')
+			if flag_plotErrorbars_AVERAGE: temp = [ LINESTYLES['AvrMeanline'],  LINESTYLES['AvrMeanlineStderr'] ] * 5
+			else: temp = [ LINESTYLES['AvrMeanline'] ] * 5
 	
 			if flag_plotAll:
 				plotstring.append("'%s' using 1:7 with lines %s linetype %s title '%s'" % (Avrfilename, temp[0], linetype, Atitle) )
@@ -463,11 +535,22 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename, linetype=1 ):
 				if flag_plotErrorbars_AVERAGE: 
 					plotstring.append("'' using 1:23:24 with yerrorbars %s linetype %s notitle" % (temp[0], linetype))
 					temp.pop(0)
+			if flag_plotBehavior:
+				plotstring.append("'%s' using 1:31 with lines %s linetype %s title '%s'" % (Avrfilename, temp[0], linetype, Btitle) )
+				temp.pop(0)
+				if flag_plotErrorbars_AVERAGE: 
+					plotstring.append("'' using 1:31:32 with yerrorbars %s linetype %s notitle" % (temp[0], linetype))
+					temp.pop(0)
+			if flag_plotHealthBehavior:
+				plotstring.append("'%s' using 1:39 with lines %s linetype %s title '%s'" % (Avrfilename, temp[0], linetype, HBtitle) )
+				temp.pop(0)
+				if flag_plotErrorbars_AVERAGE: 
+					plotstring.append("'' using 1:39:40 with yerrorbars %s linetype %s notitle" % (temp[0], linetype))
+					temp.pop(0)
 
-                if flag_plotMax_AVERAGE:   # are we doing the MAX for each one?
-			Atitle,Ptitle,Ititle=('max-mmAll','max-mmProcessing','max-mmInput')
-
-                        temp = [ LINESTYLES['AvrMaxline'] ] * 3
+			if flag_plotMax_AVERAGE:   # are we doing the MAX for each one?
+				Atitle,Ptitle,Ititle,Btitle,HBtitle=('max-mmAll','max-mmProcessing','max-mmInput','max-mmBehavior', 'max-mmHealthBehavior')
+				temp = [ LINESTYLES['AvrMaxline'] ] * 5
 
 			if flag_plotAll:
 				plotstring.append("'%s' using 1:26 with lines %s linetype %s title '%s'" % (Avrfilename, temp[0], linetype, Atitle) )
@@ -477,6 +560,12 @@ def GET_GNUPLOT_PLOTSTRING( filename, Avrfilename, linetype=1 ):
 				temp.pop(0)
 			if flag_plotInput:
 				plotstring.append("'%s' using 1:30 with lines %s linetype %s title '%s'" % (Avrfilename, temp[0], linetype, Ititle) )
+				temp.pop(0)
+			if flag_plotBehavior:
+				plotstring.append("'%s' using 1:32 with lines %s linetype %s title '%s'" % (Avrfilename, temp[0], linetype, Btitle) )
+				temp.pop(0)
+			if flag_plotHealthBehavior:
+				plotstring.append("'%s' using 1:34 with lines %s linetype %s title '%s'" % (Avrfilename, temp[0], linetype, HBtitle) )
 				temp.pop(0)
 	
 	plotstring = ', '.join(plotstring)
@@ -499,7 +588,7 @@ def sample_mean( list ):
 	return mean, stderr
 
 def check_parameters( argv ):
-	try: opts, args = getopt.getopt( argv, "esnwENWlpAPIxXM:")
+	try: opts, args = getopt.getopt( argv, "esnwENWlpAPIBxXM:", "HB")
 	except getopt.GetoptError: print_usage_and_exit() 
 
 #	print "opts=%s" % ( opts )
@@ -507,7 +596,7 @@ def check_parameters( argv ):
 
 	global flag_plotLegend, flag_plotErrorbars, flag_multiplot, flag_plotMean, flag_plotPoints, PASSED_DIRECTORY, multiplotDimX, multiplotDimY	# grant access to the global variables we're going to modify
 	global flag_plotErrorbars_AVERAGE, flag_plotMean_AVERAGE, flag_plotWhiskers, flag_plotWhiskers_AVERAGE
-	global flag_plotAll, flag_plotProcessing, flag_plotInput, flag_plotSmooth
+	global flag_plotAll, flag_plotProcessing, flag_plotInput, flag_plotBehavior, flag_plotHealthBehavior, flag_plotSmooth
 	global flag_plotMax, flag_plotMax_AVERAGE
 	# Set our plot flags
 	for opt, value in opts:
@@ -525,6 +614,8 @@ def check_parameters( argv ):
 		elif '-A' in opt: flag_plotAll = True
 		elif '-P' in opt: flag_plotProcessing = True
 		elif '-I' in opt: flag_plotInput = True
+		elif '-B' in opt: flag_plotBehavior = True
+		elif '--HB' in opt: flag_plotHealthBehavior = True
 		elif '-M' in opt:
 			flag_multiplot = True
 			try: multiplotDimX, multiplotDimY = map(int, (value).split('x'))
@@ -532,7 +623,7 @@ def check_parameters( argv ):
 
 
 	# Some default settings if the user doesn't specify anything...
-	if not flag_plotInput and not flag_plotAll: flag_plotProcessing = True	# if no -[API] is specified, assume -P.
+	if not flag_plotInput and not flag_plotAll and not flag_plotBehavior and not flag_plotHealthBehavior: flag_plotProcessing  = True	# if none of -[APIB] or --HB are specified, assume -P.
 
 	if not flag_plotWhiskers and not flag_plotMax and not flag_plotWhiskers_AVERAGE and not flag_plotMean_AVERAGE and not flag_plotPoints:
 		flag_plotMean = True						# if nothing to plot is specified, plot the meanlines.
@@ -595,6 +686,7 @@ def get_bestRecentBrainFunctionRecordFrequency( run_dir ):
 ########################################################################################################################		
 ### Real program begins here
 
+KnownVersions = [0, 1]
 
 ########### THIS IS THE BEGINNINGS OF ALLOWING COMPARISON OF PASSIVE AND DRIVEN RUNS
 # Going to make our OPTS and ARGS lists here.
@@ -631,6 +723,20 @@ for whichrecent in RUN_DIRS:
 	for rundir in RUN_DIRS[whichrecent]:
 		filename = rundir + '/brain/' + whichrecent + '/' + inputplotfilename
 		inputplotfile = open( filename )
+
+		# figure out what version file we're dealing with
+		firstLine = inputplotfile.readline().strip('\n')
+		versionStart = firstLine.find('version=')
+		if versionStart < 0:	# no version specified, so version is 0
+			version = 0
+		else:					# version is specified, so extract it
+			versionStart += 8	# len('version=')
+			version = int(firstLine[versionStart:])
+			if version not in KnownVersions:
+				print 'AvrComplexity.plt has an unknown version (' + str(version) + ')'
+				print 'Exiting'
+				sys.exit(1)
+                
 		for line in inputplotfile:
 			if line.startswith('#'):	# if the line is a comment (begins with #)
 				continue;
@@ -642,24 +748,19 @@ for whichrecent in RUN_DIRS:
 			t = int(line_array[0])
 			if t not in DATA[whichrecent]:
 				DATA[whichrecent][t] = {}
-				DATA[whichrecent][t]['Pro']=[]
-				DATA[whichrecent][t]['All']=[]
-				DATA[whichrecent][t]['Inp']=[]
-
 				MAXDATA[whichrecent][t] = {}
-				MAXDATA[whichrecent][t]['Pro']=[]
-				MAXDATA[whichrecent][t]['All']=[]
-				MAXDATA[whichrecent][t]['Inp']=[]
 
-			# make the list of means
-			DATA[whichrecent][t]['All'].append( line_array[6 ] )
-			DATA[whichrecent][t]['Pro'].append( line_array[14] )
-			DATA[whichrecent][t]['Inp'].append( line_array[22] )
-
-			# make the list of maximum's
-			MAXDATA[whichrecent][t]['All'].append( line_array[5 ] ) 
-			MAXDATA[whichrecent][t]['Pro'].append( line_array[13] )
-			MAXDATA[whichrecent][t]['Inp'].append( line_array[21] )
+				# Start with the original, un-versioned set of brain regions
+				Regions = ['All', 'Pro', 'Inp']
+				if version == 1:
+					Regions.append('Beh')
+					Regions.append('HeaBeh')
+				
+				dataIndex = 6
+				for region in Regions:
+					DATA[whichrecent][t][region] = [line_array[dataIndex]]
+					MAXDATA[whichrecent][t][region] = [line_array[dataIndex-1]]
+					dataIndex += 8
 
 			if t > MAXTIMESTEP: MAXTIMESTEP = t
 #			print "linearray=%s" % (line_array ) 
@@ -676,25 +777,25 @@ for whichrecent in RUN_DIRS:
 	print "tempfilename=%s" % ( tempfilename + '.' + whichrecent ),
 	for t in [0] + range(averagetimestepinterval,MAXTIMESTEP+averagetimestepinterval,averagetimestepinterval):
 		list_to_print = [ t ]
-		for area in ('All','Pro','Inp'):
-			DATA[whichrecent][t][area] = map( float, DATA[whichrecent][t][area] )	# make sure they are all floats so we comparing correctly.
-			minimum=min( DATA[whichrecent][t][area] )
-			maximum=max( DATA[whichrecent][t][area] )
-			median, lowerhalf, upperhalf = get_median( DATA[whichrecent][t][area] )
+		for region in Regions:
+			DATA[whichrecent][t][region] = map( float, DATA[whichrecent][t][region] )	# make sure they are all floats so we comparing correctly.
+			minimum=min( DATA[whichrecent][t][region] )
+			maximum=max( DATA[whichrecent][t][region] )
+			median, lowerhalf, upperhalf = get_median( DATA[whichrecent][t][region] )
 			q1=get_median( lowerhalf )[0]
 			q3=get_median( upperhalf )[0]
-			mean, mean_stderr = sample_mean( DATA[ whichrecent ][t][area] )
-			if DATA[whichrecent][t][area] == ['']: numsamples=0
-			else: numsamples=len(DATA[whichrecent][t][area])
+			mean, mean_stderr = sample_mean( DATA[ whichrecent ][t][region] )
+			if DATA[whichrecent][t][region] == ['']: numsamples=0
+			else: numsamples=len(DATA[whichrecent][t][region])
 
 			list_to_print.append( "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s" % ( minimum, q1, median, q3, maximum, mean, mean_stderr, numsamples ) )
 
-		for area in ('All','Pro','Inp'):	# we break the format and put the mean and stderr of the MAX's at the end because initially we didnt know that we were going to do that.
-			MAXDATA[whichrecent][t][area] = map( float, MAXDATA[whichrecent][t][area] )	# make sure they are all floats so we comparing correctly.
-			meanmax, max_stderr = sample_mean( MAXDATA[whichrecent][t][area] )
+		for region in Regions:	# we break the format and put the mean and stderr of the MAX's at the end because initially we didnt know that we were going to do that.
+			MAXDATA[whichrecent][t][region] = map( float, MAXDATA[whichrecent][t][region] )	# make sure they are all floats so we comparing correctly.
+			meanmax, max_stderr = sample_mean( MAXDATA[whichrecent][t][region] )
 			list_to_print.append( "%s\t%s" % (meanmax, max_stderr) )
 
-#			del DATA[whichrecent][t][area]		# Don't need this anymore
+#			del DATA[whichrecent][t][region]		# Don't need this anymore
 		list_to_print = map(str, list_to_print)
 		tempfile.write( '\t'.join( list_to_print ) )
 		tempfile.write('\n')
