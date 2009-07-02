@@ -767,7 +767,7 @@ void TSimulation::Step()
 			{
 				if( fFittest[i]->complexity == 0.0 )		// if Complexity is zero it means we have to Calculate it
 				{
-					fFittest[i]->complexity = CalcComplexity( t, 'P', 0 );		// Complexity of Processing Units Only, all time steps
+					fFittest[i]->complexity = CalcComplexity( t, "P", 0 );		// Complexity of Processing Units Only, all time steps
 					cout << "[COMPLEXITY] Critter: " << fFittest[i]->critterID << "\t Processing Complexity: " << fFittest[i]->complexity << endl;
 				}
 			}
@@ -809,7 +809,7 @@ void TSimulation::Step()
 				{
 					if( fRecentFittest[i]->complexity == 0.0 )		// if Complexity is zero it means we have to Calculate it
 					{
-						fRecentFittest[i]->complexity = CalcComplexity( t, 'P', 0 );		// Complexity of Processing Units Only, all time steps
+						fRecentFittest[i]->complexity = CalcComplexity( t, "P", 0 );		// Complexity of Processing Units Only, all time steps
 						cout << "[COMPLEXITY] Critter: " << fRecentFittest[i]->critterID << "\t Processing Complexity: " << fRecentFittest[i]->complexity << endl;
 					}
 				}
@@ -3707,16 +3707,16 @@ void TSimulation::Death(critter* c)
 		// Virgil
 		if ( fComplexityFitnessWeight > 0 )		// Are we using Complexity as a Fitness Function?  If so, set fitness = Complexity here
 		{
-			if( fComplexityType == 'D' )	// special case the difference of complexities case
+			if( fComplexityType == "D" )	// special case the difference of complexities case
 			{
-				float pComplexity = CalcComplexity( t, 'P', 0 );
-				float iComplexity = CalcComplexity( t, 'I', 0 );
+				float pComplexity = CalcComplexity( t, "P", 0 );
+				float iComplexity = CalcComplexity( t, "I", 0 );
 				c->SetComplexity( pComplexity - iComplexity );
 			}
-			else if( fComplexityType != 'Z' )	// avoid special hack case to evolve towards zero max velocity, for testing purposes only
+			else if( fComplexityType != "Z" )	// avoid special hack case to evolve towards zero max velocity, for testing purposes only
 			{
-				// otherwise, fComplexityType has the right letter in it
-				c->SetComplexity( CalcComplexity( t, fComplexityType, 0 ) );
+				// otherwise, fComplexityType has the right string in it
+				c->SetComplexity( CalcComplexity( t, fComplexityType.c_str(), 0 ) );
 			}
 		}
 	}
@@ -4084,7 +4084,7 @@ float TSimulation::Fitness( critter* c )
 	{
 		fitness = c->HeuristicFitness() / fTotalHeuristicFitness;
 	}
-	else if( fComplexityType == 'Z' )	// hack to evolve towards zero velocity, for testing purposes only
+	else if( fComplexityType == "Z" )	// hack to evolve towards zero velocity, for testing purposes only
 	{
 		fitness = 0.01 / (c->MaxSpeed() + 0.01);
 	}
@@ -4094,14 +4094,14 @@ float TSimulation::Fitness( critter* c )
 		{
 			char filename[256];
 			sprintf( filename, "run/brain/function/brainFunction_%ld.txt", c->Number() );
-			if( fComplexityType == 'D' )	// difference between I and P complexity being used for fitness
+			if( fComplexityType == "D" )	// difference between I and P complexity being used for fitness
 			{
-				float pComplexity = CalcComplexity( filename, 'P', 0 );
-				float iComplexity = CalcComplexity( filename, 'I', 0 );
+				float pComplexity = CalcComplexity( filename, "P", 0 );
+				float iComplexity = CalcComplexity( filename, "I", 0 );
 				c->SetComplexity( pComplexity - iComplexity );
 			}
-			else	// fComplexityType contains the appropriate character to select the type of complexity
-				c->SetComplexity( CalcComplexity( filename, fComplexityType, 0 ) );
+			else	// fComplexityType contains the appropriate string to select the type of complexity
+				c->SetComplexity( CalcComplexity( filename, fComplexityType.c_str(), 0 ) );
 		}
 		// fitness is normalized (by the sum of the weights) after doing a weighted sum of normalized heuristic fitness and complexity
 		// (Complexity runs between 0.0 and 1.0 in the early simulations.  Is there a way to guarantee this?  Do we want to?)
@@ -5025,10 +5025,10 @@ void TSimulation::ReadWorldFile(const char* filename)
 		in >> fComplexityType; in >> label;
 		if( version < 28 )
 		{
-			if( fComplexityType == '0' )	// zero used to mean off
-				fComplexityType = 'O';
+			if( fComplexityType == "0" )	// zero used to mean off
+				fComplexityType = "O";
 			else
-				fComplexityType = 'P';	// on used to assume processing complexity
+				fComplexityType = "P";	// on used to assume processing complexity
 		}
 		cout << "complexityType" ses fComplexityType nl;
 
@@ -5039,7 +5039,7 @@ void TSimulation::ReadWorldFile(const char* filename)
 		}
 		else
 		{
-			if( fComplexityType == 'O' )		// 'O' meant complexity as a fitness function was off
+			if( fComplexityType == "O" )		// 'O' meant complexity as a fitness function was off
 				fComplexityFitnessWeight = 0.0;	// so set the complexity fitness weight to zero (turn it off)
 			else
 				fComplexityFitnessWeight = 1.0;	// any other complexity type used to mean use it as the fitness function

@@ -5,6 +5,8 @@
 	#include <errno.h>
 #endif
 
+#include <string>
+
 // qt
 #include <qobject.h>
 #include <qapplication.h>
@@ -432,7 +434,7 @@ private:
 	bool fRecordGeneStats;
 	bool fRecordFoodPatchStats;
 	
-	char fComplexityType;
+	std::string fComplexityType;
 	float fComplexityFitnessWeight;
 	float fHeuristicFitnessWeight;
 

@@ -73,8 +73,8 @@ gsl_matrix * gsamp( gsl_matrix_view x );
 int qsort_compare_double( const void *a, const void *b);
 int qsort_compare_rows0( const void *a, const void *b );
 int qsort_compare_rows1( const void *a, const void *b );
-double CalcComplexity( char * , char *, int );//The most important function
-double CalcComplexityWithMatrix( gsl_matrix*, char *, int );
+double CalcComplexity( char * , const char *, int );//The most important function
+double CalcComplexityWithMatrix( gsl_matrix*, const char *, int );
 
 static bool RandSeeded = false;
 static const gsl_rng_type * T = gsl_rng_mt19937;
@@ -219,7 +219,7 @@ gsl_matrix * gsamp( gsl_matrix_view x )
 	return y;
 }
 
-double CalcComplexity( char * fnameAct, char * part, int ignore_timesteps_after )
+double CalcComplexity( char * fnameAct, const char * part, int ignore_timesteps_after )
 {
 	//printf( "%s( %s, %s, %d )\n", __func__, fnameAct, part, ignore_timesteps_after );
 	int numinputneurons = 0;		// this value will be defined by readin_brainfunction()
@@ -229,7 +229,7 @@ double CalcComplexity( char * fnameAct, char * part, int ignore_timesteps_after 
 	return( CalcComplexityWithMatrix( activity, part, numinputneurons ) );
 }
 
-double CalcComplexityWithMatrix( gsl_matrix * activity, char * part, int numinputneurons )
+double CalcComplexityWithMatrix( gsl_matrix * activity, const char * part, int numinputneurons )
 {
     // if had an invalid brain file, return 0.
     if( activity == NULL ) { return 0.0; }
@@ -237,10 +237,6 @@ double CalcComplexityWithMatrix( gsl_matrix * activity, char * part, int numinpu
     // If critter lived less timesteps than it has neurons, return Complexity = 0.0.
     if( activity->size2 > activity->size1 || activity->size1 < IgnoreCrittersThatLivedLessThan_N_Timesteps ) { return 0.0; }
 	
-	for( unsigned int i = 0; i < strlen( part ); i++ )
-	{
-		part[i] = toupper( part[i] );			// capitalize it
-	}
     gsl_matrix * o;			// we don't need this guy yet but we will in a bit.  We need to define him here so the useGSAMP can assign to it.
 
 /* Now to inject a little bit of noise into the activity matrix */
@@ -341,7 +337,7 @@ double CalcComplexityWithMatrix( gsl_matrix * activity, char * part, int numinpu
 		char complexityType = part[j];
 		
 		
-		switch(complexityType)
+		switch(toupper(complexityType))
 		{
 			case'A':
 				flag_All = 1;
