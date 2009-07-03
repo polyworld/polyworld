@@ -40,7 +40,7 @@ flag_have_previously_plotted_a_max = False
 flag_getRAW = True
 tempfilename='/tmp/,plotNeuralComplexity_%s.plt' % ( os.getpid() )		# this file will contain the raw data
 gnufilename='/tmp/,plotNeuralComplexity_%s.gnuplot' % ( os.getpid() )	# this file will contain gnuplot commands
-flag_plotPoints, flag_plotMean, flag_plotErrorbars, flag_plotLegend, flag_plotWhiskers, flag_plotWhiskers_AVERAGE, flag_plotMean_AVERAGE, flag_plotErrorbars_AVERAGE, flag_plotProcessing, flag_plotInput, flag_plotAll, flag_plotMax, flag_plotMax_AVERAGE, flag_multiplot = False, False, False, False, False, False, False, False, False, False, False, False, False, False
+flag_plotPoints, flag_plotMean, flag_plotErrorbars, flag_plotLegend, flag_plotWhiskers, flag_plotWhiskers_AVERAGE, flag_plotMean_AVERAGE, flag_plotErrorbars_AVERAGE, flag_plotProcessing, flag_plotInput, flag_plotAll, flag_plotBehavior, flag_plotHealthBehavior, flag_plotMax, flag_plotMax_AVERAGE, flag_multiplot = False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False
 ###############
 numplotsmade=0
 PASSED_DIRECTORY=''
@@ -50,7 +50,7 @@ GNUPLOT_TOPRIGHT_LABEL=[ "Generated `date +%Y-%m-%d` by `whoami`" ]
 def print_usage_and_exit():
 	print """
 USAGE 
-       plotNeuralComplexityHistogram -[API] directory
+       plotNeuralComplexityHistogram_new -[APIB] --HB directory
 
 DESCRIPTION
        plotNeuralComplexityHistogram plots the Olafcomplexity distributions from one or more Polyworld run/ directories.
@@ -62,7 +62,12 @@ OPTIONS
        -P      Plot NeuralComplexity Histogram across 'Processing' neurons. (default on)
 
        -I      Plot NeuralComplexity Histogram across 'Input' neurons. (default off)
-       
+
+       -B      Plot NeuralComplexity Histogram across 'Behavior' neurons. (default off)
+
+       --HB      Plot NeuralComplexity Histogram across 'HealthBehavior' neurons. (default off)
+
+        
        -N      Plot NeuralComplexity Histogram normalized by timestep. (default off)
 
 	"""
@@ -73,7 +78,7 @@ OPTIONS
 def GET_GNUPLOT_DYNAMIC_SETTINGS( Title ):
 	global RUN_DIRS, PARAMS, IDENTICAL_LINE_WIDTH, GNUPLOT_TOPRIGHT_LABEL, MAXTIMESTEP
 	global numplotsmade, GNUPLOT_TERMINAL, ytics
-	global flag_plotAll, flag_plotProcessing, flag_plotInput
+	global flag_plotAll, flag_plotProcessing, flag_plotInput, flag_plotBehavior, flag_plotHealthBehavior
 	settings = [ ]
 
 
@@ -106,22 +111,24 @@ def GET_GNUPLOT_DYNAMIC_SETTINGS( Title ):
 
 def check_parameters( argv ):
 	global PASSED_DIRECTORY, inputplotfilename
-	try: opts, args = getopt.getopt( argv, "esnwENWlpAPIxXM:")
+	try: opts, args = getopt.getopt( argv, "esnwENWlpAPIBxXM:", "HB")
 	except getopt.GetoptError: print_usage_and_exit() 
 
 #	print "opts=%s" % ( opts )
 #	print "args=%s" % ( args)
 
-	global flag_plotAll, flag_plotProcessing, flag_plotInput, flag_getRAW
+	global flag_plotAll, flag_plotProcessing, flag_plotInput, flag_plotBehavior, flag_plotHealthBehavior, flag_getRAW
 	# Set our plot flags
 	for opt, value in opts:
 		if '-A' in opt: flag_plotAll = True
 		elif '-P' in opt: flag_plotProcessing = True
 		elif '-I' in opt: flag_plotInput = True
+		elif '-B' in opt: flag_plotBehavior = True
+		elif '--HB' in opt: flag_plotHealthBehavior = True
 		elif 'N' in opt: inputplotfilename = inputplotfilename.replace('Raw', 'Norm')
 
 	# Some default settings if the user doesn't specify anything...
-	if not flag_plotInput and not flag_plotAll: flag_plotProcessing = True	# if no -[API] is specified, assume -P.
+	if not flag_plotInput and not flag_plotAll and not flag_plotBehavior and not flag_plotHealthBehavior: flag_plotProcessing = True	# if no -[APIB] is specified, assume -P.
 
 	# If we don't have a single argument, exit.
 	if len(args) != 1: print_usage_and_exit()
@@ -211,7 +218,9 @@ print "- AverageInterval=%s" % (averagetimestepinterval),
 
 if flag_plotAll: whichtype = 0
 elif flag_plotProcessing: whichtype = 1
-else: whichtype = 2
+elif flag_plotInput: whichtype = 2
+elif flag_plotHealthBehavior: whichtype = 3
+else: whichtype = 4
 
 MAXTIMESTEP=0
 NUMBINS=0
@@ -237,6 +246,12 @@ for rundir in RUN_DIRS:
 			if line.startswith('#INPMAX'):
 				line_array=line.split('=')
 				INPMAX = float( line_array[1] )
+			if line.startswith('#BEHMAX'):
+				line_array=line.split('=')
+				BEHMAX = float( line_array[1] )
+			if line.startswith('#HEABEHMAX'):
+				line_array=line.split('=')
+				HEABEHMAX = float( line_array[1] )
 			continue;
 		if(thiswhichtype == 0):
 			line_array=line.split('\t')
@@ -276,8 +291,12 @@ if flag_plotAll:
 	MAX = ALLMAX
 if flag_plotProcessing:
 	MAX = PROMAX
-else:
+if flag_plotInput:
 	MAX = INPMAX
+if flag_plotBehavior:
+	MAX = BEHMAX
+if flag_plotHealthBehavior:
+	MAX = HEABEHMAX
 binlength = MAX/NUMBINS
 #generate ytics
 #ytics = '"0" -.5, '
