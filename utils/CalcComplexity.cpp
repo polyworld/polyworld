@@ -30,17 +30,17 @@ int main( int argc, char *argv[] )
 /* END DEFAULT VALUES */
 //########################################################################
 
-	if( argc < 1 )	// if don't  1, or more arguments.  Split out usage information.  
+	if( argc < 2 )	// if don't  1, or more arguments.  Spit out usage information.  
 	{
-		cout << "\tUsage: CalcComplexity brainFunction_log.txt [N] [A P I B HB]" << endl << endl;
-		cout << "\tThe first argument is the brainFunction file to compute the complexity over.\nBoth complete and incomplete brainFunction files are supported." << endl;
-		cout << "\tThe 2nd argument is optional, and is the number of timesteps since the beginning of the agent's life to compute the Complexity over.  Ex: a value of 100 will compute Complexity across the first 100 steps of the agent's life." << endl; 
-		cout << "\tThe 3rd argument is optional, and can be 'A', 'P', 'I', 'B', 'H' or any combination thereof.  It specifies whether you want to compute the Complexity of All, Processing, Input neurons or Behavior neurons or Heatleh+Behavior neurons.  By default it computes the Complexity for A, P, I, B and H." << endl; 
+		cout << "Usage: CalcComplexity brainFunction_log.txt [N] [A P I B HB]" << endl;
+		cout << "\tThe first argument is the brainFunction file to compute the complexity for.\n\t\tBoth complete and incomplete brainFunction files are supported." << endl;
+		cout << "\tThe 2nd argument is optional, and is the number of timesteps since the beginning\n\t\tof the agent's life to compute the Complexity over.\n\t\tEx: a value of 100 will compute Complexity across the first 100 steps of the agent's life." << endl; 
+		cout << "\tThe 3rd argument is optional, and can be 'A', 'P', 'I', 'B', 'H' or any meaningful combination thereof.\n\t\tIt specifies whether you want to compute the Complexity of All, Processing, Input, Behavior, or Health+Behavior neurons.\n\t\tBy default it computes the Complexity for A, P, I, B, and HB." << endl; 
 		exit(1);
 	}
 	
 	// we're going to parse our extra parameters N and A P I B H (if we have them)
-	if( argc > 2 )
+	if( argc > 3 )
 	{
 		if (isdigit(argv[2][0]))
 			num_Com = argc - 3;
