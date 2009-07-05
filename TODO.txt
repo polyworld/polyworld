@@ -4,8 +4,15 @@ a good place to start.
 In the short term, certain key user interface functionality must
 still be revived or newly developed, such as:
 
+* make windows record their position and size changes to the settings
+  file when they are manually moved or resized
+* make dump files work again (to save state and restart the program) 
+* get the genetic-spread graphics working again
+* switch from recording movies in my home-brewed codec and file format
+  to using a standard QuickTime codec and file format
 * create macro equivalents for OSSwapInt16(), OSSwapInt32(), htonl(),
   and ntohl(), so Linux can use the PwMovieTools
+* make Polyworld work on Windows
 * when an agent is killed and its carcass is to become food, it is
   inserted into the x-sorted object list with add(), which searches
   through the entire list to figure out where to do the insertion;
@@ -15,17 +22,12 @@ still be revived or newly developed, such as:
   it should save and restore currItem, then we can eliminate the
   explicit code to do so in Interact() in Simulation.cp.
 * same as above for newborn critters
-* make windows record their position and size changes to the settings
-  file when they are manually moved or resized
-* make dump files work again (to save state and restart the program) 
-* get the overhead view working again 
-* get zoom working in the overhead view 
-* allow overhead critter following (and toggle on/off, and set fitness rank)
-* get the genetic-spread graphics working again
 * convert all window drawing to a direct Draw() method, instead of
   relying on updateGL() and paintGL() (cannot depend on rigorous
   synchrony between window updates and simulator time-steps otherwise);
   main, critter POV, and brain windows are already converted
+  (confirm best option here first, as Linux appears to have a problem
+  with these direct draws)
 * record all (or a specifiable subset of) Polyworld windows, using the
   new PwRecordMovie/PwMoviePlayer tools (they used to all be embedded
   in a single effective window--the entire Iris screen--but are now
@@ -98,3 +100,7 @@ Recently done:
   fixed indexes, regardless of how many internal neural groups
   exist, so connections to outputs can remain undisturbed as
   evolution alters the number of internal groups and their connections
+* get the overhead view working again 
+* get zoom working in the overhead view 
+* allow overhead critter following (and toggle on/off, and set fitness rank)
+
