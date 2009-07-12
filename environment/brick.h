@@ -5,6 +5,8 @@
 #ifndef BRICK_H
 #define BRICK_H
 
+#define Bricks 1
+
 // System
 #include <iostream>
 
@@ -18,8 +20,6 @@ using namespace std;
 // Forward declarations
 class brick;
 
-
-
 //===========================================================================
 // brick
 //===========================================================================
@@ -28,6 +28,8 @@ class brick : public gboxf
  public:
 	static float gBrickHeight;
 	static Color gBrickColor;
+
+	static long GetNumBricks();
 
 	BrickPatch* myBrickPatch;
 	
@@ -46,12 +48,17 @@ class brick : public gboxf
 	void initBrick();
 	void initBrick( float x, float z );
 	void initBrick( float x, float y, float z );
+	
+	static long NumBricks;
+	static bool BrickClassInited;
+	static void InitBrickClass();
 
 #if 0
 	void setRadius();
 #endif
 };
 
+inline long brick::GetNumBricks() { return NumBricks; }
 inline void brick::setPatch( BrickPatch* bp ) { myBrickPatch = bp; }
 
 #endif

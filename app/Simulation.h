@@ -368,6 +368,7 @@ private:
 	void InitWorld();
 	void InitMonitoringWindows();
 	
+	void PickParentsUsingTournament(int numInPool, int* iParent, int* jParent);
 	void Interact();
 	
 	void RecordGeneSeparation();

@@ -26,6 +26,9 @@ using namespace std;
 // External globals
 float brick::gBrickHeight;
 Color brick::gBrickColor;
+long brick::NumBricks;
+bool brick::BrickClassInited;
+
 
 //===========================================================================
 // bricks
@@ -105,6 +108,11 @@ void brick::initBrick( float x, float z )
 //-------------------------------------------------------------------------------------------
 void brick::initBrick( float x, float y, float z )
 {
+	if( !BrickClassInited )
+		InitBrickClass();
+	
+	NumBricks++;
+	
 	fPosition[0] = x;
 	fPosition[1] = y;
 	fPosition[2] = z;
@@ -112,6 +120,19 @@ void brick::initBrick( float x, float y, float z )
 	setlen( gBrickHeight, gBrickHeight, gBrickHeight );
 	
 	setcolor( gBrickColor );
+}
+ 
+
+//-------------------------------------------------------------------------------------------
+// brick::InitBrickClass
+//-------------------------------------------------------------------------------------------
+void brick::InitBrickClass()
+{
+	if( BrickClassInited )
+		return;
+	
+	BrickClassInited = true;
+	NumBricks = 0;
 }
  
 

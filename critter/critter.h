@@ -78,6 +78,7 @@ public:
     void dump(std::ostream& out);
     void load(std::istream& in);
     float Update(float moveFitnessParam, float speed2dpos);
+	void GetCollisionFixedCoordinates( float xo, float zo, float xn, float zn, float xb, float zb, float rc, float rb, float *xf, float *zf );
     
     void SetVelocity(float x, float y, float z);
     void SetVelocity(short k, float f);

@@ -16,6 +16,8 @@
 
 #define CurrentWorldfileVersion 30
 
+#define TournamentSelection 1
+
 // CompatibilityMode makes the new code with a single x-sorted list behave *almost* identically to the old code.
 // Discrepancies still arise due to the old food list never being re-sorted and critters at the exact same x location
 // not always ending up sorted in the same order.  [Food centers remain sorted as long as they exist, but these lists
@@ -553,11 +555,7 @@ void TSimulation::Step()
 			debugcheck(debugstring);
 			critnum++;
 		#endif DEBUGCHECK
-			// Set mark on current critter since we need to check for bricks
-			// in the list in order to find intersections of critters and bricks
-			objectxsortedlist::gXSortedObjects.setMark(CRITTERTYPE);
 			fFoodEnergyOut += c->Update(fMoveFitnessParameter, critter::gSpeed2DPosition);
-			objectxsortedlist::gXSortedObjects.toMark(CRITTERTYPE);
 		}
 		
 		// Swap buffers for the critter POV window when they're all done
@@ -1612,15 +1610,16 @@ void TSimulation::Init()
 			}
 		}
 
-	#if 0
-		// Add initial bricks 
-		for( int i = 0; i < fNumBrickPatches; i++ )
+	#if Bricks
+		for( int domainNumber = 0; domainNumber < fNumDomains; domainNumber++ )
 		{
-			for( int j = 0; j < fBrickPatches[i].brickCount; j++ )
+			for( int brickPatchNumber = 0; brickPatchNumber < fDomains[domainNumber].numBrickPatches; brickPatchNumber++ )
 			{
-				fBrickPatches[i].addBrick();
+				for( int j = 0; j < fDomains[domainNumber].fBrickPatches[brickPatchNumber].brickCount; j++ )
+				{
+					fDomains[domainNumber].fBrickPatches[brickPatchNumber].addBrick();
+				}
 			}
-
 		}
 	#endif
 	}
@@ -2108,6 +2107,32 @@ void TSimulation::InitMonitoringWindows()
 	if (fOverheadWindow != NULL)
 		fOverheadWindow->RestoreFromPrefs( fBirthrateWindow->width() + 1, kMenuBarHeight + mainWindowTitleHeight + titleHeight + titleHeight );
                 //(screenleft,screenleft+.75*xscreensize, screenbottom,screenbottom+(5./6.)*yscreensize);
+}
+
+
+//---------------------------------------------------------------------------
+// TSimulation::PickParentsUsingTournament
+//---------------------------------------------------------------------------
+
+void TSimulation::PickParentsUsingTournament(int numInPool, int* iParent, int* jParent)
+{
+	*iParent = numInPool-1;
+	for (int z = 0; z < 5; z++)
+	{
+		int r = (int)floor(randpw()*numInPool);
+		if (*iParent > r)
+			*iParent = r;
+	}
+	do
+	{
+		*jParent = numInPool-1;
+		for (int z = 0; z < 5; z++)
+		{
+			int r = (int)floor(randpw()*numInPool);
+			if (*jParent > r)
+				*jParent = r;
+		}
+	} while (*jParent == *iParent);
 }
 
 //---------------------------------------------------------------------------
@@ -3072,6 +3097,7 @@ void TSimulation::Interact()
 		// first deal with the individual domains
         for (id = 0; id < fNumDomains; id++)
         {
+			// while we have fewer critters than minimum for this domain
             while (fDomains[id].numCritters < fDomains[id].minNumCritters)
             {
                 fNumberCreated++;
@@ -3098,13 +3124,22 @@ void TSimulation::Interact()
                     		 && ((fDomains[id].numcreated / fFitness2Frequency) * fFitness2Frequency == fDomains[id].numcreated) )
                     {
                         // mate 2 from array of fittest
+					#if TournamentSelection
+						int parent1, parent2;
+						PickParentsUsingTournament(fDomains[id].numCritters, &parent1, &parent2);
+						newCritter->Genes()->Crossover(fDomains[id].fittest[parent1]->genes,
+													   fDomains[id].fittest[parent2]->genes,
+													   true);
+						fNumberCreated2Fit++;
+						gaPrint( "%5ld: domain %d creation from two (%d, %d) fittest (%4lu, %4lu) %4ld\n", fStep, id, parent1, parent2, fDomains[id].fittest[parent1]->critterID, fDomains[id].fittest[parent2]->critterID, fNumberCreated2Fit );
+					#else
                         newCritter->Genes()->Crossover(fDomains[id].fittest[fDomains[id].ifit]->genes,
                             				  		   fDomains[id].fittest[fDomains[id].jfit]->genes,
                             				  		   true);
                         fNumberCreated2Fit++;
 						gaPrint( "%5ld: domain %d creation from two (%d, %d) fittest (%4lu, %4lu) %4ld\n", fStep, id, fDomains[id].ifit, fDomains[id].jfit, fDomains[id].fittest[fDomains[id].ifit]->critterID, fDomains[id].fittest[fDomains[id].jfit]->critterID, fNumberCreated2Fit );
                         ijfitinc(&(fDomains[id].ifit), &(fDomains[id].jfit));
-						
+					#endif
                     }
                     else
                     {
@@ -3190,11 +3225,19 @@ void TSimulation::Interact()
                 }
                 else if( fFitness2Frequency && ((numglobalcreated / fFitness2Frequency) * fFitness2Frequency == numglobalcreated) )
                 {
+				#if TournamentSelection
+					int parent1, parent2;
+					TSimulation::PickParentsUsingTournament(numglobalcreated, &parent1, &parent2);
+                    newCritter->Genes()->Crossover( fFittest[parent1]->genes, fFittest[parent2]->genes, true );
+                    fNumberCreated2Fit++;
+					gaPrint( "%5ld: global creation from two (%d, %d) fittest (%4lu, %4lu) %4ld\n", fStep, parent1, parent2, fFittest[parent1]->critterID, fFittest[parent2]->critterID, fNumberCreated2Fit );
+				#else
                     // mate 2 from array of fittest
                     newCritter->Genes()->Crossover( fFittest[fFitI]->genes, fFittest[fFitJ]->genes, true );
                     fNumberCreated2Fit++;
 					gaPrint( "%5ld: global creation from two (%d, %d) fittest (%4lu, %4lu) %4ld\n", fStep, fFitI, fFitJ, fFittest[fFitI]->critterID, fFittest[fFitJ]->critterID, fNumberCreated2Fit );
                     ijfitinc( &fFitI, &fFitJ );
+                #endif
                 }
                 else
                 {

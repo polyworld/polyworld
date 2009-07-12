@@ -910,31 +910,118 @@ float critter::Update(float moveFitnessParam, float speed2dpos)
         } // end of barrier comes after beginning of critter
     } // while (barrier::gXSortedBarriers.next(b))
 	
-/*
-	// Note (lsy):  The following is terribly inefficient.  We only need to search backwards and forwards
-	// for a short distance around the critter, to see if it has hit any bricks.  See the equivalent code
-	// for a critter encountering food in Simulation::Interact().  It is the tiniest bit tricky, requiring
-	// you to look farther back than you might think intuitively.
-	//
-	// Now go through all the bricks to check for intersections
-	brick* br;
-	objectxsortedlist::gXSortedObjects.reset();
-	while (objectxsortedlist::gXSortedObjects.nextObj(BRICKTYPE, (gobject**)&br)){
-		if( (br->xmax() > (    x() - FF * radius())) || (br->xmax() > (LastX() - FF * radius())) )
-	        {
-			// end of barrier comes after beginning of critter
-			// in either its new or old position
-		if( (br->xmin() > (    x() + FF * radius())) && (br->xmin() > (LastX() + FF * radius())) )
-	        {
-			// beginning of barrier comes after end of critter,
-			// in both new and old positions,
-			// so there is no overlap, and we can stop searching
-			// for this critter's possible barrier overlaps
-			break;  // get out of the sorted barriers while loop
-            });
+#if Bricks
+	// If there are any bricks, then we need to test for collisions
+	if( brick::GetNumBricks() > 0 )
+	{
+		// If the critter moves, then we want to do collision processing
+		if( dx != 0.0 || dz != 0.0 )
+		{
+			// Save the current critter pointer in the master x-sorted list before we mess with it, so we can restore it later
+			objectxsortedlist::gXSortedObjects.setMark(CRITTERTYPE);
+			
+			brick* br;
 
+			// First look backwards in the list (to the left, decreasing x)
+			while( objectxsortedlist::gXSortedObjects.prevObj(BRICKTYPE, (gobject**)&br) )
+			{
+				// Test to see if we're close enough in x; if not, get out, we're done,
+				// because all objects after this one are even farther away
+				if( br->x() + br->radius() < min( x(), LastX() ) - radius() )
+					break;
+				
+				// Test to see if we're too far away in z; if so, we're done with this object
+				if( br->z() - br->radius() > max( z(), LastZ() ) + radius()  ||
+					br->z() + br->radius() < min( z(), LastZ() ) - radius() )
+					continue;
+				
+				// If we reach here, then the two objects appear to have had contact this time step
+				
+				// We only want to adjust the position of our critter if it was traveling in the
+				// direction of the object it is touching, so take a small step from the start
+				// position towards the end position and see whether the distance to the potential
+				// collision object decreases.  ("Small" because we want to avoid the case where
+				// the agent's velocity is great enough to step past the collision object and end
+				// up farther away than it started, after going completely through the collision
+				// object.  Dividing by worldsize should take care of that in any situation.)
+				float xs, zs;
+				float dosquared = (br->x()-LastX())*(br->x()-LastX()) + (br->z()-LastZ())*(br->z()-LastZ());
+				if( fabs( dx ) > fabs( dz ) )
+				{
+					float s = dz / dx;
+					xs = LastX()  +  dx / globals::worldsize;
+					zs = LastZ()  +  s * (xs - LastX());
+				}
+				else
+				{
+					float s = dx / dz;
+					zs = LastZ()  +  dz / globals::worldsize;
+					xs = LastX()  +  s * (zs - LastZ());
+				}
+				float dssquared = (br->x()-xs)*(br->x()-xs) + (br->z()-zs)*(br->z()-zs);
+				
+				// Test to see if the critter is approaching the potential collision object
+				if( dssquared < dosquared )
+				{
+					// If we reach here, then there was a collision
+					// So calculate where along our path we had to stop in order to avoid it
+					float xf, zf;	// the "fixed" coordinates so as to avoid penetrating the brick
+					GetCollisionFixedCoordinates( LastX(), LastZ(), x(), z(), br->x(), br->z(), radius(), br->radius(), &xf, &zf );
+					setx( xf );
+					setz( zf );
+					break;	// can only hit one
+				}
+			}
+
+			// Restore the current critter pointer in the master x-sorted list
+			objectxsortedlist::gXSortedObjects.toMark(CRITTERTYPE);
+
+			// Then look forwards in the list (to the right, increasing x)
+			while( objectxsortedlist::gXSortedObjects.nextObj(BRICKTYPE, (gobject**)&br) )
+			{
+				if( br->x() - br->radius() > max( x(), LastX() ) + radius() )
+					break;
+				// if we reach here, we're close enough in x
+				
+				float zmin = min( z(), LastZ() ) - radius();
+				float zmax = max( z(), LastZ() ) + radius();
+				
+				if( br->z() - br->radius() > max( z(), LastZ() ) + radius()  || 
+					br->z() + br->radius() < min( z(), LastZ() ) - radius() )
+					continue;
+				
+				// if we reach here, we're also close enough in z
+				float xs, zs;
+				float dosquared = (br->x()-LastX())*(br->x()-LastX()) + (br->z()-LastZ())*(br->z()-LastZ());
+				if( fabs( dx ) > fabs( dz ) )
+				{
+					float s = dz / dx;
+					xs = LastX()  +  dx / globals::worldsize;
+					zs = LastZ()  +  s * (xs - LastX());
+				}
+				else
+				{
+					float s = dx / dz;
+					zs = LastZ()  +  dz / globals::worldsize;
+					xs = LastX()  +  s * (zs - LastZ());
+				}
+				float dssquared = (br->x()-xs)*(br->x()-xs) + (br->z()-zs)*(br->z()-zs);
+				if( dssquared < dosquared )
+				{
+					// if we reach here, the critter is approaching the brick
+					float xf, zf;	// the "fixed" coordinates so as to avoid penetrating the brick
+					GetCollisionFixedCoordinates( LastX(), LastZ(), x(), z(), br->x(), br->z(), radius(), br->radius(), &xf, &zf );
+					setx( xf );
+					setz( zf );
+					break;	// can only hit one
+				}
+			}
+			
+			// Restore the current critter pointer in the master x-sorted list
+			objectxsortedlist::gXSortedObjects.toMark(CRITTERTYPE);
+		}
 	}
-*/
+#endif
 
 #if 0
 	TODO
@@ -966,6 +1053,101 @@ float critter::Update(float moveFitnessParam, float speed2dpos)
     return energyUsed;
 }
 
+// Cheap and dirty algorithm for finding a "fixed" position for the critter, so it avoids a collision with a brick
+// Treats both the critter and the brick as circles and calculates the point along the critter's trajectory
+// that will place it adjacent to, but not penetrating the brick.  Math is in my notebook.
+// x and z are coordinates
+// o and n are old and new critter positions (beginning and end of time step, before being fixed)
+// r is for radius
+// b is for brick
+// f is for fixed critter position (to avoid collision)
+// d is for distance (or delta)
+void critter::GetCollisionFixedCoordinates( float xo, float zo, float xn, float zn, float xb, float zb, float rc, float rb, float *xf, float *zf )
+{
+	float xf1, zf1, xf2, zf2;
+	float dx = xn - xo;
+	float dz = zn - zo;
+	float dsquared = dx*dx + dz*dz;
+	
+	if( dx == 0.0 && dz == 0.0 )
+	{
+		*xf = xn;
+		*zf = zn;
+		return;
+	}
+	
+	if( fabs( dx ) > fabs( dz ) )
+	{
+		float s = dz / dx;
+		float a = 1 + s*s;
+		float b = 2.0 * (s * (zo - zb - s*xo) - xb);
+		float c = xb*xb + zb*zb + s*s*xo*xo + zo*zo + 2.0 * (s * xo * (zb-zo) - zb*zo) - (rc+rb)*(rc+rb);
+		float discriminant = b*b - 4.0*a*c;
+		if( discriminant < 0.0 )
+		{
+			// roots are not real; shouldn't be possible, but protect against it
+			*xf = xn;
+			*zf = zn;
+			return;
+		}
+		float d = sqrt(discriminant);
+		float e = 0.5 / a;		
+		xf1 = (-b + d) * e;
+		xf2 = (-b - d) * e;
+		zf1 = zo  +  s * (xf1 - xo);
+		zf2 = zo  +  s * (xf2 - xo);
+	}
+	else
+	{
+		float s = dx / dz;
+		float a = 1 + s*s;
+		float b = 2.0 * (s * (xo - xb - s*zo) - zb);
+		float c = xb*xb + zb*zb + s*s*zo*zo + xo*xo + 2.0 * (s * zo * (xb-xo) - xb*xo) - (rc+rb)*(rc+rb);
+		float discriminant = b*b - 4.0*a*c;
+		if( discriminant < 0.0 )
+		{
+			// roots are not real; shouldn't be possible, but protect against it
+			*xf = xn;
+			*zf = zn;
+			return;
+		}
+		float d = sqrt(discriminant);
+		float e = 0.5 / a;		
+		zf1 = (-b + d) * e;
+		zf2 = (-b - d) * e;
+		xf1 = xo  +  s * (zf1 - zo);
+		xf2 = xo  +  s * (zf2 - zo);
+	}
+
+	float d1squared = (xf1-xo)*(xf1-xo) + (zf1-zo)*(zf1-zo);
+	float d2squared = (xf2-xo)*(xf2-xo) + (zf2-zo)*(zf2-zo);
+	if( d1squared < d2squared )
+	{
+		if( d1squared < dsquared )
+		{
+			*xf = xf1;
+			*zf = zf1;
+		}
+		else
+		{
+			*xf = xn;
+			*zf = zn;
+		}
+	}
+	else
+	{
+		if( d2squared < dsquared )
+		{
+			*xf = xf2;
+			*zf = zf2;
+		}
+		else
+		{
+			*xf = xn;
+			*zf = zn;
+		}	
+	}
+}
 
 void critter::draw()
 {
