@@ -9,10 +9,12 @@
 #ifndef GOBJECT_H
 #define GOBJECT_H
 
-/* gobject possible types */
-#define CRITTERTYPE 0
-#define FOODTYPE 1
-#define BRICKTYPE 2
+// gobject possible types
+// use one bit per type, so masks may be created with multiple object types
+#define ANYTYPE 0xffffffff
+#define CRITTERTYPE 0x1
+#define FOODTYPE 0x2
+#define BRICKTYPE 0x4
 
 // System
 #include <gl.h>

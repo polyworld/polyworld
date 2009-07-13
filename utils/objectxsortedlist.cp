@@ -36,23 +36,19 @@ objectxsortedlist objectxsortedlist::gXSortedObjects;
 //---------------------------------------------------------------------------
 int objectxsortedlist::getCount( int objType )
 {
-    /* Update the counts based on which type of object was added to the list */
-    switch( objType )
-	{
-		case CRITTERTYPE:
-			return critterCount;
-			break;
-		case FOODTYPE:
-			return foodCount;
-			break;
-		case BRICKTYPE:
-			return brickCount;
-			break;
-    }
-    
-    // Error!  Should not get here.
-    printf( "%s: ERROR--Unknown object type\n", __func__ );
-    exit( 1 );
+    // Count the requested types in the list
+	int count = 0;
+	
+	if( objType & CRITTERTYPE )
+		count += critterCount;
+	
+	if( objType & FOODTYPE )
+		count += foodCount;
+	
+	if( objType & BRICKTYPE )
+		count += brickCount;
+	
+	return( count );
 }
 
 
@@ -68,7 +64,7 @@ int objectxsortedlist::lastObj( int objType, gobject** g )
     returnVal = this->last( *g );
     
     // Traverse the list backwards to find the last object of the given type
-    while( (*g)->getType() != objType )
+    while( ((*g)->getType() & objType) == 0 )
 		returnVal = this->prev(*g);
     
     // Return whatever prev or last returned
@@ -90,9 +86,9 @@ int objectxsortedlist::nextObj( int objType, gobject** g )
     returnVal = this->next( *g );
 	if( !returnVal )
 		return returnVal;
-
+		
     // Traverse the list forwards looking for an appropriate object
-    while( (*g)->getType() != objType )
+    while( ((*g)->getType() & objType) == 0 )
 	{
 		returnVal = this->next( *g );
 		if( returnVal == 0 )
@@ -117,7 +113,7 @@ int objectxsortedlist::prevObj( int objType, gobject** g )
 		return( returnVal );
 
     // Traverse backwards looking for an object of the given type
-    while( (*g)->getType() != objType )
+    while( ((*g)->getType() & objType) == 0 )
 	{
 		returnVal = this->prev( *g );
 		if( !returnVal )
@@ -125,6 +121,23 @@ int objectxsortedlist::prevObj( int objType, gobject** g )
     }
 	
     return returnVal;
+}
+
+
+//---------------------------------------------------------------------------
+// objectxsortedlist::anotherObj
+//---------------------------------------------------------------------------
+// Get the previous object of a given type
+int objectxsortedlist::anotherObj( int direction, int objType, gobject** g )
+{
+	if( direction == NEXT )
+		return nextObj( objType, g );
+	else if( direction == PREV )
+		return prevObj( objType, g );
+	
+    // Error!  Should not get here.
+    printf( "%s: ERROR--Unknown direction (%d)\n", __func__, direction );
+    exit( 1 );
 }
 
 

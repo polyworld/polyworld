@@ -415,6 +415,8 @@ private:
 
 	long fNumDomains;
 	
+	int fSolidObjects;	// critters cannot pass through solid objects (collisions are avoided)
+	
 	float fCritterHealingRate;	// Virgil Healing
 	bool fHealing;				// Virgil Healing
 	

@@ -1,6 +1,8 @@
 #ifndef OBJECTXSORTEDLIST_H
 #define OBJECTXSORTEDLIST_H
 
+#define NEXT 1
+#define PREV 2
 
 #include "gdlink.h"
 #include "gobject.h"
@@ -38,6 +40,7 @@ class objectxsortedlist : public gdlist<gobject*>
     int nextObj( int objType, gobject** gob );
     int prevObj( int objType, gobject** gob );
     int lastObj( int objType, gobject** gob );
+	int anotherObj( int direction, int objType, gobject** gob );
 
     void setMark( int objType );
     void setMarkPrevious( int objType );

@@ -14,7 +14,7 @@
 #define MinDebugStep 0
 #define MaxDebugStep INT_MAX
 
-#define CurrentWorldfileVersion 30
+#define CurrentWorldfileVersion 31
 
 #define TournamentSelection 1
 
@@ -186,7 +186,6 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
 		fRecordAdamiComplexity(false),
 		fAdamiComplexityRecordFrequency(0),
 
-
 		fSceneView(sceneView),
 		fSceneWindow(sceneWindow),
 		fBirthrateWindow(NULL),
@@ -202,6 +201,8 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
 		fStatusFrequency(100),
 		fLoadState(false),
 		inited(false),
+		
+		fSolidObjects(0x4),	// only bricks are solid by default, for historical reasons
 
 		fHealing(0),
 		fGroundClearance(0.0),
@@ -555,7 +556,7 @@ void TSimulation::Step()
 			debugcheck(debugstring);
 			critnum++;
 		#endif DEBUGCHECK
-			fFoodEnergyOut += c->Update(fMoveFitnessParameter, critter::gSpeed2DPosition);
+			fFoodEnergyOut += c->Update(fMoveFitnessParameter, critter::gSpeed2DPosition, fSolidObjects);
 		}
 		
 		// Swap buffers for the critter POV window when they're all done
@@ -4434,6 +4435,28 @@ void TSimulation::ReadWorldFile(const char* filename)
     cout << "minbitprob" ses genome::gMinBitProb nl;
     in >> genome::gMaxBitProb; in >> label;
     cout << "maxbitprob" ses genome::gMaxBitProb nl;
+	
+	if( version >= 31 )
+	{
+		fSolidObjects = 0;
+		int solidCritters, solidFood, solidBricks;
+		in >> solidCritters; in >> label;
+		cout << "solidCritters" ses solidCritters nl;
+		if( solidCritters ) fSolidObjects |= CRITTERTYPE;
+		in >> solidFood; in >> label;
+		cout << "solidFood" ses solidFood nl;
+		if( solidFood ) fSolidObjects |= FOODTYPE;
+		in >> solidBricks; in >> label;
+		cout << "solidBricks" ses solidBricks nl;
+		if( solidBricks ) fSolidObjects |= BRICKTYPE;
+	}
+	else
+		fSolidObjects = BRICKTYPE;
+	printf( "\tfSolidObjects = 0x" );
+	for( unsigned int i = 0; i < sizeof(fSolidObjects)*8; i++ )
+		printf( "%d", (fSolidObjects>>(31-i)) & 1 );
+	printf( "\n" );
+	
     in >> critter::gCritterHeight; in >> label;
     cout << "critterheight" ses critter::gCritterHeight nl;
     in >> food::gFoodHeight; in >> label;

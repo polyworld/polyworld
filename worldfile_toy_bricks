@@ -1,4 +1,4 @@
-30      version
+31      version
 
 0	LockStepWithBirthsDeathsLog
 
@@ -102,6 +102,11 @@
 2.0    initmaxweight_0.5_0.1_1.0
 0.5    minbitprob_0.1
 0.5    maxbitprob_0.6
+
+1		solidCritters_0
+1		solidFood_0
+1		solidBricks_1
+
 0.2    critterheight
 0.6    foodheight
 0.2 0.6 0.2 foodcolor
