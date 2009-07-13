@@ -294,7 +294,7 @@ public:
 //	bool GetShowBrain() const;
 //	void SetShowBrain(bool showBrain);
 	long GetMaxCritters() const;
-	static long fMaxCritters;
+	static long fMaxNumCritters;
 	long GetInitNumCritters() const;
 	
 //	short OverHeadRank( void );
@@ -520,8 +520,8 @@ private:
 
 	long fMinFoodCount;
 	long fMaxFoodCount;
-	long fMaxFoodGrown;
-	long fInitialFoodCount;
+	long fMaxFoodGrownCount;
+	long fInitFoodCount;
 	bool fCrittersRfood;
 	float fFoodRate;
 	float fFoodEnergyIn;
@@ -600,7 +600,7 @@ inline TOverheadView* TSimulation::GetOverheadWindow() const { return fOverheadW
 inline TTextStatusWindow* TSimulation::GetStatusWindow() const { return fTextStatusWindow; }
 //inline bool TSimulation::GetShowBrain() const { return fBrainMonitorWindow->visible; }
 //inline void TSimulation::SetShowBrain(bool showBrain) { fBrainMonitorWindow->visible = showBrain; }
-inline long TSimulation::GetMaxCritters() const { return fMaxCritters; }
+inline long TSimulation::GetMaxCritters() const { return fMaxNumCritters; }
 //inline short TSimulation::OverHeadRank( void ) { return fOverHeadRank; }
 inline long TSimulation::GetInitNumCritters() const { return fInitNumCritters; }
 inline float TSimulation::EnergyFitnessParameter() const { return fEnergyFitnessParameter; }

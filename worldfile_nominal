@@ -1,4 +1,4 @@
-31		version
+32		version
 
 0		LockStepWithBirthsDeathsLog
 
@@ -20,14 +20,14 @@
 0.9		probabilityOfMutatingSeed
 -1		misccritters
 
-42		positionseed_not_used
-42		genomeseed_used_for_all
-
+90		initFoodCount
 90		minFoodCount
 120		maxFoodCount
 90		maxFoodGrown
-90		initFoodCount
 0.1		foodrate
+
+42		positionseed_not_used
+42		genomeseed_used_for_all
 
 1		crittersRfood
 100		fit1freq
@@ -140,29 +140,29 @@
 
 3		numdomains
 
-30		domain[0].minCritters
-100		domain[0].maxCritters
-50		domain[0].initCritters
-15		domain[0].numberToSeed
-0.9		domain[0].probabilityOfMutatingSeeds
 0.16667	domain[0].centerX	
 0.5		domain[0].centerZ	
 0.33333	domain[0].sizeX
 1.0		domain[0].sizeZ
+-1.0	domain[0].minCrittersFraction
+-1.0	domain[0].maxCrittersFraction
+-1.0	domain[0].initCrittersFraction
+-1.0	domain[0].numberToSeedFraction
+-1.0	domain[0].probabilityOfMutatingSeeds
+-1.0	domain[0].initFoodFraction
+-1.0	domain[0].minFoodFraction
+-1.0	domain[0].maxFoodFraction
+-1.0	domain[0].maxFoodGrownFraction
+-1.0	domain[0].foodRate
 2		domain[0].numFoodPatches
 1		domain[0].numBrickPatches
-0.1		domain[0].foodRate
-30		domain[0].initFoodCount
-30		domain[0].minFoodCount
-40		domain[0].maxFoodCount
-30		domain[0].maxFoodGrownCount
 
 0.2		domain[0].foodPatch[0].fraction
+-1.0	domain[0].foodPatch[0].initFoodFraction
+-1.0	domain[0].foodPatch[0].minFoodFraction
+-1.0	domain[0].foodPatch[0].maxFoodFraction
+-1.0	domain[0].foodPatch[0].maxFoodGrownFraction
 -1.0	domain[0].foodPatch[0].growthRate
--1		domain[0].foodPatch[0].initFoodCount
--1		domain[0].foodPatch[0].minFoodCount
--1		domain[0].foodPatch[0].maxFoodCount
--1		domain[0].foodPatch[0].maxFoodGrownCount
 0.5		domain[0].foodPatch[0].centerX
 0.05	domain[0].foodPatch[0].centerZ
 1.0		domain[0].foodPatch[0].sizeX
@@ -176,11 +176,11 @@
 0		domain[0].foodPatch[0].removeFood
 
 0.8		domain[0].foodPatch[1].fraction
+-1.0	domain[0].foodPatch[1].initFoodFraction
+-1.0	domain[0].foodPatch[1].minFoodFraction
+-1.0	domain[0].foodPatch[1].maxFoodFraction
+-1.0	domain[0].foodPatch[1].maxFoodGrownFraction
 -1.0	domain[0].foodPatch[1].growthRate
--1		domain[0].foodPatch[1].initFoodCount
--1		domain[0].foodPatch[1].minFoodCount
--1		domain[0].foodPatch[1].maxFoodCount
--1		domain[0].foodPatch[1].maxFoodGrownCount
 0.5		domain[0].foodPatch[1].centerX
 0.8		domain[0].foodPatch[1].centerZ
 1.0		domain[0].foodPatch[1].sizeX
@@ -202,29 +202,29 @@
 0		domain[0].brickPatch[0].distribution_0=uniform|1=linear|2=gaussian
 0		domain[0].brickPatch[0].neighborhoodSize
 
-30		domain[1].minCritters
-100		domain[1].maxCritters
-50		domain[1].initCritters
-15		domain[1].numberToSeed
-0.5		domain[1].probabilityOfMutatingSeeds
 0.5		domain[1].centerX	
 0.5		domain[1].centerZ	
 0.33333	domain[1].sizeX
 1.0		domain[1].sizeZ
+-1.0	domain[1].minCrittersFraction
+-1.0	domain[1].maxCrittersFraction
+-1.0	domain[1].initCrittersFraction
+-1.0	domain[1].numberToSeedFraction
+-1.0	domain[1].probabilityOfMutatingSeeds
+-1.0	domain[1].initFoodFraction
+-1.0	domain[1].minFoodFraction
+-1.0	domain[1].maxFoodFraction
+-1.0	domain[1].maxFoodGrownFraction
+-1.0	domain[1].foodRate
 2		domain[1].numFoodPatches
 1		domain[1].numBrickPatches
-0.1		domain[1].foodRate
-30		domain[1].initFoodCount
-30		domain[1].minFoodCount
-40		domain[1].maxFoodCount
-30		domain[1].maxFoodGrownCount
 
 0.2		domain[1].foodPatch[0].fraction
+-1.0	domain[1].foodPatch[0].initFoodFraction
+-1.0	domain[1].foodPatch[0].minFoodFraction
+-1.0	domain[1].foodPatch[0].maxFoodFraction
+-1.0	domain[1].foodPatch[0].maxFoodGrownFraction
 -1.0	domain[1].foodPatch[0].growthRate
--1		domain[1].foodPatch[0].initFoodCount
--1		domain[1].foodPatch[0].minFoodCount
--1		domain[1].foodPatch[0].maxFoodCount
--1		domain[1].foodPatch[0].maxFoodGrownCount
 0.5		domain[1].foodPatch[0].centerX
 0.05	domain[1].foodPatch[0].centerZ
 1.0		domain[1].foodPatch[0].sizeX
@@ -238,11 +238,11 @@
 0		domain[1].foodPatch[0].removeFood
 
 0.8		domain[1].foodPatch[1].fraction
+-1.0	domain[1].foodPatch[1].initFoodFraction
+-1.0	domain[1].foodPatch[1].minFoodFraction
+-1.0	domain[1].foodPatch[1].maxFoodFraction
+-1.0	domain[1].foodPatch[1].maxFoodGrownFraction
 -1.0	domain[1].foodPatch[1].growthRate
--1		domain[1].foodPatch[1].initFoodCount
--1		domain[1].foodPatch[1].minFoodCount
--1		domain[1].foodPatch[1].maxFoodCount
--1		domain[1].foodPatch[1].maxFoodGrownCount
 0.5		domain[1].foodPatch[1].centerX
 0.8		domain[1].foodPatch[1].centerZ
 1.0		domain[1].foodPatch[1].sizeX
@@ -264,29 +264,29 @@
 0		domain[1].brickPatch[0].distribution_0=uniform|1=linear|2=gaussian
 0		domain[1].brickPatch[0].neighborhoodSize
 
-30		domain[2].minCritters
-100		domain[2].maxCritters
-50		domain[2].initCritters
-15		domain[2].numberToSeed
-0.5		domain[2].probabilityOfMutatingSeeds
 0.83333	domain[2].centerX	
 0.5		domain[2].centerZ	
 0.33333	domain[2].sizeX
 1.0		domain[2].sizeZ
+-1.0	domain[2].minCrittersFraction
+-1.0	domain[2].maxCrittersFraction
+-1.0	domain[2].initCrittersFraction
+-1.0	domain[2].numberToSeedFraction
+-1.0	domain[2].probabilityOfMutatingSeeds
+-1.0	domain[2].minFoodFraction
+-1.0	domain[2].maxFoodFraction
+-1.0	domain[2].maxFoodGrownFraction
+-1.0	domain[2].initFoodFraction
+-1.0	domain[2].foodRate
 2		domain[2].numFoodPatches
 1		domain[2].numBrickPatches
-0.1		domain[2].foodRate
-30		domain[2].initFoodCount
-30		domain[2].minFoodCount
-40		domain[2].maxFoodCount
-30		domain[2].maxFoodGrownCount
 
 0.2		domain[2].foodPatch[0].fraction
+-1.0	domain[2].foodPatch[0].initFoodFraction
+-1.0	domain[2].foodPatch[0].minFoodFraction
+-1.0	domain[2].foodPatch[0].maxFoodFraction
+-1.0	domain[2].foodPatch[0].maxFoodGrownFraction
 -1.0	domain[2].foodPatch[0].growthRate
--1		domain[2].foodPatch[0].initFoodCount
--1		domain[2].foodPatch[0].minFoodCount
--1		domain[2].foodPatch[0].maxFoodCount
--1		domain[2].foodPatch[0].maxFoodGrownCount
 0.5		domain[2].foodPatch[0].centerX
 0.05	domain[2].foodPatch[0].centerZ
 1.0		domain[2].foodPatch[0].sizeX
@@ -300,11 +300,11 @@
 0		domain[2].foodPatch[0].removeFood
 
 0.8		domain[2].foodPatch[1].fraction
+-1.0	domain[2].foodPatch[1].initFoodFraction
+-1.0	domain[2].foodPatch[1].minFoodFraction
+-1.0	domain[2].foodPatch[1].maxFoodFraction
+-1.0	domain[2].foodPatch[1].maxFoodGrownFraction
 -1.0	domain[2].foodPatch[1].growthRate
--1		domain[2].foodPatch[1].initFoodCount
--1		domain[2].foodPatch[1].minFoodCount
--1		domain[2].foodPatch[1].maxFoodCount
--1		domain[2].foodPatch[1].maxFoodGrownCount
 0.5		domain[2].foodPatch[1].centerX
 0.8		domain[2].foodPatch[1].centerZ
 1.0		domain[2].foodPatch[1].sizeX

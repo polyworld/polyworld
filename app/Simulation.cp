@@ -14,7 +14,7 @@
 #define MinDebugStep 0
 #define MaxDebugStep INT_MAX
 
-#define CurrentWorldfileVersion 31
+#define CurrentWorldfileVersion 32
 
 #define TournamentSelection 1
 
@@ -69,7 +69,7 @@ using namespace std;
 
 static long numglobalcreated = 0;    // needs to be static so we only get warned about influence of global creations once ever
 
-long TSimulation::fMaxCritters;
+long TSimulation::fMaxNumCritters;
 long TSimulation::fStep;
 short TSimulation::fOverHeadRank = 1;
 critter* TSimulation::fMonitorCritter = NULL;
@@ -495,7 +495,7 @@ void TSimulation::Step()
 		long numCritters = objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE);
 		long initNumCritters = fInitNumCritters;
 		long minNumCritters = fMinNumCritters  +  lround( 0.1 * (fInitNumCritters - fMinNumCritters) );	// 10% buffer, to help prevent reaching actual min value and invoking GA
-		long maxNumCritters = fMaxCritters;
+		long maxNumCritters = fMaxNumCritters;
 		long excess = numCritters - fInitNumCritters;	// global excess
 
 		// Use the lowest excess value to produce the most help or the least penalty
@@ -1311,8 +1311,8 @@ void TSimulation::Init()
 		fBrainAnatomyRecordSeeds || fBrainFunctionRecordSeeds || fAdamiComplexityRecordFrequency )
 	{
 		// If we're going to be saving info on all these files, must increase the number allowed open
-		if( SetMaximumFiles( fMaxCritters * 2 ) )	// 2x is overkill, but let's be safe
-			eprintf( "Error setting maximum files to %ld (%d)\n", fMaxCritters * 2, errno );
+		if( SetMaximumFiles( fMaxNumCritters * 2 ) )	// 2x is overkill, but let's be safe
+			eprintf( "Error setting maximum files to %ld (%d)\n", fMaxNumCritters * 2, errno );
 
 		if( mkdir( "run/brain", PwDirMode ) )
 			eprintf( "Error making run/brain directory (%d)\n", errno );
@@ -1490,7 +1490,7 @@ void TSimulation::Init()
 		{
 			numSeededDomain = 0;	// reset for each domain
 
-			int limit = min((fMaxCritters - (long)objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE)), fDomains[id].initNumCritters);
+			int limit = min((fMaxNumCritters - (long)objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE)), fDomains[id].initNumCritters);
 			for (int i = 0; i < limit; i++)
 			{
 				c = critter::getfreecritter(this, &fStage);
@@ -1548,7 +1548,7 @@ void TSimulation::Init()
 		}
 	
 		// Handle global initial creations, if necessary
-		Q_ASSERT( fInitNumCritters <= fMaxCritters );
+		Q_ASSERT( fInitNumCritters <= fMaxNumCritters );
 		
 		while( (int)objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE) < fInitNumCritters )
 		{
@@ -1712,7 +1712,7 @@ void TSimulation::Init()
 	// Set up gene Separation monitoring
 	if (fMonitorGeneSeparation)
     {
-		fGeneSepVals = new float[fMaxCritters * (fMaxCritters - 1) / 2];
+		fGeneSepVals = new float[fMaxNumCritters * (fMaxNumCritters - 1) / 2];
         fNumGeneSepVals = 0;
         CalculateGeneSeparationAll();
 
@@ -1794,8 +1794,8 @@ void TSimulation::InitWorld()
 	fProbabilityOfMutatingSeeds = 0.0;
     fMinFoodCount = 15;
     fMaxFoodCount = 50;
-    fMaxFoodGrown = 25;
-    fInitialFoodCount = 25;
+    fMaxFoodGrownCount = 25;
+    fInitFoodCount = 25;
     fFoodRate = 0.1;
     fMiscCritters = 150;
 	fPositionSeed = 42;
@@ -1928,7 +1928,7 @@ void TSimulation::InitWorld()
 	fGraphics = true;
     critter::gVision = true;
     critter::gMaxVelocity = 1.0;
-    fMaxCritters = 50;
+    fMaxNumCritters = 50;
     critter::gInitMateWait = 25;
     critter::gMinCritterSize = 1.0;
     critter::gMinCritterSize = 4.0;
@@ -2027,7 +2027,7 @@ void TSimulation::InitMonitoringWindows()
 	for (int i = 0; i < numpop; i++)
 	{
 		int colorIndex = i % 7;
-		fPopulationWindow->SetRange(short(i), 0, fMaxCritters);
+		fPopulationWindow->SetRange(short(i), 0, fMaxNumCritters);
 		fPopulationWindow->SetColor(i, popColor[colorIndex]);
 	}
 	fPopulationWindow->setFixedSize(TChartWindow::kMaxWidth, TChartWindow::kMaxHeight);
@@ -2037,7 +2037,7 @@ void TSimulation::InitMonitoringWindows()
 //	fBrainMonitorWindow->setWindowTitle( QString( "Brain Monitor" ) );
 	
 	// Critter POV
-	fCritterPOVWindow = new TCritterPOVWindow( fMaxCritters, this );
+	fCritterPOVWindow = new TCritterPOVWindow( fMaxNumCritters, this );
 	
 	// Status window
 	fTextStatusWindow = new TTextStatusWindow( this );
@@ -2476,7 +2476,7 @@ void TSimulation::Interact()
 				int i = 0;
 				
 				int numCritters = objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE);
-				assert( numCritters < fMaxCritters );			// Since we've already done all the deaths that occurred at this timestep, we should always have enough room to process the births that happened at this timestep.
+				assert( numCritters < fMaxNumCritters );			// Since we've already done all the deaths that occurred at this timestep, we should always have enough room to process the births that happened at this timestep.
 				
 				critter* testCritter = NULL;
 				//int randomIndex = int( round( randpw() * fDomains[kd].numCritters ) );	// pick from this domain V???
@@ -2769,7 +2769,7 @@ void TSimulation::Interact()
 
 						
 						if ( (fDomains[kd].numCritters < fDomains[kd].maxNumCritters) &&
-							 (objectxsortedlist::gXSortedObjects.getCount( CRITTERTYPE ) < fMaxCritters) )
+							 (objectxsortedlist::gXSortedObjects.getCount( CRITTERTYPE ) < fMaxNumCritters) )
 						{
 							// Still got room for more
 							if( (fMiscCritters < 0) ||									// miscegenation function not being used
@@ -3091,7 +3091,7 @@ void TSimulation::Interact()
 
 	// now for a little spontaneous generation!
 	
-    if (((long)(objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE))) < fMaxCritters)
+    if (((long)(objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE))) < fMaxNumCritters)
     {
         // provided there are less than the maximum number of critters already
 
@@ -4236,10 +4236,11 @@ void TSimulation::ReadWorldFile(const char* filename)
     cout << "minwin" ses brain::gMinWin nl;
     in >> critter::gMaxVelocity; in >> label;
     cout << "maxvel" ses critter::gMaxVelocity nl;
+
     in >> fMinNumCritters; in >> label;
     cout << "minNumCritters" ses fMinNumCritters nl;
-    in >> fMaxCritters; in >> label;
-    cout << "maxNumCritters" ses fMaxCritters nl;
+    in >> fMaxNumCritters; in >> label;
+    cout << "maxNumCritters" ses fMaxNumCritters nl;
     in >> fInitNumCritters; in >> label;
     cout << "initNumCritters" ses fInitNumCritters nl;
 	if( version >= 9 )
@@ -4256,20 +4257,40 @@ void TSimulation::ReadWorldFile(const char* filename)
 	}
     in >> fMiscCritters; in >> label;
     cout << "misccritters" ses fMiscCritters nl;
+
+	if( version >= 32 )
+	{
+		in >> fInitFoodCount; in >> label;
+		cout << "initFoodCount" ses fInitFoodCount nl;
+		in >> fMinFoodCount; in >> label;
+		cout << "minFoodCount" ses fMinFoodCount nl;
+		in >> fMaxFoodCount; in >> label;
+		cout << "maxFoodCount" ses fMaxFoodCount nl;
+		in >> fMaxFoodGrownCount; in >> label;
+		cout << "maxFoodGrown" ses fMaxFoodGrownCount nl;
+		in >> fFoodRate; in >> label;
+		cout << "foodrate" ses fFoodRate nl;
+	}
+
     in >> fPositionSeed; in >> label;
     cout << "fPositionSeed" ses fPositionSeed nl;
     in >> fGenomeSeed; in >> label;
     cout << "genomeseed" ses fGenomeSeed nl;
-    in >> fMinFoodCount; in >> label;
-    cout << "minFoodCount" ses fMinFoodCount nl;
-    in >> fMaxFoodCount; in >> label;
-    cout << "maxFoodCount" ses fMaxFoodCount nl;
-    in >> fMaxFoodGrown; in >> label;
-    cout << "maxFoodGrown" ses fMaxFoodGrown nl;
-    in >> fInitialFoodCount; in >> label;
-    cout << "initFoodCount" ses fInitialFoodCount nl;
-    in >> fFoodRate; in >> label;
-    cout << "foodrate" ses fFoodRate nl;
+
+	if( version < 32 )
+	{
+		in >> fMinFoodCount; in >> label;
+		cout << "minFoodCount" ses fMinFoodCount nl;
+		in >> fMaxFoodCount; in >> label;
+		cout << "maxFoodCount" ses fMaxFoodCount nl;
+		in >> fMaxFoodGrownCount; in >> label;
+		cout << "maxFoodGrown" ses fMaxFoodGrownCount nl;
+		in >> fInitFoodCount; in >> label;
+		cout << "initFoodCount" ses fInitFoodCount nl;
+		in >> fFoodRate; in >> label;
+		cout << "foodrate" ses fFoodRate nl;
+	}
+
     in >> fCrittersRfood; in >> label;
     cout << "crittersRfood" ses fCrittersRfood nl;
     in >> fFitness1Frequency; in >> label;
@@ -4599,24 +4620,28 @@ void TSimulation::ReadWorldFile(const char* filename)
 	
 	for (id = 0; id < fNumDomains; id++)
 	{
-		in >> fDomains[id].minNumCritters; in >> label;
-		cout << "minNumCritters in domains[" << id << "]" ses fDomains[id].minNumCritters nl;
-		in >> fDomains[id].maxNumCritters; in >> label;
-		cout << "maxNumCritters in domains[" << id << "]" ses fDomains[id].maxNumCritters nl;
-		in >> fDomains[id].initNumCritters; in >> label;
-		cout << "initNumCritters in domains[" << id << "]" ses fDomains[id].initNumCritters nl;
-		if( version >= 9 )
+		if( version < 32 )
 		{
-			in >> fDomains[id].numberToSeed; in >> label;
-			cout << "numberToSeed in domains[" << id << "]" ses fDomains[id].numberToSeed nl;
-			in >> fDomains[id].probabilityOfMutatingSeeds; in >> label;
-			cout << "probabilityOfMutatingSeeds in domains [" << id << "]" ses fDomains[id].probabilityOfMutatingSeeds nl;
+			in >> fDomains[id].minNumCritters; in >> label;
+			cout << "minNumCritters in domains[" << id << "]" ses fDomains[id].minNumCritters nl;
+			in >> fDomains[id].maxNumCritters; in >> label;
+			cout << "maxNumCritters in domains[" << id << "]" ses fDomains[id].maxNumCritters nl;
+			in >> fDomains[id].initNumCritters; in >> label;
+			cout << "initNumCritters in domains[" << id << "]" ses fDomains[id].initNumCritters nl;
+			if( version >= 9 )
+			{
+				in >> fDomains[id].numberToSeed; in >> label;
+				cout << "numberToSeed in domains[" << id << "]" ses fDomains[id].numberToSeed nl;
+				in >> fDomains[id].probabilityOfMutatingSeeds; in >> label;
+				cout << "probabilityOfMutatingSeeds in domains [" << id << "]" ses fDomains[id].probabilityOfMutatingSeeds nl;
+			}
+			else
+			{
+				fDomains[id].numberToSeed = 0;
+				fDomains[id].probabilityOfMutatingSeeds = 0.0;
+			}
 		}
-		else
-		{
-			fDomains[id].numberToSeed = 0;
-			fDomains[id].probabilityOfMutatingSeeds = 0.0;
-		}
+		
 		if (version >= 19)
 		{
 			in >> fDomains[id].centerX; in >> label;
@@ -4655,20 +4680,118 @@ void TSimulation::ReadWorldFile(const char* filename)
 			printf("\tabsoluteX: %.2f\n", fDomains[id].absoluteSizeX);
 			printf("\tabsoluteZ: %.2f\n", fDomains[id].absoluteSizeZ);
 
-			in >> fDomains[id].numFoodPatches; in >> label;
-			cout << "numFoodPatches of domains[" << id << "]" ses fDomains[id].numFoodPatches nl;
-			in >> fDomains[id].numBrickPatches; in >> label;
-			cout << "numBrickPatches of domains[" << id << "]" ses fDomains[id].numBrickPatches nl;
-			in >> fDomains[id].foodRate; in >> label;
-			cout << "foodRate of domains[" << id << "]" ses fDomains[id].foodRate nl;
-			in >> fDomains[id].initFoodCount; in >> label;
-			cout << "initFoodCount of domains[" << id << "]" ses fDomains[id].initFoodCount nl;
-            in >> fDomains[id].minFoodCount; in >> label;
-			cout << "minFoodCount of domains[" << id << "]" ses fDomains[id].minFoodCount nl;
-            in >> fDomains[id].maxFoodCount; in >> label;
-			cout << "maxFoodCount of domains[" << id << "]" ses fDomains[id].maxFoodCount nl;
-			in >> fDomains[id].maxFoodGrownCount; in >> label;
-			cout << "maxFoodGrownCount of domains[" << id << "]" ses fDomains[id].maxFoodGrownCount nl;
+			if( version >= 32 )
+			{
+				float minCrittersFraction, maxCrittersFraction, initCrittersFraction, initSeedsFraction;
+				
+				in >> minCrittersFraction; in >> label;
+				cout << "minCrittersFraction in domains[" << id << "]" ses minCrittersFraction nl;
+				if( minCrittersFraction < 0.0 )
+				{
+					minCrittersFraction = fDomains[id].sizeX * fDomains[id].sizeZ;
+					cout << "\tminCrittersFraction in domains[" << id << "]" ses minCrittersFraction nl;
+				}
+				fDomains[id].minNumCritters = nint( minCrittersFraction * fMinNumCritters );
+				cout << "\tminNumCritters in domains[" << id << "]" ses fDomains[id].minNumCritters nl;
+				
+				in >> maxCrittersFraction; in >> label;
+				cout << "maxCrittersFraction in domains[" << id << "]" ses maxCrittersFraction nl;
+				if( maxCrittersFraction < 0.0 )
+				{
+					maxCrittersFraction = fDomains[id].sizeX * fDomains[id].sizeZ;
+					cout << "\tmaxCrittersFraction in domains[" << id << "]" ses maxCrittersFraction nl;
+				}
+				fDomains[id].maxNumCritters = nint( maxCrittersFraction * fMaxNumCritters );
+				cout << "\tmaxNumCritters in domains[" << id << "]" ses fDomains[id].maxNumCritters nl;
+				
+				in >> initCrittersFraction; in >> label;
+				cout << "initCrittersFraction in domains[" << id << "]" ses initCrittersFraction nl;
+				if( initCrittersFraction < 0.0 )
+				{
+					initCrittersFraction = fDomains[id].sizeX * fDomains[id].sizeZ;
+					cout << "\tinitCrittersFraction in domains[" << id << "]" ses initCrittersFraction nl;
+				}
+				fDomains[id].initNumCritters = nint( initCrittersFraction * fInitNumCritters );
+				cout << "\tinitNumCritters in domains[" << id << "]" ses fDomains[id].initNumCritters nl;
+				
+				in >> initSeedsFraction; in >> label;
+				cout << "initSeedsFraction in domains[" << id << "]" ses initSeedsFraction nl;
+				if( initSeedsFraction < 0.0 )
+				{
+					initSeedsFraction = fDomains[id].sizeX * fDomains[id].sizeZ;
+					cout << "\tinitSeedsFraction in domains[" << id << "]" ses initSeedsFraction nl;
+				}
+				fDomains[id].numberToSeed = nint( initSeedsFraction * fNumberToSeed );
+				cout << "\tnumberToSeed in domains[" << id << "]" ses fDomains[id].numberToSeed nl;
+				
+				in >> fDomains[id].probabilityOfMutatingSeeds; in >> label;
+				cout << "probabilityOfMutatingSeeds in domains [" << id << "]" ses fDomains[id].probabilityOfMutatingSeeds nl;
+				if( fDomains[id].probabilityOfMutatingSeeds < 0.0 )
+				{
+					fDomains[id].probabilityOfMutatingSeeds = fProbabilityOfMutatingSeeds;
+					cout << "\tprobabilityOfMutatingSeeds in domains [" << id << "]" ses fDomains[id].probabilityOfMutatingSeeds nl;
+				}
+
+				float initFoodFraction;
+				in >> initFoodFraction; in >> label;
+				cout << "initFoodFraction of domains[" << id << "]" ses initFoodFraction nl;
+				if( initFoodFraction >= 0.0 )
+					fDomains[id].initFoodCount = nint( initFoodFraction * fInitFoodCount );
+				else
+					fDomains[id].initFoodCount = nint( fDomains[id].sizeX * fDomains[id].sizeZ * fInitFoodCount );
+				cout << "\tinitFoodCount of domains[" << id << "]" ses fDomains[id].initFoodCount nl;
+				float minFoodFraction;
+				in >> minFoodFraction; in >> label;
+				cout << "minFoodFraction of domains[" << id << "]" ses minFoodFraction nl;
+				if( minFoodFraction >= 0.0 )
+					fDomains[id].minFoodCount = nint( minFoodFraction * fMinFoodCount );
+				else
+					fDomains[id].minFoodCount = nint( fDomains[id].sizeX * fDomains[id].sizeZ * fMinFoodCount );
+				cout << "\tminFoodCount of domains[" << id << "]" ses fDomains[id].minFoodCount nl;
+				float maxFoodFraction;
+				in >> maxFoodFraction; in >> label;
+				cout << "maxFoodFraction of domains[" << id << "]" ses maxFoodFraction nl;
+				if( maxFoodFraction >= 0.0 )
+					fDomains[id].maxFoodCount = nint( maxFoodFraction * fMaxFoodCount );
+				else
+					fDomains[id].maxFoodCount = nint( fDomains[id].sizeX * fDomains[id].sizeZ * fMaxFoodCount );
+				cout << "\tmaxFoodCount of domains[" << id << "]" ses fDomains[id].maxFoodCount nl;
+				float maxFoodGrownFraction;
+				in >> maxFoodGrownFraction; in >> label;
+				cout << "maxFoodGrownFraction of domains[" << id << "]" ses maxFoodGrownFraction nl;
+				if( maxFoodGrownFraction >= 0.0 )
+					fDomains[id].maxFoodGrownCount = nint( maxFoodGrownFraction * fMaxFoodGrownCount );
+				else
+					fDomains[id].maxFoodGrownCount = nint( fDomains[id].sizeX * fDomains[id].sizeZ * fMaxFoodGrownCount );
+				cout << "\tmaxFoodGrownCount of domains[" << id << "]" ses fDomains[id].maxFoodGrownCount nl;
+				in >> fDomains[id].foodRate; in >> label;
+				if( fDomains[id].foodRate < 0.0 )
+					fDomains[id].foodRate = fFoodRate;
+				cout << "foodRate of domains[" << id << "]" ses fDomains[id].foodRate nl;
+				in >> fDomains[id].numFoodPatches; in >> label;
+				cout << "numFoodPatches of domains[" << id << "]" ses fDomains[id].numFoodPatches nl;
+				in >> fDomains[id].numBrickPatches; in >> label;
+				cout << "numBrickPatches of domains[" << id << "]" ses fDomains[id].numBrickPatches nl;
+			}
+			else
+			{
+				in >> fDomains[id].numFoodPatches; in >> label;
+				cout << "numFoodPatches of domains[" << id << "]" ses fDomains[id].numFoodPatches nl;
+				in >> fDomains[id].numBrickPatches; in >> label;
+				cout << "numBrickPatches of domains[" << id << "]" ses fDomains[id].numBrickPatches nl;
+				in >> fDomains[id].foodRate; in >> label;
+				if( fDomains[id].foodRate < 0.0 )
+					fDomains[id].foodRate = fFoodRate;
+				cout << "foodRate of domains[" << id << "]" ses fDomains[id].foodRate nl;
+				in >> fDomains[id].initFoodCount; in >> label;
+				cout << "initFoodCount of domains[" << id << "]" ses fDomains[id].initFoodCount nl;
+				in >> fDomains[id].minFoodCount; in >> label;
+				cout << "minFoodCount of domains[" << id << "]" ses fDomains[id].minFoodCount nl;
+				in >> fDomains[id].maxFoodCount; in >> label;
+				cout << "maxFoodCount of domains[" << id << "]" ses fDomains[id].maxFoodCount nl;
+				in >> fDomains[id].maxFoodGrownCount; in >> label;
+				cout << "maxFoodGrownCount of domains[" << id << "]" ses fDomains[id].maxFoodGrownCount nl;
+			}
 			
 			// Create an array of FoodPatches
 			fDomains[id].fFoodPatches = new FoodPatch[fDomains[id].numFoodPatches];
@@ -4676,28 +4799,97 @@ void TSimulation::ReadWorldFile(const char* filename)
 
 			for (int i = 0; i < fDomains[id].numFoodPatches; i++)
 			{
-				float tmpFraction, tmpRate;
+				float foodFraction, foodRate;
 				float centerX, centerZ;  // should be from 0.0 -> 1.0
 				float sizeX, sizeZ;  // should be from 0.0 -> 1.0
 				float nhsize;
+				float initFoodFraction, minFoodFraction, maxFoodFraction, maxFoodGrownFraction;
 				int initFood, minFood, maxFood, maxFoodGrown;
 				int shape, distribution;
 				int period;
 				float onFraction, phase;
 				bool removeFood;
 
-				in >> tmpFraction; in >> label;
-				cout << "tmpFraction" ses tmpFraction nl;
-				in >> tmpRate; in >> label;
-				cout << "tmpRate" ses tmpRate nl;
-				in >> initFood; in >> label;
-				cout << "initFood" ses initFood nl;
-				in >> minFood; in >> label;
-				cout << "minFood" ses minFood nl;
-				in >> maxFood; in >> label;
-				cout << "maxFood" ses maxFood nl;
-				in >> maxFoodGrown; in >> label;
-				cout << "maxFoodGrown" ses maxFoodGrown nl;
+				in >> foodFraction; in >> label;
+				cout << "foodFraction" ses foodFraction nl;
+
+				if( version >= 32 )
+				{
+					in >> initFoodFraction; in >> label;
+					cout << "initFoodFraction" ses initFoodFraction nl;
+					if( initFoodFraction < 0.0 )
+					{
+						initFoodFraction = foodFraction;
+						cout << "\tinitFoodFraction" ses initFoodFraction nl;
+					}
+					initFood = nint( initFoodFraction * fDomains[id].initFoodCount );
+					cout << "\tinitFood" ses initFood nl;
+					
+					in >> minFoodFraction; in >> label;
+					cout << "minFoodFraction" ses minFoodFraction nl;
+					if( minFoodFraction < 0.0 )
+					{
+						minFoodFraction = foodFraction;
+						cout << "\tminFoodFraction" ses minFoodFraction nl;
+					}
+					minFood = nint( minFoodFraction * fDomains[id].minFoodCount );
+					cout << "\tminFood" ses minFood nl;
+					
+					in >> maxFoodFraction; in >> label;
+					cout << "maxFoodFraction" ses maxFoodFraction nl;
+					if( maxFoodFraction < 0.0 )
+					{
+						maxFoodFraction = foodFraction;
+						cout << "\tmaxFoodFraction" ses maxFoodFraction nl;
+					}
+					maxFood = nint( maxFoodFraction * fDomains[id].maxFoodCount );
+					cout << "\tmaxFood" ses maxFood nl;
+					
+					in >> maxFoodGrownFraction; in >> label;
+					cout << "maxFoodFractionGrown" ses maxFoodGrownFraction nl;
+					if( maxFoodGrownFraction < 0.0 )
+					{
+						maxFoodGrownFraction = foodFraction;
+						cout << "\tmaxFoodGrownFraction" ses maxFoodGrownFraction nl;
+					}
+					maxFoodGrown = nint( maxFoodGrownFraction * fDomains[id].maxFoodGrownCount );
+					cout << "\tmaxFoodGrown" ses maxFoodGrown nl;
+					
+					in >> foodRate; in >> label;
+					cout << "foodRate" ses foodRate nl;
+					if (foodRate < 0.0)
+					{
+						foodRate = fDomains[id].foodRate;
+						cout << "\tfoodRate" ses foodRate nl;
+					}
+				}
+				else
+				{
+					in >> foodRate; in >> label;
+					cout << "foodRate" ses foodRate nl;
+					if (foodRate == 0.0)
+					{
+						foodRate = fDomains[id].foodRate;
+						cout << "\tfoodRate" ses foodRate nl;
+					}
+					in >> initFood; in >> label;
+					cout << "initFood" ses initFood nl;
+					in >> minFood; in >> label;
+					cout << "minFood" ses minFood nl;
+					in >> maxFood; in >> label;
+					cout << "maxFood" ses maxFood nl;
+					in >> maxFoodGrown; in >> label;
+					cout << "maxFoodGrown" ses maxFoodGrown nl;
+					// If we have a legitimate fraction specified, see if we need to set the food limits
+					if( foodFraction > 0.0 )
+					{
+						// Check for negative values...if found then use global food counts and this patch's fraction
+						if (initFood < 0) initFood = (int)(foodFraction * fDomains[id].initFoodCount);
+						if (minFood < 0) minFood = (int)(foodFraction * fDomains[id].minFoodCount);
+						if (maxFood < 0) maxFood = (int)(foodFraction * fDomains[id].maxFoodCount);
+						if (maxFoodGrown < 0) maxFoodGrown = (int)(foodFraction * fDomains[id].maxFoodGrownCount);
+					}
+				}
 				in >> centerX; in >> label;
 				cout << "centerX" ses centerX nl;
 				in >> centerZ; in >> label;
@@ -4737,23 +4929,9 @@ void TSimulation::ReadWorldFile(const char* filename)
 					cout << "+removeFood" ses removeFood nl;
 				}
 				
-				// If we have a legitimate fraction specified, see if we need to set the food limits
-				if( tmpFraction > 0.0 )
-				{
-					// Check for negative values...if found then use global food counts and this patch's fraction
-					if (initFood < 0) initFood = (int)(tmpFraction * fDomains[id].initFoodCount);
-					if (minFood < 0) minFood = (int)(tmpFraction * fDomains[id].minFoodCount);
-					if (maxFood < 0) maxFood = (int)(tmpFraction * fDomains[id].maxFoodCount);
-					if (maxFoodGrown < 0) maxFoodGrown = (int)(tmpFraction * fDomains[id].maxFoodGrownCount);
-				}
+				fDomains[id].fFoodPatches[i].init(centerX, centerZ, sizeX, sizeZ, foodRate, initFood, minFood, maxFood, maxFoodGrown, foodFraction, shape, distribution, nhsize, period, onFraction, phase, removeFood, &fStage, &(fDomains[id]), id);
 
-				// Check if rate is 0.0...if so, then set this patch's rate to the domain's rate
-				if (tmpRate == 0.0)
-					tmpRate = fDomains[id].foodRate;
-
-				fDomains[id].fFoodPatches[i].init(centerX, centerZ, sizeX, sizeZ, tmpRate, initFood, minFood, maxFood, maxFoodGrown, tmpFraction, shape, distribution, nhsize, period, onFraction, phase, removeFood, &fStage, &(fDomains[id]), id);
-
-				patchFractionSpecified += tmpFraction;
+				patchFractionSpecified += foodFraction;
 
 			}
 
@@ -4778,8 +4956,7 @@ void TSimulation::ReadWorldFile(const char* filename)
 			// Make sure fractions add up to 1.0 (allowing a little slop for floating point precision)
 			if( (patchFractionSpecified < 0.99999) || (patchFractionSpecified > 1.00001) )
 			{
-				printf( "Patch Fractions sum to %f\n", patchFractionSpecified );
-				printf( "FoodPatch fractions do not sum to 1!\n" );
+				printf( "Patch Fractions sum to %f, when they must sum to 1.0!\n", patchFractionSpecified );
 				exit( 1 );
 			}
 
@@ -4819,12 +4996,12 @@ void TSimulation::ReadWorldFile(const char* filename)
 	}
 
 
-	if (totmaxnumcritters > fMaxCritters)
+	if (totmaxnumcritters > fMaxNumCritters)
 	{
 		char tempstring[256];
 		sprintf(tempstring,"%s %ld %s %ld %s",
 			"The maximum number of organisms in the world (",
-			fMaxCritters,
+			fMaxNumCritters,
 			") is < the maximum summed over domains (",
 			totmaxnumcritters,
 			"), so there may still be some indirect global influences.");
@@ -5217,11 +5394,11 @@ void TSimulation::ReadWorldFile(const char* filename)
 	// If this is a steady-state GA run, then we need to force certain parameter values (and warn the user)
 	if( (fHeuristicFitnessWeight != 0.0) || (fComplexityFitnessWeight != 0) )
 	{
-		fNumberToSeed = lrint( fMaxCritters * (float) fNumberToSeed / fInitNumCritters );	// same proportion as originally specified (must calculate before changing fInitNumCritters)
-		if( fNumberToSeed > fMaxCritters )	// just to be safe
-			fNumberToSeed = fMaxCritters;
-		fInitNumCritters = fMaxCritters;	// population starts at maximum
-		fMinNumCritters = fMaxCritters;		// population stays at mximum
+		fNumberToSeed = lrint( fMaxNumCritters * (float) fNumberToSeed / fInitNumCritters );	// same proportion as originally specified (must calculate before changing fInitNumCritters)
+		if( fNumberToSeed > fMaxNumCritters )	// just to be safe
+			fNumberToSeed = fMaxNumCritters;
+		fInitNumCritters = fMaxNumCritters;	// population starts at maximum
+		fMinNumCritters = fMaxNumCritters;		// population stays at mximum
 		fProbabilityOfMutatingSeeds = 1.0;	// so there is variation in the initial population
 //		fMateThreshold = 1.5;				// so they can't reproduce on their own
 

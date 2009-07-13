@@ -112,9 +112,9 @@ void critter::critterinit()
 
 	int n = 10;
 	int a = 3;
-	int i = (int) (sqrt( (float) (TSimulation::fMaxCritters * a) ) + n - 1) / n;
+	int i = (int) (sqrt( (float) (TSimulation::fMaxNumCritters * a) ) + n - 1) / n;
 	critter::povcols = i * n;   // width in cells
-	critter::povrows = (TSimulation::fMaxCritters + critter::povcols - 1) / critter:: povcols;
+	critter::povrows = (TSimulation::fMaxNumCritters + critter::povcols - 1) / critter:: povcols;
 	critter::povwidth = critter::povcols * (brain::retinawidth + kPOVCellPad);
 	critter::povheight = critter::povrows * (brain::retinaheight + kPOVCellPad);
 //	cout << "numCols" ses critter::povcols cms "numRows" ses critter::povrows cms "w" ses critter::povwidth cms "h" ses critter::povheight nl;
