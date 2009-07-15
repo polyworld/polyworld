@@ -1804,7 +1804,7 @@ void TSimulation::InitWorld()
     fFitness1Frequency = 100;
     fFitness2Frequency = 2;
 	fEat2Consume = 20.0;
-    fNumberFit = 10;
+    fNumberFit = 30;
 	fNumberRecentFit = 10;
     fEatFitnessParameter = 10.0;
     fMateFitnessParameter = 10.0;
@@ -2676,10 +2676,10 @@ void TSimulation::Interact()
 							// (count would-be offspring towards fitness, but don't actually instantiate them)
 							(void) c->mating( fMateFitnessParameter, fMateWait );
 							(void) d->mating( fMateFitnessParameter, fMateWait );
-							cout << "t=" << fStep sp "mating c=" << c->Number() sp "(m=" << c->Mate() << ",lm=" << c->LastMate() << ",e=" << c->Energy() << ",x=" << c->x() << ",z=" << c->z() << ",r=" << c->radius() << ")" nl;
-							cout << "          & d=" << d->Number() sp "(m=" << d->Mate() << ",lm=" << d->LastMate() << ",e=" << d->Energy() << ",x=" << d->x() << ",z=" << d->z() << ",r=" << d->radius() << ")" nl;
-							if( sqrt((d->x()-c->x())*(d->x()-c->x())+(d->z()-c->z())*(d->z()-c->z())) > (d->radius()+c->radius()) )
-								cout << "            ***** no overlap *****" nl;
+//							cout << "t=" << fStep sp "mating c=" << c->Number() sp "(m=" << c->Mate() << ",lm=" << c->LastMate() << ",e=" << c->Energy() << ",x=" << c->x() << ",z=" << c->z() << ",r=" << c->radius() << ")" nl;
+//							cout << "          & d=" << d->Number() sp "(m=" << d->Mate() << ",lm=" << d->LastMate() << ",e=" << d->Energy() << ",x=" << d->x() << ",z=" << d->z() << ",r=" << d->radius() << ")" nl;
+//							if( sqrt((d->x()-c->x())*(d->x()-c->x())+(d->z()-c->z())*(d->z()-c->z())) > (d->radius()+c->radius()) )
+//								cout << "            ***** no overlap *****" nl;
 							fNumberBornVirtual++;
 						}
 						else
@@ -3104,22 +3104,28 @@ void TSimulation::Interact()
 		long numToCreate = 0;
 		for (id = 0; id < fNumDomains; id++)
 		{
-			fDomains[id].numToCreate = fDomains[id].minNumCritters - fDomains[id].numCritters;
+			fDomains[id].numToCreate = max(0L, fDomains[id].minNumCritters - fDomains[id].numCritters);
 			numToCreate += fDomains[id].numToCreate;
 		}
+//		printf( "num[0]= %ld, num[1] = %ld, num[2] = %ld, num = %ld, max = %ld\n",
+//				fDomains[0].numToCreate, fDomains[1].numToCreate, fDomains[2].numToCreate,
+//				numToCreate, maxToCreate ); 
 		while( numToCreate > maxToCreate )
 		{
-			int domainWithLeastNeed = 0;
-			long leastAgentsNeeded = fDomains[0].numToCreate;
-			for (id = 1; id < fNumDomains; id++)
+			int domainWithLeastNeed = -1;
+			long leastAgentsNeeded = fMaxNumCritters+1;	// Has to be lest than this
+			for (id = 0; id < fNumDomains; id++)
 			{
-				if (fDomains[id].numToCreate < leastAgentsNeeded)
+				if (fDomains[id].numToCreate > 0 && fDomains[id].numToCreate < leastAgentsNeeded)
 				{
 					leastAgentsNeeded = fDomains[id].numToCreate;
 					domainWithLeastNeed = id;
 				}
 			}
-			fDomains[id].numToCreate--;
+//			printf( "num[0]= %ld, num[1] = %ld, num[2] = %ld, num = %ld, max = %ld, least = %ld, domLeast = %d\n",
+//					fDomains[0].numToCreate, fDomains[1].numToCreate, fDomains[2].numToCreate,
+//					numToCreate, maxToCreate, leastAgentsNeeded, domainWithLeastNeed ); 
+			fDomains[domainWithLeastNeed].numToCreate--;
 			numToCreate--;
 		}
 
@@ -3155,7 +3161,7 @@ void TSimulation::Interact()
                         // mate 2 from array of fittest
 					#if TournamentSelection
 						int parent1, parent2;
-						PickParentsUsingTournament(fDomains[id].numCritters, &parent1, &parent2);
+						PickParentsUsingTournament(fNumberFit, &parent1, &parent2);
 						newCritter->Genes()->Crossover(fDomains[id].fittest[parent1]->genes,
 													   fDomains[id].fittest[parent2]->genes,
 													   true);
@@ -3256,7 +3262,7 @@ void TSimulation::Interact()
                 {
 				#if TournamentSelection
 					int parent1, parent2;
-					TSimulation::PickParentsUsingTournament(numglobalcreated, &parent1, &parent2);
+					TSimulation::PickParentsUsingTournament(fNumberFit, &parent1, &parent2);
                     newCritter->Genes()->Crossover( fFittest[parent1]->genes, fFittest[parent2]->genes, true );
                     fNumberCreated2Fit++;
 					gaPrint( "%5ld: global creation from two (%d, %d) fittest (%4lu, %4lu) %4ld\n", fStep, parent1, parent2, fFittest[parent1]->critterID, fFittest[parent2]->critterID, fNumberCreated2Fit );
@@ -3815,12 +3821,14 @@ void TSimulation::Death(critter* c)
 	// Maintain a list of the fittest critters ever, for use in the online/steady-state GA,
 	// based on complete fitness, however it is currently being calculated
 	// First on a domain-by-domain basis...
-    long newfit = 0;
+    int newfit = 0;
     FitStruct* saveFit;
 	float cFitness = Fitness( c );
-    if( cFitness > fDomains[id].fittest[fNumberFit-1]->fitness )
+    if( (fDomains[id].numdied <= fNumberFit) || (cFitness > fDomains[id].fittest[fNumberFit-1]->fitness) )
     {
-        for( short i = 0; i < fNumberFit; i++ )
+		int limit = fDomains[id].numdied < fNumberFit ? fDomains[id].numdied : fNumberFit;
+		newfit = limit - 1;
+        for( int i = 0; i < limit; i++ )
         {
             if( cFitness > fDomains[id].fittest[i]->fitness )
 			{
@@ -3829,6 +3837,10 @@ void TSimulation::Death(critter* c)
 			}
 		}
 		
+		// Note: This does some unnecessary work while numdied is less than fNumberFit,
+		// but it's not a big deal and doesn't hurt anything, and I don't want to deal
+		// with the logic to handle the newfit == limit case (adding a new one on the end)
+		// right now.
         saveFit = fDomains[id].fittest[fNumberFit-1];				// this is to save the data structure, not its contents
         for( short i = fNumberFit - 1; i > newfit; i-- )
             fDomains[id].fittest[i] = fDomains[id].fittest[i-1];
@@ -3841,11 +3853,13 @@ void TSimulation::Death(critter* c)
     }
 
 	// Then on a whole-world basis...
-    if( cFitness > fFittest[fNumberFit-1]->fitness )
+    if( (fNumberDied <= fNumberFit) || (cFitness > fFittest[fNumberFit-1]->fitness) )
     {
 		oneOfTheBestSoFar = true;
 		
-        for( short i = 0; i < fNumberFit; i++ )
+		int limit = fNumberDied < fNumberFit ? fNumberDied : fNumberFit;
+		newfit = limit - 1;
+        for( short i = 0; i < limit; i++ )
         {
             if( cFitness > fFittest[i]->fitness )
 			{
@@ -3854,7 +3868,14 @@ void TSimulation::Death(critter* c)
 			}
 		}
 				
-		loserIDBestSoFar = fFittest[fNumberFit - 1]->critterID;	// this is the ID of the critter that is being booted from the bestSoFar (fFittest[]) list
+		// Note: This does some unnecessary work while numdied is less than fNumberFit,
+		// but it's not a big deal and doesn't hurt anything, and I don't want to deal
+		// with the logic to handle the newfit == limit case (adding a new one on the end)
+		// right now.
+		if( fNumberDied > fNumberFit )
+			loserIDBestSoFar = fFittest[fNumberFit - 1]->critterID;	// this is the ID of the critter that is being booted from the bestSoFar (fFittest[]) list
+		else
+			loserIDBestSoFar = 0;	// nobody is being booted, because the list isn't full yet
         saveFit = fFittest[fNumberFit - 1];		// this is to save the data structure, not its contents
         for( short i = fNumberFit - 1; i > newfit; i-- )
             fFittest[i] = fFittest[i - 1];
