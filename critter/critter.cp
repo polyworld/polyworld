@@ -144,7 +144,7 @@ critter* critter::getfreecritter(TSimulation* simulation, gstage* stage)
 	
 	if (critter::crittersliving + 1 > simulation->GetMaxCritters())
 	{
-		printf("PolyWorld ERROR:: Unable to satisfy request for free critter. Max allocated: %ld", simulation->GetMaxCritters());
+		printf("PolyWorld ERROR:: Unable to satisfy request for free critter. Max allocated: %ld\n", simulation->GetMaxCritters());
 		return NULL;
 	}
 
