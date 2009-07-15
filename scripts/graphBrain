@@ -2,7 +2,7 @@
 ################################################################################################################################################
 # Things you might want to configure
 ################################################################################################################################################
-DOT='/usr/local/graphviz-2.12/bin/dot'
+DOT='/usr/local/graphviz/bin/dot'
 GRAPH_FORMAT="pdf"       # pdf, png, etc.
 IGNORE_CONNECTIONS_WITH_ABSWEIGHT_LESS_THAN=0.20
 DOTFILE_PARAMS="""
