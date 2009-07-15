@@ -95,6 +95,7 @@ class Domain
     long numdied;
     long lastcreate;
     long maxgapcreate;
+	long numToCreate;
 	float probabilityOfMutatingSeeds;
     short ifit;
     short jfit;

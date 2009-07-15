@@ -3091,15 +3091,43 @@ void TSimulation::Interact()
 
 	// now for a little spontaneous generation!
 	
-    if (((long)(objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE))) < fMaxNumCritters)
+	long maxToCreate = fMaxNumCritters - (long)(objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE));
+    if (maxToCreate > 0)
     {
         // provided there are less than the maximum number of critters already
+
+		// Due to an imbalance in the number of agents in the various domains, and the fact that
+		// maximum numbers are not enforced for domains as agents travel of their own accord,
+		// the sum of domain would-be creations may exceed the possible number of creations,
+		// so we "load balance" creations, favoring the domains that need agents the most, by
+		// not creating agents in domains that need them the least.
+		long numToCreate = 0;
+		for (id = 0; id < fNumDomains; id++)
+		{
+			fDomains[id].numToCreate = fDomains[id].minNumCritters - fDomains[id].numCritters;
+			numToCreate += fDomains[id].numToCreate;
+		}
+		while( numToCreate > maxToCreate )
+		{
+			int domainWithLeastNeed = 0;
+			long leastAgentsNeeded = fDomains[0].numToCreate;
+			for (id = 1; id < fNumDomains; id++)
+			{
+				if (fDomains[id].numToCreate < leastAgentsNeeded)
+				{
+					leastAgentsNeeded = fDomains[id].numToCreate;
+					domainWithLeastNeed = id;
+				}
+			}
+			fDomains[id].numToCreate--;
+			numToCreate--;
+		}
 
 		// first deal with the individual domains
         for (id = 0; id < fNumDomains; id++)
         {
-			// while we have fewer critters than minimum for this domain
-            while (fDomains[id].numCritters < fDomains[id].minNumCritters)
+			// create as many critters as we need (and are allowed) for this domain
+            for (int ic = 0; ic < fDomains[id].numToCreate; ic++)
             {
                 fNumberCreated++;
                 fDomains[id].numcreated++;
