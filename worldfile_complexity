@@ -1,4 +1,6 @@
-23      version
+29      version
+
+0	LockStepWithBirthsDeathsLog
 
 10001  maxSteps
 1      docpuwork
@@ -25,10 +27,11 @@
 90    maxFoodGrown
 90    initFoodCount
 0.1    foodrate
+
 0      crittersRfood
 100    fit1freq
 1      fit2freq
-10     numFit
+30     numFit
 10     numRecentFit
 10.0   eatfitparam
 100.0  matefitparam
@@ -52,6 +55,7 @@
 1000   maxlifespan
 25     matewait
 0      initmatewait
+0		EatMateSpan
 0.5    minstrength
 2.0    maxstrength
 0.5    minsize
@@ -115,7 +119,11 @@
 8      monheight_not_used
 1      monstride
 100.0  worldsize
-0      numbarriers
+2								numbarriers
+1								barrier[0].numKeyFrames
+0     33.33 -100. 33.33 -10.	barrier[0].keyFrame[0]_t_x1_z1_x2_z2
+1								barrier[1].numKeyFrames
+0     66.67 -100. 66.67 -10.	barrier[1].keyFrame[0]_t_x1_z1_x2_z2
 
 0      genesepmon
 0      geneseprec
@@ -156,6 +164,10 @@
 0	domain[0].foodPatch[0].areaShape_0=rectangular|1=elliptical
 0	domain[0].foodPatch[0].distribution_0=uniform|1=linear|2=gaussian
 10	domain[0].foodPatch[0].neighborhoodSize
+0		domain[0].foodPatch[0].period
+1.0		domain[0].foodPatch[0].onFraction
+0.0		domain[0].foodPatch[0].phase
+0		domain[0].foodPatch[0].removeFood
 
 0.8	domain[0].foodPatch[0].fraction
 0.0	domain[0].foodPatch[0].growthRate
@@ -170,6 +182,10 @@
 0	domain[0].foodPatch[0].areaShape_0=rectangular|1=elliptical
 0	domain[0].foodPatch[0].distribution_0=uniform|1=linear|2=gaussian
 10	domain[0].foodPatch[0].neighborhoodSize
+0		domain[0].foodPatch[1].period
+1.0		domain[0].foodPatch[1].onFraction
+0.0		domain[0].foodPatch[1].phase
+0		domain[0].foodPatch[1].removeFood
 
 1	useProbabilisticFoodPatches
 
@@ -190,7 +206,7 @@
 0.0    mintopologicaldistortion
 1.0    maxtopologicaldistortion
 0.0    maxneur2energy
-10     numprebirthcycles
+25     numprebirthcycles
 
 1      overheadrank
 1      tracking
@@ -198,17 +214,18 @@
 
 0      graycoding
 
-R      smiteMode_R=random|L=leastfit
+O      smiteMode_R=random|L=leastfit|O=off
 0.10   smiteFrac
 0.25   smiteAgeFrac_affectsAverageFitness
-0	   NumDepletionSteps
+0      NumDepletionSteps_150
+0      applyLowPopulationAdvantage
 
 
 1	recordBirthsDeaths
-0      brainAnatomyRecordAll
-0      brainFunctionRecordAll
-1      brainAnatomyRecordSeeds
-1      brainFunctionRecordSeeds
+1       brainAnatomyRecordAll
+1       brainFunctionRecordAll
+1       brainAnatomyRecordSeeds
+1       brainFunctionRecordSeeds
 1000     bestSoFarBrainAnatonomyRecordFrequency
 1000     bestSoFarBrainFunctionRecordFrequency
 1000     bestRecentBrainAnatonomyRecordFrequency
@@ -216,7 +233,7 @@ R      smiteMode_R=random|L=leastfit
 1      recordGeneStats
 1      recordFoodPatchStats
 1      recordComplexity
-1      useComplexityAsFitness
+P      useComplexityAsFitness_O=off|P=processing|A=all|I=input|D=processing-input
 1      recordAdamiComplexity
 500    AdamiComplexityRecordFrequency
 
