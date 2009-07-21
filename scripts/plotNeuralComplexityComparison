@@ -236,8 +236,8 @@ def CONVERT_TO_MULTIPLOT( plotstring ):
 ####################################################################################
 def get_median( listofnumbers ):
 
-		length=len(listofnumbers)
-		lenover2=int(length / 2)
+	length=len(listofnumbers)
+	lenover2=int(length / 2)
 
 	listofnumbers = map( float, listofnumbers ) # convert them all to float
 	listofnumbers.sort()				# sort them.
@@ -263,7 +263,7 @@ def get_median( listofnumbers ):
 #	print "lowerhalf=%s" % ( lowerhalf )	
 #	print "upperhalf=%s" % ( upperhalf )
 		
-		return median, lowerhalf, upperhalf
+	return median, lowerhalf, upperhalf
 ######################################################################################
 # GET_GNUPLOT_PLOTSTRING_SMOOTH -- this function calls the function GET_GNUPLOT_PLOTSTRING, and then some manipulations to make the SMOOTHED plotstring
 #######################################################################################
@@ -1282,7 +1282,7 @@ outputcontents.append( GET_GNUPLOT_END_SETTINGS() )
 if flag_plotSmooth: # We've finished all of the regular plots, now to do the smoothed plots (if we're doing that)
 	outputcontents.append("reset")	# clear everything
 	outputcontents.append( GNUPLOT_SETTINGS )	# load the old settings back
-		GNUPLOT_TOPRIGHT_LABEL.append( "Smoothed with '%s'" % (GNUPLOT_SMOOTHING_FUNCTION) )
+	GNUPLOT_TOPRIGHT_LABEL.append( "Smoothed with '%s'" % (GNUPLOT_SMOOTHING_FUNCTION) )
 
 	for whichrecent in RUN_DIRS:
 		for whichtype in RUN_DIRS[whichrecent]:
