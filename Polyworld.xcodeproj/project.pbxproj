@@ -89,6 +89,7 @@
 		76D02CE40894D30200D89155 /* moc_GLWidget.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 76D02CE30894D30200D89155 /* moc_GLWidget.cpp */; };
 		76D32E0F09E62F9200394ACE /* objectxsortedlist.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76D32E0D09E62F9200394ACE /* objectxsortedlist.cp */; };
 		76D99C520C38F1E200CC8F85 /* worldfile in Resources */ = {isa = PBXBuildFile; fileRef = 76BB7C9E074D4CE500576391 /* worldfile */; };
+		76E9D481101D1C0B007D602E /* Resources.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76E9D47F101D1C0B007D602E /* Resources.cp */; };
 		84ED837C062E7EED00AEEA18 /* AgentPOVWindow.cp in Sources */ = {isa = PBXBuildFile; fileRef = 84ED837A062E7EED00AEEA18 /* AgentPOVWindow.cp */; };
 /* End PBXBuildFile section */
 
@@ -272,6 +273,8 @@
 		76D32E0E09E62F9200394ACE /* objectxsortedlist.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = objectxsortedlist.h; sourceTree = "<group>"; };
 		76D32E1609E62FDC00394ACE /* brick.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = brick.cp; sourceTree = "<group>"; };
 		76D32E1709E62FDC00394ACE /* brick.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = brick.h; sourceTree = "<group>"; };
+		76E9D47F101D1C0B007D602E /* Resources.cp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Resources.cp; sourceTree = "<group>"; };
+		76E9D480101D1C0B007D602E /* Resources.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Resources.h; sourceTree = "<group>"; };
 		84ED837A062E7EED00AEEA18 /* AgentPOVWindow.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = AgentPOVWindow.cp; sourceTree = "<group>"; };
 		84ED837B062E7EED00AEEA18 /* AgentPOVWindow.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = AgentPOVWindow.h; sourceTree = "<group>"; };
 		8D0C4E970486CD37000505A6 /* Polyworld.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Polyworld.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -618,6 +621,8 @@
 				76D32E0E09E62F9200394ACE /* objectxsortedlist.h */,
 				7668D1680885AC65004158C6 /* PwMovieUtils.cp */,
 				7668D16A0885AD07004158C6 /* PwMovieUtils.h */,
+				76E9D47F101D1C0B007D602E /* Resources.cp */,
+				76E9D480101D1C0B007D602E /* Resources.h */,
 			);
 			path = utils;
 			sourceTree = "<group>";
@@ -883,6 +888,7 @@
 				760C2CCE101AC96700F5F662 /* PositionPath.cp in Sources */,
 				760C2CCF101AC96700F5F662 /* PositionReader.cp in Sources */,
 				760C2CD0101AC96700F5F662 /* PositionWriter.cp in Sources */,
+				76E9D481101D1C0B007D602E /* Resources.cp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
