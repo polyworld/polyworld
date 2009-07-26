@@ -13,9 +13,9 @@ SOURCES		=	app/debug.cp \
 				app/Simulation.cp \
 				complexity/complexity_algorithm.cp \
 				complexity/complexity_brain.cp \
-				critter/brain.cp \
-				critter/critter.cp \
-				critter/genome.cp \
+				agent/brain.cp \
+				agent/agent.cp \
+				agent/genome.cp \
 				environment/barrier.cp \
 				environment/food.cp \
 				environment/brick.cp \
@@ -36,14 +36,15 @@ SOURCES		=	app/debug.cp \
 				motion/PositionWriter.cp \
 				ui/BrainMonitorWindow.cp \
 				ui/ChartWindow.cp \
-				ui/CritterPOVWindow.cp \
+				ui/AgentPOVWindow.cp \
 				ui/SceneView.cp \
 				ui/TextStatusWindow.cp \
 				ui/OverheadView.cp \
 				utils/error.cp \
 				utils/indexlist.cp \
 				utils/misc.cp \
-				utils/PwMovieTools.cp \
+				utils/PwMovieUtils.cp \
+				utils/Resources.cp \
 				utils/objectxsortedlist.cp \
 				utils/distributions.cp
 
@@ -52,9 +53,9 @@ for(f, SOURCES): __SOURCES += $(DIR__HOME)/$${f}
 SOURCES = $${__SOURCES}
 
 INCLUDEPATH +=	. \
+		agent \
 		app \
 		complexity \
-		critter \
 		environment \
 		graphics \
 		motion \
