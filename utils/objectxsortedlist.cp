@@ -149,7 +149,7 @@ void objectxsortedlist::add( gobject* a )
 {
 #ifdef DEBUGCALLS
     pushproc( "objectxsortedlist::add" );
-#endif DEBUGCALLS
+#endif // DEBUGCALLS
     bool inserted = false;
     gobject* o;
     this->reset();
@@ -188,7 +188,7 @@ void objectxsortedlist::add( gobject* a )
 
 #ifdef DEBUGCALLS
     popproc();
-#endif DEBUGCALLS
+#endif // DEBUGCALLS
 
 }
 
@@ -327,7 +327,7 @@ void objectxsortedlist::sort()
 
 #ifdef DEBUGCALLS
     pushproc("objectxsortedlist::sort");
-#endif DEBUGCALLS
+#endif // DEBUGCALLS
     // This technique assumes that the list is almost entirely sorted at the start
     // Hopefully, with some reasonable frame-to-frame coherency, this will be true!
     gdlink<gobject*> *savecurr;
@@ -358,7 +358,7 @@ void objectxsortedlist::sort()
     }
 #ifdef DEBUGCALLS
     popproc();
-#endif DEBUGCALLS
+#endif // DEBUGCALLS
 }
 
 
@@ -369,7 +369,7 @@ void objectxsortedlist::list()
 {
 #ifdef DEBUGCALLS
     pushproc("objectxsortedlist::list");
-#endif DEBUGCALLS
+#endif // DEBUGCALLS
     gdlink<gobject*> *savecurr;
     gobject* pobj;
     savecurr = currItem;
@@ -390,7 +390,7 @@ void objectxsortedlist::list()
     currItem = savecurr;
 #ifdef DEBUGCALLS
     popproc();
-#endif DEBUGCALLS
+#endif // DEBUGCALLS
 }
 
 
