@@ -11,7 +11,7 @@
 #include <qapplication.h>
 
 // Local
-#include "critter.h"
+#include "agent.h"
 #include "globals.h"
 #include "graphics.h"
 #include "food.h"
@@ -51,8 +51,8 @@ void Patch::initBase(float x, float z, float sx, float sz, int shape, int distri
 
 	neighborhoodSize = nhsize;
 
-	critterInsideCount = 0;
-	critterNeighborhoodCount = 0;
+	agentInsideCount = 0;
+	agentNeighborhoodCount = 0;
 
 	fStage = fs;
 
@@ -148,10 +148,10 @@ void  Patch::setPoint( float* x, float* z )
 
 
 // Reset the counts each step in the simulation
-void Patch::resetCritterCounts()
+void Patch::resetAgentCounts()
 {
-	critterInsideCount = 0;
-	critterNeighborhoodCount = 0;
+	agentInsideCount = 0;
+	agentNeighborhoodCount = 0;
 }
 
 
@@ -199,21 +199,21 @@ bool Patch::pointIsInside( float x, float z, float outerRange )
 	}
 }
 
-// Check if a critter with given x and z coordinates is inside the patch
-// Increment the Patch's critterInsideCount if it is
-void Patch::checkIfCritterIsInside( float critterX, float critterZ )
+// Check if a agent with given x and z coordinates is inside the patch
+// Increment the Patch's agentInsideCount if it is
+void Patch::checkIfAgentIsInside( float agentX, float agentZ )
 {
-	// Check if point is inside the Patch (outerRange is 0 to get only those critters that are truly inside)
-	if( pointIsInside( critterX, critterZ, 0 ) )
-		critterInsideCount++;
+	// Check if point is inside the Patch (outerRange is 0 to get only those agents that are truly inside)
+	if( pointIsInside( agentX, agentZ, 0 ) )
+		agentInsideCount++;
 }
 
 
-// Check if a critter with given x and z coordinates is inside the Patch's neighborhood
-// Increment the Patch's critterOuterRangeCount if it is
-void Patch::checkIfCritterIsInsideNeighborhood( float critterX, float critterZ )
+// Check if a agent with given x and z coordinates is inside the Patch's neighborhood
+// Increment the Patch's agentOuterRangeCount if it is
+void Patch::checkIfAgentIsInsideNeighborhood( float agentX, float agentZ )
 {
 	// Check if point is inside outerRange AND outside of Patch
-	if( pointIsInside( critterX, critterZ, neighborhoodSize ) && !pointIsInside( critterX, critterZ, 0 ) )
-		critterNeighborhoodCount++;
+	if( pointIsInside( agentX, agentZ, neighborhoodSize ) && !pointIsInside( agentX, agentZ, 0 ) )
+		agentNeighborhoodCount++;
 }

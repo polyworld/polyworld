@@ -1,0 +1,7 @@
+eatneuron
+mateneuron
+fightneuron
+speedneuron (move)
+yawneuron (turn)
+lightneuron
+focusneuron

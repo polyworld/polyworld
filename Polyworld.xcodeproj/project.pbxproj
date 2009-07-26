@@ -7,62 +7,61 @@
 	objects = {
 
 /* Begin PBXAggregateTarget section */
-		76B2FB68084CE6E9002FBDA1 /* moc */ = {
+		760C3548101BD01500F5F662 /* All */ = {
 			isa = PBXAggregateTarget;
-			buildConfigurationList = 76293F090981AF4600D27C6E /* Build configuration list for PBXAggregateTarget "moc" */;
+			buildConfigurationList = 760C3551101BD04500F5F662 /* Build configuration list for PBXAggregateTarget "All" */;
 			buildPhases = (
-				76B2FB67084CE6E9002FBDA1 /* ShellScript */,
 			);
 			dependencies = (
+				760C3553101BD05C00F5F662 /* PBXTargetDependency */,
+				760C3555101BD05C00F5F662 /* PBXTargetDependency */,
+				760C3557101BD05C00F5F662 /* PBXTargetDependency */,
 			);
-			name = moc;
-			productName = moc;
-		};
-		76D02AFD0894900E00D89155 /* moc_PwMoviePlayer */ = {
-			isa = PBXAggregateTarget;
-			buildConfigurationList = 76293F130981AF4600D27C6E /* Build configuration list for PBXAggregateTarget "moc_PwMoviePlayer" */;
-			buildPhases = (
-				76D02AFE0894900E00D89155 /* ShellScript */,
-			);
-			dependencies = (
-			);
-			name = moc_PwMoviePlayer;
-			productName = moc;
+			name = All;
+			productName = All;
 		};
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
-		373751E3078D762B00B1DFA0 /* vecLib.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 373751E2078D762B00B1DFA0 /* vecLib.framework */; };
 		37577669078C8C6200CA4042 /* moc_PWApp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 37577667078C8C6200CA4042 /* moc_PWApp.cpp */; };
 		3757766A078C8C6200CA4042 /* moc_Simulation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 37577668078C8C6200CA4042 /* moc_Simulation.cpp */; };
-		37577842078C8E9900CA4042 /* worldfile in CopyFiles */ = {isa = PBXBuildFile; fileRef = 76BB7C9E074D4CE500576391 /* worldfile */; };
-		37577843078C8E9900CA4042 /* critter.obj in CopyFiles */ = {isa = PBXBuildFile; fileRef = 76CBA5E2062BEE2B001C79E7 /* critter.obj */; };
-		37577844078C8E9900CA4042 /* ground.obj in CopyFiles */ = {isa = PBXBuildFile; fileRef = 76CBA5E3062BEE2B001C79E7 /* ground.obj */; };
+		760C2CA6101AC87700F5F662 /* brainfunction.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 760C2C9F101AC87700F5F662 /* brainfunction.cpp */; };
+		760C2CA7101AC87700F5F662 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 760C2CA1101AC87700F5F662 /* main.cpp */; };
+		760C2CA9101AC87700F5F662 /* motion.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 760C2CA4101AC87700F5F662 /* motion.cpp */; };
+		760C2CBA101AC94700F5F662 /* complexity_algorithm.cp in Sources */ = {isa = PBXBuildFile; fileRef = 760C2CB4101AC94700F5F662 /* complexity_algorithm.cp */; };
+		760C2CBB101AC94700F5F662 /* complexity_brain.cp in Sources */ = {isa = PBXBuildFile; fileRef = 760C2CB6101AC94700F5F662 /* complexity_brain.cp */; };
+		760C2CBC101AC94700F5F662 /* complexity_motion.cp in Sources */ = {isa = PBXBuildFile; fileRef = 760C2CB8101AC94700F5F662 /* complexity_motion.cp */; };
+		760C2CBD101AC94700F5F662 /* complexity_algorithm.cp in Sources */ = {isa = PBXBuildFile; fileRef = 760C2CB4101AC94700F5F662 /* complexity_algorithm.cp */; };
+		760C2CBE101AC94700F5F662 /* complexity_brain.cp in Sources */ = {isa = PBXBuildFile; fileRef = 760C2CB6101AC94700F5F662 /* complexity_brain.cp */; };
+		760C2CBF101AC94700F5F662 /* complexity_motion.cp in Sources */ = {isa = PBXBuildFile; fileRef = 760C2CB8101AC94700F5F662 /* complexity_motion.cp */; };
+		760C2CCB101AC96700F5F662 /* PositionPath.cp in Sources */ = {isa = PBXBuildFile; fileRef = 760C2CC4101AC96700F5F662 /* PositionPath.cp */; };
+		760C2CCC101AC96700F5F662 /* PositionReader.cp in Sources */ = {isa = PBXBuildFile; fileRef = 760C2CC6101AC96700F5F662 /* PositionReader.cp */; };
+		760C2CCD101AC96700F5F662 /* PositionWriter.cp in Sources */ = {isa = PBXBuildFile; fileRef = 760C2CC9101AC96700F5F662 /* PositionWriter.cp */; };
+		760C2CCE101AC96700F5F662 /* PositionPath.cp in Sources */ = {isa = PBXBuildFile; fileRef = 760C2CC4101AC96700F5F662 /* PositionPath.cp */; };
+		760C2CCF101AC96700F5F662 /* PositionReader.cp in Sources */ = {isa = PBXBuildFile; fileRef = 760C2CC6101AC96700F5F662 /* PositionReader.cp */; };
+		760C2CD0101AC96700F5F662 /* PositionWriter.cp in Sources */ = {isa = PBXBuildFile; fileRef = 760C2CC9101AC96700F5F662 /* PositionWriter.cp */; };
+		760C2D21101ADEDD00F5F662 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 76CBA7CC062D11C2001C79E7 /* OpenGL.framework */; };
+		760C2D4E101B9A8200F5F662 /* agent.obj in Resources */ = {isa = PBXBuildFile; fileRef = 760C2D4C101B9A8200F5F662 /* agent.obj */; };
+		760C2D4F101B9A8200F5F662 /* ground.obj in Resources */ = {isa = PBXBuildFile; fileRef = 760C2D4D101B9A8200F5F662 /* ground.obj */; };
+		760C3114101BB15900F5F662 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 760C3112101BB15900F5F662 /* InfoPlist.strings */; };
+		760C319D101BB74E00F5F662 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 76CBA7CC062D11C2001C79E7 /* OpenGL.framework */; };
 		7624C7CE0A4A0CD5006A2B7C /* BrickPatch.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7624C7C80A4A0CD5006A2B7C /* BrickPatch.cp */; };
 		7624C7D00A4A0CD5006A2B7C /* FoodPatch.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7624C7CA0A4A0CD5006A2B7C /* FoodPatch.cp */; };
 		7624C7D20A4A0CD5006A2B7C /* Patch.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7624C7CC0A4A0CD5006A2B7C /* Patch.cp */; };
 		7624C7F10A4A204A006A2B7C /* distributions.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7624C7EE0A4A204A006A2B7C /* distributions.cp */; };
-		7655B2E80C35D35D0065C0A1 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 8D0C4E960486CD37000505A6 /* Info.plist */; };
-		7655B4E70C35DF040065C0A1 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 7655B4E60C35DF040065C0A1 /* Info.plist */; };
-		7655B5160C35DF710065C0A1 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 7655B5140C35DF710065C0A1 /* InfoPlist.strings */; };
-		7668D1690885AC65004158C6 /* PwMovieTools.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7668D1680885AC65004158C6 /* PwMovieTools.cp */; };
-		7668D2F208864A7E004158C6 /* PwMovieTools.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7668D1680885AC65004158C6 /* PwMovieTools.cp */; };
+		7668D1690885AC65004158C6 /* PwMovieUtils.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7668D1680885AC65004158C6 /* PwMovieUtils.cp */; };
+		7668D2F208864A7E004158C6 /* PwMovieUtils.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7668D1680885AC65004158C6 /* PwMovieUtils.cp */; };
 		7668D30008864B8A004158C6 /* PwMoviePlayer.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7668D2FF08864B8A004158C6 /* PwMoviePlayer.cp */; };
 		7668D30E088650F0004158C6 /* MainWindow.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7668D30D088650F0004158C6 /* MainWindow.cp */; };
 		767A61770A4A21AC00A88B62 /* brick.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76D32E1609E62FDC00394ACE /* brick.cp */; };
-		76AA4617073AAEFF00508D3D /* AGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 76AA4616073AAEFF00508D3D /* AGL.framework */; };
 		76AA4628073AAF7E00508D3D /* TextStatusWindow.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76AA4626073AAF7E00508D3D /* TextStatusWindow.cp */; };
-		76AB9FA60CA58D2100DA1161 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 76AB9F260CA58D2000DA1161 /* Foundation.framework */; };
-		76ABA1320CA58E7300DA1161 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 76AB9F260CA58D2000DA1161 /* Foundation.framework */; };
-		76ABA1DA0CA58F0100DA1161 /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 76ABA1350CA58F0000DA1161 /* AppKit.framework */; };
-		76ABA1DB0CA58F0100DA1161 /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 76ABA1350CA58F0000DA1161 /* AppKit.framework */; };
 		76C2315009D0B4AA00EB652A /* OverheadView.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76C2314E09D0B4AA00EB652A /* OverheadView.cp */; };
 		76CBA568062BED8E001C79E7 /* debug.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA55D062BED8E001C79E7 /* debug.cp */; };
 		76CBA56B062BED8E001C79E7 /* globals.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA560062BED8E001C79E7 /* globals.cp */; };
 		76CBA56D062BED8E001C79E7 /* PWApp.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA562062BED8E001C79E7 /* PWApp.cp */; };
 		76CBA571062BED8E001C79E7 /* Simulation.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA566062BED8E001C79E7 /* Simulation.cp */; };
 		76CBA5AD062BEDBC001C79E7 /* brain.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA574062BEDBC001C79E7 /* brain.cp */; };
-		76CBA5AF062BEDBC001C79E7 /* critter.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA576062BEDBC001C79E7 /* critter.cp */; };
+		76CBA5AF062BEDBC001C79E7 /* agent.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA576062BEDBC001C79E7 /* agent.cp */; };
 		76CBA5B1062BEDBC001C79E7 /* genome.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA578062BEDBC001C79E7 /* genome.cp */; };
 		76CBA5B3062BEDBC001C79E7 /* barrier.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA57B062BEDBC001C79E7 /* barrier.cp */; };
 		76CBA5B5062BEDBC001C79E7 /* food.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA57D062BEDBC001C79E7 /* food.cp */; };
@@ -83,60 +82,42 @@
 		76CBA5D9062BEDBC001C79E7 /* error.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA5A4062BEDBC001C79E7 /* error.cp */; };
 		76CBA5DB062BEDBC001C79E7 /* indexlist.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA5A6062BEDBC001C79E7 /* indexlist.cp */; };
 		76CBA5DD062BEDBC001C79E7 /* misc.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA5A8062BEDBC001C79E7 /* misc.cp */; };
-		76CBA5E4062BEE2B001C79E7 /* critter.obj in Resources */ = {isa = PBXBuildFile; fileRef = 76CBA5E2062BEE2B001C79E7 /* critter.obj */; };
-		76CBA5E5062BEE2B001C79E7 /* ground.obj in Resources */ = {isa = PBXBuildFile; fileRef = 76CBA5E3062BEE2B001C79E7 /* ground.obj */; };
-		76CBA7CD062D11C2001C79E7 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 76CBA7CC062D11C2001C79E7 /* OpenGL.framework */; };
-		76D02AE30894875A00D89155 /* AGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 76AA4616073AAEFF00508D3D /* AGL.framework */; };
 		76D02AE40894875B00D89155 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 76CBA7CC062D11C2001C79E7 /* OpenGL.framework */; };
-		76D02AE50894875D00D89155 /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 20286C33FDCF999611CA2CEA /* Carbon.framework */; };
-		76D02AE60894875E00D89155 /* libstdc++.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 0249A66BFF388E3F11CA2CEA /* libstdc++.a */; };
 		76D02B050894910800D89155 /* moc_MainWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 76D02B030894910800D89155 /* moc_MainWindow.cpp */; };
 		76D02B060894910800D89155 /* moc_PwMoviePlayer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 76D02B040894910800D89155 /* moc_PwMoviePlayer.cpp */; };
 		76D02CC70894CEE300D89155 /* GLWidget.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76D02CC60894CEE300D89155 /* GLWidget.cp */; };
 		76D02CE40894D30200D89155 /* moc_GLWidget.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 76D02CE30894D30200D89155 /* moc_GLWidget.cpp */; };
 		76D32E0F09E62F9200394ACE /* objectxsortedlist.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76D32E0D09E62F9200394ACE /* objectxsortedlist.cp */; };
 		76D99C520C38F1E200CC8F85 /* worldfile in Resources */ = {isa = PBXBuildFile; fileRef = 76BB7C9E074D4CE500576391 /* worldfile */; };
-		84ED837C062E7EED00AEEA18 /* CritterPOVWindow.cp in Sources */ = {isa = PBXBuildFile; fileRef = 84ED837A062E7EED00AEEA18 /* CritterPOVWindow.cp */; };
-		8D0C4E8D0486CD37000505A6 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 0867D6AAFE840B52C02AAC07 /* InfoPlist.strings */; };
-		8D0C4E920486CD37000505A6 /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 20286C33FDCF999611CA2CEA /* Carbon.framework */; };
-		8D0C4E930486CD37000505A6 /* libstdc++.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 0249A66BFF388E3F11CA2CEA /* libstdc++.a */; };
+		84ED837C062E7EED00AEEA18 /* AgentPOVWindow.cp in Sources */ = {isa = PBXBuildFile; fileRef = 84ED837A062E7EED00AEEA18 /* AgentPOVWindow.cp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		76B2FB6F084CE761002FBDA1 /* PBXContainerItemProxy */ = {
+		760C3552101BD05C00F5F662 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 20286C28FDCF999611CA2CEA /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 76B2FB68084CE6E9002FBDA1;
-			remoteInfo = moc;
+			remoteGlobalIDString = 8D0C4E890486CD37000505A6;
+			remoteInfo = Polyworld;
 		};
-		76D02B01089490DB00D89155 /* PBXContainerItemProxy */ = {
+		760C3554101BD05C00F5F662 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 20286C28FDCF999611CA2CEA /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 76D02AFD0894900E00D89155;
-			remoteInfo = moc_PwMoviePlayer;
+			remoteGlobalIDString = 7668D2E208864A66004158C6;
+			remoteInfo = PwMoviePlayer;
+		};
+		760C3556101BD05C00F5F662 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 20286C28FDCF999611CA2CEA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 760C2C93101AC7DD00F5F662;
+			remoteInfo = CalcComplexity;
 		};
 /* End PBXContainerItemProxy section */
 
-/* Begin PBXCopyFilesBuildPhase section */
-		37577841078C8E8100CA4042 /* CopyFiles */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 16;
-			files = (
-				37577842078C8E9900CA4042 /* worldfile in CopyFiles */,
-				37577843078C8E9900CA4042 /* critter.obj in CopyFiles */,
-				37577844078C8E9900CA4042 /* ground.obj in CopyFiles */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXCopyFilesBuildPhase section */
-
 /* Begin PBXFileReference section */
 		0249A66BFF388E3F11CA2CEA /* libstdc++.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libstdc++.a"; path = "/usr/lib/libstdc++.a"; sourceTree = "<absolute>"; };
-		0867D6ABFE840B52C02AAC07 /* English */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = English; path = English.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		20286C33FDCF999611CA2CEA /* Carbon.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Carbon.framework; path = /System/Library/Frameworks/Carbon.framework; sourceTree = "<absolute>"; };
 		32DBCF6D0370B57F00C91783 /* PolyworldPrefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PolyworldPrefix.pch; sourceTree = "<group>"; };
 		373751E2078D762B00B1DFA0 /* vecLib.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = vecLib.framework; path = /System/Library/Frameworks/vecLib.framework; sourceTree = "<absolute>"; };
@@ -146,6 +127,55 @@
 		4A9504CAFFE6A41611CA0CBA /* CoreServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreServices.framework; path = /System/Library/Frameworks/CoreServices.framework; sourceTree = "<absolute>"; };
 		760097BD0887874B008CD45B /* PwMoviePlayer.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = PwMoviePlayer.h; sourceTree = "<group>"; };
 		760097E608879D78008CD45B /* MainWindow.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = MainWindow.h; sourceTree = "<group>"; };
+		760C2C94101AC7DD00F5F662 /* CalcComplexity */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.objfile"; includeInIndex = 0; path = CalcComplexity; sourceTree = BUILT_PRODUCTS_DIR; };
+		760C2C9F101AC87700F5F662 /* brainfunction.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = brainfunction.cpp; sourceTree = "<group>"; };
+		760C2CA0101AC87700F5F662 /* brainfunction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = brainfunction.h; sourceTree = "<group>"; };
+		760C2CA1101AC87700F5F662 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		760C2CA2101AC87700F5F662 /* main.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = main.h; sourceTree = "<group>"; };
+		760C2CA4101AC87700F5F662 /* motion.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = motion.cpp; sourceTree = "<group>"; };
+		760C2CA5101AC87700F5F662 /* motion.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = motion.h; sourceTree = "<group>"; };
+		760C2CB3101AC94700F5F662 /* complexity.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = complexity.h; sourceTree = "<group>"; };
+		760C2CB4101AC94700F5F662 /* complexity_algorithm.cp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = complexity_algorithm.cp; sourceTree = "<group>"; };
+		760C2CB5101AC94700F5F662 /* complexity_algorithm.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = complexity_algorithm.h; sourceTree = "<group>"; };
+		760C2CB6101AC94700F5F662 /* complexity_brain.cp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = complexity_brain.cp; sourceTree = "<group>"; };
+		760C2CB7101AC94700F5F662 /* complexity_brain.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = complexity_brain.h; sourceTree = "<group>"; };
+		760C2CB8101AC94700F5F662 /* complexity_motion.cp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = complexity_motion.cp; sourceTree = "<group>"; };
+		760C2CB9101AC94700F5F662 /* complexity_motion.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = complexity_motion.h; sourceTree = "<group>"; };
+		760C2CC4101AC96700F5F662 /* PositionPath.cp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PositionPath.cp; sourceTree = "<group>"; };
+		760C2CC5101AC96700F5F662 /* PositionPath.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PositionPath.h; sourceTree = "<group>"; };
+		760C2CC6101AC96700F5F662 /* PositionReader.cp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PositionReader.cp; sourceTree = "<group>"; };
+		760C2CC7101AC96700F5F662 /* PositionReader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PositionReader.h; sourceTree = "<group>"; };
+		760C2CC8101AC96700F5F662 /* PositionRecord.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PositionRecord.h; sourceTree = "<group>"; };
+		760C2CC9101AC96700F5F662 /* PositionWriter.cp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PositionWriter.cp; sourceTree = "<group>"; };
+		760C2CCA101AC96700F5F662 /* PositionWriter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PositionWriter.h; sourceTree = "<group>"; };
+		760C2D4C101B9A8200F5F662 /* agent.obj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = agent.obj; sourceTree = "<group>"; };
+		760C2D4D101B9A8200F5F662 /* ground.obj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = ground.obj; sourceTree = "<group>"; };
+		760C3113101BB15900F5F662 /* English */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = English; path = English.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		760C31C6101BB9E900F5F662 /* worldfile.big */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile.big; path = worldfiles/worldfile.big; sourceTree = "<group>"; };
+		760C31C7101BB9E900F5F662 /* worldfile.small */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile.small; path = worldfiles/worldfile.small; sourceTree = "<group>"; };
+		760C31C8101BB9E900F5F662 /* worldfile_alifex */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_alifex; path = worldfiles/worldfile_alifex; sourceTree = "<group>"; };
+		760C31C9101BB9E900F5F662 /* worldfile_barriers */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_barriers; path = worldfiles/worldfile_barriers; sourceTree = "<group>"; };
+		760C31CA101BB9E900F5F662 /* worldfile_complexity */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_complexity; path = worldfiles/worldfile_complexity; sourceTree = "<group>"; };
+		760C31CB101BB9E900F5F662 /* worldfile_driven */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_driven; path = worldfiles/worldfile_driven; sourceTree = "<group>"; };
+		760C31CC101BB9E900F5F662 /* worldfile_driven_domains */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_driven_domains; path = worldfiles/worldfile_driven_domains; sourceTree = "<group>"; };
+		760C31CD101BB9E900F5F662 /* worldfile_driven_hard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_driven_hard; path = worldfiles/worldfile_driven_hard; sourceTree = "<group>"; };
+		760C31CE101BB9E900F5F662 /* worldfile_dynfood */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_dynfood; path = worldfiles/worldfile_dynfood; sourceTree = "<group>"; };
+		760C31CF101BB9E900F5F662 /* worldfile_epoch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_epoch; path = worldfiles/worldfile_epoch; sourceTree = "<group>"; };
+		760C31D0101BB9E900F5F662 /* worldfile_fixed_driven */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_fixed_driven; path = worldfiles/worldfile_fixed_driven; sourceTree = "<group>"; };
+		760C31D1101BB9E900F5F662 /* worldfile_fixed_passive */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_fixed_passive; path = worldfiles/worldfile_fixed_passive; sourceTree = "<group>"; };
+		760C31D2101BB9E900F5F662 /* worldfile_heur_comp_fit */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_heur_comp_fit; path = worldfiles/worldfile_heur_comp_fit; sourceTree = "<group>"; };
+		760C31D3101BB9E900F5F662 /* worldfile_IFD */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_IFD; path = worldfiles/worldfile_IFD; sourceTree = "<group>"; };
+		760C31D4101BB9E900F5F662 /* worldfile_MaxSpeed_to_0.0 */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_MaxSpeed_to_0.0; path = worldfiles/worldfile_MaxSpeed_to_0.0; sourceTree = "<group>"; };
+		760C31D5101BB9E900F5F662 /* worldfile_nominal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_nominal; path = worldfiles/worldfile_nominal; sourceTree = "<group>"; };
+		760C31D6101BB9E900F5F662 /* worldfile_passive */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_passive; path = worldfiles/worldfile_passive; sourceTree = "<group>"; };
+		760C31D7101BB9E900F5F662 /* worldfile_passive_domains */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_passive_domains; path = worldfiles/worldfile_passive_domains; sourceTree = "<group>"; };
+		760C31D8101BB9E900F5F662 /* worldfile_passive_hard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_passive_hard; path = worldfiles/worldfile_passive_hard; sourceTree = "<group>"; };
+		760C31D9101BB9E900F5F662 /* worldfile_toy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_toy; path = worldfiles/worldfile_toy; sourceTree = "<group>"; };
+		760C31DF101BBA4E00F5F662 /* 51.wf */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = 51.wf; path = docs/51.wf; sourceTree = "<group>"; };
+		760C31E0101BBA4E00F5F662 /* brain_anatomy.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = brain_anatomy.txt; path = docs/brain_anatomy.txt; sourceTree = "<group>"; };
+		760C31E1101BBA4E00F5F662 /* brain_function.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = brain_function.txt; path = docs/brain_function.txt; sourceTree = "<group>"; };
+		760C31E2101BBA4E00F5F662 /* FoodPatchNotes.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; name = FoodPatchNotes.pdf; path = docs/FoodPatchNotes.pdf; sourceTree = "<group>"; };
+		760C31E3101BBA4E00F5F662 /* pw_doc_old.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = pw_doc_old.txt; path = docs/pw_doc_old.txt; sourceTree = "<group>"; };
 		7624C7C80A4A0CD5006A2B7C /* BrickPatch.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = BrickPatch.cp; sourceTree = "<group>"; };
 		7624C7C90A4A0CD5006A2B7C /* BrickPatch.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = BrickPatch.h; sourceTree = "<group>"; };
 		7624C7CA0A4A0CD5006A2B7C /* FoodPatch.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = FoodPatch.cp; sourceTree = "<group>"; };
@@ -155,15 +185,15 @@
 		7624C7EE0A4A204A006A2B7C /* distributions.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = distributions.cp; sourceTree = "<group>"; };
 		7624C7EF0A4A204A006A2B7C /* distributions.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = distributions.h; sourceTree = "<group>"; };
 		7624C7F00A4A204A006A2B7C /* graybin.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = graybin.h; sourceTree = "<group>"; };
-		7625064A09B8CA5500C36C36 /* probe_activity.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = probe_activity.cpp; path = utils/probe_activity.cpp; sourceTree = "<group>"; };
-		7625066609B8CCE600C36C36 /* probe_activity */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = probe_activity; sourceTree = BUILT_PRODUCTS_DIR; };
-		7655B4E60C35DF040065C0A1 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text.plist.xml; name = Info.plist; path = PwMoviePlayer/Info.plist; sourceTree = "<group>"; };
-		7655B5150C35DF710065C0A1 /* English */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = English; path = PwMoviePlayer/English.lproj/InfoPlist.strings; sourceTree = "<group>"; };
-		7668D1680885AC65004158C6 /* PwMovieTools.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = PwMovieTools.cp; sourceTree = "<group>"; };
-		7668D16A0885AD07004158C6 /* PwMovieTools.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = PwMovieTools.h; sourceTree = "<group>"; };
+		7668D1680885AC65004158C6 /* PwMovieUtils.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = PwMovieUtils.cp; sourceTree = "<group>"; };
+		7668D16A0885AD07004158C6 /* PwMovieUtils.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = PwMovieUtils.h; sourceTree = "<group>"; };
 		7668D2E308864A66004158C6 /* PwMoviePlayer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PwMoviePlayer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7668D2FF08864B8A004158C6 /* PwMoviePlayer.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = PwMoviePlayer.cp; sourceTree = "<group>"; };
 		7668D30D088650F0004158C6 /* MainWindow.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = MainWindow.cp; sourceTree = "<group>"; };
+		769227D0101C382B000BB4F4 /* Behavior-OutputNeuronOrder.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = "Behavior-OutputNeuronOrder.txt"; path = "docs/Behavior-OutputNeuronOrder.txt"; sourceTree = "<group>"; };
+		769227D1101C382B000BB4F4 /* Logistic.xls */ = {isa = PBXFileReference; lastKnownFileType = file; name = Logistic.xls; path = docs/Logistic.xls; sourceTree = "<group>"; };
+		769227D2101C382B000BB4F4 /* MiscegenationProbabilityCurves.xls */ = {isa = PBXFileReference; lastKnownFileType = file; name = MiscegenationProbabilityCurves.xls; path = docs/MiscegenationProbabilityCurves.xls; sourceTree = "<group>"; };
+		769227D3101C382B000BB4F4 /* NOTES.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = NOTES.txt; path = docs/NOTES.txt; sourceTree = "<group>"; };
 		769996580742BCF0001B0A65 /* gdlink.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = gdlink.h; sourceTree = "<group>"; };
 		76AA4616073AAEFF00508D3D /* AGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AGL.framework; path = /System/Library/Frameworks/AGL.framework; sourceTree = "<absolute>"; };
 		76AA4626073AAF7E00508D3D /* TextStatusWindow.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = TextStatusWindow.cp; sourceTree = "<group>"; };
@@ -184,8 +214,8 @@
 		76CBA567062BED8E001C79E7 /* Simulation.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = Simulation.h; sourceTree = "<group>"; };
 		76CBA574062BEDBC001C79E7 /* brain.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = brain.cp; sourceTree = "<group>"; };
 		76CBA575062BEDBC001C79E7 /* brain.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = brain.h; sourceTree = "<group>"; };
-		76CBA576062BEDBC001C79E7 /* critter.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = critter.cp; sourceTree = "<group>"; };
-		76CBA577062BEDBC001C79E7 /* critter.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = critter.h; sourceTree = "<group>"; };
+		76CBA576062BEDBC001C79E7 /* agent.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = agent.cp; sourceTree = "<group>"; };
+		76CBA577062BEDBC001C79E7 /* agent.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = agent.h; sourceTree = "<group>"; };
 		76CBA578062BEDBC001C79E7 /* genome.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = genome.cp; sourceTree = "<group>"; };
 		76CBA579062BEDBC001C79E7 /* genome.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = genome.h; sourceTree = "<group>"; };
 		76CBA57B062BEDBC001C79E7 /* barrier.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = barrier.cp; sourceTree = "<group>"; };
@@ -232,8 +262,6 @@
 		76CBA5A8062BEDBC001C79E7 /* misc.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = misc.cp; sourceTree = "<group>"; };
 		76CBA5A9062BEDBC001C79E7 /* misc.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = misc.h; sourceTree = "<group>"; };
 		76CBA5AA062BEDBC001C79E7 /* objectlist.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = objectlist.h; sourceTree = "<group>"; };
-		76CBA5E2062BEE2B001C79E7 /* critter.obj */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text; path = critter.obj; sourceTree = "<group>"; };
-		76CBA5E3062BEE2B001C79E7 /* ground.obj */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text; path = ground.obj; sourceTree = "<group>"; };
 		76CBA7CC062D11C2001C79E7 /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = /System/Library/Frameworks/OpenGL.framework; sourceTree = "<absolute>"; };
 		76D02B030894910800D89155 /* moc_MainWindow.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = moc_MainWindow.cpp; sourceTree = "<group>"; };
 		76D02B040894910800D89155 /* moc_PwMoviePlayer.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = moc_PwMoviePlayer.cpp; sourceTree = "<group>"; };
@@ -244,18 +272,17 @@
 		76D32E0E09E62F9200394ACE /* objectxsortedlist.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = objectxsortedlist.h; sourceTree = "<group>"; };
 		76D32E1609E62FDC00394ACE /* brick.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = brick.cp; sourceTree = "<group>"; };
 		76D32E1709E62FDC00394ACE /* brick.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = brick.h; sourceTree = "<group>"; };
-		84ED837A062E7EED00AEEA18 /* CritterPOVWindow.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = CritterPOVWindow.cp; sourceTree = "<group>"; };
-		84ED837B062E7EED00AEEA18 /* CritterPOVWindow.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = CritterPOVWindow.h; sourceTree = "<group>"; };
-		8D0C4E960486CD37000505A6 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		84ED837A062E7EED00AEEA18 /* AgentPOVWindow.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = AgentPOVWindow.cp; sourceTree = "<group>"; };
+		84ED837B062E7EED00AEEA18 /* AgentPOVWindow.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = AgentPOVWindow.h; sourceTree = "<group>"; };
 		8D0C4E970486CD37000505A6 /* Polyworld.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Polyworld.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		C58654FB09B94E1C000F30F8 /* complexity.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = complexity.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		7625066409B8CCE600C36C36 /* Frameworks */ = {
+		760C2C92101AC7DD00F5F662 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				760C2D21101ADEDD00F5F662 /* OpenGL.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -263,12 +290,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				76D02AE30894875A00D89155 /* AGL.framework in Frameworks */,
 				76D02AE40894875B00D89155 /* OpenGL.framework in Frameworks */,
-				76D02AE50894875D00D89155 /* Carbon.framework in Frameworks */,
-				76D02AE60894875E00D89155 /* libstdc++.a in Frameworks */,
-				76ABA1320CA58E7300DA1161 /* Foundation.framework in Frameworks */,
-				76ABA1DA0CA58F0100DA1161 /* AppKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -276,13 +298,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				8D0C4E920486CD37000505A6 /* Carbon.framework in Frameworks */,
-				8D0C4E930486CD37000505A6 /* libstdc++.a in Frameworks */,
-				76CBA7CD062D11C2001C79E7 /* OpenGL.framework in Frameworks */,
-				76AA4617073AAEFF00508D3D /* AGL.framework in Frameworks */,
-				373751E3078D762B00B1DFA0 /* vecLib.framework in Frameworks */,
-				76AB9FA60CA58D2100DA1161 /* Foundation.framework in Frameworks */,
-				76ABA1DB0CA58F0100DA1161 /* AppKit.framework in Frameworks */,
+				760C319D101BB74E00F5F662 /* OpenGL.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -294,7 +310,7 @@
 			children = (
 				8D0C4E970486CD37000505A6 /* Polyworld.app */,
 				7668D2E308864A66004158C6 /* PwMoviePlayer.app */,
-				7625066609B8CCE600C36C36 /* probe_activity */,
+				760C2C94101AC7DD00F5F662 /* CalcComplexity */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -302,14 +318,13 @@
 		20286C29FDCF999611CA2CEA /* Polyworld */ = {
 			isa = PBXGroup;
 			children = (
-				76ABA1350CA58F0000DA1161 /* AppKit.framework */,
-				76AB9F260CA58D2000DA1161 /* Foundation.framework */,
-				7655B5140C35DF710065C0A1 /* InfoPlist.strings */,
-				7655B4E60C35DF040065C0A1 /* Info.plist */,
 				20286C2AFDCF999611CA2CEA /* Sources */,
 				20286C2CFDCF999611CA2CEA /* Resources */,
 				20286C32FDCF999611CA2CEA /* External Frameworks and Libraries */,
 				195DF8CFFE9D517E11CA2CBB /* Products */,
+				760C31DC101BBA2600F5F662 /* Documentation */,
+				760C31BF101BB99800F5F662 /* Worldfiles */,
+				760C31BC101BB8A200F5F662 /* Unused External Frameworks & Libraries */,
 			);
 			name = Polyworld;
 			sourceTree = "<group>";
@@ -317,15 +332,16 @@
 		20286C2AFDCF999611CA2CEA /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				76CBA573062BEDBC001C79E7 /* agent */,
 				76CBA55C062BED8E001C79E7 /* app */,
-				76CBA573062BEDBC001C79E7 /* critter */,
+				760C2CB2101AC94700F5F662 /* complexity */,
 				76CBA57A062BEDBC001C79E7 /* environment */,
 				76CBA580062BEDBC001C79E7 /* graphics */,
+				760C2CC3101AC96700F5F662 /* motion */,
+				760C2C52101AC6EC00F5F662 /* tools */,
 				76CBA598062BEDBC001C79E7 /* ui */,
 				76CBA5A3062BEDBC001C79E7 /* utils */,
 				32DBCF6D0370B57F00C91783 /* PolyworldPrefix.pch */,
-				7668D2F508864AA3004158C6 /* PwMoviePlayer */,
-				7625065209B8CC5600C36C36 /* probe_activity */,
 			);
 			name = Sources;
 			sourceTree = "<group>";
@@ -333,11 +349,9 @@
 		20286C2CFDCF999611CA2CEA /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				760C3112101BB15900F5F662 /* InfoPlist.strings */,
+				760C2D4B101B9A8200F5F662 /* objects */,
 				76BB7C9E074D4CE500576391 /* worldfile */,
-				76CBA5E2062BEE2B001C79E7 /* critter.obj */,
-				76CBA5E3062BEE2B001C79E7 /* ground.obj */,
-				8D0C4E960486CD37000505A6 /* Info.plist */,
-				0867D6AAFE840B52C02AAC07 /* InfoPlist.strings */,
 			);
 			name = Resources;
 			sourceTree = "<group>";
@@ -345,23 +359,126 @@
 		20286C32FDCF999611CA2CEA /* External Frameworks and Libraries */ = {
 			isa = PBXGroup;
 			children = (
-				373751E2078D762B00B1DFA0 /* vecLib.framework */,
-				76AA4616073AAEFF00508D3D /* AGL.framework */,
 				76CBA7CC062D11C2001C79E7 /* OpenGL.framework */,
-				20286C33FDCF999611CA2CEA /* Carbon.framework */,
-				4A9504CAFFE6A41611CA0CBA /* CoreServices.framework */,
-				4A9504C8FFE6A3BC11CA0CBA /* ApplicationServices.framework */,
-				0249A66BFF388E3F11CA2CEA /* libstdc++.a */,
 			);
 			name = "External Frameworks and Libraries";
 			sourceTree = "<group>";
 		};
-		7625065209B8CC5600C36C36 /* probe_activity */ = {
+		760C2C52101AC6EC00F5F662 /* tools */ = {
 			isa = PBXGroup;
 			children = (
-				7625064A09B8CA5500C36C36 /* probe_activity.cpp */,
+				760C2C9E101AC87700F5F662 /* CalcComplexity */,
+				7668D2F508864AA3004158C6 /* PwMoviePlayer */,
 			);
-			name = probe_activity;
+			path = tools;
+			sourceTree = "<group>";
+		};
+		760C2C9E101AC87700F5F662 /* CalcComplexity */ = {
+			isa = PBXGroup;
+			children = (
+				760C2C9F101AC87700F5F662 /* brainfunction.cpp */,
+				760C2CA0101AC87700F5F662 /* brainfunction.h */,
+				760C2CA1101AC87700F5F662 /* main.cpp */,
+				760C2CA2101AC87700F5F662 /* main.h */,
+				760C2CA4101AC87700F5F662 /* motion.cpp */,
+				760C2CA5101AC87700F5F662 /* motion.h */,
+			);
+			path = CalcComplexity;
+			sourceTree = "<group>";
+		};
+		760C2CB2101AC94700F5F662 /* complexity */ = {
+			isa = PBXGroup;
+			children = (
+				760C2CB3101AC94700F5F662 /* complexity.h */,
+				760C2CB4101AC94700F5F662 /* complexity_algorithm.cp */,
+				760C2CB5101AC94700F5F662 /* complexity_algorithm.h */,
+				760C2CB6101AC94700F5F662 /* complexity_brain.cp */,
+				760C2CB7101AC94700F5F662 /* complexity_brain.h */,
+				760C2CB8101AC94700F5F662 /* complexity_motion.cp */,
+				760C2CB9101AC94700F5F662 /* complexity_motion.h */,
+			);
+			path = complexity;
+			sourceTree = "<group>";
+		};
+		760C2CC3101AC96700F5F662 /* motion */ = {
+			isa = PBXGroup;
+			children = (
+				760C2CC4101AC96700F5F662 /* PositionPath.cp */,
+				760C2CC5101AC96700F5F662 /* PositionPath.h */,
+				760C2CC6101AC96700F5F662 /* PositionReader.cp */,
+				760C2CC7101AC96700F5F662 /* PositionReader.h */,
+				760C2CC8101AC96700F5F662 /* PositionRecord.h */,
+				760C2CC9101AC96700F5F662 /* PositionWriter.cp */,
+				760C2CCA101AC96700F5F662 /* PositionWriter.h */,
+			);
+			path = motion;
+			sourceTree = "<group>";
+		};
+		760C2D4B101B9A8200F5F662 /* objects */ = {
+			isa = PBXGroup;
+			children = (
+				760C2D4C101B9A8200F5F662 /* agent.obj */,
+				760C2D4D101B9A8200F5F662 /* ground.obj */,
+			);
+			path = objects;
+			sourceTree = "<group>";
+		};
+		760C31BC101BB8A200F5F662 /* Unused External Frameworks & Libraries */ = {
+			isa = PBXGroup;
+			children = (
+				76AA4616073AAEFF00508D3D /* AGL.framework */,
+				76ABA1350CA58F0000DA1161 /* AppKit.framework */,
+				4A9504C8FFE6A3BC11CA0CBA /* ApplicationServices.framework */,
+				20286C33FDCF999611CA2CEA /* Carbon.framework */,
+				4A9504CAFFE6A41611CA0CBA /* CoreServices.framework */,
+				76AB9F260CA58D2000DA1161 /* Foundation.framework */,
+				373751E2078D762B00B1DFA0 /* vecLib.framework */,
+				0249A66BFF388E3F11CA2CEA /* libstdc++.a */,
+			);
+			name = "Unused External Frameworks & Libraries";
+			sourceTree = "<group>";
+		};
+		760C31BF101BB99800F5F662 /* Worldfiles */ = {
+			isa = PBXGroup;
+			children = (
+				760C31C6101BB9E900F5F662 /* worldfile.big */,
+				760C31C7101BB9E900F5F662 /* worldfile.small */,
+				760C31C8101BB9E900F5F662 /* worldfile_alifex */,
+				760C31C9101BB9E900F5F662 /* worldfile_barriers */,
+				760C31CA101BB9E900F5F662 /* worldfile_complexity */,
+				760C31CB101BB9E900F5F662 /* worldfile_driven */,
+				760C31CC101BB9E900F5F662 /* worldfile_driven_domains */,
+				760C31CD101BB9E900F5F662 /* worldfile_driven_hard */,
+				760C31CE101BB9E900F5F662 /* worldfile_dynfood */,
+				760C31CF101BB9E900F5F662 /* worldfile_epoch */,
+				760C31D0101BB9E900F5F662 /* worldfile_fixed_driven */,
+				760C31D1101BB9E900F5F662 /* worldfile_fixed_passive */,
+				760C31D2101BB9E900F5F662 /* worldfile_heur_comp_fit */,
+				760C31D3101BB9E900F5F662 /* worldfile_IFD */,
+				760C31D4101BB9E900F5F662 /* worldfile_MaxSpeed_to_0.0 */,
+				760C31D5101BB9E900F5F662 /* worldfile_nominal */,
+				760C31D6101BB9E900F5F662 /* worldfile_passive */,
+				760C31D7101BB9E900F5F662 /* worldfile_passive_domains */,
+				760C31D8101BB9E900F5F662 /* worldfile_passive_hard */,
+				760C31D9101BB9E900F5F662 /* worldfile_toy */,
+			);
+			name = Worldfiles;
+			sourceTree = "<group>";
+		};
+		760C31DC101BBA2600F5F662 /* Documentation */ = {
+			isa = PBXGroup;
+			children = (
+				760C31DF101BBA4E00F5F662 /* 51.wf */,
+				769227D0101C382B000BB4F4 /* Behavior-OutputNeuronOrder.txt */,
+				760C31E0101BBA4E00F5F662 /* brain_anatomy.txt */,
+				760C31E1101BBA4E00F5F662 /* brain_function.txt */,
+				760C31E2101BBA4E00F5F662 /* FoodPatchNotes.pdf */,
+				769227D1101C382B000BB4F4 /* Logistic.xls */,
+				769227D2101C382B000BB4F4 /* MiscegenationProbabilityCurves.xls */,
+				769227D3101C382B000BB4F4 /* NOTES.txt */,
+				760C31E3101BBA4E00F5F662 /* pw_doc_old.txt */,
+			);
+			name = Documentation;
 			sourceTree = "<group>";
 		};
 		7668D2F508864AA3004158C6 /* PwMoviePlayer */ = {
@@ -398,17 +515,17 @@
 			path = app;
 			sourceTree = "<group>";
 		};
-		76CBA573062BEDBC001C79E7 /* critter */ = {
+		76CBA573062BEDBC001C79E7 /* agent */ = {
 			isa = PBXGroup;
 			children = (
 				76CBA574062BEDBC001C79E7 /* brain.cp */,
 				76CBA575062BEDBC001C79E7 /* brain.h */,
-				76CBA576062BEDBC001C79E7 /* critter.cp */,
-				76CBA577062BEDBC001C79E7 /* critter.h */,
+				76CBA576062BEDBC001C79E7 /* agent.cp */,
+				76CBA577062BEDBC001C79E7 /* agent.h */,
 				76CBA578062BEDBC001C79E7 /* genome.cp */,
 				76CBA579062BEDBC001C79E7 /* genome.h */,
 			);
-			path = critter;
+			path = agent;
 			sourceTree = "<group>";
 		};
 		76CBA57A062BEDBC001C79E7 /* environment */ = {
@@ -463,14 +580,14 @@
 		76CBA598062BEDBC001C79E7 /* ui */ = {
 			isa = PBXGroup;
 			children = (
+				84ED837A062E7EED00AEEA18 /* AgentPOVWindow.cp */,
+				84ED837B062E7EED00AEEA18 /* AgentPOVWindow.h */,
 				76CBA599062BEDBC001C79E7 /* BrainMonitorWindow.cp */,
 				76CBA59A062BEDBC001C79E7 /* BrainMonitorWindow.h */,
 				76CBA59B062BEDBC001C79E7 /* CameraController.cp */,
 				76CBA59C062BEDBC001C79E7 /* CameraController.h */,
 				76CBA59D062BEDBC001C79E7 /* ChartWindow.cp */,
 				76CBA59E062BEDBC001C79E7 /* ChartWindow.h */,
-				84ED837A062E7EED00AEEA18 /* CritterPOVWindow.cp */,
-				84ED837B062E7EED00AEEA18 /* CritterPOVWindow.h */,
 				76CBA59F062BEDBC001C79E7 /* Menu.cp */,
 				76CBA5A0062BEDBC001C79E7 /* Menu.h */,
 				76C2314E09D0B4AA00EB652A /* OverheadView.cp */,
@@ -486,7 +603,6 @@
 		76CBA5A3062BEDBC001C79E7 /* utils */ = {
 			isa = PBXGroup;
 			children = (
-				C58654FB09B94E1C000F30F8 /* complexity.h */,
 				7624C7EE0A4A204A006A2B7C /* distributions.cp */,
 				7624C7EF0A4A204A006A2B7C /* distributions.h */,
 				76CBA5A4062BEDBC001C79E7 /* error.cp */,
@@ -500,8 +616,8 @@
 				76CBA5AA062BEDBC001C79E7 /* objectlist.h */,
 				76D32E0D09E62F9200394ACE /* objectxsortedlist.cp */,
 				76D32E0E09E62F9200394ACE /* objectxsortedlist.h */,
-				7668D1680885AC65004158C6 /* PwMovieTools.cp */,
-				7668D16A0885AD07004158C6 /* PwMovieTools.h */,
+				7668D1680885AC65004158C6 /* PwMovieUtils.cp */,
+				7668D16A0885AD07004158C6 /* PwMovieUtils.h */,
 			);
 			path = utils;
 			sourceTree = "<group>";
@@ -509,26 +625,28 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		7625066509B8CCE600C36C36 /* probe_activity */ = {
+		760C2C93101AC7DD00F5F662 /* CalcComplexity */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 7625066D09B8CD0500C36C36 /* Build configuration list for PBXNativeTarget "probe_activity" */;
+			buildConfigurationList = 760C2C9B101AC7FB00F5F662 /* Build configuration list for PBXNativeTarget "CalcComplexity" */;
 			buildPhases = (
-				7625066309B8CCE600C36C36 /* Sources */,
-				7625066409B8CCE600C36C36 /* Frameworks */,
+				760C2C91101AC7DD00F5F662 /* Sources */,
+				760C2C92101AC7DD00F5F662 /* Frameworks */,
+				76825D37101C49B400830EC9 /* ShellScript */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
-			name = probe_activity;
-			productName = probe_activity;
-			productReference = 7625066609B8CCE600C36C36 /* probe_activity */;
-			productType = "com.apple.product-type.tool";
+			name = CalcComplexity;
+			productName = CalcComplexity;
+			productReference = 760C2C94101AC7DD00F5F662 /* CalcComplexity */;
+			productType = "com.apple.product-type.objfile";
 		};
 		7668D2E208864A66004158C6 /* PwMoviePlayer */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 76293F180981AF4600D27C6E /* Build configuration list for PBXNativeTarget "PwMoviePlayer" */;
 			buildPhases = (
+				760C35B5101BD32F00F5F662 /* ShellScript */,
 				7668D2DF08864A66004158C6 /* Resources */,
 				7668D2E008864A66004158C6 /* Sources */,
 				7668D2E108864A66004158C6 /* Frameworks */,
@@ -537,7 +655,6 @@
 			buildRules = (
 			);
 			dependencies = (
-				76D02B02089490DB00D89155 /* PBXTargetDependency */,
 			);
 			name = PwMoviePlayer;
 			productName = PwMoviePlayer;
@@ -548,17 +665,16 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 76293F0E0981AF4600D27C6E /* Build configuration list for PBXNativeTarget "Polyworld" */;
 			buildPhases = (
+				760C32FF101BC3E500F5F662 /* ShellScript */,
 				8D0C4E8C0486CD37000505A6 /* Resources */,
 				8D0C4E8F0486CD37000505A6 /* Sources */,
 				8D0C4E910486CD37000505A6 /* Frameworks */,
 				8D0C4E940486CD37000505A6 /* Rez */,
-				37577841078C8E8100CA4042 /* CopyFiles */,
 				76D99F740C38FE3600CC8F85 /* ShellScript */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				76B2FB70084CE761002FBDA1 /* PBXTargetDependency */,
 			);
 			name = Polyworld;
 			productInstallPath = "$(HOME)/Applications";
@@ -571,6 +687,9 @@
 /* Begin PBXProject section */
 		20286C28FDCF999611CA2CEA /* Project object */ = {
 			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = NO;
+			};
 			buildConfigurationList = 76293F1D0981AF4600D27C6E /* Build configuration list for PBXProject "Polyworld" */;
 			compatibilityVersion = "Xcode 2.4";
 			hasScannedForEncodings = 1;
@@ -578,11 +697,10 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
+				760C3548101BD01500F5F662 /* All */,
 				8D0C4E890486CD37000505A6 /* Polyworld */,
-				76B2FB68084CE6E9002FBDA1 /* moc */,
 				7668D2E208864A66004158C6 /* PwMoviePlayer */,
-				76D02AFD0894900E00D89155 /* moc_PwMoviePlayer */,
-				7625066509B8CCE600C36C36 /* probe_activity */,
+				760C2C93101AC7DD00F5F662 /* CalcComplexity */,
 			);
 		};
 /* End PBXProject section */
@@ -592,8 +710,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7655B4E70C35DF040065C0A1 /* Info.plist in Resources */,
-				7655B5160C35DF710065C0A1 /* InfoPlist.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -601,11 +717,10 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7655B2E80C35D35D0065C0A1 /* Info.plist in Resources */,
-				8D0C4E8D0486CD37000505A6 /* InfoPlist.strings in Resources */,
-				76CBA5E4062BEE2B001C79E7 /* critter.obj in Resources */,
-				76CBA5E5062BEE2B001C79E7 /* ground.obj in Resources */,
 				76D99C520C38F1E200CC8F85 /* worldfile in Resources */,
+				760C2D4E101B9A8200F5F662 /* agent.obj in Resources */,
+				760C2D4F101B9A8200F5F662 /* ground.obj in Resources */,
+				760C3114101BB15900F5F662 /* InfoPlist.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -622,24 +737,33 @@
 /* End PBXRezBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		76B2FB67084CE6E9002FBDA1 /* ShellScript */ = {
+		760C32FF101BC3E500F5F662 /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			inputPaths = (
-				"$(SRCROOT)/app/PWApp.h",
-				"$(SRCROOT)/app/Simulation.h",
 			);
 			outputPaths = (
-				"$(SRCROOT)/app/mov_PWApp.cpp",
-				"$(SRCROOT)/app/moc_Simulation.cpp",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "if [ app/Simulation.h -nt app/moc_Simulation.cpp ]; then $QT/bin/moc app/Simulation.h -o app/moc_Simulation.cpp; fi\nif [ app/PWApp.h      -nt app/moc_PWApp.cpp      ]; then $QT/bin/moc app/PWApp.h      -o app/moc_PWApp.cpp     ; fi\nexit 0";
+			shellPath = /bin/bash;
+			shellScript = "# Make sure there's a worldfile available\nif ! [ -r \"worldfile\" ]\nthen\n\tcp worldfiles/worldfile_nominal ./worldfile\nfi\n\n# Keep the moc files in sync\nif [ app/Simulation.h -nt app/moc_Simulation.cpp ]; then $QT/bin/moc app/Simulation.h -o app/moc_Simulation.cpp; fi\nif [ app/PWApp.h      -nt app/moc_PWApp.cpp      ]; then $QT/bin/moc app/PWApp.h      -o app/moc_PWApp.cpp     ; fi\n";
 		};
-		76D02AFE0894900E00D89155 /* ShellScript */ = {
+		760C35B5101BD32F00F5F662 /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "# Keep moc files in sync\n\nPwMoviePlayerDir=\"tools/PwMoviePlayer\"\n \nif [ $PwMoviePlayerDir/PwMoviePlayer.h -nt $PwMoviePlayerDir/moc_PwMoviePlayer.cpp ]; then $QT/bin/moc $PwMoviePlayerDir/PwMoviePlayer.h -o $PwMoviePlayerDir/moc_PwMoviePlayer.cpp; fi\nif [ $PwMoviePlayerDir/MainWindow.h    -nt $PwMoviePlayerDir/moc_MainWindow.cpp    ]; then $QT/bin/moc $PwMoviePlayerDir/MainWindow.h    -o $PwMoviePlayerDir/moc_MainWindow.cpp   ; fi\nif [ $PwMoviePlayerDir/GLWidget.h      -nt $PwMoviePlayerDir/moc_GLWidget.cpp      ]; then $QT/bin/moc $PwMoviePlayerDir/GLWidget.h      -o $PwMoviePlayerDir/moc_GLWidget.cpp     ; fi\n";
+		};
+		76825D37101C49B400830EC9 /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -650,7 +774,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "if [ PwMoviePlayer/PwMoviePlayer.h -nt PwMoviePlayer/moc_PwMoviePlayer.cpp ]; then $QT/bin/moc PwMoviePlayer/PwMoviePlayer.h -o PwMoviePlayer/moc_PwMoviePlayer.cpp; fi\nif [ PwMoviePlayer/MainWindow.h    -nt PwMoviePlayer/moc_MainWindow.cpp    ]; then $QT/bin/moc PwMoviePlayer/MainWindow.h    -o PwMoviePlayer/moc_MainWindow.cpp   ; fi\nif [ PwMoviePlayer/GLWidget.h      -nt PwMoviePlayer/moc_GLWidget.cpp      ]; then $QT/bin/moc PwMoviePlayer/GLWidget.h      -o PwMoviePlayer/moc_GLWidget.cpp     ; fi\nexit 0";
+			shellScript = "ln -sf ${BUILD_DIR}/${CONFIGURATION}${EFFECTIVE_PLATFORM_NAME}/CalcComplexity bin/";
 		};
 		76D99F740C38FE3600CC8F85 /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -663,7 +787,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\nLIBRARIES=\"QtCore QtGui QtOpenGL\"\n\nif [ $CONFIGURATION == \"Release\" ] ; then\n\tif [ ! -e $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks ] ; then\n\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks\n\tfi\n\tfor f in $LIBRARIES ; do\n\t\tif [ ! -e $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework ] ; then\n\t\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework\n\t\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions\n\t\t\tcd $QtLib/$f.framework/Versions\n\t\t\tfor v in `\\ls -d [0-9]*` ; do\n\t\t\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v\n\t\t\t\tcp $QtLib/$f.framework/Versions/$v/$f* $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v/\n\t\t\t\tln -sf $v/ $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/Current\n\t\t\t\tif [ \"$f\" == \"QtCore\" ] ; then\n\t\t\t\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v/Headers\n\t\t\t\t\tcp -R $QtLib/$f.framework/Versions/$v/Headers/arch $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v/Headers/\n\t\t\t\tfi\n\t\t\t\tinstall_name_tool -id @executable_path/../Frameworks/$f.framework/Versions/$v/$f $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v/$f\n\t\t\t\tinstall_name_tool -change /usr/local/Trolltech/Qt-4.1.0/lib/$f.framework/Versions/$v/$f @executable_path/../Frameworks/$f.framework/Versions/$v/$f $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/MacOS/$TARGET_NAME\n\t\t\tdone\n\t\t\tcp -R $QtLib/$f.framework/$f* $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/\n\t\t\tcp -R $QtLib/$f.framework/Contents $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/\n\t\t\tcd $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/\n\t\t\tif [ \"$f\" == \"QtCore\" ] ; then\n\t\t\t\tln -sf Versions/Current/Headers/ $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Headers\n\t\t\t\tln -sf Versions/Current/Headers/arch/ $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/arch\n\t\t\telse\n\t\t\t\tfor g in $LIBRARIES ; do\n\t\t\t\t\tif [ \"$g\" != \"$f\" ] ; then\n\t\t\t\t\t\tcd $QtLib/$g.framework/Versions\n\t\t\t\t\t\tfor v in `\\ls -d [0-9]*` ; do\n\t\t\t\t\t\t\tinstall_name_tool -change /usr/local/Trolltech/Qt-4.1.0/lib/$g.framework/Versions/$v/$g @executable_path/../Frameworks/$g.framework/Versions/$v/$g $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/Current/$f\n\t\t\t\t\t\tdone\n\t\t\t\t\tfi\n\t\t\t\tdone\n\t\t\tfi\n\t\tfi\n\tdone\n\tcp /usr/local/lib/libgsl.0.dylib $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/\n\tinstall_name_tool -id @executable_path/../Frameworks/libgsl.0.dylib $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/libgsl.0.dylib\n\tinstall_name_tool -change /usr/local/lib/libgsl.0.dylib @executable_path/../Frameworks/libgsl.0.dylib $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/MacOS/$TARGET_NAME\n\tcp /usr/local/lib/libgslcblas.0.dylib $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/\n\tinstall_name_tool -id @executable_path/../Frameworks/libgslcblas.0.dylib $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/libgslcblas.0.dylib\n\tinstall_name_tool -change /usr/local/lib/libgslcblas.0.dylib @executable_path/../Frameworks/libgslcblas.0.dylib $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/MacOS/$TARGET_NAME\nfi\n";
+			shellScript = "if [ -r \"worldfile\" ] ; then\n\tcp worldfile ${BUILD_DIR}/${CONFIGURATION}${EFFECTIVE_PLATFORM_NAME}/\nfi\n\nln -sf ${BUILD_DIR}/${CONFIGURATION}${EFFECTIVE_PLATFORM_NAME}/Polyworld.app bin/\n\nLIBRARIES=\"QtCore QtGui QtOpenGL\"\n\nif [ $CONFIGURATION == \"Release\" ] ; then\n\tif [ ! -e $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks ] ; then\n\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks\n\tfi\n\tfor f in $LIBRARIES ; do\n\t\tif [ ! -e $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework ] ; then\n\t\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework\n\t\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions\n\t\t\tcd $QtLib/$f.framework/Versions\n\t\t\tfor v in `\\ls -d [0-9]*` ; do\n\t\t\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v\n\t\t\t\tcp $QtLib/$f.framework/Versions/$v/$f* $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v/\n\t\t\t\tln -sf $v/ $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/Current\n\t\t\t\tif [ \"$f\" == \"QtCore\" ] ; then\n\t\t\t\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v/Headers\n\t\t\t\t\tcp -R $QtLib/$f.framework/Versions/$v/Headers/arch $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v/Headers/\n\t\t\t\tfi\n\t\t\t\tinstall_name_tool -id @executable_path/../Frameworks/$f.framework/Versions/$v/$f $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v/$f\n\t\t\t\tinstall_name_tool -change /usr/local/Trolltech/Qt-4.1.0/lib/$f.framework/Versions/$v/$f @executable_path/../Frameworks/$f.framework/Versions/$v/$f $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/MacOS/$TARGET_NAME\n\t\t\tdone\n\t\t\tcp -R $QtLib/$f.framework/$f* $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/\n\t\t\tcp -R $QtLib/$f.framework/Contents $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/\n\t\t\tcd $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/\n\t\t\tif [ \"$f\" == \"QtCore\" ] ; then\n\t\t\t\tln -sf Versions/Current/Headers/ $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Headers\n\t\t\t\tln -sf Versions/Current/Headers/arch/ $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/arch\n\t\t\telse\n\t\t\t\tfor g in $LIBRARIES ; do\n\t\t\t\t\tif [ \"$g\" != \"$f\" ] ; then\n\t\t\t\t\t\tcd $QtLib/$g.framework/Versions\n\t\t\t\t\t\tfor v in `\\ls -d [0-9]*` ; do\n\t\t\t\t\t\t\tinstall_name_tool -change /usr/local/Trolltech/Qt-4.1.0/lib/$g.framework/Versions/$v/$g @executable_path/../Frameworks/$g.framework/Versions/$v/$g $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/Current/$f\n\t\t\t\t\t\tdone\n\t\t\t\t\tfi\n\t\t\t\tdone\n\t\t\tfi\n\t\tfi\n\tdone\n\tcp /usr/local/lib/libgsl.0.dylib $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/\n\tinstall_name_tool -id @executable_path/../Frameworks/libgsl.0.dylib $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/libgsl.0.dylib\n\tinstall_name_tool -change /usr/local/lib/libgsl.0.dylib @executable_path/../Frameworks/libgsl.0.dylib $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/MacOS/$TARGET_NAME\n\tcp /usr/local/lib/libgslcblas.0.dylib $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/\n\tinstall_name_tool -id @executable_path/../Frameworks/libgslcblas.0.dylib $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/libgslcblas.0.dylib\n\tinstall_name_tool -change /usr/local/lib/libgslcblas.0.dylib @executable_path/../Frameworks/libgslcblas.0.dylib $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/MacOS/$TARGET_NAME\nfi\n";
 		};
 		76D9A5B60C3A3DAF00CC8F85 /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -676,15 +800,24 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\nLIBRARIES=\"QtCore QtGui QtOpenGL\"\n\nif [ $CONFIGURATION == \"Release\" ] ; then\n\tif [ ! -e $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks ] ; then\n\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks\n\tfi\n\tfor f in $LIBRARIES ; do\n\t\tif [ ! -e $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework ] ; then\n\t\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework\n\t\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions\n\t\t\tcd $QtLib/$f.framework/Versions\n\t\t\tfor v in `\\ls -d [0-9]*` ; do\n\t\t\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v\n\t\t\t\tcp $QtLib/$f.framework/Versions/$v/$f* $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v/\n\t\t\t\tln -sf $v/ $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/Current\n\t\t\t\tif [ \"$f\" == \"QtCore\" ] ; then\n\t\t\t\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v/Headers\n\t\t\t\t\tcp -R $QtLib/$f.framework/Versions/$v/Headers/arch $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v/Headers/\n\t\t\t\tfi\n\t\t\t\tinstall_name_tool -id @executable_path/../Frameworks/$f.framework/Versions/$v/$f $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v/$f\n\t\t\t\tinstall_name_tool -change /usr/local/Trolltech/Qt-4.1.0/lib/$f.framework/Versions/$v/$f @executable_path/../Frameworks/$f.framework/Versions/$v/$f $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/MacOS/$TARGET_NAME\n\t\t\tdone\n\t\t\tcp -R $QtLib/$f.framework/$f* $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/\n\t\t\tcp -R $QtLib/$f.framework/Contents $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/\n\t\t\tcd $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/\n\t\t\tif [ \"$f\" == \"QtCore\" ] ; then\n\t\t\t\tln -sf Versions/Current/Headers/ $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Headers\n\t\t\t\tln -sf Versions/Current/Headers/arch/ $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/arch\n\t\t\telse\n\t\t\t\tfor g in $LIBRARIES ; do\n\t\t\t\t\tif [ \"$g\" != \"$f\" ] ; then\n\t\t\t\t\t\tcd $QtLib/$g.framework/Versions\n\t\t\t\t\t\tfor v in `\\ls -d [0-9]*` ; do\n\t\t\t\t\t\t\tinstall_name_tool -change /usr/local/Trolltech/Qt-4.1.0/lib/$g.framework/Versions/$v/$g @executable_path/../Frameworks/$g.framework/Versions/$v/$g $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/Current/$f\n\t\t\t\t\t\tdone\n\t\t\t\t\tfi\n\t\t\t\tdone\n\t\t\tfi\n\t\tfi\n\tdone\nfi\n";
+			shellScript = "ln -sf ${BUILD_DIR}/${CONFIGURATION}${EFFECTIVE_PLATFORM_NAME}/PwMoviePlayer.app bin/\n\nLIBRARIES=\"QtCore QtGui QtOpenGL\"\n\nif [ $CONFIGURATION == \"Release\" ] ; then\n\tif [ ! -e $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks ] ; then\n\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks\n\tfi\n\tfor f in $LIBRARIES ; do\n\t\tif [ ! -e $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework ] ; then\n\t\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework\n\t\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions\n\t\t\tcd $QtLib/$f.framework/Versions\n\t\t\tfor v in `\\ls -d [0-9]*` ; do\n\t\t\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v\n\t\t\t\tcp $QtLib/$f.framework/Versions/$v/$f* $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v/\n\t\t\t\tln -sf $v/ $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/Current\n\t\t\t\tif [ \"$f\" == \"QtCore\" ] ; then\n\t\t\t\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v/Headers\n\t\t\t\t\tcp -R $QtLib/$f.framework/Versions/$v/Headers/arch $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v/Headers/\n\t\t\t\tfi\n\t\t\t\tinstall_name_tool -id @executable_path/../Frameworks/$f.framework/Versions/$v/$f $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v/$f\n\t\t\t\tinstall_name_tool -change /usr/local/Trolltech/Qt-4.1.0/lib/$f.framework/Versions/$v/$f @executable_path/../Frameworks/$f.framework/Versions/$v/$f $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/MacOS/$TARGET_NAME\n\t\t\tdone\n\t\t\tcp -R $QtLib/$f.framework/$f* $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/\n\t\t\tcp -R $QtLib/$f.framework/Contents $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/\n\t\t\tcd $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/\n\t\t\tif [ \"$f\" == \"QtCore\" ] ; then\n\t\t\t\tln -sf Versions/Current/Headers/ $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Headers\n\t\t\t\tln -sf Versions/Current/Headers/arch/ $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/arch\n\t\t\telse\n\t\t\t\tfor g in $LIBRARIES ; do\n\t\t\t\t\tif [ \"$g\" != \"$f\" ] ; then\n\t\t\t\t\t\tcd $QtLib/$g.framework/Versions\n\t\t\t\t\t\tfor v in `\\ls -d [0-9]*` ; do\n\t\t\t\t\t\t\tinstall_name_tool -change /usr/local/Trolltech/Qt-4.1.0/lib/$g.framework/Versions/$v/$g @executable_path/../Frameworks/$g.framework/Versions/$v/$g $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/Current/$f\n\t\t\t\t\t\tdone\n\t\t\t\t\tfi\n\t\t\t\tdone\n\t\t\tfi\n\t\tfi\n\tdone\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		7625066309B8CCE600C36C36 /* Sources */ = {
+		760C2C91101AC7DD00F5F662 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				760C2CA6101AC87700F5F662 /* brainfunction.cpp in Sources */,
+				760C2CA7101AC87700F5F662 /* main.cpp in Sources */,
+				760C2CA9101AC87700F5F662 /* motion.cpp in Sources */,
+				760C2CBA101AC94700F5F662 /* complexity_algorithm.cp in Sources */,
+				760C2CBB101AC94700F5F662 /* complexity_brain.cp in Sources */,
+				760C2CBC101AC94700F5F662 /* complexity_motion.cp in Sources */,
+				760C2CCB101AC96700F5F662 /* PositionPath.cp in Sources */,
+				760C2CCC101AC96700F5F662 /* PositionReader.cp in Sources */,
+				760C2CCD101AC96700F5F662 /* PositionWriter.cp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -692,7 +825,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7668D2F208864A7E004158C6 /* PwMovieTools.cp in Sources */,
+				7668D2F208864A7E004158C6 /* PwMovieUtils.cp in Sources */,
 				7668D30008864B8A004158C6 /* PwMoviePlayer.cp in Sources */,
 				7668D30E088650F0004158C6 /* MainWindow.cp in Sources */,
 				76D02B050894910800D89155 /* moc_MainWindow.cpp in Sources */,
@@ -711,7 +844,7 @@
 				76CBA56D062BED8E001C79E7 /* PWApp.cp in Sources */,
 				76CBA571062BED8E001C79E7 /* Simulation.cp in Sources */,
 				76CBA5AD062BEDBC001C79E7 /* brain.cp in Sources */,
-				76CBA5AF062BEDBC001C79E7 /* critter.cp in Sources */,
+				76CBA5AF062BEDBC001C79E7 /* agent.cp in Sources */,
 				76CBA5B1062BEDBC001C79E7 /* genome.cp in Sources */,
 				76CBA5B3062BEDBC001C79E7 /* barrier.cp in Sources */,
 				76CBA5B5062BEDBC001C79E7 /* food.cp in Sources */,
@@ -732,11 +865,11 @@
 				76CBA5D9062BEDBC001C79E7 /* error.cp in Sources */,
 				76CBA5DB062BEDBC001C79E7 /* indexlist.cp in Sources */,
 				76CBA5DD062BEDBC001C79E7 /* misc.cp in Sources */,
-				84ED837C062E7EED00AEEA18 /* CritterPOVWindow.cp in Sources */,
+				84ED837C062E7EED00AEEA18 /* AgentPOVWindow.cp in Sources */,
 				76AA4628073AAF7E00508D3D /* TextStatusWindow.cp in Sources */,
 				37577669078C8C6200CA4042 /* moc_PWApp.cpp in Sources */,
 				3757766A078C8C6200CA4042 /* moc_Simulation.cpp in Sources */,
-				7668D1690885AC65004158C6 /* PwMovieTools.cp in Sources */,
+				7668D1690885AC65004158C6 /* PwMovieUtils.cp in Sources */,
 				76C2315009D0B4AA00EB652A /* OverheadView.cp in Sources */,
 				76D32E0F09E62F9200394ACE /* objectxsortedlist.cp in Sources */,
 				7624C7CE0A4A0CD5006A2B7C /* BrickPatch.cp in Sources */,
@@ -744,37 +877,40 @@
 				7624C7D20A4A0CD5006A2B7C /* Patch.cp in Sources */,
 				7624C7F10A4A204A006A2B7C /* distributions.cp in Sources */,
 				767A61770A4A21AC00A88B62 /* brick.cp in Sources */,
+				760C2CBD101AC94700F5F662 /* complexity_algorithm.cp in Sources */,
+				760C2CBE101AC94700F5F662 /* complexity_brain.cp in Sources */,
+				760C2CBF101AC94700F5F662 /* complexity_motion.cp in Sources */,
+				760C2CCE101AC96700F5F662 /* PositionPath.cp in Sources */,
+				760C2CCF101AC96700F5F662 /* PositionReader.cp in Sources */,
+				760C2CD0101AC96700F5F662 /* PositionWriter.cp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		76B2FB70084CE761002FBDA1 /* PBXTargetDependency */ = {
+		760C3553101BD05C00F5F662 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 76B2FB68084CE6E9002FBDA1 /* moc */;
-			targetProxy = 76B2FB6F084CE761002FBDA1 /* PBXContainerItemProxy */;
+			target = 8D0C4E890486CD37000505A6 /* Polyworld */;
+			targetProxy = 760C3552101BD05C00F5F662 /* PBXContainerItemProxy */;
 		};
-		76D02B02089490DB00D89155 /* PBXTargetDependency */ = {
+		760C3555101BD05C00F5F662 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 76D02AFD0894900E00D89155 /* moc_PwMoviePlayer */;
-			targetProxy = 76D02B01089490DB00D89155 /* PBXContainerItemProxy */;
+			target = 7668D2E208864A66004158C6 /* PwMoviePlayer */;
+			targetProxy = 760C3554101BD05C00F5F662 /* PBXContainerItemProxy */;
+		};
+		760C3557101BD05C00F5F662 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 760C2C93101AC7DD00F5F662 /* CalcComplexity */;
+			targetProxy = 760C3556101BD05C00F5F662 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
-		0867D6AAFE840B52C02AAC07 /* InfoPlist.strings */ = {
+		760C3112101BB15900F5F662 /* InfoPlist.strings */ = {
 			isa = PBXVariantGroup;
 			children = (
-				0867D6ABFE840B52C02AAC07 /* English */,
-			);
-			name = InfoPlist.strings;
-			sourceTree = "<group>";
-		};
-		7655B5140C35DF710065C0A1 /* InfoPlist.strings */ = {
-			isa = PBXVariantGroup;
-			children = (
-				7655B5150C35DF710065C0A1 /* English */,
+				760C3113101BB15900F5F662 /* English */,
 			);
 			name = InfoPlist.strings;
 			sourceTree = "<group>";
@@ -782,35 +918,167 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
-		760EF64209EF188F00C0FAA5 /* Release */ = {
+		760C2C95101AC7DD00F5F662 /* Development */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				COPY_PHASE_STRIP = YES;
-				GCC_ENABLE_FIX_AND_CONTINUE = NO;
-				GCC_MODEL_TUNING = G5;
-				GCC_OPTIMIZATION_LEVEL = 3;
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				COPY_PHASE_STRIP = NO;
+				EXECUTABLE_EXTENSION = "";
+				EXECUTABLE_SUFFIX = "";
+				FRAMEWORK_SEARCH_PATHS = (
+					$QT/lib,
+					/sw/lib,
+				);
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				HEADER_SEARCH_PATHS = (
+					$QT/include,
+					$QT/include/Qt,
+					$QT/include/QtGui,
+					/sw/include,
+					/System/Library/Frameworks/OpenGL.framework/Headers,
+					/System/Library/Frameworks/AGL.framework,
+				);
+				INSTALL_PATH = bin;
+				LIBRARY_SEARCH_PATHS = (
+					$QT/lib,
+					/sw/lib,
+				);
 				OTHER_CFLAGS = "";
-				OTHER_CPLUSPLUSFLAGS = "-DQT_NO_DEBUG";
 				OTHER_LDFLAGS = (
-					"-framework",
-					QtGui,
 					"-framework",
 					QtCore,
 					"-framework",
+					QtGui,
+					"-framework",
 					QtOpenGL,
 					"-lz",
+					"-lgsl",
+					"-lgslcblas",
+					"-lm",
 				);
-				OTHER_REZFLAGS = "";
-				PRODUCT_NAME = moc;
-				SECTORDER_FLAGS = "";
-				WARNING_CFLAGS = (
-					"-Wmost",
-					"-Wno-four-char-constants",
-					"-Wno-unknown-pragmas",
-				);
+				PREBINDING = NO;
+				PRODUCT_NAME = CalcComplexity;
+			};
+			name = Development;
+		};
+		760C2C96101AC7DD00F5F662 /* Development-static */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				EXECUTABLE_EXTENSION = "";
+				EXECUTABLE_SUFFIX = "";
+				INSTALL_PATH = /usr/local/lib;
+				OTHER_CFLAGS = "";
+				PREBINDING = NO;
+				PRODUCT_NAME = CalcComplexity;
+			};
+			name = "Development-static";
+		};
+		760C2C97101AC7DD00F5F662 /* Optimized */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				EXECUTABLE_EXTENSION = "";
+				EXECUTABLE_SUFFIX = "";
+				INSTALL_PATH = /usr/local/lib;
+				OTHER_CFLAGS = "";
+				PREBINDING = NO;
+				PRODUCT_NAME = CalcComplexity;
+			};
+			name = Optimized;
+		};
+		760C2C98101AC7DD00F5F662 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				EXECUTABLE_EXTENSION = "";
+				EXECUTABLE_SUFFIX = "";
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				INSTALL_PATH = /usr/local/lib;
+				OTHER_CFLAGS = "";
+				PREBINDING = NO;
+				PRODUCT_NAME = CalcComplexity;
 				ZERO_LINK = NO;
 			};
 			name = Release;
+		};
+		760C2C99101AC7DD00F5F662 /* Profiling */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				EXECUTABLE_EXTENSION = "";
+				EXECUTABLE_SUFFIX = "";
+				INSTALL_PATH = /usr/local/lib;
+				OTHER_CFLAGS = "";
+				PREBINDING = NO;
+				PRODUCT_NAME = CalcComplexity;
+			};
+			name = Profiling;
+		};
+		760C2C9A101AC7DD00F5F662 /* Default */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				EXECUTABLE_EXTENSION = "";
+				EXECUTABLE_SUFFIX = "";
+				INSTALL_PATH = /usr/local/lib;
+				OTHER_CFLAGS = "";
+				PREBINDING = NO;
+				PRODUCT_NAME = CalcComplexity;
+			};
+			name = Default;
+		};
+		760C3549101BD01500F5F662 /* Development */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				PRODUCT_NAME = All;
+			};
+			name = Development;
+		};
+		760C354A101BD01500F5F662 /* Development-static */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = All;
+			};
+			name = "Development-static";
+		};
+		760C354B101BD01500F5F662 /* Optimized */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = All;
+			};
+			name = Optimized;
+		};
+		760C354C101BD01500F5F662 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				PRODUCT_NAME = All;
+				ZERO_LINK = NO;
+			};
+			name = Release;
+		};
+		760C354D101BD01500F5F662 /* Profiling */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = All;
+			};
+			name = Profiling;
+		};
+		760C354E101BD01500F5F662 /* Default */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = All;
+			};
+			name = Default;
 		};
 		760EF64309EF188F00C0FAA5 /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -861,7 +1129,7 @@
 					/sw/lib,
 				);
 				LIBRARY_STYLE = Static;
-				OBJROOT = "$(PROJECT_DIR)/../polyworld_related/build";
+				OBJROOT = "$(SYMROOT)";
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
 					"-DQT_TABLET_SUPPORT",
@@ -887,43 +1155,13 @@
 				PREBINDING = NO;
 				PRODUCT_NAME = Polyworld;
 				SECTORDER_FLAGS = "";
-				SYMROOT = "$(PROJECT_DIR)/../polyworld_related/build";
+				SYMROOT = "$(SYMROOT)";
 				WARNING_CFLAGS = (
 					"-Wmost",
 					"-Wno-four-char-constants",
 					"-Wno-unknown-pragmas",
 				);
 				WRAPPER_EXTENSION = app;
-				ZERO_LINK = NO;
-			};
-			name = Release;
-		};
-		760EF64409EF188F00C0FAA5 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				COPY_PHASE_STRIP = YES;
-				GCC_ENABLE_FIX_AND_CONTINUE = NO;
-				GCC_MODEL_TUNING = G5;
-				GCC_OPTIMIZATION_LEVEL = 3;
-				OTHER_CFLAGS = "";
-				OTHER_CPLUSPLUSFLAGS = "-DQT_NO_DEBUG";
-				OTHER_LDFLAGS = (
-					"-framework",
-					QtGui,
-					"-framework",
-					QtCore,
-					"-framework",
-					QtOpenGL,
-					"-lz",
-				);
-				OTHER_REZFLAGS = "";
-				PRODUCT_NAME = moc;
-				SECTORDER_FLAGS = "";
-				WARNING_CFLAGS = (
-					"-Wmost",
-					"-Wno-four-char-constants",
-					"-Wno-unknown-pragmas",
-				);
 				ZERO_LINK = NO;
 			};
 			name = Release;
@@ -948,10 +1186,10 @@
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
 				);
-				INFOPLIST_FILE = "";
+				INFOPLIST_FILE = tools/PwMoviePlayer/Info.plist;
 				INSTALL_PATH = "$(USER_APPS_DIR)";
 				LIBRARY_SEARCH_PATHS = $QT/lib;
-				OBJROOT = "$(PROJECT_DIR)/../polyworld_related/build";
+				OBJROOT = "$(SRCROOT)";
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
 					"-DQT_TABLET_SUPPORT",
@@ -972,32 +1210,12 @@
 				PREBINDING = YES;
 				PRODUCT_NAME = PwMoviePlayer;
 				SECTORDER_FLAGS = "";
-				SYMROOT = "$(PROJECT_DIR)/../polyworld_related/build";
+				SYMROOT = "$(SRCROOT)";
 				WARNING_CFLAGS = (
 					"-Wmost",
 					"-Wno-four-char-constants",
 					"-Wno-unknown-pragmas",
 				);
-				ZERO_LINK = NO;
-			};
-			name = Release;
-		};
-		760EF64609EF188F00C0FAA5 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				COPY_PHASE_STRIP = YES;
-				GCC_ENABLE_FIX_AND_CONTINUE = NO;
-				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
-				GCC_MODEL_TUNING = G5;
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "$(SYSTEM_LIBRARY_DIR)/Frameworks/Carbon.framework/Headers/Carbon.h";
-				INSTALL_PATH = "$(HOME)/bin";
-				OTHER_LDFLAGS = (
-					"-framework",
-					Carbon,
-				);
-				PREBINDING = NO;
-				PRODUCT_NAME = probe_activity;
 				ZERO_LINK = NO;
 			};
 			name = Release;
@@ -1011,180 +1229,6 @@
 				);
 			};
 			name = Release;
-		};
-		7625066E09B8CD0500C36C36 /* Development */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				COPY_PHASE_STRIP = NO;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_ENABLE_FIX_AND_CONTINUE = YES;
-				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
-				GCC_MODEL_TUNING = G5;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "$(SYSTEM_LIBRARY_DIR)/Frameworks/Carbon.framework/Headers/Carbon.h";
-				INSTALL_PATH = "$(HOME)/bin";
-				OTHER_LDFLAGS = (
-					"-framework",
-					Carbon,
-				);
-				PREBINDING = NO;
-				PRODUCT_NAME = probe_activity;
-				ZERO_LINK = YES;
-			};
-			name = Development;
-		};
-		7625066F09B8CD0500C36C36 /* Optimized */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				COPY_PHASE_STRIP = YES;
-				GCC_ENABLE_FIX_AND_CONTINUE = NO;
-				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
-				GCC_MODEL_TUNING = G5;
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "$(SYSTEM_LIBRARY_DIR)/Frameworks/Carbon.framework/Headers/Carbon.h";
-				INSTALL_PATH = "$(HOME)/bin";
-				OTHER_LDFLAGS = (
-					"-framework",
-					Carbon,
-				);
-				PREBINDING = NO;
-				PRODUCT_NAME = probe_activity;
-				ZERO_LINK = NO;
-			};
-			name = Optimized;
-		};
-		7625067009B8CD0500C36C36 /* Profiling */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				GCC_ENABLE_FIX_AND_CONTINUE = YES;
-				GCC_MODEL_TUNING = G5;
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "$(SYSTEM_LIBRARY_DIR)/Frameworks/Carbon.framework/Headers/Carbon.h";
-				INSTALL_PATH = "$(HOME)/bin";
-				OTHER_LDFLAGS = (
-					"-framework",
-					Carbon,
-				);
-				PREBINDING = NO;
-				PRODUCT_NAME = probe_activity;
-				ZERO_LINK = YES;
-			};
-			name = Profiling;
-		};
-		7625067109B8CD0500C36C36 /* Default */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				GCC_ENABLE_FIX_AND_CONTINUE = YES;
-				GCC_MODEL_TUNING = G5;
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "$(SYSTEM_LIBRARY_DIR)/Frameworks/Carbon.framework/Headers/Carbon.h";
-				INSTALL_PATH = "$(HOME)/bin";
-				OTHER_LDFLAGS = (
-					"-framework",
-					Carbon,
-				);
-				PREBINDING = NO;
-				PRODUCT_NAME = probe_activity;
-				ZERO_LINK = YES;
-			};
-			name = Default;
-		};
-		76293F0A0981AF4600D27C6E /* Development */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				COPY_PHASE_STRIP = NO;
-				DEBUGGING_SYMBOLS = YES;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_ENABLE_FIX_AND_CONTINUE = NO;
-				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = (
-					"-lQtGui_debug",
-					"-lQtCore_debug",
-					"-lQtOpenGL_debug",
-					"-lz",
-				);
-				OTHER_REZFLAGS = "";
-				PRODUCT_NAME = moc;
-				SECTORDER_FLAGS = "";
-				WARNING_CFLAGS = (
-					"-Wmost",
-					"-Wno-four-char-constants",
-					"-Wno-unknown-pragmas",
-				);
-				ZERO_LINK = NO;
-			};
-			name = Development;
-		};
-		76293F0B0981AF4600D27C6E /* Optimized */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				COPY_PHASE_STRIP = YES;
-				GCC_ENABLE_FIX_AND_CONTINUE = NO;
-				GCC_MODEL_TUNING = G5;
-				GCC_OPTIMIZATION_LEVEL = 3;
-				OTHER_CFLAGS = "";
-				OTHER_CPLUSPLUSFLAGS = "-DQT_NO_DEBUG";
-				OTHER_LDFLAGS = (
-					"-framework",
-					QtGui,
-					"-framework",
-					QtCore,
-					"-framework",
-					QtOpenGL,
-					"-lz",
-				);
-				OTHER_REZFLAGS = "";
-				PRODUCT_NAME = moc;
-				SECTORDER_FLAGS = "";
-				WARNING_CFLAGS = (
-					"-Wmost",
-					"-Wno-four-char-constants",
-					"-Wno-unknown-pragmas",
-				);
-				ZERO_LINK = NO;
-			};
-			name = Optimized;
-		};
-		76293F0C0981AF4600D27C6E /* Profiling */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				COPY_PHASE_STRIP = NO;
-				DEAD_CODE_STRIPPING = YES;
-				GCC_ALTIVEC_EXTENSIONS = YES;
-				GCC_ENABLE_FIX_AND_CONTINUE = NO;
-				GENERATE_PROFILING_CODE = YES;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				OTHER_REZFLAGS = "";
-				PRODUCT_NAME = moc;
-				SECTORDER_FLAGS = "";
-				WARNING_CFLAGS = (
-					"-Wmost",
-					"-Wno-four-char-constants",
-					"-Wno-unknown-pragmas",
-				);
-				ZERO_LINK = NO;
-			};
-			name = Profiling;
-		};
-		76293F0D0981AF4600D27C6E /* Default */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				OTHER_REZFLAGS = "";
-				PRODUCT_NAME = moc;
-				SECTORDER_FLAGS = "";
-				WARNING_CFLAGS = (
-					"-Wmost",
-					"-Wno-four-char-constants",
-					"-Wno-unknown-pragmas",
-				);
-			};
-			name = Default;
 		};
 		76293F0F0981AF4600D27C6E /* Development */ = {
 			isa = XCBuildConfiguration;
@@ -1235,7 +1279,7 @@
 					/sw/lib,
 				);
 				LIBRARY_STYLE = Static;
-				OBJROOT = "$(PROJECT_DIR)/../polyworld_related/build";
+				OBJROOT = "$(SYMROOT)";
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
 					"-DQT_TABLET_SUPPORT",
@@ -1258,7 +1302,7 @@
 				PREBINDING = NO;
 				PRODUCT_NAME = Polyworld;
 				SECTORDER_FLAGS = "";
-				SYMROOT = "$(PROJECT_DIR)/../polyworld_related/build";
+				SYMROOT = "$(SYMROOT)";
 				WARNING_CFLAGS = (
 					"-Wmost",
 					"-Wno-four-char-constants",
@@ -1317,7 +1361,7 @@
 					/sw/lib,
 				);
 				LIBRARY_STYLE = Static;
-				OBJROOT = "$(PROJECT_DIR)/../polyworld_related/build";
+				OBJROOT = "$(SYMROOT)";
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
 					"-DQT_TABLET_SUPPORT",
@@ -1343,7 +1387,7 @@
 				PREBINDING = NO;
 				PRODUCT_NAME = Polyworld;
 				SECTORDER_FLAGS = "";
-				SYMROOT = "$(PROJECT_DIR)/../polyworld_related/build";
+				SYMROOT = "$(SYMROOT)";
 				WARNING_CFLAGS = (
 					"-Wmost",
 					"-Wno-four-char-constants",
@@ -1402,7 +1446,7 @@
 					/sw/lib,
 				);
 				LIBRARY_STYLE = Static;
-				OBJROOT = "$(PROJECT_DIR)/../polyworld_related/build";
+				OBJROOT = "$(SYMROOT)";
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
 					"-DQT_TABLET_SUPPORT",
@@ -1424,7 +1468,7 @@
 				PREBINDING = NO;
 				PRODUCT_NAME = Polyworld;
 				SECTORDER_FLAGS = "";
-				SYMROOT = "$(PROJECT_DIR)/../polyworld_related/build";
+				SYMROOT = "$(SYMROOT)";
 				WARNING_CFLAGS = (
 					"-Wmost",
 					"-Wno-four-char-constants",
@@ -1479,7 +1523,7 @@
 					/sw/lib,
 				);
 				LIBRARY_STYLE = Static;
-				OBJROOT = "$(PROJECT_DIR)/../polyworld_related/build";
+				OBJROOT = "$(SYMROOT)";
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
 					"-DQT_TABLET_SUPPORT",
@@ -1501,109 +1545,13 @@
 				PREBINDING = NO;
 				PRODUCT_NAME = Polyworld;
 				SECTORDER_FLAGS = "";
-				SYMROOT = "$(PROJECT_DIR)/../polyworld_related/build";
+				SYMROOT = "$(SYMROOT)";
 				WARNING_CFLAGS = (
 					"-Wmost",
 					"-Wno-four-char-constants",
 					"-Wno-unknown-pragmas",
 				);
 				WRAPPER_EXTENSION = app;
-			};
-			name = Default;
-		};
-		76293F140981AF4600D27C6E /* Development */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				COPY_PHASE_STRIP = NO;
-				DEBUGGING_SYMBOLS = YES;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_ENABLE_FIX_AND_CONTINUE = NO;
-				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = (
-					"-lQtGui_debug",
-					"-lQtCore_debug",
-					"-lQtOpenGL_debug",
-					"-lz",
-				);
-				OTHER_REZFLAGS = "";
-				PRODUCT_NAME = moc;
-				SECTORDER_FLAGS = "";
-				WARNING_CFLAGS = (
-					"-Wmost",
-					"-Wno-four-char-constants",
-					"-Wno-unknown-pragmas",
-				);
-				ZERO_LINK = NO;
-			};
-			name = Development;
-		};
-		76293F150981AF4600D27C6E /* Optimized */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				COPY_PHASE_STRIP = YES;
-				GCC_ENABLE_FIX_AND_CONTINUE = NO;
-				GCC_MODEL_TUNING = G5;
-				GCC_OPTIMIZATION_LEVEL = 3;
-				OTHER_CFLAGS = "";
-				OTHER_CPLUSPLUSFLAGS = "-DQT_NO_DEBUG";
-				OTHER_LDFLAGS = (
-					"-framework",
-					QtGui,
-					"-framework",
-					QtCore,
-					"-framework",
-					QtOpenGL,
-					"-lz",
-				);
-				OTHER_REZFLAGS = "";
-				PRODUCT_NAME = moc;
-				SECTORDER_FLAGS = "";
-				WARNING_CFLAGS = (
-					"-Wmost",
-					"-Wno-four-char-constants",
-					"-Wno-unknown-pragmas",
-				);
-				ZERO_LINK = NO;
-			};
-			name = Optimized;
-		};
-		76293F160981AF4600D27C6E /* Profiling */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				COPY_PHASE_STRIP = NO;
-				DEAD_CODE_STRIPPING = YES;
-				GCC_ALTIVEC_EXTENSIONS = YES;
-				GCC_ENABLE_FIX_AND_CONTINUE = NO;
-				GENERATE_PROFILING_CODE = YES;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				OTHER_REZFLAGS = "";
-				PRODUCT_NAME = moc;
-				SECTORDER_FLAGS = "";
-				WARNING_CFLAGS = (
-					"-Wmost",
-					"-Wno-four-char-constants",
-					"-Wno-unknown-pragmas",
-				);
-				ZERO_LINK = NO;
-			};
-			name = Profiling;
-		};
-		76293F170981AF4600D27C6E /* Default */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				OTHER_REZFLAGS = "";
-				PRODUCT_NAME = moc;
-				SECTORDER_FLAGS = "";
-				WARNING_CFLAGS = (
-					"-Wmost",
-					"-Wno-four-char-constants",
-					"-Wno-unknown-pragmas",
-				);
 			};
 			name = Default;
 		};
@@ -1628,10 +1576,10 @@
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
 				);
-				INFOPLIST_FILE = "";
+				INFOPLIST_FILE = tools/PwMoviePlayer/Info.plist;
 				INSTALL_PATH = "$(USER_APPS_DIR)";
 				LIBRARY_SEARCH_PATHS = $QT/lib;
-				OBJROOT = "$(PROJECT_DIR)/../polyworld_related/build";
+				OBJROOT = "$(SYMROOT)";
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
 					"-DQT_TABLET_SUPPORT",
@@ -1651,7 +1599,7 @@
 				PREBINDING = YES;
 				PRODUCT_NAME = PwMoviePlayer;
 				SECTORDER_FLAGS = "";
-				SYMROOT = "$(PROJECT_DIR)/../polyworld_related/build";
+				SYMROOT = "$(SYMROOT)";
 				WARNING_CFLAGS = (
 					"-Wmost",
 					"-Wno-four-char-constants",
@@ -1680,10 +1628,10 @@
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
 				);
-				INFOPLIST_FILE = "";
+				INFOPLIST_FILE = tools/PwMoviePlayer/Info.plist;
 				INSTALL_PATH = "$(USER_APPS_DIR)";
 				LIBRARY_SEARCH_PATHS = $QT/lib;
-				OBJROOT = "$(PROJECT_DIR)/../polyworld_related/build";
+				OBJROOT = "$(SRCROOT)";
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
 					"-DQT_TABLET_SUPPORT",
@@ -1704,7 +1652,7 @@
 				PREBINDING = YES;
 				PRODUCT_NAME = PwMoviePlayer;
 				SECTORDER_FLAGS = "";
-				SYMROOT = "$(PROJECT_DIR)/../polyworld_related/build";
+				SYMROOT = "$(SRCROOT)";
 				WARNING_CFLAGS = (
 					"-Wmost",
 					"-Wno-four-char-constants",
@@ -1735,10 +1683,10 @@
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
 				);
-				INFOPLIST_FILE = "";
+				INFOPLIST_FILE = tools/PwMoviePlayer/Info.plist;
 				INSTALL_PATH = "$(USER_APPS_DIR)";
 				LIBRARY_SEARCH_PATHS = $QT/lib;
-				OBJROOT = "$(PROJECT_DIR)/../polyworld_related/build";
+				OBJROOT = "$(SRCROOT)";
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
 					"-DQT_TABLET_SUPPORT",
@@ -1758,7 +1706,7 @@
 				PREBINDING = YES;
 				PRODUCT_NAME = PwMoviePlayer;
 				SECTORDER_FLAGS = "";
-				SYMROOT = "$(PROJECT_DIR)/../polyworld_related/build";
+				SYMROOT = "$(SRCROOT)";
 				WARNING_CFLAGS = (
 					"-Wmost",
 					"-Wno-four-char-constants",
@@ -1784,10 +1732,10 @@
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
 				);
-				INFOPLIST_FILE = "";
+				INFOPLIST_FILE = tools/PwMoviePlayer/Info.plist;
 				INSTALL_PATH = "$(USER_APPS_DIR)";
 				LIBRARY_SEARCH_PATHS = $QT/lib;
-				OBJROOT = "$(PROJECT_DIR)/../polyworld_related/build";
+				OBJROOT = "$(SRCROOT)";
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
 					"-DQT_TABLET_SUPPORT",
@@ -1807,7 +1755,7 @@
 				PREBINDING = YES;
 				PRODUCT_NAME = PwMoviePlayer;
 				SECTORDER_FLAGS = "";
-				SYMROOT = "$(PROJECT_DIR)/../polyworld_related/build";
+				SYMROOT = "$(SRCROOT)";
 				WARNING_CFLAGS = (
 					"-Wmost",
 					"-Wno-four-char-constants",
@@ -1839,34 +1787,6 @@
 			buildSettings = {
 			};
 			name = Default;
-		};
-		76AB9E5A0CA4E45200DA1161 /* Development-static */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				COPY_PHASE_STRIP = NO;
-				DEBUGGING_SYMBOLS = YES;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_ENABLE_FIX_AND_CONTINUE = NO;
-				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = (
-					"-lQtGui_debug",
-					"-lQtCore_debug",
-					"-lQtOpenGL_debug",
-					"-lz",
-				);
-				OTHER_REZFLAGS = "";
-				PRODUCT_NAME = moc;
-				SECTORDER_FLAGS = "";
-				WARNING_CFLAGS = (
-					"-Wmost",
-					"-Wno-four-char-constants",
-					"-Wno-unknown-pragmas",
-				);
-				ZERO_LINK = NO;
-			};
-			name = "Development-static";
 		};
 		76AB9E5B0CA4E45200DA1161 /* Development-static */ = {
 			isa = XCBuildConfiguration;
@@ -1918,7 +1838,7 @@
 					/sw/lib,
 				);
 				LIBRARY_STYLE = Static;
-				OBJROOT = "$(PROJECT_DIR)/../polyworld_related/build";
+				OBJROOT = "$(SYMROOT)";
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
 					"-DQT_TABLET_SUPPORT",
@@ -1939,41 +1859,13 @@
 				PREBINDING = NO;
 				PRODUCT_NAME = Polyworld;
 				SECTORDER_FLAGS = "";
-				SYMROOT = "$(PROJECT_DIR)/../polyworld_related/build";
+				SYMROOT = "$(SYMROOT)";
 				WARNING_CFLAGS = (
 					"-Wmost",
 					"-Wno-four-char-constants",
 					"-Wno-unknown-pragmas",
 				);
 				WRAPPER_EXTENSION = app;
-				ZERO_LINK = NO;
-			};
-			name = "Development-static";
-		};
-		76AB9E5C0CA4E45200DA1161 /* Development-static */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				COPY_PHASE_STRIP = NO;
-				DEBUGGING_SYMBOLS = YES;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_ENABLE_FIX_AND_CONTINUE = NO;
-				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = (
-					"-lQtGui_debug",
-					"-lQtCore_debug",
-					"-lQtOpenGL_debug",
-					"-lz",
-				);
-				OTHER_REZFLAGS = "";
-				PRODUCT_NAME = moc;
-				SECTORDER_FLAGS = "";
-				WARNING_CFLAGS = (
-					"-Wmost",
-					"-Wno-four-char-constants",
-					"-Wno-unknown-pragmas",
-				);
 				ZERO_LINK = NO;
 			};
 			name = "Development-static";
@@ -1999,13 +1891,13 @@
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
 				);
-				INFOPLIST_FILE = "";
+				INFOPLIST_FILE = tools/PwMoviePlayer/Info.plist;
 				INSTALL_PATH = "$(USER_APPS_DIR)";
 				LIBRARY_SEARCH_PATHS = (
 					/usr/lib,
 					$QTS/lib,
 				);
-				OBJROOT = "$(PROJECT_DIR)/../polyworld_related/build";
+				OBJROOT = "$(SRCROOT)";
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
 					"-DQT_TABLET_SUPPORT",
@@ -2023,35 +1915,13 @@
 				PREBINDING = YES;
 				PRODUCT_NAME = PwMoviePlayer;
 				SECTORDER_FLAGS = "";
-				SYMROOT = "$(PROJECT_DIR)/../polyworld_related/build";
+				SYMROOT = "$(SRCROOT)";
 				WARNING_CFLAGS = (
 					"-Wmost",
 					"-Wno-four-char-constants",
 					"-Wno-unknown-pragmas",
 				);
 				ZERO_LINK = NO;
-			};
-			name = "Development-static";
-		};
-		76AB9E5E0CA4E45200DA1161 /* Development-static */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				COPY_PHASE_STRIP = NO;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_ENABLE_FIX_AND_CONTINUE = YES;
-				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
-				GCC_MODEL_TUNING = G5;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "$(SYSTEM_LIBRARY_DIR)/Frameworks/Carbon.framework/Headers/Carbon.h";
-				INSTALL_PATH = "$(HOME)/bin";
-				OTHER_LDFLAGS = (
-					"-framework",
-					Carbon,
-				);
-				PREBINDING = NO;
-				PRODUCT_NAME = probe_activity;
-				ZERO_LINK = YES;
 			};
 			name = "Development-static";
 		};
@@ -2064,28 +1934,28 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		7625066D09B8CD0500C36C36 /* Build configuration list for PBXNativeTarget "probe_activity" */ = {
+		760C2C9B101AC7FB00F5F662 /* Build configuration list for PBXNativeTarget "CalcComplexity" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				7625066E09B8CD0500C36C36 /* Development */,
-				76AB9E5E0CA4E45200DA1161 /* Development-static */,
-				7625066F09B8CD0500C36C36 /* Optimized */,
-				760EF64609EF188F00C0FAA5 /* Release */,
-				7625067009B8CD0500C36C36 /* Profiling */,
-				7625067109B8CD0500C36C36 /* Default */,
+				760C2C95101AC7DD00F5F662 /* Development */,
+				760C2C96101AC7DD00F5F662 /* Development-static */,
+				760C2C97101AC7DD00F5F662 /* Optimized */,
+				760C2C98101AC7DD00F5F662 /* Release */,
+				760C2C99101AC7DD00F5F662 /* Profiling */,
+				760C2C9A101AC7DD00F5F662 /* Default */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Default;
 		};
-		76293F090981AF4600D27C6E /* Build configuration list for PBXAggregateTarget "moc" */ = {
+		760C3551101BD04500F5F662 /* Build configuration list for PBXAggregateTarget "All" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				76293F0A0981AF4600D27C6E /* Development */,
-				76AB9E5A0CA4E45200DA1161 /* Development-static */,
-				76293F0B0981AF4600D27C6E /* Optimized */,
-				760EF64209EF188F00C0FAA5 /* Release */,
-				76293F0C0981AF4600D27C6E /* Profiling */,
-				76293F0D0981AF4600D27C6E /* Default */,
+				760C3549101BD01500F5F662 /* Development */,
+				760C354A101BD01500F5F662 /* Development-static */,
+				760C354B101BD01500F5F662 /* Optimized */,
+				760C354C101BD01500F5F662 /* Release */,
+				760C354D101BD01500F5F662 /* Profiling */,
+				760C354E101BD01500F5F662 /* Default */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Default;
@@ -2099,19 +1969,6 @@
 				760EF64309EF188F00C0FAA5 /* Release */,
 				76293F110981AF4600D27C6E /* Profiling */,
 				76293F120981AF4600D27C6E /* Default */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Default;
-		};
-		76293F130981AF4600D27C6E /* Build configuration list for PBXAggregateTarget "moc_PwMoviePlayer" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				76293F140981AF4600D27C6E /* Development */,
-				76AB9E5C0CA4E45200DA1161 /* Development-static */,
-				76293F150981AF4600D27C6E /* Optimized */,
-				760EF64409EF188F00C0FAA5 /* Release */,
-				76293F160981AF4600D27C6E /* Profiling */,
-				76293F170981AF4600D27C6E /* Default */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Default;

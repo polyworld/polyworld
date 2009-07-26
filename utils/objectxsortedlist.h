@@ -7,29 +7,29 @@
 #include "gdlink.h"
 #include "gobject.h"
 #include "food.h"
-#include "critter.h"
+#include "agent.h"
 #include "brick.h"
 
 using namespace std;
 
 
 //===========================================================================
-// Sorted list of all objects: critters, food, bricks, other.
+// Sorted list of all objects: agents, food, bricks, other.
 //===========================================================================
 
 class objectxsortedlist : public gdlist<gobject*>
 {
 
  private:
-    int critterCount;
+    int agentCount;
     int foodCount;
     int brickCount;
-    gdlink<gobject*> *markedCritter;	
+    gdlink<gobject*> *markedAgent;	
     gdlink<gobject*> *markedFood;	
     gdlink<gobject*> *markedBrick;	
 
  public:
-    objectxsortedlist() { markedCritter = 0; markedFood = 0; markedBrick = 0; }
+    objectxsortedlist() { markedAgent = 0; markedFood = 0; markedBrick = 0; }
     ~objectxsortedlist() { }
     void add( gobject* a );
     void removeCurrentObject();

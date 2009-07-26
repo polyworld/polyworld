@@ -34,8 +34,8 @@ const float kDefaultFar = 10000.0;
 // negative z-axis.
 
 // One of the most common useages in PolyWorld will be cameras attached
-// to "critter" objects.  Accordingly, the camera need only be declared,
-// cam.AttachTo(critter) invoked once, and cam.Use() should be invoked by
+// to "agent" objects.  Accordingly, the camera need only be declared,
+// cam.AttachTo(agent) invoked once, and cam.Use() should be invoked by
 // the scene to which the camera is attached.  cam.SetFOV() and possibly
 // cam.SetNear() and cam.SetFar() may be used if the defaults are not adequate.
 // Cam.SetTranslation(x,y,z) and cam.SetRotation(yaw,pitch,roll) can be used
@@ -64,7 +64,7 @@ gcamera::gcamera()
 		fFollowObject(NULL),
 		fPerspectiveFixed(false),
 		fPerspectiveInUse(false),
-		glFogOn(false)				// this will be turned on for cameras attached to critters at the SetGraphics() function
+		glFogOn(false)				// this will be turned on for cameras attached to agents at the SetGraphics() function
 {
 	fPosition[0] = 0.0;
     fPosition[1] = 0.0;
@@ -332,7 +332,7 @@ void gcamera::SetFog( bool fog, char function, float density, int end )
 {
 	if( fog )			
 	{
-		glEnable(GL_FOG);				// turn on Fog to give the critters depth perception
+		glEnable(GL_FOG);				// turn on Fog to give the agents depth perception
 
 		if( function == 'L' )		// is it Linear?
 		{
@@ -358,6 +358,6 @@ void gcamera::SetFog( bool fog, char function, float density, int end )
 	else
 	{
 //		cout << "Disabling GL FOG." << endl;
-		glDisable(GL_FOG);		// Turn off the fog if for some reason we ever wanted critters to turn it off.	
+		glDisable(GL_FOG);		// Turn off the fog if for some reason we ever wanted agents to turn it off.	
 	}
 }

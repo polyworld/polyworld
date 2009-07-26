@@ -10,7 +10,7 @@
 
 // Local
 #include "barrier.h"
-#include "critter.h"
+#include "agent.h"
 #include "error.h"
 #include "graphics.h"
 
@@ -19,20 +19,20 @@ void debugcheck(const char* s)
 	static const char* slast = NULL;
 #if defined(DEBUGCHECK)
 	bool caughtError = false;
-	gpolyobj* critterobj = critter::GetCritterObj();
+	gpolyobj* agentobj = agent::GetAgentObj();
 	
-	if( critterobj )
+	if( agentobj )
 	{
-		if( critterobj->numPolygons() != 10 )
+		if( agentobj->numPolygons() != 10 )
 		{
 			caughtError = true;
-			printf( "Bad critterobj->numPolygons() (%ld): %s\n", critterobj->numPolygons(), s );
+			printf( "Bad agentobj->numPolygons() (%ld): %s\n", agentobj->numPolygons(), s );
 		}
 	}
 	else
 	{
 		caughtError = true;
-		printf( "NULL critterobj: %s\n", s );
+		printf( "NULL agentobj: %s\n", s );
 	}
 
   #if 0

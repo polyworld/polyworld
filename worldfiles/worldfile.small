@@ -1,0 +1,176 @@
+6      version
+
+1      docpuwork
+10000  dumpfreq
+10000  statfreq
+1      edges
+0      wraparound
+1      vision
+1      showvision
+22     minwin
+1.0    maxvel
+21     minnumagents
+90     maxnumagents
+30     initnumagents
+60     miscagents
+
+42    positionseed
+42    genomeseed
+
+75     minfoodcount
+150    maxfoodcount
+120    maxfoodgrown
+120    initfoodcount
+0.2    foodrate
+1      agentsRfood
+100    fit1freq
+2      fit2freq
+10     numfit
+10.0   eatfitparam
+100.0  matefitparam
+0.5    movefitparam
+5.0    energyfitparam
+10.0   agefitparam
+200.0  minfoodenergy
+1000.0  maxfoodenergy
+400.0  size2energy
+100.0   eat2consume
+
+0      minintneurons
+0      maxintneurons
+1      minvispixels
+16     maxvispixels
+0.01   minmrate
+0.1    maxmrate
+2      minnumcpts
+8      maxnumcpts
+500    minlifespan
+1000   maxlifespan
+25     matewait
+25     initmatewait
+0.5    minstrength
+2.0    maxstrength
+0.5    minsize
+2.0    maxsize
+500.0  minmaxenergy
+1000.0 maxmaxenergy
+.2     minmateenergy
+.8     maxmatenergy
+0.05   minmatefrac
+0.5    minmaxspeed
+1.5    maxmaxspeed
+1.0    speed2dpos
+80.0    yaw2dyaw
+0.0    minlrate
+0.1    maxlrate
+20.0   minfocus
+140.0  maxfocus
+10.0   agentfovy
+2.5    maxsizeadvantage
+2.5    power2energy
+
+0.01   eat2energy
+0.1    mate2energy
+1.0    fight2energy
+10.0   maxsizepenalty
+0.1    speed2energy
+0.1    yaw2energy
+0.01   light2energy
+0.001  focus2energy
+0.01   maxsynapse2energy
+0.05   fixedenergydrain
+0.99   decayrate
+
+0.2    eatthreshold
+0.5    matethreshold
+0.2    fightthreshold
+1.0    miscbias
+2.0    miscinvslope
+
+0.5    logisticslope
+1.0    maxweight
+0.5    initmaxweight
+0.1    minbitprob
+0.6    maxbitprob
+0.2    agentheight
+0.6    foodheight
+0.2 0.6 0.2 foodcolor
+5.0    barrierheight
+0.35 0.25 0.15 barriercolor
+0.10 0.15 0.05 groundcolor
+0.0    groundclearance
+1.0 1.0 1.0 cameracolor
+0.6    camradius
+0.35   camheight
+0.09   camrotationrate
+0.0    camanglestart
+90.    camfov
+1      moncrit
+8      monwidth
+8      monheight
+25     monstride
+100.0  worldsize
+2      numbarriers
+33.33 -100. 33.33 -10. barrierposition
+66.67 -100. 66.67 -10. barrierposition
+
+0      genesepmon
+0      geneseprec
+1      chartborn
+1      chartfit
+1      chartfoodenergy
+1      chartpop
+
+3      numdomains
+
+33.33  domainbarrier#1
+66.67  domainbarrier#2
+
+7      domain[0].minnumagents
+30     domain[0].maxnumagents
+10     domain[0].initnumagents
+25     domain[0].minfoodcount
+50     domain[0].maxfoodcount
+30     domain[0].maxfoodgrown
+30     domain[0].initfoodcount
+
+7      domain[1].minnumagents
+30     domain[1].maxnumagents
+10     domain[1].initnumagents
+25     domain[1].minfoodcount
+50     domain[1].maxfoodcount
+30     domain[1].maxfoodgrown
+30     domain[1].initfoodcount
+
+7      domain[2].minnumagents
+30     domain[2].maxnumagents
+10     domain[2].initnumagents
+25     domain[2].minfoodcount
+50     domain[2].maxfoodcount
+30     domain[2].maxfoodgrown
+30     domain[2].initfoodcount
+
+1      binchartgs
+
+1      mininternalneurgroups
+5      maxinternalneurgroups
+1      mineneurpergroup
+16     maxeneurpergroup
+1      minineurpergroup
+16     maxineurpergroup
+-1.0   minbias;
+1.0    maxbias;
+0.0    minbiaslrate;
+0.2    maxbiaslrate;
+0.0    minconnectiondensity
+1.0    maxconnectiondensity
+0.0    mintopologicaldistortion
+1.0    maxtopologicaldistortion
+0.1    maxneur2energy
+10     numprebirthcycles
+
+0      overheadrank
+0      tracking
+0.0    minfoodenergyatdeath
+
+1      graycoding

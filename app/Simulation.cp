@@ -14,12 +14,12 @@
 #define MinDebugStep 0
 #define MaxDebugStep INT_MAX
 
-#define CurrentWorldfileVersion 32
+#define CurrentWorldfileVersion 33
 
 #define TournamentSelection 1
 
 // CompatibilityMode makes the new code with a single x-sorted list behave *almost* identically to the old code.
-// Discrepancies still arise due to the old food list never being re-sorted and critters at the exact same x location
+// Discrepancies still arise due to the old food list never being re-sorted and agents at the exact same x location
 // not always ending up sorted in the same order.  [Food centers remain sorted as long as they exist, but these lists
 // are actually sorted on x at the left edge (x increases from left to right) of the objects, which changes as the
 // food is eaten and shrinks.]
@@ -45,14 +45,14 @@
 #include "brain.h"
 #include "BrainMonitorWindow.h"
 #include "ChartWindow.h"
-#include "CritterPOVWindow.h"
+#include "AgentPOVWindow.h"
 #include "debug.h"
 #include "food.h"
 #include "globals.h"
 #include "food.h"
 #include "SceneView.h"
 #include "TextStatusWindow.h"
-#include "PwMovieTools.h"
+#include "PwMovieUtils.h"
 #include "complexity.h"
 
 #include "objectxsortedlist.h"
@@ -69,10 +69,10 @@ using namespace std;
 
 static long numglobalcreated = 0;    // needs to be static so we only get warned about influence of global creations once ever
 
-long TSimulation::fMaxNumCritters;
+long TSimulation::fMaxNumAgents;
 long TSimulation::fStep;
 short TSimulation::fOverHeadRank = 1;
-critter* TSimulation::fMonitorCritter = NULL;
+agent* TSimulation::fMonitorAgent = NULL;
 double TSimulation::fFramesPerSecondOverall;
 double TSimulation::fSecondsPerFrameOverall;
 double TSimulation::fFramesPerSecondRecent;
@@ -164,17 +164,21 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
 	:
 		fLockStepWithBirthsDeathsLog(false),
 		fLockstepFile(NULL),
-		fCritterTracking(false),
-//		fMonitorCritterRank(0),
-		fMonitorCritterRankOld(0),
+		fAgentTracking(false),
+//		fMonitorAgentRank(0),
+		fMonitorAgentRankOld(0),
 		fRotateWorld(false),
 //		fOverHeadRank(0),
-//		fMonitorCritter(NULL),
+//		fMonitorAgent(NULL),
 		fBestSoFarBrainAnatomyRecordFrequency(0),
 		fBestSoFarBrainFunctionRecordFrequency(0),
 		fBestRecentBrainAnatomyRecordFrequency(0),
 		fBestRecentBrainFunctionRecordFrequency(0),
 		fRecordBirthsDeaths(false),
+
+		fRecordPosition(false),
+		fPositionWriter(&fRecordPosition),
+
 		fBrainAnatomyRecordAll(false),
 		fBrainFunctionRecordAll(false),
 		fBrainAnatomyRecordSeeds(false),
@@ -207,7 +211,7 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
 		fHealing(0),
 		fGroundClearance(0.0),
 		fOverHeadRankOld(0),
-		fOverheadCritter(NULL),
+		fOverheadAgent(NULL),
 
 		fChartBorn(true),
 		fChartFitness(true),
@@ -230,7 +234,7 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
 		fGeneSum2(NULL),
 		fGeneStatsFile(NULL),
 		fFoodPatchStatsFile(NULL),
-		fNumCrittersNotInOrNearAnyFoodPatch(0)
+		fNumAgentsNotInOrNearAnyFoodPatch(0)
 {
 	Init();
 }
@@ -276,8 +280,8 @@ TSimulation::~TSimulation()
 	if (fGeneSeparationWindow != NULL)
 		delete fGeneSeparationWindow;
 
-	if (fCritterPOVWindow != NULL)
-		delete fCritterPOVWindow;
+	if (fAgentPOVWindow != NULL)
+		delete fAgentPOVWindow;
 
 	if (fTextStatusWindow != NULL)
 		delete fTextStatusWindow;
@@ -304,16 +308,16 @@ void TSimulation::Stop()
 	// delete all objects
 	gobject* gob = NULL;
 
-	// delete all non-critters
+	// delete all non-agents
 	objectxsortedlist::gXSortedObjects.reset();
 	while (objectxsortedlist::gXSortedObjects.next(gob))
-		if (gob->getType() != CRITTERTYPE)
+		if (gob->getType() != AGENTTYPE)
 		{
 			//delete gob;	// ??? why aren't these being deleted?  do we need to delete them by type?  make the destructor virtual?  what???
 		}
-	// delete all critters
-	// all the critters are deleted in critterdestruct
-	// rather than cycling through them in xsortedcritters here
+	// delete all agents
+	// all the agents are deleted in agentdestruct
+	// rather than cycling through them in xsortedagents here
 	objectxsortedlist::gXSortedObjects.clear();
 
 	
@@ -376,7 +380,7 @@ void TSimulation::Stop()
 
     brain::braindestruct();
 
-    critter::critterdestruct();
+    agent::agentdestruct();
 }
 
 
@@ -481,35 +485,35 @@ void TSimulation::Step()
 		b->update( fStep );
 	barrier::gXSortedBarriers.xsort();
 
-	// Update all critters, using their neurally controlled behaviors
+	// Update all agents, using their neurally controlled behaviors
 	{
-		// Make the critter POV window the current GL context
-		fCritterPOVWindow->makeCurrent();
+		// Make the agent POV window the current GL context
+		fAgentPOVWindow->makeCurrent();
 		
 		// Clear the window's color and depth buffers
-		fCritterPOVWindow->qglClearColor( Qt::black );
+		fAgentPOVWindow->qglClearColor( Qt::black );
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
-		// These are the critter counts to be used in applying either the LowPopulationAdvantage or the (high) PopulationPenalty
+		// These are the agent counts to be used in applying either the LowPopulationAdvantage or the (high) PopulationPenalty
 		// Assume global settings apply, until we know better
-		long numCritters = objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE);
-		long initNumCritters = fInitNumCritters;
-		long minNumCritters = fMinNumCritters  +  lround( 0.1 * (fInitNumCritters - fMinNumCritters) );	// 10% buffer, to help prevent reaching actual min value and invoking GA
-		long maxNumCritters = fMaxNumCritters;
-		long excess = numCritters - fInitNumCritters;	// global excess
+		long numAgents = objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE);
+		long initNumAgents = fInitNumAgents;
+		long minNumAgents = fMinNumAgents  +  lround( 0.1 * (fInitNumAgents - fMinNumAgents) );	// 10% buffer, to help prevent reaching actual min value and invoking GA
+		long maxNumAgents = fMaxNumAgents;
+		long excess = numAgents - fInitNumAgents;	// global excess
 
 		// Use the lowest excess value to produce the most help or the least penalty
 		if( fNumDomains > 1 )
 		{
 			for( int id = 0; id < fNumDomains; id++ )
 			{
-				long domainExcess = fDomains[id].numCritters - fDomains[id].initNumCritters;
+				long domainExcess = fDomains[id].numAgents - fDomains[id].initNumAgents;
 				if( domainExcess < excess )	// This is the domain that is in the worst shape
 				{
-					numCritters = fDomains[id].numCritters;
-					initNumCritters = fDomains[id].initNumCritters;
-					minNumCritters = fDomains[id].minNumCritters  +  lround( 0.1 * (fDomains[id].initNumCritters - fDomains[id].minNumCritters) );	// 10% buffer, to help prevent reaching actual min value and invoking GA
-					maxNumCritters = fDomains[id].maxNumCritters;
+					numAgents = fDomains[id].numAgents;
+					initNumAgents = fDomains[id].initNumAgents;
+					minNumAgents = fDomains[id].minNumAgents  +  lround( 0.1 * (fDomains[id].initNumAgents - fDomains[id].minNumAgents) );	// 10% buffer, to help prevent reaching actual min value and invoking GA
+					maxNumAgents = fDomains[id].maxNumAgents;
 					excess = domainExcess;
 				}
 			}
@@ -518,49 +522,49 @@ void TSimulation::Step()
 		// If the population is too low, globally or in any domain, then either help it or leave it alone
 		if( excess < 0 )
 		{
-			critter::gPopulationPenaltyFraction = 0.0;	// we're not currently applying the high population penalty
+			agent::gPopulationPenaltyFraction = 0.0;	// we're not currently applying the high population penalty
 
 			// If we want to help it, apply the low population advantage
 			if( fApplyLowPopulationAdvantage )
 			{
-				critter::gLowPopulationAdvantageFactor = 1.0 - (float) (initNumCritters - numCritters) / (initNumCritters - minNumCritters);
-				if( critter::gLowPopulationAdvantageFactor < 0.0 )
-					critter::gLowPopulationAdvantageFactor = 0.0;
-				if( critter::gLowPopulationAdvantageFactor > 1.0 )
-					critter::gLowPopulationAdvantageFactor = 1.0;
+				agent::gLowPopulationAdvantageFactor = 1.0 - (float) (initNumAgents - numAgents) / (initNumAgents - minNumAgents);
+				if( agent::gLowPopulationAdvantageFactor < 0.0 )
+					agent::gLowPopulationAdvantageFactor = 0.0;
+				if( agent::gLowPopulationAdvantageFactor > 1.0 )
+					agent::gLowPopulationAdvantageFactor = 1.0;
 			}
 		}
 		else if( excess > 0 )	// population is greater than initial level everywhere
 		{
-			critter::gLowPopulationAdvantageFactor = 1.0;	// we're not currently applying the low population advantage
+			agent::gLowPopulationAdvantageFactor = 1.0;	// we're not currently applying the low population advantage
 
 			// apply the high population penalty (if the max-penalty is non-zero)
-			critter::gPopulationPenaltyFraction = critter::gMaxPopulationPenaltyFraction * (numCritters - initNumCritters) / (maxNumCritters - initNumCritters);
-			if( critter::gPopulationPenaltyFraction < 0.0 )
-				critter::gPopulationPenaltyFraction = 0.0;
-			if( critter::gPopulationPenaltyFraction > critter::gMaxPopulationPenaltyFraction )
-				critter::gPopulationPenaltyFraction = critter::gMaxPopulationPenaltyFraction;
+			agent::gPopulationPenaltyFraction = agent::gMaxPopulationPenaltyFraction * (numAgents - initNumAgents) / (maxNumAgents - initNumAgents);
+			if( agent::gPopulationPenaltyFraction < 0.0 )
+				agent::gPopulationPenaltyFraction = 0.0;
+			if( agent::gPopulationPenaltyFraction > agent::gMaxPopulationPenaltyFraction )
+				agent::gPopulationPenaltyFraction = agent::gMaxPopulationPenaltyFraction;
 		}
 		
 //		printf( "step=%4ld, pop=%3d, initPop=%3ld, minPop=%2ld, maxPop=%3ld, maxPopPenaltyFraction=%g, popPenaltyFraction=%g, lowPopAdvantageFactor=%g\n",
-//				fStep, numCritters, initNumCritters, minNumCritters, maxNumCritters,
-//				critter::gMaxPopulationPenaltyFraction, critter::gPopulationPenaltyFraction, critter::gLowPopulationAdvantageFactor );
+//				fStep, numAgents, initNumAgents, minNumAgents, maxNumAgents,
+//				agent::gMaxPopulationPenaltyFraction, agent::gPopulationPenaltyFraction, agent::gLowPopulationAdvantageFactor );
 		
-		critter* c;
+		agent* c;
 		objectxsortedlist::gXSortedObjects.reset();
-		while (objectxsortedlist::gXSortedObjects.nextObj(CRITTERTYPE, (gobject**)&c))
+		while (objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&c))
 		{
 		#ifdef DEBUGCHECK
 			debugstring[256];
-			sprintf(debugstring,"in critter loop at age %ld, critnum = %ld", fStep, critnum);
+			sprintf(debugstring,"in agent loop at age %ld, critnum = %ld", fStep, critnum);
 			debugcheck(debugstring);
 			critnum++;
 		#endif DEBUGCHECK
-			fFoodEnergyOut += c->Update(fMoveFitnessParameter, critter::gSpeed2DPosition, fSolidObjects);
+			fFoodEnergyOut += c->Update(fMoveFitnessParameter, agent::gSpeed2DPosition, fSolidObjects);
 		}
 		
-		// Swap buffers for the critter POV window when they're all done
-		fCritterPOVWindow->swapBuffers();
+		// Swap buffers for the agent POV window when they're all done
+		fAgentPOVWindow->swapBuffers();
 	}
 
 	if( fHeuristicFitnessWeight != 0.0 )
@@ -598,30 +602,30 @@ void TSimulation::Step()
 		// Overhead window
 		if (fOverHeadRank)
 		{
-			if (!fCritterTracking
+			if (!fAgentTracking
 				|| (fOverHeadRank != fOverHeadRankOld)
-				|| !fOverheadCritter
-				|| !(fOverheadCritter->Alive()))
+				|| !fOverheadAgent
+				|| !(fOverheadAgent->Alive()))
 			{
-				fOverheadCritter = fCurrentFittestCritter[fOverHeadRank - 1];
+				fOverheadAgent = fCurrentFittestAgent[fOverHeadRank - 1];
 				fOverHeadRankOld = fOverHeadRank;
 			}
 			
-			if (fOverheadCritter != NULL)
+			if (fOverheadAgent != NULL)
 			{
-				fOverheadCamera.setx(fOverheadCritter->x());
-                                fOverheadCamera.setz(fOverheadCritter->z());
+				fOverheadCamera.setx(fOverheadAgent->x());
+                                fOverheadCamera.setz(fOverheadAgent->z());
 			}
 		}
-		//Update the title of the overhead window with the rank, critter number and whether or not we are tracking (T) (CMB 3/26/06)
-		if( fOverheadWindow && fOverheadWindow->isVisible() && fOverheadCritter)
+		//Update the title of the overhead window with the rank, agent number and whether or not we are tracking (T) (CMB 3/26/06)
+		if( fOverheadWindow && fOverheadWindow->isVisible() && fOverheadAgent)
 		{
 			char overheadTitle[64];
-			if (fCritterTracking)
+			if (fAgentTracking)
 			{
-			    sprintf( overheadTitle, "Overhead View (T%ld:%ld)", (long int) fOverHeadRank, fOverheadCritter->Number() );
+			    sprintf( overheadTitle, "Overhead View (T%ld:%ld)", (long int) fOverHeadRank, fOverheadAgent->Number() );
 			}else{			
-			    sprintf( overheadTitle, "Overhead View (%ld:%ld)", (long int) fOverHeadRank, fOverheadCritter->Number() );
+			    sprintf( overheadTitle, "Overhead View (%ld:%ld)", (long int) fOverHeadRank, fOverheadAgent->Number() );
 			}
 			fOverheadWindow->setWindowTitle( QString(overheadTitle) );			
 		}
@@ -669,52 +673,52 @@ void TSimulation::Step()
 		if( fChartPopulation && fPopulationWindow != NULL /* && fPopulationWindow->isVisible() */ )
 		{				
 			{
-				fPopulationWindow->AddPoint(0, float(objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE)));
+				fPopulationWindow->AddPoint(0, float(objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE)));
 			}				
 			
 			if (fNumDomains > 1)
 			{
 				for (int id = 0; id < fNumDomains; id++)
-					fPopulationWindow->AddPoint((id + 1), float(fDomains[id].numCritters));
+					fPopulationWindow->AddPoint((id + 1), float(fDomains[id].numAgents));
 			}
 		}
 
 //		dbprintf( "age=%ld, rank=%d, rankOld=%d, tracking=%s, fittest=%08lx, monitored=%08lx, alive=%s\n",
-//				  fStep, fMonitorCritterRank, fMonitorCritterRankOld, BoolString( fCritterTracking ), (ulong) fCurrentFittestCritter[fMonitorCritterRank-1], (ulong) fMonitorCritter, BoolString( !(!fMonitorCritter || !fMonitorCritter->Alive()) ) );
+//				  fStep, fMonitorAgentRank, fMonitorAgentRankOld, BoolString( fAgentTracking ), (ulong) fCurrentFittestAgent[fMonitorAgentRank-1], (ulong) fMonitorAgent, BoolString( !(!fMonitorAgent || !fMonitorAgent->Alive()) ) );
 
 		// Brain window
-		if ((fMonitorCritterRank != fMonitorCritterRankOld)
-			 || (fMonitorCritterRank && !fCritterTracking && (fCurrentFittestCritter[fMonitorCritterRank - 1] != fMonitorCritter))
-			 || (fMonitorCritterRank && fCritterTracking && (!fMonitorCritter || !fMonitorCritter->Alive())))
+		if ((fMonitorAgentRank != fMonitorAgentRankOld)
+			 || (fMonitorAgentRank && !fAgentTracking && (fCurrentFittestAgent[fMonitorAgentRank - 1] != fMonitorAgent))
+			 || (fMonitorAgentRank && fAgentTracking && (!fMonitorAgent || !fMonitorAgent->Alive())))
 		{			
-			if (fMonitorCritter != NULL)
+			if (fMonitorAgent != NULL)
 			{
 				if (fBrainMonitorWindow != NULL)
 					fBrainMonitorWindow->StopMonitoring();
 			}					
 							
-			if (fMonitorCritterRank && fBrainMonitorWindow != NULL && fBrainMonitorWindow->isVisible() )
+			if (fMonitorAgentRank && fBrainMonitorWindow != NULL && fBrainMonitorWindow->isVisible() )
 			{
 				Q_CHECK_PTR(fBrainMonitorWindow);
-				fMonitorCritter = fCurrentFittestCritter[fMonitorCritterRank - 1];
-				fBrainMonitorWindow->StartMonitoring(fMonitorCritter);					
+				fMonitorAgent = fCurrentFittestAgent[fMonitorAgentRank - 1];
+				fBrainMonitorWindow->StartMonitoring(fMonitorAgent);					
 			}
 			else
 			{
-				fMonitorCritter = NULL;
+				fMonitorAgent = NULL;
 			}
 		
-			fMonitorCritterRankOld = fMonitorCritterRank;			
+			fMonitorAgentRankOld = fMonitorAgentRank;			
 		}
 		//Added T for title if we are in tracking mode (CMB 3/26/06)
-		if( fBrainMonitorWindow && fBrainMonitorWindow->isVisible() && fMonitorCritter && (fStep % fBrainMonitorStride == 0) )
+		if( fBrainMonitorWindow && fBrainMonitorWindow->isVisible() && fMonitorAgent && (fStep % fBrainMonitorStride == 0) )
 		{
 			char title[64];
-			if (fCritterTracking)
+			if (fAgentTracking)
 			{
-			    sprintf( title, "Brain Monitor (T%ld:%ld)", fMonitorCritterRank, fMonitorCritter->Number() );
+			    sprintf( title, "Brain Monitor (T%ld:%ld)", fMonitorAgentRank, fMonitorAgent->Number() );
 			}else{			
-			    sprintf( title, "Brain Monitor (%ld:%ld)", fMonitorCritterRank, fMonitorCritter->Number() );
+			    sprintf( title, "Brain Monitor (%ld:%ld)", fMonitorAgentRank, fMonitorAgent->Number() );
 			}			
 			fBrainMonitorWindow->setWindowTitle( QString(title) );
 			fBrainMonitorWindow->Draw();
@@ -741,20 +745,20 @@ void TSimulation::Step()
 		for( int i = 0; i < limit; i++ )
 		{
 			char t[256];	// target (use s for source)
-			sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_incept.txt", fFittest[i]->critterID );
-			sprintf( t, "run/brain/bestSoFar/%ld/%d_brainAnatomy_%ld_incept.txt", fStep, i, fFittest[i]->critterID );
+			sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_incept.txt", fFittest[i]->agentID );
+			sprintf( t, "run/brain/bestSoFar/%ld/%d_brainAnatomy_%ld_incept.txt", fStep, i, fFittest[i]->agentID );
 			if( link( s, t ) )
 				eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
-			sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_birth.txt", fFittest[i]->critterID );
-			sprintf( t, "run/brain/bestSoFar/%ld/%d_brainAnatomy_%ld_birth.txt", fStep, i, fFittest[i]->critterID );
+			sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_birth.txt", fFittest[i]->agentID );
+			sprintf( t, "run/brain/bestSoFar/%ld/%d_brainAnatomy_%ld_birth.txt", fStep, i, fFittest[i]->agentID );
 			if( link( s, t ) )
 				eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
-			sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_death.txt", fFittest[i]->critterID );
-			sprintf( t, "run/brain/bestSoFar/%ld/%d_brainAnatomy_%ld_death.txt", fStep, i, fFittest[i]->critterID );
+			sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_death.txt", fFittest[i]->agentID );
+			sprintf( t, "run/brain/bestSoFar/%ld/%d_brainAnatomy_%ld_death.txt", fStep, i, fFittest[i]->agentID );
 			if( link( s, t ) )
 				eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
-			sprintf( s, "run/brain/function/brainFunction_%ld.txt", fFittest[i]->critterID );
-			sprintf( t, "run/brain/bestSoFar/%ld/%d_brainFunction_%ld.txt", fStep, i, fFittest[i]->critterID );
+			sprintf( s, "run/brain/function/brainFunction_%ld.txt", fFittest[i]->agentID );
+			sprintf( t, "run/brain/bestSoFar/%ld/%d_brainFunction_%ld.txt", fStep, i, fFittest[i]->agentID );
 			if( link( s, t ) )
 				eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
 			
@@ -766,8 +770,8 @@ void TSimulation::Step()
 			{
 				if( fFittest[i]->complexity == 0.0 )		// if Complexity is zero it means we have to Calculate it
 				{
-					fFittest[i]->complexity = CalcComplexity( t, "P", 0 );		// Complexity of Processing Units Only, all time steps
-					cout << "[COMPLEXITY] Critter: " << fFittest[i]->critterID << "\t Processing Complexity: " << fFittest[i]->complexity << endl;
+					fFittest[i]->complexity = CalcComplexity_brainfunction( t, "P", 0 );		// Complexity of Processing Units Only, all time steps
+					cout << "[COMPLEXITY] Agent: " << fFittest[i]->agentID << "\t Processing Complexity: " << fFittest[i]->complexity << endl;
 				}
 			}
 
@@ -784,23 +788,23 @@ void TSimulation::Step()
 		mkdir( s, PwDirMode );
 		for( int i = 0; i < limit; i++ )
 		{
-			if( fRecentFittest[i]->critterID > 0 )
+			if( fRecentFittest[i]->agentID > 0 )
 			{
 				char t[256];	// target (use s for source)
-				sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_incept.txt", fRecentFittest[i]->critterID );
-				sprintf( t, "run/brain/bestRecent/%ld/%d_brainAnatomy_%ld_incept.txt", fStep, i, fRecentFittest[i]->critterID );
+				sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_incept.txt", fRecentFittest[i]->agentID );
+				sprintf( t, "run/brain/bestRecent/%ld/%d_brainAnatomy_%ld_incept.txt", fStep, i, fRecentFittest[i]->agentID );
 				if( link( s, t ) )
 					eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
-				sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_birth.txt", fRecentFittest[i]->critterID );
-				sprintf( t, "run/brain/bestRecent/%ld/%d_brainAnatomy_%ld_birth.txt", fStep, i, fRecentFittest[i]->critterID );
+				sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_birth.txt", fRecentFittest[i]->agentID );
+				sprintf( t, "run/brain/bestRecent/%ld/%d_brainAnatomy_%ld_birth.txt", fStep, i, fRecentFittest[i]->agentID );
 				if( link( s, t ) )
 					eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
-				sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_death.txt", fRecentFittest[i]->critterID );
-				sprintf( t, "run/brain/bestRecent/%ld/%d_brainAnatomy_%ld_death.txt", fStep, i, fRecentFittest[i]->critterID );
+				sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_death.txt", fRecentFittest[i]->agentID );
+				sprintf( t, "run/brain/bestRecent/%ld/%d_brainAnatomy_%ld_death.txt", fStep, i, fRecentFittest[i]->agentID );
 				if( link( s, t ) )
 					eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
-				sprintf( s, "run/brain/function/brainFunction_%ld.txt", fRecentFittest[i]->critterID );
-				sprintf( t, "run/brain/bestRecent/%ld/%d_brainFunction_%ld.txt", fStep, i, fRecentFittest[i]->critterID );
+				sprintf( s, "run/brain/function/brainFunction_%ld.txt", fRecentFittest[i]->agentID );
+				sprintf( t, "run/brain/bestRecent/%ld/%d_brainFunction_%ld.txt", fStep, i, fRecentFittest[i]->agentID );
 				if( link( s, t ) )
 					eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
 
@@ -808,8 +812,8 @@ void TSimulation::Step()
 				{
 					if( fRecentFittest[i]->complexity == 0.0 )		// if Complexity is zero it means we have to Calculate it
 					{
-						fRecentFittest[i]->complexity = CalcComplexity( t, "P", 0 );		// Complexity of Processing Units Only, all time steps
-						cout << "[COMPLEXITY] Critter: " << fRecentFittest[i]->critterID << "\t Processing Complexity: " << fRecentFittest[i]->complexity << endl;
+						fRecentFittest[i]->complexity = CalcComplexity_brainfunction( t, "P", 0 );		// Complexity of Processing Units Only, all time steps
+						cout << "[COMPLEXITY] Agent: " << fRecentFittest[i]->agentID << "\t Processing Complexity: " << fRecentFittest[i]->complexity << endl;
 					}
 				}
 
@@ -828,9 +832,9 @@ void TSimulation::Step()
 			
 			for( int i=0; i<limit2; i++ )
 			{
-				if( fRecentFittest[i]->critterID > 0 )
+				if( fRecentFittest[i]->agentID > 0 )
 				{
-//					cout << "[" <<  fStep << "] " << fRecentFittest[i]->critterID << ": " << fRecentFittest[i]->complexity << endl;
+//					cout << "[" <<  fStep << "] " << fRecentFittest[i]->agentID << ": " << fRecentFittest[i]->complexity << endl;
 					mean += fRecentFittest[i]->complexity;		// Get Sum of all Complexities
 					count++;
 				}
@@ -848,7 +852,7 @@ void TSimulation::Step()
 			{
 				for( int i=0; i<limit2; i++ )
 				{
-					if( fRecentFittest[i]->critterID > 0 )
+					if( fRecentFittest[i]->agentID > 0 )
 					{
 						stddev += pow(fRecentFittest[i]->complexity - mean, 2);		// Get Sum of all Complexities
 					}
@@ -873,41 +877,41 @@ void TSimulation::Step()
 			
 		}
 
-		// Now delete all bestRecent critter files, unless they are also on the bestSoFar list
+		// Now delete all bestRecent agent files, unless they are also on the bestSoFar list
 		// Also empty the bestRecent list here, so we start over each epoch
 		int limit2 = fNumberDied < fNumberFit ? fNumberDied : fNumberFit;
 		for( int i = 0; i < limit; i++ )
 		{
-			// First determine whether or not each bestRecent critter is in the bestSoFar list or not
+			// First determine whether or not each bestRecent agent is in the bestSoFar list or not
 			bool inBestSoFarList = false;
 			for( int j = 0; j < limit2; j++ )
 			{
-				if( fRecentFittest[i]->critterID == fFittest[j]->critterID )
+				if( fRecentFittest[i]->agentID == fFittest[j]->agentID )
 				{
 					inBestSoFarList = true;
 					break;
 				}
 			}
 			
-			// If each bestRecent critter is NOT in the bestSoFar list, then unlink all its files from their original location
-			if( !inBestSoFarList && (fRecentFittest[i]->critterID > 0) )
+			// If each bestRecent agent is NOT in the bestSoFar list, then unlink all its files from their original location
+			if( !inBestSoFarList && (fRecentFittest[i]->agentID > 0) )
 			{
-				sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_incept.txt", fRecentFittest[i]->critterID );
+				sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_incept.txt", fRecentFittest[i]->agentID );
 				if( unlink( s ) )
 					eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
-				sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_birth.txt", fRecentFittest[i]->critterID );
+				sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_birth.txt", fRecentFittest[i]->agentID );
 				if( unlink( s ) )
 					eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
-				sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_death.txt", fRecentFittest[i]->critterID );
+				sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_death.txt", fRecentFittest[i]->agentID );
 				if( unlink( s ) )
 					eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
-				sprintf( s, "run/brain/function/brainFunction_%ld.txt", fRecentFittest[i]->critterID );
+				sprintf( s, "run/brain/function/brainFunction_%ld.txt", fRecentFittest[i]->agentID );
 				if( unlink( s ) )
 					eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
 			}
 			
-			// Empty the bestRecent list by zeroing out critter IDs and fitnesses
-			fRecentFittest[i]->critterID = 0;
+			// Empty the bestRecent list by zeroing out agent IDs and fitnesses
+			fRecentFittest[i]->agentID = 0;
 			fRecentFittest[i]->fitness = 0.0;
 			fRecentFittest[i]->complexity = 0.0;
 		}
@@ -933,7 +937,7 @@ void TSimulation::Step()
 			float entropyFourBit[2];
 			float informationFourBit[2];
 						
-			critter* c = NULL;
+			agent* c = NULL;
 
 			if( (FileOneBit = fopen("run/genome/AdamiComplexity-1bit.txt", "a")) == NULL )
 			{
@@ -962,14 +966,14 @@ void TSimulation::Step()
 			fprintf( FileFourBit, "%ld:", fStep );		// write the timestep on the beginning of the line
 			fprintf( FileSummary, "%ld ", fStep );		// write the timestep on the beginning of the line
 			
-			int numcritters = objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE);
+			int numagents = objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE);
 
-			bool bits[numcritters][8];
+			bool bits[numagents][8];
 		
 			for( int gene = 0; gene < genome::gNumBytes; gene++ )			// for each gene ...
 			{
 				int count = 0;
-				while( objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &c ) )	// for each critter ...
+				while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**) &c ) )	// for each agent ...
 				{
 					genevalue = c->Genes()->GeneUIntValue(gene);
 
@@ -994,10 +998,10 @@ void TSimulation::Step()
 				{
 					int number_of_ones=0;
 					
-					for( int critter=0; critter<numcritters; critter++ )
-						if( bits[critter][i] == true ) { number_of_ones++; }		// if critter has a 1 in the column, increment number_of_ones
+					for( int agent=0; agent<numagents; agent++ )
+						if( bits[agent][i] == true ) { number_of_ones++; }		// if agent has a 1 in the column, increment number_of_ones
 										
-					float prob_1 = (float) number_of_ones / (float) numcritters;
+					float prob_1 = (float) number_of_ones / (float) numagents;
 					float prob_0 = 1.0 - prob_1;
 					float logprob_0, logprob_1;
 					
@@ -1024,16 +1028,16 @@ void TSimulation::Step()
 					int number_of[4];
 					for( int j=0; j<4; j++) { number_of[j] = 0; }		// zero out the array
 
-					for( int critter=0; critter<numcritters; critter++ )
+					for( int agent=0; agent<numagents; agent++ )
 					{
-						if( bits[critter][i*2] )			// Bits: 1 ?
+						if( bits[agent][i*2] )			// Bits: 1 ?
 						{
-							if( bits[critter][(i*2)+1] ) { number_of[3]++; }	// Bits: 1 1
+							if( bits[agent][(i*2)+1] ) { number_of[3]++; }	// Bits: 1 1
 							else						 { number_of[2]++; }		// Bits: 1 0							
 						}
 						else							// Bits: 0 ?
 						{
-							if( bits[critter][(i*2)+1] ) { number_of[1]++; }		// Bits: 0 1
+							if( bits[agent][(i*2)+1] ) { number_of[1]++; }		// Bits: 0 1
 							else						 { number_of[0]++; }		// Bits: 0 0
 						}
 					}
@@ -1046,7 +1050,7 @@ void TSimulation::Step()
 					
 					for( int j=0; j<4; j++ )
 					{
-						prob[j] = (float) number_of[j] / (float) numcritters;
+						prob[j] = (float) number_of[j] / (float) numagents;
 						if( prob[j] == 0.0 ) { logprob[j] = 0.0; }
 						else { logprob[j] = log2(prob[j]); }						// in units of mers
 
@@ -1071,62 +1075,62 @@ void TSimulation::Step()
 					for( int j=0; j<16; j++) { number_of[j] = 0; }		// zero out the array
 
 					
-					for( int critter=0; critter<numcritters; critter++ )
+					for( int agent=0; agent<numagents; agent++ )
 					{
-						if( bits[critter][i*4] )					// 1 ? ? ?.  Possibilities are 8-15
+						if( bits[agent][i*4] )					// 1 ? ? ?.  Possibilities are 8-15
 						{
-							if( bits[critter][(i*4)+1] )			// 1 1 ? ?.  Possibilities are 12-15
+							if( bits[agent][(i*4)+1] )			// 1 1 ? ?.  Possibilities are 12-15
 							{
-								if( bits[critter][(i*4)+2] )		// 1 1 1 ?.  Possibilities are 14-15
+								if( bits[agent][(i*4)+2] )		// 1 1 1 ?.  Possibilities are 14-15
 								{
-									if( bits[critter][(i*4)+3] )	{ number_of[15]++; }	// 1 1 1 1
+									if( bits[agent][(i*4)+3] )	{ number_of[15]++; }	// 1 1 1 1
 									else							{ number_of[14]++; }	// 1 1 1 0
 								}
 								else								// 1 1 0 ?.  Possibilities are 12-13
 								{
-									if( bits[critter][(i*4)+3] )	{ number_of[13]++; }	// 1 1 0 1
+									if( bits[agent][(i*4)+3] )	{ number_of[13]++; }	// 1 1 0 1
 									else							{ number_of[12]++; }	// 1 1 0 0
 								}
 							}
 							else									// 1 0 ? ?.  Possibilities are 8-11
 							{
-								if( bits[critter][(i*4)+2] )		// 1 0 1 ?.  Possibilities are 14-15
+								if( bits[agent][(i*4)+2] )		// 1 0 1 ?.  Possibilities are 14-15
 								{
-									if( bits[critter][(i*4)+3] )	{ number_of[11]++; }	// 1 0 1 1
+									if( bits[agent][(i*4)+3] )	{ number_of[11]++; }	// 1 0 1 1
 									else							{ number_of[10]++; }	// 1 0 1 0
 								}
 								else								// 1 0 0 ?.  Possibilities are 12-13
 								{
-									if( bits[critter][(i*4)+3] )	{ number_of[9]++; }		// 1 0 0 1
+									if( bits[agent][(i*4)+3] )	{ number_of[9]++; }		// 1 0 0 1
 									else							{ number_of[8]++; }		// 1 0 0 0
 								}
 							}
 						}
 						else										// 0 ? ? ?.  Possibilities are 0-7
 						{
-							if( bits[critter][(i*4)+1] )			// 0 1 ? ?.  Possibilities are 4-8
+							if( bits[agent][(i*4)+1] )			// 0 1 ? ?.  Possibilities are 4-8
 							{
-								if( bits[critter][(i*4)+2] )		// 0 1 1 ?.  Possibilities are 6-7
+								if( bits[agent][(i*4)+2] )		// 0 1 1 ?.  Possibilities are 6-7
 								{
-									if( bits[critter][(i*4)+3] )	{ number_of[7]++; } // 0 1 1 1
+									if( bits[agent][(i*4)+3] )	{ number_of[7]++; } // 0 1 1 1
 									else							{ number_of[6]++; }	// 0 1 0 0
 								}
 								else								// 0 1 0 ?.  Possibilities are 4-5
 								{
-									if( bits[critter][(i*4)+3] )	{ number_of[5]++; } // 0 1 0 1
+									if( bits[agent][(i*4)+3] )	{ number_of[5]++; } // 0 1 0 1
 									else							{ number_of[4]++; }	// 0 1 0 0
 								}
 							}
 							else									// 0 0 ? ?.  Possibilities are 0-3
 							{
-								if( bits[critter][(i*4)+2] )		// 0 0 1 ?.  Possibilities are 2-3
+								if( bits[agent][(i*4)+2] )		// 0 0 1 ?.  Possibilities are 2-3
 								{
-									if( bits[critter][(i*4)+3] )	{ number_of[3]++; } // 0 0 1 1
+									if( bits[agent][(i*4)+3] )	{ number_of[3]++; } // 0 0 1 1
 									else							{ number_of[2]++; }	// 0 0 1 0
 								}
 								else								// 0 0 0 ?.  Possibilities are 0-1
 								{
-									if( bits[critter][(i*4)+3] )	{ number_of[1]++; } // 0 0 0 1
+									if( bits[agent][(i*4)+3] )	{ number_of[1]++; } // 0 0 0 1
 									else							{ number_of[0]++; }	// 0 0 0 0
 								}							
 							}
@@ -1139,7 +1143,7 @@ void TSimulation::Step()
 					
 					for( int j=0; j<16; j++ )
 					{
-						prob[j] = (float) number_of[j] / (float) numcritters;
+						prob[j] = (float) number_of[j] / (float) numagents;
 						if( prob[j] == 0.0 ) { logprob[j] = 0.0; }
 						else { logprob[j] = log2(prob[j]); }
 
@@ -1174,6 +1178,8 @@ void TSimulation::Step()
 	// Handle tracking gene Separation
 	if( fMonitorGeneSeparation && fRecordGeneSeparation )
 		RecordGeneSeparation();
+
+	fPositionWriter.step(fStep);
 		
 	//Rotate the world a bit each time step... (CMB 3/10/06)
 	if (fRotateWorld)
@@ -1195,7 +1201,7 @@ globals::worldsize);
 void TSimulation::Init()
 {
  	// Set up graphical constructs
-    "ground.obj" >> fGround;
+    "./Polyworld.app/Contents/Resources/ground.obj" >> fGround;
 
     srand(1);
 
@@ -1209,24 +1215,24 @@ void TSimulation::Init()
 	
 	genome::genomeinit();
     brain::braininit();
-    critter::critterinit();
+    agent::agentinit();
 	
 	 // Following is part of one way to speed up the graphics
-	 // Note:  this code must agree with the critter sizing in critter::grow()
+	 // Note:  this code must agree with the agent sizing in agent::grow()
 	 // and the food sizing in food::initlen().
 
-	float maxcritterlenx = critter::gMaxCritterSize / sqrt(genome::gMinmaxspeed);
-	float maxcritterlenz = critter::gMaxCritterSize * sqrt(genome::gMaxmaxspeed);
-	float maxcritterradius = 0.5 * sqrt(maxcritterlenx*maxcritterlenx + maxcritterlenz*maxcritterlenz);
+	float maxagentlenx = agent::gMaxAgentSize / sqrt(genome::gMinmaxspeed);
+	float maxagentlenz = agent::gMaxAgentSize * sqrt(genome::gMaxmaxspeed);
+	float maxagentradius = 0.5 * sqrt(maxagentlenx*maxagentlenx + maxagentlenz*maxagentlenz);
 	float maxfoodlen = 0.75 * food::gMaxFoodEnergy / food::gSize2Energy;
 	float maxfoodradius = 0.5 * sqrt(maxfoodlen * maxfoodlen * 2.0);
 	food::gMaxFoodRadius = maxfoodradius;
-	critter::gMaxRadius = maxcritterradius > maxfoodradius ?
-						  maxcritterradius : maxfoodradius;
+	agent::gMaxRadius = maxagentradius > maxfoodradius ?
+						  maxagentradius : maxfoodradius;
 
     InitMonitoringWindows();
 
-    critter* c = NULL;
+    agent* c = NULL;
 
     if (fNumberFit > 0)
     {
@@ -1240,7 +1246,7 @@ void TSimulation::Init()
             fFittest[i]->genes = new genome();
 			Q_CHECK_PTR( fFittest[i]->genes );
             fFittest[i]->fitness = 0.0;
-			fFittest[i]->critterID = 0;
+			fFittest[i]->agentID = 0;
 			fFittest[i]->complexity = 0.0;
         }
 		
@@ -1253,7 +1259,7 @@ void TSimulation::Init()
 			Q_CHECK_PTR( fRecentFittest[i] );
             fRecentFittest[i]->genes = NULL;	// new genome();	// we don't save the genes in the bestRecent list
             fRecentFittest[i]->fitness = 0.0;
-			fRecentFittest[i]->critterID = 0;
+			fRecentFittest[i]->agentID = 0;
 			fRecentFittest[i]->complexity = 0.0;
         }
 		
@@ -1269,7 +1275,7 @@ void TSimulation::Init()
                 fDomains[id].fittest[i]->genes = new genome();
 				Q_CHECK_PTR( fDomains[id].fittest[i]->genes );
                 fDomains[id].fittest[i]->fitness = 0.0;
-				fDomains[id].fittest[i]->critterID = 0;
+				fDomains[id].fittest[i]->agentID = 0;
 				fDomains[id].fittest[i]->complexity = 0.0;
             }
         }
@@ -1280,13 +1286,13 @@ void TSimulation::Init()
         for( int id = 0; id < fNumDomains; id++ )
         {
 			fDomains[id].fNumLeastFit = 0;
-			fDomains[id].fMaxNumLeastFit = lround( fSmiteFrac * fDomains[id].maxNumCritters );
+			fDomains[id].fMaxNumLeastFit = lround( fSmiteFrac * fDomains[id].maxNumAgents );
 			
 			smPrint( "for domain %d fMaxNumLeastFit = %d\n", id, fDomains[id].fMaxNumLeastFit );
 			
 			if( fDomains[id].fMaxNumLeastFit > 0 )
 			{
-				fDomains[id].fLeastFit = new critter*[fDomains[id].fMaxNumLeastFit];
+				fDomains[id].fLeastFit = new agent*[fDomains[id].fMaxNumLeastFit];
 				
 				for( int i = 0; i < fDomains[id].fMaxNumLeastFit; i++ )
 					fDomains[id].fLeastFit[i] = NULL;
@@ -1308,11 +1314,21 @@ void TSimulation::Init()
 	if( fBestSoFarBrainAnatomyRecordFrequency || fBestSoFarBrainFunctionRecordFrequency ||
 		fBestRecentBrainAnatomyRecordFrequency || fBestRecentBrainFunctionRecordFrequency ||
 		fBrainAnatomyRecordAll || fBrainFunctionRecordAll ||
-		fBrainAnatomyRecordSeeds || fBrainFunctionRecordSeeds || fAdamiComplexityRecordFrequency )
+		fBrainAnatomyRecordSeeds || fBrainFunctionRecordSeeds || fAdamiComplexityRecordFrequency || fRecordPosition)
 	{
+		int agent_factor = 0;
+
+		if(RecordBrainFunction(1)) agent_factor++;
+		if(fRecordPosition) agent_factor++;
+
+		int nfiles = 100 + (fMaxNumAgents * agent_factor);
+
 		// If we're going to be saving info on all these files, must increase the number allowed open
-		if( SetMaximumFiles( fMaxNumCritters * 2 ) )	// 2x is overkill, but let's be safe
-			eprintf( "Error setting maximum files to %ld (%d)\n", fMaxNumCritters * 2, errno );
+		if( SetMaximumFiles( nfiles ) )
+		  {
+		    eprintf( "Error setting maximum files to %d (%d) -- consult ulimit\n", nfiles, errno );
+		    exit(1);
+		  }
 
 		if( mkdir( "run/brain", PwDirMode ) )
 			eprintf( "Error making run/brain directory (%d)\n", errno );
@@ -1398,7 +1414,7 @@ void TSimulation::Init()
 			cerr << "could not open run/BirthsDeaths.log for writing [1]. Exiting." << endl;
 			exit(1);
 		}
-		fprintf( File, "%% Timestep Event Critter# Parent1 Parent2\n" );
+		fprintf( File, "%% Timestep Event Agent# Parent1 Parent2\n" );
 		fclose( File );
 	}
 
@@ -1462,7 +1478,7 @@ void TSimulation::Init()
 	}
 #endif
 
-	//If we're recording the number of critters in or near various foodpatches, then open the stat file
+	//If we're recording the number of agents in or near various foodpatches, then open the stat file
 	if( fRecordFoodPatchStats )
 	{
 			fFoodPatchStatsFile = fopen( "run/foodpatchstats.txt", "w" );
@@ -1490,10 +1506,10 @@ void TSimulation::Init()
 		{
 			numSeededDomain = 0;	// reset for each domain
 
-			int limit = min((fMaxNumCritters - (long)objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE)), fDomains[id].initNumCritters);
+			int limit = min((fMaxNumAgents - (long)objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE)), fDomains[id].initNumAgents);
 			for (int i = 0; i < limit; i++)
 			{
-				c = critter::getfreecritter(this, &fStage);
+				c = agent::getfreeagent(this, &fStage);
 				Q_ASSERT(c != NULL);
 				
 				fNumberCreated++;
@@ -1518,11 +1534,11 @@ void TSimulation::Init()
 				float x = randpw() * (fDomains[id].absoluteSizeX - 0.02) + fDomains[id].startX + 0.01;
 				float z = randpw() * (fDomains[id].absoluteSizeZ - 0.02) + fDomains[id].startZ + 0.01;
 				//float z = -0.01 - randpw() * (globals::worldsize - 0.02);
-				float y = 0.5 * critter::gCritterHeight;
+				float y = 0.5 * agent::gAgentHeight;
 			#if TestWorld
-				// evenly distribute the critters
+				// evenly distribute the agents
 				x = fDomains[id].xleft  +  0.666 * fDomains[id].xsize;
-				z = - globals::worldsize * ((float) (i+1) / (fDomains[id].initNumCritters + 1));
+				z = - globals::worldsize * ((float) (i+1) / (fDomains[id].initNumAgents + 1));
 			#endif
 				c->settranslation(x, y, z);
 				
@@ -1536,23 +1552,25 @@ void TSimulation::Init()
 				objectxsortedlist::gXSortedObjects.add(c);	// stores c->listLink
 
 				c->Domain(id);
-				fDomains[id].numCritters++;
+				fDomains[id].numAgents++;
 				fNeuronGroupCountStats.add( c->Brain()->NumNeuronGroups() );
 
 			#if RecordRandomBrainAnatomies
 				c->Brain()->dumpAnatomical( "run/brain/random", "birth", c->Number(), 0.0 );
 			#endif
+
+				Birth(c, NULL, NULL);
 			}
 			
 			numSeededTotal += numSeededDomain;
 		}
 	
 		// Handle global initial creations, if necessary
-		Q_ASSERT( fInitNumCritters <= fMaxNumCritters );
+		Q_ASSERT( fInitNumAgents <= fMaxNumAgents );
 		
-		while( (int)objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE) < fInitNumCritters )
+		while( (int)objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE) < fInitNumAgents )
 		{
-			c = critter::getfreecritter( this, &fStage );
+			c = agent::getfreeagent( this, &fStage );
 			Q_CHECK_PTR(c);
 
 			fNumberCreated++;
@@ -1574,7 +1592,7 @@ void TSimulation::Init()
 			
 			float x =  0.01 + randpw() * (globals::worldsize - 0.02);
 			float z = -0.01 - randpw() * (globals::worldsize - 0.02);
-			float y = 0.5 * critter::gCritterHeight;
+			float y = 0.5 * agent::gAgentHeight;
 			c->settranslation(x, y, z);
 
 			float yaw =  360.0 * randpw();
@@ -1584,8 +1602,10 @@ void TSimulation::Init()
 			
 			id = WhichDomain(x, z, 0);
 			c->Domain(id);
-			fDomains[id].numCritters++;
+			fDomains[id].numAgents++;
 			fNeuronGroupCountStats.add( c->Brain()->NumNeuronGroups() );
+
+			Birth(c, NULL, NULL);
 		}
 			
 		// Add food to the food patches until they each have their initFoodCount number of food pieces
@@ -1684,13 +1704,13 @@ void TSimulation::Init()
 #if DebugGenetics
 	// This little snippet of code confirms that genetic copying, crossover, and mutation are behaving somewhat reasonably
 	objectxsortedlist::gXSortedObjects.reset();
-	critter* c1 = NULL;
-	critter* c2 = NULL;
+	agent* c1 = NULL;
+	agent* c2 = NULL;
 	genome* g1 = NULL;
 	genome* g2 = NULL;
 	genome g1c, g1x2, g1x2m;
-	objectxsortedlist::gXSortedObjects.nextObj(CRITTERTYPE, c1 );
-	objectxsortedlist::gXSortedObjects.nextObj(CRITTERTYPE, c2 );
+	objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, c1 );
+	objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, c2 );
 	g1 = c1->Genes();
 	g2 = c2->Genes();
 	cout << "************** G1 **************" nl;
@@ -1712,7 +1732,7 @@ void TSimulation::Init()
 	// Set up gene Separation monitoring
 	if (fMonitorGeneSeparation)
     {
-		fGeneSepVals = new float[fMaxNumCritters * (fMaxNumCritters - 1) / 2];
+		fGeneSepVals = new float[fMaxNumAgents * (fMaxNumAgents - 1) / 2];
         fNumGeneSepVals = 0;
         CalculateGeneSeparationAll();
 
@@ -1788,8 +1808,8 @@ void TSimulation::InitWorld()
 	globals::wraparound = false;
 	globals::edges = true;
 	
-    fMinNumCritters = 15;
-    fInitNumCritters = 15;
+    fMinNumAgents = 15;
+    fInitNumAgents = 15;
 	fNumberToSeed = 0;
 	fProbabilityOfMutatingSeeds = 0.0;
     fMinFoodCount = 15;
@@ -1797,10 +1817,10 @@ void TSimulation::InitWorld()
     fMaxFoodGrownCount = 25;
     fInitFoodCount = 25;
     fFoodRate = 0.1;
-    fMiscCritters = 150;
+    fMiscAgents = 150;
 	fPositionSeed = 42;
     fGenomeSeed = 42;
-    fCrittersRfood = true;
+    fAgentsRfood = true;
     fFitness1Frequency = 100;
     fFitness2Frequency = 2;
 	fEat2Consume = 20.0;
@@ -1835,9 +1855,9 @@ void TSimulation::InitWorld()
     fRotateWorld = (fCameraRotationRate != 0.0);	//Boolean for enabling or disabling world roation (CMB 3/19/06)
     fCameraAngleStart = 0.0;
     fCameraFOV = 90.0;
-	fMonitorCritterRank = 1;
-	fMonitorCritterRankOld = 0;
-	fMonitorCritter = NULL;
+	fMonitorAgentRank = 1;
+	fMonitorAgentRankOld = 0;
+	fMonitorAgent = NULL;
 	fMonitorGeneSeparation = false;
     fRecordGeneSeparation = false;
 
@@ -1926,30 +1946,30 @@ void TSimulation::InitWorld()
     genome::gMaxBitProb = 0.9;
 
 	fGraphics = true;
-    critter::gVision = true;
-    critter::gMaxVelocity = 1.0;
-    fMaxNumCritters = 50;
-    critter::gInitMateWait = 25;
-    critter::gMinCritterSize = 1.0;
-    critter::gMinCritterSize = 4.0;
-    critter::gMinMaxEnergy = 500.0;
-    critter::gMaxMaxEnergy = 1000.0;
-    critter::gSpeed2DPosition = 1.0;
-    critter::gYaw2DYaw = 1.0;
-    critter::gMinFocus = 20.0;
-    critter::gMaxFocus = 140.0;
-    critter::gCritterFOV = 10.0;
-    critter::gMaxSizeAdvantage = 2.5;
-    critter::gEat2Energy = 0.01;
-    critter::gMate2Energy = 0.1;
-    critter::gFight2Energy = 1.0;
-    critter::gMaxSizePenalty = 10.0;
-    critter::gSpeed2Energy = 0.1;
-    critter::gYaw2Energy = 0.1;
-    critter::gLight2Energy = 0.01;
-    critter::gFocus2Energy = 0.001;
-    critter::gFixedEnergyDrain = 0.1;
-    critter::gCritterHeight = 0.2;
+    agent::gVision = true;
+    agent::gMaxVelocity = 1.0;
+    fMaxNumAgents = 50;
+    agent::gInitMateWait = 25;
+    agent::gMinAgentSize = 1.0;
+    agent::gMinAgentSize = 4.0;
+    agent::gMinMaxEnergy = 500.0;
+    agent::gMaxMaxEnergy = 1000.0;
+    agent::gSpeed2DPosition = 1.0;
+    agent::gYaw2DYaw = 1.0;
+    agent::gMinFocus = 20.0;
+    agent::gMaxFocus = 140.0;
+    agent::gAgentFOV = 10.0;
+    agent::gMaxSizeAdvantage = 2.5;
+    agent::gEat2Energy = 0.01;
+    agent::gMate2Energy = 0.1;
+    agent::gFight2Energy = 1.0;
+    agent::gMaxSizePenalty = 10.0;
+    agent::gSpeed2Energy = 0.1;
+    agent::gYaw2Energy = 0.1;
+    agent::gLight2Energy = 0.01;
+    agent::gFocus2Energy = 0.001;
+    agent::gFixedEnergyDrain = 0.1;
+    agent::gAgentHeight = 0.2;
 
 	food::gMinFoodEnergy = 20.0;
 	fMinFoodEnergyAtDeath = food::gMinFoodEnergy;
@@ -1980,14 +2000,14 @@ void TSimulation::InitWorld()
 
 void TSimulation::InitMonitoringWindows()
 {
-	// Critter birthrate
+	// Agent birthrate
 	fBirthrateWindow = new TChartWindow( "born / (born + created)", "Birthrate" );
 //	fBirthrateWindow->setWindowTitle( QString( "born / (born + created)" ) );
 	sprintf( fBirthrateWindow->title, "born / (born + created)" );
 	fBirthrateWindow->SetRange(0.0, 1.0);
 	fBirthrateWindow->setFixedSize(TChartWindow::kMaxWidth, TChartWindow::kMaxHeight);
 
-	// Critter fitness		
+	// Agent fitness		
 	fFitnessWindow = new TChartWindow( "maxfit, curmaxfit, avgfit", "Fitness", 3);
 //	fFitnessWindow->setWindowTitle( QString( "maxfit, curmaxfit, avgfit" ) );
 	sprintf( fFitnessWindow->title, "maxfit, curmaxfit, avgfit" );
@@ -2027,7 +2047,7 @@ void TSimulation::InitMonitoringWindows()
 	for (int i = 0; i < numpop; i++)
 	{
 		int colorIndex = i % 7;
-		fPopulationWindow->SetRange(short(i), 0, fMaxNumCritters);
+		fPopulationWindow->SetRange(short(i), 0, fMaxNumAgents);
 		fPopulationWindow->SetColor(i, popColor[colorIndex]);
 	}
 	fPopulationWindow->setFixedSize(TChartWindow::kMaxWidth, TChartWindow::kMaxHeight);
@@ -2036,8 +2056,8 @@ void TSimulation::InitMonitoringWindows()
 	fBrainMonitorWindow = new TBrainMonitorWindow();
 //	fBrainMonitorWindow->setWindowTitle( QString( "Brain Monitor" ) );
 	
-	// Critter POV
-	fCritterPOVWindow = new TCritterPOVWindow( fMaxNumCritters, this );
+	// Agent POV
+	fAgentPOVWindow = new TAgentPOVWindow( fMaxNumAgents, this );
 	
 	// Status window
 	fTextStatusWindow = new TTextStatusWindow( this );
@@ -2091,8 +2111,8 @@ void TSimulation::InitMonitoringWindows()
 	
 	const int mainWindowTitleHeight = 22;
 
-	if (fCritterPOVWindow != NULL)
-		fCritterPOVWindow->RestoreFromPrefs( fBirthrateWindow->width() + 1, kMenuBarHeight + mainWindowTitleHeight + titleHeight );
+	if (fAgentPOVWindow != NULL)
+		fAgentPOVWindow->RestoreFromPrefs( fBirthrateWindow->width() + 1, kMenuBarHeight + mainWindowTitleHeight + titleHeight );
 	
 	if (fBrainMonitorWindow != NULL)
 		fBrainMonitorWindow->RestoreFromPrefs( fBirthrateWindow->width() + 1, kMenuBarHeight + mainWindowTitleHeight + titleHeight + titleHeight );
@@ -2141,12 +2161,12 @@ void TSimulation::PickParentsUsingTournament(int numInPool, int* iParent, int* j
 //---------------------------------------------------------------------------
 void TSimulation::Interact()
 {
-    critter* c = NULL;
-    critter* d = NULL;
-	critter* newCritter = NULL;
-//	critter* oldCritter = NULL;
+    agent* c = NULL;
+    agent* d = NULL;
+	agent* newAgent = NULL;
+//	agent* oldAgent = NULL;
 	food* f = NULL;
-	//cxsortedlist newCritters;
+	//cxsortedlist newAgents;
 	int newlifes = 0;
 	long i;
 	long j;
@@ -2170,8 +2190,8 @@ void TSimulation::Interact()
 	if( (fStep >= MinDebugStep) && (fStep <= MaxDebugStep) )
 	{
 		objectxsortedlist::gXSortedObjects.reset();
-		printf( "********** critters at step %ld **********\n", fStep );
-		while( objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &c ) )
+		printf( "********** agents at step %ld **********\n", fStep );
+		while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**) &c ) )
 		{
 			printf( "  # %ld edge=%g at (%g,%g) rad=%g\n", c->Number(), c->x() - c->radius(), c->x(), c->z(), c->radius() );
 			fflush( stdout );
@@ -2188,9 +2208,9 @@ void TSimulation::Interact()
 
 	fCurrentFittestCount = 0;
 	smPrint( "setting fCurrentFittestCount to 0\n" );
-	float prevAvgFitness = fAverageFitness; // used in smite code, to limit critters that are smitable
+	float prevAvgFitness = fAverageFitness; // used in smite code, to limit agents that are smitable
     fAverageFitness = 0.0;
-	fNumAverageFitness = 0;	// need this because we'll only count critters that have lived at least a modest portion of their lifespan (fSmiteAgeFrac)
+	fNumAverageFitness = 0;	// need this because we'll only count agents that have lived at least a modest portion of their lifespan (fSmiteAgeFrac)
 //	fNumLeastFit = 0;
 //	fNumSmited = 0;
 	for( i = 0; i < fNumDomains; i++ )
@@ -2209,16 +2229,16 @@ void TSimulation::Interact()
 		}
 	}
 	
-	// reset all the FoodPatch critter counts to 0
+	// reset all the FoodPatch agent counts to 0
 	if( fRecordFoodPatchStats )
 	{
-		fNumCrittersNotInOrNearAnyFoodPatch = 0;
+		fNumAgentsNotInOrNearAnyFoodPatch = 0;
 
 		for( int domainNumber = 0; domainNumber < fNumDomains; domainNumber++ )
 		{
 			for( int foodPatchNumber = 0; foodPatchNumber < fDomains[domainNumber].numFoodPatches; foodPatchNumber++ )
 			{
-				fDomains[domainNumber].fFoodPatches[foodPatchNumber].resetCritterCounts();
+				fDomains[domainNumber].fFoodPatches[foodPatchNumber].resetAgentCounts();
 			}
 		}
 	}
@@ -2228,7 +2248,7 @@ void TSimulation::Interact()
 	
 	if( fLockStepWithBirthsDeathsLog )
 	{
-		// if we are running in Lockstep with a LOCKSTEP-BirthDeaths.log, we kill our critters here.
+		// if we are running in Lockstep with a LOCKSTEP-BirthDeaths.log, we kill our agents here.
 		if( fLockstepTimestep == fStep )
 		{
 			lsPrint( "t%d: Triggering %d random deaths...\n", fStep, fLockstepNumDeathsAtTimestep );
@@ -2236,34 +2256,34 @@ void TSimulation::Interact()
 			for( int count = 0; count < fLockstepNumDeathsAtTimestep; count++ )
 			{
 				int i = 0;
-				int numcritters = objectxsortedlist::gXSortedObjects.getCount( CRITTERTYPE );
-				critter* testCritter;
-				critter* randCritter = NULL;
-	//				int randomIndex = int( floor( randpw() * fDomains[kd].numcritters ) );	// pick from this domain
-				int randomIndex = int( floor( randpw() * numcritters ) );
+				int numagents = objectxsortedlist::gXSortedObjects.getCount( AGENTTYPE );
+				agent* testAgent;
+				agent* randAgent = NULL;
+	//				int randomIndex = int( floor( randpw() * fDomains[kd].numagents ) );	// pick from this domain
+				int randomIndex = int( floor( randpw() * numagents ) );
 				gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();	// save the state of the x-sorted list
 
-				// As written, randCritter may not actually be the randomIndex-th critter in the domain, but it will be close,
-				// and as long as there's a single legitimate critter for killing, we will find and kill it
+				// As written, randAgent may not actually be the randomIndex-th agent in the domain, but it will be close,
+				// and as long as there's a single legitimate agent for killing, we will find and kill it
 				objectxsortedlist::gXSortedObjects.reset();
-				while( objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &testCritter ) )
+				while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**) &testAgent ) )
 				{
-					// no qualifications for this critter.  It doesn't even need to be old enough to smite.
-					randCritter = testCritter;	// as long as there's a single legitimate critter for killing, randCriter will be non-NULL
+					// no qualifications for this agent.  It doesn't even need to be old enough to smite.
+					randAgent = testAgent;	// as long as there's a single legitimate agent for killing, randCriter will be non-NULL
 
 					i++;
 					
-					if( i > randomIndex )	// don't need to test for non-NULL randCritter, as it is always non-NULL by the time we reach here
+					if( i > randomIndex )	// don't need to test for non-NULL randAgent, as it is always non-NULL by the time we reach here
 						break;
 				}
 
 				objectxsortedlist::gXSortedObjects.setcurr( saveCurr );	// restore the state of the x-sorted list  V???
 				
-				assert( randCritter != NULL );		// In we're in LOCKSTEP mode, we should *always* have a critter to kill.  If we don't kill a critter, then we are no longer in sync in the LOCKSTEP-BirthsDeaths.log
+				assert( randAgent != NULL );		// In we're in LOCKSTEP mode, we should *always* have a agent to kill.  If we don't kill a agent, then we are no longer in sync in the LOCKSTEP-BirthsDeaths.log
 				
-				Death( randCritter );
+				Death( randAgent );
 				
-				lsPrint( "- Killed critter %d, randomIndex = %d\n", randCritter->Number(), randomIndex );						
+				lsPrint( "- Killed agent %d, randomIndex = %d\n", randAgent->Number(), randomIndex );						
 			}	// end of for loop
 		}	// end of if( fLockstepTimestep == fStep )
 	}
@@ -2271,21 +2291,21 @@ void TSimulation::Interact()
 	fCurrentNeuronGroupCountStats.reset();
 	fCurrentNeuronCountStats.reset();
 	objectxsortedlist::gXSortedObjects.reset();
-    while( objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &c ) )
+    while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**) &c ) )
     {
 
 		fCurrentNeuronGroupCountStats.add( c->Brain()->NumNeuronGroups() );
 		fCurrentNeuronCountStats.add( c->Brain()->GetNumNeurons() );
 
-        id = c->Domain();						// Determine the domain in which the critter currently is located
+        id = c->Domain();						// Determine the domain in which the agent currently is located
 	
 		if( ! fLockStepWithBirthsDeathsLog )
 		{
 			// If we're not running in LockStep mode, allow natural deaths
 			// If we're not using the LowPopulationAdvantage to prevent the population getting to low,
-			// or there are enough agents that we can still afford to lose one (globally & in critter's domain)...
+			// or there are enough agents that we can still afford to lose one (globally & in agent's domain)...
 			if( !fApplyLowPopulationAdvantage ||
-				((objectxsortedlist::gXSortedObjects.getCount( CRITTERTYPE ) > fMinNumCritters) && (fDomains[c->Domain()].numCritters > fDomains[c->Domain()].minNumCritters)) )
+				((objectxsortedlist::gXSortedObjects.getCount( AGENTTYPE ) > fMinNumAgents) && (fDomains[c->Domain()].numAgents > fDomains[c->Domain()].minNumAgents)) )
 			{
 				if ( (c->Energy() <= 0.0)		||
 					 (c->Age() >= c->MaxAge())  ||
@@ -2327,19 +2347,19 @@ void TSimulation::Interact()
 			}
 		}
 		
-		// If we're saving critter-occupancy-of-food-band stats, compute them here
+		// If we're saving agent-occupancy-of-food-band stats, compute them here
 		if( fRecordFoodPatchStats )
 		{
-			// Count critters inside FoodPatches
-			// Also: Count critters outside FoodPatches, but within fFoodPatchOuterRange
+			// Count agents inside FoodPatches
+			// Also: Count agents outside FoodPatches, but within fFoodPatchOuterRange
 			for (int domainNumber = 0; domainNumber < fNumDomains; domainNumber++){
 				for( int foodPatchNumber = 0; foodPatchNumber < fDomains[domainNumber].numFoodPatches; foodPatchNumber++ )
 				{
-					// if critter is inside, then update FoodPatch's critterInsideCount
-					fDomains[domainNumber].fFoodPatches[foodPatchNumber].checkIfCritterIsInside(c->x(), c->z());  
+					// if agent is inside, then update FoodPatch's agentInsideCount
+					fDomains[domainNumber].fFoodPatches[foodPatchNumber].checkIfAgentIsInside(c->x(), c->z());  
 
-					// if critter is inside the outerrange, then update FoodPatch's critterOuterRangeCount
-					fDomains[domainNumber].fFoodPatches[foodPatchNumber].checkIfCritterIsInsideNeighborhood(c->x(), c->z());  
+					// if agent is inside the outerrange, then update FoodPatch's agentOuterRangeCount
+					fDomains[domainNumber].fFoodPatches[foodPatchNumber].checkIfAgentIsInsideNeighborhood(c->x(), c->z());  
 				}
 			}
 		}	
@@ -2352,23 +2372,23 @@ void TSimulation::Interact()
 		
 		// The test against average fitness is an attempt to keep fit organisms from being smited, in general,
 		// but it also helps protect against the situation when there are so few potential low-fitness candidates,
-		// due to the age constraint and/or population size, that critters can end up on both the highest fitness
+		// due to the age constraint and/or population size, that agents can end up on both the highest fitness
 		// and the lowest fitness lists, which can actually cause a crash (or at least used to).
 //		printf( "%ld id=%ld, domain=%d, maxLeast=%d, numLeast=%d, numCrit=%d, maxCrit-
 		if( (fNumDomains > 0) && (fDomains[id].fMaxNumLeastFit > 0) )
 		{
-			if( ((fDomains[id].numCritters > (fDomains[id].maxNumCritters - fDomains[id].fMaxNumLeastFit))) &&	// if there are getting to be too many critters, and
-				(c->Age() >= (fSmiteAgeFrac * c->MaxAge())) &&													// the current critter is old enough to consider for smiting, and
-				(c->HeuristicFitness() < prevAvgFitness) &&																// the current critter has worse than average fitness,
+			if( ((fDomains[id].numAgents > (fDomains[id].maxNumAgents - fDomains[id].fMaxNumLeastFit))) &&	// if there are getting to be too many agents, and
+				(c->Age() >= (fSmiteAgeFrac * c->MaxAge())) &&													// the current agent is old enough to consider for smiting, and
+				(c->HeuristicFitness() < prevAvgFitness) &&																// the current agent has worse than average fitness,
 				( (fDomains[id].fNumLeastFit < fDomains[id].fMaxNumLeastFit)	||								// (we haven't filled our quota yet, or
-				  (c->HeuristicFitness() < fDomains[id].fLeastFit[fDomains[id].fNumLeastFit-1]->HeuristicFitness()) ) )			// the critter is bad enough to displace one already in the queue)
+				  (c->HeuristicFitness() < fDomains[id].fLeastFit[fDomains[id].fNumLeastFit-1]->HeuristicFitness()) ) )			// the agent is bad enough to displace one already in the queue)
 			{
 				if( fDomains[id].fNumLeastFit == 0 )
 				{
 					// It's the first one, so just store it
 					fDomains[id].fLeastFit[0] = c;
 					fDomains[id].fNumLeastFit++;
-					smPrint( "critter %ld added to least fit list for domain %d at position 0 with fitness %g\n", c->Number(), id, c->HeuristicFitness() );
+					smPrint( "agent %ld added to least fit list for domain %d at position 0 with fitness %g\n", c->Number(), id, c->HeuristicFitness() );
 				}
 				else
 				{
@@ -2397,7 +2417,7 @@ void TSimulation::Interact()
 					
 					// Store the new i-th worst
 					fDomains[id].fLeastFit[i] = c;
-					smPrint( "critter %ld added to least fit list for domain %d at position %d with fitness %g\n", c->Number(), id, i, c->HeuristicFitness() );
+					smPrint( "agent %ld added to least fit list for domain %d at position %d with fitness %g\n", c->Number(), id, i, c->HeuristicFitness() );
 				}
 			}
 		}
@@ -2405,7 +2425,7 @@ void TSimulation::Interact()
 
 // Following debug output is accurate only when there is a single domain
 //	if( fDomains[0].fNumLeastFit > 0 )
-//		printf( "%ld numSmitable = %d out of %d, from %ld critters out of %ld\n", fStep, fDomains[0].fNumLeastFit, fDomains[0].fMaxNumLeastFit, fDomains[0].numCritters, fDomains[0].maxNumCritters );
+//		printf( "%ld numSmitable = %d out of %d, from %ld agents out of %ld\n", fStep, fDomains[0].fNumLeastFit, fDomains[0].fMaxNumLeastFit, fDomains[0].numAgents, fDomains[0].maxNumAgents );
 
 	// If we're saving gene stats, record them here
 	if( fRecordGeneStats )
@@ -2415,8 +2435,8 @@ void TSimulation::Interact()
 		{
 			float mean, stddev;
 			
-			mean = (float) fGeneSum[i] / (float) objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE);
-			stddev = sqrt( (float) fGeneSum2[i] / (float) objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE)  -  mean * mean );
+			mean = (float) fGeneSum[i] / (float) objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE);
+			stddev = sqrt( (float) fGeneSum2[i] / (float) objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE)  -  mean * mean );
 			fprintf( fGeneStatsFile, " %.1f,%.1f", mean, stddev );
 		}
 		fprintf( fGeneStatsFile, "\n" );
@@ -2435,7 +2455,7 @@ void TSimulation::Interact()
 	}
 #endif
 
-	//cout << "after deaths1 "; critter::gXSortedCritters.list();	//dbg
+	//cout << "after deaths1 "; agent::gXSortedAgents.list();	//dbg
 
 	// Now go through the list, and use the influence radius to determine
 	// all possible interactions
@@ -2444,19 +2464,19 @@ void TSimulation::Interact()
 	if( (fStep >= MinDebugStep) && (fStep <= MaxDebugStep) )
 	{
 		objectxsortedlist::gXSortedObjects.reset();
-		objectxsortedlist::gXSortedObjects.nextObj(CRITTERTYPE, c);
-		critter* lastCritter;
-		objectxsortedlist::gXSortedObjects.lastObj(CRITTERTYPE, (gobject**) &lastCritter );
-		printf( "%s: at age %ld about to process %ld critters, %ld pieces of food, starting with critter %08lx (%4ld), ending with critter %08lx (%4ld)\n", __FUNCTION__, fStep, objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE), objectxsortedlist::gXSortedObjects.getCount(FOODTYPE), (ulong) c, c->Number(), (ulong) lastCritter, lastCritter->Number() );
+		objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, c);
+		agent* lastAgent;
+		objectxsortedlist::gXSortedObjects.lastObj(AGENTTYPE, (gobject**) &lastAgent );
+		printf( "%s: at age %ld about to process %ld agents, %ld pieces of food, starting with agent %08lx (%4ld), ending with agent %08lx (%4ld)\n", __FUNCTION__, fStep, objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE), objectxsortedlist::gXSortedObjects.getCount(FOODTYPE), (ulong) c, c->Number(), (ulong) lastAgent, lastAgent->Number() );
 	}
 #endif
 
-	// Do Critter Healing
+	// Do Agent Healing
 	if( fHealing )	// if healing is turned on...
 	{
 		objectxsortedlist::gXSortedObjects.reset();
-    	while( objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &c) )	// for every critter...
-			c->Heal( fCritterHealingRate, 0.0 );										// heal it if FoodEnergy > 2ndParam.
+    	while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**) &c) )	// for every agent...
+			c->Heal( fAgentHealingRate, 0.0 );										// heal it if FoodEnergy > 2ndParam.
 	}
 
 	if( fLockStepWithBirthsDeathsLog )
@@ -2465,8 +2485,8 @@ void TSimulation::Interact()
 		{
 			lsPrint( "t%d: Triggering %d random births...\n", fStep, fLockstepNumBirthsAtTimestep );
 
-			critter* c = NULL;		// mommy
-			critter* d = NULL;		// daddy
+			agent* c = NULL;		// mommy
+			agent* d = NULL;		// daddy
 			
 			
 			for( int count = 0; count < fLockstepNumBirthsAtTimestep; count++ ) 
@@ -2475,22 +2495,22 @@ void TSimulation::Interact()
 
 				int i = 0;
 				
-				int numCritters = objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE);
-				assert( numCritters < fMaxNumCritters );			// Since we've already done all the deaths that occurred at this timestep, we should always have enough room to process the births that happened at this timestep.
+				int numAgents = objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE);
+				assert( numAgents < fMaxNumAgents );			// Since we've already done all the deaths that occurred at this timestep, we should always have enough room to process the births that happened at this timestep.
 				
-				critter* testCritter = NULL;
-				//int randomIndex = int( round( randpw() * fDomains[kd].numCritters ) );	// pick from this domain V???
-				int randomIndex = int( round( randpw() * numCritters ) );
+				agent* testAgent = NULL;
+				//int randomIndex = int( round( randpw() * fDomains[kd].numAgents ) );	// pick from this domain V???
+				int randomIndex = int( round( randpw() * numAgents ) );
 								
-				// As written, randCritter may not actually be the randomIndex-th critter in the domain, but it will be close,
-				// and as long as there's a single legitimate critter for mating (right domain, long enough since last mating,
+				// As written, randAgent may not actually be the randomIndex-th agent in the domain, but it will be close,
+				// and as long as there's a single legitimate agent for mating (right domain, long enough since last mating,
 				// and long enough since birth) we will find and use it
 				objectxsortedlist::gXSortedObjects.reset();
-				while( objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &testCritter ) )
+				while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**) &testAgent ) )
 				{
 					// Make sure it's old enough (anything except just birthed), and it has been long enough since it mated
-					if( (testCritter->Age() > 0) && ((testCritter->Age() - testCritter->LastMate()) >= fMateWait) )
-						c = testCritter;	// as long as there's a single legitimate critter for mating, Mommy will be non-NULL
+					if( (testAgent->Age() > 0) && ((testAgent->Age() - testAgent->LastMate()) >= fMateWait) )
+						c = testAgent;	// as long as there's a single legitimate agent for mating, Mommy will be non-NULL
 					
 					i++;
 					
@@ -2501,17 +2521,17 @@ void TSimulation::Interact()
 				/* select daddy. */
 
 				i = 0;
-				randomIndex = int( round( randpw() * numCritters ) );
+				randomIndex = int( round( randpw() * numAgents ) );
 								
-				// As written, randCritter may not actually be the randomIndex-th critter in the domain, but it will be close,
-				// and as long as there's a single legitimate critter for mating (right domain, long enough since last mating, and
+				// As written, randAgent may not actually be the randomIndex-th agent in the domain, but it will be close,
+				// and as long as there's a single legitimate agent for mating (right domain, long enough since last mating, and
 				// has enough energy, plus not the same as the mommy), we will find and use it
 				objectxsortedlist::gXSortedObjects.reset();
-				while( objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &testCritter ) )
+				while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**) &testAgent ) )
 				{
 					// If it was not just birthed, it has been long enough since it mated, and it's not the same as mommy, it'll do for daddy.
-					if( (testCritter->Age() > 0) && ((testCritter->Age() - testCritter->LastMate()) >= fMateWait) && (testCritter->Number() != c->Number()) )
-						d = testCritter;	// as long as there's another single legitimate critter for mating, Daddy will be non-NULL
+					if( (testAgent->Age() > 0) && ((testAgent->Age() - testAgent->LastMate()) >= fMateWait) && (testAgent->Number() != c->Number()) )
+						d = testAgent;	// as long as there's another single legitimate agent for mating, Daddy will be non-NULL
 
 					i++;
 						
@@ -2521,13 +2541,13 @@ void TSimulation::Interact()
 
 				assert( c != NULL && d != NULL );				// If for some reason we can't select parents, then we'll become out of sync with LOCKSTEP-BirthDeaths.log
 												
-				lsPrint( "* I have selected Mommy(%ld) and Daddy(%ld). Population size = %d\n", c->Number(), d->Number(), numCritters );
+				lsPrint( "* I have selected Mommy(%ld) and Daddy(%ld). Population size = %d\n", c->Number(), d->Number(), numAgents );
 				
-				/* === We've selected our parents, now time to birth our critter. */
+				/* === We've selected our parents, now time to birth our agent. */
 					
-				ttPrint( "age %ld: critters # %ld & %ld are mating randomly\n", fStep, c->Number(), d->Number() );
+				ttPrint( "age %ld: agents # %ld & %ld are mating randomly\n", fStep, c->Number(), d->Number() );
 						
-				critter* e = critter::getfreecritter( this, &fStage );
+				agent* e = agent::getfreeagent( this, &fStage );
 				Q_CHECK_PTR(e);
 
 				e->Genes()->Crossover(c->Genes(), d->Genes(), true);
@@ -2540,24 +2560,24 @@ void TSimulation::Interact()
 				e->FoodEnergy(eenergy);
 				float x =  0.01 + randpw() * (globals::worldsize - 0.02);
 				float z = -0.01 - randpw() * (globals::worldsize - 0.02);
-				float y = 0.5 * critter::gCritterHeight;
+				float y = 0.5 * agent::gAgentHeight;
 				e->settranslation(x, y, z);
 				float yaw =  360.0 * randpw();
 				c->setyaw(yaw);
 				kd = WhichDomain(x, z, 0);
 				e->Domain(kd);
 				fStage.AddObject(e);
-				objectxsortedlist::gXSortedObjects.add(e); // Add the new critter directly to the list of objects (no new critter list); the e->listLink that gets auto stored here should be valid immediately
+				objectxsortedlist::gXSortedObjects.add(e); // Add the new agent directly to the list of objects (no new agent list); the e->listLink that gets auto stored here should be valid immediately
 							
 				newlifes++;
-				fDomains[kd].numCritters++;
+				fDomains[kd].numAgents++;
 				fNumberBorn++;
 				fDomains[kd].numborn++;
 				fNumBornSinceCreated++;
 				fDomains[kd].numbornsincecreated++;
 				fNeuronGroupCountStats.add( e->Brain()->NumNeuronGroups() );
-				ttPrint( "age %ld: critter # %ld is born\n", fStep, e->Number() );
-				birthPrint( "step %ld: critter # %ld born to %ld & %ld, at (%g,%g,%g), yaw=%g, energy=%g, domain %d (%d & %d), neurgroups=%d\n",
+				ttPrint( "age %ld: agent # %ld is born\n", fStep, e->Number() );
+				birthPrint( "step %ld: agent # %ld born to %ld & %ld, at (%g,%g,%g), yaw=%g, energy=%g, domain %d (%d & %d), neurgroups=%d\n",
 					fStep, e->Number(), c->Number(), d->Number(), e->x(), e->y(), e->z(), e->yaw(), e->Energy(), kd, id, jd, e->Brain()->NumNeuronGroups() );
 
 
@@ -2568,6 +2588,8 @@ void TSimulation::Interact()
 					e->Brain()->scale_latest_spikes = d->Brain()->scale_latest_spikes;
 				printf("%f\n", e->Brain()->scale_latest_spikes);
 #endif
+
+				Birth(e, c, d);
 
 				if( fRecordBirthsDeaths )		// If we're recording birth and death events, record the birth of our newborn.
 				{
@@ -2593,27 +2615,27 @@ void TSimulation::Interact()
 
 
 	objectxsortedlist::gXSortedObjects.reset();
-    while( objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &c ) )
+    while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**) &c ) )
     {
-		// Check for new critter.  If totally new (never updated), skip this critter.
-		// This is because newly born critters get added directly to the main list,
+		// Check for new agent.  If totally new (never updated), skip this agent.
+		// This is because newly born agents get added directly to the main list,
 		// and we might try to process them immediately after being born, but we
 		// don't want to do that until the next time step.
 		if( c->Age() <= 0 )
 			continue;
 
-		// determine the domain in which the critter currently is located
+		// determine the domain in which the agent currently is located
         id = c->Domain();
 
-		// now see if there's an overlap with any other critters
+		// now see if there's an overlap with any other agents
 
-		objectxsortedlist::gXSortedObjects.setMark( CRITTERTYPE ); // so can point back to this critter later
+		objectxsortedlist::gXSortedObjects.setMark( AGENTTYPE ); // so can point back to this agent later
 		
         cDied = FALSE;
         jd = id;
         kd = id;
 
-        while( objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &d ) ) // to end of list or...
+        while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**) &d ) ) // to end of list or...
         {
 			if( d == c )
 			{
@@ -2637,13 +2659,13 @@ void TSimulation::Interact()
                 // and if we get here then they are also close enough in z,
                 // so must actually worry about their interaction
 
-				ttPrint( "age %ld: critters # %ld & %ld are close\n", fStep, c->Number(), d->Number() );
+				ttPrint( "age %ld: agents # %ld & %ld are close\n", fStep, c->Number(), d->Number() );
 
                 jd = d->Domain();
 
 				// now take care of mating
 
-				// first test to see if these two critters are attempting to mate and allowed to do so (based on their own states)
+				// first test to see if these two agents are attempting to mate and allowed to do so (based on their own states)
 			#ifdef OF1
 				if ( (c->Mate() > fMateThreshold) &&
 					 (d->Mate() > fMateThreshold) &&          // it takes two!
@@ -2664,7 +2686,7 @@ void TSimulation::Interact()
 					((fEatMateSpan == 0) || ((fStep-c->LastEat() < fEatMateSpan) && (fStep-d->LastEat() < fEatMateSpan))) )	// and they've eaten recently enough (if we're enforcing that)
 			#endif
 				{
-					// the critters are mate-worthy, so now deal with other conditions...
+					// the agents are mate-worthy, so now deal with other conditions...
 					
 					// test for steady-state GA vs. natural selection
 					if( (fHeuristicFitnessWeight != 0.0) || (fComplexityFitnessWeight != 0.0) )
@@ -2699,7 +2721,7 @@ void TSimulation::Interact()
 
 						if( fSmiteMode == 'L' )		// smite the least fit
 						{
-							if( (fDomains[kd].numCritters >= fDomains[kd].maxNumCritters) &&	// too many critters to reproduce withing a bit of smiting
+							if( (fDomains[kd].numAgents >= fDomains[kd].maxNumAgents) &&	// too many agents to reproduce withing a bit of smiting
 								(fDomains[kd].fNumLeastFit > fDomains[kd].fNumSmited) )			// we've still got some left that are suitable for smiting
 							{
 								while( (fDomains[kd].fNumSmited < fDomains[kd].fNumLeastFit) &&		// there are any left to smite
@@ -2713,7 +2735,7 @@ void TSimulation::Interact()
 								}
 								if( fDomains[kd].fNumSmited < fDomains[kd].fNumLeastFit )	// we've still got someone to smite, so do it
 								{
-									smPrint( "About to smite least-fit critter #%d in domain %d\n", fDomains[kd].fLeastFit[fDomains[kd].fNumSmited]->Number(), kd );
+									smPrint( "About to smite least-fit agent #%d in domain %d\n", fDomains[kd].fLeastFit[fDomains[kd].fNumSmited]->Number(), kd );
 									Death( fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] );
 									fDomains[kd].fNumSmited++;
 									fNumberDiedSmite++;
@@ -2724,43 +2746,43 @@ void TSimulation::Interact()
 						}
 						else if( fSmiteMode == 'R' )				/// RANDOM SMITE
 						{
-							// If necessary, smite a random critter in this domain
-							if( fDomains[kd].numCritters >= fDomains[kd].maxNumCritters )
+							// If necessary, smite a random agent in this domain
+							if( fDomains[kd].numAgents >= fDomains[kd].maxNumAgents )
 							{
 								int i = 0;
-								critter* testCritter;
-								critter* randCritter = NULL;
-								int randomIndex = int( floor( randpw() * fDomains[kd].numCritters ) );	// pick from this domain
+								agent* testAgent;
+								agent* randAgent = NULL;
+								int randomIndex = int( floor( randpw() * fDomains[kd].numAgents ) );	// pick from this domain
 
 								gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();	// save the state of the x-sorted list
 
-								// As written, randCritter may not actually be the randomIndex-th critter in the domain, but it will be close,
-								// and as long as there's a single legitimate critter for smiting (right domain, old enough, and not one of the
+								// As written, randAgent may not actually be the randomIndex-th agent in the domain, but it will be close,
+								// and as long as there's a single legitimate agent for smiting (right domain, old enough, and not one of the
 								// parents), we will find and smite it
 								objectxsortedlist::gXSortedObjects.reset();
-								while( (i <= randomIndex) && objectxsortedlist::gXSortedObjects.nextObj( CRITTERTYPE, (gobject**) &testCritter ) )
+								while( (i <= randomIndex) && objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**) &testAgent ) )
 								{
 									// If it's from the right domain, it's old enough, and it's not one of the parents, allow it
-									if( testCritter->Domain() == kd )
+									if( testAgent->Domain() == kd )
 									{
 										i++;	// if it's in the right domain, increment even if we're not allowed to smite it
 										
-										if( (testCritter->Age() > fSmiteAgeFrac*testCritter->MaxAge()) && (testCritter->Number() != c->Number()) && (testCritter->Number() != d->Number()) )
-											randCritter = testCritter;	// as long as there's a single legitimate critter for smiting in this domain, randCriter will be non-NULL
+										if( (testAgent->Age() > fSmiteAgeFrac*testAgent->MaxAge()) && (testAgent->Number() != c->Number()) && (testAgent->Number() != d->Number()) )
+											randAgent = testAgent;	// as long as there's a single legitimate agent for smiting in this domain, randCriter will be non-NULL
 									}
 									
-									if( (i > randomIndex) && (randCritter != NULL) )
+									if( (i > randomIndex) && (randAgent != NULL) )
 										break;
 								}
 																	
 								objectxsortedlist::gXSortedObjects.setcurr( saveCurr );	// restore the state of the x-sorted list
 								
-								if( randCritter )	// if we found any legitimately smitable critter...
+								if( randAgent )	// if we found any legitimately smitable agent...
 								{
 									fDomains[kd].fNumSmited++;
 									fNumberDiedSmite++;
 									smited = true;
-									Death( randCritter );
+									Death( randAgent );
 								}
 								
 							}
@@ -2768,19 +2790,19 @@ void TSimulation::Interact()
 						}
 
 						
-						if ( (fDomains[kd].numCritters < fDomains[kd].maxNumCritters) &&
-							 (objectxsortedlist::gXSortedObjects.getCount( CRITTERTYPE ) < fMaxNumCritters) )
+						if ( (fDomains[kd].numAgents < fDomains[kd].maxNumAgents) &&
+							 (objectxsortedlist::gXSortedObjects.getCount( AGENTTYPE ) < fMaxNumAgents) )
 						{
 							// Still got room for more
-							if( (fMiscCritters < 0) ||									// miscegenation function not being used
-								(fDomains[kd].numbornsincecreated < fMiscCritters) ||	// miscegenation function not in use yet
+							if( (fMiscAgents < 0) ||									// miscegenation function not being used
+								(fDomains[kd].numbornsincecreated < fMiscAgents) ||	// miscegenation function not in use yet
 								(randpw() < c->MateProbability(d)) )					// miscegenation function allows the birth
 							{
-								ttPrint( "age %ld: critters # %ld & %ld are mating\n", fStep, c->Number(), d->Number() );
+								ttPrint( "age %ld: agents # %ld & %ld are mating\n", fStep, c->Number(), d->Number() );
 								fNumBornSinceCreated++;
 								fDomains[kd].numbornsincecreated++;
 								
-								critter* e = critter::getfreecritter(this, &fStage);
+								agent* e = agent::getfreeagent(this, &fStage);
 								Q_CHECK_PTR(e);
 
 								e->Genes()->Crossover(c->Genes(), d->Genes(), true);
@@ -2795,17 +2817,17 @@ void TSimulation::Interact()
 								e->Domain(kd);
 								fStage.AddObject(e);
 								gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();
-								objectxsortedlist::gXSortedObjects.add(e); // Add the new critter directly to the list of objects (no new critter list); the e->listLink that gets auto stored here should be valid immediately
+								objectxsortedlist::gXSortedObjects.add(e); // Add the new agent directly to the list of objects (no new agent list); the e->listLink that gets auto stored here should be valid immediately
 								objectxsortedlist::gXSortedObjects.setcurr( saveCurr );
 								
 								newlifes++;
-								//newCritters.add(e); // add it to the full list later; the e->listLink that gets auto stored here must be replaced with one from full list below
-								fDomains[kd].numCritters++;
+								//newAgents.add(e); // add it to the full list later; the e->listLink that gets auto stored here must be replaced with one from full list below
+								fDomains[kd].numAgents++;
 								fNumberBorn++;
 								fDomains[kd].numborn++;
 								fNeuronGroupCountStats.add( e->Brain()->NumNeuronGroups() );
-								ttPrint( "age %ld: critter # %ld is born\n", fStep, e->Number() );
-								birthPrint( "step %ld: critter # %ld born to %ld & %ld, at (%g,%g,%g), yaw=%g, energy=%g, domain %d (%d & %d), neurgroups=%d\n",
+								ttPrint( "age %ld: agent # %ld is born\n", fStep, e->Number() );
+								birthPrint( "step %ld: agent # %ld born to %ld & %ld, at (%g,%g,%g), yaw=%g, energy=%g, domain %d (%d & %d), neurgroups=%d\n",
 											fStep, e->Number(), c->Number(), d->Number(), e->x(), e->y(), e->z(), e->yaw(), e->Energy(), kd, id, jd, e->Brain()->NumNeuronGroups() );
 								//if( fStep > 50 )
 								//	exit( 0 );
@@ -2816,6 +2838,8 @@ void TSimulation::Interact()
 								e->Brain()->scale_latest_spikes = d->Brain()->scale_latest_spikes;
 							printf("%f\n", e->Brain()->scale_latest_spikes);
 	#endif							
+								Birth(e, c, d);
+
 								if( fRecordBirthsDeaths )
 								{
 									FILE * File;
@@ -2837,10 +2861,10 @@ void TSimulation::Interact()
 								fMiscDenials++;
 							}
 						}
-						else	// Too many critters
+						else	// Too many agents
 							fBirthDenials++;
 					}	// steady-state GA vs. natural selection
-                }	// if critters are trying to mate
+                }	// if agents are trying to mate
 			
 			
 
@@ -2864,7 +2888,7 @@ void TSimulation::Interact()
 
                     if ( (cpower > 0.0) || (dpower > 0.0) )
                     {
-						ttPrint( "age %ld: critters # %ld & %ld are fighting\n", fStep, c->Number(), d->Number() );
+						ttPrint( "age %ld: agents # %ld & %ld are fighting\n", fStep, c->Number(), d->Number() );
                         // somebody wants to fight
                         fNumberFights++;
                         c->damage(dpower * fPower2Energy);
@@ -2874,20 +2898,20 @@ void TSimulation::Interact()
 							// If we're not running in LockStep mode, allow natural deaths
 							if (d->Energy() <= 0.0)
 							{
-								//cout << "before deaths2 "; critter::gXSortedCritters.list();	//dbg
+								//cout << "before deaths2 "; agent::gXSortedAgents.list();	//dbg
 								Death(d);
 								fNumberDiedFight++;
-								//cout << "after deaths2 "; critter::gXSortedCritters.list();	//dbg
+								//cout << "after deaths2 "; agent::gXSortedAgents.list();	//dbg
 							}
 							if (c->Energy() <= 0.0)
 							{
-								objectxsortedlist::gXSortedObjects.toMark( CRITTERTYPE ); // point back to c
+								objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point back to c
 								Death(c);
 								fNumberDiedFight++;
 
-								// note: this leaves list pointing to item before c, and markedCritter set to previous critter
-								//objectxsortedlist::gXSortedObjects.setMarkPrevious( CRITTERTYPE );	// if previous object was a critter, this would step one too far back, I think - lsy
-								//cout << "after deaths3 "; critter::gXSortedCritters.list();	//dbg
+								// note: this leaves list pointing to item before c, and markedAgent set to previous agent
+								//objectxsortedlist::gXSortedObjects.setMarkPrevious( AGENTTYPE );	// if previous object was a agent, this would step one too far back, I think - lsy
+								//cout << "after deaths3 "; agent::gXSortedAgents.list();	//dbg
 								cDied = true;
 								break;
 							}
@@ -2900,29 +2924,29 @@ void TSimulation::Interact()
 			#endif DEBUGCHECK
 
             }  // if close enough
-        }  // while (critter::gXSortedCritters.next(d))
+        }  // while (agent::gXSortedAgents.next(d))
 
 	#ifdef DEBUGCHECK
-        debugcheck("after all critter interactions in interact");
+        debugcheck("after all agent interactions in interact");
 	#endif DEBUGCHECK
 
         if( cDied )
 			continue; // nothing else to do with c, it's gone!
 	
 		// they finally get to eat (couldn't earlier to keep from conferring
-		// a special advantage on critters early in the sorted list)
+		// a special advantage on agents early in the sorted list)
 
 		// Just to be slightly more like the old multi-x-sorted list version of the code, look backwards first
 
-		// set the list back to the critter mark, so we can look backward from that point
-		objectxsortedlist::gXSortedObjects.toMark( CRITTERTYPE ); // point list back to c
+		// set the list back to the agent mark, so we can look backward from that point
+		objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point list back to c
 	
 		// look for food in the -x direction
 		ateBackwardFood = false;
 	#if CompatibilityMode
 		// go backwards in the list until we reach a place where even the largest possible piece of food
-		// would entirely precede our critter, and no smaller piece of food sorting after it, but failing
-		// to reach the critter can prematurely terminate the scan back (hence the factor of 2.0),
+		// would entirely precede our agent, and no smaller piece of food sorting after it, but failing
+		// to reach the agent can prematurely terminate the scan back (hence the factor of 2.0),
 		// so we can then search forward from there
 		while( objectxsortedlist::gXSortedObjects.prevObj( FOODTYPE, (gobject**) &f ) )
 			if( (f->x() + 2.0*food::gMaxFoodRadius) < (c->x() - c->radius()) )
@@ -2932,24 +2956,24 @@ void TSimulation::Interact()
         {
 			if( (f->x() + f->radius()) < (c->x() - c->radius()) )
 			{
-				// end of food comes before beginning of critter, so there is no overlap
+				// end of food comes before beginning of agent, so there is no overlap
 				// if we've gone so far back that the largest possible piece of food could not overlap us,
-				// then we can stop searching for this critter's possible foods in the backward direction
+				// then we can stop searching for this agent's possible foods in the backward direction
 				if( (f->x() + 2.0*food::gMaxFoodRadius) < (c->x() - c->radius()) )
 					break;  // so get out of the backward food while loop
 			}
 			else
 			{
-				// beginning of food comes before end of critter, so there is overlap in x
+				// beginning of food comes before end of agent, so there is overlap in x
 				// time to check for overlap in z
 				if( fabs( f->z() - c->z() ) < ( f->radius() + c->radius() ) )
 				{
 					// also overlap in z, so they really interact
-					ttPrint( "step %ld: critter # %ld is eating\n", fStep, c->Number() );
+					ttPrint( "step %ld: agent # %ld is eating\n", fStep, c->Number() );
 					float foodEaten = c->eat( f, fEatFitnessParameter, fEat2Consume, fEatThreshold, fStep );
 					fFoodEnergyOut += foodEaten;
 					
-					eatPrint( "at step %ld, critter %ld at (%g,%g) with rad=%g wasted %g units of food at (%g,%g) with rad=%g\n", fStep, c->Number(), c->x(), c->z(), c->radius(), foodEaten, f->x(), f->z(), f->radius() );
+					eatPrint( "at step %ld, agent %ld at (%g,%g) with rad=%g wasted %g units of food at (%g,%g) with rad=%g\n", fStep, c->Number(), c->x(), c->z(), c->radius(), foodEaten, f->x(), f->z(), f->radius() );
 
 					if (f->energy() <= 0.0)  // all gone
 					{
@@ -2973,8 +2997,8 @@ void TSimulation::Interact()
 		if( !ateBackwardFood )
 		{
 		#if ! CompatibilityMode
-			// set the list back to the critter mark, so we can look forward from that point
-			objectxsortedlist::gXSortedObjects.toMark( CRITTERTYPE ); // point list back to c
+			// set the list back to the agent mark, so we can look forward from that point
+			objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point list back to c
 		#endif
 		
 			// look for food in the +x direction
@@ -2982,27 +3006,27 @@ void TSimulation::Interact()
 			{
 				if( (f->x() - f->radius()) > (c->x() + c->radius()) )
 				{
-					// beginning of food comes after end of critter, so there is no overlap,
-					// and we can stop searching for this critter's possible foods in the forward direction
+					// beginning of food comes after end of agent, so there is no overlap,
+					// and we can stop searching for this agent's possible foods in the forward direction
 					break;  // so get out of the forward food while loop
 				}
 				else
 				{
 		#if CompatibilityMode
-					if( ((f->x() + f->radius()) > (c->x() - c->radius()))  &&		// end of food comes after beginning of critter, and
+					if( ((f->x() + f->radius()) > (c->x() - c->radius()))  &&		// end of food comes after beginning of agent, and
 						(fabs( f->z() - c->z() ) < (f->radius() + c->radius())) )	// there is overlap in z
 		#else
-					// beginning of food comes before end of critter, so there is overlap in x
+					// beginning of food comes before end of agent, so there is overlap in x
 					// time to check for overlap in z
 					if( fabs( f->z() - c->z() ) < (f->radius() + c->radius()) )
 		#endif
 					{
 						// also overlap in z, so they really interact
-						ttPrint( "step %ld: critter # %ld is eating\n", fStep, c->Number() );
+						ttPrint( "step %ld: agent # %ld is eating\n", fStep, c->Number() );
 						float foodEaten = c->eat( f, fEatFitnessParameter, fEat2Consume, fEatThreshold, fStep );
 						fFoodEnergyOut += foodEaten;
 						
-						eatPrint( "at step %ld, critter %ld at (%g,%g) with rad=%g wasted %g units of food at (%g,%g) with rad=%g\n", fStep, c->Number(), c->x(), c->z(), c->radius(), foodEaten, f->x(), f->z(), f->radius() );
+						eatPrint( "at step %ld, agent %ld at (%g,%g) with rad=%g wasted %g units of food at (%g,%g) with rad=%g\n", fStep, c->Number(), c->x(), c->z(), c->radius(), foodEaten, f->x(), f->z(), f->radius() );
 
 						if (f->energy() <= 0.0)  // all gone
 						{
@@ -3025,7 +3049,7 @@ void TSimulation::Interact()
 
 		}
 	
-		objectxsortedlist::gXSortedObjects.toMark( CRITTERTYPE ); // point list back to c
+		objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point list back to c
 		
 	#ifdef DEBUGCHECK
         debugcheck( "after eating in interact" );
@@ -3043,10 +3067,10 @@ void TSimulation::Interact()
 			if( (fCurrentFittestCount == 0) || ((c->HeuristicFitness() <= fCurrentMaxFitness[fCurrentFittestCount-1]) && (fCurrentFittestCount < MAXFITNESSITEMS)) )	// just append
 			{
 				fCurrentMaxFitness[fCurrentFittestCount] = c->HeuristicFitness();
-				fCurrentFittestCritter[fCurrentFittestCount] = c;
+				fCurrentFittestAgent[fCurrentFittestCount] = c;
 				fCurrentFittestCount++;
 			#if DebugMaxFitness
-				printf( "appended critter %08lx (%4ld) to fittest list at position %d with fitness %g, count = %d\n", (ulong) c, c->Number(), fCurrentFittestCount-1, c->HeuristicFitness(), fCurrentFittestCount );
+				printf( "appended agent %08lx (%4ld) to fittest list at position %d with fitness %g, count = %d\n", (ulong) c, c->Number(), fCurrentFittestCount-1, c->HeuristicFitness(), fCurrentFittestCount );
 			#endif
 			}
 			else	// must insert
@@ -3060,29 +3084,29 @@ void TSimulation::Interact()
 				for( j = min( fCurrentFittestCount, MAXFITNESSITEMS-1 ); j > i; j-- )
 				{
 					fCurrentMaxFitness[j] = fCurrentMaxFitness[j-1];
-					fCurrentFittestCritter[j] = fCurrentFittestCritter[j-1];
+					fCurrentFittestAgent[j] = fCurrentFittestAgent[j-1];
 				}
 				
 				fCurrentMaxFitness[i] = c->HeuristicFitness();
-				fCurrentFittestCritter[i] = c;
+				fCurrentFittestAgent[i] = c;
 				if( fCurrentFittestCount < MAXFITNESSITEMS )
 					fCurrentFittestCount++;
 			#if DebugMaxFitness
-				printf( "inserted critter %08lx (%4ld) into fittest list at position %ld with fitness %g, count = %d\n", (ulong) c, c->Number(), i, c->HeuristicFitness(), fCurrentFittestCount );
+				printf( "inserted agent %08lx (%4ld) into fittest list at position %ld with fitness %g, count = %d\n", (ulong) c, c->Number(), i, c->HeuristicFitness(), fCurrentFittestCount );
 			#endif
 			}
         }
 
-    } // while loop on critters
+    } // while loop on agents
 
-//	fAverageFitness /= critter::gXSortedCritters.count();
+//	fAverageFitness /= agent::gXSortedAgents.count();
 	if( fNumAverageFitness > 0 )
 		fAverageFitness /= fNumAverageFitness * fTotalHeuristicFitness;
 
 #if DebugMaxFitness
 	printf( "At age %ld (c,n,fit,c->fit) =", fStep );
 	for( i = 0; i < fCurrentFittestCount; i++ )
-		printf( " (%08lx,%ld,%5.2f,%5.2f)", (ulong) fCurrentFittestCritter[i], fCurrentFittestCritter[i]->Number(), fCurrentMaxFitness[i], fCurrentFittestCritter[i]->HeuristicFitness() );
+		printf( " (%08lx,%ld,%5.2f,%5.2f)", (ulong) fCurrentFittestAgent[i], fCurrentFittestAgent[i]->Number(), fCurrentMaxFitness[i], fCurrentFittestAgent[i]->HeuristicFitness() );
 	printf( "\n" );
 #endif
 
@@ -3091,10 +3115,10 @@ void TSimulation::Interact()
 
 	// now for a little spontaneous generation!
 	
-	long maxToCreate = fMaxNumCritters - (long)(objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE));
+	long maxToCreate = fMaxNumAgents - (long)(objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE));
     if (maxToCreate > 0)
     {
-        // provided there are less than the maximum number of critters already
+        // provided there are less than the maximum number of agents already
 
 		// Due to an imbalance in the number of agents in the various domains, and the fact that
 		// maximum numbers are not enforced for domains as agents travel of their own accord,
@@ -3104,7 +3128,7 @@ void TSimulation::Interact()
 		long numToCreate = 0;
 		for (id = 0; id < fNumDomains; id++)
 		{
-			fDomains[id].numToCreate = max(0L, fDomains[id].minNumCritters - fDomains[id].numCritters);
+			fDomains[id].numToCreate = max(0L, fDomains[id].minNumAgents - fDomains[id].numAgents);
 			numToCreate += fDomains[id].numToCreate;
 		}
 //		printf( "num[0]= %ld, num[1] = %ld, num[2] = %ld, num = %ld, max = %ld\n",
@@ -3113,7 +3137,7 @@ void TSimulation::Interact()
 		while( numToCreate > maxToCreate )
 		{
 			int domainWithLeastNeed = -1;
-			long leastAgentsNeeded = fMaxNumCritters+1;	// Has to be lest than this
+			long leastAgentsNeeded = fMaxNumAgents+1;	// Has to be lest than this
 			for (id = 0; id < fNumDomains; id++)
 			{
 				if (fDomains[id].numToCreate > 0 && fDomains[id].numToCreate < leastAgentsNeeded)
@@ -3132,7 +3156,7 @@ void TSimulation::Interact()
 		// first deal with the individual domains
         for (id = 0; id < fNumDomains; id++)
         {
-			// create as many critters as we need (and are allowed) for this domain
+			// create as many agents as we need (and are allowed) for this domain
             for (int ic = 0; ic < fDomains[id].numToCreate; ic++)
             {
                 fNumberCreated++;
@@ -3141,8 +3165,8 @@ void TSimulation::Interact()
                 fDomains[id].numbornsincecreated = 0;
                 fLastCreated = fStep;
                 fDomains[id].lastcreate = fStep;
-                critter* newCritter = critter::getfreecritter(this, &fStage);
-                Q_CHECK_PTR(newCritter);
+                agent* newAgent = agent::getfreeagent(this, &fStage);
+                Q_CHECK_PTR(newAgent);
 
                 if ( fNumberFit && (fDomains[id].numdied >= fNumberFit) )
                 {
@@ -3151,9 +3175,9 @@ void TSimulation::Interact()
                     	&& ((fDomains[id].numcreated / fFitness1Frequency) * fFitness1Frequency == fDomains[id].numcreated) )
                     {
                         // revive 1 fittest
-                        newCritter->Genes()->CopyGenes(fDomains[id].fittest[0]->genes);
+                        newAgent->Genes()->CopyGenes(fDomains[id].fittest[0]->genes);
                         fNumberCreated1Fit++;
-						gaPrint( "%5ld: domain %d creation from one fittest (%4lu) %4ld\n", fStep, id, fDomains[id].fittest[0]->critterID, fNumberCreated1Fit );
+						gaPrint( "%5ld: domain %d creation from one fittest (%4lu) %4ld\n", fStep, id, fDomains[id].fittest[0]->agentID, fNumberCreated1Fit );
                     }
                     else if (fFitness2Frequency
                     		 && ((fDomains[id].numcreated / fFitness2Frequency) * fFitness2Frequency == fDomains[id].numcreated) )
@@ -3162,24 +3186,24 @@ void TSimulation::Interact()
 					#if TournamentSelection
 						int parent1, parent2;
 						PickParentsUsingTournament(fNumberFit, &parent1, &parent2);
-						newCritter->Genes()->Crossover(fDomains[id].fittest[parent1]->genes,
+						newAgent->Genes()->Crossover(fDomains[id].fittest[parent1]->genes,
 													   fDomains[id].fittest[parent2]->genes,
 													   true);
 						fNumberCreated2Fit++;
-						gaPrint( "%5ld: domain %d creation from two (%d, %d) fittest (%4lu, %4lu) %4ld\n", fStep, id, parent1, parent2, fDomains[id].fittest[parent1]->critterID, fDomains[id].fittest[parent2]->critterID, fNumberCreated2Fit );
+						gaPrint( "%5ld: domain %d creation from two (%d, %d) fittest (%4lu, %4lu) %4ld\n", fStep, id, parent1, parent2, fDomains[id].fittest[parent1]->agentID, fDomains[id].fittest[parent2]->agentID, fNumberCreated2Fit );
 					#else
-                        newCritter->Genes()->Crossover(fDomains[id].fittest[fDomains[id].ifit]->genes,
+                        newAgent->Genes()->Crossover(fDomains[id].fittest[fDomains[id].ifit]->genes,
                             				  		   fDomains[id].fittest[fDomains[id].jfit]->genes,
                             				  		   true);
                         fNumberCreated2Fit++;
-						gaPrint( "%5ld: domain %d creation from two (%d, %d) fittest (%4lu, %4lu) %4ld\n", fStep, id, fDomains[id].ifit, fDomains[id].jfit, fDomains[id].fittest[fDomains[id].ifit]->critterID, fDomains[id].fittest[fDomains[id].jfit]->critterID, fNumberCreated2Fit );
+						gaPrint( "%5ld: domain %d creation from two (%d, %d) fittest (%4lu, %4lu) %4ld\n", fStep, id, fDomains[id].ifit, fDomains[id].jfit, fDomains[id].fittest[fDomains[id].ifit]->agentID, fDomains[id].fittest[fDomains[id].jfit]->agentID, fNumberCreated2Fit );
                         ijfitinc(&(fDomains[id].ifit), &(fDomains[id].jfit));
 					#endif
                     }
                     else
                     {
                         // otherwise, just generate a random, hopeful monster
-                        newCritter->Genes()->Randomize();
+                        newAgent->Genes()->Randomize();
                         fNumberCreatedRandom++;
 						gaPrint( "%5ld: domain %d creation random (%4ld)\n", fStep, id, fNumberCreatedRandom );
                     }
@@ -3187,32 +3211,34 @@ void TSimulation::Interact()
                 else
                 {
                     // otherwise, just generate a random, hopeful monster
-                    newCritter->Genes()->Randomize();
+                    newAgent->Genes()->Randomize();
                     fNumberCreatedRandom++;
 					gaPrint( "%5ld: domain %d creation random early (%4ld)\n", fStep, id, fNumberCreatedRandom );
                 }
 
-                newCritter->grow( RecordBrainAnatomy( newCritter->Number() ), RecordBrainFunction( newCritter->Number() ) );
-                fFoodEnergyIn += newCritter->FoodEnergy();
+                newAgent->grow( RecordBrainAnatomy( newAgent->Number() ), RecordBrainFunction( newAgent->Number() ) );
+                fFoodEnergyIn += newAgent->FoodEnergy();
 				float x = randpw() * (fDomains[id].absoluteSizeX - 0.02) + fDomains[id].startX + 0.01;
 				float z = randpw() * (fDomains[id].absoluteSizeZ - 0.02) + fDomains[id].startZ + 0.01;
-				float y = 0.5 * critter::gCritterHeight;
+				float y = 0.5 * agent::gAgentHeight;
 				float yaw = randpw() * 360.0;
 			#if TestWorld
 				x = fDomains[id].xleft  +  0.666 * fDomains[id].xsize;
-				z = - globals::worldsize * ((float) (i+1) / (fDomains[id].initNumCritters + 1));
+				z = - globals::worldsize * ((float) (i+1) / (fDomains[id].initNumAgents + 1));
 				yaw = 95.0;
 			#endif
-                newCritter->settranslation( x, y, z );
-                newCritter->setyaw( yaw );
-                newCritter->Domain(id);
-                fStage.AddObject(newCritter);
-                fDomains[id].numCritters++;
-				objectxsortedlist::gXSortedObjects.add(newCritter);
+                newAgent->settranslation( x, y, z );
+                newAgent->setyaw( yaw );
+                newAgent->Domain(id);
+                fStage.AddObject(newAgent);
+                fDomains[id].numAgents++;
+				objectxsortedlist::gXSortedObjects.add(newAgent);
 				newlifes++;
-                //newCritters.add(newCritter); // add it to the full list later; the e->listLink that gets auto stored here must be replaced with one from full list below
-				fNeuronGroupCountStats.add( newCritter->Brain()->NumNeuronGroups() );
+                //newAgents.add(newAgent); // add it to the full list later; the e->listLink that gets auto stored here must be replaced with one from full list below
+				fNeuronGroupCountStats.add( newAgent->Brain()->NumNeuronGroups() );
 				
+				Birth(c, NULL, NULL);
+
 				if( fRecordBirthsDeaths )
 				{
 					FILE * File;
@@ -3221,7 +3247,7 @@ void TSimulation::Interact()
 						cerr << "could not open run/genome/AdamiComplexity-summary.txt for writing [1]. Exiting." << endl;
 						exit(1);
 					}
-					fprintf( File, "%ld CREATION %ld\n", fStep, newCritter->Number() );
+					fprintf( File, "%ld CREATION %ld\n", fStep, newAgent->Number() );
 					fclose( File );
 				}
             }
@@ -3233,19 +3259,19 @@ void TSimulation::Interact()
 		
 		// then deal with global creation if necessary
 
-        while (((long)(objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE))) < fMinNumCritters)
+        while (((long)(objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE))) < fMinNumAgents)
         {
             fNumberCreated++;
             numglobalcreated++;
 
             if ((numglobalcreated == 1) && (fNumDomains > 1))
-                errorflash(0, "Possible global influence on domains due to minNumCritters");
+                errorflash(0, "Possible global influence on domains due to minNumAgents");
 
             fNumBornSinceCreated = 0;
             fLastCreated = fStep;
 
-            newCritter = critter::getfreecritter(this, &fStage);
-            Q_CHECK_PTR(newCritter);
+            newAgent = agent::getfreeagent(this, &fStage);
+            Q_CHECK_PTR(newAgent);
 
             if( fNumberFit && (fNumberDied >= fNumberFit) )
             {
@@ -3254,30 +3280,30 @@ void TSimulation::Interact()
                 	&& ((numglobalcreated / fFitness1Frequency) * fFitness1Frequency == numglobalcreated) )
                 {
                     // revive 1 fittest
-                    newCritter->Genes()->CopyGenes( fFittest[0]->genes );
+                    newAgent->Genes()->CopyGenes( fFittest[0]->genes );
                     fNumberCreated1Fit++;
-					gaPrint( "%5ld: global creation from one fittest (%4lu) %4ld\n", fStep, fFittest[0]->critterID, fNumberCreated1Fit );
+					gaPrint( "%5ld: global creation from one fittest (%4lu) %4ld\n", fStep, fFittest[0]->agentID, fNumberCreated1Fit );
                 }
                 else if( fFitness2Frequency && ((numglobalcreated / fFitness2Frequency) * fFitness2Frequency == numglobalcreated) )
                 {
 				#if TournamentSelection
 					int parent1, parent2;
 					TSimulation::PickParentsUsingTournament(fNumberFit, &parent1, &parent2);
-                    newCritter->Genes()->Crossover( fFittest[parent1]->genes, fFittest[parent2]->genes, true );
+                    newAgent->Genes()->Crossover( fFittest[parent1]->genes, fFittest[parent2]->genes, true );
                     fNumberCreated2Fit++;
-					gaPrint( "%5ld: global creation from two (%d, %d) fittest (%4lu, %4lu) %4ld\n", fStep, parent1, parent2, fFittest[parent1]->critterID, fFittest[parent2]->critterID, fNumberCreated2Fit );
+					gaPrint( "%5ld: global creation from two (%d, %d) fittest (%4lu, %4lu) %4ld\n", fStep, parent1, parent2, fFittest[parent1]->agentID, fFittest[parent2]->agentID, fNumberCreated2Fit );
 				#else
                     // mate 2 from array of fittest
-                    newCritter->Genes()->Crossover( fFittest[fFitI]->genes, fFittest[fFitJ]->genes, true );
+                    newAgent->Genes()->Crossover( fFittest[fFitI]->genes, fFittest[fFitJ]->genes, true );
                     fNumberCreated2Fit++;
-					gaPrint( "%5ld: global creation from two (%d, %d) fittest (%4lu, %4lu) %4ld\n", fStep, fFitI, fFitJ, fFittest[fFitI]->critterID, fFittest[fFitJ]->critterID, fNumberCreated2Fit );
+					gaPrint( "%5ld: global creation from two (%d, %d) fittest (%4lu, %4lu) %4ld\n", fStep, fFitI, fFitJ, fFittest[fFitI]->agentID, fFittest[fFitJ]->agentID, fNumberCreated2Fit );
                     ijfitinc( &fFitI, &fFitJ );
                 #endif
                 }
                 else
                 {
                     // otherwise, just generate a random, hopeful monster
-                    newCritter->Genes()->Randomize();
+                    newAgent->Genes()->Randomize();
                     fNumberCreatedRandom++;
 					gaPrint( "%5ld: global creation random (%4ld)\n", fStep, fNumberCreatedRandom );
                 }
@@ -3285,25 +3311,27 @@ void TSimulation::Interact()
             else
             {
                 // otherwise, just generate a random, hopeful monster
-                newCritter->Genes()->Randomize();
+                newAgent->Genes()->Randomize();
                 fNumberCreatedRandom++;
 				gaPrint( "%5ld: global creation random early (%4ld)\n", fStep, fNumberCreatedRandom );
             }
 
-            newCritter->grow( RecordBrainAnatomy( newCritter->Number() ), RecordBrainFunction( newCritter->Number() ) );
-            fFoodEnergyIn += newCritter->FoodEnergy();
-            newCritter->settranslation(randpw() * globals::worldsize, 0.5 * critter::gCritterHeight, randpw() * -globals::worldsize);
-            newCritter->setyaw(randpw() * 360.0);
-            id = WhichDomain(newCritter->x(), newCritter->z(), 0);
-            newCritter->Domain(id);
+            newAgent->grow( RecordBrainAnatomy( newAgent->Number() ), RecordBrainFunction( newAgent->Number() ) );
+            fFoodEnergyIn += newAgent->FoodEnergy();
+            newAgent->settranslation(randpw() * globals::worldsize, 0.5 * agent::gAgentHeight, randpw() * -globals::worldsize);
+            newAgent->setyaw(randpw() * 360.0);
+            id = WhichDomain(newAgent->x(), newAgent->z(), 0);
+            newAgent->Domain(id);
             fDomains[id].numcreated++;
             fDomains[id].lastcreate = fStep;
-            fDomains[id].numCritters++;
-            fStage.AddObject(newCritter);
-	    	objectxsortedlist::gXSortedObjects.add(newCritter); // add new critter to list of all objejcts; the newCritter->listLink that gets auto stored here should be valid immediately
+            fDomains[id].numAgents++;
+            fStage.AddObject(newAgent);
+	    	objectxsortedlist::gXSortedObjects.add(newAgent); // add new agent to list of all objejcts; the newAgent->listLink that gets auto stored here should be valid immediately
 	    	newlifes++;
-            //newCritters.add(newCritter); // add it to the full list later; the e->listLink that gets auto stored here must be replaced with one from full list below
-			fNeuronGroupCountStats.add( newCritter->Brain()->NumNeuronGroups() );
+            //newAgents.add(newAgent); // add it to the full list later; the e->listLink that gets auto stored here must be replaced with one from full list below
+			fNeuronGroupCountStats.add( newAgent->Brain()->NumNeuronGroups() );
+
+			Birth(newAgent, NULL, NULL);
 
 			if( fRecordBirthsDeaths )
 			{
@@ -3313,7 +3341,7 @@ void TSimulation::Interact()
 					cerr << "could not open run/genome/AdamiComplexity-summary.txt for writing [1]. Exiting." << endl;
 					exit(1);
 				}
-				fprintf( File, "%ld CREATION %ld\n", fStep, newCritter->Number() );
+				fprintf( File, "%ld CREATION %ld\n", fStep, newAgent->Number() );
 				fclose( File );
 			}
 						
@@ -3325,7 +3353,7 @@ void TSimulation::Interact()
     }
 
 #ifdef DEBUGCHECK
-    debugcheck("after newcritters added to critter::gXSortedCritters in interact");
+    debugcheck("after newagents added to agent::gXSortedAgents in interact");
 #endif DEBUGCHECK
 
     if ((newlifes || fNewDeaths) && fMonitorGeneSeparation)
@@ -3527,25 +3555,25 @@ void TSimulation::RecordGeneSeparation()
 //---------------------------------------------------------------------------
 // TSimulation::CalculateGeneSeparation
 //---------------------------------------------------------------------------
-void TSimulation::CalculateGeneSeparation(critter* ci)
+void TSimulation::CalculateGeneSeparation(agent* ci)
 {
 	// TODO add assert to validate statement below
 	
-	// NOTE: This version assumes ci is *not* currently in gSortedCritters.
+	// NOTE: This version assumes ci is *not* currently in gSortedAgents.
     // It also marks the current position in the list on entry and returns
     // there before exit so it can be invoked during the insertion of the
-    // newcritters list into the existing gSortedCritters list.
+    // newagents list into the existing gSortedAgents list.
 	
     //objectxsortedlist::gXSortedObjects.mark();
-    objectxsortedlist::gXSortedObjects.setMark( CRITTERTYPE );
+    objectxsortedlist::gXSortedObjects.setMark( AGENTTYPE );
 	
-    critter* cj = NULL;
+    agent* cj = NULL;
     float genesep;
     float genesepsum = 0.0;
     long numgsvalsold = fNumGeneSepVals;
 
 	objectxsortedlist::gXSortedObjects.reset();
-	while (objectxsortedlist::gXSortedObjects.nextObj(CRITTERTYPE, (gobject**)&cj))
+	while (objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&cj))
     {
 		genesep = ci->Genes()->CalcSeparation(cj->Genes());
         fMaxGeneSeparation = fmax(genesep, fMaxGeneSeparation);
@@ -3554,7 +3582,7 @@ void TSimulation::CalculateGeneSeparation(critter* ci)
         fGeneSepVals[fNumGeneSepVals++] = genesep;
     }
 
-    long n = objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE);
+    long n = objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE);
     if (numgsvalsold != (n * (n - 1) / 2))
     {
 		char tempstring[256];
@@ -3578,7 +3606,7 @@ void TSimulation::CalculateGeneSeparation(critter* ci)
     fAverageGeneSeparation = (genesepsum + fAverageGeneSeparation * numgsvalsold) / fNumGeneSepVals;
 	
     //objectxsortedlist::gXSortedObjects.tomark();
-    objectxsortedlist::gXSortedObjects.toMark(CRITTERTYPE);
+    objectxsortedlist::gXSortedObjects.toMark(AGENTTYPE);
 }
 
 
@@ -3588,8 +3616,8 @@ void TSimulation::CalculateGeneSeparation(critter* ci)
 //---------------------------------------------------------------------------
 void TSimulation::CalculateGeneSeparationAll()
 {
-    critter* ci = NULL;
-    critter* cj = NULL;
+    agent* ci = NULL;
+    agent* cj = NULL;
 
     float genesep;
     float genesepsum = 0.0;
@@ -3598,11 +3626,11 @@ void TSimulation::CalculateGeneSeparationAll()
     fNumGeneSepVals = 0;
 
     objectxsortedlist::gXSortedObjects.reset();
-    while (objectxsortedlist::gXSortedObjects.nextObj(CRITTERTYPE, (gobject**)&ci))
+    while (objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&ci))
     {
-		objectxsortedlist::gXSortedObjects.setMark(CRITTERTYPE);
+		objectxsortedlist::gXSortedObjects.setMark(AGENTTYPE);
 
-		while (objectxsortedlist::gXSortedObjects.nextObj(CRITTERTYPE, (gobject**)&cj))
+		while (objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&cj))
 		{	
             genesep = ci->Genes()->CalcSeparation(cj->Genes());
             fMaxGeneSeparation = max(genesep, fMaxGeneSeparation);
@@ -3611,11 +3639,11 @@ void TSimulation::CalculateGeneSeparationAll()
             fGeneSepVals[fNumGeneSepVals++] = genesep;
         }
 		//objectxsortedlist::gXSortedObjects.tomark();
-		objectxsortedlist::gXSortedObjects.toMark(CRITTERTYPE);
+		objectxsortedlist::gXSortedObjects.toMark(AGENTTYPE);
     }
 
     // n * (n - 1) / 2 is how many calculations were made
-	long n = objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE);
+	long n = objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE);
     if (fNumGeneSepVals != (n * (n - 1) / 2))
     {
 		char tempstring[256];
@@ -3638,9 +3666,9 @@ void TSimulation::SmiteOne(short /*id*/, short /*smite*/)
 /*
     if (id < 0)  // smite one anywhere in the world
     {
-        fSortedCritters.next(c);
+        fSortedAgents.next(c);
         smitten = c;
-        while (fSortedCritters.next(c))
+        while (fSortedAgents.next(c))
         {
             if (c->Age() > minsmiteage)
             {
@@ -3681,38 +3709,49 @@ void TSimulation::ijfitinc(short* i, short* j)
 
 
 //---------------------------------------------------------------------------
+// TSimulation::Birth
+//---------------------------------------------------------------------------
+void TSimulation::Birth(agent* c,
+			agent*,
+			agent*)
+{
+	fPositionWriter.birth(fStep,
+			      c);
+}
+
+//---------------------------------------------------------------------------
 // TSimulation::Death
 //
-// Perform all actions needed to critter before list removal and deletion
+// Perform all actions needed to agent before list removal and deletion
 //---------------------------------------------------------------------------
-void TSimulation::Death(critter* c)
+void TSimulation::Death(agent* c)
 {
 	Q_CHECK_PTR(c);
-	unsigned long loserIDBestSoFar = 0;	// the way this is used depends on fCritterNumber being 1-based in critter.cp
-	unsigned long loserIDBestRecent = 0;	// the way this is used depends on fCritterNumber being 1-based in critter.cp
+	unsigned long loserIDBestSoFar = 0;	// the way this is used depends on fAgentNumber being 1-based in agent.cp
+	unsigned long loserIDBestRecent = 0;	// the way this is used depends on fAgentNumber being 1-based in agent.cp
 	bool oneOfTheBestSoFar = false;
 	bool oneOfTheBestRecent = false;
 	
 	const short id = c->Domain();
 	
-	ttPrint( "age %ld: critter # %ld has died\n", fStep, c->Number() );
+	ttPrint( "age %ld: agent # %ld has died\n", fStep, c->Number() );
 	
     fNewDeaths++;
     fNumberDied++;
     fDomains[id].numdied++;
-    fDomains[id].numCritters--;
+    fDomains[id].numAgents--;
 	
 	fLifeSpanStats.add( c->Age() );
 	fLifeSpanRecentStats.add( c->Age() );
 	fLifeFractionRecentStats.add( c->Age() / c->MaxAge() );
 	
-	// Make any final contributions to the critter's overall, lifetime fitness
+	// Make any final contributions to the agent's overall, lifetime fitness
     c->lastrewards(fEnergyFitnessParameter, fAgeFitnessParameter); // if any
 
 	FoodPatch* fp;
 	
-	// If critter's carcass is to become food, make it so here
-    if (fCrittersRfood
+	// If agent's carcass is to become food, make it so here
+    if (fAgentsRfood
     	&& ((long)objectxsortedlist::gXSortedObjects.getCount(FOODTYPE) < fMaxFoodCount)
 		&& (fDomains[id].foodCount < fDomains[id].maxFoodCount)	// ??? Matt had commented this out; why?
 		&& ((fp = fDomains[id].whichFoodPatch( c->x(), c->z() )) && (fp->foodCount < fp->maxFoodCount))	// ??? Matt had nothing like this here; why?
@@ -3741,7 +3780,7 @@ void TSimulation::Death(critter* c)
             food* f = new food( foodenergy, c->x(), c->z() );
             Q_CHECK_PTR( f );
 			gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();
-			objectxsortedlist::gXSortedObjects.add( f );	// dead critter becomes food
+			objectxsortedlist::gXSortedObjects.add( f );	// dead agent becomes food
 			objectxsortedlist::gXSortedObjects.setcurr( saveCurr );
 			fStage.AddObject( f );			// put replacement food into the world
 			if( fp )
@@ -3760,7 +3799,7 @@ void TSimulation::Death(critter* c)
         fFoodEnergyOut += c->FoodEnergy();
     }
 	
-	// Must call Die() for the critter before any of the uses of Fitness() below, so we get the final, true, post-death fitness
+	// Must call Die() for the agent before any of the uses of Fitness() below, so we get the final, true, post-death fitness
 	c->Die();
 
 #define HackForProcessingUnitComplexity 1
@@ -3769,7 +3808,7 @@ void TSimulation::Death(critter* c)
 	if(  fBrainAnatomyRecordAll					||
 		 fBestSoFarBrainAnatomyRecordFrequency	||
 		 fBestRecentBrainAnatomyRecordFrequency	||
-		(fBrainAnatomyRecordSeeds && (c->Number() <= fInitNumCritters))
+		(fBrainAnatomyRecordSeeds && (c->Number() <= fInitNumAgents))
 	  )
 		c->Brain()->dumpAnatomical( "run/brain/anatomy", "death", c->Number(), c->HeuristicFitness() );
 #endif
@@ -3787,38 +3826,38 @@ void TSimulation::Death(critter* c)
 		{
 			if( fComplexityType == "D" )	// special case the difference of complexities case
 			{
-				float pComplexity = CalcComplexity( t, "P", 0 );
-				float iComplexity = CalcComplexity( t, "I", 0 );
+				float pComplexity = CalcComplexity_brainfunction( t, "P", 0 );
+				float iComplexity = CalcComplexity_brainfunction( t, "I", 0 );
 				c->SetComplexity( pComplexity - iComplexity );
 			}
 			else if( fComplexityType != "Z" )	// avoid special hack case to evolve towards zero max velocity, for testing purposes only
 			{
 				// otherwise, fComplexityType has the right string in it
-				c->SetComplexity( CalcComplexity( t, fComplexityType.c_str(), 0 ) );
+				c->SetComplexity( CalcComplexity_brainfunction( t, fComplexityType.c_str(), 0 ) );
 			}
 		}
 	}
 	
 	// Maintain the current-fittest list based on heuristic fitness
-	if( (fCurrentFittestCount > 0) && (c->HeuristicFitness() >= fCurrentMaxFitness[fCurrentFittestCount-1]) )	// a current-fittest critter is dying
+	if( (fCurrentFittestCount > 0) && (c->HeuristicFitness() >= fCurrentMaxFitness[fCurrentFittestCount-1]) )	// a current-fittest agent is dying
 	{
-		int haveFitCritter = 0;
+		int haveFitAgent = 0;
 		for( int i = 0; i < fCurrentFittestCount; i++ )
 		{
-			if( fCurrentFittestCritter[i] != c )
-				fCurrentFittestCritter[ (i-haveFitCritter) ] = fCurrentFittestCritter[i];
+			if( fCurrentFittestAgent[i] != c )
+				fCurrentFittestAgent[ (i-haveFitAgent) ] = fCurrentFittestAgent[i];
 			else
-				haveFitCritter = 1;
+				haveFitAgent = 1;
 		}
 	
-		if( haveFitCritter == 1 )		// this should usually be true, but lets make sure.
+		if( haveFitAgent == 1 )		// this should usually be true, but lets make sure.
 		{
-			fCurrentFittestCritter[ (fCurrentFittestCount-1) ] = NULL;	// Null out the last critter in the list, just to be polite
-			fCurrentFittestCount--;		// decrement the number of critters in the list now that we've removed the recently deceased critter (c) from it.
+			fCurrentFittestAgent[ (fCurrentFittestCount-1) ] = NULL;	// Null out the last agent in the list, just to be polite
+			fCurrentFittestCount--;		// decrement the number of agents in the list now that we've removed the recently deceased agent (c) from it.
 		}
 	}
 	
-	// Maintain a list of the fittest critters ever, for use in the online/steady-state GA,
+	// Maintain a list of the fittest agents ever, for use in the online/steady-state GA,
 	// based on complete fitness, however it is currently being calculated
 	// First on a domain-by-domain basis...
     int newfit = 0;
@@ -3847,7 +3886,7 @@ void TSimulation::Death(critter* c)
         fDomains[id].fittest[newfit] = saveFit;						// reuse the old data structure, but replace its contents...
         fDomains[id].fittest[newfit]->fitness = cFitness;
         fDomains[id].fittest[newfit]->genes->CopyGenes( c->Genes() );
-		fDomains[id].fittest[newfit]->critterID = c->Number();
+		fDomains[id].fittest[newfit]->agentID = c->Number();
 		fDomains[id].fittest[newfit]->complexity = c->Complexity();
 		gaPrint( "%5ld: new domain %d fittest[%ld] id=%4ld fitness=%7.3f complexity=%7.3f\n", fStep, id, newfit, c->Number(), cFitness, c->Complexity() );
     }
@@ -3873,7 +3912,7 @@ void TSimulation::Death(critter* c)
 		// with the logic to handle the newfit == limit case (adding a new one on the end)
 		// right now.
 		if( fNumberDied > fNumberFit )
-			loserIDBestSoFar = fFittest[fNumberFit - 1]->critterID;	// this is the ID of the critter that is being booted from the bestSoFar (fFittest[]) list
+			loserIDBestSoFar = fFittest[fNumberFit - 1]->agentID;	// this is the ID of the agent that is being booted from the bestSoFar (fFittest[]) list
 		else
 			loserIDBestSoFar = 0;	// nobody is being booted, because the list isn't full yet
         saveFit = fFittest[fNumberFit - 1];		// this is to save the data structure, not its contents
@@ -3882,7 +3921,7 @@ void TSimulation::Death(critter* c)
         fFittest[newfit] = saveFit;				// reuse the old data structure, but replace its contents...
         fFittest[newfit]->fitness = cFitness;
         fFittest[newfit]->genes->CopyGenes( c->Genes() );
-		fFittest[newfit]->critterID = c->Number();
+		fFittest[newfit]->agentID = c->Number();
 		fFittest[newfit]->complexity = c->Complexity();
 		gaPrint( "%5ld: new global   fittest[%ld] id=%4ld fitness=%7.3f complexity=%7.3f\n", fStep, newfit, c->Number(), cFitness, c->Complexity() );
     }
@@ -3900,11 +3939,11 @@ void TSimulation::Death(critter* c)
 		
         for( short i = 0; i < fNumberRecentFit; i++ )
         {
-			// If the critter booted off of the bestSoFar list happens to remain on the bestRecent list,
+			// If the agent booted off of the bestSoFar list happens to remain on the bestRecent list,
 			// then we don't want to let it be unlinked below, so clear loserIDBestSoFar
 			// This loop tests the first part of the fRecentFittest[] list, and the last part is tested
 			// below, so we don't need a separate loop to make this determination
-			if( loserIDBestSoFar == fRecentFittest[i]->critterID )
+			if( loserIDBestSoFar == fRecentFittest[i]->agentID )
 				loserIDBestSoFar = 0;
 			
             if( cFitness > fRecentFittest[i]->fitness )
@@ -3914,15 +3953,15 @@ void TSimulation::Death(critter* c)
 			}
 		}
 				
-		loserIDBestRecent = fRecentFittest[fNumberRecentFit - 1]->critterID;	// this is the ID of the critter that is being booted from the bestRecent (fRecentFittest[]) list
+		loserIDBestRecent = fRecentFittest[fNumberRecentFit - 1]->agentID;	// this is the ID of the agent that is being booted from the bestRecent (fRecentFittest[]) list
         saveFit = fRecentFittest[fNumberRecentFit - 1];		// this is to save the data structure, not its contents
         for( short i = fNumberRecentFit - 1; i > newfit; i-- )
 		{
-			// If the critter booted off of the bestSoFar list happens to remain on the bestRecent list,
+			// If the agent booted off of the bestSoFar list happens to remain on the bestRecent list,
 			// then we don't want to let it be unlinked below, so clear loserIDBestSoFar
 			// This loop tests the last part of the fRecentFittest[] list, and the first part was tested
 			// above, so we don't need a separate loop to make this determination
-			if( loserIDBestSoFar == fRecentFittest[i]->critterID )
+			if( loserIDBestSoFar == fRecentFittest[i]->agentID )
 				loserIDBestSoFar = 0;
 			
             fRecentFittest[i] = fRecentFittest[i - 1];
@@ -3930,53 +3969,53 @@ void TSimulation::Death(critter* c)
         fRecentFittest[newfit] = saveFit;				// reuse the old data structure, but replace its contents...
         fRecentFittest[newfit]->fitness = cFitness;
 //		fRecentFittest[newfit]->genes->CopyGenes( c->Genes() );	// we don't save the genes in the bestRecent list
-		fRecentFittest[newfit]->critterID = c->Number();
+		fRecentFittest[newfit]->agentID = c->Number();
 		fRecentFittest[newfit]->complexity = c->Complexity();
     }
 
 	// Must also update the leastFit data structures, now that they
 	// are used on-demand in the main mate/fight/eat loop in Interact()
-	// As these are used during the critter's life, they must be based on the heuristic fitness function.
+	// As these are used during the agent's life, they must be based on the heuristic fitness function.
 	// Update the domain-specific leastFit list (only one, as we know which domain it's in)
 	for( int i = 0; i < fDomains[id].fNumLeastFit; i++ )
 	{
 		if( fDomains[id].fLeastFit[i] != c )	// not one of our least fit, so just loop again to keep searching
 			continue;
 
-		// one of our least-fit critters died, so pull in the list over it
-		smPrint( "removing critter %ld from the least fit list for domain %d at position %d with fitness %g (because it died)\n", c->Number(), id, i, c->HeuristicFitness() );
+		// one of our least-fit agents died, so pull in the list over it
+		smPrint( "removing agent %ld from the least fit list for domain %d at position %d with fitness %g (because it died)\n", c->Number(), id, i, c->HeuristicFitness() );
 		for( int j = i; j < fDomains[id].fNumLeastFit-1; j++ )
 			fDomains[id].fLeastFit[j] = fDomains[id].fLeastFit[j+1];
 		fDomains[id].fNumLeastFit--;
 		break;	// c can only appear once in the list, so we're done
 	}
 	
-	// Remove critter from world
+	// Remove agent from world
     fStage.RemoveObject( c );
 
     // Check and see if we are monitoring this guy
-	if (c == fMonitorCritter)
+	if (c == fMonitorAgent)
 	{
-		fMonitorCritter = NULL;
+		fMonitorAgent = NULL;
 
-		// Stop monitoring critter brain
+		// Stop monitoring agent brain
 		if (fBrainMonitorWindow != NULL)
 			fBrainMonitorWindow->StopMonitoring();
 	}
 	
-	// If we're recording all anatomies or recording best anatomies and this was one of the fittest critters,
+	// If we're recording all anatomies or recording best anatomies and this was one of the fittest agents,
 	// then dump the anatomy to the appropriate location on disk
 	if(  fBrainAnatomyRecordAll ||
 		(fBestSoFarBrainAnatomyRecordFrequency && oneOfTheBestSoFar) ||
 		(fBestRecentBrainAnatomyRecordFrequency && oneOfTheBestRecent) ||
-		(fBrainAnatomyRecordSeeds && (c->Number() <= fInitNumCritters))
+		(fBrainAnatomyRecordSeeds && (c->Number() <= fInitNumAgents))
 	  )
 	{
 	#if ! HackForProcessingUnitComplexity
 		c->Brain()->dumpAnatomical( "run/brain/anatomy", "death", c->Number(), c->HeuristicFitness() );
 	#endif
 	}
-	else	// don't want brain anatomies for this critter, so must eliminate the "incept" and "birth" anatomies that were already recorded
+	else	// don't want brain anatomies for this agent, so must eliminate the "incept" and "birth" anatomies that were already recorded
 	{
 		char s[256];
 	
@@ -4000,8 +4039,8 @@ void TSimulation::Death(critter* c)
 	#endif
 	}
 		
-	// If this was one of the seed critters and we're recording their anatomies, then save the data in the appropriate directory
-	if( fBrainAnatomyRecordSeeds && (c->Number() <= fInitNumCritters) )
+	// If this was one of the seed agents and we're recording their anatomies, then save the data in the appropriate directory
+	if( fBrainAnatomyRecordSeeds && (c->Number() <= fInitNumAgents) )
 	{
 		char s[256];	// source
 		char t[256];	// target
@@ -4047,14 +4086,14 @@ void TSimulation::Death(critter* c)
 		}
 	}
 	
-	// If this critter was so good it displaced another critter from the bestSoFar (fFittest[]) list,
-	// then nuke the booted critter's brain anatomy & function recordings
-	// Note: A critter may be booted from the bestSoFar list, yet remain on the bestRecent list;
+	// If this agent was so good it displaced another agent from the bestSoFar (fFittest[]) list,
+	// then nuke the booted agent's brain anatomy & function recordings
+	// Note: A agent may be booted from the bestSoFar list, yet remain on the bestRecent list;
 	// if this happens, loserIDBestSoFar will be reset to zero above, so we won't execute this block
 	// of code and delete files that are needed for the bestRecent data logging
-	// In the rare case that a critter is simultaneously booted from both best lists,
+	// In the rare case that a agent is simultaneously booted from both best lists,
 	// don't delete it here (so we don't try to delete it more than once)
-	if( loserIDBestSoFar && (loserIDBestSoFar != loserIDBestRecent) )	//  depends on fCritterNumber being 1-based in critter.cp
+	if( loserIDBestSoFar && (loserIDBestSoFar != loserIDBestRecent) )	//  depends on fAgentNumber being 1-based in agent.cp
 	{
 		char s[256];
 		if( !fBrainAnatomyRecordAll )
@@ -4077,11 +4116,11 @@ void TSimulation::Death(critter* c)
 		}
 	}
 
-	// If this critter was so good it displaced another critter from the bestRecent (fRecentFittest[]) list,
-	// then nuke the booted critter's brain anatomy & function recordings
-	// In the rare case that a critter is simultaneously booted from both best lists,
+	// If this agent was so good it displaced another agent from the bestRecent (fRecentFittest[]) list,
+	// then nuke the booted agent's brain anatomy & function recordings
+	// In the rare case that a agent is simultaneously booted from both best lists,
 	// we will only delete it here
-	if( loserIDBestRecent )	//  depends on fCritterNumber being 1-based in critter.cp
+	if( loserIDBestRecent )	//  depends on fAgentNumber being 1-based in agent.cp
 	{
 		char s[256];
 		if( !fBrainAnatomyRecordAll )
@@ -4104,9 +4143,9 @@ void TSimulation::Death(critter* c)
 		}
 	}
 
-	// If this was one of the seed critters and we're recording their functioning, then save the data in the appropriate directory
+	// If this was one of the seed agents and we're recording their functioning, then save the data in the appropriate directory
 	// NOTE:  Must be done after c->Die(), as that is where the brainFunction file is closed
-	if( fBrainFunctionRecordSeeds && (c->Number() <= fInitNumCritters) )
+	if( fBrainFunctionRecordSeeds && (c->Number() <= fInitNumAgents) )
 	{
 		char s[256];	// source
 		char t[256];	// target
@@ -4128,7 +4167,7 @@ void TSimulation::Death(critter* c)
 			eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
 	}
 
-	if( fRecordBirthsDeaths )		// are we recording births, deaths, and creations?  If so, this critter will be included.
+	if( fRecordBirthsDeaths )		// are we recording births, deaths, and creations?  If so, this agent will be included.
 	{
 		FILE * File;
 		
@@ -4141,19 +4180,22 @@ void TSimulation::Death(critter* c)
 		fprintf( File, "%ld DEATH %ld\n", fStep, c->Number() );
 		fclose( File );
 	}
+
+	fPositionWriter.death(fStep,
+			      c);
 	
 	// following assumes (requires!) list to be currently pointing to c,
-    // and will leave the list pointing to the previous critter
-	// critter::gXSortedCritters.remove(); // get critter out of the list
-	// objectxsortedlist::gXSortedObjects.removeCurrentObject(); // get critter out of the list
+    // and will leave the list pointing to the previous agent
+	// agent::gXSortedAgents.remove(); // get agent out of the list
+	// objectxsortedlist::gXSortedObjects.removeCurrentObject(); // get agent out of the list
 	
-	// Following assumes (requires!) the critter to have stored c->listLink correctly
+	// Following assumes (requires!) the agent to have stored c->listLink correctly
 	objectxsortedlist::gXSortedObjects.removeObjectWithLink( (gobject*) c );
 
 	
-	// Note: For the sake of computational efficiency, I used to never delete a critter,
-	// but "reinit" and reuse them as new critters were born or created.  But Gene made
-	// critters be allocated afresh on birth or creation, so we now need to delete the
+	// Note: For the sake of computational efficiency, I used to never delete a agent,
+	// but "reinit" and reuse them as new agents were born or created.  But Gene made
+	// agents be allocated afresh on birth or creation, so we now need to delete the
 	// old ones here when they die.  Remove this if I ever get a chance to go back to the
 	// more efficient reinit and reuse technique.
 	delete c;
@@ -4163,13 +4205,13 @@ void TSimulation::Death(critter* c)
 //-------------------------------------------------------------------------------------------
 // TSimulation::Fitness
 //-------------------------------------------------------------------------------------------
-float TSimulation::Fitness( critter* c )
+float TSimulation::Fitness( agent* c )
 {
 	float fitness = 0.0;
 	
 	if( c->Alive() )
 	{
-		cerr << "Error: Simulation's Fitness(critter) function called while critter is still alive" nl;
+		cerr << "Error: Simulation's Fitness(agent) function called while agent is still alive" nl;
 		exit(1);
 	}
 	
@@ -4189,12 +4231,12 @@ float TSimulation::Fitness( critter* c )
 			sprintf( filename, "run/brain/function/brainFunction_%ld.txt", c->Number() );
 			if( fComplexityType == "D" )	// difference between I and P complexity being used for fitness
 			{
-				float pComplexity = CalcComplexity( filename, "P", 0 );
-				float iComplexity = CalcComplexity( filename, "I", 0 );
+				float pComplexity = CalcComplexity_brainfunction( filename, "P", 0 );
+				float iComplexity = CalcComplexity_brainfunction( filename, "I", 0 );
 				c->SetComplexity( pComplexity - iComplexity );
 			}
 			else	// fComplexityType contains the appropriate string to select the type of complexity
-				c->SetComplexity( CalcComplexity( filename, fComplexityType.c_str(), 0 ) );
+				c->SetComplexity( CalcComplexity_brainfunction( filename, fComplexityType.c_str(), 0 ) );
 		}
 		// fitness is normalized (by the sum of the weights) after doing a weighted sum of normalized heuristic fitness and complexity
 		// (Complexity runs between 0.0 and 1.0 in the early simulations.  Is there a way to guarantee this?  Do we want to?)
@@ -4210,14 +4252,22 @@ float TSimulation::Fitness( critter* c )
 //-------------------------------------------------------------------------------------------
 void TSimulation::ReadWorldFile(const char* filename)
 {
+
+#define PROP(NAME) in >> f##NAME; ReadLabel(in, #NAME); cout << #NAME ses f##NAME nl;
+
     filebuf fb;
-    if (fb.open(filename, ios_base::in) == 0)
-    {
-        error(0,"unable to open world file \"",filename,"\"");
-        return;
-    }
+    if( fb.open( filename, ios_base::in ) == 0 )
+	{
+		error( 0, "unable to open world file \"", filename, "\"; will use default, internal worldfile" );
+		if( fb.open( "./Polyworld.app/Contents/Resources/worldfile", ios_base::in ) == 0 )
+		{
+			error( 0, "unable to open internal world file \"", "./Polyworld.app/Contents/Resources/worldfile", "\"; will use built-in code defaults" );
+			error( 2, "built-in code defaults not currently functional; exiting" );
+			return;
+		}
+	}
 	
-	istream in(&fb);
+	istream in( &fb );
     short version;
     char label[128];
 
@@ -4269,29 +4319,29 @@ void TSimulation::ReadWorldFile(const char* filename)
     in >> globals::edges; in >> label;
     cout << "edges" ses globals::edges nl;
 
-	// TODO figure out how to config critter using this
+	// TODO figure out how to config agent using this
     in >> globals::wraparound; in >> label;
     cout << "wraparound" ses globals::wraparound nl;
 
-    in >> critter::gVision; in >> label;
+    in >> agent::gVision; in >> label;
     if (!fGraphics)
-        critter::gVision = false;
-    cout << "vision" ses critter::gVision nl;
+        agent::gVision = false;
+    cout << "vision" ses agent::gVision nl;
     in >> fShowVision; in >> label;
     if (!fGraphics)
         fShowVision = false;
     cout << "showvision" ses fShowVision nl;
     in >> brain::gMinWin; in >> label;
     cout << "minwin" ses brain::gMinWin nl;
-    in >> critter::gMaxVelocity; in >> label;
-    cout << "maxvel" ses critter::gMaxVelocity nl;
+    in >> agent::gMaxVelocity; in >> label;
+    cout << "maxvel" ses agent::gMaxVelocity nl;
 
-    in >> fMinNumCritters; in >> label;
-    cout << "minNumCritters" ses fMinNumCritters nl;
-    in >> fMaxNumCritters; in >> label;
-    cout << "maxNumCritters" ses fMaxNumCritters nl;
-    in >> fInitNumCritters; in >> label;
-    cout << "initNumCritters" ses fInitNumCritters nl;
+    in >> fMinNumAgents; in >> label;
+    cout << "minNumAgents" ses fMinNumAgents nl;
+    in >> fMaxNumAgents; in >> label;
+    cout << "maxNumAgents" ses fMaxNumAgents nl;
+    in >> fInitNumAgents; in >> label;
+    cout << "initNumAgents" ses fInitNumAgents nl;
 	if( version >= 9 )
 	{
 		in >> fNumberToSeed; in >> label;
@@ -4304,8 +4354,8 @@ void TSimulation::ReadWorldFile(const char* filename)
 		fNumberToSeed = 0;
 		fProbabilityOfMutatingSeeds = 0.0;
 	}
-    in >> fMiscCritters; in >> label;
-    cout << "misccritters" ses fMiscCritters nl;
+    in >> fMiscAgents; in >> label;
+    cout << "miscagents" ses fMiscAgents nl;
 
 	if( version >= 32 )
 	{
@@ -4340,8 +4390,8 @@ void TSimulation::ReadWorldFile(const char* filename)
 		cout << "foodrate" ses fFoodRate nl;
 	}
 
-    in >> fCrittersRfood; in >> label;
-    cout << "crittersRfood" ses fCrittersRfood nl;
+    in >> fAgentsRfood; in >> label;
+    cout << "agentsRfood" ses fAgentsRfood nl;
     in >> fFitness1Frequency; in >> label;
     cout << "fit1freq" ses fFitness1Frequency nl;
     in >> fFitness2Frequency; in >> label;
@@ -4401,8 +4451,8 @@ void TSimulation::ReadWorldFile(const char* filename)
     cout << "maxlifespan" ses genome::gMaxLifeSpan nl;
     in >> fMateWait; in >> label;
     cout << "matewait" ses fMateWait nl;
-    in >> critter::gInitMateWait; in >> label;
-    cout << "initmatewait" ses critter::gInitMateWait nl;
+    in >> agent::gInitMateWait; in >> label;
+    cout << "initmatewait" ses agent::gInitMateWait nl;
 	if( version >= 29 )
 	{
 		in >> fEatMateSpan; in >> label;
@@ -4417,14 +4467,14 @@ void TSimulation::ReadWorldFile(const char* filename)
     cout << "minstrength" ses genome::gMinStrength nl;
     in >> genome::gMaxStrength; in >> label;
     cout << "maxstrength" ses genome::gMaxStrength nl;
-    in >> critter::gMinCritterSize; in >> label;
-    cout << "mincsize" ses critter::gMinCritterSize nl;
-    in >> critter::gMaxCritterSize; in >> label;
-    cout << "maxcsize" ses critter::gMaxCritterSize nl;
-    in >> critter::gMinMaxEnergy; in >> label;
-    cout << "minmaxenergy" ses critter::gMinMaxEnergy nl;
-    in >> critter::gMaxMaxEnergy; in >> label;
-    cout << "maxmaxenergy" ses critter::gMaxMaxEnergy nl;
+    in >> agent::gMinAgentSize; in >> label;
+    cout << "mincsize" ses agent::gMinAgentSize nl;
+    in >> agent::gMaxAgentSize; in >> label;
+    cout << "maxcsize" ses agent::gMaxAgentSize nl;
+    in >> agent::gMinMaxEnergy; in >> label;
+    cout << "minmaxenergy" ses agent::gMinMaxEnergy nl;
+    in >> agent::gMaxMaxEnergy; in >> label;
+    cout << "maxmaxenergy" ses agent::gMaxMaxEnergy nl;
     in >> genome::gMinmateenergy; in >> label;
     cout << "minmateenergy" ses genome::gMinmateenergy nl;
     in >> genome::gMaxmateenergy; in >> label;
@@ -4435,54 +4485,54 @@ void TSimulation::ReadWorldFile(const char* filename)
     cout << "minmaxspeed" ses genome::gMinmaxspeed nl;
     in >> genome::gMaxmaxspeed; in >> label;
     cout << "maxmaxspeed" ses genome::gMaxmaxspeed nl;
-    in >> critter::gSpeed2DPosition; in >> label;
-    cout << "speed2dpos" ses critter::gSpeed2DPosition nl;
-    in >> critter::gYaw2DYaw; in >> label;
-    cout << "yaw2dyaw" ses critter::gYaw2DYaw nl;
+    in >> agent::gSpeed2DPosition; in >> label;
+    cout << "speed2dpos" ses agent::gSpeed2DPosition nl;
+    in >> agent::gYaw2DYaw; in >> label;
+    cout << "yaw2dyaw" ses agent::gYaw2DYaw nl;
     in >> genome::gMinlrate; in >> label;
     cout << "minlrate" ses genome::gMinlrate nl;
     in >> genome::gMaxlrate; in >> label;
     cout << "maxlrate" ses genome::gMaxlrate nl;
-    in >> critter::gMinFocus; in >> label;
-    cout << "minfocus" ses critter::gMinFocus nl;
-    in >> critter::gMaxFocus; in >> label;
-    cout << "maxfocus" ses critter::gMaxFocus nl;
-    in >> critter::gCritterFOV; in >> label;
-    cout << "critterfovy" ses critter::gCritterFOV nl;
-    in >> critter::gMaxSizeAdvantage; in >> label;
-    cout << "maxsizeadvantage" ses critter::gMaxSizeAdvantage nl;
+    in >> agent::gMinFocus; in >> label;
+    cout << "minfocus" ses agent::gMinFocus nl;
+    in >> agent::gMaxFocus; in >> label;
+    cout << "maxfocus" ses agent::gMaxFocus nl;
+    in >> agent::gAgentFOV; in >> label;
+    cout << "agentfovy" ses agent::gAgentFOV nl;
+    in >> agent::gMaxSizeAdvantage; in >> label;
+    cout << "maxsizeadvantage" ses agent::gMaxSizeAdvantage nl;
     in >> fPower2Energy; in >> label;
     cout << "power2energy" ses fPower2Energy nl;
-    in >> critter::gEat2Energy; in >> label;
-    cout << "eat2energy" ses critter::gEat2Energy nl;
-    in >> critter::gMate2Energy; in >> label;
-    cout << "mate2energy" ses critter::gMate2Energy nl;
-    in >> critter::gFight2Energy; in >> label;
-    cout << "fight2energy" ses critter::gFight2Energy nl;
-    in >> critter::gMaxSizePenalty; in >> label;
-    cout << "maxsizepenalty" ses critter::gMaxSizePenalty nl;
-    in >> critter::gSpeed2Energy; in >> label;
-    cout << "speed2energy" ses critter::gSpeed2Energy nl;
-    in >> critter::gYaw2Energy; in >> label;
-    cout << "yaw2energy" ses critter::gYaw2Energy nl;
-    in >> critter::gLight2Energy; in >> label;
-    cout << "light2energy" ses critter::gLight2Energy nl;
-    in >> critter::gFocus2Energy; in >> label;
-    cout << "focus2energy" ses critter::gFocus2Energy nl;
+    in >> agent::gEat2Energy; in >> label;
+    cout << "eat2energy" ses agent::gEat2Energy nl;
+    in >> agent::gMate2Energy; in >> label;
+    cout << "mate2energy" ses agent::gMate2Energy nl;
+    in >> agent::gFight2Energy; in >> label;
+    cout << "fight2energy" ses agent::gFight2Energy nl;
+    in >> agent::gMaxSizePenalty; in >> label;
+    cout << "maxsizepenalty" ses agent::gMaxSizePenalty nl;
+    in >> agent::gSpeed2Energy; in >> label;
+    cout << "speed2energy" ses agent::gSpeed2Energy nl;
+    in >> agent::gYaw2Energy; in >> label;
+    cout << "yaw2energy" ses agent::gYaw2Energy nl;
+    in >> agent::gLight2Energy; in >> label;
+    cout << "light2energy" ses agent::gLight2Energy nl;
+    in >> agent::gFocus2Energy; in >> label;
+    cout << "focus2energy" ses agent::gFocus2Energy nl;
     in >> brain::gNeuralValues.maxsynapse2energy; in >> label;
     cout << "maxsynapse2energy" ses brain::gNeuralValues.maxsynapse2energy nl;
-    in >> critter::gFixedEnergyDrain; in >> label;
-    cout << "fixedenergydrain" ses critter::gFixedEnergyDrain nl;
+    in >> agent::gFixedEnergyDrain; in >> label;
+    cout << "fixedenergydrain" ses agent::gFixedEnergyDrain nl;
     in >> brain::gDecayRate; in >> label;
     cout << "decayrate" ses brain::gDecayRate nl;
 
 	if( version >= 18 )
 	{
-		in >> fCritterHealingRate; in >> label;
+		in >> fAgentHealingRate; in >> label;
 		
-		if( fCritterHealingRate > 0.0 )
+		if( fAgentHealingRate > 0.0 )
 			fHealing = 1;					// a bool flag to check to see if healing is turned on is faster than always comparing a float.
-		cout << "CritterHealingRate" ses fCritterHealingRate nl;
+		cout << "AgentHealingRate" ses fAgentHealingRate nl;
 	}
 	
     in >> fEatThreshold; in >> label;
@@ -4509,10 +4559,10 @@ void TSimulation::ReadWorldFile(const char* filename)
 	if( version >= 31 )
 	{
 		fSolidObjects = 0;
-		int solidCritters, solidFood, solidBricks;
-		in >> solidCritters; in >> label;
-		cout << "solidCritters" ses solidCritters nl;
-		if( solidCritters ) fSolidObjects |= CRITTERTYPE;
+		int solidAgents, solidFood, solidBricks;
+		in >> solidAgents; in >> label;
+		cout << "solidAgents" ses solidAgents nl;
+		if( solidAgents ) fSolidObjects |= AGENTTYPE;
 		in >> solidFood; in >> label;
 		cout << "solidFood" ses solidFood nl;
 		if( solidFood ) fSolidObjects |= FOODTYPE;
@@ -4527,8 +4577,8 @@ void TSimulation::ReadWorldFile(const char* filename)
 		printf( "%d", (fSolidObjects>>(31-i)) & 1 );
 	printf( "\n" );
 	
-    in >> critter::gCritterHeight; in >> label;
-    cout << "critterheight" ses critter::gCritterHeight nl;
+    in >> agent::gAgentHeight; in >> label;
+    cout << "agentheight" ses agent::gAgentHeight nl;
     in >> food::gFoodHeight; in >> label;
     cout << "foodheight" ses food::gFoodHeight nl;
     in >> food::gFoodColor.r >> food::gFoodColor.g >> food::gFoodColor.b >> label;
@@ -4562,10 +4612,10 @@ void TSimulation::ReadWorldFile(const char* filename)
     cout << "camanglestart" ses fCameraAngleStart nl;
     in >> fCameraFOV; in >> label;
     cout << "camfov" ses fCameraFOV nl;
-    in >> fMonitorCritterRank; in >> label;
+    in >> fMonitorAgentRank; in >> label;
     if (!fGraphics)
-        fMonitorCritterRank = 0; // cannot monitor critter brain without graphics
-    cout << "fMonitorCritterRank" ses fMonitorCritterRank nl;
+        fMonitorAgentRank = 0; // cannot monitor agent brain without graphics
+    cout << "fMonitorAgentRank" ses fMonitorAgentRank nl;
 
     in >> ignoreShort3; in >> label;
     cout << "fMonitorCritWinWidth (ignored)" ses ignoreShort3 nl;
@@ -4663,20 +4713,20 @@ void TSimulation::ReadWorldFile(const char* filename)
     }
 
     short id;
-	long totmaxnumcritters = 0;
-	long totminnumcritters = 0;
+	long totmaxnumagents = 0;
+	long totminnumagents = 0;
 	int	numFoodPatchesNeedingRemoval = 0;
 	
 	for (id = 0; id < fNumDomains; id++)
 	{
 		if( version < 32 )
 		{
-			in >> fDomains[id].minNumCritters; in >> label;
-			cout << "minNumCritters in domains[" << id << "]" ses fDomains[id].minNumCritters nl;
-			in >> fDomains[id].maxNumCritters; in >> label;
-			cout << "maxNumCritters in domains[" << id << "]" ses fDomains[id].maxNumCritters nl;
-			in >> fDomains[id].initNumCritters; in >> label;
-			cout << "initNumCritters in domains[" << id << "]" ses fDomains[id].initNumCritters nl;
+			in >> fDomains[id].minNumAgents; in >> label;
+			cout << "minNumAgents in domains[" << id << "]" ses fDomains[id].minNumAgents nl;
+			in >> fDomains[id].maxNumAgents; in >> label;
+			cout << "maxNumAgents in domains[" << id << "]" ses fDomains[id].maxNumAgents nl;
+			in >> fDomains[id].initNumAgents; in >> label;
+			cout << "initNumAgents in domains[" << id << "]" ses fDomains[id].initNumAgents nl;
 			if( version >= 9 )
 			{
 				in >> fDomains[id].numberToSeed; in >> label;
@@ -4731,37 +4781,37 @@ void TSimulation::ReadWorldFile(const char* filename)
 
 			if( version >= 32 )
 			{
-				float minCrittersFraction, maxCrittersFraction, initCrittersFraction, initSeedsFraction;
+				float minAgentsFraction, maxAgentsFraction, initAgentsFraction, initSeedsFraction;
 				
-				in >> minCrittersFraction; in >> label;
-				cout << "minCrittersFraction in domains[" << id << "]" ses minCrittersFraction nl;
-				if( minCrittersFraction < 0.0 )
+				in >> minAgentsFraction; in >> label;
+				cout << "minAgentsFraction in domains[" << id << "]" ses minAgentsFraction nl;
+				if( minAgentsFraction < 0.0 )
 				{
-					minCrittersFraction = fDomains[id].sizeX * fDomains[id].sizeZ;
-					cout << "\tminCrittersFraction in domains[" << id << "]" ses minCrittersFraction nl;
+					minAgentsFraction = fDomains[id].sizeX * fDomains[id].sizeZ;
+					cout << "\tminAgentsFraction in domains[" << id << "]" ses minAgentsFraction nl;
 				}
-				fDomains[id].minNumCritters = nint( minCrittersFraction * fMinNumCritters );
-				cout << "\tminNumCritters in domains[" << id << "]" ses fDomains[id].minNumCritters nl;
+				fDomains[id].minNumAgents = nint( minAgentsFraction * fMinNumAgents );
+				cout << "\tminNumAgents in domains[" << id << "]" ses fDomains[id].minNumAgents nl;
 				
-				in >> maxCrittersFraction; in >> label;
-				cout << "maxCrittersFraction in domains[" << id << "]" ses maxCrittersFraction nl;
-				if( maxCrittersFraction < 0.0 )
+				in >> maxAgentsFraction; in >> label;
+				cout << "maxAgentsFraction in domains[" << id << "]" ses maxAgentsFraction nl;
+				if( maxAgentsFraction < 0.0 )
 				{
-					maxCrittersFraction = fDomains[id].sizeX * fDomains[id].sizeZ;
-					cout << "\tmaxCrittersFraction in domains[" << id << "]" ses maxCrittersFraction nl;
+					maxAgentsFraction = fDomains[id].sizeX * fDomains[id].sizeZ;
+					cout << "\tmaxAgentsFraction in domains[" << id << "]" ses maxAgentsFraction nl;
 				}
-				fDomains[id].maxNumCritters = nint( maxCrittersFraction * fMaxNumCritters );
-				cout << "\tmaxNumCritters in domains[" << id << "]" ses fDomains[id].maxNumCritters nl;
+				fDomains[id].maxNumAgents = nint( maxAgentsFraction * fMaxNumAgents );
+				cout << "\tmaxNumAgents in domains[" << id << "]" ses fDomains[id].maxNumAgents nl;
 				
-				in >> initCrittersFraction; in >> label;
-				cout << "initCrittersFraction in domains[" << id << "]" ses initCrittersFraction nl;
-				if( initCrittersFraction < 0.0 )
+				in >> initAgentsFraction; in >> label;
+				cout << "initAgentsFraction in domains[" << id << "]" ses initAgentsFraction nl;
+				if( initAgentsFraction < 0.0 )
 				{
-					initCrittersFraction = fDomains[id].sizeX * fDomains[id].sizeZ;
-					cout << "\tinitCrittersFraction in domains[" << id << "]" ses initCrittersFraction nl;
+					initAgentsFraction = fDomains[id].sizeX * fDomains[id].sizeZ;
+					cout << "\tinitAgentsFraction in domains[" << id << "]" ses initAgentsFraction nl;
 				}
-				fDomains[id].initNumCritters = nint( initCrittersFraction * fInitNumCritters );
-				cout << "\tinitNumCritters in domains[" << id << "]" ses fDomains[id].initNumCritters nl;
+				fDomains[id].initNumAgents = nint( initAgentsFraction * fInitNumAgents );
+				cout << "\tinitNumAgents in domains[" << id << "]" ses fDomains[id].initNumAgents nl;
 				
 				in >> initSeedsFraction; in >> label;
 				cout << "initSeedsFraction in domains[" << id << "]" ses initSeedsFraction nl;
@@ -5040,30 +5090,30 @@ void TSimulation::ReadWorldFile(const char* filename)
 
 		}
 
-		totmaxnumcritters += fDomains[id].maxNumCritters;
-		totminnumcritters += fDomains[id].minNumCritters;
+		totmaxnumagents += fDomains[id].maxNumAgents;
+		totminnumagents += fDomains[id].minNumAgents;
 	}
 
 
-	if (totmaxnumcritters > fMaxNumCritters)
+	if (totmaxnumagents > fMaxNumAgents)
 	{
 		char tempstring[256];
 		sprintf(tempstring,"%s %ld %s %ld %s",
 			"The maximum number of organisms in the world (",
-			fMaxNumCritters,
+			fMaxNumAgents,
 			") is < the maximum summed over domains (",
-			totmaxnumcritters,
+			totmaxnumagents,
 			"), so there may still be some indirect global influences.");
 		errorflash(0, tempstring);
 	}
-	if (totminnumcritters < fMinNumCritters)
+	if (totminnumagents < fMinNumAgents)
 	{
 		char tempstring[256];
 		sprintf(tempstring,"%s %ld %s %ld %s",
 			"The minimum number of organisms in the world (",
-			fMinNumCritters,
+			fMinNumAgents,
 			") is > the minimum summed over domains (",
-			totminnumcritters,
+			totminnumagents,
 			"), so there may still be some indirect global influences.");
 		errorflash(0,tempstring);
 	}
@@ -5079,7 +5129,7 @@ void TSimulation::ReadWorldFile(const char* filename)
 	
     for (id = 0; id < fNumDomains; id++)
     {
-        fDomains[id].numCritters = 0;
+        fDomains[id].numAgents = 0;
         fDomains[id].numcreated = 0;
         fDomains[id].numborn = 0;
         fDomains[id].numbornsincecreated = 0;
@@ -5161,8 +5211,8 @@ void TSimulation::ReadWorldFile(const char* filename)
 
     in >> fOverHeadRank; in >> label;
     cout << "fOverHeadRank" ses fOverHeadRank nl;
-    in >> fCritterTracking; in >> label;
-    cout << "fCritterTracking" ses fCritterTracking nl;
+    in >> fAgentTracking; in >> label;
+    cout << "fAgentTracking" ses fAgentTracking nl;
     in >> fMinFoodEnergyAtDeath; in >> label;
     cout << "minfoodenergyatdeath" ses fMinFoodEnergyAtDeath nl;
 
@@ -5187,20 +5237,20 @@ void TSimulation::ReadWorldFile(const char* filename)
     in >> fSmiteAgeFrac; in >> label;
     cout << "smiteAgeFrac" ses fSmiteAgeFrac nl;
 	
-	// critter::gNumDepletionSteps and critter:gMaxPopulationFraction must both be initialized to zero
+	// agent::gNumDepletionSteps and agent:gMaxPopulationFraction must both be initialized to zero
 	// for backward compatibility, and we depend on that fact here, so don't change it
 	if( version >= 23 )
 	{
-		in >> critter::gNumDepletionSteps; in >> label;
-		cout << "NumDepletionSteps" ses critter::gNumDepletionSteps nl;
-		if( critter::gNumDepletionSteps )
-			critter::gMaxPopulationPenaltyFraction = 1.0 / (float) critter::gNumDepletionSteps;
-		cout << ".MaxPopulationPenaltyFraction" ses critter::gMaxPopulationPenaltyFraction nl;
+		in >> agent::gNumDepletionSteps; in >> label;
+		cout << "NumDepletionSteps" ses agent::gNumDepletionSteps nl;
+		if( agent::gNumDepletionSteps )
+			agent::gMaxPopulationPenaltyFraction = 1.0 / (float) agent::gNumDepletionSteps;
+		cout << ".MaxPopulationPenaltyFraction" ses agent::gMaxPopulationPenaltyFraction nl;
 	}
 	else
 	{
-		cout << "+NumDepletionSteps" ses critter::gNumDepletionSteps nl;
-		cout << ".MaxPopulationPenaltyFraction" ses critter::gMaxPopulationPenaltyFraction nl;
+		cout << "+NumDepletionSteps" ses agent::gNumDepletionSteps nl;
+		cout << ".MaxPopulationPenaltyFraction" ses agent::gMaxPopulationPenaltyFraction nl;
 	}
 	
 	if( version >= 24 )
@@ -5224,6 +5274,11 @@ void TSimulation::ReadWorldFile(const char* filename)
 	{
 		in >> fRecordBirthsDeaths; in >> label;
 		cout << "RecordBirthsDeaths" ses fRecordBirthsDeaths nl;
+	}
+
+	if( version >= 33 )
+	{
+		PROP(RecordPosition);
 	}
 	
 	if( version >= 11 )
@@ -5392,7 +5447,7 @@ void TSimulation::ReadWorldFile(const char* filename)
 		cout << "ExpFogDensity" ses fExpFogDensity nl;
 
 		// This value only does something if Fog Function is linear
-		// It defines the maximum distance a critter can see.
+		// It defines the maximum distance a agent can see.
 		in >> fLinearFogEnd; in >> label;
 		cout << "LinearFogEnd" ses fLinearFogEnd nl;
 
@@ -5408,79 +5463,79 @@ void TSimulation::ReadWorldFile(const char* filename)
 		genome::gMinLifeSpan = fMaxSteps;
 		genome::gMaxLifeSpan = fMaxSteps;
 		
-		critter::gEat2Energy = 0.0;
-		critter::gMate2Energy = 0.0;
-		critter::gFight2Energy = 0.0;
-		critter::gMaxSizePenalty = 0.0;
-		critter::gSpeed2Energy = 0.0;
-		critter::gYaw2Energy = 0.0;
-		critter::gLight2Energy = 0.0;
-		critter::gFocus2Energy = 0.0;
-		critter::gFixedEnergyDrain = 0.0;
+		agent::gEat2Energy = 0.0;
+		agent::gMate2Energy = 0.0;
+		agent::gFight2Energy = 0.0;
+		agent::gMaxSizePenalty = 0.0;
+		agent::gSpeed2Energy = 0.0;
+		agent::gYaw2Energy = 0.0;
+		agent::gLight2Energy = 0.0;
+		agent::gFocus2Energy = 0.0;
+		agent::gFixedEnergyDrain = 0.0;
 
-		critter::gNumDepletionSteps = 0;
-		critter::gMaxPopulationPenaltyFraction = 0.0;
+		agent::gNumDepletionSteps = 0;
+		agent::gMaxPopulationPenaltyFraction = 0.0;
 		
 		fApplyLowPopulationAdvantage = false;
 		
 		cout << "Due to running in LockStepWithBirthsDeathsLog mode, the following parameter values have been forcibly reset as indicated:" nl;
 		cout << "  MinLifeSpan" ses genome::gMinLifeSpan nl;
 		cout << "  MaxLifeSpan" ses genome::gMaxLifeSpan nl;
-		cout << "  Eat2Energy" ses critter::gEat2Energy nl;
-		cout << "  Mate2Energy" ses critter::gMate2Energy nl;
-		cout << "  Fight2Energy" ses critter::gFight2Energy nl;
-		cout << "  MaxSizePenalty" ses critter::gMaxSizePenalty nl;
-		cout << "  Speed2Energy" ses critter::gSpeed2Energy nl;
-		cout << "  Yaw2Energy" ses critter::gYaw2Energy nl;
-		cout << "  Light2Energy" ses critter::gLight2Energy nl;
-		cout << "  Focus2Energy" ses critter::gFocus2Energy nl;
-		cout << "  FixedEnergyDrain" ses critter::gFixedEnergyDrain nl;
-		cout << "  NumDepletionSteps" ses critter::gNumDepletionSteps nl;
-		cout << "  .MaxPopulationPenaltyFraction" ses critter::gMaxPopulationPenaltyFraction nl;
+		cout << "  Eat2Energy" ses agent::gEat2Energy nl;
+		cout << "  Mate2Energy" ses agent::gMate2Energy nl;
+		cout << "  Fight2Energy" ses agent::gFight2Energy nl;
+		cout << "  MaxSizePenalty" ses agent::gMaxSizePenalty nl;
+		cout << "  Speed2Energy" ses agent::gSpeed2Energy nl;
+		cout << "  Yaw2Energy" ses agent::gYaw2Energy nl;
+		cout << "  Light2Energy" ses agent::gLight2Energy nl;
+		cout << "  Focus2Energy" ses agent::gFocus2Energy nl;
+		cout << "  FixedEnergyDrain" ses agent::gFixedEnergyDrain nl;
+		cout << "  NumDepletionSteps" ses agent::gNumDepletionSteps nl;
+		cout << "  .MaxPopulationPenaltyFraction" ses agent::gMaxPopulationPenaltyFraction nl;
 		cout << "  ApplyLowPopulationAdvantage" ses fApplyLowPopulationAdvantage nl;
 	}
 	
 	// If this is a steady-state GA run, then we need to force certain parameter values (and warn the user)
 	if( (fHeuristicFitnessWeight != 0.0) || (fComplexityFitnessWeight != 0) )
 	{
-		fNumberToSeed = lrint( fMaxNumCritters * (float) fNumberToSeed / fInitNumCritters );	// same proportion as originally specified (must calculate before changing fInitNumCritters)
-		if( fNumberToSeed > fMaxNumCritters )	// just to be safe
-			fNumberToSeed = fMaxNumCritters;
-		fInitNumCritters = fMaxNumCritters;	// population starts at maximum
-		fMinNumCritters = fMaxNumCritters;		// population stays at mximum
+		fNumberToSeed = lrint( fMaxNumAgents * (float) fNumberToSeed / fInitNumAgents );	// same proportion as originally specified (must calculate before changing fInitNumAgents)
+		if( fNumberToSeed > fMaxNumAgents )	// just to be safe
+			fNumberToSeed = fMaxNumAgents;
+		fInitNumAgents = fMaxNumAgents;	// population starts at maximum
+		fMinNumAgents = fMaxNumAgents;		// population stays at mximum
 		fProbabilityOfMutatingSeeds = 1.0;	// so there is variation in the initial population
 //		fMateThreshold = 1.5;				// so they can't reproduce on their own
 
 		for( int i = 0; i < fNumDomains; i++ )	// over all domains
 		{
-			fDomains[i].numberToSeed = lrint( fDomains[i].maxNumCritters * (float) fDomains[i].numberToSeed / fDomains[i].initNumCritters );	// same proportion as originally specified (must calculate before changing fInitNumCritters)
-			if( fDomains[i].numberToSeed > fDomains[i].maxNumCritters )	// just to be safe
-				fDomains[i].numberToSeed = fDomains[i].maxNumCritters;
-			fDomains[i].initNumCritters = fDomains[i].maxNumCritters;	// population starts at maximum
-			fDomains[i].minNumCritters  = fDomains[i].maxNumCritters;	// population stays at maximum
+			fDomains[i].numberToSeed = lrint( fDomains[i].maxNumAgents * (float) fDomains[i].numberToSeed / fDomains[i].initNumAgents );	// same proportion as originally specified (must calculate before changing fInitNumAgents)
+			if( fDomains[i].numberToSeed > fDomains[i].maxNumAgents )	// just to be safe
+				fDomains[i].numberToSeed = fDomains[i].maxNumAgents;
+			fDomains[i].initNumAgents = fDomains[i].maxNumAgents;	// population starts at maximum
+			fDomains[i].minNumAgents  = fDomains[i].maxNumAgents;	// population stays at maximum
 			fDomains[i].probabilityOfMutatingSeeds = 1.0;				// so there is variation in the initial population
 		}
 
-		critter::gNumDepletionSteps = 0;				// turn off the high-population penalty
-		critter::gMaxPopulationPenaltyFraction = 0.0;	// ditto
+		agent::gNumDepletionSteps = 0;				// turn off the high-population penalty
+		agent::gMaxPopulationPenaltyFraction = 0.0;	// ditto
 		fApplyLowPopulationAdvantage = false;			// turn off the low-population advantage
 		
 		cout << "Due to running as a steady-state GA with a fitness function, the following parameter values have been forcibly reset as indicated:" nl;
-		cout << "  InitNumCritters" ses fInitNumCritters nl;
-		cout << "  MinNumCritters" ses fMinNumCritters nl;
+		cout << "  InitNumAgents" ses fInitNumAgents nl;
+		cout << "  MinNumAgents" ses fMinNumAgents nl;
 		cout << "  NumberToSeed" ses fNumberToSeed nl;
 		cout << "  ProbabilityOfMutatingSeeds" ses fProbabilityOfMutatingSeeds nl;
 //		cout << "  MateThreshold" ses fMateThreshold nl;
 		for( int i = 0; i < fNumDomains; i++ )
 		{
 			cout << "  Domain " << i << ":" nl;
-			cout << "    initNumCritters" ses fDomains[i].initNumCritters nl;
-			cout << "    minNumCritters" ses fDomains[i].minNumCritters nl;
+			cout << "    initNumAgents" ses fDomains[i].initNumAgents nl;
+			cout << "    minNumAgents" ses fDomains[i].minNumAgents nl;
 			cout << "    numberToSeed" ses fDomains[i].numberToSeed nl;
 			cout << "    probabilityOfMutatingSeeds" ses fDomains[i].probabilityOfMutatingSeeds nl;
 		}
-		cout << "  NumDepletionSteps" ses critter::gNumDepletionSteps nl;
-		cout << "  .MaxPopulationPenaltyFraction" ses critter::gMaxPopulationPenaltyFraction nl;
+		cout << "  NumDepletionSteps" ses agent::gNumDepletionSteps nl;
+		cout << "  .MaxPopulationPenaltyFraction" ses agent::gMaxPopulationPenaltyFraction nl;
 		cout << "  ApplyLowPopulationAdvantage" ses fApplyLowPopulationAdvantage nl;
 		
 		if( fComplexityFitnessWeight != 0.0 )
@@ -5494,8 +5549,25 @@ void TSimulation::ReadWorldFile(const char* filename)
 	cout nlf;
     fb.close();
 	return;
+
+#undef PROP
 }
 
+
+//-------------------------------------------------------------------------------------------
+// TSimulation::ReadLabel
+//-------------------------------------------------------------------------------------------
+void TSimulation::ReadLabel(istream &in, const char *name)
+{
+	string label;
+	
+	in >> label;
+	
+	if(0 != strcasecmp(name, label.c_str()))
+	{
+	  error(2, "expecting '", name, "' found '", label.c_str(), "'");
+	}
+}
 
 
 //---------------------------------------------------------------------------
@@ -5535,9 +5607,9 @@ void TSimulation::Dump()
     out << fMaxGapCreate nl;
     out << fNumBornSinceCreated nl;
 
-    out << fMonitorCritterRank nl;
-    out << fMonitorCritterRankOld nl;
-    out << fCritterTracking nl;
+    out << fMonitorAgentRank nl;
+    out << fMonitorAgentRankOld nl;
+    out << fAgentTracking nl;
     out << fOverHeadRank nl;
     out << fOverHeadRankOld nl;
     out << fMaxGeneSeparation nl;
@@ -5550,7 +5622,7 @@ void TSimulation::Dump()
     out << fTotalFoodEnergyIn nl;
     out << fTotalFoodEnergyOut nl;
 
-    critter::critterdump(out);
+    agent::agentdump(out);
 
     out << objectxsortedlist::gXSortedObjects.getCount(FOODTYPE) nl;
 	food* f = NULL;
@@ -5563,14 +5635,14 @@ void TSimulation::Dump()
     out << fFitJ nl;
     for (int index = 0; index < fNumberFit; index++)
     {
-		out << fFittest[index]->critterID nl;
+		out << fFittest[index]->agentID nl;
         out << fFittest[index]->fitness nl;
         fFittest[index]->genes->Dump(out);
     }
 	out << fNumberRecentFit nl;
     for (int index = 0; index < fNumberRecentFit; index++)
     {
-		out << fRecentFittest[index]->critterID nl;
+		out << fRecentFittest[index]->agentID nl;
 		out << fRecentFittest[index]->fitness nl;
 //		fRecentFittest[index]->genes->Dump(out);	// we don't save the genes in the bestRecent list
     }
@@ -5578,7 +5650,7 @@ void TSimulation::Dump()
     out << fNumDomains nl;
     for (int id = 0; id < fNumDomains; id++)
     {
-        out << fDomains[id].numCritters nl;
+        out << fDomains[id].numAgents nl;
         out << fDomains[id].numcreated nl;
         out << fDomains[id].numborn nl;
         out << fDomains[id].numbornsincecreated nl;
@@ -5603,7 +5675,7 @@ void TSimulation::Dump()
 
             for (i = 0; i < numfitid; i++)
             {
-				out << fDomains[id].fittest[i]->critterID nl;
+				out << fDomains[id].fittest[i]->agentID nl;
                 out << fDomains[id].fittest[i]->fitness nl;
                 fDomains[id].fittest[i]->genes->Dump(out);
             }
@@ -5673,8 +5745,8 @@ void TSimulation::SwitchDomain(short newDomain, short oldDomain)
 {
 	Q_ASSERT(newDomain != oldDomain);
 		
-	fDomains[newDomain].numCritters++;
-	fDomains[oldDomain].numCritters--;
+	fDomains[newDomain].numAgents++;
+	fDomains[oldDomain].numAgents--;
 }
 
 
@@ -5694,14 +5766,14 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 	sprintf( t, "step = %ld", fStep );
 	list.push_back( strdup( t ) );
 	
-	sprintf( t, "critters = %4d", objectxsortedlist::gXSortedObjects.getCount(CRITTERTYPE) );
+	sprintf( t, "agents = %4d", objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE) );
 	if (fNumDomains > 1)
 	{
-		sprintf(t2, " (%ld",fDomains[0].numCritters );
+		sprintf(t2, " (%ld",fDomains[0].numAgents );
 		strcat(t, t2 );
 		for (id = 1; id < fNumDomains; id++)
 		{
-			sprintf(t2, ", %ld", fDomains[id].numCritters );
+			sprintf(t2, ", %ld", fDomains[id].numAgents );
 			strcat( t, t2 );
 		}
 		
@@ -5848,7 +5920,7 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 	int fittestCount = min( 5, min( fNumberFit, (int) fNumberDied ));
 	for( int i = 0; i < fittestCount; i++ )
 	{
-		sprintf( t2, " %lu", fFittest[i]->critterID );
+		sprintf( t2, " %lu", fFittest[i]->agentID );
 		strcat( t, t2 );
 	}
 	list.push_back( strdup( t ) );
@@ -5867,7 +5939,7 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 	sprintf( t, "CurFit =" );
 	for( int i = 0; i < fCurrentFittestCount; i++ )
 	{
-		sprintf( t2, " %lu", fCurrentFittestCritter[i]->Number() );
+		sprintf( t2, " %lu", fCurrentFittestAgent[i]->Number() );
 		strcat( t, t2 );
 	}
 	list.push_back( strdup( t ) );
@@ -5877,7 +5949,7 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 		sprintf( t, " " );
 		for( int i = 0; i < fCurrentFittestCount; i++ )
 		{
-			sprintf( t2, "  %.2f", fCurrentFittestCritter[i]->HeuristicFitness() / fTotalHeuristicFitness );
+			sprintf( t2, "  %.2f", fCurrentFittestAgent[i]->HeuristicFitness() / fTotalHeuristicFitness );
 			strcat( t, t2 );
 		}
 		list.push_back( strdup( t ) );
@@ -5895,19 +5967,19 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 		list.push_back( strdup( t ) );
 	}
 
-	sprintf( t, "LifeSpan = %lu ± %lu [%lu, %lu]", nint( fLifeSpanStats.mean() ), nint( fLifeSpanStats.stddev() ), (ulong) fLifeSpanStats.min(), (ulong) fLifeSpanStats.max() );
+	sprintf( t, "LifeSpan = %lu ï¿½ %lu [%lu, %lu]", nint( fLifeSpanStats.mean() ), nint( fLifeSpanStats.stddev() ), (ulong) fLifeSpanStats.min(), (ulong) fLifeSpanStats.max() );
 	list.push_back( strdup( t ) );
 
-	sprintf( t, "RecLifeSpan = %lu ± %lu [%lu, %lu]", nint( fLifeSpanRecentStats.mean() ), nint( fLifeSpanRecentStats.stddev() ), (ulong) fLifeSpanRecentStats.min(), (ulong) fLifeSpanRecentStats.max() );
+	sprintf( t, "RecLifeSpan = %lu ï¿½ %lu [%lu, %lu]", nint( fLifeSpanRecentStats.mean() ), nint( fLifeSpanRecentStats.stddev() ), (ulong) fLifeSpanRecentStats.min(), (ulong) fLifeSpanRecentStats.max() );
 	list.push_back( strdup( t ) );
 
-	sprintf( t, "CurNeurons = %.1f ± %.1f [%lu, %lu]", fCurrentNeuronCountStats.mean(), fCurrentNeuronCountStats.stddev(), (ulong) fCurrentNeuronCountStats.min(), (ulong) fCurrentNeuronCountStats.max() );
+	sprintf( t, "CurNeurons = %.1f ï¿½ %.1f [%lu, %lu]", fCurrentNeuronCountStats.mean(), fCurrentNeuronCountStats.stddev(), (ulong) fCurrentNeuronCountStats.min(), (ulong) fCurrentNeuronCountStats.max() );
 	list.push_back( strdup( t ) );
 
-	sprintf( t, "NeurGroups = %.1f ± %.1f [%lu, %lu]", fNeuronGroupCountStats.mean(), fNeuronGroupCountStats.stddev(), (ulong) fNeuronGroupCountStats.min(), (ulong) fNeuronGroupCountStats.max() );
+	sprintf( t, "NeurGroups = %.1f ï¿½ %.1f [%lu, %lu]", fNeuronGroupCountStats.mean(), fNeuronGroupCountStats.stddev(), (ulong) fNeuronGroupCountStats.min(), (ulong) fNeuronGroupCountStats.max() );
 	list.push_back( strdup( t ) );
 
-	sprintf( t, "CurNeurGroups = %.1f ± %.1f [%lu, %lu]", fCurrentNeuronGroupCountStats.mean(), fCurrentNeuronGroupCountStats.stddev(), (ulong) fCurrentNeuronGroupCountStats.min(), (ulong) fCurrentNeuronGroupCountStats.max() );
+	sprintf( t, "CurNeurGroups = %.1f ï¿½ %.1f [%lu, %lu]", fCurrentNeuronGroupCountStats.mean(), fCurrentNeuronGroupCountStats.stddev(), (ulong) fCurrentNeuronGroupCountStats.min(), (ulong) fCurrentNeuronGroupCountStats.max() );
 	list.push_back( strdup( t ) );
 
 	sprintf( t, "Rate %2.1f (%2.1f) %2.1f (%2.1f) %2.1f (%2.1f)",
@@ -5918,59 +5990,59 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 	
 	if( fRecordFoodPatchStats )
 	{
-		int numCrittersInAnyFoodPatchInAnyDomain = 0;
-		int numCrittersInOuterRangesInAnyDomain = 0;
+		int numAgentsInAnyFoodPatchInAnyDomain = 0;
+		int numAgentsInOuterRangesInAnyDomain = 0;
 
 		for( int domainNumber = 0; domainNumber < fNumDomains; domainNumber++ )
 		{
 			sprintf( t, "Domain %d", domainNumber);
 			list.push_back( strdup( t ) );
 			
-			int numCrittersInAnyFoodPatch = 0;
-			int numCrittersInOuterRanges = 0;
+			int numAgentsInAnyFoodPatch = 0;
+			int numAgentsInOuterRanges = 0;
 
 			for( int i = 0; i < fDomains[domainNumber].numFoodPatches; i++ )
 			{
-				numCrittersInAnyFoodPatch += fDomains[domainNumber].fFoodPatches[i].critterInsideCount;
-				numCrittersInOuterRanges += fDomains[domainNumber].fFoodPatches[i].critterNeighborhoodCount;
+				numAgentsInAnyFoodPatch += fDomains[domainNumber].fFoodPatches[i].agentInsideCount;
+				numAgentsInOuterRanges += fDomains[domainNumber].fFoodPatches[i].agentNeighborhoodCount;
 			}
 			
-			float makePercent = 100.0 / fDomains[domainNumber].numCritters;
-			float makePercentNorm = 100.0 / numCrittersInAnyFoodPatch;
+			float makePercent = 100.0 / fDomains[domainNumber].numAgents;
+			float makePercentNorm = 100.0 / numAgentsInAnyFoodPatch;
 
 			for( int i = 0; i < fDomains[domainNumber].numFoodPatches; i++ )
 			{
 				sprintf( t, "  FP%d %3d %3d  %4.1f %4.1f  %4.1f",
 						 i,
-						 fDomains[domainNumber].fFoodPatches[i].critterInsideCount,
-						 fDomains[domainNumber].fFoodPatches[i].critterInsideCount + fDomains[domainNumber].fFoodPatches[i].critterNeighborhoodCount,
-						 fDomains[domainNumber].fFoodPatches[i].critterInsideCount * makePercent,
-						(fDomains[domainNumber].fFoodPatches[i].critterInsideCount + fDomains[domainNumber].fFoodPatches[i].critterNeighborhoodCount) * makePercent,
-						 fDomains[domainNumber].fFoodPatches[i].critterInsideCount * makePercentNorm );
+						 fDomains[domainNumber].fFoodPatches[i].agentInsideCount,
+						 fDomains[domainNumber].fFoodPatches[i].agentInsideCount + fDomains[domainNumber].fFoodPatches[i].agentNeighborhoodCount,
+						 fDomains[domainNumber].fFoodPatches[i].agentInsideCount * makePercent,
+						(fDomains[domainNumber].fFoodPatches[i].agentInsideCount + fDomains[domainNumber].fFoodPatches[i].agentNeighborhoodCount) * makePercent,
+						 fDomains[domainNumber].fFoodPatches[i].agentInsideCount * makePercentNorm );
 				list.push_back( strdup( t ) );
 			}
 			
 			
 			sprintf( t, "  FP* %3d %3d  %4.1f %4.1f 100.0",
-					 numCrittersInAnyFoodPatch,
-					 numCrittersInAnyFoodPatch + numCrittersInOuterRanges,
-					 numCrittersInAnyFoodPatch * makePercent,
-					(numCrittersInAnyFoodPatch + numCrittersInOuterRanges) * makePercent );
+					 numAgentsInAnyFoodPatch,
+					 numAgentsInAnyFoodPatch + numAgentsInOuterRanges,
+					 numAgentsInAnyFoodPatch * makePercent,
+					(numAgentsInAnyFoodPatch + numAgentsInOuterRanges) * makePercent );
 			list.push_back( strdup( t ) );
 
-			numCrittersInAnyFoodPatchInAnyDomain += numCrittersInAnyFoodPatch;
-			numCrittersInOuterRangesInAnyDomain += numCrittersInOuterRanges;
+			numAgentsInAnyFoodPatchInAnyDomain += numAgentsInAnyFoodPatch;
+			numAgentsInOuterRangesInAnyDomain += numAgentsInOuterRanges;
 		}
 
 		if( fNumDomains > 1 )
 		{
-			float makePercent = 100.0 / objectxsortedlist::gXSortedObjects.getCount( CRITTERTYPE );
+			float makePercent = 100.0 / objectxsortedlist::gXSortedObjects.getCount( AGENTTYPE );
 
 			sprintf( t, "**FP* %3d %3d  %4.1f %4.1f 100.0",
-					 numCrittersInAnyFoodPatchInAnyDomain,
-					 numCrittersInAnyFoodPatchInAnyDomain + numCrittersInOuterRangesInAnyDomain,
-					 numCrittersInAnyFoodPatchInAnyDomain * makePercent,
-					(numCrittersInAnyFoodPatchInAnyDomain + numCrittersInOuterRangesInAnyDomain) * makePercent );
+					 numAgentsInAnyFoodPatchInAnyDomain,
+					 numAgentsInAnyFoodPatchInAnyDomain + numAgentsInOuterRangesInAnyDomain,
+					 numAgentsInAnyFoodPatchInAnyDomain * makePercent,
+					(numAgentsInAnyFoodPatchInAnyDomain + numAgentsInOuterRangesInAnyDomain) * makePercent );
 			list.push_back( strdup( t ) );
 		}
 	}
@@ -6004,10 +6076,10 @@ void TSimulation::Update()
 	// Redraw main simulation window
 	fSceneView->updateGL();
 
-	// Update critter POV window
-	if (fShowVision && fCritterPOVWindow != NULL && !fCritterPOVWindow->isHidden())
-		fCritterPOVWindow->updateGL();
-		//QApplication::postEvent(fCritterPOVWindow, new QCustomEvent(kUpdateEventType));	
+	// Update agent POV window
+	if (fShowVision && fAgentPOVWindow != NULL && !fAgentPOVWindow->isHidden())
+		fAgentPOVWindow->updateGL();
+		//QApplication::postEvent(fAgentPOVWindow, new QCustomEvent(kUpdateEventType));	
 	
 	// Update chart windows
 	if (fChartBorn && fBirthrateWindow != NULL && fBirthrateWindow->isVisible())

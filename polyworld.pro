@@ -2,9 +2,7 @@ TEMPLATE	= 	app
 
 CONFIG		+=	qt warn_on debug
 
-QT              += opengl
-
-SUBDIRS  	=	PwMoviePlayer
+QT              +=	opengl
 
 HEADERS		= 	app/PWApp.h	\
 				app/Simulation.h
@@ -13,6 +11,8 @@ SOURCES		=	app/debug.cp \
 				app/globals.cp \
 				app/PWApp.cp \
 				app/Simulation.cp \
+				complexity/complexity_algorithm.cp \
+				complexity/complexity_brain.cp \
 				critter/brain.cp \
 				critter/critter.cp \
 				critter/genome.cp \
@@ -32,65 +32,58 @@ SOURCES		=	app/debug.cp \
 				graphics/gscene.cp \
 				graphics/gsquare.cp \
 				graphics/gstage.cp \
+				motion/PositionPath.cp \
+				motion/PositionWriter.cp \
 				ui/BrainMonitorWindow.cp \
 				ui/ChartWindow.cp \
 				ui/CritterPOVWindow.cp \
 				ui/SceneView.cp \
 				ui/TextStatusWindow.cp \
-				ui/OverheadView.cp \ 
+				ui/OverheadView.cp \
 				utils/error.cp \
 				utils/indexlist.cp \
 				utils/misc.cp \
 				utils/PwMovieTools.cp \
 				utils/objectxsortedlist.cp \
 				utils/distributions.cp
-																			  	
-TARGET		= 	Polyworld
+
+# Make source paths absolute so that XCode can properly interpret error messages
+for(f, SOURCES): __SOURCES += $(DIR__HOME)/$${f}
+SOURCES = $${__SOURCES}
+
+INCLUDEPATH +=	. \
+		app \
+		complexity \
+		critter \
+		environment \
+		graphics \
+		motion \
+		ui \
+		utils \
 
 macx {
 	message(compiling for Mac OS X)
-	INCLUDEPATH +=	. \
-					app \
-					critter \
-					environment \
-					graphics \
-					ui \
-					utils \
-					$(QT)/include \
-					$(QT)/include/QtOpenGL \
-					/sw/include \
-					/System/Library/Frameworks/AGL.framework/Versions/A/Headers/
+	INCLUDEPATH +=	$(QT)/include \
+			$(QT)/include/QtOpenGL \
+			/sw/include \
+			/System/Library/Frameworks/AGL.framework/Versions/A/Headers/
 }
 
 unix:!macx {
 	message(compiling for Linux)
-	INCLUDEPATH +=	. \
-					app \
-					critter \
-					environment \
-					graphics \
-					ui \
-					utils \
-					$(QT)/include \
-					$(QT)/include/QtOpenGL \
-					$(QT)/include/QtCore \
-					$(QT)/include/QtGui \
-					/usr/include/GL/
+	INCLUDEPATH +=	$(QT)/include \
+			$(QT)/include/QtOpenGL \
+			$(QT)/include/QtCore \
+			$(QT)/include/QtGui \
+			/usr/include/GL/
 }
 
 win32 {
 	message(compiling for Windows)
-	INCLUDEPATH +=	. \
-					app \
-					critter \
-					environment \
-					graphics \
-					ui \
-					utils \
-					$(QT)/include \
-					$(QT)/include/QtOpenGL				
+	INCLUDEPATH +=	$(QT)/include \
+			$(QT)/include/QtOpenGL				
 }
-								
+
 QMAKE_CFLAGS_DEBUG += -D_GLIBCXX_DEBUG_PEDANTIC -Wno-deprecated
 QMAKE_CFLAGS += -Wno-deprecated
 
@@ -102,6 +95,11 @@ macx {
 
 unix:!macx {
 	LIBS	+=	-L$(QT)/lib/ -lQtOpenGL -lgsl -lgslcblas
+
+        # OpenMP Flags
+        LIBS += -lgomp
+        QMAKE_CFLAGS_DEBUG += -fopenmp
+        QMAKE_CFLAGS += -fopenmp
 }
 
 win32 {

@@ -9,7 +9,7 @@
 
 
 #include "objectxsortedlist.h"
-#include "critter.h"
+#include "agent.h"
 
 #define DebugCounts 0
 
@@ -27,7 +27,7 @@ class objectxsortedlist;
 
 // Globals 
 
-// The big list of all objects (critters, food, bricks, etc.)
+// The big list of all objects (agents, food, bricks, etc.)
 objectxsortedlist objectxsortedlist::gXSortedObjects;
 
 
@@ -39,8 +39,8 @@ int objectxsortedlist::getCount( int objType )
     // Count the requested types in the list
 	int count = 0;
 	
-	if( objType & CRITTERTYPE )
-		count += critterCount;
+	if( objType & AGENTTYPE )
+		count += agentCount;
 	
 	if( objType & FOODTYPE )
 		count += foodCount;
@@ -169,9 +169,9 @@ void objectxsortedlist::add( gobject* a )
     // Increase object type count based on added object's type
     switch( a->getType() )
 	{
-		case CRITTERTYPE:
-			cntPrint( "%s: incrementing critterCount from %d to %d\n", __func__, critterCount, critterCount + 1 );
-			critterCount++;
+		case AGENTTYPE:
+			cntPrint( "%s: incrementing agentCount from %d to %d\n", __func__, agentCount, agentCount + 1 );
+			agentCount++;
 			break;
 		case FOODTYPE:
 			cntPrint( "%s: incrementing foodCount from %d to %d\n", __func__, foodCount, foodCount + 1 );
@@ -213,19 +213,19 @@ void objectxsortedlist::removeCurrentObject()
 		{
 			gdlink<gobject*> *tempItem;
 
-			case CRITTERTYPE:
-				cntPrint( "%s: decrementing critterCount from %d to %d\n", __func__, critterCount, critterCount - 1 );
-				critterCount--;
+			case AGENTTYPE:
+				cntPrint( "%s: decrementing agentCount from %d to %d\n", __func__, agentCount, agentCount - 1 );
+				agentCount--;
 				tempItem = currItem;
-				while( (markedCritter == currItem) && (markedCritter != 0) )
+				while( (markedAgent == currItem) && (markedAgent != 0) )
 				{
 					if( tempItem == lastItem->nextItem )	// backed up to the head of the list
-						markedCritter = 0;					// so there won't be a mark for this type anymore
+						markedAgent = 0;					// so there won't be a mark for this type anymore
 					else
 					{
 						tempItem = tempItem->prevItem;				// back up one item in the list
-						if( tempItem->e->getType() == CRITTERTYPE )	// if it's of the right type,
-							markedCritter = tempItem;				// mark it (and that will kick us out of the loop)
+						if( tempItem->e->getType() == AGENTTYPE )	// if it's of the right type,
+							markedAgent = tempItem;				// mark it (and that will kick us out of the loop)
 					}
 				}
 				break;
@@ -272,9 +272,9 @@ void objectxsortedlist::removeCurrentObject()
 		// Actually remove the object from the list
 		this->remove();
 		
-		if( kount != (critterCount + foodCount + brickCount) )
+		if( kount != (agentCount + foodCount + brickCount) )
 		{
-			printf( "kount (%ld) != critterCount (%d) + foodCount (%d) + brickCount (%d)\n", kount, critterCount, foodCount, brickCount );
+			printf( "kount (%ld) != agentCount (%d) + foodCount (%d) + brickCount (%d)\n", kount, agentCount, foodCount, brickCount );
 		}
     }
 }
@@ -298,8 +298,8 @@ void objectxsortedlist::removeObjectWithLink( gobject* o )
 	removeCurrentObject();	// will take care of currItem, markItem, and marked<type> if they point to the item being removed
     switch( o->getType() )
 	{
-		case CRITTERTYPE:
-			countType = critterCount;
+		case AGENTTYPE:
+			countType = agentCount;
 			break;
 		case FOODTYPE:
 			countType = foodCount;
@@ -378,10 +378,10 @@ void objectxsortedlist::list()
     cout << this->kount << ":";
     while( this->next( pobj ) )
 	{
-		if( pobj->getType() == CRITTERTYPE )
+		if( pobj->getType() == AGENTTYPE )
 		{
-			critter* c;
-			c = (critter*) pobj;
+			agent* c;
+			c = (agent*) pobj;
 			//cout sp c->Number() << "/" << pobj << "/" << pobj->GetListLink();
 			cout sp c->Number() << "(X=" << c->X() << ")";
 		}
@@ -425,8 +425,8 @@ void objectxsortedlist::setMark( int objType )
     }
     */
 
-    if( objType == CRITTERTYPE )
-		markedCritter = lookAt;
+    if( objType == AGENTTYPE )
+		markedAgent = lookAt;
     else if( objType == FOODTYPE )
 		markedFood = lookAt;
     else if( objType == BRICKTYPE )
@@ -450,8 +450,8 @@ void objectxsortedlist::setMarkPrevious( int objType )
 		}
     }
 
-    if( objType == CRITTERTYPE )
-		markedCritter = lookAt;
+    if( objType == AGENTTYPE )
+		markedAgent = lookAt;
     else if( objType == FOODTYPE )
 		markedFood = lookAt;
     else if( objType == BRICKTYPE )
@@ -479,8 +479,8 @@ void objectxsortedlist::setMarkLast( int objType )
 		}
     }
 	
-    if( objType == CRITTERTYPE )
-		markedCritter = lookAt;
+    if( objType == AGENTTYPE )
+		markedAgent = lookAt;
     else if( objType == FOODTYPE )
 	    markedFood = lookAt;
     else if( objType == BRICKTYPE )
@@ -491,8 +491,8 @@ void objectxsortedlist::setMarkLast( int objType )
 
 void objectxsortedlist::toMark( int objType )
 {
-    if (objType == CRITTERTYPE)
-		currItem = markedCritter;
+    if (objType == AGENTTYPE)
+		currItem = markedAgent;
     else if (objType == FOODTYPE)
 		currItem = markedFood;
     else if (objType == BRICKTYPE)
@@ -503,10 +503,10 @@ void objectxsortedlist::toMark( int objType )
 
 void objectxsortedlist::getMark( int objType, gobject* gob )
 {
-    if( objType == CRITTERTYPE )
+    if( objType == AGENTTYPE )
 	{
-		if( markedCritter )
-			gob = markedCritter->e;
+		if( markedAgent )
+			gob = markedAgent->e;
 		else
 			gob = 0;
 	}

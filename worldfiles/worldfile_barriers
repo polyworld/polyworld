@@ -1,0 +1,243 @@
+28      version
+
+0		LockStepWithBirthsDeathsLog
+
+40001  maxSteps
+1      docpuwork
+1000   dumpfreq
+100    statfreq
+1      edges
+0      wraparound
+1      vision
+1      showvision
+22     minwin
+1.0    maxvel
+60     minnumagents
+300    maxnumagents
+90     initnumagents
+90     numberToSeed
+0.0    probabilityOfMutatingSeed
+-1     miscagents
+
+42    positionseed_not_used
+42    genomeseed_used_for_all
+
+90     minFoodCount
+120    maxFoodCount
+90     maxFoodGrown
+90     initFoodCount
+0.10   foodrate
+
+0      agentsRfood
+100    fit1freq
+1      fit2freq
+10     numFit
+10     numRecentFit
+10.0   eatfitparam
+100.0  matefitparam
+0.1    movefitparam_0.5
+5.0    energyfitparam
+25.0   agefitparam_10.0
+200.0  minfoodenergy
+1000.0  maxfoodenergy
+400.0  size2energy
+100.0   eat2consume
+
+0      minintneurons
+0      maxintneurons
+1      minvispixels
+16     maxvispixels
+0.01   minmrate
+0.05   maxmrate_0.1
+2      minnumcpts
+8      maxnumcpts
+500    minlifespan
+1000   maxlifespan
+25     matewait
+0		initmatewait
+0.5    minstrength
+2.0    maxstrength
+0.5    minsize
+2.0    maxsize
+500.0  minmaxenergy
+1000.0 maxmaxenergy
+.2     minmateenergy
+.8     maxmatenergy
+0.5   minmatefrac_0.05
+0.5    minmaxspeed
+1.5    maxmaxspeed
+1.0    speed2dpos
+20.0    yaw2dyaw_80.0
+0.0    minlrate
+0.1    maxlrate
+20.0   minfocus
+140.0  maxfocus
+10.0   agentfovy
+2.5    maxsizeadvantage
+2.5    power2energy
+
+0.01   eat2energy
+0.1    mate2energy
+1.0    fight2energy
+10.0   maxsizepenalty
+0.1    speed2energy
+0.1    yaw2energy
+0.01   light2energy
+0.001  focus2energy
+0.0    maxsynapse2energy
+0.05   fixedenergydrain
+0.99   decayrate
+0.0    agenthealingrate
+
+0.2    eatthreshold
+0.5    matethreshold
+0.2    fightthreshold
+1.0    miscbias
+2.0    miscinvslope
+
+0.5    logisticslope
+8.0    maxweight
+2.0    initmaxweight_0.5_0.1_1.0
+0.1    minbitprob_0.1
+0.6    maxbitprob_0.6
+0.2    agentheight
+0.6    foodheight
+0.2 0.6 0.2 foodcolor
+5.0    barrierheight
+0.35 0.25 0.15 barriercolor
+0.10 0.15 0.05 groundcolor
+0.0    groundclearance
+0.3 0.3 0.3 cameracolor
+0.6    camradius
+0.35   camheight
+0.09   camrotationrate
+0.0    camanglestart
+90.    camfov
+1      moncrit
+8      monwidth_not_used
+8      monheight_not_used
+1      monstride
+100.0  worldsize
+2								numbarriers
+1								barrier[0].numKeyFrames
+0     33.33 -100. 33.33 -10.	barrier[0].keyFrame[0]_t_x1_z1_x2_z2
+1								barrier[1].numKeyFrames
+0     66.67 -100. 66.67 -10.	barrier[1].keyFrame[0]_t_x1_z1_x2_z2
+
+0      genesepmon
+0      geneseprec
+1      chartborn
+1      chartfit
+1      chartfoodenergy
+1      chartpop
+
+1      numdomains
+
+60	domain[0].minAgents
+300	domain[0].maxAgents
+90	domain[0].initAgents
+90	domain[0].numberToSeed
+0.0	domain[0].probabilityOfMutatingSeeds
+0.5	domain[0].centerX	
+0.5	domain[0].centerZ	
+1.0	domain[0].sizeX
+1.0	domain[0].sizeZ
+2	domain[0].numFoodPatches
+0	domain[0].numBrickPatches
+0.1	domain[0].foodRate
+90	domain[0].initFoodCount
+90	domain[0].minFoodCount
+120	domain[0].maxFoodCount
+90	domain[0].maxFoodGrownCount
+
+0.2	domain[0].foodPatch[0].fraction
+0.0	domain[0].foodPatch[0].growthRate
+18	domain[0].foodPatch[0].initFoodCount
+0	domain[0].foodPatch[0].minFoodCount
+120	domain[0].foodPatch[0].maxFoodCount
+90	domain[0].foodPatch[0].maxFoodGrownCount
+0.5	domain[0].foodPatch[0].centerX
+0.05	domain[0].foodPatch[0].centerZ
+1.0	domain[0].foodPatch[0].sizeX
+0.1	domain[0].foodPatch[0].sizeZ
+0	domain[0].foodPatch[0].areaShape_0=rectangular|1=elliptical
+0	domain[0].foodPatch[0].distribution_0=uniform|1=linear|2=gaussian
+10	domain[0].foodPatch[0].neighborhoodSize
+0		domain[0].foodPatch[0].period
+1.0		domain[0].foodPatch[0].onFraction
+0.0		domain[0].foodPatch[0].phase
+0		domain[0].foodPatch[0].removeFood
+
+0.8	domain[0].foodPatch[1].fraction
+0.0	domain[0].foodPatch[1].growthRate
+72	domain[0].foodPatch[1].initFoodCount
+0	domain[0].foodPatch[1].minFoodCount
+120	domain[0].foodPatch[1].maxFoodCount
+90	domain[0].foodPatch[1].maxFoodGrownCount
+0.5	domain[0].foodPatch[1].centerX
+0.8	domain[0].foodPatch[1].centerZ
+1.0	domain[0].foodPatch[1].sizeX
+0.4	domain[0].foodPatch[1].sizeZ
+0	domain[0].foodPatch[1].areaShape_0=rectangular|1=elliptical
+0	domain[0].foodPatch[1].distribution_0=uniform|1=linear|2=gaussian
+10	domain[0].foodPatch[1].neighborhoodSize
+0		domain[0].foodPatch[1].period
+1.0		domain[0].foodPatch[1].onFraction
+0.0		domain[0].foodPatch[1].phase
+0		domain[0].foodPatch[1].removeFood
+
+1	useProbabilisticFoodPatches
+
+0      binchartgs
+
+0      mininternalneurgroups
+5      maxinternalneurgroups
+1      mineneurpergroup
+16     maxeneurpergroup
+1      minineurpergroup
+16     maxineurpergroup
+-8.0   minbias_-1.0_unused
+8.0    maxbias_1.0
+0.0    minbiaslrate
+0.0    maxbiaslrate_0.2
+0.0    minconnectiondensity
+1.0    maxconnectiondensity
+0.0    mintopologicaldistortion
+1.0    maxtopologicaldistortion
+0.0    maxneur2energy
+25     numprebirthcycles
+
+1      overheadrank
+1      tracking
+0.0    minfoodenergyatdeath
+
+0      graycoding
+
+O      smiteMode_R=random|L=leastfit|O=off
+0.10   smiteFrac
+0.25   smiteAgeFrac_affectsAverageFitness
+150    NumDepletionSteps_150
+1      applyLowPopulationAdvantage
+
+
+1	recordBirthsDeaths
+1       brainAnatomyRecordAll
+1       brainFunctionRecordAll
+1       brainAnatomyRecordSeeds
+1       brainFunctionRecordSeeds
+1000     bestSoFarBrainAnatonomyRecordFrequency
+1000     bestSoFarBrainFunctionRecordFrequency
+1000     bestRecentBrainAnatonomyRecordFrequency
+1000     bestRecentBrainFunctionRecordFrequency
+1      recordGeneStats
+1      recordFoodPatchStats
+0      recordComplexity
+O      useComplexityAsFitness_O=off|P=processing|A=all|I=input|D=processing-input
+1      recordAdamiComplexity
+200    AdamiComplexityRecordFrequency
+
+O    FogFunction|_E=exponential|L=linear|O=off
+0.1    ExponentialFogDensity
+33     LinearFogEnd
+
+1      recordMovie

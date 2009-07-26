@@ -16,7 +16,7 @@
 
 // Local
 #include "brain.h"
-#include "critter.h"
+#include "agent.h"
 #include "globals.h"
 #include "Simulation.h"
 
@@ -34,7 +34,7 @@ const int kMonitorCritWinHeight = 8;
 TBrainMonitorWindow::TBrainMonitorWindow()
 //	:	QGLWidget(NULL, "BrainMonitor", NULL, WStyle_Customize | WStyle_SysMenu | WStyle_Tool),
 	:	QGLWidget( NULL, NULL, Qt::WindowSystemMenuHint | Qt::Tool ),
-		fCritter(NULL),
+		fAgent(NULL),
 		fPatchWidth(kMonitorCritWinWidth),
 		fPatchHeight(kMonitorCritWinHeight)
 {
@@ -155,7 +155,7 @@ void TBrainMonitorWindow::DisableAA()
 //---------------------------------------------------------------------------
 void TBrainMonitorWindow::Draw()
 {
-	if (fCritter == NULL)
+	if (fAgent == NULL)
 		return;
 	
 //	printf( "isVisible() = %s\n", BoolString( isVisible() ) );
@@ -178,9 +178,9 @@ void TBrainMonitorWindow::Draw()
 	glClear( GL_COLOR_BUFFER_BIT );
 
 	// Make sure the window is the proper size
-	const long winWidth = fCritter->Brain()->GetNumNeurons()
+	const long winWidth = fAgent->Brain()->GetNumNeurons()
 						  * fPatchWidth + 2 * fPatchWidth;						  
-	const long winHeight = fCritter->Brain()->GetNumNonInputNeurons()
+	const long winHeight = fAgent->Brain()->GetNumNonInputNeurons()
 					   	   * fPatchHeight + 2 * fPatchHeight;
 					   	   
 	if (width() != winWidth || height() != winHeight)
@@ -193,15 +193,15 @@ void TBrainMonitorWindow::Draw()
 #endif
 
 #if 0
-	dbprintf("%s: Age = %lu, Critter = %lu, retinaBuf(0x%.8x) = (%2x,%2x,%2x,%2x) (%2x,%2x,%2x,%2x) (%2x,%2x,%2x,%2x) (%2x,%2x,%2x,%2x) ...\n",
+	dbprintf("%s: Age = %lu, Agent = %lu, retinaBuf(0x%.8x) = (%2x,%2x,%2x,%2x) (%2x,%2x,%2x,%2x) (%2x,%2x,%2x,%2x) (%2x,%2x,%2x,%2x) ...\n",
 			__FUNCTION__,
 			TSimulation::fAge,
-			fCritter->Number(),
-			fCritter->Brain()->retinaBuf,
-			fCritter->Brain()->retinaBuf[0], fCritter->Brain()->retinaBuf[1], fCritter->Brain()->retinaBuf[2], fCritter->Brain()->retinaBuf[3],
-			fCritter->Brain()->retinaBuf[4], fCritter->Brain()->retinaBuf[5], fCritter->Brain()->retinaBuf[6], fCritter->Brain()->retinaBuf[7],
-			fCritter->Brain()->retinaBuf[8], fCritter->Brain()->retinaBuf[9], fCritter->Brain()->retinaBuf[10], fCritter->Brain()->retinaBuf[11],
-			fCritter->Brain()->retinaBuf[12], fCritter->Brain()->retinaBuf[13], fCritter->Brain()->retinaBuf[14], fCritter->Brain()->retinaBuf[15]);
+			fAgent->Number(),
+			fAgent->Brain()->retinaBuf,
+			fAgent->Brain()->retinaBuf[0], fAgent->Brain()->retinaBuf[1], fAgent->Brain()->retinaBuf[2], fAgent->Brain()->retinaBuf[3],
+			fAgent->Brain()->retinaBuf[4], fAgent->Brain()->retinaBuf[5], fAgent->Brain()->retinaBuf[6], fAgent->Brain()->retinaBuf[7],
+			fAgent->Brain()->retinaBuf[8], fAgent->Brain()->retinaBuf[9], fAgent->Brain()->retinaBuf[10], fAgent->Brain()->retinaBuf[11],
+			fAgent->Brain()->retinaBuf[12], fAgent->Brain()->retinaBuf[13], fAgent->Brain()->retinaBuf[14], fAgent->Brain()->retinaBuf[15]);
 #endif
 
 	// Frame and draw the actual vision pixels
@@ -209,10 +209,10 @@ void TBrainMonitorWindow::Draw()
 	glRecti( 2*fPatchWidth-1, 0, (2+brain::retinawidth)*fPatchWidth+1, fPatchHeight );
 	glPixelZoom( float(fPatchWidth), float(fPatchHeight) );
 	glRasterPos2i( 2*fPatchWidth, 0 );
-	glDrawPixels( brain::retinawidth, 1, GL_RGBA, GL_UNSIGNED_BYTE, fCritter->Brain()->retinaBuf );
+	glDrawPixels( brain::retinawidth, 1, GL_RGBA, GL_UNSIGNED_BYTE, fAgent->Brain()->retinaBuf );
 	glPixelZoom( 1.0, 1.0 );
 	
-	fCritter->Brain()->Render(fPatchWidth, fPatchHeight);
+	fAgent->Brain()->Render(fPatchWidth, fPatchHeight);
 
 	swapBuffers();
 //	if( visible )
@@ -227,13 +227,13 @@ void TBrainMonitorWindow::Draw()
 //---------------------------------------------------------------------------
 // TBrainMonitorWindow::StartMonitoring
 //---------------------------------------------------------------------------
-void TBrainMonitorWindow::StartMonitoring(critter* inCritter)
+void TBrainMonitorWindow::StartMonitoring(agent* inAgent)
 {
-	if (inCritter == NULL)
+	if (inAgent == NULL)
 		return;
 		
-	fCritter = inCritter;
-	Q_CHECK_PTR(fCritter->Brain());
+	fAgent = inAgent;
+	Q_CHECK_PTR(fAgent->Brain());
 	
 //	QApplication::postEvent(this, new QCustomEvent(kUpdateEventType));	
 }
@@ -244,7 +244,7 @@ void TBrainMonitorWindow::StartMonitoring(critter* inCritter)
 //---------------------------------------------------------------------------
 void TBrainMonitorWindow::StopMonitoring()
 {
-	fCritter = NULL;
+	fAgent = NULL;
 }
 
 

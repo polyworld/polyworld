@@ -16,10 +16,10 @@
 #include <QDesktopWidget>
 
 // Local
-#include "critter.h"
+#include "agent.h"
 #include "BrainMonitorWindow.h"
 #include "ChartWindow.h"
-#include "CritterPOVWindow.h"
+#include "AgentPOVWindow.h"
 #include "globals.h"
 #include "SceneView.h"
 #include "Simulation.h"
@@ -272,20 +272,20 @@ void TSceneWindow::keyReleaseEvent(QKeyEvent* event)
 	break;
 	case Qt::Key_T:	
 	  //If it is enabled, disable, otherwise; re-enable (CMB 3/26/06)
-	  if (fSimulation->fCritterTracking)
+	  if (fSimulation->fAgentTracking)
 	  {
-	  	fSimulation->fCritterTracking = false;	  
+	  	fSimulation->fAgentTracking = false;	  
 	  }
 	  else
 	  {
-	  	fSimulation->fCritterTracking = true;	  
+	  	fSimulation->fAgentTracking = true;	  
 	  }
-          if (fSimulation->fCritterTracking)
+          if (fSimulation->fAgentTracking)
           {
           	if (!fSimulation->fOverHeadRank)
                 {
-                    if (fSimulation->fMonitorCritterRank)
-                      fSimulation->fOverHeadRank = fSimulation->fMonitorCritterRank;
+                    if (fSimulation->fMonitorAgentRank)
+                      fSimulation->fOverHeadRank = fSimulation->fMonitorAgentRank;
                     else
                       fSimulation->fOverHeadRank = 1;
                 }
@@ -306,28 +306,28 @@ void TSceneWindow::keyReleaseEvent(QKeyEvent* event)
       	  break;    	      	  	  	  	  	  
 	case Qt::Key_1 :		       //Nth Fit 1
           fSimulation->fOverHeadRank = 1;
-	  if (fSimulation->fMonitorCritterRank)
-		fSimulation->fMonitorCritterRank = fSimulation->fOverHeadRank;
+	  if (fSimulation->fMonitorAgentRank)
+		fSimulation->fMonitorAgentRank = fSimulation->fOverHeadRank;
       	  break;    	      
 	case Qt::Key_2 :		       //Nth Fit 2
           fSimulation->fOverHeadRank = 2;
-	  if (fSimulation->fMonitorCritterRank)
-		fSimulation->fMonitorCritterRank = fSimulation->fOverHeadRank;	  
+	  if (fSimulation->fMonitorAgentRank)
+		fSimulation->fMonitorAgentRank = fSimulation->fOverHeadRank;	  
       	  break;    	      
 	case Qt::Key_3 :		       //Nth Fit 3
           fSimulation->fOverHeadRank = 3;
-	  if (fSimulation->fMonitorCritterRank)
-		fSimulation->fMonitorCritterRank = fSimulation->fOverHeadRank;	  
+	  if (fSimulation->fMonitorAgentRank)
+		fSimulation->fMonitorAgentRank = fSimulation->fOverHeadRank;	  
       	  break;    	      
 	case Qt::Key_4 :		       //Nth Fit 4
           fSimulation->fOverHeadRank = 4;
-	  if (fSimulation->fMonitorCritterRank)
-		fSimulation->fMonitorCritterRank = fSimulation->fOverHeadRank;	  
+	  if (fSimulation->fMonitorAgentRank)
+		fSimulation->fMonitorAgentRank = fSimulation->fOverHeadRank;	  
       	  break;    	      
 	case Qt::Key_5 :		       //Nth Fit 5
           fSimulation->fOverHeadRank = 5;
-	  if (fSimulation->fMonitorCritterRank)
-		fSimulation->fMonitorCritterRank = fSimulation->fOverHeadRank;	  
+	  if (fSimulation->fMonitorAgentRank)
+		fSimulation->fMonitorAgentRank = fSimulation->fOverHeadRank;	  
       	  break;    	      		  
     	default:
       	  event->ignore();
@@ -378,7 +378,7 @@ void TSceneWindow::AddWindowMenu()
 	toggleEnergyWindowAct = fWindowsMenu->addAction("Hide Energy Monitor", this, SLOT(ToggleEnergyWindow()), Qt::CTRL+Qt::Key_3 );
 	togglePopulationWindowAct = fWindowsMenu->addAction("Hide Population Monitor", this, SLOT(TogglePopulationWindow()), Qt::CTRL+Qt::Key_4 );
 	toggleBrainWindowAct = fWindowsMenu->addAction("Hide Brain Monitor", this, SLOT(ToggleBrainWindow()), Qt::CTRL+Qt::Key_5 );
-	togglePOVWindowAct = fWindowsMenu->addAction("Hide Critter POV", this, SLOT(TogglePOVWindow()), Qt::CTRL+Qt::Key_6 );
+	togglePOVWindowAct = fWindowsMenu->addAction("Hide Agent POV", this, SLOT(TogglePOVWindow()), Qt::CTRL+Qt::Key_6 );
 	toggleTextStatusAct = fWindowsMenu->addAction("Hide Text Status", this, SLOT(ToggleTextStatus()), Qt::CTRL+Qt::Key_7 );
 	toggleOverheadWindowAct = fWindowsMenu->addAction("Hide Overhead Window", this, SLOT(ToggleOverheadWindow()), Qt::CTRL+Qt::Key_8 );
 	fWindowsMenu->addSeparator();
@@ -467,7 +467,7 @@ void TSceneWindow::ToggleBrainWindow()
 void TSceneWindow::TogglePOVWindow()
 {
 	Q_ASSERT(fSimulation != NULL);
-	TCritterPOVWindow* window = fSimulation->GetCritterPOVWindow();
+	TAgentPOVWindow* window = fSimulation->GetAgentPOVWindow();
 	Q_ASSERT(window != NULL);
 	window->setHidden(window->isVisible());
 	window->SaveVisibility();
@@ -575,7 +575,7 @@ void TSceneWindow::TileAllWindows()
 
 	
 	// POV (place it on top of the top part of the main Simulation window)
-	TCritterPOVWindow* povWindow = fSimulation->GetCritterPOVWindow();
+	TAgentPOVWindow* povWindow = fSimulation->GetAgentPOVWindow();
 	int leftEdge = TChartWindow::kMaxWidth + 1;
 	if( povWindow != NULL )
 	{
@@ -861,7 +861,7 @@ void TSceneWindow::windowsMenuAboutToShow()
 	}
 	
 	// POV
-	TCritterPOVWindow* pov = fSimulation->GetCritterPOVWindow();
+	TAgentPOVWindow* pov = fSimulation->GetAgentPOVWindow();
 	if (pov == NULL)
 	{
 		// No window. Disable menu
@@ -871,11 +871,11 @@ void TSceneWindow::windowsMenuAboutToShow()
 	else
 	{
 		if (pov->isVisible())
-			//fWindowsMenu->changeItem(5, "Hide Critter POV");
-			togglePOVWindowAct->setText( "&Hide Critter POV" );
+			//fWindowsMenu->changeItem(5, "Hide Agent POV");
+			togglePOVWindowAct->setText( "&Hide Agent POV" );
 		else
-			//fWindowsMenu->changeItem(5, "Show Critter POV");
-			togglePOVWindowAct->setText( "&Show Critter POV" );
+			//fWindowsMenu->changeItem(5, "Show Agent POV");
+			togglePOVWindowAct->setText( "&Show Agent POV" );
 	}
 	
 	// OverheadView

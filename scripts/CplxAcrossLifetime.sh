@@ -1,24 +1,14 @@
-#!/bin/sh
+#!/bin/bash
+
+#
+# make sure environment is ok and fetch PW_* environment variables
+#
+. `dirname $0`/env_check.sh $0 complexity gnuplot
 
 BEGIN_AT_TIMESTEP=100
 SAMPLE_EVERY=25
 
-CALC_COMPLEXITY="$pol/utils/CalcComplexity"
-GNUPLOT="/sw/bin/gnuplot"
-
 BF_FILE="$1"
-
-if [ ! -x "${CALC_COMPLEXITY}" ]
-then
-	echo "CalcComplexity at '${CALC_COMPLEXITY}' isn't executable.  Make it so.";
-	exit;
-fi
-
-if [ ! -x "${GNUPLOT}" ]
-then
-	echo "Gnuplot at '${GNUPLOT}' isn't executable.  Change the variable or make it so.";
-	exit;
-fi
 
 if [ ! -f "$BF_FILE" ]
 then
@@ -43,7 +33,7 @@ echo "Plotting..."
 
 	while [ "$current_timestep" -le "$timesteps_in_lifetime" ]
 	do
-		data=$(${CALC_COMPLEXITY} ${BF_FILE} ${current_timestep})
+		data=$(${PW_CALC_COMPLEXITY} ${BF_FILE} ${current_timestep})
 		Cplx_All=$(echo "$data" | grep '(All)' | awk -F'	' '{ print $2 }')
 		Cplx_Pro=$(echo "$data" | grep '(Processing)' | awk -F'	' '{ print $2 }')
 		Cplx_Inp=$(echo "$data" | grep '(Input)' | awk -F'	' '{ print $2 }')
@@ -52,7 +42,7 @@ echo "Plotting..."
 	done
 
 # Now one more time...
-	data=$(${CALC_COMPLEXITY} ${BF_FILE})
+	data=$(${PW_CALC_COMPLEXITY} ${BF_FILE})
 	Cplx_All=$(echo "$data" | grep '(All)' | awk -F'	' '{ print $2 }')
 	Cplx_Pro=$(echo "$data" | grep '(Processing)' | awk -F'	' '{ print $2 }')
 	Cplx_Inp=$(echo "$data" | grep '(Input)' | awk -F'	' '{ print $2 }')
@@ -60,7 +50,7 @@ echo "Plotting..."
 } > ',temp'
 
 
-${GNUPLOT} << EOF
+${PW_GNUPLOT} << EOF
 
 set xlabel 'Timestep'
 set ylabel 'Neural Complexity'

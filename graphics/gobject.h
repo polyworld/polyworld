@@ -12,7 +12,7 @@
 // gobject possible types
 // use one bit per type, so masks may be created with multiple object types
 #define ANYTYPE 0xffffffff
-#define CRITTERTYPE 0x1
+#define AGENTTYPE 0x1
 #define FOODTYPE 0x2
 #define BRICKTYPE 0x4
 
@@ -106,7 +106,7 @@ public:
     void inverserotate();
     void inverseposition();
 
-    /* Get and set the objects type (CRITTERTYPE, FOODTYPE, or BRICKTYPE) */
+    /* Get and set the objects type (AGENTTYPE, FOODTYPE, or BRICKTYPE) */
     int getType();
     void setType(int newType);
 
@@ -131,7 +131,7 @@ protected:
     float fColor[4];  // default color (r,g,b,t) if no material is bound
     char* fName;
     float fRadius;  // for sphere of influence
-    int objType;  // CRITTERTYPE, FOODTYPE, or BRICKTYPE
+    int objType;  // AGENTTYPE, FOODTYPE, or BRICKTYPE
 };
 
 inline void gobject::setx(float x) { fPosition[0] = x; }

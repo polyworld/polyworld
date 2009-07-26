@@ -5,7 +5,7 @@
 /********************************************************************/
 // dumpload.C - these routines dump and load the state of the world
 
-#include "critter.h"
+#include "agent.h"
 #include "error.h"
 #include "graphics.h"
 #include "Simulation.h"
@@ -80,7 +80,7 @@ void dump()
     out << totfoodenergyin nl;
     out << totfoodenergyout nl;
 
-    critterdump(out);
+    agentdump(out);
 
     out << xsortedfood.count() nl;
     food *f = NULL;
@@ -100,7 +100,7 @@ void dump()
     out << numdomains nl;
     for (register short id = 0; id < numdomains; id++)
     {
-        out << domains[id].numcritters nl;
+        out << domains[id].numagents nl;
         out << domains[id].numcreated nl;
         out << domains[id].numborn nl;
         out << domains[id].numbornsincecreated nl;
@@ -195,7 +195,7 @@ void load()
     in >> totfoodenergyin;
     in >> totfoodenergyout;
 
-    critterload(in);
+    agentload(in);
 
     food* f = NULL;
     if (xsortedfood.count())
@@ -235,7 +235,7 @@ void load()
         error(2,"numdomains different in worldfile and dumpfile");
     for (register short id = 0; id < numdomains; id++)
     {
-        in >> domains[id].numcritters;
+        in >> domains[id].numagents;
         in >> domains[id].numcreated;
         in >> domains[id].numborn;
         in >> domains[id].numbornsincecreated;

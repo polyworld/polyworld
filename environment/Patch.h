@@ -48,8 +48,8 @@ class Patch
 	int areaShape;
 	int distribution;
        
-	int critterInsideCount;
-	int critterNeighborhoodCount;
+	int agentInsideCount;
+	int agentNeighborhoodCount;
 
 	float neighborhoodSize;
     
@@ -58,11 +58,11 @@ class Patch
 	int domainNumberOfParent;
 
 	void setPoint(float* x, float* z);
-	void resetCritterCounts();
+	void resetAgentCounts();
 	float getArea();
 	bool pointIsInside(float x, float z, float outerRange);
-	void checkIfCritterIsInside(float critterX, float critterZ);
-	void checkIfCritterIsInsideNeighborhood(float critterX, float critterZ);
+	void checkIfAgentIsInside(float agentX, float agentZ);
+	void checkIfAgentIsInsideNeighborhood(float agentX, float agentZ);
 	void initBase(float x, float z, float sx, float sz, int shape, int distrib, float nhsize, gstage* fs, Domain* dm, int domainNumber);
     
  protected:

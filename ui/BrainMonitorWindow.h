@@ -14,7 +14,7 @@
 //#include <QCustomEvent>
 
 // Forward declarations
-class critter;
+class agent;
 //class QCustomEvent;
 
 //===========================================================================
@@ -26,7 +26,7 @@ public:
     TBrainMonitorWindow();
     virtual ~TBrainMonitorWindow();
 
-	void StartMonitoring(critter* inCritter);
+	void StartMonitoring(agent* inAgent);
 	void StopMonitoring();
     void Draw();
 	
@@ -52,7 +52,7 @@ protected:
 	void SaveWindowState();
 	void SaveDimensions();
 	
-    critter* fCritter;
+    agent* fAgent;
     int fPatchWidth;
     int fPatchHeight;
     

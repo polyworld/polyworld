@@ -15,11 +15,12 @@
 
 // Local
 #include "barrier.h"
-#include "critter.h"
+#include "agent.h"
 #include "food.h"
 #include "gmisc.h"
 #include "graphics.h"
 #include "gstage.h"
+#include "PositionWriter.h"
 #include "TextStatusWindow.h"
 #include "OverheadView.h"
 
@@ -29,7 +30,7 @@ class TBrainMonitorWindow;
 class TChartWindow;
 class TSceneView;
 class TOverheadView;
-class TCritterPOVWindow;
+class TAgentPOVWindow;
 //class QMenuBar;
 //class QTimer;
 class TSimulation;
@@ -45,7 +46,7 @@ static const int MAXFITNESSITEMS = 5;
 
 struct FitStruct
 {
-	ulong	critterID;
+	ulong	agentID;
 	float	fitness;
 	float   complexity;
 	genome*	genes;
@@ -84,11 +85,11 @@ class Domain
 	int numFoodPatchesGrown;
 	FoodPatch* fFoodPatches;
 	BrickPatch* fBrickPatches;
-    long minNumCritters;
-    long maxNumCritters;
-    long initNumCritters;
+    long minNumAgents;
+    long maxNumAgents;
+    long initNumAgents;
 	long numberToSeed;
-    long numCritters;
+    long numAgents;
     long numcreated;
     long numborn;
     long numbornsincecreated;
@@ -103,7 +104,7 @@ class Domain
 	int fNumLeastFit;
 	int fMaxNumLeastFit;
 	int fNumSmited;
-	critter** fLeastFit;	// based on heuristic fitness
+	agent** fLeastFit;	// based on heuristic fitness
 
 	FoodPatch* whichFoodPatch( float x, float z );
 };
@@ -288,15 +289,15 @@ public:
 	TChartWindow* GetPopulationWindow() const;	
 	TBrainMonitorWindow* GetBrainMonitorWindow() const;	
 	TBinChartWindow* GetGeneSeparationWindow() const;
-	TCritterPOVWindow* GetCritterPOVWindow() const;
+	TAgentPOVWindow* GetAgentPOVWindow() const;
 	TTextStatusWindow* GetStatusWindow() const;
 	TOverheadView*   GetOverheadWindow() const;
 	
 //	bool GetShowBrain() const;
 //	void SetShowBrain(bool showBrain);
-	long GetMaxCritters() const;
-	static long fMaxNumCritters;
-	long GetInitNumCritters() const;
+	long GetMaxAgents() const;
+	static long fMaxNumAgents;
+	long GetInitNumAgents() const;
 	
 //	short OverHeadRank( void );
 	
@@ -308,18 +309,18 @@ public:
 	bool fLockStepWithBirthsDeathsLog;	// Are we running in lockstep mode?
 	FILE * fLockstepFile;				// Define a file pointer to our LOCKSTEP-BirthsDeaths.log
 	int fLockstepTimestep;				// Timestep at which the next event in LOCKSTEP-BirthDeaths.log occurs
-	int fLockstepNumDeathsAtTimestep;	// How many critters died at this LockstepTimestep?
-	int fLockstepNumBirthsAtTimestep;	// how many critters were born at LockstepTimestep?
+	int fLockstepNumDeathsAtTimestep;	// How many agents died at this LockstepTimestep?
+	int fLockstepNumBirthsAtTimestep;	// how many agents were born at LockstepTimestep?
 	void SetNextLockstepEvent();		// function to read the next event from LOCKSTEP-BirthsDeaths.log
 
 
 	static long fStep;
-	bool fCritterTracking;		//Moving to public for access to sceneview and keypress (CMB 3/19/06)
-	long fMonitorCritterRank;	//Moving to public for access to sceneview and keypress (CMB 3/19/06)
-	long fMonitorCritterRankOld;
+	bool fAgentTracking;		//Moving to public for access to sceneview and keypress (CMB 3/19/06)
+	long fMonitorAgentRank;	//Moving to public for access to sceneview and keypress (CMB 3/19/06)
+	long fMonitorAgentRankOld;
 	bool fRotateWorld;		//Turn world rotation on or off (CMB 3/19/06)
 	static short fOverHeadRank;    	
-	static critter* fMonitorCritter;	
+	static agent* fMonitorAgent;	
 	static double fFramesPerSecondOverall;
 	static double fSecondsPerFrameOverall;
 	static double fFramesPerSecondRecent;
@@ -334,6 +335,10 @@ public:
 	int fBestRecentBrainFunctionRecordFrequency;
 	
 	bool fRecordBirthsDeaths;
+
+	bool fRecordPosition;
+	PositionWriter fPositionWriter;
+
 	bool fBrainAnatomyRecordAll;
 	bool fBrainFunctionRecordAll;
 	bool fBrainAnatomyRecordSeeds;
@@ -356,7 +361,7 @@ public:
 	int glLinearFogEnd();
 
 
-	float GetCritterHealingRate();				// Virgil Healing
+	float GetAgentHealingRate();				// Virgil Healing
 
 	int getRandomPatch(int domainNumber);
 	Domain fDomains[MAXDOMAINS];	
@@ -373,21 +378,27 @@ private:
 	void Interact();
 	
 	void RecordGeneSeparation();
-	void CalculateGeneSeparation(critter* ci);
+	void CalculateGeneSeparation(agent* ci);
 	void CalculateGeneSeparationAll();
 
 	// Following two functions only determine whether or not we should create the relevant files.
 	// Linking, renaming, and unlinking are handled according to the specific recording options.
-	bool RecordBrainAnatomy( long critterNumber );
-	bool RecordBrainFunction( long critterNumber );
+	bool RecordBrainAnatomy( long agentNumber );
+	bool RecordBrainFunction( long agentNumber );
 	
 	void SmiteOne(short id, short smite);
 	void ijfitinc(short* i, short* j);
 		
-	void Death(critter* inCritter);
-	float Fitness( critter* c );
+	void Birth(agent* c,
+		   agent* c_parent1,
+		   agent* c_parent2);
+	void Death(agent* inAgent);
+	float Fitness( agent* c );
 	
 	void ReadWorldFile(const char* filename);	
+
+	void ReadLabel(istream &in, const char *name);
+
 	void Dump();
 	
 
@@ -400,7 +411,7 @@ private:
 	TChartWindow* fPopulationWindow;
 	TBrainMonitorWindow* fBrainMonitorWindow;
 	TBinChartWindow* fGeneSeparationWindow;
-	TCritterPOVWindow* fCritterPOVWindow;
+	TAgentPOVWindow* fAgentPOVWindow;
 	TTextStatusWindow* fTextStatusWindow;
 	
 	long fMaxSteps;
@@ -416,19 +427,19 @@ private:
 
 	long fNumDomains;
 	
-	int fSolidObjects;	// critters cannot pass through solid objects (collisions are avoided)
+	int fSolidObjects;	// agents cannot pass through solid objects (collisions are avoided)
 	
-	float fCritterHealingRate;	// Virgil Healing
+	float fAgentHealingRate;	// Virgil Healing
 	bool fHealing;				// Virgil Healing
 	
-	//long fMonitorCritterRank;
-	//long fMonitorCritterRankOld;
-//	critter* fMonitorCritter;
-	//bool fCritterTracking;
+	//long fMonitorAgentRank;
+	//long fMonitorAgentRankOld;
+//	agent* fMonitorAgent;
+	//bool fAgentTracking;
 	float fGroundClearance;
 //	short fOverHeadRank;
 	short fOverHeadRankOld;
-	critter* fOverheadCritter;
+	agent* fOverheadAgent;
 	bool fChartBorn;
 	bool fChartFitness;
 	bool fChartFoodEnergy;
@@ -453,7 +464,7 @@ private:
 	float fCameraAngle;
 	float fCameraFOV;
 
-	critter* fCurrentFittestCritter[MAXFITNESSITEMS];	// based on heuristic fitness
+	agent* fCurrentFittestAgent[MAXFITNESSITEMS];	// based on heuristic fitness
 	float fCurrentMaxFitness[MAXFITNESSITEMS];	// based on heuristic fitness
 	int fCurrentFittestCount;
 	int fNumberFit;
@@ -479,13 +490,13 @@ private:
 	float fEnergyFitnessParameter;
 	float fAgeFitnessParameter;
 
-	long fMinNumCritters; 
-	long fInitNumCritters;
+	long fMinNumAgents; 
+	long fInitNumAgents;
 	long fNumberToSeed;
 	float fProbabilityOfMutatingSeeds;
 	float fMinMateFraction;
 	long fMateWait;
-	long fMiscCritters; // number of critters born without intervening creation before miscegenation function kicks in
+	long fMiscAgents; // number of agents born without intervening creation before miscegenation function kicks in
 	float fMateThreshold;
 	long fEatMateSpan;
 	float fFightThreshold;
@@ -523,7 +534,7 @@ private:
 	long fMaxFoodCount;
 	long fMaxFoodGrownCount;
 	long fInitFoodCount;
-	bool fCrittersRfood;
+	bool fAgentsRfood;
 	float fFoodRate;
 	float fFoodEnergyIn;
 	float fFoodEnergyOut;
@@ -534,7 +545,7 @@ private:
 	float fEat2Consume; // (converts eat neuron value to energy consumed)
 	int fFoodPatchOuterRange;
 	float fMinFoodEnergyAtDeath;
-	float fPower2Energy; // controls amount of damage to other critter
+	float fPower2Energy; // controls amount of damage to other agent
 	float fDeathProbability;
 	
 	char   fFogFunction;
@@ -563,7 +574,7 @@ private:
 	int fNumLeastFit;
 	int fMaxNumLeastFit;
 	int fNumSmited;
-	critter** fLeastFit;	// based on heuristic fitness
+	agent** fLeastFit;	// based on heuristic fitness
 	bool fShowVision;
 	bool fGraphics;
 	long fBrainMonitorStride;
@@ -577,8 +588,8 @@ private:
 	
 	FILE* fFoodPatchStatsFile;
 
-	unsigned long fNumCrittersNotInOrNearAnyFoodPatch;
-	unsigned long* fNumCrittersInFoodPatch;
+	unsigned long fNumAgentsNotInOrNearAnyFoodPatch;
+	unsigned long* fNumAgentsInFoodPatch;
 	
     gcamera fCamera;
     gcamera fOverheadCamera;
@@ -596,39 +607,39 @@ inline TChartWindow* TSimulation::GetEnergyWindow() const { return fFoodEnergyWi
 inline TChartWindow* TSimulation::GetPopulationWindow() const { return fPopulationWindow; }
 inline TBrainMonitorWindow* TSimulation::GetBrainMonitorWindow() const { return fBrainMonitorWindow; }
 inline TBinChartWindow* TSimulation::GetGeneSeparationWindow() const { return fGeneSeparationWindow; }
-inline TCritterPOVWindow* TSimulation::GetCritterPOVWindow() const { return fCritterPOVWindow; }
+inline TAgentPOVWindow* TSimulation::GetAgentPOVWindow() const { return fAgentPOVWindow; }
 inline TOverheadView* TSimulation::GetOverheadWindow() const { return fOverheadWindow; }
 inline TTextStatusWindow* TSimulation::GetStatusWindow() const { return fTextStatusWindow; }
 //inline bool TSimulation::GetShowBrain() const { return fBrainMonitorWindow->visible; }
 //inline void TSimulation::SetShowBrain(bool showBrain) { fBrainMonitorWindow->visible = showBrain; }
-inline long TSimulation::GetMaxCritters() const { return fMaxNumCritters; }
+inline long TSimulation::GetMaxAgents() const { return fMaxNumAgents; }
 //inline short TSimulation::OverHeadRank( void ) { return fOverHeadRank; }
-inline long TSimulation::GetInitNumCritters() const { return fInitNumCritters; }
+inline long TSimulation::GetInitNumAgents() const { return fInitNumAgents; }
 inline float TSimulation::EnergyFitnessParameter() const { return fEnergyFitnessParameter; }
 inline float TSimulation::AgeFitnessParameter() const { return fAgeFitnessParameter; }
 inline float TSimulation::LifeFractionRecent() { return fLifeFractionRecentStats.mean(); }
 inline unsigned long TSimulation::LifeFractionSamples() { return fLifeFractionRecentStats.samples(); }
 
 
-inline float TSimulation::GetCritterHealingRate() { return fCritterHealingRate;	} 
+inline float TSimulation::GetAgentHealingRate() { return fAgentHealingRate;	} 
 
 
 // Following two functions only determine whether or not we should create the relevant files.
 // Linking, renaming, and unlinking are handled according to the specific recording options.
-inline bool TSimulation::RecordBrainAnatomy( long critterNumber )
+inline bool TSimulation::RecordBrainAnatomy( long agentNumber )
 {
 	return( fBestSoFarBrainAnatomyRecordFrequency ||
 			fBestRecentBrainAnatomyRecordFrequency ||
 			fBrainAnatomyRecordAll ||
-			(fBrainAnatomyRecordSeeds && (critterNumber <= fInitNumCritters))
+			(fBrainAnatomyRecordSeeds && (agentNumber <= fInitNumAgents))
 		  );
 }
-inline bool TSimulation::RecordBrainFunction( long critterNumber )
+inline bool TSimulation::RecordBrainFunction( long agentNumber )
 {
 	return( fBestSoFarBrainFunctionRecordFrequency ||
 			fBestRecentBrainFunctionRecordFrequency ||
 			fBrainFunctionRecordAll ||
-			(fBrainFunctionRecordSeeds && (critterNumber <= fInitNumCritters))
+			(fBrainFunctionRecordSeeds && (agentNumber <= fInitNumAgents))
 		  );
 }
 

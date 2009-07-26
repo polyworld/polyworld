@@ -18,7 +18,7 @@
 #include "graphics.h"
 
 // Forward declarations
-class critter;
+class agent;
 
 // Custom events
 const int kUpdateEventType = QEvent::User + 1;

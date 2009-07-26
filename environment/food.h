@@ -35,7 +35,7 @@ public:
 	static Color gFoodColor;
 	static float gMinFoodEnergy;
 	static float gMaxFoodEnergy;
-	static float gSize2Energy; // (converts food/critter size to available energy)
+	static float gSize2Energy; // (converts food/agent size to available energy)
 	static float gMaxFoodRadius;	// only for TotalCompatibilityMode in TSimulation::Interact()
 //	static fxsortedlist gXSortedFood;
 

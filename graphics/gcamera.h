@@ -57,7 +57,7 @@ private:
 	gobject* fFollowObject;
 	bool fPerspectiveFixed;
 	bool fPerspectiveInUse;
-	bool glFogOn;			// this will be turned on for critters at the Attach() function
+	bool glFogOn;			// this will be turned on for agents at the Attach() function
 
 	char sFogFunction;
 	float fExpFogDensity;

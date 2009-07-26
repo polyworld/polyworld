@@ -10,7 +10,7 @@
 #include <qapplication.h>
 
 // Local
-#include "critter.h"
+#include "agent.h"
 #include "globals.h"
 #include "graphics.h"
 #include "brick.h"

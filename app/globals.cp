@@ -8,6 +8,6 @@
 // Self
 #include "globals.h"
 
-float   globals::worldsize;		// critter, food
-bool	globals::wraparound;	// critter, sceneview, simulation
-bool	globals::edges;			// critter, simulation
+float   globals::worldsize;		// agent, food
+bool	globals::wraparound;	// agent, sceneview, simulation
+bool	globals::edges;			// agent, simulation

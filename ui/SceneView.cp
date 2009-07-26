@@ -17,7 +17,7 @@
 #include "globals.h"
 #include "gscene.h"
 #include "Simulation.h"
-#include "PwMovieTools.h"
+#include "PwMovieUtils.h"
 
 using namespace std;
 
