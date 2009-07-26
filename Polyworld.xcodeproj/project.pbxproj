@@ -36,7 +36,6 @@
 		760C2CBF101AC94700F5F662 /* complexity_motion.cp in Sources */ = {isa = PBXBuildFile; fileRef = 760C2CB8101AC94700F5F662 /* complexity_motion.cp */; };
 		760C2CCB101AC96700F5F662 /* PositionPath.cp in Sources */ = {isa = PBXBuildFile; fileRef = 760C2CC4101AC96700F5F662 /* PositionPath.cp */; };
 		760C2CCC101AC96700F5F662 /* PositionReader.cp in Sources */ = {isa = PBXBuildFile; fileRef = 760C2CC6101AC96700F5F662 /* PositionReader.cp */; };
-		760C2CCD101AC96700F5F662 /* PositionWriter.cp in Sources */ = {isa = PBXBuildFile; fileRef = 760C2CC9101AC96700F5F662 /* PositionWriter.cp */; };
 		760C2CCE101AC96700F5F662 /* PositionPath.cp in Sources */ = {isa = PBXBuildFile; fileRef = 760C2CC4101AC96700F5F662 /* PositionPath.cp */; };
 		760C2CCF101AC96700F5F662 /* PositionReader.cp in Sources */ = {isa = PBXBuildFile; fileRef = 760C2CC6101AC96700F5F662 /* PositionReader.cp */; };
 		760C2CD0101AC96700F5F662 /* PositionWriter.cp in Sources */ = {isa = PBXBuildFile; fileRef = 760C2CC9101AC96700F5F662 /* PositionWriter.cp */; };
@@ -822,7 +821,6 @@
 				760C2CBC101AC94700F5F662 /* complexity_motion.cp in Sources */,
 				760C2CCB101AC96700F5F662 /* PositionPath.cp in Sources */,
 				760C2CCC101AC96700F5F662 /* PositionReader.cp in Sources */,
-				760C2CCD101AC96700F5F662 /* PositionWriter.cp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
