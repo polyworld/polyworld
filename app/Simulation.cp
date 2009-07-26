@@ -50,6 +50,7 @@
 #include "food.h"
 #include "globals.h"
 #include "food.h"
+#include "Resources.h"
 #include "SceneView.h"
 #include "TextStatusWindow.h"
 #include "PwMovieUtils.h"
@@ -559,7 +560,7 @@ void TSimulation::Step()
 			sprintf(debugstring,"in agent loop at age %ld, critnum = %ld", fStep, critnum);
 			debugcheck(debugstring);
 			critnum++;
-		#endif DEBUGCHECK
+		#endif // DEBUGCHECK
 			fFoodEnergyOut += c->Update(fMoveFitnessParameter, agent::gSpeed2DPosition, fSolidObjects);
 		}
 		
@@ -583,7 +584,7 @@ void TSimulation::Step()
 	debugstring[256];
 	sprintf(debugstring, "after interact at age %ld", fStep);
 	debugcheck(debugstring);
-#endif DEBUGCHECK
+#endif // DEBUGCHECK
 
 	fTotalFoodEnergyIn += fFoodEnergyIn;
 	fTotalFoodEnergyOut += fFoodEnergyOut;
@@ -732,7 +733,7 @@ void TSimulation::Step()
 	debugstring[256];
 	sprintf(debugstring,"after extra graphics at age %ld", fStep);
 	debugcheck(debugstring);
-#endif DEBUGCHECK
+#endif // DEBUGCHECK
 
 	// Archive the bestSoFar brain anatomy and function files, if we're doing that
 	if( fBestSoFarBrainAnatomyRecordFrequency && ((fStep % fBestSoFarBrainAnatomyRecordFrequency) == 0) )
@@ -1201,7 +1202,7 @@ globals::worldsize);
 void TSimulation::Init()
 {
  	// Set up graphical constructs
-    "./Polyworld.app/Contents/Resources/ground.obj" >> fGround;
+	Resources::loadPolygons( &fGround, "ground" );
 
     srand(1);
 
@@ -2335,8 +2336,8 @@ void TSimulation::Interact()
 
 	#ifdef DEBUGCHECK
         debugcheck("after a death in interact");
-	#endif DEBUGCHECK
-	
+	#endif // DEBUGCHECK
+
 		// If we're saving gene stats, compute them here
 		if( fRecordGeneStats )
 		{
@@ -2870,7 +2871,7 @@ void TSimulation::Interact()
 
 			#ifdef DEBUGCHECK
                 debugcheck("after a birth in interact");
-			#endif DEBUGCHECK
+			#endif // DEBUGCHECK
 
 				// now take care of fighting
 
@@ -2921,14 +2922,14 @@ void TSimulation::Interact()
 
 			#ifdef DEBUGCHECK
                 debugcheck("after fighting in interact");
-			#endif DEBUGCHECK
+			#endif // DEBUGCHECK
 
             }  // if close enough
         }  // while (agent::gXSortedAgents.next(d))
 
 	#ifdef DEBUGCHECK
         debugcheck("after all agent interactions in interact");
-	#endif DEBUGCHECK
+	#endif // DEBUGCHECK
 
         if( cDied )
 			continue; // nothing else to do with c, it's gone!
@@ -2951,7 +2952,7 @@ void TSimulation::Interact()
 		while( objectxsortedlist::gXSortedObjects.prevObj( FOODTYPE, (gobject**) &f ) )
 			if( (f->x() + 2.0*food::gMaxFoodRadius) < (c->x() - c->radius()) )
 				break;
-	#else CompatibilityMode
+	#else // CompatibilityMode
         while( objectxsortedlist::gXSortedObjects.prevObj( FOODTYPE, (gobject**) &f ) )
         {
 			if( (f->x() + f->radius()) < (c->x() - c->radius()) )
@@ -2992,8 +2993,8 @@ void TSimulation::Interact()
 				}
 			}
 		}	// backward while loop on food
-	#endif CompatibilityMode
-	
+	#endif // CompatibilityMode
+
 		if( !ateBackwardFood )
 		{
 		#if ! CompatibilityMode
@@ -3053,7 +3054,7 @@ void TSimulation::Interact()
 		
 	#ifdef DEBUGCHECK
         debugcheck( "after eating in interact" );
-	#endif DEBUGCHECK
+	#endif // DEBUGCHECK
 
 		// keep tabs of current and average fitness for surviving organisms
 
@@ -3255,8 +3256,8 @@ void TSimulation::Interact()
 
 	#ifdef DEBUGCHECK
         debugcheck("after domain creations in interact");
-	#endif DEBUGCHECK
-		
+	#endif // DEBUGCHECK
+
 		// then deal with global creation if necessary
 
         while (((long)(objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE))) < fMinNumAgents)
@@ -3349,12 +3350,12 @@ void TSimulation::Interact()
 
 	#ifdef DEBUGCHECK
         debugcheck("after global creations in interact");
-	#endif DEBUGCHECK
+	#endif // DEBUGCHECK
     }
 
 #ifdef DEBUGCHECK
     debugcheck("after newagents added to agent::gXSortedAgents in interact");
-#endif DEBUGCHECK
+#endif // DEBUGCHECK
 
     if ((newlifes || fNewDeaths) && fMonitorGeneSeparation)
     {
@@ -4256,15 +4257,9 @@ void TSimulation::ReadWorldFile(const char* filename)
 #define PROP(NAME) in >> f##NAME; ReadLabel(in, #NAME); cout << #NAME ses f##NAME nl;
 
     filebuf fb;
-    if( fb.open( filename, ios_base::in ) == 0 )
+	if( !Resources::openWorldFile( &fb, filename ) )
 	{
-		error( 0, "unable to open world file \"", filename, "\"; will use default, internal worldfile" );
-		if( fb.open( "./Polyworld.app/Contents/Resources/worldfile", ios_base::in ) == 0 )
-		{
-			error( 0, "unable to open internal world file \"", "./Polyworld.app/Contents/Resources/worldfile", "\"; will use built-in code defaults" );
-			error( 2, "built-in code defaults not currently functional; exiting" );
-			return;
-		}
+		return;
 	}
 	
 	istream in( &fb );
