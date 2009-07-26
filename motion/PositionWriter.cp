@@ -70,7 +70,7 @@ PositionWriter::~PositionWriter()
 // PositionWriter::birth
 //---------------------------------------------------------------------------
 void PositionWriter::birth(long step,
-			   agent *c)
+						   agent *c)
 {
 	CHECK_RECORD();
 
@@ -82,7 +82,7 @@ void PositionWriter::birth(long step,
 // PositionWriter::death
 //---------------------------------------------------------------------------
 void PositionWriter::death(long,
-			   agent *c)
+						   agent *c)
 {
 	CHECK_RECORD();
 
@@ -126,7 +126,7 @@ void PositionWriter::step(long step)
 // PositionFile::PositionFile
 //---------------------------------------------------------------------------
 PositionFile::PositionFile(long step_birth,
-			   agent *c)
+						   agent *c)
 {
 	this->step_birth = step_birth;
 	this->c = c;

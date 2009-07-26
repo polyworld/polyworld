@@ -14,9 +14,9 @@ class PositionWriter
 
  public:
 	void birth(long step,
-		   agent *c);
+			   agent *c);
 	void death(long step,
-		   agent *c);
+			   agent *c);
 	void step(long step);
 
  private:
@@ -35,7 +35,7 @@ class PositionFile
 {
  public:
 	PositionFile(long step,
-		     agent *c);
+				 agent *c);
 	~PositionFile();
 
  public:
