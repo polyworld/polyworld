@@ -5,18 +5,18 @@ CONFIG		+=	qt warn_on debug
 HEADERS		= 	PwMoviePlayer.h \
 				MainWindow.h \
 				GLWidget.h \
-				../utils/PwMovieTools.h
+				$(DIR__UTILS)/PwMovieUtils.h
 
 SOURCES		=	PwMoviePlayer.cp \
 				MainWindow.cp \
 				GLWidget.cp \
-				../utils/PwMovieTools.cp																			  	
+				$(DIR__UTILS)/PwMovieUtils.cp																			  	
+
+INCLUDEPATH += $(DIR__UTILS)
 
 macx {
 	message(compiling for Mac OS X)
 	INCLUDEPATH +=	. \
-					.. \
-					../utils \
 					$(QT)/include \
 					$(QT)/include/QtOpenGL \
 					$(QT)/include/QtGui \
@@ -27,8 +27,6 @@ macx {
 unix:!macx {
 	message(compiling for Linux)
 	INCLUDEPATH +=	. \
-					.. \
-					../utils \
 					$(QT)/include \
 					$(QT)/include/QtOpenGL \
 					$(QT)/include/QtCore \
