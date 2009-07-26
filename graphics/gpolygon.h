@@ -68,7 +68,7 @@ inline float gpoly::radiusscale() { return fRadiusScale; }
 //===========================================================================
 class gpolyobj : public gobject
 {
-friend void operator >> (char*, gpolyobj&);
+friend void operator >> (const char*, gpolyobj&);
 
 public:
     gpolyobj();

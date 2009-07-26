@@ -376,7 +376,7 @@ istream& operator>>(istream& s, opoly& op)
 }
 
 
-void operator>>(char* filename, gpolyobj& gpo)
+void operator>>(const char* filename, gpolyobj& gpo)
 {
 	filebuf fb;
 	    
