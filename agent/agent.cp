@@ -26,6 +26,7 @@
 #include "graphics.h"
 #include "graybin.h"
 #include "misc.h"
+#include "Resources.h"
 #include "Simulation.h"
 
 #pragma mark -
@@ -100,7 +101,7 @@ void agent::agentinit()
     agent::gClassInited = true;
     agent::agentsliving = 0;
     agent::agentobj = new gpolyobj();
-    "./Polyworld.app/Contents/Resources/agent.obj" >> (*(agent::agentobj));
+	Resources::loadPolygons( agent::agentobj, "agent" );
 	agent::agentobj->SetName("agentobj");
 	
 	// If we decide we want the width W (in cells) to be a multiple of N (call it I)
