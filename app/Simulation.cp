@@ -14,7 +14,7 @@
 #define MinDebugStep 0
 #define MaxDebugStep INT_MAX
 
-#define CurrentWorldfileVersion 33
+#define CurrentWorldfileVersion 34
 
 #define TournamentSelection 1
 
@@ -551,6 +551,13 @@ void TSimulation::Step()
 //				fStep, numAgents, initNumAgents, minNumAgents, maxNumAgents,
 //				agent::gMaxPopulationPenaltyFraction, agent::gPopulationPenaltyFraction, agent::gLowPopulationAdvantageFactor );
 		
+		if( fStaticTimestepGeometry )
+		{
+			// Optimize rendering performance by downloading world geometry to
+			// graphics card.
+			fStage.Compile();
+		}
+		
 		agent* c;
 		objectxsortedlist::gXSortedObjects.reset();
 		while (objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&c))
@@ -563,9 +570,14 @@ void TSimulation::Step()
 		#endif // DEBUGCHECK
 			fFoodEnergyOut += c->Update(fMoveFitnessParameter, agent::gSpeed2DPosition, fSolidObjects);
 		}
-		
+
 		// Swap buffers for the agent POV window when they're all done
 		fAgentPOVWindow->swapBuffers();
+
+		if( fStaticTimestepGeometry )
+		{
+			fStage.Decompile();
+		}
 	}
 
 	if( fHeuristicFitnessWeight != 0.0 )
@@ -1891,6 +1903,7 @@ void TSimulation::InitWorld()
     fSmiteFrac = 0.10;
 	fSmiteAgeFrac = 0.25;
     fShowVision = true;
+	fStaticTimestepGeometry = false;
 	fRecordMovie = false;
 	fMovieFile = NULL;
 
@@ -4326,6 +4339,12 @@ void TSimulation::ReadWorldFile(const char* filename)
     if (!fGraphics)
         fShowVision = false;
     cout << "showvision" ses fShowVision nl;
+
+	if( version >= 34 )
+	{
+		PROP( StaticTimestepGeometry );
+	}
+
     in >> brain::gMinWin; in >> label;
     cout << "minwin" ses brain::gMinWin nl;
     in >> agent::gMaxVelocity; in >> label;
@@ -5273,7 +5292,7 @@ void TSimulation::ReadWorldFile(const char* filename)
 
 	if( version >= 33 )
 	{
-		PROP(RecordPosition);
+		PROP( RecordPosition );
 	}
 	
 	if( version >= 11 )

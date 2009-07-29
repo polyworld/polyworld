@@ -9,6 +9,8 @@
 #ifndef GSTAGE_H
 #define GSTAGE_H
 
+#include <gl.h>
+
 // Local
 #include "gmisc.h"
 
@@ -34,6 +36,8 @@ public:
     void SetCurrentCamera(gcamera* pcam);
     
     void Clear();  // issues ->Clear() for all associated lists
+	void Compile();
+	void Decompile();
 	void Draw();
 	void Draw(const frustumXZ& fxz);
 	void Print();
@@ -54,6 +58,7 @@ private:
     glightmodel* fLightModel;
     bool fDrawLights;
     TCastList* fCastList; 
+	GLuint fDisplayList;
 };
 
 #endif

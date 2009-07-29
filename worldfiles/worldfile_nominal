@@ -1,15 +1,16 @@
-33		version
+34		version
 
 0		LockStepWithBirthsDeathsLog
 
-30001	maxSteps
+30001		maxSteps
 1		docpuwork
-1000	dumpfreq
+1000		dumpfreq
 100		statfreq
 1		edges
 0		wraparound
 1		vision
 1		showvision
+1		staticTimestepGeometry
 22		minwin
 1.0		maxvel
 

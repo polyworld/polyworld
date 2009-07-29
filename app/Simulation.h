@@ -576,6 +576,7 @@ private:
 	int fNumSmited;
 	agent** fLeastFit;	// based on heuristic fitness
 	bool fShowVision;
+	bool fStaticTimestepGeometry;
 	bool fGraphics;
 	long fBrainMonitorStride;
 	

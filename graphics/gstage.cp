@@ -5,7 +5,9 @@
 /********************************************************************/
 
 // System
+#include <assert.h>
 #include <iostream>
+#include <stdlib.h>
 
 // qt
 #include <qapplication.h>
@@ -39,7 +41,8 @@ gstage::gstage()
 		fPropList(NULL),
 		fLightList(NULL),
 		fLightModel(NULL),
-		fDrawLights(false)
+		fDrawLights(false),
+		fDisplayList(0)
 {
 }
 
@@ -113,27 +116,67 @@ void gstage::Clear()
 
 
 //---------------------------------------------------------------------------
+// gstage::Compile
+//---------------------------------------------------------------------------
+void gstage::Compile()
+{
+	if( fDisplayList )
+	{
+		Decompile();
+	}
+
+	GLuint displayList = glGenLists( 1 );
+	assert( displayList );
+
+	glNewList( displayList, GL_COMPILE );
+	{
+		Draw();
+	}
+	glEndList();
+
+	fDisplayList = displayList;
+}
+
+
+//---------------------------------------------------------------------------
+// gstage::Decompile
+//---------------------------------------------------------------------------
+void gstage::Decompile()
+{
+	glDeleteLists( fDisplayList, 1 );
+	fDisplayList = 0;
+}
+
+
+//---------------------------------------------------------------------------
 // gstage::Draw
 //---------------------------------------------------------------------------
 void gstage::Draw()
 {
-    if (fLightModel != NULL)
-    	fLightModel->Use();
+	if( fDisplayList )
+	{
+		glCallList( fDisplayList );
+	}
+	else
+	{
+		if (fLightModel != NULL)
+			fLightModel->Use();
     	
-    if (fDrawLights && fLightList != NULL)
-    {
-		fLightList->Draw();  // does position() and Draw() for each
-		fLightList->Use(); 	// does position() and bind() for each
-    }
+		if (fDrawLights && fLightList != NULL)
+		{
+			fLightList->Draw();  // does position() and Draw() for each
+			fLightList->Use(); 	// does position() and bind() for each
+		}
 
-	if (fSetList != NULL)	        
-		fSetList->Draw();
+		if (fSetList != NULL)	        
+			fSetList->Draw();
 
-	if (fPropList != NULL)			
-		fPropList->Draw();
+		if (fPropList != NULL)			
+			fPropList->Draw();
 		
-	if (fCastList != NULL)
-		fCastList->Draw();
+		if (fCastList != NULL)
+			fCastList->Draw();
+	}
 }
 
 
