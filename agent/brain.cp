@@ -157,8 +157,9 @@ void brain::braindestruct()
 //---------------------------------------------------------------------------
 // brain::brain
 //---------------------------------------------------------------------------
-brain::brain()
-	:	mygenes(NULL),	// but don't delete them, because we don't new them
+brain::brain(agent *_self)
+	:	self(_self),
+		mygenes(NULL),	// but don't delete them, because we don't new them
 		groupblrate(NULL),
 		grouplrate(NULL),
 		neuron(NULL),
@@ -2092,7 +2093,7 @@ void brain::Update(float energyfraction)
         return;
 
 #ifdef PRINTBRAIN
-    if (printbrain && TSimulation::fOverHeadRank && !brainprinted && agent::currentAgent == TSimulation::fMonitorAgent)
+    if (printbrain && TSimulation::fOverHeadRank && !brainprinted && self == TSimulation::fMonitorAgent)
     {
         brainprinted = true;
         printf("neuron (toneuron)  fromneuron   synapse   efficacy\n");
@@ -2140,7 +2141,7 @@ void brain::Update(float energyfraction)
         pixel = 0;
         avgcolor = 0.0;
 	#ifdef PRINTBRAIN
-        if (printbrain && (agent::currentAgent == TSimulation::fMonitorAgent))
+        if (printbrain && (self == TSimulation::fMonitorAgent))
         {
             printf("xredwidth = %f\n", xredwidth);
         }
@@ -2150,7 +2151,7 @@ void brain::Update(float energyfraction)
             endpixloc = xredwidth * float(i+1);
 		#ifdef PRINTBRAIN
             if (printbrain &&
-                (agent::currentAgent == TSimulation::fMonitorAgent))
+                (self == TSimulation::fMonitorAgent))
             {
                 printf("  neuron %d, endpixloc = %g\n", i, endpixloc);
             }
@@ -2159,7 +2160,7 @@ void brain::Update(float energyfraction)
             {
                 avgcolor += retinaBuf[(pixel++) * 4];
 			#ifdef PRINTBRAIN
-                if (printbrain && (agent::currentAgent == TSimulation::fMonitorAgent))
+                if (printbrain && (self == TSimulation::fMonitorAgent))
                 {
                     printf("    in loop with pixel %d, avgcolor = %g\n", pixel,avgcolor);
 					if ((float(pixel) < (endpixloc - 1.0)) && (float(pixel) >= (endpixloc - 1.0 - 1.0e-5)))
@@ -2171,7 +2172,7 @@ void brain::Update(float energyfraction)
             avgcolor += (endpixloc - float(pixel)) * retinaBuf[pixel * 4];
             neuronactivation[redneuron + i] = avgcolor / (xredwidth * 255.0);
 		#ifdef PRINTBRAIN
-            if (printbrain && (agent::currentAgent == TSimulation::fMonitorAgent))
+            if (printbrain && (self == TSimulation::fMonitorAgent))
             {
                 printf("    after loop with pixel %d, avgcolor = %g, color = %g\n", pixel,avgcolor,neuronactivation[redneuron+i]);
                 if ((float(pixel) >= (endpixloc - 1.0)) && (float(pixel) < (endpixloc - 1.0 + 1.0e-5)))
@@ -2180,7 +2181,7 @@ void brain::Update(float energyfraction)
 		#endif // PRINTBRAIN
             avgcolor = (1.0 - (endpixloc - float(pixel))) * retinaBuf[pixel * 4];
 		#ifdef PRINTBRAIN
-            if (printbrain && (agent::currentAgent == TSimulation::fMonitorAgent))
+            if (printbrain && (self == TSimulation::fMonitorAgent))
             {
                 printf("  before incrementing pixel = %d, avgcolor = %g\n", pixel, avgcolor);
             }
@@ -2211,7 +2212,7 @@ void brain::Update(float energyfraction)
             {
                 avgcolor += retinaBuf[(pixel++) * 4 + 1];
 			#ifdef PRINTBRAIN
-                if (printbrain && (agent::currentAgent == TSimulation::fMonitorAgent))
+                if (printbrain && (self == TSimulation::fMonitorAgent))
                 {
                     if ((float(pixel) < (endpixloc - 1.0)) && (float(pixel) >= (endpixloc - 1.0 - 1.0e-5)) )
                         printf("Got in-loop borderline case - green\n");
@@ -2219,7 +2220,7 @@ void brain::Update(float energyfraction)
 			#endif // PRINTBRAIN
             }
 		#ifdef PRINTBRAIN
-            if (printbrain && (agent::currentAgent == TSimulation::fMonitorAgent))
+            if (printbrain && (self == TSimulation::fMonitorAgent))
             {
                 if ((float(pixel) >= (endpixloc - 1.0)) && (float(pixel) < (endpixloc - 1.0)))
                     printf("Got outside-loop borderline case - green\n");
@@ -2255,7 +2256,7 @@ void brain::Update(float energyfraction)
             {
                 avgcolor += retinaBuf[(pixel++) * 4 + 2];
 			#ifdef PRINTBRAIN
-                if (printbrain && (agent::currentAgent == TSimulation::fMonitorAgent))
+                if (printbrain && (self == TSimulation::fMonitorAgent))
                 {
                     if ((float(pixel) < (endpixloc - 1.0)) && (float(pixel) >= (endpixloc - 1.0 - 1.0e-5)) )
                         printf("Got in-loop borderline case - blue\n");
@@ -2264,7 +2265,7 @@ void brain::Update(float energyfraction)
             }
             
 		#ifdef PRINTBRAIN
-            if (printbrain && (agent::currentAgent == TSimulation::fMonitorAgent))
+            if (printbrain && (self == TSimulation::fMonitorAgent))
             {
                 if ((float(pixel) >= (endpixloc - 1.0)) && (float(pixel) < (endpixloc - 1.0 + 1.0e-5)) )
                     printf("Got outside-loop borderline case - blue\n");
@@ -2292,7 +2293,7 @@ void brain::Update(float energyfraction)
 
 #ifdef PRINTBRAIN
     if (printbrain && TSimulation::fOverHeadRank &&
-        (agent::currentAgent == TSimulation::fMonitorAgent))
+        (self == TSimulation::fMonitorAgent))
     {
         printf("***** age = %ld ****** overheadrank = %d ******\n", TSimulation::fAge, TSimulation::fOverHeadRank);
         printf("retinaBuf [0 - %d]\n",(brain::retinawidth - 1));
@@ -2408,7 +2409,7 @@ void brain::Update(float energyfraction)
 
 #ifdef PRINTBRAIN
     if (printbrain && TSimulation::fOverHeadRank &&
-        (agent::currentAgent == TSimulation::fMonitorAgent))
+        (self == TSimulation::fMonitorAgent))
     {
         printf("  i neuron[i].bias neuronactivation[i] newneuronactivation[i]\n");
         for (i = 0; i < numneurons; i++)
@@ -2819,7 +2820,7 @@ void brain::UpdateSpikes(float energyfraction, FILE * fHandle)
 	}
 	
 #ifdef PRINTBRAIN
-    if (printbrain && TSimulation::fOverHeadRank && !brainprinted && agent::currentAgent == TSimulation::fMonitorAgent)
+    if (printbrain && TSimulation::fOverHeadRank && !brainprinted && self == TSimulation::fMonitorAgent)
     {
         brainprinted = true;
         printf("neuron (toneuron)  fromneuron   synapse   efficacy\n");
@@ -2882,7 +2883,7 @@ void brain::UpdateSpikes(float energyfraction, FILE * fHandle)
         pixel = 0;
         avgcolor = 0.0;
 #ifdef PRINTBRAIN
-        if (printbrain && (agent::currentAgent == TSimulation::fMonitorAgent))
+        if (printbrain && (self == TSimulation::fMonitorAgent))
         {
             printf("xredwidth = %f\n", xredwidth);
         }
@@ -2892,7 +2893,7 @@ void brain::UpdateSpikes(float energyfraction, FILE * fHandle)
             endpixloc = xredwidth * float(i+1);
 #ifdef PRINTBRAIN
             if (printbrain &&
-                (agent::currentAgent == TSimulation::fMonitorAgent))
+                (self == TSimulation::fMonitorAgent))
             {
                 printf("  neuron %d, endpixloc = %g\n", i, endpixloc);
             }
@@ -2901,7 +2902,7 @@ void brain::UpdateSpikes(float energyfraction, FILE * fHandle)
             {
                 avgcolor += retinaBuf[(pixel++) * 4];
 #ifdef PRINTBRAIN
-                if (printbrain && (agent::currentAgent == TSimulation::fMonitorAgent))
+                if (printbrain && (self == TSimulation::fMonitorAgent))
                 {
                     printf("    in loop with pixel %d, avgcolor = %g\n", pixel,avgcolor);
 					if ((float(pixel) < (endpixloc - 1.0)) && (float(pixel) >= (endpixloc - 1.0 - 1.0e-5)))
@@ -2917,7 +2918,7 @@ void brain::UpdateSpikes(float energyfraction, FILE * fHandle)
 			//			printf( "red brightness[%d] = %g, probability of firing = %g\n", i, (avgcolor / (xredwidth * 255.0)), newneuronactivation[redneuron+i] );
 			//######################################################################################################################			
 #ifdef PRINTBRAIN
-            if (printbrain && (agent::currentAgent == TSimulation::fMonitorAgent))
+            if (printbrain && (self == TSimulation::fMonitorAgent))
             {
                 printf("    after loop with pixel %d, avgcolor = %g, color = %g\n", pixel,avgcolor,newneuronactivation[redneuron+i]);
                 if ((float(pixel) >= (endpixloc - 1.0)) && (float(pixel) < (endpixloc - 1.0 + 1.0e-5)))
@@ -2926,7 +2927,7 @@ void brain::UpdateSpikes(float energyfraction, FILE * fHandle)
 #endif // PRINTBRAIN
             avgcolor = (1.0 - (endpixloc - float(pixel))) * retinaBuf[pixel * 4];
 #ifdef PRINTBRAIN
-            if (printbrain && (agent::currentAgent == TSimulation::fMonitorAgent))
+            if (printbrain && (self == TSimulation::fMonitorAgent))
             {
                 printf("  before incrementing pixel = %d, avgcolor = %g\n", pixel, avgcolor);
             }
@@ -2962,7 +2963,7 @@ void brain::UpdateSpikes(float energyfraction, FILE * fHandle)
             {
                 avgcolor += retinaBuf[(pixel++) * 4 + 1];
 #ifdef PRINTBRAIN
-                if (printbrain && (agent::currentAgent == TSimulation::fMonitorAgent))
+                if (printbrain && (self == TSimulation::fMonitorAgent))
                 {
                     if ((float(pixel) < (endpixloc - 1.0)) && (float(pixel) >= (endpixloc - 1.0 - 1.0e-5)) )
                         printf("Got in-loop borderline case - green\n");
@@ -2970,7 +2971,7 @@ void brain::UpdateSpikes(float energyfraction, FILE * fHandle)
 #endif // PRINTBRAIN
             }
 #ifdef PRINTBRAIN
-            if (printbrain && (agent::currentAgent == TSimulation::fMonitorAgent))
+            if (printbrain && (self == TSimulation::fMonitorAgent))
             {
                 if ((float(pixel) >= (endpixloc - 1.0)) && (float(pixel) < (endpixloc - 1.0)))
                     printf("Got outside-loop borderline case - green\n");
@@ -3014,7 +3015,7 @@ void brain::UpdateSpikes(float energyfraction, FILE * fHandle)
             {
                 avgcolor += retinaBuf[(pixel++) * 4 + 2];
 #ifdef PRINTBRAIN
-                if (printbrain && (agent::currentAgent == TSimulation::fMonitorAgent))
+                if (printbrain && (self == TSimulation::fMonitorAgent))
                 {
                     if ((float(pixel) < (endpixloc - 1.0)) && (float(pixel) >= (endpixloc - 1.0 - 1.0e-5)) )
                         printf("Got in-loop borderline case - blue\n");
@@ -3023,7 +3024,7 @@ void brain::UpdateSpikes(float energyfraction, FILE * fHandle)
             }
             
 #ifdef PRINTBRAIN
-            if (printbrain && (agent::currentAgent == TSimulation::fMonitorAgent))
+            if (printbrain && (self == TSimulation::fMonitorAgent))
             {
                 if ((float(pixel) >= (endpixloc - 1.0)) && (float(pixel) < (endpixloc - 1.0 + 1.0e-5)) )
                     printf("Got outside-loop borderline case - blue\n");
@@ -3049,7 +3050,7 @@ void brain::UpdateSpikes(float energyfraction, FILE * fHandle)
 	
 #ifdef PRINTBRAIN
     if (printbrain && TSimulation::fOverHeadRank &&
-        (agent::currentAgent == TSimulation::fMonitorAgent))
+        (self == TSimulation::fMonitorAgent))
     {
 		//        printf("***** age = %ld ****** overheadrank = %d ******\n", TSimulation::fAge, TSimulation::fOverHeadRank);
         printf("retinaBuf [0 - %d]\n",(brain::retinawidth - 1));

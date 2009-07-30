@@ -83,8 +83,6 @@ double		agent::gPopulationPenaltyFraction = 0.0;
 double		agent::gLowPopulationAdvantageFactor = 1.0;
 
 
-agent* agent::currentAgent;	// during brain updates
-
 // [TODO] figure out a better way to track agent indices
 bitset<1000> gAgentIndex;
 
@@ -278,7 +276,7 @@ agent::agent(TSimulation* sim, gstage* stage)
 	fGenome = new genome();
 	Q_CHECK_PTR(fGenome);
 	
-	fBrain = new brain();
+	fBrain = new brain(this);
 	Q_CHECK_PTR(fBrain);
 	
 	// Set up agent POV	
@@ -357,7 +355,7 @@ void agent::load(istream& in)
     fGenome->Load(in);
     if (fBrain == NULL)
     {
-        fBrain = new brain();
+        fBrain = new brain(this);
         Q_CHECK_PTR(fBrain);
     }
     fBrain->Load(in);
@@ -657,14 +655,10 @@ void agent::SaveLastPosition()
 
 
 //---------------------------------------------------------------------------
-// agent::Behave
-//---------------------------------------------------------------------------    
-void agent::Behave()
+// agent::UpdateVision
+//---------------------------------------------------------------------------
+void agent::UpdateVision()
 {
-#ifdef DEBUGCHECK
-    debugcheck("agent::Behave entry");
-#endif // DEBUGCHECK
-
     if (gVision)
     {
 		// create retinal pixmap, based on values of focus & numvisneurons
@@ -675,13 +669,13 @@ void agent::Behave()
 		
 		fSimulation->GetAgentPOVWindow()->DrawAgentPOV( this );
 	#ifdef DEBUGCHECK
-		debugcheck("agent::Behave after DrawAgentPOV");
+		debugcheck("agent::UpdateVision after DrawAgentPOV");
 	#endif // DEBUGCHECK
 
 		if (fBrain->retinaBuf != NULL)
 		{
 			// The POV window must be the current GL context,
-			// when agent::Behave is called, for both the
+			// when agent::UpdateVision is called, for both the
 			// DrawAgentPOV() call above and the glReadPixels()
 			// call below.  It is set in TSimulation::Step().
 			
@@ -693,7 +687,7 @@ void agent::Behave()
 				 		 GL_UNSIGNED_BYTE,
 				 		 fBrain->retinaBuf);
 		#ifdef DEBUGCHECK
-			debugcheck("agent::Behave after glReadPixels");
+			debugcheck("agent::UpdateVision after glReadPixels");
 		#endif // DEBUGCHECK
 		#if 0
 			printf( "retina pixels:" );
@@ -708,9 +702,14 @@ void agent::Behave()
 		#endif
 		}
 	}
-	        
-    // now update the brain
-	currentAgent = this;
+}
+
+
+//---------------------------------------------------------------------------
+// agent::UpdateBrain
+//---------------------------------------------------------------------------
+void agent::UpdateBrain()
+{
     fBrain->Update(fEnergy / fMaxEnergy);
 
 	// If we're recording brain function, do it here
@@ -720,13 +719,13 @@ void agent::Behave()
 
 
 //---------------------------------------------------------------------------
-// agent::Update
+// agent::UpdateBody
 //
 // Return energy consumed
 //---------------------------------------------------------------------------
 const float FF = 1.01;
 
-float agent::Update(float moveFitnessParam, float speed2dpos, int solidObjects)
+float agent::UpdateBody(float moveFitnessParam, float speed2dpos, int solidObjects)
 {
 #ifdef DEBUGCHECK
     debugcheck("agent::Update entry");
@@ -734,9 +733,6 @@ float agent::Update(float moveFitnessParam, float speed2dpos, int solidObjects)
 
 	float energyUsed = 0;
 	
-	// Update vision and brain
-	Behave(); 
-
 	// just do x & z dimensions in this version
     SaveLastPosition();
     

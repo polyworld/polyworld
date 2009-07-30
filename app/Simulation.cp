@@ -553,31 +553,15 @@ void TSimulation::Step()
 		
 		if( fStaticTimestepGeometry )
 		{
-			// Optimize rendering performance by downloading world geometry to
-			// graphics card.
-			fStage.Compile();
+			UpdateAgents_StaticTimestepGeometry();
 		}
-		
-		agent* c;
-		objectxsortedlist::gXSortedObjects.reset();
-		while (objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&c))
+		else // if( fStaticTimestepGeometry )
 		{
-		#ifdef DEBUGCHECK
-			debugstring[256];
-			sprintf(debugstring,"in agent loop at age %ld, critnum = %ld", fStep, critnum);
-			debugcheck(debugstring);
-			critnum++;
-		#endif // DEBUGCHECK
-			fFoodEnergyOut += c->Update(fMoveFitnessParameter, agent::gSpeed2DPosition, fSolidObjects);
+			UpdateAgents();
 		}
 
 		// Swap buffers for the agent POV window when they're all done
 		fAgentPOVWindow->swapBuffers();
-
-		if( fStaticTimestepGeometry )
-		{
-			fStage.Decompile();
-		}
 	}
 
 	if( fHeuristicFitnessWeight != 0.0 )
@@ -2169,6 +2153,108 @@ void TSimulation::PickParentsUsingTournament(int numInPool, int* iParent, int* j
 		}
 	} while (*jParent == *iParent);
 }
+
+
+//---------------------------------------------------------------------------
+// TSimulation::UpdateAgents
+//---------------------------------------------------------------------------
+void TSimulation::UpdateAgents()
+{
+	// The world changes as each critter is processed, so we can't do our stage compilation
+	// or parallelization optimizations
+
+	agent* a;
+	objectxsortedlist::gXSortedObjects.reset();
+	while (objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&a))
+	{
+#ifdef DEBUGCHECK
+		debugstring[256];
+		sprintf(debugstring,"in agent loop at age %ld, critnum = %ld", fStep, critnum);
+		debugcheck(debugstring);
+		critnum++;
+#endif // DEBUGCHECK
+
+		a->UpdateVision();
+		a->UpdateBrain();
+		fFoodEnergyOut += a->UpdateBody(fMoveFitnessParameter, agent::gSpeed2DPosition, fSolidObjects);
+	}
+}
+
+
+//---------------------------------------------------------------------------
+// TSimulation::UpdateAgents_StaticTimestepGeometry
+//---------------------------------------------------------------------------
+void TSimulation::UpdateAgents_StaticTimestepGeometry()
+{
+	// Take advantage of the geometry being unchanged during a timestep by sending the 
+	// geometry to the graphics card only once (via stage compilation). Also, parallelize
+	// execution of brains.
+
+	// ---
+	// --- Vision (Serial -- for now)
+	// ---
+	{
+		fStage.Compile();
+
+		agent* a;
+
+		objectxsortedlist::gXSortedObjects.reset();
+		while (objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&a))
+		{
+			a->UpdateVision();
+		}
+
+		fStage.Decompile();
+	}
+
+	// ---
+	// --- Brain (Parallel)
+	// ---
+	{
+		bool eol = false; // thread-global 'end of list'
+
+#pragma omp parallel shared(eol)
+		{
+			bool done = false; // thread-local flag
+
+			while( !done )
+			{
+				agent* a;
+
+#pragma omp critical(gXSortedObjects)
+				{
+					if( eol )
+					{
+						done = true;
+					}
+					else if( !objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&a) )
+					{
+						done = eol = true;
+					}
+				}
+
+				if( !done )
+				{
+					a->UpdateBrain();
+				}
+			}
+		}
+	}
+
+	// ---
+	// --- Body (Serial)
+	// ---
+	{
+		agent *a;
+
+		objectxsortedlist::gXSortedObjects.reset();
+		while (objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&a))
+		{
+			fFoodEnergyOut += a->UpdateBody(fMoveFitnessParameter, agent::gSpeed2DPosition, fSolidObjects);
+		}
+	}
+}
+
 
 //---------------------------------------------------------------------------
 // TSimulation::Interact

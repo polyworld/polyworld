@@ -77,7 +77,9 @@ public:
     
     void dump(std::ostream& out);
     void load(std::istream& in);
-    float Update(float moveFitnessParam, float speed2dpos, int solidObjects);
+	void UpdateVision();
+	void UpdateBrain();
+    float UpdateBody(float moveFitnessParam, float speed2dpos, int solidObjects);
 	void AvoidCollisions( int solidObjects );
 	void AvoidCollisionDirectional( int direction, int solidObjects );
 	void GetCollisionFixedCoordinates( float xo, float zo, float xn, float zn, float xb, float zb, float rc, float rb, float *xf, float *zf );
@@ -154,7 +156,6 @@ public:
 	static short povrows;
     static short povwidth;
     static short povheight;
-	static agent* currentAgent;	// during brain updates
 
     short xleft;
     short xright;
@@ -174,7 +175,6 @@ public:
 	} external;
 
 protected:
-    void Behave();
     void NumberToName();
     void SetGeometry();
     void SetGraphics();

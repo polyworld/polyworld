@@ -99,7 +99,7 @@ public:
 	static void braininit();
 	static void braindestruct();
 	
-    brain();
+    brain(agent *self);
     ~brain();
     
     void Dump(std::ostream& out);
@@ -162,7 +162,8 @@ protected:
     static bool* neurused; 		// [max(maxeneurpergroup,maxineurpergroup)]
     static short randomneuron;
     static short energyneuron;
-       
+
+	class agent *self;
     short numinputneurons;
     short numnoninputneurons;
     short numneurons;

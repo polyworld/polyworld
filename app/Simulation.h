@@ -219,7 +219,7 @@ protected:
 	void SaveDimensions();
 	void SaveVisibility();
 	void RestoreFromPrefs();
-	
+
 private slots:
 
 	// File menu
@@ -375,6 +375,8 @@ private:
 	void InitMonitoringWindows();
 	
 	void PickParentsUsingTournament(int numInPool, int* iParent, int* jParent);
+	void UpdateAgents();
+	void UpdateAgents_StaticTimestepGeometry();
 	void Interact();
 	
 	void RecordGeneSeparation();
