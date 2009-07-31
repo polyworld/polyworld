@@ -14,6 +14,7 @@ endif
 POLYWORLD = Polyworld
 MOVIE_PLAYER = PwMoviePlayer
 CALC_COMPLEXITY = CalcComplexity
+PWTXT = pwtxt
 
 APP__POLYWORLD = ${POLYWORLD}${APP_EXT}
 APP__MOVIE_PLYAER = ${MOVIE_PLAYER}${APP_EXT}
@@ -26,12 +27,16 @@ DIR__BLD = ${DIR__HOME}/.bld
 DIR__BLD_APP = ${DIR__BLD}/app
 DIR__BLD_MOVIE_PLAYER = ${DIR__BLD}/${MOVIE_PLAYER}
 DIR__BLD_CALC_COMPLEXITY = ${DIR__BLD}/${CALC_COMPLEXITY}
+DIR__BLD_PWTXT = ${DIR__BLD}/${PWTXT}
 
 DIR__BIN = ${DIR__HOME}/bin
 export DIR__TOOLS = ${DIR__HOME}/tools
 export DIR__UTILS = ${DIR__HOME}/utils
+export DIR__MOTION = ${DIR__HOME}/motion
+export DIR__COMPLEXITY = ${DIR__HOME}/complexity
 DIR__CALC_COMPLEXITY = ${DIR__TOOLS}/${CALC_COMPLEXITY}
 DIR__MOVIE_PLAYER = ${DIR__TOOLS}/${MOVIE_PLAYER}
+DIR__PWTXT = ${DIR__TOOLS}/${PWTXT}
 
 ###
 ### Target-specific files
@@ -43,6 +48,7 @@ MAKEFILE__MOVIE_PLAYER = ${DIR__BLD_MOVIE_PLAYER}/Makefile
 QPRO__MOVIE_PLAYER = ${DIR__MOVIE_PLAYER}/pwmovieplayer.pro
 
 TARGET__CALC_COMPLEXITY = ${DIR__BLD_CALC_COMPLEXITY}/${CALC_COMPLEXITY}
+TARGET__PWTXT = ${DIR__BLD_PWTXT}/${PWTXT}
 
 ###
 ### Utilities
@@ -53,7 +59,7 @@ QMAKE = qmake
 
 .PHONY: default clean env app movie_player calc_complexity
 
-default: env app movie_player calc_complexity
+default: env app movie_player calc_complexity pwtxt
 	@echo ---------------------------------
 	@echo --- SUCCESS: Polyworld Project
 	@echo ---------------------------------
@@ -77,6 +83,7 @@ env:
 	mkdir -p ${DIR__BLD_APP}
 	mkdir -p ${DIR__BLD_MOVIE_PLAYER}
 	mkdir -p ${DIR__BLD_CALC_COMPLEXITY}
+	mkdir -p ${DIR__BLD_PWTXT}
 	mkdir -p ${DIR__BIN}
 
 ###
@@ -107,3 +114,10 @@ ${MAKEFILE__MOVIE_PLAYER}: ${QPRO__MOVIE_PLAYER}
 calc_complexity:
 	cd ${DIR__CALC_COMPLEXITY} && ${MAKE} TARGET=${TARGET__CALC_COMPLEXITY}
 	ln -sf ${TARGET__CALC_COMPLEXITY} ${DIR__BIN}
+
+###
+### pwtxt
+###
+pwtxt:
+	cd ${DIR__PWTXT} && ${MAKE} TARGET=${TARGET__PWTXT}
+	ln -sf ${TARGET__PWTXT} ${DIR__BIN}
