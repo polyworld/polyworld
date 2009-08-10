@@ -13,7 +13,7 @@ x-sorted lists into a single x-sorted list.  Matt Ira implemented
 the first version of a spiking neuron model in Polyworld after
 Izhikevich.
 
-Polyworld currently runs atop Qt 4.1 (or later) from Trolltech
+Polyworld currently runs atop Qt 4.5 (or later) from Trolltech
 <http://www.trolltech.com/>.  It uses the "Qt Open Source Edition",
 in keeping with its open source nature.  Polyworld itself is open
 sourced under the Apple Public Source License (see the accompanying

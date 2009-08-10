@@ -4,6 +4,7 @@ export OS = ${shell uname}
 
 ifeq (${OS},Darwin)
 	APP_EXT = .app
+	export QMAKESPEC = macx-g++
 else
 	APP_EXT =
 endif

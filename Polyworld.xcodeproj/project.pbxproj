@@ -752,7 +752,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/bash;
-			shellScript = "# Make sure there's a worldfile available\nif ! [ -r \"worldfile\" ]\nthen\n\tcp worldfiles/worldfile_nominal ./worldfile\nfi\n\n# Keep the moc files in sync\nif [ app/Simulation.h -nt app/moc_Simulation.cpp ]; then $QT/bin/moc app/Simulation.h -o app/moc_Simulation.cpp; fi\nif [ app/PWApp.h      -nt app/moc_PWApp.cpp      ]; then $QT/bin/moc app/PWApp.h      -o app/moc_PWApp.cpp     ; fi\n";
+			shellScript = "# Make sure there's a worldfile available\nif ! [ -r \"worldfile\" ]\nthen\n\tcp worldfiles/worldfile_nominal ./worldfile\nfi\n\n# Keep the moc files in sync\nif [ app/Simulation.h -nt app/moc_Simulation.cpp ]; then moc app/Simulation.h -o app/moc_Simulation.cpp; fi\nif [ app/PWApp.h      -nt app/moc_PWApp.cpp      ]; then moc app/PWApp.h      -o app/moc_PWApp.cpp     ; fi\n";
 		};
 		760C35B5101BD32F00F5F662 /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -765,7 +765,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/bash;
-			shellScript = "# Keep moc files in sync\n\nPwMoviePlayerDir=\"tools/PwMoviePlayer\"\n \nif [ $PwMoviePlayerDir/PwMoviePlayer.h -nt $PwMoviePlayerDir/moc_PwMoviePlayer.cpp ]; then $QT/bin/moc $PwMoviePlayerDir/PwMoviePlayer.h -o $PwMoviePlayerDir/moc_PwMoviePlayer.cpp; fi\nif [ $PwMoviePlayerDir/MainWindow.h    -nt $PwMoviePlayerDir/moc_MainWindow.cpp    ]; then $QT/bin/moc $PwMoviePlayerDir/MainWindow.h    -o $PwMoviePlayerDir/moc_MainWindow.cpp   ; fi\nif [ $PwMoviePlayerDir/GLWidget.h      -nt $PwMoviePlayerDir/moc_GLWidget.cpp      ]; then $QT/bin/moc $PwMoviePlayerDir/GLWidget.h      -o $PwMoviePlayerDir/moc_GLWidget.cpp     ; fi\n";
+			shellScript = "# Keep moc files in sync\n\nPwMoviePlayerDir=\"tools/PwMoviePlayer\"\n \nif [ $PwMoviePlayerDir/PwMoviePlayer.h -nt $PwMoviePlayerDir/moc_PwMoviePlayer.cpp ]; then moc $PwMoviePlayerDir/PwMoviePlayer.h -o $PwMoviePlayerDir/moc_PwMoviePlayer.cpp; fi\nif [ $PwMoviePlayerDir/MainWindow.h    -nt $PwMoviePlayerDir/moc_MainWindow.cpp    ]; then moc $PwMoviePlayerDir/MainWindow.h    -o $PwMoviePlayerDir/moc_MainWindow.cpp   ; fi\nif [ $PwMoviePlayerDir/GLWidget.h      -nt $PwMoviePlayerDir/moc_GLWidget.cpp      ]; then moc $PwMoviePlayerDir/GLWidget.h      -o $PwMoviePlayerDir/moc_GLWidget.cpp     ; fi\n";
 		};
 		76825D37101C49B400830EC9 /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -791,7 +791,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "if [ -r \"worldfile\" ] ; then\n\tcp worldfile ${BUILD_DIR}/${CONFIGURATION}${EFFECTIVE_PLATFORM_NAME}/\nfi\n\nif ! [ -d \"bin\" ] ; then\n\tmkdir bin\nfi\nln -sf ${BUILD_DIR}/${CONFIGURATION}${EFFECTIVE_PLATFORM_NAME}/Polyworld.app bin/\n\nLIBRARIES=\"QtCore QtGui QtOpenGL\"\n\nif [ $CONFIGURATION == \"Release\" ] ; then\n\tif [ ! -e $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks ] ; then\n\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks\n\tfi\n\tfor f in $LIBRARIES ; do\n\t\tif [ ! -e $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework ] ; then\n\t\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework\n\t\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions\n\t\t\tcd $QtLib/$f.framework/Versions\n\t\t\tfor v in `\\ls -d [0-9]*` ; do\n\t\t\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v\n\t\t\t\tcp $QtLib/$f.framework/Versions/$v/$f* $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v/\n\t\t\t\tln -sf $v/ $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/Current\n\t\t\t\tif [ \"$f\" == \"QtCore\" ] ; then\n\t\t\t\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v/Headers\n\t\t\t\t\tcp -R $QtLib/$f.framework/Versions/$v/Headers/arch $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v/Headers/\n\t\t\t\tfi\n\t\t\t\tinstall_name_tool -id @executable_path/../Frameworks/$f.framework/Versions/$v/$f $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v/$f\n\t\t\t\tinstall_name_tool -change /usr/local/Trolltech/Qt-4.1.0/lib/$f.framework/Versions/$v/$f @executable_path/../Frameworks/$f.framework/Versions/$v/$f $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/MacOS/$TARGET_NAME\n\t\t\tdone\n\t\t\tcp -R $QtLib/$f.framework/$f* $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/\n\t\t\tcp -R $QtLib/$f.framework/Contents $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/\n\t\t\tcd $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/\n\t\t\tif [ \"$f\" == \"QtCore\" ] ; then\n\t\t\t\tln -sf Versions/Current/Headers/ $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Headers\n\t\t\t\tln -sf Versions/Current/Headers/arch/ $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/arch\n\t\t\telse\n\t\t\t\tfor g in $LIBRARIES ; do\n\t\t\t\t\tif [ \"$g\" != \"$f\" ] ; then\n\t\t\t\t\t\tcd $QtLib/$g.framework/Versions\n\t\t\t\t\t\tfor v in `\\ls -d [0-9]*` ; do\n\t\t\t\t\t\t\tinstall_name_tool -change /usr/local/Trolltech/Qt-4.1.0/lib/$g.framework/Versions/$v/$g @executable_path/../Frameworks/$g.framework/Versions/$v/$g $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/Current/$f\n\t\t\t\t\t\tdone\n\t\t\t\t\tfi\n\t\t\t\tdone\n\t\t\tfi\n\t\tfi\n\tdone\n\tcp /usr/local/lib/libgsl.0.dylib $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/\n\tinstall_name_tool -id @executable_path/../Frameworks/libgsl.0.dylib $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/libgsl.0.dylib\n\tinstall_name_tool -change /usr/local/lib/libgsl.0.dylib @executable_path/../Frameworks/libgsl.0.dylib $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/MacOS/$TARGET_NAME\n\tcp /usr/local/lib/libgslcblas.0.dylib $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/\n\tinstall_name_tool -id @executable_path/../Frameworks/libgslcblas.0.dylib $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/libgslcblas.0.dylib\n\tinstall_name_tool -change /usr/local/lib/libgslcblas.0.dylib @executable_path/../Frameworks/libgslcblas.0.dylib $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/MacOS/$TARGET_NAME\nfi\n";
+			shellScript = "if [ -r \"worldfile\" ] ; then\n\tcp worldfile ${BUILD_DIR}/${CONFIGURATION}${EFFECTIVE_PLATFORM_NAME}/\nfi\n\nif [ $CONFIGURATION == \"Release\" ] ; then\n\tLIBRARIES=\"QtCore QtGui QtOpenGL\"\n\tif [ ! -e $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks ] ; then\n\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks\n\tfi\n\tfor f in $LIBRARIES ; do\n\t\tif [ ! -e $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework ] ; then\n\t\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework\n\t\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions\n\t\t\tcd /Library/Frameworks/$f.framework/Versions\n\t\t\tfor v in `\\ls -d [0-9]*` ; do\n\t\t\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v\n\t\t\t\tcp /Library/Frameworks/$f.framework/Versions/$v/$f* $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v/\n\t\t\t\tln -sf $v/ $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/Current\n#\t\t\t\tif [ \"$f\" == \"QtCore\" ] ; then\n#\t\t\t\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v/Headers\n#\t\t\t\t\tcp -R /Library/Frameworks/$f.framework/Versions/$v/Headers/arch $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v/Headers/\n#\t\t\t\tfi\n\t\t\t\tinstall_name_tool -id @executable_path/../Frameworks/$f.framework/Versions/$v/$f $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v/$f\n\t\t\t\tinstall_name_tool -change /Library/Frameworks/$f.framework/Versions/$v/$f @executable_path/../Frameworks/$f.framework/Versions/$v/$f $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/MacOS/$TARGET_NAME\n\t\t\tdone\n\t\t\tcp -R /Library/Frameworks/$f.framework/$f* $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/\n\t\t\tcp -R /Library/Frameworks/$f.framework/Contents $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/\n\t\t\tcd $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/\n#\t\t\tif [ \"$f\" == \"QtCore\" ] ; then\n#\t\t\t\tln -sf Versions/Current/Headers/ $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Headers\n#\t\t\t\tln -sf Versions/Current/Headers/arch/ $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/arch\n#\t\t\telse\n#\t\t\t\tfor g in $LIBRARIES ; do\n#\t\t\t\t\tif [ \"$g\" != \"$f\" ] ; then\n#\t\t\t\t\t\tcd /Library/Frameworks/$g.framework/Versions\n#\t\t\t\t\t\tfor v in `\\ls -d [0-9]*` ; do\n#\t\t\t\t\t\t\tinstall_name_tool -change /Library/Frameworks/$g.framework/Versions/$v/$g @executable_path/../Frameworks/$g.framework/Versions/$v/$g $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/Current/$f\n#\t\t\t\t\t\tdone\n#\t\t\t\t\tfi\n#\t\t\t\tdone\n#\t\t\tfi\n\t\tfi\n\tdone\n\tcp /usr/local/lib/libgsl.0.dylib $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/\n\tinstall_name_tool -id @executable_path/../Frameworks/libgsl.0.dylib $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/libgsl.0.dylib\n\tinstall_name_tool -change /usr/local/lib/libgsl.0.dylib @executable_path/../Frameworks/libgsl.0.dylib $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/MacOS/$TARGET_NAME\n\tcp /usr/local/lib/libgslcblas.0.dylib $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/\n\tinstall_name_tool -id @executable_path/../Frameworks/libgslcblas.0.dylib $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/libgslcblas.0.dylib\n\tinstall_name_tool -change /usr/local/lib/libgslcblas.0.dylib @executable_path/../Frameworks/libgslcblas.0.dylib $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/MacOS/$TARGET_NAME\nfi\n";
 		};
 		76D9A5B60C3A3DAF00CC8F85 /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -804,7 +804,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "if ! [ -d \"bin\" ] ; then\n\tmkdir bin\nfi\nln -sf ${BUILD_DIR}/${CONFIGURATION}${EFFECTIVE_PLATFORM_NAME}/PwMoviePlayer.app bin/\n\nLIBRARIES=\"QtCore QtGui QtOpenGL\"\n\nif [ $CONFIGURATION == \"Release\" ] ; then\n\tif [ ! -e $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks ] ; then\n\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks\n\tfi\n\tfor f in $LIBRARIES ; do\n\t\tif [ ! -e $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework ] ; then\n\t\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework\n\t\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions\n\t\t\tcd $QtLib/$f.framework/Versions\n\t\t\tfor v in `\\ls -d [0-9]*` ; do\n\t\t\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v\n\t\t\t\tcp $QtLib/$f.framework/Versions/$v/$f* $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v/\n\t\t\t\tln -sf $v/ $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/Current\n\t\t\t\tif [ \"$f\" == \"QtCore\" ] ; then\n\t\t\t\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v/Headers\n\t\t\t\t\tcp -R $QtLib/$f.framework/Versions/$v/Headers/arch $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v/Headers/\n\t\t\t\tfi\n\t\t\t\tinstall_name_tool -id @executable_path/../Frameworks/$f.framework/Versions/$v/$f $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v/$f\n\t\t\t\tinstall_name_tool -change /usr/local/Trolltech/Qt-4.1.0/lib/$f.framework/Versions/$v/$f @executable_path/../Frameworks/$f.framework/Versions/$v/$f $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/MacOS/$TARGET_NAME\n\t\t\tdone\n\t\t\tcp -R $QtLib/$f.framework/$f* $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/\n\t\t\tcp -R $QtLib/$f.framework/Contents $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/\n\t\t\tcd $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/\n\t\t\tif [ \"$f\" == \"QtCore\" ] ; then\n\t\t\t\tln -sf Versions/Current/Headers/ $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Headers\n\t\t\t\tln -sf Versions/Current/Headers/arch/ $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/arch\n\t\t\telse\n\t\t\t\tfor g in $LIBRARIES ; do\n\t\t\t\t\tif [ \"$g\" != \"$f\" ] ; then\n\t\t\t\t\t\tcd $QtLib/$g.framework/Versions\n\t\t\t\t\t\tfor v in `\\ls -d [0-9]*` ; do\n\t\t\t\t\t\t\tinstall_name_tool -change /usr/local/Trolltech/Qt-4.1.0/lib/$g.framework/Versions/$v/$g @executable_path/../Frameworks/$g.framework/Versions/$v/$g $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/Current/$f\n\t\t\t\t\t\tdone\n\t\t\t\t\tfi\n\t\t\t\tdone\n\t\t\tfi\n\t\tfi\n\tdone\nfi\n";
+			shellScript = "if [ $CONFIGURATION == \"Release\" ] ; then\n\tLIBRARIES=\"QtCore QtGui QtOpenGL\"\n\tif [ ! -e $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks ] ; then\n\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks\n\tfi\n\tfor f in $LIBRARIES ; do\n\t\tif [ ! -e $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework ] ; then\n\t\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework\n\t\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions\n\t\t\tcd /Library/Frameworks/$f.framework/Versions\n\t\t\tfor v in `\\ls -d [0-9]*` ; do\n\t\t\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v\n\t\t\t\tcp /Library/Frameworks/$f.framework/Versions/$v/$f* $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v/\n\t\t\t\tln -sf $v/ $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/Current\n#\t\t\t\tif [ \"$f\" == \"QtCore\" ] ; then\n#\t\t\t\t\tmkdir $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v/Headers\n#\t\t\t\t\tcp -R /Library/Frameworks/$f.framework/Versions/$v/Headers/arch $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v/Headers/\n#\t\t\t\tfi\n\t\t\t\tinstall_name_tool -id @executable_path/../Frameworks/$f.framework/Versions/$v/$f $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/$v/$f\n\t\t\t\tinstall_name_tool -change /Library/Frameworks/$f.framework/Versions/$v/$f @executable_path/../Frameworks/$f.framework/Versions/$v/$f $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/MacOS/$TARGET_NAME\n\t\t\tdone\n\t\t\tcp -R /Library/Frameworks/$f.framework/$f* $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/\n\t\t\tcp -R /Library/Frameworks/$f.framework/Contents $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/\n\t\t\tcd $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/\n#\t\t\tif [ \"$f\" == \"QtCore\" ] ; then\n#\t\t\t\tln -sf Versions/Current/Headers/ $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Headers\n#\t\t\t\tln -sf Versions/Current/Headers/arch/ $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/arch\n#\t\t\telse\n#\t\t\t\tfor g in $LIBRARIES ; do\n#\t\t\t\t\tif [ \"$g\" != \"$f\" ] ; then\n#\t\t\t\t\t\tcd /Library/Frameworks/$g.framework/Versions\n#\t\t\t\t\t\tfor v in `\\ls -d [0-9]*` ; do\n#\t\t\t\t\t\t\tinstall_name_tool -change /Library/Frameworks/$g.framework/Versions/$v/$g @executable_path/../Frameworks/$g.framework/Versions/$v/$g $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/$f.framework/Versions/Current/$f\n#\t\t\t\t\t\tdone\n#\t\t\t\t\tfi\n#\t\t\t\tdone\n#\t\t\tfi\n\t\tfi\n\tdone\n\tcp /usr/local/lib/libgsl.0.dylib $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/\n\tinstall_name_tool -id @executable_path/../Frameworks/libgsl.0.dylib $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/libgsl.0.dylib\n\tinstall_name_tool -change /usr/local/lib/libgsl.0.dylib @executable_path/../Frameworks/libgsl.0.dylib $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/MacOS/$TARGET_NAME\n\tcp /usr/local/lib/libgslcblas.0.dylib $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/\n\tinstall_name_tool -id @executable_path/../Frameworks/libgslcblas.0.dylib $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/Frameworks/libgslcblas.0.dylib\n\tinstall_name_tool -change /usr/local/lib/libgslcblas.0.dylib @executable_path/../Frameworks/libgslcblas.0.dylib $BUILT_PRODUCTS_DIR/$TARGET_NAME.app/Contents/MacOS/$TARGET_NAME\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -966,19 +966,6 @@
 			};
 			name = Development;
 		};
-		760C2C96101AC7DD00F5F662 /* Development-static */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				EXECUTABLE_EXTENSION = "";
-				EXECUTABLE_SUFFIX = "";
-				INSTALL_PATH = /usr/local/lib;
-				OTHER_CFLAGS = "";
-				PREBINDING = NO;
-				PRODUCT_NAME = CalcComplexity;
-			};
-			name = "Development-static";
-		};
 		760C2C97101AC7DD00F5F662 /* Optimized */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1022,19 +1009,6 @@
 			};
 			name = Profiling;
 		};
-		760C2C9A101AC7DD00F5F662 /* Default */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				EXECUTABLE_EXTENSION = "";
-				EXECUTABLE_SUFFIX = "";
-				INSTALL_PATH = /usr/local/lib;
-				OTHER_CFLAGS = "";
-				PREBINDING = NO;
-				PRODUCT_NAME = CalcComplexity;
-			};
-			name = Default;
-		};
 		760C3549101BD01500F5F662 /* Development */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1044,13 +1018,6 @@
 				PRODUCT_NAME = All;
 			};
 			name = Development;
-		};
-		760C354A101BD01500F5F662 /* Development-static */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				PRODUCT_NAME = All;
-			};
-			name = "Development-static";
 		};
 		760C354B101BD01500F5F662 /* Optimized */ = {
 			isa = XCBuildConfiguration;
@@ -1077,19 +1044,12 @@
 			};
 			name = Profiling;
 		};
-		760C354E101BD01500F5F662 /* Default */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				PRODUCT_NAME = All;
-			};
-			name = Default;
-		};
 		760EF64309EF188F00C0FAA5 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = i386;
+				ARCHS = "$(NATIVE_ARCH)";
 				COPY_PHASE_STRIP = YES;
-				FRAMEWORK_SEARCH_PATHS = $QT/lib;
+				FRAMEWORK_SEARCH_PATHS = "";
 				GCC_ALTIVEC_EXTENSIONS = YES;
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_ENABLE_TRIGRAPHS = NO;
@@ -1119,19 +1079,15 @@
 				GCC_WARN_UNUSED_VALUE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = (
-					$QT/include,
-					$QT/include/Qt,
-					$QT/include/QtGui,
-					/sw/include,
+					/Library/Frameworks/QtOpenGL.framework/Headers,
+					/Library/Frameworks/QtGui.framework/Headers,
+					/Library/Frameworks/QtCore.framework/Headers,
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
 				);
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Applications";
-				LIBRARY_SEARCH_PATHS = (
-					$QT/lib,
-					/sw/lib,
-				);
+				LIBRARY_SEARCH_PATHS = "";
 				LIBRARY_STYLE = Static;
 				OBJROOT = "$(SYMROOT)";
 				OTHER_CFLAGS = (
@@ -1175,7 +1131,7 @@
 			buildSettings = {
 				ARCHS = i386;
 				COPY_PHASE_STRIP = YES;
-				FRAMEWORK_SEARCH_PATHS = $QT/lib;
+				FRAMEWORK_SEARCH_PATHS = "";
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
 				GCC_MODEL_TUNING = G5;
@@ -1183,17 +1139,16 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "";
 				HEADER_SEARCH_PATHS = (
-					$QT/include,
-					$QT/include/QtCore,
-					$QT/include/QtGui,
-					$QT/include/QtOpenGL,
+					/Library/Frameworks/QtOpenGL.framework/Headers,
+					/Library/Frameworks/QtGui.framework/Headers,
+					/Library/Frameworks/QtCore.framework/Headers,
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
 				);
 				INFOPLIST_FILE = tools/PwMoviePlayer/Info.plist;
 				INSTALL_PATH = "$(USER_APPS_DIR)";
-				LIBRARY_SEARCH_PATHS = $QT/lib;
-				OBJROOT = "$(SRCROOT)";
+				LIBRARY_SEARCH_PATHS = "";
+				OBJROOT = build;
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
 					"-DQT_TABLET_SUPPORT",
@@ -1214,7 +1169,7 @@
 				PREBINDING = YES;
 				PRODUCT_NAME = PwMoviePlayer;
 				SECTORDER_FLAGS = "";
-				SYMROOT = "$(SRCROOT)";
+				SYMROOT = build;
 				WARNING_CFLAGS = (
 					"-Wmost",
 					"-Wno-four-char-constants",
@@ -1239,7 +1194,7 @@
 			buildSettings = {
 				COPY_PHASE_STRIP = NO;
 				DEBUGGING_SYMBOLS = YES;
-				FRAMEWORK_SEARCH_PATHS = $QT/lib;
+				FRAMEWORK_SEARCH_PATHS = "";
 				GCC_ALTIVEC_EXTENSIONS = YES;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
@@ -1269,19 +1224,15 @@
 				GCC_WARN_UNUSED_VALUE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = (
-					$QT/include,
-					$QT/include/Qt,
-					$QT/include/QtGui,
-					/sw/include,
+					/Library/Frameworks/QtOpenGL.framework/Headers,
+					/Library/Frameworks/QtGui.framework/Headers,
+					/Library/Frameworks/QtCore.framework/Headers,
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
 				);
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Applications";
-				LIBRARY_SEARCH_PATHS = (
-					$QT/lib,
-					/sw/lib,
-				);
+				LIBRARY_SEARCH_PATHS = "";
 				LIBRARY_STYLE = Static;
 				OBJROOT = "$(SYMROOT)";
 				OTHER_CFLAGS = (
@@ -1321,7 +1272,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COPY_PHASE_STRIP = YES;
-				FRAMEWORK_SEARCH_PATHS = $QT/lib;
+				FRAMEWORK_SEARCH_PATHS = "";
 				GCC_ALTIVEC_EXTENSIONS = YES;
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_ENABLE_TRIGRAPHS = NO;
@@ -1351,19 +1302,15 @@
 				GCC_WARN_UNUSED_VALUE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = (
-					$QT/include,
-					$QT/include/Qt,
-					$QT/include/QtGui,
-					/sw/include,
+					/Library/Frameworks/QtOpenGL.framework/Headers,
+					/Library/Frameworks/QtGui.framework/Headers,
+					/Library/Frameworks/QtCore.framework/Headers,
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
 				);
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Applications";
-				LIBRARY_SEARCH_PATHS = (
-					$QT/lib,
-					/sw/lib,
-				);
+				LIBRARY_SEARCH_PATHS = "";
 				LIBRARY_STYLE = Static;
 				OBJROOT = "$(SYMROOT)";
 				OTHER_CFLAGS = (
@@ -1407,7 +1354,7 @@
 			buildSettings = {
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
-				FRAMEWORK_SEARCH_PATHS = $QT/lib;
+				FRAMEWORK_SEARCH_PATHS = "";
 				GCC_ALTIVEC_EXTENSIONS = YES;
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_ENABLE_TRIGRAPHS = NO;
@@ -1436,19 +1383,15 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				GENERATE_PROFILING_CODE = YES;
 				HEADER_SEARCH_PATHS = (
-					$QT/include,
-					$QT/include/Qt,
-					$QT/include/QtGui,
-					/sw/include,
+					/Library/Frameworks/QtOpenGL.framework/Headers,
+					/Library/Frameworks/QtGui.framework/Headers,
+					/Library/Frameworks/QtCore.framework/Headers,
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
 				);
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Applications";
-				LIBRARY_SEARCH_PATHS = (
-					$QT/lib,
-					/sw/lib,
-				);
+				LIBRARY_SEARCH_PATHS = "";
 				LIBRARY_STYLE = Static;
 				OBJROOT = "$(SYMROOT)";
 				OTHER_CFLAGS = (
@@ -1483,88 +1426,12 @@
 			};
 			name = Profiling;
 		};
-		76293F120981AF4600D27C6E /* Default */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				FRAMEWORK_SEARCH_PATHS = $QT/lib;
-				GCC_ALTIVEC_EXTENSIONS = YES;
-				GCC_ENABLE_TRIGRAPHS = NO;
-				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = PolyworldPrefix.pch;
-				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
-				GCC_WARN_CHECK_SWITCH_STATEMENTS = YES;
-				GCC_WARN_EFFECTIVE_CPLUSPLUS_VIOLATIONS = NO;
-				GCC_WARN_FOUR_CHARACTER_CONSTANTS = NO;
-				GCC_WARN_HIDDEN_VIRTUAL_FUNCTIONS = YES;
-				GCC_WARN_INHIBIT_ALL_WARNINGS = NO;
-				GCC_WARN_INITIALIZER_NOT_FULLY_BRACKETED = YES;
-				GCC_WARN_MISSING_PARENTHESES = YES;
-				GCC_WARN_NON_VIRTUAL_DESTRUCTOR = YES;
-				GCC_WARN_PEDANTIC = NO;
-				GCC_WARN_SHADOW = NO;
-				GCC_WARN_SIGN_COMPARE = YES;
-				GCC_WARN_TYPECHECK_CALLS_TO_PRINTF = NO;
-				GCC_WARN_UNINITIALIZED_AUTOS = NO;
-				GCC_WARN_UNKNOWN_PRAGMAS = YES;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_LABEL = YES;
-				GCC_WARN_UNUSED_PARAMETER = YES;
-				GCC_WARN_UNUSED_VALUE = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				HEADER_SEARCH_PATHS = (
-					$QT/include,
-					$QT/include/Qt,
-					$QT/include/QtGui,
-					/sw/include,
-					/System/Library/Frameworks/OpenGL.framework/Headers,
-					/System/Library/Frameworks/AGL.framework,
-				);
-				INFOPLIST_FILE = Info.plist;
-				INSTALL_PATH = "$(HOME)/Applications";
-				LIBRARY_SEARCH_PATHS = (
-					$QT/lib,
-					/sw/lib,
-				);
-				LIBRARY_STYLE = Static;
-				OBJROOT = "$(SYMROOT)";
-				OTHER_CFLAGS = (
-					"-DQT_ACCESSIBILITY_SUPPORT",
-					"-DQT_TABLET_SUPPORT",
-					"-Wno-deprecated",
-				);
-				OTHER_LDFLAGS = (
-					"-framework",
-					QtCore,
-					"-framework",
-					QtGui,
-					"-framework",
-					QtOpenGL,
-					"-lz",
-					"-lgsl",
-					"-lgslcblas",
-					"-lm",
-				);
-				OTHER_REZFLAGS = "";
-				PREBINDING = NO;
-				PRODUCT_NAME = Polyworld;
-				SECTORDER_FLAGS = "";
-				SYMROOT = "$(SYMROOT)";
-				WARNING_CFLAGS = (
-					"-Wmost",
-					"-Wno-four-char-constants",
-					"-Wno-unknown-pragmas",
-				);
-				WRAPPER_EXTENSION = app;
-			};
-			name = Default;
-		};
 		76293F190981AF4600D27C6E /* Development */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COPY_PHASE_STRIP = NO;
 				DEBUGGING_SYMBOLS = YES;
-				FRAMEWORK_SEARCH_PATHS = $QT/lib;
+				FRAMEWORK_SEARCH_PATHS = "";
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
@@ -1573,17 +1440,16 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "";
 				HEADER_SEARCH_PATHS = (
-					$QT/include,
-					$QT/include/QtCore,
-					$QT/include/QtGui,
-					$QT/include/QtOpenGL,
+					/Library/Frameworks/QtOpenGL.framework/Headers,
+					/Library/Frameworks/QtGui.framework/Headers,
+					/Library/Frameworks/QtCore.framework/Headers,
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
 				);
 				INFOPLIST_FILE = tools/PwMoviePlayer/Info.plist;
 				INSTALL_PATH = "$(USER_APPS_DIR)";
-				LIBRARY_SEARCH_PATHS = $QT/lib;
-				OBJROOT = "$(SYMROOT)";
+				LIBRARY_SEARCH_PATHS = "";
+				OBJROOT = build;
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
 					"-DQT_TABLET_SUPPORT",
@@ -1603,7 +1469,7 @@
 				PREBINDING = YES;
 				PRODUCT_NAME = PwMoviePlayer;
 				SECTORDER_FLAGS = "";
-				SYMROOT = "$(SYMROOT)";
+				SYMROOT = build;
 				WARNING_CFLAGS = (
 					"-Wmost",
 					"-Wno-four-char-constants",
@@ -1617,7 +1483,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COPY_PHASE_STRIP = YES;
-				FRAMEWORK_SEARCH_PATHS = $QT/lib;
+				FRAMEWORK_SEARCH_PATHS = "";
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
 				GCC_MODEL_TUNING = G5;
@@ -1625,17 +1491,16 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "";
 				HEADER_SEARCH_PATHS = (
-					$QT/include,
-					$QT/include/QtCore,
-					$QT/include/QtGui,
-					$QT/include/QtOpenGL,
+					/Library/Frameworks/QtOpenGL.framework/Headers,
+					/Library/Frameworks/QtGui.framework/Headers,
+					/Library/Frameworks/QtCore.framework/Headers,
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
 				);
 				INFOPLIST_FILE = tools/PwMoviePlayer/Info.plist;
 				INSTALL_PATH = "$(USER_APPS_DIR)";
-				LIBRARY_SEARCH_PATHS = $QT/lib;
-				OBJROOT = "$(SRCROOT)";
+				LIBRARY_SEARCH_PATHS = "";
+				OBJROOT = build;
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
 					"-DQT_TABLET_SUPPORT",
@@ -1656,7 +1521,7 @@
 				PREBINDING = YES;
 				PRODUCT_NAME = PwMoviePlayer;
 				SECTORDER_FLAGS = "";
-				SYMROOT = "$(SRCROOT)";
+				SYMROOT = build;
 				WARNING_CFLAGS = (
 					"-Wmost",
 					"-Wno-four-char-constants",
@@ -1671,7 +1536,7 @@
 			buildSettings = {
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
-				FRAMEWORK_SEARCH_PATHS = $QT/lib;
+				FRAMEWORK_SEARCH_PATHS = "";
 				GCC_ALTIVEC_EXTENSIONS = YES;
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
@@ -1680,17 +1545,16 @@
 				GCC_PREFIX_HEADER = "";
 				GENERATE_PROFILING_CODE = YES;
 				HEADER_SEARCH_PATHS = (
-					$QT/include,
-					$QT/include/QtCore,
-					$QT/include/QtGui,
-					$QT/include/QtOpenGL,
+					/Library/Frameworks/QtOpenGL.framework/Headers,
+					/Library/Frameworks/QtGui.framework/Headers,
+					/Library/Frameworks/QtCore.framework/Headers,
 					/System/Library/Frameworks/OpenGL.framework/Headers,
 					/System/Library/Frameworks/AGL.framework,
 				);
 				INFOPLIST_FILE = tools/PwMoviePlayer/Info.plist;
 				INSTALL_PATH = "$(USER_APPS_DIR)";
-				LIBRARY_SEARCH_PATHS = $QT/lib;
-				OBJROOT = "$(SRCROOT)";
+				LIBRARY_SEARCH_PATHS = "";
+				OBJROOT = build;
 				OTHER_CFLAGS = (
 					"-DQT_ACCESSIBILITY_SUPPORT",
 					"-DQT_TABLET_SUPPORT",
@@ -1710,7 +1574,7 @@
 				PREBINDING = YES;
 				PRODUCT_NAME = PwMoviePlayer;
 				SECTORDER_FLAGS = "";
-				SYMROOT = "$(SRCROOT)";
+				SYMROOT = build;
 				WARNING_CFLAGS = (
 					"-Wmost",
 					"-Wno-four-char-constants",
@@ -1719,54 +1583,6 @@
 				ZERO_LINK = NO;
 			};
 			name = Profiling;
-		};
-		76293F1C0981AF4600D27C6E /* Default */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				FRAMEWORK_SEARCH_PATHS = $QT/lib;
-				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
-				GCC_MODEL_TUNING = G5;
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "";
-				HEADER_SEARCH_PATHS = (
-					$QT/include,
-					$QT/include/QtCore,
-					$QT/include/QtGui,
-					$QT/include/QtOpenGL,
-					/System/Library/Frameworks/OpenGL.framework/Headers,
-					/System/Library/Frameworks/AGL.framework,
-				);
-				INFOPLIST_FILE = tools/PwMoviePlayer/Info.plist;
-				INSTALL_PATH = "$(USER_APPS_DIR)";
-				LIBRARY_SEARCH_PATHS = $QT/lib;
-				OBJROOT = "$(SRCROOT)";
-				OTHER_CFLAGS = (
-					"-DQT_ACCESSIBILITY_SUPPORT",
-					"-DQT_TABLET_SUPPORT",
-					"-DQT_NO_DEBUG",
-					"-Wno-deprecated",
-				);
-				OTHER_LDFLAGS = (
-					"-framework",
-					QtGui,
-					"-framework",
-					QtCore,
-					"-framework",
-					QtOpenGL,
-					"-lz",
-				);
-				OTHER_REZFLAGS = "";
-				PREBINDING = YES;
-				PRODUCT_NAME = PwMoviePlayer;
-				SECTORDER_FLAGS = "";
-				SYMROOT = "$(SRCROOT)";
-				WARNING_CFLAGS = (
-					"-Wmost",
-					"-Wno-four-char-constants",
-					"-Wno-unknown-pragmas",
-				);
-			};
-			name = Default;
 		};
 		76293F1E0981AF4600D27C6E /* Development */ = {
 			isa = XCBuildConfiguration;
@@ -1786,155 +1602,6 @@
 			};
 			name = Profiling;
 		};
-		76293F210981AF4600D27C6E /* Default */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-			};
-			name = Default;
-		};
-		76AB9E5B0CA4E45200DA1161 /* Development-static */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				COPY_PHASE_STRIP = NO;
-				DEBUGGING_SYMBOLS = YES;
-				FRAMEWORK_SEARCH_PATHS = $QTS/lib;
-				GCC_ALTIVEC_EXTENSIONS = YES;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_ENABLE_FIX_AND_CONTINUE = NO;
-				GCC_ENABLE_TRIGRAPHS = NO;
-				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = PolyworldPrefix.pch;
-				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
-				GCC_WARN_CHECK_SWITCH_STATEMENTS = YES;
-				GCC_WARN_EFFECTIVE_CPLUSPLUS_VIOLATIONS = NO;
-				GCC_WARN_FOUR_CHARACTER_CONSTANTS = NO;
-				GCC_WARN_HIDDEN_VIRTUAL_FUNCTIONS = YES;
-				GCC_WARN_INHIBIT_ALL_WARNINGS = NO;
-				GCC_WARN_INITIALIZER_NOT_FULLY_BRACKETED = YES;
-				GCC_WARN_MISSING_PARENTHESES = YES;
-				GCC_WARN_NON_VIRTUAL_DESTRUCTOR = YES;
-				GCC_WARN_PEDANTIC = NO;
-				GCC_WARN_SHADOW = NO;
-				GCC_WARN_SIGN_COMPARE = YES;
-				GCC_WARN_TYPECHECK_CALLS_TO_PRINTF = NO;
-				GCC_WARN_UNINITIALIZED_AUTOS = NO;
-				GCC_WARN_UNKNOWN_PRAGMAS = YES;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_LABEL = YES;
-				GCC_WARN_UNUSED_PARAMETER = YES;
-				GCC_WARN_UNUSED_VALUE = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				HEADER_SEARCH_PATHS = (
-					$QTS/include,
-					$QTS/include/Qt,
-					$QTS/include/QtGui,
-					/sw/include,
-					/System/Library/Frameworks/OpenGL.framework/Headers,
-					/System/Library/Frameworks/AGL.framework,
-				);
-				INFOPLIST_FILE = Info.plist;
-				INSTALL_PATH = "$(HOME)/Applications";
-				LIBRARY_SEARCH_PATHS = (
-					/usr/lib,
-					$QTS/lib,
-					/sw/lib,
-				);
-				LIBRARY_STYLE = Static;
-				OBJROOT = "$(SYMROOT)";
-				OTHER_CFLAGS = (
-					"-DQT_ACCESSIBILITY_SUPPORT",
-					"-DQT_TABLET_SUPPORT",
-					"-Wno-deprecated",
-				);
-				OTHER_CPLUSPLUSFLAGS = "$(OTHER_CFLAGS)";
-				OTHER_LDFLAGS = (
-					"-lQtCore",
-					"-lQtGui",
-					"-lQtOpenGL",
-					"-lz",
-					"$(GSL)/libgsl.a",
-					"$(GSL)/libgslcblas.a",
-					"-lm",
-					"-liconv",
-				);
-				OTHER_REZFLAGS = "";
-				PREBINDING = NO;
-				PRODUCT_NAME = Polyworld;
-				SECTORDER_FLAGS = "";
-				SYMROOT = "$(SYMROOT)";
-				WARNING_CFLAGS = (
-					"-Wmost",
-					"-Wno-four-char-constants",
-					"-Wno-unknown-pragmas",
-				);
-				WRAPPER_EXTENSION = app;
-				ZERO_LINK = NO;
-			};
-			name = "Development-static";
-		};
-		76AB9E5D0CA4E45200DA1161 /* Development-static */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				COPY_PHASE_STRIP = NO;
-				DEBUGGING_SYMBOLS = YES;
-				FRAMEWORK_SEARCH_PATHS = $QTS/lib;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_ENABLE_FIX_AND_CONTINUE = NO;
-				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
-				GCC_MODEL_TUNING = G5;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "";
-				HEADER_SEARCH_PATHS = (
-					$QTS/include,
-					$QTS/include/QtCore,
-					$QTS/include/QtGui,
-					$QTS/include/QtOpenGL,
-					/System/Library/Frameworks/OpenGL.framework/Headers,
-					/System/Library/Frameworks/AGL.framework,
-				);
-				INFOPLIST_FILE = tools/PwMoviePlayer/Info.plist;
-				INSTALL_PATH = "$(USER_APPS_DIR)";
-				LIBRARY_SEARCH_PATHS = (
-					/usr/lib,
-					$QTS/lib,
-				);
-				OBJROOT = "$(SRCROOT)";
-				OTHER_CFLAGS = (
-					"-DQT_ACCESSIBILITY_SUPPORT",
-					"-DQT_TABLET_SUPPORT",
-					"-DQT_NO_DEBUG",
-					"-Wno-deprecated",
-				);
-				OTHER_LDFLAGS = (
-					"-lQtGui_debug",
-					"-lQtCore_debug",
-					"-lQtOpenGL_debug",
-					"-lz",
-					"-liconv",
-				);
-				OTHER_REZFLAGS = "";
-				PREBINDING = YES;
-				PRODUCT_NAME = PwMoviePlayer;
-				SECTORDER_FLAGS = "";
-				SYMROOT = "$(SRCROOT)";
-				WARNING_CFLAGS = (
-					"-Wmost",
-					"-Wno-four-char-constants",
-					"-Wno-unknown-pragmas",
-				);
-				ZERO_LINK = NO;
-			};
-			name = "Development-static";
-		};
-		76AB9E5F0CA4E45200DA1161 /* Development-static */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-			};
-			name = "Development-static";
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1942,66 +1609,56 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				760C2C95101AC7DD00F5F662 /* Development */,
-				760C2C96101AC7DD00F5F662 /* Development-static */,
 				760C2C97101AC7DD00F5F662 /* Optimized */,
 				760C2C98101AC7DD00F5F662 /* Release */,
 				760C2C99101AC7DD00F5F662 /* Profiling */,
-				760C2C9A101AC7DD00F5F662 /* Default */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Default;
+			defaultConfigurationName = Development;
 		};
 		760C3551101BD04500F5F662 /* Build configuration list for PBXAggregateTarget "All" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				760C3549101BD01500F5F662 /* Development */,
-				760C354A101BD01500F5F662 /* Development-static */,
 				760C354B101BD01500F5F662 /* Optimized */,
 				760C354C101BD01500F5F662 /* Release */,
 				760C354D101BD01500F5F662 /* Profiling */,
-				760C354E101BD01500F5F662 /* Default */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Default;
+			defaultConfigurationName = Development;
 		};
 		76293F0E0981AF4600D27C6E /* Build configuration list for PBXNativeTarget "Polyworld" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				76293F0F0981AF4600D27C6E /* Development */,
-				76AB9E5B0CA4E45200DA1161 /* Development-static */,
 				76293F100981AF4600D27C6E /* Optimized */,
 				760EF64309EF188F00C0FAA5 /* Release */,
 				76293F110981AF4600D27C6E /* Profiling */,
-				76293F120981AF4600D27C6E /* Default */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Default;
+			defaultConfigurationName = Development;
 		};
 		76293F180981AF4600D27C6E /* Build configuration list for PBXNativeTarget "PwMoviePlayer" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				76293F190981AF4600D27C6E /* Development */,
-				76AB9E5D0CA4E45200DA1161 /* Development-static */,
 				76293F1A0981AF4600D27C6E /* Optimized */,
 				760EF64509EF188F00C0FAA5 /* Release */,
 				76293F1B0981AF4600D27C6E /* Profiling */,
-				76293F1C0981AF4600D27C6E /* Default */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Default;
+			defaultConfigurationName = Development;
 		};
 		76293F1D0981AF4600D27C6E /* Build configuration list for PBXProject "Polyworld" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				76293F1E0981AF4600D27C6E /* Development */,
-				76AB9E5F0CA4E45200DA1161 /* Development-static */,
 				76293F1F0981AF4600D27C6E /* Optimized */,
 				760EF64709EF188F00C0FAA5 /* Release */,
 				76293F200981AF4600D27C6E /* Profiling */,
-				76293F210981AF4600D27C6E /* Default */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Default;
+			defaultConfigurationName = Development;
 		};
 /* End XCConfigurationList section */
 	};

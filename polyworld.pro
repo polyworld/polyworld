@@ -64,43 +64,34 @@ INCLUDEPATH +=	. \
 
 macx {
 	message(compiling for Mac OS X)
-	INCLUDEPATH +=	$(QT)/include \
-			$(QT)/include/QtOpenGL \
-			/sw/include \
-			/System/Library/Frameworks/AGL.framework/Versions/A/Headers/
+	INCLUDEPATH +=	/System/Library/Frameworks/AGL.framework/Versions/A/Headers/
 }
 
 unix:!macx {
 	message(compiling for Linux)
-	INCLUDEPATH +=	$(QT)/include \
-			$(QT)/include/QtOpenGL \
-			$(QT)/include/QtCore \
-			$(QT)/include/QtGui \
-			/usr/include/GL/
+	INCLUDEPATH +=	/usr/include/GL/
 }
 
 win32 {
-	message(compiling for Windows)
-	INCLUDEPATH +=	$(QT)/include \
-			$(QT)/include/QtOpenGL				
 }
 
+# _GLIBCXX_DEBUG was added here, but it causes gdb problems on linux (bad in-memory datastructure layouts)
 QMAKE_CFLAGS_DEBUG += -D_GLIBCXX_DEBUG_PEDANTIC -Wno-deprecated
 QMAKE_CFLAGS += -Wno-deprecated
 
 macx {
-    # _GLIBCXX_DEBUG causes gdb problems on linux (bad in-memory datastructure layouts)
-	QMAKE_CFLAGS_DEBUG += -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC -Wno-deprecated
-	LIBS	+=	-F$(QT)/lib/ -L/sw/lib -framework QtOpenGL -framework OpenGL -framework AGL -lgsl -lgslcblas -lm
+    # _GLIBCXX_DEBUG added here because it causes gdb problems on linux (bad in-memory datastructure layouts)
+	QMAKE_CFLAGS_DEBUG += -D_GLIBCXX_DEBUG
+	LIBS	+=	-framework AGL -lgsl -lgslcblas -lm
 }
 
 unix:!macx {
-	LIBS	+=	-L$(QT)/lib/ -lQtOpenGL -lgsl -lgslcblas
+	LIBS	+=	-lgsl -lgslcblas
 
-        # OpenMP Flags
-        LIBS += -lgomp
-        QMAKE_CFLAGS_DEBUG += -fopenmp
-        QMAKE_CFLAGS += -fopenmp
+	# OpenMP Flags
+	LIBS += -lgomp
+	QMAKE_CFLAGS_DEBUG += -fopenmp
+	QMAKE_CFLAGS += -fopenmp
 }
 
 win32 {
