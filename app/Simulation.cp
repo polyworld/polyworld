@@ -3337,7 +3337,7 @@ void TSimulation::Interact()
                 //newAgents.add(newAgent); // add it to the full list later; the e->listLink that gets auto stored here must be replaced with one from full list below
 				fNeuronGroupCountStats.add( newAgent->Brain()->NumNeuronGroups() );
 				
-				Birth(c, NULL, NULL);
+				Birth(newAgent, NULL, NULL);
 
 				if( fRecordBirthsDeaths )
 				{
