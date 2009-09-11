@@ -1,0 +1,144 @@
+import os
+import sys
+
+from scons_util import exclude, find, init_env, relocate_paths
+from scons_util import import_OpenGL, import_OpenMP, import_GSL, import_Qt
+
+SRCDIRS = ['src/' + x
+           for x in ['agent',
+                     'app',
+                     'complexity',
+                     'environment',
+                     'graphics',
+                     'motion',
+                     'tools',
+                     'ui',
+                     'utils']]
+
+def build():
+    envs = env_create()
+
+    Default( build_Polyworld(envs['Polyworld']) )
+    Default( build_CalcComplexity(envs['CalcComplexity']) )
+    Default( build_PwMoviePlayer(envs['PwMoviePlayer']) )
+    Default( build_pwtxt(envs['pwtxt']) )
+
+def build_Polyworld(env):
+    blddir = '.bld/Polyworld'
+
+    srcdirs = exclude(SRCDIRS, ['src/tools'])
+
+    sources = Flatten([find(srcdir,
+                            name = '*.cp')
+                       for srcdir in srcdirs])
+
+    env.BuildDir(blddir, 'src', False)
+
+    return env.Program('Polyworld',
+                       relocate_paths(sources,
+                                      'src',
+                                      blddir))
+
+def build_CalcComplexity(env):
+    blddir = '.bld/CalcComplexity'
+
+    sources = find('src/tools/CalcComplexity',
+                   name = '*.cpp')
+    sources += find('src/complexity',
+                    name = '*.cp')
+    sources += ['src/motion/PositionPath.cp',
+                'src/motion/PositionReader.cp']
+
+    env.BuildDir(blddir, 'src', False)
+
+    return env.Program('bin/CalcComplexity',
+                       relocate_paths(sources,
+                                      'src',
+                                      blddir))
+
+def build_PwMoviePlayer(env):
+    blddir = '.bld/PwMoviePlayer'
+
+    sources = find('src/tools/PwMoviePlayer',
+                   name = '*.cp')
+    sources += ['src/utils/PwMovieUtils.cp']
+
+    env.BuildDir(blddir, 'src', False)
+
+    return env.Program('bin/PwMoviePlayer',
+                       relocate_paths(sources,
+                                      'src',
+                                      blddir))
+
+def build_pwtxt(env):
+    blddir = '.bld/pwtxt'
+
+    sources = find('src/tools/pwtxt',
+                   name = '*.cpp')
+    sources += ['src/motion/PositionPath.cp',
+                'src/motion/PositionReader.cp']
+
+    env.BuildDir(blddir, 'src', False)
+
+    return env.Program('bin/pwtxt',
+                       relocate_paths(sources,
+                                      'src',
+                                      blddir))
+
+def env_create():
+    envs = {}
+
+    env = env_common = init_env(Environment())
+    env.Append( CPPSUFFIXES = ['.cp'] )
+    env.Append( CPPFLAGS = ['-g'] )
+    env.Append( CPPPATH = find('src',
+                               type = 'dir') )
+    import_OpenMP(env)
+    import_GSL(env)
+
+    env = envs['Polyworld'] = env_common.Clone()    
+    import_OpenGL(env)
+    import_Qt(env,
+              qtversion = 4,
+              qtmodules = ['QtCore',
+                           'QtGui',
+                           'QtOpenGL'])
+
+    envs['CalcComplexity'] = env_common.Clone()
+
+    envs['PwMoviePlayer'] = envs['Polyworld'].Clone()
+
+    envs['pwtxt'] = env_common.Clone()
+
+    return envs
+
+def hack_addCpExtension():
+    # treat *.cp as C++ source
+    module = __import__('SCons.Tool.c++',
+                        globals(),
+                        locals(),
+                        ['CXXSuffixes'])
+    module.CXXSuffixes += ['.cp']
+
+    # scan *.cp for #include
+    from SCons.Scanner.C import CScanner
+    builder_object = DefaultEnvironment()["BUILDERS"]["Object"]
+    builder_object.source_scanner.add_scanner('.cp',
+                                              CScanner())
+
+def hack_createSrcDir():
+    if not os.path.exists('src'):
+        os.mkdir('src')
+
+    for dir in SRCDIRS:
+        if not os.path.exists(dir):
+            src = '../' + dir[4:] # strip src/
+            dst = dir
+            os.symlink(src,dst)
+
+################################################################################
+
+hack_addCpExtension()
+hack_createSrcDir()
+
+build()

@@ -25,7 +25,7 @@ function parentdir() {
     readlink -f `dirname "$1"`/..
 }
 
-CALLER="$1"
+CALLER=`readlink -f "$1"`
 shift
 
 if [ -z "${CALLER}" ]; then
@@ -36,7 +36,15 @@ else
     fi
 fi
 
-. `dirname "${CALLER}"`/env_init.sh `parentdir "${CALLER}"`
+SCRIPT_DIR=`dirname ${CALLER}`
+while [ ! -f "${SCRIPT_DIR}/env_init.sh" ]; do
+    if [ "${SCRIPT_DIR}" == "/" ]; then
+	err "Cannot locate env_init.sh"
+    fi
+    SCRIPT_DIR=`dirname ${SCRIPT_DIR}`
+done
+
+. "${SCRIPT_DIR}/env_init.sh" `dirname ${SCRIPT_DIR}`
 
 if [ -z "${PW_HOME}" ]; then
     err "That's not possible! env_check.sh is confused."
@@ -67,6 +75,12 @@ for arg in "$@"; do
 	    ECHO_VAL="${PW_OPEN}"
 	    if [ ! -x "${ECHO_VAL}" ]; then
 		err "Cannot determine open command."
+	    fi
+	    ;;
+	archive)
+	    ECHO_VAL="${PW_SCRIPTS}/util/archive.sh"
+	    if [ ! -x "${ECHO_VAL}" ]; then
+		err "Cannot locate archive.sh"
 	    fi
 	    ;;
 	*)

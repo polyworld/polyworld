@@ -1,0 +1,10 @@
+[PROJECT]
+name = polyworld
+home = ../..
+
+[PACKAGE]
+exclude = *~, .*, *.lproj, *.plist, *.pyc, *.txt, ./bin, */CVS/*, ./docs, ./run*, src, worldfile*
+
+[INSTALL]
+dir = ~/.polyworld/cluster-install
+cmd = ./scripts/cluster/__install-host.sh

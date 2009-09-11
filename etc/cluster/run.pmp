@@ -1,0 +1,7 @@
+[INPUT]
+dir = ../..
+include = worldfile
+
+[RUN]
+dir = ~/.polyworld/cluster-install
+cmd = ./scripts/cluster/__run-host.sh

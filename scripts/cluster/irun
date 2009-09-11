@@ -1,0 +1,5 @@
+#!/bin/bash
+
+dir=`dirname $0`
+
+$dir/install.sh && $dir/run.sh
