@@ -336,9 +336,13 @@ def get_cmd_stdout(cmd):
 #################################################
 def env_check(args):
 	program = os.path.abspath(__progpath)
+
 	try:
 		dir = os.getenv('PW_SCRIPTS')
-	except KeyError:
+	except:
+		pass
+
+	if dir == None:
 		dir = os.path.dirname(program)
 
 	env_check = dir + '/env_check.sh'
