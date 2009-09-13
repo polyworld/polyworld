@@ -205,7 +205,6 @@
 		76C2314F09D0B4AA00EB652A /* OverheadView.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = OverheadView.h; sourceTree = "<group>"; };
 		76CBA55D062BED8E001C79E7 /* debug.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = debug.cp; sourceTree = "<group>"; };
 		76CBA55E062BED8E001C79E7 /* debug.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = debug.h; sourceTree = "<group>"; };
-		76CBA55F062BED8E001C79E7 /* dumpload.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = dumpload.cp; sourceTree = "<group>"; };
 		76CBA560062BED8E001C79E7 /* globals.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = globals.cp; sourceTree = "<group>"; };
 		76CBA561062BED8E001C79E7 /* globals.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = globals.h; sourceTree = "<group>"; };
 		76CBA562062BED8E001C79E7 /* PWApp.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = PWApp.cp; sourceTree = "<group>"; };
@@ -504,7 +503,6 @@
 			children = (
 				76CBA55D062BED8E001C79E7 /* debug.cp */,
 				76CBA55E062BED8E001C79E7 /* debug.h */,
-				76CBA55F062BED8E001C79E7 /* dumpload.cp */,
 				76CBA560062BED8E001C79E7 /* globals.cp */,
 				76CBA561062BED8E001C79E7 /* globals.h */,
 				76CBA562062BED8E001C79E7 /* PWApp.cp */,
@@ -1186,6 +1184,7 @@
 					ppc,
 					i386,
 				);
+				GCC_VERSION = 4.2;
 			};
 			name = Release;
 		};
@@ -1587,18 +1586,21 @@
 		76293F1E0981AF4600D27C6E /* Development */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				GCC_VERSION = 4.2;
 			};
 			name = Development;
 		};
 		76293F1F0981AF4600D27C6E /* Optimized */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				GCC_VERSION = 4.2;
 			};
 			name = Optimized;
 		};
 		76293F200981AF4600D27C6E /* Profiling */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				GCC_VERSION = 4.2;
 			};
 			name = Profiling;
 		};
