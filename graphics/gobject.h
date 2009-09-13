@@ -86,7 +86,7 @@ public:
     float GetGreen();
     float GetBlue();
     
-    void SetName(char* pc);
+    void SetName(const char* pc);
     char* GetName();
     
     float* getposptr();    

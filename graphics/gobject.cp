@@ -100,7 +100,7 @@ void gobject::draw()
 }
 
 
-void gobject::SetName(char* pc)
+void gobject::SetName(const char* pc)
 {
     fName = new char[strlen(pc)+1];
     if (fName == NULL)
