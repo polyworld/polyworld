@@ -1,0 +1,15 @@
+#!/bin/bash
+
+cd `dirname $0`/../..
+
+if [ -e worldfile ]; then
+   if [ ! -e .worldfile.regression ]; then
+       mv worldfile .worldfile.regression
+   fi
+fi
+
+scripts/regression/__run.sh
+
+if [ -e .worldfile.regression ]; then
+    mv .worldfile.regression worldfile
+fi
