@@ -16,6 +16,7 @@ packages="\
 	libgsl0-dev \
 	libqt4-opengl-dev \
 	scons \
+	gnuplot \
 "
 
 for pkg in $packages; do
