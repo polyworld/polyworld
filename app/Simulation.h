@@ -449,6 +449,7 @@ private:
 //	bool fShowBrain;
 	bool fShowTextStatus;
 	bool fRecordGeneStats;
+	bool fRecordPerformanceStats;
 	bool fRecordFoodPatchStats;
 	
 	std::string fComplexityType;

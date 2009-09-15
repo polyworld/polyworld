@@ -1,4 +1,4 @@
-34		version
+35		version
 
 0		LockStepWithBirthsDeathsLog
 
@@ -373,6 +373,7 @@ O		smiteMode_R=random|L=leastfit|O=off
 1000	bestRecentBrainAnatonomyRecordFrequency
 1000	bestRecentBrainFunctionRecordFrequency
 1		recordGeneStats
+1		recordPerformanceStats
 0		recordFoodPatchStats
 0		recordComplexity
 P		complexityType_P=processing|A=all|I=input|B=behavior|D=processing-input|Z=ZeroMaxVelocityHack

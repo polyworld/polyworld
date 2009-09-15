@@ -2,14 +2,20 @@
 
 cd `dirname $0`/../..
 
+rm -rf regression
+mkdir regression
+
 if [ -e worldfile ]; then
    if [ ! -e .worldfile.regression ]; then
        mv worldfile .worldfile.regression
    fi
 fi
 
-scripts/regression/__run.sh
 
-if [ -e .worldfile.regression ]; then
-    mv .worldfile.regression worldfile
+if scripts/regression/__run.sh $*; then
+    # test was successful, so cleanup
+    rm -rf regression
+    if [ -e .worldfile.regression ]; then
+	mv .worldfile.regression worldfile
+    fi
 fi

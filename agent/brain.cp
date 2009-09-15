@@ -41,6 +41,7 @@
 #include "agent.h"
 #include "debug.h"
 #include "misc.h"
+#include "RandomNumberGenerator.h"
 #include "Simulation.h"
 
 
@@ -173,6 +174,8 @@ brain::brain(agent *_self)
 	if (!brain::classinited)
 		braininit();	
 
+	rng = RandomNumberGenerator::create( RandomNumberGenerator::BRAIN );
+
 	retinaBuf = (unsigned char *)calloc(brain::retinawidth * 4, sizeof(unsigned char));
 //	cout << "allocated retinaBuf of 4 * width bytes, where width" ses brain::retinawidth nl;
     Q_CHECK_PTR(retinaBuf);
@@ -191,6 +194,8 @@ brain::~brain()
 	free(groupblrate);
 	free(grouplrate);
 	free(retinaBuf);
+
+	RandomNumberGenerator::dispose( rng );
 }
 
 //---------------------------------------------------------------------------
@@ -862,9 +867,9 @@ void brain::GrowDesignedBrain( genome* g )
 				
                 for (isyn = 0; isyn < newsyn; isyn++)
                 {
-                    if (randpw() < tdij)
+                    if (rng->drand() < tdij)
                     {
-                        disneur = short(nint(rrand(-0.5,0.5)*tdij*nneurj));
+                        disneur = short(nint(rng->range(-0.5,0.5)*tdij*nneurj));
                         jneur = isyn + joff + disneur;
                         
                         if (jneur < 0)
@@ -967,9 +972,9 @@ void brain::GrowDesignedBrain( genome* g )
 				
                 for (isyn = 0; isyn < newsyn; isyn++)
                 {
-                    if (randpw() < tdij)
+                    if (rng->drand() < tdij)
                     {
-                        disneur = short(nint(rrand(-0.5,0.5)*tdij*nneurj));
+                        disneur = short(nint(rng->range(-0.5,0.5)*tdij*nneurj));
                         jneur = isyn + joff + disneur;
                         if (jneur < 0)
                             jneur += nneurj;
@@ -1101,9 +1106,9 @@ void brain::GrowDesignedBrain( genome* g )
 				
                 for (isyn = 0; isyn < newsyn; isyn++)
                 {
-                    if (randpw() < tdij)
+                    if (rng->drand() < tdij)
                     {
-                        disneur = short(nint(rrand(-0.5,0.5)*tdij*nneurj));
+                        disneur = short(nint(rng->range(-0.5,0.5)*tdij*nneurj));
                         jneur = isyn + joff + disneur;
                         if (jneur < 0)
                             jneur += nneurj;
@@ -1199,9 +1204,9 @@ void brain::GrowDesignedBrain( genome* g )
 				
                 for (isyn = 0; isyn < newsyn; isyn++)
                 {
-                    if (randpw() < tdij)
+                    if (rng->drand() < tdij)
                     {
-                        disneur = short(nint(rrand(-0.5,0.5)*tdij*nneurj));
+                        disneur = short(nint(rng->range(-0.5,0.5)*tdij*nneurj));
                         jneur = isyn + joff + disneur;
                         if (jneur < 0)
                             jneur += nneurj;
@@ -1272,8 +1277,8 @@ void brain::GrowDesignedBrain( genome* g )
     {
         // load up the retinabuf with noise
         for (j = 0; j < (brain::retinawidth * 4); j++)
-            retinaBuf[j] = (unsigned char)(rrand(0.0, 255.0));
-        Update(randpw());
+            retinaBuf[j] = (unsigned char)(rng->range(0.0, 255.0));
+        Update(rng->drand());
     }
 #endif
 }
@@ -1658,9 +1663,9 @@ void brain::Grow( genome* g, long agentNumber, bool recordBrainAnatomy )
 				
                 for (isyn = 0; isyn < newsyn; isyn++)
                 {
-                    if (randpw() < tdij)
+                    if (rng->drand() < tdij)
                     {
-                        disneur = short(nint(rrand(-0.5,0.5)*tdij*nneurj));
+                        disneur = short(nint(rng->range(-0.5,0.5)*tdij*nneurj));
                         jneur = isyn + joff + disneur;
                         
                         if (jneur < 0)
@@ -1692,7 +1697,7 @@ void brain::Grow( genome* g, long agentNumber, bool recordBrainAnatomy )
                     if (ineur == jneur)
                         synapse[numsyn].efficacy = 0.0;
                     else
-                        synapse[numsyn].efficacy = rrand(initminweight, gInitMaxWeight);
+                        synapse[numsyn].efficacy = rng->range(initminweight, gInitMaxWeight);
 
 #if DebugBrainGrow
                     cout << "        synapse[" << numsyn
@@ -1753,9 +1758,9 @@ void brain::Grow( genome* g, long agentNumber, bool recordBrainAnatomy )
 				
                 for (isyn = 0; isyn < newsyn; isyn++)
                 {
-                    if (randpw() < tdij)
+                    if (rng->drand() < tdij)
                     {
-                        disneur = short(nint(rrand(-0.5,0.5)*tdij*nneurj));
+                        disneur = short(nint(rng->range(-0.5,0.5)*tdij*nneurj));
                         jneur = isyn + joff + disneur;
                         if (jneur < 0)
                             jneur += nneurj;
@@ -1786,7 +1791,7 @@ void brain::Grow( genome* g, long agentNumber, bool recordBrainAnatomy )
                     if (ineur == jneur) // can't happen anymore?
                         synapse[numsyn].efficacy = 0.0;
                     else
-                        synapse[numsyn].efficacy = min(-1.e-10, -rrand(initminweight, gInitMaxWeight));
+                        synapse[numsyn].efficacy = min(-1.e-10, -rng->range(initminweight, gInitMaxWeight));
 
 #if DebugBrainGrow
                     cout << "        synapse[" << numsyn
@@ -1877,9 +1882,9 @@ void brain::Grow( genome* g, long agentNumber, bool recordBrainAnatomy )
 				
                 for (isyn = 0; isyn < newsyn; isyn++)
                 {
-                    if (randpw() < tdij)
+                    if (rng->drand() < tdij)
                     {
-                        disneur = short(nint(rrand(-0.5,0.5)*tdij*nneurj));
+                        disneur = short(nint(rng->range(-0.5,0.5)*tdij*nneurj));
                         jneur = isyn + joff + disneur;
                         if (jneur < 0)
                             jneur += nneurj;
@@ -1910,7 +1915,7 @@ void brain::Grow( genome* g, long agentNumber, bool recordBrainAnatomy )
                     if (ineur == jneur) // can't happen anymore?
                         synapse[numsyn].efficacy = 0.0;
                     else
-                        synapse[numsyn].efficacy = rrand(initminweight, gInitMaxWeight);
+                        synapse[numsyn].efficacy = rng->range(initminweight, gInitMaxWeight);
 
 #if DebugBrainGrow
                     cout << "        synapse[" << numsyn
@@ -1965,9 +1970,9 @@ void brain::Grow( genome* g, long agentNumber, bool recordBrainAnatomy )
 				
                 for (isyn = 0; isyn < newsyn; isyn++)
                 {
-                    if (randpw() < tdij)
+                    if (rng->drand() < tdij)
                     {
-                        disneur = short(nint(rrand(-0.5,0.5)*tdij*nneurj));
+                        disneur = short(nint(rng->range(-0.5,0.5)*tdij*nneurj));
                         jneur = isyn + joff + disneur;
                         if (jneur < 0)
                             jneur += nneurj;
@@ -1998,7 +2003,7 @@ void brain::Grow( genome* g, long agentNumber, bool recordBrainAnatomy )
                     if (ineur == jneur) // can't happen anymore?
                         synapse[numsyn].efficacy = 0.0;
                     else
-                        synapse[numsyn].efficacy = min(-1.e-10, -rrand(initminweight, gInitMaxWeight));
+                        synapse[numsyn].efficacy = min(-1.e-10, -rng->range(initminweight, gInitMaxWeight));
 
 #if DebugBrainGrow
                     cout << "        synapse[" << numsyn
@@ -2063,11 +2068,11 @@ void brain::Grow( genome* g, long agentNumber, bool recordBrainAnatomy )
     {
         // load up the retinabuf with noise
         for (j = 0; j < (brain::retinawidth * 4); j++)
-            retinaBuf[j] = (unsigned char)(rrand(0.0, 255.0));
+            retinaBuf[j] = (unsigned char)(rng->range(0.0, 255.0));
 #if SPIKING_MODEL
-			UpdateSpikes(randpw(),NULL);
+			UpdateSpikes(rng->drand(),NULL);
 #else	
-			Update(randpw());
+			Update(rng->drand());
 #endif
     }
 	
@@ -2118,7 +2123,7 @@ void brain::Update(float energyfraction)
     }
 #endif // PRINTBRAIN
 
-    neuronactivation[randomneuron] = randpw();
+    neuronactivation[randomneuron] = rng->drand();
     neuronactivation[energyneuron] = energyfraction;
     
     short pixel;
@@ -2846,8 +2851,8 @@ void brain::UpdateSpikes(float energyfraction, FILE * fHandle)
 #endif // PRINTBRAIN
 	
 	//#############################################################################################################
-//    inputFiringProbability[randomneuron] = randpw() * MaxFiringRatePerSecond * SecondsPerBrainStep;
-	inputFiringProbability[randomneuron] = randpw();
+//    inputFiringProbability[randomneuron] = rng->drand() * MaxFiringRatePerSecond * SecondsPerBrainStep;
+	inputFiringProbability[randomneuron] = rng->drand();
 	neuronactivation[randomneuron] = 0;
 //    inputFiringProbability[energyneuron] = energyfraction * MaxFiringRatePerSecond * SecondsPerBrainStep;
     inputFiringProbability[energyneuron] = energyfraction;
@@ -3095,7 +3100,7 @@ void brain::UpdateSpikes(float energyfraction, FILE * fHandle)
 		for (i = 0; i < firstnoninputneuron; i++)
 		{
 //			printf("input firing prob = %f\n", inputFiringProbability[i]);
-			if( randpw() < inputFiringProbability[i])
+			if( rng->drand() < inputFiringProbability[i])
 			{
 			
 				spikeMatrix[i][n_steps] = '1'; //This is strictly for debug printout purposes
@@ -3151,7 +3156,7 @@ void brain::UpdateSpikes(float energyfraction, FILE * fHandle)
 			
 #if USE_BIAS			
 			//stochastically generate bias
-			if (randpw() < (1.0 / (1.0 + exp(-1 * neuron[i].bias * .5))))
+			if (rng->drand() < (1.0 / (1.0 + exp(-1 * neuron[i].bias * .5))))
 				newneuronactivation[i] += BIAS_INJECTED_VOLTAGE;
 #endif
 			

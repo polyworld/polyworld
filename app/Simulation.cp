@@ -14,7 +14,7 @@
 #define MinDebugStep 0
 #define MaxDebugStep INT_MAX
 
-#define CurrentWorldfileVersion 34
+#define CurrentWorldfileVersion 35
 
 #define TournamentSelection 1
 
@@ -50,6 +50,7 @@
 #include "food.h"
 #include "globals.h"
 #include "food.h"
+#include "RandomNumberGenerator.h"
 #include "Resources.h"
 #include "SceneView.h"
 #include "TextStatusWindow.h"
@@ -1208,6 +1209,13 @@ void TSimulation::Init()
 	// Initialize world state from saved file if present
 	ReadWorldFile("worldfile");
 	
+	if( fStaticTimestepGeometry )
+	{
+		// Brains execute in parallel, so we need brain-local RNG state
+		RandomNumberGenerator::set( RandomNumberGenerator::BRAIN,
+									RandomNumberGenerator::LOCAL );
+	}
+
 	InitNeuralValues();	 // Must be called before genome and brain init
 	
 	genome::genomeinit();
@@ -1890,6 +1898,7 @@ void TSimulation::InitWorld()
 	fStaticTimestepGeometry = false;
 	fRecordMovie = false;
 	fMovieFile = NULL;
+	fRecordPerformanceStats = true;
 
     fFitI = 0;
     fFitJ = 1;
@@ -5416,6 +5425,11 @@ void TSimulation::ReadWorldFile(const char* filename)
 		cout << "recordGeneStats" ses fRecordGeneStats nl;
 	}
 
+	if( version >= 35 )
+	{
+		PROP( RecordPerformanceStats );
+	}
+
 	if( version >= 15 )
 	{
 		in >> fRecordFoodPatchStats; in >> label;
@@ -6082,11 +6096,14 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 	sprintf( t, "CurNeurGroups = %.1f ± %.1f [%lu, %lu]", fCurrentNeuronGroupCountStats.mean(), fCurrentNeuronGroupCountStats.stddev(), (ulong) fCurrentNeuronGroupCountStats.min(), (ulong) fCurrentNeuronGroupCountStats.max() );
 	list.push_back( strdup( t ) );
 
-	sprintf( t, "Rate %2.1f (%2.1f) %2.1f (%2.1f) %2.1f (%2.1f)",
-				fFramesPerSecondInstantaneous, fSecondsPerFrameInstantaneous,
-				fFramesPerSecondRecent,        fSecondsPerFrameRecent,
-				fFramesPerSecondOverall,       fSecondsPerFrameOverall  );
-	list.push_back( strdup( t ) );
+	if( fRecordPerformanceStats )
+	{
+		sprintf( t, "Rate %2.1f (%2.1f) %2.1f (%2.1f) %2.1f (%2.1f)",
+				 fFramesPerSecondInstantaneous, fSecondsPerFrameInstantaneous,
+				 fFramesPerSecondRecent,        fSecondsPerFrameRecent,
+				 fFramesPerSecondOverall,       fSecondsPerFrameOverall  );
+		list.push_back( strdup( t ) );
+	}
 	
 	if( fRecordFoodPatchStats )
 	{

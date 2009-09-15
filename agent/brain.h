@@ -88,6 +88,7 @@ struct synapsestruct
 // Forward declarations
 class agent;
 class genome;
+class RandomNumberGenerator;
 
 
 //===========================================================================
@@ -204,6 +205,8 @@ protected:
 	short neuronsize;
 	short neuronactivationsize;
 	long synapsesize;
+
+	RandomNumberGenerator *rng;
     
     void AllocateBrainMemory();
     short NearestFreeNeuron(short iin, bool* used, short num, short exclude);
