@@ -2782,7 +2782,7 @@ void TSimulation::Interact()
 					 ((d->Age() - d->LastMate()) >= fMateWait) &&  // and some time
 					 (c->Energy() > fMinMateFraction * c->MaxEnergy()) &&
 					 (d->Energy() > fMinMateFraction * d->MaxEnergy()) && // and energy
-					 ((fEatMateSpan == 0) || ((c->LastEat()-fStep < fEatMateSpan) && (d->LastEat()-fStep < fEatMateSpan))) &&	// and they've eaten recently enough (if we're enforcing that)
+					 ((fEatMateSpan == 0) || ((fStep-c->LastEat() < fEatMateSpan) && (fStep-d->LastEat() < fEatMateSpan))) &&	// and they've eaten recently enough (if we're enforcing that)
 					 (kd == 1) && (jd == 1) ) // in the safe domain
 			#else
 				if( !fLockStepWithBirthsDeathsLog &&
