@@ -48,6 +48,7 @@
 		7624C7D00A4A0CD5006A2B7C /* FoodPatch.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7624C7CA0A4A0CD5006A2B7C /* FoodPatch.cp */; };
 		7624C7D20A4A0CD5006A2B7C /* Patch.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7624C7CC0A4A0CD5006A2B7C /* Patch.cp */; };
 		7624C7F10A4A204A006A2B7C /* distributions.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7624C7EE0A4A204A006A2B7C /* distributions.cp */; };
+		762A43921061C79C0079A7F0 /* RandomNumberGenerator.cp in Sources */ = {isa = PBXBuildFile; fileRef = 762A43901061C79C0079A7F0 /* RandomNumberGenerator.cp */; };
 		7668D1690885AC65004158C6 /* PwMovieUtils.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7668D1680885AC65004158C6 /* PwMovieUtils.cp */; };
 		7668D2F208864A7E004158C6 /* PwMovieUtils.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7668D1680885AC65004158C6 /* PwMovieUtils.cp */; };
 		7668D30008864B8A004158C6 /* PwMoviePlayer.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7668D2FF08864B8A004158C6 /* PwMoviePlayer.cp */; };
@@ -185,6 +186,8 @@
 		7624C7EE0A4A204A006A2B7C /* distributions.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = distributions.cp; sourceTree = "<group>"; };
 		7624C7EF0A4A204A006A2B7C /* distributions.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = distributions.h; sourceTree = "<group>"; };
 		7624C7F00A4A204A006A2B7C /* graybin.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = graybin.h; sourceTree = "<group>"; };
+		762A43901061C79C0079A7F0 /* RandomNumberGenerator.cp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RandomNumberGenerator.cp; sourceTree = "<group>"; };
+		762A43911061C79C0079A7F0 /* RandomNumberGenerator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RandomNumberGenerator.h; sourceTree = "<group>"; };
 		7668D1680885AC65004158C6 /* PwMovieUtils.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = PwMovieUtils.cp; sourceTree = "<group>"; };
 		7668D16A0885AD07004158C6 /* PwMovieUtils.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = PwMovieUtils.h; sourceTree = "<group>"; };
 		7668D2E308864A66004158C6 /* PwMoviePlayer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PwMoviePlayer.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -618,6 +621,8 @@
 				76D32E0E09E62F9200394ACE /* objectxsortedlist.h */,
 				7668D1680885AC65004158C6 /* PwMovieUtils.cp */,
 				7668D16A0885AD07004158C6 /* PwMovieUtils.h */,
+				762A43901061C79C0079A7F0 /* RandomNumberGenerator.cp */,
+				762A43911061C79C0079A7F0 /* RandomNumberGenerator.h */,
 				76E9D47F101D1C0B007D602E /* Resources.cp */,
 				76E9D480101D1C0B007D602E /* Resources.h */,
 			);
@@ -885,6 +890,7 @@
 				760C2CCF101AC96700F5F662 /* PositionReader.cp in Sources */,
 				760C2CD0101AC96700F5F662 /* PositionWriter.cp in Sources */,
 				76E9D481101D1C0B007D602E /* Resources.cp in Sources */,
+				762A43921061C79C0079A7F0 /* RandomNumberGenerator.cp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
