@@ -7,19 +7,19 @@ function __err() {
 
 case `uname` in
     Linux)
-	PW_OS='linux'
-	PW_OPEN=`which gnome-open`
-	if [ -z "${PW_OPEN}" ]; then
-	    PW_OPEN=`which kde-open`
-	fi
-	;;
+		PW_OS='linux'
+		PW_OPEN=`which gnome-open`
+		if [ -z "${PW_OPEN}" ]; then
+			PW_OPEN=`which kde-open`
+		fi
+		;;
     Darwin)
-	PW_OS='mac'
-	PW_OPEN='open'
-	;;
+		PW_OS='mac'
+		PW_OPEN=`which open`
+		;;
     *)
-	__err "Unknown Operating System (`uname`)"
-	;;
+		__err "Unknown Operating System (`uname`)"
+		;;
 esac
 
 
