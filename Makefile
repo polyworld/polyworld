@@ -1,3 +1,5 @@
+# This file should never be executable
+
 SCONS = scons -f scripts/build/SConstruct
 
 .PHONY: all clean \
