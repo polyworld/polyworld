@@ -39,7 +39,6 @@
 		760C2CCE101AC96700F5F662 /* PositionPath.cp in Sources */ = {isa = PBXBuildFile; fileRef = 760C2CC4101AC96700F5F662 /* PositionPath.cp */; };
 		760C2CCF101AC96700F5F662 /* PositionReader.cp in Sources */ = {isa = PBXBuildFile; fileRef = 760C2CC6101AC96700F5F662 /* PositionReader.cp */; };
 		760C2CD0101AC96700F5F662 /* PositionWriter.cp in Sources */ = {isa = PBXBuildFile; fileRef = 760C2CC9101AC96700F5F662 /* PositionWriter.cp */; };
-		760C2D21101ADEDD00F5F662 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 76CBA7CC062D11C2001C79E7 /* OpenGL.framework */; };
 		760C2D4E101B9A8200F5F662 /* agent.obj in Resources */ = {isa = PBXBuildFile; fileRef = 760C2D4C101B9A8200F5F662 /* agent.obj */; };
 		760C2D4F101B9A8200F5F662 /* ground.obj in Resources */ = {isa = PBXBuildFile; fileRef = 760C2D4D101B9A8200F5F662 /* ground.obj */; };
 		760C3114101BB15900F5F662 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 760C3112101BB15900F5F662 /* InfoPlist.strings */; };
@@ -286,7 +285,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				760C2D21101ADEDD00F5F662 /* OpenGL.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -696,6 +694,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = NO;
+				ORGANIZATIONNAME = "Indiana University";
 			};
 			buildConfigurationList = 76293F1D0981AF4600D27C6E /* Build configuration list for PBXProject "Polyworld" */;
 			compatibilityVersion = "Xcode 2.4";
@@ -930,36 +929,20 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(NATIVE_ARCH)";
 				COPY_PHASE_STRIP = NO;
 				EXECUTABLE_EXTENSION = "";
 				EXECUTABLE_SUFFIX = "";
-				FRAMEWORK_SEARCH_PATHS = (
-					$QT/lib,
-					/sw/lib,
-				);
+				FRAMEWORK_SEARCH_PATHS = "";
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_OPTIMIZATION_LEVEL = 0;
-				HEADER_SEARCH_PATHS = (
-					$QT/include,
-					$QT/include/Qt,
-					$QT/include/QtGui,
-					/sw/include,
-					/System/Library/Frameworks/OpenGL.framework/Headers,
-					/System/Library/Frameworks/AGL.framework,
-				);
+				HEADER_SEARCH_PATHS = "";
 				INSTALL_PATH = bin;
-				LIBRARY_SEARCH_PATHS = (
-					$QT/lib,
-					/sw/lib,
-				);
+				LIBRARY_SEARCH_PATHS = "";
+				LINK_WITH_STANDARD_LIBRARIES = YES;
+				MACH_O_TYPE = mh_execute;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = (
-					"-framework",
-					QtCore,
-					"-framework",
-					QtGui,
-					"-framework",
-					QtOpenGL,
 					"-lz",
 					"-lgsl",
 					"-lgslcblas",
@@ -974,10 +957,19 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(NATIVE_ARCH)";
 				EXECUTABLE_EXTENSION = "";
 				EXECUTABLE_SUFFIX = "";
 				INSTALL_PATH = /usr/local/lib;
+				LINK_WITH_STANDARD_LIBRARIES = YES;
+				MACH_O_TYPE = mh_execute;
 				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = (
+					"-lz",
+					"-lgsl",
+					"-lgslcblas",
+					"-lm",
+				);
 				PREBINDING = NO;
 				PRODUCT_NAME = CalcComplexity;
 			};
@@ -987,13 +979,22 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(NATIVE_ARCH)";
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				EXECUTABLE_EXTENSION = "";
 				EXECUTABLE_SUFFIX = "";
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				INSTALL_PATH = /usr/local/lib;
+				LINK_WITH_STANDARD_LIBRARIES = YES;
+				MACH_O_TYPE = mh_execute;
 				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = (
+					"-lz",
+					"-lgsl",
+					"-lgslcblas",
+					"-lm",
+				);
 				PREBINDING = NO;
 				PRODUCT_NAME = CalcComplexity;
 				ZERO_LINK = NO;
@@ -1004,10 +1005,19 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(NATIVE_ARCH)";
 				EXECUTABLE_EXTENSION = "";
 				EXECUTABLE_SUFFIX = "";
 				INSTALL_PATH = /usr/local/lib;
+				LINK_WITH_STANDARD_LIBRARIES = YES;
+				MACH_O_TYPE = mh_execute;
 				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = (
+					"-lz",
+					"-lgsl",
+					"-lgslcblas",
+					"-lm",
+				);
 				PREBINDING = NO;
 				PRODUCT_NAME = CalcComplexity;
 			};
@@ -1016,6 +1026,7 @@
 		760C3549101BD01500F5F662 /* Development */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = "$(NATIVE_ARCH)";
 				COPY_PHASE_STRIP = NO;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_OPTIMIZATION_LEVEL = 0;
@@ -1026,6 +1037,7 @@
 		760C354B101BD01500F5F662 /* Optimized */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = "$(NATIVE_ARCH)";
 				PRODUCT_NAME = All;
 			};
 			name = Optimized;
@@ -1033,6 +1045,7 @@
 		760C354C101BD01500F5F662 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = "$(NATIVE_ARCH)";
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
@@ -1044,6 +1057,7 @@
 		760C354D101BD01500F5F662 /* Profiling */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = "$(NATIVE_ARCH)";
 				PRODUCT_NAME = All;
 			};
 			name = Profiling;
@@ -1051,7 +1065,8 @@
 		760EF64309EF188F00C0FAA5 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(NATIVE_ARCH)";
+				ARCHS = "$(ARCHS_STANDARD_32_BIT_PRE_XCODE_3_1)";
+				ARCHS_STANDARD_32_BIT_PRE_XCODE_3_1 = "ppc i386";
 				COPY_PHASE_STRIP = YES;
 				FRAMEWORK_SEARCH_PATHS = "";
 				GCC_ALTIVEC_EXTENSIONS = YES;
@@ -1133,7 +1148,8 @@
 		760EF64509EF188F00C0FAA5 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = i386;
+				ARCHS = "$(ARCHS_STANDARD_32_BIT_PRE_XCODE_3_1)";
+				ARCHS_STANDARD_32_BIT_PRE_XCODE_3_1 = "ppc i386";
 				COPY_PHASE_STRIP = YES;
 				FRAMEWORK_SEARCH_PATHS = "";
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
@@ -1186,10 +1202,8 @@
 		760EF64709EF188F00C0FAA5 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = (
-					ppc,
-					i386,
-				);
+				ARCHS = "$(ARCHS_STANDARD_32_BIT_PRE_XCODE_3_1)";
+				ARCHS_STANDARD_32_BIT_PRE_XCODE_3_1 = "ppc i386";
 				GCC_VERSION = 4.2;
 			};
 			name = Release;
@@ -1197,6 +1211,7 @@
 		76293F0F0981AF4600D27C6E /* Development */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = "$(NATIVE_ARCH)";
 				COPY_PHASE_STRIP = NO;
 				DEBUGGING_SYMBOLS = YES;
 				FRAMEWORK_SEARCH_PATHS = "";
@@ -1276,6 +1291,7 @@
 		76293F100981AF4600D27C6E /* Optimized */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = "$(NATIVE_ARCH)";
 				COPY_PHASE_STRIP = YES;
 				FRAMEWORK_SEARCH_PATHS = "";
 				GCC_ALTIVEC_EXTENSIONS = YES;
@@ -1357,6 +1373,7 @@
 		76293F110981AF4600D27C6E /* Profiling */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = "$(NATIVE_ARCH)";
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				FRAMEWORK_SEARCH_PATHS = "";
@@ -1434,6 +1451,7 @@
 		76293F190981AF4600D27C6E /* Development */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = "$(NATIVE_ARCH)";
 				COPY_PHASE_STRIP = NO;
 				DEBUGGING_SYMBOLS = YES;
 				FRAMEWORK_SEARCH_PATHS = "";
@@ -1487,6 +1505,7 @@
 		76293F1A0981AF4600D27C6E /* Optimized */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = "$(NATIVE_ARCH)";
 				COPY_PHASE_STRIP = YES;
 				FRAMEWORK_SEARCH_PATHS = "";
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
@@ -1539,6 +1558,7 @@
 		76293F1B0981AF4600D27C6E /* Profiling */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = "$(NATIVE_ARCH)";
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				FRAMEWORK_SEARCH_PATHS = "";
@@ -1592,6 +1612,7 @@
 		76293F1E0981AF4600D27C6E /* Development */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = "$(NATIVE_ARCH)";
 				GCC_VERSION = 4.2;
 			};
 			name = Development;
@@ -1599,6 +1620,7 @@
 		76293F1F0981AF4600D27C6E /* Optimized */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = "$(NATIVE_ARCH)";
 				GCC_VERSION = 4.2;
 			};
 			name = Optimized;
@@ -1606,6 +1628,7 @@
 		76293F200981AF4600D27C6E /* Profiling */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = "$(NATIVE_ARCH)";
 				GCC_VERSION = 4.2;
 			};
 			name = Profiling;
