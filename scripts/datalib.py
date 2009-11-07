@@ -19,7 +19,8 @@ class Table:
                  colnames,
                  coltypes,
                  path = None,
-                 index = None):
+                 index = None,
+                 keycolname = None):
         assert(len(colnames) == len(coltypes))
 
         self.name = name
@@ -27,12 +28,19 @@ class Table:
         self.coltypes = coltypes
         self.path = path
         self.index = index
+        self.keycolname = keycolname
 
         self.coldata = [[] for x in range(len(colnames))]
         self.collist = [Column(self, x) for x in range(len(colnames))]
         self.coldict = dict([(colnames[x], self.collist[x]) for x in range(len(colnames))])
 
         self.rowlist = []
+
+        self.keymap = {}
+
+    # override [] operator
+    def __getitem__(self, key):
+        return self.rowlist[self.keymap[key]]
 
     def rows(self):
         return self.rowlist
@@ -67,6 +75,14 @@ class Row:
         for col in self.table.columns():
             yield col.get(self.index)
 
+    # override [] operator
+    def __getitem__(self, colname):
+        return self.get(colname)
+
+    # override [] operator
+    def __setitem__(self, colname, value):
+        return self.set(colname, value)
+
     def get(self, colname):
         return self.table.coldict[colname].get(self.index)
 
@@ -88,6 +104,8 @@ class Column:
         self.name = table.colnames[index]
         self.data = table.coldata[index]
 
+        self.iskey = (self.name == table.keycolname)
+
         type = table.coltypes[index]
         if type == 'int':
             self.convert = int
@@ -104,13 +122,55 @@ class Column:
         return self.data[i]
 
     def set(self, i, value):
+        if self.iskey:
+            self.__clear_keymap(i)
+
         value = self.convert(value)
         self.data[i] = value
+
+        if self.iskey:
+            self.__update_keymap(i)
+
         return value
 
     def mutate(self, i, func):
+        if self.iskey:
+            self.__clear_keymap(i)
+
         value = self.data[i] = func(self.data[i])
+
+        if self.iskey:
+            self.__update_keymap(i)
+
         return value
+
+    def __clear_keymap(self, i):
+        value = self.get(i)
+        try:
+            del self.table.keymap[value]
+        except KeyError:
+            pass
+
+    def __update_keymap(self, i):
+        value = self.get(i)
+
+        try:
+            self.table.keymap[value]
+            raise DuplicateKeyError(str(value))
+        except KeyError:
+            pass
+
+        self.table.keymap[value] = i
+
+        return value
+        
+####################################################################################
+###
+### CLASS DuplicateKeyError
+###
+####################################################################################
+class DuplicateKeyError(Exception):
+    pass
 
 ####################################################################################
 ###
@@ -183,10 +243,23 @@ def write(path, tables):
 
 ####################################################################################
 ###
+### FUNCTION parse_all()
+###
+####################################################################################
+def parse_all(paths, tablenames = None, required = not REQUIRED, keycolname = None):
+    tables = {}
+
+    for path in paths:
+        tables[path] = parse(path, tablenames, required, keycolname)
+
+    return tables
+
+####################################################################################
+###
 ### FUNCTION parse()
 ###
 ####################################################################################
-def parse(path, tablenames = None, required = not REQUIRED):
+def parse(path, tablenames = None, required = not REQUIRED, keycolname = None):
     f = open(path, 'r')
 
     if tablenames:
@@ -242,7 +315,8 @@ def parse(path, tablenames = None, required = not REQUIRED):
                       colnames,
                       coltypes,
                       path,
-                      table_index)
+                      table_index,
+                      keycolname = keycolname)
         tables[tablename] = table
 
         found_end_tag = False
@@ -333,7 +407,7 @@ def __is_datalib_file(file):
 ###
 ####################################################################################
 def __seek_next_tag(file):
-    regex = '^#\\<([a-zA-Z]+)\\>'
+    regex = '^#\\<([a-zA-Z0-9_ ]+)\\>'
 
     while True:
         line = file.readline();
@@ -350,7 +424,7 @@ def __seek_next_tag(file):
 ###
 ####################################################################################
 def __get_end_tag(line):
-    regex = '^#\\</([a-zA-Z]+)\\>'
+    regex = '^#\\</([a-zA-Z0-9_ ]+)\\>'
 
     result = re.search(regex, line)
     if result:
@@ -377,3 +451,35 @@ def __seek_end_tag(file, tag):
                 return
 
     raise InvalidFileError('unbalanced tag '+tag+' (no terminating tag)')
+
+####################################################################################
+###
+### FUNCTION test()
+###
+####################################################################################
+def test():
+        table = datalib.Table(name='Example 2',
+                              colnames=['Time','A','B'],
+                              coltypes=['int','float','float'],
+                              keycolname='Time')
+        row = table.createRow()
+        row['Time'] = 1
+        row['A'] = 100.0
+        row['B'] = 101.0
+        row = table.createRow()
+        row['Time'] = 2
+        row['A'] = 200.0
+        row['B'] = 201.0
+        
+        it = iterators.MatrixIterator(table, range(1,3), ['B'])
+        for a in it:
+            print a
+        
+        datalib.write('/tmp/datalib', table)
+        
+        tables = datalib.parse('/tmp/datalib', keycolname = 'Time')
+        
+        table = tables['Example 2']
+        print 'key=',table.keycolname
+        
+        print tables['Example 2'][1]['A']

@@ -7,6 +7,7 @@ OutputFilename2='ComplexityHist.plt'
 
 #CALC_COMPLEXITY_OVER_DIRECTORY="./CalcComplexityOverDirectory.sh"
 #### Don't modify anything beneath here unless you know what you're doing
+import algorithms
 import getopt, glob, string, sys, os
 import common_functions
 from common_functions import err, warn, list_difference
@@ -186,9 +187,9 @@ def analyze_recent_dir(complexities, recent_dir):
 	#-- Create 'Avr' File
 	#--
 	#-----------------------------------------------------------------------------------
-	AVR = common_functions.compute_avr(DATA,
-					   timesteps,
-					   complexities)
+	AVR = algorithms.avr_table(DATA,
+				   complexities,
+				   timesteps)
 	
 	datalib.write(outputpath, AVR)
 	

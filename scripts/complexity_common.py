@@ -1,4 +1,6 @@
-import plotlib
+import os
+
+import datalib
 
 COMPLEXITY_TYPES = ['A', 'P', 'I', 'B', 'H']
 COMPLEXITY_NAMES = {'A':'All', 'P':'Processing', 'I':'Input', 'B':'Behavior', 'H':'Health'}
@@ -60,3 +62,50 @@ def parse_legacy_complexities(path):
 
     return complexities
 
+####################################################################################
+###
+### FUNCTION relpath_avr()
+###
+####################################################################################
+def relpath_avr(recent_type):
+    return os.path.join('brain', recent_type, FILENAME_AVR)
+
+####################################################################################
+###
+### FUNCTION path_avr()
+###
+####################################################################################
+def path_avr(path_run, recent_type):
+    return os.path.join(path_run, relpath_avr(recent_type))
+
+####################################################################################
+###
+### FUNCTION path_run_from_avr()
+###
+####################################################################################
+def path_run_from_avr(path_avr, recent_type):
+    suffix = relpath_avr(recent_type)
+
+    return path_avr[:-(len(suffix) + 1)]
+
+####################################################################################
+###
+### FUNCTION parse_avrs
+###
+####################################################################################
+def parse_avrs(run_paths, recent_type, complexities, run_as_key = False):
+    # parse the AVRs for all the runs
+    avrs = datalib.parse_all( map(lambda x: path_avr( x, recent_type ),
+                                  run_paths),
+                              complexities,
+                              datalib.REQUIRED,
+                              keycolname = 'Timestep' )
+
+    if run_as_key:
+        # modify the map to use run dir as key, not Avr file
+        avrs = dict( [(path_run_from_avr( x[0], recent_type ),
+                       x[1])
+                      for x in avrs.items()] )
+
+    return avrs
+    

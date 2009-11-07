@@ -28,28 +28,170 @@ def warn(msg):
 
 ####################################################################################
 ###
+### FUNCTION verbose()
+###
+####################################################################################
+_isverbose = False
+
+def isverbose():
+	return _isverbose
+
+def verbose(msg):
+	if isverbose:
+		print msg
+
+####################################################################################
+###
 ### FUNCTION read_worldfile_parameter()
 ###
 ### Return a value from the worldfile parameter.  If it is not found the value is False
 ###
 ####################################################################################
-def read_worldfile_parameter( worldfilename, parameter ):
-#	print "worldfilename='%s'  parameter='%s'" % ( worldfilename, parameter )
-	value = False
+def read_worldfile_parameter( path_worldfile_or_run, parameter ):
+	if os.path.isdir(path_worldfile_or_run):
+		worldfile = path_worldfile(path_worldfile_or_run)
+	else:
+		worldfile = path_worldfile_or_run
 
-	if not os.path.isfile( worldfilename ):
-		print "ERROR: '%s' was not a worldfile"
+	value = None
+
+	if not os.path.isfile( worldfile ):
+		print "ERROR: '%s' was not a worldfile" % worldfile
 		sys.exit(1)
-	worldfile = open( worldfilename )
+	worldfile = open( worldfile )
 
 	for line in worldfile:
-		line = line.rstrip('\n')
+		line = line.split('_')[0].rstrip('\n') # '_' infomrally functions as comment
 		if line.endswith(parameter):
 			value = line.split()[0]
 			break
 
 	worldfile.close()
 	return value
+
+####################################################################################
+###
+### FUNCTION classify_run()
+###
+####################################################################################
+CLASSIFICATIONS = ['Driven', 'Passive', 'Fitness']
+
+# Key supercedes/preempts associated list
+CLASSIFICATION_PREEMPTION = {'Fitness': ['Driven', 'Passive']}
+
+class ClassificationError(Exception):
+	pass
+
+def classify_run(path_run,
+		 single_classification = False,
+		 constraints = CLASSIFICATIONS):
+	classifications = []
+
+	def __nonzero(field):
+		value = read_worldfile_parameter(path_run,
+						 field)
+		return value != None and float(value) != 0
+
+	def __not(field, notvalue, default = None):
+		value = read_worldfile_parameter(path_run,
+						 field)
+		if value == None:
+			if default == None:
+				value = notvalue
+			else:
+				value = default
+
+		return value != notvalue
+
+	#
+	# Fitness
+	#
+	if __nonzero("complexityFitnessWeight")	or __nonzero("heuristicFitnessWeight") or __not("useComplexityAsFitness", "O"):
+		classifications.append('Fitness')
+
+	#
+	# Driven/Passive
+	#
+	if __nonzero("LockStepWithBirthsDeathsLog"):
+		classifications.append('Passive')
+	else:
+		classifications.append('Driven')
+
+	#
+	# Apply Constraints
+	#
+	classifications_constrained = list_intersection( classifications,
+							 constraints )
+
+	#
+	# Apply Preemptions
+	#
+	for c in classifications_constrained:
+		try:
+			preempted = CLASSIFICATION_PREEMPTION[c]
+			classifications_constrained = list_difference(classifications_constrained,
+								      preempted)
+		except KeyError:
+			pass
+
+	#
+	# Validate Result
+	#
+	if len(classifications_constrained) == 0:
+		if len(classifications) == 0:
+			raise ClassificationError( path_run + ' cannot be classified' )
+		else:
+			raise ClassificationError( path_run + ' classification not in {' + ','.join(constraints) + '}' )
+
+	if single_classification and len(classifications_constrained) > 1:
+		raise ClassificationError( path_run + ' classification ambiguous (' + ','.join(classifications_constrained) + ')' )
+
+	return classifications_constrained
+
+####################################################################################
+###
+### FUNCTION classify_runs()
+###
+####################################################################################
+def classify_runs(run_paths,
+		  single_classification = False,
+		  constraints = CLASSIFICATIONS):
+
+	result = {}
+
+	for path in run_paths:
+		classifications = classify_run( path,
+						single_classification,
+						constraints )
+		for c in classifications:
+			try:
+				result[c].append(path)
+			except KeyError:
+				result[c] = [path]
+
+	return result
+
+####################################################################################
+###
+### FUNCTION get_timesteps()
+###
+####################################################################################
+def get_timesteps(iter_tables, colname_timestep):
+	timesteps = {}
+	n = 0
+
+	for table in iter_tables:
+		n += 1
+		for t in table.getColumn(colname_timestep):
+			try:
+				timesteps[t] += 1
+			except KeyError:
+				timesteps[t] = 1
+
+	ret = [item[0] for item in timesteps.items() if item[1] == n]
+	ret.sort()
+
+	return ret
 
 ####################################################################################
 ###
@@ -102,6 +244,48 @@ def __expand_macros(text, macros, ignore):
             result.append(tok)
 
     return result
+
+####################################################################################
+###
+### FUNCTION expand_abbreviations()
+###
+####################################################################################
+class IllegalAbbreviationError(Exception):
+	pass
+
+def expand_abbreviations(abbreviations,
+			 full,
+			 case_sensitive = True):
+	result = []
+
+	for a in abbreviations:
+		match = None
+		na = len(a)
+
+		for f in full:
+			nf = len(f)
+			if na <= nf:
+				failed = False
+				for i in range(na):
+					if case_sensitive:
+						if a[i] != f[i]:
+							failed = True
+							break
+					else:
+						if a[i].upper() != f[i].upper():
+							failed = True
+							break;
+				if not failed:
+					if match:
+						raise IllegalAbbreviationError( a+' is ambiguous ('+match+','+f+')' )
+					else:
+						match = f
+		if not match:
+			raise IllegalAbbreviationError( "Illegal value '"+a+"' (valid="+','.join(full)+")" )
+		else:
+			result.append(match)
+
+	return result
 
 ####################################################################################
 ###
@@ -176,135 +360,49 @@ def truncate_paths(paths):
 	files.append(os.path.basename(path))
 
     files = get_unique(files)
+    files = map(lambda x: x.strip('_'), files)
 
     paths = []
 
     for i in range(len(files)):
-        paths.append((dirs[i], files[i]))
+        paths.append( (dirs[i], {'i': i, 'name': files[i]}) )
 
-    return __truncate_paths(paths)
+    result = {}
 
-def __truncate_paths(paths):
+    __truncate_paths(paths, result)
+
+    return [result[i] for i in range(len(paths))]
+
+def __truncate_paths(paths, result):
     accumulate = {}
 
     for path in paths:
+        dir = path[0]
+        name = path[1]['name']
+	i = path[1]['i']
+	entry = {'i': i, 'dir': dir}
         try:
-            accumulate[path[1]].append(path[0])
+            accumulate[name].append(entry)
         except KeyError:
-            accumulate[path[1]] = [path[0]]
+            accumulate[name] = [entry]
 
-    result = []
-
-    for suffix, dirs in accumulate.items():
-        if len(dirs) == 1:
-            result.append(suffix)
+    for name, entries in accumulate.items():
+        if len(entries) == 1:
+            entry = entries[0]		
+            result[entry['i']] = name
         else:
             paths = []
-            for dir in dirs:
+            for entry in entries:
+                dir = entry['dir']
+		i = entry['i']
                 basename = os.path.basename(dir)
-                paths.append((os.path.dirname(dir), os.path.join(basename, suffix)))
+		dirname = os.path.dirname(dir)
+		newname = os.path.join(basename, name)
+                paths.append( (dirname, {'i': i, 'name': newname}) )
             
-            result += __truncate_paths(paths)
+            __truncate_paths(paths, result)
 
     return result
-
-####################################################################################
-###
-### FUNCTION get_median()
-###
-### In addition to returning the median, get_median() also returns the upper and
-### lower half of the list.
-###
-### IMPORTANT: This function ASSUMES THE LIST IS ALREADY SORTED.
-###
-####################################################################################
-def get_median( listofnumbers ):
-
-	length=len(listofnumbers)
-	lenover2=int(length / 2)
-
-	middle1=listofnumbers[ lenover2 ]			# this number is the answer if the length is ODD, and half of the answer is the length is EVEN
-	lowerhalf=listofnumbers[: lenover2 ]	# first half of the numbers
-
-		
-	if length % 2 == 0:			# if the length of the list is an EVEN number
-		upperhalf=listofnumbers[ lenover2 :]
-		middle2=listofnumbers[ (lenover2 - 1) ]
-		median = (middle1 + middle2) / 2.0
-	else:						# the length of the list is an ODD number, so simply return the middle number.
-		upperhalf=listofnumbers[(lenover2+1) :]	# second half of the numbers
-		median = middle1
-	
-	return median, lowerhalf, upperhalf
-
-####################################################################################
-###
-### FUNCTION sample_mean()
-###
-####################################################################################
-def sample_mean( list ):
-        N = float(len(list))
-        mean = sum(list) / N
-        SSE=0
-        for item in list:
-                SSE += (item - mean)**2.0
-
-        try: variance = SSE / (N-1)
-        except: variance = 0
-
-        stderr = ( variance ** 0.5 ) / (N**0.5) # stderr = stddev / sqrt(N)
-
-        return mean, stderr
-
-####################################################################################
-###
-### FUNCTION compute_avr()
-###
-### Warning: This assumes the data is sorted
-###
-####################################################################################
-def compute_avr(DATA, timesteps, regions):
-	colnames = ['Timestep', 'min', 'q1', 'median', 'q3', 'max', 'mean', 'mean_stderr', 'sampsize']
-	coltypes = ['int', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'int']
-
-	tables = {}
-
-	for region in regions:
-		  table = datalib.Table(region, colnames, coltypes)
-		  tables[region] = table
-
-		  for t in timesteps:
-			regiondata = DATA[t][region];
-			assert(len(regiondata) > 1)
-
-			try:
-				minimum = regiondata[0]
-				maximum = regiondata[-1]
-
-				# sanity check (data should already be sorted)
-				assert(minimum <= maximum)
-
-				mean, mean_stderr = sample_mean(regiondata)
-
-				median, lowerhalf, upperhalf=get_median(regiondata)
-
-				q1=get_median( lowerhalf )[0]
-				q3=get_median( upperhalf )[0]
-			except ValueError:
-				minimum, maximum, mean, mean_stderr, q1, q3, median = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
-
-			row = table.createRow()
-			row.set('Timestep', t)
-			row.set('min', minimum)
-			row.set('max', maximum)
-			row.set('mean', mean)
-			row.set('mean_stderr', mean_stderr)
-			row.set('median', median)
-			row.set('q1', q1)
-			row.set('q3', q3)
-			row.set('sampsize', len(regiondata))
-
-	return tables
 
 #################################################
 ###
@@ -397,7 +495,6 @@ def find_run_paths(paths_arg, required_subpath):
             raise InvalidDirError(path_arg)
 
         # if 'directory' is itself a run/ directory, just use that.
-	print __path_required(path_arg)
         if os.path.exists(__path_required(path_arg)):
             run_paths.append(path_arg)
         else:
@@ -415,7 +512,17 @@ def find_run_paths(paths_arg, required_subpath):
             if not found_run:
                 raise InvalidDirError(path_arg, 'run/run-parent')
 
+    run_paths.sort()
+
     return map(lambda x: x.rstrip('/'), run_paths)
+
+####################################################################################
+###
+### FUNCTION path_worldfile()
+###
+####################################################################################
+def path_worldfile(path_run):
+	return os.path.join(path_run, "worldfile")
 
 ####################################################################################
 ###
@@ -425,4 +532,16 @@ def find_run_paths(paths_arg, required_subpath):
 ###
 ####################################################################################
 def list_difference(a, b):
-	return filter(lambda x:x not in b, a)
+	return filter(lambda x: x not in b,
+		      a)
+
+####################################################################################
+###
+### FUNCTION list_intersection()
+###
+### returns list of elements in both a and b
+###
+####################################################################################
+def list_intersection(a, b):
+	return filter(lambda x: x in b,
+		      a)

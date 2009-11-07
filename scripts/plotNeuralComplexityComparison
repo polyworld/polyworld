@@ -15,7 +15,7 @@ import sys, getopt, os.path, re, os
 # Finished loading libraries
 ################################################################################
 # some global variables:
-GNUPLOT_TERMINAL='aqua'		# set this to x11 if your under linux.
+GNUPLOT_TERMINAL='aqua'		# set this to 'x11' for linux, 'aqua' for Mac.
 GNUPLOT_SETTINGS="""
 set termoption noenhanced
 set key outside			# if we have a legend, put it outside the graph
