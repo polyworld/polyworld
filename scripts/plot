@@ -1,0 +1,979 @@
+#!/usr/bin/python
+
+import copy
+import getopt
+import os
+import sys
+
+import algorithms
+import common_functions
+from common_functions import err, expand_macros, RECENT_TYPES, isverbose, verbose, warn
+import complexity_common
+import datalib
+import iterators
+import plotlib
+
+################################################################################
+#TCRIT = 2.132	# 95% confidence for 4 degrees of freedom (5 pairs of points)
+TCRIT_DEFAULT = (1.833,20,10)	# 95% confidence for 9 degrees of freedom (10 pairs of points)
+#TCRIT = 1.796	# 95% confidence for 11 degrees of freedom (12 pairs of points)
+################################################################################
+
+DATASETS = ['min', 'mean', 'max']
+DEFAULT_OUTPUT = './plot.eps'
+CLASSIFICATION_LINETYPES = {'Driven': plotlib.StyleGroup.SOLID,
+                            'Passive': plotlib.StyleGroup.DASHED,
+                            'Fitness': plotlib.StyleGroup.DASHDOT}
+
+####################################################################################
+###
+### FUNCTION main()
+###
+####################################################################################
+def main():
+    #---
+    #--- Process command-line arguments
+    #---
+    options, complexities, groups, recent_type, arg_paths = parse_args( sys.argv[1:] )
+    
+    try:
+        run_paths = common_functions.find_run_paths( arg_paths,
+                                                     complexity_common.relpath_avr(recent_type) )
+    except common_functions.InvalidDirError, e:
+        show_usage( str(e) )
+
+    arg_dirs = common_functions.truncate_paths(arg_paths)
+    run_dirs = common_functions.truncate_paths(run_paths)
+
+    #---
+    #--- Parse & classify (e.g. Driven/Passive) runs
+    #---
+    avrs, avrs_classified = get_avrs( run_paths,
+                                      recent_type,
+                                      complexities,
+                                      groups )
+    groups = avrs_classified.keys()
+
+    #---
+    #--- Compute Meta
+    #---
+    avrs_meta = get_meta( options,
+                          complexities,
+                          avrs_classified )
+
+    #---
+    #--- Compute T-test
+    #---
+    ttest, groups_ttest = get_ttest( options,
+                                     complexities,
+                                     avrs_classified )
+
+    #---
+    #--- Create macros
+    #---
+    macros = get_macros( options,
+                         arg_paths,
+                         arg_dirs,
+                         run_paths,
+                         run_dirs,
+                         recent_type,
+                         complexities,
+                         groups,
+                         groups_ttest)
+
+    #---
+    #--- Plot
+    #---
+    plot( options,
+          macros,
+          recent_type,
+          run_paths,
+          run_dirs,
+          complexities,
+          avrs_classified,
+          avrs_meta,
+          ttest )
+
+####################################################################################
+###
+### FUNCTION parse_args()
+###
+####################################################################################
+def parse_args(argv):
+    if len(argv) == 0:
+        show_usage()
+
+    # ---
+    # --- OPTIONS
+    # ---
+    FLAGS_GLOBAL = {'d': 'points',
+                    'dots': 'points',
+                    'points': 'points',
+                    's': 'smooth',
+                    'smooth': 'smooth',
+                    'l': 'legend',
+                    'legend': 'legend',
+                    'L': 'nolegend',
+                    'nolegend': 'nolegend',
+                    'v': 'noview',
+                    'noview': 'noview',
+                    'c': 'color',
+                    'color': 'color',
+                    'verbose': 'verbose'}
+    ARGS_GLOBAL = {'C': 'complexity',
+                   'g': 'group',
+                   'group': 'group',
+                   'o': 'output',
+                   'title': 'title',
+                   'xlabel': 'xlabel',
+                   'ylabel': 'ylabel',
+                   'rmargin': 'rmargin'}
+
+    FLAGS_AVR = {'w': 'whiskers',
+                 'whiskers': 'whiskers',
+                 'm': 'mean',
+                 'mean': 'mean',
+                 'n': 'min',
+                 'min': 'min',
+                 'x': 'max',
+                 'max': 'max',
+                 'e': 'errorbars',
+                 'err': 'errorbars'}
+    ARGS_AVR = {}
+
+    FLAGS_META = dict([(x[0].capitalize(), x[1]) for x in FLAGS_AVR.items()])
+    ARGS_META = {}
+
+    FLAGS_TTEST = {'p': 'pval',
+                   'pval': 'pval',
+                   't': 'tval',
+                   'tval': 'tval'}
+    ARGS_TTEST = {'tcrit': 'tcrit'}
+
+    # These values are copied into the ttest options from avr/meta options
+    TTEST_COPY = DATASETS
+
+    # ---
+    # --- END OPTIONS
+    # ---
+
+    complexities = []
+    paths = []
+    options = {'global': plotlib.Options(FLAGS_GLOBAL, ARGS_GLOBAL),
+               'avr': plotlib.Options(FLAGS_AVR, ARGS_AVR),
+               'meta': plotlib.Options(FLAGS_META, ARGS_META),
+               'ttest': plotlib.Options(FLAGS_TTEST, ARGS_TTEST)}
+
+    try:
+        short, long = plotlib.getopts_encoding(options.values())
+                        
+        opts, args = getopt.getopt(argv, short, long)
+    except getopt.GetoptError, e:
+        show_usage(str(e))
+
+    plotlib.process_options(options, opts)
+
+    gopts = options['global']
+
+    common_functions._isverbose = gopts.get('verbose')
+
+    # process complexities
+    complexities = gopts.get('complexity', 'P').split(',')
+
+    # process grouping
+    group = gopts.get('group', 'auto')
+    if group == 'auto':
+        groups = common_functions.CLASSIFICATIONS
+    elif group == 'off':
+        groups = []
+    else:
+        try:
+            group = group.split(',')
+            groups = common_functions.expand_abbreviations( group,
+                                                            common_functions.CLASSIFICATIONS,
+                                                            case_sensitive = False )
+            gopts.set('group', groups, count = False)
+        except common_functions.IllegalAbbreviationError, x:
+            err(str(x))
+
+    # determine recent type
+    if len(args) == 0:
+        show_usage('Must specify recent type (%s).' % ','.join(RECENT_TYPES))
+
+    recent_type = args.pop(0)
+    if not recent_type in RECENT_TYPES:
+        show_usage('Invalid recent type (%s).' % recent_type)
+
+    # process paths
+    for path in args:
+        paths.append(path)
+
+    if len(paths) == 0:
+        show_usage("Must provide a directory.")
+
+    # default plot if none specified
+    if options['avr'].nset == 0 and options['meta'].nset == 0:
+        options['avr'].set('mean', True)
+
+    topts = options['ttest']
+
+    # validate tval/pval settings
+    tval = topts.get('tval', False)
+    pval = topts.get('pval', False)
+    if tval and pval:
+        err('Cannot plot t-values and p-values simultaneously.')
+    elif (tval or pval) and (group == 'off'):
+        err( "'--group off' incompatible with T-test calculations." )
+        
+    # validate tcrit
+    try:
+        topts.set('tcrit',
+                  float(topts.get('tcrit', TCRIT_DEFAULT[0])),
+                  count = False)
+    except ValueError:
+        err("Invalid TCRIT value ("+topts.get('tcrit')+")")
+
+    # copy flags that affect ttest plotting
+    for opt in TTEST_COPY:
+        topts.set( opt,
+                   options['avr'].get(opt) or options['meta'].get(opt),
+                   count = False )
+
+    return options, complexities, groups, recent_type, paths
+
+####################################################################################
+###
+### FUNCTION get_macros()
+###
+####################################################################################
+def get_macros( options,
+                arg_paths,
+                arg_dirs,
+                run_paths,
+                run_dirs,
+                recent_type,
+                complexities,
+                groups,
+                groups_ttest):
+    if len(groups) > 1:
+        title = '{GROUPS} -- {TYPES}'
+    else:
+        title = '{TYPES}'
+
+    types = []
+    for t in DATASETS:
+        if options['avr'].get(t) or options['meta'].get(t):
+            types.append(t.title())
+
+    if len(groups) > 2:
+        groups = ', '.join(groups)
+    else:
+        groups = ' vs. '.join(groups)
+
+    groups_ttest = ' vs. '.join(groups_ttest)
+    
+    return {'TITLE': title,
+            'XLABEL': 'Timestep',
+            'YLABEL': 'Neural Complexity ({COMPLEXITY_NAMES})',
+            'ARG_DIRS': ', '.join(arg_dirs),
+            'RUN_DIRS': ', '.join(run_dirs),
+            'ARG_PATHS': ', '.join(arg_paths),
+            'RUN_PATHS': ', '.join(run_paths),
+            'RECENT': recent_type,
+            'COMPLEXITY_TYPES': ', '.join(complexities),
+            'COMPLEXITY_NAMES': ', '.join(complexity_common.get_names(complexities)),
+            'TYPES': ', '.join(types),
+            'GROUPS': groups,
+            'GROUPS_TTEST': groups_ttest}
+
+####################################################################################
+###
+### FUNCTION get_avrs()
+###
+####################################################################################
+def get_avrs( run_paths,
+              recent_type,
+              complexities,
+              groups ):
+
+    avrs = complexity_common.parse_avrs( run_paths,
+                                         recent_type,
+                                         complexities,
+                                         run_as_key = True )
+
+    if len(groups) == 0: # --group off
+        avrs_classified = { 'None': [x
+                                    for x in iterators.MatrixIterator(avrs,
+                                                                      avrs.keys())] }
+    else:
+        try:
+            classifications = common_functions.classify_runs( run_paths,
+                                                              single_classification = True,
+                                                              constraints = groups )
+        except common_functions.ClassificationError, x:
+            err(str(x))
+
+        # map from classification to list of avrs
+        avrs_classified = {}
+        for c, paths in classifications.items():
+            l = avrs_classified[c] = []
+            for path in paths:
+                l.append( avrs[path] )
+
+    if isverbose():
+        for c, avrs_list in avrs_classified.items():
+            verbose('%s:' % c)
+            for avrs in avrs_list:
+                verbose('  %s' % avrs.values()[0].path)
+
+    return avrs, avrs_classified
+
+####################################################################################
+###
+### FUNCTION get_meta()
+###
+####################################################################################
+def get_meta( options,
+              complexities,
+              avrs_classified ):
+
+    avrs_meta = {}
+
+    mopts = options['meta']
+
+    if mopts.nset > 0:
+        for classification, avrs in avrs_classified.items():
+            if len(avrs) < 2:
+                warn('Not enough runs to perform meta averaging for classification '+classification+'.')
+            else:
+                for type in DATASETS:
+                    if mopts.get(type):
+                        if classification not in avrs_meta.keys():
+                            avrs_meta[classification] = {}
+
+                        meta = create_meta( options,
+                                            mopts,
+                                            type,
+                                            complexities,
+                                            classification,
+                                            avrs )
+
+                        avrs_meta[classification][type] = meta
+
+    return avrs_meta
+
+####################################################################################
+###
+### FUNCTION create_meta()
+###
+####################################################################################
+def create_meta( options,
+                 mopts,
+                 type,
+                 complexities,
+                 classification,
+                 avrs ):
+
+    timesteps = common_functions.get_timesteps( iterators.MatrixIterator(avrs,
+                                                                         range(len(avrs)),
+                                                                         complexities),
+                                                'Timestep' )    
+    if len(timesteps) < 1:
+        err( 'No common timesteps found between runs for meta. (classfication=%s)' % classification )
+    
+    avrs_meta = algorithms.avr_meta(avrs,
+                                    complexities,
+                                    timesteps,
+                                    type )
+    datalib.write( '/tmp/meta-%s-%s-%d.plt' % (classification,
+                                               type,
+                                               os.getpid()),
+                   avrs_meta )
+
+    return avrs_meta
+
+####################################################################################
+###
+### FUNCTION get_ttest()
+###
+####################################################################################
+def get_ttest( options, complexities, avrs ):
+    gopts = options['global']
+    topts = options['ttest']
+
+    if topts.nset == 0:
+        return {}, []
+
+    groups = avrs.keys()
+
+    if len(groups) < 2:
+        err( "T-test calculations require 2 classifications, but only 1 found." )
+
+    if len(groups) > 2:
+        if gopts.get('group','auto') != 'auto':
+            optgroups = gopts.get('group')[0:2]
+            for g in optgroups:
+                if g not in groups:
+                    err( "Found no runs of classification '%s', which is required for T-test due to --group setting." % g )
+            groups = optgroups
+        else:
+            if not (('Passive' in groups) and ('Driven' in groups)):
+                err( "Too many groups for T-test calculations with --group=auto. (%s)" % ','.join(groups) )
+            groups = ['Passive', 'Driven']
+
+    verbose('T-test groups: %s' % ','.join(groups))
+
+    runsa = avrs[groups[0]] # e.g. all the 'driven' runs
+    runsb = avrs[groups[1]] # e.g. all the 'passive' runs
+
+    na = len(runsa)
+    nb = len(runsb)
+    if na != nb:
+        warn( "T-test requires symmetrical classification run count; truncating run data for ttest." )
+    nruns = min( na, nb )
+
+    if nruns < 2:
+        err( "T-test requires at least 2 runs per classification" )
+
+    timesteps = common_functions.get_timesteps( iterators.MatrixIterator(avrs,
+                                                                         groups,
+                                                                         range( nruns ),
+                                                                         complexities),
+                                                'Timestep' )
+
+    if len(timesteps) == 0:
+        err( "No common timesteps found for T-test calculations." )
+                                                                         
+    def __iter( parms ):
+        data = parms[0]
+        C = parms[1]
+        t = parms[2]
+        col = parms[3]
+
+        return iterators.MatrixIterator( data,
+                                         range(nruns),
+                                         [C],
+                                         [t],
+                                         [col] )
+
+    ttest = algorithms.ttest_table( runsa,
+                                    runsb,
+                                    nruns,
+                                    options['ttest'].get('tcrit'),
+                                    complexities,
+                                    timesteps,
+                                    DATASETS,
+                                    __iter )
+
+    datalib.write( '/tmp/ttest-%d.plt' % os.getpid(), ttest )
+
+    return ttest, groups
+
+    
+####################################################################################
+###
+### FUNCTION plot()
+###
+####################################################################################
+def plot( options,
+          macros,
+          recent_type,
+          run_paths,
+          run_dirs,
+          complexities,
+          avrs_classified,
+          avrs_meta,
+          ttest ):
+
+    gopts = options['global']
+
+    doc = plotlib.Document()
+    doc.nocolor = not gopts.get( 'color' )
+
+    title = expand_macros(gopts.get('title', '{TITLE}'), macros)
+    plot = doc.createPlot(title)
+
+    plot.xlabel = expand_macros(gopts.get('xlabel', '{XLABEL}'), macros)
+    plot.ylabel = expand_macros(gopts.get('ylabel', '{YLABEL}'), macros)
+
+    if len(ttest) > 0:
+        topts = options['ttest']
+        if topts.get('pval'):
+            pmin = 0.8
+            pmax = 1.0
+            fracHeight = 1.0 / 6.0
+
+            plot.y2range = ( pmin, (pmin + (pmax-pmin)/fracHeight) )
+            plot.y2label = "(1 - p-value)	   Dependent Student's T-test"
+
+            plot.createTick( 0.8 )
+            plot.createTick( 0.95,
+                             line = True )
+            plot.createTick( 1.0,
+                             "1.0" )
+        elif topts.get('tval'):
+            tcrit = topts.get('tcrit')
+            tmax = tcrit
+            for col in TTEST_COLS:
+                if topts.get(col):
+                    for C in complexities:
+                        tmax = max( tmax,
+                                    max(ttest[C+'-'+col].getColumn( 'tval' )) )
+            plot.y2range = (0, tmax * 4)
+            plot.y2label = "Dependent Student's T-test (p < 0.05)"
+            plot.createTick( tcrit,
+                             "T*",
+                             line = True )
+    else:
+        # stupid EPS terminal cuts off our x-axis label without this
+        plot.rmargin = 2
+
+    try:
+        # allow user-override of right margin
+        plot.rmargin = int(gopts.get('rmargin'))
+    except KeyError:
+        # user didn't specify
+        pass
+        
+
+
+    ngroups = len(avrs_classified.keys())
+    plot.legend = gopts.get('legend') or (not gopts.get('nolegend') and ngroups > 1)
+    
+    colordict = {}
+
+    if len(run_paths) < 2:
+        pathdict = None
+    else:
+        pathdict = dict([(run_paths[i], run_dirs[i]) for i in range(len(run_paths))])
+
+    for classification, avrs_list in avrs_classified.items():
+        for avrs in avrs_list:
+            for C in complexities:
+                table = avrs[C]
+                create_curves( doc,
+                               plot,
+                               macros,
+                               colordict,
+                               pathdict,
+                               options,
+                               'avr',
+                               recent_type,
+                               classification,
+                               None,
+                               table )
+
+    for classification, types in avrs_meta.items():
+        for type, avrs in types.items():
+            for C in complexities:
+                table = avrs[C]
+
+                create_curves( doc,
+                               plot,
+                               macros,
+                               colordict,
+                               pathdict,
+                               options,
+                               'meta',
+                               recent_type,
+                               classification,
+                               type,
+                               table )
+
+    for colname, table in ttest.items():
+        create_curves( doc,
+                       plot,
+                       macros,
+                       colordict,
+                       None,
+                       options,
+                       'ttest',
+                       recent_type,
+                       None,
+                       None,
+                       table )
+
+    path_doc, path_script = doc.save( options['global'].get('output',
+                                                            DEFAULT_OUTPUT) )
+    os.system('%s %s' % (common_functions.pw_env('open'), path_doc))
+
+####################################################################################
+###
+### FUNCTION create_curves()
+###
+####################################################################################
+def create_curves(doc,
+                  plot,
+                  macros,
+                  colordict,
+                  pathdict,
+                  options,
+                  optionclass,
+                  recent_type,
+                  classification,
+                  meta_type,
+                  table):
+    gopts = options['global']
+    smooth = gopts.get('smooth')
+    points = gopts.get('points')
+    options = options[optionclass]
+    path = table.path
+    meta = optionclass == 'meta'
+    ttest = optionclass == 'ttest'
+
+    if meta:
+        assert(meta_type)
+    else:
+        assert(not meta_type)
+
+    if smooth and points:
+        warn("Cannot show points with smooth curves.")
+        gopts.set('points', False) # prevent multiple warnings
+        
+
+    #---
+    #--- FUNCTION __style()
+    #---
+    #--- Provides logic for grouping curves within style groups (e.g. line type and color).
+    #--- A style group has a constant line width and pattern, while cycling
+    #--- through colors
+    #---
+    def __style(curvetype):
+        if gopts.get('group', 'auto') == 'off':
+            groupkey = curvetype
+        else:
+            groupkey = classification
+
+        if meta:
+            groupname = 'meta-'+groupkey
+        elif ttest:
+            groupname = 'ttest'
+        else:
+            groupname = groupkey
+
+        # check if we have a linetype preference
+        try:
+            preflinetype = CLASSIFICATION_LINETYPES[classification]
+        except:
+            preflinetype = None
+
+        try:
+            group = plot.getStyleGroup(groupname)
+        except KeyError:
+            if meta:
+                try:
+                    # use the avrs' line style, but thick
+                    group = plot.createStyleGroup(groupname,
+                                                  plot.getStyleGroup(groupkey).linetype,
+                                                  plotlib.StyleGroup.THICK)
+                except:
+                    # no avrs were plotted for this classification.
+                    group = plot.createStyleGroup(groupname,
+                                                  preflinetype,
+                                                  plotlib.StyleGroup.THICK)
+            else:
+                group = plot.createStyleGroup(groupname,
+                                              preflinetype)
+
+        # Use the color key to ensure consistent color between
+        # style groups.
+        if meta:
+            colorkey = 'meta'
+            forcecolor = 'black'
+        else:
+            colorkey = path
+            forcecolor = None
+
+        if not colorkey in colordict.keys():
+            style = group.createStyle( forcecolor )
+            colordict[colorkey] = style.color
+            plot.reserveColor(style.color)
+        else:
+            color = colordict[colorkey]
+            style = group.createStyle(color)
+        
+        return style
+    #---
+
+    #---
+    #--- FUNCTION __title()
+    #---
+    #--- Provides title/legend-label for a curve
+    #---
+    def __title(name):
+        if name != 'whiskers':
+            title = name + ' ' + table.name
+        else:
+            title = table.name
+
+        if meta:
+            title = 'Meta-' + title
+            if classification != 'None':
+                title += ' (' + classification + ')'
+        elif ttest:
+            title += expand_macros( ' ({GROUPS_TTEST})', macros )
+        else:
+            if pathdict != None:
+                title += ' (' + pathdict[complexity_common.path_run_from_avr(table.path, recent_type)] + ')'
+
+        return title
+    #---
+
+    # Whisker curves are available for avr and meta, not ttest
+    if options.get('whiskers', False):
+        assert( not ttest)
+
+        style = __style('whiskers')
+
+        if options.get('mean') or options.get('max'):
+            warn('Cannot show whiskers and mean/max curves.')
+            options.set('mean', False)
+            options.set('max', False)
+        
+        plot.createCandlestickCurve(table,
+                                    __title('whiskers'),
+                                    'Timestep',
+                                    'q1',
+                                    'min',
+                                    'max',
+                                    'q3',
+                                    plotlib.CandlestickCurve.WHISKERS,
+                                    style)
+
+        plot.createCandlestickCurve(table,
+                                    None,
+                                    'Timestep',
+                                    'median',
+                                    'median',
+                                    'median',
+                                    'median',
+                                    not plotlib.CandlestickCurve.WHISKERS,
+                                    style)
+    else: # Not plotting whisker curve.
+        def __shouldplot( type ):
+            if ttest:
+                return options.get( type ) and table.name.endswith( '-'+type )
+            elif meta:
+                return options.get( type ) and type == meta_type
+            else:
+                return options.get( type )
+
+        def __curves( type ):
+            result = []
+            if ttest:
+                if options.get( 'pval' ):
+                    result.append( {'col': 'pval', 'title': 'pval', 'axes': (1,2)} )
+                if options.get( 'tval' ):
+                    result.append( {'col': 'tval', 'title': 'tval', 'axes': (1,2)} )
+            elif meta:
+                result.append( {'col': 'mean', 'title': type.title(), 'axes': (1,1)} )
+            else:
+                result.append( {'col': type, 'title': type.title(), 'axes': (1,1)} )
+            return result
+
+        #
+        # Create the curves.
+        #
+        # (about freaking time)
+        #
+        for type in DATASETS:
+            if __shouldplot( type ):
+                for c in __curves( type ):
+                    style = __style( type )
+            
+                    curve = plot.createCurve(table,
+                                             __title(c['title']),
+                                             'Timestep',
+                                             c['col'],
+                                             style,
+                                             smooth)
+                    curve.points = points
+                    curve.axes = c['axes']
+            
+        if __shouldplot( 'mean' ) and options.get('errorbars', False):
+                assert(not ttest)
+
+                plot.createErrorbarCurve(table,
+                                         None,
+                                         'Timestep',
+                                         'mean',
+                                         'mean_stderr',
+                                         style)
+
+####################################################################################
+###
+### FUNCTION show_usage()
+###
+####################################################################################
+def show_usage(msg = None):
+#-------------------------------------------------------------------------------
+	print """\
+USAGE 
+
+     %s [<options>]... (%s) <directory>...
+
+DESCRIPTION
+
+     Plots the Olafcomplexity from one or more Polyworld run/ directories.
+
+     Directory arguments can specify a run directory or the parent of one or
+  more run directories.
+
+     Note that all 'meta' averages can only be calculated if more than one run
+  is specified. Meta-averages are computed only for those timesteps which exist
+  for all runs.
+
+OPTIONS
+
+     -o <path>
+               Specify path of generated plot document.
+               (default %s)
+
+     --verbose
+               Print informational messages.
+
+     -C <C>[,<C>]...
+               Plot NeuralComplexity across one or more 'C' neuron types,
+            where C can be a composite of types (e.g. HB). Multiple C specs are
+            separated by commas (e.g. -C P,HB,I).
+            (default P)
+
+     -g, --group (off | auto | <class>[,<class>]...)
+               off: Do not group runs into classifications.
+
+               auto: Group with no constraints on possible classifications.
+
+               <class>[,<class>]...: Constrain set of possible classifications,
+            where choices are:
+               %s
+            Note that classification names are case-insensitive and needn't be
+            fully spelled -- only enough to disambiguate (e.g. dri = Driven,
+            P = Passive, f = Fitness).
+
+            (default auto)
+
+     --tcrit <TCRIT>
+               Specify value of T* (default %f, which corresponds to %d
+            samples in %d pairs in a Dependent Student's T-test)
+
+     -p, --pval
+               Plot T-test p-values between groups (see --group).
+            If more than two groups are present, use the first two groups
+            specified by --group.  If more than two groups are present and
+            --group is auto, use Driven and Passive, if present, else abort
+            requesting specification of --group.
+
+     -t, --tval
+               Plot T-test t-values between groups (see --group).
+            If more than two groups are present, use the first two groups
+            specified by --group.  If more than two groups are present and
+            --group is auto, use Driven and Passive, if present, else abort
+            requesting specification of --group.
+
+     -m/M, --mean/Mean
+               Plot mean/meta-mean of each complexity type. (default -m on)
+
+     -n/N, --min/Min
+               Plot max/meta-max of each complexity type.
+
+     -x/X, --max/Max
+               Plot max/meta-max of each complexity type.
+
+     -e/E, --err/Err
+               Draw Standard Error bars for the mean/meta-mean.
+
+     -w/W, --whiskers/Whiskers
+               Box-and-Whiskers plot of run/meta-average.
+
+     -d, --points, --dots
+               Draw points on mean, max, and min lines.
+
+     -s, --smooth
+               Generate smooth curves.
+
+     -l, --legend
+               Display a legend for the individual runs.
+            (default is to not display a runs legend)
+
+     -L, --noLegend
+               Do not display a legend for groups.
+            (default is to display a groups legend, if multiple groups
+            are present)
+
+     -v, --noview
+               Do not show document in default viewer.
+
+     -c, --color
+               Use color to distinguish individual runs.
+               (default is to use uniform gray for individual runs)
+
+     --title <title>
+               Specify title of graph, optionally with macros (see below).
+
+     --xlabel <label>
+               Specify label of x-axis, optionally with macros (see below).
+
+     --ylabel <label>
+               Specify label of y-axis, optionally with macros (see below).
+
+     --rmargin <n>
+               Override size of right margin, where n is number of character
+            widths. Necessary because of buggy gnuplot behavior.
+
+MACROS
+
+        Macros are allowed in the title, xlabel, and ylabel options. Their
+     names must be enclosed within {}.
+
+     Available macros:
+
+     TITLE              Standard title
+
+     XLABEL             Standard x-axis label
+
+     YLABEL             Standard y-axis label
+
+     ARG_DIRS           List of paths passed to script with redundant path info
+                     stripped.
+
+     ARG_PATHS          List of paths passed to script with no modification.
+
+     RUN_DIRS           List of run directory paths with redundant path info
+                     stripped.
+
+     RUN_PATHS          List of run directory paths with no modification.
+
+     RECENT             Name of recent type (e.g. Recent, bestRecent)
+
+     COMPLEXITY_TYPES   List of complexity types in abbreviated form.
+
+     COMPLEXITY_NAMES   List of complexity types in user-friendly form.
+
+     GROUPS             List of groups.
+
+     GROUPS_TTEST       List of groups used in T-test calculations.
+
+     TYPES              List of curve types (e.g. Min, Mean, Max)\
+""" % (sys.argv[0],
+       '|'.join(RECENT_TYPES),
+       DEFAULT_OUTPUT,
+       ', '.join(common_functions.CLASSIFICATIONS),
+       TCRIT_DEFAULT[0], TCRIT_DEFAULT[1], TCRIT_DEFAULT[2])
+#-------------------------------------------------------------------------------
+
+        if msg:
+            print "--------------------------------------------------------------------------------"
+            print
+            print 'Error!', msg
+	sys.exit(1)
+
+
+####################################################################################
+###
+### Primary Code Path
+###
+####################################################################################
+
+exit_value = main()
+
+sys.exit(exit_value)
