@@ -90,7 +90,7 @@ def env_create():
 
     env = env_common = init_env(Environment())
     env.Append( CPPSUFFIXES = ['.cp'] )
-    cpp_flags = ['g']
+    cpp_flags = ['-g']
     try:
     	cpp_flags += os.environ['CPPFLAGS'].split(' ')
     except KeyError:
