@@ -90,9 +90,19 @@ def env_create():
 
     env = env_common = init_env(Environment())
     env.Append( CPPSUFFIXES = ['.cp'] )
-    env.Append( CPPFLAGS = ['-g'] )
+    cpp_flags = ['g']
+    try:
+    	cpp_flags += os.environ['CPPFLAGS'].split(' ')
+    except KeyError:
+    	pass
+    env.Append( CPPFLAGS = cpp_flags )
     env.Append( CPPPATH = find('src',
                                type = 'dir') )
+    try:
+        env.Append( LINKFLAGS = os.environ['LDFLAGS'].split(' ') )
+    except KeyError:
+        pass
+
     import_OpenMP(env)
     import_GSL(env)
 
