@@ -1053,7 +1053,7 @@ short genome::numneurons(short i)
 //---------------------------------------------------------------------------
 float genome::Bias(short i)
 {
-	return interp(GeneValue(biasgene+i), -brain::gNeuralValues.maxbias, brain::gNeuralValues.maxbias);
+	return interp(GeneValue(biasgene+i-brain::gNeuralValues.numinputneurgroups), -brain::gNeuralValues.maxbias, brain::gNeuralValues.maxbias);
 }
 
 
@@ -1062,7 +1062,7 @@ float genome::Bias(short i)
 //---------------------------------------------------------------------------
 float genome::BiasLearningRate(short i)
 {
-	return interp(GeneValue(biaslrategene+i), brain::gNeuralValues.minbiaslrate, brain::gNeuralValues.maxbiaslrate);
+	return interp(GeneValue(biaslrategene+i-brain::gNeuralValues.numinputneurgroups), brain::gNeuralValues.minbiaslrate, brain::gNeuralValues.maxbiaslrate);
 }
 
 
