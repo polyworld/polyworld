@@ -433,7 +433,7 @@ void genome::SeedGenes()
 		fGenes[biasgene+i]		= 127;	// about 0.0 bias
 		fGenes[biaslrategene+i]	= 0;	// about 0.0 bias learning rate
 	}
-	fGenes[biasgene+brain::gNeuralValues.maxinternalneurgroups+1] = 255;	// always want to mate
+	fGenes[biasgene+1] = 255;	// always want to mate
 	for( int i = 0; i < brain::gNeuralValues.maxneurgroups * brain::gNeuralValues.maxnoninputneurgroups; i++ )
 	{
 		fGenes[eecdgene+i] = 0;	// 1,   but won't matter for the non-existent internal groups
