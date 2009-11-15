@@ -1,0 +1,23 @@
+This document describes the current layout of the genome
+
+Each gene is one byte, and they appear in the following order:
+
+size
+strength
+maximum speed
+ID (green coloration)
+mutation rate
+number of crossover points
+life span
+fraction of energy to offspring
+number of neurons devoted to red component of vision
+number of neurons devoted to green component of vision
+number of neurons devoted to blue component of vision
+number of internal neuronal groups
+number of excitatory neurons in each internal neuronal group
+number of inhibitory neurons in each internal neuronal group
+initial bias of neurons in each non-input neuronal group
+bias learning rate for each non-input neuronal group (not used)
+connection density between all pairs of neuronal groups and neuron types
+topological distortion between all pairs of neuronal groups and neuron types
+learning rate between all pairs of neuronal groups and neuron types
