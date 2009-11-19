@@ -159,7 +159,8 @@ void brain::braindestruct()
 // brain::brain
 //---------------------------------------------------------------------------
 brain::brain(agent *_self)
-	:	self(_self),
+	:	scale_latest_spikes(0),
+		self(_self),
 		mygenes(NULL),	// but don't delete them, because we don't new them
 		groupblrate(NULL),
 		grouplrate(NULL),
@@ -3285,7 +3286,8 @@ void brain::UpdateSpikes(float energyfraction, FILE * fHandle)
 	//this whole time and actually use them to modify the efficacy of the synapses.  The reason we wait to modify
 	//the actual synapse efficacies until all brain steps is complete is two fold one Izhikevich does it and two
 	//for the sake of efficiency.
-	float learningrate, half_max_weight = .5f * gMaxWeight, one_minus_decay = 1. - gDecayRate;
+	float learningrate;
+//	float half_max_weight = .5f * gMaxWeight, one_minus_decay = 1. - gDecayRate;
 	int ii,jj;
 				
     for (k = 0; k < numsynapses; k++)
@@ -3419,14 +3421,14 @@ void brain::UpdateSpikes(float energyfraction, FILE * fHandle)
 	{
 		for(int i = 0; i < firstOutputNeuron; i++ )
 		{
-			fprintf( fHandle, "%d %1.4f ", i, (float)NeuronFiringCounter[i]/BrainStepsPerWorldStep);
+			fprintf( fHandle, "%d %1.4f\t", i, (float)NeuronFiringCounter[i]/BrainStepsPerWorldStep);
 			for(int j=0; j<BrainStepsPerWorldStep; j++)
 				fprintf( fHandle, "%c", spikeMatrix[i][j] );
 			fprintf( fHandle, "\n");
 		}
 		for (int i = firstOutputNeuron; i < numneurons; i++)
 		{
-			fprintf( fHandle, "%d %1.4f ", i, neuronactivation[i]);
+			fprintf( fHandle, "%d %1.4f\t", i, neuronactivation[i]);
 			for(int j=0; j<BrainStepsPerWorldStep; j++)
 				fprintf( fHandle, "%c", spikeMatrix[i][j] );
 			fprintf( fHandle, "\n");

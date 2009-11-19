@@ -710,11 +710,14 @@ void agent::UpdateVision()
 //---------------------------------------------------------------------------
 void agent::UpdateBrain()
 {
-    fBrain->Update(fEnergy / fMaxEnergy);
-
+#if SPIKING_MODEL
+    fBrain->UpdateSpikes( fEnergy / fMaxEnergy, fBrainFuncFile );
+#else
+    fBrain->Update( fEnergy / fMaxEnergy );
 	// If we're recording brain function, do it here
 	if( fBrainFuncFile )
 		fBrain->writeFunctional( fBrainFuncFile );
+#endif
 }
 
 
