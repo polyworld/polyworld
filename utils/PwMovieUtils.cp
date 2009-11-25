@@ -181,8 +181,8 @@ void rleproc( register unsigned long *rgb,
     while( (rgb < rgbend) && (rle < rleend) )
 	{
         n = 1;
-        while( ((*++rgb | AlphaMask_RGBA) == currentrgb) &&
-			   (rgb < rgbend) )
+        while( (++rgb < rgbend) &&
+			   ((*rgb | AlphaMask_RGBA) == currentrgb) )
             n++;
 		pmpPrint( "encoding run of %lu pixels = %08lx\n", n, currentrgb );
         *rle++ = n;
