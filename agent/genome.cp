@@ -825,7 +825,7 @@ float genome::CalcSeparation(genome* g)
     fsep /= (255.0f * float(local_numbytes));
     return fsep;
 #else
-	fsep = float(sep / (255 * genome::gNumBytes));
+	fsep = float(sep) / (255 * genome::gNumBytes);
     return fsep;
 #endif
 }
