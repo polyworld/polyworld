@@ -1,9 +1,9 @@
-#!/usr/bin/python
+#!/usr/local/bin/python
 
 CurrentVersion=2
 
 ### Configurable parameters
-OutputFilename2='ComplexityHist.plt'
+OutputFilename2='MetricHist.plt'
 
 #CALC_COMPLEXITY_OVER_DIRECTORY="./CalcComplexityOverDirectory.sh"
 #### Don't modify anything beneath here unless you know what you're doing
@@ -11,13 +11,16 @@ import algorithms
 import getopt, glob, string, sys, os
 import common_functions
 from common_functions import err, warn, list_difference
-import common_complexity
+import common_metric
 import datalib
+import networkx as nx
+import numpy
 
 ### Now initialize some global variables
-OutputFilename = common_complexity.FILENAME_AVR
-NUMBINS = common_complexity.DEFAULT_NUMBINS
-
+##OutputFilename = common_complexity.FILENAME_AVR
+OutputFilename = common_metric.FILENAME_AVR
+NUMBINS = common_metric.DEFAULT_NUMBINS
+RandomFlag = False
 LEGACY_MODES = ['force','prefer','off']
 LegacyMode = 'off'
 ####
@@ -28,9 +31,9 @@ LegacyMode = 'off'
 ###
 ####################################################################################
 def main():
-	check_environment()
+	#check_environment()
 
-	complexities, recent_type, arg_paths = parse_args(sys.argv[1:])
+	metrics, recent_type, arg_paths = parse_args(sys.argv[1:])
 
 	recent_subpath = os.path.join('brain', recent_type)
 	try:
@@ -43,7 +46,7 @@ def main():
 			  run_paths)
 
 	for recent_dir in recent_dirs:
-		analyze_recent_dir(complexities,
+		analyze_recent_dir(metrics,
 				   recent_dir)
 
 	print "Done!"
@@ -65,15 +68,20 @@ def check_environment():
 ###
 ####################################################################################
 def parse_args(argv):
-	global NUMBINS, LegacyMode
+	global NUMBINS, LegacyMode, RandomFlag
 
 	if len(argv) == 0:
 		show_usage()
 
-	complexities = common_complexity.DEFAULT_COMPLEXITIES
+	metrics = common_metric.DEFAULT_METRICS#'CC' represents clustering coefficient
+	                              #and 'SP' represents shortest path length
 
-	short = 'C:l:b:'
-	long = ['legacy=', 'bins=']
+
+##	short = 'C:l:b:'
+##	long = ['legacy=', 'bins=']
+	short = 'M:R'
+	long = ['metrics=','random=']
+
 
 	try:
 		opts, args = getopt.getopt(argv, short, long)
@@ -83,17 +91,19 @@ def parse_args(argv):
 	for opt, value in opts:
 		opt = opt.strip('-')
 
-		if opt == 'C':
-			complexities = map(string.upper, value.split(','))
-		elif opt == 'l' or opt == 'legacy':
-			if value not in LEGACY_MODES:
-				show_usage('Invalid legacy mode (%s)' % value)
-			LegacyMode = value
-		elif opt == 'b' or opt == 'bins':
-			try:
-				NUMBINS = int(value)
-			except:
-				show_usage("Invalid integer argument for --bins (%s)" % value)
+		if opt == 'M':
+			metrics = map(string.upper, value.split(','))
+		elif opt == 'R':
+                        RandomFlag = True
+##		elif opt == 'l' or opt == 'legacy':
+##			if value not in LEGACY_MODES:
+##				show_usage('Invalid legacy mode (%s)' % value)
+##			LegacyMode = value
+##		elif opt == 'b' or opt == 'bins':
+##			try:
+##				NUMBINS = int(value)
+##			except:
+##				show_usage("Invalid integer argument for --bins (%s)" % value)
 		else:
 			assert(False)
 
@@ -109,14 +119,14 @@ def parse_args(argv):
 
 	paths = list(args)
 
-	return complexities, recent_type, paths
+	return metrics, recent_type, paths
 
 ####################################################################################
 ###
 ### analyze_recent_dir()
 ###
 ####################################################################################
-def analyze_recent_dir(complexities, recent_dir):
+def analyze_recent_dir(metrics, recent_dir):
 	outputpath = os.path.join(recent_dir, OutputFilename);
 	
 	print "- recent directory='%s'" %(recent_dir)
@@ -151,7 +161,6 @@ def analyze_recent_dir(complexities, recent_dir):
 	
 	print "Final Timestep: %s" % ( max(timesteps) )
 	print "Processing:",
-	
 	for t in timesteps:
 		timestep_directory = os.path.join(recent_dir, str(t))
 		print '%s...\n' % (t),
@@ -159,28 +168,28 @@ def analyze_recent_dir(complexities, recent_dir):
 	
 		DATA[t] = tdata = {}
 
-		complexities_remaining = complexities
+		metrics_remaining = metrics
 
-		if LegacyMode != 'off' :
-			complexities_read = read_legacy_complexities(complexities_remaining,
+##		if LegacyMode != 'off' :
+##			complexities_read = read_legacy_complexities(complexities_remaining,
+##								     timestep_directory,
+##								     tdata)
+##			complexities_remaining = list_difference(complexities_remaining,
+##								 complexities_read)
+##			if len(complexities_remaining) != 0:
+##				if LegacyMode == 'force':
+##					err('Failed to find data for %s' % ','.join(complexities_remaining))
+##			
+##			print '  Legacy =', complexities_read
+
+		if len(metrics_remaining) > 0:
+			metrics_computed = compute_metrics(metrics_remaining,
 								     timestep_directory,
 								     tdata)
-			complexities_remaining = list_difference(complexities_remaining,
-								 complexities_read)
-			if len(complexities_remaining) != 0:
-				if LegacyMode == 'force':
-					err('Failed to find data for %s' % ','.join(complexities_remaining))
-			
-			print '  Legacy =', complexities_read
+			metrics_remaining = list_difference(metrics_remaining,
+								 metrics_computed)
 
-		if len(complexities_remaining) > 0:
-			complexities_computed = compute_complexities(complexities_remaining,
-								     timestep_directory,
-								     tdata)
-			complexities_remaining = list_difference(complexities_remaining,
-								 complexities_computed)
-
-		assert(len(complexities_remaining) == 0)
+		assert(len(metrics_remaining) == 0)
 	
 	#-----------------------------------------------------------------------------------
 	#--
@@ -188,55 +197,55 @@ def analyze_recent_dir(complexities, recent_dir):
 	#--
 	#-----------------------------------------------------------------------------------
 	AVR = algorithms.avr_table(DATA,
-				   complexities,
+                                   metrics,
 				   timesteps)
 	
 	datalib.write(outputpath, AVR)
 	
 	
-	#-----------------------------------------------------------------------------------
-	#--
-	#-- Create 'Norm' file
-	#--
-	#-----------------------------------------------------------------------------------
-	tables = compute_bins(DATA,
-			      timesteps,
-			      complexities,
-			      AVR,
-			      lambda row: row.get('min'),
-			      lambda row: row.get('max'))
-	
-	outputpath = os.path.join(recent_dir, OutputFilename2.replace( '.', 'Norm.'))
-	
-	datalib.write(outputpath, tables)
-	
-	
-	#-----------------------------------------------------------------------------------
-	#--
-	#-- Create 'Raw' file
-	#--
-	#-----------------------------------------------------------------------------------
-	MAXGLOBAL = dict([(type, float('-inf')) for type in complexities])
-	MINGLOBAL = dict([(type, float('inf')) for type in complexities])
-	
-	for avr_table in AVR.values():
-		for row in avr_table.rows():
-			type = avr_table.name
-	
-			MAXGLOBAL[type] = max(MAXGLOBAL[type], row.get('max'));
-			MINGLOBAL[type] = min(MINGLOBAL[type], row.get('min'));
-	
-	tables = compute_bins(DATA,
-			      timesteps,
-			      complexities,
-			      AVR,
-			      lambda row: MINGLOBAL[row.table.name],
-			      lambda row: MAXGLOBAL[row.table.name])
-	
-	outputpath = os.path.join(recent_dir, OutputFilename2.replace( '.', 'Raw.'))
-	
-	datalib.write(outputpath, tables)
-	
+##	#-----------------------------------------------------------------------------------
+##	#--
+##	#-- Create 'Norm' file
+##	#--
+##	#-----------------------------------------------------------------------------------
+##	tables = compute_bins(DATA,
+##			      timesteps,
+##			      metrics,
+##			      AVR,
+##			      lambda row: row.get('min'),
+##			      lambda row: row.get('max'))
+##	
+##	outputpath = os.path.join(recent_dir, OutputFilename2.replace( '.', 'Norm.'))
+##	
+##	datalib.write(outputpath, tables)
+##	
+##	
+##	#-----------------------------------------------------------------------------------
+##	#--
+##	#-- Create 'Raw' file
+##	#--
+##	#-----------------------------------------------------------------------------------
+##	MAXGLOBAL = dict([(type, float('-inf')) for type in metrics])
+##	MINGLOBAL = dict([(type, float('inf')) for type in metrics])
+##	
+##	for avr_table in AVR.values():
+##		for row in avr_table.rows():
+##			type = avr_table.name
+##	
+##			MAXGLOBAL[type] = max(MAXGLOBAL[type], row.get('max'));
+##			MINGLOBAL[type] = min(MINGLOBAL[type], row.get('min'));
+##	
+##	tables = compute_bins(DATA,
+##			      timesteps,
+##			      metrics,
+##			      AVR,
+##			      lambda row: MINGLOBAL[row.table.name],
+##			      lambda row: MAXGLOBAL[row.table.name])
+##	
+##	outputpath = os.path.join(recent_dir, OutputFilename2.replace( '.', 'Raw.'))
+##	
+##	datalib.write(outputpath, tables)
+##	
 ####################################################################################
 ###
 ### FUNCTION read_legacy_complexities()
@@ -261,86 +270,172 @@ def read_legacy_complexities(complexities,
 
 ####################################################################################
 ###
-### FUNCTION compute_complexities()
+### FUNCTION compute_metrics()
 ###
 ####################################################################################
-def compute_complexities(complexities,
-			 timestep_directory,
-			 tdata):
+def compute_metrics(metrics,
+		    timestep_directory,
+		    tdata):
 	def __path(type):
-		return os.path.join(timestep_directory, 'complexity_' + type + '.plt')
+		return os.path.join(timestep_directory, 'metric_' + type + '.plt')
 	
-	# --- Read in any complexities computed on a previous invocation of this script
-	complexities_read = []
-	for type in complexities:
+	# --- Read in any metrics computed on a previous invocation of this script
+	metrics_read = []
+	for type in metrics:
 		path = __path(type)
 
 		if os.path.isfile(path):
 			try:
 				table = datalib.parse(path)[type]
-				data = table.getColumn('Complexity').data
-				tdata[type] = common_complexity.normalize_complexities(data)
+				data = table.getColumn('Metric').data
+				tdata[type] = common_metric.normalize_metrics(data)
 	
-				complexities_read.append(type)
+				metrics_read.append(type)
 			except datalib.InvalidFileError, e:
 				# file must have been incomplete
 				print "Failed reading ", path, "(", e, ") ... regenerating"
 	
 	    
-	complexities_remaining = list_difference(complexities,
-						 complexities_read)
+	metrics_remaining = list_difference(metrics,
+					    metrics_read)
 	
-	print "  AlreadyHave =", complexities_read
-	print "  ComplexitiesToGet =", complexities_remaining
-	
-	# --- Compute complexities not already found on the file system
-	if complexities_remaining:
-		# --- Execute CalcComplexity on all brainFunction files in the timestep dir
-		brainFunction_files = glob.glob(os.path.join(timestep_directory, "brainFunction*.txt"))
-		brainFunction_files.sort(lambda x, y: cmp(int(os.path.basename(x)[14:-4]),
-							  int(os.path.basename(y)[14:-4])))
-		if len(brainFunction_files) == 0:
-			err('No brainfunction files found in %s' % timestep_directory)
+        #metrics_remaining = ['CC','SP']#JUST for TEST
+	print "  AlreadyHave =", metrics_read
+	print "  MetricsToGet =", metrics_remaining
 
-		cmd="%s brainfunction --bare --list %s -- %s" % ( CALC_COMPLEXITY,
-								  ' '.join(brainFunction_files),
-								  ' '.join(complexities_remaining))
-			
-		stdout = os.popen(cmd)
-		complexity_all = stdout.readlines()
-		if stdout.close() != None:
-			err('Failed executing CalcComplexity!')
+	# --- Compute metrics not already found on the file system
+	if metrics_remaining:
+		# --- Execute CalcMetric on all corresponding brainAnatomy files in anatomy dir
+		brainFunction_files = glob.glob(os.path.join(timestep_directory, "brainFunction*.txt"))
+##		brainFunction_files.sort(lambda x, y: cmp(int(os.path.basename(x)[14:-4]),
+##							  int(os.path.basename(y)[14:-4])))
+		#Extract critter number from brainFunction files
+		number_list = map(lambda x: int(os.path.basename(x)[14:-4]), brainFunction_files)
+                
+                anatomy_directory = os.path.join(timestep_directory, "..", "..", "anatomy")
+		brainAnatomy_files_all = glob.glob(os.path.join(anatomy_directory, "*death.txt"))
+
+                #Pick out those brainAnatomy files with corresponding critter number to brainFunction files.
+                brainAnatomy_files = []
+		for anatomyFile in brainAnatomy_files_all:
+                        if int(os.path.basename(anatomyFile)[13:-10]) in number_list:
+                                brainAnatomy_files.append(anatomyFile)
+                                               
+		brainAnatomy_files.sort(lambda x, y: cmp(int(os.path.basename(x)[13:-10]),
+							  int(os.path.basename(y)[13:-10])))
+		if len(brainAnatomy_files) == 0:
+			err('No brainanatomy files found in %s' % anatomy_directory)
+
+##		cmd="%s brainfunction --bare --list %s -- %s" % ( CALC_COMPLEXITY,
+##								  ' '.join(brainFunction_files),
+##								  ' '.join(complexities_remaining))
+##			
+##		stdout = os.popen(cmd)
+##		complexity_all = stdout.readlines()
+##		if stdout.close() != None:
+##			err('Failed executing CalcComplexity!')
+
+                metric_all = calc_metrics(metrics_remaining, brainAnatomy_files)
 	
-		colnames = ['CritterNumber', 'Complexity']
+	
+		colnames = ['CritterNumber', 'Metric']
 		coltypes = ['int', 'float']
 		tables = dict([(type, datalib.Table(type, colnames, coltypes))
-			       for type in complexities_remaining])
+			       for type in metrics_remaining])
 	
 		# --- Parse the output
-		for line in complexity_all:
+		for line in metric_all:
 			fields = line.split()
 			critter_number = fields.pop(0)
 
-			for type in complexities_remaining:
+			for type in metrics_remaining:
 				table = tables[type]
 				row = table.createRow()
 	
 				row.set('CritterNumber', critter_number)
-				row.set('Complexity', fields.pop(0))
+				row.set('Metric', fields.pop(0))
 	
 		# --- Write to file and normalize data (eg sort and remove 0's)
-		for type in complexities_remaining:
+		for type in metrics_remaining:
 			table = tables[type]
 	
 			datalib.write(__path(type),
 				      table)
 	
-			data = table.getColumn('Complexity').data
+			data = table.getColumn('Metric').data
 	
-			tdata[type] = common_complexity.normalize_complexities(data)
+			tdata[type] = common_metric.normalize_metrics(data)
 
-	return complexities
+	return metrics
 
+
+####################################################################################
+###
+### FUNCTION calc_metrics()
+###
+####################################################################################
+def calc_metrics(metrics,anatomy_files):
+        global RandomFlag
+        metric_all = []
+        for anatomy_file in anatomy_files:
+                individual_metric = os.path.basename(anatomy_file)[13:-10] + ' '#Critter Number
+                #metric_all.append(anatomy_file[13:-10])
+
+                #Transform the anatomy file content into numpy adjacency matrix
+                infile = open(anatomy_file,"r")
+                lines = infile.readlines()
+                lines.pop(0)
+
+                H = []
+                for l in lines:
+                    g = []
+                    l = l.split()
+                    l.remove(';')
+                    for e in l:
+                        g.append(abs(float(e)))
+
+                    H.append(g)
+
+
+                B = numpy.matrix(H)
+                G_Dir = nx.from_numpy_matrix(B,nx.DiGraph())#Geneterate directed version of brain network
+                G_Undir = nx.Graph(G_Dir)#Generate undirected version of brain network
+                if not RandomFlag:
+                
+                        if 'CC' in metrics:#need to calculate average clustering coeffcient
+                                avr_clustering = nx.average_clustering(G_Undir)
+                                individual_metric += str(avr_clustering) + ' '
+
+                        if 'SP' in metrics:#need to calculate average shortest path length
+                                avr_shortest_path_length = nx.normalized_average_shortest_path_length(G_Undir,weighted=False)
+                                #avr_shortest_path_length = nx.normalized_average_shortest_path_length(G_Dir,weighted=True)
+                                individual_metric += str(avr_shortest_path_length) + ' '
+        ##                        closeness_centrality_list = nx.closeness_centrality(G_Undir).values()
+        ##                        avr_closeness = sum(closeness_centrality_list) / len(closeness_centrality_list)
+        ##                        individual_metric += str(avr_closeness) + ' '
+                else:
+                        num_nodes = G_Undir.number_of_nodes()
+                        num_edges = G_Undir.number_of_edges()
+                        Random_G_Undir = nx.gnm_random_graph(num_nodes,num_edges)
+                        if 'CC' in metrics:#need to calculate average clustering coeffcient
+                                avr_clustering = nx.average_clustering(Random_G_Undir)
+                                individual_metric += str(avr_clustering) + ' '
+
+                        if 'SP' in metrics:#need to calculate average shortest path length
+                                avr_shortest_path_length = nx.normalized_average_shortest_path_length(Random_G_Undir,weighted=False)
+                                #avr_shortest_path_length = nx.normalized_average_shortest_path_length(G_Dir,weighted=True)
+                                individual_metric += str(avr_shortest_path_length) + ' '
+        ##                        closeness_centrality_list = nx.closeness_centrality(G_Undir).values()
+        ##                        avr_closeness = sum(closeness_centrality_list) / len(closeness_centrality_list)
+        ##                        individual_metric += str(avr_closeness) + ' '
+                        
+
+
+                metric_all.append(individual_metric)
+
+        return metric_all
+                        
+			 
 ####################################################################################
 ###
 ### FUNCTION make_percents()
@@ -450,8 +545,8 @@ OPTIONS
                Specify number of bins used in histogram calculations.
 	    (default %d)""" % (sys.argv[0],
 			       '|'.join(common_functions.RECENT_TYPES),
-			       ','.join(common_complexity.DEFAULT_COMPLEXITIES),
-			       common_complexity.DEFAULT_NUMBINS)
+			       ','.join(common_metric.DEFAULT_METRICS),
+			       common_metric.DEFAULT_NUMBINS)
 
         if msg:
             print "--------------------------------------------------------------------------------"

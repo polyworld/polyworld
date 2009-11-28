@@ -18,9 +18,13 @@ import iterators
 def median( listofnumbers ):
 
 	length=len(listofnumbers)
+
+	if length == 1:
+		return listofnumbers[0], listofnumbers, listofnumbers
+	
 	lenover2=int(length / 2)
 
-	middle1=listofnumbers[ lenover2 ]			# this number is the answer if the length is ODD, and half of the answer is the length is EVEN
+	middle1=listofnumbers[ lenover2 ]			# this number is the answer if the length is ODD, and half of the answer if the length is EVEN
 	lowerhalf=listofnumbers[: lenover2 ]	# first half of the numbers
 
 		
@@ -44,12 +48,12 @@ def sample_mean( list ):
         mean = sum(list) / N
         SSE=0
         for item in list:
-                SSE += (item - mean)**2.0
+                SSE += (item - mean) * (item - mean)
 
         try: variance = SSE / (N-1)
         except: variance = 0
 
-        stderr = ( variance ** 0.5 ) / (N**0.5) # stderr = stddev / sqrt(N)
+        stderr = ( variance / N ) ** 0.5 # stderr = stddev / sqrt(N)
 
         return mean, stderr
 
@@ -63,6 +67,7 @@ def sample_mean( list ):
 def diff_mean( ita, itb ):
 	n = 0
 	sum = 0.0
+	
 	for a, b in iterators.IteratorUnion( ita, itb ):
 		n += 1
 		sum += a - b
@@ -96,7 +101,10 @@ def diff_stddev( diffmean, ita, itb ):
 ###
 ####################################################################################
 def tval( mean, stddev, n ):
-	return (abs( mean ) / stddev) * sqrt( n - 1 )	
+	if stddev:
+		return (abs( mean ) / stddev) * sqrt( n - 1 )
+	else:
+		return 0.0
 
 ####################################################################################
 ###
@@ -123,17 +131,16 @@ def avr(data):
         # sanity check (data should already be sorted)
         assert(minimum <= maximum)
 
-        mean, mean_stderr = sample_mean(data)
+        mean, stderr = sample_mean(data)
 
         med, lowerhalf, upperhalf = median(data)
 
         q1 = median( lowerhalf )[0]
         q3 = median( upperhalf )[0]
-    except ValueError:
-        # not enough data (< 2 data points)
-        minimum, maximum, mean, mean_stderr, q1, q3, med = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+    except IndexError:  # no data points
+        minimum, maximum, mean, stderr, q1, q3, med = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 
-    return minimum, maximum, mean, mean_stderr, q1, q3, med
+    return minimum, maximum, mean, stderr, q1, q3, med
 
 ####################################################################################
 ###
@@ -222,7 +229,7 @@ def avr_meta( avr_list, regions, timesteps, col ):
 	def __get_regiondata( avr_list, region, t ):
 		return iterators.MatrixIterator( avr_list,
 						 range(len( avr_list )),
-						 region,
+						 [region],
 						 [t],
 						 [col])
 

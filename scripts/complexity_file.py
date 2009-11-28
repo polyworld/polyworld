@@ -1,5 +1,5 @@
 import re
-import complexity_common
+import common_complexity
 
 ####################################################################################
 ###
@@ -98,8 +98,8 @@ def parse_avr(path):
     elif version == 1:
         f.readline() # skip column headers
 
-        typenames = complexity_common.DEFAULT_COMPLEXITIES
-        fieldnames = complexity_common.AVR_FIELDS
+        typenames = common_complexity.DEFAULT_COMPLEXITIES
+        fieldnames = common_complexity.AVR_FIELDS
 
         for typename in typenames:
             type = types[typename] = {}

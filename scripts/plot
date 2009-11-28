@@ -8,15 +8,16 @@ import sys
 import algorithms
 import common_functions
 from common_functions import err, expand_macros, RECENT_TYPES, isverbose, verbose, warn
-import complexity_common
+import common_complexity
+import common_metric
 import datalib
 import iterators
 import plotlib
 
 ################################################################################
-#TCRIT = 2.132	# 95% confidence for 4 degrees of freedom (5 pairs of points)
-TCRIT_DEFAULT = (1.833,20,10)	# 95% confidence for 9 degrees of freedom (10 pairs of points)
-#TCRIT = 1.796	# 95% confidence for 11 degrees of freedom (12 pairs of points)
+#TCRIT = 2.132  # 95% confidence for 4 degrees of freedom (5 pairs of points)
+TCRIT_DEFAULT = (1.833,20,10)   # 95% confidence for 9 degrees of freedom (10 pairs of points)
+#TCRIT = 1.796  # 95% confidence for 11 degrees of freedom (12 pairs of points)
 ################################################################################
 
 DATASETS = ['min', 'mean', 'max']
@@ -24,6 +25,8 @@ DEFAULT_OUTPUT = './plot.eps'
 CLASSIFICATION_LINETYPES = {'Driven': plotlib.StyleGroup.SOLID,
                             'Passive': plotlib.StyleGroup.DASHED,
                             'Fitness': plotlib.StyleGroup.DASHDOT}
+
+Plotting = "complexity"  # ["complexity" | "graph_metric"] Value identifies which is being plotted
 
 ####################################################################################
 ###
@@ -34,11 +37,16 @@ def main():
     #---
     #--- Process command-line arguments
     #---
-    options, complexities, groups, recent_type, arg_paths = parse_args( sys.argv[1:] )
+    options, values, groups, recent_type, arg_paths = parse_args( sys.argv[1:] )
     
     try:
-        run_paths = common_functions.find_run_paths( arg_paths,
-                                                     complexity_common.relpath_avr(recent_type) )
+        if Plotting == "complexity":
+            run_paths = common_functions.find_run_paths( arg_paths,
+                                                         common_complexity.relpath_avr(recent_type) )
+        elif Plotting == "graph_metric":
+            run_paths = common_functions.find_run_paths( arg_paths,
+                                                         common_metric.relpath_avr(recent_type) )
+
     except common_functions.InvalidDirError, e:
         show_usage( str(e) )
 
@@ -50,7 +58,7 @@ def main():
     #---
     avrs, avrs_classified = get_avrs( run_paths,
                                       recent_type,
-                                      complexities,
+                                      values,
                                       groups )
     groups = avrs_classified.keys()
 
@@ -58,14 +66,14 @@ def main():
     #--- Compute Meta
     #---
     avrs_meta = get_meta( options,
-                          complexities,
+                          values,
                           avrs_classified )
 
     #---
     #--- Compute T-test
     #---
     ttest, groups_ttest = get_ttest( options,
-                                     complexities,
+                                     values,
                                      avrs_classified )
 
     #---
@@ -77,7 +85,7 @@ def main():
                          run_paths,
                          run_dirs,
                          recent_type,
-                         complexities,
+                         values,
                          groups,
                          groups_ttest)
 
@@ -89,7 +97,7 @@ def main():
           recent_type,
           run_paths,
           run_dirs,
-          complexities,
+          values,
           avrs_classified,
           avrs_meta,
           ttest )
@@ -100,6 +108,7 @@ def main():
 ###
 ####################################################################################
 def parse_args(argv):
+    global Plotting
     if len(argv) == 0:
         show_usage()
 
@@ -121,6 +130,7 @@ def parse_args(argv):
                     'color': 'color',
                     'verbose': 'verbose'}
     ARGS_GLOBAL = {'C': 'complexity',
+                   'G': 'graph metric',
                    'g': 'group',
                    'group': 'group',
                    'o': 'output',
@@ -157,7 +167,9 @@ def parse_args(argv):
     # --- END OPTIONS
     # ---
 
-    complexities = []
+    #complexities = []
+    #metrics = []
+    values = []
     paths = []
     options = {'global': plotlib.Options(FLAGS_GLOBAL, ARGS_GLOBAL),
                'avr': plotlib.Options(FLAGS_AVR, ARGS_AVR),
@@ -166,19 +178,25 @@ def parse_args(argv):
 
     try:
         short, long = plotlib.getopts_encoding(options.values())
-                        
         opts, args = getopt.getopt(argv, short, long)
     except getopt.GetoptError, e:
         show_usage(str(e))
+        
+    #Determine whether Complexities or Graph Metrics are being plotted
+    for o, a in opts:
+        if 'G' in o:
+            Plotting = 'graph_metric'  # Graph metrics are being plotted
+            break
 
     plotlib.process_options(options, opts)
-
     gopts = options['global']
 
     common_functions._isverbose = gopts.get('verbose')
 
-    # process complexities
-    complexities = gopts.get('complexity', 'P').split(',')
+    if Plotting == 'complexity':
+        values = gopts.get('complexity', 'P').split(',')
+    elif Plotting == 'graph_metric':
+        values = gopts.get('graph metric', 'SP').split(',')
 
     # process grouping
     group = gopts.get('group', 'auto')
@@ -239,7 +257,7 @@ def parse_args(argv):
                    options['avr'].get(opt) or options['meta'].get(opt),
                    count = False )
 
-    return options, complexities, groups, recent_type, paths
+    return options, values, groups, recent_type, paths
 
 ####################################################################################
 ###
@@ -252,7 +270,7 @@ def get_macros( options,
                 run_paths,
                 run_dirs,
                 recent_type,
-                complexities,
+                values,
                 groups,
                 groups_ttest):
     if len(groups) > 1:
@@ -272,19 +290,34 @@ def get_macros( options,
 
     groups_ttest = ' vs. '.join(groups_ttest)
     
-    return {'TITLE': title,
-            'XLABEL': 'Timestep',
-            'YLABEL': 'Neural Complexity ({COMPLEXITY_NAMES})',
-            'ARG_DIRS': ', '.join(arg_dirs),
-            'RUN_DIRS': ', '.join(run_dirs),
-            'ARG_PATHS': ', '.join(arg_paths),
-            'RUN_PATHS': ', '.join(run_paths),
-            'RECENT': recent_type,
-            'COMPLEXITY_TYPES': ', '.join(complexities),
-            'COMPLEXITY_NAMES': ', '.join(complexity_common.get_names(complexities)),
-            'TYPES': ', '.join(types),
-            'GROUPS': groups,
-            'GROUPS_TTEST': groups_ttest}
+    if Plotting == 'complexity':
+        return {'TITLE': title,
+                'XLABEL': 'Timestep',
+                'YLABEL': 'Neural Complexity ({COMPLEXITY_NAMES})',
+                'ARG_DIRS': ', '.join(arg_dirs),
+                'RUN_DIRS': ', '.join(run_dirs),
+                'ARG_PATHS': ', '.join(arg_paths),
+                'RUN_PATHS': ', '.join(run_paths),
+                'RECENT': recent_type,
+                'COMPLEXITY_TYPES': ', '.join(values),
+                'COMPLEXITY_NAMES': ', '.join(common_complexity.get_names(values)),
+                'TYPES': ', '.join(types),
+                'GROUPS': groups,
+                'GROUPS_TTEST': groups_ttest}
+    elif Plotting == 'graph_metric':
+         return {'TITLE': title,
+                'XLABEL': 'Timestep',
+                'YLABEL': 'Graphic Metric ({METRIC_NAMES})',
+                'ARG_DIRS': ', '.join(arg_dirs),
+                'RUN_DIRS': ', '.join(run_dirs),
+                'ARG_PATHS': ', '.join(arg_paths),
+                'RUN_PATHS': ', '.join(run_paths),
+                'RECENT': recent_type,
+                'METRIC_TYPES': ', '.join(values),
+                'METRIC_NAMES': ', '.join(common_metric.get_names(values)),
+                'TYPES': ', '.join(types),
+                'GROUPS': groups,
+                'GROUPS_TTEST': groups_ttest}
 
 ####################################################################################
 ###
@@ -293,12 +326,18 @@ def get_macros( options,
 ####################################################################################
 def get_avrs( run_paths,
               recent_type,
-              complexities,
+              values,
               groups ):
 
-    avrs = complexity_common.parse_avrs( run_paths,
+    if Plotting == 'complexity':
+        avrs = common_complexity.parse_avrs( run_paths,
+                                             recent_type,
+                                             values,
+                                             run_as_key = True )
+    elif Plotting == 'graph_metric':
+        avrs = common_metric.parse_avrs( run_paths,
                                          recent_type,
-                                         complexities,
+                                         values,
                                          run_as_key = True )
 
     if len(groups) == 0: # --group off
@@ -334,7 +373,7 @@ def get_avrs( run_paths,
 ###
 ####################################################################################
 def get_meta( options,
-              complexities,
+              values,
               avrs_classified ):
 
     avrs_meta = {}
@@ -354,7 +393,7 @@ def get_meta( options,
                         meta = create_meta( options,
                                             mopts,
                                             type,
-                                            complexities,
+                                            values,
                                             classification,
                                             avrs )
 
@@ -370,19 +409,19 @@ def get_meta( options,
 def create_meta( options,
                  mopts,
                  type,
-                 complexities,
+                 values,
                  classification,
                  avrs ):
 
     timesteps = common_functions.get_timesteps( iterators.MatrixIterator(avrs,
                                                                          range(len(avrs)),
-                                                                         complexities),
+                                                                         values),
                                                 'Timestep' )    
     if len(timesteps) < 1:
         err( 'No common timesteps found between runs for meta. (classfication=%s)' % classification )
     
     avrs_meta = algorithms.avr_meta(avrs,
-                                    complexities,
+                                    values,
                                     timesteps,
                                     type )
     datalib.write( '/tmp/meta-%s-%s-%d.plt' % (classification,
@@ -397,7 +436,7 @@ def create_meta( options,
 ### FUNCTION get_ttest()
 ###
 ####################################################################################
-def get_ttest( options, complexities, avrs ):
+def get_ttest( options, values, avrs ):
     gopts = options['global']
     topts = options['ttest']
 
@@ -438,7 +477,7 @@ def get_ttest( options, complexities, avrs ):
     timesteps = common_functions.get_timesteps( iterators.MatrixIterator(avrs,
                                                                          groups,
                                                                          range( nruns ),
-                                                                         complexities),
+                                                                         values),
                                                 'Timestep' )
 
     if len(timesteps) == 0:
@@ -446,13 +485,13 @@ def get_ttest( options, complexities, avrs ):
                                                                          
     def __iter( parms ):
         data = parms[0]
-        C = parms[1]
+        V = parms[1]
         t = parms[2]
         col = parms[3]
 
         return iterators.MatrixIterator( data,
                                          range(nruns),
-                                         [C],
+                                         [V],
                                          [t],
                                          [col] )
 
@@ -460,7 +499,7 @@ def get_ttest( options, complexities, avrs ):
                                     runsb,
                                     nruns,
                                     options['ttest'].get('tcrit'),
-                                    complexities,
+                                    values,
                                     timesteps,
                                     DATASETS,
                                     __iter )
@@ -480,7 +519,7 @@ def plot( options,
           recent_type,
           run_paths,
           run_dirs,
-          complexities,
+          values,
           avrs_classified,
           avrs_meta,
           ttest ):
@@ -504,7 +543,7 @@ def plot( options,
             fracHeight = 1.0 / 6.0
 
             plot.y2range = ( pmin, (pmin + (pmax-pmin)/fracHeight) )
-            plot.y2label = "(1 - p-value)	   Dependent Student's T-test"
+            plot.y2label = "(1 - p-value)      Dependent Student's T-test"
 
             plot.createTick( 0.8 )
             plot.createTick( 0.95,
@@ -516,9 +555,9 @@ def plot( options,
             tmax = tcrit
             for col in TTEST_COLS:
                 if topts.get(col):
-                    for C in complexities:
+                    for V in values:
                         tmax = max( tmax,
-                                    max(ttest[C+'-'+col].getColumn( 'tval' )) )
+                                    max(ttest[V+'-'+col].getColumn( 'tval' )) )
             plot.y2range = (0, tmax * 4)
             plot.y2label = "Dependent Student's T-test (p < 0.05)"
             plot.createTick( tcrit,
@@ -549,8 +588,8 @@ def plot( options,
 
     for classification, avrs_list in avrs_classified.items():
         for avrs in avrs_list:
-            for C in complexities:
-                table = avrs[C]
+            for V in values:
+                table = avrs[V]
                 create_curves( doc,
                                plot,
                                macros,
@@ -565,8 +604,8 @@ def plot( options,
 
     for classification, types in avrs_meta.items():
         for type, avrs in types.items():
-            for C in complexities:
-                table = avrs[C]
+            for V in values:
+                table = avrs[V]
 
                 create_curves( doc,
                                plot,
@@ -714,7 +753,10 @@ def create_curves(doc,
             title += expand_macros( ' ({GROUPS_TTEST})', macros )
         else:
             if pathdict != None:
-                title += ' (' + pathdict[complexity_common.path_run_from_avr(table.path, recent_type)] + ')'
+                if Plotting == 'complexity':
+                    title += ' (' + pathdict[common_complexity.path_run_from_avr(table.path, recent_type)] + ')'
+                elif Plotting == 'graph_metric':
+                    title += ' (' + pathdict[common_metric.path_run_from_avr(table.path, recent_type)] + ')'
 
         return title
     #---
@@ -807,7 +849,7 @@ def create_curves(doc,
 ####################################################################################
 def show_usage(msg = None):
 #-------------------------------------------------------------------------------
-	print """\
+    print """\
 USAGE 
 
      %s [<options>]... (%s) <directory>...
@@ -837,6 +879,12 @@ OPTIONS
             where C can be a composite of types (e.g. HB). Multiple C specs are
             separated by commas (e.g. -C P,HB,I).
             (default P)
+     
+     -G <G>[,<G>]...
+               Plot Graph theoretical metrics of one or more types 'G',
+            where G is one of:
+                CC - Clustering Coefficient
+                SP - (Normalized) Shortest Path length
 
      -g, --group (off | auto | <class>[,<class>]...)
                off: Do not group runs into classifications.
@@ -953,7 +1001,7 @@ MACROS
 
      GROUPS_TTEST       List of groups used in T-test calculations.
 
-     TYPES              List of curve types (e.g. Min, Mean, Max)\
+     TYPES              List of curve types (e.g. Min, Mean, Max)
 """ % (sys.argv[0],
        '|'.join(RECENT_TYPES),
        DEFAULT_OUTPUT,
@@ -961,11 +1009,11 @@ MACROS
        TCRIT_DEFAULT[0], TCRIT_DEFAULT[1], TCRIT_DEFAULT[2])
 #-------------------------------------------------------------------------------
 
-        if msg:
-            print "--------------------------------------------------------------------------------"
-            print
-            print 'Error!', msg
-	sys.exit(1)
+    if msg:
+        print "--------------------------------------------------------------------------------"
+        print
+        print 'Error!', msg
+    sys.exit(1)
 
 
 ####################################################################################

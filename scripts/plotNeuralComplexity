@@ -5,9 +5,9 @@ import datalib, plotlib
 
 import common_functions
 from common_functions import err, warn, expand_macros
-import complexity_common
+import common_complexity
 
-INPUT_PLOT_FILENAME = complexity_common.FILENAME_AVR
+INPUT_PLOT_FILENAME = common_complexity.FILENAME_AVR
 RECENT_TYPES = common_functions.RECENT_TYPES
 
 ####################################################################################
@@ -333,7 +333,7 @@ def get_macros(arg_paths, arg_dirs, run_paths, run_dirs, recent_type, complexiti
             'RUN_PATHS': ', '.join(run_paths),
             'RECENT': recent_type,
             'COMPLEXITY_TYPES': ', '.join(complexities),
-            'COMPLEXITY_NAMES': ', '.join(complexity_common.get_names(complexities))}
+            'COMPLEXITY_NAMES': ', '.join(common_complexity.get_names(complexities))}
 
 ####################################################################################
 ###
@@ -424,7 +424,7 @@ def accumulate_meta(avrs, colname):
     for t, tdata in data.items():
         for c in tdata.keys():
             cdata = tdata[c]
-            cdata = complexity_common.normalize_complexities(cdata)
+            cdata = common_complexity.normalize_complexities(cdata)
             tdata[c] = cdata
 
     return data
