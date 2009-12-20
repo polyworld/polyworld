@@ -4,7 +4,7 @@ import datalib
 
 COMPLEXITY_TYPES = ['CC', 'SP']
 COMPLEXITY_NAMES = {'CC':'Clustering Coefficient', 'SP':'Shortest Path'}
-DEFAULT_COMPLEXITIES = ['CC', 'SP']
+DEFAULT_METRICS = ['CC', 'SP']
 FILENAME_AVR = 'AvrMetric.plt'
 DEFAULT_NUMBINS = 11
 
