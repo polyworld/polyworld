@@ -1,8 +1,8 @@
-35		version
+36		version
 
 0		LockStepWithBirthsDeathsLog
 
-30001		maxSteps
+30000		maxSteps
 1		docpuwork
 1000		dumpfreq
 100		statfreq
@@ -330,6 +330,8 @@
 1		useProbabilisticFoodPatches
 
 0		binchartgs
+
+F		neuronModel_F=FiringRate|S=Spiking
 
 0		mininternalneurgroups
 5		maxinternalneurgroups
