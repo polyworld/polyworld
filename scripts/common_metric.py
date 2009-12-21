@@ -2,8 +2,8 @@ import os
 
 import datalib
 
-COMPLEXITY_TYPES = ['CC', 'SP']
-COMPLEXITY_NAMES = {'CC':'Clustering Coefficient', 'SP':'Shortest Path'}
+METRIC_TYPES = ['CC', 'SP']
+METRIC_NAMES = {'CC':'Clustering Coefficient', 'SP':'Shortest Path'}
 DEFAULT_METRICS = ['CC', 'SP']
 FILENAME_AVR = 'AvrMetric.plt'
 DEFAULT_NUMBINS = 11
@@ -17,8 +17,8 @@ def get_name(type):
     result = []
 
 ##    for c in type:
-##        result.append(COMPLEXITY_NAMES[c])
-    result.append(COMPLEXITY_NAMES[type])
+##        result.append(METRIC_NAMES[c])
+    result.append(METRIC_NAMES[type])
     return '+'.join(result)
 
 ####################################################################################
@@ -31,10 +31,10 @@ def get_names(types):
 
 ####################################################################################
 ###
-### FUNCTION normalize_complexities()
+### FUNCTION normalize_metrics()
 ###
 ####################################################################################
-def normalize_complexities(data):
+def normalize_metrics(data):
     data = map(float, data)
     # ignore 0.0, since it is a critter that was ignored in the complexity
     # calculation due to short lifespan.
@@ -46,21 +46,21 @@ def normalize_complexities(data):
 
 ####################################################################################
 ###
-### FUNCTION parse_legacy_complexities()
+### FUNCTION parse_legacy_metrics()
 ###
 ####################################################################################
-def parse_legacy_complexities(path):
+def parse_legacy_metrics(path):
 
     f = open(path, 'r')
 
-    complexities = []
+    metrics = []
 
     for line in f:
-        complexities.append(float(line.strip()))
+        metrics.append(float(line.strip()))
 
     f.close()
 
-    return complexities
+    return metrics
 
 ####################################################################################
 ###
@@ -93,11 +93,11 @@ def path_run_from_avr(path_avr, recent_type):
 ### FUNCTION parse_avrs
 ###
 ####################################################################################
-def parse_avrs(run_paths, recent_type, complexities, run_as_key = False):
+def parse_avrs(run_paths, recent_type, metrics, run_as_key = False):
     # parse the AVRs for all the runs
     avrs = datalib.parse_all( map(lambda x: path_avr( x, recent_type ),
                                   run_paths),
-                              complexities,
+                              metrics,
                               datalib.REQUIRED,
                               keycolname = 'Timestep' )
 
