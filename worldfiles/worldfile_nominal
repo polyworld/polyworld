@@ -1,4 +1,4 @@
-36		version
+35		version
 
 0		LockStepWithBirthsDeathsLog
 
@@ -330,8 +330,6 @@
 1		useProbabilisticFoodPatches
 
 0		binchartgs
-
-F		neuronModel_F=FiringRate|S=Spiking
 
 0		mininternalneurgroups
 5		maxinternalneurgroups
