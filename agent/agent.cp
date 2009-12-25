@@ -690,15 +690,25 @@ void agent::UpdateVision()
 			debugcheck("agent::UpdateVision after glReadPixels");
 		#endif // DEBUGCHECK
 		#if 0
-			printf( "retina pixels:" );
+			static FILE* pixelFile = NULL;
+			if( pixelFile == NULL )
+			{
+				pixelFile = fopen( "run/pixels.txt", "w");
+				if( !pixelFile )
+				{
+					fprintf( stderr, "Unable to open pixels.txt\n" );
+					exit( 1 );
+				}
+				fprintf( pixelFile, "retina pixels:\n" );
+			}
+			fprintf( pixelFile, "id = %ld, age = %ld\n", fIndex, fAge );
 			for( int i = 0; i < brain::retinawidth; i++ )
 			{
-				printf( " " );
+				fprintf( pixelFile, "  " );
 				for( int j = 0; j < 4; j++ )
-					printf( "%02x", fBrain->retinaBuf[i*4 + j] );
-				
+					fprintf( pixelFile, "%02x", fBrain->retinaBuf[i*4 + j] );			
 			}
-			printf( "\n" );
+			fprintf( pixelFile, "\n" );
 		#endif
 		}
 	}
