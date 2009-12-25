@@ -971,6 +971,9 @@ void TSimulation::Step()
 			for( int gene = 0; gene < genome::gNumBytes; gene++ )			// for each gene ...
 			{
 				int count = 0;
+
+				objectxsortedlist::gXSortedObjects.reset();				
+		
 				while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**) &c ) )	// for each agent ...
 				{
 					genevalue = c->Genes()->GeneUIntValue(gene);
