@@ -7,8 +7,10 @@ from scons_util import import_OpenGL, import_OpenMP, import_GSL, import_Qt
 SRCDIRS = ['src/' + x
            for x in ['agent',
                      'app',
+                     'brain',
                      'complexity',
                      'environment',
+                     'genome',
                      'graphics',
                      'motion',
                      'tools',

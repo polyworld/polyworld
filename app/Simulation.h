@@ -25,6 +25,10 @@
 #include "OverheadView.h"
 
 // Forward declarations
+namespace genome
+{
+	class Genome;
+}
 class TBinChartWindow;
 class TBrainMonitorWindow;
 class TChartWindow;
@@ -49,7 +53,7 @@ struct FitStruct
 	ulong	agentID;
 	float	fitness;
 	float   complexity;
-	genome*	genes;
+	genome::Genome*	genes;
 };
 typedef struct FitStruct FitStruct;
 

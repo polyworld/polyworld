@@ -53,15 +53,28 @@
 		7668D30008864B8A004158C6 /* PwMoviePlayer.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7668D2FF08864B8A004158C6 /* PwMoviePlayer.cp */; };
 		7668D30E088650F0004158C6 /* MainWindow.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7668D30D088650F0004158C6 /* MainWindow.cp */; };
 		767A61770A4A21AC00A88B62 /* brick.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76D32E1609E62FDC00394ACE /* brick.cp */; };
+		768BD94810E016EC00B3DCAA /* EnergySensor.cp in Sources */ = {isa = PBXBuildFile; fileRef = 768BD94210E016EC00B3DCAA /* EnergySensor.cp */; };
+		768BD94910E016EC00B3DCAA /* RandomSensor.cp in Sources */ = {isa = PBXBuildFile; fileRef = 768BD94410E016EC00B3DCAA /* RandomSensor.cp */; };
+		768BD94A10E016EC00B3DCAA /* Retina.cp in Sources */ = {isa = PBXBuildFile; fileRef = 768BD94610E016EC00B3DCAA /* Retina.cp */; };
+		768BD97010E0175A00B3DCAA /* Brain.cp in Sources */ = {isa = PBXBuildFile; fileRef = 768BD96410E0175A00B3DCAA /* Brain.cp */; };
+		768BD97110E0175A00B3DCAA /* FiringRateModel.cp in Sources */ = {isa = PBXBuildFile; fileRef = 768BD96610E0175A00B3DCAA /* FiringRateModel.cp */; };
+		768BD97210E0175A00B3DCAA /* Nerve.cp in Sources */ = {isa = PBXBuildFile; fileRef = 768BD96810E0175A00B3DCAA /* Nerve.cp */; };
+		768BD97310E0175A00B3DCAA /* NervousSystem.cp in Sources */ = {isa = PBXBuildFile; fileRef = 768BD96A10E0175A00B3DCAA /* NervousSystem.cp */; };
+		768BD97410E0175A00B3DCAA /* SpikingModel.cp in Sources */ = {isa = PBXBuildFile; fileRef = 768BD96E10E0175A00B3DCAA /* SpikingModel.cp */; };
+		768BD98610E017A700B3DCAA /* Gene.cp in Sources */ = {isa = PBXBuildFile; fileRef = 768BD97A10E017A700B3DCAA /* Gene.cp */; };
+		768BD98710E017A700B3DCAA /* Genome.cp in Sources */ = {isa = PBXBuildFile; fileRef = 768BD97C10E017A700B3DCAA /* Genome.cp */; };
+		768BD98810E017A700B3DCAA /* GenomeSchema.cp in Sources */ = {isa = PBXBuildFile; fileRef = 768BD97E10E017A700B3DCAA /* GenomeSchema.cp */; };
+		768BD98910E017A700B3DCAA /* GenomeUtil.cp in Sources */ = {isa = PBXBuildFile; fileRef = 768BD98010E017A700B3DCAA /* GenomeUtil.cp */; };
+		768BD98A10E017A700B3DCAA /* SynapseType.cp in Sources */ = {isa = PBXBuildFile; fileRef = 768BD98410E017A700B3DCAA /* SynapseType.cp */; };
+		768BD98F10E017C200B3DCAA /* Scalar.cp in Sources */ = {isa = PBXBuildFile; fileRef = 768BD98D10E017C200B3DCAA /* Scalar.cp */; };
+		768BD9DC10E01D4C00B3DCAA /* worldfile in Resources */ = {isa = PBXBuildFile; fileRef = 768BD9DB10E01D4C00B3DCAA /* worldfile */; };
 		76AA4628073AAF7E00508D3D /* TextStatusWindow.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76AA4626073AAF7E00508D3D /* TextStatusWindow.cp */; };
 		76C2315009D0B4AA00EB652A /* OverheadView.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76C2314E09D0B4AA00EB652A /* OverheadView.cp */; };
 		76CBA568062BED8E001C79E7 /* debug.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA55D062BED8E001C79E7 /* debug.cp */; };
 		76CBA56B062BED8E001C79E7 /* globals.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA560062BED8E001C79E7 /* globals.cp */; };
 		76CBA56D062BED8E001C79E7 /* PWApp.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA562062BED8E001C79E7 /* PWApp.cp */; };
 		76CBA571062BED8E001C79E7 /* Simulation.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA566062BED8E001C79E7 /* Simulation.cp */; };
-		76CBA5AD062BEDBC001C79E7 /* brain.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA574062BEDBC001C79E7 /* brain.cp */; };
 		76CBA5AF062BEDBC001C79E7 /* agent.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA576062BEDBC001C79E7 /* agent.cp */; };
-		76CBA5B1062BEDBC001C79E7 /* genome.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA578062BEDBC001C79E7 /* genome.cp */; };
 		76CBA5B3062BEDBC001C79E7 /* barrier.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA57B062BEDBC001C79E7 /* barrier.cp */; };
 		76CBA5B5062BEDBC001C79E7 /* food.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA57D062BEDBC001C79E7 /* food.cp */; };
 		76CBA5B8062BEDBC001C79E7 /* gcamera.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76CBA581062BEDBC001C79E7 /* gcamera.cp */; };
@@ -87,7 +100,6 @@
 		76D02CC70894CEE300D89155 /* GLWidget.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76D02CC60894CEE300D89155 /* GLWidget.cp */; };
 		76D02CE40894D30200D89155 /* moc_GLWidget.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 76D02CE30894D30200D89155 /* moc_GLWidget.cpp */; };
 		76D32E0F09E62F9200394ACE /* objectxsortedlist.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76D32E0D09E62F9200394ACE /* objectxsortedlist.cp */; };
-		76D99C520C38F1E200CC8F85 /* worldfile in Resources */ = {isa = PBXBuildFile; fileRef = 76BB7C9E074D4CE500576391 /* worldfile */; };
 		76E9D481101D1C0B007D602E /* Resources.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76E9D47F101D1C0B007D602E /* Resources.cp */; };
 		84ED837C062E7EED00AEEA18 /* AgentPOVWindow.cp in Sources */ = {isa = PBXBuildFile; fileRef = 84ED837A062E7EED00AEEA18 /* AgentPOVWindow.cp */; };
 /* End PBXBuildFile section */
@@ -192,6 +204,40 @@
 		7668D2E308864A66004158C6 /* PwMoviePlayer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PwMoviePlayer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7668D2FF08864B8A004158C6 /* PwMoviePlayer.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = PwMoviePlayer.cp; sourceTree = "<group>"; };
 		7668D30D088650F0004158C6 /* MainWindow.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = MainWindow.cp; sourceTree = "<group>"; };
+		768BD94210E016EC00B3DCAA /* EnergySensor.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = EnergySensor.cp; sourceTree = "<group>"; };
+		768BD94310E016EC00B3DCAA /* EnergySensor.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = EnergySensor.h; sourceTree = "<group>"; };
+		768BD94410E016EC00B3DCAA /* RandomSensor.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = RandomSensor.cp; sourceTree = "<group>"; };
+		768BD94510E016EC00B3DCAA /* RandomSensor.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = RandomSensor.h; sourceTree = "<group>"; };
+		768BD94610E016EC00B3DCAA /* Retina.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = Retina.cp; sourceTree = "<group>"; };
+		768BD94710E016EC00B3DCAA /* Retina.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = Retina.h; sourceTree = "<group>"; };
+		768BD96310E0175A00B3DCAA /* BaseNeuronModel.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = BaseNeuronModel.h; path = brain/BaseNeuronModel.h; sourceTree = "<group>"; };
+		768BD96410E0175A00B3DCAA /* Brain.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = Brain.cp; path = brain/Brain.cp; sourceTree = "<group>"; };
+		768BD96510E0175A00B3DCAA /* Brain.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = Brain.h; path = brain/Brain.h; sourceTree = "<group>"; };
+		768BD96610E0175A00B3DCAA /* FiringRateModel.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = FiringRateModel.cp; path = brain/FiringRateModel.cp; sourceTree = "<group>"; };
+		768BD96710E0175A00B3DCAA /* FiringRateModel.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = FiringRateModel.h; path = brain/FiringRateModel.h; sourceTree = "<group>"; };
+		768BD96810E0175A00B3DCAA /* Nerve.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = Nerve.cp; path = brain/Nerve.cp; sourceTree = "<group>"; };
+		768BD96910E0175A00B3DCAA /* Nerve.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = Nerve.h; path = brain/Nerve.h; sourceTree = "<group>"; };
+		768BD96A10E0175A00B3DCAA /* NervousSystem.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = NervousSystem.cp; path = brain/NervousSystem.cp; sourceTree = "<group>"; };
+		768BD96B10E0175A00B3DCAA /* NervousSystem.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = NervousSystem.h; path = brain/NervousSystem.h; sourceTree = "<group>"; };
+		768BD96C10E0175A00B3DCAA /* NeuronModel.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = NeuronModel.h; path = brain/NeuronModel.h; sourceTree = "<group>"; };
+		768BD96D10E0175A00B3DCAA /* Sensor.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = Sensor.h; path = brain/Sensor.h; sourceTree = "<group>"; };
+		768BD96E10E0175A00B3DCAA /* SpikingModel.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = SpikingModel.cp; path = brain/SpikingModel.cp; sourceTree = "<group>"; };
+		768BD96F10E0175A00B3DCAA /* SpikingModel.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = SpikingModel.h; path = brain/SpikingModel.h; sourceTree = "<group>"; };
+		768BD97A10E017A700B3DCAA /* Gene.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = Gene.cp; path = genome/Gene.cp; sourceTree = "<group>"; };
+		768BD97B10E017A700B3DCAA /* Gene.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = Gene.h; path = genome/Gene.h; sourceTree = "<group>"; };
+		768BD97C10E017A700B3DCAA /* Genome.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = Genome.cp; path = genome/Genome.cp; sourceTree = "<group>"; };
+		768BD97D10E017A700B3DCAA /* Genome.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = Genome.h; path = genome/Genome.h; sourceTree = "<group>"; };
+		768BD97E10E017A700B3DCAA /* GenomeSchema.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = GenomeSchema.cp; path = genome/GenomeSchema.cp; sourceTree = "<group>"; };
+		768BD97F10E017A700B3DCAA /* GenomeSchema.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = GenomeSchema.h; path = genome/GenomeSchema.h; sourceTree = "<group>"; };
+		768BD98010E017A700B3DCAA /* GenomeUtil.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = GenomeUtil.cp; path = genome/GenomeUtil.cp; sourceTree = "<group>"; };
+		768BD98110E017A700B3DCAA /* GenomeUtil.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = GenomeUtil.h; path = genome/GenomeUtil.h; sourceTree = "<group>"; };
+		768BD98210E017A700B3DCAA /* NeurGroupType.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = NeurGroupType.h; path = genome/NeurGroupType.h; sourceTree = "<group>"; };
+		768BD98310E017A700B3DCAA /* NeuronType.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = NeuronType.h; path = genome/NeuronType.h; sourceTree = "<group>"; };
+		768BD98410E017A700B3DCAA /* SynapseType.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = SynapseType.cp; path = genome/SynapseType.cp; sourceTree = "<group>"; };
+		768BD98510E017A700B3DCAA /* SynapseType.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = SynapseType.h; path = genome/SynapseType.h; sourceTree = "<group>"; };
+		768BD98D10E017C200B3DCAA /* Scalar.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = Scalar.cp; sourceTree = "<group>"; };
+		768BD98E10E017C200B3DCAA /* Scalar.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = Scalar.h; sourceTree = "<group>"; };
+		768BD9DB10E01D4C00B3DCAA /* worldfile */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text; path = worldfile; sourceTree = "<group>"; };
 		769227D0101C382B000BB4F4 /* Behavior-OutputNeuronOrder.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = "Behavior-OutputNeuronOrder.txt"; path = "docs/Behavior-OutputNeuronOrder.txt"; sourceTree = "<group>"; };
 		769227D1101C382B000BB4F4 /* Logistic.xls */ = {isa = PBXFileReference; lastKnownFileType = file; name = Logistic.xls; path = docs/Logistic.xls; sourceTree = "<group>"; };
 		769227D2101C382B000BB4F4 /* MiscegenationProbabilityCurves.xls */ = {isa = PBXFileReference; lastKnownFileType = file; name = MiscegenationProbabilityCurves.xls; path = docs/MiscegenationProbabilityCurves.xls; sourceTree = "<group>"; };
@@ -202,7 +248,6 @@
 		76AA4627073AAF7E00508D3D /* TextStatusWindow.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = TextStatusWindow.h; sourceTree = "<group>"; };
 		76AB9F260CA58D2000DA1161 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = /System/Library/Frameworks/Foundation.framework; sourceTree = "<absolute>"; };
 		76ABA1350CA58F0000DA1161 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = /System/Library/Frameworks/AppKit.framework; sourceTree = "<absolute>"; };
-		76BB7C9E074D4CE500576391 /* worldfile */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text; path = worldfile; sourceTree = "<group>"; };
 		76C2314E09D0B4AA00EB652A /* OverheadView.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = OverheadView.cp; sourceTree = "<group>"; };
 		76C2314F09D0B4AA00EB652A /* OverheadView.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = OverheadView.h; sourceTree = "<group>"; };
 		76CBA55D062BED8E001C79E7 /* debug.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = debug.cp; sourceTree = "<group>"; };
@@ -213,12 +258,8 @@
 		76CBA563062BED8E001C79E7 /* PWApp.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = PWApp.h; sourceTree = "<group>"; };
 		76CBA566062BED8E001C79E7 /* Simulation.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = Simulation.cp; sourceTree = "<group>"; };
 		76CBA567062BED8E001C79E7 /* Simulation.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = Simulation.h; sourceTree = "<group>"; };
-		76CBA574062BEDBC001C79E7 /* brain.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = brain.cp; sourceTree = "<group>"; };
-		76CBA575062BEDBC001C79E7 /* brain.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = brain.h; sourceTree = "<group>"; };
 		76CBA576062BEDBC001C79E7 /* agent.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = agent.cp; sourceTree = "<group>"; };
 		76CBA577062BEDBC001C79E7 /* agent.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = agent.h; sourceTree = "<group>"; };
-		76CBA578062BEDBC001C79E7 /* genome.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = genome.cp; sourceTree = "<group>"; };
-		76CBA579062BEDBC001C79E7 /* genome.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = genome.h; sourceTree = "<group>"; };
 		76CBA57B062BEDBC001C79E7 /* barrier.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = barrier.cp; sourceTree = "<group>"; };
 		76CBA57C062BEDBC001C79E7 /* barrier.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = barrier.h; sourceTree = "<group>"; };
 		76CBA57D062BEDBC001C79E7 /* food.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = food.cp; sourceTree = "<group>"; };
@@ -336,8 +377,10 @@
 			children = (
 				76CBA573062BEDBC001C79E7 /* agent */,
 				76CBA55C062BED8E001C79E7 /* app */,
+				768BD94D10E0172B00B3DCAA /* brain */,
 				760C2CB2101AC94700F5F662 /* complexity */,
 				76CBA57A062BEDBC001C79E7 /* environment */,
+				768BD97710E0178A00B3DCAA /* genome */,
 				76CBA580062BEDBC001C79E7 /* graphics */,
 				760C2CC3101AC96700F5F662 /* motion */,
 				760C2C52101AC6EC00F5F662 /* tools */,
@@ -353,7 +396,7 @@
 			children = (
 				760C3112101BB15900F5F662 /* InfoPlist.strings */,
 				760C2D4B101B9A8200F5F662 /* objects */,
-				76BB7C9E074D4CE500576391 /* worldfile */,
+				768BD9DB10E01D4C00B3DCAA /* worldfile */,
 			);
 			name = Resources;
 			sourceTree = "<group>";
@@ -499,6 +542,45 @@
 			path = PwMoviePlayer;
 			sourceTree = "<group>";
 		};
+		768BD94D10E0172B00B3DCAA /* brain */ = {
+			isa = PBXGroup;
+			children = (
+				768BD96310E0175A00B3DCAA /* BaseNeuronModel.h */,
+				768BD96410E0175A00B3DCAA /* Brain.cp */,
+				768BD96510E0175A00B3DCAA /* Brain.h */,
+				768BD96610E0175A00B3DCAA /* FiringRateModel.cp */,
+				768BD96710E0175A00B3DCAA /* FiringRateModel.h */,
+				768BD96810E0175A00B3DCAA /* Nerve.cp */,
+				768BD96910E0175A00B3DCAA /* Nerve.h */,
+				768BD96A10E0175A00B3DCAA /* NervousSystem.cp */,
+				768BD96B10E0175A00B3DCAA /* NervousSystem.h */,
+				768BD96C10E0175A00B3DCAA /* NeuronModel.h */,
+				768BD96D10E0175A00B3DCAA /* Sensor.h */,
+				768BD96E10E0175A00B3DCAA /* SpikingModel.cp */,
+				768BD96F10E0175A00B3DCAA /* SpikingModel.h */,
+			);
+			name = brain;
+			sourceTree = "<group>";
+		};
+		768BD97710E0178A00B3DCAA /* genome */ = {
+			isa = PBXGroup;
+			children = (
+				768BD97A10E017A700B3DCAA /* Gene.cp */,
+				768BD97B10E017A700B3DCAA /* Gene.h */,
+				768BD97C10E017A700B3DCAA /* Genome.cp */,
+				768BD97D10E017A700B3DCAA /* Genome.h */,
+				768BD97E10E017A700B3DCAA /* GenomeSchema.cp */,
+				768BD97F10E017A700B3DCAA /* GenomeSchema.h */,
+				768BD98010E017A700B3DCAA /* GenomeUtil.cp */,
+				768BD98110E017A700B3DCAA /* GenomeUtil.h */,
+				768BD98210E017A700B3DCAA /* NeurGroupType.h */,
+				768BD98310E017A700B3DCAA /* NeuronType.h */,
+				768BD98410E017A700B3DCAA /* SynapseType.cp */,
+				768BD98510E017A700B3DCAA /* SynapseType.h */,
+			);
+			name = genome;
+			sourceTree = "<group>";
+		};
 		76CBA55C062BED8E001C79E7 /* app */ = {
 			isa = PBXGroup;
 			children = (
@@ -519,12 +601,14 @@
 		76CBA573062BEDBC001C79E7 /* agent */ = {
 			isa = PBXGroup;
 			children = (
-				76CBA574062BEDBC001C79E7 /* brain.cp */,
-				76CBA575062BEDBC001C79E7 /* brain.h */,
 				76CBA576062BEDBC001C79E7 /* agent.cp */,
 				76CBA577062BEDBC001C79E7 /* agent.h */,
-				76CBA578062BEDBC001C79E7 /* genome.cp */,
-				76CBA579062BEDBC001C79E7 /* genome.h */,
+				768BD94210E016EC00B3DCAA /* EnergySensor.cp */,
+				768BD94310E016EC00B3DCAA /* EnergySensor.h */,
+				768BD94410E016EC00B3DCAA /* RandomSensor.cp */,
+				768BD94510E016EC00B3DCAA /* RandomSensor.h */,
+				768BD94610E016EC00B3DCAA /* Retina.cp */,
+				768BD94710E016EC00B3DCAA /* Retina.h */,
 			);
 			path = agent;
 			sourceTree = "<group>";
@@ -623,6 +707,8 @@
 				762A43911061C79C0079A7F0 /* RandomNumberGenerator.h */,
 				76E9D47F101D1C0B007D602E /* Resources.cp */,
 				76E9D480101D1C0B007D602E /* Resources.h */,
+				768BD98D10E017C200B3DCAA /* Scalar.cp */,
+				768BD98E10E017C200B3DCAA /* Scalar.h */,
 			);
 			path = utils;
 			sourceTree = "<group>";
@@ -723,10 +809,10 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				76D99C520C38F1E200CC8F85 /* worldfile in Resources */,
 				760C2D4E101B9A8200F5F662 /* agent.obj in Resources */,
 				760C2D4F101B9A8200F5F662 /* ground.obj in Resources */,
 				760C3114101BB15900F5F662 /* InfoPlist.strings in Resources */,
+				768BD9DC10E01D4C00B3DCAA /* worldfile in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -848,9 +934,7 @@
 				76CBA56B062BED8E001C79E7 /* globals.cp in Sources */,
 				76CBA56D062BED8E001C79E7 /* PWApp.cp in Sources */,
 				76CBA571062BED8E001C79E7 /* Simulation.cp in Sources */,
-				76CBA5AD062BEDBC001C79E7 /* brain.cp in Sources */,
 				76CBA5AF062BEDBC001C79E7 /* agent.cp in Sources */,
-				76CBA5B1062BEDBC001C79E7 /* genome.cp in Sources */,
 				76CBA5B3062BEDBC001C79E7 /* barrier.cp in Sources */,
 				76CBA5B5062BEDBC001C79E7 /* food.cp in Sources */,
 				76CBA5B8062BEDBC001C79E7 /* gcamera.cp in Sources */,
@@ -890,6 +974,20 @@
 				760C2CD0101AC96700F5F662 /* PositionWriter.cp in Sources */,
 				76E9D481101D1C0B007D602E /* Resources.cp in Sources */,
 				762A43921061C79C0079A7F0 /* RandomNumberGenerator.cp in Sources */,
+				768BD94810E016EC00B3DCAA /* EnergySensor.cp in Sources */,
+				768BD94910E016EC00B3DCAA /* RandomSensor.cp in Sources */,
+				768BD94A10E016EC00B3DCAA /* Retina.cp in Sources */,
+				768BD97010E0175A00B3DCAA /* Brain.cp in Sources */,
+				768BD97110E0175A00B3DCAA /* FiringRateModel.cp in Sources */,
+				768BD97210E0175A00B3DCAA /* Nerve.cp in Sources */,
+				768BD97310E0175A00B3DCAA /* NervousSystem.cp in Sources */,
+				768BD97410E0175A00B3DCAA /* SpikingModel.cp in Sources */,
+				768BD98610E017A700B3DCAA /* Gene.cp in Sources */,
+				768BD98710E017A700B3DCAA /* Genome.cp in Sources */,
+				768BD98810E017A700B3DCAA /* GenomeSchema.cp in Sources */,
+				768BD98910E017A700B3DCAA /* GenomeUtil.cp in Sources */,
+				768BD98A10E017A700B3DCAA /* SynapseType.cp in Sources */,
+				768BD98F10E017C200B3DCAA /* Scalar.cp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

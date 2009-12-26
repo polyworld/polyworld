@@ -14,7 +14,7 @@
 #define MinDebugStep 0
 #define MaxDebugStep INT_MAX
 
-#define CurrentWorldfileVersion 35
+#define CurrentWorldfileVersion 36
 
 #define TournamentSelection 1
 
@@ -42,7 +42,7 @@
 
 // Local
 #include "barrier.h"
-#include "brain.h"
+#include "Brain.h"
 #include "BrainMonitorWindow.h"
 #include "ChartWindow.h"
 #include "AgentPOVWindow.h"
@@ -50,6 +50,8 @@
 #include "food.h"
 #include "globals.h"
 #include "food.h"
+#include "Genome.h"
+#include "GenomeUtil.h"
 #include "RandomNumberGenerator.h"
 #include "Resources.h"
 #include "SceneView.h"
@@ -63,6 +65,7 @@
 #include "BrickPatch.h"
 #include "brick.h"
 
+using namespace genome;
 using namespace std;
 
 //===========================================================================
@@ -378,9 +381,7 @@ void TSimulation::Stop()
 	if( fLeastFit )
 		delete fLeastFit;
 
-    genome::genomedestruct();
-
-    brain::braindestruct();
+    Brain::braindestruct();
 
     agent::agentdestruct();
 }
@@ -968,7 +969,7 @@ void TSimulation::Step()
 
 			bool bits[numagents][8];
 		
-			for( int gene = 0; gene < genome::gNumBytes; gene++ )			// for each gene ...
+			for( int gene = 0, n = GenomeUtil::schema->getMutableSize(); gene < n; gene++ )			// for each gene ...
 			{
 				int count = 0;
 
@@ -976,7 +977,7 @@ void TSimulation::Step()
 		
 				while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**) &c ) )	// for each agent ...
 				{
-					genevalue = c->Genes()->GeneUIntValue(gene);
+					genevalue = c->Genes()->get_raw_uint(gene);
 
 					
 					if( genevalue >= 128 ) { bits[count][0]=true; genevalue -= 128; } else { bits[count][0] = false; }
@@ -1215,15 +1216,16 @@ void TSimulation::Init()
 	if( fStaticTimestepGeometry )
 	{
 		// Brains execute in parallel, so we need brain-local RNG state
-		RandomNumberGenerator::set( RandomNumberGenerator::BRAIN,
+		RandomNumberGenerator::set( RandomNumberGenerator::NERVOUS_SYSTEM,
 									RandomNumberGenerator::LOCAL );
 	}
 
 	InitNeuralValues();	 // Must be called before genome and brain init
 	
-	genome::genomeinit();
-    brain::braininit();
+    Brain::braininit();
     agent::agentinit();
+	
+	GenomeUtil::createSchema();
 	
 	 // Following is part of one way to speed up the graphics
 	 // Note:  this code must agree with the agent sizing in agent::grow()
@@ -1251,7 +1253,7 @@ void TSimulation::Init()
         {
 			fFittest[i] = new FitStruct;
 			Q_CHECK_PTR( fFittest[i] );
-            fFittest[i]->genes = new genome();
+            fFittest[i]->genes = GenomeUtil::createGenome();
 			Q_CHECK_PTR( fFittest[i]->genes );
             fFittest[i]->fitness = 0.0;
 			fFittest[i]->agentID = 0;
@@ -1265,7 +1267,7 @@ void TSimulation::Init()
         {
 			fRecentFittest[i] = new FitStruct;
 			Q_CHECK_PTR( fRecentFittest[i] );
-            fRecentFittest[i]->genes = NULL;	// new genome();	// we don't save the genes in the bestRecent list
+            fRecentFittest[i]->genes = NULL;	// GenomeUtil::createGenome()->legacy;	// we don't save the genes in the bestRecent list
             fRecentFittest[i]->fitness = 0.0;
 			fRecentFittest[i]->agentID = 0;
 			fRecentFittest[i]->complexity = 0.0;
@@ -1280,7 +1282,7 @@ void TSimulation::Init()
             {
 				fDomains[id].fittest[i] = new FitStruct;
 				Q_CHECK_PTR( fDomains[id].fittest[i] );
-                fDomains[id].fittest[i]->genes = new genome();
+                fDomains[id].fittest[i]->genes = GenomeUtil::createGenome();
 				Q_CHECK_PTR( fDomains[id].fittest[i]->genes );
                 fDomains[id].fittest[i]->fitness = 0.0;
 				fDomains[id].fittest[i]->agentID = 0;
@@ -1385,7 +1387,7 @@ void TSimulation::Init()
 			cerr << "could not open run/genome/AdamiComplexity-1bit.txt for writing [1]. Exiting." << endl;
 			exit(1);
 		}
-		fprintf( File, "%% BitsInGenome: %ld WindowSize: 1\n", genome::gNumBytes * 8 );		// write the number of bits into the top of the file.
+		fprintf( File, "%% BitsInGenome: %d WindowSize: 1\n", GenomeUtil::schema->getMutableSize() * 8 );		// write the number of bits into the top of the file.
 		fclose( File );
 
 		if( (File = fopen("run/genome/AdamiComplexity-2bit.txt", "a")) == NULL )
@@ -1393,7 +1395,7 @@ void TSimulation::Init()
 			cerr << "could not open run/genome/AdamiComplexity-2bit.txt for writing [1]. Exiting." << endl;
 			exit(1);
 		}
-		fprintf( File, "%% BitsInGenome: %ld WindowSize: 2\n", genome::gNumBytes * 8 );		// write the number of bits into the top of the file.
+		fprintf( File, "%% BitsInGenome: %d WindowSize: 2\n", GenomeUtil::schema->getMutableSize() * 8 );		// write the number of bits into the top of the file.
 		fclose( File );
 
 
@@ -1402,7 +1404,7 @@ void TSimulation::Init()
 			cerr << "could not open run/genome/AdamiComplexity-4bit.txt for writing [1]. Exiting." << endl;
 			exit(1);
 		}
-		fprintf( File, "%% BitsInGenome: %ld WindowSize: 4\n", genome::gNumBytes * 8 );		// write the number of bits into the top of the file.
+		fprintf( File, "%% BitsInGenome: %d WindowSize: 4\n", GenomeUtil::schema->getMutableSize() * 8 );		// write the number of bits into the top of the file.
 		fclose( File );
 
 		if( (File = fopen("run/genome/AdamiComplexity-summary.txt", "a")) == NULL )
@@ -1463,15 +1465,15 @@ void TSimulation::Init()
 	// If we're going to record the gene means and std devs, we need to allocate a couple of stat arrays
 	if( fRecordGeneStats )
 	{
-		fGeneSum  = (unsigned long*) malloc( sizeof( *fGeneSum  ) * genome::gNumBytes );
+		fGeneSum  = (unsigned long*) malloc( sizeof( *fGeneSum  ) * GenomeUtil::schema->getMutableSize() );
 		Q_CHECK_PTR( fGeneSum );
-		fGeneSum2 = (unsigned long*) malloc( sizeof( *fGeneSum2 ) * genome::gNumBytes );
+		fGeneSum2 = (unsigned long*) malloc( sizeof( *fGeneSum2 ) * GenomeUtil::schema->getMutableSize() );
 		Q_CHECK_PTR( fGeneSum2 );
 		
 		fGeneStatsFile = fopen( "run/genestats.txt", "w" );
 		Q_CHECK_PTR( fGeneStatsFile );
 		
-		fprintf( fGeneStatsFile, "%ld\n", genome::gNumBytes );
+		fprintf( fGeneStatsFile, "%d\n", GenomeUtil::schema->getMutableSize() );
 	}
 
 #define PrintGeneIndexesFlag 1
@@ -1480,7 +1482,7 @@ void TSimulation::Init()
 		FILE* f = fopen( "run/geneindex.txt", "w" );
 		Q_CHECK_PTR( f );
 		
-		genome::PrintGeneIndexes( f );
+		GenomeUtil::schema->printIndexes( f );
 		
 		fclose( f );
 	}
@@ -1526,13 +1528,13 @@ void TSimulation::Init()
 				
 				if( numSeededDomain < fDomains[id].numberToSeed )
 				{
-					c->Genes()->SeedGenes();
+					GenomeUtil::seed( c->Genes() );
 					if( randpw() < fDomains[id].probabilityOfMutatingSeeds )
-						c->Genes()->Mutate();
+						c->Genes()->mutate();
 					numSeededDomain++;
 				}
 				else
-					c->Genes()->Randomize();
+					c->Genes()->randomize();
 
 				c->grow( RecordBrainAnatomy( c->Number() ), RecordBrainFunction( c->Number() ) );
 				
@@ -1561,10 +1563,10 @@ void TSimulation::Init()
 
 				c->Domain(id);
 				fDomains[id].numAgents++;
-				fNeuronGroupCountStats.add( c->Brain()->NumNeuronGroups() );
+				fNeuronGroupCountStats.add( c->GetBrain()->NumNeuronGroups() );
 
 			#if RecordRandomBrainAnatomies
-				c->Brain()->dumpAnatomical( "run/brain/random", "birth", c->Number(), 0.0 );
+				c->GetBrain()->dumpAnatomical( "run/brain/random", "birth", c->Number(), 0.0 );
 			#endif
 
 				Birth(c, NULL, NULL);
@@ -1586,13 +1588,13 @@ void TSimulation::Init()
 			
 			if( numSeededTotal < fNumberToSeed )
 			{
-				c->Genes()->SeedGenes();
+				GenomeUtil::seed( c->Genes() );
 				if( randpw() < fProbabilityOfMutatingSeeds )
-					c->Genes()->Mutate();
+					c->Genes()->mutate();
 				numSeededTotal++;
 			}
 			else
-				c->Genes()->Randomize();
+				c->Genes()->randomize();
 			c->grow( RecordBrainAnatomy( c->Number() ), RecordBrainFunction( c->Number() ) );
 			
 			fFoodEnergyIn += c->FoodEnergy();
@@ -1611,7 +1613,7 @@ void TSimulation::Init()
 			id = WhichDomain(x, z, 0);
 			c->Domain(id);
 			fDomains[id].numAgents++;
-			fNeuronGroupCountStats.add( c->Brain()->NumNeuronGroups() );
+			fNeuronGroupCountStats.add( c->GetBrain()->NumNeuronGroups() );
 
 			Birth(c, NULL, NULL);
 		}
@@ -1708,32 +1710,32 @@ void TSimulation::Init()
 	fSceneView->SetScene(&fScene);
 	fOverheadWindow->SetScene( &fOverheadScene );  //Set up overhead view (CMB 3/13/06)
 
-#define DebugGenetics 0
+#define DebugGenetics false
 #if DebugGenetics
 	// This little snippet of code confirms that genetic copying, crossover, and mutation are behaving somewhat reasonably
 	objectxsortedlist::gXSortedObjects.reset();
 	agent* c1 = NULL;
 	agent* c2 = NULL;
-	genome* g1 = NULL;
-	genome* g2 = NULL;
-	genome g1c, g1x2, g1x2m;
-	objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, c1 );
-	objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, c2 );
+	Genome* g1 = NULL;
+	Genome* g2 = NULL;
+	Genome g1c(GenomeUtil::schema), g1x2(GenomeUtil::schema), g1x2m(GenomeUtil::schema);
+	objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&c1 );
+	objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&c2 );
 	g1 = c1->Genes();
 	g2 = c2->Genes();
 	cout << "************** G1 **************" nl;
-	g1->Print();
+	g1->print();
 	cout << "************** G2 **************" nl;
-	g2->Print();
-	g1c.CopyGenes( g1 );
-	g1x2.Crossover( g1, g2, false );
-	g1x2m.Crossover( g1, g2, true );
+	g2->print();
+	g1c.copyFrom( g1 );
+	g1x2.crossover( g1, g2, false );
+	g1x2m.crossover( g1, g2, true );
 	cout << "************** G1c **************" nl;
-	g1c.Print();
+	g1c.print();
 	cout << "************** G1x2 **************" nl;
-	g1x2.Print();
+	g1x2.print();
 	cout << "************** G1x2m **************" nl;
-	g1x2m.Print();
+	g1x2m.print();
 	exit(0);
 #endif
 	
@@ -2334,7 +2336,7 @@ void TSimulation::Interact()
 	// If we're saving gene stats, zero them out them here
 	if( fRecordGeneStats )
 	{
-		for( i = 0; i < genome::gNumBytes; i++ )
+		for( i = 0; i < GenomeUtil::schema->getMutableSize(); i++ )
 		{
 			fGeneSum[i] = 0;
 			fGeneSum2[i] = 0;
@@ -2406,8 +2408,8 @@ void TSimulation::Interact()
     while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**) &c ) )
     {
 
-		fCurrentNeuronGroupCountStats.add( c->Brain()->NumNeuronGroups() );
-		fCurrentNeuronCountStats.add( c->Brain()->GetNumNeurons() );
+		fCurrentNeuronGroupCountStats.add( c->GetBrain()->NumNeuronGroups() );
+		fCurrentNeuronCountStats.add( c->GetBrain()->GetNumNeurons() );
 
         id = c->Domain();						// Determine the domain in which the agent currently is located
 	
@@ -2452,10 +2454,11 @@ void TSimulation::Interact()
 		// If we're saving gene stats, compute them here
 		if( fRecordGeneStats )
 		{
-			for( i = 0; i < genome::gNumBytes; i++ )
+			int n = GenomeUtil::schema->getMutableSize();
+			for( i = 0; i < n; i++ )
 			{
-				fGeneSum[i] += c->Genes()->GeneUIntValue(i);
-				fGeneSum2[i] += c->Genes()->GeneUIntValue(i) * c->Genes()->GeneUIntValue(i);
+				fGeneSum[i] += c->Genes()->get_raw_uint(i);
+				fGeneSum2[i] += c->Genes()->get_raw_uint(i) * c->Genes()->get_raw_uint(i);
 			}
 		}
 		
@@ -2543,7 +2546,8 @@ void TSimulation::Interact()
 	if( fRecordGeneStats )
 	{
 		fprintf( fGeneStatsFile, "%ld", fStep );
-		for( i = 0; i < genome::gNumBytes; i++ )
+		int n = GenomeUtil::schema->getMutableSize();
+		for( i = 0; i < n; i++ )
 		{
 			float mean, stddev;
 			
@@ -2662,7 +2666,7 @@ void TSimulation::Interact()
 				agent* e = agent::getfreeagent( this, &fStage );
 				Q_CHECK_PTR(e);
 
-				e->Genes()->Crossover(c->Genes(), d->Genes(), true);
+				e->Genes()->crossover(c->Genes(), d->Genes(), true);
 				e->grow( RecordBrainAnatomy( e->Number() ), RecordBrainFunction( e->Number() ) );
 				float eenergy = c->mating( fMateFitnessParameter, fMateWait ) + d->mating( fMateFitnessParameter, fMateWait );
 				float minenergy = fMinMateFraction * ( c->MaxEnergy() + d->MaxEnergy() ) * 0.5;	// just a modest, reasonable amount; this doesn't really matter in lockstep mode
@@ -2687,19 +2691,18 @@ void TSimulation::Interact()
 				fDomains[kd].numborn++;
 				fNumBornSinceCreated++;
 				fDomains[kd].numbornsincecreated++;
-				fNeuronGroupCountStats.add( e->Brain()->NumNeuronGroups() );
+				fNeuronGroupCountStats.add( e->GetBrain()->NumNeuronGroups() );
 				ttPrint( "age %ld: agent # %ld is born\n", fStep, e->Number() );
 				birthPrint( "step %ld: agent # %ld born to %ld & %ld, at (%g,%g,%g), yaw=%g, energy=%g, domain %d (%d & %d), neurgroups=%d\n",
-					fStep, e->Number(), c->Number(), d->Number(), e->x(), e->y(), e->z(), e->yaw(), e->Energy(), kd, id, jd, e->Brain()->NumNeuronGroups() );
+					fStep, e->Number(), c->Number(), d->Number(), e->x(), e->y(), e->z(), e->yaw(), e->Energy(), kd, id, jd, e->GetBrain()->NumNeuronGroups() );
 
-
-#if SPIKING_MODEL
-				if (randpw() >= .5)
-					e->Brain()->scale_latest_spikes = c->Brain()->scale_latest_spikes;
-				else
-					e->Brain()->scale_latest_spikes = d->Brain()->scale_latest_spikes;
-				printf("%f\n", e->Brain()->scale_latest_spikes);
-#endif
+				if( brain::gNeuralValues.model == brain::NeuralValues::SPIKING )
+				{
+					if (randpw() >= .5)
+						e->GetBrain()->InheritState( c->GetBrain() );
+					else
+						e->GetBrain()->InheritState( d->GetBrain() );
+				}
 
 				Birth(e, c, d);
 
@@ -2917,7 +2920,7 @@ void TSimulation::Interact()
 								agent* e = agent::getfreeagent(this, &fStage);
 								Q_CHECK_PTR(e);
 
-								e->Genes()->Crossover(c->Genes(), d->Genes(), true);
+								e->Genes()->crossover(c->Genes(), d->Genes(), true);
 								e->grow( RecordBrainAnatomy( e->Number() ), RecordBrainFunction( e->Number() ) );
 								float eenergy = c->mating( fMateFitnessParameter, fMateWait ) + d->mating( fMateFitnessParameter, fMateWait );
 								e->Energy(eenergy);
@@ -2937,19 +2940,21 @@ void TSimulation::Interact()
 								fDomains[kd].numAgents++;
 								fNumberBorn++;
 								fDomains[kd].numborn++;
-								fNeuronGroupCountStats.add( e->Brain()->NumNeuronGroups() );
+								fNeuronGroupCountStats.add( e->GetBrain()->NumNeuronGroups() );
 								ttPrint( "age %ld: agent # %ld is born\n", fStep, e->Number() );
 								birthPrint( "step %ld: agent # %ld born to %ld & %ld, at (%g,%g,%g), yaw=%g, energy=%g, domain %d (%d & %d), neurgroups=%d\n",
-											fStep, e->Number(), c->Number(), d->Number(), e->x(), e->y(), e->z(), e->yaw(), e->Energy(), kd, id, jd, e->Brain()->NumNeuronGroups() );
+											fStep, e->Number(), c->Number(), d->Number(), e->x(), e->y(), e->z(), e->yaw(), e->Energy(), kd, id, jd, e->GetBrain()->NumNeuronGroups() );
 								//if( fStep > 50 )
 								//	exit( 0 );
-	#if SPIKING_MODEL
-							if (randpw() >= .5)
-								e->Brain()->scale_latest_spikes = c->Brain()->scale_latest_spikes;
-							else
-								e->Brain()->scale_latest_spikes = d->Brain()->scale_latest_spikes;
-							printf("%f\n", e->Brain()->scale_latest_spikes);
-	#endif							
+
+								if( brain::gNeuralValues.model == brain::NeuralValues::SPIKING )
+								{
+									if (randpw() >= .5)
+										e->GetBrain()->InheritState( c->GetBrain() );
+									else
+										e->GetBrain()->InheritState( d->GetBrain() );
+								}
+
 								Birth(e, c, d);
 
 								if( fRecordBirthsDeaths )
@@ -3287,7 +3292,7 @@ void TSimulation::Interact()
                     	&& ((fDomains[id].numcreated / fFitness1Frequency) * fFitness1Frequency == fDomains[id].numcreated) )
                     {
                         // revive 1 fittest
-                        newAgent->Genes()->CopyGenes(fDomains[id].fittest[0]->genes);
+                        newAgent->Genes()->copyFrom(fDomains[id].fittest[0]->genes);
                         fNumberCreated1Fit++;
 						gaPrint( "%5ld: domain %d creation from one fittest (%4lu) %4ld\n", fStep, id, fDomains[id].fittest[0]->agentID, fNumberCreated1Fit );
                     }
@@ -3298,13 +3303,13 @@ void TSimulation::Interact()
 					#if TournamentSelection
 						int parent1, parent2;
 						PickParentsUsingTournament(fNumberFit, &parent1, &parent2);
-						newAgent->Genes()->Crossover(fDomains[id].fittest[parent1]->genes,
+						newAgent->Genes()->crossover(fDomains[id].fittest[parent1]->genes,
 													   fDomains[id].fittest[parent2]->genes,
 													   true);
 						fNumberCreated2Fit++;
 						gaPrint( "%5ld: domain %d creation from two (%d, %d) fittest (%4lu, %4lu) %4ld\n", fStep, id, parent1, parent2, fDomains[id].fittest[parent1]->agentID, fDomains[id].fittest[parent2]->agentID, fNumberCreated2Fit );
 					#else
-                        newAgent->Genes()->Crossover(fDomains[id].fittest[fDomains[id].ifit]->genes,
+                        newAgent->Genes()->crossover(fDomains[id].fittest[fDomains[id].ifit]->genes,
                             				  		   fDomains[id].fittest[fDomains[id].jfit]->genes,
                             				  		   true);
                         fNumberCreated2Fit++;
@@ -3315,7 +3320,7 @@ void TSimulation::Interact()
                     else
                     {
                         // otherwise, just generate a random, hopeful monster
-                        newAgent->Genes()->Randomize();
+                        newAgent->Genes()->randomize();
                         fNumberCreatedRandom++;
 						gaPrint( "%5ld: domain %d creation random (%4ld)\n", fStep, id, fNumberCreatedRandom );
                     }
@@ -3323,7 +3328,7 @@ void TSimulation::Interact()
                 else
                 {
                     // otherwise, just generate a random, hopeful monster
-                    newAgent->Genes()->Randomize();
+                    newAgent->Genes()->randomize();
                     fNumberCreatedRandom++;
 					gaPrint( "%5ld: domain %d creation random early (%4ld)\n", fStep, id, fNumberCreatedRandom );
                 }
@@ -3347,7 +3352,7 @@ void TSimulation::Interact()
 				objectxsortedlist::gXSortedObjects.add(newAgent);
 				newlifes++;
                 //newAgents.add(newAgent); // add it to the full list later; the e->listLink that gets auto stored here must be replaced with one from full list below
-				fNeuronGroupCountStats.add( newAgent->Brain()->NumNeuronGroups() );
+				fNeuronGroupCountStats.add( newAgent->GetBrain()->NumNeuronGroups() );
 				
 				Birth(newAgent, NULL, NULL);
 
@@ -3392,7 +3397,7 @@ void TSimulation::Interact()
                 	&& ((numglobalcreated / fFitness1Frequency) * fFitness1Frequency == numglobalcreated) )
                 {
                     // revive 1 fittest
-                    newAgent->Genes()->CopyGenes( fFittest[0]->genes );
+                    newAgent->Genes()->copyFrom( fFittest[0]->genes );
                     fNumberCreated1Fit++;
 					gaPrint( "%5ld: global creation from one fittest (%4lu) %4ld\n", fStep, fFittest[0]->agentID, fNumberCreated1Fit );
                 }
@@ -3401,12 +3406,12 @@ void TSimulation::Interact()
 				#if TournamentSelection
 					int parent1, parent2;
 					TSimulation::PickParentsUsingTournament(fNumberFit, &parent1, &parent2);
-                    newAgent->Genes()->Crossover( fFittest[parent1]->genes, fFittest[parent2]->genes, true );
+                    newAgent->Genes()->crossover( fFittest[parent1]->genes, fFittest[parent2]->genes, true );
                     fNumberCreated2Fit++;
 					gaPrint( "%5ld: global creation from two (%d, %d) fittest (%4lu, %4lu) %4ld\n", fStep, parent1, parent2, fFittest[parent1]->agentID, fFittest[parent2]->agentID, fNumberCreated2Fit );
 				#else
                     // mate 2 from array of fittest
-                    newAgent->Genes()->Crossover( fFittest[fFitI]->genes, fFittest[fFitJ]->genes, true );
+                    newAgent->Genes()->crossover( fFittest[fFitI]->genes, fFittest[fFitJ]->genes, true );
                     fNumberCreated2Fit++;
 					gaPrint( "%5ld: global creation from two (%d, %d) fittest (%4lu, %4lu) %4ld\n", fStep, fFitI, fFitJ, fFittest[fFitI]->agentID, fFittest[fFitJ]->agentID, fNumberCreated2Fit );
                     ijfitinc( &fFitI, &fFitJ );
@@ -3415,7 +3420,7 @@ void TSimulation::Interact()
                 else
                 {
                     // otherwise, just generate a random, hopeful monster
-                    newAgent->Genes()->Randomize();
+                    newAgent->Genes()->randomize();
                     fNumberCreatedRandom++;
 					gaPrint( "%5ld: global creation random (%4ld)\n", fStep, fNumberCreatedRandom );
                 }
@@ -3423,7 +3428,7 @@ void TSimulation::Interact()
             else
             {
                 // otherwise, just generate a random, hopeful monster
-                newAgent->Genes()->Randomize();
+                newAgent->Genes()->randomize();
                 fNumberCreatedRandom++;
 				gaPrint( "%5ld: global creation random early (%4ld)\n", fStep, fNumberCreatedRandom );
             }
@@ -3441,7 +3446,7 @@ void TSimulation::Interact()
 	    	objectxsortedlist::gXSortedObjects.add(newAgent); // add new agent to list of all objejcts; the newAgent->listLink that gets auto stored here should be valid immediately
 	    	newlifes++;
             //newAgents.add(newAgent); // add it to the full list later; the e->listLink that gets auto stored here must be replaced with one from full list below
-			fNeuronGroupCountStats.add( newAgent->Brain()->NumNeuronGroups() );
+			fNeuronGroupCountStats.add( newAgent->GetBrain()->NumNeuronGroups() );
 
 			Birth(newAgent, NULL, NULL);
 
@@ -3687,7 +3692,7 @@ void TSimulation::CalculateGeneSeparation(agent* ci)
 	objectxsortedlist::gXSortedObjects.reset();
 	while (objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&cj))
     {
-		genesep = ci->Genes()->CalcSeparation(cj->Genes());
+		genesep = ci->Genes()->separation(cj->Genes());
         fMaxGeneSeparation = fmax(genesep, fMaxGeneSeparation);
         fMinGeneSeparation = fmin(genesep, fMinGeneSeparation);
         genesepsum += genesep;
@@ -3744,7 +3749,7 @@ void TSimulation::CalculateGeneSeparationAll()
 
 		while (objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&cj))
 		{	
-            genesep = ci->Genes()->CalcSeparation(cj->Genes());
+            genesep = ci->Genes()->separation(cj->Genes());
             fMaxGeneSeparation = max(genesep, fMaxGeneSeparation);
             fMinGeneSeparation = min(genesep, fMinGeneSeparation);
             genesepsum += genesep;
@@ -3922,7 +3927,7 @@ void TSimulation::Death(agent* c)
 		 fBestRecentBrainAnatomyRecordFrequency	||
 		(fBrainAnatomyRecordSeeds && (c->Number() <= fInitNumAgents))
 	  )
-		c->Brain()->dumpAnatomical( "run/brain/anatomy", "death", c->Number(), c->HeuristicFitness() );
+		c->GetBrain()->dumpAnatomical( "run/brain/anatomy", "death", c->Number(), c->HeuristicFitness() );
 #endif
 
 	if( RecordBrainFunction( c->Number() ) )
@@ -3997,7 +4002,7 @@ void TSimulation::Death(agent* c)
             fDomains[id].fittest[i] = fDomains[id].fittest[i-1];
         fDomains[id].fittest[newfit] = saveFit;						// reuse the old data structure, but replace its contents...
         fDomains[id].fittest[newfit]->fitness = cFitness;
-        fDomains[id].fittest[newfit]->genes->CopyGenes( c->Genes() );
+        fDomains[id].fittest[newfit]->genes->copyFrom( c->Genes() );
 		fDomains[id].fittest[newfit]->agentID = c->Number();
 		fDomains[id].fittest[newfit]->complexity = c->Complexity();
 		gaPrint( "%5ld: new domain %d fittest[%ld] id=%4ld fitness=%7.3f complexity=%7.3f\n", fStep, id, newfit, c->Number(), cFitness, c->Complexity() );
@@ -4032,7 +4037,7 @@ void TSimulation::Death(agent* c)
             fFittest[i] = fFittest[i - 1];
         fFittest[newfit] = saveFit;				// reuse the old data structure, but replace its contents...
         fFittest[newfit]->fitness = cFitness;
-        fFittest[newfit]->genes->CopyGenes( c->Genes() );
+        fFittest[newfit]->genes->copyFrom( c->Genes() );
 		fFittest[newfit]->agentID = c->Number();
 		fFittest[newfit]->complexity = c->Complexity();
 		gaPrint( "%5ld: new global   fittest[%ld] id=%4ld fitness=%7.3f complexity=%7.3f\n", fStep, newfit, c->Number(), cFitness, c->Complexity() );
@@ -4080,7 +4085,7 @@ void TSimulation::Death(agent* c)
 		}
         fRecentFittest[newfit] = saveFit;				// reuse the old data structure, but replace its contents...
         fRecentFittest[newfit]->fitness = cFitness;
-//		fRecentFittest[newfit]->genes->CopyGenes( c->Genes() );	// we don't save the genes in the bestRecent list
+//		fRecentFittest[newfit]->genes->copyFrom( c->Genes() );	// we don't save the genes in the bestRecent list
 		fRecentFittest[newfit]->agentID = c->Number();
 		fRecentFittest[newfit]->complexity = c->Complexity();
     }
@@ -4124,7 +4129,7 @@ void TSimulation::Death(agent* c)
 	  )
 	{
 	#if ! HackForProcessingUnitComplexity
-		c->Brain()->dumpAnatomical( "run/brain/anatomy", "death", c->Number(), c->HeuristicFitness() );
+		c->GetBrain()->dumpAnatomical( "run/brain/anatomy", "death", c->Number(), c->HeuristicFitness() );
 	#endif
 	}
 	else	// don't want brain anatomies for this agent, so must eliminate the "incept" and "birth" anatomies that were already recorded
@@ -5280,6 +5285,30 @@ void TSimulation::ReadWorldFile(const char* filename)
         return;
 	}
 
+	if( version >= 36 )
+	{
+		string model;
+		in >> model; in >> label;
+
+		if( model == "F" )
+		{
+			brain::gNeuralValues.model = brain::NeuralValues::FIRING_RATE;
+		}
+		else if( model == "S" )
+		{
+			brain::gNeuralValues.model = brain::NeuralValues::SPIKING;			
+		}
+		else
+		{
+			error(1, "Invalid NeuronModel in worldfile (%s)", model.c_str());
+		}
+	}
+	else
+	{
+		brain::gNeuralValues.model = brain::NeuralValues::FIRING_RATE;			
+	}
+	cout << "neuronModel" ses brain::gNeuralValues.model nl;
+
     in >> brain::gNeuralValues.mininternalneurgroups; in >> label;
     cout << "mininternalneurgroups" ses brain::gNeuralValues.mininternalneurgroups nl;
     in >> brain::gNeuralValues.maxinternalneurgroups; in >> label;
@@ -5754,7 +5783,7 @@ void TSimulation::Dump()
     {
 		out << fFittest[index]->agentID nl;
         out << fFittest[index]->fitness nl;
-        fFittest[index]->genes->Dump(out);
+        fFittest[index]->genes->dump(out);
     }
 	out << fNumberRecentFit nl;
     for (int index = 0; index < fNumberRecentFit; index++)
@@ -5794,7 +5823,7 @@ void TSimulation::Dump()
             {
 				out << fDomains[id].fittest[i]->agentID nl;
                 out << fDomains[id].fittest[i]->fitness nl;
-                fDomains[id].fittest[i]->genes->Dump(out);
+                fDomains[id].fittest[i]->genes->dump(out);
             }
         }
         else

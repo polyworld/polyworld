@@ -8,7 +8,7 @@ class RandomNumberGenerator
 	// ---
 	enum Role
 	{
-		BRAIN = 0,
+		NERVOUS_SYSTEM = 0,
 		__NROLES
 	};
 

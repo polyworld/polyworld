@@ -15,9 +15,10 @@
 #include <qcoreevent.h>
 
 // Local
-#include "brain.h"
 #include "agent.h"
+#include "Brain.h"
 #include "globals.h"
+#include "Retina.h"
 #include "Simulation.h"
 
 using namespace std;
@@ -178,9 +179,9 @@ void TBrainMonitorWindow::Draw()
 	glClear( GL_COLOR_BUFFER_BIT );
 
 	// Make sure the window is the proper size
-	const long winWidth = fAgent->Brain()->GetNumNeurons()
+	const long winWidth = fAgent->GetBrain()->GetNumNeurons()
 						  * fPatchWidth + 2 * fPatchWidth;						  
-	const long winHeight = fAgent->Brain()->GetNumNonInputNeurons()
+	const long winHeight = fAgent->GetBrain()->GetNumNonInputNeurons()
 					   	   * fPatchHeight + 2 * fPatchHeight;
 					   	   
 	if (width() != winWidth || height() != winHeight)
@@ -197,11 +198,11 @@ void TBrainMonitorWindow::Draw()
 			__FUNCTION__,
 			TSimulation::fAge,
 			fAgent->Number(),
-			fAgent->Brain()->retinaBuf,
-			fAgent->Brain()->retinaBuf[0], fAgent->Brain()->retinaBuf[1], fAgent->Brain()->retinaBuf[2], fAgent->Brain()->retinaBuf[3],
-			fAgent->Brain()->retinaBuf[4], fAgent->Brain()->retinaBuf[5], fAgent->Brain()->retinaBuf[6], fAgent->Brain()->retinaBuf[7],
-			fAgent->Brain()->retinaBuf[8], fAgent->Brain()->retinaBuf[9], fAgent->Brain()->retinaBuf[10], fAgent->Brain()->retinaBuf[11],
-			fAgent->Brain()->retinaBuf[12], fAgent->Brain()->retinaBuf[13], fAgent->Brain()->retinaBuf[14], fAgent->Brain()->retinaBuf[15]);
+			fAgent->GetBrain()->retinaBuf,
+			fAgent->GetBrain()->retinaBuf[0], fAgent->GetBrain()->retinaBuf[1], fAgent->GetBrain()->retinaBuf[2], fAgent->GetBrain()->retinaBuf[3],
+			fAgent->GetBrain()->retinaBuf[4], fAgent->GetBrain()->retinaBuf[5], fAgent->GetBrain()->retinaBuf[6], fAgent->GetBrain()->retinaBuf[7],
+			fAgent->GetBrain()->retinaBuf[8], fAgent->GetBrain()->retinaBuf[9], fAgent->GetBrain()->retinaBuf[10], fAgent->GetBrain()->retinaBuf[11],
+			fAgent->GetBrain()->retinaBuf[12], fAgent->GetBrain()->retinaBuf[13], fAgent->GetBrain()->retinaBuf[14], fAgent->GetBrain()->retinaBuf[15]);
 #endif
 
 	// Frame and draw the actual vision pixels
@@ -209,10 +210,10 @@ void TBrainMonitorWindow::Draw()
 	glRecti( 2*fPatchWidth-1, 0, (2+brain::retinawidth)*fPatchWidth+1, fPatchHeight );
 	glPixelZoom( float(fPatchWidth), float(fPatchHeight) );
 	glRasterPos2i( 2*fPatchWidth, 0 );
-	glDrawPixels( brain::retinawidth, 1, GL_RGBA, GL_UNSIGNED_BYTE, fAgent->Brain()->retinaBuf );
+	glDrawPixels( brain::retinawidth, 1, GL_RGBA, GL_UNSIGNED_BYTE, fAgent->GetRetina()->getBuffer() );
 	glPixelZoom( 1.0, 1.0 );
 	
-	fAgent->Brain()->Render(fPatchWidth, fPatchHeight);
+	fAgent->GetBrain()->Render(fPatchWidth, fPatchHeight);
 
 	swapBuffers();
 //	if( visible )
@@ -233,7 +234,7 @@ void TBrainMonitorWindow::StartMonitoring(agent* inAgent)
 		return;
 		
 	fAgent = inAgent;
-	Q_CHECK_PTR(fAgent->Brain());
+	Q_CHECK_PTR(fAgent->GetBrain());
 	
 //	QApplication::postEvent(this, new QCustomEvent(kUpdateEventType));	
 }

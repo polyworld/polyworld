@@ -46,5 +46,91 @@ public:
 	static bool		edges;
 };
 
+//===========================================================================
+// brain
+//===========================================================================
+namespace brain
+{
+
+	struct NeuralValues
+	{
+		enum NeuronModel
+		{
+			FIRING_RATE,
+			SPIKING
+		} model;
+		short minneurons;
+		short maxneurons;
+		long maxsynapses;
+		short numinputneurgroups;
+		short numoutneurgroups;
+		short mininternalneurgroups;
+		short maxinternalneurgroups;
+		short mineneurpergroup;
+		short maxeneurpergroup;
+		short minineurpergroup;
+		short maxineurpergroup;
+		short maxneurpergroup;
+		short maxneurgroups;
+		short maxnoninputneurgroups;
+		short maxinternalneurons;
+		short maxinputneurons;
+		short maxnoninputneurons;
+		float maxbias;
+		float minbiaslrate;
+		float maxbiaslrate;
+		float minconnectiondensity;
+		float maxconnectiondensity;
+		float mintopologicaldistortion;
+		float maxtopologicaldistortion;
+		float maxsynapse2energy; // (amount if all synapses usable)
+		float maxneuron2energy;
+	};
+
+	// Public globals	
+    extern NeuralValues gNeuralValues;
+    extern long gNumPrebirthCycles;
+	extern float gLogisticsSlope;
+	extern float gMaxWeight;
+	extern float gInitMaxWeight;
+	extern float gDecayRate;
+	extern short gMinWin;
+	extern short retinawidth;
+	extern short retinaheight;
+
+} // namespace brain
+
+
+//===========================================================================
+// genome
+//===========================================================================
+namespace genome
+{
+    // External globals
+    extern long gNumBytes;
+    extern float gMinStrength;
+    extern float gMaxStrength;
+	extern float gMinMutationRate;
+//	extern float genome::gMaxMutationRate;
+	extern float gMaxMutationRate;
+	extern long gMinNumCpts;
+	extern long gMaxNumCpts;
+	extern long gMinLifeSpan;
+	extern long gMaxLifeSpan;
+	extern float gMiscBias;
+	extern float gMiscInvisSlope;
+	extern float gMinBitProb;
+	extern float gMaxBitProb;
+	extern bool gGrayCoding;	
+	extern short gMinvispixels;
+	extern short gMaxvispixels;
+	extern float gMinmateenergy;
+	extern float gMaxmateenergy;
+	extern float gMinmaxspeed;
+	extern float gMaxmaxspeed;
+	extern float gMinlrate;
+	extern float gMaxlrate;
+}
+
 #endif
 

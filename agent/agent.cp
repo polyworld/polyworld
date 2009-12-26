@@ -22,12 +22,19 @@
 #include "AgentPOVWindow.h"
 #include "debug.h"
 #include "food.h"
+#include "EnergySensor.h"
 #include "globals.h"
+#include "GenomeUtil.h"
 #include "graphics.h"
 #include "graybin.h"
 #include "misc.h"
+#include "NervousSystem.h"
+#include "RandomSensor.h"
 #include "Resources.h"
+#include "Retina.h"
 #include "Simulation.h"
+
+using namespace genome;
 
 #pragma mark -
 
@@ -253,6 +260,10 @@ agent::agent(TSimulation* sim, gstage* stage)
 		fMass(0.0), 		// mass - not used
 		fHeuristicFitness(0.0),  	// crude guess for keeping minimum population early on
 		fGenome(NULL),
+		fCns(NULL),
+		fRetina(NULL),
+		fRandomSensor(NULL),
+		fEnergySensor(NULL),
 		fBrain(NULL),
 		fBrainFuncFile(NULL)
 {
@@ -273,10 +284,13 @@ agent::agent(TSimulation* sim, gstage* stage)
 	fMaxSpeed = 0.0;
 	fLastEat = 0;
 
-	fGenome = new genome();
+	fGenome = GenomeUtil::createGenome();
 	Q_CHECK_PTR(fGenome);
+
+	fCns = new NervousSystem();
+	Q_CHECK_PTR(fCns);
 	
-	fBrain = new brain(this);
+	fBrain = new Brain(fCns);
 	Q_CHECK_PTR(fBrain);
 	
 	// Set up agent POV	
@@ -292,7 +306,11 @@ agent::~agent()
 {
 //	delete fPolygon;
 	delete fGenome;
+	delete fCns;
 	delete fBrain;
+	delete fRandomSensor;
+	delete fEnergySensor;
+	delete fRetina;
 }
 
 
@@ -319,7 +337,7 @@ void agent::dump(ostream& out)
 
     gobject::dump(out);
 
-    fGenome->Dump(out);
+    fGenome->dump(out);
     if (fBrain != NULL)
         fBrain->Dump(out);
     else
@@ -352,10 +370,10 @@ void agent::load(istream& in)
 
     gobject::load(in);
 
-    fGenome->Load(in);
+    fGenome->load(in);
     if (fBrain == NULL)
     {
-        fBrain = new brain(this);
+        fBrain = new Brain(fCns);
         Q_CHECK_PTR(fBrain);
     }
     fBrain->Load(in);
@@ -374,9 +392,35 @@ void agent::grow( bool recordBrainAnatomy, bool recordBrainFunction )
 {    
 	Q_CHECK_PTR(fBrain);
 	Q_CHECK_PTR(fGenome);
-	
-	// grow the brain from the genome's specifications
-	fBrain->Grow( fGenome, fAgentNumber, recordBrainAnatomy );
+	Q_CHECK_PTR(fCns);
+
+	InitGeneCache();
+
+	fCns->setBrain( fBrain );
+
+#define INPUT(NAME) nerves.NAME = fCns->add( Nerve::INPUT, #NAME )
+	INPUT(random);
+	INPUT(energy);
+	INPUT(red);
+	INPUT(green);
+	INPUT(blue);
+#undef INPUT
+
+#define OUTPUT(NAME) nerves.NAME = fCns->add( Nerve::OUTPUT, #NAME )
+	OUTPUT(eat);
+	OUTPUT(mate);
+	OUTPUT(fight);
+	OUTPUT(speed);
+	OUTPUT(yaw);
+	OUTPUT(light);
+	OUTPUT(focus);
+#undef OUTPUT
+
+	fCns->add( fRetina = new Retina(brain::retinawidth) );
+	fCns->add( fEnergySensor = new EnergySensor(this) );
+	fCns->add( fRandomSensor = new RandomSensor(fBrain->rng) );
+
+	fCns->grow( fGenome, fAgentNumber, recordBrainAnatomy );
 
 	// If we're recording brain function,
 	// open the file to be used to write out neural activity
@@ -390,7 +434,7 @@ void agent::grow( bool recordBrainAnatomy, bool recordBrainFunction )
     fColor[0] = fColor[2] = 0.0;
     
 	// set green color by the "id"
-    fColor[1] = fGenome->ID();
+    fColor[1] = fGenome->get( "ID" );
     
 	// start neutral gray
     fNoseColor[0] = fNoseColor[1] = fNoseColor[2] = 0.5;
@@ -398,7 +442,9 @@ void agent::grow( bool recordBrainAnatomy, bool recordBrainFunction )
     fAge = 0;
     fLastMate = gInitMateWait;
     
-    fMaxEnergy = gMinMaxEnergy + ((fGenome->Size(gMinAgentSize, gMaxAgentSize) - gMinAgentSize)
+	float size_rel = geneCache.size - gMinAgentSize;
+
+    fMaxEnergy = gMinMaxEnergy + (size_rel
     			 * (gMaxMaxEnergy - gMinMaxEnergy) / (gMaxAgentSize - gMinAgentSize) );
 	
     fEnergy = fMaxEnergy;
@@ -407,15 +453,15 @@ void agent::grow( bool recordBrainAnatomy, bool recordBrainFunction )
 	
 //	printf( "%s: energy initialized to %g\n", __func__, fEnergy );
     
-    fSpeed2Energy = gSpeed2Energy * fGenome->MaxSpeed()
-				     * (fGenome->Size(gMinAgentSize, gMaxAgentSize) - gMinAgentSize) * (gMaxSizePenalty - 1.0)
+    fSpeed2Energy = gSpeed2Energy * geneCache.maxSpeed
+				     * size_rel * (gMaxSizePenalty - 1.0)
 					/ (gMaxAgentSize - gMinAgentSize);
     
-    fYaw2Energy = gYaw2Energy * fGenome->MaxSpeed()
-              	   * (fGenome->Size(gMinAgentSize, gMaxAgentSize) - gMinAgentSize) * (gMaxSizePenalty - 1.0)
+    fYaw2Energy = gYaw2Energy * geneCache.maxSpeed
+              	   * size_rel * (gMaxSizePenalty - 1.0)
               	   / (gMaxAgentSize - gMinAgentSize);
     
-    fSizeAdvantage = 1.0 + ( (fGenome->Size(gMinAgentSize, gMaxAgentSize) - gMinAgentSize) *
+    fSizeAdvantage = 1.0 + ( size_rel *
                 (gMaxSizeAdvantage - 1.0) / (gMaxAgentSize - gMinAgentSize) );
 
     // now setup the camera & window for our agent to see the world in
@@ -448,9 +494,9 @@ float agent::eat(food* f, float eatFitnessParameter, float eat2consume, float ea
 	
 	float result = 0;
 	
-	if (fBrain->Eat() > eatthreshold)
+	if (nerves.eat->get() > eatthreshold)
 	{
-		float trytoeat = fBrain->Eat() * eat2consume;
+		float trytoeat = nerves.eat->get() * eat2consume;
 		
 		if ((fEnergy+trytoeat) > fMaxEnergy)
 			trytoeat = fMaxEnergy - fEnergy;
@@ -469,7 +515,7 @@ float agent::eat(food* f, float eatFitnessParameter, float eat2consume, float ea
 			fFoodEnergy = fMaxEnergy;
 		}
 				
-		fHeuristicFitness += eatFitnessParameter * actuallyeat / (eat2consume * fGenome->Lifespan());
+		fHeuristicFitness += eatFitnessParameter * actuallyeat / (eat2consume * MaxAge());
 		
 		if( actuallyeat > 0.0 )
 			fLastEat = step;
@@ -494,7 +540,7 @@ void agent::damage(float e)
 //---------------------------------------------------------------------------    
 float agent::MateProbability(agent* c)
 {
-	return fGenome->MateProbability(c->Genes());
+	return fGenome->mateProbability(c->fGenome);
 }
 
 
@@ -510,9 +556,9 @@ float agent::mating( float mateFitnessParam, long mateWait )
 	
 	if( mateWait <= 0 )
 		mateWait = 1;
-	fHeuristicFitness += mateFitnessParam * mateWait / fGenome->Lifespan();
+	fHeuristicFitness += mateFitnessParam * mateWait / MaxAge();
 	
-	float mymateenergy = fGenome->MateEnergy() * fEnergy;	
+	float mymateenergy = fGenome->get( "MateEnergyFraction" ) * fEnergy;	
 	fEnergy -= mymateenergy;
 	fFoodEnergy -= mymateenergy;
 	
@@ -527,7 +573,7 @@ void agent::rewardmovement(float moveFitnessParam, float speed2dpos)
 {
 	fHeuristicFitness += moveFitnessParam
 				* (fabs(fPosition[0] - fLastPosition[0]) + fabs(fPosition[2] - fLastPosition[2]))
-				/ (fGenome->MaxSpeed() * speed2dpos * fGenome->Lifespan());
+		/ (geneCache.maxSpeed * speed2dpos * MaxAge());
 }
     
 
@@ -537,7 +583,7 @@ void agent::rewardmovement(float moveFitnessParam, float speed2dpos)
 void agent::lastrewards(float energyFitness, float ageFitness)
 {
     fHeuristicFitness += energyFitness * fEnergy / fMaxEnergy
-              + ageFitness * fAge / fGenome->Lifespan();
+              + ageFitness * fAge / MaxAge();
 }
     
  
@@ -547,7 +593,7 @@ void agent::lastrewards(float energyFitness, float ageFitness)
 float agent::ProjectedHeuristicFitness()
 {
 	if( fSimulation->LifeFractionSamples() >= 50 )
-		return( fHeuristicFitness * fSimulation->LifeFractionRecent() * fGenome->Lifespan() / fAge +
+		return( fHeuristicFitness * fSimulation->LifeFractionRecent() * MaxAge() / fAge +
 				fSimulation->EnergyFitnessParameter() * fEnergy / fMaxEnergy +
 				fSimulation->AgeFitnessParameter() * fSimulation->LifeFractionRecent() );
 	else
@@ -589,9 +635,9 @@ void agent::SetGeometry()
     clonegeom(*agentobj);
         
     // then adjust the geometry to fit size, speed, & agentheight
-    fLengthX = fGenome->Size(gMinAgentSize, gMaxAgentSize) / sqrt(fGenome->MaxSpeed());
-    fLengthZ = fGenome->Size(gMinAgentSize, gMaxAgentSize) * sqrt(fGenome->MaxSpeed());
-    srPrint( "agent::%s(): min=%g, max=%g, speed=%g, size=%g, lx=%g, lz=%g\n", __FUNCTION__, gMinAgentSize, gMaxAgentSize, fGenome->MaxSpeed(), fGenome->Size(gMinAgentSize, gMaxAgentSize), fLengthX, fLengthZ );
+    fLengthX = Size() / sqrt(geneCache.maxSpeed);
+    fLengthZ = Size() * sqrt(geneCache.maxSpeed);
+    srPrint( "agent::%s(): min=%g, max=%g, speed=%g, size=%g, lx=%g, lz=%g\n", __FUNCTION__, gMinAgentSize, gMaxAgentSize, geneCache.maxSpeed, Size(), fLengthX, fLengthZ );
     for (long i = 0; i < fNumPolygons; i++)
     {
         for (long j = 0; j < fPolygon[i].fNumPoints; j++)
@@ -644,6 +690,17 @@ void agent::SetGraphics()
 
 
 //---------------------------------------------------------------------------
+// agent::InitGeneCache
+//---------------------------------------------------------------------------    
+void agent::InitGeneCache()
+{
+	geneCache.maxSpeed = fGenome->get("MaxSpeed");
+	geneCache.strength = fGenome->get("Strength");
+	geneCache.size = fGenome->get("Size");
+	geneCache.lifespan = fGenome->get("LifeSpan");
+}
+
+//---------------------------------------------------------------------------
 // agent::SaveLastPosition
 //---------------------------------------------------------------------------    
 void agent::SaveLastPosition()
@@ -662,7 +719,7 @@ void agent::UpdateVision()
     if (gVision)
     {
 		// create retinal pixmap, based on values of focus & numvisneurons
-        const float fovx = fBrain->Focus() * (gMaxFocus - gMinFocus) + gMinFocus;
+        const float fovx = nerves.focus->get() * (gMaxFocus - gMinFocus) + gMinFocus;
         		
 		fFrustum.Set(fPosition[0], fPosition[2], fAngle[0], fovx, gMaxRadius);
 		fCamera.SetAspect(fovx * brain::retinaheight / (gAgentFOV * brain::retinawidth));
@@ -672,45 +729,7 @@ void agent::UpdateVision()
 		debugcheck("agent::UpdateVision after DrawAgentPOV");
 	#endif // DEBUGCHECK
 
-		if (fBrain->retinaBuf != NULL)
-		{
-			// The POV window must be the current GL context,
-			// when agent::UpdateVision is called, for both the
-			// DrawAgentPOV() call above and the glReadPixels()
-			// call below.  It is set in TSimulation::Step().
-			
-			glReadPixels(xleft,
-				 		 ypix,
-				 		 brain::retinawidth,
-				 		 1,
-				 		 GL_RGBA,
-				 		 GL_UNSIGNED_BYTE,
-				 		 fBrain->retinaBuf);
-		#ifdef DEBUGCHECK
-			debugcheck("agent::UpdateVision after glReadPixels");
-		#endif // DEBUGCHECK
-		#if 0
-			static FILE* pixelFile = NULL;
-			if( pixelFile == NULL )
-			{
-				pixelFile = fopen( "run/pixels.txt", "w");
-				if( !pixelFile )
-				{
-					fprintf( stderr, "Unable to open pixels.txt\n" );
-					exit( 1 );
-				}
-				fprintf( pixelFile, "retina pixels:\n" );
-			}
-			fprintf( pixelFile, "id = %ld, age = %ld\n", fIndex, fAge );
-			for( int i = 0; i < brain::retinawidth; i++ )
-			{
-				fprintf( pixelFile, "  " );
-				for( int j = 0; j < 4; j++ )
-					fprintf( pixelFile, "%02x", fBrain->retinaBuf[i*4 + j] );			
-			}
-			fprintf( pixelFile, "\n" );
-		#endif
-		}
+		fRetina->updateBuffer( xleft, ypix );
 	}
 }
 
@@ -720,14 +739,11 @@ void agent::UpdateVision()
 //---------------------------------------------------------------------------
 void agent::UpdateBrain()
 {
-#if SPIKING_MODEL
-    fBrain->UpdateSpikes( fEnergy / fMaxEnergy, fBrainFuncFile );
-#else
-    fBrain->Update( fEnergy / fMaxEnergy );
+	fCns->update( this == TSimulation::fMonitorAgent && TSimulation::fOverHeadRank );
+
 	// If we're recording brain function, do it here
 	if( fBrainFuncFile )
 		fBrain->writeFunctional( fBrainFuncFile );
-#endif
 }
 
 
@@ -749,19 +765,19 @@ float agent::UpdateBody(float moveFitnessParam, float speed2dpos, int solidObjec
 	// just do x & z dimensions in this version
     SaveLastPosition();
     
-    float dpos = fBrain->Speed() * fGenome->MaxSpeed() * gSpeed2DPosition;
+    float dpos = nerves.speed->get() * geneCache.maxSpeed * gSpeed2DPosition;
     if (dpos > gMaxVelocity)
         dpos = gMaxVelocity;
 
     float dx = -dpos * sin(yaw() * DEGTORAD);
     float dz = -dpos * cos(yaw() * DEGTORAD);
 #if UseLightForOpposingYawHack
-    float dyaw = (fBrain->Yaw() - fBrain->Light()) * fGenome->MaxSpeed() * gYaw2DYaw;
+    float dyaw = (nerves.yaw->get() - nerves.light->get()) * geneCache.maxSpeed * gYaw2DYaw;
 #else
-    float dyaw = (2.0 * fBrain->Yaw() - 1.0) * fGenome->MaxSpeed() * gYaw2DYaw;
+    float dyaw = (2.0 * nerves.yaw->get() - 1.0) * geneCache.maxSpeed * gYaw2DYaw;
 #endif
 //	printf( "%4ld  %4ld  dyaw = %4.2f b->y = %4.2f, 2*b->y - 1 = %4.2f, g->maxSpeed = %4.2f, y2dy = %4.2f\n",
-//			TSimulation::fAge, fAgentNumber, dyaw, fBrain->Yaw(), 2.0*fBrain->Yaw() - 1.0, fGenome->MaxSpeed(), gYaw2DYaw );
+//			TSimulation::fAge, fAgentNumber, dyaw, nerves.yaw->get(), 2.0*nerves.yaw->get() - 1.0, geneCache.maxSpeed, gYaw2DYaw );
 
 #if TestWorld
 	dx = dz = dyaw = 0.0;
@@ -770,21 +786,21 @@ float agent::UpdateBody(float moveFitnessParam, float speed2dpos, int solidObjec
     addx(dx);
     addz(dz);
 #if DirectYaw
-	setyaw( fBrain->Yaw() * 360.0 );
+	setyaw( nerves.yaw->get() * 360.0 );
 #else
     addyaw(dyaw);
 #endif
     
-    float energyused = fBrain->Eat()   * gEat2Energy
-                     + fBrain->Mate()  * gMate2Energy
-                     + fBrain->Fight() * gFight2Energy
-                     + fBrain->Speed() * fSpeed2Energy
-                     + fabs(2.0*fBrain->Yaw() - 1.0) * fYaw2Energy
-                     + fBrain->Light() * gLight2Energy
+    float energyused = nerves.eat->get()   * gEat2Energy
+                     + nerves.mate->get()  * gMate2Energy
+                     + nerves.fight->get() * gFight2Energy
+                     + nerves.speed->get() * fSpeed2Energy
+                     + fabs(2.0*nerves.yaw->get() - 1.0) * fYaw2Energy
+                     + nerves.light->get() * gLight2Energy
                      + fBrain->BrainEnergy()
                      + gFixedEnergyDrain;
 
-    double denergy = energyused * fGenome->Strength();
+    double denergy = energyused * Strength();
 //	printf( "%s: energy consumed = %g + ", __func__, denergy );
 	double populationEnergyPenalty;
 #if UniformPopulationEnergyPenalty
@@ -800,9 +816,9 @@ float agent::UpdateBody(float moveFitnessParam, float speed2dpos, int solidObjec
 
 	energyUsed = denergy;
 
-	SetRed(fBrain->Fight());	// set red color according to desire to fight
-	SetBlue(fBrain->Mate()); 	// set blue color according to desire to mate
-	fNoseColor[0] = fNoseColor[1] = fNoseColor[2] = fBrain->Light();
+	SetRed(nerves.fight->get());	// set red color according to desire to fight
+	SetBlue(nerves.mate->get()); 	// set blue color according to desire to mate
+	fNoseColor[0] = fNoseColor[1] = fNoseColor[2] = nerves.light->get();
     fAge++;
 
 	// Do barrier overrun testing here...
@@ -1186,11 +1202,11 @@ void agent::print()
     
     if (fGenome != NULL)
     {
-        cout << "  fGenome->Lifespan() = " << fGenome->Lifespan() nl;
-        cout << "  fGenome->MutationRate() = " << fGenome->MutationRate() nl;
-        cout << "  fGenome->Strength() = " << fGenome->Strength() nl;
-        cout << "  fGenome->Size() = " << fGenome->Size(gMinAgentSize, gMaxAgentSize) nl;
-        cout << "  fGenome->MaxSpeed() = " << fGenome->MaxSpeed() nl;
+        cout << "  fGenome->Lifespan() = " << MaxAge() nl;
+        cout << "  fGenome->MutationRate() = " << fGenome->get( "MutationRate" ) nl;
+        cout << "  fGenome->Strength() = " << Strength() nl;
+        cout << "  fGenome->Size() = " << Size() nl;
+        cout << "  fGenome->MaxSpeed() = " << geneCache.maxSpeed nl;
     }
     else
     {
@@ -1200,12 +1216,12 @@ void agent::print()
     if (fBrain != NULL)
     {
         cout << "  fBrain->brainenergy() = " << fBrain->BrainEnergy() nl;
-        cout << "  fBrain->eat() = " << fBrain->Eat() nl;
-        cout << "  fBrain->mate() = " << fBrain->Mate() nl;
-        cout << "  fBrain->fight() = " << fBrain->Fight() nl;
-        cout << "  fBrain->speed() = " << fBrain->Speed() nl;
-        cout << "  fBrain->yaw() = " << fBrain->Yaw() nl;
-        cout << "  fBrain->light() = " << fBrain->Light() nl;
+        cout << "  fBrain->eat() = " << nerves.eat->get() nl;
+        cout << "  fBrain->mate() = " << nerves.mate->get() nl;
+        cout << "  fBrain->fight() = " << nerves.fight->get() nl;
+        cout << "  fBrain->speed() = " << nerves.speed->get() nl;
+        cout << "  fBrain->yaw() = " << nerves.yaw->get() nl;
+        cout << "  fBrain->light() = " << nerves.light->get() nl;
     }
     else
         cout << "  brain is not yet defined" nl;
@@ -1218,7 +1234,7 @@ void agent::print()
 //---------------------------------------------------------------------------
 float agent::FieldOfView()
 {
-	return fBrain->Focus() * (gMaxFocus - gMinFocus) + gMinFocus;
+	return nerves.focus->get() * (gMaxFocus - gMinFocus) + gMinFocus;
 }
 
 

@@ -8,22 +8,28 @@
 //#include <qrect.h>
 
 // Local
-#include "brain.h"
+#include "Brain.h"
 #include "debug.h"
 #include "gcamera.h"
 #include "gdlink.h"
-#include "genome.h"
+#include "Genome.h"
+#include "globals.h"
 #include "gmisc.h"
 #include "gpolygon.h"
 #include "gscene.h"
 #include "gstage.h"
 #include "misc.h"
+#include "Nerve.h"
 #include "objectxsortedlist.h"
 
 
 // Forward declarations
 class agent;
+class EnergySensor;
 class food;
+class NervousSystem;
+class RandomSensor;
+class Retina;
 class TAgentPOVWindow;
 class TSimulation;
 
@@ -133,7 +139,7 @@ public:
     float MaxEnergy();
     long LastMate();
 	long LastEat();
-    genome* Genes();
+	genome::Genome* Genes();
     long Number();
 	float CurrentHeuristicFitness();
 	float ProjectedHeuristicFitness();
@@ -145,7 +151,8 @@ public:
     void Domain(short id);
     bool Alive() const;
     long Index() const;
-	brain* Brain();
+	Brain* GetBrain();
+	Retina* GetRetina();
 //	gscene& agent::GetScene();
 	gscene& GetScene();
 	frustumXZ& GetFrustum();
@@ -178,6 +185,7 @@ protected:
     void NumberToName();
     void SetGeometry();
     void SetGraphics();
+	void InitGeneCache();
     
 	static bool gClassInited;
     static long agentsever;
@@ -215,8 +223,36 @@ protected:
     float fHeuristicFitness;	// rough estimate along evolutionary biology lines
 	float fComplexity;
 	
-    genome* fGenome;
-    brain* fBrain;
+	genome::Genome* fGenome;
+	struct GeneCache
+	{
+		float maxSpeed;
+		float strength;
+		float size;
+		long lifespan;
+	} geneCache;
+
+	NervousSystem *fCns;
+	Retina *fRetina;
+	RandomSensor *fRandomSensor;
+	EnergySensor *fEnergySensor;
+	Brain* fBrain;
+	struct Nerves
+	{
+		Nerve *random;
+		Nerve *energy;
+		Nerve *red;
+		Nerve *green;
+		Nerve *blue;
+		Nerve *eat;
+		Nerve *mate;
+		Nerve *fight;
+		Nerve *speed;
+		Nerve *yaw;
+		Nerve *light;
+		Nerve *focus;
+	} nerves;
+
     gcamera fCamera;
     gscene fScene;
     frustumXZ fFrustum;
@@ -252,16 +288,16 @@ inline float agent::Energy() { return fEnergy; }
 inline void agent::Energy(float e) { fEnergy = e; }
 inline float agent::FoodEnergy() { return fFoodEnergy; }
 inline void agent::FoodEnergy(float e) { fFoodEnergy = e; }
-inline float agent::Fight() { return fBrain->Fight(); }
-inline float agent::Strength() { return fGenome->Strength(); }
-inline float agent::Mate() { return fBrain->Mate(); }
-inline float agent::Size() { return fGenome->Size(gMinAgentSize, gMaxAgentSize); }
+inline float agent::Fight() { return nerves.fight->get(); }
+inline float agent::Strength() { return geneCache.strength; }
+inline float agent::Mate() { return nerves.mate->get(); }
+inline float agent::Size() { return geneCache.size; }
 inline long agent::Age() { return fAge; }
-inline long agent::MaxAge() { return fGenome->Lifespan(); }
+inline long agent::MaxAge() { return geneCache.lifespan; }
 inline float agent::MaxEnergy() { return fMaxEnergy; }
 inline long agent::LastMate() { return fLastMate; }
 inline long agent::LastEat() { return fLastEat; }
-inline genome* agent::Genes() { return fGenome; }
+inline genome::Genome* agent::Genes() { return fGenome; }
 inline long agent::Number() { return fAgentNumber; }
 // replace both occurences of 0.8 with actual estimate of fraction of lifespan agent will live
 inline float agent::CurrentHeuristicFitness() { return fHeuristicFitness; }
@@ -275,7 +311,8 @@ inline short agent::Domain() { return fDomain; }
 inline void agent::Domain(short id) { fDomain = id; }
 inline bool agent::Alive() const { return fAlive; }
 inline long agent::Index() const { return fIndex; }
-inline brain* agent::Brain() { return fBrain; }
+inline Brain* agent::GetBrain() { return fBrain; }
+inline Retina* agent::GetRetina() { return fRetina; }
 inline gscene& agent::GetScene() { return fScene; }
 inline frustumXZ& agent::GetFrustum() { return fFrustum; }
 inline gpolyobj* agent::GetAgentObj() { return agentobj; }
