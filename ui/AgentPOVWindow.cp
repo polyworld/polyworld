@@ -50,6 +50,7 @@ TAgentPOVWindow::TAgentPOVWindow(int numSlots, TSimulation* simulation)
 {
 	setWindowTitle( "Agent POV" );
 	windowSettingsName = "AgentPOV";
+	setAttribute( Qt::WA_MacAlwaysShowToolWindow );
 }
 
 
