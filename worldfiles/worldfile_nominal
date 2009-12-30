@@ -1,4 +1,4 @@
-35		version
+36		version
 
 0		LockStepWithBirthsDeathsLog
 
@@ -104,8 +104,8 @@
 0.5		minbitprob_0.1_0.5
 0.5		maxbitprob_0.6_0.5
 
-1		solidAgents_0
-1		solidFood_0
+0		solidAgents_0
+0		solidFood_0
 1		solidBricks_1
 
 0.2		agentheight
@@ -198,7 +198,7 @@
 0.5		domain[0].brickPatch[0].centerZ
 1.0		domain[0].brickPatch[0].sizeX
 0.2		domain[0].brickPatch[0].sizeZ
-10		domain[0].brickPatch[0].count
+3		domain[0].brickPatch[0].count
 0		domain[0].brickPatch[0].areaShape_0=rectangular|1=elliptical
 0		domain[0].brickPatch[0].distribution_0=uniform|1=linear|2=gaussian
 0		domain[0].brickPatch[0].neighborhoodSize
@@ -260,7 +260,7 @@
 0.5		domain[1].brickPatch[0].centerZ
 1.0		domain[1].brickPatch[0].sizeX
 0.2		domain[1].brickPatch[0].sizeZ
-10		domain[1].brickPatch[0].count
+3		domain[1].brickPatch[0].count
 0		domain[1].brickPatch[0].areaShape_0=rectangular|1=elliptical
 0		domain[1].brickPatch[0].distribution_0=uniform|1=linear|2=gaussian
 0		domain[1].brickPatch[0].neighborhoodSize
@@ -322,7 +322,7 @@
 0.5		domain[2].brickPatch[0].centerZ
 1.0		domain[2].brickPatch[0].sizeX
 0.2		domain[2].brickPatch[0].sizeZ
-10		domain[2].brickPatch[0].count
+3		domain[2].brickPatch[0].count
 0		domain[2].brickPatch[0].areaShape_0=rectangular|1=elliptical
 0		domain[2].brickPatch[0].distribution_0=uniform|1=linear|2=gaussian
 0		domain[2].brickPatch[0].neighborhoodSize
@@ -330,6 +330,8 @@
 1		useProbabilisticFoodPatches
 
 0		binchartgs
+
+F		neuronModel_F=FiringRate|S=Spiking
 
 0		mininternalneurgroups
 5		maxinternalneurgroups
