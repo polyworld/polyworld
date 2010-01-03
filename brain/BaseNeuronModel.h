@@ -113,9 +113,12 @@ class BaseNeuronModel : public NeuronModel
 #endif
 
 #if DebugBrainGrow
+		if( DebugBrainGrowPrint )
+		{
             cout << "    group = " << n.group nlf;
             cout << "    bias = " << n.bias nlf;
             cout << "    startsynapses = " << n.startsynapses nlf;
+		}
 #endif
 	}
 
@@ -139,9 +142,12 @@ class BaseNeuronModel : public NeuronModel
 		s.efficacy = efficacy;
 
 #if DebugBrainGrow
-                    cout << "        synapse[" << index
-                         << "].toneur, fromneur, efficacy = "
-                         << s.toneuron cms s.fromneuron cms s.efficacy nlf;
+		if( DebugBrainGrowPrint )
+		{
+			cout << "        synapse[" << index
+				 << "].toneur, fromneur, efficacy = "
+				 << s.toneuron cms s.fromneuron cms s.efficacy nlf;
+		}
 #endif
 
 	}
@@ -166,7 +172,8 @@ class BaseNeuronModel : public NeuronModel
 		groupblrate[group] = value;
 
 #if DebugBrainGrow
-        cout << "  groupbiaslearningrate = " << value nlf;
+		if( DebugBrainGrowPrint )
+			cout << "  groupbiaslearningrate = " << value nlf;
 #endif
 	}
 

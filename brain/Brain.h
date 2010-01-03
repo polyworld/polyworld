@@ -11,7 +11,10 @@
 
 
 #define DesignerBrains false
-#define DebugBrainGrow false
+#define DebugBrainGrow true
+#if DebugBrainGrow
+	extern bool DebugBrainGrowPrint;
+#endif
 
 #define PrintBrain false
 #if PrintBrain
