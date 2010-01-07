@@ -18,6 +18,7 @@
 #include "gpolygon.h"
 #include "gscene.h"
 #include "gstage.h"
+#include "LifeSpan.h"
 #include "misc.h"
 #include "Nerve.h"
 #include "objectxsortedlist.h"
@@ -25,6 +26,7 @@
 
 // Forward declarations
 class agent;
+class DataLibWriter;
 class EnergySensor;
 class food;
 class NervousSystem;
@@ -98,7 +100,9 @@ public:
     void SetMass(float f);
     
     virtual void draw();
-    void grow( bool recordBrainAnatomy, bool recordBrainFunction );    
+    void grow( bool recordBrainAnatomy,
+			   bool recordBrainFunction,
+			   bool recordPosition );    
     virtual void setradius();    
     float eat(food* f, float eatFitnessParameter, float eat2consume, float eatthreshold, long step);
     void damage(float e);
@@ -112,9 +116,6 @@ public:
     void SetLastY(float y);
     void SetLastZ(float z);
     void SaveLastPosition();
-    float X();
-    float Y();
-    float Z();
     float LastX();
     float LastY();
     float LastZ();
@@ -151,6 +152,7 @@ public:
     void Domain(short id);
     bool Alive() const;
     long Index() const;
+	LifeSpan* GetLifeSpan();
 	Brain* GetBrain();
 	Retina* GetRetina();
 //	gscene& agent::GetScene();
@@ -200,6 +202,7 @@ protected:
     long fAge;
     long fLastMate;
 	long fLastEat;
+	LifeSpan fLifeSpan;
     
     float fEnergy;
     float fFoodEnergy;
@@ -259,6 +262,7 @@ protected:
     short fDomain;
 	
 	FILE* fBrainFuncFile;
+	DataLibWriter *fPositionWriter;
 };
 
 inline void agent::SetVelocity(float x, float y, float z) { fVelocity[0] = x; fVelocity[1] = y; fVelocity[2] = z; }
@@ -270,9 +274,6 @@ inline void agent::SetMass(float f) { fMass = f; }
 inline void agent::SetLastX(float x) { fLastPosition[0] = x; }
 inline void agent::SetLastY(float y) { fLastPosition[1] = y; }
 inline void agent::SetLastZ(float z) { fLastPosition[2] = z; }
-inline float agent::X() { return fPosition[0]; }
-inline float agent::Y() { return fPosition[1]; }
-inline float agent::Z() { return fPosition[2]; }
 inline float agent::LastX() { return fLastPosition[0]; }
 inline float agent::LastY() { return fLastPosition[1]; }
 inline float agent::LastZ() { return fLastPosition[2]; }
@@ -311,6 +312,7 @@ inline short agent::Domain() { return fDomain; }
 inline void agent::Domain(short id) { fDomain = id; }
 inline bool agent::Alive() const { return fAlive; }
 inline long agent::Index() const { return fIndex; }
+inline LifeSpan* agent::GetLifeSpan() { return &fLifeSpan; }
 inline Brain* agent::GetBrain() { return fBrain; }
 inline Retina* agent::GetRetina() { return fRetina; }
 inline gscene& agent::GetScene() { return fScene; }

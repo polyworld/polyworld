@@ -4,6 +4,11 @@
 
 using namespace std;
 
+Scalar::Scalar()
+{
+	type = INVALID;
+}
+
 Scalar::Scalar( int ival )
 {
 	type = INT;
@@ -39,6 +44,9 @@ Scalar::Scalar( const Scalar &scalar )
 	type = scalar.type;
 	switch(type)
 	{
+	case INVALID:
+		// no-op
+		break;
 	case INT:
 		ival = scalar.ival;
 		break;

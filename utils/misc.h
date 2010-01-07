@@ -9,6 +9,7 @@
 #ifndef MISC_H
 #define MISC_H
 
+#include <errno.h>
 #include <float.h>
 #include <math.h>
 
@@ -93,5 +94,22 @@ int GetMaximumFiles( long *filecount );
 #define RADTODEG 57.29577951
 #define DEGTORAD 0.017453292
 
+// iterator for loop
+#define itfor(TYPE,CONT,IT)			\
+  for(TYPE::iterator				\
+	IT = (CONT).begin(),			\
+	IT##_end = (CONT).end();		\
+      IT != IT##_end;				\
+      IT++)
+
+// const iterator for loop
+#define citfor(TYPE,CONT,IT)		\
+  for(TYPE::const_iterator			\
+	IT = (CONT).begin(),			\
+	IT##_end = (CONT).end();		\
+      IT != IT##_end;				\
+      IT++)
+
 #endif
 
+#define SYS(STMT) {int rc = STMT; if(rc == -1) perror(#STMT);}

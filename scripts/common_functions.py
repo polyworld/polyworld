@@ -37,7 +37,7 @@ def isverbose():
 	return _isverbose
 
 def verbose(msg):
-	if isverbose:
+	if _isverbose:
 		print msg
 
 ####################################################################################
@@ -256,6 +256,12 @@ class IllegalAbbreviationError(Exception):
 def expand_abbreviations(abbreviations,
 			 full,
 			 case_sensitive = True):
+	islist = True
+
+	if isinstance(abbreviations, str):
+		islist = False
+		abbreviations = [abbreviations]
+
 	result = []
 
 	for a in abbreviations:
@@ -285,7 +291,10 @@ def expand_abbreviations(abbreviations,
 		else:
 			result.append(match)
 
-	return result
+	if islist:
+		return result
+	else:
+		return result[0]
 
 ####################################################################################
 ###
@@ -314,6 +323,10 @@ def find_affix(names, direction):
                         return ""
                     else:
                         return names[0][idx + 1:]
+
+    # we fell through, meaning that one of the names is contained in all the
+    # others (e.g. ['a', 'ab', 'abc'])
+    return ''
 
 ####################################################################################
 ###
@@ -469,7 +482,7 @@ def pw_env(name):
 ###
 #################################################
 class InvalidDirError(Exception):
-	def __init__(self, path, type = None):
+	def __init__(self, path, type = None, required_subpath = None):
 		self.type = type
 
 		if type:
@@ -477,7 +490,9 @@ class InvalidDirError(Exception):
 		else:
 			type = ''
 
-		Exception.__init__(self, 'Invalid %sdir (%s)' % (type, path))
+		details = ' -- require %s' % required_subpath if required_subpath else ''
+
+		Exception.__init__(self, 'Invalid %sdir (%s)%s' % (type, path, details))
 
 ####################################################################################
 ###
@@ -510,7 +525,7 @@ def find_run_paths(paths_arg, required_subpath):
                     found_run = True
 
             if not found_run:
-                raise InvalidDirError(path_arg, 'run/run-parent')
+                raise InvalidDirError(path_arg, 'run/run-parent', required_subpath)
 
     run_paths.sort()
 

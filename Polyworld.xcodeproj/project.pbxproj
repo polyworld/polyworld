@@ -34,11 +34,6 @@
 		760C2CBD101AC94700F5F662 /* complexity_algorithm.cp in Sources */ = {isa = PBXBuildFile; fileRef = 760C2CB4101AC94700F5F662 /* complexity_algorithm.cp */; };
 		760C2CBE101AC94700F5F662 /* complexity_brain.cp in Sources */ = {isa = PBXBuildFile; fileRef = 760C2CB6101AC94700F5F662 /* complexity_brain.cp */; };
 		760C2CBF101AC94700F5F662 /* complexity_motion.cp in Sources */ = {isa = PBXBuildFile; fileRef = 760C2CB8101AC94700F5F662 /* complexity_motion.cp */; };
-		760C2CCB101AC96700F5F662 /* PositionPath.cp in Sources */ = {isa = PBXBuildFile; fileRef = 760C2CC4101AC96700F5F662 /* PositionPath.cp */; };
-		760C2CCC101AC96700F5F662 /* PositionReader.cp in Sources */ = {isa = PBXBuildFile; fileRef = 760C2CC6101AC96700F5F662 /* PositionReader.cp */; };
-		760C2CCE101AC96700F5F662 /* PositionPath.cp in Sources */ = {isa = PBXBuildFile; fileRef = 760C2CC4101AC96700F5F662 /* PositionPath.cp */; };
-		760C2CCF101AC96700F5F662 /* PositionReader.cp in Sources */ = {isa = PBXBuildFile; fileRef = 760C2CC6101AC96700F5F662 /* PositionReader.cp */; };
-		760C2CD0101AC96700F5F662 /* PositionWriter.cp in Sources */ = {isa = PBXBuildFile; fileRef = 760C2CC9101AC96700F5F662 /* PositionWriter.cp */; };
 		760C2D4E101B9A8200F5F662 /* agent.obj in Resources */ = {isa = PBXBuildFile; fileRef = 760C2D4C101B9A8200F5F662 /* agent.obj */; };
 		760C2D4F101B9A8200F5F662 /* ground.obj in Resources */ = {isa = PBXBuildFile; fileRef = 760C2D4D101B9A8200F5F662 /* ground.obj */; };
 		760C3114101BB15900F5F662 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 760C3112101BB15900F5F662 /* InfoPlist.strings */; };
@@ -100,6 +95,11 @@
 		76D02CC70894CEE300D89155 /* GLWidget.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76D02CC60894CEE300D89155 /* GLWidget.cp */; };
 		76D02CE40894D30200D89155 /* moc_GLWidget.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 76D02CE30894D30200D89155 /* moc_GLWidget.cpp */; };
 		76D32E0F09E62F9200394ACE /* objectxsortedlist.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76D32E0D09E62F9200394ACE /* objectxsortedlist.cp */; };
+		76E969B810F6A1DC00D0C730 /* LifeSpan.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76E969B610F6A1DC00D0C730 /* LifeSpan.cp */; };
+		76E969D410F6A22400D0C730 /* datalib.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76E969D010F6A22400D0C730 /* datalib.cp */; };
+		76E969D510F6A22400D0C730 /* Variant.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76E969D210F6A22400D0C730 /* Variant.cp */; };
+		76E969DB10F6A49000D0C730 /* datalib.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76E969D010F6A22400D0C730 /* datalib.cp */; };
+		76E969DD10F6A4AF00D0C730 /* Variant.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76E969D210F6A22400D0C730 /* Variant.cp */; };
 		76E9D481101D1C0B007D602E /* Resources.cp in Sources */ = {isa = PBXBuildFile; fileRef = 76E9D47F101D1C0B007D602E /* Resources.cp */; };
 		84ED837C062E7EED00AEEA18 /* AgentPOVWindow.cp in Sources */ = {isa = PBXBuildFile; fileRef = 84ED837A062E7EED00AEEA18 /* AgentPOVWindow.cp */; };
 /* End PBXBuildFile section */
@@ -153,13 +153,6 @@
 		760C2CB7101AC94700F5F662 /* complexity_brain.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = complexity_brain.h; sourceTree = "<group>"; };
 		760C2CB8101AC94700F5F662 /* complexity_motion.cp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = complexity_motion.cp; sourceTree = "<group>"; };
 		760C2CB9101AC94700F5F662 /* complexity_motion.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = complexity_motion.h; sourceTree = "<group>"; };
-		760C2CC4101AC96700F5F662 /* PositionPath.cp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PositionPath.cp; sourceTree = "<group>"; };
-		760C2CC5101AC96700F5F662 /* PositionPath.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PositionPath.h; sourceTree = "<group>"; };
-		760C2CC6101AC96700F5F662 /* PositionReader.cp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PositionReader.cp; sourceTree = "<group>"; };
-		760C2CC7101AC96700F5F662 /* PositionReader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PositionReader.h; sourceTree = "<group>"; };
-		760C2CC8101AC96700F5F662 /* PositionRecord.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PositionRecord.h; sourceTree = "<group>"; };
-		760C2CC9101AC96700F5F662 /* PositionWriter.cp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PositionWriter.cp; sourceTree = "<group>"; };
-		760C2CCA101AC96700F5F662 /* PositionWriter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PositionWriter.h; sourceTree = "<group>"; };
 		760C2D4C101B9A8200F5F662 /* agent.obj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = agent.obj; sourceTree = "<group>"; };
 		760C2D4D101B9A8200F5F662 /* ground.obj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = ground.obj; sourceTree = "<group>"; };
 		760C3113101BB15900F5F662 /* English */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = English; path = English.lproj/InfoPlist.strings; sourceTree = "<group>"; };
@@ -314,6 +307,12 @@
 		76D32E0E09E62F9200394ACE /* objectxsortedlist.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = objectxsortedlist.h; sourceTree = "<group>"; };
 		76D32E1609E62FDC00394ACE /* brick.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = brick.cp; sourceTree = "<group>"; };
 		76D32E1709E62FDC00394ACE /* brick.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = brick.h; sourceTree = "<group>"; };
+		76E969B610F6A1DC00D0C730 /* LifeSpan.cp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LifeSpan.cp; sourceTree = "<group>"; };
+		76E969B710F6A1DC00D0C730 /* LifeSpan.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LifeSpan.h; sourceTree = "<group>"; };
+		76E969D010F6A22400D0C730 /* datalib.cp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = datalib.cp; sourceTree = "<group>"; };
+		76E969D110F6A22400D0C730 /* datalib.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = datalib.h; sourceTree = "<group>"; };
+		76E969D210F6A22400D0C730 /* Variant.cp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Variant.cp; sourceTree = "<group>"; };
+		76E969D310F6A22400D0C730 /* Variant.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Variant.h; sourceTree = "<group>"; };
 		76E9D47F101D1C0B007D602E /* Resources.cp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Resources.cp; sourceTree = "<group>"; };
 		76E9D480101D1C0B007D602E /* Resources.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Resources.h; sourceTree = "<group>"; };
 		84ED837A062E7EED00AEEA18 /* AgentPOVWindow.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = AgentPOVWindow.cp; sourceTree = "<group>"; };
@@ -382,7 +381,6 @@
 				76CBA57A062BEDBC001C79E7 /* environment */,
 				768BD97710E0178A00B3DCAA /* genome */,
 				76CBA580062BEDBC001C79E7 /* graphics */,
-				760C2CC3101AC96700F5F662 /* motion */,
 				760C2C52101AC6EC00F5F662 /* tools */,
 				76CBA598062BEDBC001C79E7 /* ui */,
 				76CBA5A3062BEDBC001C79E7 /* utils */,
@@ -443,20 +441,6 @@
 				760C2CB9101AC94700F5F662 /* complexity_motion.h */,
 			);
 			path = complexity;
-			sourceTree = "<group>";
-		};
-		760C2CC3101AC96700F5F662 /* motion */ = {
-			isa = PBXGroup;
-			children = (
-				760C2CC4101AC96700F5F662 /* PositionPath.cp */,
-				760C2CC5101AC96700F5F662 /* PositionPath.h */,
-				760C2CC6101AC96700F5F662 /* PositionReader.cp */,
-				760C2CC7101AC96700F5F662 /* PositionReader.h */,
-				760C2CC8101AC96700F5F662 /* PositionRecord.h */,
-				760C2CC9101AC96700F5F662 /* PositionWriter.cp */,
-				760C2CCA101AC96700F5F662 /* PositionWriter.h */,
-			);
-			path = motion;
 			sourceTree = "<group>";
 		};
 		760C2D4B101B9A8200F5F662 /* objects */ = {
@@ -605,6 +589,8 @@
 				76CBA577062BEDBC001C79E7 /* agent.h */,
 				768BD94210E016EC00B3DCAA /* EnergySensor.cp */,
 				768BD94310E016EC00B3DCAA /* EnergySensor.h */,
+				76E969B610F6A1DC00D0C730 /* LifeSpan.cp */,
+				76E969B710F6A1DC00D0C730 /* LifeSpan.h */,
 				768BD94410E016EC00B3DCAA /* RandomSensor.cp */,
 				768BD94510E016EC00B3DCAA /* RandomSensor.h */,
 				768BD94610E016EC00B3DCAA /* Retina.cp */,
@@ -688,6 +674,8 @@
 		76CBA5A3062BEDBC001C79E7 /* utils */ = {
 			isa = PBXGroup;
 			children = (
+				76E969D010F6A22400D0C730 /* datalib.cp */,
+				76E969D110F6A22400D0C730 /* datalib.h */,
 				7624C7EE0A4A204A006A2B7C /* distributions.cp */,
 				7624C7EF0A4A204A006A2B7C /* distributions.h */,
 				76CBA5A4062BEDBC001C79E7 /* error.cp */,
@@ -709,6 +697,8 @@
 				76E9D480101D1C0B007D602E /* Resources.h */,
 				768BD98D10E017C200B3DCAA /* Scalar.cp */,
 				768BD98E10E017C200B3DCAA /* Scalar.h */,
+				76E969D210F6A22400D0C730 /* Variant.cp */,
+				76E969D310F6A22400D0C730 /* Variant.h */,
 			);
 			path = utils;
 			sourceTree = "<group>";
@@ -907,8 +897,8 @@
 				760C2CBA101AC94700F5F662 /* complexity_algorithm.cp in Sources */,
 				760C2CBB101AC94700F5F662 /* complexity_brain.cp in Sources */,
 				760C2CBC101AC94700F5F662 /* complexity_motion.cp in Sources */,
-				760C2CCB101AC96700F5F662 /* PositionPath.cp in Sources */,
-				760C2CCC101AC96700F5F662 /* PositionReader.cp in Sources */,
+				76E969DB10F6A49000D0C730 /* datalib.cp in Sources */,
+				76E969DD10F6A4AF00D0C730 /* Variant.cp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -969,9 +959,6 @@
 				760C2CBD101AC94700F5F662 /* complexity_algorithm.cp in Sources */,
 				760C2CBE101AC94700F5F662 /* complexity_brain.cp in Sources */,
 				760C2CBF101AC94700F5F662 /* complexity_motion.cp in Sources */,
-				760C2CCE101AC96700F5F662 /* PositionPath.cp in Sources */,
-				760C2CCF101AC96700F5F662 /* PositionReader.cp in Sources */,
-				760C2CD0101AC96700F5F662 /* PositionWriter.cp in Sources */,
 				76E9D481101D1C0B007D602E /* Resources.cp in Sources */,
 				762A43921061C79C0079A7F0 /* RandomNumberGenerator.cp in Sources */,
 				768BD94810E016EC00B3DCAA /* EnergySensor.cp in Sources */,
@@ -988,6 +975,9 @@
 				768BD98910E017A700B3DCAA /* GenomeUtil.cp in Sources */,
 				768BD98A10E017A700B3DCAA /* SynapseType.cp in Sources */,
 				768BD98F10E017C200B3DCAA /* Scalar.cp in Sources */,
+				76E969B810F6A1DC00D0C730 /* LifeSpan.cp in Sources */,
+				76E969D410F6A22400D0C730 /* datalib.cp in Sources */,
+				76E969D510F6A22400D0C730 /* Variant.cp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

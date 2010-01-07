@@ -6,7 +6,7 @@ SCONS = scons -f scripts/build/SConstruct
 	app Polyworld \
 	comp CalcComplexity \
 	mp PwMoviePlayer \
-	pwtxt
+	rancheck
 
 all:
 	${SCONS}
@@ -28,5 +28,5 @@ comp CalcComplexity:
 mp PwMoviePlayer:
 	${SCONS} bin/PwMoviePlayer
 
-pwtxt:
-	${SCONS} bin/pwtxt
+rancheck:
+	${SCONS} bin/rancheck

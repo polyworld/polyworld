@@ -7,12 +7,11 @@ import sys
 
 import algorithms
 import common_functions
-from common_functions import err, expand_macros, RECENT_TYPES, isverbose, verbose, warn
-import common_complexity
-import common_metric
+from common_functions import err, expand_macros, isverbose, verbose, warn
 import datalib
 import iterators
 import plotlib
+from plotmode import MODES, ismode, expandmode
 
 ################################################################################
 #TCRIT = 2.132  # 95% confidence for 4 degrees of freedom (5 pairs of points)
@@ -20,13 +19,13 @@ TCRIT_DEFAULT = (1.833,20,10)   # 95% confidence for 9 degrees of freedom (10 pa
 #TCRIT = 1.796  # 95% confidence for 11 degrees of freedom (12 pairs of points)
 ################################################################################
 
-DATASETS = ['min', 'mean', 'max']
 DEFAULT_OUTPUT = './plot.eps'
 CLASSIFICATION_LINETYPES = {'Driven': plotlib.StyleGroup.SOLID,
                             'Passive': plotlib.StyleGroup.DASHED,
                             'Fitness': plotlib.StyleGroup.DASHDOT}
 
-Plotting = "complexity"  # ["complexity" | "graph_metric"] Value identifies which is being plotted
+# Please, please, please do not start using this as a general global
+mode_usage = None
 
 ####################################################################################
 ###
@@ -37,15 +36,24 @@ def main():
     #---
     #--- Process command-line arguments
     #---
-    options, values, groups, recent_type, arg_paths = parse_args( sys.argv[1:] )
+    clauses, groups, arg_paths = parse_args( sys.argv[1:] )
     
     try:
-        if Plotting == "complexity":
-            run_paths = common_functions.find_run_paths( arg_paths,
-                                                         common_complexity.relpath_avr(recent_type) )
-        elif Plotting == "graph_metric":
-            run_paths = common_functions.find_run_paths( arg_paths,
-                                                         common_metric.relpath_avr(recent_type) )
+        run_paths = None
+        __mode = None
+
+        for clause in clauses:
+            relpath = clause.mode.relpath(clause.dataset)
+
+            __run_paths = common_functions.find_run_paths( arg_paths,
+                                                           relpath )
+            if run_paths == None:
+                run_paths = __run_paths
+                __mode = clause.mode
+            else:
+                if __run_paths != run_paths:
+                    err( 'run directories for %s different than %s' % (clause.mode.shortname,
+                                                                       __mode.shortname) )
 
     except common_functions.InvalidDirError, e:
         show_usage( str(e) )
@@ -54,53 +62,82 @@ def main():
     run_dirs = common_functions.truncate_paths(run_paths)
 
     #---
-    #--- Parse & classify (e.g. Driven/Passive) runs
+    #--- Iterate over clauses
     #---
-    avrs, avrs_classified = get_avrs( run_paths,
-                                      recent_type,
-                                      values,
-                                      groups )
-    groups = avrs_classified.keys()
+    for clause in clauses:
+        mode = clause.mode
+        options = clause.options
+        value_names = clause.value_names
+        dataset = clause.dataset
 
-    #---
-    #--- Compute Meta
-    #---
-    avrs_meta = get_meta( options,
-                          values,
-                          avrs_classified )
+        #---
+        #--- Parse & classify (e.g. Driven/Passive) runs
+        #---
+        clause.values, clause.values_classified = get_values( mode,
+                                                              run_paths,
+                                                              dataset,
+                                                              value_names,
+                                                              groups )
+        clause.groups = clause.values_classified.keys()
 
-    #---
-    #--- Compute T-test
-    #---
-    ttest, groups_ttest = get_ttest( options,
-                                     values,
-                                     avrs_classified )
+        #---
+        #--- Compute Meta
+        #---
+        clause.values_meta = get_meta( mode,
+                                       options,
+                                       value_names,
+                                       clause.values_classified )
+
+        #---
+        #--- Compute T-test
+        #---
+        clause.ttest, clause.groups_ttest = get_ttest( mode,
+                                                       options,
+                                                       value_names,
+                                                       clause.values_classified )
 
     #---
     #--- Create macros
     #---
-    macros = get_macros( options,
+    macros = get_macros( clauses,
                          arg_paths,
                          arg_dirs,
                          run_paths,
-                         run_dirs,
-                         recent_type,
-                         values,
-                         groups,
-                         groups_ttest)
+                         run_dirs )
+
 
     #---
     #--- Plot
     #---
-    plot( options,
-          macros,
-          recent_type,
-          run_paths,
-          run_dirs,
-          values,
-          avrs_classified,
-          avrs_meta,
-          ttest )
+    doc, plot, colordict, pathdict = plot_init( clauses,
+                                                macros,
+                                                run_paths,
+                                                run_dirs )
+
+    clauses[0].yaxis = 1
+    if len(clauses) > 1:
+        clauses[1].yaxis = 2
+
+    for clause in clauses:
+        plot_clause( doc,
+                     plot,
+                     colordict,
+                     str(clause.index) + '-',
+                     pathdict,
+                     clause.mode,
+                     clause.options,
+                     macros,
+                     clause.dataset,
+                     clause.yaxis,
+                     run_paths,
+                     run_dirs,
+                     clause.value_names,
+                     clause.values_classified,
+                     clause.values_meta,
+                     clause.ttest )
+
+    plot_complete( clauses[0].options['global'],
+                   doc )
 
 ####################################################################################
 ###
@@ -108,12 +145,23 @@ def main():
 ###
 ####################################################################################
 def parse_args(argv):
-    global Plotting
-    if len(argv) == 0:
-        show_usage()
+    global mode_usage
+
+    class ModeClause:
+        def __init__( self,
+                      mode,
+                      index,
+                      options,
+                      value_names,
+                      dataset ):
+            self.mode = mode
+            self.index = index
+            self.options = options
+            self.value_names = value_names
+            self.dataset = dataset
 
     # ---
-    # --- OPTIONS
+    # --- OPT CONSTANTS
     # ---
     FLAGS_GLOBAL = {'d': 'points',
                     'dots': 'points',
@@ -128,16 +176,20 @@ def parse_args(argv):
                     'noview': 'noview',
                     'c': 'color',
                     'color': 'color',
-                    'verbose': 'verbose'}
-    ARGS_GLOBAL = {'C': 'complexity',
-                   'G': 'graph metric',
-                   'g': 'group',
+                    'verbose': 'verbose',
+                    'p': 'pval',
+                    'pval': 'pval',
+                    't': 'tval',
+                    'tval': 'tval'}
+    ARGS_GLOBAL = {'g': 'group',
                    'group': 'group',
                    'o': 'output',
                    'title': 'title',
                    'xlabel': 'xlabel',
-                   'ylabel': 'ylabel',
-                   'rmargin': 'rmargin'}
+                   'ylabel1': 'ylabel1',
+                   'ylabel2': 'ylabel2',
+                   'rmargin': 'rmargin',
+                   'tcrit': 'tcrit'}
 
     FLAGS_AVR = {'w': 'whiskers',
                  'whiskers': 'whiskers',
@@ -151,58 +203,181 @@ def parse_args(argv):
                  'err': 'errorbars'}
     ARGS_AVR = {}
 
-    FLAGS_META = dict([(x[0].capitalize(), x[1]) for x in FLAGS_AVR.items()])
-    ARGS_META = {}
-
-    FLAGS_TTEST = {'p': 'pval',
-                   'pval': 'pval',
-                   't': 'tval',
-                   'tval': 'tval'}
-    ARGS_TTEST = {'tcrit': 'tcrit'}
-
-    # These values are copied into the ttest options from avr/meta options
-    TTEST_COPY = DATASETS
+    FLAGS_AVR_META = dict([(x[0].capitalize(), x[1]) for x in FLAGS_AVR.items()])
+    ARGS_AVR_META = {}
 
     # ---
-    # --- END OPTIONS
+    # --- Help
+    # ---
+    if len(argv) == 0:
+        show_usage()
+    elif argv[0] == 'help':
+        if len(argv) > 1:
+            show_usage( arg = argv[1] )
+        else:
+            show_usage()
+
+    # ---
+    # --- Parse ':'
+    # ---
+    argv_modes = []
+    for arg in argv:
+        if arg == ':' or len(argv_modes) == 0:
+            argv_mode = []
+            argv_modes.append( argv_mode )
+        
+        if arg != ':':
+            argv_mode.append( arg )
+
+    if len(argv_modes) > 2:
+        err( "Only two clauses currently supported." )
+
+    # ---
+    # --- Process Modes
+    # ---
+    clauses = []
+    gopts = plotlib.Options(FLAGS_GLOBAL, ARGS_GLOBAL)
+    gargs = []
+
+    for argv in argv_modes:
+        if len(argv) == 0:
+            show_usage( "Missing mode" )
+
+        modestr = argv.pop( 0 )
+        if ismode( modestr ):
+            mode = MODES[expandmode( modestr )]
+            mode_usage = mode
+        else:
+            show_usage( 'Invalid mode (%s)' % modestr )
+
+        # ---
+        # --- MODE OPTIONS
+        # ---
+        args_mode = {}
+        flags_mode = {}
+
+        args_curvetypes = {}
+        flags_curvetypes = {}
+
+        args_meta = {}
+        flags_meta = {}
+
+        if len(mode.datasets) > 1:
+            args_mode['D'] = 'dataset'
+
+        if len(mode.values) > 1:
+            args_mode['V'] = 'values'
+
+        if mode.isAvr:
+            args_curvetypes.update( ARGS_AVR )
+            flags_curvetypes.update( FLAGS_AVR )
+            args_meta.update( ARGS_AVR_META )
+            flags_meta.update( FLAGS_AVR_META )
+        elif len(mode.curvetypes) == 1:
+            flags_curvetypes['m'] = mode.defaultCurvetype
+            flags_meta['M'] = mode.defaultCurvetype
+
+        # secret flag
+        args_mode['curvehack'] = 'curvehack'
+
+        # ---
+        # --- PARSE ARGS
+        # ---
+        value_names = []
+        paths = []
+        options = {'global': gopts,
+                   'mode': plotlib.Options(flags_mode, args_mode),
+                   'curvetypes': plotlib.Options(flags_curvetypes, args_curvetypes),
+                   'meta': plotlib.Options(flags_meta, args_meta)}
+
+        try:
+            short, long = plotlib.getopts_encoding(options.values())
+            opts, args = getopt.getopt(argv, short, long)
+        except getopt.GetoptError, e:
+            show_usage(str(e))
+
+        # defer global args processing
+        gargs += args
+
+        plotlib.process_options(options, opts)
+        mopts = options['mode']
+        common_functions._isverbose = gopts.get('verbose')
+
+        # ---
+        # --- PROCESS MODE OPTIONS
+        # ---
+        if mopts.get( 'curvehack', False ):
+            mode.curvetypes.append( mopts.get('curvehack') )
+            options['curvetypes'].set( mopts.get('curvehack'), True )
+
+        # determine value_names
+        value_names = mopts.get( 'values', mode.defaultValues ).split( ',' )
+
+        # determine dataset
+        if len(mode.datasets):
+            datasetstr = mopts.get( 'dataset', mode.defaultDataset )
+
+            try:
+                dataset = common_functions.expand_abbreviations( datasetstr,
+                                                                 mode.datasets,
+                                                                 case_sensitive = False )
+            except common_functions.IllegalAbbreviationError, x:
+                err(str(x))
+        else:
+            dataset = mode.defaultDataset
+
+        # default plot if none specified
+        if options['curvetypes'].nset == 0 and options['meta'].nset == 0:
+            options['curvetypes'].set(mode.defaultCurvetype, True)
+
+        clauses.append( ModeClause(mode,
+                                   len(clauses),
+                                   options,
+                                   value_names,
+                                   dataset) )
+
+    # ---
+    # --- T-Test
     # ---
 
-    #complexities = []
-    #metrics = []
-    values = []
-    paths = []
-    options = {'global': plotlib.Options(FLAGS_GLOBAL, ARGS_GLOBAL),
-               'avr': plotlib.Options(FLAGS_AVR, ARGS_AVR),
-               'meta': plotlib.Options(FLAGS_META, ARGS_META),
-               'ttest': plotlib.Options(FLAGS_TTEST, ARGS_TTEST)}
+    # validate tval/pval settings
+    tval = gopts.get('tval', False)
+    pval = gopts.get('pval', False)
+
+    if tval and pval:
+        err('Cannot plot t-values and p-values simultaneously.')
+    elif tval or pval:
+        if len( clauses ) > 1:
+            err( "Cannot plot T-test and multiple clauses." )
 
     try:
-        short, long = plotlib.getopts_encoding(options.values())
-        opts, args = getopt.getopt(argv, short, long)
-    except getopt.GetoptError, e:
-        show_usage(str(e))
-        
-    #Determine whether Complexities or Graph Metrics are being plotted
-    for o, a in opts:
-        if 'G' in o:
-            Plotting = 'graph_metric'  # Graph metrics are being plotted
-            break
+        tcrit = float( gopts.get('tcrit', TCRIT_DEFAULT[0]) )
+        gopts.set( 'tcrit', tcrit )
+    except ValueError:
+        err("Invalid TCRIT value ("+gopts.get('tcrit')+")")
 
-    plotlib.process_options(options, opts)
-    gopts = options['global']
+    for clause in clauses:
+        topts = plotlib.Options( {}, {} )
+        clause.options['ttest'] = topts
 
-    common_functions._isverbose = gopts.get('verbose')
+        # copy flags that affect ttest plotting
+        for opt in clause.mode.curvetypes:
+            topts.set( opt,
+                       clause.options['curvetypes'].get(opt, False) or clause.options['meta'].get(opt, False),
+                       count = False )
 
-    if Plotting == 'complexity':
-        values = gopts.get('complexity', 'P').split(',')
-    elif Plotting == 'graph_metric':
-        values = gopts.get('graph metric', 'SP').split(',')
+    # ---
+    # --- GLOBAL ARGS
+    # ---
+    args = gargs
 
     # process grouping
     group = gopts.get('group', 'auto')
     if group == 'auto':
         groups = common_functions.CLASSIFICATIONS
     elif group == 'off':
+        if pval or tval:
+            err( "'--group off' incompatible with T-test calculations." )
         groups = []
     else:
         try:
@@ -214,14 +389,6 @@ def parse_args(argv):
         except common_functions.IllegalAbbreviationError, x:
             err(str(x))
 
-    # determine recent type
-    if len(args) == 0:
-        show_usage('Must specify recent type (%s).' % ','.join(RECENT_TYPES))
-
-    recent_type = args.pop(0)
-    if not recent_type in RECENT_TYPES:
-        show_usage('Invalid recent type (%s).' % recent_type)
-
     # process paths
     for path in args:
         paths.append(path)
@@ -229,121 +396,99 @@ def parse_args(argv):
     if len(paths) == 0:
         show_usage("Must provide a directory.")
 
-    # default plot if none specified
-    if options['avr'].nset == 0 and options['meta'].nset == 0:
-        options['avr'].set('mean', True)
-
-    topts = options['ttest']
-
-    # validate tval/pval settings
-    tval = topts.get('tval', False)
-    pval = topts.get('pval', False)
-    if tval and pval:
-        err('Cannot plot t-values and p-values simultaneously.')
-    elif (tval or pval) and (group == 'off'):
-        err( "'--group off' incompatible with T-test calculations." )
-        
-    # validate tcrit
-    try:
-        topts.set('tcrit',
-                  float(topts.get('tcrit', TCRIT_DEFAULT[0])),
-                  count = False)
-    except ValueError:
-        err("Invalid TCRIT value ("+topts.get('tcrit')+")")
-
-    # copy flags that affect ttest plotting
-    for opt in TTEST_COPY:
-        topts.set( opt,
-                   options['avr'].get(opt) or options['meta'].get(opt),
-                   count = False )
-
-    return options, values, groups, recent_type, paths
+    return clauses, groups, paths
 
 ####################################################################################
 ###
 ### FUNCTION get_macros()
 ###
 ####################################################################################
-def get_macros( options,
+def get_macros( clauses,
                 arg_paths,
                 arg_dirs,
                 run_paths,
-                run_dirs,
-                recent_type,
-                values,
-                groups,
-                groups_ttest):
-    if len(groups) > 1:
-        title = '{GROUPS} -- {TYPES}'
+                run_dirs ):
+    clause1 = clauses[0]
+
+    if len(clause1.groups) > 1:
+        title = '{GROUPS} -- {MODES}'
     else:
-        title = '{TYPES}'
+        title = '{MODES}'
 
-    types = []
-    for t in DATASETS:
-        if options['avr'].get(t) or options['meta'].get(t):
-            types.append(t.title())
-
-    if len(groups) > 2:
-        groups = ', '.join(groups)
+    if len(clause1.groups) > 2:
+        groups = ', '.join(clause1.groups)
     else:
-        groups = ' vs. '.join(groups)
+        groups = ' vs. '.join(clause1.groups)
 
-    groups_ttest = ' vs. '.join(groups_ttest)
+    groups_ttest = ' vs. '.join(clause1.groups_ttest)
+
+    modes = set( [x.mode.name for x in clauses] )
+
+    def __clause_macros( macros, i ):
+        num = i + 1
+
+        if i >= len(clauses):
+            ylabel, dataset, value_types, value_names, curve_types = '', '', '', '', ''
+        else:
+            clause = clauses[i]
+            options = clause.options
+
+            ylabel = clause.mode.name + ' ({VALUE_NAMES%d})' % num
+
+            dataset = clause.dataset
+
+            value_types = ', '.join(clause.value_names)
+            value_names = ', '.join(clause.mode.func_getValueNames( clause.value_names ))
+
+            curve_types = []
+            for curve_type in clause.mode.curvetypes:
+                if options['curvetypes'].get(curve_type, False) or options['meta'].get(curve_type, False):
+                    curve_types.append(curve_type.title())
+            curve_types = ', '.join( curve_types )
+
+        macros['YLABEL%d' % num] = ylabel
+        macros['DATASET%d' % num] = dataset
+        macros['VALUE_TYPES%d' % num] = value_types
+        macros['VALUE_NAMES%d' % num] = value_names
+        macros['CURVE_TYPES%d' % num] = curve_types
+        
     
-    if Plotting == 'complexity':
-        return {'TITLE': title,
-                'XLABEL': 'Timestep',
-                'YLABEL': 'Neural Complexity ({COMPLEXITY_NAMES})',
-                'ARG_DIRS': ', '.join(arg_dirs),
-                'RUN_DIRS': ', '.join(run_dirs),
-                'ARG_PATHS': ', '.join(arg_paths),
-                'RUN_PATHS': ', '.join(run_paths),
-                'RECENT': recent_type,
-                'COMPLEXITY_TYPES': ', '.join(values),
-                'COMPLEXITY_NAMES': ', '.join(common_complexity.get_names(values)),
-                'TYPES': ', '.join(types),
-                'GROUPS': groups,
-                'GROUPS_TTEST': groups_ttest}
-    elif Plotting == 'graph_metric':
-         return {'TITLE': title,
-                'XLABEL': 'Timestep',
-                'YLABEL': 'Graphic Metric ({METRIC_NAMES})',
-                'ARG_DIRS': ', '.join(arg_dirs),
-                'RUN_DIRS': ', '.join(run_dirs),
-                'ARG_PATHS': ', '.join(arg_paths),
-                'RUN_PATHS': ', '.join(run_paths),
-                'RECENT': recent_type,
-                'METRIC_TYPES': ', '.join(values),
-                'METRIC_NAMES': ', '.join(common_metric.get_names(values)),
-                'TYPES': ', '.join(types),
-                'GROUPS': groups,
-                'GROUPS_TTEST': groups_ttest}
+
+    macros = {'TITLE': title,
+              'XLABEL': 'Timestep',
+              'ARG_DIRS': ', '.join(arg_dirs),
+              'RUN_DIRS': ', '.join(run_dirs),
+              'ARG_PATHS': ', '.join(arg_paths),
+              'RUN_PATHS': ', '.join(run_paths),
+              'MODES': ', '.join(modes),
+              'GROUPS': groups,
+              'GROUPS_TTEST': groups_ttest}
+
+    __clause_macros( macros, 0 )
+    __clause_macros( macros, 1 )
+
+    return macros
 
 ####################################################################################
 ###
-### FUNCTION get_avrs()
+### FUNCTION get_values()
 ###
 ####################################################################################
-def get_avrs( run_paths,
-              recent_type,
-              values,
-              groups ):
+def get_values( mode,
+                run_paths,
+                dataset,
+                value_names,
+                groups ):
 
-    if Plotting == 'complexity':
-        avrs = common_complexity.parse_avrs( run_paths,
-                                             recent_type,
-                                             values,
-                                             run_as_key = True )
-    elif Plotting == 'graph_metric':
-        avrs = common_metric.parse_avrs( run_paths,
-                                         recent_type,
-                                         values,
-                                         run_as_key = True )
+    values = mode.parseValues( run_paths,
+                               dataset,
+                               value_names,
+                               run_as_key = True )
 
     if len(groups) == 0: # --group off
-        avrs_classified = { 'None': [x
-                                    for x in iterators.MatrixIterator(avrs,
-                                                                      avrs.keys())] }
+        values_classified = { 'None': [x
+                                       for x in iterators.MatrixIterator(values,
+                                                                         values.keys())] }
     else:
         try:
             classifications = common_functions.classify_runs( run_paths,
@@ -352,98 +497,103 @@ def get_avrs( run_paths,
         except common_functions.ClassificationError, x:
             err(str(x))
 
-        # map from classification to list of avrs
-        avrs_classified = {}
+        # map from classification to list of value tables
+        values_classified = {}
         for c, paths in classifications.items():
-            l = avrs_classified[c] = []
+            l = values_classified[c] = []
             for path in paths:
-                l.append( avrs[path] )
+                l.append( values[path] )
 
     if isverbose():
-        for c, avrs_list in avrs_classified.items():
+        for c, values_list in values_classified.items():
             verbose('%s:' % c)
-            for avrs in avrs_list:
-                verbose('  %s' % avrs.values()[0].path)
+            for values in values_list:
+                verbose('  %s' % values.values()[0].path)
 
-    return avrs, avrs_classified
+    return values, values_classified
 
 ####################################################################################
 ###
 ### FUNCTION get_meta()
 ###
 ####################################################################################
-def get_meta( options,
-              values,
-              avrs_classified ):
+def get_meta( mode,
+              options,
+              value_names,
+              values_classified ):
 
-    avrs_meta = {}
+    values_meta = {}
 
     mopts = options['meta']
 
     if mopts.nset > 0:
-        for classification, avrs in avrs_classified.items():
-            if len(avrs) < 2:
+        for classification, values in values_classified.items():
+            if len(values) < 2:
                 warn('Not enough runs to perform meta averaging for classification '+classification+'.')
             else:
-                for type in DATASETS:
-                    if mopts.get(type):
-                        if classification not in avrs_meta.keys():
-                            avrs_meta[classification] = {}
+                for curvetype in mode.curvetypes:
+                    if mopts.get(curvetype):
+                        if classification not in values_meta.keys():
+                            values_meta[classification] = {}
 
-                        meta = create_meta( options,
+                        meta = create_meta( mode,
+                                            options,
                                             mopts,
-                                            type,
-                                            values,
+                                            curvetype,
+                                            value_names,
                                             classification,
-                                            avrs )
+                                            values )
 
-                        avrs_meta[classification][type] = meta
+                        values_meta[classification][curvetype] = meta
 
-    return avrs_meta
+    return values_meta
 
 ####################################################################################
 ###
 ### FUNCTION create_meta()
 ###
 ####################################################################################
-def create_meta( options,
+def create_meta( mode,
+                 options,
                  mopts,
-                 type,
-                 values,
+                 curvetype,
+                 value_names,
                  classification,
-                 avrs ):
+                 values ):
 
-    timesteps = common_functions.get_timesteps( iterators.MatrixIterator(avrs,
-                                                                         range(len(avrs)),
-                                                                         values),
-                                                'Timestep' )    
+    timesteps = common_functions.get_timesteps( iterators.MatrixIterator(values,
+                                                                         range(len(values)),
+                                                                         value_names),
+                                                mode.colName_timestep )    
     if len(timesteps) < 1:
         err( 'No common timesteps found between runs for meta. (classfication=%s)' % classification )
     
-    avrs_meta = algorithms.avr_meta(avrs,
-                                    values,
-                                    timesteps,
-                                    type )
+    values_meta = algorithms.avr_meta(values,
+                                      value_names,
+                                      timesteps,
+                                      curvetype )
     datalib.write( '/tmp/meta-%s-%s-%d.plt' % (classification,
-                                               type,
+                                               curvetype,
                                                os.getpid()),
-                   avrs_meta )
+                   values_meta )
 
-    return avrs_meta
+    return values_meta
 
 ####################################################################################
 ###
 ### FUNCTION get_ttest()
 ###
 ####################################################################################
-def get_ttest( options, values, avrs ):
+def get_ttest( mode,
+               options,
+               value_names,
+               values ):
     gopts = options['global']
-    topts = options['ttest']
 
-    if topts.nset == 0:
+    if not gopts.get('pval') and not gopts.get('tval'):
         return {}, []
 
-    groups = avrs.keys()
+    groups = values.keys()
 
     if len(groups) < 2:
         err( "T-test calculations require 2 classifications, but only 1 found." )
@@ -462,8 +612,8 @@ def get_ttest( options, values, avrs ):
 
     verbose('T-test groups: %s' % ','.join(groups))
 
-    runsa = avrs[groups[0]] # e.g. all the 'driven' runs
-    runsb = avrs[groups[1]] # e.g. all the 'passive' runs
+    runsa = values[groups[0]] # e.g. all the 'driven' runs
+    runsb = values[groups[1]] # e.g. all the 'passive' runs
 
     na = len(runsa)
     nb = len(runsb)
@@ -474,11 +624,11 @@ def get_ttest( options, values, avrs ):
     if nruns < 2:
         err( "T-test requires at least 2 runs per classification" )
 
-    timesteps = common_functions.get_timesteps( iterators.MatrixIterator(avrs,
+    timesteps = common_functions.get_timesteps( iterators.MatrixIterator(values,
                                                                          groups,
                                                                          range( nruns ),
-                                                                         values),
-                                                'Timestep' )
+                                                                         value_names),
+                                                mode.colName_timestep )
 
     if len(timesteps) == 0:
         err( "No common timesteps found for T-test calculations." )
@@ -487,21 +637,21 @@ def get_ttest( options, values, avrs ):
         data = parms[0]
         V = parms[1]
         t = parms[2]
-        col = parms[3]
+        curvetype = parms[3]
 
         return iterators.MatrixIterator( data,
                                          range(nruns),
                                          [V],
                                          [t],
-                                         [col] )
+                                         [curvetype] )
 
     ttest = algorithms.ttest_table( runsa,
                                     runsb,
                                     nruns,
-                                    options['ttest'].get('tcrit'),
-                                    values,
+                                    gopts.get('tcrit'),
+                                    value_names,
                                     timesteps,
-                                    DATASETS,
+                                    mode.curvetypes,
                                     __iter )
 
     datalib.write( '/tmp/ttest-%d.plt' % os.getpid(), ttest )
@@ -511,20 +661,14 @@ def get_ttest( options, values, avrs ):
     
 ####################################################################################
 ###
-### FUNCTION plot()
+### FUNCTION plot_init()
 ###
 ####################################################################################
-def plot( options,
-          macros,
-          recent_type,
-          run_paths,
-          run_dirs,
-          values,
-          avrs_classified,
-          avrs_meta,
-          ttest ):
-
-    gopts = options['global']
+def plot_init( clauses,
+               macros,
+               run_paths,
+               run_dirs ):
+    gopts = clauses[0].options['global']
 
     doc = plotlib.Document()
     doc.nocolor = not gopts.get( 'color' )
@@ -533,36 +677,41 @@ def plot( options,
     plot = doc.createPlot(title)
 
     plot.xlabel = expand_macros(gopts.get('xlabel', '{XLABEL}'), macros)
-    plot.ylabel = expand_macros(gopts.get('ylabel', '{YLABEL}'), macros)
+    plot.ylabel = expand_macros(gopts.get('ylabel1', '{YLABEL1}'), macros)
+    plot.y2label = expand_macros(gopts.get('ylabel2', '{YLABEL2}'), macros)
 
-    if len(ttest) > 0:
-        topts = options['ttest']
-        if topts.get('pval'):
-            pmin = 0.8
-            pmax = 1.0
-            fracHeight = 1.0 / 6.0
+    if gopts.get('pval'):
+        pmin = 0.8
+        pmax = 1.0
+        fracHeight = 1.0 / 6.0
 
-            plot.y2range = ( pmin, (pmin + (pmax-pmin)/fracHeight) )
-            plot.y2label = "(1 - p-value)      Dependent Student's T-test"
+        plot.y2range = ( pmin, (pmin + (pmax-pmin)/fracHeight) )
+        plot.y2label = "(1 - p-value)      Dependent Student's T-test"
 
-            plot.createTick( 0.8 )
-            plot.createTick( 0.95,
-                             line = True )
-            plot.createTick( 1.0,
-                             "1.0" )
-        elif topts.get('tval'):
-            tcrit = topts.get('tcrit')
-            tmax = tcrit
-            for col in TTEST_COLS:
-                if topts.get(col):
-                    for V in values:
-                        tmax = max( tmax,
-                                    max(ttest[V+'-'+col].getColumn( 'tval' )) )
-            plot.y2range = (0, tmax * 4)
-            plot.y2label = "Dependent Student's T-test (p < 0.05)"
-            plot.createTick( tcrit,
-                             "T*",
-                             line = True )
+        plot.createTick( 0.8 )
+        plot.createTick( 0.95,
+                         line = True )
+        plot.createTick( 1.0,
+                         "1.0" )
+    elif gopts.get('tval'):
+        assert( len(clauses) == 1 )
+
+        tcrit = gopts.get('tcrit')
+        tmax = tcrit
+
+        clause = clauses[0]
+        topts = clause.options['ttest']
+
+        for curve in clause.mode.curvetypes:
+            if topts.get(curve):
+                for V in clause.value_names:
+                    tmax = max( tmax,
+                                max(clause.ttest[V+'-'+curve].getColumn( 'tval' )) )
+        plot.y2range = (0, tmax * 4)
+        plot.y2label = "Dependent Student's T-test (p < 0.05)"
+        plot.createTick( tcrit,
+                         "T*",
+                         line = True )
     else:
         # stupid EPS terminal cuts off our x-axis label without this
         plot.rmargin = 2
@@ -573,10 +722,9 @@ def plot( options,
     except KeyError:
         # user didn't specify
         pass
-        
 
 
-    ngroups = len(avrs_classified.keys())
+    ngroups = len(clauses[0].values_classified.keys())
     plot.legend = gopts.get('legend') or (not gopts.get('nolegend') and ngroups > 1)
     
     colordict = {}
@@ -586,54 +734,97 @@ def plot( options,
     else:
         pathdict = dict([(run_paths[i], run_dirs[i]) for i in range(len(run_paths))])
 
-    for classification, avrs_list in avrs_classified.items():
-        for avrs in avrs_list:
-            for V in values:
-                table = avrs[V]
-                create_curves( doc,
+    return doc, plot, colordict, pathdict
+
+
+####################################################################################
+###
+### FUNCTION plot_clause()
+###
+####################################################################################
+def plot_clause( doc,
+                 plot,
+                 colordict,
+                 colorkey_prefix,
+                 pathdict,
+                 mode,
+                 options,
+                 macros,
+                 dataset,
+                 yaxis,
+                 run_paths,
+                 run_dirs,
+                 value_names,
+                 values_classified,
+                 values_meta,
+                 ttest ):
+
+    gopts = options['global']
+
+    for classification, values_list in values_classified.items():
+        for values in values_list:
+            for V in value_names:
+                table = values[V]
+                create_curves( mode,
+                               doc,
                                plot,
                                macros,
                                colordict,
+                               colorkey_prefix,
                                pathdict,
                                options,
-                               'avr',
-                               recent_type,
+                               'curvetypes',
+                               dataset,
+                               yaxis,
                                classification,
                                None,
                                table )
 
-    for classification, types in avrs_meta.items():
-        for type, avrs in types.items():
-            for V in values:
-                table = avrs[V]
+    for classification, curvetypes in values_meta.items():
+        for curvetype, values in curvetypes.items():
+            for V in value_names:
+                table = values[V]
 
-                create_curves( doc,
+                create_curves( mode,
+                               doc,
                                plot,
                                macros,
                                colordict,
+                               colorkey_prefix,
                                pathdict,
                                options,
                                'meta',
-                               recent_type,
+                               dataset,
+                               yaxis,
                                classification,
-                               type,
+                               curvetype,
                                table )
 
     for colname, table in ttest.items():
-        create_curves( doc,
+        create_curves( mode,
+                       doc,
                        plot,
                        macros,
                        colordict,
+                       colorkey_prefix,
                        None,
                        options,
                        'ttest',
-                       recent_type,
+                       dataset,
+                       yaxis,
                        None,
                        None,
                        table )
 
-    path_doc, path_script = doc.save( options['global'].get('output',
-                                                            DEFAULT_OUTPUT) )
+####################################################################################
+###
+### FUNCTION plot_complete()
+###
+####################################################################################
+def plot_complete( gopts,
+                   doc ):
+    path_doc, path_script = doc.save( gopts.get('output',
+                                                DEFAULT_OUTPUT) )
     os.system('%s %s' % (common_functions.pw_env('open'), path_doc))
 
 ####################################################################################
@@ -641,16 +832,19 @@ def plot( options,
 ### FUNCTION create_curves()
 ###
 ####################################################################################
-def create_curves(doc,
+def create_curves(mode,
+                  doc,
                   plot,
                   macros,
                   colordict,
+                  colorkey_prefix,
                   pathdict,
                   options,
                   optionclass,
-                  recent_type,
+                  dataset,
+                  yaxis,
                   classification,
-                  meta_type,
+                  meta_curvetype,
                   table):
     gopts = options['global']
     smooth = gopts.get('smooth')
@@ -661,9 +855,9 @@ def create_curves(doc,
     ttest = optionclass == 'ttest'
 
     if meta:
-        assert(meta_type)
+        assert(meta_curvetype)
     else:
-        assert(not meta_type)
+        assert(not meta_curvetype)
 
     if smooth and points:
         warn("Cannot show points with smooth curves.")
@@ -701,12 +895,12 @@ def create_curves(doc,
         except KeyError:
             if meta:
                 try:
-                    # use the avrs' line style, but thick
+                    # use the values' line style, but thick
                     group = plot.createStyleGroup(groupname,
                                                   plot.getStyleGroup(groupkey).linetype,
                                                   plotlib.StyleGroup.THICK)
                 except:
-                    # no avrs were plotted for this classification.
+                    # no values were plotted for this classification.
                     group = plot.createStyleGroup(groupname,
                                                   preflinetype,
                                                   plotlib.StyleGroup.THICK)
@@ -722,6 +916,8 @@ def create_curves(doc,
         else:
             colorkey = path
             forcecolor = None
+
+        colorkey = colorkey_prefix + colorkey
 
         if not colorkey in colordict.keys():
             style = group.createStyle( forcecolor )
@@ -740,7 +936,7 @@ def create_curves(doc,
     #--- Provides title/legend-label for a curve
     #---
     def __title(name):
-        if name != 'whiskers':
+        if name != 'whiskers' and len(mode.curvetypes) > 1:
             title = name + ' ' + table.name
         else:
             title = table.name
@@ -753,15 +949,12 @@ def create_curves(doc,
             title += expand_macros( ' ({GROUPS_TTEST})', macros )
         else:
             if pathdict != None:
-                if Plotting == 'complexity':
-                    title += ' (' + pathdict[common_complexity.path_run_from_avr(table.path, recent_type)] + ')'
-                elif Plotting == 'graph_metric':
-                    title += ' (' + pathdict[common_metric.path_run_from_avr(table.path, recent_type)] + ')'
+                title += ' (' + pathdict[mode.pathRunFromValue(table.path, dataset)] + ')'
 
         return title
     #---
 
-    # Whisker curves are available for avr and meta, not ttest
+    # Whisker curves are available for values and meta, not ttest
     if options.get('whiskers', False):
         assert( not ttest)
 
@@ -772,45 +965,58 @@ def create_curves(doc,
             options.set('mean', False)
             options.set('max', False)
         
-        plot.createCandlestickCurve(table,
-                                    __title('whiskers'),
-                                    'Timestep',
-                                    'q1',
-                                    'min',
-                                    'max',
-                                    'q3',
-                                    plotlib.CandlestickCurve.WHISKERS,
-                                    style)
+        curve = plot.createCandlestickCurve(table,
+                                            __title('whiskers'),
+                                            'Timestep',
+                                            'q1',
+                                            'min',
+                                            'max',
+                                            'q3',
+                                            plotlib.CandlestickCurve.WHISKERS,
+                                            style)
+        curve.axes[1] = yaxis
 
-        plot.createCandlestickCurve(table,
-                                    None,
-                                    'Timestep',
-                                    'median',
-                                    'median',
-                                    'median',
-                                    'median',
-                                    not plotlib.CandlestickCurve.WHISKERS,
-                                    style)
+        curve = plot.createCandlestickCurve(table,
+                                            None,
+                                            'Timestep',
+                                            'median',
+                                            'median',
+                                            'median',
+                                            'median',
+                                            not plotlib.CandlestickCurve.WHISKERS,
+                                            style)
+        curve.axes[1] = yaxis
+
     else: # Not plotting whisker curve.
-        def __shouldplot( type ):
-            if ttest:
-                return options.get( type ) and table.name.endswith( '-'+type )
-            elif meta:
-                return options.get( type ) and type == meta_type
-            else:
-                return options.get( type )
+        def __shouldplot( curvetype ):
+            inopts = options.get( curvetype, False )
 
-        def __curves( type ):
-            result = []
             if ttest:
-                if options.get( 'pval' ):
+                return inopts and table.name.endswith( '-'+curvetype )
+            elif meta:
+                return inopts and curvetype == meta_curvetype
+            else:
+                return inopts
+
+        def __curves( curvetype ):
+            result = []
+
+            x = mode.colName_timestep
+
+            if ttest:
+                if gopts.get( 'pval' ):
                     result.append( {'col': 'pval', 'title': 'pval', 'axes': (1,2)} )
-                if options.get( 'tval' ):
+                if gopts.get( 'tval' ):
                     result.append( {'col': 'tval', 'title': 'tval', 'axes': (1,2)} )
             elif meta:
-                result.append( {'col': 'mean', 'title': type.title(), 'axes': (1,1)} )
+                x = 'Timestep'
+                result.append( {'col': 'mean', 'title': curvetype.title(), 'axes': (1,yaxis)} )
             else:
-                result.append( {'col': type, 'title': type.title(), 'axes': (1,1)} )
+                result.append( {'col': curvetype, 'title': curvetype.title(), 'axes': (1,yaxis)} )
+
+            for r in result:
+                r['x'] = x
+
             return result
 
         #
@@ -818,14 +1024,14 @@ def create_curves(doc,
         #
         # (about freaking time)
         #
-        for type in DATASETS:
-            if __shouldplot( type ):
-                for c in __curves( type ):
-                    style = __style( type )
-            
+        for curvetype in mode.curvetypes:
+            if __shouldplot( curvetype ):
+                for c in __curves( curvetype ):
+                    style = __style( curvetype )
+
                     curve = plot.createCurve(table,
                                              __title(c['title']),
-                                             'Timestep',
+                                             c['x'],
                                              c['col'],
                                              style,
                                              smooth)
@@ -835,28 +1041,65 @@ def create_curves(doc,
         if __shouldplot( 'mean' ) and options.get('errorbars', False):
                 assert(not ttest)
 
-                plot.createErrorbarCurve(table,
-                                         None,
-                                         'Timestep',
-                                         'mean',
-                                         'mean_stderr',
-                                         style)
+                curve = plot.createErrorbarCurve(table,
+                                                 None,
+                                                 'Timestep',
+                                                 'mean',
+                                                 'mean_stderr',
+                                                 style)
+                curve.axes[1] = yaxis
 
 ####################################################################################
 ###
 ### FUNCTION show_usage()
 ###
 ####################################################################################
-def show_usage(msg = None):
-#-------------------------------------------------------------------------------
+def show_usage(msg = None, arg = None):
+    global mode_usage
+
+    if arg == None:
+        if mode_usage == None:
+            usage_default()
+        else:
+            usage_mode( mode_usage.shortname )
+    elif arg == 'opts':
+        usage_opts()
+    elif arg == 'macros':
+        usage_macros()
+    elif ismode( arg ):
+        usage_mode( arg )
+    else:
+        usage_default( 'Invalid help topic (%s)' % arg )
+
+    if msg:
+        print "--------------------------------------------------------------------------------"
+        print
+        print 'Error!', msg
+
+    sys.exit(1)
+
+####################################################################################
+###
+### FUNCTION usage_default()
+###
+####################################################################################
+def usage_default():
     print """\
 USAGE 
 
-     %s [<options>]... (%s) <directory>...
+     plot help [<mode>|opts|macros]
+     plot <mode> [<opt>]... [: <mode> [<opt>]...]... <directory>...
 
 DESCRIPTION
 
-     Plots the Olafcomplexity from one or more Polyworld run/ directories.
+     Plots results of one or more Polyworld runs.
+
+     The type of data from a Polyworld run that is to be plotted is specified by
+  the 'mode' argument, where valid modes are:
+
+       %s
+
+     Note that mode names may be abbreviated.
 
      Directory arguments can specify a run directory or the parent of one or
   more run directories.
@@ -864,8 +1107,18 @@ DESCRIPTION
      Note that all 'meta' averages can only be calculated if more than one run
   is specified. Meta-averages are computed only for those timesteps which exist
   for all runs.
+""" % ("\n       ".join(MODES.keys()))
+#-------------------------------------------------------------------------------
 
-OPTIONS
+
+####################################################################################
+###
+### FUNCTION usage_opts()
+###
+####################################################################################
+def usage_opts():
+    print """\
+GENERAL OPTIONS
 
      -o <path>
                Specify path of generated plot document.
@@ -873,18 +1126,6 @@ OPTIONS
 
      --verbose
                Print informational messages.
-
-     -C <C>[,<C>]...
-               Plot NeuralComplexity across one or more 'C' neuron types,
-            where C can be a composite of types (e.g. HB). Multiple C specs are
-            separated by commas (e.g. -C P,HB,I).
-            (default P)
-     
-     -G <G>[,<G>]...
-               Plot Graph theoretical metrics of one or more types 'G',
-            where G is one of:
-                CC - Clustering Coefficient
-                SP - (Normalized) Shortest Path length
 
      -g, --group (off | auto | <class>[,<class>]...)
                off: Do not group runs into classifications.
@@ -918,21 +1159,6 @@ OPTIONS
             --group is auto, use Driven and Passive, if present, else abort
             requesting specification of --group.
 
-     -m/M, --mean/Mean
-               Plot mean/meta-mean of each complexity type. (default -m on)
-
-     -n/N, --min/Min
-               Plot max/meta-max of each complexity type.
-
-     -x/X, --max/Max
-               Plot max/meta-max of each complexity type.
-
-     -e/E, --err/Err
-               Draw Standard Error bars for the mean/meta-mean.
-
-     -w/W, --whiskers/Whiskers
-               Box-and-Whiskers plot of run/meta-average.
-
      -d, --points, --dots
                Draw points on mean, max, and min lines.
 
@@ -956,18 +1182,31 @@ OPTIONS
                (default is to use uniform gray for individual runs)
 
      --title <title>
-               Specify title of graph, optionally with macros (see below).
+               Specify title of graph, optionally with macros (see 'help macros').
 
      --xlabel <label>
-               Specify label of x-axis, optionally with macros (see below).
+               Specify label of x-axis, optionally with macros (see 'help macros').
 
-     --ylabel <label>
-               Specify label of y-axis, optionally with macros (see below).
+     --ylabel1 <label>
+               Specify label of y1-axis, optionally with macros (see 'help macros').
+
+     --ylabel2 <label>
+               Specify label of y2-axis, optionally with macros (see 'help macros').
 
      --rmargin <n>
                Override size of right margin, where n is number of character
             widths. Necessary because of buggy gnuplot behavior.
+""" % (DEFAULT_OUTPUT,
+       ', '.join(common_functions.CLASSIFICATIONS),
+       TCRIT_DEFAULT[0], TCRIT_DEFAULT[1], TCRIT_DEFAULT[2])
 
+####################################################################################
+###
+### FUNCTION usage_macros()
+###
+####################################################################################
+def usage_macros():
+    print """\
 MACROS
 
         Macros are allowed in the title, xlabel, and ylabel options. Their
@@ -979,7 +1218,9 @@ MACROS
 
      XLABEL             Standard x-axis label
 
-     YLABEL             Standard y-axis label
+     YLABEL1            Standard y1-axis label
+
+     YLABEL2            Standard y2-axis label
 
      ARG_DIRS           List of paths passed to script with redundant path info
                      stripped.
@@ -991,30 +1232,36 @@ MACROS
 
      RUN_PATHS          List of run directory paths with no modification.
 
-     RECENT             Name of recent type (e.g. Recent, bestRecent)
+     MODES              List of modes.
 
-     COMPLEXITY_TYPES   List of complexity types in abbreviated form.
+     DATASET1           Name of clause 1 dataset (e.g. Recent, bestRecent)
 
-     COMPLEXITY_NAMES   List of complexity types in user-friendly form.
+     DATASET2           Name of clause 2 dataset  (e.g. Recent, bestRecent)
+
+     VALUE_TYPES1       List of clause 1 value types in abbreviated form.
+
+     VALUE_TYPES2       List of clause 2 value types in abbreviated form.
+
+     VALUE_NAMES1       List of clause 1 value types in user-friendly form.
+
+     VALUE_NAMES2       List of clause 2 value types in user-friendly form.
 
      GROUPS             List of groups.
 
      GROUPS_TTEST       List of groups used in T-test calculations.
 
-     TYPES              List of curve types (e.g. Min, Mean, Max)
-""" % (sys.argv[0],
-       '|'.join(RECENT_TYPES),
-       DEFAULT_OUTPUT,
-       ', '.join(common_functions.CLASSIFICATIONS),
-       TCRIT_DEFAULT[0], TCRIT_DEFAULT[1], TCRIT_DEFAULT[2])
-#-------------------------------------------------------------------------------
+     CURVE_TYPES1       List of clause 1 curve types (e.g. Min, Mean, Max)
 
-    if msg:
-        print "--------------------------------------------------------------------------------"
-        print
-        print 'Error!', msg
-    sys.exit(1)
+     CURVE_TYPES2       List of clause 2 curve types (e.g. Min, Mean, Max)
+"""
 
+####################################################################################
+###
+### FUNCTION usage_mode()
+###
+####################################################################################
+def usage_mode( mode ):
+    MODES[expandmode(mode)].usage()
 
 ####################################################################################
 ###

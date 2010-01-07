@@ -12,7 +12,6 @@ SRCDIRS = ['src/' + x
                      'environment',
                      'genome',
                      'graphics',
-                     'motion',
                      'tools',
                      'ui',
                      'utils']]
@@ -23,7 +22,7 @@ def build():
     Default( build_Polyworld(envs['Polyworld']) )
     Default( build_CalcComplexity(envs['CalcComplexity']) )
     Default( build_PwMoviePlayer(envs['PwMoviePlayer']) )
-    Default( build_pwtxt(envs['pwtxt']) )
+    Default( build_rancheck(envs['rancheck']) )
 
 def build_Polyworld(env):
     blddir = '.bld/Polyworld'
@@ -48,8 +47,8 @@ def build_CalcComplexity(env):
                    name = '*.cpp')
     sources += find('src/complexity',
                     name = '*.cp')
-    sources += ['src/motion/PositionPath.cp',
-                'src/motion/PositionReader.cp']
+    sources += ['src/utils/datalib.cp',
+                'src/utils/Variant.cp']
 
     env.BuildDir(blddir, 'src', False)
 
@@ -72,17 +71,14 @@ def build_PwMoviePlayer(env):
                                       'src',
                                       blddir))
 
-def build_pwtxt(env):
-    blddir = '.bld/pwtxt'
+def build_rancheck(env):
+    blddir = '.bld/rancheck'
 
-    sources = find('src/tools/pwtxt',
-                   name = '*.cpp')
-    sources += ['src/motion/PositionPath.cp',
-                'src/motion/PositionReader.cp']
+    sources = ['src/tools/rancheck/rancheck.c']
 
     env.BuildDir(blddir, 'src', False)
 
-    return env.Program('bin/pwtxt',
+    return env.Program('bin/rancheck',
                        relocate_paths(sources,
                                       'src',
                                       blddir))
@@ -120,7 +116,7 @@ def env_create():
 
     envs['PwMoviePlayer'] = envs['Polyworld'].Clone()
 
-    envs['pwtxt'] = env_common.Clone()
+    envs['rancheck'] = envs['CalcComplexity'].Clone()
 
     return envs
 

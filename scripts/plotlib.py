@@ -92,7 +92,7 @@ class Curve:
         self.smooth = smooth
 
         self.points = False
-        self.axes = (1,1)
+        self.axes = [1,1]
 
     def getSpec(self):
         # make sure table is written to a file
@@ -386,12 +386,12 @@ class Plot:
             spec += 'set y2label "%s" font "Times,12"\n' % psencode(self.y2label)
         else:
             spec += 'unset y2label\n'
-        
+
         if self.y2range:
             spec += 'set y2range [%f:%f]\n' % (self.y2range[0], self.y2range[1])
         else:
             spec += 'unset y2range\n'
-
+        
         if self.rmargin:
             spec += 'set rmargin %d\n' % self.rmargin
         else:

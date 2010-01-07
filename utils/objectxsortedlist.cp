@@ -383,7 +383,7 @@ void objectxsortedlist::list()
 			agent* c;
 			c = (agent*) pobj;
 			//cout sp c->Number() << "/" << pobj << "/" << pobj->GetListLink();
-			cout sp c->Number() << "(X=" << c->X() << ")";
+			cout sp c->Number() << "(x=" << c->x() << ")";
 		}
     }
     cout nlf;

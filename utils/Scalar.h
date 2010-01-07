@@ -6,11 +6,13 @@ struct Scalar
 {
 	enum Type
 	{
+		INVALID,
 		INT,
 		FLOAT,
 		BOOL
 	};
 
+	Scalar();
 	Scalar( int ival );
 	Scalar( long ival );
 	Scalar( float fval );

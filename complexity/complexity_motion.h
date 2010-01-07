@@ -1,92 +1,61 @@
-#ifndef COMPLEXITY_MOTION_H
-#define COMPLEXITY_MOTION_H
-
-struct CalcComplexity_motion_parms
-{
-	const char *path;
-	long step_begin;
-	long step_end;
-	long epoch_len;
-	float min_epoch_presence;
-};
-
-class CalcComplexity_motion_result
-{
- public:
-	CalcComplexity_motion_parms parms_requested;
-	CalcComplexity_motion_parms parms;
- 
-	int ndimensions;
-
-	class Epochs
-	{
-	public:
-		~Epochs()
-		{
-	  		delete complexity;
-	  		delete agent_count;
-	  		delete agent_count_calculated;
-			delete nil_count;
-		}
-
-		int count;
-
-		double *complexity;
-		int *agent_count;
-		int *agent_count_calculated;
-		int *nil_count;
-	} epochs;
-};
-
-class CalcComplexity_motion_callback
-{
- public:
-	virtual ~CalcComplexity_motion_callback() {}
-
-	virtual void begin(CalcComplexity_motion_parms &parms) = 0;
-	virtual void epoch_result(CalcComplexity_motion_result *result,
-				  int epoch_index) = 0;
-	virtual void end(CalcComplexity_motion_result *result) = 0;
-};
-
-CalcComplexity_motion_result *CalcComplexity_motion(CalcComplexity_motion_parms &parms,
-						    CalcComplexity_motion_callback *callback = 0);
-
-
-#ifdef COMPLEXITY_MOTION_CP
+#pragma once
 
 #include <list>
-#include <map>
+#include <vector>
 
-#include "PositionReader.h"
+#include "complexity_algorithm.h"
 
-class PopulateMatrixContext
+class MotionComplexity
 {
  public:
-	PopulateMatrixContext(CalcComplexity_motion_result *result);
-	~PopulateMatrixContext();
-
-	void computeEpochs();
-
-	CalcComplexity_motion_result *result;
-
-	PositionReader position_reader;
-	PositionQuery query;
-
-	long step;
-
-	typedef std::map<long, const PopulationHistoryEntry *> EntryList;
-
-	class Epoch
+	struct Agent
 	{
-	public:
-	  EntryList entries;
+		long number;
+		long birth;
+
+		long begin;
+		long end;
 	};
+	typedef std::list<Agent> AgentList;
 
-	Epoch *epochs;
-	int nepochs;
+	struct Epoch
+	{
+		int index;
+		long begin;
+		long end;
+		AgentList agents;
+
+		struct Complexity
+		{
+			float value;
+			long nagents;
+			float nil_ratio;
+		} complexity;
+	};
+	typedef std::vector<Epoch> EpochList;
+
+ public:
+	MotionComplexity( const char *path_run,
+					  long step_begin,
+					  long step_end,
+					  long epoch_len,
+					  float min_epoch_presence );
+	~MotionComplexity();
+
+	float calculate( Epoch &epoch );
+
+ public:	
+	EpochList epochs;
+
+ private:
+	void computeEpochs(	long begin,
+						long end,
+						long epochlen );
+	float getPresence( Agent &agent,
+					   Epoch &epoch );
+	gsl_matrix *populateMatrix( Epoch &epoch );
+
+ private:
+	const char *path_run;
+	float min_epoch_presence;
 };
-
-#endif // COMPLEXITY_MOTION_CP
-
-#endif // COMPLEXITY_MOTION_H

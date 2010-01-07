@@ -70,16 +70,8 @@ void show_usage(string msg)
 
 	cerr << endl;
 	cerr << "--- Motion ---" << endl;
-	cerr << "CalcComplexity motion [option]... run_dir [option]..." << endl;
-	cerr << endl;
-	cerr << "options:" << endl;
-	cerr << "  --first <step>  : first step as integer. (default = 1)" << endl;
-	cerr << "  --last <step>   : last step as integer. (default = final step in sim data)" << endl;
-	cerr << "  --epoch <n>     : number of steps in epoch as integer. (default = " << DEFAULT_EPOCH << ")" << endl;
-	cerr << "  --threshold <f> : fraction of epoch agent must be present in order to be" << endl;
-	cerr << "                       part of the calculation. (default = " << DEFAULT_THRESHOLD << ")" << endl;
-	cerr << "  --bare          : output only raw values." << endl;
-	cerr << "  --position-dir  : specify position dir instead of run dir." << endl;
+
+	usage_motion();
 
 	cerr << endl;
 

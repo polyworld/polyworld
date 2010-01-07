@@ -558,7 +558,7 @@ void Brain::GrowDesignedBrain( Genome* g )
         float groupbias;
 		
 		if( i == brain::gNeuralValues.numinputneurgroups + 4 )	// yaw group/neuron		
-			groupbias = 0.5;	// keep turning, unless overriden by vision
+			groupbias = 0.5;	// straight ahead (< 0.5 is turn one way, > 0.5 is turn other way)
 		else
 			groupbias = 0.0;	// no bias	// g->Bias(i);
 
@@ -1324,7 +1324,7 @@ void Brain::Grow( Genome* g )
     debugcheck("brain::grow before allocating memory");
 #endif // DEBUGCHECK
 
-	InitNeuralNet( 0.1 );
+	InitNeuralNet( 0.1 );	// lsy? - why is this initializing activations to 0.1?
 
 #ifdef DEBUGCHECK
     debugcheck("brain::grow after allocating memory");
@@ -1815,11 +1815,19 @@ void Brain::Grow( Genome* g )
         }
     }
 
-    if (numneur != (dims.numneurons))
+	if (numneur != (dims.numneurons))
         error(2,"Bad neural architecture, numneur (",numneur,") not equal to numneurons (",dims.numneurons,")");
 
-    if (numsyn != (dims.numsynapses))
-        error(2,"Bad neural architecture, numsyn (",numsyn,") not equal to numsynapses (",dims.numsynapses,")");
+    if( numsyn != dims.numsynapses )
+	{
+		if( (numsyn > dims.numsynapses)
+			|| (( (dims.numsynapses - numsyn) / float(dims.numsynapses) ) > 1.e-3) )
+		{
+			error(2,"Bad neural architecture, numsyn (",numsyn,") not equal to numsynapses (",dims.numsynapses,")");
+		}
+
+		dims.numsynapses = numsyn;
+	}
 	
     energyuse = brain::gNeuralValues.maxneuron2energy * float(dims.numneurons) / float(brain::gNeuralValues.maxneurons)
               + brain::gNeuralValues.maxsynapse2energy * float(dims.numsynapses) / float(brain::gNeuralValues.maxsynapses);

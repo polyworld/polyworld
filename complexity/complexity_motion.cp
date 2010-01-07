@@ -1,14 +1,13 @@
-#define COMPLEXITY_MOTION_CP
-
 #include "complexity_motion.h"
 
 #include <assert.h>
-#include <stdlib.h>
 
-#include "complexity_algorithm.h"
-#include "PositionReader.h"
+#include <map>
+#include <string>
 
-#include <list>
+#include "datalib.h"
+#include "misc.h"
+
 
 using namespace std;
 
@@ -18,7 +17,7 @@ using namespace std;
 
 #define NDIMS 2
 
-#define DEBUG_MOTION_COMPLEXITY 0
+#define DEBUG_MOTION_COMPLEXITY false
 
 #if DEBUG_MOTION_COMPLEXITY
 	#define DEBUG(STMT) STMT
@@ -26,176 +25,275 @@ using namespace std;
 	#define DEBUG(STMT)
 #endif
 
-static gsl_matrix *populate_matrix(PopulateMatrixContext &context,
-				   long epoch,
-				   long step_begin,
-				   long step_end);
-static float get_epoch_presence(PositionQuery &query);
 
-#if DEBUG_MOTION_COMPLEXITY
-	static void show_positions(PositionQuery &query);
-#endif
-
-
-//---------------------------------------------------------------------------
-// CalcComplexity_motion
-//---------------------------------------------------------------------------
-CalcComplexity_motion_result *CalcComplexity_motion(CalcComplexity_motion_parms &parms,
-						    CalcComplexity_motion_callback *callback)
+// -----------------------------------------------------------------------------
+// ---
+// --- ctor()
+// ---
+// -----------------------------------------------------------------------------
+MotionComplexity::MotionComplexity( const char *path_run,
+									long step_begin,
+									long step_end,
+									long epochlen,
+									float min_epoch_presence )
 {
-	CalcComplexity_motion_result *result = new CalcComplexity_motion_result();
-	result->parms_requested = result->parms = parms;
-	result->ndimensions = NDIMS; 
+	this->path_run = path_run;
+	this->min_epoch_presence = min_epoch_presence;
 
-#define MFREE(MATRIX) gsl_matrix_free(MATRIX); MATRIX = NULL;
-
-	PopulateMatrixContext context(result);
-
-	if(parms.step_begin == 0) parms.step_begin = 1;
-
-	long sim_end = context.position_reader.getPopulationHistory()->step_end;
-	if(parms.step_end == 0 || parms.step_end > sim_end) parms.step_end = sim_end;
-	
-	// round to epoch boundary
-	parms.step_end = parms.step_begin + (((parms.step_end - parms.step_begin + 1) / parms.epoch_len) * parms.epoch_len) - 1;
-
-	result->parms = parms;
-
-	if(callback)
-	{
-		callback->begin(parms);
-	}
-
-	context.computeEpochs();
-
-	int nepochs = context.nepochs;
-
-	result->epochs.count = nepochs;
-	result->epochs.complexity = new double[nepochs];
-	result->epochs.agent_count = new int[nepochs];
-	result->epochs.agent_count_calculated = new int[nepochs];
-	result->epochs.nil_count = new int[nepochs];
-
-#pragma omp parallel for
-	for(long iepoch = 0;
-	    iepoch < nepochs;
-	    iepoch++)
-	{
-		long step = parms.step_begin + (parms.epoch_len * iepoch);
-		gsl_matrix *matrix_pos = populate_matrix(context,
-							 iepoch,
-							 step,
-							 step + parms.epoch_len - 1);
-
-		double Complexity;
-
-		if(matrix_pos == NULL)
-		{
-			Complexity = 0;
-		}
-		else
-		{
-			DEBUG(print_matrix(matrix_pos));
-			gsl_matrix *COV = mCOV(matrix_pos);
-			MFREE(matrix_pos);
-
-			DEBUG(print_matrix(COV));
-
-			Complexity = calcC_det3__optimized( COV );
-			MFREE(COV);
-		}
-
-		result->epochs.complexity[iepoch] = Complexity;
-
-		if(callback)
-		{
-			callback->epoch_result(result,
-					       iepoch);
-		}
-	}
-
-	if(callback)
-	{
-		callback->end(result);
-	}
-
-	return result;
-
-#undef MFREE
+	computeEpochs( step_begin,
+				   step_end,
+				   epochlen );
 }
 
-//---------------------------------------------------------------------------
-// populate_matrix
-//---------------------------------------------------------------------------
-gsl_matrix *populate_matrix(PopulateMatrixContext &context,
-			    long iepoch,
-			    long step_begin,
-			    long step_end)
+// -----------------------------------------------------------------------------
+// ---
+// --- dtor()
+// ---
+// -----------------------------------------------------------------------------
+MotionComplexity::~MotionComplexity()
+{
+}
+
+// -----------------------------------------------------------------------------
+// ---
+// --- calculate()
+// ---
+// -----------------------------------------------------------------------------
+float MotionComplexity::calculate( Epoch &epoch )
+{
+	gsl_matrix *matrix_pos = populateMatrix( epoch );
+
+	if( matrix_pos == NULL )
+	{
+		epoch.complexity.value = 0;
+	}
+	else
+	{
+#define MFREE(MATRIX) gsl_matrix_free(MATRIX); MATRIX = NULL;
+
+		DEBUG( print_matrix(matrix_pos) );
+		gsl_matrix *COV = mCOV( matrix_pos );
+		MFREE(matrix_pos);
+
+		DEBUG( print_matrix(COV) );
+
+		epoch.complexity.value = calcC_det3__optimized( COV );
+		MFREE(COV);
+	}
+
+	return epoch.complexity.value;
+}
+
+// -----------------------------------------------------------------------------
+// ---
+// --- computeEpochs()
+// ---
+// -----------------------------------------------------------------------------
+void MotionComplexity::computeEpochs( long begin,
+									  long end,
+									  long epochlen )
+{
+	DataLibReader in( (string(path_run) + "/lifespans.txt").c_str() );
+	in.seekTable( "LifeSpans" );
+
+	// ---
+	// --- Determine actual time constraints
+	// ---
+	if( begin <= 0 )
+	{
+		begin = 1;
+	}
+
+	in.seekRow( -1 );
+	long sim_end = in.col( "DeathStep" );
+	
+	if( end <= 0 )
+	{
+		end = sim_end;
+	}
+	else
+	{
+		end = min( end, sim_end );
+	}
+
+	// round to epoch boundary
+	end = begin + (((end - begin + 1) / epochlen) * epochlen) - 1;
+
+	assert( end > begin );
+	
+	// ---
+	// --- Alloc/Init Epochs
+	// ---
+	for( long step = begin;
+		 step <= end;
+		 step += epochlen )
+	{
+		Epoch epoch;
+
+		epoch.index = epochs.size();
+		epoch.begin = step;
+		epoch.end = step + epochlen - 1;
+
+		epoch.complexity.value = 0;
+		epoch.complexity.nagents = 0;
+		epoch.complexity.nil_ratio = 0;
+
+		epochs.push_back( epoch );
+	}
+
+	// ---
+	// --- Parse Agents
+	// ---
+	in.rewindTable();
+
+	// read into a map so we sort by agent number
+	typedef map<long, Agent> AgentMap;
+	
+	AgentMap agents;
+
+	while( in.nextRow() )
+	{
+		Agent a;
+
+		a.number = in.col( "Agent" );
+		a.begin = a.birth = (int)in.col("BirthStep") + 1;
+		a.end = in.col( "DeathStep" );
+
+		agents[a.number] = a;
+	}
+
+	// ---
+	// --- Add Agents to Epochs
+	// ---
+	itfor( AgentMap, agents, it )
+	{
+		Agent &a = it->second;
+
+		// if agent was alive during time we're analyzing
+		if( (a.begin >= begin && a.begin <= end)
+			|| (a.end >= begin && a.end <= end) )
+		{
+#define IEPOCH(STEP) (STEP - begin) / epochlen;
+
+			int iepoch_abegin = IEPOCH( max(a.begin, begin) );
+			int iepoch_aend = IEPOCH( min( a.end, end) );
+
+			// Update epochs this agent was alive during
+			for( int iepoch = iepoch_abegin;
+				 iepoch <= iepoch_aend;
+				 iepoch++ )
+			{
+				Epoch &epoch = epochs[iepoch];
+
+				// ---
+				// --- Add time-clipped Agent to Epoch
+				// ---
+				Agent a_epoch;
+
+				a_epoch.number = a.number;
+				a_epoch.birth = a.birth;
+				a_epoch.begin = max( a.begin, epoch.begin );
+				a_epoch.end = min( a.end, epoch.end );
+
+				epoch.agents.push_back( a_epoch );
+			}
+		}
+	}
+
+	DEBUG( itfor( EpochList, epochs, it )
+		   {
+			   printf( "--- %d ---\n", it->index );
+			   printf( "  BEGIN=%ld, END=%ld\n", it->begin, it->end );
+
+			   itfor( AgentList, it->agents, ita )
+			   {
+				   printf( "  #%ld  (%ld,%ld)\n", ita->number, ita->begin, ita->end );
+			   }
+		   } )
+}
+
+// -----------------------------------------------------------------------------
+// ---
+// --- getPresence()
+// ---
+// -----------------------------------------------------------------------------
+float MotionComplexity::getPresence( Agent &agent,
+									 Epoch &epoch )
+{
+	return float(agent.end - agent.begin)
+		/ float(epoch.end - epoch.begin);
+}
+
+// -----------------------------------------------------------------------------
+// ---
+// --- populateMatrix()
+// ---
+// -----------------------------------------------------------------------------
+gsl_matrix *MotionComplexity::populateMatrix( Epoch &epoch )
 {
 #if NIL_TYPE == NIL_RAND
-	srand(step_begin);
+	srand(epoch.begin);
 #endif
-	PopulateMatrixContext::Epoch &epoch = context.epochs[iepoch];
-	int nagents = epoch.entries.size();
-	int nsteps = step_end - step_begin + 1;
 
-	DEBUG(printf("nagents=%d, nsteps=%d\n", nagents, nsteps));
-
+	// ---
+	// --- Alloc Matrix
+	// ---
+	int nagents = epoch.agents.size();
+	int nsteps = epoch.end - epoch.begin + 1;
 	int nrows = nagents * NDIMS;
 	int ncols = nsteps;
 	assert(nrows > 0 && ncols > 0);
 
 	gsl_matrix *matrix_pos = gsl_matrix_alloc(nrows,
-						  ncols);
+											  ncols);
 
 	int row_x = 0;
 	int row_z = 1;
+	long nil_count = 0;
 
-	PositionQuery query;
-
-	query.steps_epoch.begin = step_begin;
-	query.steps_epoch.end = step_end;
-
-	int &nil_count = context.result->epochs.nil_count[iepoch];
-	nil_count = 0;
-
-	for(PopulateMatrixContext::EntryList::iterator
-	      it = epoch.entries.begin(),
-	      it_end = epoch.entries.end();
-	    it != it_end;
-	    it++)
+	// ---
+	// --- Iterate Agents
+	// ---
+	itfor( AgentList, epoch.agents, it )
 	{
-		query.agent_number = it->first;
+		Agent &agent = *it;
 
-#pragma omp critical(complexity_motion__query_positions)
-		{
-		  context.position_reader.getPositions(&query);
-		}
-		DEBUG(show_positions(query));
+		// ---
+		// --- Open Position File
+		// ---
+		char path[512];
+		sprintf( path,
+				 "%s/motion/position/position_%ld.txt",
+				 path_run, agent.number );
 
-		if(get_epoch_presence(query) < context.result->parms.min_epoch_presence)
+		DataLibReader in( path );
+		in.seekTable( "Positions" );
+
+		// ---
+		// --- Presence Filter
+		// ---
+		if(getPresence(agent, epoch) < min_epoch_presence)
 		{
-			DEBUG(printf("agent %ld below presence threshold\n", query.agent_number));
+			DEBUG(printf("agent %ld below presence threshold\n", agent.number));
 			continue;
 		}
 
-		int col = 0;
-
-		for(long step = query.steps_epoch.begin;
-		    step <= query.steps_epoch.end;
-		    step++, col++)
+		// ---
+		// --- Iterate Steps
+		// ---
+		for(long step = epoch.begin;
+		    step <= epoch.end;
+		    step++)
 		{
-			PositionRecord *pos = query.get(step);
-
 			float x;
 			float z;
 
-			if(pos)
+			if( step >= agent.begin && step <= agent.end )
 			{
-				assert(pos->step == step);
-				
-				x = pos->x;
-				z = pos->z;
+				in.seekRow( step - agent.birth );
+
+				x = in.col( "x" );
+				z = in.col( "z" );
 			}
 			else
 			{
@@ -209,22 +307,28 @@ gsl_matrix *populate_matrix(PopulateMatrixContext &context,
 #endif
 			}
 
+			DEBUG( printf(" step=%ld, agent=%ld, (x,z)=(%f,%f)\n", step, agent.number, x, z) );
+
 			gsl_matrix_set(matrix_pos,
-				       row_x,
-				       col,
-				       x);
+						   row_x,
+						   step - epoch.begin,
+						   x);
 			gsl_matrix_set(matrix_pos,
-				       row_z,
-				       col,
-				       z);
+						   row_z,
+						   step - epoch.begin,
+						   z);
 		}
 
 		row_x += 2;
 		row_z += 2;
 	}
 
+	// ---
+	// --- Post-Processing Matrix Fixup
+	// ---
 	if(row_x == 0)
 	{
+		// All agents were filtered out
 		gsl_matrix_free(matrix_pos);
 		matrix_pos = NULL;
 	}
@@ -241,146 +345,8 @@ gsl_matrix *populate_matrix(PopulateMatrixContext &context,
 		}
 	}
 
-	context.result->epochs.agent_count[iepoch] = nagents;
-	context.result->epochs.agent_count_calculated[iepoch] = row_x / 2;
+	epoch.complexity.nagents = row_x / 2;
+	epoch.complexity.nil_ratio = float(nil_count) / (epoch.complexity.nagents * NDIMS * nsteps);
 
 	return matrix_pos;
 }
-
-//---------------------------------------------------------------------------
-// get_epoch_presence
-//---------------------------------------------------------------------------
-float get_epoch_presence(PositionQuery &query)
-{
-	float presence =
-	  float(query.steps_agent.end - query.steps_agent.begin)
-	  / float(query.steps_epoch.end - query.steps_epoch.begin);
-
-	return presence;
-}
-
-#if DEBUG_MOTION_COMPLEXITY
-//---------------------------------------------------------------------------
-// show_positions
-//---------------------------------------------------------------------------
-void show_positions(PositionQuery &query)
-{
-	printf("agent_number=%ld\n",
-	       query.agent_number);
-
-	float presence = get_epoch_presence(query);
-
-	printf("  epoch=[%ld,%ld], agent=[%ld,%ld], presence=%f\n",
-	       query.steps_epoch.begin, query.steps_epoch.end,
-	       query.steps_agent.begin, query.steps_agent.end,
-	       presence);
-
-
-	for(long step = query.steps_epoch.begin;
-	    step <= query.steps_epoch.end;
-	    step++)
-	{
-		PositionRecord *pos = query.get(step);
-
-		if(pos)
-		{
-			printf("    step %ld = {%ld, (%f,%f,%f)}\n",
-			       step,
-			       pos->step, pos->x, pos->y, pos->z);
-		}
-		else
-		{
-			printf("    step %ld = NIL\n",
-			       step);
-		}
-	}
-}
-#endif
-
-
-//===========================================================================
-// PopulateMatrixContext
-//===========================================================================
-
-//---------------------------------------------------------------------------
-// PopulateMatrixContext::PopulateMatrixContext
-//---------------------------------------------------------------------------
-PopulateMatrixContext::PopulateMatrixContext(CalcComplexity_motion_result *result)
-  : position_reader(result->parms.path)
-{
-	this->result = result;
-	this->step = 0;
-	this->epochs = NULL;
-	this->nepochs = 0;
-}
-
-//---------------------------------------------------------------------------
-// PopulateMatrixContext::~PopulateMatrixContext
-//---------------------------------------------------------------------------
-PopulateMatrixContext::~PopulateMatrixContext()
-{
-	if(nepochs) delete[] epochs;
-}
-
-//---------------------------------------------------------------------------
-// PopulateMatrixContext::computeEpochs
-//---------------------------------------------------------------------------
-void PopulateMatrixContext::computeEpochs()
-{
-	assert(nepochs == 0);
-
-	CalcComplexity_motion_parms &parms = result->parms;
-
-	nepochs = (parms.step_end - parms.step_begin + 1) / parms.epoch_len;
-	epochs = new Epoch[nepochs];
-
-	long epoch_len = parms.epoch_len;
-	long begin = parms.step_begin;
-	long end = parms.step_end;
-
-#define EPOCH(STEP) ((STEP - begin) / epoch_len)
-
-	long epoch_begin = EPOCH(begin);
-	long epoch_end = EPOCH(end);
-
-	const PopulationHistory *ph = position_reader.getPopulationHistory();
-
-	for(PopulationHistory::AgentNumberMap::const_iterator
-	      it_crit = ph->numberLookup.begin(),
-	      it_crit_end = ph->numberLookup.end();
-	    it_crit != it_crit_end;
-	    it_crit++)
-	{
-		const PopulationHistoryEntry *entry = it_crit->second;
-
-		DEBUG(printf("crit %ld --> [%ld,%ld]\n", entry->agent_number, entry->step_begin, entry->step_end));
-
-		long entry_begin = entry->step_begin;
-		long entry_end = entry->step_end;
-
-		if((entry_begin >= begin && entry_begin <= end)
-		   || (entry_end >= begin && entry_end <= end))
-		{
-			long epoch_begin_entry = max(epoch_begin,
-						     EPOCH(entry_begin));
-			long epoch_end_entry = min(epoch_end,
-						   EPOCH(entry_end));
-
-			for(long iepoch = epoch_begin_entry;
-			    iepoch <= epoch_end_entry;
-			    iepoch++)
-			{
-			  int idx = iepoch - epoch_begin;
-			  assert(idx < nepochs);
-				Epoch *epoch = &epochs[iepoch - epoch_begin];
-
-				epoch->entries[entry->agent_number] = entry;
-			}
-		}
-	}
-
-#undef EPOCH
-
-}
-
-// eof

@@ -181,8 +181,9 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
 		fBestRecentBrainFunctionRecordFrequency(0),
 		fRecordBirthsDeaths(false),
 
+		fLifeSpanLog(NULL),
+
 		fRecordPosition(false),
-		fPositionWriter(&fRecordPosition),
 
 		fBrainAnatomyRecordAll(false),
 		fBrainFunctionRecordAll(false),
@@ -410,9 +411,7 @@ void TSimulation::Step()
 	
 	if( fMaxSteps && ((fStep+1) > fMaxSteps) )
 	{
-		// Stop simulation
-		printf( "Simulation stopped after step %ld\n", fStep );
-		exit( 0 );
+		End();
 	}
 		
 	fStep++;
@@ -1181,8 +1180,6 @@ void TSimulation::Step()
 	if( fMonitorGeneSeparation && fRecordGeneSeparation )
 		RecordGeneSeparation();
 
-	fPositionWriter.step(fStep);
-		
 	//Rotate the world a bit each time step... (CMB 3/10/06)
 	if (fRotateWorld)
 	{
@@ -1191,6 +1188,26 @@ void TSimulation::Step()
 		fCamera.settranslation((0.5+fCameraRadius*sin(camrad))*globals::worldsize, fCameraHeight*globals::worldsize,(-.5+fCameraRadius*cos(camrad))*
 globals::worldsize);
 	}	
+}
+
+//---------------------------------------------------------------------------
+// TSimulation::End
+//---------------------------------------------------------------------------
+void TSimulation::End()
+{
+	agent *a;
+
+	objectxsortedlist::gXSortedObjects.reset();
+	while (objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&a))
+	{
+		Death( a, LifeSpan::DR_SIMEND );
+	}	
+
+	EndLifeSpanLog();
+
+	// Stop simulation
+	printf( "Simulation stopped after step %ld\n", fStep );
+	exit( 0 );
 }
 
 
@@ -1313,14 +1330,27 @@ void TSimulation::Init()
 	// Set up the run directory and its subsidiaries
 	char s[256];
 	char t[256];
+
+#define MKDIR(PATH)												\
+	if( mkdir( PATH, PwDirMode ) )								\
+		eprintf( "Error making %s directory (%d)\n", PATH, errno );
+
 	// First save the old directory, if it exists
 	sprintf( s, "run" );
 	sprintf( t, "run_%ld", time(NULL) );
 	(void) rename( s, t );
+
 	if( mkdir( "run", PwDirMode ) )
 		eprintf( "Error making run directory (%d)\n", errno );
 	if( mkdir( "run/stats", PwDirMode ) )
 		eprintf( "Error making run/stats directory (%d)\n", errno );
+
+	if( fRecordPosition )
+	{
+		MKDIR( "run/motion" );
+		MKDIR( "run/motion/position" );
+	}
+
 	if( fBestSoFarBrainAnatomyRecordFrequency || fBestSoFarBrainFunctionRecordFrequency ||
 		fBestRecentBrainAnatomyRecordFrequency || fBestRecentBrainFunctionRecordFrequency ||
 		fBrainAnatomyRecordAll || fBrainFunctionRecordAll ||
@@ -1536,7 +1566,9 @@ void TSimulation::Init()
 				else
 					c->Genes()->randomize();
 
-				c->grow( RecordBrainAnatomy( c->Number() ), RecordBrainFunction( c->Number() ) );
+				c->grow( RecordBrainAnatomy( c->Number() ),
+						 RecordBrainFunction( c->Number() ),
+						 fRecordPosition );
 				
 				fFoodEnergyIn += c->FoodEnergy();
 				fStage.AddObject(c);
@@ -1569,7 +1601,7 @@ void TSimulation::Init()
 				c->GetBrain()->dumpAnatomical( "run/brain/random", "birth", c->Number(), 0.0 );
 			#endif
 
-				Birth(c, NULL, NULL);
+				Birth( c, LifeSpan::BR_SIMINIT );
 			}
 			
 			numSeededTotal += numSeededDomain;
@@ -1595,7 +1627,9 @@ void TSimulation::Init()
 			}
 			else
 				c->Genes()->randomize();
-			c->grow( RecordBrainAnatomy( c->Number() ), RecordBrainFunction( c->Number() ) );
+			c->grow( RecordBrainAnatomy( c->Number() ),
+					 RecordBrainFunction( c->Number() ),
+					 fRecordPosition );
 			
 			fFoodEnergyIn += c->FoodEnergy();
 			fStage.AddObject(c);
@@ -1615,7 +1649,7 @@ void TSimulation::Init()
 			fDomains[id].numAgents++;
 			fNeuronGroupCountStats.add( c->GetBrain()->NumNeuronGroups() );
 
-			Birth(c, NULL, NULL);
+			Birth(c, LifeSpan::BR_SIMINIT );
 		}
 			
 		// Add food to the food patches until they each have their initFoodCount number of food pieces
@@ -1770,6 +1804,8 @@ void TSimulation::Init()
 		
 		fSceneView->setRecordMovie( fRecordMovie, fMovieFile );
 	}
+
+	InitLifeSpanLog();
 	
 	inited = true;
 }
@@ -2142,6 +2178,62 @@ void TSimulation::InitMonitoringWindows()
                 //(screenleft,screenleft+.75*xscreensize, screenbottom,screenbottom+(5./6.)*yscreensize);
 }
 
+//---------------------------------------------------------------------------
+// TSimulation::InitLifeSpanLog
+//---------------------------------------------------------------------------
+
+void TSimulation::InitLifeSpanLog()
+{
+	fLifeSpanLog = new DataLibWriter( "run/lifespans.txt" );
+
+	const char *colnames[] =
+		{
+			"Agent",
+			"BirthStep",
+			"BirthReason",
+			"DeathStep",
+			"DeathReason",
+			NULL
+		};
+	const datalib::Type coltypes[] =
+		{
+			datalib::INT,
+			datalib::INT,
+			datalib::STRING,
+			datalib::INT,
+			datalib::STRING
+		};
+
+	fLifeSpanLog->beginTable( "LifeSpans",
+							  colnames,
+							  coltypes );
+}
+
+//---------------------------------------------------------------------------
+// TSimulation::UpdateLifeSpanLog
+//---------------------------------------------------------------------------
+
+void TSimulation::UpdateLifeSpanLog( agent *a )
+{
+	LifeSpan *ls = a->GetLifeSpan();
+
+	fLifeSpanLog->addRow( a->Number(),
+						  ls->birth.step,
+						  LifeSpan::BR_NAMES[ls->birth.reason],
+						  ls->death.step,
+						  LifeSpan::DR_NAMES[ls->death.reason] );
+}
+
+//---------------------------------------------------------------------------
+// TSimulation::EndLifeSpanLog
+//---------------------------------------------------------------------------
+
+void TSimulation::EndLifeSpanLog()
+{
+	fLifeSpanLog->endTable();
+	delete fLifeSpanLog;
+	fLifeSpanLog = NULL;
+}
 
 //---------------------------------------------------------------------------
 // TSimulation::PickParentsUsingTournament
@@ -2395,7 +2487,7 @@ void TSimulation::Interact()
 				
 				assert( randAgent != NULL );		// In we're in LOCKSTEP mode, we should *always* have a agent to kill.  If we don't kill a agent, then we are no longer in sync in the LOCKSTEP-BirthsDeaths.log
 				
-				Death( randAgent );
+				Death( randAgent, LifeSpan::DR_LOCKSTEP );
 				
 				lsPrint( "- Killed agent %d, randomIndex = %d\n", randAgent->Number(), randomIndex );						
 			}	// end of for loop
@@ -2432,7 +2524,7 @@ void TSimulation::Interact()
 						fNumberDiedEnergy++;
 					else
 						fNumberDiedEdge++;
-					Death(c);
+					Death( c, LifeSpan::DR_NATURAL );
 					continue; // nothing else to do for this poor schmo
 				}
 			}
@@ -2441,7 +2533,7 @@ void TSimulation::Interact()
 	#ifdef OF1
         if ( (id == 0) && (randpw() < fDeathProb) )
         {
-            Death(c);
+            Death( c, LifeSpan::DR_RANDOM );
             continue;
         }
 	#endif
@@ -2667,7 +2759,9 @@ void TSimulation::Interact()
 				Q_CHECK_PTR(e);
 
 				e->Genes()->crossover(c->Genes(), d->Genes(), true);
-				e->grow( RecordBrainAnatomy( e->Number() ), RecordBrainFunction( e->Number() ) );
+				e->grow( RecordBrainAnatomy( e->Number() ),
+						 RecordBrainFunction( e->Number() ),
+						 fRecordPosition );
 				float eenergy = c->mating( fMateFitnessParameter, fMateWait ) + d->mating( fMateFitnessParameter, fMateWait );
 				float minenergy = fMinMateFraction * ( c->MaxEnergy() + d->MaxEnergy() ) * 0.5;	// just a modest, reasonable amount; this doesn't really matter in lockstep mode
 				if( eenergy < minenergy )
@@ -2704,21 +2798,7 @@ void TSimulation::Interact()
 						e->GetBrain()->InheritState( d->GetBrain() );
 				}
 
-				Birth(e, c, d);
-
-				if( fRecordBirthsDeaths )		// If we're recording birth and death events, record the birth of our newborn.
-				{
-					FILE * File;
-					
-					if( (File = fopen("run/BirthsDeaths.log", "a")) == NULL )
-					{
-						cerr << "could not open run/BirthsDeaths.log for writing [2]. Exiting." << endl;
-						exit(1);
-					}
-							
-					fprintf(File, "%ld BIRTH %ld %ld %ld\n", fStep, e->Number(), c->Number(), d->Number() );
-					fclose(File);
-				}
+				Birth( e, LifeSpan::BR_LOCKSTEP, c, d );
 											
 			}	// end of loop 'for( int count=0; count<fLockstepNumBirthsAtTimestep; count++ )'
 							
@@ -2851,7 +2931,7 @@ void TSimulation::Interact()
 								if( fDomains[kd].fNumSmited < fDomains[kd].fNumLeastFit )	// we've still got someone to smite, so do it
 								{
 									smPrint( "About to smite least-fit agent #%d in domain %d\n", fDomains[kd].fLeastFit[fDomains[kd].fNumSmited]->Number(), kd );
-									Death( fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] );
+									Death( fDomains[kd].fLeastFit[fDomains[kd].fNumSmited], LifeSpan::DR_SMITE );
 									fDomains[kd].fNumSmited++;
 									fNumberDiedSmite++;
 									smited = true;
@@ -2897,7 +2977,7 @@ void TSimulation::Interact()
 									fDomains[kd].fNumSmited++;
 									fNumberDiedSmite++;
 									smited = true;
-									Death( randAgent );
+									Death( randAgent, LifeSpan::DR_SMITE );
 								}
 								
 							}
@@ -2921,7 +3001,9 @@ void TSimulation::Interact()
 								Q_CHECK_PTR(e);
 
 								e->Genes()->crossover(c->Genes(), d->Genes(), true);
-								e->grow( RecordBrainAnatomy( e->Number() ), RecordBrainFunction( e->Number() ) );
+								e->grow( RecordBrainAnatomy( e->Number() ),
+										 RecordBrainFunction( e->Number() ),
+										 fRecordPosition );
 								float eenergy = c->mating( fMateFitnessParameter, fMateWait ) + d->mating( fMateFitnessParameter, fMateWait );
 								e->Energy(eenergy);
 								e->FoodEnergy(eenergy);
@@ -2955,22 +3037,7 @@ void TSimulation::Interact()
 										e->GetBrain()->InheritState( d->GetBrain() );
 								}
 
-								Birth(e, c, d);
-
-								if( fRecordBirthsDeaths )
-								{
-									FILE * File;
-								
-									if( (File = fopen("run/BirthsDeaths.log", "a")) == NULL )
-									{
-										cerr << "could not open run/BirthsDeaths.log for writing [1]. Exiting." << endl;
-										exit(1);
-									}
-									
-									fprintf(File, "%ld BIRTH %ld %ld %ld\n", fStep, e->Number(), c->Number(), d->Number() );
-									
-									fclose(File);
-								}
+								Birth( e, LifeSpan::BR_NATURAL, c, d );
 							}
 							else	// miscegenation function denied this birth
 							{
@@ -3016,14 +3083,14 @@ void TSimulation::Interact()
 							if (d->Energy() <= 0.0)
 							{
 								//cout << "before deaths2 "; agent::gXSortedAgents.list();	//dbg
-								Death(d);
+								Death( d, LifeSpan::DR_NATURAL );
 								fNumberDiedFight++;
 								//cout << "after deaths2 "; agent::gXSortedAgents.list();	//dbg
 							}
 							if (c->Energy() <= 0.0)
 							{
 								objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point back to c
-								Death(c);
+								Death( c, LifeSpan::DR_NATURAL );
 								fNumberDiedFight++;
 
 								// note: this leaves list pointing to item before c, and markedAgent set to previous agent
@@ -3333,7 +3400,9 @@ void TSimulation::Interact()
 					gaPrint( "%5ld: domain %d creation random early (%4ld)\n", fStep, id, fNumberCreatedRandom );
                 }
 
-                newAgent->grow( RecordBrainAnatomy( newAgent->Number() ), RecordBrainFunction( newAgent->Number() ) );
+                newAgent->grow( RecordBrainAnatomy( newAgent->Number() ),
+								RecordBrainFunction( newAgent->Number() ),
+								fRecordPosition );
                 fFoodEnergyIn += newAgent->FoodEnergy();
 				float x = randpw() * (fDomains[id].absoluteSizeX - 0.02) + fDomains[id].startX + 0.01;
 				float z = randpw() * (fDomains[id].absoluteSizeZ - 0.02) + fDomains[id].startZ + 0.01;
@@ -3354,19 +3423,7 @@ void TSimulation::Interact()
                 //newAgents.add(newAgent); // add it to the full list later; the e->listLink that gets auto stored here must be replaced with one from full list below
 				fNeuronGroupCountStats.add( newAgent->GetBrain()->NumNeuronGroups() );
 				
-				Birth(newAgent, NULL, NULL);
-
-				if( fRecordBirthsDeaths )
-				{
-					FILE * File;
-					if( (File = fopen("run/BirthsDeaths.log", "a")) == NULL )
-					{
-						cerr << "could not open run/genome/AdamiComplexity-summary.txt for writing [1]. Exiting." << endl;
-						exit(1);
-					}
-					fprintf( File, "%ld CREATION %ld\n", fStep, newAgent->Number() );
-					fclose( File );
-				}
+				Birth( newAgent, LifeSpan::BR_CREATE );
             }
         }
 
@@ -3433,7 +3490,9 @@ void TSimulation::Interact()
 				gaPrint( "%5ld: global creation random early (%4ld)\n", fStep, fNumberCreatedRandom );
             }
 
-            newAgent->grow( RecordBrainAnatomy( newAgent->Number() ), RecordBrainFunction( newAgent->Number() ) );
+            newAgent->grow( RecordBrainAnatomy( newAgent->Number() ),
+							RecordBrainFunction( newAgent->Number() ),
+							fRecordPosition );
             fFoodEnergyIn += newAgent->FoodEnergy();
             newAgent->settranslation(randpw() * globals::worldsize, 0.5 * agent::gAgentHeight, randpw() * -globals::worldsize);
             newAgent->setyaw(randpw() * 360.0);
@@ -3448,20 +3507,7 @@ void TSimulation::Interact()
             //newAgents.add(newAgent); // add it to the full list later; the e->listLink that gets auto stored here must be replaced with one from full list below
 			fNeuronGroupCountStats.add( newAgent->GetBrain()->NumNeuronGroups() );
 
-			Birth(newAgent, NULL, NULL);
-
-			if( fRecordBirthsDeaths )
-			{
-				FILE * File;
-				if( (File = fopen("run/BirthsDeaths.log", "a")) == NULL )
-				{
-					cerr << "could not open run/genome/AdamiComplexity-summary.txt for writing [1]. Exiting." << endl;
-					exit(1);
-				}
-				fprintf( File, "%ld CREATION %ld\n", fStep, newAgent->Number() );
-				fclose( File );
-			}
-						
+			Birth( newAgent, LifeSpan::BR_CREATE );
         }
 
 	#ifdef DEBUGCHECK
@@ -3828,12 +3874,52 @@ void TSimulation::ijfitinc(short* i, short* j)
 //---------------------------------------------------------------------------
 // TSimulation::Birth
 //---------------------------------------------------------------------------
-void TSimulation::Birth(agent* c,
-			agent*,
-			agent*)
+void TSimulation::Birth( agent* a,
+						 LifeSpan::BirthReason reason,
+						 agent* a_parent1,
+						 agent* a_parent2 )
 {
-	fPositionWriter.birth(fStep,
-			      c);
+	// ---
+	// --- Update LifeSpan
+	// ---
+	a->GetLifeSpan()->set_birth( fStep,
+								 reason );
+
+	// ---
+	// --- Update Birth/Death Log
+	// ---
+	if( fRecordBirthsDeaths && (reason != LifeSpan::BR_SIMINIT) )
+	{
+		FILE * File;
+		if( (File = fopen("run/BirthsDeaths.log", "a")) == NULL )
+		{
+			cerr << "could not open run/BirthsDeaths.log for writing. Exiting." << endl;
+			exit(1);
+		}
+
+		switch( reason )
+		{
+		case LifeSpan::BR_NATURAL:
+		case LifeSpan::BR_LOCKSTEP:
+			fprintf( File,
+					 "%ld BIRTH %ld %ld %ld\n",
+					 fStep,
+					 a->Number(),
+					 a_parent1->Number(),
+					 a_parent2->Number() );
+			break;
+		case LifeSpan::BR_CREATE:
+			fprintf( File,
+					 "%ld CREATION %ld\n",
+					 fStep,
+					 a->Number() );
+			break;
+		default:
+			assert( false );
+		}
+
+		fclose(File);
+	}
 }
 
 //---------------------------------------------------------------------------
@@ -3841,8 +3927,24 @@ void TSimulation::Birth(agent* c,
 //
 // Perform all actions needed to agent before list removal and deletion
 //---------------------------------------------------------------------------
-void TSimulation::Death(agent* c)
+void TSimulation::Death( agent* c,
+						 LifeSpan::DeathReason reason )
 {
+	// ---
+	// --- Update LifeSpan
+	// ---
+	c->GetLifeSpan()->set_death( fStep,
+								 reason );
+
+	UpdateLifeSpanLog( c );
+
+	if( reason == LifeSpan::DR_SIMEND )
+	{
+		c->Die();
+
+		return;
+	}
+
 	Q_CHECK_PTR(c);
 	unsigned long loserIDBestSoFar = 0;	// the way this is used depends on fAgentNumber being 1-based in agent.cp
 	unsigned long loserIDBestRecent = 0;	// the way this is used depends on fAgentNumber being 1-based in agent.cp
@@ -4297,9 +4399,6 @@ void TSimulation::Death(agent* c)
 		fprintf( File, "%ld DEATH %ld\n", fStep, c->Number() );
 		fclose( File );
 	}
-
-	fPositionWriter.death(fStep,
-			      c);
 	
 	// following assumes (requires!) list to be currently pointing to c,
     // and will leave the list pointing to the previous agent

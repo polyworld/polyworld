@@ -14,13 +14,13 @@
 #include <qmenu.h>
 
 // Local
-#include "barrier.h"
 #include "agent.h"
+#include "barrier.h"
+#include "datalib.h"
 #include "food.h"
 #include "gmisc.h"
 #include "graphics.h"
 #include "gstage.h"
-#include "PositionWriter.h"
 #include "TextStatusWindow.h"
 #include "OverheadView.h"
 
@@ -308,6 +308,7 @@ public:
 	void PopulateStatusList(TStatusList& list);
 	
 	void Step();
+	void End();
 	void Update();
 
 	bool fLockStepWithBirthsDeathsLog;	// Are we running in lockstep mode?
@@ -340,8 +341,9 @@ public:
 	
 	bool fRecordBirthsDeaths;
 
+	DataLibWriter *fLifeSpanLog;
+
 	bool fRecordPosition;
-	PositionWriter fPositionWriter;
 
 	bool fBrainAnatomyRecordAll;
 	bool fBrainFunctionRecordAll;
@@ -377,6 +379,10 @@ private:
 	void InitNeuralValues();
 	void InitWorld();
 	void InitMonitoringWindows();
+
+	void InitLifeSpanLog();
+	void UpdateLifeSpanLog( agent *a );
+	void EndLifeSpanLog();
 	
 	void PickParentsUsingTournament(int numInPool, int* iParent, int* jParent);
 	void UpdateAgents();
@@ -395,10 +401,13 @@ private:
 	void SmiteOne(short id, short smite);
 	void ijfitinc(short* i, short* j);
 		
-	void Birth(agent* c,
-		   agent* c_parent1,
-		   agent* c_parent2);
-	void Death(agent* inAgent);
+	void Birth( agent* a,
+				LifeSpan::BirthReason reason,
+				agent* a_parent1 = NULL,
+				agent* a_parent2 = NULL );
+	void Death( agent* inAgent,
+				LifeSpan::DeathReason reason );
+
 	float Fitness( agent* c );
 	
 	void ReadWorldFile(const char* filename);	

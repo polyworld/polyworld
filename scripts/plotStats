@@ -497,7 +497,7 @@ print "Finished writing to '%s'." % ( tempfilename )
 gnufile = open( gnufilename, 'w' ) 
 gnufile.write( "%s\n%s\n%s\n%s\n" % ( GNUPLOT_SETTINGS, GET_GNUPLOT_DYNAMIC_SETTINGS(), GET_GNUPLOT_PLOTSTRING()[0], GET_GNUPLOT_END_SETTINGS() ) )
 gnufile.close()
-os.system( 'gnuplot '+ gnufilename )
+os.system( 'gnuplot -persist '+ gnufilename )
 
 if flag_plotSmooth:		# Second, plot the smoothed in a new window (if we're doing that)
 	GNUPLOT_TOPRIGHT_LABEL.append( "Smoothed with '%s'" % (GNUPLOT_SMOOTHING_FUNCTION) )

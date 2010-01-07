@@ -20,6 +20,7 @@
 // Local
 #include "barrier.h"
 #include "AgentPOVWindow.h"
+#include "datalib.h"
 #include "debug.h"
 #include "food.h"
 #include "EnergySensor.h"
@@ -265,7 +266,8 @@ agent::agent(TSimulation* sim, gstage* stage)
 		fRandomSensor(NULL),
 		fEnergySensor(NULL),
 		fBrain(NULL),
-		fBrainFuncFile(NULL)
+		fBrainFuncFile(NULL),
+		fPositionWriter(NULL)
 {
 	Q_CHECK_PTR(sim);
 	Q_CHECK_PTR(stage);
@@ -388,7 +390,9 @@ void agent::load(istream& in)
 //---------------------------------------------------------------------------
 // agent::grow
 //---------------------------------------------------------------------------
-void agent::grow( bool recordBrainAnatomy, bool recordBrainFunction )
+void agent::grow( bool recordBrainAnatomy,
+				  bool recordBrainFunction,
+				  bool recordPosition )
 {    
 	Q_CHECK_PTR(fBrain);
 	Q_CHECK_PTR(fGenome);
@@ -426,6 +430,22 @@ void agent::grow( bool recordBrainAnatomy, bool recordBrainFunction )
 	// open the file to be used to write out neural activity
 	if( recordBrainFunction )
 		fBrainFuncFile = fBrain->startFunctional( fAgentNumber );
+
+	if( recordPosition )
+	{
+		char path[512];
+		sprintf( path,
+				 "run/motion/position/position_%ld.txt",
+				 fAgentNumber );
+
+		fPositionWriter = new DataLibWriter( path );
+
+		const char *colnames[] = {"Timestep", "x", "y", "z", NULL};
+		const datalib::Type coltypes[] = {datalib::INT, datalib::FLOAT, datalib::FLOAT, datalib::FLOAT};
+		fPositionWriter->beginTable( "Positions",
+									 colnames,
+									 coltypes );		
+	}
 
     // setup the agent's geometry
     SetGeometry();
@@ -605,6 +625,17 @@ float agent::ProjectedHeuristicFitness()
 //---------------------------------------------------------------------------    
 void agent::Die()
 {
+	if( fPositionWriter )
+	{
+		delete fPositionWriter;
+		fPositionWriter = NULL;
+	}
+
+	if( fLifeSpan.death.reason == LifeSpan::DR_SIMEND )
+	{
+		return;
+	}
+
 	// Decrement total number of agents
 	agent::agentsliving--;	
 	Q_ASSERT(agent::agentsliving >= 0);
@@ -974,6 +1005,14 @@ float agent::UpdateBody(float moveFitnessParam, float speed2dpos, int solidObjec
 		fMaxSpeed = fSpeed;
 
 	rewardmovement(moveFitnessParam, speed2dpos);
+
+	if( fPositionWriter )
+	{
+		fPositionWriter->addRow( fSimulation->fStep,
+								 x(),
+								 y(),
+								 z() );
+	}
     
     return energyUsed;
 }

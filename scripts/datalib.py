@@ -4,7 +4,7 @@ import common_functions
 REQUIRED = True
 
 SIGNATURE = '#datalib\n'
-CURRENT_VERSION = 1
+CURRENT_VERSION = 2
 COLUMN_TYPE_MARKER = "#@T"
 COLUMN_LABEL_MARKER = "#@L"
 
@@ -206,12 +206,23 @@ def write(path, tables):
     except AttributeError:
         tables = [tables]
 
+    class TableDims:
+        def __init__( self, table ):
+            self.name = table.name
+            self.nrows = len( table.rows() )
+            self.rowlen = -1
+    tabledims = []
+
+
     f = open(path, 'w')
 
     __write_header(f)
 
     table_index = 0
     for table in tables:
+        dims = TableDims( table )
+        tabledims.append( dims )
+
         table.path = path
         
         table.index = table_index
@@ -222,12 +233,19 @@ def write(path, tables):
         col_types = __create_col_metadata(COLUMN_TYPE_MARKER,
                                            table.coltypes)
 
+
+        dims.offset = f.tell()
+
         __start_table(f,
                       table.name,
                       col_labels,
                       col_types)
+
+        dims.data = f.tell()
         
         for row in table.rows():
+            rowstart = f.tell()
+
             linelist = ['   ']
 
             for data in row:
@@ -236,8 +254,17 @@ def write(path, tables):
             linelist.append('\n')
             f.write(' '.join(linelist))
 
+            rowlen = f.tell() - rowstart
+
+            if dims.rowlen == -1:
+                dims.rowlen = rowlen
+            else:
+                assert dims.rowlen == rowlen
+
         __end_table(f,
                     table.name)
+
+    __write_footer( f, tabledims )
 
     f.close()
 
@@ -269,7 +296,7 @@ def parse(path, tablenames = None, required = not REQUIRED, keycolname = None):
         raise InvalidFileError(path)
 
     version = common_functions.get_version(f.readline())
-    if not version == CURRENT_VERSION:
+    if version > CURRENT_VERSION:
         raise InvalidFileError('invalid version (%s)' % version)
 
     tables = {}
@@ -359,6 +386,28 @@ def __write_header(f):
 
 ####################################################################################
 ###
+### FUNCTION __write_footer()
+###
+####################################################################################
+def __write_footer( f, tabledims ):
+    start = f.tell()
+
+    f.write( '#TABLES %d\n' % len(tabledims) )
+
+    for dims in tabledims:
+        f.write( '# %s %d %d %d %d\n' % (dims.name,
+                                         dims.offset,
+                                         dims.data,
+                                         dims.nrows,
+                                         dims.rowlen) )
+
+    end = f.tell()
+
+    f.write( '#START %d\n' % start )
+    f.write( '#SIZE %d' % (end - start) )
+
+####################################################################################
+###
 ### FUNCTION __start_table_()
 ###
 ####################################################################################
@@ -407,7 +456,7 @@ def __is_datalib_file(file):
 ###
 ####################################################################################
 def __seek_next_tag(file):
-    regex = '^#\\<([a-zA-Z0-9_ ]+)\\>'
+    regex = '^#\\<([a-zA-Z0-9_ \-]+)\\>'
 
     while True:
         line = file.readline();
@@ -424,7 +473,7 @@ def __seek_next_tag(file):
 ###
 ####################################################################################
 def __get_end_tag(line):
-    regex = '^#\\</([a-zA-Z0-9_ ]+)\\>'
+    regex = '^#\\</([a-zA-Z0-9_ \-]+)\\>'
 
     result = re.search(regex, line)
     if result:
