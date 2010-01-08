@@ -390,13 +390,22 @@ void agent::load(istream& in)
 //---------------------------------------------------------------------------
 // agent::grow
 //---------------------------------------------------------------------------
-void agent::grow( bool recordBrainAnatomy,
+void agent::grow( bool recordGenome,
+				  bool recordBrainAnatomy,
 				  bool recordBrainFunction,
 				  bool recordPosition )
 {    
 	Q_CHECK_PTR(fBrain);
 	Q_CHECK_PTR(fGenome);
 	Q_CHECK_PTR(fCns);
+
+	if( recordGenome )
+	{
+		char path[256];
+		sprintf( path, "run/genome/genome_%ld.txt", fAgentNumber );
+		ofstream out( path );
+		fGenome->dump( out );
+	}
 
 	InitGeneCache();
 

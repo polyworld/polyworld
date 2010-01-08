@@ -1,5 +1,10 @@
 #pragma once
 
+namespace __RandomNumberGenerator
+{
+	class ModuleInit;
+}
+
 class RandomNumberGenerator
 {
  public:
@@ -29,7 +34,7 @@ class RandomNumberGenerator
 	static void dispose( RandomNumberGenerator *rng );
 
  private:
-	friend class ModuleInit;
+	friend class __RandomNumberGenerator::ModuleInit;
 
 	static void init();
 

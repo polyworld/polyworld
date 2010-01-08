@@ -3,21 +3,23 @@
 const char *LifeSpan::BR_NAMES[];
 const char *LifeSpan::DR_NAMES[];
 
-class ModuleInit
+namespace __LifeSpan
 {
- public:
-	ModuleInit()
+	class ModuleInit
 	{
+	public:
+		ModuleInit()
+		{
 #define BIRTH_TYPE(TYPE) LifeSpan::BR_NAMES[LifeSpan::BR_##TYPE] = #TYPE;
-		BIRTH_METAENUM();
+			BIRTH_METAENUM();
 #undef BIRTH_TYPE
 
 #define DEATH_TYPE(TYPE) LifeSpan::DR_NAMES[LifeSpan::DR_##TYPE] = #TYPE;
-		DEATH_METAENUM();
+			DEATH_METAENUM();
 #undef DEATH_TYPE
-	}
-} module_init;
-
+		}
+	} module_init;
+}
 
 LifeSpan::LifeSpan()
 {

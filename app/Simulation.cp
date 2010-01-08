@@ -14,7 +14,7 @@
 #define MinDebugStep 0
 #define MaxDebugStep INT_MAX
 
-#define CurrentWorldfileVersion 36
+#define CurrentWorldfileVersion 37
 
 #define TournamentSelection 1
 
@@ -193,6 +193,7 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
 
 		fRecordComplexity(false),
 
+		fRecordGenomes(false),
 		fRecordAdamiComplexity(false),
 		fAdamiComplexityRecordFrequency(0),
 
@@ -1340,10 +1341,13 @@ void TSimulation::Init()
 	sprintf( t, "run_%ld", time(NULL) );
 	(void) rename( s, t );
 
-	if( mkdir( "run", PwDirMode ) )
-		eprintf( "Error making run directory (%d)\n", errno );
-	if( mkdir( "run/stats", PwDirMode ) )
-		eprintf( "Error making run/stats directory (%d)\n", errno );
+	MKDIR( "run" );
+	MKDIR( "run/stats" );
+
+	if( fRecordAdamiComplexity || fRecordGenomes )
+	{
+		MKDIR( "run/genome" );
+	}
 
 	if( fRecordPosition )
 	{
@@ -1373,9 +1377,6 @@ void TSimulation::Init()
 		if( mkdir( "run/brain", PwDirMode ) )
 			eprintf( "Error making run/brain directory (%d)\n", errno );
 			
-		if( mkdir( "run/genome", PwDirMode ) )
-			eprintf( "Error making run/genome directory (%d)\n", errno );
-
 			
 	#define RecordRandomBrainAnatomies 0
 	#if RecordRandomBrainAnatomies
@@ -1566,7 +1567,8 @@ void TSimulation::Init()
 				else
 					c->Genes()->randomize();
 
-				c->grow( RecordBrainAnatomy( c->Number() ),
+				c->grow( fRecordGenomes,
+						 RecordBrainAnatomy( c->Number() ),
 						 RecordBrainFunction( c->Number() ),
 						 fRecordPosition );
 				
@@ -1627,7 +1629,8 @@ void TSimulation::Init()
 			}
 			else
 				c->Genes()->randomize();
-			c->grow( RecordBrainAnatomy( c->Number() ),
+			c->grow( fRecordGenomes,
+					 RecordBrainAnatomy( c->Number() ),
 					 RecordBrainFunction( c->Number() ),
 					 fRecordPosition );
 			
@@ -2759,7 +2762,8 @@ void TSimulation::Interact()
 				Q_CHECK_PTR(e);
 
 				e->Genes()->crossover(c->Genes(), d->Genes(), true);
-				e->grow( RecordBrainAnatomy( e->Number() ),
+				e->grow( fRecordGenomes,
+						 RecordBrainAnatomy( e->Number() ),
 						 RecordBrainFunction( e->Number() ),
 						 fRecordPosition );
 				float eenergy = c->mating( fMateFitnessParameter, fMateWait ) + d->mating( fMateFitnessParameter, fMateWait );
@@ -3001,7 +3005,8 @@ void TSimulation::Interact()
 								Q_CHECK_PTR(e);
 
 								e->Genes()->crossover(c->Genes(), d->Genes(), true);
-								e->grow( RecordBrainAnatomy( e->Number() ),
+								e->grow( fRecordGenomes,
+										 RecordBrainAnatomy( e->Number() ),
 										 RecordBrainFunction( e->Number() ),
 										 fRecordPosition );
 								float eenergy = c->mating( fMateFitnessParameter, fMateWait ) + d->mating( fMateFitnessParameter, fMateWait );
@@ -3400,7 +3405,8 @@ void TSimulation::Interact()
 					gaPrint( "%5ld: domain %d creation random early (%4ld)\n", fStep, id, fNumberCreatedRandom );
                 }
 
-                newAgent->grow( RecordBrainAnatomy( newAgent->Number() ),
+                newAgent->grow( fRecordGenomes,
+								RecordBrainAnatomy( newAgent->Number() ),
 								RecordBrainFunction( newAgent->Number() ),
 								fRecordPosition );
                 fFoodEnergyIn += newAgent->FoodEnergy();
@@ -3490,7 +3496,8 @@ void TSimulation::Interact()
 				gaPrint( "%5ld: global creation random early (%4ld)\n", fStep, fNumberCreatedRandom );
             }
 
-            newAgent->grow( RecordBrainAnatomy( newAgent->Number() ),
+            newAgent->grow( fRecordGenomes,
+							RecordBrainAnatomy( newAgent->Number() ),
 							RecordBrainFunction( newAgent->Number() ),
 							fRecordPosition );
             fFoodEnergyIn += newAgent->FoodEnergy();
@@ -5659,6 +5666,15 @@ void TSimulation::ReadWorldFile(const char* filename)
 			}
 		}
 		
+		if( version >= 37 )
+		{
+			PROP( RecordGenomes );
+		}
+		else
+		{
+			fRecordGenomes = false;
+		}
+
 		if( version >= 20 )
 		{
 			in >> fRecordAdamiComplexity; in >> label;

@@ -190,13 +190,13 @@ void DataLibWriter::addRow( Variant col0, ... )
 #undef DATA
 
 		b += strlen( b );
-		assert( (b - buf) < sizeof(buf) );
+		assert( size_t(b - buf) < sizeof(buf) );
 
 		first = false;
 	}
 
 	*(b++) = '\n';
-	assert( (b - buf) <= sizeof(buf) );
+	assert( size_t(b - buf) <= sizeof(buf) );
 
 	size_t nwrite = b - buf;
 
@@ -385,7 +385,7 @@ void DataLibReader::seekRow( int index )
 		index = table->nrows + index;
 	}
 
-	assert( index >= 0 && index < table->nrows );
+	assert( (index >= 0) && ((size_t)index < table->nrows) );
 
 	if( index == row )
 	{
@@ -454,7 +454,7 @@ bool DataLibReader::nextRow()
 {
 	int next = row + 1;
 
-	if( next >= table->nrows )
+	if( (size_t)next >= table->nrows )
 	{
 		return false;
 	}

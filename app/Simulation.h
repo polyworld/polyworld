@@ -354,6 +354,7 @@ public:
 	
 	bool fRecordComplexity;				// record the Olaf Functional Complexity (neural)
 
+	bool fRecordGenomes;
 	bool fRecordAdamiComplexity;		// record the Adami Physical Complexity  (genetic)
 	int fAdamiComplexityRecordFrequency;
 	

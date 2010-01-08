@@ -116,6 +116,7 @@ namespace genome
 		const Scalar &getMax();
 
 		Scalar interpolate( unsigned char raw );
+		Scalar interpolate( double ratio );
 
 	private:
 		const Scalar smin;
@@ -201,7 +202,7 @@ namespace genome
 								   Gene *gmax );
 		virtual ~ImmutableInterpolatedGene() {}
 
-		Scalar interpolate( unsigned char raw );
+		Scalar interpolate( double ratio );
 	};
 
 

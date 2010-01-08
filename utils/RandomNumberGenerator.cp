@@ -8,14 +8,17 @@
 
 RandomNumberGenerator::Type RandomNumberGenerator::types[];
 
-class ModuleInit
+namespace __RandomNumberGenerator
 {
- public:
-	ModuleInit()
+	class ModuleInit
 	{
-		RandomNumberGenerator::init();
-	}
-} init;
+	public:
+		ModuleInit()
+		{
+			RandomNumberGenerator::init();
+		}
+	} init;
+}
 
 void RandomNumberGenerator::set( Role role,
 								 Type type )

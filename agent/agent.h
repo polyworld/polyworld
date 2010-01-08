@@ -100,7 +100,8 @@ public:
     void SetMass(float f);
     
     virtual void draw();
-    void grow( bool recordBrainAnatomy,
+    void grow( bool recordGenome,
+			   bool recordBrainAnatomy,
 			   bool recordBrainFunction,
 			   bool recordPosition );    
     virtual void setradius();    

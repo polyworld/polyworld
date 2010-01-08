@@ -137,6 +137,11 @@ Scalar __InterpolatedGene::interpolate( unsigned char raw )
 	// temporarily cast to double for backwards compatibility
 	double ratio = float(raw) * OneOver255;
 
+	return interpolate( ratio );
+}
+
+Scalar __InterpolatedGene::interpolate( double ratio )
+{
 	switch(smin.type)
 	{
 	case Scalar::INT: {
@@ -239,9 +244,9 @@ ImmutableInterpolatedGene::ImmutableInterpolatedGene( const char *name,
 {
 }
 
-Scalar ImmutableInterpolatedGene::interpolate( unsigned char raw )
+Scalar ImmutableInterpolatedGene::interpolate( double ratio )
 {
-	return __InterpolatedGene::interpolate( raw );
+	return __InterpolatedGene::interpolate( ratio );
 }
 
 

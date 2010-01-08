@@ -74,6 +74,8 @@ Variant &Variant::operator = ( const Variant &variant )
 	default:
 		assert(false);
 	}
+
+	return *this;
 }
 
 Variant::~Variant()
