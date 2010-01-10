@@ -171,8 +171,8 @@ MODES['neuralComplexity'] = Mode( 'Neural Complexity',
                                   common_complexity.get_names )
 
 MODES['graphMetric'] = Mode( 'Graph Metric',
-                             [],
-                             None,
+							 common_functions.RECENT_TYPES,
+							 'Recent',
                              True,
                              common_metric.METRIC_TYPES,
                              'SP',
