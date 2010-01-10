@@ -1069,7 +1069,8 @@ def show_usage(msg = None, arg = None):
     elif ismode( arg ):
         usage_mode( arg )
     else:
-        usage_default( 'Invalid help topic (%s)' % arg )
+    	print '\nInvalid help topic (%s)\n' % arg
+        usage_default()
 
     if msg:
         print "--------------------------------------------------------------------------------"
@@ -1099,7 +1100,8 @@ DESCRIPTION
 
        %s
 
-     Note that mode names may be abbreviated.
+     Note that mode names may be abbreviated, but "opts" and "macros" must be
+  spelled fully.
 
      Directory arguments can specify a run directory or the parent of one or
   more run directories.
