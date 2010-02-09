@@ -15,6 +15,7 @@ import common_metric
 import datalib
 import networkx as nx
 import numpy
+import datetime
 
 ### Now initialize some global variables
 ##OutputFilename = common_complexity.FILENAME_AVR
@@ -182,6 +183,7 @@ def __analyze_recent_dir(metrics, recent_dir, random):
 	DATA={ }
 	
 	print "Final Timestep: %s" % ( max(timesteps) )
+	print datetime.datetime.now()
 	print "Processing:",
 	for t in timesteps:
 		timestep_directory = os.path.join(recent_dir, str(t))
