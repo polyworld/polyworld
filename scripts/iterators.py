@@ -1,5 +1,17 @@
 ####################################################################################
 ###
+### FUNCTION product
+###
+### see standard itertools.product(). This is here because we need to support
+### Python 2.5
+###
+####################################################################################
+def product( ita, itb ):
+    return [(x,y) for x in ita for y in itb]
+
+
+####################################################################################
+###
 ### CLASS IteratorUnion
 ###
 ### Iterator that combines one or more iterators in such a way that each iteration

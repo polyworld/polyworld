@@ -1,7 +1,10 @@
 #!/usr/bin/python
 import os, re, sys
 from subprocess import Popen, PIPE
+
+import common_metric
 import datalib
+import glob
 
 RECENT_TYPES = ['Recent', 'bestRecent']
 
@@ -74,13 +77,16 @@ def read_worldfile_parameter( path_worldfile_or_run, parameter ):
 ### FUNCTION classify_run()
 ###
 ####################################################################################
-CLASSIFICATIONS = ['Driven', 'Passive', 'Fitness']
+CLASSIFICATIONS = ['Driven', 'Passive', 'Fitness', 'Random']
 
 # Key supercedes/preempts associated list
 CLASSIFICATION_PREEMPTION = {'Fitness': ['Driven', 'Passive']}
 
 class ClassificationError(Exception):
-	pass
+	def __init__(self, reason, message):
+		super(Exception, self).__init__(message)
+
+		self.reason = reason
 
 def classify_run(path_run,
 		 single_classification = False,
@@ -118,6 +124,12 @@ def classify_run(path_run,
 		classifications.append('Driven')
 
 	#
+	# Random
+	#
+	if common_metric.has_random( path_run ):
+		classifications.append('Random')
+              
+	#
 	# Apply Constraints
 	#
 	classifications_constrained = list_intersection( classifications,
@@ -139,12 +151,12 @@ def classify_run(path_run,
 	#
 	if len(classifications_constrained) == 0:
 		if len(classifications) == 0:
-			raise ClassificationError( path_run + ' cannot be classified' )
+			raise ClassificationError( 'notfound', path_run + ' cannot be classified' )
 		else:
-			raise ClassificationError( path_run + ' classification not in {' + ','.join(constraints) + '}' )
+			raise ClassificationError( 'notfound', path_run + ' classification not in {' + ','.join(constraints) + '}' )
 
 	if single_classification and len(classifications_constrained) > 1:
-		raise ClassificationError( path_run + ' classification ambiguous (' + ','.join(classifications_constrained) + ')' )
+		raise ClassificationError( 'ambiguous', path_run + ' classification ambiguous (' + ','.join(classifications_constrained) + ')' )
 
 	return classifications_constrained
 
@@ -155,19 +167,31 @@ def classify_run(path_run,
 ####################################################################################
 def classify_runs(run_paths,
 		  single_classification = False,
-		  constraints = CLASSIFICATIONS):
+		  constraints = CLASSIFICATIONS,
+		  func_notfound = None):
 
 	result = {}
 
 	for path in run_paths:
-		classifications = classify_run( path,
-						single_classification,
-						constraints )
-		for c in classifications:
-			try:
-				result[c].append(path)
-			except KeyError:
-				result[c] = [path]
+		try:
+			classifications = classify_run( path,
+							single_classification,
+							constraints )
+
+			for c in classifications:
+				try:
+					result[c].append(path)
+				except KeyError:
+					result[c] = [path]
+
+		except ClassificationError, x:
+			if x.reason == 'notfound':
+				if func_notfound == None:
+					raise x
+				else:
+					func_notfound(path, x)
+			else:
+				raise x
 
 	return result
 
@@ -503,6 +527,9 @@ def find_run_paths(paths_arg, required_subpath):
     def __path_required(dir):
 	    return os.path.join(dir, required_subpath)
 
+    def __exists(path):
+	    return len(glob.glob(path)) > 0
+
     run_paths = []
 
     for path_arg in paths_arg:
@@ -510,7 +537,7 @@ def find_run_paths(paths_arg, required_subpath):
             raise InvalidDirError(path_arg)
 
         # if 'directory' is itself a run/ directory, just use that.
-        if os.path.exists(__path_required(path_arg)):
+        if __exists(__path_required(path_arg)):
             run_paths.append(path_arg)
         else:
             found_run = False
@@ -520,7 +547,7 @@ def find_run_paths(paths_arg, required_subpath):
                 subdir = os.path.join(path_arg, potential_runpath)
                 
                 # if potential_directory is a run/ directory, add it.
-                if os.path.exists(__path_required(subdir)):
+                if __exists(__path_required(subdir)):
                     run_paths.append(subdir)
                     found_run = True
 

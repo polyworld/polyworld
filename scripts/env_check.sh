@@ -21,11 +21,19 @@ function err() {
     exit 1
 }
 
-function parentdir() {
-    readlink -f `dirname "$1"`/..
+function canonicalize()
+{
+    (
+	cd -P -- "$(dirname -- "$1")" &&
+	printf '%s\n' "$(pwd -P)/$(basename -- "$1")"
+    )
 }
 
-CALLER=`readlink -f "$1"`
+function parentdir() {
+    canonicalize `dirname "$1"`/..
+}
+
+CALLER=`canonicalize "$1"`
 shift
 
 if [ -z "${CALLER}" ]; then

@@ -22,7 +22,8 @@ TCRIT_DEFAULT = (1.833,20,10)   # 95% confidence for 9 degrees of freedom (10 pa
 DEFAULT_OUTPUT = './plot.eps'
 CLASSIFICATION_LINETYPES = {'Driven': plotlib.StyleGroup.SOLID,
                             'Passive': plotlib.StyleGroup.DASHED,
-                            'Fitness': plotlib.StyleGroup.DASHDOT}
+                            'Fitness': plotlib.StyleGroup.DASHDOT,
+                            'Random': plotlib.StyleGroup.DOTTED}
 
 # Please, please, please do not start using this as a general global
 mode_usage = None
@@ -37,29 +38,15 @@ def main():
     #--- Process command-line arguments
     #---
     clauses, groups, arg_paths = parse_args( sys.argv[1:] )
-    
-    try:
-        run_paths = None
-        __mode = None
 
-        for clause in clauses:
-            relpath = clause.mode.relpath(clause.dataset)
-
-            __run_paths = common_functions.find_run_paths( arg_paths,
-                                                           relpath )
-            if run_paths == None:
-                run_paths = __run_paths
-                __mode = clause.mode
-            else:
-                if __run_paths != run_paths:
-                    err( 'run directories for %s different than %s' % (clause.mode.shortname,
-                                                                       __mode.shortname) )
-
-    except common_functions.InvalidDirError, e:
-        show_usage( str(e) )
+    run_paths, classified_runs = classify_runs( arg_paths,
+                                                groups )
 
     arg_dirs = common_functions.truncate_paths(arg_paths)
     run_dirs = common_functions.truncate_paths(run_paths)
+
+    print run_paths
+    print classified_runs
 
     #---
     #--- Iterate over clauses
@@ -73,11 +60,11 @@ def main():
         #---
         #--- Parse & classify (e.g. Driven/Passive) runs
         #---
-        clause.values, clause.values_classified = get_values( mode,
-                                                              run_paths,
-                                                              dataset,
-                                                              value_names,
-                                                              groups )
+        clause.values_classified = get_values( mode,
+                                               classified_runs,
+                                               dataset,
+                                               value_names )
+
         clause.groups = clause.values_classified.keys()
 
         #---
@@ -104,7 +91,6 @@ def main():
                          arg_dirs,
                          run_paths,
                          run_dirs )
-
 
     #---
     #--- Plot
@@ -168,10 +154,10 @@ def parse_args(argv):
                     'points': 'points',
                     's': 'smooth',
                     'smooth': 'smooth',
-                    'l': 'legend',
-                    'legend': 'legend',
-                    'L': 'nolegend',
-                    'nolegend': 'nolegend',
+                    'l': 'legendOn',
+                    'legend': 'legendOn',
+                    'L': 'metaLegendOff',
+                    'nolegend': 'metaLegendOff',
                     'v': 'noview',
                     'noview': 'noview',
                     'c': 'color',
@@ -374,7 +360,8 @@ def parse_args(argv):
     # process grouping
     group = gopts.get('group', 'auto')
     if group == 'auto':
-        groups = common_functions.CLASSIFICATIONS
+        groups = list(common_functions.CLASSIFICATIONS)
+        groups.remove( 'Random' ) # Random must be explicitly requested
     elif group == 'off':
         if pval or tval:
             err( "'--group off' incompatible with T-test calculations." )
@@ -397,6 +384,41 @@ def parse_args(argv):
         show_usage("Must provide a directory.")
 
     return clauses, groups, paths
+
+####################################################################################
+###
+### FUNCTION classify_runs()
+###
+####################################################################################
+def classify_runs( arg_paths,
+                   groups ):
+    try:
+        run_paths = common_functions.find_run_paths( arg_paths,
+                                                     'worldfile' )
+    except common_functions.InvalidDirError, e:
+        show_usage( str(e) )
+
+    if len(groups) == 0: # --group off
+        return run_paths, {'None': run_paths}
+
+    failed_paths = []
+
+    def __classification_fail( failed_paths, path, x):
+        warn( str(x) )
+        failed_paths.append( path )
+
+    classified_runs = common_functions.classify_runs( run_paths,
+                                                      False,
+                                                      groups,
+                                                      lambda path, x: __classification_fail(failed_paths,
+                                                                                            path,
+                                                                                            x) )
+    run_paths = common_functions.list_difference( run_paths, failed_paths )
+
+    if len(run_paths) == 0:
+        err( "No run directories for plotting." )
+
+    return run_paths, classified_runs
 
 ####################################################################################
 ###
@@ -475,42 +497,22 @@ def get_macros( clauses,
 ###
 ####################################################################################
 def get_values( mode,
-                run_paths,
+                classified_runs,
                 dataset,
-                value_names,
-                groups ):
+                value_names ):
 
-    values = mode.parseValues( run_paths,
-                               dataset,
-                               value_names,
-                               run_as_key = True )
+    classified_values = {}
 
-    if len(groups) == 0: # --group off
-        values_classified = { 'None': [x
-                                       for x in iterators.MatrixIterator(values,
-                                                                         values.keys())] }
-    else:
-        try:
-            classifications = common_functions.classify_runs( run_paths,
-                                                              single_classification = True,
-                                                              constraints = groups )
-        except common_functions.ClassificationError, x:
-            err(str(x))
+    for classification, paths in classified_runs.items():
+        values = mode.parseValues( paths,
+                                   classification,
+                                   dataset,
+                                   value_names,
+                                   run_as_key = True )
 
-        # map from classification to list of value tables
-        values_classified = {}
-        for c, paths in classifications.items():
-            l = values_classified[c] = []
-            for path in paths:
-                l.append( values[path] )
+        classified_values[classification] = values.values()
 
-    if isverbose():
-        for c, values_list in values_classified.items():
-            verbose('%s:' % c)
-            for values in values_list:
-                verbose('  %s' % values.values()[0].path)
-
-    return values, values_classified
+    return classified_values
 
 ####################################################################################
 ###
@@ -724,8 +726,7 @@ def plot_init( clauses,
         pass
 
 
-    ngroups = len(clauses[0].values_classified.keys())
-    plot.legend = gopts.get('legend') or (not gopts.get('nolegend') and ngroups > 1)
+    plot.legend = False  # this will be toggled later if needed
     
     colordict = {}
 
@@ -936,6 +937,15 @@ def create_curves(mode,
     #--- Provides title/legend-label for a curve
     #---
     def __title(name):
+        if meta:
+            if gopts.get( 'metaLegendOff', False ):
+                return None
+        else:
+            if not gopts.get( 'legendOn', False ):
+                return None
+
+        plot.legend = True
+
         if name != 'whiskers' and len(mode.curvetypes) > 1:
             title = name + ' ' + table.name
         else:
@@ -949,7 +959,7 @@ def create_curves(mode,
             title += expand_macros( ' ({GROUPS_TTEST})', macros )
         else:
             if pathdict != None:
-                title += ' (' + pathdict[mode.pathRunFromValue(table.path, dataset)] + ')'
+                title += ' (' + pathdict[mode.pathRunFromValue(table.path, classification, dataset)] + ')'
 
         return title
     #---

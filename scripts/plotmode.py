@@ -39,28 +39,31 @@ class Mode:
         self.func_parseValues = func_parseValues
         self.func_getValueNames = func_getValueNames
 
-    def relpath( self, dataset ):
-        if len(self.datasets):
-            return self.func_relpath( dataset )
-        else:
-            return self.func_relpath()
+    def relpath( self,
+                 classification,
+                 dataset ):
+        return self.func_relpath( classification,
+                                  dataset )
 
-    def pathRunFromValue( self, path, dataset ):
-        if len(self.datasets):
-            return self.func_pathRunFromValue( path, dataset )
-        else:
-            return self.func_pathRunFromValue( path )
+    def pathRunFromValue( self,
+                          path,
+                          classification,
+                          dataset ):
+        return self.func_pathRunFromValue( path,
+                                           classification,
+                                           dataset )
 
-    def parseValues( self, run_paths, dataset, value_names, run_as_key ):
-        if len(self.datasets):
-            return self.func_parseValues( run_paths,
-                                          dataset,
-                                          value_names,
-                                          run_as_key )
-        else:
-            return self.func_parseValues( run_paths,
-                                          value_names,
-                                          run_as_key )
+    def parseValues( self,
+                     run_paths,
+                     classification,
+                     dataset,
+                     value_names,
+                     run_as_key ):
+        return self.func_parseValues( run_paths,
+                                      classification,
+                                      dataset,
+                                      value_names,
+                                      run_as_key )
 
     def usage( self ):
         #

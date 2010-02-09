@@ -1,4 +1,4 @@
-#!/usr/local/bin/python
+#!/usr/bin/python
 
 CurrentVersion=2
 
@@ -19,8 +19,10 @@ import numpy
 ### Now initialize some global variables
 ##OutputFilename = common_complexity.FILENAME_AVR
 OutputFilename = common_metric.FILENAME_AVR
+OutputFilename1 = common_metric.RANDOMFILENAME_AVR
 NUMBINS = common_metric.DEFAULT_NUMBINS
-RandomFlag = False
+RandomN = 0
+DefaultRecent = 'Recent'
 LEGACY_MODES = ['force','prefer','off']
 LegacyMode = 'off'
 ####
@@ -68,7 +70,7 @@ def check_environment():
 ###
 ####################################################################################
 def parse_args(argv):
-	global NUMBINS, LegacyMode, RandomFlag
+	global NUMBINS, LegacyMode, RandomN
 
 	if len(argv) == 0:
 		show_usage()
@@ -77,11 +79,10 @@ def parse_args(argv):
 	                              #and 'SP' represents shortest path length
 
 
-##	short = 'C:l:b:'
-##	long = ['legacy=', 'bins=']
-	short = 'M:R'
-	long = ['metrics=','random=']
+	recent_type = DefaultRecent
 
+	short = 'D:V:R:'
+	long = []
 
 	try:
 		opts, args = getopt.getopt(argv, short, long)
@@ -91,14 +92,22 @@ def parse_args(argv):
 	for opt, value in opts:
 		opt = opt.strip('-')
 
-		if opt == 'M':
+		if opt == 'D':
+			try:
+				recent_type = common_functions.expand_abbreviations( value,
+										     common_functions.RECENT_TYPES,
+										     case_sensitive = False )
+			except common_functions.IllegalAbbreviationError, x:
+				err(str(x))
+		elif opt == 'V':
 			metrics = map(string.upper, value.split(','))
 		elif opt == 'R':
-                        RandomFlag = True
-##		elif opt == 'l' or opt == 'legacy':
-##			if value not in LEGACY_MODES:
-##				show_usage('Invalid legacy mode (%s)' % value)
-##			LegacyMode = value
+			try:
+				RandomN = int(value)
+				if RandomN < 0:
+					show_usage("R argument must be >= 0")
+			except:
+				show_usage("R argument must be an integer >= 0")
 ##		elif opt == 'b' or opt == 'bins':
 ##			try:
 ##				NUMBINS = int(value)
@@ -106,13 +115,6 @@ def parse_args(argv):
 ##				show_usage("Invalid integer argument for --bins (%s)" % value)
 		else:
 			assert(False)
-
-	if len(args) == 0:
-		show_usage('Must specify recent type.')
-
-	recent_type = args.pop(0)
-	if not recent_type in common_functions.RECENT_TYPES:
-		show_usage('Invalid recent type (%s).' % recent_type)
 
 	if len(args) == 0:
 		show_usage('Must specify run/run-parent directory.')
@@ -127,11 +129,31 @@ def parse_args(argv):
 ###
 ####################################################################################
 def analyze_recent_dir(metrics, recent_dir):
-	outputpath = os.path.join(recent_dir, OutputFilename);
+        global RandomN
+
+	__analyze_recent_dir(metrics, recent_dir, random = False)
+	if RandomN > 0:
+		__analyze_recent_dir(metrics, recent_dir, random = True)
+
+
+
+####################################################################################
+###
+### analyze_recent_dir()
+###
+####################################################################################
+def __analyze_recent_dir(metrics, recent_dir, random):
+        global RandomN
+
+        if random:
+                outputpath = os.path.join(recent_dir, "AvrMetricRandom.plt" )
+        else:
+                outputpath = os.path.join(recent_dir, OutputFilename)
+                        
 	
 	print "- recent directory='%s'" %(recent_dir)
 	print "- output='%s'" % (outputpath)
-	
+
 	#-----------------------------------------------------------------------------------
 	#--
 	#-- Find epoch/timestep directories
@@ -170,27 +192,16 @@ def analyze_recent_dir(metrics, recent_dir):
 
 		metrics_remaining = metrics
 
-##		if LegacyMode != 'off' :
-##			complexities_read = read_legacy_complexities(complexities_remaining,
-##								     timestep_directory,
-##								     tdata)
-##			complexities_remaining = list_difference(complexities_remaining,
-##								 complexities_read)
-##			if len(complexities_remaining) != 0:
-##				if LegacyMode == 'force':
-##					err('Failed to find data for %s' % ','.join(complexities_remaining))
-##			
-##			print '  Legacy =', complexities_read
-
 		if len(metrics_remaining) > 0:
 			metrics_computed = compute_metrics(metrics_remaining,
-								     timestep_directory,
-								     tdata)
+							   timestep_directory,
+							   tdata,
+							   random)
 			metrics_remaining = list_difference(metrics_remaining,
-								 metrics_computed)
+							    metrics_computed)
 
 		assert(len(metrics_remaining) == 0)
-	
+
 	#-----------------------------------------------------------------------------------
 	#--
 	#-- Create 'Avr' File
@@ -246,27 +257,6 @@ def analyze_recent_dir(metrics, recent_dir):
 ##	
 ##	datalib.write(outputpath, tables)
 ##	
-####################################################################################
-###
-### FUNCTION read_legacy_complexities()
-###
-####################################################################################
-def read_legacy_complexities(complexities,
-			     timestep_directory,
-			     tdata):
-	def __path(type):
-		return os.path.join(timestep_directory, 'complexity_' + type + '.txt')
-
-	complexities_read = []
-	
-	for type in complexities:
-		path = __path(type)
-		if os.path.isfile(path):
-			data = common_complexity.parse_legacy_complexities(path)
-			tdata[type] = common_complexity.normalize_complexities(data)
-			complexities_read.append(type)
-
-	return complexities_read
 
 ####################################################################################
 ###
@@ -275,31 +265,39 @@ def read_legacy_complexities(complexities,
 ####################################################################################
 def compute_metrics(metrics,
 		    timestep_directory,
-		    tdata):
+		    tdata,
+		    random):
+	global RandomN
+
 	def __path(type):
-		return os.path.join(timestep_directory, 'metric_' + type + '.plt')
-	
+		suffix = '_Random' if random else ''
+		return os.path.join(timestep_directory, 'metric_' + type + suffix + '.plt')
+
 	# --- Read in any metrics computed on a previous invocation of this script
 	metrics_read = []
-	for type in metrics:
-		path = __path(type)
+	if not random:
+		for type in metrics:
+			path = __path(type)
 
-		if os.path.isfile(path):
-			try:
-				table = datalib.parse(path)[type]
-				data = table.getColumn('Metric').data
-				tdata[type] = common_metric.normalize_metrics(data)
+			if os.path.isfile(path):
+				try:
+					table = datalib.parse(path)[type]
+					try:
+						data = table.getColumn('Mean').data
+					except KeyError, x:
+						# Maybe it's of an older format
+						data = table.getColumn('Metric').data
+					tdata[type] = common_metric.normalize_metrics(data)
 	
-				metrics_read.append(type)
-			except datalib.InvalidFileError, e:
-				# file must have been incomplete
-				print "Failed reading ", path, "(", e, ") ... regenerating"
+					metrics_read.append(type)
+				except datalib.InvalidFileError, e:
+					# file must have been incomplete
+					print "Failed reading ", path, "(", e, ") ... regenerating"
 	
 	    
 	metrics_remaining = list_difference(metrics,
 					    metrics_read)
 	
-        #metrics_remaining = ['CC','SP']#JUST for TEST
 	print "  AlreadyHave =", metrics_read
 	print "  MetricsToGet =", metrics_remaining
 
@@ -326,34 +324,31 @@ def compute_metrics(metrics,
 		if len(brainAnatomy_files) == 0:
 			err('No brainanatomy files found in %s' % anatomy_directory)
 
-##		cmd="%s brainfunction --bare --list %s -- %s" % ( CALC_COMPLEXITY,
-##								  ' '.join(brainFunction_files),
-##								  ' '.join(complexities_remaining))
-##			
-##		stdout = os.popen(cmd)
-##		complexity_all = stdout.readlines()
-##		if stdout.close() != None:
-##			err('Failed executing CalcComplexity!')
+                metric_all = calc_metrics(metrics_remaining, brainAnatomy_files, random)
+	
+		colnames = ['AgentNumber', 'SampSize', 'Mean', 'StdDev']
+		coltypes = ['int', 'int', 'float', 'float']
 
-                metric_all = calc_metrics(metrics_remaining, brainAnatomy_files)
-	
-	
-		colnames = ['CritterNumber', 'Metric']
-		coltypes = ['int', 'float']
 		tables = dict([(type, datalib.Table(type, colnames, coltypes))
 			       for type in metrics_remaining])
-	
-		# --- Parse the output
-		for line in metric_all:
-			fields = line.split()
-			critter_number = fields.pop(0)
+
+		for agent_results in metric_all:
+			agent = agent_results['agent']
+			results = agent_results['metrics']
 
 			for type in metrics_remaining:
+				result = results[type]
+	
+				n = len(result)
+				mean, stddev, stderr = algorithms.sample_mean( result )
+			
 				table = tables[type]
 				row = table.createRow()
-	
-				row.set('CritterNumber', critter_number)
-				row.set('Metric', fields.pop(0))
+
+				row['AgentNumber'] = agent
+				row['SampSize'] = n
+				row['Mean'] = mean
+				row['StdDev'] = stddev
 	
 		# --- Write to file and normalize data (eg sort and remove 0's)
 		for type in metrics_remaining:
@@ -362,7 +357,7 @@ def compute_metrics(metrics,
 			datalib.write(__path(type),
 				      table)
 	
-			data = table.getColumn('Metric').data
+			data = table.getColumn('Mean').data
 	
 			tdata[type] = common_metric.normalize_metrics(data)
 
@@ -374,12 +369,14 @@ def compute_metrics(metrics,
 ### FUNCTION calc_metrics()
 ###
 ####################################################################################
-def calc_metrics(metrics,anatomy_files):
-        global RandomFlag
+def calc_metrics(metrics,anatomy_files, random):
+        global RandomN
         metric_all = []
+
         for anatomy_file in anatomy_files:
-                individual_metric = os.path.basename(anatomy_file)[13:-10] + ' '#Critter Number
-                #metric_all.append(anatomy_file[13:-10])
+		agent = os.path.basename(anatomy_file)[13:-10]
+		result = dict([(metric, [])
+			       for metric in metrics])
 
                 #Transform the anatomy file content into numpy adjacency matrix
                 infile = open(anatomy_file,"r")
@@ -396,42 +393,33 @@ def calc_metrics(metrics,anatomy_files):
 
                     H.append(g)
 
-
                 B = numpy.matrix(H)
-                G_Dir = nx.from_numpy_matrix(B,nx.DiGraph())#Geneterate directed version of brain network
-                G_Undir = nx.Graph(G_Dir)#Generate undirected version of brain network
-                if not RandomFlag:
-                
-                        if 'CC' in metrics:#need to calculate average clustering coeffcient
-                                avr_clustering = nx.average_clustering(G_Undir)
-                                individual_metric += str(avr_clustering) + ' '
+                #G_Dir = nx.from_numpy_matrix(B,nx.DiGraph())#Geneterate directed version of brain network
+                G_Undir = nx.from_numpy_matrix(B,nx.Graph())#Generate undirected version of brain network
 
-                        if 'SP' in metrics:#need to calculate average shortest path length
-                                avr_shortest_path_length = nx.normalized_average_shortest_path_length(G_Undir,weighted=False)
-                                #avr_shortest_path_length = nx.normalized_average_shortest_path_length(G_Dir,weighted=True)
-                                individual_metric += str(avr_shortest_path_length) + ' '
-        ##                        closeness_centrality_list = nx.closeness_centrality(G_Undir).values()
-        ##                        avr_closeness = sum(closeness_centrality_list) / len(closeness_centrality_list)
-        ##                        individual_metric += str(avr_closeness) + ' '
-                else:
-                        num_nodes = G_Undir.number_of_nodes()
-                        num_edges = G_Undir.number_of_edges()
-                        Random_G_Undir = nx.gnm_random_graph(num_nodes,num_edges)
-                        if 'CC' in metrics:#need to calculate average clustering coeffcient
-                                avr_clustering = nx.average_clustering(Random_G_Undir)
-                                individual_metric += str(avr_clustering) + ' '
+		N = RandomN if random else 1
 
-                        if 'SP' in metrics:#need to calculate average shortest path length
-                                avr_shortest_path_length = nx.normalized_average_shortest_path_length(Random_G_Undir,weighted=False)
-                                #avr_shortest_path_length = nx.normalized_average_shortest_path_length(G_Dir,weighted=True)
-                                individual_metric += str(avr_shortest_path_length) + ' '
-        ##                        closeness_centrality_list = nx.closeness_centrality(G_Undir).values()
-        ##                        avr_closeness = sum(closeness_centrality_list) / len(closeness_centrality_list)
-        ##                        individual_metric += str(avr_closeness) + ' '
-                        
+		for i in range(N):
+			if random:
+				num_nodes = G_Undir.number_of_nodes()
+				num_edges = G_Undir.number_of_edges()
+				G = nx.gnm_random_graph(num_nodes,num_edges)
+			else:
+				G = G_Undir
 
+                        if 'CC' in metrics:
+				#need to calculate average clustering coeffcient
+                                avr_clustering = nx.average_clustering(G)
+				result['CC'].append( avr_clustering )
 
-                metric_all.append(individual_metric)
+                        if 'SP' in metrics:
+				#need to calculate average shortest path length
+                                avr_shortest_path_length = nx.normalized_average_shortest_path_length(G,weighted=False)
+				result['SP'].append( avr_shortest_path_length )                        
+
+		metric_all.append({'agent': agent,
+				   'metrics': result})
+
 
         return metric_all
                         
@@ -504,7 +492,7 @@ def show_usage(msg = None):
 	print"""\
 USAGE
 
-  %s [<options>]... (%s) <directory>...
+  %s [<options>]... <directory>...
 
 DESCRIPTION
 
@@ -514,39 +502,25 @@ DESCRIPTION
      <directory> can specify either a run directory or a parent of one or more
   run directories.
 
-    The results of the analysis are written to AvrComplexity.plt, 
-  ComplexityHistNorm.plt, and ComplexityHistRaw.plt in the appropriate recent
-  directory of each respective run directory. The generated files contain
-  statistics on the complexity at each timestep.
-
 OPTIONS
 
-     -C <C>[,<C>]...
-               Override default NeuralComplexity types for analysis, where C can
-            be a composite of types (e.g. HB). Multiple C specs are separated by
-            commas (e.g. -C P,HB,I).
+     -D <dataset>
+            Valid datasets:\
+%s
+
+            Note that datasets may be abbreviated.
             (default %s)
 
-     -l, --legacy (force|prefer|off)
-               force: Do not perform complexity calculations, but
-            instead use results from run of older version of this script.
+     -V <V>[,<V>]...
+               Override default metrics, where V is one of:
 
-               prefer: Use results from older version if available,
-            otherwise perform complexity calculations.
+               CC - Clustering Coefficient
+               SP - (Normalized) Shortest Path length
 
-               off: Do not use any legacy files.
-
-            (default off)
-
-            Note: Legacy file paths are of the form
-             <recent_directory>/<epoch>/complexity_<C>.txt.
-
-     -b, --bins <n>
-               Specify number of bins used in histogram calculations.
-	    (default %d)""" % (sys.argv[0],
-			       '|'.join(common_functions.RECENT_TYPES),
-			       ','.join(common_metric.DEFAULT_METRICS),
-			       common_metric.DEFAULT_NUMBINS)
+            (default %s)""" % (sys.argv[0],
+			       '\n               '.join(['']+common_functions.RECENT_TYPES),
+			       DefaultRecent,
+			       ','.join(common_metric.DEFAULT_METRICS))
 
         if msg:
             print "--------------------------------------------------------------------------------"

@@ -53,9 +53,11 @@ def sample_mean( list ):
         try: variance = SSE / (N-1)
         except: variance = 0
 
+	stddev = sqrt(variance)
+
         stderr = ( variance / N ) ** 0.5 # stderr = stddev / sqrt(N)
 
-        return mean, stderr
+        return mean, stddev, stderr
 
 ####################################################################################
 ###
@@ -72,7 +74,7 @@ def diff_mean( ita, itb ):
 		n += 1
 		sum += a - b
 
-	if n < 2:
+	if n < 1:
 		return 0.0
 	else:
 		return sum / n
@@ -90,7 +92,7 @@ def diff_stddev( diffmean, ita, itb ):
 		delta = a - b - diffmean
 		sum += delta ** 2
 
-	if n < 2:
+	if n < 1:
 		return 0.0
 	else:
 		return sqrt( sum / (n - 1) )
@@ -131,7 +133,7 @@ def avr(data):
         # sanity check (data should already be sorted)
         assert(minimum <= maximum)
 
-        mean, stderr = sample_mean(data)
+        mean, stddev, stderr = sample_mean(data)
 
         med, lowerhalf, upperhalf = median(data)
 
@@ -283,7 +285,7 @@ def ttest_table( data1,
 
     # {C-colname,table}, where colname is min, max, or mean
     result = dict( [__createTable('-'.join( C_col ))
-		    for C_col in itertools.product(regions, input_colnames)] )
+		    for C_col in iterators.product(regions, input_colnames)] )
     
     for C in regions:
         for t in timesteps:
