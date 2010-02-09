@@ -19,7 +19,7 @@ import numpy
 ### Now initialize some global variables
 ##OutputFilename = common_complexity.FILENAME_AVR
 OutputFilename = common_metric.FILENAME_AVR
-OutputFilename1 = common_metric.RANDOMFILENAME_AVR
+OutputFilenameRandom = common_metric.RANDOMFILENAME_AVR
 NUMBINS = common_metric.DEFAULT_NUMBINS
 RandomN = 0
 DefaultRecent = 'Recent'
@@ -146,7 +146,7 @@ def __analyze_recent_dir(metrics, recent_dir, random):
         global RandomN
 
         if random:
-                outputpath = os.path.join(recent_dir, "AvrMetricRandom.plt" )
+                outputpath = os.path.join(recent_dir, OutputFilenameRandom )
         else:
                 outputpath = os.path.join(recent_dir, OutputFilename)
                         
