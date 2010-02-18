@@ -4,9 +4,9 @@ import os
 import common_functions
 import datalib
 
-METRIC_TYPES = ['CC', 'SP']
-METRIC_NAMES = {'CC':'Clustering Coefficient', 'SP':'Shortest Path'}
-DEFAULT_METRICS = ['CC', 'SP']
+METRIC_TYPES = ['CC', 'SP', 'CP', 'SW']
+METRIC_NAMES = {'CC':'Clustering Coefficient', 'SP':'Normalized Shortest Path', 'CP': 'Characteristic Path Length', 'SW': 'Small World Index'}
+DEFAULT_METRICS = ['CC', 'SP', 'CP', 'SW']
 FILENAME_AVR = 'AvrMetric.plt'
 RANDOMFILENAME_AVR = 'AvrMetricRandom.plt'
 DEFAULT_NUMBINS = 11
