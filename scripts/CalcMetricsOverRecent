@@ -41,7 +41,7 @@ def main():
 	recent_subpath = os.path.join('brain', recent_type)
 	try:
 		run_paths = common_functions.find_run_paths(arg_paths,
-							    recent_subpath)
+								recent_subpath)
 	except common_functions.InvalidDirError, e:
 		show_usage(str(e))
 
@@ -77,7 +77,8 @@ def parse_args(argv):
 		show_usage()
 
 	metrics = common_metric.DEFAULT_METRICS#'CC' represents clustering coefficient
-	                              #and 'SP' represents shortest path length
+								  #and 'SP' represents (normalized) shortest path length
+								  #and 'CP' represents charateristic path length
 
 
 	recent_type = DefaultRecent
@@ -96,8 +97,8 @@ def parse_args(argv):
 		if opt == 'D':
 			try:
 				recent_type = common_functions.expand_abbreviations( value,
-										     common_functions.RECENT_TYPES,
-										     case_sensitive = False )
+											 common_functions.RECENT_TYPES,
+											 case_sensitive = False )
 			except common_functions.IllegalAbbreviationError, x:
 				err(str(x))
 		elif opt == 'V':
@@ -130,27 +131,54 @@ def parse_args(argv):
 ###
 ####################################################################################
 def analyze_recent_dir(metrics, recent_dir):
-        global RandomN
-
-	__analyze_recent_dir(metrics, recent_dir, random = False)
+	global RandomN
+	
+	metrics_first = metrics
+	
 	if RandomN > 0:
-		__analyze_recent_dir(metrics, recent_dir, random = True)
+		print 'Will calculate random metrics after all actual metrics are calculated'
+	
+	if 'SW' in metrics:
+		print 'Will calculate SW (if needed) after all other actual and random metrics are calculated'
+		print "    This causes a recalculation of the other metrics' averages, but not of the metrics themselves"
+		metrics_first.remove('SW')
 
+	__analyze_recent_dir(metrics_first, recent_dir, random = False)
+	if RandomN > 0:
+		__analyze_recent_dir(metrics_first, recent_dir, random = True)
+
+	# This is an awful hack, because all other actual metrics must be
+	# re-averaged from the <epoch>/metric_*.plt files to produce the
+	# AvrMetric.plt file.  But it's no less time consuming than running
+	# the script twice by hand, first for CC, SP, and CP (actual and
+	# random), and then running it again for CC, SP, CP, and SW.  And
+	# unfortunately, the way things are set up, the <epoch>/metric_*.plt
+	# files must already be in place for CC and SP before SW can be
+	# computed.
+	#
+	# The right way to do this would be to have any newly calculated
+	# metrics be added to the existing AvrMetric.plt file, but that's
+	# not how it works at present.  Then this could be called with
+	# just ['SW'] instead of metrics, and only SW would be computed.
+
+	if 'SW' in metrics:
+		__analyze_recent_dir(metrics, recent_dir, random = False)
+	
 
 
 ####################################################################################
 ###
-### analyze_recent_dir()
+### __analyze_recent_dir()
 ###
 ####################################################################################
 def __analyze_recent_dir(metrics, recent_dir, random):
-        global RandomN
-
-        if random:
-                outputpath = os.path.join(recent_dir, OutputFilenameRandom )
-        else:
-                outputpath = os.path.join(recent_dir, OutputFilename)
-                        
+	global RandomN
+	
+	if random:
+		outputpath = os.path.join(recent_dir, OutputFilenameRandom )
+	else:
+		outputpath = os.path.join(recent_dir, OutputFilename)
+						
 	
 	print "- recent directory='%s'" %(recent_dir)
 	print "- output='%s'" % (outputpath)
@@ -200,7 +228,7 @@ def __analyze_recent_dir(metrics, recent_dir, random):
 							   tdata,
 							   random)
 			metrics_remaining = list_difference(metrics_remaining,
-							    metrics_computed)
+								metrics_computed)
 
 		assert(len(metrics_remaining) == 0)
 
@@ -210,8 +238,8 @@ def __analyze_recent_dir(metrics, recent_dir, random):
 	#--
 	#-----------------------------------------------------------------------------------
 	AVR = algorithms.avr_table(DATA,
-                                   metrics,
-				   timesteps)
+							   metrics,
+							   timesteps)
 	
 	datalib.write(outputpath, AVR)
 	
@@ -222,11 +250,11 @@ def __analyze_recent_dir(metrics, recent_dir, random):
 ##	#--
 ##	#-----------------------------------------------------------------------------------
 ##	tables = compute_bins(DATA,
-##			      timesteps,
-##			      metrics,
-##			      AVR,
-##			      lambda row: row.get('min'),
-##			      lambda row: row.get('max'))
+##				  timesteps,
+##				  metrics,
+##				  AVR,
+##				  lambda row: row.get('min'),
+##				  lambda row: row.get('max'))
 ##	
 ##	outputpath = os.path.join(recent_dir, OutputFilename2.replace( '.', 'Norm.'))
 ##	
@@ -249,11 +277,11 @@ def __analyze_recent_dir(metrics, recent_dir, random):
 ##			MINGLOBAL[type] = min(MINGLOBAL[type], row.get('min'));
 ##	
 ##	tables = compute_bins(DATA,
-##			      timesteps,
-##			      metrics,
-##			      AVR,
-##			      lambda row: MINGLOBAL[row.table.name],
-##			      lambda row: MAXGLOBAL[row.table.name])
+##				  timesteps,
+##				  metrics,
+##				  AVR,
+##				  lambda row: MINGLOBAL[row.table.name],
+##				  lambda row: MAXGLOBAL[row.table.name])
 ##	
 ##	outputpath = os.path.join(recent_dir, OutputFilename2.replace( '.', 'Raw.'))
 ##	
@@ -262,13 +290,57 @@ def __analyze_recent_dir(metrics, recent_dir, random):
 
 ####################################################################################
 ###
+### FUNCTION compute_small_world_index()
+###
+####################################################################################
+def compute_small_world_index(timestep_directory):
+	def __list_division(a,b):
+		assert(len(a) == len(b))
+		c = []
+		for i in range(len(a)):
+			c.append(float(a[i])/float(b[i]))
+		return c
+	
+	# Check if all needed data is available
+	metric_files = glob.glob(os.path.join(timestep_directory, "*.plt"))
+	sw_metric_files = ['metric_CC.plt','metric_CC_Random.plt','metric_SP.plt','metric_SP_Random.plt']
+	sw_files = []
+	for e in sw_metric_files:
+		temp_file = os.path.join(timestep_directory, e)
+		sw_files.append(temp_file)
+	if common_functions.list_intersection(sw_files, metric_files) != sw_files:
+		err('Must have actual and random clustering coefficient and characteristic path length to calculate small world index!')
+		return []
+	else:
+		sw_metrics = []
+		for sw_file in sw_files:
+			if 'CC' in sw_file:
+				type = 'CC'
+			else:
+				type = 'SP'
+			table = datalib.parse(sw_file)[type]
+			try:
+				data = table.getColumn('Mean').data
+			except KeyError, x:
+				# Maybe it's of an older format
+				data = table.getColumn('Metric').data
+			sw_metrics.append(data)	 # So sw_metrics = [CC,CC_Random,SP,SP_Random]
+
+		g = __list_division(sw_metrics[0], sw_metrics[1])
+		l = __list_division(sw_metrics[2], sw_metrics[3])
+		s = __list_division(g, l)
+		return s
+
+
+####################################################################################
+###
 ### FUNCTION compute_metrics()
 ###
 ####################################################################################
 def compute_metrics(metrics,
-		    timestep_directory,
-		    tdata,
-		    random):
+					timestep_directory,
+					tdata,
+					random):
 	global RandomN
 
 	def __path(type):
@@ -277,62 +349,69 @@ def compute_metrics(metrics,
 
 	# --- Read in any metrics computed on a previous invocation of this script
 	metrics_read = []
-	if not random:
-		for type in metrics:
-			path = __path(type)
+	for type in metrics:
+		path = __path(type)
 
-			if os.path.isfile(path):
+		if os.path.isfile(path):
+			try:
+				table = datalib.parse(path)[type]
 				try:
-					table = datalib.parse(path)[type]
-					try:
-						data = table.getColumn('Mean').data
-					except KeyError, x:
-						# Maybe it's of an older format
-						data = table.getColumn('Metric').data
-					tdata[type] = common_metric.normalize_metrics(data)
+					data = table.getColumn('Mean').data
+				except KeyError, x:
+					# Maybe it's of an older format
+					data = table.getColumn('Metric').data
+				tdata[type] = common_metric.normalize_metrics(data)
+
+				metrics_read.append(type)
+			except datalib.InvalidFileError, e:
+				# file must have been incomplete
+				print "Failed reading ", path, "(", e, ") ... regenerating"
+		
+	metrics_remaining = list_difference(metrics, metrics_read)
 	
-					metrics_read.append(type)
-				except datalib.InvalidFileError, e:
-					# file must have been incomplete
-					print "Failed reading ", path, "(", e, ") ... regenerating"
-	
-	    
-	metrics_remaining = list_difference(metrics,
-					    metrics_read)
-	
-	print "  AlreadyHave =", metrics_read
-	print "  MetricsToGet =", metrics_remaining
+	print "	 AlreadyHave =", metrics_read
+	print "	 MetricsToGet =", metrics_remaining
 
 	# --- Compute metrics not already found on the file system
-	if metrics_remaining:
+	if metrics_remaining:						
 		# --- Execute CalcMetric on all corresponding brainAnatomy files in anatomy dir
 		brainFunction_files = glob.glob(os.path.join(timestep_directory, "brainFunction*.txt"))
-##		brainFunction_files.sort(lambda x, y: cmp(int(os.path.basename(x)[14:-4]),
-##							  int(os.path.basename(y)[14:-4])))
 		#Extract critter number from brainFunction files
 		number_list = map(lambda x: int(os.path.basename(x)[14:-4]), brainFunction_files)
-                
-                anatomy_directory = os.path.join(timestep_directory, "..", "..", "anatomy")
+				
+		anatomy_directory = os.path.join(timestep_directory, "..", "..", "anatomy")
 		brainAnatomy_files_all = glob.glob(os.path.join(anatomy_directory, "*death.txt"))
 
-                #Pick out those brainAnatomy files with corresponding critter number to brainFunction files.
-                brainAnatomy_files = []
+		#Pick out those brainAnatomy files with corresponding critter number to brainFunction files.
+		brainAnatomy_files = []
 		for anatomyFile in brainAnatomy_files_all:
-                        if int(os.path.basename(anatomyFile)[13:-10]) in number_list:
-                                brainAnatomy_files.append(anatomyFile)
-                                               
+			if int(os.path.basename(anatomyFile)[13:-10]) in number_list:
+				brainAnatomy_files.append(anatomyFile)
+											   
 		brainAnatomy_files.sort(lambda x, y: cmp(int(os.path.basename(x)[13:-10]),
 							  int(os.path.basename(y)[13:-10])))
 		if len(brainAnatomy_files) == 0:
 			err('No brainanatomy files found in %s' % anatomy_directory)
 
-                metric_all = calc_metrics(metrics_remaining, brainAnatomy_files, random)
+		if 'SW' in metrics_remaining:  # SW is being computed (always by itself)
+			if len(metrics_remaining) > 1:
+				err('SW metric being computed at same time as other metrics')
+			metric_all = []
+			i = 0
+			for anatomy_file in brainAnatomy_files:
+				agent = os.path.basename(anatomy_file)[13:-10]
+				result = {}
+				result['SW'] = [compute_small_world_index(timestep_directory)]
+				metric_all.append({'agent': agent, 'metrics': result})
+				i += 1
+		else:
+			metric_all = calc_metrics(metrics_remaining, brainAnatomy_files, random)
 	
 		colnames = ['AgentNumber', 'SampSize', 'Mean', 'StdDev']
 		coltypes = ['int', 'int', 'float', 'float']
 
 		tables = dict([(type, datalib.Table(type, colnames, coltypes))
-			       for type in metrics_remaining])
+				   for type in metrics_remaining])
 
 		for agent_results in metric_all:
 			agent = agent_results['agent']
@@ -356,8 +435,7 @@ def compute_metrics(metrics,
 		for type in metrics_remaining:
 			table = tables[type]
 	
-			datalib.write(__path(type),
-				      table)
+			datalib.write(__path(type), table)
 	
 			data = table.getColumn('Mean').data
 	
@@ -371,36 +449,34 @@ def compute_metrics(metrics,
 ### FUNCTION calc_metrics()
 ###
 ####################################################################################
-def calc_metrics(metrics,anatomy_files, random):
-        global RandomN
-        metric_all = []
-
-        for anatomy_file in anatomy_files:
+def calc_metrics(metrics, anatomy_files, random):
+	global RandomN
+	metric_all = []
+	
+	for anatomy_file in anatomy_files:
 		agent = os.path.basename(anatomy_file)[13:-10]
-		result = dict([(metric, [])
-			       for metric in metrics])
+		result = dict([(metric, []) for metric in metrics])
+	
+		# Transform the anatomy file content into numpy adjacency matrix
+		infile = open(anatomy_file,"r")
+		lines = infile.readlines()
+		lines.pop(0) # drop the header line
 
-                #Transform the anatomy file content into numpy adjacency matrix
-                infile = open(anatomy_file,"r")
-                lines = infile.readlines()
-                lines.pop(0)
+		H = []
+		for i in range(len(lines)-1):  # -1 to leave out the bias unit
+			l = lines[i].split()
+			l.remove(';')
+			g = []
+			for j in range(len(l)-1):  # -1 to leave out the bias links
+				g.append(abs(float(l[j])))
+			H.append(g)
+		B = numpy.matrix(H)
 
-                H = []
-                for l in lines:
-                    g = []
-                    l = l.split()
-                    l.remove(';')
-                    for e in l:
-                        g.append(abs(float(e)))
-
-                    H.append(g)
-
-                B = numpy.matrix(H)
-                #G_Dir = nx.from_numpy_matrix(B,nx.DiGraph())#Geneterate directed version of brain network
-                G_Undir = nx.from_numpy_matrix(B,nx.Graph())#Generate undirected version of brain network
-
+		#G_Dir = nx.from_numpy_matrix(B,nx.DiGraph())  # Geneterate directed version of brain network
+		G_Undir = nx.from_numpy_matrix(B,nx.Graph())  # Generate undirected version of brain network
+	
 		N = RandomN if random else 1
-
+		
 		for i in range(N):
 			if random:
 				num_nodes = G_Undir.number_of_nodes()
@@ -408,23 +484,26 @@ def calc_metrics(metrics,anatomy_files, random):
 				G = nx.gnm_random_graph(num_nodes,num_edges)
 			else:
 				G = G_Undir
-
-                        if 'CC' in metrics:
-				#need to calculate average clustering coeffcient
-                                avr_clustering = nx.average_clustering(G)
+		
+			if 'CC' in metrics:
+				# need to calculate average clustering coefficient
+				avr_clustering = nx.average_clustering(G)
 				result['CC'].append( avr_clustering )
+	
+			if 'SP' in metrics:
+				# need to calculate normalized average shortest path length
+				avr_shortest_path_length = nx.normalized_average_shortest_path_length(G,weighted=False)
+				result['SP'].append( avr_shortest_path_length )						   
 
-                        if 'SP' in metrics:
-				#need to calculate average shortest path length
-                                avr_shortest_path_length = nx.normalized_average_shortest_path_length(G,weighted=False)
-				result['SP'].append( avr_shortest_path_length )                        
-
-		metric_all.append({'agent': agent,
-				   'metrics': result})
-
-
-        return metric_all
-                        
+			if 'CP' in metrics:
+				# need to calculate characteristic path length
+				char_shortest_path_length = nx.average_shortest_path_length(G,weighted=False)
+				result['CP'].append( char_shortest_path_length )
+		
+		metric_all.append({'agent': agent, 'metrics': result})
+	
+	return metric_all
+						
 			 
 ####################################################################################
 ###
@@ -518,16 +597,17 @@ OPTIONS
 
                CC - Clustering Coefficient
                SP - (Normalized) Shortest Path length
+               CP - Characteristic Path Length
 
             (default %s)""" % (sys.argv[0],
-			       '\n               '.join(['']+common_functions.RECENT_TYPES),
-			       DefaultRecent,
-			       ','.join(common_metric.DEFAULT_METRICS))
+				   '\n				 '.join(['']+common_functions.RECENT_TYPES),
+				   DefaultRecent,
+				   ','.join(common_metric.DEFAULT_METRICS))
 
-        if msg:
-            print "--------------------------------------------------------------------------------"
-            print
-            print 'Error!', msg
+	if msg:
+		print "--------------------------------------------------------------------------------"
+		print
+		print 'Error!', msg
 	sys.exit(1)
 
 ####################################################################################
