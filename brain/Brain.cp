@@ -1411,7 +1411,7 @@ void Brain::Grow( Genome* g )
             ineur = ini + firsteneur[i];
 
 #if DebugBrainGrow
-		if( DebugBrainGrowPrint )
+			if( DebugBrainGrowPrint )
 				cout << "  For ini, ineur = "
 					 << ini cms ineur << ":" nlf;
 #endif
