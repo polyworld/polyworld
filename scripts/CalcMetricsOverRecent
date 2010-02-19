@@ -161,9 +161,11 @@ def analyze_recent_dir(metrics, recent_dir):
 	# not how it works at present.  Then this could be called with
 	# just ['SW'] instead of metrics, and only SW would be computed.
 
+	# There is no Random clause, because this is really only for SW,
+	# which has no meaning for Random graph metrics.
 	if 'SW' in metrics:
 		__analyze_recent_dir(metrics, recent_dir, random = False)
-	
+
 
 
 ####################################################################################
@@ -329,6 +331,7 @@ def compute_small_world_index(timestep_directory):
 		g = __list_division(sw_metrics[0], sw_metrics[1])
 		l = __list_division(sw_metrics[2], sw_metrics[3])
 		s = __list_division(g, l)
+		
 		return s
 
 
@@ -373,7 +376,7 @@ def compute_metrics(metrics,
 	print "	 MetricsToGet =", metrics_remaining
 
 	# --- Compute metrics not already found on the file system
-	if metrics_remaining:						
+	if metrics_remaining:
 		# --- Execute CalcMetric on all corresponding brainAnatomy files in anatomy dir
 		brainFunction_files = glob.glob(os.path.join(timestep_directory, "brainFunction*.txt"))
 		#Extract critter number from brainFunction files
@@ -393,20 +396,30 @@ def compute_metrics(metrics,
 		if len(brainAnatomy_files) == 0:
 			err('No brainanatomy files found in %s' % anatomy_directory)
 
-		if 'SW' in metrics_remaining:  # SW is being computed (always by itself)
-			if len(metrics_remaining) > 1:
-				err('SW metric being computed at same time as other metrics')
+		metrics_to_compute = metrics_remaining[:]
+		if 'SW' in metrics_to_compute:
+			metrics_to_compute.remove('SW')
+		if metrics_to_compute:  # computing something besides SW		
+			metric_all = calc_metrics(metrics_to_compute, brainAnatomy_files, random)
+			if 'SW' in metrics_remaining:  # also need to compute SW (from the other metrics)
+				sw = compute_small_world_index(timestep_directory)
+				i = 0
+				for agent_results in metric_all:
+					agent_results['metrics']['SW'] = [sw[i]]
+					i += 1		
+		elif 'SW' in metrics_remaining:  # computing just SW (from the other metrics)
+			sw = compute_small_world_index(timestep_directory)
 			metric_all = []
 			i = 0
 			for anatomy_file in brainAnatomy_files:
 				agent = os.path.basename(anatomy_file)[13:-10]
 				result = {}
-				result['SW'] = [compute_small_world_index(timestep_directory)]
+				result['SW'] = [sw[i]]
 				metric_all.append({'agent': agent, 'metrics': result})
 				i += 1
-		else:
-			metric_all = calc_metrics(metrics_remaining, brainAnatomy_files, random)
-	
+		else:  # not computing anything (should never happen)
+			metric_all = []
+
 		colnames = ['AgentNumber', 'SampSize', 'Mean', 'StdDev']
 		coltypes = ['int', 'int', 'float', 'float']
 
