@@ -133,7 +133,7 @@ def parse_args(argv):
 def analyze_recent_dir(metrics, recent_dir):
 	global RandomN
 	
-	metrics_first = metrics
+	metrics_first = metrics[:]
 	
 	if RandomN > 0:
 		print 'Will calculate random metrics after all actual metrics are calculated'
