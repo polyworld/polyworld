@@ -48,10 +48,10 @@ def parse_args():
 		exit(2)
 
 	if len(args) == 1:
-		source_dir = args[0].strip('/')
+		source_dir = args[0].rstrip('/')
 	elif len(args) == 2:
-		source_dir = args[0].strip('/')
-		target_dir = args[1].strip('/')
+		source_dir = args[0].rstrip('/')
+		target_dir = args[1].rstrip('/')
 		target_dir_specified = True
 	elif len(args) > 2:
 		print "Error - too many arguments: ",
