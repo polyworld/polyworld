@@ -15,8 +15,9 @@ class StyleGroup:
     DOTTED = 0
     SOLID = 1
     DASHED = 2
+    HASHED = 3
     DASHDOT = 5
-    LINE_TYPES = [SOLID, DASHED, DOTTED, DASHDOT] * 4
+    LINE_TYPES = [SOLID, DASHED, DOTTED, DASHDOT, HASHED] * 4
 
     THIN = 1
     THICK = 3.5

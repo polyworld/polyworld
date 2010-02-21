@@ -67,7 +67,7 @@ def parse_legacy_complexities(path):
 ### FUNCTION relpath_avr()
 ###
 ####################################################################################
-def relpath_avr(recent_type, not_used):
+def relpath_avr(classification, recent_type):
     return os.path.join('brain', recent_type, FILENAME_AVR)
 
 ####################################################################################
@@ -75,16 +75,16 @@ def relpath_avr(recent_type, not_used):
 ### FUNCTION path_avr()
 ###
 ####################################################################################
-def path_avr(path_run, recent_type, not_used):
-    return os.path.join(path_run, relpath_avr(recent_type, not_used))
+def path_avr(path_run, classification, recent_type):
+    return os.path.join(path_run, relpath_avr(classification, recent_type))
 
 ####################################################################################
 ###
 ### FUNCTION path_run_from_avr()
 ###
 ####################################################################################
-def path_run_from_avr(path_avr, recent_type, not_used):
-    suffix = relpath_avr(recent_type, not_used)
+def path_run_from_avr(path_avr, classification, recent_type):
+    suffix = relpath_avr(classification, recent_type)
 
     return path_avr[:-(len(suffix) + 1)]
 
@@ -93,9 +93,9 @@ def path_run_from_avr(path_avr, recent_type, not_used):
 ### FUNCTION parse_avrs
 ###
 ####################################################################################
-def parse_avrs(run_paths, recent_type, complexities, run_as_key = False, not_used = True):
+def parse_avrs(run_paths, classification, recent_type, complexities, run_as_key = False):
     # parse the AVRs for all the runs
-    avrs = datalib.parse_all( map(lambda x: path_avr( x, recent_type, not_used ),
+    avrs = datalib.parse_all( map(lambda x: path_avr( x, classification, recent_type ),
                                   run_paths),
                               complexities,
                               datalib.REQUIRED,
@@ -103,7 +103,7 @@ def parse_avrs(run_paths, recent_type, complexities, run_as_key = False, not_use
 
     if run_as_key:
         # modify the map to use run dir as key, not Avr file
-        avrs = dict( [(path_run_from_avr( x[0], recent_type, not_used ),
+        avrs = dict( [(path_run_from_avr( x[0], classification, recent_type ),
                        x[1])
                       for x in avrs.items()] )
 

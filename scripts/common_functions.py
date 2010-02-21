@@ -127,7 +127,10 @@ def classify_run(path_run,
 	# Random
 	#
 	if common_metric.has_random( path_run ):
-		classifications.append('Random')
+		if ( ('Driven' in constraints and 'Driven' in classifications) or
+			 ('Passive' in constraints and 'Passive' in classifications) or
+			 ('Driven' not in constraints and 'Passive' not in constraints) ):
+			classifications.append('Random')
               
 	#
 	# Apply Constraints

@@ -14,16 +14,16 @@ import plotlib
 from plotmode import MODES, ismode, expandmode
 
 ################################################################################
-#TCRIT = 2.132  # 95% confidence for 4 degrees of freedom (5 pairs of points)
-TCRIT_DEFAULT = (1.833,20,10)   # 95% confidence for 9 degrees of freedom (10 pairs of points)
-#TCRIT = 1.796  # 95% confidence for 11 degrees of freedom (12 pairs of points)
+#TCRIT = 2.132	# 95% confidence for 4 degrees of freedom (5 pairs of points)
+TCRIT_DEFAULT = (1.833,20,10)	# 95% confidence for 9 degrees of freedom (10 pairs of points)
+#TCRIT = 1.796	# 95% confidence for 11 degrees of freedom (12 pairs of points)
 ################################################################################
 
 DEFAULT_OUTPUT = './plot.eps'
 CLASSIFICATION_LINETYPES = {'Driven': plotlib.StyleGroup.SOLID,
-                            'Passive': plotlib.StyleGroup.DASHED,
-                            'Fitness': plotlib.StyleGroup.DASHDOT,
-                            'Random': plotlib.StyleGroup.DOTTED}
+							'Passive': plotlib.StyleGroup.DASHED,
+							'Fitness': plotlib.StyleGroup.DASHDOT,
+							'Random': plotlib.StyleGroup.HASHED}
 
 # Please, please, please do not start using this as a general global
 mode_usage = None
@@ -34,96 +34,96 @@ mode_usage = None
 ###
 ####################################################################################
 def main():
-    #---
-    #--- Process command-line arguments
-    #---
-    clauses, groups, arg_paths = parse_args( sys.argv[1:] )
+	#---
+	#--- Process command-line arguments
+	#---
+	clauses, groups, arg_paths = parse_args( sys.argv[1:] )
 
-    run_paths, classified_runs = classify_runs( arg_paths,
-                                                groups )
+	run_paths, classified_runs = classify_runs( arg_paths,
+												groups )
 
-    arg_dirs = common_functions.truncate_paths(arg_paths)
-    run_dirs = common_functions.truncate_paths(run_paths)
+	arg_dirs = common_functions.truncate_paths(arg_paths)
+	run_dirs = common_functions.truncate_paths(run_paths)
 
-    print run_paths
-    print classified_runs
+	print run_paths
+	print classified_runs
 
-    #---
-    #--- Iterate over clauses
-    #---
-    for clause in clauses:
-        mode = clause.mode
-        options = clause.options
-        value_names = clause.value_names
-        dataset = clause.dataset
+	#---
+	#--- Iterate over clauses
+	#---
+	for clause in clauses:
+		mode = clause.mode
+		options = clause.options
+		value_names = clause.value_names
+		dataset = clause.dataset
 
-        #---
-        #--- Parse & classify (e.g. Driven/Passive) runs
-        #---
-        clause.values_classified = get_values( mode,
-                                               classified_runs,
-                                               dataset,
-                                               value_names )
+		#---
+		#--- Parse & classify (e.g. Driven/Passive) runs
+		#---
+		clause.values_classified = get_values( mode,
+											   classified_runs,
+											   dataset,
+											   value_names )
 
-        clause.groups = clause.values_classified.keys()
+		clause.groups = clause.values_classified.keys()
 
-        #---
-        #--- Compute Meta
-        #---
-        clause.values_meta = get_meta( mode,
-                                       options,
-                                       value_names,
-                                       clause.values_classified )
+		#---
+		#--- Compute Meta
+		#---
+		clause.values_meta = get_meta( mode,
+									   options,
+									   value_names,
+									   clause.values_classified )
 
-        #---
-        #--- Compute T-test
-        #---
-        clause.ttest, clause.groups_ttest = get_ttest( mode,
-                                                       options,
-                                                       value_names,
-                                                       clause.values_classified )
+		#---
+		#--- Compute T-test
+		#---
+		clause.ttest, clause.groups_ttest = get_ttest( mode,
+													   options,
+													   value_names,
+													   clause.values_classified )
 
-    #---
-    #--- Create macros
-    #---
-    macros = get_macros( clauses,
-                         arg_paths,
-                         arg_dirs,
-                         run_paths,
-                         run_dirs )
+	#---
+	#--- Create macros
+	#---
+	macros = get_macros( clauses,
+						 arg_paths,
+						 arg_dirs,
+						 run_paths,
+						 run_dirs )
 
-    #---
-    #--- Plot
-    #---
-    doc, plot, colordict, pathdict = plot_init( clauses,
-                                                macros,
-                                                run_paths,
-                                                run_dirs )
+	#---
+	#--- Plot
+	#---
+	doc, plot, colordict, pathdict = plot_init( clauses,
+												macros,
+												run_paths,
+												run_dirs )
 
-    clauses[0].yaxis = 1
-    if len(clauses) > 1:
-        clauses[1].yaxis = 2
+	clauses[0].yaxis = 1
+	if len(clauses) > 1:
+		clauses[1].yaxis = 2
 
-    for clause in clauses:
-        plot_clause( doc,
-                     plot,
-                     colordict,
-                     str(clause.index) + '-',
-                     pathdict,
-                     clause.mode,
-                     clause.options,
-                     macros,
-                     clause.dataset,
-                     clause.yaxis,
-                     run_paths,
-                     run_dirs,
-                     clause.value_names,
-                     clause.values_classified,
-                     clause.values_meta,
-                     clause.ttest )
+	for clause in clauses:
+		plot_clause( doc,
+					 plot,
+					 colordict,
+					 str(clause.index) + '-',
+					 pathdict,
+					 clause.mode,
+					 clause.options,
+					 macros,
+					 clause.dataset,
+					 clause.yaxis,
+					 run_paths,
+					 run_dirs,
+					 clause.value_names,
+					 clause.values_classified,
+					 clause.values_meta,
+					 clause.ttest )
 
-    plot_complete( clauses[0].options['global'],
-                   doc )
+	plot_complete( clauses[0].options['global'],
+				   doc )
 
 ####################################################################################
 ###
@@ -131,259 +131,259 @@ def main():
 ###
 ####################################################################################
 def parse_args(argv):
-    global mode_usage
+	global mode_usage
 
-    class ModeClause:
-        def __init__( self,
-                      mode,
-                      index,
-                      options,
-                      value_names,
-                      dataset ):
-            self.mode = mode
-            self.index = index
-            self.options = options
-            self.value_names = value_names
-            self.dataset = dataset
+	class ModeClause:
+		def __init__( self,
+					  mode,
+					  index,
+					  options,
+					  value_names,
+					  dataset ):
+			self.mode = mode
+			self.index = index
+			self.options = options
+			self.value_names = value_names
+			self.dataset = dataset
 
-    # ---
-    # --- OPT CONSTANTS
-    # ---
-    FLAGS_GLOBAL = {'d': 'points',
-                    'dots': 'points',
-                    'points': 'points',
-                    's': 'smooth',
-                    'smooth': 'smooth',
-                    'l': 'legendOn',
-                    'legend': 'legendOn',
-                    'L': 'metaLegendOff',
-                    'nolegend': 'metaLegendOff',
-                    'v': 'noview',
-                    'noview': 'noview',
-                    'c': 'color',
-                    'color': 'color',
-                    'verbose': 'verbose',
-                    'p': 'pval',
-                    'pval': 'pval',
-                    't': 'tval',
-                    'tval': 'tval'}
-    ARGS_GLOBAL = {'g': 'group',
-                   'group': 'group',
-                   'o': 'output',
-                   'title': 'title',
-                   'xlabel': 'xlabel',
-                   'ylabel1': 'ylabel1',
-                   'ylabel2': 'ylabel2',
-                   'rmargin': 'rmargin',
-                   'tcrit': 'tcrit'}
+	# ---
+	# --- OPT CONSTANTS
+	# ---
+	FLAGS_GLOBAL = {'d': 'points',
+					'dots': 'points',
+					'points': 'points',
+					's': 'smooth',
+					'smooth': 'smooth',
+					'l': 'legendOn',
+					'legend': 'legendOn',
+					'L': 'metaLegendOff',
+					'nolegend': 'metaLegendOff',
+					'v': 'noview',
+					'noview': 'noview',
+					'c': 'color',
+					'color': 'color',
+					'verbose': 'verbose',
+					'p': 'pval',
+					'pval': 'pval',
+					't': 'tval',
+					'tval': 'tval'}
+	ARGS_GLOBAL = {'g': 'group',
+				   'group': 'group',
+				   'o': 'output',
+				   'title': 'title',
+				   'xlabel': 'xlabel',
+				   'ylabel1': 'ylabel1',
+				   'ylabel2': 'ylabel2',
+				   'rmargin': 'rmargin',
+				   'tcrit': 'tcrit'}
 
-    FLAGS_AVR = {'w': 'whiskers',
-                 'whiskers': 'whiskers',
-                 'm': 'mean',
-                 'mean': 'mean',
-                 'n': 'min',
-                 'min': 'min',
-                 'x': 'max',
-                 'max': 'max',
-                 'e': 'errorbars',
-                 'err': 'errorbars'}
-    ARGS_AVR = {}
+	FLAGS_AVR = {'w': 'whiskers',
+				 'whiskers': 'whiskers',
+				 'm': 'mean',
+				 'mean': 'mean',
+				 'n': 'min',
+				 'min': 'min',
+				 'x': 'max',
+				 'max': 'max',
+				 'e': 'errorbars',
+				 'err': 'errorbars'}
+	ARGS_AVR = {}
 
-    FLAGS_AVR_META = dict([(x[0].capitalize(), x[1]) for x in FLAGS_AVR.items()])
-    ARGS_AVR_META = {}
+	FLAGS_AVR_META = dict([(x[0].capitalize(), x[1]) for x in FLAGS_AVR.items()])
+	ARGS_AVR_META = {}
 
-    # ---
-    # --- Help
-    # ---
-    if len(argv) == 0:
-        show_usage()
-    elif argv[0] == 'help':
-        if len(argv) > 1:
-            show_usage( arg = argv[1] )
-        else:
-            show_usage()
+	# ---
+	# --- Help
+	# ---
+	if len(argv) == 0:
+		show_usage()
+	elif argv[0] == 'help':
+		if len(argv) > 1:
+			show_usage( arg = argv[1] )
+		else:
+			show_usage()
 
-    # ---
-    # --- Parse ':'
-    # ---
-    argv_modes = []
-    for arg in argv:
-        if arg == ':' or len(argv_modes) == 0:
-            argv_mode = []
-            argv_modes.append( argv_mode )
-        
-        if arg != ':':
-            argv_mode.append( arg )
+	# ---
+	# --- Parse ':'
+	# ---
+	argv_modes = []
+	for arg in argv:
+		if arg == ':' or len(argv_modes) == 0:
+			argv_mode = []
+			argv_modes.append( argv_mode )
+		
+		if arg != ':':
+			argv_mode.append( arg )
 
-    if len(argv_modes) > 2:
-        err( "Only two clauses currently supported." )
+	if len(argv_modes) > 2:
+		err( "Only two clauses currently supported." )
 
-    # ---
-    # --- Process Modes
-    # ---
-    clauses = []
-    gopts = plotlib.Options(FLAGS_GLOBAL, ARGS_GLOBAL)
-    gargs = []
+	# ---
+	# --- Process Modes
+	# ---
+	clauses = []
+	gopts = plotlib.Options(FLAGS_GLOBAL, ARGS_GLOBAL)
+	gargs = []
 
-    for argv in argv_modes:
-        if len(argv) == 0:
-            show_usage( "Missing mode" )
+	for argv in argv_modes:
+		if len(argv) == 0:
+			show_usage( "Missing mode" )
 
-        modestr = argv.pop( 0 )
-        if ismode( modestr ):
-            mode = MODES[expandmode( modestr )]
-            mode_usage = mode
-        else:
-            show_usage( 'Invalid mode (%s)' % modestr )
+		modestr = argv.pop( 0 )
+		if ismode( modestr ):
+			mode = MODES[expandmode( modestr )]
+			mode_usage = mode
+		else:
+			show_usage( 'Invalid mode (%s)' % modestr )
 
-        # ---
-        # --- MODE OPTIONS
-        # ---
-        args_mode = {}
-        flags_mode = {}
+		# ---
+		# --- MODE OPTIONS
+		# ---
+		args_mode = {}
+		flags_mode = {}
 
-        args_curvetypes = {}
-        flags_curvetypes = {}
+		args_curvetypes = {}
+		flags_curvetypes = {}
 
-        args_meta = {}
-        flags_meta = {}
+		args_meta = {}
+		flags_meta = {}
 
-        if len(mode.datasets) > 1:
-            args_mode['D'] = 'dataset'
+		if len(mode.datasets) > 1:
+			args_mode['D'] = 'dataset'
 
-        if len(mode.values) > 1:
-            args_mode['V'] = 'values'
+		if len(mode.values) > 1:
+			args_mode['V'] = 'values'
 
-        if mode.isAvr:
-            args_curvetypes.update( ARGS_AVR )
-            flags_curvetypes.update( FLAGS_AVR )
-            args_meta.update( ARGS_AVR_META )
-            flags_meta.update( FLAGS_AVR_META )
-        elif len(mode.curvetypes) == 1:
-            flags_curvetypes['m'] = mode.defaultCurvetype
-            flags_meta['M'] = mode.defaultCurvetype
+		if mode.isAvr:
+			args_curvetypes.update( ARGS_AVR )
+			flags_curvetypes.update( FLAGS_AVR )
+			args_meta.update( ARGS_AVR_META )
+			flags_meta.update( FLAGS_AVR_META )
+		elif len(mode.curvetypes) == 1:
+			flags_curvetypes['m'] = mode.defaultCurvetype
+			flags_meta['M'] = mode.defaultCurvetype
 
-        # secret flag
-        args_mode['curvehack'] = 'curvehack'
+		# secret flag
+		args_mode['curvehack'] = 'curvehack'
 
-        # ---
-        # --- PARSE ARGS
-        # ---
-        value_names = []
-        paths = []
-        options = {'global': gopts,
-                   'mode': plotlib.Options(flags_mode, args_mode),
-                   'curvetypes': plotlib.Options(flags_curvetypes, args_curvetypes),
-                   'meta': plotlib.Options(flags_meta, args_meta)}
+		# ---
+		# --- PARSE ARGS
+		# ---
+		value_names = []
+		paths = []
+		options = {'global': gopts,
+				   'mode': plotlib.Options(flags_mode, args_mode),
+				   'curvetypes': plotlib.Options(flags_curvetypes, args_curvetypes),
+				   'meta': plotlib.Options(flags_meta, args_meta)}
 
-        try:
-            short, long = plotlib.getopts_encoding(options.values())
-            opts, args = getopt.getopt(argv, short, long)
-        except getopt.GetoptError, e:
-            show_usage(str(e))
+		try:
+			short, long = plotlib.getopts_encoding(options.values())
+			opts, args = getopt.getopt(argv, short, long)
+		except getopt.GetoptError, e:
+			show_usage(str(e))
 
-        # defer global args processing
-        gargs += args
+		# defer global args processing
+		gargs += args
 
-        plotlib.process_options(options, opts)
-        mopts = options['mode']
-        common_functions._isverbose = gopts.get('verbose')
+		plotlib.process_options(options, opts)
+		mopts = options['mode']
+		common_functions._isverbose = gopts.get('verbose')
 
-        # ---
-        # --- PROCESS MODE OPTIONS
-        # ---
-        if mopts.get( 'curvehack', False ):
-            mode.curvetypes.append( mopts.get('curvehack') )
-            options['curvetypes'].set( mopts.get('curvehack'), True )
+		# ---
+		# --- PROCESS MODE OPTIONS
+		# ---
+		if mopts.get( 'curvehack', False ):
+			mode.curvetypes.append( mopts.get('curvehack') )
+			options['curvetypes'].set( mopts.get('curvehack'), True )
 
-        # determine value_names
-        value_names = mopts.get( 'values', mode.defaultValues ).split( ',' )
+		# determine value_names
+		value_names = mopts.get( 'values', mode.defaultValues ).split( ',' )
 
-        # determine dataset
-        if len(mode.datasets):
-            datasetstr = mopts.get( 'dataset', mode.defaultDataset )
+		# determine dataset
+		if len(mode.datasets):
+			datasetstr = mopts.get( 'dataset', mode.defaultDataset )
 
-            try:
-                dataset = common_functions.expand_abbreviations( datasetstr,
-                                                                 mode.datasets,
-                                                                 case_sensitive = False )
-            except common_functions.IllegalAbbreviationError, x:
-                err(str(x))
-        else:
-            dataset = mode.defaultDataset
+			try:
+				dataset = common_functions.expand_abbreviations( datasetstr,
+																 mode.datasets,
+																 case_sensitive = False )
+			except common_functions.IllegalAbbreviationError, x:
+				err(str(x))
+		else:
+			dataset = mode.defaultDataset
 
-        # default plot if none specified
-        if options['curvetypes'].nset == 0 and options['meta'].nset == 0:
-            options['curvetypes'].set(mode.defaultCurvetype, True)
+		# default plot if none specified
+		if options['curvetypes'].nset == 0 and options['meta'].nset == 0:
+			options['curvetypes'].set(mode.defaultCurvetype, True)
 
-        clauses.append( ModeClause(mode,
-                                   len(clauses),
-                                   options,
-                                   value_names,
-                                   dataset) )
+		clauses.append( ModeClause(mode,
+								   len(clauses),
+								   options,
+								   value_names,
+								   dataset) )
 
-    # ---
-    # --- T-Test
-    # ---
+	# ---
+	# --- T-Test
+	# ---
 
-    # validate tval/pval settings
-    tval = gopts.get('tval', False)
-    pval = gopts.get('pval', False)
+	# validate tval/pval settings
+	tval = gopts.get('tval', False)
+	pval = gopts.get('pval', False)
 
-    if tval and pval:
-        err('Cannot plot t-values and p-values simultaneously.')
-    elif tval or pval:
-        if len( clauses ) > 1:
-            err( "Cannot plot T-test and multiple clauses." )
+	if tval and pval:
+		err('Cannot plot t-values and p-values simultaneously.')
+	elif tval or pval:
+		if len( clauses ) > 1:
+			err( "Cannot plot T-test and multiple clauses." )
 
-    try:
-        tcrit = float( gopts.get('tcrit', TCRIT_DEFAULT[0]) )
-        gopts.set( 'tcrit', tcrit )
-    except ValueError:
-        err("Invalid TCRIT value ("+gopts.get('tcrit')+")")
+	try:
+		tcrit = float( gopts.get('tcrit', TCRIT_DEFAULT[0]) )
+		gopts.set( 'tcrit', tcrit )
+	except ValueError:
+		err("Invalid TCRIT value ("+gopts.get('tcrit')+")")
 
-    for clause in clauses:
-        topts = plotlib.Options( {}, {} )
-        clause.options['ttest'] = topts
+	for clause in clauses:
+		topts = plotlib.Options( {}, {} )
+		clause.options['ttest'] = topts
 
-        # copy flags that affect ttest plotting
-        for opt in clause.mode.curvetypes:
-            topts.set( opt,
-                       clause.options['curvetypes'].get(opt, False) or clause.options['meta'].get(opt, False),
-                       count = False )
+		# copy flags that affect ttest plotting
+		for opt in clause.mode.curvetypes:
+			topts.set( opt,
+					   clause.options['curvetypes'].get(opt, False) or clause.options['meta'].get(opt, False),
+					   count = False )
 
-    # ---
-    # --- GLOBAL ARGS
-    # ---
-    args = gargs
+	# ---
+	# --- GLOBAL ARGS
+	# ---
+	args = gargs
 
-    # process grouping
-    group = gopts.get('group', 'auto')
-    if group == 'auto':
-        groups = list(common_functions.CLASSIFICATIONS)
-        groups.remove( 'Random' ) # Random must be explicitly requested
-    elif group == 'off':
-        if pval or tval:
-            err( "'--group off' incompatible with T-test calculations." )
-        groups = []
-    else:
-        try:
-            group = group.split(',')
-            groups = common_functions.expand_abbreviations( group,
-                                                            common_functions.CLASSIFICATIONS,
-                                                            case_sensitive = False )
-            gopts.set('group', groups, count = False)
-        except common_functions.IllegalAbbreviationError, x:
-            err(str(x))
+	# process grouping
+	group = gopts.get('group', 'auto')
+	if group == 'auto':
+		groups = list(common_functions.CLASSIFICATIONS)
+		groups.remove( 'Random' ) # Random must be explicitly requested
+	elif group == 'off':
+		if pval or tval:
+			err( "'--group off' incompatible with T-test calculations." )
+		groups = []
+	else:
+		try:
+			group = group.split(',')
+			groups = common_functions.expand_abbreviations( group,
+															common_functions.CLASSIFICATIONS,
+															case_sensitive = False )
+			gopts.set('group', groups, count = False)
+		except common_functions.IllegalAbbreviationError, x:
+			err(str(x))
 
-    # process paths
-    for path in args:
-        paths.append(path)
+	# process paths
+	for path in args:
+		paths.append(path)
 
-    if len(paths) == 0:
-        show_usage("Must provide a directory.")
+	if len(paths) == 0:
+		show_usage("Must provide a directory.")
 
-    return clauses, groups, paths
+	return clauses, groups, paths
 
 ####################################################################################
 ###
@@ -391,34 +391,34 @@ def parse_args(argv):
 ###
 ####################################################################################
 def classify_runs( arg_paths,
-                   groups ):
-    try:
-        run_paths = common_functions.find_run_paths( arg_paths,
-                                                     'worldfile' )
-    except common_functions.InvalidDirError, e:
-        show_usage( str(e) )
+				   groups ):
+	try:
+		run_paths = common_functions.find_run_paths( arg_paths,
+													 'worldfile' )
+	except common_functions.InvalidDirError, e:
+		show_usage( str(e) )
 
-    if len(groups) == 0: # --group off
-        return run_paths, {'None': run_paths}
+	if len(groups) == 0: # --group off
+		return run_paths, {'None': run_paths}
 
-    failed_paths = []
+	failed_paths = []
 
-    def __classification_fail( failed_paths, path, x):
-        warn( str(x) )
-        failed_paths.append( path )
+	def __classification_fail( failed_paths, path, x):
+		warn( str(x) )
+		failed_paths.append( path )
 
-    classified_runs = common_functions.classify_runs( run_paths,
-                                                      False,
-                                                      groups,
-                                                      lambda path, x: __classification_fail(failed_paths,
-                                                                                            path,
-                                                                                            x) )
-    run_paths = common_functions.list_difference( run_paths, failed_paths )
+	classified_runs = common_functions.classify_runs( run_paths,
+													  False,
+													  groups,
+													  lambda path, x: __classification_fail(failed_paths,
+																							path,
+																							x) )
+	run_paths = common_functions.list_difference( run_paths, failed_paths )
 
-    if len(run_paths) == 0:
-        err( "No run directories for plotting." )
+	if len(run_paths) == 0:
+		err( "No run directories for plotting." )
 
-    return run_paths, classified_runs
+	return run_paths, classified_runs
 
 ####################################################################################
 ###
@@ -426,70 +426,82 @@ def classify_runs( arg_paths,
 ###
 ####################################################################################
 def get_macros( clauses,
-                arg_paths,
-                arg_dirs,
-                run_paths,
-                run_dirs ):
-    clause1 = clauses[0]
+				arg_paths,
+				arg_dirs,
+				run_paths,
+				run_dirs ):
+	clause1 = clauses[0]
 
-    if len(clause1.groups) > 1:
-        title = '{GROUPS} -- {MODES}'
-    else:
-        title = '{MODES}'
+	if len(clause1.groups) > 1:
+		title = '{GROUPS} -- '
+	else:
+		title = ''
+	
+	if 'Complexity' in clause1.mode.name:
+		title += '{MODES}'
+		if 'Neural' in clause1.mode.name:
+			title += ' ({VALUE_NAMES1})'
+	else:
+		title += '{VALUE_NAMES1}'
 
-    if len(clause1.groups) > 2:
-        groups = ', '.join(clause1.groups)
-    else:
-        groups = ' vs. '.join(clause1.groups)
+	if len(clause1.groups) > 2:
+		groups = ', '.join(clause1.groups)
+	else:
+		groups = ' vs. '.join(clause1.groups)
 
-    groups_ttest = ' vs. '.join(clause1.groups_ttest)
+	groups_ttest = ' vs. '.join(clause1.groups_ttest)
 
-    modes = set( [x.mode.name for x in clauses] )
+	modes = set( [x.mode.name for x in clauses] )
 
-    def __clause_macros( macros, i ):
-        num = i + 1
+	def __clause_macros( macros, i ):
+		num = i + 1
 
-        if i >= len(clauses):
-            ylabel, dataset, value_types, value_names, curve_types = '', '', '', '', ''
-        else:
-            clause = clauses[i]
-            options = clause.options
+		if i >= len(clauses):
+			ylabel, dataset, value_types, value_names, curve_types = '', '', '', '', ''
+		else:
+			clause = clauses[i]
+			options = clause.options
 
-            ylabel = clause.mode.name + ' ({VALUE_NAMES%d})' % num
+			if 'Complexity' in clause.mode.name:
+				ylabel = clause.mode.name
+				if 'Neural' in clause.mode.name:
+					ylabel += ' ({VALUE_NAMES%d})' % num
+			else:
+				ylabel = '{VALUE_NAMES%d}' % num
 
-            dataset = clause.dataset
+			dataset = clause.dataset
 
-            value_types = ', '.join(clause.value_names)
-            value_names = ', '.join(clause.mode.func_getValueNames( clause.value_names ))
+			value_types = ', '.join(clause.value_names)
+			value_names = ', '.join(clause.mode.func_getValueNames( clause.value_names ))
 
-            curve_types = []
-            for curve_type in clause.mode.curvetypes:
-                if options['curvetypes'].get(curve_type, False) or options['meta'].get(curve_type, False):
-                    curve_types.append(curve_type.title())
-            curve_types = ', '.join( curve_types )
+			curve_types = []
+			for curve_type in clause.mode.curvetypes:
+				if options['curvetypes'].get(curve_type, False) or options['meta'].get(curve_type, False):
+					curve_types.append(curve_type.title())
+			curve_types = ', '.join( curve_types )
 
-        macros['YLABEL%d' % num] = ylabel
-        macros['DATASET%d' % num] = dataset
-        macros['VALUE_TYPES%d' % num] = value_types
-        macros['VALUE_NAMES%d' % num] = value_names
-        macros['CURVE_TYPES%d' % num] = curve_types
-        
-    
+		macros['YLABEL%d' % num] = ylabel
+		macros['DATASET%d' % num] = dataset
+		macros['VALUE_TYPES%d' % num] = value_types
+		macros['VALUE_NAMES%d' % num] = value_names
+		macros['CURVE_TYPES%d' % num] = curve_types
+		
+	
 
-    macros = {'TITLE': title,
-              'XLABEL': 'Timestep',
-              'ARG_DIRS': ', '.join(arg_dirs),
-              'RUN_DIRS': ', '.join(run_dirs),
-              'ARG_PATHS': ', '.join(arg_paths),
-              'RUN_PATHS': ', '.join(run_paths),
-              'MODES': ', '.join(modes),
-              'GROUPS': groups,
-              'GROUPS_TTEST': groups_ttest}
+	macros = {'TITLE': title,
+			  'XLABEL': 'Timestep',
+			  'ARG_DIRS': ', '.join(arg_dirs),
+			  'RUN_DIRS': ', '.join(run_dirs),
+			  'ARG_PATHS': ', '.join(arg_paths),
+			  'RUN_PATHS': ', '.join(run_paths),
+			  'MODES': ', '.join(modes),
+			  'GROUPS': groups,
+			  'GROUPS_TTEST': groups_ttest}
 
-    __clause_macros( macros, 0 )
-    __clause_macros( macros, 1 )
+	__clause_macros( macros, 0 )
+	__clause_macros( macros, 1 )
 
-    return macros
+	return macros
 
 ####################################################################################
 ###
@@ -497,22 +509,22 @@ def get_macros( clauses,
 ###
 ####################################################################################
 def get_values( mode,
-                classified_runs,
-                dataset,
-                value_names ):
+				classified_runs,
+				dataset,
+				value_names ):
 
-    classified_values = {}
+	classified_values = {}
 
-    for classification, paths in classified_runs.items():
-        values = mode.parseValues( paths,
-                                   classification,
-                                   dataset,
-                                   value_names,
-                                   run_as_key = True )
+	for classification, paths in classified_runs.items():
+		values = mode.parseValues( paths,
+								   classification,
+								   dataset,
+								   value_names,
+								   run_as_key = True )
 
-        classified_values[classification] = values.values()
+		classified_values[classification] = values.values()
 
-    return classified_values
+	return classified_values
 
 ####################################################################################
 ###
@@ -520,35 +532,35 @@ def get_values( mode,
 ###
 ####################################################################################
 def get_meta( mode,
-              options,
-              value_names,
-              values_classified ):
+			  options,
+			  value_names,
+			  values_classified ):
 
-    values_meta = {}
+	values_meta = {}
 
-    mopts = options['meta']
+	mopts = options['meta']
 
-    if mopts.nset > 0:
-        for classification, values in values_classified.items():
-            if len(values) < 2:
-                warn('Not enough runs to perform meta averaging for classification '+classification+'.')
-            else:
-                for curvetype in mode.curvetypes:
-                    if mopts.get(curvetype):
-                        if classification not in values_meta.keys():
-                            values_meta[classification] = {}
+	if mopts.nset > 0:
+		for classification, values in values_classified.items():
+			if len(values) < 2:
+				warn('Not enough runs to perform meta averaging for classification '+classification+'.')
+			else:
+				for curvetype in mode.curvetypes:
+					if mopts.get(curvetype):
+						if classification not in values_meta.keys():
+							values_meta[classification] = {}
 
-                        meta = create_meta( mode,
-                                            options,
-                                            mopts,
-                                            curvetype,
-                                            value_names,
-                                            classification,
-                                            values )
+						meta = create_meta( mode,
+											options,
+											mopts,
+											curvetype,
+											value_names,
+											classification,
+											values )
 
-                        values_meta[classification][curvetype] = meta
+						values_meta[classification][curvetype] = meta
 
-    return values_meta
+	return values_meta
 
 ####################################################################################
 ###
@@ -556,30 +568,30 @@ def get_meta( mode,
 ###
 ####################################################################################
 def create_meta( mode,
-                 options,
-                 mopts,
-                 curvetype,
-                 value_names,
-                 classification,
-                 values ):
+				 options,
+				 mopts,
+				 curvetype,
+				 value_names,
+				 classification,
+				 values ):
 
-    timesteps = common_functions.get_timesteps( iterators.MatrixIterator(values,
-                                                                         range(len(values)),
-                                                                         value_names),
-                                                mode.colName_timestep )    
-    if len(timesteps) < 1:
-        err( 'No common timesteps found between runs for meta. (classfication=%s)' % classification )
-    
-    values_meta = algorithms.avr_meta(values,
-                                      value_names,
-                                      timesteps,
-                                      curvetype )
-    datalib.write( '/tmp/meta-%s-%s-%d.plt' % (classification,
-                                               curvetype,
-                                               os.getpid()),
-                   values_meta )
+	timesteps = common_functions.get_timesteps( iterators.MatrixIterator(values,
+																		 range(len(values)),
+																		 value_names),
+												mode.colName_timestep )	   
+	if len(timesteps) < 1:
+		err( 'No common timesteps found between runs for meta. (classfication=%s)' % classification )
+	
+	values_meta = algorithms.avr_meta(values,
+									  value_names,
+									  timesteps,
+									  curvetype )
+	datalib.write( '/tmp/meta-%s-%s-%d.plt' % (classification,
+											   curvetype,
+											   os.getpid()),
+				   values_meta )
 
-    return values_meta
+	return values_meta
 
 ####################################################################################
 ###
@@ -587,155 +599,155 @@ def create_meta( mode,
 ###
 ####################################################################################
 def get_ttest( mode,
-               options,
-               value_names,
-               values ):
-    gopts = options['global']
+			   options,
+			   value_names,
+			   values ):
+	gopts = options['global']
 
-    if not gopts.get('pval') and not gopts.get('tval'):
-        return {}, []
+	if not gopts.get('pval') and not gopts.get('tval'):
+		return {}, []
 
-    groups = values.keys()
+	groups = values.keys()
 
-    if len(groups) < 2:
-        err( "T-test calculations require 2 classifications, but only 1 found." )
+	if len(groups) < 2:
+		err( "T-test calculations require 2 classifications, but only 1 found." )
 
-    if len(groups) > 2:
-        if gopts.get('group','auto') != 'auto':
-            optgroups = gopts.get('group')[0:2]
-            for g in optgroups:
-                if g not in groups:
-                    err( "Found no runs of classification '%s', which is required for T-test due to --group setting." % g )
-            groups = optgroups
-        else:
-            if not (('Passive' in groups) and ('Driven' in groups)):
-                err( "Too many groups for T-test calculations with --group=auto. (%s)" % ','.join(groups) )
-            groups = ['Passive', 'Driven']
+	if len(groups) > 2:
+		if gopts.get('group','auto') != 'auto':
+			optgroups = gopts.get('group')[0:2]
+			for g in optgroups:
+				if g not in groups:
+					err( "Found no runs of classification '%s', which is required for T-test due to --group setting." % g )
+			groups = optgroups
+		else:
+			if not (('Passive' in groups) and ('Driven' in groups)):
+				err( "Too many groups for T-test calculations with --group=auto. (%s)" % ','.join(groups) )
+			groups = ['Passive', 'Driven']
 
-    verbose('T-test groups: %s' % ','.join(groups))
+	verbose('T-test groups: %s' % ','.join(groups))
 
-    runsa = values[groups[0]] # e.g. all the 'driven' runs
-    runsb = values[groups[1]] # e.g. all the 'passive' runs
+	runsa = values[groups[0]] # e.g. all the 'driven' runs
+	runsb = values[groups[1]] # e.g. all the 'passive' runs
 
-    na = len(runsa)
-    nb = len(runsb)
-    if na != nb:
-        warn( "T-test requires symmetrical classification run count; truncating run data for ttest." )
-    nruns = min( na, nb )
+	na = len(runsa)
+	nb = len(runsb)
+	if na != nb:
+		warn( "T-test requires symmetrical classification run count; truncating run data for ttest." )
+	nruns = min( na, nb )
 
-    if nruns < 2:
-        err( "T-test requires at least 2 runs per classification" )
+	if nruns < 2:
+		err( "T-test requires at least 2 runs per classification" )
 
-    timesteps = common_functions.get_timesteps( iterators.MatrixIterator(values,
-                                                                         groups,
-                                                                         range( nruns ),
-                                                                         value_names),
-                                                mode.colName_timestep )
+	timesteps = common_functions.get_timesteps( iterators.MatrixIterator(values,
+																		 groups,
+																		 range( nruns ),
+																		 value_names),
+												mode.colName_timestep )
 
-    if len(timesteps) == 0:
-        err( "No common timesteps found for T-test calculations." )
-                                                                         
-    def __iter( parms ):
-        data = parms[0]
-        V = parms[1]
-        t = parms[2]
-        curvetype = parms[3]
+	if len(timesteps) == 0:
+		err( "No common timesteps found for T-test calculations." )
+																		 
+	def __iter( parms ):
+		data = parms[0]
+		V = parms[1]
+		t = parms[2]
+		curvetype = parms[3]
 
-        return iterators.MatrixIterator( data,
-                                         range(nruns),
-                                         [V],
-                                         [t],
-                                         [curvetype] )
+		return iterators.MatrixIterator( data,
+										 range(nruns),
+										 [V],
+										 [t],
+										 [curvetype] )
 
-    ttest = algorithms.ttest_table( runsa,
-                                    runsb,
-                                    nruns,
-                                    gopts.get('tcrit'),
-                                    value_names,
-                                    timesteps,
-                                    mode.curvetypes,
-                                    __iter )
+	ttest = algorithms.ttest_table( runsa,
+									runsb,
+									nruns,
+									gopts.get('tcrit'),
+									value_names,
+									timesteps,
+									mode.curvetypes,
+									__iter )
 
-    datalib.write( '/tmp/ttest-%d.plt' % os.getpid(), ttest )
+	datalib.write( '/tmp/ttest-%d.plt' % os.getpid(), ttest )
 
-    return ttest, groups
+	return ttest, groups
 
-    
+	
 ####################################################################################
 ###
 ### FUNCTION plot_init()
 ###
 ####################################################################################
 def plot_init( clauses,
-               macros,
-               run_paths,
-               run_dirs ):
-    gopts = clauses[0].options['global']
+			   macros,
+			   run_paths,
+			   run_dirs ):
+	gopts = clauses[0].options['global']
 
-    doc = plotlib.Document()
-    doc.nocolor = not gopts.get( 'color' )
+	doc = plotlib.Document()
+	doc.nocolor = not gopts.get( 'color' )
 
-    title = expand_macros(gopts.get('title', '{TITLE}'), macros)
-    plot = doc.createPlot(title)
+	title = expand_macros(gopts.get('title', '{TITLE}'), macros)
+	plot = doc.createPlot(title)
 
-    plot.xlabel = expand_macros(gopts.get('xlabel', '{XLABEL}'), macros)
-    plot.ylabel = expand_macros(gopts.get('ylabel1', '{YLABEL1}'), macros)
-    plot.y2label = expand_macros(gopts.get('ylabel2', '{YLABEL2}'), macros)
+	plot.xlabel = expand_macros(gopts.get('xlabel', '{XLABEL}'), macros)
+	plot.ylabel = expand_macros(gopts.get('ylabel1', '{YLABEL1}'), macros)
+	plot.y2label = expand_macros(gopts.get('ylabel2', '{YLABEL2}'), macros)
 
-    if gopts.get('pval'):
-        pmin = 0.8
-        pmax = 1.0
-        fracHeight = 1.0 / 6.0
+	if gopts.get('pval'):
+		pmin = 0.8
+		pmax = 1.0
+		fracHeight = 1.0 / 6.0
 
-        plot.y2range = ( pmin, (pmin + (pmax-pmin)/fracHeight) )
-        plot.y2label = "(1 - p-value)      Dependent Student's T-test"
+		plot.y2range = ( pmin, (pmin + (pmax-pmin)/fracHeight) )
+		plot.y2label = "(1 - p-value)	   Dependent Student's T-test"
 
-        plot.createTick( 0.8 )
-        plot.createTick( 0.95,
-                         line = True )
-        plot.createTick( 1.0,
-                         "1.0" )
-    elif gopts.get('tval'):
-        assert( len(clauses) == 1 )
+		plot.createTick( 0.8 )
+		plot.createTick( 0.95,
+						 line = True )
+		plot.createTick( 1.0,
+						 "1.0" )
+	elif gopts.get('tval'):
+		assert( len(clauses) == 1 )
 
-        tcrit = gopts.get('tcrit')
-        tmax = tcrit
+		tcrit = gopts.get('tcrit')
+		tmax = tcrit
 
-        clause = clauses[0]
-        topts = clause.options['ttest']
+		clause = clauses[0]
+		topts = clause.options['ttest']
 
-        for curve in clause.mode.curvetypes:
-            if topts.get(curve):
-                for V in clause.value_names:
-                    tmax = max( tmax,
-                                max(clause.ttest[V+'-'+curve].getColumn( 'tval' )) )
-        plot.y2range = (0, tmax * 4)
-        plot.y2label = "Dependent Student's T-test (p < 0.05)"
-        plot.createTick( tcrit,
-                         "T*",
-                         line = True )
-    else:
-        # stupid EPS terminal cuts off our x-axis label without this
-        plot.rmargin = 2
+		for curve in clause.mode.curvetypes:
+			if topts.get(curve):
+				for V in clause.value_names:
+					tmax = max( tmax,
+								max(clause.ttest[V+'-'+curve].getColumn( 'tval' )) )
+		plot.y2range = (0, tmax * 4)
+		plot.y2label = "Dependent Student's T-test (p < 0.05)"
+		plot.createTick( tcrit,
+						 "T*",
+						 line = True )
+	else:
+		# stupid EPS terminal cuts off our x-axis label without this
+		plot.rmargin = 4
 
-    try:
-        # allow user-override of right margin
-        plot.rmargin = int(gopts.get('rmargin'))
-    except KeyError:
-        # user didn't specify
-        pass
+	try:
+		# allow user-override of right margin
+		plot.rmargin = int(gopts.get('rmargin'))
+	except KeyError:
+		# user didn't specify
+		pass
 
 
-    plot.legend = False  # this will be toggled later if needed
-    
-    colordict = {}
+	plot.legend = False	 # this will be toggled later if needed
+	
+	colordict = {}
 
-    if len(run_paths) < 2:
-        pathdict = None
-    else:
-        pathdict = dict([(run_paths[i], run_dirs[i]) for i in range(len(run_paths))])
+	if len(run_paths) < 2:
+		pathdict = None
+	else:
+		pathdict = dict([(run_paths[i], run_dirs[i]) for i in range(len(run_paths))])
 
-    return doc, plot, colordict, pathdict
+	return doc, plot, colordict, pathdict
 
 
 ####################################################################################
@@ -744,78 +756,78 @@ def plot_init( clauses,
 ###
 ####################################################################################
 def plot_clause( doc,
-                 plot,
-                 colordict,
-                 colorkey_prefix,
-                 pathdict,
-                 mode,
-                 options,
-                 macros,
-                 dataset,
-                 yaxis,
-                 run_paths,
-                 run_dirs,
-                 value_names,
-                 values_classified,
-                 values_meta,
-                 ttest ):
+				 plot,
+				 colordict,
+				 colorkey_prefix,
+				 pathdict,
+				 mode,
+				 options,
+				 macros,
+				 dataset,
+				 yaxis,
+				 run_paths,
+				 run_dirs,
+				 value_names,
+				 values_classified,
+				 values_meta,
+				 ttest ):
 
-    gopts = options['global']
+	gopts = options['global']
 
-    for classification, values_list in values_classified.items():
-        for values in values_list:
-            for V in value_names:
-                table = values[V]
-                create_curves( mode,
-                               doc,
-                               plot,
-                               macros,
-                               colordict,
-                               colorkey_prefix,
-                               pathdict,
-                               options,
-                               'curvetypes',
-                               dataset,
-                               yaxis,
-                               classification,
-                               None,
-                               table )
+	for classification, values_list in values_classified.items():
+		for values in values_list:
+			for V in value_names:
+				table = values[V]
+				create_curves( mode,
+							   doc,
+							   plot,
+							   macros,
+							   colordict,
+							   colorkey_prefix,
+							   pathdict,
+							   options,
+							   'curvetypes',
+							   dataset,
+							   yaxis,
+							   classification,
+							   None,
+							   table )
 
-    for classification, curvetypes in values_meta.items():
-        for curvetype, values in curvetypes.items():
-            for V in value_names:
-                table = values[V]
+	for classification, curvetypes in values_meta.items():
+		for curvetype, values in curvetypes.items():
+			for V in value_names:
+				table = values[V]
 
-                create_curves( mode,
-                               doc,
-                               plot,
-                               macros,
-                               colordict,
-                               colorkey_prefix,
-                               pathdict,
-                               options,
-                               'meta',
-                               dataset,
-                               yaxis,
-                               classification,
-                               curvetype,
-                               table )
+				create_curves( mode,
+							   doc,
+							   plot,
+							   macros,
+							   colordict,
+							   colorkey_prefix,
+							   pathdict,
+							   options,
+							   'meta',
+							   dataset,
+							   yaxis,
+							   classification,
+							   curvetype,
+							   table )
 
-    for colname, table in ttest.items():
-        create_curves( mode,
-                       doc,
-                       plot,
-                       macros,
-                       colordict,
-                       colorkey_prefix,
-                       None,
-                       options,
-                       'ttest',
-                       dataset,
-                       yaxis,
-                       None,
-                       None,
-                       table )
+	for colname, table in ttest.items():
+		create_curves( mode,
+					   doc,
+					   plot,
+					   macros,
+					   colordict,
+					   colorkey_prefix,
+					   None,
+					   options,
+					   'ttest',
+					   dataset,
+					   yaxis,
+					   None,
+					   None,
+					   table )
 
 ####################################################################################
 ###
@@ -823,10 +835,10 @@ def plot_clause( doc,
 ###
 ####################################################################################
 def plot_complete( gopts,
-                   doc ):
-    path_doc, path_script = doc.save( gopts.get('output',
-                                                DEFAULT_OUTPUT) )
-    os.system('%s %s' % (common_functions.pw_env('open'), path_doc))
+				   doc ):
+	path_doc, path_script = doc.save( gopts.get('output',
+												DEFAULT_OUTPUT) )
+	os.system('%s %s' % (common_functions.pw_env('open'), path_doc))
 
 ####################################################################################
 ###
@@ -834,230 +846,231 @@ def plot_complete( gopts,
 ###
 ####################################################################################
 def create_curves(mode,
-                  doc,
-                  plot,
-                  macros,
-                  colordict,
-                  colorkey_prefix,
-                  pathdict,
-                  options,
-                  optionclass,
-                  dataset,
-                  yaxis,
-                  classification,
-                  meta_curvetype,
-                  table):
-    gopts = options['global']
-    smooth = gopts.get('smooth')
-    points = gopts.get('points')
-    options = options[optionclass]
-    path = table.path
-    meta = optionclass == 'meta'
-    ttest = optionclass == 'ttest'
+				  doc,
+				  plot,
+				  macros,
+				  colordict,
+				  colorkey_prefix,
+				  pathdict,
+				  options,
+				  optionclass,
+				  dataset,
+				  yaxis,
+				  classification,
+				  meta_curvetype,
+				  table):
+	gopts = options['global']
+	smooth = gopts.get('smooth')
+	points = gopts.get('points')
+	options = options[optionclass]
+	path = table.path
+	meta = optionclass == 'meta'
+	ttest = optionclass == 'ttest'
 
-    if meta:
-        assert(meta_curvetype)
-    else:
-        assert(not meta_curvetype)
+	if meta:
+		assert(meta_curvetype)
+	else:
+		assert(not meta_curvetype)
 
-    if smooth and points:
-        warn("Cannot show points with smooth curves.")
-        gopts.set('points', False) # prevent multiple warnings
-        
+	if smooth and points:
+		warn("Cannot show points with smooth curves.")
+		gopts.set('points', False) # prevent multiple warnings
+		
 
-    #---
-    #--- FUNCTION __style()
-    #---
-    #--- Provides logic for grouping curves within style groups (e.g. line type and color).
-    #--- A style group has a constant line width and pattern, while cycling
-    #--- through colors
-    #---
-    def __style(curvetype):
-        if gopts.get('group', 'auto') == 'off':
-            groupkey = curvetype
-        else:
-            groupkey = classification
+	#---
+	#--- FUNCTION __style()
+	#---
+	#--- Provides logic for grouping curves within style groups (e.g. line type and color).
+	#--- A style group has a constant line width and pattern, while cycling
+	#--- through colors
+	#---
+	def __style(curvetype):
+		if gopts.get('group', 'auto') == 'off':
+			groupkey = curvetype
+		else:
+			groupkey = classification
 
-        if meta:
-            groupname = 'meta-'+groupkey
-        elif ttest:
-            groupname = 'ttest'
-        else:
-            groupname = groupkey
+		if meta:
+			groupname = 'meta-'+groupkey
+		elif ttest:
+			groupname = 'ttest'
+		else:
+			groupname = groupkey
 
-        # check if we have a linetype preference
-        try:
-            preflinetype = CLASSIFICATION_LINETYPES[classification]
-        except:
-            preflinetype = None
+		# check if we have a linetype preference
+		try:
+			preflinetype = CLASSIFICATION_LINETYPES[classification]
+		except:
+			preflinetype = plotlib.StyleGroup.DOTTED
 
-        try:
-            group = plot.getStyleGroup(groupname)
-        except KeyError:
-            if meta:
-                try:
-                    # use the values' line style, but thick
-                    group = plot.createStyleGroup(groupname,
-                                                  plot.getStyleGroup(groupkey).linetype,
-                                                  plotlib.StyleGroup.THICK)
-                except:
-                    # no values were plotted for this classification.
-                    group = plot.createStyleGroup(groupname,
-                                                  preflinetype,
-                                                  plotlib.StyleGroup.THICK)
-            else:
-                group = plot.createStyleGroup(groupname,
-                                              preflinetype)
+		try:
+			group = plot.getStyleGroup(groupname)
+		except KeyError:
+			if meta:
+				try:
+					# use the values' line style, but thick
+					group = plot.createStyleGroup(groupname,
+												  plot.getStyleGroup(groupkey).linetype,
+												  plotlib.StyleGroup.THICK)
+				except:
+					# no values were plotted for this classification.
+					group = plot.createStyleGroup(groupname,
+												  preflinetype,
+												  plotlib.StyleGroup.THICK)
+			else:
+				group = plot.createStyleGroup(groupname,
+											  preflinetype)
 
-        # Use the color key to ensure consistent color between
-        # style groups.
-        if meta:
-            colorkey = 'meta'
-            forcecolor = 'black'
-        else:
-            colorkey = path
-            forcecolor = None
+		# Use the color key to ensure consistent color between
+		# style groups.
+		if meta:
+			colorkey = 'meta'
+			forcecolor = 'black'
+		else:
+			colorkey = path
+			forcecolor = None
 
-        colorkey = colorkey_prefix + colorkey
+		colorkey = colorkey_prefix + colorkey
 
-        if not colorkey in colordict.keys():
-            style = group.createStyle( forcecolor )
-            colordict[colorkey] = style.color
-            plot.reserveColor(style.color)
-        else:
-            color = colordict[colorkey]
-            style = group.createStyle(color)
-        
-        return style
-    #---
+		if not colorkey in colordict.keys():
+			style = group.createStyle( forcecolor )
+			colordict[colorkey] = style.color
+			plot.reserveColor(style.color)
+		else:
+			color = colordict[colorkey]
+			style = group.createStyle(color)
+		
+		return style
+	#---
 
-    #---
-    #--- FUNCTION __title()
-    #---
-    #--- Provides title/legend-label for a curve
-    #---
-    def __title(name):
-        if meta:
-            if gopts.get( 'metaLegendOff', False ):
-                return None
-        else:
-            if not gopts.get( 'legendOn', False ):
-                return None
+	#---
+	#--- FUNCTION __title()
+	#---
+	#--- Provides title/legend-label for a curve
+	#---
+	def __title(name):
+		if meta:
+			if gopts.get( 'metaLegendOff', False ):
+				return None
+		else:
+			if not gopts.get( 'legendOn', False ):
+				return None
 
-        plot.legend = True
+		plot.legend = True
 
-        if name != 'whiskers' and len(mode.curvetypes) > 1:
-            title = name + ' ' + table.name
-        else:
-            title = table.name
+		if name != 'whiskers' and len(mode.curvetypes) > 1:
+			title = name + ' ' + table.name
+		else:
+			title = table.name
 
-        if meta:
-            title = 'Meta-' + title
-            if classification != 'None':
-                title += ' (' + classification + ')'
-        elif ttest:
-            title += expand_macros( ' ({GROUPS_TTEST})', macros )
-        else:
-            if pathdict != None:
-                title += ' (' + pathdict[mode.pathRunFromValue(table.path, classification, dataset)] + ')'
+		if meta:
+			if classification == 'None':
+				title = 'Meta-' + title
+			else:
+				title = classification
+		elif ttest:
+			title += expand_macros( ' ({GROUPS_TTEST})', macros )
+		else:
+			if pathdict != None:
+				title += ' (' + pathdict[mode.pathRunFromValue(table.path, classification, dataset)] + ')'
 
-        return title
-    #---
+		return title
+	#---
 
-    # Whisker curves are available for values and meta, not ttest
-    if options.get('whiskers', False):
-        assert( not ttest)
+	# Whisker curves are available for values and meta, not ttest
+	if options.get('whiskers', False):
+		assert( not ttest)
 
-        style = __style('whiskers')
+		style = __style('whiskers')
 
-        if options.get('mean') or options.get('max'):
-            warn('Cannot show whiskers and mean/max curves.')
-            options.set('mean', False)
-            options.set('max', False)
-        
-        curve = plot.createCandlestickCurve(table,
-                                            __title('whiskers'),
-                                            'Timestep',
-                                            'q1',
-                                            'min',
-                                            'max',
-                                            'q3',
-                                            plotlib.CandlestickCurve.WHISKERS,
-                                            style)
-        curve.axes[1] = yaxis
+		if options.get('mean') or options.get('max'):
+			warn('Cannot show whiskers and mean/max curves.')
+			options.set('mean', False)
+			options.set('max', False)
+		
+		curve = plot.createCandlestickCurve(table,
+											__title('whiskers'),
+											'Timestep',
+											'q1',
+											'min',
+											'max',
+											'q3',
+											plotlib.CandlestickCurve.WHISKERS,
+											style)
+		curve.axes[1] = yaxis
 
-        curve = plot.createCandlestickCurve(table,
-                                            None,
-                                            'Timestep',
-                                            'median',
-                                            'median',
-                                            'median',
-                                            'median',
-                                            not plotlib.CandlestickCurve.WHISKERS,
-                                            style)
-        curve.axes[1] = yaxis
+		curve = plot.createCandlestickCurve(table,
+											None,
+											'Timestep',
+											'median',
+											'median',
+											'median',
+											'median',
+											not plotlib.CandlestickCurve.WHISKERS,
+											style)
+		curve.axes[1] = yaxis
 
-    else: # Not plotting whisker curve.
-        def __shouldplot( curvetype ):
-            inopts = options.get( curvetype, False )
+	else: # Not plotting whisker curve.
+		def __shouldplot( curvetype ):
+			inopts = options.get( curvetype, False )
 
-            if ttest:
-                return inopts and table.name.endswith( '-'+curvetype )
-            elif meta:
-                return inopts and curvetype == meta_curvetype
-            else:
-                return inopts
+			if ttest:
+				return inopts and table.name.endswith( '-'+curvetype )
+			elif meta:
+				return inopts and curvetype == meta_curvetype
+			else:
+				return inopts
 
-        def __curves( curvetype ):
-            result = []
+		def __curves( curvetype ):
+			result = []
 
-            x = mode.colName_timestep
+			x = mode.colName_timestep
 
-            if ttest:
-                if gopts.get( 'pval' ):
-                    result.append( {'col': 'pval', 'title': 'pval', 'axes': (1,2)} )
-                if gopts.get( 'tval' ):
-                    result.append( {'col': 'tval', 'title': 'tval', 'axes': (1,2)} )
-            elif meta:
-                x = 'Timestep'
-                result.append( {'col': 'mean', 'title': curvetype.title(), 'axes': (1,yaxis)} )
-            else:
-                result.append( {'col': curvetype, 'title': curvetype.title(), 'axes': (1,yaxis)} )
+			if ttest:
+				if gopts.get( 'pval' ):
+					result.append( {'col': 'pval', 'title': 'pval', 'axes': (1,2)} )
+				if gopts.get( 'tval' ):
+					result.append( {'col': 'tval', 'title': 'tval', 'axes': (1,2)} )
+			elif meta:
+				x = 'Timestep'
+				result.append( {'col': 'mean', 'title': curvetype.title(), 'axes': (1,yaxis)} )
+			else:
+				result.append( {'col': curvetype, 'title': curvetype.title(), 'axes': (1,yaxis)} )
 
-            for r in result:
-                r['x'] = x
+			for r in result:
+				r['x'] = x
 
-            return result
+			return result
 
-        #
-        # Create the curves.
-        #
-        # (about freaking time)
-        #
-        for curvetype in mode.curvetypes:
-            if __shouldplot( curvetype ):
-                for c in __curves( curvetype ):
-                    style = __style( curvetype )
+		#
+		# Create the curves.
+		#
+		# (about freaking time)
+		#
+		for curvetype in mode.curvetypes:
+			if __shouldplot( curvetype ):
+				for c in __curves( curvetype ):
+					style = __style( curvetype )
 
-                    curve = plot.createCurve(table,
-                                             __title(c['title']),
-                                             c['x'],
-                                             c['col'],
-                                             style,
-                                             smooth)
-                    curve.points = points
-                    curve.axes = c['axes']
-            
-        if __shouldplot( 'mean' ) and options.get('errorbars', False):
-                assert(not ttest)
+					curve = plot.createCurve(table,
+											 __title(c['title']),
+											 c['x'],
+											 c['col'],
+											 style,
+											 smooth)
+					curve.points = points
+					curve.axes = c['axes']
+			
+		if __shouldplot( 'mean' ) and options.get('errorbars', False):
+				assert(not ttest)
 
-                curve = plot.createErrorbarCurve(table,
-                                                 None,
-                                                 'Timestep',
-                                                 'mean',
-                                                 'mean_stderr',
-                                                 style)
-                curve.axes[1] = yaxis
+				curve = plot.createErrorbarCurve(table,
+												 None,
+												 'Timestep',
+												 'mean',
+												 'mean_stderr',
+												 style)
+				curve.axes[1] = yaxis
 
 ####################################################################################
 ###
@@ -1065,29 +1078,29 @@ def create_curves(mode,
 ###
 ####################################################################################
 def show_usage(msg = None, arg = None):
-    global mode_usage
+	global mode_usage
 
-    if arg == None:
-        if mode_usage == None:
-            usage_default()
-        else:
-            usage_mode( mode_usage.shortname )
-    elif arg == 'opts':
-        usage_opts()
-    elif arg == 'macros':
-        usage_macros()
-    elif ismode( arg ):
-        usage_mode( arg )
-    else:
-    	print '\nInvalid help topic (%s)\n' % arg
-        usage_default()
+	if arg == None:
+		if mode_usage == None:
+			usage_default()
+		else:
+			usage_mode( mode_usage.shortname )
+	elif arg == 'opts':
+		usage_opts()
+	elif arg == 'macros':
+		usage_macros()
+	elif ismode( arg ):
+		usage_mode( arg )
+	else:
+		print '\nInvalid help topic (%s)\n' % arg
+		usage_default()
 
-    if msg:
-        print "--------------------------------------------------------------------------------"
-        print
-        print 'Error!', msg
+	if msg:
+		print "--------------------------------------------------------------------------------"
+		print
+		print 'Error!', msg
 
-    sys.exit(1)
+	sys.exit(1)
 
 ####################################################################################
 ###
@@ -1095,31 +1108,31 @@ def show_usage(msg = None, arg = None):
 ###
 ####################################################################################
 def usage_default():
-    print """\
+	print """\
 USAGE 
 
-     plot help [<mode>|opts|macros]
-     plot <mode> [<opt>]... [: <mode> [<opt>]...]... <directory>...
+	 plot help [<mode>|opts|macros]
+	 plot <mode> [<opt>]... [: <mode> [<opt>]...]... <directory>...
 
 DESCRIPTION
 
-     Plots results of one or more Polyworld runs.
+	 Plots results of one or more Polyworld runs.
 
-     The type of data from a Polyworld run that is to be plotted is specified by
+	 The type of data from a Polyworld run that is to be plotted is specified by
   the 'mode' argument, where valid modes are:
 
-       %s
+	   %s
 
-     Note that mode names may be abbreviated, but "opts" and "macros" must be
+	 Note that mode names may be abbreviated, but "opts" and "macros" must be
   spelled fully.
 
-     Directory arguments can specify a run directory or the parent of one or
+	 Directory arguments can specify a run directory or the parent of one or
   more run directories.
 
-     Note that all 'meta' averages can only be calculated if more than one run
+	 Note that all 'meta' averages can only be calculated if more than one run
   is specified. Meta-averages are computed only for those timesteps which exist
   for all runs.
-""" % ("\n       ".join(MODES.keys()))
+""" % ("\n		 ".join(MODES.keys()))
 #-------------------------------------------------------------------------------
 
 
@@ -1129,88 +1142,88 @@ DESCRIPTION
 ###
 ####################################################################################
 def usage_opts():
-    print """\
+	print """\
 GENERAL OPTIONS
 
-     -o <path>
-               Specify path of generated plot document.
-               (default %s)
+	 -o <path>
+			   Specify path of generated plot document.
+			   (default %s)
 
-     --verbose
-               Print informational messages.
+	 --verbose
+			   Print informational messages.
 
-     -g, --group (off | auto | <class>[,<class>]...)
-               off: Do not group runs into classifications.
+	 -g, --group (off | auto | <class>[,<class>]...)
+			   off: Do not group runs into classifications.
 
-               auto: Group with no constraints on possible classifications.
+			   auto: Group with no constraints on possible classifications.
 
-               <class>[,<class>]...: Constrain set of possible classifications,
-            where choices are:
-               %s
-            Note that classification names are case-insensitive and needn't be
-            fully spelled -- only enough to disambiguate (e.g. dri = Driven,
-            P = Passive, f = Fitness).
+			   <class>[,<class>]...: Constrain set of possible classifications,
+			where choices are:
+			   %s
+			Note that classification names are case-insensitive and needn't be
+			fully spelled -- only enough to disambiguate (e.g. dri = Driven,
+			P = Passive, f = Fitness).
 
-            (default auto)
+			(default auto)
 
-     --tcrit <TCRIT>
-               Specify value of T* (default %f, which corresponds to %d
-            samples in %d pairs in a Dependent Student's T-test)
+	 --tcrit <TCRIT>
+			   Specify value of T* (default %f, which corresponds to %d
+			samples in %d pairs in a Dependent Student's T-test)
 
-     -p, --pval
-               Plot T-test p-values between groups (see --group).
-            If more than two groups are present, use the first two groups
-            specified by --group.  If more than two groups are present and
-            --group is auto, use Driven and Passive, if present, else abort
-            requesting specification of --group.
+	 -p, --pval
+			   Plot T-test p-values between groups (see --group).
+			If more than two groups are present, use the first two groups
+			specified by --group.  If more than two groups are present and
+			--group is auto, use Driven and Passive, if present, else abort
+			requesting specification of --group.
 
-     -t, --tval
-               Plot T-test t-values between groups (see --group).
-            If more than two groups are present, use the first two groups
-            specified by --group.  If more than two groups are present and
-            --group is auto, use Driven and Passive, if present, else abort
-            requesting specification of --group.
+	 -t, --tval
+			   Plot T-test t-values between groups (see --group).
+			If more than two groups are present, use the first two groups
+			specified by --group.  If more than two groups are present and
+			--group is auto, use Driven and Passive, if present, else abort
+			requesting specification of --group.
 
-     -d, --points, --dots
-               Draw points on mean, max, and min lines.
+	 -d, --points, --dots
+			   Draw points on mean, max, and min lines.
 
-     -s, --smooth
-               Generate smooth curves.
+	 -s, --smooth
+			   Generate smooth curves.
 
-     -l, --legend
-               Display a legend for the individual runs.
-            (default is to not display a runs legend)
+	 -l, --legend
+			   Display a legend for the individual runs.
+			(default is to not display a runs legend)
 
-     -L, --noLegend
-               Do not display a legend for groups.
-            (default is to display a groups legend, if multiple groups
-            are present)
+	 -L, --noLegend
+			   Do not display a legend for groups.
+			(default is to display a groups legend, if multiple groups
+			are present)
 
-     -v, --noview
-               Do not show document in default viewer.
+	 -v, --noview
+			   Do not show document in default viewer.
 
-     -c, --color
-               Use color to distinguish individual runs.
-               (default is to use uniform gray for individual runs)
+	 -c, --color
+			   Use color to distinguish individual runs.
+			   (default is to use uniform gray for individual runs)
 
-     --title <title>
-               Specify title of graph, optionally with macros (see 'help macros').
+	 --title <title>
+			   Specify title of graph, optionally with macros (see 'help macros').
 
-     --xlabel <label>
-               Specify label of x-axis, optionally with macros (see 'help macros').
+	 --xlabel <label>
+			   Specify label of x-axis, optionally with macros (see 'help macros').
 
-     --ylabel1 <label>
-               Specify label of y1-axis, optionally with macros (see 'help macros').
+	 --ylabel1 <label>
+			   Specify label of y1-axis, optionally with macros (see 'help macros').
 
-     --ylabel2 <label>
-               Specify label of y2-axis, optionally with macros (see 'help macros').
+	 --ylabel2 <label>
+			   Specify label of y2-axis, optionally with macros (see 'help macros').
 
-     --rmargin <n>
-               Override size of right margin, where n is number of character
-            widths. Necessary because of buggy gnuplot behavior.
+	 --rmargin <n>
+			   Override size of right margin, where n is number of character
+			widths. Necessary because of buggy gnuplot behavior.
 """ % (DEFAULT_OUTPUT,
-       ', '.join(common_functions.CLASSIFICATIONS),
-       TCRIT_DEFAULT[0], TCRIT_DEFAULT[1], TCRIT_DEFAULT[2])
+	   ', '.join(common_functions.CLASSIFICATIONS),
+	   TCRIT_DEFAULT[0], TCRIT_DEFAULT[1], TCRIT_DEFAULT[2])
 
 ####################################################################################
 ###
@@ -1218,53 +1231,53 @@ GENERAL OPTIONS
 ###
 ####################################################################################
 def usage_macros():
-    print """\
+	print """\
 MACROS
 
-        Macros are allowed in the title, xlabel, and ylabel options. Their
-     names must be enclosed within {}.
+		Macros are allowed in the title, xlabel, and ylabel options. Their
+	 names must be enclosed within {}.
 
-     Available macros:
+	 Available macros:
 
-     TITLE              Standard title
+	 TITLE				Standard title
 
-     XLABEL             Standard x-axis label
+	 XLABEL				Standard x-axis label
 
-     YLABEL1            Standard y1-axis label
+	 YLABEL1			Standard y1-axis label
 
-     YLABEL2            Standard y2-axis label
+	 YLABEL2			Standard y2-axis label
 
-     ARG_DIRS           List of paths passed to script with redundant path info
-                     stripped.
+	 ARG_DIRS			List of paths passed to script with redundant path info
+					 stripped.
 
-     ARG_PATHS          List of paths passed to script with no modification.
+	 ARG_PATHS			List of paths passed to script with no modification.
 
-     RUN_DIRS           List of run directory paths with redundant path info
-                     stripped.
+	 RUN_DIRS			List of run directory paths with redundant path info
+					 stripped.
 
-     RUN_PATHS          List of run directory paths with no modification.
+	 RUN_PATHS			List of run directory paths with no modification.
 
-     MODES              List of modes.
+	 MODES				List of modes.
 
-     DATASET1           Name of clause 1 dataset (e.g. Recent, bestRecent)
+	 DATASET1			Name of clause 1 dataset (e.g. Recent, bestRecent)
 
-     DATASET2           Name of clause 2 dataset  (e.g. Recent, bestRecent)
+	 DATASET2			Name of clause 2 dataset  (e.g. Recent, bestRecent)
 
-     VALUE_TYPES1       List of clause 1 value types in abbreviated form.
+	 VALUE_TYPES1		List of clause 1 value types in abbreviated form.
 
-     VALUE_TYPES2       List of clause 2 value types in abbreviated form.
+	 VALUE_TYPES2		List of clause 2 value types in abbreviated form.
 
-     VALUE_NAMES1       List of clause 1 value types in user-friendly form.
+	 VALUE_NAMES1		List of clause 1 value types in user-friendly form.
 
-     VALUE_NAMES2       List of clause 2 value types in user-friendly form.
+	 VALUE_NAMES2		List of clause 2 value types in user-friendly form.
 
-     GROUPS             List of groups.
+	 GROUPS				List of groups.
 
-     GROUPS_TTEST       List of groups used in T-test calculations.
+	 GROUPS_TTEST		List of groups used in T-test calculations.
 
-     CURVE_TYPES1       List of clause 1 curve types (e.g. Min, Mean, Max)
+	 CURVE_TYPES1		List of clause 1 curve types (e.g. Min, Mean, Max)
 
-     CURVE_TYPES2       List of clause 2 curve types (e.g. Min, Mean, Max)
+	 CURVE_TYPES2		List of clause 2 curve types (e.g. Min, Mean, Max)
 """
 
 ####################################################################################
@@ -1273,7 +1286,7 @@ MACROS
 ###
 ####################################################################################
 def usage_mode( mode ):
-    MODES[expandmode(mode)].usage()
+	MODES[expandmode(mode)].usage()
 
 ####################################################################################
 ###
