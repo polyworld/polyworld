@@ -324,7 +324,7 @@ def compute_small_world_index(timestep_directory, length_metric):
 	else:
 		sw_metrics = []
 		for sw_file in sw_files:
-			type = sw_file[7:9]  #  CC or (SP or CP)
+			type = os.path.basename(sw_file)[7:9]  #  CC or (SP or CP)
 			table = datalib.parse(sw_file)[type]
 			try:
 				data = table.getColumn('Mean').data
