@@ -72,18 +72,21 @@ def parse_args():
 			exit(2)
 
 def copy(source_file, target_file):
+	global test
 	if test:
 		print '  copying', source_file, 'to', target_file
 	else:
 		copy2(source_file, target_file)
 
 def mkdir(dir):
+	global test
 	if test:
 		print 'making directory', dir
 	else:
 		os.mkdir(dir)
 
 def copy_run_dir(source, target):
+	global overwrite
 	print 'copying files from', source, 'to', target
 	target_brain_dir = join(target, 'brain')
 	target_Recent_dir = join(target_brain_dir, 'Recent')
@@ -125,6 +128,7 @@ def copy_run_dir(source, target):
 
 
 def main():
+	global source_dir, target_dir, target_dir_specified
 	parse_args()
 	
 	for root, dirs, files in os.walk(source_dir):
@@ -135,7 +139,7 @@ def main():
 		usage()
 		exit(1)
 	
-	# create a parallel, unique directory, if not target_dir was specified
+	# create a parallel, unique directory, if target_dir was not specified
 	if not target_dir_specified:
 		suffix = 1
 		while os.access(source_dir+'_'+str(suffix), os.F_OK):
