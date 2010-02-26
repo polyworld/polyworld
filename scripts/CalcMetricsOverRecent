@@ -76,9 +76,12 @@ def parse_args(argv):
 	if len(argv) == 0:
 		show_usage()
 
-	metrics = common_metric.DEFAULT_METRICS#'CC' represents clustering coefficient
-								  #and 'SP' represents (normalized) shortest path length
-								  #and 'CP' represents charateristic path length
+	metrics = common_metric.DEFAULT_METRICS
+	# 'CC' = clustering coefficient
+	# 'SP' = (normalized) shortest path length (aka NSP)
+	# 'CP' = characteristic path length (aka CPL)
+	# 'SW' = small world index (aka SWI, based on NSP)
+	# 'SC' = small world index (aka SWIc, based on CPL)
 
 
 	recent_type = DefaultRecent
@@ -310,10 +313,8 @@ def compute_small_world_index(timestep_directory, length_metric):
 	
 	# Check if all needed data is available
 	metric_files = glob.glob(os.path.join(timestep_directory, "*.plt"))
-	if length_metric == 'SP':
-		sw_metric_files = ['metric_CC.plt','metric_CC_Random.plt','metric_SP.plt','metric_SP_Random.plt']
-	else:
-		sw_metric_files = ['metric_CC.plt','metric_CC_Random.plt','metric_CP.plt','metric_CP_Random.plt']
+	sw_metric_files = ['metric_CC.plt', 'metric_CC_Random.plt',
+					   'metric_'+length_metric+'.plt', 'metric_'+length_metric+'_Random.plt']
 	sw_files = []
 	for e in sw_metric_files:
 		temp_file = os.path.join(timestep_directory, e)
