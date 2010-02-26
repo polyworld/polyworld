@@ -7,8 +7,8 @@ import datalib
 METRIC_TYPES = ['CC', 'SP', 'CP', 'SW', 'SC']
 METRIC_NAMES = {'CC':'Clustering Coefficient', 'SP':'Normalized Shortest Path', 'CP': 'Characteristic Path Length', 'SW': 'Small World Index (NSP)', 'SC': 'Small World Index (CPL)'}
 DEFAULT_METRICS = ['CC', 'SP', 'CP', 'SW', 'SC']
-FILENAME_AVR = 'AvrMetric.plt'
-RANDOMFILENAME_AVR = 'AvrMetricRandom.plt'
+METRIC_FILENAME_AVR = 'AvrMetric.plt'
+RANDOM_METRIC_FILENAME_AVR = 'AvrMetricRandom.plt'
 DEFAULT_NUMBINS = 11
 
 ####################################################################################
@@ -71,9 +71,9 @@ def has_random(path_run, recent_type = None):
 def relpath_avr(classification,
                 recent_type):
     if classification == 'Random':
-        return os.path.join('brain', recent_type, RANDOMFILENAME_AVR)
+        return os.path.join('brain', recent_type, RANDOM_METRIC_FILENAME_AVR)
     else:
-        return os.path.join('brain', recent_type, FILENAME_AVR)
+        return os.path.join('brain', recent_type, METRIC_FILENAME_AVR)
 
 ####################################################################################
 ###
