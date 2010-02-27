@@ -498,30 +498,35 @@ def calc_metrics(metrics, anatomy_files, random):
 		# Transform the anatomy file content into numpy adjacency matrix
 		infile = open(anatomy_file,"r")
 		lines = infile.readlines()
-		lines.pop(0) # drop the header line
+		header = lines[0]
 
-		H = []
-		for i in range(len(lines)-1):  # -1 to leave out the bias unit
-			l = lines[i].split()
-			l.remove(';')
-			g = []
-			for j in range(len(l)-1):  # -1 to leave out the bias links
-				g.append(abs(float(l[j])))
-			H.append(g)
-		B = numpy.matrix(H)
-
-		#G_Dir = nx.from_numpy_matrix(B,nx.DiGraph())  # Geneterate directed version of brain network
-		G_Undir = nx.from_numpy_matrix(B,nx.Graph())  # Generate undirected version of brain network
+		need_graph = filter(lambda x:x in metrics,['CC','SP','CP'])
+		
+		if need_graph:
+			lines.pop(0) # drop the header line
+			H = []
+			for i in range(len(lines)-1):  # -1 to leave out the bias unit
+				l = lines[i].split()
+				l.remove(';')
+				g = []
+				for j in range(len(l)-1):  # -1 to leave out the bias links
+					g.append(abs(float(l[j])))
+				H.append(g)
+			B = numpy.matrix(H)
+	
+			#G_Dir = nx.from_numpy_matrix(B,nx.DiGraph())  # Geneterate directed version of brain network
+			G_Undir = nx.from_numpy_matrix(B,nx.Graph())  # Generate undirected version of brain network
 	
 		N = RandomN if random else 1
 		
 		for i in range(N):
-			if random:
-				num_nodes = G_Undir.number_of_nodes()
-				num_edges = G_Undir.number_of_edges()
-				G = nx.gnm_random_graph(num_nodes,num_edges)
-			else:
-				G = G_Undir
+			if need_graph:
+				if random:
+					num_nodes = G_Undir.number_of_nodes()
+					num_edges = G_Undir.number_of_edges()
+					G = nx.gnm_random_graph(num_nodes,num_edges)
+				else:
+					G = G_Undir
 		
 			if 'CC' in metrics:
 				# need to calculate average clustering coefficient
@@ -537,6 +542,12 @@ def calc_metrics(metrics, anatomy_files, random):
 				# need to calculate characteristic path length
 				char_shortest_path_length = nx.average_shortest_path_length(G,weighted=False)
 				result['CP'].append( char_shortest_path_length )
+			
+			if 'HF' in metrics:
+				# need to extract Heuristic Fitness from the header line
+				start = header.find('fitness=') + 8
+				end = start + header[start:].find(' ')
+				result['HF'].append( float(header[start:end]) )
 		
 		metric_all.append({'agent': agent, 'metrics': result})
 	
@@ -615,7 +626,7 @@ USAGE
 
 DESCRIPTION
 
-     Analyzes the complexities of the epochs contained in one or more recent
+     Analyzes various metrics of the epochs contained in one or more recent
   directories.
 
      <directory> can specify either a run directory or a parent of one or more
@@ -638,6 +649,7 @@ OPTIONS
                CP - Characteristic Path Length
                SW - Small World Index (based on SP)
                SC - Small World Index (based on CP)
+               HF - Heuristic Fitness
 
             (default %s)""" % (sys.argv[0],
 				   '\n				 '.join(['']+common_functions.RECENT_TYPES),
