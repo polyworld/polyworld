@@ -9,12 +9,14 @@ from common_metric import METRIC_TYPES, METRIC_NAMES, METRIC_FILENAME_AVR
 
 GROUPS = ['driven', 'passive', 'both']
 
-DEFAULT_DIRECTORY = '/Volumes/halo/pwd/driven_vs_passive_b2'
+DEFAULT_DIRECTORY = '/pwd/driven_vs_passive_b2'
 DEFAULT_GROUP = GROUPS[2]
 DEFAULT_X_DATA_TYPE = 'P'
-DEFAULT_Y_DATA_TYPE = 'SC'
+DEFAULT_Y_DATA_TYPE = 'HF'
 
 COLOR = {'driven':(0.5,1.0,0.5), 'passive':(0.5,0.5,1.0)}
+
+use_hf_coloration = True
 
 end_points = []
 
@@ -128,7 +130,14 @@ def retrieve_data(run_dir, x_data_type, y_data_type):
 	y_table = datalib.parse(y_path)[y_data_type]
 	x_data = x_table.getColumn('mean').data
 	y_data = y_table.getColumn('mean').data
-	t_data = x_table.getColumn('Timestep').data # could come from either x or y
+	if use_hf_coloration:
+		try:
+			hf_table = datalib.parse(y_path)['HF']
+		except KeyError:
+			hf_table = datalib.parse(x_path)['HF']
+		t_data = hf_table.getColumn('mean').data
+	else:
+		t_data = x_table.getColumn('Timestep').data # could come from either x or y
 		
 	return x_data, y_data, t_data
 
@@ -142,20 +151,40 @@ def plot_init(title, x_label, y_label, bounds, size):
 	pylab.xlabel(x_label)
 	pylab.ylabel(y_label)
 	return ax
-	
+
+
+def get_hf_color(f):
+	hf_colors = [(0.0, (0.0, 0.0, 1.0)), (20.0, (0.0, 1.0, 0.0)), (24.0, (1.0, 0.0, 0.0))]
+	for i in range(1,len(hf_colors)):
+		f2, c2 = hf_colors[i]
+		if f < f2:
+			f1, c1 = hf_colors[i-1]
+			r = c1[0]  +  (f - f1) * (c2[0] - c1[0]) / (f2-f1)
+			g = c1[1]  +  (f - f1) * (c2[1] - c1[1]) / (f2-f1)
+			b = c1[2]  +  (f - f1) * (c2[2] - c1[2]) / (f2-f1)
+			c = (r, g, b)
+			return c
+	f_max, c_max = hf_colors[-1]
+	return c_max
 
 def plot(ax, x, y, time, sim_type):
 	assert(len(x) == len(y) == len(time))
 
 	l = len(time)
-	time_to_grayscale = 0.8 / time[l-1]
+	if use_hf_coloration:
+		time_to_grayscale = 0.8 / 23.6 # for HF coloring
+	else:
+		time_to_grayscale = 0.8 / time[l-1]
 	colors = []
-	for i in range(len(time)-1):
-		c = 0.8 - (time[i] * time_to_grayscale)**2.0
-		if sim_type == 'driven':
-			color = (c, 1.0, c, 0.8)
+	for i in range(l-1):
+		if use_hf_coloration:
+			color = get_hf_color(time[i])  # time[] is really HF
 		else:
-			color = (c, c, 1.0, 1.0)
+			g = 0.8 - (time[i] * time_to_grayscale)**2.0
+			if sim_type == 'driven':
+				color = (g, 1.0, g, 0.8)
+			else:
+				color = (g, g, 1.0, 1.0)
 		colors.append(color)
 	
 	points = zip(x,y)
@@ -165,7 +194,10 @@ def plot(ax, x, y, time, sim_type):
 	lc.set_linewidth(1.0)
 	lc.set_antialiased(True)
 	ax.add_collection(lc)
-	end_points.append((x[l-1], y[l-1], sim_type))
+	if use_hf_coloration:
+		end_points.append((x[l-1], y[l-1], get_hf_color(time[l-1])))
+	else:
+		end_points.append((x[l-1], y[l-1], COLOR[sim_type]))
 
 
 def plot_dirs(ax, run_dirs, x_data_type, y_data_type, sim_type):
@@ -176,7 +208,7 @@ def plot_dirs(ax, run_dirs, x_data_type, y_data_type, sim_type):
 
 def plot_finish(ax, bounds):
 	for point in end_points:
-		pylab.plot([point[0]], [point[1]], 'o', color=COLOR[point[2]])
+		pylab.plot([point[0]], [point[1]], 'o', color=point[2])
 # 	ax.set_xlim(bounds[0], bounds[1])
 # 	ax.set_ylim(bounds[2], bounds[3])
 
