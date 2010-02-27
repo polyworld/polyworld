@@ -18,9 +18,8 @@ import numpy
 import datetime
 
 ### Now initialize some global variables
-##OutputFilename = common_complexity.FILENAME_AVR
-OutputFilename = common_metric.FILENAME_AVR
-OutputFilenameRandom = common_metric.RANDOMFILENAME_AVR
+OutputFilename = common_metric.METRIC_FILENAME_AVR
+OutputFilenameRandom = common_metric.RANDOM_METRIC_FILENAME_AVR
 NUMBINS = common_metric.DEFAULT_NUMBINS
 RandomN = 0
 DefaultRecent = 'Recent'

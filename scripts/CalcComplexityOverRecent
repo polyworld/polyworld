@@ -15,7 +15,7 @@ import common_complexity
 import datalib
 
 ### Now initialize some global variables
-OutputFilename = common_complexity.FILENAME_AVR
+OutputFilename = common_complexity.COMPLEXITY_FILENAME_AVR
 NUMBINS = common_complexity.DEFAULT_NUMBINS
 
 LEGACY_MODES = ['force','prefer','off']
