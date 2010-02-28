@@ -881,32 +881,41 @@ void TSimulation::Step()
 		int limit2 = fNumberDied < fNumberFit ? fNumberDied : fNumberFit;
 		for( int i = 0; i < limit; i++ )
 		{
-			// First determine whether or not each bestRecent agent is in the bestSoFar list or not
-			bool inBestSoFarList = false;
-			for( int j = 0; j < limit2; j++ )
+			if( !fBrainAnatomyRecordAll || !fBrainFunctionRecordAll )
 			{
-				if( fRecentFittest[i]->agentID == fFittest[j]->agentID )
+				// First determine whether or not each bestRecent agent is in the bestSoFar list or not
+				bool inBestSoFarList = false;
+				for( int j = 0; j < limit2; j++ )
 				{
-					inBestSoFarList = true;
-					break;
+					if( fRecentFittest[i]->agentID == fFittest[j]->agentID )
+					{
+						inBestSoFarList = true;
+						break;
+					}
 				}
-			}
-			
-			// If each bestRecent agent is NOT in the bestSoFar list, then unlink all its files from their original location
-			if( !inBestSoFarList && (fRecentFittest[i]->agentID > 0) )
-			{
-				sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_incept.txt", fRecentFittest[i]->agentID );
-				if( unlink( s ) )
-					eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
-				sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_birth.txt", fRecentFittest[i]->agentID );
-				if( unlink( s ) )
-					eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
-				sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_death.txt", fRecentFittest[i]->agentID );
-				if( unlink( s ) )
-					eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
-				sprintf( s, "run/brain/function/brainFunction_%ld.txt", fRecentFittest[i]->agentID );
-				if( unlink( s ) )
-					eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
+				
+				// If each bestRecent agent is NOT in the bestSoFar list, then unlink all its files from their original location
+				if( !inBestSoFarList && (fRecentFittest[i]->agentID > 0) )
+				{
+					if( !fBrainAnatomyRecordAll )
+					{
+						sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_incept.txt", fRecentFittest[i]->agentID );
+						if( unlink( s ) )
+							eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
+						sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_birth.txt", fRecentFittest[i]->agentID );
+						if( unlink( s ) )
+							eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
+						sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_death.txt", fRecentFittest[i]->agentID );
+						if( unlink( s ) )
+							eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
+					}
+					if( !fBrainFunctionRecordAll )
+					{
+						sprintf( s, "run/brain/function/brainFunction_%ld.txt", fRecentFittest[i]->agentID );
+						if( unlink( s ) )
+							eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
+					}
+				}
 			}
 			
 			// Empty the bestRecent list by zeroing out agent IDs and fitnesses
