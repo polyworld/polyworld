@@ -565,6 +565,9 @@ def calc_metrics(metrics, anatomy_files, random):
 				result['HF'].append( float(header[start:end]) )
 		
 		metric_all.append({'agent': agent, 'metrics': result})
+		
+		if need_graph_bct:
+			bct.gsl_free(g_wd)
 	
 	return metric_all
 						
