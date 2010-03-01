@@ -16,6 +16,7 @@ import datalib
 import networkx as nx
 import numpy
 import datetime
+import bct
 
 ### Now initialize some global variables
 OutputFilename = common_metric.METRIC_FILENAME_AVR
@@ -104,7 +105,7 @@ def parse_args(argv):
 			except common_functions.IllegalAbbreviationError, x:
 				err(str(x))
 		elif opt == 'V':
-			metrics = map(string.upper, value.split(','))
+			metrics = value.split(',')
 		elif opt == 'R':
 			try:
 				RandomN = int(value)
@@ -135,43 +136,47 @@ def parse_args(argv):
 def analyze_recent_dir(metrics, recent_dir):
 	global RandomN
 	
-	metrics_first = metrics[:]
+	try:
+		metrics_have = datalib.parse(os.path.join(recent_dir, OutputFilename)).keys()
+	except IOError:
+		metrics_have = []
 	
-	if RandomN > 0:
-		print 'Will calculate random metrics after all actual metrics are calculated'
+	try:
+		metrics_random_have = datalib.parse(os.path.join(recent_dir, OutputFilenameRandom)).keys()
+	except IOError:
+		metrics_random_have = []
 	
-	if 'SW' in metrics:
-		print 'Will calculate SW (if needed) after all other actual and random metrics are calculated'
-		print "    This causes a recalculation of the other metrics' averages, but not of the metrics themselves"
-		metrics_first.remove('SW')
-
-	if 'SC' in metrics:
-		print 'Will calculate SC (if needed) after all other actual and random metrics are calculated'
-		print "    This causes a recalculation of the other metrics' averages, but not of the metrics themselves"
-		metrics_first.remove('SC')
-
-	__analyze_recent_dir(metrics_first, recent_dir, random = False)
-	if RandomN > 0:
-		__analyze_recent_dir(metrics_first, recent_dir, random = True)
-
-	# This is an awful hack, because all other actual metrics must be
-	# re-averaged from the <epoch>/metric_*.plt files to produce the
-	# AvrMetric.plt file.  But it's no less time consuming than running
-	# the script twice by hand, first for CC, SP, and CP (actual and
-	# random), and then running it again for CC, SP, CP, SW and SC.  And
-	# unfortunately, the way things are set up, the <epoch>/metric_*.plt
-	# files must already be in place for CC and SP before SW can be
-	# computed.
-	#
-	# The right way to do this would be to have any newly calculated
-	# metrics be added to the existing AvrMetric.plt file, but that's
-	# not how it works at present.  Then this could be called with
-	# just ['SW', 'SC'] instead of metrics, and only SW and SC would be computed.
-
-	# There is no Random clause, because this is really only for SW and SC,
-	# for which Random graph metrics have no meaning.
-	if 'SW' in metrics or 'SC' in metrics:
-		__analyze_recent_dir(metrics, recent_dir, random = False)
+	metrics_remaining = common_functions.list_difference(metrics, metrics_have)
+	metrics_random_remaining = common_functions.list_difference(metrics, metrics_random_have + common_metric.METRICS_NON_RANDOM)
+	
+	metrics_first = []
+	metrics_random_first = []
+	if 'SW' in metrics_remaining:
+		for metric in ['CC', 'SP']:
+			if metric not in metrics_have:
+				metrics_first.append(metric)
+			if RandomN > 0 and metric not in metrics_random_first:
+				metrics_random_first.append(metric)
+	if 'SC' in metrics_remaining:
+		for metric in ['CC', 'CP']:
+			if metric not in metrics_have and metric not in metrics_first:
+				metrics_first.append(metric)
+			if RandomN > 0 and metric not in metrics_random_have and metric not in metrics_random_first:
+				metrics_random_first.append(metric)
+	if metrics_first:
+		print 'To calculate SW or SC must first calculate', metrics_first
+		__analyze_recent_dir(metrics_first, recent_dir, random = False)
+	if metrics_random_first:
+		print 'To calculate SW or SC must first calculate random', metrics_random_first
+		__analyze_recent_dir(metrics_random_first, recent_dir, random = True)
+	
+	metrics_remaining = common_functions.list_difference(metrics_remaining, metrics_first)
+	metrics_random_remaining = common_functions.list_difference(metrics_random_remaining, metrics_random_first)
+	
+	if metrics_remaining:
+		__analyze_recent_dir(metrics_remaining, recent_dir, random = False)
+	if metrics_random_remaining and RandomN > 0:
+		__analyze_recent_dir(metrics_random_remaining, recent_dir, random = True)
 
 
 
@@ -250,7 +255,7 @@ def __analyze_recent_dir(metrics, recent_dir, random):
 							   metrics,
 							   timesteps)
 	
-	datalib.write(outputpath, AVR)
+	datalib.write(outputpath, AVR, append=True)
 	
 	
 ##	#-----------------------------------------------------------------------------------
@@ -500,9 +505,10 @@ def calc_metrics(metrics, anatomy_files, random):
 		lines = infile.readlines()
 		header = lines[0]
 
-		need_graph = filter(lambda x:x in metrics,['CC','SP','CP'])
+		need_graph_nx = filter(lambda x:x in metrics,common_metric.NETWORKX_METRICS)
+		need_graph_bct = filter(lambda x:x in metrics,common_metric.BCT_METRICS)
 		
-		if need_graph:
+		if need_graph_nx or need_graph_bct:
 			lines.pop(0) # drop the header line
 			H = []
 			for i in range(len(lines)-1):  # -1 to leave out the bias unit
@@ -512,15 +518,19 @@ def calc_metrics(metrics, anatomy_files, random):
 				for j in range(len(l)-1):  # -1 to leave out the bias links
 					g.append(abs(float(l[j])))
 				H.append(g)
-			B = numpy.matrix(H)
-	
-			#G_Dir = nx.from_numpy_matrix(B,nx.DiGraph())  # Geneterate directed version of brain network
-			G_Undir = nx.from_numpy_matrix(B,nx.Graph())  # Generate undirected version of brain network
+			
+			if need_graph_nx:
+				B = numpy.matrix(H)
+				#G_Dir = nx.from_numpy_matrix(B,nx.DiGraph())  # Generate directed version of brain network
+				G_Undir = nx.from_numpy_matrix(B,nx.Graph())  # Generate undirected version of brain network
+			
+			if need_graph_bct:
+				g_wd = bct.to_gslm(H)
 	
 		N = RandomN if random else 1
 		
 		for i in range(N):
-			if need_graph:
+			if need_graph_nx:
 				if random:
 					num_nodes = G_Undir.number_of_nodes()
 					num_edges = G_Undir.number_of_edges()
@@ -542,6 +552,11 @@ def calc_metrics(metrics, anatomy_files, random):
 				# need to calculate characteristic path length
 				char_shortest_path_length = nx.average_shortest_path_length(G,weighted=False)
 				result['CP'].append( char_shortest_path_length )
+			
+			if 'NM_wd' in metrics:
+				# need to calculate newman modularity
+				modularity = bct.modularity_dir(g_wd)
+				result['NM_wd'].append( modularity )
 			
 			if 'HF' in metrics:
 				# need to extract Heuristic Fitness from the header line
@@ -642,19 +657,13 @@ OPTIONS
             (default %s)
 
      -V <V>[,<V>]...
-               Override default metrics, where V is one of:
+           Override default metrics, where V is one of:
+""" % (sys.argv[0], '\n                '.join(['']+common_functions.RECENT_TYPES), DefaultRecent )
 
-               CC - Clustering Coefficient
-               SP - (Normalized) Shortest Path length
-               CP - Characteristic Path Length
-               SW - Small World Index (based on SP)
-               SC - Small World Index (based on CP)
-               HF - Heuristic Fitness
+	for metric in common_metric.METRIC_TYPES:
+		print '              ', metric, '-', common_metric.METRIC_NAMES[metric]
 
-            (default %s)""" % (sys.argv[0],
-				   '\n				 '.join(['']+common_functions.RECENT_TYPES),
-				   DefaultRecent,
-				   ','.join(common_metric.DEFAULT_METRICS))
+	print '\n           (default %s)\n' % (','.join(common_metric.DEFAULT_METRICS))
 
 	if msg:
 		print "--------------------------------------------------------------------------------"

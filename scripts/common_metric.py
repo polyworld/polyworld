@@ -4,9 +4,12 @@ import os
 import common_functions
 import datalib
 
-METRIC_TYPES = ['CC', 'SP', 'CP', 'SW', 'SC', 'HF']
-METRIC_NAMES = {'CC':'Clustering Coefficient', 'SP':'Normalized Shortest Path', 'CP': 'Characteristic Path Length', 'SW': 'Small World Index (NSP)', 'SC': 'Small World Index (CPL)', 'HF':'Heuristic Fitness'}
-DEFAULT_METRICS = ['CC', 'SP', 'CP', 'SW', 'SC', 'HF']
+METRIC_TYPES = ['CC', 'SP', 'CP', 'SW', 'SC', 'HF', 'NM_wd']
+METRIC_NAMES = {'CC':'Clustering Coefficient', 'SP':'Normalized Shortest Path', 'CP': 'Characteristic Path Length', 'SW': 'Small World Index (NSP)', 'SC': 'Small World Index (CPL)', 'HF':'Heuristic Fitness', 'NM_wd':'Newman Modularity (weighted, directed)'}
+DEFAULT_METRICS = ['CC', 'SP', 'CP', 'SW', 'SC', 'HF', 'NM_wd']
+NETWORKX_METRICS = ['CC', 'SP', 'CP']
+BCT_METRICS = ['NM_wd']
+METRICS_NON_RANDOM = ['SW', 'SC', 'HF']
 METRIC_FILENAME_AVR = 'AvrMetric.plt'
 RANDOM_METRIC_FILENAME_AVR = 'AvrMetricRandom.plt'
 DEFAULT_NUMBINS = 11
