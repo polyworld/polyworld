@@ -190,10 +190,18 @@ class MissingTableError(Exception):
 
 ####################################################################################
 ###
+### CLASS DuplicateTableError
+###
+####################################################################################
+class DuplicateTableError(Exception):
+    pass
+
+####################################################################################
+###
 ### FUNCTION write()
 ###
 ####################################################################################
-def write(path, tables):
+def write(path, tables, append = False, replace = True):
     try:
         # if it's a dict, get the values
         tables = tables.values()
@@ -205,6 +213,24 @@ def write(path, tables):
         len(tables)
     except AttributeError:
         tables = [tables]
+    
+    if append:
+        try:
+            f = open(path, 'r')
+        except IOError:
+            pass
+        else:
+            existing_tables = parse(path).values()
+            for et in existing_tables:
+                for t in tables:
+                    if et.name == t.name:
+                        if replace:
+                            existing_tables.remove(et)
+                        else:
+                            raise DuplicateTableError('%s table found in both existing and new data, but not allowed to replace' % et.name)
+                            tables.remove(t)
+            f.close()
+            tables += existing_tables
 
     class TableDims:
         def __init__( self, table ):
@@ -212,7 +238,6 @@ def write(path, tables):
             self.nrows = len( table.rows() )
             self.rowlen = -1
     tabledims = []
-
 
     f = open(path, 'w')
 
@@ -228,10 +253,8 @@ def write(path, tables):
         table.index = table_index
         table_index += 1
         
-        col_labels = __create_col_metadata(COLUMN_LABEL_MARKER,
-                                           table.colnames)
-        col_types = __create_col_metadata(COLUMN_TYPE_MARKER,
-                                           table.coltypes)
+        col_labels = __create_col_metadata(COLUMN_LABEL_MARKER, table.colnames)
+        col_types = __create_col_metadata(COLUMN_TYPE_MARKER, table.coltypes)
 
 
         dims.offset = f.tell()
@@ -261,8 +284,7 @@ def write(path, tables):
             else:
                 assert dims.rowlen == rowlen
 
-        __end_table(f,
-                    table.name)
+        __end_table(f, table.name)
 
     __write_footer( f, tabledims )
 
