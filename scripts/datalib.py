@@ -228,7 +228,7 @@ def write(path, tables, append = False, replace = True):
             	existing_tables.remove(et)
             for t in remove_new:
             	tables.remove(t)
-            tables += existing_tables
+            tables = existing_tables + tables
 
     class TableDims:
         def __init__( self, table ):
