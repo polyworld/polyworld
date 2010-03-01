@@ -75,10 +75,7 @@ for i in range(5):
 	row['Time'] = i
 	row['mean'] = float(i*100)
 
-try:
-	datalib.write('test.plt', t4, append=True, replace=False)
-except datalib.DuplicateTableError, e:
-	print 'Error updating', '('+str(e)+')'
+datalib.write('test.plt', t4, append=True, replace=False)
 
 print_datalib('test.plt')
 

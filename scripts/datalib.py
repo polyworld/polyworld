@@ -190,14 +190,6 @@ class MissingTableError(Exception):
 
 ####################################################################################
 ###
-### CLASS DuplicateTableError
-###
-####################################################################################
-class DuplicateTableError(Exception):
-    pass
-
-####################################################################################
-###
 ### FUNCTION write()
 ###
 ####################################################################################
@@ -221,15 +213,21 @@ def write(path, tables, append = False, replace = True):
             pass
         else:
             existing_tables = parse(path).values()
+            remove_existing = []
+            remove_new = []
             for et in existing_tables:
                 for t in tables:
                     if et.name == t.name:
                         if replace:
-                            existing_tables.remove(et)
+                            remove_existing.append(et)
                         else:
-                            raise DuplicateTableError('%s table found in both existing and new data, but not allowed to replace' % et.name)
-                            tables.remove(t)
+                            print 'WARNING: %s table found in both existing and new data, but not allowed to replace; discarding new data and retaining old' % et.name
+                            remove_new.append(t)
             f.close()
+            for et in remove_existing:
+            	existing_tables.remove(et)
+            for t in remove_new:
+            	tables.remove(t)
             tables += existing_tables
 
     class TableDims:
