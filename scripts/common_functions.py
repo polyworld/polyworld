@@ -577,8 +577,7 @@ def path_worldfile(path_run):
 ###
 ####################################################################################
 def list_difference(a, b):
-	return filter(lambda x: x not in b,
-		      a)
+	return filter(lambda x: x not in b, a)
 
 ####################################################################################
 ###
@@ -588,5 +587,16 @@ def list_difference(a, b):
 ###
 ####################################################################################
 def list_intersection(a, b):
-	return filter(lambda x: x in b,
-		      a)
+	return filter(lambda x: x in b, a)
+
+####################################################################################
+###
+### FUNCTION list_unique()
+###
+### returns order-preserving list of unique elements in a
+###
+####################################################################################
+def list_unique(a):
+	b = [] 
+	[b.append(i) for i in a if not b.count(i)] 
+	return b
