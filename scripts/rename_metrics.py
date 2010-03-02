@@ -15,7 +15,7 @@ from os.path import join
 import glob
 import datalib
 
-DEFAULT_DIRECTORY = ''
+DEFAULT_DIRECTORY = '/Volumes/halo/pwd/driven_vs_passive_b2_4/run_b2_driven_0'
 
 FILES_TO_ALTER = ['AvrMetric*.plt']
 FILES_TO_RENAME = ['metric_*.plt']
@@ -23,7 +23,7 @@ METRICS_TO_RENAME = {'CC':'cc_a_bu', 'SP':'nsp_a_bu', 'CP':'cpl_a_bu', 'NM_wd':'
 					 'SW':'swi_nsp_a_bu', 'SC':'swi_cpl_a_bu', 'HF':'hf'}
 
 
-test = False
+test = True
 
 
 def usage():
@@ -65,15 +65,15 @@ def parse_args():
 	return directory
 
 
-def rename_metrics_in_file(file):
+def rename_metrics_in_file(file, metrics_to_rename):
 	global test
 	tables = datalib.parse(file)
 	not_renamed = []
 	renamed = []
 	for table in tables.values():
-		if table.name in METRICS_TO_RENAME:
-			renamed.append((table.name, METRICS_TO_RENAME[table.name]))
-			table.name = METRICS_TO_RENAME[table.name]
+		if table.name in metrics_to_rename:
+			renamed.append((table.name, metrics_to_rename[table.name]))
+			table.name = metrics_to_rename[table.name]
 		else:
 			not_renamed.append(table.name)
 	if renamed:
@@ -100,8 +100,10 @@ def rename_metric_file(file):
 		if root:
 			new_file = join(root, new_file)
 		if test:
+			rename_metrics_in_file(file, {metric:METRICS_TO_RENAME[metric]})
 			print '  renaming', file, 'to', new_file
 		else:
+			rename_metrics_in_file(file, {metric:METRICS_TO_RENAME[metric]})
 			os.rename(file, new_file)
 	else:
 		print '  unknown metric:', metric, '; not renaming', file
@@ -115,9 +117,9 @@ def rename_metrics_in_dir(directory):
 	for expression in FILES_TO_ALTER:
 		files_to_alter += glob.glob(join(recent_dir, expression))
 	for file in files_to_alter:
-		rename_metrics_in_file(file)
+		rename_metrics_in_file(file, METRICS_TO_RENAME)
 	
-	# Rename the metric_* files in the epochs
+	# Rename the metric_* files in the epochs (and the metrics therein)
 	for root, dirs, files in os.walk(recent_dir):
 		break
 	for dir in dirs:
@@ -143,7 +145,7 @@ def main():
 	if 'worldfile' in files:
 		# this is a single run directory,
 		# so just rename the files therein
-		rename_metrics(directory)
+		rename_metrics_in_dir(directory)
 	else:
 		# this is a directory of run directories,
 		# so recreate the run directories inside it,
