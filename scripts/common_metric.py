@@ -4,15 +4,25 @@ import os
 import common_functions
 import datalib
 
-METRIC_TYPES = ['CC', 'SP', 'CP', 'SW', 'SC', 'HF', 'NM_wd']
-METRIC_NAMES = {'CC':'Clustering Coefficient', 'SP':'Normalized Shortest Path', 'CP': 'Characteristic Path Length', 'SW': 'Small World Index (NSP)', 'SC': 'Small World Index (CPL)', 'HF':'Heuristic Fitness', 'NM_wd':'Newman Modularity (weighted, directed)'}
-DEFAULT_METRICS = ['CC', 'SP', 'CP', 'SW', 'SC', 'HF', 'NM_wd']
-NETWORKX_METRICS = ['CC', 'SP', 'CP']
-BCT_METRICS = ['NM_wd']
-METRICS_NON_RANDOM = ['SW', 'SC', 'HF']
-METRIC_FILENAME_AVR = 'AvrMetric.plt'
-RANDOM_METRIC_FILENAME_AVR = 'AvrMetricRandom.plt'
+METRIC_ROOT_TYPES = ['cc', 'nsp', 'cpl', 'swi', 'hf', 'nm']
+METRIC_ROOT_NAMES = {'cc':'Clustering Coefficient', 'nsp':'Normalized Shortest Path', 'cpl': 'Characteristic Path Length', 'swi': 'Small World Index', 'hf':'Heuristic Fitness', 'nm':'Newman Modularity'}
+METRIC_TYPES = ['cc_a_bu', 'nsp_a_bu', 'cpl_a_bu', 'swi_nsp_a_bu', 'swi_cpl_a_bu', 'hf', 'nm_a_wd']
+DEFAULT_METRICS = ['cc_a_bu', 'nsp_a_bu', 'cpl_a_bu', 'swi_nsp_a_bu', 'swi_cpl_a_bu', 'hf', 'nm_a_wd']
+NETWORKX_METRICS = ['cc_a_bu', 'nsp_a_bu', 'cpl_a_bu']
+BCT_METRICS = ['nm_a_wd']
+METRICS_NON_RANDOM = ['swi', 'swi', 'hf']
+FILENAME_AVR = 'AvrMetric.plt'
+RANDOM_FILENAME_AVR = 'AvrMetricRandom.plt'
 DEFAULT_NUMBINS = 11
+
+
+####################################################################################
+###
+### FUNCTION get_root_type()
+###
+####################################################################################
+def get_root_type(type):
+    return type.split('_')[0]
 
 ####################################################################################
 ###
@@ -20,12 +30,14 @@ DEFAULT_NUMBINS = 11
 ###
 ####################################################################################
 def get_name(type):
-    result = []
-
-##    for c in type:
-##        result.append(METRIC_NAMES[c])
-    result.append(METRIC_NAMES[type])
-    return '+'.join(result)
+    pieces = type.split('_')
+    name = METRIC_ROOT_NAMES[pieces[0]]
+    if len(pieces) > 1:
+        name += ' ('
+        for piece in pieces[1:]:
+    	    name += piece.upper() + ','
+    	name = name[:-1] + ')'
+    return name
 
 ####################################################################################
 ###
@@ -74,9 +86,9 @@ def has_random(path_run, recent_type = None):
 def relpath_avr(classification,
                 recent_type):
     if classification == 'Random':
-        return os.path.join('brain', recent_type, RANDOM_METRIC_FILENAME_AVR)
+        return os.path.join('brain', recent_type, RANDOM_FILENAME_AVR)
     else:
-        return os.path.join('brain', recent_type, METRIC_FILENAME_AVR)
+        return os.path.join('brain', recent_type, FILENAME_AVR)
 
 ####################################################################################
 ###

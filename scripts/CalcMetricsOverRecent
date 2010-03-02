@@ -19,8 +19,8 @@ import datetime
 import bct
 
 ### Now initialize some global variables
-OutputFilename = common_metric.METRIC_FILENAME_AVR
-OutputFilenameRandom = common_metric.RANDOM_METRIC_FILENAME_AVR
+OutputFilename = common_metric.FILENAME_AVR
+OutputFilenameRandom = common_metric.RANDOM_FILENAME_AVR
 NUMBINS = common_metric.DEFAULT_NUMBINS
 RandomN = 0
 DefaultRecent = 'Recent'
@@ -77,12 +77,6 @@ def parse_args(argv):
 		show_usage()
 
 	metrics = common_metric.DEFAULT_METRICS
-	# 'CC' = clustering coefficient
-	# 'SP' = (normalized) shortest path length (aka NSP)
-	# 'CP' = characteristic path length (aka CPL)
-	# 'SW' = small world index (aka SWI, based on NSP)
-	# 'SC' = small world index (aka SWIc, based on CPL)
-
 
 	recent_type = DefaultRecent
 
@@ -123,6 +117,9 @@ def parse_args(argv):
 
 	if len(args) == 0:
 		show_usage('Must specify run/run-parent directory.')
+	
+	if common_functions.list_difference(metrics, common_metric.METRIC_TYPES):
+		show_usage('Unknown metric requested')
 
 	paths = list(args)
 
@@ -151,23 +148,23 @@ def analyze_recent_dir(metrics, recent_dir):
 	
 	metrics_first = []
 	metrics_random_first = []
-	if 'SW' in metrics_remaining:
-		for metric in ['CC', 'SP']:
+	if 'swi_nsp_a_bu' in metrics_remaining:
+		for metric in ['cc_a_bu', 'nsp_a_bu']:
 			if metric not in metrics_have:
 				metrics_first.append(metric)
 			if RandomN > 0 and metric not in metrics_random_first:
 				metrics_random_first.append(metric)
-	if 'SC' in metrics_remaining:
-		for metric in ['CC', 'CP']:
+	if 'swi_cpl_a_bu' in metrics_remaining:
+		for metric in ['cc_a_bu', 'cpl_a_bu']:
 			if metric not in metrics_have and metric not in metrics_first:
 				metrics_first.append(metric)
 			if RandomN > 0 and metric not in metrics_random_have and metric not in metrics_random_first:
 				metrics_random_first.append(metric)
 	if metrics_first:
-		print 'To calculate SW or SC must first calculate', metrics_first
+		print 'To calculate swi must first calculate', metrics_first
 		__analyze_recent_dir(metrics_first, recent_dir, random = False)
 	if metrics_random_first:
-		print 'To calculate SW or SC must first calculate random', metrics_random_first
+		print 'To calculate swi must first calculate random', metrics_random_first
 		__analyze_recent_dir(metrics_random_first, recent_dir, random = True)
 	
 	metrics_remaining = common_functions.list_difference(metrics_remaining, metrics_first)
@@ -314,29 +311,37 @@ def compute_small_world_index(timestep_directory, length_metric):
 		for i in range(len(a)):
 			c.append(float(a[i])/float(b[i]))
 		return c
+
+	# Unpack the length_metric
+	pieces = length_metric.split('_')
+	length_metric = pieces[0]
+	neuron_set = pieces[1]
+	graph_type = pieces[2]
 	
 	# Check if all needed data is available
 	metric_files = glob.glob(os.path.join(timestep_directory, "*.plt"))
-	sw_metric_files = ['metric_CC.plt', 'metric_CC_Random.plt',
-					   'metric_'+length_metric+'.plt', 'metric_'+length_metric+'_Random.plt']
+	sw_metric_files = ['metric_cc_'+neuron_set+'_'+graph_type+'.plt',
+					   'metric_cc_'+neuron_set+'_'+graph_type+'_random.plt',
+					   'metric_'+length_metric+'_'+neuron_set+'_'+graph_type+'.plt',
+					   'metric_'+length_metric+'_'+neuron_set+'_'+graph_type+'_random.plt']
 	sw_files = []
 	for e in sw_metric_files:
 		temp_file = os.path.join(timestep_directory, e)
 		sw_files.append(temp_file)
 	if common_functions.list_intersection(sw_files, metric_files) != sw_files:
 		err('Must have actual and random clustering coefficient and characteristic path length to calculate small world index!')
-		return []
+		return []  # not executed because err() exits
 	else:
 		sw_metrics = []
 		for sw_file in sw_files:
-			type = os.path.basename(sw_file)[7:9]  #  CC or (SP or CP)
+			type = os.path.basename(sw_file)[7:-4]  #  strip off 'metric_' and '.plt'
 			table = datalib.parse(sw_file)[type]
 			try:
 				data = table.getColumn('Mean').data
 			except KeyError, x:
 				# Maybe it's of an older format
 				data = table.getColumn('Metric').data
-			sw_metrics.append(data)	 # So sw_metrics = [CC,CC_Random,SP|CP,SP|CP_Random]
+			sw_metrics.append(data)	 # So sw_metrics = [cc,cc_random,nsp|cpl,nsp|cpl_random]
 
 		g = __list_division(sw_metrics[0], sw_metrics[1])
 		l = __list_division(sw_metrics[2], sw_metrics[3])
@@ -357,7 +362,7 @@ def compute_metrics(metrics,
 	global RandomN
 
 	def __path(type):
-		suffix = '_Random' if random else ''
+		suffix = '_random' if random else ''
 		return os.path.join(timestep_directory, 'metric_' + type + suffix + '.plt')
 
 	# --- Read in any metrics computed on a previous invocation of this script
@@ -407,44 +412,44 @@ def compute_metrics(metrics,
 			err('No brainanatomy files found in %s' % anatomy_directory)
 
 		metrics_to_compute = metrics_remaining[:]
-		if 'SW' in metrics_to_compute:
+		if 'swi_nsp_a_bu' in metrics_to_compute:
 			compute_sw = True
-			metrics_to_compute.remove('SW')
+			metrics_to_compute.remove('swi_nsp_a_bu')
 		else:
 			compute_sw = False
-		if 'SC' in metrics_to_compute:
+		if 'swi_cpl_a_bu' in metrics_to_compute:
 			compute_sc = True
-			metrics_to_compute.remove('SC')
+			metrics_to_compute.remove('swi_cpl_a_bu')
 		else:
 			compute_sc = False
 		if metrics_to_compute:  # computing something besides SW and SC		
 			metric_all = calc_metrics(metrics_to_compute, brainAnatomy_files, random)
 			if compute_sw:  # also need to compute SW (from the other metrics)
-				sw = compute_small_world_index(timestep_directory, 'SP')
+				sw = compute_small_world_index(timestep_directory, 'nsp_a_bu')
 				i = 0
 				for agent_results in metric_all:
-					agent_results['metrics']['SW'] = [sw[i]]
+					agent_results['metrics']['swi_nsp_a_bu'] = [sw[i]]
 					i += 1
 			if compute_sc:  # also need to compute SW (from the other metrics)
-				sw = compute_small_world_index(timestep_directory, 'CP')
+				sw = compute_small_world_index(timestep_directory, 'cpl_a_bu')
 				i = 0
 				for agent_results in metric_all:
-					agent_results['metrics']['SC'] = [sw[i]]
+					agent_results['metrics']['swi_cpl_a_bu'] = [sw[i]]
 					i += 1
 		elif compute_sw or compute_sc:  # computing just SW and/or SC (from the other metrics)
 			if compute_sw:
-				sw = compute_small_world_index(timestep_directory, 'SP')
+				sw = compute_small_world_index(timestep_directory, 'nsp_a_bu')
 			if compute_sc:
-				sc = compute_small_world_index(timestep_directory, 'CP')
+				sc = compute_small_world_index(timestep_directory, 'cpl_a_bu')
 			metric_all = []
 			i = 0
 			for anatomy_file in brainAnatomy_files:
 				agent = os.path.basename(anatomy_file)[13:-10]
 				result = {}
 				if compute_sw:
-					result['SW'] = [sw[i]]
+					result['swi_nsp_a_bu'] = [sw[i]]
 				if compute_sc:
-					result['SC'] = [sc[i]]
+					result['swi_cpl_a_bu'] = [sc[i]]
 				metric_all.append({'agent': agent, 'metrics': result})
 				i += 1
 		else:  # not computing anything (should never happen)
@@ -538,31 +543,31 @@ def calc_metrics(metrics, anatomy_files, random):
 				else:
 					G = G_Undir
 		
-			if 'CC' in metrics:
+			if 'cc_a_bu' in metrics:
 				# need to calculate average clustering coefficient
 				avr_clustering = nx.average_clustering(G)
-				result['CC'].append( avr_clustering )
+				result['cc_a_bu'].append( avr_clustering )
 	
-			if 'SP' in metrics:
+			if 'nsp_a_bu' in metrics:
 				# need to calculate normalized average shortest path length
 				avr_shortest_path_length = nx.normalized_average_shortest_path_length(G,weighted=False)
-				result['SP'].append( avr_shortest_path_length )						   
+				result['nsp_a_bu'].append( avr_shortest_path_length )						   
 
-			if 'CP' in metrics:
+			if 'cpl_a_bu' in metrics:
 				# need to calculate characteristic path length
 				char_shortest_path_length = nx.average_shortest_path_length(G,weighted=False)
-				result['CP'].append( char_shortest_path_length )
+				result['cpl_a_bu'].append( char_shortest_path_length )
 			
-			if 'NM_wd' in metrics:
+			if 'nm_a_wd' in metrics:
 				# need to calculate newman modularity
 				modularity = bct.modularity_dir(g_wd)
-				result['NM_wd'].append( modularity )
+				result['nm_a_wd'].append( modularity )
 			
-			if 'HF' in metrics:
+			if 'hf' in metrics:
 				# need to extract Heuristic Fitness from the header line
 				start = header.find('fitness=') + 8
 				end = start + header[start:].find(' ')
-				result['HF'].append( float(header[start:end]) )
+				result['hf'].append( float(header[start:end]) )
 		
 		metric_all.append({'agent': agent, 'metrics': result})
 		
@@ -664,9 +669,9 @@ OPTIONS
 """ % (sys.argv[0], '\n                '.join(['']+common_functions.RECENT_TYPES), DefaultRecent )
 
 	for metric in common_metric.METRIC_TYPES:
-		print '              ', metric, '-', common_metric.METRIC_NAMES[metric]
+		print '              ', metric, '-', common_metric.get_name(metric)
 
-	print '\n           (default %s)\n' % (','.join(common_metric.DEFAULT_METRICS))
+	print '\n           (default %s)\n' % (', '.join(common_metric.DEFAULT_METRICS))
 
 	if msg:
 		print "--------------------------------------------------------------------------------"

@@ -4,8 +4,8 @@ import pylab
 import os,sys, getopt
 import datalib
 from matplotlib.collections import LineCollection
-from common_complexity import COMPLEXITY_TYPES, COMPLEXITY_NAMES, COMPLEXITY_FILENAME_AVR
-from common_metric import METRIC_TYPES, METRIC_NAMES, METRIC_FILENAME_AVR
+import common_complexity
+import common_metric
 
 GROUPS = ['driven', 'passive', 'both']
 
@@ -30,19 +30,19 @@ def usage():
 	print '  if -b is specified, both driven and passive runs will be selected when multiple run directories exist'
 	print '  for current data types see common_complexity.py, common_metrics.py, common_motion.py'
 	print '  e.g., complexities:',
-	for type in COMPLEXITY_TYPES:
+	for type in common_complexity.COMPLEXITY_TYPES:
 		print type,
 	print '; metrics:',
-	for type in METRIC_TYPES:
-		print type,
+	for type in common_metric.METRIC_ROOT_TYPES:
+		print type+'_{a|p}_{bu|bd|wu|wd}',
 	print
 	
 
 def get_filename(data_type):
-	if data_type in COMPLEXITY_TYPES:
-		return COMPLEXITY_FILENAME_AVR
+	if data_type in common_complexity.COMPLEXITY_TYPES:
+		return common_complexity.FILENAME_AVR
 	else:
-		return METRIC_FILENAME_AVR
+		return common_metric.FILENAME_AVR
 
 
 def get_run_dirs(input_dir, group):
@@ -100,12 +100,14 @@ def parse_args():
 			usage()
 			exit(2)
 	
-	if x_data_type not in COMPLEXITY_TYPES and x_data_type not in METRIC_TYPES:
+	if x_data_type not in common_complexity.COMPLEXITY_TYPES and 
+	   x_data_type not in common_metric.METRIC_TYPES:
 		print 'unknown x_data_type:', x_data_type
 		usage()
 		exit(2)
 
-	if y_data_type not in COMPLEXITY_TYPES and y_data_type not in METRIC_TYPES:
+	if y_data_type not in common_complexity.COMPLEXITY_TYPES and
+	   y_data_type not in common_metric.METRIC_TYPES:
 		print 'unknown y_data_type:', y_data_type
 		usage()
 		exit(2)
@@ -215,14 +217,14 @@ def plot_finish(ax, bounds):
 
 def main():
 	input_dir, group, x_data_type, y_data_type = parse_args()
-	if x_data_type in COMPLEXITY_TYPES:
-		x_label = 'Complexity (' + COMPLEXITY_NAMES[x_data_type] + ')'
+	if x_data_type in common_complexity.COMPLEXITY_TYPES:
+		x_label = 'Complexity (' + common_complexity.COMPLEXITY_NAMES[x_data_type] + ')'
 	else:
-		x_label = METRIC_NAMES[x_data_type]
-	if y_data_type in COMPLEXITY_TYPES:
-		y_label = 'Complexity (' + COMPLEXITY_NAMES[y_data_type] + ')'
+		x_label = common_metric.get_name(x_data_type)
+	if y_data_type in common_complexity.COMPLEXITY_TYPES:
+		y_label = 'Complexity (' + common_complexity.COMPLEXITY_NAMES[y_data_type] + ')'
 	else:
-		y_label = METRIC_NAMES[y_data_type]
+		y_label = common_metric.get_name(y_data_type)
 	title = y_label + ' vs. ' + x_label + ' - Temporal Traces'
 	bounds = (0.1, 0.5, 0.0, 3.0)  # (x_min, x_max, y_min, y_max)
 	size = (11.0, 8.5)  # (width, height)

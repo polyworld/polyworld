@@ -5,7 +5,7 @@ import datalib
 COMPLEXITY_TYPES = ['A', 'P', 'I', 'B', 'HB']
 COMPLEXITY_NAMES = {'A':'All', 'P':'Processing', 'I':'Input', 'B':'Behavior', 'HB':'Health+Behavior'}
 DEFAULT_COMPLEXITIES = ['A', 'P', 'I', 'B', 'HB']
-COMPLEXITY_FILENAME_AVR = 'AvrComplexity.plt'
+FILENAME_AVR = 'AvrComplexity.plt'
 DEFAULT_NUMBINS = 11
 
 ####################################################################################
@@ -68,7 +68,7 @@ def parse_legacy_complexities(path):
 ###
 ####################################################################################
 def relpath_avr(classification, recent_type):
-    return os.path.join('brain', recent_type, COMPLEXITY_FILENAME_AVR)
+    return os.path.join('brain', recent_type, FILENAME_AVR)
 
 ####################################################################################
 ###

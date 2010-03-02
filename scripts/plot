@@ -1111,28 +1111,28 @@ def usage_default():
 	print """\
 USAGE 
 
-	 plot help [<mode>|opts|macros]
-	 plot <mode> [<opt>]... [: <mode> [<opt>]...]... <directory>...
+     plot help [<mode>|opts|macros]
+     plot <mode> [<opt>]... [: <mode> [<opt>]...]... <directory>...
 
 DESCRIPTION
 
-	 Plots results of one or more Polyworld runs.
+     Plots results of one or more Polyworld runs.
 
-	 The type of data from a Polyworld run that is to be plotted is specified by
-  the 'mode' argument, where valid modes are:
+     The type of data from a Polyworld run that is to be plotted is specified by
+     the 'mode' argument, where valid modes are:
 
-	   %s
+          %s
 
-	 Note that mode names may be abbreviated, but "opts" and "macros" must be
-  spelled fully.
+     Note that mode names may be abbreviated, but "opts" and "macros" must be
+     spelled fully.
 
-	 Directory arguments can specify a run directory or the parent of one or
-  more run directories.
+     Directory arguments can specify a run directory or the parent of one or
+     more run directories.
 
-	 Note that all 'meta' averages can only be calculated if more than one run
-  is specified. Meta-averages are computed only for those timesteps which exist
-  for all runs.
-""" % ("\n		 ".join(MODES.keys()))
+     Note that all 'meta' averages can only be calculated if more than one run
+     is specified. Meta-averages are computed only for those timesteps which exist
+     for all runs.
+""" % ("\n          ".join(MODES.keys()))
 #-------------------------------------------------------------------------------
 
 
