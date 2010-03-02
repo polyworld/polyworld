@@ -15,7 +15,7 @@ from os.path import join
 import glob
 import datalib
 
-DEFAULT_DIRECTORY = '/Volumes/halo/pwd/driven_vs_passive_b2_4/run_b2_driven_0'
+DEFAULT_DIRECTORY = ''
 
 FILES_TO_ALTER = ['AvrMetric*.plt']
 FILES_TO_RENAME = ['metric_*.plt']
@@ -23,7 +23,7 @@ METRICS_TO_RENAME = {'CC':'cc_a_bu', 'SP':'nsp_a_bu', 'CP':'cpl_a_bu', 'NM_wd':'
 					 'SW':'swi_nsp_a_bu', 'SC':'swi_cpl_a_bu', 'HF':'hf'}
 
 
-test = True
+test = False
 
 
 def usage():
