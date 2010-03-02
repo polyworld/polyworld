@@ -12,7 +12,7 @@ GROUPS = ['driven', 'passive', 'both']
 DEFAULT_DIRECTORY = '/pwd/driven_vs_passive_b2'
 DEFAULT_GROUP = GROUPS[2]
 DEFAULT_X_DATA_TYPE = 'P'
-DEFAULT_Y_DATA_TYPE = 'HF'
+DEFAULT_Y_DATA_TYPE = 'hf'
 
 COLOR = {'driven':(0.5,1.0,0.5), 'passive':(0.5,0.5,1.0)}
 
@@ -100,13 +100,13 @@ def parse_args():
 			usage()
 			exit(2)
 	
-	if x_data_type not in common_complexity.COMPLEXITY_TYPES and 
+	if x_data_type not in common_complexity.COMPLEXITY_TYPES and \
 	   x_data_type not in common_metric.METRIC_TYPES:
 		print 'unknown x_data_type:', x_data_type
 		usage()
 		exit(2)
 
-	if y_data_type not in common_complexity.COMPLEXITY_TYPES and
+	if y_data_type not in common_complexity.COMPLEXITY_TYPES and \
 	   y_data_type not in common_metric.METRIC_TYPES:
 		print 'unknown y_data_type:', y_data_type
 		usage()
@@ -134,9 +134,9 @@ def retrieve_data(run_dir, x_data_type, y_data_type):
 	y_data = y_table.getColumn('mean').data
 	if use_hf_coloration:
 		try:
-			hf_table = datalib.parse(y_path)['HF']
+			hf_table = datalib.parse(y_path)['hf']
 		except KeyError:
-			hf_table = datalib.parse(x_path)['HF']
+			hf_table = datalib.parse(x_path)['hf']
 		t_data = hf_table.getColumn('mean').data
 	else:
 		t_data = x_table.getColumn('Timestep').data # could come from either x or y
