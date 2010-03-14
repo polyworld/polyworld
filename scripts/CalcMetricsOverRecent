@@ -199,12 +199,33 @@ def __get_graph_size(neuron_set, graph_type, link_type):
 ###
 ####################################################################################
 def clustering_coefficient(neuron_set, graph_type, random, preserving):
-	link_type = 'd'
-	g = __get_graph('nx', neuron_set, graph_type, link_type)
+	link_type = 'w'
+	package = 'bct'  # 'bct' or 'nx'
+	g = __get_graph(package, neuron_set, graph_type, link_type)
 	if random:
-		g = random_graph(g, 'nx', neuron_set, graph_type, link_type, preserving)
+		g = random_graph(g, package, neuron_set, graph_type, link_type, preserving)
 	weighted = 'w' in graph_type
-	cc = nx.average_clustering(g, weighted=weighted)
+	if package == 'nx':
+		if weighted:
+			err('NetworkX does not implement clustering coefficient for weighted graphs')
+		else:
+			cc = nx.average_clustering(g)
+	elif package == 'bct':
+		if graph_type == 'bu':
+			ccv_gsl = bct.clustering_coef_bu(g)
+		elif graph_type == 'bd':
+			ccv_gsl = bct.clustering_coef_bd(g)
+		elif graph_type == 'wu':
+			ccv_gsl = bct.clustering_coef_wu(g)
+		elif graph_type == 'wd':
+			ccv_gsl = bct.clustering_coef_wd(g)
+		else:
+			err('Unknown graph_type: '+str(graph_type))
+		ccv = bct.from_gsl(ccv_gsl)
+		bct.gsl_free(ccv_gsl)
+		cc = sum(ccv) / len(ccv)
+	else:
+		err('Unknown package type: '+str(package))
 
 	return cc
 
@@ -261,7 +282,12 @@ def connectivity_length(neuron_set, graph_type, random, preserving):
 	if package == 'nx':
 		cl = nxe.connectivity_length(g, weighted=weighted)
 	else:
-		err('connectivity length not implemented in BCT (though we should just invert efficiency)')
+		e = bct.efficiency(g)
+		if e == 0:
+			cl = float('inf')
+		else:
+			cl = 1.0 / e
+	
 	return cl
 
 
@@ -492,10 +518,12 @@ def analyze_recent_dir(metrics, recent_dir):
 			preserving = details[5]
 			for required_root in ['cc', length_metric]:
 				required_metric = required_root + '_' + neuron_set + '_' + graph_type
-				if required_metric not in metrics_avail:
+				if required_metric not in metrics_avail and \
+				   required_metric not in metrics_remaining:
 					dependent_metrics.append(required_metric)
 				required_metric_random = required_metric + '_ran_' + num_samples + '_' + preserving
-				if required_metric_random not in metrics_avail:
+				if required_metric_random not in metrics_avail and \
+				   required_metric_random not in metrics_remaining:
 					dependent_metrics.append(required_metric_random)
 
 	if dependent_metrics:
@@ -635,7 +663,10 @@ def compute_small_world_index(timestep_directory, length_metric, randomization):
 		assert(len(a) == len(b))
 		c = []
 		for i in range(len(a)):
-			c.append(float(a[i])/float(b[i]))
+			if b[i] == 0:
+				c.append(0.0)
+			else:
+				c.append(float(a[i])/float(b[i]))
 		return c
 
 	# Unpack the length_metric
@@ -645,9 +676,9 @@ def compute_small_world_index(timestep_directory, length_metric, randomization):
 	
 	# Define the files and metrics that will be needed
 	sw_metric_files = ['metric_cc_'+neuron_set+'_'+graph_type+'.plt',
-					   'metric_cc_'+neuron_set+'_'+graph_type+'_random.plt',
+					   'metric_cc_'+neuron_set+'_'+graph_type+randomization+'.plt',
 					   'metric_'+length_metric+'.plt',
-					   'metric_'+length_metric+'_random.plt']
+					   'metric_'+length_metric+randomization+'.plt']
 	sw_metrics = ['cc_'+neuron_set+'_'+graph_type,
 				  'cc_'+neuron_set+'_'+graph_type+randomization,
 				  length_metric,
@@ -872,7 +903,7 @@ def calc_metrics(metrics, anatomy_files):
 				
 				result[metric].append(value)
 						
-			metric_data.append({'agent': agent, 'metrics': result})
+		metric_data.append({'agent': agent, 'metrics': result})
 		
 		if need_any_graphs:
 			__free_graphs()
