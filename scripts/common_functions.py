@@ -91,7 +91,8 @@ class ClassificationError(Exception):
 
 def classify_run(path_run,
 		 single_classification = False,
-		 constraints = CLASSIFICATIONS):
+		 constraints = CLASSIFICATIONS,
+		 dependents = None):
 	classifications = []
 
 	def __nonzero(field):
@@ -151,6 +152,15 @@ def classify_run(path_run,
 			pass
 
 	#
+	# Apply Dependents
+	#
+	if dependents != None:
+		nondependents = list_difference(classifications_constrained,
+						dependents)
+		if len(nondependents) == 0:
+			classifications_constrained = []
+
+	#
 	# Validate Result
 	#
 	if len(classifications_constrained) == 0:
@@ -172,6 +182,7 @@ def classify_run(path_run,
 def classify_runs(run_paths,
 		  single_classification = False,
 		  constraints = CLASSIFICATIONS,
+		  dependents = None,
 		  func_notfound = None):
 
 	result = {}
@@ -180,7 +191,8 @@ def classify_runs(run_paths,
 		try:
 			classifications = classify_run( path,
 							single_classification,
-							constraints )
+							constraints,
+							dependents)
 
 			for c in classifications:
 				try:
@@ -224,6 +236,19 @@ def normalize_classifications( names,
 			       classifications = CLASSIFICATIONS ):
 	return map( lambda name: normalize_classification(name, classifications),
 		    names )
+
+####################################################################################
+###
+### FUNCTION friendly_classification()
+###
+####################################################################################
+def friendly_classification( name ):
+	parts = name.split('_')
+	if len(parts) == 1:
+		return name
+	else:
+		return parts[0] + ' (' + ','.join(parts[1:]) + ')'
+
 
 ####################################################################################
 ###

@@ -44,7 +44,7 @@ def get_name(type):
     if len(pieces) > 1:
         name += ' ('
         for piece in pieces[1:]:
-    	    name += piece.upper() + ','
+    	    name += piece + ','
     	name = name[:-1] + ')'
     return name
 

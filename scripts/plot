@@ -172,7 +172,8 @@ def parse_args(argv):
 				   'ylabel1': 'ylabel1',
 				   'ylabel2': 'ylabel2',
 				   'rmargin': 'rmargin',
-				   'tcrit': 'tcrit'}
+				   'tcrit': 'tcrit',
+				   'tscale': 'tscale'}
 
 	FLAGS_AVR = {'w': 'whiskers',
 				 'whiskers': 'whiskers',
@@ -403,9 +404,13 @@ def classify_runs( arg_paths,
 		warn( str(x) )
 		failed_paths.append( path )
 
+	dependents = filter(lambda x: x.startswith('Random'),
+			    groups)
+
 	classified_runs = common_functions.classify_runs( run_paths,
 													  False,
 													  groups,
+													  dependents,
 													  lambda path, x: __classification_fail(failed_paths,
 																							path,
 																							x) )
@@ -440,12 +445,17 @@ def get_macros( clauses,
 	else:
 		title += '{VALUE_NAMES1}'
 
-	if len(clause1.groups) > 2:
-		groups = ', '.join(clause1.groups)
-	else:
-		groups = ' vs. '.join(clause1.groups)
+	groups = map(common_functions.friendly_classification,
+		     clause1.groups)
+	groups_ttest = map(common_functions.friendly_classification,
+			   clause1.groups)
 
-	groups_ttest = ' vs. '.join(clause1.groups_ttest)
+	if len(groups) > 2:
+		groups = ', '.join(groups)
+	else:
+		groups = ' vs. '.join(groups)
+
+	groups_ttest = ' vs. '.join(groups_ttest)
 
 	modes = set( [x.mode.name for x in clauses] )
 
@@ -732,7 +742,12 @@ def plot_init( clauses,
 					tmax = max( tmax,
 								max(clause.ttest[V+'-'+curve].getColumn( 'tval' )) )
 
-		plot.y2range = (0, tmax * 4)
+		try:
+			y2max = tmax / float(gopts.get('tscale', '0.25'));
+		except:
+			err('tscale must be a valid float')
+
+		plot.y2range = (0, y2max)
 		plot.y2label = "Dependent Student's T-test (p < 0.05)"
 		plot.createTick( tcrit,
 						 "T*",
@@ -980,7 +995,7 @@ def create_curves(mode,
 			if classification == 'None':
 				title = 'Meta-' + title
 			else:
-				title = classification
+				title = common_functions.friendly_classification(classification)
 		elif ttest:
 			title += expand_macros( ' ({GROUPS_TTEST})', macros )
 		else:
@@ -1182,6 +1197,13 @@ GENERAL OPTIONS
 	 --tcrit <TCRIT>
 			   Specify value of T* (default %f, which corresponds to %d
 			samples in %d pairs in a Dependent Student's T-test)
+
+     --tscale <scale>
+                       Specify scale of y axis when displaying tval, where a value
+                    of 1 will result in the max tval being at the very top of the
+                    chart.
+
+                    (default '0.25')
 
 	 -p, --pval
 			   Plot T-test p-values between groups (see --group).
