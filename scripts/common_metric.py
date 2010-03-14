@@ -4,16 +4,25 @@ import os
 import common_functions
 import datalib
 
-METRIC_ROOT_TYPES = ['cc', 'nsp', 'cpl', 'swi', 'hf', 'nm']
-METRIC_ROOT_NAMES = {'cc':'Clustering Coefficient', 'nsp':'Normalized Shortest Path', 'cpl': 'Characteristic Path Length', 'swi': 'Small World Index', 'hf':'Heuristic Fitness', 'nm':'Newman Modularity'}
-METRIC_TYPES = ['cc_a_bu', 'nsp_a_bu', 'cpl_a_bu', 'swi_nsp_a_bu', 'swi_cpl_a_bu', 'hf', 'nm_a_wd']
-DEFAULT_METRICS = ['cc_a_bu', 'nsp_a_bu', 'cpl_a_bu', 'swi_nsp_a_bu', 'swi_cpl_a_bu', 'hf', 'nm_a_wd']
-NETWORKX_METRICS = ['cc_a_bu', 'nsp_a_bu', 'cpl_a_bu']
-BCT_METRICS = ['nm_a_wd']
-METRICS_NON_RANDOM = ['swi', 'swi', 'hf']
+METRIC_ROOT_TYPES = ['cc', 'npl', 'cpl', 'cl', 'nm', 'swi', 'hf']
+METRIC_ROOT_NAMES = {'cc':'Clustering Coefficient', 'npl':'Normalized Path Length', 'cpl': 'Characteristic Path Length', 'cl':'Connectivity Length', 'swi':'Small World Index', 'hf':'Heuristic Fitness', 'nm':'Newman Modularity'}
+DEFAULT_METRICS = []
+METRICS_NO_GRAPH = ['hf']
+PACKAGES = ['nx', 'bct']  # NetworkX or BCT
+NEURON_SETS = ['a', 'p']  # all or processing
+GRAPH_TYPES = ['bu', 'bd', 'wu', 'wd']  # binary/weighted, undirected/directed
+LINK_TYPES = ['w', 'd']  # weight or distance
+PRESERVATIONS = ['np', 'wp', 'dp']
+RANDOM_PIECE = '_ran_'
 FILENAME_AVR = 'AvrMetric.plt'
-RANDOM_FILENAME_AVR = 'AvrMetricRandom.plt'
 DEFAULT_NUMBINS = 11
+
+METRIC_TYPES = []
+for root in METRIC_ROOT_TYPES:
+	for neuron_set in NEURON_SETS:
+		for graph_type in GRAPH_TYPES:
+			type = root + '_' + neuron_set + '_' + graph_type
+			METRIC_TYPES.append(type)
 
 
 ####################################################################################
@@ -64,19 +73,31 @@ def normalize_metrics(data):
 
 ####################################################################################
 ###
-### FUNCTION has_random()
+### FUNCTION get_random_classifications()
 ###
 ####################################################################################
-def has_random(path_run, recent_type = None):
+def get_random_classifications(path_run, recent_type = None):
     if recent_type == None:
+        classifications = []
         for recent_type in common_functions.RECENT_TYPES:
-            if has_random(path_run, recent_type):
-                return True
-        return False
+            classifications += get_random_classifications(path_run, recent_type)
 
-    return os.path.exists( path_avr(path_run,
-                                    'Random',
-                                    recent_type) )
+        return classifications
+
+    path = path_avr( path_run, None, recent_type )
+    if os.path.exists( path ):
+        digest = datalib.parse_digest( path )
+
+        classifications = set()
+        
+        for name in digest['tables'].keys():
+            index = name.find(RANDOM_PIECE)
+            if index > -1:
+                classifications.add( name[index + len(RANDOM_PIECE):] )
+
+        return list( classifications )
+    else:
+        return []
 
 ####################################################################################
 ###
@@ -85,10 +106,7 @@ def has_random(path_run, recent_type = None):
 ####################################################################################
 def relpath_avr(classification,
                 recent_type):
-    if classification == 'Random':
-        return os.path.join('brain', recent_type, RANDOM_FILENAME_AVR)
-    else:
-        return os.path.join('brain', recent_type, FILENAME_AVR)
+    return os.path.join('brain', recent_type, FILENAME_AVR)
 
 ####################################################################################
 ###
@@ -115,6 +133,20 @@ def path_run_from_avr(path_avr,
 
 ####################################################################################
 ###
+### FUNCTION normalize_metrics_names()
+###
+####################################################################################
+def normalize_metrics_names( classification,
+                             metrics ):
+    if classification.startswith("Random"):
+        metric_prefix = classification.replace('Random', 'ran')
+        metrics = map(lambda x: x + '_' + metric_prefix,
+                      metrics)
+
+    return metrics
+
+####################################################################################
+###
 ### FUNCTION parse_avrs()
 ###
 ####################################################################################
@@ -123,8 +155,9 @@ def parse_avrs(run_paths,
                recent_type,
                metrics,
                run_as_key = False):
+
     # parse the AVRs for all the runs
-   
+
     avrs = datalib.parse_all( map(lambda x: path_avr( x, classification, recent_type ),
                                   run_paths),
                               metrics,
@@ -138,4 +171,3 @@ def parse_avrs(run_paths,
                       for x in avrs.items()] )
 
     return avrs
-    

@@ -270,7 +270,9 @@ def ttest_table( data1,
 		 data2,
 		 n,
 		 tcrit,
-		 regions,
+		 regions,  # general names
+		 regions1, # normalized for classification of data1
+		 regions2, # normalized for classification of data2
 		 timesteps,
 		 input_colnames,
 		 func_iter ):
@@ -287,11 +289,11 @@ def ttest_table( data1,
     result = dict( [__createTable('-'.join( C_col ))
 		    for C_col in iterators.product(regions, input_colnames)] )
     
-    for C in regions:
+    for C, C1, C2 in iterators.IteratorUnion(iter(regions), iter(regions1), iter(regions2)):
         for t in timesteps:
             for col in input_colnames:
-                diffMean, stdDev, tval, pval = ttest( (data1,C,t,col),
-						      (data2,C,t,col),
+                diffMean, stdDev, tval, pval = ttest( (data1,C1,t,col),
+						      (data2,C2,t,col),
 						      n,
 						      func_iter )
 
@@ -309,3 +311,115 @@ def ttest_table( data1,
                 row["pval"] = pval
 
     return result
+
+
+####################################################################################
+###
+### FUNCTION copy_matrix()
+###
+####################################################################################
+def copy_matrix(m):
+	n = []
+	for i in range(len(m)):
+		row = []
+		for j in range(len(m[i])):
+			row.append(m[i][j])
+		n.append(row)
+	
+	return n
+	
+
+####################################################################################
+###
+### FUNCTION wd_to_bu()  # Convert weighted, directed matrix to binary, undirected
+###                      # Assumes all positive (or zero) weights
+###
+####################################################################################
+def wd_to_bu(m, threshold):
+	m_wu = wd_to_wu(m)
+	m_bu = copy_matrix(m_wu)
+	for i in range(len(m)):
+		for j in range(len(m[i])):
+			if m_wu[i][j] > threshold:
+				m_bu[i][j] = 1
+			else:
+				m_bu[i][j] = 0
+	
+	return m_bu
+			
+
+####################################################################################
+###
+### FUNCTION wd_to_bd()  # Convert weighted, directed matrix to binary, directed
+###                      # Assumes all positive (or zero) weights
+###
+####################################################################################
+def wd_to_bd(m, threshold):
+	m_bd = copy_matrix(m)
+	for i in range(len(m)):
+		for j in range(len(m[i])):
+			if m[i][j] > threshold:
+				m_bd[i][j] = 1
+			else:
+				m_bd[i][j] = 0
+
+	return m_bd
+
+
+####################################################################################
+###
+### FUNCTION wd_to_wu()  # Convert weighted, directed matrix to weighted, undirected
+###                      # Assumes all positive (or zero) weights
+###
+####################################################################################
+def wd_to_wu(m):
+	m_wu = copy_matrix(m)
+	for i in range(len(m)):
+		for j in range(i):
+			m_wu[i][j] = m_wu[j][i] = (m[i][j] + m[j][i]) * 0.5
+
+	return m_wu
+
+
+####################################################################################
+###
+### FUNCTION count_non_zeroes()  # counts non_zero elements in a matrix
+###                              # Assumes all positive (or zero) weights
+###
+####################################################################################
+def count_non_zeroes(m, threshold=0.0):
+	count = 0
+	for i in range(len(m)):
+		for j in range(len(m[i])):
+			if m[i][j] > threshold:
+				count += 1
+
+	return count
+
+
+####################################################################################
+###
+### FUNCTION w_to_d()  # converts matrix weights to distances (by inversion),
+###					   # leaving zeroes as zeroes,
+###					   # optionally capping distances to N (# of nodes),
+###					   # and assuring the diagonal elements are zero
+###					   # assumes a square matrix
+###
+####################################################################################
+def w_to_d(mw, cap=False):
+	l = len(mw)
+	n = float(l * l)
+	oneOverN = 1.0 / n
+	md = []
+	for i in range(l):
+		md.append([])
+		for j in range(l):
+			if mw[i][j] == 0 or i == j:
+				md[i].append(0.0)
+			elif cap and mw[i][j] < oneOverN:
+				md[i].append(n)
+			else:
+				md[i].append(1.0 / mw[i][j])
+
+	return md
+

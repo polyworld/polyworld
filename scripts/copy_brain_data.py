@@ -27,21 +27,23 @@ target_dir = ''
 target_dir_specified = False
 test = False
 overwrite = False
+avr_only = False
 
 def usage():
-	print 'Usage:  copy_brain_data.py [-t] [-o] source_directory [target_directory]'
+	print 'Usage:  copy_brain_data.py [-t] [-a] [-o] source_directory [target_directory]'
 	print '  source_directory may be a run directory or a collection of run directories'
 	print '  target_directory is optional, but if present must be the same kind of directory as source_directory'
 	print '    If target_directory is not specified, a new, unique target_directory will be created'
 	print '    If target_directory is specified, existing brain files will only be overwritten if -o is specified'
 	print '      and BirthsDeaths.log and worldfile will not be overwritten whether -o is specified or not'
+	print '  -a will copy only the Avr files (no epoch files)'
 	print '  -t will print out the directories that would have been affected, but nothing will be changed'
 
 def parse_args():
-	global source_dir, target_dir, target_dir_specified, test, overwrite
+	global source_dir, target_dir, target_dir_specified, test, overwrite, avr_only
 	
 	try:
-		opts, args = getopt.getopt(sys.argv[1:], 'to', ['test','overwrite'] )
+		opts, args = getopt.getopt(sys.argv[1:], 'toa', ['test','overwrite','avr'] )
 	except getopt.GetoptError, err:
 		print str(err) # will print something like "option -a not recognized"
 		usage()
@@ -66,6 +68,8 @@ def parse_args():
 			test = True
 		elif o in ('-o', '--overwrite'):
 			overwrite = True
+		elif o in ('-a', '--avr_only'):
+			avr_only = True
 		else:
 			print 'Unknown option:', o
 			usage()
@@ -108,23 +112,24 @@ def copy_run_dir(source, target):
 			if not target_dir_specified or overwrite or not os.access(target_file, os.F_OK):
 				copy(source_file, target_file)
 	
-	for root, dirs, files in os.walk(source_Recent_dir):
-		break
-	for time_dir in dirs:
-		source_time_dir = join(source_Recent_dir, time_dir)
-		target_time_dir = join(target_Recent_dir, time_dir)
-		if not target_dir_specified:
-			mkdir(target_time_dir)
-		
-		files_to_copy = []
-		for expression in EPOCH_FILES_TO_COPY:
-			files_to_copy += glob.glob(join(source_time_dir, expression))
-		
-		for source_file in files_to_copy:
-			if os.access(source_file, os.F_OK):
-				target_file = join(target_time_dir, os.path.basename(source_file))
-				if not target_dir_specified or overwrite or not os.access(target_file, os.F_OK):
-					copy(source_file, target_file)
+	if not avr_only:
+		for root, dirs, files in os.walk(source_Recent_dir):
+			break
+		for time_dir in dirs:
+			source_time_dir = join(source_Recent_dir, time_dir)
+			target_time_dir = join(target_Recent_dir, time_dir)
+			if not target_dir_specified and EPOCH_FILES_TO_COPY:
+				mkdir(target_time_dir)
+			
+			files_to_copy = []
+			for expression in EPOCH_FILES_TO_COPY:
+				files_to_copy += glob.glob(join(source_time_dir, expression))
+			
+			for source_file in files_to_copy:
+				if os.access(source_file, os.F_OK):
+					target_file = join(target_time_dir, os.path.basename(source_file))
+					if not target_dir_specified or overwrite or not os.access(target_file, os.F_OK):
+						copy(source_file, target_file)
 
 
 def main():

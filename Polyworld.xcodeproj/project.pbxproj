@@ -165,7 +165,6 @@
 		760C31CC101BB9E900F5F662 /* worldfile_driven_domains */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_driven_domains; path = worldfiles/worldfile_driven_domains; sourceTree = "<group>"; };
 		760C31CD101BB9E900F5F662 /* worldfile_driven_hard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_driven_hard; path = worldfiles/worldfile_driven_hard; sourceTree = "<group>"; };
 		760C31CE101BB9E900F5F662 /* worldfile_dynfood */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_dynfood; path = worldfiles/worldfile_dynfood; sourceTree = "<group>"; };
-		760C31CF101BB9E900F5F662 /* worldfile_epoch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_epoch; path = worldfiles/worldfile_epoch; sourceTree = "<group>"; };
 		760C31D0101BB9E900F5F662 /* worldfile_fixed_driven */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_fixed_driven; path = worldfiles/worldfile_fixed_driven; sourceTree = "<group>"; };
 		760C31D1101BB9E900F5F662 /* worldfile_fixed_passive */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_fixed_passive; path = worldfiles/worldfile_fixed_passive; sourceTree = "<group>"; };
 		760C31D2101BB9E900F5F662 /* worldfile_heur_comp_fit */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_heur_comp_fit; path = worldfiles/worldfile_heur_comp_fit; sourceTree = "<group>"; };
@@ -479,7 +478,6 @@
 				760C31CC101BB9E900F5F662 /* worldfile_driven_domains */,
 				760C31CD101BB9E900F5F662 /* worldfile_driven_hard */,
 				760C31CE101BB9E900F5F662 /* worldfile_dynfood */,
-				760C31CF101BB9E900F5F662 /* worldfile_epoch */,
 				760C31D0101BB9E900F5F662 /* worldfile_fixed_driven */,
 				760C31D1101BB9E900F5F662 /* worldfile_fixed_passive */,
 				760C31D2101BB9E900F5F662 /* worldfile_heur_comp_fit */,

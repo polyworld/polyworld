@@ -24,7 +24,8 @@ class Mode:
                   func_relpath,
                   func_pathRunFromValue,
                   func_parseValues,
-                  func_getValueNames ):
+                  func_getValueNames,
+                  func_normalizeValueNames):
         self.name = name
         self.datasets = datasets
         self.defaultDataset = defaultDataset if defaultDataset else 'defaultDataset'
@@ -38,6 +39,37 @@ class Mode:
         self.func_pathRunFromValue = func_pathRunFromValue
         self.func_parseValues = func_parseValues
         self.func_getValueNames = func_getValueNames
+        self.func_normalizeValueNames = func_normalizeValueNames
+   
+    def __str__( self ):
+    	s1 = []
+    	
+    	return """Mode: name = %s,
+                        datasets = %s
+                        defaultDataset = %s,
+                        isAvr = %s,
+                        values = %s
+                        defaultValues = %s
+                        curvetypes = %s
+                        defaultCurvetype = %s,
+                        colname_timestep = %s,
+                        func_relpath = %s,
+                        func_pathRunFromValue = %s,
+                        func_parseValues = %s,
+                        func_getValueNames = %s\n""" % (
+                        self.name,
+                        str([x for x in self.datasets]),
+                        self.defaultDataset,
+                        str(self.isAvr),
+                        str([x for x in self.values]),
+                        str([x for x in self.defaultValues]),
+                        str([str(x) for x in self.curvetypes]),
+                        str(self.defaultCurvetype),
+                        str(self.colName_timestep),
+                        str(self.func_relpath),
+                        str(self.func_pathRunFromValue),
+                        str(self.func_parseValues),
+                        str(self.func_getValueNames) )
 
     def relpath( self,
                  classification,
@@ -65,6 +97,14 @@ class Mode:
                                       value_names,
                                       run_as_key )
 
+    def normalizeValueNames( self,
+                             classification,
+                             value_names ):
+        if self.func_normalizeValueNames == None:
+            return valueNames
+        else:
+            return self.func_normalizeValueNames(classification, value_names)
+
     def usage( self ):
         #
         # Usage
@@ -85,13 +125,13 @@ OPTIONS
 """
 
         #
-        # -D
+        # -d
         #
         if len(self.datasets) > 1:
             opts = True
 
             print """
-     -D <dataset>
+     -d <dataset>
             Valid datasets:\
 %s
             Note that datasets may be abbreviated.
@@ -99,13 +139,13 @@ OPTIONS
                                self.defaultDataset)
 
         #
-        # -V
+        # -v
         #
         if len(self.values) > 1:
             opts = True
 
             print """
-     -V <V>[,<V>]..."""
+     -v <v>[,<v>]..."""
             print self.usage_values
 
         #
@@ -116,13 +156,13 @@ OPTIONS
 
             print """
      -m/M, --mean/Mean
-               Plot mean/meta-mean of each value (-V) type. (default -m on)
+               Plot mean/meta-mean of each value (-v) type. (default -m on)
 
      -n/N, --min/Min
-               Plot max/meta-max of each value (-V) type.
+               Plot max/meta-max of each value (-v) type.
 
      -x/X, --max/Max
-               Plot max/meta-max of each value (-V) type.
+               Plot max/meta-max of each value (-v) type.
 
      -e/E, --err/Err
                Draw Standard Error bars for the mean/meta-mean.
@@ -171,21 +211,23 @@ MODES['neuralComplexity'] = Mode( 'Neural Complexity',
                                   common_complexity.relpath_avr,
                                   common_complexity.path_run_from_avr,
                                   common_complexity.parse_avrs,
-                                  common_complexity.get_names )
+                                  common_complexity.get_names,
+                                  None)
 
 MODES['graphMetric'] = Mode( 'Graph Metric',
 							 common_functions.RECENT_TYPES,
 							 'Recent',
                              True,
                              common_metric.METRIC_TYPES,
-                             'SP',
+                             'cc_a_bu',
                              ['min', 'mean', 'max'],
                              'mean',
                              'Timestep',
                              common_metric.relpath_avr,
                              common_metric.path_run_from_avr,
                              common_metric.parse_avrs,
-                             common_metric.get_names )
+                             common_metric.get_names,
+                             common_metric.normalize_metrics_names)
 
 MODES['motionComplexity'] = Mode( 'Motion',
                                   [],
@@ -199,7 +241,8 @@ MODES['motionComplexity'] = Mode( 'Motion',
                                   common_motion.relpath_complexity,
                                   common_motion.path_run_from_complexity,
                                   common_motion.parse_complexity,
-                                  common_motion.get_names )
+                                  common_motion.get_names,
+                                  None)
 
 MODES['stats'] = Mode( 'Stats',
                        [],
@@ -213,26 +256,27 @@ MODES['stats'] = Mode( 'Stats',
                        lambda: 'stats/stat.1',
                        common_stats.path_run_from_stats,
                        common_stats.parse_stats,
-                       common_stats.get_names )
+                       common_stats.get_names,
+                       None)
 
 for shortname, mode in MODES.items():
     mode.shortname = shortname
 
 MODES['neuralComplexity'].usage_values = """\
-               Plot NeuralComplexity across one or more 'V' neuron types,
-            where V can be a composite of types (e.g. HB). Multiple V specs are
-            separated by commas (e.g. -V P,HB,I).
+               Plot NeuralComplexity across one or more 'v' neuron types,
+            where v can be a composite of types (e.g. HB). Multiple v specs are
+            separated by commas (e.g. -v P,HB,I).
             (default P)"""
 
 MODES['graphMetric'].usage_values = """\
-              Plot Graph theoretical metrics of one or more types 'V',
-           where V is one of:
+              Plot Graph theoretical metrics of one or more types 'v',
+           where v is one of:
                CC - Clustering Coefficient
                SP - (Normalized) Shortest Path length"""
 
 MODES['stats'].usage_values = """\
-              Plot statistics of one or more types 'V',
-           where V is one of:\
+              Plot statistics of one or more types 'v',
+           where v is one of:\
 %s""" % ('\n               '.join( [''] + common_stats.STAT_TYPES ))
 
 

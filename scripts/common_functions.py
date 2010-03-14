@@ -7,6 +7,7 @@ import datalib
 import glob
 
 RECENT_TYPES = ['Recent', 'bestRecent']
+DEBUG = False
 
 # save this in case program stomps on argv later
 __progpath = sys.argv[0]
@@ -126,17 +127,17 @@ def classify_run(path_run,
 	#
 	# Random
 	#
-	if common_metric.has_random( path_run ):
-		if ( ('Driven' in constraints and 'Driven' in classifications) or
-			 ('Passive' in constraints and 'Passive' in classifications) or
-			 ('Driven' not in constraints and 'Passive' not in constraints) ):
-			classifications.append('Random')
+	classifications += map( lambda x: 'Random_' + x,
+				common_metric.get_random_classifications(path_run) )
               
 	#
 	# Apply Constraints
 	#
-	classifications_constrained = list_intersection( classifications,
+	if constraints != None:
+		classifications_constrained = list_intersection( classifications,
 							 constraints )
+	else:
+		classifications_constrained = classifications
 
 	#
 	# Apply Preemptions
@@ -200,6 +201,32 @@ def classify_runs(run_paths,
 
 ####################################################################################
 ###
+### FUNCTION normalize_classification()
+###
+### Expand abbreviated classification name, and handle special classifications
+### comprised of constituents/pieces delimited by '_'
+###
+### Example:
+###
+###  d        -->  Driven
+###  r_10_np  -->  Random_10_np
+###
+####################################################################################
+def normalize_classification( name,
+			      classifications = CLASSIFICATIONS ):
+	pieces = name.split( '_' )
+	pieces[0] = expand_abbreviations( pieces[0],
+					  classifications,
+					  case_sensitive = False )
+	return '_'.join( pieces )
+	
+def normalize_classifications( names,
+			       classifications = CLASSIFICATIONS ):
+	return map( lambda name: normalize_classification(name, classifications),
+		    names )
+
+####################################################################################
+###
 ### FUNCTION get_timesteps()
 ###
 ####################################################################################
@@ -219,6 +246,7 @@ def get_timesteps(iter_tables, colname_timestep):
 	ret.sort()
 
 	return ret
+
 
 ####################################################################################
 ###
@@ -593,10 +621,26 @@ def list_intersection(a, b):
 ###
 ### FUNCTION list_unique()
 ###
-### returns order-preserving list of unique elements in a
+### returns order-preserving list of unique elements in list a
 ###
 ####################################################################################
 def list_unique(a):
 	b = [] 
-	[b.append(i) for i in a if not b.count(i)] 
+#	[b.append(i) for i in a if not b.count(i)] 
+	[b.append(i) for i in a if i not in b] 
 	return b
+
+####################################################################################
+###
+### FUNCTION debug()
+###
+### works like print(), but can be toggled on and off via common_functions.DEBUG
+###
+####################################################################################
+def debug(*args):
+	if DEBUG:
+		for arg in args:
+			print arg,
+		print
+
+

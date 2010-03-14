@@ -521,6 +521,17 @@ class Options:
 
         self.settings = dict([(name, False) for name in self.flags.values()])
         self.nset = 0
+    
+    def __str__(self):
+        return """plotlib.Options:
+        flags = %s,
+        args = %s,
+        settings = %s,
+        nset = %d\n""" % (
+        str(self.flags),
+        str(self.args),
+        str(self.settings),
+        self.nset )
 
     def get(self, setting_name, default = None):
         try:

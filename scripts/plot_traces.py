@@ -12,7 +12,7 @@ GROUPS = ['driven', 'passive', 'both']
 DEFAULT_DIRECTORY = '/pwd/driven_vs_passive_b2'
 DEFAULT_GROUP = GROUPS[2]
 DEFAULT_X_DATA_TYPE = 'P'
-DEFAULT_Y_DATA_TYPE = 'hf'
+DEFAULT_Y_DATA_TYPE = 'HB'
 
 COLOR = {'driven':(0.5,1.0,0.5), 'passive':(0.5,0.5,1.0)}
 
@@ -100,18 +100,6 @@ def parse_args():
 			usage()
 			exit(2)
 	
-	if x_data_type not in common_complexity.COMPLEXITY_TYPES and \
-	   x_data_type not in common_metric.METRIC_TYPES:
-		print 'unknown x_data_type:', x_data_type
-		usage()
-		exit(2)
-
-	if y_data_type not in common_complexity.COMPLEXITY_TYPES and \
-	   y_data_type not in common_metric.METRIC_TYPES:
-		print 'unknown y_data_type:', y_data_type
-		usage()
-		exit(2)
-	
 	if group not in GROUP_TYPES:
 		print 'unknown group type:', group
 					
@@ -119,6 +107,7 @@ def parse_args():
 		
 	
 def retrieve_data(run_dir, x_data_type, y_data_type):
+	global use_hf_coloration
 	recent_dir = os.path.join(run_dir, 'brain/Recent')
 	x_filename = get_filename(x_data_type)
 	x_path = os.path.join(recent_dir, x_filename)
@@ -133,11 +122,21 @@ def retrieve_data(run_dir, x_data_type, y_data_type):
 	x_data = x_table.getColumn('mean').data
 	y_data = y_table.getColumn('mean').data
 	if use_hf_coloration:
+		got_hf_data = False
 		try:
 			hf_table = datalib.parse(y_path)['hf']
+			got_hf_data = True
 		except KeyError:
-			hf_table = datalib.parse(x_path)['hf']
-		t_data = hf_table.getColumn('mean').data
+			try:
+				hf_table = datalib.parse(x_path)['hf']
+			except KeyError:
+				# must resort to time data because hf isn't available
+				use_hf_coloration = False
+				pass
+		if got_hf_data:
+			t_data = hf_table.getColumn('mean').data
+		else:
+			t_data = x_table.getColumn('Timestep').data # could come from either x or y
 	else:
 		t_data = x_table.getColumn('Timestep').data # could come from either x or y
 		

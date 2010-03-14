@@ -102,18 +102,6 @@ def parse_args():
 			usage()
 			exit(2)
 	
-	if x_data_type not in common_complexity.COMPLEXITY_TYPES and \
-	   x_data_type not in common_metric.METRIC_TYPES:
-		print 'unknown x_data_type:', x_data_type
-		usage()
-		exit(2)
-
-	if y_data_type not in common_complexity.COMPLEXITY_TYPES and \
-	   y_data_type not in common_metric.METRIC_TYPES:
-		print 'unknown y_data_type:', y_data_type
-		usage()
-		exit(2)
-	
 	if group not in GROUP_TYPES:
 		print 'unknown group type:', group
 					

@@ -1,5 +1,6 @@
 import re
 import common_functions
+import os
 
 REQUIRED = True
 
@@ -394,6 +395,59 @@ def parse(path, tablenames = None, required = not REQUIRED, keycolname = None):
                 raise MissingTableError('Failed to find %s in %s' % (name, path))
 
     return tables
+
+####################################################################################
+###
+### FUNCTION parse_digest()
+###
+####################################################################################
+def parse_digest( path ):
+    f = open( path )
+    
+    def int_field(line):
+        return int( line.split()[1] )
+    
+    #
+    # Parse the digest start/size from end of file
+    #
+    f.seek( -64, os.SEEK_END )
+    
+    start = -1
+    size = -1
+    
+    for line in f.readlines():
+        if line.startswith( '#START' ):
+            start = int_field( line )
+        elif line.startswith('#SIZE'):
+            size = int_field( line )
+    
+    assert( start > -1 )
+    assert( size > -1 )
+    
+    #
+    # Parse the digest
+    #
+    f.seek( start, os.SEEK_SET )
+    
+    line = f.readline()
+    assert( line.startswith('#TABLES') )
+    
+    ntables = int_field( line )
+    
+    tables = {}
+    
+    for i in range(ntables):
+        fields = f.readline().split()
+    
+        table = { 'name': fields[1],
+                  'offset': int( fields[2] ),
+                  'data': int( fields[3] ),
+                  'nrows': int( fields[4] ),
+                  'rowlen': int( fields[5] ) }
+    
+        tables[ table['name'] ] = table
+    
+    return {'tables': tables}
 
 ####################################################################################
 ###
