@@ -17,13 +17,25 @@ import datalib
 
 DEFAULT_DIRECTORY = ''
 
-FILES_TO_ALTER = ['AvrMetric*.plt']
-FILES_TO_RENAME = ['metric_*.plt']
-METRICS_TO_RENAME = {'CC':'cc_a_bu', 'SP':'nsp_a_bu', 'CP':'cpl_a_bu', 'NM_wd':'nm_a_wd',
-					 'SW':'swi_nsp_a_bu', 'SC':'swi_cpl_a_bu', 'HF':'hf'}
+PASS = 2
 
+if PASS == 1:
+	# This was for the original massive renaming from our simple two-character names to
+	# multi-character metric names, plus identification of the neuron-set and graph-type
+	FILES_TO_ALTER = ['AvrMetric*.plt']
+	FILES_TO_RENAME = ['metric_*.plt']
+	METRICS_TO_RENAME = {'CC':'cc_a_bu', 'SP':'nsp_a_bu', 'CP':'cpl_a_bu', 'NM_wd':'nm_a_wd',
+						 'SW':'swi_nsp_a_bu', 'SC':'swi_cpl_a_bu', 'HF':'hf'}
+elif PASS == 2:
+	# This was for the renaming of 'nsp' to 'npl'
+	# ("normalized shortest path" to "normalized path length")
+	# This should be after the big random metric renaming (rename_random_metrics.py)
+	FILES_TO_ALTER = ['AvrMetric*.plt']
+	FILES_TO_RENAME = ['metric_*.plt']
+	METRICS_TO_RENAME = {'nsp_a_bu':'npl_a_bu', 'nsp_a_bu_ran_10_np':'npl_a_bu_ran_10_np'}
 
 test = False
+verbose = False
 
 
 def usage():
@@ -33,10 +45,10 @@ def usage():
 
 
 def parse_args():
-	global test
+	global test, verbose
 	
 	try:
-		opts, args = getopt.getopt(sys.argv[1:], 't', ['test'] )
+		opts, args = getopt.getopt(sys.argv[1:], 'tv', ['test', '--verbose'] )
 	except getopt.GetoptError, err:
 		print str(err) # will print something like "option -a not recognized"
 		usage()
@@ -57,6 +69,8 @@ def parse_args():
 	for o, a in opts:
 		if o in ('-t', '--test'):
 			test = True
+		elif o in ('-v', '--verbose'):
+			verbose = True
 		else:
 			print 'Unknown option:', o
 			usage()
@@ -66,7 +80,7 @@ def parse_args():
 
 
 def rename_metrics_in_file(file, metrics_to_rename):
-	global test
+	global test, verbose
 	tables = datalib.parse(file)
 	not_renamed = []
 	renamed = []
@@ -81,8 +95,8 @@ def rename_metrics_in_file(file, metrics_to_rename):
 			print 'renaming', renamed, 'in', file
 		else:
 			datalib.write(file, tables)
-	if not_renamed:
-		print 'could not rename', not_renamed, 'in', file
+	if not_renamed and verbose:
+		print 'not renaming', not_renamed, 'in', file
 
 def rename_metric_file(file):
 	global test
@@ -105,8 +119,8 @@ def rename_metric_file(file):
 		else:
 			rename_metrics_in_file(file, {metric:METRICS_TO_RENAME[metric]})
 			os.rename(file, new_file)
-	else:
-		print '  unknown metric:', metric, '; not renaming', file
+	elif verbose:
+		print 'not renaming', file
 
 def rename_metrics_in_dir(directory):
 	print 'renaming metrics in', directory
