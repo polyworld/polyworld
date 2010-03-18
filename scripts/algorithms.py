@@ -335,7 +335,7 @@ def copy_matrix(m):
 ###                      # Assumes all positive (or zero) weights
 ###
 ####################################################################################
-def wd_to_bu(m, threshold):
+def wd_to_bu(m, threshold=0.0):
 	m_wu = wd_to_wu(m)
 	m_bu = copy_matrix(m_wu)
 	for i in range(len(m)):
@@ -354,7 +354,7 @@ def wd_to_bu(m, threshold):
 ###                      # Assumes all positive (or zero) weights
 ###
 ####################################################################################
-def wd_to_bd(m, threshold):
+def wd_to_bd(m, threshold=0.0):
 	m_bd = copy_matrix(m)
 	for i in range(len(m)):
 		for j in range(len(m[i])):

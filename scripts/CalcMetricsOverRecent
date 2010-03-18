@@ -82,32 +82,9 @@ def __initialize_graphs():
 ###
 ####################################################################################
 def __read_graphs(anatomy_file):
-	global G_py, G_alg, G_size
+	global G_py
 
-	def __num_input_neurons(header):
-		start = header.rfind('-') + 1
-		return int(header[start:])
-	
-	file = open(anatomy_file,"r")
-	lines = file.readlines()
-	header = lines[0].rstrip()  # get rid of the newline
-	num_input_neurons = __num_input_neurons(header)
-	
-	lines.pop(0) # drop the header line
-
-	for i in range(len(lines)-1):  # -1 to leave out the bias unit
-		l = lines[i].split()
-		l.remove(';')
-		row_a = []
-		row_p = []
-		for j in range(len(l)-1):  # -1 to leave out the bias links
-			w = abs(float(l[j]))
-			row_a.append(w)
-			if j >= num_input_neurons:
-				row_p.append(w)
-		G_py['a']['wd']['w'].append(row_a)  # must agree with neuron-sets and graph-types in common_metric.py
-		if i >= num_input_neurons:
-			G_py['p']['wd']['w'].append(row_p)  # must agree with neuron-sets and graph-types in common_metric.py
+	G_py['a']['wd']['w'], G_py['p']['wd']['w'], header = common_metric.read_anatomy(anatomy_file)
 	
 	return header
 
@@ -124,6 +101,7 @@ def __free_graphs():
 				g = G_alg['bct'][neuron_set][graph_type][link_type]
 				if g:
 					bct.gsl_free(g)
+					G_alg['bct'][neuron_set][graph_type][link_type] = None
 	
 
 ####################################################################################

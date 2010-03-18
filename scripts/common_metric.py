@@ -171,3 +171,60 @@ def parse_avrs(run_paths,
                       for x in avrs.items()] )
 
     return avrs
+
+
+####################################################################################
+###
+### FUNCTION read_anatomy()
+###
+### Reads a brain anatomy file and returns the all-neuron matrix (ga),
+### the processing-neuron (non-sensory) matrix (gp), and the file header.
+### Neither ga nor gp contains the bias neuron or bias inputs.
+###
+####################################################################################
+def read_anatomy(anatomy_file):
+	ga = []
+	gp = []
+
+	def __num_input_neurons(header):
+		start = header.rfind('-') + 1
+		return int(header[start:])
+	
+	file = open(anatomy_file, 'r')
+	lines = file.readlines()
+	header = lines[0].rstrip()  # get rid of the newline
+	num_input_neurons = __num_input_neurons(header)
+	
+	lines.pop(0) # drop the header line
+
+	for i in range(len(lines)-1):  # -1 to leave out the bias unit
+		l = lines[i].split()
+		l.remove(';')
+		row_a = []
+		row_p = []
+		for j in range(len(l)-1):  # -1 to leave out the bias links
+			if j == i:
+				w = 0.0
+			else:
+				w = abs(float(l[j]))
+			row_a.append(w)
+			if j >= num_input_neurons:
+				row_p.append(w)
+		ga.append(row_a)  # must agree with neuron-sets and graph-types in common_metric.py
+		if i >= num_input_neurons:
+			gp.append(row_p)  # must agree with neuron-sets and graph-types in common_metric.py
+	
+	for i in range(len(ga)):
+		for j in range(i):
+			temp = ga[i][j]
+			ga[i][j] = ga[j][i]
+			ga[j][i] = temp
+	
+	for i in range(len(gp)):
+		for j in range(i):
+			temp = gp[i][j]
+			gp[i][j] = gp[j][i]
+			gp[j][i] = temp
+
+	return ga, gp, header
+
