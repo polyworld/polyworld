@@ -35,7 +35,8 @@ DEFAULT_LENGTH_METRIC = 'cl'
 DEFAULT_NUM_RANDOM = '10'
 DEFAULT_PRESERVATION = 'np'
 Threshold = 0.0
-Overwrite = False
+OverwriteEpochMetrics = False
+OverwriteAvrMetrics = False
 G_py = {}
 G_alg = {}
 G_size = {}
@@ -202,6 +203,8 @@ def clustering_coefficient(neuron_set, graph_type, random, preserving):
 		ccv = bct.from_gsl(ccv_gsl)
 		bct.gsl_free(ccv_gsl)
 		cc = sum(ccv) / len(ccv)
+		if random:
+			bct.gsl_free(g)
 	else:
 		err('Unknown package type: '+str(package))
 
@@ -242,6 +245,8 @@ def characteristic_path_length(neuron_set, graph_type, random, preserving):
 		dist = bct.distance_bin(g)
 		cpl = bct.charpath_lambda(dist)
 		bct.gsl_free(dist)
+		if random:
+			bct.gsl_free(g)
 	return cpl
 
 
@@ -265,6 +270,8 @@ def connectivity_length(neuron_set, graph_type, random, preserving):
 			cl = float('inf')
 		else:
 			cl = 1.0 / e
+		if random:
+			bct.gsl_free(g)
 	
 	return cl
 
@@ -283,6 +290,9 @@ def newman_modularity(neuron_set, graph_type, random, preserving):
 		nm = bct.modularity_dir(g)
 	else:
 		nm = bct.modularity_und(g)
+	if random:
+		bct.gsl_free(g)
+
 	return nm
 
 
@@ -394,7 +404,7 @@ def check_environment():
 ###
 ####################################################################################
 def parse_args(argv):
-	global NUMBINS, LegacyMode, Overwrite
+	global NUMBINS, LegacyMode, OverwriteEpochMetrics, OverwriteAvrMetrics
 
 	if len(argv) == 0:
 		show_usage()
@@ -403,7 +413,7 @@ def parse_args(argv):
 
 	recent_type = DefaultRecent
 
-	short = 'od:v:'
+	short = 'oOd:v:'
 	long = []
 
 	try:
@@ -424,7 +434,10 @@ def parse_args(argv):
 		elif opt == 'v':
 			metrics = value.split(',')
 		elif opt == 'o':
-			Overwrite = True
+			OverwriteAvrMetrics = True
+		elif opt == 'O':
+			OverwriteEpochMetrics = True
+			OverwriteAvrMetrics = True
 ##		elif opt == 'b' or opt == 'bins':
 ##			try:
 ##				NUMBINS = int(value)
@@ -477,7 +490,7 @@ def analyze_recent_dir(metrics, recent_dir):
 	except IOError:
 		metrics_avail = []
 	
-	if Overwrite:
+	if OverwriteAvrMetrics:
 		metrics_have = []
 	else:
 		metrics_have = metrics_avail
@@ -706,7 +719,7 @@ def compute_metrics(metrics,
 					tdata):
 	# --- Read in any metrics computed on a previous invocation of this script
 	metrics_read = []
-	if not Overwrite:
+	if not OverwriteEpochMetrics:
 		for metric in metrics:
 			path = os.path.join(timestep_directory, 'metric_' + metric + '.plt')
 	
@@ -971,7 +984,11 @@ DESCRIPTION
 OPTIONS
 
      -o
-            Overwrite existing metric(s) if found
+            Overwrite/recompute existing metrics in Avr file (if present)
+     
+     -O
+            Overwrite/recompute both the epoch metric files and the metrics
+            in the Avr file (if present)
 
      -d <dataset>
             Valid datasets:\
