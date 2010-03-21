@@ -6,16 +6,17 @@
 
 // error.C: implementation of standard error reporting mechanism
 
-// Self
-#include "error.h"
-
 // System
 #include <iostream>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 // Local
 #include "graphics.h"
+
+// Self
+#include "error.h"
 
 using namespace std;
 

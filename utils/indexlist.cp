@@ -6,6 +6,9 @@
 
 // indexlist.cp: declaration & implementation of indexlist classes
 
+// System
+#include <stdio.h>
+
 // Local
 #include "error.h"
 #include "misc.h"

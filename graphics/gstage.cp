@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <iostream>
 #include <stdlib.h>
+#include <stdio.h>
 
 // qt
 #include <qapplication.h>
