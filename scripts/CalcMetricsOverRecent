@@ -588,7 +588,7 @@ def __analyze_recent_dir(metrics, recent_dir):
 		if len(metrics_remaining) > 0:
 			metrics_computed = compute_metrics(metrics_remaining,
 							   recent_dir,
-							   t,
+							   str(t),
 							   tdata)
 			metrics_remaining = list_difference(metrics_remaining,
 								metrics_computed)
@@ -725,7 +725,7 @@ def compute_metrics(metrics,
 					recent_dir,
 					t,
 					tdata):
-	timestep_directory = os.path.join(recent_dir, str(t))
+	timestep_directory = os.path.join(recent_dir, t)
 	print '%s...' % (t)
 	sys.stdout.flush()	
 	
