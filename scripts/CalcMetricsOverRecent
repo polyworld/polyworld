@@ -76,7 +76,7 @@ def __initialize_graphs():
 		for graph_type in common_metric.GRAPH_TYPES:
 			G_size[neuron_set][graph_type] = {}
 			for link_type in common_metric.LINK_TYPES:
-				G_size[neuron_set][graph_type][link_type] = []  # will be node_count, link_count
+				G_size[neuron_set][graph_type][link_type] = []	# will be node_count, link_count
 		
 
 ####################################################################################
@@ -124,7 +124,7 @@ def __get_py_graph(neuron_set, graph_type, link_type):
 		elif graph_type == 'wu':
 			G_py[neuron_set][graph_type]['w'] = algorithms.wd_to_wu(G_py[neuron_set]['wd']['w'])
 		else:
-			err('trying to get py_graph of unknown type: %s' % graph_type)  # shouldn't be possible
+			err('trying to get py_graph of unknown type: %s' % graph_type)	# shouldn't be possible
 	if not G_py[neuron_set][graph_type][link_type] and link_type == 'd':  # need a distance connection matrix
 		G_py[neuron_set][graph_type]['d'] = algorithms.w_to_d(G_py[neuron_set][graph_type]['w'])
 	return G_py[neuron_set][graph_type][link_type]
@@ -132,7 +132,7 @@ def __get_py_graph(neuron_set, graph_type, link_type):
 
 ####################################################################################
 ###
-### FUNCTION __get_graph()  # creates graphs of the appropriate type as needed
+### FUNCTION __get_graph()	# creates graphs of the appropriate type as needed
 ###
 ###		package is 'nx' or 'bct', for NetworkX or Brain Connectivity Toolbox
 ###		neuron_set is 'a' or 'p', for all neurons or processing neurons
@@ -155,13 +155,13 @@ def __get_graph(package, neuron_set, graph_type, link_type):
 		elif package == 'bct':
 			G_alg[package][neuron_set][graph_type][link_type] = bct.to_gslm(g_py)
 		else:
-			err('unknown package type %s' % package)  #  shouldn't be possible
+			err('unknown package type %s' % package)  #	 shouldn't be possible
 	return G_alg[package][neuron_set][graph_type][link_type]
 	
 
 ####################################################################################
 ###
-### FUNCTION __get_graph_size()  # caches and returns graph node_count, link_count
+### FUNCTION __get_graph_size()	 # caches and returns graph node_count, link_count
 ###
 ####################################################################################
 def __get_graph_size(neuron_set, graph_type, link_type):
@@ -169,8 +169,8 @@ def __get_graph_size(neuron_set, graph_type, link_type):
 
 	if not G_size[neuron_set][graph_type][link_type]:
 		g_py = __get_py_graph(neuron_set, graph_type, link_type)
-		G_size[neuron_set][graph_type][link_type].append(len(g_py))  # node count
-		G_size[neuron_set][graph_type][link_type].append(algorithms.count_non_zeroes(g_py))  # link count
+		G_size[neuron_set][graph_type][link_type].append(len(g_py))	 # node count
+		G_size[neuron_set][graph_type][link_type].append(algorithms.count_non_zeroes(g_py))	 # link count
 	return G_size[neuron_set][graph_type][link_type][0], G_size[neuron_set][graph_type][link_type][1]
 
 
@@ -180,8 +180,8 @@ def __get_graph_size(neuron_set, graph_type, link_type):
 ###
 ####################################################################################
 def clustering_coefficient(neuron_set, graph_type, random, preserving):
-	link_type = 'w'  # weight (not distance)
-	package = 'bct'  # 'bct' or 'nx'
+	link_type = 'w'	 # weight (not distance)
+	package = 'bct'	 # 'bct' or 'nx'
 	g = __get_graph(package, neuron_set, graph_type, link_type)
 	if random:
 		g = random_graph(g, package, neuron_set, graph_type, link_type, preserving)
@@ -219,7 +219,7 @@ def clustering_coefficient(neuron_set, graph_type, random, preserving):
 ###
 ####################################################################################
 def normalized_path_length(neuron_set, graph_type, random, preserving):
-	link_type = 'd'  # distance (not weight)
+	link_type = 'd'	 # distance (not weight)
 	g = __get_graph('nx', neuron_set, graph_type, link_type)
 	if random:
 		g = random_graph(g, 'nx', neuron_set, graph_type, link_type, preserving)
@@ -235,8 +235,8 @@ def normalized_path_length(neuron_set, graph_type, random, preserving):
 ###
 ####################################################################################
 def characteristic_path_length(neuron_set, graph_type, random, preserving):
-	link_type = 'd'  # distance (not weight)
-	package = 'bct'  # 'bct' or 'nx'
+	link_type = 'd'	 # distance (not weight)
+	package = 'bct'	 # 'bct' or 'nx'
 	g = __get_graph(package, neuron_set, graph_type, link_type)
 	if random:
 		g = random_graph(g, package, neuron_set, graph_type, link_type, preserving)
@@ -258,8 +258,8 @@ def characteristic_path_length(neuron_set, graph_type, random, preserving):
 ###
 ####################################################################################
 def connectivity_length(neuron_set, graph_type, random, preserving):
-	link_type = 'd'  # distance (not weight)
-    package = 'bct'  # 'bct' or 'nx'
+	link_type = 'd'	 # distance (not weight)
+	package = 'bct'	 # 'bct' or 'nx'
 	g = __get_graph(package, neuron_set, graph_type, link_type)
 	if random:
 		g = random_graph(g, package, neuron_set, graph_type, link_type, preserving)
@@ -283,7 +283,7 @@ def connectivity_length(neuron_set, graph_type, random, preserving):
 ###
 ####################################################################################
 def newman_modularity(neuron_set, graph_type, random, preserving):
-	link_type = 'w'  # weight (not distance)
+	link_type = 'w'	 # weight (not distance)
 	g = __get_graph('bct', neuron_set, graph_type, link_type)
 	if random:
 		g = random_graph(g, 'bct', neuron_set, graph_type, link_type, preserving)
@@ -311,7 +311,7 @@ def random_graph(g, package, neuron_set, graph_type, link_type, preserving):
 		else:
 			err('NetworkX does not support the generation of random graphs preserving weights or degrees/strength')
 	else:
-		if preserving == 'np':  # not preserving anything
+		if preserving == 'np':	# not preserving anything
 			if graph_type == 'bu':
 				g = bct.makerandCIJ_bu(num_nodes, num_links/2)
 			elif graph_type == 'bd':
@@ -328,9 +328,9 @@ def random_graph(g, package, neuron_set, graph_type, link_type, preserving):
 			elif graph_type == 'bd':
 				err('Weight-preservation does not apply to binary graphs')
 			elif graph_type == 'wu':
-                g = bct.makerandCIJ_wu(g)
-            elif graph_type == 'wd':
-                g = bct.makerandCIJ_wd(g)
+				g = bct.makerandCIJ_wu(g)
+			elif graph_type == 'wd':
+				g = bct.makerandCIJ_wd(g)
 			else:
 				err('unknown graph type %s', graph_type)
 		elif preserving == 'dp':  # degree-preserving
@@ -705,7 +705,7 @@ def compute_small_world_index(timestep_directory, length_metric, randomization):
 				return []  # not executed because err() exits
 			try:
 				data = table.getColumn('Mean').data
-			except KeyError, x:  # Maybe it's of an older format
+			except KeyError, x:	 # Maybe it's of an older format
 				data = table.getColumn('Metric').data
 			metric_data.append(data)	 # So metric_data = [cc,cc_random,length,length_random]
 
@@ -771,16 +771,16 @@ def compute_metrics(metrics,
 		for id in number_list:
 			brainAnatomy_files.append(os.path.join(anatomy_directory, 'brainAnatomy_' + str(id) + '_death.txt'))
 											   
-# 		brainAnatomy_files_all = glob.glob(os.path.join(anatomy_directory, "*death.txt"))
+#		brainAnatomy_files_all = glob.glob(os.path.join(anatomy_directory, "*death.txt"))
 # 
-# 		#Pick out those brainAnatomy files with corresponding critter number to brainFunction files.
-# 		brainAnatomy_files = []
-# 		for anatomyFile in brainAnatomy_files_all:
-# 			if int(os.path.basename(anatomyFile)[13:-10]) in number_list:
-# 				brainAnatomy_files.append(anatomyFile)
+#		#Pick out those brainAnatomy files with corresponding critter number to brainFunction files.
+#		brainAnatomy_files = []
+#		for anatomyFile in brainAnatomy_files_all:
+#			if int(os.path.basename(anatomyFile)[13:-10]) in number_list:
+#				brainAnatomy_files.append(anatomyFile)
 # 
-# 		brainAnatomy_files.sort(lambda x, y: cmp(int(os.path.basename(x)[13:-10]),
-# 							  int(os.path.basename(y)[13:-10])))
+#		brainAnatomy_files.sort(lambda x, y: cmp(int(os.path.basename(x)[13:-10]),
+#							  int(os.path.basename(y)[13:-10])))
 
 		if len(brainAnatomy_files) == 0:
 			err('No brainanatomy files found in %s' % anatomy_directory)
@@ -797,7 +797,7 @@ def compute_metrics(metrics,
 			else:
 				metrics_to_compute.append(metric)
 				
-		if metrics_to_compute:  # computing something other than 'swi' metrics
+		if metrics_to_compute:	# computing something other than 'swi' metrics
 			metric_data = calc_metrics(metrics_to_compute, brainAnatomy_files)
 			save_metrics(metrics_to_compute, metric_data, timestep_directory, tdata)
 
@@ -805,7 +805,7 @@ def compute_metrics(metrics,
 			swis = []
 			for i in range(len(swi_metrics_to_compute)):
 				details = swi_details[i]
-				length_metric = details[3] + '_' + details[1] + '_' + details[2]  #  <metric>_<neuron-set>_<graph-type>
+				length_metric = details[3] + '_' + details[1] + '_' + details[2]  #	 <metric>_<neuron-set>_<graph-type>
 				randomization = '_ran'
 				for detail in details[4:]:
 					randomization += '_' + detail
@@ -987,41 +987,41 @@ USAGE
 
 DESCRIPTION
 
-     Analyzes various metrics of the epochs contained in one or more recent
+	 Analyzes various metrics of the epochs contained in one or more recent
   directories.
 
-     <directory> can specify either a run directory or a parent of one or more
+	 <directory> can specify either a run directory or a parent of one or more
   run directories.
 
 OPTIONS
 
-     -s
-            Run BCT in "safe" mode, so matrices are checked for binary status
-            (only zeroes and ones) and undirected status (symmetric)
+	 -s
+			Run BCT in "safe" mode, so matrices are checked for binary status
+			(only zeroes and ones) and undirected status (symmetric)
 
-     -o
-            Overwrite/recompute existing metrics in Avr file (if present)
-     
-     -O
-            Overwrite/recompute both the epoch metric files and the metrics
-            in the Avr file (if present)
-     
-     -e <epoch,...>
-            If -O is specified, then using -e followed by a list of epoch
-            numbers will result in only those epochs being overwritten
-            (default is all epochs will be overwritten if -O is specified,
-            otherwise none will be overwritten)
-     
-     -d <dataset>
-            Valid datasets:\
+	 -o
+			Overwrite/recompute existing metrics in Avr file (if present)
+	 
+	 -O
+			Overwrite/recompute both the epoch metric files and the metrics
+			in the Avr file (if present)
+	 
+	 -e <epoch,...>
+			If -O is specified, then using -e followed by a list of epoch
+			numbers will result in only those epochs being overwritten
+			(default is all epochs will be overwritten if -O is specified,
+			otherwise none will be overwritten)
+	 
+	 -d <dataset>
+			Valid datasets:\
 %s
 
-            Note that datasets may be abbreviated.
-            (default %s)
+			Note that datasets may be abbreviated.
+			(default %s)
 
-     -v <v>[,<v>]...
-           Override default metrics, where <v> is one of:
-""" % (sys.argv[0], '\n                '.join(['']+common_functions.RECENT_TYPES), DefaultRecent )
+	 -v <v>[,<v>]...
+		   Override default metrics, where <v> is one of:
+""" % (sys.argv[0], '\n				   '.join(['']+common_functions.RECENT_TYPES), DefaultRecent )
 
 	options = '_{'
 	for x in common_metric.NEURON_SETS:
@@ -1041,9 +1041,9 @@ OPTIONS
 			metric = root + options_swi
 		else:
 			metric = root + options
-		print '              ', metric, '-', common_metric.get_name(root)
+		print '				 ', metric, '-', common_metric.get_name(root)
 
-	print '\n           (default %s)\n' % (', '.join(common_metric.DEFAULT_METRICS))
+	print '\n			(default %s)\n' % (', '.join(common_metric.DEFAULT_METRICS))
 
 	if msg:
 		print "--------------------------------------------------------------------------------"
