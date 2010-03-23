@@ -34,9 +34,11 @@ LegacyMode = 'off'
 DEFAULT_LENGTH_METRIC = 'cl'
 DEFAULT_NUM_RANDOM = '10'
 DEFAULT_PRESERVATION = 'np'
+SafeMode = False
 Threshold = 0.0
 OverwriteEpochMetrics = False
 OverwriteAvrMetrics = False
+EpochList = []
 G_py = {}
 G_alg = {}
 G_size = {}
@@ -178,7 +180,7 @@ def __get_graph_size(neuron_set, graph_type, link_type):
 ###
 ####################################################################################
 def clustering_coefficient(neuron_set, graph_type, random, preserving):
-	link_type = 'w'
+	link_type = 'w'  # weight (not distance)
 	package = 'bct'  # 'bct' or 'nx'
 	g = __get_graph(package, neuron_set, graph_type, link_type)
 	if random:
@@ -217,7 +219,7 @@ def clustering_coefficient(neuron_set, graph_type, random, preserving):
 ###
 ####################################################################################
 def normalized_path_length(neuron_set, graph_type, random, preserving):
-	link_type = 'd'
+	link_type = 'd'  # distance (not weight)
 	g = __get_graph('nx', neuron_set, graph_type, link_type)
 	if random:
 		g = random_graph(g, 'nx', neuron_set, graph_type, link_type, preserving)
@@ -233,7 +235,7 @@ def normalized_path_length(neuron_set, graph_type, random, preserving):
 ###
 ####################################################################################
 def characteristic_path_length(neuron_set, graph_type, random, preserving):
-	link_type = 'd'
+	link_type = 'd'  # distance (not weight)
 	package = 'bct'  # 'bct' or 'nx'
 	g = __get_graph(package, neuron_set, graph_type, link_type)
 	if random:
@@ -256,8 +258,8 @@ def characteristic_path_length(neuron_set, graph_type, random, preserving):
 ###
 ####################################################################################
 def connectivity_length(neuron_set, graph_type, random, preserving):
-	link_type = 'd'
-	package = 'nx'  # 'bct' or 'nx'
+	link_type = 'd'  # distance (not weight)
+    package = 'bct'  # 'bct' or 'nx'
 	g = __get_graph(package, neuron_set, graph_type, link_type)
 	if random:
 		g = random_graph(g, package, neuron_set, graph_type, link_type, preserving)
@@ -265,11 +267,10 @@ def connectivity_length(neuron_set, graph_type, random, preserving):
 	if package == 'nx':
 		cl = nxe.connectivity_length(g, weighted=weighted)
 	else:
-		e = bct.efficiency(g)
-		if e == 0:
-			cl = float('inf')
+		if weighted:
+			cl = bct.connectivity_length_wei(g)
 		else:
-			cl = 1.0 / e
+			cl = bct.connectivity_length_bin(g)
 		if random:
 			bct.gsl_free(g)
 	
@@ -282,7 +283,7 @@ def connectivity_length(neuron_set, graph_type, random, preserving):
 ###
 ####################################################################################
 def newman_modularity(neuron_set, graph_type, random, preserving):
-	link_type = 'w'
+	link_type = 'w'  # weight (not distance)
 	g = __get_graph('bct', neuron_set, graph_type, link_type)
 	if random:
 		g = random_graph(g, 'bct', neuron_set, graph_type, link_type, preserving)
@@ -327,9 +328,9 @@ def random_graph(g, package, neuron_set, graph_type, link_type, preserving):
 			elif graph_type == 'bd':
 				err('Weight-preservation does not apply to binary graphs')
 			elif graph_type == 'wu':
-				g = bct.makerandCIJ_wu(num_nodes, num_links/2, g)
-			elif graph_type == 'wd':
-				g = bct.makerandCIJ_wd(num_nodes, num_links, g)
+                g = bct.makerandCIJ_wu(g)
+            elif graph_type == 'wd':
+                g = bct.makerandCIJ_wd(g)
 			else:
 				err('unknown graph type %s', graph_type)
 		elif preserving == 'dp':  # degree-preserving
@@ -370,6 +371,8 @@ def main():
 	#check_environment()
 
 	metrics, recent_type, arg_paths = parse_args(sys.argv[1:])
+	
+	bct.set_safe_mode(SafeMode)
 
 	recent_subpath = os.path.join('brain', recent_type)
 	try:
@@ -404,7 +407,7 @@ def check_environment():
 ###
 ####################################################################################
 def parse_args(argv):
-	global NUMBINS, LegacyMode, OverwriteEpochMetrics, OverwriteAvrMetrics
+	global NUMBINS, LegacyMode, OverwriteEpochMetrics, OverwriteAvrMetrics, SafeMode, EpochList
 
 	if len(argv) == 0:
 		show_usage()
@@ -413,7 +416,7 @@ def parse_args(argv):
 
 	recent_type = DefaultRecent
 
-	short = 'oOd:v:'
+	short = 'oOsd:v:e:'
 	long = []
 
 	try:
@@ -438,6 +441,13 @@ def parse_args(argv):
 		elif opt == 'O':
 			OverwriteEpochMetrics = True
 			OverwriteAvrMetrics = True
+		elif opt == 'e':
+			EpochList = value.split(',')
+			for epoch in EpochList:
+				if not epoch.isdigit():
+					err('Epochs must be specified as numbers')
+		elif opt == 's':
+			SafeMode = True
 ##		elif opt == 'b' or opt == 'bins':
 ##			try:
 ##				NUMBINS = int(value)
@@ -550,7 +560,7 @@ def __analyze_recent_dir(metrics, recent_dir):
 			continue	# if timestep isn't a digit, skip it.
 		if not os.path.isdir( os.path.join(recent_dir, potential_timestep) ):
 			continue	# if the timestep isn't a directory, skip it.
-	
+		
 		timesteps.append( int(potential_timestep) )						# add timestep to our list
 	
 	if len(timesteps) == 0:
@@ -571,17 +581,14 @@ def __analyze_recent_dir(metrics, recent_dir):
 	print datetime.datetime.now()
 	print "Processing:",
 	for t in timesteps:
-		timestep_directory = os.path.join(recent_dir, str(t))
-		print '%s...\n' % (t),
-		sys.stdout.flush()	
-	
 		DATA[t] = tdata = {}
 
 		metrics_remaining = metrics
 
 		if len(metrics_remaining) > 0:
 			metrics_computed = compute_metrics(metrics_remaining,
-							   timestep_directory,
+							   recent_dir,
+							   t,
 							   tdata)
 			metrics_remaining = list_difference(metrics_remaining,
 								metrics_computed)
@@ -715,11 +722,16 @@ def compute_small_world_index(timestep_directory, length_metric, randomization):
 ###
 ####################################################################################
 def compute_metrics(metrics,
-					timestep_directory,
+					recent_dir,
+					t,
 					tdata):
+	timestep_directory = os.path.join(recent_dir, str(t))
+	print '%s...' % (t)
+	sys.stdout.flush()	
+	
 	# --- Read in any metrics computed on a previous invocation of this script
 	metrics_read = []
-	if not OverwriteEpochMetrics:
+	if not OverwriteEpochMetrics or (EpochList and (t not in EpochList)):
 		for metric in metrics:
 			path = os.path.join(timestep_directory, 'metric_' + metric + '.plt')
 	
@@ -983,13 +995,23 @@ DESCRIPTION
 
 OPTIONS
 
+     -s
+            Run BCT in "safe" mode, so matrices are checked for binary status
+            (only zeroes and ones) and undirected status (symmetric)
+
      -o
             Overwrite/recompute existing metrics in Avr file (if present)
      
      -O
             Overwrite/recompute both the epoch metric files and the metrics
             in the Avr file (if present)
-
+     
+     -e <epoch,...>
+            If -O is specified, then using -e followed by a list of epoch
+            numbers will result in only those epochs being overwritten
+            (default is all epochs will be overwritten if -O is specified,
+            otherwise none will be overwritten)
+     
      -d <dataset>
             Valid datasets:\
 %s
