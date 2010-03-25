@@ -520,11 +520,13 @@ def analyze_recent_dir(metrics, recent_dir):
 			for required_root in ['cc', length_metric]:
 				required_metric = required_root + '_' + neuron_set + '_' + graph_type
 				if required_metric not in metrics_avail and \
-				   required_metric not in metrics_remaining:
+				   required_metric not in metrics_remaining and \
+				   required_metric not in dependent_metrics:
 					dependent_metrics.append(required_metric)
 				required_metric_random = required_metric + '_ran_' + num_samples + '_' + preserving
 				if required_metric_random not in metrics_avail and \
-				   required_metric_random not in metrics_remaining:
+				   required_metric_random not in metrics_remaining and \
+				   required_metric_random not in dependent_metrics:
 					dependent_metrics.append(required_metric_random)
 
 	if dependent_metrics:
