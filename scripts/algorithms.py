@@ -383,17 +383,30 @@ def wd_to_wu(m):
 
 ####################################################################################
 ###
-### FUNCTION count_non_zeroes()  # counts non_zero elements in a matrix
-###                              # Assumes all positive (or zero) weights
+### FUNCTION count_edges()  # counts edges in a graph matrix
+###                         # Assumes all positive (or zero) weights, and that
+###							# the diagonal is all zeroes (no self-connections).
+###							# (If any diagonal elements are non-zero, they will
+###							# be counted in the directed=True case, but not the
+###							# directed=False case.)
+###							# If directed is False, it is assumed that the
+###							# graph is symmetric, and only the lower triangle
+###							# is counted.
 ###
 ####################################################################################
-def count_non_zeroes(m, threshold=0.0):
+def count_edges(m, directed=True, threshold=0.0):
 	count = 0
-	for i in range(len(m)):
-		for j in range(len(m[i])):
-			if m[i][j] > threshold:
-				count += 1
-
+	if directed:
+		for i in range(len(m)):
+			for j in range(len(m[i])):
+				if m[i][j] > threshold:
+					count += 1
+	else:
+		for i in range(len(m)):
+			for j in range(i):
+				if m[i][j] > threshold:
+					count += 1
+	
 	return count
 
 

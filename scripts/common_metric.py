@@ -4,25 +4,47 @@ import os
 import common_functions
 import datalib
 
-METRIC_ROOT_TYPES = ['cc', 'npl', 'cpl', 'cl', 'nm', 'swi', 'hf']
-METRIC_ROOT_NAMES = {'cc':'Clustering Coefficient', 'npl':'Normalized Path Length', 'cpl': 'Characteristic Path Length', 'cl':'Connectivity Length', 'swi':'Small World Index', 'hf':'Heuristic Fitness', 'nm':'Newman Modularity'}
+METRIC_ROOT_TYPES = ['cc', 'cpl', 'npl', 'cl', 'nm', 'swi', 'nc', 'ec', 'hf']
+METRIC_ROOT_NAMES = {'cc':'Clustering Coefficient', 'npl':'Normalized Path Length', 'cpl': 'Characteristic Path Length', 'cl':'Connectivity Length', 'swi':'Small World Index', 'hf':'Heuristic Fitness', 'nm':'Newman Modularity', 'nc':'Node Count', 'ec':'Edge Count'}
 DEFAULT_METRICS = []
 METRICS_NO_GRAPH = ['hf']
+METRICS_NO_RANDOM = ['swi', 'nc', 'ec']
 PACKAGES = ['nx', 'bct']  # NetworkX or BCT
 NEURON_SETS = ['a', 'p']  # all or processing
 GRAPH_TYPES = ['bu', 'bd', 'wu', 'wd']  # binary/weighted, undirected/directed
 LINK_TYPES = ['w', 'd']  # weight or distance
 PRESERVATIONS = ['np', 'wp', 'dp']
+LENGTH_TYPES = ['cpl', 'npl', 'cl']
 RANDOM_PIECE = '_ran_'
 FILENAME_AVR = 'AvrMetric.plt'
 DEFAULT_NUMBINS = 11
 
-METRIC_TYPES = []
+sep = '|'
+METRIC_TYPES = {}
 for root in METRIC_ROOT_TYPES:
-	for neuron_set in NEURON_SETS:
+	type = root
+	if root not in METRICS_NO_GRAPH:
+		type += '_{'
+		for neuron_set in NEURON_SETS:
+			type += neuron_set + sep
+		type = type[:-1] + '}_{'
 		for graph_type in GRAPH_TYPES:
-			type = root + '_' + neuron_set + '_' + graph_type
-			METRIC_TYPES.append(type)
+			type += graph_type + sep
+		type = type[:-1] + '}'
+		if root == 'swi':
+			type += '_{'
+			for length_type in LENGTH_TYPES:
+				type += length_type + sep
+			type = type[:-1] + '}_#_{'
+			for preservation in PRESERVATIONS:
+				type += preservation + sep
+			type = type[:-1] + '}'
+		if root not in METRICS_NO_RANDOM:
+			type += '[' + RANDOM_PIECE + '#_{'
+			for preservation in PRESERVATIONS:
+				type += preservation + sep
+			type = type[:-1] + '}]'
+	METRIC_TYPES[root] = type
 
 
 ####################################################################################

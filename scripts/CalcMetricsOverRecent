@@ -33,7 +33,7 @@ LEGACY_MODES = ['force','prefer','off']
 LegacyMode = 'off'
 DEFAULT_LENGTH_METRIC = 'cl'
 DEFAULT_NUM_RANDOM = '10'
-DEFAULT_PRESERVATION = 'np'
+DEFAULT_PRESERVATION = 'wp'
 SafeMode = False
 Threshold = 0.0
 OverwriteEpochMetrics = False
@@ -170,7 +170,8 @@ def __get_graph_size(neuron_set, graph_type, link_type):
 	if not G_size[neuron_set][graph_type][link_type]:
 		g_py = __get_py_graph(neuron_set, graph_type, link_type)
 		G_size[neuron_set][graph_type][link_type].append(len(g_py))	 # node count
-		G_size[neuron_set][graph_type][link_type].append(algorithms.count_non_zeroes(g_py))	 # link count
+		directed = 'd' in graph_type
+		G_size[neuron_set][graph_type][link_type].append(algorithms.count_edges(g_py, directed=directed))	 # edge count
 	return G_size[neuron_set][graph_type][link_type][0], G_size[neuron_set][graph_type][link_type][1]
 
 
@@ -299,6 +300,44 @@ def newman_modularity(neuron_set, graph_type, random, preserving):
 
 ####################################################################################
 ###
+### FUNCTION node_count()
+###
+####################################################################################
+def node_count(neuron_set, graph_type, random, preserving):
+	link_type = 'w'	 # weight (not distance)
+	nc, ec = __get_graph_size(neuron_set, graph_type, link_type)
+
+	return nc
+
+
+####################################################################################
+###
+### FUNCTION edge_count()
+###
+####################################################################################
+def edge_count(neuron_set, graph_type, random, preserving):
+	link_type = 'w'	 # weight (not distance)
+	nc, ec = __get_graph_size(neuron_set, graph_type, link_type)
+
+	return ec
+
+
+####################################################################################
+###
+### This global cannot be defined until the functions it refers to have been defined
+###
+####################################################################################
+Metric_Function = {'cc' : clustering_coefficient,
+				   'npl': normalized_path_length,
+				   'cpl': characteristic_path_length,
+				   'cl' : connectivity_length,
+				   'nm' : newman_modularity,
+				   'nc' : node_count,
+				   'ec' : edge_count}
+
+
+####################################################################################
+###
 ### FUNCTION random_graph()
 ###
 ####################################################################################
@@ -313,20 +352,20 @@ def random_graph(g, package, neuron_set, graph_type, link_type, preserving):
 	else:
 		if preserving == 'np':	# not preserving anything
 			if graph_type == 'bu':
-				g = bct.makerandCIJ_bu(num_nodes, num_links/2)
+				g = bct.makerandCIJ_bu(num_nodes, num_links)
 			elif graph_type == 'bd':
 				g = bct.makerandCIJ_bd(num_nodes, num_links)
 			elif graph_type == 'wu':
-				g = bct.makerandCIJ_wu(num_nodes, num_links/2, 0.0, 1.0)
+				g = bct.makerandCIJ_wu(num_nodes, num_links, 0.0, 1.0)
 			elif graph_type == 'wd':
 				g = bct.makerandCIJ_wd(num_nodes, num_links, 0.0, 1.0)
 			else:
 				err('unknown graph type %s', graph_type)
 		elif preserving == 'wp':  # weight-preserving
 			if graph_type == 'bu':
-				err('Weight-preservation does not apply to binary graphs')
+				g = bct.makerandCIJ_bd(num_nodes, num_links)  # wp == np for binary graphs
 			elif graph_type == 'bd':
-				err('Weight-preservation does not apply to binary graphs')
+				g = bct.makerandCIJ_bd(num_nodes, num_links)  # wp == np for binary graphs
 			elif graph_type == 'wu':
 				g = bct.makerandCIJ_wu(g)
 			elif graph_type == 'wd':
@@ -348,18 +387,6 @@ def random_graph(g, package, neuron_set, graph_type, link_type, preserving):
 			err('unknown preservation type %s', preserving)
 	
 	return g
-
-
-####################################################################################
-###
-### This global cannot be defined until the functions it refers to have been defined
-###
-####################################################################################
-Metric_Function = {'cc' : clustering_coefficient,
-				   'npl': normalized_path_length,
-				   'cpl': characteristic_path_length,
-				   'cl' : connectivity_length,
-				   'nm' : newman_modularity}
 
 
 ####################################################################################
@@ -989,63 +1016,46 @@ USAGE
 
 DESCRIPTION
 
-	 Analyzes various metrics of the epochs contained in one or more recent
+     Analyzes various metrics of the epochs contained in one or more recent
   directories.
 
-	 <directory> can specify either a run directory or a parent of one or more
+     <directory> can specify either a run directory or a parent of one or more
   run directories.
 
 OPTIONS
 
-	 -s
-			Run BCT in "safe" mode, so matrices are checked for binary status
-			(only zeroes and ones) and undirected status (symmetric)
+     -s
+            Run BCT in "safe" mode, so matrices are checked for binary status
+            (only zeroes and ones) and undirected status (symmetric)
 
-	 -o
-			Overwrite/recompute existing metrics in Avr file (if present)
-	 
-	 -O
-			Overwrite/recompute both the epoch metric files and the metrics
-			in the Avr file (if present)
-	 
-	 -e <epoch,...>
-			If -O is specified, then using -e followed by a list of epoch
-			numbers will result in only those epochs being overwritten
-			(default is all epochs will be overwritten if -O is specified,
-			otherwise none will be overwritten)
-	 
-	 -d <dataset>
-			Valid datasets:\
+     -o
+            Overwrite/recompute existing metrics in Avr file (if present)
+     
+     -O
+            Overwrite/recompute both the epoch metric files and the metrics
+            in the Avr file (if present)
+     
+     -e <epoch,...>
+            If -O is specified, then using -e followed by a list of epoch
+            numbers will result in only those epochs being overwritten
+            (default is all epochs will be overwritten if -O is specified,
+            otherwise none will be overwritten)
+     
+     -d <dataset>
+            Valid datasets:\
 %s
 
-			Note that datasets may be abbreviated.
-			(default %s)
+            Note that datasets may be abbreviated.
+            (default %s)
 
-	 -v <v>[,<v>]...
-		   Override default metrics, where <v> is one of:
-""" % (sys.argv[0], '\n				   '.join(['']+common_functions.RECENT_TYPES), DefaultRecent )
+     -v <v>[,<v>]...
+           Override default metrics, where <v> is one of:
+""" % (sys.argv[0], '\n                '.join(common_functions.RECENT_TYPES), DefaultRecent )
 
-	options = '_{'
-	for x in common_metric.NEURON_SETS:
-		options += x + '|'
-	options = options[:-1] + '}_{'
-	for x in common_metric.GRAPH_TYPES:
-		options += x + '|'
-	options = options[:-1] + '}[_ran][_#][_'
-	for x in common_metric.PRESERVATIONS:
-		options += x + '|'
-	options = options[:-1] + ']'
-	options_swi = options.replace('_ran', '_npl|cpl|cl', 1)
 	for root in common_metric.METRIC_ROOT_TYPES:
-		if root == 'hf':
-			metric = root
-		elif root == 'swi':
-			metric = root + options_swi
-		else:
-			metric = root + options
-		print '				 ', metric, '-', common_metric.get_name(root)
+		print '              ', common_metric.METRIC_TYPES[root], '-', common_metric.get_name(root)
 
-	print '\n			(default %s)\n' % (', '.join(common_metric.DEFAULT_METRICS))
+	print '\n           (default %s)\n' % (', '.join(common_metric.DEFAULT_METRICS))
 
 	if msg:
 		print "--------------------------------------------------------------------------------"
