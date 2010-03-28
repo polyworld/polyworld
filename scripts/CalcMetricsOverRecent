@@ -126,7 +126,10 @@ def __get_py_graph(neuron_set, graph_type, link_type):
 		else:
 			err('trying to get py_graph of unknown type: %s' % graph_type)	# shouldn't be possible
 	if not G_py[neuron_set][graph_type][link_type] and link_type == 'd':  # need a distance connection matrix
-		G_py[neuron_set][graph_type]['d'] = algorithms.w_to_d(G_py[neuron_set][graph_type]['w'])
+		if 'b' in graph_type:  # it's a binary graph, so no need to invert (weights & distances are both either zero or one)
+			G_py[neuron_set][graph_type]['d'] = G_py[neuron_set][graph_type]['w']
+		else:
+			G_py[neuron_set][graph_type]['d'] = algorithms.w_to_d(G_py[neuron_set][graph_type]['w'])
 	return G_py[neuron_set][graph_type][link_type]
 
 
