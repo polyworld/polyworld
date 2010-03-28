@@ -924,10 +924,14 @@ def create_curves(mode,
 	#--- through colors
 	#---
 	def __style(curvetype):
+		if classification:
+			class_root = classification.split('_')[0]
+		else:
+			class_root = classification
 		if gopts.get('group', 'auto') == 'off':
 			groupkey = curvetype
 		else:
-			groupkey = classification
+			groupkey = class_root
 
 		if meta:
 			groupname = 'meta-'+groupkey
@@ -938,9 +942,10 @@ def create_curves(mode,
 
 		# check if we have a linetype preference
 		try:
-			preflinetype = CLASSIFICATION_LINETYPES[classification]
+			preflinetype = CLASSIFICATION_LINETYPES[class_root]
 		except:
 			preflinetype = plotlib.StyleGroup.DOTTED
+		#print 'class_root =', class_root, 'preflinetype =', preflinetype, 'curvetype =', curvetype, 'groupkey =', groupkey, 'groupname =', groupname
 
 		try:
 			group = plot.getStyleGroup(groupname)
@@ -952,7 +957,7 @@ def create_curves(mode,
 												  plot.getStyleGroup(groupkey).linetype,
 												  plotlib.StyleGroup.THICK)
 				except:
-					# no values were plotted for this classification.
+					# no values were plotted for this class_root.
 					group = plot.createStyleGroup(groupname,
 												  preflinetype,
 												  plotlib.StyleGroup.THICK)
