@@ -767,7 +767,7 @@ def compute_metrics(metrics,
 					t,
 					tdata):
 	timestep_directory = os.path.join(recent_dir, t)
-	print '%s...' % (t)
+	print '%s at %s...' % (timestep_directory, datetime.datetime.now())
 	sys.stdout.flush()	
 	
 	# --- Read in any metrics computed on a previous invocation of this script
