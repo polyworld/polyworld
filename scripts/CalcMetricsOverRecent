@@ -254,7 +254,10 @@ def characteristic_path_length(neuron_set, graph_type, random, preserving):
 	if package == 'nx':
 		cpl = nxe.characteristic_path_length(g, weighted=weighted)
 	else:
-		dist = bct.distance_bin(g)
+		if weighted:
+			dist = bct.distance_wei(g)
+		else:
+			dist = bct.distance_bin(g)
 		cpl = bct.charpath_lambda(dist)
 		bct.gsl_free(dist)
 		if random:
