@@ -17,7 +17,7 @@ import datalib
 
 DEFAULT_DIRECTORY = ''
 
-PASS = 2
+PASS = 3
 
 if PASS == 1:
 	# This was for the original massive renaming from our simple two-character names to
@@ -33,6 +33,14 @@ elif PASS == 2:
 	FILES_TO_ALTER = ['AvrMetric*.plt']
 	FILES_TO_RENAME = ['metric_*.plt']
 	METRICS_TO_RENAME = {'nsp_a_bu':'npl_a_bu', 'nsp_a_bu_ran_10_np':'npl_a_bu_ran_10_np'}
+elif PASS == 3:
+	# This was for the metrics that were missed in the initial renaming of 'nsp' to 'npl'
+	# ("normalized shortest path" to "normalized path length")
+	# This should be after all of the above
+	FILES_TO_ALTER = ['AvrMetric*.plt']
+	FILES_TO_RENAME = ['metric_*.plt']
+	METRICS_TO_RENAME = {'swi_a_bu_nsp_10_np':'swi_a_bu_npl_10_np'}
+
 
 test = False
 verbose = False
