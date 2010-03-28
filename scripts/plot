@@ -666,6 +666,7 @@ def get_ttest( mode,
 		err( "No common timesteps found for T-test calculations." )
 																		 
 	def __iter( parms ):
+# 		print 'parms =', parms
 		data = parms[0]
 		V = parms[1]
 		t = parms[2]
@@ -676,7 +677,16 @@ def get_ttest( mode,
 										 [V],
 										 [t],
 										 [curvetype] )
-
+# 	print '-------------------------------'
+# 	print 'runsa =', runsa
+# 	print 'runsb =', runsb
+# 	print 'nruns =', nruns
+# 	print "gopts.get('tcrit') =", gopts.get('tcrit')
+# 	print 'value_names =', value_names
+# 	print 'mode.normalizeValueNames(groupa, value_names) =', mode.normalizeValueNames(groupa, value_names)
+# 	print 'mode.normalizeValueNames(groupb, value_names) =', mode.normalizeValueNames(groupb, value_names)
+# 	print 'timesteps =', timesteps
+# 	print 'mode.curvetypes =', mode.curvetypes
 	ttest = algorithms.ttest_table( runsa,
 					runsb,
 					nruns,
@@ -866,7 +876,8 @@ def plot_complete( gopts,
 				   doc ):
 	path_doc, path_script = doc.save( gopts.get('output',
 												DEFAULT_OUTPUT) )
-	os.system('%s %s' % (common_functions.pw_env('open'), path_doc))
+	if not gopts.get('noview'):
+		os.system('%s %s' % (common_functions.pw_env('open'), path_doc))
 
 ####################################################################################
 ###
