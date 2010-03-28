@@ -221,11 +221,17 @@ def clustering_coefficient(neuron_set, graph_type, random, preserving):
 ####################################################################################
 def normalized_path_length(neuron_set, graph_type, random, preserving):
 	link_type = 'd'	 # distance (not weight)
-	g = __get_graph('nx', neuron_set, graph_type, link_type)
+	package = 'bct'  # 'bct' or 'nx'
+	g = __get_graph(package, neuron_set, graph_type, link_type)
 	if random:
-		g = random_graph(g, 'nx', neuron_set, graph_type, link_type, preserving)
+		g = random_graph(g, package, neuron_set, graph_type, link_type, preserving)
 	weighted = 'w' in graph_type
-	npl = nxe.normalized_path_length(g, weighted=weighted)
+	if weighted:
+		npl = bct.normalized_path_length_wei(g)
+	else:
+		npl = bct.normalized_path_length_bin(g)
+	if random:
+		bct.gsl_free(g)
 
 	return npl
 
