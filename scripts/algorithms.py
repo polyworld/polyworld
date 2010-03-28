@@ -67,13 +67,29 @@ def sample_mean( list ):
 ###
 ####################################################################################
 def diff_mean( ita, itb ):
+# 	import sys
+# 	import traceback
 	n = 0
 	sum = 0.0
-	
+	n_inf = 0
 	for a, b in iterators.IteratorUnion( ita, itb ):
 		n += 1
+# 		print 'a, b, sum =', a, b, sum
+# 		if a == float('inf') or b == float('inf'):
+# 			traceback.print_stack()
+# 			sys.exit(1)
+		if a == float('inf'):
+			a = 0
+			n_inf += 1
+		if b == float('inf'):
+			b = 0
+			n_inf += 1
+			
 		sum += a - b
 
+	if n_inf > 0:
+		print 'ignoring', n_inf, 'inf values'
+	
 	if n < 1:
 		return 0.0
 	else:
