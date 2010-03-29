@@ -3,7 +3,7 @@ import re
 
 import common_functions
 
-COLORS = ['red', 'green', 'blue', 'orange', 'pink', 'magenta', 'black', 'gray40', 'cyan', 'yellow']
+COLORS = ['red', 'green', 'blue', 'orange', 'pink', 'magenta', 'gray40', 'cyan', 'yellow']
 GRAYSCALE = ['gray40', 'black']
 
 ####################################################################################
