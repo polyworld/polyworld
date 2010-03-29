@@ -262,7 +262,7 @@ class Plot:
                          linetype = None,
                          linewidth = StyleGroup.THIN,
                          make_context = True):
-        if not linetype:
+        if linetype == None:
             linetype = self.linetypes.pop(0)
         else:
             self.linetypes.remove(linetype)
