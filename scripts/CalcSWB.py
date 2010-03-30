@@ -8,7 +8,7 @@ import os,sys, getopt
 import datalib
 import common_metric
 
-DEFAULT_DIRECTORY = '../results/b2_avail' # '/pwd/driven_vs_passive_b2'
+DEFAULT_DIRECTORY = '' # '/pwd/driven_vs_passive_b2'
 DEFAULT_VALUES = ['swb_a_bu_npl', 'swb_p_bu_npl', 'swb_a_wd_npl', 'swb_p_wd_npl', \
 				  'swb_a_bu_cpl', 'swb_p_bu_cpl', 'swb_a_wd_cpl', 'swb_p_wd_cpl', \
 				  'swb_a_bu_cl' , 'swb_p_bu_cl' , 'swb_a_wd_cl' , 'swb_p_wd_cl'  ]
@@ -81,12 +81,26 @@ def parse_args():
 		
 	if len(args) < 1:
 		usage()
-		print 'using defaults: -v', ','.join(value for value in DEFAULT_VALUES), DEFAULT_DIRECTORY
-		return DEFAULT_DIRECTORY, DEFAULT_VALUES
+		if DEFAULT_DIRECTORY and DEFAULT_VALUES:
+			print 'using defaults: -v', ','.join(value for value in DEFAULT_VALUES), DEFAULT_DIRECTORY
+			input_dir = DEFAULT_DIRECTORY
+		else:
+			exit(0)
+	else:
+		input_dir = args[0]
 		
-	input_dir = args[0].rstrip('/')
+	values = DEFAULT_VALUES
+	for o, a in opts:
+		if o in ('-v','--value'):
+			values = a.split(',')
+		else:
+			print 'Unknown options:', o
+			usage()
+			exit(2)
+	
+	input_dir = input_dir.rstrip('/')
 						
-	return input_dir
+	return input_dir, values
 
 
 def get_avr_file(dir):
