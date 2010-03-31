@@ -18,9 +18,12 @@ import getopt
 from os.path import join
 from shutil import copy2
 import glob
+import datalib
 
-RECENT_FILES_TO_COPY = ['Avr*.plt', 'Complexity*.plt']
-EPOCH_FILES_TO_COPY = ['complexity_*.*', 'metric_*.*']
+DEFAULT_RECENT_FILES_TO_COPY = ['Avr*.plt', 'Complexity*.plt']
+DEFAULT_EPOCH_FILES_TO_COPY = ['complexity_*.*', 'metric_*.*']
+
+AVR_METRIC_FILENAME = 'AvrMetric.plt'
 
 source_dir = ''
 target_dir = ''
@@ -28,22 +31,34 @@ target_dir_specified = False
 test = False
 overwrite = False
 avr_only = False
+recent_files_to_copy = DEFAULT_RECENT_FILES_TO_COPY[:]
+epoch_files_to_copy = DEFAULT_EPOCH_FILES_TO_COPY[:]
+metrics_to_copy = []
 
 def usage():
-	print 'Usage:  copy_brain_data.py [-t] [-a] [-o] source_directory [target_directory]'
+	print 'Usage:  copy_brain_data.py [-t] [-a] [-o] [-e epoch_file_pattern,...] [-r recent_file_pattern,...] [-m metric,...] source_directory [target_directory]'
 	print '  source_directory may be a run directory or a collection of run directories'
 	print '  target_directory is optional, but if present must be the same kind of directory as source_directory'
 	print '    If target_directory is not specified, a new, unique target_directory will be created'
 	print '    If target_directory is specified, existing brain files will only be overwritten if -o is specified'
 	print '      and BirthsDeaths.log and worldfile will not be overwritten whether -o is specified or not'
 	print '  -a will copy only the Avr files (no epoch files)'
-	print '  -t will print out the directories that would have been affected, but nothing will be changed'
+	print '  -e comma-separated epoch files to copy (standard glob symbols allowed)'
+	print '     (default: %s)' % ','.join(DEFAULT_EPOCH_FILES_TO_COPY)
+	print '  -r comma-separated recent files to copy (standard glob symbols allowed)'
+	print '     (default: %s)' % ','.join(DEFAULT_RECENT_FILES_TO_COPY)
+	print '  -m comma-separated metrics to copy from one AvrMetric.plt file to the other'
+	print '     IF -m IS SPECIFIED, NO RECENT / Avr FILES WILL BE COPIED, ONLY THE METRICS THEREIN'
+	print '     AND THE ONLY EPOCH FILES COPIED WILL BE "metric_<metric>.*" FOR THE METRICS SPECIFIED WITH -m'
+	print '     (default: All or none, depending on target_directory and -o, as the entire file is copied by default)'
+	print '  -t will print out the directories and files that would have been affected, but nothing will be changed'
 
 def parse_args():
-	global source_dir, target_dir, target_dir_specified, test, overwrite, avr_only
+	global	source_dir, target_dir, target_dir_specified, test, overwrite, avr_only, \
+			recent_files_to_copy, epoch_files_to_copy, metrics_to_copy
 	
 	try:
-		opts, args = getopt.getopt(sys.argv[1:], 'toa', ['test','overwrite','avr'] )
+		opts, args = getopt.getopt(sys.argv[1:], 'toae:r:m:', ['test','overwrite','avr','epoch_files','recent_files','metrics'] )
 	except getopt.GetoptError, err:
 		print str(err) # will print something like "option -a not recognized"
 		usage()
@@ -63,17 +78,43 @@ def parse_args():
 		usage()
 		exit(0)
 	
-	for o, a in opts:
-		if o in ('-t', '--test'):
+	a = False
+	e = False
+	r = False
+	m = False
+	for opt, arg in opts:
+		if opt in ('-t', '--test'):
 			test = True
-		elif o in ('-o', '--overwrite'):
+		elif opt in ('-o', '--overwrite'):
 			overwrite = True
-		elif o in ('-a', '--avr_only'):
+		elif opt in ('-a', '--avr_only'):
 			avr_only = True
+			a = True
+		elif opt in ('-e', '--epoch_files'):
+			epoch_files_to_copy = arg.split(',')
+			e = True
+		elif opt in ('-r', '--recent_files'):
+			recent_files_to_copy = arg.split(',')
+			r = True
+		elif opt in ('-m', '--metrics'):
+			metrics_to_copy = arg.split(',')
+			epoch_files_to_copy = []
+			for metric in metrics_to_copy:
+				epoch_files_to_copy.append('metric_' + metric + '.plt')
+			m = True
 		else:
-			print 'Unknown option:', o
+			print 'Unknown option:', opt
 			usage()
 			exit(2)
+	
+	if m and (e or r):
+		print 'Cannot specify -m with any of the -e, or -r options'
+		usage()
+		exit(2)
+	
+	if m and a:
+		print 'Note: Because -a was specified, only the metrics in the %s file will be copied'
+		print '      None of the <epoch>/metric_*.plt files will be copied'
 
 def copy(source_file, target_file):
 	global test
@@ -89,8 +130,19 @@ def mkdir(dir):
 	else:
 		os.mkdir(dir)
 
+def copy_metrics(source_file, target_file):
+	global test, overwrite, metrics_to_copy
+	if test:
+		print '  copying metrics (%s) from' % (','.join(metrics_to_copy)), source_file, 'to', target_file
+	else:
+		tables_to_copy = {}
+		source_tables = datalib.parse(source_file)
+		for metric in metrics_to_copy:
+			tables_to_copy[metric] = source_tables[metric]
+		datalib.write(target_file, tables_to_copy, append=True, replace=overwrite)
+
 def copy_run_dir(source, target):
-	global overwrite
+	global overwrite, metrics_to_copy, recent_files_to_copy, epoch_files_to_copy
 	print 'copying files from', source, 'to', target
 	target_brain_dir = join(target, 'brain')
 	target_Recent_dir = join(target_brain_dir, 'Recent')
@@ -102,33 +154,42 @@ def copy_run_dir(source, target):
 		mkdir(target_brain_dir)
 		mkdir(target_Recent_dir)
 	
-	files_to_copy = []
-	for expression in RECENT_FILES_TO_COPY:
-		files_to_copy += glob.glob(join(source_Recent_dir, expression))
-
-	for source_file in files_to_copy:
-		if os.access(source_file, os.F_OK):
-			target_file = join(target_Recent_dir, os.path.basename(source_file))
-			if not target_dir_specified or overwrite or not os.access(target_file, os.F_OK):
-				copy(source_file, target_file)
+	if metrics_to_copy:
+		source_file = join(source_Recent_dir, AVR_METRIC_FILENAME)
+		if not os.access(source_file, os.F_OK):
+			print 'Unable to access source file:', source_file
+			exit(3)
+		target_file = join(target_Recent_dir, AVR_METRIC_FILENAME)
+		copy_metrics(source_file, target_file)
+	else:
+		files_to_copy = []
+		for expression in recent_files_to_copy:
+			files_to_copy += glob.glob(join(source_Recent_dir, expression))
 	
+		for source_file in files_to_copy:
+			if os.access(source_file, os.F_OK):
+				target_file = join(target_Recent_dir, os.path.basename(source_file))
+				if not target_dir_specified or overwrite or not os.access(target_file, os.F_OK):
+					copy(source_file, target_file)
+		
 	if not avr_only:
 		for root, dirs, files in os.walk(source_Recent_dir):
 			break
 		for time_dir in dirs:
 			source_time_dir = join(source_Recent_dir, time_dir)
 			target_time_dir = join(target_Recent_dir, time_dir)
-			if not target_dir_specified and EPOCH_FILES_TO_COPY:
+			if not target_dir_specified and epoch_files_to_copy:
 				mkdir(target_time_dir)
 			
 			files_to_copy = []
-			for expression in EPOCH_FILES_TO_COPY:
+			for expression in epoch_files_to_copy:
 				files_to_copy += glob.glob(join(source_time_dir, expression))
-			
 			for source_file in files_to_copy:
 				if os.access(source_file, os.F_OK):
 					target_file = join(target_time_dir, os.path.basename(source_file))
-					if not target_dir_specified or overwrite or not os.access(target_file, os.F_OK):
+					if target_dir_specified and os.access(target_file, os.F_OK) and not overwrite:
+						print 'Target file already exists and -o was not specified:', target_file
+					else:
 						copy(source_file, target_file)
 
 
