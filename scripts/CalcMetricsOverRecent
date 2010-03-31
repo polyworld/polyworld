@@ -379,9 +379,9 @@ def random_graph(g, package, neuron_set, graph_type, link_type, preserving):
 			elif graph_type == 'bd':
 				g = bct.makerandCIJ_bd(num_nodes, num_links)  # wp == np for binary graphs
 			elif graph_type == 'wu':
-				g = bct.makerandCIJ_wu(g)
+				g = bct.makerandCIJ_wu_wp(g)
 			elif graph_type == 'wd':
-				g = bct.makerandCIJ_wd(g)
+				g = bct.makerandCIJ_wd_wp(g)
 			else:
 				err('unknown graph type %s', graph_type)
 		elif preserving == 'dp':  # degree-preserving
