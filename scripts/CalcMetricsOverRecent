@@ -750,6 +750,13 @@ def compute_small_world_index(timestep_directory, length_metric, randomization):
 				data = table.getColumn('Metric').data
 			metric_data.append(data)	 # So metric_data = [cc,cc_random,length,length_random]
 
+		if len(metric_data[0]) != len(metric_data[1]):
+			print 'small_world_index: mismatched %s and %s vectors' % (sw_metrics[0], sw_metrics[1])
+		elif len(metric_data[2]) != len(metric_data[3]):
+			print 'small_world_index: mismatched %s and %s vectors' % (sw_metrics[2], sw_metrics[3])
+		elif len(metric_data[0]) != len(metric_data[2]):
+			print 'small_world_index: mismatched %s and %s vectors' % (sw_metrics[0], sw_metrics[2])
+
 		g = __list_division(metric_data[0], metric_data[1])
 		l = __list_division(metric_data[2], metric_data[3])
 		s = __list_division(g, l)
