@@ -38,10 +38,27 @@ SafeMode = False
 Threshold = 0.0
 OverwriteEpochMetrics = False
 OverwriteAvrMetrics = False
+NUM_ITER = 5  # number of times links are randomized in randmio* routines (5 suggested by Mika)
 EpochList = []
 G_py = {}
-G_alg = {}
+G_set = {}
 G_size = {}
+
+
+####################################################################################
+###
+### Classes
+###
+####################################################################################
+class Graph(object):
+	def __init__(self, connection = None):
+		self.connection = connection  # connection matrix if 'bct'; graph object if 'nx'
+		self.distance = None  # distance matrix if 'bct' and computed (not used for 'nx')
+
+class GraphSet(object):
+	def __init__(self, connection = None):
+		self.graph = Graph(connection)
+		self.rand_graphs = []
 
 
 ####################################################################################
@@ -50,7 +67,7 @@ G_size = {}
 ###
 ####################################################################################
 def __initialize_graphs():
-	global G_py, G_alg, G_size
+	global G_py, G_set, G_size
 	
 	G_py = {}
 	for neuron_set in common_metric.NEURON_SETS:
@@ -60,16 +77,16 @@ def __initialize_graphs():
 			for link_type in common_metric.LINK_TYPES:
 				G_py[neuron_set][graph_type][link_type] = []
 
-	G_alg = {}
+	G_set = {}
 	for package in common_metric.PACKAGES:
-		G_alg[package] = {}
+		G_set[package] = {}
 		for neuron_set in common_metric.NEURON_SETS:
-			G_alg[package][neuron_set] = {}
+			G_set[package][neuron_set] = {}
 			for graph_type in common_metric.GRAPH_TYPES:
-				G_alg[package][neuron_set][graph_type] = {}
+				G_set[package][neuron_set][graph_type] = {}
 				for link_type in common_metric.LINK_TYPES:
-					G_alg[package][neuron_set][graph_type][link_type] = None
-	
+					G_set[package][neuron_set][graph_type][link_type] = None
+
 	G_size = {}
 	for neuron_set in common_metric.NEURON_SETS:
 		G_size[neuron_set] = {}
@@ -98,13 +115,21 @@ def __read_graphs(anatomy_file):
 ###
 ####################################################################################
 def __free_graphs():
+	global G_set
+	
 	for neuron_set in common_metric.NEURON_SETS:
 		for graph_type in common_metric.GRAPH_TYPES:
 			for link_type in common_metric.LINK_TYPES:
-				g = G_alg['bct'][neuron_set][graph_type][link_type]
-				if g:
-					bct.gsl_free(g)
-					G_alg['bct'][neuron_set][graph_type][link_type] = None
+				g_set = G_set['bct'][neuron_set][graph_type][link_type]
+				if g_set:
+					bct.gsl_free(g_set.graph.connection)
+					if g_set.graph.distance:
+						bct.gsl_free(g_set.graph.distance)
+					for graph in g_set.rand_graphs:
+						bct.gsl_free(graph.connection)
+						if graph.distance:
+							bct.gsl_free(graph.distance)
+					G_set['bct'][neuron_set][graph_type][link_type] = None
 	
 
 ####################################################################################
@@ -135,7 +160,7 @@ def __get_py_graph(neuron_set, graph_type, link_type):
 
 ####################################################################################
 ###
-### FUNCTION __get_graph()	# creates graphs of the appropriate type as needed
+### FUNCTION __get_graph_set()	# creates graphs of the appropriate type as needed
 ###
 ###		package is 'nx' or 'bct', for NetworkX or Brain Connectivity Toolbox
 ###		neuron_set is 'a' or 'p', for all neurons or processing neurons
@@ -143,10 +168,11 @@ def __get_py_graph(neuron_set, graph_type, link_type):
 ###		link_type is 'w' or 'd', for weight or distance
 ###
 ####################################################################################
-def __get_graph(package, neuron_set, graph_type, link_type):
-	global G_alg
+def __get_graph_set(package, neuron_set, graph_type, link_type):
+	global G_set
 	
-	if not G_alg[package][neuron_set][graph_type][link_type]:
+	if not G_set[package][neuron_set][graph_type][link_type]:
+		# not cached, so have to create it from the Python graph
 		g_py = __get_py_graph(neuron_set, graph_type, link_type)
 		if package == 'nx':
 			g_npy = numpy.matrix(g_py)
@@ -154,12 +180,16 @@ def __get_graph(package, neuron_set, graph_type, link_type):
 				nx_graph_type = nx.DiGraph()
 			else:
 				nx_graph_type = nx.Graph()
-			G_alg[package][neuron_set][graph_type][link_type] = nx.from_numpy_matrix(g_npy, nx_graph_type)
+			connection = nx.from_numpy_matrix(g_npy, nx_graph_type)
 		elif package == 'bct':
-			G_alg[package][neuron_set][graph_type][link_type] = bct.to_gslm(g_py)
+			connection = bct.to_gslm(g_py)
 		else:
 			err('unknown package type %s' % package)  #	 shouldn't be possible
-	return G_alg[package][neuron_set][graph_type][link_type]
+		
+		g_set = GraphSet(connection)
+		G_set[package][neuron_set][graph_type][link_type] = g_set
+	
+	return G_set[package][neuron_set][graph_type][link_type]
 	
 
 ####################################################################################
@@ -175,7 +205,86 @@ def __get_graph_size(neuron_set, graph_type, link_type):
 		G_size[neuron_set][graph_type][link_type].append(len(g_py))	 # node count
 		directed = 'd' in graph_type
 		G_size[neuron_set][graph_type][link_type].append(algorithms.count_edges(g_py, directed=directed))	 # edge count
+
 	return G_size[neuron_set][graph_type][link_type][0], G_size[neuron_set][graph_type][link_type][1]
+
+
+####################################################################################
+###
+### FUNCTION __get_distance_matrix()
+###
+####################################################################################
+def __get_distance_matrix(graph, package, weighted):
+	if graph.distance:
+		dist = graph.distance  # already computed, so just use it
+	else:
+		if package == 'bct':
+			if weighted:
+				dist = bct.distance_wei(graph.connection)
+			else:
+				dist = bct.distance_bin(graph.connection)
+		elif package == 'nx':
+			err('Distance matrix not implementd for NetworkX (though it could be)')
+		else:
+			err('Unknown package type: '+str(package))
+	
+		graph.distance = dist
+	
+	return dist
+
+
+####################################################################################
+###
+### FUNCTION __make_random_graph()
+###
+####################################################################################
+def __make_random_graph(g_set, package, neuron_set, graph_type, link_type, preserving):
+	num_nodes, num_links = __get_graph_size(neuron_set, graph_type, link_type)
+	if package == 'nx':
+		if preserving == 'np':
+			g = nx.gnm_random_graph(num_nodes, num_links)
+		else:
+			err('NetworkX does not support the generation of random graphs preserving weights or degrees/strength')
+	else:
+		if preserving == 'np':	# not preserving anything
+			if graph_type == 'bu':
+				g = bct.makerandCIJ_bu(num_nodes, num_links)
+			elif graph_type == 'bd':
+				g = bct.makerandCIJ_bd(num_nodes, num_links)
+			elif graph_type == 'wu':
+				g = bct.makerandCIJ_wu(num_nodes, num_links, 0.0, 1.0)
+			elif graph_type == 'wd':
+				g = bct.makerandCIJ_wd(num_nodes, num_links, 0.0, 1.0)
+			else:
+				err('unknown graph type %s', graph_type)
+		elif preserving == 'wp':  # weight-preserving
+			if graph_type == 'bu':
+				g = bct.makerandCIJ_bd(num_nodes, num_links)  # wp == np for binary graphs
+			elif graph_type == 'bd':
+				g = bct.makerandCIJ_bd(num_nodes, num_links)  # wp == np for binary graphs
+			elif graph_type == 'wu':
+				g = bct.makerandCIJ_wu_wp(g_set.graph.connection)
+			elif graph_type == 'wd':
+				g = bct.makerandCIJ_wd_wp(g_set.graph.connection)
+			else:
+				err('unknown graph type %s', graph_type)
+		elif preserving == 'dp':  # degree-preserving
+			if graph_type == 'bu':
+				g = bct.randmio_und(g_set.graph.connection, NUM_ITER)
+			elif graph_type == 'bd':
+				g = bct.makerandCIJdegreesfixed(g_set.graph.connection)
+			elif graph_type == 'wu':
+				g = bct.randmio_und(g_set.graph.connection, NUM_ITER)
+			elif graph_type == 'wd':
+				g = bct.randmio_dir(g_set.graph.connection, NUM_ITER)
+			else:
+				err('unknown graph type %s', graph_type)
+		else:
+			err('unknown preservation type %s', preserving)
+	
+	graph = Graph(g)
+	
+	return graph
 
 
 ####################################################################################
@@ -183,34 +292,34 @@ def __get_graph_size(neuron_set, graph_type, link_type):
 ### FUNCTION clustering_coefficient()
 ###
 ####################################################################################
-def clustering_coefficient(neuron_set, graph_type, random, preserving):
+def clustering_coefficient(neuron_set, graph_type, random, preserving, index):
 	link_type = 'w'	 # weight (not distance)
 	package = 'bct'	 # 'bct' or 'nx'
-	g = __get_graph(package, neuron_set, graph_type, link_type)
+	g_set = __get_graph_set(package, neuron_set, graph_type, link_type)
 	if random:
-		g = random_graph(g, package, neuron_set, graph_type, link_type, preserving)
+		graph = random_graph(g_set, package, neuron_set, graph_type, link_type, preserving, index)
+	else:
+		graph = g_set.graph
 	weighted = 'w' in graph_type
 	if package == 'nx':
 		if weighted:
 			err('NetworkX does not implement clustering coefficient for weighted graphs')
 		else:
-			cc = nx.average_clustering(g)
+			cc = nx.average_clustering(graph.connection)
 	elif package == 'bct':
 		if graph_type == 'bu':
-			ccv_gsl = bct.clustering_coef_bu(g)
+			ccv_gsl = bct.clustering_coef_bu(graph.connection)
 		elif graph_type == 'bd':
-			ccv_gsl = bct.clustering_coef_bd(g)
+			ccv_gsl = bct.clustering_coef_bd(graph.connection)
 		elif graph_type == 'wu':
-			ccv_gsl = bct.clustering_coef_wu(g)
+			ccv_gsl = bct.clustering_coef_wu(graph.connection)
 		elif graph_type == 'wd':
-			ccv_gsl = bct.clustering_coef_wd(g)
+			ccv_gsl = bct.clustering_coef_wd(graph.connection)
 		else:
 			err('Unknown graph_type: '+str(graph_type))
 		ccv = bct.from_gsl(ccv_gsl)
 		bct.gsl_free(ccv_gsl)
 		cc = sum(ccv) / len(ccv)
-		if random:
-			bct.gsl_free(g)
 	else:
 		err('Unknown package type: '+str(package))
 
@@ -222,19 +331,19 @@ def clustering_coefficient(neuron_set, graph_type, random, preserving):
 ### FUNCTION normalized_path_length()
 ###
 ####################################################################################
-def normalized_path_length(neuron_set, graph_type, random, preserving):
+def normalized_path_length(neuron_set, graph_type, random, preserving, index):
 	link_type = 'd'	 # distance (not weight)
 	package = 'bct'  # 'bct' or 'nx'
-	g = __get_graph(package, neuron_set, graph_type, link_type)
+	g_set = __get_graph_set(package, neuron_set, graph_type, link_type)
 	if random:
-		g = random_graph(g, package, neuron_set, graph_type, link_type, preserving)
+		graph = random_graph(g_set, package, neuron_set, graph_type, link_type, preserving, index)
+	else:
+		graph = g_set.graph
 	weighted = 'w' in graph_type
 	if weighted:
-		npl = bct.normalized_path_length_wei(g)
+		npl = bct.normalized_path_length_wei(graph.connection)
 	else:
-		npl = bct.normalized_path_length_bin(g)
-	if random:
-		bct.gsl_free(g)
+		npl = bct.normalized_path_length_bin(graph.connection)
 
 	return npl
 
@@ -244,24 +353,20 @@ def normalized_path_length(neuron_set, graph_type, random, preserving):
 ### FUNCTION characteristic_path_length()
 ###
 ####################################################################################
-def characteristic_path_length(neuron_set, graph_type, random, preserving):
+def characteristic_path_length(neuron_set, graph_type, random, preserving, index):
 	link_type = 'd'	 # distance (not weight)
 	package = 'bct'	 # 'bct' or 'nx'
-	g = __get_graph(package, neuron_set, graph_type, link_type)
-	if random:
-		g = random_graph(g, package, neuron_set, graph_type, link_type, preserving)
+	g_set = __get_graph_set(package, neuron_set, graph_type, link_type)
 	weighted = 'w' in graph_type
-	if package == 'nx':
-		cpl = nxe.characteristic_path_length(g, weighted=weighted)
+	if random:
+		graph = random_graph(g_set, package, neuron_set, graph_type, link_type, preserving, index)
 	else:
-		if weighted:
-			dist = bct.distance_wei(g)
-		else:
-			dist = bct.distance_bin(g)
-		cpl = bct.charpath_lambda(dist)
-		bct.gsl_free(dist)
-		if random:
-			bct.gsl_free(g)
+		graph = g_set.graph
+	if package == 'nx':
+		cpl = nxe.characteristic_path_length(graph.connection, weighted=weighted)
+	else:
+		d = __get_distance_matrix(graph, package, weighted)
+		cpl = bct.charpath_lambda(d)
 	return cpl
 
 
@@ -270,22 +375,22 @@ def characteristic_path_length(neuron_set, graph_type, random, preserving):
 ### FUNCTION connectivity_length()
 ###
 ####################################################################################
-def connectivity_length(neuron_set, graph_type, random, preserving):
+def connectivity_length(neuron_set, graph_type, random, preserving, index):
 	link_type = 'd'	 # distance (not weight)
 	package = 'bct'	 # 'bct' or 'nx'
-	g = __get_graph(package, neuron_set, graph_type, link_type)
+	g_set = __get_graph_set(package, neuron_set, graph_type, link_type)
 	if random:
-		g = random_graph(g, package, neuron_set, graph_type, link_type, preserving)
+		graph = random_graph(g_set, package, neuron_set, graph_type, link_type, preserving, index)
+	else:
+		graph = g_set.graph
 	weighted = 'w' in graph_type
 	if package == 'nx':
-		cl = nxe.connectivity_length(g, weighted=weighted)
+		cl = nxe.connectivity_length(graph.connection, weighted=weighted)
 	else:
 		if weighted:
-			cl = bct.connectivity_length_wei(g)
+			cl = bct.connectivity_length_wei(graph.connection)
 		else:
-			cl = bct.connectivity_length_bin(g)
-		if random:
-			bct.gsl_free(g)
+			cl = bct.connectivity_length_bin(graph.connection)
 	
 	return cl
 
@@ -295,17 +400,17 @@ def connectivity_length(neuron_set, graph_type, random, preserving):
 ### FUNCTION newman_modularity()
 ###
 ####################################################################################
-def newman_modularity(neuron_set, graph_type, random, preserving):
+def newman_modularity(neuron_set, graph_type, random, preserving, index):
 	link_type = 'w'	 # weight (not distance)
-	g = __get_graph('bct', neuron_set, graph_type, link_type)
+	g_set = __get_graph_set('bct', neuron_set, graph_type, link_type)
 	if random:
-		g = random_graph(g, 'bct', neuron_set, graph_type, link_type, preserving)
-	if 'd' in graph_type:
-		nm = bct.modularity_dir(g)
+		graph = random_graph(g_set, 'bct', neuron_set, graph_type, link_type, preserving, index)
 	else:
-		nm = bct.modularity_und(g)
-	if random:
-		bct.gsl_free(g)
+		graph = g_set.graph
+	if 'd' in graph_type:
+		nm = bct.modularity_dir(graph.connection)
+	else:
+		nm = bct.modularity_und(graph.connection)
 
 	return nm
 
@@ -353,52 +458,14 @@ Metric_Function = {'cc' : clustering_coefficient,
 ### FUNCTION random_graph()
 ###
 ####################################################################################
-def random_graph(g, package, neuron_set, graph_type, link_type, preserving):
-	NUM_ITER = 5  # number of times links are randomized in randmio* routines (5 suggested by Mika)
-	num_nodes, num_links = __get_graph_size(neuron_set, graph_type, link_type)
-	if package == 'nx':
-		if preserving == 'np':
-			g = nx.gnm_random_graph(num_nodes, num_links/2)
-		else:
-			err('NetworkX does not support the generation of random graphs preserving weights or degrees/strength')
+def random_graph(g_set, package, neuron_set, graph_type, link_type, preserving, index):
+	if index < len(g_set.rand_graphs):
+		graph = g_set.rand_graphs[index]
 	else:
-		if preserving == 'np':	# not preserving anything
-			if graph_type == 'bu':
-				g = bct.makerandCIJ_bu(num_nodes, num_links)
-			elif graph_type == 'bd':
-				g = bct.makerandCIJ_bd(num_nodes, num_links)
-			elif graph_type == 'wu':
-				g = bct.makerandCIJ_wu(num_nodes, num_links, 0.0, 1.0)
-			elif graph_type == 'wd':
-				g = bct.makerandCIJ_wd(num_nodes, num_links, 0.0, 1.0)
-			else:
-				err('unknown graph type %s', graph_type)
-		elif preserving == 'wp':  # weight-preserving
-			if graph_type == 'bu':
-				g = bct.makerandCIJ_bd(num_nodes, num_links)  # wp == np for binary graphs
-			elif graph_type == 'bd':
-				g = bct.makerandCIJ_bd(num_nodes, num_links)  # wp == np for binary graphs
-			elif graph_type == 'wu':
-				g = bct.makerandCIJ_wu_wp(g)
-			elif graph_type == 'wd':
-				g = bct.makerandCIJ_wd_wp(g)
-			else:
-				err('unknown graph type %s', graph_type)
-		elif preserving == 'dp':  # degree-preserving
-			if graph_type == 'bu':
-				g = bct.randmio_und(g, NUM_ITER)
-			elif graph_type == 'bd':
-				g = bct.makerandCIJdegreesfixed(g)
-			elif graph_type == 'wu':
-				g = bct.randmio_und(g, NUM_ITER)
-			elif graph_type == 'wd':
-				g = bct.randmio_dir(g, NUM_ITER)
-			else:
-				err('unknown graph type %s', graph_type)
-		else:
-			err('unknown preservation type %s', preserving)
+		graph = __make_random_graph(g_set, package, neuron_set, graph_type, link_type, preserving)
+		g_set.rand_graphs.append(graph)
 	
-	return g
+	return graph
 
 
 ####################################################################################
@@ -944,13 +1011,13 @@ def calc_metrics(metrics, anatomy_files):
 					num_samples = 1
 					preserving = ''
 		
-			for i in range(num_samples):				
+			for index in range(num_samples):				
 				if root == 'hf':
 					start = header.find('fitness=') + 8
 					end = start + header[start:].find(' ')
 					value = float(header[start:end])
 				else:
-					value = Metric_Function[root](neuron_set, graph_type, random, preserving)
+					value = Metric_Function[root](neuron_set, graph_type, random, preserving, index)
 				
 				result[metric].append(value)
 						
