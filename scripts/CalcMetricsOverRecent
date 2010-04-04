@@ -289,6 +289,21 @@ def __make_random_graph(g_set, package, neuron_set, graph_type, link_type, prese
 
 ####################################################################################
 ###
+### FUNCTION __get_random_graph()
+###
+####################################################################################
+def __get_random_graph(g_set, package, neuron_set, graph_type, link_type, preserving, index):
+	if index < len(g_set.rand_graphs):
+		graph = g_set.rand_graphs[index]
+	else:
+		graph = __make_random_graph(g_set, package, neuron_set, graph_type, link_type, preserving)
+		g_set.rand_graphs.append(graph)
+	
+	return graph
+
+
+####################################################################################
+###
 ### FUNCTION clustering_coefficient()
 ###
 ####################################################################################
@@ -297,7 +312,7 @@ def clustering_coefficient(neuron_set, graph_type, random, preserving, index):
 	package = 'bct'	 # 'bct' or 'nx'
 	g_set = __get_graph_set(package, neuron_set, graph_type, link_type)
 	if random:
-		graph = random_graph(g_set, package, neuron_set, graph_type, link_type, preserving, index)
+		graph = __get_random_graph(g_set, package, neuron_set, graph_type, link_type, preserving, index)
 	else:
 		graph = g_set.graph
 	weighted = 'w' in graph_type
@@ -336,14 +351,12 @@ def normalized_path_length(neuron_set, graph_type, random, preserving, index):
 	package = 'bct'  # 'bct' or 'nx'
 	g_set = __get_graph_set(package, neuron_set, graph_type, link_type)
 	if random:
-		graph = random_graph(g_set, package, neuron_set, graph_type, link_type, preserving, index)
+		graph = __get_random_graph(g_set, package, neuron_set, graph_type, link_type, preserving, index)
 	else:
 		graph = g_set.graph
 	weighted = 'w' in graph_type
-	if weighted:
-		npl = bct.normalized_path_length_wei(graph.connection)
-	else:
-		npl = bct.normalized_path_length_bin(graph.connection)
+	d = __get_distance_matrix(graph, package, weighted)
+	npl = bct.normalized_path_length(d, wmax = 1.0)
 
 	return npl
 
@@ -359,7 +372,7 @@ def characteristic_path_length(neuron_set, graph_type, random, preserving, index
 	g_set = __get_graph_set(package, neuron_set, graph_type, link_type)
 	weighted = 'w' in graph_type
 	if random:
-		graph = random_graph(g_set, package, neuron_set, graph_type, link_type, preserving, index)
+		graph = __get_random_graph(g_set, package, neuron_set, graph_type, link_type, preserving, index)
 	else:
 		graph = g_set.graph
 	if package == 'nx':
@@ -380,17 +393,15 @@ def connectivity_length(neuron_set, graph_type, random, preserving, index):
 	package = 'bct'	 # 'bct' or 'nx'
 	g_set = __get_graph_set(package, neuron_set, graph_type, link_type)
 	if random:
-		graph = random_graph(g_set, package, neuron_set, graph_type, link_type, preserving, index)
+		graph = __get_random_graph(g_set, package, neuron_set, graph_type, link_type, preserving, index)
 	else:
 		graph = g_set.graph
 	weighted = 'w' in graph_type
 	if package == 'nx':
 		cl = nxe.connectivity_length(graph.connection, weighted=weighted)
 	else:
-		if weighted:
-			cl = bct.connectivity_length_wei(graph.connection)
-		else:
-			cl = bct.connectivity_length_bin(graph.connection)
+		d = __get_distance_matrix(graph, package, weighted)
+		cl = bct.connectivity_length(graph.connection)
 	
 	return cl
 
@@ -404,7 +415,7 @@ def newman_modularity(neuron_set, graph_type, random, preserving, index):
 	link_type = 'w'	 # weight (not distance)
 	g_set = __get_graph_set('bct', neuron_set, graph_type, link_type)
 	if random:
-		graph = random_graph(g_set, 'bct', neuron_set, graph_type, link_type, preserving, index)
+		graph = __get_random_graph(g_set, 'bct', neuron_set, graph_type, link_type, preserving, index)
 	else:
 		graph = g_set.graph
 	if 'd' in graph_type:
@@ -413,6 +424,26 @@ def newman_modularity(neuron_set, graph_type, random, preserving, index):
 		nm = bct.modularity_und(graph.connection)
 
 	return nm
+
+
+####################################################################################
+###
+### FUNCTION louvain_modularity()
+###
+####################################################################################
+def louvain_modularity(neuron_set, graph_type, random, preserving, index):
+	link_type = 'w'	 # weight (not distance)
+	g_set = __get_graph_set('bct', neuron_set, graph_type, link_type)
+	if random:
+		graph = __get_random_graph(g_set, 'bct', neuron_set, graph_type, link_type, preserving, index)
+	else:
+		graph = g_set.graph
+	if 'd' in graph_type:
+		err('No directed version of Louvain modularity exists in BCT')
+	else:
+		lm = bct.modularity_und_louvain(graph.connection)
+
+	return lm
 
 
 ####################################################################################
@@ -449,23 +480,81 @@ Metric_Function = {'cc' : clustering_coefficient,
 				   'cpl': characteristic_path_length,
 				   'cl' : connectivity_length,
 				   'nm' : newman_modularity,
+				   'lm' : louvain_modularity,
 				   'nc' : node_count,
 				   'ec' : edge_count}
 
 
 ####################################################################################
 ###
-### FUNCTION random_graph()
+### FUNCTION small_world_index()
 ###
 ####################################################################################
-def random_graph(g_set, package, neuron_set, graph_type, link_type, preserving, index):
-	if index < len(g_set.rand_graphs):
-		graph = g_set.rand_graphs[index]
-	else:
-		graph = __make_random_graph(g_set, package, neuron_set, graph_type, link_type, preserving)
-		g_set.rand_graphs.append(graph)
+def small_world_index(timestep_directory, length_metric, randomization):
+	def __list_division(a,b):
+		assert(len(a) == len(b))
+		c = []
+		for i in range(len(a)):
+			if b[i] == 0:
+				c.append(0.0)
+			else:
+				c.append(float(a[i])/float(b[i]))
+		return c
+
+	# Unpack the length_metric
+	pieces = length_metric.split('_')
+	neuron_set = pieces[1]
+	graph_type = pieces[2]
 	
-	return graph
+	# Define the files and metrics that will be needed
+	sw_metric_files = ['metric_cc_'+neuron_set+'_'+graph_type+'.plt',
+					   'metric_cc_'+neuron_set+'_'+graph_type+randomization+'.plt',
+					   'metric_'+length_metric+'.plt',
+					   'metric_'+length_metric+randomization+'.plt']
+	sw_metrics = ['cc_'+neuron_set+'_'+graph_type,
+				  'cc_'+neuron_set+'_'+graph_type+randomization,
+				  length_metric,
+				  length_metric+randomization]
+
+	sw_files = []
+	for e in sw_metric_files:
+		temp_file = os.path.join(timestep_directory, e)
+		sw_files.append(temp_file)
+
+	metric_files = glob.glob(os.path.join(timestep_directory, "*.plt"))
+
+	# Make sure we have all the files we need
+	if common_functions.list_intersection(sw_files, metric_files) != sw_files:
+		err('Must have actual and random clustering coefficient and characteristic path length to calculate small world index!')
+		return []  # not executed because err() exits
+	else:
+		metric_data = []
+		for i in range(len(sw_files)):
+			file = sw_files[i]
+			metric = sw_metrics[i]
+			try:
+				table = datalib.parse(file)[metric]
+			except MissingTableError, x:
+				err('Unable to find metric %s in file %s' % metric, file)
+				return []  # not executed because err() exits
+			try:
+				data = table.getColumn('Mean').data
+			except KeyError, x:	 # Maybe it's of an older format
+				data = table.getColumn('Metric').data
+			metric_data.append(data)	 # So metric_data = [cc,cc_random,length,length_random]
+
+		if len(metric_data[0]) != len(metric_data[1]):
+			print 'small_world_index: mismatched %s and %s vectors' % (sw_metrics[0], sw_metrics[1])
+		elif len(metric_data[2]) != len(metric_data[3]):
+			print 'small_world_index: mismatched %s and %s vectors' % (sw_metrics[2], sw_metrics[3])
+		elif len(metric_data[0]) != len(metric_data[2]):
+			print 'small_world_index: mismatched %s and %s vectors' % (sw_metrics[0], sw_metrics[2])
+
+		g = __list_division(metric_data[0], metric_data[1])
+		l = __list_division(metric_data[2], metric_data[3])
+		s = __list_division(g, l)
+		
+		return s
 
 
 ####################################################################################
@@ -759,77 +848,6 @@ def __analyze_recent_dir(metrics, recent_dir):
 ##	datalib.write(outputpath, tables)
 ##	
 
-####################################################################################
-###
-### FUNCTION compute_small_world_index()
-###
-####################################################################################
-def compute_small_world_index(timestep_directory, length_metric, randomization):
-	def __list_division(a,b):
-		assert(len(a) == len(b))
-		c = []
-		for i in range(len(a)):
-			if b[i] == 0:
-				c.append(0.0)
-			else:
-				c.append(float(a[i])/float(b[i]))
-		return c
-
-	# Unpack the length_metric
-	pieces = length_metric.split('_')
-	neuron_set = pieces[1]
-	graph_type = pieces[2]
-	
-	# Define the files and metrics that will be needed
-	sw_metric_files = ['metric_cc_'+neuron_set+'_'+graph_type+'.plt',
-					   'metric_cc_'+neuron_set+'_'+graph_type+randomization+'.plt',
-					   'metric_'+length_metric+'.plt',
-					   'metric_'+length_metric+randomization+'.plt']
-	sw_metrics = ['cc_'+neuron_set+'_'+graph_type,
-				  'cc_'+neuron_set+'_'+graph_type+randomization,
-				  length_metric,
-				  length_metric+randomization]
-
-	sw_files = []
-	for e in sw_metric_files:
-		temp_file = os.path.join(timestep_directory, e)
-		sw_files.append(temp_file)
-
-	metric_files = glob.glob(os.path.join(timestep_directory, "*.plt"))
-
-	# Make sure we have all the files we need
-	if common_functions.list_intersection(sw_files, metric_files) != sw_files:
-		err('Must have actual and random clustering coefficient and characteristic path length to calculate small world index!')
-		return []  # not executed because err() exits
-	else:
-		metric_data = []
-		for i in range(len(sw_files)):
-			file = sw_files[i]
-			metric = sw_metrics[i]
-			try:
-				table = datalib.parse(file)[metric]
-			except MissingTableError, x:
-				err('Unable to find metric %s in file %s' % metric, file)
-				return []  # not executed because err() exits
-			try:
-				data = table.getColumn('Mean').data
-			except KeyError, x:	 # Maybe it's of an older format
-				data = table.getColumn('Metric').data
-			metric_data.append(data)	 # So metric_data = [cc,cc_random,length,length_random]
-
-		if len(metric_data[0]) != len(metric_data[1]):
-			print 'small_world_index: mismatched %s and %s vectors' % (sw_metrics[0], sw_metrics[1])
-		elif len(metric_data[2]) != len(metric_data[3]):
-			print 'small_world_index: mismatched %s and %s vectors' % (sw_metrics[2], sw_metrics[3])
-		elif len(metric_data[0]) != len(metric_data[2]):
-			print 'small_world_index: mismatched %s and %s vectors' % (sw_metrics[0], sw_metrics[2])
-
-		g = __list_division(metric_data[0], metric_data[1])
-		l = __list_division(metric_data[2], metric_data[3])
-		s = __list_division(g, l)
-		
-		return s
-
 
 ####################################################################################
 ###
@@ -924,7 +942,7 @@ def compute_metrics(metrics,
 				randomization = '_ran'
 				for detail in details[4:]:
 					randomization += '_' + detail
-				swi = compute_small_world_index(timestep_directory, length_metric, randomization)
+				swi = small_world_index(timestep_directory, length_metric, randomization)
 				swis.append(swi)
 			metric_data = []
 			i = 0
