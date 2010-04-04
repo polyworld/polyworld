@@ -435,19 +435,18 @@ def count_edges(m, directed=True, threshold=0.0):
 ###
 ####################################################################################
 def w_to_d(mw, cap=False):
-	l = len(mw)
-	n = float(l * l)
+	n = len(mw)
 	oneOverN = 1.0 / n
 	md = []
-	for i in range(l):
+	for i in range(n):
 		md.append([])
-		for j in range(l):
+		for j in range(n):
 			if mw[i][j] == 0 or i == j:
 				md[i].append(0.0)
-			elif cap and mw[i][j] < oneOverN:
-				md[i].append(n)
-			else:
+			elif not cap or mw[i][j] > oneOverN:
 				md[i].append(1.0 / mw[i][j])
+			else:
+				md[i].append(n)
 
 	return md
 
