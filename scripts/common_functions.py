@@ -668,4 +668,14 @@ def debug(*args):
 			print arg,
 		print
 
+####################################################################################
+###
+### FUNCTION print_matrix()
+###
+####################################################################################
+def print_matrix(m, fmt):
+	for row in m:
+		for col in row:
+			print fmt % (col),
+		print
 
