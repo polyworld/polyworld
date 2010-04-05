@@ -999,6 +999,30 @@ def save_metrics(metrics, metric_data, timestep_directory, tdata):
 
 ####################################################################################
 ###
+### FUNCTION debug_metrics()
+###
+####################################################################################
+def debug_metrics(agent = None, metric = None, index = None):
+	DEBUG_METRICS = False
+	if DEBUG_METRICS:
+		newline = True
+		if agent:
+			print agent + ':',
+			newline = False
+		if metric:
+			print metric,
+			newline = False
+		if index != None:
+			print index,
+			newline = False
+		if newline:
+			print
+		else:
+			sys.stdout.flush()
+
+
+####################################################################################
+###
 ### FUNCTION calc_metrics()
 ###
 ####################################################################################
@@ -1007,6 +1031,7 @@ def calc_metrics(metrics, anatomy_files):
 	
 	for anatomy_file in anatomy_files:
 		agent = os.path.basename(anatomy_file)[13:-10]
+		debug_metrics(agent=agent)
 		result = dict([(metric, []) for metric in metrics])
 		need_any_graphs = list_difference(metrics, common_metric.METRICS_NO_GRAPH)
 
@@ -1015,6 +1040,7 @@ def calc_metrics(metrics, anatomy_files):
 			header = __read_graphs(anatomy_file)  # adds both 'a' and 'p' graphs, of type 'wd', to G_py
 		
 		for metric in metrics:
+			debug_metrics(metric=metric)
 			details = metric.split('_')
 			root = details[0]
 			if root not in common_metric.METRICS_NO_GRAPH:
@@ -1029,16 +1055,20 @@ def calc_metrics(metrics, anatomy_files):
 					num_samples = 1
 					preserving = ''
 		
-			for index in range(num_samples):				
+			for index in range(num_samples):			
 				if root == 'hf':
 					start = header.find('fitness=') + 8
 					end = start + header[start:].find(' ')
 					value = float(header[start:end])
 				else:
+					if num_samples > 1:
+						debug_metrics(index=index)
 					value = Metric_Function[root](neuron_set, graph_type, random, preserving, index)
 				
 				result[metric].append(value)
-						
+		
+		debug_metrics()
+		
 		metric_data.append({'agent': agent, 'metrics': result})
 		
 		if need_any_graphs:
