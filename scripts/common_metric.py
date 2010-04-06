@@ -5,10 +5,10 @@ import common_functions
 import datalib
 
 METRIC_ROOT_TYPES = ['cc', 'ccd', 'cpl', 'npl', 'cl', 'nm', 'lm', 'swi', 'swb', 'nc', 'ec', 'hf']
-METRIC_ROOT_NAMES = {'cc':'Clustering Coefficient', 'ccd':'Clustering Coefficient [d]', 'npl':'Normalized Path Length', 'cpl': 'Characteristic Path Length', 'cl':'Connectivity Length', 'swi':'Small World Index', 'hf':'Heuristic Fitness', 'nm':'Newman Modularity', 'lm':'Louvain Modularity', 'nc':'Node Count', 'ec':'Edge Count', 'swb':'Small World Bias'}
+METRIC_ROOT_NAMES = {'cc':'Clustering Coefficient', 'ccd':'Clustering Coefficient [d]', 'npl':'Normalized Path Length', 'cpl': 'Characteristic Path Length', 'cl':'Connectivity Length', 'swi':'Small World Index', 'swid':'Small World Index [d]', 'hf':'Heuristic Fitness', 'nm':'Newman Modularity', 'lm':'Louvain Modularity', 'nc':'Node Count', 'ec':'Edge Count', 'swb':'Small World Bias'}
 DEFAULT_METRICS = []
 METRICS_NO_GRAPH = ['hf']
-METRICS_NO_RANDOM = ['swi', 'nc', 'ec', 'swb']
+METRICS_NO_RANDOM = ['swi', 'swid', 'nc', 'ec', 'swb']
 PACKAGES = ['nx', 'bct']  # NetworkX or BCT
 NEURON_SETS = ['a', 'p']  # all or processing
 GRAPH_TYPES = ['bu', 'bd', 'wu', 'wd']  # binary/weighted, undirected/directed
@@ -31,7 +31,7 @@ for root in METRIC_ROOT_TYPES:
 		for graph_type in GRAPH_TYPES:
 			type += graph_type + sep
 		type = type[:-1] + '}'
-		if root == 'swi':
+		if root == 'swi' or root == 'swid':
 			type += '_{'
 			for length_type in LENGTH_TYPES:
 				type += length_type + sep

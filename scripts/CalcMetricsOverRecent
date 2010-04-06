@@ -530,7 +530,7 @@ Metric_Function = {'cc' : clustering_coefficient,
 ### FUNCTION small_world_index()
 ###
 ####################################################################################
-def small_world_index(timestep_directory, length_metric, randomization):
+def small_world_index(timestep_directory, length_metric, randomization, distance):
 	def __list_division(a,b):
 		assert(len(a) == len(b))
 		c = []
@@ -546,15 +546,19 @@ def small_world_index(timestep_directory, length_metric, randomization):
 	neuron_set = pieces[1]
 	graph_type = pieces[2]
 	
-	# Define the files and metrics that will be needed
-	sw_metric_files = ['metric_cc_'+neuron_set+'_'+graph_type+'.plt',
-					   'metric_cc_'+neuron_set+'_'+graph_type+randomization+'.plt',
-					   'metric_'+length_metric+'.plt',
-					   'metric_'+length_metric+randomization+'.plt']
-	sw_metrics = ['cc_'+neuron_set+'_'+graph_type,
-				  'cc_'+neuron_set+'_'+graph_type+randomization,
+	# Define the metrics and files that will be needed
+	if distance:
+		cc_metric = 'ccd'
+	else:
+		cc_metric = 'cc'
+	sw_metrics = [cc_metric+'_'+neuron_set+'_'+graph_type,
+				  cc_metric+'_'+neuron_set+'_'+graph_type+randomization,
 				  length_metric,
 				  length_metric+randomization]
+	sw_metric_files = ['metric_'+sw_metrics[0]+'.plt',
+					   'metric_'+sw_metrics[1]+'.plt',
+					   'metric_'+sw_metrics[2]+'.plt',
+					   'metric_'+sw_metrics[3]+'.plt']
 
 	sw_files = []
 	for e in sw_metric_files:
@@ -707,8 +711,8 @@ def parse_args(argv):
 		details = metric.split('_')
 		root = details[0]
 		# apply default random settings
-		if '_ran' in metric or root == 'swi':
-			if root == 'swi' and len(details) < 4:
+		if '_ran' in metric or (root == 'swi' or root == 'swid'):
+			if (root == 'swi' or root == 'swid') and len(details) < 4:
 				metric += '_' + DEFAULT_LENGTH_METRIC
 			if len(details) < 5:
 				metric += '_' + DEFAULT_NUM_RANDOM
@@ -746,7 +750,7 @@ def analyze_recent_dir(metrics, recent_dir):
 	for metric in metrics_remaining:
 		details = metric.split('_')
 		root = details[0]
-		if root == 'swi':
+		if root == 'swi' or root = 'swid':
 			neuron_set = details[1]
 			graph_type = details[2]
 			length_metric = details[3]
@@ -964,7 +968,7 @@ def compute_metrics(metrics,
 		swi_details = []
 		for metric in metrics_remaining:
 			details = metric.split('_')
-			if details[0] == 'swi':
+			if details[0] == 'swi' or details[0] == 'swid':
 				swi_metrics_to_compute.append(metric)
 				swi_details.append(details)
 			else:
@@ -982,7 +986,7 @@ def compute_metrics(metrics,
 				randomization = '_ran'
 				for detail in details[4:]:
 					randomization += '_' + detail
-				swi = small_world_index(timestep_directory, length_metric, randomization)
+				swi = small_world_index(timestep_directory, length_metric, randomization, 'd' in details[0])
 				swis.append(swi)
 			metric_data = []
 			i = 0
