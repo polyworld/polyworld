@@ -4,8 +4,8 @@ import os
 import common_functions
 import datalib
 
-METRIC_ROOT_TYPES = ['cc', 'cpl', 'npl', 'cl', 'nm', 'lm', 'swi', 'swb', 'nc', 'ec', 'hf']
-METRIC_ROOT_NAMES = {'cc':'Clustering Coefficient', 'npl':'Normalized Path Length', 'cpl': 'Characteristic Path Length', 'cl':'Connectivity Length', 'swi':'Small World Index', 'hf':'Heuristic Fitness', 'nm':'Newman Modularity', 'lm':'Louvain Modularity', 'nc':'Node Count', 'ec':'Edge Count', 'swb':'Small World Bias'}
+METRIC_ROOT_TYPES = ['cc', 'ccd', 'cpl', 'npl', 'cl', 'nm', 'lm', 'swi', 'swb', 'nc', 'ec', 'hf']
+METRIC_ROOT_NAMES = {'cc':'Clustering Coefficient', 'ccd':'Clustering Coefficient [d]', 'npl':'Normalized Path Length', 'cpl': 'Characteristic Path Length', 'cl':'Connectivity Length', 'swi':'Small World Index', 'hf':'Heuristic Fitness', 'nm':'Newman Modularity', 'lm':'Louvain Modularity', 'nc':'Node Count', 'ec':'Edge Count', 'swb':'Small World Bias'}
 DEFAULT_METRICS = []
 METRICS_NO_GRAPH = ['hf']
 METRICS_NO_RANDOM = ['swi', 'nc', 'ec', 'swb']

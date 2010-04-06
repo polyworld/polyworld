@@ -343,6 +343,45 @@ def clustering_coefficient(neuron_set, graph_type, random, preserving, index):
 
 ####################################################################################
 ###
+### FUNCTION clustering_coefficient_distance()
+###
+####################################################################################
+def clustering_coefficient_distance(neuron_set, graph_type, random, preserving, index):
+	link_type = 'd'	 # distance (not distweightance)
+	package = 'bct'	 # 'bct' or 'nx'
+	g_set = __get_graph_set(package, neuron_set, graph_type, link_type)
+	if random:
+		graph = __get_random_graph(g_set, package, neuron_set, graph_type, link_type, preserving, index)
+	else:
+		graph = g_set.graph
+	weighted = 'w' in graph_type
+	if package == 'nx':
+		if weighted:
+			err('NetworkX does not implement clustering coefficient for weighted graphs')
+		else:
+			cc = nx.average_clustering(graph.connection)
+	elif package == 'bct':
+		if graph_type == 'bu':
+			ccv_gsl = bct.clustering_coef_bu(graph.connection)
+		elif graph_type == 'bd':
+			ccv_gsl = bct.clustering_coef_bd(graph.connection)
+		elif graph_type == 'wu':
+			ccv_gsl = bct.clustering_coef_wu(graph.connection)
+		elif graph_type == 'wd':
+			ccv_gsl = bct.clustering_coef_wd(graph.connection)
+		else:
+			err('Unknown graph_type: '+str(graph_type))
+		ccv = bct.from_gsl(ccv_gsl)
+		bct.gsl_free(ccv_gsl)
+		cc = sum(ccv) / len(ccv)
+	else:
+		err('Unknown package type: '+str(package))
+
+	return cc
+
+
+####################################################################################
+###
 ### FUNCTION normalized_path_length()
 ###
 ####################################################################################
@@ -476,6 +515,7 @@ def edge_count(neuron_set, graph_type, random, preserving):
 ###
 ####################################################################################
 Metric_Function = {'cc' : clustering_coefficient,
+				   'ccd': clustering_coefficient_distance,  # cc based on 'd' instead of 'w'
 				   'npl': normalized_path_length,
 				   'cpl': characteristic_path_length,
 				   'cl' : connectivity_length,
