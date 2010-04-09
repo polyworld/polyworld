@@ -897,7 +897,7 @@ void TSimulation::Step()
 				// If each bestRecent agent is NOT in the bestSoFar list, then unlink all its files from their original location
 				if( !inBestSoFarList && (fRecentFittest[i]->agentID > 0) )
 				{
-					if( !fBrainAnatomyRecordAll )
+					if( (fBestRecentBrainAnatomyRecordFrequency || fBestSoFarBrainAnatomyRecordFrequency) && !fBrainAnatomyRecordAll )
 					{
 						sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_incept.txt", fRecentFittest[i]->agentID );
 						if( unlink( s ) )
@@ -909,7 +909,7 @@ void TSimulation::Step()
 						if( unlink( s ) )
 							eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
 					}
-					if( !fBrainFunctionRecordAll )
+					if( (fBestRecentBrainFunctionRecordFrequency || fBestSoFarBrainFunctionRecordFrequency) && !fBrainFunctionRecordAll )
 					{
 						sprintf( s, "run/brain/function/brainFunction_%ld.txt", fRecentFittest[i]->agentID );
 						if( unlink( s ) )
@@ -4250,7 +4250,7 @@ void TSimulation::Death( agent* c,
 		c->GetBrain()->dumpAnatomical( "run/brain/anatomy", "death", c->Number(), c->HeuristicFitness() );
 	#endif
 	}
-	else	// don't want brain anatomies for this agent, so must eliminate the "incept" and "birth" anatomies that were already recorded
+	else if( fBestRecentBrainAnatomyRecordFrequency || fBestSoFarBrainAnatomyRecordFrequency )	// don't want brain anatomies for this agent, so must eliminate the "incept" and "birth" anatomies if they were recorded
 	{
 		char s[256];
 	
@@ -4262,6 +4262,7 @@ void TSimulation::Death( agent* c,
 			eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
 
 	#if HackForProcessingUnitComplexity
+		// I'm pretty sure the following tests are unnecessary but don't hurt anything (we should be able to just unlink the _death file if we reach here) - lsy 4/9/10
 		// Turns out we didn't want the "death" anatomy either, but we saved it above for the complexity measure
 		if( (fBestSoFarBrainAnatomyRecordFrequency  && !oneOfTheBestSoFar  && (!fBestRecentBrainAnatomyRecordFrequency || !oneOfTheBestRecent))	||
 			(fBestRecentBrainAnatomyRecordFrequency	&& !oneOfTheBestRecent && (!fBestSoFarBrainAnatomyRecordFrequency  || !oneOfTheBestSoFar ))
@@ -4331,7 +4332,7 @@ void TSimulation::Death( agent* c,
 	if( loserIDBestSoFar && (loserIDBestSoFar != loserIDBestRecent) )	//  depends on fAgentNumber being 1-based in agent.cp
 	{
 		char s[256];
-		if( !fBrainAnatomyRecordAll )
+		if( (fBestRecentBrainAnatomyRecordFrequency || fBestSoFarBrainAnatomyRecordFrequency) && !fBrainAnatomyRecordAll )
 		{
 			sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_incept.txt", loserIDBestSoFar );
 			if( unlink( s ) )
@@ -4343,7 +4344,7 @@ void TSimulation::Death( agent* c,
 			if( unlink( s ) )
 				eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
 		}
-		if( !fBrainFunctionRecordAll )
+		if( (fBestRecentBrainFunctionRecordFrequency || fBestSoFarBrainFunctionRecordFrequency) && !fBrainFunctionRecordAll )
 		{
 			sprintf( s, "run/brain/function/brainFunction_%lu.txt", loserIDBestSoFar );
 			if( unlink( s ) )
@@ -4358,7 +4359,7 @@ void TSimulation::Death( agent* c,
 	if( loserIDBestRecent )	//  depends on fAgentNumber being 1-based in agent.cp
 	{
 		char s[256];
-		if( !fBrainAnatomyRecordAll )
+		if( (fBestRecentBrainAnatomyRecordFrequency || fBestSoFarBrainAnatomyRecordFrequency) && !fBrainAnatomyRecordAll )
 		{
 			sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_incept.txt", loserIDBestRecent );
 			if( unlink( s ) )
@@ -4370,7 +4371,7 @@ void TSimulation::Death( agent* c,
 			if( unlink( s ) )
 				eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
 		}
-		if( !fBrainFunctionRecordAll )
+		if( (fBestRecentBrainFunctionRecordFrequency || fBestSoFarBrainFunctionRecordFrequency) && !fBrainFunctionRecordAll )
 		{
 			sprintf( s, "run/brain/function/brainFunction_%lu.txt", loserIDBestRecent );
 			if( unlink( s ) )
