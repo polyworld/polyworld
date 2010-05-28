@@ -4,8 +4,8 @@ import os
 import common_functions
 import datalib
 
-METRIC_ROOT_TYPES = ['cc', 'ccd', 'cpl', 'npl', 'cl', 'nm', 'lm', 'swi', 'swb', 'nc', 'ec', 'hf']
-METRIC_ROOT_NAMES = {'cc':'Clustering Coefficient', 'ccd':'Clustering Coefficient [d]', 'npl':'Normalized Path Length', 'cpl': 'Characteristic Path Length', 'cl':'Connectivity Length', 'swi':'Small World Index', 'swid':'Small World Index [d]', 'hf':'Heuristic Fitness', 'nm':'Newman Modularity', 'lm':'Louvain Modularity', 'nc':'Node Count', 'ec':'Edge Count', 'swb':'Small World Bias'}
+METRIC_ROOT_TYPES = ['cc', 'ccd', 'cpl', 'npl', 'cl', 'nm', 'lm', 'm3', 'swi', 'swid', 'swb', 'nc', 'ec', 'hf']
+METRIC_ROOT_NAMES = {'cc':'Clustering Coefficient', 'ccd':'Clustering Coefficient [d]', 'npl':'Normalized Path Length', 'cpl': 'Characteristic Path Length', 'cl':'Connectivity Length', 'swi':'Small World Index', 'swid':'Small World Index [d]', 'hf':'Heuristic Fitness', 'nm':'Newman Modularity', 'lm':'Louvain Modularity', 'nc':'Node Count', 'ec':'Edge Count', 'swb':'Small World Bias', 'm3':'3-Node Motifs'}
 DEFAULT_METRICS = []
 METRICS_NO_GRAPH = ['hf']
 METRICS_NO_RANDOM = ['swi', 'swid', 'nc', 'ec', 'swb']
@@ -231,7 +231,10 @@ def read_anatomy(anatomy_file):
 		row_p = []
 		for j in range(len(l)-1):  # -1 to leave out the bias links
 			if j == i:
-				w = 0.0
+				w = float(l[j])
+				if w != 0.0:
+					print 'self-connection in', anatomy_file, 'i = j =', i, 'w =', w
+					w = 0.0
 			else:
 				w = abs(float(l[j]))
 			row_a.append(w)
