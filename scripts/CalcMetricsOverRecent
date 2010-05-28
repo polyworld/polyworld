@@ -487,10 +487,33 @@ def louvain_modularity(neuron_set, graph_type, random, preserving, index):
 
 ####################################################################################
 ###
+### FUNCTION motif_3()
+###
+####################################################################################
+def motif_3(neuron_set, graph_type, random, preserving, index):
+	link_type = 'w'	 # weight (not distance)
+	g_set = __get_graph_set('bct', neuron_set, graph_type, link_type)
+	if random:
+		graph = __get_random_graph(g_set, 'bct', neuron_set, graph_type, link_type, preserving, index)
+	else:
+		graph = g_set.graph
+	if 'b' in graph_type:
+		m3_freq_bct = bct.motif3struct_bin(graph.connection)
+		m3_freq = bct.from_gsl(m3_freq_bct)
+		bct.gsl_free(m3_freq_bct)
+	else:
+		err('Weighted 3-node motifs not yet implemented')
+		#m3_freq_bct = bct.motif3struct_wei(graph.connection)
+
+	return m3_freq
+
+
+####################################################################################
+###
 ### FUNCTION node_count()
 ###
 ####################################################################################
-def node_count(neuron_set, graph_type, random, preserving):
+def node_count(neuron_set, graph_type, random, preserving, index):
 	link_type = 'w'	 # weight (not distance)
 	nc, ec = __get_graph_size(neuron_set, graph_type, link_type)
 
@@ -502,7 +525,7 @@ def node_count(neuron_set, graph_type, random, preserving):
 ### FUNCTION edge_count()
 ###
 ####################################################################################
-def edge_count(neuron_set, graph_type, random, preserving):
+def edge_count(neuron_set, graph_type, random, preserving, index):
 	link_type = 'w'	 # weight (not distance)
 	nc, ec = __get_graph_size(neuron_set, graph_type, link_type)
 
@@ -521,6 +544,7 @@ Metric_Function = {'cc' : clustering_coefficient,
 				   'cl' : connectivity_length,
 				   'nm' : newman_modularity,
 				   'lm' : louvain_modularity,
+				   'm3' : motif_3,
 				   'nc' : node_count,
 				   'ec' : edge_count}
 
@@ -750,7 +774,7 @@ def analyze_recent_dir(metrics, recent_dir):
 	for metric in metrics_remaining:
 		details = metric.split('_')
 		root = details[0]
-		if root == 'swi' or root = 'swid':
+		if root == 'swi' or root == 'swid':
 			neuron_set = details[1]
 			graph_type = details[2]
 			length_metric = details[3]
