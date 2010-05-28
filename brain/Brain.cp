@@ -695,7 +695,7 @@ void Brain::GrowDesignedBrain( Genome* g )
                         || neurused[jneur] ) // already connected to this one
                     {
                         if (i == j) // same group and neuron type (because we're doing e->e currently)
-                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, ineur);	// ineur was ini
+                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, ineur - firsteneur[j]);	// ineur was ini
                         else
                             jneur = NearestFreeNeuron(jneur,&neurused[0], nneurj, jneur);
                     }
@@ -797,7 +797,7 @@ void Brain::GrowDesignedBrain( Genome* g )
                         || neurused[jneur] ) // already connected to this one
                     {
                         if( (i == j) && IsOutputNeuralGroup( i ) )//same & output group
-                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, ineur);	// ineur was ini
+                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, ineur - firstineur[j]);	// ineur was ini
                         else
                             jneur = NearestFreeNeuron(jneur,&neurused[0], nneurj, jneur);
                     }
@@ -931,7 +931,7 @@ void Brain::GrowDesignedBrain( Genome* g )
                         || neurused[jneur] ) // already connected to this one
                     {
                         if( (i == j) && IsOutputNeuralGroup( i ) )	//same & output group
-                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, ini);
+                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, ineur - firsteneur[j]);
                         else
                             jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, jneur);
                     }
@@ -1026,7 +1026,7 @@ void Brain::GrowDesignedBrain( Genome* g )
                         || neurused[jneur] ) // already connected to this one
                     {
                         if (i == j) // same group and neuron type
-                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, ini);
+                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, ineur - firstineur[j]);
                         else
                             jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, jneur);
                     }
@@ -1491,7 +1491,7 @@ void Brain::Grow( Genome* g )
                         || neurused[jneur] ) // already connected to this one
                     {
                         if (i == j) // same group and neuron type (because we're doing e->e connections currently)
-                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, ineur);	// ineur was ini
+                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, ineur - firsteneur[j]);	// ineur was ini
                         else
                             jneur = NearestFreeNeuron(jneur,&neurused[0], nneurj, jneur);
                     }
@@ -1583,7 +1583,7 @@ void Brain::Grow( Genome* g )
                         || neurused[jneur] ) // already connected to this one
                     {
                         if( (i == j) && IsOutputNeuralGroup( i ) )	// same & output group
-                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, ineur);	// ineur was ini
+                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, ineur - firstineur[j]);	// ineur was ini
                         else
                             jneur = NearestFreeNeuron(jneur,&neurused[0], nneurj, jneur);
                     }
@@ -1707,7 +1707,7 @@ void Brain::Grow( Genome* g )
                         || neurused[jneur] ) // already connected to this one
                     {
                         if( (i == j) && IsOutputNeuralGroup( i ) )	// same & output group
-                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, ineur);	// ineur was ini
+                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, ineur - firsteneur[j]);	// ineur was ini
                         else
                             jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, jneur);
                     }
@@ -1792,7 +1792,7 @@ void Brain::Grow( Genome* g )
                         || neurused[jneur] ) // already connected to this one
                     {
                         if( i == j ) // same group and neuron type (because we're doing i->i currently)
-                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, ineur);	// ineur was ini
+                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, ineur - firstineur[j]);	// ineur was ini
                         else
                             jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, jneur);
                     }
