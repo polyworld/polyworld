@@ -1,7 +1,17 @@
 #!/usr/bin/python
 
+import sys
+
 import datalib
 import iterators
+
+tables = datalib.parse('AvrComplexity.plt')
+
+datalib.write('test.plt', tables)
+
+sys.exit(0)
+
+
 
 COLNAMES = ['T', 'A', 'B', 'C']
 COLTYPES = ['int', 'int', 'int', 'int']
