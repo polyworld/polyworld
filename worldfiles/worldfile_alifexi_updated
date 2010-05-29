@@ -1,6 +1,6 @@
-36		version
+37		version
 
-0	LockStepWithBirthsDeathsLog
+0		LockStepWithBirthsDeathsLog
 
 30000  maxSteps
 1      docpuwork
@@ -10,7 +10,7 @@
 0      wraparound
 1      vision
 1      showvision
-1      staticTimeStepGeometry
+1      staticTimestepGeometry
 22     minwin
 1.0    maxvel
 
@@ -29,7 +29,6 @@
 
 42		positionseed_not_used
 42		genomeseed_used_for_all
-
 
 0      agentsRfood
 100    fit1freq
@@ -243,12 +242,13 @@ O      smiteMode_R=random|L=leastfit|O=off
 1000     bestRecentBrainAnatonomyRecordFrequency
 1000     bestRecentBrainFunctionRecordFrequency
 1      recordGeneStats
-0      recordPerformanceStats
+1      recordPerformanceStats
 1      recordFoodPatchStats
 0      recordComplexity
 P		complexityType_P=processing|A=all|I=input|B=behavior|D=processing-input|Z=ZeroMaxVelocityHack
 0.0		complexityFitnessWeight_0.0
 0.0		heuristicFitnessWeight_0.0
+0		recordGenomes
 1      recordAdamiComplexity
 200    AdamiComplexityRecordFrequency
 
