@@ -1,5 +1,6 @@
 import re
 import common_functions
+import iterators
 import os
 
 REQUIRED = True
@@ -252,8 +253,10 @@ def write(path, tables, append = False, replace = True):
         table.index = table_index
         table_index += 1
         
-        col_labels = __create_col_metadata(COLUMN_LABEL_MARKER, table.colnames)
-        col_types = __create_col_metadata(COLUMN_TYPE_MARKER, table.coltypes)
+        col_widths = __calc_col_widths(table)
+
+        col_labels = __create_col_metadata(COLUMN_LABEL_MARKER, table.colnames, col_widths)
+        col_types = __create_col_metadata(COLUMN_TYPE_MARKER, table.coltypes, col_widths)
 
 
         dims.offset = f.tell()
@@ -270,11 +273,12 @@ def write(path, tables, append = False, replace = True):
 
             linelist = ['   ']
 
-            for data in row:
-                linelist.append('%-18s' % data)
+            for data, width in iterators.IteratorUnion(iter(row), iter(col_widths)):
+                format = '%-' + str(width) + 's'
+                linelist.append(format % data)
 
             linelist.append('\n')
-            f.write(' '.join(linelist))
+            f.write('\t'.join(linelist))
 
             rowlen = f.tell() - rowstart
 
@@ -288,6 +292,7 @@ def write(path, tables, append = False, replace = True):
     __write_footer( f, tabledims )
 
     f.close()
+
 
 ####################################################################################
 ###
@@ -505,16 +510,34 @@ def __end_table(f, tablename):
 
 ####################################################################################
 ###
+### FUNCTION __calc_col_widths()
+###
+####################################################################################
+def __calc_col_widths(table):
+    col_widths = []
+
+    for name, type, data in iterators.IteratorUnion(iter(table.colnames), iter(table.coltypes), iter(table.coldata)):
+        width = max(len(name), len(type))
+        for row in data:
+            width = max(width, len(str(row)))
+
+        col_widths.append(width)
+
+    return col_widths
+
+####################################################################################
+###
 ### FUNCTION __create_col_metadata()
 ###
 ####################################################################################
-def __create_col_metadata(marker, meta):
+def __create_col_metadata(marker, meta, colwidths):
     linelist = [marker]
-    for colmeta in meta:
-        linelist.append('%-18s' % colmeta)
+    for colmeta, colwidth in iterators.IteratorUnion(iter(meta), iter(colwidths)):
+        format = '%-' + str(colwidth) + 's'
+        linelist.append(format % colmeta)
     linelist.append('\n')
 
-    return ' '.join(linelist)
+    return '\t'.join(linelist)
 
 ####################################################################################
 ###
