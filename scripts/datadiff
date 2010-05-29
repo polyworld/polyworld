@@ -1,0 +1,57 @@
+#!/usr/bin/python
+
+import os
+import sys
+
+from common_functions import err
+import datalib
+import iterators
+
+
+def main():
+    argv = sys.argv[1:]
+
+    if len(argv) == 0:
+        usage()
+
+    if len(argv) != 2:
+        err("Must provide 2 paths")
+
+    path1 = argv[0]
+    path2 = argv[1]
+
+    tables1 = datalib.parse(path1)
+    tables2 = datalib.parse(path2)
+
+    find_missing_tables(tables1, tables2, path1, path2)
+    find_missing_tables(tables2, tables1, path2, path1)
+
+    for tablename in tables1.keys():
+        if tablename in tables1 and tablename in tables2:
+            diff_table(tables1[tablename], tables2[tablename])
+
+def find_missing_tables(tablesa, tablesb, patha, pathb):
+    for tablename in tablesa:
+        if not tablename in tablesb:
+            print 'missing table', tablename, 'from', pathb
+
+def diff_table(tablea, tableb):
+    if tablea.colnames != tableb.colnames:
+        err('column names differ for ' + tablea.name + ' (' + tablea.path + ')')
+    if tablea.coltypes != tableb.coltypes:
+        err('column types differ for ' + tablea.name + ' (' + tablea.path + ')')
+
+    for colname, coldataa, coldatab in iterators.IteratorUnion(iter(tablea.colnames), iter(tablea.coldata), iter(tableb.coldata)):
+        for a,b in iterators.IteratorUnion(iter(coldataa), iter(coldatab)):
+            # do a string compare due to 'nan' never equaling anything
+            if str(a) != str(b):
+                err('column ' + colname + ' differs for table ' + tablea.name + ' (' + tablea.path + ')')
+
+def usage():
+    print "datadiff <path1> <path2>"
+    print
+    print "compare two datalib files"
+    sys.exit(1)
+
+
+main()

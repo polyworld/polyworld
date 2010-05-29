@@ -1,0 +1,19 @@
+#!/bin/bash
+
+function trim()
+{
+    path=$1
+
+    if ./datatrim $path; then
+	if ./datadiff $path $path~; then
+	    rm $path~
+	fi
+    fi
+}
+export -f trim
+
+
+for dir in $*
+do
+	find $dir -name "*.plt" -exec bash -c "trim {}" \;
+done

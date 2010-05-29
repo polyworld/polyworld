@@ -1,0 +1,36 @@
+#!/usr/bin/python
+
+import os
+import sys
+
+from common_functions import err
+import datalib
+
+
+def main():
+    argv = sys.argv[1:]
+
+    if len(argv) == 0:
+        usage()
+
+    if len(argv) != 1:
+        err("Must provide path")
+
+    path = argv[0]
+    path_trim = path + '.trim'
+    path_bak = path + '~'
+
+    tables = datalib.parse(path)
+    datalib.write(path_trim, tables)
+
+    os.rename(path, path_bak)
+    os.rename(path_trim, path)
+
+def usage():
+    print "datatrim <path>"
+    print
+    print "reduces size of datalib file and saves original to <path>~"
+    sys.exit(1)
+
+
+main()
