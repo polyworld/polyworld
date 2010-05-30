@@ -101,7 +101,7 @@ class Mode:
                              classification,
                              value_names ):
         if self.func_normalizeValueNames == None:
-            return valueNames
+            return value_names
         else:
             return self.func_normalizeValueNames(classification, value_names)
 
