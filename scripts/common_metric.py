@@ -215,13 +215,13 @@ def read_anatomy(anatomy_file):
 
 	def __num_input_neurons(header):
 		start = header.rfind('-') + 1
-		return int(header[start:])
+		return int(header[start:]) + 1  # +1 because the value in the header is the last 0-based index, but we need a count
 	
 	file = open(anatomy_file, 'r')
 	lines = file.readlines()
 	header = lines[0].rstrip()  # get rid of the newline
 	num_input_neurons = __num_input_neurons(header)
-	
+
 	lines.pop(0) # drop the header line
 
 	for i in range(len(lines)-1):  # -1 to leave out the bias unit
