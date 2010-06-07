@@ -219,6 +219,8 @@ def read_anatomy(anatomy_file):
 	
 	file = open(anatomy_file, 'r')
 	lines = file.readlines()
+	file.close()
+	
 	header = lines[0].rstrip()  # get rid of the newline
 	num_input_neurons = __num_input_neurons(header)
 
