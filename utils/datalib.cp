@@ -12,6 +12,7 @@ using namespace std::tr1::placeholders;
 #define VERSION_MIN 2
 #define VERSION 2
 
+char *rfind( char *begin, char *end, char c );
 char *rfind( char *begin, char *end, char c )
 {
 	for( char *p = end - 1; p != end; p-- )
@@ -75,6 +76,7 @@ __Column::__Column( const char *name,
 DataLibWriter::DataLibWriter( const char *path )
 {
 	f = fopen( path, "w" );
+	//printf( "%s: path = %s\n", __func__, path );
 	assert( f );
 
 	table = NULL;

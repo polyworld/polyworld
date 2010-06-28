@@ -3,6 +3,7 @@
 
 // System
 #include <gl.h>
+#include <istream>
 
 // Local
 #include "gobject.h"
@@ -21,6 +22,7 @@ class gpoly : public gobject
 {
 
 friend std::istream& operator>>(std::istream&, gpoly&);
+friend std::istream& operator>>(std::istream&, opoly&);
 
 public:
     gpoly();
@@ -31,7 +33,6 @@ public:
     gpoly(char* n, const opoly& p);
     gpoly(const opoly* pp);
     gpoly(char* n, const opoly* pp);
-
     
     void setradius(float r);
     void setradiusscale(float s);

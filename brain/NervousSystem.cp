@@ -198,7 +198,7 @@ void NervousSystem::dumpAnatomical( FILE *f )
 	}	
 }
 
-void __test()
+void NervousSystem::__test()
 {
 	NervousSystem ifs;
 

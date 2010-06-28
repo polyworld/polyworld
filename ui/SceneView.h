@@ -14,6 +14,9 @@
 
 // qt
 #include <qgl.h>
+#include <QApplication>
+#include <QGLWidget>
+
 //#include <QCustomEvent>
 
 // Forware declarations

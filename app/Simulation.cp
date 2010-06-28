@@ -1375,7 +1375,7 @@ void TSimulation::Init()
 		if(fRecordPosition) agent_factor++;
 
 		int nfiles = 100 + (fMaxNumAgents * agent_factor);
-
+		//printf("setting maximum files to %d\n", nfiles);
 		// If we're going to be saving info on all these files, must increase the number allowed open
 		if( SetMaximumFiles( nfiles ) )
 		  {

@@ -281,12 +281,8 @@
 		76CBA597062BEDBC001C79E7 /* gstage.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = gstage.h; sourceTree = "<group>"; };
 		76CBA599062BEDBC001C79E7 /* BrainMonitorWindow.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = BrainMonitorWindow.cp; sourceTree = "<group>"; };
 		76CBA59A062BEDBC001C79E7 /* BrainMonitorWindow.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = BrainMonitorWindow.h; sourceTree = "<group>"; };
-		76CBA59B062BEDBC001C79E7 /* CameraController.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = CameraController.cp; sourceTree = "<group>"; };
-		76CBA59C062BEDBC001C79E7 /* CameraController.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = CameraController.h; sourceTree = "<group>"; };
 		76CBA59D062BEDBC001C79E7 /* ChartWindow.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = ChartWindow.cp; sourceTree = "<group>"; };
 		76CBA59E062BEDBC001C79E7 /* ChartWindow.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = ChartWindow.h; sourceTree = "<group>"; };
-		76CBA59F062BEDBC001C79E7 /* Menu.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = Menu.cp; sourceTree = "<group>"; };
-		76CBA5A0062BEDBC001C79E7 /* Menu.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = Menu.h; sourceTree = "<group>"; };
 		76CBA5A1062BEDBC001C79E7 /* SceneView.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = SceneView.cp; sourceTree = "<group>"; };
 		76CBA5A2062BEDBC001C79E7 /* SceneView.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = SceneView.h; sourceTree = "<group>"; };
 		76CBA5A4062BEDBC001C79E7 /* error.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = error.cp; sourceTree = "<group>"; };
@@ -653,12 +649,8 @@
 				84ED837B062E7EED00AEEA18 /* AgentPOVWindow.h */,
 				76CBA599062BEDBC001C79E7 /* BrainMonitorWindow.cp */,
 				76CBA59A062BEDBC001C79E7 /* BrainMonitorWindow.h */,
-				76CBA59B062BEDBC001C79E7 /* CameraController.cp */,
-				76CBA59C062BEDBC001C79E7 /* CameraController.h */,
 				76CBA59D062BEDBC001C79E7 /* ChartWindow.cp */,
 				76CBA59E062BEDBC001C79E7 /* ChartWindow.h */,
-				76CBA59F062BEDBC001C79E7 /* Menu.cp */,
-				76CBA5A0062BEDBC001C79E7 /* Menu.h */,
 				76C2314E09D0B4AA00EB652A /* OverheadView.cp */,
 				76C2314F09D0B4AA00EB652A /* OverheadView.h */,
 				76CBA5A1062BEDBC001C79E7 /* SceneView.cp */,

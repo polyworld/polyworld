@@ -57,6 +57,8 @@ class NervousSystem
 	void startFunctional( FILE *f );
 	void dumpAnatomical( FILE *f );
 
+	void __test();
+	
  private:
 	Brain *b;
 	RandomNumberGenerator *rng;
