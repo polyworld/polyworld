@@ -109,3 +109,14 @@ def parse_avrs(run_paths, classification, recent_type, complexities, run_as_key 
 
     return avrs
     
+####################################################################################
+###
+### FUNCTION num_neurons
+###
+####################################################################################
+def num_neurons(function_file):
+	file = open(function_file, 'r')
+	header = file.readline()
+	file.close()
+	entries = header.split()
+	return int(entries[2])
