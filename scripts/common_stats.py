@@ -47,7 +47,7 @@ def path_run_from_stats(path_stats):
 ### FUNCTION parse_complexity
 ###
 ####################################################################################
-def parse_stats(run_paths, types, run_as_key = False):
+def parse_stats(run_paths, types, dataset, value_names, run_as_key = False):
     # make sure the datalib files exist
     for path in run_paths:
         __get_stats( path )
