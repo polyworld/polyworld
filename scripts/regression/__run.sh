@@ -18,7 +18,7 @@ function worldfile {
 	shift
     fi
 
-    try ./scripts/regression/__edit_worldfile.py $in ./worldfile $*
+    try ./scripts/edit_worldfile.py $in ./worldfile $*
 }
 
 function try {
