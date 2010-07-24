@@ -22,16 +22,20 @@ map<char, string> part_names;
 
 const char *DEFAULT_PART_COMBOS[5] = {"A","P","I","B","HB"};
 
-#if 1
-#define DEBUG(STMT)
+#define DEBUG 0
+
+#if DEBUG
+	#define DEBUG_STMT(STMT) STMT
 #else
-#define DEBUG(STMT) STMT
+	#define DEBUG_STMT(STMT)
 #endif
 
+#if DEBUG
 static void show_args(list<string> &files,
 		      int ignore_timesteps_after,
 		      const char **part_combos,
 		      int ncombos);
+#endif
 
 //---------------------------------------------------------------------------
 // process_brainfunction
@@ -162,7 +166,7 @@ int process_brainfunction(int argc, char *argv[])
 		}
 	}
 
-	DEBUG(show_args(files, ignore_timesteps_after, part_combos, ncombos));
+	DEBUG_STMT(show_args(files, ignore_timesteps_after, part_combos, ncombos));
 
 	// ---
 	// --- Perform Complexity Calculations
@@ -206,6 +210,8 @@ int process_brainfunction(int argc, char *argv[])
 	return 0;
 }
 
+
+#if DEBUG
 //---------------------------------------------------------------------------
 // show_args
 //---------------------------------------------------------------------------
@@ -233,6 +239,7 @@ void show_args(list<string> &files,
 	}
 
 }
+#endif
 
 
 //===========================================================================
