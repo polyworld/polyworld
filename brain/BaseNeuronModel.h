@@ -251,8 +251,8 @@ class BaseNeuronModel : public NeuronModel
 	virtual void startFunctional( FILE *file )
 	{
 		fprintf( file,
-				 " %d %d %ld",
-				 dims->numneurons, dims->numInputNeurons, dims->numsynapses );		
+				 " %d %d %d %ld",
+				 dims->numneurons, dims->numInputNeurons, dims->numOutputNeurons, dims->numsynapses );		
 	}
 
 	virtual void writeFunctional( FILE *file )

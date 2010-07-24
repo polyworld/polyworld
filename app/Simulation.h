@@ -18,6 +18,7 @@
 #include "barrier.h"
 #include "datalib.h"
 #include "food.h"
+#include "SeparationCache.h"
 #include "gmisc.h"
 #include "graphics.h"
 #include "gstage.h"
@@ -29,6 +30,7 @@ namespace genome
 {
 	class Genome;
 }
+class ContactEntry;
 class TBinChartWindow;
 class TBrainMonitorWindow;
 class TChartWindow;
@@ -267,6 +269,18 @@ private:
 };
 
 //===========================================================================
+// ObjectType
+//===========================================================================
+enum ObjectType
+{
+	OT_AGENT = 0,
+	OT_FOOD,
+	OT_BRICK,
+	OT_BARRIER,
+	OT_EDGE
+};
+
+//===========================================================================
 // TSimulation
 //===========================================================================
 class TSimulation : public QObject
@@ -344,6 +358,10 @@ public:
 	DataLibWriter *fLifeSpanLog;
 
 	bool fRecordPosition;
+	bool fRecordContacts;
+	DataLibWriter *fContactsLog;
+	bool fRecordCollisions;
+	DataLibWriter *fCollisionsLog;
 
 	bool fBrainAnatomyRecordAll;
 	bool fBrainFunctionRecordAll;
@@ -355,6 +373,8 @@ public:
 	bool fRecordComplexity;				// record the Olaf Functional Complexity (neural)
 
 	bool fRecordGenomes;
+	bool fRecordSeparations;
+	DataLibWriter *fSeparationsLog;
 	bool fRecordAdamiComplexity;		// record the Adami Physical Complexity  (genetic)
 	int fAdamiComplexityRecordFrequency;
 	
@@ -384,11 +404,33 @@ private:
 	void InitLifeSpanLog();
 	void UpdateLifeSpanLog( agent *a );
 	void EndLifeSpanLog();
+
+	void InitContactsLog();
+	void EndContactsLog();
+
+	void InitCollisionsLog();
+ public:
+	void UpdateCollisionsLog( agent *c, ObjectType ot );
+ private:
+	void EndCollisionsLog();
+
+	void InitSeparationsLog();
+	void EndSeparationsLog();
 	
 	void PickParentsUsingTournament(int numInPool, int* iParent, int* jParent);
 	void UpdateAgents();
 	void UpdateAgents_StaticTimestepGeometry();
 	void Interact();
+	void Fight( agent *c,
+				agent *d,
+				ContactEntry *contactEntry,
+				bool *cDied,
+				bool *dDied );
+	void Give( agent *x,
+			   agent *y,
+			   ContactEntry *contactEntry,
+			   bool *xDied,
+			   bool toMarkOnDeath );
 	
 	void RecordGeneSeparation();
 	void CalculateGeneSeparation(agent* ci);
@@ -517,6 +559,8 @@ private:
 	float fMateThreshold;
 	long fEatMateSpan;
 	float fFightThreshold;
+	float fGiveThreshold;
+	float fGiveFraction;
 	
 	long fNumberBorn;
 	long fNumberBornVirtual;
@@ -603,6 +647,8 @@ private:
 	unsigned long* fGeneSum;	// sum, for computing mean
 	unsigned long* fGeneSum2;	// sum of squares, for computing std. dev.
 	FILE* fGeneStatsFile;
+
+	SeparationCache fSeparationCache;
 	
 	FILE* fFoodPatchStatsFile;
 

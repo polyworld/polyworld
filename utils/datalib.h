@@ -70,7 +70,8 @@ namespace datalib
 	public:
 		__Column();
 		__Column( const char *name,
-				  datalib::Type type );
+				  datalib::Type type,
+				  bool pad);
 
 		std::string name;
 		datalib::Type type;
@@ -92,7 +93,9 @@ namespace datalib
 class DataLibWriter
 {
  public:
-	DataLibWriter( const char *path );
+	DataLibWriter( const char *path,
+				   bool randomAccess = false,
+				   bool singleSchema = true );
 	~DataLibWriter();
 
 	void beginTable( const char *name,
@@ -106,9 +109,12 @@ class DataLibWriter
 	void fileFooter();
 	void tableHeader();
 	void tableFooter();
+	void colMetaData();
 
  private:
 	FILE *f;
+	bool randomAccess;
+	bool singleSchema;
 	datalib::__TableVector tables;
 	datalib::__Table *table;
 	datalib::__ColVector cols;

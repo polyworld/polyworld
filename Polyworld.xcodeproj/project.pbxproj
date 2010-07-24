@@ -42,6 +42,9 @@
 		7624C7D00A4A0CD5006A2B7C /* FoodPatch.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7624C7CA0A4A0CD5006A2B7C /* FoodPatch.cp */; };
 		7624C7D20A4A0CD5006A2B7C /* Patch.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7624C7CC0A4A0CD5006A2B7C /* Patch.cp */; };
 		7624C7F10A4A204A006A2B7C /* distributions.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7624C7EE0A4A204A006A2B7C /* distributions.cp */; };
+		7629AB8E11FBA367004002AE /* ContactEntry.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7629AB8811FBA367004002AE /* ContactEntry.cp */; };
+		7629AB8F11FBA367004002AE /* SeparationCache.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7629AB8A11FBA367004002AE /* SeparationCache.cp */; };
+		7629AB9011FBA367004002AE /* SpeedSensor.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7629AB8C11FBA367004002AE /* SpeedSensor.cp */; };
 		762A43921061C79C0079A7F0 /* RandomNumberGenerator.cp in Sources */ = {isa = PBXBuildFile; fileRef = 762A43901061C79C0079A7F0 /* RandomNumberGenerator.cp */; };
 		7668D1690885AC65004158C6 /* PwMovieUtils.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7668D1680885AC65004158C6 /* PwMovieUtils.cp */; };
 		7668D2F208864A7E004158C6 /* PwMovieUtils.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7668D1680885AC65004158C6 /* PwMovieUtils.cp */; };
@@ -189,6 +192,12 @@
 		7624C7EE0A4A204A006A2B7C /* distributions.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = distributions.cp; sourceTree = "<group>"; };
 		7624C7EF0A4A204A006A2B7C /* distributions.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = distributions.h; sourceTree = "<group>"; };
 		7624C7F00A4A204A006A2B7C /* graybin.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = graybin.h; sourceTree = "<group>"; };
+		7629AB8811FBA367004002AE /* ContactEntry.cp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ContactEntry.cp; sourceTree = "<group>"; };
+		7629AB8911FBA367004002AE /* ContactEntry.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ContactEntry.h; sourceTree = "<group>"; };
+		7629AB8A11FBA367004002AE /* SeparationCache.cp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SeparationCache.cp; sourceTree = "<group>"; };
+		7629AB8B11FBA367004002AE /* SeparationCache.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SeparationCache.h; sourceTree = "<group>"; };
+		7629AB8C11FBA367004002AE /* SpeedSensor.cp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SpeedSensor.cp; sourceTree = "<group>"; };
+		7629AB8D11FBA367004002AE /* SpeedSensor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SpeedSensor.h; sourceTree = "<group>"; };
 		762A43901061C79C0079A7F0 /* RandomNumberGenerator.cp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RandomNumberGenerator.cp; sourceTree = "<group>"; };
 		762A43911061C79C0079A7F0 /* RandomNumberGenerator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RandomNumberGenerator.h; sourceTree = "<group>"; };
 		7668D1680885AC65004158C6 /* PwMovieUtils.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = PwMovieUtils.cp; sourceTree = "<group>"; };
@@ -579,6 +588,12 @@
 		76CBA573062BEDBC001C79E7 /* agent */ = {
 			isa = PBXGroup;
 			children = (
+				7629AB8811FBA367004002AE /* ContactEntry.cp */,
+				7629AB8911FBA367004002AE /* ContactEntry.h */,
+				7629AB8A11FBA367004002AE /* SeparationCache.cp */,
+				7629AB8B11FBA367004002AE /* SeparationCache.h */,
+				7629AB8C11FBA367004002AE /* SpeedSensor.cp */,
+				7629AB8D11FBA367004002AE /* SpeedSensor.h */,
 				76CBA576062BEDBC001C79E7 /* agent.cp */,
 				76CBA577062BEDBC001C79E7 /* agent.h */,
 				768BD94210E016EC00B3DCAA /* EnergySensor.cp */,
@@ -968,6 +983,9 @@
 				76E969B810F6A1DC00D0C730 /* LifeSpan.cp in Sources */,
 				76E969D410F6A22400D0C730 /* datalib.cp in Sources */,
 				76E969D510F6A22400D0C730 /* Variant.cp in Sources */,
+				7629AB8E11FBA367004002AE /* ContactEntry.cp in Sources */,
+				7629AB8F11FBA367004002AE /* SeparationCache.cp in Sources */,
+				7629AB9011FBA367004002AE /* SpeedSensor.cp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

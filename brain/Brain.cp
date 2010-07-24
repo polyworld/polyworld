@@ -187,6 +187,8 @@ FILE* Brain::startFunctional( long index )
 		goto bail;
 	}
 
+	fprintf( file, "version 1\n" );
+
 	// print the header, with index (agent number)
 	fprintf( file, "brainFunction %ld", index );	
 

@@ -133,6 +133,8 @@ GenomeSchema *GenomeUtil::createSchema()
 
 	INPUT1( Random );
 	INPUT1( Energy );
+	if( genome::gEnableSpeedFeedback )
+		INPUT1( SpeedFeedback );
 	INPUT( Red, VisionNeuronCount );
 	INPUT( Green, VisionNeuronCount );
 	INPUT( Blue, VisionNeuronCount );
@@ -144,6 +146,9 @@ GenomeSchema *GenomeUtil::createSchema()
 	OUTPUT( Yaw );
 	OUTPUT( Light );
 	OUTPUT( Focus );
+
+	if( genome::gEnableGive )
+		OUTPUT( Give );
 
 	INTERNAL( InternalNeuronGroupCount );
 

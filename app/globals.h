@@ -108,6 +108,10 @@ namespace genome
 {
     // External globals
     extern long gNumBytes;
+
+	extern bool gEnableSpeedFeedback;
+	extern bool gEnableGive;
+
     extern float gMinStrength;
     extern float gMaxStrength;
 	extern float gMinMutationRate;

@@ -58,28 +58,30 @@ class CalcComplexity_brainfunction_callback
 };
 
 CalcComplexity_brainfunction_result *CalcComplexity_brainfunction(CalcComplexity_brainfunction_parms *parms,
-								  int nparms,
-								  CalcComplexity_brainfunction_callback *callback = 0);
+							  int nparms,
+							  CalcComplexity_brainfunction_callback *callback = 0);
 double CalcComplexity_brainfunction(const char *path,
-				    const char *parts,
-				    int ignore_timesteps_after,
-				    long *agent_number = NULL,
-				    long *lifespan = NULL,
-				    long *num_neurons = NULL);
+									const char *parts,
+									int ignore_timesteps_after,
+									long *agent_number = NULL,
+									long *lifespan = NULL,
+									long *num_neurons = NULL);
 double CalcComplexityWithMatrix_brainfunction(gsl_matrix *matrix,
-					      const char *parts,
-					      long numinputneurons);
+											  const char *parts,
+											  long numinputneurons,
+											  long numoutputneurons);
 
 std::vector<std::string> get_list_of_brainfunction_logfiles( std::string );
 std::vector<std::string> get_list_of_brainanatomy_logfiles( std::string );
 
 gsl_matrix * readin_brainfunction( const char* , int& );
 gsl_matrix * readin_brainfunction__optimized(const char *path,
-					     int ignore_timesteps_after,
-					     long *agent_number,
-					     long *lifespan,
-					     long *num_neurons,
-					     long *num_ineurons);
+											 int ignore_timesteps_after,
+											 long *agent_number,
+											 long *lifespan,
+											 long *num_neurons,
+											 long *num_ineurons,
+											 long *num_oneurons);
 gsl_matrix * readin_brainanatomy( const char* );
 
 

@@ -14,7 +14,7 @@
 #define MinDebugStep 0
 #define MaxDebugStep INT_MAX
 
-#define CurrentWorldfileVersion 37
+#define CurrentWorldfileVersion 38
 
 #define TournamentSelection 1
 
@@ -31,6 +31,7 @@
 // System
 #include <fstream>
 #include <iostream>
+#include <strstream>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/errno.h>
@@ -45,6 +46,7 @@
 #include "Brain.h"
 #include "BrainMonitorWindow.h"
 #include "ChartWindow.h"
+#include "ContactEntry.h"
 #include "AgentPOVWindow.h"
 #include "debug.h"
 #include "food.h"
@@ -182,8 +184,11 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
 		fRecordBirthsDeaths(false),
 
 		fLifeSpanLog(NULL),
-
 		fRecordPosition(false),
+		fRecordContacts(false),
+		fContactsLog(NULL),
+		fRecordCollisions(false),
+		fCollisionsLog(NULL),
 
 		fBrainAnatomyRecordAll(false),
 		fBrainFunctionRecordAll(false),
@@ -194,6 +199,7 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
 		fRecordComplexity(false),
 
 		fRecordGenomes(false),
+		fRecordSeparations(false),
 		fRecordAdamiComplexity(false),
 		fAdamiComplexityRecordFrequency(0),
 
@@ -1213,7 +1219,10 @@ void TSimulation::End()
 		Death( a, LifeSpan::DR_SIMEND );
 	}	
 
+	EndSeparationsLog();
 	EndLifeSpanLog();
+	EndContactsLog();
+	EndCollisionsLog();
 
 	// Stop simulation
 	printf( "Simulation stopped after step %ld\n", fStep );
@@ -1353,7 +1362,7 @@ void TSimulation::Init()
 	MKDIR( "run" );
 	MKDIR( "run/stats" );
 
-	if( fRecordAdamiComplexity || fRecordGenomes )
+	if( fRecordAdamiComplexity || fRecordGenomes || fRecordSeparations )
 	{
 		MKDIR( "run/genome" );
 	}
@@ -1362,6 +1371,11 @@ void TSimulation::Init()
 	{
 		MKDIR( "run/motion" );
 		MKDIR( "run/motion/position" );
+	}
+
+	if( fRecordContacts || fRecordCollisions )
+	{
+		MKDIR( "run/events" );
 	}
 
 	if( fBestSoFarBrainAnatomyRecordFrequency || fBestSoFarBrainFunctionRecordFrequency ||
@@ -1817,7 +1831,10 @@ void TSimulation::Init()
 		fSceneView->setRecordMovie( fRecordMovie, fMovieFile );
 	}
 
+	InitSeparationsLog();
 	InitLifeSpanLog();
+	InitContactsLog();
+	InitCollisionsLog();
 	
 	inited = true;
 }
@@ -1831,6 +1848,16 @@ void TSimulation::Init()
 //---------------------------------------------------------------------------
 void TSimulation::InitNeuralValues()
 {
+	int numinputneurgroups = 5;
+	if( genome::gEnableSpeedFeedback )
+		numinputneurgroups++;
+	brain::gNeuralValues.numinputneurgroups = numinputneurgroups;
+
+	int numoutneurgroups = 7;
+	if( genome::gEnableGive )
+		numoutneurgroups++;		
+	brain::gNeuralValues.numoutneurgroups = numoutneurgroups;
+
     brain::gNeuralValues.maxnoninputneurgroups = brain::gNeuralValues.maxinternalneurgroups + brain::gNeuralValues.numoutneurgroups;
     brain::gNeuralValues.maxneurgroups = brain::gNeuralValues.maxnoninputneurgroups + brain::gNeuralValues.numinputneurgroups;
     brain::gNeuralValues.maxneurpergroup = brain::gNeuralValues.maxeneurpergroup + brain::gNeuralValues.maxineurpergroup;
@@ -1901,6 +1928,7 @@ void TSimulation::InitWorld()
 	fEatThreshold = 0.2;
     fMateThreshold = 0.5;
     fFightThreshold = 0.2;
+	fGiveThreshold = fFightThreshold;
   	fGroundColor.r = 0.1;
     fGroundColor.g = 0.15;
     fGroundColor.b = 0.05;
@@ -1971,8 +1999,8 @@ void TSimulation::InitWorld()
     brain::gNeuralValues.maxeneurpergroup = 8;
     brain::gNeuralValues.minineurpergroup = 1;
     brain::gNeuralValues.maxineurpergroup = 8;
-	brain::gNeuralValues.numoutneurgroups = 7;
-    brain::gNeuralValues.numinputneurgroups = 5;
+	brain::gNeuralValues.numoutneurgroups = 7;  // set dynamically in InitNeuralValues()
+    brain::gNeuralValues.numinputneurgroups = 5;  // set dynamically in InitNeuralValues()
     brain::gNeuralValues.maxbias = 1.0;
     brain::gNeuralValues.minbiaslrate = 0.0;
     brain::gNeuralValues.maxbiaslrate = 0.2;
@@ -2248,6 +2276,137 @@ void TSimulation::EndLifeSpanLog()
 }
 
 //---------------------------------------------------------------------------
+// TSimulation::InitContactsLog
+//---------------------------------------------------------------------------
+
+void TSimulation::InitContactsLog()
+{
+	if( !fRecordContacts )
+		return;
+
+	fContactsLog = new DataLibWriter( "run/events/contacts.log" );
+
+	ContactEntry::start( fContactsLog );
+}
+
+//---------------------------------------------------------------------------
+// TSimulation::EndContactsLog
+//---------------------------------------------------------------------------
+
+void TSimulation::EndContactsLog()
+{
+	if( !fRecordContacts )
+		return;
+
+	ContactEntry::stop( fContactsLog );
+
+	delete fContactsLog;
+	fContactsLog = NULL;
+}
+
+//---------------------------------------------------------------------------
+// TSimulation::InitCollisionsLog
+//---------------------------------------------------------------------------
+
+void TSimulation::InitCollisionsLog()
+{
+	if( !fRecordCollisions )
+		return;
+
+	fCollisionsLog = new DataLibWriter( "run/events/collisions.log" );
+
+	const char *colnames[] =
+		{
+			"Step",
+			"Agent",
+			"Type",
+			NULL
+		};
+	const datalib::Type coltypes[] =
+		{
+			datalib::INT,
+			datalib::INT,
+			datalib::STRING
+		};
+
+	fCollisionsLog->beginTable( "Collisions",
+								colnames,
+								coltypes );
+}
+
+//---------------------------------------------------------------------------
+// TSimulation::UpdateCollisionsLog
+//---------------------------------------------------------------------------
+
+void TSimulation::UpdateCollisionsLog( agent *c,
+									   ObjectType ot )
+{
+	if( !fRecordCollisions )
+	{
+		return;
+	}
+
+	// We store type as a string since this data will most likely
+	// be processed by a script.
+	static const char *names[] = {"agent",
+								  "food",
+								  "brick",
+								  "barrier",
+								  "edge"};
+
+	fCollisionsLog->addRow( fStep,
+							c->Number(),
+							names[ot] );
+}
+
+//---------------------------------------------------------------------------
+// TSimulation::EndCollisionsLog
+//---------------------------------------------------------------------------
+
+void TSimulation::EndCollisionsLog()
+{
+	if( !fRecordCollisions )
+		return;
+
+	fCollisionsLog->endTable();
+	delete fCollisionsLog;
+	fCollisionsLog = NULL;
+}
+
+//---------------------------------------------------------------------------
+// TSimulation::InitSeparationsLog
+//---------------------------------------------------------------------------
+
+void TSimulation::InitSeparationsLog()
+{
+	if( fRecordSeparations )
+	{
+		fSeparationsLog = new DataLibWriter( "run/genome/separations.txt" );
+	}
+	else
+	{
+		fSeparationsLog = NULL;
+	}
+
+	fSeparationCache.start( fSeparationsLog );
+}
+
+//---------------------------------------------------------------------------
+// TSimulation::EndSeparationsLog
+//---------------------------------------------------------------------------
+
+void TSimulation::EndSeparationsLog()
+{
+	fSeparationCache.stop();
+
+	if( fRecordSeparations )
+	{
+		delete fSeparationsLog;
+		fSeparationsLog = NULL;
+	}
+}
+
+//---------------------------------------------------------------------------
 // TSimulation::PickParentsUsingTournament
 //---------------------------------------------------------------------------
 
@@ -2294,7 +2453,9 @@ void TSimulation::UpdateAgents()
 
 		a->UpdateVision();
 		a->UpdateBrain();
-		fFoodEnergyOut += a->UpdateBody(fMoveFitnessParameter, agent::gSpeed2DPosition, fSolidObjects);
+		fFoodEnergyOut += a->UpdateBody(fMoveFitnessParameter,
+										agent::gSpeed2DPosition,
+										fSolidObjects);
 	}
 }
 
@@ -2394,8 +2555,6 @@ void TSimulation::Interact()
 	bool cDied;
 //	bool foodMarked = 0;
 	bool ateBackwardFood;
-	float cpower;
-	float dpower;
 
 	fNewDeaths = 0;
 
@@ -2869,6 +3028,14 @@ void TSimulation::Interact()
 
 				ttPrint( "age %ld: agents # %ld & %ld are close\n", fStep, c->Number(), d->Number() );
 
+				ContactEntry contactEntry( fStep, c, d );
+
+				if( fRecordSeparations )
+				{
+					// Force a separation calculation so it gets logged.
+					fSeparationCache.separation( c, d );
+				}
+
                 jd = d->Domain();
 
 				// now take care of mating
@@ -3007,6 +3174,8 @@ void TSimulation::Interact()
 								(randpw() < c->MateProbability(d)) )					// miscegenation function allows the birth
 							{
 								ttPrint( "age %ld: agents # %ld & %ld are mating\n", fStep, c->Number(), d->Number() );
+								contactEntry.mate();
+
 								fNumBornSinceCreated++;
 								fDomains[kd].numbornsincecreated++;
 								
@@ -3070,56 +3239,40 @@ void TSimulation::Interact()
                 debugcheck("after a birth in interact");
 			#endif // DEBUGCHECK
 
-				// now take care of fighting
+				bool dDied = false;
 
+				// -------------
+				// --- FIGHT ---
+				// -------------
                 if (fPower2Energy > 0.0)
                 {
-                    if ( (c->Fight() > fFightThreshold) )
-                        cpower = c->Strength() * c->SizeAdvantage() * c->Fight() * (c->Energy()/c->MaxEnergy());
-                    else
-                        cpower = 0.0;
-
-                    if ( (d->Fight() > fFightThreshold) )
-                        dpower = d->Strength() * d->SizeAdvantage() * d->Fight() * (d->Energy()/d->MaxEnergy());
-                    else
-                        dpower = 0.0;
-
-                    if ( (cpower > 0.0) || (dpower > 0.0) )
-                    {
-						ttPrint( "age %ld: agents # %ld & %ld are fighting\n", fStep, c->Number(), d->Number() );
-                        // somebody wants to fight
-                        fNumberFights++;
-                        c->damage(dpower * fPower2Energy);
-                        d->damage(cpower * fPower2Energy);
-						if( !fLockStepWithBirthsDeathsLog )
-						{
-							// If we're not running in LockStep mode, allow natural deaths
-							if (d->Energy() <= 0.0)
-							{
-								//cout << "before deaths2 "; agent::gXSortedAgents.list();	//dbg
-								Death( d, LifeSpan::DR_NATURAL );
-								fNumberDiedFight++;
-								//cout << "after deaths2 "; agent::gXSortedAgents.list();	//dbg
-							}
-							if (c->Energy() <= 0.0)
-							{
-								objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point back to c
-								Death( c, LifeSpan::DR_NATURAL );
-								fNumberDiedFight++;
-
-								// note: this leaves list pointing to item before c, and markedAgent set to previous agent
-								//objectxsortedlist::gXSortedObjects.setMarkPrevious( AGENTTYPE );	// if previous object was a agent, this would step one too far back, I think - lsy
-								//cout << "after deaths3 "; agent::gXSortedAgents.list();	//dbg
-								cDied = true;
-								break;
-							}
-						}
-                    }
+					Fight( c, d, &contactEntry, &cDied, &dDied );
                 }
 
 			#ifdef DEBUGCHECK
-                debugcheck("after fighting in interact");
+				debugcheck("after fighting in interact");
 			#endif // DEBUGCHECK
+
+				// ------------
+				// --- GIVE ---
+				// ------------
+				if( genome::gEnableGive )
+				{
+					if( !cDied && !dDied )
+					{
+						Give( c, d, &contactEntry, &cDied, true );
+						if(!cDied)
+						{				
+							Give( d, c, &contactEntry, &dDied, false );
+						}
+					}
+				}
+
+				if( fRecordContacts )
+					contactEntry.log( fContactsLog );
+
+				if( cDied )
+					break;
 
             }  // if close enough
         }  // while (agent::gXSortedAgents.next(d))
@@ -3717,6 +3870,108 @@ void TSimulation::Interact()
 	}
 }
 
+//---------------------------------------------------------------------------
+// TSimulation::Fight
+//---------------------------------------------------------------------------
+void TSimulation::Fight( agent *c,
+						 agent *d,
+						 ContactEntry *contactEntry,
+						 bool *cDied,
+						 bool *dDied)
+{
+	float cpower;
+	float dpower;
+
+	if ( (c->Fight() > fFightThreshold) )
+		cpower = c->Strength() * c->SizeAdvantage() * c->Fight() * (c->Energy()/c->MaxEnergy());
+	else
+		cpower = 0.0;
+
+	if ( (d->Fight() > fFightThreshold) )
+		dpower = d->Strength() * d->SizeAdvantage() * d->Fight() * (d->Energy()/d->MaxEnergy());
+	else
+		dpower = 0.0;
+
+	if ( (cpower > 0.0) || (dpower > 0.0) )
+	{
+		ttPrint( "age %ld: agents # %ld & %ld are fighting\n", fStep, c->Number(), d->Number() );
+
+		if(cpower > 0.0)
+			contactEntry->fight( c );
+		if(dpower > 0.0)
+			contactEntry->fight( d );
+
+		// somebody wants to fight
+		fNumberFights++;
+		c->damage(dpower * fPower2Energy);
+		d->damage(cpower * fPower2Energy);
+		if( !fLockStepWithBirthsDeathsLog )
+		{
+			// If we're not running in LockStep mode, allow natural deaths
+			if (d->Energy() <= 0.0)
+			{
+				//cout << "before deaths2 "; agent::gXSortedAgents.list();	//dbg
+				Death( d, LifeSpan::DR_NATURAL );
+				fNumberDiedFight++;
+				//cout << "after deaths2 "; agent::gXSortedAgents.list();	//dbg
+
+				*dDied = true;
+			}
+			if (c->Energy() <= 0.0)
+			{
+				objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point back to c
+				Death( c, LifeSpan::DR_NATURAL );
+				fNumberDiedFight++;
+
+				// note: this leaves list pointing to item before c, and markedAgent set to previous agent
+				//objectxsortedlist::gXSortedObjects.setMarkPrevious( AGENTTYPE );	// if previous object was a agent, this would step one too far back, I think - lsy
+				//cout << "after deaths3 "; agent::gXSortedAgents.list();	//dbg
+				*cDied = true;
+			}
+		}
+	}
+}
+
+//---------------------------------------------------------------------------
+// TSimulation::Give
+//---------------------------------------------------------------------------
+void TSimulation::Give( agent *x,
+						agent *y,
+						ContactEntry *contactEntry,
+						bool *xDied,
+						bool toMarkOnDeath )
+{
+	if( (x->Give() > fGiveThreshold) )
+	{
+		float energy;
+
+		energy = x->Energy() * x->Give() * fGiveFraction;
+
+		if( energy > 0 )
+		{
+			contactEntry->give( x );
+
+			float result = y->receive( x, &energy );
+			fFoodEnergyOut += result;
+
+			if( !fLockStepWithBirthsDeathsLog )
+			{
+				if (x->Energy() <= 0.0)
+				{
+					if( toMarkOnDeath )
+						objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point back to x
+					Death( x, LifeSpan::DR_NATURAL );
+#if GIVE_TODO
+					fNumberDiedGive++;
+#endif
+
+					*xDied = true;
+				}
+			}
+		}
+
+	}
+}
 
 //---------------------------------------------------------------------------
 // TSimulation::RecordGeneSeparation
@@ -3901,6 +4156,12 @@ void TSimulation::Birth( agent* a,
 	a->GetLifeSpan()->set_birth( fStep,
 								 reason );
 
+
+	// ---
+	// --- Update Separation Cache
+	// ---
+	fSeparationCache.birth( a );
+
 	// ---
 	// --- Update Birth/Death Log
 	// ---
@@ -3953,6 +4214,11 @@ void TSimulation::Death( agent* c,
 								 reason );
 
 	UpdateLifeSpanLog( c );
+
+	// ---
+	// --- Update Separation Cache
+	// ---
+	fSeparationCache.death( c );
 
 	if( reason == LifeSpan::DR_SIMEND )
 	{
@@ -4486,7 +4752,8 @@ float TSimulation::Fitness( agent* c )
 void TSimulation::ReadWorldFile(const char* filename)
 {
 
-#define PROP(NAME) in >> f##NAME; ReadLabel(in, #NAME); cout << #NAME ses f##NAME nl;
+#define __PROP(LABEL,VAR)in >> VAR; ReadLabel(in, LABEL); cout << LABEL ses VAR nl;
+#define PROP(NAME) __PROP(#NAME,f##NAME)
 
     filebuf fb;
 	if( !Resources::openWorldFile( &fb, filename ) )
@@ -4658,6 +4925,17 @@ void TSimulation::ReadWorldFile(const char* filename)
     in >> fEat2Consume; in >> label;
     cout << "eat2consume" ses fEat2Consume nl;
 
+	if( version >= 38 )
+	{
+		__PROP( "enableSpeedFeedback", genome::gEnableSpeedFeedback );
+		__PROP( "enableGive", genome::gEnableGive );
+	}
+	else
+	{
+		genome::gEnableSpeedFeedback = false;
+		genome::gEnableGive = false;
+	}
+
     int ignoreShort1, ignoreShort2, ignoreShort3, ignoreShort4;
     in >> ignoreShort1; in >> label;
     cout << "minintneurons" ses ignoreShort1 nl;
@@ -4734,6 +5012,62 @@ void TSimulation::ReadWorldFile(const char* filename)
     cout << "agentfovy" ses agent::gAgentFOV nl;
     in >> agent::gMaxSizeAdvantage; in >> label;
     cout << "maxsizeadvantage" ses agent::gMaxSizeAdvantage nl;
+
+	if( version >= 38 )
+	{
+		string value;
+
+		__PROP("bodyGreenChannel", value);
+
+		if( value == "I" )
+		{
+			agent::gBodyGreenChannel = agent::BGC_ID;
+		}
+		else if( value == "L" )
+		{
+			agent::gBodyGreenChannel = agent::BGC_LIGHT;
+		}
+		else
+		{
+			float fval = -1;
+			istrstream sin(value.c_str());
+			sin >> fval;
+			if( sin.fail() )
+			{
+				error(2, "Invalid float for property bodyGreenChannel (", value.c_str(), ")");
+			}
+
+			agent::gBodyGreenChannel = agent::BGC_CONST;
+			agent::gBodyGreenChannelConstValue = fval;
+		}
+
+		__PROP("noseColor", value);
+
+		if( value == "L" )
+		{
+			agent::gNoseColor = agent::NC_LIGHT;
+		}
+		else
+		{
+			float fval = -1;
+			istrstream sin(value.c_str());
+			sin >> fval;
+			if( sin.fail() )
+			{
+				error(2, "Invalid float for property noseColor (", value.c_str(), ")");
+			}
+
+			agent::gNoseColor = agent::NC_CONST;
+			agent::gNoseColorConstValue = fval;
+		}
+		
+	}
+	else
+	{
+		agent::gBodyGreenChannel = agent::BGC_ID;
+		agent::gNoseColor = agent::NC_LIGHT;
+	}
+
     in >> fPower2Energy; in >> label;
     cout << "power2energy" ses fPower2Energy nl;
     in >> agent::gEat2Energy; in >> label;
@@ -4774,6 +5108,11 @@ void TSimulation::ReadWorldFile(const char* filename)
     cout << "matethreshold" ses fMateThreshold nl;
     in >> fFightThreshold; in >> label;
     cout << "fightthreshold" ses fFightThreshold nl;
+	if( version >= 38 )
+	{
+		PROP(GiveThreshold);
+		PROP(GiveFraction);
+	}
     in >> genome::gMiscBias; in >> label;
     cout << "miscbias" ses genome::gMiscBias nl;
     in >> genome::gMiscInvisSlope; in >> label;
@@ -5537,6 +5876,12 @@ void TSimulation::ReadWorldFile(const char* filename)
 	{
 		PROP( RecordPosition );
 	}
+
+	if( version >= 38 )
+	{
+		PROP( RecordContacts );
+		PROP( RecordCollisions );
+	}
 	
 	if( version >= 11 )
 	{
@@ -5685,6 +6030,15 @@ void TSimulation::ReadWorldFile(const char* filename)
 			fRecordGenomes = false;
 		}
 
+		if( version >= 38 )
+		{
+			PROP( RecordSeparations );
+		}
+		else
+		{
+			fRecordSeparations = false;
+		}
+
 		if( version >= 20 )
 		{
 			in >> fRecordAdamiComplexity; in >> label;
@@ -5694,7 +6048,7 @@ void TSimulation::ReadWorldFile(const char* filename)
 			cout << "AdamiComplexityRecordFrequency" ses fAdamiComplexityRecordFrequency nl;
 		}
 		
-	}	
+	}
 
 	if( version >= 18 )
 	{
@@ -5834,6 +6188,12 @@ void TSimulation::ReadLabel(istream &in, const char *name)
 	
 	in >> label;
 	
+	size_t i = label.find('_');
+	if( i != string::npos )
+	{
+		label = label.substr( 0, i );
+	}
+
 	if(0 != strcasecmp(name, label.c_str()))
 	{
 	  error(2, "expecting '", name, "' found '", label.c_str(), "'");

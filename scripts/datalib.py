@@ -6,7 +6,7 @@ import os
 REQUIRED = True
 
 SIGNATURE = '#datalib\n'
-CURRENT_VERSION = 2
+CURRENT_VERSION = 3
 COLUMN_TYPE_MARKER = "#@T"
 COLUMN_LABEL_MARKER = "#@L"
 
@@ -113,6 +113,8 @@ class Column:
             self.convert = int
         elif type == 'float':
             self.convert = float
+        elif type == 'string':
+            self.convert = lambda x: x
         else:
             raise ValueError('illegal data type ('+type+')')
 
@@ -195,7 +197,16 @@ class MissingTableError(Exception):
 ### FUNCTION write()
 ###
 ####################################################################################
-def write(path, tables, append = False, replace = True):
+def write( path,
+           tables,
+           append = False,
+           replace = True,
+           randomAccess = True,
+           singleSchema = False ):
+
+    colformat = 'fixed' if randomAccess else 'none'
+    schema = 'single' if singleSchema else 'table'
+
     try:
         # if it's a dict, get the values
         tables = tables.values()
@@ -241,7 +252,16 @@ def write(path, tables, append = False, replace = True):
 
     f = open(path, 'w')
 
-    __write_header(f)
+    __write_header(f, schema, colformat)
+
+    if schema == 'single':
+        table = tables[0]
+        col_widths = __calc_col_widths(table, colformat)
+        col_labels = __create_col_metadata(COLUMN_LABEL_MARKER, table.colnames, col_widths)
+        col_types = __create_col_metadata(COLUMN_TYPE_MARKER, table.coltypes, col_widths)
+        f.write(col_labels)
+        f.write(col_types)
+        f.write('\n')
 
     table_index = 0
     for table in tables:
@@ -253,15 +273,20 @@ def write(path, tables, append = False, replace = True):
         table.index = table_index
         table_index += 1
         
-        col_widths = __calc_col_widths(table)
+        if schema == 'single':
+            assert( table.colnames == tables[0].colnames )
+            assert( table.coltypes == tables[0].coltypes )
+        else:
+            col_widths = __calc_col_widths(table, colformat)
 
-        col_labels = __create_col_metadata(COLUMN_LABEL_MARKER, table.colnames, col_widths)
-        col_types = __create_col_metadata(COLUMN_TYPE_MARKER, table.coltypes, col_widths)
+            col_labels = __create_col_metadata(COLUMN_LABEL_MARKER, table.colnames, col_widths)
+            col_types = __create_col_metadata(COLUMN_TYPE_MARKER, table.coltypes, col_widths)
 
 
         dims.offset = f.tell()
 
         __start_table(f,
+                      schema,
                       table.name,
                       col_labels,
                       col_types)
@@ -271,21 +296,33 @@ def write(path, tables, append = False, replace = True):
         for row in table.rows():
             rowstart = f.tell()
 
-            linelist = ['   ']
-
-            for data, width in iterators.IteratorUnion(iter(row), iter(col_widths)):
-                format = '%-' + str(width) + 's'
-                linelist.append(format % data)
-
-            linelist.append('\n')
-            f.write('\t'.join(linelist))
-
-            rowlen = f.tell() - rowstart
+            if colformat == 'fixed':
+                linelist = ['   ']
+        
+                for data, width in iterators.IteratorUnion(iter(row), iter(col_widths)):
+                    format = '%-' + str(width) + 's'
+                    linelist.append(format % data)
+        
+                linelist.append('\n')
+                f.write('\t'.join(linelist))
+        
+                rowlen = f.tell() - rowstart
+            elif colformat == 'none':
+                f.write('\t'.join(map(str,row)))
+                f.write('\n')
+                rowlen = -1
 
             if dims.rowlen == -1:
                 dims.rowlen = rowlen
             else:
-                assert dims.rowlen == rowlen
+                if dims.rowlen != rowlen:
+                    print 'dims.rowlen =', dims.rowlen
+                    print 'rowlen =', rowlen
+                    print 'table =', table.name
+                    print 'linelist =', linelist
+                    print 'col_widths =', col_widths
+                    print 'data =', ','.join(linelist)
+                    assert(false)
 
         __end_table(f, table.name)
 
@@ -312,7 +349,14 @@ def parse_all(paths, tablenames = None, required = not REQUIRED, keycolname = No
 ### FUNCTION parse()
 ###
 ####################################################################################
-def parse(path, tablenames = None, required = not REQUIRED, keycolname = None):
+def parse( path,
+           tablenames = None,
+           required = not REQUIRED,
+           keycolname = None,
+           tablename2key = lambda x: x,
+           stream_beginTable = None,
+           stream_row = None):
+
     f = open(path, 'r')
 
     if tablenames:
@@ -325,8 +369,113 @@ def parse(path, tablenames = None, required = not REQUIRED, keycolname = None):
     if version > CURRENT_VERSION:
         raise InvalidFileError('invalid version (%s)' % version)
 
-    tables = {}
+    if version < 3:
+        schema = 'table'
+        colformat = 'fixed'
+    else:
+        schema = common_functions.get_equals_decl(f.readline(), 'schema')
+        colformat = common_functions.get_equals_decl(f.readline(), 'colformat')
+
+    assert( schema in ['table', 'single'] )
+    assert( colformat in ['fixed', 'none'] )
+
+    class TableResult:
+        def __init__(self):
+            self.tables = {}
+
+        def beginTable( self,
+                        tablename,
+                        colnames,
+                        coltypes,
+                        path,
+                        table_index,
+                        keycolname):
+
+            self.table = Table(tablename,
+                               colnames,
+                               coltypes,
+                               path,
+                               table_index,
+                               keycolname = keycolname)
+            self.tables[tablename2key(tablename)] = self.table
+
+        def row(self, data):
+            row = self.table.createRow()
+            for col in self.table.columns():
+                col.set(row.index, data[col.index])
+
+        def retval(self):
+            return self.tables
+
+    class StreamResult:
+        def __init__(self):
+            pass
+
+        def beginTable(self,
+                       tablename,
+                       colnames,
+                       coltypes,
+                       path,
+                       table_index,
+                       keycolname):
+            if stream_beginTable:
+                stream_beginTable(tablename,
+                                  colnames,
+                                  coltypes,
+                                  path,
+                                  table_index,
+                                  keycolname)
+
+            # a private table used for a row context in callback
+            self.table = Table(tablename,
+                               colnames,
+                               coltypes,
+                               path,
+                               table_index,
+                               keycolname = keycolname)
+            self.__row = self.table.createRow()
+
+        def row(self, data):
+            if stream_row:
+                for col in self.table.columns():
+                    col.set(self.__row.index, data[col.index])
+
+                stream_row(self.__row)
+
+        def retval(self):
+            return None
+
+    if stream_beginTable == None and stream_row == None:
+        result = TableResult()
+    else:
+        result = StreamResult()
+
     table_index = -1
+
+    def __parse_colnames():
+        colnames = f.readline().split()
+        if len(colnames) == 0:
+            raise InvalidFileError('expecting column labels')
+        elif colnames[0] != COLUMN_LABEL_MARKER:
+            raise InvalidFileError('unexpected token (%s)' % colnames[0])
+        colnames.pop(0) # remove marker
+
+        return colnames
+
+    def __parse_coltypes():
+        coltypes = f.readline().split()
+        if len(coltypes) == 0:
+            raise InvalidFileError('expecting column types')
+        elif coltypes[0] != COLUMN_TYPE_MARKER:
+            raise InvalidFileError('unexpected token (%s)' % coltypes[0])
+        coltypes.pop(0) # remove marker
+
+        return coltypes
+
+    if schema == 'single':
+        __seek_meta(f, 'L')
+        colnames = __parse_colnames()
+        coltypes = __parse_coltypes()
 
     while True:
         tablename = __seek_next_tag(f)
@@ -341,36 +490,20 @@ def parse(path, tablenames = None, required = not REQUIRED, keycolname = None):
             else:
                 tablenames_found[tablename] = True
             
-
-        # --- read column names
-        colnames = f.readline().split()
-        if len(colnames) == 0:
-            raise InvalidFileError('expecting column labels')
-        elif colnames[0] != COLUMN_LABEL_MARKER:
-            raise InvalidFileError('unexpected token (%s)' % colnames[0])
-        colnames.pop(0) # remove marker
-
-        f.readline() # skip blank line
-
-        # --- read column types
-        coltypes = f.readline().split()
-        if len(coltypes) == 0:
-            raise InvalidFileError('expecting column types')
-        elif coltypes[0] != COLUMN_TYPE_MARKER:
-            raise InvalidFileError('unexpected token (%s)' % coltypes[0])
-        coltypes.pop(0) # remove marker
-
-        f.readline() # skip blank line
+        if schema == 'table':
+            colnames = __parse_colnames()
+            f.readline() # skip blank line
+            coltypes = __parse_coltypes()
+            f.readline() # skip blank line
 
 
-        # --- construct table object
-        table = Table(tablename,
-                      colnames,
-                      coltypes,
-                      path,
-                      table_index,
-                      keycolname = keycolname)
-        tables[tablename] = table
+        # --- begin table
+        result.beginTable(tablename,
+                          colnames,
+                          coltypes,
+                          path,
+                          table_index,
+                          keycolname)
 
         found_end_tag = False
         
@@ -390,16 +523,14 @@ def parse(path, tablenames = None, required = not REQUIRED, keycolname = None):
             elif len(data) != len(colnames):
                 raise InvalidFileError("Missing data for %s" % tablename)
 
-            row = table.createRow()
-            for col in table.columns():
-                col.set(row.index, data[col.index])
+            result.row(data)
 
     if tablenames and required:
         for name, found in tablenames_found.items():
             if not found:
                 raise MissingTableError('Failed to find %s in %s' % (name, path))
 
-    return tables
+    return result.retval();
 
 ####################################################################################
 ###
@@ -459,9 +590,12 @@ def parse_digest( path ):
 ### FUNCTION __write_header()
 ###
 ####################################################################################
-def __write_header(f):
+def __write_header(f,schema,colformat):
     f.write(SIGNATURE)
     f.write('#version=%d\n' % CURRENT_VERSION)
+    f.write('#schema=%s\n' % schema)
+    f.write('#colformat=%s\n' % colformat)
+    f.write('\n')
 
 ####################################################################################
 ###
@@ -491,14 +625,16 @@ def __write_footer( f, tabledims ):
 ###
 ####################################################################################
 def __start_table(f,
+                  schema,
                   tablename,
                   col_labels,
                   col_types):
-    f.write('\n#<%s>\n' % tablename)
-    f.write(col_labels)
-    f.write('#\n')
-    f.write(col_types)
-    f.write('#\n')
+    f.write('#<%s>\n' % tablename)
+    if schema != 'single':
+        f.write(col_labels)
+        f.write('#\n')
+        f.write(col_types)
+        f.write('#\n')
 
 ####################################################################################
 ###
@@ -513,13 +649,14 @@ def __end_table(f, tablename):
 ### FUNCTION __calc_col_widths()
 ###
 ####################################################################################
-def __calc_col_widths(table):
+def __calc_col_widths(table, colformat):
     col_widths = []
 
     for name, type, data in iterators.IteratorUnion(iter(table.colnames), iter(table.coltypes), iter(table.coldata)):
         width = max(len(name), len(type))
-        for row in data:
-            width = max(width, len(str(row)))
+        if colformat == 'fixed':
+            for row in data:
+                width = max(width, len(str(row)))
 
         col_widths.append(width)
 
@@ -549,6 +686,26 @@ def __is_datalib_file(file):
 
 ####################################################################################
 ###
+### FUNCTION __seek_meta()
+###
+####################################################################################
+def __seek_meta(file, meta):
+    regex = '^#@'+meta+'\s'
+
+    while True:
+        pos = file.tell()
+        line = file.readline()
+        if not line: break
+
+        result = re.search(regex, line)
+        if result:
+            file.seek(pos, os.SEEK_SET)
+            return
+
+    raise InvalidFileError('missing meta '+meta)
+
+####################################################################################
+###
 ### FUNCTION __seek_next_tag()
 ###
 ####################################################################################
@@ -556,7 +713,7 @@ def __seek_next_tag(file):
     regex = '^#\\<([a-zA-Z0-9_ \-]+)\\>'
 
     while True:
-        line = file.readline();
+        line = file.readline()
         if not line: break
 
         result = re.search(regex, line)

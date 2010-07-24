@@ -29,6 +29,9 @@ namespace brain
 
 namespace genome
 {
+	bool gEnableSpeedFeedback;
+	bool gEnableGive;
+
 	float gMinStrength;
 	float gMaxStrength;
 	float gMinMutationRate;

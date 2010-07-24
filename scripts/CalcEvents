@@ -1,0 +1,511 @@
+#!/usr/bin/python
+
+import os
+import sys
+
+import common_functions
+from common_functions import err, warn
+import common_genome
+import common_logs
+import datalib
+
+####################################################################################
+###
+### main()
+###
+####################################################################################
+def main():
+    epoch_len = 10000
+    nbins = 8
+    nbins_age = 20
+
+    argv = sys.argv[1:]
+    arg_paths = argv[1:]
+
+    type = argv[0]
+    if type == 'd':
+        calcdelta(arg_paths)
+        return
+    elif type == 'f':
+        subpath_log = 'events/fights.log'
+    elif type == 'g' or type == 'a':
+        subpath_log = 'events/gives.log'
+    elif type == 'c':
+        subpath_log = 'events/contacts.log'
+    else:
+        show_usage("invalid type")
+
+    try:
+        run_paths = common_functions.find_run_paths( arg_paths,
+                                                     subpath_log )
+    except:
+        show_usage(str(sys.exc_info()[1]))
+
+    
+    for run in run_paths:
+        path = os.path.join(run, subpath_log)
+        if type == 'a':
+            calcage( path,
+                     os.path.join(run, 'lifespans.txt'),
+                     nbins)
+        elif type == 'c':
+            calc_contacts( path,
+                           run,
+                           epoch_len,
+                           nbins,
+                           nbins_age)
+        else:
+            calclog( path,
+                     epoch_len,
+                     nbins )
+
+
+####################################################################################
+###
+### FUNCTION getbin()
+###
+####################################################################################
+def getbin(value, lo, hi, nbins):
+    bin = int((float(value - lo)/(hi - lo))*nbins)
+    if bin >= nbins:
+        bin -= 1
+    return bin
+
+####################################################################################
+###
+### FUNCTION create_bins()
+###
+####################################################################################
+def create_bins(values, nbins, lo = None, hi = None):
+    if len(values) == 0:
+        return [0 for x in range(nbins)]
+
+    if lo == None: lo = min(values)
+    if hi == None: hi = max(values)
+        
+    bins = [0 for x in range(nbins)]
+    for value in values:
+        bin = getbin(value, lo, hi, nbins)
+        bins[bin] += 1
+     
+    # convert to percent
+    #bins = [100 * x / len(values) for x in bins]
+
+    return bins
+
+####################################################################################
+###
+### FUNCTION create_bins2D()
+###
+####################################################################################
+def create_bins2D(xvalues, xnbins, xlo, xhi,
+                  yvalues, ynbins, ylo, yhi):
+    n = len(xvalues)
+    assert( len(xvalues) == len(yvalues) )
+
+    if xlo == None: xlo = min(xvalues)
+    if xhi == None: xhi = max(xvalues)
+    if ylo == None: ylo = min(yvalues)
+    if yhi == None: yhi = max(yvalues)
+    
+    bins = [ [0 for x in range(xnbins)] for y in range(ynbins) ]
+
+    for i in range(n):
+        x = xvalues[i]
+        y = yvalues[i]
+        xbin = getbin(x, xlo, xhi, xnbins)
+        ybin = getbin(y, ylo, yhi, ynbins)
+        bins[ybin][xbin] += 1
+
+    """
+    # convert to percents (along x) -- retarded.
+    for i in range(ynbins):
+        total = float(sum(bins[i]))
+        for j in range(xnbins):
+            if( total == 0 ):
+                bins[i][j] = float('nan')
+            else:
+                bins[i][j] = (bins[i][j] / total) * 100
+"""                
+    return bins
+
+####################################################################################
+###
+### FUNCTION calcage()
+###
+####################################################################################
+def calcage( path_log, path_lifespan, nbins ):
+
+    nbins_separation = nbins
+    nbins_age = 20
+
+    table_lifespans = datalib.parse( path_lifespan,
+                                     keycolname = 'Agent' )['LifeSpans']
+
+    table_log = datalib.parse(path_log).values()[0]
+    ages_receive = [[] for i in range(nbins_separation)]
+    ages_give = [[] for i in range(nbins_separation)]
+    
+    def __age(agent, step):
+        return step - table_lifespans[agent]['BirthStep']
+
+    separations = []
+    for row in table_log.rows():
+        separations.append(row['Separation'])
+
+    separation_min = min(separations)
+    separation_max = max(separations)
+
+    for row in table_log.rows():
+        step = row['Step']
+        separation = row['Separation']
+        separation_bin = getbin(separation, separation_min, separation_max, nbins_separation)
+        age_giver = __age(row['Agent1'], step)
+        age_receiver = __age(row['Agent2'], step)
+        ages_receive[separation_bin].append(age_receiver)
+        ages_give[separation_bin].append(age_giver)
+
+
+    print 'receive bins ='
+    for ages in ages_receive:
+        print create_bins(ages, nbins_age)
+
+    print 'give bins ='
+    for ages in ages_give:
+        print create_bins(ages, nbins_age)
+
+    ages = [row['DeathStep'] - row['BirthStep'] for row in table_lifespans.rows()]
+    print 'lifespans bins =', create_bins(ages, nbins_age)
+
+####################################################################################
+###
+### FUNCTION calcdelta()
+###
+####################################################################################
+def calcdelta( paths ):
+    if len(paths) != 2:
+        show_usage("Can only delta 2 files")
+
+    n0, bins0 = parse_bins(paths[0])
+    n1, bins1 = parse_bins(paths[1])
+
+    nsteps = len(bins0)
+    assert(nsteps == len(bins1))
+
+    nbins = len(bins0[0])
+    assert(nbins == len(bins1[0]))
+
+    for i in range(nsteps):
+        for j in range(nbins):
+            diff = bins0[i][j] - bins1[i][j]
+            print '%3s ' % diff,
+        print ' | n0 =', n0[i], '| n1 =', n1[i]
+
+
+def parse_bins( path ):
+    counts = []
+    bins = []
+
+    for line in open(path):
+        if '|n =' in line:
+            n = int(line.split()[-1])
+            counts.append(n)
+        if 'bins =' in line:
+            line = line[line.find('[') + 1 : line.rfind(']')]
+            tokens = line.split(', ')
+            nums = map( int, tokens)
+            bins.append(nums)
+
+    return counts, bins
+
+####################################################################################
+###
+### FUNCTION calclog()
+###
+####################################################################################
+def calclog( path_log,
+             epoch_len,
+             nbins ):
+    tables = datalib.parse(path_log)
+    table = tables.values()[0]
+
+    min_separation = sys.maxint
+    max_separation = -min_separation
+
+    class Epoch:
+        def __init__(self, step):
+            self.step = step
+            self.separations = []
+
+    epoch = Epoch(1)
+    epochs = []
+
+    for row in table.rows():
+        step = row['Step']
+        separation = row['Separation']
+
+        min_separation = min(min_separation, separation)
+        max_separation = max(max_separation, separation)
+        
+        while step >= (epoch.step + epoch_len):
+            epochs.append(epoch)
+            epoch = Epoch(epoch.step + epoch_len)
+
+        epoch.separations.append(separation)
+
+    epochs.append(epoch)
+
+    print 'min_separation =', min_separation, '|max_separation =', max_separation
+    print
+
+    for epoch in epochs:
+        separations = epoch.separations
+        n = len(separations)
+        lo = min(separations)
+        hi = max(separations)
+        mean = sum(separations) / n
+
+        bins = [0 for x in range(nbins)]
+        for separation in separations:
+            bin = int(((separation - min_separation)/(max_separation - min_separation))*nbins)
+            if bin >= nbins:
+                bin -= 1
+            bins[bin] += 1
+
+        bins = [100 * x / len(separations) for x in bins]
+        
+        print 'epoch =', epoch.step, '|lo =', lo, '|hi =', hi, '|mean =', mean, '|n =', n
+        print '  bins =', bins
+    
+
+####################################################################################
+###
+### function list_subtract()
+###
+####################################################################################
+def list_subtract(x,y):
+    assert(len(x) == len(y))
+
+    return [x[i] - y[i] for i in range(len(x))]
+
+####################################################################################
+###
+### function list_divide()
+###
+####################################################################################
+def list_divide(x,y):
+    assert(len(x) == len(y))
+
+    return [float(x[i]) / float(y[i]) if y[i] != 0 else float('nan') for i in range(len(x))]
+
+####################################################################################
+###
+### function calc_contacts()
+###
+####################################################################################
+def calc_contacts( path_log,
+                   path_run,
+                   epoch_len,
+                   nbins,
+                   nbins_age):
+    print 'reading separations'
+    separations = common_genome.SeparationCache( path_run )
+    print 'reading lifespans'
+    lifespans = common_logs.LifeSpans( path_run )
+
+    min_separation, max_separation = separations.getBounds()
+    max_age = lifespans.getBounds()[1]
+
+    print 'min_separation =', min_separation
+    print 'max_separation =', max_separation
+    print 'max_age =', max_age
+
+    class Event:
+        def __init__(self, name):
+            self.name = name
+            self.separations = []
+            self.ages_subject = []
+            self.ages_object = []
+
+        def add(self, separation, age_subject, age_object):
+            self.separations.append(separation)
+            self.ages_subject.append(age_subject)
+            self.ages_object.append(age_object)
+
+        def compute(self):
+            print '  computing event', self.name
+            
+            self.bins_separations = create_bins(self.separations, nbins, min_separation, max_separation)
+            self.bins_subject = create_bins(self.ages_subject, nbins_age, 0, max_age)
+            self.bins_subject2D = create_bins2D(self.ages_subject, nbins_age, 0, max_age,
+                                                self.separations, nbins, min_separation, max_separation )
+            self.bins_object = create_bins(self.ages_object, nbins_age, 0, max_age)
+            self.bins_object2D = create_bins2D(self.ages_object, nbins_age, 0, max_age,
+                                               self.separations, nbins, min_separation, max_separation )
+
+            # clear these fields out so they're not taking up memory
+            del self.separations
+            del self.ages_subject
+            del self.ages_object
+
+        def createTables(self, tables, step):
+            self.createTable( tables, step, 'separations', self.bins_separations )
+            self.createTable( tables, step, 'subject', self.bins_subject )
+            self.createTable( tables, step, 'object', self.bins_object )
+
+            self.createTable2D( tables, step, 'subject2D', self.bins_subject2D )
+            self.createTable2D( tables, step, 'object2D', self.bins_object2D )
+
+        def createTable(self, tables, step, tablename, values):
+            tablename = tablename + "_" + self.name
+            nbins = len(values)
+            
+            try:
+                table = tables[tablename]
+            except:
+                colnames = ['T'] + ['bin%d' % i for i in range(nbins)]
+                coltypes = ['int'] + ['int' for i in range(nbins)]
+                table = datalib.Table(tablename, colnames, coltypes)
+                tables[tablename] = table
+            
+            row = table.createRow()
+
+            row['T'] = step
+            for i in range(nbins):
+                row['bin%d' % i] = values[i]
+
+        def createTable2D(self, tables, step, tablename, values2D):
+            n = len(values2D)
+
+            for i in range(n):
+                self.createTable(tables, step, tablename+'_bin'+str(i), values2D[i])
+
+    class Epoch:
+        def __init__(self, step):
+            self.step = step
+            self.events = dict([(x, Event(x)) for x in [',', 'f', 'g', 'm']])
+
+        def compute(self):
+            print 'computing epoch', self.step
+            for ev in self.events.values():
+                ev.compute()
+
+        def createTables(self, tables):
+            for ev in self.events.values():
+                ev.createTables(tables, self.step)
+
+    # This class is just a place for us to keep references to variables
+    # that are accessed as "l-values" from __row(). If we didn't have
+    # this mechanism, __row() would make its own local copy.
+    class State:
+        epoch = Epoch(1)
+        epochs = [epoch]
+
+    # ---------------------------------- #
+    # --- datalib.parse stream_row() --- #
+    # ---------------------------------- #
+    # Note this is a callback function passed to datalib.parse() further on.
+    def __row(row):
+        step = row['Timestep']
+        agent1 = row['Agent1']
+        agent2 = row['Agent2']
+        events = row['Events']
+        separation = separations.separation( agent1, agent2 )
+
+        while step >= (State.epoch.step + epoch_len):
+            # we do a loop here because it's conceivable that
+            # we'll have an epoch without events. Extremely unlikely,
+            # but we don't want a crash.
+            State.epoch.compute()
+            State.epoch = Epoch(State.epoch.step + epoch_len)
+            State.epochs.append(State.epoch)
+
+        age_agent1 = lifespans.age( agent1, step )
+        age_agent2 = lifespans.age( agent2, step )
+        age_subject = age_agent1
+        age_object = age_agent2
+
+        for ev in events:
+            if ev == ',':
+                # erm, not sure about subject/object age-tracking
+                # on the ',' event itself... definitely need to switch
+                # them though for the events after the ','
+                age_subject = age_agent2
+                age_object = age_agent1
+
+            State.epoch.events[ev].add(separation, age_subject, age_object)
+    # ---------------------------------- #
+    # --- datalib.parse stream_row() --- #
+    # ---------------------------------- #
+
+    # Parse the durned thing, using __row() to process each row.
+    table_contacts = datalib.parse( path_log, tablenames = ['Contacts'], stream_row = __row )
+
+    # do computation on final epoch
+    State.epoch.compute()
+
+    # Let's make a durned output file, eh?
+    tables = {}
+
+    for epoch in State.epochs:
+        epoch.createTables(tables)
+
+    path_output = os.path.join(path_run, 'events/contacts_bins.txt')
+
+    datalib.write( path_output, tables )
+
+    """
+    print 'min_separation =', min_separation
+    print 'max_separation =', max_separation
+    print 'bounds=', separations.getBounds()
+    print 'max_age =', max_age
+    print 'bounds=', lifespans.getBounds()
+
+    def __format_list(l):
+        return map(lambda x: '%.2f' % x, l)
+
+    
+    for epoch in epochs:
+        print '---', epoch.step, '---'
+        for name, ev in epoch.events.items():
+            ev.bins_separations = create_bins(ev.separations, nbins, min_separation, max_separation)
+            print name, 'separation bins =', ev.bins_separations
+
+            ev.bins_subject = create_bins2D( ev.ages_subject, nbins_age, 0, max_age,
+                                             ev.separations, nbins, min_separation, max_separation )
+
+            for row in ev.bins_subject:
+                print name, 'subject bins[%d] =' % epoch.step, __format_list(row)
+/////
+
+            ev.bins_subject = create_bins(ev.ages_subject, nbins_age, 0, max_age)
+            print name, 'subject bins =', ev.bins_subject
+            ev.bins_object = create_bins(ev.ages_object, nbins_age, 0, max_age)
+            print name, 'object bins =', ev.bins_object
+
+            
+
+        def __sub_sep(ev1, ev2):
+            return __format_list(list_subtract(epoch.events[ev1].bins_separations, epoch.events[ev2].bins_separations))
+
+        def __div_sep(ev1, ev2):
+            return __format_list(list_divide(epoch.events[ev1].bins_separations, epoch.events[ev2].bins_separations))
+
+        print 'g-f =', __sub_sep('g', 'f')
+        print 'g/f =', __div_sep('g', 'f')
+        print 'g/, =', __div_sep('g', ',')
+        print 'f/, =', __div_sep('f', ',')
+"""
+
+####################################################################################
+###
+### function show_usage()
+###
+####################################################################################
+def show_usage(msg = None):
+    print 'show_usage STUB (d,f,g,a,c):'
+    print msg
+
+    sys.exit(1)
+
+main()

@@ -5,7 +5,7 @@ function install() {
 	return
     fi
 
-    sudo apt-get --assume-yes install $*
+    sudo apt-get --force-yes install $*
     if test $?; then
 	exit 1
     fi

@@ -13,6 +13,8 @@ import common_functions
 from common_functions import err, warn, list_difference
 import common_complexity
 import datalib
+import shlex
+import subprocess
 
 ### Now initialize some global variables
 OutputFilename = common_complexity.FILENAME_AVR
@@ -305,11 +307,12 @@ def compute_complexities(complexities,
 		cmd="%s brainfunction --bare --list %s -- %s" % ( CALC_COMPLEXITY,
 								  ' '.join(brainFunction_files),
 								  ' '.join(complexities_remaining))
-			
-		stdout = os.popen(cmd)
-		complexity_all = stdout.readlines()
-		if stdout.close() != None:
-			err('Failed executing CalcComplexity!')
+		cmd = shlex.split(cmd)
+		proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+		stdout = proc.communicate()[0]
+		complexity_all = filter(lambda x: len(x), stdout.split('\n'))
+		if proc.returncode != 0:
+			err('Failed executing CalcComplexity, exit=%d' % exitvalue)
 	
 		colnames = ['CritterNumber', 'Complexity']
 		coltypes = ['int', 'float']

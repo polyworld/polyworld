@@ -32,6 +32,7 @@ class food;
 class NervousSystem;
 class RandomSensor;
 class Retina;
+class SpeedSensor;
 class TAgentPOVWindow;
 class TSimulation;
 
@@ -51,6 +52,9 @@ public:
 	static void agentdestruct();
 	static void agentdump(std::ostream& out);
 	
+	enum BodyGreenChannel { BGC_ID, BGC_LIGHT, BGC_CONST };
+	enum NoseColor { NC_LIGHT, NC_CONST };
+
 	static float	gAgentHeight;	
 	static float	gMinAgentSize;
 	static float	gMaxAgentSize;
@@ -75,6 +79,10 @@ public:
 	static float	gMaxFocus;
 	static float	gAgentFOV;
 	static float	gMaxSizeAdvantage;
+	static BodyGreenChannel gBodyGreenChannel;
+	static float    gBodyGreenChannelConstValue;
+	static NoseColor gNoseColor;
+	static float    gNoseColorConstValue;
 	static int		gNumDepletionSteps;
 	static double	gMaxPopulationPenaltyFraction;
 	static double	gPopulationPenaltyFraction;
@@ -87,7 +95,9 @@ public:
     void load(std::istream& in);
 	void UpdateVision();
 	void UpdateBrain();
-    float UpdateBody(float moveFitnessParam, float speed2dpos, int solidObjects);
+    float UpdateBody( float moveFitnessParam,
+					  float speed2dpos,
+					  int solidObjects );
 	void AvoidCollisions( int solidObjects );
 	void AvoidCollisionDirectional( int direction, int solidObjects );
 	void GetCollisionFixedCoordinates( float xo, float zo, float xn, float zn, float xb, float zb, float rc, float rb, float *xf, float *zf );
@@ -106,6 +116,7 @@ public:
 			   bool recordPosition );    
     virtual void setradius();    
     float eat(food* f, float eatFitnessParameter, float eat2consume, float eatthreshold, long step);
+	float receive( agent *giver, float *e );
     void damage(float e);
     float MateProbability(agent* c);
     float mating( float mateFitnessParam, long mateWait );
@@ -133,6 +144,7 @@ public:
     float FoodEnergy();
     void FoodEnergy(float e);
 	float Fight();
+	float Give();
     float Strength();
     float Mate();
     float Size();
@@ -182,6 +194,7 @@ public:
  public:
 	struct ExternalData {
 		void *position_recorder;
+		void *separation_cache;
 	} external;
 
 protected:
@@ -240,11 +253,13 @@ protected:
 	Retina *fRetina;
 	RandomSensor *fRandomSensor;
 	EnergySensor *fEnergySensor;
+	SpeedSensor *fSpeedSensor;
 	Brain* fBrain;
 	struct Nerves
 	{
 		Nerve *random;
 		Nerve *energy;
+		Nerve *speedFeedback;
 		Nerve *red;
 		Nerve *green;
 		Nerve *blue;
@@ -255,6 +270,7 @@ protected:
 		Nerve *yaw;
 		Nerve *light;
 		Nerve *focus;
+		Nerve *give;
 	} nerves;
 
     gcamera fCamera;
@@ -291,6 +307,7 @@ inline void agent::Energy(float e) { fEnergy = e; }
 inline float agent::FoodEnergy() { return fFoodEnergy; }
 inline void agent::FoodEnergy(float e) { fFoodEnergy = e; }
 inline float agent::Fight() { return nerves.fight->get(); }
+inline float agent::Give() { return nerves.give->get(); }
 inline float agent::Strength() { return geneCache.strength; }
 inline float agent::Mate() { return nerves.mate->get(); }
 inline float agent::Size() { return geneCache.size; }

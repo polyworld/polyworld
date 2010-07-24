@@ -34,10 +34,10 @@ def path_stats(path_run):
 
 ####################################################################################
 ###
-### FUNCTION path_run_from_complexity()
+### FUNCTION path_run_from_stats()
 ###
 ####################################################################################
-def path_run_from_stats(path_stats):
+def path_run_from_stats(path_stats, classification, dataset):
     suffix = relpath_stats()
 
     return path_stats[:-(len(suffix) + 1)]
@@ -47,7 +47,7 @@ def path_run_from_stats(path_stats):
 ### FUNCTION parse_complexity
 ###
 ####################################################################################
-def parse_stats(run_paths, types, dataset, value_names, run_as_key = False):
+def parse_stats(run_paths, classification, dataset, types, run_as_key = False):
     # make sure the datalib files exist
     for path in run_paths:
         __get_stats( path )
@@ -61,7 +61,9 @@ def parse_stats(run_paths, types, dataset, value_names, run_as_key = False):
 
     if run_as_key:
         # modify the map to use run dir as key, not Avr file
-        tables = dict( [(path_run_from_stats( x[0] ),
+        tables = dict( [(path_run_from_stats( x[0],
+                                              classification,
+                                              dataset),
                          x[1])
                         for x in tables.items()] )
 

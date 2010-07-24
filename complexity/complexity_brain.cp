@@ -15,7 +15,6 @@ using namespace std;
 // Turn on no more than one of the *Options flags
 #define VirgilOptions 0
 #define OlafOptions 1
-#define numbehaviorneurons 7                  //modification: adding output neuron numbers
 
 // Note:  The bias neuron is not recorded in the brain function files, as it is always 1.0.
 // So I don't think turning on FLAG_subtractBias is ever a good idea, unless the subroutine
@@ -102,27 +101,31 @@ double CalcComplexity_brainfunction(const char *fnameAct,
 				    long *lifespan,
 				    long *num_neurons)
 {
-
+		
 	long numinputneurons = 0;		// this value will be defined by readin_brainfunction()
-
+	long numoutputneurons = 0;
+	
 	gsl_matrix * activity = readin_brainfunction__optimized(fnameAct,
-								ignore_timesteps_after,
-								agent_number,
-								lifespan,
-								num_neurons,
-								&numinputneurons);
+															ignore_timesteps_after,
+															agent_number,
+															lifespan,
+															num_neurons,
+															&numinputneurons,
+															&numoutputneurons);
 
 	return CalcComplexityWithMatrix_brainfunction(activity,
-						      part,
-						      numinputneurons);
+												  part,
+												  numinputneurons,
+												  numoutputneurons);
 }
 
 //---------------------------------------------------------------------------
 // CalcComplexityWithMatrix_brainfunction
 //---------------------------------------------------------------------------
 double CalcComplexityWithMatrix_brainfunction(gsl_matrix *activity,
-					      const char *part,
-					      long numinputneurons)
+											  const char *part,
+											  long numinputneurons,
+											  long numoutputneurons)
 {
     // if had an invalid brain file, return 0.
     if( activity == NULL ) { return 0.0; }
@@ -212,7 +215,7 @@ double CalcComplexityWithMatrix_brainfunction(gsl_matrix *activity,
 	int Inp_id[InumIndex];
 	
 	int BstartIndex = numinputneurons;
-	int BnumIndex = numbehaviorneurons;
+	int BnumIndex = numoutputneurons;
 	int Beh_id[BnumIndex];
 	
 	int Hea_id = 1;
@@ -665,11 +668,12 @@ gsl_matrix * readin_brainfunction( const char* fname, int& numinputneurons )
 // readin_brainfunction__optimized
 //---------------------------------------------------------------------------
 gsl_matrix * readin_brainfunction__optimized(const char* fname,
-					     int ignore_timesteps_after,
-					     long *agent_number,
-					     long *lifespan,
-					     long *num_neurons,
-					     long *num_ineurons)
+											 int ignore_timesteps_after,
+											 long *agent_number,
+											 long *lifespan,
+											 long *num_neurons,
+											 long *num_ineurons,
+											 long *num_oneurons)
 {
 /* This function largely replicates the function of the MATLAB file
    readin_brainfunction.m (Calculates, but does not return filnum,
@@ -709,6 +713,21 @@ gsl_matrix * readin_brainfunction__optimized(const char* fname,
 	fgets( tline, 100, FunctionFile );
 //	cout << "First Line: " << tline << " // Length: " << strlen(tline) << endl;
 
+	int version;
+	if( 0 != strncmp(tline, "version ", 8) )
+	{
+		version = 0;
+	}
+	else
+	{
+		version = atoi(tline + 8);
+
+		// read in line after version
+		char *nl = strchr(tline, '\n');
+		fseek( FunctionFile, (nl - tline) + 1, SEEK_SET );
+		fgets( tline, 100, FunctionFile );
+	}
+
 	string params = tline;
 	params = params.substr(14, params.length());
 
@@ -721,8 +740,23 @@ gsl_matrix * readin_brainfunction__optimized(const char* fname,
 	if(num_neurons) *num_neurons = atoi(numneu.c_str());
 
 	string numineu = params.substr(0,params.find(" ",0));
+	params.erase( 0, params.find(" ",0)+1 );						//Remove the numineu
 	if(num_ineurons) *num_ineurons = atoi(numineu.c_str());
 
+	if(num_oneurons)
+	{
+		if( version == 0 )
+		{
+			*num_oneurons = 7;
+		}
+		else
+		{
+			string numoneu = params.substr(0,params.find(" ",0));
+			params.erase( 0, params.find(" ",0)+1 );			//Remove the numoneu
+			*num_oneurons = atoi(numoneu.c_str());
+		}
+	}
+	
 /* MATLAB CODE:
         % start reading in the timesteps
         nextl = fgetl(fid);

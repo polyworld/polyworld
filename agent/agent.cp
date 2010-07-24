@@ -3,7 +3,6 @@
 /* by Larry Yaeger                                                  */
 /* Copyright Apple Computer 1990,1991,1992                          */
 /********************************************************************/
-
 // Self
 #include "agent.h"
 
@@ -34,8 +33,12 @@
 #include "Resources.h"
 #include "Retina.h"
 #include "Simulation.h"
+#include "SpeedSensor.h"
 
 using namespace genome;
+
+
+#define gGive2Energy gFight2Energy
 
 #pragma mark -
 
@@ -81,6 +84,12 @@ float		agent::gMinFocus;
 float		agent::gMaxFocus;
 float		agent::gAgentFOV;
 float		agent::gMaxSizeAdvantage;
+
+agent::BodyGreenChannel agent::gBodyGreenChannel;
+float					agent::gBodyGreenChannelConstValue;
+
+agent::NoseColor agent::gNoseColor;
+float            agent::gNoseColorConstValue;
 
 // agent::gNumDepletionSteps and agent:gMaxPopulationFraction must both be initialized to zero
 // for backward compatibility, and we depend on that fact in ReadWorldFile(), so don't change it
@@ -265,6 +274,7 @@ agent::agent(TSimulation* sim, gstage* stage)
 		fRetina(NULL),
 		fRandomSensor(NULL),
 		fEnergySensor(NULL),
+		fSpeedSensor(NULL),
 		fBrain(NULL),
 		fBrainFuncFile(NULL),
 		fPositionWriter(NULL)
@@ -312,6 +322,7 @@ agent::~agent()
 	delete fBrain;
 	delete fRandomSensor;
 	delete fEnergySensor;
+	delete fSpeedSensor;
 	delete fRetina;
 }
 
@@ -414,6 +425,8 @@ void agent::grow( bool recordGenome,
 #define INPUT(NAME) nerves.NAME = fCns->add( Nerve::INPUT, #NAME )
 	INPUT(random);
 	INPUT(energy);
+	if( genome::gEnableSpeedFeedback )
+		INPUT(speedFeedback);
 	INPUT(red);
 	INPUT(green);
 	INPUT(blue);
@@ -427,11 +440,15 @@ void agent::grow( bool recordGenome,
 	OUTPUT(yaw);
 	OUTPUT(light);
 	OUTPUT(focus);
+	if( genome::gEnableGive )
+		OUTPUT(give);
 #undef OUTPUT
 
 	fCns->add( fRetina = new Retina(brain::retinawidth) );
 	fCns->add( fEnergySensor = new EnergySensor(this) );
 	fCns->add( fRandomSensor = new RandomSensor(fBrain->rng) );
+	if( genome::gEnableSpeedFeedback )
+		fCns->add( fSpeedSensor = new SpeedSensor(this) );
 
 	fCns->grow( fGenome, fAgentNumber, recordBrainAnatomy );
 
@@ -447,7 +464,7 @@ void agent::grow( bool recordGenome,
 				 "run/motion/position/position_%ld.txt",
 				 fAgentNumber );
 
-		fPositionWriter = new DataLibWriter( path );
+		fPositionWriter = new DataLibWriter( path, true, false );
 
 		const char *colnames[] = {"Timestep", "x", "y", "z", NULL};
 		const datalib::Type coltypes[] = {datalib::INT, datalib::FLOAT, datalib::FLOAT, datalib::FLOAT};
@@ -462,11 +479,39 @@ void agent::grow( bool recordGenome,
 	// initially set red & blue to 0
     fColor[0] = fColor[2] = 0.0;
     
-	// set green color by the "id"
-    fColor[1] = fGenome->get( "ID" );
+	// set body green channel
+	switch(gBodyGreenChannel)
+	{
+	case BGC_ID:
+		fColor[1] = fGenome->get( "ID" );
+		break;
+	case BGC_CONST:
+		fColor[1] = gBodyGreenChannelConstValue;
+		break;
+	case BGC_LIGHT:
+		// no-op
+		break;
+	default:
+		assert(false);
+		break;
+	}
     
-	// start neutral gray
-    fNoseColor[0] = fNoseColor[1] = fNoseColor[2] = 0.5;
+	// set the initial nose color
+	float noseColor;
+	switch(gNoseColor)
+	{
+	case NC_CONST:
+		noseColor = gNoseColorConstValue;
+		break;
+	case NC_LIGHT:
+		// start neutral gray
+		noseColor = 0.5;
+		break;
+	default:
+		assert(false);
+		break;
+	}
+    fNoseColor[0] = fNoseColor[1] = fNoseColor[2] = noseColor;
     
     fAge = 0;
     fLastMate = gInitMateWait;
@@ -553,6 +598,39 @@ float agent::eat(food* f, float eatFitnessParameter, float eat2consume, float ea
 	return result;
 }
 
+//---------------------------------------------------------------------------
+// agent::receive
+//---------------------------------------------------------------------------    
+float agent::receive( agent *giver, float *e )
+{
+	float actual = min( *e, fMaxEnergy - fEnergy );
+	float result = 0;
+
+	if( actual > 0 )
+	{
+		fEnergy += actual;
+#if GIVE_TODO
+		fFoodEnergy += actual;
+#endif
+		giver->damage( actual );
+
+#if GIVE_TODO
+		if( fFoodEnergy > fMaxEnergy )
+		{
+			result = fFoodEnergy - fMaxEnergy;
+			fFoodEnergy = fMaxEnergy;
+		}
+#endif
+	}
+	else
+	{
+		actual = 0;
+	}
+
+	*e = actual;
+
+	return result;
+}
 
 //---------------------------------------------------------------------------
 // agent::damage
@@ -794,7 +872,9 @@ void agent::UpdateBrain()
 //---------------------------------------------------------------------------
 const float FF = 1.01;
 
-float agent::UpdateBody(float moveFitnessParam, float speed2dpos, int solidObjects)
+float agent::UpdateBody( float moveFitnessParam,
+						 float speed2dpos,
+						 int solidObjects )
 {
 #ifdef DEBUGCHECK
     debugcheck("agent::Update entry");
@@ -840,6 +920,11 @@ float agent::UpdateBody(float moveFitnessParam, float speed2dpos, int solidObjec
                      + fBrain->BrainEnergy()
                      + gFixedEnergyDrain;
 
+	if( genome::gEnableGive )
+	{
+		energyused += nerves.give->get() * gGive2Energy;
+	}
+
     double denergy = energyused * Strength();
 //	printf( "%s: energy consumed = %g + ", __func__, denergy );
 	double populationEnergyPenalty;
@@ -858,7 +943,16 @@ float agent::UpdateBody(float moveFitnessParam, float speed2dpos, int solidObjec
 
 	SetRed(nerves.fight->get());	// set red color according to desire to fight
 	SetBlue(nerves.mate->get()); 	// set blue color according to desire to mate
-	fNoseColor[0] = fNoseColor[1] = fNoseColor[2] = nerves.light->get();
+  	if( gBodyGreenChannel == BGC_LIGHT )
+	{
+		SetGreen(nerves.light->get());
+	}
+
+	if( gNoseColor == NC_LIGHT )
+	{
+		fNoseColor[0] = fNoseColor[1] = fNoseColor[2] = nerves.light->get();
+	}
+
     fAge++;
 
 	// Do barrier overrun testing here...
@@ -921,6 +1015,8 @@ float agent::UpdateBody(float moveFitnessParam, float speed2dpos, int solidObjec
                         addz( p * b->sina());
                         addx(-p * b->cosa());
                     }
+
+					fSimulation->UpdateCollisionsLog( this, OT_BARRIER );
                 } // overlap in z
             } // beginning of barrier comes after end of agent
         } // end of barrier comes after beginning of agent
@@ -961,8 +1057,11 @@ float agent::UpdateBody(float moveFitnessParam, float speed2dpos, int solidObjec
 	// and possibly correctness in the sort)
     if (globals::edges)
     {
+		bool collision = false;
+
         if (fPosition[0] > globals::worldsize)
         {
+			collision = true;
             if (globals::wraparound)
                 fPosition[0] -= globals::worldsize;
             else
@@ -970,6 +1069,7 @@ float agent::UpdateBody(float moveFitnessParam, float speed2dpos, int solidObjec
         }
         else if (fPosition[0] < 0.0)
         {
+			collision = true;
             if (globals::wraparound)
                 fPosition[0] += globals::worldsize;
             else
@@ -978,6 +1078,7 @@ float agent::UpdateBody(float moveFitnessParam, float speed2dpos, int solidObjec
         
         if (fPosition[2] < -globals::worldsize)
         {
+			collision = true;
             if (globals::wraparound)
                 fPosition[2] += globals::worldsize;
             else
@@ -985,11 +1086,17 @@ float agent::UpdateBody(float moveFitnessParam, float speed2dpos, int solidObjec
         }
         else if (fPosition[2] > 0.0)
         {
+			collision = true;
             if (globals::wraparound)
                 fPosition[2] -= globals::worldsize;
             else
                 fPosition[2] = 0.0;
         }
+
+		if( collision )
+		{
+			fSimulation->UpdateCollisionsLog( this, OT_EDGE );
+		}
     }
 
 	// Keep track of the domain in which the agent resides
@@ -1117,6 +1224,25 @@ void agent::AvoidCollisionDirectional( int direction, int solidObjects )
 			GetCollisionFixedCoordinates( LastX(), LastZ(), x(), z(), obj->x(), obj->z(), agtRadius, objRadius, &xf, &zf );
 			setx( xf );
 			setz( zf );
+
+			ObjectType ot;
+			switch(obj->getType())
+			{
+			case AGENTTYPE:
+				ot = OT_AGENT;
+				break;
+			case FOODTYPE:
+				ot = OT_FOOD;
+				break;
+			case BRICKTYPE:
+				ot = OT_BRICK;
+				break;
+			default:
+				assert(false);
+				break;
+			}
+
+			fSimulation->UpdateCollisionsLog( this, ot );
 			//break;	// can only hit one
 		}
 	}

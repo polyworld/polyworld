@@ -9,8 +9,11 @@ using namespace std::tr1::placeholders;
 
 #define SIGNATURE "#datalib\n"
 #define VERSION_STR "#version="
-#define VERSION_MIN 2
-#define VERSION 2
+// Why are read/write versions different? Cuz I'm lazy.
+// We'll implement version 3 reading when we need it, if ever.
+#define VERSION_READ_MIN 2
+#define VERSION_READ 2
+#define VERSION_WRITE 3
 
 char *rfind( char *begin, char *end, char c );
 char *rfind( char *begin, char *end, char c )
@@ -39,7 +42,8 @@ __Column::__Column()
 }
 
 __Column::__Column( const char *name,
-					datalib::Type type )
+					datalib::Type type,
+					bool pad )
 {
 	this->name = name;
 	this->type = type;
@@ -48,15 +52,15 @@ __Column::__Column( const char *name,
 	{
 	case datalib::INT:
 		tname = "int";
-		format = "%-20d";
+		format = pad ? "%-20d" : "%d";
 		break;
 	case datalib::FLOAT:
 		tname = "float";
-		format = "%-20f";
+		format = pad ? "%-20f" : "%f";
 		break;
 	case datalib::STRING:
 		tname = "string";
-		format = "%-20s";
+		format = pad ? "%-20s" : "%s";
 		break;
 	default:
 		assert( false );
@@ -73,10 +77,13 @@ __Column::__Column( const char *name,
 // ------------------------------------------------------------
 // --- ctor()
 // ------------------------------------------------------------
-DataLibWriter::DataLibWriter( const char *path )
+DataLibWriter::DataLibWriter( const char *path,
+							  bool _randomAccess,
+							  bool _singleSchema )
+: randomAccess( _randomAccess )
+, singleSchema( _singleSchema )
 {
 	f = fopen( path, "w" );
-	//printf( "%s: path = %s\n", __func__, path );
 	assert( f );
 
 	table = NULL;
@@ -125,7 +132,8 @@ void DataLibWriter::beginTable( const char *name,
 		}
 
 		cols.push_back( __Column(colname,
-								 coltypes[i]) );
+								 coltypes[i],
+								 randomAccess) );
 	}
 
 	tableHeader();
@@ -146,9 +154,12 @@ void DataLibWriter::addRow( Variant col0, ... )
 	char buf[4096];
 	char *b = buf;
 	bool first = true;
-		
-	sprintf( buf, "    " );
-	b += strlen( buf );
+
+	if( randomAccess )
+	{
+		sprintf( buf, "    " );
+		b += strlen( buf );
+	}
 
 	itfor( __ColVector, cols, it )
 	{
@@ -192,26 +203,36 @@ void DataLibWriter::addRow( Variant col0, ... )
 #undef DATA
 
 		b += strlen( b );
+		if( !randomAccess )
+		{
+			*(b++) = '\t';
+		}
 		assert( size_t(b - buf) < sizeof(buf) );
 
 		first = false;
 	}
 
+	if( !randomAccess )
+	{
+		b--; // erase last tab
+	}
 	*(b++) = '\n';
 	assert( size_t(b - buf) <= sizeof(buf) );
 
 	size_t nwrite = b - buf;
 
-	// enforce fixed-length records
-	if( table->rowlen == 0 )
+	if( randomAccess )
 	{
-		table->rowlen = nwrite;
+		// enforce fixed-length records
+		if( table->rowlen == 0 )
+		{
+			table->rowlen = nwrite;
+		}
+		else
+		{
+			assert( nwrite == table->rowlen );
+		}
 	}
-	else
-	{
-		assert( nwrite == table->rowlen );
-	}
-
 	size_t n = fwrite( buf, 1, nwrite, f );
 	assert( n == nwrite );
 }
@@ -233,11 +254,10 @@ void DataLibWriter::endTable()
 // ------------------------------------------------------------
 void DataLibWriter::fileHeader()
 {
-	fprintf( f,
-			 SIGNATURE
-			 "%s%d\n",
-			 VERSION_STR,
-			 VERSION );
+	fprintf( f, SIGNATURE );
+	fprintf( f, "#version=%d\n", VERSION_WRITE );
+	fprintf( f, "#schema=%s\n", singleSchema ? "single" : "table" );
+	fprintf( f, "#colformat=%s\n", randomAccess ? "fixed" : "none" );
 }
 
 // ------------------------------------------------------------
@@ -247,6 +267,7 @@ void DataLibWriter::fileFooter()
 {
 	size_t digest_start = ftell( f );
 
+	fprintf( f, "\n" );
 	fprintf( f, "#TABLES %lu\n", tables.size() );
 
 	itfor( __TableVector, tables, it )
@@ -272,8 +293,37 @@ void DataLibWriter::fileFooter()
 // ------------------------------------------------------------
 void DataLibWriter::tableHeader()
 {
+	if( singleSchema && (tables.size() == 1) )
+	{
+		colMetaData();
+	}
+
 	fprintf( f, "\n#<%s>\n", table->name.c_str() );
-		
+
+	if( !singleSchema )
+	{
+		colMetaData();
+	}
+}
+
+// ------------------------------------------------------------
+// --- tableFooter()
+// ------------------------------------------------------------
+void DataLibWriter::tableFooter()
+{
+	fprintf( f, "#</%s>\n", table->name.c_str() );
+}
+
+// ------------------------------------------------------------
+// --- colMetaData()
+// ------------------------------------------------------------
+void DataLibWriter::colMetaData()
+{
+	if( singleSchema )
+	{
+		fprintf( f, "\n" );
+	}
+
 	// ---
 	// --- colnames
 	// ---
@@ -283,9 +333,12 @@ void DataLibWriter::tableHeader()
 	{
 		fprintf( f, "%-20s", it->name.c_str() );
 	}
+	fprintf( f, "\n" );
 
-	fprintf( f, "\n"
-			 "#\n" );
+	if( !singleSchema )
+	{
+		fprintf( f, "#\n" );
+	}
 
 	// ---
 	// --- coltypes
@@ -296,19 +349,13 @@ void DataLibWriter::tableHeader()
 	{
 		fprintf( f, "%-20s", it->tname );
 	}
+	fprintf( f, "\n" );
 
-	fprintf( f, "\n"
-			 "#\n" );
+	if( !singleSchema )
+	{
+		fprintf( f, "#\n" );
+	}
 }
-
-// ------------------------------------------------------------
-// --- tableFooter()
-// ------------------------------------------------------------
-void DataLibWriter::tableFooter()
-{
-	fprintf( f, "#</%s>\n\n", table->name.c_str() );
-}
-
 
 // ================================================================================
 // ===
@@ -507,7 +554,7 @@ void DataLibReader::parseHeader()
 
 	int iversion = atoi(version + len);
 
-	assert( (iversion >= VERSION_MIN) && (iversion <= VERSION) );
+	assert( (iversion >= VERSION_READ_MIN) && (iversion <= VERSION_READ) );
 }
 
 // ------------------------------------------------------------
@@ -692,7 +739,8 @@ void DataLibReader::parseTableHeader()
 	for( size_t i = 0, n = types.size(); i < n; i++ )
 	{
 		__Column col( names[i].c_str(),
-					  types[i] );
+					  types[i],
+					  false );
 
 		cols.push_back( col );
 	}
