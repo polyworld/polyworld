@@ -4,9 +4,9 @@ import datalib
 import iterators
 
 def main():
-	test__misc()
+	#test__misc()
 	#test__append()
-	#test__version3()
+	test__version3()
 	#test__stream()
 
 def print_table(t):

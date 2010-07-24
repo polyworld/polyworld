@@ -642,7 +642,7 @@ def __start_table(f,
 ###
 ####################################################################################
 def __end_table(f, tablename):
-    f.write('#</%s>\n\n' % tablename)
+    f.write('#</%s>\n\n\n' % tablename)
 
 ####################################################################################
 ###
@@ -653,7 +653,7 @@ def __calc_col_widths(table, colformat):
     col_widths = []
 
     for name, type, data in iterators.IteratorUnion(iter(table.colnames), iter(table.coltypes), iter(table.coldata)):
-        width = max(len(name), len(type))
+        width = max(len(str(name)), len(type))
         if colformat == 'fixed':
             for row in data:
                 width = max(width, len(str(row)))
@@ -710,7 +710,7 @@ def __seek_meta(file, meta):
 ###
 ####################################################################################
 def __seek_next_tag(file):
-    regex = '^#\\<([a-zA-Z0-9_ \-]+)\\>'
+    regex = '^#\\<([a-zA-Z0-9_ \-,/]+)\\>'
 
     while True:
         line = file.readline()
@@ -727,7 +727,7 @@ def __seek_next_tag(file):
 ###
 ####################################################################################
 def __get_end_tag(line):
-    regex = '^#\\</([a-zA-Z0-9_ \-]+)\\>'
+    regex = '^#\\</([a-zA-Z0-9_ \-,/]+)\\>'
 
     result = re.search(regex, line)
     if result:

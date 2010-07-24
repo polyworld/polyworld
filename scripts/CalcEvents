@@ -8,6 +8,7 @@ from common_functions import err, warn
 import common_genome
 import common_logs
 import datalib
+import iterators
 
 ####################################################################################
 ###
@@ -32,32 +33,65 @@ def main():
         subpath_log = 'events/gives.log'
     elif type == 'c':
         subpath_log = 'events/contacts.log'
+    elif type == 'b':
+        subpath_log = 'events/contacts_bins.txt'
+    elif type == 'm':
+        subpath_log = 'events/contacts_bias.txt'
     else:
         show_usage("invalid type")
 
-    try:
-        run_paths = common_functions.find_run_paths( arg_paths,
-                                                     subpath_log )
-    except:
-        show_usage(str(sys.exc_info()[1]))
+    if type == 'm':
+        for group_path in arg_paths:
 
+            try:
+                run_paths = common_functions.find_run_paths( [group_path],
+                                                             subpath_log )
+            except:
+                show_usage(str(sys.exc_info()[1]))
+
+            def __meta(log):
+                log_paths = map( lambda x: os.path.join(x, 'events/contacts_'+log+'.txt'),
+                                 run_paths )
+                path_meta = os.path.join(group_path, 'contacts_meta_'+log+'.txt')
+                calc_meta( path_meta, log_paths )
+
+            __meta('bias')
+            __meta('bins')
+            __meta('bias_2bin')
+            __meta('bins_2bin')
+        
+    else:
+        try:
+            run_paths = common_functions.find_run_paths( arg_paths,
+                                                         subpath_log )
+        except:
+            show_usage(str(sys.exc_info()[1]))
     
-    for run in run_paths:
-        path = os.path.join(run, subpath_log)
-        if type == 'a':
-            calcage( path,
-                     os.path.join(run, 'lifespans.txt'),
-                     nbins)
-        elif type == 'c':
-            calc_contacts( path,
-                           run,
-                           epoch_len,
-                           nbins,
-                           nbins_age)
-        else:
-            calclog( path,
-                     epoch_len,
-                     nbins )
+        for run in run_paths:
+            path = os.path.join(run, subpath_log)
+            if type == 'a':
+                calcage( path,
+                         os.path.join(run, 'lifespans.txt'),
+                         nbins)
+            elif type == 'c':
+                calc_contacts( path,
+                               run,
+                               epoch_len,
+                               nbins,
+                               nbins_age)
+            elif type == 'b':
+                path_2bin = os.path.join( run, 'events/contacts_bins_2bin.txt' )
+                calc_2bin( path,
+                           path_2bin )
+                calc_bias( path_2bin,
+                           os.path.join(run, 'events/contacts_bias_2bin.txt') )
+
+                calc_bias( path,
+                           os.path.join(run, 'events/contacts_bias.txt') )
+            else:
+                calclog( path,
+                         epoch_len,
+                         nbins )
 
 
 ####################################################################################
@@ -497,6 +531,134 @@ def calc_contacts( path_log,
         print 'f/, =', __div_sep('f', ',')
 """
 
+####################################################################################
+###
+### function calc_bias()
+###
+####################################################################################
+def calc_bias( path_log,
+               path_out ):
+    tables_bins = datalib.parse( path_log )
+
+
+    def __div( table_x, table_y, tablename_result ):
+        assert( table_x.colnames == table_y.colnames )
+        assert( table_x.coltypes == table_y.coltypes )
+
+        colnames = table_x.colnames
+
+        assert(colnames[0] == 'T')
+        coltypes = ['int'] + ['float' for x in range(len(table_x.coltypes) - 1)]
+
+        table_result = datalib.Table( tablename_result,
+                                      colnames,
+                                      coltypes )
+
+        for row_x, row_y in iterators.IteratorUnion( iter(table_x.rows()), iter(table_y.rows()) ):
+            t = row_x['T']
+            assert( t == row_y['T'] )
+
+            row_result = table_result.createRow()
+
+            row_result['T'] = t
+
+            for colname in table_x.colnames[1:]:
+                val_x = row_x[colname]
+                val_y = row_y[colname]
+                
+                row_result.set( colname, float(val_x) / float(val_y) )
+        
+        return table_result
+
+    tables_bias = []
+
+    bias_f = __div( tables_bins['separations_f'], tables_bins['separations_,'], 'f/,' )
+    tables_bias.append( bias_f )
+
+    try:
+        bias_g = __div( tables_bins['separations_g'], tables_bins['separations_,'], 'g/,' )
+        bias_gf = __div( tables_bins['separations_g'], tables_bins['separations_f'], 'g/f' )
+
+        tables_bias.append(bias_g)
+        tables_bias.append(bias_gf)
+    except:
+        print 'found no give data'
+
+    datalib.write( path_out, tables_bias )
+
+####################################################################################
+###
+### function calc_meta()
+###
+####################################################################################
+def calc_meta( path_meta,
+               log_paths):
+
+    tables0 = datalib.parse(log_paths[0])
+
+    for log_path in log_paths[1:]:
+        tablesi = datalib.parse(log_path)
+
+        for table0 in tables0.values():
+            tablei = tablesi[table0.name]
+
+            for row0, rowi in iterators.IteratorUnion( iter(table0.rows()), iter(tablei.rows()) ):
+                assert(table0.colnames[0] == 'T')
+                for colname in table0.colnames[1:]:
+                    row0[colname] = row0[colname] + rowi[colname]
+
+    n = len(log_paths)
+
+    for table in tables0.values():
+        for row in table.rows():
+            for colname in table.colnames[1:]:
+                row[colname] = row[colname] / n
+
+    datalib.write( path_meta, tables0 )
+
+####################################################################################
+###
+### function calc_2bin()
+###
+####################################################################################
+def calc_2bin( path_in, path_out ):
+    tables_in = datalib.parse( path_in )
+    tables_out = []
+
+    for table_in in tables_in.values():
+        assert( table_in.colnames[0] == 'T' )
+
+        n = len(table_in.colnames) - 1
+        assert( n % 2 == 0 )
+        assert( table_in.coltypes[1] == 'int' )
+
+        colnames = ['T', 'bin0', 'bin1']
+        coltypes = ['int', 'int', 'int']
+
+        table_out = datalib.Table( table_in.name,
+                                   colnames,
+                                   coltypes )
+
+        for row_in in table_in.rows():
+            row_out = table_out.createRow()
+
+            row_out['T'] = row_in['T']
+
+            bin0 = 0
+            for i in range(n/2):
+                bin0 += row_in['bin%d'%i]
+                
+            bin1 = 0
+            for i in range(n/2, n):
+                bin1 += row_in['bin%d'%i]
+
+            row_out['bin0'] = bin0
+            row_out['bin1'] = bin1
+
+        tables_out.append( table_out )
+
+    datalib.write( path_out, tables_out )
+    
 ####################################################################################
 ###
 ### function show_usage()

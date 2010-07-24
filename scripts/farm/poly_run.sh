@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 
 
 if [ -z "$1" ]; then
@@ -54,6 +54,7 @@ if [ "$1" == "--field" ]; then
     ./scripts/edit_worldfile $payload_dir/worldfile ./worldfile genomeseed_used_for_all=$seed
 
     export DISPLAY=:0.0
+    ulimit -n 1024
 
     failed=true
     if ./Polyworld; then
@@ -62,16 +63,18 @@ if [ "$1" == "--field" ]; then
 	fi
     fi
 
-    if ! $failed; then
-	rundir=run_${PWFARM_ID}
-	archive=${rundir}.zip
-	if [ -e $archive ]; then
-	    rm $archive
-	fi
-	mv run $rundir
-	zip -r $archive $rundir/brain/Recent/*.plt $rundir/events/*.txt $rundir/stats/* $rundir/worldfile
-	mv $rundir run
+    if $failed; then
+	touch run/FAILED
     fi
+
+    rundir=run_${PWFARM_ID}
+    archive=${rundir}.zip
+    if [ -e $archive ]; then
+	rm $archive
+    fi
+    mv run $rundir
+    zip -r $archive $rundir/brain/Recent/*.plt $rundir/events/*.txt $rundir/stats/* $rundir/worldfile
+    mv $rundir run
 
     cd ~/polyworld_pwfarm
 
@@ -114,7 +117,7 @@ else
     WORLDFILE=$1
     RUNID=$2
     POSTRUN=$3
-    DSTDIR=$4
+    DSTDIR=`canonpath $4`
 
     if [ -z $DSTDIR ]; then
 	err "No dstdir!"

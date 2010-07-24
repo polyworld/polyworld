@@ -1,4 +1,9 @@
 #!/bin/bash
 
-echo POSTRUN on $PWFARM_ID!
+./scripts/CalcEvents c run
+
+cd scripts
+./MakeRecentDirectorywithEntirePopulation.sh ../run
+./CalcComplexityOverRecent Recent ../run
+
 
