@@ -1,10 +1,10 @@
-37		version
+38		version
 
 0		LockStepWithBirthsDeathsLog
 
-30000		maxSteps
+30000	maxSteps
 1		docpuwork
-1000		dumpfreq
+1000	dumpfreq
 100		statfreq
 1		edges
 0		wraparound
@@ -45,6 +45,9 @@
 400.0	size2energy
 100.0	eat2consume
 
+0		enableSpeedFeedback
+0		enableGive
+
 0		minintneurons_unused
 0		maxintneurons_unused
 1		minvispixels
@@ -77,8 +80,10 @@
 140.0	maxfocus
 10.0	agentfovy
 2.5		maxsizeadvantage
-2.5		power2energy
+L		bodyGreenChannel_I=ID_Gene|L=Light_Neuron|<float_literal>=fixed
+L		noseColor_L=Light_Neuron|<float_literal>=fixed
 
+2.5		power2energy
 0.01	eat2energy
 0.1		mate2energy
 1.0		fight2energy
@@ -95,6 +100,8 @@
 0.2		eatthreshold
 0.5		matethreshold
 0.2		fightthreshold
+0.3		givethreshold
+0.9		givefraction
 1.0		miscbias
 2.0		miscinvslope
 
@@ -365,6 +372,8 @@ O		smiteMode_R=random|L=leastfit|O=off
 
 1		recordBirthsDeaths
 1		recordPosition
+1		recordContacts
+1		recordCollisions
 
 1		brainAnatomyRecordAll
 1		brainFunctionRecordAll
@@ -376,12 +385,13 @@ O		smiteMode_R=random|L=leastfit|O=off
 1000	bestRecentBrainFunctionRecordFrequency
 1		recordGeneStats
 1		recordPerformanceStats
-0		recordFoodPatchStats
+1		recordFoodPatchStats
 0		recordComplexity
 P		complexityType_P=processing|A=all|I=input|B=behavior|D=processing-input|Z=ZeroMaxVelocityHack
 0.0		complexityFitnessWeight_0.0
 0.0		heuristicFitnessWeight_0.0
-0		recordGenomes
+1		recordGenomes
+1		recordSeparations
 1		recordAdamiComplexity
 500		AdamiComplexityRecordFrequency
 
