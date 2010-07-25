@@ -80,7 +80,7 @@
 140.0	maxfocus
 10.0	agentfovy
 2.5		maxsizeadvantage
-L		bodyGreenChannel_I=ID_Gene|L=Light_Neuron|<float_literal>=fixed
+I		bodyGreenChannel_I=ID_Gene|L=Light_Neuron|<float_literal>=fixed
 L		noseColor_L=Light_Neuron|<float_literal>=fixed
 
 2.5		power2energy
