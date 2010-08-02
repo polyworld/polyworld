@@ -26,8 +26,10 @@ using namespace std;
 // External globals
 float brick::gBrickHeight;
 Color brick::gBrickColor;
-long brick::NumBricks;
+float brick::gBrickRadius;
+unsigned long brick::NumBricks;
 bool brick::BrickClassInited;
+float brick::gCarryBrick2Energy;
 
 
 //===========================================================================
@@ -40,7 +42,6 @@ bool brick::BrickClassInited;
 //-------------------------------------------------------------------------------------------
 brick::brick()
 {
-	setType( BRICKTYPE );
 	initBrick();
 }
 
@@ -113,6 +114,9 @@ void brick::initBrick( float x, float y, float z )
 	
 	NumBricks++;
 	
+	setType( BRICKTYPE );
+	setTypeNumber( NumBricks );
+
 	fPosition[0] = x;
 	fPosition[1] = y;
 	fPosition[2] = z;
@@ -133,6 +137,7 @@ void brick::InitBrickClass()
 	
 	BrickClassInited = true;
 	NumBricks = 0;
+	gBrickRadius = 0.5 * sqrt( 2.0 ) * gBrickHeight;
 }
  
 

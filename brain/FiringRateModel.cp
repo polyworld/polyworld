@@ -1,5 +1,6 @@
 #include "FiringRateModel.h"
 
+#include "debug.h"
 #include "Genome.h"
 #include "GenomeSchema.h"
 #include "misc.h"
@@ -112,9 +113,7 @@ void FiringRateModel::load( istream &in )
 
 void FiringRateModel::update( bool bprint )
 {
-#ifdef DEBUGCHECK
-    debugcheck("brain::Update entry");
-#endif // DEBUGCHECK
+    debugcheck( "(firing-rate brain) on entry" );
 
     short i,j,ii,jj;
     long k;
@@ -137,9 +136,7 @@ void FiringRateModel::update( bool bprint )
 	)
 
 
-#ifdef DEBUGCHECK
-    debugcheck("brain::update after updating vision");
-#endif // DEBUGCHECK
+    debugcheck( "after updating vision" );
 
 //	float minExcitation = FLT_MAX;
 //	float maxExcitation = -FLT_MAX;
@@ -231,9 +228,7 @@ void FiringRateModel::update( bool bprint )
 	}
 #endif
 
-#ifdef DEBUGCHECK
-    debugcheck("brain::update after updating neurons");
-#endif // DEBUGCHECK
+    debugcheck( "after updating neurons" );
 
 	IF_BPRINT
 	(
@@ -300,9 +295,7 @@ void FiringRateModel::update( bool bprint )
         }
     }
 
-#ifdef DEBUGCHECK
-    debugcheck("brain::update after updating synapses");
-#endif // DEBUGCHECK
+    debugcheck( "after updating synapses" );
 
 #if 0
 	if( gNeuralValues.maxbiaslrate > 0.0 )
@@ -324,9 +317,7 @@ void FiringRateModel::update( bool bprint )
 		}
 	}
 
-  #ifdef DEBUGCHECK
-    debugcheck("brain::update after updating biases");
-  #endif // DEBUGCHECK
+    debugcheck( "after updating biases" );
 #endif
 
     float* saveneuronactivation = neuronactivation;

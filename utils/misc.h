@@ -41,6 +41,8 @@
 
 #define getbit(a,b) (((a)>>(b))&1)
 
+#define lxor(p,q) ( !((p) && (q)) && ((p) || (q)) )
+
 inline int   sign(int   x) { return (x<0)  ? -1  : 1 ; }
 inline long  sign(long  x) { return (x<0)  ? -1  : 1 ; }
 inline float sign(float x) { return (x<0.) ? -1. : 1.; }

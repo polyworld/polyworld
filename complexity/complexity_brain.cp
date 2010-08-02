@@ -731,9 +731,9 @@ gsl_matrix * readin_brainfunction__optimized(const char* fname,
 	string params = tline;
 	params = params.substr(14, params.length());
 
-	string critnum = params.substr( 0, params.find(" ",0));
-	params.erase( 0, params.find(" ",0)+1 );						//Remove the critnum
-	if(agent_number) *agent_number = atoi(critnum.c_str());
+	string agentNum = params.substr( 0, params.find(" ",0));
+	params.erase( 0, params.find(" ",0)+1 );						//Remove the agentNum
+	if(agent_number) *agent_number = atoi(agentNum.c_str());
 
 	string numneu = params.substr( 0 , params.find(" ",0) );
 	params.erase( 0, params.find(" ",0)+1 );						//Remove the numneu

@@ -26,8 +26,8 @@ using namespace std;
 //===========================================================================
 // TBrainMonitorWindow
 //===========================================================================
-const int kMonitorCritWinWidth = 8;
-const int kMonitorCritWinHeight = 8;
+const int kMonitorAgentWinWidth = 8;
+const int kMonitorAgentWinHeight = 8;
 
 //---------------------------------------------------------------------------
 // TBrainMonitorWindow::TBrainMonitorWindow
@@ -36,8 +36,8 @@ TBrainMonitorWindow::TBrainMonitorWindow()
 //	:	QGLWidget(NULL, "BrainMonitor", NULL, WStyle_Customize | WStyle_SysMenu | WStyle_Tool),
 	:	QGLWidget( NULL, NULL, Qt::WindowSystemMenuHint | Qt::Tool ),
 		fAgent(NULL),
-		fPatchWidth(kMonitorCritWinWidth),
-		fPatchHeight(kMonitorCritWinHeight)
+		fPatchWidth(kMonitorAgentWinWidth),
+		fPatchHeight(kMonitorAgentWinHeight)
 {
 	setWindowTitle( "BrainMonitor" );
 	windowSettingsName = "BrainMonitor";

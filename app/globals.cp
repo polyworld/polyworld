@@ -31,6 +31,11 @@ namespace genome
 {
 	bool gEnableSpeedFeedback;
 	bool gEnableGive;
+	bool gEnableCarry;
+	float gSeedPickupBias;
+	float gSeedDropBias;
+	float gSeedPickupExcitation;
+	float gSeedDropExcitation;
 
 	float gMinStrength;
 	float gMaxStrength;

@@ -16,21 +16,35 @@
 #define FOODTYPE 0x2
 #define BRICKTYPE 0x4
 
+#define OBJECTTYPE( o ) ( o->getType() == AGENTTYPE ? "agent" : \
+						  o->getType() == FOODTYPE ? "food" : \
+						  o->getType() == BRICKTYPE ? "brick" : \
+						  "unknown" )
+
 // System
 #include <gl.h>
 #include <iostream>
 #include <math.h>
+#include <list>
+#include <string>
 
 // Local
 #include "error.h"
 #include "graphics.h"
 #include "gdlink.h"
+#include "misc.h"
 
 // Orientation, like with gcameras, is handled by yaw, pitch, and roll
 // (rotate-y, rotate-x, rotate-z) applied in that order.
 // Also like gcameras, gobjects are assumed to begin life facing down
 // the positive x-axis.
 
+// TODO: Subclass gobject to make a gobject3D class from which food, brick, and agent inherit
+// This will let a lot of duplicated code for lx(), ly(), lz(), radius(), etc. be made common code.
+// Then change object carrying to be for gobject3D objects only, using a gObject3DList to hold them,
+// so it isn't necessary to special case for object type certain places.
+
+using namespace std;
 
 //===========================================================================
 // gobject
@@ -109,9 +123,22 @@ public:
     /* Get and set the objects type (AGENTTYPE, FOODTYPE, or BRICKTYPE) */
     int getType();
     void setType(int newType);
+	unsigned long getTypeNumber();
+	void setTypeNumber( unsigned long typeNumber );
 
     gdlink<gobject*>* listLink;    
     gdlink<gobject*>* GetListLink();
+
+	bool BeingCarried( void );
+	gobject* CarriedBy( void );
+	int NumCarries( void );
+	void PickedUp( gobject* carrier, float dy );
+	void Dropped( void );
+
+	typedef std::list<gobject*> gObjectList;
+
+	gObjectList CarryList( void );
+	gObjectList fCarries;
 
 private:
     bool fRotated;
@@ -132,6 +159,9 @@ protected:
     char* fName;
     float fRadius;  // for sphere of influence
     int objType;  // AGENTTYPE, FOODTYPE, or BRICKTYPE
+	unsigned long fTypeNumber;	// index or number of this object amongst other objects of its type (agent #, food #, brick #)
+	gobject* fCarriedBy;
+	float fCarryOffset[3];
 };
 
 inline void gobject::setx(float x) { fPosition[0] = x; }
@@ -165,7 +195,13 @@ inline float gobject::z() { return fPosition[2]; }
 inline float gobject::radius() { return fRadius; }
 inline int gobject::getType() { return objType; }
 inline void gobject::setType(int newType) { objType = newType; }
+inline unsigned long gobject::getTypeNumber() { return fTypeNumber; }
+inline void gobject::setTypeNumber( unsigned long typeNumber ) { fTypeNumber = typeNumber; }
 inline gdlink<gobject*>* gobject::GetListLink() { return listLink; }
+inline bool gobject::BeingCarried( void ) { return (fCarriedBy != NULL); }
+inline gobject* gobject::CarriedBy( void ) { return fCarriedBy; }
+inline int gobject::NumCarries() { return fCarries.size(); }
+inline std::list<gobject*> gobject::CarryList() { return fCarries; }
 
 #endif
 

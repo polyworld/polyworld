@@ -48,6 +48,11 @@ void gobject::init()
 	fColor[2] = rand() / 32767.0;
 	fColor[3] = 0.;
 	listLink = NULL;
+	fCarriedBy = NULL;
+	fTypeNumber = 0;
+	fCarryOffset[0] = 0.0;
+	fCarryOffset[1] = 0.0;
+	fCarryOffset[2] = 0.0;
 }
  
     
@@ -300,4 +305,28 @@ void gobject::inverseposition()
 	inversetranslate();
 }
 
+
+void gobject::PickedUp( gobject* carrier, float dy )
+{
+	debugcheck( "%s # %lu picked up by %s # %lu", OBJECTTYPE( this ), getTypeNumber(), OBJECTTYPE( carrier ), carrier->getTypeNumber() );
+	
+	fCarriedBy = carrier;
+	fCarryOffset[0] = carrier->x() - x();
+	fCarryOffset[1] = dy;
+	fCarryOffset[2] = carrier->z() - z();
+	fPosition[0] = carrier->x();
+	fPosition[1] += dy;
+	fPosition[2] = carrier->z();
+}
+
+
+void gobject::Dropped( void )
+{
+	debugcheck( "%s # %lu dropped by %s # %lu", OBJECTTYPE( this ), getTypeNumber(), OBJECTTYPE( fCarriedBy ), fCarriedBy->getTypeNumber() );
+	
+	fCarriedBy = NULL;
+	fPosition[0] -= fCarryOffset[0];
+	fPosition[1] -= fCarryOffset[1];
+	fPosition[2] -= fCarryOffset[2];
+}
 

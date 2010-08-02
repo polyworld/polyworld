@@ -395,7 +395,7 @@ def normalized_path_length(neuron_set, graph_type, random, preserving, index):
 		graph = g_set.graph
 	weighted = 'w' in graph_type
 	d = __get_distance_matrix(graph, package, weighted)
-	npl = bct.normalized_path_length(d, wmax = 1.0)
+	npl = bct.normalized_path_length(d, 1.0)
 
 	return npl
 

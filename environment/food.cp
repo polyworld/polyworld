@@ -23,6 +23,9 @@
 
 using namespace std;
 
+// Static class variables
+unsigned long food::fFoodEver;
+
 // External globals
 float food::gFoodHeight;
 Color food::gFoodColor;
@@ -30,6 +33,7 @@ float food::gMinFoodEnergy;
 float food::gMaxFoodEnergy;
 float food::gSize2Energy;
 float food::gMaxFoodRadius;
+float food::gCarryFood2Energy;
 
 
 //===========================================================================
@@ -112,29 +116,27 @@ float food::eat(float e)
 //-------------------------------------------------------------------------------------------
 void food::initfood()
 {
-	fEnergy = randpw() * (gMaxFoodEnergy - gMinFoodEnergy) + gMinFoodEnergy;
-	initlen();
-	initpos();
-	initrest();
+	float e = randpw() * (gMaxFoodEnergy - gMinFoodEnergy) + gMinFoodEnergy;
+	initfood( e );
 }
 
 
 //-------------------------------------------------------------------------------------------
 // food::initfood
 //-------------------------------------------------------------------------------------------
-void food::initfood(float e)
+void food::initfood( float e )
 {
 	fEnergy = e;
-	initlen();
-	initpos();
-	initrest();
+	float x = randpw() * globals::worldsize;
+	float z = randpw() * globals::worldsize;
+	initfood( e, x, z );
 }
 
 
 //-------------------------------------------------------------------------------------------
 // food::initfood
 //-------------------------------------------------------------------------------------------
-void food::initfood(float e, float x, float z)
+void food::initfood( float e, float x, float z )
 {
 	fEnergy = e;
 	initlen();
@@ -146,24 +148,13 @@ void food::initfood(float e, float x, float z)
  
 
 //-------------------------------------------------------------------------------------------
-// food::initpos
-//-------------------------------------------------------------------------------------------    
-void food::initpos()
-{
-	fPosition[0] = randpw() * globals::worldsize;
-	fPosition[1] = 0.5 * fLength[1];
-	fPosition[2] = randpw() * globals::worldsize;
-}
-
-
-//-------------------------------------------------------------------------------------------
 // food::initlen
 //-------------------------------------------------------------------------------------------       
 void food::initlen()
 {
 	float lxz = 0.75 * fEnergy / gSize2Energy;
 	float ly = gFoodHeight;
-	setlen(lxz,ly,lxz);
+	setlen( lxz, ly, lxz );
 }
 
 
@@ -172,15 +163,16 @@ void food::initlen()
 //-------------------------------------------------------------------------------------------           
 void food::initrest()
 {
-	setType(FOODTYPE);
-	setcolor(gFoodColor);
+	setType( FOODTYPE );
+	setTypeNumber( ++food::fFoodEver );
+	setcolor( gFoodColor );
 }
 
 
 //-------------------------------------------------------------------------------------------
 // food::setenergy
 //-------------------------------------------------------------------------------------------           
-void food::setenergy(float e)
+void food::setenergy( float e )
 {
 	fEnergy = e;
 	initlen();

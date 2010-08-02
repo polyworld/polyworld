@@ -21,11 +21,14 @@
 #include "LifeSpan.h"
 #include "misc.h"
 #include "Nerve.h"
+#include "objectlist.h"
 #include "objectxsortedlist.h"
 
 
 // Forward declarations
 class agent;
+class BeingCarriedSensor;
+class CarryingSensor;
 class DataLibWriter;
 class EnergySensor;
 class food;
@@ -66,7 +69,12 @@ public:
 	static float	gYaw2Energy;
 	static float	gLight2Energy;
 	static float	gFocus2Energy;
+	static float	gPickup2Energy;
+	static float	gDrop2Energy;
+	static float	gCarryAgent2Energy;
+	static float	gCarryAgentSize2Energy;
 	static float	gFixedEnergyDrain;
+	static float	gMaxCarries;
 	static bool		gVision;
 	static long 	gInitMateWait;
 	static float	gSpeed2DPosition;
@@ -97,7 +105,8 @@ public:
 	void UpdateBrain();
     float UpdateBody( float moveFitnessParam,
 					  float speed2dpos,
-					  int solidObjects );
+					  int solidObjects,
+					  agent* carrier );
 	void AvoidCollisions( int solidObjects );
 	void AvoidCollisionDirectional( int direction, int solidObjects );
 	void GetCollisionFixedCoordinates( float xo, float zo, float xn, float zn, float xb, float zb, float rc, float rb, float *xf, float *zf );
@@ -147,6 +156,8 @@ public:
 	float Give();
     float Strength();
     float Mate();
+	float Pickup();
+	float Drop();
     float Size();
     long Age();
     long MaxAge();
@@ -190,7 +201,18 @@ public:
 	void SetComplexity( float value );
 	
 	void Heal( float HealingRate, float minFoodEnergy );	//Virgil
-
+	
+	void PickupObject( gobject* o );
+	void DropMostRecent( void );
+	void DropObject( gobject* o );
+	float CarryRadius( void );
+	void RecalculateCarryRadius( void );
+	bool Carrying( gobject* );
+	float CarryEnergy( void );
+	void PrintCarries( FILE* );
+	void RecordPosition( void );
+	TSimulation* fSimulation;
+	
  public:
 	struct ExternalData {
 		void *position_recorder;
@@ -204,15 +226,13 @@ protected:
 	void InitGeneCache();
     
 	static bool gClassInited;
-    static long agentsever;
+    static unsigned long agentsEver;
     static long agentsliving;
     static gpolyobj* agentobj;
     static agent** pc;
 
-	TSimulation* fSimulation;
     bool fAlive;
 	long fIndex;
-    long fAgentNumber;
     long fAge;
     long fLastMate;
 	long fLastEat;
@@ -236,7 +256,7 @@ protected:
 
 	float fSpeed;
 	float fMaxSpeed;
-
+	
     float fHeuristicFitness;	// rough estimate along evolutionary biology lines
 	float fComplexity;
 	
@@ -254,15 +274,21 @@ protected:
 	RandomSensor *fRandomSensor;
 	EnergySensor *fEnergySensor;
 	SpeedSensor *fSpeedSensor;
+	CarryingSensor *fCarryingSensor;
+	BeingCarriedSensor *fBeingCarriedSensor;
 	Brain* fBrain;
 	struct Nerves
 	{
+		// Inputs
 		Nerve *random;
 		Nerve *energy;
 		Nerve *speedFeedback;
+		Nerve *carrying;
+		Nerve *beingCarried;
 		Nerve *red;
 		Nerve *green;
 		Nerve *blue;
+		// Outputs
 		Nerve *eat;
 		Nerve *mate;
 		Nerve *fight;
@@ -271,6 +297,8 @@ protected:
 		Nerve *light;
 		Nerve *focus;
 		Nerve *give;
+		Nerve *pickup;
+		Nerve *drop;
 	} nerves;
 
     gcamera fCamera;
@@ -280,6 +308,8 @@ protected:
 	
 	FILE* fBrainFuncFile;
 	DataLibWriter *fPositionWriter;
+	
+	float fCarryRadius;
 };
 
 inline void agent::SetVelocity(float x, float y, float z) { fVelocity[0] = x; fVelocity[1] = y; fVelocity[2] = z; }
@@ -310,6 +340,8 @@ inline float agent::Fight() { return nerves.fight->get(); }
 inline float agent::Give() { return nerves.give->get(); }
 inline float agent::Strength() { return geneCache.strength; }
 inline float agent::Mate() { return nerves.mate->get(); }
+inline float agent::Pickup() { return nerves.pickup->get(); }
+inline float agent::Drop() { return nerves.drop->get(); }
 inline float agent::Size() { return geneCache.size; }
 inline long agent::Age() { return fAge; }
 inline long agent::MaxAge() { return geneCache.lifespan; }
@@ -317,7 +349,7 @@ inline float agent::MaxEnergy() { return fMaxEnergy; }
 inline long agent::LastMate() { return fLastMate; }
 inline long agent::LastEat() { return fLastEat; }
 inline genome::Genome* agent::Genes() { return fGenome; }
-inline long agent::Number() { return fAgentNumber; }
+inline long agent::Number() { return getTypeNumber(); }
 // replace both occurences of 0.8 with actual estimate of fraction of lifespan agent will live
 inline float agent::CurrentHeuristicFitness() { return fHeuristicFitness; }
 #define UseProjectedHeuristicFitness 1
@@ -340,6 +372,8 @@ inline gpolyobj* agent::GetAgentObj() { return agentobj; }
 
 inline void agent::SetComplexity( float value ) { fComplexity = value; }
 inline float agent::Complexity() { return fComplexity; }
+
+inline float agent::CarryRadius() { return fCarryRadius; }
 
 #endif
 

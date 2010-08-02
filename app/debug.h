@@ -6,7 +6,7 @@
 /* by Larry Yaeger                                                  */
 /* Copyright Apple Computer 1990,1991,1992                          */
 /********************************************************************/
-//#define DEBUGCHECK
+#define DEBUGCHECK 0
 
 #define DebugSetRadius 0
 #define TestWorld 0
@@ -22,7 +22,13 @@
 	#define srPrint( x... )
 #endif
 
-extern void  debugcheck(const char* s);
+extern void DebugCheck( const char* func, const char* fmt, ... );
+
+#if DEBUGCHECK
+	#define debugcheck( x... ) DebugCheck( __FUNCTION__, x )
+#else
+	#define debugcheck( x... )
+#endif
 
 #define BoolString( boolVar ) (boolVar) ? "true" : "false"
 

@@ -111,6 +111,11 @@ namespace genome
 
 	extern bool gEnableSpeedFeedback;
 	extern bool gEnableGive;
+	extern bool gEnableCarry;
+	extern float gSeedPickupBias;
+	extern float gSeedDropBias;
+	extern float gSeedPickupExcitation;
+	extern float gSeedDropExcitation;
 
     extern float gMinStrength;
     extern float gMaxStrength;

@@ -17,8 +17,10 @@
 #include <qgl.h>
 
 // Local
-#include "barrier.h"
 #include "AgentPOVWindow.h"
+#include "barrier.h"
+#include "BeingCarriedSensor.h"
+#include "CarryingSensor.h"
 #include "datalib.h"
 #include "debug.h"
 #include "food.h"
@@ -52,7 +54,7 @@ using namespace genome;
 
 // Agent globals
 bool		agent::gClassInited;
-long		agent::agentsever;
+unsigned long	agent::agentsEver;
 long		agent::agentsliving;
 gpolyobj*	agent::agentobj;
 short		agent::povcols;
@@ -71,7 +73,12 @@ float		agent::gSpeed2Energy;
 float		agent::gYaw2Energy;
 float		agent::gLight2Energy;
 float		agent::gFocus2Energy;
+float		agent::gPickup2Energy;
+float		agent::gDrop2Energy;
+float		agent::gCarryAgent2Energy;
+float		agent::gCarryAgentSize2Energy;
 float		agent::gFixedEnergyDrain;
+float		agent::gMaxCarries;
 bool		agent::gVision;
 long		agent::gInitMateWait;
 float		agent::gSpeed2DPosition;
@@ -102,6 +109,78 @@ double		agent::gLowPopulationAdvantageFactor = 1.0;
 
 // [TODO] figure out a better way to track agent indices
 bitset<1000> gAgentIndex;
+
+
+//---------------------------------------------------------------------------
+// agent::agent
+//---------------------------------------------------------------------------
+agent::agent(TSimulation* sim, gstage* stage)
+	:	xleft(-1),  		// to show it hasn't been initialized
+		fSimulation(sim),
+		fAlive(false), 		// must grow() to be truly alive
+		fMass(0.0), 		// mass - not used
+		fHeuristicFitness(0.0),  	// crude guess for keeping minimum population early on
+		fGenome(NULL),
+		fCns(NULL),
+		fRetina(NULL),
+		fRandomSensor(NULL),
+		fEnergySensor(NULL),
+		fSpeedSensor(NULL),
+		fBrain(NULL),
+		fBrainFuncFile(NULL),
+		fPositionWriter(NULL)
+{
+	Q_CHECK_PTR(sim);
+	Q_CHECK_PTR(stage);
+	
+	/* Set object type to be AGENTTYPE */
+	setType(AGENTTYPE);
+	
+	if (!gClassInited)
+		agentinit();
+
+	fLastPosition[0] = 0.0;
+	fLastPosition[1] = 0.0;
+	fLastPosition[2] = 0.0;
+
+	fVelocity[0] = 0.0;
+	fVelocity[1] = 0.0;
+	fVelocity[2] = 0.0;
+	
+	fSpeed = 0.0;
+	fMaxSpeed = 0.0;
+	fLastEat = 0;
+
+	fGenome = GenomeUtil::createGenome();
+	Q_CHECK_PTR(fGenome);
+
+	fCns = new NervousSystem();
+	Q_CHECK_PTR(fCns);
+	
+	fBrain = new Brain(fCns);
+	Q_CHECK_PTR(fBrain);
+	
+	// Set up agent POV	
+	fScene.SetStage(stage);	
+	fScene.SetCamera(&fCamera);
+}
+
+
+//---------------------------------------------------------------------------
+// agent::~agent
+//---------------------------------------------------------------------------
+agent::~agent()
+{
+//	delete fPolygon;
+	delete fGenome;
+	delete fCns;
+	delete fBrain;
+	delete fRandomSensor;
+	delete fEnergySensor;
+	delete fSpeedSensor;
+	delete fRetina;
+}
+
 
 //-------------------------------------------------------------------------------------------
 // agent::agentinit
@@ -172,7 +251,7 @@ agent* agent::getfreeagent(TSimulation* simulation, gstage* stage)
     agent::agentsliving++;
     
     // Set number to total creatures that have ever lived (note this is 1-based)
-    c->fAgentNumber = ++agent::agentsever;
+    c->setTypeNumber( ++agent::agentsEver );
 
 	// Set agent index.  Used for POV drawing.
 	for (size_t index = 0; index < gAgentIndex.size(); ++index)
@@ -181,7 +260,7 @@ agent* agent::getfreeagent(TSimulation* simulation, gstage* stage)
 		{
 			c->fIndex = index;
 			gAgentIndex.set(index);
-//			cout << "getfreeagent: c = " << c << ", fAgentNumber = " << c->fAgentNumber << ", fIndex = " << c->fIndex << endl;
+//			cout << "getfreeagent: c = " << c << ", agentNumber = " << c->getTypeNumber() << ", fIndex = " << c->fIndex << endl;
 			break;
 		}
 	}
@@ -195,7 +274,7 @@ agent* agent::getfreeagent(TSimulation* simulation, gstage* stage)
 //---------------------------------------------------------------------------    
 void agent::agentdump(ostream& out)
 {
-    out << agent::agentsever nl;
+    out << agent::agentsEver nl;
     out << agent::agentsliving nl;
 
 }
@@ -208,7 +287,7 @@ void agent::agentload(istream&)
 {
 	qWarning("agent::agentload called. Not supported.");
 #if 0
-    in >> agent::agentsever;
+    in >> agent::agentsEver;
     in >> agent::agentsliving;
 
     agent::agentlist->load(in);
@@ -261,78 +340,11 @@ void agent::agentload(istream&)
 
 
 //---------------------------------------------------------------------------
-// agent::agent
-//---------------------------------------------------------------------------
-agent::agent(TSimulation* sim, gstage* stage)
-	:	xleft(-1),  		// to show it hasn't been initialized
-		fSimulation(sim),
-		fAlive(false), 		// must grow() to be truly alive
-		fMass(0.0), 		// mass - not used
-		fHeuristicFitness(0.0),  	// crude guess for keeping minimum population early on
-		fGenome(NULL),
-		fCns(NULL),
-		fRetina(NULL),
-		fRandomSensor(NULL),
-		fEnergySensor(NULL),
-		fSpeedSensor(NULL),
-		fBrain(NULL),
-		fBrainFuncFile(NULL),
-		fPositionWriter(NULL)
-{
-	Q_CHECK_PTR(sim);
-	Q_CHECK_PTR(stage);
-	
-	/* Set object type to be AGENTTYPE */
-	setType(AGENTTYPE);
-	
-	if (!gClassInited)
-		agentinit();
-
-	fVelocity[0] = 0.0;
-	fVelocity[1] = 0.0;
-	fVelocity[2] = 0.0;
-	
-	fSpeed = 0.0;
-	fMaxSpeed = 0.0;
-	fLastEat = 0;
-
-	fGenome = GenomeUtil::createGenome();
-	Q_CHECK_PTR(fGenome);
-
-	fCns = new NervousSystem();
-	Q_CHECK_PTR(fCns);
-	
-	fBrain = new Brain(fCns);
-	Q_CHECK_PTR(fBrain);
-	
-	// Set up agent POV	
-	fScene.SetStage(stage);	
-	fScene.SetCamera(&fCamera);
-}
-
-
-//---------------------------------------------------------------------------
-// agent::~agent
-//---------------------------------------------------------------------------
-agent::~agent()
-{
-//	delete fPolygon;
-	delete fGenome;
-	delete fCns;
-	delete fBrain;
-	delete fRandomSensor;
-	delete fEnergySensor;
-	delete fSpeedSensor;
-	delete fRetina;
-}
-
-
-//---------------------------------------------------------------------------
 // agent::dump
 //---------------------------------------------------------------------------
 void agent::dump(ostream& out)
 {
-    out << fAgentNumber nl;
+    out << getTypeNumber() nl;
     out << fIndex nl;
     out << fAge nl;
     out << fLastMate nl;
@@ -365,7 +377,10 @@ void agent::load(istream& in)
 {
 	qWarning("fix domain issue");
 	
-    in >> fAgentNumber;
+	unsigned long agentNumber;
+	
+    in >> agentNumber;
+	setTypeNumber( agentNumber );
     in >> fIndex;
     in >> fAge;
     in >> fLastMate;
@@ -413,7 +428,7 @@ void agent::grow( bool recordGenome,
 	if( recordGenome )
 	{
 		char path[256];
-		sprintf( path, "run/genome/genome_%ld.txt", fAgentNumber );
+		sprintf( path, "run/genome/genome_%ld.txt", getTypeNumber() );
 		ofstream out( path );
 		fGenome->dump( out );
 	}
@@ -427,6 +442,11 @@ void agent::grow( bool recordGenome,
 	INPUT(energy);
 	if( genome::gEnableSpeedFeedback )
 		INPUT(speedFeedback);
+	if( genome::gEnableCarry )
+	{
+		INPUT(carrying);
+		INPUT(beingCarried);
+	}
 	INPUT(red);
 	INPUT(green);
 	INPUT(blue);
@@ -442,6 +462,11 @@ void agent::grow( bool recordGenome,
 	OUTPUT(focus);
 	if( genome::gEnableGive )
 		OUTPUT(give);
+	if( genome::gEnableCarry )
+	{
+		OUTPUT(pickup);
+		OUTPUT(drop);
+	}
 #undef OUTPUT
 
 	fCns->add( fRetina = new Retina(brain::retinawidth) );
@@ -449,20 +474,25 @@ void agent::grow( bool recordGenome,
 	fCns->add( fRandomSensor = new RandomSensor(fBrain->rng) );
 	if( genome::gEnableSpeedFeedback )
 		fCns->add( fSpeedSensor = new SpeedSensor(this) );
+	if( genome::gEnableCarry )
+	{
+		fCns->add( fCarryingSensor = new CarryingSensor(this) );
+		fCns->add( fBeingCarriedSensor = new BeingCarriedSensor(this) );
+	}
 
-	fCns->grow( fGenome, fAgentNumber, recordBrainAnatomy );
+	fCns->grow( fGenome, getTypeNumber(), recordBrainAnatomy );
 
 	// If we're recording brain function,
 	// open the file to be used to write out neural activity
 	if( recordBrainFunction )
-		fBrainFuncFile = fBrain->startFunctional( fAgentNumber );
+		fBrainFuncFile = fBrain->startFunctional( getTypeNumber() );
 
 	if( recordPosition )
 	{
 		char path[512];
 		sprintf( path,
 				 "run/motion/position/position_%ld.txt",
-				 fAgentNumber );
+				 getTypeNumber() );
 
 		fPositionWriter = new DataLibWriter( path, true, false );
 
@@ -722,13 +752,26 @@ void agent::Die()
 	{
 		return;
 	}
+	
+    itfor( gObjectList, fCarries, it )
+    {
+        gobject* o = *it;
+        o->Dropped();
+    }
+    fCarries.clear();
+	
+	if( BeingCarried() )
+	{
+		agent* a = (agent*)fCarriedBy;
+		a->DropObject( this );
+	}
 
 	// Decrement total number of agents
 	agent::agentsliving--;	
 	Q_ASSERT(agent::agentsliving >= 0);
 	
 	// Clear index in bitset
-//	cout << "agent::Die: this = " << this << ", fAgentNumber = " << fAgentNumber << ", fIndex = " << fIndex << "----------" << endl;
+	//cout << "agent::Die: this = " << this << ", agentNumber = " << getTypeNumber() << ", fIndex = " << fIndex << "----------" << endl;
 	gAgentIndex.set(fIndex, false);
 	
 	// Used to clear this agent's pane in the POV window/region, and call endbrainmonitoring()
@@ -766,6 +809,7 @@ void agent::SetGeometry()
         }
     }
     setlen();
+	fCarryRadius = fRadius;
 }
 
 
@@ -843,9 +887,8 @@ void agent::UpdateVision()
 		fCamera.SetAspect(fovx * brain::retinaheight / (gAgentFOV * brain::retinawidth));
 		
 		fSimulation->GetAgentPOVWindow()->DrawAgentPOV( this );
-	#ifdef DEBUGCHECK
-		debugcheck("agent::UpdateVision after DrawAgentPOV");
-	#endif // DEBUGCHECK
+
+		debugcheck( "after DrawAgentPOV" );
 
 		fRetina->updateBuffer( xleft, ypix );
 	}
@@ -874,43 +917,55 @@ const float FF = 1.01;
 
 float agent::UpdateBody( float moveFitnessParam,
 						 float speed2dpos,
-						 int solidObjects )
+						 int solidObjects,
+						 agent* carrier )
 {
-#ifdef DEBUGCHECK
-    debugcheck("agent::Update entry");
-#endif // DEBUGCHECK
-
+    debugcheck( "%lu", Number() );
+	Q_ASSERT( lxor( !BeingCarried(), carrier ) );
+	
+	float dx;
+	float dz;
 	float energyUsed = 0;
 	
 	// just do x & z dimensions in this version
     SaveLastPosition();
-    
-    float dpos = nerves.speed->get() * geneCache.maxSpeed * gSpeed2DPosition;
-    if (dpos > gMaxVelocity)
-        dpos = gMaxVelocity;
+	
+	if( BeingCarried() )  // the agent carrying this agent initiated the update
+	{
+		setx( carrier->x() );
+		setz( carrier->z() );
+		dx = x() - LastX();
+		dz = z() - LastX();
+	}
+	else  // this is a normal update (the agent is not being carried)
+	{
+	#if TestWorld
+		dx = dz = 0.0;
+	#else
+		float dpos = nerves.speed->get() * geneCache.maxSpeed * gSpeed2DPosition;
+		if( dpos > gMaxVelocity )
+			dpos = gMaxVelocity;
+		dx = -dpos * sin( yaw() * DEGTORAD );
+		dz = -dpos * cos( yaw() * DEGTORAD );
+		addx( dx );
+		addz( dz );
+	#endif
+	}
 
-    float dx = -dpos * sin(yaw() * DEGTORAD);
-    float dz = -dpos * cos(yaw() * DEGTORAD);
-#if UseLightForOpposingYawHack
-    float dyaw = (nerves.yaw->get() - nerves.light->get()) * geneCache.maxSpeed * gYaw2DYaw;
-#else
-    float dyaw = (2.0 * nerves.yaw->get() - 1.0) * geneCache.maxSpeed * gYaw2DYaw;
-#endif
-//	printf( "%4ld  %4ld  dyaw = %4.2f b->y = %4.2f, 2*b->y - 1 = %4.2f, g->maxSpeed = %4.2f, y2dy = %4.2f\n",
-//			TSimulation::fAge, fAgentNumber, dyaw, nerves.yaw->get(), 2.0*nerves.yaw->get() - 1.0, geneCache.maxSpeed, gYaw2DYaw );
-
-#if TestWorld
-	dx = dz = dyaw = 0.0;
-#endif
-
-    addx(dx);
-    addz(dz);
-#if DirectYaw
+#if ! TestWorld
+  #if DirectYaw
 	setyaw( nerves.yaw->get() * 360.0 );
-#else
-    addyaw(dyaw);
+  #else
+   #if UseLightForOpposingYawHack
+	float dyaw = (nerves.yaw->get() - nerves.light->get()) * geneCache.maxSpeed * gYaw2DYaw;
+   #else
+	float dyaw = (2.0 * nerves.yaw->get() - 1.0) * geneCache.maxSpeed * gYaw2DYaw;
+   #endif
+	addyaw(dyaw);
+  #endif
 #endif
-    
+
+	// Whether being carried or not, behaviors cost energy
     float energyused = nerves.eat->get()   * gEat2Energy
                      + nerves.mate->get()  * gMate2Energy
                      + nerves.fight->get() * gFight2Energy
@@ -924,9 +979,15 @@ float agent::UpdateBody( float moveFitnessParam,
 	{
 		energyused += nerves.give->get() * gGive2Energy;
 	}
+	
+	if( genome::gEnableCarry )
+	{
+		energyused += CarryEnergy();	// depends on number and size of items being carried
+	}
 
     double denergy = energyused * Strength();
-//	printf( "%s: energy consumed = %g + ", __func__, denergy );
+
+	// Apply large-population energy penalty
 	double populationEnergyPenalty;
 #if UniformPopulationEnergyPenalty
 	populationEnergyPenalty = gPopulationPenaltyFraction * 0.5 * (gMaxMaxEnergy + gMinMaxEnergy);
@@ -934,15 +995,17 @@ float agent::UpdateBody( float moveFitnessParam,
 	populationEnergyPenalty = gPopulationPenaltyFraction * fMaxEnergy;
 #endif
 	denergy += populationEnergyPenalty;
+	
+	// Apply low-population energy advantage
 	denergy *= gLowPopulationAdvantageFactor;	// if population is getting too low, reduce energy consumption
-//	printf( "%g = %g\n", populationEnergyPenalty, denergy );
+
     fEnergy -= denergy;
     fFoodEnergy -= denergy;
 
 	energyUsed = denergy;
 
-	SetRed(nerves.fight->get());	// set red color according to desire to fight
-	SetBlue(nerves.mate->get()); 	// set blue color according to desire to mate
+	SetRed( nerves.fight->get() );	// set red color according to desire to fight
+	SetBlue( nerves.mate->get() ); 	// set blue color according to desire to mate
   	if( gBodyGreenChannel == BGC_LIGHT )
 	{
 		SetGreen(nerves.light->get());
@@ -955,160 +1018,171 @@ float agent::UpdateBody( float moveFitnessParam,
 
     fAge++;
 
-	// Do barrier overrun testing here...
-	// apply a multiplicative Fudge Factor to keep agents from mating
-	// *across* the barriers
-	barrier* b = NULL;
-	barrier::gXSortedBarriers.reset();
-	while (barrier::gXSortedBarriers.next(b))
+	// Do collision detection for barriers, edges, and solid objects, if not being carried
+	if( ! BeingCarried() )
 	{
-		if( (b->xmax() > (    x() - FF * radius())) ||
-			(b->xmax() > (LastX() - FF * radius())) )
-        {
-			// end of barrier comes after beginning of agent
-			// in either its new or old position
-            if( (b->xmin() > (    x() + FF * radius())) &&
-            	(b->xmin() > (LastX() + FF * radius())) )
-            {
-                // beginning of barrier comes after end of agent,
-                // in both new and old positions,
-                // so there is no overlap, and we can stop searching
-                // for this agent's possible barrier overlaps
-                break;  // get out of the sorted barriers while loop
-            }
-            else // we have an overlap in x
-            {
-                if( ((b->zmin() < ( z() + FF * radius())) || (b->zmin() < (LastZ() + FF * radius()))) &&
-                	((b->zmax() > ( z() - FF * radius())) || (b->zmax() > (LastZ() - FF * radius()))) )
-                {
-                    // also overlap in z, so there may be an intersection
-                    float dist  = b->dist(    x(),     z());
-                    float disto = b->dist(LastX(), LastZ());
-                    float p;
-                    
-                    if (fabs(dist) < FF * radius())
-                    {
-                        // they actually overlap/intersect
-                        if ((disto*dist) < 0.0)
-                        {   // sign change, so crossed the barrier already
-                            p = fabs(dist) + FF * radius();
-                            if (disto < 0.0) p = -p;
-                        }
-                        else
-                        {
-                            p = FF * radius() - fabs(dist);
-                            if (dist < 0.) p = -p;
-                        }
-
-                        addz( p * b->sina());
-                        addx(-p * b->cosa());
-
-                    } // actual intersection
-                    else if ((disto * dist) < 0.0)
-                    {
-                        // the agent completely passed through the barrier
-                        p = fabs(dist) + FF * radius();
-                        
-                        if (disto < 0.0)
-                        	p = -p;
-                        	                        	
-                        addz( p * b->sina());
-                        addx(-p * b->cosa());
-                    }
-
-					fSimulation->UpdateCollisionsLog( this, OT_BARRIER );
-                } // overlap in z
-            } // beginning of barrier comes after end of agent
-        } // end of barrier comes after beginning of agent
-    } // while (barrier::gXSortedBarriers.next(b))
-	
-#if Bricks
-	// If there are any bricks, then we need to test for collisions
-	if( brick::GetNumBricks() > 0 )
-	{
-		// If the agent moves, then we want to do collision avoidance
-		if( dx != 0.0 || dz != 0.0 )
+		// Do barrier overrun testing here...
+		// apply a multiplicative Fudge Factor (FF) to keep agents from mating
+		// *across* the barriers
+		//
+		// For barrier collisions only, use the "CarryRadius" instead of the radius.
+		// The CarryRadius takes into account all agents this agent is carrying, so
+		// it can't push one of the agents it is carrying through a barrier and drop
+		// it on the other side or let the carried agent mate with an agent on the
+		// other side.
+		
+		barrier* b = NULL;
+		barrier::gXSortedBarriers.reset();
+		while( barrier::gXSortedBarriers.next(b) )
 		{
-			AvoidCollisions( solidObjects );
-		}
-	}
-#endif
+			if( (b->xmax() > (    x() - FF * CarryRadius())) ||
+				(b->xmax() > (LastX() - FF * CarryRadius())) )
+			{
+				// end of barrier comes after beginning of agent
+				// in either its new or old position
+				if( (b->xmin() > (    x() + FF * CarryRadius())) &&
+					(b->xmin() > (LastX() + FF * CarryRadius())) )
+				{
+					// beginning of barrier comes after end of agent,
+					// in both new and old positions,
+					// so there is no overlap, and we can stop searching
+					// for this agent's possible barrier overlaps
+					break;  // get out of the sorted barriers while loop
+				}
+				else // we have an overlap in x
+				{
+					if( ((b->zmin() < ( z() + FF * CarryRadius())) || (b->zmin() < (LastZ() + FF * CarryRadius()))) &&
+						((b->zmax() > ( z() - FF * CarryRadius())) || (b->zmax() > (LastZ() - FF * CarryRadius()))) )
+					{
+						// also overlap in z, so there may be an intersection
+						float dist  = b->dist(     x(),     z() );
+						float disto = b->dist( LastX(), LastZ() );
+						float p;
+						
+						if( fabs( dist ) < FF * CarryRadius() )
+						{
+							// they actually overlap/intersect
+							if( (disto*dist) < 0.0 )
+							{   // sign change, so crossed the barrier already
+								p = fabs( dist ) + FF * CarryRadius();
+								if( disto < 0.0 ) p = -p;
+							}
+							else
+							{
+								p = FF * CarryRadius() - fabs( dist );
+								if( dist < 0. ) p = -p;
+							}
 
-#if 0
-	TODO
-	// Do a check
-	barrier::gXSortedBarriers.reset();
-	while (barrier::gXSortedBarriers.next(b))
-	{
-		float dist  = b->dist(    x(),     z());
-        float disto = b->dist(LastX(), LastZ());
+							addz(  p * b->sina() );
+							addx( -p * b->cosa() );
 
-        if ((disto * dist) < 0.0)
-        {
-            cout << "****Got one! moving from (" << LastX() cm LastZ() << ") to (" << x() cm z() pnlf;
-            cout << "fRadius = " << radius() nlf;
-        }
-    }
-#endif
+						} // actual intersection
+						else if( (disto * dist) < 0.0 )
+						{
+							// the agent completely passed through the barrier
+							p = fabs( dist ) + FF * CarryRadius();
+							
+							if( disto < 0.0 )
+								p = -p;
+															
+							addz(  p * b->sina() );
+							addx( -p * b->cosa() );
+						}
 
-	// Hardwire knowledge of world boundaries for now
-	// Need to do something special with the agent list,
-	// when the agents do a wraparound (for the sake of efficiency
-	// and possibly correctness in the sort)
-    if (globals::edges)
-    {
-		bool collision = false;
+						fSimulation->UpdateCollisionsLog( this, OT_BARRIER );
+					} // overlap in z
+				} // beginning of barrier comes after end of agent
+			} // end of barrier comes after beginning of agent
+		} // while( barrier::gXSortedBarriers.next(b) )
 
-        if (fPosition[0] > globals::worldsize)
-        {
-			collision = true;
-            if (globals::wraparound)
-                fPosition[0] -= globals::worldsize;
-            else
-                fPosition[0] = globals::worldsize;
-        }
-        else if (fPosition[0] < 0.0)
-        {
-			collision = true;
-            if (globals::wraparound)
-                fPosition[0] += globals::worldsize;
-            else
-                fPosition[0] = 0.0;
-        }
-        
-        if (fPosition[2] < -globals::worldsize)
-        {
-			collision = true;
-            if (globals::wraparound)
-                fPosition[2] += globals::worldsize;
-            else
-                fPosition[2] = -globals::worldsize;
-        }
-        else if (fPosition[2] > 0.0)
-        {
-			collision = true;
-            if (globals::wraparound)
-                fPosition[2] -= globals::worldsize;
-            else
-                fPosition[2] = 0.0;
-        }
-
-		if( collision )
+		// If there are solid objects besides bricks, or
+		// if only bricks are solid and bricks are present in the simulation...
+		if( ( (solidObjects != BRICKTYPE) && (solidObjects > 0) ) ||
+			( (solidObjects == BRICKTYPE) && (brick::GetNumBricks() > 0) ) )
 		{
-			fSimulation->UpdateCollisionsLog( this, OT_EDGE );
+			// If the agent moves, then we want to do collision avoidance
+			if( dx != 0.0 || dz != 0.0 )
+			{
+				AvoidCollisions( solidObjects );
+			}
 		}
-    }
+
+	#if 0
+		TODO
+		// Do a check
+		barrier::gXSortedBarriers.reset();
+		while( barrier::gXSortedBarriers.next( b ) )
+		{
+			float dist  = b->dist(     x(),     z() );
+			float disto = b->dist( LastX(), LastZ() );
+
+			if( (disto * dist) < 0.0 )
+			{
+				cout << "****Got one! moving from (" << LastX() cm LastZ() << ") to (" << x() cm z() pnlf;
+				cout << "fRadius = " << radius() nlf;
+			}
+		}
+	#endif
+
+		// Hardwire knowledge of world boundaries for now
+		// Need to do something special with the agent list,
+		// when the agents do a wraparound (for the sake of efficiency
+		// and possibly correctness in the sort)
+		if( globals::edges )
+		{
+			bool collision = false;
+
+			if( fPosition[0] > globals::worldsize )
+			{
+				collision = true;
+				if( globals::wraparound )
+					fPosition[0] -= globals::worldsize;
+				else
+					fPosition[0] = globals::worldsize;
+			}
+			else if( fPosition[0] < 0.0 )
+			{
+				collision = true;
+				if( globals::wraparound )
+					fPosition[0] += globals::worldsize;
+				else
+					fPosition[0] = 0.0;
+			}
+			
+			if( fPosition[2] < -globals::worldsize )
+			{
+				collision = true;
+				if( globals::wraparound )
+					fPosition[2] += globals::worldsize;
+				else
+					fPosition[2] = -globals::worldsize;
+			}
+			else if( fPosition[2] > 0.0 )
+			{
+				collision = true;
+				if( globals::wraparound )
+					fPosition[2] -= globals::worldsize;
+				else
+					fPosition[2] = 0.0;
+			}
+
+			if( collision )
+			{
+				fSimulation->UpdateCollisionsLog( this, OT_EDGE );
+			}
+		}
+	} // if( ! BeingCarried() )
 
 	// Keep track of the domain in which the agent resides
-    short newDomain = fSimulation->WhichDomain(fPosition[0], fPosition[2], fDomain);
-    if (newDomain != fDomain)
+    short newDomain = fSimulation->WhichDomain( fPosition[0], fPosition[2], fDomain );
+    if( newDomain != fDomain )
     {
-        fSimulation->SwitchDomain(newDomain, fDomain);
+        fSimulation->SwitchDomain( newDomain, fDomain, AGENTTYPE );
         fDomain = newDomain;
     }
         
 #ifdef OF1
-    if (fDomain == 0)
+    if( fDomain == 0 )
         myt0++;
 #endif
 
@@ -1120,14 +1194,42 @@ float agent::UpdateBody( float moveFitnessParam,
 	if( fSpeed > fMaxSpeed )
 		fMaxSpeed = fSpeed;
 
-	rewardmovement(moveFitnessParam, speed2dpos);
+	rewardmovement( moveFitnessParam, speed2dpos );
 
-	if( fPositionWriter )
+	RecordPosition();
+	
+	// Now update any objects we are carrying
+	// (They will not be updated in TSimulation::UpdateAgents*().)
+	itfor( gObjectList, fCarries, it )
 	{
-		fPositionWriter->addRow( fSimulation->fStep,
-								 x(),
-								 y(),
-								 z() );
+		gobject* carried = *it;
+		switch( carried->getType() )
+		{
+			case AGENTTYPE:
+				energyUsed += ((agent*)carried)->UpdateBody( moveFitnessParam,
+															speed2dpos,
+															solidObjects,
+															this );
+				// carried agent's domain will be taken care of in its UpdateBody() call
+				break;
+			
+			case FOODTYPE:
+				carried->setx( x() );
+				carried->setz( z() );
+				fSimulation->SwitchDomain( Domain(), ((food*)carried)->domain(), FOODTYPE );
+				((food*)carried)->domain( Domain() );
+				break;
+			
+			case BRICKTYPE:
+				carried->setx( x() );
+				carried->setz( z() );
+				// bricks do not currently identify their domain, nor are they counted in domains
+				break;
+			
+			default:
+				Q_ASSERT_X( false, "updating carried objects", "encountered unknown object type" );
+				break;
+		}
 	}
     
     return energyUsed;
@@ -1190,7 +1292,12 @@ void agent::AvoidCollisionDirectional( int direction, int solidObjects )
 			obj->z() + objRadius < min( z(), LastZ() ) - agtRadius )
 			continue;
 		
+		// If we're carrying the object, then there's nothing to be done
+		if( Carrying( obj ) )
+			continue;
+		
 		// If we reach here, then the two objects appear to have had contact this time step
+		// and we're not carrying the other object
 		
 		// We only want to adjust the position of our agent if it was traveling in the
 		// direction of the object it is touching, so take a small step from the start
@@ -1345,6 +1452,93 @@ void agent::GetCollisionFixedCoordinates( float xo, float zo, float xn, float zn
 	}
 }
 
+static FILE* pickupLog = NULL;
+
+//---------------------------------------------------------------------------
+// agent::Pickup
+//---------------------------------------------------------------------------
+void agent::PickupObject( gobject* o )
+{
+    debugcheck( "%lu", Number() );
+
+	if( pickupLog == NULL )
+	{
+		pickupLog = fopen( "run/PickupLog.txt", "w" );
+		if( pickupLog == NULL )
+			error( 2, "Unable to open PickupLog.txt" );
+	}
+	
+	o->PickedUp( (gobject*)this, ly() );
+	fCarries.push_back( o );
+	if( o->radius() > fCarryRadius )
+		fCarryRadius = o->radius();
+
+	fprintf( pickupLog, "t=%lu agent %lu picked up  %5s # %4lu, now carrying %u\n",
+			 fSimulation->fStep, Number(), OBJECTTYPE( o ), o->getTypeNumber(), NumCarries() );
+	fflush( pickupLog );
+}
+
+
+//---------------------------------------------------------------------------
+// agent::DropMostRecent
+//---------------------------------------------------------------------------
+void agent::DropMostRecent( void )
+{
+    debugcheck( "%lu", Number() );
+	
+	gobject* o = fCarries.back();
+	o->Dropped();
+	fCarries.pop_back();
+	
+	if( o->radius() == fCarryRadius )
+	{
+		RecalculateCarryRadius();
+	}
+
+	fprintf( pickupLog, "t=%lu agent %lu dropped rc %5s # %4lu, now carrying %u\n",
+			 fSimulation->fStep, Number(), OBJECTTYPE( o ), o->getTypeNumber(), NumCarries() );
+	fflush( pickupLog );
+}
+
+
+//---------------------------------------------------------------------------
+// agent::DropObject
+//---------------------------------------------------------------------------
+void agent::DropObject( gobject* o )
+{
+    debugcheck( "agent # %lu (carrying %d) dropping %s # %lu (carrying %d)", Number(), NumCarries(), OBJECTTYPE( o ), o->getTypeNumber(), o->NumCarries() );
+	
+	o->Dropped();
+	fCarries.remove( o );
+	if( o->radius() == fCarryRadius )
+	{
+		RecalculateCarryRadius();
+	}
+
+	fprintf( pickupLog, "t=%lu agent %lu dropped    %5s # %4lu, now carrying %u\n",
+			 fSimulation->fStep, Number(), OBJECTTYPE( o ), o->getTypeNumber(), NumCarries() );
+	fflush( pickupLog );
+}
+
+
+//---------------------------------------------------------------------------
+// agent::RecalculateCarryRadius
+//---------------------------------------------------------------------------
+void agent::RecalculateCarryRadius( void )
+{
+	float newCarryRadius = fRadius;
+	itfor( gObjectList, fCarries, it )
+	{
+		if( (*it)->radius() > newCarryRadius )
+			newCarryRadius = (*it)->radius();
+	}
+	fCarryRadius = newCarryRadius;
+}
+
+
+//---------------------------------------------------------------------------
+// agent::draw
+//---------------------------------------------------------------------------
 void agent::draw()
 {
 	glPushMatrix();
@@ -1359,7 +1553,7 @@ void agent::draw()
 
 void agent::print()
 {
-    cout << "Printing agent #" << fAgentNumber nl;
+    cout << "Printing agent #" << getTypeNumber() nl;
     gobject::print();
     cout << "  fAge = " << fAge nl;
     cout << "  fLastMate = " << fLastMate nl;
@@ -1418,7 +1612,7 @@ float agent::FieldOfView()
 void agent::NumberToName()
 {
 	char tempstring[256];
-	sprintf(tempstring, "agent#%ld", agentsever);
+	sprintf(tempstring, "agent#%ld", agentsEver);
 	this->SetName(tempstring);
 }
 
@@ -1428,7 +1622,6 @@ void agent::NumberToName()
 //---------------------------------------------------------------------------
 void agent::Heal( float HealingRate, float minFoodEnergy)
 {
-
 	// if agent has some FoodEnergy to spare, and agent can receive some Energy.
 	if( ( fFoodEnergy > minFoodEnergy) && (fMaxEnergy > fEnergy) )		
 	{
@@ -1439,5 +1632,89 @@ void agent::Heal( float HealingRate, float minFoodEnergy)
 		fFoodEnergy -= delta;					// take delta away from FoodEnergy
 		fEnergy     += delta;					// and add it to Energy
 	}
+}
 
+
+//---------------------------------------------------------------------------
+// agent::Carrying
+//---------------------------------------------------------------------------
+bool agent::Carrying( gobject* o )
+{
+	return (o->CarriedBy() == (gobject*)this);
+}
+
+
+//---------------------------------------------------------------------------
+// agent::CarryEnergy
+//---------------------------------------------------------------------------
+float agent::CarryEnergy( void )
+{
+	float energy = 0.0;
+	
+	itfor( gObjectList, fCarries, it )
+	{
+		gobject* o = *it;	// the object being carried
+		
+		switch( o->getType() )
+		{
+			case AGENTTYPE:
+				energy += agent::gCarryAgent2Energy +
+						  agent::gCarryAgentSize2Energy * (((agent*)o)->Size() - agent::gMinAgentSize) / (agent::gMaxAgentSize - agent::gMinAgentSize);
+				break;
+			
+			case FOODTYPE:
+				energy += food::gCarryFood2Energy * o->radius() / food::gMaxFoodRadius;
+				break;
+			
+			case BRICKTYPE:
+				energy += brick::gCarryBrick2Energy;	// all bricks are the same size currently
+				break;
+			
+			default:
+				error( 2, "unknown object type in CarryEnergy()" );
+				break;
+		}
+	}
+	
+	return energy;
+}
+
+
+//---------------------------------------------------------------------------
+// agent::RecordPosition
+//---------------------------------------------------------------------------
+void agent::RecordPosition( void )
+{
+	if( fPositionWriter )
+	{
+		//printf( "%3lu %3lu  %6.2f  %6.2f\n", fSimulation->fStep, getTypeNumber(), LastX(), x() );
+		if( LastX() > 5.0  &&  x() == 0.0 )
+			printf( "Got one: %3lu %3lu  %6.2f  %6.2f\n", fSimulation->fStep, getTypeNumber(), LastX(), x() );
+		fPositionWriter->addRow( fSimulation->fStep,
+								 x(),
+								 y(),
+								 z() );
+	}
+}
+
+
+//---------------------------------------------------------------------------
+// agent::PrintCarries
+//---------------------------------------------------------------------------
+void agent::PrintCarries( FILE* f )
+{
+	fprintf( f, "%ld: %s # %lu is carrying", fSimulation->fStep, OBJECTTYPE( this ), getTypeNumber() );
+	if( fCarries.size() > 0 )
+	{
+		itfor( gObjectList, fCarries, it )
+		{
+			gobject* o = *it;
+			fprintf( f, " %s # %lu", OBJECTTYPE( o ), o->getTypeNumber() );
+		}
+		fprintf( f, "\n" );
+	}
+	else
+	{
+		fprintf( f, " nothing\n" );
+	}
 }

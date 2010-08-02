@@ -135,6 +135,11 @@ GenomeSchema *GenomeUtil::createSchema()
 	INPUT1( Energy );
 	if( genome::gEnableSpeedFeedback )
 		INPUT1( SpeedFeedback );
+	if( genome::gEnableCarry )
+	{
+		INPUT1( Carrying );
+		INPUT1( BeingCarried );
+	}
 	INPUT( Red, VisionNeuronCount );
 	INPUT( Green, VisionNeuronCount );
 	INPUT( Blue, VisionNeuronCount );
@@ -149,6 +154,12 @@ GenomeSchema *GenomeUtil::createSchema()
 
 	if( genome::gEnableGive )
 		OUTPUT( Give );
+
+	if( genome::gEnableCarry )
+	{
+		OUTPUT( Pickup );
+		OUTPUT( Drop );
+	}
 
 	INTERNAL( InternalNeuronGroupCount );
 
@@ -239,6 +250,11 @@ void GenomeUtil::seed( Genome *g )
 	SEED( BiasLearningRate, 0 );
 
 	SEED_GROUP( Bias, Mate, 1.0 );
+	if( genome::gEnableCarry )
+	{
+		SEED_GROUP( Bias, Pickup, genome::gSeedPickupBias );
+		SEED_GROUP( Bias, Drop, genome::gSeedDropBias );
+	}
 
 	SEED( ConnectionDensity, 0 );
 	SEED( LearningRate, 0 );
@@ -264,6 +280,15 @@ void GenomeUtil::seed( Genome *g )
 	SEED_SYNAPSE( TopologicalDistortion, IE, Blue,  Yaw,	1.0 );
 	SEED_SYNAPSE( ConnectionDensity,	 IE, Eat,   Fight,	1.0 );
 	SEED_SYNAPSE( ConnectionDensity,	 IE, Mate,	Fight,	1.0 );
+	{
+		SEED_SYNAPSE( ConnectionDensity,	 EE, Red,	Pickup,	genome::gSeedPickupExcitation );
+		SEED_SYNAPSE( ConnectionDensity,	 EE, Green,	Pickup,	genome::gSeedPickupExcitation );
+		SEED_SYNAPSE( ConnectionDensity,	 EE, Blue,	Pickup,	genome::gSeedPickupExcitation );
+		SEED_SYNAPSE( ConnectionDensity,	 EE, Red,	Drop,	genome::gSeedDropExcitation );
+		SEED_SYNAPSE( ConnectionDensity,	 EE, Green,	Drop,	genome::gSeedDropExcitation );
+		SEED_SYNAPSE( ConnectionDensity,	 EE, Blue,	Drop,	genome::gSeedDropExcitation );
+		SEED_SYNAPSE( ConnectionDensity,	 IE, Pickup,Drop,	genome::gSeedPickupExcitation ); // if wiring in pickup, have it suppress drop
+	}
 
 #undef SEED
 #undef SEED_GROUP

@@ -38,6 +38,8 @@
 		760C2D4F101B9A8200F5F662 /* ground.obj in Resources */ = {isa = PBXBuildFile; fileRef = 760C2D4D101B9A8200F5F662 /* ground.obj */; };
 		760C3114101BB15900F5F662 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 760C3112101BB15900F5F662 /* InfoPlist.strings */; };
 		760C319D101BB74E00F5F662 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 76CBA7CC062D11C2001C79E7 /* OpenGL.framework */; };
+		7612461411FFF1DF00638900 /* BeingCarriedSensor.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7612461011FFF1DF00638900 /* BeingCarriedSensor.cp */; };
+		7612461511FFF1DF00638900 /* CarryingSensor.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7612461211FFF1DF00638900 /* CarryingSensor.cp */; };
 		7624C7CE0A4A0CD5006A2B7C /* BrickPatch.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7624C7C80A4A0CD5006A2B7C /* BrickPatch.cp */; };
 		7624C7D00A4A0CD5006A2B7C /* FoodPatch.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7624C7CA0A4A0CD5006A2B7C /* FoodPatch.cp */; };
 		7624C7D20A4A0CD5006A2B7C /* Patch.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7624C7CC0A4A0CD5006A2B7C /* Patch.cp */; };
@@ -159,30 +161,15 @@
 		760C2D4C101B9A8200F5F662 /* agent.obj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = agent.obj; sourceTree = "<group>"; };
 		760C2D4D101B9A8200F5F662 /* ground.obj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = ground.obj; sourceTree = "<group>"; };
 		760C3113101BB15900F5F662 /* English */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = English; path = English.lproj/InfoPlist.strings; sourceTree = "<group>"; };
-		760C31C6101BB9E900F5F662 /* worldfile.big */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile.big; path = worldfiles/worldfile.big; sourceTree = "<group>"; };
-		760C31C7101BB9E900F5F662 /* worldfile.small */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile.small; path = worldfiles/worldfile.small; sourceTree = "<group>"; };
-		760C31C8101BB9E900F5F662 /* worldfile_alifex */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_alifex; path = worldfiles/worldfile_alifex; sourceTree = "<group>"; };
-		760C31C9101BB9E900F5F662 /* worldfile_barriers */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_barriers; path = worldfiles/worldfile_barriers; sourceTree = "<group>"; };
-		760C31CA101BB9E900F5F662 /* worldfile_complexity */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_complexity; path = worldfiles/worldfile_complexity; sourceTree = "<group>"; };
-		760C31CB101BB9E900F5F662 /* worldfile_driven */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_driven; path = worldfiles/worldfile_driven; sourceTree = "<group>"; };
-		760C31CC101BB9E900F5F662 /* worldfile_driven_domains */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_driven_domains; path = worldfiles/worldfile_driven_domains; sourceTree = "<group>"; };
-		760C31CD101BB9E900F5F662 /* worldfile_driven_hard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_driven_hard; path = worldfiles/worldfile_driven_hard; sourceTree = "<group>"; };
-		760C31CE101BB9E900F5F662 /* worldfile_dynfood */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_dynfood; path = worldfiles/worldfile_dynfood; sourceTree = "<group>"; };
-		760C31D0101BB9E900F5F662 /* worldfile_fixed_driven */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_fixed_driven; path = worldfiles/worldfile_fixed_driven; sourceTree = "<group>"; };
-		760C31D1101BB9E900F5F662 /* worldfile_fixed_passive */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_fixed_passive; path = worldfiles/worldfile_fixed_passive; sourceTree = "<group>"; };
-		760C31D2101BB9E900F5F662 /* worldfile_heur_comp_fit */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_heur_comp_fit; path = worldfiles/worldfile_heur_comp_fit; sourceTree = "<group>"; };
-		760C31D3101BB9E900F5F662 /* worldfile_IFD */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_IFD; path = worldfiles/worldfile_IFD; sourceTree = "<group>"; };
-		760C31D4101BB9E900F5F662 /* worldfile_MaxSpeed_to_0.0 */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_MaxSpeed_to_0.0; path = worldfiles/worldfile_MaxSpeed_to_0.0; sourceTree = "<group>"; };
-		760C31D5101BB9E900F5F662 /* worldfile_nominal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_nominal; path = worldfiles/worldfile_nominal; sourceTree = "<group>"; };
-		760C31D6101BB9E900F5F662 /* worldfile_passive */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_passive; path = worldfiles/worldfile_passive; sourceTree = "<group>"; };
-		760C31D7101BB9E900F5F662 /* worldfile_passive_domains */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_passive_domains; path = worldfiles/worldfile_passive_domains; sourceTree = "<group>"; };
-		760C31D8101BB9E900F5F662 /* worldfile_passive_hard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_passive_hard; path = worldfiles/worldfile_passive_hard; sourceTree = "<group>"; };
-		760C31D9101BB9E900F5F662 /* worldfile_toy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = worldfile_toy; path = worldfiles/worldfile_toy; sourceTree = "<group>"; };
 		760C31DF101BBA4E00F5F662 /* 51.wf */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = 51.wf; path = docs/51.wf; sourceTree = "<group>"; };
 		760C31E0101BBA4E00F5F662 /* brain_anatomy.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = brain_anatomy.txt; path = docs/brain_anatomy.txt; sourceTree = "<group>"; };
 		760C31E1101BBA4E00F5F662 /* brain_function.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = brain_function.txt; path = docs/brain_function.txt; sourceTree = "<group>"; };
 		760C31E2101BBA4E00F5F662 /* FoodPatchNotes.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; name = FoodPatchNotes.pdf; path = docs/FoodPatchNotes.pdf; sourceTree = "<group>"; };
 		760C31E3101BBA4E00F5F662 /* pw_doc_old.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = pw_doc_old.txt; path = docs/pw_doc_old.txt; sourceTree = "<group>"; };
+		7612461011FFF1DF00638900 /* BeingCarriedSensor.cp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = BeingCarriedSensor.cp; sourceTree = "<group>"; };
+		7612461111FFF1DF00638900 /* BeingCarriedSensor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BeingCarriedSensor.h; sourceTree = "<group>"; };
+		7612461211FFF1DF00638900 /* CarryingSensor.cp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CarryingSensor.cp; sourceTree = "<group>"; };
+		7612461311FFF1DF00638900 /* CarryingSensor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CarryingSensor.h; sourceTree = "<group>"; };
 		7624C7C80A4A0CD5006A2B7C /* BrickPatch.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = BrickPatch.cp; sourceTree = "<group>"; };
 		7624C7C90A4A0CD5006A2B7C /* BrickPatch.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = BrickPatch.h; sourceTree = "<group>"; };
 		7624C7CA0A4A0CD5006A2B7C /* FoodPatch.cp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = FoodPatch.cp; sourceTree = "<group>"; };
@@ -369,7 +356,6 @@
 				20286C32FDCF999611CA2CEA /* External Frameworks and Libraries */,
 				195DF8CFFE9D517E11CA2CBB /* Products */,
 				760C31DC101BBA2600F5F662 /* Documentation */,
-				760C31BF101BB99800F5F662 /* Worldfiles */,
 				760C31BC101BB8A200F5F662 /* Unused External Frameworks & Libraries */,
 			);
 			name = Polyworld;
@@ -471,32 +457,6 @@
 			name = "Unused External Frameworks & Libraries";
 			sourceTree = "<group>";
 		};
-		760C31BF101BB99800F5F662 /* Worldfiles */ = {
-			isa = PBXGroup;
-			children = (
-				760C31C6101BB9E900F5F662 /* worldfile.big */,
-				760C31C7101BB9E900F5F662 /* worldfile.small */,
-				760C31C8101BB9E900F5F662 /* worldfile_alifex */,
-				760C31C9101BB9E900F5F662 /* worldfile_barriers */,
-				760C31CA101BB9E900F5F662 /* worldfile_complexity */,
-				760C31CB101BB9E900F5F662 /* worldfile_driven */,
-				760C31CC101BB9E900F5F662 /* worldfile_driven_domains */,
-				760C31CD101BB9E900F5F662 /* worldfile_driven_hard */,
-				760C31CE101BB9E900F5F662 /* worldfile_dynfood */,
-				760C31D0101BB9E900F5F662 /* worldfile_fixed_driven */,
-				760C31D1101BB9E900F5F662 /* worldfile_fixed_passive */,
-				760C31D2101BB9E900F5F662 /* worldfile_heur_comp_fit */,
-				760C31D3101BB9E900F5F662 /* worldfile_IFD */,
-				760C31D4101BB9E900F5F662 /* worldfile_MaxSpeed_to_0.0 */,
-				760C31D5101BB9E900F5F662 /* worldfile_nominal */,
-				760C31D6101BB9E900F5F662 /* worldfile_passive */,
-				760C31D7101BB9E900F5F662 /* worldfile_passive_domains */,
-				760C31D8101BB9E900F5F662 /* worldfile_passive_hard */,
-				760C31D9101BB9E900F5F662 /* worldfile_toy */,
-			);
-			name = Worldfiles;
-			sourceTree = "<group>";
-		};
 		760C31DC101BBA2600F5F662 /* Documentation */ = {
 			isa = PBXGroup;
 			children = (
@@ -588,14 +548,14 @@
 		76CBA573062BEDBC001C79E7 /* agent */ = {
 			isa = PBXGroup;
 			children = (
-				7629AB8811FBA367004002AE /* ContactEntry.cp */,
-				7629AB8911FBA367004002AE /* ContactEntry.h */,
-				7629AB8A11FBA367004002AE /* SeparationCache.cp */,
-				7629AB8B11FBA367004002AE /* SeparationCache.h */,
-				7629AB8C11FBA367004002AE /* SpeedSensor.cp */,
-				7629AB8D11FBA367004002AE /* SpeedSensor.h */,
 				76CBA576062BEDBC001C79E7 /* agent.cp */,
 				76CBA577062BEDBC001C79E7 /* agent.h */,
+				7612461011FFF1DF00638900 /* BeingCarriedSensor.cp */,
+				7612461111FFF1DF00638900 /* BeingCarriedSensor.h */,
+				7612461211FFF1DF00638900 /* CarryingSensor.cp */,
+				7612461311FFF1DF00638900 /* CarryingSensor.h */,
+				7629AB8811FBA367004002AE /* ContactEntry.cp */,
+				7629AB8911FBA367004002AE /* ContactEntry.h */,
 				768BD94210E016EC00B3DCAA /* EnergySensor.cp */,
 				768BD94310E016EC00B3DCAA /* EnergySensor.h */,
 				76E969B610F6A1DC00D0C730 /* LifeSpan.cp */,
@@ -604,6 +564,10 @@
 				768BD94510E016EC00B3DCAA /* RandomSensor.h */,
 				768BD94610E016EC00B3DCAA /* Retina.cp */,
 				768BD94710E016EC00B3DCAA /* Retina.h */,
+				7629AB8A11FBA367004002AE /* SeparationCache.cp */,
+				7629AB8B11FBA367004002AE /* SeparationCache.h */,
+				7629AB8C11FBA367004002AE /* SpeedSensor.cp */,
+				7629AB8D11FBA367004002AE /* SpeedSensor.h */,
 			);
 			path = agent;
 			sourceTree = "<group>";
@@ -986,6 +950,8 @@
 				7629AB8E11FBA367004002AE /* ContactEntry.cp in Sources */,
 				7629AB8F11FBA367004002AE /* SeparationCache.cp in Sources */,
 				7629AB9011FBA367004002AE /* SpeedSensor.cp in Sources */,
+				7612461411FFF1DF00638900 /* BeingCarriedSensor.cp in Sources */,
+				7612461511FFF1DF00638900 /* CarryingSensor.cp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

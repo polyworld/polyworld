@@ -118,9 +118,9 @@ void Retina::updateBuffer( short xleft, short ypix )
 				 GL_RGBA,
 				 GL_UNSIGNED_BYTE,
 				 buf);
-#ifdef DEBUGCHECK
-	debugcheck("agent::UpdateVision after glReadPixels");
-#endif // DEBUGCHECK
+
+	debugcheck( "after glReadPixels" );
+
 #if 0
 	static FILE* pixelFile = NULL;
 	if( pixelFile == NULL )

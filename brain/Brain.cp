@@ -1060,9 +1060,7 @@ void Brain::GrowDesignedBrain( Genome* g )
     energyuse = brain::gNeuralValues.maxneuron2energy * float(dims.numneurons) / float(brain::gNeuralValues.maxneurons)
               + brain::gNeuralValues.maxsynapse2energy * float(dims.numsynapses) / float(brain::gNeuralValues.maxsynapses);
 
-#ifdef DEBUGCHECK
-    debugcheck("brain::grow after setting up architecture");
-#endif // DEBUGCHECK
+    debugcheck(" after setting up brain architecture ");
 }
 
 
@@ -1167,9 +1165,7 @@ float Brain::DesignedEfficacy( short toGroup, short fromGroup, short isyn, int s
 //---------------------------------------------------------------------------
 void Brain::Grow( Genome* g )
 {
-#ifdef DEBUGCHECK
-    debugcheck("brain::grow entry");
-#endif // DEBUGCHECK
+    debugcheck( "(brain) on entry" );
 
 #if DesignerBrains
 	GrowDesignedBrain( g );
@@ -1322,15 +1318,11 @@ void Brain::Grow( Genome* g )
 	}
 #endif
 
-#ifdef DEBUGCHECK
-    debugcheck("brain::grow before allocating memory");
-#endif // DEBUGCHECK
+    debugcheck( "before allocating brain memory" );
 
 	InitNeuralNet( 0.1 );	// lsy? - why is this initializing activations to 0.1?
 
-#ifdef DEBUGCHECK
-    debugcheck("brain::grow after allocating memory");
-#endif // DEBUGCHECK
+    debugcheck( "after allocating brain memory" );
 
 	int i, j;
 	int ii;
@@ -1834,9 +1826,7 @@ void Brain::Grow( Genome* g )
     energyuse = brain::gNeuralValues.maxneuron2energy * float(dims.numneurons) / float(brain::gNeuralValues.maxneurons)
               + brain::gNeuralValues.maxsynapse2energy * float(dims.numsynapses) / float(brain::gNeuralValues.maxsynapses);
 
-#ifdef DEBUGCHECK
-    debugcheck("brain::grow after setting up architecture");
-#endif // DEBUGCHECK
+    debugcheck( "after setting up brain architecture" );
 }
 
 //---------------------------------------------------------------------------
@@ -1865,9 +1855,7 @@ void Brain::Prebirth( long agentNumber, bool recordBrainAnatomy )
 	if( recordBrainAnatomy )
 		dumpAnatomical( "run/brain/anatomy", "birth", agentNumber, 0.0 );
 
-#ifdef DEBUGCHECK
-    debugcheck("brain::grow after prebirth cycling");
-#endif // DEBUGCHECK
+    debugcheck( "after prebirth cycling" );
 }
 
 //---------------------------------------------------------------------------

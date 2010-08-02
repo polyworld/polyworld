@@ -35,9 +35,9 @@ public:
 	static Color gFoodColor;
 	static float gMinFoodEnergy;
 	static float gMaxFoodEnergy;
-	static float gSize2Energy; // (converts food/agent size to available energy)
-	static float gMaxFoodRadius;	// only for TotalCompatibilityMode in TSimulation::Interact()
-//	static fxsortedlist gXSortedFood;
+	static float gSize2Energy; // (converts between food/agent size and available energy)
+	static float gMaxFoodRadius;
+	static float gCarryFood2Energy;
 
     food();
     food(float e);
@@ -63,11 +63,12 @@ protected:
     void initfood();
     void initfood(float e);
     void initfood(float e, float x, float z);
-	void initpos();
 	void initlen();
 	void initrest();
    	virtual void setradius();
 	
+    static unsigned long fFoodEver;
+
     float fEnergy;
     short fDomain;
 

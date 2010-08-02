@@ -5,8 +5,6 @@
 #ifndef BRICK_H
 #define BRICK_H
 
-#define Bricks 1
-
 // System
 #include <iostream>
 
@@ -28,6 +26,8 @@ class brick : public gboxf
  public:
 	static float gBrickHeight;
 	static Color gBrickColor;
+	static float gBrickRadius;
+	static float gCarryBrick2Energy;
 
 	static long GetNumBricks();
 
@@ -49,7 +49,7 @@ class brick : public gboxf
 	void initBrick( float x, float z );
 	void initBrick( float x, float y, float z );
 	
-	static long NumBricks;
+	static unsigned long NumBricks;
 	static bool BrickClassInited;
 	static void InitBrickClass();
 

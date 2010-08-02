@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stdlib.h>
 
+#include "debug.h"
 #include "Genome.h"
 #include "GenomeSchema.h"
 #include "misc.h"
@@ -177,9 +178,7 @@ void SpikingModel::update( bool bprint )
 		for (int i = 0; i< BrainStepsPerWorldStep; i++)
 			spikeMatrix[j][i] = '0';
 	
-#ifdef DEBUGCHECK
-    debugcheck("brain::Update entry");
-#endif // DEBUGCHECK
+    debugcheck( "(spiking brain) on entry" );
 	float inputFiringProbability[dims->numInputNeurons];
 	static long loop_counter=0;
     short i, j, n_steps;
