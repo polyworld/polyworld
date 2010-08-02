@@ -14,7 +14,7 @@
 #define MinDebugStep 0
 #define MaxDebugStep INT_MAX
 
-#define CurrentWorldfileVersion 38
+#define CurrentWorldfileVersion 39
 
 #define TournamentSelection 1
 
@@ -423,11 +423,7 @@ void TSimulation::Step()
 		
 	fStep++;
 	
-#ifdef DEBUGCHECK
-	char debugstring[256];
-	sprintf(debugstring, "in main loop at age %ld", fStep);
-	debugcheck(debugstring);
-#endif
+	debugcheck( "beginning of step %ld", fStep );
 
 	// compute some frame rates
 	timeNow = hirestime();
@@ -482,10 +478,6 @@ void TSimulation::Step()
 	// Set up some per-step values
 	fFoodEnergyIn = 0.0;
 	fFoodEnergyOut = 0.0;
-
-#ifdef DEBUGCHECK
-	long critnum = 0;
-#endif
 
 	// Update the barriers, now that they can be dynamic
 	barrier* b;
@@ -584,11 +576,7 @@ void TSimulation::Step()
 		Interact();
 	}
 		
-#ifdef DEBUGCHECK
-	debugstring[256];
-	sprintf(debugstring, "after interact at age %ld", fStep);
-	debugcheck(debugstring);
-#endif // DEBUGCHECK
+	debugcheck( "after Interact() in step %ld", fStep );
 
 	fTotalFoodEnergyIn += fFoodEnergyIn;
 	fTotalFoodEnergyOut += fFoodEnergyOut;
@@ -733,11 +721,7 @@ void TSimulation::Step()
 // xxx
 //sleep( 10 );
 
-#ifdef DEBUGCHECK
-	debugstring[256];
-	sprintf(debugstring,"after extra graphics at age %ld", fStep);
-	debugcheck(debugstring);
-#endif // DEBUGCHECK
+	debugcheck( "after brain monitor window in step %ld", fStep );
 
 	// Archive the bestSoFar brain anatomy and function files, if we're doing that
 	if( fBestSoFarBrainAnatomyRecordFrequency && ((fStep % fBestSoFarBrainAnatomyRecordFrequency) == 0) )
@@ -1216,7 +1200,7 @@ void TSimulation::End()
 	objectxsortedlist::gXSortedObjects.reset();
 	while (objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&a))
 	{
-		Death( a, LifeSpan::DR_SIMEND );
+		Kill( a, LifeSpan::DR_SIMEND );
 	}	
 
 	EndSeparationsLog();
@@ -1280,7 +1264,7 @@ void TSimulation::Init()
 
     agent* c = NULL;
 
-    if (fNumberFit > 0)
+    if( fNumberFit > 0 )
     {
         fFittest = new FitStruct*[fNumberFit];
 		Q_CHECK_PTR( fFittest );
@@ -1299,7 +1283,7 @@ void TSimulation::Init()
         fRecentFittest = new FitStruct*[fNumberRecentFit];
 		Q_CHECK_PTR( fRecentFittest );
 
-        for (int i = 0; i < fNumberRecentFit; i++)
+        for( int i = 0; i < fNumberRecentFit; i++ )
         {
 			fRecentFittest[i] = new FitStruct;
 			Q_CHECK_PTR( fRecentFittest[i] );
@@ -1385,8 +1369,8 @@ void TSimulation::Init()
 	{
 		int agent_factor = 0;
 
-		if(RecordBrainFunction(1)) agent_factor++;
-		if(fRecordPosition) agent_factor++;
+		if( RecordBrainFunction( 1 ) ) agent_factor++;
+		if( fRecordPosition ) agent_factor++;
 
 		int nfiles = 100 + (fMaxNumAgents * agent_factor);
 
@@ -1514,8 +1498,6 @@ void TSimulation::Init()
 
 	}
 
-
-
 	// If we're going to record the gene means and std devs, we need to allocate a couple of stat arrays
 	if( fRecordGeneStats )
 	{
@@ -1608,6 +1590,10 @@ void TSimulation::Init()
 				z = - globals::worldsize * ((float) (i+1) / (fDomains[id].initNumAgents + 1));
 			#endif
 				c->settranslation(x, y, z);
+				c->SaveLastPosition();
+				
+				if( fRecordPosition )
+					c->RecordPosition();
 				
 				float yaw =  360.0 * randpw();
 			#if TestWorld
@@ -1701,7 +1687,6 @@ void TSimulation::Init()
 			}
 		}
 
-	#if Bricks
 		for( int domainNumber = 0; domainNumber < fNumDomains; domainNumber++ )
 		{
 			for( int brickPatchNumber = 0; brickPatchNumber < fDomains[domainNumber].numBrickPatches; brickPatchNumber++ )
@@ -1712,7 +1697,6 @@ void TSimulation::Init()
 				}
 			}
 		}
-	#endif
 	}
 
     fTotalFoodEnergyIn = fFoodEnergyIn;
@@ -1851,11 +1835,15 @@ void TSimulation::InitNeuralValues()
 	int numinputneurgroups = 5;
 	if( genome::gEnableSpeedFeedback )
 		numinputneurgroups++;
+	if( genome::gEnableCarry )
+		numinputneurgroups += 2;
 	brain::gNeuralValues.numinputneurgroups = numinputneurgroups;
 
 	int numoutneurgroups = 7;
 	if( genome::gEnableGive )
-		numoutneurgroups++;		
+		numoutneurgroups++;
+	if( genome::gEnableCarry )
+		numoutneurgroups += 2;
 	brain::gNeuralValues.numoutneurgroups = numoutneurgroups;
 
     brain::gNeuralValues.maxnoninputneurgroups = brain::gNeuralValues.maxinternalneurgroups + brain::gNeuralValues.numoutneurgroups;
@@ -1928,7 +1916,9 @@ void TSimulation::InitWorld()
 	fEatThreshold = 0.2;
     fMateThreshold = 0.5;
     fFightThreshold = 0.2;
-	fGiveThreshold = fFightThreshold;
+	fGiveThreshold = 0.2;
+	fPickupThreshold = 0.5;
+	fDropThreshold = 0.5;
   	fGroundColor.r = 0.1;
     fGroundColor.g = 0.15;
     fGroundColor.b = 0.05;
@@ -2032,6 +2022,9 @@ void TSimulation::InitWorld()
     genome::gMiscInvisSlope = 2.0;
     genome::gMinBitProb = 0.1;
     genome::gMaxBitProb = 0.9;
+	genome::gEnableSpeedFeedback = false;
+	genome::gEnableGive = false;
+	genome::gEnableCarry = false;
 
 	fGraphics = true;
     agent::gVision = true;
@@ -2056,13 +2049,19 @@ void TSimulation::InitWorld()
     agent::gYaw2Energy = 0.1;
     agent::gLight2Energy = 0.01;
     agent::gFocus2Energy = 0.001;
+	agent::gPickup2Energy = 0.5;
+	agent::gDrop2Energy = 0.001;
+	agent::gCarryAgent2Energy = 0.05;
+	agent::gCarryAgentSize2Energy = 0.05;
     agent::gFixedEnergyDrain = 0.1;
+	agent::gMaxCarries = 3;
     agent::gAgentHeight = 0.2;
 
 	food::gMinFoodEnergy = 20.0;
 	fMinFoodEnergyAtDeath = food::gMinFoodEnergy;
     food::gMaxFoodEnergy = 300.0;
     food::gSize2Energy = 100.0;
+	food::gCarryFood2Energy = 0.01;
     food::gFoodHeight = 0.6;
     food::gFoodColor.r = 0.2;
     food::gFoodColor.g = 0.6;
@@ -2076,7 +2075,9 @@ void TSimulation::InitWorld()
 	brick::gBrickHeight = 0.5;
 	brick::gBrickColor.r = 0.6;
 	brick::gBrickColor.g = 0.2;
-	brick::gBrickColor.b = 0.2;  
+	brick::gBrickColor.b = 0.2;
+	brick::gCarryBrick2Energy = 0.01;
+
 }
 
 
@@ -2437,25 +2438,29 @@ void TSimulation::PickParentsUsingTournament(int numInPool, int* iParent, int* j
 //---------------------------------------------------------------------------
 void TSimulation::UpdateAgents()
 {
-	// The world changes as each critter is processed, so we can't do our stage compilation
-	// or parallelization optimizations
+	// In this version of UpdateAgents*() the world changes as each agent is
+	// processed, so we can't do our stage compilation or parallelization
+	// optimizations
 
+#if DEBUGCHECK
+	int pass = 0;
+#endif
 	agent* a;
 	objectxsortedlist::gXSortedObjects.reset();
 	while (objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&a))
 	{
-#ifdef DEBUGCHECK
-		debugstring[256];
-		sprintf(debugstring,"in agent loop at age %ld, critnum = %ld", fStep, critnum);
-		debugcheck(debugstring);
-		critnum++;
-#endif // DEBUGCHECK
+	#if DEBUGCHECK
+		debugcheck( "in agent loop at age %ld, pass = %d, agent = %lu", fStep, pass, a->Number() );
+		pass++;
+	#endif
 
 		a->UpdateVision();
 		a->UpdateBrain();
-		fFoodEnergyOut += a->UpdateBody(fMoveFitnessParameter,
-										agent::gSpeed2DPosition,
-										fSolidObjects);
+		if( !a->BeingCarried() )
+			fFoodEnergyOut += a->UpdateBody(fMoveFitnessParameter,
+											agent::gSpeed2DPosition,
+											fSolidObjects,
+											NULL);
 	}
 }
 
@@ -2527,9 +2532,13 @@ void TSimulation::UpdateAgents_StaticTimestepGeometry()
 		agent *a;
 
 		objectxsortedlist::gXSortedObjects.reset();
-		while (objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&a))
+		while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**)&a) )
 		{
-			fFoodEnergyOut += a->UpdateBody(fMoveFitnessParameter, agent::gSpeed2DPosition, fSolidObjects);
+			if( !a->BeingCarried() )
+				fFoodEnergyOut += a->UpdateBody( fMoveFitnessParameter,
+												 agent::gSpeed2DPosition,
+												 fSolidObjects,
+												 NULL );
 		}
 	}
 }
@@ -2542,20 +2551,10 @@ void TSimulation::Interact()
 {
     agent* c = NULL;
     agent* d = NULL;
-	agent* newAgent = NULL;
-//	agent* oldAgent = NULL;
-	food* f = NULL;
-	//cxsortedlist newAgents;
-	int newlifes = 0;
 	long i;
-	long j;
-    short id = 0;
-	short jd;
-	short kd;
 	bool cDied;
-//	bool foodMarked = 0;
-	bool ateBackwardFood;
 
+	fNewLifes = 0;
 	fNewDeaths = 0;
 
 	// first x-sort all the objects
@@ -2566,6 +2565,7 @@ void TSimulation::Interact()
 		printf( "food::gMaxFoodRadius = %g\n", food::gMaxFoodRadius );
 	if( (fStep >= MinDebugStep) && (fStep <= MaxDebugStep) )
 	{
+		food* f;
 		objectxsortedlist::gXSortedObjects.reset();
 		printf( "********** agents at step %ld **********\n", fStep );
 		while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**) &c ) )
@@ -2585,7 +2585,7 @@ void TSimulation::Interact()
 
 	fCurrentFittestCount = 0;
 	smPrint( "setting fCurrentFittestCount to 0\n" );
-	float prevAvgFitness = fAverageFitness; // used in smite code, to limit agents that are smitable
+	fPrevAvgFitness = fAverageFitness; // used in smite code, to limit agents that are smitable
     fAverageFitness = 0.0;
 	fNumAverageFitness = 0;	// need this because we'll only count agents that have lived at least a modest portion of their lifespan (fSmiteAgeFrac)
 //	fNumLeastFit = 0;
@@ -2620,8 +2620,219 @@ void TSimulation::Interact()
 		}
 	}
 
+	// -----------------------
+	// -------- Death --------
+	// -----------------------
 	// Take care of deaths first, plus least-fit determinations
 	// Also use this as a convenient place to compute some stats
+	DeathAndStats();
+
+#if DebugSmite
+	if( (fStep >= MinDebugStep) && (fStep <= MaxDebugStep) )
+	{
+		for( short id = 0; id < fNumDomains; id++ )
+		{
+			printf( "At age %ld in domain %d (c,n,c->fit) =", fStep, id );
+			for( i = 0; i < fDomains[id].fNumLeastFit; i++ )
+				printf( " (%08lx,%ld,%5.2f)", (ulong) fDomains[id].fLeastFit[i], fDomains[id].fLeastFit[i]->Number(), fDomains[id].fLeastFit[i]->HeuristicFitness() );
+			printf( "\n" );
+		}
+	}
+#endif
+
+#if DebugMaxFitness
+	if( (fStep >= MinDebugStep) && (fStep <= MaxDebugStep) )
+	{
+		objectxsortedlist::gXSortedObjects.reset();
+		objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, c);
+		agent* lastAgent;
+		objectxsortedlist::gXSortedObjects.lastObj(AGENTTYPE, (gobject**) &lastAgent );
+		printf( "%s: at age %ld about to process %ld agents, %ld pieces of food, starting with agent %08lx (%4ld), ending with agent %08lx (%4ld)\n", __FUNCTION__, fStep, objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE), objectxsortedlist::gXSortedObjects.getCount(FOODTYPE), (ulong) c, c->Number(), (ulong) lastAgent, lastAgent->Number() );
+	}
+#endif
+
+	// -----------------------
+	// -------- Heal ---------
+	// -----------------------
+	if( fHealing )	// if healing is turned on...
+	{
+		objectxsortedlist::gXSortedObjects.reset();
+    	while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**) &c) )	// for every agent...
+			c->Heal( fAgentHealingRate, 0.0 );										// heal it if FoodEnergy > 2ndParam.
+	}
+
+	// -----------------------
+	// --- Mate (Lockstep) ---
+	//------------------------
+	if( fLockStepWithBirthsDeathsLog )
+	{
+		if( fLockstepTimestep == fStep )
+		{
+			MateLockstep();
+			SetNextLockstepEvent();		// set the timestep, NumBirths, and NumDeaths for the next Lockstep events.
+		}
+	}
+
+	// Now go through the list, and use the influence radius to determine
+	// all possible interactions
+
+	objectxsortedlist::gXSortedObjects.reset();
+    while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**) &c ) )
+    {
+		// Check for new agent.  If totally new (never updated), skip this agent.
+		// This is because newly born agents get added directly to the main list,
+		// and we might try to process them immediately after being born, but we
+		// don't want to do that until the next time step.
+		if( c->Age() <= 0 )
+			continue;
+
+		objectxsortedlist::gXSortedObjects.setMark( AGENTTYPE ); // so can point back to this agent later
+        cDied = FALSE;
+
+		// See if there's an overlap with any other agents
+        while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**) &d ) ) // to end of list or...
+        {
+			if( d == c )	// sanity check; shouldn't happen
+			{
+				printf( "***************** d == c **************\n" );
+				continue;
+			}
+			
+            if( (d->x() - d->radius()) >= (c->x() + c->radius()) )
+                break;  // this guy (& everybody else in list) is too far away
+
+            // so if we get here, then c & d are close enough in x to interact
+
+			// We used to test only on delta z at this point, thereby using manhattan distance to permit interaction
+			// now modified to use actual distances to tighten things up a little (particularly visible in "toy world"
+			// simulations).  Since we are basing interactions on circumscribing circles, agents may still interact
+			// without having an actual overlap of polygons, but using actual distances reduces the range over which
+			// this may happen and should reduce the number of such incidents.
+			if( sqrt( (d->x()-c->x())*(d->x()-c->x()) + (d->z()-c->z())*(d->z()-c->z()) ) <= (d->radius() + c->radius()) )
+            {
+                // and if we get here then they are also close enough in z,
+                // so must actually worry about their interaction
+
+				ttPrint( "age %ld: agents # %ld & %ld are close\n", fStep, c->Number(), d->Number() );
+
+				ContactEntry contactEntry( fStep, c, d );
+
+				if( fRecordSeparations )
+				{
+					// Force a separation calculation so it gets logged.
+					fSeparationCache.separation( c, d );
+				}
+
+				// -----------------------
+				// ---- Mate (Normal) ----
+				// -----------------------
+                Mate( c, d, &contactEntry );
+
+				// -----------------------
+				// -------- Fight --------
+				// -----------------------
+				bool dDied = false;
+                if (fPower2Energy > 0.0)
+                {
+					Fight( c, d, &contactEntry, &cDied, &dDied );
+                }
+
+				// -----------------------
+				// -------- Give ---------
+				// -----------------------
+				if( genome::gEnableGive )
+				{
+					if( !cDied && !dDied )
+					{
+						Give( c, d, &contactEntry, &cDied, true );
+						if(!cDied)
+						{				
+							Give( d, c, &contactEntry, &dDied, false );
+						}
+					}
+				}
+				
+				if( fRecordContacts )
+					contactEntry.log( fContactsLog );
+
+				if( cDied )
+					break;
+
+            }  // if close enough
+        }  // while (agent::gXSortedAgents.next(d))
+
+        debugcheck( "after all agent interactions" );
+
+        if( cDied )
+			continue; // nothing else to do with c, it's gone!
+	
+		// -----------------------
+		// --------- Eat ---------
+		// -----------------------
+		// They finally get to eat (couldn't earlier to keep from conferring
+		// a special advantage on agents early in the sorted list)
+		Eat( c );
+
+		// -----------------------
+		// -------- Carry --------
+		// -----------------------
+		// Have to do carry testing here instead of inside inner loop above,
+		// because agents can carry any kind of object, not just other agents
+		if( genome::gEnableCarry )
+			Carry( c );
+
+		// -----------------------
+		// ------- Fitness -------
+		// -----------------------
+		// keep tabs of current and average fitness for surviving organisms
+		Fitness( c );
+
+    } // while loop on agents (c)
+
+//	fAverageFitness /= agent::gXSortedAgents.count();
+	if( fNumAverageFitness > 0 )
+		fAverageFitness /= fNumAverageFitness * fTotalHeuristicFitness;
+
+#if DebugMaxFitness
+	printf( "At age %ld (c,n,fit,c->fit) =", fStep );
+	for( i = 0; i < fCurrentFittestCount; i++ )
+		printf( " (%08lx,%ld,%5.2f,%5.2f)", (ulong) fCurrentFittestAgent[i], fCurrentFittestAgent[i]->Number(), fCurrentMaxFitness[i], fCurrentFittestAgent[i]->HeuristicFitness() );
+	printf( "\n" );
+#endif
+
+    if (fMonitorGeneSeparation && (fNewDeaths > 0))
+        CalculateGeneSeparationAll();
+
+	// -----------------------
+	// ---- Create Agents ----
+	// -----------------------
+	// now for a little spontaneous generation!
+	CreateAgents();
+
+    if ((fNewLifes || fNewDeaths) && fMonitorGeneSeparation)
+    {
+        if (fRecordGeneSeparation)
+            RecordGeneSeparation();
+
+		if (fChartGeneSeparation && fGeneSeparationWindow != NULL)
+			fGeneSeparationWindow->AddPoint(fGeneSepVals, fNumGeneSepVals);
+    }
+
+	// -----------------------
+	// ---- Maintain Food ----
+	// -----------------------
+	// finally, maintain the world's food supply...
+	MaintainFood();
+}
+
+
+//---------------------------------------------------------------------------
+// TSimulation::DeathAndStats
+//---------------------------------------------------------------------------
+void TSimulation::DeathAndStats( void )
+{
+	agent *c;
+	short id;
 	
 	if( fLockStepWithBirthsDeathsLog )
 	{
@@ -2646,7 +2857,7 @@ void TSimulation::Interact()
 				while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**) &testAgent ) )
 				{
 					// no qualifications for this agent.  It doesn't even need to be old enough to smite.
-					randAgent = testAgent;	// as long as there's a single legitimate agent for killing, randCriter will be non-NULL
+					randAgent = testAgent;	// as long as there's a single legitimate agent for killing, randAgent will be non-NULL
 
 					i++;
 					
@@ -2658,7 +2869,7 @@ void TSimulation::Interact()
 				
 				assert( randAgent != NULL );		// In we're in LOCKSTEP mode, we should *always* have a agent to kill.  If we don't kill a agent, then we are no longer in sync in the LOCKSTEP-BirthsDeaths.log
 				
-				Death( randAgent, LifeSpan::DR_LOCKSTEP );
+				Kill( randAgent, LifeSpan::DR_LOCKSTEP );
 				
 				lsPrint( "- Killed agent %d, randomIndex = %d\n", randAgent->Number(), randomIndex );						
 			}	// end of for loop
@@ -2679,7 +2890,7 @@ void TSimulation::Interact()
 		if( ! fLockStepWithBirthsDeathsLog )
 		{
 			// If we're not running in LockStep mode, allow natural deaths
-			// If we're not using the LowPopulationAdvantage to prevent the population getting to low,
+			// If we're not using the LowPopulationAdvantage to prevent the population getting too low,
 			// or there are enough agents that we can still afford to lose one (globally & in agent's domain)...
 			if( !fApplyLowPopulationAdvantage ||
 				((objectxsortedlist::gXSortedObjects.getCount( AGENTTYPE ) > fMinNumAgents) && (fDomains[c->Domain()].numAgents > fDomains[c->Domain()].minNumAgents)) )
@@ -2695,7 +2906,7 @@ void TSimulation::Interact()
 						fNumberDiedEnergy++;
 					else
 						fNumberDiedEdge++;
-					Death( c, LifeSpan::DR_NATURAL );
+					Kill( c, LifeSpan::DR_NATURAL );
 					continue; // nothing else to do for this poor schmo
 				}
 			}
@@ -2704,21 +2915,18 @@ void TSimulation::Interact()
 	#ifdef OF1
         if ( (id == 0) && (randpw() < fDeathProb) )
         {
-            Death( c, LifeSpan::DR_RANDOM );
+            Kill( c, LifeSpan::DR_RANDOM );
             continue;
         }
 	#endif
 
-
-	#ifdef DEBUGCHECK
-        debugcheck("after a death in interact");
-	#endif // DEBUGCHECK
+        debugcheck( "after a death" );
 
 		// If we're saving gene stats, compute them here
 		if( fRecordGeneStats )
 		{
 			int n = GenomeUtil::schema->getMutableSize();
-			for( i = 0; i < n; i++ )
+			for( int i = 0; i < n; i++ )
 			{
 				fGeneSum[i] += c->Genes()->get_raw_uint(i);
 				fGeneSum2[i] += c->Genes()->get_raw_uint(i) * c->Genes()->get_raw_uint(i);
@@ -2742,7 +2950,6 @@ void TSimulation::Interact()
 			}
 		}	
 		
-				
 		// Figure out who is least fit, if we're doing smiting to make room for births
 		
 		// Do the bookkeeping for the specific domain, if we're using domains
@@ -2752,12 +2959,11 @@ void TSimulation::Interact()
 		// but it also helps protect against the situation when there are so few potential low-fitness candidates,
 		// due to the age constraint and/or population size, that agents can end up on both the highest fitness
 		// and the lowest fitness lists, which can actually cause a crash (or at least used to).
-//		printf( "%ld id=%ld, domain=%d, maxLeast=%d, numLeast=%d, numCrit=%d, maxCrit-
 		if( (fNumDomains > 0) && (fDomains[id].fMaxNumLeastFit > 0) )
 		{
 			if( ((fDomains[id].numAgents > (fDomains[id].maxNumAgents - fDomains[id].fMaxNumLeastFit))) &&	// if there are getting to be too many agents, and
 				(c->Age() >= (fSmiteAgeFrac * c->MaxAge())) &&													// the current agent is old enough to consider for smiting, and
-				(c->HeuristicFitness() < prevAvgFitness) &&																// the current agent has worse than average fitness,
+				(c->HeuristicFitness() < fPrevAvgFitness) &&																// the current agent has worse than average fitness,
 				( (fDomains[id].fNumLeastFit < fDomains[id].fMaxNumLeastFit)	||								// (we haven't filled our quota yet, or
 				  (c->HeuristicFitness() < fDomains[id].fLeastFit[fDomains[id].fNumLeastFit-1]->HeuristicFitness()) ) )			// the agent is bad enough to displace one already in the queue)
 			{
@@ -2801,7 +3007,7 @@ void TSimulation::Interact()
 		}
 	}
 
-// Following debug output is accurate only when there is a single domain
+	// Following debug output is accurate only when there is a single domain
 //	if( fDomains[0].fNumLeastFit > 0 )
 //		printf( "%ld numSmitable = %d out of %d, from %ld agents out of %ld\n", fStep, fDomains[0].fNumLeastFit, fDomains[0].fMaxNumLeastFit, fDomains[0].numAgents, fDomains[0].maxNumAgents );
 
@@ -2810,7 +3016,7 @@ void TSimulation::Interact()
 	{
 		fprintf( fGeneStatsFile, "%ld", fStep );
 		int n = GenomeUtil::schema->getMutableSize();
-		for( i = 0; i < n; i++ )
+		for( int i = 0; i < n; i++ )
 		{
 			float mean, stddev;
 			
@@ -2819,505 +3025,547 @@ void TSimulation::Interact()
 			fprintf( fGeneStatsFile, " %.1f,%.1f", mean, stddev );
 		}
 		fprintf( fGeneStatsFile, "\n" );
-	}
+	}	
+}
+
+//---------------------------------------------------------------------------
+// TSimulation::MateLockstep
+//---------------------------------------------------------------------------
+void TSimulation::MateLockstep( void )
+{
+	lsPrint( "t%d: Triggering %d random births...\n", fStep, fLockstepNumBirthsAtTimestep );
+
+	agent* c = NULL;		// mommy
+	agent* d = NULL;		// daddy
 	
-#if DebugSmite
-	if( (fStep >= MinDebugStep) && (fStep <= MaxDebugStep) )
+	for( int count = 0; count < fLockstepNumBirthsAtTimestep; count++ ) 
 	{
-		for( id = 0; id < fNumDomains; id++ )
-		{
-			printf( "At age %ld in domain %d (c,n,c->fit) =", fStep, id );
-			for( i = 0; i < fDomains[id].fNumLeastFit; i++ )
-				printf( " (%08lx,%ld,%5.2f)", (ulong) fDomains[id].fLeastFit[i], fDomains[id].fLeastFit[i]->Number(), fDomains[id].fLeastFit[i]->HeuristicFitness() );
-			printf( "\n" );
-		}
-	}
-#endif
+		/* select mommy. */
 
-	//cout << "after deaths1 "; agent::gXSortedAgents.list();	//dbg
-
-	// Now go through the list, and use the influence radius to determine
-	// all possible interactions
-
-#if DebugMaxFitness
-	if( (fStep >= MinDebugStep) && (fStep <= MaxDebugStep) )
-	{
-		objectxsortedlist::gXSortedObjects.reset();
-		objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, c);
-		agent* lastAgent;
-		objectxsortedlist::gXSortedObjects.lastObj(AGENTTYPE, (gobject**) &lastAgent );
-		printf( "%s: at age %ld about to process %ld agents, %ld pieces of food, starting with agent %08lx (%4ld), ending with agent %08lx (%4ld)\n", __FUNCTION__, fStep, objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE), objectxsortedlist::gXSortedObjects.getCount(FOODTYPE), (ulong) c, c->Number(), (ulong) lastAgent, lastAgent->Number() );
-	}
-#endif
-
-	// Do Agent Healing
-	if( fHealing )	// if healing is turned on...
-	{
-		objectxsortedlist::gXSortedObjects.reset();
-    	while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**) &c) )	// for every agent...
-			c->Heal( fAgentHealingRate, 0.0 );										// heal it if FoodEnergy > 2ndParam.
-	}
-
-	if( fLockStepWithBirthsDeathsLog )
-	{
-		if( fLockstepTimestep == fStep )
-		{
-			lsPrint( "t%d: Triggering %d random births...\n", fStep, fLockstepNumBirthsAtTimestep );
-
-			agent* c = NULL;		// mommy
-			agent* d = NULL;		// daddy
-			
-			
-			for( int count = 0; count < fLockstepNumBirthsAtTimestep; count++ ) 
-			{
-				/* select mommy. */
-
-				int i = 0;
-				
-				int numAgents = objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE);
-				assert( numAgents < fMaxNumAgents );			// Since we've already done all the deaths that occurred at this timestep, we should always have enough room to process the births that happened at this timestep.
-				
-				agent* testAgent = NULL;
-				//int randomIndex = int( round( randpw() * fDomains[kd].numAgents ) );	// pick from this domain V???
-				int randomIndex = int( round( randpw() * numAgents ) );
-								
-				// As written, randAgent may not actually be the randomIndex-th agent in the domain, but it will be close,
-				// and as long as there's a single legitimate agent for mating (right domain, long enough since last mating,
-				// and long enough since birth) we will find and use it
-				objectxsortedlist::gXSortedObjects.reset();
-				while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**) &testAgent ) )
-				{
-					// Make sure it's old enough (anything except just birthed), and it has been long enough since it mated
-					if( (testAgent->Age() > 0) && ((testAgent->Age() - testAgent->LastMate()) >= fMateWait) )
-						c = testAgent;	// as long as there's a single legitimate agent for mating, Mommy will be non-NULL
-					
-					i++;
-					
-					if( (i > randomIndex) && (c != NULL) )
-						break;
-				}
-
-				/* select daddy. */
-
-				i = 0;
-				randomIndex = int( round( randpw() * numAgents ) );
-								
-				// As written, randAgent may not actually be the randomIndex-th agent in the domain, but it will be close,
-				// and as long as there's a single legitimate agent for mating (right domain, long enough since last mating, and
-				// has enough energy, plus not the same as the mommy), we will find and use it
-				objectxsortedlist::gXSortedObjects.reset();
-				while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**) &testAgent ) )
-				{
-					// If it was not just birthed, it has been long enough since it mated, and it's not the same as mommy, it'll do for daddy.
-					if( (testAgent->Age() > 0) && ((testAgent->Age() - testAgent->LastMate()) >= fMateWait) && (testAgent->Number() != c->Number()) )
-						d = testAgent;	// as long as there's another single legitimate agent for mating, Daddy will be non-NULL
-
-					i++;
-						
-					if( (i > randomIndex) && (d != NULL) )
-						break;
-				}
-
-				assert( c != NULL && d != NULL );				// If for some reason we can't select parents, then we'll become out of sync with LOCKSTEP-BirthDeaths.log
-												
-				lsPrint( "* I have selected Mommy(%ld) and Daddy(%ld). Population size = %d\n", c->Number(), d->Number(), numAgents );
-				
-				/* === We've selected our parents, now time to birth our agent. */
-					
-				ttPrint( "age %ld: agents # %ld & %ld are mating randomly\n", fStep, c->Number(), d->Number() );
-						
-				agent* e = agent::getfreeagent( this, &fStage );
-				Q_CHECK_PTR(e);
-
-				e->Genes()->crossover(c->Genes(), d->Genes(), true);
-				e->grow( fRecordGenomes,
-						 RecordBrainAnatomy( e->Number() ),
-						 RecordBrainFunction( e->Number() ),
-						 fRecordPosition );
-				float eenergy = c->mating( fMateFitnessParameter, fMateWait ) + d->mating( fMateFitnessParameter, fMateWait );
-				float minenergy = fMinMateFraction * ( c->MaxEnergy() + d->MaxEnergy() ) * 0.5;	// just a modest, reasonable amount; this doesn't really matter in lockstep mode
-				if( eenergy < minenergy )
-					eenergy = minenergy;
-				e->Energy(eenergy);
-				e->FoodEnergy(eenergy);
-				float x =  0.01 + randpw() * (globals::worldsize - 0.02);
-				float z = -0.01 - randpw() * (globals::worldsize - 0.02);
-				float y = 0.5 * agent::gAgentHeight;
-				e->settranslation(x, y, z);
-				float yaw =  360.0 * randpw();
-				c->setyaw(yaw);
-				kd = WhichDomain(x, z, 0);
-				e->Domain(kd);
-				fStage.AddObject(e);
-				objectxsortedlist::gXSortedObjects.add(e); // Add the new agent directly to the list of objects (no new agent list); the e->listLink that gets auto stored here should be valid immediately
-							
-				newlifes++;
-				fDomains[kd].numAgents++;
-				fNumberBorn++;
-				fDomains[kd].numborn++;
-				fNumBornSinceCreated++;
-				fDomains[kd].numbornsincecreated++;
-				fNeuronGroupCountStats.add( e->GetBrain()->NumNeuronGroups() );
-				ttPrint( "age %ld: agent # %ld is born\n", fStep, e->Number() );
-				birthPrint( "step %ld: agent # %ld born to %ld & %ld, at (%g,%g,%g), yaw=%g, energy=%g, domain %d (%d & %d), neurgroups=%d\n",
-					fStep, e->Number(), c->Number(), d->Number(), e->x(), e->y(), e->z(), e->yaw(), e->Energy(), kd, id, jd, e->GetBrain()->NumNeuronGroups() );
-
-				if( brain::gNeuralValues.model == brain::NeuralValues::SPIKING )
-				{
-					if (randpw() >= .5)
-						e->GetBrain()->InheritState( c->GetBrain() );
-					else
-						e->GetBrain()->InheritState( d->GetBrain() );
-				}
-
-				Birth( e, LifeSpan::BR_LOCKSTEP, c, d );
-											
-			}	// end of loop 'for( int count=0; count<fLockstepNumBirthsAtTimestep; count++ )'
-							
-			SetNextLockstepEvent();		// set the timestep, NumBirths, and NumDeaths for the next Lockstep events.
-			
-		}	// end of 'if( fLockstepTimestep == fStep )'
-					
-	}	// end of 'if( fLockStepWithBirthsDeathsLog )'
-
-
-	objectxsortedlist::gXSortedObjects.reset();
-    while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**) &c ) )
-    {
-		// Check for new agent.  If totally new (never updated), skip this agent.
-		// This is because newly born agents get added directly to the main list,
-		// and we might try to process them immediately after being born, but we
-		// don't want to do that until the next time step.
-		if( c->Age() <= 0 )
-			continue;
-
-		// determine the domain in which the agent currently is located
-        id = c->Domain();
-
-		// now see if there's an overlap with any other agents
-
-		objectxsortedlist::gXSortedObjects.setMark( AGENTTYPE ); // so can point back to this agent later
+		int i = 0;
 		
-        cDied = FALSE;
-        jd = id;
-        kd = id;
-
-        while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**) &d ) ) // to end of list or...
-        {
-			if( d == c )
-			{
-				printf( "d == c\n" );
-				continue;
-			}
+		int numAgents = objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE);
+		assert( numAgents < fMaxNumAgents );			// Since we've already done all the deaths that occurred at this timestep, we should always have enough room to process the births that happened at this timestep.
+		
+		agent* testAgent = NULL;
+		//int randomIndex = int( round( randpw() * fDomains[kd].numAgents ) );	// pick from this domain V???
+		int randomIndex = int( round( randpw() * numAgents ) );
+						
+		// As written, randAgent may not actually be the randomIndex-th agent in the domain, but it will be close,
+		// and as long as there's a single legitimate agent for mating (right domain, long enough since last mating,
+		// and long enough since birth) we will find and use it
+		objectxsortedlist::gXSortedObjects.reset();
+		while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**) &testAgent ) )
+		{
+			// Make sure it's old enough (anything except just birthed), and it has been long enough since it mated
+			if( (testAgent->Age() > 0) && ((testAgent->Age() - testAgent->LastMate()) >= fMateWait) )
+				c = testAgent;	// as long as there's a single legitimate agent for mating, Mommy will be non-NULL
 			
-            if( (d->x() - d->radius()) >= (c->x() + c->radius()) )
-                break;  // this guy (& everybody else in list) is too far away
+			i++;
+			
+			if( (i > randomIndex) && (c != NULL) )
+				break;
+		}
 
-            // so if we get here, then c & d are close enough in x to interact
+		/* select daddy. */
 
-			// We used to test only on delta z at this point, thereby using manhattan distance to permit interaction
-			// now modified to use actual distances to tighten things up a little (particularly visible in "toy world"
-			// simulations).  Since we are basing interactions on circumscribing circles, agents may still interact
-			// without having an actual overlap of polygons, but using actual distances reduces the range over which
-			// this may happen and should reduce the number of such incidents.
-//			if( fabs(d->z() - c->z()) < (d->radius() + c->radius()) )
-			if( sqrt( (d->x()-c->x())*(d->x()-c->x()) + (d->z()-c->z())*(d->z()-c->z()) ) <= (d->radius() + c->radius()) )
-            {
-                // and if we get here then they are also close enough in z,
-                // so must actually worry about their interaction
+		i = 0;
+		randomIndex = int( round( randpw() * numAgents ) );
+						
+		// As written, randAgent may not actually be the randomIndex-th agent in the domain, but it will be close,
+		// and as long as there's a single legitimate agent for mating (right domain, long enough since last mating, and
+		// has enough energy, plus not the same as the mommy), we will find and use it
+		objectxsortedlist::gXSortedObjects.reset();
+		while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**) &testAgent ) )
+		{
+			// If it was not just birthed, it has been long enough since it mated, and it's not the same as mommy, it'll do for daddy.
+			if( (testAgent->Age() > 0) && ((testAgent->Age() - testAgent->LastMate()) >= fMateWait) && (testAgent->Number() != c->Number()) )
+				d = testAgent;	// as long as there's another single legitimate agent for mating, Daddy will be non-NULL
 
-				ttPrint( "age %ld: agents # %ld & %ld are close\n", fStep, c->Number(), d->Number() );
+			i++;
+				
+			if( (i > randomIndex) && (d != NULL) )
+				break;
+		}
 
-				ContactEntry contactEntry( fStep, c, d );
+		assert( c != NULL && d != NULL );				// If for some reason we can't select parents, then we'll become out of sync with LOCKSTEP-BirthDeaths.log
+		
+		lsPrint( "* I have selected Mommy(%ld) and Daddy(%ld). Population size = %d\n", c->Number(), d->Number(), numAgents );
+		
+		/* === We've selected our parents, now time to birth our agent. */
+			
+		ttPrint( "age %ld: agents # %ld & %ld are mating randomly\n", fStep, c->Number(), d->Number() );
+		
+		agent* e = agent::getfreeagent( this, &fStage );
+		Q_CHECK_PTR(e);
 
-				if( fRecordSeparations )
-				{
-					// Force a separation calculation so it gets logged.
-					fSeparationCache.separation( c, d );
-				}
-
-                jd = d->Domain();
-
-				// now take care of mating
-
-				// first test to see if these two agents are attempting to mate and allowed to do so (based on their own states)
-			#ifdef OF1
-				if ( (c->Mate() > fMateThreshold) &&
-					 (d->Mate() > fMateThreshold) &&          // it takes two!
-					 ((c->Age() - c->LastMate()) >= fMateWait) &&
-					 ((d->Age() - d->LastMate()) >= fMateWait) &&  // and some time
-					 (c->Energy() > fMinMateFraction * c->MaxEnergy()) &&
-					 (d->Energy() > fMinMateFraction * d->MaxEnergy()) && // and energy
-					 ((fEatMateSpan == 0) || ((fStep-c->LastEat() < fEatMateSpan) && (fStep-d->LastEat() < fEatMateSpan))) &&	// and they've eaten recently enough (if we're enforcing that)
-					 (kd == 1) && (jd == 1) ) // in the safe domain
-			#else
-				if( !fLockStepWithBirthsDeathsLog &&
-					(c->Mate() > fMateThreshold) &&
-					(d->Mate() > fMateThreshold) &&          // it takes two!
-					((c->Age() - c->LastMate()) >= fMateWait) &&
-					((d->Age() - d->LastMate()) >= fMateWait) &&  // and some time
-					(c->Energy() > fMinMateFraction * c->MaxEnergy()) &&
-					(d->Energy() > fMinMateFraction * d->MaxEnergy()) &&	// and energy
-					((fEatMateSpan == 0) || ((fStep-c->LastEat() < fEatMateSpan) && (fStep-d->LastEat() < fEatMateSpan))) )	// and they've eaten recently enough (if we're enforcing that)
-			#endif
-				{
-					// the agents are mate-worthy, so now deal with other conditions...
+		e->Genes()->crossover(c->Genes(), d->Genes(), true);
+		e->grow( fRecordGenomes,
+				 RecordBrainAnatomy( e->Number() ),
+				 RecordBrainFunction( e->Number() ),
+				 fRecordPosition );
+		float eenergy = c->mating( fMateFitnessParameter, fMateWait ) + d->mating( fMateFitnessParameter, fMateWait );
+		float minenergy = fMinMateFraction * ( c->MaxEnergy() + d->MaxEnergy() ) * 0.5;	// just a modest, reasonable amount; this doesn't really matter in lockstep mode
+		if( eenergy < minenergy )
+			eenergy = minenergy;
+		e->Energy(eenergy);
+		e->FoodEnergy(eenergy);
+		float x =  0.01 + randpw() * (globals::worldsize - 0.02);
+		float z = -0.01 - randpw() * (globals::worldsize - 0.02);
+		float y = 0.5 * agent::gAgentHeight;
+		e->settranslation(x, y, z);
+		float yaw =  360.0 * randpw();
+		c->setyaw(yaw);
+		short kd = WhichDomain(x, z, 0);
+		e->Domain(kd);
+		fStage.AddObject(e);
+		objectxsortedlist::gXSortedObjects.add(e); // Add the new agent directly to the list of objects (no new agent list); the e->listLink that gets auto stored here should be valid immediately
 					
-					// test for steady-state GA vs. natural selection
-					if( (fHeuristicFitnessWeight != 0.0) || (fComplexityFitnessWeight != 0.0) )
-					{
-						// we're using the steady state GA (instead of natural selection)
-						if( fHeuristicFitnessWeight != 0.0 )
-						{
-							// we're using the heuristic fitness function, so allow virtual offspring
-							// (count would-be offspring towards fitness, but don't actually instantiate them)
-							(void) c->mating( fMateFitnessParameter, fMateWait );
-							(void) d->mating( fMateFitnessParameter, fMateWait );
+		fNewLifes++;
+		fDomains[kd].numAgents++;
+		fNumberBorn++;
+		fDomains[kd].numborn++;
+		fNumBornSinceCreated++;
+		fDomains[kd].numbornsincecreated++;
+		fNeuronGroupCountStats.add( e->GetBrain()->NumNeuronGroups() );
+		ttPrint( "age %ld: agent # %ld is born\n", fStep, e->Number() );
+		birthPrint( "step %ld: agent # %ld born to %ld & %ld, at (%g,%g,%g), yaw=%g, energy=%g, domain %d (%d & %d), neurgroups=%d\n",
+			fStep, e->Number(), c->Number(), d->Number(), e->x(), e->y(), e->z(), e->yaw(), e->Energy(), kd, id, jd, e->GetBrain()->NumNeuronGroups() );
+
+		if( brain::gNeuralValues.model == brain::NeuralValues::SPIKING )
+		{
+			if (randpw() >= .5)
+				e->GetBrain()->InheritState( c->GetBrain() );
+			else
+				e->GetBrain()->InheritState( d->GetBrain() );
+		}
+
+		Birth( e, LifeSpan::BR_LOCKSTEP, c, d );
+									
+	}	// end of loop 'for( int count=0; count<fLockstepNumBirthsAtTimestep; count++ )'
+}
+
+//---------------------------------------------------------------------------
+// TSimulation::Mate
+//---------------------------------------------------------------------------
+void TSimulation::Mate( agent *c,
+						agent *d,
+						ContactEntry *contactEntry )
+{
+#ifdef OF1
+    short id = c->Domain();
+	short jd = d->Domain();
+#endif
+	short kd;
+
+	// first test to see if these two agents are attempting to mate and allowed to do so (based on their own states)
+#ifdef OF1
+	if ( (c->Mate() > fMateThreshold) &&
+		 (d->Mate() > fMateThreshold) &&          // it takes two!
+		 ((c->Age() - c->LastMate()) >= fMateWait) &&
+		 ((d->Age() - d->LastMate()) >= fMateWait) &&  // and some time
+		 (c->Energy() > fMinMateFraction * c->MaxEnergy()) &&
+		 (d->Energy() > fMinMateFraction * d->MaxEnergy()) && // and energy
+		 ((fEatMateSpan == 0) || ((fStep-c->LastEat() < fEatMateSpan) && (fStep-d->LastEat() < fEatMateSpan))) &&	// and they've eaten recently enough (if we're enforcing that)
+		 (id == 1) && (jd == 1) ) // in the safe domain
+#else
+	if( !fLockStepWithBirthsDeathsLog &&
+		(c->Mate() > fMateThreshold) &&
+		(d->Mate() > fMateThreshold) &&          // it takes two!
+		((c->Age() - c->LastMate()) >= fMateWait) &&
+		((d->Age() - d->LastMate()) >= fMateWait) &&  // and some time
+		(c->Energy() > fMinMateFraction * c->MaxEnergy()) &&
+		(d->Energy() > fMinMateFraction * d->MaxEnergy()) &&	// and energy
+		((fEatMateSpan == 0) || ((fStep-c->LastEat() < fEatMateSpan) && (fStep-d->LastEat() < fEatMateSpan))) )	// and they've eaten recently enough (if we're enforcing that)
+#endif
+	{
+		// the agents are mate-worthy, so now deal with other conditions...
+		
+		// test for steady-state GA vs. natural selection
+		if( (fHeuristicFitnessWeight != 0.0) || (fComplexityFitnessWeight != 0.0) )
+		{
+			// we're using the steady state GA (instead of natural selection)
+			if( fHeuristicFitnessWeight != 0.0 )
+			{
+				// we're using the heuristic fitness function, so allow virtual offspring
+				// (count would-be offspring towards fitness, but don't actually instantiate them)
+				(void) c->mating( fMateFitnessParameter, fMateWait );
+				(void) d->mating( fMateFitnessParameter, fMateWait );
 //							cout << "t=" << fStep sp "mating c=" << c->Number() sp "(m=" << c->Mate() << ",lm=" << c->LastMate() << ",e=" << c->Energy() << ",x=" << c->x() << ",z=" << c->z() << ",r=" << c->radius() << ")" nl;
 //							cout << "          & d=" << d->Number() sp "(m=" << d->Mate() << ",lm=" << d->LastMate() << ",e=" << d->Energy() << ",x=" << d->x() << ",z=" << d->z() << ",r=" << d->radius() << ")" nl;
 //							if( sqrt((d->x()-c->x())*(d->x()-c->x())+(d->z()-c->z())*(d->z()-c->z())) > (d->radius()+c->radius()) )
 //								cout << "            ***** no overlap *****" nl;
-							fNumberBornVirtual++;
-						}
-						else
-						{
-							// we're not using the heuristic fitness function, so just disable the mating process altogether
-						}
-					}
-					else
-					{
-						// we're using natural selection (or are lockstepped to a previous natural selection run),
-						// so proceed with the normal mating process (attempt to mate for offspring production if there's room)
-						kd = WhichDomain(0.5*(c->x()+d->x()),
-										 0.5*(c->z()+d->z()),
-										 kd);
-
-						bool smited = false;
-
-						if( fSmiteMode == 'L' )		// smite the least fit
-						{
-							if( (fDomains[kd].numAgents >= fDomains[kd].maxNumAgents) &&	// too many agents to reproduce withing a bit of smiting
-								(fDomains[kd].fNumLeastFit > fDomains[kd].fNumSmited) )			// we've still got some left that are suitable for smiting
-							{
-								while( (fDomains[kd].fNumSmited < fDomains[kd].fNumLeastFit) &&		// there are any left to smite
-									  ((fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] == c) ||	// trying to smite mommy
-									   (fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] == d) ||	// trying to smite daddy
-									   ((fCurrentFittestCount > 0) && (fDomains[kd].fLeastFit[fDomains[kd].fNumSmited]->HeuristicFitness() >= fCurrentMaxFitness[fCurrentFittestCount-1]))) )	// trying to smite one of the fittest
-								{
-									// We would have smited one of our mating pair, or one of the fittest, which wouldn't be prudent,
-									// so just step over them and see if there's someone else to smite
-									fDomains[kd].fNumSmited++;
-								}
-								if( fDomains[kd].fNumSmited < fDomains[kd].fNumLeastFit )	// we've still got someone to smite, so do it
-								{
-									smPrint( "About to smite least-fit agent #%d in domain %d\n", fDomains[kd].fLeastFit[fDomains[kd].fNumSmited]->Number(), kd );
-									Death( fDomains[kd].fLeastFit[fDomains[kd].fNumSmited], LifeSpan::DR_SMITE );
-									fDomains[kd].fNumSmited++;
-									fNumberDiedSmite++;
-									smited = true;
-									//cout << "********************* SMITE *******************" nlf;	//dbg
-								}
-							}
-						}
-						else if( fSmiteMode == 'R' )				/// RANDOM SMITE
-						{
-							// If necessary, smite a random agent in this domain
-							if( fDomains[kd].numAgents >= fDomains[kd].maxNumAgents )
-							{
-								int i = 0;
-								agent* testAgent;
-								agent* randAgent = NULL;
-								int randomIndex = int( floor( randpw() * fDomains[kd].numAgents ) );	// pick from this domain
-
-								gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();	// save the state of the x-sorted list
-
-								// As written, randAgent may not actually be the randomIndex-th agent in the domain, but it will be close,
-								// and as long as there's a single legitimate agent for smiting (right domain, old enough, and not one of the
-								// parents), we will find and smite it
-								objectxsortedlist::gXSortedObjects.reset();
-								while( (i <= randomIndex) && objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**) &testAgent ) )
-								{
-									// If it's from the right domain, it's old enough, and it's not one of the parents, allow it
-									if( testAgent->Domain() == kd )
-									{
-										i++;	// if it's in the right domain, increment even if we're not allowed to smite it
-										
-										if( (testAgent->Age() > fSmiteAgeFrac*testAgent->MaxAge()) && (testAgent->Number() != c->Number()) && (testAgent->Number() != d->Number()) )
-											randAgent = testAgent;	// as long as there's a single legitimate agent for smiting in this domain, randCriter will be non-NULL
-									}
-									
-									if( (i > randomIndex) && (randAgent != NULL) )
-										break;
-								}
-																	
-								objectxsortedlist::gXSortedObjects.setcurr( saveCurr );	// restore the state of the x-sorted list
-								
-								if( randAgent )	// if we found any legitimately smitable agent...
-								{
-									fDomains[kd].fNumSmited++;
-									fNumberDiedSmite++;
-									smited = true;
-									Death( randAgent, LifeSpan::DR_SMITE );
-								}
-								
-							}
-							
-						}
-
-						
-						if ( (fDomains[kd].numAgents < fDomains[kd].maxNumAgents) &&
-							 (objectxsortedlist::gXSortedObjects.getCount( AGENTTYPE ) < fMaxNumAgents) )
-						{
-							// Still got room for more
-							if( (fMiscAgents < 0) ||									// miscegenation function not being used
-								(fDomains[kd].numbornsincecreated < fMiscAgents) ||	// miscegenation function not in use yet
-								(randpw() < c->MateProbability(d)) )					// miscegenation function allows the birth
-							{
-								ttPrint( "age %ld: agents # %ld & %ld are mating\n", fStep, c->Number(), d->Number() );
-								contactEntry.mate();
-
-								fNumBornSinceCreated++;
-								fDomains[kd].numbornsincecreated++;
-								
-								agent* e = agent::getfreeagent(this, &fStage);
-								Q_CHECK_PTR(e);
-
-								e->Genes()->crossover(c->Genes(), d->Genes(), true);
-								e->grow( fRecordGenomes,
-										 RecordBrainAnatomy( e->Number() ),
-										 RecordBrainFunction( e->Number() ),
-										 fRecordPosition );
-								float eenergy = c->mating( fMateFitnessParameter, fMateWait ) + d->mating( fMateFitnessParameter, fMateWait );
-								e->Energy(eenergy);
-								e->FoodEnergy(eenergy);
-								e->settranslation(0.5*(c->x() + d->x()),
-												  0.5*(c->y() + d->y()),
-												  0.5*(c->z() + d->z()));
-								e->setyaw( AverageAngles(c->yaw(), d->yaw()) );	// wrong: 0.5*(c->yaw() + d->yaw()));   // was (360.0*randpw());
-								e->Domain(kd);
-								fStage.AddObject(e);
-								gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();
-								objectxsortedlist::gXSortedObjects.add(e); // Add the new agent directly to the list of objects (no new agent list); the e->listLink that gets auto stored here should be valid immediately
-								objectxsortedlist::gXSortedObjects.setcurr( saveCurr );
-								
-								newlifes++;
-								//newAgents.add(e); // add it to the full list later; the e->listLink that gets auto stored here must be replaced with one from full list below
-								fDomains[kd].numAgents++;
-								fNumberBorn++;
-								fDomains[kd].numborn++;
-								fNeuronGroupCountStats.add( e->GetBrain()->NumNeuronGroups() );
-								ttPrint( "age %ld: agent # %ld is born\n", fStep, e->Number() );
-								birthPrint( "step %ld: agent # %ld born to %ld & %ld, at (%g,%g,%g), yaw=%g, energy=%g, domain %d (%d & %d), neurgroups=%d\n",
-											fStep, e->Number(), c->Number(), d->Number(), e->x(), e->y(), e->z(), e->yaw(), e->Energy(), kd, id, jd, e->GetBrain()->NumNeuronGroups() );
-								//if( fStep > 50 )
-								//	exit( 0 );
-
-								if( brain::gNeuralValues.model == brain::NeuralValues::SPIKING )
-								{
-									if (randpw() >= .5)
-										e->GetBrain()->InheritState( c->GetBrain() );
-									else
-										e->GetBrain()->InheritState( d->GetBrain() );
-								}
-
-								Birth( e, LifeSpan::BR_NATURAL, c, d );
-							}
-							else	// miscegenation function denied this birth
-							{
-								fBirthDenials++;
-								fMiscDenials++;
-							}
-						}
-						else	// Too many agents
-							fBirthDenials++;
-					}	// steady-state GA vs. natural selection
-                }	// if agents are trying to mate
-			
-			
-
-			#ifdef DEBUGCHECK
-                debugcheck("after a birth in interact");
-			#endif // DEBUGCHECK
-
-				bool dDied = false;
-
-				// -------------
-				// --- FIGHT ---
-				// -------------
-                if (fPower2Energy > 0.0)
-                {
-					Fight( c, d, &contactEntry, &cDied, &dDied );
-                }
-
-			#ifdef DEBUGCHECK
-				debugcheck("after fighting in interact");
-			#endif // DEBUGCHECK
-
-				// ------------
-				// --- GIVE ---
-				// ------------
-				if( genome::gEnableGive )
-				{
-					if( !cDied && !dDied )
-					{
-						Give( c, d, &contactEntry, &cDied, true );
-						if(!cDied)
-						{				
-							Give( d, c, &contactEntry, &dDied, false );
-						}
-					}
-				}
-
-				if( fRecordContacts )
-					contactEntry.log( fContactsLog );
-
-				if( cDied )
-					break;
-
-            }  // if close enough
-        }  // while (agent::gXSortedAgents.next(d))
-
-	#ifdef DEBUGCHECK
-        debugcheck("after all agent interactions in interact");
-	#endif // DEBUGCHECK
-
-        if( cDied )
-			continue; // nothing else to do with c, it's gone!
-	
-		// they finally get to eat (couldn't earlier to keep from conferring
-		// a special advantage on agents early in the sorted list)
-
-		// Just to be slightly more like the old multi-x-sorted list version of the code, look backwards first
-
-		// set the list back to the agent mark, so we can look backward from that point
-		objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point list back to c
-	
-		// look for food in the -x direction
-		ateBackwardFood = false;
-	#if CompatibilityMode
-		// go backwards in the list until we reach a place where even the largest possible piece of food
-		// would entirely precede our agent, and no smaller piece of food sorting after it, but failing
-		// to reach the agent can prematurely terminate the scan back (hence the factor of 2.0),
-		// so we can then search forward from there
-		while( objectxsortedlist::gXSortedObjects.prevObj( FOODTYPE, (gobject**) &f ) )
-			if( (f->x() + 2.0*food::gMaxFoodRadius) < (c->x() - c->radius()) )
-				break;
-	#else // CompatibilityMode
-        while( objectxsortedlist::gXSortedObjects.prevObj( FOODTYPE, (gobject**) &f ) )
-        {
-			if( (f->x() + f->radius()) < (c->x() - c->radius()) )
-			{
-				// end of food comes before beginning of agent, so there is no overlap
-				// if we've gone so far back that the largest possible piece of food could not overlap us,
-				// then we can stop searching for this agent's possible foods in the backward direction
-				if( (f->x() + 2.0*food::gMaxFoodRadius) < (c->x() - c->radius()) )
-					break;  // so get out of the backward food while loop
+				fNumberBornVirtual++;
 			}
 			else
 			{
+				// we're not using the heuristic fitness function, so just disable the mating process altogether
+			}
+		}
+		else
+		{
+			// we're using natural selection (or are lockstepped to a previous natural selection run),
+			// so proceed with the normal mating process (attempt to mate for offspring production if there's room)
+			kd = WhichDomain(0.5*(c->x()+d->x()),
+							 0.5*(c->z()+d->z()),
+							 kd);
+
+			bool smited = false;
+
+			if( fSmiteMode == 'L' )		// smite the least fit
+			{
+				if( (fDomains[kd].numAgents >= fDomains[kd].maxNumAgents) &&	// too many agents to reproduce withing a bit of smiting
+					(fDomains[kd].fNumLeastFit > fDomains[kd].fNumSmited) )			// we've still got some left that are suitable for smiting
+				{
+					while( (fDomains[kd].fNumSmited < fDomains[kd].fNumLeastFit) &&		// there are any left to smite
+						  ((fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] == c) ||	// trying to smite mommy
+						   (fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] == d) ||	// trying to smite daddy
+						   ((fCurrentFittestCount > 0) && (fDomains[kd].fLeastFit[fDomains[kd].fNumSmited]->HeuristicFitness() >= fCurrentMaxFitness[fCurrentFittestCount-1]))) )	// trying to smite one of the fittest
+					{
+						// We would have smited one of our mating pair, or one of the fittest, which wouldn't be prudent,
+						// so just step over them and see if there's someone else to smite
+						fDomains[kd].fNumSmited++;
+					}
+					if( fDomains[kd].fNumSmited < fDomains[kd].fNumLeastFit )	// we've still got someone to smite, so do it
+					{
+						smPrint( "About to smite least-fit agent #%d in domain %d\n", fDomains[kd].fLeastFit[fDomains[kd].fNumSmited]->Number(), kd );
+						Kill( fDomains[kd].fLeastFit[fDomains[kd].fNumSmited], LifeSpan::DR_SMITE );
+						fDomains[kd].fNumSmited++;
+						fNumberDiedSmite++;
+						smited = true;
+						//cout << "********************* SMITE *******************" nlf;	//dbg
+					}
+				}
+			}
+			else if( fSmiteMode == 'R' )				/// RANDOM SMITE
+			{
+				// If necessary, smite a random agent in this domain
+				if( fDomains[kd].numAgents >= fDomains[kd].maxNumAgents )
+				{
+					int i = 0;
+					agent* testAgent;
+					agent* randAgent = NULL;
+					int randomIndex = int( floor( randpw() * fDomains[kd].numAgents ) );	// pick from this domain
+
+					gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();	// save the state of the x-sorted list
+
+					// As written, randAgent may not actually be the randomIndex-th agent in the domain, but it will be close,
+					// and as long as there's a single legitimate agent for smiting (right domain, old enough, and not one of the
+					// parents), we will find and smite it
+					objectxsortedlist::gXSortedObjects.reset();
+					while( (i <= randomIndex) && objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**) &testAgent ) )
+					{
+						// If it's from the right domain, it's old enough, and it's not one of the parents, allow it
+						if( testAgent->Domain() == kd )
+						{
+							i++;	// if it's in the right domain, increment even if we're not allowed to smite it
+							
+							if( (testAgent->Age() > fSmiteAgeFrac*testAgent->MaxAge()) && (testAgent->Number() != c->Number()) && (testAgent->Number() != d->Number()) )
+								randAgent = testAgent;	// as long as there's a single legitimate agent for smiting in this domain, randAgent will be non-NULL
+						}
+						
+						if( (i > randomIndex) && (randAgent != NULL) )
+							break;
+					}
+														
+					objectxsortedlist::gXSortedObjects.setcurr( saveCurr );	// restore the state of the x-sorted list
+					
+					if( randAgent )	// if we found any legitimately smitable agent...
+					{
+						fDomains[kd].fNumSmited++;
+						fNumberDiedSmite++;
+						smited = true;
+						Kill( randAgent, LifeSpan::DR_SMITE );
+					}
+				}
+			}
+
+			
+			if ( (fDomains[kd].numAgents < fDomains[kd].maxNumAgents) &&
+				 (objectxsortedlist::gXSortedObjects.getCount( AGENTTYPE ) < fMaxNumAgents) )
+			{
+				// Still got room for more
+				if( (fMiscAgents < 0) ||									// miscegenation function not being used
+					(fDomains[kd].numbornsincecreated < fMiscAgents) ||	// miscegenation function not in use yet
+					(randpw() < c->MateProbability(d)) )					// miscegenation function allows the birth
+				{
+					ttPrint( "age %ld: agents # %ld & %ld are mating\n", fStep, c->Number(), d->Number() );
+					contactEntry->mate();
+
+					fNumBornSinceCreated++;
+					fDomains[kd].numbornsincecreated++;
+					
+					agent* e = agent::getfreeagent(this, &fStage);
+					Q_CHECK_PTR(e);
+
+					e->Genes()->crossover(c->Genes(), d->Genes(), true);
+					e->grow( fRecordGenomes,
+							 RecordBrainAnatomy( e->Number() ),
+							 RecordBrainFunction( e->Number() ),
+							 fRecordPosition );
+					float eenergy = c->mating( fMateFitnessParameter, fMateWait ) + d->mating( fMateFitnessParameter, fMateWait );
+					e->Energy(eenergy);
+					e->FoodEnergy(eenergy);
+					e->settranslation(0.5*(c->x() + d->x()),
+									  0.5*(c->y() + d->y()),
+									  0.5*(c->z() + d->z()));
+					e->setyaw( AverageAngles(c->yaw(), d->yaw()) );	// wrong: 0.5*(c->yaw() + d->yaw()));   // was (360.0*randpw());
+					e->Domain(kd);
+					fStage.AddObject(e);
+					gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();
+					objectxsortedlist::gXSortedObjects.add(e); // Add the new agent directly to the list of objects (no new agent list); the e->listLink that gets auto stored here should be valid immediately
+					objectxsortedlist::gXSortedObjects.setcurr( saveCurr );
+					
+					fNewLifes++;
+					fDomains[kd].numAgents++;
+					fNumberBorn++;
+					fDomains[kd].numborn++;
+					fNeuronGroupCountStats.add( e->GetBrain()->NumNeuronGroups() );
+					ttPrint( "age %ld: agent # %ld is born\n", fStep, e->Number() );
+					birthPrint( "step %ld: agent # %ld born to %ld & %ld, at (%g,%g,%g), yaw=%g, energy=%g, domain %d (%d & %d), neurgroups=%d\n",
+								fStep, e->Number(), c->Number(), d->Number(), e->x(), e->y(), e->z(), e->yaw(), e->Energy(), kd, id, jd, e->GetBrain()->NumNeuronGroups() );
+					//if( fStep > 50 )
+					//	exit( 0 );
+
+					if( brain::gNeuralValues.model == brain::NeuralValues::SPIKING )
+					{
+						if (randpw() >= .5)
+							e->GetBrain()->InheritState( c->GetBrain() );
+						else
+							e->GetBrain()->InheritState( d->GetBrain() );
+					}
+
+					Birth( e, LifeSpan::BR_NATURAL, c, d );
+				}
+				else	// miscegenation function denied this birth
+				{
+					fBirthDenials++;
+					fMiscDenials++;
+				}
+			}
+			else	// Too many agents
+				fBirthDenials++;
+		}	// steady-state GA vs. natural selection
+	}	// if agents are trying to mate
+
+	debugcheck( "after all mating is complete" );
+}
+
+//---------------------------------------------------------------------------
+// TSimulation::Fight
+//---------------------------------------------------------------------------
+void TSimulation::Fight( agent *c,
+						 agent *d,
+						 ContactEntry *contactEntry,
+						 bool *cDied,
+						 bool *dDied)
+{
+#if DEBUGCHECK
+	unsigned long cnum = c->Number();
+	unsigned long dnum = d->Number();
+#endif
+	float cpower;
+	float dpower;
+
+	if ( (c->Fight() > fFightThreshold) )
+		cpower = c->Strength() * c->SizeAdvantage() * c->Fight() * (c->Energy()/c->MaxEnergy());
+	else
+		cpower = 0.0;
+
+	if ( (d->Fight() > fFightThreshold) )
+		dpower = d->Strength() * d->SizeAdvantage() * d->Fight() * (d->Energy()/d->MaxEnergy());
+	else
+		dpower = 0.0;
+
+	if ( (cpower > 0.0) || (dpower > 0.0) )
+	{
+		ttPrint( "age %ld: agents # %ld & %ld are fighting\n", fStep, c->Number(), d->Number() );
+
+		if(cpower > 0.0)
+			contactEntry->fight( c );
+		if(dpower > 0.0)
+			contactEntry->fight( d );
+
+		// somebody wants to fight
+		fNumberFights++;
+		c->damage(dpower * fPower2Energy);
+		d->damage(cpower * fPower2Energy);
+		if( !fLockStepWithBirthsDeathsLog )
+		{
+			// If we're not running in LockStep mode, allow natural deaths
+			if (d->Energy() <= 0.0)
+			{
+				//cout << "before deaths2 "; agent::gXSortedAgents.list();	//dbg
+				Kill( d, LifeSpan::DR_NATURAL );
+				fNumberDiedFight++;
+				//cout << "after deaths2 "; agent::gXSortedAgents.list();	//dbg
+
+				*dDied = true;
+			}
+			if (c->Energy() <= 0.0)
+			{
+				objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point back to c
+				Kill( c, LifeSpan::DR_NATURAL );
+				fNumberDiedFight++;
+
+				// note: this leaves list pointing to item before c, and markedAgent set to previous agent
+				//objectxsortedlist::gXSortedObjects.setMarkPrevious( AGENTTYPE );	// if previous object was a agent, this would step one too far back, I think - lsy
+				//cout << "after deaths3 "; agent::gXSortedAgents.list();	//dbg
+				*cDied = true;
+			}
+		}
+	}
+	
+	debugcheck( "after fight between agents %lu and %lu, %s", cnum, dnum, *cDied ? (*dDied ? "both died" : "c died") : (*dDied ? "d died" : "neither died") );
+}
+
+//---------------------------------------------------------------------------
+// TSimulation::Give
+//---------------------------------------------------------------------------
+void TSimulation::Give( agent *x,
+						agent *y,
+						ContactEntry *contactEntry,
+						bool *xDied,
+						bool toMarkOnDeath )
+{
+#if DEBUGCHECK
+	unsigned long xnum = x->Number();
+#endif
+	float energy = 0.0;
+
+	if( (x->Give() > fGiveThreshold) )
+	{
+		energy = x->Energy() * x->Give() * fGiveFraction;
+
+		if( energy > 0 )
+		{
+			contactEntry->give( x );
+
+			float result = y->receive( x, &energy );
+			fFoodEnergyOut += result;
+
+			if( !fLockStepWithBirthsDeathsLog )
+			{
+				if (x->Energy() <= 0.0)
+				{
+					if( toMarkOnDeath )
+						objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point back to x
+					Kill( x, LifeSpan::DR_NATURAL );
+#if GIVE_TODO
+					fNumberDiedGive++;
+#endif
+
+					*xDied = true;
+				}
+			}
+		}
+
+	}
+		
+	debugcheck( "after %lu gave %g energy to %lu%s", xnum, energy, y->Number(), energy == 0.0 ? " (did NOT give)" : "" );
+}
+
+
+
+//---------------------------------------------------------------------------
+// TSimulation::Eat
+//---------------------------------------------------------------------------
+void TSimulation::Eat( agent *c )
+{
+	bool ateBackwardFood;
+	food* f = NULL;
+	
+	// Just to be slightly more like the old multi-x-sorted list version of the code, look backwards first
+
+	// set the list back to the agent mark, so we can look backward from that point
+	objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point list back to c
+
+	// look for food in the -x direction
+	ateBackwardFood = false;
+#if CompatibilityMode
+	// go backwards in the list until we reach a place where even the largest possible piece of food
+	// would entirely precede our agent, and no smaller piece of food sorting after it, but failing
+	// to reach the agent can prematurely terminate the scan back (hence the factor of 2.0),
+	// so we can then search forward from there
+	while( objectxsortedlist::gXSortedObjects.prevObj( FOODTYPE, (gobject**) &f ) )
+		if( (f->x() + 2.0*food::gMaxFoodRadius) < (c->x() - c->radius()) )
+			break;
+#else // CompatibilityMode
+	while( objectxsortedlist::gXSortedObjects.prevObj( FOODTYPE, (gobject**) &f ) )
+	{
+		if( (f->x() + f->radius()) < (c->x() - c->radius()) )
+		{
+			// end of food comes before beginning of agent, so there is no overlap
+			// if we've gone so far back that the largest possible piece of food could not overlap us,
+			// then we can stop searching for this agent's possible foods in the backward direction
+			if( (f->x() + 2.0*food::gMaxFoodRadius) < (c->x() - c->radius()) )
+				break;  // so get out of the backward food while loop
+		}
+		else
+		{
+			// beginning of food comes before end of agent, so there is overlap in x
+			// time to check for overlap in z
+			if( fabs( f->z() - c->z() ) < ( f->radius() + c->radius() ) )
+			{
+				// also overlap in z, so they really interact
+				ttPrint( "step %ld: agent # %ld is eating\n", fStep, c->Number() );
+				float foodEaten = c->eat( f, fEatFitnessParameter, fEat2Consume, fEatThreshold, fStep );
+				fFoodEnergyOut += foodEaten;
+				
+				eatPrint( "at step %ld, agent %ld at (%g,%g) with rad=%g wasted %g units of food at (%g,%g) with rad=%g\n", fStep, c->Number(), c->x(), c->z(), c->radius(), foodEaten, f->x(), f->z(), f->radius() );
+
+				if (f->energy() <= 0.0)  // all gone
+				{
+					// A food was used up so remove it from the patch count and domain count
+					(f->getPatch())->foodCount--;
+					fDomains[f->domain()].foodCount--;
+
+					objectxsortedlist::gXSortedObjects.removeCurrentObject();   // get it out of the list
+					fStage.RemoveObject( f );  // get it out of the world
+					
+					if( f->BeingCarried() )
+					{
+						// if it's being carried, have to remove it from the carrier
+						((agent*)(f->CarriedBy()))->DropObject( (gobject*) f );
+					}
+					
+					delete f;	// get it out of memory
+				}
+
+				// but this guy only gets to eat from one food source
+				ateBackwardFood = true;
+				break;  // so get out of the backward food while loop
+			}
+		}
+	}	// backward while loop on food
+#endif // CompatibilityMode
+
+	if( !ateBackwardFood )
+	{
+	#if ! CompatibilityMode
+		// set the list back to the agent mark, so we can look forward from that point
+		objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point list back to c
+	#endif
+	
+		// look for food in the +x direction
+		while( objectxsortedlist::gXSortedObjects.nextObj( FOODTYPE, (gobject**) &f ) )
+		{
+			if( (f->x() - f->radius()) > (c->x() + c->radius()) )
+			{
+				// beginning of food comes after end of agent, so there is no overlap,
+				// and we can stop searching for this agent's possible foods in the forward direction
+				break;  // so get out of the forward food while loop
+			}
+			else
+			{
+	#if CompatibilityMode
+				if( ((f->x() + f->radius()) > (c->x() - c->radius()))  &&		// end of food comes after beginning of agent, and
+					(fabs( f->z() - c->z() ) < (f->radius() + c->radius())) )	// there is overlap in z
+	#else
 				// beginning of food comes before end of agent, so there is overlap in x
 				// time to check for overlap in z
-				if( fabs( f->z() - c->z() ) < ( f->radius() + c->radius() ) )
+				if( fabs( f->z() - c->z() ) < (f->radius() + c->radius()) )
+	#endif
 				{
 					// also overlap in z, so they really interact
 					ttPrint( "step %ld: agent # %ld is eating\n", fStep, c->Number() );
@@ -3329,143 +3577,210 @@ void TSimulation::Interact()
 					if (f->energy() <= 0.0)  // all gone
 					{
 						// A food was used up so remove it from the patch count and domain count
-						(f->getPatch())->foodCount--;
+						FoodPatch* fp = f->getPatch();
+						if( fp )
+							fp->foodCount--;
 						fDomains[f->domain()].foodCount--;
 
 						objectxsortedlist::gXSortedObjects.removeCurrentObject();   // get it out of the list
 						fStage.RemoveObject( f );  // get it out of the world
+
+						if( f->BeingCarried() )
+						{
+							// if it's being carried, have to remove it from the carrier
+							((agent*)(f->CarriedBy()))->DropObject( (gobject*) f );
+						}
+					
 						delete f;				// get it out of memory
 					}
 
 					// but this guy only gets to eat from one food source
-					ateBackwardFood = true;
-					break;  // so get out of the backward food while loop
-				}
-			}
-		}	// backward while loop on food
-	#endif // CompatibilityMode
-
-		if( !ateBackwardFood )
-		{
-		#if ! CompatibilityMode
-			// set the list back to the agent mark, so we can look forward from that point
-			objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point list back to c
-		#endif
-		
-			// look for food in the +x direction
-			while( objectxsortedlist::gXSortedObjects.nextObj( FOODTYPE, (gobject**) &f ) )
-			{
-				if( (f->x() - f->radius()) > (c->x() + c->radius()) )
-				{
-					// beginning of food comes after end of agent, so there is no overlap,
-					// and we can stop searching for this agent's possible foods in the forward direction
 					break;  // so get out of the forward food while loop
 				}
-				else
-				{
-		#if CompatibilityMode
-					if( ((f->x() + f->radius()) > (c->x() - c->radius()))  &&		// end of food comes after beginning of agent, and
-						(fabs( f->z() - c->z() ) < (f->radius() + c->radius())) )	// there is overlap in z
-		#else
-					// beginning of food comes before end of agent, so there is overlap in x
-					// time to check for overlap in z
-					if( fabs( f->z() - c->z() ) < (f->radius() + c->radius()) )
-		#endif
-					{
-						// also overlap in z, so they really interact
-						ttPrint( "step %ld: agent # %ld is eating\n", fStep, c->Number() );
-						float foodEaten = c->eat( f, fEatFitnessParameter, fEat2Consume, fEatThreshold, fStep );
-						fFoodEnergyOut += foodEaten;
-						
-						eatPrint( "at step %ld, agent %ld at (%g,%g) with rad=%g wasted %g units of food at (%g,%g) with rad=%g\n", fStep, c->Number(), c->x(), c->z(), c->radius(), foodEaten, f->x(), f->z(), f->radius() );
+			}
+		} // forward while loop on food
+	} // if( !ateBackwardFood )
 
-						if (f->energy() <= 0.0)  // all gone
-						{
-							// A food was used up so remove it from the patch count and domain count
-							FoodPatch* fp = f->getPatch();
-							if( fp )
-								fp->foodCount--;
-							fDomains[f->domain()].foodCount--;
-
-							objectxsortedlist::gXSortedObjects.removeCurrentObject();   // get it out of the list
-							fStage.RemoveObject( f );  // get it out of the world
-							delete f;				// get it out of memory
-						}
-
-						// but this guy only gets to eat from one food source
-						break;  // so get out of the forward food while loop
-					}
-				}
-			} // forward while loop on food
-
-		}
-	
-		objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point list back to c
+	objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point list back to c
 		
-	#ifdef DEBUGCHECK
-        debugcheck( "after eating in interact" );
-	#endif // DEBUGCHECK
+	debugcheck( "after all agents had a chance to eat" );
+}
 
-		// keep tabs of current and average fitness for surviving organisms
-
-		if( c->Age() >= (fSmiteAgeFrac * c->MaxAge()) )
-		{
-			fAverageFitness += c->HeuristicFitness();	// will divide by fTotalHeuristicFitness later
-			fNumAverageFitness++;
-		}
-        if( (fCurrentFittestCount < MAXFITNESSITEMS) || (c->HeuristicFitness() > fCurrentMaxFitness[fCurrentFittestCount-1]) )
-        {
-			if( (fCurrentFittestCount == 0) || ((c->HeuristicFitness() <= fCurrentMaxFitness[fCurrentFittestCount-1]) && (fCurrentFittestCount < MAXFITNESSITEMS)) )	// just append
-			{
-				fCurrentMaxFitness[fCurrentFittestCount] = c->HeuristicFitness();
-				fCurrentFittestAgent[fCurrentFittestCount] = c;
-				fCurrentFittestCount++;
-			#if DebugMaxFitness
-				printf( "appended agent %08lx (%4ld) to fittest list at position %d with fitness %g, count = %d\n", (ulong) c, c->Number(), fCurrentFittestCount-1, c->HeuristicFitness(), fCurrentFittestCount );
-			#endif
-			}
-			else	// must insert
-			{
-				for( i = 0; i <  fCurrentFittestCount ; i++ )
-				{
-					if( c->HeuristicFitness() > fCurrentMaxFitness[i] )
-						break;
-				}
-				
-				for( j = min( fCurrentFittestCount, MAXFITNESSITEMS-1 ); j > i; j-- )
-				{
-					fCurrentMaxFitness[j] = fCurrentMaxFitness[j-1];
-					fCurrentFittestAgent[j] = fCurrentFittestAgent[j-1];
-				}
-				
-				fCurrentMaxFitness[i] = c->HeuristicFitness();
-				fCurrentFittestAgent[i] = c;
-				if( fCurrentFittestCount < MAXFITNESSITEMS )
-					fCurrentFittestCount++;
-			#if DebugMaxFitness
-				printf( "inserted agent %08lx (%4ld) into fittest list at position %ld with fitness %g, count = %d\n", (ulong) c, c->Number(), i, c->HeuristicFitness(), fCurrentFittestCount );
-			#endif
-			}
-        }
-
-    } // while loop on agents
-
-//	fAverageFitness /= agent::gXSortedAgents.count();
-	if( fNumAverageFitness > 0 )
-		fAverageFitness /= fNumAverageFitness * fTotalHeuristicFitness;
-
-#if DebugMaxFitness
-	printf( "At age %ld (c,n,fit,c->fit) =", fStep );
-	for( i = 0; i < fCurrentFittestCount; i++ )
-		printf( " (%08lx,%ld,%5.2f,%5.2f)", (ulong) fCurrentFittestAgent[i], fCurrentFittestAgent[i]->Number(), fCurrentMaxFitness[i], fCurrentFittestAgent[i]->HeuristicFitness() );
-	printf( "\n" );
-#endif
-
-    if (fMonitorGeneSeparation && (fNewDeaths > 0))
-        CalculateGeneSeparationAll();
-
-	// now for a little spontaneous generation!
+//---------------------------------------------------------------------------
+// TSimulation::Carry
+//---------------------------------------------------------------------------
+void TSimulation::Carry( agent* c )
+{
+	// Look for objects for this agent to carry
 	
+	// Is the agent expressing its pickup behavior?
+	if( c->Pickup() > fPickupThreshold )
+	{
+		// Don't pick up more than we can carry
+		if( c->NumCarries() < agent::gMaxCarries )
+		{
+			Pickup( c );
+		}
+	}
+	
+	// Is the agent expressing its drop behavior?
+	if( c->Drop() > fDropThreshold )
+	{
+		// Make sure there's something to put down
+		if( c->NumCarries() > 0 )
+		{
+			Drop( c );
+		}
+	}
+}
+
+//---------------------------------------------------------------------------
+// TSimulation::Pickup
+//---------------------------------------------------------------------------
+void TSimulation::Pickup( agent* c )
+{
+	gobject* o;
+	
+	// set the list back to the agent mark, so we can look backward from that point
+	objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point list back to c
+
+	// look in the -x direction for something to carry
+	while( objectxsortedlist::gXSortedObjects.prevObj( ANYTYPE, (gobject**) &o ) )
+	{
+		if( o->BeingCarried() || (o->NumCarries() > 0) )
+			continue;	// already carrying or being carried, so nothing we can do with it
+		
+		if( ( o->x() + o->radius() ) < ( c->x() - c->radius() ) )
+		{
+			// end of object comes before beginning of agent, so there is no overlap
+			// if we've gone so far back that the largest possible object could not overlap us,
+			// then we can stop searching for this agent's possible pickups in the backward direction
+			if( ( o->x() + 2.0 * max( max( food::gMaxFoodRadius, agent::gMaxRadius ), brick::gBrickRadius ) ) < ( c->x() - c->radius() ) )
+				break;  // so get out of the backward object while loop
+		}
+		else
+		{
+			// beginning of object comes before end of agent, so there is overlap in x
+			// time to check for overlap in z
+			if( fabs( o->z() - c->z() ) < ( o->radius() + c->radius() ) )
+			{
+				// also overlap in z, so they really interact
+				ttPrint( "step %ld: agent # %ld is picking up object of type %lu\n", fStep, c->Number(), o->getType() );
+				
+				c->PickupObject( o );
+
+				if( c->NumCarries() >= agent::gMaxCarries )	// carrying as much as we can,
+					break;								// so get out of the backward while loop
+			}
+		}
+	}
+
+	// can we pick up anything else?
+	if( c->NumCarries() < agent::gMaxCarries )
+	{
+		// set the list back to the agent mark, so we can look forward from that point
+		objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point list back to c
+	
+		// look in the +x direction for something to pick up
+		while( objectxsortedlist::gXSortedObjects.nextObj( ANYTYPE, (gobject**) &o ) )
+		{
+			if( o->BeingCarried() || (o->NumCarries() > 0) )
+				continue;	// already carrying or being carried, so nothing we can do with it
+		
+			if( (o->x() - o->radius()) > (c->x() + c->radius()) )
+			{
+				// beginning of object comes after end of agent, so there is no overlap,
+				// and we can stop searching for this agent's possible pickups in the forward direction
+				break;  // so get out of the forward object while loop
+			}
+			else
+			{
+				// beginning of object comes before end of agent, so there is overlap in x
+				// time to check for overlap in z
+				if( fabs( o->z() - c->z() ) < (o->radius() + c->radius()) )
+				{
+					// also overlap in z, so they really interact
+					ttPrint( "step %ld: agent # %ld is picking up object of type %d\n", fStep, c->Number(), o->getType() );
+					
+					c->PickupObject( o );
+					
+					if( c->NumCarries() >= agent::gMaxCarries )	// carrying as much as we can,
+						break;								// so get out of the forward while loop
+				}
+			}
+		}
+	}
+
+	objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point list back to c
+		
+	debugcheck( "after all agents had a chance to pickup objects" );
+}
+
+//---------------------------------------------------------------------------
+// TSimulation::Drop
+//---------------------------------------------------------------------------
+void TSimulation::Drop( agent* c )
+{
+	c->DropMostRecent();
+			
+	debugcheck( "after dropping most recent" );
+}
+
+//---------------------------------------------------------------------------
+// TSimulation::Fitness
+//---------------------------------------------------------------------------
+void TSimulation::Fitness( agent *c )
+{
+	if( c->Age() >= (fSmiteAgeFrac * c->MaxAge()) )
+	{
+		fAverageFitness += c->HeuristicFitness();	// will divide by fTotalHeuristicFitness later
+		fNumAverageFitness++;
+	}
+	if( (fCurrentFittestCount < MAXFITNESSITEMS) || (c->HeuristicFitness() > fCurrentMaxFitness[fCurrentFittestCount-1]) )
+	{
+		if( (fCurrentFittestCount == 0) || ((c->HeuristicFitness() <= fCurrentMaxFitness[fCurrentFittestCount-1]) && (fCurrentFittestCount < MAXFITNESSITEMS)) )	// just append
+		{
+			fCurrentMaxFitness[fCurrentFittestCount] = c->HeuristicFitness();
+			fCurrentFittestAgent[fCurrentFittestCount] = c;
+			fCurrentFittestCount++;
+		#if DebugMaxFitness
+			printf( "appended agent %08lx (%4ld) to fittest list at position %d with fitness %g, count = %d\n", (ulong) c, c->Number(), fCurrentFittestCount-1, c->HeuristicFitness(), fCurrentFittestCount );
+		#endif
+		}
+		else	// must insert
+		{
+			int i;
+			
+			for( i = 0; i <  fCurrentFittestCount ; i++ )
+			{
+				if( c->HeuristicFitness() > fCurrentMaxFitness[i] )
+					break;
+			}
+			
+			for( int j = min( fCurrentFittestCount, MAXFITNESSITEMS-1 ); j > i; j-- )
+			{
+				fCurrentMaxFitness[j] = fCurrentMaxFitness[j-1];
+				fCurrentFittestAgent[j] = fCurrentFittestAgent[j-1];
+			}
+			
+			fCurrentMaxFitness[i] = c->HeuristicFitness();
+			fCurrentFittestAgent[i] = c;
+			if( fCurrentFittestCount < MAXFITNESSITEMS )
+				fCurrentFittestCount++;
+		#if DebugMaxFitness
+			printf( "inserted agent %08lx (%4ld) into fittest list at position %ld with fitness %g, count = %d\n", (ulong) c, c->Number(), i, c->HeuristicFitness(), fCurrentFittestCount );
+		#endif
+		}
+	}
+		
+	debugcheck( "after current fitness lists maintained" );
+}
+
+//---------------------------------------------------------------------------
+// TSimulation::CreateAgents
+//---------------------------------------------------------------------------
+void TSimulation::CreateAgents( void )
+{
 	long maxToCreate = fMaxNumAgents - (long)(objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE));
     if (maxToCreate > 0)
     {
@@ -3477,6 +3792,7 @@ void TSimulation::Interact()
 		// so we "load balance" creations, favoring the domains that need agents the most, by
 		// not creating agents in domains that need them the least.
 		long numToCreate = 0;
+		short id;
 		for (id = 0; id < fNumDomains; id++)
 		{
 			fDomains[id].numToCreate = max(0L, fDomains[id].minNumAgents - fDomains[id].numAgents);
@@ -3587,17 +3903,14 @@ void TSimulation::Interact()
                 fStage.AddObject(newAgent);
                 fDomains[id].numAgents++;
 				objectxsortedlist::gXSortedObjects.add(newAgent);
-				newlifes++;
-                //newAgents.add(newAgent); // add it to the full list later; the e->listLink that gets auto stored here must be replaced with one from full list below
+				fNewLifes++;
 				fNeuronGroupCountStats.add( newAgent->GetBrain()->NumNeuronGroups() );
 				
 				Birth( newAgent, LifeSpan::BR_CREATE );
             }
         }
 
-	#ifdef DEBUGCHECK
-        debugcheck("after domain creations in interact");
-	#endif // DEBUGCHECK
+        debugcheck( "after agent creations for domains" );
 
 		// then deal with global creation if necessary
 
@@ -3612,7 +3925,7 @@ void TSimulation::Interact()
             fNumBornSinceCreated = 0;
             fLastCreated = fStep;
 
-            newAgent = agent::getfreeagent(this, &fStage);
+            agent* newAgent = agent::getfreeagent(this, &fStage);
             Q_CHECK_PTR(newAgent);
 
             if( fNumberFit && (fNumberDied >= fNumberFit) )
@@ -3672,32 +3985,24 @@ void TSimulation::Interact()
             fDomains[id].numAgents++;
             fStage.AddObject(newAgent);
 	    	objectxsortedlist::gXSortedObjects.add(newAgent); // add new agent to list of all objejcts; the newAgent->listLink that gets auto stored here should be valid immediately
-	    	newlifes++;
+	    	fNewLifes++;
             //newAgents.add(newAgent); // add it to the full list later; the e->listLink that gets auto stored here must be replaced with one from full list below
 			fNeuronGroupCountStats.add( newAgent->GetBrain()->NumNeuronGroups() );
 
 			Birth( newAgent, LifeSpan::BR_CREATE );
         }
 
-	#ifdef DEBUGCHECK
-        debugcheck("after global creations in interact");
-	#endif // DEBUGCHECK
+        debugcheck( "after global agent creations" );
     }
 
-#ifdef DEBUGCHECK
-    debugcheck("after newagents added to agent::gXSortedAgents in interact");
-#endif // DEBUGCHECK
+    debugcheck( "after all agent creations" );
+}
 
-    if ((newlifes || fNewDeaths) && fMonitorGeneSeparation)
-    {
-        if (fRecordGeneSeparation)
-            RecordGeneSeparation();
-
-		if (fChartGeneSeparation && fGeneSeparationWindow != NULL)
-			fGeneSeparationWindow->AddPoint(fGeneSepVals, fNumGeneSepVals);
-    }
-
-	// finally, keep the world's food supply going...
+//---------------------------------------------------------------------------
+// TSimulation::MaintainFood
+//---------------------------------------------------------------------------
+void TSimulation::MaintainFood()
+{
 	// Go through each of the food patches and bring them up to minFoodCount size
 	// and create a new piece based on the foodRate probability
 	if( (long)objectxsortedlist::gXSortedObjects.getCount(FOODTYPE) < fMaxFoodCount ) 
@@ -3868,109 +4173,8 @@ void TSimulation::Interact()
 		}
 		fprintf( fFoodPatchStatsFile, "\n");
 	}
-}
 
-//---------------------------------------------------------------------------
-// TSimulation::Fight
-//---------------------------------------------------------------------------
-void TSimulation::Fight( agent *c,
-						 agent *d,
-						 ContactEntry *contactEntry,
-						 bool *cDied,
-						 bool *dDied)
-{
-	float cpower;
-	float dpower;
-
-	if ( (c->Fight() > fFightThreshold) )
-		cpower = c->Strength() * c->SizeAdvantage() * c->Fight() * (c->Energy()/c->MaxEnergy());
-	else
-		cpower = 0.0;
-
-	if ( (d->Fight() > fFightThreshold) )
-		dpower = d->Strength() * d->SizeAdvantage() * d->Fight() * (d->Energy()/d->MaxEnergy());
-	else
-		dpower = 0.0;
-
-	if ( (cpower > 0.0) || (dpower > 0.0) )
-	{
-		ttPrint( "age %ld: agents # %ld & %ld are fighting\n", fStep, c->Number(), d->Number() );
-
-		if(cpower > 0.0)
-			contactEntry->fight( c );
-		if(dpower > 0.0)
-			contactEntry->fight( d );
-
-		// somebody wants to fight
-		fNumberFights++;
-		c->damage(dpower * fPower2Energy);
-		d->damage(cpower * fPower2Energy);
-		if( !fLockStepWithBirthsDeathsLog )
-		{
-			// If we're not running in LockStep mode, allow natural deaths
-			if (d->Energy() <= 0.0)
-			{
-				//cout << "before deaths2 "; agent::gXSortedAgents.list();	//dbg
-				Death( d, LifeSpan::DR_NATURAL );
-				fNumberDiedFight++;
-				//cout << "after deaths2 "; agent::gXSortedAgents.list();	//dbg
-
-				*dDied = true;
-			}
-			if (c->Energy() <= 0.0)
-			{
-				objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point back to c
-				Death( c, LifeSpan::DR_NATURAL );
-				fNumberDiedFight++;
-
-				// note: this leaves list pointing to item before c, and markedAgent set to previous agent
-				//objectxsortedlist::gXSortedObjects.setMarkPrevious( AGENTTYPE );	// if previous object was a agent, this would step one too far back, I think - lsy
-				//cout << "after deaths3 "; agent::gXSortedAgents.list();	//dbg
-				*cDied = true;
-			}
-		}
-	}
-}
-
-//---------------------------------------------------------------------------
-// TSimulation::Give
-//---------------------------------------------------------------------------
-void TSimulation::Give( agent *x,
-						agent *y,
-						ContactEntry *contactEntry,
-						bool *xDied,
-						bool toMarkOnDeath )
-{
-	if( (x->Give() > fGiveThreshold) )
-	{
-		float energy;
-
-		energy = x->Energy() * x->Give() * fGiveFraction;
-
-		if( energy > 0 )
-		{
-			contactEntry->give( x );
-
-			float result = y->receive( x, &energy );
-			fFoodEnergyOut += result;
-
-			if( !fLockStepWithBirthsDeathsLog )
-			{
-				if (x->Energy() <= 0.0)
-				{
-					if( toMarkOnDeath )
-						objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point back to x
-					Death( x, LifeSpan::DR_NATURAL );
-#if GIVE_TODO
-					fNumberDiedGive++;
-#endif
-
-					*xDied = true;
-				}
-			}
-		}
-
-	}
+    debugcheck( "after growing food and maintaining food patch stats" );
 }
 
 //---------------------------------------------------------------------------
@@ -4200,11 +4404,11 @@ void TSimulation::Birth( agent* a,
 }
 
 //---------------------------------------------------------------------------
-// TSimulation::Death
+// TSimulation::Kill
 //
 // Perform all actions needed to agent before list removal and deletion
 //---------------------------------------------------------------------------
-void TSimulation::Death( agent* c,
+void TSimulation::Kill( agent* c,
 						 LifeSpan::DeathReason reason )
 {
 	// ---
@@ -4363,7 +4567,7 @@ void TSimulation::Death( agent* c,
 	// First on a domain-by-domain basis...
     int newfit = 0;
     FitStruct* saveFit;
-	float cFitness = Fitness( c );
+	float cFitness = AgentFitness( c );
     if( (fDomains[id].numdied <= fNumberFit) || (cFitness > fDomains[id].fittest[fNumberFit-1]->fitness) )
     {
 		int limit = fDomains[id].numdied < fNumberFit ? fDomains[id].numdied : fNumberFit;
@@ -4692,7 +4896,7 @@ void TSimulation::Death( agent* c,
 	objectxsortedlist::gXSortedObjects.removeObjectWithLink( (gobject*) c );
 
 	
-	// Note: For the sake of computational efficiency, I used to never delete a agent,
+	// Note: For the sake of computational efficiency, I used to never delete an agent,
 	// but "reinit" and reuse them as new agents were born or created.  But Gene made
 	// agents be allocated afresh on birth or creation, so we now need to delete the
 	// old ones here when they die.  Remove this if I ever get a chance to go back to the
@@ -4702,15 +4906,15 @@ void TSimulation::Death( agent* c,
 
 
 //-------------------------------------------------------------------------------------------
-// TSimulation::Fitness
+// TSimulation::AgentFitness
 //-------------------------------------------------------------------------------------------
-float TSimulation::Fitness( agent* c )
+float TSimulation::AgentFitness( agent* c )
 {
 	float fitness = 0.0;
 	
 	if( c->Alive() )
 	{
-		cerr << "Error: Simulation's Fitness(agent) function called while agent is still alive" nl;
+		cerr << "Error: Simulation's AgentFitness(agent) function called while agent is still alive" nl;
 		exit(1);
 	}
 	
@@ -4927,15 +5131,17 @@ void TSimulation::ReadWorldFile(const char* filename)
 
 	if( version >= 38 )
 	{
+		// For earlier versions these will be initialized in initworld()
 		__PROP( "enableSpeedFeedback", genome::gEnableSpeedFeedback );
 		__PROP( "enableGive", genome::gEnableGive );
 	}
-	else
+	
+	if( version >= 39 )
 	{
-		genome::gEnableSpeedFeedback = false;
-		genome::gEnableGive = false;
+		__PROP( "enableCarry", genome::gEnableCarry );
+		__PROP( "maxCarries", agent::gMaxCarries );
 	}
-
+	
     int ignoreShort1, ignoreShort2, ignoreShort3, ignoreShort4;
     in >> ignoreShort1; in >> label;
     cout << "minintneurons" ses ignoreShort1 nl;
@@ -4979,9 +5185,9 @@ void TSimulation::ReadWorldFile(const char* filename)
     in >> genome::gMaxStrength; in >> label;
     cout << "maxstrength" ses genome::gMaxStrength nl;
     in >> agent::gMinAgentSize; in >> label;
-    cout << "mincsize" ses agent::gMinAgentSize nl;
+    cout << "minAgentSize" ses agent::gMinAgentSize nl;
     in >> agent::gMaxAgentSize; in >> label;
-    cout << "maxcsize" ses agent::gMaxAgentSize nl;
+    cout << "maxAgentSize" ses agent::gMaxAgentSize nl;
     in >> agent::gMinMaxEnergy; in >> label;
     cout << "minmaxenergy" ses agent::gMinMaxEnergy nl;
     in >> agent::gMaxMaxEnergy; in >> label;
@@ -5086,6 +5292,18 @@ void TSimulation::ReadWorldFile(const char* filename)
     cout << "light2energy" ses agent::gLight2Energy nl;
     in >> agent::gFocus2Energy; in >> label;
     cout << "focus2energy" ses agent::gFocus2Energy nl;
+
+	if( version >= 39 )
+	{
+		// For earlier versions these will be initialized in initworld()
+		__PROP( "pickup2energy", agent::gPickup2Energy );
+		__PROP( "drop2energy", agent::gDrop2Energy );
+		__PROP( "carryAgent2energy", agent::gCarryAgent2Energy );
+		__PROP( "carryAgentSize2energy", agent::gCarryAgentSize2Energy );
+		__PROP( "carryFood2energy", food::gCarryFood2Energy );
+		__PROP( "carryBrick2energy", brick::gCarryBrick2Energy );
+	}
+	
     in >> brain::gNeuralValues.maxsynapse2energy; in >> label;
     cout << "maxsynapse2energy" ses brain::gNeuralValues.maxsynapse2energy nl;
     in >> agent::gFixedEnergyDrain; in >> label;
@@ -5112,6 +5330,11 @@ void TSimulation::ReadWorldFile(const char* filename)
 	{
 		PROP(GiveThreshold);
 		PROP(GiveFraction);
+	}
+	if( version >= 39 )
+	{
+		PROP(PickupThreshold);
+		PROP(DropThreshold);
 	}
     in >> genome::gMiscBias; in >> label;
     cout << "miscbias" ses genome::gMiscBias nl;
@@ -5799,6 +6022,15 @@ void TSimulation::ReadWorldFile(const char* filename)
     in >> brain::gNumPrebirthCycles; in >> label;
     cout << "numprebirthcycles" ses brain::gNumPrebirthCycles nl;
 
+	if( version >= 39 )
+	{
+		// For earlier versions these will be initialized in initworld()
+		__PROP( "seedPickupBias", genome::gSeedPickupBias );
+		__PROP( "seedDropBias", genome::gSeedDropBias );
+		__PROP( "seedPickupExcitation", genome::gSeedPickupExcitation );
+		__PROP( "seedDropExcitation", genome::gSeedDropExcitation );
+	}
+
     InitNeuralValues();
 
     cout << "maxneurgroups" ses brain::gNeuralValues.maxneurgroups nl;
@@ -6096,6 +6328,12 @@ void TSimulation::ReadWorldFile(const char* filename)
 		agent::gYaw2Energy = 0.0;
 		agent::gLight2Energy = 0.0;
 		agent::gFocus2Energy = 0.0;
+		agent::gPickup2Energy = 0.0;
+		agent::gDrop2Energy = 0.0;
+		agent::gCarryAgent2Energy = 0.0;
+		agent::gCarryAgentSize2Energy = 0.0;
+		food::gCarryFood2Energy = 0.0;
+		brick::gCarryBrick2Energy = 0.0;
 		agent::gFixedEnergyDrain = 0.0;
 
 		agent::gNumDepletionSteps = 0;
@@ -6114,6 +6352,12 @@ void TSimulation::ReadWorldFile(const char* filename)
 		cout << "  Yaw2Energy" ses agent::gYaw2Energy nl;
 		cout << "  Light2Energy" ses agent::gLight2Energy nl;
 		cout << "  Focus2Energy" ses agent::gFocus2Energy nl;
+		cout << "  Pickup2Energy" ses agent::gPickup2Energy nl;
+		cout << "  Drop2Energy" ses agent::gDrop2Energy nl;
+		cout << "  CarryAgent2Energy" ses agent::gCarryAgent2Energy nl;
+		cout << "  CarryAgentSize2Energy" ses agent::gCarryAgentSize2Energy nl;
+		cout << "  CarryFood2Energy" ses food::gCarryFood2Energy nl;
+		cout << "  CarryBrick2Energy" ses brick::gCarryBrick2Energy nl;
 		cout << "  FixedEnergyDrain" ses agent::gFixedEnergyDrain nl;
 		cout << "  NumDepletionSteps" ses agent::gNumDepletionSteps nl;
 		cout << "  .MaxPopulationPenaltyFraction" ses agent::gMaxPopulationPenaltyFraction nl;
@@ -6372,12 +6616,31 @@ short TSimulation::WhichDomain(float x, float z, short d)
 //
 //	No verification is done. Assume caller has verified domains.
 //---------------------------------------------------------------------------
-void TSimulation::SwitchDomain(short newDomain, short oldDomain)
+void TSimulation::SwitchDomain(short newDomain, short oldDomain, int objectType)
 {
-	Q_ASSERT(newDomain != oldDomain);
+	if( newDomain == oldDomain )
+		return;
+	
+	switch( objectType )
+	{
+		case AGENTTYPE:
+			fDomains[newDomain].numAgents++;
+			fDomains[oldDomain].numAgents--;
+			break;
 		
-	fDomains[newDomain].numAgents++;
-	fDomains[oldDomain].numAgents--;
+		case FOODTYPE:
+			fDomains[newDomain].foodCount++;
+			fDomains[oldDomain].foodCount--;
+			break;
+		
+		case BRICKTYPE:
+			// Domains do not currently keep track of brick counts
+			break;
+		
+		default:
+			error( 2, "unknown object type %d", objectType, "" );
+			break; 
+	}
 }
 
 

@@ -106,7 +106,7 @@ class Domain
 	float probabilityOfMutatingSeeds;
     short ifit;
     short jfit;
-    FitStruct** fittest;	// based on complete fitness, however it is being calculated in Fitness(c)
+    FitStruct** fittest;	// based on complete fitness, however it is being calculated in AgentFitness(c)
 	int fNumLeastFit;
 	int fMaxNumLeastFit;
 	int fNumSmited;
@@ -296,7 +296,7 @@ public:
 	void Pause();
 	
 	short WhichDomain( float x, float z, short d );
-	void SwitchDomain( short newDomain, short oldDomain );
+	void SwitchDomain( short newDomain, short oldDomain, int objectType );
 	
 	gcamera& GetCamera();
 	gcamera& GetOverheadCamera();
@@ -420,7 +420,13 @@ private:
 	void PickParentsUsingTournament(int numInPool, int* iParent, int* jParent);
 	void UpdateAgents();
 	void UpdateAgents_StaticTimestepGeometry();
+
 	void Interact();
+	void DeathAndStats();
+	void MateLockstep();
+	void Mate( agent *c,
+			   agent *d,
+			   ContactEntry *contactEntry );
 	void Fight( agent *c,
 				agent *d,
 				ContactEntry *contactEntry,
@@ -431,6 +437,13 @@ private:
 			   ContactEntry *contactEntry,
 			   bool *xDied,
 			   bool toMarkOnDeath );
+	void Eat( agent *c );
+	void Carry( agent *c );
+	void Pickup( agent *c );
+	void Drop( agent *c );
+	void Fitness( agent *c );
+	void CreateAgents();
+	void MaintainFood();
 	
 	void RecordGeneSeparation();
 	void CalculateGeneSeparation(agent* ci);
@@ -448,10 +461,10 @@ private:
 				LifeSpan::BirthReason reason,
 				agent* a_parent1 = NULL,
 				agent* a_parent2 = NULL );
-	void Death( agent* inAgent,
-				LifeSpan::DeathReason reason );
+	void Kill( agent* inAgent,
+			   LifeSpan::DeathReason reason );
 
-	float Fitness( agent* c );
+	float AgentFitness( agent* c );
 	
 	void ReadWorldFile(const char* filename);	
 
@@ -512,6 +525,7 @@ private:
 	float fComplexityFitnessWeight;
 	float fHeuristicFitnessWeight;
 
+	long fNewLifes;
 	long fNewDeaths;
 	
 	Color fGroundColor;
@@ -527,9 +541,9 @@ private:
 	float fCurrentMaxFitness[MAXFITNESSITEMS];	// based on heuristic fitness
 	int fCurrentFittestCount;
 	int fNumberFit;
-	FitStruct** fFittest;	// based on the complete fitness, however it is being calculated in Fitness(c)
+	FitStruct** fFittest;	// based on the complete fitness, however it is being calculated in AgentFitness(c)
 	int fNumberRecentFit;
-	FitStruct** fRecentFittest;	// based on the complete fitness, however it is being calculated in Fitness(c)
+	FitStruct** fRecentFittest;	// based on the complete fitness, however it is being calculated in AgentFitness(c)
 	long fFitness1Frequency;
 	long fFitness2Frequency;
 	short fFitI;
@@ -543,6 +557,7 @@ private:
 	float fMaxFitness;
 	ulong fNumAverageFitness;
 	float fAverageFitness;
+	float fPrevAvgFitness;
 	float fTotalHeuristicFitness;
 	float fMateFitnessParameter;
 	float fMoveFitnessParameter;
@@ -561,6 +576,8 @@ private:
 	float fFightThreshold;
 	float fGiveThreshold;
 	float fGiveFraction;
+	float fPickupThreshold;
+	float fDropThreshold;
 	
 	long fNumberBorn;
 	long fNumberBornVirtual;
