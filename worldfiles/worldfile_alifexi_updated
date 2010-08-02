@@ -1,4 +1,4 @@
-38		version
+39		version
 
 0		LockStepWithBirthsDeathsLog
 
@@ -47,7 +47,9 @@
 
 0		enableSpeedFeedback
 0		enableGive
+0		enableCarry
 
+3		maxCarries_3
 0		minintneurons_unused
 0		maxintneurons_unused
 1		minvispixels
@@ -92,16 +94,25 @@ L		noseColor_L=Light_Neuron|<float_literal>=fixed
 0.1		yaw2energy
 0.01	light2energy
 0.001	focus2energy
+0.5		pickup2energy
+0.001	drop2energy
+0.05	carryAgent2energy
+0.05	carryAgentSize2energy
+0.01	carryFood2energy
+0.01	carryBrick2energy
 0.0		maxsynapse2energy
 0.05	fixedenergydrain
 0.99	decayrate
 0.0		agenthealingrate
 
-0.2		eatthreshold
-0.5		matethreshold
-0.2		fightthreshold
-0.3		givethreshold
-0.9		givefraction
+0.2		eatThreshold
+0.5		mateThreshold
+0.2		fightThreshold
+0.3		giveThreshold
+0.9		giveFraction
+0.5		pickupThreshold
+0.5		dropThreshold
+
 1.0		miscbias
 2.0		miscinvslope
 
@@ -128,7 +139,7 @@ L		noseColor_L=Light_Neuron|<float_literal>=fixed
 0.09	camrotationrate_0.09
 0.0		camanglestart
 90.		camfov
-1		moncrit
+1		monAgent
 8		monwidth_not_used
 8		monheight_not_used
 1		monstride
@@ -223,6 +234,11 @@ F		neuronModel_F=FiringRate|S=Spiking
 1.0		maxtopologicaldistortion
 0.0		maxneur2energy
 25		numprebirthcycles
+
+0.0		seedPickupBias_0.0
+0.0		seedDropBias_0.0
+0.0		seedPickupExcitation_0.0
+0.0		seedDropExcitation_0.0
 
 1		overheadrank
 1		tracking
