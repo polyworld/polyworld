@@ -254,9 +254,9 @@ O		smiteMode_R=random|L=leastfit|O=off
 
 
 1		recordBirthsDeaths
-1		recordPosition
-1		recordContacts
-1		recordCollisions
+0		recordPosition
+0		recordContacts
+0		recordCollisions
 
 1		brainAnatomyRecordAll
 1		brainFunctionRecordAll
@@ -273,8 +273,8 @@ O		smiteMode_R=random|L=leastfit|O=off
 P		complexityType_P=processing|A=all|I=input|B=behavior|D=processing-input|Z=ZeroMaxVelocityHack
 0.0		complexityFitnessWeight_0.0
 0.0		heuristicFitnessWeight_0.0
-1		recordGenomes
-1		recordSeparations
+0		recordGenomes
+0		recordSeparations
 1		recordAdamiComplexity
 200		AdamiComplexityRecordFrequency
 
