@@ -8,6 +8,7 @@
 #include <stdlib.h>
 
 // Local
+#include "globals.h"
 #include "gmisc.h"
 #include "misc.h"
 
@@ -328,5 +329,16 @@ void gobject::Dropped( void )
 	fPosition[0] -= fCarryOffset[0];
 	fPosition[1] -= fCarryOffset[1];
 	fPosition[2] -= fCarryOffset[2];
+	
+	if( fPosition[0] < 0.0 )
+		fPosition[0] = 0.0;
+	else if( fPosition[0] > globals::worldsize )
+		fPosition[0] = globals::worldsize;
+
+	if( fPosition[2] > 0.0 )
+		fPosition[2] = 0.0;
+	else if( fPosition[2] < -globals::worldsize )
+		fPosition[2] = -globals::worldsize;
+	
 }
 
