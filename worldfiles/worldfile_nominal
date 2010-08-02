@@ -45,8 +45,8 @@
 400.0	size2energy
 100.0	eat2consume
 
-0		enableSpeedFeedback
-0		enableGive
+1		enableSpeedFeedback
+1		enableGive
 1		enableCarry
 
 3		maxCarries_3
