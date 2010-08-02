@@ -10,7 +10,7 @@
 0		wraparound
 1		vision
 1		showvision
-1		staticTimeStepGeometry
+1		staticTimestepGeometry
 22		minwin
 1.0		maxvel
 
