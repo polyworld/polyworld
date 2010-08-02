@@ -12,5 +12,6 @@ time ./Polyworld
 mv ./run $RUN
 
 cd scripts
-time ./MakeRecentDirectorywithEntirePopulation.sh ../$RUN
-time ./CalcComplexityOverRecent -C P Recent ../$RUN
+time ./MakeRecent ../$RUN
+time ./CalcComplexity -C P Recent ../$RUN
+
