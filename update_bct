@@ -3,6 +3,7 @@ cd ~/src/bct-cpp
 svn update
 make
 sudo make install
+make swig
 cp bct.py ../polyworld/scripts/
 cp _bct.so ../polyworld/scripts/
 cd ~/src/polyworld
