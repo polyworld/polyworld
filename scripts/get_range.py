@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 # get_range.py
 # Gets and prints the min, max, and mean of the specified values

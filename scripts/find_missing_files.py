@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 # Finds any missing anatomy files (agents for which a function file exists, but not an anatomy file)
 # This is more complicated that it needs to be because it is based directly on CalcMetricsOverRecent

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 # CalcSWB.py
 # Calculates Small World Bias, a driven vs. passive version of

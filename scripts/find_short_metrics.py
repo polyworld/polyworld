@@ -1,4 +1,4 @@
-#! /usr/bin/python
+#! /usr/bin/env python
 
 # find_short_metrics
 # Finds the metrics that were calculated before the missing anatomy files

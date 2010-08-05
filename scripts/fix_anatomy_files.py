@@ -1,4 +1,4 @@
-#! /usr/bin/python
+#! /usr/bin/env python
 
 # fix_anatomy_files
 # Copies (and appropriately renames) anatomy files that are missing from the

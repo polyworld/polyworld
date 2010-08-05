@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 from numpy import array, matrix, exp, pi, sqrt, mean, round, random, ones
 import numpy
 #from pprint import pprint

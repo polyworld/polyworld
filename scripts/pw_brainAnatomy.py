@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 from pprint import pprint
 from numpy import array, matrix, zeros
 import os.path

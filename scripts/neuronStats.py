@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 # Calculates neuron and synapse count min, max, and average
 # Invoke this from within a "Recent" or "bestRecent" or "bestSoFar" directory

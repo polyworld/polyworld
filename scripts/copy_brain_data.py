@@ -1,4 +1,4 @@
-#! /usr/bin/python
+#! /usr/bin/env python
 
 # copy_brain_data
 # Copies the following files (if present) from one or more Polyworld "run" directories:

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 # MotifLengths - Calculates and displays characteristic path length,
 #				 normalized shortest path length, 1 - efficiency, and

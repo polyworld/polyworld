@@ -1,4 +1,4 @@
-#! /usr/bin/python
+#! /usr/bin/env python
 
 # rename_metrics
 # Renames the following metrics and files (if present) from one or more Polyworld "run" directories:

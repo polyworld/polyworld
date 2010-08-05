@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 import os.path
 import pw_brainAnatomy, pw_brainFunction
 from numpy import sum
