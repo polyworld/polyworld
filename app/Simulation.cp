@@ -14,7 +14,7 @@
 #define MinDebugStep 0
 #define MaxDebugStep INT_MAX
 
-#define CurrentWorldfileVersion 39
+#define CurrentWorldfileVersion 40
 
 #define TournamentSelection 1
 
@@ -5328,6 +5328,7 @@ void TSimulation::ReadWorldFile(const char* filename)
     cout << "fightthreshold" ses fFightThreshold nl;
 	if( version >= 38 )
 	{
+
 		PROP(GiveThreshold);
 		PROP(GiveFraction);
 	}
@@ -6021,6 +6022,19 @@ void TSimulation::ReadWorldFile(const char* filename)
 
     in >> brain::gNumPrebirthCycles; in >> label;
     cout << "numprebirthcycles" ses brain::gNumPrebirthCycles nl;
+
+	if( version >= 40 )
+	{
+		__PROP( "seedFightBias", genome::gSeedFightBias );
+		__PROP( "seedFightExcitation", genome::gSeedFightExcitation );
+		__PROP( "seedGiveBias", genome::gSeedGiveBias );
+	}
+	else
+	{
+		genome::gSeedFightBias = 0.5;
+		genome::gSeedFightExcitation = 1.0;
+		genome::gSeedGiveBias = 0.0;
+	}
 
 	if( version >= 39 )
 	{

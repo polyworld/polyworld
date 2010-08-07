@@ -29,8 +29,14 @@ namespace brain
 
 namespace genome
 {
+	float gSeedFightBias;
+	float gSeedFightExcitation;
+
 	bool gEnableSpeedFeedback;
+
 	bool gEnableGive;
+	float gSeedGiveBias;
+
 	bool gEnableCarry;
 	float gSeedPickupBias;
 	float gSeedDropBias;

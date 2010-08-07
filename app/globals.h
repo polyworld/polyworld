@@ -109,8 +109,13 @@ namespace genome
     // External globals
     extern long gNumBytes;
 
+	extern float gSeedFightBias;
+	extern float gSeedFightExcitation;
+
 	extern bool gEnableSpeedFeedback;
 	extern bool gEnableGive;
+	extern float gSeedGiveBias;
+
 	extern bool gEnableCarry;
 	extern float gSeedPickupBias;
 	extern float gSeedDropBias;

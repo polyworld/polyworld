@@ -250,6 +250,11 @@ void GenomeUtil::seed( Genome *g )
 	SEED( BiasLearningRate, 0 );
 
 	SEED_GROUP( Bias, Mate, 1.0 );
+	SEED_GROUP( Bias, Fight, gSeedFightBias );
+	if( genome::gEnableGive )
+	{
+		SEED_GROUP( Bias, Give, gSeedGiveBias );
+	}
 	if( genome::gEnableCarry )
 	{
 		SEED_GROUP( Bias, Pickup, genome::gSeedPickupBias );
@@ -260,7 +265,7 @@ void GenomeUtil::seed( Genome *g )
 	SEED( LearningRate, 0 );
 	SEED( TopologicalDistortion, 0 );
 
-	SEED_SYNAPSE( ConnectionDensity,	 EE, Red,   Fight,	1.0 );
+	SEED_SYNAPSE( ConnectionDensity,	 EE, Red,   Fight,	genome::gSeedFightExcitation );
 	SEED_SYNAPSE( ConnectionDensity,	 EE, Green, Eat,	1.0 );
 	SEED_SYNAPSE( ConnectionDensity,	 EE, Blue,  Mate,	1.0 );
 	SEED_SYNAPSE( ConnectionDensity,	 IE, Red,   Speed,	0.5 );
@@ -278,8 +283,9 @@ void GenomeUtil::seed( Genome *g )
 	SEED_SYNAPSE( ConnectionDensity,	 EE, Blue,  Yaw,	0.5 );
 	SEED_SYNAPSE( ConnectionDensity,	 IE, Blue,  Yaw,	0.5 );
 	SEED_SYNAPSE( TopologicalDistortion, IE, Blue,  Yaw,	1.0 );
-	SEED_SYNAPSE( ConnectionDensity,	 IE, Eat,   Fight,	1.0 );
-	SEED_SYNAPSE( ConnectionDensity,	 IE, Mate,	Fight,	1.0 );
+	SEED_SYNAPSE( ConnectionDensity,	 IE, Eat,   Fight,	genome::gSeedFightExcitation );
+	SEED_SYNAPSE( ConnectionDensity,	 IE, Mate,	Fight,	genome::gSeedFightExcitation );
+	if( genome::gEnableCarry )
 	{
 		SEED_SYNAPSE( ConnectionDensity,	 EE, Red,	Pickup,	genome::gSeedPickupExcitation );
 		SEED_SYNAPSE( ConnectionDensity,	 EE, Green,	Pickup,	genome::gSeedPickupExcitation );
