@@ -1,4 +1,4 @@
-39		version
+40		version
 
 0		LockStepWithBirthsDeathsLog
 
@@ -368,6 +368,9 @@ F		neuronModel_F=FiringRate|S=Spiking
 0.1		maxneur2energy
 25		numprebirthcycles
 
+0.5		seedFightBias_0.5
+1.0		seedFightExcitation_1.0
+0.0		seedGiveBias_0.0
 0.0		seedPickupBias_0.0
 0.0		seedDropBias_0.0
 0.0		seedPickupExcitation_0.0
