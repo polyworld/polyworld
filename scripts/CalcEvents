@@ -3,6 +3,7 @@
 import os
 import sys
 
+import algorithms
 import common_functions
 from common_functions import err, warn
 import common_genome
@@ -16,7 +17,7 @@ import iterators
 ###
 ####################################################################################
 def main():
-    epoch_len = 10000
+    epoch_len = 5000
     nbins = 8
     nbins_age = 20
 
@@ -35,12 +36,16 @@ def main():
         subpath_log = 'events/contacts.log'
     elif type == 'b':
         subpath_log = 'events/contacts_bins.txt'
+    elif type == 'n':
+        subpath_log = 'events/contacts_bias_2bin.txt'
     elif type == 'm':
         subpath_log = 'events/contacts_bias.txt'
+    elif type == 's':
+        subpath_log = 'events/contacts_bias_2bin.txt'
     else:
         show_usage("invalid type")
 
-    if type == 'm':
+    if type == 'm' or type == 's':
         for group_path in arg_paths:
 
             try:
@@ -49,16 +54,23 @@ def main():
             except:
                 show_usage(str(sys.exc_info()[1]))
 
-            def __meta(log):
-                log_paths = map( lambda x: os.path.join(x, 'events/contacts_'+log+'.txt'),
-                                 run_paths )
-                path_meta = os.path.join(group_path, 'contacts_meta_'+log+'.txt')
-                calc_meta( path_meta, log_paths )
+            if type == 'm':
+                def __meta(log):
+                    log_paths = map( lambda x: os.path.join(x, 'events/contacts_'+log+'.txt'),
+                                     run_paths )
+                    path_meta = os.path.join(group_path, 'contacts_meta_'+log+'.txt')
+                    calc_meta( path_meta, log_paths )
 
-            __meta('bias')
-            __meta('bins')
-            __meta('bias_2bin')
-            __meta('bins_2bin')
+                __meta('bias')
+                __meta('bins')
+                __meta('bias_2bin')
+                __meta('bins_2bin')
+                __meta('nearfar')
+            else:
+                log_paths = map( lambda x: os.path.join(x, 'events/contacts_bias_2bin.txt'),
+                                 run_paths )
+                calc_stddev( group_path, log_paths )
+                
         
     else:
         try:
@@ -88,6 +100,9 @@ def main():
 
                 calc_bias( path,
                            os.path.join(run, 'events/contacts_bias.txt') )
+            elif type == 'n':
+                calc_nearfar( path,
+                              os.path.join(run, 'events/contacts_nearfar.txt') )
             else:
                 calclog( path,
                          epoch_len,
@@ -565,8 +580,11 @@ def calc_bias( path_log,
             for colname in table_x.colnames[1:]:
                 val_x = row_x[colname]
                 val_y = row_y[colname]
-                
-                row_result.set( colname, float(val_x) / float(val_y) )
+
+                if val_y == 0:
+                    row_result.set( colname, float('inf') )
+                else:
+                    row_result.set( colname, float(val_x) / float(val_y) )
         
         return table_result
 
@@ -659,6 +677,64 @@ def calc_2bin( path_in, path_out ):
 
     datalib.write( path_out, tables_out )
     
+####################################################################################
+###
+### function calc_stddev()
+###
+####################################################################################
+def calc_stddev( group_path, log_paths ):
+    print group_path
+    tables = datalib.parse_all( log_paths, tablenames = 'f/,', keycolname = 'T' )
+
+    for t in range(1,50002,10000):
+        for bin in ['bin0', 'bin1']:
+            values = []
+            for table in tables.values():
+                table = table['f/,']
+                values.append(table[t][bin])
+
+            mean, stddev, stderr = algorithms.sample_mean( values )
+
+            print t, bin, 'mean =', mean, 'stddev =', stddev, ' stderr =', stderr
+    
+    
+
+####################################################################################
+###
+### function calc_nearfar()
+###
+####################################################################################
+def calc_nearfar( path_in,
+                  path_out ):
+    tables_in = datalib.parse( path_in )
+    tables_out = []
+
+    for table_in in tables_in.values():
+        assert( table_in.colnames[0] == 'T' )
+
+        assert( len(table_in.colnames) == 3 )
+        assert( table_in.coltypes[1] == 'float' )
+
+        colnames = ['T', 'ratio']
+        coltypes = ['int', 'float']
+
+        table_out = datalib.Table( table_in.name,
+                                   colnames,
+                                   coltypes )
+
+        for row_in in table_in.rows():
+            row_out = table_out.createRow()
+
+            row_out['T'] = row_in['T']
+
+            bin0 = row_in['bin0']
+            bin1 = row_in['bin1']
+            row_out['ratio'] = bin0 / bin1
+
+        tables_out.append( table_out )
+
+    datalib.write( path_out, tables_out )
+                                  
 ####################################################################################
 ###
 ### function show_usage()
