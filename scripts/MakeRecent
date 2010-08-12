@@ -193,7 +193,7 @@ echo "Finished checking for bins that have too few critters."
 ## Now to make the seed critters.
 
 echo "Making the Seeds..."
-./MakeSeedsRecent.sh "${directory}"
+`dirname "$0"`/MakeSeedsRecent.sh "${directory}"
 
 echo "Checking for invalid brainFunction files in brain/bestRecent..."
 Invalids=$(grep -R -c 'maxBias' ${directory}/brain/bestRecent/ | grep -v 'brainAnatomy' | grep -v ':0$')
