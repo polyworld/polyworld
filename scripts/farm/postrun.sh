@@ -2,8 +2,6 @@
 
 ./scripts/CalcEvents c run
 
-cd scripts
-./MakeRecentDirectorywithEntirePopulation.sh ../run
-./CalcComplexityOverRecent Recent ../run
-
-
+#cd scripts
+#./MakeRecent ../run
+#./CalcComplexity -C P Recent ../run

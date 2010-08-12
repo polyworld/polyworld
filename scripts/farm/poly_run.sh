@@ -1,20 +1,29 @@
 #!/bin/bash
 
 
-if [ -z "$1" ]; then
-    echo "usage: $0 worldfile run_id postrun_script dst_dir"
+function usage()
+{
+    echo "usage: $0 (\"nil\"|worldfile) run_id (\"nil\"|prerun_script) (\"nil\"|postrun_script) (\"nil\"|input_zip) dst_dir"
     echo
-    echo "  worldfile: path of worldfile to be executed."
+    echo "  worldfile: path of worldfile to be executed (\"nil\" if only doing postrun analysis)."
     echo
     echo "  run_id: unique id of run, which should use '/' for a hierarchy of classification."
     echo
-    echo "  postrun_script: path of script to be executed after simulation completes."
+    echo "  prerun_script: path of (optional) script to be executed prior to starting simulation."
+    echo
+    echo "  postrun_script: path of (optional) script to be executed after simulation completes."
+    echo
+    echo "  input_zip: path of (optional) input zip archive, to be unpacked at \$POLYWORLD_PWFARM_INPUT"
     echo
     echo "  dst_dir: destination for unpacking runs on local machine"
     echo
 
+    if [ ! -z "$1" ]; then
+	err $*
+    fi
+
     exit 1
-fi
+}
 
 function err()
 {
@@ -32,8 +41,14 @@ function canondirname()
     dirname `canonpath "$1"`
 }
 
+if [ -z "$1" ]; then
+    usage
+fi
+
 if [ "$1" == "--field" ]; then
     payload_dir=`pwd`
+    export POLYWORLD_PWFARM_WORLDFILE="$payload_dir/worldfile"
+    RUNID=`cat $payload_dir/runid`
 
     cd ~/polyworld_pwfarm || exit
 
@@ -45,27 +60,99 @@ if [ "$1" == "--field" ]; then
     
     cd app
 
-    if [ "$PWFARM_ID" == "0" ]; then
-	seed=42
-    else
-	seed=$PWFARM_ID
+    failed=false
+
+    export DISPLAY=:0.0 # for Linux -- allow graphics from ssh
+    export PATH=`canonpath scripts`:$PATH
+    ulimit -n 1024      # for Mac -- allow enough file descriptors
+
+    ###
+    ### Unpack the input zip
+    ###
+    if [ -e $payload_dir/input.zip ]; then
+	export POLYWORLD_PWFARM_INPUT=~/polyworld_pwfarm/input
+
+	if [ -e $POLYWORLD_PWFARM_INPUT ]; then
+	    rm -rf $POLYWORLD_PWFARM_INPUT
+	fi
+
+	if ! mkdir -p $POLYWORLD_PWFARM_INPUT; then
+	    failed=true
+	else
+	    if ! unzip $payload_dir/input.zip -d $POLYWORLD_PWFARM_INPUT; then
+		failed=true
+	    fi
+	fi
     fi
 
-    ./scripts/edit_worldfile $payload_dir/worldfile ./worldfile genomeseed_used_for_all=$seed
+    ###
+    ### Execute the prerun script
+    ###
+    if ! $failed; then
+	if [ -f $payload_dir/prerun.sh ]; then
+	    chmod +x $payload_dir/prerun.sh
 
-    export DISPLAY=:0.0
-    ulimit -n 1024
+	    if ! $payload_dir/prerun.sh; then
+		failed=true
+	    fi
+	fi
+    fi
 
-    failed=true
-    if ./Polyworld; then
-	if $payload_dir/postrun.sh; then
-	    failed=false
+    if ! $failed; then
+	if [ -e $POLYWORLD_PWFARM_WORLDFILE ]; then
+	    ###
+	    ### Set the seed based on farm node
+	    ###
+	    if [ "$PWFARM_ID" == "0" ]; then
+		seed=42
+	    else
+		seed=$PWFARM_ID
+	    fi
+	    ./scripts/edit_worldfile.py $POLYWORLD_PWFARM_WORLDFILE ./worldfile genomeseed_used_for_all=$seed
+
+	    ###
+	    ### Run Polyworld!!!
+	    ###
+	    if ! ./Polyworld; then
+		failed=true
+	    fi
+	else
+ 	    ###
+	    ### Move the old run from good/failed archive into working directory
+	    ###
+	    rundir=~/polyworld_pwfarm/runs/good/$RUNID
+	    
+	    if ! mv $rundir ./run ; then
+		echo "Cannot locate good run... attempting failed run"
+		rundir=~/polyworld_pwfarm/runs/failed/$RUNID
+
+		if ! mv $rundir ./run ; then
+		    failed=true
+		fi
+	    fi
+	fi
+    fi
+
+    ###
+    ### Execute the postrun script
+    ###
+    if ! $failed; then
+	if [ -f $payload_dir/postrun.sh ]; then
+	    chmod +x $payload_dir/postrun.sh
+
+	    if ! $payload_dir/postrun.sh; then
+		failed=true
+	    fi
 	fi
     fi
 
     if $failed; then
 	touch run/FAILED
+    else
+	rm -f run/FAILED
     fi
+
+    scripts/run_history.sh src run $failed $payload_dir/postrun.sh
 
     rundir=run_${PWFARM_ID}
     archive=${rundir}.zip
@@ -73,14 +160,12 @@ if [ "$1" == "--field" ]; then
 	rm $archive
     fi
     mv run $rundir
-    zip -r $archive $rundir/brain/Recent/*.plt $rundir/events/*.txt $rundir/stats/* $rundir/worldfile
+    zip -r $archive $rundir/brain/Recent/*.plt $rundir/events/*.txt $rundir/stats/* $rundir/worldfile $rundir/*.eps
     mv $rundir run
 
     cd ~/polyworld_pwfarm
 
     if [ -e app/run ]; then
-	RUNID=`cat $payload_dir/runid`
-
 	if $failed; then
 	    dst=runs/failed
 	else
@@ -114,21 +199,38 @@ else
 
     PWHOSTNUMBERS=~/polyworld_pwfarm/etc/pwhostnumbers
     USER=`cat ~/polyworld_pwfarm/etc/pwuser`
-    WORLDFILE=$1
-    RUNID=$2
-    POSTRUN=$3
-    DSTDIR=`canonpath $4`
 
-    if [ -z $DSTDIR ]; then
+    if [ $# != 6 ]; then
+	usage "Invalid number of arguments"
+    fi
+
+    WORLDFILE="$1"
+    RUNID="$2"
+    PRERUN="$3"
+    POSTRUN="$4"
+    INPUT_ZIP="$5"
+    DSTDIR=`canonpath "$6"`
+
+    if [ -z "$DSTDIR" ]; then
 	err "No dstdir!"
     fi
 
     tmp_dir=`mktemp -d /tmp/poly_run.XXXXXXXX` || exit 1
-    echo $tmp_dir
 
     cp $0 $tmp_dir/poly_run.sh || exit
-    cp $WORLDFILE $tmp_dir/worldfile || exit
-    cp $POSTRUN $tmp_dir/postrun.sh || exit
+
+    function cpopt()
+    {
+	if [ "$1" != "nil" ]; then
+	    cp "$1" "$tmp_dir/$2" || exit 1
+	fi
+    }
+
+    cpopt "$WORLDFILE" worldfile
+    cpopt "$PRERUN" prerun.sh
+    cpopt "$POSTRUN" postrun.sh
+    cpopt "$INPUT_ZIP" input.zip
+
     echo "$RUNID" > $tmp_dir/runid
 
     cd $tmp_dir
@@ -157,7 +259,7 @@ else
 
 	cd $DSTDIR/$RUNID
 	for x in *.zip; do
-	    unzip $x
+	    unzip -o $x
 	done
 
 	rm *.zip
