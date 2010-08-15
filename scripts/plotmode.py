@@ -1,3 +1,7 @@
+import os
+import sys
+
+import common_adhoc
 import common_complexity
 import common_functions
 import common_metric
@@ -15,12 +19,15 @@ class Mode:
                   name,
                   datasets,
                   defaultDataset,
+                  expandDataset,
                   isAvr,
                   values,
                   defaultValues,
+                  splitValues,
                   curvetypes,
                   defaultCurvetype,
                   colName_timestep,
+                  func_parseArgs,
                   func_relpath,
                   func_pathRunFromValue,
                   func_parseValues,
@@ -29,17 +36,22 @@ class Mode:
         self.name = name
         self.datasets = datasets
         self.defaultDataset = defaultDataset if defaultDataset else 'defaultDataset'
+        self.expandDataset = expandDataset
         self.isAvr = isAvr
         self.values = values
         self.defaultValues = defaultValues
+        self.splitValues = splitValues
         self.curvetypes = curvetypes
         self.defaultCurvetype = defaultCurvetype
         self.colName_timestep = colName_timestep
+        self.func_parseArgs = func_parseArgs
         self.func_relpath = func_relpath
         self.func_pathRunFromValue = func_pathRunFromValue
         self.func_parseValues = func_parseValues
         self.func_getValueNames = func_getValueNames
         self.func_normalizeValueNames = func_normalizeValueNames
+
+        self.usage_custom = None
    
     def __str__( self ):
     	s1 = []
@@ -70,6 +82,12 @@ class Mode:
                         str(self.func_pathRunFromValue),
                         str(self.func_parseValues),
                         str(self.func_getValueNames) )
+
+    def parseArgs( self, options, args ):
+        if self.func_parseArgs:
+            return self.func_parseArgs( self, options, args )
+        else:
+            return args
 
     def relpath( self,
                  classification,
@@ -111,7 +129,12 @@ class Mode:
         #
         print """\
 USAGE
+"""
 
+        if self.usage_custom:
+            print self.usage_custom
+        else:
+            print """\
      plot %s [<option>]... <directory>...
 """ % (self.shortname)
 
@@ -203,11 +226,14 @@ MODES['neuralComplexity'] = Mode( 'Neural Complexity',
                                   common_functions.RECENT_TYPES,
                                   'Recent',
                                   True,
+                                  True,
                                   common_complexity.COMPLEXITY_TYPES,
                                   'P',
+                                  True,
                                   ['min', 'mean', 'max'],
                                   'mean',
-                                  'Timestep',
+                                  'Timestep',                            # colName_timestep
+                                  None,                                  # func_parseArgs
                                   common_complexity.relpath_avr,
                                   common_complexity.path_run_from_avr,
                                   common_complexity.parse_avrs,
@@ -215,15 +241,18 @@ MODES['neuralComplexity'] = Mode( 'Neural Complexity',
                                   None)
 
 MODES['graphMetric'] = Mode( 'Graph Metric',
-							 common_functions.RECENT_TYPES,
-							 'Recent',
+                             common_functions.RECENT_TYPES,
+                             'Recent',
+                             True,
                              True,
                              common_metric.METRIC_TYPES,
                              'cc_a_bu',
+                             True,
                              ['min', 'mean', 'max'],
                              'mean',
-                             'Timestep',
-                             common_metric.relpath_avr,
+                             'Timestep',                                  # colName_timestep
+                             None,                                        # func_parseArgs
+                             common_metric.relpath_avr,                   
                              common_metric.path_run_from_avr,
                              common_metric.parse_avrs,
                              common_metric.get_names,
@@ -233,11 +262,14 @@ MODES['motionComplexity'] = Mode( 'Motion',
                                   [],
                                   None,
                                   False,
+                                  False,
                                   common_motion.COMPLEXITY_TYPES,
                                   'Olaf',
+                                  True,
                                   ['COMPLEXITY'],
                                   'COMPLEXITY',
-                                  'EPOCH-START',
+                                  'EPOCH-START',                           # colName_timestep
+                                  None,                                    # func_parseArgs
                                   common_motion.relpath_complexity,
                                   common_motion.path_run_from_complexity,
                                   common_motion.parse_complexity,
@@ -248,16 +280,38 @@ MODES['stats'] = Mode( 'Stats',
                        [],
                        None,
                        False,
+                       False,
                        common_stats.STAT_TYPES,
                        'agents',
+                       True,
                        ['value'],
                        'value',
-                       'step',
+                       'step',                                             # colName_timestep
+                       None,                                               # func_parseArgs
                        lambda: 'stats/stat.1',
                        common_stats.path_run_from_stats,
                        common_stats.parse_stats,
                        common_stats.get_names,
                        None)
+
+MODES['adhoc'] = Mode( 'Ad hoc',                                           # name
+                       [],                                                 # datasets
+                       None,                                               # defaultDataset
+                       False,                                              # expandDataset
+                       False,                                              # isAvr
+                       ['foo'],                                            # values
+                       None,                                               # defaultValues
+                       False,                                              # splitValues
+                       ['adhoc_curvetype'],                                # curvetypes
+                       'adhoc_curvetype',                                  # defaultCurvetype
+                       None,                                               # colName_timestep
+                       common_adhoc.parseArgs,                             # func_parseArgs
+                       None,                                               # func_relpath
+                       common_adhoc.pathRunFromValue,                      # func_pathRunFromValue
+                       common_adhoc.parseValues,                           # func_parseValues
+                       common_adhoc.getValueNames,                         # func_getValueNames
+                       None )                                              # func_normalizeValueNames
+                       
 
 for shortname, mode in MODES.items():
     mode.shortname = shortname
@@ -278,6 +332,10 @@ MODES['stats'].usage_values = """\
               Plot statistics of one or more types 'v',
            where v is one of:\
 %s""" % ('\n               '.join( [''] + common_stats.STAT_TYPES ))
+
+MODES['adhoc'].usage_custom = """\
+     plot adhoc [<option>]... <relpath> <table> <x-column> <y-column> <directory>...
+"""
 
 
 ####################################################################################

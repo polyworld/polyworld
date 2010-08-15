@@ -521,7 +521,7 @@ class Options:
 
         self.settings = dict([(name, False) for name in self.flags.values()])
         self.nset = 0
-    
+
     def __str__(self):
         return """plotlib.Options:
         flags = %s,
