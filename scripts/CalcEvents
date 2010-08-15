@@ -32,11 +32,11 @@ def main():
         subpath_log = 'events/fights.log'
     elif type == 'g' or type == 'a':
         subpath_log = 'events/gives.log'
-    elif type == 'c':
+    elif type == 'c': # contacts binning (takes long time)
         subpath_log = 'events/contacts.log'
-    elif type == 'b':
+    elif type == 'b': # bias
         subpath_log = 'events/contacts_bins.txt'
-    elif type == 'n':
+    elif type == 'n': # near/far
         subpath_log = 'events/contacts_bias_2bin.txt'
     elif type == 'm':
         subpath_log = 'events/contacts_bias.txt'
@@ -582,7 +582,7 @@ def calc_bias( path_log,
                 val_y = row_y[colname]
 
                 if val_y == 0:
-                    row_result.set( colname, float('inf') )
+                    row_result.set( colname, float('nan') )
                 else:
                     row_result.set( colname, float(val_x) / float(val_y) )
         
@@ -592,6 +592,9 @@ def calc_bias( path_log,
 
     bias_f = __div( tables_bins['separations_f'], tables_bins['separations_,'], 'f/,' )
     tables_bias.append( bias_f )
+
+    bias_m = __div( tables_bins['separations_m'], tables_bins['separations_,'], 'm/,' )
+    tables_bias.append( bias_m )
 
     try:
         bias_g = __div( tables_bins['separations_g'], tables_bins['separations_,'], 'g/,' )
