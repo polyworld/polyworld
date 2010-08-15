@@ -101,8 +101,10 @@ def main():
                 calc_bias( path,
                            os.path.join(run, 'events/contacts_bias.txt') )
             elif type == 'n':
-                calc_nearfar( path,
-                              os.path.join(run, 'events/contacts_nearfar.txt') )
+                calc_nearfar( os.path.join(run, 'events/contacts_bins_2bin.txt'),
+                              os.path.join(run, 'events/contacts_bins_nearfar.txt') )
+                calc_nearfar( os.path.join(run, 'events/contacts_bias_2bin.txt'),
+                              os.path.join(run, 'events/contacts_bias_nearfar.txt') )
             else:
                 calclog( path,
                          epoch_len,
@@ -716,7 +718,6 @@ def calc_nearfar( path_in,
         assert( table_in.colnames[0] == 'T' )
 
         assert( len(table_in.colnames) == 3 )
-        assert( table_in.coltypes[1] == 'float' )
 
         colnames = ['T', 'ratio']
         coltypes = ['int', 'float']
@@ -730,8 +731,8 @@ def calc_nearfar( path_in,
 
             row_out['T'] = row_in['T']
 
-            bin0 = row_in['bin0']
-            bin1 = row_in['bin1']
+            bin0 = float( row_in['bin0'] )
+            bin1 = float( row_in['bin1'] )
             
             if bin1 == 0:
                 row_out['ratio'] = float('nan')
