@@ -729,7 +729,11 @@ def calc_nearfar( path_in,
 
             bin0 = row_in['bin0']
             bin1 = row_in['bin1']
-            row_out['ratio'] = bin0 / bin1
+            
+            if bin1 == 0:
+                row_out['ratio'] = float('nan')
+            else:
+                row_out['ratio'] = bin0 / bin1
 
         tables_out.append( table_out )
 
