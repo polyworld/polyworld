@@ -3500,9 +3500,6 @@ void TSimulation::Give( agent *x,
 //---------------------------------------------------------------------------
 void TSimulation::Eat( agent *c )
 {
-	if( (c->NumCarries() > 0) && fCarryPreventsEat )
-		return;
-
 	bool ateBackwardFood;
 	food* f = NULL;
 	
@@ -3510,6 +3507,10 @@ void TSimulation::Eat( agent *c )
 
 	// set the list back to the agent mark, so we can look backward from that point
 	objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point list back to c
+
+	if( (c->NumCarries() > 0) && fCarryPreventsEat )
+		return;
+
 
 	// look for food in the -x direction
 	ateBackwardFood = false;
