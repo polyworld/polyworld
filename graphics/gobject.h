@@ -132,6 +132,7 @@ public:
 	bool BeingCarried( void );
 	gobject* CarriedBy( void );
 	int NumCarries( void );
+	bool IsCarrying(int type);
 	void PickedUp( gobject* carrier, float dy );
 	void Dropped( void );
 

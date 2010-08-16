@@ -306,6 +306,18 @@ void gobject::inverseposition()
 	inversetranslate();
 }
 
+bool gobject::IsCarrying( int type )
+{
+    itfor( gObjectList, fCarries, it )
+    {
+        gobject* o = *it;
+        
+		if( (o->getType() & type) != 0 )
+			return true;
+    }
+
+	return false;
+}
 
 void gobject::PickedUp( gobject* carrier, float dy )
 {

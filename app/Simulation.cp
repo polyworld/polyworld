@@ -14,7 +14,7 @@
 #define MinDebugStep 0
 #define MaxDebugStep INT_MAX
 
-#define CurrentWorldfileVersion 40
+#define CurrentWorldfileVersion 41
 
 #define TournamentSelection 1
 
@@ -3158,10 +3158,15 @@ void TSimulation::Mate( agent *c,
 #endif
 	short kd;
 
+	bool cprevented = fCarryPreventsMate && (c->NumCarries() > 0);
+	bool dprevented = fCarryPreventsMate && (d->NumCarries() > 0);
+
 	// first test to see if these two agents are attempting to mate and allowed to do so (based on their own states)
 #ifdef OF1
 	if ( (c->Mate() > fMateThreshold) &&
 		 (d->Mate() > fMateThreshold) &&          // it takes two!
+		 !cprevented &&
+		 !dprevented &&
 		 ((c->Age() - c->LastMate()) >= fMateWait) &&
 		 ((d->Age() - d->LastMate()) >= fMateWait) &&  // and some time
 		 (c->Energy() > fMinMateFraction * c->MaxEnergy()) &&
@@ -3172,6 +3177,8 @@ void TSimulation::Mate( agent *c,
 	if( !fLockStepWithBirthsDeathsLog &&
 		(c->Mate() > fMateThreshold) &&
 		(d->Mate() > fMateThreshold) &&          // it takes two!
+		!cprevented &&
+		!dprevented &&
 		((c->Age() - c->LastMate()) >= fMateWait) &&
 		((d->Age() - d->LastMate()) >= fMateWait) &&  // and some time
 		(c->Energy() > fMinMateFraction * c->MaxEnergy()) &&
@@ -3366,13 +3373,29 @@ void TSimulation::Fight( agent *c,
 #endif
 	float cpower;
 	float dpower;
+	bool cprevented = false;
+	bool dprevented = false;
+	bool cshielded = false;
+	bool dshielded = false;
 
-	if ( (c->Fight() > fFightThreshold) )
+	if( fCarryPreventsFight )
+	{
+		cprevented = c->NumCarries() > 0;
+		dprevented = d->NumCarries() > 0;
+	}
+
+	if( fShieldObjects )
+	{
+		cshielded = c->IsCarrying( fShieldObjects );
+		dshielded = d->IsCarrying( fShieldObjects );
+	}
+
+	if ( !cprevented && !dshielded && (c->Fight() > fFightThreshold) )
 		cpower = c->Strength() * c->SizeAdvantage() * c->Fight() * (c->Energy()/c->MaxEnergy());
 	else
 		cpower = 0.0;
 
-	if ( (d->Fight() > fFightThreshold) )
+	if ( !dprevented && !cshielded && (d->Fight() > fFightThreshold) )
 		dpower = d->Strength() * d->SizeAdvantage() * d->Fight() * (d->Energy()/d->MaxEnergy());
 	else
 		dpower = 0.0;
@@ -3428,6 +3451,11 @@ void TSimulation::Give( agent *x,
 						bool *xDied,
 						bool toMarkOnDeath )
 {
+	if( fCarryPreventsGive && (x->NumCarries() > 0) )
+	{
+		return;
+	}
+
 #if DEBUGCHECK
 	unsigned long xnum = x->Number();
 #endif
@@ -3472,6 +3500,9 @@ void TSimulation::Give( agent *x,
 //---------------------------------------------------------------------------
 void TSimulation::Eat( agent *c )
 {
+	if( (c->NumCarries() > 0) && fCarryPreventsEat )
+		return;
+
 	bool ateBackwardFood;
 	food* f = NULL;
 	
@@ -3645,11 +3676,11 @@ void TSimulation::Pickup( agent* c )
 	objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point list back to c
 
 	// look in the -x direction for something to carry
-	while( objectxsortedlist::gXSortedObjects.prevObj( ANYTYPE, (gobject**) &o ) )
+	while( objectxsortedlist::gXSortedObjects.prevObj( fCarryObjects, (gobject**) &o ) )
 	{
 		if( o->BeingCarried() || (o->NumCarries() > 0) )
 			continue;	// already carrying or being carried, so nothing we can do with it
-		
+
 		if( ( o->x() + o->radius() ) < ( c->x() - c->radius() ) )
 		{
 			// end of object comes before beginning of agent, so there is no overlap
@@ -3682,7 +3713,7 @@ void TSimulation::Pickup( agent* c )
 		objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point list back to c
 	
 		// look in the +x direction for something to pick up
-		while( objectxsortedlist::gXSortedObjects.nextObj( ANYTYPE, (gobject**) &o ) )
+		while( objectxsortedlist::gXSortedObjects.nextObj( fCarryObjects, (gobject**) &o ) )
 		{
 			if( o->BeingCarried() || (o->NumCarries() > 0) )
 				continue;	// already carrying or being carried, so nothing we can do with it
@@ -5141,6 +5172,50 @@ void TSimulation::ReadWorldFile(const char* filename)
 		__PROP( "enableCarry", genome::gEnableCarry );
 		__PROP( "maxCarries", agent::gMaxCarries );
 	}
+
+	if( version >= 41 )
+	{
+		int agents, food, bricks;
+
+		fCarryObjects = 0;
+
+		__PROP( "carryAgents", agents );
+		__PROP( "carryFood", food );
+		__PROP( "carryBricks", bricks );
+
+#define __SET( VAR, MASK ) 	if( VAR ) fCarryObjects |= MASK##TYPE
+		__SET( agents, AGENT );
+		__SET( food, FOOD );
+		__SET( bricks, BRICK );
+#undef __SET
+
+		fShieldObjects = 0;
+
+		__PROP( "shieldAgents", agents );
+		__PROP( "shieldFood", food );
+		__PROP( "shieldBricks", bricks );
+
+#define __SET( VAR, MASK ) 	if( VAR ) fShieldObjects |= MASK##TYPE
+		__SET( agents, AGENT );
+		__SET( food, FOOD );
+		__SET( bricks, BRICK );
+#undef __SET
+
+		PROP( CarryPreventsEat );
+		PROP( CarryPreventsFight );
+		PROP( CarryPreventsGive );
+		PROP( CarryPreventsMate );
+	}
+	else
+	{
+		fCarryObjects = ANYTYPE;
+		fShieldObjects = 0;
+		fCarryPreventsEat = false;
+		fCarryPreventsFight = false;
+		fCarryPreventsGive = false;
+		fCarryPreventsMate = false;
+	}
+
 	
     int ignoreShort1, ignoreShort2, ignoreShort3, ignoreShort4;
     in >> ignoreShort1; in >> label;
@@ -5368,6 +5443,7 @@ void TSimulation::ReadWorldFile(const char* filename)
 	}
 	else
 		fSolidObjects = BRICKTYPE;
+
 	printf( "\tfSolidObjects = 0x" );
 	for( unsigned int i = 0; i < sizeof(fSolidObjects)*8; i++ )
 		printf( "%d", (fSolidObjects>>(31-i)) & 1 );

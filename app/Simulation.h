@@ -499,6 +499,12 @@ private:
 	long fNumDomains;
 	
 	int fSolidObjects;	// agents cannot pass through solid objects (collisions are avoided)
+	int fCarryObjects;  // specifies which types of objects can be picked up.
+	int fShieldObjects;  // specifies which types of objects act as shields.
+	bool fCarryPreventsEat;
+	bool fCarryPreventsFight;
+	bool fCarryPreventsGive;
+	bool fCarryPreventsMate;
 	
 	float fAgentHealingRate;	// Virgil Healing
 	bool fHealing;				// Virgil Healing
