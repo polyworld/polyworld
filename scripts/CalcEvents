@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import getopt
 import os
 import sys
 
@@ -11,104 +12,80 @@ import common_logs
 import datalib
 import iterators
 
+DEFAULT_EPOCH = 10000
+
 ####################################################################################
 ###
 ### main()
 ###
 ####################################################################################
 def main():
-    epoch_len = 5000
+    epoch_len = DEFAULT_EPOCH
     nbins = 8
     nbins_age = 20
 
-    argv = sys.argv[1:]
-    arg_paths = argv[1:]
 
-    type = argv[0]
-    if type == 'd':
-        calcdelta(arg_paths)
-        return
-    elif type == 'f':
-        subpath_log = 'events/fights.log'
-    elif type == 'g' or type == 'a':
-        subpath_log = 'events/gives.log'
-    elif type == 'c': # contacts binning (takes long time)
-        subpath_log = 'events/contacts.log'
-    elif type == 'b': # bias
-        subpath_log = 'events/contacts_bins.txt'
-    elif type == 'n': # near/far
-        subpath_log = 'events/contacts_bias_2bin.txt'
-    elif type == 'm':
-        subpath_log = 'events/contacts_bias.txt'
-    elif type == 's':
-        subpath_log = 'events/contacts_bias_2bin.txt'
-    else:
-        show_usage("invalid type")
+    shortopts = ''
+    longopts = ['epoch=']
 
-    if type == 'm' or type == 's':
-        for group_path in arg_paths:
+    try:
+        opts, args = getopt.getopt( sys.argv[1:], shortopts, longopts )
+    except getopt.GetoptError, e:
+        show_usage( e )
 
+    for opt, val in opts:
+        if opt == '--epoch':
             try:
-                run_paths = common_functions.find_run_paths( [group_path],
-                                                             subpath_log )
+                epoch_len = int(val)
             except:
-                show_usage(str(sys.exc_info()[1]))
+                show_usage("Invalid epoch (%s). Expecting integer." % val)
+            if epoch_len <= 0:
+                show_usage("Epoch must be > 0")
 
-            if type == 'm':
-                def __meta(log):
-                    log_paths = map( lambda x: os.path.join(x, 'events/contacts_'+log+'.txt'),
-                                     run_paths )
-                    path_meta = os.path.join(group_path, 'contacts_meta_'+log+'.txt')
-                    calc_meta( path_meta, log_paths )
+    if len(args) < 2:
+        show_usage("Missing arguments")
 
-                __meta('bias')
-                __meta('bins')
-                __meta('bias_2bin')
-                __meta('bins_2bin')
-                __meta('nearfar')
-            else:
-                log_paths = map( lambda x: os.path.join(x, 'events/contacts_bias_2bin.txt'),
-                                 run_paths )
-                calc_stddev( group_path, log_paths )
-                
-        
+    mode = args[0]
+    arg_paths = args[1:]
+
+    if mode == 'c': # contacts binning (takes long time)
+        subpath_log = 'events/contacts.log'
+    elif mode == 'b': # bias
+        subpath_log = 'events/contacts_bins.txt'
+    elif mode == 'n': # near/far
+        subpath_log = 'events/contacts_bias_2bin.txt'
     else:
-        try:
-            run_paths = common_functions.find_run_paths( arg_paths,
-                                                         subpath_log )
-        except:
-            show_usage(str(sys.exc_info()[1]))
-    
-        for run in run_paths:
-            path = os.path.join(run, subpath_log)
-            if type == 'a':
-                calcage( path,
-                         os.path.join(run, 'lifespans.txt'),
-                         nbins)
-            elif type == 'c':
-                calc_contacts( path,
-                               run,
-                               epoch_len,
-                               nbins,
-                               nbins_age)
-            elif type == 'b':
-                path_2bin = os.path.join( run, 'events/contacts_bins_2bin.txt' )
-                calc_2bin( path,
-                           path_2bin )
-                calc_bias( path_2bin,
-                           os.path.join(run, 'events/contacts_bias_2bin.txt') )
+        show_usage("invalid mode (%s)" % mode)
 
-                calc_bias( path,
-                           os.path.join(run, 'events/contacts_bias.txt') )
-            elif type == 'n':
-                calc_nearfar( os.path.join(run, 'events/contacts_bins_2bin.txt'),
-                              os.path.join(run, 'events/contacts_bins_nearfar.txt') )
-                calc_nearfar( os.path.join(run, 'events/contacts_bias_2bin.txt'),
-                              os.path.join(run, 'events/contacts_bias_nearfar.txt') )
-            else:
-                calclog( path,
-                         epoch_len,
-                         nbins )
+    try:
+        run_paths = common_functions.find_run_paths( arg_paths,
+                                                     subpath_log )
+    except:
+        show_usage(str(sys.exc_info()[1]))
+
+    for run in run_paths:
+        path = os.path.join(run, subpath_log)
+        if mode == 'c':
+            calc_contacts( path,
+                           run,
+                           epoch_len,
+                           nbins,
+                           nbins_age)
+        elif mode == 'b':
+            path_2bin = os.path.join( run, 'events/contacts_bins_2bin.txt' )
+            calc_2bin( path,
+                       path_2bin )
+            calc_bias( path_2bin,
+                       os.path.join(run, 'events/contacts_bias_2bin.txt') )
+            calc_bias( path,
+                       os.path.join(run, 'events/contacts_bias.txt') )
+        elif mode == 'n':
+            calc_nearfar( os.path.join(run, 'events/contacts_bins_2bin.txt'),
+                          os.path.join(run, 'events/contacts_bins_nearfar.txt') )
+            calc_nearfar( os.path.join(run, 'events/contacts_bias_2bin.txt'),
+                          os.path.join(run, 'events/contacts_bias_nearfar.txt') )
+        else:
+            assert( False )
 
 
 ####################################################################################
@@ -168,166 +145,8 @@ def create_bins2D(xvalues, xnbins, xlo, xhi,
         ybin = getbin(y, ylo, yhi, ynbins)
         bins[ybin][xbin] += 1
 
-    """
-    # convert to percents (along x) -- retarded.
-    for i in range(ynbins):
-        total = float(sum(bins[i]))
-        for j in range(xnbins):
-            if( total == 0 ):
-                bins[i][j] = float('nan')
-            else:
-                bins[i][j] = (bins[i][j] / total) * 100
-"""                
     return bins
 
-####################################################################################
-###
-### FUNCTION calcage()
-###
-####################################################################################
-def calcage( path_log, path_lifespan, nbins ):
-
-    nbins_separation = nbins
-    nbins_age = 20
-
-    table_lifespans = datalib.parse( path_lifespan,
-                                     keycolname = 'Agent' )['LifeSpans']
-
-    table_log = datalib.parse(path_log).values()[0]
-    ages_receive = [[] for i in range(nbins_separation)]
-    ages_give = [[] for i in range(nbins_separation)]
-    
-    def __age(agent, step):
-        return step - table_lifespans[agent]['BirthStep']
-
-    separations = []
-    for row in table_log.rows():
-        separations.append(row['Separation'])
-
-    separation_min = min(separations)
-    separation_max = max(separations)
-
-    for row in table_log.rows():
-        step = row['Step']
-        separation = row['Separation']
-        separation_bin = getbin(separation, separation_min, separation_max, nbins_separation)
-        age_giver = __age(row['Agent1'], step)
-        age_receiver = __age(row['Agent2'], step)
-        ages_receive[separation_bin].append(age_receiver)
-        ages_give[separation_bin].append(age_giver)
-
-
-    print 'receive bins ='
-    for ages in ages_receive:
-        print create_bins(ages, nbins_age)
-
-    print 'give bins ='
-    for ages in ages_give:
-        print create_bins(ages, nbins_age)
-
-    ages = [row['DeathStep'] - row['BirthStep'] for row in table_lifespans.rows()]
-    print 'lifespans bins =', create_bins(ages, nbins_age)
-
-####################################################################################
-###
-### FUNCTION calcdelta()
-###
-####################################################################################
-def calcdelta( paths ):
-    if len(paths) != 2:
-        show_usage("Can only delta 2 files")
-
-    n0, bins0 = parse_bins(paths[0])
-    n1, bins1 = parse_bins(paths[1])
-
-    nsteps = len(bins0)
-    assert(nsteps == len(bins1))
-
-    nbins = len(bins0[0])
-    assert(nbins == len(bins1[0]))
-
-    for i in range(nsteps):
-        for j in range(nbins):
-            diff = bins0[i][j] - bins1[i][j]
-            print '%3s ' % diff,
-        print ' | n0 =', n0[i], '| n1 =', n1[i]
-
-
-def parse_bins( path ):
-    counts = []
-    bins = []
-
-    for line in open(path):
-        if '|n =' in line:
-            n = int(line.split()[-1])
-            counts.append(n)
-        if 'bins =' in line:
-            line = line[line.find('[') + 1 : line.rfind(']')]
-            tokens = line.split(', ')
-            nums = map( int, tokens)
-            bins.append(nums)
-
-    return counts, bins
-
-####################################################################################
-###
-### FUNCTION calclog()
-###
-####################################################################################
-def calclog( path_log,
-             epoch_len,
-             nbins ):
-    tables = datalib.parse(path_log)
-    table = tables.values()[0]
-
-    min_separation = sys.maxint
-    max_separation = -min_separation
-
-    class Epoch:
-        def __init__(self, step):
-            self.step = step
-            self.separations = []
-
-    epoch = Epoch(1)
-    epochs = []
-
-    for row in table.rows():
-        step = row['Step']
-        separation = row['Separation']
-
-        min_separation = min(min_separation, separation)
-        max_separation = max(max_separation, separation)
-        
-        while step >= (epoch.step + epoch_len):
-            epochs.append(epoch)
-            epoch = Epoch(epoch.step + epoch_len)
-
-        epoch.separations.append(separation)
-
-    epochs.append(epoch)
-
-    print 'min_separation =', min_separation, '|max_separation =', max_separation
-    print
-
-    for epoch in epochs:
-        separations = epoch.separations
-        n = len(separations)
-        lo = min(separations)
-        hi = max(separations)
-        mean = sum(separations) / n
-
-        bins = [0 for x in range(nbins)]
-        for separation in separations:
-            bin = int(((separation - min_separation)/(max_separation - min_separation))*nbins)
-            if bin >= nbins:
-                bin -= 1
-            bins[bin] += 1
-
-        bins = [100 * x / len(separations) for x in bins]
-        
-        print 'epoch =', epoch.step, '|lo =', lo, '|hi =', hi, '|mean =', mean, '|n =', n
-        print '  bins =', bins
-    
 
 ####################################################################################
 ###
@@ -505,48 +324,6 @@ def calc_contacts( path_log,
 
     datalib.write( path_output, tables )
 
-    """
-    print 'min_separation =', min_separation
-    print 'max_separation =', max_separation
-    print 'bounds=', separations.getBounds()
-    print 'max_age =', max_age
-    print 'bounds=', lifespans.getBounds()
-
-    def __format_list(l):
-        return map(lambda x: '%.2f' % x, l)
-
-    
-    for epoch in epochs:
-        print '---', epoch.step, '---'
-        for name, ev in epoch.events.items():
-            ev.bins_separations = create_bins(ev.separations, nbins, min_separation, max_separation)
-            print name, 'separation bins =', ev.bins_separations
-
-            ev.bins_subject = create_bins2D( ev.ages_subject, nbins_age, 0, max_age,
-                                             ev.separations, nbins, min_separation, max_separation )
-
-            for row in ev.bins_subject:
-                print name, 'subject bins[%d] =' % epoch.step, __format_list(row)
-/////
-
-            ev.bins_subject = create_bins(ev.ages_subject, nbins_age, 0, max_age)
-            print name, 'subject bins =', ev.bins_subject
-            ev.bins_object = create_bins(ev.ages_object, nbins_age, 0, max_age)
-            print name, 'object bins =', ev.bins_object
-
-            
-
-        def __sub_sep(ev1, ev2):
-            return __format_list(list_subtract(epoch.events[ev1].bins_separations, epoch.events[ev2].bins_separations))
-
-        def __div_sep(ev1, ev2):
-            return __format_list(list_divide(epoch.events[ev1].bins_separations, epoch.events[ev2].bins_separations))
-
-        print 'g-f =', __sub_sep('g', 'f')
-        print 'g/f =', __div_sep('g', 'f')
-        print 'g/, =', __div_sep('g', ',')
-        print 'f/, =', __div_sep('f', ',')
-"""
 
 ####################################################################################
 ###
@@ -611,36 +388,6 @@ def calc_bias( path_log,
 
 ####################################################################################
 ###
-### function calc_meta()
-###
-####################################################################################
-def calc_meta( path_meta,
-               log_paths):
-
-    tables0 = datalib.parse(log_paths[0])
-
-    for log_path in log_paths[1:]:
-        tablesi = datalib.parse(log_path)
-
-        for table0 in tables0.values():
-            tablei = tablesi[table0.name]
-
-            for row0, rowi in iterators.IteratorUnion( iter(table0.rows()), iter(tablei.rows()) ):
-                assert(table0.colnames[0] == 'T')
-                for colname in table0.colnames[1:]:
-                    row0[colname] = row0[colname] + rowi[colname]
-
-    n = len(log_paths)
-
-    for table in tables0.values():
-        for row in table.rows():
-            for colname in table.colnames[1:]:
-                row[colname] = row[colname] / n
-
-    datalib.write( path_meta, tables0 )
-
-####################################################################################
-###
 ### function calc_2bin()
 ###
 ####################################################################################
@@ -681,27 +428,6 @@ def calc_2bin( path_in, path_out ):
         tables_out.append( table_out )
 
     datalib.write( path_out, tables_out )
-    
-####################################################################################
-###
-### function calc_stddev()
-###
-####################################################################################
-def calc_stddev( group_path, log_paths ):
-    print group_path
-    tables = datalib.parse_all( log_paths, tablenames = 'f/,', keycolname = 'T' )
-
-    for t in range(1,50002,10000):
-        for bin in ['bin0', 'bin1']:
-            values = []
-            for table in tables.values():
-                table = table['f/,']
-                values.append(table[t][bin])
-
-            mean, stddev, stderr = algorithms.sample_mean( values )
-
-            print t, bin, 'mean =', mean, 'stddev =', stddev, ' stderr =', stderr
-    
     
 
 ####################################################################################
@@ -748,9 +474,37 @@ def calc_nearfar( path_in,
 ### function show_usage()
 ###
 ####################################################################################
+
+# 80 columns:
+################################################################################
 def show_usage(msg = None):
-    print 'show_usage STUB (d,f,g,a,c):'
-    print msg
+    print """\
+USAGE
+
+     CalcEvents [option]... mode <directory>...
+
+DESCRIPTION
+
+     Performs a variety of analysis tasks on logs in run/events.
+
+     Valid modes are:
+
+       c : bin contacts log (takes long time)
+
+       b : contacts bias and 2bin (requires output of mode c)
+
+       n : contacts near/far (requires output of mode b)
+
+OPTIONS
+
+     --epoch <steps>
+               Length of epochs. Used by mode c.
+
+               (default %d)
+""" % (DEFAULT_EPOCH)
+    
+    if msg:
+        print str(msg)
 
     sys.exit(1)
 
