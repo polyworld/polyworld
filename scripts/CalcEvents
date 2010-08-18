@@ -54,6 +54,8 @@ def main():
         subpath_log = 'events/contacts_bins.txt'
     elif mode == 'n': # near/far
         subpath_log = 'events/contacts_bias_2bin.txt'
+    elif mode == 'fixpickup':
+        subpath_log = 'PickupLog.txt'
     else:
         show_usage("invalid mode (%s)" % mode)
 
@@ -65,6 +67,7 @@ def main():
 
     for run in run_paths:
         path = os.path.join(run, subpath_log)
+
         if mode == 'c':
             calc_contacts( path,
                            run,
@@ -84,6 +87,9 @@ def main():
                           os.path.join(run, 'events/contacts_bins_nearfar.txt') )
             calc_nearfar( os.path.join(run, 'events/contacts_bias_2bin.txt'),
                           os.path.join(run, 'events/contacts_bias_nearfar.txt') )
+        elif mode == 'fixpickup':
+            fixpickup( path,
+                       os.path.join(run, 'events/carry.log') )
         else:
             assert( False )
 
@@ -468,6 +474,52 @@ def calc_nearfar( path_in,
         tables_out.append( table_out )
 
     datalib.write( path_out, tables_out )
+
+####################################################################################
+###
+### function fixpickup()
+###
+####################################################################################
+def fixpickup( path_in,
+               path_out ):
+
+    colnames = ['T', 'Agent', 'Action', 'ObjectType', 'ObjectNumber']
+    coltypes = ['int', 'int', 'string', 'string', 'int']
+
+    table = datalib.Table( 'Carry', colnames, coltypes )
+
+    actions = {'dropped': 'Do', 'dropped-rc': 'D', 'picked': 'P'}
+    types = {'agent': 'A', 'food': 'F', 'brick': 'B'}
+
+    for line in open(path_in):
+        tokens = line.split()
+        time = tokens[0].split('=')[1]
+        agent = tokens[2]
+        action = tokens[3]
+
+        token_skip = 1
+
+        if action == 'dropped':
+            if tokens[4] == 'rc':
+                action = 'dropped-rc'
+            else:
+                token_skip = 0
+
+        object_type = tokens[4 + token_skip]
+        object_num = tokens[6 + token_skip].rstrip(',')
+
+        row = table.createRow()
+
+        row['T'] = int(time)
+        row['Agent'] = int(agent)
+        row['Action'] = actions[action]
+        row['ObjectType'] = types[object_type]
+        row['ObjectNumber'] = int(object_num)
+        
+    datalib.write( path_out,
+                   table,
+                   randomAccess = False )
+            
                                   
 ####################################################################################
 ###
@@ -494,6 +546,8 @@ DESCRIPTION
        b : contacts bias and 2bin (requires output of mode c)
 
        n : contacts near/far (requires output of mode b)
+
+       fixpickup : convert old pickup log to datalib carry log
 
 OPTIONS
 
