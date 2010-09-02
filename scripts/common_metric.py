@@ -215,7 +215,17 @@ def read_anatomy(anatomy_file):
 
 	def __num_input_neurons(header):
 		start = header.rfind('-') + 1
-		return int(header[start:]) + 1  # +1 because the value in the header is the last 0-based index, but we need a count
+		if start > 1:  # new-style anatomy file that has the input neuron info
+			return int(header[start:]) + 1  # +1 because the value in the header is a 0-based index, but we need a count
+		else:  # old-style anatomy file that doesn't have input neuron info
+			# /pwd/run_df8_F30_complexity_0_partial/brain/Recent/0/../../anatomy/brainAnatomy_1_death.txt
+			brain_dir = anatomy_file[:anatomy_file.find('Recent')]
+			agent_id = anatomy_file.split('_')[-2]
+			function_filename = brain_dir + 'function/brainFunction_' + agent_id + '.txt'
+			function_file = open(function_filename, 'r')
+			function_header = function_file.readline()
+			function_file.close()
+			return int(function_header.split(' ')[-2])
 	
 	file = open(anatomy_file, 'r')
 	lines = file.readlines()
