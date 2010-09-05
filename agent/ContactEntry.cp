@@ -1,7 +1,10 @@
 #include "ContactEntry.h"
 
+#include <assert.h>
+
 #include "agent.h"
 #include "datalib.h"
+#include "Simulation.h"
 
 static const char *colnames[] =
 	{
@@ -41,20 +44,19 @@ ContactEntry::ContactEntry( long _step, agent *_c, agent *_d )
 	d.init( _d );
 }
 
-void ContactEntry::mate()
+void ContactEntry::mate( agent *a, int status )
 {
-	c.mate = true;
-	d.mate = true;
+	get(a)->mate = status;
 }
 
-void ContactEntry::fight( agent *a )
+void ContactEntry::fight( agent *a, int status )
 {
-	get(a)->fight = true;
+	get(a)->fight = status;
 }
 
-void ContactEntry::give( agent *a )
+void ContactEntry::give( agent *a, int status )
 {
-	get(a)->give = true;
+	get(a)->give = status;
 }
 
 void ContactEntry::log( DataLibWriter *out )
@@ -63,7 +65,7 @@ void ContactEntry::log( DataLibWriter *out )
 	char *b = buf;
 
 	c.encode( &b );
-	*(b++) = ',';
+	*(b++) = 'C';
 	d.encode( &b );
 	*(b++) = 0;
 
@@ -84,7 +86,9 @@ ContactEntry::AgentInfo *ContactEntry::get( agent *a )
 void ContactEntry::AgentInfo::init( agent *a )
 {
 	number = a->Number();
-	mate = fight = give = false;
+	mate = MATE__NIL;
+	fight = FIGHT__NIL;
+	give = GIVE__NIL;
 }
 
 void ContactEntry::AgentInfo::encode( char **buf )
@@ -92,11 +96,49 @@ void ContactEntry::AgentInfo::encode( char **buf )
 	char *b = *buf;
 
 	if(mate)
-		*(b++) = 'm';
+	{
+		*(b++) = 'M';
+		
+#define __SET( PREVENT_TYPE, CODE ) if( mate & MATE__PREVENTED__##PREVENT_TYPE ) *(b++) = CODE
+
+		__SET( PARTNER, 'p' );
+		__SET( CARRY, 'c' );
+		__SET( MATE_WAIT, 'w' );
+		__SET( ENERGY, 'e' );
+		__SET( EAT_MATE_SPAN, 'f' );
+
+#undef __SET
+
+#ifdef OF1
+		// implement
+		assert( false );
+#endif
+	}
+
 	if(fight)
-		*(b++) = 'f';
+	{
+		*(b++) = 'F';
+
+#define __SET( PREVENT_TYPE, CODE ) if( fight & FIGHT__PREVENTED__##PREVENT_TYPE ) *(b++) = CODE
+
+		__SET( CARRY, 'c' );
+		__SET( SHIELD, 's' );
+		__SET( POWER, 'p' );
+
+#undef __SET
+	}
+
 	if(give)
-		*(b++) = 'g';
+	{
+		*(b++) = 'G';
+
+#define __SET( PREVENT_TYPE, CODE ) if( give & GIVE__PREVENTED__##PREVENT_TYPE ) *(b++) = CODE
+
+		__SET( CARRY, 'c' );
+		__SET( ENERGY, 'e' );
+
+#undef __SET
+	}
 
 	*buf = b;
 }

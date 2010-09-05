@@ -12,9 +12,9 @@ class ContactEntry
  public:
 	ContactEntry( long step, agent *c, agent *d );
 
-	void mate();
-	void fight( agent *a );
-	void give( agent *a );
+	void mate( agent *a, int status );
+	void fight( agent *a, int status );
+	void give( agent *a, int status );
 
 	void log( DataLibWriter *out );
 
@@ -27,9 +27,9 @@ class ContactEntry
 
 	public:
 		long number;
-		bool mate;
-		bool fight;
-		bool give;
+		int mate;
+		int fight;
+		int give;
 	};
 
 	AgentInfo *get( agent *a );

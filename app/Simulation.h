@@ -50,6 +50,32 @@ static const int MAXFITNESSITEMS = 5;
 #define	PwDirMode ( S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH )
 
 
+// Used in logic related to Mating as well as ContactEntry
+#define MATE__NIL						0
+#define MATE__DESIRED					(1 << 0)
+#define MATE__PREVENTED__PARTNER		(1 << 1)
+#define MATE__PREVENTED__CARRY			(1 << 2)
+#define MATE__PREVENTED__MATE_WAIT		(1 << 3)
+#define MATE__PREVENTED__ENERGY			(1 << 4)
+#define MATE__PREVENTED__EAT_MATE_SPAN	(1 << 5)
+#define MATE__PREVENTED__OF1			(1 << 6)
+
+
+// Used in logic related to Fighting as well as ContactEntry
+#define FIGHT__NIL						0
+#define FIGHT__DESIRED					(1 << 0)
+#define FIGHT__PREVENTED__CARRY			(1 << 1)
+#define FIGHT__PREVENTED__SHIELD		(1 << 2)
+#define FIGHT__PREVENTED__POWER			(1 << 3)
+
+
+// Used in logic related to Giving as well as ContactEntry
+#define GIVE__NIL						0
+#define GIVE__DESIRED					(1 << 0)
+#define GIVE__PREVENTED__CARRY			(1 << 1)
+#define GIVE__PREVENTED__ENERGY			(1 << 2)
+
+
 struct FitStruct
 {
 	ulong	agentID;
@@ -424,14 +450,21 @@ private:
 	void Interact();
 	void DeathAndStats();
 	void MateLockstep();
+	int GetMatePotential( agent *x );
+	int GetMateStatus( int xPotential, int yPotential );
 	void Mate( agent *c,
 			   agent *d,
 			   ContactEntry *contactEntry );
+	int GetFightStatus( agent *x,
+						agent *y,
+						float *out_power );
 	void Fight( agent *c,
 				agent *d,
 				ContactEntry *contactEntry,
 				bool *cDied,
 				bool *dDied );
+	int GetGiveStatus( agent *x,
+					   float *out_energy );
 	void Give( agent *x,
 			   agent *y,
 			   ContactEntry *contactEntry,

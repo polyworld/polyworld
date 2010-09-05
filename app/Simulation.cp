@@ -3146,45 +3146,82 @@ void TSimulation::MateLockstep( void )
 }
 
 //---------------------------------------------------------------------------
+// TSimulation::GetMatePotential
+//---------------------------------------------------------------------------
+int TSimulation::GetMatePotential( agent *x )
+{
+	int potential = MATE__NIL;
+
+	bool desiresMate = x->Mate() > fMateThreshold;
+	if( desiresMate )
+	{
+		potential |= MATE__DESIRED;
+
+		bool preventedByCarry = fCarryPreventsMate && (x->NumCarries() > 0);
+		bool preventedByMateWait = (x->Age() - x->LastMate()) < fMateWait;
+		bool preventedByEnergy = x->Energy() <= (fMinMateFraction * x->MaxEnergy());
+		bool preventedByEatMateSpan = (fEatMateSpan > 0) && ( (fStep - x->LastEat()) >= fEatMateSpan );
+
+#define __SET(var,macro) if( preventedBy##var ) potential |= MATE__PREVENTED__##macro
+
+		__SET( Carry, CARRY );
+		__SET( MateWait, MATE_WAIT );
+		__SET( Energy, ENERGY );
+		__SET( EatMateSpan, EAT_MATE_SPAN );
+
+#undef __SET
+
+#if OF1
+		bool preventedByOF1 = x->Domain() != 1;
+		if( preventedByOF1 ) potential |= MATE__PREVENTED__OF1;
+#endif
+
+	}
+
+	return potential;
+}
+
+//---------------------------------------------------------------------------
+// TSimulation::GetMateStatus
+//---------------------------------------------------------------------------
+int TSimulation::GetMateStatus( int xPotential, int yPotential )
+{
+	int xStatus = xPotential;
+
+	if( xPotential & MATE__DESIRED )
+	{
+		if( yPotential != MATE__DESIRED )
+		{
+			xStatus |= MATE__PREVENTED__PARTNER;
+		}
+	}
+
+	return xStatus;
+}
+
+//---------------------------------------------------------------------------
 // TSimulation::Mate
 //---------------------------------------------------------------------------
 void TSimulation::Mate( agent *c,
 						agent *d,
 						ContactEntry *contactEntry )
 {
-#ifdef OF1
-    short id = c->Domain();
-	short jd = d->Domain();
-#endif
-	short kd;
+	int cMatePotential = GetMatePotential( c );
+	int dMatePotential = GetMatePotential( d );
+	int cMateStatus = GetMateStatus( cMatePotential, dMatePotential );
+	int dMateStatus = GetMateStatus( dMatePotential, cMatePotential );
 
-	bool cprevented = fCarryPreventsMate && (c->NumCarries() > 0);
-	bool dprevented = fCarryPreventsMate && (d->NumCarries() > 0);
+	contactEntry->mate( c, cMateStatus );
+	contactEntry->mate( d, dMateStatus );
 
-	// first test to see if these two agents are attempting to mate and allowed to do so (based on their own states)
-#ifdef OF1
-	if ( (c->Mate() > fMateThreshold) &&
-		 (d->Mate() > fMateThreshold) &&          // it takes two!
-		 !cprevented &&
-		 !dprevented &&
-		 ((c->Age() - c->LastMate()) >= fMateWait) &&
-		 ((d->Age() - d->LastMate()) >= fMateWait) &&  // and some time
-		 (c->Energy() > fMinMateFraction * c->MaxEnergy()) &&
-		 (d->Energy() > fMinMateFraction * d->MaxEnergy()) && // and energy
-		 ((fEatMateSpan == 0) || ((fStep-c->LastEat() < fEatMateSpan) && (fStep-d->LastEat() < fEatMateSpan))) &&	// and they've eaten recently enough (if we're enforcing that)
-		 (id == 1) && (jd == 1) ) // in the safe domain
-#else
-	if( !fLockStepWithBirthsDeathsLog &&
-		(c->Mate() > fMateThreshold) &&
-		(d->Mate() > fMateThreshold) &&          // it takes two!
-		!cprevented &&
-		!dprevented &&
-		((c->Age() - c->LastMate()) >= fMateWait) &&
-		((d->Age() - d->LastMate()) >= fMateWait) &&  // and some time
-		(c->Energy() > fMinMateFraction * c->MaxEnergy()) &&
-		(d->Energy() > fMinMateFraction * d->MaxEnergy()) &&	// and energy
-		((fEatMateSpan == 0) || ((fStep-c->LastEat() < fEatMateSpan) && (fStep-d->LastEat() < fEatMateSpan))) )	// and they've eaten recently enough (if we're enforcing that)
+#ifndef OF1
+	if( fLockStepWithBirthsDeathsLog )
+	{
+		return;
+	}
 #endif
+
+	if( (cMateStatus == MATE__DESIRED) && (dMateStatus == MATE__DESIRED) )
 	{
 		// the agents are mate-worthy, so now deal with other conditions...
 		
@@ -3213,9 +3250,9 @@ void TSimulation::Mate( agent *c,
 		{
 			// we're using natural selection (or are lockstepped to a previous natural selection run),
 			// so proceed with the normal mating process (attempt to mate for offspring production if there's room)
-			kd = WhichDomain(0.5*(c->x()+d->x()),
-							 0.5*(c->z()+d->z()),
-							 kd);
+			short kd = WhichDomain(0.5*(c->x()+d->x()),
+								   0.5*(c->z()+d->z()),
+								   kd);
 
 			bool smited = false;
 
@@ -3297,7 +3334,6 @@ void TSimulation::Mate( agent *c,
 					(randpw() < c->MateProbability(d)) )					// miscegenation function allows the birth
 				{
 					ttPrint( "age %ld: agents # %ld & %ld are mating\n", fStep, c->Number(), d->Number() );
-					contactEntry->mate();
 
 					fNumBornSinceCreated++;
 					fDomains[kd].numbornsincecreated++;
@@ -3334,6 +3370,10 @@ void TSimulation::Mate( agent *c,
 					//if( fStep > 50 )
 					//	exit( 0 );
 
+					// This Spiking-specific state inheritance logic really shouldn't
+					// be here. It would be nice to have a more generalized mechanism
+					// that removes model-specific logic from this simulation module.
+					// ~Sean
 					if( brain::gNeuralValues.model == brain::NeuralValues::SPIKING )
 					{
 						if (randpw() >= .5)
@@ -3359,6 +3399,47 @@ void TSimulation::Mate( agent *c,
 }
 
 //---------------------------------------------------------------------------
+// TSimulation::GetFightStatus
+//---------------------------------------------------------------------------
+int TSimulation::GetFightStatus( agent *x,
+								 agent *y,
+								 float *out_power )
+{
+	int status = FIGHT__NIL;
+
+	bool desiresFight = x->Fight() > fFightThreshold;
+	if( desiresFight )
+	{
+		status |= FIGHT__DESIRED;
+
+		*out_power = x->Strength() * x->SizeAdvantage() * x->Fight() * (x->Energy()/x->MaxEnergy());
+
+		bool preventedByCarry = fCarryPreventsFight && (x->NumCarries() > 0);
+		bool preventedByShield = y->IsCarrying( fShieldObjects );
+		bool preventedByPower = *out_power <= 0.0;
+
+#define __SET(var,macro) if( preventedBy##var ) status |= FIGHT__PREVENTED__##macro
+
+		__SET( Carry, CARRY );
+		__SET( Shield, SHIELD );
+		__SET( Power, POWER );
+
+#undef __SET
+
+		if( status != FIGHT__DESIRED )
+		{
+			*out_power = 0.0;
+		}
+	}
+	else
+	{
+		*out_power = 0.0;
+	}
+
+	return status;
+}
+
+//---------------------------------------------------------------------------
 // TSimulation::Fight
 //---------------------------------------------------------------------------
 void TSimulation::Fight( agent *c,
@@ -3373,41 +3454,15 @@ void TSimulation::Fight( agent *c,
 #endif
 	float cpower;
 	float dpower;
-	bool cprevented = false;
-	bool dprevented = false;
-	bool cshielded = false;
-	bool dshielded = false;
+	int cstatus = GetFightStatus( c, d, &cpower );
+	int dstatus = GetFightStatus( d, c, &dpower );
 
-	if( fCarryPreventsFight )
-	{
-		cprevented = c->NumCarries() > 0;
-		dprevented = d->NumCarries() > 0;
-	}
-
-	if( fShieldObjects )
-	{
-		cshielded = c->IsCarrying( fShieldObjects );
-		dshielded = d->IsCarrying( fShieldObjects );
-	}
-
-	if ( !cprevented && !dshielded && (c->Fight() > fFightThreshold) )
-		cpower = c->Strength() * c->SizeAdvantage() * c->Fight() * (c->Energy()/c->MaxEnergy());
-	else
-		cpower = 0.0;
-
-	if ( !dprevented && !cshielded && (d->Fight() > fFightThreshold) )
-		dpower = d->Strength() * d->SizeAdvantage() * d->Fight() * (d->Energy()/d->MaxEnergy());
-	else
-		dpower = 0.0;
+	contactEntry->fight( c, cstatus );
+	contactEntry->fight( d, dstatus );
 
 	if ( (cpower > 0.0) || (dpower > 0.0) )
 	{
 		ttPrint( "age %ld: agents # %ld & %ld are fighting\n", fStep, c->Number(), d->Number() );
-
-		if(cpower > 0.0)
-			contactEntry->fight( c );
-		if(dpower > 0.0)
-			contactEntry->fight( d );
 
 		// somebody wants to fight
 		fNumberFights++;
@@ -3443,6 +3498,44 @@ void TSimulation::Fight( agent *c,
 }
 
 //---------------------------------------------------------------------------
+// TSimulation::GetGiveStatus
+//---------------------------------------------------------------------------
+int TSimulation::GetGiveStatus( agent *x,
+								float *out_energy )
+{
+	int status = GIVE__NIL;
+
+	bool desiresGive = x->Give() > fGiveThreshold;
+	if( desiresGive )
+	{
+		status |= GIVE__DESIRED;
+
+		*out_energy = x->Energy() * x->Give() * fGiveFraction;
+
+		bool preventedByCarry = fCarryPreventsGive && (x->NumCarries() > 0);
+		bool preventedByEnergy = *out_energy <= 0.0;
+
+#define __SET(var,macro) if( preventedBy##var ) status |= GIVE__PREVENTED__##macro
+
+		__SET( Carry, CARRY );
+		__SET( Energy, ENERGY );
+
+#undef __SET
+
+		if( status != GIVE__DESIRED )
+		{
+			*out_energy = 0.0;
+		}
+	}
+	else
+	{
+		*out_energy = 0.0;
+	}
+
+	return status;
+}
+
+//---------------------------------------------------------------------------
 // TSimulation::Give
 //---------------------------------------------------------------------------
 void TSimulation::Give( agent *x,
@@ -3451,43 +3544,34 @@ void TSimulation::Give( agent *x,
 						bool *xDied,
 						bool toMarkOnDeath )
 {
-	if( fCarryPreventsGive && (x->NumCarries() > 0) )
-	{
-		return;
-	}
+	float energy;
+	int xstatus = GetGiveStatus( x, &energy );
+
+	contactEntry->give( x, xstatus );
 
 #if DEBUGCHECK
 	unsigned long xnum = x->Number();
 #endif
-	float energy = 0.0;
 
-	if( (x->Give() > fGiveThreshold) )
+	if( energy > 0 )
 	{
-		energy = x->Energy() * x->Give() * fGiveFraction;
+		float result = y->receive( x, &energy );
+		fFoodEnergyOut += result;
 
-		if( energy > 0 )
+		if( !fLockStepWithBirthsDeathsLog )
 		{
-			contactEntry->give( x );
-
-			float result = y->receive( x, &energy );
-			fFoodEnergyOut += result;
-
-			if( !fLockStepWithBirthsDeathsLog )
+			if (x->Energy() <= 0.0)
 			{
-				if (x->Energy() <= 0.0)
-				{
-					if( toMarkOnDeath )
-						objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point back to x
-					Kill( x, LifeSpan::DR_NATURAL );
+				if( toMarkOnDeath )
+					objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point back to x
+				Kill( x, LifeSpan::DR_NATURAL );
 #if GIVE_TODO
-					fNumberDiedGive++;
+				fNumberDiedGive++;
 #endif
 
-					*xDied = true;
-				}
+				*xDied = true;
 			}
 		}
-
 	}
 		
 	debugcheck( "after %lu gave %g energy to %lu%s", xnum, energy, y->Number(), energy == 0.0 ? " (did NOT give)" : "" );

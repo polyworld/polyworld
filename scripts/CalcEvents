@@ -14,6 +14,15 @@ import iterators
 
 DEFAULT_EPOCH = 10000
 
+# key = Major, values = Minor
+CONTACT_SYMBOLS = {'C': [],
+                   'M': ['p','c','w','e','f'],
+                   'F': ['c','s','p'],
+                   'G': ['c','e']}
+
+def contactEventTypes( major ):
+    return [major] + map( lambda x: major + x, CONTACT_SYMBOLS[major] )
+
 ####################################################################################
 ###
 ### main()
@@ -259,7 +268,12 @@ def calc_contacts( path_log,
     class Epoch:
         def __init__(self, step):
             self.step = step
-            self.events = dict([(x, Event(x)) for x in [',', 'f', 'g', 'm']])
+            self.events = {}
+
+            # construct dict from event name to event object
+            for major in CONTACT_SYMBOLS.keys():
+                for eventType in contactEventTypes( major ):
+                    self.events[eventType] = Event(eventType)
 
         def compute(self):
             print 'computing epoch', self.step
@@ -271,9 +285,8 @@ def calc_contacts( path_log,
                 ev.createTables(tables, self.step)
 
     # This class is just a place for us to keep references to variables
-    # that are accessed as "l-values" from __row(). If we didn't have
-    # this mechanism, __row() would make its own local copy.
-    class State:
+    # that are accessed as "l-values" from inner functions.
+    class local:
         epoch = Epoch(1)
         epochs = [epoch]
 
@@ -285,31 +298,49 @@ def calc_contacts( path_log,
         step = row['Timestep']
         agent1 = row['Agent1']
         agent2 = row['Agent2']
-        events = row['Events']
+        eventSymbols = row['Events']
         separation = separations.separation( agent1, agent2 )
 
-        while step >= (State.epoch.step + epoch_len):
+        while step >= (local.epoch.step + epoch_len):
             # we do a loop here because it's conceivable that
             # we'll have an epoch without events. Extremely unlikely,
             # but we don't want a crash.
-            State.epoch.compute()
-            State.epoch = Epoch(State.epoch.step + epoch_len)
-            State.epochs.append(State.epoch)
+            local.epoch.compute()
+            local.epoch = Epoch(local.epoch.step + epoch_len)
+            local.epochs.append(local.epoch)
 
         age_agent1 = lifespans.age( agent1, step )
         age_agent2 = lifespans.age( agent2, step )
         age_subject = age_agent1
         age_object = age_agent2
 
-        for ev in events:
-            if ev == ',':
+        eventMajor = None
+        haveEventMinor = False
+
+        def __addEvent(eventName):
+            local.epoch.events[eventName].add(separation, age_subject, age_object)
+
+        for eventSymbol in eventSymbols:
+            if eventSymbol.islower():
+                __addEvent( eventMajor + eventSymbol )
+                haveEventMinor = True
+            else:
+                if eventMajor and not haveEventMinor:
+                    __addEvent( eventMajor )
+
+                eventMajor = eventSymbol
+                haveEventMinor = False
+
+            if eventSymbol == 'C':
                 # erm, not sure about subject/object age-tracking
-                # on the ',' event itself... definitely need to switch
-                # them though for the events after the ','
+                # on the 'C' event itself... definitely need to switch
+                # them though for the events after the 'C'
                 age_subject = age_agent2
                 age_object = age_agent1
 
-            State.epoch.events[ev].add(separation, age_subject, age_object)
+        if eventMajor and not haveEventMinor:
+            __addEvent( eventMajor )
+
     # ---------------------------------- #
     # --- datalib.parse stream_row() --- #
     # ---------------------------------- #
@@ -318,12 +349,12 @@ def calc_contacts( path_log,
     table_contacts = datalib.parse( path_log, tablenames = ['Contacts'], stream_row = __row )
 
     # do computation on final epoch
-    State.epoch.compute()
+    local.epoch.compute()
 
     # Let's make a durned output file, eh?
     tables = {}
 
-    for epoch in State.epochs:
+    for epoch in local.epochs:
         epoch.createTables(tables)
 
     path_output = os.path.join(path_run, 'events/contacts_bins.txt')
@@ -375,20 +406,19 @@ def calc_bias( path_log,
 
     tables_bias = []
 
-    bias_f = __div( tables_bins['separations_f'], tables_bins['separations_,'], 'f/,' )
-    tables_bias.append( bias_f )
+    def __bias( majorx, majory ):
+        for eventx in contactEventTypes( majorx ):
+            tablex = tables_bins['separations_'+eventx]
+            for eventy in contactEventTypes( majory):
+                tabley = tables_bins['separations_'+eventy]
 
-    bias_m = __div( tables_bins['separations_m'], tables_bins['separations_,'], 'm/,' )
-    tables_bias.append( bias_m )
+                bias = __div( tablex, tabley, eventx + '/' + eventy )
+                tables_bias.append( bias )
 
-    try:
-        bias_g = __div( tables_bins['separations_g'], tables_bins['separations_,'], 'g/,' )
-        bias_gf = __div( tables_bins['separations_g'], tables_bins['separations_f'], 'g/f' )
-
-        tables_bias.append(bias_g)
-        tables_bias.append(bias_gf)
-    except:
-        print 'found no give data'
+    __bias( 'F', 'C' )
+    __bias( 'M', 'C' )
+    __bias( 'G', 'C' )
+    __bias( 'G', 'F' )
 
     datalib.write( path_out, tables_bias )
 
