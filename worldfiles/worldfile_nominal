@@ -1,4 +1,4 @@
-40		version
+42		version
 
 0		LockStepWithBirthsDeathsLog
 
@@ -50,6 +50,19 @@
 1		enableCarry
 
 3		maxCarries_3
+1		carryAgents
+1		carryFood
+1		carryBricks
+
+0		shieldAgents
+0		shieldFood
+1		shieldBricks
+
+0		carryPreventsEat
+0		carryPreventsFight
+0		carryPreventsGive
+0		carryPreventsMate
+
 0		minintneurons_unused
 0		maxintneurons_unused
 1		minvispixels
@@ -393,6 +406,7 @@ O		smiteMode_R=random|L=leastfit|O=off
 1		recordPosition
 1		recordContacts
 1		recordCollisions
+1		recordCarry
 
 1		brainAnatomyRecordAll
 1		brainFunctionRecordAll
