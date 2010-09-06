@@ -1209,6 +1209,7 @@ void TSimulation::End()
 	EndLifeSpanLog();
 	EndContactsLog();
 	EndCollisionsLog();
+	EndCarryLog();
 
 	// Stop simulation
 	printf( "Simulation stopped after step %ld\n", fStep );
@@ -1359,7 +1360,7 @@ void TSimulation::Init()
 		MKDIR( "run/motion/position" );
 	}
 
-	if( fRecordContacts || fRecordCollisions )
+	if( fRecordContacts || fRecordCollisions || fRecordCarry )
 	{
 		MKDIR( "run/events" );
 	}
@@ -1821,6 +1822,7 @@ void TSimulation::Init()
 	InitLifeSpanLog();
 	InitContactsLog();
 	InitCollisionsLog();
+	InitCarryLog();
 	
 	inited = true;
 }
@@ -2374,6 +2376,89 @@ void TSimulation::EndCollisionsLog()
 	fCollisionsLog->endTable();
 	delete fCollisionsLog;
 	fCollisionsLog = NULL;
+}
+
+//---------------------------------------------------------------------------
+// TSimulation::InitCarryLog
+//---------------------------------------------------------------------------
+
+void TSimulation::InitCarryLog()
+{
+	if( !fRecordCarry )
+		return;
+
+	fCarryLog = new DataLibWriter( "run/events/carry.log" );
+
+	const char *colnames[] =
+		{
+			"T",
+			"Agent",
+			"Action",
+			"ObjectType",
+			"ObjectNumber",
+			NULL
+		};
+	const datalib::Type coltypes[] =
+		{
+			datalib::INT,
+			datalib::INT,
+			datalib::STRING,
+			datalib::STRING,
+			datalib::INT
+		};
+
+	fCarryLog->beginTable( "Carry",
+						   colnames,
+						   coltypes );
+}
+
+
+//---------------------------------------------------------------------------
+// TSimulation::UpdateCarryLog
+//---------------------------------------------------------------------------
+
+void TSimulation::UpdateCarryLog( agent *c,
+								  gobject *obj,
+								  CarryAction action )
+{
+	if( !fRecordCarry )
+	{
+		return;
+	}
+
+	static const char *actions[] = {"P",
+									"D",
+									"Do"};
+
+	const char *objectType;
+	switch(obj->getType())
+	{
+	case AGENTTYPE: objectType = "A"; break;
+	case FOODTYPE: objectType = "F"; break;
+	case BRICKTYPE: objectType = "B"; break;
+	default: assert(false);
+	}
+
+	fCarryLog->addRow( fStep,
+					   c->Number(),
+					   actions[action],
+					   objectType,
+					   obj->getTypeNumber() );
+}
+
+
+//---------------------------------------------------------------------------
+// TSimulation::EndCarryLog
+//---------------------------------------------------------------------------
+
+void TSimulation::EndCarryLog()
+{
+	if( !fRecordCarry )
+		return;
+
+	fCarryLog->endTable();
+	delete fCarryLog;
+	fCarryLog = NULL;
 }
 
 //---------------------------------------------------------------------------

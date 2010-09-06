@@ -1452,7 +1452,6 @@ void agent::GetCollisionFixedCoordinates( float xo, float zo, float xn, float zn
 	}
 }
 
-static FILE* pickupLog = NULL;
 
 //---------------------------------------------------------------------------
 // agent::Pickup
@@ -1460,22 +1459,15 @@ static FILE* pickupLog = NULL;
 void agent::PickupObject( gobject* o )
 {
     debugcheck( "%lu", Number() );
-
-	if( pickupLog == NULL )
-	{
-		pickupLog = fopen( "run/PickupLog.txt", "w" );
-		if( pickupLog == NULL )
-			error( 2, "Unable to open PickupLog.txt" );
-	}
 	
 	o->PickedUp( (gobject*)this, ly() );
 	fCarries.push_back( o );
 	if( o->radius() > fCarryRadius )
 		fCarryRadius = o->radius();
 
-	fprintf( pickupLog, "t=%lu agent %lu picked up  %5s # %4lu, now carrying %u\n",
-			 fSimulation->fStep, Number(), OBJECTTYPE( o ), o->getTypeNumber(), NumCarries() );
-	fflush( pickupLog );
+	fSimulation->UpdateCarryLog( this,
+								 o,
+								 TSimulation::CA__PICKUP );
 }
 
 
@@ -1495,9 +1487,9 @@ void agent::DropMostRecent( void )
 		RecalculateCarryRadius();
 	}
 
-	fprintf( pickupLog, "t=%lu agent %lu dropped rc %5s # %4lu, now carrying %u\n",
-			 fSimulation->fStep, Number(), OBJECTTYPE( o ), o->getTypeNumber(), NumCarries() );
-	fflush( pickupLog );
+	fSimulation->UpdateCarryLog( this,
+								 o,
+								 TSimulation::CA__DROP_RECENT );
 }
 
 
@@ -1515,9 +1507,9 @@ void agent::DropObject( gobject* o )
 		RecalculateCarryRadius();
 	}
 
-	fprintf( pickupLog, "t=%lu agent %lu dropped    %5s # %4lu, now carrying %u\n",
-			 fSimulation->fStep, Number(), OBJECTTYPE( o ), o->getTypeNumber(), NumCarries() );
-	fflush( pickupLog );
+	fSimulation->UpdateCarryLog( this,
+								 o,
+								 TSimulation::CA__DROP_OBJECT );
 }
 
 

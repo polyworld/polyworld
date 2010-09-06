@@ -446,6 +446,10 @@ private:
 	void EndCollisionsLog();
 
 	void InitCarryLog();
+ public:
+	enum CarryAction { CA__PICKUP = 0, CA__DROP_RECENT, CA__DROP_OBJECT };
+	void UpdateCarryLog( agent *c, gobject *obj, CarryAction action );
+ private:
 	void EndCarryLog();
 
 	void InitSeparationsLog();
