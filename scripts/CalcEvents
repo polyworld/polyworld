@@ -183,7 +183,7 @@ def list_divide(x,y):
 
 # key = Major, values = Minor
 CONTACT_SYMBOLS = {'C': [],
-                   'M': ['p','c','w','e','f'],
+                   'M': ['p','c','w','e','f','d','x','m'],
                    'F': ['c','s','p'],
                    'G': ['c','e']}
 

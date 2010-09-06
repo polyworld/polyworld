@@ -106,6 +106,9 @@ void ContactEntry::AgentInfo::encode( char **buf )
 		__SET( MATE_WAIT, 'w' );
 		__SET( ENERGY, 'e' );
 		__SET( EAT_MATE_SPAN, 'f' );
+		__SET( MAX_DOMAIN, 'd' );
+		__SET( MAX_WORLD, 'x' );
+		__SET( MISC, 'm' );
 
 #undef __SET
 

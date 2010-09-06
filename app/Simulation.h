@@ -59,6 +59,9 @@ static const int MAXFITNESSITEMS = 5;
 #define MATE__PREVENTED__ENERGY			(1 << 4)
 #define MATE__PREVENTED__EAT_MATE_SPAN	(1 << 5)
 #define MATE__PREVENTED__OF1			(1 << 6)
+#define MATE__PREVENTED__MAX_DOMAIN		(1 << 7)
+#define MATE__PREVENTED__MAX_WORLD		(1 << 8)
+#define MATE__PREVENTED__MISC			(1 << 9)
 
 
 // Used in logic related to Fighting as well as ContactEntry
@@ -388,6 +391,8 @@ public:
 	DataLibWriter *fContactsLog;
 	bool fRecordCollisions;
 	DataLibWriter *fCollisionsLog;
+	bool fRecordCarry;
+	DataLibWriter *fCarryLog;
 
 	bool fBrainAnatomyRecordAll;
 	bool fBrainFunctionRecordAll;
@@ -440,6 +445,9 @@ private:
  private:
 	void EndCollisionsLog();
 
+	void InitCarryLog();
+	void EndCarryLog();
+
 	void InitSeparationsLog();
 	void EndSeparationsLog();
 	
@@ -452,9 +460,15 @@ private:
 	void MateLockstep();
 	int GetMatePotential( agent *x );
 	int GetMateStatus( int xPotential, int yPotential );
+	int GetMateDenialStatus( agent *x, int *xStatus,
+							 agent *y, int *yStatus,
+							 short domainID );
 	void Mate( agent *c,
 			   agent *d,
 			   ContactEntry *contactEntry );
+	void Smite( short kd,
+				agent *c,
+				agent *d );
 	int GetFightStatus( agent *x,
 						agent *y,
 						float *out_power );
@@ -487,7 +501,6 @@ private:
 	bool RecordBrainAnatomy( long agentNumber );
 	bool RecordBrainFunction( long agentNumber );
 	
-	void SmiteOne(short id, short smite);
 	void ijfitinc(short* i, short* j);
 		
 	void Birth( agent* a,

@@ -14,7 +14,7 @@
 #define MinDebugStep 0
 #define MaxDebugStep INT_MAX
 
-#define CurrentWorldfileVersion 41
+#define CurrentWorldfileVersion 42
 
 #define TournamentSelection 1
 
@@ -189,6 +189,8 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
 		fContactsLog(NULL),
 		fRecordCollisions(false),
 		fCollisionsLog(NULL),
+		fRecordCarry(false),
+		fCarryLog(NULL),
 
 		fBrainAnatomyRecordAll(false),
 		fBrainFunctionRecordAll(false),
@@ -3200,6 +3202,44 @@ int TSimulation::GetMateStatus( int xPotential, int yPotential )
 }
 
 //---------------------------------------------------------------------------
+// TSimulation::GetMateDenialStatus
+//---------------------------------------------------------------------------
+int TSimulation::GetMateDenialStatus( agent *x, int *xStatus,
+									  agent *y, int *yStatus,
+									  short domainID )
+{
+	int status = MATE__NIL;
+	Domain &domain = fDomains[domainID];
+
+	bool preventedByMaxDomain = domain.numAgents >= domain.maxNumAgents;
+	bool preventedByMaxWorld = objectxsortedlist::gXSortedObjects.getCount( AGENTTYPE ) >= fMaxNumAgents;
+
+#define __SET(var,macro) if( preventedBy##var ) status |= MATE__PREVENTED__##macro
+
+	__SET( MaxDomain, MAX_DOMAIN );
+	__SET( MaxWorld, MAX_WORLD );
+
+	if( status == MATE__NIL )
+	{
+		// We only check misc if not rejected by max. We do this so the random number
+		// generator state is the same as in older versions of the simulator.
+		bool preventedByMisc =
+			(fMiscAgents >= 0)
+			&& (domain.numbornsincecreated >= fMiscAgents)
+			&& (randpw() >= x->MateProbability(y));
+
+		__SET( Misc, MISC );
+	}
+
+#undef __SET
+
+	*xStatus |= status;
+	*yStatus |= status;
+
+	return status;
+}
+
+//---------------------------------------------------------------------------
 // TSimulation::Mate
 //---------------------------------------------------------------------------
 void TSimulation::Mate( agent *c,
@@ -3211,127 +3251,59 @@ void TSimulation::Mate( agent *c,
 	int cMateStatus = GetMateStatus( cMatePotential, dMatePotential );
 	int dMateStatus = GetMateStatus( dMatePotential, cMatePotential );
 
-	contactEntry->mate( c, cMateStatus );
-	contactEntry->mate( d, dMateStatus );
-
 #ifndef OF1
-	if( fLockStepWithBirthsDeathsLog )
+	if( !fLockStepWithBirthsDeathsLog )
 	{
-		return;
-	}
 #endif
-
-	if( (cMateStatus == MATE__DESIRED) && (dMateStatus == MATE__DESIRED) )
-	{
-		// the agents are mate-worthy, so now deal with other conditions...
-		
-		// test for steady-state GA vs. natural selection
-		if( (fHeuristicFitnessWeight != 0.0) || (fComplexityFitnessWeight != 0.0) )
+		if( (cMateStatus == MATE__DESIRED) && (dMateStatus == MATE__DESIRED) )
 		{
-			// we're using the steady state GA (instead of natural selection)
-			if( fHeuristicFitnessWeight != 0.0 )
+			// the agents are mate-worthy, so now deal with other conditions...
+		
+			// test for steady-state GA vs. natural selection
+			if( (fHeuristicFitnessWeight != 0.0) || (fComplexityFitnessWeight != 0.0) )
 			{
-				// we're using the heuristic fitness function, so allow virtual offspring
-				// (count would-be offspring towards fitness, but don't actually instantiate them)
-				(void) c->mating( fMateFitnessParameter, fMateWait );
-				(void) d->mating( fMateFitnessParameter, fMateWait );
-//							cout << "t=" << fStep sp "mating c=" << c->Number() sp "(m=" << c->Mate() << ",lm=" << c->LastMate() << ",e=" << c->Energy() << ",x=" << c->x() << ",z=" << c->z() << ",r=" << c->radius() << ")" nl;
-//							cout << "          & d=" << d->Number() sp "(m=" << d->Mate() << ",lm=" << d->LastMate() << ",e=" << d->Energy() << ",x=" << d->x() << ",z=" << d->z() << ",r=" << d->radius() << ")" nl;
-//							if( sqrt((d->x()-c->x())*(d->x()-c->x())+(d->z()-c->z())*(d->z()-c->z())) > (d->radius()+c->radius()) )
-//								cout << "            ***** no overlap *****" nl;
-				fNumberBornVirtual++;
+				// we're using the steady state GA (instead of natural selection)
+				if( fHeuristicFitnessWeight != 0.0 )
+				{
+					// we're using the heuristic fitness function, so allow virtual offspring
+					// (count would-be offspring towards fitness, but don't actually instantiate them)
+					(void) c->mating( fMateFitnessParameter, fMateWait );
+					(void) d->mating( fMateFitnessParameter, fMateWait );
+					//							cout << "t=" << fStep sp "mating c=" << c->Number() sp "(m=" << c->Mate() << ",lm=" << c->LastMate() << ",e=" << c->Energy() << ",x=" << c->x() << ",z=" << c->z() << ",r=" << c->radius() << ")" nl;
+					//							cout << "          & d=" << d->Number() sp "(m=" << d->Mate() << ",lm=" << d->LastMate() << ",e=" << d->Energy() << ",x=" << d->x() << ",z=" << d->z() << ",r=" << d->radius() << ")" nl;
+					//							if( sqrt((d->x()-c->x())*(d->x()-c->x())+(d->z()-c->z())*(d->z()-c->z())) > (d->radius()+c->radius()) )
+					//								cout << "            ***** no overlap *****" nl;
+					fNumberBornVirtual++;
+				}
+				else
+				{
+					// we're not using the heuristic fitness function, so just disable the mating process altogether
+				}
 			}
 			else
 			{
-				// we're not using the heuristic fitness function, so just disable the mating process altogether
-			}
-		}
-		else
-		{
-			// we're using natural selection (or are lockstepped to a previous natural selection run),
-			// so proceed with the normal mating process (attempt to mate for offspring production if there's room)
-			short kd = WhichDomain(0.5*(c->x()+d->x()),
-								   0.5*(c->z()+d->z()),
-								   kd);
+				// we're using natural selection (or are lockstepped to a previous natural selection run),
+				// so proceed with the normal mating process (attempt to mate for offspring production if there's room)
+				short kd = WhichDomain(0.5*(c->x()+d->x()),
+									   0.5*(c->z()+d->z()),
+									   kd);
 
-			bool smited = false;
+				Smite( kd, c, d );
 
-			if( fSmiteMode == 'L' )		// smite the least fit
-			{
-				if( (fDomains[kd].numAgents >= fDomains[kd].maxNumAgents) &&	// too many agents to reproduce withing a bit of smiting
-					(fDomains[kd].fNumLeastFit > fDomains[kd].fNumSmited) )			// we've still got some left that are suitable for smiting
+				int denialStatus = GetMateDenialStatus( c, &cMateStatus,
+														d, &dMateStatus,
+														kd );
+
+				if( denialStatus != MATE__NIL )
 				{
-					while( (fDomains[kd].fNumSmited < fDomains[kd].fNumLeastFit) &&		// there are any left to smite
-						  ((fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] == c) ||	// trying to smite mommy
-						   (fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] == d) ||	// trying to smite daddy
-						   ((fCurrentFittestCount > 0) && (fDomains[kd].fLeastFit[fDomains[kd].fNumSmited]->HeuristicFitness() >= fCurrentMaxFitness[fCurrentFittestCount-1]))) )	// trying to smite one of the fittest
+					fBirthDenials++;
+
+					if( denialStatus & MATE__PREVENTED__MISC )
 					{
-						// We would have smited one of our mating pair, or one of the fittest, which wouldn't be prudent,
-						// so just step over them and see if there's someone else to smite
-						fDomains[kd].fNumSmited++;
-					}
-					if( fDomains[kd].fNumSmited < fDomains[kd].fNumLeastFit )	// we've still got someone to smite, so do it
-					{
-						smPrint( "About to smite least-fit agent #%d in domain %d\n", fDomains[kd].fLeastFit[fDomains[kd].fNumSmited]->Number(), kd );
-						Kill( fDomains[kd].fLeastFit[fDomains[kd].fNumSmited], LifeSpan::DR_SMITE );
-						fDomains[kd].fNumSmited++;
-						fNumberDiedSmite++;
-						smited = true;
-						//cout << "********************* SMITE *******************" nlf;	//dbg
+						fMiscDenials++;
 					}
 				}
-			}
-			else if( fSmiteMode == 'R' )				/// RANDOM SMITE
-			{
-				// If necessary, smite a random agent in this domain
-				if( fDomains[kd].numAgents >= fDomains[kd].maxNumAgents )
-				{
-					int i = 0;
-					agent* testAgent;
-					agent* randAgent = NULL;
-					int randomIndex = int( floor( randpw() * fDomains[kd].numAgents ) );	// pick from this domain
-
-					gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();	// save the state of the x-sorted list
-
-					// As written, randAgent may not actually be the randomIndex-th agent in the domain, but it will be close,
-					// and as long as there's a single legitimate agent for smiting (right domain, old enough, and not one of the
-					// parents), we will find and smite it
-					objectxsortedlist::gXSortedObjects.reset();
-					while( (i <= randomIndex) && objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**) &testAgent ) )
-					{
-						// If it's from the right domain, it's old enough, and it's not one of the parents, allow it
-						if( testAgent->Domain() == kd )
-						{
-							i++;	// if it's in the right domain, increment even if we're not allowed to smite it
-							
-							if( (testAgent->Age() > fSmiteAgeFrac*testAgent->MaxAge()) && (testAgent->Number() != c->Number()) && (testAgent->Number() != d->Number()) )
-								randAgent = testAgent;	// as long as there's a single legitimate agent for smiting in this domain, randAgent will be non-NULL
-						}
-						
-						if( (i > randomIndex) && (randAgent != NULL) )
-							break;
-					}
-														
-					objectxsortedlist::gXSortedObjects.setcurr( saveCurr );	// restore the state of the x-sorted list
-					
-					if( randAgent )	// if we found any legitimately smitable agent...
-					{
-						fDomains[kd].fNumSmited++;
-						fNumberDiedSmite++;
-						smited = true;
-						Kill( randAgent, LifeSpan::DR_SMITE );
-					}
-				}
-			}
-
-			
-			if ( (fDomains[kd].numAgents < fDomains[kd].maxNumAgents) &&
-				 (objectxsortedlist::gXSortedObjects.getCount( AGENTTYPE ) < fMaxNumAgents) )
-			{
-				// Still got room for more
-				if( (fMiscAgents < 0) ||									// miscegenation function not being used
-					(fDomains[kd].numbornsincecreated < fMiscAgents) ||	// miscegenation function not in use yet
-					(randpw() < c->MateProbability(d)) )					// miscegenation function allows the birth
+				else
 				{
 					ttPrint( "age %ld: agents # %ld & %ld are mating\n", fStep, c->Number(), d->Number() );
 
@@ -3384,18 +3356,94 @@ void TSimulation::Mate( agent *c,
 
 					Birth( e, LifeSpan::BR_NATURAL, c, d );
 				}
-				else	// miscegenation function denied this birth
-				{
-					fBirthDenials++;
-					fMiscDenials++;
-				}
-			}
-			else	// Too many agents
-				fBirthDenials++;
-		}	// steady-state GA vs. natural selection
-	}	// if agents are trying to mate
+			}	// steady-state GA vs. natural selection
+		}	// if agents are trying to mate
+#ifndef OF1
+	} // if not lockstep
+#endif
+
+	contactEntry->mate( c, cMateStatus );
+	contactEntry->mate( d, dMateStatus );
 
 	debugcheck( "after all mating is complete" );
+}
+
+//---------------------------------------------------------------------------
+// TSimulation::Smite
+//---------------------------------------------------------------------------
+void TSimulation::Smite( short kd,
+						 agent *c,
+						 agent *d )
+{
+	bool smited = false;
+
+	if( fSmiteMode == 'L' )		// smite the least fit
+	{
+		if( (fDomains[kd].numAgents >= fDomains[kd].maxNumAgents) &&	// too many agents to reproduce withing a bit of smiting
+			(fDomains[kd].fNumLeastFit > fDomains[kd].fNumSmited) )			// we've still got some left that are suitable for smiting
+		{
+			while( (fDomains[kd].fNumSmited < fDomains[kd].fNumLeastFit) &&		// there are any left to smite
+				   ((fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] == c) ||	// trying to smite mommy
+					(fDomains[kd].fLeastFit[fDomains[kd].fNumSmited] == d) ||	// trying to smite daddy
+					((fCurrentFittestCount > 0) && (fDomains[kd].fLeastFit[fDomains[kd].fNumSmited]->HeuristicFitness() >= fCurrentMaxFitness[fCurrentFittestCount-1]))) )	// trying to smite one of the fittest
+			{
+				// We would have smited one of our mating pair, or one of the fittest, which wouldn't be prudent,
+				// so just step over them and see if there's someone else to smite
+				fDomains[kd].fNumSmited++;
+			}
+			if( fDomains[kd].fNumSmited < fDomains[kd].fNumLeastFit )	// we've still got someone to smite, so do it
+			{
+				smPrint( "About to smite least-fit agent #%d in domain %d\n", fDomains[kd].fLeastFit[fDomains[kd].fNumSmited]->Number(), kd );
+				Kill( fDomains[kd].fLeastFit[fDomains[kd].fNumSmited], LifeSpan::DR_SMITE );
+				fDomains[kd].fNumSmited++;
+				fNumberDiedSmite++;
+				smited = true;
+				//cout << "********************* SMITE *******************" nlf;	//dbg
+			}
+		}
+	}
+	else if( fSmiteMode == 'R' )				/// RANDOM SMITE
+	{
+		// If necessary, smite a random agent in this domain
+		if( fDomains[kd].numAgents >= fDomains[kd].maxNumAgents )
+		{
+			int i = 0;
+			agent* testAgent;
+			agent* randAgent = NULL;
+			int randomIndex = int( floor( randpw() * fDomains[kd].numAgents ) );	// pick from this domain
+
+			gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();	// save the state of the x-sorted list
+
+			// As written, randAgent may not actually be the randomIndex-th agent in the domain, but it will be close,
+			// and as long as there's a single legitimate agent for smiting (right domain, old enough, and not one of the
+			// parents), we will find and smite it
+			objectxsortedlist::gXSortedObjects.reset();
+			while( (i <= randomIndex) && objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**) &testAgent ) )
+			{
+				// If it's from the right domain, it's old enough, and it's not one of the parents, allow it
+				if( testAgent->Domain() == kd )
+				{
+					i++;	// if it's in the right domain, increment even if we're not allowed to smite it
+							
+					if( (testAgent->Age() > fSmiteAgeFrac*testAgent->MaxAge()) && (testAgent->Number() != c->Number()) && (testAgent->Number() != d->Number()) )
+						randAgent = testAgent;	// as long as there's a single legitimate agent for smiting in this domain, randAgent will be non-NULL
+				}
+						
+				if( (i > randomIndex) && (randAgent != NULL) )
+					break;
+			}
+														
+			objectxsortedlist::gXSortedObjects.setcurr( saveCurr );	// restore the state of the x-sorted list
+					
+			if( randAgent )	// if we found any legitimately smitable agent...
+			{
+				fDomains[kd].fNumSmited++;
+				fNumberDiedSmite++;
+				smited = true;
+				Kill( randAgent, LifeSpan::DR_SMITE );
+			}
+		}
+	}
 }
 
 //---------------------------------------------------------------------------
@@ -4409,32 +4457,6 @@ void TSimulation::CalculateGeneSeparationAll()
     }
 
     fAverageGeneSeparation = genesepsum / fNumGeneSepVals;
-}
-
-
-//---------------------------------------------------------------------------
-// TSimulation::SmiteOne
-//---------------------------------------------------------------------------
-void TSimulation::SmiteOne(short /*id*/, short /*smite*/)
-{
-/*
-    if (id < 0)  // smite one anywhere in the world
-    {
-        fSortedAgents.next(c);
-        smitten = c;
-        while (fSortedAgents.next(c))
-        {
-            if (c->Age() > minsmiteage)
-            {
-                case (smite)
-                1:  // fitness rate
-            }
-        }
-    }
-    else  // smite one in domain id
-    {
-    }
-*/
 }
 
 
@@ -6288,6 +6310,11 @@ void TSimulation::ReadWorldFile(const char* filename)
 	{
 		PROP( RecordContacts );
 		PROP( RecordCollisions );
+	}
+
+	if( version >= 42 )
+	{
+		PROP( RecordCarry );
 	}
 	
 	if( version >= 11 )
