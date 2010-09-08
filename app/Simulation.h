@@ -551,10 +551,11 @@ private:
 	int fSolidObjects;	// agents cannot pass through solid objects (collisions are avoided)
 	int fCarryObjects;  // specifies which types of objects can be picked up.
 	int fShieldObjects;  // specifies which types of objects act as shields.
-	bool fCarryPreventsEat;
-	bool fCarryPreventsFight;
-	bool fCarryPreventsGive;
-	bool fCarryPreventsMate;
+
+	float fCarryPreventsEat;
+	float fCarryPreventsFight;
+	float fCarryPreventsGive;
+	float fCarryPreventsMate;
 	
 	float fAgentHealingRate;	// Virgil Healing
 	bool fHealing;				// Virgil Healing
@@ -630,6 +631,7 @@ private:
 	float fMateThreshold;
 	long fEatMateSpan;
 	float fFightThreshold;
+	float fFightFraction;
 	float fGiveThreshold;
 	float fGiveFraction;
 	float fPickupThreshold;

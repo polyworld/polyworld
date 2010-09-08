@@ -14,7 +14,7 @@
 #define MinDebugStep 0
 #define MaxDebugStep INT_MAX
 
-#define CurrentWorldfileVersion 42
+#define CurrentWorldfileVersion 43
 
 #define TournamentSelection 1
 
@@ -163,6 +163,9 @@ inline float AverageAngles( float a, float b )
 #else
 	#define lsPrint( x... )
 #endif
+
+#define IS_PREVENTED_BY_CARRY( ACTION, AGENT ) \
+	( (fCarryPrevents##ACTION != 0) && ((AGENT)->NumCarries() > 0) && (randpw() < fCarryPrevents##ACTION) )
 
 //---------------------------------------------------------------------------
 // TSimulation::TSimulation
@@ -1920,6 +1923,7 @@ void TSimulation::InitWorld()
 	fEatThreshold = 0.2;
     fMateThreshold = 0.5;
     fFightThreshold = 0.2;
+	fFightFraction = 1.0;
 	fGiveThreshold = 0.2;
 	fPickupThreshold = 0.5;
 	fDropThreshold = 0.5;
@@ -3244,7 +3248,7 @@ int TSimulation::GetMatePotential( agent *x )
 	{
 		potential |= MATE__DESIRED;
 
-		bool preventedByCarry = fCarryPreventsMate && (x->NumCarries() > 0);
+		bool preventedByCarry = IS_PREVENTED_BY_CARRY( Mate, x );
 		bool preventedByMateWait = (x->Age() - x->LastMate()) < fMateWait;
 		bool preventedByEnergy = x->Energy() <= (fMinMateFraction * x->MaxEnergy());
 		bool preventedByEatMateSpan = (fEatMateSpan > 0) && ( (fStep - x->LastEat()) >= fEatMateSpan );
@@ -3545,9 +3549,9 @@ int TSimulation::GetFightStatus( agent *x,
 	{
 		status |= FIGHT__DESIRED;
 
-		*out_power = x->Strength() * x->SizeAdvantage() * x->Fight() * (x->Energy()/x->MaxEnergy());
+		*out_power = fFightFraction * x->Strength() * x->SizeAdvantage() * x->Fight() * (x->Energy()/x->MaxEnergy());
 
-		bool preventedByCarry = fCarryPreventsFight && (x->NumCarries() > 0);
+		bool preventedByCarry = IS_PREVENTED_BY_CARRY( Fight, x );
 		bool preventedByShield = y->IsCarrying( fShieldObjects );
 		bool preventedByPower = *out_power <= 0.0;
 
@@ -3645,7 +3649,7 @@ int TSimulation::GetGiveStatus( agent *x,
 
 		*out_energy = x->Energy() * x->Give() * fGiveFraction;
 
-		bool preventedByCarry = fCarryPreventsGive && (x->NumCarries() > 0);
+		bool preventedByCarry = IS_PREVENTED_BY_CARRY( Give, x );
 		bool preventedByEnergy = *out_energy <= 0.0;
 
 #define __SET(var,macro) if( preventedBy##var ) status |= GIVE__PREVENTED__##macro
@@ -3725,7 +3729,7 @@ void TSimulation::Eat( agent *c )
 	// set the list back to the agent mark, so we can look backward from that point
 	objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point list back to c
 
-	if( (c->NumCarries() > 0) && fCarryPreventsEat )
+	if( IS_PREVENTED_BY_CARRY(Eat, c) )
 		return;
 
 
@@ -5402,10 +5406,10 @@ void TSimulation::ReadWorldFile(const char* filename)
 	{
 		fCarryObjects = ANYTYPE;
 		fShieldObjects = 0;
-		fCarryPreventsEat = false;
-		fCarryPreventsFight = false;
-		fCarryPreventsGive = false;
-		fCarryPreventsMate = false;
+		fCarryPreventsEat = 0;
+		fCarryPreventsFight = 0;
+		fCarryPreventsGive = 0;
+		fCarryPreventsMate = 0;
 	}
 
 	
@@ -5593,6 +5597,10 @@ void TSimulation::ReadWorldFile(const char* filename)
     cout << "matethreshold" ses fMateThreshold nl;
     in >> fFightThreshold; in >> label;
     cout << "fightthreshold" ses fFightThreshold nl;
+	if( version >= 43 )
+	{
+		PROP( FightFraction );
+	}
 	if( version >= 38 )
 	{
 
