@@ -79,8 +79,13 @@ def main():
             path_2bin = os.path.join( run, 'events/contacts_bins_2bin.txt' )
             calc_2bin( path,
                        path_2bin )
+            path_total = os.path.join( run, 'events/contacts_total.txt' )
+            calc_total( path,
+                       path_total )
             calc_bias( path_2bin,
                        os.path.join(run, 'events/contacts_bias_2bin.txt') )
+            calc_bias( path_total,
+                       os.path.join(run, 'events/contacts_bias_total.txt') )
             calc_bias( path,
                        os.path.join(run, 'events/contacts_bias.txt') )
         elif mode == 'n':
@@ -488,6 +493,44 @@ def calc_2bin( path_in, path_out ):
 
             row_out['bin0'] = bin0
             row_out['bin1'] = bin1
+
+        tables_out.append( table_out )
+
+    datalib.write( path_out, tables_out )
+    
+
+####################################################################################
+###
+### function calc_total()
+###
+####################################################################################
+def calc_total( path_in, path_out ):
+    tables_in = datalib.parse( path_in )
+    tables_out = []
+
+    for table_in in tables_in.values():
+        assert( table_in.colnames[0] == 'T' )
+
+        n = len(table_in.colnames) - 1
+        assert( table_in.coltypes[1] == 'int' )
+
+        colnames = ['T', 'total']
+        coltypes = ['int', 'int']
+
+        table_out = datalib.Table( table_in.name,
+                                   colnames,
+                                   coltypes )
+
+        for row_in in table_in.rows():
+            row_out = table_out.createRow()
+
+            row_out['T'] = row_in['T']
+
+            total = 0
+            for i in range(n):
+                total += row_in['bin%d'%i]
+
+            row_out['total'] = total
 
         tables_out.append( table_out )
 
