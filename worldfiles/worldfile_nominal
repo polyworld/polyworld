@@ -1,4 +1,4 @@
-42		version
+44		version
 
 0		LockStepWithBirthsDeathsLog
 
@@ -27,8 +27,9 @@
 90		maxFoodGrown
 0.1		foodrate
 
-42		positionseed_not_used
-42		genomeseed_used_for_all
+42		positionSeed_not_used
+42		genomeSeed_also_used_for_position
+42		simulationSeed_42=default,0=not_used
 
 1		agentsRfood
 100		fit1freq
@@ -121,6 +122,7 @@ L		noseColor_L=Light_Neuron|<float_literal>=fixed
 0.2		eatThreshold
 0.5		mateThreshold
 0.2		fightThreshold
+1.0		fightFraction_1.0
 0.3		giveThreshold
 0.9		giveFraction
 0.5		pickupThreshold

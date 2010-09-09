@@ -607,6 +607,7 @@ private:
 	short fFitJ;
 	long fPositionSeed;
 	long fGenomeSeed;
+	long fSimulationSeed;
 
 	float fEatFitnessParameter;
 	float fEatThreshold;

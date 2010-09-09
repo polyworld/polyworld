@@ -1,4 +1,4 @@
-39		version
+44		version
 
 0		LockStepWithBirthsDeathsLog
 
@@ -27,8 +27,9 @@
 90		maxFoodGrown
 0.1		foodrate
 
-42		positionseed_not_used
-42		genomeseed_used_for_all
+42		positionSeed_not_used
+42		genomeSeed_also_used_for_position
+0		simulationSeed_42=default,0=not_used
 
 0		agentsRfood
 100		fit1freq
@@ -50,6 +51,19 @@
 0		enableCarry
 
 3		maxCarries_3
+1		carryAgents
+1		carryFood
+1		carryBricks
+
+0		shieldAgents
+0		shieldFood
+1		shieldBricks
+
+0		carryPreventsEat
+0		carryPreventsFight
+0		carryPreventsGive
+0		carryPreventsMate
+
 0		minintneurons_unused
 0		maxintneurons_unused
 1		minvispixels
@@ -108,6 +122,7 @@ L		noseColor_L=Light_Neuron|<float_literal>=fixed
 0.2		eatThreshold
 0.5		mateThreshold
 0.2		fightThreshold
+1.0		fightFraction_1.0
 0.3		giveThreshold
 0.9		giveFraction
 0.5		pickupThreshold
@@ -235,6 +250,9 @@ F		neuronModel_F=FiringRate|S=Spiking
 0.0		maxneur2energy
 25		numprebirthcycles
 
+0.5		seedFightBias_0.5
+1.0		seedFightExcitation_1.0
+0.0		seedGiveBias_0.0
 0.0		seedPickupBias_0.0
 0.0		seedDropBias_0.0
 0.0		seedPickupExcitation_0.0
@@ -254,9 +272,10 @@ O		smiteMode_R=random|L=leastfit|O=off
 
 
 1		recordBirthsDeaths
-0		recordPosition
-0		recordContacts
-0		recordCollisions
+1		recordPosition
+1		recordContacts
+1		recordCollisions
+1		recordCarry
 
 1		brainAnatomyRecordAll
 1		brainFunctionRecordAll
@@ -273,8 +292,8 @@ O		smiteMode_R=random|L=leastfit|O=off
 P		complexityType_P=processing|A=all|I=input|B=behavior|D=processing-input|Z=ZeroMaxVelocityHack
 0.0		complexityFitnessWeight_0.0
 0.0		heuristicFitnessWeight_0.0
-0		recordGenomes
-0		recordSeparations
+1		recordGenomes
+1		recordSeparations
 1		recordAdamiComplexity
 200		AdamiComplexityRecordFrequency
 

@@ -14,7 +14,7 @@
 #define MinDebugStep 0
 #define MaxDebugStep INT_MAX
 
-#define CurrentWorldfileVersion 43
+#define CurrentWorldfileVersion 44
 
 #define TournamentSelection 1
 
@@ -416,6 +416,11 @@ void TSimulation::Step()
 	{
 		printf( "%s: called before TSimulation::Init()\n", __FUNCTION__ );
 		return;
+	}
+	
+	if( (frame == 0) && (fSimulationSeed != 0) )
+	{
+		srand48(fSimulationSeed);
 	}
 	
 	frame++;
@@ -1900,6 +1905,7 @@ void TSimulation::InitWorld()
     fMiscAgents = 150;
 	fPositionSeed = 42;
     fGenomeSeed = 42;
+	fSimulationSeed = 42;
     fAgentsRfood = true;
     fFitness1Frequency = 100;
     fFitness2Frequency = 2;
@@ -5303,9 +5309,11 @@ void TSimulation::ReadWorldFile(const char* filename)
 	}
 
     in >> fPositionSeed; in >> label;
-    cout << "fPositionSeed" ses fPositionSeed nl;
+    cout << "positionSeed" ses fPositionSeed nl;
     in >> fGenomeSeed; in >> label;
-    cout << "genomeseed" ses fGenomeSeed nl;
+    cout << "genomeSeed" ses fGenomeSeed nl;
+    in >> fSimulationSeed; in >> label;
+    cout << "simulationSeed" ses fSimulationSeed nl;
 
 	if( version < 32 )
 	{
