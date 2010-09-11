@@ -10,16 +10,24 @@ import common_metric
 
 GROUPS = ['driven', 'passive', 'both']
 
-DEFAULT_DIRECTORY = '/pwd/driven_vs_passive_b2/run_b2_passive_0'
+#DEFAULT_DIRECTORY = '/pwd/dynamic_food/run_df8_F30_complexity_0_partial'
+DEFAULT_DIRECTORY = '/pwd/b2_driven_vs_passive/run_b2_passive_0'
 DEFAULT_GROUP = GROUPS[1]
-DEFAULT_X_DATA_TYPE = 'P'
-DEFAULT_Y_DATA_TYPE = 'swi_nsp_a_bu'
+#DEFAULT_X_DATA_TYPE = 'swi_p_wd_npl_10_wp'
+#DEFAULT_X_DATA_TYPE = 'npl_p_wd'
+DEFAULT_X_DATA_TYPE = 'time'
+DEFAULT_Y_DATA_TYPE = 'P'
+
+LimitX = 0.0 # 4.0 for swi, 0.0 otherwise
+LimitY = 0.0 # 4.0 for swi, 0.0 otherwise
 
 HF_MAX = 24.0
 
 use_hf_coloration = True
 
 end_points = []
+
+TimeOfDeath = {}
 
 def usage():
 	print 'Usage:  plot_points.py -x <data_type> -y <data_type> [-d|p|b] run_directory'
@@ -106,39 +114,63 @@ def parse_args():
 		print 'unknown group type:', group
 					
 	return run_dir, group, x_data_type, y_data_type
-		
+
+def retrieve_time_data(timestep_dir, sim_type, time, max_time, limit):
+	path, data, agents = retrieve_data_type(timestep_dir, 'P', sim_type, time, max_time, limit)
+	if not agents:
+		return None
+	
+	time_data = []
+	for agent in agents:
+		time_data.append(TimeOfDeath[agent])
+	
+	return time_data
+
+def retrieve_data_type(timestep_dir, data_type, sim_type, time, max_time, limit):
+	if data_type == 'time':
+		time_data = retrieve_time_data(timestep_dir, sim_type, time, max_time, limit)
+		return None, time_data, None
+	
+	filename = get_filename(data_type)
+	path = os.path.join(timestep_dir, filename)
+	if not os.path.exists(path):
+		print 'Warning:', path, '.plt file is missing:'
+		return None, None, None
+
+	table = datalib.parse(path)[data_type]
+	
+	try:
+		data = table.getColumn('Mean').data # should change to 'Mean' for new format data
+		if limit:
+			for i in range(len(data)):
+				if data[i] > limit:
+					data[i] = limit
+	except KeyError:
+		data = table.getColumn('Complexity').data # should change to 'Mean' for new format data
+
+	try:
+		agents = table.getColumn('AgentNumber').data # should change to 'AgentNumber' for new format data
+	except KeyError:
+		agents = table.getColumn('CritterNumber').data # should change to 'AgentNumber' for new format data
+
+	return path, data, agents
 	
 def retrieve_data(timestep_dir, x_data_type, y_data_type, sim_type, time, max_time):
 	global use_hf_coloration
 	
-	x_filename = get_filename(x_data_type)
-	x_path = os.path.join(timestep_dir, x_filename)
-	y_filename = get_filename(y_data_type)
-	y_path = os.path.join(timestep_dir, y_filename)
-	if not (os.path.exists(x_path) or not os.path.exists(y_path)):
-		print 'Error! Needed .plt files are missing'
-		exit(2)
-		
-	x_table = datalib.parse(x_path)[x_data_type]
-	y_table = datalib.parse(y_path)[y_data_type]
-	try:
-		x_data = x_table.getColumn('Mean').data # should change to 'Mean' for new format data
-	except KeyError:
-		x_data = x_table.getColumn('Complexity').data # should change to 'Mean' for new format data
-	try:
-		y_data = y_table.getColumn('Mean').data
-	except KeyError:
-		y_data = y_table.getColumn('Complexity').data
-	try:
-		x_agents = x_table.getColumn('AgentNumber').data# should change to 'AgentNumber' for new format data
-	except KeyError:
-		x_agents = x_table.getColumn('CritterNumber').data# should change to 'AgentNumber' for new format data
-	try:
-		y_agents = y_table.getColumn('AgentNumber').data
-	except KeyError:
-		y_agents = y_table.getColumn('CritterNumber').data
+	x_path, x_data, x_agents = retrieve_data_type(timestep_dir, x_data_type, sim_type, time, max_time, LimitX)
+	y_path, y_data, y_agents = retrieve_data_type(timestep_dir, y_data_type, sim_type, time, max_time, LimitY)
 	
-	#assert(len(x_agents) == len(y_agents))
+	if not x_data or not y_data:
+		return None, None, None
+	
+	# Deal with fact that the "time" data type doesn't have its own path or list of agents
+	if not x_path:
+		x_path = y_path
+		x_agents = y_agents
+	elif not y_path:
+		y_path = x_path
+		y_agents = x_agents
 	
 	# Get rid of extra agents to make len(x_data) == len(y_data)
 	if len(x_agents) != len(y_agents):
@@ -168,15 +200,8 @@ def retrieve_data(timestep_dir, x_data_type, y_data_type, sim_type, time, max_ti
 	if got_hf_data:
 		hf_data = hf_table.getColumn('Mean').data
 		c_data = map(lambda x: get_hf_color(x), hf_data)
-# 		c_data = []
-# 		for f in hf_data:
-# 			c.append(get_hf_color(f))
 	else:
 		c_data = map(lambda x: get_time_color(float(time)/float(max_time), sim_type), range(len(x_data)))
-# 		c = get_time_color(float(time)/float(max_time), sim_type)
-# 		c_data = []
-# 		for i in range(len(x_data)):
-# 			c_data.append(c)
 
 	return x_data, y_data, c_data
 
@@ -223,35 +248,55 @@ def plot(ax, x, y, color):
 	#pylab.plot(x, y, 50, color, marker='+')
 
 
-def plot_dirs(ax, timestep_dirs, x_data_type, y_data_type, sim_type):
+def get_TimeOfDeath(run_dir):
+	global TimeOfDeath
+	TimeOfDeath.clear()
+	path = os.path.join(run_dir, "BirthsDeaths.log")
+	log = open(path, 'r')
+	for line in log:
+		items = line.split(' ')
+		if items[1] == 'DEATH':
+			for agent in items[2:]:
+				TimeOfDeath[int(agent)] = int(items[0])
+
+def plot_dirs(ax, run_dir, timestep_dirs, x_data_type, y_data_type, sim_type):
+	if x_data_type == 'time' or y_data_type == 'time':
+		get_TimeOfDeath(run_dir)
+	
 	times = map(lambda x: int(os.path.basename(x)), timestep_dirs)
 	max_time = max(times)
 	i = 0
 	for timestep_dir in timestep_dirs:
 		x, y, color = retrieve_data(timestep_dir, x_data_type, y_data_type, sim_type, times[i], max_time)
-		plot(ax, x, y, color)
+		if x:
+			plot(ax, x, y, color)
 		i += 1
 
+def get_axis_label(data_type):
+	if data_type == 'time':
+		label = 'Time'
+	elif data_type in common_complexity.COMPLEXITY_TYPES:
+		label = 'Complexity (' + common_complexity.COMPLEXITY_NAMES[data_type] + ')'
+	else:
+		label = common_metric.get_name(data_type)
+	
+	return label
 
 def main():
 	run_dir, group, x_data_type, y_data_type = parse_args()
-	if x_data_type in common_complexity.COMPLEXITY_TYPES:
-		x_label = 'Complexity (' + common_complexity.COMPLEXITY_NAMES[x_data_type] + ')'
-	else:
-		x_label = common_metric.get_name(x_data_type)
-	if y_data_type in common_complexity.COMPLEXITY_TYPES:
-		y_label = 'Complexity (' + common_complexity.COMPLEXITY_NAMES[y_data_type] + ')'
-	else:
-		y_label = common_metric.get_name(y_data_type)
-	title = y_label + ' vs. ' + x_label + ' - Temporal Traces'
+	
+	x_label = get_axis_label(x_data_type)
+	y_label = get_axis_label(y_data_type)
+
+	title = y_label + ' vs. ' + x_label + ' - Scatter Plot'
 	bounds = (0.0, 0.8, 0.0, 8.0)  # (x_min, x_max, y_min, y_max)
 	size = (11.0, 8.5)  # (width, height)
 	ax = plot_init(title, x_label, y_label, bounds, size)
 	
 	if group == 'passive':
-		plot_dirs(ax, get_timestep_dirs(run_dir, 'passive'), x_data_type, y_data_type, 'passive')
+		plot_dirs(ax, run_dir, get_timestep_dirs(run_dir, 'passive'), x_data_type, y_data_type, 'passive')
 	if group == 'driven':
-		plot_dirs(ax, get_timestep_dirs(run_dir, 'driven'), x_data_type, y_data_type, 'driven')
+		plot_dirs(ax, run_dir, get_timestep_dirs(run_dir, 'driven'), x_data_type, y_data_type, 'driven')
 	if group == 'both':
 		if 'passive' in os.path.basename(run_dir):
 			passive_dir = run_dir
@@ -261,8 +306,8 @@ def main():
 			driven_dir = run_dir
 			start = run_dir.rfind('driven')
 			passive_dir = run_dir[:start] + 'passive' + run_dir[start+6:]
-		plot_dirs(ax, get_timestep_dirs(passive_dir, 'passive'), x_data_type, y_data_type, 'passive')
-		plot_dirs(ax, get_timestep_dirs(driven_dir, 'driven'), x_data_type, y_data_type, 'driven')
+		plot_dirs(ax, passive_dir, get_timestep_dirs(passive_dir, 'passive'), x_data_type, y_data_type, 'passive')
+		plot_dirs(ax, driven_dir, get_timestep_dirs(driven_dir, 'driven'), x_data_type, y_data_type, 'driven')
 	
 	pylab.show()
 	
