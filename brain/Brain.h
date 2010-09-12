@@ -62,11 +62,10 @@ public:
 	void GrowSynapses( genome::Genome *g,
 					   int i,
 					   short nneuri,
-					   float *eeremainder,
+					   float *remainder,
 					   short ini,
-					   bool *neurused,
 					   short ineur,
-					   short *firsteneur,
+					   short *firstneur,
 					   long &numsyn,
 					   genome::SynapseType *synapseType );
 	void Prebirth( long agentNumber, bool recordBrainAnatomy );

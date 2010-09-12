@@ -1160,12 +1160,14 @@ float Brain::DesignedEfficacy( short toGroup, short fromGroup, short isyn, int s
 	return( efficacy );
 }
 
+//---------------------------------------------------------------------------
+// Brain::GrowSynapses
+//---------------------------------------------------------------------------
 void Brain::GrowSynapses( Genome *g,
 						  int i,
 						  short nneuri,
 						  float *remainder,
 						  short ini,
-						  bool *neurused,
 						  short ineur,
 						  short *firstneur,
 						  long &numsyn,
@@ -1222,11 +1224,8 @@ void Brain::GrowSynapses( Genome *g,
 				  " than there are i-neurons in group ",j);
 		}
 
-		if (newsyn > 0)
-		{
-			for (int ii = 0; ii < nneurj; ii++)
-				neurused[ii] = false;
-		}
+		bool neurused[nneurj];
+		memset( neurused, 0, sizeof(neurused) );
 				
 		for (int isyn = 0; isyn < newsyn; isyn++)
 		{
@@ -1444,8 +1443,6 @@ void Brain::Grow( Genome* g )
 
     debugcheck( "after allocating brain memory" );
 
-	int i, j;
-    short ineur, nneuri;
     long numsyn = 0;
     short numneur = dims.numInputNeurons;
 
@@ -1454,9 +1451,9 @@ void Brain::Grow( Genome* g )
 		cout << "  Initializing input neurons:" nlf;
 #endif
 
-    for (i = 0, ineur = 0; i < brain::gNeuralValues.numinputneurgroups; i++)
+    for (int i = 0, ineur = 0; i < brain::gNeuralValues.numinputneurgroups; i++)
     {
-        for (j = 0; j < g->getNeuronCount(EXCITATORY, i); j++, ineur++)
+        for (int j = 0; j < g->getNeuronCount(EXCITATORY, i); j++, ineur++)
         {
 			neuralnet->set_neuron( ineur,
 								   i,
@@ -1464,29 +1461,29 @@ void Brain::Grow( Genome* g )
         }
     }
 
-    for (i = brain::gNeuralValues.numinputneurgroups; i < dims.numgroups; i++)
+    for (int groupIndex_to = brain::gNeuralValues.numinputneurgroups; groupIndex_to < dims.numgroups; groupIndex_to++)
     {
 #if DebugBrainGrow
 		if( DebugBrainGrowPrint )
-			cout << "For group " << i << ":" nlf;
+			cout << "For group " << groupIndex_to << ":" nlf;
 #endif
 
-        float groupbias = g->get(g->BIAS,i);
+        float groupbias = g->get(g->BIAS,groupIndex_to);
 
 #if DebugBrainGrow
 		if( DebugBrainGrowPrint )
 			cout << "  groupbias = " << groupbias nlf;
 #endif
 
-		neuralnet->set_groupblrate( i,
-									g->get(g->BIAS_LEARNING_RATE, i) );
+		neuralnet->set_groupblrate( groupIndex_to,
+									g->get(g->BIAS_LEARNING_RATE, groupIndex_to) );
 
-        for (j = 0; j < dims.numgroups; j++)
+        for (int groupIndex_from = 0; groupIndex_from < dims.numgroups; groupIndex_from++)
         {
-            eeremainder[j] = 0.0;
-            eiremainder[j] = 0.0;
-            iiremainder[j] = 0.0;
-            ieremainder[j] = 0.0;
+            eeremainder[groupIndex_from] = 0.0;
+            eiremainder[groupIndex_from] = 0.0;
+            iiremainder[groupIndex_from] = 0.0;
+            ieremainder[groupIndex_from] = 0.0;
 
 			for( SynapseTypeList::const_iterator
 					 it = g->getSynapseTypes().begin(),
@@ -1494,117 +1491,112 @@ void Brain::Grow( Genome* g )
 				 it != end;
 				 it++ )
 			{
-				SynapseType *stype = *it;
+				SynapseType *synapseType = *it;
 
-				neuralnet->set_grouplrate( stype,
-										   j,
-										   i,
+				neuralnet->set_grouplrate( synapseType,
+										   groupIndex_from,
+										   groupIndex_to,
 										   g->get(g->LEARNING_RATE,
-												  stype,
-												  j,
-												  i) );
+												  synapseType,
+												  groupIndex_from,
+												  groupIndex_to) );
 			}
         }
 
         // setup all e-neurons for this group
-        nneuri = g->getNeuronCount(EXCITATORY, i);
+        int neuronCount_to = g->getNeuronCount(EXCITATORY, groupIndex_to);
 
 #if DebugBrainGrow
 	if( DebugBrainGrowPrint )
-        cout << "  Setting up " << nneuri << " e-neurons" nlf;
+        cout << "  Setting up " << neuronCount_to << " e-neurons" nlf;
 #endif
 		
-		short ini;	
-        for (ini = 0; ini < nneuri; ini++)
+        for (int neuronLocalIndex_to = 0; neuronLocalIndex_to < neuronCount_to; neuronLocalIndex_to++)
         {
-            ineur = ini + firsteneur[i];
+            int neuronIndex_to = neuronLocalIndex_to + firsteneur[groupIndex_to];
 
 #if DebugBrainGrow
 			if( DebugBrainGrowPrint )
-				cout << "  For ini, ineur = "
-					 << ini cms ineur << ":" nlf;
+				cout << "  For neuronLocalIndex_to, neuronIndex_to = "
+					 << neuronLocalIndex_to cms neuronIndex_to << ":" nlf;
 #endif
 
-			neuralnet->set_neuron( ineur, i, groupbias, numsyn );
+			neuralnet->set_neuron( neuronIndex_to, groupIndex_to, groupbias, numsyn );
 
 			GrowSynapses( g,
-						  i,
-						  nneuri,
+						  groupIndex_to,
+						  neuronCount_to,
 						  eeremainder,
-						  ini,
-						  neurused,
-						  ineur,
+						  neuronLocalIndex_to,
+						  neuronIndex_to,
 						  firsteneur,
 						  numsyn,
 						  g->EE );
 
 			GrowSynapses( g,
-						  i,
-						  nneuri,
+						  groupIndex_to,
+						  neuronCount_to,
 						  ieremainder,
-						  ini,
-						  neurused,
-						  ineur,
+						  neuronLocalIndex_to,
+						  neuronIndex_to,
 						  firstineur,
 						  numsyn,
 						  g->IE );
 
-			neuralnet->set_neuron_endsynapses( ineur, numsyn );
+			neuralnet->set_neuron_endsynapses( neuronIndex_to, numsyn );
             numneur++;
         }
 
         // setup all i-neurons for this group
 
-        if( IsOutputNeuralGroup( i ) )
-            nneuri = 0;  // output/behavior neurons are e-only postsynaptically
+        if( IsOutputNeuralGroup( groupIndex_to ) )
+            neuronCount_to = 0;  // output/behavior neurons are e-only postsynaptically
         else
-            nneuri = g->getNeuronCount(INHIBITORY,  i );
+            neuronCount_to = g->getNeuronCount(INHIBITORY,  groupIndex_to );
 
 #if DebugBrainGrow
 		if( DebugBrainGrowPrint )
-			cout << "  Setting up " << nneuri << " i-neurons" nlf;
+			cout << "  Setting up " << neuronCount_to << " i-neurons" nlf;
 #endif
 
-        for (ini = 0; ini < nneuri; ini++)
+        for (int neuronLocalIndex_to = 0; neuronLocalIndex_to < neuronCount_to; neuronLocalIndex_to++)
         {
-            ineur = ini + firstineur[i];
+            int neuronIndex_to = neuronLocalIndex_to + firstineur[groupIndex_to];
 
 #if DebugBrainGrow
 			if( DebugBrainGrowPrint )
 			{
-				cout << "  For ini, ineur = "
-					 << ini cms ineur << ":" nlf;
+				cout << "  For neuronLocalIndex_to, neuronIndex_to = "
+					 << neuronLocalIndex_to cms neuronIndex_to << ":" nlf;
 			}
 #endif
 
-			neuralnet->set_neuron( ineur,
-								   i,
+			neuralnet->set_neuron( neuronIndex_to,
+								   groupIndex_to,
 								   groupbias,
 								   numsyn );
 
 			GrowSynapses( g,
-						  i,
-						  nneuri,
+						  groupIndex_to,
+						  neuronCount_to,
 						  eiremainder,
-						  ini,
-						  neurused,
-						  ineur,
+						  neuronLocalIndex_to,
+						  neuronIndex_to,
 						  firsteneur,
 						  numsyn,
 						  g->EI );
 
 			GrowSynapses( g,
-						  i,
-						  nneuri,
+						  groupIndex_to,
+						  neuronCount_to,
 						  iiremainder,
-						  ini,
-						  neurused,
-						  ineur,
+						  neuronLocalIndex_to,
+						  neuronIndex_to,
 						  firstineur,
 						  numsyn,
 						  g->II );
 
-			neuralnet->set_neuron_endsynapses( ineur, numsyn );
+			neuralnet->set_neuron_endsynapses( neuronIndex_to, numsyn );
             numneur++;
         }
     }
