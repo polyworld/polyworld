@@ -1160,6 +1160,126 @@ float Brain::DesignedEfficacy( short toGroup, short fromGroup, short isyn, int s
 	return( efficacy );
 }
 
+void Brain::GrowSynapses( Genome *g,
+						  int i,
+						  short nneuri,
+						  float *remainder,
+						  short ini,
+						  bool *neurused,
+						  short ineur,
+						  short *firstneur,
+						  long &numsyn,
+						  SynapseType *synapseType )
+{
+#if DebugBrainGrow
+	if( DebugBrainGrowPrint )
+		cout << "    Setting up " << synapseType->name << " connections:" nlf;
+#endif
+
+	bool checkOutputGroup = synapseType->nt_from != synapseType->nt_to;
+	int imul = synapseType->nt_to == EXCITATORY ? 1 : -1;
+	int jmul = synapseType->nt_from == EXCITATORY ? 1 : -1;
+
+	for (int j = 0; j < dims.numgroups; j++)
+	{
+		int nneurj = g->getNeuronCount(synapseType->nt_from, j);
+
+#if DebugBrainGrow
+		if( DebugBrainGrowPrint )
+		{
+			cout << "      From group " << j nlf;
+			cout << "      with nneurj, (old)" << synapseType->name << "remainder = "
+				 << nneurj cms remainder[j] nlf;
+		}
+#endif
+
+		int nsynji = g->getSynapseCount(synapseType,j,i);
+		float nsynjiperneur = float(nsynji)/float(nneuri);
+		int newsyn = short(nsynjiperneur + remainder[j] + 1.e-5);
+		remainder[j] += nsynjiperneur - newsyn;
+		float tdji = g->get(g->TOPOLOGICAL_DISTORTION,synapseType,j,i);
+
+		int joff = short((float(ini) / float(nneuri)) * float(nneurj) - float(newsyn) * 0.5);
+		joff = max<short>(0, min<short>(nneurj - newsyn, joff));
+
+#if DebugBrainGrow
+		if( DebugBrainGrowPrint )
+		{
+			cout << "      and nsynji, nsynjiperneur, newsyn = "
+				 << nsynji cms nsynjiperneur cms newsyn nlf;
+			cout << "      and (new)" << synapseType->name << "remainder, tdji, joff = "
+				 << remainder[j] cms tdji cms joff nlf;
+		}
+#endif
+
+		if ((joff + newsyn) > nneurj)
+		{
+			char msg[128];
+			sprintf( msg, "more %s synapses from group ", synapseType->name.c_str() );
+			error(2,"Illegal architecture generated: ",
+				  msg, j,
+				  " to group ",i,
+				  " than there are i-neurons in group ",j);
+		}
+
+		if (newsyn > 0)
+		{
+			for (int ii = 0; ii < nneurj; ii++)
+				neurused[ii] = false;
+		}
+				
+		for (int isyn = 0; isyn < newsyn; isyn++)
+		{
+			int jneur;
+
+			if (rng->drand() < tdji)
+			{
+				short disneur = short(nint(rng->range(-0.5,0.5)*tdji*nneurj));
+				jneur = isyn + joff + disneur;
+                        
+				if (jneur < 0)
+					jneur += nneurj;
+				else if (jneur >= nneurj)
+					jneur -= nneurj;
+			}
+			else
+			{
+				jneur = isyn + joff;
+			}                      
+
+			if (((jneur+firstneur[j]) == ineur) // same neuron or
+				|| neurused[jneur] ) // already connected to this one
+			{
+				if ( (i == j) && (!checkOutputGroup || IsOutputNeuralGroup(i)) ) // same group and neuron type (because we're doing e->e connections currently)
+					jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, ineur - firstneur[j]);	// ineur was ini
+				else
+					jneur = NearestFreeNeuron(jneur,&neurused[0], nneurj, jneur);
+			}
+
+			neurused[jneur] = true;
+
+			jneur += firstneur[j];
+
+			float efficacy;
+			if( jmul < 0 )
+			{
+				efficacy = ineur == jneur ? 0.0 : min(-1.e-10, -rng->range(initminweight, brain::gInitMaxWeight));
+			}
+			else
+			{
+				efficacy = ineur == jneur ? 0.0 : rng->range(initminweight, brain::gInitMaxWeight);
+			}
+
+			neuralnet->set_synapse( numsyn,
+									jneur * jmul,
+									ineur * imul,
+									efficacy );
+
+			numsyn++;
+		}
+	}
+}
+
 //---------------------------------------------------------------------------
 // Brain::Grow
 //---------------------------------------------------------------------------
@@ -1325,14 +1445,9 @@ void Brain::Grow( Genome* g )
     debugcheck( "after allocating brain memory" );
 
 	int i, j;
-	int ii;
-    short ineur, jneur, nneuri, nneurj, joff, disneur;
-    short isyn, newsyn;
-    long  nsynji;
-    float nsynjiperneur;
+    short ineur, nneuri;
     long numsyn = 0;
     short numneur = dims.numInputNeurons;
-    float tdji;
 
 #if DebugBrainGrow
 	if( DebugBrainGrowPrint )
@@ -1412,188 +1527,27 @@ void Brain::Grow( Genome* g )
 
 			neuralnet->set_neuron( ineur, i, groupbias, numsyn );
 
-#if DebugBrainGrow
-			if( DebugBrainGrowPrint )
-				cout << "    Setting up e-e connections:" nlf;
-#endif
+			GrowSynapses( g,
+						  i,
+						  nneuri,
+						  eeremainder,
+						  ini,
+						  neurused,
+						  ineur,
+						  firsteneur,
+						  numsyn,
+						  g->EE );
 
-            // setup all e-e connections for this e-neuron
-            for (j = 0; j < dims.numgroups; j++)
-            {
-                nneurj = g->getNeuronCount(EXCITATORY, j);
-
-#if DebugBrainGrow
-				if( DebugBrainGrowPrint )
-				{
-					cout << "      From group " << j nlf;
-					cout << "      with nneurj, (old)eeremainder = "
-						 << nneurj cms eeremainder[j] nlf;
-				}
-#endif
-
-                nsynji = g->getSynapseCount(g->EE,j,i);
-                nsynjiperneur = float(nsynji)/float(nneuri);
-                newsyn = short(nsynjiperneur + eeremainder[j] + 1.e-5);
-                eeremainder[j] += nsynjiperneur - newsyn;
-                tdji = g->get(g->TOPOLOGICAL_DISTORTION,g->EE,j,i);
-
-                joff = short((float(ini) / float(nneuri)) * float(nneurj) - float(newsyn) * 0.5);
-                joff = max<short>(0, min<short>(nneurj - newsyn, joff));
-
-#if DebugBrainGrow
-				if( DebugBrainGrowPrint )
-				{
-					cout << "      and nsynji, nsynjiperneur, newsyn = "
-						 << nsynji cms nsynjiperneur cms newsyn nlf;
-					cout << "      and (new)eeremainder, tdji, joff = "
-						 << eeremainder[j] cms tdji cms joff nlf;
-				}
-#endif
-
-                if ((joff + newsyn) > nneurj)
-                {
-                    error(2,"Illegal architecture generated: ",
-                        "more e-e synapses from group ",j,
-                        " to group ",i,
-                        " than there are i-neurons in group ",j);
-                }
-
-                if (newsyn > 0)
-                {
-                    for (ii = 0; ii < nneurj; ii++)
-                        neurused[ii] = false;
-				}
-				
-                for (isyn = 0; isyn < newsyn; isyn++)
-                {
-                    if (rng->drand() < tdji)
-                    {
-                        disneur = short(nint(rng->range(-0.5,0.5)*tdji*nneurj));
-                        jneur = isyn + joff + disneur;
-                        
-                        if (jneur < 0)
-                            jneur += nneurj;
-                        else if (jneur >= nneurj)
-                            jneur -= nneurj;
-                    }
-                    else
-                    {
-                        jneur = isyn + joff;
-					}                      
-
-                    if (((jneur+firsteneur[j]) == ineur) // same neuron or
-                        || neurused[jneur] ) // already connected to this one
-                    {
-                        if (i == j) // same group and neuron type (because we're doing e->e connections currently)
-                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, ineur - firsteneur[j]);	// ineur was ini
-                        else
-                            jneur = NearestFreeNeuron(jneur,&neurused[0], nneurj, jneur);
-                    }
-
-                    neurused[jneur] = true;
-
-                    jneur += firsteneur[j];
-
-					neuralnet->set_synapse( numsyn,
-											jneur,
-											ineur,
-											ineur == jneur ? 0.0 : rng->range(initminweight, brain::gInitMaxWeight) );
-
-                    numsyn++;
-                }
-            }
-
-            // setup all i-e connections for this e-neuron
-
-#if DebugBrainGrow
-			if( DebugBrainGrowPrint )
-				cout << "    Setting up i-e connections:" nlf;
-#endif
-
-            for (j = 0; j < dims.numgroups; j++)
-            {
-                nneurj = g->getNeuronCount(INHIBITORY, j);
-
-#if DebugBrainGrow
-				if( DebugBrainGrowPrint )
-				{
-					cout << "      From group " << j nlf;
-					cout << "      with nneurj, (old)ieremainder = "
-						 << nneurj cms ieremainder[j] nlf;
-				}
-#endif
-
-                nsynji = g->getSynapseCount(g->IE,j,i);
-                nsynjiperneur = float(nsynji)/float(nneuri);
-                newsyn = short(nsynjiperneur + ieremainder[j] + 1.e-5);
-                ieremainder[j] += nsynjiperneur - newsyn;
-                tdji = g->get(g->TOPOLOGICAL_DISTORTION,g->IE,j,i);
-
-                joff = short((float(ini)/float(nneuri)) * float(nneurj)
-                     - float(newsyn) * 0.5);
-                joff = max<short>(0, min<short>(nneurj - newsyn, joff));
-
-#if DebugBrainGrow
-				if( DebugBrainGrowPrint )
-				{
-					cout << "      and nsynji, nsynjiperneur, newsyn = "
-						 << nsynji cms nsynjiperneur cms newsyn nlf;
-					cout << "      and (new)ieremainder, tdji, joff = "
-						 << ieremainder[j] cms tdji cms joff nlf;
-				}
-#endif
-
-                if ((joff+newsyn) > nneurj)
-                {
-                    error(2,"Illegal architecture generated: ",
-                        "more i-e synapses from group ",j,
-                        " to group ",i,
-                        " than there are i-neurons in group ",j);
-                }
-
-                if (newsyn > 0)
-                {
-                    for (ii = 0; ii < nneurj; ii++)
-                        neurused[ii] = false;
-				}
-				
-                for (isyn = 0; isyn < newsyn; isyn++)
-                {
-                    if (rng->drand() < tdji)
-                    {
-                        disneur = short(nint(rng->range(-0.5,0.5)*tdji*nneurj));
-                        jneur = isyn + joff + disneur;
-                        if (jneur < 0)
-                            jneur += nneurj;
-                        else if (jneur >= nneurj)
-                            jneur -= nneurj;
-                    }
-                    else
-                    {
-                        jneur = isyn + joff;
-					}                     
-
-                    if ( ((jneur+firstineur[j]) == ineur) // same neuron or
-                        || neurused[jneur] ) // already connected to this one
-                    {
-                        if( (i == j) && IsOutputNeuralGroup( i ) )	// same & output group
-                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, ineur - firstineur[j]);	// ineur was ini
-                        else
-                            jneur = NearestFreeNeuron(jneur,&neurused[0], nneurj, jneur);
-                    }
-
-                    neurused[jneur] = true;
-
-                    jneur += firstineur[j];
-
-					neuralnet->set_synapse( numsyn,
-											-jneur, // - denotes inhibitory
-											ineur,  // + denotes excitatory
-											ineur == jneur ? 0.0 : min(-1.e-10, -rng->range(initminweight, brain::gInitMaxWeight)) );
-
-                    numsyn++;
-                }
-            }
+			GrowSynapses( g,
+						  i,
+						  nneuri,
+						  ieremainder,
+						  ini,
+						  neurused,
+						  ineur,
+						  firstineur,
+						  numsyn,
+						  g->IE );
 
 			neuralnet->set_neuron_endsynapses( ineur, numsyn );
             numneur++;
@@ -1628,186 +1582,33 @@ void Brain::Grow( Genome* g )
 								   groupbias,
 								   numsyn );
 
-#if DebugBrainGrow
-			if( DebugBrainGrowPrint )
-				cout << "    Setting up e-i connections:" nlf;
-#endif
+			GrowSynapses( g,
+						  i,
+						  nneuri,
+						  eiremainder,
+						  ini,
+						  neurused,
+						  ineur,
+						  firsteneur,
+						  numsyn,
+						  g->EI );
 
-            // setup all e-i connections for this i-neuron
-
-            for (j = 0; j < dims.numgroups; j++)
-            {
-                nneurj = g->getNeuronCount(EXCITATORY, j);
-
-#if DebugBrainGrow
-				if( DebugBrainGrowPrint )
-				{
-					cout << "      From group " << j nlf;
-					cout << "      with nneurj, (old)eiremainder = "
-						 << nneurj cms eiremainder[j] nlf;
-				}
-#endif
-
-                nsynji = g->getSynapseCount(g->EI, j,i);
-                nsynjiperneur = float(nsynji) / float(nneuri);
-                newsyn = short(nsynjiperneur + eiremainder[j] + 1.e-5);
-                eiremainder[j] += nsynjiperneur - newsyn;
-                tdji = g->get(g->TOPOLOGICAL_DISTORTION,g->EI,j,i);
-
-                joff = short((float(ini)/float(nneuri)) * float(nneurj) - float(newsyn) * 0.5);
-                joff = max<short>(0, min<short>(nneurj - newsyn, joff));
-
-#if DebugBrainGrow
-				if( DebugBrainGrowPrint )
-				{
-					cout << "      and nsynji, nsynjiperneur, newsyn = "
-						 << nsynji cms nsynjiperneur cms newsyn nlf;
-					cout << "      and (new)eiremainder, tdji, joff = "
-						 << eiremainder[j] cms tdji cms joff nlf;
-				}
-#endif
-
-                if ((joff+newsyn) > nneurj)
-                {
-                    error(2,"Illegal architecture generated: ",
-                        "more e-i synapses from group ",j,
-                        " to group ",i,
-                        " than there are e-neurons in group ",j);
-                }
-
-                if (newsyn > 0)
-                {
-                    for (ii = 0; ii < nneurj; ii++)
-                        neurused[ii] = false;
-				}
-				
-                for (isyn = 0; isyn < newsyn; isyn++)
-                {
-                    if (rng->drand() < tdji)
-                    {
-                        disneur = short(nint(rng->range(-0.5,0.5)*tdji*nneurj));
-                        jneur = isyn + joff + disneur;
-                        if (jneur < 0)
-                            jneur += nneurj;
-                        else if (jneur >= nneurj)
-                            jneur -= nneurj;
-                    }
-                    else
-                    {
-                        jneur = isyn + joff;
-					}
-					
-                    if ( ((jneur+firsteneur[j]) == ineur) // same neuron or
-                        || neurused[jneur] ) // already connected to this one
-                    {
-                        if( (i == j) && IsOutputNeuralGroup( i ) )	// same & output group
-                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, ineur - firsteneur[j]);	// ineur was ini
-                        else
-                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, jneur);
-                    }
-
-                    neurused[jneur] = true;
-
-                    jneur += firsteneur[j];
-
-					neuralnet->set_synapse( numsyn,
-											jneur,  // + denotes excitatory
-											-ineur, // - denotes inhibitory
-											ineur == jneur ? 0.0 : rng->range(initminweight, brain::gInitMaxWeight) );
-
-                    numsyn++;
-                }
-            }
-
-            // setup all i-i connections for this i-neuron
-            for (j = 0; j < dims.numgroups; j++)
-            {
-                nneurj = g->getNeuronCount(INHIBITORY, j);
-
-#if DebugBrainGrow
-				if( DebugBrainGrowPrint )
-				{
-					cout << "      From group " << j nlf;
-					cout << "      with nneurj, (old)iiremainder = "
-						 << nneurj cms iiremainder[j] nlf;
-				}
-#endif
-
-                nsynji = g->getSynapseCount(g->II,j,i);
-                nsynjiperneur = float(nsynji)/float(nneuri);
-                newsyn = short(nsynjiperneur + iiremainder[j] + 1.e-5);
-                iiremainder[j] += nsynjiperneur - newsyn;
-                tdji = g->get(g->TOPOLOGICAL_DISTORTION,g->II,j,i);
-
-                joff = short((float(ini)/float(nneuri)) * float(nneurj) - float(newsyn) * 0.5);
-                joff = max<short>(0, min<short>(nneurj - newsyn, joff));
-
-#if DebugBrainGrow
-				if( DebugBrainGrowPrint )
-				{
-					cout << "      and nsynji, nsynjiperneur, newsyn = "
-						 << nsynji cms nsynjiperneur cms newsyn nlf;
-					cout << "      and (new)iiremainder, tdji, joff = "
-						 << iiremainder[j] cms tdji cms joff nlf;
-				}
-#endif
-
-                if ((joff+newsyn) > nneurj)
-                {
-                    error(2,"Illegal architecture generated: ",
-                        "more i-i synapses from group ",j,
-                        " to group ",i,
-                        " than there are i-neurons in group ",j);
-                }
-
-                if (newsyn > 0)
-                {
-                    for (ii = 0; ii < nneurj; ii++)
-                        neurused[ii] = false;
-				}
-				
-                for (isyn = 0; isyn < newsyn; isyn++)
-                {
-                    if (rng->drand() < tdji)
-                    {
-                        disneur = short(nint(rng->range(-0.5,0.5)*tdji*nneurj));
-                        jneur = isyn + joff + disneur;
-                        if (jneur < 0)
-                            jneur += nneurj;
-                        else if (jneur >= nneurj)
-                            jneur -= nneurj;
-                    }
-                    else
-                    {
-                        jneur = isyn + joff;
-					}
-					
-                    if (((jneur+firstineur[j]) == ineur) // same neuron or
-                        || neurused[jneur] ) // already connected to this one
-                    {
-                        if( i == j ) // same group and neuron type (because we're doing i->i currently)
-                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, ineur - firstineur[j]);	// ineur was ini
-                        else
-                            jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, jneur);
-                    }
-
-                    neurused[jneur] = true;
-
-                    jneur += firstineur[j];
-
-					neuralnet->set_synapse( numsyn,
-											-jneur, // - denotes inhibitory
-											-ineur, // - denotes inhibitory
-											ineur == jneur ? 0.0 : min(-1.e-10, -rng->range(initminweight, brain::gInitMaxWeight)) );
-
-                    numsyn++;
-                }
-            }
+			GrowSynapses( g,
+						  i,
+						  nneuri,
+						  iiremainder,
+						  ini,
+						  neurused,
+						  ineur,
+						  firstineur,
+						  numsyn,
+						  g->II );
 
 			neuralnet->set_neuron_endsynapses( ineur, numsyn );
             numneur++;
         }
     }
+
 
 	if (numneur != (dims.numneurons))
         error(2,"Bad neural architecture, numneur (",numneur,") not equal to numneurons (",dims.numneurons,")");

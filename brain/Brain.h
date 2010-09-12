@@ -59,6 +59,16 @@ public:
     void Dump(std::ostream& out);
     void Load(std::istream& in);
     void Grow( genome::Genome* g );
+	void GrowSynapses( genome::Genome *g,
+					   int i,
+					   short nneuri,
+					   float *eeremainder,
+					   short ini,
+					   bool *neurused,
+					   short ineur,
+					   short *firsteneur,
+					   long &numsyn,
+					   genome::SynapseType *synapseType );
 	void Prebirth( long agentNumber, bool recordBrainAnatomy );
 	void InheritState( Brain *parent );
     void Update( bool bprint );
