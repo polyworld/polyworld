@@ -1164,13 +1164,13 @@ float Brain::DesignedEfficacy( short toGroup, short fromGroup, short isyn, int s
 // Brain::GrowSynapses
 //---------------------------------------------------------------------------
 void Brain::GrowSynapses( Genome *g,
-						  int i,
-						  short nneuri,
+						  int groupIndex_to,
+						  short neuronCount_to,
 						  float *remainder,
-						  short ini,
-						  short ineur,
+						  short neuronLocalIndex_to,
+						  short neuronIndex_to,
 						  short *firstneur,
-						  long &numsyn,
+						  long &synapseCount_brain,
 						  SynapseType *synapseType )
 {
 #if DebugBrainGrow
@@ -1178,103 +1178,122 @@ void Brain::GrowSynapses( Genome *g,
 		cout << "    Setting up " << synapseType->name << " connections:" nlf;
 #endif
 
-	bool checkOutputGroup = synapseType->nt_from != synapseType->nt_to;
-	int imul = synapseType->nt_to == EXCITATORY ? 1 : -1;
-	int jmul = synapseType->nt_from == EXCITATORY ? 1 : -1;
+	int sign_to = synapseType->nt_to == EXCITATORY ? 1 : -1;
+	int sign_from = synapseType->nt_from == EXCITATORY ? 1 : -1;
 
-	for (int j = 0; j < dims.numgroups; j++)
+	for (int groupIndex_from = 0; groupIndex_from < dims.numgroups; groupIndex_from++)
 	{
-		int nneurj = g->getNeuronCount(synapseType->nt_from, j);
+		int neuronCount_from = g->getNeuronCount(synapseType->nt_from, groupIndex_from);
 
 #if DebugBrainGrow
 		if( DebugBrainGrowPrint )
 		{
-			cout << "      From group " << j nlf;
-			cout << "      with nneurj, (old)" << synapseType->name << "remainder = "
-				 << nneurj cms remainder[j] nlf;
+			cout << "      From group " << groupIndex_from nlf;
+			cout << "      with neuronCount_from, (old)" << synapseType->name << "remainder = "
+				 << neuronCount_from cms remainder[groupIndex_from] nlf;
 		}
 #endif
 
-		int nsynji = g->getSynapseCount(synapseType,j,i);
-		float nsynjiperneur = float(nsynji)/float(nneuri);
-		int newsyn = short(nsynjiperneur + remainder[j] + 1.e-5);
-		remainder[j] += nsynjiperneur - newsyn;
-		float tdji = g->get(g->TOPOLOGICAL_DISTORTION,synapseType,j,i);
+		int synapseCount_fromto = g->getSynapseCount( synapseType,
+													  groupIndex_from,
+													  groupIndex_to );
+		float nsynjiperneur = float(synapseCount_fromto)/float(neuronCount_to);
+		int synapseCount_new = short(nsynjiperneur + remainder[groupIndex_from] + 1.e-5);
+		remainder[groupIndex_from] += nsynjiperneur - synapseCount_new;
+		float td_fromto = g->get( g->TOPOLOGICAL_DISTORTION,
+								  synapseType,
+								  groupIndex_from,
+								  groupIndex_to );
 
-		int joff = short((float(ini) / float(nneuri)) * float(nneurj) - float(newsyn) * 0.5);
-		joff = max<short>(0, min<short>(nneurj - newsyn, joff));
+		int neuronLocalIndex_fromBase = short((float(neuronLocalIndex_to) / float(neuronCount_to)) * float(neuronCount_from) - float(synapseCount_new) * 0.5);
+		neuronLocalIndex_fromBase = max<short>(0, min<short>(neuronCount_from - synapseCount_new, neuronLocalIndex_fromBase));
 
 #if DebugBrainGrow
 		if( DebugBrainGrowPrint )
 		{
-			cout << "      and nsynji, nsynjiperneur, newsyn = "
-				 << nsynji cms nsynjiperneur cms newsyn nlf;
-			cout << "      and (new)" << synapseType->name << "remainder, tdji, joff = "
-				 << remainder[j] cms tdji cms joff nlf;
+			cout << "      and synapseCount_fromto, nsynjiperneur, synapseCount_new = "
+				 << synapseCount_fromto cms nsynjiperneur cms synapseCount_new nlf;
+			cout << "      and (new)" << synapseType->name << "remainder, td_fromto, neuronLocalIndex_fromBase = "
+				 << remainder[groupIndex_from] cms td_fromto cms neuronLocalIndex_fromBase nlf;
 		}
 #endif
 
-		if ((joff + newsyn) > nneurj)
+		if ((neuronLocalIndex_fromBase + synapseCount_new) > neuronCount_from)
 		{
 			char msg[128];
 			sprintf( msg, "more %s synapses from group ", synapseType->name.c_str() );
 			error(2,"Illegal architecture generated: ",
-				  msg, j,
-				  " to group ",i,
-				  " than there are i-neurons in group ",j);
+				  msg, groupIndex_from,
+				  " to group ",groupIndex_to,
+				  " than there are i-neurons in group ",groupIndex_from);
 		}
 
-		bool neurused[nneurj];
+		bool neurused[neuronCount_from];
 		memset( neurused, 0, sizeof(neurused) );
 				
-		for (int isyn = 0; isyn < newsyn; isyn++)
+		for (int isyn = 0; isyn < synapseCount_new; isyn++)
 		{
-			int jneur;
+			int neuronLocalIndex_from;
 
-			if (rng->drand() < tdji)
+			if (rng->drand() < td_fromto)
 			{
-				short disneur = short(nint(rng->range(-0.5,0.5)*tdji*nneurj));
-				jneur = isyn + joff + disneur;
+				short distortion = short(nint(rng->range(-0.5,0.5)*td_fromto*neuronCount_from));
+				neuronLocalIndex_from = isyn + neuronLocalIndex_fromBase + distortion;
                         
-				if (jneur < 0)
-					jneur += nneurj;
-				else if (jneur >= nneurj)
-					jneur -= nneurj;
+				if (neuronLocalIndex_from < 0)
+					neuronLocalIndex_from += neuronCount_from;
+				else if (neuronLocalIndex_from >= neuronCount_from)
+					neuronLocalIndex_from -= neuronCount_from;
 			}
 			else
 			{
-				jneur = isyn + joff;
+				neuronLocalIndex_from = isyn + neuronLocalIndex_fromBase;
 			}                      
 
-			if (((jneur+firstneur[j]) == ineur) // same neuron or
-				|| neurused[jneur] ) // already connected to this one
+			if (((neuronLocalIndex_from+firstneur[groupIndex_from]) == neuronIndex_to) // same neuron or
+				|| neurused[neuronLocalIndex_from] ) // already connected to this one
 			{
-				if ( (i == j) && (!checkOutputGroup || IsOutputNeuralGroup(i)) ) // same group and neuron type (because we're doing e->e connections currently)
-					jneur = NearestFreeNeuron(jneur, &neurused[0], nneurj, ineur - firstneur[j]);	// ineur was ini
+				if ( (groupIndex_to == groupIndex_from)
+					 && (synapseType->nt_from == synapseType->nt_to
+						 || IsOutputNeuralGroup(groupIndex_to)) )
+					neuronLocalIndex_from = NearestFreeNeuron( neuronLocalIndex_from,
+															   &neurused[0],
+															   neuronCount_from,
+															   neuronIndex_to - firstneur[groupIndex_from] );
 				else
-					jneur = NearestFreeNeuron(jneur,&neurused[0], nneurj, jneur);
+					neuronLocalIndex_from = NearestFreeNeuron( neuronLocalIndex_from,
+															   &neurused[0],
+															   neuronCount_from,
+															   neuronLocalIndex_from);
 			}
 
-			neurused[jneur] = true;
+			neurused[neuronLocalIndex_from] = true;
 
-			jneur += firstneur[j];
+			int neuronIndex_from = neuronLocalIndex_from + firstneur[groupIndex_from];
 
 			float efficacy;
-			if( jmul < 0 )
+			if( neuronIndex_to == neuronIndex_from )
 			{
-				efficacy = ineur == jneur ? 0.0 : min(-1.e-10, -rng->range(initminweight, brain::gInitMaxWeight));
+				efficacy = 0;
 			}
 			else
 			{
-				efficacy = ineur == jneur ? 0.0 : rng->range(initminweight, brain::gInitMaxWeight);
+				if( sign_from < 0 )
+				{
+					efficacy = min(-1.e-10, -rng->range(initminweight, brain::gInitMaxWeight));
+				}
+				else
+				{
+					efficacy = rng->range(initminweight, brain::gInitMaxWeight);
+				}				
 			}
 
-			neuralnet->set_synapse( numsyn,
-									jneur * jmul,
-									ineur * imul,
+			neuralnet->set_synapse( synapseCount_brain,
+									neuronIndex_from * sign_from,
+									neuronIndex_to * sign_to,
 									efficacy );
 
-			numsyn++;
+			synapseCount_brain++;
 		}
 	}
 }

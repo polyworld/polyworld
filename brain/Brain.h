@@ -60,13 +60,13 @@ public:
     void Load(std::istream& in);
     void Grow( genome::Genome* g );
 	void GrowSynapses( genome::Genome *g,
-					   int i,
-					   short nneuri,
+					   int groupIndex_to,
+					   short neuronCount_to,
 					   float *remainder,
-					   short ini,
-					   short ineur,
+					   short neuronLocalIndex_to,
+					   short neuronIndex_to,
 					   short *firstneur,
-					   long &numsyn,
+					   long &synapseCount_brain,
 					   genome::SynapseType *synapseType );
 	void Prebirth( long agentNumber, bool recordBrainAnatomy );
 	void InheritState( Brain *parent );
