@@ -1,4 +1,4 @@
-44		version
+45		version
 
 0		LockStepWithBirthsDeathsLog
 
@@ -19,6 +19,7 @@
 150		initnumagents
 45		numberToSeed
 0.9		probabilityOfMutatingSeed
+0		seedFromFile
 -1		miscagents
 
 90		initFoodCount
