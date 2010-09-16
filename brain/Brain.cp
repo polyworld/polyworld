@@ -1205,6 +1205,8 @@ void Brain::GrowSynapses( Genome *g,
 								  groupIndex_from,
 								  groupIndex_to );
 
+		// "Local Index" means that the index is relative to the start of the neuron type (I or E) within
+		// the group as opposed to the entire neuron array.
 		int neuronLocalIndex_fromBase = short((float(neuronLocalIndex_to) / float(neuronCount_to)) * float(neuronCount_from) - float(synapseCount_new) * 0.5);
 		neuronLocalIndex_fromBase = max<short>(0, min<short>(neuronCount_from - synapseCount_new, neuronLocalIndex_fromBase));
 
@@ -1233,6 +1235,8 @@ void Brain::GrowSynapses( Genome *g,
 				
 		for (int isyn = 0; isyn < synapseCount_new; isyn++)
 		{
+			// "Local Index" means that the index is relative to the start of the neuron type (I or E) within
+			// the group as opposed to the entire neuron array.
 			int neuronLocalIndex_from;
 
 			if (rng->drand() < td_fromto)
@@ -1253,8 +1257,8 @@ void Brain::GrowSynapses( Genome *g,
 			if (((neuronLocalIndex_from+firstneur[groupIndex_from]) == neuronIndex_to) // same neuron or
 				|| neurused[neuronLocalIndex_from] ) // already connected to this one
 			{
-				if ( (groupIndex_to == groupIndex_from)
-					 && (synapseType->nt_from == synapseType->nt_to
+				if ( (groupIndex_to == groupIndex_from) // same group
+					 && (synapseType->nt_from == synapseType->nt_to // same neuron type (I or E)
 						 || IsOutputNeuralGroup(groupIndex_to)) )
 					neuronLocalIndex_from = NearestFreeNeuron( neuronLocalIndex_from,
 															   &neurused[0],
@@ -1271,22 +1275,18 @@ void Brain::GrowSynapses( Genome *g,
 
 			int neuronIndex_from = neuronLocalIndex_from + firstneur[groupIndex_from];
 
+			// We should never have a self-synapsing neuron.
+			assert( neuronIndex_from != neuronIndex_to );
+
 			float efficacy;
-			if( neuronIndex_to == neuronIndex_from )
+			if( sign_from < 0 )
 			{
-				efficacy = 0;
+				efficacy = min(-1.e-10, -rng->range(initminweight, brain::gInitMaxWeight));
 			}
 			else
 			{
-				if( sign_from < 0 )
-				{
-					efficacy = min(-1.e-10, -rng->range(initminweight, brain::gInitMaxWeight));
-				}
-				else
-				{
-					efficacy = rng->range(initminweight, brain::gInitMaxWeight);
-				}				
-			}
+				efficacy = rng->range(initminweight, brain::gInitMaxWeight);
+			}				
 
 			neuralnet->set_synapse( synapseCount_brain,
 									neuronIndex_from * sign_from,
@@ -1456,6 +1456,9 @@ void Brain::Grow( Genome* g )
 	}
 #endif
 
+	// ---
+	// --- Allocate Neural Net
+	// ---
     debugcheck( "before allocating brain memory" );
 
 	InitNeuralNet( 0.1 );	// lsy? - why is this initializing activations to 0.1?
@@ -1470,6 +1473,9 @@ void Brain::Grow( Genome* g )
 		cout << "  Initializing input neurons:" nlf;
 #endif
 
+	// ---
+	// --- Initialize Input Neuron Activations
+	// ---
     for (int i = 0, ineur = 0; i < brain::gNeuralValues.numinputneurgroups; i++)
     {
         for (int j = 0; j < g->getNeuronCount(EXCITATORY, i); j++, ineur++)
@@ -1480,6 +1486,9 @@ void Brain::Grow( Genome* g )
         }
     }
 
+	// ---
+	// --- Grow Synapses
+	// ---
     for (int groupIndex_to = brain::gNeuralValues.numinputneurgroups; groupIndex_to < dims.numgroups; groupIndex_to++)
     {
 #if DebugBrainGrow
@@ -1504,11 +1513,8 @@ void Brain::Grow( Genome* g )
             iiremainder[groupIndex_from] = 0.0;
             ieremainder[groupIndex_from] = 0.0;
 
-			for( SynapseTypeList::const_iterator
-					 it = g->getSynapseTypes().begin(),
-					 end = g->getSynapseTypes().end();
-				 it != end;
-				 it++ )
+			// synapseTypes = EE, EI, IE, II
+			citfor( SynapseTypeList, g->getSynapseTypes(), it )
 			{
 				SynapseType *synapseType = *it;
 
@@ -1526,10 +1532,13 @@ void Brain::Grow( Genome* g )
         int neuronCount_to = g->getNeuronCount(EXCITATORY, groupIndex_to);
 
 #if DebugBrainGrow
-	if( DebugBrainGrowPrint )
-        cout << "  Setting up " << neuronCount_to << " e-neurons" nlf;
+		if( DebugBrainGrowPrint )
+			cout << "  Setting up " << neuronCount_to << " e-neurons" nlf;
 #endif
-		
+
+
+		// "Local Index" means that the index is relative to the start of the neuron type (I or E) within
+		// the group as opposed to the entire neuron array.
         for (int neuronLocalIndex_to = 0; neuronLocalIndex_to < neuronCount_to; neuronLocalIndex_to++)
         {
             int neuronIndex_to = neuronLocalIndex_to + firsteneur[groupIndex_to];
@@ -1578,6 +1587,8 @@ void Brain::Grow( Genome* g )
 			cout << "  Setting up " << neuronCount_to << " i-neurons" nlf;
 #endif
 
+		// "Local Index" means that the index is relative to the start of the neuron type (I or E) within
+		// the group as opposed to the entire neuron array.
         for (int neuronLocalIndex_to = 0; neuronLocalIndex_to < neuronCount_to; neuronLocalIndex_to++)
         {
             int neuronIndex_to = neuronLocalIndex_to + firstineur[groupIndex_to];
@@ -1621,6 +1632,9 @@ void Brain::Grow( Genome* g )
     }
 
 
+	// ---
+	// --- Sanity Checks
+	// ---
 	if (numneur != (dims.numneurons))
         error(2,"Bad neural architecture, numneur (",numneur,") not equal to numneurons (",dims.numneurons,")");
 
@@ -1635,6 +1649,9 @@ void Brain::Grow( Genome* g )
 		dims.numsynapses = numsyn;
 	}
 	
+	// ---
+	// --- Calculate Energy Use
+	// ---
     energyuse = brain::gNeuralValues.maxneuron2energy * float(dims.numneurons) / float(brain::gNeuralValues.maxneurons)
               + brain::gNeuralValues.maxsynapse2energy * float(dims.numsynapses) / float(brain::gNeuralValues.maxsynapses);
 
