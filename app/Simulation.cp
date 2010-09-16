@@ -14,7 +14,7 @@
 #define MinDebugStep 0
 #define MaxDebugStep INT_MAX
 
-#define CurrentWorldfileVersion 44
+#define CurrentWorldfileVersion 45
 
 #define TournamentSelection 1
 
@@ -1575,9 +1575,10 @@ void TSimulation::Init()
 				
 				if( numSeededDomain < fDomains[id].numberToSeed )
 				{
-					GenomeUtil::seed( c->Genes() );
-					if( randpw() < fDomains[id].probabilityOfMutatingSeeds )
-						c->Genes()->mutate();
+					SeedGenome( c->Number(),
+								c->Genes(),
+								fDomains[id].probabilityOfMutatingSeeds,
+								numSeededDomain + numSeededTotal );
 					numSeededDomain++;
 				}
 				else
@@ -1642,9 +1643,10 @@ void TSimulation::Init()
 			
 			if( numSeededTotal < fNumberToSeed )
 			{
-				GenomeUtil::seed( c->Genes() );
-				if( randpw() < fProbabilityOfMutatingSeeds )
-					c->Genes()->mutate();
+				SeedGenome( c->Number(),
+							c->Genes(),
+							fProbabilityOfMutatingSeeds,
+							numSeededTotal );
 				numSeededTotal++;
 			}
 			else
@@ -2231,6 +2233,103 @@ void TSimulation::InitMonitoringWindows()
 	if (fOverheadWindow != NULL)
 		fOverheadWindow->RestoreFromPrefs( fBirthrateWindow->width() + 1, kMenuBarHeight + mainWindowTitleHeight + titleHeight + titleHeight );
                 //(screenleft,screenleft+.75*xscreensize, screenbottom,screenbottom+(5./6.)*yscreensize);
+}
+
+//---------------------------------------------------------------------------
+// TSimulation::SeedGenome
+//---------------------------------------------------------------------------
+
+void TSimulation::SeedGenome( long agentNumber,
+							  genome::Genome *genes,
+							  float probabilityOfMutatingSeeds,
+							  long numSeeded )
+{
+	if( fSeedFromFile )
+	{
+		SeedGenomeFromFile( agentNumber, genes, numSeeded );
+	}
+	else
+	{
+		GenomeUtil::seed( genes );
+	}
+	if( randpw() < probabilityOfMutatingSeeds )
+		genes->mutate();
+}
+
+//---------------------------------------------------------------------------
+// TSimulation::SeedGenomeFromFile
+//---------------------------------------------------------------------------
+
+void TSimulation::SeedGenomeFromFile( long agentNumber,
+									  genome::Genome *genes,
+									  long numSeeded )
+{
+	if( fSeedFilePaths.size() == 0 )
+	{
+		ReadSeedFilePaths();
+	}
+
+	const string &path = fSeedFilePaths[ numSeeded % fSeedFilePaths.size() ];
+	ifstream in( path.c_str() );
+
+	if( in.fail() )
+	{
+		cerr << "Could not open seed file " << path << endl;
+		exit( 1 );
+	}
+
+	cout << "seeding agent #" << agentNumber << " genome from " << path << endl;
+
+	genes->load( in );
+
+	if( in.fail() )
+	{
+		cerr << "Failure in reading seed file " << path << endl;
+		cerr << "Probably due to genome schema mismatch." << endl;
+		exit( 1 );
+	}
+
+	string foo;
+	in >> foo;
+
+	if( foo.size() != 0 )
+	{
+		cerr << "Unexpected data in seed file after genome bytes: " << foo << endl;
+		cerr << "Probably due to genome schema mismatch." << endl;
+		exit( 1 );
+	}
+}
+
+//---------------------------------------------------------------------------
+// TSimulation::ReadSeedFilePaths
+//---------------------------------------------------------------------------
+
+void TSimulation::ReadSeedFilePaths()
+{
+	ifstream in("genomeSeeds.txt");
+
+	if( in.fail() )
+	{
+		cerr << "Could not open genomeSeeds.txt" << endl;
+		exit( 1 );
+	}
+
+	char buf[1024 * 4];
+	while( !in.eof() )
+	{
+		in.getline( buf, sizeof(buf) );
+
+		if( strlen(buf) )
+		{
+			fSeedFilePaths.push_back( string(buf) );
+		}
+	}
+
+	if( fSeedFilePaths.size() == 0 )
+	{
+		cerr << "genomeSeeds.txt is empty!" << endl;
+		exit( 1 );
+	}
 }
 
 //---------------------------------------------------------------------------
@@ -5291,6 +5390,16 @@ void TSimulation::ReadWorldFile(const char* filename)
 		fNumberToSeed = 0;
 		fProbabilityOfMutatingSeeds = 0.0;
 	}
+
+	if( version >= 45 )
+	{
+		PROP( SeedFromFile );
+	}
+	else
+	{
+		fSeedFromFile = false;
+	}
+
     in >> fMiscAgents; in >> label;
     cout << "miscagents" ses fMiscAgents nl;
 

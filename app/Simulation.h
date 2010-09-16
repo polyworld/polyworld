@@ -239,6 +239,7 @@ public:
 	TSceneWindow();
 	virtual ~TSceneWindow();
 	
+	void CreateSimulationScheduler();
 	void Update();
 
 protected:
@@ -432,6 +433,15 @@ private:
 	void InitWorld();
 	void InitMonitoringWindows();
 
+	void SeedGenome( long agentNumber,
+					 genome::Genome *genes,
+					 float probabilityOfMutatingSeeds,
+					 long numSeeded );
+	void SeedGenomeFromFile( long agentNumber,
+							 genome::Genome *genes,
+							 long numSeeded );
+	void ReadSeedFilePaths();
+
 	void InitLifeSpanLog();
 	void UpdateLifeSpanLog( agent *a );
 	void EndLifeSpanLog();
@@ -506,7 +516,7 @@ private:
 	bool RecordBrainFunction( long agentNumber );
 	
 	void ijfitinc(short* i, short* j);
-		
+
 	void Birth( agent* a,
 				LifeSpan::BirthReason reason,
 				agent* a_parent1 = NULL,
@@ -626,6 +636,8 @@ private:
 	long fInitNumAgents;
 	long fNumberToSeed;
 	float fProbabilityOfMutatingSeeds;
+	bool fSeedFromFile;
+	std::vector<std::string> fSeedFilePaths;
 	float fMinMateFraction;
 	long fMateWait;
 	long fMiscAgents; // number of agents born without intervening creation before miscegenation function kicks in

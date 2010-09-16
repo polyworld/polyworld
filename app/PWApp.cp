@@ -14,6 +14,8 @@
 #include <qtimer.h>
 
 #include <QDesktopWidget>
+#include <QHBoxLayout>
+#include <QPushButton>
 
 // Local
 #include "agent.h"
@@ -24,6 +26,8 @@
 #include "SceneView.h"
 #include "Simulation.h"
 
+void createDebugger(TSceneWindow *sceneWindow);
+
 
 //===========================================================================
 // main
@@ -31,6 +35,15 @@
 
 int main(int argc, char** argv)
 {
+	bool debugMode = false;
+	if( argc > 1 )
+	{
+		if( 0 == strcmp(argv[1], "--debug") )
+		{
+			debugMode = true;
+		}
+	}
+
 	// Create application instance
 	TPWApp app(argc, argv);
 	
@@ -45,9 +58,20 @@ int main(int argc, char** argv)
 	QCoreApplication::setOrganizationDomain( "indiana.edu" );
 //	QCoreApplication::setOrganizationName( "indiana" );
 	QCoreApplication::setApplicationName( "polyworld" );
+
 	
 	// Create the main window (without passing a menubar)
-	TSceneWindow* appWindow = new TSceneWindow();
+	TSceneWindow *sceneWindow = new TSceneWindow();
+
+	// Either create the debugger or construct the scheduler/gui-timer
+	if( debugMode )
+	{
+		createDebugger( sceneWindow );
+	}
+	else
+	{
+		sceneWindow->CreateSimulationScheduler();
+	}
 
 	// Set up signals
 	app.connect(&app, SIGNAL(lastWindowClosed()), &app, SLOT(quit()));
@@ -144,11 +168,6 @@ int main(int argc, char** argv)
 	if( 1 )
 		exit( 0 );
 #endif
-
-	// Create simulation timer
-	QTimer* idleTimer = new QTimer(appWindow);
-	app.connect(idleTimer, SIGNAL(timeout()), appWindow, SLOT(timeStep()));
-	idleTimer->start(0);
 	
 	return app.exec();
 }
@@ -225,6 +244,18 @@ TSceneWindow::~TSceneWindow()
 	SaveWindowState();
 }
 
+
+//---------------------------------------------------------------------------
+// TSceneWindow::CreateSimulationScheduler
+//---------------------------------------------------------------------------
+void TSceneWindow::CreateSimulationScheduler()
+{
+	// Create simulation timer
+	QTimer *timer = new QTimer(this);
+	timer->start(0);
+
+	connect(timer, SIGNAL(timeout()), this, SLOT(timeStep()));
+}
 
 //---------------------------------------------------------------------------
 // TSceneWindow::closeEvent
@@ -895,3 +926,33 @@ void TSceneWindow::windowsMenuAboutToShow()
 }
 
 
+//===========================================================================
+// DebuggerWindow
+//===========================================================================
+
+class DebuggerWindow : public QWidget
+{
+ public:
+ DebuggerWindow( TSceneWindow *sceneWindow ) : QWidget( NULL )
+	{
+		QPushButton *step = new QPushButton(tr("Step"));
+		connect(step, SIGNAL(clicked()), sceneWindow, SLOT(timeStep()));
+
+		QHBoxLayout *layout = new QHBoxLayout;
+		layout->addWidget(step);
+		setLayout(layout);
+
+		setWindowTitle( "PW Debugger" );
+	}
+
+	virtual void closeEvent( QCloseEvent *e )
+	{
+		exit( 0 );
+	}
+};
+
+void createDebugger(TSceneWindow *sceneWindow)
+{
+	DebuggerWindow *debugger = new DebuggerWindow(sceneWindow);
+	debugger->show();
+}
