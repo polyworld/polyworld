@@ -26,3 +26,8 @@ class LifeSpans:
             hi = max(hi, age)
 
         return lo, hi
+
+    def getAllWithDeathReason( self, deathReason ):
+        for row in self.table.rows():
+            if row['DeathReason'] == deathReason:
+                yield row['Agent']
