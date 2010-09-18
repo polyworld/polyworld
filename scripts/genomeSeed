@@ -1,17 +1,107 @@
 #!/usr/bin/env python
 
+import getopt
+import os
 import sys
 
+from common_functions import err
 import common_logs
 
+####################################################################################
+###
+### FUNCTION main()
+###
+####################################################################################
+def main():
+    mode = 'simend'
+    # polyworld home dir
+    homedir = os.path.realpath( os.path.join(os.path.dirname( sys.argv[0] ), '..') )
 
-rundir = sys.argv[1]
+    #
+    # Process Args
+    #
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], 'a:e', ['agent=', 'simend'] )
+    except getopt.GetoptError, x:
+        show_usage( x )
 
-lifespans = common_logs.LifeSpans( rundir )
 
-out = open( 'genomeSeeds.txt', 'w' )
+    for opt, arg in opts:
+        if opt == '--agent' or opt == '-a':
+            mode = 'agent'
+            try:
+                agentNumber = int(arg)
+            except:
+                show_usage( 'Invalid agentNumber (%s)' % arg )
+        elif opt == '--simend' or opt == 'e':
+            mode = 'simend'
 
-for agent in lifespans.getAllWithDeathReason( 'SIMEND' ):
-    out.write(rundir + '/genome/genome_' + str(agent) + '.txt\n' )
+    if len(args) != 1:
+        show_usage( 'Expecting one run dir as argument' )
 
-out.close()
+    rundir = args[0]
+
+    #
+    # Determine agent numbers
+    #
+    if mode == 'agent':
+        agentNumbers = [agentNumber]
+    elif mode == 'simend':
+        lifespans = common_logs.LifeSpans( rundir )
+        agentNumbers = lifespans.getAllWithDeathReason( 'SIMEND' )
+
+    #
+    # Determine genome file paths
+    #
+    paths = [os.path.join( rundir, 'genome/genome_' + str(agentNumber) + '.txt' )
+             for agentNumber in agentNumbers]
+
+    for path in paths:
+        if not os.path.exists( path ):
+            err( 'Cannot find %s' % path )
+
+    # make paths relative to polyworld home dir, regardless of working directory
+    paths = map( lambda x: os.path.relpath(x, homedir), paths )
+
+    #
+    # Generate the file
+    #
+    out = open( os.path.join(homedir, 'genomeSeeds.txt'), 'w' )
+
+    for path in paths:
+        out.write( path )
+        out.write( '\n' )
+
+    out.close()
+
+####################################################################################
+###
+### FUNCTION show_usage()
+###
+####################################################################################
+def show_usage( msg = None ):
+################################################################################
+    print """\
+usage: genomeSeed [option] rundir
+
+     Produces a genomeSeeds.txt file appropriate for use with Polyworld
+  executable. Note the file will be created in the parent directory of that
+  which contains this script, regardless of the working directory from which
+  this script is invoked. Also, the paths in the generated file will be
+  relative to that same 'Polyworld home' directory.
+
+  --agent, -a <agentNumber>
+
+             Generate seed for single agent.
+
+  --simend, -e
+
+             Generate seeds for agents alive at end of sim.
+"""
+
+    if msg != None:
+        err(msg)
+
+    sys.exit(1)
+
+main()
