@@ -1,4 +1,4 @@
-45		version
+46		version
 
 0		LockStepWithBirthsDeathsLog
 
@@ -27,6 +27,7 @@
 120		maxFoodCount
 90		maxFoodGrown
 0.1		foodrate
+0.0		foodRemoveEnergy
 
 42		positionSeed_not_used
 42		genomeSeed_also_used_for_position

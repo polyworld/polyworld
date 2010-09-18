@@ -14,7 +14,7 @@
 #define MinDebugStep 0
 #define MaxDebugStep INT_MAX
 
-#define CurrentWorldfileVersion 45
+#define CurrentWorldfileVersion 46
 
 #define TournamentSelection 1
 
@@ -3872,7 +3872,7 @@ void TSimulation::Eat( agent *c )
 				
 				eatPrint( "at step %ld, agent %ld at (%g,%g) with rad=%g wasted %g units of food at (%g,%g) with rad=%g\n", fStep, c->Number(), c->x(), c->z(), c->radius(), foodEaten, f->x(), f->z(), f->radius() );
 
-				if (f->energy() <= 0.0)  // all gone
+				if (f->energy() <= fFoodRemoveEnergy)  // all gone
 				{
 					// A food was used up so remove it from the patch count and domain count
 					(f->getPatch())->foodCount--;
@@ -3932,7 +3932,7 @@ void TSimulation::Eat( agent *c )
 					
 					eatPrint( "at step %ld, agent %ld at (%g,%g) with rad=%g wasted %g units of food at (%g,%g) with rad=%g\n", fStep, c->Number(), c->x(), c->z(), c->radius(), foodEaten, f->x(), f->z(), f->radius() );
 
-					if (f->energy() <= 0.0)  // all gone
+					if (f->energy() <= fFoodRemoveEnergy)  // all gone
 					{
 						// A food was used up so remove it from the patch count and domain count
 						FoodPatch* fp = f->getPatch();
@@ -5415,6 +5415,15 @@ void TSimulation::ReadWorldFile(const char* filename)
 		cout << "maxFoodGrown" ses fMaxFoodGrownCount nl;
 		in >> fFoodRate; in >> label;
 		cout << "foodrate" ses fFoodRate nl;
+	}
+
+	if( version >= 46 )
+	{
+		PROP( FoodRemoveEnergy );
+	}
+	else
+	{
+		fFoodRemoveEnergy = 0.0f;
 	}
 
     in >> fPositionSeed; in >> label;

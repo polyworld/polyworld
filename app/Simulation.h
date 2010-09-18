@@ -685,6 +685,7 @@ private:
 	long fInitFoodCount;
 	bool fAgentsRfood;
 	float fFoodRate;
+	float fFoodRemoveEnergy;
 	float fFoodEnergyIn;
 	float fFoodEnergyOut;
 	float fTotalFoodEnergyIn;
