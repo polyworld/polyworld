@@ -1,0 +1,82 @@
+#!/bin/bash
+
+function err() {
+   echo "$*" >&2
+   exit 1
+}
+
+function usage() {
+    echo "usage: "`basename $0`" rundir agentNumber"
+    exit 1
+}
+
+if [ $# != 2 ]; then
+    usage
+fi
+
+rundir="$1"
+agentNumber="$2"
+
+
+if [ ! -e ./scripts/`basename $0` ]; then
+   err 'Must be invoked from polyworld home dir'
+   exit 1
+fi
+
+# trap ctrl-c and call ctrl_c()
+trap ctrl_c INT
+function ctrl_c() {
+    # If the user cancels the simulator with ctrl-c, we want to
+    # recover so we restore the worldfile and seed file.
+    
+    : # no-op
+}
+
+
+if [ -e ./worldfile ]; then
+    worldfile_save=`mktemp worldfile.XXXXXXXX`
+    echo "Saving existing ./worldfile to $worldfile_save"
+    mv ./worldfile $worldfile_save
+fi
+
+if [ -e ./genomeSeeds.txt ]; then
+    seeds_save=`mktemp genomeSeeds.txt.XXXXXXXX`
+    echo "Saving existing ./genomeSeeds.txt to $seeds_save"
+    mv ./genomeSeeds.txt $seeds_save
+fi
+
+if [ -e ./run ]; then
+    run_save=`mktemp run.XXXXXXXX`
+    rm $run_save
+    echo "Saving existing ./run to $run_save"
+    mv ./run $run_save
+fi
+
+if ./scripts/genomeSeed --agent $agentNumber $rundir; then
+    if ./scripts/edit_worldfile.py $rundir/worldfile ./worldfile \
+	maxSteps=10000 \
+	minnumagents=1 \
+	initnumagents=1 \
+	numberToSeed=1 \
+	probabilityOfMutatingSeed=0.0 \
+	seedFromFile=1 \
+	"domain[*].probabilityOfMutatingSeeds=0.0"
+    then
+	./Polyworld --debug
+
+	rm worldfile
+	rm -rf run
+    fi
+fi
+
+if [ ! -z "$worldfile_save" ]; then
+    mv $worldfile_save ./worldfile
+fi
+
+if [ ! -z "$seeds_save" ]; then
+    mv $seeds_save ./genomeSeeds.txt
+fi
+
+if [ ! -z "$run_save" ]; then
+    mv $run_save ./run
+fi

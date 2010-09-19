@@ -39,7 +39,10 @@ def main():
     if len(args) != 1:
         show_usage( 'Expecting one run dir as argument' )
 
-    rundir = args[0]
+    rundir = os.path.realpath( args[0] )
+    if rundir == os.path.realpath( os.path.join(homedir, 'run') ):
+        err( 'Cannot use seeds in run/ -- conflicts with simulator. Please rename run/.' )
+
 
     #
     # Determine agent numbers
