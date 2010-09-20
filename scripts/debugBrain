@@ -6,9 +6,14 @@ function err() {
 }
 
 function usage() {
-    echo "usage: "`basename $0`" rundir agentNumber"
+    echo "usage: "`basename $0`" [--gdb] rundir agentNumber"
     exit 1
 }
+
+if [ "$1" == "--gdb" ]; then
+    useGdb=true
+    shift
+fi
 
 if [ $# != 2 ]; then
     usage
@@ -62,7 +67,11 @@ if ./scripts/genomeSeed --agent $agentNumber $rundir; then
 	seedFromFile=1 \
 	"domain[*].probabilityOfMutatingSeeds=0.0"
     then
-	./Polyworld --debug
+	if [ "$useGdb" == "true" ]; then
+	    gdb --args ./Polyworld --debug
+	else
+	    ./Polyworld --debug
+	fi
 
 	rm worldfile
 	rm -rf run

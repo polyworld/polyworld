@@ -130,6 +130,7 @@ BehaviorNeuronSpinBox::BehaviorNeuronSpinBox( std::string name,
 {
 	fName = name;
 	fAgent = NULL;
+	fNerve = NULL;
 	fManualBehavior = false;
 
 	setRange( 0, 1 );
@@ -190,14 +191,17 @@ void BehaviorNeuronSpinBox::manualBehaviorChanged( bool enabled )
 //---------------------------------------------------------------------------
 void BehaviorNeuronSpinBox::updateNerveState()
 {
-	if( fManualBehavior )
+	if( fNerve )
 	{
-		fNerve->config( 1, 0 );
-		fNerve->config( &fActivationPointer, &fActivationPointer );		
-	}
-	else
-	{
-		memcpy( fNerve, fNerveSimState, sizeof(Nerve) );
+		if( fManualBehavior )
+		{
+			fNerve->config( 1, 0 );
+			fNerve->config( &fActivationPointer, &fActivationPointer );		
+		}
+		else
+		{
+			memcpy( fNerve, fNerveSimState, sizeof(Nerve) );
+		}
 	}
 }
 
