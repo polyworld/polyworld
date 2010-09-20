@@ -241,6 +241,7 @@ public:
 	
 	void CreateSimulationScheduler();
 	void Update();
+	TSimulation *GetSimulation();
 
 protected:
     void closeEvent(QCloseEvent* event);    
@@ -256,6 +257,9 @@ protected:
 	void SaveVisibility();
 	void RestoreFromPrefs();
 
+public slots:
+    void timeStep();
+
 private slots:
 
 	// File menu
@@ -264,7 +268,6 @@ private slots:
     void saveAs() {}
     void about() {}    
     void windowsMenuAboutToShow();    
-    void timeStep();
     
     // Window menu
     void ToggleEnergyWindow();

@@ -452,20 +452,20 @@ void agent::grow( bool recordGenome,
 	INPUT(blue);
 #undef INPUT
 
-#define OUTPUT(NAME) nerves.NAME = fCns->add( Nerve::OUTPUT, #NAME )
-	OUTPUT(eat);
-	OUTPUT(mate);
-	OUTPUT(fight);
-	OUTPUT(speed);
-	OUTPUT(yaw);
-	OUTPUT(light);
-	OUTPUT(focus);
+#define OUTPUT(FIELD, NAME) nerves.FIELD = fCns->add( Nerve::OUTPUT, #NAME )
+	OUTPUT(eat, Eat);
+	OUTPUT(mate, Mate);
+	OUTPUT(fight, Fight);
+	OUTPUT(speed, Speed);
+	OUTPUT(yaw, Yaw);
+	OUTPUT(light, Light);
+	OUTPUT(focus, Focus);
 	if( genome::gEnableGive )
-		OUTPUT(give);
+		OUTPUT(give, Give);
 	if( genome::gEnableCarry )
 	{
-		OUTPUT(pickup);
-		OUTPUT(drop);
+		OUTPUT(pickup, Pickup);
+		OUTPUT(drop, Drop);
 	}
 #undef OUTPUT
 

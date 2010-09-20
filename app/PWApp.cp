@@ -14,19 +14,16 @@
 #include <qtimer.h>
 
 #include <QDesktopWidget>
-#include <QHBoxLayout>
-#include <QPushButton>
 
 // Local
 #include "agent.h"
 #include "BrainMonitorWindow.h"
 #include "ChartWindow.h"
+#include "DebuggerWindow.h"
 #include "AgentPOVWindow.h"
 #include "globals.h"
 #include "SceneView.h"
 #include "Simulation.h"
-
-void createDebugger(TSceneWindow *sceneWindow);
 
 
 //===========================================================================
@@ -255,6 +252,14 @@ void TSceneWindow::CreateSimulationScheduler()
 	timer->start(0);
 
 	connect(timer, SIGNAL(timeout()), this, SLOT(timeStep()));
+}
+
+//---------------------------------------------------------------------------
+// TSceneWindow::GetSimulation()
+//---------------------------------------------------------------------------
+TSimulation *TSceneWindow::GetSimulation()
+{
+	return fSimulation;
 }
 
 //---------------------------------------------------------------------------
@@ -923,36 +928,4 @@ void TSceneWindow::windowsMenuAboutToShow()
 		else			
 			toggleOverheadWindowAct->setText( "&Show Overhead Window" );
 	}
-}
-
-
-//===========================================================================
-// DebuggerWindow
-//===========================================================================
-
-class DebuggerWindow : public QWidget
-{
- public:
- DebuggerWindow( TSceneWindow *sceneWindow ) : QWidget( NULL )
-	{
-		QPushButton *step = new QPushButton(tr("Step"));
-		connect(step, SIGNAL(clicked()), sceneWindow, SLOT(timeStep()));
-
-		QHBoxLayout *layout = new QHBoxLayout;
-		layout->addWidget(step);
-		setLayout(layout);
-
-		setWindowTitle( "PW Debugger" );
-	}
-
-	virtual void closeEvent( QCloseEvent *e )
-	{
-		exit( 0 );
-	}
-};
-
-void createDebugger(TSceneWindow *sceneWindow)
-{
-	DebuggerWindow *debugger = new DebuggerWindow(sceneWindow);
-	debugger->show();
 }

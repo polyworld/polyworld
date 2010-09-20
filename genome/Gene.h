@@ -60,7 +60,8 @@ namespace genome
 		int offset;
 
 	public:
-#define CAST_TO(TYPE) class TYPE##Gene *to_##TYPE();
+#define CAST_TO(TYPE) \
+		class TYPE##Gene *to_##TYPE();
 	CAST_TO(NonVector);
 	CAST_TO(ImmutableScalar);
 	CAST_TO(MutableScalar);

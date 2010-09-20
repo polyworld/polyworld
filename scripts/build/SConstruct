@@ -9,6 +9,7 @@ SRCDIRS = ['src/' + x
                      'app',
                      'brain',
                      'complexity',
+                     'debugger',
                      'environment',
                      'genome',
                      'graphics',

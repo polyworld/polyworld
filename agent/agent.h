@@ -165,6 +165,7 @@ public:
     long LastMate();
 	long LastEat();
 	genome::Genome* Genes();
+	NervousSystem* GetNervousSystem();
     long Number();
 	float CurrentHeuristicFitness();
 	float ProjectedHeuristicFitness();
@@ -349,6 +350,7 @@ inline float agent::MaxEnergy() { return fMaxEnergy; }
 inline long agent::LastMate() { return fLastMate; }
 inline long agent::LastEat() { return fLastEat; }
 inline genome::Genome* agent::Genes() { return fGenome; }
+inline NervousSystem* agent::GetNervousSystem() { return fCns; }
 inline long agent::Number() { return getTypeNumber(); }
 // replace both occurences of 0.8 with actual estimate of fraction of lifespan agent will live
 inline float agent::CurrentHeuristicFitness() { return fHeuristicFitness; }

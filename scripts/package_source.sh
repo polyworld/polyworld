@@ -4,6 +4,7 @@ SRCDIRS="agent\
          app\
          brain\
          complexity\
+         debugger\
          environment\
          genome\
          graphics\
