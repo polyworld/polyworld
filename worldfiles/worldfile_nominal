@@ -1,10 +1,10 @@
-46		version
+47		version
 
 0		LockStepWithBirthsDeathsLog
 
-30000	maxSteps
+30000		maxSteps
 1		docpuwork
-1000	dumpfreq
+1000		dumpfreq
 100		statfreq
 1		edges
 0		wraparound
@@ -105,6 +105,7 @@ L		noseColor_L=Light_Neuron|<float_literal>=fixed
 0.01	eat2energy
 0.1		mate2energy
 1.0		fight2energy
+0.0	minsizepenalty
 10.0	maxsizepenalty
 0.1		speed2energy
 0.1		yaw2energy
@@ -146,6 +147,8 @@ L		noseColor_L=Light_Neuron|<float_literal>=fixed
 0.2		agentheight
 0.6		foodheight
 0.2 0.6 0.2	foodcolor
+0.5 		brickheight
+0.6 0.2 0.2	brickcolor
 5.0		barrierheight
 0.35 0.25 0.15	barriercolor
 0.10 0.15 0.05	groundcolor
@@ -162,6 +165,7 @@ L		noseColor_L=Light_Neuron|<float_literal>=fixed
 1		monstride
 100.0	worldsize
 2		numbarriers
+0		ratioBarrierPositions
 1								barrier[0].numKeyFrames
 0		33.33 -100. 33.33 -10.	barrier[0].keyFrame[0]_t_x1_z1_x2_z2
 1								barrier[1].numKeyFrames

@@ -68,6 +68,7 @@ float		agent::gMaxAgentSize;
 float		agent::gEat2Energy;
 float		agent::gMate2Energy;
 float		agent::gFight2Energy;
+float       agent::gMinSizePenalty;
 float		agent::gMaxSizePenalty;
 float		agent::gSpeed2Energy;
 float		agent::gYaw2Energy;
@@ -557,13 +558,17 @@ void agent::grow( bool recordGenome,
 	
 //	printf( "%s: energy initialized to %g\n", __func__, fEnergy );
     
+	// Note: gMinSizePenalty can be used to prevent size_rel==0 from giving
+	// the agents "free" speed.
     fSpeed2Energy = gSpeed2Energy * geneCache.maxSpeed
-				     * size_rel * (gMaxSizePenalty - 1.0)
+		            * (gMinSizePenalty + size_rel) * (gMaxSizePenalty - 1.0)
 					/ (gMaxAgentSize - gMinAgentSize);
     
+	// Note: gMinSizePenalty can be used to prevent size_rel==0 from giving
+	// the agents "free" yaw.
     fYaw2Energy = gYaw2Energy * geneCache.maxSpeed
-              	   * size_rel * (gMaxSizePenalty - 1.0)
-              	   / (gMaxAgentSize - gMinAgentSize);
+		          * (gMinSizePenalty + size_rel) * (gMaxSizePenalty - 1.0)
+              	  / (gMaxAgentSize - gMinAgentSize);
     
     fSizeAdvantage = 1.0 + ( size_rel *
                 (gMaxSizeAdvantage - 1.0) / (gMaxAgentSize - gMinAgentSize) );

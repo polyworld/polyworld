@@ -6,7 +6,7 @@
 #include "NervousSystem.h"
 #include "RandomNumberGenerator.h"
 
-#define DISABLE_PROPRIOCEPTION true
+#define DISABLE_PROPRIOCEPTION false
 
 SpeedSensor::SpeedSensor( agent *self )
 {

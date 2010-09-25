@@ -14,7 +14,7 @@
 #define MinDebugStep 0
 #define MaxDebugStep INT_MAX
 
-#define CurrentWorldfileVersion 46
+#define CurrentWorldfileVersion 47
 
 #define TournamentSelection 1
 
@@ -2313,6 +2313,8 @@ void TSimulation::ReadSeedFilePaths()
 		cerr << "Could not open genomeSeeds.txt" << endl;
 		exit( 1 );
 	}
+
+	system( "cp genomeSeeds.txt run/genome" );
 
 	char buf[1024 * 4];
 	while( !in.eof() )
@@ -5679,6 +5681,14 @@ void TSimulation::ReadWorldFile(const char* filename)
     cout << "mate2energy" ses agent::gMate2Energy nl;
     in >> agent::gFight2Energy; in >> label;
     cout << "fight2energy" ses agent::gFight2Energy nl;
+	if( version >= 47 )
+	{
+		__PROP( "minsizepenalty", agent::gMinSizePenalty );
+	}
+	else
+	{
+		agent::gMinSizePenalty = 0.0;
+	}
     in >> agent::gMaxSizePenalty; in >> label;
     cout << "maxsizepenalty" ses agent::gMaxSizePenalty nl;
     in >> agent::gSpeed2Energy; in >> label;
@@ -5783,6 +5793,16 @@ void TSimulation::ReadWorldFile(const char* filename)
     cout << "foodcolor = (" << food::gFoodColor.r cms
                                food::gFoodColor.g cms
                                food::gFoodColor.b pnl;
+	if( version >= 47 )
+	{
+		__PROP( "brickheight", brick::gBrickHeight );
+	    __PROP( "brickcolor", brick::gBrickColor );
+	}
+	else
+	{
+		brick::gBrickColor.set( 0.6, 0.2, 0.2 );
+		brick::gBrickHeight = 0.5;
+	}
     in >> barrier::gBarrierHeight; in >> label;
     cout << "barrierheight" ses barrier::gBarrierHeight nl;
     in >> barrier::gBarrierColor.r >> barrier::gBarrierColor.g >> barrier::gBarrierColor.b >> label;
@@ -5830,6 +5850,13 @@ void TSimulation::ReadWorldFile(const char* filename)
     cout << "numbarriers = " << numbarriers nl;
 	if( version >= 27 )
 	{
+		bool ratioBarrierPositions = false;
+		
+		if( version >= 47 )
+		{
+			__PROP( "ratioBarrierPositions", ratioBarrierPositions );
+		}
+
 		for( int i = 0; i < numbarriers; i++ )
 		{
 			int numKeyFrames;
@@ -5840,6 +5867,13 @@ void TSimulation::ReadWorldFile(const char* filename)
 			{
 				long t;
 				in >> t >> x1 >> z1 >> x2 >> z2 >> label;
+				if( ratioBarrierPositions )
+				{
+					x1 *= globals::worldsize;
+					x2 *= globals::worldsize;
+					z1 *= globals::worldsize;
+					z2 *= globals::worldsize;
+				}
 				cout << "barrier[" << i << "].keyFrame[" << j << "]" ses t sp x1 sp z1 sp x2 sp z2 nl;
 				b->setKeyFrame( t, x1, z1, x2, z2 );
 			}

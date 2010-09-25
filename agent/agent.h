@@ -64,6 +64,7 @@ public:
 	static float	gEat2Energy;
 	static float	gMate2Energy;
 	static float	gFight2Energy;
+	static float	gMinSizePenalty;
 	static float	gMaxSizePenalty;
 	static float	gSpeed2Energy;
 	static float	gYaw2Energy;
