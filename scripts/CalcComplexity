@@ -20,6 +20,8 @@ import subprocess
 OutputFilename = common_complexity.FILENAME_AVR
 NUMBINS = common_complexity.DEFAULT_NUMBINS
 
+DEFAULT_RECENT = 'Recent'
+
 LEGACY_MODES = ['force','prefer','off']
 LegacyMode = 'off'
 ####
@@ -34,15 +36,25 @@ def main():
 
 	complexities, recent_type, arg_paths = parse_args(sys.argv[1:])
 
-	recent_subpath = os.path.join('brain', recent_type)
 	try:
 		run_paths = common_functions.find_run_paths(arg_paths,
-							    recent_subpath)
+							    'brain/function/brainFunction_1.txt')
 	except common_functions.InvalidDirError, e:
 		show_usage(str(e))
 
-	recent_dirs = map(lambda x: os.path.join(x, recent_subpath),
-			  run_paths)
+	recent_subpath = os.path.join('brain', recent_type)
+	recent_dirs = []
+
+	for run_dir in run_paths:
+		recent_dir = os.path.join(run_dir, recent_subpath)
+
+		if not os.path.exists( recent_dir ):
+			if recent_type != 'Recent':
+				show_usage( 'Unsupported recent type for -d' )
+
+			make_recent( run_dir )
+
+		recent_dirs.append( recent_dir )
 
 	for recent_dir in recent_dirs:
 		analyze_recent_dir(complexities,
@@ -50,6 +62,15 @@ def main():
 
 	print "Done!"
 	return 0
+
+####################################################################################
+###
+### FUNCTION make_recent()
+###
+####################################################################################
+def make_recent( run_dir ):
+	script = common_functions.pw_env('makeRecent')
+	os.system( script + " " + run_dir )
 
 ####################################################################################
 ###
@@ -73,8 +94,9 @@ def parse_args(argv):
 		show_usage()
 
 	complexities = common_complexity.DEFAULT_COMPLEXITIES
+	recent_type = DEFAULT_RECENT
 
-	short = 'C:l:b:'
+	short = 'C:l:b:r:d'
 	long = ['legacy=', 'bins=']
 
 	try:
@@ -96,13 +118,11 @@ def parse_args(argv):
 				NUMBINS = int(value)
 			except:
 				show_usage("Invalid integer argument for --bins (%s)" % value)
+		elif opt == 'r':
+			recent_type = value
 		else:
 			assert(False)
 
-	if len(args) == 0:
-		show_usage('Must specify recent type.')
-
-	recent_type = args.pop(0)
 	if not recent_type in common_functions.RECENT_TYPES:
 		show_usage('Invalid recent type (%s).' % recent_type)
 
@@ -412,7 +432,7 @@ def show_usage(msg = None):
 	print"""\
 USAGE
 
-  %s [<options>]... (%s) <directory>...
+  %s [<options>]... <directory>...
 
 DESCRIPTION
 
@@ -435,6 +455,12 @@ OPTIONS
             commas (e.g. -C P,HB,I).
             (default %s)
 
+     -r <recent_type>
+               Specify recent directory type. Valid values:
+%s
+
+            (default %s)
+
      -l, --legacy (force|prefer|off)
                force: Do not perform complexity calculations, but
             instead use results from run of older version of this script.
@@ -452,8 +478,9 @@ OPTIONS
      -b, --bins <n>
                Specify number of bins used in histogram calculations.
 	    (default %d)""" % (sys.argv[0],
-			       '|'.join(common_functions.RECENT_TYPES),
 			       ','.join(common_complexity.DEFAULT_COMPLEXITIES),
+			       ''.join(map( lambda x: '\n                  ' + x, common_functions.RECENT_TYPES )) ,
+			       DEFAULT_RECENT,
 			       common_complexity.DEFAULT_NUMBINS)
 
         if msg:

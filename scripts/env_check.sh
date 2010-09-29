@@ -73,6 +73,12 @@ for arg in "$@"; do
 		err "Please build CalcComplexity -- execute 'make' in Polyworld home directory."
 	    fi
 	    ;;
+	makeRecent)
+	    ECHO_VAL="${PW_SCRIPTS}/MakeRecent"
+	    if [ ! -x "${ECHO_VAL}" ]; then
+		err "Cannot locate MakeRecent script. Bad."
+	    fi
+	    ;;
 	gnuplot)
 	    ECHO_VAL="${PW_GNUPLOT}"
 	    if [ ! -x "${ECHO_VAL}" ]; then
