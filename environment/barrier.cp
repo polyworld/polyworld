@@ -217,7 +217,7 @@ void barrier::position( float xa, float za, float xb, float zb )
 		if( a < 0. )
 			sna *= -1.;
 			
-		csa =  abs( (int) (a * f) );
+		csa =  abs(a * f);
 	}
 }
 
