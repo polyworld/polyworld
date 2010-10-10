@@ -306,8 +306,8 @@ MODES['adhoc'] = Mode( 'Ad hoc',                                           # nam
                        'adhoc_curvetype',                                  # defaultCurvetype
                        None,                                               # colName_timestep
                        common_adhoc.parseArgs,                             # func_parseArgs
-                       None,                                               # func_relpath
-                       common_adhoc.pathRunFromValue,                      # func_pathRunFromValue
+                       None,                                               # func_relpath (filled in by common_adhoc.parseArgs)
+                       None,                                               # func_pathRunFromValue (filled in by common_adhoc.parseArgs)
                        common_adhoc.parseValues,                           # func_parseValues
                        common_adhoc.getValueNames,                         # func_getValueNames
                        None )                                              # func_normalizeValueNames

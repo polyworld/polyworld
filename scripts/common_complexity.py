@@ -1,4 +1,5 @@
 import os
+import sys
 
 import datalib
 
@@ -7,6 +8,23 @@ COMPLEXITY_NAMES = {'A':'All', 'P':'Processing', 'I':'Input', 'B':'Behavior', 'H
 DEFAULT_COMPLEXITIES = ['P']
 FILENAME_AVR = 'AvrComplexity.plt'
 DEFAULT_NUMBINS = 11
+
+####################################################################################
+###
+### FUNCTION calc_script()
+###
+### Invoke the CalcComplexity script
+###
+####################################################################################
+def calc_script( args ):
+    
+    script = os.path.join( os.path.dirname(sys.argv[0]), 'CalcComplexity' )
+    
+    cmd = 'CalcComplexity' + ' ' + ' '.join( map(lambda x: '"%s"' % x, args) )
+    rc = os.system( cmd )
+
+    if rc != 0:
+        raise Exception( 'CalcComplexity failed' )
 
 ####################################################################################
 ###

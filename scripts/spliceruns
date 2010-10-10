@@ -1,0 +1,152 @@
+#!/usr/bin/env python
+
+import os
+import sys
+
+import common_complexity
+import common_functions
+import common_genome
+import common_stats
+import datalib
+import shutil
+
+def main():
+    runs = common_genome.get_seed_run_chain( '../../../../../g3/local/expand/barriersfixed/fseed/ws248' )
+
+    run_spliced = 'runfoo'
+
+    splice_complexity( runs, run_spliced )
+    splice_stats( runs, run_spliced )
+
+    # we need a worldfile in the generated run directory so that other
+    # tools will recognize it as a run.
+    shutil.copy( os.path.join(runs[-1], 'worldfile'), run_spliced )
+
+    # generate a simple table showing the starting timestep for each constituent
+    # run within the spliced run.
+    f = open( os.path.join(run_spliced, 'SPLICE.txt'), 'w' )
+    time = 0
+    for run in runs:
+        f.write( '%d: %s\n' % (time, run) )
+        steps = int(common_functions.read_worldfile_parameter( run, 'maxSteps' ))
+        time += steps
+    f.close()
+
+####################################################################################
+###
+### FUNCTION splice_complexity()
+###
+####################################################################################
+def splice_complexity( runs, run_spliced ):
+    classification = None
+    recent_type = 'Recent'
+    complexities = ['P']
+
+    #common_complexity.calc_script( ['-C'] + complexities + runs )
+
+    complexities = common_complexity.parse_avrs( runs,
+                                                 classification,
+                                                 recent_type,
+                                                 complexities,
+                                                 run_as_key = True )
+    spliced_tables = splice_alltables( runs,
+                                       complexities,
+                                       'Timestep' )
+
+    path = common_complexity.path_avr( run_spliced,
+                                       classification,
+                                       recent_type )
+    write_spliced_file( path, spliced_tables )
+
+####################################################################################
+###
+### FUNCTION splice_stats()
+###
+####################################################################################
+def splice_stats( runs, run_spliced ):
+    stats = common_stats.parse_stats( runs, run_as_key = True )
+    spliced_tables = splice_alltables( runs, stats, 'step' )
+
+    path = common_stats.path_stats( run_spliced )
+    write_spliced_file( path, spliced_tables )
+
+####################################################################################
+###
+### FUNCTION write_spliced_file()
+###
+### write out the tables to a datalib file, creating any needed dirs
+###
+####################################################################################
+def write_spliced_file( path, tables ):    
+    dir = os.path.dirname(path)
+
+    if not os.path.exists( dir ):
+        os.makedirs( dir )
+
+    datalib.write( path, tables )
+
+####################################################################################
+###
+### FUNCTION splice_alltables()
+###
+### for all tables of the same name, create a spliced table. If the passed in data
+### has two runs with 5 tables per run, then this function will return 5 tables.
+###
+### runs: list of run dirs that provides the correct ordering
+### 
+### alltables_parsed: {rundir : {tablename: table}}
+###
+####################################################################################
+def splice_alltables( runs, alltables_parsed, colname_time ):
+    # put tables in array with same order as runs
+    alltables_ordered = [ alltables_parsed[run] for run in runs ]
+    
+    alltables_spliced = []
+
+    for tablename in alltables_ordered[0].keys():
+        # get tables with name tablename from all runs and put in ordered array
+        tables = [ tables_run[tablename] for tables_run in alltables_ordered ]
+
+        table_spliced = splice_tables( tables, colname_time )
+        alltables_spliced.append( table_spliced )
+
+    return alltables_spliced
+
+####################################################################################
+###
+### FUNCTION splice_tables()
+###
+### Take all the input tables and splice them into a single table, shifting time
+### appropriately for each table.
+###
+####################################################################################
+def splice_tables( tables, colname_time ):
+    table0 = tables[0]
+    colnames = table0.colnames
+    coltypes = table0.coltypes
+
+    table_spliced = datalib.Table( table0.name, colnames, coltypes )
+
+    time_base = 0
+
+    for table in tables:
+        for row in table.rows():
+            row_spliced = table_spliced.createRow()
+
+            for colname in colnames:
+                val = row[colname]
+
+                if colname == colname_time:
+                    if val == 0 and time_base != 0:
+                        val = 1
+
+                    time = time_base + val
+                    val = time
+
+                row_spliced[colname] = val
+
+        time_base = time
+
+    return table_spliced
+
+main()

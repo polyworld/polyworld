@@ -21,6 +21,7 @@ def parseArgs( mode, options, args ):
         ycolname = args.pop(0)
     
         mode.func_relpath = lambda x, y: relpath
+        mode.func_pathRunFromValue = lambda path, classification, dataset: path[:-len(relpath)].rstrip('/')
         mode.defaultValues = tablename
         mode.colName_timestep = xcolname
         mode.curvetypes = [ycolname]
@@ -60,21 +61,11 @@ def parseValues(mode, run_paths, classification, dataset, values, run_as_key):
 
     if run_as_key:
         # modify the map to use run dir as key, not Avr file
-        avrs = dict( [(pathRunFromValue( x[0], classification, dataset ),
+        avrs = dict( [(mode.pathRunFromValue( x[0], classification, dataset ),
                        x[1])
                       for x in tables.items()] )
 
     return avrs
-
-####################################################################################
-###
-### FUNCTION pathRunFromValue
-###
-####################################################################################
-def pathRunFromValue( path, classification, dataset ):
-    relpath = dataset.split(':')[0]
-
-    return path[:-len(relpath) - 1]
 
 ####################################################################################
 ###

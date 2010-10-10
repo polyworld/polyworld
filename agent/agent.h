@@ -32,6 +32,7 @@ class CarryingSensor;
 class DataLibWriter;
 class EnergySensor;
 class food;
+class MateWaitSensor;
 class NervousSystem;
 class RandomSensor;
 class Retina;
@@ -120,7 +121,8 @@ public:
     void SetMass(float f);
     
     virtual void draw();
-    void grow( bool recordGenome,
+    void grow( long mateWait,
+			   bool recordGenome,
 			   bool recordBrainAnatomy,
 			   bool recordBrainFunction,
 			   bool recordPosition );    
@@ -275,6 +277,7 @@ protected:
 	Retina *fRetina;
 	RandomSensor *fRandomSensor;
 	EnergySensor *fEnergySensor;
+	MateWaitSensor *fMateWaitSensor;
 	SpeedSensor *fSpeedSensor;
 	CarryingSensor *fCarryingSensor;
 	BeingCarriedSensor *fBeingCarriedSensor;
@@ -284,6 +287,7 @@ protected:
 		// Inputs
 		Nerve *random;
 		Nerve *energy;
+		Nerve *mateWaitFeedback;
 		Nerve *speedFeedback;
 		Nerve *carrying;
 		Nerve *beingCarried;

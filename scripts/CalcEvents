@@ -12,7 +12,7 @@ import common_logs
 import datalib
 import iterators
 
-DEFAULT_EPOCH = 10000
+DEFAULT_EPOCH = 1000
 
 
 ####################################################################################
@@ -400,7 +400,7 @@ def calc_bias( path_log,
     tables_bins = datalib.parse( path_log )
 
 
-    def __div( table_x, table_y, tablename_result ):
+    def __div( table_x, table_y, tablename_result, multiplier ):
         assert( table_x.colnames == table_y.colnames )
         assert( table_x.coltypes == table_y.coltypes )
 
@@ -428,25 +428,28 @@ def calc_bias( path_log,
                 if val_y == 0:
                     row_result.set( colname, float('nan') )
                 else:
-                    row_result.set( colname, float(val_x) / float(val_y) )
+                    row_result.set( colname, multiplier * float(val_x) / float(val_y) )
         
         return table_result
 
     tables_bias = []
 
-    def __bias( majorx, majory ):
+    def __bias( majorx, majory, multiplier = 1.0 ):
         for eventx in contactEventTypes( majorx ):
             tablex = tables_bins['separations_'+eventx]
             for eventy in contactEventTypes( majory):
                 if eventx != eventy:
                     tabley = tables_bins['separations_'+eventy]
 
-                    bias = __div( tablex, tabley, eventx + '/' + eventy )
+                    bias = __div( tablex, tabley, eventx + '/' + eventy, multiplier )
                     tables_bias.append( bias )
 
-    __bias( 'F', 'C' )
-    __bias( 'M', 'C' )
-    __bias( 'G', 'C' )
+    # We divide */C by two because each contact event
+    # represents two opportunities for a behavior.
+    __bias( 'F', 'C' , 0.5 )
+    __bias( 'M', 'C' , 0.5 )
+    __bias( 'G', 'C' , 0.5 )
+
     __bias( 'G', 'F' )
 
     __bias( 'M', 'M' )

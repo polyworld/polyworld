@@ -60,6 +60,7 @@ fi
 if ./scripts/genomeSeed --agent $agentNumber $rundir; then
     if ./scripts/edit_worldfile.py $rundir/worldfile ./worldfile \
 	maxSteps=10000 \
+	endOnPopulationCrash=0 \
 	minnumagents=1 \
 	initnumagents=1 \
 	numberToSeed=1 \

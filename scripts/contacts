@@ -1,0 +1,100 @@
+#!/bin/bash
+
+set -e
+
+function err() {
+    echo $* >&2
+    exit 1
+}
+
+function usage() {
+    prog=$( basename $0 )
+
+    cat <<EOF
+ANALYSIS USAGE:
+
+    $prog c run_dir...
+
+    Performs all contacts analysis (CalcEvents).
+
+
+PLOTTING USAGE:
+
+    $prog p file_type table ["plot_flags"] "plot_args"
+
+    Performs contacts plotting.
+
+    file_type:
+
+	t = contacts_total.txt
+	bt = contacts_bias_total.txt
+        bn = contacts_bias_nearfar.txt
+
+    table: M/C, Mw/M_any, F/C, etc
+
+    flags: flags for plot. Must be in quotes so it's one arg to this script.
+
+    plot_args: args for plot.
+
+EOF
+
+    exit 1
+}
+
+if [ $# == 0 ]; then
+    usage
+fi
+
+mode=$1
+
+scripts=$( dirname $0 )
+
+case $mode in
+    h) 
+	usage
+	;;
+    c)
+	shift 1
+	$scripts/CalcEvents --epoch 1000 c $*
+	$scripts/CalcEvents --epoch 1000 b $*
+	$scripts/CalcEvents --epoch 1000 n $*
+	;;
+    p)
+	file_type=$2
+	table=$3
+	if [ ${4:0:1} == "-" ]; then
+	    flags="$4"
+	    shift 4
+	    args="$@"
+	else
+	    flags=""
+	    shift 3
+	    args="$@"
+	fi
+
+	case $file_type in
+	    t)
+		relpath=events/contacts_total.txt
+		xcol=T
+		ycol=total
+		;;
+	    bt)
+		relpath=events/contacts_bias_total.txt
+		xcol=T
+		ycol=total
+		;;
+	    bn)
+		relpath=events/contacts_bias_nearfar.txt
+		xcol=T
+		ycol=ratio
+		;;
+	    default)
+		err "Unknown file_type ($file_type)"
+	esac
+
+	$scripts/plot a $flags $relpath $table $xcol $ycol $args
+	;;
+    *)
+	err "Invalid mode ($mode)"
+esac
+		

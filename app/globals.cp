@@ -32,6 +32,7 @@ namespace genome
 	float gSeedFightBias;
 	float gSeedFightExcitation;
 
+	bool gEnableMateWaitFeedback;
 	bool gEnableSpeedFeedback;
 
 	bool gEnableGive;

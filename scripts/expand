@@ -1,0 +1,91 @@
+#!/bin/bash
+
+set -e
+
+
+nruns=0
+
+seed=/g3/local/expand/barriersfixed/fseed/ws171
+worldsize=181
+worldsizegrowth=0.1
+worldsizemingrowth=0.005
+worldsizemaxgrowth=0.1
+
+experimentdir=/g3/local/expand/barriersfixed__mx.1
+#experimentdir=/tmp/expand0
+normaldir=$experimentdir/normal
+fseeddir=$experimentdir/fseed
+
+expandlog=$experimentdir/expand.log
+rm -f ./expand.log
+ln -s $expandlog ./expand.log
+
+mkdir -p $normaldir
+mkdir -p $fseeddir
+
+if [ "$seed" == "" ]; then
+    cp worldfile /tmp
+    edit_worldfile.py /tmp/worldfile worldfile worldsize=$worldsize seedFromFile=0 endOnPopulationCrash=1
+
+    runcurr=$normaldir/ws${worldsize}
+
+    Polyworld
+    run_history.sh src run false
+    if [ "$( cat run/endReason.txt )" == "PopulationCrash" ]; then
+	echo "Initial run crashed!" >&2
+	exit 1
+    fi
+    mv run $runcurr
+    nruns=1
+else
+    runcurr=$seed
+    worldsize=$( python -c "print int(round($worldsize / (1+$worldsizegrowth)))" )
+fi
+
+while true; do
+    runprev=$runcurr
+    worldsize=$( python -c "print int(round($worldsize * (1+$worldsizegrowth)))" )
+
+    echo "nruns=$nruns worldsize=$worldsize worldsizegrowth=$worldsizegrowth" >> $expandlog
+
+    runcurr=$fseeddir/ws${worldsize}
+
+    if [ -e $runcurr ]; then
+	runcurr=${runcurr}_${nruns}
+	
+	if [ -e $runcurr ]; then
+	    echo "$runcurr already exists!!!"
+	    exit 1
+	fi
+    fi
+
+    cp worldfile /tmp
+    edit_worldfile.py /tmp/worldfile worldfile worldsize=$worldsize seedFromFile=1 endOnPopulationCrash=1 genomeSeed_also_used_for_position=$nruns
+
+    genomeSeed $runprev
+    Polyworld
+    echo "--------> nruns=$nruns"
+    #read -p "Crash?" iscrash
+    #if [ $iscrash == "y" ]; then
+	#echo "PopulationCrash" > run/endReason.txt
+    #fi
+
+    if [ "$( cat run/endReason.txt )" == "PopulationCrash" ]; then
+	echo "crash!" >> $expandlog
+	#if [ $nruns == 0 ]; then
+	    #echo "nruns == 0!!!"
+	    #exit 1
+	#fi
+	worldsize=$( python -c "print int(round($worldsize / (1+$worldsizegrowth)))" )
+	worldsizegrowth=$( python -c "print max( $worldsizemingrowth, ($worldsizegrowth / 2) )" )
+	rm -rf run
+	runcurr=$runprev
+    else
+	echo "yay!" >> $expandlog
+	run_history.sh src run false
+	mv run $runcurr
+	worldsizegrowth=$( python -c "print min( $worldsizemaxgrowth, ($worldsizegrowth * 1.25) )" )
+    fi
+
+    nruns=$(( nruns + 1 ))
+done

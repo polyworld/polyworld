@@ -112,6 +112,7 @@ namespace genome
 	extern float gSeedFightBias;
 	extern float gSeedFightExcitation;
 
+	extern bool gEnableMateWaitFeedback;
 	extern bool gEnableSpeedFeedback;
 	extern bool gEnableGive;
 	extern float gSeedGiveBias;

@@ -47,10 +47,10 @@ def path_run_from_stats(path_stats, classification, dataset):
 ### FUNCTION parse_complexity
 ###
 ####################################################################################
-def parse_stats(run_paths, classification, dataset, types, run_as_key = False):
+def parse_stats(run_paths, classification = None, dataset = None, types = None, run_as_key = False, quiet = False):
     # make sure the datalib files exist
     for path in run_paths:
-        __get_stats( path )
+        __get_stats( path, quiet )
 
     # parse the stats for all the runs
     tables = datalib.parse_all( map(lambda x: path_stats( x ),
@@ -69,11 +69,15 @@ def parse_stats(run_paths, classification, dataset, types, run_as_key = False):
 
     return tables
 
-def __get_stats( path_run ):
+def __get_stats( path_run, quiet = False ):
     path_datalib = os.path.join( path_run, 'stats', FILENAME_DATALIB )
     if os.path.exists( path_datalib ):
         return datalib.parse( path_datalib,
                               keycolname = 'step' )
+
+    if not quiet:
+        # This can take a long time, so let the user we're not hung
+        print 'Converting stats files into datalib format for run', path_run
 
     tables = __create_tables( path_run )
 
@@ -142,10 +146,13 @@ def __add_row( tables, path ):
             assert( int(value) == step )
             continue
 
-        table = tables[label]
-        row = table.createRow()
-        row['step'] = step
-        row['value'] = value
+        if not label in tables:
+            print 'Warning! Found label "%s" in %s, but not in stat.1' % (label,path)
+        else:
+            table = tables[label]
+            row = table.createRow()
+            row['step'] = step
+            row['value'] = value
 
 def __path2step( path ):
     return int(path[ path.rfind('.') + 1 : ])

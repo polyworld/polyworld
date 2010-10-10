@@ -355,7 +355,7 @@ public:
 	void PopulateStatusList(TStatusList& list);
 	
 	void Step();
-	void End();
+	void End( const std::string &reason );
 	void Update();
 
 	bool fLockStepWithBirthsDeathsLog;	// Are we running in lockstep mode?
@@ -549,6 +549,7 @@ private:
 	TTextStatusWindow* fTextStatusWindow;
 	
 	long fMaxSteps;
+	bool fEndOnPopulationCrash;
 	bool fPaused;
 	int fDelay;
 	int fDumpFrequency;

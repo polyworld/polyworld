@@ -133,6 +133,8 @@ GenomeSchema *GenomeUtil::createSchema()
 
 	INPUT1( Random );
 	INPUT1( Energy );
+	if( genome::gEnableMateWaitFeedback )
+		INPUT1( MateWaitFeedback );
 	if( genome::gEnableSpeedFeedback )
 		INPUT1( SpeedFeedback );
 	if( genome::gEnableCarry )

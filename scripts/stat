@@ -1,0 +1,35 @@
+#!/bin/bash
+
+# this script is useful for looking at the progress of a run via ssh
+
+set -e
+
+if [ "$1" == "-p" ] || [ "$1" == "--poll" ]; then
+    poll="true"
+    shift
+fi
+
+if [ $# == 1 ]; then
+    rundir=$1 
+else
+    rundir=$(dirname $0)/../run
+fi
+
+function latest() {
+    ls -c $rundir/stats/stat.* | head -n 1
+}
+
+while true; do
+    statfile=$( latest )
+
+    cat $statfile
+
+    if [ "$poll" != "true" ]; then break; fi
+
+    while [ $( latest ) == $statfile ]; do
+	sleep 10
+    done
+
+    echo "-----------------------------------"
+done
+

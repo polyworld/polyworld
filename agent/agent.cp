@@ -30,6 +30,7 @@
 #include "graphics.h"
 #include "graybin.h"
 #include "misc.h"
+#include "MateWaitSensor.h"
 #include "NervousSystem.h"
 #include "RandomSensor.h"
 #include "Resources.h"
@@ -126,7 +127,10 @@ agent::agent(TSimulation* sim, gstage* stage)
 		fRetina(NULL),
 		fRandomSensor(NULL),
 		fEnergySensor(NULL),
+		fMateWaitSensor(NULL),
 		fSpeedSensor(NULL),
+		fCarryingSensor(NULL),
+		fBeingCarriedSensor(NULL),
 		fBrain(NULL),
 		fBrainFuncFile(NULL),
 		fPositionWriter(NULL)
@@ -178,7 +182,10 @@ agent::~agent()
 	delete fBrain;
 	delete fRandomSensor;
 	delete fEnergySensor;
+	delete fMateWaitSensor;
 	delete fSpeedSensor;
+	delete fCarryingSensor;
+	delete fBeingCarriedSensor;
 	delete fRetina;
 }
 
@@ -417,7 +424,8 @@ void agent::load(istream& in)
 //---------------------------------------------------------------------------
 // agent::grow
 //---------------------------------------------------------------------------
-void agent::grow( bool recordGenome,
+void agent::grow( long mateWait,
+				  bool recordGenome,
 				  bool recordBrainAnatomy,
 				  bool recordBrainFunction,
 				  bool recordPosition )
@@ -441,6 +449,8 @@ void agent::grow( bool recordGenome,
 #define INPUT(NAME) nerves.NAME = fCns->add( Nerve::INPUT, #NAME )
 	INPUT(random);
 	INPUT(energy);
+	if( genome::gEnableMateWaitFeedback )
+		INPUT(mateWaitFeedback);
 	if( genome::gEnableSpeedFeedback )
 		INPUT(speedFeedback);
 	if( genome::gEnableCarry )
@@ -473,6 +483,10 @@ void agent::grow( bool recordGenome,
 	fCns->add( fRetina = new Retina(brain::retinawidth) );
 	fCns->add( fEnergySensor = new EnergySensor(this) );
 	fCns->add( fRandomSensor = new RandomSensor(fBrain->rng) );
+	if( genome::gEnableMateWaitFeedback )
+		fCns->add( fMateWaitSensor = new MateWaitSensor(this, mateWait) );
+	if( genome::gEnableSpeedFeedback )
+		fCns->add( fSpeedSensor = new SpeedSensor(this) );
 	if( genome::gEnableSpeedFeedback )
 		fCns->add( fSpeedSensor = new SpeedSensor(this) );
 	if( genome::gEnableCarry )

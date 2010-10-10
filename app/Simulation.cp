@@ -14,7 +14,7 @@
 #define MinDebugStep 0
 #define MaxDebugStep INT_MAX
 
-#define CurrentWorldfileVersion 47
+#define CurrentWorldfileVersion 48
 
 #define TournamentSelection 1
 
@@ -428,7 +428,13 @@ void TSimulation::Step()
 	
 	if( fMaxSteps && ((fStep+1) > fMaxSteps) )
 	{
-		End();
+		End( "MaxSteps" );
+	}
+	else if( fEndOnPopulationCrash && 
+			 (objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE) <= fMinNumAgents) )
+	{
+		cerr << "Population crash at step " << fStep << endl;
+		End( "PopulationCrash" );
 	}
 		
 	fStep++;
@@ -1203,7 +1209,7 @@ globals::worldsize);
 //---------------------------------------------------------------------------
 // TSimulation::End
 //---------------------------------------------------------------------------
-void TSimulation::End()
+void TSimulation::End( const string &reason )
 {
 	agent *a;
 
@@ -1221,6 +1227,11 @@ void TSimulation::End()
 
 	// Stop simulation
 	printf( "Simulation stopped after step %ld\n", fStep );
+
+	ofstream fout( "run/endReason.txt" );
+	fout << reason << endl;
+	fout.close();
+
 	exit( 0 );
 }
 
@@ -1584,7 +1595,8 @@ void TSimulation::Init()
 				else
 					c->Genes()->randomize();
 
-				c->grow( fRecordGenomes,
+				c->grow( fMateWait,
+						 fRecordGenomes,
 						 RecordBrainAnatomy( c->Number() ),
 						 RecordBrainFunction( c->Number() ),
 						 fRecordPosition );
@@ -1651,7 +1663,8 @@ void TSimulation::Init()
 			}
 			else
 				c->Genes()->randomize();
-			c->grow( fRecordGenomes,
+			c->grow( fMateWait,
+					 fRecordGenomes,
 					 RecordBrainAnatomy( c->Number() ),
 					 RecordBrainFunction( c->Number() ),
 					 fRecordPosition );
@@ -1847,6 +1860,8 @@ void TSimulation::Init()
 void TSimulation::InitNeuralValues()
 {
 	int numinputneurgroups = 5;
+	if( genome::gEnableMateWaitFeedback )
+		numinputneurgroups++;
 	if( genome::gEnableSpeedFeedback )
 		numinputneurgroups++;
 	if( genome::gEnableCarry )
@@ -2038,6 +2053,7 @@ void TSimulation::InitWorld()
     genome::gMiscInvisSlope = 2.0;
     genome::gMinBitProb = 0.1;
     genome::gMaxBitProb = 0.9;
+	genome::gEnableMateWaitFeedback = false;
 	genome::gEnableSpeedFeedback = false;
 	genome::gEnableGive = false;
 	genome::gEnableCarry = false;
@@ -3298,7 +3314,8 @@ void TSimulation::MateLockstep( void )
 		Q_CHECK_PTR(e);
 
 		e->Genes()->crossover(c->Genes(), d->Genes(), true);
-		e->grow( fRecordGenomes,
+		e->grow( fMateWait,
+				 fRecordGenomes,
 				 RecordBrainAnatomy( e->Number() ),
 				 RecordBrainFunction( e->Number() ),
 				 fRecordPosition );
@@ -3510,7 +3527,8 @@ void TSimulation::Mate( agent *c,
 					Q_CHECK_PTR(e);
 
 					e->Genes()->crossover(c->Genes(), d->Genes(), true);
-					e->grow( fRecordGenomes,
+					e->grow( fMateWait,
+							 fRecordGenomes,
 							 RecordBrainAnatomy( e->Number() ),
 							 RecordBrainFunction( e->Number() ),
 							 fRecordPosition );
@@ -4243,7 +4261,8 @@ void TSimulation::CreateAgents( void )
 					gaPrint( "%5ld: domain %d creation random early (%4ld)\n", fStep, id, fNumberCreatedRandom );
                 }
 
-                newAgent->grow( fRecordGenomes,
+                newAgent->grow( fMateWait,
+								fRecordGenomes,
 								RecordBrainAnatomy( newAgent->Number() ),
 								RecordBrainFunction( newAgent->Number() ),
 								fRecordPosition );
@@ -4331,7 +4350,8 @@ void TSimulation::CreateAgents( void )
 				gaPrint( "%5ld: global creation random early (%4ld)\n", fStep, fNumberCreatedRandom );
             }
 
-            newAgent->grow( fRecordGenomes,
+            newAgent->grow( fMateWait,
+							fRecordGenomes,
 							RecordBrainAnatomy( newAgent->Number() ),
 							RecordBrainFunction( newAgent->Number() ),
 							fRecordPosition );
@@ -5339,6 +5359,15 @@ void TSimulation::ReadWorldFile(const char* filename)
 	}
 	else
 		fMaxSteps = 0;  // don't terminate automatically
+
+	if( version >= 48 )
+	{
+		PROP( EndOnPopulationCrash );
+	}
+	else
+	{
+		fEndOnPopulationCrash = false;
+	}
 	
 	bool ignoreBool;
     in >> ignoreBool; in >> label;
@@ -5483,6 +5512,12 @@ void TSimulation::ReadWorldFile(const char* filename)
     cout << "size2energy" ses food::gSize2Energy nl;
     in >> fEat2Consume; in >> label;
     cout << "eat2consume" ses fEat2Consume nl;
+
+	if( version >= 48 )
+	{
+		// For earlier versions these will be initialized in initworld()
+		__PROP( "enableMateWaitFeedback", genome::gEnableMateWaitFeedback );
+	}
 
 	if( version >= 38 )
 	{
@@ -7364,8 +7399,9 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 
 			for( int i = 0; i < fDomains[domainNumber].numFoodPatches; i++ )
 			{
-				sprintf( t, "  FP%d %3d %3d  %4.1f %4.1f  %4.1f",
+				sprintf( t, "  FP%d %d %3d %3d  %4.1f %4.1f  %4.1f",
 						 i,
+						 fDomains[domainNumber].fFoodPatches[i].foodCount,
 						 fDomains[domainNumber].fFoodPatches[i].agentInsideCount,
 						 fDomains[domainNumber].fFoodPatches[i].agentInsideCount + fDomains[domainNumber].fFoodPatches[i].agentNeighborhoodCount,
 						 fDomains[domainNumber].fFoodPatches[i].agentInsideCount * makePercent,
