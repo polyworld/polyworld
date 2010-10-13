@@ -31,3 +31,8 @@ class LifeSpans:
         for row in self.table.rows():
             if row['DeathReason'] == deathReason:
                 yield row['Agent']
+
+    def getAllAliveAtTime( self, time ):
+        for row in self.table.rows():
+            if row['BirthStep'] <= time and row['DeathStep'] > time:
+                yield row['Agent']

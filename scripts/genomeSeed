@@ -21,7 +21,7 @@ def main():
     # Process Args
     #
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'a:e', ['agent=', 'simend'] )
+        opts, args = getopt.getopt(sys.argv[1:], 'a:et:', ['agent=', 'simend', 'time='] )
     except getopt.GetoptError, x:
         show_usage( x )
 
@@ -33,8 +33,16 @@ def main():
                 agentNumber = int(arg)
             except:
                 show_usage( 'Invalid agentNumber (%s)' % arg )
-        elif opt == '--simend' or opt == 'e':
+        elif opt == '--simend' or opt == '-e':
             mode = 'simend'
+        elif opt == '--time' or opt == '-t':
+            mode = 'time'
+            try:
+                time = int(arg)
+            except:
+                show_usage( 'Invalid timestep (%s)' % arg )
+        else:
+            assert( False )
 
     if len(args) != 1:
         show_usage( 'Expecting one run dir as argument' )
@@ -52,6 +60,11 @@ def main():
     elif mode == 'simend':
         lifespans = common_logs.LifeSpans( rundir )
         agentNumbers = lifespans.getAllWithDeathReason( 'SIMEND' )
+    elif mode == 'time':
+        lifespans = common_logs.LifeSpans( rundir )
+        agentNumbers = lifespans.getAllAliveAtTime( time )        
+    else:
+        assert( False )
 
     #
     # Determine genome file paths
@@ -100,6 +113,10 @@ usage: genomeSeed [option] rundir
   --simend, -e
 
              Generate seeds for agents alive at end of sim.
+
+  --time, -t <step>
+
+             Generate seeds for agents alive at timestep.
 """
 
     if msg != None:
