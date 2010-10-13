@@ -10,10 +10,32 @@ import common_stats
 import datalib
 import shutil
 
-def main():
-    runs = common_genome.get_seed_run_chain( '../../../../../g3/local/expand/barriersfixed/fseed/ws248' )
 
-    run_spliced = 'runfoo'
+def usage( msg = None ):
+    print """\
+usage: spliceruns run_spliced run_input"""
+
+    if msg != None:
+        print
+        print msg
+
+    exit( 1 )
+
+def main():
+    args = sys.argv[1:]
+
+    if len(args) != 2:
+        usage()
+
+    run_spliced = args[0]
+    run_input = args[1].rstrip( '/' )
+
+    SPLICE_TXT = os.path.join( run_spliced, 'SPLICE.txt' )
+
+    if os.path.exists( run_spliced ) and not os.path.exists( SPLICE_TXT ):
+        usage( "spliced run already exists, but doesn't contain SPLICE.txt. not a splice run? (%s)" % run_spliced )
+
+    runs = common_genome.get_seed_run_chain( run_input )
 
     splice_complexity( runs, run_spliced )
     splice_stats( runs, run_spliced )
@@ -24,7 +46,7 @@ def main():
 
     # generate a simple table showing the starting timestep for each constituent
     # run within the spliced run.
-    f = open( os.path.join(run_spliced, 'SPLICE.txt'), 'w' )
+    f = open( SPLICE_TXT, 'w' )
     time = 0
     for run in runs:
         f.write( '%d: %s\n' % (time, run) )
@@ -42,7 +64,7 @@ def splice_complexity( runs, run_spliced ):
     recent_type = 'Recent'
     complexities = ['P']
 
-    #common_complexity.calc_script( ['-C'] + complexities + runs )
+    common_complexity.calc_script( ['-C'] + complexities + runs )
 
     complexities = common_complexity.parse_avrs( runs,
                                                  classification,
