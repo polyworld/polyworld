@@ -122,6 +122,7 @@ Brain::Brain(NervousSystem *_cns)
 		neuralnet = new SpikingModel( cns );
 		break;
 	case brain::NeuralValues::FIRING_RATE:
+	case brain::NeuralValues::TAU:
 		neuralnet = new FiringRateModel( cns );
 		break;
 	default:
@@ -1181,6 +1182,19 @@ void Brain::GrowSynapses( Genome *g,
 	int sign_to = synapseType->nt_to == EXCITATORY ? 1 : -1;
 	int sign_from = synapseType->nt_from == EXCITATORY ? 1 : -1;
 
+	RandomNumberGenerator *td_rng;
+	Gene *td_seedGene;
+	if( brain::gNeuralValues.enableTopologicalDistortionRngSeed )
+	{
+		td_rng = RandomNumberGenerator::create( RandomNumberGenerator::TOPOLOGICAL_DISTORTION );
+		td_seedGene = g->gene( "TopologicalDistortionRngSeed" );
+	}
+	else
+	{
+		td_rng = this->rng;
+		td_seedGene = NULL;
+	}
+
 	for (int groupIndex_from = 0; groupIndex_from < dims.numgroups; groupIndex_from++)
 	{
 		int neuronCount_from = g->getNeuronCount(synapseType->nt_from, groupIndex_from);
@@ -1204,6 +1218,14 @@ void Brain::GrowSynapses( Genome *g,
 								  synapseType,
 								  groupIndex_from,
 								  groupIndex_to );
+		if( brain::gNeuralValues.enableTopologicalDistortionRngSeed )
+		{
+			long td_seed = g->get( td_seedGene,
+								   synapseType,
+								   groupIndex_from,
+								   groupIndex_to );
+			td_rng->seed( td_seed );
+		}
 
 		// "Local Index" means that the index is relative to the start of the neuron type (I or E) within
 		// the group as opposed to the entire neuron array.
@@ -1239,9 +1261,9 @@ void Brain::GrowSynapses( Genome *g,
 			// the group as opposed to the entire neuron array.
 			int neuronLocalIndex_from;
 
-			if (rng->drand() < td_fromto)
+			if (td_rng->drand() < td_fromto)
 			{
-				short distortion = short(nint(rng->range(-0.5,0.5)*td_fromto*neuronCount_from));
+				short distortion = short(nint(td_rng->range(-0.5,0.5)*td_fromto*neuronCount_from));
 				neuronLocalIndex_from = isyn + neuronLocalIndex_fromBase + distortion;
                         
 				if (neuronLocalIndex_from < 0)
@@ -1295,6 +1317,11 @@ void Brain::GrowSynapses( Genome *g,
 
 			synapseCount_brain++;
 		}
+	}
+
+	if( brain::gNeuralValues.enableTopologicalDistortionRngSeed )
+	{
+		RandomNumberGenerator::dispose( td_rng );
 	}
 }
 
@@ -1648,6 +1675,7 @@ void Brain::Grow( Genome* g )
 
 		dims.numsynapses = numsyn;
 	}
+	//printf( "numsynapses=%ld\n", numsyn );
 	
 	// ---
 	// --- Calculate Energy Use

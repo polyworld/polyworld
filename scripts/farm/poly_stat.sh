@@ -24,6 +24,11 @@ for x in $PWHOSTNUMBERS; do
 	    echo "--- $pwhostname ---"
 	    ssh -l $USER $pwhost df -H
 	    ;;
+	'runs')
+	    echo "--- $pwhostname ---"
+	    
+	    ssh -l $USER $pwhost find '~/polyworld_pwfarm/runs' -name worldfile
+	    ;;
 	'*')
 	    echo "Invalid op: $op">&2
 	    exit 1

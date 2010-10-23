@@ -14,6 +14,7 @@ class RandomNumberGenerator
 	enum Role
 	{
 		NERVOUS_SYSTEM = 0,
+		TOPOLOGICAL_DISTORTION,
 		__NROLES
 	};
 

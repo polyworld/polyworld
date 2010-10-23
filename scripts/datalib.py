@@ -710,7 +710,7 @@ def __seek_meta(file, meta):
 ###
 ####################################################################################
 def __seek_next_tag(file):
-    regex = '^#\\<([a-zA-Z0-9_ \-,/]+)\\>'
+    regex = r'^#\<([^\>]+)\>'
 
     while True:
         line = file.readline()
@@ -727,7 +727,7 @@ def __seek_next_tag(file):
 ###
 ####################################################################################
 def __get_end_tag(line):
-    regex = '^#\\</([a-zA-Z0-9_ \-,/]+)\\>'
+    regex = r'^#\</([^\>]+)\>'
 
     result = re.search(regex, line)
     if result:

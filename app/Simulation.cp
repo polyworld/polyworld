@@ -14,7 +14,7 @@
 #define MinDebugStep 0
 #define MaxDebugStep INT_MAX
 
-#define CurrentWorldfileVersion 48
+#define CurrentWorldfileVersion 50
 
 #define TournamentSelection 1
 
@@ -1373,7 +1373,7 @@ void TSimulation::Init()
 		MKDIR( "run/genome" );
 	}
 
-	if( fRecordPosition )
+	if( fRecordPosition || fPositionSeedsFromFile )
 	{
 		MKDIR( "run/motion" );
 		MKDIR( "run/motion/position" );
@@ -1577,6 +1577,8 @@ void TSimulation::Init()
 			int limit = min((fMaxNumAgents - (long)objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE)), fDomains[id].initNumAgents);
 			for (int i = 0; i < limit; i++)
 			{
+				bool isSeed = false;
+
 				c = agent::getfreeagent(this, &fStage);
 				Q_ASSERT(c != NULL);
 				
@@ -1586,6 +1588,8 @@ void TSimulation::Init()
 				
 				if( numSeededDomain < fDomains[id].numberToSeed )
 				{
+					isSeed = true;
+
 					SeedGenome( c->Number(),
 								c->Genes(),
 								fDomains[id].probabilityOfMutatingSeeds,
@@ -1613,7 +1617,14 @@ void TSimulation::Init()
 				x = fDomains[id].xleft  +  0.666 * fDomains[id].xsize;
 				z = - globals::worldsize * ((float) (i+1) / (fDomains[id].initNumAgents + 1));
 			#endif
-				c->settranslation(x, y, z);
+				if( isSeed )
+				{
+					SetSeedPosition( c, numSeededDomain + numSeededTotal - 1, x, y, z );
+				}
+				else
+				{
+					c->settranslation(x, y, z);
+				}
 				c->SaveLastPosition();
 				
 				if( fRecordPosition )
@@ -1647,6 +1658,8 @@ void TSimulation::Init()
 		
 		while( (int)objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE) < fInitNumAgents )
 		{
+			bool isSeed = true;
+
 			c = agent::getfreeagent( this, &fStage );
 			Q_CHECK_PTR(c);
 
@@ -1655,6 +1668,8 @@ void TSimulation::Init()
 			
 			if( numSeededTotal < fNumberToSeed )
 			{
+				isSeed = true;
+
 				SeedGenome( c->Number(),
 							c->Genes(),
 							fProbabilityOfMutatingSeeds,
@@ -1675,7 +1690,14 @@ void TSimulation::Init()
 			float x =  0.01 + randpw() * (globals::worldsize - 0.02);
 			float z = -0.01 - randpw() * (globals::worldsize - 0.02);
 			float y = 0.5 * agent::gAgentHeight;
-			c->settranslation(x, y, z);
+			if( isSeed )
+			{
+				SetSeedPosition( c, numSeededTotal - 1, x, y, z );
+			}
+			else
+			{
+				c->settranslation(x, y, z);
+			}
 
 			float yaw =  360.0 * randpw();
 			c->setyaw(yaw);
@@ -2346,6 +2368,65 @@ void TSimulation::ReadSeedFilePaths()
 	if( fSeedFilePaths.size() == 0 )
 	{
 		cerr << "genomeSeeds.txt is empty!" << endl;
+		exit( 1 );
+	}
+}
+
+//---------------------------------------------------------------------------
+// TSimulation::SetSeedPosition
+//---------------------------------------------------------------------------
+
+void TSimulation::SetSeedPosition( agent *a, long numSeeded, float x, float y, float z )
+{
+	if( fPositionSeedsFromFile )
+	{
+		if( fSeedPositions.size() == 0 )
+		{
+			ReadSeedPositionsFromFile();
+		}
+
+		if( numSeeded < (long)fSeedPositions.size() )
+		{
+			Position &pos = fSeedPositions[numSeeded];
+			x = pos.x;
+			y = pos.y;
+			z = pos.z;
+		}
+	}
+
+	a->settranslation(x, y, z);
+}
+
+//---------------------------------------------------------------------------
+// TSimulation::ReadSeedPositionsFromFile
+//---------------------------------------------------------------------------
+
+void TSimulation::ReadSeedPositionsFromFile()
+{
+	ifstream in("seedPositions.txt");
+
+	if( in.fail() )
+	{
+		cerr << "Could not open seedPositions.txt" << endl;
+		exit( 1 );
+	}
+
+	system( "cp seedPositions.txt run/motion/position" );
+
+	while( !in.eof() )
+	{
+		Position pos;
+
+		in >> pos.x;
+		in >> pos.y;
+		in >> pos.z;
+		
+		fSeedPositions.push_back( pos );
+	}
+
+	if( fSeedPositions.size() == 0 )
+	{
+		cerr << "seedPositions.txt is empty!" << endl;
 		exit( 1 );
 	}
 }
@@ -5431,6 +5512,15 @@ void TSimulation::ReadWorldFile(const char* filename)
 		fSeedFromFile = false;
 	}
 
+	if( version >= 49 )
+	{
+		PROP( PositionSeedsFromFile );
+	}
+	else
+	{
+		fPositionSeedsFromFile = false;
+	}
+
     in >> fMiscAgents; in >> label;
     cout << "miscagents" ses fMiscAgents nl;
 
@@ -6448,6 +6538,11 @@ void TSimulation::ReadWorldFile(const char* filename)
 		{
 			brain::gNeuralValues.model = brain::NeuralValues::SPIKING;			
 		}
+		else if( model == "T" )
+		{
+			assert( version >= 50 );
+			brain::gNeuralValues.model = brain::NeuralValues::TAU;
+		}
 		else
 		{
 			error(1, "Invalid NeuronModel in worldfile (%s)", model.c_str());
@@ -6458,6 +6553,13 @@ void TSimulation::ReadWorldFile(const char* filename)
 		brain::gNeuralValues.model = brain::NeuralValues::FIRING_RATE;			
 	}
 	cout << "neuronModel" ses brain::gNeuralValues.model nl;
+
+	if( version >= 50 )
+	{
+		__PROP( "tauMin", brain::gNeuralValues.Tau.minVal );
+		__PROP( "tauMax", brain::gNeuralValues.Tau.maxVal );
+		__PROP( "tauSeed", brain::gNeuralValues.Tau.seedVal );
+	}
 
     in >> brain::gNeuralValues.mininternalneurgroups; in >> label;
     cout << "mininternalneurgroups" ses brain::gNeuralValues.mininternalneurgroups nl;
@@ -6488,6 +6590,19 @@ void TSimulation::ReadWorldFile(const char* filename)
     cout << "mintopologicaldistortion" ses brain::gNeuralValues.mintopologicaldistortion nl;
     in >> brain::gNeuralValues.maxtopologicaldistortion; in >> label;
     cout << "maxtopologicaldistortion" ses brain::gNeuralValues.maxtopologicaldistortion nl;
+	if( version >= 50 )
+	{
+		__PROP( "enableTopologicalDistortionRngSeed", brain::gNeuralValues.enableTopologicalDistortionRngSeed );
+		__PROP( "minTopologicalDistortionRngSeed", brain::gNeuralValues.minTopologicalDistortionRngSeed );
+		__PROP( "maxTopologicalDistortionRngSeed", brain::gNeuralValues.maxTopologicalDistortionRngSeed );
+
+		RandomNumberGenerator::set( RandomNumberGenerator::TOPOLOGICAL_DISTORTION,
+									RandomNumberGenerator::LOCAL );
+	}
+	else
+	{
+		brain::gNeuralValues.enableTopologicalDistortionRngSeed = false;
+	}
     in >> brain::gNeuralValues.maxneuron2energy; in >> label;
     cout << "maxneuron2energy" ses brain::gNeuralValues.maxneuron2energy nl;
 

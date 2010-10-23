@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import datalib
 import getopt
 import os
 import sys
@@ -14,6 +15,8 @@ import common_logs
 ####################################################################################
 def main():
     mode = 'simend'
+    generatePositions = False
+
     # polyworld home dir
     homedir = os.path.realpath( os.path.join(os.path.dirname( sys.argv[0] ), '..') )
 
@@ -21,7 +24,7 @@ def main():
     # Process Args
     #
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'a:et:', ['agent=', 'simend', 'time='] )
+        opts, args = getopt.getopt(sys.argv[1:], 'a:et:p', ['agent=', 'simend', 'time=', 'pos'] )
     except getopt.GetoptError, x:
         show_usage( x )
 
@@ -41,6 +44,8 @@ def main():
                 time = int(arg)
             except:
                 show_usage( 'Invalid timestep (%s)' % arg )
+        elif opt == '--pos' or opt == '-p':
+            generatePositions = True
         else:
             assert( False )
 
@@ -59,10 +64,10 @@ def main():
         agentNumbers = [agentNumber]
     elif mode == 'simend':
         lifespans = common_logs.LifeSpans( rundir )
-        agentNumbers = lifespans.getAllWithDeathReason( 'SIMEND' )
+        agentNumbers = list( lifespans.getAllWithDeathReason('SIMEND') )
     elif mode == 'time':
         lifespans = common_logs.LifeSpans( rundir )
-        agentNumbers = lifespans.getAllAliveAtTime( time )        
+        agentNumbers = list( lifespans.getAllAliveAtTime(time) )
     else:
         assert( False )
 
@@ -89,6 +94,24 @@ def main():
         out.write( '\n' )
 
     out.close()
+
+    #
+    # Generate positions file if requested
+    #
+    if generatePositions:
+        out = open( os.path.join(homedir, 'seedPositions.txt'), 'w' )
+
+        for agentNumber in agentNumbers:
+            path = os.path.join( rundir, 'motion/position/position_' + str(agentNumber) + '.txt' )
+            positionTable = datalib.parse( path, keycolname = 'Timestep' )['Positions']
+            if mode == 'time':
+                row = positionTable[time]
+            else:
+                row = positionTable.rows()[-1]
+
+            out.write( '%s %s %s\n' % (row['x'], row['y'], row['z']) )
+
+        out.close()
 
 ####################################################################################
 ###
@@ -117,6 +140,10 @@ usage: genomeSeed [option] rundir
   --time, -t <step>
 
              Generate seeds for agents alive at timestep.
+
+  --pos, p
+
+             Generate positions file.
 """
 
     if msg != None:

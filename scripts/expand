@@ -5,14 +5,13 @@ set -e
 
 nruns=0
 
-seed=/g3/local/expand/barriersfixed/fseed/ws171
-worldsize=181
-worldsizegrowth=0.1
+#seed=/flex/runs/expand/tau/fseed/ws100
+worldsize=100
+worldsizegrowth=0.2
 worldsizemingrowth=0.005
-worldsizemaxgrowth=0.1
+worldsizemaxgrowth=0.2
 
-experimentdir=/g3/local/expand/barriersfixed__mx.1
-#experimentdir=/tmp/expand0
+experimentdir=/flex/runs/expand/tau
 normaldir=$experimentdir/normal
 fseeddir=$experimentdir/fseed
 

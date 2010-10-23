@@ -108,7 +108,7 @@ if [ "$1" == "--field" ]; then
 	    else
 		seed=$PWFARM_ID
 	    fi
-	    ./scripts/edit_worldfile.py $POLYWORLD_PWFARM_WORLDFILE ./worldfile genomeseed_used_for_all=$seed
+	    ./scripts/edit_worldfile.py $POLYWORLD_PWFARM_WORLDFILE ./worldfile genomeSeed_also_used_for_position=$seed || exit 1
 
 	    ###
 	    ### Run Polyworld!!!

@@ -64,6 +64,7 @@ GenomeSchema *GenomeUtil::createSchema()
 	RANGE( LearningRate,
 		   genome::gMinlrate,
 		   genome::gMaxlrate );
+	
 	RANGE( InternalNeuronGroupCount,
 		   brain::gNeuralValues.mininternalneurgroups,
 		   brain::gNeuralValues.maxinternalneurgroups );
@@ -79,12 +80,24 @@ GenomeSchema *GenomeUtil::createSchema()
 	RANGE( BiasLearningRate,
 		   brain::gNeuralValues.minbiaslrate,
 		   brain::gNeuralValues.maxbiaslrate );
+	if( brain::gNeuralValues.model == brain::NeuralValues::TAU )
+	{
+		RANGE( Tau,
+			   brain::gNeuralValues.Tau.minVal,
+			   brain::gNeuralValues.Tau.maxVal );
+	}
 	RANGE( ConnectionDensity,
 		   brain::gNeuralValues.minconnectiondensity,
 		   brain::gNeuralValues.maxconnectiondensity );
 	RANGE( TopologicalDistortion,
 		   brain::gNeuralValues.mintopologicaldistortion,
 		   brain::gNeuralValues.maxtopologicaldistortion );
+	if( brain::gNeuralValues.enableTopologicalDistortionRngSeed )
+	{
+		RANGE( TopologicalDistortionRngSeed,
+			   brain::gNeuralValues.minTopologicalDistortionRngSeed,
+			   brain::gNeuralValues.maxTopologicalDistortionRngSeed );
+	}
 	CONSTANT( maxsynapse2energy,
 			  brain::gNeuralValues.maxsynapse2energy );
 	CONSTANT( maxneuron2energy,
@@ -169,10 +182,18 @@ GenomeSchema *GenomeUtil::createSchema()
 	GROUP_ATTR( InhibitoryNeuronCount, INTERNAL );
 	GROUP_ATTR( Bias, NONINPUT );
 	GROUP_ATTR( BiasLearningRate, NONINPUT );
+	if( brain::gNeuralValues.model == brain::NeuralValues::TAU )
+	{
+		GROUP_ATTR( Tau, NONINPUT );
+	}
 
 	SYNAPSE_ATTR( ConnectionDensity, false, false );
 	SYNAPSE_ATTR( LearningRate, true, true );
 	SYNAPSE_ATTR( TopologicalDistortion, false, false );
+	if( brain::gNeuralValues.enableTopologicalDistortionRngSeed )
+	{
+		SYNAPSE_ATTR( TopologicalDistortionRngSeed, false, false );
+	}
 
 #undef SCALAR
 #undef INPUT1
@@ -250,6 +271,10 @@ void GenomeUtil::seed( Genome *g )
 
 	SEED( Bias, 0.5 );
 	SEED( BiasLearningRate, 0 );
+	if( brain::gNeuralValues.model == brain::NeuralValues::TAU )
+	{
+		SEED( Tau, brain::gNeuralValues.Tau.seedVal );
+	}
 
 	SEED_GROUP( Bias, Mate, 1.0 );
 	SEED_GROUP( Bias, Fight, gSeedFightBias );
@@ -266,6 +291,10 @@ void GenomeUtil::seed( Genome *g )
 	SEED( ConnectionDensity, 0 );
 	SEED( LearningRate, 0 );
 	SEED( TopologicalDistortion, 0 );
+	if( brain::gNeuralValues.enableTopologicalDistortionRngSeed )
+	{
+		SEED( TopologicalDistortionRngSeed, 0 );
+	}	
 
 	SEED_SYNAPSE( ConnectionDensity,	 EE, Red,   Fight,	genome::gSeedFightExcitation );
 	SEED_SYNAPSE( ConnectionDensity,	 EE, Green, Eat,	1.0 );

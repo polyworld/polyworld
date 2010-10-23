@@ -9,6 +9,8 @@
 
 using namespace std;
 
+using namespace genome;
+
 
 #define GaussianOutputNeurons 0
 #if GaussianOutputNeurons
@@ -16,8 +18,6 @@ using namespace std;
 	#define GaussianActivationStandardDeviation 1.5
 	#define GaussianActivationVariance (GaussianActivationStandardDeviation * GaussianActivationStandardDeviation)
 #endif
-
-#define TauNN 0
 
 
 FiringRateModel::FiringRateModel( NervousSystem *cns )
@@ -31,11 +31,41 @@ FiringRateModel::~FiringRateModel()
 
 void FiringRateModel::init_derived( float initial_activation )
 {
+	if( brain::gNeuralValues.model == brain::NeuralValues::TAU )
+	{
+		tauGene = genes->gene( "Tau" );
+	}
+	else
+	{
+		tauGene = NULL;
+	}
 
 	for( int i = 0; i < dims->numneurons; i++ )
 	{
 		neuronactivation[i] = initial_activation;
 	}	
+}
+
+void FiringRateModel::set_neuron( int index,
+								  int group,
+								  float bias,
+								  int startsynapses,
+								  int endsynapses )
+{
+	BaseNeuronModel<Neuron, Synapse>::set_neuron( index,
+												  group,
+												  bias,
+												  startsynapses,
+												  endsynapses );
+	Neuron &n = neuron[index];
+
+	if( tauGene )
+	{
+		if( genes->schema->getNeurGroupType(group) != NGT_INPUT )
+		{
+			n.tau = genes->get( tauGene, group );
+		}
+	}
 }
 
 void FiringRateModel::inheritState( NeuronModel *parent )
@@ -52,6 +82,7 @@ void FiringRateModel::dump( ostream &out )
 		Neuron &n = neuron[i];
         out << n.group
 			sp n.bias
+			sp n.tau
 			sp n.startsynapses
 			sp n.endsynapses
 			nl;
@@ -85,6 +116,7 @@ void FiringRateModel::load( istream &in )
 		Neuron &n = neuron[i];
         in >> n.group
 		   >> n.bias
+		   >> n.tau
 		   >> n.startsynapses
 		   >> n.endsynapses;
 
@@ -161,12 +193,15 @@ void FiringRateModel::update( bool bprint )
 	#if GaussianOutputNeurons
         newneuronactivation[i] = gaussian( newneuronactivation[i], GaussianActivationMean, GaussianActivationVariance );
 	#else
-	  #if TauNN
-		float tau = 0.1;	// also try tauMin + (tauMax - tauMin) * genome->ID() / 255;
-        newneuronactivation[i] = (1.0 - tau) * neuronactivation[i]  +  tau * logistic( newneuronactivation[i], brain::gLogisticsSlope );
-	  #else
-        newneuronactivation[i] = logistic( newneuronactivation[i], brain::gLogisticsSlope );
-	  #endif
+		if( tauGene )
+		{
+			float tau = neuron[i].tau;
+			newneuronactivation[i] = (1.0 - tau) * neuronactivation[i]  +  tau * logistic( newneuronactivation[i], brain::gLogisticsSlope );
+		}
+		else
+		{
+			newneuronactivation[i] = logistic( newneuronactivation[i], brain::gLogisticsSlope );
+		}
 	#endif
 //		if( newneuronactivation[i] < minActivation )
 //			minActivation = newneuronactivation[i];
@@ -188,7 +223,17 @@ void FiringRateModel::update( bool bprint )
             newneuronactivation[i] += synapse[k].efficacy *
                neuronactivation[abs(synapse[k].fromneuron)];
 		}
-        newneuronactivation[i] = logistic(newneuronactivation[i], brain::gLogisticsSlope);
+        //newneuronactivation[i] = logistic(newneuronactivation[i], brain::gLogisticsSlope);
+
+		if( tauGene )
+		{
+			float tau = neuron[i].tau;
+			newneuronactivation[i] = (1.0 - tau) * neuronactivation[i]  +  tau * logistic( newneuronactivation[i], brain::gLogisticsSlope );
+		}
+		else
+		{
+			newneuronactivation[i] = logistic( newneuronactivation[i], brain::gLogisticsSlope );
+		}
     }
 
 #define DebugBrain 0

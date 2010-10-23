@@ -78,6 +78,12 @@ static const int MAXFITNESSITEMS = 5;
 #define GIVE__PREVENTED__CARRY			(1 << 1)
 #define GIVE__PREVENTED__ENERGY			(1 << 2)
 
+struct Position
+{
+	float x;
+	float y;
+	float z;
+};
 
 struct FitStruct
 {
@@ -445,6 +451,11 @@ private:
 							 long numSeeded );
 	void ReadSeedFilePaths();
 
+	void SetSeedPosition( agent *a,
+						  long numSeeded,
+						  float x, float y, float z );
+	void ReadSeedPositionsFromFile();
+
 	void InitLifeSpanLog();
 	void UpdateLifeSpanLog( agent *a );
 	void EndLifeSpanLog();
@@ -642,6 +653,8 @@ private:
 	float fProbabilityOfMutatingSeeds;
 	bool fSeedFromFile;
 	std::vector<std::string> fSeedFilePaths;
+	bool fPositionSeedsFromFile;
+	std::vector<Position> fSeedPositions;
 	float fMinMateFraction;
 	long fMateWait;
 	long fMiscAgents; // number of agents born without intervening creation before miscegenation function kicks in

@@ -4,6 +4,10 @@
 
 // forward decls
 class NervousSystem;
+namespace genome
+{
+	class Gene;
+};
 
 // note: activation levels are not maintained in the neuronstruct
 // so that after the new activation levels are computed, the old
@@ -13,6 +17,7 @@ struct FiringRateModel__Neuron
 {
 	short group;
 	float bias;
+	float tau;
 	long  startsynapses;
 	long  endsynapses;
 };
@@ -36,10 +41,19 @@ class FiringRateModel : public BaseNeuronModel<FiringRateModel__Neuron, FiringRa
 
 	virtual void init_derived( float initial_activation );
 
+	virtual void set_neuron( int index,
+							 int group,
+							 float bias,
+							 int startsynapses,
+							 int endsynapses );
+
 	virtual void inheritState( NeuronModel *parent );
 
 	virtual void dump( std::ostream &out );
 	virtual void load( std::istream &in );
 
 	virtual void update( bool bprint );
+
+ private:
+	genome::Gene *tauGene;
 };

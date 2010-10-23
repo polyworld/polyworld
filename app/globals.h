@@ -57,6 +57,7 @@ namespace brain
 		enum NeuronModel
 		{
 			FIRING_RATE,
+			TAU,
 			SPIKING
 		} model;
 		short minneurons;
@@ -64,6 +65,12 @@ namespace brain
 		long maxsynapses;
 		short numinputneurgroups;
 		short numoutneurgroups;
+		struct
+		{
+			float minVal;
+			float maxVal;
+			float seedVal;
+		} Tau;
 		short mininternalneurgroups;
 		short maxinternalneurgroups;
 		short mineneurpergroup;
@@ -83,6 +90,11 @@ namespace brain
 		float maxconnectiondensity;
 		float mintopologicaldistortion;
 		float maxtopologicaldistortion;
+
+		bool enableTopologicalDistortionRngSeed;
+		long minTopologicalDistortionRngSeed;
+		long maxTopologicalDistortionRngSeed;
+
 		float maxsynapse2energy; // (amount if all synapses usable)
 		float maxneuron2energy;
 	};
