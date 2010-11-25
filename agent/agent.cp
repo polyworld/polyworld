@@ -437,7 +437,7 @@ void agent::grow( long mateWait,
 	if( recordGenome )
 	{
 		char path[256];
-		sprintf( path, "run/genome/genome_%ld.txt", getTypeNumber() );
+		sprintf( path, "run/genome/agents/genome_%ld.txt", getTypeNumber() );
 		ofstream out( path );
 		fGenome->dump( out );
 	}

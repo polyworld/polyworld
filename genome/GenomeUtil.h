@@ -4,6 +4,9 @@
 
 namespace genome
 {
+	// forward decls
+	class GenomeLayout;
+
 	class GenomeUtil
 	{
 	public:
@@ -16,6 +19,7 @@ namespace genome
 
 	public:
 		static GenomeSchema *schema;
+		static GenomeLayout *layout;
 	};
 
 }

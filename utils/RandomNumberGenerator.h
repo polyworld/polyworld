@@ -15,6 +15,7 @@ class RandomNumberGenerator
 	{
 		NERVOUS_SYSTEM = 0,
 		TOPOLOGICAL_DISTORTION,
+		INIT_WEIGHT,
 		__NROLES
 	};
 

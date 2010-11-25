@@ -1,6 +1,9 @@
 #include "GenomeSchema.h"
 
 #include <assert.h>
+#include <stdlib.h>
+
+#include "misc.h"
 
 using namespace genome;
 using namespace std;
@@ -422,7 +425,7 @@ void GenomeSchema::complete()
 	state = STATE_COMPLETE;
 }
 
-void GenomeSchema::printIndexes( FILE *f )
+void GenomeSchema::printIndexes( FILE *f, GenomeLayout *layout )
 {
 	for( GeneList::iterator
 			 it = genes.begin(),
@@ -430,6 +433,14 @@ void GenomeSchema::printIndexes( FILE *f )
 		 it != end;
 		 it++ )
 	{
-		(*it)->printIndexes( f );
+		(*it)->printIndexes( f, layout );
+	}
+}
+
+void GenomeSchema::printTitles( FILE *f )
+{
+	itfor( GeneList, genes, it )
+	{
+		(*it)->printTitles( f );
 	}
 }

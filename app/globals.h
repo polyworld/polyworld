@@ -15,6 +15,7 @@
 #include <qevent.h>
 
 // Local
+#include "GenomeLayout.h"
 #include "graphics.h"
 
 // Forward declarations
@@ -104,6 +105,9 @@ namespace brain
     extern long gNumPrebirthCycles;
 	extern float gLogisticsSlope;
 	extern float gMaxWeight;
+	extern bool gEnableInitWeightRngSeed;
+	extern long gMinInitWeightRngSeed;
+	extern long gMaxInitWeightRngSeed;
 	extern float gInitMaxWeight;
 	extern float gDecayRate;
 	extern short gMinWin;
@@ -120,6 +124,7 @@ namespace genome
 {
     // External globals
     extern long gNumBytes;
+	extern GenomeLayout::LayoutType gLayoutType;
 
 	extern float gSeedFightBias;
 	extern float gSeedFightExcitation;

@@ -20,6 +20,7 @@ class LifeSpan
 		DEATH_TYPE(SIMEND)						\
 		DEATH_TYPE(SMITE)						\
 		DEATH_TYPE(NATURAL)						\
+		DEATH_TYPE(FIGHT)						\
 		DEATH_TYPE(LOCKSTEP)					\
 		DEATH_TYPE(RANDOM)
 

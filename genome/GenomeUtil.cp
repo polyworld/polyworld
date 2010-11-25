@@ -5,11 +5,13 @@
 #include "agent.h"
 #include "Brain.h"
 #include "Gene.h"
+#include "GenomeLayout.h"
 #include "globals.h"
 
 using namespace genome;
 
 GenomeSchema *GenomeUtil::schema = NULL;
+GenomeLayout *GenomeUtil::layout = NULL;
 
 
 GenomeSchema *GenomeUtil::createSchema()
@@ -97,6 +99,12 @@ GenomeSchema *GenomeUtil::createSchema()
 		RANGE( TopologicalDistortionRngSeed,
 			   brain::gNeuralValues.minTopologicalDistortionRngSeed,
 			   brain::gNeuralValues.maxTopologicalDistortionRngSeed );
+	}
+	if( brain::gEnableInitWeightRngSeed )
+	{
+		RANGE( InitWeightRngSeed,
+			   brain::gMinInitWeightRngSeed,
+			   brain::gMaxInitWeightRngSeed );
 	}
 	CONSTANT( maxsynapse2energy,
 			  brain::gNeuralValues.maxsynapse2energy );
@@ -194,6 +202,10 @@ GenomeSchema *GenomeUtil::createSchema()
 	{
 		SYNAPSE_ATTR( TopologicalDistortionRngSeed, false, false );
 	}
+	if( brain::gEnableInitWeightRngSeed )
+	{
+		SYNAPSE_ATTR( InitWeightRngSeed, false, false );
+	}
 
 #undef SCALAR
 #undef INPUT1
@@ -208,14 +220,20 @@ GenomeSchema *GenomeUtil::createSchema()
 	// ---
 	schema->complete();	
 
+	// ---
+	// --- Layout
+	// ---
+	layout = GenomeLayout::create( schema, gLayoutType );
+
 	return schema;
 }
 
 Genome *GenomeUtil::createGenome( bool randomized )
 {
 	assert(schema);
+	assert(layout);
 
-	Genome *g = new Genome( schema );
+	Genome *g = new Genome( schema, layout );
 
 	if( randomized )
 	{
@@ -338,6 +356,7 @@ using namespace std;
 
 void GenomeUtil::test()
 {
+#if 0
 	GenomeSchema &schema = *createSchema();
 
 	// ---
@@ -468,4 +487,5 @@ void GenomeUtil::test()
 	out5 << "separation(1,4)=" << (float)g1->separation( g4 ) << endl;
 	out5 << "mateProbability(1,2)=" << g1->mateProbability( g2 ) << endl;
 	out5 << "mateProbability(1,4)=" << g1->mateProbability( g4 ) << endl;	
+#endif // #if 0
 }

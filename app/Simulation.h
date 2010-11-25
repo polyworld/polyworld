@@ -700,7 +700,12 @@ private:
 	long fMaxFoodCount;
 	long fMaxFoodGrownCount;
 	long fInitFoodCount;
-	bool fAgentsRfood;
+	enum
+	{
+		RFOOD_FALSE,
+		RFOOD_TRUE,
+		RFOOD_TRUE__FIGHT_ONLY
+	} fAgentsRfood;
 	float fFoodRate;
 	float fFoodRemoveEnergy;
 	float fFoodEnergyIn;

@@ -5,15 +5,26 @@ set -e
 
 nruns=0
 
-#seed=/flex/runs/expand/tau/fseed/ws100
-worldsize=100
+#seed=/flex/runs/expand/lomrate_notdseed/fseed/ws173
+seedpos=true
+worldsize=140
 worldsizegrowth=0.2
 worldsizemingrowth=0.005
 worldsizemaxgrowth=0.2
 
-experimentdir=/flex/runs/expand/tau
+initpop=260
+
+experimentdir=/flex/runs/expand/smite
 normaldir=$experimentdir/normal
 fseeddir=$experimentdir/fseed
+
+genomeSeedFlags="--simend"
+if [ "$seedpos" == "true" ]; then
+    genomeSeedFlags="$genomeSeedFlags --pos"
+    positionSeedsFromFile="1"
+else
+    positionSeedsFromFile="0"
+fi
 
 expandlog=$experimentdir/expand.log
 rm -f ./expand.log
@@ -24,7 +35,13 @@ mkdir -p $fseeddir
 
 if [ "$seed" == "" ]; then
     cp worldfile /tmp
-    edit_worldfile.py /tmp/worldfile worldfile worldsize=$worldsize seedFromFile=0 endOnPopulationCrash=1
+    edit_worldfile.py /tmp/worldfile worldfile \
+	worldsize=$worldsize \
+	seedFromFile=0 \
+	endOnPopulationCrash=0 \
+	initnumagents=$initpop \
+	numberToSeed=$initpop \
+	|| exit 1
 
     runcurr=$normaldir/ws${worldsize}
 
@@ -58,10 +75,19 @@ while true; do
 	fi
     fi
 
-    cp worldfile /tmp
-    edit_worldfile.py /tmp/worldfile worldfile worldsize=$worldsize seedFromFile=1 endOnPopulationCrash=1 genomeSeed_also_used_for_position=$nruns
+    genomeSeed $genomeSeedFlags $runprev
+    nagents=$( cat seedPositions.txt | wc -l )
 
-    genomeSeed $runprev
+    cp worldfile /tmp
+    edit_worldfile.py /tmp/worldfile worldfile \
+	worldsize=$worldsize \
+	seedFromFile=1 \
+	endOnPopulationCrash=1 \
+	positionSeedsFromFile=$positionSeedsFromFile \
+	initnumagents=$nagents \
+	numberToSeed=$nagents \
+	genomeSeed_also_used_for_position=$nruns
+
     Polyworld
     echo "--------> nruns=$nruns"
     #read -p "Crash?" iscrash

@@ -27,10 +27,11 @@ class LifeSpans:
 
         return lo, hi
 
-    def getAllWithDeathReason( self, deathReason ):
+    def getAllWithDeathReason( self, deathReason, includeNilLifeSpan = False ):
         for row in self.table.rows():
             if row['DeathReason'] == deathReason:
-                yield row['Agent']
+                if includeNilLifeSpan or row['BirthStep'] != row['DeathStep']:
+                    yield row['Agent']
 
     def getAllAliveAtTime( self, time ):
         for row in self.table.rows():

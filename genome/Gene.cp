@@ -3,6 +3,7 @@
 #include <assert.h>
 
 #include "Genome.h"
+#include "GenomeLayout.h"
 #include "GenomeSchema.h"
 #include "misc.h"
 
@@ -30,14 +31,30 @@ int Gene::getMutableSize()
 	return ismutable ? getMutableSizeImpl() : 0;
 }
 
-void Gene::printIndexes( FILE *file )
+void Gene::printIndexes( FILE *file, GenomeLayout *layout )
 {
 	if( !ismutable )
 	{
 		return;
 	}
 
-	fprintf( file, "%d\t%s\n", offset, name.c_str() );	
+	int index = offset;
+	if( layout )
+	{
+		index = layout->getMutableDataOffset( index );
+	}
+
+	fprintf( file, "%d\t%s\n", index, name.c_str() );	
+}
+
+void Gene::printTitles( FILE *file )
+{
+	if( !ismutable )
+	{
+		return;
+	}
+
+	fprintf( file, "%s :: %s\n", name.c_str(), name.c_str() );
 }
 
 void Gene::init( Type _type,
@@ -353,6 +370,30 @@ int MutableNeurGroupGene::getMaxNeuronCount()
 	}
 }
 
+std::string MutableNeurGroupGene::getTitle( int group )
+{
+	group -= first_group;
+
+	assert( group >= 0 );
+	assert( group < getMaxGroupCount() );
+
+	switch( getGroupType() )
+	{
+	case NGT_INPUT:
+		// we're assuming only 1 group when titling input
+		assert( group == 0 );
+		return name;
+	case NGT_INTERNAL: {
+		char buf[1024];
+		sprintf( buf, "InternalNeurGroup %d", group );
+
+		return buf;
+	}
+	default:
+		assert(false);
+	}
+}
+
 
 // ================================================================================
 // ===
@@ -381,6 +422,13 @@ int ImmutableNeurGroupGene::getMaxGroupCount()
 int ImmutableNeurGroupGene::getMaxNeuronCount()
 {
 	return 1;
+}
+
+std::string ImmutableNeurGroupGene::getTitle( int group )
+{
+	assert( group == first_group );
+
+	return name;
 }
 
 
@@ -434,13 +482,37 @@ void NeurGroupAttrGene::seed( Genome *genome,
 					 rawval );
 }
 
-void NeurGroupAttrGene::printIndexes( FILE *file )
+void NeurGroupAttrGene::printIndexes( FILE *file, GenomeLayout *layout )
 {
 	int n = schema->getMaxGroupCount( group_type );
 
 	for( int i = 0; i < n; i++ )
 	{
-		fprintf( file, "%d\t%s_%d\n", offset + i, name.c_str(), i );
+		int index = offset + i;
+		if( layout )
+		{
+			index = layout->getMutableDataOffset( index );
+		}
+
+		fprintf( file, "%d\t%s_%d\n", index, name.c_str(), i );
+	}
+}
+
+void NeurGroupAttrGene::printTitles( FILE *file )
+{
+	int first_group = schema->getFirstGroup( group_type );
+	int ngroups = schema->getMaxGroupCount( group_type );
+
+	for( int i = 0; i < ngroups; i++ )
+	{
+		int group = first_group + i;
+		NeurGroupGene *groupGene = schema->getGroupGene( group );
+		string groupTitle = groupGene->getTitle( group );
+
+		fprintf( file,
+				 "%s[%s] :: %s_%d\n",
+				 name.c_str(), groupTitle.c_str(),
+				 name.c_str(), i );
 	}
 }
 
@@ -523,7 +595,7 @@ void SynapseAttrGene::seed( Genome *genome,
 					 rawval );
 }
 
-void SynapseAttrGene::printIndexes( FILE *file )
+void SynapseAttrGene::printIndexes( FILE *file, GenomeLayout *layout )
 {
 	int nin = schema->getMaxGroupCount( NGT_INPUT );
 	int nany = schema->getMaxGroupCount( NGT_ANY );
@@ -540,13 +612,24 @@ void SynapseAttrGene::printIndexes( FILE *file )
 		{
 			for( int from = 0; from < nany; from++ )
 			{
+				int index = getOffset( st, from, to );
+				if( layout )
+				{
+					index = layout->getMutableDataOffset( index );
+				}
+
 				fprintf( file, "%d\t%s%s_%d->%d\n",
-						 getOffset( st, from, to ),
+						 index,
 						 st->name.c_str(), this->name.c_str(),
 						 from, to );
 			}
 		}
 	}	
+}
+
+void SynapseAttrGene::printTitles( FILE *file )
+{
+	// we don't currently investigate this data, not implemented yet.
 }
 
 int SynapseAttrGene::getMutableSizeImpl()

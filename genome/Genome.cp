@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "GenomeLayout.h"
 #include "graybin.h"
 #include "misc.h"
 
@@ -27,9 +28,11 @@ using namespace std;
 // ===
 // ================================================================================
 
-Genome::Genome( GenomeSchema *schema )
+Genome::Genome( GenomeSchema *schema,
+				GenomeLayout *layout )
 {
 	this->schema = schema;
+	this->layout = layout;
 
 	gray = get( "GrayCoding" );
 
@@ -637,7 +640,7 @@ void Genome::dump( ostream &out )
 {
 	for( int i = 0; i < nbytes; i++ )
 	{
-		out << (int)(mutable_data[i]) << endl;
+		out << int( get_raw(i) ) << endl;
 	}
 }
 
@@ -647,7 +650,7 @@ void Genome::load(std::istream& in)
     for (long i = 0; i < nbytes; i++)
     {
         in >> num;
-        mutable_data[i] = (unsigned char)num;
+		set_raw( i, 1, num );
     }
 }
 
@@ -665,7 +668,7 @@ void Genome::print( long lobit, long hibit )
     {
         long byte = i >> 3; // 0-based
         long bit = i % 8; // 0-based,from left
-        cout << ((mutable_data[byte] >> (7-bit)) & 1);
+        cout << ((get_raw(byte) >> (7-bit)) & 1);
     }
     cout nlf;
 }
@@ -674,7 +677,8 @@ unsigned char Genome::get_raw( int offset )
 {
 	assert( offset >= 0 && offset < nbytes );
 
-	unsigned char val = mutable_data[offset];
+	int layoutOffset = layout->getMutableDataOffset( offset );
+	unsigned char val = mutable_data[layoutOffset];
 	if( gray )
 	{
 		val = binofgray[val];
@@ -684,14 +688,17 @@ unsigned char Genome::get_raw( int offset )
 }
 
 void Genome::set_raw( int offset,
-					   int n,
-					   unsigned char val )
+					  int n,
+					  unsigned char val )
 {
 	assert( (offset >= 0) && (offset + n <= nbytes) );
 
-	memset( mutable_data + offset,
-			val,
-			n );
+	for( int i = 0; i < n; i++ )
+	{
+		int layoutOffset = layout->getMutableDataOffset( offset + i );
+
+		mutable_data[layoutOffset] = val;
+	}
 }
 
 void Genome::alloc()

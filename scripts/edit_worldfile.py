@@ -1,54 +1,91 @@
 #!/usr/bin/env python
 
+###
+### This module can be used as a script from the shell or as a library.
+### The entry point for the shell is main(), the entry point as a library
+### is edit()
+###
+
 from sys import argv, exit
 from os import path
 import re
 
-if len(argv) == 1:
-           ################################################################################
-    print "usage:", path.basename(argv[0]), "input_file output_file (propname=value)*"
-    print
-    print "      Propname may include splat wildcard -- useful for arrays. If using splat,"
-    print "  be sure to put quotes around the argument so the shell doesn't screw it up."
-    exit(1)
+from common_functions import err
 
-orig = argv[1]
-new = argv[2]
+################################################################################
+###
+### CLASS LabelNotFoundException
+###
+################################################################################
+class LabelNotFoundException(Exception):
+    pass
 
-edits = {}
-
-for edit in argv[3:]:
-    pattern, value = edit.strip().split('=')
-    pattern = '^' + pattern.replace('*', '.*').replace('[', '\[').replace(']', '\]') + '$'
-    edits[pattern] = value
-
-edits_notFound = list( edits.keys() )
-
-forig = open( orig )
-fnew = open( new, 'w' )
-
-for line in forig:
-    fields = line.split()
-    newline = line
-
-    if( len(fields) >= 2 ):
-        label = fields[1]
-
-        for pattern, value in edits.items():
-            if re.match( pattern, label ):
-                newline = value + '\t' + label + '\n'
-                try:
-                    edits_notFound.remove( pattern )
-                except:
-                    pass # edits can have multiple matches with patterns
+################################################################################
+###
+### FUNCTION edit()
+###
+### orig = path of original worldfile
+### new = path of new worldfile to create
+### edit_specs = array of edits in form "label=value", where label supports splat wildcard
+###
+################################################################################
+def edit( orig, new, edit_specs ):
+    edits = {}
     
-    fnew.write( newline )
+    for edit in edit_specs:
+        pattern, value = edit.strip().split('=')
+        pattern = '^' + pattern.replace('*', '.*').replace('[', '\[').replace(']', '\]') + '$'
+        edits[pattern] = value
+    
+    edits_notFound = list( edits.keys() )
+    
+    forig = open( orig )
+    fnew = open( new, 'w' )
+    
+    for line in forig:
+        fields = line.split()
+        newline = line
+    
+        if( len(fields) >= 2 ):
+            label = fields[1]
+    
+            for pattern, value in edits.items():
+                if re.match( pattern, label ):
+                    newline = value + '\t' + label + '\n'
+                    try:
+                        edits_notFound.remove( pattern )
+                    except:
+                        pass # edits can have multiple matches with patterns
+        
+        fnew.write( newline )
+    
+    forig.close()
+    fnew.close()
+    
+    if len( edits_notFound ):
+        raise LabelNotFoundException( "Couldn't find labels: " +  ', '.join(edits.keys()) )
 
-forig.close()
-fnew.close()
+################################################################################
+###
+### FUNCTION main()
+###
+### entry point when called from shell    
+###
+################################################################################
+def main():
+    if len(argv) < 3:
+        print "usage:", path.basename(argv[0]), "input_file output_file (propname=value)+"
+        print
+        print "      Propname may include splat wildcard -- useful for arrays. If using splat,"
+        print "  be sure to put quotes around the argument so the shell doesn't screw it up."
+        exit(1)
 
-if len( edits_notFound ):
-    print "Couldn't find labels:", ', '.join( edits.keys() )
-    exit( 1 )
+    try:
+        edit( argv[1], argv[2], argv[3:] )
+    except Exception, x:
+        err( x )
+    
+    exit( 0 )
 
-exit( 0 )
+if __name__ == "__main__":
+    main()

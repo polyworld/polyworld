@@ -1194,6 +1194,18 @@ void Brain::GrowSynapses( Genome *g,
 		td_rng = this->rng;
 		td_seedGene = NULL;
 	}
+	RandomNumberGenerator *weight_rng;
+	Gene *weight_seedGene;
+	if( brain::gEnableInitWeightRngSeed )
+	{
+		weight_rng = RandomNumberGenerator::create( RandomNumberGenerator::INIT_WEIGHT );
+		weight_seedGene = g->gene( "InitWeightRngSeed" );
+	}
+	else
+	{
+		weight_rng = this->rng;
+		weight_seedGene = NULL;
+	}
 
 	for (int groupIndex_from = 0; groupIndex_from < dims.numgroups; groupIndex_from++)
 	{
@@ -1225,6 +1237,14 @@ void Brain::GrowSynapses( Genome *g,
 								   groupIndex_from,
 								   groupIndex_to );
 			td_rng->seed( td_seed );
+		}
+		if( brain::gEnableInitWeightRngSeed )
+		{
+			long weight_seed = g->get( weight_seedGene,
+									   synapseType,
+									   groupIndex_from,
+									   groupIndex_to );
+			weight_rng->seed( weight_seed );
 		}
 
 		// "Local Index" means that the index is relative to the start of the neuron type (I or E) within
@@ -1303,11 +1323,11 @@ void Brain::GrowSynapses( Genome *g,
 			float efficacy;
 			if( sign_from < 0 )
 			{
-				efficacy = min(-1.e-10, -rng->range(initminweight, brain::gInitMaxWeight));
+				efficacy = min(-1.e-10, -weight_rng->range(initminweight, brain::gInitMaxWeight));
 			}
 			else
 			{
-				efficacy = rng->range(initminweight, brain::gInitMaxWeight);
+				efficacy = weight_rng->range(initminweight, brain::gInitMaxWeight);
 			}				
 
 			neuralnet->set_synapse( synapseCount_brain,
@@ -1322,6 +1342,10 @@ void Brain::GrowSynapses( Genome *g,
 	if( brain::gNeuralValues.enableTopologicalDistortionRngSeed )
 	{
 		RandomNumberGenerator::dispose( td_rng );
+	}
+	if( brain::gEnableInitWeightRngSeed )
+	{
+		RandomNumberGenerator::dispose( weight_rng );
 	}
 }
 

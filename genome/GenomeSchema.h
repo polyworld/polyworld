@@ -10,6 +10,8 @@
 
 namespace genome
 {
+	// forward decl
+	class GenomeLayout;
 
 	// ================================================================================
 	// ===
@@ -50,7 +52,8 @@ namespace genome
 
 		void complete();
 
-		void printIndexes( FILE *f );
+		void printIndexes( FILE *f, GenomeLayout *layout = NULL );
+		void printTitles( FILE *f );
 
 	private:
 		GeneMap name2gene;

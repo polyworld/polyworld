@@ -6,6 +6,8 @@
 
 namespace genome
 {
+	// forward decl
+	class GenomeLayout;
 
 	// ================================================================================
 	// ===
@@ -15,7 +17,8 @@ namespace genome
 	class Genome
 	{
 	public:
-		Genome( GenomeSchema *schema );
+		Genome( GenomeSchema *schema,
+				GenomeLayout *layout );
 		~Genome();
 
 		SynapseType *EE;
@@ -108,6 +111,7 @@ namespace genome
 	private:
 		void alloc();
 
+		GenomeLayout *layout;
 		unsigned char *mutable_data;
 		int nbytes;
 		bool gray;

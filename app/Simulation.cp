@@ -14,7 +14,7 @@
 #define MinDebugStep 0
 #define MaxDebugStep INT_MAX
 
-#define CurrentWorldfileVersion 50
+#define CurrentWorldfileVersion 53
 
 #define TournamentSelection 1
 
@@ -1368,9 +1368,11 @@ void TSimulation::Init()
 	MKDIR( "run" );
 	MKDIR( "run/stats" );
 
-	if( fRecordAdamiComplexity || fRecordGenomes || fRecordSeparations )
+	MKDIR( "run/genome" );
+	MKDIR( "run/genome/meta" );
+	if( fRecordGenomes )
 	{
-		MKDIR( "run/genome" );
+		MKDIR( "run/genome/agents" );
 	}
 
 	if( fRecordPosition || fPositionSeedsFromFile )
@@ -1528,7 +1530,7 @@ void TSimulation::Init()
 		fGeneSum2 = (unsigned long*) malloc( sizeof( *fGeneSum2 ) * GenomeUtil::schema->getMutableSize() );
 		Q_CHECK_PTR( fGeneSum2 );
 		
-		fGeneStatsFile = fopen( "run/genestats.txt", "w" );
+		fGeneStatsFile = fopen( "run/genome/genestats.txt", "w" );
 		Q_CHECK_PTR( fGeneStatsFile );
 		
 		fprintf( fGeneStatsFile, "%d\n", GenomeUtil::schema->getMutableSize() );
@@ -1537,10 +1539,28 @@ void TSimulation::Init()
 #define PrintGeneIndexesFlag 1
 #if PrintGeneIndexesFlag
 	{
-		FILE* f = fopen( "run/geneindex.txt", "w" );
+		FILE* f = fopen( "run/genome/meta/geneindex.txt", "w" );
 		Q_CHECK_PTR( f );
 		
 		GenomeUtil::schema->printIndexes( f );
+		
+		fclose( f );
+	}
+	{
+		FILE* f = fopen( "run/genome/meta/genelayout.txt", "w" );
+		Q_CHECK_PTR( f );
+		
+		GenomeUtil::schema->printIndexes( f, GenomeUtil::layout );
+		
+		fclose( f );
+
+		system( "cat run/genome/meta/genelayout.txt | sort -n > run/genome/meta/genelayout-sorted.txt" );
+	}
+	{
+		FILE* f = fopen( "run/genome/meta/genetitle.txt", "w" );
+		Q_CHECK_PTR( f );
+		
+		GenomeUtil::schema->printTitles( f );
 		
 		fclose( f );
 	}
@@ -1945,7 +1965,7 @@ void TSimulation::InitWorld()
 	fPositionSeed = 42;
     fGenomeSeed = 42;
 	fSimulationSeed = 42;
-    fAgentsRfood = true;
+    fAgentsRfood = RFOOD_TRUE;
     fFitness1Frequency = 100;
     fFitness2Frequency = 2;
 	fEat2Consume = 20.0;
@@ -2417,10 +2437,33 @@ void TSimulation::ReadSeedPositionsFromFile()
 	{
 		Position pos;
 
-		in >> pos.x;
-		in >> pos.y;
-		in >> pos.z;
-		
+		struct local
+		{
+			static float read_dim( istream &in )
+			{
+				float val;
+				string raw;
+				in >> raw;
+
+				if( raw[0] == 'r' )
+				{
+					string ratiostr = raw.substr(1);
+					float ratio = atof( ratiostr.c_str() );
+					val = ratio * globals::worldsize;
+				}
+				else
+				{
+					val = atof( raw.c_str() );
+				}
+
+				return val;
+			}
+		};
+
+		pos.x = local::read_dim( in );
+		pos.y = local::read_dim( in );
+		pos.z = local::read_dim( in );
+
 		fSeedPositions.push_back( pos );
 	}
 
@@ -3817,7 +3860,7 @@ void TSimulation::Fight( agent *c,
 			if (d->Energy() <= 0.0)
 			{
 				//cout << "before deaths2 "; agent::gXSortedAgents.list();	//dbg
-				Kill( d, LifeSpan::DR_NATURAL );
+				Kill( d, LifeSpan::DR_FIGHT );
 				fNumberDiedFight++;
 				//cout << "after deaths2 "; agent::gXSortedAgents.list();	//dbg
 
@@ -3826,7 +3869,7 @@ void TSimulation::Fight( agent *c,
 			if (c->Energy() <= 0.0)
 			{
 				objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point back to c
-				Kill( c, LifeSpan::DR_NATURAL );
+				Kill( c, LifeSpan::DR_FIGHT );
 				fNumberDiedFight++;
 
 				// note: this leaves list pointing to item before c, and markedAgent set to previous agent
@@ -4844,7 +4887,7 @@ void TSimulation::Birth( agent* a,
 // Perform all actions needed to agent before list removal and deletion
 //---------------------------------------------------------------------------
 void TSimulation::Kill( agent* c,
-						 LifeSpan::DeathReason reason )
+						LifeSpan::DeathReason reason )
 {
 	// ---
 	// --- Update LifeSpan
@@ -4890,8 +4933,11 @@ void TSimulation::Kill( agent* c,
 
 	FoodPatch* fp;
 	
+	bool rFood = (fAgentsRfood == RFOOD_TRUE)
+		|| ( (fAgentsRfood == RFOOD_TRUE__FIGHT_ONLY) && (reason == LifeSpan::DR_FIGHT) );
+
 	// If agent's carcass is to become food, make it so here
-    if (fAgentsRfood
+    if ( rFood
     	&& ((long)objectxsortedlist::gXSortedObjects.getCount(FOODTYPE) < fMaxFoodCount)
 		&& (fDomains[id].foodCount < fDomains[id].maxFoodCount)	// ??? Matt had commented this out; why?
 		&& ((fp = fDomains[id].whichFoodPatch( c->x(), c->z() )) && (fp->foodCount < fp->maxFoodCount))	// ??? Matt had nothing like this here; why?
@@ -5568,8 +5614,37 @@ void TSimulation::ReadWorldFile(const char* filename)
 		cout << "foodrate" ses fFoodRate nl;
 	}
 
-    in >> fAgentsRfood; in >> label;
-    cout << "agentsRfood" ses fAgentsRfood nl;
+	if( version < 51 )
+	{
+		bool rfood;
+
+		in >> rfood; in >> label;
+		fAgentsRfood = rfood ? RFOOD_TRUE : RFOOD_FALSE;
+		cout << "agentsRfood" ses rfood nl;
+	}
+	else
+	{
+		string rfood;
+
+		__PROP( "agentsRfood", rfood );
+		if( rfood == "F" )
+		{
+			fAgentsRfood = RFOOD_TRUE__FIGHT_ONLY;
+		}
+		else if( rfood == "1" )
+		{
+			fAgentsRfood = RFOOD_TRUE;
+		}
+		else if( rfood == "0" )
+		{
+			fAgentsRfood = RFOOD_FALSE;
+		}
+		else
+		{
+			cerr << "Invalid agentsRfood value. Should be in {0,1,F}" << endl;
+			exit( 1 );
+		}
+	}
     in >> fFitness1Frequency; in >> label;
     cout << "fit1freq" ses fFitness1Frequency nl;
     in >> fFitness2Frequency; in >> label;
@@ -5602,6 +5677,31 @@ void TSimulation::ReadWorldFile(const char* filename)
     cout << "size2energy" ses food::gSize2Energy nl;
     in >> fEat2Consume; in >> label;
     cout << "eat2consume" ses fEat2Consume nl;
+
+	if( version >= 53 )
+	{
+		string layout;
+
+		__PROP( "genomeLayout", layout );
+
+		if( layout == "L" )
+		{
+			genome::gLayoutType = genome::GenomeLayout::LEGACY;
+		}
+		else if( layout == "N" )
+		{
+			genome::gLayoutType = genome::GenomeLayout::NEURGROUP;
+		}
+		else
+		{
+			cerr << "bad value for genomeLayout." << endl;
+			exit( 1 );
+		}
+	}
+	else
+	{
+		genome::gLayoutType = genome::GenomeLayout::LEGACY;
+	}
 
 	if( version >= 48 )
 	{
@@ -5881,6 +5981,20 @@ void TSimulation::ReadWorldFile(const char* filename)
     cout << "logisticslope" ses brain::gLogisticsSlope nl;
     in >> brain::gMaxWeight; in >> label;
     cout << "maxweight" ses brain::gMaxWeight nl;
+	if( version >= 52 )
+	{
+		__PROP( "enableInitWeightRngSeed", brain::gEnableInitWeightRngSeed );
+		__PROP( "minInitWeightRngSeed", brain::gMinInitWeightRngSeed );
+		__PROP( "maxInitWeightRngSeed", brain::gMaxInitWeightRngSeed );
+
+		RandomNumberGenerator::set( RandomNumberGenerator::INIT_WEIGHT,
+									RandomNumberGenerator::LOCAL );
+
+	}
+	else
+	{
+		brain::gEnableInitWeightRngSeed = false;
+	}
     in >> brain::gInitMaxWeight; in >> label;
     cout << "initmaxweight" ses brain::gInitMaxWeight nl;
     in >> genome::gMinBitProb; in >> label;

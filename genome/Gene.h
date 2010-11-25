@@ -13,6 +13,7 @@ namespace genome
 
 	// forward decls
 	class Genome;
+	class GenomeLayout;
 	class GenomeSchema;
 	class SynapseType;
 
@@ -38,7 +39,9 @@ namespace genome
 				   unsigned char rawval );
 
 		int getMutableSize();
-		virtual void printIndexes( FILE *file );
+
+		virtual void printIndexes( FILE *file, GenomeLayout *layout );
+		virtual void printTitles( FILE *file );
 
 		Type type;
 		std::string name;
@@ -56,6 +59,7 @@ namespace genome
 
 	protected:
 		friend class GenomeSchema;
+		friend class GenomeLayout;
 
 		int offset;
 
@@ -228,6 +232,8 @@ namespace genome
 		virtual int getMaxGroupCount() = 0;
 		virtual int getMaxNeuronCount() = 0;
 
+		virtual std::string getTitle( int group ) = 0;
+
 	protected:
 		friend class GenomeSchema;
 
@@ -259,6 +265,8 @@ namespace genome
 
 		virtual int getMaxGroupCount();
 		virtual int getMaxNeuronCount();
+
+		virtual std::string getTitle( int group );
 	};
 
 
@@ -281,6 +289,8 @@ namespace genome
 
 		virtual int getMaxGroupCount();
 		virtual int getMaxNeuronCount();
+
+		virtual std::string getTitle( int group );
 	};
 
 
@@ -310,15 +320,17 @@ namespace genome
 				   NeurGroupGene *group,
 				   unsigned char rawval );
 
-		virtual void printIndexes( FILE *file );
+		virtual void printIndexes( FILE *file, GenomeLayout *layout );
+		virtual void printTitles( FILE *file );
+
+		const NeurGroupType group_type;
 
 	protected:
 		virtual int getMutableSizeImpl();
 
-	private:
-		int getOffset( int group );
+		friend class GenomeLayout;
 
-		NeurGroupType group_type;
+		int getOffset( int group );
 	};
 
 	// ================================================================================
@@ -349,16 +361,19 @@ namespace genome
 				   NeurGroupGene *to,
 				   unsigned char rawval );
 
-		virtual void printIndexes( FILE *file );
+		virtual void printIndexes( FILE *file, GenomeLayout *layout );
+		virtual void printTitles( FILE *file );
 
 	protected:
 		virtual int getMutableSizeImpl();
 
-	private:
+		friend class GenomeLayout;
+
 		int getOffset( SynapseType *synapseType,
 					   int from,
 					   int to );
 
+	private:
 		bool negateInhibitory;
 		bool lessThanZero;
 	};

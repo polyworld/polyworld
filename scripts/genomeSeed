@@ -5,8 +5,9 @@ import getopt
 import os
 import sys
 
-from common_functions import err
+from common_functions import err, read_worldfile_parameter
 import common_logs
+import edit_worldfile
 
 ####################################################################################
 ###
@@ -16,6 +17,7 @@ import common_logs
 def main():
     mode = 'simend'
     generatePositions = False
+    editWorldfile = False
 
     # polyworld home dir
     homedir = os.path.realpath( os.path.join(os.path.dirname( sys.argv[0] ), '..') )
@@ -24,7 +26,7 @@ def main():
     # Process Args
     #
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'a:et:p', ['agent=', 'simend', 'time=', 'pos'] )
+        opts, args = getopt.getopt(sys.argv[1:], 'a:et:pw', ['agent=', 'simend', 'time=', 'pos', 'worldfile'] )
     except getopt.GetoptError, x:
         show_usage( x )
 
@@ -46,6 +48,8 @@ def main():
                 show_usage( 'Invalid timestep (%s)' % arg )
         elif opt == '--pos' or opt == '-p':
             generatePositions = True
+        elif opt == '--worldfile' or opt == '-w':
+            editWorldfile = True
         else:
             assert( False )
 
@@ -74,7 +78,11 @@ def main():
     #
     # Determine genome file paths
     #
-    paths = [os.path.join( rundir, 'genome/genome_' + str(agentNumber) + '.txt' )
+    genome_relpath='genome/agents/'
+    if not os.path.exists( os.path.join(rundir, genome_relpath) ):
+        genome_relpath='genome/'
+
+    paths = [os.path.join( rundir, genome_relpath + '/genome_' + str(agentNumber) + '.txt' )
              for agentNumber in agentNumbers]
 
     for path in paths:
@@ -101,6 +109,11 @@ def main():
     if generatePositions:
         out = open( os.path.join(homedir, 'seedPositions.txt'), 'w' )
 
+        worldsize = float( read_worldfile_parameter(rundir,
+                                                    'worldsize') )
+        def __ratio( val ):
+            return "r%s" % (val / worldsize)
+
         for agentNumber in agentNumbers:
             path = os.path.join( rundir, 'motion/position/position_' + str(agentNumber) + '.txt' )
             positionTable = datalib.parse( path, keycolname = 'Timestep' )['Positions']
@@ -109,9 +122,32 @@ def main():
             else:
                 row = positionTable.rows()[-1]
 
-            out.write( '%s %s %s\n' % (row['x'], row['y'], row['z']) )
+            out.write( '%s %s %s\n' % (__ratio(row['x']), row['y'], __ratio(row['z'])) )
 
         out.close()
+
+    #
+    # Edit worldfile if requested
+    #
+    if editWorldfile:
+        worldfile = os.path.join( homedir, 'worldfile' )
+
+        if not os.path.exists( worldfile ):
+            err( 'Cannot locate ' + worldfile )
+
+        worldfile_new = 'worldfile.' + str(os.getpid())
+
+        edits = [
+            "initnumagents=%d" % len(agentNumbers),
+            "numberToSeed=%d" % len(agentNumbers),
+            "seedFromFile=1",
+            "positionSeedsFromFile=%d" % (1 if generatePositions else 0)
+        ]
+
+        edit_worldfile.edit( worldfile, worldfile_new, edits )
+
+        os.rename( worldfile_new, worldfile )
+        
 
 ####################################################################################
 ###
@@ -144,6 +180,10 @@ usage: genomeSeed [option] rundir
   --pos, p
 
              Generate positions file.
+
+  --worldfile, w
+
+             Edit <Polyworld Home>/worldfile to use seeds.
 """
 
     if msg != None:

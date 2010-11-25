@@ -19,6 +19,9 @@ namespace brain
     long gNumPrebirthCycles;
 	float gLogisticsSlope;
 	float gMaxWeight;
+	bool gEnableInitWeightRngSeed;
+	long gMinInitWeightRngSeed;
+	long gMaxInitWeightRngSeed;
 	float gInitMaxWeight;
 	float gDecayRate;
 	short gMinWin;
@@ -29,6 +32,8 @@ namespace brain
 
 namespace genome
 {
+	GenomeLayout::LayoutType gLayoutType;
+
 	float gSeedFightBias;
 	float gSeedFightExcitation;
 
