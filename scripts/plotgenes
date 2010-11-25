@@ -1,0 +1,36 @@
+#!/bin/bash
+
+run=${1-run}
+dir=$run/plots
+
+mkdir -p $dir
+
+#
+# Use inline python to determine gene names from datalib file
+#
+genes=$(
+export PYTHONPATH=$PYTHONPATH:$(dirname $0)
+python - <<EOF
+import datalib
+
+table = datalib.parse("$run/genome/genestats.plt")['GeneStats']
+
+# Don't report T or stddev columns
+genes = filter( lambda x: not (x == 'T' or x.endswith(' stddev')), table.colnames )
+
+# Delimit with commas since names can have spaces
+print ','.join( genes )
+
+EOF
+)
+
+# For each gene, generate a plot
+(
+
+IFS=',' # make ',' the field separator since gene names might have spaces
+for gene in $genes; do
+    genepath=$dir/genestat-${gene// /_}.eps # replace space with '_' in filename
+    echo generating $genepath
+    plot adhoc --noview -o $genepath --title "$gene" genome/genestats.plt GeneStats T $gene $run
+done
+)

@@ -1,0 +1,100 @@
+#!/usr/bin/env python
+
+import os
+import re
+import sys
+
+import datalib
+
+###
+### Parse Args
+###
+argv = sys.argv[1:]
+
+if len( argv ) == 0:
+    rundir = 'run'
+else:
+    rundir = argv[0]
+
+titlePath = os.path.join( rundir, "genome/meta/genetitle.txt" )
+indexPath = os.path.join( rundir, "genome/meta/geneindex.txt" )
+statsPath = os.path.join( rundir, "genome/genestats.txt" )
+
+###
+### Define genes we want data for
+###
+
+# gene name regexes
+geneNamePatterns = [
+    'Tau_[0-9]+',
+    'CrossoverPointCount'
+]
+# add beginning-of-string and end-of-string to regexes
+geneNamePatterns = map( lambda x: '^' + x + '$', geneNamePatterns )
+
+###
+### Parse genetitle.txt
+###
+geneTitles = {}
+for line in open( titlePath ):
+    fields = line.split("::")
+    title = fields[0].strip()
+    name = fields[1].strip()
+
+    geneTitles[name] = title
+
+###
+### Parse geneindex.txt
+###
+geneIndex = {}
+geneNames = []
+for line in open( indexPath ):
+    fields = line.split()
+    index = int( fields[0] )
+    name = fields[1]
+
+    for pattern in geneNamePatterns:
+        if re.match( pattern, name ):
+            geneIndex[name] = index
+            geneNames.append( name )
+
+###
+### Create datalib Table
+###
+firstLine = True
+colnames = ['T']
+for name in geneNames:
+    title = geneTitles[name]
+    colnames.append( title )
+    colnames.append( title + " stddev" )
+
+coltypes = ['int'] + ['float' for x in colnames[1:]]
+
+table = datalib.Table('GeneStats', colnames, coltypes )
+
+###
+### Populate datalib Table from genestats.txt
+###
+for line in open( statsPath ):
+    fields = line.split()
+    if len(fields) == 1:
+        assert( firstLine )
+        firstLine = False
+        continue
+    
+    row = table.createRow()
+
+    row['T'] = fields[0]
+
+    for name in geneNames:
+        title = geneTitles[name]
+        pair = fields[ geneIndex[name] + 1 ].split(',')
+        mean = pair[0]
+        stddev = pair[1]
+        row[title] = mean
+        row[title+' stddev'] = stddev
+
+###
+### Generate datalib output file
+###
+datalib.write( os.path.join(rundir, 'genome/genestats.plt'), table )
