@@ -452,30 +452,10 @@ def parse( path,
 
     table_index = -1
 
-    def __parse_colnames():
-        colnames = f.readline().split()
-        if len(colnames) == 0:
-            raise InvalidFileError('expecting column labels')
-        elif colnames[0] != COLUMN_LABEL_MARKER:
-            raise InvalidFileError('unexpected token (%s)' % colnames[0])
-        colnames.pop(0) # remove marker
-
-        return colnames
-
-    def __parse_coltypes():
-        coltypes = f.readline().split()
-        if len(coltypes) == 0:
-            raise InvalidFileError('expecting column types')
-        elif coltypes[0] != COLUMN_TYPE_MARKER:
-            raise InvalidFileError('unexpected token (%s)' % coltypes[0])
-        coltypes.pop(0) # remove marker
-
-        return coltypes
-
     if schema == 'single':
         __seek_meta(f, 'L')
-        colnames = __parse_colnames()
-        coltypes = __parse_coltypes()
+        colnames = __parse_colnames( f )
+        coltypes = __parse_coltypes( f )
 
     while True:
         tablename = __seek_next_tag(f)
@@ -491,9 +471,9 @@ def parse( path,
                 tablenames_found[tablename] = True
             
         if schema == 'table':
-            colnames = __parse_colnames()
+            colnames = __parse_colnames( f )
             f.readline() # skip blank line
-            coltypes = __parse_coltypes()
+            coltypes = __parse_coltypes( f )
             f.readline() # skip blank line
 
 
@@ -531,6 +511,7 @@ def parse( path,
                 raise MissingTableError('Failed to find %s in %s' % (name, path))
 
     return result.retval();
+
 
 ####################################################################################
 ###
@@ -653,7 +634,8 @@ def __calc_col_widths(table, colformat):
     col_widths = []
 
     for name, type, data in iterators.IteratorUnion(iter(table.colnames), iter(table.coltypes), iter(table.coldata)):
-        width = max(len(str(name)), len(type))
+        # add 2 to name length to account for quotes
+        width = max(len(str(name)) + 2, len(type))
         if colformat == 'fixed':
             for row in data:
                 width = max(width, len(str(row)))
@@ -671,10 +653,51 @@ def __create_col_metadata(marker, meta, colwidths):
     linelist = [marker]
     for colmeta, colwidth in iterators.IteratorUnion(iter(meta), iter(colwidths)):
         format = '%-' + str(colwidth) + 's'
+        if marker == COLUMN_LABEL_MARKER:
+            # add quotes
+            colmeta = '"%s"' % colmeta
+            
         linelist.append(format % colmeta)
     linelist.append('\n')
 
     return '\t'.join(linelist)
+
+####################################################################################
+###
+### FUNCTION __parse_colnames()
+###
+####################################################################################
+def __parse_colnames( f ):
+    line = f.readline()
+    tokens = line.split()
+    if tokens[0] != COLUMN_LABEL_MARKER:
+        raise InvalidFileError('unexpected token (%s)' % tokens[0])
+
+    if '"' in line:
+        # parse colnames enclosed in quotes
+        colnames = re.findall(r'"([^"]+)"', line)
+    else:
+        colnames = tokens[1:]
+
+    if len(colnames) == 0:
+        raise InvalidFileError('expecting column labels')
+
+    return colnames
+
+####################################################################################
+###
+### FUNCTION __parse_coltypes()
+###
+####################################################################################
+def __parse_coltypes( f ):
+    coltypes = f.readline().split()
+    if len(coltypes) == 0:
+        raise InvalidFileError('expecting column types')
+    elif coltypes[0] != COLUMN_TYPE_MARKER:
+        raise InvalidFileError('unexpected token (%s)' % coltypes[0])
+    coltypes.pop(0) # remove marker
+
+    return coltypes
 
 ####################################################################################
 ###
