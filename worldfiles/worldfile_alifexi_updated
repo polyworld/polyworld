@@ -1,8 +1,9 @@
-47		version
+53		version
 
 0		LockStepWithBirthsDeathsLog
 
 30000	maxSteps
+0		endOnPopulationCrash
 1		docpuwork
 1000	dumpfreq
 100		statfreq
@@ -20,6 +21,7 @@
 180		numberToSeed
 0.0		probabilityOfMutatingSeed
 0		seedFromFile
+0		positionSeedsFromFile
 -1		miscagents
 
 90		initFoodCount
@@ -48,6 +50,9 @@
 400.0	size2energy
 100.0	eat2consume
 
+L		genomeLayout_L=Legacy|N=NeurGroup
+
+0		enableMateWaitFeedback
 0		enableSpeedFeedback
 0		enableGive
 0		enableCarry
@@ -136,6 +141,9 @@ L		noseColor_L=Light_Neuron|<float_literal>=fixed
 
 0.5		logisticslope
 8.0		maxweight
+0		enableInitWeightRngSeed
+0		minInitWeightRngSeed
+255		maxInitWeightRngSeed
 2.0		initmaxweight_0.5_0.1_1.0
 0.1		minbitprob_0.1
 0.6		maxbitprob_0.6
@@ -237,7 +245,11 @@ L		noseColor_L=Light_Neuron|<float_literal>=fixed
 
 0		binchartgs
 
-F		neuronModel_F=FiringRate|S=Spiking
+F		neuronModel_F=FiringRate|S=Spiking|T=Tau
+
+0.01		tauMin
+1.0		tauMax
+1.0		tauSeed
 
 0		mininternalneurgroups
 5		maxinternalneurgroups
@@ -253,6 +265,9 @@ F		neuronModel_F=FiringRate|S=Spiking
 1.0		maxconnectiondensity
 0.0		mintopologicaldistortion
 1.0		maxtopologicaldistortion
+0		enableTopologicalDistortionRngSeed
+0		minTopologicalDistortionRngSeed
+255		maxTopologicalDistortionRngSeed
 0.0		maxneur2energy
 25		numprebirthcycles
 
