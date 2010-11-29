@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <string.h>
 
+#include "AbstractFile.h"
 #include "Brain.h"
 #include "Nerve.h"
 #include "RandomNumberGenerator.h"
@@ -174,7 +175,7 @@ void NervousSystem::prebirthSignal()
 	}	
 }
 
-void NervousSystem::startFunctional( FILE *f )
+void NervousSystem::startFunctional( AbstractFile *f )
 {
 	for( SensorList::iterator
 			 it = sensors.begin(),
@@ -186,7 +187,7 @@ void NervousSystem::startFunctional( FILE *f )
 	}	
 }
 
-void NervousSystem::dumpAnatomical( FILE *f )
+void NervousSystem::dumpAnatomical( AbstractFile *f )
 {
 	for( SensorList::iterator
 			 it = sensors.begin(),

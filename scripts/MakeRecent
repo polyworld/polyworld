@@ -69,7 +69,7 @@ NumMoved=0
 ls -1 "$directory/brain/bestRecent" | awk 'int($1) == $1 { print $0 }' | sort -n | while read bestRecent
 do
 #	echo "directory = $bestRecent"
-	for filename in `ls -1 $directory/brain/bestRecent/$bestRecent/*_brainFunction_*.txt`
+	for filename in `abstractfile ls "$directory/brain/bestRecent/$bestRecent/*_brainFunction_*.txt"`
 	do
 		formatted_filename=$(echo "$filename" | sed -e 's/.*brainFunction/brainFunction/')
 
@@ -140,18 +140,20 @@ do
 
 	printf "\r[timestep: $time_of_death | critter: $critternum] "
 
+	functionfile=`abstractfile ls "$directory/brain/function/brainFunction_${critternum}.txt"`
+
 	# Finished parsing BirthsDeaths.log, now make sure the record for the critter in brain/function/ exists before we try to link to it (a general sanity check).
-	if [ ! -r "$directory/brain/function/brainFunction_${critternum}.txt" ]
+	if [ ! -r "$functionfile" ]
 	then
-		echo "	**Warning: 'brain/function/brainFunction_${critternum}.txt' didn't exist!.**";
+		echo "	**Warning: '$functionfile' didn't exist!.**";
 		continue;	# skip this entry
 	fi
 
 	# Is the brainFunction file invalid?  If so, skip it.
-	isInvalid=$(grep -o 'maxBias' ${directory}/brain/function/brainFunction_${critternum}.txt)
+	isInvalid=$(grep -o 'maxBias' $functionfile)
 	if [ ! -z "${isInvalid}" ]
 	then
-		echo " ** 'brain/function/brainFunction_${critternum}.txt' is invalid.  Not linking it into brain/Recent **";
+		echo " ** '$functionfile' is invalid.  Not linking it into brain/Recent **";
 		continue;
 	fi
 
@@ -165,7 +167,7 @@ do
 
 
 	# Source file exists, made the destination directory, Lets link it!
-	ln "$directory/brain/function/brainFunction_${critternum}.txt" "${directory}/brain/Recent/${binned_time_of_death}/brainFunction_${critternum}.txt"
+	ln "$functionfile" "${directory}/brain/Recent/${binned_time_of_death}/"
 
 done
 

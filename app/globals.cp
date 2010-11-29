@@ -11,6 +11,7 @@
 float   globals::worldsize;		// agent, food
 bool	globals::wraparound;	// agent, sceneview, simulation
 bool	globals::edges;			// agent, simulation
+AbstractFile::ConcreteFileType globals::recordFileType;
 
 namespace brain
 {

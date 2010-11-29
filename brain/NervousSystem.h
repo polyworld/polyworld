@@ -9,6 +9,7 @@
 #include "Nerve.h"
 #include "Sensor.h"
 
+class AbstractFile;
 class Brain;
 class RandomNumberGenerator;
 namespace genome
@@ -54,8 +55,8 @@ class NervousSystem
 
 	void grow( genome::Genome *g, long agent_number, bool record_anatomy );
 	void prebirthSignal();
-	void startFunctional( FILE *f );
-	void dumpAnatomical( FILE *f );
+	void startFunctional( AbstractFile *f );
+	void dumpAnatomical( AbstractFile *f );
 
 	void __test();
 	

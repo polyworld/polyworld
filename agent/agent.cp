@@ -17,6 +17,7 @@
 #include <qgl.h>
 
 // Local
+#include "AbstractFile.h"
 #include "AgentPOVWindow.h"
 #include "barrier.h"
 #include "BeingCarriedSensor.h"
@@ -370,7 +371,7 @@ void agent::dump(ostream& out)
 
     gobject::dump(out);
 
-    fGenome->dump(out);
+    	assert( false ); //fGenome->dump(out); // must port this to AbstractFile
     if (fBrain != NULL)
         fBrain->Dump(out);
     else
@@ -405,8 +406,8 @@ void agent::load(istream& in)
     in >> fHeuristicFitness;
 
     gobject::load(in);
-
-    fGenome->load(in);
+	
+    assert( false ); //fGenome->load(in); // must port this to AbstractFile
     if (fBrain == NULL)
     {
         fBrain = new Brain(fCns);
@@ -438,8 +439,9 @@ void agent::grow( long mateWait,
 	{
 		char path[256];
 		sprintf( path, "run/genome/agents/genome_%ld.txt", getTypeNumber() );
-		ofstream out( path );
+		AbstractFile *out = AbstractFile::open( globals::recordFileType, path, "w" );
 		fGenome->dump( out );
+		delete out;
 	}
 
 	InitGeneCache();

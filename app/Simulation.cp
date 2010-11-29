@@ -14,7 +14,7 @@
 #define MinDebugStep 0
 #define MaxDebugStep INT_MAX
 
-#define CurrentWorldfileVersion 53
+#define CurrentWorldfileVersion 54
 
 #define TournamentSelection 1
 
@@ -42,6 +42,7 @@
 #include <qdesktopwidget.h>
 
 // Local
+#include "AbstractFile.h"
 #include "barrier.h"
 #include "Brain.h"
 #include "BrainMonitorWindow.h"
@@ -135,9 +136,13 @@ inline float AverageAngles( float a, float b )
 #endif
 
 #if DebugLinksEtAl
-	#define link( x... ) { if( (fStep >= MinDebugStep) && (fStep <= MaxDebugStep) ) { ( printf( "%lu link %s to %s (%s/%d)\n", fStep, s, t, __FUNCTION__, __LINE__ ), link( x ) ) } }
-	#define unlink( x... ) { if( (fStep >= MinDebugStep) && (fStep <= MaxDebugStep) ) { ( printf( "%lu unlink %s (%s/%d)\n", fStep, s, __FUNCTION__, __LINE__ ), unlink( x ) ) } }
-	#define rename( x... ) { if( (fStep >= MinDebugStep) && (fStep <= MaxDebugStep) ) { ( printf( "%lu rename %s to %s (%s/%d)\n", fStep, s, t, __FUNCTION__, __LINE__ ), rename( x ) ) } }
+#define link( x... ) { if( (fStep >= MinDebugStep) && (fStep <= MaxDebugStep) ) { ( printf( "%lu link %s to %s (%s/%d)\n", fStep, s, t, __FUNCTION__, __LINE__ ), AbstractFile::link( x ) ) } }
+	#define unlink( x... ) { if( (fStep >= MinDebugStep) && (fStep <= MaxDebugStep) ) { ( printf( "%lu unlink %s (%s/%d)\n", fStep, s, __FUNCTION__, __LINE__ ), AbstractFile::unlink( x ) ) } }
+	#define rename( x... ) { if( (fStep >= MinDebugStep) && (fStep <= MaxDebugStep) ) { ( printf( "%lu rename %s to %s (%s/%d)\n", fStep, s, t, __FUNCTION__, __LINE__ ), AbstractFile::rename( x ) ) } }
+#else
+#define link( x... ) AbstractFile::link( x )
+	#define unlink( x... ) AbstractFile::unlink( x )
+	#define rename( x... ) AbstractFile::rename( x )
 #endif
 
 #if DebugShowBirths
@@ -2328,9 +2333,8 @@ void TSimulation::SeedGenomeFromFile( long agentNumber,
 	}
 
 	const string &path = fSeedFilePaths[ numSeeded % fSeedFilePaths.size() ];
-	ifstream in( path.c_str() );
-
-	if( in.fail() )
+	AbstractFile *in = AbstractFile::open( path.c_str(), "r" );
+	if( in == NULL )
 	{
 		cerr << "Could not open seed file " << path << endl;
 		exit( 1 );
@@ -2340,22 +2344,7 @@ void TSimulation::SeedGenomeFromFile( long agentNumber,
 
 	genes->load( in );
 
-	if( in.fail() )
-	{
-		cerr << "Failure in reading seed file " << path << endl;
-		cerr << "Probably due to genome schema mismatch." << endl;
-		exit( 1 );
-	}
-
-	string foo;
-	in >> foo;
-
-	if( foo.size() != 0 )
-	{
-		cerr << "Unexpected data in seed file after genome bytes: " << foo << endl;
-		cerr << "Probably due to genome schema mismatch." << endl;
-		exit( 1 );
-	}
+	delete in;
 }
 
 //---------------------------------------------------------------------------
@@ -7001,6 +6990,18 @@ void TSimulation::ReadWorldFile(const char* filename)
 		
 	}
 
+	if( version >= 54 )
+	{
+		bool compress;
+		__PROP( "compressFiles", compress );
+
+		globals::recordFileType = compress ? AbstractFile::TYPE_GZIP_FILE : AbstractFile::TYPE_FILE;
+	}
+	else
+	{
+		globals::recordFileType = AbstractFile::TYPE_FILE;
+	}
+
 	if( version >= 18 )
 	{
 		in >> fFogFunction; in >> label;
@@ -7231,7 +7232,7 @@ void TSimulation::Dump()
     {
 		out << fFittest[index]->agentID nl;
         out << fFittest[index]->fitness nl;
-        fFittest[index]->genes->dump(out);
+        assert(false); // fFittest[index]->genes->dump(out); // port to AbstractFile
     }
 	out << fNumberRecentFit nl;
     for (int index = 0; index < fNumberRecentFit; index++)
@@ -7271,7 +7272,7 @@ void TSimulation::Dump()
             {
 				out << fDomains[id].fittest[i]->agentID nl;
                 out << fDomains[id].fittest[i]->fitness nl;
-                fDomains[id].fittest[i]->genes->dump(out);
+                assert(false); // fDomains[id].fittest[i]->genes->dump(out); // port to AbstractFile
             }
         }
         else

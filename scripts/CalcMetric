@@ -7,6 +7,7 @@ OutputFilename2='MetricHist.plt'
 
 #CALC_COMPLEXITY_OVER_DIRECTORY="./CalcComplexityOverDirectory.sh"
 #### Don't modify anything beneath here unless you know what you're doing
+import abstractfile
 import algorithms
 import getopt, glob, string, sys, os
 import common_functions
@@ -959,7 +960,8 @@ def compute_metrics(metrics,
 	# --- Compute metrics not already found on the file system
 	if metrics_remaining:
 		# --- Execute CalcMetric on all corresponding brainAnatomy files in anatomy dir
-		brainFunction_files = glob.glob(os.path.join(timestep_directory, "brainFunction*.txt"))
+		query = os.path.join(timestep_directory, "brainFunction*.txt")
+		brainFunction_files = abstractfile.ls( [query], returnConcrete = False )
 		#Extract critter number from brainFunction files
 		number_list = map(lambda x: int(os.path.basename(x)[14:-4]), brainFunction_files)
 				

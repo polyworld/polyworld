@@ -2,7 +2,6 @@
 import os, re, sys
 from subprocess import Popen, PIPE
 
-import common_metric
 import datalib
 import glob
 
@@ -93,6 +92,8 @@ def classify_run(path_run,
 		 single_classification = False,
 		 constraints = CLASSIFICATIONS,
 		 dependents = None):
+	import common_metric
+
 	classifications = []
 
 	def __nonzero(field):

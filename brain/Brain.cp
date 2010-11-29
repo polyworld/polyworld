@@ -16,6 +16,7 @@
 #include <qapplication.h>
 
 // Local
+#include "AbstractFile.h"
 #include "agent.h"
 #include "debug.h"
 #include "FiringRateModel.h"
@@ -144,11 +145,11 @@ Brain::~Brain()
 //---------------------------------------------------------------------------
 void Brain::dumpAnatomical( const char* directoryName, const char* suffix, long index, float fitness )
 {
-	FILE*	file;
+	AbstractFile *file;
 	char	filename[256];
 
 	sprintf( filename, "%s/brainAnatomy_%ld_%s.txt", directoryName, index, suffix );
-	file = fopen( filename, "w" );
+	file = AbstractFile::open( globals::recordFileType, filename, "w" );
 	if( !file )
 	{
 		fprintf( stderr, "%s: could not open file %s\n", __FUNCTION__, filename );
@@ -156,16 +157,15 @@ void Brain::dumpAnatomical( const char* directoryName, const char* suffix, long 
 	}
 
 	// print the header, with index, fitness, and number of neurons
-	fprintf( file,
-			 "brain %ld fitness=%g numneurons+1=%d maxWeight=%g maxBias=%g",
-			 index, fitness, dims.numneurons+1, brain::gMaxWeight, brain::gNeuralValues.maxbias );
+	file->printf( "brain %ld fitness=%g numneurons+1=%d maxWeight=%g maxBias=%g",
+				  index, fitness, dims.numneurons+1, brain::gMaxWeight, brain::gNeuralValues.maxbias );
 
 	cns->dumpAnatomical( file );
-	fprintf( file, "\n" );
+	file->printf( "\n" );
 
 	neuralnet->dumpAnatomical( file );
 	
-	fclose( file );
+	delete file;
 
 	daPrint( "%s: done with anatomy file for %ld\n", __FUNCTION__, index );
 }
@@ -173,14 +173,13 @@ void Brain::dumpAnatomical( const char* directoryName, const char* suffix, long 
 //---------------------------------------------------------------------------
 // Brain::startFunctional
 //---------------------------------------------------------------------------
-FILE* Brain::startFunctional( long index )
+AbstractFile *Brain::startFunctional( long index )
 {
-	FILE* file;
+	AbstractFile *file;
 	char filename[256];
 
 	sprintf( filename, "run/brain/function/incomplete_brainFunction_%ld.txt", index );
-	file = fopen( filename, "w" );
-
+	file = AbstractFile::open( globals::recordFileType, filename, "w" );
 
 	if( !file )
 	{
@@ -188,21 +187,21 @@ FILE* Brain::startFunctional( long index )
 		goto bail;
 	}
 
-	fprintf( file, "version 1\n" );
+	file->printf( "version 1\n" );
 
 	// print the header, with index (agent number)
-	fprintf( file, "brainFunction %ld", index );	
+	file->printf( "brainFunction %ld", index );	
 
 	// print neuron count, number of input neurons, number of synapses
 	neuralnet->startFunctional( file );
 
 	// print timestep born
-	fprintf( file, " %ld", TSimulation::fStep );
+	file->printf( " %ld", TSimulation::fStep );
 
 	// print organs portion
 	cns->startFunctional( file );
 
-	fprintf( file, "\n" );
+	file->printf( "\n" );
 	
 bail:
 
@@ -212,19 +211,19 @@ bail:
 //---------------------------------------------------------------------------
 // Brain::endFunctional
 //---------------------------------------------------------------------------
-void Brain::endFunctional( FILE* file, float fitness )
+void Brain::endFunctional( AbstractFile *file, float fitness )
 {
 	if( !file )
 		return;
 
-	fprintf( file, "end fitness = %g\n", fitness );
-	fclose( file );
+	file->printf( "end fitness = %g\n", fitness );
+	delete file;
 }
 
 //---------------------------------------------------------------------------
 // Brain::writeFunctional
 //---------------------------------------------------------------------------
-void Brain::writeFunctional( FILE* file )
+void Brain::writeFunctional( AbstractFile *file )
 {
 	if( !file )
 		return;

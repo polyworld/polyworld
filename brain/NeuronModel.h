@@ -6,6 +6,9 @@
 
 #include "Genome.h"
 
+// forward decls
+class AbstractFile;
+
 #define DebugDumpAnatomical false
 #if DebugDumpAnatomical
 	#define daPrint( x... ) printf( x );
@@ -62,10 +65,10 @@ class NeuronModel
 
 	virtual void update( bool bprint ) = 0;
 
-	virtual void dumpAnatomical( FILE *file ) = 0;
+	virtual void dumpAnatomical( AbstractFile *file ) = 0;
 
-	virtual void startFunctional( FILE *file ) = 0;
-	virtual void writeFunctional( FILE *file ) = 0;
+	virtual void startFunctional( AbstractFile *file ) = 0;
+	virtual void writeFunctional( AbstractFile *file ) = 0;
 
 	virtual void dump( std::ostream &out ) = 0;
 	virtual void load( std::istream &in ) = 0;

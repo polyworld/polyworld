@@ -4,6 +4,9 @@
 
 #include "GenomeSchema.h"
 
+// forward decl
+class AbstractFile;
+
 namespace genome
 {
 	// forward decl
@@ -88,8 +91,8 @@ namespace genome
 		float separation( Genome *g );
 		float mateProbability( Genome *g );
 
-		void dump( std::ostream &out );
-		void load( std::istream &in );
+		void dump( AbstractFile *out );
+		void load( AbstractFile *in );
 
 		void print();
 		void print( long lobit, long hibit );

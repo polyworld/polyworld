@@ -4,6 +4,7 @@
 
 #include <iostream>
 
+#include "AbstractFile.h"
 #include "complexity_algorithm.h"
 
 using namespace std;
@@ -692,8 +693,8 @@ gsl_matrix * readin_brainfunction__optimized(const char* fname,
         if (fid==-1) fname = fname(1:end-1); fid = fopen(fname,'r'); end;
 */
 
-	FILE * FunctionFile;
-	if( (FunctionFile = fopen(fname, "rt")) == NULL )
+	AbstractFile *FunctionFile;
+	if( (FunctionFile = AbstractFile::open(fname, "r")) == NULL )
 	{
 		cerr << "Could not open file '" << fname << "' for reading. -- Terminating." << endl;
 		exit(1);
@@ -710,8 +711,8 @@ gsl_matrix * readin_brainfunction__optimized(const char* fname,
         numneu = params(2);
 */
 	char tline[100];
-	fgets( tline, 100, FunctionFile );
-//	cout << "First Line: " << tline << " // Length: " << strlen(tline) << endl;
+	FunctionFile->gets( tline, 100 );
+	//cout << "First Line: " << tline << " // Length: " << strlen(tline) << endl;
 
 	int version;
 	if( 0 != strncmp(tline, "version ", 8) )
@@ -724,8 +725,8 @@ gsl_matrix * readin_brainfunction__optimized(const char* fname,
 
 		// read in line after version
 		char *nl = strchr(tline, '\n');
-		fseek( FunctionFile, (nl - tline) + 1, SEEK_SET );
-		fgets( tline, 100, FunctionFile );
+		FunctionFile->seek( (nl - tline) + 1, SEEK_SET );
+		FunctionFile->gets( tline, 100 );
 	}
 
 	string params = tline;
@@ -772,12 +773,12 @@ gsl_matrix * readin_brainfunction__optimized(const char* fname,
 	list<string> FileContents;
 
 	char nextl[200];
-	while( fgets(nextl, 200, FunctionFile) )	// returns null when at end of file
+	while( FunctionFile->gets(nextl, 200) )	// returns null when at end of file
 	{
 		FileContents.push_back( nextl );
 	}
 
-	fclose( FunctionFile );                         // Don't need this anymore.
+	delete FunctionFile;                         // Don't need this anymore.
 
 	int numcols = atoi(numneu.c_str());
 

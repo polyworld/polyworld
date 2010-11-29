@@ -6,6 +6,7 @@
 #include <string.h>
 #include <strings.h>
 
+#include "AbstractFile.h"
 #include "Brain.h"
 #include "Genome.h"
 #include "globals.h"
@@ -177,7 +178,7 @@ class BaseNeuronModel : public NeuronModel
 #endif
 	}
 
-	virtual void dumpAnatomical( FILE *file )
+	virtual void dumpAnatomical( AbstractFile *file )
 	{
 		size_t	sizeCM;
 		float*	connectionMatrix;
@@ -243,23 +244,22 @@ class BaseNeuronModel : public NeuronModel
 		for( i = 0; i <= dims->numneurons; i++ )	// running over post-synaptic neurons + bias ('=' because of bias)
 		{
 			for( j = 0; j <= dims->numneurons; j++ )	// running over pre-synaptic neurons + bias ('=' because of bias)
-				fprintf( file, "%+06.4f ", connectionMatrix[j + i*(dims->numneurons+1)] * inverseMaxWeight );
-			fprintf( file, ";\n" );
+				file->printf( "%+06.4f ", connectionMatrix[j + i*(dims->numneurons+1)] * inverseMaxWeight );
+			file->printf( ";\n" );
 		}
 	}
 
-	virtual void startFunctional( FILE *file )
+	virtual void startFunctional( AbstractFile *file )
 	{
-		fprintf( file,
-				 " %d %d %d %ld",
-				 dims->numneurons, dims->numInputNeurons, dims->numOutputNeurons, dims->numsynapses );		
+		file->printf( " %d %d %d %ld",
+					  dims->numneurons, dims->numInputNeurons, dims->numOutputNeurons, dims->numsynapses );		
 	}
 
-	virtual void writeFunctional( FILE *file )
+	virtual void writeFunctional( AbstractFile *file )
 	{
 		for( int i = 0; i < dims->numneurons; i++ )
 		{
-			fprintf( file, "%d %g\n", i, neuronactivation[i] );
+			file->printf( "%d %g\n", i, neuronactivation[i] );
 		}
 	}
 

@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "AbstractFile.h"
 #include "Brain.h"
 #include "NervousSystem.h"
 #include "RandomNumberGenerator.h"
@@ -88,7 +89,7 @@ void Retina::sensor_update( bool bprint )
 	)
 }
 
-void Retina::sensor_start_functional( FILE *f )
+void Retina::sensor_start_functional( AbstractFile *f )
 {
 	for( int i = 0; i < 3; i++ )
 	{
@@ -96,7 +97,7 @@ void Retina::sensor_start_functional( FILE *f )
 	}
 }
 
-void Retina::sensor_dump_anatomical( FILE *f )
+void Retina::sensor_dump_anatomical( AbstractFile *f )
 {
 	for( int i = 0; i < 3; i++ )
 	{
@@ -242,16 +243,16 @@ void Retina::Channel::update( bool bprint )
 #endif
 }
 
-void Retina::Channel::start_functional( FILE *f )
+void Retina::Channel::start_functional( AbstractFile *f )
 {
 	int i = nerve->getIndex();
 
-	fprintf( f, " %d-%d", i, i + numneurons - 1 );
+	f->printf( " %d-%d", i, i + numneurons - 1 );
 }
 
-void Retina::Channel::dump_anatomical( FILE *f )
+void Retina::Channel::dump_anatomical( AbstractFile *f )
 {
 	int i = nerve->getIndex();
 
-	fprintf( f, " %sinput=%d-%d", nerve->name.c_str(), i, i + numneurons - 1 );
+	f->printf( " %sinput=%d-%d", nerve->name.c_str(), i, i + numneurons - 1 );
 }

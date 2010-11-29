@@ -16,8 +16,8 @@ class Retina : public Sensor
 	virtual void sensor_grow( NervousSystem *cns );
 	virtual void sensor_prebirth_signal( RandomNumberGenerator *rng );
 	virtual void sensor_update( bool print );
-	virtual void sensor_start_functional( FILE *f );
-	virtual void sensor_dump_anatomical( FILE *f );
+	virtual void sensor_start_functional( AbstractFile *f );
+	virtual void sensor_dump_anatomical( AbstractFile *f );
 
 	void updateBuffer( short xleft,
 					   short ypix );
@@ -50,8 +50,8 @@ class Retina : public Sensor
 
 		void update( bool print );
 
-		void start_functional( FILE *f );
-		void dump_anatomical( FILE *f );
+		void start_functional( AbstractFile *f );
+		void dump_anatomical( AbstractFile *f );
 
 	} channels[3];
 };

@@ -7,6 +7,7 @@ OutputFilename2='ComplexityHist.plt'
 
 #CALC_COMPLEXITY_OVER_DIRECTORY="./CalcComplexityOverDirectory.sh"
 #### Don't modify anything beneath here unless you know what you're doing
+import abstractfile
 import algorithms
 import getopt, glob, string, sys, os
 import common_functions
@@ -38,7 +39,7 @@ def main():
 
 	try:
 		run_paths = common_functions.find_run_paths(arg_paths,
-							    'brain/function/brainFunction_1.txt')
+							    'brain/function/')
 	except common_functions.InvalidDirError, e:
 		show_usage(str(e))
 
@@ -318,9 +319,11 @@ def compute_complexities(complexities,
 	# --- Compute complexities not already found on the file system
 	if complexities_remaining:
 		# --- Execute CalcComplexity on all brainFunction files in the timestep dir
-		brainFunction_files = glob.glob(os.path.join(timestep_directory, "brainFunction*.txt"))
+		query = os.path.join(timestep_directory, "brainFunction*.txt")
+		brainFunction_files = abstractfile.ls([query], returnConcrete = False)
 		brainFunction_files.sort(lambda x, y: cmp(int(os.path.basename(x)[14:-4]),
 							  int(os.path.basename(y)[14:-4])))
+
 		if len(brainFunction_files) == 0:
 			err('No brainfunction files found in %s' % timestep_directory)
 

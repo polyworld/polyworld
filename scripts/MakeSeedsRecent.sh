@@ -112,7 +112,7 @@ then
 	while [ $critter -le $numseedcritters ]
 	do
 		filename="brainFunction_$critter.txt"
-		ln "${directory}/brain/function/$filename" "${directory}/brain/Recent/0/$filename"
+		abstractfile ln "${directory}/brain/function/$filename" "${directory}/brain/Recent/0/$filename"
 		critter=$(echo "$critter + 1" | bc)
 	done
 fi
@@ -138,7 +138,7 @@ echo "Getting the '$AvrNumBrainFuncFiles' most fit seed critters..."
 critter=1
 data=$(while [ $critter -le $numseedcritters ]
         do
-		fitness=$(tail -1 "${directory}/brain/function/brainFunction_${critter}.txt" | cut -d' ' -f4)
+		fitness=$(abstractfile tail -1 "${directory}/brain/function/brainFunction_${critter}.txt" | cut -d' ' -f4)
 		echo "$critter	$fitness"
 		critter=$(echo "$critter + 1" | bc)
 done | sort -t'	' -k2 -rn | head -n "${AvrNumBrainFuncFiles}")
@@ -154,8 +154,7 @@ for critternum in ${NumsOfMostFitCritters}
 do
 	filename="brainFunction_$critternum.txt"
 	bestRecentfilename="${CritterRank}_${filename}"
-	ln "${directory}/brain/function/$filename" "${directory}/brain/bestRecent/0/$bestRecentfilename"
-	if [ -r "${directory}/brain/bestRecent/0/$bestRecentfilename" ]
+	if abstractfile ln "${directory}/brain/function/$filename" "${directory}/brain/bestRecent/0/$bestRecentfilename"
 	then
 		NumMoved=$(echo "$NumMoved + 1" | bc)
 	fi

@@ -15,6 +15,7 @@
 #include <qevent.h>
 
 // Local
+#include "AbstractFile.h"
 #include "GenomeLayout.h"
 #include "graphics.h"
 
@@ -45,6 +46,7 @@ public:
 	static float	worldsize;
 	static bool		wraparound;
 	static bool		edges;
+	static AbstractFile::ConcreteFileType recordFileType;
 };
 
 //===========================================================================

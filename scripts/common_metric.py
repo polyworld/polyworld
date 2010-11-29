@@ -1,6 +1,7 @@
 import glob
 import os
 
+import abstractfile
 import common_functions
 import datalib
 
@@ -222,12 +223,13 @@ def read_anatomy(anatomy_file):
 			brain_dir = anatomy_file[:anatomy_file.find('Recent')]
 			agent_id = anatomy_file.split('_')[-2]
 			function_filename = brain_dir + 'function/brainFunction_' + agent_id + '.txt'
+			# don't bother with abstractfile since this is an old format
 			function_file = open(function_filename, 'r')
 			function_header = function_file.readline()
 			function_file.close()
 			return int(function_header.split(' ')[-2])
 	
-	file = open(anatomy_file, 'r')
+	file = abstractfile.open(anatomy_file, 'r')
 	lines = file.readlines()
 	file.close()
 	

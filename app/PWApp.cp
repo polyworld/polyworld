@@ -25,6 +25,11 @@
 #include "SceneView.h"
 #include "Simulation.h"
 
+//#define UNIT_TESTS
+
+#ifdef UNIT_TESTS
+#include "AbstractFile.h"
+#endif
 
 //===========================================================================
 // main
@@ -32,6 +37,14 @@
 
 int main(int argc, char** argv)
 {
+#ifdef UNIT_TESTS
+	AbstractFile::test();
+
+	printf("done with unit tests.\n");
+
+	return 0;
+#endif
+
 	bool debugMode = false;
 	if( argc > 1 )
 	{

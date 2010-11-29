@@ -2,7 +2,7 @@ import os
 import sys
 
 from scons_util import exclude, find, init_env, relocate_paths
-from scons_util import import_OpenGL, import_OpenMP, import_GSL, import_Qt
+from scons_util import import_OpenGL, import_OpenMP, import_GSL, import_Qt, import_zlib
 
 SRCDIRS = ['src/' + x
            for x in ['agent',
@@ -49,7 +49,8 @@ def build_CalcComplexity(env):
     sources += find('src/complexity',
                     name = '*.cp')
     sources += ['src/utils/datalib.cp',
-                'src/utils/Variant.cp']
+                'src/utils/Variant.cp',
+                'src/utils/AbstractFile.cp']
 
     env.BuildDir(blddir, 'src', False)
 
@@ -113,7 +114,8 @@ def env_create():
                            'QtGui',
                            'QtOpenGL'])
 
-    envs['CalcComplexity'] = env_common.Clone()
+    env = envs['CalcComplexity'] = env_common.Clone()
+    import_zlib(env)
 
     envs['PwMoviePlayer'] = envs['Polyworld'].Clone()
 

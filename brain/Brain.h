@@ -35,6 +35,7 @@
 #endif
 
 // Forward declarations
+class AbstractFile;
 class agent;
 namespace genome
 {
@@ -78,9 +79,9 @@ public:
 	short NumNeuronGroups();
         
 	void dumpAnatomical( const char* directoryName, const char* suffix, long index, float fitness );
-	FILE* startFunctional( long index );
-	void endFunctional( FILE* file, float fitness );
-	void writeFunctional( FILE* file );
+	AbstractFile* startFunctional( long index );
+	void endFunctional( AbstractFile* file, float fitness );
+	void writeFunctional( AbstractFile* file );
         
     void Render(short patchwidth, short patchheight);
 	

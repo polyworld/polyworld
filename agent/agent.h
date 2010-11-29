@@ -26,6 +26,7 @@
 
 
 // Forward declarations
+class AbstractFile;
 class agent;
 class BeingCarriedSensor;
 class CarryingSensor;
@@ -312,7 +313,7 @@ protected:
     frustumXZ fFrustum;
     short fDomain;
 	
-	FILE* fBrainFuncFile;
+	AbstractFile *fBrainFuncFile;
 	DataLibWriter *fPositionWriter;
 	
 	float fCarryRadius;

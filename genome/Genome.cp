@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "AbstractFile.h"
 #include "GenomeLayout.h"
 #include "graybin.h"
 #include "misc.h"
@@ -636,22 +637,38 @@ float Genome::mateProbability( Genome *g )
     return p;
 }
 
-void Genome::dump( ostream &out )
+void Genome::dump( AbstractFile *out )
 {
 	for( int i = 0; i < nbytes; i++ )
 	{
-		out << int( get_raw(i) ) << endl;
+		out->printf( "%d\n", get_raw(i) );
 	}
 }
 
-void Genome::load(std::istream& in)
+void Genome::load( AbstractFile *in )
 {
     int num = 0;
     for (long i = 0; i < nbytes; i++)
     {
-        in >> num;
+		int rc = in->scanf( "%d\n", &num );
+		if( rc != 1 )
+		{
+			// not enough genes
+			cerr << "Failure in reading seed file " << in->getAbstractPath() << endl;
+			cerr << "Probably due to genome schema mismatch." << endl;
+			exit( 1 );
+		}
 		set_raw( i, 1, num );
     }
+
+	int rc = in->scanf( "%d\n", &num );
+	if( rc > 0 )
+	{
+		// too many genes
+		cerr << "Unexpected data in seed file after genome bytes: " << num << endl;
+		cerr << "Probably due to genome schema mismatch." << endl;
+		exit( 1 );
+	}
 }
 
 void Genome::print()
