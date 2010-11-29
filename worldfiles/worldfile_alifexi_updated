@@ -1,4 +1,4 @@
-53		version
+54		version
 
 0		LockStepWithBirthsDeathsLog
 
@@ -317,6 +317,8 @@ P		complexityType_P=processing|A=all|I=input|B=behavior|D=processing-input|Z=Zer
 1		recordSeparations
 1		recordAdamiComplexity
 200		AdamiComplexityRecordFrequency
+
+0		compressFiles
 
 O		FogFunction_O=Off|L=Linear|E=Exponential
 0.1		ExponentialFogDensity
