@@ -327,6 +327,9 @@ class TSimulation : public QObject
 	Q_OBJECT
 
 public:
+	void GrowTask_exec_parallel( agent *e, float eenergy );
+	void GrowTask_exec_serialFinalize( agent *e );
+
 	TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow );
 	virtual ~TSimulation();
 	
@@ -749,6 +752,7 @@ private:
 	agent** fLeastFit;	// based on heuristic fitness
 	bool fShowVision;
 	bool fStaticTimestepGeometry;
+	bool fParallelGrow;
 	bool fGraphics;
 	long fBrainMonitorStride;
 	

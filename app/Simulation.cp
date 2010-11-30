@@ -14,7 +14,7 @@
 #define MinDebugStep 0
 #define MaxDebugStep INT_MAX
 
-#define CurrentWorldfileVersion 54
+#define CurrentWorldfileVersion 55
 
 #define TournamentSelection 1
 
@@ -70,6 +70,79 @@
 
 using namespace genome;
 using namespace std;
+
+class GrowTask
+{
+ public:
+	GrowTask( TSimulation *sim,
+			  agent *e,
+			  float eenergy )
+	{
+		this->sim = sim;
+		this->e = e;
+		this->eenergy = eenergy;
+	}
+
+	void exec_parallel()
+	{
+		sim->GrowTask_exec_parallel( e, eenergy );
+	}
+
+	void exec_serialFinalize()
+	{
+		sim->GrowTask_exec_serialFinalize( e );
+	}
+
+ private:
+	TSimulation *sim;
+	agent *c;
+	agent *d;
+	agent *e;
+	float eenergy;
+};
+
+list<GrowTask *> growTasks;
+
+void TSimulation::GrowTask_exec_parallel( agent *e, float eenergy )
+{
+	e->grow( fMateWait,
+			 fRecordGenomes,
+			 RecordBrainAnatomy( e->Number() ),
+			 RecordBrainFunction( e->Number() ),
+			 fRecordPosition );
+
+	e->Energy(eenergy);
+	e->FoodEnergy(eenergy);
+
+	if( brain::gNeuralValues.model == brain::NeuralValues::SPIKING )
+	{
+		assert( false );
+		// This is just screwy. I never fixed it because I didn't want
+		// to alter the RNG sequence so that I could verify correctness of
+		// changes I was making. We should just unconditionally invoke
+		// the randpw() and call InheritState, regardless of neuron model.
+		// However, the randpw() must be invoked by the master thread
+		// that constructs this task. The number must then be passed to
+		// this task. Note that c and d are the two parents.
+		/*
+		if (randpw() >= .5)
+			e->GetBrain()->InheritState( c->GetBrain() );
+		else
+			e->GetBrain()->InheritState( d->GetBrain() );
+		*/
+	}
+
+}
+
+void TSimulation::GrowTask_exec_serialFinalize( agent *e )
+{
+	fStage.AddObject(e);
+	gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();
+	objectxsortedlist::gXSortedObjects.add(e); // Add the new agent directly to the list of objects (no new agent list); the e->listLink that gets auto stored here should be valid immediately
+	objectxsortedlist::gXSortedObjects.setcurr( saveCurr );
+
+	fNeuronGroupCountStats.add( e->GetBrain()->NumNeuronGroups() );
+}
 
 //===========================================================================
 // TSimulation
@@ -595,6 +668,46 @@ void TSimulation::Step()
 	{
 		// Handles collisions, matings, fights, deaths, births, etc
 		Interact();
+	}
+
+	if( fParallelGrow )
+	{
+		list<GrowTask *>::iterator it_growTask = growTasks.begin();
+
+#pragma omp parallel shared(it_growTask)
+		{
+			bool done = false;
+
+			while(!done)
+			{
+				GrowTask *task = NULL;
+
+#pragma omp critical(growTasks)
+				{
+					if( it_growTask != growTasks.end() )
+					{
+						task = *it_growTask;
+						it_growTask++;
+					}
+				}
+
+				if( task != NULL )
+				{
+					task->exec_parallel();
+				}
+				else
+				{
+					done = true;
+				}
+			}
+		}
+
+		itfor( list<GrowTask *>, growTasks, it )
+		{
+			(*it)->exec_serialFinalize();
+			delete (*it);
+		}
+		growTasks.clear();
 	}
 		
 	debugcheck( "after Interact() in step %ld", fStep );
@@ -3758,48 +3871,39 @@ void TSimulation::Mate( agent *c,
 					Q_CHECK_PTR(e);
 
 					e->Genes()->crossover(c->Genes(), d->Genes(), true);
-					e->grow( fMateWait,
-							 fRecordGenomes,
-							 RecordBrainAnatomy( e->Number() ),
-							 RecordBrainFunction( e->Number() ),
-							 fRecordPosition );
+
 					float eenergy = c->mating( fMateFitnessParameter, fMateWait ) + d->mating( fMateFitnessParameter, fMateWait );
-					e->Energy(eenergy);
-					e->FoodEnergy(eenergy);
+
 					e->settranslation(0.5*(c->x() + d->x()),
 									  0.5*(c->y() + d->y()),
 									  0.5*(c->z() + d->z()));
 					e->setyaw( AverageAngles(c->yaw(), d->yaw()) );	// wrong: 0.5*(c->yaw() + d->yaw()));   // was (360.0*randpw());
 					e->Domain(kd);
-					fStage.AddObject(e);
-					gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();
-					objectxsortedlist::gXSortedObjects.add(e); // Add the new agent directly to the list of objects (no new agent list); the e->listLink that gets auto stored here should be valid immediately
-					objectxsortedlist::gXSortedObjects.setcurr( saveCurr );
-					
 					fNewLifes++;
 					fDomains[kd].numAgents++;
 					fNumberBorn++;
 					fDomains[kd].numborn++;
-					fNeuronGroupCountStats.add( e->GetBrain()->NumNeuronGroups() );
-					ttPrint( "age %ld: agent # %ld is born\n", fStep, e->Number() );
-					birthPrint( "step %ld: agent # %ld born to %ld & %ld, at (%g,%g,%g), yaw=%g, energy=%g, domain %d (%d & %d), neurgroups=%d\n",
-								fStep, e->Number(), c->Number(), d->Number(), e->x(), e->y(), e->z(), e->yaw(), e->Energy(), kd, id, jd, e->GetBrain()->NumNeuronGroups() );
 					//if( fStep > 50 )
 					//	exit( 0 );
 
-					// This Spiking-specific state inheritance logic really shouldn't
-					// be here. It would be nice to have a more generalized mechanism
-					// that removes model-specific logic from this simulation module.
-					// ~Sean
-					if( brain::gNeuralValues.model == brain::NeuralValues::SPIKING )
-					{
-						if (randpw() >= .5)
-							e->GetBrain()->InheritState( c->GetBrain() );
-						else
-							e->GetBrain()->InheritState( d->GetBrain() );
-					}
+					ttPrint( "age %ld: agent # %ld is born\n", fStep, e->Number() );
+					birthPrint( "step %ld: agent # %ld born to %ld & %ld, at (%g,%g,%g), yaw=%g, energy=%g, domain %d (%d & %d)\n",
+								fStep, e->Number(), c->Number(), d->Number(), e->x(), e->y(), e->z(), e->yaw(), e->Energy(), kd, id, jd );
 
 					Birth( e, LifeSpan::BR_NATURAL, c, d );
+
+					GrowTask *growTask = new GrowTask( this, e, eenergy );
+					if( fParallelGrow )
+					{
+						growTasks.push_back( growTask );
+					}
+					else
+					{
+						growTask->exec_parallel();
+						growTask->exec_serialFinalize();
+
+						delete growTask;
+					}
 				}
 			}	// steady-state GA vs. natural selection
 		}	// if agents are trying to mate
@@ -5630,6 +5734,15 @@ void TSimulation::ReadWorldFile(const char* filename)
 	if( version >= 34 )
 	{
 		PROP( StaticTimestepGeometry );
+	}
+
+	if( version >= 55 )
+	{
+		PROP( ParallelGrow );
+	}
+	else
+	{
+		fParallelGrow = false;
 	}
 
     in >> brain::gMinWin; in >> label;
