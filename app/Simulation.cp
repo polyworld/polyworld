@@ -2797,6 +2797,8 @@ void TSimulation::UpdateAgents()
 //---------------------------------------------------------------------------
 void TSimulation::UpdateAgents_StaticTimestepGeometry()
 {
+	//#define OLD_UPDATE
+#ifdef OLD_UPDATE
 	// Take advantage of the geometry being unchanged during a timestep by sending the 
 	// geometry to the graphics card only once (via stage compilation). Also, parallelize
 	// execution of brains.
@@ -2804,6 +2806,7 @@ void TSimulation::UpdateAgents_StaticTimestepGeometry()
 	// ---
 	// --- Vision (Serial -- for now)
 	// ---
+	double visionStart = hirestime();
 	{
 		fStage.Compile();
 
@@ -2817,10 +2820,12 @@ void TSimulation::UpdateAgents_StaticTimestepGeometry()
 
 		fStage.Decompile();
 	}
+	double visionEnd = hirestime();
 
 	// ---
 	// --- Brain (Parallel)
 	// ---
+	double brainStart = hirestime();
 	{
 		bool eol = false; // thread-global 'end of list'
 
@@ -2851,7 +2856,123 @@ void TSimulation::UpdateAgents_StaticTimestepGeometry()
 			}
 		}
 	}
+	double brainEnd = hirestime();
 
+	static double visionTotal = 0;
+	static double brainTotal = 0;
+
+	visionTotal += (visionEnd - visionStart);
+	brainTotal += (brainEnd - brainStart);
+
+	cout << "T vision=" << visionTotal << ", brain=" << brainTotal << endl;
+#else
+
+	////////////////////////////////////////////////////////////////////////////////
+	////////////////////////////////////////////////////////////////////////////////
+	////////////////////////////////////////////////////////////////////////////////
+
+	// Take advantage of the geometry being unchanged during a timestep by sending the 
+	// geometry to the graphics card only once (via stage compilation). Also, parallelize
+	// execution of brains.
+
+	static bool firstTime = true;
+	static pthread_spinlock_t spinlock;
+	if( firstTime )
+	{
+		int rc = pthread_spin_init(&spinlock, PTHREAD_PROCESS_PRIVATE);
+		assert( rc == 0 );
+	}
+
+
+	int nagents = objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE);
+	int nvision = 0;
+	int nbrain = 0;
+
+	bool visionComplete = false;
+	agent *pendingBrains[nagents];
+	int pendingBrainsHead = 0;
+	int pendingBrainsTail = 0;
+
+	//cout << "[" << pthread_self() << "] START UPDATE. nagents=" << nagents << endl;
+
+#pragma omp parallel shared(visionComplete, pendingBrains, pendingBrainsHead, pendingBrainsTail)
+	{
+		bool done = false; // thread-local flag
+
+
+		while( !done )
+		{
+			//////////////////////////////////////////////////
+			//// MASTER ONLY
+			//////////////////////////////////////////////////
+#pragma omp master
+			if( !visionComplete )
+			{
+				fStage.Compile();
+				objectxsortedlist::gXSortedObjects.reset();
+
+				agent *avision = NULL;
+
+				while (objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&avision))
+				{
+					//cout << "[" << pthread_self() << "] update vision of " << avision->Number() << ". nvision=" << nvision << endl;
+					avision->UpdateVision();
+					nvision++;
+
+					{
+						pendingBrains[pendingBrainsTail] = avision;
+#pragma omp atomic
+						pendingBrainsTail++;
+					}
+				}
+
+				//cout << "[" << pthread_self() << "] exited while" << endl;
+
+				visionComplete = true;
+
+				fStage.Decompile();
+
+			}
+			//////////////////////////////////////////////////
+			//// END MASTER ONLY
+			//////////////////////////////////////////////////
+
+			agent *abrain = NULL;
+
+				//cout << "[" << pthread_self() << "] checking brains" << endl;
+			{
+				int rc = pthread_spin_lock( &spinlock );
+				assert( rc == 0 );
+
+				if( pendingBrainsHead < pendingBrainsTail )
+				{
+					abrain = pendingBrains[pendingBrainsHead];
+					pendingBrainsHead++;
+					nbrain++;
+				}
+				else if( visionComplete )
+				{
+					done = true;
+				}
+
+				rc = pthread_spin_unlock( &spinlock );
+				assert( rc == 0 );
+			}
+
+			if( abrain )
+			{
+				abrain->UpdateBrain();
+			}
+		}
+	}
+
+	assert( nvision == nagents );
+	assert( nbrain == nagents );
+
+      ////////////////////////////////////////////////////////////////////////////////
+      ////////////////////////////////////////////////////////////////////////////////
+      ////////////////////////////////////////////////////////////////////////////////
+#endif
 	// ---
 	// --- Body (Serial)
 	// ---

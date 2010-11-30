@@ -56,4 +56,6 @@ class FiringRateModel : public BaseNeuronModel<FiringRateModel__Neuron, FiringRa
 
  private:
 	genome::Gene *tauGene;
+	float maxWeight;
+	float decayRate;
 };

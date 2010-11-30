@@ -1,5 +1,7 @@
 #pragma once
 
+#include <assert.h>
+
 namespace genome
 {
 	// forward decls
@@ -39,4 +41,15 @@ namespace genome
 		int numOffsets;
 		int *geneOffset2mutableDataOffset;
 	};
+
+	//===========================================================================
+	// inlines
+	//===========================================================================
+	inline int GenomeLayout::getMutableDataOffset( int geneOffset )
+	{
+		//assert( (geneOffset < numOffsets) && (geneOffset >= 0) );
+
+		return geneOffset2mutableDataOffset[ geneOffset ];
+	}
+
 }

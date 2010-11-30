@@ -90,12 +90,14 @@ def env_create():
 
     env = env_common = init_env(Environment())
     env.Append( CPPSUFFIXES = ['.cp'] )
+    #cpp_flags = ['-g', '-Wall', '-pg']
     cpp_flags = ['-g', '-Wall']
     try:
     	cpp_flags += os.environ['CPPFLAGS'].split(' ')
     except KeyError:
     	pass
     env.Append( CPPFLAGS = cpp_flags )
+    #env.Append( LINKFLAGS = ['-pg'] )
     env.Append( CPPPATH = find('src',
                                type = 'dir') )
     try:

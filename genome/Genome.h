@@ -1,8 +1,12 @@
 #pragma once
 
+#include <assert.h>
+
 #include <iostream>
 
+#include "GenomeLayout.h"
 #include "GenomeSchema.h"
+#include "graybin.h"
 
 // forward decl
 class AbstractFile;
@@ -119,5 +123,23 @@ namespace genome
 		int nbytes;
 		bool gray;
 	};
+
+
+//===========================================================================
+// inlines
+//===========================================================================
+inline unsigned char Genome::get_raw( int offset )
+{
+	//assert( offset >= 0 && offset < nbytes );
+
+	int layoutOffset = layout->getMutableDataOffset( offset );
+	unsigned char val = mutable_data[layoutOffset];
+	if( gray )
+	{
+		val = binofgray[val];
+	}
+
+	return val;
+}
 
 } // namespace genome

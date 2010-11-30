@@ -23,6 +23,8 @@ using namespace genome;
 FiringRateModel::FiringRateModel( NervousSystem *cns )
 : BaseNeuronModel<Neuron, Synapse>( cns )
 {
+	maxWeight = brain::gMaxWeight;
+	decayRate = brain::gDecayRate;
 }
 
 FiringRateModel::~FiringRateModel()
@@ -215,12 +217,14 @@ void FiringRateModel::update( bool bprint )
 //	printf( "X:  min=%6.1f  max=%6.1f  avg=%6.1f\n", minExcitation, maxExcitation, avgExcitation );
 //	printf( "X:  min=%6.1f  max=%6.1f  avg=%6.1f\n", minActivation, maxActivation, avgActivation );
 
-    for( i = dims->firstInternalNeuron; i < dims->numneurons; i++ )
+	long numneurons = dims->numneurons;
+	float logisticsSlope = brain::gLogisticsSlope;
+    for( i = dims->firstInternalNeuron; i < numneurons; i++ )
     {
-        newneuronactivation[i] = neuron[i].bias;
+		float newactivation = neuron[i].bias;
         for( k = neuron[i].startsynapses; k < neuron[i].endsynapses; k++ )
         {
-            newneuronactivation[i] += synapse[k].efficacy *
+            newactivation += synapse[k].efficacy *
                neuronactivation[abs(synapse[k].fromneuron)];
 		}
         //newneuronactivation[i] = logistic(newneuronactivation[i], brain::gLogisticsSlope);
@@ -228,12 +232,14 @@ void FiringRateModel::update( bool bprint )
 		if( tauGene )
 		{
 			float tau = neuron[i].tau;
-			newneuronactivation[i] = (1.0 - tau) * neuronactivation[i]  +  tau * logistic( newneuronactivation[i], brain::gLogisticsSlope );
+			newactivation = (1.0 - tau) * neuronactivation[i]  +  tau * logistic( newactivation, logisticsSlope );
 		}
 		else
 		{
-			newneuronactivation[i] = logistic( newneuronactivation[i], brain::gLogisticsSlope );
+			newactivation = logistic( newactivation, logisticsSlope );
 		}
+
+        newneuronactivation[i] = newactivation;
     }
 
 #define DebugBrain 0
@@ -285,27 +291,33 @@ void FiringRateModel::update( bool bprint )
 //	printf( "yaw activation = %g\n", newneuronactivation[yawneuron] );
 
     float learningrate;
-    for (k = 0; k < dims->numsynapses; k++)
+	long numsynapses = dims->numsynapses;
+	long numgroups = dims->numgroups;
+	float maxWeight = this->maxWeight;
+	float decayRate = this->decayRate;
+    for (k = 0; k < numsynapses; k++)
     {
-        if (synapse[k].toneuron >= 0) // 0 can't happen it's an input neuron
+		FiringRateModel__Synapse &syn = synapse[k];
+
+        if (syn.toneuron >= 0) // 0 can't happen it's an input neuron
         {
-            i = synapse[k].toneuron;
+            i = syn.toneuron;
             ii = 0;
         }
         else
         {
-            i = -synapse[k].toneuron;
+            i = -syn.toneuron;
             ii = 1;
         }
-        if ( (synapse[k].fromneuron > 0) ||
-            ((synapse[k].toneuron  == 0) && (synapse[k].efficacy >= 0.0)) )
+        if ( (syn.fromneuron > 0) ||
+            ((syn.toneuron  == 0) && (syn.efficacy >= 0.0)) )
         {
-            j = synapse[k].fromneuron;
+            j = syn.fromneuron;
             jj = 0;
         }
         else
         {
-            j = -synapse[k].fromneuron;
+            j = -syn.fromneuron;
             jj = 1;
         }
         // Note: If .toneuron == 0, and .efficacy were to equal
@@ -314,30 +326,35 @@ void FiringRateModel::update( bool bprint )
         // to zero below & during initialization to prevent this.
         // Similarly, learningrate is guaranteed to be < 0.0 for
         // inhibitory synapses.
-        learningrate = grouplrate[index4(neuron[i].group,neuron[j].group,ii,jj, dims->numgroups,2,2)];
-        synapse[k].efficacy += learningrate
-                             * (newneuronactivation[i]-0.5f)
-                             * (   neuronactivation[j]-0.5f);
+        learningrate = grouplrate[index4(neuron[i].group,neuron[j].group,ii,jj, numgroups,2,2)];
 
-        if (fabs(synapse[k].efficacy) > (0.5f * brain::gMaxWeight))
+		float efficacy = syn.efficacy + learningrate
+			             * (newneuronactivation[i]-0.5f)
+			             * (   neuronactivation[j]-0.5f);
+
+        if (fabs(efficacy) > (0.5f * maxWeight))
         {
-            synapse[k].efficacy *= 1.0f - (1.0f - brain::gDecayRate) *
-                (fabs(synapse[k].efficacy) - 0.5f * brain::gMaxWeight) / (0.5f * brain::gMaxWeight);
-            if (synapse[k].efficacy > brain::gMaxWeight)
-                synapse[k].efficacy = brain::gMaxWeight;
-            else if (synapse[k].efficacy < -brain::gMaxWeight)
-                synapse[k].efficacy = -brain::gMaxWeight;
+            efficacy *= 1.0f - (1.0f - decayRate) *
+                (fabs(efficacy) - 0.5f * maxWeight) / (0.5f * maxWeight);
+            if (efficacy > maxWeight)
+                efficacy = maxWeight;
+            else if (efficacy < -maxWeight)
+                efficacy = -maxWeight;
         }
         else
         {
+#define MIN(x,y) ((x) < (y) ? (x) : (y))
+#define MAX(x,y) ((x) > (y) ? (x) : (y))
             // not strictly correct for this to be in an else clause,
             // but if lrate is reasonable, efficacy should never change
-            // sign with a new magnitude greater than 0.5 * brain::gMaxWeight
+            // sign with a new magnitude greater than 0.5 * maxWeight
             if (learningrate >= 0.0f)  // excitatory
-                synapse[k].efficacy = max(0.0f, synapse[k].efficacy);
+                efficacy = MAX(0.0f, efficacy);
             if (learningrate < 0.0f)  // inhibitory
-                synapse[k].efficacy = min(-1.e-10f, synapse[k].efficacy);
+                efficacy = MIN(-1.e-10f, efficacy);
         }
+
+		syn.efficacy = efficacy;
     }
 
     debugcheck( "after updating synapses" );

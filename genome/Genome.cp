@@ -6,7 +6,6 @@
 
 #include "AbstractFile.h"
 #include "GenomeLayout.h"
-#include "graybin.h"
 #include "misc.h"
 
 
@@ -688,20 +687,6 @@ void Genome::print( long lobit, long hibit )
         cout << ((get_raw(byte) >> (7-bit)) & 1);
     }
     cout nlf;
-}
-
-unsigned char Genome::get_raw( int offset )
-{
-	assert( offset >= 0 && offset < nbytes );
-
-	int layoutOffset = layout->getMutableDataOffset( offset );
-	unsigned char val = mutable_data[layoutOffset];
-	if( gray )
-	{
-		val = binofgray[val];
-	}
-
-	return val;
 }
 
 void Genome::set_raw( int offset,

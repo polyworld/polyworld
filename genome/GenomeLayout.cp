@@ -43,13 +43,6 @@ GenomeLayout *GenomeLayout::create( GenomeSchema *schema,
 	return layout;
 }
 
-int GenomeLayout::getMutableDataOffset( int geneOffset )
-{
-	assert( (geneOffset < numOffsets) && (geneOffset >= 0) );
-
-	return geneOffset2mutableDataOffset[ geneOffset ];
-}
-
 void GenomeLayout::createLegacy( GenomeLayout *layout )
 {
 	for( int i = 0; i < layout->numOffsets; i++ )
