@@ -2881,6 +2881,7 @@ void TSimulation::UpdateAgents_StaticTimestepGeometry()
 	{
 		int rc = pthread_spin_init(&spinlock, PTHREAD_PROCESS_PRIVATE);
 		assert( rc == 0 );
+		firstTime = false;
 	}
 
 
@@ -2915,7 +2916,6 @@ void TSimulation::UpdateAgents_StaticTimestepGeometry()
 
 				while (objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&avision))
 				{
-					//cout << "[" << pthread_self() << "] update vision of " << avision->Number() << ". nvision=" << nvision << endl;
 					avision->UpdateVision();
 					nvision++;
 
@@ -2925,8 +2925,6 @@ void TSimulation::UpdateAgents_StaticTimestepGeometry()
 						pendingBrainsTail++;
 					}
 				}
-
-				//cout << "[" << pthread_self() << "] exited while" << endl;
 
 				visionComplete = true;
 
@@ -2939,7 +2937,6 @@ void TSimulation::UpdateAgents_StaticTimestepGeometry()
 
 			agent *abrain = NULL;
 
-				//cout << "[" << pthread_self() << "] checking brains" << endl;
 			{
 				int rc = pthread_spin_lock( &spinlock );
 				assert( rc == 0 );
