@@ -47,7 +47,7 @@ namespace genome
 	//===========================================================================
 	inline int GenomeLayout::getMutableDataOffset( int geneOffset )
 	{
-		//assert( (geneOffset < numOffsets) && (geneOffset >= 0) );
+		assert( (geneOffset < numOffsets) && (geneOffset >= 0) );
 
 		return geneOffset2mutableDataOffset[ geneOffset ];
 	}

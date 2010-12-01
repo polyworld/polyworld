@@ -55,6 +55,7 @@
 #include "food.h"
 #include "Genome.h"
 #include "GenomeUtil.h"
+#include "Queue.h"
 #include "RandomNumberGenerator.h"
 #include "Resources.h"
 #include "SceneView.h"
@@ -70,79 +71,6 @@
 
 using namespace genome;
 using namespace std;
-
-class GrowTask
-{
- public:
-	GrowTask( TSimulation *sim,
-			  agent *e,
-			  float eenergy )
-	{
-		this->sim = sim;
-		this->e = e;
-		this->eenergy = eenergy;
-	}
-
-	void exec_parallel()
-	{
-		sim->GrowTask_exec_parallel( e, eenergy );
-	}
-
-	void exec_serialFinalize()
-	{
-		sim->GrowTask_exec_serialFinalize( e );
-	}
-
- private:
-	TSimulation *sim;
-	agent *c;
-	agent *d;
-	agent *e;
-	float eenergy;
-};
-
-list<GrowTask *> growTasks;
-
-void TSimulation::GrowTask_exec_parallel( agent *e, float eenergy )
-{
-	e->grow( fMateWait,
-			 fRecordGenomes,
-			 RecordBrainAnatomy( e->Number() ),
-			 RecordBrainFunction( e->Number() ),
-			 fRecordPosition );
-
-	e->Energy(eenergy);
-	e->FoodEnergy(eenergy);
-
-	if( brain::gNeuralValues.model == brain::NeuralValues::SPIKING )
-	{
-		assert( false );
-		// This is just screwy. I never fixed it because I didn't want
-		// to alter the RNG sequence so that I could verify correctness of
-		// changes I was making. We should just unconditionally invoke
-		// the randpw() and call InheritState, regardless of neuron model.
-		// However, the randpw() must be invoked by the master thread
-		// that constructs this task. The number must then be passed to
-		// this task. Note that c and d are the two parents.
-		/*
-		if (randpw() >= .5)
-			e->GetBrain()->InheritState( c->GetBrain() );
-		else
-			e->GetBrain()->InheritState( d->GetBrain() );
-		*/
-	}
-
-}
-
-void TSimulation::GrowTask_exec_serialFinalize( agent *e )
-{
-	fStage.AddObject(e);
-	gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();
-	objectxsortedlist::gXSortedObjects.add(e); // Add the new agent directly to the list of objects (no new agent list); the e->listLink that gets auto stored here should be valid immediately
-	objectxsortedlist::gXSortedObjects.setcurr( saveCurr );
-
-	fNeuronGroupCountStats.add( e->GetBrain()->NumNeuronGroups() );
-}
 
 //===========================================================================
 // TSimulation
@@ -665,50 +593,27 @@ void TSimulation::Step()
 	oldNumCreated = fNumberCreated;
 	
 //  if( fDoCPUWork )
+
+	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+	// ^^^ MASTER TASK ExecInteract
+	// ^^^
+	// ^^^ Handles collisions, matings, fights, deaths, births, etc
+	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+	class ExecInteract : public ITask
 	{
-		// Handles collisions, matings, fights, deaths, births, etc
-		Interact();
-	}
-
-	if( fParallelGrow )
-	{
-		list<GrowTask *>::iterator it_growTask = growTasks.begin();
-
-#pragma omp parallel shared(it_growTask)
+	public:
+		virtual void task_exec( TSimulation *sim )
 		{
-			bool done = false;
-
-			while(!done)
-			{
-				GrowTask *task = NULL;
-
-#pragma omp critical(growTasks)
-				{
-					if( it_growTask != growTasks.end() )
-					{
-						task = *it_growTask;
-						it_growTask++;
-					}
-				}
-
-				if( task != NULL )
-				{
-					task->exec_parallel();
-				}
-				else
-				{
-					done = true;
-				}
-			}
+			sim->Interact();
 		}
+	} execInteract;
 
-		itfor( list<GrowTask *>, growTasks, it )
-		{
-			(*it)->exec_serialFinalize();
-			delete (*it);
-		}
-		growTasks.clear();
-	}
+	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	// !!! EXEC MASTER
+	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	fScheduler.execMasterTask( this,
+							   execInteract,
+							   !fParallelInteract );
 		
 	debugcheck( "after Interact() in step %ld", fStep );
 
@@ -2910,179 +2815,63 @@ void TSimulation::UpdateAgents()
 //---------------------------------------------------------------------------
 void TSimulation::UpdateAgents_StaticTimestepGeometry()
 {
-	//#define OLD_UPDATE
-#ifdef OLD_UPDATE
-	// Take advantage of the geometry being unchanged during a timestep by sending the 
-	// geometry to the graphics card only once (via stage compilation). Also, parallelize
-	// execution of brains.
+	//************************************************************
+	//************************************************************
+	//************************************************************
+	//*****
+	//***** BEGIN PARALLEL REGION
+	//*****
+	//************************************************************
+	//************************************************************
+	//************************************************************
+	fUpdateBrainQueue.reset();
 
-	// ---
-	// --- Vision (Serial -- for now)
-	// ---
-	double visionStart = hirestime();
+#pragma omp parallel
 	{
-		fStage.Compile();
-
-		agent* a;
-
-		objectxsortedlist::gXSortedObjects.reset();
-		while (objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&a))
-		{
-			a->UpdateVision();
-		}
-
-		fStage.Decompile();
-	}
-	double visionEnd = hirestime();
-
-	// ---
-	// --- Brain (Parallel)
-	// ---
-	double brainStart = hirestime();
-	{
-		bool eol = false; // thread-global 'end of list'
-
-#pragma omp parallel shared(eol)
-		{
-			bool done = false; // thread-local flag
-
-			while( !done )
-			{
-				agent* a;
-
-#pragma omp critical(gXSortedObjects)
-				{
-					if( eol )
-					{
-						done = true;
-					}
-					else if( !objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&a) )
-					{
-						done = eol = true;
-					}
-				}
-
-				if( !done )
-				{
-					a->UpdateBrain();
-				}
-			}
-		}
-	}
-	double brainEnd = hirestime();
-
-	static double visionTotal = 0;
-	static double brainTotal = 0;
-
-	visionTotal += (visionEnd - visionStart);
-	brainTotal += (brainEnd - brainStart);
-
-	cout << "T vision=" << visionTotal << ", brain=" << brainTotal << endl;
-#else
-
-	////////////////////////////////////////////////////////////////////////////////
-	////////////////////////////////////////////////////////////////////////////////
-	////////////////////////////////////////////////////////////////////////////////
-
-	// Take advantage of the geometry being unchanged during a timestep by sending the 
-	// geometry to the graphics card only once (via stage compilation). Also, parallelize
-	// execution of brains.
-
-	static bool firstTime = true;
-	static pthread_spinlock_t spinlock;
-	if( firstTime )
-	{
-		int rc = pthread_spin_init(&spinlock, PTHREAD_PROCESS_PRIVATE);
-		assert( rc == 0 );
-		firstTime = false;
-	}
-
-
-	int nagents = objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE);
-	int nvision = 0;
-	int nbrain = 0;
-
-	bool visionComplete = false;
-	agent *pendingBrains[nagents];
-	int pendingBrainsHead = 0;
-	int pendingBrainsTail = 0;
-
-	//cout << "[" << pthread_self() << "] START UPDATE. nagents=" << nagents << endl;
-
-#pragma omp parallel shared(visionComplete, pendingBrains, pendingBrainsHead, pendingBrainsTail)
-	{
-		bool done = false; // thread-local flag
-
-
-		while( !done )
-		{
-			//////////////////////////////////////////////////
-			//// MASTER ONLY
-			//////////////////////////////////////////////////
+		//////////////////////////////////////////////////
+		//// MASTER ONLY
+		//////////////////////////////////////////////////
 #pragma omp master
-			if( !visionComplete )
+		{
+			fStage.Compile();
+			objectxsortedlist::gXSortedObjects.reset();
+
+			agent *avision = NULL;
+
+			while (objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&avision))
 			{
-				fStage.Compile();
-				objectxsortedlist::gXSortedObjects.reset();
+				avision->UpdateVision();
 
-				agent *avision = NULL;
-
-				while (objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&avision))
-				{
-					avision->UpdateVision();
-					nvision++;
-
-					{
-						pendingBrains[pendingBrainsTail] = avision;
-#pragma omp atomic
-						pendingBrainsTail++;
-					}
-				}
-
-				visionComplete = true;
-
-				fStage.Decompile();
-
+				fUpdateBrainQueue.post( avision );
 			}
-			//////////////////////////////////////////////////
-			//// END MASTER ONLY
-			//////////////////////////////////////////////////
 
+			fUpdateBrainQueue.endOfPosts();
+
+			fStage.Decompile();
+		}
+
+		//////////////////////////////////////////////////
+		//// MASTER & SLAVES
+		//////////////////////////////////////////////////
+		{
 			agent *abrain = NULL;
 
-			{
-				int rc = pthread_spin_lock( &spinlock );
-				assert( rc == 0 );
-
-				if( pendingBrainsHead < pendingBrainsTail )
-				{
-					abrain = pendingBrains[pendingBrainsHead];
-					pendingBrainsHead++;
-					nbrain++;
-				}
-				else if( visionComplete )
-				{
-					done = true;
-				}
-
-				rc = pthread_spin_unlock( &spinlock );
-				assert( rc == 0 );
-			}
-
-			if( abrain )
+			while( fUpdateBrainQueue.fetch(&abrain) )
 			{
 				abrain->UpdateBrain();
 			}
 		}
 	}
+	//************************************************************
+	//************************************************************
+	//************************************************************
+	//*****
+	//***** END PARALLEL REGION
+	//*****
+	//************************************************************
+	//************************************************************
+	//************************************************************
 
-	assert( nvision == nagents );
-	assert( nbrain == nagents );
-
-      ////////////////////////////////////////////////////////////////////////////////
-      ////////////////////////////////////////////////////////////////////////////////
-      ////////////////////////////////////////////////////////////////////////////////
-#endif
 	// ---
 	// --- Body (Serial)
 	// ---
@@ -3892,18 +3681,83 @@ void TSimulation::Mate( agent *c,
 
 					Birth( e, LifeSpan::BR_NATURAL, c, d );
 
-					GrowTask *growTask = new GrowTask( this, e, eenergy );
-					if( fParallelGrow )
+					// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+					// ^^^ PARALLEL TASK GrowAgent
+					// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+					class GrowAgent : public ITask
 					{
-						growTasks.push_back( growTask );
-					}
-					else
-					{
-						growTask->exec_parallel();
-						growTask->exec_serialFinalize();
+					public:
+						agent *e;
+						float eenergy;
+						GrowAgent( agent *e, float eenergy )
+						{
+							this->e = e;
+							this->eenergy = eenergy;
+						}
 
-						delete growTask;
-					}
+						virtual void task_exec( TSimulation *sim )
+						{
+							e->grow( sim->fMateWait,
+									 sim->fRecordGenomes,
+									 sim->RecordBrainAnatomy( e->Number() ),
+									 sim->RecordBrainFunction( e->Number() ),
+									 sim->fRecordPosition );
+
+							e->Energy(eenergy);
+							e->FoodEnergy(eenergy);
+
+							if( brain::gNeuralValues.model == brain::NeuralValues::SPIKING )
+							{
+								assert( false );
+								// This is just screwy. I never fixed it because I didn't want
+								// to alter the RNG sequence so that I could verify correctness of
+								// changes I was making. We should just unconditionally invoke
+								// the randpw() and call InheritState, regardless of neuron model.
+								// However, the randpw() must be invoked by the master thread
+								// that constructs this task. The number must then be passed to
+								// this task. Note that c and d are the two parents.
+								/*
+								  if (randpw() >= .5)
+								  e->GetBrain()->InheritState( c->GetBrain() );
+								  else
+								  e->GetBrain()->InheritState( d->GetBrain() );
+								*/
+							}
+						}
+					};
+
+					// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+					// !!! POST PARALLEL
+					// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+					fScheduler.postParallel( new GrowAgent(e, eenergy) );
+
+					// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+					// ^^^ SERIAL TASK AddAgent
+					// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+					class AddAgent : public ITask
+					{
+					public:
+						agent *e;
+						AddAgent( agent *e )
+						{
+							this->e = e;
+						}
+
+						virtual void task_exec( TSimulation *sim )
+						{
+							sim->fStage.AddObject(e);
+							gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();
+							objectxsortedlist::gXSortedObjects.add(e); // Add the new agent directly to the list of objects (no new agent list); the e->listLink that gets auto stored here should be valid immediately
+							objectxsortedlist::gXSortedObjects.setcurr( saveCurr );
+
+							sim->fNeuronGroupCountStats.add( e->GetBrain()->NumNeuronGroups() );
+						}
+					};
+
+					// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+					// !!! POST SERIAL
+					// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+					fScheduler.postSerial( new AddAgent(e) );
 				}
 			}	// steady-state GA vs. natural selection
 		}	// if agents are trying to mate
@@ -5738,11 +5592,11 @@ void TSimulation::ReadWorldFile(const char* filename)
 
 	if( version >= 55 )
 	{
-		PROP( ParallelGrow );
+		PROP( ParallelInteract );
 	}
 	else
 	{
-		fParallelGrow = false;
+		fParallelInteract = false;
 	}
 
     in >> brain::gMinWin; in >> label;

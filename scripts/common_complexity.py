@@ -58,7 +58,7 @@ def normalize_complexities(data):
     # calculation due to short lifespan.
     #
     # also, must be sorted
-    data = filter(lambda x: x != 0.0, data)
+    data = filter(lambda x: x != 0.0 and str(x) != 'nan', data)
     data.sort()
     return data
 

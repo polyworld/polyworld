@@ -130,7 +130,7 @@ namespace genome
 //===========================================================================
 inline unsigned char Genome::get_raw( int offset )
 {
-	//assert( offset >= 0 && offset < nbytes );
+	assert( offset >= 0 && offset < nbytes );
 
 	int layoutOffset = layout->getMutableDataOffset( offset );
 	unsigned char val = mutable_data[layoutOffset];

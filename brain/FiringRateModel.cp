@@ -23,8 +23,6 @@ using namespace genome;
 FiringRateModel::FiringRateModel( NervousSystem *cns )
 : BaseNeuronModel<Neuron, Synapse>( cns )
 {
-	maxWeight = brain::gMaxWeight;
-	decayRate = brain::gDecayRate;
 }
 
 FiringRateModel::~FiringRateModel()
@@ -293,8 +291,6 @@ void FiringRateModel::update( bool bprint )
     float learningrate;
 	long numsynapses = dims->numsynapses;
 	long numgroups = dims->numgroups;
-	float maxWeight = this->maxWeight;
-	float decayRate = this->decayRate;
     for (k = 0; k < numsynapses; k++)
     {
 		FiringRateModel__Synapse &syn = synapse[k];
@@ -332,14 +328,14 @@ void FiringRateModel::update( bool bprint )
 			             * (newneuronactivation[i]-0.5f)
 			             * (   neuronactivation[j]-0.5f);
 
-        if (fabs(efficacy) > (0.5f * maxWeight))
+        if (fabs(efficacy) > (0.5f * brain::gMaxWeight))
         {
-            efficacy *= 1.0f - (1.0f - decayRate) *
-                (fabs(efficacy) - 0.5f * maxWeight) / (0.5f * maxWeight);
-            if (efficacy > maxWeight)
-                efficacy = maxWeight;
-            else if (efficacy < -maxWeight)
-                efficacy = -maxWeight;
+            efficacy *= 1.0f - (1.0f - brain::gDecayRate) *
+                (fabs(efficacy) - 0.5f * brain::gMaxWeight) / (0.5f * brain::gMaxWeight);
+            if (efficacy > brain::gMaxWeight)
+                efficacy = brain::gMaxWeight;
+            else if (efficacy < -brain::gMaxWeight)
+                efficacy = -brain::gMaxWeight;
         }
         else
         {
@@ -347,7 +343,7 @@ void FiringRateModel::update( bool bprint )
 #define MAX(x,y) ((x) > (y) ? (x) : (y))
             // not strictly correct for this to be in an else clause,
             // but if lrate is reasonable, efficacy should never change
-            // sign with a new magnitude greater than 0.5 * maxWeight
+            // sign with a new magnitude greater than 0.5 * brain::gMaxWeight
             if (learningrate >= 0.0f)  // excitatory
                 efficacy = MAX(0.0f, efficacy);
             if (learningrate < 0.0f)  // inhibitory

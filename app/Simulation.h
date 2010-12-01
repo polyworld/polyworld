@@ -18,6 +18,7 @@
 #include "barrier.h"
 #include "datalib.h"
 #include "food.h"
+#include "Scheduler.h"
 #include "SeparationCache.h"
 #include "gmisc.h"
 #include "graphics.h"
@@ -327,9 +328,6 @@ class TSimulation : public QObject
 	Q_OBJECT
 
 public:
-	void GrowTask_exec_parallel( agent *e, float eenergy );
-	void GrowTask_exec_serialFinalize( agent *e );
-
 	TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow );
 	virtual ~TSimulation();
 	
@@ -561,6 +559,9 @@ private:
 	TBinChartWindow* fGeneSeparationWindow;
 	TAgentPOVWindow* fAgentPOVWindow;
 	TTextStatusWindow* fTextStatusWindow;
+
+	Scheduler fScheduler;
+	BusyFetchQueue<agent *> fUpdateBrainQueue;
 	
 	long fMaxSteps;
 	bool fEndOnPopulationCrash;
@@ -752,7 +753,7 @@ private:
 	agent** fLeastFit;	// based on heuristic fitness
 	bool fShowVision;
 	bool fStaticTimestepGeometry;
-	bool fParallelGrow;
+	bool fParallelInteract;
 	bool fGraphics;
 	long fBrainMonitorStride;
 	
