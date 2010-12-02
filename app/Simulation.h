@@ -762,6 +762,7 @@ private:
 	
 	unsigned long* fGeneSum;	// sum, for computing mean
 	unsigned long* fGeneSum2;	// sum of squares, for computing std. dev.
+	agent** fGeneStatsAgents;   // list of agents to be used for computing stats.
 	FILE* fGeneStatsFile;
 
 	SeparationCache fSeparationCache;

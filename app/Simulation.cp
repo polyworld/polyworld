@@ -256,6 +256,7 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow )
 		fBrainMonitorStride(25),
 		fGeneSum(NULL),
 		fGeneSum2(NULL),
+		fGeneStatsAgents(NULL),
 		fGeneStatsFile(NULL),
 		fFoodPatchStatsFile(NULL),
 		fNumAgentsNotInOrNearAnyFoodPatch(0)
@@ -281,6 +282,9 @@ TSimulation::~TSimulation()
 
 	if( fGeneSum2 )
 		free( fGeneSum2 );
+
+    if( fGeneStatsAgents )
+		free( fGeneStatsAgents );
 		
 	if( fGeneStatsFile )
 		fclose( fGeneStatsFile );
@@ -1552,6 +1556,7 @@ void TSimulation::Init()
 		Q_CHECK_PTR( fGeneSum );
 		fGeneSum2 = (unsigned long*) malloc( sizeof( *fGeneSum2 ) * GenomeUtil::schema->getMutableSize() );
 		Q_CHECK_PTR( fGeneSum2 );
+		fGeneStatsAgents = (agent**) malloc( sizeof( *fGeneStatsAgents ) * GetMaxAgents() );
 		
 		fGeneStatsFile = fopen( "run/genome/genestats.txt", "w" );
 		Q_CHECK_PTR( fGeneStatsFile );
@@ -2943,16 +2948,6 @@ void TSimulation::Interact()
 		fDomains[i].fNumSmited = 0;
 	}
 
-	// If we're saving gene stats, zero them out them here
-	if( fRecordGeneStats )
-	{
-		for( i = 0; i < GenomeUtil::schema->getMutableSize(); i++ )
-		{
-			fGeneSum[i] = 0;
-			fGeneSum2[i] = 0;
-		}
-	}
-	
 	// reset all the FoodPatch agent counts to 0
 	if( fRecordFoodPatchStats )
 	{
@@ -3269,17 +3264,6 @@ void TSimulation::DeathAndStats( void )
 
         debugcheck( "after a death" );
 
-		// If we're saving gene stats, compute them here
-		if( fRecordGeneStats )
-		{
-			int n = GenomeUtil::schema->getMutableSize();
-			for( int i = 0; i < n; i++ )
-			{
-				fGeneSum[i] += c->Genes()->get_raw_uint(i);
-				fGeneSum2[i] += c->Genes()->get_raw_uint(i) * c->Genes()->get_raw_uint(i);
-			}
-		}
-		
 		// If we're saving agent-occupancy-of-food-band stats, compute them here
 		if( fRecordFoodPatchStats )
 		{
@@ -3358,21 +3342,69 @@ void TSimulation::DeathAndStats( void )
 //	if( fDomains[0].fNumLeastFit > 0 )
 //		printf( "%ld numSmitable = %d out of %d, from %ld agents out of %ld\n", fStep, fDomains[0].fNumLeastFit, fDomains[0].fMaxNumLeastFit, fDomains[0].numAgents, fDomains[0].maxNumAgents );
 
-	// If we're saving gene stats, record them here
+	// If we're saving gene stats, compute them here
 	if( fRecordGeneStats )
 	{
-		fprintf( fGeneStatsFile, "%ld", fStep );
-		int n = GenomeUtil::schema->getMutableSize();
-		for( int i = 0; i < n; i++ )
+		// Because we'll be performing the stats calculations/recording in parallel
+		// with the master task, which will kill and birth agents, we must create a
+		// snapshot of the agents alive right now.
+		int nagents = objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE);
+		objectxsortedlist::gXSortedObjects.reset();
+		for( int i = 0; i < nagents; i++ )
 		{
-			float mean, stddev;
-			
-			mean = (float) fGeneSum[i] / (float) objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE);
-			stddev = sqrt( (float) fGeneSum2[i] / (float) objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE)  -  mean * mean );
-			fprintf( fGeneStatsFile, " %.1f,%.1f", mean, stddev );
+			objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**)fGeneStatsAgents + i );
 		}
-		fprintf( fGeneStatsFile, "\n" );
-	}	
+
+		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+		// ^^^ PARALLEL TASK RecordGeneStats
+		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+		class RecordGeneStats : public ITask
+		{
+		public:
+			int nagents;
+			RecordGeneStats( int nagents )
+			{
+				this->nagents = nagents;
+			}
+
+			virtual void task_exec( TSimulation *sim )
+			{
+				unsigned long *sum = sim->fGeneSum;
+				unsigned long *sum2 = sim->fGeneSum2;
+				int ngenes = GenomeUtil::schema->getMutableSize(); 
+
+				memset( sum, 0, sizeof(*sum) * ngenes );
+				memset( sum2, 0, sizeof(*sum2) * ngenes );
+
+				for( int i = 0; i < nagents; i++ )
+				{
+					Genome *genes = sim->fGeneStatsAgents[i]->Genes();
+					for( int i = 0; i < ngenes; i++ )
+					{
+						sum[i] += genes->get_raw_uint(i);
+						sum2[i] += genes->get_raw_uint(i) * genes->get_raw_uint(i);
+					}
+				}
+
+				fprintf( sim->fGeneStatsFile, "%ld", sim->fStep );
+				for( int i = 0; i < ngenes; i++ )
+				{
+					float mean, stddev;
+			
+					mean = (float) sum[i] / (float) nagents;
+					stddev = sqrt( (float) sum2[i] / (float) nagents  -  mean * mean );
+					fprintf( sim->fGeneStatsFile, " %.1f,%.1f", mean, stddev );
+				}
+				fprintf( sim->fGeneStatsFile, "\n" );
+			}
+		};
+
+		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		// !!! POST PARALLEL
+		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		fScheduler.postParallel( new RecordGeneStats(nagents) );
+	}
+
 }
 
 //---------------------------------------------------------------------------
@@ -5441,13 +5473,39 @@ void TSimulation::Kill( agent* c,
 	// Following assumes (requires!) the agent to have stored c->listLink correctly
 	objectxsortedlist::gXSortedObjects.removeObjectWithLink( (gobject*) c );
 
-	
-	// Note: For the sake of computational efficiency, I used to never delete an agent,
-	// but "reinit" and reuse them as new agents were born or created.  But Gene made
-	// agents be allocated afresh on birth or creation, so we now need to delete the
-	// old ones here when they die.  Remove this if I ever get a chance to go back to the
-	// more efficient reinit and reuse technique.
-	delete c;
+
+	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+	// ^^^ SERIAL TASK DeleteAgent
+	// ^^^
+	// ^^^ It's important that we not deallocate the agent from
+	// ^^^ memory until all parallel tasks are done. For example,
+	// ^^^ The RecordGeneStats task might need this agent's
+	// ^^^ genome.
+	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+	class DeleteAgent : public ITask
+	{
+	public:
+		agent *a;
+		DeleteAgent( agent *a )
+		{
+			this->a = a;
+		}
+
+		virtual void task_exec( TSimulation *sim )
+		{
+			// Note: For the sake of computational efficiency, I used to never delete an agent,
+			// but "reinit" and reuse them as new agents were born or created.  But Gene made
+			// agents be allocated afresh on birth or creation, so we now need to delete the
+			// old ones here when they die.  Remove this if I ever get a chance to go back to the
+			// more efficient reinit and reuse technique.
+			delete a;
+		}
+	};
+
+	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	// !!! POST SERIAL
+	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	fScheduler.postSerial( new DeleteAgent(c) );
 }
 
 
