@@ -538,6 +538,8 @@ private:
 				agent* a_parent2 = NULL );
 	void Kill( agent* inAgent,
 			   LifeSpan::DeathReason reason );
+	void Kill_UpdateBrainData( agent *c );
+	void Kill_UpdateFittest( agent *c );
 
 	float AgentFitness( agent* c );
 	

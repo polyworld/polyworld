@@ -799,13 +799,18 @@ void agent::Die()
 	
 	// No longer alive. :(		
 	fAlive = false;
+}
 
+//---------------------------------------------------------------------------
+// agent::EndFunctional
+//---------------------------------------------------------------------------    
+void agent::EndFunctional()
+{
 	// If we're recording brain function, end it here
 	if( fBrainFuncFile )
 		fBrain->endFunctional( fBrainFuncFile, fHeuristicFitness );
 	fBrainFuncFile = NULL;
 }
-
 
 
 //---------------------------------------------------------------------------

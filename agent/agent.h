@@ -136,6 +136,7 @@ public:
     void rewardmovement(float moveFitnessParam, float speed2dpos);
     void lastrewards(float energyFitness, float ageFitness);
     void Die();
+	void EndFunctional();
     
     void SetLastX(float x);
     void SetLastY(float y);

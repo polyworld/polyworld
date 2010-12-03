@@ -621,6 +621,42 @@ void TSimulation::Step()
 		
 	debugcheck( "after Interact() in step %ld", fStep );
 
+//	fAverageFitness /= agent::gXSortedAgents.count();
+	if( fNumAverageFitness > 0 )
+		fAverageFitness /= fNumAverageFitness * fTotalHeuristicFitness;
+
+#if DebugMaxFitness
+	printf( "At age %ld (c,n,fit,c->fit) =", fStep );
+	for( i = 0; i < fCurrentFittestCount; i++ )
+		printf( " (%08lx,%ld,%5.2f,%5.2f)", (ulong) fCurrentFittestAgent[i], fCurrentFittestAgent[i]->Number(), fCurrentMaxFitness[i], fCurrentFittestAgent[i]->HeuristicFitness() );
+	printf( "\n" );
+#endif
+
+    if (fMonitorGeneSeparation && (fNewDeaths > 0))
+        CalculateGeneSeparationAll();
+
+	// -----------------------
+	// ---- Create Agents ----
+	// -----------------------
+	// now for a little spontaneous generation!
+	CreateAgents();
+
+    if ((fNewLifes || fNewDeaths) && fMonitorGeneSeparation)
+    {
+        if (fRecordGeneSeparation)
+            RecordGeneSeparation();
+
+		if (fChartGeneSeparation && fGeneSeparationWindow != NULL)
+			fGeneSeparationWindow->AddPoint(fGeneSepVals, fNumGeneSepVals);
+    }
+
+	// -----------------------
+	// ---- Maintain Food ----
+	// -----------------------
+	// finally, maintain the world's food supply...
+	MaintainFood();
+
+
 	fTotalFoodEnergyIn += fFoodEnergyIn;
 	fTotalFoodEnergyOut += fFoodEnergyOut;
 
@@ -3130,41 +3166,6 @@ void TSimulation::Interact()
 		Fitness( c );
 
     } // while loop on agents (c)
-
-//	fAverageFitness /= agent::gXSortedAgents.count();
-	if( fNumAverageFitness > 0 )
-		fAverageFitness /= fNumAverageFitness * fTotalHeuristicFitness;
-
-#if DebugMaxFitness
-	printf( "At age %ld (c,n,fit,c->fit) =", fStep );
-	for( i = 0; i < fCurrentFittestCount; i++ )
-		printf( " (%08lx,%ld,%5.2f,%5.2f)", (ulong) fCurrentFittestAgent[i], fCurrentFittestAgent[i]->Number(), fCurrentMaxFitness[i], fCurrentFittestAgent[i]->HeuristicFitness() );
-	printf( "\n" );
-#endif
-
-    if (fMonitorGeneSeparation && (fNewDeaths > 0))
-        CalculateGeneSeparationAll();
-
-	// -----------------------
-	// ---- Create Agents ----
-	// -----------------------
-	// now for a little spontaneous generation!
-	CreateAgents();
-
-    if ((fNewLifes || fNewDeaths) && fMonitorGeneSeparation)
-    {
-        if (fRecordGeneSeparation)
-            RecordGeneSeparation();
-
-		if (fChartGeneSeparation && fGeneSeparationWindow != NULL)
-			fGeneSeparationWindow->AddPoint(fGeneSepVals, fNumGeneSepVals);
-    }
-
-	// -----------------------
-	// ---- Maintain Food ----
-	// -----------------------
-	// finally, maintain the world's food supply...
-	MaintainFood();
 }
 
 
@@ -5002,27 +5003,34 @@ void TSimulation::Kill( agent* c,
 	}
 
 	Q_CHECK_PTR(c);
-	unsigned long loserIDBestSoFar = 0;	// the way this is used depends on fAgentNumber being 1-based in agent.cp
-	unsigned long loserIDBestRecent = 0;	// the way this is used depends on fAgentNumber being 1-based in agent.cp
-	bool oneOfTheBestSoFar = false;
-	bool oneOfTheBestRecent = false;
-	
 	const short id = c->Domain();
 	
 	ttPrint( "age %ld: agent # %ld has died\n", fStep, c->Number() );
 	
+	// ---
+	// --- Update Tallies
+	// ---
     fNewDeaths++;
     fNumberDied++;
     fDomains[id].numdied++;
     fDomains[id].numAgents--;
 	
+	// ---
+	// --- Update Stats
+	// ---
 	fLifeSpanStats.add( c->Age() );
 	fLifeSpanRecentStats.add( c->Age() );
 	fLifeFractionRecentStats.add( c->Age() / c->MaxAge() );
 	
+	// ---
+	// --- Update Fitness
+	// ---
 	// Make any final contributions to the agent's overall, lifetime fitness
     c->lastrewards(fEnergyFitnessParameter, fAgeFitnessParameter); // if any
 
+	// ---
+	// --- Turn into food, if applicable
+	// ---
 	FoodPatch* fp;
 	
 	bool rFood = (fAgentsRfood == RFOOD_TRUE)
@@ -5077,17 +5085,131 @@ void TSimulation::Kill( agent* c,
         fFoodEnergyOut += c->FoodEnergy();
     }
 	
+	// ---
+	// --- Die()
+	// ---
 	// Must call Die() for the agent before any of the uses of Fitness() below, so we get the final, true, post-death fitness
 	c->Die();
 
+	// ---
+	// --- Remove From Stage
+	// ---
+    fStage.RemoveObject( c );
+
+	// ---
+	// --- Update Monitor Window
+	// ---
+	if (c == fMonitorAgent)
+	{
+		fMonitorAgent = NULL;
+
+		// Stop monitoring agent brain
+		if (fBrainMonitorWindow != NULL)
+			fBrainMonitorWindow->StopMonitoring();
+	}
+
+	// ---
+	// --- Births Deaths Log
+	// ---
+	if( fRecordBirthsDeaths )		// are we recording births, deaths, and creations?  If so, this agent will be included.
+	{
+		FILE * File;
+		
+		if( (File = fopen("run/BirthsDeaths.log", "a")) == NULL )
+		{
+			cerr << "could not open run/genome/run/BirthsDeaths.log for writing [1].  Exiting." << endl;
+			exit(1);
+		}
+		
+		fprintf( File, "%ld DEATH %ld\n", fStep, c->Number() );
+		fclose( File );
+	}
+	
+	// ---
+	// --- x-sorted list
+	// ---
+	// following assumes (requires!) list to be currently pointing to c,
+    // and will leave the list pointing to the previous agent
+	// agent::gXSortedAgents.remove(); // get agent out of the list
+	// objectxsortedlist::gXSortedObjects.removeCurrentObject(); // get agent out of the list
+	
+	// Following assumes (requires!) the agent to have stored c->listLink correctly
+	objectxsortedlist::gXSortedObjects.removeObjectWithLink( (gobject*) c );
+
+	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+	// ^^^ PARALLEL TASK UpdateBrainData
+	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+	class UpdateBrainData : public ITask
+	{
+	public:
+		agent *a;
+		UpdateBrainData( agent *a )
+		{
+			this->a = a;
+		}
+
+		virtual void task_exec( TSimulation *sim )
+		{
+			sim->Kill_UpdateBrainData( a );
+		}
+	};
+
+	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	// !!! POST PARALLEL
+	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	fScheduler.postParallel( new UpdateBrainData(c) );
+
+	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+	// ^^^ SERIAL TASK UpdateFittestAndDeleteAgent
+	// ^^^
+	// ^^^ It's important that we not deallocate the agent from
+	// ^^^ memory until all parallel tasks are done. For example,
+	// ^^^ The RecordGeneStats task might need this agent's
+	// ^^^ genome.
+	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+	class UpdateFittestAndDeleteAgent : public ITask
+	{
+	public:
+		agent *a;
+		UpdateFittestAndDeleteAgent( agent *a )
+		{
+			this->a = a;
+		}
+
+		virtual void task_exec( TSimulation *sim )
+		{
+			sim->Kill_UpdateFittest( a );
+
+			// Note: For the sake of computational efficiency, I used to never delete an agent,
+			// but "reinit" and reuse them as new agents were born or created.  But Gene made
+			// agents be allocated afresh on birth or creation, so we now need to delete the
+			// old ones here when they die.  Remove this if I ever get a chance to go back to the
+			// more efficient reinit and reuse technique.
+			delete a;
+		}
+	};
+
+	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	// !!! POST SERIAL
+	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	fScheduler.postSerial( new UpdateFittestAndDeleteAgent(c) );
+}
+
 #define HackForProcessingUnitComplexity 1
+
+//---------------------------------------------------------------------------
+// TSimulation::Kill_UpdateBrainData
+//---------------------------------------------------------------------------
+void TSimulation::Kill_UpdateBrainData( agent *c )
+{
+	c->EndFunctional();
 
 #if HackForProcessingUnitComplexity
 	if(  fBrainAnatomyRecordAll					||
 		 fBestSoFarBrainAnatomyRecordFrequency	||
 		 fBestRecentBrainAnatomyRecordFrequency	||
-		(fBrainAnatomyRecordSeeds && (c->Number() <= fInitNumAgents))
-	  )
+		 (fBrainAnatomyRecordSeeds && (c->Number() <= fInitNumAgents))
+		 )
 		c->GetBrain()->dumpAnatomical( "run/brain/anatomy", "death", c->Number(), c->HeuristicFitness() );
 #endif
 
@@ -5115,6 +5237,20 @@ void TSimulation::Kill( agent* c,
 			}
 		}
 	}
+
+}
+
+//---------------------------------------------------------------------------
+// TSimulation::Kill_UpdateFittest
+//---------------------------------------------------------------------------
+void TSimulation::Kill_UpdateFittest( agent *c )
+{
+	unsigned long loserIDBestSoFar = 0;	// the way this is used depends on fAgentNumber being 1-based in agent.cp
+	unsigned long loserIDBestRecent = 0;	// the way this is used depends on fAgentNumber being 1-based in agent.cp
+	bool oneOfTheBestSoFar = false;
+	bool oneOfTheBestRecent = false;
+	const short id = c->Domain();
+
 	
 	// Maintain the current-fittest list based on heuristic fitness
 	if( (fCurrentFittestCount > 0) && (c->HeuristicFitness() >= fCurrentMaxFitness[fCurrentFittestCount-1]) )	// a current-fittest agent is dying
@@ -5138,16 +5274,16 @@ void TSimulation::Kill( agent* c,
 	// Maintain a list of the fittest agents ever, for use in the online/steady-state GA,
 	// based on complete fitness, however it is currently being calculated
 	// First on a domain-by-domain basis...
-    int newfit = 0;
-    FitStruct* saveFit;
+	int newfit = 0;
+	FitStruct* saveFit;
 	float cFitness = AgentFitness( c );
-    if( (fDomains[id].numdied <= fNumberFit) || (cFitness > fDomains[id].fittest[fNumberFit-1]->fitness) )
-    {
+	if( (fDomains[id].numdied <= fNumberFit) || (cFitness > fDomains[id].fittest[fNumberFit-1]->fitness) )
+	{
 		int limit = fDomains[id].numdied < fNumberFit ? fDomains[id].numdied : fNumberFit;
 		newfit = limit - 1;
-        for( int i = 0; i < limit; i++ )
-        {
-            if( cFitness > fDomains[id].fittest[i]->fitness )
+		for( int i = 0; i < limit; i++ )
+		{
+			if( cFitness > fDomains[id].fittest[i]->fitness )
 			{
 				newfit = i;
 				break;
@@ -5158,27 +5294,27 @@ void TSimulation::Kill( agent* c,
 		// but it's not a big deal and doesn't hurt anything, and I don't want to deal
 		// with the logic to handle the newfit == limit case (adding a new one on the end)
 		// right now.
-        saveFit = fDomains[id].fittest[fNumberFit-1];				// this is to save the data structure, not its contents
-        for( short i = fNumberFit - 1; i > newfit; i-- )
-            fDomains[id].fittest[i] = fDomains[id].fittest[i-1];
-        fDomains[id].fittest[newfit] = saveFit;						// reuse the old data structure, but replace its contents...
-        fDomains[id].fittest[newfit]->fitness = cFitness;
-        fDomains[id].fittest[newfit]->genes->copyFrom( c->Genes() );
+		saveFit = fDomains[id].fittest[fNumberFit-1];				// this is to save the data structure, not its contents
+		for( short i = fNumberFit - 1; i > newfit; i-- )
+			fDomains[id].fittest[i] = fDomains[id].fittest[i-1];
+		fDomains[id].fittest[newfit] = saveFit;						// reuse the old data structure, but replace its contents...
+		fDomains[id].fittest[newfit]->fitness = cFitness;
+		fDomains[id].fittest[newfit]->genes->copyFrom( c->Genes() );
 		fDomains[id].fittest[newfit]->agentID = c->Number();
 		fDomains[id].fittest[newfit]->complexity = c->Complexity();
 		gaPrint( "%5ld: new domain %d fittest[%ld] id=%4ld fitness=%7.3f complexity=%7.3f\n", fStep, id, newfit, c->Number(), cFitness, c->Complexity() );
-    }
+	}
 
 	// Then on a whole-world basis...
-    if( (fNumberDied <= fNumberFit) || (cFitness > fFittest[fNumberFit-1]->fitness) )
-    {
+	if( (fNumberDied <= fNumberFit) || (cFitness > fFittest[fNumberFit-1]->fitness) )
+	{
 		oneOfTheBestSoFar = true;
 		
 		int limit = fNumberDied < fNumberFit ? fNumberDied : fNumberFit;
 		newfit = limit - 1;
-        for( short i = 0; i < limit; i++ )
-        {
-            if( cFitness > fFittest[i]->fitness )
+		for( short i = 0; i < limit; i++ )
+		{
+			if( cFitness > fFittest[i]->fitness )
 			{
 				newfit = i;
 				break;
@@ -5193,30 +5329,30 @@ void TSimulation::Kill( agent* c,
 			loserIDBestSoFar = fFittest[fNumberFit - 1]->agentID;	// this is the ID of the agent that is being booted from the bestSoFar (fFittest[]) list
 		else
 			loserIDBestSoFar = 0;	// nobody is being booted, because the list isn't full yet
-        saveFit = fFittest[fNumberFit - 1];		// this is to save the data structure, not its contents
-        for( short i = fNumberFit - 1; i > newfit; i-- )
-            fFittest[i] = fFittest[i - 1];
-        fFittest[newfit] = saveFit;				// reuse the old data structure, but replace its contents...
-        fFittest[newfit]->fitness = cFitness;
-        fFittest[newfit]->genes->copyFrom( c->Genes() );
+		saveFit = fFittest[fNumberFit - 1];		// this is to save the data structure, not its contents
+		for( short i = fNumberFit - 1; i > newfit; i-- )
+			fFittest[i] = fFittest[i - 1];
+		fFittest[newfit] = saveFit;				// reuse the old data structure, but replace its contents...
+		fFittest[newfit]->fitness = cFitness;
+		fFittest[newfit]->genes->copyFrom( c->Genes() );
 		fFittest[newfit]->agentID = c->Number();
 		fFittest[newfit]->complexity = c->Complexity();
 		gaPrint( "%5ld: new global   fittest[%ld] id=%4ld fitness=%7.3f complexity=%7.3f\n", fStep, newfit, c->Number(), cFitness, c->Complexity() );
-    }
+	}
 
-    if (cFitness > fMaxFitness)
-        fMaxFitness = cFitness;
+	if (cFitness > fMaxFitness)
+		fMaxFitness = cFitness;
 	
 	// Keep a separate list of the recent fittest, purely for data-gathering purposes,
 	// also based on complete fitness, however it is being currently being calculated
 	// "Recent" means since the last archival recording of recent best, as determined by fBestRecentBrainAnatomyRecordFrequency
 	// (Don't bother, if we're not gathering that kind of data)
-    if( fBestRecentBrainAnatomyRecordFrequency && (cFitness > fRecentFittest[fNumberRecentFit-1]->fitness) )
-    {
+	if( fBestRecentBrainAnatomyRecordFrequency && (cFitness > fRecentFittest[fNumberRecentFit-1]->fitness) )
+	{
 		oneOfTheBestRecent = true;
 		
-        for( short i = 0; i < fNumberRecentFit; i++ )
-        {
+		for( short i = 0; i < fNumberRecentFit; i++ )
+		{
 			// If the agent booted off of the bestSoFar list happens to remain on the bestRecent list,
 			// then we don't want to let it be unlinked below, so clear loserIDBestSoFar
 			// This loop tests the first part of the fRecentFittest[] list, and the last part is tested
@@ -5224,7 +5360,7 @@ void TSimulation::Kill( agent* c,
 			if( loserIDBestSoFar == fRecentFittest[i]->agentID )
 				loserIDBestSoFar = 0;
 			
-            if( cFitness > fRecentFittest[i]->fitness )
+			if( cFitness > fRecentFittest[i]->fitness )
 			{
 				newfit = i;
 				break;
@@ -5232,8 +5368,8 @@ void TSimulation::Kill( agent* c,
 		}
 				
 		loserIDBestRecent = fRecentFittest[fNumberRecentFit - 1]->agentID;	// this is the ID of the agent that is being booted from the bestRecent (fRecentFittest[]) list
-        saveFit = fRecentFittest[fNumberRecentFit - 1];		// this is to save the data structure, not its contents
-        for( short i = fNumberRecentFit - 1; i > newfit; i-- )
+		saveFit = fRecentFittest[fNumberRecentFit - 1];		// this is to save the data structure, not its contents
+		for( short i = fNumberRecentFit - 1; i > newfit; i-- )
 		{
 			// If the agent booted off of the bestSoFar list happens to remain on the bestRecent list,
 			// then we don't want to let it be unlinked below, so clear loserIDBestSoFar
@@ -5242,14 +5378,14 @@ void TSimulation::Kill( agent* c,
 			if( loserIDBestSoFar == fRecentFittest[i]->agentID )
 				loserIDBestSoFar = 0;
 			
-            fRecentFittest[i] = fRecentFittest[i - 1];
+			fRecentFittest[i] = fRecentFittest[i - 1];
 		}
-        fRecentFittest[newfit] = saveFit;				// reuse the old data structure, but replace its contents...
-        fRecentFittest[newfit]->fitness = cFitness;
-//		fRecentFittest[newfit]->genes->copyFrom( c->Genes() );	// we don't save the genes in the bestRecent list
+		fRecentFittest[newfit] = saveFit;				// reuse the old data structure, but replace its contents...
+		fRecentFittest[newfit]->fitness = cFitness;
+		//		fRecentFittest[newfit]->genes->copyFrom( c->Genes() );	// we don't save the genes in the bestRecent list
 		fRecentFittest[newfit]->agentID = c->Number();
 		fRecentFittest[newfit]->complexity = c->Complexity();
-    }
+	}
 
 	// Must also update the leastFit data structures, now that they
 	// are used on-demand in the main mate/fight/eat loop in Interact()
@@ -5267,31 +5403,18 @@ void TSimulation::Kill( agent* c,
 		fDomains[id].fNumLeastFit--;
 		break;	// c can only appear once in the list, so we're done
 	}
-	
-	// Remove agent from world
-    fStage.RemoveObject( c );
 
-    // Check and see if we are monitoring this guy
-	if (c == fMonitorAgent)
-	{
-		fMonitorAgent = NULL;
-
-		// Stop monitoring agent brain
-		if (fBrainMonitorWindow != NULL)
-			fBrainMonitorWindow->StopMonitoring();
-	}
-	
 	// If we're recording all anatomies or recording best anatomies and this was one of the fittest agents,
 	// then dump the anatomy to the appropriate location on disk
 	if(  fBrainAnatomyRecordAll ||
-		(fBestSoFarBrainAnatomyRecordFrequency && oneOfTheBestSoFar) ||
-		(fBestRecentBrainAnatomyRecordFrequency && oneOfTheBestRecent) ||
-		(fBrainAnatomyRecordSeeds && (c->Number() <= fInitNumAgents))
-	  )
+		 (fBestSoFarBrainAnatomyRecordFrequency && oneOfTheBestSoFar) ||
+		 (fBestRecentBrainAnatomyRecordFrequency && oneOfTheBestRecent) ||
+		 (fBrainAnatomyRecordSeeds && (c->Number() <= fInitNumAgents))
+		 )
 	{
-	#if ! HackForProcessingUnitComplexity
+#if ! HackForProcessingUnitComplexity
 		c->GetBrain()->dumpAnatomical( "run/brain/anatomy", "death", c->Number(), c->HeuristicFitness() );
-	#endif
+#endif
 	}
 	else if( fBestRecentBrainAnatomyRecordFrequency || fBestSoFarBrainAnatomyRecordFrequency )	// don't want brain anatomies for this agent, so must eliminate the "incept" and "birth" anatomies if they were recorded
 	{
@@ -5304,18 +5427,18 @@ void TSimulation::Kill( agent* c,
 		if( unlink( s ) )
 			eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
 
-	#if HackForProcessingUnitComplexity
+#if HackForProcessingUnitComplexity
 		// I'm pretty sure the following tests are unnecessary but don't hurt anything (we should be able to just unlink the _death file if we reach here) - lsy 4/9/10
 		// Turns out we didn't want the "death" anatomy either, but we saved it above for the complexity measure
 		if( (fBestSoFarBrainAnatomyRecordFrequency  && !oneOfTheBestSoFar  && (!fBestRecentBrainAnatomyRecordFrequency || !oneOfTheBestRecent))	||
 			(fBestRecentBrainAnatomyRecordFrequency	&& !oneOfTheBestRecent && (!fBestSoFarBrainAnatomyRecordFrequency  || !oneOfTheBestSoFar ))
-		  )
+			)
 		{
 			sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_death.txt", c->Number() );
 			if( unlink( s ) )
 				eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
 		}
-	#endif
+#endif
 	}
 		
 	// If this was one of the seed agents and we're recording their anatomies, then save the data in the appropriate directory
@@ -5445,64 +5568,7 @@ void TSimulation::Kill( agent* c,
 		if( unlink( s ) )
 			eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
 	}
-
-	if( fRecordBirthsDeaths )		// are we recording births, deaths, and creations?  If so, this agent will be included.
-	{
-		FILE * File;
-		
-		if( (File = fopen("run/BirthsDeaths.log", "a")) == NULL )
-		{
-			cerr << "could not open run/genome/run/BirthsDeaths.log for writing [1].  Exiting." << endl;
-			exit(1);
-		}
-		
-		fprintf( File, "%ld DEATH %ld\n", fStep, c->Number() );
-		fclose( File );
-	}
-	
-	// following assumes (requires!) list to be currently pointing to c,
-    // and will leave the list pointing to the previous agent
-	// agent::gXSortedAgents.remove(); // get agent out of the list
-	// objectxsortedlist::gXSortedObjects.removeCurrentObject(); // get agent out of the list
-	
-	// Following assumes (requires!) the agent to have stored c->listLink correctly
-	objectxsortedlist::gXSortedObjects.removeObjectWithLink( (gobject*) c );
-
-
-	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-	// ^^^ SERIAL TASK DeleteAgent
-	// ^^^
-	// ^^^ It's important that we not deallocate the agent from
-	// ^^^ memory until all parallel tasks are done. For example,
-	// ^^^ The RecordGeneStats task might need this agent's
-	// ^^^ genome.
-	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-	class DeleteAgent : public ITask
-	{
-	public:
-		agent *a;
-		DeleteAgent( agent *a )
-		{
-			this->a = a;
-		}
-
-		virtual void task_exec( TSimulation *sim )
-		{
-			// Note: For the sake of computational efficiency, I used to never delete an agent,
-			// but "reinit" and reuse them as new agents were born or created.  But Gene made
-			// agents be allocated afresh on birth or creation, so we now need to delete the
-			// old ones here when they die.  Remove this if I ever get a chance to go back to the
-			// more efficient reinit and reuse technique.
-			delete a;
-		}
-	};
-
-	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	// !!! POST SERIAL
-	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	fScheduler.postSerial( new DeleteAgent(c) );
 }
-
 
 //-------------------------------------------------------------------------------------------
 // TSimulation::AgentFitness
