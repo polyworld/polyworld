@@ -26,6 +26,7 @@ namespace genome
 		
 	public:
 		int getMutableDataOffset( int geneOffset );
+		int getMutableDataOffset_nocheck( int geneOffset );
 
 	private:
 		static void createLegacy( GenomeLayout *layout );
@@ -45,11 +46,16 @@ namespace genome
 	//===========================================================================
 	// inlines
 	//===========================================================================
+	inline int GenomeLayout::getMutableDataOffset_nocheck( int geneOffset )
+	{
+		return geneOffset2mutableDataOffset[ geneOffset ];
+	}
+
 	inline int GenomeLayout::getMutableDataOffset( int geneOffset )
 	{
 		assert( (geneOffset < numOffsets) && (geneOffset >= 0) );
 
-		return geneOffset2mutableDataOffset[ geneOffset ];
+		return getMutableDataOffset_nocheck( geneOffset );
 	}
 
 }

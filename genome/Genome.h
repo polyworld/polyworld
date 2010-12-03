@@ -56,6 +56,7 @@ namespace genome
 					int to );
 
 		unsigned int get_raw_uint( long byte );
+		void updateSum( unsigned long *sum, unsigned long *sum2 );
 
 		int getGroupCount( NeurGroupType type );
 		int getNeuronCount( NeuronType type,

@@ -102,6 +102,37 @@ unsigned int Genome::get_raw_uint( long byte )
 	return (unsigned int)get_raw( byte );
 }
 
+void Genome::updateSum( unsigned long *sum, unsigned long *sum2 )
+{
+	// This function is more verbose than necessary because we're optimizing
+	// for speed. This loop is run *a lot*. So, we move the if(gray) outside
+	// the loop and implement the get_raw() logic in here.
+	if( gray )
+	{
+		for( int i = 0; i < nbytes; i++ )
+		{
+			int layoutOffset = layout->getMutableDataOffset_nocheck( i );
+			unsigned long raw = (unsigned long)mutable_data[layoutOffset];
+
+			raw = binofgray[raw];
+
+			sum[i] += raw;
+			sum2[i] += raw * raw;
+		}
+	}
+	else
+	{
+		for( int i = 0; i < nbytes; i++ )
+		{
+			int layoutOffset = layout->getMutableDataOffset_nocheck( i );
+			unsigned long raw = (unsigned long)mutable_data[layoutOffset];
+
+			sum[i] += raw;
+			sum2[i] += raw * raw;
+		}
+	}
+}
+
 int Genome::getGroupCount( NeurGroupType type )
 {
 	if( (type == NGT_INPUT) || (type == NGT_OUTPUT) )

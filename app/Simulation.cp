@@ -3378,12 +3378,7 @@ void TSimulation::DeathAndStats( void )
 
 				for( int i = 0; i < nagents; i++ )
 				{
-					Genome *genes = sim->fGeneStatsAgents[i]->Genes();
-					for( int i = 0; i < ngenes; i++ )
-					{
-						sum[i] += genes->get_raw_uint(i);
-						sum2[i] += genes->get_raw_uint(i) * genes->get_raw_uint(i);
-					}
+					sim->fGeneStatsAgents[i]->Genes()->updateSum( sum, sum2 );
 				}
 
 				fprintf( sim->fGeneStatsFile, "%ld", sim->fStep );
