@@ -68,11 +68,6 @@ void FiringRateModel::set_neuron( int index,
 	}
 }
 
-void FiringRateModel::inheritState( NeuronModel *parent )
-{
-	// no-op
-}
-
 void FiringRateModel::dump( ostream &out )
 {
 	long i;

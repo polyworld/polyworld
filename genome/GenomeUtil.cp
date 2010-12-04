@@ -88,6 +88,13 @@ GenomeSchema *GenomeUtil::createSchema()
 			   brain::gNeuralValues.Tau.minVal,
 			   brain::gNeuralValues.Tau.maxVal );
 	}
+	if( brain::gNeuralValues.model == brain::NeuralValues::SPIKING )
+	{
+		RANGE( ScaleLatestSpikes,
+			   0.1,
+			   0.9 );
+	}
+
 	RANGE( ConnectionDensity,
 		   brain::gNeuralValues.minconnectiondensity,
 		   brain::gNeuralValues.maxconnectiondensity );
@@ -151,6 +158,11 @@ GenomeSchema *GenomeUtil::createSchema()
 	SCALAR( Size );
 	SCALAR( MaxSpeed );
 	SCALAR( MateEnergyFraction );
+
+	if( brain::gNeuralValues.model == brain::NeuralValues::SPIKING )
+	{
+		SCALAR( ScaleLatestSpikes );
+	}
 
 	INPUT1( Random );
 	INPUT1( Energy );
@@ -269,15 +281,17 @@ void GenomeUtil::seed( Genome *g )
 			 schema->get(#TO),					\
 			 VAL )
 
-	SEED( MutationRate, 0.5 );
-	SEED( CrossoverPointCount, 0.5 );
-
-	SEED( LifeSpan, 0.5 );
-	SEED( ID, 0.5 );
-	SEED( Strength, 0.5 );
-	SEED( Size, 0.5 );
-	SEED( MaxSpeed, 0.5 );
-	SEED( MateEnergyFraction, 0.5 );
+	// ---
+	// --- SCALARS (e.g. MutationRate, LifeSpan, Size)
+	// --- 
+	citfor( GeneVector, schema->getAll(Gene::SCALAR), it )
+	{
+		Gene *gene = *it;
+		if( gene->ismutable )
+		{
+			g->seed( gene, 0.5 );
+		}
+	}
 
 	SEED( Red, 0.5 );
 	SEED( Green, 0.5 );

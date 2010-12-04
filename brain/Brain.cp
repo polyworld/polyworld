@@ -1739,14 +1739,6 @@ void Brain::Prebirth( long agentNumber, bool recordBrainAnatomy )
 }
 
 //---------------------------------------------------------------------------
-// Brain::InheritState
-//---------------------------------------------------------------------------
-void Brain::InheritState( Brain *parent )
-{
-	neuralnet->inheritState( parent->neuralnet );
-}
-
-//---------------------------------------------------------------------------
 // Brain::Update
 //---------------------------------------------------------------------------
 void Brain::Update( bool bprint )

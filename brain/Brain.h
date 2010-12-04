@@ -70,7 +70,6 @@ public:
 					   long &synapseCount_brain,
 					   genome::SynapseType *synapseType );
 	void Prebirth( long agentNumber, bool recordBrainAnatomy );
-	void InheritState( Brain *parent );
     void Update( bool bprint );
 
     float BrainEnergy();

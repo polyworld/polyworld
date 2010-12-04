@@ -20,8 +20,6 @@ SpikingModel::SpikingModel( NervousSystem *cns )
 {
 	this->rng = cns->getRNG();
 
-	scale_latest_spikes = 0;
-
 	outputActivation = NULL;
 }
 
@@ -55,17 +53,7 @@ void SpikingModel::init_derived( float initial_activation )
 		outputActivation[nerve->getIndex()-dims->firstOutputNeuron] = 0.5;	// equivalent to 0.0 for the yaw/turn neuron
 	}
 
-	while(!scale_latest_spikes)
-	{
-		scale_latest_spikes = (random() % 10)/10.; //ira fix me later
-	}
-}
-
-void SpikingModel::inheritState( NeuronModel *_parent )
-{
-	SpikingModel *parent = dynamic_cast<SpikingModel *>(_parent);
-
-	scale_latest_spikes = parent->scale_latest_spikes;
+	scale_latest_spikes = genes->get( "ScaleLatestSpikes" );
 }
 
 void SpikingModel::set_neuron( int index,

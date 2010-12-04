@@ -47,8 +47,6 @@ class FiringRateModel : public BaseNeuronModel<FiringRateModel__Neuron, FiringRa
 							 int startsynapses,
 							 int endsynapses );
 
-	virtual void inheritState( NeuronModel *parent );
-
 	virtual void dump( std::ostream &out );
 	virtual void load( std::istream &in );
 

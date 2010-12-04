@@ -3596,14 +3596,6 @@ void TSimulation::MateLockstep( void )
 		birthPrint( "step %ld: agent # %ld born to %ld & %ld, at (%g,%g,%g), yaw=%g, energy=%g, domain %d (%d & %d), neurgroups=%d\n",
 			fStep, e->Number(), c->Number(), d->Number(), e->x(), e->y(), e->z(), e->yaw(), e->Energy(), kd, id, jd, e->GetBrain()->NumNeuronGroups() );
 
-		if( brain::gNeuralValues.model == brain::NeuralValues::SPIKING )
-		{
-			if (randpw() >= .5)
-				e->GetBrain()->InheritState( c->GetBrain() );
-			else
-				e->GetBrain()->InheritState( d->GetBrain() );
-		}
-
 		Birth( e, LifeSpan::BR_LOCKSTEP, c, d );
 									
 	}	// end of loop 'for( int count=0; count<fLockstepNumBirthsAtTimestep; count++ )'
@@ -3821,24 +3813,6 @@ void TSimulation::Mate( agent *c,
 
 							e->Energy(eenergy);
 							e->FoodEnergy(eenergy);
-
-							if( brain::gNeuralValues.model == brain::NeuralValues::SPIKING )
-							{
-								assert( false );
-								// This is just screwy. I never fixed it because I didn't want
-								// to alter the RNG sequence so that I could verify correctness of
-								// changes I was making. We should just unconditionally invoke
-								// the randpw() and call InheritState, regardless of neuron model.
-								// However, the randpw() must be invoked by the master thread
-								// that constructs this task. The number must then be passed to
-								// this task. Note that c and d are the two parents.
-								/*
-								  if (randpw() >= .5)
-								  e->GetBrain()->InheritState( c->GetBrain() );
-								  else
-								  e->GetBrain()->InheritState( d->GetBrain() );
-								*/
-							}
 						}
 					};
 

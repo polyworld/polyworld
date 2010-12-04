@@ -61,8 +61,6 @@ class NeuronModel
 	virtual void set_groupblrate( int group,
 								  float value ) = 0;
 
-	virtual void inheritState( NeuronModel *parent ) = 0;
-
 	virtual void update( bool bprint ) = 0;
 
 	virtual void dumpAnatomical( AbstractFile *file ) = 0;

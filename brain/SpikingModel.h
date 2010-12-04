@@ -64,8 +64,6 @@ class SpikingModel : public BaseNeuronModel<SpikingModel__Neuron, SpikingModel__
 	virtual void dump( std::ostream &out );
 	virtual void load( std::istream &in );
 
-	virtual void inheritState( NeuronModel *parent );
-
 	virtual void update( bool bprint );
 
  private:
