@@ -2926,62 +2926,80 @@ void TSimulation::UpdateAgents()
 //---------------------------------------------------------------------------
 void TSimulation::UpdateAgents_StaticTimestepGeometry()
 {
-	//************************************************************
-	//************************************************************
-	//************************************************************
-	//*****
-	//***** BEGIN PARALLEL REGION
-	//*****
-	//************************************************************
-	//************************************************************
-	//************************************************************
-	fUpdateBrainQueue.reset();
+	if( fParallelBrains )
+	{
+		//************************************************************
+		//************************************************************
+		//************************************************************
+		//*****
+		//***** BEGIN PARALLEL REGION
+		//*****
+		//************************************************************
+		//************************************************************
+		//************************************************************
+		fUpdateBrainQueue.reset();
 
 #pragma omp parallel
-	{
-		//////////////////////////////////////////////////
-		//// MASTER ONLY
-		//////////////////////////////////////////////////
+		{
+			//////////////////////////////////////////////////
+			//// MASTER ONLY
+			//////////////////////////////////////////////////
 #pragma omp master
-		{
-			fStage.Compile();
-			objectxsortedlist::gXSortedObjects.reset();
-
-			agent *avision = NULL;
-
-			while (objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&avision))
 			{
-				avision->UpdateVision();
+				fStage.Compile();
+				objectxsortedlist::gXSortedObjects.reset();
 
-				fUpdateBrainQueue.post( avision );
+				agent *avision = NULL;
+
+				while (objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&avision))
+				{
+					avision->UpdateVision();
+
+					fUpdateBrainQueue.post( avision );
+				}
+
+				fUpdateBrainQueue.endOfPosts();
+
+				fStage.Decompile();
 			}
 
-			fUpdateBrainQueue.endOfPosts();
-
-			fStage.Decompile();
-		}
-
-		//////////////////////////////////////////////////
-		//// MASTER & SLAVES
-		//////////////////////////////////////////////////
-		{
-			agent *abrain = NULL;
-
-			while( fUpdateBrainQueue.fetch(&abrain) )
+			//////////////////////////////////////////////////
+			//// MASTER & SLAVES
+			//////////////////////////////////////////////////
 			{
-				abrain->UpdateBrain();
+				agent *abrain = NULL;
+
+				while( fUpdateBrainQueue.fetch(&abrain) )
+				{
+					abrain->UpdateBrain();
+				}
 			}
 		}
+		//************************************************************
+		//************************************************************
+		//************************************************************
+		//*****
+		//***** END PARALLEL REGION
+		//*****
+		//************************************************************
+		//************************************************************
+		//************************************************************
 	}
-	//************************************************************
-	//************************************************************
-	//************************************************************
-	//*****
-	//***** END PARALLEL REGION
-	//*****
-	//************************************************************
-	//************************************************************
-	//************************************************************
+	else
+	{
+		fStage.Compile();
+		objectxsortedlist::gXSortedObjects.reset();
+
+		agent *a = NULL;
+
+		while (objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&a))
+		{
+			a->UpdateVision();
+			a->UpdateBrain();
+		}
+
+		fStage.Decompile();
+	}
 
 	// ---
 	// --- Body (Serial)
@@ -5795,6 +5813,15 @@ void TSimulation::ReadWorldFile(const char* filename)
 	else
 	{
 		fParallelInteract = false;
+	}
+
+	if( version >= 55 )
+	{
+		PROP( ParallelBrains );
+	}
+	else
+	{
+		fParallelBrains = false;
 	}
 
     in >> brain::gMinWin; in >> label;

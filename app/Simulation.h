@@ -758,6 +758,7 @@ private:
 	bool fStaticTimestepGeometry;
 	bool fParallelInitAgents;
 	bool fParallelInteract;
+	bool fParallelBrains;
 	bool fGraphics;
 	long fBrainMonitorStride;
 	
