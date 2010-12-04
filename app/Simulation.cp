@@ -1347,8 +1347,6 @@ void TSimulation::Init()
 
     InitMonitoringWindows();
 
-    agent* c = NULL;
-
     if( fNumberFit > 0 )
     {
         fFittest = new FitStruct*[fNumberFit];
@@ -1649,152 +1647,24 @@ void TSimulation::Init()
 
 	if (!fLoadState)
 	{
-		long numSeededDomain;
-		long numSeededTotal = 0;
-		int id;
-		
-		// first handle the individual domains
-		for (id = 0; id < fNumDomains; id++)
+		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+		// ^^^ MASTER TASK ExecInitAgents
+		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+		class ExecInitAgents : public ITask
 		{
-			numSeededDomain = 0;	// reset for each domain
-
-			int limit = min((fMaxNumAgents - (long)objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE)), fDomains[id].initNumAgents);
-			for (int i = 0; i < limit; i++)
+		public:
+			virtual void task_exec( TSimulation *sim )
 			{
-				bool isSeed = false;
-
-				c = agent::getfreeagent(this, &fStage);
-				Q_ASSERT(c != NULL);
-				
-				fNumberCreated++;
-				fNumberCreatedRandom++;
-				fDomains[id].numcreated++;
-				
-				if( numSeededDomain < fDomains[id].numberToSeed )
-				{
-					isSeed = true;
-
-					SeedGenome( c->Number(),
-								c->Genes(),
-								fDomains[id].probabilityOfMutatingSeeds,
-								numSeededDomain + numSeededTotal );
-					numSeededDomain++;
-				}
-				else
-					c->Genes()->randomize();
-
-				c->grow( fMateWait,
-						 fRecordGenomes,
-						 RecordBrainAnatomy( c->Number() ),
-						 RecordBrainFunction( c->Number() ),
-						 fRecordPosition );
-				
-				fFoodEnergyIn += c->FoodEnergy();
-				fStage.AddObject(c);
-				
-				float x = randpw() * (fDomains[id].absoluteSizeX - 0.02) + fDomains[id].startX + 0.01;
-				float z = randpw() * (fDomains[id].absoluteSizeZ - 0.02) + fDomains[id].startZ + 0.01;
-				//float z = -0.01 - randpw() * (globals::worldsize - 0.02);
-				float y = 0.5 * agent::gAgentHeight;
-			#if TestWorld
-				// evenly distribute the agents
-				x = fDomains[id].xleft  +  0.666 * fDomains[id].xsize;
-				z = - globals::worldsize * ((float) (i+1) / (fDomains[id].initNumAgents + 1));
-			#endif
-				if( isSeed )
-				{
-					SetSeedPosition( c, numSeededDomain + numSeededTotal - 1, x, y, z );
-				}
-				else
-				{
-					c->settranslation(x, y, z);
-				}
-				c->SaveLastPosition();
-				
-				if( fRecordPosition )
-					c->RecordPosition();
-				
-				float yaw =  360.0 * randpw();
-			#if TestWorld
-				// point them all the same way
-				yaw = 95.0;
-			#endif
-				c->setyaw(yaw);
-				
-				objectxsortedlist::gXSortedObjects.add(c);	// stores c->listLink
-
-				c->Domain(id);
-				fDomains[id].numAgents++;
-				fNeuronGroupCountStats.add( c->GetBrain()->NumNeuronGroups() );
-
-			#if RecordRandomBrainAnatomies
-				c->GetBrain()->dumpAnatomical( "run/brain/random", "birth", c->Number(), 0.0 );
-			#endif
-
-				Birth( c, LifeSpan::BR_SIMINIT );
+				sim->InitAgents();
 			}
-			
-			numSeededTotal += numSeededDomain;
-		}
-	
-		// Handle global initial creations, if necessary
-		Q_ASSERT( fInitNumAgents <= fMaxNumAgents );
-		
-		while( (int)objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE) < fInitNumAgents )
-		{
-			bool isSeed = true;
+		} execInitAgents;
 
-			c = agent::getfreeagent( this, &fStage );
-			Q_CHECK_PTR(c);
-
-			fNumberCreated++;
-			fNumberCreatedRandom++;
-			
-			if( numSeededTotal < fNumberToSeed )
-			{
-				isSeed = true;
-
-				SeedGenome( c->Number(),
-							c->Genes(),
-							fProbabilityOfMutatingSeeds,
-							numSeededTotal );
-				numSeededTotal++;
-			}
-			else
-				c->Genes()->randomize();
-			c->grow( fMateWait,
-					 fRecordGenomes,
-					 RecordBrainAnatomy( c->Number() ),
-					 RecordBrainFunction( c->Number() ),
-					 fRecordPosition );
-			
-			fFoodEnergyIn += c->FoodEnergy();
-			fStage.AddObject(c);
-			
-			float x =  0.01 + randpw() * (globals::worldsize - 0.02);
-			float z = -0.01 - randpw() * (globals::worldsize - 0.02);
-			float y = 0.5 * agent::gAgentHeight;
-			if( isSeed )
-			{
-				SetSeedPosition( c, numSeededTotal - 1, x, y, z );
-			}
-			else
-			{
-				c->settranslation(x, y, z);
-			}
-
-			float yaw =  360.0 * randpw();
-			c->setyaw(yaw);
-			
-			objectxsortedlist::gXSortedObjects.add(c);	// stores c->listLink
-			
-			id = WhichDomain(x, z, 0);
-			c->Domain(id);
-			fDomains[id].numAgents++;
-			fNeuronGroupCountStats.add( c->GetBrain()->NumNeuronGroups() );
-
-			Birth(c, LifeSpan::BR_SIMINIT );
-		}
+		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		// !!! EXEC MASTER
+		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		fScheduler.execMasterTask( this,
+								   execInitAgents,
+								   !fParallelInitAgents );
 			
 		// Add food to the food patches until they each have their initFoodCount number of food pieces
 		for( int domainNumber = 0; domainNumber < fNumDomains; domainNumber++ )
@@ -1956,6 +1826,206 @@ void TSimulation::Init()
 	inited = true;
 }
 
+//---------------------------------------------------------------------------
+// TSimulation::InitAgents
+//---------------------------------------------------------------------------
+void TSimulation::InitAgents()
+{
+	long numSeededDomain;
+	long numSeededTotal = 0;
+    agent* c = NULL;
+	int id;
+
+	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+	// ^^^ PARALLEL TASK GrowAgent
+	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+	class GrowAgent : public ITask
+	{
+	public:
+		agent *a;
+		GrowAgent( agent *a )
+		{
+			this->a = a;
+		}
+
+		virtual void task_exec( TSimulation *sim )
+		{
+			a->grow( sim->fMateWait,
+					 sim->fRecordGenomes,
+					 sim->RecordBrainAnatomy( a->Number() ),
+					 sim->RecordBrainFunction( a->Number() ),
+					 sim->fRecordPosition );
+
+
+#if RecordRandomBrainAnatomies
+			a->GetBrain()->dumpAnatomical( "run/brain/random", "birth", a->Number(), 0.0 );
+#endif
+		}
+	};
+
+	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+	// ^^^ SERIAL TASK UpdateStats
+	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+	class UpdateStats : public ITask
+	{
+	public:
+		agent *a;
+		UpdateStats( agent *a )
+		{
+			this->a = a;
+		}
+
+		virtual void task_exec( TSimulation *sim )
+		{
+			sim->fNeuronGroupCountStats.add( a->GetBrain()->NumNeuronGroups() );
+			sim->fFoodEnergyIn += a->FoodEnergy();
+			if( sim->fRecordPosition )
+				a->RecordPosition();
+		}
+	};
+
+		
+	// first handle the individual domains
+	for (id = 0; id < fNumDomains; id++)
+	{
+		numSeededDomain = 0;	// reset for each domain
+
+		int limit = min((fMaxNumAgents - (long)objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE)), fDomains[id].initNumAgents);
+		for (int i = 0; i < limit; i++)
+		{
+			bool isSeed = false;
+
+			c = agent::getfreeagent(this, &fStage);
+			Q_ASSERT(c != NULL);
+				
+			fNumberCreated++;
+			fNumberCreatedRandom++;
+			fDomains[id].numcreated++;
+				
+			if( numSeededDomain < fDomains[id].numberToSeed )
+			{
+				isSeed = true;
+
+				SeedGenome( c->Number(),
+							c->Genes(),
+							fDomains[id].probabilityOfMutatingSeeds,
+							numSeededDomain + numSeededTotal );
+				numSeededDomain++;
+			}
+			else
+				c->Genes()->randomize();
+
+			// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+			// !!! POST PARALLEL
+			// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+			fScheduler.postParallel( new GrowAgent(c) );
+				
+			fStage.AddObject(c);
+				
+			float x = randpw() * (fDomains[id].absoluteSizeX - 0.02) + fDomains[id].startX + 0.01;
+			float z = randpw() * (fDomains[id].absoluteSizeZ - 0.02) + fDomains[id].startZ + 0.01;
+			//float z = -0.01 - randpw() * (globals::worldsize - 0.02);
+			float y = 0.5 * agent::gAgentHeight;
+#if TestWorld
+			// evenly distribute the agents
+			x = fDomains[id].xleft  +  0.666 * fDomains[id].xsize;
+			z = - globals::worldsize * ((float) (i+1) / (fDomains[id].initNumAgents + 1));
+#endif
+			if( isSeed )
+			{
+				SetSeedPosition( c, numSeededDomain + numSeededTotal - 1, x, y, z );
+			}
+			else
+			{
+				c->settranslation(x, y, z);
+			}
+			c->SaveLastPosition();
+								
+			float yaw =  360.0 * randpw();
+#if TestWorld
+			// point them all the same way
+			yaw = 95.0;
+#endif
+			c->setyaw(yaw);
+				
+			objectxsortedlist::gXSortedObjects.add(c);	// stores c->listLink
+
+			c->Domain(id);
+			fDomains[id].numAgents++;
+
+			// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+			// !!! POST SERIAL 
+			// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+			fScheduler.postSerial( new UpdateStats(c) );
+
+			Birth( c, LifeSpan::BR_SIMINIT );
+		}
+			
+		numSeededTotal += numSeededDomain;
+	}
+	
+	// Handle global initial creations, if necessary
+	Q_ASSERT( fInitNumAgents <= fMaxNumAgents );
+		
+	while( (int)objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE) < fInitNumAgents )
+	{
+		bool isSeed = true;
+
+		c = agent::getfreeagent( this, &fStage );
+		Q_CHECK_PTR(c);
+
+		fNumberCreated++;
+		fNumberCreatedRandom++;
+			
+		if( numSeededTotal < fNumberToSeed )
+		{
+			isSeed = true;
+
+			SeedGenome( c->Number(),
+						c->Genes(),
+						fProbabilityOfMutatingSeeds,
+						numSeededTotal );
+			numSeededTotal++;
+		}
+		else
+			c->Genes()->randomize();
+
+		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		// !!! POST PARALLEL
+		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		fScheduler.postParallel( new GrowAgent(c) );
+			
+		fStage.AddObject(c);
+			
+		float x =  0.01 + randpw() * (globals::worldsize - 0.02);
+		float z = -0.01 - randpw() * (globals::worldsize - 0.02);
+		float y = 0.5 * agent::gAgentHeight;
+		if( isSeed )
+		{
+			SetSeedPosition( c, numSeededTotal - 1, x, y, z );
+		}
+		else
+		{
+			c->settranslation(x, y, z);
+		}
+
+		float yaw =  360.0 * randpw();
+		c->setyaw(yaw);
+			
+		objectxsortedlist::gXSortedObjects.add(c);	// stores c->listLink
+			
+		id = WhichDomain(x, z, 0);
+		c->Domain(id);
+		fDomains[id].numAgents++;
+
+		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		// !!! POST SERIAL 
+		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		fScheduler.postSerial( new UpdateStats(c) );
+
+		Birth(c, LifeSpan::BR_SIMINIT );
+	}
+}
 
 //---------------------------------------------------------------------------
 // TSimulation::InitNeuralValues
@@ -5707,6 +5777,15 @@ void TSimulation::ReadWorldFile(const char* filename)
 	if( version >= 34 )
 	{
 		PROP( StaticTimestepGeometry );
+	}
+
+	if( version >= 55 )
+	{
+		PROP( ParallelInitAgents );
+	}
+	else
+	{
+		fParallelInitAgents = false;
 	}
 
 	if( version >= 55 )

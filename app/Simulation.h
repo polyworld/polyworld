@@ -439,6 +439,7 @@ private slots:
 	
 private:
 	void Init();
+	void InitAgents();
 	void InitNeuralValues();
 	void InitWorld();
 	void InitMonitoringWindows();
@@ -755,6 +756,7 @@ private:
 	agent** fLeastFit;	// based on heuristic fitness
 	bool fShowVision;
 	bool fStaticTimestepGeometry;
+	bool fParallelInitAgents;
 	bool fParallelInteract;
 	bool fGraphics;
 	long fBrainMonitorStride;

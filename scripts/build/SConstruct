@@ -1,3 +1,5 @@
+PERFORMANCE_PROFILER = False # temp hack. add command-line switch
+
 import os
 import sys
 
@@ -88,16 +90,21 @@ def build_rancheck(env):
 def env_create():
     envs = {}
 
+
     env = env_common = init_env(Environment())
     env.Append( CPPSUFFIXES = ['.cp'] )
-    #cpp_flags = ['-g', '-Wall', '-pg']
     cpp_flags = ['-g', '-Wall']
+
+    if PERFORMANCE_PROFILER:
+        # use the gnu gprof
+        cpp_flags += ['-pg']
+        env.Append( LINKFLAGS = ['-pg'] )
+
     try:
     	cpp_flags += os.environ['CPPFLAGS'].split(' ')
     except KeyError:
     	pass
-    env.Append( CPPFLAGS = cpp_flags )
-    #env.Append( LINKFLAGS = ['-pg'] )
+    env.Append( CPPFLAGS = cpp_flags )    
     env.Append( CPPPATH = find('src',
                                type = 'dir') )
     try:
