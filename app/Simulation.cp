@@ -5711,6 +5711,17 @@ void TSimulation::ReadWorldFile(const char* filename)
 
 #define __PROP(LABEL,VAR)in >> VAR; ReadLabel(in, LABEL); cout << LABEL ses VAR nl;
 #define PROP(NAME) __PROP(#NAME,f##NAME)
+#define __VPROP(LABEL,VAR,VERSION,DEFAULT) \
+	if( version >= VERSION ) \
+	{						 \
+		__PROP(LABEL,VAR);	 \
+	}						 \
+	else					 \
+	{						 \
+		VAR = DEFAULT;		 \
+	}
+#define VPROP(NAME,VERSION,DEFAULT) __VPROP(#NAME,f##NAME,VERSION,DEFAULT)
+		
 
     filebuf fb;
 	if( !Resources::openWorldFile( &fb, filename ) )
@@ -5759,14 +5770,7 @@ void TSimulation::ReadWorldFile(const char* filename)
 	else
 		fMaxSteps = 0;  // don't terminate automatically
 
-	if( version >= 48 )
-	{
-		PROP( EndOnPopulationCrash );
-	}
-	else
-	{
-		fEndOnPopulationCrash = false;
-	}
+	VPROP( EndOnPopulationCrash, 48, false );
 	
 	bool ignoreBool;
     in >> ignoreBool; in >> label;
@@ -5792,37 +5796,10 @@ void TSimulation::ReadWorldFile(const char* filename)
         fShowVision = false;
     cout << "showvision" ses fShowVision nl;
 
-	if( version >= 34 )
-	{
-		PROP( StaticTimestepGeometry );
-	}
-
-	if( version >= 55 )
-	{
-		PROP( ParallelInitAgents );
-	}
-	else
-	{
-		fParallelInitAgents = false;
-	}
-
-	if( version >= 55 )
-	{
-		PROP( ParallelInteract );
-	}
-	else
-	{
-		fParallelInteract = false;
-	}
-
-	if( version >= 55 )
-	{
-		PROP( ParallelBrains );
-	}
-	else
-	{
-		fParallelBrains = false;
-	}
+	VPROP( StaticTimestepGeometry, 34, false );
+	VPROP( ParallelInitAgents, 55, false );
+	VPROP( ParallelInteract, 55, false );
+	VPROP( ParallelBrains, 55, true );
 
     in >> brain::gMinWin; in >> label;
     cout << "minwin" ses brain::gMinWin nl;
@@ -5848,23 +5825,8 @@ void TSimulation::ReadWorldFile(const char* filename)
 		fProbabilityOfMutatingSeeds = 0.0;
 	}
 
-	if( version >= 45 )
-	{
-		PROP( SeedFromFile );
-	}
-	else
-	{
-		fSeedFromFile = false;
-	}
-
-	if( version >= 49 )
-	{
-		PROP( PositionSeedsFromFile );
-	}
-	else
-	{
-		fPositionSeedsFromFile = false;
-	}
+	VPROP( SeedFromFile, 45, false );
+	VPROP( PositionSeedsFromFile, 49, false );
 
     in >> fMiscAgents; in >> label;
     cout << "miscagents" ses fMiscAgents nl;
@@ -5883,14 +5845,7 @@ void TSimulation::ReadWorldFile(const char* filename)
 		cout << "foodrate" ses fFoodRate nl;
 	}
 
-	if( version >= 46 )
-	{
-		PROP( FoodRemoveEnergy );
-	}
-	else
-	{
-		fFoodRemoveEnergy = 0.0f;
-	}
+	VPROP( FoodRemoveEnergy, 46, 0.0f );
 
     in >> fPositionSeed; in >> label;
     cout << "positionSeed" ses fPositionSeed nl;
