@@ -3309,12 +3309,14 @@ void TSimulation::DeathAndStats( void )
 
 	fCurrentNeuronGroupCountStats.reset();
 	fCurrentNeuronCountStats.reset();
+	fCurrentSynapseCountStats.reset();
 	objectxsortedlist::gXSortedObjects.reset();
     while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**) &c ) )
     {
 
 		fCurrentNeuronGroupCountStats.add( c->GetBrain()->NumNeuronGroups() );
 		fCurrentNeuronCountStats.add( c->GetBrain()->GetNumNeurons() );
+		fCurrentSynapseCountStats.add( c->GetBrain()->GetNumSynapses() );
 
         id = c->Domain();						// Determine the domain in which the agent currently is located
 	
@@ -7833,6 +7835,9 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 	list.push_back( strdup( t ) );
 
 	sprintf( t, "CurNeurGroups = %.1f ± %.1f [%lu, %lu]", fCurrentNeuronGroupCountStats.mean(), fCurrentNeuronGroupCountStats.stddev(), (ulong) fCurrentNeuronGroupCountStats.min(), (ulong) fCurrentNeuronGroupCountStats.max() );
+	list.push_back( strdup( t ) );
+
+	sprintf( t, "CurSynapses = %.1f ± %.1f [%lu, %lu]", fCurrentSynapseCountStats.mean(), fCurrentSynapseCountStats.stddev(), (ulong) fCurrentSynapseCountStats.min(), (ulong) fCurrentSynapseCountStats.max() );
 	list.push_back( strdup( t ) );
 
 	if( fRecordPerformanceStats )

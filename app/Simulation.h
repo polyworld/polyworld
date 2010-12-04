@@ -744,6 +744,7 @@ private:
 	Stat fNeuronGroupCountStats;
 	Stat fCurrentNeuronGroupCountStats;
 	Stat fCurrentNeuronCountStats;
+	Stat fCurrentSynapseCountStats;
 	StatRecent fLifeSpanRecentStats;
 	StatRecent fLifeFractionRecentStats;
 

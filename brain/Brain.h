@@ -74,6 +74,7 @@ public:
 
     float BrainEnergy();
     short GetNumNeurons();
+	long  GetNumSynapses();
     short GetNumNonInputNeurons();
 	short NumNeuronGroups();
         
@@ -110,6 +111,7 @@ protected:
 //===========================================================================
 inline float Brain::BrainEnergy() { return energyuse; }
 inline short Brain::GetNumNeurons() { return dims.numneurons; }
+inline long Brain::GetNumSynapses() { return dims.numsynapses; }
 inline short Brain::GetNumNonInputNeurons() { return dims.numNonInputNeurons; }
 inline short Brain::NumNeuronGroups() { return dims.numgroups; }
 
