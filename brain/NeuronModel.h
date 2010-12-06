@@ -25,6 +25,7 @@ class NeuronModel
 		int numneurons;
 		long numsynapses;
 		int numgroups;
+		int numgroupsWithNeurons;
 		
 		int numInputNeurons;
 		int numNonInputNeurons;

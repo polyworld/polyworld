@@ -76,7 +76,7 @@ public:
     short GetNumNeurons();
 	long  GetNumSynapses();
     short GetNumNonInputNeurons();
-	short NumNeuronGroups();
+	short NumNeuronGroups( bool ignoreEmpty );
         
 	void dumpAnatomical( const char* directoryName, const char* suffix, long index, float fitness );
 	AbstractFile* startFunctional( long index );
@@ -113,6 +113,6 @@ inline float Brain::BrainEnergy() { return energyuse; }
 inline short Brain::GetNumNeurons() { return dims.numneurons; }
 inline long Brain::GetNumSynapses() { return dims.numsynapses; }
 inline short Brain::GetNumNonInputNeurons() { return dims.numNonInputNeurons; }
-inline short Brain::NumNeuronGroups() { return dims.numgroups; }
+inline short Brain::NumNeuronGroups( bool ignoreEmpty = true ) { return ignoreEmpty ? dims.numgroupsWithNeurons : dims.numgroups; }
 
 // Macros

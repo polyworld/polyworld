@@ -1365,6 +1365,14 @@ void Brain::Grow( Genome* g )
     mygenes = g;
 
     dims.numgroups = g->getGroupCount(NGT_ANY);
+	dims.numgroupsWithNeurons = 0;
+	for( int i = 0; i < dims.numgroups; i++ )
+	{
+		if( g->getNeuronCount(i) > 0 )
+		{
+			dims.numgroupsWithNeurons++;
+		}
+	}
 
 #if DebugBrainGrow
 	if( DebugBrainGrowPrint )
