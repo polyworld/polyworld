@@ -1,0 +1,565 @@
+#!/usr/bin/env python
+
+from common_functions import err
+
+DEBUG = False
+
+class Container:
+    def __init__( self ):
+        self.parent = None
+        self.props = {}
+        self.order = []
+
+    def add( self, name, value ):
+        if DEBUG:
+            print 'parsed', name, ' as ', value
+        self.props[name] = value
+        self.order.append( name )
+        if isinstance( value, Container ):
+            value.parent = self
+            value.name = name
+
+    def fullname( self, name ):
+        if self.parent == None:
+            return name
+
+        ancestors = self.parent.fullname( self.name )
+        if isinstance( name, int ):
+            return "%s[%d]" % (ancestors, name)
+        else:
+            return "%s.%s" % (ancestors, name)
+
+    def dump( self ):
+        for name in self.order:
+            value = self.props[name]
+            if isinstance(value, Container):
+                value.dump()
+            else:
+                print "%s = %s" % ( self.fullname(name), value )
+
+
+def parse( path ):
+    f = open( path, 'r' )
+
+    def __line():
+        while True:
+            l = f.readline()
+
+            tokens = l.split()
+            n = len(tokens)
+            if n == 1:
+                err( "unexpected format: '%s'" % l )
+
+            if DEBUG:
+                print 'READ LINE:', l
+
+            if n > 0:
+                return tokens[-1], tokens[:-1]
+
+    class local:
+        container = Container()
+
+    def push( name, childContainer ):
+        local.container.add( name, childContainer )
+        local.container = childContainer
+        return childContainer
+
+    def pop( name ):
+        assert( name == local.container.name )
+        local.container = local.container.parent
+
+    wfversion = -1
+
+    def __scalar( name, version, default, func_parse ):
+        if version == None or version <= wfversion:
+            label, val = __line()
+            if len(val) != 1:
+                err( "expecting scalar for %s, found (%s,%s)" % (name, label, val) )
+            val = func_parse( val[0] )
+
+            local.container.add( name, val )
+        else:
+            val = default
+
+        return val
+
+    def __tuple( name, count, version, default, func_parse ):
+        if version == None or version <= wfversion:
+            label, val = __line()
+            if len(val) != count:
+                err( "expecting tuple with %d elements for %s, found (%s,%s)" % (count, name, label, val) )
+            val = map( func_parse, val )
+
+            local.container.add( name, val )
+        else:
+            val = default
+
+
+        return val
+
+    def pint( name, version = None, default = None ):
+        return __scalar(name, version, default, int)
+
+    def pfloat( name, version = None, default = None ):
+        return __scalar(name, version, default, float)
+
+    def pbool( name, version = None, default = None ):
+        return __scalar(name, version, default, lambda x: x != '0' )
+
+    def penum( name, values, version = None, default = None ):
+        val =  __scalar(name, version, default, lambda x: x )
+        assert( val in values )
+        return val
+
+    def pcolor( name, version = None, default = None ):
+        return __tuple( name, 3, version, default, float )
+
+    def pbarrierkeyframe( name ):
+        label, val = __line()
+        if len(val) != 5:
+            err( "expecting barrierkeyframe with 5 elements for %s, found (%s,%s)" % (name, label, val) )
+        val = [int(val[0])] + map( float, val[1:] )
+
+        local.container.add( name, val )
+
+        return val
+
+    def pbarrierpos( name ):
+        label, val = __line()
+        if len(val) != 4:
+            err( "expecting barrierkeyframe with 4 elements for %s, found (%s,%s)" % (name, label, val) )
+        val = map( float, val )
+
+        local.container.add( name, val )
+
+        return val
+
+    def pignore( name ):
+        __line()
+
+            
+
+    wfversion = pint( 'Version' )
+
+    pbool( 'LockStepWithBirthsDeathsLog', 25, False )
+    pint( 'MaxSteps', 18, 0 )
+    pbool( 'EndOnPopulationCrash', 48, False )
+    pignore( 'DoCpuWork' )
+    pint( 'DumpFrequency' )
+    pint( 'StatusFrequency' )
+    pbool( 'Edges' )
+    pbool( 'WrapAround' )
+    pbool( 'Vision' )
+    pbool( 'ShowVision' )
+    pbool( 'StaticTimestepGeometry', 34, False )
+    pbool( 'ParallelInitAgents', 55, False )
+    pbool( 'ParallelInteract', 55, False )
+    pbool( 'ParallelBrains', 55, True )
+    pint( 'MinWin' )
+    pfloat( 'MaxVelocity' )
+    pint( 'MinNumAgents' )
+    pint( 'MaxNumAgents' )
+    pint( 'InitNumAgents' )
+    pint( 'NumberToSeed', 9, 0 )
+    pfloat( 'ProbabilityOfMutatingSeeds', 9, 0.0 )
+    pbool( 'SeedFromFile', 45, False )
+    pbool( 'PositionSeedsFromFile', 49, False )
+    pint( 'MiscAgents' )
+
+    if wfversion >= 32:
+        pint( 'InitFoodCount' )
+        pint( 'MinFoodCount' )
+        pint( 'MaxFoodCount' )
+        pint( 'MaxFoodGrown' )
+        pfloat( 'FoodRate' )
+
+    pfloat( 'FoodRemoveEnergy', 46, 0.0 )
+    pint( 'PositionSeed' )
+    pint( 'GenomeSeed' )
+    pint( 'SimulationSeed', 44, 0.0 )
+    
+    if wfversion < 32:
+        pint( 'MinFoodCount' )
+        pint( 'MaxFoodCount' )
+        pint( 'MaxFoodGrown' )
+        pint( 'InitFoodCount' )
+        pfloat( 'FoodRate' )
+
+    penum( 'AgentsRfood', ['0','1','F'] )
+    pint( 'Fitness1Frequency' )
+    pint( 'Fitness2Frequency' )
+    pint( 'NumberFit' )
+    pint( 'NumberRecentFit', 14, 10 )
+    pfloat( 'EatFitnessParameter' )
+    pfloat( 'MateFitnessParameter' )
+    pfloat( 'MoveFitnessParameter' )
+    pfloat( 'EnergyFitnessParameter' )
+    pfloat( 'AgeFitnessParameter' )
+    pfloat( 'MinFoodEnergy' )
+    pfloat( 'MaxFoodEnergy' )
+    pfloat( 'Size2Energy' )
+    pfloat( 'Eat2Consome' )
+    penum( 'GenomeLayout', ['L','N'], 53, 'L' )
+    pbool( 'EnableMateWaitFeedback', 48, False )
+    pbool( 'EnableSpeedFeedback', 38, False )
+    pbool( 'EnableGive', 38, False )
+    pbool( 'EnableCarry', 39, False )
+    pint( 'MaxCarries', 39, 0 )
+    pbool( 'CarryAgents', 41, True )
+    pbool( 'CarryFood', 41, True )
+    pbool( 'CarryBricks', 41, True )
+    pbool( 'ShieldAgents', 41, False )
+    pbool( 'ShieldFood', 41, False )
+    pbool( 'ShieldBricks', 41, False )
+    pfloat( 'CarryPreventsEat', 41, 0.0 )
+    pfloat( 'CarryPreventsFight', 41, 0.0 )
+    pfloat( 'CarryPreventsGive', 41, 0.0 )
+    pfloat( 'CarryPreventsMate', 41, 0.0 )
+    pignore( 'MinInternalNeurons' )
+    pignore( 'MaxInternalNeurons' )
+    pint( 'MinVisPixels' )
+    pint( 'MaxVisPixels' )
+    pfloat( 'MinMutationRate' )
+    pfloat( 'MaxMutationRate' )
+    pint( 'MinNumCpts' )
+    pint( 'MaxNumCpts' )
+    pint( 'MinLifeSpan' )
+    pint( 'MaxLifeSpan' )
+    pint( 'MateWait' )
+    pint( 'InitMateWait' )
+    pint( 'EatMateSpan', 29, 0 )
+    pfloat( 'MinStrength' )
+    pfloat( 'MaxStrength' )
+    pfloat( 'MinAgentSize' )
+    pfloat( 'MaxAgentSize' )
+    pfloat( 'MinMaxEnergy' )
+    pfloat( 'MaxMaxEnergy' )
+    pfloat( 'MinMateEnergy' )
+    pfloat( 'MaxMateEnergy' )
+    pfloat( 'MinMateFrac' )
+    pfloat( 'MinMaxSpeed' )
+    pfloat( 'MaxMaxSpeed' )
+    pfloat( 'Speed2DPosition' )
+    pfloat( 'Yaw2DYaw' )
+    pfloat( 'MinLRate' )
+    pfloat( 'MaxLRate' )
+    pfloat( 'MinFocus' )
+    pfloat( 'MaxFocus' )
+    pfloat( 'AgentFOV' )
+    pfloat( 'MaxSizeAdvantage' )
+    penum( 'BodyGreenChannel', ['I','L','$float'], 38, 'I' )
+    penum( 'NoseColor', ['L','$float'], 38, 'L' )
+    pfloat( 'Power2Energy' )
+    pfloat( 'Eat2Energy' )
+    pfloat( 'Mate2Energy' )
+    pfloat( 'Fight2Energy' )
+    pfloat( 'MinSizePenalty', 47, 0 )
+    pfloat( 'MaxSizePenalty' )
+    pfloat( 'Speed2Energy' )
+    pfloat( 'Yaw2Energy' )
+    pfloat( 'Light2Energy' )
+    pfloat( 'Focus2Energy' )
+    pfloat( 'Pickup2Energy', 39, 0.5 )
+    pfloat( 'Drop2Energy', 39, 0.001 )
+    pfloat( 'CarryAgent2Energy', 39, 0.05 )
+    pfloat( 'CarryAgentSize2Energy', 39, 0.05 )
+    pfloat( 'CarryFood2Energy', 39, 0.01 )
+    pfloat( 'CarryBrick2Energy', 39, 0.01 )
+    pfloat( 'MaxSynapse2Energy' )
+    pfloat( 'FixedEnergyDrain' )
+    pfloat( 'DecayRate' )
+    pfloat( 'AgentHealingRate', 18, 0.0 )
+    pfloat( 'EatThreshold' )
+    pfloat( 'MateThreshold' )
+    pfloat( 'FightThreshold' )
+    pfloat( 'FightFraction', 43, 1.0 )
+    pfloat( 'GiveThreshold', 38, 0.2 )
+    pfloat( 'GiveFraction', 38, 1.0 )
+    pfloat( 'PickupThreshold', 39, 0.5 )
+    pfloat( 'DropThreshold', 39, 0.5 )
+    pfloat( 'MiscBias' )
+    pfloat( 'MiscInvisSlope' )
+    pfloat( 'LogisticsSlope' )
+    pfloat( 'MaxWeight' )
+    pbool( 'EnableInitWeightRngSeed', 52, False )
+    pint( 'MinInitWeightRngSeed', 52, 0 )
+    pint( 'MaxInitWeightRngSeed', 52, 0 )
+    pfloat( 'InitMaxWeight' )
+    pfloat( 'MinBitProb' )
+    pfloat( 'MaxBitProb' )
+    pbool( 'SolidAgents', 31, False )
+    pbool( 'SolidFood', 31, False )
+    pbool( 'SolidBricks', 31, True )
+    pfloat( 'AgentHeight' )
+    pfloat( 'FoodHeight' )
+    pcolor( 'FoodColor' )
+    pfloat( 'BrickHeight', 47 )
+    pcolor( 'BrickColor', 47, [0.6,0.2,0.2] )
+    pfloat( 'BarrierHeight' )
+    pcolor( 'BarrierColor' )
+    pcolor( 'GroundColor' )
+    pfloat( 'GroundClearance' )
+    pcolor( 'CameraColor' )
+    pfloat( 'CameraRadius' )
+    pfloat( 'CameraHeight' )
+    pfloat( 'CameraRotationRate' )
+    pfloat( 'CameraAngleStart' )
+    pfloat( 'CameraFOV' )
+    pint( 'MonitorAgentRank' )
+    pignore( 'MonitorCritWinWidth' )
+    pignore( 'MonitorCritWinHeight' )
+    pint( 'BrainMonitorStride' )
+    pfloat( 'WorldSize' )
+
+    ###
+    ### Barriers
+    ###
+    numBarriers = pint( 'NumBarriers' )
+    pbool( 'RatioBarrierPositions', 47, False )
+
+    barriers = push( 'Barriers', Container() )
+    for i in range(numBarriers):
+        barrier = push( i, Container() )
+
+        if( wfversion >= 27 ):
+            numKeyFrames = pint( 'NumKeyFrames' )
+            keyFrames = push( 'KeyFrames', Container() )
+            for j in range(numKeyFrames):
+                pbarrierkeyframe( j )
+            pop( 'KeyFrames' )
+        else:
+            pbarrierpos( j )
+
+        pop( i )
+    pop( 'Barriers' )
+
+    if wfversion < 2:
+        return local.container
+
+    pbool( 'MonitorGeneSeparation' )
+    pbool( 'RecordGeneSeparation' )
+
+    if wfversion < 3:
+        return local.container
+
+    pbool( 'ChartBorn' )
+    pbool( 'ChartFitness' )
+    pbool( 'ChartFoodEnergy' )
+    pbool( 'ChartPopulation' )
+    
+    ###
+    ### Domains
+    ###
+    numDomains = pint( 'NumDomains' )
+
+    push( 'Domains', Container() )
+
+    for i in range(numDomains):
+        domain = push( i, Container() )
+
+        if wfversion < 32:
+            pint( 'MinNumAgents' )
+            pint( 'MaxNumAgents' )
+            pint( 'InitNumAgents' )
+            pint( 'NumberToSeed', 9, 0 )
+            pfloat( 'ProbabilityOfMutatingSeeds', 9, 0.0 )
+
+        if wfversion >= 19:
+            pfloat( 'CenterX' )
+            pfloat( 'CenterZ' )
+            pfloat( 'SizeX' )
+            pfloat( 'SizeZ' )
+        
+        if wfversion >= 32:
+            pfloat( 'MinAgentsFraction' )
+            pfloat( 'MaxAgentsFraction' )
+            pfloat( 'InitAgentsFraction' )
+            pfloat( 'InitSeedsFraction' )
+            pfloat( 'ProbabilityOfMutatingSeeds' )
+            pfloat( 'InitFoodFraction' )
+            pfloat( 'MinFoodFraction' )
+            pfloat( 'MaxFoodFraction' )
+            pfloat( 'MaxFoodGrownFraction' )
+            pfloat( 'FoodRate' )
+
+            numFoodPatches = pint( 'NumFoodPatches' )
+            numBrickPatches = pint( 'NumBrickPatches' )
+        else:
+            numFoodPatches = pint( 'NumFoodPatches' )
+            numBrickPatches = pint( 'NumBrickPatches' )
+            pfloat( 'FoodRate' )
+            pint( 'InitFoodCount' )
+            pint( 'MinFoodCount' )
+            pint( 'MaxFoodCount' )
+            pint( 'MaxFoodGrownCount' )
+
+        foodPatches = push( 'FoodPatches', Container() )
+
+        for j in range( numFoodPatches ):
+            push( j , Container() )
+
+            pfloat( 'FoodFraction' )
+
+            if wfversion >= 32:
+                pfloat( 'InitFoodFraction' )
+                pfloat( 'MinFoodFraction' )
+                pfloat( 'MaxFoodFraction' )
+                pfloat( 'MaxFoodGrownFaction' )
+                pfloat( 'FoodRate' )
+            else:
+                pfloat( 'FoodRate' )
+                pint( 'InitFood' )
+                pint( 'MinFood' )
+                pint( 'MaxFood' )
+                pint( 'MaxFoodGrown' )
+            
+            pfloat( 'CenterX' )
+            pfloat( 'CenterY' )
+            pfloat( 'SizeX' )
+            pfloat( 'SizeZ' )
+            penum( 'Shape', ['0','1'] )
+            penum( 'Distribution', ['0','1','2'] )
+            pfloat( 'NeighborhoodSize' )
+            
+            pint( 'Period', 26, 0 )
+            pfloat( 'OnFraction', 26, 0.0 )
+            pfloat( 'Phase', 26, 0.0 )
+            pbool( 'RemoveFood', 26, False )
+
+            pop( j )
+
+        pop( 'FoodPatches' )
+                
+
+        brickPatches = push( 'BrickPatches', Container() )
+
+        for j in range( numBrickPatches ):
+            push( j, Container() )
+
+            pfloat( 'CenterX' )
+            pfloat( 'CenterZ' )
+            pfloat( 'SizeX' )
+            pfloat( 'SizeZ' )
+            pint( 'BrickCount' )
+            penum( 'Shape', ['0','1'] )
+            penum( 'Distribution', ['0','1','2'] )
+            pfloat( 'NeighborhoodSize' )
+
+            pop( j )
+
+        pop( 'BrickPatches' )
+        
+        pop( i )
+    pop( 'Domains' )
+
+    pbool( 'UseProbabilisticFoodPatches', 17, False )
+
+    if wfversion < 5:
+        return local.container
+
+    pbool( 'ChartGeneSeparation' )
+
+    if wfversion < 6:
+        return local.container
+
+    penum( 'NeuronModel', ['F','S','T'], 36, 'F' )
+
+    pfloat( 'TauMin', 50, 0.01 )
+    pfloat( 'TauMax', 50, 1.0 )
+    pfloat( 'TauSeed', 50, 1.0 )
+
+    pint( 'MinInternalNeurGroups' )
+    pint( 'MaxInternalNeurGroups' )
+    pint( 'MinENeurPerGroup' )
+    pint( 'MaxENeurPerGroup' )
+    pint( 'MinINeurPerGroup' )
+    pint( 'MaxINeurPerGroup' )
+    pignore( 'MinBias' )
+    pfloat( 'MaxBias' )
+    pfloat( 'MinBiasLrate' )
+    pfloat( 'MaxBiasLrate' )
+    pfloat( 'MinConnectionDensity' )
+    pfloat( 'MaxConnectionDensity' )
+    pfloat( 'MinTopologicalDistortion' )
+    pfloat( 'MaxTopologicalDistortion' )
+    pbool( 'EnableTopologicalDistortionRngSeed', 50, False )
+    pint( 'MinTopologicalDistortionRngSeed', 50, 0 )
+    pint( 'MaxTopologicalDistortionRngSeed', 50, 255 )
+    pfloat( 'MaxNeuron2Energy' )
+    pint( 'NumPreBirthCycles' )
+    pfloat( 'SeedFightBias', 40, 0.5 )
+    pfloat( 'SeedFightExcitation', 40, 1.0 )
+    pfloat( 'SeedGiveBias', 40, 0.0 )
+
+    if wfversion >= 39:
+        pfloat( 'SeedPickupBias' )
+        pfloat( 'SeedDropBias' )
+        pfloat( 'SeedPickupExcitation' )
+        pfloat( 'SeedDropExcitation' )
+
+    pint( 'OverHeadRank' )
+    pbool( 'AgentTracking' )
+    pfloat( 'MinFoodEnergyAtDeath' )
+    pbool( 'GrayCoding' )
+
+    if wfversion < 7:
+        return local.container
+
+    penum( 'SmiteMode', ['L','R','O'], 21 )
+    pfloat( 'SmiteFrac' )
+    pfloat( 'SmiteAgeFrac' )
+
+    pint( 'NumDepletionSteps', 23, 0 )
+    pbool( 'ApplyLowPopulationAdvantage', 24, False )
+
+    if wfversion < 8:
+        return local.container
+
+    pbool( 'RecordBirthsDeaths', 22, False )
+    pbool( 'RecordPosition', 33, False )
+    pbool( 'RecordContacts', 38, False )
+    pbool( 'RecordCollisions', 38, False )
+    pbool( 'RecordCarry', 42, False )
+
+    pbool( 'BrainAnatomyRecordAll', 11, False )
+    pbool( 'BrainFunctionRecordAll', 11, False )
+    pbool( 'BrainAnatomyRecordSeeds', 12, False )
+    pbool( 'BrainFunctionRecordSeeds', 12, False )
+    pint( 'BestSoFarBrainAnatomyRecordFrequency', 11, False )
+    pint( 'BestSoFarBrainFunctionRecordFrequency', 11, False )
+    pint( 'BestRecentBrainAnatomyRecordFrequency', 14, False )
+    pint( 'BestRecentBrainFunctionRecordFrequency', 14, False )
+    pbool( 'RecordGeneStats', 12, False )
+    pbool( 'RecordPerformanceStats', 35, False )
+    pbool( 'RecordFoodPatchStats', 15, False )
+    
+    if wfversion >= 18:
+        pbool( 'RecordComplexity' )
+        penum( 'ComplexityType', ['0', 'P','A','I','B','D','Z'] )
+        if wfversion >= 30:
+            pfloat( 'ComplexityFitnessWeight' )
+            pfloat( 'HeuristicFitnessWeight' )
+    
+    pbool( 'RecordGenomes', 37, False )
+    pbool( 'RecordSeparations', 38, False )
+    pbool( 'RecordAdamiComplexity', 20, False )
+    pint( 'AdamiComplexityRecordFrequency', 20, 0 )
+
+    pbool( 'CompressFiles', 54, False )
+
+    if wfversion >= 18:
+        penum( 'FogFunction', ['E','L','O'] )
+        pfloat( 'ExpFogDensity' )
+        pint( 'LinearFogEnd' )
+
+    pbool( 'RecordMovie' )
+    
+    return local.container
+
+worldfile = parse( 'worldfiles/worldfile_dynfood' )
+
+template = parse( 'worldfiles/worldfile_shields' )
+
+
+
+worldfile.dump()
