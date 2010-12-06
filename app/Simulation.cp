@@ -5827,8 +5827,9 @@ void TSimulation::ReadWorldFile(const char* filename)
     cout << "positionSeed" ses fPositionSeed nl;
     in >> fGenomeSeed; in >> label;
     cout << "genomeSeed" ses fGenomeSeed nl;
-    in >> fSimulationSeed; in >> label;
-    cout << "simulationSeed" ses fSimulationSeed nl;
+
+
+	VPROP( SimulationSeed, 44, 0 );
 
 	if( version < 32 )
 	{
