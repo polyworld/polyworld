@@ -62,7 +62,7 @@ class Container:
                     value = ' '.join( map(str,value) )
                 print "%-30s %s" % ( value, self.fullname(name) )
 
-    def printNewFormat( self, indent = "" ):
+    def printNewFormat( self, schema = False, indent = "" ):
         def __print( name, data ):
             print "%s%-25s %s" % (indent, name, data)
 
@@ -83,7 +83,7 @@ class Container:
                     #__print( prop.name + " " + open, "" )
                     __print( prop.name +" "+open, "" )
 
-                value.printNewFormat( indent + "  " )
+                value.printNewFormat( schema, indent + "  " )
 
                 if not self.isarray():
                     #__print( close, "" )
@@ -92,21 +92,36 @@ class Container:
                     if prop != lastprop:
                         __print( ",", "" )
             elif prop.type == 'barrierkeyframe':
-                __print( "T", value[0] )
-                __print( "X1", value[1] )
-                __print( "Z1", value[2] )
-                __print( "X2", value[3] )
-                __print( "Z2", value[4] )
+                if schema:
+                    __print( "T", 'int' )
+                    __print( "X1", 'float' )
+                    __print( "Z1", 'float' )
+                    __print( "X2", 'float' )
+                    __print( "Z2", 'float' )
+                else:
+                    __print( "T", value[0] )
+                    __print( "X1", value[1] )
+                    __print( "Z1", value[2] )
+                    __print( "X2", value[3] )
+                    __print( "Z2", value[4] )
             elif prop.type == 'color':
                 __print( prop.name + " {", "" )
                 indent += "  "
-                __print( "R", value[0] )
-                __print( "G", value[1] )
-                __print( "B", value[2] )
+                if schema:
+                    __print( "R", 'float' )
+                    __print( "G", 'float' )
+                    __print( "B", 'float' )
+                else:
+                    __print( "R", value[0] )
+                    __print( "G", value[1] )
+                    __print( "B", value[2] )
                 indent = indent[:-2]
                 __print( "}", "" )
             else:
-                __print( prop.name, prop.value )
+                if schema:
+                    __print( prop.name, prop.type )
+                else:
+                    __print( prop.name, prop.value )
 
 
 ################################################################################
@@ -116,7 +131,7 @@ class Container:
 ###
 ################################################################################
 ################################################################################
-def printNewFormat( container ):
+def printNewFormat( container, schema = False ):
     container.remove( 'NumBarriers' )
     container.remove( 'NumDomains' )
 
@@ -134,7 +149,7 @@ def printNewFormat( container ):
     print '100  Version'
     print
 
-    container.printNewFormat()
+    container.printNewFormat( schema )
 
 ################################################################################
 ################################################################################
@@ -211,8 +226,11 @@ def parse( path ):
     def pbool( name, version = None, default = None ):
         return __scalar(name, version, default, 'bool', lambda x: x != '0' )
 
-    def penum( name, values, version = None, default = None ):
-        val =  __scalar(name, version, default, 'enum', lambda x: x )
+    def penum( name, values, version = None, default = None, values_new = None ):
+        if values_new == None:
+            values_new = values
+        type = 'enum(' + ','.join(values_new) + ')'
+        val =  __scalar(name, version, default, type, lambda x: x )
         assert( val in values )
         return val
 
@@ -290,7 +308,7 @@ def parse( path ):
         pint( 'InitFoodCount' )
         pfloat( 'FoodRate' )
 
-    penum( 'AgentsRfood', ['0','1','F'] )
+    penum( 'AgentsRfood', ['0','1','F'], values_new = ['False','True', 'Fight'] )
     pint( 'Fitness1Frequency' )
     pint( 'Fitness2Frequency' )
     pint( 'NumberFit' )
@@ -667,4 +685,4 @@ def parse( path ):
 worldfile = parse( 'worldfile' )
 
 
-printNewFormat( worldfile )
+printNewFormat( worldfile, True )
