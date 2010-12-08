@@ -4,20 +4,37 @@ from common_functions import err
 
 DEBUG = False
 
+class Property:
+    def __init__( self, name, type, value ):
+        self.name = name
+        self.type = type
+        self.value = value
+
 class Container:
     def __init__( self ):
         self.parent = None
         self.props = {}
         self.order = []
 
-    def add( self, name, value ):
+    def add( self, name, type, value ):
         if DEBUG:
             print 'parsed', name, ' as ', value
-        self.props[name] = value
-        self.order.append( name )
-        if isinstance( value, Container ):
+
+        prop = Property( name, type, value )
+
+        self.props[name] = prop
+        self.order.append( prop )
+        if prop.type == 'container':
             value.parent = self
             value.name = name
+
+    def remove( self, name ):
+        prop = self.props[name]
+        del self.props[name]
+        self.order.remove( prop )
+
+    def get( self, name ):
+        return self.props[ name ]
 
     def fullname( self, name ):
         if self.parent == None:
@@ -29,15 +46,103 @@ class Container:
         else:
             return "%s.%s" % (ancestors, name)
 
-    def dump( self ):
-        for name in self.order:
-            value = self.props[name]
-            if isinstance(value, Container):
-                value.dump()
+    def isarray( self ):
+        return all( map(lambda x: isinstance(x, int), self.props) )
+
+    def printOldFormat( self ):
+        for prop in self.order:
+            value = prop.value
+            name = prop.name
+            if prop.type == 'container':
+                value.printOldFormat()
             else:
-                print "%s = %s" % ( self.fullname(name), value )
+                if isinstance( value, bool ):
+                    value = '1' if value else '0'
+                elif isinstance( value, list ):
+                    value = ' '.join( map(str,value) )
+                print "%-30s %s" % ( value, self.fullname(name) )
+
+    def printNewFormat( self, indent = "" ):
+        def __print( name, data ):
+            print "%s%-25s %s" % (indent, name, data)
 
 
+        lastprop = self.order[-1]
+
+        for prop in self.order:
+            value = prop.value
+
+            if prop.type == 'container':
+                if not self.isarray():
+                    if value.isarray():
+                        open = '['
+                        close = ']'
+                    else:
+                        open = '{'
+                        close = '}'
+                    #__print( prop.name + " " + open, "" )
+                    __print( prop.name +" "+open, "" )
+
+                value.printNewFormat( indent + "  " )
+
+                if not self.isarray():
+                    #__print( close, "" )
+                    __print( close, "" )
+                else:
+                    if prop != lastprop:
+                        __print( ",", "" )
+            elif prop.type == 'barrierkeyframe':
+                __print( "T", value[0] )
+                __print( "X1", value[1] )
+                __print( "Z1", value[2] )
+                __print( "X2", value[3] )
+                __print( "Z2", value[4] )
+            elif prop.type == 'color':
+                __print( prop.name + " {", "" )
+                indent += "  "
+                __print( "R", value[0] )
+                __print( "G", value[1] )
+                __print( "B", value[2] )
+                indent = indent[:-2]
+                __print( "}", "" )
+            else:
+                __print( prop.name, prop.value )
+
+
+################################################################################
+################################################################################
+###
+### FUNCTION printNewFormat()
+###
+################################################################################
+################################################################################
+def printNewFormat( container ):
+    container.remove( 'NumBarriers' )
+    container.remove( 'NumDomains' )
+
+    barriers = container.get( 'Barriers' )
+    for barrier in barriers.value.props.values():
+        barrier.value.remove( 'NumKeyFrames' )
+
+    domains = container.get( 'Domains' )
+    for domain in domains.value.props.values():
+        domain.value.remove( 'NumFoodPatches' )
+        domain.value.remove( 'NumBrickPatches' )
+
+    container.remove( 'Version' )
+    
+    print '100  Version'
+    print
+
+    container.printNewFormat()
+
+################################################################################
+################################################################################
+###
+### FUNCTION parse()
+###
+################################################################################
+################################################################################
 def parse( path ):
     f = open( path, 'r' )
 
@@ -60,7 +165,7 @@ def parse( path ):
         container = Container()
 
     def push( name, childContainer ):
-        local.container.add( name, childContainer )
+        local.container.add( name, 'container', childContainer )
         local.container = childContainer
         return childContainer
 
@@ -70,27 +175,27 @@ def parse( path ):
 
     wfversion = -1
 
-    def __scalar( name, version, default, func_parse ):
+    def __scalar( name, version, default, type, func_parse ):
         if version == None or version <= wfversion:
             label, val = __line()
             if len(val) != 1:
                 err( "expecting scalar for %s, found (%s,%s)" % (name, label, val) )
             val = func_parse( val[0] )
 
-            local.container.add( name, val )
+            local.container.add( name, type, val )
         else:
             val = default
 
         return val
 
-    def __tuple( name, count, version, default, func_parse ):
+    def __tuple( name, count, version, default, type, func_parse ):
         if version == None or version <= wfversion:
             label, val = __line()
             if len(val) != count:
                 err( "expecting tuple with %d elements for %s, found (%s,%s)" % (count, name, label, val) )
             val = map( func_parse, val )
 
-            local.container.add( name, val )
+            local.container.add( name, type, val )
         else:
             val = default
 
@@ -98,21 +203,21 @@ def parse( path ):
         return val
 
     def pint( name, version = None, default = None ):
-        return __scalar(name, version, default, int)
+        return __scalar(name, version, default, 'int', int)
 
     def pfloat( name, version = None, default = None ):
-        return __scalar(name, version, default, float)
+        return __scalar(name, version, default, 'float', float)
 
     def pbool( name, version = None, default = None ):
-        return __scalar(name, version, default, lambda x: x != '0' )
+        return __scalar(name, version, default, 'bool', lambda x: x != '0' )
 
     def penum( name, values, version = None, default = None ):
-        val =  __scalar(name, version, default, lambda x: x )
+        val =  __scalar(name, version, default, 'enum', lambda x: x )
         assert( val in values )
         return val
 
     def pcolor( name, version = None, default = None ):
-        return __tuple( name, 3, version, default, float )
+        return __tuple( name, 3, version, default, 'color', float )
 
     def pbarrierkeyframe( name ):
         label, val = __line()
@@ -120,7 +225,7 @@ def parse( path ):
             err( "expecting barrierkeyframe with 5 elements for %s, found (%s,%s)" % (name, label, val) )
         val = [int(val[0])] + map( float, val[1:] )
 
-        local.container.add( name, val )
+        local.container.add( name, 'barrierkeyframe', val )
 
         return val
 
@@ -130,7 +235,7 @@ def parse( path ):
             err( "expecting barrierkeyframe with 4 elements for %s, found (%s,%s)" % (name, label, val) )
         val = map( float, val )
 
-        local.container.add( name, val )
+        local.container.add( name, 'barrierpos', val )
 
         return val
 
@@ -325,7 +430,9 @@ def parse( path ):
             numKeyFrames = pint( 'NumKeyFrames' )
             keyFrames = push( 'KeyFrames', Container() )
             for j in range(numKeyFrames):
+                push( j, Container() )
                 pbarrierkeyframe( j )
+                pop( j )
             pop( 'KeyFrames' )
         else:
             pbarrierpos( j )
@@ -556,10 +663,8 @@ def parse( path ):
     
     return local.container
 
-worldfile = parse( 'worldfiles/worldfile_dynfood' )
-
-template = parse( 'worldfiles/worldfile_shields' )
-
+#worldfile = parse( 'worldfiles/worldfile_dynfood' )
+worldfile = parse( 'worldfile' )
 
 
-worldfile.dump()
+printNewFormat( worldfile )
