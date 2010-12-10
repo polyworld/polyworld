@@ -3,6 +3,7 @@
 #include <istream>
 #include <list>
 #include <map>
+#include <stack>
 
 namespace PropertyFile
 {
@@ -42,7 +43,7 @@ namespace PropertyFile
 			OBJECT
 		};
 
-		Property( Identifier id );
+		Property( Identifier id, bool _isArray = false );
 		Property( Identifier id, const char *val );
 		virtual ~Property();
 
@@ -60,10 +61,13 @@ namespace PropertyFile
 		void dump( std::ostream &out, const char *indent = "" );
 
 	private:
+		friend class Parser;
+
 		char *getscalar( Identifier id );
 
 		Type type;
 		Identifier id;
+		bool isArray;
 
 		typedef std::map<Identifier, Property *> PropertyMap;
 		union
@@ -97,10 +101,12 @@ namespace PropertyFile
 
 	private:
 		typedef std::list<char *> StringList;
+		typedef std::stack<Property *> PropertyStack;
 
 		static char *readline( std::istream &in );
 		static void tokenize( char *line, StringList &list );
-		static void addProperty( Document *doc, StringList &tokens );
-		static void parsePath( char *label, StringList &path );
+		static void processLine( Document *doc,
+								 PropertyStack &propertyStack,
+								 StringList &tokens );
 	};
 };

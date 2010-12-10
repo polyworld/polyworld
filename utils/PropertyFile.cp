@@ -78,10 +78,11 @@ namespace PropertyFile
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
 
-	Property::Property( Identifier _id )
+	Property::Property( Identifier _id, bool _isArray )
 		: id( _id )
+		, isArray( _isArray )
 	{
-		type = OBJECT;
+		type =  OBJECT;
 		oval = new PropertyMap();
 	}
 
@@ -167,10 +168,18 @@ namespace PropertyFile
 
 		if( type == OBJECT )
 		{
+			if( isArray )
+			{
+				out << " [";
+			}
 			out << endl;
 			itfor( PropertyMap, *oval, it )
 			{
 				it->second->dump( out, (string(indent) + "  ").c_str() );
+			}
+			if( isArray )
+			{
+				out << indent << "]" << endl;
 			}
 		}
 		else
@@ -220,6 +229,9 @@ namespace PropertyFile
 	Document *Parser::parse( const char *path )
 	{
 		Document *doc = new Document( path );
+		PropertyStack propertyStack;
+
+		propertyStack.push( doc );
 
 		ifstream in( path );
 		char *line;
@@ -231,7 +243,9 @@ namespace PropertyFile
 			StringList tokens;
 			tokenize( line, tokens );
 
-			addProperty( doc, tokens );
+			processLine( doc,
+						 propertyStack,
+						 tokens );
 
 			freeall( tokens );
 			delete line;
@@ -302,109 +316,91 @@ namespace PropertyFile
 		}
 	}
 
-	void Parser::addProperty( Document *doc, StringList &tokens )
+	void Parser::processLine( Document *doc,
+							  PropertyStack &propertyStack,
+							  StringList &tokens )
 	{
-		assert( tokens.size() > 1 );
-
-		char *label = tokens.back();
-		StringList path;
-		Property *parent = doc;
+		size_t ntokens = tokens.size();
+		char *nameToken = tokens.front();
+		char *valueToken = tokens.back();
 		
-		parsePath( label, path );
 
-		for( StringList::iterator
-				 it = path.begin(),
-				 end = --path.end();
-			 it != end;
-			 it++ )
+		if( 0 == strcmp("]", valueToken) )
 		{
-			Property *child = parent->get( *it );
+			assert( ntokens == 1 );
 
-			if( child == NULL )
+			if( !propertyStack.top()->isArray )
 			{
-				child = new Property( *it );
-				parent->add( child );
+				// close out the object for the last element.
+				propertyStack.pop();
+
+				assert( propertyStack.top()->isArray );
 			}
 
-			parent = child;
-		}
-
-		if( tokens.size() == 2 )
-		{
-			Property *prop = new Property( path.back(), tokens.front() );
-			parent->add( prop );
+			propertyStack.pop();
 		}
 		else
 		{
-			Property *list = new Property( path.back() );
-			parent->add( list );
-
-			int index = 0;
-			for( StringList::iterator
-					 it = tokens.begin(),
-					 end = --tokens.end();
-				 it != end;
-				 it++ )
+			if( propertyStack.top()->isArray )
 			{
-				Property *element = new Property( index++, *it );
-				list->add( element );
+				// we need a container for the coming element.
+
+				Property *prop = new Property( propertyStack.top()->oval->size() );
+				propertyStack.top()->add( prop );
+				propertyStack.push( prop );				
+			}
+
+			if( 0 == strcmp("{", valueToken) )
+			{
+				assert( ntokens == 2 );
+
+				char *objectName = nameToken;
+			
+				Property *prop = new Property( objectName );
+				propertyStack.top()->add( prop );
+				propertyStack.push( prop );
+			}
+			else if( 0 == strcmp("}", valueToken) )
+			{
+				assert( ntokens == 1 );
+
+				propertyStack.pop();
+			}
+			else if( 0 == strcmp("[", valueToken) )
+			{
+				assert( ntokens == 2 );
+
+				char *arrayName = nameToken;
+			
+				Property *propArray = new Property( arrayName, true );
+				propertyStack.top()->add( propArray );
+				propertyStack.push( propArray );
+			}
+			else if( 0 == strcmp(",", valueToken) )
+			{
+				propertyStack.pop();
+			}
+			else
+			{
+				assert( ntokens == 2 );
+
+				char *propName = nameToken;
+				char *value = valueToken;
+
+				Property *prop = new Property( propName, value );
+			
+				propertyStack.top()->add( prop );
 			}
 		}
-
-		freeall( path );
-	}
-
-	void Parser::parsePath( char *label, StringList &path )
-	{
-	    char *start = label;
-		char *end;
-
-#define ADDID() \
-		if( end != start)									\
-		{													\
-			path.push_back( strndup(start, end - start) );	\
-			start = end + 1;								\
-		}													\
-		else												\
-		{													\
-			start++;										\
-		}
-
-		for( end = start; *end; end++ )
-		{
-			switch( *end )
-			{
-			case '[':
-			case ']':
-			case '.':
-				ADDID();
-			break;
-			}
-		}
-
-		ADDID();
 	}
 }
+
 
 #if 0
 using namespace PropertyFile;
 
 int main( int argc, char **argv )
 {
-	/*
-	Document doc("Doc");
-	Property *array = new Property("array");
-	Property *iprop = new Property("iprop", 42);
-
-	doc.add( array );
-	doc.add( iprop );
-
-	cout << doc.getName() << endl;
-	cout << doc["array"].getName() << endl;
-	cout << doc.get( "iprop", -1 ) << endl;
-	cout << doc.get( "iprop_bad", -1 ) << endl;
-	*/
-	
 	Document *_doc = Parser::parse( "foo.txt" );
 	Document &doc = *_doc;
 
