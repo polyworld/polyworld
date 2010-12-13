@@ -39,32 +39,49 @@ namespace PropertyFile
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
 
-	Identifier::Identifier( const char *name )
+	Identifier::Identifier( const string &name )
 	{
-		this->name = strdup( name );
+		this->name = name;
 	}
 
 	Identifier::Identifier( int index )
 	{
 		char buf[32];
 		sprintf( buf, "%d", index );
-		this->name = strdup( buf );
+		this->name = buf;
+	}
+
+	Identifier::Identifier( unsigned int index )
+	{
+		char buf[32];
+		sprintf( buf, "%u", index );
+		this->name = buf;
+	}
+
+	Identifier::Identifier( size_t index )
+	{
+		char buf[32];
+		sprintf( buf, "%lu", index );
+		this->name = buf;
+	}
+
+	Identifier::Identifier( const char *name)
+	{
+		this->name = name;
 	}
 
 	Identifier::Identifier( const Identifier &other )
 	{
-		this->name = strdup( other.name );
+		this->name = other.name;
 	}
 
 	Identifier::~Identifier()
 	{
-		free( this->name );
-		this->name = NULL;
 	}
 
 	const char *Identifier::getName() const
 	{
-		return this->name;
+		return this->name.c_str();
 	}
 
 	bool operator<( const Identifier &a, const Identifier &b )
@@ -74,20 +91,48 @@ namespace PropertyFile
 
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
+	// --- CLASS DocumentLocation
+	// ----------------------------------------------------------------------
+	// ----------------------------------------------------------------------
+	DocumentLocation::DocumentLocation( Document *_doc, unsigned int _lineno )
+		: doc( _doc )
+		, lineno( _lineno )
+	{
+	}
+
+	string DocumentLocation::getDescription()
+	{
+		char buf[1024 * 4];
+
+		sprintf( buf, "%s:%u", doc->getName(), lineno );
+
+		return buf;
+	}
+
+	void DocumentLocation::err( string msg )
+	{
+		fprintf( stderr, "%s:%u: %s\n", doc->getName(), lineno, msg.c_str() );
+		exit( 1 );
+	}
+
+	// ----------------------------------------------------------------------
+	// ----------------------------------------------------------------------
 	// --- CLASS Property
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
 
-	Property::Property( Identifier _id, bool _isArray )
-		: id( _id )
+	Property::Property( DocumentLocation _loc, Identifier _id, bool _isArray )
+		: loc(_loc)
+		, id( _id )
 		, isArray( _isArray )
 	{
 		type =  OBJECT;
 		oval = new PropertyMap();
 	}
 
-	Property::Property( Identifier _id, const char *val )
-		: id( _id )
+	Property::Property( DocumentLocation _loc, Identifier _id, const char *val )
+		: loc( _loc )
+		, id( _id )
 	{
 		type = SCALAR;
 		sval = strdup( val );
@@ -117,42 +162,68 @@ namespace PropertyFile
 		return id.getName();
 	}
 
-	Property *Property::get( Identifier id )
+	Property &Property::get( Identifier id )
+	{
+		assert( type == OBJECT );
+
+		Property *prop = getp( id );
+
+		if( prop == NULL )
+		{
+			err( string("Expecting property '") + id.getName() + "' for '" + getName() + "'");
+		}
+
+		return *prop;
+	}
+
+	Property *Property::getp( Identifier id )
 	{
 		assert( type == OBJECT );
 
 		return (*oval)[ id ];
 	}
 
-	int Property::get( Identifier id, int def )
+	Property::operator int()
 	{
-		char *val = getscalar( id );
-		if( val == NULL )
-		{
-			return def;
-		}
+		int ival;
 
-		char *end;
-		int ival = (int)strtol( sval, &end, 10 );
-		assert( *end == '\0' );
+		if( (type != SCALAR) || !Parser::parseInt(sval, &ival) )
+		{
+			err( string("Expecting INT value for property '") + getName() + "'." );
+		}
 
 		return ival;
 	}
 
-	bool Property::get( Identifier id, bool def )
+	Property::operator float()
 	{
-		char *val = getscalar( id );
-		if( val == NULL )
+		float fval;
+
+		if( (type != SCALAR) || !Parser::parseFloat(sval, &fval) )
 		{
-			return def;
+			err( string("Expecting FLOAT value for property '") + getName() + "'." );
 		}
 
-		return 0 != strcmp( val, "0" );
+		return fval;
 	}
 
-	Property &Property::operator[]( Identifier id )
+	Property::operator bool()
 	{
-		return *get( id );
+		bool bval;
+
+		if( (type != SCALAR) || !Parser::parseBool(sval, &bval) )
+		{
+			err( string("Expecting BOOL value for property '") + getName() + "'." );
+		}
+
+		return bval;
+	}
+
+	Property::operator string()
+	{
+		assert( type == SCALAR );
+
+		return string( sval );
 	}
 
 	void Property::add( Property *prop )
@@ -162,8 +233,14 @@ namespace PropertyFile
 		(*oval)[ prop->id ] = prop;
 	}
 
+	void Property::err( string message )
+	{
+		loc.err( message );
+	}
+
 	void Property::dump( ostream &out, const char *indent )
 	{
+		out << loc.getDescription() << " ";
 		out << indent << getName();
 
 		if( type == OBJECT )
@@ -179,6 +256,7 @@ namespace PropertyFile
 			}
 			if( isArray )
 			{
+				out << loc.getDescription() << " ";
 				out << indent << "]" << endl;
 			}
 		}
@@ -189,30 +267,14 @@ namespace PropertyFile
 
 	}
 
-	char *Property::getscalar( Identifier id )
-	{
-		assert( type == OBJECT );
-
-		Property *prop = get( id );
-
-		if( prop == NULL )
-		{
-			return NULL;
-		}
-		
-		assert( prop->type == SCALAR );
-
-		return prop->sval;
-	}
-
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
 	// --- CLASS Document
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
 
-	Document::Document( Identifier id )
-		: Property( id )
+	Document::Document( const char *name )
+		: Property( DocumentLocation(this,0), string(name) )
 	{
 	}
 
@@ -229,6 +291,7 @@ namespace PropertyFile
 	Document *Parser::parse( const char *path )
 	{
 		Document *doc = new Document( path );
+		DocumentLocation loc( doc, 0 );
 		PropertyStack propertyStack;
 
 		propertyStack.push( doc );
@@ -236,14 +299,13 @@ namespace PropertyFile
 		ifstream in( path );
 		char *line;
 
-		while( (line = readline(in)) != NULL )
+		while( (line = readline(in, loc)) != NULL )
 		{
-			cout << "'" << line << "'" << endl;
-
 			StringList tokens;
 			tokenize( line, tokens );
 
 			processLine( doc,
+						 loc,
 						 propertyStack,
 						 tokens );
 
@@ -251,10 +313,92 @@ namespace PropertyFile
 			delete line;
 		}
 
+		if( propertyStack.size() > 1 )
+		{
+			loc.err( "Unexpected end of document. Likely missing '}' or ']'" );
+		}
+
 		return doc;
 	}
 
-	char *Parser::readline( istream &in )
+	bool Parser::isValidIdentifier( const char *text )
+	{
+		bool valid = false;
+
+		if( isalpha(*text) )
+		{
+			valid = true;
+
+			for( const char *c = text; *c && valid; c++ )
+			{
+				valid = isalnum(*c);
+			}
+		}
+
+		return valid;
+	}
+
+	bool Parser::parseInt( const char *text, int *result )
+	{
+		char *end;
+		int ival = (int)strtol( text, &end, 10 );
+		if( *end != '\0' )
+		{
+			return false;
+		}
+
+		if( result != NULL )
+		{
+			*result = ival;
+		}
+
+		return true;
+	}
+
+	bool Parser::parseFloat( const char *text, float *result )
+	{
+		char *end;
+		float fval = (float)strtof( text, &end );
+		if( *end != '\0' )
+		{
+			return false;
+		}
+
+		if( result != NULL )
+		{
+			*result = fval;
+		}
+
+		return true;
+	}
+
+	bool Parser::parseBool( const char *text, bool *result )
+	{
+		bool bval;
+
+		if( 0 == strcmp(text, "True") )
+		{
+			bval = true;
+		}
+		else if( 0 == strcmp(text, "False") )
+		{
+			bval = false;
+		}
+		else
+		{
+			return false;
+		}
+
+		if( result != NULL )
+		{
+			*result = bval;
+		}
+
+		return true;
+	}
+
+	char *Parser::readline( istream &in,
+							DocumentLocation &loc )
 	{
 		char buf[1024 * 4];
 		char *result = NULL;
@@ -268,6 +412,8 @@ namespace PropertyFile
 			}
 
 			char *line = buf;
+
+			loc.lineno++;
 
 			// remove comments
 			{
@@ -317,97 +463,524 @@ namespace PropertyFile
 	}
 
 	void Parser::processLine( Document *doc,
+							  DocumentLocation &loc,
 							  PropertyStack &propertyStack,
 							  StringList &tokens )
 	{
 		size_t ntokens = tokens.size();
-		char *nameToken = tokens.front();
-		char *valueToken = tokens.back();
+		string nameToken = tokens.front();
+		string valueToken = tokens.back();
 		
 
-		if( 0 == strcmp("]", valueToken) )
+		if( valueToken == "]" )
 		{
-			assert( ntokens == 1 );
+			if( ntokens != 1 )
+			{
+				loc.err( "Expecting only ']'" );
+			}
+			if( propertyStack.size() < 2 )
+			{
+				loc.err( "Extraneous ']'" );
+			}
 
+			
 			if( !propertyStack.top()->isArray )
 			{
 				// close out the object for the last element.
 				propertyStack.pop();
 
-				assert( propertyStack.top()->isArray );
+				if( !propertyStack.top()->isArray )
+				{
+					loc.err( "Unexpected ']'." );
+				}
+
+				if( propertyStack.size() < 2 )
+				{
+					loc.err( "Extraneous ']'" );
+				}
+			}
+			else
+			{
+				Property *propArray = propertyStack.top();
+				int nelements = (int)propArray->oval->size();
+
+				if( nelements > 0 )
+				{
+					if( propArray->get(0).type == Property::OBJECT )
+					{
+						// we must have had a hanging ','. We force an empty object as a final element.
+						propArray->add( new Property( loc, nelements ) );
+					}
+				}
 			}
 
 			propertyStack.pop();
 		}
 		else
 		{
+			bool isScalarArray = false;
+
 			if( propertyStack.top()->isArray )
 			{
-				// we need a container for the coming element.
+				Property *propArray = propertyStack.top();
 
-				Property *prop = new Property( propertyStack.top()->oval->size() );
-				propertyStack.top()->add( prop );
-				propertyStack.push( prop );				
+				// If this is the first element.
+				if( propArray->oval->size() == 0 )
+				{
+					if( (ntokens == 1) && (valueToken != ",") )
+					{
+						isScalarArray = true;
+					}
+				}
+				else
+				{
+					isScalarArray = propArray->get(0).type == Property::SCALAR;
+				}
+
+				if( !isScalarArray )
+				{
+					// we need a container for the coming element.
+					size_t index = propertyStack.top()->oval->size();
+					Property *prop = new Property( loc, index );
+					propertyStack.top()->add( prop );
+					propertyStack.push( prop );
+				}
 			}
 
-			if( 0 == strcmp("{", valueToken) )
+			if( isScalarArray )
 			{
-				assert( ntokens == 2 );
+				if( ntokens != 1 )
+				{
+					loc.err( "Expecting only 1 token in scalar array element." );
+				}
+				if( valueToken == "," )
+				{
+					loc.err( "Commas not allowed in scalar array." );
+				}
 
-				char *objectName = nameToken;
-			
-				Property *prop = new Property( objectName );
-				propertyStack.top()->add( prop );
-				propertyStack.push( prop );
-			}
-			else if( 0 == strcmp("}", valueToken) )
-			{
-				assert( ntokens == 1 );
-
-				propertyStack.pop();
-			}
-			else if( 0 == strcmp("[", valueToken) )
-			{
-				assert( ntokens == 2 );
-
-				char *arrayName = nameToken;
-			
-				Property *propArray = new Property( arrayName, true );
-				propertyStack.top()->add( propArray );
-				propertyStack.push( propArray );
-			}
-			else if( 0 == strcmp(",", valueToken) )
-			{
-				propertyStack.pop();
+				size_t index = propertyStack.top()->oval->size();
+				propertyStack.top()->add( new Property(loc, index, valueToken.c_str()) );
 			}
 			else
 			{
-				assert( ntokens == 2 );
+				if( valueToken == "{" )
+				{
+					if( ntokens != 2 )
+					{
+						loc.err( "Expecting 'NAME {'" );
+					}
 
-				char *propName = nameToken;
-				char *value = valueToken;
-
-				Property *prop = new Property( propName, value );
+					string &objectName = nameToken;
 			
-				propertyStack.top()->add( prop );
+					Property *prop = new Property( loc, objectName );
+					propertyStack.top()->add( prop );
+					propertyStack.push( prop );
+				}
+				else if( valueToken == "}" )
+				{
+					if( ntokens != 1 )
+					{
+						loc.err( "Expecting '}' only." );
+					}
+
+					if( propertyStack.size() < 2 )
+					{
+						loc.err( "Extraneous '}'" );
+					}
+
+					propertyStack.pop();
+				}
+				else if( valueToken == "[" )
+				{
+					if( ntokens != 2 )
+					{
+						loc.err( "Expecting 'NAME ['" );
+					}
+
+					string &arrayName = nameToken;
+			
+					Property *propArray = new Property( loc, arrayName, true );
+					propertyStack.top()->add( propArray );
+					propertyStack.push( propArray );
+				}
+				else if( valueToken == "," )
+				{
+					if( ntokens != 1 )
+					{
+						loc.err( "Expecting comma only." );
+					}
+
+					propertyStack.pop();
+				}
+				else
+				{
+					if( ntokens != 2 )
+					{
+						loc.err( "Expecting 'NAME VALUE'" );
+					}
+
+					string &propName = nameToken;
+					string &value = valueToken;
+
+					if( !isValidIdentifier(propName.c_str()) )
+					{
+						loc.err( "Invalid name: " + propName );
+					}
+
+					Property *prop = new Property( loc, propName, value.c_str() );
+			
+					propertyStack.top()->add( prop );
+				}
+			}
+		}
+	}
+
+	// ----------------------------------------------------------------------
+	// ----------------------------------------------------------------------
+	// --- CLASS Schema
+	// ----------------------------------------------------------------------
+	// ----------------------------------------------------------------------
+
+	void Schema::apply( Document *docSchema, Document *docValues )
+	{
+		validateChildren( *docSchema, *docValues );
+	}
+
+	void Schema::validateChildren( Property &propSchema, Property &propValue )
+	{
+		assert( propSchema.type == Property::OBJECT );
+		assert( propValue.type == Property::OBJECT );
+
+		itfor( Property::PropertyMap, *(propValue.oval), it )
+		{
+			Property *childValue = it->second;
+			Property *childSchema = propSchema.getp( childValue->id );
+
+			if( childSchema == NULL )
+			{
+				childValue->err( string(childValue->getName()) + " not in schema." );
+			}
+
+			validateProperty( *childSchema, *childValue );
+		}
+	}
+
+	void Schema::validateProperty(  Property &propSchema, Property &propValue )
+	{
+		string name = propValue.getName();
+		Property &propType = propSchema.get( "type" );
+		string type = propType;
+
+		// --
+		// -- Verify the value is of the correct type.
+		// --
+		if( type == "INT" )
+		{
+			(int)propValue;
+		}
+		else if( type == "FLOAT" )
+		{
+			(float)propValue;
+		}
+		else if( type == "BOOL" )
+		{
+			(bool)propValue;
+		}
+		else if( type == "ARRAY" )
+		{
+			if( !propValue.isArray )
+			{
+				propValue.err( string("Expecting ARRAY value for property '") + propValue.getName() + "'" );
+			}
+		}
+		else if( type == "OBJECT" )
+		{
+			if( (propValue.type != Property::OBJECT) || propValue.isArray )
+			{
+				propValue.err( string("Expecting OBJECT value for property '") + propValue.getName() + "'" );
+			}
+		}
+		else if( type == "ENUM" )
+		{
+			Property &propEnumValues = propSchema.get( "values" );
+			if( !propEnumValues.isArray )
+			{
+				propEnumValues.err( "Expecting array of enum values." );
+			}
+
+			bool valid = false;
+
+			itfor( Property::PropertyMap, *(propEnumValues.oval), it )
+			{
+				if( (string)propValue == (string)*(it->second) )
+				{
+					valid = true;
+					break;
+				}
+			}
+
+			if( !valid )
+			{
+				Property *propScalar = propSchema.getp( "scalar" );
+				if( propScalar )
+				{
+					string scalarType = propScalar->get( "type" );
+					if( scalarType == "INT" || scalarType == "FLOAT" || scalarType == "BOOL" )
+					{
+						validateProperty( *propScalar, propValue );
+						valid = true;
+					}
+					else
+					{
+						propScalar->err( "Invalid scalar type for enum." );
+					}
+				}
+			}
+
+			if( !valid )
+			{
+				propValue.err( "Invalid enum value." );
+			}
+		}
+		else
+		{
+			propType.err( string("Invalid type '") + type + "'"  );
+		}
+
+		// --
+		// -- Iterate over schema attributes for this property.
+		// --
+		itfor( Property::PropertyMap, *propSchema.oval, it )
+		{
+			string attrName = it->first.getName();
+			Property &attrVal = *(it->second);
+
+			// --
+			// -- min
+			// --
+			if( attrName == "min" )
+			{
+				if( type == "ARRAY" )
+				{
+					bool valid = propValue.isArray
+						&& (int)propValue.oval->size() >= (int)attrVal;
+
+					if( !valid )
+					{
+						propValue.err( name + " element count less than min " + (string)attrVal );
+					}
+				}
+				else
+				{
+					bool valid = true;
+
+					if( type == "INT" )
+					{
+						valid = (int)propValue >= (int)attrVal;
+					}
+					else if( type == "FLOAT" )
+					{
+						valid = (float)propValue >= (float)attrVal;
+					}
+					else
+					{
+						propSchema.err( string("'min' is not valid for type ") + type );
+					}
+
+					if( !valid )
+					{
+						propValue.err( (string)propValue + " less than min " + (string)attrVal );
+					}
+				}
+			}
+
+			// --
+			// -- xmin
+			// --
+			else if( attrName == "xmin" )
+			{
+				if( type == "ARRAY" )
+				{
+					bool valid = propValue.isArray
+						&& (int)propValue.oval->size() > (int)attrVal;
+
+					if( !valid )
+					{
+						propValue.err( name + " element count <= xmin " + (string)attrVal );
+					}
+				}
+				else
+				{
+					bool valid = true;
+
+					if( type == "INT" )
+					{
+						valid = (int)propValue > (int)attrVal;
+					}
+					else if( type == "FLOAT" )
+					{
+						valid = (float)propValue > (float)attrVal;
+					}
+					else
+					{
+						propSchema.err( string("'xmin' is not valid for type ") + type );
+					}
+
+					if( !valid )
+					{
+						propValue.err( (string)propValue + " <= xmin " + (string)attrVal );
+					}
+				}
+			}
+
+			// --
+			// -- max
+			// --
+			else if( attrName == "max" )
+			{
+				if( type == "ARRAY" )
+				{
+					bool valid = propValue.isArray
+						&& (int)propValue.oval->size() <= (int)attrVal;
+
+					if( !valid )
+					{
+						propValue.err( name + " element count greater than max " + (string)attrVal );
+					}
+				}
+				else
+				{
+					bool valid = true;
+
+					if( type == "INT" )
+					{
+						valid = (int)propValue <= (int)attrVal;
+					}
+					else if( type == "FLOAT" )
+					{
+						valid = (float)propValue <= (float)attrVal;
+					}
+					else
+					{
+						propSchema.err( string("'max' is not valid for type ") + type );
+					}
+
+					if( !valid )
+					{
+						propValue.err( (string)propValue + " greater than max " + (string)attrVal );
+					}
+				}
+			}
+
+			// --
+			// -- xmax
+			// --
+			else if( attrName == "xmax" )
+			{
+				if( type == "ARRAY" )
+				{
+					bool valid = propValue.isArray
+						&& (int)propValue.oval->size() < (int)attrVal;
+
+					if( !valid )
+					{
+						propValue.err( name + " element count >= than xmax " + (string)attrVal );
+					}
+				}
+				else
+				{
+					bool valid = true;
+
+					if( type == "INT" )
+					{
+						valid = (int)propValue < (int)attrVal;
+					}
+					else if( type == "FLOAT" )
+					{
+						valid = (float)propValue < (float)attrVal;
+					}
+					else
+					{
+						propSchema.err( string("'xmax' is not valid for type ") + type );
+					}
+
+					if( !valid )
+					{
+						propValue.err( (string)propValue + " >= xmax " + (string)attrVal );
+					}
+				}
+			}
+
+			// --
+			// -- element
+			// --
+			else if( attrName == "element" )
+			{
+				if( type != "ARRAY" )
+				{
+					attrVal.err( "'element' only valid for ARRAY" );
+				}
+
+				itfor( Property::PropertyMap, *(propValue.oval), itelem )
+				{
+					validateProperty( attrVal, *itelem->second );
+				}
+
+			}
+
+			// --
+			// -- values & scalar
+			// --
+			else if( attrName == "values" || attrName == "scalar" )
+			{
+				// These attributes were handled prior to this loop.
+				if( type != "ENUM" )
+				{
+					attrVal.err( string("Invalid schema attribute for non-ENUM type.") );
+				}
+			}
+
+			// --
+			// -- properties
+			// --
+			else if( attrName == "properties" )
+			{
+				if( type != "OBJECT" )
+				{
+					attrVal.err( "'properties' only valid for OBJECT type." );
+				}
+
+				validateChildren( attrVal, propValue );
+			}
+
+			// --
+			// -- Invalid attr
+			// --
+			else if( (attrName != "type") && (attrName != "default") )
+			{
+				attrVal.err( string("Invalid schema attribute '") + attrName + "'" );
 			}
 		}
 	}
 }
-
 
 #if 0
 using namespace PropertyFile;
 
 int main( int argc, char **argv )
 {
-	Document *_doc = Parser::parse( "foo.txt" );
-	Document &doc = *_doc;
+	Document *docValues = Parser::parse( "values.txt" );
+	Document *docSchema = Parser::parse( "schema.txt" );
 
-	doc.dump( cout );
+	docValues->dump( cout );
+	docSchema->dump( cout );
 
-	delete _doc;
+	Schema::apply( docSchema, docValues );
+
+	delete docValues;
+	delete docSchema;
 	
 	return 0;
 }
+
 #endif
