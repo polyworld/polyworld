@@ -1035,7 +1035,7 @@ namespace PropertyFile
 	}
 }
 
-
+#if 0
 using namespace PropertyFile;
 
 int main( int argc, char **argv )
@@ -1054,3 +1054,4 @@ int main( int argc, char **argv )
 	return 0;
 }
 
+#endif
