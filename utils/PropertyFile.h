@@ -144,7 +144,7 @@ namespace PropertyFile
 
 		static char *readline( std::istream &in,
 							   DocumentLocation &loc );
-		static void tokenize( char *line, StringList &list );
+		static void tokenize( DocumentLocation &loc, char *line, StringList &list );
 		static void processLine( Document *doc,
 								 DocumentLocation &loc,
 								 PropertyStack &propertyStack,

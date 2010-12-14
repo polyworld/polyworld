@@ -302,7 +302,7 @@ namespace PropertyFile
 		while( (line = readline(in, loc)) != NULL )
 		{
 			StringList tokens;
-			tokenize( line, tokens );
+			tokenize( loc, line, tokens );
 
 			processLine( doc,
 						 loc,
@@ -451,14 +451,85 @@ namespace PropertyFile
 		return result;
 	}
 
-	void Parser::tokenize( char *line, StringList &list )
+	void Parser::tokenize( DocumentLocation &loc,
+						   char *line,
+						   StringList &list )
 	{
-		char *saveptr;
-		char *tok;
+		char *start = NULL;
+		char *end;
+		int paren = 0;
 
-		for( ; (tok = strtok_r(line, " \t\n", &saveptr)) != NULL; line = NULL )
+#define ADDTOK( END )											\
+		if( start )												\
+		{														\
+			list.push_back( strndup(start, (END) - start) );	\
+			start = NULL;										\
+			paren = 0;											\
+		}
+
+		for( end = line; *end; end++ )
 		{
-			list.push_back( strdup(tok) );
+			bool expr = paren > 0;
+
+			if( !start )
+			{
+				if( *end == '$' && *(end + 1) == '(' )
+				{
+					start = end;
+					end++;
+					paren++;
+					expr = true;
+				}
+				else if( !isspace(*end) )
+				{
+					start = end;
+				}
+			}
+			else
+			{
+				if( paren )
+				{
+					if( *end == '(' )
+					{
+						paren++;
+					}
+					else if( *end == ')' )
+					{
+						if( --paren == 0 )
+						{
+							ADDTOK( end + 1 );
+						}
+					}
+				}
+				else
+				{
+					if( isspace(*end) )
+					{
+						ADDTOK( end );
+					}
+				}
+			}
+
+			if( !expr )
+			{
+				if( *end == '(' )
+				{
+					loc.err( "Unexpected '('" );
+				}
+				else if( *end == ')' )
+				{
+					loc.err( "Unexpected ')'" );
+				}
+			}
+		}
+
+		if( paren )
+		{
+			loc.err( "Missing ')'" );
+		}
+		else
+		{
+			ADDTOK( end );
 		}
 	}
 
@@ -964,7 +1035,7 @@ namespace PropertyFile
 	}
 }
 
-#if 0
+
 using namespace PropertyFile;
 
 int main( int argc, char **argv )
@@ -973,9 +1044,9 @@ int main( int argc, char **argv )
 	Document *docSchema = Parser::parse( "schema.txt" );
 
 	docValues->dump( cout );
-	docSchema->dump( cout );
+	//docSchema->dump( cout );
 
-	Schema::apply( docSchema, docValues );
+	//Schema::apply( docSchema, docValues );
 
 	delete docValues;
 	delete docSchema;
@@ -983,4 +1054,3 @@ int main( int argc, char **argv )
 	return 0;
 }
 
-#endif
