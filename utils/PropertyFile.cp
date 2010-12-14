@@ -33,6 +33,61 @@ namespace PropertyFile
 		l.clear();
 	}
 
+	bool eval( const char *expr,
+			   map<string,string> symbols,
+			   char *result, size_t result_size )
+	{
+		string locals = "{";
+		for(map<string,string>::iterator
+				it = symbols.begin(),
+				itend = symbols.end();
+			it != itend;
+			it++ )
+		{
+			locals.append( "'" + it->first + "': " + it->second );
+			locals.append( "," ); // python allows final dangling comma
+		}
+		locals.append( "}" );
+
+		char script[1024 * 4];
+		sprintf( script,
+				 "import sys\n"
+				 "try:\n"
+				 "  print eval('%s', %s)\n"
+				 "except:\n"
+				 "  print sys.exc_info()[1]\n"
+				 "  sys.exit(1)\n",
+				 expr,
+				 locals.c_str());
+
+		char cmd[1024 * 4];
+		sprintf( cmd, "python -c \"%s\"", script );
+
+		FILE *f = popen( cmd, "r" );
+
+		char *result_orig = result;
+
+		size_t n;
+		while( (result_size > 0) && (n = fread(result, 1, result_size, f)) != 0 )
+		{
+			result[n] = 0;
+			result += n;
+			result_size -= n;
+		}
+
+		int rc = pclose( f );
+
+		for( char *tail = result - 1; tail >= result_orig; tail-- )
+		{
+			if( *tail == '\n' )
+				*tail = 0;
+			else
+				break;
+		}
+
+		return rc == 0;
+	}
+
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
 	// --- CLASS Identifier
@@ -122,20 +177,43 @@ namespace PropertyFile
 	// ----------------------------------------------------------------------
 
 	Property::Property( DocumentLocation _loc, Identifier _id, bool _isArray )
-		: loc(_loc)
+		: parent( NULL )
+		, symbolSource( NULL )
+		, loc( _loc )
 		, id( _id )
 		, isArray( _isArray )
+		, isExpr( false )
+		, isEval( false )
 	{
 		type =  OBJECT;
 		oval = new PropertyMap();
 	}
 
 	Property::Property( DocumentLocation _loc, Identifier _id, const char *val )
-		: loc( _loc )
+		: parent( NULL )
+		, symbolSource( NULL )
+		, loc( _loc )
 		, id( _id )
+		, isEval( false )
 	{
 		type = SCALAR;
-		sval = strdup( val );
+
+		size_t n = strlen( val );
+		isExpr = (n > 3) && (val[0] == '$') && (val[1] == '(') && (val[n - 1] == ')');
+		if( isExpr )
+		{
+			val += 2; n -= 2; // skip $(
+			n -= 1; // ignore )
+
+			for( ; isspace(*val); val++, n-- ) {}
+			for( ; isspace(val[n - 1]); n-- ) {}
+
+			sval = strndup( val, n );
+		}
+		else
+		{
+			sval = strdup( val );
+		}
 	}
 
 	Property::~Property()
@@ -183,11 +261,35 @@ namespace PropertyFile
 		return (*oval)[ id ];
 	}
 
+	Property *Property::find( Identifier id )
+	{
+		if( symbolSource != NULL )
+		{
+			return symbolSource->find( id );
+		}
+		else
+		{
+			Property *result = NULL;
+
+			if( type == OBJECT )
+			{
+				result = getp( id );
+			}
+
+			if( result == NULL && parent != NULL )
+			{
+				result = parent->find( id );
+			}
+
+			return result;
+		}
+	}
+
 	Property::operator int()
 	{
 		int ival;
 
-		if( (type != SCALAR) || !Parser::parseInt(sval, &ival) )
+		if( (type != SCALAR) || !Parser::parseInt(getScalarValue(), &ival) )
 		{
 			err( string("Expecting INT value for property '") + getName() + "'." );
 		}
@@ -199,7 +301,7 @@ namespace PropertyFile
 	{
 		float fval;
 
-		if( (type != SCALAR) || !Parser::parseFloat(sval, &fval) )
+		if( (type != SCALAR) || !Parser::parseFloat(getScalarValue(), &fval) )
 		{
 			err( string("Expecting FLOAT value for property '") + getName() + "'." );
 		}
@@ -211,7 +313,7 @@ namespace PropertyFile
 	{
 		bool bval;
 
-		if( (type != SCALAR) || !Parser::parseBool(sval, &bval) )
+		if( (type != SCALAR) || !Parser::parseBool(getScalarValue(), &bval) )
 		{
 			err( string("Expecting BOOL value for property '") + getName() + "'." );
 		}
@@ -229,6 +331,8 @@ namespace PropertyFile
 	void Property::add( Property *prop )
 	{
 		assert( type == OBJECT );
+
+		prop->parent = this;
 
 		(*oval)[ prop->id ] = prop;
 	}
@@ -264,7 +368,56 @@ namespace PropertyFile
 		{
 			out << " = " << sval << endl;
 		}
+	}
 
+	string Property::getScalarValue()
+	{
+		if( type != SCALAR )
+		{
+			loc.err( "Referenced as scalar, probably from expression." );
+		}
+
+		if( isExpr )
+		{
+			// We eventually want to move the isEval state out of the object and the stack so we are thread safe.
+			if( isEval )
+			{
+				loc.err( "Expression dependency cycle." );
+			}
+			isEval = true;
+
+			map<string, string> symbolTable;
+
+			Parser::StringList ids;
+			Parser::scanIdentifiers( sval, ids );
+
+			itfor( Parser::StringList, ids, it )
+			{
+				Property *prop = find( *it );
+				if( prop != NULL )
+				{
+					symbolTable[ prop->getName() ] = prop->getScalarValue();
+				}
+			}
+
+			char buf[1024];
+
+			bool success = eval( sval, symbolTable,
+								 buf, sizeof(buf) );
+
+			if( !success )
+			{
+				loc.err( buf );
+			}
+
+			isEval = false;
+
+			return buf;
+		}
+		else
+		{
+			return sval;
+		}
 	}
 
 	// ----------------------------------------------------------------------
@@ -301,7 +454,7 @@ namespace PropertyFile
 
 		while( (line = readline(in, loc)) != NULL )
 		{
-			StringList tokens;
+			CStringList tokens;
 			tokenize( loc, line, tokens );
 
 			processLine( doc,
@@ -321,8 +474,9 @@ namespace PropertyFile
 		return doc;
 	}
 
-	bool Parser::isValidIdentifier( const char *text )
+	bool Parser::isValidIdentifier( const string &_text )
 	{
+		const char *text = _text.c_str();
 		bool valid = false;
 
 		if( isalpha(*text) )
@@ -338,10 +492,45 @@ namespace PropertyFile
 		return valid;
 	}
 
-	bool Parser::parseInt( const char *text, int *result )
+	void Parser::scanIdentifiers( const string &_expr, StringList &ids )
+	{
+		const char *expr = _expr.c_str();
+		const char *start = NULL;
+		const char *end = expr;
+
+#define ADDID()												\
+		if( start )											\
+		{													\
+			ids.push_back( string(start, end - start) );	\
+			start = NULL;									\
+		}
+
+		for( end = expr; *end; end++ )
+		{
+			if( !start )
+			{
+				if( isalpha(*end) )
+				{
+					start = end;
+				}
+			}
+			else
+			{
+				if( !isalnum(*end) )
+				{
+					ADDID();
+				}
+			}
+		}
+
+		ADDID();
+	}
+
+
+	bool Parser::parseInt( const string &text, int *result )
 	{
 		char *end;
-		int ival = (int)strtol( text, &end, 10 );
+		int ival = (int)strtol( text.c_str(), &end, 10 );
 		if( *end != '\0' )
 		{
 			return false;
@@ -355,10 +544,10 @@ namespace PropertyFile
 		return true;
 	}
 
-	bool Parser::parseFloat( const char *text, float *result )
+	bool Parser::parseFloat( const string &text, float *result )
 	{
 		char *end;
-		float fval = (float)strtof( text, &end );
+		float fval = (float)strtof( text.c_str(), &end );
 		if( *end != '\0' )
 		{
 			return false;
@@ -372,15 +561,15 @@ namespace PropertyFile
 		return true;
 	}
 
-	bool Parser::parseBool( const char *text, bool *result )
+	bool Parser::parseBool( const string &text, bool *result )
 	{
 		bool bval;
 
-		if( 0 == strcmp(text, "True") )
+		if( text == "True" )
 		{
 			bval = true;
 		}
-		else if( 0 == strcmp(text, "False") )
+		else if( text == "False" )
 		{
 			bval = false;
 		}
@@ -453,7 +642,7 @@ namespace PropertyFile
 
 	void Parser::tokenize( DocumentLocation &loc,
 						   char *line,
-						   StringList &list )
+						   CStringList &list )
 	{
 		char *start = NULL;
 		char *end;
@@ -536,7 +725,7 @@ namespace PropertyFile
 	void Parser::processLine( Document *doc,
 							  DocumentLocation &loc,
 							  PropertyStack &propertyStack,
-							  StringList &tokens )
+							  CStringList &tokens )
 	{
 		size_t ntokens = tokens.size();
 		string nameToken = tokens.front();
@@ -826,6 +1015,8 @@ namespace PropertyFile
 			string attrName = it->first.getName();
 			Property &attrVal = *(it->second);
 
+			attrVal.symbolSource = &propValue;
+
 			// --
 			// -- min
 			// --
@@ -1035,7 +1226,7 @@ namespace PropertyFile
 	}
 }
 
-#if 0
+#ifdef PROPDEV
 using namespace PropertyFile;
 
 int main( int argc, char **argv )
@@ -1043,15 +1234,19 @@ int main( int argc, char **argv )
 	Document *docValues = Parser::parse( "values.txt" );
 	Document *docSchema = Parser::parse( "schema.txt" );
 
-	docValues->dump( cout );
+	//Document *docValues = Parser::parse( "foo.txt" );
+	//docValues->dump( cout );
 	//docSchema->dump( cout );
 
-	//Schema::apply( docSchema, docValues );
+	Schema::apply( docSchema, docValues );
+
+	//cout << (string)*docValues->get( "Expr" ).find( "X" ) << endl;
+
+	//cout << "'" << (float)docValues->get( "Expr" ) << "'" << endl;
 
 	delete docValues;
 	delete docSchema;
 	
 	return 0;
 }
-
 #endif

@@ -81,6 +81,8 @@ namespace PropertyFile
 		Property &get( Identifier id );
 		Property *getp( Identifier id );
 
+		Property *find( Identifier id );
+
 		operator int();
 		operator float();
 		operator bool();
@@ -95,13 +97,19 @@ namespace PropertyFile
 		// We don't allow the copy constructor
 		Property( const Property &copy ) :loc(NULL,-1), id("") { throw "copy not supported."; }
 
+		std::string getScalarValue();
+
 		friend class Parser;
 		friend class Schema;
 
+		Property *parent;
+		Property *symbolSource;
 		DocumentLocation loc;
 		Type type;
 		Identifier id;
 		bool isArray;
+		bool isExpr;
+		bool isEval;
 
 		typedef std::map<Identifier, Property *> PropertyMap;
 		union
@@ -131,24 +139,28 @@ namespace PropertyFile
 	class Parser
 	{
 	public:
+		typedef std::list<char *> CStringList;
+		typedef std::list<std::string> StringList;
+
 		static Document *parse( const char *path );
 
-		static bool isValidIdentifier( const char *text );
-		static bool parseInt( const char *text, int *result );
-		static bool parseFloat( const char *text, float *result );
-		static bool parseBool( const char *text, bool *result );
+		static bool isValidIdentifier( const std::string &text );
+		static void scanIdentifiers( const std::string &expr, StringList &ids );
+
+		static bool parseInt( const std::string &text, int *result );
+		static bool parseFloat( const std::string &text, float *result );
+		static bool parseBool( const std::string &text, bool *result );
 
 	private:
-		typedef std::list<char *> StringList;
 		typedef std::stack<Property *> PropertyStack;
 
 		static char *readline( std::istream &in,
 							   DocumentLocation &loc );
-		static void tokenize( DocumentLocation &loc, char *line, StringList &list );
+		static void tokenize( DocumentLocation &loc, char *line, CStringList &list );
 		static void processLine( Document *doc,
 								 DocumentLocation &loc,
 								 PropertyStack &propertyStack,
-								 StringList &tokens );
+								 CStringList &tokens );
 	};
 
 	// ----------------------------------------------------------------------
