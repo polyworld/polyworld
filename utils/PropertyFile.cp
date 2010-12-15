@@ -263,7 +263,15 @@ namespace PropertyFile
 	{
 		assert( type == OBJECT );
 
-		return (*oval)[ id ];
+		PropertyMap::iterator it = oval->find( id );
+		if( it != oval->end() )
+		{
+			return it->second;
+		}
+		else
+		{
+			return NULL;
+		}
 	}
 
 	Property *Property::find( Identifier id )
@@ -350,6 +358,7 @@ namespace PropertyFile
 		{
 		case SCALAR:
 			clone = new Property( loc, id, sval );
+			clone->isExpr = isExpr;
 			break;
 		case OBJECT:
 			clone = new Property( loc, id, isArray );
@@ -1244,7 +1253,9 @@ namespace PropertyFile
 
 				itfor( Property::PropertyMap, *(propValue.oval), itelem )
 				{
-					validateProperty( attrVal, *itelem->second );
+					Property *elementValue = itelem->second;
+
+					validateProperty( attrVal, *elementValue );
 				}
 
 			}
@@ -1293,15 +1304,7 @@ int main( int argc, char **argv )
 	Document *docValues = Parser::parse( "values.txt" );
 	Document *docSchema = Parser::parse( "schema.txt" );
 
-	//Document *docValues = Parser::parse( "foo.txt" );
-	//docValues->dump( cout );
-	//docSchema->dump( cout );
-
 	Schema::apply( docSchema, docValues );
-
-	//cout << (string)*docValues->get( "Expr" ).find( "X" ) << endl;
-
-	//cout << "'" << (float)docValues->get( "Expr" ) << "'" << endl;
 
 	docValues->dump( cout );
 
