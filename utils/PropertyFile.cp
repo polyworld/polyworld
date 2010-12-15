@@ -949,7 +949,11 @@ namespace PropertyFile
 	void Schema::injectDefaults( Property &propSchema, Property &propValue )
 	{
 		assert( propSchema.type == Property::OBJECT );
-		assert( propValue.type == Property::OBJECT );
+
+		if( propValue.type != Property::OBJECT )
+		{
+			propValue.err( "Expecting OBJECT" );
+		}
 
 		itfor( Property::PropertyMap, *(propSchema.oval), it )
 		{
@@ -969,6 +973,30 @@ namespace PropertyFile
 					propClone->id = childSchema->id;
 
 					propValue.add( propClone );
+				}
+			}
+
+			Property &propType = childSchema->get( "type" );
+			string type = propType;
+			if( type == "OBJECT" )
+			{
+				injectDefaults( childSchema->get("properties"),
+								*childValue );
+			}
+			else if( type == "ARRAY" )
+			{
+				Property &propElement = childSchema->get( "element" );
+				if( (string)propElement.get("type") == "OBJECT" )
+				{
+					Property &propProperties = propElement.get( "properties" );
+
+					itfor( Property::PropertyMap, *(childValue->oval), itelem )
+					{
+						Property *elementValue = itelem->second;
+
+						injectDefaults( propProperties,
+										*elementValue );
+					}
 				}
 			}
 		}
