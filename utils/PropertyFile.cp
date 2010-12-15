@@ -164,6 +164,11 @@ namespace PropertyFile
 		return buf;
 	}
 
+	string DocumentLocation::getPath()
+	{
+		return doc->getName();
+	}
+
 	void DocumentLocation::err( string msg )
 	{
 		fprintf( stderr, "%s:%u: %s\n", doc->getName(), lineno, msg.c_str() );
@@ -335,6 +340,31 @@ namespace PropertyFile
 		prop->parent = this;
 
 		(*oval)[ prop->id ] = prop;
+	}
+
+	Property *Property::clone()
+	{
+		Property *clone = NULL;
+
+		switch( type )
+		{
+		case SCALAR:
+			clone = new Property( loc, id, sval );
+			break;
+		case OBJECT:
+			clone = new Property( loc, id, isArray );
+
+			clone->oval = new PropertyMap();
+			itfor( PropertyMap, *oval, it )
+			{
+				clone->add( it->second->clone() );
+			}
+			break;
+		default:
+			assert( false );
+		}
+
+		return clone;
 	}
 
 	void Property::err( string message )
@@ -903,7 +933,36 @@ namespace PropertyFile
 
 	void Schema::apply( Document *docSchema, Document *docValues )
 	{
+		injectDefaults( *docSchema, *docValues );
 		validateChildren( *docSchema, *docValues );
+	}
+
+	void Schema::injectDefaults( Property &propSchema, Property &propValue )
+	{
+		assert( propSchema.type == Property::OBJECT );
+		assert( propValue.type == Property::OBJECT );
+
+		itfor( Property::PropertyMap, *(propSchema.oval), it )
+		{
+			Property *childSchema = it->second;
+			Property *childValue = propValue.getp( childSchema->id );
+
+			if( childValue == NULL )
+			{
+				Property *propDefault = childSchema->getp( "default" );
+				if( propDefault == NULL )
+				{
+					childSchema->err( string(childSchema->getName()) + " not found in " + propValue.loc.getPath() + "." );
+				}
+				else
+				{
+					Property *propClone = propDefault->clone();
+					propClone->id = childSchema->id;
+
+					propValue.add( propClone );
+				}
+			}
+		}
 	}
 
 	void Schema::validateChildren( Property &propSchema, Property &propValue )
@@ -918,7 +977,7 @@ namespace PropertyFile
 
 			if( childSchema == NULL )
 			{
-				childValue->err( string(childValue->getName()) + " not in schema." );
+				childValue->err( string(childValue->getName()) + " not in schema (" + propSchema.loc.getPath() + ")" );
 			}
 
 			validateProperty( *childSchema, *childValue );
@@ -1243,6 +1302,8 @@ int main( int argc, char **argv )
 	//cout << (string)*docValues->get( "Expr" ).find( "X" ) << endl;
 
 	//cout << "'" << (float)docValues->get( "Expr" ) << "'" << endl;
+
+	docValues->dump( cout );
 
 	delete docValues;
 	delete docSchema;

@@ -46,7 +46,7 @@ namespace PropertyFile
 	public:
 		DocumentLocation( Document *doc, unsigned int lineno );
 
-		Document *getDocument();
+		std::string getPath();
 		std::string getDescription();
 
 		void err( std::string msg );
@@ -89,6 +89,8 @@ namespace PropertyFile
 		operator std::string();
 
 		void add( Property *prop );
+
+		Property *clone();
 
 		void err( std::string message );
 		void dump( std::ostream &out, const char *indent = "" );
@@ -174,6 +176,7 @@ namespace PropertyFile
 		static void apply( Document *docSchema, Document *docValues );
 
 	private:
+		static void injectDefaults( Property &propSchema, Property &propValues );
 		static void validateChildren( Property &propSchema, Property &propValues );
 		static void validateProperty(  Property &propSchema, Property &propValues );
 	};
