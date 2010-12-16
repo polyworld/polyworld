@@ -5,6 +5,7 @@
 #include <map>
 #include <stack>
 #include <string>
+#include <vector>
 
 namespace PropertyFile
 {
@@ -60,10 +61,54 @@ namespace PropertyFile
 
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
+	// --- CLASS Node
+	// ----------------------------------------------------------------------
+	// ----------------------------------------------------------------------
+	class Node
+	{
+	public:
+		enum Type
+		{
+			CONDITION,
+			CLAUSE,
+			PROPERTY
+		};
+
+		Node( DocumentLocation loc,
+			  Type type );
+		virtual ~Node();
+
+		Type getNodeType();
+
+		bool isProp();
+		bool isCond();
+		bool isClause();
+
+		class Property *toProp();
+		class Condition *toCond();
+		class Clause *toClause();
+
+		void err( std::string message );
+
+		virtual void add( Node *node ) = 0;
+		virtual void dump( std::ostream &out, const char *indent = "" ) = 0;
+
+	protected:
+		friend class Parser;
+		friend class Schema;
+
+		DocumentLocation loc;
+
+	private:
+		Type type;
+	};
+
+	// ----------------------------------------------------------------------
+	// ----------------------------------------------------------------------
 	// --- CLASS Property
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
-	class Property
+	class Property : Node
 	{
 	public:
 		enum Type
@@ -88,16 +133,15 @@ namespace PropertyFile
 		operator bool();
 		operator std::string();
 
-		void add( Property *prop );
+		virtual void add( Node *node );
 
 		Property *clone();
-
-		void err( std::string message );
-		void dump( std::ostream &out, const char *indent = "" );
+		virtual void dump( std::ostream &out, const char *indent = "" );
 
 	private:
 		// We don't allow the copy constructor
-		Property( const Property &copy ) :loc(NULL,-1), id("") { throw "copy not supported."; }
+		Property( const Property &copy ) : Node(DocumentLocation(NULL,-1), Node::PROPERTY), id("")
+		{ throw "Property copy not supported."; }
 
 		std::string getScalarValue();
 
@@ -106,7 +150,6 @@ namespace PropertyFile
 
 		Property *parent;
 		Property *symbolSource;
-		DocumentLocation loc;
 		Type type;
 		Identifier id;
 		bool isArray;
@@ -114,11 +157,69 @@ namespace PropertyFile
 		bool isEval;
 
 		typedef std::map<Identifier, Property *> PropertyMap;
+		typedef std::list<Condition *> ConditionList;
 		union
 		{
 			char *sval;
-			PropertyMap *oval;
+			struct
+			{
+				PropertyMap *oval;
+				ConditionList *cond;
+			};
 		};
+	};
+
+	// ----------------------------------------------------------------------
+	// ----------------------------------------------------------------------
+	// --- CLASS Condition
+	// ----------------------------------------------------------------------
+	// ----------------------------------------------------------------------
+	class Condition : public Node
+	{
+	public:
+		Condition( DocumentLocation loc );
+		virtual ~Condition();
+
+		virtual void add( Node *node );
+
+		virtual void dump( std::ostream &out, const char *indent = "" );
+
+	private:
+		typedef std::list<Clause *> ClauseList;
+
+		ClauseList clauses;
+	};
+
+	// ----------------------------------------------------------------------
+	// ----------------------------------------------------------------------
+	// --- CLASS Clause
+	// ----------------------------------------------------------------------
+	// ----------------------------------------------------------------------
+	class Clause : public Node
+	{
+	public:
+		enum Type
+		{
+			IF,
+			ELIF,
+			ELSE
+		};
+
+		Clause( DocumentLocation loc, Type type, std::string expr = "True" );
+		virtual ~Clause();
+
+		bool isIf();
+		bool isElif();
+		bool isElse();
+
+		virtual void add( Node *node );
+
+		virtual void dump( std::ostream &out, const char *indent = "" );
+
+	private:
+		Type type;
+		std::string expr;
+		Property *rootProp;
 	};
 
 	// ----------------------------------------------------------------------
@@ -141,7 +242,7 @@ namespace PropertyFile
 	class Parser
 	{
 	public:
-		typedef std::list<char *> CStringList;
+		typedef std::vector<char *> CStringList;
 		typedef std::list<std::string> StringList;
 
 		static Document *parse( const char *path );
@@ -154,14 +255,14 @@ namespace PropertyFile
 		static bool parseBool( const std::string &text, bool *result );
 
 	private:
-		typedef std::stack<Property *> PropertyStack;
+		typedef std::stack<Node *> NodeStack;
 
 		static char *readline( std::istream &in,
 							   DocumentLocation &loc );
 		static void tokenize( DocumentLocation &loc, char *line, CStringList &list );
 		static void processLine( Document *doc,
 								 DocumentLocation &loc,
-								 PropertyStack &propertyStack,
+								 NodeStack &nodeStack,
 								 CStringList &tokens );
 	};
 

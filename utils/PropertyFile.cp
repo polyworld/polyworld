@@ -24,15 +24,6 @@ namespace PropertyFile
 		cout << endl;
 	}
 
-	static void freeall( list<char *> &l )
-	{
-		itfor( list<char *>, l, it )
-		{
-			free( *it );
-		}
-		l.clear();
-	}
-
 	bool eval( const char *expr,
 			   map<string,string> symbols,
 			   char *result, size_t result_size )
@@ -177,14 +168,76 @@ namespace PropertyFile
 
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
+	// --- CLASS Node
+	// ----------------------------------------------------------------------
+	// ----------------------------------------------------------------------
+	Node::Node( DocumentLocation _loc,
+				Type _type )
+		: loc( _loc )
+		, type( _type )
+	{
+	}
+
+	Node::~Node()
+	{
+	}
+
+	Node::Type Node::getNodeType()
+	{
+		return type;
+	}
+
+	bool Node::isProp()
+	{
+		return type == PROPERTY;
+	}
+
+	bool Node::isCond()
+	{
+		return type == CONDITION;
+	}
+
+	bool Node::isClause()
+	{
+		return type == CLAUSE;
+	}
+
+	Property *Node::toProp()
+	{
+		assert( isProp() );
+
+		return (Property *)this;
+	}
+
+	Condition *Node::toCond()
+	{
+		assert( isCond() );
+
+		return (Condition *)this;
+	}
+
+	Clause *Node::toClause()
+	{
+		assert( isClause() );
+
+		return (Clause *)this;
+	}
+
+	void Node::err( string message )
+	{
+		loc.err( message );
+	}
+
+	// ----------------------------------------------------------------------
+	// ----------------------------------------------------------------------
 	// --- CLASS Property
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
 
 	Property::Property( DocumentLocation _loc, Identifier _id, bool _isArray )
-		: parent( NULL )
+		: Node( _loc, Node::PROPERTY )
+		, parent( NULL )
 		, symbolSource( NULL )
-		, loc( _loc )
 		, id( _id )
 		, isArray( _isArray )
 		, isExpr( false )
@@ -192,12 +245,13 @@ namespace PropertyFile
 	{
 		type =  OBJECT;
 		oval = new PropertyMap();
+		cond = new ConditionList();
 	}
 
 	Property::Property( DocumentLocation _loc, Identifier _id, const char *val )
-		: parent( NULL )
+		: Node( _loc, Node::PROPERTY )
+		, parent( NULL )
 		, symbolSource( NULL )
-		, loc( _loc )
 		, id( _id )
 		, isEval( false )
 	{
@@ -231,6 +285,12 @@ namespace PropertyFile
 				delete it->second;
 			}
 			delete oval;
+
+			itfor( ConditionList, *cond, it )
+			{
+				delete *it;
+			}
+			delete cond;
 			break;
 		case SCALAR:
 			free( sval );
@@ -341,13 +401,30 @@ namespace PropertyFile
 		return string( sval );
 	}
 
-	void Property::add( Property *prop )
+	void Property::add( Node *node )
 	{
 		assert( type == OBJECT );
 
-		prop->parent = this;
+		switch( node->getNodeType() )
+		{
+		case PROPERTY:
+			{
+				Property *prop = node->toProp();
+				prop->parent = this;
 
-		(*oval)[ prop->id ] = prop;
+				(*oval)[ prop->id ] = prop;
+			}
+			break;
+		case CONDITION:
+			{
+				Condition *cond = node->toCond();
+				
+				this->cond->push_back( cond );
+			}
+			break;
+		default:
+			assert( false );
+		}
 	}
 
 	Property *Property::clone()
@@ -376,11 +453,6 @@ namespace PropertyFile
 		return clone;
 	}
 
-	void Property::err( string message )
-	{
-		loc.err( message );
-	}
-
 	void Property::dump( ostream &out, const char *indent )
 	{
 		out << loc.getDescription() << " ";
@@ -396,6 +468,10 @@ namespace PropertyFile
 			itfor( PropertyMap, *oval, it )
 			{
 				it->second->dump( out, (string(indent) + "  ").c_str() );
+			}
+			itfor( ConditionList, *cond, it )
+			{
+				(*it)->dump( out, (string(indent) + "  ").c_str() );
 			}
 			if( isArray )
 			{
@@ -461,6 +537,127 @@ namespace PropertyFile
 
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
+	// --- CLASS Condition
+	// ----------------------------------------------------------------------
+	// ----------------------------------------------------------------------
+	Condition::Condition( DocumentLocation _loc )
+		: Node( _loc, Node::CONDITION )
+	{
+	}
+
+	Condition::~Condition()
+	{
+		itfor( ClauseList, clauses, it )
+		{
+			delete *it;
+		}
+	}
+
+	void Condition::add( Node *node )
+	{
+		if( node->isClause() )
+		{
+			Clause *clause = node->toClause();
+
+			if( clauses.size() == 0 )
+			{
+				if( !clause->isIf() )
+				{
+					clause->err( "Expecting 'if'" );
+				}
+
+				clauses.push_back( clause );
+			}
+			else
+			{
+				if( clauses.back()->isElse() )
+				{
+					clause->err( "Cannot follow 'else'" ); 
+				}
+				else if( clause->isIf() )
+				{
+					clause->err( "Unexpected 'if'" );
+				}
+			
+				clauses.push_back( clause );
+			}
+		}
+		else
+		{
+			assert( clauses.size() > 0 );
+
+			clauses.back()->add( node );
+		}
+	}
+
+	void Condition::dump( ostream &out, const char *indent )
+	{
+		out << loc.getDescription() << " ";
+		out << indent << "<CONDITION>" << endl;
+
+		itfor( ClauseList, clauses, it )
+		{
+			(*it)->dump( out, (string(indent) + "  ").c_str() );
+		}
+
+		out << loc.getDescription() << " ";
+		out << indent << "</CONDITION>" << endl;
+	}
+
+
+	// ----------------------------------------------------------------------
+	// ----------------------------------------------------------------------
+	// --- CLASS Clause
+	// ----------------------------------------------------------------------
+	// ----------------------------------------------------------------------
+	
+	Clause::Clause( DocumentLocation _loc, Type _type, string _expr )
+		: Node( _loc, Node::CLAUSE )
+		, type( _type )
+		, expr( _expr )
+	{
+		rootProp = new Property( _loc,
+								 string("Clause-")+loc.getDescription() );
+	}
+
+	Clause::~Clause()
+	{
+		delete rootProp;
+	}
+
+	bool Clause::isIf()
+	{
+		return type == IF;
+	}
+
+	bool Clause::isElif()
+	{
+		return type == ELIF;
+	}
+
+	bool Clause::isElse()
+	{
+		return type == ELSE;
+	}
+
+	void Clause::add( Node *node )
+	{
+		rootProp->add( node );
+	}
+
+	void Clause::dump( ostream &out, const char *indent )
+	{
+		out << loc.getDescription() << " ";
+		out << indent << "<CLAUSE " << expr << ">" << endl;
+
+		rootProp->dump( out, (string(indent) + "  ").c_str() );
+
+		out << loc.getDescription() << " ";
+		out << indent << "</CLAUSE>" << endl;
+	}
+
+	// ----------------------------------------------------------------------
+	// ----------------------------------------------------------------------
 	// --- CLASS Document
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
@@ -484,9 +681,9 @@ namespace PropertyFile
 	{
 		Document *doc = new Document( path );
 		DocumentLocation loc( doc, 0 );
-		PropertyStack propertyStack;
+		NodeStack nodeStack;
 
-		propertyStack.push( doc );
+		nodeStack.push( doc );
 
 		ifstream in( path );
 		char *line;
@@ -498,14 +695,19 @@ namespace PropertyFile
 
 			processLine( doc,
 						 loc,
-						 propertyStack,
+						 nodeStack,
 						 tokens );
 
-			freeall( tokens );
+			itfor( CStringList, tokens, it )
+			{
+				free( *it );
+			}
+			tokens.clear();
+
 			delete line;
 		}
 
-		if( propertyStack.size() > 1 )
+		if( nodeStack.size() > 1 )
 		{
 			loc.err( "Unexpected end of document. Likely missing '}' or ']'" );
 		}
@@ -515,16 +717,19 @@ namespace PropertyFile
 
 	bool Parser::isValidIdentifier( const string &_text )
 	{
-		const char *text = _text.c_str();
 		bool valid = false;
 
-		if( isalpha(*text) )
+		if( (_text != "if") && (_text != "else") && (_text != "elif") )
 		{
-			valid = true;
-
-			for( const char *c = text; *c && valid; c++ )
+			const char *text = _text.c_str();
+			if( isalpha(*text) )
 			{
-				valid = isalnum(*c);
+				valid = true;
+
+				for( const char *c = text; *c && valid; c++ )
+				{
+					valid = isalnum(*c);
+				}
 			}
 		}
 
@@ -763,7 +968,7 @@ namespace PropertyFile
 
 	void Parser::processLine( Document *doc,
 							  DocumentLocation &loc,
-							  PropertyStack &propertyStack,
+							  NodeStack &nodeStack,
 							  CStringList &tokens )
 	{
 		size_t ntokens = tokens.size();
@@ -773,34 +978,37 @@ namespace PropertyFile
 
 		if( valueToken == "]" )
 		{
-			if( ntokens != 1 )
+			if( !nodeStack.top()->isProp() )
+			{
+				loc.err( "Expecting ']' to terminate property, not condition" );
+			}
+			else if( ntokens != 1 )
 			{
 				loc.err( "Expecting only ']'" );
 			}
-			if( propertyStack.size() < 2 )
+			if( nodeStack.size() < 2 )
 			{
 				loc.err( "Extraneous ']'" );
 			}
-
 			
-			if( !propertyStack.top()->isArray )
+			if( !nodeStack.top()->toProp()->isArray )
 			{
 				// close out the object for the last element.
-				propertyStack.pop();
+				nodeStack.pop();
 
-				if( !propertyStack.top()->isArray )
+				if( !nodeStack.top()->toProp()->isArray )
 				{
 					loc.err( "Unexpected ']'." );
 				}
 
-				if( propertyStack.size() < 2 )
+				if( nodeStack.size() < 2 )
 				{
 					loc.err( "Extraneous ']'" );
 				}
 			}
 			else
 			{
-				Property *propArray = propertyStack.top();
+				Property *propArray = nodeStack.top()->toProp();
 				int nelements = (int)propArray->oval->size();
 
 				if( nelements > 0 )
@@ -813,15 +1021,16 @@ namespace PropertyFile
 				}
 			}
 
-			propertyStack.pop();
+			nodeStack.pop();
 		}
 		else
 		{
 			bool isScalarArray = false;
 
-			if( propertyStack.top()->isArray )
+			if( nodeStack.top()->isProp()
+				&& nodeStack.top()->toProp()->isArray )
 			{
-				Property *propArray = propertyStack.top();
+				Property *propArray = nodeStack.top()->toProp();
 
 				// If this is the first element.
 				if( propArray->oval->size() == 0 )
@@ -839,10 +1048,10 @@ namespace PropertyFile
 				if( !isScalarArray )
 				{
 					// we need a container for the coming element.
-					size_t index = propertyStack.top()->oval->size();
+					size_t index = nodeStack.top()->toProp()->oval->size();
 					Property *prop = new Property( loc, index );
-					propertyStack.top()->add( prop );
-					propertyStack.push( prop );
+					nodeStack.top()->add( prop );
+					nodeStack.push( prop );
 				}
 			}
 
@@ -857,23 +1066,77 @@ namespace PropertyFile
 					loc.err( "Commas not allowed in scalar array." );
 				}
 
-				size_t index = propertyStack.top()->oval->size();
-				propertyStack.top()->add( new Property(loc, index, valueToken.c_str()) );
+				size_t index = nodeStack.top()->toProp()->oval->size();
+				nodeStack.top()->add( new Property(loc, index, valueToken.c_str()) );
 			}
 			else
 			{
 				if( valueToken == "{" )
 				{
-					if( ntokens != 2 )
+					if( nameToken == "if" )
 					{
-						loc.err( "Expecting 'NAME {'" );
-					}
+						if( ntokens != 3 )
+						{
+							loc.err( "Expecting 'if EXPR {'" );
+						}
 
-					string &objectName = nameToken;
+						Condition *cond = new Condition( loc );
+						nodeStack.top()->add( cond );
+						nodeStack.push( cond );
+
+						Clause *clause = new Clause( loc, Clause::IF, tokens[1] );
+						cond->add( clause );
+					}
+					else if( nameToken == "}" )
+					{
+						string clauseType = tokens[1];
+
+						if( clauseType == "elif" )
+						{
+							if( ntokens != 4 )
+							{
+								loc.err( "Expecting '} elif EXPR {'" );
+							}
+							if( !nodeStack.top()->isCond() )
+							{
+								loc.err( "Unexpected 'elif'" );
+							}
+
+							Clause *clause = new Clause( loc, Clause::ELIF, tokens[2] );
+							nodeStack.top()->add( clause );
+						}
+						else if( clauseType == "else" )
+						{
+							if( ntokens != 3 )
+							{
+								loc.err( "Expecting '} else {'" );
+							}
+							if( !nodeStack.top()->isCond() )
+							{
+								loc.err( "Unexpected 'else'" );
+							}
+
+							Clause *clause = new Clause( loc, Clause::ELSE );
+							nodeStack.top()->add( clause );
+						}
+						else
+						{
+							loc.err( string("Unexpected '") + tokens[1] + "'" );
+						}
+					}
+					else
+					{
+						if( (ntokens != 2) || !isValidIdentifier(nameToken) )
+						{
+							loc.err( "Expecting 'NAME {'" );
+						}
+
+						string &objectName = nameToken;
 			
-					Property *prop = new Property( loc, objectName );
-					propertyStack.top()->add( prop );
-					propertyStack.push( prop );
+						Property *prop = new Property( loc, objectName );
+						nodeStack.top()->add( prop );
+						nodeStack.push( prop );
+					}
 				}
 				else if( valueToken == "}" )
 				{
@@ -882,12 +1145,12 @@ namespace PropertyFile
 						loc.err( "Expecting '}' only." );
 					}
 
-					if( propertyStack.size() < 2 )
+					if( nodeStack.size() < 2 )
 					{
 						loc.err( "Extraneous '}'" );
 					}
 
-					propertyStack.pop();
+					nodeStack.pop();
 				}
 				else if( valueToken == "[" )
 				{
@@ -899,8 +1162,8 @@ namespace PropertyFile
 					string &arrayName = nameToken;
 			
 					Property *propArray = new Property( loc, arrayName, true );
-					propertyStack.top()->add( propArray );
-					propertyStack.push( propArray );
+					nodeStack.top()->add( propArray );
+					nodeStack.push( propArray );
 				}
 				else if( valueToken == "," )
 				{
@@ -909,7 +1172,7 @@ namespace PropertyFile
 						loc.err( "Expecting comma only." );
 					}
 
-					propertyStack.pop();
+					nodeStack.pop();
 				}
 				else
 				{
@@ -928,7 +1191,7 @@ namespace PropertyFile
 
 					Property *prop = new Property( loc, propName, value.c_str() );
 			
-					propertyStack.top()->add( prop );
+					nodeStack.top()->add( prop );
 				}
 			}
 		}
@@ -1329,16 +1592,27 @@ using namespace PropertyFile;
 
 int main( int argc, char **argv )
 {
-	Document *docValues = Parser::parse( "values.txt" );
-	Document *docSchema = Parser::parse( "schema.txt" );
+	if( false )
+	{
+		Document *docSchema = Parser::parse( "schema.txt" );
 
-	Schema::apply( docSchema, docValues );
+		docSchema->dump( cout );
 
-	docValues->dump( cout );
+		delete docSchema;
+	}
+	else
+	{
+		Document *docValues = Parser::parse( "values.txt.sav.1" );
+		Document *docSchema = Parser::parse( "schema.txt.sav.1" );
 
-	delete docValues;
-	delete docSchema;
-	
+		Schema::apply( docSchema, docValues );
+
+		docValues->dump( cout );
+
+		delete docValues;
+		delete docSchema;
+	}
+
 	return 0;
 }
 #endif
