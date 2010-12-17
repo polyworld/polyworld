@@ -714,8 +714,11 @@ namespace PropertyFile
 
 		ifstream in( path );
 		char *line;
+		bool inMultiLineComment = false;
 
-		while( (line = readline(in, loc)) != NULL )
+		while( (line = readline(in,
+								loc,
+								inMultiLineComment)) != NULL )
 		{
 			CStringList tokens;
 			tokenize( loc, line, tokens );
@@ -730,7 +733,6 @@ namespace PropertyFile
 				free( *it );
 			}
 			tokens.clear();
-
 			delete line;
 		}
 
@@ -858,7 +860,8 @@ namespace PropertyFile
 	}
 
 	char *Parser::readline( istream &in,
-							DocumentLocation &loc )
+							DocumentLocation &loc,
+							bool &inMultiLineComment )
 	{
 		char buf[1024 * 4];
 		char *result = NULL;
@@ -871,19 +874,10 @@ namespace PropertyFile
 				break;
 			}
 
-			char *line = buf;
+			char *line = stripComments( buf, inMultiLineComment );
 
 			loc.lineno++;
-
-			// remove comments
-			{
-				char *comment = strchr( line, '#' );
-				if( comment != NULL )
-				{
-					*comment = '\0';
-				}
-			}
-
+			
 			// remove leading whitespace
 			{
 				for( ; *line != '\0' && isspace(*line); line++ )
@@ -909,6 +903,89 @@ namespace PropertyFile
 		} while( result == NULL );
 
 		return result;
+	}
+
+	char *Parser::stripComments( char *line,
+								 bool &inMultiLineComment )
+	{
+		// process multi-line comments
+		{
+			list< pair<int,int> > contentSegments;
+			bool firstChar = false;
+			int contentStart = -1;
+			int index;
+				
+			if( !inMultiLineComment )
+			{
+				contentStart = 0;
+			}
+
+			for( index = 0; line[index] != '\0'; index++ )
+			{
+				char c = line[index];
+
+				if( !inMultiLineComment )
+				{
+					if( c == '#' )
+					{
+						firstChar = true;
+					}
+					else if( firstChar && (c == '*') )
+					{
+						inMultiLineComment = true;
+						firstChar = false;
+						int contentEnd = index - 2;
+
+						if( (contentStart > -1) && (contentEnd >= contentStart) )
+							contentSegments.push_back( make_pair(contentStart, contentEnd) );
+
+						contentStart = -1;
+					}
+				}
+				else
+				{
+					if( (c == '*') )
+					{
+						firstChar = true;
+					}
+					else if( firstChar && (c == '#') )
+					{
+						inMultiLineComment = false;
+						firstChar = false;
+						contentStart = index + 1;
+					}
+				}
+			}
+
+			if( contentStart > -1 )
+				contentSegments.push_back( make_pair(contentStart, index) );
+
+			char *tail = line;
+
+			for( list<pair<int,int> >::iterator
+					 it = contentSegments.begin(),
+					 it_end =contentSegments.end();
+				 it != it_end;
+				 it++ )
+			{
+				int n = (it->second - it->first) + 1;
+				memcpy( tail, line + it->first, n );
+				tail += n;
+			}
+
+			*tail = '\0';
+		}
+
+		// remove single-line comments
+		{
+			char *comment = strchr( line, '#' );
+			if( comment != NULL )
+			{
+				*comment = '\0';
+			}
+		}
+
+		return line;
 	}
 
 	void Parser::tokenize( DocumentLocation &loc,
@@ -1388,6 +1465,11 @@ namespace PropertyFile
 		assert( propSchema.type == Property::OBJECT );
 		assert( propValue.type == Property::OBJECT );
 
+		if( propValue.cond->size() > 0 )
+		{
+			propValue.cond->front()->err( "'if' only legal in schema files." );
+		}
+
 		itfor( Property::PropertyMap, *(propSchema.oval), it )
 		{
 			Property *childSchema = it->second;
@@ -1414,6 +1496,11 @@ namespace PropertyFile
 
 	void Schema::validateProperty(  Property &propSchema, Property &propValue )
 	{
+		if( (propValue.type == Property::OBJECT) && (propValue.cond->size() > 0) )
+		{
+			propValue.cond->front()->err( "'if' only legal in schema files." );
+		}
+
 		string name = propValue.getName();
 		Property &propType = propSchema.get( "type" );
 		string type = propType;
@@ -1439,6 +1526,9 @@ namespace PropertyFile
 			{
 				propValue.err( string("Expecting ARRAY value for property '") + propValue.getName() + "'" );
 			}
+
+			// make required attributes exist
+			propSchema.get( "element" );
 		}
 		else if( type == "OBJECT" )
 		{
@@ -1446,6 +1536,9 @@ namespace PropertyFile
 			{
 				propValue.err( string("Expecting OBJECT value for property '") + propValue.getName() + "'" );
 			}
+
+			// make required attributes exist
+			propSchema.get( "properties" );
 		}
 		else if( type == "ENUM" )
 		{
@@ -1722,11 +1815,7 @@ int main( int argc, char **argv )
 {
 	if( false )
 	{
-		Document *docSchema = Parser::parse( "schema.txt" );
-
-		docSchema->dump( cout );
-
-		delete docSchema;
+		Parser::parse( "foo.txt" );
 	}
 	else
 	{

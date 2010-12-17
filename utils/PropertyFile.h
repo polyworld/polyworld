@@ -267,7 +267,10 @@ namespace PropertyFile
 		typedef std::stack<Node *> NodeStack;
 
 		static char *readline( std::istream &in,
-							   DocumentLocation &loc );
+							   DocumentLocation &loc,
+							   bool &inMultiLineComment );
+		static char *stripComments( char *line,
+									bool &inMultiLineComment );
 		static void tokenize( DocumentLocation &loc, char *line, CStringList &list );
 		static void processLine( Document *doc,
 								 DocumentLocation &loc,
