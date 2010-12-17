@@ -108,6 +108,9 @@ namespace PropertyFile
 	// --- CLASS Property
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
+	typedef std::map<Identifier, class Property *> PropertyMap;
+	typedef std::list<Condition *> ConditionList;
+
 	class Property : Node
 	{
 	public:
@@ -123,10 +126,15 @@ namespace PropertyFile
 
 		const char *getName();
 
+		bool isObj();
+		bool isArray();
+		bool isScalar();
+
 		Property &get( Identifier id );
 		Property *getp( Identifier id );
 
-		Property *find( Identifier id );
+		PropertyMap &props();
+		ConditionList &conds();
 
 		operator int();
 		operator float();
@@ -143,7 +151,8 @@ namespace PropertyFile
 		Property( const Property &copy ) : Node(DocumentLocation(NULL,-1), Node::PROPERTY), id("")
 		{ throw "Property copy not supported."; }
 
-		std::string getScalarValue();
+		std::string evalScalar();
+		Property *findSymbol( Identifier id );
 
 		friend class Parser;
 		friend class Schema;
@@ -153,20 +162,18 @@ namespace PropertyFile
 		Property *symbolSource;
 		Type type;
 		Identifier id;
-		bool isArray;
+		bool _isArray;
 		bool isExpr;
-		bool isEval;
+		bool isEvaling;
 
-		typedef std::map<Identifier, Property *> PropertyMap;
-		typedef std::list<Condition *> ConditionList;
 		union
 		{
 			char *sval;
 			struct
 			{
-				PropertyMap *oval;
-				ConditionList *cond;
-			};
+				PropertyMap *props;
+				ConditionList *conds;
+			} oval;
 		};
 	};
 

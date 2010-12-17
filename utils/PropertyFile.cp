@@ -225,18 +225,18 @@ namespace PropertyFile
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
 
-	Property::Property( DocumentLocation _loc, Identifier _id, bool _isArray )
+	Property::Property( DocumentLocation _loc, Identifier _id, bool isArray )
 		: Node( _loc, Node::PROPERTY )
 		, parent( NULL )
 		, symbolSource( NULL )
 		, id( _id )
-		, isArray( _isArray )
+		, _isArray( isArray )
 		, isExpr( false )
-		, isEval( false )
+		, isEvaling( false )
 	{
 		type =  OBJECT;
-		oval = new PropertyMap();
-		cond = new ConditionList();
+		oval.props = new PropertyMap();
+		oval.conds = new ConditionList();
 	}
 
 	Property::Property( DocumentLocation _loc, Identifier _id, const char *val )
@@ -244,8 +244,8 @@ namespace PropertyFile
 		, parent( NULL )
 		, symbolSource( NULL )
 		, id( _id )
-		, isArray( false )
-		, isEval( false )
+		, _isArray( false )
+		, isEvaling( false )
 	{
 		type = SCALAR;
 
@@ -272,17 +272,17 @@ namespace PropertyFile
 		switch( type )
 		{
 		case OBJECT:
-			itfor( PropertyMap, *oval, it )
+			itfor( PropertyMap, *oval.props, it )
 			{
 				delete it->second;
 			}
-			delete oval;
+			delete oval.props;
 
-			itfor( ConditionList, *cond, it )
+			itfor( ConditionList, *oval.conds, it )
 			{
 				delete *it;
 			}
-			delete cond;
+			delete oval.conds;
 			break;
 		case SCALAR:
 			free( sval );
@@ -295,6 +295,21 @@ namespace PropertyFile
 	const char *Property::getName()
 	{
 		return id.getName();
+	}
+
+	bool Property::isObj()
+	{
+		return type == OBJECT;
+	}
+
+	bool Property::isArray()
+	{
+		return isObj() && _isArray;
+	}
+
+	bool Property::isScalar()
+	{
+		return type == SCALAR;
 	}
 
 	Property &Property::get( Identifier id )
@@ -315,8 +330,8 @@ namespace PropertyFile
 	{
 		assert( type == OBJECT );
 
-		PropertyMap::iterator it = oval->find( id );
-		if( it != oval->end() )
+		PropertyMap::iterator it = props().find( id );
+		if( it != props().end() )
 		{
 			return it->second;
 		}
@@ -326,35 +341,25 @@ namespace PropertyFile
 		}
 	}
 
-	Property *Property::find( Identifier id )
+	PropertyMap &Property::props()
 	{
-		if( symbolSource != NULL )
-		{
-			return symbolSource->find( id );
-		}
-		else
-		{
-			Property *result = NULL;
+		assert( type == OBJECT );
 
-			if( type == OBJECT )
-			{
-				result = getp( id );
-			}
+		return *oval.props;
+	}
 
-			if( result == NULL && parent != NULL )
-			{
-				result = parent->find( id );
-			}
+	ConditionList &Property::conds()
+	{
+		assert( type == OBJECT );
 
-			return result;
-		}
+		return *oval.conds;
 	}
 
 	Property::operator int()
 	{
 		int ival;
 
-		if( (type != SCALAR) || !Parser::parseInt(getScalarValue(), &ival) )
+		if( (type != SCALAR) || !Parser::parseInt(evalScalar(), &ival) )
 		{
 			err( string("Expecting INT value for property '") + getName() + "'." );
 		}
@@ -366,7 +371,7 @@ namespace PropertyFile
 	{
 		float fval;
 
-		if( (type != SCALAR) || !Parser::parseFloat(getScalarValue(), &fval) )
+		if( (type != SCALAR) || !Parser::parseFloat(evalScalar(), &fval) )
 		{
 			err( string("Expecting FLOAT value for property '") + getName() + "'." );
 		}
@@ -378,7 +383,7 @@ namespace PropertyFile
 	{
 		bool bval;
 
-		if( (type != SCALAR) || !Parser::parseBool(getScalarValue(), &bval) )
+		if( (type != SCALAR) || !Parser::parseBool(evalScalar(), &bval) )
 		{
 			err( string("Expecting BOOL value for property '") + getName() + "'." );
 		}
@@ -404,14 +409,14 @@ namespace PropertyFile
 				Property *prop = node->toProp();
 				prop->parent = this;
 
-				(*oval)[ prop->id ] = prop;
+				props()[ prop->id ] = prop;
 			}
 			break;
 		case CONDITION:
 			{
 				Condition *cond = node->toCond();
 				
-				this->cond->push_back( cond );
+				conds().push_back( cond );
 			}
 			break;
 		default:
@@ -430,14 +435,14 @@ namespace PropertyFile
 			clone->isExpr = isExpr;
 			break;
 		case OBJECT:
-			clone = new Property( loc, id, isArray );
+			clone = new Property( loc, id, _isArray );
 
-			itfor( PropertyMap, *oval, it )
+			itfor( PropertyMap, props(), it )
 			{
 				clone->add( it->second->clone() );
 			}
 
-			assert( cond->size() == 0 );
+			assert( conds().size() == 0 );
 			break;
 		default:
 			assert( false );
@@ -453,20 +458,20 @@ namespace PropertyFile
 
 		if( type == OBJECT )
 		{
-			if( isArray )
+			if( _isArray )
 			{
 				out << " [";
 			}
 			out << endl;
-			itfor( PropertyMap, *oval, it )
+			itfor( PropertyMap, props(), it )
 			{
 				it->second->dump( out, (string(indent) + "  ").c_str() );
 			}
-			itfor( ConditionList, *cond, it )
+			itfor( ConditionList, conds(), it )
 			{
 				(*it)->dump( out, (string(indent) + "  ").c_str() );
 			}
-			if( isArray )
+			if( _isArray )
 			{
 				out << loc.getDescription() << " ";
 				out << indent << "]" << endl;
@@ -478,7 +483,7 @@ namespace PropertyFile
 		}
 	}
 
-	string Property::getScalarValue()
+	string Property::evalScalar()
 	{
 		if( type != SCALAR )
 		{
@@ -487,12 +492,12 @@ namespace PropertyFile
 
 		if( isExpr )
 		{
-			// We eventually want to move the isEval state out of the object and the stack so we are thread safe.
-			if( isEval )
+			// We eventually want to move the isEvaling state out of the object and the stack so we are thread safe.
+			if( isEvaling )
 			{
 				loc.err( "Expression dependency cycle." );
 			}
-			isEval = true;
+			isEvaling = true;
 
 			map<string, string> symbolTable;
 
@@ -501,10 +506,14 @@ namespace PropertyFile
 
 			itfor( Parser::StringList, ids, it )
 			{
-				Property *prop = find( *it );
+				Property *prop = findSymbol( *it );
 				if( prop != NULL )
 				{
-					symbolTable[ prop->getName() ] = prop->getScalarValue();
+					if( !prop->isScalar() )
+					{
+						err( string("Referencing non-scalar '") + prop->getName() + "' in expression" );
+					}
+					symbolTable[ prop->getName() ] = prop->evalScalar();
 				}
 			}
 
@@ -518,13 +527,37 @@ namespace PropertyFile
 				loc.err( buf );
 			}
 
-			isEval = false;
+			isEvaling = false;
 
 			return buf;
 		}
 		else
 		{
 			return sval;
+		}
+	}
+
+	Property *Property::findSymbol( Identifier id )
+	{
+		if( symbolSource != NULL )
+		{
+			return symbolSource->findSymbol( id );
+		}
+		else
+		{
+			Property *result = NULL;
+
+			if( type == OBJECT )
+			{
+				result = getp( id );
+			}
+
+			if( result == NULL && parent != NULL )
+			{
+				result = parent->findSymbol( id );
+			}
+
+			return result;
 		}
 	}
 
@@ -1086,12 +1119,12 @@ namespace PropertyFile
 				loc.err( "Extraneous ']'" );
 			}
 			
-			if( !nodeStack.top()->toProp()->isArray )
+			if( !nodeStack.top()->toProp()->isArray() )
 			{
 				// close out the object for the last element.
 				nodeStack.pop();
 
-				if( !nodeStack.top()->toProp()->isArray )
+				if( !nodeStack.top()->toProp()->isArray() )
 				{
 					loc.err( "Unexpected ']'." );
 				}
@@ -1104,11 +1137,11 @@ namespace PropertyFile
 			else
 			{
 				Property *propArray = nodeStack.top()->toProp();
-				int nelements = (int)propArray->oval->size();
+				int nelements = (int)propArray->props().size();
 
 				if( nelements > 0 )
 				{
-					if( propArray->get(0).type == Property::OBJECT )
+					if( propArray->get(0).isObj() )
 					{
 						// we must have had a hanging ','. We force an empty object as a final element.
 						propArray->add( new Property( loc, nelements ) );
@@ -1123,12 +1156,12 @@ namespace PropertyFile
 			bool isScalarArray = false;
 
 			if( nodeStack.top()->isProp()
-				&& nodeStack.top()->toProp()->isArray )
+				&& nodeStack.top()->toProp()->isArray() )
 			{
 				Property *propArray = nodeStack.top()->toProp();
 
 				// If this is the first element.
-				if( propArray->oval->size() == 0 )
+				if( propArray->props().size() == 0 )
 				{
 					if( (ntokens == 1) && (valueToken != ",") )
 					{
@@ -1137,13 +1170,13 @@ namespace PropertyFile
 				}
 				else
 				{
-					isScalarArray = propArray->get(0).type == Property::SCALAR;
+					isScalarArray = propArray->get(0).isScalar();
 				}
 
 				if( !isScalarArray )
 				{
 					// we need a container for the coming element.
-					size_t index = nodeStack.top()->toProp()->oval->size();
+					size_t index = nodeStack.top()->toProp()->props().size();
 					Property *prop = new Property( loc, index );
 					nodeStack.top()->add( prop );
 					nodeStack.push( prop );
@@ -1161,7 +1194,7 @@ namespace PropertyFile
 					loc.err( "Commas not allowed in scalar array." );
 				}
 
-				size_t index = nodeStack.top()->toProp()->oval->size();
+				size_t index = nodeStack.top()->toProp()->props().size();
 				nodeStack.top()->add( new Property(loc, index, valueToken.c_str()) );
 			}
 			else
@@ -1308,11 +1341,11 @@ namespace PropertyFile
 							Property &propValue,
 							Property *conditionSymbolSource )
 	{
-		assert( propSchema.type == Property::OBJECT );
+		assert( propSchema.isObj() );
 
 		injectDefaults( propSchema, propValue );
 
-		itfor( Property::ConditionList, *propSchema.cond, it )
+		itfor( ConditionList, propSchema.conds(), it )
 		{
 			Condition *cond = *it;
 
@@ -1326,39 +1359,39 @@ namespace PropertyFile
 			{
 				Property *bodyProp = clause->bodyProp;
 				clause->bodyProp = NULL;
-				itfor( Property::PropertyMap, *(bodyProp->oval), itprop )
+				itfor( PropertyMap, bodyProp->props(), itprop )
 				{
 					propSchema.add( itprop->second );
 				}
-				bodyProp->oval->clear();
+				bodyProp->props().clear();
 
-				itfor( Property::ConditionList, *(bodyProp->cond), itcond )
+				itfor( ConditionList, bodyProp->conds(), itcond )
 				{
 					propSchema.add( *itcond );
 				}
-				bodyProp->cond->clear();
+				bodyProp->conds().clear();
 
 				injectDefaults( propSchema, propValue );
 			}
 		}
 
-		itfor( Property::ConditionList, *propSchema.cond, it )
+		itfor( ConditionList, propSchema.conds(), it )
 		{
 			delete *it;
 		}
-		propSchema.cond->clear();
+		propSchema.conds().clear();
 
-		itfor( Property::PropertyMap, *(propSchema.oval), it )
+		itfor( PropertyMap, propSchema.props(), it )
 		{
 			Property *childSchema = it->second;
 
-			if( childSchema->type != Property::SCALAR )
+			if( !childSchema->isScalar() )
 			{
 				if( string(childSchema->getName()) == "element"  )
 				{
 					assert( string(propSchema.getName()) == propValue.getName() );
 
-					if( !propValue.isArray )
+					if( !propValue.isArray() )
 					{
 						propValue.err( "Expecting ARRAY" );
 					}
@@ -1370,7 +1403,7 @@ namespace PropertyFile
 							? conditionSymbolSource
 							: propValue.parent;
 
-						itfor( Property::PropertyMap, *(propValue.oval), itelem )
+						itfor( PropertyMap, propValue.props(), itelem )
 						{
 							Property *elementValue = itelem->second;
 
@@ -1381,7 +1414,7 @@ namespace PropertyFile
 				else
 				{
 					Property *childValue = NULL;
-					if( propValue.type != Property::SCALAR )
+					if( !propValue.isScalar() )
 					{
 						childValue = propValue.getp( childSchema->id );
 					}
@@ -1398,7 +1431,7 @@ namespace PropertyFile
 
 	void Schema::injectDefaults( Property &propSchema, Property &propValue )
 	{
-		assert( propSchema.type == Property::OBJECT );
+		assert( propSchema.isObj() );
 
 		// need to be within <root>, properties, element
 		if( propSchema.getp( "type" ) != NULL )
@@ -1406,15 +1439,15 @@ namespace PropertyFile
 			return;
 		}
 
-		if( propValue.type != Property::OBJECT )
+		if( !propValue.isObj() )
 		{
 			propValue.err( "Expecting OBJECT" );
 		}
 
-		itfor( Property::PropertyMap, *(propSchema.oval), it )
+		itfor( PropertyMap, propSchema.props(), it )
 		{
 			Property *childSchema = it->second;
-			if( childSchema->type != Property::OBJECT )
+			if( !childSchema->isObj() )
 			{
 				childSchema->err( "Unexpected attribute" );
 			}
@@ -1442,25 +1475,25 @@ namespace PropertyFile
 
 	void Schema::validateChildren( Property &propSchema, Property &propValue )
 	{
-		assert( propSchema.type == Property::OBJECT );
-		assert( propValue.type == Property::OBJECT );
+		assert( propSchema.isObj() );
+		assert( propValue.isObj() );
 
-		if( propValue.cond->size() > 0 )
+		if( propValue.conds().size() > 0 )
 		{
-			propValue.cond->front()->err( "'if' only legal in schema files." );
+			propValue.conds().front()->err( "'if' only legal in schema files." );
 		}
 
-		itfor( Property::PropertyMap, *(propSchema.oval), it )
+		itfor( PropertyMap, propSchema.props(), it )
 		{
 			Property *childSchema = it->second;
 
-			if( childSchema->type != Property::OBJECT )
+			if( !childSchema->isObj() )
 			{
 				childSchema->err( "Unexpected attribute." );
 			}
 		}
 
-		itfor( Property::PropertyMap, *(propValue.oval), it )
+		itfor( PropertyMap, propValue.props(), it )
 		{
 			Property *childValue = it->second;
 			Property *childSchema = propSchema.getp( childValue->id );
@@ -1476,9 +1509,9 @@ namespace PropertyFile
 
 	void Schema::validateProperty(  Property &propSchema, Property &propValue )
 	{
-		if( (propValue.type == Property::OBJECT) && (propValue.cond->size() > 0) )
+		if( propValue.isObj() && (propValue.conds().size() > 0) )
 		{
-			propValue.cond->front()->err( "'if' only legal in schema files." );
+			propValue.conds().front()->err( "'if' only legal in schema files." );
 		}
 
 		string name = propValue.getName();
@@ -1502,7 +1535,7 @@ namespace PropertyFile
 		}
 		else if( type == "ARRAY" )
 		{
-			if( !propValue.isArray )
+			if( !propValue.isArray() )
 			{
 				propValue.err( string("Expecting ARRAY value for property '") + propValue.getName() + "'" );
 			}
@@ -1512,7 +1545,7 @@ namespace PropertyFile
 		}
 		else if( type == "OBJECT" )
 		{
-			if( (propValue.type != Property::OBJECT) || propValue.isArray )
+			if( !propValue.isObj() || propValue.isArray() )
 			{
 				propValue.err( string("Expecting OBJECT value for property '") + propValue.getName() + "'" );
 			}
@@ -1523,14 +1556,14 @@ namespace PropertyFile
 		else if( type == "ENUM" )
 		{
 			Property &propEnumValues = propSchema.get( "values" );
-			if( !propEnumValues.isArray )
+			if( !propEnumValues.isArray() )
 			{
 				propEnumValues.err( "Expecting array of enum values." );
 			}
 
 			bool valid = false;
 
-			itfor( Property::PropertyMap, *(propEnumValues.oval), it )
+			itfor( PropertyMap, propEnumValues.props(), it )
 			{
 				if( (string)propValue == (string)*(it->second) )
 				{
@@ -1570,7 +1603,7 @@ namespace PropertyFile
 		// --
 		// -- Iterate over schema attributes for this property.
 		// --
-		itfor( Property::PropertyMap, *propSchema.oval, it )
+		itfor( PropertyMap, propSchema.props(), it )
 		{
 			string attrName = it->first.getName();
 			Property &attrVal = *(it->second);
@@ -1584,8 +1617,8 @@ namespace PropertyFile
 			{
 				if( type == "ARRAY" )
 				{
-					bool valid = propValue.isArray
-						&& (int)propValue.oval->size() >= (int)attrVal;
+					bool valid = propValue.isArray()
+						&& (int)propValue.props().size() >= (int)attrVal;
 
 					if( !valid )
 					{
@@ -1623,8 +1656,8 @@ namespace PropertyFile
 			{
 				if( type == "ARRAY" )
 				{
-					bool valid = propValue.isArray
-						&& (int)propValue.oval->size() > (int)attrVal;
+					bool valid = propValue.isArray()
+						&& (int)propValue.props().size() > (int)attrVal;
 
 					if( !valid )
 					{
@@ -1662,8 +1695,8 @@ namespace PropertyFile
 			{
 				if( type == "ARRAY" )
 				{
-					bool valid = propValue.isArray
-						&& (int)propValue.oval->size() <= (int)attrVal;
+					bool valid = propValue.isArray()
+						&& (int)propValue.props().size() <= (int)attrVal;
 
 					if( !valid )
 					{
@@ -1701,8 +1734,8 @@ namespace PropertyFile
 			{
 				if( type == "ARRAY" )
 				{
-					bool valid = propValue.isArray
-						&& (int)propValue.oval->size() < (int)attrVal;
+					bool valid = propValue.isArray()
+						&& (int)propValue.props().size() < (int)attrVal;
 
 					if( !valid )
 					{
@@ -1756,7 +1789,7 @@ namespace PropertyFile
 					attrVal.err( "'element' only valid for ARRAY" );
 				}
 
-				itfor( Property::PropertyMap, *(propValue.oval), itelem )
+				itfor( PropertyMap, propValue.props(), itelem )
 				{
 					Property *elementValue = itelem->second;
 
