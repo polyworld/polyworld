@@ -292,6 +292,37 @@ namespace PropertyFile
 		}
 	}
 
+	Property *Property::clone()
+	{
+		Property *clone = NULL;
+
+		switch( type )
+		{
+		case SCALAR:
+			clone = new Property( loc, id, sval );
+			// we have to set 'isExpr' because $() is stripped
+			clone->isExpr = isExpr;
+			break;
+		case OBJECT:
+			clone = new Property( loc, id, _isArray );
+
+			itfor( PropertyMap, props(), it )
+			{
+				clone->add( it->second->clone() );
+			}
+
+			itfor( ConditionList, conds(), it )
+			{
+				clone->add( (*it)->clone() );
+			}
+			break;
+		default:
+			assert( false );
+		}
+
+		return clone;
+	}
+
 	const char *Property::getName()
 	{
 		return id.getName();
@@ -353,6 +384,24 @@ namespace PropertyFile
 		assert( type == OBJECT );
 
 		return *oval.conds;
+	}
+
+	void Property::replace( PropertyMap &newprops, bool isArray )
+	{
+		assert( type == OBJECT );
+
+		itfor( PropertyMap, props(), it )
+		{
+			delete it->second;
+		}
+		props().clear();
+
+		_isArray = isArray;
+
+		itfor( PropertyMap, newprops, it )
+		{
+			add( it->second );
+		}
 	}
 
 	Property::operator int()
@@ -422,33 +471,6 @@ namespace PropertyFile
 		default:
 			assert( false );
 		}
-	}
-
-	Property *Property::clone()
-	{
-		Property *clone = NULL;
-
-		switch( type )
-		{
-		case SCALAR:
-			clone = new Property( loc, id, sval );
-			clone->isExpr = isExpr;
-			break;
-		case OBJECT:
-			clone = new Property( loc, id, _isArray );
-
-			itfor( PropertyMap, props(), it )
-			{
-				clone->add( it->second->clone() );
-			}
-
-			assert( conds().size() == 0 );
-			break;
-		default:
-			assert( false );
-		}
-
-		return clone;
 	}
 
 	void Property::dump( ostream &out, const char *indent )
@@ -579,6 +601,20 @@ namespace PropertyFile
 		}
 	}
 
+	Condition *Condition::clone()
+	{
+		Condition *clone = new Condition( loc );
+
+		itfor( ClauseList, clauses, it )
+		{
+			Clause *clause = *it;
+
+			clone->clauses.push_back( clause->clone() );
+		}
+
+		return clone;
+	}
+
 	Clause *Condition::selectClause( Property *symbolSource )
 	{
 		itfor( ClauseList, clauses, it )
@@ -663,10 +699,25 @@ namespace PropertyFile
 								 string("Body-")+loc.getDescription() );
 	}
 
+	// private constructor for clone()
+	Clause::Clause( DocumentLocation _loc )
+		: Node( _loc, Node::CLAUSE )
+	{
+	}
+
 	Clause::~Clause()
 	{
 		delete exprProp;
 		delete bodyProp;
+	}
+
+	Clause *Clause::clone()
+	{
+		Clause *clone = new Clause( loc );
+		clone->type = type;
+		clone->exprProp = exprProp->clone();
+		clone->bodyProp = bodyProp->clone();
+		return clone;
 	}
 
 	bool Clause::isIf()
@@ -1337,9 +1388,7 @@ namespace PropertyFile
 		validateChildren( *docSchema, *docValues );
 	}
 
-	void Schema::normalize( Property &propSchema,
-							Property &propValue,
-							Property *conditionSymbolSource )
+	void Schema::normalize( Property &propSchema, Property &propValue )
 	{
 		assert( propSchema.isObj() );
 
@@ -1349,12 +1398,7 @@ namespace PropertyFile
 		{
 			Condition *cond = *it;
 
-			Property *symbolSource =
-				conditionSymbolSource != NULL
-				? conditionSymbolSource
-				: &propValue;
-
-			Clause *clause = cond->selectClause( symbolSource );
+			Clause *clause = cond->selectClause( &propValue );
 			if( clause )
 			{
 				Property *bodyProp = clause->bodyProp;
@@ -1396,20 +1440,20 @@ namespace PropertyFile
 						propValue.err( "Expecting ARRAY" );
 					}
 
-					if( (string)childSchema->get("type") == "OBJECT" )
+					PropertyMap schemaElements;
+
+					itfor( PropertyMap, propValue.props(), itelem )
 					{
-						Property *symbolSource =
-							conditionSymbolSource != NULL
-							? conditionSymbolSource
-							: propValue.parent;
+						Property *elementValue = itelem->second;
+						Property *elementSchema = childSchema->clone();
 
-						itfor( PropertyMap, propValue.props(), itelem )
-						{
-							Property *elementValue = itelem->second;
+						normalize( *elementSchema, *elementValue );
 
-							normalize( *childSchema, *elementValue, symbolSource );
-						}
+						elementSchema->id = elementValue->id;
+						schemaElements[ elementValue->id ] = elementSchema;
 					}
+
+					childSchema->replace( schemaElements, true );
 				}
 				else
 				{
@@ -1423,7 +1467,7 @@ namespace PropertyFile
 						childValue = &propValue;
 					}
 
-					normalize( *childSchema, *childValue, conditionSymbolSource );
+					normalize( *childSchema, *childValue );
 				}
 			}
 		}
@@ -1789,11 +1833,14 @@ namespace PropertyFile
 					attrVal.err( "'element' only valid for ARRAY" );
 				}
 
+				assert( attrVal.isArray() );
+				assert( propValue.isArray() );
+
 				itfor( PropertyMap, propValue.props(), itelem )
 				{
 					Property *elementValue = itelem->second;
 
-					validateProperty( attrVal, *elementValue );
+					validateProperty( attrVal.get(elementValue->getName()), *elementValue );
 				}
 
 			}

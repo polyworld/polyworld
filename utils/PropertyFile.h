@@ -124,6 +124,8 @@ namespace PropertyFile
 		Property( DocumentLocation loc, Identifier id, const char *val );
 		virtual ~Property();
 
+		Property *clone();
+
 		const char *getName();
 
 		bool isObj();
@@ -136,6 +138,8 @@ namespace PropertyFile
 		PropertyMap &props();
 		ConditionList &conds();
 
+		void replace( PropertyMap &newprops, bool isArray );
+
 		operator int();
 		operator float();
 		operator bool();
@@ -143,7 +147,6 @@ namespace PropertyFile
 
 		virtual void add( Node *node );
 
-		Property *clone();
 		virtual void dump( std::ostream &out, const char *indent = "" );
 
 	private:
@@ -188,12 +191,13 @@ namespace PropertyFile
 		Condition( DocumentLocation loc );
 		virtual ~Condition();
 
+		Condition *clone();
+
 		Clause *selectClause( Property *symbolSource );
 
 		virtual void add( Node *node );
 
 		virtual void dump( std::ostream &out, const char *indent = "" );
-		
 
 	private:
 		typedef std::list<Clause *> ClauseList;
@@ -217,7 +221,10 @@ namespace PropertyFile
 		};
 
 		Clause( DocumentLocation loc, Type type, std::string expr = "True" );
+	public:
 		virtual ~Clause();
+
+		Clause *clone();
 
 		bool isIf();
 		bool isElif();
@@ -230,6 +237,8 @@ namespace PropertyFile
 		virtual void dump( std::ostream &out, const char *indent = "" );
 
 	private:
+		Clause( DocumentLocation loc );
+
 		friend class Condition;
 		friend class Schema;
 
@@ -296,9 +305,7 @@ namespace PropertyFile
 		static void apply( Document *docSchema, Document *docValues );
 
 	private:
-		static void normalize( Property &propSchema,
-							   Property &propValues,
-							   Property *conditionSymbolSource = NULL );
+		static void normalize( Property &propSchema, Property &propValues );
 		static void injectDefaults( Property &propSchema, Property &propValues );
 		static void validateChildren( Property &propSchema, Property &propValues );
 		static void validateProperty(  Property &propSchema, Property &propValues );
