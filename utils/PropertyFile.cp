@@ -15,15 +15,6 @@ using namespace std;
 namespace PropertyFile
 {
 
-	static void dump( list<char *> &l )
-	{
-		itfor( list<char *>, l, it )
-		{
-			cout << *it << "/";
-		}
-		cout << endl;
-	}
-
 	bool eval( const char *expr,
 			   map<string,string> symbols,
 			   char *result, size_t result_size )
@@ -1309,14 +1300,11 @@ namespace PropertyFile
 
 	void Schema::apply( Document *docSchema, Document *docValues )
 	{
-		transform( *docSchema, *docValues );
-
-		docSchema->dump( cout );
-
+		normalize( *docSchema, *docValues );
 		validateChildren( *docSchema, *docValues );
 	}
 
-	void Schema::transform( Property &propSchema,
+	void Schema::normalize( Property &propSchema,
 							Property &propValue,
 							Property *conditionSymbolSource )
 	{
@@ -1386,23 +1374,9 @@ namespace PropertyFile
 						{
 							Property *elementValue = itelem->second;
 
-							transform( *childSchema, *elementValue, symbolSource );
+							normalize( *childSchema, *elementValue, symbolSource );
 						}
 					}
-					/*
-					  if( (string)childSchema->get("type") == "OBJECT" )
-					  {
-					  Property &propProperties = propElement.get( "properties" );
-
-					  itfor( Property::PropertyMap, *(childValue->oval), itelem )
-					  {
-					  Property *elementValue = itelem->second;
-
-					  transform( propProperties,
-					  *elementValue );
-					  }
-					  }
-					*/
 				}
 				else
 				{
@@ -1416,7 +1390,7 @@ namespace PropertyFile
 						childValue = &propValue;
 					}
 
-					transform( *childSchema, *childValue, conditionSymbolSource );
+					normalize( *childSchema, *childValue, conditionSymbolSource );
 				}
 			}
 		}
@@ -1440,10 +1414,16 @@ namespace PropertyFile
 		itfor( Property::PropertyMap, *(propSchema.oval), it )
 		{
 			Property *childSchema = it->second;
+			if( childSchema->type != Property::OBJECT )
+			{
+				childSchema->err( "Unexpected attribute" );
+			}
+
 			Property *childValue = propValue.getp( childSchema->id );
 
 			if( childValue == NULL )
 			{
+
 				Property *propDefault = childSchema->getp( "default" );
 				if( propDefault == NULL )
 				{
@@ -1750,6 +1730,19 @@ namespace PropertyFile
 					{
 						propValue.err( (string)propValue + " >= xmax " + (string)attrVal );
 					}
+				}
+			}
+
+			// --
+			// -- assert
+			// --
+			else if( attrName == "assert" )
+			{
+				bool result = (bool)attrVal;
+
+				if( !result )
+				{
+					propValue.err( string("Failed assertion '") + (string)attrVal + "' at " + attrVal.loc.getDescription());
 				}
 			}
 

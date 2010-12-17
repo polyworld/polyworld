@@ -289,7 +289,7 @@ namespace PropertyFile
 		static void apply( Document *docSchema, Document *docValues );
 
 	private:
-		static void transform( Property &propSchema,
+		static void normalize( Property &propSchema,
 							   Property &propValues,
 							   Property *conditionSymbolSource = NULL );
 		static void injectDefaults( Property &propSchema, Property &propValues );
