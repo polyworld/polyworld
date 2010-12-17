@@ -253,6 +253,7 @@ namespace PropertyFile
 		, parent( NULL )
 		, symbolSource( NULL )
 		, id( _id )
+		, isArray( false )
 		, isEval( false )
 	{
 		type = SCALAR;
@@ -440,11 +441,12 @@ namespace PropertyFile
 		case OBJECT:
 			clone = new Property( loc, id, isArray );
 
-			clone->oval = new PropertyMap();
 			itfor( PropertyMap, *oval, it )
 			{
 				clone->add( it->second->clone() );
 			}
+
+			assert( cond->size() == 0 );
 			break;
 		default:
 			assert( false );
@@ -553,6 +555,21 @@ namespace PropertyFile
 		}
 	}
 
+	Clause *Condition::selectClause( Property *symbolSource )
+	{
+		itfor( ClauseList, clauses, it )
+		{
+			Clause *clause = *it;
+
+			if( clause->evalExpr(symbolSource) )
+			{
+				return clause;
+			}
+		}
+
+		return NULL;
+	}
+
 	void Condition::add( Node *node )
 	{
 		if( node->isClause() )
@@ -614,15 +631,18 @@ namespace PropertyFile
 	Clause::Clause( DocumentLocation _loc, Type _type, string _expr )
 		: Node( _loc, Node::CLAUSE )
 		, type( _type )
-		, expr( _expr )
 	{
-		rootProp = new Property( _loc,
-								 string("Clause-")+loc.getDescription() );
+		exprProp = new Property( _loc,
+								 string("Expr-")+loc.getDescription(),
+								 _expr.c_str() );
+		bodyProp = new Property( _loc,
+								 string("Body-")+loc.getDescription() );
 	}
 
 	Clause::~Clause()
 	{
-		delete rootProp;
+		delete exprProp;
+		delete bodyProp;
 	}
 
 	bool Clause::isIf()
@@ -640,17 +660,24 @@ namespace PropertyFile
 		return type == ELSE;
 	}
 
+	bool Clause::evalExpr( Property *symbolSource )
+	{
+		exprProp->symbolSource = symbolSource;
+
+		return (bool)*exprProp;
+	}
+
 	void Clause::add( Node *node )
 	{
-		rootProp->add( node );
+		bodyProp->add( node );
 	}
 
 	void Clause::dump( ostream &out, const char *indent )
 	{
 		out << loc.getDescription() << " ";
-		out << indent << "<CLAUSE " << expr << ">" << endl;
+		out << indent << "<CLAUSE " << exprProp->sval << ">" << endl;
 
-		rootProp->dump( out, (string(indent) + "  ").c_str() );
+		bodyProp->dump( out, (string(indent) + "  ").c_str() );
 
 		out << loc.getDescription() << " ";
 		out << indent << "</CLAUSE>" << endl;
@@ -1205,13 +1232,128 @@ namespace PropertyFile
 
 	void Schema::apply( Document *docSchema, Document *docValues )
 	{
-		injectDefaults( *docSchema, *docValues );
+		transform( *docSchema, *docValues );
+
+		docSchema->dump( cout );
+
 		validateChildren( *docSchema, *docValues );
+	}
+
+	void Schema::transform( Property &propSchema,
+							Property &propValue,
+							Property *conditionSymbolSource )
+	{
+		assert( propSchema.type == Property::OBJECT );
+
+		injectDefaults( propSchema, propValue );
+
+		itfor( Property::ConditionList, *propSchema.cond, it )
+		{
+			Condition *cond = *it;
+
+			Property *symbolSource =
+				conditionSymbolSource != NULL
+				? conditionSymbolSource
+				: &propValue;
+
+			Clause *clause = cond->selectClause( symbolSource );
+			if( clause )
+			{
+				Property *bodyProp = clause->bodyProp;
+				clause->bodyProp = NULL;
+				itfor( Property::PropertyMap, *(bodyProp->oval), itprop )
+				{
+					propSchema.add( itprop->second );
+				}
+				bodyProp->oval->clear();
+
+				itfor( Property::ConditionList, *(bodyProp->cond), itcond )
+				{
+					propSchema.add( *itcond );
+				}
+				bodyProp->cond->clear();
+
+				injectDefaults( propSchema, propValue );
+			}
+		}
+
+		itfor( Property::ConditionList, *propSchema.cond, it )
+		{
+			delete *it;
+		}
+		propSchema.cond->clear();
+
+		itfor( Property::PropertyMap, *(propSchema.oval), it )
+		{
+			Property *childSchema = it->second;
+
+			if( childSchema->type != Property::SCALAR )
+			{
+				if( string(childSchema->getName()) == "element"  )
+				{
+					assert( string(propSchema.getName()) == propValue.getName() );
+
+					if( !propValue.isArray )
+					{
+						propValue.err( "Expecting ARRAY" );
+					}
+
+					if( (string)childSchema->get("type") == "OBJECT" )
+					{
+						Property *symbolSource =
+							conditionSymbolSource != NULL
+							? conditionSymbolSource
+							: propValue.parent;
+
+						itfor( Property::PropertyMap, *(propValue.oval), itelem )
+						{
+							Property *elementValue = itelem->second;
+
+							transform( *childSchema, *elementValue, symbolSource );
+						}
+					}
+					/*
+					  if( (string)childSchema->get("type") == "OBJECT" )
+					  {
+					  Property &propProperties = propElement.get( "properties" );
+
+					  itfor( Property::PropertyMap, *(childValue->oval), itelem )
+					  {
+					  Property *elementValue = itelem->second;
+
+					  transform( propProperties,
+					  *elementValue );
+					  }
+					  }
+					*/
+				}
+				else
+				{
+					Property *childValue = NULL;
+					if( propValue.type != Property::SCALAR )
+					{
+						childValue = propValue.getp( childSchema->id );
+					}
+					if( childValue == NULL )
+					{
+						childValue = &propValue;
+					}
+
+					transform( *childSchema, *childValue, conditionSymbolSource );
+				}
+			}
+		}
 	}
 
 	void Schema::injectDefaults( Property &propSchema, Property &propValue )
 	{
 		assert( propSchema.type == Property::OBJECT );
+
+		// need to be within <root>, properties, element
+		if( propSchema.getp( "type" ) != NULL )
+		{
+			return;
+		}
 
 		if( propValue.type != Property::OBJECT )
 		{
@@ -1238,30 +1380,6 @@ namespace PropertyFile
 					propValue.add( propClone );
 				}
 			}
-
-			Property &propType = childSchema->get( "type" );
-			string type = propType;
-			if( type == "OBJECT" )
-			{
-				injectDefaults( childSchema->get("properties"),
-								*childValue );
-			}
-			else if( type == "ARRAY" )
-			{
-				Property &propElement = childSchema->get( "element" );
-				if( (string)propElement.get("type") == "OBJECT" )
-				{
-					Property &propProperties = propElement.get( "properties" );
-
-					itfor( Property::PropertyMap, *(childValue->oval), itelem )
-					{
-						Property *elementValue = itelem->second;
-
-						injectDefaults( propProperties,
-										*elementValue );
-					}
-				}
-			}
 		}
 	}
 
@@ -1269,6 +1387,16 @@ namespace PropertyFile
 	{
 		assert( propSchema.type == Property::OBJECT );
 		assert( propValue.type == Property::OBJECT );
+
+		itfor( Property::PropertyMap, *(propSchema.oval), it )
+		{
+			Property *childSchema = it->second;
+
+			if( childSchema->type != Property::OBJECT )
+			{
+				childSchema->err( "Unexpected attribute." );
+			}
+		}
 
 		itfor( Property::PropertyMap, *(propValue.oval), it )
 		{
@@ -1602,8 +1730,8 @@ int main( int argc, char **argv )
 	}
 	else
 	{
-		Document *docValues = Parser::parse( "values.txt.sav.1" );
-		Document *docSchema = Parser::parse( "schema.txt.sav.1" );
+		Document *docValues = Parser::parse( "values.txt" );
+		Document *docSchema = Parser::parse( "schema.txt" );
 
 		Schema::apply( docSchema, docValues );
 

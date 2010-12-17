@@ -147,6 +147,7 @@ namespace PropertyFile
 
 		friend class Parser;
 		friend class Schema;
+		friend class Clause;
 
 		Property *parent;
 		Property *symbolSource;
@@ -180,9 +181,12 @@ namespace PropertyFile
 		Condition( DocumentLocation loc );
 		virtual ~Condition();
 
+		Clause *selectClause( Property *symbolSource );
+
 		virtual void add( Node *node );
 
 		virtual void dump( std::ostream &out, const char *indent = "" );
+		
 
 	private:
 		typedef std::list<Clause *> ClauseList;
@@ -212,14 +216,19 @@ namespace PropertyFile
 		bool isElif();
 		bool isElse();
 
+		bool evalExpr( Property *symbolSource );
+
 		virtual void add( Node *node );
 
 		virtual void dump( std::ostream &out, const char *indent = "" );
 
 	private:
+		friend class Condition;
+		friend class Schema;
+
 		Type type;
-		std::string expr;
-		Property *rootProp;
+		Property *exprProp;
+		Property *bodyProp;
 	};
 
 	// ----------------------------------------------------------------------
@@ -277,6 +286,9 @@ namespace PropertyFile
 		static void apply( Document *docSchema, Document *docValues );
 
 	private:
+		static void transform( Property &propSchema,
+							   Property &propValues,
+							   Property *conditionSymbolSource = NULL );
 		static void injectDefaults( Property &propSchema, Property &propValues );
 		static void validateChildren( Property &propSchema, Property &propValues );
 		static void validateProperty(  Property &propSchema, Property &propValues );
