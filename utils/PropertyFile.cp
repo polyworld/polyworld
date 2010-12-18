@@ -1584,7 +1584,7 @@ namespace PropertyFile
 				propValue.err( string("Expecting ARRAY value for property '") + propValue.getName() + "'" );
 			}
 
-			// make required attributes exist
+			// verify required attributes exist
 			propSchema.get( "element" );
 		}
 		else if( type == "OBJECT" )
@@ -1594,7 +1594,7 @@ namespace PropertyFile
 				propValue.err( string("Expecting OBJECT value for property '") + propValue.getName() + "'" );
 			}
 
-			// make required attributes exist
+			// verify required attributes exist
 			propSchema.get( "properties" );
 		}
 		else if( type == "ENUM" )
@@ -1655,81 +1655,56 @@ namespace PropertyFile
 			attrVal.symbolSource = &propValue;
 
 			// --
+			// -- CONSTRAINT
+			// --
+#define CONSTRAINT( NAME, OP, ERRDESC )									\
+			if( type == "ARRAY" )										\
+			{															\
+				bool valid = propValue.isArray()						\
+					&& (int)propValue.props().size() OP (int)attrVal;	\
+																		\
+				if( !valid )											\
+				{														\
+					propValue.err( name + " element count "ERRDESC" "NAME" " + (string)attrVal ); \
+				}														\
+			}															\
+			else														\
+			{															\
+				bool valid = true;										\
+																		\
+				if( type == "INT" )										\
+				{														\
+					valid = (int)propValue OP (int)attrVal;				\
+				}														\
+				else if( type == "FLOAT" )								\
+				{														\
+					valid = (float)propValue OP (float)attrVal;			\
+				}														\
+				else													\
+				{														\
+					propSchema.err( string("'" NAME "' is not valid for type ") + type ); \
+				}														\
+																		\
+				if( !valid )											\
+				{														\
+					propValue.err( (string)propValue + " "ERRDESC" "NAME" " + (string)attrVal ); \
+				}														\
+			}
+
+			// --
 			// -- min
 			// --
 			if( attrName == "min" )
 			{
-				if( type == "ARRAY" )
-				{
-					bool valid = propValue.isArray()
-						&& (int)propValue.props().size() >= (int)attrVal;
-
-					if( !valid )
-					{
-						propValue.err( name + " element count less than min " + (string)attrVal );
-					}
-				}
-				else
-				{
-					bool valid = true;
-
-					if( type == "INT" )
-					{
-						valid = (int)propValue >= (int)attrVal;
-					}
-					else if( type == "FLOAT" )
-					{
-						valid = (float)propValue >= (float)attrVal;
-					}
-					else
-					{
-						propSchema.err( string("'min' is not valid for type ") + type );
-					}
-
-					if( !valid )
-					{
-						propValue.err( (string)propValue + " less than min " + (string)attrVal );
-					}
-				}
+				CONSTRAINT( "min", >=, "<" );
 			}
 
 			// --
-			// -- xmin
+			// -- exmin
 			// --
-			else if( attrName == "xmin" )
+			else if( attrName == "exmin" )
 			{
-				if( type == "ARRAY" )
-				{
-					bool valid = propValue.isArray()
-						&& (int)propValue.props().size() > (int)attrVal;
-
-					if( !valid )
-					{
-						propValue.err( name + " element count <= xmin " + (string)attrVal );
-					}
-				}
-				else
-				{
-					bool valid = true;
-
-					if( type == "INT" )
-					{
-						valid = (int)propValue > (int)attrVal;
-					}
-					else if( type == "FLOAT" )
-					{
-						valid = (float)propValue > (float)attrVal;
-					}
-					else
-					{
-						propSchema.err( string("'xmin' is not valid for type ") + type );
-					}
-
-					if( !valid )
-					{
-						propValue.err( (string)propValue + " <= xmin " + (string)attrVal );
-					}
-				}
+				CONSTRAINT( "exmin", >, "<=" );
 			}
 
 			// --
@@ -1737,78 +1712,18 @@ namespace PropertyFile
 			// --
 			else if( attrName == "max" )
 			{
-				if( type == "ARRAY" )
-				{
-					bool valid = propValue.isArray()
-						&& (int)propValue.props().size() <= (int)attrVal;
-
-					if( !valid )
-					{
-						propValue.err( name + " element count greater than max " + (string)attrVal );
-					}
-				}
-				else
-				{
-					bool valid = true;
-
-					if( type == "INT" )
-					{
-						valid = (int)propValue <= (int)attrVal;
-					}
-					else if( type == "FLOAT" )
-					{
-						valid = (float)propValue <= (float)attrVal;
-					}
-					else
-					{
-						propSchema.err( string("'max' is not valid for type ") + type );
-					}
-
-					if( !valid )
-					{
-						propValue.err( (string)propValue + " greater than max " + (string)attrVal );
-					}
-				}
+				CONSTRAINT( "max", <=, ">" );
 			}
 
 			// --
-			// -- xmax
+			// -- exmax
 			// --
-			else if( attrName == "xmax" )
+			else if( attrName == "exmax" )
 			{
-				if( type == "ARRAY" )
-				{
-					bool valid = propValue.isArray()
-						&& (int)propValue.props().size() < (int)attrVal;
-
-					if( !valid )
-					{
-						propValue.err( name + " element count >= than xmax " + (string)attrVal );
-					}
-				}
-				else
-				{
-					bool valid = true;
-
-					if( type == "INT" )
-					{
-						valid = (int)propValue < (int)attrVal;
-					}
-					else if( type == "FLOAT" )
-					{
-						valid = (float)propValue < (float)attrVal;
-					}
-					else
-					{
-						propSchema.err( string("'xmax' is not valid for type ") + type );
-					}
-
-					if( !valid )
-					{
-						propValue.err( (string)propValue + " >= xmax " + (string)attrVal );
-					}
-				}
+				CONSTRAINT( "exmax", <, ">=" );
 			}
+
+#undef CONSTRAINT
 
 			// --
 			// -- assert
