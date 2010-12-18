@@ -780,7 +780,7 @@ namespace PropertyFile
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
 	
-	Document *Parser::parse( const char *path )
+	Document *Parser::parseFile( const char *path )
 	{
 		Document *doc = new Document( path );
 		DocumentLocation loc( doc, 0 );
@@ -1788,12 +1788,12 @@ int main( int argc, char **argv )
 {
 	if( false )
 	{
-		Parser::parse( "foo.txt" );
+		Parser::parseFile( "foo.txt" );
 	}
 	else
 	{
-		Document *docValues = Parser::parse( "values.txt" );
-		Document *docSchema = Parser::parse( "schema.txt" );
+		Document *docValues = Parser::parseFile( "values.txt" );
+		Document *docSchema = Parser::parseFile( "schema.txt" );
 
 		Schema::apply( docSchema, docValues );
 

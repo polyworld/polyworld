@@ -15,6 +15,10 @@ namespace PropertyFile
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
 	// --- CLASS Identifier
+	// ---
+	// --- This represents either a property name or an array index. The API
+	// --- uses this so it doesn't have to define separate methods for
+	// --- strings and integers.
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
 	class Identifier
@@ -40,6 +44,9 @@ namespace PropertyFile
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
 	// --- CLASS DocumentLocation
+	// ---
+	// --- Primarily used for giving the user error messages that include
+	// --- file and line number.
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
 	class DocumentLocation
@@ -62,6 +69,12 @@ namespace PropertyFile
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
 	// --- CLASS Node
+	// ---
+	// --- The heart of the proplib Document Object Model (DOM). The primary
+	// --- utilty of this common base class is that it makes parsing
+	// --- convenient. Note the use of a "NodeStack" in Parser::parseLine().
+	// --- This allows for the parser to create a context to which nodes
+	// --- are added, where the nodes might be properties or condtions.
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
 	class Node
@@ -106,6 +119,22 @@ namespace PropertyFile
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
 	// --- CLASS Property
+	// ---
+	// --- This is the most important class for clients of proplib. It is
+	// --- through this class that clients get values from a file. A property
+	// --- can be a "SCALAR" (e.g. integer, boolean) or a "CONTAINER"
+	// --- (Array or Object). While it doesn't seem very object-oriented to
+	// --- have this one class representing both scalars and containers, it
+	// --- provides the client with convenient fetching of properties within
+	// --- a path, for example:
+	// ---
+	// ---   int val = doc.get("obj1").get("array1").get("prop1");
+	// ---
+	// --- Note the cast operators that facilitate statements like the
+	// --- example above.
+	// ---
+	// --- Note that $() expression are stored in this class, but that they
+	// --- stored with the '$(' and ')' stripped.
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
 	typedef std::map<Identifier, class Property *> PropertyMap;
@@ -183,6 +212,16 @@ namespace PropertyFile
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
 	// --- CLASS Condition
+	// ---
+	// --- This represents an if/elif/else statement. It can contain one or
+	// --- more "clauses". Where the following example code contains 4
+	// --- clauses:
+	// ---
+	// --- if $( foo ) {
+	// --- } elif $( bar ) {
+	// --- } elif $( baz ) {
+	// --- } else {
+	// --- }
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
 	class Condition : public Node
@@ -208,6 +247,9 @@ namespace PropertyFile
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
 	// --- CLASS Clause
+	// ---
+	// --- Exists within an if/elif/else "Condition". All clauses have an
+	// --- "expression", but an else clause always has the expression "True".
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
 	class Clause : public Node
@@ -250,6 +292,8 @@ namespace PropertyFile
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
 	// --- CLASS Document
+	// ---
+	// --- Nothing to see here. Just for API clarity.
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
 	class Document : public Property
@@ -262,6 +306,11 @@ namespace PropertyFile
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
 	// --- CLASS Parser
+	// ---
+	// --- A stupid line-based parser. One day we'll do better.
+	// ---
+	// --- If you want to use proplib, you need the parseFile() function.
+	// --- The other public functions are for proplib. Not a great API.
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
 	class Parser
@@ -270,7 +319,7 @@ namespace PropertyFile
 		typedef std::vector<char *> CStringList;
 		typedef std::list<std::string> StringList;
 
-		static Document *parse( const char *path );
+		static Document *parseFile( const char *path );
 
 		static bool isValidIdentifier( const std::string &text );
 		static void scanIdentifiers( const std::string &expr, StringList &ids );
@@ -297,6 +346,13 @@ namespace PropertyFile
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
 	// --- CLASS Schema
+	// ---
+	// --- This is how you validate/normalize a values file.
+	// ---
+	// --- The "normalize" procedure does two important things:
+	// ---
+	// ---   1) Evaluate/resolve conditions in the schema
+	// ---   2) Insert default values into the values file if needed.
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
 	class Schema
