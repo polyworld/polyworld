@@ -790,7 +790,7 @@ namespace PropertyFile
 
 		ifstream in( path );
 		char *line;
-		bool inMultiLineComment = false;
+		int inMultiLineComment = 0;
 
 		while( (line = readline(in,
 								loc,
@@ -937,7 +937,7 @@ namespace PropertyFile
 
 	char *Parser::readline( istream &in,
 							DocumentLocation &loc,
-							bool &inMultiLineComment )
+							int &inMultiLineComment )
 	{
 		char buf[1024 * 4];
 		char *result = NULL;
@@ -982,34 +982,24 @@ namespace PropertyFile
 	}
 
 	char *Parser::stripComments( char *line,
-								 bool &inMultiLineComment )
+								 int &inMultiLineComment )
 	{
 		// process multi-line comments
 		{
 			list< pair<int,int> > contentSegments;
-			bool firstChar = false;
-			int contentStart = -1;
+			char prevChar = '\0';
 			int index;
+			int contentStart = inMultiLineComment == 0 ? 0 : -1;
 				
-			if( !inMultiLineComment )
-			{
-				contentStart = 0;
-			}
-
 			for( index = 0; line[index] != '\0'; index++ )
 			{
 				char c = line[index];
 
-				if( !inMultiLineComment )
+				if( (prevChar == '#') && (c == '*') )
 				{
-					if( c == '#' )
+					inMultiLineComment++;
+					if( inMultiLineComment == 1 )
 					{
-						firstChar = true;
-					}
-					else if( firstChar && (c == '*') )
-					{
-						inMultiLineComment = true;
-						firstChar = false;
 						int contentEnd = index - 2;
 
 						if( (contentStart > -1) && (contentEnd >= contentStart) )
@@ -1018,19 +1008,14 @@ namespace PropertyFile
 						contentStart = -1;
 					}
 				}
-				else
+				else if( (prevChar == '*') && (c == '#') )
 				{
-					if( (c == '*') )
-					{
-						firstChar = true;
-					}
-					else if( firstChar && (c == '#') )
-					{
-						inMultiLineComment = false;
-						firstChar = false;
+					inMultiLineComment--;
+					if( inMultiLineComment == 0 )
 						contentStart = index + 1;
-					}
 				}
+
+				prevChar = c;
 			}
 
 			if( contentStart > -1 )

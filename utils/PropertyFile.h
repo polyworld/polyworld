@@ -284,9 +284,9 @@ namespace PropertyFile
 
 		static char *readline( std::istream &in,
 							   DocumentLocation &loc,
-							   bool &inMultiLineComment );
+							   int &inMultiLineComment );
 		static char *stripComments( char *line,
-									bool &inMultiLineComment );
+									int &inMultiLineComment );
 		static void tokenize( DocumentLocation &loc, char *line, CStringList &list );
 		static void processLine( Document *doc,
 								 DocumentLocation &loc,
