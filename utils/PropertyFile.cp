@@ -234,7 +234,7 @@ namespace PropertyFile
 		, isExpr( false )
 		, isEvaling( false )
 	{
-		type =  OBJECT;
+		type =  CONTAINER;
 		oval.props = new PropertyMap();
 		oval.conds = new ConditionList();
 	}
@@ -271,7 +271,7 @@ namespace PropertyFile
 	{
 		switch( type )
 		{
-		case OBJECT:
+		case CONTAINER:
 			itfor( PropertyMap, *oval.props, it )
 			{
 				delete it->second;
@@ -303,7 +303,7 @@ namespace PropertyFile
 			// we have to set 'isExpr' because $() is stripped
 			clone->isExpr = isExpr;
 			break;
-		case OBJECT:
+		case CONTAINER:
 			clone = new Property( loc, id, _isArray );
 
 			itfor( PropertyMap, props(), it )
@@ -328,14 +328,14 @@ namespace PropertyFile
 		return id.getName();
 	}
 
-	bool Property::isObj()
+	bool Property::isContainer()
 	{
-		return type == OBJECT;
+		return type == CONTAINER;
 	}
 
 	bool Property::isArray()
 	{
-		return isObj() && _isArray;
+		return isContainer() && _isArray;
 	}
 
 	bool Property::isScalar()
@@ -345,7 +345,7 @@ namespace PropertyFile
 
 	Property &Property::get( Identifier id )
 	{
-		assert( type == OBJECT );
+		assert( type == CONTAINER );
 
 		Property *prop = getp( id );
 
@@ -359,7 +359,7 @@ namespace PropertyFile
 
 	Property *Property::getp( Identifier id )
 	{
-		assert( type == OBJECT );
+		assert( type == CONTAINER );
 
 		PropertyMap::iterator it = props().find( id );
 		if( it != props().end() )
@@ -374,21 +374,21 @@ namespace PropertyFile
 
 	PropertyMap &Property::props()
 	{
-		assert( type == OBJECT );
+		assert( type == CONTAINER );
 
 		return *oval.props;
 	}
 
 	ConditionList &Property::conds()
 	{
-		assert( type == OBJECT );
+		assert( type == CONTAINER );
 
 		return *oval.conds;
 	}
 
 	void Property::replace( PropertyMap &newprops, bool isArray )
 	{
-		assert( type == OBJECT );
+		assert( type == CONTAINER );
 
 		itfor( PropertyMap, props(), it )
 		{
@@ -449,7 +449,7 @@ namespace PropertyFile
 
 	void Property::add( Node *node )
 	{
-		assert( type == OBJECT );
+		assert( type == CONTAINER );
 
 		switch( node->getNodeType() )
 		{
@@ -478,7 +478,7 @@ namespace PropertyFile
 		out << loc.getDescription() << " ";
 		out << indent << getName();
 
-		if( type == OBJECT )
+		if( type == CONTAINER )
 		{
 			if( _isArray )
 			{
@@ -514,7 +514,8 @@ namespace PropertyFile
 
 		if( isExpr )
 		{
-			// We eventually want to move the isEvaling state out of the object and the stack so we are thread safe.
+			// We eventually want to move the isEvaling state out of the object and
+			// onto the stack so we are thread safe.
 			if( isEvaling )
 			{
 				loc.err( "Expression dependency cycle." );
@@ -569,7 +570,7 @@ namespace PropertyFile
 		{
 			Property *result = NULL;
 
-			if( type == OBJECT )
+			if( type == CONTAINER )
 			{
 				result = getp( id );
 			}
@@ -1192,7 +1193,7 @@ namespace PropertyFile
 
 				if( nelements > 0 )
 				{
-					if( propArray->get(0).isObj() )
+					if( propArray->get(0).isContainer() )
 					{
 						// we must have had a hanging ','. We force an empty object as a final element.
 						propArray->add( new Property( loc, nelements ) );
@@ -1390,7 +1391,7 @@ namespace PropertyFile
 
 	void Schema::normalize( Property &propSchema, Property &propValue )
 	{
-		assert( propSchema.isObj() );
+		assert( propSchema.isContainer() );
 
 		injectDefaults( propSchema, propValue );
 
@@ -1475,7 +1476,7 @@ namespace PropertyFile
 
 	void Schema::injectDefaults( Property &propSchema, Property &propValue )
 	{
-		assert( propSchema.isObj() );
+		assert( propSchema.isContainer() );
 
 		// need to be within <root>, properties, element
 		if( propSchema.getp( "type" ) != NULL )
@@ -1483,7 +1484,7 @@ namespace PropertyFile
 			return;
 		}
 
-		if( !propValue.isObj() )
+		if( !propValue.isContainer() )
 		{
 			propValue.err( "Expecting OBJECT" );
 		}
@@ -1491,7 +1492,7 @@ namespace PropertyFile
 		itfor( PropertyMap, propSchema.props(), it )
 		{
 			Property *childSchema = it->second;
-			if( !childSchema->isObj() )
+			if( !childSchema->isContainer() )
 			{
 				childSchema->err( "Unexpected attribute" );
 			}
@@ -1500,7 +1501,6 @@ namespace PropertyFile
 
 			if( childValue == NULL )
 			{
-
 				Property *propDefault = childSchema->getp( "default" );
 				if( propDefault == NULL )
 				{
@@ -1519,8 +1519,8 @@ namespace PropertyFile
 
 	void Schema::validateChildren( Property &propSchema, Property &propValue )
 	{
-		assert( propSchema.isObj() );
-		assert( propValue.isObj() );
+		assert( propSchema.isContainer() );
+		assert( propValue.isContainer() );
 
 		if( propValue.conds().size() > 0 )
 		{
@@ -1531,7 +1531,7 @@ namespace PropertyFile
 		{
 			Property *childSchema = it->second;
 
-			if( !childSchema->isObj() )
+			if( !childSchema->isContainer() )
 			{
 				childSchema->err( "Unexpected attribute." );
 			}
@@ -1553,7 +1553,7 @@ namespace PropertyFile
 
 	void Schema::validateProperty(  Property &propSchema, Property &propValue )
 	{
-		if( propValue.isObj() && (propValue.conds().size() > 0) )
+		if( propValue.isContainer() && (propValue.conds().size() > 0) )
 		{
 			propValue.conds().front()->err( "'if' only legal in schema files." );
 		}
@@ -1589,7 +1589,7 @@ namespace PropertyFile
 		}
 		else if( type == "OBJECT" )
 		{
-			if( !propValue.isObj() || propValue.isArray() )
+			if( !propValue.isContainer() || propValue.isArray() )
 			{
 				propValue.err( string("Expecting OBJECT value for property '") + propValue.getName() + "'" );
 			}

@@ -117,7 +117,7 @@ namespace PropertyFile
 		enum Type
 		{
 			SCALAR,
-			OBJECT
+			CONTAINER
 		};
 
 		Property( DocumentLocation loc, Identifier id, bool _isArray = false );
@@ -128,7 +128,7 @@ namespace PropertyFile
 
 		const char *getName();
 
-		bool isObj();
+		bool isContainer();
 		bool isArray();
 		bool isScalar();
 
