@@ -12,22 +12,28 @@
 
 using namespace std;
 
+#define DEBUG_INPUT !true
+
 namespace PropertyFile
 {
+	// ----------------------------------------------------------------------
+	// ----------------------------------------------------------------------
+	// --- FUNCTION eval()
+	// ---
+	// --- Use python to evaluate an expression
+	// ----------------------------------------------------------------------
+	// ----------------------------------------------------------------------
+	typedef map<string,string> SymbolTable;
 
-	bool eval( const char *expr,
-			   map<string,string> symbols,
-			   char *result, size_t result_size )
+	static bool eval( const char *expr,
+					  SymbolTable &symbols,
+					  char *result, size_t result_size )
 	{
+		// build a dict() mapping symbol name to value
 		string locals = "{";
-		for(map<string,string>::iterator
-				it = symbols.begin(),
-				itend = symbols.end();
-			it != itend;
-			it++ )
+		itfor(SymbolTable, symbols, it )
 		{
-			locals.append( "'" + it->first + "': " + it->second );
-			locals.append( "," ); // python allows final dangling comma
+			locals.append( "'" + it->first + "': " + it->second + ",");
 		}
 		locals.append( "}" );
 
@@ -153,8 +159,13 @@ namespace PropertyFile
 
 	void DocumentLocation::err( string msg )
 	{
-		fprintf( stderr, "%s:%u: %s\n", doc->getName(), lineno, msg.c_str() );
+		fprintf( stderr, "%s:%u: ERROR! %s\n", doc->getName(), lineno, msg.c_str() );
 		exit( 1 );
+	}
+
+	void DocumentLocation::warn( string msg )
+	{
+		fprintf( stderr, "%s:%u: WARNING! %s\n", doc->getName(), lineno, msg.c_str() );
 	}
 
 	// ----------------------------------------------------------------------
@@ -217,6 +228,11 @@ namespace PropertyFile
 	void Node::err( string message )
 	{
 		loc.err( message );
+	}
+
+	void Node::warn( string message )
+	{
+		loc.warn( message );
 	}
 
 	// ----------------------------------------------------------------------
@@ -444,7 +460,7 @@ namespace PropertyFile
 	{
 		assert( type == SCALAR );
 
-		return string( sval );
+		return evalScalar();
 	}
 
 	void Property::add( Node *node )
@@ -456,6 +472,11 @@ namespace PropertyFile
 		case PROPERTY:
 			{
 				Property *prop = node->toProp();
+				Property *prev = props()[ prop->id ];
+				if( prev != NULL )
+				{
+					prop->err( string("Duplicate definition. See ") + prev->loc.getDescription() );
+				}
 				prop->parent = this;
 
 				props()[ prop->id ] = prop;
@@ -522,7 +543,7 @@ namespace PropertyFile
 			}
 			isEvaling = true;
 
-			map<string, string> symbolTable;
+			SymbolTable symbolTable;
 
 			Parser::StringList ids;
 			Parser::scanIdentifiers( sval, ids );
@@ -796,6 +817,10 @@ namespace PropertyFile
 								loc,
 								inMultiLineComment)) != NULL )
 		{
+#if DEBUG_INPUT
+			cout << "readline='" << line << "'" << endl;
+#endif
+
 			CStringList tokens;
 			tokenize( loc, line, tokens );
 
@@ -947,8 +972,18 @@ namespace PropertyFile
 			in.getline( buf, sizeof(buf) );
 			if( !in.good() )
 			{
-				break;
+				if( in.eof() )
+				{
+					if( in.gcount() == 0 )
+						break;
+				}
+				else
+					loc.err( "Failed reading file!" );
 			}
+
+#if DEBUG_INPUT
+			cout << "getline='" << buf << "'" << endl;
+#endif
 
 			char *line = stripComments( buf, inMultiLineComment );
 
@@ -975,7 +1010,6 @@ namespace PropertyFile
 			{
 				result = strdup( line );
 			}
-
 		} while( result == NULL );
 
 		return result;
@@ -986,7 +1020,9 @@ namespace PropertyFile
 	{
 		// process multi-line comments
 		{
-			list< pair<int,int> > contentSegments;
+			typedef list< pair<int,int> > SegmentList;
+
+			SegmentList contentSegments;
 			char prevChar = '\0';
 			int index;
 			int contentStart = inMultiLineComment == 0 ? 0 : -1;
@@ -1023,11 +1059,7 @@ namespace PropertyFile
 
 			char *tail = line;
 
-			for( list<pair<int,int> >::iterator
-					 it = contentSegments.begin(),
-					 it_end =contentSegments.end();
-				 it != it_end;
-				 it++ )
+			itfor( SegmentList, contentSegments, it )
 			{
 				int n = (it->second - it->first) + 1;
 				memcpy( tail, line + it->first, n );
@@ -1414,10 +1446,11 @@ namespace PropertyFile
 		itfor( PropertyMap, propSchema.props(), it )
 		{
 			Property *childSchema = it->second;
+			string childSchemaName = childSchema->getName();
 
 			if( !childSchema->isScalar() )
 			{
-				if( string(childSchema->getName()) == "element"  )
+				if( childSchemaName == "element"  )
 				{
 					assert( string(propSchema.getName()) == propValue.getName() );
 
@@ -1441,7 +1474,7 @@ namespace PropertyFile
 
 					childSchema->replace( schemaElements, true );
 				}
-				else
+				else if( childSchemaName != "default" && childSchemaName != "values" )
 				{
 					Property *childValue = NULL;
 					if( !propValue.isScalar() )
@@ -1479,7 +1512,7 @@ namespace PropertyFile
 			Property *childSchema = it->second;
 			if( !childSchema->isContainer() )
 			{
-				childSchema->err( "Unexpected attribute" );
+				childSchema->err( string("Unexpected attribute for ") + propSchema.getName() );
 			}
 
 			Property *childValue = propValue.getp( childSchema->id );
@@ -1724,6 +1757,14 @@ namespace PropertyFile
 			}
 
 			// --
+			// -- warn
+			// --
+			else if( attrName == "warn" )
+			{
+				propValue.warn( (string)attrVal );
+			}
+
+			// --
 			// -- element
 			// --
 			else if( attrName == "element" )
@@ -1788,13 +1829,17 @@ int main( int argc, char **argv )
 {
 	if( false )
 	{
-		Parser::parseFile( "foo.txt" );
+		Parser::parseFile( "v101.wfs" )->dump( cout );
 	}
 	else
 	{
+#if false
 		Document *docValues = Parser::parseFile( "values.txt" );
 		Document *docSchema = Parser::parseFile( "schema.txt" );
-
+#else
+		Document *docValues = Parser::parseFile( "v101.wf" );
+		Document *docSchema = Parser::parseFile( "v101.wfs" );
+#endif
 		Schema::apply( docSchema, docValues );
 
 		docValues->dump( cout );

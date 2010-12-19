@@ -58,6 +58,7 @@ namespace PropertyFile
 		std::string getDescription();
 
 		void err( std::string msg );
+		void warn( std::string msg );
 
 	private:
 		friend class Parser;
@@ -102,6 +103,7 @@ namespace PropertyFile
 		class Clause *toClause();
 
 		void err( std::string message );
+		void warn( std::string message );
 
 		virtual void add( Node *node ) = 0;
 		virtual void dump( std::ostream &out, const char *indent = "" ) = 0;
