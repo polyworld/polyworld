@@ -1,4 +1,4 @@
-#include "PropertyFile.h"
+#include "proplib.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -14,7 +14,7 @@ using namespace std;
 
 #define DEBUG_INPUT !true
 
-namespace PropertyFile
+namespace proplib
 {
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
@@ -1823,7 +1823,7 @@ namespace PropertyFile
 }
 
 #ifdef PROPDEV
-using namespace PropertyFile;
+using namespace proplib;
 
 int main( int argc, char **argv )
 {

@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-namespace PropertyFile
+namespace proplib
 {
 	// forward decl
 	class Document;
