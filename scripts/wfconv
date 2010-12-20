@@ -685,4 +685,4 @@ def parse( path ):
 worldfile = parse( 'worldfile' )
 
 
-printNewFormat( worldfile, True )
+printNewFormat( worldfile, schema = True )

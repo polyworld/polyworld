@@ -16,6 +16,13 @@ void Color::set( GLfloat _r, GLfloat _g, GLfloat _b )
 	set( _r, _g, _b, 1.0 );
 }
 
+Color &Color::operator=( proplib::Property &prop )
+{
+	set( (float)prop.get( "R"), (float)prop.get( "G"), (float)prop.get( "B") );
+
+	return *this;
+}
+
 
 std::ostream &operator<<( std::ostream &out, const Color &color )
 {

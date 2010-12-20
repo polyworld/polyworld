@@ -12,6 +12,8 @@
 
 #include <gl.h>
 
+#include "proplib.h"
+
 struct Color
 {
     GLfloat r;
@@ -21,6 +23,8 @@ struct Color
 
 	void set( GLfloat _r, GLfloat _g, GLfloat _b, GLfloat _a );
 	void set( GLfloat _r, GLfloat _g, GLfloat _b );
+
+	Color &operator=( proplib::Property &prop );
 };
 typedef struct Color Color;
 

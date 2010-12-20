@@ -167,11 +167,15 @@ namespace proplib
 		Property *getp( Identifier id );
 
 		PropertyMap &props();
+		PropertyMap &elements(); // just an alias for props() to make code clearer with arrays
+		size_t size(); // number of properties/elements
 		ConditionList &conds();
 
 		void replace( PropertyMap &newprops, bool isArray );
 
+		operator short();
 		operator int();
+		operator long();
 		operator float();
 		operator bool();
 		operator std::string();

@@ -55,6 +55,9 @@
 #include "food.h"
 #include "Genome.h"
 #include "GenomeUtil.h"
+#ifdef PROPLIB
+#include "proplib.h"
+#endif
 #include "Queue.h"
 #include "RandomNumberGenerator.h"
 #include "Resources.h"
@@ -1312,11 +1315,17 @@ void TSimulation::Init()
 
     srand(1);
 
+#ifdef PROPLIB
+	fGraphics = true;
+
+	ReadPropLib();
+#else
     // Initialize world with default values
     InitWorld();
 	
 	// Initialize world state from saved file if present
 	ReadWorldFile("worldfile");
+#endif
 	
 	if( fStaticTimestepGeometry )
 	{
@@ -7406,6 +7415,860 @@ void TSimulation::ReadLabel(istream &in, const char *name)
 	}
 }
 
+#ifdef PROPLIB
+//-------------------------------------------------------------------------------------------
+// TSimulation::ReadPropLib
+//-------------------------------------------------------------------------------------------
+void TSimulation::ReadPropLib()
+{
+	proplib::Document *docSchema = proplib::Parser::parseFile( "v101.wfs" );
+	proplib::Document *docValues = proplib::Parser::parseFile( "v101.wf" );
+	proplib::Schema::apply( docSchema, docValues );
+	proplib::Document &doc = *docValues;
+
+	fLockStepWithBirthsDeathsLog = doc.get( "PassiveLockstep" );
+	fMaxSteps = doc.get( "MaxSteps" );
+	fEndOnPopulationCrash = doc.get( "EndOnPopulationCrash" );
+	fDumpFrequency = doc.get( "CheckPointFrequency" );
+	fStatusFrequency = doc.get( "StatusFrequency" );
+	{
+		globals::edges = false;
+		globals::wraparound = false;
+		string prop = doc.get( "Edges" );
+		if( prop == "B" )
+			globals::edges = true;
+		else if( prop == "W" )
+			globals::wraparound = true;
+		else
+			assert( false );
+	}
+	agent::gVision = doc.get( "Vision" );
+	fShowVision = doc.get( "ShowVision" );
+	fStaticTimestepGeometry = doc.get( "StaticTimestepGeometry" );
+	fParallelInitAgents = doc.get( "ParallelInitAgents" );
+	fParallelInteract = doc.get( "ParallelInteract" );
+	fParallelBrains = doc.get( "ParallelBrains" );
+	brain::gMinWin = doc.get( "RetinaWidth" );
+	agent::gMaxVelocity = doc.get( "MaxVelocity" );
+	fMinNumAgents = doc.get( "MinAgents" );
+	fMaxNumAgents = doc.get( "MaxAgents" );
+	fInitNumAgents = doc.get( "InitAgents" );
+	fNumberToSeed = doc.get( "InitAgents" );
+	fProbabilityOfMutatingSeeds = doc.get( "SeedMutationProbability" );
+	fSeedFromFile = doc.get( "SeedGenomeFromRun" );
+	fPositionSeedsFromFile = doc.get( "SeedPositionFromRun" );
+    fMiscAgents = doc.get( "MiscegenationDelay" );
+	fInitFoodCount = doc.get( "InitFood" );
+	fMinFoodCount = doc.get( "MinFood" );
+	fMaxFoodCount = doc.get( "MaxFood" );
+	fMaxFoodGrownCount = doc.get( "MaxFoodGrown" );
+	fFoodRate = doc.get( "FoodGrowthRate" );
+	fFoodRemoveEnergy = doc.get( "FoodRemoveEnergy" );
+    fPositionSeed = doc.get( "PositionSeed" );
+    fGenomeSeed = doc.get( "InitSeed" );
+	fSimulationSeed = doc.get( "SimulationSeed" );
+	{
+		proplib::Property &rfood = doc.get( "AgentsAreFood" );
+		if( (string)rfood == "Fight" )
+			fAgentsRfood = RFOOD_TRUE__FIGHT_ONLY;
+		else if ( (bool)rfood )
+			fAgentsRfood = RFOOD_TRUE;
+		else
+			fAgentsRfood = RFOOD_FALSE;
+	}
+	fFitness1Frequency = doc.get( "EliteFrequency" );
+    fFitness2Frequency = doc.get( "PairFrequency" );
+    fNumberFit = doc.get( "NumberFittest" );
+	fNumberRecentFit = doc.get( "NumberRecentFittest" );
+    fEatFitnessParameter = doc.get( "FitnessWeightEating" );
+    fMateFitnessParameter = doc.get( "FitnessWeightMating" );
+    fMoveFitnessParameter = doc.get( "FitnessWeightMoving" );
+    fEnergyFitnessParameter = doc.get( "FitnessWeightEnergyAtDeath" );
+    fAgeFitnessParameter = doc.get( "FitnessWeightLongevity" );
+  	fTotalHeuristicFitness = fEatFitnessParameter + fMateFitnessParameter + fMoveFitnessParameter + fEnergyFitnessParameter + fAgeFitnessParameter;
+	food::gMinFoodEnergy = doc.get( "MinFoodEnergy" );
+    food::gMaxFoodEnergy = doc.get( "MaxFoodEnergy" );
+	food::gSize2Energy = doc.get( "FoodEnergySizeScale" );
+	fEat2Consume = doc.get( "FoodConsumptionRate" );
+	{
+		string layout = doc.get( "GenomeLayout" );
+		if( layout == "N" )
+			genome::gLayoutType = genome::GenomeLayout::NEURGROUP;
+		else if( layout == "L" )
+			genome::gLayoutType = genome::GenomeLayout::LEGACY;
+		else
+			assert( false );
+	}
+	genome::gEnableMateWaitFeedback = doc.get( "EnableMateWaitFeedback" );
+	genome::gEnableSpeedFeedback = doc.get( "EnableSpeedFeedback" );
+	genome::gEnableGive = doc.get( "EnableGive" );
+	genome::gEnableCarry = doc.get( "EnableCarry" );
+	agent::gMaxCarries = doc.get( "MaxCarries" );
+	{
+		fCarryObjects = 0;
+#define __SET( PROP, MASK ) if( (bool)doc.get("Carry"PROP) ) fCarryObjects |= MASK##TYPE
+		__SET( "Agents", AGENT );
+		__SET( "Food", FOOD );
+		__SET( "Bricks", BRICK );
+#undef __SET
+	}
+	{
+		fShieldObjects = 0;
+#define __SET( PROP, MASK ) if( (bool)doc.get("Shield"PROP) ) fShieldObjects |= MASK##TYPE
+		__SET( "Agents", AGENT );
+		__SET( "Food", FOOD );
+		__SET( "Bricks", BRICK );
+#undef __SET
+	}
+	fCarryPreventsEat = doc.get( "CarryPreventsEat" );
+	fCarryPreventsFight = doc.get( "CarryPreventsFight" );
+	fCarryPreventsGive = doc.get( "CarryPreventsGive" );
+	fCarryPreventsMate = doc.get( "CarryPreventsMate" );
+
+    genome::gMinvispixels = doc.get( "MinVisionNeuronsPerGroup" );
+    genome::gMaxvispixels = doc.get( "MaxVisionNeuronsPerGroup" );
+    genome::gMinMutationRate = doc.get( "MinMutationRate" );
+    genome::gMaxMutationRate = doc.get( "MaxMutationRate" );
+    genome::gMinNumCpts = doc.get( "MinCrossoverPoints" );
+    genome::gMaxNumCpts = doc.get( "MaxCrossoverPoints" );
+    genome::gMinLifeSpan = doc.get( "MinLifeSpan" );
+    genome::gMaxLifeSpan = doc.get( "MaxLifeSpan" );
+    fMateWait = doc.get( "MateWait" );
+    agent::gInitMateWait = doc.get( "InitMateWait" );
+	fEatMateSpan = doc.get( "EatMateWait" );
+    genome::gMinStrength = doc.get( "MinAgentStrength" );
+    genome::gMaxStrength = doc.get( "MaxAgentStrength" );
+    agent::gMinAgentSize = doc.get( "MinAgentSize" );
+    agent::gMaxAgentSize = doc.get( "MaxAgentSize" );
+    agent::gMinMaxEnergy = doc.get( "MinAgentMaxEnergy" );
+    agent::gMaxMaxEnergy = doc.get( "MaxAgentMaxEnergy" );
+    genome::gMinmateenergy = doc.get( "MinEnergyFractionToOffspring" );
+    genome::gMaxmateenergy = doc.get( "MaxEnergyFractionToOffspring" );
+    fMinMateFraction = doc.get( "MinMateEnergyFraction" );
+    genome::gMinmaxspeed = doc.get( "MinAgentMaxSpeed" );
+    genome::gMaxmaxspeed = doc.get( "MaxAgentMaxSpeed" );
+    agent::gSpeed2DPosition = doc.get( "MotionRate" );
+    agent::gYaw2DYaw = doc.get( "YawRate" );
+    genome::gMinlrate = doc.get( "MinLearningRate" );
+    genome::gMaxlrate = doc.get( "MaxLearningRate" );
+    agent::gMinFocus = doc.get( "MinHorizontalFieldOfView" );
+    agent::gMaxFocus = doc.get( "MaxHorizontalFieldOfView" );
+    agent::gAgentFOV = doc.get( "VerticalFieldOfView" );
+    agent::gMaxSizeAdvantage = doc.get( "MaxSizeFightAdvantage" );
+	{
+		proplib::Property &prop = doc.get( "BodyGreenChannel" );
+		if( (string)prop == "I" )
+			agent::gBodyGreenChannel = agent::BGC_ID;
+		else if( (string)prop == "L" )
+			agent::gBodyGreenChannel = agent::BGC_LIGHT;
+		else
+		{
+			agent::gBodyGreenChannel = agent::BGC_CONST;
+			agent::gBodyGreenChannelConstValue = (float)prop;
+		}
+	}
+	{
+		proplib::Property &prop = doc.get( "NoseColor" );
+		if( (string)prop == "L" )
+			agent::gNoseColor = agent::NC_LIGHT;
+		else
+		{
+			agent::gNoseColor = agent::NC_CONST;
+			agent::gNoseColorConstValue = (float)prop;
+		}
+	}
+    fPower2Energy = doc.get( "DamageRate" );
+    agent::gEat2Energy = doc.get( "EnergyUseEat" );
+    agent::gMate2Energy = doc.get( "EnergyUseMate" );
+    agent::gFight2Energy = doc.get( "EnergyUseFight" );
+	agent::gMinSizePenalty = doc.get( "MinSizeEnergyPenalty" );
+    agent::gMaxSizePenalty = doc.get( "MaxSizeEnergyPenalty" );
+    agent::gSpeed2Energy = doc.get( "EnergyUseMove" );
+    agent::gYaw2Energy = doc.get( "EnergyUseTurn" );
+    agent::gLight2Energy = doc.get( "EnergyUseLight" );
+    agent::gFocus2Energy = doc.get( "EnergyUseFocus" );
+	agent::gPickup2Energy = doc.get( "EnergyUsePickup" );
+	agent::gDrop2Energy = doc.get( "EnergyUseDrop" );
+	agent::gCarryAgent2Energy = doc.get( "EnergyUseCarryAgent" );
+	agent::gCarryAgentSize2Energy = doc.get( "EnergyUseCarryAgentSize" );
+	food::gCarryFood2Energy = doc.get( "EnergyUseCarryFood" );
+	brick::gCarryBrick2Energy = doc.get( "EnergyUseCarryBrick" );
+    brain::gNeuralValues.maxsynapse2energy = doc.get( "EnergyUseSynapses" );
+    agent::gFixedEnergyDrain = doc.get( "EnergyUseFixed" );
+    brain::gDecayRate = doc.get( "SynapseWeightDecayRate" );
+	{
+		fAgentHealingRate = doc.get( "AgentHealingRate" );
+		// a bool flag to check to see if healing is turned on is faster than always comparing a float.
+		fHealing = fAgentHealingRate > 0.0;
+	}
+    fEatThreshold = doc.get( "EatThreshold" );
+    fMateThreshold = doc.get( "MateThreshold" );
+    fFightThreshold = doc.get( "FightThreshold" );
+	fFightFraction = doc.get( "FightMultiplier" );
+	fGiveThreshold = doc.get( "GiveThreshold" );
+	fGiveFraction = doc.get( "GiveFraction" );
+	fPickupThreshold = doc.get( "PickupThreshold" );
+	fDropThreshold = doc.get( "DropThreshold" );
+    genome::gMiscBias = doc.get( "MiscegenationFunctionBias" );
+    genome::gMiscInvisSlope = doc.get( "MiscegenationFunctionInverseSlope" );
+    brain::gLogisticsSlope = doc.get( "LogisticSlope" );
+    brain::gMaxWeight = doc.get( "MaxSynapseWeight" );
+
+	brain::gEnableInitWeightRngSeed = doc.get( "EnableInitWeightRngSeed" );
+	brain::gMinInitWeightRngSeed = doc.get( "MinInitWeightRngSeed" );
+	brain::gMaxInitWeightRngSeed = doc.get( "MaxInitWeightRngSeed" );
+	RandomNumberGenerator::set( RandomNumberGenerator::INIT_WEIGHT,
+								RandomNumberGenerator::LOCAL );
+    brain::gInitMaxWeight = doc.get( "MaxSynapseWeightInitial" );
+    genome::gMinBitProb = doc.get( "MinInitialBitProb" );
+    genome::gMaxBitProb = doc.get( "MaxInitialBitProb" );
+	{
+		fSolidObjects = 0;
+#define __SET( PROP, MASK ) if( (bool)doc.get("Solid"PROP) ) fSolidObjects |= MASK##TYPE
+		__SET( "Agents", AGENT );
+		__SET( "Food", FOOD );
+		__SET( "Bricks", BRICK );
+#undef __SET
+	}
+    agent::gAgentHeight = doc.get( "AgentHeight" );
+    food::gFoodHeight = doc.get( "FoodHeight" );
+    food::gFoodColor = doc.get( "FoodColor" );
+	brick::gBrickHeight = doc.get( "BrickHeight" );
+	brick::gBrickColor = doc.get( "BrickColor" );
+    barrier::gBarrierHeight = doc.get( "BarrierHeight" );
+    barrier::gBarrierColor = doc.get( "BarrierColor" );
+    fGroundColor = doc.get( "GroundColor" );
+    fGroundClearance = doc.get( "GroundClearance" );
+    fCameraColor = doc.get( "CameraColor" );
+    fCameraRadius = doc.get( "CameraRadius" );
+    fCameraHeight = doc.get( "CameraHeight" );
+    fCameraRotationRate = doc.get( "CameraRotationRate" );
+    fRotateWorld = (fCameraRotationRate != 0.0);	//Boolean for enabling or disabling world roation (CMB 3/19/06)
+    fCameraAngleStart = doc.get( "CameraAngleStart" );
+    fCameraFOV = doc.get( "CameraFieldOfView" );
+    fMonitorAgentRank = doc.get( "MonitorAgentRank" );
+    if (!fGraphics)
+        fMonitorAgentRank = 0; // cannot monitor agent brain without graphics
+    fBrainMonitorStride = doc.get( "BrainMonitorFrequency" );
+    globals::worldsize = doc.get( "WorldSize" );
+	{
+		bool ratioBarrierPositions = doc.get( "RatioBarrierPositions" );
+		proplib::Property &propBarriers = doc.get( "Barriers" );
+
+		itfor( proplib::PropertyMap, propBarriers.elements(), itBarrier )
+		{
+			proplib::Property &propKeyFrames = itBarrier->second->get( "KeyFrames" );
+			barrier *b = new barrier( propKeyFrames.size() );
+
+			itfor( proplib::PropertyMap, propKeyFrames.elements(), itKeyFrame )
+			{
+				long t;
+				float x1, z1, x2, z2;
+
+				t = itKeyFrame->second->get( "T" );
+				x1 = itKeyFrame->second->get( "X1" );
+				z1 = itKeyFrame->second->get( "Z1" );
+				x2 = itKeyFrame->second->get( "X2" );
+				z2 = itKeyFrame->second->get( "Z2" );
+
+				if( ratioBarrierPositions )
+				{
+					x1 *= globals::worldsize;
+					z1 *= globals::worldsize;
+					x2 *= globals::worldsize;
+					z2 *= globals::worldsize;
+				}
+				b->setKeyFrame( t, x1, z1, x2, z2 );
+			}
+
+			barrier::gXSortedBarriers.add( b );
+		}
+	}
+    fMonitorGeneSeparation = doc.get( "MonitorGeneSeparation" );
+    fRecordGeneSeparation = doc.get( "RecordGeneSeparation" );
+    fChartBorn = doc.get( "ChartBorn" );
+    fChartFitness = doc.get( "ChartFitness" );
+    fChartFoodEnergy = doc.get( "ChartFoodEnergy" );
+    fChartPopulation = doc.get( "ChartPopulation" );
+	{
+		proplib::Property &propDomains = doc.get( "Domains" );
+		fNumDomains = propDomains.size();
+
+		long totmaxnumagents = 0;
+		long totminnumagents = 0;
+		int	numFoodPatchesNeedingRemoval = 0;
+
+		for( int id = 0; id < fNumDomains; id++ )
+		{
+			proplib::Property &dom = propDomains.get( id );
+
+			{
+				fDomains[id].centerX = dom.get( "CenterX" );
+				fDomains[id].centerZ = dom.get( "CenterZ" );
+				fDomains[id].sizeX = dom.get( "SizeX" );
+				fDomains[id].sizeZ = dom.get( "SizeZ" );
+
+				fDomains[id].absoluteSizeX = globals::worldsize * fDomains[id].sizeX;
+				fDomains[id].absoluteSizeZ = globals::worldsize * fDomains[id].sizeZ;
+
+				fDomains[id].startX = fDomains[id].centerX * globals::worldsize - (fDomains[id].absoluteSizeX / 2.0);
+				fDomains[id].startZ = - fDomains[id].centerZ * globals::worldsize - (fDomains[id].absoluteSizeZ / 2.0);
+
+				fDomains[id].endX = fDomains[id].centerX * globals::worldsize + (fDomains[id].absoluteSizeX / 2.0);
+				fDomains[id].endZ = - fDomains[id].centerZ * globals::worldsize + (fDomains[id].absoluteSizeZ / 2.0);
+
+				// clean up for floating point precision a little
+				if( fDomains[id].startX < 0.0006 )
+					fDomains[id].startX = 0.0;
+				if( fDomains[id].startZ > -0.0006 )
+					fDomains[id].startZ = 0.0;
+				if( fDomains[id].endX > globals::worldsize * 0.9994 )
+					fDomains[id].endX = globals::worldsize;
+				if( fDomains[id].endZ < -globals::worldsize * 0.9994 )
+					fDomains[id].endZ = -globals::worldsize;
+			}
+
+			{
+				float minAgentsFraction = dom.get( "MinAgentsFraction" );
+				if( minAgentsFraction < 0.0 )
+					minAgentsFraction = fDomains[id].sizeX * fDomains[id].sizeZ;
+				fDomains[id].minNumAgents = nint( minAgentsFraction * fMinNumAgents );
+				
+				float maxAgentsFraction = dom.get( "MaxAgentsFraction" );
+				if( maxAgentsFraction < 0.0 )
+					maxAgentsFraction = fDomains[id].sizeX * fDomains[id].sizeZ;
+				fDomains[id].maxNumAgents = nint( maxAgentsFraction * fMaxNumAgents );
+				
+				float initAgentsFraction = dom.get( "InitAgentsFraction" );
+				if( initAgentsFraction < 0.0 )
+					initAgentsFraction = fDomains[id].sizeX * fDomains[id].sizeZ;
+				fDomains[id].initNumAgents = nint( initAgentsFraction * fInitNumAgents );
+				
+				float initSeedsFraction = dom.get( "InitSeedsFraction" );
+				if( initSeedsFraction < 0.0 )
+					initSeedsFraction = fDomains[id].sizeX * fDomains[id].sizeZ;
+				fDomains[id].numberToSeed = nint( initSeedsFraction * fNumberToSeed );
+				
+				fDomains[id].probabilityOfMutatingSeeds = dom.get( "ProbabilityOfMutatingSeeds" );
+				if( fDomains[id].probabilityOfMutatingSeeds < 0.0 )
+					fDomains[id].probabilityOfMutatingSeeds = fProbabilityOfMutatingSeeds;
+
+				float initFoodFraction = dom.get( "InitFoodFraction" );
+				if( initFoodFraction >= 0.0 )
+					fDomains[id].initFoodCount = nint( initFoodFraction * fInitFoodCount );
+				else
+					fDomains[id].initFoodCount = nint( fDomains[id].sizeX * fDomains[id].sizeZ * fInitFoodCount );
+
+				float minFoodFraction = dom.get( "MinFoodFraction" );
+				if( minFoodFraction >= 0.0 )
+					fDomains[id].minFoodCount = nint( minFoodFraction * fMinFoodCount );
+				else
+					fDomains[id].minFoodCount = nint( fDomains[id].sizeX * fDomains[id].sizeZ * fMinFoodCount );
+
+				float maxFoodFraction = dom.get( "MaxFoodFraction" );
+				if( maxFoodFraction >= 0.0 )
+					fDomains[id].maxFoodCount = nint( maxFoodFraction * fMaxFoodCount );
+				else
+					fDomains[id].maxFoodCount = nint( fDomains[id].sizeX * fDomains[id].sizeZ * fMaxFoodCount );
+				float maxFoodGrownFraction = dom.get( "MaxFoodGrownFraction" );
+				if( maxFoodGrownFraction >= 0.0 )
+					fDomains[id].maxFoodGrownCount = nint( maxFoodGrownFraction * fMaxFoodGrownCount );
+				else
+					fDomains[id].maxFoodGrownCount = nint( fDomains[id].sizeX * fDomains[id].sizeZ * fMaxFoodGrownCount );
+				fDomains[id].foodRate = dom.get( "FoodRate" );
+				if( fDomains[id].foodRate < 0.0 )
+					fDomains[id].foodRate = fFoodRate;
+
+			}
+
+			{
+				proplib::Property &propPatches = dom.get( "FoodPatches" );
+				fDomains[id].numFoodPatches = propPatches.size();
+
+				// Create an array of FoodPatches
+				fDomains[id].fFoodPatches = new FoodPatch[fDomains[id].numFoodPatches];
+				float patchFractionSpecified = 0.0;
+
+				for (int i = 0; i < fDomains[id].numFoodPatches; i++)
+				{
+					proplib::Property &propPatch = propPatches.get( i );
+
+					float foodFraction, foodRate;
+					float centerX, centerZ;  // should be from 0.0 -> 1.0
+					float sizeX, sizeZ;  // should be from 0.0 -> 1.0
+					float nhsize;
+					float initFoodFraction, minFoodFraction, maxFoodFraction, maxFoodGrownFraction;
+					int initFood, minFood, maxFood, maxFoodGrown;
+					int shape, distribution;
+					int period;
+					float onFraction, phase;
+					bool removeFood;
+
+					foodFraction = propPatch.get( "FoodFraction" );
+
+					initFoodFraction = propPatch.get( "InitFoodFraction" );
+					if( initFoodFraction < 0.0 )
+						initFoodFraction = foodFraction;
+					initFood = nint( initFoodFraction * fDomains[id].initFoodCount );
+					
+					minFoodFraction = propPatch.get( "MinFoodFraction" );
+					if( minFoodFraction < 0.0 )
+						minFoodFraction = foodFraction;
+					minFood = nint( minFoodFraction * fDomains[id].minFoodCount );
+					
+					maxFoodFraction = propPatch.get( "MaxFoodFraction" );
+					if( maxFoodFraction < 0.0 )
+						maxFoodFraction = foodFraction;
+					maxFood = nint( maxFoodFraction * fDomains[id].maxFoodCount );
+					
+					maxFoodGrownFraction = propPatch.get( "MaxFoodGrownFraction" );
+					if( maxFoodGrownFraction < 0.0 )
+						maxFoodGrownFraction = foodFraction;
+					maxFoodGrown = nint( maxFoodGrownFraction * fDomains[id].maxFoodGrownCount );
+					
+					foodRate = propPatch.get( "FoodRate" );
+					if (foodRate < 0.0)
+						foodRate = fDomains[id].foodRate;
+
+					centerX = propPatch.get( "CenterX" );
+					centerZ = propPatch.get( "CenterZ" );
+					sizeX = propPatch.get( "SizeX" );
+					sizeZ = propPatch.get( "SizeZ" );
+					{
+						string val = propPatch.get( "Shape" );
+						if( val == "R" )
+							shape = 0;
+						else if( val == "E" )
+							shape = 1;
+						else
+							assert( false );
+					}
+					{
+						string val = propPatch.get( "Distribution" );
+						if( val == "U" )
+							distribution = 0;
+						else if( val == "L" )
+							distribution = 1;
+						else if( val == "G" )
+							distribution = 2;
+						else
+							assert( false );
+					}
+					nhsize = propPatch.get( "NeighborhoodSize" );
+					period = propPatch.get( "Period" );
+					onFraction = propPatch.get( "OnFraction" );
+					phase = propPatch.get( "Phase" );
+					removeFood = propPatch.get( "RemoveFood" );
+					if( removeFood )
+						numFoodPatchesNeedingRemoval++;
+				
+					fDomains[id].fFoodPatches[i].init(centerX, centerZ, sizeX, sizeZ, foodRate, initFood, minFood, maxFood, maxFoodGrown, foodFraction, shape, distribution, nhsize, period, onFraction, phase, removeFood, &fStage, &(fDomains[id]), id);
+
+					patchFractionSpecified += foodFraction;
+
+				}
+
+				// If all the fractions are 0.0, then set fractions based on patch area
+				if (patchFractionSpecified == 0.0)
+				{
+					float totalArea = 0.0;
+					// First calculate the total area from all the patches
+					for (int i=0; i<fDomains[id].numFoodPatches; i++)
+					{
+						totalArea += fDomains[id].fFoodPatches[i].getArea();
+					}
+					// Then calculate the fraction for each patch
+					for (int i=0; i<fDomains[id].numFoodPatches; i++)
+					{
+						float newFraction = fDomains[id].fFoodPatches[i].getArea() / totalArea;
+						fDomains[id].fFoodPatches[i].setInitCounts((int)(newFraction * fDomains[id].initFoodCount), (int)(newFraction * fDomains[id].minFoodCount), (int)(newFraction * fDomains[id].maxFoodCount), (int)(newFraction * fDomains[id].maxFoodGrownCount), newFraction);
+						patchFractionSpecified += newFraction;
+					}
+				}
+			
+				// Make sure fractions add up to 1.0 (allowing a little slop for floating point precision)
+				if( (patchFractionSpecified < 0.99999) || (patchFractionSpecified > 1.00001) )
+				{
+					printf( "Patch Fractions sum to %f, when they must sum to 1.0!\n", patchFractionSpecified );
+					exit( 1 );
+				}
+			}
+
+			{
+				proplib::Property &propPatches = dom.get( "BrickPatches" );
+				fDomains[id].numBrickPatches = propPatches.size();
+
+				// Create an array of BrickPatches
+				fDomains[id].fBrickPatches = new BrickPatch[fDomains[id].numBrickPatches];
+				for (int i = 0; i < fDomains[id].numBrickPatches; i++)
+				{
+					proplib::Property &propPatch = propPatches.get( i );
+					float centerX, centerZ;  // should be from 0.0 -> 1.0
+					float sizeX, sizeZ;  // should be from 0.0 -> 1.0
+					float nhsize;
+					int shape, distribution, brickCount;
+
+					centerX = propPatch.get( "CenterX" );
+					centerZ = propPatch.get( "CenterZ" );
+					sizeX = propPatch.get( "SizeX" );
+					sizeZ = propPatch.get( "SizeZ" );
+					brickCount = propPatch.get( "BrickCount" );
+					{
+						string val = propPatch.get( "Shape" );
+						if( val == "R" )
+							shape = 0;
+						else if( val == "E" )
+							shape = 1;
+						else
+							assert( false );
+					}
+					{
+						string val = propPatch.get( "Distribution" );
+						if( val == "U" )
+							distribution = 0;
+						else if( val == "L" )
+							distribution = 1;
+						else if( val == "G" )
+							distribution = 2;
+						else
+							assert( false );
+					}
+					nhsize = propPatch.get( "NeighborhoodSize" );
+
+					fDomains[id].fBrickPatches[i].init(centerX, centerZ, sizeX, sizeZ, brickCount, shape, distribution, nhsize, &fStage, &(fDomains[id]), id);
+
+				}
+			}
+
+			totmaxnumagents += fDomains[id].maxNumAgents;
+			totminnumagents += fDomains[id].minNumAgents;
+		}
+
+		if (totmaxnumagents > fMaxNumAgents)
+		{
+			char tempstring[256];
+			sprintf(tempstring,"%s %ld %s %ld %s",
+					"The maximum number of organisms in the world (",
+					fMaxNumAgents,
+					") is < the maximum summed over domains (",
+					totmaxnumagents,
+					"), so there may still be some indirect global influences.");
+			errorflash(0, tempstring);
+		}
+		if (totminnumagents < fMinNumAgents)
+		{
+			char tempstring[256];
+			sprintf(tempstring,"%s %ld %s %ld %s",
+					"The minimum number of organisms in the world (",
+					fMinNumAgents,
+					") is > the minimum summed over domains (",
+					totminnumagents,
+					"), so there may still be some indirect global influences.");
+			errorflash(0,tempstring);
+		}
+
+		if( numFoodPatchesNeedingRemoval > 0 )
+		{
+			// Allocate a maximally sized array to keep a list of food patches needing their food removed
+			fFoodPatchesNeedingRemoval = new FoodPatch*[numFoodPatchesNeedingRemoval];
+			fFoodRemovalNeeded = true;
+		}
+		else
+			fFoodRemovalNeeded = false;
+	
+		for (int id = 0; id < fNumDomains; id++)
+		{
+			fDomains[id].numAgents = 0;
+			fDomains[id].numcreated = 0;
+			fDomains[id].numborn = 0;
+			fDomains[id].numbornsincecreated = 0;
+			fDomains[id].numdied = 0;
+			fDomains[id].lastcreate = 0;
+			fDomains[id].maxgapcreate = 0;
+			fDomains[id].ifit = 0;
+			fDomains[id].jfit = 1;
+			fDomains[id].fittest = NULL;
+		}
+	}
+	
+	fUseProbabilisticFoodPatches = doc.get( "ProbabilisticFoodPatches" );
+    fChartGeneSeparation = doc.get( "ChartGeneSeparation" );
+    if (fChartGeneSeparation)
+        fMonitorGeneSeparation = true;
+
+	{
+		string val = doc.get( "NeuronModel" );
+		if( val == "F" )
+			brain::gNeuralValues.model = brain::NeuralValues::FIRING_RATE;
+		else if( val == "T" )
+			brain::gNeuralValues.model = brain::NeuralValues::SPIKING;
+		else if( val == "S" )
+			brain::gNeuralValues.model = brain::NeuralValues::TAU;
+		else
+			assert( false );
+	}
+
+	brain::gNeuralValues.Tau.minVal = doc.get( "TauMin" );
+	brain::gNeuralValues.Tau.maxVal = doc.get( "TauMax" );
+	brain::gNeuralValues.Tau.seedVal = doc.get( "TauSeed" );
+
+    brain::gNeuralValues.mininternalneurgroups = doc.get( "MinInternalNeuralGroups" );
+    brain::gNeuralValues.maxinternalneurgroups = doc.get( "MaxInternalNeuralGroups" );
+    brain::gNeuralValues.mineneurpergroup = doc.get( "MinExcitatoryNeuronsPerGroup" );
+    brain::gNeuralValues.maxeneurpergroup = doc.get( "MaxExcitatoryNeuronsPerGroup" );
+    brain::gNeuralValues.minineurpergroup = doc.get( "MinInhibitoryNeuronsPerGroup" );
+    brain::gNeuralValues.maxineurpergroup = doc.get( "MaxInhibitoryNeuronsPerGroup" );
+    brain::gNeuralValues.maxbias = doc.get( "MaxBiasWeight" );
+    brain::gNeuralValues.minbiaslrate = doc.get( "MinBiasLrate" );
+    brain::gNeuralValues.maxbiaslrate = doc.get( "MaxBiasLrate" );
+    brain::gNeuralValues.minconnectiondensity = doc.get( "MinConnectionDensity" );
+    brain::gNeuralValues.maxconnectiondensity = doc.get( "MaxConnectionDensity" );
+    brain::gNeuralValues.mintopologicaldistortion = doc.get( "MinTopologicalDistortion" );
+    brain::gNeuralValues.maxtopologicaldistortion = doc.get( "MaxTopologicalDistortion" );
+	brain::gNeuralValues.enableTopologicalDistortionRngSeed = doc.get( "EnableTopologicalDistortionRngSeed" );
+	brain::gNeuralValues.minTopologicalDistortionRngSeed = doc.get( "MinTopologicalDistortionRngSeed" );
+	brain::gNeuralValues.maxTopologicalDistortionRngSeed = doc.get( "MaxTopologicalDistortionRngSeed" );
+
+	RandomNumberGenerator::set( RandomNumberGenerator::TOPOLOGICAL_DISTORTION,
+								RandomNumberGenerator::LOCAL );
+	brain::gNeuralValues.maxneuron2energy = doc.get( "EnergyUseNeurons" );
+	brain::gNumPrebirthCycles = doc.get( "PreBirthCycles" );
+
+	genome::gSeedFightBias = doc.get( "SeedFightBias" );
+	genome::gSeedFightExcitation = doc.get( "SeedFightExcitation" );
+	genome::gSeedGiveBias = doc.get( "SeedGiveBias" );
+	genome::gSeedPickupBias = doc.get( "SeedPickupBias" );
+	genome::gSeedDropBias = doc.get( "SeedDropBias" );
+	genome::gSeedPickupExcitation = doc.get( "SeedPickupExcitation" );
+	genome::gSeedDropExcitation = doc.get( "SeedDropExcitation" );
+
+    InitNeuralValues();
+
+    fOverHeadRank = doc.get( "OverHeadRank" );
+    fAgentTracking = doc.get( "AgentTracking" );
+    fMinFoodEnergyAtDeath = doc.get( "MinFoodEnergyAtDeath" );
+    genome::gGrayCoding = doc.get( "GrayCoding" );
+	{
+		string prop = doc.get( "SmiteMode" );
+		if( prop == "O" )
+			fSmiteMode = 'O';
+		else if( prop == "R" )
+			fSmiteMode = 'R';
+		else if( prop == "L" )
+			fSmiteMode = 'L';
+		else
+			assert( false );
+	}
+    fSmiteFrac = doc.get( "SmiteFrac" );
+    fSmiteAgeFrac = doc.get( "SmiteAgeFrac" );
+	agent::gNumDepletionSteps = doc.get( "NumDepletionSteps" );
+	if( agent::gNumDepletionSteps )
+		agent::gMaxPopulationPenaltyFraction = 1.0 / (float) agent::gNumDepletionSteps;
+
+	fApplyLowPopulationAdvantage = doc.get( "ApplyLowPopulationAdvantage" );
+	fRecordBirthsDeaths = doc.get( "RecordBirthsDeaths" );
+	fRecordPosition = doc.get( "RecordPosition" );
+	fRecordContacts = doc.get( "RecordContacts" );
+	fRecordCollisions = doc.get( "RecordCollisions" );
+	fRecordCarry = doc.get( "RecordCarry" );
+	fBrainAnatomyRecordAll = doc.get( "BrainAnatomyRecordAll" );
+	fBrainFunctionRecordAll = doc.get( "BrainFunctionRecordAll" );
+	fBrainAnatomyRecordSeeds = doc.get( "BrainAnatomyRecordSeeds" );
+	fBrainFunctionRecordSeeds = doc.get( "BrainFunctionRecordSeeds" );
+	fBestSoFarBrainAnatomyRecordFrequency = doc.get( "BestSoFarBrainAnatomyRecordFrequency" );
+	fBestSoFarBrainFunctionRecordFrequency = doc.get( "BestSoFarBrainFunctionRecordFrequency" );
+	fBestRecentBrainAnatomyRecordFrequency = doc.get( "BestRecentBrainAnatomyRecordFrequency" );
+	fBestRecentBrainFunctionRecordFrequency = doc.get( "BestRecentBrainFunctionRecordFrequency" );
+	
+	fRecordGeneStats = doc.get( "RecordGeneStats" );
+	fRecordPerformanceStats = doc.get( "RecordPerformanceStats" );
+	fRecordFoodPatchStats = doc.get( "RecordFoodPatchStats" );
+	fRecordComplexity = doc.get( "RecordComplexity" );
+	if( fRecordComplexity )
+	{
+		if( ! fBestSoFarBrainFunctionRecordFrequency )
+		{
+			if( fBestRecentBrainFunctionRecordFrequency )
+				fBestSoFarBrainFunctionRecordFrequency = fBestRecentBrainFunctionRecordFrequency;
+			else
+				fBestSoFarBrainFunctionRecordFrequency = 1000;
+			cerr << "Warning: Attempted to record Complexity without recording \"best so far\" brain function.  Setting BestSoFarBrainFunctionRecordFrequency to " << fBestSoFarBrainFunctionRecordFrequency nl;
+		}
+			
+		if( ! fBestSoFarBrainAnatomyRecordFrequency )
+		{
+			if( fBestRecentBrainAnatomyRecordFrequency )
+				fBestSoFarBrainAnatomyRecordFrequency = fBestRecentBrainAnatomyRecordFrequency;
+			else
+				fBestSoFarBrainAnatomyRecordFrequency = 1000;				
+			cerr << "Warning: Attempted to record Complexity without recording \"best so far\" brain anatomy.  Setting BestSoFarBrainAnatomyRecordFrequency to " << fBestSoFarBrainAnatomyRecordFrequency nl;
+		}
+
+		if( ! fBestRecentBrainFunctionRecordFrequency )
+		{
+			if( fBestSoFarBrainAnatomyRecordFrequency )
+				fBestRecentBrainFunctionRecordFrequency = fBestSoFarBrainAnatomyRecordFrequency;
+			else
+				fBestRecentBrainFunctionRecordFrequency = 1000;
+			cerr << "Warning: Attempted to record Complexity without recording \"best recent\" brain function.  Setting BestRecentBrainFunctionRecordFrequency to " << fBestRecentBrainFunctionRecordFrequency nl;
+		}
+			
+		if( ! fBestRecentBrainAnatomyRecordFrequency )
+		{
+			if( fBestSoFarBrainAnatomyRecordFrequency )
+				fBestRecentBrainAnatomyRecordFrequency = fBestSoFarBrainAnatomyRecordFrequency;
+			else
+				fBestRecentBrainAnatomyRecordFrequency = 1000;				
+			cerr << "Warning: Attempted to record Complexity without recording \"best recent\" brain anatomy.  Setting BestRecentBrainAnatomyRecordFrequency to " << fBestRecentBrainAnatomyRecordFrequency nl;
+		}
+	}
+		
+	fComplexityType = (string)doc.get( "ComplexityType" );
+	fComplexityFitnessWeight = doc.get( "ComplexityFitnessWeight" );
+	fHeuristicFitnessWeight = doc.get( "HeuristicFitnessWeight" );
+	if( fComplexityFitnessWeight > 0.0 )
+	{
+		if( ! fRecordComplexity )		//Not Recording Complexity?
+		{
+			cerr << "Warning: Attempted to use Complexity as fitness func without recording Complexity.  Turning on RecordComplexity." nl;
+			fRecordComplexity = true;
+		}
+		if( ! fBrainFunctionRecordAll )	//Not recording BrainFunction?
+		{
+			cerr << "Warning: Attempted to use Complexity as fitness func without recording brain function.  Turning on RecordBrainFunctionAll." nl;
+			fBrainFunctionRecordAll = true;
+		}
+		if( ! fBrainAnatomyRecordAll )
+		{
+			cerr << "Warning: Attempted to use Complexity as fitness func without recording brain anatomy.  Turning on RecordBrainAnatomyAll." nl;
+			fBrainAnatomyRecordAll = true;				
+		}
+	}
+		
+	fRecordGenomes = doc.get( "RecordGenomes" );
+	fRecordSeparations = doc.get( "RecordSeparations" );
+	fRecordAdamiComplexity = doc.get( "RecordAdamiComplexity" );
+	fAdamiComplexityRecordFrequency = doc.get( "AdamiComplexityRecordFrequency" );
+	globals::recordFileType = (bool)doc.get( "CompressFiles" )
+		? AbstractFile::TYPE_GZIP_FILE
+		: AbstractFile::TYPE_FILE;
+
+	fFogFunction = ((string)doc.get( "FogFunction" ))[0];
+	assert( glFogFunction() == fFogFunction );
+	// This value only does something if Fog Function is exponential
+	// Acceptable values are between 0 and 1 (inclusive)
+	fExpFogDensity = doc.get( "ExpFogDensity" );
+	// This value only does something if Fog Function is linear
+	// It defines the maximum distance a agent can see.
+	fLinearFogEnd = doc.get( "LinearFogEnd" );
+	
+	fRecordMovie = doc.get( "RecordMovie" );
+
+	// If this is a lockstep run, then we need to force certain parameter values (and warn the user)
+	if( fLockStepWithBirthsDeathsLog )
+	{
+		genome::gMinLifeSpan = fMaxSteps;
+		genome::gMaxLifeSpan = fMaxSteps;
+		
+		agent::gEat2Energy = 0.0;
+		agent::gMate2Energy = 0.0;
+		agent::gFight2Energy = 0.0;
+		agent::gMaxSizePenalty = 0.0;
+		agent::gSpeed2Energy = 0.0;
+		agent::gYaw2Energy = 0.0;
+		agent::gLight2Energy = 0.0;
+		agent::gFocus2Energy = 0.0;
+		agent::gPickup2Energy = 0.0;
+		agent::gDrop2Energy = 0.0;
+		agent::gCarryAgent2Energy = 0.0;
+		agent::gCarryAgentSize2Energy = 0.0;
+		food::gCarryFood2Energy = 0.0;
+		brick::gCarryBrick2Energy = 0.0;
+		agent::gFixedEnergyDrain = 0.0;
+
+		agent::gNumDepletionSteps = 0;
+		agent::gMaxPopulationPenaltyFraction = 0.0;
+		
+		fApplyLowPopulationAdvantage = false;
+		
+		cout << "Due to running in LockStepWithBirthsDeathsLog mode, the following parameter values have been forcibly reset as indicated:" nl;
+		cout << "  MinLifeSpan" ses genome::gMinLifeSpan nl;
+		cout << "  MaxLifeSpan" ses genome::gMaxLifeSpan nl;
+		cout << "  Eat2Energy" ses agent::gEat2Energy nl;
+		cout << "  Mate2Energy" ses agent::gMate2Energy nl;
+		cout << "  Fight2Energy" ses agent::gFight2Energy nl;
+		cout << "  MaxSizePenalty" ses agent::gMaxSizePenalty nl;
+		cout << "  Speed2Energy" ses agent::gSpeed2Energy nl;
+		cout << "  Yaw2Energy" ses agent::gYaw2Energy nl;
+		cout << "  Light2Energy" ses agent::gLight2Energy nl;
+		cout << "  Focus2Energy" ses agent::gFocus2Energy nl;
+		cout << "  Pickup2Energy" ses agent::gPickup2Energy nl;
+		cout << "  Drop2Energy" ses agent::gDrop2Energy nl;
+		cout << "  CarryAgent2Energy" ses agent::gCarryAgent2Energy nl;
+		cout << "  CarryAgentSize2Energy" ses agent::gCarryAgentSize2Energy nl;
+		cout << "  CarryFood2Energy" ses food::gCarryFood2Energy nl;
+		cout << "  CarryBrick2Energy" ses brick::gCarryBrick2Energy nl;
+		cout << "  FixedEnergyDrain" ses agent::gFixedEnergyDrain nl;
+		cout << "  NumDepletionSteps" ses agent::gNumDepletionSteps nl;
+		cout << "  .MaxPopulationPenaltyFraction" ses agent::gMaxPopulationPenaltyFraction nl;
+		cout << "  ApplyLowPopulationAdvantage" ses fApplyLowPopulationAdvantage nl;
+	}
+	
+	// If this is a steady-state GA run, then we need to force certain parameter values (and warn the user)
+	if( (fHeuristicFitnessWeight != 0.0) || (fComplexityFitnessWeight != 0) )
+	{
+		fNumberToSeed = lrint( fMaxNumAgents * (float) fNumberToSeed / fInitNumAgents );	// same proportion as originally specified (must calculate before changing fInitNumAgents)
+		if( fNumberToSeed > fMaxNumAgents )	// just to be safe
+			fNumberToSeed = fMaxNumAgents;
+		fInitNumAgents = fMaxNumAgents;	// population starts at maximum
+		fMinNumAgents = fMaxNumAgents;		// population stays at mximum
+		fProbabilityOfMutatingSeeds = 1.0;	// so there is variation in the initial population
+//		fMateThreshold = 1.5;				// so they can't reproduce on their own
+
+		for( int i = 0; i < fNumDomains; i++ )	// over all domains
+		{
+			fDomains[i].numberToSeed = lrint( fDomains[i].maxNumAgents * (float) fDomains[i].numberToSeed / fDomains[i].initNumAgents );	// same proportion as originally specified (must calculate before changing fInitNumAgents)
+			if( fDomains[i].numberToSeed > fDomains[i].maxNumAgents )	// just to be safe
+				fDomains[i].numberToSeed = fDomains[i].maxNumAgents;
+			fDomains[i].initNumAgents = fDomains[i].maxNumAgents;	// population starts at maximum
+			fDomains[i].minNumAgents  = fDomains[i].maxNumAgents;	// population stays at maximum
+			fDomains[i].probabilityOfMutatingSeeds = 1.0;				// so there is variation in the initial population
+		}
+
+		agent::gNumDepletionSteps = 0;				// turn off the high-population penalty
+		agent::gMaxPopulationPenaltyFraction = 0.0;	// ditto
+		fApplyLowPopulationAdvantage = false;			// turn off the low-population advantage
+		
+		cout << "Due to running as a steady-state GA with a fitness function, the following parameter values have been forcibly reset as indicated:" nl;
+		cout << "  InitNumAgents" ses fInitNumAgents nl;
+		cout << "  MinNumAgents" ses fMinNumAgents nl;
+		cout << "  NumberToSeed" ses fNumberToSeed nl;
+		cout << "  ProbabilityOfMutatingSeeds" ses fProbabilityOfMutatingSeeds nl;
+//		cout << "  MateThreshold" ses fMateThreshold nl;
+		for( int i = 0; i < fNumDomains; i++ )
+		{
+			cout << "  Domain " << i << ":" nl;
+			cout << "    initNumAgents" ses fDomains[i].initNumAgents nl;
+			cout << "    minNumAgents" ses fDomains[i].minNumAgents nl;
+			cout << "    numberToSeed" ses fDomains[i].numberToSeed nl;
+			cout << "    probabilityOfMutatingSeeds" ses fDomains[i].probabilityOfMutatingSeeds nl;
+		}
+		cout << "  NumDepletionSteps" ses agent::gNumDepletionSteps nl;
+		cout << "  .MaxPopulationPenaltyFraction" ses agent::gMaxPopulationPenaltyFraction nl;
+		cout << "  ApplyLowPopulationAdvantage" ses fApplyLowPopulationAdvantage nl;
+		
+		if( fComplexityFitnessWeight != 0.0 )
+		{
+			cout << "Due to running with Complexity as a fitness function, the following parameter values have been forcibly reset as indicated:" nl;
+			fRecordComplexity = true;						// record it, since we have to compute it
+			cout << "  RecordComplexity" ses fRecordComplexity nl;
+		}
+	}
+
+	delete docSchema;
+	delete docValues;
+}
+#endif // PROPLIB
 
 //---------------------------------------------------------------------------
 // TSimulation::Dump

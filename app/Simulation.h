@@ -1,6 +1,8 @@
 #ifndef SIMULATION_H
 #define SIMULATION_H
 
+//#define PROPLIB
+
 #ifdef linux
 	#include <errno.h>
 #endif
@@ -42,7 +44,7 @@ class TAgentPOVWindow;
 //class QTimer;
 class TSimulation;
 
-static const int MAXDOMAINS = 10;
+static const int MAXDOMAINS = 10; // if you change this, you MUST change the schema file.
 static const int MAXFITNESSITEMS = 5;
 
 // Define file mode mask so that users can read+write, group and others can read (but not write)
@@ -544,9 +546,13 @@ private:
 
 	float AgentFitness( agent* c );
 	
-	void ReadWorldFile(const char* filename);	
+	void ReadWorldFile(const char* filename);
 
 	void ReadLabel(istream &in, const char *name);
+
+#ifdef PROPLIB
+	void ReadPropLib();
+#endif // PROPLIB
 
 	void Dump();
 	

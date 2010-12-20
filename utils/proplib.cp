@@ -395,6 +395,20 @@ namespace proplib
 		return *oval.props;
 	}
 
+	PropertyMap &Property::elements()
+	{
+		assert( isArray() );
+
+		return props();
+	}
+
+	size_t Property::size()
+	{
+		assert( isContainer() );
+
+		return props().size();
+	}
+
 	ConditionList &Property::conds()
 	{
 		assert( type == CONTAINER );
@@ -420,6 +434,11 @@ namespace proplib
 		}
 	}
 
+	Property::operator short()
+	{
+		return (int)*this;
+	}
+
 	Property::operator int()
 	{
 		int ival;
@@ -430,6 +449,11 @@ namespace proplib
 		}
 
 		return ival;
+	}
+
+	Property::operator long()
+	{
+		return (int)*this;
 	}
 
 	Property::operator float()
