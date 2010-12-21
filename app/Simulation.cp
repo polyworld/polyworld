@@ -7421,7 +7421,7 @@ void TSimulation::ReadLabel(istream &in, const char *name)
 //-------------------------------------------------------------------------------------------
 void TSimulation::ReadPropLib()
 {
-	proplib::Document *docSchema = proplib::Parser::parseFile( "v101.wfs" );
+	proplib::Document *docSchema = proplib::Parser::parseFile( "worldfiles/v101.wfs" );
 	proplib::Document *docValues = proplib::Parser::parseFile( "v101.wf" );
 	proplib::Schema::apply( docSchema, docValues );
 	proplib::Document &doc = *docValues;
