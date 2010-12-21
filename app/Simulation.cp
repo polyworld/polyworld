@@ -1317,6 +1317,7 @@ void TSimulation::Init()
 
 #ifdef PROPLIB
 	fGraphics = true;
+    InitWorld();
 
 	ReadPropLib();
 #else
