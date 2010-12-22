@@ -1419,15 +1419,22 @@ namespace proplib
 
 	void Schema::apply( Document *docSchema, Document *docValues )
 	{
-		normalize( *docSchema, *docValues );
+		bool legacyMode = false;
+		Property *propLegacyMode = docValues->getp( "LegacyMode" );
+		if( propLegacyMode != NULL )
+		{
+			legacyMode = (bool)*propLegacyMode;
+		}
+
+		normalize( *docSchema, *docValues, legacyMode );
 		validateChildren( *docSchema, *docValues );
 	}
 
-	void Schema::normalize( Property &propSchema, Property &propValue )
+	void Schema::normalize( Property &propSchema, Property &propValue, bool legacyMode )
 	{
 		assert( propSchema.isContainer() );
 
-		injectDefaults( propSchema, propValue );
+		injectDefaults( propSchema, propValue, legacyMode );
 
 		itfor( ConditionList, propSchema.conds(), it )
 		{
@@ -1450,7 +1457,7 @@ namespace proplib
 				}
 				bodyProp->conds().clear();
 
-				injectDefaults( propSchema, propValue );
+				injectDefaults( propSchema, propValue, legacyMode );
 			}
 		}
 
@@ -1483,7 +1490,7 @@ namespace proplib
 						Property *elementValue = itelem->second;
 						Property *elementSchema = childSchema->clone();
 
-						normalize( *elementSchema, *elementValue );
+						normalize( *elementSchema, *elementValue, legacyMode );
 
 						elementSchema->id = elementValue->id;
 						schemaElements[ elementValue->id ] = elementSchema;
@@ -1503,13 +1510,13 @@ namespace proplib
 						childValue = &propValue;
 					}
 
-					normalize( *childSchema, *childValue );
+					normalize( *childSchema, *childValue, legacyMode );
 				}
 			}
 		}
 	}
 
-	void Schema::injectDefaults( Property &propSchema, Property &propValue )
+	void Schema::injectDefaults( Property &propSchema, Property &propValue, bool legacyMode )
 	{
 		assert( propSchema.isContainer() );
 
@@ -1536,7 +1543,16 @@ namespace proplib
 
 			if( childValue == NULL )
 			{
-				Property *propDefault = childSchema->getp( "default" );
+				Property *propDefault = NULL;
+				if( legacyMode )
+				{
+					propDefault = childSchema->getp( "legacy" );
+				}
+				if( propDefault == NULL )
+				{
+					propDefault = childSchema->getp( "default" );
+				}
+
 				if( propDefault == NULL )
 				{
 					childSchema->err( string(childSchema->getName()) + " not found in " + propValue.loc.getPath() + "." );
@@ -1831,7 +1847,7 @@ namespace proplib
 			// --
 			// -- Invalid attr
 			// --
-			else if( (attrName != "type") && (attrName != "default") )
+			else if( (attrName != "type") && (attrName != "default") && (attrName != "legacy") )
 			{
 				attrVal.err( string("Invalid schema attribute '") + attrName + "'" );
 			}

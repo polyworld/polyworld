@@ -158,6 +158,8 @@ def printNewFormat( container, schema = False ):
         domain.value.remove( 'NumBrickPatches' )
 
     container.remove( 'Version' )
+
+    container.add( 'LegacyMode', 'bool', True )
     
     container.printNewFormat( schema )
 
@@ -693,7 +695,7 @@ def parse( path ):
     return local.container
 
 #worldfile = parse( 'worldfiles/worldfile_dynfood' )
-worldfile = parse( 'worldfiles/worldfile_alifexi_updated' )
+worldfile = parse( 'worldfile' )
 
 
 printNewFormat( worldfile, schema = False )

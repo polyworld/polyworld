@@ -366,8 +366,8 @@ namespace proplib
 		static void apply( Document *docSchema, Document *docValues );
 
 	private:
-		static void normalize( Property &propSchema, Property &propValues );
-		static void injectDefaults( Property &propSchema, Property &propValues );
+		static void normalize( Property &propSchema, Property &propValues, bool legacyMode );
+		static void injectDefaults( Property &propSchema, Property &propValues, bool legacyMode );
 		static void validateChildren( Property &propSchema, Property &propValues );
 		static void validateProperty(  Property &propSchema, Property &propValues );
 	};

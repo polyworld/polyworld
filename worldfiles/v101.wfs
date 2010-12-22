@@ -18,6 +18,12 @@
 # SECTION Simulation meta-information
 #-------------------------------------------------------------------
 
+LegacyMode {
+  type    BOOL
+  default False # This *has* to be False, because underlying proplib.cpp
+                # assumes False if it doesn't find it in the values file.
+}
+
 PassiveLockstep {
   type    BOOL
   default False
@@ -1343,16 +1349,19 @@ StaticTimestepGeometry {
 ParallelInitAgents {
   type    BOOL
   default True
+  legacy  False
 }
 
 ParallelInteract {
   type    BOOL
   default True
+  legacy  False
 }
 
 ParallelBrains {
   type    BOOL
   default True
+  legacy  True
 }
 
 CheckPointFrequency {
