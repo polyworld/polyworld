@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import getopt
 import os
 import sys
 
@@ -7,32 +8,101 @@ from common_functions import err
 
 DEBUG = False
 
+
+################################################################################
+################################################################################
+###
+### FUNCTION main()
+###
+################################################################################
+################################################################################
 def main():
     
     argv = sys.argv[1:]
 
-    if len(argv) == 1:
-        worldfile = parsePreVersion101( argv[0] )
-        printNewFormat( worldfile, schema = False )
-    elif len(argv) == 3:
-        path_worldfile = argv[0]
-        path_schema_legacy = argv[1]
-        path_schema_current = argv[2]
+    if len(argv) == 0:
+        usage()
 
-        os.system( 'proputil apply %s %s > /tmp/applied.wf' % (path_schema_legacy, path_worldfile) )
-        os.system( 'proputil set /tmp/applied.wf LegacyMode True > /tmp/set.wf' )
-        os.system( 'proputil apply %s /tmp/set.wf' % (path_schema_current) )
-        
+    mode = argv[0]
+
+    if mode == "norm":
+        norm( argv[1:] )
+    elif mode == "reduce":
+        err( "reduce not yet implemented" )
     else:
-        assert( False )
+        err( "invalid mode (%s)" % mode )
 
+################################################################################
+################################################################################
+###
+### FUNCTION norm()
+###
+################################################################################
+################################################################################
+def norm( argv ):
+    legacyMode = False
 
+    shortopts = 'l'
+    longopts = []
+    try:
+        opts, args = getopt.getopt(argv, shortopts, longopts)
+    except getopt.GetoptError, e:
+        show_usage( e )
+
+    for opt, value in opts:
+        opt = opt.strip('-')
+
+        if opt == 'l':
+            legacyMode = True
+
+    if len(args) < 1:
+        usage( "missing worldfile argument" )
+        
+
+    if len(args) == 1:
+        worldfile = parsePreVersion101( args[0] )
+        printNewFormat( worldfile, legacyMode )
+    elif len(args) == 2:
+        path_worldfile = args[0]
+        path_schema_legacy = args[1]
+
+        # polyworld home dir
+        homedir = os.path.realpath( os.path.join(os.path.dirname( sys.argv[0] ), '..') )
+        path_schema_current = os.path.join( homedir, 'worldfiles/v101.wfs' )
+        proputil = os.path.join( homedir, 'bin/proputil' )
+
+        def __shell( cmd, args ):
+            exitval = os.system( cmd + " " + args )
+            if exitval != 0:
+                err( "Failed executing '%s'. exit=%s" % (cmd,exitval) )
+    
+        __shell( proputil, 'apply %s %s > /tmp/applied.wf' % (path_schema_legacy, path_worldfile) )
+        __shell( proputil, 'set /tmp/applied.wf LegacyMode %s > /tmp/set.wf' % (legacyMode) )
+        __shell( proputil, 'apply %s /tmp/set.wf' % (path_schema_current) )
+            
+    else:
+        usage()
+
+################################################################################
+################################################################################
+###
+### CLASS Property
+###
+################################################################################
+################################################################################
 class Property:
     def __init__( self, name, type, value ):
         self.name = name
         self.type = type
         self.value = value
 
+################################################################################
+################################################################################
+###
+### CLASS Container
+###
+################################################################################
+################################################################################
 class Container:
     def __init__( self ):
         self.parent = None
@@ -85,7 +155,7 @@ class Container:
                     value = ' '.join( map(str,value) )
                 print "%-30s %s" % ( value, self.fullname(name) )
 
-    def printNewFormat( self, schema = False, indent = "" ):
+    def printNewFormat( self, indent = "" ):
         def __print( name, data ):
             print "%s%-25s %s" % (indent, name, data)
 
@@ -108,7 +178,7 @@ class Container:
                     #__print( prop.name + " " + open, "" )
                     __print( prop.name +" "+open, "" )
 
-                value.printNewFormat( schema, indent + "  " )
+                value.printNewFormat(indent + "  " )
 
                 if not self.isarray():
                     #__print( close, "" )
@@ -117,36 +187,21 @@ class Container:
                     if prop != lastprop:
                         __print( ",", "" )
             elif prop.type == 'barrierkeyframe':
-                if schema:
-                    __print( "T", 'int' )
-                    __print( "X1", 'float' )
-                    __print( "Z1", 'float' )
-                    __print( "X2", 'float' )
-                    __print( "Z2", 'float' )
-                else:
-                    __print( "T", value[0] )
-                    __print( "X1", value[1] )
-                    __print( "Z1", value[2] )
-                    __print( "X2", value[3] )
-                    __print( "Z2", value[4] )
+                __print( "T", value[0] )
+                __print( "X1", value[1] )
+                __print( "Z1", value[2] )
+                __print( "X2", value[3] )
+                __print( "Z2", value[4] )
             elif prop.type == 'color':
                 __print( prop.name + " {", "" )
                 indent += "  "
-                if schema:
-                    __print( "R", 'float' )
-                    __print( "G", 'float' )
-                    __print( "B", 'float' )
-                else:
-                    __print( "R", value[0] )
-                    __print( "G", value[1] )
-                    __print( "B", value[2] )
+                __print( "R", value[0] )
+                __print( "G", value[1] )
+                __print( "B", value[2] )
                 indent = indent[:-2]
                 __print( "}", "" )
             else:
-                if schema:
-                    __print( prop.name, prop.type )
-                else:
-                    __print( prop.name, prop.value )
+                __print( prop.name, prop.value )
 
 
 ################################################################################
@@ -156,7 +211,7 @@ class Container:
 ###
 ################################################################################
 ################################################################################
-def printNewFormat( container, schema = False ):
+def printNewFormat( container, legacyMode ):
     edges = container.get( 'Edges' ).value
     container.remove( 'Edges' )
     wraparound = container.get( 'WrapAround' ).value
@@ -182,9 +237,9 @@ def printNewFormat( container, schema = False ):
 
     container.remove( 'Version' )
 
-    container.add( 'LegacyMode', 'bool', True )
+    container.add( 'LegacyMode', 'bool', legacyMode )
     
-    container.printNewFormat( schema )
+    container.printNewFormat()
 
 ################################################################################
 ################################################################################
@@ -717,5 +772,57 @@ def parsePreVersion101( path ):
     
     return local.container
 
+################################################################################
+################################################################################
+###
+### FUNCTION usage()
+###
+################################################################################
+################################################################################
+def usage( msg = None ):
+    print """\
+usage: wfconv norm [-l] worldfile
+
+   Normalizes a pre-v101 worldfile to be compatible with the current schema.
+
+   Result is written to stdout.
+ 
+   -l    enable LegacyMode, which should result in a worldfile that produces
+       the same results as the old worldfile.
+
+--
+
+usage: wfconv norm [-l] worldfile legacy_schemafile
+
+   Normalizes an old post-v101 worldfile to be compatible with the current schema.
+   You'll generally want this with the -l flag so that you can exactly recreate
+   an old run. That is, the purpose of this invocation is to get a worldfile with
+   settings that disable any features introduced into the simulator since the
+   original worldfile was written.
+
+   Result is written to stdout.
+ 
+   -l    enable LegacyMode, which should result in a worldfile that produces
+       the same results as the old worldfile.
+
+--
+
+usage: wfconv reduce worldfile
+
+   NOT YET IMPLEMENTED
+"""
+
+    if msg != None:
+        print msg
+
+    exit( 1 )
+
+################################################################################
+################################################################################
+###
+### INVOKE MAIN
+###
+################################################################################
+################################################################################
 if __name__ == "__main__":
     main()
