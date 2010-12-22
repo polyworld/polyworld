@@ -12,6 +12,23 @@
 #    Parameters are organized within sections. You may quickly jump to
 # to sections by searching for the string SECTION.
 #
+#
+# --- QUICK REFERENCE ---
+#
+#   min/max = inclusive min/max
+#
+#   exmin/exmax = exclusive min/max
+#
+#   assert = expression that results in error if evaluates to False.
+#
+#   default = value used if not specified and LegacyMode == False or
+              LegacyMode == True and legacy value is not provided.
+#
+#   legacy = value used if not specified and LegacyMode == True
+#
+#   $(...) = expression evaluated by Python. Symbols are properties
+#            in the values file.
+#
 ##########################################################################
 
 #-------------------------------------------------------------------
@@ -42,6 +59,7 @@ SimulationSeed {
 GenomeLayout {
   type    ENUM
   default N
+  legacy  L
   values  [
     N           # NeurGroup
     L           # Legacy
@@ -582,21 +600,25 @@ EatMateWait {
 EnableMateWaitFeedback {
   type    BOOL
   default True
+  legacy  False
 }
 
 EnableSpeedFeedback {
   type    BOOL
   default True
+  legacy  False
 }
 
 EnableGive {
   type    BOOL
   default True
+  legacy  False
 }
 
 EnableCarry {
   type    BOOL
   default True
+  legacy  False
 
   # TODO: 1) Enhance tokenizer to support quotes.
   #       2) Enhance eval() to automatically escape quotes in expressions.
@@ -644,6 +666,7 @@ ShieldFood {
 ShieldBricks {
   type    BOOL
   default True
+  legacy  False
 }
 
 CarryPreventsEat {
@@ -721,6 +744,7 @@ SolidFood {
 SolidBricks {
   type    BOOL
   default False
+  legacy  True
 }
 
 PreBirthCycles {
@@ -732,12 +756,14 @@ PreBirthCycles {
 NumDepletionSteps {
   type    INT
   default 125
+  legacy  0
   min     0
 }
 
 ApplyLowPopulationAdvantage {
   type    BOOL
   default True
+  legacy  False
 }
 
 #-------------------------------------------------------------------
@@ -858,6 +884,7 @@ DamageRate {
 ProbabilisticFoodPatches {
   type    BOOL
   default True
+  legacy  False
 }
 
 SmiteMode {
@@ -1063,6 +1090,7 @@ MaxInitialBitProb {
 EnableTopologicalDistortionRngSeed {
   type    BOOL
   default True
+  legacy  False
 }
 
 MinTopologicalDistortionRngSeed {
@@ -1080,6 +1108,7 @@ MaxTopologicalDistortionRngSeed {
 EnableInitWeightRngSeed {
   type    BOOL
   default True
+  legacy  False
 }
 
 MinInitWeightRngSeed {
@@ -1097,11 +1126,13 @@ MaxInitWeightRngSeed {
 SeedFightBias {
   type    FLOAT
   default 0.0
+  legacy  0.5
 }
 
 SeedFightExcitation {
   type    FLOAT
   default 0.0
+  legacy  1.0
 }
 
 SeedGiveBias {
@@ -1206,6 +1237,7 @@ FightThreshold {
 GiveThreshold {
   type    FLOAT
   default 0.3
+  legacy  0.2
 }
 
 PickupThreshold {
@@ -1226,6 +1258,7 @@ FightMultiplier {
 GiveFraction {
   type    FLOAT
   default 0.2
+  legacy  1.0
 }
 
 
@@ -1338,12 +1371,13 @@ RecordGeneSeparation {
 
 EndOnPopulationCrash {
   type    BOOL
-  default True
+  default False
 }
 
 StaticTimestepGeometry {
   type    BOOL
   default True
+  legacy  False
 }
 
 ParallelInitAgents {
@@ -1358,6 +1392,8 @@ ParallelInteract {
   legacy  False
 }
 
+# This only takes effect if StaticTimestepGeometry is True.
+# Its primary purpose is for easing debugging with False value.
 ParallelBrains {
   type    BOOL
   default True
@@ -1424,7 +1460,7 @@ FoodColor {
 
 BrickHeight {
   type    FLOAT
-  default 0.3
+  default 0.5
 }
 
 BrickColor {
@@ -1588,46 +1624,55 @@ RecordMovie {
 RecordBirthsDeaths {
   type    BOOL
   default True
+  legacy  False
 }
 
 RecordPosition {
   type    BOOL
   default True
+  legacy  False
 }
 
 RecordContacts {
   type    BOOL
   default True
+  legacy  False
 }
 
 RecordCollisions {
   type    BOOL
   default True
+  legacy  False
 }
 
 RecordCarry {
   type    BOOL
   default True
+  legacy  False
 }
 
 BrainAnatomyRecordAll {
   type    BOOL
   default True
+  legacy  False
 }
 
 BrainFunctionRecordAll {
   type    BOOL
   default True
+  legacy  False
 }
 
 BrainAnatomyRecordSeeds {
   type    BOOL
   default True
+  legacy  False
 }
 
 BrainFunctionRecordSeeds {
   type    BOOL
   default True
+  legacy  False
 }
 
 BestSoFarBrainAnatomyRecordFrequency {
@@ -1653,6 +1698,7 @@ BestRecentBrainFunctionRecordFrequency {
 RecordGeneStats {
   type    BOOL
   default True
+  legacy  False
 }
 
 RecordPerformanceStats {
@@ -1663,6 +1709,7 @@ RecordPerformanceStats {
 RecordFoodPatchStats {
   type    BOOL
   default True
+  legacy  False
 }
 
 RecordComplexity {
@@ -1673,6 +1720,7 @@ RecordComplexity {
 RecordAdamiComplexity {
   type    BOOL
   default True
+  legacy  False
 }
 
 AdamiComplexityRecordFrequency {
@@ -1683,11 +1731,13 @@ AdamiComplexityRecordFrequency {
 RecordGenomes {
   type    BOOL
   default True
+  legacy  False
 }
 
 RecordSeparations {
   type    BOOL
   default True
+  legacy  False
 }
 
 CompressFiles {
@@ -1711,7 +1761,7 @@ SeedPositionFromRun {
 
 FoodRemoveEnergy {
   type    FLOAT
-  default 150.0
+  default 0.0
 }
 
 #-------------------------------------------------------------------
