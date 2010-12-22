@@ -26,6 +26,7 @@ def build():
     Default( build_CalcComplexity(envs['CalcComplexity']) )
     Default( build_PwMoviePlayer(envs['PwMoviePlayer']) )
     Default( build_rancheck(envs['rancheck']) )
+    Default( build_proputil(envs['proputil']) )
 
 def build_Polyworld(env):
     blddir = '.bld/Polyworld'
@@ -87,6 +88,20 @@ def build_rancheck(env):
                                       'src',
                                       blddir))
 
+def build_proputil(env):
+    blddir = '.bld/proputil'
+
+    sources = find('src/tools/proputil',
+                   name = '*.cp')
+    sources += ['src/utils/proplib.cp']
+
+    env.BuildDir(blddir, 'src', False)
+
+    return env.Program('bin/proputil',
+                       relocate_paths(sources,
+                                      'src',
+                                      blddir))
+
 def env_create():
     envs = {}
 
@@ -129,6 +144,8 @@ def env_create():
     envs['PwMoviePlayer'] = envs['Polyworld'].Clone()
 
     envs['rancheck'] = envs['CalcComplexity'].Clone()
+
+    envs['proputil'] = envs['CalcComplexity'].Clone()
 
     return envs
 

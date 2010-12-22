@@ -105,7 +105,9 @@ namespace proplib
 		void warn( std::string message );
 
 		virtual void add( Node *node ) = 0;
+
 		virtual void dump( std::ostream &out, const char *indent = "" ) = 0;
+		virtual void write( std::ostream &out, const char *indent = "" ) = 0;
 
 	protected:
 		friend class Parser;
@@ -141,7 +143,7 @@ namespace proplib
 	typedef std::map<Identifier, class Property *> PropertyMap;
 	typedef std::list<Condition *> ConditionList;
 
-	class Property : Node
+	class Property : public Node
 	{
 	public:
 		enum Type
@@ -182,6 +184,7 @@ namespace proplib
 		virtual void add( Node *node );
 
 		virtual void dump( std::ostream &out, const char *indent = "" );
+		virtual void write( std::ostream &out, const char *indent = "" );
 
 	private:
 		// We don't allow the copy constructor
@@ -242,6 +245,7 @@ namespace proplib
 		virtual void add( Node *node );
 
 		virtual void dump( std::ostream &out, const char *indent = "" );
+		virtual void write( std::ostream &out, const char *indent = "" );
 
 	private:
 		typedef std::list<Clause *> ClauseList;
@@ -282,6 +286,7 @@ namespace proplib
 		virtual void add( Node *node );
 
 		virtual void dump( std::ostream &out, const char *indent = "" );
+		virtual void write( std::ostream &out, const char *indent = "" );
 
 	private:
 		Clause( DocumentLocation loc );
@@ -306,6 +311,8 @@ namespace proplib
 	public:
 		Document( const char *name );
 		virtual ~Document();
+
+		virtual void write( std::ostream &out, const char *indent = "" );
 	};
 
 	// ----------------------------------------------------------------------

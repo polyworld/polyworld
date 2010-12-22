@@ -1,8 +1,31 @@
 #!/usr/bin/env python
 
+import os
+import sys
+
 from common_functions import err
 
 DEBUG = False
+
+def main():
+    
+    argv = sys.argv[1:]
+
+    if len(argv) == 1:
+        worldfile = parsePreVersion101( argv[0] )
+        printNewFormat( worldfile, schema = False )
+    elif len(argv) == 3:
+        path_worldfile = argv[0]
+        path_schema_legacy = argv[1]
+        path_schema_current = argv[2]
+
+        os.system( 'proputil apply %s %s > /tmp/applied.wf' % (path_schema_legacy, path_worldfile) )
+        os.system( 'proputil set /tmp/applied.wf LegacyMode True > /tmp/set.wf' )
+        os.system( 'proputil apply %s /tmp/set.wf' % (path_schema_current) )
+        
+    else:
+        assert( False )
+
 
 class Property:
     def __init__( self, name, type, value ):
@@ -166,11 +189,11 @@ def printNewFormat( container, schema = False ):
 ################################################################################
 ################################################################################
 ###
-### FUNCTION parse()
+### FUNCTION parsePreVersion101()
 ###
 ################################################################################
 ################################################################################
-def parse( path ):
+def parsePreVersion101( path ):
     f = open( path, 'r' )
 
     def __line():
@@ -694,8 +717,5 @@ def parse( path ):
     
     return local.container
 
-#worldfile = parse( 'worldfiles/worldfile_dynfood' )
-worldfile = parse( 'worldfile' )
-
-
-printNewFormat( worldfile, schema = False )
+if __name__ == "__main__":
+    main()

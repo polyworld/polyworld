@@ -543,6 +543,72 @@ namespace proplib
 		}
 	}
 
+	void Property::write( ostream &out, const char *indent )
+	{
+		out << indent << getName();
+
+		if( type == CONTAINER )
+		{
+			if( _isArray )
+			{
+				out << " [" << endl;
+
+				if( props().size() > 0 )
+				{
+					if( props()[0]->isScalar() )
+					{
+						itfor( PropertyMap, props(), it )
+						{
+							it->second->write( out, (string(indent) + "  ").c_str() );
+						}
+					}
+					else
+					{
+						PropertyMap::iterator itlast = --props().end();
+						itfor( PropertyMap, props(), itObjectElement )
+						{
+							Property *objectElement = itObjectElement->second;
+							itfor( PropertyMap, objectElement->props(), it )
+							{
+								it->second->write( out, (string(indent) + "  ").c_str() );
+							}
+
+							if( itObjectElement != itlast )
+							{
+								out << indent << "," << endl;
+							}
+						}
+						
+					}
+				}
+
+				out << indent << "]" << endl;
+			}
+			else
+			{
+				out << " {" << endl;
+
+				itfor( PropertyMap, props(), it )
+				{
+					it->second->write( out, (string(indent) + "  ").c_str() );
+				}
+
+				out << indent << "}" << endl;
+			}
+		}
+		else
+		{
+			if( isExpr )
+			{
+				out << " $( " << sval << " )" << endl;
+			}
+			else
+			{
+				out << " " << sval << endl;
+			}
+		}
+	}
+
 	string Property::evalScalar()
 	{
 		if( type != SCALAR )
@@ -720,6 +786,10 @@ namespace proplib
 		out << indent << "</CONDITION>" << endl;
 	}
 
+	void Condition::write( ostream &out, const char *indent )
+	{
+		assert( false ); // not yet supported
+	}
 
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
@@ -797,6 +867,11 @@ namespace proplib
 		out << indent << "</CLAUSE>" << endl;
 	}
 
+	void Clause::write( ostream &out, const char *indent )
+	{
+		assert( false ); // not yet supported
+	}
+
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
 	// --- CLASS Document
@@ -810,6 +885,14 @@ namespace proplib
 
 	Document::~Document()
 	{
+	}
+
+	void Document::write( ostream &out, const char *indent )
+	{
+		itfor( PropertyMap, props(), it )
+		{
+			it->second->write( out, indent );
+		}
 	}
 
 	// ----------------------------------------------------------------------
