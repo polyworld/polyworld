@@ -87,17 +87,15 @@ namespace proplib
 		this->name = name;
 	}
 
+	Identifier::Identifier( const char *name)
+	{
+		this->name = name;
+	}
+
 	Identifier::Identifier( int index )
 	{
 		char buf[32];
 		sprintf( buf, "%d", index );
-		this->name = buf;
-	}
-
-	Identifier::Identifier( unsigned int index )
-	{
-		char buf[32];
-		sprintf( buf, "%u", index );
 		this->name = buf;
 	}
 
@@ -106,11 +104,6 @@ namespace proplib
 		char buf[32];
 		sprintf( buf, "%lu", index );
 		this->name = buf;
-	}
-
-	Identifier::Identifier( const char *name)
-	{
-		this->name = name;
 	}
 
 	Identifier::Identifier( const Identifier &other )

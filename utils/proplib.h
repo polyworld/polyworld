@@ -25,10 +25,9 @@ namespace proplib
 	{
 	public:
 		Identifier( const std::string &name );
-		Identifier( int index );
-		Identifier( unsigned int index );
-		Identifier( size_t index );
 		Identifier( const char *name);
+		Identifier( int index );
+		Identifier( size_t index );
 		Identifier( const Identifier &other );
 
 		~Identifier();
