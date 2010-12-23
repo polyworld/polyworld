@@ -141,6 +141,8 @@ namespace proplib
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
 	typedef std::map<Identifier, class Property *> PropertyMap;
+	typedef std::list<class Property *> PropertyList;
+
 	typedef std::list<Condition *> ConditionList;
 
 	class Property : public Node
@@ -157,6 +159,7 @@ namespace proplib
 		virtual ~Property();
 
 		Property *clone();
+		bool equals( Property *other );
 
 		const char *getName();
 
@@ -192,6 +195,7 @@ namespace proplib
 		{ throw "Property copy not supported."; }
 
 		std::string evalScalar();
+		std::string getDecoratedScalar();
 		Property *findSymbol( Identifier id );
 
 		friend class Parser;
@@ -340,6 +344,8 @@ namespace proplib
 		static bool parseFloat( const std::string &text, float *result );
 		static bool parseBool( const std::string &text, bool *result );
 
+		static bool scalarValuesEqual( const std::string &a, const std::string &b );
+
 	private:
 		typedef std::stack<Node *> NodeStack;
 
@@ -359,7 +365,7 @@ namespace proplib
 	// ----------------------------------------------------------------------
 	// --- CLASS Schema
 	// ---
-	// --- This is how you validate/normalize a values file.
+	// --- This is how you normalize/validate/reduce a values file.
 	// ---
 	// --- The "normalize" procedure does two important things:
 	// ---
@@ -371,11 +377,17 @@ namespace proplib
 	{
 	public:
 		static void apply( Document *docSchema, Document *docValues );
+		static void reduce( Document *docSchema, Document *docValues );
 
 	private:
 		static void normalize( Property &propSchema, Property &propValues, bool legacyMode );
 		static void injectDefaults( Property &propSchema, Property &propValues, bool legacyMode );
 		static void validateChildren( Property &propSchema, Property &propValues );
 		static void validateProperty(  Property &propSchema, Property &propValues );
+		static bool reduceChildren( Property &propSchema, Property &propValues, bool legacyMode );
+		static bool reduceProperty(  Property &propSchema, Property &propValues, bool legacyMode );
+
+		static bool isLegacyMode( Document *docValues );
+		static Property *getDefaultProperty( Property *propSchema, bool legacyMode );
 	};
 };

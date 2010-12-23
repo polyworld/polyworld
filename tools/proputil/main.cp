@@ -10,16 +10,18 @@ using namespace std;
 
 void apply( const char *pathSchema, const char *pathValues );
 void set( const char *pathValues, const char *name, const char *value );
+void reduce( const char *pathSchema, const char *pathValues );
 
 void usage( string msg = "" )
 {
 	cout << "usage: proputil apply path_schema path_values" << endl;
 	cout << "       proputil set path_values propname propvalue" << endl;
+	cout << "       proputil reduce path_schema path_values" << endl;
 
 	if( msg.length() > 0 )
 	{
-		cout << "----------------------------------------" << endl;
-		cout << msg;
+		cout << "--------------------------------------------------------------------------------" << endl;
+		cout << msg << endl;
 	}
 
 	exit( 1 );
@@ -52,6 +54,15 @@ int main( int argc, char **argv )
 
 		set( argv[2], argv[3], argv[4] );
 	}
+	else if( mode == "reduce" )
+	{
+		if( argc != 4 )
+		{
+			usage();
+		}
+
+		reduce( argv[2], argv[3] );
+	}
 	else
 	{
 		usage( "Invalid mode" );
@@ -83,5 +94,18 @@ void set( const char *pathValues, const char *name, const char *value )
 
 	docValues->write( cout );
 
+	delete docValues;
+}
+
+void reduce( const char *pathSchema, const char *pathValues )
+{
+	Document *docSchema = Parser::parseFile( pathSchema );
+	Document *docValues = Parser::parseFile( pathValues );
+
+	Schema::reduce( docSchema, docValues );
+
+	docValues->write( cout );
+
+	delete docSchema;
 	delete docValues;
 }

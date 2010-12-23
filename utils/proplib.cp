@@ -332,6 +332,40 @@ namespace proplib
 		return clone;
 	}
 
+	bool Property::equals( Property *other )
+	{
+		if( isContainer() )
+		{
+			assert( conds().size() == 0 );
+
+			if( props().size() != other->props().size() )
+			{
+				return false;
+			}
+
+			itfor( PropertyMap, props(), it )
+			{
+				Property *otherChild = other->getp( it->first );
+				if( otherChild == NULL )
+				{
+					return false;
+				}
+
+				Property *child = it->second;
+				if( !child->equals(otherChild) )
+				{
+					return false;
+				}
+			}
+
+			return true;
+		}
+		else
+		{
+			return Parser::scalarValuesEqual( this->evalScalar(), other->evalScalar() );
+		}
+	}
+
 	const char *Property::getName()
 	{
 		return id.getName();
@@ -557,9 +591,11 @@ namespace proplib
 				{
 					if( props()[0]->isScalar() )
 					{
+						string _indent = string(indent) + "  ";
+
 						itfor( PropertyMap, props(), it )
 						{
-							it->second->write( out, (string(indent) + "  ").c_str() );
+							out << _indent << it->second->getDecoratedScalar() << endl;
 						}
 					}
 					else
@@ -598,14 +634,7 @@ namespace proplib
 		}
 		else
 		{
-			if( isExpr )
-			{
-				out << " $( " << sval << " )" << endl;
-			}
-			else
-			{
-				out << " " << sval << endl;
-			}
+			out << " " << getDecoratedScalar() << endl;
 		}
 	}
 
@@ -657,6 +686,20 @@ namespace proplib
 			isEvaling = false;
 
 			return buf;
+		}
+		else
+		{
+			return sval;
+		}
+	}
+
+	string Property::getDecoratedScalar()
+	{
+		assert( isScalar() );
+
+		if( isExpr )
+		{
+			return string(" $( ") + sval + " )";
 		}
 		else
 		{
@@ -1058,6 +1101,23 @@ namespace proplib
 		}
 
 		return true;
+	}
+
+	bool Parser::scalarValuesEqual( const string &a, const string &b )
+	{
+		if( a == b )
+			return true;
+
+		{
+			float x, y;
+
+			if( parseFloat(a, &x) && parseFloat(b, &y) )
+			{
+				return x == y;
+			}
+		}
+
+		return false;
 	}
 
 	char *Parser::readline( istream &in,
@@ -1502,15 +1562,14 @@ namespace proplib
 
 	void Schema::apply( Document *docSchema, Document *docValues )
 	{
-		bool legacyMode = false;
-		Property *propLegacyMode = docValues->getp( "LegacyMode" );
-		if( propLegacyMode != NULL )
-		{
-			legacyMode = (bool)*propLegacyMode;
-		}
-
-		normalize( *docSchema, *docValues, legacyMode );
+		normalize( *docSchema, *docValues, isLegacyMode(docValues) );
 		validateChildren( *docSchema, *docValues );
+	}
+
+	void Schema::reduce( Document *docSchema, Document *docValues )
+	{
+		apply( docSchema, docValues );
+		reduceChildren( *docSchema, *docValues, isLegacyMode(docValues) );
 	}
 
 	void Schema::normalize( Property &propSchema, Property &propValue, bool legacyMode )
@@ -1626,15 +1685,7 @@ namespace proplib
 
 			if( childValue == NULL )
 			{
-				Property *propDefault = NULL;
-				if( legacyMode )
-				{
-					propDefault = childSchema->getp( "legacy" );
-				}
-				if( propDefault == NULL )
-				{
-					propDefault = childSchema->getp( "default" );
-				}
+				Property *propDefault = getDefaultProperty( childSchema, legacyMode );
 
 				if( propDefault == NULL )
 				{
@@ -1935,6 +1986,110 @@ namespace proplib
 				attrVal.err( string("Invalid schema attribute '") + attrName + "'" );
 			}
 		}
+	}
+
+	bool Schema::reduceChildren( Property &propSchema, Property &propValue, bool legacyMode )
+	{
+		assert( propSchema.isContainer() );
+		assert( propValue.isContainer() );
+
+		bool reduced = true;
+		PropertyList reducedProperties;
+
+		itfor( PropertyMap, propValue.props(), it )
+		{
+			Property *childValue = it->second;
+			Property *childSchema = propSchema.getp( childValue->id );
+
+			// it has to be non-null because we apply() prior to reduce()
+			assert( childSchema );
+
+			if( reduceProperty(*childSchema, *childValue, legacyMode) )
+			{
+				reducedProperties.push_back( childValue );
+			}
+			else
+			{
+				reduced = false;
+			}
+		}
+
+		itfor( PropertyList, reducedProperties, it )
+		{
+			propValue.props().erase( (*it)->id );
+			delete *it;
+		}
+
+		return reduced;
+	}
+
+	bool Schema::reduceProperty(  Property &propSchema, Property &propValue, bool legacyMode )
+	{
+		bool reduced = false;
+		Property *propDefault = getDefaultProperty( &propSchema, legacyMode );
+
+		if( propDefault && propDefault->equals(&propValue) )
+		{
+			reduced = true;
+		}
+		else if( !propValue.isScalar() )
+		{
+			if( propValue.isArray() )
+			{
+				if( (propValue.size() > 0) && !propValue.get(0).isScalar() )
+				{
+					// it's an array of objects. it doesn't match the default, but we
+					// need to try to reduce individual properties, which could even
+					// reduce the whole array.
+					reduced = true;
+				
+					Property &schemaElements = propSchema.get( "element" );
+					for( size_t i = 0, n = propValue.size(); i < n; i++ )
+					{
+						if( !reduceChildren(schemaElements.get(i).get( "properties" ),
+											propValue.get(i),
+											legacyMode) )
+						{
+							reduced = false;
+						}
+					}
+				}
+			}
+			else
+			{
+				// it's an object
+				reduced = reduceChildren( propSchema.get("properties"), propValue, legacyMode );
+			}
+		}
+
+		return reduced;
+	}
+
+	bool Schema::isLegacyMode( Document *docValues )
+	{
+		bool legacyMode = false;
+		Property *propLegacyMode = docValues->getp( "LegacyMode" );
+		if( propLegacyMode != NULL )
+		{
+			legacyMode = (bool)*propLegacyMode;
+		}
+		return legacyMode;
+	}
+
+	Property *Schema::getDefaultProperty( Property *propSchema, bool legacyMode )
+	{
+		Property *propDefault = NULL;
+
+		if( legacyMode )
+		{
+			propDefault = propSchema->getp( "legacy" );
+		}
+		if( propDefault == NULL )
+		{
+			propDefault = propSchema->getp( "default" );
+		}
+
+		return propDefault;
 	}
 }
 
