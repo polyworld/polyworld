@@ -28,7 +28,7 @@ def main():
     if mode == "norm":
         norm( argv[1:] )
     elif mode == "reduce":
-        err( "reduce not yet implemented" )
+        reduce( argv[1:] )
     else:
         err( "invalid mode (%s)" % mode )
 
@@ -65,23 +65,68 @@ def norm( argv ):
     elif len(args) == 2:
         path_worldfile = args[0]
         path_schema_legacy = args[1]
+        path_schema_current = path_schema()
 
-        # polyworld home dir
-        homedir = os.path.realpath( os.path.join(os.path.dirname( sys.argv[0] ), '..') )
-        path_schema_current = os.path.join( homedir, 'worldfiles/v101.wfs' )
-        proputil = os.path.join( homedir, 'bin/proputil' )
-
-        def __shell( cmd, args ):
-            exitval = os.system( cmd + " " + args )
-            if exitval != 0:
-                err( "Failed executing '%s'. exit=%s" % (cmd,exitval) )
-    
-        __shell( proputil, 'apply %s %s > /tmp/applied.wf' % (path_schema_legacy, path_worldfile) )
-        __shell( proputil, 'set /tmp/applied.wf LegacyMode %s > /tmp/set.wf' % (legacyMode) )
-        __shell( proputil, 'apply %s /tmp/set.wf' % (path_schema_current) )
+        proputil( 'apply %s %s > /tmp/applied.wf' % (path_schema_legacy, path_worldfile) )
+        proputil( 'set /tmp/applied.wf LegacyMode %s > /tmp/set.wf' % (legacyMode) )
+        proputil( 'apply %s /tmp/set.wf' % (path_schema_current) )
             
     else:
         usage()
+
+################################################################################
+################################################################################
+###
+### FUNCTION reduce()
+###
+################################################################################
+################################################################################
+def reduce( args ):
+    if len(args) != 1:
+        usage()
+
+    path_worldfile = args[0]
+
+    proputil( 'reduce %s %s' % (path_schema(), path_worldfile) )
+
+################################################################################
+################################################################################
+###
+### FUNCTION proputil()
+###
+### Execute the proputil application.
+###
+################################################################################
+################################################################################
+def proputil( args ):
+    proputil = os.path.join( path_polyhome(), 'bin/proputil' )
+
+    cmd = proputil + " " + args
+    exitval = os.system( cmd )
+    if exitval != 0:
+        err( "Failed executing '%s'. exit=%s" % (cmd,exitval) )
+
+################################################################################
+################################################################################
+###
+### FUNCTION path_polyhome()
+###
+### Get the Polyworld home directory
+###
+################################################################################
+################################################################################
+def path_polyhome():
+    return os.path.realpath( os.path.join(os.path.dirname( sys.argv[0] ), '..') )
+
+################################################################################
+################################################################################
+###
+### FUNCTION path_schema()
+###
+################################################################################
+################################################################################
+def path_schema():
+    return os.path.join( path_polyhome(), 'worldfiles/v101.wfs' )
 
 ################################################################################
 ################################################################################
@@ -353,7 +398,13 @@ def parsePreVersion101( path ):
 
             
 
-    wfversion = pint( 'Version' )
+    try:
+        wfversion = pint( 'Version' )
+    except:
+        wfversion = 0
+
+    if (wfversion < 1) or (wfversion > 55):
+        err( "Invalid pre-v101 worldfile (didn't find version on first line)" )
 
     pbool( 'PassiveLockstep', 25, False )
     pint( 'MaxSteps', 18, 0 )
@@ -390,7 +441,7 @@ def parsePreVersion101( path ):
     pfloat( 'FoodRemoveEnergy', 46, 0.0 )
     pint( 'PositionSeed' )
     pint( 'InitSeed' )
-    pint( 'SimulationSeed', 44, 0.0 )
+    pint( 'SimulationSeed', 44, 0 )
     
     if wfversion < 32:
         pint( 'MinFood' )
@@ -783,33 +834,39 @@ def usage( msg = None ):
     print """\
 usage: wfconv norm [-l] worldfile
 
-   Normalizes a pre-v101 worldfile to be compatible with the current schema.
+     Normalizes a pre-v101 worldfile to be compatible with the current schema.
 
    Result is written to stdout.
  
-   -l    enable LegacyMode, which should result in a worldfile that produces
-       the same results as the old worldfile.
+   -l    Enable LegacyMode, which should result in a worldfile that produces
+       the same results as the old worldfile. If this is not specified, then
+       schema default values will be adopted for properties that were
+       introduced since the original worldfile was created, which will likely
+       change simulation results.
 
 --
 
 usage: wfconv norm [-l] worldfile legacy_schemafile
 
-   Normalizes an old post-v101 worldfile to be compatible with the current schema.
-   You'll generally want this with the -l flag so that you can exactly recreate
-   an old run. That is, the purpose of this invocation is to get a worldfile with
-   settings that disable any features introduced into the simulator since the
-   original worldfile was written.
+     Normalizes a v101 worldfile to be compatible with the current schema.
 
    Result is written to stdout.
  
-   -l    enable LegacyMode, which should result in a worldfile that produces
-       the same results as the old worldfile.
+   -l    Enable LegacyMode, which should result in a worldfile that produces
+       the same results as the old worldfile. If this is not specified, then
+       schema default values will be adopted for properties that were
+       introduced since the original worldfile was created, which will likely
+       change simulation results.
 
 --
 
 usage: wfconv reduce worldfile
 
-   NOT YET IMPLEMENTED
+     Strips a v101 worldfile of any values that are the same as the default values
+   in the schema. Note that the setting of LegacyMode effects the determination
+   of schema default values.
+
+   Result is written to stdout.
 """
 
     if msg != None:

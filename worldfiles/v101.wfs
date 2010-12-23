@@ -1,16 +1,15 @@
-# I haven't decided if this version flag is a part of the proper proplib
-# format. Currently, it's not part of the schema file. I think what I might
-# do is have the simulator strip this from the worldfile prior to passing
-# it to proplib. I haven't thought it through yet.
-#101 Version 
-
 ##########################################################################
 #
 #    Tabs aren't allowed in this schema file. This file serves as a
 # reference and must format well for all people.
 #
 #    Parameters are organized within sections. You may quickly jump to
-# to sections by searching for the string SECTION.
+# sections by searching for the string SECTION.
+#
+#    The parser of this file is not very flexible in how it processes
+# syntax. Follow the conventions you see in this file and you will be
+# fine. For example, put an opening brace on its own line as done in our
+# C++ code, and no soup for you!
 #
 #
 # --- QUICK REFERENCE ---
@@ -22,7 +21,7 @@
 #   assert = expression that results in error if evaluates to False.
 #
 #   default = value used if not specified and LegacyMode == False or
-              LegacyMode == True and legacy value is not provided.
+#             LegacyMode == True and legacy value is not provided.
 #
 #   legacy = value used if not specified and LegacyMode == True
 #
@@ -235,6 +234,62 @@ Barriers {
 #------------------------------
 Domains {
   type    ARRAY
+
+  default [
+    CenterX                   0.5
+    CenterZ                   0.5
+    SizeX                     1.0
+    SizeZ                     1.0
+    MinAgentsFraction         -1.0
+    MaxAgentsFraction         -1.0
+    InitAgentsFraction        -1.0
+    InitSeedsFraction         -1.0
+    ProbabilityOfMutatingSeeds -1.0
+    InitFoodFraction          -1.0
+    MinFoodFraction           -1.0
+    MaxFoodFraction           -1.0
+    MaxFoodGrownFraction      -1.0
+    FoodRate                  -1.0
+    FoodPatches [             
+        FoodFraction              0.2
+        InitFoodFraction          -1.0
+        MinFoodFraction           -1.0
+        MaxFoodFraction           1.0
+        MaxFoodGrownFraction      1.0
+        FoodRate                  -1.0
+        CenterX                   0.5
+        CenterZ                   0.05
+        SizeX                     1.0
+        SizeZ                     0.1
+        Shape                     R
+        Distribution              U
+        NeighborhoodSize          10.0
+        Period                    0
+        OnFraction                1.0
+        Phase                     0.0
+        RemoveFood                False
+      ,                         
+        FoodFraction              0.8
+        InitFoodFraction          -1.0
+        MinFoodFraction           -1.0
+        MaxFoodFraction           1.0
+        MaxFoodGrownFraction      1.0
+        FoodRate                  -1.0
+        CenterX                   0.5
+        CenterZ                   0.8
+        SizeX                     1.0
+        SizeZ                     0.4
+        Shape                     R
+        Distribution              U
+        NeighborhoodSize          10.0
+        Period                    0
+        OnFraction                1.0
+        Phase                     0.0
+        RemoveFood                False
+    ]
+    BrickPatches [
+    ]
+  ]
 
   exmin   0
   max     10 # This number comes from the MAXDOMAINS symbol in Simulation.h. It is critical they match.
