@@ -377,7 +377,7 @@ namespace proplib
 	{
 	public:
 		static void apply( Document *docSchema, Document *docValues );
-		static void reduce( Document *docSchema, Document *docValues );
+		static void reduce( Document *docSchema, Document *docValues, bool apply = true );
 
 	private:
 		static void normalize( Property &propSchema, Property &propValues, bool legacyMode );

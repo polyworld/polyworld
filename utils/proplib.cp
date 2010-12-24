@@ -1580,9 +1580,10 @@ namespace proplib
 		validateChildren( *docSchema, *docValues );
 	}
 
-	void Schema::reduce( Document *docSchema, Document *docValues )
+	void Schema::reduce( Document *docSchema, Document *docValues, bool apply )
 	{
-		apply( docSchema, docValues );
+		if( apply )
+			Schema::apply( docSchema, docValues );
 		reduceChildren( *docSchema, *docValues, isLegacyMode(docValues) );
 	}
 

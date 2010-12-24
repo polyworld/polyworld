@@ -1645,7 +1645,32 @@ void TSimulation::Init()
 			Q_CHECK_PTR( fFoodPatchStatsFile );
 	}
 	
+#ifdef PROPLIB
+	{
+		system( "cp v101.wf run/original.wf" );
+		system( "cp worldfiles/v101.wfs run/original.wfs" );
+
+		proplib::Document *docSchema = proplib::Parser::parseFile( "worldfiles/v101.wfs" );
+		proplib::Document *docValues = proplib::Parser::parseFile( "v101.wf" );
+		proplib::Schema::apply( docSchema, docValues );
+
+		{
+			ofstream out( "run/normalized.wf" );
+			docValues->write( out );
+		}
+		{
+			ofstream out( "run/reduced.wf" );
+			proplib::Schema::reduce( docSchema, docValues, false );
+			docValues->write( out );
+		}
+		{
+			ofstream out( "run/normalized.wfs" );
+			docSchema->write( out );
+		}
+	}
+#else
 	system( "cp worldfile run/" );
+#endif
 
     // Pass ownership of the cast to the stage [TODO] figure out ownership issues
     fStage.SetCast(&fWorldCast);
@@ -8264,7 +8289,7 @@ void TSimulation::ReadPropLib()
 			fRecordComplexity = true;						// record it, since we have to compute it
 			cout << "  RecordComplexity" ses fRecordComplexity nl;
 		}
-	}
+	}	
 
 	delete docSchema;
 	delete docValues;
