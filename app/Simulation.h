@@ -543,6 +543,7 @@ private:
 			   LifeSpan::DeathReason reason );
 	void Kill_UpdateBrainData( agent *c );
 	void Kill_UpdateFittest( agent *c );
+	void RemoveFood( food *f );
 
 	float AgentFitness( agent* c );
 	

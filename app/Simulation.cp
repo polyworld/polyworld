@@ -1913,13 +1913,13 @@ void TSimulation::InitAgents()
 		virtual void task_exec( TSimulation *sim )
 		{
 			sim->fNeuronGroupCountStats.add( a->GetBrain()->NumNeuronGroups() );
+
 			sim->fFoodEnergyIn += a->FoodEnergy();
 			if( sim->fRecordPosition )
 				a->RecordPosition();
 		}
 	};
 
-		
 	// first handle the individual domains
 	for (id = 0; id < fNumDomains; id++)
 	{
@@ -2480,7 +2480,9 @@ void TSimulation::SeedGenome( long agentNumber,
 		GenomeUtil::seed( genes );
 	}
 	if( randpw() < probabilityOfMutatingSeeds )
+	{
 		genes->mutate();
+	}
 }
 
 //---------------------------------------------------------------------------
@@ -4210,20 +4212,7 @@ void TSimulation::Eat( agent *c )
 
 				if (f->energy() <= fFoodRemoveEnergy)  // all gone
 				{
-					// A food was used up so remove it from the patch count and domain count
-					(f->getPatch())->foodCount--;
-					fDomains[f->domain()].foodCount--;
-
-					objectxsortedlist::gXSortedObjects.removeCurrentObject();   // get it out of the list
-					fStage.RemoveObject( f );  // get it out of the world
-					
-					if( f->BeingCarried() )
-					{
-						// if it's being carried, have to remove it from the carrier
-						((agent*)(f->CarriedBy()))->DropObject( (gobject*) f );
-					}
-					
-					delete f;	// get it out of memory
+					RemoveFood( f );
 				}
 
 				// but this guy only gets to eat from one food source
@@ -4270,22 +4259,7 @@ void TSimulation::Eat( agent *c )
 
 					if (f->energy() <= fFoodRemoveEnergy)  // all gone
 					{
-						// A food was used up so remove it from the patch count and domain count
-						FoodPatch* fp = f->getPatch();
-						if( fp )
-							fp->foodCount--;
-						fDomains[f->domain()].foodCount--;
-
-						objectxsortedlist::gXSortedObjects.removeCurrentObject();   // get it out of the list
-						fStage.RemoveObject( f );  // get it out of the world
-
-						if( f->BeingCarried() )
-						{
-							// if it's being carried, have to remove it from the carrier
-							((agent*)(f->CarriedBy()))->DropObject( (gobject*) f );
-						}
-					
-						delete f;				// get it out of memory
+						RemoveFood( f );
 					}
 
 					// but this guy only gets to eat from one food source
@@ -4841,14 +4815,9 @@ void TSimulation::MaintainFood()
 				{
 					if( f->getPatch() == fFoodPatchesNeedingRemoval[i] )
 					{
-						// This piece of food is in a patch performing food removal, so get rid of it
-						(f->getPatch())->foodCount--;
-						fDomains[f->domain()].foodCount--;
 						fFoodEnergyOut += f->energy();
-						
-						objectxsortedlist::gXSortedObjects.removeCurrentObject();   // get it out of the list
-						fStage.RemoveObject( f );  // get it out of the world
-						delete f;				// get it out of memory
+
+						RemoveFood( f );
 						
 						break;	// found patch and deleted food, so get out of patch loop
 					}
@@ -5667,6 +5636,28 @@ void TSimulation::Kill_UpdateFittest( agent *c )
 		if( unlink( s ) )
 			eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
 	}
+}
+
+//-------------------------------------------------------------------------------------------
+// TSimulation::RemoveFood
+//-------------------------------------------------------------------------------------------
+void TSimulation::RemoveFood( food *f )
+{
+	FoodPatch *fp = f->getPatch();
+	if( fp ) fp->foodCount--;
+
+	fDomains[f->domain()].foodCount--;
+
+	objectxsortedlist::gXSortedObjects.removeCurrentObject();   // get it out of the list
+	fStage.RemoveObject( f );  // get it out of the world
+					
+	if( f->BeingCarried() )
+	{
+		// if it's being carried, have to remove it from the carrier
+		((agent*)(f->CarriedBy()))->DropObject( (gobject*) f );
+	}
+					
+	delete f;	// get it out of memory
 }
 
 //-------------------------------------------------------------------------------------------
@@ -7479,7 +7470,7 @@ void TSimulation::ReadPropLib()
 	fMinNumAgents = doc.get( "MinAgents" );
 	fMaxNumAgents = doc.get( "MaxAgents" );
 	fInitNumAgents = doc.get( "InitAgents" );
-	fNumberToSeed = doc.get( "InitAgents" );
+	fNumberToSeed = doc.get( "SeedAgents" );
 	fProbabilityOfMutatingSeeds = doc.get( "SeedMutationProbability" );
 	fSeedFromFile = doc.get( "SeedGenomeFromRun" );
 	fPositionSeedsFromFile = doc.get( "SeedPositionFromRun" );
