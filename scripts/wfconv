@@ -47,7 +47,7 @@ def norm( argv ):
     try:
         opts, args = getopt.getopt(argv, shortopts, longopts)
     except getopt.GetoptError, e:
-        show_usage( e )
+        usage( e )
 
     for opt, value in opts:
         opt = opt.strip('-')
@@ -61,7 +61,8 @@ def norm( argv ):
 
     if len(args) == 1:
         worldfile = parsePreVersion101( args[0] )
-        printNewFormat( worldfile, legacyMode )
+        normalizePreVersion101( worldfile, legacyMode )
+        printV101Format( worldfile )
     elif len(args) == 2:
         path_worldfile = args[0]
         path_schema_legacy = args[1]
@@ -200,7 +201,7 @@ class Container:
                     value = ' '.join( map(str,value) )
                 print "%-30s %s" % ( value, self.fullname(name) )
 
-    def printNewFormat( self, indent = "" ):
+    def printV101Format( self, indent = "" ):
         def __print( name, data ):
             print "%s%-25s %s" % (indent, name, data)
 
@@ -223,7 +224,7 @@ class Container:
                     #__print( prop.name + " " + open, "" )
                     __print( prop.name +" "+open, "" )
 
-                value.printNewFormat(indent + "  " )
+                value.printV101Format(indent + "  " )
 
                 if not self.isarray():
                     #__print( close, "" )
@@ -252,11 +253,23 @@ class Container:
 ################################################################################
 ################################################################################
 ###
-### FUNCTION printNewFormat()
+### FUNCTION printV101Format()
 ###
 ################################################################################
 ################################################################################
-def printNewFormat( container, legacyMode ):
+def printV101Format( container ):
+    container.printV101Format()
+
+################################################################################
+################################################################################
+###
+### FUNCTION normalizePreVersion101()
+###
+################################################################################
+################################################################################
+def normalizePreVersion101( container, legacyMode ):
+    wfversion = container.get( 'Version' ).value
+
     edges = container.get( 'Edges' ).value
     container.remove( 'Edges' )
     wraparound = container.get( 'WrapAround' ).value
@@ -267,7 +280,6 @@ def printNewFormat( container, legacyMode ):
         print 'implement edges conversion'
         assert( false )
     
-
     container.remove( 'NumBarriers' )
     container.remove( 'NumDomains' )
 
@@ -275,16 +287,52 @@ def printNewFormat( container, legacyMode ):
     for barrier in barriers.value.props.values():
         barrier.value.remove( 'NumKeyFrames' )
 
+    def __fraction( container, worldPropName, subcontainer, subPropName = None, newPropName = None ):
+        if not subPropName:
+            subPropName = worldPropName
+        if not newPropName:
+            newPropName = subPropName + 'Fraction'
+
+        worldValue = container.get( worldPropName ).value
+        subValue = subcontainer.value.get( subPropName ).value
+        fractionValue = float(subValue) / worldValue
+        subcontainer.value.remove( subPropName )
+        subcontainer.value.add( newPropName, 'float', fractionValue )
+
     domains = container.get( 'Domains' )
     for domain in domains.value.props.values():
         domain.value.remove( 'NumFoodPatches' )
         domain.value.remove( 'NumBrickPatches' )
 
+        if wfversion < 32:
+            foodpatches = domain.value.get( 'FoodPatches' )
+            for foodpatch in foodpatches.value.props.values():
+                def __foodfraction( propName, domainPropName ):
+                    value = foodpatch.value.get( propName ).value
+                    if value < 0:
+                        value *= foodpatch.value.get( 'FoodFraction' ).value
+                    __fraction( domain.value, domainPropName, foodpatch, propName, propName + 'Fraction' )
+
+                __foodfraction( 'InitFood', 'InitFood' )
+                __foodfraction( 'MinFood', 'MinFood' )
+                __foodfraction( 'MaxFood', 'MaxFood' )
+                __foodfraction( 'MaxFoodGrown', 'MaxFoodGrownCount' )
+
+
+            __fraction( container, 'InitFood', domain )
+            __fraction( container, 'MinFood', domain )
+            __fraction( container, 'MaxFood', domain )
+            __fraction( container, 'MaxFoodGrown', domain, 'MaxFoodGrownCount', 'MaxFoodGrownFraction' )
+            __fraction( container, 'InitAgents', domain )
+            __fraction( container, 'MinAgents', domain )
+            __fraction( container, 'MaxAgents', domain )
+            __fraction( container, 'SeedAgents', domain, 'SeedAgents', 'InitSeedsFraction' )
+            
+
+
     container.remove( 'Version' )
 
     container.add( 'LegacyMode', 'bool', legacyMode )
-    
-    container.printNewFormat()
 
 ################################################################################
 ################################################################################
@@ -802,7 +850,14 @@ def parsePreVersion101( path ):
     
     if wfversion >= 18:
         pbool( 'RecordComplexity' )
-        penum( 'ComplexityType', ['0', 'P','A','I','B','D','Z'] )
+        if wfversion < 28:
+            # this property is a bit odd in that it dramatically changed rules between versions.
+            # this should probably be moved into the normalize function
+            __scalar( 'ComplexityType', None, None, 'enum', lambda x: 'O' if x == '0' else 'P' )
+        else:
+            penum( 'ComplexityType',
+                   ['O', 'P','A','I','B','D','Z'],
+                   values_new = ['O', 'P','A','I','B','D','Z'] )
         if wfversion >= 30:
             pfloat( 'ComplexityFitnessWeight' )
             pfloat( 'HeuristicFitnessWeight' )

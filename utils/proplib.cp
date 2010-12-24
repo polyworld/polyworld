@@ -12,7 +12,8 @@
 
 using namespace std;
 
-#define DEBUG_INPUT !true
+#define DEBUG_INPUT false
+#define DEBUG_EVAL false
 
 namespace proplib
 {
@@ -33,7 +34,14 @@ namespace proplib
 		string locals = "{";
 		itfor(SymbolTable, symbols, it )
 		{
-			locals.append( "'" + it->first + "': " + it->second + ",");
+			string value = it->second;
+			if( !Parser::parseInt(value)
+				&& !Parser::parseFloat(value)
+				&& !Parser::parseBool(value) )
+			{
+				value = string("'") + value + "'";
+			}
+			locals.append( "'" + it->first + "': " + value + ",");
 		}
 		locals.append( "}" );
 
@@ -50,6 +58,12 @@ namespace proplib
 
 		char cmd[1024 * 4];
 		sprintf( cmd, "python -c \"%s\"", script );
+
+#if DEBUG_EVAL
+		cout << "<EVAL>" << endl;
+		cout << script << endl;
+		cout << "</EVAL>" << endl;
+#endif
 
 		FILE *f = popen( cmd, "r" );
 

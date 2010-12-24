@@ -340,9 +340,9 @@ namespace proplib
 		static bool isValidIdentifier( const std::string &text );
 		static void scanIdentifiers( const std::string &expr, StringList &ids );
 
-		static bool parseInt( const std::string &text, int *result );
-		static bool parseFloat( const std::string &text, float *result );
-		static bool parseBool( const std::string &text, bool *result );
+		static bool parseInt( const std::string &text, int *result = NULL );
+		static bool parseFloat( const std::string &text, float *result = NULL );
+		static bool parseBool( const std::string &text, bool *result = NULL );
 
 		static bool scalarValuesEqual( const std::string &a, const std::string &b );
 
