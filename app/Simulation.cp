@@ -5648,7 +5648,9 @@ void TSimulation::RemoveFood( food *f )
 
 	fDomains[f->domain()].foodCount--;
 
+	assert( f == objectxsortedlist::gXSortedObjects.getcurr()->e );
 	objectxsortedlist::gXSortedObjects.removeCurrentObject();   // get it out of the list
+
 	fStage.RemoveObject( f );  // get it out of the world
 					
 	if( f->BeingCarried() )
