@@ -8020,9 +8020,9 @@ void TSimulation::ReadPropLib()
 		if( val == "F" )
 			brain::gNeuralValues.model = brain::NeuralValues::FIRING_RATE;
 		else if( val == "T" )
-			brain::gNeuralValues.model = brain::NeuralValues::SPIKING;
-		else if( val == "S" )
 			brain::gNeuralValues.model = brain::NeuralValues::TAU;
+		else if( val == "S" )
+			brain::gNeuralValues.model = brain::NeuralValues::SPIKING;
 		else
 			assert( false );
 	}
