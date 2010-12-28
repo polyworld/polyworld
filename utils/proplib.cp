@@ -66,8 +66,10 @@ namespace proplib
 				 "import sys\n"
 				 "try:\n"
 				 "  print eval('%s', %s)\n"
+				 "  sys.stdout.flush()\n"
 				 "except:\n"
 				 "  print sys.exc_info()[1]\n"
+				 "  sys.stdout.flush()\n"
 				 "  sys.exit(1)\n",
 				 expr,
 				 locals.c_str());
@@ -86,8 +88,9 @@ namespace proplib
 		char *result_orig = result;
 
 		size_t n;
-		while( (result_size > 0) && (n = fread(result, 1, result_size, f)) != 0 )
+		while( !feof(f) && (result_size > 0) )
 		{
+			n = fread(result, 1, result_size, f);
 			result[n] = 0;
 			result += n;
 			result_size -= n;
