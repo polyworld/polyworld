@@ -19,6 +19,22 @@ namespace proplib
 {
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
+	// --- FUNCTION _strndup()
+	// ---
+	// --- Mac doesn't have strndup
+	// ----------------------------------------------------------------------
+	// ----------------------------------------------------------------------
+	static char* _strndup(const char *s, size_t n)
+	{
+		n = min( n, strlen(s) );
+		char *result = (char *)malloc( n + 1 );
+		memcpy( result, s, n );
+		result[ n ] = '\0';
+		return result;
+	}
+
+	// ----------------------------------------------------------------------
+	// ----------------------------------------------------------------------
 	// --- FUNCTION eval()
 	// ---
 	// --- Use python to evaluate an expression
@@ -282,7 +298,7 @@ namespace proplib
 			for( ; isspace(*val); val++, n-- ) {}
 			for( ; isspace(val[n - 1]); n-- ) {}
 
-			sval = strndup( val, n );
+			sval = _strndup( val, n );
 		}
 		else
 		{
@@ -528,6 +544,61 @@ namespace proplib
 		return evalScalar();
 	}
 
+	string Property::evalScalar()
+	{
+		if( type != SCALAR )
+		{
+			loc.err( "Referenced as scalar, probably from expression." );
+		}
+
+		if( isExpr )
+		{
+			// We eventually want to move the isEvaling state out of the object and
+			// onto the stack so we are thread safe.
+			if( isEvaling )
+			{
+				loc.err( "Expression dependency cycle." );
+			}
+			isEvaling = true;
+
+			SymbolTable symbolTable;
+
+			Parser::StringList ids;
+			Parser::scanIdentifiers( sval, ids );
+
+			itfor( Parser::StringList, ids, it )
+			{
+				Property *prop = findSymbol( *it );
+				if( prop != NULL )
+				{
+					if( !prop->isScalar() )
+					{
+						err( string("Referencing non-scalar '") + prop->getName() + "' in expression" );
+					}
+					symbolTable[ prop->getName() ] = prop->evalScalar();
+				}
+			}
+
+			char buf[1024];
+
+			bool success = eval( sval, symbolTable,
+								 buf, sizeof(buf) );
+
+			if( !success )
+			{
+				loc.err( buf );
+			}
+
+			isEvaling = false;
+
+			return buf;
+		}
+		else
+		{
+			return sval;
+		}
+	}
+
 	void Property::add( Node *node )
 	{
 		assert( type == CONTAINER );
@@ -649,61 +720,6 @@ namespace proplib
 		else
 		{
 			out << " " << getDecoratedScalar() << endl;
-		}
-	}
-
-	string Property::evalScalar()
-	{
-		if( type != SCALAR )
-		{
-			loc.err( "Referenced as scalar, probably from expression." );
-		}
-
-		if( isExpr )
-		{
-			// We eventually want to move the isEvaling state out of the object and
-			// onto the stack so we are thread safe.
-			if( isEvaling )
-			{
-				loc.err( "Expression dependency cycle." );
-			}
-			isEvaling = true;
-
-			SymbolTable symbolTable;
-
-			Parser::StringList ids;
-			Parser::scanIdentifiers( sval, ids );
-
-			itfor( Parser::StringList, ids, it )
-			{
-				Property *prop = findSymbol( *it );
-				if( prop != NULL )
-				{
-					if( !prop->isScalar() )
-					{
-						err( string("Referencing non-scalar '") + prop->getName() + "' in expression" );
-					}
-					symbolTable[ prop->getName() ] = prop->evalScalar();
-				}
-			}
-
-			char buf[1024];
-
-			bool success = eval( sval, symbolTable,
-								 buf, sizeof(buf) );
-
-			if( !success )
-			{
-				loc.err( buf );
-			}
-
-			isEvaling = false;
-
-			return buf;
-		}
-		else
-		{
-			return sval;
 		}
 	}
 
@@ -1266,7 +1282,7 @@ namespace proplib
 #define ADDTOK( END )											\
 		if( start )												\
 		{														\
-			list.push_back( strndup(start, (END) - start) );	\
+			list.push_back( _strndup(start, (END) - start) );	\
 			start = NULL;										\
 			paren = 0;											\
 		}

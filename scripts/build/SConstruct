@@ -137,6 +137,7 @@ def env_create():
               qtmodules = ['QtCore',
                            'QtGui',
                            'QtOpenGL'])
+    import_zlib(env)
 
     env = envs['CalcComplexity'] = env_common.Clone()
     import_zlib(env)

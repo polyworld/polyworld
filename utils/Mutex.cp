@@ -2,30 +2,6 @@
 
 #include <assert.h>
 
-SpinMutex::SpinMutex()
-{
-	int rc = pthread_spin_init( &spinlock, PTHREAD_PROCESS_PRIVATE );
-	assert( rc == 0 );
-}
-
-SpinMutex::~SpinMutex()
-{
-	pthread_spin_destroy( &spinlock );
-}
-
-void SpinMutex::lock()
-{
-	int rc = pthread_spin_lock( &spinlock );
-	assert( rc == 0 );
-}
-
-void SpinMutex::unlock()
-{
-	int rc = pthread_spin_unlock( &spinlock );
-	assert( rc == 0 );
-}
-
-
 WaitMutex::WaitMutex()
 {
 	int rc = pthread_mutex_init( &mutex, NULL );
@@ -48,6 +24,31 @@ void WaitMutex::unlock()
 	int rc = pthread_mutex_unlock( &mutex );
 	assert( rc == 0 );
 }
+
+#if PTHREAD_SPINLOCKS
+SpinMutex::SpinMutex()
+{
+	int rc = pthread_spin_init( &spinlock, PTHREAD_PROCESS_PRIVATE );
+	assert( rc == 0 );
+}
+
+SpinMutex::~SpinMutex()
+{
+	pthread_spin_destroy( &spinlock );
+}
+
+void SpinMutex::lock()
+{
+	int rc = pthread_spin_lock( &spinlock );
+	assert( rc == 0 );
+}
+
+void SpinMutex::unlock()
+{
+	int rc = pthread_spin_unlock( &spinlock );
+	assert( rc == 0 );
+}
+#endif // PTHREAD_SPINLOCKS
 
 ConditionMonitor::ConditionMonitor()
 : WaitMutex()

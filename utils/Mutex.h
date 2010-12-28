@@ -1,6 +1,13 @@
 #pragma once
 
 #include <pthread.h>
+#include <unistd.h>
+
+#if ((_POSIX_SPIN_LOCKS - 200112L) >= 0L)
+	#define PTHREAD_SPINLOCKS true
+#else
+	#define PTHREAD_SPINLOCKS false
+#endif
 
 class IMutex
 {
@@ -21,19 +28,6 @@ class IMonitor : public IMutex
 	virtual void wait() = 0;
 };
 
-class SpinMutex : public IMutex
-{
- public:
-	SpinMutex();
-	virtual ~SpinMutex();
-
-	virtual void lock();
-	virtual void unlock();
-
- private:
-	pthread_spinlock_t spinlock;
-};
-
 class WaitMutex : public IMutex
 {
  public:
@@ -46,6 +40,23 @@ class WaitMutex : public IMutex
  protected:
 	pthread_mutex_t mutex;
 };
+
+#if PTHREAD_SPINLOCKS
+class SpinMutex : public IMutex
+{
+ public:
+	SpinMutex();
+	virtual ~SpinMutex();
+
+	virtual void lock();
+	virtual void unlock();
+
+ private:
+	pthread_spinlock_t spinlock;
+};
+#else
+typedef WaitMutex SpinMutex;
+#endif
 
 class ConditionMonitor : public IMonitor, public WaitMutex
 {
