@@ -1,8 +1,6 @@
 #ifndef SIMULATION_H
 #define SIMULATION_H
 
-//#define PROPLIB
-
 #ifdef linux
 	#include <errno.h>
 #endif
@@ -29,6 +27,10 @@
 #include "OverheadView.h"
 
 // Forward declarations
+namespace proplib
+{
+	class Document;
+}
 namespace genome
 {
 	class Genome;
@@ -245,7 +247,7 @@ class TSceneWindow: public QMainWindow
 	Q_OBJECT
 
 public:
-	TSceneWindow();
+	TSceneWindow( const char *worldfilePath );
 	virtual ~TSceneWindow();
 	
 	void CreateSimulationScheduler();
@@ -330,7 +332,7 @@ class TSimulation : public QObject
 	Q_OBJECT
 
 public:
-	TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow );
+	TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow, const char *worldfilePath );
 	virtual ~TSimulation();
 	
 	void Start();
@@ -400,6 +402,7 @@ public:
 	DataLibWriter *fLifeSpanLog;
 
 	bool fRecordPosition;
+	bool fRecordBarrierPosition;
 	bool fRecordContacts;
 	DataLibWriter *fContactsLog;
 	bool fRecordCollisions;
@@ -440,7 +443,7 @@ public:
 private slots:
 	
 private:
-	void Init();
+	void Init( const char *worldfilePath );
 	void InitAgents();
 	void InitNeuralValues();
 	void InitWorld();
@@ -547,13 +550,7 @@ private:
 
 	float AgentFitness( agent* c );
 	
-	void ReadWorldFile(const char* filename);
-
-	void ReadLabel(istream &in, const char *name);
-
-#ifdef PROPLIB
-	void ReadPropLib();
-#endif // PROPLIB
+	void ProcessWorldFile( proplib::Document *docWorldFile );
 
 	void Dump();
 	
@@ -616,6 +613,7 @@ private:
 	bool fRecordGeneStats;
 	bool fRecordPerformanceStats;
 	bool fRecordFoodPatchStats;
+	bool fCalcFoodPatchAgentCounts;
 	
 	std::string fComplexityType;
 	float fComplexityFitnessWeight;

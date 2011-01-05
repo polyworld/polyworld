@@ -167,7 +167,6 @@ Barriers {
     # I don't think we actually want these as default values. These are values I was playing
     # with for shields. Note gaps on both ends of Z.
     KeyFrames [
-      T     0
       X1    0.33
       Z1    -0.9
       X2    0.33
@@ -175,7 +174,6 @@ Barriers {
     ]
   ,
     KeyFrames [
-      T     0
       X1    0.67
       Z1    -0.9
       X2    0.67
@@ -195,11 +193,61 @@ Barriers {
           type    OBJECT
           properties {    # properties of KeyFrame
             
-            T {
+	    Mode {
+              type    ENUM
+              default Time
+              values [
+                Time
+                Count
+              ]
+            }
+
+            Time {
               type    INT
               default 0
               min     0
               max     $( MaxSteps )
+            }
+
+            Count {
+              type    OBJECT
+              default {
+              }
+              properties {
+
+                Value {
+                  type    ENUM
+                  default Agents
+                  values [
+                    Agents
+                  ]
+                }
+
+                Op {
+                  type    ENUM
+                  default UNDEFINED
+                  values [
+                    UNDEFINED
+                    EQ
+                    GT
+                    LT
+                  ]
+                  if $( Mode == \"Count\" ) {
+                    assert $( Op != \"UNDEFINED\" )
+                  }
+                }
+                
+                Threshold {
+                  type    INT
+                  default 0
+                }
+
+                Duration {
+                  type    INT
+                  default 0
+                  min     0
+                }
+              }
             }
 
             X1 {
@@ -264,11 +312,6 @@ Domains {
         SizeZ                     0.1
         Shape                     R
         Distribution              U
-        NeighborhoodSize          10.0
-        Period                    0
-        OnFraction                1.0
-        Phase                     0.0
-        RemoveFood                False
       ,                         
         FoodFraction              0.8
         InitFoodFraction          -1.0
@@ -282,11 +325,6 @@ Domains {
         SizeZ                     0.4
         Shape                     R
         Distribution              U
-        NeighborhoodSize          10.0
-        Period                    0
-        OnFraction                1.0
-        Phase                     0.0
-        RemoveFood                False
     ]
     BrickPatches [
     ]
@@ -495,31 +533,90 @@ Domains {
               max     $( WorldSize ) # what should the max be? this is kind of a fudge factor, isn't it?
             }
 
-            Period {
-              type    INT
-              default 0
-              min     0
-              max     $( MaxSteps )
-            }
-
-            OnFraction {
-              type    FLOAT
-              default 1.0
-              min     0.0
-              max     1.0
-            }
-
-            Phase {
-              type    FLOAT
-              default 0.0
-              min     0.0
-              max     1.0
-            }
-
             RemoveFood {
               type    BOOL
               default False
             }
+
+            OnCondition {
+              type    OBJECT
+              default {
+              }
+
+              properties {
+                Mode {
+                  type    ENUM
+                  default Time
+                  values [
+                    Time
+                    MaxPopGroup
+                  ]
+                }
+
+                Time {
+                  type    OBJECT
+                  default {
+                  }
+
+                  properties {
+                
+                    Period {
+                      type    INT
+                      default 0
+                      min     0
+                      max     $( MaxSteps )
+                    }
+
+                    OnFraction {
+                      type    FLOAT
+                      default 1.0
+                      min     0.0
+                      max     1.0
+                    }
+
+                    Phase {
+                      type    FLOAT
+                      default 0.0
+                      min     0.0
+                      max     1.0
+                    }
+
+                  } # Time properties
+                } # Time
+
+                MaxPopGroup {
+                  type    OBJECT
+                  default {
+                  }
+
+                  properties {
+
+                    MaxAgents {
+                      type    INT
+                      default 200
+                      min     0
+                    }
+
+                    Timeout {
+                      type    INT
+                      default 2000
+                      assert  $( Timeout == -1 or Timeout > 0 )
+                    }
+
+                    Group {
+                      type    ENUM
+                      default Domain
+                      values [
+                        Domain
+                        World
+                      ]
+                    }
+
+                  } # MaxPopGroup properties
+                } # MaxPopGroup
+
+              } # OnCondition properties
+            } # OnCondition
                                     
           } # FoodPatch properties
         } # FoodPatches[] element
@@ -749,6 +846,34 @@ CarryPreventsGive {
 CarryPreventsMate {
   type    FLOAT
   default 0.0
+  min     0.0
+  max     1.0
+}
+
+EnableVisionPitch {
+  type    BOOL
+  default True
+  legacy  False
+}
+
+MinVisionPitch {
+  type    FLOAT
+  default -7.5
+  min     -90.0
+  max     0.0
+}
+
+MaxVisionPitch {
+  type    FLOAT
+  default 7.5
+  min     0
+  max     90.0
+}
+
+EyeHeight {
+  type    FLOAT
+  default 1.0
+  legacy  0.5
   min     0.0
   max     1.0
 }
@@ -1689,6 +1814,12 @@ RecordPosition {
   legacy  False
 }
 
+RecordBarrierPosition {
+  type    BOOL
+  default True
+  legacy  False
+}
+
 RecordContacts {
   type    BOOL
   default True
@@ -1799,6 +1930,7 @@ RecordSeparations {
 CompressFiles {
   type    BOOL
   default True
+  legacy  False
 }
 
 #-------------------------------------------------------------------

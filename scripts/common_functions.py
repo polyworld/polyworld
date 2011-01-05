@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 import os, re, sys
+import glob
 from subprocess import Popen, PIPE
 
 import datalib
-import glob
 
 RECENT_TYPES = ['Recent', 'bestRecent']
 DEBUG = False
@@ -45,35 +45,6 @@ def verbose(msg):
 
 ####################################################################################
 ###
-### FUNCTION read_worldfile_parameter()
-###
-### Return a value from the worldfile parameter.  If it is not found the value is False
-###
-####################################################################################
-def read_worldfile_parameter( path_worldfile_or_run, parameter ):
-	if os.path.isdir(path_worldfile_or_run):
-		worldfile = path_worldfile(path_worldfile_or_run)
-	else:
-		worldfile = path_worldfile_or_run
-
-	value = None
-
-	if not os.path.isfile( worldfile ):
-		print "ERROR: '%s' was not a worldfile" % worldfile
-		sys.exit(1)
-	worldfile = open( worldfile )
-
-	for line in worldfile:
-		line = line.split('_')[0].rstrip('\n') # '_' infomrally functions as comment
-		if line.endswith(parameter):
-			value = line.split()[0]
-			break
-
-	worldfile.close()
-	return value
-
-####################################################################################
-###
 ### FUNCTION classify_run()
 ###
 ####################################################################################
@@ -93,35 +64,33 @@ def classify_run(path_run,
 		 constraints = CLASSIFICATIONS,
 		 dependents = None):
 	import common_metric
+	import wfutil
 
 	classifications = []
 
 	def __nonzero(field):
-		value = read_worldfile_parameter(path_run,
-						 field)
-		return value != None and float(value) != 0
+		value = wfutil.get_parameter(path_run, field)
+		return float(value) != 0
 
-	def __not(field, notvalue, default = None):
-		value = read_worldfile_parameter(path_run,
-						 field)
-		if value == None:
-			if default == None:
-				value = notvalue
-			else:
-				value = default
-
+	def __not(field, notvalue):
+		value = wfutil.get_parameter(path_run, field)
 		return value != notvalue
+
+	def __true(field):
+		value = wfutil.get_parameter(path_run, field)
+		return value == 'True'
+		
 
 	#
 	# Fitness
 	#
-	if __nonzero("complexityFitnessWeight")	or __nonzero("heuristicFitnessWeight") or __not("useComplexityAsFitness", "O"):
+	if __nonzero("ComplexityFitnessWeight")	or __nonzero("HeuristicFitnessWeight"):
 		classifications.append('Fitness')
 
 	#
 	# Driven/Passive
 	#
-	if __nonzero("LockStepWithBirthsDeathsLog"):
+	if __true("PassiveLockstep"):
 		classifications.append('Passive')
 	else:
 		classifications.append('Driven')
@@ -510,6 +479,8 @@ def __truncate_paths(paths, result):
 ###
 #################################################
 def get_cmd_stdout(cmd):
+	cmd = map( str, cmd )
+
 	proc = Popen(cmd, stdout=PIPE)
 	
 	stdout, stderr = proc.communicate()
@@ -577,15 +548,38 @@ class InvalidDirError(Exception):
 
 ####################################################################################
 ###
+### FUNCTION isrundir()
+###
+### Tries to determine if a directory is a run dir by making sure it doesn't have
+### some signature files from the home dir and contains important signature files
+### from a run dir.
+###
+####################################################################################
+def isrundir(path):
+	import wfutil
+
+	if os.path.exists( os.path.join(path, 'docs') ) and os.path.exists( os.path.join(path, 'scripts') ):
+		return False
+	if not os.path.exists( os.path.join(path, 'stats') ):
+		return False
+	if os.path.exists( wfutil.path_worldfile(path, legacy = False) ):
+		return True
+	if os.path.exists( wfutil.path_worldfile(path, legacy = True) ):
+		return True
+	return False
+
+####################################################################################
+###
 ### FUNCTION find_run_paths()
 ###
 ####################################################################################
-def find_run_paths(paths_arg, required_subpath):
-    def __path_required(dir):
-	    return os.path.join(dir, required_subpath)
-
-    def __exists(path):
-	    return len(glob.glob(path)) > 0
+def find_run_paths(paths_arg, required_subpath = None):
+    def __isrundir( path ):
+	    if required_subpath == None:
+		    return isrundir( path )
+	    else:
+		    path = os.path.join( path, required_subpath )
+		    return len( glob.glob(path) ) > 0
 
     run_paths = []
 
@@ -594,7 +588,7 @@ def find_run_paths(paths_arg, required_subpath):
             raise InvalidDirError(path_arg)
 
         # if 'directory' is itself a run/ directory, just use that.
-        if __exists(__path_required(path_arg)):
+        if __isrundir(path_arg):
             run_paths.append(path_arg)
         else:
             found_run = False
@@ -604,7 +598,7 @@ def find_run_paths(paths_arg, required_subpath):
                 subdir = os.path.join(path_arg, potential_runpath)
                 
                 # if potential_directory is a run/ directory, add it.
-                if __exists(__path_required(subdir)):
+                if __isrundir(subdir):
                     run_paths.append(subdir)
                     found_run = True
 
@@ -614,14 +608,6 @@ def find_run_paths(paths_arg, required_subpath):
     run_paths.sort()
 
     return map(lambda x: x.rstrip('/'), run_paths)
-
-####################################################################################
-###
-### FUNCTION path_worldfile()
-###
-####################################################################################
-def path_worldfile(path_run):
-	return os.path.join(path_run, "worldfile")
 
 ####################################################################################
 ###

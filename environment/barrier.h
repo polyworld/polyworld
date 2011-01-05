@@ -18,6 +18,7 @@
 
 // Forward declarations
 class barrier;
+class DataLibWriter;
 
 //===========================================================================
 // TSortedBarrierList
@@ -38,12 +39,80 @@ private:
 inline void bxsortedlist::xsort() { if( needXSort ) actuallyXSort(); }
 
 //===========================================================================
-// barrier
+// KeyFrame
 //===========================================================================
-
-struct KeyFrame
+class KeyFrame
 {
-	long	step;
+ public:
+	//===========================================================================
+	// Condition
+	//===========================================================================
+	class Condition
+	{
+	public:
+		virtual ~Condition() {}
+
+		virtual bool isSatisfied( long step ) = 0;
+		virtual void setActive( long step, bool active ) = 0;
+		virtual long getEnd( long step ) = 0;
+	};
+
+	//===========================================================================
+	// TimeCondition
+	//===========================================================================
+	class TimeCondition : public Condition
+	{
+	public:
+		TimeCondition( long step );
+		virtual ~TimeCondition();
+
+		virtual bool isSatisfied( long step );
+		virtual void setActive( long step, bool active );
+		virtual long getEnd( long step );
+
+	private:
+		long end;
+	};
+
+	//===========================================================================
+	// CountCondition
+	//===========================================================================
+	class CountCondition : public Condition
+	{
+	public:
+		enum Op
+		{
+			EQ, GT, LT
+		};
+		CountCondition( const int *count,
+						Op op,
+						int threshold,
+						long duration );
+		virtual ~CountCondition();
+
+		virtual bool isSatisfied( long step );
+		virtual void setActive( long step, bool active );
+		virtual long getEnd( long step );
+
+	private:
+		struct Parameters
+		{
+			const int *count;
+			Op op;
+			int threshold;
+			long duration;
+		} parms;
+
+		struct State
+		{
+			long end;
+		} state;
+	};
+
+	KeyFrame();
+	~KeyFrame();
+
+	Condition *condition;
 	float	xa;
 	float	za;
 	float	xb;
@@ -51,6 +120,9 @@ struct KeyFrame
 };
 typedef struct KeyFrame KeyFrame;
 
+//===========================================================================
+// barrier
+//===========================================================================
 class barrier : public gpoly
 {
 public:
@@ -58,10 +130,10 @@ public:
 	static Color gBarrierColor;
 	static bxsortedlist gXSortedBarriers;	
 
-    barrier( int keyFrameCount );
+    barrier( int id, int keyFrameCount, bool recordPosition );
     ~barrier();
     
-	void setKeyFrame( long step, float xa, float za, float xb, float zb );
+	void setKeyFrame( KeyFrame::Condition *condition, float xa, float za, float xb, float zb );
 	
 	void init();	// must be called after the first keyframe is set
 	void update( long step );
@@ -79,6 +151,11 @@ public:
 protected:
     void position( float xa, float za, float xb, float zb );
 
+	float xa;
+	float xb;
+	float za;
+	float zb;
+
     float xmn;
     float xmx;
     float zmn;
@@ -92,10 +169,14 @@ protected:
 	
 	int	numKeyFrames;
 	int numKeyFramesSet;
-	int currentKeyFrame;
+	KeyFrame* activeKeyFrame;
 	KeyFrame* keyFrame;
 	
 	bool xSortNeeded;
+
+	int id;
+	bool recordPosition;
+	DataLibWriter *positionWriter;
 };
 
 

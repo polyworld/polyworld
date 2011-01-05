@@ -38,12 +38,6 @@ function ctrl_c() {
 }
 
 
-if [ -e ./worldfile ]; then
-    worldfile_save=`mktemp worldfile.XXXXXXXX`
-    echo "Saving existing ./worldfile to $worldfile_save"
-    mv ./worldfile $worldfile_save
-fi
-
 if [ -e ./genomeSeeds.txt ]; then
     seeds_save=`mktemp genomeSeeds.txt.XXXXXXXX`
     echo "Saving existing ./genomeSeeds.txt to $seeds_save"
@@ -58,29 +52,25 @@ if [ -e ./run ]; then
 fi
 
 if ./scripts/genomeSeed --agent $agentNumber $rundir; then
-    if ./scripts/edit_worldfile.py $rundir/worldfile ./worldfile \
-	maxSteps=10000 \
-	endOnPopulationCrash=0 \
-	minnumagents=1 \
-	initnumagents=1 \
-	numberToSeed=1 \
-	probabilityOfMutatingSeed=0.0 \
-	seedFromFile=1 \
-	"domain[*].probabilityOfMutatingSeeds=0.0"
+    cp $rundir/normalized.wf /tmp/debugBrain.wf
+    if ./scripts/wfutil edit /tmp/debugBrain.wf \
+	MaxSteps=10000 \
+	EndOnPopulationCrash=False \
+	MinAgents=1 \
+	InitAgents=1 \
+	SeedAgents=1 \
+	SeedMutationProbability=0.0 \
+	SeedGenomeFromRun=True \
+	"Domains[*].ProbabilityOfMutatingSeeds=0.0"
     then
 	if [ "$useGdb" == "true" ]; then
 	    gdb --args ./Polyworld --debug
 	else
-	    ./Polyworld --debug
+	    ./Polyworld --debug /tmp/debugBrain.wf
 	fi
 
-	rm worldfile
 	rm -rf run
     fi
-fi
-
-if [ ! -z "$worldfile_save" ]; then
-    mv $worldfile_save ./worldfile
 fi
 
 if [ ! -z "$seeds_save" ]; then

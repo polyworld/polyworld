@@ -89,6 +89,9 @@ public:
 	static float	gMinFocus;
 	static float	gMaxFocus;
 	static float	gAgentFOV;
+	static float    gMinVisionPitch;
+	static float    gMaxVisionPitch;
+	static float    gEyeHeight;
 	static float	gMaxSizeAdvantage;
 	static BodyGreenChannel gBodyGreenChannel;
 	static float    gBodyGreenChannelConstValue;
@@ -304,6 +307,7 @@ protected:
 		Nerve *yaw;
 		Nerve *light;
 		Nerve *focus;
+		Nerve *visionPitch;
 		Nerve *give;
 		Nerve *pickup;
 		Nerve *drop;

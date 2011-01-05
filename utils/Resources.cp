@@ -5,6 +5,7 @@
 
 #include "error.h"
 #include "gpolygon.h"
+#include "proplib.h"
 
 using namespace std;
 
@@ -37,28 +38,50 @@ bool Resources::loadPolygons( gpolyobj *poly,
 }
 
 //---------------------------------------------------------------------------
-// Resources::openWorldFile()
+// Resources::parseWorldFile()
 //---------------------------------------------------------------------------
 
-bool Resources::openWorldFile( std::filebuf *fb,
-							   string filename )
+void Resources::parseWorldFile( proplib::Document **ret_docWorldFile,
+								proplib::Document **ret_docSchema,
+								const char *argWorldfilePath)
 {
-    if( fb->open( filename.c_str(), ios_base::in ) == 0 )
+	string worldfilePath;
+	string schemaPath;
+
+	if( argWorldfilePath )
 	{
-		error( 0, "unable to open world file \"", filename.c_str(), "\"; will use default, internal worldfile" );
+		if( !exists( argWorldfilePath ) )
+			error(2, "Failed locating file", argWorldfilePath );
 
-		string path = find( "worldfile" );
-
-		if( (path == "") || (fb->open( path.c_str(), ios_base::in ) == 0) )
-		{
-			error( 0, "unable to open internal world file; will use built-in code defaults" );
-			error( 2, "built-in code defaults not currently functional; exiting" );
-
-			return false;
-		}
+		worldfilePath = argWorldfilePath;
+	}
+	else
+	{
+		if( exists( "./current.wf" ) )
+			worldfilePath = "./current.wf";
+		else if( exists( "./nominal.wf" ) )
+			worldfilePath = "./nominal.wf";
+		else
+			worldfilePath = "";
 	}
 
-	return true;
+	proplib::Document *docWorldFile;
+	if( worldfilePath == "" )
+	{
+		docWorldFile = new proplib::Document( "(from schema)", "" );
+	}
+	else
+	{
+		docWorldFile = proplib::Parser::parseFile( worldfilePath.c_str() );
+	}
+
+	schemaPath = "./default.wfs";
+
+	proplib::Document *docSchema = proplib::Parser::parseFile( schemaPath.c_str() );
+	proplib::Schema::apply( docSchema, docWorldFile );
+
+	*ret_docWorldFile = docWorldFile;
+	*ret_docSchema = docSchema;
 }
 
 //---------------------------------------------------------------------------
@@ -76,12 +99,21 @@ string Resources::find( string name )
 		strcpy(buf, *path);
 		strcat(buf, name.c_str());
 
-		struct stat _stat;
-		if( 0 == stat(buf, &_stat) )
+		if( exists(buf) )
 		{
 			return buf;
 		}
 	}
 
 	return "";
+}
+
+//---------------------------------------------------------------------------
+// Resources::exists()
+//---------------------------------------------------------------------------
+
+bool Resources::exists( string path )
+{
+	struct stat _stat;
+	return 0 == stat(path.c_str(), &_stat);
 }

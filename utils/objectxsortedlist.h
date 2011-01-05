@@ -37,6 +37,7 @@ class objectxsortedlist : public gdlist<gobject*>
     void sort();
     void list();
     int getCount( int objType );
+	const int *getCountPtr( int objType );
     int nextObj( int objType, gobject** gob );
     int prevObj( int objType, gobject** gob );
     int lastObj( int objType, gobject** gob );

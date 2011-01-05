@@ -46,11 +46,20 @@ int main(int argc, char** argv)
 #endif
 
 	bool debugMode = false;
+	const char *worldfilePath = NULL;
 	if( argc > 1 )
 	{
-		if( 0 == strcmp(argv[1], "--debug") )
+		int argi = 1;
+		if( 0 == strcmp(argv[argi], "--debug") )
 		{
 			debugMode = true;
+			argi++;
+		}
+
+		if( argi < argc )
+		{
+			worldfilePath = argv[argi];
+			argi++;
 		}
 	}
 
@@ -71,7 +80,7 @@ int main(int argc, char** argv)
 
 	
 	// Create the main window (without passing a menubar)
-	TSceneWindow *sceneWindow = new TSceneWindow();
+	TSceneWindow *sceneWindow = new TSceneWindow( worldfilePath );
 
 	// Either create the debugger or construct the scheduler/gui-timer
 	if( debugMode )
@@ -202,7 +211,7 @@ TPWApp::TPWApp(int& argc, char** argv) : QApplication(argc, argv)
 //---------------------------------------------------------------------------
 // TSceneWindow::TSceneWindow
 //---------------------------------------------------------------------------
-TSceneWindow::TSceneWindow()
+TSceneWindow::TSceneWindow( const char *worldfilePath )
 //	:	QMainWindow(0, "Polyworld", WDestructiveClose | WGroupLeader),
 	:	QMainWindow( 0, 0 ),
 		fWindowsMenu(NULL)
@@ -239,7 +248,7 @@ TSceneWindow::TSceneWindow()
 	// Create the simulation
 	// NOTE: Must wait until after the above RestoreFromPrefs(), so the window
 	// is the right size when we create the TSimulation object below.
-	fSimulation = new TSimulation( fSceneView, this );
+	fSimulation = new TSimulation( fSceneView, this, worldfilePath );
 	fSceneView->SetSimulation( fSimulation );
 }
 

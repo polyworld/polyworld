@@ -50,6 +50,8 @@ namespace genome
 	float gSeedPickupExcitation;
 	float gSeedDropExcitation;
 
+	bool gEnableVisionPitch;
+
 	float gMinStrength;
 	float gMaxStrength;
 	float gMinMutationRate;

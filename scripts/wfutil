@@ -2,9 +2,10 @@
 
 import getopt
 import os
+import shutil
 import sys
 
-from common_functions import err
+from common_functions import err, get_cmd_stdout, isrundir, pw_env
 
 DEBUG = False
 
@@ -25,21 +26,113 @@ def main():
 
     mode = argv[0]
 
-    if mode == "norm":
-        norm( argv[1:] )
+    if mode == "conv":
+        shell_conv( argv[1:] )
     elif mode == "reduce":
-        reduce( argv[1:] )
+        shell_reduce( argv[1:] )
+    elif mode == "edit":
+        shell_edit( argv[1:] )
     else:
         err( "invalid mode (%s)" % mode )
+
+####################################################################################
+###
+### FUNCTION get_parameter()
+###
+####################################################################################
+def get_parameter( path_worldfile_or_run, parameter, assume_run_dir = True ):
+    if assume_run_dir:
+        # do automatic conversion
+        path_proplib = ensure_proplib_worldfile( path_worldfile_or_run )
+    else:
+        path_proplib = path_worldfile_or_run
+
+    return proputil( 'get', path_proplib, parameter )
+
+####################################################################################
+###
+### FUNCTION edit()
+###
+####################################################################################
+def edit( path, edit_specs, path_new = None ):
+    __tofile( '/tmp/normalized.wf', proputil('apply', path_schema(), path) )
+
+    result = proputil( 'set', '/tmp/normalized.wf', *edit_specs )
+
+    if path_new == None:
+        path_new = path
+
+    __tofile( path_new, result )
+ 
+####################################################################################
+###
+### FUNCTION ensure_proplib_worldfile()
+###
+####################################################################################
+def ensure_proplib_worldfile( path_worldfile_or_run ):
+    if not os.path.isdir( path_worldfile_or_run ):
+        path_run = os.path.dirname( path_worldfile_or_run )
+    else:
+        path_run = path_worldfile_or_run
+
+    if not isrundir( path_worldfile_or_run ):
+        err( "ensure_proplib_worldfile can only operate within a run directory" )
+
+    path_proplib = path_worldfile(path_run)
+
+    if not os.path.exists( path_proplib ):
+        path_legacy = path_worldfile( path_run, legacy = True )
+
+        if not os.path.exists( path_legacy ):
+            err( "Cannot locate proplib or legacy worldfile in rundir " + path_run )
+
+        exitval, stdout = get_cmd_stdout( ['wfutil', 'conv', '-l', path_legacy] )
+        if exitval != 0:
+            err( "Cannot convert worldfile in rundir " + path_run )
+        
+        __tofile( path_proplib, stdout )
+
+        shutil.copy( path_schema(), path_run )
+
+    return path_proplib
 
 ################################################################################
 ################################################################################
 ###
-### FUNCTION norm()
+### FUNCTION path_schema()
 ###
 ################################################################################
 ################################################################################
-def norm( argv ):
+def path_schema():
+    return os.path.join( pw_env('home'), 'default.wfs' )
+
+####################################################################################
+###
+### FUNCTION path_worldfile()
+###
+####################################################################################
+def path_worldfile(path_run, legacy = False):
+    if legacy:
+	return os.path.join(path_run, "worldfile")
+    else:
+	return os.path.join(path_run, "normalized.wf")
+
+####################################################################################
+###
+### FUNCTION path_default_worldfile()
+###
+####################################################################################
+def path_default_worldfile():
+    return os.path.join(pw_env('home'), 'current.wf')
+
+################################################################################
+################################################################################
+###
+### FUNCTION shell_conv()
+###
+################################################################################
+################################################################################
+def shell_conv( argv ):
     legacyMode = False
 
     shortopts = 'l'
@@ -68,9 +161,9 @@ def norm( argv ):
         path_schema_legacy = args[1]
         path_schema_current = path_schema()
 
-        proputil( 'apply %s %s > /tmp/applied.wf' % (path_schema_legacy, path_worldfile) )
-        proputil( 'set /tmp/applied.wf LegacyMode %s > /tmp/set.wf' % (legacyMode) )
-        proputil( 'apply %s /tmp/set.wf' % (path_schema_current) )
+        __tofile( '/tmp/applied.wf', proputil('apply', path_schema_legacy, path_worldfile) )
+        __tofile( '/tmp/set.wf', proputil('set', '/tmp/applied.wf', 'LegacyMode=' % legacyMode) )
+        print proputil( 'apply',  path_schema_current, '/tmp/set.wf' )
             
     else:
         usage()
@@ -78,17 +171,34 @@ def norm( argv ):
 ################################################################################
 ################################################################################
 ###
-### FUNCTION reduce()
+### FUNCTION shell_reduce()
 ###
 ################################################################################
 ################################################################################
-def reduce( args ):
+def shell_reduce( args ):
     if len(args) != 1:
         usage()
 
     path_worldfile = args[0]
 
-    proputil( 'reduce %s %s' % (path_schema(), path_worldfile) )
+    result = proputil( 'reduce', path_schema(), path_worldfile )
+    __tofile( path_worldfile, result )
+
+################################################################################
+################################################################################
+###
+### FUNCTION shell_edit()
+###
+################################################################################
+################################################################################
+def shell_edit( args ):
+    if len(args) < 2:
+        usage()
+
+    path_worldfile = args[0]
+    edit_specs = args[1:]
+
+    result = edit( path_worldfile, edit_specs )
 
 ################################################################################
 ################################################################################
@@ -99,35 +209,31 @@ def reduce( args ):
 ###
 ################################################################################
 ################################################################################
-def proputil( args ):
-    proputil = os.path.join( path_polyhome(), 'bin/proputil' )
+def proputil( *args ):
+    proputil = pw_env( 'proputil' )
 
-    cmd = proputil + " " + args
-    exitval = os.system( cmd )
+    cmd = [proputil] + list(args)
+
+    exitval, stdout = get_cmd_stdout( cmd )
+    
     if exitval != 0:
         err( "Failed executing '%s'. exit=%s" % (cmd,exitval) )
 
-################################################################################
-################################################################################
-###
-### FUNCTION path_polyhome()
-###
-### Get the Polyworld home directory
-###
-################################################################################
-################################################################################
-def path_polyhome():
-    return os.path.realpath( os.path.join(os.path.dirname( sys.argv[0] ), '..') )
+    return stdout.strip()
 
 ################################################################################
 ################################################################################
 ###
-### FUNCTION path_schema()
+### FUNCTION __tofile()
+###
+### write a string to a file
 ###
 ################################################################################
 ################################################################################
-def path_schema():
-    return os.path.join( path_polyhome(), 'worldfiles/v101.wfs' )
+def __tofile( path, content ):
+    f = open( path, 'w' )
+    f.write( content )
+    f.close()
 
 ################################################################################
 ################################################################################
@@ -233,7 +339,7 @@ class Container:
                     if prop != lastprop:
                         __print( ",", "" )
             elif prop.type == 'barrierkeyframe':
-                __print( "T", value[0] )
+                __print( "Time", value[0] )
                 __print( "X1", value[1] )
                 __print( "Z1", value[2] )
                 __print( "X2", value[3] )
@@ -283,6 +389,9 @@ def normalizePreVersion101( container, legacyMode ):
     container.remove( 'NumBarriers' )
     container.remove( 'NumDomains' )
 
+    if wfversion < 47:
+        container.add( 'RatioBarrierPositions', 'bool', False )
+
     barriers = container.get( 'Barriers' )
     for barrier in barriers.value.props.values():
         barrier.value.remove( 'NumKeyFrames' )
@@ -299,14 +408,34 @@ def normalizePreVersion101( container, legacyMode ):
         subcontainer.value.remove( subPropName )
         subcontainer.value.add( newPropName, 'float', fractionValue )
 
+    def __move( container, propName, subcontainer, subPropName = None ):
+        if subPropName == None:
+            subPropName = propName
+
+        prop = container.value.get( propName )
+        subcontainer.add( subPropName, prop.type, prop.value )
+        container.value.remove( propName )
+
+
     domains = container.get( 'Domains' )
     for domain in domains.value.props.values():
         domain.value.remove( 'NumFoodPatches' )
         domain.value.remove( 'NumBrickPatches' )
 
-        if wfversion < 32:
-            foodpatches = domain.value.get( 'FoodPatches' )
-            for foodpatch in foodpatches.value.props.values():
+        foodpatches = domain.value.get( 'FoodPatches' )
+        for foodpatch in foodpatches.value.props.values():
+            onCondition = Container()
+            foodpatch.value.add( 'OnCondition', 'container', onCondition )
+            onCondition.add( 'Mode', 'enum', 'Time' )
+            time = Container()
+            onCondition.add( 'Time', 'container', time )
+
+            __move( foodpatch, 'Period', time )
+            __move( foodpatch, 'Phase', time )
+            __move( foodpatch, 'OnFraction', time )
+
+
+            if wfversion < 32:
                 def __foodfraction( propName, domainPropName ):
                     value = foodpatch.value.get( propName ).value
                     if value < 0:
@@ -319,6 +448,7 @@ def normalizePreVersion101( container, legacyMode ):
                 __foodfraction( 'MaxFoodGrown', 'MaxFoodGrownCount' )
 
 
+        if wfversion < 32:
             __fraction( container, 'InitFood', domain )
             __fraction( container, 'MinFood', domain )
             __fraction( container, 'MaxFood', domain )
@@ -887,23 +1017,9 @@ def parsePreVersion101( path ):
 ################################################################################
 def usage( msg = None ):
     print """\
-usage: wfconv norm [-l] worldfile
+usage: wfutil conv [-l] worldfile
 
-     Normalizes a pre-v101 worldfile to be compatible with the current schema.
-
-   Result is written to stdout.
- 
-   -l    Enable LegacyMode, which should result in a worldfile that produces
-       the same results as the old worldfile. If this is not specified, then
-       schema default values will be adopted for properties that were
-       introduced since the original worldfile was created, which will likely
-       change simulation results.
-
---
-
-usage: wfconv norm [-l] worldfile legacy_schemafile
-
-     Normalizes a v101 worldfile to be compatible with the current schema.
+     Converts a pre-v101 worldfile to be compatible with the current schema.
 
    Result is written to stdout.
  
@@ -915,13 +1031,35 @@ usage: wfconv norm [-l] worldfile legacy_schemafile
 
 --
 
-usage: wfconv reduce worldfile
+usage: wfutil conv [-l] worldfile legacy_schemafile
+
+     Converts a v101 worldfile to be compatible with the current schema.
+
+   Result is written to stdout.
+ 
+   -l    Enable LegacyMode, which should result in a worldfile that produces
+       the same results as the old worldfile. If this is not specified, then
+       schema default values will be adopted for properties that were
+       introduced since the original worldfile was created, which will likely
+       change simulation results.
+
+--
+
+usage: wfutil reduce worldfile
 
      Strips a v101 worldfile of any values that are the same as the default values
    in the schema. Note that the setting of LegacyMode effects the determination
    of schema default values.
 
-   Result is written to stdout.
+   Result is written to original file.
+
+--
+
+usage: wfutil edit worldfile (propname=value)+
+
+     Set one or more properties, where array indices may be '*'.
+
+   Result is written to original file.
 """
 
     if msg != None:

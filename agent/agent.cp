@@ -93,6 +93,9 @@ float		agent::gYaw2DYaw;
 float		agent::gMinFocus;
 float		agent::gMaxFocus;
 float		agent::gAgentFOV;
+float       agent::gMinVisionPitch;
+float		agent::gMaxVisionPitch;
+float		agent::gEyeHeight;
 float		agent::gMaxSizeAdvantage;
 
 agent::BodyGreenChannel agent::gBodyGreenChannel;
@@ -473,6 +476,8 @@ void agent::grow( long mateWait,
 	OUTPUT(yaw, Yaw);
 	OUTPUT(light, Light);
 	OUTPUT(focus, Focus);
+	if( genome::gEnableVisionPitch )
+		OUTPUT(visionPitch, VisionPitch);
 	if( genome::gEnableGive )
 		OUTPUT(give, Give);
 	if( genome::gEnableCarry )
@@ -508,7 +513,7 @@ void agent::grow( long mateWait,
 	{
 		char path[512];
 		sprintf( path,
-				 "run/motion/position/position_%ld.txt",
+				 "run/motion/position/agents/position_%ld.txt",
 				 getTypeNumber() );
 
 		fPositionWriter = new DataLibWriter( path, true, false );
@@ -848,7 +853,7 @@ void agent::SetGraphics()
 	float fovx = FieldOfView();
 
 	fCamera.SetAspect(fovx * brain::retinaheight / (gAgentFOV * brain::retinawidth));
-    fCamera.settranslation(0.0, 0.0, -0.5 * fLengthZ);
+    fCamera.settranslation(0.0, (gEyeHeight - 0.5) * gAgentHeight, -0.5 * fLengthZ);
     
     if (xleft < 0)  // not initialized yet
     {
@@ -911,6 +916,12 @@ void agent::UpdateVision()
         		
 		fFrustum.Set(fPosition[0], fPosition[2], fAngle[0], fovx, gMaxRadius);
 		fCamera.SetAspect(fovx * brain::retinaheight / (gAgentFOV * brain::retinawidth));
+
+		if( genome::gEnableVisionPitch )
+		{
+			const float pitch = nerves.visionPitch->get() * (gMaxVisionPitch - gMinVisionPitch) + gMinVisionPitch;
+			fCamera.setpitch( pitch );
+		}
 		
 		fSimulation->GetAgentPOVWindow()->DrawAgentPOV( this );
 

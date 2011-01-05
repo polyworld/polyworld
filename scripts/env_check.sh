@@ -67,10 +67,22 @@ for arg in "$@"; do
 	--echo)
 	    ECHO=1
 	    ;;
+	home)
+	    ECHO_VAL="${PW_HOME}"
+	    if [ -z "${ECHO_VAL}" ]; then
+		err "Don't know PW_HOME!"
+	    fi
+	    ;;
 	complexity)
 	    ECHO_VAL="${PW_CALC_COMPLEXITY}"
 	    if [ ! -x "${ECHO_VAL}" ]; then
 		err "Please build CalcComplexity -- execute 'make' in Polyworld home directory."
+	    fi
+	    ;;
+	proputil)
+	    ECHO_VAL="${PW_PROPUTIL}"
+	    if [ ! -x "${ECHO_VAL}" ]; then
+		err "Please build proputil -- execute 'make' in Polyworld home directory."
 	    fi
 	    ;;
 	makeRecent)

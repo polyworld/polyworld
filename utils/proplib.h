@@ -12,6 +12,9 @@ namespace proplib
 	// forward decl
 	class Document;
 
+	typedef std::vector<char *> CStringList;
+	typedef std::list<std::string> StringList;
+
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
 	// --- CLASS Identifier
@@ -175,6 +178,8 @@ namespace proplib
 		size_t size(); // number of properties/elements
 		ConditionList &conds();
 
+		Property &replaceScalar( const std::string &newValue );
+		Property &replaceScalar( Property *oldChild, const std::string &newValue );
 		void replace( PropertyMap &newprops, bool isArray );
 
 		operator short();
@@ -184,17 +189,21 @@ namespace proplib
 		operator bool();
 		operator std::string();
 
+		std::string evalScalar();
+
 		virtual void add( Node *node );
 
 		virtual void dump( std::ostream &out, const char *indent = "" );
 		virtual void write( std::ostream &out, const char *indent = "" );
+
+	protected:
+		void resolve( StringList::iterator curr, StringList::iterator end, PropertyList &result );
 
 	private:
 		// We don't allow the copy constructor
 		Property( const Property &copy ) : Node(DocumentLocation(NULL,-1), Node::PROPERTY), id("")
 		{ throw "Property copy not supported."; }
 
-		std::string evalScalar();
 		std::string getDecoratedScalar();
 		Property *findSymbol( Identifier id );
 
@@ -306,17 +315,22 @@ namespace proplib
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
 	// --- CLASS Document
-	// ---
-	// --- Nothing to see here. Just for API clarity.
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
 	class Document : public Property
 	{
 	public:
-		Document( const char *name );
+		Document( const char *name, const char *path );
 		virtual ~Document();
 
+		std::string getPath();
+
+		void set( StringList &propertyPath, const std::string &value );
+
 		virtual void write( std::ostream &out, const char *indent = "" );
+
+	private:
+		std::string path;
 	};
 
 	// ----------------------------------------------------------------------
@@ -332,13 +346,12 @@ namespace proplib
 	class Parser
 	{
 	public:
-		typedef std::vector<char *> CStringList;
-		typedef std::list<std::string> StringList;
-
 		static Document *parseFile( const char *path );
 
 		static bool isValidIdentifier( const std::string &text );
 		static void scanIdentifiers( const std::string &expr, StringList &ids );
+
+		static StringList parsePropertyPath( const std::string &path );
 
 		static bool parseInt( const std::string &text, int *result = NULL );
 		static bool parseFloat( const std::string &text, float *result = NULL );

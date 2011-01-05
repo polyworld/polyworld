@@ -421,13 +421,26 @@ namespace proplib
 
 	Property &Property::get( Identifier id )
 	{
-		assert( type == CONTAINER );
+		if( !isContainer() )
+		{
+			err( string("Not a property container, cannot contain ") + id.getName() );
+		}
 
 		Property *prop = getp( id );
 
 		if( prop == NULL )
 		{
-			err( string("Expecting property '") + id.getName() + "' for '" + getName() + "'");
+			string name;
+			if( parent != NULL && parent->isArray() )
+			{
+				name = string(parent->getName()) + "[" + getName() + "]";
+			}
+			else
+			{
+				name = getName();
+			}
+
+			err( string("Expecting property '") + id.getName() + "' for '" + name + "'");
 		}
 
 		return *prop;
@@ -474,6 +487,26 @@ namespace proplib
 		assert( type == CONTAINER );
 
 		return *oval.conds;
+	}
+
+	Property &Property::replaceScalar( const string &newValue )
+	{
+		return parent->replaceScalar( this, newValue );
+	}
+
+	Property &Property::replaceScalar( Property *oldChild, const string &newValue )
+	{
+		assert( isContainer() );
+		assert( oldChild->isScalar() );
+		assert( oldChild->parent == this );
+		
+		// TODO: give a reasonable location indicating it was set.
+		Property *newChild = new Property( oldChild->loc, oldChild->id, newValue.c_str() );
+
+		props().erase( oldChild->id );
+		add( newChild );
+
+		return *newChild;
 	}
 
 	void Property::replace( PropertyMap &newprops, bool isArray )
@@ -566,19 +599,18 @@ namespace proplib
 
 			SymbolTable symbolTable;
 
-			Parser::StringList ids;
+			StringList ids;
 			Parser::scanIdentifiers( sval, ids );
 
-			itfor( Parser::StringList, ids, it )
+			itfor( StringList, ids, it )
 			{
 				Property *prop = findSymbol( *it );
 				if( prop != NULL )
 				{
-					if( !prop->isScalar() )
+					if( prop->isScalar() )
 					{
-						err( string("Referencing non-scalar '") + prop->getName() + "' in expression" );
+						symbolTable[ prop->getName() ] = prop->evalScalar();
 					}
-					symbolTable[ prop->getName() ] = prop->evalScalar();
 				}
 			}
 
@@ -723,6 +755,38 @@ namespace proplib
 		else
 		{
 			out << " " << getDecoratedScalar() << endl;
+		}
+	}
+
+	void Property::resolve( StringList::iterator curr, StringList::iterator end, PropertyList &result )
+	{
+		if( curr == end )
+		{
+			result.push_back( this );
+		}
+		else
+		{
+			string &childName = *curr;
+			curr++;
+
+			if( childName == "*" )
+			{
+				if( !isArray() )
+				{
+					err( "'*' only legal for array index." );
+				}
+
+				itfor( PropertyMap, props(), it )
+				{
+					it->second->resolve( curr, end, result );
+				}
+			}
+			else
+			{
+				Property &propChild = get( childName );
+
+				propChild.resolve( curr, end, result );
+			}
 		}
 	}
 
@@ -954,13 +1018,29 @@ namespace proplib
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
 
-	Document::Document( const char *name )
+	Document::Document( const char *name, const char *path )
 		: Property( DocumentLocation(this,0), string(name) )
 	{
+		this->path = path;
 	}
 
 	Document::~Document()
 	{
+	}
+
+	string Document::getPath()
+	{
+		return path;
+	}
+
+	void Document::set( StringList &propertyPath, const string &value )
+	{
+		PropertyList props;
+		resolve( propertyPath.begin(), propertyPath.end(), props );
+		itfor( PropertyList, props, it )
+		{
+			(*it)->replaceScalar( value );
+		}
 	}
 
 	void Document::write( ostream &out, const char *indent )
@@ -979,7 +1059,7 @@ namespace proplib
 	
 	Document *Parser::parseFile( const char *path )
 	{
-		Document *doc = new Document( path );
+		Document *doc = new Document( path, path );
 		DocumentLocation loc( doc, 0 );
 		NodeStack nodeStack;
 
@@ -1076,6 +1156,23 @@ namespace proplib
 		ADDID();
 	}
 
+	StringList Parser::parsePropertyPath( const string &path )
+	{
+		StringList result;
+
+		char copy[1024];
+		assert( path.length() < sizeof(copy) );
+		strcpy( copy, path.c_str() );
+
+		for( char *str = copy, *token, *save; 
+			 (token = strtok_r(str, ".[]", &save)) != NULL;
+			 str = NULL )
+		{
+			result.push_back( token );
+		}
+
+		return result;
+	}
 
 	bool Parser::parseInt( const string &text, int *result )
 	{

@@ -34,7 +34,7 @@ FoodPatch::FoodPatch()
 //-------------------------------------------------------------------------------------------
 // FoodPatch::FoodPatch
 //-------------------------------------------------------------------------------------------
-void FoodPatch::init(float x, float z, float sx, float sz, float rate, int initFood, int minFood, int maxFood, int maxFoodGrown, float patchFraction, int shape, int distrib, float nhsize, int inPeriod, float inOnFraction, float inPhase, bool inRemoveFood, gstage* fs, Domain* dm, int domainNumber){
+void FoodPatch::init(float x, float z, float sx, float sz, float rate, int initFood, int minFood, int maxFood, int maxFoodGrown, float patchFraction, int shape, int distrib, float nhsize, OnCondition *onCondition, bool inRemoveFood, gstage* fs, Domain* dm, int domainNumber){
     
 	initBase(x, z,  sx, sz, shape, distrib, nhsize, fs, dm, domainNumber);
 
@@ -48,19 +48,17 @@ void FoodPatch::init(float x, float z, float sx, float sz, float rate, int initF
  	maxFoodCount = maxFood;
 	maxFoodGrownCount = maxFoodGrown;
 	
-	period = inPeriod;
-	inversePeriod = 1. / period;
-	onFraction = inOnFraction;
-	phase = inPhase;
+	this->onCondition = onCondition;
+
 	removeFood = inRemoveFood;
 
 #if DebugFoodPatches
 	if( patchFraction > 0.0 )
-		printf( "initing FOOD patch at (%.2f, %.2f) with size (%.2f, %.2f), frac=%g, init=%d, min=%d, max=%d, maxGrow=%d, period=%d, onFraction=%g, phase=%g, removeFood=%d\n",
-				startX, startZ, sizeX, sizeZ, fraction, initFoodCount, minFoodCount, maxFoodCount, maxFoodGrownCount, period, onFraction, phase, removeFood );
+		printf( "initing FOOD patch at (%.2f, %.2f) with size (%.2f, %.2f), frac=%g, init=%d, min=%d, max=%d, maxGrow=%d, removeFood=%d\n",
+				startX, startZ, sizeX, sizeZ, fraction, initFoodCount, minFoodCount, maxFoodCount, maxFoodGrownCount, removeFood );
 	else
-		printf( "initing FOOD patch at (%.2f, %.2f) with size (%.2f, %.2f), period=%d, onFraction=%g, phase=%g, removeFood=%d; limits to be determined\n",
-				startX, startZ, sizeX, sizeZ, period, onFraction, phase, removeFood );
+		printf( "initing FOOD patch at (%.2f, %.2f) with size (%.2f, %.2f), removeFood=%d; limits to be determined\n",
+				startX, startZ, sizeX, sizeZ, removeFood );
 #endif
 }
 
@@ -87,6 +85,7 @@ void FoodPatch::setInitCounts( int initFood, int minFood, int maxFood, int maxFo
 //-------------------------------------------------------------------------------------------
 FoodPatch::~FoodPatch()
 {
+	delete onCondition;
 }
 
 
@@ -131,6 +130,145 @@ float FoodPatch::addFood()
 	return( 0 );
 }
 
+//===========================================================================
+// TimeOnCondition
+//===========================================================================
+FoodPatch::TimeOnCondition::TimeOnCondition( int _period,
+											 float _onFraction,
+											 float _phase )
+{
+	period = _period;
+	inversePeriod = 1. / _period;
+	onFraction = _onFraction;
+	phase = _phase;
+}
 
+FoodPatch::TimeOnCondition::~TimeOnCondition()
+{
+}
 
+void FoodPatch::TimeOnCondition::updateOn( long step )
+{
+	// no-op
+}
 
+bool FoodPatch::TimeOnCondition::on( long step )
+{
+	if( (period == 0) || (onFraction == 1.0) )
+		return( true );
+	
+	float floatCycles = step * inversePeriod;
+	int intCycles = (int) floatCycles;
+	float cycleFraction = floatCycles  -  intCycles;
+	if( (cycleFraction >= phase) && (cycleFraction < (phase + onFraction)) )
+		return( true );
+	else
+		return( false );
+}
+
+bool FoodPatch::TimeOnCondition::turnedOff( long step )
+{
+	return on( step ) && !on( step + 1 );
+}
+
+//===========================================================================
+// MaxPopGroupOnCondition
+//===========================================================================
+void FoodPatch::MaxPopGroupOnCondition::Group::validate( Group *group )
+{
+	if( group != NULL )
+	{
+		if( group->members.size() < 2 )
+		{
+			cerr << "MaxPopGroup must have at least 2 patches" << endl;
+			exit( 1 );
+		}
+	}
+}
+
+FoodPatch::MaxPopGroupOnCondition::MaxPopGroupOnCondition( FoodPatch *patch,
+														   Group *group,
+														   int maxPopulation,
+														   int timeout )
+{
+	parms.patch = patch;
+	parms.group = group;
+	parms.maxPopulation = maxPopulation;
+	parms.timeout = timeout;
+
+	if( parms.group->members.size() == 0 )
+	{
+		// activate the first one
+		state.start = 1;
+	}
+	else
+	{
+		state.start = -1;
+	}
+	state.end = -1;
+
+	parms.group->members.push_back( this );
+}
+
+FoodPatch::MaxPopGroupOnCondition::~MaxPopGroupOnCondition()
+{
+	parms.group->members.remove( this );
+	if( parms.group->members.size() == 0 )
+	{
+		delete parms.group;
+	}
+}
+
+void FoodPatch::MaxPopGroupOnCondition::updateOn( long step )
+{
+	if( (state.start > -1) && (step > state.start) )
+	{
+		bool isOn = true;
+
+		if( (parms.timeout > 0) && ((step - state.start) >= parms.timeout) )
+		{
+			isOn = false;
+			cout << "TIMEOUT @ " << step << "(timeout=" << parms.timeout << ")" << endl;
+		}
+		else if( parms.patch->agentInsideCount >= parms.maxPopulation )
+		{
+			isOn = false;
+			cout << "MAXPOP @ " << step << "(count=" << parms.patch->agentInsideCount << ")" << endl;
+		}
+
+		if( !isOn )
+		{
+			state.start = -1;
+			state.end = step;
+
+			MaxPopGroupOnCondition *minMember = NULL;
+
+			itfor( MemberList, parms.group->members, it )
+			{
+				MaxPopGroupOnCondition *member = *it;
+				if( member != this )
+				{
+					if( (minMember == NULL)
+						|| (member->parms.patch->agentInsideCount < minMember->parms.patch->agentInsideCount) )
+					{
+						minMember = member;
+					}
+				}
+			}
+
+			assert( minMember );
+
+			minMember->state.start = step;
+		}
+	}
+}
+
+bool FoodPatch::MaxPopGroupOnCondition::on( long step )
+{
+	return state.start != -1;
+}
+
+bool FoodPatch::MaxPopGroupOnCondition::turnedOff( long step )
+{
+	return state.end == step;
+}

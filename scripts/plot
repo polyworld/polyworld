@@ -12,6 +12,7 @@ import datalib
 import iterators
 import plotlib
 from plotmode import MODES, ismode, expandmode
+import wfutil
 
 ################################################################################
 #TCRIT = 2.132    # 95% confidence for 4 degrees of freedom (5 pairs of points)
@@ -445,8 +446,7 @@ def parse_groups( args ):
 
     def __group():
         try:
-            group_run_paths = common_functions.find_run_paths( local.group_arg_paths,
-                                                               'worldfile' )
+            group_run_paths = common_functions.find_run_paths( local.group_arg_paths )
         except common_functions.InvalidDirError, e:
             show_usage( str(e) )
 
@@ -485,8 +485,7 @@ def parse_groups( args ):
 def classify_runs( arg_paths,
                    groups ):
     try:
-        run_paths = common_functions.find_run_paths( arg_paths,
-                                                     'worldfile' )
+        run_paths = common_functions.find_run_paths( arg_paths )
     except common_functions.InvalidDirError, e:
         show_usage( str(e) )
 

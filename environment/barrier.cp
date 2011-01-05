@@ -16,6 +16,7 @@
 #include <qapplication.h>
 
 // Local
+#include "datalib.h"
 #include "globals.h"
 #include "graphics.h"
 
@@ -24,6 +25,104 @@ bxsortedlist barrier::gXSortedBarriers;
 float barrier::gBarrierHeight;
 Color barrier::gBarrierColor;
 
+//===========================================================================
+// KeyFrame
+//===========================================================================
+KeyFrame::KeyFrame()
+{
+	condition = NULL;
+}
+
+KeyFrame::~KeyFrame()
+{
+	if( condition )
+		delete condition;
+}
+
+//===========================================================================
+// TimeCondition
+//===========================================================================
+KeyFrame::TimeCondition::TimeCondition( long step )
+{
+	end = step;
+}
+
+KeyFrame::TimeCondition::~TimeCondition()
+{
+}
+
+bool KeyFrame::TimeCondition::isSatisfied( long step )
+{
+	return (step < end)
+		|| ( (end == 0) && (step <= 1) );
+}
+
+void KeyFrame::TimeCondition::setActive( long step, bool active )
+{
+	// no-op
+}
+
+long KeyFrame::TimeCondition::getEnd( long step )
+{
+	return end;
+}
+
+//===========================================================================
+// CountCondition
+//===========================================================================
+KeyFrame::CountCondition::CountCondition( const int *count,
+										  Op op,
+										  int threshold,
+										  long duration )
+{
+	parms.count = count;
+	parms.op = op;
+	parms.threshold = threshold;
+	parms.duration = duration;
+
+	state.end = -1;
+}
+
+KeyFrame::CountCondition::~CountCondition()
+{
+}
+
+bool KeyFrame::CountCondition::isSatisfied( long step )
+{
+	int count = *(parms.count);
+	int threshold = parms.threshold;
+
+	switch( parms.op )
+	{
+	case EQ:
+		return count == threshold;
+	case GT:
+		return count > threshold;
+	case LT:
+		return count < threshold;
+	default:
+		assert( false );
+	}
+}
+
+void KeyFrame::CountCondition::setActive( long step, bool active )
+{
+	if( active )
+	{
+		state.end = step + parms.duration;
+	}
+	else
+	{
+		state.end = -1;
+	}
+}
+
+long KeyFrame::CountCondition::getEnd( long step )
+{
+	assert( state.end > -1 );
+
+	return state.end;
+}
 
 //===========================================================================
 // barrier
@@ -32,11 +131,15 @@ Color barrier::gBarrierColor;
 //---------------------------------------------------------------------------
 // barrier::barrier
 //---------------------------------------------------------------------------
-barrier::barrier( int keyFrameCount )
+barrier::barrier( int id, int keyFrameCount, bool recordPosition )
 {
+	this->id = id;
 	numKeyFrames = keyFrameCount;
+	this->recordPosition = recordPosition;
+
+
 	numKeyFramesSet = 0;
-	currentKeyFrame = 0;
+	activeKeyFrame = NULL;
 	if( numKeyFrames > 0 )
 	{
 		keyFrame = new KeyFrame[numKeyFrames];
@@ -49,6 +152,8 @@ barrier::barrier( int keyFrameCount )
 		keyFrame = NULL;
 	}
 
+	positionWriter = NULL;
+
 	fNumPoints = 4;
 	setcolor(gBarrierColor);
 
@@ -57,6 +162,8 @@ barrier::barrier( int keyFrameCount )
 		error( 1, "Insufficient memory to setup barrier vertices" );
 
 	xSortNeeded = false;
+
+	position( 0, 0, 0, 0 );
 }
 
 
@@ -66,46 +173,33 @@ barrier::barrier( int keyFrameCount )
 barrier::~barrier()
 {
 	if( keyFrame )
-		delete keyFrame;
+		delete [] keyFrame;
 	
 	if( fVertices )
-		delete fVertices;
+		delete [] fVertices;
+
+	if( positionWriter )
+		delete positionWriter;
 }
 
 
 //---------------------------------------------------------------------------
 // barrier::setKeyFrame
 //---------------------------------------------------------------------------
-void barrier::setKeyFrame( long step, float xa, float za, float xb, float zb )
+void barrier::setKeyFrame( KeyFrame::Condition *condition, float xa, float za, float xb, float zb )
 {
 	if( keyFrame )
 	{
 		if( numKeyFramesSet < numKeyFrames )
 		{
-			// If it's the first keyframe or time is correctly increasing monotonically...
-			if( (numKeyFramesSet == 0) || (step > keyFrame[numKeyFramesSet-1].step) )
-			{
-				keyFrame[numKeyFramesSet].step = step;
-				keyFrame[numKeyFramesSet].xa   = xa;
-				keyFrame[numKeyFramesSet].za   = za;
-				keyFrame[numKeyFramesSet].xb   = xb;
-				keyFrame[numKeyFramesSet].zb   = zb;
-				
-				if( numKeyFramesSet == 0 )	// first one
-				{
-					position( xa, za, xb, zb );	// initialize the barrier's position
-				}
-				else if( !xSortNeeded )
-				{
-					if( (keyFrame[numKeyFramesSet].xa != keyFrame[numKeyFramesSet-1].xa) ||
-						(keyFrame[numKeyFramesSet].xb != keyFrame[numKeyFramesSet-1].xb) )
-						xSortNeeded = true;
-				}
+			// TODO: validate time sequence
+			keyFrame[numKeyFramesSet].condition = condition;
+			keyFrame[numKeyFramesSet].xa   = xa;
+			keyFrame[numKeyFramesSet].za   = za;
+			keyFrame[numKeyFramesSet].xb   = xb;
+			keyFrame[numKeyFramesSet].zb   = zb;
 
-				numKeyFramesSet++;
-			}
-			else
-				error( 1, "Barrier keyframes specified out of temporal sequence" );
+			numKeyFramesSet++;
 		}
 		else
 			error( 1, "More barrier keyframes specified than requested for allocation" );
@@ -118,39 +212,66 @@ void barrier::setKeyFrame( long step, float xa, float za, float xb, float zb )
 //---------------------------------------------------------------------------
 void barrier::update( long step )
 {
-	// If the barrier is static or something went wrong allocating the keyframes
-	// or we've stepped beyond the final keyframe, then there's nothing to do
-	if( (numKeyFrames <= 1) || !keyFrame || (step > keyFrame[numKeyFramesSet-1].step) )
-		return;
-
-	// Note:  Since we guaranteed that the keyframe time steps were specified
-	// in monotonically increasing order in setKeyFrame() and we only reach here
-	// if we are not past the end of the last keyFrame, and we only update
-	// currentKeyFrame after we're done processing an update for a given step,
-	// there should always be a *next* keyframe available for us to test against.
-
-	// If we've reached the next key frame, have to do some special updating
-	if( step == keyFrame[currentKeyFrame+1].step )
+	// determine the active key frame
 	{
-		int i = ++currentKeyFrame;
-		
-		position( keyFrame[i].xa, keyFrame[i].za, keyFrame[i].xb, keyFrame[i].zb );
-	}
-	else
-	{
-		int i = currentKeyFrame;
-		int j = i + 1;
-		
-		// If there's any change in x or z from one keyframe to the next...
-		if( (keyFrame[i].xa != keyFrame[j].xa) || (keyFrame[i].za != keyFrame[j].za) ||
-			(keyFrame[i].xb != keyFrame[j].xb) || (keyFrame[i].zb != keyFrame[j].zb) )
+		KeyFrame *nextKeyFrame = NULL;
+		for( int i = 0; i < numKeyFrames; i++ )
 		{
-			float fraction = (float) (step - keyFrame[i].step) / (keyFrame[j].step - keyFrame[i].step);
-			float xa = keyFrame[i].xa  +  fraction * (keyFrame[j].xa - keyFrame[i].xa);
-			float xb = keyFrame[i].xb  +  fraction * (keyFrame[j].xb - keyFrame[i].xb);
-			float za = keyFrame[i].za  +  fraction * (keyFrame[j].za - keyFrame[i].za);
-			float zb = keyFrame[i].zb  +  fraction * (keyFrame[j].zb - keyFrame[i].zb);
-			position( xa, za, xb, zb );
+			if( keyFrame[i].condition->isSatisfied( step ) )
+			{
+				nextKeyFrame = &keyFrame[i];
+				//cout << "activeframe = " << i << endl;
+				break;
+			}
+		}
+
+		if( nextKeyFrame != activeKeyFrame )
+		{
+			if( activeKeyFrame )
+				activeKeyFrame->condition->setActive( step, false );
+
+			activeKeyFrame = nextKeyFrame;
+			if( activeKeyFrame )
+				activeKeyFrame->condition->setActive( step, true );
+		}
+	}
+
+	if( activeKeyFrame )
+	{
+		KeyFrame *kf = activeKeyFrame;
+		long time = max( 1l, kf->condition->getEnd(step) - step  );
+		float dxa = (kf->xa - xa) / time;
+		float dxb = (kf->xb - xb) / time;
+		float dza = (kf->za - za) / time;
+		float dzb = (kf->zb - zb) / time;
+
+		//cout << "DELTA = (" << dxa << "," << dza << "," << dxb << "," << dzb << ")" << endl;
+
+		if( (dxa != 0.0) || (dxb != 0.0) || (dza != 0.0) || (dzb != 0.0) )
+		{
+			position( xa + dxa, za + dza, xb + dxb, zb + dzb );
+
+			if( recordPosition )
+			{
+				if( positionWriter == NULL )
+				{
+					char path[512];
+					sprintf( path,
+							 "run/motion/position/barriers/position_%d.txt",
+							 id );
+
+					positionWriter = new DataLibWriter( path );
+
+					const char *colnames[] = {"Time", "X1", "Z1", "X2","Z2", NULL};
+					const datalib::Type coltypes[] = {datalib::INT, datalib::FLOAT, datalib::FLOAT, datalib::FLOAT, datalib::FLOAT};
+					positionWriter->beginTable( "Positions",
+												colnames,
+												coltypes );		
+				}
+
+				positionWriter->addRow( step,
+										xa, za, xb, zb );
+			}
 		}
 	}
 }
@@ -162,14 +283,21 @@ void barrier::update( long step )
 void barrier::position( float xa, float za, float xb, float zb )
 {
 //	printf( "barrier::position( xa=%g, za=%g, xb=%g, zb=%g )\n", xa, za, xb, zb );
+
+	this->xa = xa;
+	this->za = za;
+	this->xb = xb;
+	this->zb = zb;
+
+	//cout << "(" << xa << "," << za << "," << xb << "," << zb << ")" << endl;
 	
 	if( fVertices != NULL )
 	{
 		float x1;
-		float x2;
 		float z1;
+		float x2;
 		float z2;
-		
+
 		fVertices[ 0] = xa; fVertices[ 1] = 0.; 			fVertices[ 2] = za;
 		fVertices[ 3] = xa; fVertices[ 4] = gBarrierHeight; fVertices[ 5] = za;
 		fVertices[ 6] = xb; fVertices[ 7] = gBarrierHeight; fVertices[ 8] = zb;

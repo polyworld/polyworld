@@ -142,6 +142,8 @@ namespace genome
 	extern float gSeedPickupExcitation;
 	extern float gSeedDropExcitation;
 
+	extern bool gEnableVisionPitch;
+
     extern float gMinStrength;
     extern float gMaxStrength;
 	extern float gMinMutationRate;

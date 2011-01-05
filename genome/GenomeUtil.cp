@@ -187,6 +187,9 @@ GenomeSchema *GenomeUtil::createSchema()
 	OUTPUT( Light );
 	OUTPUT( Focus );
 
+	if( genome::gEnableVisionPitch )
+		OUTPUT( VisionPitch );
+
 	if( genome::gEnableGive )
 		OUTPUT( Give );
 
@@ -326,7 +329,11 @@ void GenomeUtil::seed( Genome *g )
 	if( brain::gNeuralValues.enableTopologicalDistortionRngSeed )
 	{
 		SEED( TopologicalDistortionRngSeed, 0 );
-	}	
+	}
+	if( brain::gEnableInitWeightRngSeed )
+	{
+		SEED( InitWeightRngSeed, 0 );
+	}
 
 	SEED_SYNAPSE( ConnectionDensity,	 EE, Red,   Fight,	genome::gSeedFightExcitation );
 	SEED_SYNAPSE( ConnectionDensity,	 EE, Green, Eat,	1.0 );

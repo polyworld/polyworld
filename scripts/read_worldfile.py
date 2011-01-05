@@ -4,6 +4,7 @@ from sys import argv, exit
 from os import path
 
 import common_functions
+import wfutil
 
 if len(argv) != 3:
            ################################################################################
@@ -13,7 +14,7 @@ if len(argv) != 3:
 worldfile = argv[1]
 param = argv[2]
 
-value = common_functions.read_worldfile_parameter( worldfile, param )
+value = wfutil.get_parameter( worldfile, param, assume_run_dir = False )
 
 if value != None:
     print value

@@ -6,7 +6,7 @@
  *
  -------------------------------------------------------------------------*/
 
-
+#include <assert.h>
 
 #include "objectxsortedlist.h"
 #include "agent.h"
@@ -51,7 +51,23 @@ int objectxsortedlist::getCount( int objType )
 	return( count );
 }
 
-
+//---------------------------------------------------------------------------
+// objectxsortedlist::getCountPtr
+//---------------------------------------------------------------------------
+const int *objectxsortedlist::getCountPtr( int objType )
+{
+	switch( objType )
+	{
+	case AGENTTYPE:
+		return &agentCount;
+	case FOODTYPE:
+		return &foodCount;
+	case BRICKTYPE:
+		return  &brickCount;
+	default:
+		assert( false );
+	}
+}
 
 //---------------------------------------------------------------------------
 // objectxsortedlist::lastObj

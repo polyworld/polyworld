@@ -34,6 +34,7 @@ PW_TOOLS=${PW_HOME}/tools
 PW_BIN=${PW_HOME}/bin
 
 PW_CALC_COMPLEXITY=${PW_BIN}/CalcComplexity
+PW_PROPUTIL=${PW_BIN}/proputil
 PW_GNUPLOT=`which gnuplot`
 
 if [ ! -e ${PW_SCRIPTS}/env_init.sh ]; then
@@ -44,6 +45,7 @@ else
     export PW_TOOLS
     export PW_BIN
     export PW_CALC_COMPLEXITY
+    export PW_PROPUTIL
     export PW_GNUPLOT
 
 #    if [[ ${PATH} != *${PW_BIN}* ]]; then

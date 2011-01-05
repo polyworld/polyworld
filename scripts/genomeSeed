@@ -6,9 +6,9 @@ import getopt
 import os
 import sys
 
-from common_functions import err, read_worldfile_parameter
+from common_functions import err
 import common_logs
-import edit_worldfile
+import wfutil
 
 ####################################################################################
 ###
@@ -110,13 +110,13 @@ def main():
     if generatePositions:
         out = open( os.path.join(homedir, 'seedPositions.txt'), 'w' )
 
-        worldsize = float( read_worldfile_parameter(rundir,
-                                                    'worldsize') )
+        worldsize = float( wfutil.get_parameter(rundir,
+                                                'WorldSize') )
         def __ratio( val ):
             return "r%s" % (val / worldsize)
 
         for agentNumber in agentNumbers:
-            path = os.path.join( rundir, 'motion/position/position_' + str(agentNumber) + '.txt' )
+            path = os.path.join( rundir, 'motion/position/agents/position_' + str(agentNumber) + '.txt' )
             positionTable = datalib.parse( path, keycolname = 'Timestep' )['Positions']
             if mode == 'time':
                 row = positionTable[time]
@@ -131,23 +131,19 @@ def main():
     # Edit worldfile if requested
     #
     if editWorldfile:
-        worldfile = os.path.join( homedir, 'worldfile' )
+        worldfile = wfutil.path_default_worldfile()
 
         if not os.path.exists( worldfile ):
             err( 'Cannot locate ' + worldfile )
 
-        worldfile_new = 'worldfile.' + str(os.getpid())
-
         edits = [
-            "initnumagents=%d" % len(agentNumbers),
-            "numberToSeed=%d" % len(agentNumbers),
-            "seedFromFile=1",
-            "positionSeedsFromFile=%d" % (1 if generatePositions else 0)
+            "InitAgents=%d" % len(agentNumbers),
+            "SeedAgents=%d" % len(agentNumbers),
+            "SeedGenomeFromRun=True",
+            "SeedPositionFromRun=%s" % generatePositions
         ]
 
-        edit_worldfile.edit( worldfile, worldfile_new, edits )
-
-        os.rename( worldfile_new, worldfile )
+        wfutil.edit( worldfile, edits )
         
 
 ####################################################################################
