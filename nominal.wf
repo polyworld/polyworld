@@ -1,0 +1,480 @@
+PassiveLockstep           False
+MaxSteps                  30000
+EndOnPopulationCrash      False
+CheckPointFrequency       1000
+StatusFrequency           100
+Vision                    True
+ShowVision                True
+StaticTimestepGeometry    True
+RetinaWidth               22
+MaxVelocity               1.0
+MinAgents                 90
+MaxAgents                 300
+InitAgents                150
+SeedAgents                45
+SeedMutationProbability   0.9
+SeedGenomeFromRun         False
+SeedPositionFromRun       False
+MiscegenationDelay        -1
+InitFood                  90
+MinFood                   90
+MaxFood                   120
+MaxFoodGrown              90
+FoodGrowthRate            0.1
+FoodRemoveEnergy          0.0
+PositionSeed              42
+InitSeed                  42
+SimulationSeed            42
+AgentsAreFood             True
+EliteFrequency            100
+PairFrequency             2
+NumberFittest             30
+NumberRecentFittest       10
+FitnessWeightEating       10.0
+FitnessWeightMating       100.0
+FitnessWeightMoving       0.1
+FitnessWeightEnergyAtDeath 5.0
+FitnessWeightLongevity    25.0
+MinFoodEnergy             200.0
+MaxFoodEnergy             1000.0
+FoodEnergySizeScale       400.0
+FoodConsumptionRate       100.0
+GenomeLayout              N
+EnableMateWaitFeedback    False
+EnableSpeedFeedback       True
+EnableGive                True
+EnableCarry               True
+MaxCarries                3
+CarryAgents               True
+CarryFood                 True
+CarryBricks               True
+ShieldAgents              False
+ShieldFood                False
+ShieldBricks              True
+CarryPreventsEat          0.0
+CarryPreventsFight        0.0
+CarryPreventsGive         0.0
+CarryPreventsMate         0.0
+MinVisionNeuronsPerGroup  1
+MaxVisionNeuronsPerGroup  16
+MinMutationRate           0.01
+MaxMutationRate           0.05
+MinCrossoverPoints        2
+MaxCrossoverPoints        8
+MinLifeSpan               500
+MaxLifeSpan               1000
+MateWait                  25
+InitMateWait              0
+EatMateWait               0
+MinAgentStrength          0.5
+MaxAgentStrength          2.0
+MinAgentSize              0.5
+MaxAgentSize              2.0
+MinAgentMaxEnergy         500.0
+MaxAgentMaxEnergy         1000.0
+MinEnergyFractionToOffspring 0.2
+MaxEnergyFractionToOffspring 0.8
+MinMateEnergyFraction     0.5
+MinAgentMaxSpeed          0.5
+MaxAgentMaxSpeed          1.5
+MotionRate                1.0
+YawRate                   20.0
+MinLearningRate           0.0
+MaxLearningRate           0.1
+MinHorizontalFieldOfView  20.0
+MaxHorizontalFieldOfView  140.0
+VerticalFieldOfView       10.0
+MaxSizeFightAdvantage     2.5
+BodyGreenChannel          I
+NoseColor                 L
+DamageRate                2.5
+EnergyUseEat              0.01
+EnergyUseMate             0.1
+EnergyUseFight            1.0
+MinSizeEnergyPenalty      0.0
+MaxSizeEnergyPenalty      10.0
+EnergyUseMove             0.1
+EnergyUseTurn             0.1
+EnergyUseLight            0.01
+EnergyUseFocus            0.001
+EnergyUsePickup           0.5
+EnergyUseDrop             0.001
+EnergyUseCarryAgent       0.05
+EnergyUseCarryAgentSize   0.05
+EnergyUseCarryFood        0.01
+EnergyUseCarryBrick       0.01
+EnergyUseSynapses         0.01
+EnergyUseFixed            0.05
+SynapseWeightDecayRate    0.99
+AgentHealingRate          0.0
+EatThreshold              0.2
+MateThreshold             0.5
+FightThreshold            0.2
+FightMultiplier           1.0
+GiveThreshold             0.3
+GiveFraction              0.9
+PickupThreshold           0.5
+DropThreshold             0.5
+MiscegenationFunctionBias 1.0
+MiscegenationFunctionInverseSlope 2.0
+LogisticSlope             0.5
+MaxSynapseWeight          8.0
+EnableInitWeightRngSeed   False
+MinInitWeightRngSeed      0
+MaxInitWeightRngSeed      255
+MaxSynapseWeightInitial   2.0
+MinInitialBitProb         0.5
+MaxInitialBitProb         0.5
+SolidAgents               False
+SolidFood                 False
+SolidBricks               True
+AgentHeight               0.2
+FoodHeight                0.6
+FoodColor {               
+  R                         0.2
+  G                         0.6
+  B                         0.2
+}                         
+BrickHeight               0.5
+BrickColor {              
+  R                         0.6
+  G                         0.2
+  B                         0.2
+}                         
+BarrierHeight             5.0
+BarrierColor {            
+  R                         0.35
+  G                         0.25
+  B                         0.15
+}                         
+GroundColor {             
+  R                         0.1
+  G                         0.15
+  B                         0.05
+}                         
+GroundClearance           0.0
+CameraColor {             
+  R                         0.3
+  G                         0.3
+  B                         0.3
+}                         
+CameraRadius              0.6
+CameraHeight              0.35
+CameraRotationRate        0.09
+CameraAngleStart          0.0
+CameraFieldOfView         90.0
+MonitorAgentRank          1
+BrainMonitorFrequency     1
+WorldSize                 100.0
+RatioBarrierPositions     False
+Barriers [                
+    KeyFrames [               
+        Time                      0
+        X1                        33.33
+        Z1                        -100.0
+        X2                        33.33
+        Z2                        -10.0
+    ]                         
+  ,                         
+    KeyFrames [               
+        Time                      0
+        X1                        66.67
+        Z1                        -100.0
+        X2                        66.67
+        Z2                        -10.0
+    ]                         
+]                         
+MonitorGeneSeparation     False
+RecordGeneSeparation      False
+ChartBorn                 True
+ChartFitness              True
+ChartFoodEnergy           True
+ChartPopulation           True
+Domains [                 
+    CenterX                   0.16667
+    CenterZ                   0.5
+    SizeX                     0.33333
+    SizeZ                     1.0
+    MinAgentsFraction         -1.0
+    MaxAgentsFraction         -1.0
+    InitAgentsFraction        -1.0
+    InitSeedsFraction         -1.0
+    ProbabilityOfMutatingSeeds -1.0
+    InitFoodFraction          -1.0
+    MinFoodFraction           -1.0
+    MaxFoodFraction           -1.0
+    MaxFoodGrownFraction      -1.0
+    FoodRate                  -1.0
+    FoodPatches [             
+        FoodFraction              0.2
+        InitFoodFraction          -1.0
+        MinFoodFraction           -1.0
+        MaxFoodFraction           -1.0
+        MaxFoodGrownFraction      -1.0
+        FoodRate                  -1.0
+        CenterX                   0.5
+        CenterZ                   0.05
+        SizeX                     1.0
+        SizeZ                     0.1
+        Shape                     R
+        Distribution              U
+        NeighborhoodSize          10.0
+        RemoveFood                False
+        OnCondition {             
+          Mode                      Time
+          Time {                    
+            Period                    0
+            Phase                     0.0
+            OnFraction                1.0
+          }                         
+        }                         
+      ,                         
+        FoodFraction              0.8
+        InitFoodFraction          -1.0
+        MinFoodFraction           -1.0
+        MaxFoodFraction           -1.0
+        MaxFoodGrownFraction      -1.0
+        FoodRate                  -1.0
+        CenterX                   0.5
+        CenterZ                   0.8
+        SizeX                     1.0
+        SizeZ                     0.4
+        Shape                     R
+        Distribution              U
+        NeighborhoodSize          10.0
+        RemoveFood                False
+        OnCondition {             
+          Mode                      Time
+          Time {                    
+            Period                    0
+            Phase                     0.0
+            OnFraction                1.0
+          }                         
+        }                         
+    ]                         
+    BrickPatches [            
+        CenterX                   0.5
+        CenterZ                   0.5
+        SizeX                     1.0
+        SizeZ                     0.2
+        BrickCount                3
+        Shape                     R
+        Distribution              U
+        NeighborhoodSize          0.0
+    ]                         
+  ,                         
+    CenterX                   0.5
+    CenterZ                   0.5
+    SizeX                     0.33333
+    SizeZ                     1.0
+    MinAgentsFraction         -1.0
+    MaxAgentsFraction         -1.0
+    InitAgentsFraction        -1.0
+    InitSeedsFraction         -1.0
+    ProbabilityOfMutatingSeeds -1.0
+    InitFoodFraction          -1.0
+    MinFoodFraction           -1.0
+    MaxFoodFraction           -1.0
+    MaxFoodGrownFraction      -1.0
+    FoodRate                  -1.0
+    FoodPatches [             
+        FoodFraction              0.2
+        InitFoodFraction          -1.0
+        MinFoodFraction           -1.0
+        MaxFoodFraction           -1.0
+        MaxFoodGrownFraction      -1.0
+        FoodRate                  -1.0
+        CenterX                   0.5
+        CenterZ                   0.05
+        SizeX                     1.0
+        SizeZ                     0.1
+        Shape                     R
+        Distribution              U
+        NeighborhoodSize          10.0
+        RemoveFood                False
+        OnCondition {             
+          Mode                      Time
+          Time {                    
+            Period                    0
+            Phase                     0.0
+            OnFraction                1.0
+          }                         
+        }                         
+      ,                         
+        FoodFraction              0.8
+        InitFoodFraction          -1.0
+        MinFoodFraction           -1.0
+        MaxFoodFraction           -1.0
+        MaxFoodGrownFraction      -1.0
+        FoodRate                  -1.0
+        CenterX                   0.5
+        CenterZ                   0.8
+        SizeX                     1.0
+        SizeZ                     0.4
+        Shape                     R
+        Distribution              U
+        NeighborhoodSize          10.0
+        RemoveFood                False
+        OnCondition {             
+          Mode                      Time
+          Time {                    
+            Period                    0
+            Phase                     0.0
+            OnFraction                1.0
+          }                         
+        }                         
+    ]                         
+    BrickPatches [            
+        CenterX                   0.5
+        CenterZ                   0.5
+        SizeX                     1.0
+        SizeZ                     0.2
+        BrickCount                3
+        Shape                     R
+        Distribution              U
+        NeighborhoodSize          0.0
+    ]                         
+  ,                         
+    CenterX                   0.83333
+    CenterZ                   0.5
+    SizeX                     0.33333
+    SizeZ                     1.0
+    MinAgentsFraction         -1.0
+    MaxAgentsFraction         -1.0
+    InitAgentsFraction        -1.0
+    InitSeedsFraction         -1.0
+    ProbabilityOfMutatingSeeds -1.0
+    InitFoodFraction          -1.0
+    MinFoodFraction           -1.0
+    MaxFoodFraction           -1.0
+    MaxFoodGrownFraction      -1.0
+    FoodRate                  -1.0
+    FoodPatches [             
+        FoodFraction              0.2
+        InitFoodFraction          -1.0
+        MinFoodFraction           -1.0
+        MaxFoodFraction           -1.0
+        MaxFoodGrownFraction      -1.0
+        FoodRate                  -1.0
+        CenterX                   0.5
+        CenterZ                   0.05
+        SizeX                     1.0
+        SizeZ                     0.1
+        Shape                     R
+        Distribution              U
+        NeighborhoodSize          10.0
+        RemoveFood                False
+        OnCondition {             
+          Mode                      Time
+          Time {                    
+            Period                    0
+            Phase                     0.0
+            OnFraction                1.0
+          }                         
+        }                         
+      ,                         
+        FoodFraction              0.8
+        InitFoodFraction          -1.0
+        MinFoodFraction           -1.0
+        MaxFoodFraction           -1.0
+        MaxFoodGrownFraction      -1.0
+        FoodRate                  -1.0
+        CenterX                   0.5
+        CenterZ                   0.8
+        SizeX                     1.0
+        SizeZ                     0.4
+        Shape                     R
+        Distribution              U
+        NeighborhoodSize          10.0
+        RemoveFood                False
+        OnCondition {             
+          Mode                      Time
+          Time {                    
+            Period                    0
+            Phase                     0.0
+            OnFraction                1.0
+          }                         
+        }                         
+    ]                         
+    BrickPatches [            
+        CenterX                   0.5
+        CenterZ                   0.5
+        SizeX                     1.0
+        SizeZ                     0.2
+        BrickCount                3
+        Shape                     R
+        Distribution              U
+        NeighborhoodSize          0.0
+    ]                         
+]                         
+ProbabilisticFoodPatches  True
+ChartGeneSeparation       False
+NeuronModel               F
+TauMin                    0.01
+TauMax                    1.0
+TauSeed                   1.0
+MinInternalNeuralGroups   0
+MaxInternalNeuralGroups   5
+MinExcitatoryNeuronsPerGroup 1
+MaxExcitatoryNeuronsPerGroup 16
+MinInhibitoryNeuronsPerGroup 1
+MaxInhibitoryNeuronsPerGroup 16
+MaxBiasWeight             8.0
+MinBiasLrate              0.0
+MaxBiasLrate              0.0
+MinConnectionDensity      0.0
+MaxConnectionDensity      1.0
+MinTopologicalDistortion  0.0
+MaxTopologicalDistortion  1.0
+EnableTopologicalDistortionRngSeed False
+MinTopologicalDistortionRngSeed 0
+MaxTopologicalDistortionRngSeed 255
+EnergyUseNeurons          0.1
+PreBirthCycles            25
+SeedFightBias             0.5
+SeedFightExcitation       1.0
+SeedGiveBias              0.0
+SeedPickupBias            0.0
+SeedDropBias              0.0
+SeedPickupExcitation      0.0
+SeedDropExcitation        0.0
+OverHeadRank              1
+AgentTracking             True
+MinFoodEnergyAtDeath      0.0
+GrayCoding                False
+SmiteMode                 O
+SmiteFrac                 0.1
+SmiteAgeFrac              0.25
+NumDepletionSteps         150
+ApplyLowPopulationAdvantage True
+RecordBirthsDeaths        True
+RecordPosition            True
+RecordContacts            True
+RecordCollisions          True
+RecordCarry               True
+BrainAnatomyRecordAll     True
+BrainFunctionRecordAll    True
+BrainAnatomyRecordSeeds   True
+BrainFunctionRecordSeeds  True
+BestSoFarBrainAnatomyRecordFrequency 1000
+BestSoFarBrainFunctionRecordFrequency 1000
+BestRecentBrainAnatomyRecordFrequency 1000
+BestRecentBrainFunctionRecordFrequency 1000
+RecordGeneStats           True
+RecordPerformanceStats    True
+RecordFoodPatchStats      True
+RecordComplexity          False
+ComplexityType            P
+ComplexityFitnessWeight   0.0
+HeuristicFitnessWeight    0.0
+RecordGenomes             True
+RecordSeparations         True
+RecordAdamiComplexity     True
+AdamiComplexityRecordFrequency 500
+CompressFiles             False
+FogFunction               O
+ExpFogDensity             0.1
+LinearFogEnd              25
+RecordMovie               True
+Edges                     B
+LegacyMode                False
