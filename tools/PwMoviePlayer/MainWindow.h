@@ -3,6 +3,8 @@
 
 #define PW_USE_QMAINWINDOW 1
 
+#include <stdint.h>
+
 #include <QGLWidget>
 #include <QKeyEvent>
 #include <QMainWindow>
@@ -24,7 +26,7 @@ class MainWindow : public QWidget
 
 public:
 	MainWindow(const char* windowTitle, const char* windowSettingsNameParam, const Qt::WFlags windowFlags,
-				FILE* movieFileParam, char** legend, unsigned long endFrame, double frameRate );
+				FILE* movieFileParam, char** legend, uint32_t endFrame, double frameRate );
 	~MainWindow();
 	
 	void NextFrame();
@@ -54,9 +56,9 @@ private:
 	bool		step;
 	
 	FILE*		movieFile;
-	ulong		movieVersion;
-	ulong		movieWidth;
-	ulong		movieHeight;
+	uint32_t		movieVersion;
+	uint32_t		movieWidth;
+	uint32_t		movieHeight;
 	
 	QMenu*		fileMenu;
 	QMenu*		helpMenu;

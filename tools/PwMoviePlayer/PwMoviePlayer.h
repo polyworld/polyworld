@@ -25,7 +25,7 @@ class PMPApp : public QApplication
 Q_OBJECT
 
 public:
-	PMPApp( int argc, char** argv );
+	PMPApp( int &argc, char** argv );
 	~PMPApp();
 	
 private slots:

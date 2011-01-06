@@ -16,8 +16,8 @@
 	#define glwPrint( x... )
 #endif
 
-GLWidget::GLWidget( QWidget *parent, unsigned long widthParam, unsigned long heightParam, unsigned long movieVersionParam,
-					FILE* movieFileParam, char** legendParam, unsigned long endFrameParam, double frameRateParam )
+GLWidget::GLWidget( QWidget *parent, uint32_t widthParam, uint32_t heightParam, uint32_t movieVersionParam,
+					FILE* movieFileParam, char** legendParam, uint32_t endFrameParam, double frameRateParam )
 	: QGLWidget( parent )
 {
 	width = widthParam;
@@ -41,9 +41,9 @@ GLWidget::GLWidget( QWidget *parent, unsigned long widthParam, unsigned long hei
 	// Allocate the rle and rgb buffers for movie decoding and playback
 	rgbBufSize = width * height * sizeof( *rgbBuf1 );
 	rleBufSize = rgbBufSize + 1;	// it better compress!
-	rgbBuf1 = (unsigned long*) malloc( rgbBufSize );
-//	rgbBuf2 = (unsigned long*) malloc( rgbBufSize );
-	rleBuf  = (unsigned long*) malloc( rleBufSize );
+	rgbBuf1 = (uint32_t*) malloc( rgbBufSize );
+//	rgbBuf2 = (uint32_t*) malloc( rgbBufSize );
+	rleBuf  = (uint32_t*) malloc( rleBufSize );
 }
 
 GLWidget::~GLWidget()
@@ -77,7 +77,7 @@ void GLWidget::Draw()
 {
 #define RecentSteps 10
 	static bool				firstFrame = true;
-	static unsigned long	frame;
+	static uint32_t	frame;
 	static double			timePrevious;
 	double					timeNow;	
 	

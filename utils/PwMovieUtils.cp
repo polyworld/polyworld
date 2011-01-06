@@ -56,22 +56,22 @@
 
 void PwRecordMovie( FILE *f, long xleft, long ybottom, long width, long height )
 {
-    register unsigned long n;
+    register uint32_t n;
 	// Note: We depend on the fact that the following static pointers
 	// will be initialized to NULL by the linker/loader
-	static unsigned long*	rgbBuf1;
-	static unsigned long*	rgbBuf2;
-	static unsigned long*	rleBuf;
-	static unsigned long*	rgbBufNew;
-	static unsigned long*	rgbBufOld;
-	static unsigned long	rgbBufSize;
-	static unsigned long	rleBufSize;
+	static uint32_t*	rgbBuf1;
+	static uint32_t*	rgbBuf2;
+	static uint32_t*	rleBuf;
+	static uint32_t*	rgbBufNew;
+	static uint32_t*	rgbBufOld;
+	static uint32_t	rgbBufSize;
+	static uint32_t	rleBufSize;
 
 #ifdef PLAINRLE
 	if( !rgbBufNew )	// first time
 	{
 		PwWriteMovieHeader( f, kCurrentMovieVersion, width, height );
-		rgbBuf1 = (unsigned long*) malloc( rgbBufSize );
+		rgbBuf1 = (uint32_t*) malloc( rgbBufSize );
 		rgbBufNew = rgbBuf1;
 	}
 #else
@@ -80,14 +80,14 @@ void PwRecordMovie( FILE *f, long xleft, long ybottom, long width, long height )
 		PwWriteMovieHeader( f, kCurrentMovieVersion, width, height );
 		rgbBufSize = width * height * sizeof( *rgbBuf1 );
 		rleBufSize = rgbBufSize + 1;	// it better compress!
-		rgbBuf1 = (unsigned long*) malloc( rgbBufSize );
-		rgbBuf2 = (unsigned long*) malloc( rgbBufSize );
-		rleBuf  = (unsigned long*) malloc( rleBufSize );
+		rgbBuf1 = (uint32_t*) malloc( rgbBufSize );
+		rgbBuf2 = (uint32_t*) malloc( rgbBufSize );
+		rleBuf  = (uint32_t*) malloc( rleBufSize );
         rgbBufNew = rgbBuf1;
 	}
     else	// all but the first time
 	{
-        register unsigned long *rgbBufsave;
+        register uint32_t *rgbBufsave;
         rgbBufsave = rgbBufNew;
         if (rgbBufOld)
             rgbBufNew = rgbBufOld;
@@ -117,9 +117,9 @@ void PwRecordMovie( FILE *f, long xleft, long ybottom, long width, long height )
 //---------------------------------------------------------------------------
 // PwReadMovieHeader
 //---------------------------------------------------------------------------
-void PwReadMovieHeader( FILE *f, unsigned long* version, unsigned long* width, unsigned long* height )
+void PwReadMovieHeader( FILE *f, uint32_t* version, uint32_t* width, uint32_t* height )
 {
-	fread( (char*) version, sizeof( version ), 1, f );
+	fread( (char*) version, sizeof( *version ), 1, f );
 	*version = ntohl( *version );	// we always write, and therefore must read, the version as big-endian, for historical reasons (all else is native endian)
 	
 	fread( (char*) width,   sizeof( *width   ), 1, f );
@@ -146,7 +146,7 @@ void PwReadMovieHeader( FILE *f, unsigned long* version, unsigned long* width, u
 //---------------------------------------------------------------------------
 // PwWriteMovieHeader
 //---------------------------------------------------------------------------
-void PwWriteMovieHeader( FILE *f, unsigned long hostVersion, unsigned long width, unsigned long height )
+void PwWriteMovieHeader( FILE *f, uint32_t hostVersion, uint32_t width, uint32_t height )
 {
 	uint32_t version = htonl( hostVersion );	// we always write the version big-endian, for historical reasons (all else is native endian)
 	fwrite( &version, sizeof( version ), 1, f );
@@ -158,18 +158,18 @@ void PwWriteMovieHeader( FILE *f, unsigned long hostVersion, unsigned long width
 }
 
 
-void rleproc( register unsigned long *rgb,
-			  register unsigned long width,
-			  register unsigned long height,
-			  register unsigned long *rle,
-			  register unsigned long rleBufSize )
+void rleproc( register uint32_t *rgb,
+			  register uint32_t width,
+			  register uint32_t height,
+			  register uint32_t *rle,
+			  register uint32_t rleBufSize )
 {
-    register unsigned long *rgbend;
-    register unsigned long n;
-    register unsigned long currentrgb;
-    register unsigned long len;  // does not include length (itself)
-    register unsigned long *rleend;
-    unsigned long *rlelen;
+    register uint32_t *rgbend;
+    register uint32_t n;
+    register uint32_t currentrgb;
+    register uint32_t len;  // does not include length (itself)
+    register uint32_t *rleend;
+    uint32_t *rlelen;
 
     rleend = rle + rleBufSize - 1;  // -1 because they come in pairs
     rlelen = rle++;  // put length at the beginning
@@ -196,22 +196,22 @@ void rleproc( register unsigned long *rgb,
 }
 
 
-void unrle( register unsigned long *rle,
-			register unsigned long *rgb,
-			register unsigned long width,
-			register unsigned long height,
-			register unsigned long version )
+void unrle( register uint32_t *rle,
+			register uint32_t *rgb,
+			register uint32_t width,
+			register uint32_t height,
+			register uint32_t version )
 {
-    register unsigned long *rleend;
-			 unsigned long currentrgb;
-    register unsigned long *rgbend;
-    register unsigned long *rgbendmax;
-	register unsigned long len;
+    register uint32_t *rleend;
+			 uint32_t currentrgb;
+    register uint32_t *rgbend;
+    register uint32_t *rgbendmax;
+	register uint32_t len;
 
 	// Don't byte swap initial *rle (len), because it was already swapped in readrle()
 	len = *rle;
     rleend = rle + len;  // no +1 (due to length) because they come in pairs
-	//printf( "rle = %p, rleend = %p, len = %lu, rleend - rle = %lu\n", rle, rleend, len, (unsigned long)(rleend - rle) );
+	//printf( "rle = %p, rleend = %p, len = %lu, rleend - rle = %lu\n", rle, rleend, len, (uint32_t)(rleend - rle) );
 	rle++;
     rgbendmax = rgb + width*height;
 
@@ -233,7 +233,7 @@ void unrle( register unsigned long *rle,
 		rle++;
 		if( version < 5 )	// from Iris, so it was ABGR, but we need RGBA, so reverse bytes
 		{
-			unsigned long abgr = currentrgb;
+			uint32_t abgr = currentrgb;
 			register unsigned char* before = (unsigned char*) &abgr;
 			register unsigned char* after = (unsigned char*) &currentrgb;
 			for( int i = 0; i < 4; i++ )
@@ -246,9 +246,9 @@ void unrle( register unsigned long *rle,
 }
 
 
-int readrle( register FILE *f, register unsigned long *rle, register unsigned long version, register bool firstFrame )
+int readrle( register FILE *f, register uint32_t *rle, register uint32_t version, register bool firstFrame )
 {
-	register unsigned long n;
+	register uint32_t n;
 	static bool shown;	// will initialize to false
 
 	n = fread( (char *) (rle), sizeof( *rle ), 1, f );
@@ -295,19 +295,19 @@ int readrle( register FILE *f, register unsigned long *rle, register unsigned lo
 
 // rlediff2 sets the high bit to indicate changed runs
 
-void rlediff2( register unsigned long *rgbnew,
-			   register unsigned long *rgbold,
-			   register unsigned long width,
-			   register unsigned long height,
-			   register unsigned long *rle,
-			   register unsigned long rleBufSize )
+void rlediff2( register uint32_t *rgbnew,
+			   register uint32_t *rgbold,
+			   register uint32_t width,
+			   register uint32_t height,
+			   register uint32_t *rle,
+			   register uint32_t rleBufSize )
 {
-    register unsigned long *rgbnewend;
-    register unsigned long n;
-    register unsigned long currentrgb;
-    register unsigned long len;  // does not include length (itself)
-    register unsigned long *rleend;
-    unsigned long *rlelen;
+    register uint32_t *rgbnewend;
+    register uint32_t n;
+    register uint32_t currentrgb;
+    register uint32_t len;  // does not include length (itself)
+    register uint32_t *rleend;
+    uint32_t *rlelen;
 
     if( !rgbold )	// first time or PLAINRLE
 	{
@@ -342,7 +342,7 @@ void rlediff2( register unsigned long *rgbnew,
         // Now that we have a difference...
         {
             // First find where they sync up again
-            register unsigned long *rgbnewtmp;
+            register uint32_t *rgbnewtmp;
 
             rgbnewtmp = rgbnew;
 
@@ -376,16 +376,16 @@ void rlediff2( register unsigned long *rgbnew,
 }
 
 
-void unrlediff2( register unsigned long *rle,
-				 register unsigned long *rgb,
-				 register unsigned long width,
-				 register unsigned long height,
-				 register unsigned long version )
+void unrlediff2( register uint32_t *rle,
+				 register uint32_t *rgb,
+				 register uint32_t width,
+				 register uint32_t height,
+				 register uint32_t version )
 {
-    register unsigned long *rleend;
-			 unsigned long currentrgb;
-    register unsigned long *rgbend;
-    register unsigned long *rgbendmax;
+    register uint32_t *rleend;
+			 uint32_t currentrgb;
+    register uint32_t *rgbend;
+    register uint32_t *rgbendmax;
 
     rleend = rle + *rle + 1;  // +1 because the data follows the length
 	rle++;
@@ -403,7 +403,7 @@ void unrlediff2( register unsigned long *rle,
                 currentrgb = *rle++;
 				if( version < 5 )	// from Iris, so it was ABGR, but we need RGBA, so reverse bytes
 				{
-					unsigned long abgr = currentrgb;
+					uint32_t abgr = currentrgb;
 					register unsigned char* before = (unsigned char*) &abgr;
 					register unsigned char* after = (unsigned char*) &currentrgb;
 					for( int i = 0; i < 4; i++ )
@@ -421,19 +421,19 @@ void unrlediff2( register unsigned long *rle,
 
 // rlediff3 is like rlediff2, but high bit is set for unchanged runs
 
-void rlediff3( register unsigned long *rgbnew,
-               register unsigned long *rgbold,
-			   register unsigned long width,
-			   register unsigned long height,
-               register unsigned long *rle,
-			   register unsigned long rleBufSize )
+void rlediff3( register uint32_t *rgbnew,
+               register uint32_t *rgbold,
+			   register uint32_t width,
+			   register uint32_t height,
+               register uint32_t *rle,
+			   register uint32_t rleBufSize )
 {
-    register unsigned long *rgbnewend;
-    register unsigned long n;
-    register unsigned long currentrgb;
-    register unsigned long len;  // does not include length (itself)
-    register unsigned long *rleend;
-    unsigned long *rlelen;
+    register uint32_t *rgbnewend;
+    register uint32_t n;
+    register uint32_t currentrgb;
+    register uint32_t len;  // does not include length (itself)
+    register uint32_t *rleend;
+    uint32_t *rlelen;
 
     if( !rgbold )	// first time or PLAINRLE
 	{
@@ -468,7 +468,7 @@ void rlediff3( register unsigned long *rgbnew,
         // Now that we have a difference...
         {
             // First find where they sync up again
-            register unsigned long *rgbnewtmp;
+            register uint32_t *rgbnewtmp;
 
             rgbnewtmp = rgbnew;
 
@@ -503,16 +503,16 @@ void rlediff3( register unsigned long *rgbnew,
 }
 
 
-void unrlediff3( register unsigned long *rle,
-				 register unsigned long *rgb,
-				 register unsigned long width,
-				 register unsigned long height,
-				 register unsigned long version )
+void unrlediff3( register uint32_t *rle,
+				 register uint32_t *rgb,
+				 register uint32_t width,
+				 register uint32_t height,
+				 register uint32_t version )
 {
-    register unsigned long *rleend;
-			 unsigned long currentrgb;
-    register unsigned long *rgbend;
-    register unsigned long *rgbendmax;
+    register uint32_t *rleend;
+			 uint32_t currentrgb;
+    register uint32_t *rgbend;
+    register uint32_t *rgbendmax;
 
     rleend = rle + *rle + 1;  // +1 because the data follows the length
 	rle++;
@@ -532,7 +532,7 @@ void unrlediff3( register unsigned long *rle,
                 currentrgb = *rle++;
 				if( version < 5 )	// from Iris, so it was ABGR, but we need RGBA, so reverse bytes
 				{
-					unsigned long abgr = currentrgb;
+					uint32_t abgr = currentrgb;
 					register unsigned char* before = (unsigned char*) &abgr;
 					register unsigned char* after = (unsigned char*) &currentrgb;
 					for( int i = 0; i < 4; i++ )
@@ -547,17 +547,17 @@ void unrlediff3( register unsigned long *rle,
 
 // rlediff4 is like rlediff3, but packs run-length into unused alpha byte
 
-void rlediff4( register unsigned long *rgbnew,
-               register unsigned long *rgbold,
-			   register unsigned long width,
-			   register unsigned long height,
-               register unsigned long *rle,
-			   register unsigned long rleBufSize )
+void rlediff4( register uint32_t *rgbnew,
+               register uint32_t *rgbold,
+			   register uint32_t width,
+			   register uint32_t height,
+               register uint32_t *rle,
+			   register uint32_t rleBufSize )
 {
-    register unsigned long *rgbnewend;
-    register unsigned long n;
-    register unsigned long currentrgb;
-    register unsigned long len;  // does not include length (itself)
+    register uint32_t *rgbnewend;
+    register uint32_t n;
+    register uint32_t currentrgb;
+    register uint32_t len;  // does not include length (itself)
     register unsigned short *srle;
     register unsigned short *srleend;
 
@@ -605,7 +605,7 @@ void rlediff4( register unsigned long *rgbnew,
         // Now that we have a difference...
         {
             // First find where they sync up again
-            register unsigned long *rgbnewtmp;
+            register uint32_t *rgbnewtmp;
 
             rgbnewtmp = rgbnew;
 
@@ -677,22 +677,22 @@ void rlediff4( register unsigned long *rgbnew,
 }
 
 
-void unrlediff4( register unsigned long *rle,
-				 register unsigned long *rgb,
-				 register unsigned long width,
-				 register unsigned long height,
-				 register unsigned long version )
+void unrlediff4( register uint32_t *rle,
+				 register uint32_t *rgb,
+				 register uint32_t width,
+				 register uint32_t height,
+				 register uint32_t version )
 {
-			 unsigned long currentrgb;
-    register unsigned long *rgbend;
-    register unsigned long *rgbendmax;
+			 uint32_t currentrgb;
+    register uint32_t *rgbend;
+    register uint32_t *rgbendmax;
     register unsigned short *srle;
     register unsigned short *srleend;
 
     srle = (unsigned short *) (rle + 1);
 	// Don't byte swap this initial *rle (len), because it has already been swapped in readrle()
     srleend = srle + *rle;
-	pmpPrint( "rle = %08lx, srle = %08lx, *rle = %lu, srleend = %08lx\n", (unsigned long) rle, (unsigned long) srle, *rle, (unsigned long) srleend );
+	pmpPrint( "rle = %08lx, srle = %08lx, *rle = %lu, srleend = %08lx\n", (uint32_t) rle, (uint32_t) srle, *rle, (uint32_t) srleend );
 
     rgbendmax = rgb + width*height;
 
@@ -744,7 +744,7 @@ void unrlediff4( register unsigned long *rle,
 				if( version < 5 )	// from Iris, so it was ABGR, but we need RGBA, so reverse bytes
 				{
 					currentrgb = AlphaMask_ABGR | ((long) (*srle) << 16) | *(srle+1);
-					unsigned long abgr = currentrgb;
+					uint32_t abgr = currentrgb;
 					register unsigned char* before = (unsigned char*) &abgr;
 					register unsigned char* after = (unsigned char*) &currentrgb;
 					for( int i = 0; i < 4; i++ )

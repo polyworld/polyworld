@@ -1,6 +1,7 @@
 #ifndef PwMovieUtils_h
 #define PwMovieUtils_h
 
+#include <stdint.h>
 #include <stdio.h>
 
 /* #define PLAINRLE */
@@ -22,61 +23,61 @@
 
 void PwRecordMovie( FILE *f, long xleft, long ybottom, long width, long height );
 
-void PwReadMovieHeader ( FILE *f, unsigned long* version, unsigned long* width, unsigned long* height );
-void PwWriteMovieHeader( FILE *f, unsigned long  version, unsigned long  width, unsigned long  height );
+void PwReadMovieHeader ( FILE *f, uint32_t* version, uint32_t* width, uint32_t* height );
+void PwWriteMovieHeader( FILE *f, uint32_t  version, uint32_t  width, uint32_t  height );
 
-void rleproc( register unsigned long *rgb,
-			  register unsigned long width,
-			  register unsigned long height,
-			  register unsigned long *rle,
-			  register unsigned long rleBufSize );
+void rleproc( register uint32_t *rgb,
+			  register uint32_t width,
+			  register uint32_t height,
+			  register uint32_t *rle,
+			  register uint32_t rleBufSize );
 
-void rlediff2( register unsigned long *rgbnew,
-			   register unsigned long *rgbold,
-			   register unsigned long width,
-			   register unsigned long height,
-			   register unsigned long *rle,
-			   register unsigned long rleBufSize );
+void rlediff2( register uint32_t *rgbnew,
+			   register uint32_t *rgbold,
+			   register uint32_t width,
+			   register uint32_t height,
+			   register uint32_t *rle,
+			   register uint32_t rleBufSize );
 
-void rlediff3( register unsigned long *rgbnew,
-               register unsigned long *rgbold,
-			   register unsigned long width,
-			   register unsigned long height,
-               register unsigned long *rle,
-			   register unsigned long rleBufSize );
+void rlediff3( register uint32_t *rgbnew,
+               register uint32_t *rgbold,
+			   register uint32_t width,
+			   register uint32_t height,
+               register uint32_t *rle,
+			   register uint32_t rleBufSize );
 
-void rlediff4( register unsigned long *rgbnew,
-               register unsigned long *rgbold,
-			   register unsigned long width,
-			   register unsigned long height,
-               register unsigned long *rle,
-			   register unsigned long rleBufSize );
+void rlediff4( register uint32_t *rgbnew,
+               register uint32_t *rgbold,
+			   register uint32_t width,
+			   register uint32_t height,
+               register uint32_t *rle,
+			   register uint32_t rleBufSize );
 
-void unrle( register unsigned long *rle,
-			register unsigned long *rgb,
-			register unsigned long width,
-			register unsigned long height,
-			register unsigned long version );
+void unrle( register uint32_t *rle,
+			register uint32_t *rgb,
+			register uint32_t width,
+			register uint32_t height,
+			register uint32_t version );
 
-void unrlediff2( register unsigned long *rle,
-				 register unsigned long *rgb,
-				 register unsigned long width,
-				 register unsigned long height,
-				 register unsigned long version );
+void unrlediff2( register uint32_t *rle,
+				 register uint32_t *rgb,
+				 register uint32_t width,
+				 register uint32_t height,
+				 register uint32_t version );
 
-void unrlediff3( register unsigned long *rle,
-				 register unsigned long *rgb,
-				 register unsigned long width,
-				 register unsigned long height,
-				 register unsigned long version );
+void unrlediff3( register uint32_t *rle,
+				 register uint32_t *rgb,
+				 register uint32_t width,
+				 register uint32_t height,
+				 register uint32_t version );
 
-void unrlediff4( register unsigned long *rle,
-				 register unsigned long *rgb,
-				 register unsigned long width,
-				 register unsigned long height,
-				 register unsigned long version );
+void unrlediff4( register uint32_t *rle,
+				 register uint32_t *rgb,
+				 register uint32_t width,
+				 register uint32_t height,
+				 register uint32_t version );
 
-int readrle( register FILE *f, register unsigned long *rle, register unsigned long version, register bool firstFrame );
+int readrle( register FILE *f, register uint32_t *rle, register uint32_t version, register bool firstFrame );
 
 char* sgets( char* string, size_t size, FILE* file );
 double hirestime( void );

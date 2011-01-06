@@ -66,12 +66,12 @@ int main( int argc, char **argv )
 //---------------------------------------------------------------------------
 // PMPApp::PMPApp
 //---------------------------------------------------------------------------
-PMPApp::PMPApp(int argc, char** argv) : QApplication(argc, argv)
+PMPApp::PMPApp(int &argc, char** argv) : QApplication(argc, argv)
 {
     char*			movieFileName	= NULL;
 	char*			legendFileName	= NULL;
 	char**			legend			= NULL;
-	unsigned long	endFrame		= 0;
+	uint32_t	endFrame		= 0;
 	double			frameRate		= 75.0;
 	int				arg				= 1;
 		
@@ -213,7 +213,7 @@ PMPApp::~PMPApp()
 //---------------------------------------------------------------------------
 void PMPApp::NextFrame()
 {
-	static unsigned long frame;
+	static uint32_t frame;
 	
 	if( !mainMovieFile )
 		exit( 0 );

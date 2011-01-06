@@ -26,7 +26,7 @@
 // MainWindow::MainWindow
 //---------------------------------------------------------------------------
 MainWindow::MainWindow(const char* windowTitle, const char* windowSettingsNameParam, const Qt::WFlags windowFlags,
-						FILE* movieFileParam, char** legend, unsigned long endFrame, double frameRate )
+						FILE* movieFileParam, char** legend, uint32_t endFrame, double frameRate )
 	:	QMainWindow( NULL, windowFlags )
 {
 //	printf( "%s: movieFileParam = %p\n", __func__, movieFileParam );
