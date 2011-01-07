@@ -6,8 +6,11 @@
 // when the version number is 4 or less, or new RGBA data, when the version number is
 // 5 or greater.
 
+#define _FILE_OFFSET_BITS 64 // tell gnu to use 64 bit file offsets for ftello
+
 #define PMP_DEBUG 0
 
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #if __APPLE__
@@ -19,9 +22,16 @@
 	#include <sys/time.h>
 #endif
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
 #include <gl.h>
 
+#include "misc.h"
 #include "PwMovieUtils.h"
+
+using namespace std;
 
 #define HIGHBITON 0x80000000
 #define HIGHBITOFF 0x7fffffff
@@ -54,6 +64,9 @@
 	#define SwapInt16(x) bswap_16(x)
 #endif
 
+//---------------------------------------------------------------------------
+// PwRecordMovie
+//---------------------------------------------------------------------------
 void PwRecordMovie( FILE *f, long xleft, long ybottom, long width, long height )
 {
     register uint32_t n;
@@ -113,6 +126,181 @@ void PwRecordMovie( FILE *f, long xleft, long ybottom, long width, long height )
     }
 }
 
+void PwMovieIndexer::createIndexFile( const string &path_movie,
+									  uint32_t indexStride )
+{
+	assert( sizeof(off_t) == sizeof(uint64_t) );
+
+	FILE *fileMovie = fopen( path_movie.c_str(), "r" );
+	assert( fileMovie );
+	uint32_t movieVersion;
+	uint32_t width, height;
+	PwReadMovieHeader( fileMovie, &movieVersion, &width, &height );
+	assert( movieVersion >= 4 );
+
+	FILE *fileIndex = fopen( getIndexPath(path_movie).c_str(), "w" );
+	assert( fileIndex );
+
+	FileHeader header;
+	header.signature = 0x11223344;
+	header.sizeofHeader = sizeof(FileHeader);
+	header.sizeofEntry = sizeof(Entry);
+	header.version = 1;
+	header.width = width;
+	header.height = height;
+	header.movieVersion = movieVersion;
+	header.indexStride = indexStride;
+	header.entryCount = 0; // filled in later.
+	header.offsetEntries = 0; // filled in later.
+
+	fwrite( &header, sizeof(header), 1, fileIndex );
+
+	typedef std::list<Entry> EntryList;
+	EntryList entries;
+
+	uint32_t *rgbBufFrame;
+	uint32_t *rleBuf;
+	uint32_t rgbBufSize = width * height * sizeof( *rgbBufFrame );
+	uint32_t rleBufSize = rgbBufSize + 1;
+
+	rgbBufFrame = (uint32_t*) malloc( rgbBufSize );
+	rleBuf  = (uint32_t*) malloc( rleBufSize );
+
+	for( uint32_t frame = 1; ; frame++ )
+	{
+		header.frameCount = frame;
+
+		if( 0 != readrle( fileMovie, rleBuf, movieVersion, frame == 1 ) )
+		{
+			if( !feof( fileMovie ) )
+			{
+				fprintf( stderr, "Failed reading movie file.\n" );
+				exit( 1 );
+			}
+
+			// end of movie
+			break;
+		}
+
+		if( frame == 1 )
+		{
+			unrle( rleBuf, rgbBufFrame, width, height, movieVersion );
+		}
+		else
+		{
+			unrlediff4( rleBuf, rgbBufFrame, width, height, movieVersion );
+		}
+
+		if( ((frame-1) % indexStride) == 0 )
+		{
+			printf( "Indexing Frame %u...\n", frame ); fflush( stdout );
+			if( frame > 1 )
+			{
+				rleproc( rgbBufFrame, width, height, rleBuf, rleBufSize );
+			}
+
+			uint32_t rleDataSize = sizeof(uint32_t) * (rleBuf[0] + 1);
+
+			Entry entry;
+			entry.frameNumber = frame;
+			entry.offsetIndexFrame = (uint64_t)ftello( fileIndex );
+			entry.offsetMovieNextFrame = (uint64_t)ftello( fileMovie );
+			entry.sizeIndexFrame = rleDataSize;
+
+			fwrite( rleBuf, rleDataSize, 1, fileIndex );
+
+			entries.push_back( entry );
+		}
+	}
+
+	free( rgbBufFrame );
+	free( rleBuf );
+
+	header.entryCount = entries.size();
+	header.offsetEntries = ftello( fileIndex );
+	
+	itfor( EntryList, entries, it )
+	{
+		Entry entry = *it;
+		fwrite( &entry, sizeof(entry), 1, fileIndex );
+	}
+
+	fseek( fileIndex, 0, SEEK_SET );
+	fwrite( &header, sizeof(header), 1, fileIndex );
+
+	fclose( fileMovie );
+	fclose( fileIndex );
+}
+
+PwMovieIndexer::PwMovieIndexer( const string &path_movie )
+{
+	string path_index = getIndexPath(path_movie);
+
+	struct stat _stat;
+	if( 0 != stat(path_index.c_str(), &_stat) )
+	{
+		createIndexFile( path_movie, 1000 );
+	}
+
+	fileIndex = fopen( path_index.c_str(), "r" );
+	assert( fileIndex );
+
+	fread( &header, sizeof(header), 1, fileIndex );
+	
+	assert( header.signature == 0x11223344 );
+	assert( header.sizeofHeader == sizeof(FileHeader) );
+	assert( header.sizeofEntry == sizeof(Entry) );
+	assert( header.version == 1 );
+	assert( header.frameCount > 0 );
+	assert( header.indexStride > 0 );
+	assert( header.entryCount > 0 );
+	assert( header.offsetEntries > 0 );
+}
+
+PwMovieIndexer::~PwMovieIndexer()
+{
+	fclose( fileIndex );
+	fileIndex = NULL;
+}
+
+uint32_t PwMovieIndexer::getFrameCount()
+{
+	return header.frameCount;
+}
+
+void PwMovieIndexer::findFrame( uint32_t frame,
+								FILE *fileMovie,
+								uint32_t *rleBuf,
+								uint32_t *rgbBuf )
+{
+	assert( (frame >= 1) && (frame <= header.frameCount) );
+
+	uint32_t entryNumber = (frame - 1) / header.indexStride;
+	uint64_t entryOffset = header.offsetEntries + (entryNumber * sizeof(Entry));
+
+	fseeko( fileIndex, (off_t)entryOffset, SEEK_SET );
+
+	Entry entry;
+	fread( &entry, sizeof(entry), 1, fileIndex );
+	assert( entry.frameNumber == (1 + entryNumber * header.indexStride) );
+	fseeko( fileIndex, (off_t)entry.offsetIndexFrame, SEEK_SET );
+	fread( rleBuf, entry.sizeIndexFrame, 1, fileIndex );
+	unrle( rleBuf, rgbBuf, header.width, header.height, header.movieVersion );
+
+	fseeko( fileMovie, (off_t)entry.offsetMovieNextFrame, SEEK_SET );
+	for( uint32_t frameSeek = entry.frameNumber + 1;
+		 frameSeek <= frame;
+		 frameSeek++ )
+	{
+		readrle( fileMovie, rleBuf, header.movieVersion, false );
+		unrlediff4( rleBuf, rgbBuf, header.width, header.height, header.movieVersion );
+	}
+}
+
+string PwMovieIndexer::getIndexPath( const string &path_movie )
+{
+	return path_movie + ".idx";
+}
 
 //---------------------------------------------------------------------------
 // PwReadMovieHeader
@@ -270,7 +458,7 @@ int readrle( register FILE *f, register uint32_t *rle, register uint32_t version
 	{
 		if( !shown && !feof( f ) )
 		{
-			fprintf( stderr, "%s: while reading length, read %lu longs\n", __FUNCTION__, n);
+			fprintf( stderr, "%s: while reading length, read %u longs\n", __FUNCTION__, n);
 			shown = true;
 		}
 		return( 1 );

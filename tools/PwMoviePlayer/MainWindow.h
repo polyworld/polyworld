@@ -25,8 +25,10 @@ class MainWindow : public QWidget
 	Q_OBJECT
 
 public:
-	MainWindow(const char* windowTitle, const char* windowSettingsNameParam, const Qt::WFlags windowFlags,
-				FILE* movieFileParam, char** legend, uint32_t endFrame, double frameRate );
+	MainWindow( const char* windowTitle, const char* windowSettingsNameParam, const Qt::WFlags windowFlags,
+			    FILE* movieFileParam, PwMovieIndexer* indexer,
+				char** legend,
+				uint32_t startFrame, uint32_t endFrame, double frameRate );
 	~MainWindow();
 	
 	void NextFrame();
@@ -54,8 +56,10 @@ private:
 	
 	bool		paused;
 	bool		step;
+	bool        prev;
 	
 	FILE*		movieFile;
+	PwMovieIndexer* indexer;
 	uint32_t		movieVersion;
 	uint32_t		movieWidth;
 	uint32_t		movieHeight;

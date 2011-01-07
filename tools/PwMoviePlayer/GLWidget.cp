@@ -1,6 +1,7 @@
 #define GLW_DEBUG 0
 
 // System
+#include <assert.h>
 #include <math.h>
 
 // Qt
@@ -17,7 +18,7 @@
 #endif
 
 GLWidget::GLWidget( QWidget *parent, uint32_t widthParam, uint32_t heightParam, uint32_t movieVersionParam,
-					FILE* movieFileParam, char** legendParam, uint32_t endFrameParam, double frameRateParam )
+					FILE* movieFileParam, PwMovieIndexer* indexerParam, char** legendParam, uint32_t startFrameParam, uint32_t endFrameParam, double frameRateParam )
 	: QGLWidget( parent )
 {
 	width = widthParam;
@@ -29,6 +30,7 @@ GLWidget::GLWidget( QWidget *parent, uint32_t widthParam, uint32_t heightParam, 
 	height = heightParam;
 	movieVersion = movieVersionParam;
 	movieFile = movieFileParam;
+	indexer = indexerParam;
 	legend = legendParam;
 	endFrame = endFrameParam;
 	frameRate = frameRateParam;
@@ -44,10 +46,70 @@ GLWidget::GLWidget( QWidget *parent, uint32_t widthParam, uint32_t heightParam, 
 	rgbBuf1 = (uint32_t*) malloc( rgbBufSize );
 //	rgbBuf2 = (uint32_t*) malloc( rgbBufSize );
 	rleBuf  = (uint32_t*) malloc( rleBufSize );
+
+	frame = 0;
+	SetFrame( startFrameParam == 0 ? 1 : startFrameParam );
 }
 
 GLWidget::~GLWidget()
 {
+}
+
+uint32_t GLWidget::GetFrame()
+{
+	return frame;
+}
+
+void GLWidget::SetFrame( uint32_t newFrame )
+{
+	assert( (newFrame >= 1) && (newFrame <= indexer->getFrameCount()) );
+
+	if( (frame == 0) || (newFrame != frame + 1) )
+	{
+		indexer->findFrame( newFrame,
+							movieFile,
+							rleBuf,
+							rgbBuf1 );
+	}
+	else
+	{
+		if( readrle( movieFile, rleBuf, movieVersion, false ) )
+		{
+			if( newFrame != indexer->getFrameCount() )
+			{
+				fprintf( stderr, "Failed reading movie file!\n" );
+				exit( 1 );
+			}
+			else
+			{
+				exit( 0 );
+			}
+		}
+
+		if( movieVersion < 4 )
+		{
+			if( movieVersion == 2 )
+				unrlediff2( rleBuf, rgbBuf1, width, height, movieVersion );
+			else if( movieVersion == 3 )
+				unrlediff3( rleBuf, rgbBuf1, width, height, movieVersion );
+		}
+		else
+		{
+			unrlediff4( rleBuf, rgbBuf1, width, height, movieVersion );
+		}
+	}
+
+	frame = newFrame;
+}
+
+void GLWidget::NextFrame()
+{
+	SetFrame( frame + 1 );
+}
+
+void GLWidget::PrevFrame()
+{
+	SetFrame( frame - 1 );
 }
 
 QSize GLWidget::minimumSizeHint() const
@@ -75,23 +137,15 @@ void GLWidget::initializeGL()
 
 void GLWidget::Draw()
 {
-#define RecentSteps 10
-	static bool				firstFrame = true;
-	static uint32_t	frame;
-	static double			timePrevious;
-	double					timeNow;	
-	
 	if( width == 0 )
 		return;
 	
-	frame++;
 //	printf( "%s: frame # %lu\n", __FUNCTION__, frame );
-	
-	if( endFrame && (frame > endFrame) )
-		exit( 0 );	
 	
 	if( frameRate )
 	{
+		static double			timePrevious;
+		double					timeNow;	
 		double	deltaTime;
 		double	ifr = 1.0 / frameRate;
 		
@@ -109,59 +163,9 @@ void GLWidget::Draw()
 	
 	makeCurrent();
 	
-	if( readrle( movieFile, rleBuf, movieVersion, firstFrame ) )	// 0 = success, other = failure
-	{
-		exit( 0 );
-//		return;
-	}
-	
 	glClear( GL_COLOR_BUFFER_BIT );
-
-	if( (movieVersion <= 1) || firstFrame )
-	{
-		unrle( rleBuf, rgbBuf1, width, height, movieVersion );
-		firstFrame = false;
-	}
-	else
-	{
-		if( movieVersion < 4 )
-		{
-			if( movieVersion == 2 )
-				unrlediff2( rleBuf, rgbBuf1, width, height, movieVersion );
-			else if( movieVersion == 3 )
-				unrlediff3( rleBuf, rgbBuf1, width, height, movieVersion );
-		}
-		else
-		{
-			unrlediff4( rleBuf, rgbBuf1, width, height, movieVersion );
-		}
-	}
 	glRasterPos2i( 0, 0 );
-#if 0
-	for( int line = 0; line < height; line += 5 )
-	{
-		printf( "[%3d]  ", line );
-		for( int i = 0; i < 50; i += 5 )
-			printf( "%08lx  ", rgbBuf1[line*width + i] );
-		printf( "\n" );
-	}
-#endif
-
-#if 0
-// Halve the number of pixels
-	int newWidth= width / 2;
-	int newHeight = height / 2;
-	for( int j = 0; j < newHeight; j++ )
-	{
-		for( int i = 0; i < newWidth; i++ )
-		{
-			rgbBuf1[i + j*newWidth] = round( 0.25 * (rgbBuf1[2*j*width + 2*i] + rgbBuf1[2*j*width + 2*i + 1] + rgbBuf1[(2*j+1)*width + 2*i] + rgbBuf1[(2*j+1)*width + 2*i + 1] ) );
-		}
-	}
-	glDrawPixels( newWidth, newHeight, GL_RGBA, GL_UNSIGNED_BYTE, rgbBuf1 );
-#else
 	glDrawPixels( width, height, GL_RGBA, GL_UNSIGNED_BYTE, rgbBuf1 );
-#endif
 
 	// Superimpose the frame number
 	QFont font( "Monaco", 10 );
@@ -190,8 +194,6 @@ void GLWidget::Draw()
 	
 	// Done drawing, so show it
 	swapBuffers();
-	
-//	sleep( 3 );
 }
 
 void GLWidget::paintGL()

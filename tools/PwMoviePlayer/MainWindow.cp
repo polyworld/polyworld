@@ -25,8 +25,10 @@
 //---------------------------------------------------------------------------
 // MainWindow::MainWindow
 //---------------------------------------------------------------------------
-MainWindow::MainWindow(const char* windowTitle, const char* windowSettingsNameParam, const Qt::WFlags windowFlags,
-						FILE* movieFileParam, char** legend, uint32_t endFrame, double frameRate )
+MainWindow::MainWindow( const char* windowTitle, const char* windowSettingsNameParam, const Qt::WFlags windowFlags,
+						FILE* movieFileParam, PwMovieIndexer* indexerParam,
+						char** legend,
+						uint32_t startFrame, uint32_t endFrame, double frameRate )
 	:	QMainWindow( NULL, windowFlags )
 {
 //	printf( "%s: movieFileParam = %p\n", __func__, movieFileParam );
@@ -39,6 +41,7 @@ MainWindow::MainWindow(const char* windowTitle, const char* windowSettingsNamePa
 	setWindowTitle( windowTitle );
 	windowSettingsName = windowSettingsNameParam;
 	movieFile = movieFileParam;
+	indexer = indexerParam;
 	
 	paused = false;
 	step = false;
@@ -57,7 +60,7 @@ MainWindow::MainWindow(const char* windowTitle, const char* windowSettingsNamePa
 	RestoreFromPrefs();
 
 	// Set up the OpenGL view
-	glWidget = new GLWidget( this, movieWidth, movieHeight, movieVersion, movieFile, legend, endFrame, frameRate );
+	glWidget = new GLWidget( this, movieWidth, movieHeight, movieVersion, movieFile, indexer, legend, startFrame, endFrame, frameRate );
 	setCentralWidget( glWidget );
 }
 
@@ -86,10 +89,17 @@ void MainWindow::ReadMovieFileHeader()
 void MainWindow::NextFrame()
 {
 //	printf( "%s\n", __func__ );
-	if( movieFile && (!paused || step) )
+	if( movieFile && (!paused || step) || prev)
 	{
 		glWidget->Draw();
 		step = false;
+		
+		if( !prev )
+		{
+			glWidget->NextFrame();
+		}
+
+		prev = false;
 	}
 }
 
@@ -116,12 +126,10 @@ void MainWindow::keyReleaseEvent( QKeyEvent* event )
 			break;
 		
 		case Qt::Key_Left:
-			// would like to step backwards in time (if paused) or
-			// slow down (if not paused), but I don't know if it is
-			// possible to step backwards given the way the video
-			// is encoded in the file, and slowing down would take
-			// work, so for now, do nothing
-			event->ignore();
+			paused = true;
+			prev = true;
+			glWidget->PrevFrame();
+			
 			break;
 		
 		default:

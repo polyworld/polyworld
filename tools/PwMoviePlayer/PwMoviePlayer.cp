@@ -22,7 +22,7 @@
 #define MaxLegendLines 10
 #define MaxLegendLength 80
 
-char defaultMovieFileName[] = "movie.pmv";
+char defaultMovieFileName[] = "run/movie.pmv";
 
 int main( int argc, char **argv )
 {
@@ -71,6 +71,7 @@ PMPApp::PMPApp(int &argc, char** argv) : QApplication(argc, argv)
     char*			movieFileName	= NULL;
 	char*			legendFileName	= NULL;
 	char**			legend			= NULL;
+	uint32_t	startFrame		= 0;
 	uint32_t	endFrame		= 0;
 	double			frameRate		= 75.0;
 	int				arg				= 1;
@@ -101,6 +102,11 @@ PMPApp::PMPApp(int &argc, char** argv) : QApplication(argc, argv)
 					else
 						fprintf( stderr, "Unable to allocate %lu bytes of memory for legendFileName\n", strlen( argv[arg] ) + 1 );
 					break;
+
+				case 's':
+					arg++;
+					startFrame = strtoul( argv[arg], NULL, 10 );
+					break;
 				
 				case 'e':
 					arg++;
@@ -129,6 +135,7 @@ PMPApp::PMPApp(int &argc, char** argv) : QApplication(argc, argv)
         movieFileName = defaultMovieFileName;
 
     mainMovieFile = fopen( movieFileName, "rb" );
+	indexer = new PwMovieIndexer( movieFileName );
 
     if( mainMovieFile )
 	{
@@ -188,7 +195,7 @@ PMPApp::PMPApp(int &argc, char** argv) : QApplication(argc, argv)
 	QCoreApplication::setOrganizationDomain( "indiana.edu" );
 	QCoreApplication::setApplicationName( "pwmovieplayer" );
 	
-	mainWindow = new MainWindow( "Polyworld MoviePlayer", "Main", 0, mainMovieFile, legend, endFrame, frameRate );
+	mainWindow = new MainWindow( "Polyworld MoviePlayer", "Main", 0, mainMovieFile, indexer, legend, startFrame, endFrame, frameRate );
 	mainWindow->show();
 	
 	// Create playback timer

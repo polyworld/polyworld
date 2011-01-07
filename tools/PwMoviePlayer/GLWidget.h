@@ -13,8 +13,13 @@ class GLWidget : public QGLWidget
 
 public:
 	GLWidget( QWidget *parent = 0, uint32_t widthParam = 400, uint32_t heightParam = 400, uint32_t movieVersionParam = kCurrentMovieVersion,
-				FILE* movieFileParam = NULL, char** legendParam = NULL, uint32_t endFrameParam = 0, double frameRateParam = 0.0 );
+			  FILE* movieFileParam = NULL, PwMovieIndexer* indexerParam = NULL, char** legendParam = NULL, uint32_t startFrameParam = 0, uint32_t endFrameParam = 0, double frameRateParam = 0.0 );
 	~GLWidget();
+
+	uint32_t GetFrame();
+	void SetFrame( uint32_t newFrame );
+	void NextFrame();
+	void PrevFrame();
 	
 	void Draw();
 
@@ -31,7 +36,9 @@ private:
 	uint32_t	height;
 	uint32_t	movieVersion;
 	FILE*			movieFile;
+	PwMovieIndexer* indexer;
 	char**			legend;
+	uint32_t    frame;
 	uint32_t	endFrame;
 	double			frameRate;
 
