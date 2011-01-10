@@ -8,6 +8,7 @@
 #include <QGLWidget>
 #include <QKeyEvent>
 #include <QMainWindow>
+#include <QSlider>
 
 #include "GLWidget.h"
 
@@ -40,6 +41,7 @@ protected:
 
 private slots:
 	void Tick();
+	void sliderMoved( int value );
 	void openFile();
 	void about();
 //	void aboutQt();
@@ -60,6 +62,8 @@ private:
 	
 	GLWidget*	glWidget;
 	GLWidget::Frame frame;
+
+	QSlider* slider;
 	
 	enum State
 	{

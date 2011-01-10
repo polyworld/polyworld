@@ -1,3 +1,5 @@
+#include <iostream>
+
 // OpenGL
 #include <gl.h>
 
@@ -5,7 +7,7 @@
 #include <QApplication>
 #include <QDesktopWidget>
 #include <QGLWidget>
-#include <QHBoxLayout>
+#include <QVBoxLayout>
 #include <QMainWindow>
 #include <QMenuBar>
 #include <QMenu>
@@ -18,6 +20,8 @@
 #include "MainWindow.h"
 #include "PwMovieUtils.h"
 #include "PwMoviePlayer.h"
+
+using namespace std;
 
 //===========================================================================
 // MainWindow
@@ -41,7 +45,7 @@ MainWindow::MainWindow( const char* windowTitle,
 	reader = readerParam;
 	
 	// Create the main menubar
-	CreateMenus( menuBar() );
+	//CreateMenus( menuBar() );
 
 	// Read the movieFile header information (version, width, height)
 	// Must be done *before* the RestoreFromPrefs() and the OpenGL setup,
@@ -53,9 +57,22 @@ MainWindow::MainWindow( const char* windowTitle,
 	// Display the main simulation window
 	RestoreFromPrefs();
 
+	QWidget *content = new QWidget( this );
+	QVBoxLayout *contentLayout = new QVBoxLayout( content );
+	
 	// Set up the OpenGL view
-	glWidget = new GLWidget( this, legend );
-	setCentralWidget( glWidget );
+	glWidget = new GLWidget( content, legend );
+
+	slider = new QSlider( Qt::Horizontal, content );
+	slider->setMinimum( 1 );
+	slider->setMaximum( reader->getFrameCount() );
+	connect( slider, SIGNAL( sliderMoved(int) ), this, SLOT( sliderMoved(int) ) );
+
+	contentLayout->addWidget( glWidget );
+	contentLayout->addWidget( slider );
+	content->setLayout( contentLayout );
+	
+	setCentralWidget( content );
 
 	state = PAUSED;
 	SetFrame( startFrame == 0 ? 1 : startFrame );
@@ -87,6 +104,14 @@ void MainWindow::Tick()
 }
 
 //---------------------------------------------------------------------------
+// MainWindow::sliderMoved()
+//---------------------------------------------------------------------------
+void MainWindow::sliderMoved( int value )
+{
+	SetFrame( (uint32_t)value );
+}
+
+//---------------------------------------------------------------------------
 // MainWindow::SetFrame()
 //---------------------------------------------------------------------------
 void MainWindow::SetFrame( uint32_t index )
@@ -102,6 +127,8 @@ void MainWindow::SetFrame( uint32_t index )
 						   &frame.rgbBuf );
 
 		glWidget->SetFrame( &frame );
+
+		slider->setSliderPosition( index );
 	}
 }
 
