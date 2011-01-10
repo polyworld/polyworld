@@ -769,7 +769,7 @@ private:
 	long fBrainMonitorStride;
 	
 	bool fRecordMovie;
-	FILE* fMovieFile;
+	class PwMovieWriter *fMovieWriter;
 	
 	unsigned long* fGeneSum;	// sum, for computing mean
 	unsigned long* fGeneSum2;	// sum of squares, for computing std. dev.

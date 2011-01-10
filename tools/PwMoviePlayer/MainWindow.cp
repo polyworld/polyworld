@@ -11,6 +11,7 @@
 #include <QMenu>
 #include <QMessageBox>
 #include <QSettings>
+#include <QTimer>
 
 // Self
 #include "GLWidget.h"
@@ -25,26 +26,19 @@
 //---------------------------------------------------------------------------
 // MainWindow::MainWindow
 //---------------------------------------------------------------------------
-MainWindow::MainWindow( const char* windowTitle, const char* windowSettingsNameParam, const Qt::WFlags windowFlags,
-						FILE* movieFileParam, PwMovieIndexer* indexerParam,
+MainWindow::MainWindow( const char* windowTitle,
+						const char* windowSettingsNameParam,
+						const Qt::WFlags windowFlags,
+						PwMovieReader* readerParam,
 						char** legend,
-						uint32_t startFrame, uint32_t endFrame, double frameRate )
+						uint32_t startFrame,
+						uint32_t endFrame,
+						double frameRate )
 	:	QMainWindow( NULL, windowFlags )
 {
-//	printf( "%s: movieFileParam = %p\n", __func__, movieFileParam );
-	if( !movieFileParam )
-	{
-		movieWidth = 0;
-		return;
-	}
-	
 	setWindowTitle( windowTitle );
 	windowSettingsName = windowSettingsNameParam;
-	movieFile = movieFileParam;
-	indexer = indexerParam;
-	
-	paused = false;
-	step = false;
+	reader = readerParam;
 	
 	// Create the main menubar
 	CreateMenus( menuBar() );
@@ -52,7 +46,7 @@ MainWindow::MainWindow( const char* windowTitle, const char* windowSettingsNameP
 	// Read the movieFile header information (version, width, height)
 	// Must be done *before* the RestoreFromPrefs() and the OpenGL setup,
 	// because the movie dimensions define the window dimensions for these movie windows
-	ReadMovieFileHeader();
+	//ReadMovieFileHeader();
 
 //	printf( "movieWidth = %lu, movieHeight = %lu\n", movieWidth, movieHeight );
 	
@@ -60,8 +54,16 @@ MainWindow::MainWindow( const char* windowTitle, const char* windowSettingsNameP
 	RestoreFromPrefs();
 
 	// Set up the OpenGL view
-	glWidget = new GLWidget( this, movieWidth, movieHeight, movieVersion, movieFile, indexer, legend, startFrame, endFrame, frameRate );
+	glWidget = new GLWidget( this, legend );
 	setCentralWidget( glWidget );
+
+	state = PAUSED;
+	SetFrame( startFrame == 0 ? 1 : startFrame );
+
+	// Create playback timer
+	QTimer* idleTimer = new QTimer( this );
+	connect( idleTimer, SIGNAL( timeout() ), this, SLOT( Tick() ) );
+	idleTimer->start( int(1000 / frameRate) );
 }
 
 
@@ -73,34 +75,50 @@ MainWindow::~MainWindow()
 	SaveWindowState();
 }
 
-
 //---------------------------------------------------------------------------
-// MainWindow::ReadMovieFileHeader
+// MainWindow::Tick()
 //---------------------------------------------------------------------------
-void MainWindow::ReadMovieFileHeader()
+void MainWindow::Tick()
 {
-	PwReadMovieHeader( movieFile, &movieVersion, &movieWidth, &movieHeight );
+	if( state == PLAYING )
+	{
+		NextFrame();
+	}
 }
 
+//---------------------------------------------------------------------------
+// MainWindow::SetFrame()
+//---------------------------------------------------------------------------
+void MainWindow::SetFrame( uint32_t index )
+{
+	if( (index > 0) && (index <= reader->getFrameCount()) )
+	{
+		frame.index = index;
+
+		reader->readFrame( frame.index,
+						   &frame.timestep,
+						   &frame.width,
+						   &frame.height,
+						   &frame.rgbBuf );
+
+		glWidget->SetFrame( &frame );
+	}
+}
 
 //---------------------------------------------------------------------------
 // MainWindow::NextFrame()
 //---------------------------------------------------------------------------
 void MainWindow::NextFrame()
 {
-//	printf( "%s\n", __func__ );
-	if( movieFile && (!paused || step) || prev)
-	{
-		glWidget->Draw();
-		step = false;
-		
-		if( !prev )
-		{
-			glWidget->NextFrame();
-		}
+	SetFrame( frame.index + 1 );
+}
 
-		prev = false;
-	}
+//---------------------------------------------------------------------------
+// MainWindow::PrevFrame()
+//---------------------------------------------------------------------------
+void MainWindow::PrevFrame()
+{
+	SetFrame( frame.index - 1 );
 }
 
 //---------------------------------------------------------------------------
@@ -111,25 +129,19 @@ void MainWindow::keyReleaseEvent( QKeyEvent* event )
 	switch( event->key() )
 	{
 		case Qt::Key_Space:
-			paused = !paused;
+			state = state == PAUSED
+				? PLAYING
+				: PAUSED;
 			break;
 		
 		case Qt::Key_Right:
-			if( paused )
-				step = true;
-			else
-			{
-				// should speed up here, but for now just pause and step
-				paused = true;
-				step = true;
-			}
+			state = PAUSED;
+			NextFrame();
 			break;
 		
 		case Qt::Key_Left:
-			paused = true;
-			prev = true;
-			glWidget->PrevFrame();
-			
+			state = PAUSED;
+			PrevFrame();
 			break;
 		
 		default:
@@ -280,10 +292,6 @@ void MainWindow::RestoreFromPrefs()
 	// since the movie dimensions fully define the window dimensions
 //			if( settings.contains( "width" ) )
 //				defWidth = settings.value( "width" ).toInt();
-			defWidth = movieWidth;
-//			if( settings.contains( "height" ) )
-//				defHeight = settings.value( "height" ).toInt();
-			defHeight = movieHeight;
 			if( settings.contains( "x" ) )
 				defX = settings.value( "x" ).toInt();
 			if( settings.contains( "y" ) )
@@ -302,9 +310,10 @@ void MainWindow::RestoreFromPrefs()
 	// Set window size and location based on prefs
  	QRect position;
  	position.setTopLeft( QPoint( defX, defY ) );
- 	position.setSize( QSize( defWidth, defHeight ) );
+ 	//position.setSize( QSize( defWidth, defHeight ) );
+	position.setSize( QSize( 800, 600 ) );
   	setGeometry( position );
-	setFixedSize( defWidth, defHeight );
+	//setFixedSize( defWidth, defHeight );
 	show();
 	
 	// Save settings for future restore		

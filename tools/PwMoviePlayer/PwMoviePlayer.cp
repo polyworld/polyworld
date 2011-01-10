@@ -12,7 +12,6 @@
 // Qt
 #include <QApplication>
 #include <QGLFormat>
-#include <QTimer>
 
 // Self
 #include "PwMoviePlayer.h"
@@ -26,6 +25,24 @@ char defaultMovieFileName[] = "run/movie.pmv";
 
 int main( int argc, char **argv )
 {
+	/*
+	{
+		PwMovieReader *reader = new PwMovieReader( fopen("run/movie.pmv", "r") );
+
+		uint32_t timestep;
+		uint32_t width;
+		uint32_t height;
+		uint32_t *rgbBuf;
+
+		for(uint32_t i = 1; i <= Mreader->getFrameCount(); i++)
+		{
+			reader->readFrame( i, &timestep, &width, &height, &rgbBuf );
+		}
+
+		return 0;
+	}
+	*/
+
 //	Q_INIT_RESOURCE(application);
 
 	// Create application instance.
@@ -135,7 +152,12 @@ PMPApp::PMPApp(int &argc, char** argv) : QApplication(argc, argv)
         movieFileName = defaultMovieFileName;
 
     mainMovieFile = fopen( movieFileName, "rb" );
-	indexer = new PwMovieIndexer( movieFileName );
+	if( !mainMovieFile )
+	{
+		fprintf( stderr, "Failed opening %s\n", movieFileName );
+		::exit( 1 );
+	}
+	reader = new PwMovieReader( mainMovieFile );
 
     if( mainMovieFile )
 	{
@@ -195,13 +217,8 @@ PMPApp::PMPApp(int &argc, char** argv) : QApplication(argc, argv)
 	QCoreApplication::setOrganizationDomain( "indiana.edu" );
 	QCoreApplication::setApplicationName( "pwmovieplayer" );
 	
-	mainWindow = new MainWindow( "Polyworld MoviePlayer", "Main", 0, mainMovieFile, indexer, legend, startFrame, endFrame, frameRate );
-	mainWindow->show();
-	
-	// Create playback timer
-	QTimer* idleTimer = new QTimer( mainWindow );
-	connect( idleTimer, SIGNAL( timeout() ), this, SLOT( NextFrame() ) );
-	idleTimer->start( 0 );
+	mainWindow = new MainWindow( "Polyworld MoviePlayer", "Main", 0, reader, legend, startFrame, endFrame, frameRate );
+	mainWindow->show();	
 }
 
 
@@ -220,6 +237,7 @@ PMPApp::~PMPApp()
 //---------------------------------------------------------------------------
 void PMPApp::NextFrame()
 {
+	/*
 	static uint32_t frame;
 	
 	if( !mainMovieFile )
@@ -235,4 +253,5 @@ void PMPApp::NextFrame()
 #endif
 	
 	mainWindow->NextFrame();
+	*/
 }

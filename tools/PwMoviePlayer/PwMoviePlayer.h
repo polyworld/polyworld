@@ -34,7 +34,7 @@ private slots:
 private:
 	MainWindow*	mainWindow;
 	FILE*		mainMovieFile;
-	PwMovieIndexer* indexer;
+	PwMovieReader* reader;
 };
 
 #endif

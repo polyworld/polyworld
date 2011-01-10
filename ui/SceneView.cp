@@ -32,8 +32,7 @@ TSceneView::TSceneView( QWidget* parent )
 	:	QGLWidget( parent, NULL, 0 ),
 		fScene( NULL ),
 		fSimulation( NULL ),
-		fRecordMovie( false ),
-		fMovieFile( NULL )
+		fMovieRecorder( NULL )
 {
 //	setWindowTitle( "SceneView" );
 	setMouseTracking( true );	
@@ -53,6 +52,7 @@ TSceneView::TSceneView( QWidget* parent )
 //---------------------------------------------------------------------------
 TSceneView::~TSceneView()
 {
+	delete fMovieRecorder;
 }
 
 
@@ -81,8 +81,6 @@ void TSceneView::SetSimulation(TSimulation* simulation)
 //---------------------------------------------------------------------------
 void TSceneView::Draw()
 {
-	static unsigned long frame = 0;
-	frame++;
 //	printf( "%s: frame = %lu\n", __FUNCTION__, frame );
 	
 	makeCurrent();
@@ -102,9 +100,8 @@ void TSceneView::Draw()
 	swapBuffers();
 	
 	// Record movie to disk, if desired
-	if( fRecordMovie && (frame > 1) )
-		PwRecordMovie( fMovieFile, 0, 0, width(), height() );
-		
+	if( fMovieRecorder && (fSimulation->fStep > 0) )
+		fMovieRecorder->recordFrame( (uint32_t)fSimulation->fStep );
 }
 
 
@@ -324,4 +321,17 @@ void TSceneView::DisableAA()
 	// Set up antialiasing
 	glDisable(GL_LINE_SMOOTH);
 	glDisable(GL_BLEND);
+}
+
+//---------------------------------------------------------------------------
+// TSceneView::SetMovieWriter
+//---------------------------------------------------------------------------
+void TSceneView::SetMovieWriter( PwMovieWriter *writer )
+{
+	assert( fMovieRecorder == NULL );
+
+	if( writer )
+	{
+		fMovieRecorder = new PwMovieQGLWidgetRecorder( this, writer );
+	}
 }

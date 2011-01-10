@@ -40,7 +40,7 @@ public:
 	void EnableAA();
 	void DisableAA();
 	
-	void setRecordMovie( bool recordMovie, FILE* movieFile ) { fRecordMovie = recordMovie; fMovieFile = movieFile; }
+	void SetMovieWriter( class PwMovieWriter *writer );
 	
 protected:
 	virtual void initializeGL();
@@ -68,8 +68,7 @@ private:
 	float fCameraPitch;
 	float fCameraY;
 	
-	bool fRecordMovie;
-	FILE* fMovieFile;
+	class PwMovieQGLWidgetRecorder *fMovieRecorder;
 };
 
 

@@ -25,44 +25,50 @@ class MainWindow : public QWidget
 	Q_OBJECT
 
 public:
-	MainWindow( const char* windowTitle, const char* windowSettingsNameParam, const Qt::WFlags windowFlags,
-			    FILE* movieFileParam, PwMovieIndexer* indexer,
+	MainWindow( const char* windowTitle,
+				const char* windowSettingsNameParam,
+				const Qt::WFlags windowFlags,
+				PwMovieReader* reader,
 				char** legend,
-				uint32_t startFrame, uint32_t endFrame, double frameRate );
+				uint32_t startFrame,
+				uint32_t endFrame,
+				double frameRate );
 	~MainWindow();
-	
-	void NextFrame();
 
 protected:
 	virtual void keyReleaseEvent( QKeyEvent* event );
 
 private slots:
+	void Tick();
 	void openFile();
 	void about();
 //	void aboutQt();
 
 private:
+	void SetFrame( uint32_t index );
+	void NextFrame();
+	void PrevFrame();
+
 	void CreateMenus( QMenuBar* menuBar );
 	void AddFileMenu( QMenuBar* menuBar );
 	void AddHelpMenu( QMenuBar* menuBar );
 	
-	void ReadMovieFileHeader();
 	void RestoreFromPrefs();
 	void SaveWindowState();
 	void SaveDimensions();
 	void SaveVisibility();
 	
 	GLWidget*	glWidget;
+	GLWidget::Frame frame;
 	
-	bool		paused;
-	bool		step;
-	bool        prev;
+	enum State
+	{
+		STOPPED,
+		PLAYING,
+		PAUSED
+	} state;
 	
-	FILE*		movieFile;
-	PwMovieIndexer* indexer;
-	uint32_t		movieVersion;
-	uint32_t		movieWidth;
-	uint32_t		movieHeight;
+	PwMovieReader* reader;
 	
 	QMenu*		fileMenu;
 	QMenu*		helpMenu;

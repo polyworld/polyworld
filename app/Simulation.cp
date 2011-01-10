@@ -1290,6 +1290,11 @@ void TSimulation::End( const string &reason )
 	EndCollisionsLog();
 	EndCarryLog();
 
+	if( fRecordMovie )
+	{
+		fMovieWriter->close();
+	}
+
 	{
 		barrier* b;
 		barrier::gXSortedBarriers.reset();
@@ -1848,14 +1853,15 @@ void TSimulation::Init( const char *argWorldfilePath )
 	{
 		char	movieFileName[256] = "run/movie.pmv";	// put date and time into the name TODO
 				
-		fMovieFile = fopen( movieFileName, "wb" );
-		if( !fMovieFile )
+		FILE *movieFile = fopen( movieFileName, "wb" );
+		if( !movieFile )
 		{
 			eprintf( "Error opening movie file: %s\n", movieFileName );
 			exit( 1 );
 		}
 		
-		fSceneView->setRecordMovie( fRecordMovie, fMovieFile );
+		fMovieWriter = new PwMovieWriter( movieFile );
+		fSceneView->SetMovieWriter( fMovieWriter );
 	}
 
 	InitSeparationsLog();
@@ -2216,7 +2222,7 @@ void TSimulation::InitWorld()
     fShowVision = true;
 	fStaticTimestepGeometry = false;
 	fRecordMovie = false;
-	fMovieFile = NULL;
+	fMovieWriter = NULL;
 	fRecordPerformanceStats = true;
 
     fFitI = 0;

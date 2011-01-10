@@ -10,6 +10,8 @@
 
 #define PMP_DEBUG 0
 
+#define CHECKPOINT_STRIDE 500
+
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,7 +28,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <iostream>
+
 #include <gl.h>
+#include <QGLWidget>
 
 #include "misc.h"
 #include "PwMovieUtils.h"
@@ -52,8 +57,10 @@ using namespace std;
 
 #if PMP_DEBUG
 	#define pmpPrint( x... ) { printf( "%s: ", __FUNCTION__ ); printf( x ); }
+    #define pmpdb( stmt ) stmt;
 #else
 	#define pmpPrint( x... )
+    #define pmpdb( stmt )
 #endif
 
 #if __APPLE__
@@ -64,288 +71,555 @@ using namespace std;
 	#define SwapInt16(x) bswap_16(x)
 #endif
 
-//---------------------------------------------------------------------------
-// PwRecordMovie
-//---------------------------------------------------------------------------
-void PwRecordMovie( FILE *f, long xleft, long ybottom, long width, long height )
+namespace PwMovieMetaEntry
 {
-    register uint32_t n;
-	// Note: We depend on the fact that the following static pointers
-	// will be initialized to NULL by the linker/loader
-	static uint32_t*	rgbBuf1;
-	static uint32_t*	rgbBuf2;
-	static uint32_t*	rleBuf;
-	static uint32_t*	rgbBufNew;
-	static uint32_t*	rgbBufOld;
-	static uint32_t	rgbBufSize;
-	static uint32_t	rleBufSize;
+	void Entry::dispose()
+	{
+		delete __body;
+	}
+}
 
-#ifdef PLAINRLE
-	if( !rgbBufNew )	// first time
-	{
-		PwWriteMovieHeader( f, kCurrentMovieVersion, width, height );
-		rgbBuf1 = (uint32_t*) malloc( rgbBufSize );
-		rgbBufNew = rgbBuf1;
-	}
-#else
-    if( !rgbBufNew )	// first time
-	{
-		PwWriteMovieHeader( f, kCurrentMovieVersion, width, height );
-		rgbBufSize = width * height * sizeof( *rgbBuf1 );
-		rleBufSize = rgbBufSize + 1;	// it better compress!
-		rgbBuf1 = (uint32_t*) malloc( rgbBufSize );
-		rgbBuf2 = (uint32_t*) malloc( rgbBufSize );
-		rleBuf  = (uint32_t*) malloc( rleBufSize );
-        rgbBufNew = rgbBuf1;
-	}
-    else	// all but the first time
-	{
-        register uint32_t *rgbBufsave;
-        rgbBufsave = rgbBufNew;
-        if (rgbBufOld)
-            rgbBufNew = rgbBufOld;
-        else
-            rgbBufNew = rgbBuf2;
-        rgbBufOld = rgbBufsave;
-    }
+//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
+//---
+//--- PwMovieWriter
+//---
+//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
+PwMovieWriter::PwMovieWriter( FILE *file )
+{
+#if __BIG_ENDIAN__
+	fprintf( stderr, "big endian arch not currently supported for movie files.\n" );
+	exit( 1 );
 #endif
 
-	glReadPixels( xleft, ybottom, width, height, GL_RGBA, GL_UNSIGNED_BYTE, rgbBufNew );
-    
-    rlediff4( rgbBufNew, rgbBufOld, width, height, rleBuf, rleBufSize );
+	this->file = file;
+	
+	frame = 0;
+	timestep = 1;
+	width = 0;
+	height = 0;
+	rleBuf = NULL;
+	rleBufSize = 0;
 
-    if( rgbBufOld )
-	{  // frames 2 and on
-        n = fwrite( rleBuf, 2, (int) rleBuf[0]+2, f );  // +2 to include (long) length
-		pmpPrint( "wrote %lu shorts\n", n );
-    }
-    else
-	{
-        n = fwrite( rleBuf, 4, (int) rleBuf[0]+1, f );  // +1 to include (long) length
-		pmpPrint( "wrote %lu longs\n", n );
-    }
+	// version always stored in big endian
+	header.version = htonl( kCurrentMovieVersion );
+
+	header.sizeofHeader = sizeof(header);
+	header.metaEntryCount = 0;
+	header.offsetMetaEntries = 0;
+
+	writeHeader();
 }
 
-void PwMovieIndexer::createIndexFile( const string &path_movie,
-									  uint32_t indexStride )
+PwMovieWriter::~PwMovieWriter()
 {
-	assert( sizeof(off_t) == sizeof(uint64_t) );
+	close();
 
-	FILE *fileMovie = fopen( path_movie.c_str(), "r" );
-	assert( fileMovie );
-	uint32_t movieVersion;
-	uint32_t width, height;
-	PwReadMovieHeader( fileMovie, &movieVersion, &width, &height );
-	assert( movieVersion >= 4 );
+	if( rleBuf )
+	{
+		free( rleBuf );
+		rleBuf = NULL;
+	}
+}
 
-	FILE *fileIndex = fopen( getIndexPath(path_movie).c_str(), "w" );
-	assert( fileIndex );
+void PwMovieWriter::writeFrame( uint32_t timestep,
+								uint32_t width,
+								uint32_t height,
+								uint32_t *rgbBufOld,
+								uint32_t *rgbBufNew )
+{
+	assert( timestep > 0 );
+	assert( (width > 0) && (height > 0) );
 
-	FileHeader header;
-	header.signature = 0x11223344;
-	header.sizeofHeader = sizeof(FileHeader);
-	header.sizeofEntry = sizeof(Entry);
-	header.version = 1;
-	header.width = width;
-	header.height = height;
-	header.movieVersion = movieVersion;
-	header.indexStride = indexStride;
-	header.entryCount = 0; // filled in later.
-	header.offsetEntries = 0; // filled in later.
+	frame++;
 
-	fwrite( &header, sizeof(header), 1, fileIndex );
+	bool useDiff = true;
 
-	typedef std::list<Entry> EntryList;
-	EntryList entries;
+	if( (width != this->width) || (height != this->height) )
+	{
+		useDiff = false;
+		setDimensions( width, height );
+	}
 
-	uint32_t *rgbBufFrame;
-	uint32_t *rleBuf;
-	uint32_t rgbBufSize = width * height * sizeof( *rgbBufFrame );
-	uint32_t rleBufSize = rgbBufSize + 1;
+	if( (timestep != (this->timestep + 1)) || (frame == 1) )
+	{
+		useDiff = false;
+		setTimestep( timestep );
+	}
 
-	rgbBufFrame = (uint32_t*) malloc( rgbBufSize );
-	rleBuf  = (uint32_t*) malloc( rleBufSize );
+	if( ((frame - 1) % CHECKPOINT_STRIDE) == 0 )
+	{
+		useDiff = false;
+		addCheckpoint();
+	}
 
-	for( uint32_t frame = 1; ; frame++ )
+	this->timestep = timestep;
+
+	if( useDiff )
+	{
+		writeRleDiffFrame( rgbBufOld, rgbBufNew );
+	}
+	else
+	{
+		writeRleFrame( rgbBufNew );
+	}
+}
+
+void PwMovieWriter::close()
+{
+	if( file )
 	{
 		header.frameCount = frame;
-
-		if( 0 != readrle( fileMovie, rleBuf, movieVersion, frame == 1 ) )
-		{
-			if( !feof( fileMovie ) )
-			{
-				fprintf( stderr, "Failed reading movie file.\n" );
-				exit( 1 );
-			}
-
-			// end of movie
-			break;
-		}
-
-		if( frame == 1 )
-		{
-			unrle( rleBuf, rgbBufFrame, width, height, movieVersion );
-		}
-		else
-		{
-			unrlediff4( rleBuf, rgbBufFrame, width, height, movieVersion );
-		}
-
-		if( ((frame-1) % indexStride) == 0 )
-		{
-			printf( "Indexing Frame %u...\n", frame ); fflush( stdout );
-			if( frame > 1 )
-			{
-				rleproc( rgbBufFrame, width, height, rleBuf, rleBufSize );
-			}
-
-			uint32_t rleDataSize = sizeof(uint32_t) * (rleBuf[0] + 1);
-
-			Entry entry;
-			entry.frameNumber = frame;
-			entry.offsetIndexFrame = (uint64_t)ftello( fileIndex );
-			entry.offsetMovieNextFrame = (uint64_t)ftello( fileMovie );
-			entry.sizeIndexFrame = rleDataSize;
-
-			fwrite( rleBuf, rleDataSize, 1, fileIndex );
-
-			entries.push_back( entry );
-		}
-	}
-
-	free( rgbBufFrame );
-	free( rleBuf );
-
-	header.entryCount = entries.size();
-	header.offsetEntries = ftello( fileIndex );
+		header.metaEntryCount = metaEntries.size();
+		header.offsetMetaEntries = (uint64_t)ftello( file );
 	
-	itfor( EntryList, entries, it )
-	{
-		Entry entry = *it;
-		fwrite( &entry, sizeof(entry), 1, fileIndex );
+		itfor( EntryList, metaEntries, it )
+		{
+			PwMovieMetaEntry::Entry entry = *it;
+			fwrite( &(entry.header), sizeof(entry.header), 1, file );
+			fwrite( entry.__body, entry.header.sizeBody, 1, file );
+			entry.dispose();
+		}
+
+		writeHeader();
+
+		fclose( file );
+
+		file = NULL;
+		metaEntries.clear();
 	}
-
-	fseek( fileIndex, 0, SEEK_SET );
-	fwrite( &header, sizeof(header), 1, fileIndex );
-
-	fclose( fileMovie );
-	fclose( fileIndex );
 }
 
-PwMovieIndexer::PwMovieIndexer( const string &path_movie )
+void PwMovieWriter::writeHeader()
 {
-	string path_index = getIndexPath(path_movie);
+	fseeko( file, 0, SEEK_SET );
+	fwrite( &header, sizeof(header), 1, file );
+}
 
-	struct stat _stat;
-	if( 0 != stat(path_index.c_str(), &_stat) )
+void PwMovieWriter::setDimensions( uint32_t width,
+								   uint32_t height )
+{
+	this->width = width;
+	this->height = height;
+
+	if( rleBuf ) free( rleBuf );
+	rleBufSize = 1 + width * height * sizeof(*rleBuf);
+	rleBuf = (uint32_t*) malloc( rleBufSize );
+
+	PwMovieMetaEntry::Entry entry;
+	entry.header.type = PwMovieMetaEntry::DIMENSIONS;
+	entry.header.frame = frame;
+	entry.header.sizeBody = sizeof(*entry.dimensions);
+	entry.dimensions = new PwMovieMetaEntry::Dimensions();
+	entry.dimensions->width = width;
+	entry.dimensions->height = height;
+
+	metaEntries.push_back( entry );
+}
+
+void PwMovieWriter::setTimestep( uint32_t timestep )
+{
+	PwMovieMetaEntry::Entry entry;
+	entry.header.type = PwMovieMetaEntry::TIMESTEP;
+	entry.header.frame = frame;
+	entry.header.sizeBody = sizeof(*entry.timestep);
+	entry.timestep = new PwMovieMetaEntry::Timestep();
+	entry.timestep->timestep = timestep;
+
+	metaEntries.push_back( entry );
+}
+
+void PwMovieWriter::addCheckpoint()
+{
+	PwMovieMetaEntry::Entry entry;
+	entry.header.type = PwMovieMetaEntry::CHECKPOINT;
+	entry.header.frame = frame;
+	entry.header.sizeBody = sizeof(*entry.checkpoint);
+	entry.checkpoint = new PwMovieMetaEntry::Checkpoint();
+	entry.checkpoint->offsetFrame = (uint64_t)ftello( file );
+
+	metaEntries.push_back( entry );
+}
+
+void PwMovieWriter::writeRleFrame( uint32_t *rgbBuf )
+{
+	rleproc( rgbBuf, width, height, rleBuf, rleBufSize );
+
+	uint32_t rleDataSize = sizeof(uint32_t) * (rleBuf[0] + 1);
+
+	pmpdb( cout << " writing frame to offset " << ftello( file ) << ", datasize=" << rleDataSize << ", rleBuf[0]=" << rleBuf[0] << endl );
+
+	fwrite( rleBuf, rleDataSize, 1, file );
+}
+
+void PwMovieWriter::writeRleDiffFrame( uint32_t *rgbBufOld,
+									   uint32_t *rgbBufNew )
+{
+	rlediff4( rgbBufNew, rgbBufOld, width, height, rleBuf, rleBufSize );
+
+	uint32_t rleDataSize = sizeof(uint16_t) * (rleBuf[0] + 2);
+
+	pmpdb( cout << " writing frame to offset " << ftello( file ) << endl );
+
+	fwrite( rleBuf, rleDataSize, 1, file );
+}
+
+//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
+//---
+//--- PwMovieReader
+//---
+//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
+PwMovieReader::PwMovieReader( FILE *file )
+{
+#if __BIG_ENDIAN__
+	fprintf( stderr, "big endian arch not currently supported for movie files.\n" );
+	exit( 1 );
+#endif
+
+	this->file = file;
+	frame = 0;
+	rgbBuf = NULL;
+	rleBuf = NULL;
+	width = 0;
+	height = 0;
+
+	readHeader();
+}
+
+PwMovieReader::~PwMovieReader()
+{
+	for( int type = 0; type < (int)PwMovieMetaEntry::__NTYPES; type++ )
 	{
-		createIndexFile( path_movie, 1000 );
+		itfor( FrameMetaEntryMap, metaEntries[type], it )
+		{
+			it->second->dispose();
+			delete it->second;
+		}
 	}
-
-	fileIndex = fopen( path_index.c_str(), "r" );
-	assert( fileIndex );
-
-	fread( &header, sizeof(header), 1, fileIndex );
-	
-	assert( header.signature == 0x11223344 );
-	assert( header.sizeofHeader == sizeof(FileHeader) );
-	assert( header.sizeofEntry == sizeof(Entry) );
-	assert( header.version == 1 );
-	assert( header.frameCount > 0 );
-	assert( header.indexStride > 0 );
-	assert( header.entryCount > 0 );
-	assert( header.offsetEntries > 0 );
 }
 
-PwMovieIndexer::~PwMovieIndexer()
-{
-	fclose( fileIndex );
-	fileIndex = NULL;
-}
-
-uint32_t PwMovieIndexer::getFrameCount()
+uint32_t PwMovieReader::getFrameCount()
 {
 	return header.frameCount;
 }
 
-void PwMovieIndexer::findFrame( uint32_t frame,
-								FILE *fileMovie,
-								uint32_t *rleBuf,
-								uint32_t *rgbBuf )
+void PwMovieReader::readFrame( uint32_t frame,
+							   uint32_t *ret_timestep,
+							   uint32_t *ret_width,
+							   uint32_t *ret_height,
+							   uint32_t **ret_rgbBuf )
 {
-	assert( (frame >= 1) && (frame <= header.frameCount) );
+	assert( (frame > 0) && (frame <= getFrameCount()) );
 
-	uint32_t entryNumber = (frame - 1) / header.indexStride;
-	uint64_t entryOffset = header.offsetEntries + (entryNumber * sizeof(Entry));
+	pmpdb( cout << "readFrame(" << frame << ")" << endl );
 
-	fseeko( fileIndex, (off_t)entryOffset, SEEK_SET );
-
-	Entry entry;
-	fread( &entry, sizeof(entry), 1, fileIndex );
-	assert( entry.frameNumber == (1 + entryNumber * header.indexStride) );
-	fseeko( fileIndex, (off_t)entry.offsetIndexFrame, SEEK_SET );
-	fread( rleBuf, entry.sizeIndexFrame, 1, fileIndex );
-	unrle( rleBuf, rgbBuf, header.width, header.height, header.movieVersion );
-
-	fseeko( fileMovie, (off_t)entry.offsetMovieNextFrame, SEEK_SET );
-	for( uint32_t frameSeek = entry.frameNumber + 1;
-		 frameSeek <= frame;
-		 frameSeek++ )
+	if( (this->frame == 0) || (this->frame != frame ) )
 	{
-		readrle( fileMovie, rleBuf, header.movieVersion, false );
-		unrlediff4( rleBuf, rgbBuf, header.width, header.height, header.movieVersion );
+		seekFrame( frame );
+	}
+	else
+	{
+		nextFrame();
+	}
+
+	// update timestep
+	{
+		PwMovieMetaEntry::Entry *entry = findMeta( frame,
+												   PwMovieMetaEntry::TIMESTEP,
+												   true );
+		*ret_timestep = (frame - entry->header.frame) + (entry->timestep->timestep);
+	}
+
+	*ret_width = width;
+	*ret_height = height;
+	*ret_rgbBuf = rgbBuf;	
+}
+
+void PwMovieReader::readHeader()
+{
+	fseek( file, 0, SEEK_SET );
+	fread( &header.version, sizeof(header.version), 1, file );
+	uint32_t version = ntohl( header.version );
+
+	if( version < 100 )
+	{
+		fprintf( stderr, "big endian movie files not currently supported.\n" );
+		exit( 1 );
+	}
+
+	if( version >= 106 )
+	{
+		fseek( file, 0, SEEK_SET );
+		fread( &header, sizeof(header), 1, file );
+
+		assert( header.sizeofHeader == sizeof(header) );
+		assert( header.metaEntryCount > 0 );
+		assert( header.frameCount > 0 );
+
+		pmpdb( cout << "frame count = " << header.frameCount << endl );
+
+		fseeko( file, header.offsetMetaEntries, SEEK_SET );
+
+		for( uint32_t i = 0; i < header.metaEntryCount; i++ )
+		{
+			PwMovieMetaEntry::Entry *entry = new PwMovieMetaEntry::Entry();
+			fread( &entry->header, sizeof(entry->header), 1, file );
+
+			pmpdb( cout << "entry " << i << " type=" << (int)entry->header.type << ", frame=" << entry->header.frame << ", sizeBody=" << entry->header.sizeBody << endl );
+		
+			entry->__body = new uint8_t[ entry->header.sizeBody ];
+			fread( entry->__body, entry->header.sizeBody, 1, file );
+
+			switch( entry->header.type )
+			{
+			case PwMovieMetaEntry::DIMENSIONS:
+				pmpdb( cout << "  width=" << entry->dimensions->width << ", height=" << entry->dimensions->height << endl );
+				break;
+			}
+
+			assert( entry->header.type < PwMovieMetaEntry::__NTYPES );
+			metaEntries[ entry->header.type ][ entry->header.frame ] = entry;
+		}
+	}
+	else
+	{
+		header.sizeofHeader = 0;
+		header.frameCount = ~0;
+		header.metaEntryCount = 0;
+		header.offsetMetaEntries = 0;
+
+		PwMovieMetaEntry::Entry *entry;
+
+		// Create Dimensions meta entry for frame 1
+		entry = new PwMovieMetaEntry::Entry();
+		entry->header.type = PwMovieMetaEntry::DIMENSIONS;
+		entry->header.frame = 1;
+		entry->header.sizeBody = sizeof(PwMovieMetaEntry::Dimensions);
+		entry->dimensions = new PwMovieMetaEntry::Dimensions();
+		fread( entry->dimensions, sizeof(entry->dimensions), 1, file );
+		metaEntries[ entry->header.type ][ 1 ] = entry;
+
+		// Create Checkpoint meta entry for frame 1
+		entry = new PwMovieMetaEntry::Entry();
+		entry->header.type = PwMovieMetaEntry::CHECKPOINT;
+		entry->header.frame = 1;
+		entry->header.sizeBody = sizeof(PwMovieMetaEntry::Checkpoint);
+		entry->checkpoint = new PwMovieMetaEntry::Checkpoint();
+		entry->checkpoint->offsetFrame = ftello( file );
+		metaEntries[ entry->header.type ][ 1 ] = entry;
+
+		// Create Timestep meta entry for frame 1
+		entry = new PwMovieMetaEntry::Entry();
+		entry->header.type = PwMovieMetaEntry::TIMESTEP;
+		entry->header.frame = 1;
+		entry->header.sizeBody = sizeof(PwMovieMetaEntry::Timestep);
+		entry->timestep = new PwMovieMetaEntry::Timestep();
+		entry->timestep->timestep = 1;
+		metaEntries[ entry->header.type ][ 1 ] = entry;
 	}
 }
 
-string PwMovieIndexer::getIndexPath( const string &path_movie )
+PwMovieMetaEntry::Entry *PwMovieReader::findMeta( uint32_t frame,
+												  PwMovieMetaEntry::Type type,
+												  bool searchPreviousFrames )
 {
-	return path_movie + ".idx";
-}
-
-//---------------------------------------------------------------------------
-// PwReadMovieHeader
-//---------------------------------------------------------------------------
-void PwReadMovieHeader( FILE *f, uint32_t* version, uint32_t* width, uint32_t* height )
-{
-	fread( (char*) version, sizeof( *version ), 1, f );
-	*version = ntohl( *version );	// we always write, and therefore must read, the version as big-endian, for historical reasons (all else is native endian)
-	
-	fread( (char*) width,   sizeof( *width   ), 1, f );
-	fread( (char*) height,  sizeof( *height  ), 1, f );
-	
-#if __BIG_ENDIAN__
-	if( *version > 100 )
+	FrameMetaEntryMap::iterator it;
+	FrameMetaEntryMap &map = metaEntries[ type ];
+	if( searchPreviousFrames )
 	{
-		*width = SwapInt32( *width );
-		*height = SwapInt32( *height );
+		it = map.lower_bound( frame );
 	}
-#else
-	if( *version < 100 )
+	else
 	{
-		*width = SwapInt32( *width );
-		*height = SwapInt32( *height );
+		it = map.find( frame );
 	}
-#endif
-	
-	pmpPrint( "version = %lu, width = %lu, height = %lu\n", *version, *width, *height );
+
+	if( it == map.end() )
+	{
+		return NULL;
+	}
+	else
+	{
+		return it->second;
+	}
 }
 
-
-//---------------------------------------------------------------------------
-// PwWriteMovieHeader
-//---------------------------------------------------------------------------
-void PwWriteMovieHeader( FILE *f, uint32_t hostVersion, uint32_t width, uint32_t height )
+void PwMovieReader::setDimensions( uint32_t width, uint32_t height )
 {
-	uint32_t version = htonl( hostVersion );	// we always write the version big-endian, for historical reasons (all else is native endian)
-	fwrite( &version, sizeof( version ), 1, f );
-	
-	fwrite( &width,   sizeof( width ),   1, f );
-	fwrite( &height,  sizeof( height ),  1, f );
+	this->width = width;
+	this->height = height;
 
-	pmpPrint( "version = %lu, width = %lu, height = %lu\n", hostVersion, width, height );
+	if( rleBuf ) free( rleBuf );
+	if( rgbBuf ) free( rgbBuf );
+
+	uint32_t rgbBufSize = width * height * sizeof(uint32_t);
+	uint32_t rleBufSize = rgbBufSize + 1;
+
+	rleBuf = (uint32_t *)malloc( rleBufSize );
+	rgbBuf = (uint32_t *)malloc( rgbBufSize );
 }
 
+void PwMovieReader::seekFrame( uint32_t frame )
+{
+	PwMovieMetaEntry::Entry *entryCheckpoint = findMeta( frame,
+														 PwMovieMetaEntry::CHECKPOINT,
+														 true );
 
+	fseeko( file, (off_t)entryCheckpoint->checkpoint->offsetFrame, SEEK_SET );
+	this->frame = entryCheckpoint->header.frame;
+
+	while( this->frame <= frame )
+	{
+		nextFrame();
+	}
+}
+
+void PwMovieReader::nextFrame()
+{
+	bool diff = true;
+	bool changedDimensions = false;
+
+	pmpdb( cout << "start of nextFrame(), width=" << width << ", height=" << height << endl );
+
+	// update dimensions
+	{
+		PwMovieMetaEntry::Entry *entry = findMeta( frame,
+												   PwMovieMetaEntry::DIMENSIONS,
+												   true );
+		uint32_t entryWidth = entry->dimensions->width;
+		uint32_t entryHeight = entry->dimensions->height;
+
+		if( (entryWidth != width) || (entryHeight != height) )
+		{
+			changedDimensions = true;
+			setDimensions( entryWidth, entryHeight );
+		}
+
+		// if dimensions changed at this frame, we know it's not a diff
+		if( entry->header.frame == frame )
+		{
+			diff = false;
+		}
+	}
+
+	// if this is a checkpoint, we know it's not a diff
+	if( findMeta( frame,
+				  PwMovieMetaEntry::CHECKPOINT,
+				  false ) )
+	{
+		diff = false;
+	}
+
+	if( changedDimensions )
+	{
+		assert( !diff ); // just a sanity check
+	}
+
+	pmpdb( cout << "reading frame from offset " << ftello( file ) << endl );
+
+	if( 0 != readrle( file, rleBuf, header.version, !diff ) )
+	{
+		fprintf( stderr, "readrle() failed!\n" );
+		exit( 1 );
+	}
+
+	if( diff )
+	{
+		if( header.version >= 4 )
+		{
+			unrlediff4( rleBuf, rgbBuf, width, height, header.version );
+		}
+		else if( header.version == 3 )
+		{
+			unrlediff3( rleBuf, rgbBuf, width, height, header.version );
+		}
+		else if( header.version == 2 )
+		{
+			unrlediff2( rleBuf, rgbBuf, width, height, header.version );
+		}
+	}
+	else
+	{
+		unrle( rleBuf, rgbBuf, width, height, header.version );
+	}
+
+	pmpdb( cout << "end of nextFrame(), width=" << width << ", height=" << height << endl );
+
+	frame++;
+}
+
+//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
+//---
+//--- PwMovieQGLWidgetRecorder
+//---
+//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
+PwMovieQGLWidgetRecorder::PwMovieQGLWidgetRecorder( QGLWidget *widget, PwMovieWriter *writer )
+{
+	this->widget = widget;
+	this->writer = writer;
+
+	width = 0;
+	height = 0;
+	
+	rgbBufOld = NULL;
+	rgbBufNew = NULL;
+}
+
+PwMovieQGLWidgetRecorder::~PwMovieQGLWidgetRecorder()
+{
+	if( rgbBufOld ) free( rgbBufOld );
+	if( rgbBufNew ) free( rgbBufNew );
+}
+
+void PwMovieQGLWidgetRecorder::recordFrame( uint32_t timestep )
+{
+	if( (uint32_t(widget->width()) != width) || (uint32_t(widget->height()) != height) )
+	{
+		setDimensions();
+	}
+
+	glReadPixels( 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, rgbBufNew );
+
+	writer->writeFrame( timestep, width, height, rgbBufOld, rgbBufNew );
+
+	uint32_t *rgbBufSwap = rgbBufNew;
+	rgbBufNew = rgbBufOld;
+	rgbBufOld = rgbBufSwap;
+}
+
+void PwMovieQGLWidgetRecorder::setDimensions()
+{
+	if( rgbBufOld ) free( rgbBufOld );
+	if( rgbBufNew ) free( rgbBufNew );
+
+	this->width = widget->width();
+	this->height = widget->height();
+
+	uint32_t rgbBufSize = width * height * sizeof(*rgbBufNew);
+	rgbBufOld = (uint32_t *)malloc( rgbBufSize );
+	rgbBufNew = (uint32_t *)malloc( rgbBufSize );
+}
+
+//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
+//---
+//--- Encode/Decode Functions
+//---
+//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
 void rleproc( register uint32_t *rgb,
 			  register uint32_t width,
 			  register uint32_t height,
@@ -414,8 +688,7 @@ void unrle( register uint32_t *rle,
 			len = SwapInt32( len );
 	#endif
         rgbend = rgb + len;
-		rle++;
-        if( rgbend > rgbendmax )
+		rle++;        if( rgbend > rgbendmax )
             rgbend = rgbendmax;
         currentrgb = *rle;
 		rle++;
@@ -1018,3 +1291,107 @@ double hirestime( void )
 }
 
 
+//---------------------------------------------------------------------------
+// PwRecordMovie
+//---------------------------------------------------------------------------
+void PwRecordMovie( FILE *f, long xleft, long ybottom, long width, long height )
+{
+    register uint32_t n;
+	// Note: We depend on the fact that the following static pointers
+	// will be initialized to NULL by the linker/loader
+	static uint32_t*	rgbBuf1;
+	static uint32_t*	rgbBuf2;
+	static uint32_t*	rleBuf;
+	static uint32_t*	rgbBufNew;
+	static uint32_t*	rgbBufOld;
+	static uint32_t	rgbBufSize;
+	static uint32_t	rleBufSize;
+
+#ifdef PLAINRLE
+	if( !rgbBufNew )	// first time
+	{
+		PwWriteMovieHeader( f, kCurrentMovieVersion, width, height );
+		rgbBuf1 = (uint32_t*) malloc( rgbBufSize );
+		rgbBufNew = rgbBuf1;
+	}
+#else
+    if( !rgbBufNew )	// first time
+	{
+		PwWriteMovieHeader( f, kCurrentMovieVersion, width, height );
+		rgbBufSize = width * height * sizeof( *rgbBuf1 );
+		rleBufSize = rgbBufSize + 1;	// it better compress!
+		rgbBuf1 = (uint32_t*) malloc( rgbBufSize );
+		rgbBuf2 = (uint32_t*) malloc( rgbBufSize );
+		rleBuf  = (uint32_t*) malloc( rleBufSize );
+        rgbBufNew = rgbBuf1;
+	}
+    else	// all but the first time
+	{
+        register uint32_t *rgbBufsave;
+        rgbBufsave = rgbBufNew;
+        if (rgbBufOld)
+            rgbBufNew = rgbBufOld;
+        else
+            rgbBufNew = rgbBuf2;
+        rgbBufOld = rgbBufsave;
+    }
+#endif
+
+	glReadPixels( xleft, ybottom, width, height, GL_RGBA, GL_UNSIGNED_BYTE, rgbBufNew );
+    
+    rlediff4( rgbBufNew, rgbBufOld, width, height, rleBuf, rleBufSize );
+
+    if( rgbBufOld )
+	{  // frames 2 and on
+        n = fwrite( rleBuf, 2, (int) rleBuf[0]+2, f );  // +2 to include (long) length
+		pmpPrint( "wrote %lu shorts\n", n );
+    }
+    else
+	{
+        n = fwrite( rleBuf, 4, (int) rleBuf[0]+1, f );  // +1 to include (long) length
+		pmpPrint( "wrote %lu longs\n", n );
+    }
+}
+
+//---------------------------------------------------------------------------
+// PwReadMovieHeader
+//---------------------------------------------------------------------------
+void PwReadMovieHeader( FILE *f, uint32_t* version, uint32_t* width, uint32_t* height )
+{
+	fread( (char*) version, sizeof( *version ), 1, f );
+	*version = ntohl( *version );	// we always write, and therefore must read, the version as big-endian, for historical reasons (all else is native endian)
+	
+	fread( (char*) width,   sizeof( *width   ), 1, f );
+	fread( (char*) height,  sizeof( *height  ), 1, f );
+	
+#if __BIG_ENDIAN__
+	if( *version > 100 )
+	{
+		*width = SwapInt32( *width );
+		*height = SwapInt32( *height );
+	}
+#else
+	if( *version < 100 )
+	{
+		*width = SwapInt32( *width );
+		*height = SwapInt32( *height );
+	}
+#endif
+	
+	pmpPrint( "version = %lu, width = %lu, height = %lu\n", *version, *width, *height );
+}
+
+
+//---------------------------------------------------------------------------
+// PwWriteMovieHeader
+//---------------------------------------------------------------------------
+void PwWriteMovieHeader( FILE *f, uint32_t hostVersion, uint32_t width, uint32_t height )
+{
+	uint32_t version = htonl( hostVersion );	// we always write the version big-endian, for historical reasons (all else is native endian)
+	fwrite( &version, sizeof( version ), 1, f );
+	
+	fwrite( &width,   sizeof( width ),   1, f );
+	fwrite( &height,  sizeof( height ),  1, f );
+
+	pmpPrint( "version = %lu, width = %lu, height = %lu\n", hostVersion, width, height );
+}

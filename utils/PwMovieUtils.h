@@ -5,6 +5,7 @@
 #include <stdio.h>
 
 #include <list>
+#include <map>
 #include <string>
 
 /* #define PLAINRLE */
@@ -15,7 +16,7 @@
 #ifdef PLAINRLE
 	#define kCurrentMovieVersionHost 1
 #else
-	#define kCurrentMovieVersionHost 5
+	#define kCurrentMovieVersionHost 6
 #endif
 
 #if __BIG_ENDIAN__
@@ -29,57 +30,156 @@ void PwRecordMovie( FILE *f, long xleft, long ybottom, long width, long height )
 void PwReadMovieHeader ( FILE *f, uint32_t* version, uint32_t* width, uint32_t* height );
 void PwWriteMovieHeader( FILE *f, uint32_t  version, uint32_t  width, uint32_t  height );
 
-class PwMovieIndexer
-{
- public:
-	// ------------------------------------------------------------
-	// --- WRITING
-	// ------------------------------------------------------------
-	static void createIndexFile( const std::string &path_movie, uint32_t indexStride );
-
- public:
-	// ------------------------------------------------------------
-	// --- READING
-	// ------------------------------------------------------------
-	PwMovieIndexer( const std::string &path_movie );
-	~PwMovieIndexer();
-
-	uint32_t getFrameCount();
-
-	void findFrame( uint32_t frame,
-					FILE *fileMovie,
-					uint32_t *rleBuf,
-					uint32_t *rgbBuf );
-
- private:
-	static std::string getIndexPath( const std::string &path_movie );
 
 #pragma pack(push, 1)
+struct PwMovieFileHeader
+{
+	uint32_t version;
+	uint32_t sizeofHeader;
+	uint32_t frameCount;
+	uint32_t metaEntryCount;
+	uint64_t offsetMetaEntries;
+};
+
+namespace PwMovieMetaEntry
+{
+	enum Type
+	{
+		DIMENSIONS = 0,
+		TIMESTEP,
+		CHECKPOINT,
+		__NTYPES
+	};
+
 	struct FileHeader
 	{
-		uint32_t signature;
-		uint32_t sizeofHeader;
-		uint32_t sizeofEntry;
-		uint32_t version;
+		uint8_t type;
+		uint32_t frame;
+		uint32_t sizeBody;
+	};
+
+	struct Dimensions
+	{
 		uint32_t width;
 		uint32_t height;
-		uint32_t movieVersion;
-		uint32_t frameCount;
-		uint32_t indexStride;
-		uint32_t entryCount;
-		uint64_t offsetEntries;
 	};
+
+	struct Timestep
+	{
+		uint32_t timestep;
+	};
+
+	struct Checkpoint
+	{
+		uint64_t offsetFrame;
+	};
+
 	struct Entry
 	{
-		uint32_t frameNumber;
-		uint64_t offsetIndexFrame;
-		uint64_t offsetMovieNextFrame;
-		uint32_t sizeIndexFrame;
+		FileHeader header;
+
+		union
+		{
+			uint8_t *__body;
+			Dimensions *dimensions;
+			Timestep *timestep;
+			Checkpoint *checkpoint;
+		};
+
+		void dispose();
 	};
+}
 #pragma pack(pop)
 
-	FILE *fileIndex;
-	FileHeader header;
+class PwMovieWriter
+{
+ public:
+	PwMovieWriter( FILE *file );
+	~PwMovieWriter();
+
+	void writeFrame( uint32_t timestep,
+					 uint32_t width,
+					 uint32_t height,
+					 uint32_t *rgbBufOld,
+					 uint32_t *rgbBufNew );
+
+	void close();
+
+ private:
+	void writeHeader();
+	void setDimensions( uint32_t width,
+						uint32_t height );
+	void setTimestep( uint32_t timestep );
+	void addCheckpoint();
+
+	void writeRleFrame( uint32_t *rgbBuf );
+	void writeRleDiffFrame( uint32_t *rgbBufOld, uint32_t *rgbBufNew );
+
+	FILE *file;
+	PwMovieFileHeader header;
+	uint32_t frame;
+	uint32_t timestep;
+	uint32_t width;
+	uint32_t height;
+	uint32_t *rleBuf;
+	uint32_t rleBufSize;
+	typedef std::list<PwMovieMetaEntry::Entry> EntryList;
+	EntryList metaEntries;
+};
+
+class PwMovieReader
+{
+ public:
+	PwMovieReader( FILE *file );
+	~PwMovieReader();
+
+	uint32_t getFrameCount();
+	void readFrame( uint32_t frame,
+					uint32_t *ret_timestep,
+					uint32_t *ret_width,
+					uint32_t *ret_height,
+					uint32_t **ret_rgbBuf );
+
+ private:
+	void readHeader();
+	PwMovieMetaEntry::Entry *findMeta( uint32_t frame,
+									   PwMovieMetaEntry::Type type,
+									   bool searchPreviousFrames = false );
+	void setDimensions( uint32_t width, uint32_t height );
+	void seekFrame( uint32_t frame );
+	void nextFrame();
+
+	FILE *file;
+	PwMovieFileHeader header;
+	uint32_t frame;
+	uint32_t *rgbBuf;
+	uint32_t *rleBuf;
+	uint32_t width;
+	uint32_t height;
+
+	// descending order sort so we can use lower_bound to find entry <= current frame.
+	typedef std::map<uint32_t, PwMovieMetaEntry::Entry *, std::greater<uint32_t> > FrameMetaEntryMap;
+
+	FrameMetaEntryMap metaEntries[ PwMovieMetaEntry::__NTYPES ];
+};
+
+class PwMovieQGLWidgetRecorder
+{
+ public:
+	PwMovieQGLWidgetRecorder( class QGLWidget *widget, PwMovieWriter *writer );
+	~PwMovieQGLWidgetRecorder();
+	
+	void recordFrame( uint32_t timestep );
+
+ private:
+	void setDimensions();
+
+	class QGLWidget *widget;
+	PwMovieWriter *writer;
+	uint32_t width;
+	uint32_t height;
+	uint32_t *rgbBufOld;
+	uint32_t *rgbBufNew;
 };
 
 void rleproc( register uint32_t *rgb,
