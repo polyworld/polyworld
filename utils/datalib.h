@@ -103,6 +103,7 @@ class DataLibWriter
 					 const datalib::Type coltypes[] );
 	void addRow( Variant col0, ... );
 	void endTable();
+	void flush();
 
  private:
 	void fileHeader();

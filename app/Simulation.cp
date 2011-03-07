@@ -513,6 +513,9 @@ void TSimulation::Step()
 	while( barrier::gXSortedBarriers.next( b ) )
 		b->update( fStep );
 	barrier::gXSortedBarriers.xsort();
+	
+	// Update the conditional properties
+	fConditionalProps.update( fStep );
 
 	// Update all agents, using their neurally controlled behaviors
 	{
@@ -657,7 +660,6 @@ void TSimulation::Step()
 	// -----------------------
 	// finally, maintain the world's food supply...
 	MaintainFood();
-
 
 	fTotalFoodEnergyIn += fFoodEnergyIn;
 	fTotalFoodEnergyOut += fFoodEnergyOut;
@@ -994,6 +996,7 @@ void TSimulation::Step()
 			fRecentFittest[i]->fitness = 0.0;
 			fRecentFittest[i]->complexity = 0.0;
 		}
+
 	}
 	
 	if( fRecordAdamiComplexity && ((fStep % fAdamiComplexityRecordFrequency) == 0) )		// lets compute our AdamiComplexity -- 1-bit window
@@ -1268,7 +1271,7 @@ void TSimulation::Step()
 		float camrad = fCameraAngle * DEGTORAD;
 		fCamera.settranslation((0.5+fCameraRadius*sin(camrad))*globals::worldsize, fCameraHeight*globals::worldsize,(-.5+fCameraRadius*cos(camrad))*
 globals::worldsize);
-	}	
+	}
 }
 
 //---------------------------------------------------------------------------
@@ -1301,6 +1304,8 @@ void TSimulation::End( const string &reason )
 		while( barrier::gXSortedBarriers.next( b ) )
 			delete b;
 	}
+
+	fConditionalProps.dispose();
 
 	// Stop simulation
 	printf( "Simulation stopped after step %ld\n", fStep );
@@ -1468,6 +1473,12 @@ void TSimulation::Init( const char *argWorldfilePath )
 	{
 		MKDIR( "run/events" );
 	}
+
+	if( fConditionalProps.isLogging() )
+	{
+		MKDIR( "run/condprop" );
+	}
+	fConditionalProps.init();
 
 	if( fBestSoFarBrainAnatomyRecordFrequency || fBestSoFarBrainFunctionRecordFrequency ||
 		fBestRecentBrainAnatomyRecordFrequency || fBestRecentBrainFunctionRecordFrequency ||
@@ -1739,13 +1750,14 @@ void TSimulation::Init( const char *argWorldfilePath )
 		{
 			for( int brickPatchNumber = 0; brickPatchNumber < fDomains[domainNumber].numBrickPatches; brickPatchNumber++ )
 			{
-				for( int j = 0; j < fDomains[domainNumber].fBrickPatches[brickPatchNumber].brickCount; j++ )
-				{
-					fDomains[domainNumber].fBrickPatches[brickPatchNumber].addBrick();
-				}
+				fDomains[domainNumber].fBrickPatches[brickPatchNumber].updateOn( 0 );
 			}
 		}
 	}
+
+	fEatStatistics.step.numAttempts = 0;
+	fEatStatistics.step.numFailed = 0;
+	fEatStatistics.step.ratioFailed = 0.0f;
 
     fTotalFoodEnergyIn = fFoodEnergyIn;
     fTotalFoodEnergyOut = fFoodEnergyOut;
@@ -1869,7 +1881,7 @@ void TSimulation::Init( const char *argWorldfilePath )
 	InitContactsLog();
 	InitCollisionsLog();
 	InitCarryLog();
-	
+
 	inited = true;
 }
 
@@ -2203,6 +2215,7 @@ void TSimulation::InitWorld()
     fNumberDiedFight = 0;
     fNumberDiedEdge = 0;
 	fNumberDiedSmite = 0;
+	fNumberDiedPatch = 0;
     fNumberFights = 0;
     fMaxFitness = 0.;
     fAverageFitness = 0.;
@@ -2328,9 +2341,6 @@ void TSimulation::InitWorld()
     barrier::gBarrierColor.b = 0.15;
 
 	brick::gBrickHeight = 0.5;
-	brick::gBrickColor.r = 0.6;
-	brick::gBrickColor.g = 0.2;
-	brick::gBrickColor.b = 0.2;
 	brick::gCarryBrick2Energy = 0.01;
 
 }
@@ -3082,6 +3092,10 @@ void TSimulation::Interact()
 	fNewLifes = 0;
 	fNewDeaths = 0;
 
+	fEatStatistics.step.numAttempts = 0;
+	fEatStatistics.step.numFailed = 0;
+	fEatStatistics.step.ratioFailed = 0.0f;
+
 	// first x-sort all the objects
 	objectxsortedlist::gXSortedObjects.sort();
 
@@ -3303,6 +3317,8 @@ void TSimulation::Interact()
 		Fitness( c );
 
     } // while loop on agents (c)
+
+	fEatStatistics.step.ratioFailed = float(fEatStatistics.step.numFailed) / fEatStatistics.step.numAttempts;
 }
 
 
@@ -3380,15 +3396,23 @@ void TSimulation::DeathAndStats( void )
 				if ( (c->Energy() <= 0.0)		||
 					 (c->Age() >= c->MaxAge())  ||
 					 ((!globals::edges) && ((c->x() < 0.0) || (c->x() >  globals::worldsize) ||
-											(c->z() > 0.0) || (c->z() < -globals::worldsize))) )
+											(c->z() > 0.0) || (c->z() < -globals::worldsize))) ||
+					 c->GetDeathByPatch() )
 				{
+					LifeSpan::DeathReason reason = LifeSpan::DR_NATURAL;
+
 					if (c->Age() >= c->MaxAge())
 						fNumberDiedAge++;
 					else if (c->Energy() <= 0.0)
 						fNumberDiedEnergy++;
+					else if (c->GetDeathByPatch())
+					{
+						fNumberDiedPatch++;
+						reason = LifeSpan::DR_PATCH;
+					}
 					else
 						fNumberDiedEdge++;
-					Kill( c, LifeSpan::DR_NATURAL );
+					Kill( c, LifeSpan::DR_PATCH );
 					continue; // nothing else to do for this poor schmo
 				}
 			}
@@ -4178,15 +4202,20 @@ void TSimulation::Eat( agent *c )
 {
 	bool ateBackwardFood;
 	food* f = NULL;
-	
+	bool eatAllowed = true;
+	bool eatAttempted = false;
+
 	// Just to be slightly more like the old multi-x-sorted list version of the code, look backwards first
 
 	// set the list back to the agent mark, so we can look backward from that point
 	objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point list back to c
 
-	if( IS_PREVENTED_BY_CARRY(Eat, c) )
-		return;
-
+	if( (IS_PREVENTED_BY_CARRY(Eat, c))
+		|| (c->NormalizedSpeed() > fMaxEatVelocity)
+		|| (fabs(c->NormalizedYaw()) > fMaxEatYaw) )
+	{
+		eatAllowed = false;
+	}
 
 	// look for food in the -x direction
 	ateBackwardFood = false;
@@ -4215,6 +4244,9 @@ void TSimulation::Eat( agent *c )
 			// time to check for overlap in z
 			if( fabs( f->z() - c->z() ) < ( f->radius() + c->radius() ) )
 			{
+				eatAttempted = true;
+				if( !eatAllowed )
+					break;
 				// also overlap in z, so they really interact
 				ttPrint( "step %ld: agent # %ld is eating\n", fStep, c->Number() );
 				float foodEaten = c->eat( f, fEatFitnessParameter, fEat2Consume, fEatThreshold, fStep );
@@ -4235,7 +4267,7 @@ void TSimulation::Eat( agent *c )
 	}	// backward while loop on food
 #endif // CompatibilityMode
 
-	if( !ateBackwardFood )
+	if( !ateBackwardFood && !eatAttempted )
 	{
 	#if ! CompatibilityMode
 		// set the list back to the agent mark, so we can look forward from that point
@@ -4262,6 +4294,9 @@ void TSimulation::Eat( agent *c )
 				if( fabs( f->z() - c->z() ) < (f->radius() + c->radius()) )
 	#endif
 				{
+					eatAttempted = true;
+					if( !eatAllowed )
+						break;
 					// also overlap in z, so they really interact
 					ttPrint( "step %ld: agent # %ld is eating\n", fStep, c->Number() );
 					float foodEaten = c->eat( f, fEatFitnessParameter, fEat2Consume, fEatThreshold, fStep );
@@ -4280,6 +4315,13 @@ void TSimulation::Eat( agent *c )
 			}
 		} // forward while loop on food
 	} // if( !ateBackwardFood )
+
+	if( eatAttempted )
+	{
+		fEatStatistics.step.numAttempts++;
+		if( !eatAllowed )
+			fEatStatistics.step.numFailed++;
+	}
 
 	objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point list back to c
 		
@@ -4690,6 +4732,11 @@ void TSimulation::MaintainFood()
 		for( int patch = 0; patch < fDomains[domain].numFoodPatches; patch++ )
 		{
 			fDomains[domain].fFoodPatches[patch].updateOn( fStep );
+		}
+
+		for( int patch = 0; patch < fDomains[domain].numBrickPatches; patch++ )
+		{
+			fDomains[domain].fBrickPatches[patch].updateOn( fStep );
 		}
 	}
 
@@ -5750,6 +5797,7 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 		else
 			assert( false );
 	}
+	globals::stickyEdges = doc.get( "StickyEdges" );
 	agent::gVision = doc.get( "Vision" );
 	fShowVision = doc.get( "ShowVision" );
 	fStaticTimestepGeometry = doc.get( "StaticTimestepGeometry" );
@@ -5836,6 +5884,9 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	genome::gEnableVisionPitch = doc.get( "EnableVisionPitch" );
 	agent::gMinVisionPitch = doc.get( "MinVisionPitch" );
 	agent::gMaxVisionPitch = doc.get( "MaxVisionPitch" );
+	genome::gEnableVisionYaw = doc.get( "EnableVisionYaw" );
+	agent::gMinVisionYaw = doc.get( "MinVisionYaw" );
+	agent::gMaxVisionYaw = doc.get( "MaxVisionYaw" );
 	agent::gEyeHeight = doc.get( "EyeHeight" );
 
     genome::gMinvispixels = doc.get( "MinVisionNeuronsPerGroup" );
@@ -5849,6 +5900,215 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
     fMateWait = doc.get( "MateWait" );
     agent::gInitMateWait = doc.get( "InitMateWait" );
 	fEatMateSpan = doc.get( "EatMateWait" );
+	{
+		proplib::Property &propMaxEatVelocity = doc.get( "MaxEatVelocity" );
+
+		proplib::Property &propConditions = propMaxEatVelocity.get( "Conditions" );
+		condprop::ConditionList<float> *conditions = new condprop::ConditionList<float>();
+		int nconditions = propConditions.size();
+
+		for( int i = 0; i < nconditions; i++ )
+		{
+			proplib::Property &propCondition = propConditions.get( i );
+			float value = propCondition.get( "Value" );
+			string mode = propCondition.get( "Mode" );
+
+			condprop::Condition<float> *condition;
+			if( mode == "Time" )
+			{
+				long step = propCondition.get( "Time" );
+				condition = new condprop::TimeCondition<float>( step, value );
+			}
+			else if( mode == "IntThreshold" )
+			{
+				proplib::Property &propCount = propCondition.get( "IntThreshold" );
+				string countValue = propCount.get( "Value" );
+				string opname = propCount.get( "Op" );
+				int threshold = propCount.get( "Threshold" );
+				long duration = propCount.get( "Duration" );
+				
+				const int *countPtr;
+				if( countValue == "Agents" )
+				{
+					countPtr = objectxsortedlist::gXSortedObjects.getCountPtr( AGENTTYPE );
+				}
+				else
+					assert( false );
+
+				condprop::ThresholdCondition<float,int>::Op op;
+				if( opname == "EQ" )
+					op = condprop::ThresholdCondition<float,int>::EQ;
+				else if( opname == "LT" )
+					op = condprop::ThresholdCondition<float,int>::LT;
+				else if( opname == "GT" )
+					op = condprop::ThresholdCondition<float,int>::GT;
+				else
+					assert( false );
+
+				condition = new condprop::ThresholdCondition<float,int>( countPtr,
+																		 op,
+																		 threshold,
+																		 duration,
+																		 value );
+			}
+			else if( mode == "FloatThreshold" )
+			{
+				proplib::Property &propCount = propCondition.get( "FloatThreshold" );
+				string ratioValue = propCount.get( "Value" );
+				string opname = propCount.get( "Op" );
+				float threshold = propCount.get( "Threshold" );
+				long duration = propCount.get( "Duration" );
+				
+				const float *ratioPtr;
+				if( ratioValue == "EatFailed" )
+				{
+					ratioPtr = &fEatStatistics.step.ratioFailed;
+				}
+				else
+					assert( false );
+
+				condprop::ThresholdCondition<float,float>::Op op;
+				if( opname == "EQ" )
+					op = condprop::ThresholdCondition<float,float>::EQ;
+				else if( opname == "LT" )
+					op = condprop::ThresholdCondition<float,float>::LT;
+				else if( opname == "GT" )
+					op = condprop::ThresholdCondition<float,float>::GT;
+				else
+					assert( false );
+
+				condition = new condprop::ThresholdCondition<float,float>( ratioPtr,
+																		   op,
+																		   threshold,
+																		   duration,
+																		   value );
+			}
+			else
+				assert( false );
+
+			conditions->add( condition );
+		}
+
+		condprop::Logger<float> *logger = NULL;
+		if( (bool)propMaxEatVelocity.get( "Record" ) )
+		{
+			logger = new condprop::ScalarLogger<float>("MaxEatVelocity",
+													   datalib::FLOAT);
+		}
+
+		condprop::Property<float> *property =
+			new condprop::Property<float>( &fMaxEatVelocity,
+										   &condprop::InterpolateFunction_float,
+										   conditions,
+										   logger );
+
+		fConditionalProps.add( property );
+	}
+	{
+		proplib::Property &propMaxEatYaw = doc.get( "MaxEatYaw" );
+
+		proplib::Property &propConditions = propMaxEatYaw.get( "Conditions" );
+		condprop::ConditionList<float> *conditions = new condprop::ConditionList<float>();
+		int nconditions = propConditions.size();
+
+		for( int i = 0; i < nconditions; i++ )
+		{
+			proplib::Property &propCondition = propConditions.get( i );
+			float value = propCondition.get( "Value" );
+			string mode = propCondition.get( "Mode" );
+
+			condprop::Condition<float> *condition;
+			if( mode == "Time" )
+			{
+				long step = propCondition.get( "Time" );
+				condition = new condprop::TimeCondition<float>( step, value );
+			}
+			else if( mode == "IntThreshold" )
+			{
+				proplib::Property &propCount = propCondition.get( "IntThreshold" );
+				string countValue = propCount.get( "Value" );
+				string opname = propCount.get( "Op" );
+				int threshold = propCount.get( "Threshold" );
+				long duration = propCount.get( "Duration" );
+				
+				const int *countPtr;
+				if( countValue == "Agents" )
+				{
+					countPtr = objectxsortedlist::gXSortedObjects.getCountPtr( AGENTTYPE );
+				}
+				else
+					assert( false );
+
+				condprop::ThresholdCondition<float,int>::Op op;
+				if( opname == "EQ" )
+					op = condprop::ThresholdCondition<float,int>::EQ;
+				else if( opname == "LT" )
+					op = condprop::ThresholdCondition<float,int>::LT;
+				else if( opname == "GT" )
+					op = condprop::ThresholdCondition<float,int>::GT;
+				else
+					assert( false );
+
+				condition = new condprop::ThresholdCondition<float,int>( countPtr,
+																		 op,
+																		 threshold,
+																		 duration,
+																		 value );
+			}
+			else if( mode == "FloatThreshold" )
+			{
+				proplib::Property &propCount = propCondition.get( "FloatThreshold" );
+				string ratioValue = propCount.get( "Value" );
+				string opname = propCount.get( "Op" );
+				float threshold = propCount.get( "Threshold" );
+				long duration = propCount.get( "Duration" );
+				
+				const float *ratioPtr;
+				if( ratioValue == "EatFailed" )
+				{
+					ratioPtr = &fEatStatistics.step.ratioFailed;
+				}
+				else
+					assert( false );
+
+				condprop::ThresholdCondition<float,float>::Op op;
+				if( opname == "EQ" )
+					op = condprop::ThresholdCondition<float,float>::EQ;
+				else if( opname == "LT" )
+					op = condprop::ThresholdCondition<float,float>::LT;
+				else if( opname == "GT" )
+					op = condprop::ThresholdCondition<float,float>::GT;
+				else
+					assert( false );
+
+				condition = new condprop::ThresholdCondition<float,float>( ratioPtr,
+																		   op,
+																		   threshold,
+																		   duration,
+																		   value );
+			}
+
+			else
+				assert( false );
+
+			conditions->add( condition );
+		}
+
+		condprop::Logger<float> *logger = NULL;
+		if( (bool)propMaxEatYaw.get( "Record" ) )
+		{
+			logger = new condprop::ScalarLogger<float>("MaxEatYaw",
+													   datalib::FLOAT);
+		}
+
+		condprop::Property<float> *property =
+			new condprop::Property<float>( &fMaxEatYaw,
+										   &condprop::InterpolateFunction_float,
+										   conditions,
+										   logger );
+
+		fConditionalProps.add( property );
+	}
     genome::gMinStrength = doc.get( "MinAgentStrength" );
     genome::gMaxStrength = doc.get( "MaxAgentStrength" );
     agent::gMinAgentSize = doc.get( "MinAgentSize" );
@@ -5862,6 +6122,15 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
     genome::gMaxmaxspeed = doc.get( "MaxAgentMaxSpeed" );
     agent::gSpeed2DPosition = doc.get( "MotionRate" );
     agent::gYaw2DYaw = doc.get( "YawRate" );
+	{
+		string encoding = doc.get( "YawEncoding" );
+		if( encoding == "Oppose" )
+			agent::gYawEncoding = agent::YE_OPPOSE;
+		else if( encoding == "Squash" )
+			agent::gYawEncoding = agent::YE_SQUASH;
+		else
+			assert( false );
+	}
     genome::gMinlrate = doc.get( "MinLearningRate" );
     genome::gMaxlrate = doc.get( "MaxLearningRate" );
     agent::gMinFocus = doc.get( "MinHorizontalFieldOfView" );
@@ -5947,9 +6216,9 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
     food::gFoodHeight = doc.get( "FoodHeight" );
     food::gFoodColor = doc.get( "FoodColor" );
 	brick::gBrickHeight = doc.get( "BrickHeight" );
-	brick::gBrickColor = doc.get( "BrickColor" );
     barrier::gBarrierHeight = doc.get( "BarrierHeight" );
     barrier::gBarrierColor = doc.get( "BarrierColor" );
+	barrier::gStickyBarriers = doc.get( "StickyBarriers" );
     fGroundColor = doc.get( "GroundColor" );
     fGroundClearance = doc.get( "GroundClearance" );
     fCameraColor = doc.get( "CameraColor" );
@@ -6241,6 +6510,7 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 							proplib::Property &propMaxPopGroup = propOnCondition.get( "MaxPopGroup" );
 							int maxAgents = propMaxPopGroup.get( "MaxAgents" );
 							int timeout = propMaxPopGroup.get( "Timeout" );
+							int delay = propMaxPopGroup.get( "Delay" );
 							
 							FoodPatch::MaxPopGroupOnCondition::Group *group;
 							string groupType = propMaxPopGroup.get( "Group" );
@@ -6270,7 +6540,8 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 							onCondition = new FoodPatch::MaxPopGroupOnCondition( &(fDomains[id].fFoodPatches[i]),
 																				 group,
 																				 maxAgents,
-																				 timeout );
+																				 timeout,
+																				 delay );
 						}
 						else
 						{
@@ -6325,6 +6596,8 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 					float sizeX, sizeZ;  // should be from 0.0 -> 1.0
 					float nhsize;
 					int shape, distribution, brickCount;
+					Color color;
+
 
 					centerX = propPatch.get( "CenterX" );
 					centerZ = propPatch.get( "CenterZ" );
@@ -6353,7 +6626,24 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 					}
 					nhsize = propPatch.get( "NeighborhoodSize" );
 
-					fDomains[id].fBrickPatches[i].init(centerX, centerZ, sizeX, sizeZ, brickCount, shape, distribution, nhsize, &fStage, &(fDomains[id]), id);
+					if( (bool)propPatch.get( "OverrideBrickColor" ) )
+					{
+						color = propPatch.get( "BrickColor" );
+					}
+					else
+					{
+						color = doc.get( "BrickColor" );
+					}
+
+					FoodPatch *onSyncFoodPatch = NULL;
+					int onSyncFoodPatchIndex = propPatch.get( "OnSyncFoodPatchIndex" );
+					if( onSyncFoodPatchIndex > -1 )
+					{
+						assert( onSyncFoodPatchIndex < fDomains[id].numFoodPatches );
+						onSyncFoodPatch = &( fDomains[id].fFoodPatches[ onSyncFoodPatchIndex ] );
+					}
+
+					fDomains[id].fBrickPatches[i].init(color, centerX, centerZ, sizeX, sizeZ, brickCount, shape, distribution, nhsize, &fStage, &(fDomains[id]), id, onSyncFoodPatch);
 
 				}
 			}
@@ -7004,6 +7294,9 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 	list.push_back( strdup( t ) );
 
 	sprintf( t, " -smite  = %4ld", fNumberDiedSmite );
+	list.push_back( strdup( t ) );
+
+	sprintf( t, " -patch  = %4ld", fNumberDiedPatch );
 	list.push_back( strdup( t ) );
 
     sprintf( t, "birthDenials = %ld", fBirthDenials );

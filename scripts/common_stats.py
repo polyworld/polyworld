@@ -79,20 +79,27 @@ def __get_stats( path_run, quiet = False ):
         # This can take a long time, so let the user we're not hung
         print 'Converting stats files into datalib format for run', path_run
 
-    tables = __create_tables( path_run )
+    tables = __create_tables( path_run, quiet )
 
     paths = glob.glob( os.path.join(path_run, 'stats', 'stat.*') )
     paths.sort( lambda x, y: __path2step(x) - __path2step(y) )
 
     for path in paths:
-        __add_row( tables, path )
+        __add_row( tables, path, quiet )
 
-        datalib.write( path_datalib,
-                       tables )
+    if not quiet:
+        print '\nwriting %s' % path_datalib
+
+    datalib.write( path_datalib,
+                   tables,
+                   randomAccess = False )
 
     return tables
 
-def __parse_file( path ):
+def __parse_file( path, quiet ):
+    if not quiet:
+        print '\rparsing %s' % path,
+
     regex_label = r'-?[a-zA-Z]+'
     regex_number = r'-?[0-9]+(?:\.[0-9]+)?'
     regex_equals = r'\s*(%s)\s*=\s*(%s)(\s*$|\s+[^0-9])' % (regex_label, regex_number)
@@ -138,12 +145,12 @@ def __parse_file( path ):
                         yield label, type, number
 
 
-def __create_tables( path_run ):
+def __create_tables( path_run, quiet ):
     path = os.path.join( path_run, 'stats', 'stat.1' )
 
     tables = {}
 
-    for label, type, value in __parse_file( path ):
+    for label, type, value in __parse_file( path, quiet ):
         if label == 'step':
             continue
 
@@ -157,10 +164,10 @@ def __create_tables( path_run ):
 
     return tables
 
-def __add_row( tables, path ):
+def __add_row( tables, path, quiet ):
     step = __path2step( path )
 
-    for label, type, value in __parse_file( path ):
+    for label, type, value in __parse_file( path, quiet ):
         if label == 'step':
             assert( int(value) == step )
             continue

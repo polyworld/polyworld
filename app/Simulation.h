@@ -16,6 +16,7 @@
 // Local
 #include "agent.h"
 #include "barrier.h"
+#include "condprop.h"
 #include "datalib.h"
 #include "food.h"
 #include "Scheduler.h"
@@ -95,7 +96,7 @@ struct FitStruct
 	ulong	agentID;
 	float	fitness;
 	float   complexity;
-	genome::Genome*	genes;
+	genome::Genome*genes;
 };
 typedef struct FitStruct FitStruct;
 
@@ -671,6 +672,18 @@ private:
 	long fMateWait;
 	long fMiscAgents; // number of agents born without intervening creation before miscegenation function kicks in
 	float fMateThreshold;
+	float fMaxEatVelocity;
+	float fMaxEatYaw;
+	struct EatStatistics
+	{
+		struct Step
+		{
+			long numAttempts;
+			long numFailed;
+			float ratioFailed;
+		} step;
+
+	} fEatStatistics;
 	long fEatMateSpan;
 	float fFightThreshold;
 	float fFightFraction;
@@ -687,6 +700,7 @@ private:
 	long fNumberDiedFight;
 	long fNumberDiedEdge;
 	long fNumberDiedSmite;
+	long fNumberDiedPatch;
 	long fNumberCreated;
 	long fNumberCreatedRandom;
 	long fNumberCreated1Fit;
@@ -789,6 +803,8 @@ private:
     TSetList fWorldSet;	
     gscene fScene;
     gscene fOverheadScene;
+
+	condprop::PropertyList fConditionalProps;
 };
 
 inline gcamera& TSimulation::GetCamera() { return fCamera; }

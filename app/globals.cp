@@ -11,6 +11,7 @@
 float   globals::worldsize;		// agent, food
 bool	globals::wraparound;	// agent, sceneview, simulation
 bool	globals::edges;			// agent, simulation
+bool	globals::stickyEdges;
 AbstractFile::ConcreteFileType globals::recordFileType;
 
 namespace brain
@@ -51,6 +52,7 @@ namespace genome
 	float gSeedDropExcitation;
 
 	bool gEnableVisionPitch;
+	bool gEnableVisionYaw;
 
 	float gMinStrength;
 	float gMaxStrength;

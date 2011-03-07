@@ -128,6 +128,7 @@ class barrier : public gpoly
 public:
 	static float gBarrierHeight;
 	static Color gBarrierColor;
+	static bool gStickyBarriers;
 	static bxsortedlist gXSortedBarriers;	
 
     barrier( int id, int keyFrameCount, bool recordPosition );

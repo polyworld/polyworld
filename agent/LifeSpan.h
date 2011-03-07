@@ -19,6 +19,7 @@ class LifeSpan
 	DEATH_TYPE(INVALID)							\
 		DEATH_TYPE(SIMEND)						\
 		DEATH_TYPE(SMITE)						\
+		DEATH_TYPE(PATCH)						\
 		DEATH_TYPE(NATURAL)						\
 		DEATH_TYPE(FIGHT)						\
 		DEATH_TYPE(LOCKSTEP)					\

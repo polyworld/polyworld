@@ -41,7 +41,6 @@
 
 using namespace genome;
 
-
 #define gGive2Energy gFight2Energy
 
 #pragma mark -
@@ -51,7 +50,6 @@ using namespace genome;
 // It is off by default.
 #define UniformPopulationEnergyPenalty 0
 
-#define UseLightForOpposingYawHack 0
 #define DirectYaw 0
 
 // Agent globals
@@ -90,11 +88,14 @@ float		agent::gMaxVelocity;
 float		agent::gMinMaxEnergy;
 float		agent::gMaxMaxEnergy;
 float		agent::gYaw2DYaw;
+agent::YawEncoding agent::gYawEncoding;
 float		agent::gMinFocus;
 float		agent::gMaxFocus;
 float		agent::gAgentFOV;
 float       agent::gMinVisionPitch;
 float		agent::gMaxVisionPitch;
+float       agent::gMinVisionYaw;
+float		agent::gMaxVisionYaw;
 float		agent::gEyeHeight;
 float		agent::gMaxSizeAdvantage;
 
@@ -124,6 +125,7 @@ agent::agent(TSimulation* sim, gstage* stage)
 	:	xleft(-1),  		// to show it hasn't been initialized
 		fSimulation(sim),
 		fAlive(false), 		// must grow() to be truly alive
+    	fDeathByPatch(false),
 		fMass(0.0), 		// mass - not used
 		fHeuristicFitness(0.0),  	// crude guess for keeping minimum population early on
 		fGenome(NULL),
@@ -474,10 +476,14 @@ void agent::grow( long mateWait,
 	OUTPUT(fight, Fight);
 	OUTPUT(speed, Speed);
 	OUTPUT(yaw, Yaw);
+	if( gYawEncoding == YE_OPPOSE )
+		OUTPUT(yawOppose, YawOppose);
 	OUTPUT(light, Light);
 	OUTPUT(focus, Focus);
 	if( genome::gEnableVisionPitch )
 		OUTPUT(visionPitch, VisionPitch);
+	if( genome::gEnableVisionYaw )
+		OUTPUT(visionYaw, VisionYaw);
 	if( genome::gEnableGive )
 		OUTPUT(give, Give);
 	if( genome::gEnableCarry )
@@ -923,6 +929,12 @@ void agent::UpdateVision()
 			fCamera.setpitch( pitch );
 		}
 		
+		if( genome::gEnableVisionYaw )
+		{
+			const float yaw = nerves.visionYaw->get() * (gMaxVisionYaw - gMinVisionYaw) + gMinVisionYaw;
+			fCamera.setyaw( yaw );
+		}
+		
 		fSimulation->GetAgentPOVWindow()->DrawAgentPOV( this );
 
 		debugcheck( "after DrawAgentPOV" );
@@ -943,7 +955,6 @@ void agent::UpdateBrain()
 	if( fBrainFuncFile )
 		fBrain->writeFunctional( fBrainFuncFile );
 }
-
 
 //---------------------------------------------------------------------------
 // agent::UpdateBody
@@ -993,12 +1004,20 @@ float agent::UpdateBody( float moveFitnessParam,
   #if DirectYaw
 	setyaw( nerves.yaw->get() * 360.0 );
   #else
-   #if UseLightForOpposingYawHack
-	float dyaw = (nerves.yaw->get() - nerves.light->get()) * geneCache.maxSpeed * gYaw2DYaw;
-   #else
-	float dyaw = (2.0 * nerves.yaw->get() - 1.0) * geneCache.maxSpeed * gYaw2DYaw;
-   #endif
-	addyaw(dyaw);
+	float dyaw;
+	switch(gYawEncoding)
+	{
+	case YE_OPPOSE:
+		dyaw = nerves.yaw->get() - nerves.yawOppose->get();
+		break;
+	case YE_SQUASH:
+		dyaw = 2.0 * nerves.yaw->get() - 1.0;
+		break;
+	default:
+		assert(false);
+		break;
+	}
+	addyaw( dyaw * geneCache.maxSpeed * gYaw2DYaw );
   #endif
 #endif
 
@@ -1007,7 +1026,7 @@ float agent::UpdateBody( float moveFitnessParam,
                      + nerves.mate->get()  * gMate2Energy
                      + nerves.fight->get() * gFight2Energy
                      + nerves.speed->get() * fSpeed2Energy
-                     + fabs(2.0*nerves.yaw->get() - 1.0) * fYaw2Energy
+                     + fabs(dyaw) * fYaw2Energy
                      + nerves.light->get() * gLight2Energy
                      + fBrain->BrainEnergy()
                      + gFixedEnergyDrain;
@@ -1091,39 +1110,47 @@ float agent::UpdateBody( float moveFitnessParam,
 					if( ((b->zmin() < ( z() + FF * CarryRadius())) || (b->zmin() < (LastZ() + FF * CarryRadius()))) &&
 						((b->zmax() > ( z() - FF * CarryRadius())) || (b->zmax() > (LastZ() - FF * CarryRadius()))) )
 					{
-						// also overlap in z, so there may be an intersection
-						float dist  = b->dist(     x(),     z() );
-						float disto = b->dist( LastX(), LastZ() );
-						float p;
+						if( barrier::gStickyBarriers )
+						{
+							fPosition[0] = LastX();
+							fPosition[2] = LastZ();
+						}
+						else
+						{
+							// also overlap in z, so there may be an intersection
+							float dist  = b->dist(     x(),     z() );
+							float disto = b->dist( LastX(), LastZ() );
+							float p;
 						
-						if( fabs( dist ) < FF * CarryRadius() )
-						{
-							// they actually overlap/intersect
-							if( (disto*dist) < 0.0 )
-							{   // sign change, so crossed the barrier already
-								p = fabs( dist ) + FF * CarryRadius();
-								if( disto < 0.0 ) p = -p;
-							}
-							else
+							if( fabs( dist ) < FF * CarryRadius() )
 							{
-								p = FF * CarryRadius() - fabs( dist );
-								if( dist < 0. ) p = -p;
-							}
+								// they actually overlap/intersect
+								if( (disto*dist) < 0.0 )
+								{   // sign change, so crossed the barrier already
+									p = fabs( dist ) + FF * CarryRadius();
+									if( disto < 0.0 ) p = -p;
+								}
+								else
+								{
+									p = FF * CarryRadius() - fabs( dist );
+									if( dist < 0. ) p = -p;
+								}
 
-							addz(  p * b->sina() );
-							addx( -p * b->cosa() );
+								addz(  p * b->sina() );
+								addx( -p * b->cosa() );
 
-						} // actual intersection
-						else if( (disto * dist) < 0.0 )
-						{
-							// the agent completely passed through the barrier
-							p = fabs( dist ) + FF * CarryRadius();
+							} // actual intersection
+							else if( (disto * dist) < 0.0 )
+							{
+								// the agent completely passed through the barrier
+								p = fabs( dist ) + FF * CarryRadius();
 							
-							if( disto < 0.0 )
-								p = -p;
+								if( disto < 0.0 )
+									p = -p;
 															
-							addz(  p * b->sina() );
-							addx( -p * b->cosa() );
+								addz(  p * b->sina() );
+								addx( -p * b->cosa() );
+							}
 						}
 
 						fSimulation->UpdateCollisionsLog( this, OT_BARRIER );
@@ -1205,6 +1232,12 @@ float agent::UpdateBody( float moveFitnessParam,
 
 			if( collision )
 			{
+				if( globals::stickyEdges )
+				{
+					fPosition[0] = LastX();
+					fPosition[2] = LastZ();
+				}
+
 				fSimulation->UpdateCollisionsLog( this, OT_EDGE );
 			}
 		}
@@ -1625,6 +1658,23 @@ void agent::print()
     cout.flush();
 }
 
+
+//---------------------------------------------------------------------------
+// agent::NormalizedYaw
+//---------------------------------------------------------------------------
+float agent::NormalizedYaw()
+{
+	switch(gYawEncoding)
+	{
+	case YE_OPPOSE:
+		return clamp( ((nerves.yaw->get() - nerves.yawOppose->get()) * geneCache.maxSpeed) / genome::gMaxmaxspeed, -1.0, 1.0 );
+	case YE_SQUASH:
+		return clamp( ((2.0 * nerves.yaw->get() - 1.0) * geneCache.maxSpeed) / genome::gMaxmaxspeed, -1.0, 1.0 );
+	default:
+		assert(false);
+		return 0.0f;
+	}
+}
 
 //---------------------------------------------------------------------------
 // agent::FieldOfView

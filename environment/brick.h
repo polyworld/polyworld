@@ -25,7 +25,6 @@ class brick : public gboxf
 {
  public:
 	static float gBrickHeight;
-	static Color gBrickColor;
 	static float gBrickRadius;
 	static float gCarryBrick2Energy;
 
@@ -33,8 +32,8 @@ class brick : public gboxf
 
 	BrickPatch* myBrickPatch;
 	
-	brick();
-	brick( float x, float z );
+	brick( Color color );
+	brick( Color color, float x, float z );
 	~brick();
     
 	void dump(ostream& out);
@@ -45,9 +44,9 @@ class brick : public gboxf
 	void setPatch( BrickPatch* bp );
     
  protected:
-	void initBrick();
-	void initBrick( float x, float z );
-	void initBrick( float x, float y, float z );
+	void initBrick( Color color );
+	void initBrick( Color color, float x, float z );
+	void initBrick( Color color, float x, float y, float z );
 	
 	static unsigned long NumBricks;
 	static bool BrickClassInited;

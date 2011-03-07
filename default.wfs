@@ -603,6 +603,12 @@ Domains {
                       assert  $( Timeout == -1 or Timeout > 0 )
                     }
 
+                    Delay {
+                      type    INT
+                      default 0
+                      min     0
+                    }
+
                     Group {
                       type    ENUM
                       default Domain
@@ -642,8 +648,8 @@ Domains {
       
             CenterZ {
               type    FLOAT
-              exmin   0.0
-              exmax   1.0
+              #exmin   0.0
+              #exmax   1.0
             }
       
             SizeX {
@@ -689,6 +695,51 @@ Domains {
               max     $( WorldSize ) # what should the max be? this is kind of a fudge factor, isn't it?
             }
 
+            OverrideBrickColor {
+              type    BOOL
+              default False
+            }
+
+            #
+            # Optional color override for this patch.
+            #
+            BrickColor {
+              type    OBJECT
+              default {
+                R    0.6
+                G    0.2
+                B    0.2
+              }
+            
+              properties {
+                R {
+                  type    FLOAT
+                  min     0.0
+                  max     1.0
+                }
+                G {
+                  type    FLOAT
+                  min     0.0
+                  max     1.0
+                }
+                B {
+                  type    FLOAT
+                  min     0.0
+                  max     1.0
+                }
+              }
+            }
+
+            #
+            # Index of food patch to which this brick patch's On state is linked.
+            # -1 == No sync
+            #
+            OnSyncFoodPatchIndex {
+              type    INT
+              min     -1
+              default -1
+            }
+
           } # BrickPatch properties
         } # BrickPatches[] element
       }  # BrickPatches[]
@@ -718,6 +769,22 @@ Edges { # TODO: I don't know what this is in the code.
   ]
 }
 
+#
+# Can the agents slide along the world edge?
+#
+StickyEdges {
+  type    BOOL
+  default False
+}
+
+#
+# Can the agents slide along barriers?
+#
+StickyBarriers {
+  type    BOOL
+  default False
+}
+
 AgentsAreFood {
   type    ENUM
   default True
@@ -726,6 +793,274 @@ AgentsAreFood {
   ]
   scalar {
     type    BOOL
+  }
+}
+
+MaxEatVelocity {
+  type    OBJECT
+  default {
+  } 
+  properties {
+
+    Record {
+      type    BOOL
+      default True
+    }
+
+    Conditions {
+      type    ARRAY
+      default [
+        Mode Time
+        Value 1.0
+        Time 0
+      ]
+      element {
+        type    OBJECT
+    
+        properties {
+    
+          Value {
+            type    FLOAT
+            exmin   0.0
+            max     1.0
+          }
+              
+          Mode {
+            type    ENUM
+            default IntThreshold
+            values [
+              Time
+              IntThreshold
+	      FloatThreshold
+            ]
+          }
+              
+          Time {
+            type    INT
+            default 0
+            min     0
+            max     $( MaxSteps )
+          }
+    
+          IntThreshold {
+            type    OBJECT
+            default {
+            }
+            properties {
+    
+              Value {
+                type    ENUM
+                default Agents
+                values [
+                  Agents
+                ]
+              }
+    
+              Op {
+                type    ENUM
+                default UNDEFINED
+                values [
+                  UNDEFINED
+                  EQ
+                  GT
+                  LT
+                ]
+                if $( Mode == \"IntThreshold\" ) {
+                  assert $( Op != \"UNDEFINED\" )
+                }
+              }
+                    
+              Threshold {
+                type    INT
+                default 0
+              }
+    
+              Duration {
+                type    INT
+                default 0
+                min     0
+              }
+            }
+          }
+
+          FloatThreshold {
+            type    OBJECT
+            default {
+            }
+            properties {
+    
+              Value {
+                type    ENUM
+                default EatFailed
+                values [
+                  EatFailed
+                ]
+              }
+    
+              Op {
+                type    ENUM
+                default UNDEFINED
+                values [
+                  UNDEFINED
+                  EQ
+                  GT
+                  LT
+                ]
+                if $( Mode == \"FloatThreshold\" ) {
+                  assert $( Op != \"UNDEFINED\" )
+                }
+              }
+                    
+              Threshold {
+                type    FLOAT
+                default 0
+              }
+    
+              Duration {
+                type    INT
+                default 0
+                min     0
+              }
+            }
+          }
+
+        }
+      }
+    }
+  }
+}
+
+MaxEatYaw {
+  type    OBJECT
+  default {
+  } 
+  properties {
+
+    Record {
+      type    BOOL
+      default True
+    }
+
+    Conditions {
+      type    ARRAY
+      default [
+        Mode Time
+        Value 1.0
+        Time 0
+      ]
+      element {
+        type    OBJECT
+    
+        properties {
+    
+          Value {
+            type    FLOAT
+            exmin   0.0
+            max     1.0
+          }
+              
+          Mode {
+            type    ENUM
+            default IntThreshold
+            values [
+              Time
+              IntThreshold
+	      FloatThreshold
+            ]
+          }
+              
+          Time {
+            type    INT
+            default 0
+            min     0
+            max     $( MaxSteps )
+          }
+    
+          IntThreshold {
+            type    OBJECT
+            default {
+            }
+            properties {
+    
+              Value {
+                type    ENUM
+                default Agents
+                values [
+                  Agents
+                ]
+              }
+    
+              Op {
+                type    ENUM
+                default UNDEFINED
+                values [
+                  UNDEFINED
+                  EQ
+                  GT
+                  LT
+                ]
+                if $( Mode == \"IntThreshold\" ) {
+                  assert $( Op != \"UNDEFINED\" )
+                }
+              }
+                    
+              Threshold {
+                type    INT
+                default 0
+              }
+    
+              Duration {
+                type    INT
+                default 0
+                min     0
+              }
+            }
+          }
+
+          FloatThreshold {
+            type    OBJECT
+            default {
+            }
+            properties {
+    
+              Value {
+                type    ENUM
+                default EatFailed
+                values [
+                  EatFailed
+                ]
+              }
+    
+              Op {
+                type    ENUM
+                default UNDEFINED
+                values [
+                  UNDEFINED
+                  EQ
+                  GT
+                  LT
+                ]
+                if $( Mode == \"FloatThreshold\" ) {
+                  assert $( Op != \"UNDEFINED\" )
+                }
+              }
+                    
+              Threshold {
+                type    FLOAT
+                default 0
+              }
+    
+              Duration {
+                type    INT
+                default 0
+                min     0
+              }
+            }
+          }
+
+        }
+      }
+    }
   }
 }
 
@@ -870,6 +1205,26 @@ MaxVisionPitch {
   max     90.0
 }
 
+EnableVisionYaw {
+  type    BOOL
+  default True
+  legacy  False
+}
+
+MinVisionYaw {
+  type    FLOAT
+  default -90.0
+  min     -180.0
+  max     0.0
+}
+
+MaxVisionYaw {
+  type    FLOAT
+  default 90
+  min     0
+  max     180.0
+}
+
 EyeHeight {
   type    FLOAT
   default 1.0
@@ -967,6 +1322,16 @@ YawRate {
   type    FLOAT
   default 20.0
   exmin   0.0
+}
+
+YawEncoding {
+  type    ENUM
+  values [
+    Oppose
+    Squash
+  ]
+  default Oppose
+  legacy  Squash
 }
 
 MinAgentMaxEnergy {

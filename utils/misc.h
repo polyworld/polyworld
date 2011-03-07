@@ -79,6 +79,8 @@ inline float fmin(float f1, float f2, float f3, float f4)
 inline float fmin(float f1, float f2, float f3, float f4, float f5)
     { return (f2 < f1) ? fmin(f2, f3, f4, f5) : fmin(f1, f3, f4, f5); }
 
+#define clamp(VAL, MIN, MAX) ((VAL) < (MIN) ? (MIN) : ((VAL) > (MAX) ? (MAX) : (VAL)))
+
 
 float logistic(float x, float slope);
 float biasedLogistic(float x, float bias, float slope);
@@ -97,20 +99,20 @@ int GetMaximumFiles( long *filecount );
 #define DEGTORAD 0.017453292
 
 // iterator for loop
-#define itfor(TYPE,CONT,IT)			\
-  for(TYPE::iterator				\
-	IT = (CONT).begin(),			\
-	IT##_end = (CONT).end();		\
-      IT != IT##_end;				\
-      IT++)
+#define itfor(TYPE,CONT,IT)						\
+	for(TYPE::iterator					\
+			IT = (CONT).begin(),				\
+			IT##_end = (CONT).end();			\
+		IT != IT##_end;							\
+		IT++)
 
 // const iterator for loop
-#define citfor(TYPE,CONT,IT)		\
-  for(TYPE::const_iterator			\
-	IT = (CONT).begin(),			\
-	IT##_end = (CONT).end();		\
-      IT != IT##_end;				\
-      IT++)
+#define citfor(TYPE,CONT,IT)					\
+	for(TYPE::const_iterator			\
+			IT = (CONT).begin(),				\
+			IT##_end = (CONT).end();			\
+		IT != IT##_end;							\
+		IT++)
 
 #endif
 

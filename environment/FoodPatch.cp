@@ -186,15 +186,66 @@ void FoodPatch::MaxPopGroupOnCondition::Group::validate( Group *group )
 	}
 }
 
+void FoodPatch::MaxPopGroupOnCondition::Group::findNext( long step, MaxPopGroupOnCondition *exclude )
+{
+	MaxPopGroupOnCondition *minMember = NULL;
+
+	itfor( MemberList, members, it )
+	{
+		MaxPopGroupOnCondition *member = *it;
+		if( !exclude || (member != exclude) )
+		{
+			if( minMember == NULL )
+			{
+				minMember = member;
+			}
+			else
+			{
+				long count = member->parms.patch->agentInsideCount;
+				long countMin = minMember->parms.patch->agentInsideCount;
+
+				if( (count < countMin)
+					|| ( (count == countMin) && (member->state.end < minMember->state.end) ) )
+				{
+					minMember = member;
+				}
+			}
+		}
+	}
+
+	assert( minMember );
+
+	minMember->state.start = step;
+
+	// it's a hack to do this here. we want some kind of 'death patch' infrastructure.
+	if( exclude == NULL )
+	{
+		FoodPatch *newPatch = minMember->parms.patch;
+
+		// we only do killing if it wasn't a timeout, which we can tell by a null exclude
+		agent *a;
+		objectxsortedlist::gXSortedObjects.reset();
+		while (objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&a))
+		{
+			if( newPatch->pointIsInside( a->x(), a->z(), 5 ) )
+			{
+				a->SetDeathByPatch();
+			}
+		}
+	}
+}
+
 FoodPatch::MaxPopGroupOnCondition::MaxPopGroupOnCondition( FoodPatch *patch,
 														   Group *group,
 														   int maxPopulation,
-														   int timeout )
+														   int timeout,
+														   int delay )
 {
 	parms.patch = patch;
 	parms.group = group;
 	parms.maxPopulation = maxPopulation;
 	parms.timeout = timeout;
+	parms.delay = delay;
 
 	if( parms.group->members.size() == 0 )
 	{
@@ -206,6 +257,7 @@ FoodPatch::MaxPopGroupOnCondition::MaxPopGroupOnCondition( FoodPatch *patch,
 		state.start = -1;
 	}
 	state.end = -1;
+	state.findNext = -1;
 
 	parms.group->members.push_back( this );
 }
@@ -221,13 +273,20 @@ FoodPatch::MaxPopGroupOnCondition::~MaxPopGroupOnCondition()
 
 void FoodPatch::MaxPopGroupOnCondition::updateOn( long step )
 {
-	if( (state.start > -1) && (step > state.start) )
+	if( state.findNext == step )
+	{
+		state.findNext = -1;
+		parms.group->findNext( step );
+	}
+	else if( (state.start > -1) && (step > state.start) )
 	{
 		bool isOn = true;
+		bool findImmediate = false;
 
 		if( (parms.timeout > 0) && ((step - state.start) >= parms.timeout) )
 		{
 			isOn = false;
+			findImmediate = true;
 			cout << "TIMEOUT @ " << step << "(timeout=" << parms.timeout << ")" << endl;
 		}
 		else if( parms.patch->agentInsideCount >= parms.maxPopulation )
@@ -241,31 +300,22 @@ void FoodPatch::MaxPopGroupOnCondition::updateOn( long step )
 			state.start = -1;
 			state.end = step;
 
-			MaxPopGroupOnCondition *minMember = NULL;
-
-			itfor( MemberList, parms.group->members, it )
+			if( findImmediate )
 			{
-				MaxPopGroupOnCondition *member = *it;
-				if( member != this )
-				{
-					if( (minMember == NULL)
-						|| (member->parms.patch->agentInsideCount < minMember->parms.patch->agentInsideCount) )
-					{
-						minMember = member;
-					}
-				}
+				state.findNext = -1;
+				parms.group->findNext( step, this );
 			}
-
-			assert( minMember );
-
-			minMember->state.start = step;
+			else
+			{
+				state.findNext = step + parms.delay;
+			}
 		}
 	}
 }
 
 bool FoodPatch::MaxPopGroupOnCondition::on( long step )
 {
-	return state.start != -1;
+	return (state.start != -1) && (state.start <= step);
 }
 
 bool FoodPatch::MaxPopGroupOnCondition::turnedOff( long step )

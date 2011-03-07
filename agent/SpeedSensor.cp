@@ -32,13 +32,7 @@ void SpeedSensor::sensor_update( bool print )
 #if DISABLE_PROPRIOCEPTION
 	float activation = 0;
 #else
-	float activation = self->Speed() / agent::gMaxVelocity;
-
-	// there can be some floating-point precision weirdness
-	if(activation > 1.0)
-	{
-		activation = 1;
-	}
+	float activation = self->NormalizedSpeed();
 #endif
 
 	nerve->set( activation );

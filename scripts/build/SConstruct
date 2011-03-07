@@ -38,7 +38,7 @@ def build_Polyworld(env):
                             name = '*.cp')
                        for srcdir in srcdirs])
 
-    env.BuildDir(blddir, 'src', False)
+    env.VariantDir(blddir, 'src', False)
 
     return env.Program('Polyworld',
                        relocate_paths(sources,
@@ -56,7 +56,7 @@ def build_CalcComplexity(env):
                 'src/utils/Variant.cp',
                 'src/utils/AbstractFile.cp']
 
-    env.BuildDir(blddir, 'src', False)
+    env.VariantDir(blddir, 'src', False)
 
     return env.Program('bin/CalcComplexity',
                        relocate_paths(sources,
@@ -70,7 +70,7 @@ def build_PwMoviePlayer(env):
                    name = '*.cp')
     sources += ['src/utils/PwMovieUtils.cp']
 
-    env.BuildDir(blddir, 'src', False)
+    env.VariantDir(blddir, 'src', False)
 
     return env.Program('bin/PwMoviePlayer',
                        relocate_paths(sources,
@@ -82,7 +82,7 @@ def build_rancheck(env):
 
     sources = ['src/tools/rancheck/rancheck.c']
 
-    env.BuildDir(blddir, 'src', False)
+    env.VariantDir(blddir, 'src', False)
 
     return env.Program('bin/rancheck',
                        relocate_paths(sources,
@@ -96,7 +96,7 @@ def build_proputil(env):
                    name = '*.cp')
     sources += ['src/utils/proplib.cp']
 
-    env.BuildDir(blddir, 'src', False)
+    env.VariantDir(blddir, 'src', False)
 
     return env.Program('bin/proputil',
                        relocate_paths(sources,
@@ -110,7 +110,7 @@ def build_pmvutil(env):
                    name = '*.cp')
     sources += ['src/utils/PwMovieUtils.cp']
 
-    env.BuildDir(blddir, 'src', False)
+    env.VariantDir(blddir, 'src', False)
 
     return env.Program('bin/pmvutil',
                        relocate_paths(sources,

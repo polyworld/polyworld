@@ -101,12 +101,14 @@ class FoodPatch : public Patch
 			MemberList members;
 
 			static void validate( Group *group );
+			void findNext( long step, MaxPopGroupOnCondition *exclude = NULL );
 		};
 
 		MaxPopGroupOnCondition( FoodPatch *patch,
-									 Group *group,
-									 int maxPopulation,
-									 int timeout );
+								Group *group,
+								int maxPopulation,
+								int timeout,
+								int delay );
 		virtual ~MaxPopGroupOnCondition();
 		virtual void updateOn( long step );
 		virtual bool on( long step );
@@ -120,6 +122,7 @@ class FoodPatch : public Patch
 			Group *group;
 			int maxPopulation;
 			int timeout;
+			int delay;
 		} parms;
 
 		// This is the data that changes during a sim.
@@ -127,6 +130,7 @@ class FoodPatch : public Patch
 		{
 			int start;
 			int end;
+			int findNext;
 		} state;
 	};
 

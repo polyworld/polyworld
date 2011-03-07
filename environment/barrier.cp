@@ -24,6 +24,7 @@
 bxsortedlist barrier::gXSortedBarriers;
 float barrier::gBarrierHeight;
 Color barrier::gBarrierColor;
+bool barrier::gStickyBarriers;
 
 //===========================================================================
 // KeyFrame

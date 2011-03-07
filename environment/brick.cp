@@ -25,7 +25,6 @@ using namespace std;
 
 // External globals
 float brick::gBrickHeight;
-Color brick::gBrickColor;
 float brick::gBrickRadius;
 unsigned long brick::NumBricks;
 bool brick::BrickClassInited;
@@ -40,18 +39,18 @@ float brick::gCarryBrick2Energy;
 //-------------------------------------------------------------------------------------------
 // brick::brick
 //-------------------------------------------------------------------------------------------
-brick::brick()
+brick::brick( Color color )
 {
-	initBrick();
+	initBrick( color );
 }
 
 
 //-------------------------------------------------------------------------------------------
 // brick::brick
 //-------------------------------------------------------------------------------------------
-brick::brick( float x, float z )
+brick::brick( Color color, float x, float z )
 {
-	initBrick( x, z );
+	initBrick( color, x, z );
 }
 
 
@@ -80,8 +79,9 @@ void brick::load(istream& in)
 	float x, y, z;
 	
     in >> x >> y >> z;
-
-    initBrick( x, y, z );
+	
+	assert( false ); // need to store color
+    //initBrick( x, y, z );
 }
 
 
@@ -89,25 +89,25 @@ void brick::load(istream& in)
 //-------------------------------------------------------------------------------------------
 // brick::initBrick
 //-------------------------------------------------------------------------------------------
-void brick::initBrick()
+void brick::initBrick( Color color )
 {
-	initBrick( randpw() * globals::worldsize, randpw() * globals::worldsize );
+	initBrick( color, randpw() * globals::worldsize, randpw() * globals::worldsize );
 }
 
 
 //-------------------------------------------------------------------------------------------
 // brick::initBrick
 //-------------------------------------------------------------------------------------------
-void brick::initBrick( float x, float z )
+void brick::initBrick( Color color, float x, float z )
 {
-	initBrick( x, 0.5 * gBrickHeight, z );
+	initBrick( color, x, 0.5 * gBrickHeight, z );
 }
  
 
 //-------------------------------------------------------------------------------------------
 // brick::initBrick
 //-------------------------------------------------------------------------------------------
-void brick::initBrick( float x, float y, float z )
+void brick::initBrick( Color color, float x, float y, float z )
 {
 	if( !BrickClassInited )
 		InitBrickClass();
@@ -123,7 +123,7 @@ void brick::initBrick( float x, float y, float z )
 	
 	setlen( gBrickHeight, gBrickHeight, gBrickHeight );
 	
-	setcolor( gBrickColor );
+	setcolor( color );
 }
  
 

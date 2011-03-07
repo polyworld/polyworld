@@ -1,13 +1,14 @@
 #!/bin/bash
 
+if [ "${1:0:1}" == "-" ]; then
+    opts="$1"
+    shift
+fi
+
 if [ -z "$1" ]; then
     runs=run
 else
-    if [ "${1:0:1}" == "-" ]; then
-	opts="$1"
-	shift
-    fi
-    runs="$*"
+    runs=$*
 fi
 
 plot a $opts motion/position/barriers/position_0.txt Positions Time Z2 $runs

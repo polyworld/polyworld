@@ -184,11 +184,16 @@ GenomeSchema *GenomeUtil::createSchema()
 	OUTPUT( Fight );
 	OUTPUT( Speed );
 	OUTPUT( Yaw );
+	if( agent::gYawEncoding == agent::YE_OPPOSE )
+		OUTPUT( YawOppose );
 	OUTPUT( Light );
 	OUTPUT( Focus );
 
 	if( genome::gEnableVisionPitch )
 		OUTPUT( VisionPitch );
+
+	if( genome::gEnableVisionYaw )
+		OUTPUT( VisionYaw );
 
 	if( genome::gEnableGive )
 		OUTPUT( Give );

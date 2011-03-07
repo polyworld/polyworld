@@ -59,6 +59,7 @@ public:
 	
 	enum BodyGreenChannel { BGC_ID, BGC_LIGHT, BGC_CONST };
 	enum NoseColor { NC_LIGHT, NC_CONST };
+	enum YawEncoding { YE_SQUASH, YE_OPPOSE };
 
 	static float	gAgentHeight;	
 	static float	gMinAgentSize;
@@ -86,11 +87,14 @@ public:
 	static float	gMinMaxEnergy;
 	static float	gMaxMaxEnergy;
 	static float	gYaw2DYaw;
+	static YawEncoding gYawEncoding;
 	static float	gMinFocus;
 	static float	gMaxFocus;
 	static float	gAgentFOV;
 	static float    gMinVisionPitch;
 	static float    gMaxVisionPitch;
+	static float    gMinVisionYaw;
+	static float    gMaxVisionYaw;
 	static float    gEyeHeight;
 	static float	gMaxSizeAdvantage;
 	static BodyGreenChannel gBodyGreenChannel;
@@ -154,6 +158,8 @@ public:
     float VelocityZ();
 	float Speed();
 	float MaxSpeed();
+	float NormalizedSpeed();
+	float NormalizedYaw();
     float Mass();
     float SizeAdvantage();
     float Energy();
@@ -186,6 +192,8 @@ public:
     bool Alive() const;
     long Index() const;
 	LifeSpan* GetLifeSpan();
+	bool GetDeathByPatch();
+	void SetDeathByPatch();
 	Brain* GetBrain();
 	Retina* GetRetina();
 //	gscene& agent::GetScene();
@@ -246,6 +254,7 @@ protected:
     long fLastMate;
 	long fLastEat;
 	LifeSpan fLifeSpan;
+	bool fDeathByPatch;
     
     float fEnergy;
     float fFoodEnergy;
@@ -305,9 +314,11 @@ protected:
 		Nerve *fight;
 		Nerve *speed;
 		Nerve *yaw;
+		Nerve *yawOppose;
 		Nerve *light;
 		Nerve *focus;
 		Nerve *visionPitch;
+		Nerve *visionYaw;
 		Nerve *give;
 		Nerve *pickup;
 		Nerve *drop;
@@ -342,6 +353,7 @@ inline float agent::VelocityY() { return fVelocity[1]; }
 inline float agent::VelocityZ() { return fVelocity[2]; }
 inline float agent::Speed() { return fSpeed; }
 inline float agent::MaxSpeed() { return fMaxSpeed; }
+inline float agent::NormalizedSpeed() { return min( 1.0f, Speed() / agent::gMaxVelocity ); }
 inline float agent::Mass() { return fMass; }
 inline float agent::SizeAdvantage() { return fSizeAdvantage; }
 inline float agent::Energy() { return fEnergy; }
@@ -376,6 +388,8 @@ inline void agent::Domain(short id) { fDomain = id; }
 inline bool agent::Alive() const { return fAlive; }
 inline long agent::Index() const { return fIndex; }
 inline LifeSpan* agent::GetLifeSpan() { return &fLifeSpan; }
+inline bool agent::GetDeathByPatch() { return fDeathByPatch; }
+inline void agent::SetDeathByPatch() { fDeathByPatch = true; }
 inline Brain* agent::GetBrain() { return fBrain; }
 inline Retina* agent::GetRetina() { return fRetina; }
 inline gscene& agent::GetScene() { return fScene; }

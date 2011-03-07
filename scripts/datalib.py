@@ -298,8 +298,11 @@ def write( path,
 
             if colformat == 'fixed':
                 linelist = ['   ']
-        
-                for data, width in iterators.IteratorUnion(iter(row), iter(col_widths)):
+
+                ncols = len(col_widths)
+                for icol in range(ncols):
+                    width = col_widths[icol]
+                    data = table.columns()[icol].get( row.index )
                     format = '%-' + str(width) + 's'
                     linelist.append(format % data)
         

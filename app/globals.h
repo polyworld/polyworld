@@ -46,6 +46,7 @@ public:
 	static float	worldsize;
 	static bool		wraparound;
 	static bool		edges;
+	static bool     stickyEdges;
 	static AbstractFile::ConcreteFileType recordFileType;
 };
 
@@ -143,6 +144,7 @@ namespace genome
 	extern float gSeedDropExcitation;
 
 	extern bool gEnableVisionPitch;
+	extern bool gEnableVisionYaw;
 
     extern float gMinStrength;
     extern float gMaxStrength;
