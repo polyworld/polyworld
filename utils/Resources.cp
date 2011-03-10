@@ -75,6 +75,11 @@ void Resources::parseWorldFile( proplib::Document **ret_docWorldFile,
 		docWorldFile = proplib::Parser::parseFile( worldfilePath.c_str() );
 	}
 
+	if( exists( "./.dumpwf" ) )
+	{
+		docWorldFile->write( cout );
+	}
+
 	schemaPath = "./default.wfs";
 
 	proplib::Document *docSchema = proplib::Parser::parseFile( schemaPath.c_str() );
