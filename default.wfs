@@ -894,6 +894,8 @@ MaxEatVelocity {
                 default EatFailed
                 values [
                   EatFailed
+                  EatFailedYaw
+                  EatFailedVel
                 ]
               }
     
@@ -1028,6 +1030,8 @@ MaxEatYaw {
                 default EatFailed
                 values [
                   EatFailed
+                  EatFailedYaw
+                  EatFailedVel
                 ]
               }
     

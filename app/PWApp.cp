@@ -2,6 +2,8 @@
 #include "PWApp.h"
 //#include "SceneView.h"
 
+#include <limits.h>
+
 // QT
 #include <qapplication.h>
 #include <qgl.h>
@@ -14,6 +16,8 @@
 #include <qtimer.h>
 
 #include <QDesktopWidget>
+#include <QInputDialog>
+#include <QMessageBox>
 
 // Local
 #include "agent.h"
@@ -223,8 +227,9 @@ TSceneWindow::TSceneWindow( const char *worldfilePath )
 
 
 	// Add menus using built-in menubar()
-	AddFileMenu();    
-	AddEditMenu();        
+	//AddFileMenu();    
+	//AddEditMenu();        
+	AddRunMenu();
 	AddWindowMenu();
 	AddHelpMenu();
 	        	
@@ -289,7 +294,10 @@ TSimulation *TSceneWindow::GetSimulation()
 //---------------------------------------------------------------------------
 void TSceneWindow::closeEvent(QCloseEvent* ce)
 {
-	ce->accept();
+	if( !exitOnUserConfirm() )
+	{
+		ce->ignore();
+	}
 }
 
 //---------------------------------------------------------------------------
@@ -422,6 +430,20 @@ void TSceneWindow::AddEditMenu()
 
 
 //---------------------------------------------------------------------------
+// TSceneWindow::AddRunMenu
+//---------------------------------------------------------------------------
+void TSceneWindow::AddRunMenu()
+{
+	// Run menu
+	QMenu* menu = new QMenu( "&Run", this );
+	menuBar()->addMenu( menu );
+	
+	menu->addAction( "End At &Timestep...", this, SLOT(endAtTimestep()));
+	menu->addAction( "End &Now", this, SLOT(endNow()));
+}
+
+
+//---------------------------------------------------------------------------
 // TSceneWindow::AddWindowMenu
 //---------------------------------------------------------------------------
 void TSceneWindow::AddWindowMenu()
@@ -443,6 +465,51 @@ void TSceneWindow::AddWindowMenu()
 	tileAllWindowsAct = fWindowsMenu->addAction("Tile Windows", this, SLOT(TileAllWindows()));
 }
 
+//---------------------------------------------------------------------------
+// TSceneWindow::endAtTimestep
+//---------------------------------------------------------------------------
+void TSceneWindow::endAtTimestep()
+{
+	bool promptAgain;
+	int defaultValue = fSimulation->GetMaxSteps();
+
+	do
+	{
+		promptAgain = false;
+
+		bool ok;
+		int requestedTimestep =
+			QInputDialog::getInt( this,
+								  "Enter Final Timestep",
+								  "On what timestep should Polyworld end?",
+								  defaultValue,
+								  1,
+								  INT_MAX,
+								  1,
+								  &ok );
+
+		if( ok )
+		{
+			string result = fSimulation->EndAt( requestedTimestep );
+			if( result != "" )
+			{
+				QMessageBox::critical( this,
+									   "Failed Setting End Timestep",
+									   result.c_str() );
+				promptAgain = true;
+				defaultValue = requestedTimestep;
+			}
+		}
+	} while( promptAgain );
+}
+
+//---------------------------------------------------------------------------
+// TSceneWindow::endNow
+//---------------------------------------------------------------------------
+void TSceneWindow::endNow()
+{
+	exitOnUserConfirm();
+}
 
 //---------------------------------------------------------------------------
 // TSceneWindow::ToggleEnergyWindow
@@ -808,6 +875,30 @@ void TSceneWindow::RestoreFromPrefs()
 	SaveWindowState();		
 }
 
+//---------------------------------------------------------------------------
+// TSceneWindow::exitOnUserConfirm
+//---------------------------------------------------------------------------
+bool TSceneWindow::exitOnUserConfirm()
+{
+	QMessageBox::StandardButton response =
+		QMessageBox::question( this,
+							   "Confirm End Polyworld",
+							   "Really end Polyworld now?",
+							   QMessageBox::Yes | QMessageBox::Cancel,
+							   QMessageBox::Yes );
+
+	if( response == QMessageBox::Yes )
+	{
+		fSimulation->End( "userExit" );
+
+		// we'll never exec this. app exits.
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
 
 //---------------------------------------------------------------------------
 // TSceneWindow::timeStep

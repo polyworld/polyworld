@@ -1317,6 +1317,23 @@ void TSimulation::End( const string &reason )
 	exit( 0 );
 }
 
+//---------------------------------------------------------------------------
+// TSimulation::EndAt
+//
+// Returns non-empty string on error.
+//---------------------------------------------------------------------------
+string TSimulation::EndAt( long timestep )
+{
+	if( timestep < fStep )
+		return "Invalid end timestep. Simulation already beyond.";
+	
+	fMaxSteps = timestep;
+
+	cout << "End At " << timestep << endl;
+
+	return "";
+}
+
 
 //---------------------------------------------------------------------------
 // TSimulation::Init
@@ -1755,9 +1772,7 @@ void TSimulation::Init( const char *argWorldfilePath )
 		}
 	}
 
-	fEatStatistics.step.numAttempts = 0;
-	fEatStatistics.step.numFailed = 0;
-	fEatStatistics.step.ratioFailed = 0.0f;
+	fEatStatistics.Init();
 
     fTotalFoodEnergyIn = fFoodEnergyIn;
     fTotalFoodEnergyOut = fFoodEnergyOut;
@@ -3092,9 +3107,7 @@ void TSimulation::Interact()
 	fNewLifes = 0;
 	fNewDeaths = 0;
 
-	fEatStatistics.step.numAttempts = 0;
-	fEatStatistics.step.numFailed = 0;
-	fEatStatistics.step.ratioFailed = 0.0f;
+	fEatStatistics.StepBegin();
 
 	// first x-sort all the objects
 	objectxsortedlist::gXSortedObjects.sort();
@@ -3318,7 +3331,7 @@ void TSimulation::Interact()
 
     } // while loop on agents (c)
 
-	fEatStatistics.step.ratioFailed = float(fEatStatistics.step.numFailed) / fEatStatistics.step.numAttempts;
+	fEatStatistics.StepEnd();
 }
 
 
@@ -4203,6 +4216,8 @@ void TSimulation::Eat( agent *c )
 	bool ateBackwardFood;
 	food* f = NULL;
 	bool eatAllowed = true;
+	bool eatFailedYaw = false;
+	bool eatFailedVel = false;
 	bool eatAttempted = false;
 
 	// Just to be slightly more like the old multi-x-sorted list version of the code, look backwards first
@@ -4210,11 +4225,19 @@ void TSimulation::Eat( agent *c )
 	// set the list back to the agent mark, so we can look backward from that point
 	objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point list back to c
 
-	if( (IS_PREVENTED_BY_CARRY(Eat, c))
-		|| (c->NormalizedSpeed() > fMaxEatVelocity)
-		|| (fabs(c->NormalizedYaw()) > fMaxEatYaw) )
+	if( IS_PREVENTED_BY_CARRY(Eat, c) )
 	{
 		eatAllowed = false;
+	}
+	if( c->NormalizedSpeed() > fMaxEatVelocity )
+	{
+		eatAllowed = false;
+		eatFailedVel = true;
+	}
+	if( fabs(c->NormalizedYaw()) > fMaxEatYaw )
+	{
+		eatAllowed = false;
+		eatFailedYaw = true;
 	}
 
 	// look for food in the -x direction
@@ -4318,9 +4341,7 @@ void TSimulation::Eat( agent *c )
 
 	if( eatAttempted )
 	{
-		fEatStatistics.step.numAttempts++;
-		if( !eatAllowed )
-			fEatStatistics.step.numFailed++;
+		fEatStatistics.AgentEatAttempt( eatAllowed, eatFailedYaw, eatFailedVel );
 	}
 
 	objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point list back to c
@@ -5959,13 +5980,7 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 				float threshold = propCount.get( "Threshold" );
 				long duration = propCount.get( "Duration" );
 				
-				const float *ratioPtr;
-				if( ratioValue == "EatFailed" )
-				{
-					ratioPtr = &fEatStatistics.step.ratioFailed;
-				}
-				else
-					assert( false );
+				const float *ratioPtr = fEatStatistics.GetProperty( ratioValue );
 
 				condprop::ThresholdCondition<float,float>::Op op;
 				if( opname == "EQ" )
@@ -6063,13 +6078,7 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 				float threshold = propCount.get( "Threshold" );
 				long duration = propCount.get( "Duration" );
 				
-				const float *ratioPtr;
-				if( ratioValue == "EatFailed" )
-				{
-					ratioPtr = &fEatStatistics.step.ratioFailed;
-				}
-				else
-					assert( false );
+				const float *ratioPtr = fEatStatistics.GetProperty( ratioValue );
 
 				condprop::ThresholdCondition<float,float>::Op op;
 				if( opname == "EQ" )
