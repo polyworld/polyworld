@@ -1090,7 +1090,7 @@ namespace proplib
 				free( *it );
 			}
 			tokens.clear();
-			delete line;
+			free( line );
 		}
 
 		if( nodeStack.size() > 1 )
@@ -1352,7 +1352,9 @@ namespace proplib
 			itfor( SegmentList, contentSegments, it )
 			{
 				int n = (it->second - it->first) + 1;
-				memcpy( tail, line + it->first, n );
+				char segment[n];
+				memcpy( segment, line + it->first, n );
+				memcpy( tail, segment, n );
 				tail += n;
 			}
 
