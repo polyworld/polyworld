@@ -1,0 +1,356 @@
+MaxSteps 1000000
+
+MaxEatVelocity {
+  Record False	       
+  Conditions [
+    CouplingRange Begin
+    Value 1.0
+    Mode Time
+    Time 0
+  ,
+    Value 1.0
+    Mode FloatThreshold
+    FloatThreshold {
+      Value     EatFailedVel
+      Op        GT
+      Threshold 0.90
+      Duration  3000
+    }
+  ,    
+    CouplingRange End
+    Value 0.01
+    Mode FloatThreshold
+    FloatThreshold {
+      Value     EatFailedVel
+      Op        LT
+      Threshold 0.6
+      Duration  3000
+    }
+  ]
+}
+
+MaxEatYaw {
+  Record False	       
+  Conditions [
+    CouplingRange Begin
+    Value 1.0
+    Mode Time
+    Time 0
+  ,
+    Value 1.0
+    Mode FloatThreshold
+    FloatThreshold {
+      Value     EatFailedYaw
+      Op        GT
+      Threshold 0.90
+      Duration  3000
+    }
+  ,    
+    CouplingRange End
+    Value 0.01
+    Mode FloatThreshold
+    FloatThreshold {
+      Value     EatFailedYaw
+      Op        LT
+      Threshold 0.6
+      Duration  3000
+    }
+  ]
+}
+
+EnableCarry False
+CarryBricks False
+CarryFood True
+CarryAgents False
+
+NeuronModel T
+
+EnergyUseNeurons 0.0
+EnergyUseSynapses 0.0
+
+#MaxLearningRate 0.3
+
+InitAgents 180
+SeedAgents 0
+
+#EatMateWait 200
+
+StickyEdges False
+StickyBarriers False
+
+RecordMovie True
+
+MinInternalNeuralGroups 0
+MaxInternalNeuralGroups 5
+
+EnableVisionPitch True
+EyeHeight $( 1.0 if EnableVisionPitch else 0.5 )
+
+EnableVisionYaw True
+
+FoodHeight 2.0
+
+BrickHeight 3.0
+SolidBricks True
+
+BarrierHeight 4.0
+
+EnableGive False
+FightMultiplier 1.0
+
+AgentsAreFood False
+Barriers [
+  #
+  # X = 33.33
+  #
+  KeyFrames [
+    CouplingRange Begin
+    Time 0
+    X1 33.33
+    X2 33.33
+    Z1 -100.0
+    Z2 -100.0
+  ,
+    Mode Count
+    Count {
+      Value Agents
+      Op LT
+      Threshold 100
+      Duration 3000
+    }
+    X1 33.33
+    X2 33.33
+    Z1 -100.0
+    Z2 -100.0
+  ,
+    Mode Count
+    Count {
+      Value Agents
+      Op LT
+      Threshold 110
+      Duration 6000
+    }
+    X1 33.33
+    X2 33.33
+    Z1 -100.0
+    Z2 -80.0
+  ,
+    CouplingRange End
+    Mode Count
+    Count {
+      Value Agents
+      Op GT
+      Threshold 150
+      Duration 6000
+    }
+    X1 33.33
+    X2 33.33
+    Z1 -100.0
+    Z2 -20.0
+  ]
+,
+  #
+  # X = 66.67
+  #
+  KeyFrames [
+    CouplingRange Begin
+    Time 0
+    X1 66.67
+    X2 66.67
+    Z1 -100.0
+    Z2 -100.0
+  ,
+    Mode Count
+    Count {
+      Value Agents
+      Op LT
+      Threshold 100
+      Duration 3000
+    }
+    X1 66.67
+    X2 66.67
+    Z1 -100.0
+    Z2 -100.0
+  ,
+    Mode Count
+    Count {
+      Value Agents
+      Op LT
+      Threshold 110
+      Duration 6000
+    }
+    X1 66.67
+    X2 66.67
+    Z1 -100.0
+    Z2 -80.0
+  ,
+    CouplingRange End
+    Mode Count
+    Count {
+      Value Agents
+      Op GT
+      Threshold 150
+      Duration 6000
+    }
+    X1 66.67
+    X2 66.67
+    Z1 -100.0
+    Z2 -20.0
+  ]
+]
+
+Domains [
+  BrickPatches [
+    BrickCount 120
+    CenterX 0.5
+    CenterZ 0.999
+    SizeX 1.0
+    SizeZ 0.001
+    OnSyncFoodPatchIndex -1
+    OverrideBrickColor True
+    BrickColor {
+      R 0.4
+      G 0.4
+      B 0.4
+    }
+  ,
+    BrickCount 120
+    CenterX 0.5
+    CenterZ -0.05
+    SizeX 1.0
+    SizeZ 0.01
+    OnSyncFoodPatchIndex 0
+    OverrideBrickColor True
+    BrickColor {
+      R 0.2
+      G 0.2
+      B 0.8
+    }
+  ,
+    BrickCount 120
+    CenterX 0.5
+    CenterZ -0.05
+    SizeX 1.0
+    SizeZ 0.01
+    OnSyncFoodPatchIndex 1
+    OverrideBrickColor True
+    BrickColor {
+      R 0.8
+      G 0.2
+      B 0.8
+    }
+  ,
+    BrickCount 120
+    CenterX 0.5
+    CenterZ -0.05
+    SizeX 1.0
+    SizeZ 0.01
+    OnSyncFoodPatchIndex 2
+    OverrideBrickColor True
+    BrickColor {
+      R 0.8
+      G 0.2
+      B 0.2
+    }
+
+  ]
+  CenterX 0.5
+  CenterZ 0.5
+  FoodPatches [
+    CenterX 0.166667
+    CenterZ 0.25
+    FoodFraction 0.333333
+    FoodRate 0.1
+    InitFoodFraction 1.0
+    MaxFoodFraction 1.0
+    MaxFoodGrownFraction 1.0
+    MinFoodFraction 1.0
+    OnCondition {
+      Mode MaxPopGroup
+      MaxPopGroup {
+        Group World
+	MaxAgents 200
+	Timeout 2000
+	Delay 200
+      }
+    }
+    RemoveFood True
+    SizeX 0.333333
+    SizeZ 0.5
+  ,
+    CenterX 0.5
+    CenterZ 0.25
+    FoodFraction 0.333333
+    FoodRate 0.1
+    InitFoodFraction 1.0
+    MaxFoodFraction 1.0
+    MaxFoodGrownFraction 1.0
+    MinFoodFraction 1.0
+    OnCondition {
+      Mode MaxPopGroup
+      MaxPopGroup {
+        Group World
+	MaxAgents 200
+	Timeout 2000
+	Delay 200
+      }
+    }
+    RemoveFood True
+    SizeX 0.333333
+    SizeZ 0.5
+  ,
+    CenterX 0.833333
+    CenterZ 0.25
+    FoodFraction 0.333333
+    FoodRate 0.1
+    InitFoodFraction 1.0
+    MaxFoodFraction 1.0
+    MaxFoodGrownFraction 1.0
+    MinFoodFraction 1.0
+    OnCondition {
+      Mode MaxPopGroup
+      MaxPopGroup {
+        Group World
+	MaxAgents 200
+	Timeout 2000
+	Delay 200
+      }
+    }
+    RemoveFood True
+    SizeX 0.333333
+    SizeZ 0.5
+  ]
+  FoodRate 0.1
+  InitAgentsFraction 1.0
+  InitFoodFraction 1.0
+  InitSeedsFraction 1.0
+  MaxAgentsFraction 1.0
+  MaxFoodFraction 1.0
+  MaxFoodGrownFraction 1.0
+  MinAgentsFraction 1.0
+  MinFoodFraction 1.0
+  ProbabilityOfMutatingSeeds 1.0
+  SizeX 1.0
+  SizeZ 1.0
+]
+MaxFood 90
+MinMateEnergyFraction 0.5
+NumDepletionSteps 100
+PairFrequency 1
+RatioBarrierPositions False
+SeedMutationProbability 1.0
+
+#*
+RecordPosition False
+BrainAnatomyRecordAll False
+BrainFunctionRecordAll False
+BrainAnatomyRecordSeeds False
+BrainFunctionRecordSeeds False
+RecordGeneStats False
+RecordGenomes False
+RecordSeparations False
+BestSoFarBrainAnatomyRecordFrequency 0
+BestSoFarBrainFunctionRecordFrequency 0
+BestRecentBrainAnatomyRecordFrequency 0
+BestRecentBrainFunctionRecordFrequency 0
+*#
