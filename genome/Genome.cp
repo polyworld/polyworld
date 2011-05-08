@@ -61,7 +61,7 @@ Genome::Genome( GenomeSchema *schema,
 
 Genome::~Genome()
 {
-	delete mutable_data ;
+	delete [] mutable_data ;
 }
 
 Gene *Genome::gene( const char *name )

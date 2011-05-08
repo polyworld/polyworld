@@ -54,6 +54,20 @@ void SpikingModel::init_derived( float initial_activation )
 	}
 
 	scale_latest_spikes = genes->get( "ScaleLatestSpikes" );
+
+	if(brain::gNeuralValues.enableSpikingGenes == false) {
+        /*
+		  spikingGeneA = NULL;
+		  spikingGeneB = NULL;
+		  spikingGeneC = NULL;
+		  spikingGeneD = NULL;
+        */
+	} else {
+        spikingGeneA = genes->gene("SpikingParameterA");
+        spikingGeneB = genes->gene("SpikingParameterB");
+        spikingGeneC = genes->gene("SpikingParameterC");
+        spikingGeneD = genes->gene("SpikingParameterD");
+    }
 }
 
 void SpikingModel::set_neuron( int index,
@@ -68,6 +82,20 @@ void SpikingModel::set_neuron( int index,
 												  startsynapses,
 												  endsynapses );
 	Neuron &n = neuron[index];
+
+
+	if(brain::gNeuralValues.enableSpikingGenes == false) {
+		n.SpikingParameter_a = 0.02;
+		n.SpikingParameter_b = 0.2;
+		n.SpikingParameter_c = -65;
+		n.SpikingParameter_d = 6;
+	} else {
+		n.SpikingParameter_a = genes->get(spikingGeneA, group);
+		n.SpikingParameter_b = genes->get(spikingGeneB, group);
+		n.SpikingParameter_c = genes->get(spikingGeneC, group);
+		n.SpikingParameter_d = genes->get(spikingGeneD, group);
+	}
+
 	n.v = -70;
 	n.u = -14;
 	n.maxfiringcount = 1;
@@ -289,8 +317,8 @@ void SpikingModel::update( bool bprint )
 			//then reset the membrane potential and recovery variable. 	
 			if (v>=30.)
 			{										  
-				neuron[i].v =  (double) SpikingParameter_c;	  //reset the membrane potential
-				neuron[i].u += (double) SpikingParameter_d;	  //reset the recovery variable
+				neuron[i].v =  neuron[i].SpikingParameter_c;  //reset the membrane potential
+				neuron[i].u += neuron[i].SpikingParameter_d;  //reset the recovery variable
 				v = neuron[i].v;			
 			}	
 				
@@ -309,7 +337,7 @@ void SpikingModel::update( bool bprint )
 			neuron[i].v = v + (.5 * ((0.04 * v * v) + (5 * v) + 140-neuron[i].u + newneuronactivation[i]));
 //change later all v should be neuron[i].v otherwise it is the same assignment as above....dummy!
 //			neuron[i].v = v + (.5 * ((0.04 * v * v) + (5 * v) + 140-neuron[i].u + newneuronactivation[i]));
-			neuron[i].u += SpikingParameter_a * (SpikingParameter_b * v - neuron[i].u);
+			neuron[i].u += neuron[i].SpikingParameter_a * (neuron[i].SpikingParameter_b * v - neuron[i].u);
 					
 			//##############################################################################################################
 			//If the membrane potetial is high enough that means an action potential will be generated.  Here we have a 

@@ -48,6 +48,7 @@
 #include "BrainMonitorWindow.h"
 #include "ChartWindow.h"
 #include "ContactEntry.h"
+#include "condprop.h"
 #include "AgentPOVWindow.h"
 #include "debug.h"
 #include "food.h"
@@ -70,6 +71,8 @@
 #include "BrickPatch.h"
 #include "brick.h"
 
+
+using namespace condprop;
 using namespace genome;
 using namespace std;
 
@@ -261,7 +264,8 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow, cons
 		fGeneStatsAgents(NULL),
 		fGeneStatsFile(NULL),
 		fFoodPatchStatsFile(NULL),
-		fNumAgentsNotInOrNearAnyFoodPatch(0)
+		fNumAgentsNotInOrNearAnyFoodPatch(0),
+		fConditionalProps( new condprop::PropertyList() )
 {
 	Init( worldfilePath );
 }
@@ -511,11 +515,11 @@ void TSimulation::Step()
 	barrier* b;
 	barrier::gXSortedBarriers.reset();
 	while( barrier::gXSortedBarriers.next( b ) )
-		b->update( fStep );
+		b->update();
 	barrier::gXSortedBarriers.xsort();
 	
 	// Update the conditional properties
-	fConditionalProps.update( fStep );
+	fConditionalProps->update( fStep );
 
 	// Update all agents, using their neurally controlled behaviors
 	{
@@ -1305,7 +1309,7 @@ void TSimulation::End( const string &reason )
 			delete b;
 	}
 
-	fConditionalProps.dispose();
+	fConditionalProps->dispose();
 
 	// Stop simulation
 	printf( "Simulation stopped after step %ld\n", fStep );
@@ -1491,11 +1495,11 @@ void TSimulation::Init( const char *argWorldfilePath )
 		MKDIR( "run/events" );
 	}
 
-	if( fConditionalProps.isLogging() )
+	if( fConditionalProps->isLogging() )
 	{
 		MKDIR( "run/condprop" );
 	}
-	fConditionalProps.init();
+	fConditionalProps->init();
 
 	if( fBestSoFarBrainAnatomyRecordFrequency || fBestSoFarBrainFunctionRecordFrequency ||
 		fBestRecentBrainAnatomyRecordFrequency || fBestRecentBrainFunctionRecordFrequency ||
@@ -5265,6 +5269,14 @@ void TSimulation::Kill( agent* c,
 	}
 
 	// ---
+	// --- Update Overhead Agent
+	// ---
+	if (c == fOverheadAgent)
+	{
+		fOverheadAgent = NULL;
+	}
+
+	// ---
 	// --- Births Deaths Log
 	// ---
 	if( fRecordBirthsDeaths )		// are we recording births, deaths, and creations?  If so, this agent will be included.
@@ -5931,6 +5943,20 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 		for( int i = 0; i < nconditions; i++ )
 		{
 			proplib::Property &propCondition = propConditions.get( i );
+
+			CouplingRange couplingRange;
+			{
+				string role = propCondition.get( "CouplingRange" );
+				if( role == "Begin" )
+					couplingRange = COUPLING_RANGE__BEGIN;
+				else if( role == "End" )
+					couplingRange = COUPLING_RANGE__END;
+				else if( role == "None" )
+					couplingRange = COUPLING_RANGE__NONE;
+				else
+					assert( false );
+			}
+
 			float value = propCondition.get( "Value" );
 			string mode = propCondition.get( "Mode" );
 
@@ -5938,7 +5964,7 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 			if( mode == "Time" )
 			{
 				long step = propCondition.get( "Time" );
-				condition = new condprop::TimeCondition<float>( step, value );
+				condition = new condprop::TimeCondition<float>( step, value, couplingRange );
 			}
 			else if( mode == "IntThreshold" )
 			{
@@ -5970,7 +5996,8 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 																		 op,
 																		 threshold,
 																		 duration,
-																		 value );
+																		 value,
+																		 couplingRange );
 			}
 			else if( mode == "FloatThreshold" )
 			{
@@ -5996,7 +6023,8 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 																		   op,
 																		   threshold,
 																		   duration,
-																		   value );
+																		   value,
+																		   couplingRange );
 			}
 			else
 				assert( false );
@@ -6012,12 +6040,14 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 		}
 
 		condprop::Property<float> *property =
-			new condprop::Property<float>( &fMaxEatVelocity,
+			new condprop::Property<float>( "MaxEatVelocity",
+										   &fMaxEatVelocity,
 										   &condprop::InterpolateFunction_float,
+										   &condprop::DistanceFunction_float,
 										   conditions,
 										   logger );
 
-		fConditionalProps.add( property );
+		fConditionalProps->add( property );
 	}
 	{
 		proplib::Property &propMaxEatYaw = doc.get( "MaxEatYaw" );
@@ -6029,6 +6059,20 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 		for( int i = 0; i < nconditions; i++ )
 		{
 			proplib::Property &propCondition = propConditions.get( i );
+
+			CouplingRange couplingRange;
+			{
+				string role = propCondition.get( "CouplingRange" );
+				if( role == "Begin" )
+					couplingRange = COUPLING_RANGE__BEGIN;
+				else if( role == "End" )
+					couplingRange = COUPLING_RANGE__END;
+				else if( role == "None" )
+					couplingRange = COUPLING_RANGE__NONE;
+				else
+					assert( false );
+			}
+
 			float value = propCondition.get( "Value" );
 			string mode = propCondition.get( "Mode" );
 
@@ -6036,7 +6080,7 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 			if( mode == "Time" )
 			{
 				long step = propCondition.get( "Time" );
-				condition = new condprop::TimeCondition<float>( step, value );
+				condition = new condprop::TimeCondition<float>( step, value, couplingRange );
 			}
 			else if( mode == "IntThreshold" )
 			{
@@ -6068,7 +6112,8 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 																		 op,
 																		 threshold,
 																		 duration,
-																		 value );
+																		 value,
+																		 couplingRange );
 			}
 			else if( mode == "FloatThreshold" )
 			{
@@ -6094,7 +6139,8 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 																		   op,
 																		   threshold,
 																		   duration,
-																		   value );
+																		   value,
+																		   couplingRange );
 			}
 
 			else
@@ -6111,12 +6157,14 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 		}
 
 		condprop::Property<float> *property =
-			new condprop::Property<float>( &fMaxEatYaw,
+			new condprop::Property<float>( "MaxEatYaw",
+										   &fMaxEatYaw,
 										   &condprop::InterpolateFunction_float,
+										   &condprop::DistanceFunction_float,
 										   conditions,
 										   logger );
 
-		fConditionalProps.add( property );
+		fConditionalProps->add( property );
 	}
     genome::gMinStrength = doc.get( "MinAgentStrength" );
     genome::gMaxStrength = doc.get( "MaxAgentStrength" );
@@ -6250,20 +6298,57 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 
 		itfor( proplib::PropertyMap, propBarriers.elements(), itBarrier )
 		{
-			proplib::Property &propKeyFrames = itBarrier->second->get( "KeyFrames" );
+			barrier *b = new barrier();
+
 			int id = barrier::gXSortedBarriers.count();
-			barrier *b = new barrier( id, propKeyFrames.size(), fRecordBarrierPosition );
+			char barrierName[128];
+			sprintf( barrierName, "barrier%d", id );
+
+			ConditionList<LineSegment> *conditions = new ConditionList<LineSegment>();
+
+			LineSegmentLogger *logger = fRecordBarrierPosition
+				? new LineSegmentLogger( barrierName )
+				: NULL;
+
+			proplib::Property &propKeyFrames = itBarrier->second->get( "KeyFrames" );
 
 			itfor( proplib::PropertyMap, propKeyFrames.elements(), itKeyFrame )
 			{
-				float x1, z1, x2, z2;
-				KeyFrame::Condition *condition;
+				float x1 = itKeyFrame->second->get( "X1" );
+				float z1 = itKeyFrame->second->get( "Z1" );
+				float x2 = itKeyFrame->second->get( "X2" );
+				float z2 = itKeyFrame->second->get( "Z2" );
+				if( ratioBarrierPositions )
+				{
+					x1 *= globals::worldsize;
+					z1 *= globals::worldsize;
+					x2 *= globals::worldsize;
+					z2 *= globals::worldsize;
+				}
+				LineSegment position( x1, z1, x2, z2);
+
+				Condition<LineSegment> *condition;
+
+				CouplingRange couplingRange;
+				{
+					string role = itKeyFrame->second->get( "CouplingRange" );
+					if( role == "Begin" )
+						couplingRange = COUPLING_RANGE__BEGIN;
+					else if( role == "End" )
+						couplingRange = COUPLING_RANGE__END;
+					else if( role == "None" )
+						couplingRange = COUPLING_RANGE__NONE;
+					else
+						assert( false );
+				}
 
 				string mode = itKeyFrame->second->get( "Mode" );
 				if( mode == "Time" )
 				{
 					long t = itKeyFrame->second->get( "Time" );
-					condition = new KeyFrame::TimeCondition( t );
+					condition = new TimeCondition<LineSegment>( t,
+																position,
+																couplingRange );
 				}
 				else if( mode == "Count" )
 				{
@@ -6283,39 +6368,41 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 						assert( false );
 					}
 
-					KeyFrame::CountCondition::Op op;
+					ThresholdCondition<LineSegment, int>::Op op;
 					if( opname == "EQ" )
-						op = KeyFrame::CountCondition::EQ;
+						op = ThresholdCondition<LineSegment, int>::EQ;
 					else if( opname == "LT" )
-						op = KeyFrame::CountCondition::LT;
+						op = ThresholdCondition<LineSegment, int>::LT;
 					else if( opname == "GT" )
-						op = KeyFrame::CountCondition::GT;
+						op = ThresholdCondition<LineSegment, int>::GT;
 					else
 						assert( false );
 
 					
-					condition = new KeyFrame::CountCondition( count, op, threshold, duration );
+					condition = new ThresholdCondition<LineSegment, int>( count,
+																		  op,
+																		  threshold,
+																		  duration,
+																		  position,
+																		  couplingRange );
 				}
 				else
 				{
 					assert( false );
 				}
 
-				x1 = itKeyFrame->second->get( "X1" );
-				z1 = itKeyFrame->second->get( "Z1" );
-				x2 = itKeyFrame->second->get( "X2" );
-				z2 = itKeyFrame->second->get( "Z2" );
-
-				if( ratioBarrierPositions )
-				{
-					x1 *= globals::worldsize;
-					z1 *= globals::worldsize;
-					x2 *= globals::worldsize;
-					z2 *= globals::worldsize;
-				}
-
-				b->setKeyFrame( condition, x1, z1, x2, z2 );
+				conditions->add( condition );
 			}
+
+			Property<LineSegment> *property = 
+				new Property<LineSegment>( barrierName,
+										   b->getPosition(),
+										   InterpolateFunction_LineSegment,
+										   DistanceFunction_LineSegment,
+										   conditions,
+										   logger );
+
+			fConditionalProps->add( property );
 
 			barrier::gXSortedBarriers.add( b );
 		}
@@ -6726,6 +6813,17 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 		else
 			assert( false );
 	}
+
+    brain::gNeuralValues.enableSpikingGenes = doc.get( "EnableSpikingGenes" );
+
+	brain::gNeuralValues.Spiking.aMinVal = doc.get( "SpikingAMin" );
+	brain::gNeuralValues.Spiking.aMaxVal = doc.get( "SpikingAMax" );
+	brain::gNeuralValues.Spiking.bMinVal = doc.get( "SpikingBMin" );
+	brain::gNeuralValues.Spiking.bMaxVal = doc.get( "SpikingBMax" );
+	brain::gNeuralValues.Spiking.cMinVal = doc.get( "SpikingCMin" );
+	brain::gNeuralValues.Spiking.cMaxVal = doc.get( "SpikingCMax" );
+	brain::gNeuralValues.Spiking.dMinVal = doc.get( "SpikingDMin" );
+	brain::gNeuralValues.Spiking.dMaxVal = doc.get( "SpikingDMax" );
 
 	brain::gNeuralValues.Tau.minVal = doc.get( "TauMin" );
 	brain::gNeuralValues.Tau.maxVal = doc.get( "TauMax" );
@@ -7405,22 +7503,22 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 		list.push_back( strdup( t ) );
 	}
 
-	sprintf( t, "LifeSpan = %lu ± %lu [%lu, %lu]", nint( fLifeSpanStats.mean() ), nint( fLifeSpanStats.stddev() ), (ulong) fLifeSpanStats.min(), (ulong) fLifeSpanStats.max() );
+	sprintf( t, "LifeSpan = %lu ï¿½ %lu [%lu, %lu]", nint( fLifeSpanStats.mean() ), nint( fLifeSpanStats.stddev() ), (ulong) fLifeSpanStats.min(), (ulong) fLifeSpanStats.max() );
 	list.push_back( strdup( t ) );
 
-	sprintf( t, "RecLifeSpan = %lu ± %lu [%lu, %lu]", nint( fLifeSpanRecentStats.mean() ), nint( fLifeSpanRecentStats.stddev() ), (ulong) fLifeSpanRecentStats.min(), (ulong) fLifeSpanRecentStats.max() );
+	sprintf( t, "RecLifeSpan = %lu ï¿½ %lu [%lu, %lu]", nint( fLifeSpanRecentStats.mean() ), nint( fLifeSpanRecentStats.stddev() ), (ulong) fLifeSpanRecentStats.min(), (ulong) fLifeSpanRecentStats.max() );
 	list.push_back( strdup( t ) );
 
-	sprintf( t, "CurNeurons = %.1f ± %.1f [%lu, %lu]", fCurrentNeuronCountStats.mean(), fCurrentNeuronCountStats.stddev(), (ulong) fCurrentNeuronCountStats.min(), (ulong) fCurrentNeuronCountStats.max() );
+	sprintf( t, "CurNeurons = %.1f ï¿½ %.1f [%lu, %lu]", fCurrentNeuronCountStats.mean(), fCurrentNeuronCountStats.stddev(), (ulong) fCurrentNeuronCountStats.min(), (ulong) fCurrentNeuronCountStats.max() );
 	list.push_back( strdup( t ) );
 
-	sprintf( t, "NeurGroups = %.1f ± %.1f [%lu, %lu]", fNeuronGroupCountStats.mean(), fNeuronGroupCountStats.stddev(), (ulong) fNeuronGroupCountStats.min(), (ulong) fNeuronGroupCountStats.max() );
+	sprintf( t, "NeurGroups = %.1f ï¿½ %.1f [%lu, %lu]", fNeuronGroupCountStats.mean(), fNeuronGroupCountStats.stddev(), (ulong) fNeuronGroupCountStats.min(), (ulong) fNeuronGroupCountStats.max() );
 	list.push_back( strdup( t ) );
 
-	sprintf( t, "CurNeurGroups = %.1f ± %.1f [%lu, %lu]", fCurrentNeuronGroupCountStats.mean(), fCurrentNeuronGroupCountStats.stddev(), (ulong) fCurrentNeuronGroupCountStats.min(), (ulong) fCurrentNeuronGroupCountStats.max() );
+	sprintf( t, "CurNeurGroups = %.1f ï¿½ %.1f [%lu, %lu]", fCurrentNeuronGroupCountStats.mean(), fCurrentNeuronGroupCountStats.stddev(), (ulong) fCurrentNeuronGroupCountStats.min(), (ulong) fCurrentNeuronGroupCountStats.max() );
 	list.push_back( strdup( t ) );
 
-	sprintf( t, "CurSynapses = %.1f ± %.1f [%lu, %lu]", fCurrentSynapseCountStats.mean(), fCurrentSynapseCountStats.stddev(), (ulong) fCurrentSynapseCountStats.min(), (ulong) fCurrentSynapseCountStats.max() );
+	sprintf( t, "CurSynapses = %.1f ï¿½ %.1f [%lu, %lu]", fCurrentSynapseCountStats.mean(), fCurrentSynapseCountStats.stddev(), (ulong) fCurrentSynapseCountStats.min(), (ulong) fCurrentSynapseCountStats.max() );
 	list.push_back( strdup( t ) );
 
 	if( fRecordPerformanceStats )

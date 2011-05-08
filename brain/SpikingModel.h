@@ -11,10 +11,6 @@
 #define BrainStepsPerWorldStep  50
 #define MaxFiringRatePerSecond  260.0
 #define MinFiringRatePerSecond  0.0
-#define SpikingParameter_a      0.02
-#define SpikingParameter_b      0.2
-#define SpikingParameter_c      -65
-#define SpikingParameter_d      6
 
 // note: activation levels are not maintained in the neuronstruct
 // so that after the new activation levels are computed, the old
@@ -30,6 +26,10 @@ struct SpikingModel__Neuron
 	float u;			  //!<the membranes recovery period			
 	float STDP;           //!<spike-timing-dependent plasticity,
 	short maxfiringcount; //explain later if works
+	double SpikingParameter_a;
+	double SpikingParameter_b;
+	double SpikingParameter_c;
+	double SpikingParameter_d;
 };
 
 struct SpikingModel__Synapse
@@ -72,4 +72,10 @@ class SpikingModel : public BaseNeuronModel<SpikingModel__Neuron, SpikingModel__
 	float scale_latest_spikes;
 
 	float *outputActivation;
+
+    genome::Gene *spikingGeneA;
+    genome::Gene *spikingGeneB;
+    genome::Gene *spikingGeneC;
+    genome::Gene *spikingGeneD;
+
 };

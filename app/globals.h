@@ -69,12 +69,24 @@ namespace brain
 		long maxsynapses;
 		short numinputneurgroups;
 		short numoutneurgroups;
+		bool enableSpikingGenes;
 		struct
 		{
 			float minVal;
 			float maxVal;
 			float seedVal;
 		} Tau;
+		struct
+		{
+			double aMinVal;
+			double aMaxVal;
+			double bMinVal;
+			double bMaxVal;
+			double cMinVal;
+			double cMaxVal;
+			double dMinVal;
+			double dMaxVal;
+		} Spiking;
 		short mininternalneurgroups;
 		short maxinternalneurgroups;
 		short mineneurpergroup;
@@ -171,4 +183,3 @@ namespace genome
 }
 
 #endif
-

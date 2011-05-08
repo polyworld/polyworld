@@ -11,4 +11,4 @@ else
     runs=$*
 fi
 
-plot a $opts motion/position/barriers/position_0.txt Positions Time Z2 $runs
+plot a $opts condprop/barrier0.txt Values Time Z2 $runs

@@ -193,6 +193,16 @@ Barriers {
           type    OBJECT
           properties {    # properties of KeyFrame
             
+            CouplingRange {
+              type    ENUM
+              default None
+              values [
+                None
+                Begin
+                End
+              ]
+            }
+
 	    Mode {
               type    ENUM
               default Time
@@ -818,6 +828,16 @@ MaxEatVelocity {
         type    OBJECT
     
         properties {
+
+          CouplingRange {
+            type    ENUM
+            default None
+            values [
+              None
+              Begin
+              End
+            ]
+          }
     
           Value {
             type    FLOAT
@@ -954,6 +974,16 @@ MaxEatYaw {
         type    OBJECT
     
         properties {
+
+          CouplingRange {
+            type    ENUM
+            default None
+            values [
+              None
+              Begin
+              End
+            ]
+          }
     
           Value {
             type    FLOAT
@@ -1748,6 +1778,52 @@ NeuronModel {
     S             # Spiking
   ]
 }
+
+EnableSpikingGenes {
+  type BOOL
+  default True
+}
+
+SpikingAMin {
+  type    FLOAT
+  default 0.001
+}
+
+SpikingAMax {
+  type    FLOAT
+  default 0.2
+}
+
+SpikingBMin {
+  type    FLOAT
+  default 0.01
+}
+
+SpikingBMax {
+  type    FLOAT
+  default 0.3
+}
+
+SpikingCMin {
+  type    FLOAT
+  default -80
+}
+
+SpikingCMax {
+  type    FLOAT
+  default -30
+}
+
+SpikingDMin {
+  type    FLOAT
+  default 0.1
+}
+
+SpikingDMax {
+  type    FLOAT
+  default 10
+}
+
 
 TauMin {
   type    FLOAT

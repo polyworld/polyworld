@@ -25,7 +25,7 @@ void WaitMutex::unlock()
 	assert( rc == 0 );
 }
 
-#if PTHREAD_SPINLOCKS
+#if defined(SPINLOCK_PTHREAD)
 SpinMutex::SpinMutex()
 {
 	int rc = pthread_spin_init( &spinlock, PTHREAD_PROCESS_PRIVATE );
@@ -48,7 +48,26 @@ void SpinMutex::unlock()
 	int rc = pthread_spin_unlock( &spinlock );
 	assert( rc == 0 );
 }
-#endif // PTHREAD_SPINLOCKS
+#elif defined(SPINLOCK_APPLE)
+SpinMutex::SpinMutex()
+{
+	OSSpinLockUnlock( &spinlock );
+}
+
+SpinMutex::~SpinMutex()
+{
+}
+
+void SpinMutex::lock()
+{
+	OSSpinLockLock( &spinlock );
+}
+
+void SpinMutex::unlock()
+{
+	OSSpinLockUnlock( &spinlock );
+}
+#endif // SPINLOCK_*
 
 ConditionMonitor::ConditionMonitor()
 : WaitMutex()

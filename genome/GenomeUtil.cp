@@ -93,6 +93,20 @@ GenomeSchema *GenomeUtil::createSchema()
 		RANGE( ScaleLatestSpikes,
 			   0.1,
 			   0.9 );
+		if( brain::gNeuralValues.enableSpikingGenes == true) {
+			RANGE( SpikingParameterA,
+				   brain::gNeuralValues.Spiking.aMinVal,
+				   brain::gNeuralValues.Spiking.aMaxVal );
+			RANGE( SpikingParameterB,
+				   brain::gNeuralValues.Spiking.bMinVal,
+				   brain::gNeuralValues.Spiking.bMaxVal );
+			RANGE( SpikingParameterC,
+				   brain::gNeuralValues.Spiking.cMinVal,
+				   brain::gNeuralValues.Spiking.cMaxVal );
+			RANGE( SpikingParameterD,
+				   brain::gNeuralValues.Spiking.dMinVal,
+				   brain::gNeuralValues.Spiking.dMaxVal );
+		}
 	}
 
 	RANGE( ConnectionDensity,
@@ -213,6 +227,16 @@ GenomeSchema *GenomeUtil::createSchema()
 	if( brain::gNeuralValues.model == brain::NeuralValues::TAU )
 	{
 		GROUP_ATTR( Tau, NONINPUT );
+	}
+
+
+	if( brain::gNeuralValues.model == brain::NeuralValues::SPIKING &&
+		brain::gNeuralValues.enableSpikingGenes == true )
+	{
+		GROUP_ATTR( SpikingParameterA, NONINPUT );
+		GROUP_ATTR( SpikingParameterB, NONINPUT );
+		GROUP_ATTR( SpikingParameterC, NONINPUT );
+		GROUP_ATTR( SpikingParameterD, NONINPUT );
 	}
 
 	SYNAPSE_ATTR( ConnectionDensity, false, false );

@@ -16,7 +16,6 @@
 // Local
 #include "agent.h"
 #include "barrier.h"
-#include "condprop.h"
 #include "datalib.h"
 #include "EatStatistics.h"
 #include "food.h"
@@ -29,6 +28,10 @@
 #include "OverheadView.h"
 
 // Forward declarations
+namespace condprop
+{
+	class PropertyList;
+}
 namespace proplib
 {
 	class Document;
@@ -806,7 +809,7 @@ private:
     gscene fScene;
     gscene fOverheadScene;
 
-	condprop::PropertyList fConditionalProps;
+	condprop::PropertyList *fConditionalProps;
 };
 
 inline gcamera& TSimulation::GetCamera() { return fCamera; }

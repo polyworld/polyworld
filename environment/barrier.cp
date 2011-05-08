@@ -16,7 +16,6 @@
 #include <qapplication.h>
 
 // Local
-#include "datalib.h"
 #include "globals.h"
 #include "graphics.h"
 
@@ -26,104 +25,6 @@ float barrier::gBarrierHeight;
 Color barrier::gBarrierColor;
 bool barrier::gStickyBarriers;
 
-//===========================================================================
-// KeyFrame
-//===========================================================================
-KeyFrame::KeyFrame()
-{
-	condition = NULL;
-}
-
-KeyFrame::~KeyFrame()
-{
-	if( condition )
-		delete condition;
-}
-
-//===========================================================================
-// TimeCondition
-//===========================================================================
-KeyFrame::TimeCondition::TimeCondition( long step )
-{
-	end = step;
-}
-
-KeyFrame::TimeCondition::~TimeCondition()
-{
-}
-
-bool KeyFrame::TimeCondition::isSatisfied( long step )
-{
-	return (step < end)
-		|| ( (end == 0) && (step <= 1) );
-}
-
-void KeyFrame::TimeCondition::setActive( long step, bool active )
-{
-	// no-op
-}
-
-long KeyFrame::TimeCondition::getEnd( long step )
-{
-	return end;
-}
-
-//===========================================================================
-// CountCondition
-//===========================================================================
-KeyFrame::CountCondition::CountCondition( const int *count,
-										  Op op,
-										  int threshold,
-										  long duration )
-{
-	parms.count = count;
-	parms.op = op;
-	parms.threshold = threshold;
-	parms.duration = duration;
-
-	state.end = -1;
-}
-
-KeyFrame::CountCondition::~CountCondition()
-{
-}
-
-bool KeyFrame::CountCondition::isSatisfied( long step )
-{
-	int count = *(parms.count);
-	int threshold = parms.threshold;
-
-	switch( parms.op )
-	{
-	case EQ:
-		return count == threshold;
-	case GT:
-		return count > threshold;
-	case LT:
-		return count < threshold;
-	default:
-		assert( false );
-	}
-}
-
-void KeyFrame::CountCondition::setActive( long step, bool active )
-{
-	if( active )
-	{
-		state.end = step + parms.duration;
-	}
-	else
-	{
-		state.end = -1;
-	}
-}
-
-long KeyFrame::CountCondition::getEnd( long step )
-{
-	assert( state.end > -1 );
-
-	return state.end;
-}
 
 //===========================================================================
 // barrier
@@ -132,29 +33,10 @@ long KeyFrame::CountCondition::getEnd( long step )
 //---------------------------------------------------------------------------
 // barrier::barrier
 //---------------------------------------------------------------------------
-barrier::barrier( int id, int keyFrameCount, bool recordPosition )
+barrier::barrier()
+: position(0,0,0,0)
+, verticesPosition(0,0,0,0)
 {
-	this->id = id;
-	numKeyFrames = keyFrameCount;
-	this->recordPosition = recordPosition;
-
-
-	numKeyFramesSet = 0;
-	activeKeyFrame = NULL;
-	if( numKeyFrames > 0 )
-	{
-		keyFrame = new KeyFrame[numKeyFrames];
-		if( !keyFrame )
-			error( 1, "Insufficient memory to setup barrier keyFrames" );
-	}
-	else
-	{
-		error( 1, "Invalid number of barrier keyFrames (", numKeyFrames, ")" );
-		keyFrame = NULL;
-	}
-
-	positionWriter = NULL;
-
 	fNumPoints = 4;
 	setcolor(gBarrierColor);
 
@@ -162,9 +44,7 @@ barrier::barrier( int id, int keyFrameCount, bool recordPosition )
 	if( !fVertices )
 		error( 1, "Insufficient memory to setup barrier vertices" );
 
-	xSortNeeded = false;
-
-	position( 0, 0, 0, 0 );
+	updateVertices();
 }
 
 
@@ -173,181 +53,81 @@ barrier::barrier( int id, int keyFrameCount, bool recordPosition )
 //---------------------------------------------------------------------------
 barrier::~barrier()
 {
-	if( keyFrame )
-		delete [] keyFrame;
-	
 	if( fVertices )
 		delete [] fVertices;
-
-	if( positionWriter )
-		delete positionWriter;
-}
-
-
-//---------------------------------------------------------------------------
-// barrier::setKeyFrame
-//---------------------------------------------------------------------------
-void barrier::setKeyFrame( KeyFrame::Condition *condition, float xa, float za, float xb, float zb )
-{
-	if( keyFrame )
-	{
-		if( numKeyFramesSet < numKeyFrames )
-		{
-			// TODO: validate time sequence
-			keyFrame[numKeyFramesSet].condition = condition;
-			keyFrame[numKeyFramesSet].xa   = xa;
-			keyFrame[numKeyFramesSet].za   = za;
-			keyFrame[numKeyFramesSet].xb   = xb;
-			keyFrame[numKeyFramesSet].zb   = zb;
-
-			numKeyFramesSet++;
-		}
-		else
-			error( 1, "More barrier keyframes specified than requested for allocation" );
-	}
 }
 
 
 //---------------------------------------------------------------------------
 // barrier::update
 //---------------------------------------------------------------------------
-void barrier::update( long step )
+void barrier::update()
 {
-	// determine the active key frame
-	{
-		KeyFrame *nextKeyFrame = NULL;
-		for( int i = 0; i < numKeyFrames; i++ )
-		{
-			if( keyFrame[i].condition->isSatisfied( step ) )
-			{
-				nextKeyFrame = &keyFrame[i];
-				//cout << "activeframe = " << i << endl;
-				break;
-			}
-		}
-
-		if( nextKeyFrame != activeKeyFrame )
-		{
-			if( activeKeyFrame )
-				activeKeyFrame->condition->setActive( step, false );
-
-			activeKeyFrame = nextKeyFrame;
-			if( activeKeyFrame )
-				activeKeyFrame->condition->setActive( step, true );
-		}
-	}
-
-	if( activeKeyFrame )
-	{
-		KeyFrame *kf = activeKeyFrame;
-		long time = max( 1l, kf->condition->getEnd(step) - step  );
-		float dxa = (kf->xa - xa) / time;
-		float dxb = (kf->xb - xb) / time;
-		float dza = (kf->za - za) / time;
-		float dzb = (kf->zb - zb) / time;
-
-		//cout << "DELTA = (" << dxa << "," << dza << "," << dxb << "," << dzb << ")" << endl;
-
-		if( (dxa != 0.0) || (dxb != 0.0) || (dza != 0.0) || (dzb != 0.0) )
-		{
-			position( xa + dxa, za + dza, xb + dxb, zb + dzb );
-
-			if( recordPosition )
-			{
-				if( positionWriter == NULL )
-				{
-					char path[512];
-					sprintf( path,
-							 "run/motion/position/barriers/position_%d.txt",
-							 id );
-
-					positionWriter = new DataLibWriter( path );
-
-					const char *colnames[] = {"Time", "X1", "Z1", "X2","Z2", NULL};
-					const datalib::Type coltypes[] = {datalib::INT, datalib::FLOAT, datalib::FLOAT, datalib::FLOAT, datalib::FLOAT};
-					positionWriter->beginTable( "Positions",
-												colnames,
-												coltypes );		
-				}
-
-				positionWriter->addRow( step,
-										xa, za, xb, zb );
-			}
-		}
-	}
+	if( position != verticesPosition )
+		updateVertices();
 }
 
 
 //---------------------------------------------------------------------------
-// barrier::position
+// barrier::updateVertices
 //---------------------------------------------------------------------------
-void barrier::position( float xa, float za, float xb, float zb )
+void barrier::updateVertices()
 {
-//	printf( "barrier::position( xa=%g, za=%g, xb=%g, zb=%g )\n", xa, za, xb, zb );
+	verticesPosition = position;
 
-	this->xa = xa;
-	this->za = za;
-	this->xb = xb;
-	this->zb = zb;
+	float x1;
+	float z1;
+	float x2;
+	float z2;
 
-	//cout << "(" << xa << "," << za << "," << xb << "," << zb << ")" << endl;
-	
-	if( fVertices != NULL )
+	fVertices[ 0] = position.xa; fVertices[ 1] = 0.; 			 fVertices[ 2] = position.za;
+	fVertices[ 3] = position.xa; fVertices[ 4] = gBarrierHeight; fVertices[ 5] = position.za;
+	fVertices[ 6] = position.xb; fVertices[ 7] = gBarrierHeight; fVertices[ 8] = position.zb;
+	fVertices[ 9] = position.xb; fVertices[10] = 0.; 			 fVertices[11] = position.zb;
+		
+	if( position.xa < position.xb )
 	{
-		float x1;
-		float z1;
-		float x2;
-		float z2;
-
-		fVertices[ 0] = xa; fVertices[ 1] = 0.; 			fVertices[ 2] = za;
-		fVertices[ 3] = xa; fVertices[ 4] = gBarrierHeight; fVertices[ 5] = za;
-		fVertices[ 6] = xb; fVertices[ 7] = gBarrierHeight; fVertices[ 8] = zb;
-		fVertices[ 9] = xb; fVertices[10] = 0.; 			fVertices[11] = zb;
-		
-		if( xa < xb )
-		{
-			xmn = x1 = xa;
-			xmx = x2 = xb;
-			z1 = za;
-			z2 = zb;
-		}
-		else
-		{
-			xmn = x1 = xb;
-			xmx = x2 = xa;
-			z1 = zb;
-			z2 = za;
-		}
-		
-		if( za < zb )
-		{
-			zmn = za;
-			zmx = zb;
-		}
-		else
-		{
-			zmn = zb;
-			zmx = za;
-		}
-		
-		a = z2 - z1;
-		b = x1 - x2;
-		c = x2 * z1  -  x1 * z2;
-		if( (a == 0.0) && (b == 0.0) )
-		{
-			// zero-size barrier, so distance is meaningless; make it very large
-			c = 1.0;
-			f = 1.0e+10;
-		}
-		else
-			f = 1. / sqrt( a*a + b*b );
-		sna = -b * f;
-		
-		if( a < 0. )
-			sna *= -1.;
-			
-		csa =  fabs(a * f);
+		xmn = x1 = position.xa;
+		xmx = x2 = position.xb;
+		z1 = position.za;
+		z2 = position.zb;
 	}
+	else
+	{
+		xmn = x1 = position.xb;
+		xmx = x2 = position.xa;
+		z1 = position.zb;
+		z2 = position.za;
+	}
+		
+	if( position.za < position.zb )
+	{
+		zmn = position.za;
+		zmx = position.zb;
+	}
+	else
+	{
+		zmn = position.zb;
+		zmx = position.za;
+	}
+		
+	a = z2 - z1;
+	b = x1 - x2;
+	c = x2 * z1  -  x1 * z2;
+	if( (a == 0.0) && (b == 0.0) )
+	{
+		// zero-size barrier, so distance is meaningless; make it very large
+		c = 1.0;
+		f = 1.0e+10;
+	}
+	else
+		f = 1. / sqrt( a*a + b*b );
+	sna = -b * f;
+		
+	if( a < 0. )
+		sna *= -1.;
+			
+	csa =  fabs(a * f);	
 }
 
 

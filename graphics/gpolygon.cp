@@ -168,9 +168,9 @@ gpolyobj::~gpolyobj()
 		for (long i = 0; i < fNumPolygons; i++)
 		{
 			if (fPolygon[i].fVertices != NULL)
-				delete fPolygon[i].fVertices;
+				delete [] fPolygon[i].fVertices;
 		}
-		delete fPolygon;
+		delete [] fPolygon;
 	}
 #endif
 }

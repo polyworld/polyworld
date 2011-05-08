@@ -4,9 +4,13 @@
 #include <unistd.h>
 
 #if ((_POSIX_SPIN_LOCKS - 200112L) >= 0L)
-	#define PTHREAD_SPINLOCKS true
+	#define SPINLOCK_PTHREAD
+#elif __APPLE__
+	#define SPINLOCK_APPLE
+
+	#include <libkern/OSAtomic.h>
 #else
-	#define PTHREAD_SPINLOCKS false
+	#define SPINLOCK SPINLOCK_NONE
 #endif
 
 class IMutex
@@ -41,7 +45,7 @@ class WaitMutex : public IMutex
 	pthread_mutex_t mutex;
 };
 
-#if PTHREAD_SPINLOCKS
+#if defined(SPINLOCK_PTHREAD)
 class SpinMutex : public IMutex
 {
  public:
@@ -53,6 +57,19 @@ class SpinMutex : public IMutex
 
  private:
 	pthread_spinlock_t spinlock;
+};
+#elif defined(SPINLOCK_APPLE)
+class SpinMutex : public IMutex
+{
+ public:
+	SpinMutex();
+	virtual ~SpinMutex();
+
+	virtual void lock();
+	virtual void unlock();
+
+ private:
+	OSSpinLock spinlock;
 };
 #else
 typedef WaitMutex SpinMutex;
