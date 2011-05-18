@@ -342,6 +342,7 @@ def write( path,
 def parse_all(paths, tablenames = None, required = not REQUIRED, keycolname = None):
     tables = {}
 
+    print 'paths =', paths
     for path in paths:
         tables[path] = parse(path, tablenames, required, keycolname)
 
@@ -361,9 +362,13 @@ def parse( path,
            stream_row = None):
 
     f = open(path, 'r')
+    print 'for path =', path
+    print '  tablenames =', tablenames
+    print '  keycolname =', keycolname
 
     if tablenames:
         tablenames_found = dict([(tablename, False) for tablename in tablenames])
+        print '  tablenames_found =', tablenames_found
 
     if not __is_datalib_file(f):
         raise InvalidFileError(path)
