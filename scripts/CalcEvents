@@ -12,7 +12,9 @@ import common_logs
 import datalib
 import iterators
 
-DEFAULT_EPOCH = 1000
+DEFAULT_EPOCH = 10000
+DEFAULT_NNEAR = 1
+DEFAULT_NFAR = 2
 
 
 ####################################################################################
@@ -22,12 +24,14 @@ DEFAULT_EPOCH = 1000
 ####################################################################################
 def main():
     epoch_len = DEFAULT_EPOCH
+    nnear = DEFAULT_NNEAR
+    nfar = DEFAULT_NFAR
     nbins = 8
     nbins_age = 20
 
 
     shortopts = ''
-    longopts = ['epoch=']
+    longopts = ['epoch=','nnear=','nfar=']
 
     try:
         opts, args = getopt.getopt( sys.argv[1:], shortopts, longopts )
@@ -42,6 +46,11 @@ def main():
                 show_usage("Invalid epoch (%s). Expecting integer." % val)
             if epoch_len <= 0:
                 show_usage("Epoch must be > 0")
+        elif opt == '--nnear':
+            nnear = int(val)
+        elif opt == '--nfar':
+            nfar = int(val)
+
 
     if len(args) < 2:
         show_usage("Missing arguments")
@@ -73,12 +82,15 @@ def main():
             calc_contacts( path,
                            run,
                            epoch_len,
+                           True,
                            nbins,
                            nbins_age)
         elif mode == 'b':
             path_2bin = os.path.join( run, 'events/contacts_bins_2bin.txt' )
             calc_2bin( path,
-                       path_2bin )
+                       path_2bin,
+                       nnear,
+                       nfar )
             path_total = os.path.join( run, 'events/contacts_total.txt' )
             calc_total( path,
                        path_total )
@@ -188,7 +200,7 @@ def list_divide(x,y):
 
 # key = Major, values = Minor
 CONTACT_SYMBOLS = {'C': [],
-                   'M': ['p','c','w','e','f','d','x','m'],
+                   'M': ['p','c','w','e','f','i','d','x','m','v'],
                    'F': ['c','s','p'],
                    'G': ['c','e']}
 
@@ -214,8 +226,10 @@ def contactEventTypes( major ):
 def calc_contacts( path_log,
                    path_run,
                    epoch_len,
+                   epoch_separation_bins,
                    nbins,
                    nbins_age):
+
     print 'reading separations'
     separations = common_genome.SeparationCache( path_run )
     print 'reading lifespans'
@@ -240,7 +254,7 @@ def calc_contacts( path_log,
             self.ages_subject.append(age_subject)
             self.ages_object.append(age_object)
 
-        def compute(self):
+        def compute(self, min_separation, max_separation):
             print '  computing event', self.name
             
             self.bins_separations = create_bins(self.separations, nbins, min_separation, max_separation)
@@ -293,6 +307,9 @@ def calc_contacts( path_log,
             self.step = step
             self.events = {}
 
+            self.min_separation = float('nan')
+            self.max_separation = float('nan')
+
             # construct dict from event name to event object
             for major in CONTACT_SYMBOLS.keys():
                 for eventType in contactEventTypes( major ):
@@ -300,8 +317,20 @@ def calc_contacts( path_log,
 
         def compute(self):
             print 'computing epoch', self.step
+
+            if epoch_separation_bins:
+                __min_separation = self.min_separation
+                __max_separation = self.max_separation
+            else:
+                __min_separation = min_separation
+                __max_separation = max_separation
+            
+            print 'min_separation =', __min_separation
+            print 'max_separation =', __max_separation
+
+
             for ev in self.events.values():
-                ev.compute()
+                ev.compute( __min_separation, __max_separation )
 
         def createTables(self, tables):
             for ev in self.events.values():
@@ -323,6 +352,9 @@ def calc_contacts( path_log,
         agent2 = row['Agent2']
         eventSymbols = row['Events']
         separation = separations.separation( agent1, agent2 )
+
+        local.epoch.min_separation = min(separation, local.epoch.min_separation)
+        local.epoch.max_separation = max(separation, local.epoch.max_separation)
 
         while step >= (local.epoch.step + epoch_len):
             # we do a loop here because it's conceivable that
@@ -463,7 +495,7 @@ def calc_bias( path_log,
 ### function calc_2bin()
 ###
 ####################################################################################
-def calc_2bin( path_in, path_out ):
+def calc_2bin( path_in, path_out, nnear, nfar ):
     tables_in = datalib.parse( path_in )
     tables_out = []
 
@@ -487,11 +519,11 @@ def calc_2bin( path_in, path_out ):
             row_out['T'] = row_in['T']
 
             bin0 = 0
-            for i in range(n/2):
+            for i in range(nnear):
                 bin0 += row_in['bin%d'%i]
                 
             bin1 = 0
-            for i in range(n/2, n):
+            for i in range(n - nfar, n):
                 bin1 += row_in['bin%d'%i]
 
             row_out['bin0'] = bin0
@@ -500,6 +532,7 @@ def calc_2bin( path_in, path_out ):
         tables_out.append( table_out )
 
     datalib.write( path_out, tables_out )
+
     
 
 ####################################################################################
@@ -570,10 +603,11 @@ def calc_nearfar( path_in,
             bin0 = float( row_in['bin0'] )
             bin1 = float( row_in['bin1'] )
             
-            if bin1 == 0:
+            if bin0 == 0:
                 row_out['ratio'] = float('nan')
             else:
-                row_out['ratio'] = bin0 / bin1
+                #row_out['ratio'] = bin0 / bin1
+                row_out['ratio'] = bin1 / bin0
 
         tables_out.append( table_out )
 
@@ -659,7 +693,15 @@ OPTIONS
                Length of epochs. Used by mode c.
 
                (default %d)
-""" % (DEFAULT_EPOCH)
+
+     --nnear <num bins>
+               Number of bins in 'near'. Used by mode b.
+
+     --nfar <num bins>
+               Number of bins in 'far'. Used by mode b.
+
+               (default %d)
+""" % (DEFAULT_EPOCH, DEFAULT_NNEAR)
     
     if msg:
         print str(msg)

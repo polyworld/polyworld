@@ -68,10 +68,12 @@ static const int MAXFITNESSITEMS = 5;
 #define MATE__PREVENTED__MATE_WAIT		(1 << 3)
 #define MATE__PREVENTED__ENERGY			(1 << 4)
 #define MATE__PREVENTED__EAT_MATE_SPAN	(1 << 5)
-#define MATE__PREVENTED__OF1			(1 << 6)
-#define MATE__PREVENTED__MAX_DOMAIN		(1 << 7)
-#define MATE__PREVENTED__MAX_WORLD		(1 << 8)
-#define MATE__PREVENTED__MISC			(1 << 9)
+#define MATE__PREVENTED__EAT_MATE_MIN_DISTANCE	(1 << 6)
+#define MATE__PREVENTED__OF1			(1 << 7)
+#define MATE__PREVENTED__MAX_DOMAIN		(1 << 8)
+#define MATE__PREVENTED__MAX_WORLD		(1 << 9)
+#define MATE__PREVENTED__MISC			(1 << 10)
+#define MATE__PREVENTED__MAX_VELOCITY	(1 << 11)
 
 
 // Used in logic related to Fighting as well as ContactEntry
@@ -424,6 +426,8 @@ public:
 	DataLibWriter *fCollisionsLog;
 	bool fRecordCarry;
 	DataLibWriter *fCarryLog;
+	bool fRecordEnergy;
+	DataLibWriter *fEnergyLog;
 
 	bool fBrainAnatomyRecordAll;
 	bool fBrainFunctionRecordAll;
@@ -498,6 +502,15 @@ private:
  private:
 	void EndCarryLog();
 
+	void InitEnergyLog();
+	enum EnergyLogEventType { ELET__GIVE = 0, ELET__FIGHT };
+	void UpdateEnergyLog( agent *c,
+						  gobject *obj,
+						  float neuralActivation,
+						  float energy,
+						  EnergyLogEventType elet );
+	void EndEnergyLog();
+
 	void InitSeparationsLog();
 	void EndSeparationsLog();
 	
@@ -540,6 +553,7 @@ private:
 	void Drop( agent *c );
 	void Fitness( agent *c );
 	void CreateAgents();
+	void MaintainBricks();
 	void MaintainFood();
 	
 	void RecordGeneSeparation();
@@ -686,12 +700,20 @@ private:
 	long fMateWait;
 	long fMiscAgents; // number of agents born without intervening creation before miscegenation function kicks in
 	float fMateThreshold;
+	float fMaxMateVelocity;
+	float fMinEatVelocity;
 	float fMaxEatVelocity;
 	float fMaxEatYaw;
 	EatStatistics fEatStatistics;
 	long fEatMateSpan;
+	float fEatMateMinDistance;
 	float fFightThreshold;
 	float fFightFraction;
+	enum
+	{
+		FM_NORMAL,
+		FM_NULL
+	} fFightMode;
 	float fGiveThreshold;
 	float fGiveFraction;
 	float fPickupThreshold;
@@ -771,6 +793,9 @@ private:
 	Stat fCurrentSynapseCountStats;
 	StatRecent fLifeSpanRecentStats;
 	StatRecent fLifeFractionRecentStats;
+
+	bool fRandomBirthLocation;
+	float fRandomBirthLocationRadius;
 
 	char  fSmiteMode;		// 'R' = Random; 'L' = Leastfit
 	float fSmiteFrac;

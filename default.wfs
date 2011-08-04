@@ -140,6 +140,17 @@ FoodGrowthRate {
   max     1.0 # is this right?
 }
 
+FoodRemoveEnergy {
+  type    FLOAT
+  default 0.0
+}
+
+FoodMaxLifeSpan {
+  type    INT
+  default 0 # 0 means infinity
+  min 0
+}
+
 MinFoodEnergy {
   type    FLOAT
   default 200.0
@@ -645,6 +656,9 @@ Domains {
       BrickPatches {
         type    ARRAY
 
+        default [
+        ]
+
         element {
           type    OBJECT
 
@@ -803,6 +817,254 @@ AgentsAreFood {
   ]
   scalar {
     type    BOOL
+  }
+}
+
+MaxMateVelocity {
+  type    OBJECT
+  default {
+  } 
+  properties {
+
+    Record {
+      type    BOOL
+      default True
+    }
+
+    Conditions {
+      type    ARRAY
+      default [
+        Mode Time
+        Value 1.0
+        Time 0
+      ]
+      element {
+        type    OBJECT
+    
+        properties {
+
+          CouplingRange {
+            type    ENUM
+            default None
+            values [
+              None
+              Begin
+              End
+            ]
+          }
+    
+          Value {
+            type    FLOAT
+            exmin   0.0
+            max     1.0
+          }
+              
+          Mode {
+            type    ENUM
+            default IntThreshold
+            values [
+              Time
+              IntThreshold
+            ]
+          }
+              
+          Time {
+            type    INT
+            default 0
+            min     0
+            max     $( MaxSteps )
+          }
+    
+          IntThreshold {
+            type    OBJECT
+            default {
+            }
+            properties {
+    
+              Value {
+                type    ENUM
+                default Agents
+                values [
+                  Agents
+                ]
+              }
+    
+              Op {
+                type    ENUM
+                default UNDEFINED
+                values [
+                  UNDEFINED
+                  EQ
+                  GT
+                  LT
+                ]
+                if $( Mode == \"IntThreshold\" ) {
+                  assert $( Op != \"UNDEFINED\" )
+                }
+              }
+                    
+              Threshold {
+                type    INT
+                default 0
+              }
+    
+              Duration {
+                type    INT
+                default 0
+                min     0
+              }
+            }
+          }
+
+        }
+      }
+    }
+  }
+}
+
+MinEatVelocity {
+  type    OBJECT
+  default {
+  } 
+  properties {
+
+    Record {
+      type    BOOL
+      default True
+    }
+
+    Conditions {
+      type    ARRAY
+      default [
+        Mode Time
+        Value 0.0
+        Time 0
+      ]
+      element {
+        type    OBJECT
+    
+        properties {
+
+          CouplingRange {
+            type    ENUM
+            default None
+            values [
+              None
+              Begin
+              End
+            ]
+          }
+    
+          Value {
+            type    FLOAT
+            min     0.0
+            exmax   1.0
+          }
+              
+          Mode {
+            type    ENUM
+            default IntThreshold
+            values [
+              Time
+              IntThreshold
+	      FloatThreshold
+            ]
+          }
+              
+          Time {
+            type    INT
+            default 0
+            min     0
+            max     $( MaxSteps )
+          }
+    
+          IntThreshold {
+            type    OBJECT
+            default {
+            }
+            properties {
+    
+              Value {
+                type    ENUM
+                default Agents
+                values [
+                  Agents
+                ]
+              }
+    
+              Op {
+                type    ENUM
+                default UNDEFINED
+                values [
+                  UNDEFINED
+                  EQ
+                  GT
+                  LT
+                ]
+                if $( Mode == \"IntThreshold\" ) {
+                  assert $( Op != \"UNDEFINED\" )
+                }
+              }
+                    
+              Threshold {
+                type    INT
+                default 0
+              }
+    
+              Duration {
+                type    INT
+                default 0
+                min     0
+              }
+            }
+          }
+
+          FloatThreshold {
+            type    OBJECT
+            default {
+            }
+            properties {
+    
+              Value {
+                type    ENUM
+                default EatFailed
+                values [
+                  EatFailed
+                  EatFailedYaw
+                  EatFailedVel
+                ]
+              }
+    
+              Op {
+                type    ENUM
+                default UNDEFINED
+                values [
+                  UNDEFINED
+                  EQ
+                  GT
+                  LT
+                ]
+                if $( Mode == \"FloatThreshold\" ) {
+                  assert $( Op != \"UNDEFINED\" )
+                }
+              }
+                    
+              Threshold {
+                type    FLOAT
+                default 0
+              }
+    
+              Duration {
+                type    INT
+                default 0
+                min     0
+              }
+            }
+          }
+
+        }
+      }
+    }
   }
 }
 
@@ -1119,6 +1381,109 @@ EatMateWait {
   exmax   $( MaxLifeSpan )
 }
 
+# Minimum distance agent must be from last eat position before can mate.
+EatMateMinDistance {
+  type    OBJECT
+  default {
+  } 
+  properties {
+
+    Record {
+      type    BOOL
+      default True
+    }
+
+    Conditions {
+      type    ARRAY
+      default [
+        Mode Time
+        Value 0.0
+        Time 0
+      ]
+      element {
+        type    OBJECT
+    
+        properties {
+
+          CouplingRange {
+            type    ENUM
+            default None
+            values [
+              None
+              Begin
+              End
+            ]
+          }
+    
+          Value {
+            type    FLOAT
+            min   0.0
+            max     $(WorldSize)
+          }
+              
+          Mode {
+            type    ENUM
+            default IntThreshold
+            values [
+              Time
+              IntThreshold
+            ]
+          }
+              
+          Time {
+            type    INT
+            default 0
+            min     0
+            max     $( MaxSteps )
+          }
+    
+          IntThreshold {
+            type    OBJECT
+            default {
+            }
+            properties {
+    
+              Value {
+                type    ENUM
+                default Agents
+                values [
+                  Agents
+                ]
+              }
+    
+              Op {
+                type    ENUM
+                default UNDEFINED
+                values [
+                  UNDEFINED
+                  EQ
+                  GT
+                  LT
+                ]
+                if $( Mode == \"IntThreshold\" ) {
+                  assert $( Op != \"UNDEFINED\" )
+                }
+              }
+                    
+              Threshold {
+                type    INT
+                default 0
+              }
+    
+              Duration {
+                type    INT
+                default 0
+                min     0
+              }
+            }
+          }
+
+        }
+      }
+    }
+  }
+}
+
 EnableMateWaitFeedback {
   type    BOOL
   default True
@@ -1267,12 +1632,38 @@ EyeHeight {
   max     1.0
 }
 
+BodyRedChannel {
+  type    ENUM
+  default Fight
+  values [
+    Fight
+  ]
+  scalar {
+    type    FLOAT
+    min     0.0
+    max     1.0
+  }
+}
+
 BodyGreenChannel {
   type    ENUM
   default I
   values [
     I             # ID gene
     L             # Light neuron
+  ]
+  scalar {
+    type    FLOAT
+    min     0.0
+    max     1.0
+  }
+}
+
+BodyBlueChannel {
+  type    ENUM
+  default Mate
+  values [
+    Mate
   ]
   scalar {
     type    FLOAT
@@ -1465,6 +1856,18 @@ ProbabilisticFoodPatches {
   type    BOOL
   default True
   legacy  False
+}
+
+RandomBirthLocation {
+  type    BOOL
+  default False
+}
+
+RandomBirthLocationRadius {
+  type    FLOAT
+  default 1.0
+  min     0.0
+  max     1.0
 }
 
 SmiteMode {
@@ -1876,6 +2279,15 @@ DropThreshold {
   default 0.5
 }
 
+FightMode {
+  type    ENUM
+  default Normal
+  values [
+    Normal
+    Null
+  ]
+}
+
 FightMultiplier {
   type    FLOAT
   default 1.0
@@ -2283,6 +2695,12 @@ RecordCarry {
   legacy  False
 }
 
+RecordEnergy {
+  type    BOOL
+  default True
+  legacy  False
+}
+
 BrainAnatomyRecordAll {
   type    BOOL
   default True
@@ -2390,11 +2808,6 @@ SeedGenomeFromRun {
 SeedPositionFromRun {
   type    BOOL
   default False
-}
-
-FoodRemoveEnergy {
-  type    FLOAT
-  default 0.0
 }
 
 #-------------------------------------------------------------------

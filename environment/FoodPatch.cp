@@ -92,13 +92,13 @@ FoodPatch::~FoodPatch()
 
 // Add food to the FoodPatch.
 // Find an appropriate point in the patch (based on patch shape and distribution)
-float FoodPatch::addFood()
+float FoodPatch::addFood( long step )
 {
 	// Only add the food if there is room in the patch
 	if( foodCount < maxFoodCount )
 	{
 		float x, z;
-		food* f = new food;
+		food* f = new food( step );
 
 		// set the values of x and y to a legal point in the foodpatch
 		setPoint( &x, &z );

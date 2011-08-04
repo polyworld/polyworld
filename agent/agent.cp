@@ -99,8 +99,14 @@ float		agent::gMaxVisionYaw;
 float		agent::gEyeHeight;
 float		agent::gMaxSizeAdvantage;
 
+agent::BodyRedChannel agent::gBodyRedChannel;
+float				  agent::gBodyRedChannelConstValue;
+
 agent::BodyGreenChannel agent::gBodyGreenChannel;
 float					agent::gBodyGreenChannelConstValue;
+
+agent::BodyBlueChannel agent::gBodyBlueChannel;
+float				   agent::gBodyBlueChannelConstValue;
 
 agent::NoseColor agent::gNoseColor;
 float            agent::gNoseColorConstValue;
@@ -161,6 +167,10 @@ agent::agent(TSimulation* sim, gstage* stage)
 	fSpeed = 0.0;
 	fMaxSpeed = 0.0;
 	fLastEat = 0;
+
+	fLastEatPosition[0] = 0.0;
+	fLastEatPosition[1] = 0.0;
+	fLastEatPosition[2] = 0.0;
 
 	fGenome = GenomeUtil::createGenome();
 	Q_CHECK_PTR(fGenome);
@@ -537,6 +547,20 @@ void agent::grow( long mateWait,
 	// initially set red & blue to 0
     fColor[0] = fColor[2] = 0.0;
     
+	// set body red channel
+	switch(gBodyRedChannel)
+	{
+	case BRC_CONST:
+		fColor[0] = gBodyRedChannelConstValue;
+		break;
+	case BRC_FIGHT:
+		// no-op
+		break;
+	default:
+		assert(false);
+		break;
+	}
+    
 	// set body green channel
 	switch(gBodyGreenChannel)
 	{
@@ -547,6 +571,20 @@ void agent::grow( long mateWait,
 		fColor[1] = gBodyGreenChannelConstValue;
 		break;
 	case BGC_LIGHT:
+		// no-op
+		break;
+	default:
+		assert(false);
+		break;
+	}
+    
+	// set body blue channel
+	switch(gBodyBlueChannel)
+	{
+	case BBC_CONST:
+		fColor[2] = gBodyBlueChannelConstValue;
+		break;
+	case BBC_MATE:
 		// no-op
 		break;
 	default:
@@ -654,7 +692,12 @@ float agent::eat(food* f, float eatFitnessParameter, float eat2consume, float ea
 		fHeuristicFitness += eatFitnessParameter * actuallyeat / (eat2consume * MaxAge());
 		
 		if( actuallyeat > 0.0 )
+		{
 			fLastEat = step;
+			fLastEatPosition[0] = fPosition[0];
+			fLastEatPosition[1] = fPosition[1];
+			fLastEatPosition[2] = fPosition[2];
+		}
 	}
 	
 	return result;
@@ -674,7 +717,7 @@ float agent::receive( agent *giver, float *e )
 #if GIVE_TODO
 		fFoodEnergy += actual;
 #endif
-		giver->damage( actual );
+		giver->fEnergy -= actual;
 
 #if GIVE_TODO
 		if( fFoodEnergy > fMaxEnergy )
@@ -697,10 +740,15 @@ float agent::receive( agent *giver, float *e )
 //---------------------------------------------------------------------------
 // agent::damage
 //---------------------------------------------------------------------------    
-void agent::damage(float e)
+float agent::damage(float e, bool nullMode)
 {
 	e *= gLowPopulationAdvantageFactor;
-	fEnergy -= (e<fEnergy) ? e : fEnergy;
+	if (e>fEnergy) e = fEnergy;
+
+	if( !nullMode )
+		fEnergy -= e;
+
+	return e;
 }
 
 
@@ -1060,11 +1108,17 @@ float agent::UpdateBody( float moveFitnessParam,
 
 	energyUsed = denergy;
 
-	SetRed( nerves.fight->get() );	// set red color according to desire to fight
-	SetBlue( nerves.mate->get() ); 	// set blue color according to desire to mate
+	if( gBodyRedChannel == BRC_FIGHT )
+	{
+		SetRed( nerves.fight->get() );	// set red color according to desire to fight
+	}
   	if( gBodyGreenChannel == BGC_LIGHT )
 	{
 		SetGreen(nerves.light->get());
+	}
+	if( gBodyBlueChannel == BBC_MATE )
+	{
+		SetBlue( nerves.mate->get() ); 	// set blue color according to desire to mate
 	}
 
 	if( gNoseColor == NC_LIGHT )
@@ -1086,7 +1140,7 @@ float agent::UpdateBody( float moveFitnessParam,
 		// it can't push one of the agents it is carrying through a barrier and drop
 		// it on the other side or let the carried agent mate with an agent on the
 		// other side.
-		
+
 		barrier* b = NULL;
 		barrier::gXSortedBarriers.reset();
 		while( barrier::gXSortedBarriers.next(b) )
@@ -1242,6 +1296,7 @@ float agent::UpdateBody( float moveFitnessParam,
 			}
 		}
 	} // if( ! BeingCarried() )
+
 
 	// Keep track of the domain in which the agent resides
     short newDomain = fSimulation->WhichDomain( fPosition[0], fPosition[2], fDomain );

@@ -14,6 +14,7 @@ def init_env(env):
 
     if PFM == 'linux':
         env.Append( FRAMEWORKPATH = [] )
+        env.Append( LIBPATH = ['/usr/lib/x86_64-linux-gnu'] )
     elif PFM == 'mac':
         env.Append( FRAMEWORKPATH = ['/System/Library/Frameworks',
                                      '/Library/Frameworks'] )

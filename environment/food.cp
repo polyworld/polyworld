@@ -34,7 +34,8 @@ float food::gMaxFoodEnergy;
 float food::gSize2Energy;
 float food::gMaxFoodRadius;
 float food::gCarryFood2Energy;
-
+long food::gMaxLifeSpan;
+food::FoodList food::gAllFood;
 
 //===========================================================================
 // food
@@ -44,27 +45,27 @@ float food::gCarryFood2Energy;
 //-------------------------------------------------------------------------------------------
 // food::food
 //-------------------------------------------------------------------------------------------
-food::food()
+food::food( long step )
 {
-	initfood();
+	initfood( step );
 }
 
 
 //-------------------------------------------------------------------------------------------
 // food::food
 //-------------------------------------------------------------------------------------------
-food::food(float e)
+food::food( long step, float e )
 {
-	initfood(e);
+	initfood( step, e );
 }
 
 
 //-------------------------------------------------------------------------------------------
 // food::food
 //-------------------------------------------------------------------------------------------
-food::food(float e, float x, float z)
+food::food( long step, float e, float x, float z )
 {
-	initfood(e, x, z);
+	initfood( step, e, x, z );
 }
 
 
@@ -73,6 +74,8 @@ food::food(float e, float x, float z)
 //-------------------------------------------------------------------------------------------
 food::~food()
 {
+	assert( *fAllFoodIterator == this );
+	gAllFood.erase( fAllFoodIterator );
 }
 
 
@@ -112,31 +115,40 @@ float food::eat(float e)
 
 
 //-------------------------------------------------------------------------------------------
-// food::initfood
+// food::getAge
 //-------------------------------------------------------------------------------------------
-void food::initfood()
+long food::getAge(long step)
 {
-	float e = randpw() * (gMaxFoodEnergy - gMinFoodEnergy) + gMinFoodEnergy;
-	initfood( e );
+	return step - fCreationStep;
 }
 
 
 //-------------------------------------------------------------------------------------------
 // food::initfood
 //-------------------------------------------------------------------------------------------
-void food::initfood( float e )
+void food::initfood( long step )
+{
+	float e = randpw() * (gMaxFoodEnergy - gMinFoodEnergy) + gMinFoodEnergy;
+	initfood( step, e );
+}
+
+
+//-------------------------------------------------------------------------------------------
+// food::initfood
+//-------------------------------------------------------------------------------------------
+void food::initfood( long step, float e )
 {
 	fEnergy = e;
 	float x = randpw() * globals::worldsize;
 	float z = randpw() * globals::worldsize;
-	initfood( e, x, z );
+	initfood( step, e, x, z );
 }
 
 
 //-------------------------------------------------------------------------------------------
 // food::initfood
 //-------------------------------------------------------------------------------------------
-void food::initfood( float e, float x, float z )
+void food::initfood( long step, float e, float x, float z )
 {
 	fEnergy = e;
 	initlen();
@@ -144,6 +156,11 @@ void food::initfood( float e, float x, float z )
 	fPosition[1] = 0.5 * fLength[1];
 	fPosition[2] = z;
 	initrest();
+
+	fCreationStep = step;
+	gAllFood.push_back( this );
+	fAllFoodIterator = --gAllFood.end();
+	assert( *fAllFoodIterator == this );
 }
  
 

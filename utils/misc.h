@@ -86,6 +86,8 @@ float logistic(float x, float slope);
 float biasedLogistic(float x, float bias, float slope);
 float gaussian( float x, float mean, float variance );
 
+inline float dist( float x1, float y1, float x2, float y2 ) { return sqrt( (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2) ); }
+
 int SetMaximumFiles( long filecount );
 int GetMaximumFiles( long *filecount );
 

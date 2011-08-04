@@ -24,11 +24,12 @@ def parseArgs( mode, options, args ):
         mode.func_pathRunFromValue = lambda path, classification, dataset: path[:-len(relpath)].rstrip('/')
         mode.defaultValues = tablename
         mode.colName_timestep = xcolname
-        mode.curvetypes = [ycolname]
-        mode.defaultCurvetype = ycolname
-    
+        mode.curvetypes = ycolname.split(',')
+        mode.defaultCurvetype = mode.curvetypes[0]
+
         copts = options['curvetypes']
-        copts.settings[ycolname] = copts.settings['adhoc_curvetype']
+        for curvetype in mode.curvetypes:
+            copts.settings[curvetype] = True
         del copts.settings['adhoc_curvetype']
     
         metaopts = options['meta']

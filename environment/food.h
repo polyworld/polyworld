@@ -11,6 +11,7 @@
 
 // System
 #include <iostream>
+#include <list>
 
 using namespace std;
 
@@ -38,10 +39,14 @@ public:
 	static float gSize2Energy; // (converts between food/agent size and available energy)
 	static float gMaxFoodRadius;
 	static float gCarryFood2Energy;
+	static long gMaxLifeSpan;
 
-    food();
-    food(float e);
-    food(float e, float x, float z);
+	typedef list<food *> FoodList;
+	static FoodList gAllFood;
+
+    food( long step );
+    food( long step, float e );
+    food( long step, float e, float x, float z);
     ~food();
     
 	void dump(ostream& out);
@@ -59,10 +64,12 @@ public:
 	short domain();
 	void domain(short id);
 
+	long getAge( long step );
+
 protected:
-    void initfood();
-    void initfood(float e);
-    void initfood(float e, float x, float z);
+    void initfood( long step );
+    void initfood( long step, float e );
+    void initfood( long step, float e, float x, float z );
 	void initlen();
 	void initrest();
    	virtual void setradius();
@@ -74,6 +81,11 @@ protected:
 
 	FoodPatch* patch; // pointer to this food's patch
 
+	long fCreationStep;
+	// This iterator addresses this object in the global list. This
+	// allows us to remove this object from the list without having to
+	// search for it.
+	FoodList::iterator fAllFoodIterator;
 };
 
 //===========================================================================

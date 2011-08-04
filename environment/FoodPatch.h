@@ -44,7 +44,7 @@ class FoodPatch : public Patch
 	bool foodGrown;
 
 	float update();
-	float addFood();
+	float addFood( long step );
 	void setInitCounts( int initFood, int minFood, int maxFood, int maxFoodGrown, float newFraction );
 	void init( float x, float z, float sx, float sz, float rate, int initFood, int minFood, int maxFood, int maxFoodGrown, float patchFraction, int shape, int distribution, float nhsize, class OnCondition *onCondition, bool inRemoveFood, gstage* fStage, Domain* dm, int domainNumber );
 	void updateOn( long step );

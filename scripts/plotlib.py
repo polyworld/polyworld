@@ -243,6 +243,8 @@ class Plot:
         self.xlabel = None
         self.ylabel = None
         self.y2label = None
+        self.xrange = None
+        self.y1range = None
         self.y2range = None
         self.grid = True
         self.boxwidth = 0.5
@@ -387,6 +389,12 @@ class Plot:
             spec += 'set y2label "%s" font "Times,12"\n' % psencode(self.y2label)
         else:
             spec += 'unset y2label\n'
+
+        if self.xrange:
+            spec += 'set xrange [%f:%f]\n' % (self.xrange[0], self.xrange[1])
+
+        if self.y1range:
+            spec += 'set yrange [%f:%f]\n' % (self.y1range[0], self.y1range[1])
 
         if self.y2range:
             spec += 'set y2range [%f:%f]\n' % (self.y2range[0], self.y2range[1])

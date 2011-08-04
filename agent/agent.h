@@ -57,7 +57,9 @@ public:
 	static void agentdestruct();
 	static void agentdump(std::ostream& out);
 	
+	enum BodyRedChannel { BRC_FIGHT, BRC_CONST };
 	enum BodyGreenChannel { BGC_ID, BGC_LIGHT, BGC_CONST };
+	enum BodyBlueChannel { BBC_MATE, BBC_CONST };
 	enum NoseColor { NC_LIGHT, NC_CONST };
 	enum YawEncoding { YE_SQUASH, YE_OPPOSE };
 
@@ -97,8 +99,12 @@ public:
 	static float    gMaxVisionYaw;
 	static float    gEyeHeight;
 	static float	gMaxSizeAdvantage;
+	static BodyRedChannel gBodyRedChannel;
+	static float    gBodyRedChannelConstValue;
 	static BodyGreenChannel gBodyGreenChannel;
 	static float    gBodyGreenChannelConstValue;
+	static BodyBlueChannel gBodyBlueChannel;
+	static float    gBodyBlueChannelConstValue;
 	static NoseColor gNoseColor;
 	static float    gNoseColorConstValue;
 	static int		gNumDepletionSteps;
@@ -137,7 +143,7 @@ public:
     virtual void setradius();    
     float eat(food* f, float eatFitnessParameter, float eat2consume, float eatthreshold, long step);
 	float receive( agent *giver, float *e );
-    void damage(float e);
+    float damage(float e, bool nullMode);
     float MateProbability(agent* c);
     float mating( float mateFitnessParam, long mateWait );
     void rewardmovement(float moveFitnessParam, float speed2dpos);
@@ -178,6 +184,7 @@ public:
     float MaxEnergy();
     long LastMate();
 	long LastEat();
+	float LastEatDistance();
 	genome::Genome* Genes();
 	NervousSystem* GetNervousSystem();
     long Number();
@@ -253,6 +260,7 @@ protected:
     long fAge;
     long fLastMate;
 	long fLastEat;
+	float fLastEatPosition[3];
 	LifeSpan fLifeSpan;
 	bool fDeathByPatch;
     
@@ -372,6 +380,7 @@ inline long agent::MaxAge() { return geneCache.lifespan; }
 inline float agent::MaxEnergy() { return fMaxEnergy; }
 inline long agent::LastMate() { return fLastMate; }
 inline long agent::LastEat() { return fLastEat; }
+inline float agent::LastEatDistance() { return dist( fPosition[0], fPosition[2], fLastEatPosition[0], fLastEatPosition[2] ); }
 inline genome::Genome* agent::Genes() { return fGenome; }
 inline NervousSystem* agent::GetNervousSystem() { return fCns; }
 inline long agent::Number() { return getTypeNumber(); }

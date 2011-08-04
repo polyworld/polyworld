@@ -1,5 +1,6 @@
+from common_functions import warn
 import itertools
-from math import sqrt
+from math import isnan, sqrt
 from scipy import stats
 
 import datalib
@@ -144,6 +145,11 @@ def avr(data):
     try:
         minimum = data[0]
         maximum = data[-1]
+
+	if isnan(minimum) or isnan(maximum):
+	    nan = float('nan')
+	    warn('algorithms.avr() encountered NaN!')
+            return nan, nan, nan, nan, nan, nan, nan
 
         # sanity check (data should already be sorted)
         assert(minimum <= maximum)

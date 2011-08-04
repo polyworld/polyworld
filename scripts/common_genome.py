@@ -10,9 +10,23 @@ import datalib
 ####################################################################################
 class SeparationCache:
     def __init__( self, path_run ):
-        self.tables = datalib.parse( os.path.join(path_run, 'genome/separations.txt'),
-                                     keycolname = 'Agent',
-                                     tablename2key = int )
+        path_log = os.path.join(path_run, 'genome/separations.txt')
+
+        class state:
+            tables = {}
+
+        def __beginTable( tablename, colnames, coltypes, path, table_index, keycolname ):
+            agentNumber = int( tablename )
+            state.currTable = {}
+            state.tables[ agentNumber ] = state.currTable
+
+        def __row( row ):
+            state.currTable[ row['Agent'] ] = row[ 'Separation' ]
+
+
+        datalib.parse( path_log, stream_beginTable = __beginTable, stream_row = __row )
+
+        self.tables = state.tables
 
     def separation( self, agentNumber1, agentNumber2 ):
         if agentNumber1 < agentNumber2:
@@ -22,7 +36,7 @@ class SeparationCache:
             x = agentNumber2
             y = agentNumber1
 
-        return self.tables[x][y]['Separation']
+        return self.tables[x][y]
 
     # returns min_separation, max_separation
     def getBounds( self ):
@@ -30,10 +44,9 @@ class SeparationCache:
         hi = -lo
 
         for table in self.tables.values():
-            for row in table.rows():
-                sep = row['Separation']
-                lo = min(lo, sep)
-                hi = max(hi, sep)
+            for separation in table.values():
+                lo = min(lo, separation)
+                hi = max(hi, separation)
 
         return lo, hi
 

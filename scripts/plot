@@ -165,13 +165,16 @@ def parse_args(argv):
     ARGS_GLOBAL = {'g': 'group',
                    'group': 'group',
                    'o': 'output',
+                   'xrange': 'xrange',
+                   'yrange1': 'yrange1',
                    'title': 'title',
                    'xlabel': 'xlabel',
                    'ylabel1': 'ylabel1',
                    'ylabel2': 'ylabel2',
                    'rmargin': 'rmargin',
                    'tcrit': 'tcrit',
-                   'tscale': 'tscale'}
+                   'tscale': 'tscale',
+                   'style': 'style'}
 
     FLAGS_AVR = {'w': 'whiskers',
                  'whiskers': 'whiskers',
@@ -860,6 +863,18 @@ def plot_init( clauses,
         # stupid EPS terminal cuts off our x-axis label without this
         plot.rmargin = 4
 
+    if gopts.get('xrange', False):
+        xrange = gopts.get('xrange').split(',')
+        xmin = float(xrange[0])
+        xmax = float(xrange[1])
+        plot.xrange = (xmin, xmax)
+
+    if gopts.get('yrange1', False):
+        yrange = gopts.get('yrange1').split(',')
+        ymin = float(yrange[0])
+        ymax = float(yrange[1])
+        plot.y1range = (ymin, ymax)
+
     try:
         # allow user-override of right margin
         plot.rmargin = int(gopts.get('rmargin'))
@@ -995,6 +1010,7 @@ def create_curves(mode,
     gopts = options['global']
     smooth = gopts.get('smooth')
     points = gopts.get('points')
+    styleMode = gopts.get('style', 'normal')
     options = options[optionclass]
     path = table.path
     meta = optionclass == 'meta'
@@ -1022,7 +1038,10 @@ def create_curves(mode,
             class_root = classification.split('_')[0]
         else:
             class_root = classification
-        if gopts.get('group', 'auto') == 'off':
+
+        if styleMode == 'table':
+            groupkey = table.name
+        elif gopts.get('group', 'auto') == 'off':
             groupkey = curvetype
         else:
             groupkey = class_root
@@ -1060,10 +1079,13 @@ def create_curves(mode,
                                               preflinetype)
 
         # Use the color key to ensure consistent color between
-        # style groups.
+        # style groups for each run.
         if meta:
             colorkey = 'meta'
             forcecolor = 'black'
+        elif styleMode == 'table':
+            colorkey = curvetype
+            forcecolor = None
         else:
             colorkey = path
             forcecolor = None
@@ -1304,6 +1326,12 @@ GENERAL OPTIONS
 
             (default auto)
 
+     --xrange <xmin>,<xmax>
+               Specify min and max x values.
+
+     --yrange1 <ymin>,<ymax>
+               Specify min and max y values of plot for y1-axis.
+
      --tcrit <TCRIT>
                Specify value of T* (default %f, which corresponds to %d
             samples in %d pairs in a Dependent Student's T-test)
@@ -1350,6 +1378,13 @@ GENERAL OPTIONS
      -c, --color
                Use color to distinguish individual runs.
                (default is to use uniform gray for individual runs)
+
+     --style <mode>
+               Specify mode for assigning line style and color to each curve.
+            Valid modes are:
+               normal - standard behavior
+               table  - same line style for each table
+              
 
      --title <title>
                Specify title of graph, optionally with macros (see 'help macros').
