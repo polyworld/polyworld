@@ -27,37 +27,259 @@
 
 using namespace std;
 
+
+// ================================================================================
+// ================================================================================
+// ================================================================================
+// ================================================================================
+// ===
+// === MACROS
+// ===
+// ================================================================================
+// ================================================================================
+// ================================================================================
+// ================================================================================
+
+#define NUM_BINS 16 // TODO: binning code is broken. only works cuz 16*16=256
+
+// ---
+// --- Debug flags
+// ---
+#define VERBOSE false
+#define DEBUG false
+#define SANITY_CHECKS true
+// If true, user must press enter to proceed through major stages of analysis.
+// This provides an opportunity to do things like look at process memory usage.
+#define PROMPT_STAGES false
+
+// STL iterator for loop
+#define itfor(TYPE,CONT,IT)						\
+	for(TYPE::iterator							\
+			IT = (CONT).begin(),				\
+			IT##_end = (CONT).end();			\
+		IT != IT##_end;							\
+		++IT)
+
+#define err( msg... ) {fprintf(stderr, msg); exit(1);}
+
+// if condition is true, then print message and exit
+#define errif( condition, msg... )										\
+	if(condition) {														\
+		fprintf(stderr, "%s:%d Failed condition \"%s\"\n", __FILE__, __LINE__, #condition); \
+		fprintf(stderr, msg);											\
+		exit(1);														\
+	}
+
+#if PROMPT_STAGES
+#define STAGE(MESSAGE...) {printf(MESSAGE); printf("Press enter..."); getchar();}
+#else
+#define STAGE(MESSAGE...) printf(MESSAGE)
+#endif
+
+
+// ================================================================================
+// ================================================================================
+// ================================================================================
+// ================================================================================
+// ===
+// === COMMAND-LINE PARAMETERS
+// ===
+// ================================================================================
+// ================================================================================
+// ================================================================================
+// ================================================================================
+
+struct CliParms {
+	int clusterPartitionModulus;
+	float threshFact;
+	const char *path_run;
+	int nclusters;
+
+	CliParms() {
+		clusterPartitionModulus = 1;
+		threshFact = 2.125;
+		path_run = "./run";
+		nclusters = -1;
+	}
+} cliParms;
+
+// ================================================================================
+// ================================================================================
+// ================================================================================
+// ================================================================================
+// ===
+// === MAIN
+// ===
+// ================================================================================
+// ================================================================================
+// ================================================================================
+// ================================================================================
+
+int main(int argc, char *argv[]) {
+	// ---
+	// --- FUNCTION PROTOTYPES
+	// ---
+	void usage();
+	void compute_clusters();
+	void util__compareCentroids( const char *subdir_a, const char *subdir_b );
+	void util__checkThresh( const char *subdir );
+	void util__centroidDists( const char *subdir );
+
+	if( argc == 1 ) {
+		usage();
+	}
+
+	string mode = argv[1];
+
+	// copy 0 to 1 so error messages from getopt show program name
+	argv[1] = argv[0];
+	// shift forward one in args to let getopt process args after mode.
+	argc--;
+	argv++;
+
+	if( mode == "cluster" ) {
+		int opt;
+		char *endptr;
+
+		while( (opt = getopt(argc, argv, "m:f:")) != -1 ) {
+			switch(opt) {
+			case 'm': {
+				char *endptr;
+				cliParms.clusterPartitionModulus = strtol( optarg, &endptr, 10 );
+				if( *endptr ) {
+					err( "Invalid -m value -- expecting int.\n" );
+				} else if( cliParms.clusterPartitionModulus < 1 ) {
+					err( "Invalid -m value -- must be >= 1.\n" );
+				}
+			} break;
+			case 'f': {
+				char *endptr;
+				cliParms.threshFact = strtof( optarg, &endptr );
+				if( *endptr ) {
+					err( "Invalid -f value -- expecting float.\n" );
+				} else if( cliParms.threshFact <= 0 ) {
+					err( "Invalid -f value -- must be > 0.\n" );
+				}
+			} break;
+			default:
+				exit(1);
+			}
+		}
+
+		if( optind < argc ) {
+			cliParms.path_run = argv[optind++];
+		}
+
+		if( optind < argc ) {
+			err( "Unexpected arg '%s'\n", argv[optind] );
+		}
+
+		// ---
+		// --- PERFORM CLUSTERING
+		// ---
+		compute_clusters();
+	} else {
+		int opt;
+
+		while( (opt = getopt(argc, argv, "n:")) != -1 ) {
+			switch(opt) {
+			case 'n': {
+				char *endptr;
+				cliParms.nclusters = strtol( optarg, &endptr, 10 );
+				if( *endptr ) {
+					err( "Invalid -n value -- expecting int.\n" );
+				} else if( cliParms.clusterPartitionModulus < 1 ) {
+					err( "Invalid -n value -- must be >= 1.\n" );
+				}
+			} break;
+			default:
+				exit(1);
+			}
+		}
+
+		if( mode == "compareCentroids" ) {
+			if( optind >= argc ) err( "Missing subdir_A\n" );
+			const char *subdir_a = argv[optind++];
+
+			if( optind >= argc ) err( "Missing subdir_B\n" );
+			const char *subdir_b = argv[optind++];
+
+			if( optind < argc ) {
+				cliParms.path_run = argv[optind++];
+			}
+
+			if( optind < argc ) err( "Unpexected arg '%s'\n", argv[optind] );
+
+			// ---
+			// --- COMPARE CENTROIDS
+			// ---
+			util__compareCentroids( subdir_a, subdir_b );
+		} else if( mode == "checkThresh" ) {
+			if( optind >= argc ) err( "Missing subdir\n" );
+			const char *subdir = argv[optind++];
+
+			if( optind < argc ) {
+				cliParms.path_run = argv[optind++];
+			}
+
+			if( optind < argc ) err( "Unpexected arg '%s'\n", argv[optind] );
+
+			// ---
+			// --- CHECK THRESH
+			// ---
+			util__checkThresh( subdir );
+		} else if( mode == "centroidDists" ) {
+			if( optind >= argc ) err( "Missing subdir\n" );
+			const char *subdir = argv[optind++];
+
+			if( optind < argc ) {
+				cliParms.path_run = argv[optind++];
+			}
+
+			if( optind < argc ) err( "Unpexected arg '%s'\n", argv[optind] );
+
+			// ---
+			// --- CENTROID DISTS
+			// ---
+			util__centroidDists( subdir );
+		} else {
+			err( "Unknown mode '%s'\n", mode.c_str() );
+		}
+	}
+
+    return 0;
+}
+
 // --------------------------------------------------------------------------------
 // ---
 // --- FUNCTION usage
 // ---
 // --------------------------------------------------------------------------------
-void usage( const char *msg = NULL ) {
-	fprintf( stderr, "usage:\n" );
-	fprintf( stderr, "\n" );
-	fprintf( stderr, "qt_clust cluster [-m clusterPartitionModulus] [-f threshFact] [run]\n" );
-	fprintf( stderr, "\tPerform cluster analysis.\n" );
-	fprintf( stderr, "\n" );
-	fprintf( stderr, "qt_clust compareCentroids [-n max_clusters] subdir_A subdir_B [run]\n" );
-	fprintf( stderr, "\tCompute the distance between cluster centroids from two cluster files.\n" );
-	fprintf( stderr, "\n" );
-	fprintf( stderr, "qt_clust checkThresh [-n <max_clusters>] subdir [run]\n" );
-	fprintf( stderr, "\tAnalyze how well clusters conform to THRESH.\n" );
-	fprintf( stderr, "\n" );
-	fprintf( stderr, "qt_clust centroidDists [-n <max_clusters>] subdir [run]\n" );
-	fprintf( stderr, "\tCompute distance between centroids of all clusters.\n" );
-	fprintf( stderr, "\n" );
-	fprintf( stderr, "\n" );
-	fprintf( stderr, "Examples:\n" );
-	fprintf( stderr, "\n" );
-	fprintf( stderr, "\tqt_clust cluster -m 10 ./run\n" );
-	fprintf( stderr, "\n" );
-	fprintf( stderr, "\tqt_clust compareCentroids -n 10 m1f2.125 m10f2.125\n" );
-	
-	if( msg ) {
-		fprintf( stderr, "\n" );
-		fprintf( stderr, "%s\n", msg );
-	}
+void usage() {
+	#define p(x...) fprintf( stderr, "%s\n", x )
+
+	p( "usage:" );
+	p("");
+	p( "qt_clust cluster [-m clusterPartitionModulus] [-f threshFact] [run]" );
+	p( "   Perform cluster analysis." );
+	p("");
+	p( "qt_clust compareCentroids [-n max_clusters] subdir_A subdir_B [run]" );
+	p( "   Compute the distance between cluster centroids from two cluster files." );
+	p("");
+	p( "qt_clust checkThresh [-n max_clusters] subdir [run]" );
+	p( "   Analyze how well clusters conform to THRESH." );
+	p("");
+	p( "qt_clust centroidDists [-n max_clusters] subdir [run]" );
+	p( "   Compute distance between centroids of all clusters." );
+	p("");
+	p("");
+	p( "Examples:" );
+	p("");
+	p( "   qt_clust cluster -m 10 ./run" );
+	p("");
+	p( "   qt_clust compareCentroids -n 10 m1f2.125 m10f2.125" );
+
+	#undef p
 
 	exit( 1 );
 }
@@ -73,124 +295,49 @@ void usage( const char *msg = NULL ) {
 // ================================================================================
 // ================================================================================
 // ================================================================================
+
 float THRESH = 0;
 int GENES = 0;
 
-struct CliParms {
-	int clusterPartitionModulus;
-	float threshFact;
-	const char *path_run;
-	int nclusters;
-
-	CliParms() {
-		clusterPartitionModulus = 1;
-		threshFact = 2.125;
-		path_run = "../../run";
-		nclusters = -1;
-	}
-} cliParms;
 
 // ================================================================================
 // ================================================================================
 // ================================================================================
 // ================================================================================
 // ===
-// === MACROS
+// === AgentId/AgentIndex Types
 // ===
 // ================================================================================
 // ================================================================================
 // ================================================================================
 // ================================================================================
 
-// TODO: Make pathname an argument
-// TODO: Make constants GENES and POPSIZE determined from run directory
-//       Implies dynamic allocation of G, std2, dists, etc
-// TODO: Write cluster info to a file (in run/cluster/<std.dev.>)
-
-#define SORT_GENES false
-
-#include "config.h"
-
-// Debug flags
-#define VERBOSE false
-#define PRINT_ELTS 1
-#define DEBUG 0
-#define SLEEP_AT_END false
-#define SANITY_CHECKS true
-#define PROMPT_STAGES false
-
-// iterator for loop
-#define itfor(TYPE,CONT,IT)						\
-	for(TYPE::iterator							\
-			IT = (CONT).begin(),				\
-			IT##_end = (CONT).end();			\
-		IT != IT##_end;							\
-		++IT)
-
-// reverse iterator for loop
-#define ritfor(TYPE,CONT,IT)					\
-	for(TYPE::reverse_iterator					\
-			IT = (CONT).rbegin(),				\
-			IT##_end = (CONT).rend();			\
-		IT != IT##_end;							\
-		++IT)
-
-// const iterator for loop
-#define citfor(TYPE,CONT,IT)					\
-	for(TYPE::const_iterator					\
-			IT = (CONT).begin(),				\
-			IT##_end = (CONT).end();			\
-		IT != IT##_end;							\
-		++IT)
-
-#define errif( condition, msg... )										\
-	if(condition) {														\
-		fprintf(stderr, "%s:%d Failed condition \"%s\"\n", __FILE__, __LINE__, #condition); \
-		fprintf(stderr, msg);											\
-		exit(1);														\
-	}
-
-#define err( msg... ) {fprintf(stderr, msg); exit(1);}
-
-#if PROMPT_STAGES
-#define STAGE(MESSAGE...) {printf(MESSAGE); printf("Press enter..."); getchar();}
-#else
-#define STAGE(MESSAGE...) printf(MESSAGE)
-#endif
-
-
-// ================================================================================
-// ================================================================================
-// ================================================================================
-// ================================================================================
-// ===
-// ===
-// ===
-// ================================================================================
-// ================================================================================
-// ================================================================================
-// ================================================================================
+// ---
+// --- AgentId is the ID of the agent in the simulation being analyzed.
+// ---
 typedef int AgentId;
 typedef vector<AgentId> AgentIdVector;
 typedef set<AgentId> AgentIdSet;
 
+// ---
+// --- AgentIndex is the 0-based index of the agent within a PopulationPartition.
+// ---
 typedef int AgentIndex;
+typedef vector<AgentIndex> AgentIndexVector;
 typedef set<AgentIndex> AgentIndexSet;
 
-// ================================================================================
-// ================================================================================
-// ================================================================================
-// ================================================================================
-// ===
-// === PROTOTYPES
-// ===
-// ================================================================================
-// ================================================================================
-// ================================================================================
-// ================================================================================
-void write_members( FILE *f, class Cluster *cluster );
-unsigned char *load_genome( AgentId id );
 
+// ================================================================================
+// ================================================================================
+// ================================================================================
+// ================================================================================
+// ===
+// === MISC UTIL FUNCTIONS
+// ===
+// ================================================================================
+// ================================================================================
+// ================================================================================
+// ================================================================================
 
 // --------------------------------------------------------------------------------
 // ---
@@ -206,101 +353,320 @@ static double hirestime( void )
 }
 
 // --------------------------------------------------------------------------------
-// --- TODO: We don't need to use this class anymore. Switch to using vector.
 // ---
-// --- CLASS AgentIndexArray
-// ---
-// --- Designed to hold a set of agent Indexes, where emphasis is placed on small
-// --- RAM footprint and efficient computation of intersection.
+// --- FUNCTION is_regular_file
 // ---
 // --------------------------------------------------------------------------------
-class AgentIndexArray {
+bool is_regular_file( const char *path ) {
+		struct stat st;
+		int rc = stat( path, &st );
+
+		return (rc == 0) && S_ISREG(st.st_mode);
+}
+
+
+// --------------------------------------------------------------------------------
+// ---
+// --- FUNCTION read_last_nonblank_line
+// ---
+// --------------------------------------------------------------------------------
+char *read_last_nonblank_line( const char *path ) {
+	errif( !is_regular_file(path), "File does not exist: %s\n", path );
+
+	FILE *f = fopen( path, "r" );
+	errif( !f, "Failed opening %s\n", path );
+
+	long linestart = -1;
+	long lineend;
+	bool nonblank = false;
+
+	int rc = fseek( f, -1, SEEK_END );
+	errif( rc != 0, "Failed seeking end of %s\n", path );
+
+	lineend = ftell(f);
+
+	while( true ) {
+		long offset = ftell(f);
+		if( offset == 0 ) {
+			linestart = 0;
+			break;
+		}
+
+		char c = fgetc(f);
+
+		if( c == '\n' ) {
+			if( nonblank ) {
+				linestart = offset + 1;
+				break;
+			} else {
+				lineend = offset - 1;
+			}
+		} else if( !isblank(c) ) {
+			nonblank = true;
+		}
+
+		rc = fseek( f, offset - 1, SEEK_SET );
+		errif( rc != 0, "Failed seeking to offset %ld of %s\n", offset - 1, path );
+	}
+
+	if( !nonblank ) {
+		return NULL;
+	} else {
+		rc = fseek( f, linestart, SEEK_SET );
+		errif( rc != 0, "Failed seeking linestart %ld of %s\n", linestart, path );
+
+		long linelen = lineend - linestart + 1;
+		char *result = (char *)malloc( linelen + 1 );
+		rc = fread( result, 1, linelen, f );
+		errif( rc != linelen, "Failed reading line of %s\n", path );
+
+		result[linelen] = 0;
+
+		return result;
+	}
+}
+
+// --------------------------------------------------------------------------------
+// ---
+// --- FUNCTION get_run_path
+// ---
+// --------------------------------------------------------------------------------
+char *get_run_path( const char *relpath ) {
+	char buf[1024];
+
+	if( cliParms.path_run[strlen(cliParms.path_run) - 1] == '/' ) {
+		sprintf( buf, "%s%s", cliParms.path_run, relpath );
+	} else {
+		sprintf( buf, "%s/%s", cliParms.path_run, relpath );
+	}
+
+	return strdup( buf );
+}
+
+// --------------------------------------------------------------------------------
+// ---
+// --- FUNCTION get_results_dir
+// ---
+// --------------------------------------------------------------------------------
+char *get_results_dir( const char *subdir ) {
+	char reldir[1024];
+	sprintf( reldir, "qt_clust/%s", subdir );
+	return get_run_path( reldir );
+}
+
+// --------------------------------------------------------------------------------
+// ---
+// --- FUNCTION get_results_path
+// ---
+// --------------------------------------------------------------------------------
+char *get_results_path( const char *subdir, const char *type ) {
+	char *dir = get_results_dir( subdir );
+
+	char buf[1024];
+	sprintf( buf, "%s/%s.txt", dir, type );
+	free( dir );
+
+	return strdup( buf );
+}
+
+// --------------------------------------------------------------------------------
+// ---
+// --- FUNCTION load_genome
+// ---
+// --- Load genome for single agent from file.
+// ---
+// --------------------------------------------------------------------------------
+unsigned char *load_genome( AgentId id ) {
+	char *dir_genome = get_run_path( "genome/agents" );
+    char path_genome[1024];
+    sprintf(path_genome, "%s/genome_%d.txt", dir_genome, id);
+
+    FILE *fp = fopen(path_genome, "r");
+	errif( !fp, "Unable to open file \"%s\"\n", path_genome);
+
+	unsigned char *genome = new unsigned char[GENES];
+
+    char* s; int i;
+    for (i=0;  i< GENES; i++) {
+        s = readline(fp);
+        genome[i] = (unsigned char) atoi(s);
+    }
+
+    fclose(fp);
+	free( dir_genome );
+
+	return genome;
+}
+
+// --------------------------------------------------------------------------------
+// ---
+// --- FUNCTION get_genome_size
+// ---
+// --------------------------------------------------------------------------------
+int get_genome_size() {
+	char *lastline = read_last_nonblank_line( get_run_path("genome/meta/geneindex.txt") );
+	stringstream sin( lastline );
+	int offset = -1;
+	sin >> offset;
+
+	assert( offset >= 0 );
+
+	return offset + 1;
+}
+
+// --------------------------------------------------------------------------------
+// ---
+// --- FUNCTION get_agent_ids
+// ---
+// --------------------------------------------------------------------------------
+AgentIdVector *get_agent_ids() {
+	const char *path_genomes = get_run_path("genome/agents");
+
+	DIR *dir = opendir( path_genomes );
+	errif( !dir, "Failed opening dir %s\n", path_genomes );
+	
+	AgentIdVector *ids = new AgentIdVector();
+
+	dirent *ent;
+	while( ent = readdir(dir) ) {
+		if( 0 == strncmp(ent->d_name, "genome_", 7) ) {
+			AgentId id = atoi( ent->d_name + 7 );
+			ids->push_back( (int)ids->size() + 1 );
+		}
+	}
+
+	closedir( dir );
+
+	return ids;
+}
+
+// --------------------------------------------------------------------------------
+// ---
+// --- FUNCTION print_vector
+// ---
+// --------------------------------------------------------------------------------
+void print_vector(int v[], int size) {
+	int i;
+	printf("| [");
+	for (i =0; i < size; i++) {
+		printf("%3d ", v[i]);
+	}
+	printf("]\n");
+}
+
+// --------------------------------------------------------------------------------
+// ---
+// --- FUNCTION print_float_vector
+// ---
+// --------------------------------------------------------------------------------
+void print_float_vector(float v[], int size) {
+	int i;
+	printf("(");
+	for (i =0; i < size; i++) {
+		printf(" %f ", v[i]);
+	}
+	printf(")\n");
+}
+
+
+// ================================================================================
+// ================================================================================
+// ================================================================================
+// ================================================================================
+// ===
+// === CLASS ListBuffer
+// ===
+// === A lightweight doubly-linked list, where all nodes reside in single heap
+// === buffer allocated on instantiation. Links are achieved with int rather than
+// === pointers to save RAM.
+// ================================================================================
+// ================================================================================
+// ================================================================================
+// ================================================================================
+
+template< typename T >
+class ListBuffer {
 public:
-	AgentIndexArray( AgentIndexSet &set ) {
-		sorted = true;
-		numIndexes = set.size();
-		indexes = new AgentIndex[ numIndexes ];
+	struct Node {
+		T data;
+		int prev;
+		int next;
+	};
+public:
 
-		int i = 0;
-		itfor( AgentIndexSet, set, it ) {
-			indexes[i++] = *it;
+	ListBuffer( int capacity ) {
+		assert( capacity > 0 );
+
+		_buffer = new Node[capacity];
+		_head = _buffer;
+
+		for( int i = 0; i < capacity; i++ ) {
+			Node *node = _buffer + i;
+
+			node->prev = i - 1;
+			node->next = i + 1;
 		}
+
+		_buffer[capacity - 1].next = -1;
 	}
 
-	AgentIndexArray( const AgentIndex *buffer, size_t nelements ) {
-		sorted = false;
-		numIndexes = nelements;
-		indexes = new AgentIndex[ numIndexes ];
-
-		memcpy( indexes, buffer, numIndexes * sizeof(AgentIndex) );
+	~ListBuffer() {
+		delete _buffer;
 	}
 
-	~AgentIndexArray() {
-		delete indexes;
+	inline T *operator[]( int index ) {
+		return (T*)(_buffer + index);
 	}
 
-	inline AgentIndex &operator[]( int i ) {
-		assert( (i >= 0) && (i < numIndexes) );
-
-		return indexes[i];
+	inline bool empty() {
+		return _head == NULL;
 	}
 
-	inline size_t size() const {
-		return numIndexes;
+	inline T *head() {
+		return (T *)_head;
 	}
 
-	inline bool empty() const {
-		return numIndexes == 0;
-	}
-
-	inline void sort() {
-		if( !sorted ) {
-			qsort( indexes, numIndexes, sizeof(AgentIndex), compareIndex );
-			sorted = true;
-		}
-	}
-
-	inline bool intersects( AgentIndexArray &other ) {
-		if( this == &other )
-			return true;
-
-		if( other.size() < this->size() ) {
-			return other.intersects( *this );
+	inline T *next( T *curr ) {
+		if( ((Node*)curr)->next == -1 ) {
+			return NULL;
 		} else {
-			assert( other.sorted );
+			return (T*)(_buffer + ((Node*)curr)->next);
+		}
+	}
 
-			for( int i = 0; i < numIndexes; i++ )
-				if( other.contains(indexes[i]) )
-					return true;
-
-			return false;
+	inline void remove( T *data ) {
+		if( ((Node*)data)->prev != -1 ) {
+			_buffer[((Node*)data)->prev].next = ((Node*)data)->next;
+		}
+		if( ((Node*)data)->next != -1 ) {
+			_buffer[((Node*)data)->next].prev = ((Node*)data)->prev;
+		}
+		if( ((Node*)data) == _head ) {
+			if( ((Node*)data)->next == -1 ) 
+				_head = NULL;
+			else
+				_head = _buffer + ((Node*)data)->next;
 		}
 	}
 
 private:
-	inline bool contains( AgentIndex index ) {
-		return NULL != bsearch( &index, indexes, numIndexes, sizeof(AgentIndex), compareIndex );
-	}
-
-
-	static int compareIndex( const void *_x, const void *_y )
-	{
-		AgentIndex x = *(AgentIndex *)_x;
-		AgentIndex y = *(AgentIndex *)_y;
-
-		return x - y;
-	}
-
-	bool sorted;
-	size_t numIndexes;
-	AgentIndex *indexes;
+	Node *_head;
+	Node *_buffer;
 };
 
-// --------------------------------------------------------------------------------
-// ---
-// --- CLASS PopulationPartition
-// ---
-// --------------------------------------------------------------------------------
+
+// ================================================================================
+// ================================================================================
+// ================================================================================
+// ================================================================================
+// ===
+// === CLASS PopulationPartition
+// ===
+// ================================================================================
+// ================================================================================
+// ================================================================================
+// ================================================================================
+
 class PopulationPartition {
 public:
 	PopulationPartition( AgentIdVector *_members,
@@ -378,13 +744,13 @@ public:
 		AgentIdVector::iterator it = lower_bound( members.begin(), members.end(), id );
 		assert( *it == id );
 
-		return distance( members.begin(), it );
+		return std::distance( members.begin(), it );
 	}
 
-	inline AgentIdVector *createAgentIdVector( AgentIndexArray &indexes ) {
+	inline AgentIdVector *createAgentIdVector( AgentIndex *indexes, int nindexes ) {
 		AgentIdVector *result = new AgentIdVector(); // TODO constructor specifying capacity?
 
-		for( int i = 0; i < indexes.size(); i++ ) {
+		for( int i = 0; i < nindexes; i++ ) {
 			result->push_back( getId(indexes[i]) );
 		}
 
@@ -419,111 +785,45 @@ typedef vector<PopulationPartition *> PopulationPartitionVector;
 
 // --------------------------------------------------------------------------------
 // ---
-// --- CLASS GeneEntropyCalculator
+// --- FUNCTION define_partitions
 // ---
 // --------------------------------------------------------------------------------
-class GeneEntropyCalculator {
-public:
-	GeneEntropyCalculator() {
-		numGenomes = 0;
+void define_partitions(	PopulationPartition **out_clusterPartition,
+						PopulationPartition **out_neighborPartition ) {
+	AgentIdVector *ids_global = get_agent_ids();
+	AgentIdVector *ids_cluster = new AgentIdVector();
+	AgentIdVector *ids_neighbor = new AgentIdVector();
 
-		bins = new int*[NUM_BINS];
-		for( int i = 0; i < NUM_BINS; i++ ) {
-			bins[i] = new int[GENES];
-			memset( bins[i], 0, GENES * sizeof(int) );
+	for( int i = 0; i < ids_global->size(); i++ ) {
+		if( (i % cliParms.clusterPartitionModulus) == 0 ) {
+			ids_cluster->push_back( ids_global->at(i) );
+		} else {
+			ids_neighbor->push_back( ids_global->at(i) );
 		}
 	}
 
-	~GeneEntropyCalculator() {
-		for( int i = 0; i < NUM_BINS; i++ ) {
-			delete bins[i];
-		}
-		delete bins;
-	}
+	*out_clusterPartition = new PopulationPartition( ids_cluster,
+													 true,
+													 false );
+	*out_neighborPartition = new PopulationPartition( ids_neighbor,
+													  false,
+													  true );
 
-	void addGenome( unsigned char *genome ) {
-		numGenomes++;
-
-		for( int igene = 0; igene < GENES; igene++ ) {
-			// TODO: this bin calculation only works because 16 * 16 = 256
-			int bin = genome[igene] / NUM_BINS;
-			bins[bin][igene] += 1;
-		}
-	}
-
-	float *getResult() {
-		float *result = new float[GENES];
-		memset( result, 0, GENES * sizeof(float) );
-
-		for( int igene = 0; igene < GENES; igene++ ) {
-			for( int ibin = 0; ibin < NUM_BINS; ibin++ ) {
-				if( bins[ibin][igene] != 0 ) {
-					float p = (float) bins[ibin][igene] / numGenomes;
-					result[igene] += (-p * (log(p) / log(NUM_BINS)));
-				}
-			}
-
-			result[igene] = 1 - result[igene];
-		}
-
-		return result;
-	}
+	delete ids_global;
+}
 
 
-private:
-	int numGenomes;
-	int **bins;
-};
-
-// --------------------------------------------------------------------------------
-// ---
-// --- CLASS GeneStdDev2Calculator
-// ---
-// --------------------------------------------------------------------------------
-class GeneStdDev2Calculator {
-public:
-	GeneStdDev2Calculator() {
-		numGenomes = 0;
-
-		sum = new double[GENES];
-		memset( sum, 0, GENES * sizeof(double) );
-		sum2 = new double[GENES];
-		memset( sum2, 0, GENES * sizeof(double) );
-	}
-
-	~GeneStdDev2Calculator() {
-		delete sum;
-		delete sum2;
-	}
-
-	void addGenome( unsigned char *genome ) {
-		numGenomes++;
-
-		for( int i = 0; i < GENES; i++ ) {
-			sum[i] += genome[i];
-			sum2[i] += genome[i] * genome[i];
-		}
-	}
-
-	float *getResult() {
-		double mean[GENES];
-		for( int i = 0; i < GENES; i++ ) {
-			mean[i] = sum[i] / numGenomes;
-		}
-
-		float *result = new float[GENES];
-		for( int i = 0; i < GENES; i++ ) {
-			result[i] = float( sum2[i] / numGenomes - mean[i] * mean[i] );
-		}
- 
-		return result;
-	}
-
-private:
-	int numGenomes;
-	double *sum;
-	double *sum2;
-};
+// ================================================================================
+// ================================================================================
+// ================================================================================
+// ================================================================================
+// ===
+// === DISTANCE FUNCTIONS
+// ===
+// ================================================================================
+// ================================================================================
+// ================================================================================
+// ================================================================================
 
 // --------------------------------------------------------------------------------
 // ---
@@ -649,21 +949,6 @@ float **create_distanceCache( float **deltaCache, PopulationPartition *populatio
 	double endTime = hirestime();
 	printf( "distance time=%f seconds\n", endTime - startTime );
 
-	/*
-	  {
-	  FILE *f = fopen("dists.txt", "w");
-	  for( i = 0; i < POPSIZE; i++ ) {
-	  for( j = i+1; j < POPSIZE; j++ ) {
-	  float val = distanceCache[i][j];
-	  if(val > THRESH) val = THRESH;
-	  fprintf( f, "%f ", val );
-	  }
-	  fprintf(f, "\n");
-	  }
-	  fclose(f);
-	  }
-	*/
-
 	return distanceCache;
 }
 
@@ -692,9 +977,169 @@ inline float get_distance( float **distanceCache, AgentIndex x, AgentIndex y ) {
 
 // --------------------------------------------------------------------------------
 // ---
-// --- CLASS Cluster
+// --- CLASS GeneEntropyCalculator
 // ---
 // --------------------------------------------------------------------------------
+class GeneEntropyCalculator {
+public:
+	GeneEntropyCalculator() {
+		numGenomes = 0;
+
+		bins = new int*[NUM_BINS];
+		for( int i = 0; i < NUM_BINS; i++ ) {
+			bins[i] = new int[GENES];
+			memset( bins[i], 0, GENES * sizeof(int) );
+		}
+	}
+
+	~GeneEntropyCalculator() {
+		for( int i = 0; i < NUM_BINS; i++ ) {
+			delete bins[i];
+		}
+		delete bins;
+	}
+
+	void addGenome( unsigned char *genome ) {
+		numGenomes++;
+
+		for( int igene = 0; igene < GENES; igene++ ) {
+			// TODO: this bin calculation only works because 16 * 16 = 256
+			int bin = genome[igene] / NUM_BINS;
+			bins[bin][igene] += 1;
+		}
+	}
+
+	float *getResult() {
+		float *result = new float[GENES];
+		memset( result, 0, GENES * sizeof(float) );
+
+		for( int igene = 0; igene < GENES; igene++ ) {
+			for( int ibin = 0; ibin < NUM_BINS; ibin++ ) {
+				if( bins[ibin][igene] != 0 ) {
+					float p = (float) bins[ibin][igene] / numGenomes;
+					result[igene] += (-p * (log(p) / log(NUM_BINS)));
+				}
+			}
+
+			result[igene] = 1 - result[igene];
+		}
+
+		return result;
+	}
+
+
+private:
+	int numGenomes;
+	int **bins;
+};
+
+// --------------------------------------------------------------------------------
+// ---
+// --- CLASS GeneStdDev2Calculator
+// ---
+// --------------------------------------------------------------------------------
+class GeneStdDev2Calculator {
+public:
+	GeneStdDev2Calculator() {
+		numGenomes = 0;
+
+		sum = new double[GENES];
+		memset( sum, 0, GENES * sizeof(double) );
+		sum2 = new double[GENES];
+		memset( sum2, 0, GENES * sizeof(double) );
+	}
+
+	~GeneStdDev2Calculator() {
+		delete sum;
+		delete sum2;
+	}
+
+	void addGenome( unsigned char *genome ) {
+		numGenomes++;
+
+		for( int i = 0; i < GENES; i++ ) {
+			sum[i] += genome[i];
+			sum2[i] += genome[i] * genome[i];
+		}
+	}
+
+	float *getResult() {
+		double mean[GENES];
+		for( int i = 0; i < GENES; i++ ) {
+			mean[i] = sum[i] / numGenomes;
+		}
+
+		float *result = new float[GENES];
+		for( int i = 0; i < GENES; i++ ) {
+			result[i] = float( sum2[i] / numGenomes - mean[i] * mean[i] );
+		}
+ 
+		return result;
+	}
+
+private:
+	int numGenomes;
+	double *sum;
+	double *sum2;
+};
+
+// --------------------------------------------------------------------------------
+// ---
+// --- FUNCTION create_distance_metrics
+// ---
+// --------------------------------------------------------------------------------
+struct DistanceMetrics {
+	float **deltaCache;
+};
+
+DistanceMetrics create_distance_metrics( PopulationPartitionVector &partitions ) {
+	GeneEntropyCalculator entropyCalculator;
+	GeneStdDev2Calculator stddev2Calculator;
+
+	itfor( PopulationPartitionVector, partitions, it ) {
+		PopulationPartition *partition = *it;
+
+		itfor( AgentIdVector, partition->members, it ) {
+			AgentId id = *it;
+			unsigned char *genome = partition->getGenomeById( id );
+
+			entropyCalculator.addGenome( genome );
+			stddev2Calculator.addGenome( genome );
+
+			partition->endGenomeStatisticsComputation( id );
+		}
+	}
+
+	float *entropy = entropyCalculator.getResult();
+	float *stddev2 = stddev2Calculator.getResult();
+
+	DistanceMetrics result = {NULL};
+
+	THRESH = 0;
+    for( int i=0; i<GENES; i++ )
+        THRESH += entropy[i];
+    THRESH *= cliParms.threshFact;
+
+	result.deltaCache = create_distance_deltaCache( entropy, stddev2 );
+
+	delete entropy;
+	delete stddev2;
+
+	return result;
+}
+
+// ================================================================================
+// ================================================================================
+// ================================================================================
+// ================================================================================
+// ===
+// === CLASS Cluster
+// ===
+// ================================================================================
+// ================================================================================
+// ================================================================================
+// ================================================================================
+
 typedef int ClusterId;
 
 class Cluster {
@@ -746,107 +1191,173 @@ typedef vector<ClusterVector *> ClusterMatrix;
 
 // --------------------------------------------------------------------------------
 // ---
-// --- CLASS ListBuffer
-// ---
-// --- A lightweight doubly-linked list, where all nodes reside in single heap
-// --- buffer allocated on instantiation. Links are achieved with int rather than
-// --- pointers to save RAM.
+// --- FUNCTION create_centroids
 // ---
 // --------------------------------------------------------------------------------
-template< typename T >
-class ListBuffer {
-public:
-	struct Node {
-		T data;
-		int prev;
-		int next;
-	};
-public:
+void create_centroids( float **distance_deltaCache,
+					   PopulationPartition *population,
+					   ClusterVector &clusters ) {
 
-	ListBuffer( int capacity ) {
-		assert( capacity > 0 );
-
-		_buffer = new Node[capacity];
-		_head = _buffer;
-
-		for( int i = 0; i < capacity; i++ ) {
-			Node *node = _buffer + i;
-
-			node->prev = i - 1;
-			node->next = i + 1;
-		}
-
-		_buffer[capacity - 1].next = -1;
+	#pragma omp parallel for
+	for( int i = 0; i < clusters.size(); i++ ) {
+		clusters[i]->createCentroid();
 	}
 
-	~ListBuffer() {
-		delete _buffer;
-	}
-
-	inline T *operator[]( int index ) {
-		return (T*)(_buffer + index);
-	}
-
-	inline bool empty() {
-		return _head == NULL;
-	}
-
-	inline T *head() {
-		return (T *)_head;
-	}
-
-	inline T *next( T *curr ) {
-		if( ((Node*)curr)->next == -1 ) {
-			return NULL;
-		} else {
-			return (T*)(_buffer + ((Node*)curr)->next);
+#if SANITY_CHECKS
+	itfor( ClusterVector, clusters, it_cluster ) {
+		Cluster *cluster = *it_cluster;
+		itfor( AgentIdVector, cluster->members, it_member ) {
+			float dist = compute_distance(distance_deltaCache,
+										  population->getGenomeById(*it_member),
+										  cluster->centroidGenome);
+			errif( dist > THRESH,
+				   "cluster=%d, member=%d, nmembers=%lu, dist=%f, THRESH=%f\n",
+				   cluster->id, *it_member, cluster->members.size(), dist, THRESH );
 		}
 	}
-
-	inline void remove( T *data ) {
-		if( ((Node*)data)->prev != -1 ) {
-			_buffer[((Node*)data)->prev].next = ((Node*)data)->next;
-		}
-		if( ((Node*)data)->next != -1 ) {
-			_buffer[((Node*)data)->next].prev = ((Node*)data)->prev;
-		}
-		if( ((Node*)data) == _head ) {
-			if( ((Node*)data)->next == -1 ) 
-				_head = NULL;
-			else
-				_head = _buffer + ((Node*)data)->next;
-		}
-	}
-
-private:
-	Node *_head;
-	Node *_buffer;
-};
-
-void print_vector(int v[], int size) {
-	int i;
-	printf("| [");
-	for (i =0; i < size; i++) {
-		printf("%3d ", v[i]);
-	}
-	printf("]\n");
+#endif
 }
 
-void print_float_vector(float v[], int size) {
-	int i;
-	printf("(");
-	for (i =0; i < size; i++) {
-		printf(" %f ", v[i]);
+
+// ================================================================================
+// ================================================================================
+// ================================================================================
+// ================================================================================
+// ===
+// === WRITE RESULTS
+// ===
+// ================================================================================
+// ================================================================================
+// ================================================================================
+// ================================================================================
+
+// --------------------------------------------------------------------------------
+// ---
+// --- FUNCTION write_members
+// ---
+// --------------------------------------------------------------------------------
+void write_members( FILE *f, Cluster *cluster ) {
+	if( !cluster->members.empty() ) {
+		fprintf( f, "cluster %d (%lu elts) : ", cluster->id, cluster->members.size() );
+
+		itfor( AgentIdVector, cluster->members, it ) {
+			fprintf( f, "%d ", *it );
+		}
+		fprintf( f, "\n" );
 	}
-	printf(")\n");
 }
 
-int sum_arr(int a[], int ELTS) { 
-	int i, sum; sum = 0;
-	for (i = 0; i < ELTS; i++)
-		sum += a[i];
-	return sum;
+// --------------------------------------------------------------------------------
+// ---
+// --- FUNCTION write_neighbors
+// ---
+// --------------------------------------------------------------------------------
+void write_neighbors( FILE *f, Cluster *cluster ) {
+	if( !cluster->neighbors.empty() ) {
+		fprintf( f, "cluster %d (%lu elts) : ", cluster->id, cluster->neighbors.size() );
+
+		itfor( AgentIdVector, cluster->neighbors, it ) {
+			fprintf( f, "%d ", *it );
+		}
+		fprintf( f, "\n" );
+	}
 }
+
+// --------------------------------------------------------------------------------
+// ---
+// --- FUNCTION write_members_and_neighbors
+// ---
+// --------------------------------------------------------------------------------
+void write_members_and_neighbors( FILE *f, Cluster *cluster ) {
+	if( !cluster->members.empty() || !cluster->neighbors.empty() ) {
+		AgentIdVector all( cluster->members.size() + cluster->neighbors.size() );
+
+		merge( cluster->members.begin(), cluster->members.end(),
+			   cluster->neighbors.begin(), cluster->neighbors.end(),
+			   all.begin() );
+		
+		fprintf( f, "cluster %d (%lu elts) : ", cluster->id, all.size() );
+		itfor( AgentIdVector, all, it ) {
+			fprintf( f, "%d ", *it );
+		}
+		fprintf( f, "\n" );
+	}
+}
+
+// --------------------------------------------------------------------------------
+// ---
+// --- FUNCTION write_results
+// ---
+// --------------------------------------------------------------------------------
+void write_results( ClusterVector &clusters ) {
+	char subdir[1024];
+	sprintf( subdir, "m%df%g", cliParms.clusterPartitionModulus, cliParms.threshFact );
+
+	{
+		char cmd[1024 * 4];
+		sprintf( cmd, "mkdir -p %s", get_results_dir(subdir) );
+		errif( 0 != system(cmd), "Failed executing '%s'\n", cmd );
+	}
+
+#define FOPEN(HANDLE,TYPE)												\
+	FILE *HANDLE = fopen(get_results_path(subdir,TYPE),"w");			\
+	errif(HANDLE==NULL, "%s\n", get_results_path(subdir,TYPE));
+
+	{
+		FOPEN(f, "threshFact");
+
+		fprintf( f, "%f\n", cliParms.threshFact );
+
+		fclose(f);
+	}
+
+	{
+		FOPEN(f, "members");
+
+		itfor( ClusterVector, clusters, it ) {
+			write_members( f, *it );
+		}
+
+		fclose(f);
+	}
+
+	{
+		FOPEN(f, "members_neighbors");
+
+		itfor( ClusterVector, clusters, it ) {
+			write_members_and_neighbors( f, *it );
+		}
+
+		fclose(f);
+	}
+
+	{
+		FOPEN(f, "neighbors");
+
+		itfor( ClusterVector, clusters, it ) {
+			write_neighbors( f, *it );
+		}
+
+		fclose(f);
+	}
+
+	cout << "results written to " << get_results_dir(subdir) << endl;
+
+#undef FOPEN
+}
+
+
+// ================================================================================
+// ================================================================================
+// ================================================================================
+// ================================================================================
+// ===
+// === CLUSTERING FUNCTIONS
+// ===
+// ================================================================================
+// ================================================================================
+// ================================================================================
+// ================================================================================
 
 // --------------------------------------------------------------------------------
 // ---
@@ -860,9 +1371,10 @@ struct MaxDist {
 	float dist;
 };
 
-AgentIndexArray *create_candidate_cluster( float **distanceCache,
-										   AgentIndex startAgent,
-										   const AgentIndexSet &allAgents ) {
+AgentIdVector *create_candidate_cluster( float **distanceCache,
+										 PopulationPartition *partition,
+										 AgentIndex startAgent,
+										 AgentIndexSet &allAgents ) {
 	AgentIndex clusterAgents[ allAgents.size() ];
 	size_t numClusterAgents = 0;
 #define ADD_CLUSTER_AGENT( ID ) clusterAgents[numClusterAgents++] = ID;
@@ -873,7 +1385,7 @@ AgentIndexArray *create_candidate_cluster( float **distanceCache,
 		ListBuffer<MaxDist> max_dists( allAgents.size() - 1 );
 		{
 			MaxDist *node = max_dists.head();
-			citfor( AgentIndexSet, allAgents, it ) {
+			itfor( AgentIndexSet, allAgents, it ) {
 				AgentId index = *it;
 
 				if( index != startAgent ) {
@@ -918,7 +1430,7 @@ AgentIndexArray *create_candidate_cluster( float **distanceCache,
 		}
 	}
 
-	AgentIndexArray *result = new AgentIndexArray( clusterAgents, numClusterAgents );
+	AgentIndexVector *result = partition->createAgentIdVector( clusterAgents, numClusterAgents );
 
 	if (DEBUG) printf("%dC | (len %lu)\n", startAgent, result->size());
 
@@ -934,11 +1446,11 @@ AgentIndexArray *create_candidate_cluster( float **distanceCache,
 // ---
 // --------------------------------------------------------------------------------
 Cluster *create_cluster( float **distanceCache,
-						 PopulationPartition *population,
+						 PopulationPartition *partition,
 						 AgentIndexSet &remainingAgents,
 						 ClusterId clusterId ) {
 
-	AgentIndexArray *biggestMembers = NULL;
+	AgentIdVector *biggestMembers = NULL;
 	AgentIndex biggestStartAgent;
 
 	AgentIndexSet::iterator it = remainingAgents.begin();
@@ -959,9 +1471,10 @@ Cluster *create_cluster( float **distanceCache,
 
 			if( it_threadLocal != it_end ) {
 				AgentIndex startAgent = *it_threadLocal;
-				AgentIndexArray *members = create_candidate_cluster( distanceCache, 
-																	 startAgent, 
-																	 remainingAgents );
+				AgentIdVector *members = create_candidate_cluster( distanceCache,
+																   partition,
+																   startAgent, 
+																   remainingAgents );
 
 				#pragma omp critical ( cluster_single__biggest )
 				{
@@ -983,13 +1496,11 @@ Cluster *create_cluster( float **distanceCache,
 		} while( it_threadLocal != it_end );
 	}
 
-	biggestMembers->sort();
+	sort( biggestMembers->begin(), biggestMembers->end() );
 
-	Cluster *result = new Cluster( population,
+	Cluster *result = new Cluster( partition,
 								   clusterId,
-								   population->createAgentIdVector(*biggestMembers) );
-
-	delete biggestMembers;
+								   biggestMembers );
 
 	return result;
 }
@@ -1074,35 +1585,6 @@ void create_clusters( float **distance_deltaCache,
 	itfor( ClusterVector, clusters, it ) {
 		allClusters.push_back( *it );
 	}
-}
-
-// --------------------------------------------------------------------------------
-// ---
-// --- FUNCTION create_centroids
-// ---
-// --------------------------------------------------------------------------------
-void create_centroids( float **distance_deltaCache,
-					   PopulationPartition *population,
-					   ClusterVector &clusters ) {
-
-	#pragma omp parallel for
-	for( int i = 0; i < clusters.size(); i++ ) {
-		clusters[i]->createCentroid();
-	}
-
-#if SANITY_CHECKS
-	itfor( ClusterVector, clusters, it_cluster ) {
-		Cluster *cluster = *it_cluster;
-		itfor( AgentIdVector, cluster->members, it_member ) {
-			float dist = compute_distance(distance_deltaCache,
-										  population->getGenomeById(*it_member),
-										  cluster->centroidGenome);
-			errif( dist > THRESH,
-				   "cluster=%d, member=%d, nmembers=%lu, dist=%f, THRESH=%f\n",
-				   cluster->id, *it_member, cluster->members.size(), dist, THRESH );
-		}
-	}
-#endif
 }
 
 // --------------------------------------------------------------------------------
@@ -1289,444 +1771,6 @@ void find_neighbors( float **distance_deltaCache,
 
 // --------------------------------------------------------------------------------
 // ---
-// --- FUNCTION is_regular_file
-// ---
-// --------------------------------------------------------------------------------
-bool is_regular_file( const char *path ) {
-		struct stat st;
-		int rc = stat( path, &st );
-
-		return (rc == 0) && S_ISREG(st.st_mode);
-}
-
-
-// --------------------------------------------------------------------------------
-// ---
-// --- FUNCTION read_last_nonblank_line
-// ---
-// --------------------------------------------------------------------------------
-char *read_last_nonblank_line( const char *path ) {
-	errif( !is_regular_file(path), "Invalid file: %s\n", path );
-
-	FILE *f = fopen( path, "r" );
-	errif( !f, "Failed opening %s\n", path );
-
-	long linestart = -1;
-	long lineend;
-	bool nonblank = false;
-
-	int rc = fseek( f, -1, SEEK_END );
-	errif( rc != 0, "Failed seeking end of %s\n", path );
-
-	lineend = ftell(f);
-
-	while( true ) {
-		long offset = ftell(f);
-		if( offset == 0 ) {
-			linestart = 0;
-			break;
-		}
-
-		char c = fgetc(f);
-
-		if( c == '\n' ) {
-			if( nonblank ) {
-				linestart = offset + 1;
-				break;
-			} else {
-				lineend = offset - 1;
-			}
-		} else if( !isblank(c) ) {
-			nonblank = true;
-		}
-
-		rc = fseek( f, offset - 1, SEEK_SET );
-		errif( rc != 0, "Failed seeking to offset %ld of %s\n", offset - 1, path );
-	}
-
-	if( !nonblank ) {
-		return NULL;
-	} else {
-		rc = fseek( f, linestart, SEEK_SET );
-		errif( rc != 0, "Failed seeking linestart %ld of %s\n", linestart, path );
-
-		long linelen = lineend - linestart + 1;
-		char *result = (char *)malloc( linelen + 1 );
-		rc = fread( result, 1, linelen, f );
-		errif( rc != linelen, "Failed reading line of %s\n", path );
-
-		result[linelen] = 0;
-
-		return result;
-	}
-}
-
-// --------------------------------------------------------------------------------
-// ---
-// --- FUNCTION get_run_path
-// ---
-// --------------------------------------------------------------------------------
-char *get_run_path( const char *relpath ) {
-	char buf[1024];
-
-	if( cliParms.path_run[strlen(cliParms.path_run) - 1] == '/' ) {
-		sprintf( buf, "%s%s", cliParms.path_run, relpath );
-	} else {
-		sprintf( buf, "%s/%s", cliParms.path_run, relpath );
-	}
-
-	return strdup( buf );
-}
-
-// --------------------------------------------------------------------------------
-// ---
-// --- FUNCTION write_members
-// ---
-// --------------------------------------------------------------------------------
-void write_members( FILE *f, Cluster *cluster ) {
-	if( !cluster->members.empty() ) {
-		fprintf( f, "cluster %d (%lu elts) : ", cluster->id, cluster->members.size() );
-
-		itfor( AgentIdVector, cluster->members, it ) {
-			fprintf( f, "%d ", *it );
-		}
-		fprintf( f, "\n" );
-	}
-}
-
-// --------------------------------------------------------------------------------
-// ---
-// --- FUNCTION write_neighbors
-// ---
-// --------------------------------------------------------------------------------
-void write_neighbors( FILE *f, Cluster *cluster ) {
-	if( !cluster->neighbors.empty() ) {
-		fprintf( f, "cluster %d (%lu elts) : ", cluster->id, cluster->neighbors.size() );
-
-		itfor( AgentIdVector, cluster->neighbors, it ) {
-			fprintf( f, "%d ", *it );
-		}
-		fprintf( f, "\n" );
-	}
-}
-
-// --------------------------------------------------------------------------------
-// ---
-// --- FUNCTION write_members_and_neighbors
-// ---
-// --------------------------------------------------------------------------------
-void write_members_and_neighbors( FILE *f, Cluster *cluster ) {
-	if( !cluster->members.empty() || !cluster->neighbors.empty() ) {
-		AgentIdVector all( cluster->members.size() + cluster->neighbors.size() );
-
-		merge( cluster->members.begin(), cluster->members.end(),
-			   cluster->neighbors.begin(), cluster->neighbors.end(),
-			   all.begin() );
-		
-		fprintf( f, "cluster %d (%lu elts) : ", cluster->id, all.size() );
-		itfor( AgentIdVector, all, it ) {
-			fprintf( f, "%d ", *it );
-		}
-		fprintf( f, "\n" );
-	}
-}
-
-// --------------------------------------------------------------------------------
-// ---
-// --- FUNCTION get_results_dir
-// ---
-// --------------------------------------------------------------------------------
-char *get_results_dir( const char *subdir ) {
-	char reldir[1024];
-	sprintf( reldir, "qt_clust/%s", subdir );
-	return get_run_path( reldir );
-}
-
-// --------------------------------------------------------------------------------
-// ---
-// --- FUNCTION get_results_path
-// ---
-// --------------------------------------------------------------------------------
-char *get_results_path( const char *subdir, const char *type ) {
-	char *dir = get_results_dir( subdir );
-
-	char buf[1024];
-	sprintf( buf, "%s/%s.txt", dir, type );
-	free( dir );
-
-	return strdup( buf );
-}
-
-// --------------------------------------------------------------------------------
-// ---
-// --- FUNCTION write_results
-// ---
-// --------------------------------------------------------------------------------
-void write_results( ClusterVector &clusters ) {
-	char subdir[1024];
-	sprintf( subdir, "m%df%g", cliParms.clusterPartitionModulus, cliParms.threshFact );
-
-	{
-		char cmd[1024 * 4];
-		sprintf( cmd, "mkdir -p %s", get_results_dir(subdir) );
-		errif( 0 != system(cmd), "Failed executing '%s'\n", cmd );
-	}
-
-#define FOPEN(HANDLE,TYPE)												\
-	FILE *HANDLE = fopen(get_results_path(subdir,TYPE),"w");			\
-	errif(HANDLE==NULL, "%s\n", get_results_path(subdir,TYPE));
-
-	{
-		FOPEN(f, "threshFact");
-
-		fprintf( f, "%f\n", cliParms.threshFact );
-
-		fclose(f);
-	}
-
-	{
-		FOPEN(f, "members");
-
-		itfor( ClusterVector, clusters, it ) {
-			write_members( f, *it );
-		}
-
-		fclose(f);
-	}
-
-	{
-		FOPEN(f, "members_neighbors");
-
-		itfor( ClusterVector, clusters, it ) {
-			write_members_and_neighbors( f, *it );
-		}
-
-		fclose(f);
-	}
-
-	{
-		FOPEN(f, "neighbors");
-
-		itfor( ClusterVector, clusters, it ) {
-			write_neighbors( f, *it );
-		}
-
-		fclose(f);
-	}
-
-#undef FOPEN
-}
-
-// --------------------------------------------------------------------------------
-// ---
-// --- FUNCTION load_genome
-// ---
-// --- Load genome for single agent from file.
-// ---
-// --------------------------------------------------------------------------------
-unsigned char *load_genome( AgentId id ) {
-	char *dir_genome = get_run_path( "genome/agents" );
-    char path_genome[1024];
-    sprintf(path_genome, "%s/genome_%d.txt", dir_genome, id);
-
-    FILE *fp = fopen(path_genome, "r");
-	errif( !fp, "Unable to open file \"%s\"\n", path_genome);
-
-	unsigned char *genome = new unsigned char[GENES];
-
-    char* s; int i;
-    for (i=0;  i< GENES; i++) {
-        s = readline(fp);
-        genome[i] = (unsigned char) atoi(s);
-    }
-
-    fclose(fp);
-	free( dir_genome );
-
-	return genome;
-}
-
-// --------------------------------------------------------------------------------
-// ---
-// --- FUNCTION get_genome_size
-// ---
-// --------------------------------------------------------------------------------
-int get_genome_size() {
-	char *lastline = read_last_nonblank_line( get_run_path("genome/meta/geneindex.txt") );
-	stringstream sin( lastline );
-	int offset = -1;
-	sin >> offset;
-
-	assert( offset >= 0 );
-
-	return offset + 1;
-}
-
-// --------------------------------------------------------------------------------
-// ---
-// --- FUNCTION get_agent_ids
-// ---
-// --------------------------------------------------------------------------------
-AgentIdVector *get_agent_ids() {
-	const char *path_genomes = get_run_path("genome/agents");
-
-	DIR *dir = opendir( path_genomes );
-	errif( !dir, "Failed opening dir %s\n", path_genomes );
-	
-	AgentIdVector *ids = new AgentIdVector();
-
-	dirent *ent;
-	while( ent = readdir(dir) ) {
-		if( 0 == strncmp(ent->d_name, "genome_", 7) ) {
-			AgentId id = atoi( ent->d_name + 7 );
-			ids->push_back( (int)ids->size() + 1 );
-		}
-	}
-
-	closedir( dir );
-
-	return ids;
-}
-
-// --------------------------------------------------------------------------------
-// ---
-// --- FUNCTION define_partitions
-// ---
-// --------------------------------------------------------------------------------
-void define_partitions(	PopulationPartition **out_clusterPartition,
-						PopulationPartition **out_neighborPartition ) {
-	AgentIdVector *ids_global = get_agent_ids();
-	AgentIdVector *ids_cluster = new AgentIdVector();
-	AgentIdVector *ids_neighbor = new AgentIdVector();
-
-	for( int i = 0; i < ids_global->size(); i++ ) {
-		if( (i % cliParms.clusterPartitionModulus) == 0 ) {
-			ids_cluster->push_back( ids_global->at(i) );
-		} else {
-			ids_neighbor->push_back( ids_global->at(i) );
-		}
-	}
-
-	*out_clusterPartition = new PopulationPartition( ids_cluster,
-													 true,
-													 false );
-	*out_neighborPartition = new PopulationPartition( ids_neighbor,
-													  false,
-													  true );
-
-	delete ids_global;
-}
-
-// --------------------------------------------------------------------------------
-// ---
-// --- FUNCTION create_distance_metrics
-// ---
-// --------------------------------------------------------------------------------
-struct DistanceMetrics {
-	float **deltaCache;
-};
-
-DistanceMetrics create_distance_metrics( PopulationPartitionVector &partitions ) {
-	GeneEntropyCalculator entropyCalculator;
-	GeneStdDev2Calculator stddev2Calculator;
-
-	itfor( PopulationPartitionVector, partitions, it ) {
-		PopulationPartition *partition = *it;
-
-		itfor( AgentIdVector, partition->members, it ) {
-			AgentId id = *it;
-			unsigned char *genome = partition->getGenomeById( id );
-
-			entropyCalculator.addGenome( genome );
-			stddev2Calculator.addGenome( genome );
-
-			partition->endGenomeStatisticsComputation( id );
-		}
-	}
-
-	float *entropy = entropyCalculator.getResult();
-	float *stddev2 = stddev2Calculator.getResult();
-
-	DistanceMetrics result = {NULL};
-
-	THRESH = 0;
-    for( int i=0; i<GENES; i++ )
-        THRESH += entropy[i];
-    THRESH *= cliParms.threshFact;
-
-	result.deltaCache = create_distance_deltaCache( entropy, stddev2 );
-
-	delete entropy;
-	delete stddev2;
-
-	return result;
-}
-
-// --------------------------------------------------------------------------------
-// ---
-// --- FUNCTION create_sorted
-// ---
-// --------------------------------------------------------------------------------
-template< typename T >
-T *create_sorted( int *order, T *unsorted, int len ) {
-	T *sorted = new T[len];
-
-	for( int i = 0; i < len; i++ ) {
-		sorted[i] = unsorted[order[i]];
-	}
-
-	delete unsorted;
-
-	return sorted;
-}
-
-// --------------------------------------------------------------------------------
-// ---
-// --- FUNCTION sort_genes
-// ---
-// --------------------------------------------------------------------------------
-void sort_genes( PopulationPartition *population, float **out_ents, float **out_stddev2 ) {
-#if SORT_GENES
-	// TODO: this code is out of date. note that we must also sort the delta cache.
-		int sortedGeneOrder[GENES];
-
-		printf("sorting genes by entropy...\n");
-		{
-			double startTime = hirestime();
-
-			for( i = 0; i < GENES; i++ ) {
-				sortedGeneOrder[i] = i;
-			}
-			struct local {
-				static int compareEnt( const void *p1, const void *p2 ) {
-					int i1 = *(int*)p1;
-					int i2 = *(int*)p2;
-
-					float diff = ents[i2] - ents[i1];
-
-					return diff == 0
-						? 0
-						: diff < 0
-						? -1
-						: 1;
-				}
-			};
-			qsort( sortedGeneOrder, GENES, sizeof(int), local::compareEnt );
-
-			for( i = 0; i < POPSIZE; i++ ) {
-				unsigned char *sorted = create_sorted_genome( sortedGeneOrder, allGenomes[i] );
-				delete allGenomes[i];
-				allGenomes[i] = sorted;
-			}
-
-			double endTime = hirestime();
-			printf( "sort genome time=%f seconds\n", endTime - startTime );
-		}
-#endif
-}
-
-// --------------------------------------------------------------------------------
-// ---
 // --- FUNCTION compute_clusters
 // ---
 // --------------------------------------------------------------------------------
@@ -1755,13 +1799,6 @@ void compute_clusters() {
 	DistanceMetrics distanceMetrics = create_distance_metrics( partitions );
 
     printf("THRESH: %f\n", THRESH); 
-
-	// ---
-	// --- SORT GENES
-	// ---
-	STAGE( "sorting genes...\n" );
-
-	//sort_genes( globalPartition, &ents, &stddev2 );
 
 	// ---
 	// --- CREATE CLUSTERS
@@ -1835,11 +1872,24 @@ void compute_clusters() {
 
 	write_results( clusters );
 
-#if SLEEP_AT_END
-	fprintf( stderr, "sleeping...\n" );
-	while(true) sleep(1);
-#endif
+	// ---
+	// --- WE'RE DONE!
+	// ---
+	STAGE( "successfully performed clustering.\n" );
 }
+
+
+// ================================================================================
+// ================================================================================
+// ================================================================================
+// ================================================================================
+// ===
+// === POST-CLUSTERING UTILITIES
+// ===
+// ================================================================================
+// ================================================================================
+// ================================================================================
+// ================================================================================
 
 // --------------------------------------------------------------------------------
 // ---
@@ -2192,120 +2242,4 @@ void util__centroidDists( const char *subdir ) {
 			cout << "\t" << icluster->id << " --> " << jcluster->id << " = " << dist << endl;
 		}
 	}
-}
-
-// --------------------------------------------------------------------------------
-// ---
-// --- FUNCTION main
-// ---
-// --------------------------------------------------------------------------------
-int main(int argc, char *argv[]) {
-	if( argc == 1 ) {
-		usage();
-	}
-
-	string mode = argv[1];
-
-	argc--;
-	argv++;
-
-	if( mode == "cluster" ) {
-		int opt;
-		char *endptr;
-
-		while( (opt = getopt(argc, argv, "m:f:")) != -1 ) {
-			switch(opt) {
-			case 'm': {
-				char *endptr;
-				cliParms.clusterPartitionModulus = strtol( optarg, &endptr, 10 );
-				if( *endptr ) {
-					err( "Invalid -m value -- expecting int.\n" );
-				} else if( cliParms.clusterPartitionModulus < 1 ) {
-					err( "Invalid -m value -- must be >= 1.\n" );
-				}
-			} break;
-			case 'f': {
-				char *endptr;
-				cliParms.threshFact = strtof( optarg, &endptr );
-				if( *endptr ) {
-					err( "Invalid -f value -- expecting float.\n" );
-				} else if( cliParms.threshFact <= 0 ) {
-					err( "Invalid -f value -- must be > 0.\n" );
-				}
-			} break;
-			default:
-				exit(1);
-			}
-		}
-
-		if( optind < argc ) {
-			cliParms.path_run = argv[optind++];
-		}
-
-		if( optind < argc ) {
-			err( "Unexpected arg '%s'\n", argv[optind] );
-		}
-
-		compute_clusters();
-	} else {
-		int opt;
-
-		while( (opt = getopt(argc, argv, "n:")) != -1 ) {
-			switch(opt) {
-			case 'n': {
-				char *endptr;
-				cliParms.nclusters = strtol( optarg, &endptr, 10 );
-				if( *endptr ) {
-					err( "Invalid -n value -- expecting int.\n" );
-				} else if( cliParms.clusterPartitionModulus < 1 ) {
-					err( "Invalid -n value -- must be >= 1.\n" );
-				}
-			} break;
-			default:
-				exit(1);
-			}
-		}
-
-		if( mode == "compareCentroids" ) {
-			if( optind >= argc ) err( "Missing subdir_A\n" );
-			const char *subdir_a = argv[optind++];
-
-			if( optind >= argc ) err( "Missing subdir_B\n" );
-			const char *subdir_b = argv[optind++];
-
-			if( optind < argc ) {
-				cliParms.path_run = argv[optind++];
-			}
-
-			if( optind < argc ) err( "Unpexected arg '%s'\n", argv[optind] );
-
-			util__compareCentroids( subdir_a, subdir_b );
-		} else if( mode == "checkThresh" ) {
-			if( optind >= argc ) err( "Missing subdir\n" );
-			const char *subdir = argv[optind++];
-
-			if( optind < argc ) {
-				cliParms.path_run = argv[optind++];
-			}
-
-			if( optind < argc ) err( "Unpexected arg '%s'\n", argv[optind] );
-
-			util__checkThresh( subdir );
-		} else if( mode == "centroidDists" ) {
-			if( optind >= argc ) err( "Missing subdir\n" );
-			const char *subdir = argv[optind++];
-
-			if( optind < argc ) {
-				cliParms.path_run = argv[optind++];
-			}
-
-			if( optind < argc ) err( "Unpexected arg '%s'\n", argv[optind] );
-
-			util__centroidDists( subdir );
-		} else {
-			err( "Unknown mode '%s'\n", mode.c_str() );
-		}
-	}
-
-    return 0;
 }
