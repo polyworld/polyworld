@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <iostream>
 #include <fstream>
+#include <list>
 #include <map>
 #include <set>
 #include <sstream>
@@ -47,10 +48,13 @@ using namespace std;
 // ---
 #define VERBOSE false
 #define DEBUG false
-#define SANITY_CHECKS true
+#define SANITY_CHECKS false
 // If true, user must press enter to proceed through major stages of analysis.
 // This provides an opportunity to do things like look at process memory usage.
 #define PROMPT_STAGES false
+
+#define GENOME_CACHE_CAPACITY 60000
+#define GENOME_CACHE_FILE_PATH "genomeCache.bin"
 
 // STL iterator for loop
 #define itfor(TYPE,CONT,IT)						\
@@ -471,20 +475,46 @@ char *get_results_path( const char *subdir, const char *type ) {
 
 // --------------------------------------------------------------------------------
 // ---
+// --- FUNCTION decompress_genomes
+// ---
+// --- A temporary solution to deal with gzipped genomes.
+// ---
+// --------------------------------------------------------------------------------
+void decompress_genomes() {
+	char *dir_genome = get_run_path( "genome/agents" );
+
+	char cmd[1024 * 4];
+	sprintf( cmd, "for x in %s/*.txt.gz; do gunzip $x; done", dir_genome );
+	int rc = system( cmd );
+
+	errif( rc != 0, "Failed executing command %s\n", cmd );
+
+	free( dir_genome );
+}
+
+// --------------------------------------------------------------------------------
+// ---
 // --- FUNCTION load_genome
 // ---
 // --- Load genome for single agent from file.
 // ---
 // --------------------------------------------------------------------------------
-unsigned char *load_genome( AgentId id ) {
+void load_genome( AgentId id, unsigned char *genome ) {
 	char *dir_genome = get_run_path( "genome/agents" );
     char path_genome[1024];
     sprintf(path_genome, "%s/genome_%d.txt", dir_genome, id);
 
+	bool compressed;
     FILE *fp = fopen(path_genome, "r");
-	errif( !fp, "Unable to open file \"%s\"\n", path_genome);
-
-	unsigned char *genome = new unsigned char[GENES];
+	if( fp ) {
+		compressed = false;
+	} else {
+		char cmd[2048];
+		sprintf( cmd, "zcat %s.gz", path_genome );
+		fp = popen( cmd, "r" );
+		errif( !fp, "Unable to open file \"%s\"\n", path_genome);
+		compressed = true;
+	}
 
     char* s; int i;
     for (i=0;  i< GENES; i++) {
@@ -492,10 +522,13 @@ unsigned char *load_genome( AgentId id ) {
         genome[i] = (unsigned char) atoi(s);
     }
 
-    fclose(fp);
-	free( dir_genome );
+	if( !compressed ) {
+		fclose(fp);
+	} else {
+		pclose(fp);
+	}
 
-	return genome;
+	free( dir_genome );
 }
 
 // --------------------------------------------------------------------------------
@@ -567,7 +600,6 @@ void print_float_vector(float v[], int size) {
 	}
 	printf(")\n");
 }
-
 
 // ================================================================================
 // ================================================================================
@@ -654,6 +686,228 @@ private:
 	Node *_buffer;
 };
 
+// ================================================================================
+// ================================================================================
+// ================================================================================
+// ================================================================================
+// ===
+// === GENOME CACHE
+// ===
+// ================================================================================
+// ================================================================================
+// ================================================================================
+// ================================================================================
+
+typedef list<class GenomeCacheEntry *> GenomeCacheEntryList;
+
+class GenomeCacheEntry {
+public:
+	GenomeCacheEntry( AgentId id, const GenomeCacheEntryList::iterator &_it_unusedEntries )
+		: it_unusedEntries( _it_unusedEntries )
+	{
+		this->id = id;
+		genes = NULL;
+		used = 0;
+		offset_cacheFile = -1;
+	}
+
+	AgentId id;
+	unsigned char *genes;
+	int used;
+	long offset_cacheFile;
+	GenomeCacheEntryList::iterator it_unusedEntries;
+};
+
+typedef map<AgentId, GenomeCacheEntry> GenomeCacheEntryLookup;
+
+class GenomeRef {
+public:
+	GenomeRef( const GenomeRef &other ) {
+		// do not allow copies
+		assert( false );
+	}
+
+	GenomeRef( class GenomeCache *cache, GenomeCacheEntry *entry ) {
+		this->cache = cache;
+		this->entry = entry;
+	}
+
+	~GenomeRef();
+
+	inline unsigned char *genes() const {
+		return entry->genes;
+	}
+
+private:
+	GenomeCache *cache;
+	friend class GenomeCache;
+	GenomeCacheEntry *entry;
+};
+
+
+//#define TRC(x...) printf(x); printf("\n");
+#define TRC(x...)
+
+class GenomeCache {
+public:
+	GenomeCache( int capacity, AgentIdVector *agents )	{
+		this->capacity = capacity;
+		nallocated = 0;
+		nmisses = 0;
+		f_cacheFile = NULL;
+
+		itfor( AgentIdVector, *agents, it ) {
+			entryLookup.insert( make_pair(*it, GenomeCacheEntry(*it, unusedEntries.end())) );
+		}
+	}
+
+	~GenomeCache() {
+		if( f_cacheFile ) {
+			fclose( f_cacheFile );
+			remove( GENOME_CACHE_FILE_PATH );
+		}
+	}
+
+	GenomeRef get( AgentId id ) {
+		GenomeCacheEntry *entry = &( entryLookup.find(id)->second );
+		bool loadGenes = false;
+
+		#pragma omp critical( entry_used )
+		{
+			if( entry->genes != NULL ) {
+				TRC( "get(%d): GENES PRESENT", id );
+				use( entry );
+			} else {
+				TRC( "get(%d): LOAD GENES", id );
+				loadGenes = true;
+			}
+		}
+
+		if( loadGenes ) {
+			#pragma omp critical( entry_load )
+			{
+				if( entry->genes == NULL ) {
+					if( nallocated < capacity ) {
+						nallocated++;
+						unsigned char *genome = new unsigned char[GENES];
+						load( entry, genome );
+						#pragma omp critical( entry_used )
+						{
+							entry->genes = genome;
+							use( entry );
+						}
+					} else {
+						nmisses++;
+						unsigned char *genome;
+						GenomeCacheEntry *purgedEntry;
+
+						#pragma omp critical( entry_used )
+						{
+							errif( unusedEntries.empty(), "genome references exceed cache capacity!\n" );
+							purgedEntry = unusedEntries.back();
+							unusedEntries.pop_back();
+							purgedEntry->it_unusedEntries = unusedEntries.end();
+							TRC( "  purging %d, len(unusedEntries)=%lu", purgedEntry->id, unusedEntries.size() );
+							genome = purgedEntry->genes;							
+							purgedEntry->genes = NULL;
+						}
+
+						if( purgedEntry->offset_cacheFile == -1 ) {
+							if( f_cacheFile == NULL ) {
+								errif( NULL == (f_cacheFile = fopen( GENOME_CACHE_FILE_PATH, "w+" )),
+									   "Failed creating genome cache file\n" );
+							}
+
+							errif( 0 != fseek(f_cacheFile, 0, SEEK_END),
+								   "Failed seeking end of genome cache.\n" );
+							errif( -1 == (purgedEntry->offset_cacheFile = ftell(f_cacheFile)),
+								   "Failed getting genome cache file position.\n" );
+
+							errif( GENES != fwrite(genome, 1, GENES, f_cacheFile),
+								   "Failed writing genome cache entry.\n" );
+						}
+
+						load( entry, genome );
+
+						#pragma omp critical( entry_used )
+						{
+							entry->genes = genome;
+							use( entry );
+						}
+					}
+				} else {
+					#pragma omp critical( entry_used )
+					{
+						use( entry );
+					}
+				}
+			}
+		}
+
+		return GenomeRef( this, entry );
+	}
+
+public:
+	int nmisses;
+
+private:
+	friend class GenomeRef;
+
+	inline void release( GenomeRef *ref ) {
+		#pragma omp critical( entry_used )
+		{
+			GenomeCacheEntry *entry = ref->entry;
+
+			entry->used--;
+			if( entry->used == 0 ) {
+				TRC( "release(%d): NO LONGER USED", entry->id );
+				unusedEntries.push_front( entry );
+				entry->it_unusedEntries = unusedEntries.begin();
+			} else {
+				TRC( "release(%d): used == %d", entry->id, entry->used );
+			}
+		}
+	}
+
+private:
+	void load( GenomeCacheEntry *entry, unsigned char *genes ) {
+		if( entry->offset_cacheFile != -1 ) {
+			int rc;
+
+			rc = fseek( f_cacheFile, entry->offset_cacheFile, SEEK_SET);
+			errif( 0 != rc, "Failed seeking to cache entry (rc=%d)\n", rc );
+
+			rc = fread( genes, 1, GENES, f_cacheFile);
+			errif( rc != GENES,
+				   "Failed reading cache entry, rc=%d, offset=%ld (%s)\n",
+				   rc, entry->offset_cacheFile, strerror(errno) );
+		} else {
+			load_genome( entry->id, genes );
+		}
+	}
+
+	inline void use( GenomeCacheEntry *entry ) {
+		entry->used++;
+		TRC( "  used=%d", entry->used );
+		if( (entry->used == 1) && (entry->it_unusedEntries != unusedEntries.end()) ) {
+			TRC( "  removing from unusedEntries, len(unusedEntries)=%lu", unusedEntries.size() )
+			unusedEntries.erase( entry->it_unusedEntries );
+			TRC( "    len(unusedEntries)=%lu", unusedEntries.size() )
+		}
+	}
+
+private:
+	FILE *f_cacheFile;
+	int capacity;
+	int nallocated;
+	GenomeCacheEntryLookup entryLookup;
+	GenomeCacheEntryList unusedEntries;
+};
+
+GenomeRef::~GenomeRef() {
+	cache->release( this );
+	entry = NULL;
+}
 
 // ================================================================================
 // ================================================================================
@@ -670,15 +924,10 @@ private:
 class PopulationPartition {
 public:
 	PopulationPartition( AgentIdVector *_members,
-						 bool _keepGenomesInRamAfterStatisticsComputed,
-						 bool _keepGenomesInRamAfterCentroidsComputed)
+						 GenomeCache *_genomeCache )
 		: members(*_members)
-		, keepGenomesInRamAfterStatisticsComputed(_keepGenomesInRamAfterStatisticsComputed)
-		, keepGenomesInRamAfterCentroidsComputed(_keepGenomesInRamAfterCentroidsComputed)
+		, genomeCache(_genomeCache)
 	{
-		genomes = new unsigned char*[ members.size() ];
-		memset( genomes, 0, sizeof(unsigned char*) * members.size() );
-
 		// The IDs must be sorted because we use a binary search to map from ID to index -- see getIndex()
 		sort( members.begin(), members.end() );
 
@@ -692,47 +941,15 @@ public:
 	}
 
 	~PopulationPartition() {
-		for( int i = 0; i < members.size(); i++ ) {
-			if(genomes[i]) delete genomes[i];
-		}
-		delete genomes;
 		delete &members;
 	}
 
-	inline unsigned char *getGenomeById( AgentId id ) {
-		return getGenomeByIndex( getIndex(id) );
+	inline GenomeRef getGenomeById( AgentId id ) {
+		return genomeCache->get( id );
 	}
 
-	inline unsigned char *getGenomeByIndex( AgentIndex index ) {
-		unsigned char *genome = genomes[index];
-		if( genome == NULL ) {
-			#pragma omp critical( PopulationPartition_genomes )
-			{
-				genome = genomes[index];
-				if( genome == NULL ) {
-					genome = load_genome( getId(index) );
-					genomes[index] = genome;
-				}
-			}
-		}
-
-		return genome;
-	}
-
-	void endGenomeStatisticsComputation( AgentId id ) {
-		if( !keepGenomesInRamAfterStatisticsComputed ) {
-			deleteGenome( id );
-		}
-	}
-
-	void endCentroidsComputation() {
-		if( !keepGenomesInRamAfterCentroidsComputed ) {
-			deleteGenomes();
-		}
-	}
-
-	void endNeighborComputation( AgentId id ) {
-		deleteGenome( id );
+	inline GenomeRef getGenomeByIndex( AgentIndex index ) {
+		return genomeCache->get( getId(index) );
 	}
 
 	inline AgentId getId( AgentIndex index ) {
@@ -757,28 +974,11 @@ public:
 		return result;
 	}
 
-private:
-	void deleteGenomes() {
-		itfor( AgentIdVector, members, it ) {
-			deleteGenome( *it );
-		}
-	}
-
-	void deleteGenome( AgentId id ) {
-		AgentIndex index = getIndex( id );
-		if( genomes[index] ) {
-			delete genomes[index];
-			genomes[index] = NULL;
-		}
-	}
-
 public:
 	AgentIdVector &members;
 
 private:
-	bool keepGenomesInRamAfterStatisticsComputed;
-	bool keepGenomesInRamAfterCentroidsComputed;
-	unsigned char **genomes;
+	GenomeCache *genomeCache;
 };
 
 typedef vector<PopulationPartition *> PopulationPartitionVector;
@@ -788,9 +988,10 @@ typedef vector<PopulationPartition *> PopulationPartitionVector;
 // --- FUNCTION define_partitions
 // ---
 // --------------------------------------------------------------------------------
-void define_partitions(	PopulationPartition **out_clusterPartition,
+void define_partitions(	AgentIdVector *ids_global,
+						GenomeCache *genomeCache,
+						PopulationPartition **out_clusterPartition,
 						PopulationPartition **out_neighborPartition ) {
-	AgentIdVector *ids_global = get_agent_ids();
 	AgentIdVector *ids_cluster = new AgentIdVector();
 	AgentIdVector *ids_neighbor = new AgentIdVector();
 
@@ -802,14 +1003,8 @@ void define_partitions(	PopulationPartition **out_clusterPartition,
 		}
 	}
 
-	*out_clusterPartition = new PopulationPartition( ids_cluster,
-													 true,
-													 false );
-	*out_neighborPartition = new PopulationPartition( ids_neighbor,
-													  false,
-													  true );
-
-	delete ids_global;
+	*out_clusterPartition = new PopulationPartition( ids_cluster, genomeCache );
+	*out_neighborPartition = new PopulationPartition( ids_neighbor, genomeCache );
 }
 
 
@@ -832,7 +1027,7 @@ void define_partitions(	PopulationPartition **out_clusterPartition,
 // --- Calculate distance between two genomes.
 // ---
 // --------------------------------------------------------------------------------
-inline float compute_distance(float **deltaCache, unsigned char *x, unsigned char *y) {
+inline float compute_distance( float **deltaCache, unsigned char *x, unsigned char *y ) {
 	float sum = 0;
 
 	for (int gene = 0; gene < GENES; gene++) {
@@ -843,6 +1038,11 @@ inline float compute_distance(float **deltaCache, unsigned char *x, unsigned cha
 
 	return sum;
 }
+
+inline float compute_distance( float **deltaCache, const GenomeRef &x, const GenomeRef &y ) {
+	return compute_distance( deltaCache, x.genes(), y.genes() );
+}
+
 /*
 inline float compute_distance(float *ents, float *stddev2, unsigned char *x, unsigned char *y) {
 	int tmp; float sum = 0;
@@ -888,6 +1088,10 @@ inline float compute_distance(float *ents, float *stddev2, unsigned char *x, uns
 // ---
 // --------------------------------------------------------------------------------
 float **create_distance_deltaCache( float *ents, float *stddev2 ) {
+	assert( GENES > 0 );
+
+	double startTime = hirestime();
+
 	float **deltaCache = new float*[GENES];
 
 	for( int igene = 0; igene < GENES; igene++ ) {
@@ -908,6 +1112,9 @@ float **create_distance_deltaCache( float *ents, float *stddev2 ) {
 			deltaCache[igene][delta] = result;
 		}
 	}
+
+	double endTime = hirestime();
+	printf( "distance metrics time=%f seconds\n", endTime - startTime );
 
 	return deltaCache;
 }
@@ -930,10 +1137,12 @@ float **create_distanceCache( float **deltaCache, PopulationPartition *populatio
 
 	for( AgentIndex i = 0; i < numGenomes; i++) {
 		float *D = distanceCache[i];
+		GenomeRef igenome = population->getGenomeByIndex(i);
         
 		#pragma omp parallel for
 		for( AgentIndex j = i+1; j < numGenomes; j++ ) {
-			float d = compute_distance(deltaCache, population->getGenomeByIndex(i), population->getGenomeByIndex(j));
+			GenomeRef jgenome = population->getGenomeByIndex(j);
+			float d = compute_distance(deltaCache, igenome, jgenome);
 			D[j] = d;
 		}
         
@@ -999,12 +1208,13 @@ public:
 		delete bins;
 	}
 
-	void addGenome( unsigned char *genome ) {
+	void addGenome( GenomeRef &genome ) {
+		unsigned char *genes = genome.genes();
 		numGenomes++;
 
 		for( int igene = 0; igene < GENES; igene++ ) {
 			// TODO: this bin calculation only works because 16 * 16 = 256
-			int bin = genome[igene] / NUM_BINS;
+			int bin = genes[igene] / NUM_BINS;
 			bins[bin][igene] += 1;
 		}
 	}
@@ -1054,12 +1264,13 @@ public:
 		delete sum2;
 	}
 
-	void addGenome( unsigned char *genome ) {
+	void addGenome( GenomeRef &genome ) {
+		unsigned char *genes = genome.genes();
 		numGenomes++;
 
 		for( int i = 0; i < GENES; i++ ) {
-			sum[i] += genome[i];
-			sum2[i] += genome[i] * genome[i];
+			sum[i] += genes[i];
+			sum2[i] += genes[i] * genes[i];
 		}
 	}
 
@@ -1101,12 +1312,10 @@ DistanceMetrics create_distance_metrics( PopulationPartitionVector &partitions )
 
 		itfor( AgentIdVector, partition->members, it ) {
 			AgentId id = *it;
-			unsigned char *genome = partition->getGenomeById( id );
+			GenomeRef genome = partition->getGenomeById( id );
 
 			entropyCalculator.addGenome( genome );
 			stddev2Calculator.addGenome( genome );
-
-			partition->endGenomeStatisticsComputation( id );
 		}
 	}
 
@@ -1162,10 +1371,11 @@ public:
 		memset( sum, 0, GENES * sizeof(float) );
 
 		itfor( AgentIdVector, members, it ) {
-			unsigned char *memberGenome = population->getGenomeById( *it );
+			GenomeRef memberGenome = population->getGenomeById( *it );
+			unsigned char *memberGenes = memberGenome.genes();
 			
 			for( int igene = 0; igene < GENES; igene++ ) {
-				sum[igene] += memberGenome[igene];
+				sum[igene] += memberGenes[igene];
 			}
 		}
 
@@ -1207,8 +1417,9 @@ void create_centroids( float **distance_deltaCache,
 	itfor( ClusterVector, clusters, it_cluster ) {
 		Cluster *cluster = *it_cluster;
 		itfor( AgentIdVector, cluster->members, it_member ) {
+			GenomeRef memberGenome = population->getGenomeById(*it_member);
 			float dist = compute_distance(distance_deltaCache,
-										  population->getGenomeById(*it_member),
+										  memberGenome.genes(),
 										  cluster->centroidGenome);
 			errif( dist > THRESH,
 				   "cluster=%d, member=%d, nmembers=%lu, dist=%f, THRESH=%f\n",
@@ -1627,7 +1838,7 @@ void find_neighbors( float **distance_deltaCache,
 		#pragma omp parallel for
 		for( int ineighbor = 0; ineighbor < neighborCandidatesVector.size(); ineighbor++ ) {
 			AgentId neighborId = neighborCandidatesVector[ ineighbor ];
-			unsigned char *neighborGenome = neighborPartition->getGenomeById( neighborId );
+			GenomeRef neighborGenome = neighborPartition->getGenomeById( neighborId );
 			bool isNeighbor = true;
 
 			for( int iclusterMember = 0;
@@ -1635,7 +1846,7 @@ void find_neighbors( float **distance_deltaCache,
 				 iclusterMember++ )
 			{
 				AgentId clusterId = cluster->members[ iclusterMember ];
-				unsigned char *clusterGenome = clusterPartition->getGenomeById( clusterId );
+				GenomeRef clusterGenome = clusterPartition->getGenomeById( clusterId );
 				float dist = compute_distance( distance_deltaCache,
 											   clusterGenome,
 											   neighborGenome );
@@ -1669,12 +1880,12 @@ void find_neighbors( float **distance_deltaCache,
 
 		for( int i = 0; i < clusterNeighborCandidates.size(); i++ ) {
 			AgentId i_id = clusterNeighborCandidates[i];
-			unsigned char *i_genome = neighborPartition->getGenomeById( i_id );
+			GenomeRef i_genome = neighborPartition->getGenomeById( i_id );
 
 			#pragma omp parallel for
 			for( int j = i + 1; j < clusterNeighborCandidates.size(); j++ ) {
 				AgentId j_id = clusterNeighborCandidates[j];
-				unsigned char *j_genome = neighborPartition->getGenomeById( j_id );
+				GenomeRef j_genome = neighborPartition->getGenomeById( j_id );
 
 				float dist = compute_distance( distance_deltaCache,
 											   i_genome,
@@ -1777,6 +1988,10 @@ void find_neighbors( float **distance_deltaCache,
 void compute_clusters() {
 	GENES = get_genome_size();
 
+	AgentIdVector *ids_global = get_agent_ids();
+	printf( "POPSIZE: %lu\n", ids_global->size() );
+	GenomeCache genomeCache( GENOME_CACHE_CAPACITY, ids_global );
+
 	// ---
 	// --- DEFINE PARTITIONS
 	// ---
@@ -1785,11 +2000,13 @@ void compute_clusters() {
 	PopulationPartition *clusterPartition;
 	PopulationPartition *neighborPartition;
 
-	define_partitions( &clusterPartition, &neighborPartition );
+	define_partitions( ids_global, &genomeCache, &clusterPartition, &neighborPartition );
 
 	PopulationPartitionVector partitions;
-	partitions.push_back( clusterPartition );
 	partitions.push_back( neighborPartition );
+	// We want the cluster partition processed last in create_distance_metrics
+	// so that its genomes are still in the genome cache for creating the distance cache.
+	partitions.push_back( clusterPartition );
 
 	// ---
     // --- CREATE DISTANCE METRICS
@@ -1797,6 +2014,8 @@ void compute_clusters() {
     STAGE("creating distance metrics...\n");
 
 	DistanceMetrics distanceMetrics = create_distance_metrics( partitions );
+
+	cout << "num genome cache misses = " << genomeCache.nmisses << endl;
 
     printf("THRESH: %f\n", THRESH); 
 
@@ -1812,23 +2031,9 @@ void compute_clusters() {
 					 clusterPartition,
 					 clusters );
 
+	cout << "num genome cache misses = " << genomeCache.nmisses << endl;
+
 	if( neighbors ) {
-		// ---
-		// --- CREATE CENTROIDS
-		// ---
-		STAGE( "creating centroids...\n" );
-
-		create_centroids( distanceMetrics.deltaCache,
-						  clusterPartition,
-						  clusters );
-
-		printf( "NOT PURGING CLUSTER GENOMES!\n" );
-		/*
-		itfor( PopulationPartitionVector, partitions, it ) {
-			(*it)->endCentroidsComputation();
-		}
-		*/
-
 		// ---
 		// --- FIND NEIGHBORS
 		// ---
@@ -1849,15 +2054,15 @@ void compute_clusters() {
 							orphans );
 		}
 
+		cout << "num genome cache misses = " << genomeCache.nmisses << endl;
+
 		if( !orphans.empty() ) {
 			// ---
 			// --- CLUSTER ORPHANS
 			// ---
 			STAGE( "clustering orphans...\n" );
 
-			PopulationPartition orphanPartition( new AgentIdVector(orphans),
-												 false,
-												 false );
+			PopulationPartition orphanPartition( new AgentIdVector(orphans), &genomeCache );
 
 			create_clusters( distanceMetrics.deltaCache,
 							 &orphanPartition,
@@ -1875,6 +2080,7 @@ void compute_clusters() {
 	// ---
 	// --- WE'RE DONE!
 	// ---
+	cout << "num genome cache misses = " << genomeCache.nmisses << endl;
 	STAGE( "successfully performed clustering.\n" );
 }
 
@@ -1981,7 +2187,6 @@ struct LoadedClusters {
 
 LoadedClusters load_clusters( bool singlePartition,
 							  const char **subdirs, int nsubdirs ) {
-
 	errif( !singlePartition, "Need to implement support for multiple partitions\n" );
 	
 	LoadedClusters result;
@@ -2013,7 +2218,8 @@ LoadedClusters load_clusters( bool singlePartition,
 		ids = new AgentIdVector( ids_all.begin(), ids_all.end() );
 	}
 
-	PopulationPartition *partition = new PopulationPartition(ids, true, true);
+	GenomeCache *genomeCache = new GenomeCache( GENOME_CACHE_CAPACITY, ids );
+	PopulationPartition *partition = new PopulationPartition(ids, genomeCache);
 	result.partitions->push_back( partition );
 
 	cout << "Creating clusters..." << endl;
