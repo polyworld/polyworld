@@ -53,7 +53,6 @@ using namespace std;
 // This provides an opportunity to do things like look at process memory usage.
 #define PROMPT_STAGES false
 
-#define GENOME_CACHE_CAPACITY 60000
 #define GENOME_CACHE_FILE_PATH "genomeCache.bin"
 
 // STL iterator for loop
@@ -96,12 +95,14 @@ using namespace std;
 struct CliParms {
 	int clusterPartitionModulus;
 	float threshFact;
+	int genomeCacheCapacity;
 	const char *path_run;
 	int nclusters;
 
 	CliParms() {
 		clusterPartitionModulus = 1;
 		threshFact = 2.125;
+		genomeCacheCapacity = 60000;
 		path_run = "./run";
 		nclusters = -1;
 	}
@@ -145,7 +146,7 @@ int main(int argc, char *argv[]) {
 		int opt;
 		char *endptr;
 
-		while( (opt = getopt(argc, argv, "m:f:")) != -1 ) {
+		while( (opt = getopt(argc, argv, "m:f:g:")) != -1 ) {
 			switch(opt) {
 			case 'm': {
 				char *endptr;
@@ -163,6 +164,15 @@ int main(int argc, char *argv[]) {
 					err( "Invalid -f value -- expecting float.\n" );
 				} else if( cliParms.threshFact <= 0 ) {
 					err( "Invalid -f value -- must be > 0.\n" );
+				}
+			} break;
+			case 'g': {
+				char *endptr;
+				cliParms.genomeCacheCapacity = strtol( optarg, &endptr, 10 );
+				if( *endptr ) {
+					err( "Invalid -g value -- expecting int.\n" );
+				} else if( cliParms.genomeCacheCapacity < 1 ) {
+					err( "Invalid -g value -- must be >= 1.\n" );
 				}
 			} break;
 			default:
@@ -264,7 +274,7 @@ void usage() {
 
 	p( "usage:" );
 	p("");
-	p( "qt_clust cluster [-m clusterPartitionModulus] [-f threshFact] [run]" );
+	p( "qt_clust cluster [-m clusterPartitionModulus] [-f threshFact] [-g genomeCacheCapacity] [run]" );
 	p( "   Perform cluster analysis." );
 	p("");
 	p( "qt_clust compareCentroids [-n max_clusters] subdir_A subdir_B [run]" );
@@ -475,25 +485,6 @@ char *get_results_path( const char *subdir, const char *type ) {
 
 // --------------------------------------------------------------------------------
 // ---
-// --- FUNCTION decompress_genomes
-// ---
-// --- A temporary solution to deal with gzipped genomes.
-// ---
-// --------------------------------------------------------------------------------
-void decompress_genomes() {
-	char *dir_genome = get_run_path( "genome/agents" );
-
-	char cmd[1024 * 4];
-	sprintf( cmd, "for x in %s/*.txt.gz; do gunzip $x; done", dir_genome );
-	int rc = system( cmd );
-
-	errif( rc != 0, "Failed executing command %s\n", cmd );
-
-	free( dir_genome );
-}
-
-// --------------------------------------------------------------------------------
-// ---
 // --- FUNCTION load_genome
 // ---
 // --- Load genome for single agent from file.
@@ -698,28 +689,38 @@ private:
 // ================================================================================
 // ================================================================================
 
-typedef list<class GenomeCacheEntry *> GenomeCacheEntryList;
+typedef list<class GenomeCacheSlot *> GenomeCacheSlotList;
 
-class GenomeCacheEntry {
+// --------------------------------------------------------------------------------
+// ---
+// --- CLASS GenomeCacheSlot
+// ---
+// --------------------------------------------------------------------------------
+class GenomeCacheSlot {
 public:
-	GenomeCacheEntry( AgentId id, const GenomeCacheEntryList::iterator &_it_unusedEntries )
-		: it_unusedEntries( _it_unusedEntries )
+	GenomeCacheSlot( AgentId id, const GenomeCacheSlotList::iterator &_it_unreferencedAllocatedSlots )
+		: it_unreferencedAllocatedSlots( _it_unreferencedAllocatedSlots )
 	{
 		this->id = id;
 		genes = NULL;
-		used = 0;
+		nreferences = 0;
 		offset_cacheFile = -1;
 	}
 
 	AgentId id;
 	unsigned char *genes;
-	int used;
+	int nreferences;
 	long offset_cacheFile;
-	GenomeCacheEntryList::iterator it_unusedEntries;
+	GenomeCacheSlotList::iterator it_unreferencedAllocatedSlots;
 };
 
-typedef map<AgentId, GenomeCacheEntry> GenomeCacheEntryLookup;
+typedef map<AgentId, GenomeCacheSlot> GenomeCacheSlotLookup;
 
+// --------------------------------------------------------------------------------
+// ---
+// --- CLASS GenomeRef
+// ---
+// --------------------------------------------------------------------------------
 class GenomeRef {
 public:
 	GenomeRef( const GenomeRef &other ) {
@@ -727,40 +728,49 @@ public:
 		assert( false );
 	}
 
-	GenomeRef( class GenomeCache *cache, GenomeCacheEntry *entry ) {
+	GenomeRef( class GenomeCache *cache, GenomeCacheSlot *slot ) {
 		this->cache = cache;
-		this->entry = entry;
+		this->slot = slot;
 	}
 
-	~GenomeRef();
+	~GenomeRef(); // function implementation below class GenomeCache
 
 	inline unsigned char *genes() const {
-		return entry->genes;
+		return slot->genes;
 	}
 
 private:
 	GenomeCache *cache;
 	friend class GenomeCache;
-	GenomeCacheEntry *entry;
+	GenomeCacheSlot *slot;
 };
 
 
-//#define TRC(x...) printf(x); printf("\n");
-#define TRC(x...)
-
+// --------------------------------------------------------------------------------
+// ---
+// --- CLASS GenomeCache
+// ---
+// --------------------------------------------------------------------------------
 class GenomeCache {
 public:
+	// --------------------------------------------------------------------------------
+	// --- FUNCTION ctor
+	// --------------------------------------------------------------------------------
 	GenomeCache( int capacity, AgentIdVector *agents )	{
 		this->capacity = capacity;
 		nallocated = 0;
 		nmisses = 0;
 		f_cacheFile = NULL;
 
+		// Create a slot for each genome.
 		itfor( AgentIdVector, *agents, it ) {
-			entryLookup.insert( make_pair(*it, GenomeCacheEntry(*it, unusedEntries.end())) );
+			slotLookup.insert( make_pair(*it, GenomeCacheSlot(*it, unreferencedAllocatedSlots.end())) );
 		}
 	}
 
+	// --------------------------------------------------------------------------------
+	// --- FUNCTION dtor
+	// --------------------------------------------------------------------------------
 	~GenomeCache() {
 		if( f_cacheFile ) {
 			fclose( f_cacheFile );
@@ -768,83 +778,68 @@ public:
 		}
 	}
 
+	// --------------------------------------------------------------------------------
+	// --- FUNCTION get
+	// --------------------------------------------------------------------------------
 	GenomeRef get( AgentId id ) {
-		GenomeCacheEntry *entry = &( entryLookup.find(id)->second );
+		GenomeCacheSlot *slot = &( slotLookup.find(id)->second );
 		bool loadGenes = false;
 
-		#pragma omp critical( entry_used )
+		#pragma omp critical( slot_references )
 		{
-			if( entry->genes != NULL ) {
-				TRC( "get(%d): GENES PRESENT", id );
-				use( entry );
+			// Check if slot is allocated.
+			if( slot->genes != NULL ) {
+				add_reference( slot );
 			} else {
-				TRC( "get(%d): LOAD GENES", id );
 				loadGenes = true;
 			}
 		}
 
 		if( loadGenes ) {
-			#pragma omp critical( entry_load )
+			#pragma omp critical( slot_load )
 			{
-				if( entry->genes == NULL ) {
+				if( slot->genes == NULL ) {
 					if( nallocated < capacity ) {
 						nallocated++;
 						unsigned char *genome = new unsigned char[GENES];
-						load( entry, genome );
-						#pragma omp critical( entry_used )
+						load( slot, genome );
+						#pragma omp critical( slot_references )
 						{
-							entry->genes = genome;
-							use( entry );
+							slot->genes = genome;
+							add_reference( slot );
 						}
 					} else {
 						nmisses++;
-						unsigned char *genome;
-						GenomeCacheEntry *purgedEntry;
+						unsigned char *genes;
+						GenomeCacheSlot *deallocatedSlot;
 
-						#pragma omp critical( entry_used )
+						#pragma omp critical( slot_references )
 						{
-							errif( unusedEntries.empty(), "genome references exceed cache capacity!\n" );
-							purgedEntry = unusedEntries.back();
-							unusedEntries.pop_back();
-							purgedEntry->it_unusedEntries = unusedEntries.end();
-							TRC( "  purging %d, len(unusedEntries)=%lu", purgedEntry->id, unusedEntries.size() );
-							genome = purgedEntry->genes;							
-							purgedEntry->genes = NULL;
+							deallocate_slot( &deallocatedSlot, &genes );
 						}
 
-						if( purgedEntry->offset_cacheFile == -1 ) {
-							if( f_cacheFile == NULL ) {
-								errif( NULL == (f_cacheFile = fopen( GENOME_CACHE_FILE_PATH, "w+" )),
-									   "Failed creating genome cache file\n" );
-							}
-
-							errif( 0 != fseek(f_cacheFile, 0, SEEK_END),
-								   "Failed seeking end of genome cache.\n" );
-							errif( -1 == (purgedEntry->offset_cacheFile = ftell(f_cacheFile)),
-								   "Failed getting genome cache file position.\n" );
-
-							errif( GENES != fwrite(genome, 1, GENES, f_cacheFile),
-								   "Failed writing genome cache entry.\n" );
+						if( deallocatedSlot->offset_cacheFile == -1 ) {
+							store_cacheFile_slot( deallocatedSlot, genes );
 						}
 
-						load( entry, genome );
+						load( slot, genes );
 
-						#pragma omp critical( entry_used )
+						#pragma omp critical( slot_references )
 						{
-							entry->genes = genome;
-							use( entry );
+							slot->genes = genes;
+							add_reference( slot );
 						}
 					}
 				} else {
-					#pragma omp critical( entry_used )
+					#pragma omp critical( slot_references )
 					{
-						use( entry );
+						add_reference( slot );
 					}
 				}
 			}
 		}
 
-		return GenomeRef( this, entry );
+		return GenomeRef( this, slot );
 	}
 
 public:
@@ -853,60 +848,104 @@ public:
 private:
 	friend class GenomeRef;
 
-	inline void release( GenomeRef *ref ) {
-		#pragma omp critical( entry_used )
+	// --------------------------------------------------------------------------------
+	// --- FUNCTION remove_reference
+	// --------------------------------------------------------------------------------
+	inline void remove_reference( GenomeRef *ref ) {
+		#pragma omp critical( slot_references )
 		{
-			GenomeCacheEntry *entry = ref->entry;
+			GenomeCacheSlot *slot = ref->slot;
 
-			entry->used--;
-			if( entry->used == 0 ) {
-				TRC( "release(%d): NO LONGER USED", entry->id );
-				unusedEntries.push_front( entry );
-				entry->it_unusedEntries = unusedEntries.begin();
-			} else {
-				TRC( "release(%d): used == %d", entry->id, entry->used );
+			slot->nreferences--;
+			if( slot->nreferences == 0 ) {
+				unreferencedAllocatedSlots.push_front( slot );
+				slot->it_unreferencedAllocatedSlots = unreferencedAllocatedSlots.begin();
 			}
 		}
 	}
 
 private:
-	void load( GenomeCacheEntry *entry, unsigned char *genes ) {
-		if( entry->offset_cacheFile != -1 ) {
-			int rc;
-
-			rc = fseek( f_cacheFile, entry->offset_cacheFile, SEEK_SET);
-			errif( 0 != rc, "Failed seeking to cache entry (rc=%d)\n", rc );
-
-			rc = fread( genes, 1, GENES, f_cacheFile);
-			errif( rc != GENES,
-				   "Failed reading cache entry, rc=%d, offset=%ld (%s)\n",
-				   rc, entry->offset_cacheFile, strerror(errno) );
-		} else {
-			load_genome( entry->id, genes );
+	// --------------------------------------------------------------------------------
+	// --- FUNCTION add_reference
+	// --------------------------------------------------------------------------------
+	inline void add_reference( GenomeCacheSlot *slot ) {
+		slot->nreferences++;
+		if( (slot->nreferences == 1)
+			&& (slot->it_unreferencedAllocatedSlots != unreferencedAllocatedSlots.end()) )
+		{
+			unreferencedAllocatedSlots.erase( slot->it_unreferencedAllocatedSlots );
 		}
 	}
 
-	inline void use( GenomeCacheEntry *entry ) {
-		entry->used++;
-		TRC( "  used=%d", entry->used );
-		if( (entry->used == 1) && (entry->it_unusedEntries != unusedEntries.end()) ) {
-			TRC( "  removing from unusedEntries, len(unusedEntries)=%lu", unusedEntries.size() )
-			unusedEntries.erase( entry->it_unusedEntries );
-			TRC( "    len(unusedEntries)=%lu", unusedEntries.size() )
+	// --------------------------------------------------------------------------------
+	// --- FUNCTION deallocate_slot
+	// --------------------------------------------------------------------------------
+	void deallocate_slot( GenomeCacheSlot **out_deallocatedSlot, unsigned char **out_genes ) {
+		errif( unreferencedAllocatedSlots.empty(), "genome references exceed cache capacity!\n" );
+
+		GenomeCacheSlot *deallocatedSlot = unreferencedAllocatedSlots.back();
+		// remove from list.
+		unreferencedAllocatedSlots.pop_back();
+		deallocatedSlot->it_unreferencedAllocatedSlots = unreferencedAllocatedSlots.end();
+
+		*out_genes = deallocatedSlot->genes;
+		deallocatedSlot->genes = NULL;
+		*out_deallocatedSlot = deallocatedSlot;
+	}
+
+	// --------------------------------------------------------------------------------
+	// --- FUNCTION load
+	// --------------------------------------------------------------------------------
+	void load( GenomeCacheSlot *slot, unsigned char *genes ) {
+		if( slot->offset_cacheFile != -1 ) {
+			int rc;
+
+			rc = fseek( f_cacheFile, slot->offset_cacheFile, SEEK_SET);
+			errif( 0 != rc, "Failed seeking to cache slot (rc=%d)\n", rc );
+
+			rc = fread( genes, 1, GENES, f_cacheFile);
+			errif( rc != GENES,
+				   "Failed reading cache slot, rc=%d, offset=%ld (%s)\n",
+				   rc, slot->offset_cacheFile, strerror(errno) );
+		} else {
+			load_genome( slot->id, genes );
 		}
+	}
+
+	// --------------------------------------------------------------------------------
+	// --- FUNCTION store_cacheFile_slot
+	// --------------------------------------------------------------------------------
+	void store_cacheFile_slot( GenomeCacheSlot *slot, unsigned char *genes ) {
+		if( f_cacheFile == NULL ) {
+			errif( NULL == (f_cacheFile = fopen( GENOME_CACHE_FILE_PATH, "w+" )),
+				   "Failed creating genome cache file\n" );
+		}
+
+		errif( 0 != fseek(f_cacheFile, 0, SEEK_END),
+			   "Failed seeking end of genome cache.\n" );
+		errif( -1 == (slot->offset_cacheFile = ftell(f_cacheFile)),
+			   "Failed getting genome cache file position.\n" );
+
+		errif( GENES != fwrite(genes, 1, GENES, f_cacheFile),
+			   "Failed writing genome cache slot.\n" );		
 	}
 
 private:
 	FILE *f_cacheFile;
 	int capacity;
 	int nallocated;
-	GenomeCacheEntryLookup entryLookup;
-	GenomeCacheEntryList unusedEntries;
+	GenomeCacheSlotLookup slotLookup;
+	GenomeCacheSlotList unreferencedAllocatedSlots;
 };
 
+// --------------------------------------------------------------------------------
+// ---
+// --- FUNCTION ~GenomeRef
+// ---
+// --------------------------------------------------------------------------------
 GenomeRef::~GenomeRef() {
-	cache->release( this );
-	entry = NULL;
+	cache->remove_reference( this );
+	slot = NULL;
 }
 
 // ================================================================================
@@ -1088,10 +1127,6 @@ inline float compute_distance(float *ents, float *stddev2, unsigned char *x, uns
 // ---
 // --------------------------------------------------------------------------------
 float **create_distance_deltaCache( float *ents, float *stddev2 ) {
-	assert( GENES > 0 );
-
-	double startTime = hirestime();
-
 	float **deltaCache = new float*[GENES];
 
 	for( int igene = 0; igene < GENES; igene++ ) {
@@ -1112,9 +1147,6 @@ float **create_distance_deltaCache( float *ents, float *stddev2 ) {
 			deltaCache[igene][delta] = result;
 		}
 	}
-
-	double endTime = hirestime();
-	printf( "distance metrics time=%f seconds\n", endTime - startTime );
 
 	return deltaCache;
 }
@@ -1304,6 +1336,10 @@ struct DistanceMetrics {
 };
 
 DistanceMetrics create_distance_metrics( PopulationPartitionVector &partitions ) {
+	assert( GENES > 0 );
+
+	double startTime = hirestime();
+
 	GeneEntropyCalculator entropyCalculator;
 	GeneStdDev2Calculator stddev2Calculator;
 
@@ -1333,6 +1369,9 @@ DistanceMetrics create_distance_metrics( PopulationPartitionVector &partitions )
 
 	delete entropy;
 	delete stddev2;
+
+	double endTime = hirestime();
+	printf( "distance metrics time=%f seconds\n", endTime - startTime );
 
 	return result;
 }
@@ -1987,10 +2026,12 @@ void find_neighbors( float **distance_deltaCache,
 // --------------------------------------------------------------------------------
 void compute_clusters() {
 	GENES = get_genome_size();
+    printf("GENES: %d\n", GENES); 
 
 	AgentIdVector *ids_global = get_agent_ids();
 	printf( "POPSIZE: %lu\n", ids_global->size() );
-	GenomeCache genomeCache( GENOME_CACHE_CAPACITY, ids_global );
+	GenomeCache genomeCache( cliParms.genomeCacheCapacity, ids_global );
+	printf( "GENOME CACHE CAPACITY: %d\n", cliParms.genomeCacheCapacity );
 
 	// ---
 	// --- DEFINE PARTITIONS
@@ -2007,6 +2048,13 @@ void compute_clusters() {
 	// We want the cluster partition processed last in create_distance_metrics
 	// so that its genomes are still in the genome cache for creating the distance cache.
 	partitions.push_back( clusterPartition );
+
+	printf( "NUM CLUSTERED AGENTS: %lu\n", clusterPartition->members.size() );
+	printf( "NUM NEIGHBORED AGENTS: %lu\n", neighborPartition->members.size() );
+
+	if( cliParms.genomeCacheCapacity < clusterPartition->members.size() ) {
+		cerr << "Warning! GenomeCacheCapacity (-g) is less than number of clustered agents. Execution time will be poor." << endl;
+	}
 
 	// ---
     // --- CREATE DISTANCE METRICS
@@ -2218,7 +2266,7 @@ LoadedClusters load_clusters( bool singlePartition,
 		ids = new AgentIdVector( ids_all.begin(), ids_all.end() );
 	}
 
-	GenomeCache *genomeCache = new GenomeCache( GENOME_CACHE_CAPACITY, ids );
+	GenomeCache *genomeCache = new GenomeCache( cliParms.genomeCacheCapacity, ids );
 	PopulationPartition *partition = new PopulationPartition(ids, genomeCache);
 	result.partitions->push_back( partition );
 
