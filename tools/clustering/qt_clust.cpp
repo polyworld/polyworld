@@ -144,7 +144,6 @@ int main(int argc, char *argv[]) {
 
 	if( mode == "cluster" ) {
 		int opt;
-		char *endptr;
 
 		while( (opt = getopt(argc, argv, "m:f:g:")) != -1 ) {
 			switch(opt) {
@@ -552,14 +551,16 @@ AgentIdVector *get_agent_ids() {
 	AgentIdVector *ids = new AgentIdVector();
 
 	dirent *ent;
-	while( ent = readdir(dir) ) {
+	while( NULL != (ent = readdir(dir)) ) {
 		if( 0 == strncmp(ent->d_name, "genome_", 7) ) {
 			AgentId id = atoi( ent->d_name + 7 );
-			ids->push_back( (int)ids->size() + 1 );
+			ids->push_back( id );
 		}
 	}
 
 	closedir( dir );
+
+	sort( ids->begin(), ids->end() );
 
 	return ids;
 }
@@ -926,7 +927,7 @@ private:
 		errif( -1 == (slot->offset_cacheFile = ftell(f_cacheFile)),
 			   "Failed getting genome cache file position.\n" );
 
-		errif( GENES != fwrite(genes, 1, GENES, f_cacheFile),
+		errif( (size_t)GENES != fwrite(genes, 1, GENES, f_cacheFile),
 			   "Failed writing genome cache slot.\n" );		
 	}
 
@@ -1034,7 +1035,7 @@ void define_partitions(	AgentIdVector *ids_global,
 	AgentIdVector *ids_cluster = new AgentIdVector();
 	AgentIdVector *ids_neighbor = new AgentIdVector();
 
-	for( int i = 0; i < ids_global->size(); i++ ) {
+	for( int i = 0; i < (int)ids_global->size(); i++ ) {
 		if( (i % cliParms.clusterPartitionModulus) == 0 ) {
 			ids_cluster->push_back( ids_global->at(i) );
 		} else {
@@ -1199,7 +1200,7 @@ float **create_distanceCache( float **deltaCache, PopulationPartition *populatio
 // ---
 // --------------------------------------------------------------------------------
 void dispose_distanceCache( float **distanceCache, PopulationPartition *population ) {
-	for( int i = 0; i < population->members.size(); i++ ) {
+	for( int i = 0; i < (int)population->members.size(); i++ ) {
 		delete distanceCache[i];
 	}
 	delete distanceCache;
@@ -1448,7 +1449,7 @@ void create_centroids( float **distance_deltaCache,
 					   ClusterVector &clusters ) {
 
 	#pragma omp parallel for
-	for( int i = 0; i < clusters.size(); i++ ) {
+	for( int i = 0; i < (int)clusters.size(); i++ ) {
 		clusters[i]->createCentroid();
 	}
 
@@ -1774,7 +1775,7 @@ void create_clusters( float **distance_deltaCache,
 	// --- Create set of agent indexes to be clustered
 	// ---
 	AgentIndexSet remainingAgents;
-	for( int i = 0; i < population->members.size(); i++) {
+	for( int i = 0; i < (int)population->members.size(); i++) {
 		remainingAgents.insert( i );
 	}
 
@@ -1793,7 +1794,7 @@ void create_clusters( float **distance_deltaCache,
 		clusters.push_back( cluster );
 
 		// remove cluster members from agents needing processing
-		for( int i = 0; i < cluster->members.size(); i++ ) {
+		for( int i = 0; i < (int)cluster->members.size(); i++ ) {
 			remainingAgents.erase( population->getIndex(cluster->members[i]) );
 		}
 
@@ -1862,7 +1863,7 @@ void find_neighbors( float **distance_deltaCache,
 	AgentIdSet neighborCandidates( neighborPartition->members.begin(), neighborPartition->members.end() );
 	AgentIdVector neighborCandidatesVector;
 
-	for( int icluster = 0; icluster < clusters.size(); icluster++ ) {
+	for( int icluster = 0; icluster < (int)clusters.size(); icluster++ ) {
 		Cluster *cluster = clusters[icluster];
 
 		neighborCandidatesVector.resize( neighborCandidates.size() );
@@ -1875,13 +1876,13 @@ void find_neighbors( float **distance_deltaCache,
 		AgentIdVector clusterNeighborCandidates;
 
 		#pragma omp parallel for
-		for( int ineighbor = 0; ineighbor < neighborCandidatesVector.size(); ineighbor++ ) {
+		for( int ineighbor = 0; ineighbor < (int)neighborCandidatesVector.size(); ineighbor++ ) {
 			AgentId neighborId = neighborCandidatesVector[ ineighbor ];
 			GenomeRef neighborGenome = neighborPartition->getGenomeById( neighborId );
 			bool isNeighbor = true;
 
 			for( int iclusterMember = 0;
-				 isNeighbor && (iclusterMember < cluster->members.size());
+				 isNeighbor && (iclusterMember < (int)cluster->members.size());
 				 iclusterMember++ )
 			{
 				AgentId clusterId = cluster->members[ iclusterMember ];
@@ -1913,16 +1914,16 @@ void find_neighbors( float **distance_deltaCache,
 		typedef map<AgentId, double> DistMap;
 		DistMap dists;
 
-		for( int i = 0; i < clusterNeighborCandidates.size(); i++ ) {
+		for( int i = 0; i < (int)clusterNeighborCandidates.size(); i++ ) {
 			dists[ clusterNeighborCandidates[i] ] = 0;
 		}
 
-		for( int i = 0; i < clusterNeighborCandidates.size(); i++ ) {
+		for( int i = 0; i < (int)clusterNeighborCandidates.size(); i++ ) {
 			AgentId i_id = clusterNeighborCandidates[i];
 			GenomeRef i_genome = neighborPartition->getGenomeById( i_id );
 
 			#pragma omp parallel for
-			for( int j = i + 1; j < clusterNeighborCandidates.size(); j++ ) {
+			for( int j = i + 1; j < (int)clusterNeighborCandidates.size(); j++ ) {
 				AgentId j_id = clusterNeighborCandidates[j];
 				GenomeRef j_genome = neighborPartition->getGenomeById( j_id );
 
@@ -2025,6 +2026,8 @@ void find_neighbors( float **distance_deltaCache,
 // ---
 // --------------------------------------------------------------------------------
 void compute_clusters() {
+	printf("RUN: %s\n", cliParms.path_run);
+
 	GENES = get_genome_size();
     printf("GENES: %d\n", GENES); 
 
@@ -2052,7 +2055,7 @@ void compute_clusters() {
 	printf( "NUM CLUSTERED AGENTS: %lu\n", clusterPartition->members.size() );
 	printf( "NUM NEIGHBORED AGENTS: %lu\n", neighborPartition->members.size() );
 
-	if( cliParms.genomeCacheCapacity < clusterPartition->members.size() ) {
+	if( cliParms.genomeCacheCapacity < (int)clusterPartition->members.size() ) {
 		cerr << "Warning! GenomeCacheCapacity (-g) is less than number of clustered agents. Execution time will be poor." << endl;
 	}
 
@@ -2213,7 +2216,7 @@ void parse_clusters( const char *path, ParsedClusterVector &clusters ) {
 					}
 				}
 
-				assert( nmembers == members.size() );
+				assert( nmembers == (int)members.size() );
 				clusters.push_back( ParsedCluster(id, members) );
 			}
 		}
@@ -2465,7 +2468,6 @@ void util__centroidDists( const char *subdir ) {
 	const char *subdirs[] = {subdir};
 
 	LoadedClusters loadedClusters = load_clusters( true, subdirs, 1 );
-	PopulationPartition *partition = loadedClusters.partitions->front();
 
 	load_parms( subdirs, 1 );
 
