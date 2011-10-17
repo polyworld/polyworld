@@ -506,11 +506,26 @@ void load_genome( AgentId id, unsigned char *genome ) {
 		compressed = true;
 	}
 
-    char* s; int i;
-    for (i=0;  i< GENES; i++) {
-        s = readline(fp);
-        genome[i] = (unsigned char) atoi(s);
-    }
+	// 4 bytes per gene ("xxx\n") + fudge.
+	char buf[4 * GENES + 128];
+	size_t nread = fread( buf, sizeof(char), sizeof(buf), fp );
+	errif( (nread == 0) || (nread >= sizeof(buf)),
+		   "Unreasonable number of bytes read: %lu\n", nread );
+
+	size_t i = 0;
+	int igene = 0;
+	while( i < nread ) {
+		if( isdigit(buf[i]) ) {
+			genome[igene++] = atoi( buf + i );
+			do {
+				i++;
+			} while( isdigit(buf[i]) );
+		} else {
+			i++;
+		}
+	}
+
+	errif( igene != GENES, "Unexpected number of genes for agent %d: %d\n", id, igene );
 
 	if( !compressed ) {
 		fclose(fp);
