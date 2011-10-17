@@ -7,7 +7,8 @@ SCONS = scons -f scripts/build/SConstruct
 	comp CalcComplexity \
 	mp PwMoviePlayer \
 	rancheck \
-	proputil
+	proputil \
+	qt_clust
 
 all:
 	${SCONS}
@@ -34,3 +35,6 @@ rancheck:
 
 proputil:
 	${SCONS} bin/proputil
+
+qt_clust:
+	${SCONS} bin/qt_clust

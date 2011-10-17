@@ -28,6 +28,7 @@ def build():
     Default( build_rancheck(envs['rancheck']) )
     Default( build_proputil(envs['proputil']) )
     Default( build_pmvutil(envs['pmvutil']) )
+    Default( build_qt_clust(envs['qt_clust']) )
 
 def build_Polyworld(env):
     blddir = '.bld/Polyworld'
@@ -117,13 +118,29 @@ def build_pmvutil(env):
                                       'src',
                                       blddir))
 
+def build_qt_clust(env):
+    blddir = '.bld/qt_clust'
+
+    """
+    sources = find('src/tools/clustering',
+                   name = '*.cpp')
+"""
+    sources = ['src/tools/clustering/qt_clust.cpp']
+
+    env.VariantDir(blddir, 'src', False)
+
+    return env.Program('bin/qt_clust',
+                       relocate_paths(sources,
+                                      'src',
+                                      blddir))
+
 def env_create():
     envs = {}
 
 
     env = env_common = init_env(Environment())
     env.Append( CPPSUFFIXES = ['.cp'] )
-    cpp_flags = ['-g', '-Wall']
+    cpp_flags = ['-g', '-Wall', '-O2' ]
 
     if PERFORMANCE_PROFILER:
         # use the gnu gprof
@@ -164,6 +181,8 @@ def env_create():
     envs['proputil'] = envs['CalcComplexity'].Clone()
 
     envs['pmvutil'] = envs['PwMoviePlayer'].Clone()
+
+    envs['qt_clust'] = envs['CalcComplexity'].Clone()
 
     return envs
 
