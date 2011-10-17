@@ -1,0 +1,103 @@
+#!/usr/bin/python
+from sys import argv, exit
+
+if len(argv) != 3:
+    print """\
+usage: compare_cluster_files clustersA.txt clustersB.txt
+
+  Compares cluster members in two cluster files.
+"""
+    exit(1)
+
+print_best =   True
+path_a = argv[1]
+path_b = argv[2]
+
+def cmpfloat( x, y ):
+    diff = x - y
+    if diff < 0: return -1
+    if diff > 0: return 1
+    return 0
+
+class Cluster:
+    def __init__( self, id, members ):
+        self.id = id
+        self.members = set( members )
+
+    def __str__( self ):
+        return "{%d,%s}" % (self.id, self.members)
+
+def load( filename ):
+    f = open(filename)
+    clusters = []
+    id = 0
+    
+    for line in f:
+        if line.startswith('cluster'):
+            a = line.split()
+            a = map(int, a[5:])
+            clusters.append( Cluster(id,a) )
+            id += 1
+    
+    f.close()
+    
+    def __sort_cluster( x, y ):
+        diff = len(y.members)-len(x.members)
+        if diff == 0:
+            diff = x.id - y.id
+        return diff
+
+    clusters.sort( __sort_cluster )
+
+    return clusters
+
+class Intersection:
+    def __init__( self, cluster_a, cluster_b ):
+        self.cluster_a = cluster_a
+        self.cluster_b = cluster_b        
+
+        nunion = len( cluster_a.members.union(cluster_b.members) )
+        self.num_intersect = len( cluster_b.members.intersection(cluster_a.members) )
+        self.frac_intersect = float(self.num_intersect) / nunion
+
+        self.num_diff_a = len( cluster_a.members.difference(cluster_b.members) )
+        self.frac_diff_a = float(self.num_diff_a) / nunion
+
+        self.num_diff_b = len( cluster_b.members.difference(cluster_a.members) )
+        self.frac_diff_b = float(self.num_diff_b) / nunion
+
+    def __str__( self ):
+        return "{0} (n={1}): a&b={2} ({3:.2f}%) a-b={4} ({5:.2f}%) b-a={6} ({7:.2f}%)".format(self.cluster_b.id,
+                                                                                              len(self.cluster_b.members),
+                                                                                              self.num_intersect,
+                                                                                              100*self.frac_intersect,
+                                                                                              self.num_diff_a,
+                                                                                              100*self.frac_diff_a,
+                                                                                              self.num_diff_b,
+                                                                                              100*self.frac_diff_b)
+        
+
+def find_intersections( cluster, others ):
+    result = []
+
+    for other in others:
+        intersection = other.members.intersection( cluster.members )
+        if len(intersection):
+            result.append( Intersection(cluster, other) )
+
+    result.sort( lambda x,y: cmpfloat(y.frac_intersect, x.frac_intersect) )
+
+    return result
+    
+
+clusters_a = load( path_a );
+clusters_b = load( path_b );
+
+for cluster in clusters_a:
+    intersections = find_intersections( cluster, clusters_b )
+    if print_best:
+        print "\t%d (n=%d) --> %s" % (cluster.id, len(cluster.members), intersections[0] if len(intersections) else "NONE")
+    else:
+        print "%d (size=%d) -->" % (cluster.id, len(cluster.members))
+        for i in intersections:
+            print "\t%s" % i
