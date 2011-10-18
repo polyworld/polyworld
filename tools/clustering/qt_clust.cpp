@@ -195,7 +195,7 @@ int main(int argc, char *argv[]) {
 	} else {
 		int opt;
 
-		while( (opt = getopt(argc, argv, "n:")) != -1 ) {
+		while( (opt = getopt(argc, argv, "n:g:")) != -1 ) {
 			switch(opt) {
 			case 'n': {
 				char *endptr;
@@ -204,6 +204,15 @@ int main(int argc, char *argv[]) {
 					err( "Invalid -n value -- expecting int.\n" );
 				} else if( cliParms.clusterPartitionModulus < 1 ) {
 					err( "Invalid -n value -- must be >= 1.\n" );
+				}
+			} break;
+			case 'g': {
+				char *endptr;
+				cliParms.genomeCacheCapacity = strtol( optarg, &endptr, 10 );
+				if( *endptr ) {
+					err( "Invalid -g value -- expecting int.\n" );
+				} else if( cliParms.genomeCacheCapacity < 1 ) {
+					err( "Invalid -g value -- must be >= 1.\n" );
 				}
 			} break;
 			default:
@@ -277,13 +286,13 @@ void usage() {
 	p( "qt_clust cluster [-m clusterPartitionModulus] [-f threshFact] [-g genomeCacheCapacity] [run]" );
 	p( "   Perform cluster analysis." );
 	p("");
-	p( "qt_clust compareCentroids [-n max_clusters] subdir_A subdir_B [run]" );
+	p( "qt_clust compareCentroids [-n max_clusters] [-g genomeCacheCapacity] subdir_A subdir_B [run]" );
 	p( "   Compute the distance between cluster centroids from two cluster files." );
 	p("");
-	p( "qt_clust checkThresh [-n max_clusters] subdir [run]" );
+	p( "qt_clust checkThresh [-n max_clusters] [-g genomeCacheCapacity] subdir [run]" );
 	p( "   Analyze how well clusters conform to THRESH." );
 	p("");
-	p( "qt_clust centroidDists [-n max_clusters] subdir [run]" );
+	p( "qt_clust centroidDists [-n max_clusters] [-g genomeCacheCapacity] subdir [run]" );
 	p( "   Compute distance between centroids of all clusters." );
 	p("");
 	p("");
