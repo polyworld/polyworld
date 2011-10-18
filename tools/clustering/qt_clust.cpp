@@ -12,6 +12,7 @@
 #include "readline.h"
 #include <omp.h>
 #include <unistd.h>
+#include <zlib.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -494,21 +495,28 @@ void load_genome( AgentId id, unsigned char *genome ) {
     char path_genome[1024];
     sprintf(path_genome, "%s/genome_%d.txt", dir_genome, id);
 
-	bool compressed;
-    FILE *fp = fopen(path_genome, "r");
-	if( fp ) {
-		compressed = false;
-	} else {
-		char cmd[2048];
-		sprintf( cmd, "zcat %s.gz", path_genome );
-		fp = popen( cmd, "r" );
-		errif( !fp, "Unable to open file \"%s\"\n", path_genome);
-		compressed = true;
-	}
-
 	// 4 bytes per gene ("xxx\n") + fudge.
 	char buf[4 * GENES + 128];
-	size_t nread = fread( buf, sizeof(char), sizeof(buf), fp );
+	size_t nread;
+
+    FILE *fp = fopen(path_genome, "r");
+	if( fp ) {
+		nread = fread( buf, sizeof(char), sizeof(buf), fp );
+		fclose(fp);
+	} else {
+		sprintf( path_genome, "%s/genome_%d.txt.gz", dir_genome, id );
+
+		gzFile gfp = gzopen( path_genome, "r" );
+		errif( !gfp, "Unable to open file \"%s\"\n", path_genome);
+
+		int rc = gzread( gfp, buf, sizeof(buf) );
+		errif( rc <= 0, "Failed reading gzip file %s\n", path_genome );
+
+		nread = rc;
+
+		gzclose(gfp);
+	}
+
 	errif( (nread == 0) || (nread >= sizeof(buf)),
 		   "Unreasonable number of bytes read: %lu\n", nread );
 
@@ -526,12 +534,6 @@ void load_genome( AgentId id, unsigned char *genome ) {
 	}
 
 	errif( igene != GENES, "Unexpected number of genes for agent %d: %d\n", id, igene );
-
-	if( !compressed ) {
-		fclose(fp);
-	} else {
-		pclose(fp);
-	}
 
 	free( dir_genome );
 }
