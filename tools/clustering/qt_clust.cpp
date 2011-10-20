@@ -130,6 +130,8 @@ int main(int argc, char *argv[]) {
 	void util__compareCentroids( const char *subdir_a, const char *subdir_b );
 	void util__checkThresh( const char *subdir );
 	void util__centroidDists( const char *subdir );
+	void util__zscore( const char *subdir );
+	void util__metabolism( const char *subdir );
 
 	if( argc == 1 ) {
 		usage();
@@ -265,6 +267,34 @@ int main(int argc, char *argv[]) {
 			// --- CENTROID DISTS
 			// ---
 			util__centroidDists( subdir );
+		} else if( mode == "zscore" ) {
+			if( optind >= argc ) err( "Missing subdir\n" );
+			const char *subdir = argv[optind++];
+
+			if( optind < argc ) {
+				cliParms.path_run = argv[optind++];
+			}
+
+			if( optind < argc ) err( "Unpexected arg '%s'\n", argv[optind] );
+
+			// ---
+			// --- ZSCORE
+			// ---
+			util__zscore( subdir );
+		} else if( mode == "metabolism" ) {
+			if( optind >= argc ) err( "Missing subdir\n" );
+			const char *subdir = argv[optind++];
+
+			if( optind < argc ) {
+				cliParms.path_run = argv[optind++];
+			}
+
+			if( optind < argc ) err( "Unpexected arg '%s'\n", argv[optind] );
+
+			// ---
+			// --- METABOLISM
+			// ---
+			util__metabolism( subdir );
 		} else {
 			err( "Unknown mode '%s'\n", mode.c_str() );
 		}
@@ -294,6 +324,12 @@ void usage() {
 	p("");
 	p( "qt_clust centroidDists [-n max_clusters] [-g genomeCacheCapacity] subdir [run]" );
 	p( "   Compute distance between centroids of all clusters." );
+	p("");
+	p( "qt_clust zscore [-n max_clusters] [-g genomeCacheCapacity] subdir [run]" );
+	p( "   Compute zscore between clusters." );
+	p("");
+	p( "qt_clust metabolism [-n max_clusters] [-g genomeCacheCapacity] subdir [run]" );
+	p( "   Show metabolsim counts for each cluster." );
 	p("");
 	p("");
 	p( "Examples:" );
@@ -1338,6 +1374,14 @@ public:
 			sum[i] += genes[i];
 			sum2[i] += genes[i] * genes[i];
 		}
+	}
+
+	float *getMean() {
+		float *mean = new float[GENES];
+		for( int i = 0; i < GENES; i++ ) {
+			mean[i] = sum[i] / numGenomes;
+		}
+		return mean;
 	}
 
 	float *getResult() {
@@ -2537,4 +2581,145 @@ void util__centroidDists( const char *subdir ) {
 			cout << "\t" << icluster->id << " --> " << jcluster->id << " = " << dist << endl;
 		}
 	}
+}
+
+// --------------------------------------------------------------------------------
+// ---
+// --- FUNCTION util__zscore
+// ---
+// --------------------------------------------------------------------------------
+	class ZScore {
+	public:
+		float value;
+		int igene;
+
+		static bool sort( const ZScore &x, const ZScore &y ) {
+			return y.value < x.value;
+		}
+	};
+
+void util__zscore( const char *subdir ) {
+	const char *subdirs[] = {subdir};
+
+	LoadedClusters loadedClusters = load_clusters( true, subdirs, 1 );
+
+	load_parms( subdirs, 1 );
+
+	PopulationPartition *partition = loadedClusters.partitions->at(0);
+	ClusterVector &clusters = *(loadedClusters.clusterMatrix->at(0));
+	int nclusters = cliParms.nclusters == -1 ? (int)clusters.size() : min(cliParms.nclusters, (int)clusters.size());
+
+	std::sort( clusters.begin(), clusters.end(), Cluster::sort__member_size_descending );
+
+	float *mean[nclusters];
+	float *stddev[nclusters];
+
+	for( int i = 0; i < nclusters; i++ ) {
+		Cluster *cluster = clusters[i];
+		GeneStdDev2Calculator calc;
+
+		itfor( AgentIdVector, cluster->members, it ) {
+			GenomeRef genome = partition->getGenomeById( *it );
+			calc.addGenome( genome );
+		}
+
+		float *stddev2 = calc.getResult();
+		for( int j = 0; j < GENES; j++ ) {
+			stddev2[j] = sqrt( stddev2[j] );
+		}
+
+		stddev[i] = stddev2;
+		mean[i] = calc.getMean();
+	}
+
+
+	ZScore *zscore[nclusters][nclusters];
+	
+	for( int i = 0; i < nclusters; i++ ) {
+		for( int j = 0; j < nclusters; j++ ) {
+			zscore[i][j] = new ZScore[GENES];
+			for( int igene = 0; igene < GENES; igene++ ) {
+				zscore[i][j][igene].igene = igene;
+				zscore[i][j][igene].value = (mean[i][igene] - mean[j][igene]) / stddev[i][igene];
+			}
+		}
+	}
+
+	for( int i = 0; i < nclusters; i++ ) {
+		for( int j = 0; j < nclusters; j++ ) {
+			std::sort( zscore[i][j], zscore[i][j] + GENES, ZScore::sort );
+		}
+	}
+
+	for( int i = 0; i < nclusters; i++ ) {
+		for( int j = 0; j < nclusters; j++ ) {
+			if( i != j ) {
+				printf( "%d --> %d :\n", clusters[i]->id, clusters[j]->id );
+				for( int z = 0; z < 500; z++ ) {
+					printf( "  [%d] = %f\n", zscore[i][j][z].igene, zscore[i][j][z].value);
+				}
+			}
+		}
+	}
+}
+
+// --------------------------------------------------------------------------------
+// ---
+// --- FUNCTION util__metabolism
+// ---
+// --------------------------------------------------------------------------------
+#define interp(x,ylo,yhi) ((ylo)+(x)*((yhi)-(ylo)))
+
+int interpolate( unsigned char raw, int smin, int smax ) {
+	static const float OneOver255 = 1. / 255.;
+
+	// temporarily cast to double for backwards compatibility
+	double ratio = float(raw) * OneOver255;
+
+					return min( (int)interp( ratio, int(smin), int(smax) + 1 ),
+							int(smax) );
+
+}
+
+void util__metabolism( const char *subdir ) {
+	const char *subdirs[] = {subdir};
+
+	LoadedClusters loadedClusters = load_clusters( true, subdirs, 1 );
+
+	load_parms( subdirs, 1 );
+
+	PopulationPartition *partition = loadedClusters.partitions->at(0);
+	ClusterVector &clusters = *(loadedClusters.clusterMatrix->at(0));
+	int nclusters = cliParms.nclusters == -1 ? (int)clusters.size() : min(cliParms.nclusters, (int)clusters.size());
+
+	std::sort( clusters.begin(), clusters.end(), Cluster::sort__member_size_descending );
+
+	int nmetabolisms = 2;
+	fprintf( stderr, "Warning! Hard-coded nmetabolisms\n" );
+	int imetabolism = 8;
+	fprintf( stderr, "Warning! Hard-coded imetabolism\n" );
+
+	for( int i = 0; i < nclusters; i++ ) {
+		Cluster *cluster = clusters[i];
+		GeneStdDev2Calculator calc;
+
+		printf( "cluster %d (n=%lu): ", i, cluster->members.size() );
+
+		int count[nmetabolisms];
+		memset( count, 0, sizeof(count) );
+
+		itfor( AgentIdVector, cluster->members, it ) {
+			GenomeRef genome = partition->getGenomeById( *it );
+			unsigned char raw = genome.genes()[imetabolism];
+			int index = interpolate( raw, 0, nmetabolisms - 1 );
+			assert( index >= 0 && index < nmetabolisms );
+			count[index]++;
+		}
+
+		for( int i = 0; i < nmetabolisms; i++ ) {
+			printf("%d ", count[i] );
+		}
+		printf("\n");
+	}
+	
 }
