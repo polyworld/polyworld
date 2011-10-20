@@ -321,6 +321,7 @@ void usage() {
 
 float THRESH = 0;
 int GENES = 0;
+int GENESN4 = 0;
 
 
 // ================================================================================
@@ -549,10 +550,10 @@ void load_genome( AgentId id, unsigned char *genome ) {
 
 // --------------------------------------------------------------------------------
 // ---
-// --- FUNCTION get_genome_size
+// --- FUNCTION set_genome_size
 // ---
 // --------------------------------------------------------------------------------
-int get_genome_size() {
+void set_genome_size() {
 	char *lastline = read_last_nonblank_line( get_run_path("genome/meta/geneindex.txt") );
 	stringstream sin( lastline );
 	int offset = -1;
@@ -560,7 +561,9 @@ int get_genome_size() {
 
 	assert( offset >= 0 );
 
-	return offset + 1;
+	GENES = offset + 1;
+	GENESN4 = int(GENES / 4) * 4;
+	if( GENESN4 < GENES ) GENESN4 -= 4;
 }
 
 // --------------------------------------------------------------------------------
@@ -1093,19 +1096,25 @@ void define_partitions(	AgentIdVector *ids_global,
 // --- Calculate distance between two genomes.
 // ---
 // --------------------------------------------------------------------------------
-inline float compute_distance( float **deltaCache, unsigned char *x, unsigned char *y ) {
+
+inline float compute_distance( float *deltaCache, unsigned char *x, unsigned char *y ) {
 	float sum = 0;
 
-	for (int gene = 0; gene < GENES; gene++) {
-		int delta = x[gene] - y[gene];
+	for( int gene = 0; gene < GENESN4; gene += 4 ) {
+		sum += deltaCache[ abs(x[gene+0] - y[gene+0]) + ((gene+0) * 256) ];
+		sum += deltaCache[ abs(x[gene+1] - y[gene+1]) + ((gene+1) * 256) ];
+		sum += deltaCache[ abs(x[gene+2] - y[gene+2]) + ((gene+2) * 256) ];
+		sum += deltaCache[ abs(x[gene+3] - y[gene+3]) + ((gene+3) * 256) ];
+	}
 
-		sum += delta < 0 ? deltaCache[gene][-delta] : deltaCache[gene][delta];
+	for( int gene = GENESN4; gene < GENES; gene++ ) {
+		sum += deltaCache[ abs(x[gene] - y[gene]) + (gene * 256) ];
 	}
 
 	return sum;
 }
 
-inline float compute_distance( float **deltaCache, const GenomeRef &x, const GenomeRef &y ) {
+inline float compute_distance( float *deltaCache, const GenomeRef &x, const GenomeRef &y ) {
 	return compute_distance( deltaCache, x.genes(), y.genes() );
 }
 
@@ -1153,12 +1162,10 @@ inline float compute_distance(float *ents, float *stddev2, unsigned char *x, uns
 // --- FUNCTION create_distance_deltaCache
 // ---
 // --------------------------------------------------------------------------------
-float **create_distance_deltaCache( float *ents, float *stddev2 ) {
-	float **deltaCache = new float*[GENES];
+float *create_distance_deltaCache( float *ents, float *stddev2 ) {
+	float *deltaCache = new float[GENES * 256];
 
 	for( int igene = 0; igene < GENES; igene++ ) {
-		deltaCache[igene] = new float[256];
-
 		for( int delta = 0; delta < 256; delta++ ) {
 			float result;
 
@@ -1171,7 +1178,7 @@ float **create_distance_deltaCache( float *ents, float *stddev2 ) {
 				result = 0;
 			}
 
-			deltaCache[igene][delta] = result;
+			deltaCache[(igene * 256) + delta] = result;
 		}
 	}
 
@@ -1183,7 +1190,7 @@ float **create_distance_deltaCache( float *ents, float *stddev2 ) {
 // --- FUNCTION create_distanceCache
 // ---
 // --------------------------------------------------------------------------------
-float **create_distanceCache( float **deltaCache, PopulationPartition *population ) {
+float **create_distanceCache( float *deltaCache, PopulationPartition *population ) {
 	int numGenomes = population->members.size();
 
 	// allocate distance cache
@@ -1359,7 +1366,7 @@ private:
 // ---
 // --------------------------------------------------------------------------------
 struct DistanceMetrics {
-	float **deltaCache;
+	float *deltaCache;
 };
 
 DistanceMetrics create_distance_metrics( PopulationPartitionVector &partitions ) {
@@ -1732,6 +1739,9 @@ Cluster *create_cluster( float **distanceCache,
 
 	AgentIndexSet::iterator it = remainingAgents.begin();
 	AgentIndexSet::iterator it_end = remainingAgents.end();
+
+	//int stride = max( 1, int(remainingAgents.size() / 2000) );
+	int stride = 1;
 	
 	#pragma omp parallel
 	{
@@ -1742,7 +1752,9 @@ Cluster *create_cluster( float **distanceCache,
 			{
 				it_threadLocal = it;
 				if( it != it_end ) {
-					++it;
+					for( int i = 0; (i < stride) && (it != it_end); i++ ) {
+						++it;
+					}
 				}
 			}
 
@@ -1789,7 +1801,7 @@ Cluster *create_cluster( float **distanceCache,
 // --- Assigns all agents in partition to a cluster.
 // ---
 // --------------------------------------------------------------------------------
-void create_clusters( float **distance_deltaCache,
+void create_clusters( float *distance_deltaCache,
 					  PopulationPartition *population,
 					  ClusterVector &allClusters ) {
 	printf("calculating distances...\n");
@@ -1869,7 +1881,7 @@ void create_clusters( float **distance_deltaCache,
 // --- FUNCTION find_neighbors
 // ---
 // --------------------------------------------------------------------------------
-void find_neighbors( float **distance_deltaCache,
+void find_neighbors( float *distance_deltaCache,
 					 PopulationPartition *clusterPartition,
 					 PopulationPartition *neighborPartition,
 					 ClusterVector &clusters_unsorted,
@@ -2054,7 +2066,8 @@ void find_neighbors( float **distance_deltaCache,
 void compute_clusters() {
 	printf("RUN: %s\n", cliParms.path_run);
 
-	GENES = get_genome_size();
+	set_genome_size();
+
     printf("GENES: %d\n", GENES); 
 
 	AgentIdVector *ids_global = get_agent_ids();
@@ -2323,7 +2336,7 @@ LoadedClusters load_clusters( bool singlePartition,
 // ---
 // --------------------------------------------------------------------------------
 void load_parms( const char **subdirs, int nsubdirs ) {
-	GENES = get_genome_size();
+	set_genome_size();
 	cout << "GENES: " << GENES << endl;
 
 	for( int i = 0; i < nsubdirs; i++ ) {
