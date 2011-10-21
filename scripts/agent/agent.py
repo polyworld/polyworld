@@ -342,7 +342,6 @@ def _wrap_Agent(a):
 def get_agents(ids, run_dir='../run/', complexity_filter=False):
     '''grab an agent with the given run directory. If complexity_filter = True,
     then only those agents with a complexity value are returned.''' 
-    
     rd = [run_dir  for i in xrange(len(ids))]
     '''
     p = Pool()
