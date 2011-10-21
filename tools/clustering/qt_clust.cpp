@@ -771,12 +771,14 @@ public:
 		genes = NULL;
 		nreferences = 0;
 		offset_cacheFile = -1;
+		sorted = false;
 	}
 
 	AgentId id;
 	unsigned char *genes;
 	int nreferences;
 	long offset_cacheFile;
+	bool sorted;
 	GenomeCacheSlotList::iterator it_unreferencedAllocatedSlots;
 };
 
@@ -811,6 +813,29 @@ private:
 	GenomeCacheSlot *slot;
 };
 
+// --------------------------------------------------------------------------------
+// ---
+// --- CLASS GenomeCacheSlotSorter
+// ---
+// --------------------------------------------------------------------------------
+class GenomeCacheSlotSorter {
+public:
+	vector<int> &sortOrder;
+	unsigned char *genome;
+
+	GenomeCacheSlotSorter( vector<int> &_sortOrder, unsigned char *_genome )
+		: sortOrder(_sortOrder)
+		, genome(_genome)
+	{
+	}
+
+	bool operator()( const unsigned char &a, const unsigned char &b ) {
+		int ia = &a - genome;
+		int ib = &b - genome;
+
+		return sortOrder[ia] < sortOrder[ib];
+	}
+};
 
 // --------------------------------------------------------------------------------
 // ---
@@ -825,6 +850,7 @@ public:
 	GenomeCache( int capacity, AgentIdVector *agents )	{
 		this->capacity = capacity;
 		nallocated = 0;
+		sorted = false;
 		nmisses = 0;
 		f_cacheFile = NULL;
 
@@ -893,6 +919,9 @@ public:
 						#pragma omp critical( slot_references )
 						{
 							slot->genes = genes;
+							if( sorted && !slot->sorted ) {
+								sort( slot );
+							}
 							add_reference( slot );
 						}
 					}
@@ -906,6 +935,21 @@ public:
 		}
 
 		return GenomeRef( this, slot );
+	}
+
+	// --------------------------------------------------------------------------------
+	// --- FUNCTION sort
+	// --------------------------------------------------------------------------------
+	void sort( vector<int> &order ) {
+		sorted = true;
+		sortOrder = order;
+
+		itfor( GenomeCacheSlotLookup, slotLookup, it ) {
+			GenomeCacheSlot *slot = &(it->second);
+			if( slot->genes ) {
+				sort( slot );
+			}
+		}
 	}
 
 public:
@@ -996,10 +1040,26 @@ private:
 			   "Failed writing genome cache slot.\n" );		
 	}
 
+	// --------------------------------------------------------------------------------
+	// --- FUNCTION sort
+	// --------------------------------------------------------------------------------
+	void sort( GenomeCacheSlot *slot ) {
+		assert( !slot->sorted );
+
+		GenomeCacheSlotSorter sorter( sortOrder,slot->genes );
+
+		std::sort( slot->genes, slot->genes + GENES, sorter );
+
+		slot->sorted = true;
+	}
+
 private:
+
 	FILE *f_cacheFile;
 	int capacity;
 	int nallocated;
+	bool sorted;
+	vector<int> sortOrder;
 	GenomeCacheSlotLookup slotLookup;
 	GenomeCacheSlotList unreferencedAllocatedSlots;
 };
@@ -1127,30 +1187,39 @@ void define_partitions(	AgentIdVector *ids_global,
 
 // --------------------------------------------------------------------------------
 // ---
+// --- CLASS GeneDistanceDeltaCache
+// ---
+// --------------------------------------------------------------------------------
+struct GeneDistanceDeltaCache {
+	float deltaValue[256];
+};
+
+// --------------------------------------------------------------------------------
+// ---
 // --- FUNCTION compute_distance
 // ---
 // --- Calculate distance between two genomes.
 // ---
 // --------------------------------------------------------------------------------
 
-inline float compute_distance( float *deltaCache, unsigned char *x, unsigned char *y ) {
+inline float compute_distance( GeneDistanceDeltaCache *deltaCache, unsigned char *x, unsigned char *y ) {
 	float sum = 0;
 
 	for( int gene = 0; gene < GENESN4; gene += 4 ) {
-		sum += deltaCache[ abs(x[gene+0] - y[gene+0]) + ((gene+0) * 256) ];
-		sum += deltaCache[ abs(x[gene+1] - y[gene+1]) + ((gene+1) * 256) ];
-		sum += deltaCache[ abs(x[gene+2] - y[gene+2]) + ((gene+2) * 256) ];
-		sum += deltaCache[ abs(x[gene+3] - y[gene+3]) + ((gene+3) * 256) ];
+		sum += deltaCache[ gene+0 ].deltaValue[ abs(x[gene+0] - y[gene+0]) ];
+		sum += deltaCache[ gene+1 ].deltaValue[ abs(x[gene+1] - y[gene+1]) ];
+		sum += deltaCache[ gene+2 ].deltaValue[ abs(x[gene+2] - y[gene+2]) ];
+		sum += deltaCache[ gene+3 ].deltaValue[ abs(x[gene+3] - y[gene+3]) ];
 	}
 
 	for( int gene = GENESN4; gene < GENES; gene++ ) {
-		sum += deltaCache[ abs(x[gene] - y[gene]) + (gene * 256) ];
+		sum += deltaCache[ gene ].deltaValue[ abs(x[gene] - y[gene]) ];
 	}
 
 	return sum;
 }
 
-inline float compute_distance( float *deltaCache, const GenomeRef &x, const GenomeRef &y ) {
+inline float compute_distance( GeneDistanceDeltaCache *deltaCache, const GenomeRef &x, const GenomeRef &y ) {
 	return compute_distance( deltaCache, x.genes(), y.genes() );
 }
 
@@ -1198,8 +1267,8 @@ inline float compute_distance(float *ents, float *stddev2, unsigned char *x, uns
 // --- FUNCTION create_distance_deltaCache
 // ---
 // --------------------------------------------------------------------------------
-float *create_distance_deltaCache( float *ents, float *stddev2 ) {
-	float *deltaCache = new float[GENES * 256];
+GeneDistanceDeltaCache *create_distance_deltaCache( float *certainty, float *stddev2 ) {
+	GeneDistanceDeltaCache *deltaCache = new GeneDistanceDeltaCache[GENES];
 
 	for( int igene = 0; igene < GENES; igene++ ) {
 		for( int delta = 0; delta < 256; delta++ ) {
@@ -1209,12 +1278,12 @@ float *create_distance_deltaCache( float *ents, float *stddev2 ) {
 
 			if (tmp) {
 				tmp *= tmp;
-				result = (ents[igene] * tmp) / stddev2[igene];
+				result = (certainty[igene] * tmp) / stddev2[igene];
 			} else {
 				result = 0;
 			}
 
-			deltaCache[(igene * 256) + delta] = result;
+			deltaCache[igene].deltaValue[delta] = result;
 		}
 	}
 
@@ -1226,7 +1295,7 @@ float *create_distance_deltaCache( float *ents, float *stddev2 ) {
 // --- FUNCTION create_distanceCache
 // ---
 // --------------------------------------------------------------------------------
-float **create_distanceCache( float *deltaCache, PopulationPartition *population ) {
+float **create_distanceCache( GeneDistanceDeltaCache *deltaCache, PopulationPartition *population ) {
 	int numGenomes = population->members.size();
 
 	// allocate distance cache
@@ -1288,12 +1357,12 @@ inline float get_distance( float **distanceCache, AgentIndex x, AgentIndex y ) {
 
 // --------------------------------------------------------------------------------
 // ---
-// --- CLASS GeneEntropyCalculator
+// --- CLASS GeneCertaintyCalculator
 // ---
 // --------------------------------------------------------------------------------
-class GeneEntropyCalculator {
+class GeneCertaintyCalculator {
 public:
-	GeneEntropyCalculator() {
+	GeneCertaintyCalculator() {
 		numGenomes = 0;
 
 		bins = new int*[NUM_BINS];
@@ -1303,7 +1372,7 @@ public:
 		}
 	}
 
-	~GeneEntropyCalculator() {
+	~GeneCertaintyCalculator() {
 		for( int i = 0; i < NUM_BINS; i++ ) {
 			delete bins[i];
 		}
@@ -1410,7 +1479,7 @@ private:
 // ---
 // --------------------------------------------------------------------------------
 struct DistanceMetrics {
-	float *deltaCache;
+	GeneDistanceDeltaCache *deltaCache;
 };
 
 DistanceMetrics create_distance_metrics( PopulationPartitionVector &partitions ) {
@@ -1418,7 +1487,7 @@ DistanceMetrics create_distance_metrics( PopulationPartitionVector &partitions )
 
 	double startTime = hirestime();
 
-	GeneEntropyCalculator entropyCalculator;
+	GeneCertaintyCalculator certaintyCalculator;
 	GeneStdDev2Calculator stddev2Calculator;
 
 	itfor( PopulationPartitionVector, partitions, it ) {
@@ -1428,24 +1497,24 @@ DistanceMetrics create_distance_metrics( PopulationPartitionVector &partitions )
 			AgentId id = *it;
 			GenomeRef genome = partition->getGenomeById( id );
 
-			entropyCalculator.addGenome( genome );
+			certaintyCalculator.addGenome( genome );
 			stddev2Calculator.addGenome( genome );
 		}
 	}
 
-	float *entropy = entropyCalculator.getResult();
+	float *certainty = certaintyCalculator.getResult();
 	float *stddev2 = stddev2Calculator.getResult();
 
 	DistanceMetrics result = {NULL};
 
 	THRESH = 0;
     for( int i=0; i<GENES; i++ )
-        THRESH += entropy[i];
+        THRESH += certainty[i];
     THRESH *= cliParms.threshFact;
 
-	result.deltaCache = create_distance_deltaCache( entropy, stddev2 );
+	result.deltaCache = create_distance_deltaCache( certainty, stddev2 );
 
-	delete entropy;
+	delete certainty;
 	delete stddev2;
 
 	double endTime = hirestime();
@@ -1845,7 +1914,7 @@ Cluster *create_cluster( float **distanceCache,
 // --- Assigns all agents in partition to a cluster.
 // ---
 // --------------------------------------------------------------------------------
-void create_clusters( float *distance_deltaCache,
+void create_clusters( GeneDistanceDeltaCache *distance_deltaCache,
 					  PopulationPartition *population,
 					  ClusterVector &allClusters ) {
 	printf("calculating distances...\n");
@@ -1925,7 +1994,7 @@ void create_clusters( float *distance_deltaCache,
 // --- FUNCTION find_neighbors
 // ---
 // --------------------------------------------------------------------------------
-void find_neighbors( float *distance_deltaCache,
+void find_neighbors( GeneDistanceDeltaCache *distance_deltaCache,
 					 PopulationPartition *clusterPartition,
 					 PopulationPartition *neighborPartition,
 					 ClusterVector &clusters_unsorted,
