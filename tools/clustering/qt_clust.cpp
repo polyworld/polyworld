@@ -2233,6 +2233,34 @@ void compute_clusters() {
 
 // --------------------------------------------------------------------------------
 // ---
+// --- FUNCTION parse_gene_indexes
+// ---
+// --------------------------------------------------------------------------------
+void parse_gene_indexes( map<int,string> *index2name, map<string,int> *name2index = NULL ) {
+	char *path = get_run_path("genome/meta/geneindex.txt");
+
+	errif( !is_regular_file(path), "Invalid file: %s\n", path );
+		
+	ifstream fin( path );
+	errif( !fin.is_open(), "Failed opening file %s\n", path );
+
+	while( fin ) {
+		int index;
+		string name;
+		fin >> index;
+		fin >> name;
+
+		if( index2name )
+			(*index2name)[index] = name;
+		if( name2index )
+			(*name2index)[name] = index;
+	}
+
+	free( path );
+}
+
+// --------------------------------------------------------------------------------
+// ---
 // --- FUNCTION parse_clusters
 // ---
 // --------------------------------------------------------------------------------
@@ -2599,10 +2627,13 @@ void util__centroidDists( const char *subdir ) {
 	};
 
 void util__zscore( const char *subdir ) {
+	const int NGENES_SHOW = 10;
 	const char *subdirs[] = {subdir};
 
-	LoadedClusters loadedClusters = load_clusters( true, subdirs, 1 );
+	map<int,string> geneNames;
+	parse_gene_indexes( &geneNames );
 
+	LoadedClusters loadedClusters = load_clusters( true, subdirs, 1 );
 	load_parms( subdirs, 1 );
 
 	PopulationPartition *partition = loadedClusters.partitions->at(0);
@@ -2614,6 +2645,7 @@ void util__zscore( const char *subdir ) {
 	float *mean[nclusters];
 	float *stddev[nclusters];
 
+	// Compute per-cluster gene mean and stddev
 	for( int i = 0; i < nclusters; i++ ) {
 		Cluster *cluster = clusters[i];
 		GeneStdDev2Calculator calc;
@@ -2635,32 +2667,97 @@ void util__zscore( const char *subdir ) {
 
 	ZScore *zscore[nclusters][nclusters];
 	
+	// Compute z-score
 	for( int i = 0; i < nclusters; i++ ) {
 		for( int j = 0; j < nclusters; j++ ) {
 			zscore[i][j] = new ZScore[GENES];
 			for( int igene = 0; igene < GENES; igene++ ) {
 				zscore[i][j][igene].igene = igene;
-				zscore[i][j][igene].value = (mean[i][igene] - mean[j][igene]) / stddev[i][igene];
+				zscore[i][j][igene].value = fabs( (mean[i][igene] - mean[j][igene]) / stddev[i][igene] );
+				//zscore[i][j][igene].value = ( (mean[i][igene] - mean[j][igene]) / stddev[i][igene] );
 			}
 		}
 	}
 
+	// Sort z-score from hi to lo
 	for( int i = 0; i < nclusters; i++ ) {
 		for( int j = 0; j < nclusters; j++ ) {
 			std::sort( zscore[i][j], zscore[i][j] + GENES, ZScore::sort );
 		}
 	}
 
+	cout << "=== TOP " << NGENES_SHOW << " ===" << endl;
+
 	for( int i = 0; i < nclusters; i++ ) {
 		for( int j = 0; j < nclusters; j++ ) {
 			if( i != j ) {
 				printf( "%d --> %d :\n", clusters[i]->id, clusters[j]->id );
-				for( int z = 0; z < 500; z++ ) {
-					printf( "  [%d] = %f\n", zscore[i][j][z].igene, zscore[i][j][z].value);
+				for( int z = 0; z < NGENES_SHOW; z++ ) {
+					int igene = zscore[i][j][z].igene;
+					const char *name = geneNames[igene].c_str();
+					printf( "  [ %d : %s ] = %f ",
+							igene, name, zscore[i][j][z].value);
+					printf( "mean(%d)=%f mean(%d)=%f stddev(%d)=%f\n",
+							clusters[i]->id, mean[i][igene],
+							clusters[j]->id, mean[j][igene],
+							clusters[i]->id, stddev[i][igene] );
 				}
 			}
 		}
 	}
+
+	cout << "=== MEAN OF TOP " << NGENES_SHOW << " ===" << endl;
+
+	for( int i = 0; i < nclusters; i++ ) {
+		for( int j = 0; j < nclusters; j++ ) {
+			if( i != j ) {
+				float total = 0;
+				for( int z = 0; z < NGENES_SHOW; z++ ) {
+					total += zscore[i][j][z].value;
+				}
+				float mean = total / NGENES_SHOW;
+				printf( "%d --> %d : %f\n", clusters[i]->id, clusters[j]->id, mean );
+			}
+		}
+	}
+
+	cout << "=== MEAN OF TOP " << NGENES_SHOW << " (i,j) + (j,i) ===" << endl;
+
+	for( int i = 0; i < nclusters; i++ ) {
+		for( int j = i + 1; j < nclusters; j++ ) {
+			float total = 0;
+			for( int z = 0; z < NGENES_SHOW; z++ ) {
+				total += zscore[i][j][z].value;
+			}
+			for( int z = 0; z < NGENES_SHOW; z++ ) {
+				total += zscore[j][i][z].value;
+			}
+			float mean = total / (NGENES_SHOW*2);
+			printf( "%d --> %d : %f\n", clusters[i]->id, clusters[j]->id, mean );
+		}
+	}
+
+	cout << "=== UNIQUENESS ===" << endl;
+
+	for( int i = 0; i < nclusters; i++ ) {
+		float uniqueness = 0;
+		for( int j = 0 ; j < nclusters; j++ ) {
+			if( i != j ) {
+				float total = 0;
+				for( int z = 0; z < NGENES_SHOW; z++ ) {
+					total += zscore[i][j][z].value;
+				}
+				for( int z = 0; z < NGENES_SHOW; z++ ) {
+					total += zscore[j][i][z].value;
+				}
+				float mean = total / (NGENES_SHOW*2);
+				uniqueness += mean;
+			}
+		}
+		uniqueness /= nclusters - 1;
+		printf( "%d : %f\n", clusters[i]->id, uniqueness );
+	}
+
 }
 
 // --------------------------------------------------------------------------------
@@ -2694,6 +2791,28 @@ void util__metabolism( const char *subdir ) {
 
 	std::sort( clusters.begin(), clusters.end(), Cluster::sort__member_size_descending );
 
+	float *mean[nclusters];
+	float *stddev[nclusters];
+
+	// Compute per-cluster gene mean and stddev
+	for( int i = 0; i < nclusters; i++ ) {
+		Cluster *cluster = clusters[i];
+		GeneStdDev2Calculator calc;
+
+		itfor( AgentIdVector, cluster->members, it ) {
+			GenomeRef genome = partition->getGenomeById( *it );
+			calc.addGenome( genome );
+		}
+
+		float *stddev2 = calc.getResult();
+		for( int j = 0; j < GENES; j++ ) {
+			stddev2[j] = sqrt( stddev2[j] );
+		}
+
+		stddev[i] = stddev2;
+		mean[i] = calc.getMean();
+	}
+
 	int nmetabolisms = 2;
 	fprintf( stderr, "Warning! Hard-coded nmetabolisms\n" );
 	int imetabolism = 8;
@@ -2716,9 +2835,11 @@ void util__metabolism( const char *subdir ) {
 			count[index]++;
 		}
 
-		for( int i = 0; i < nmetabolisms; i++ ) {
-			printf("%d ", count[i] );
+		for( int j = 0; j < nmetabolisms; j++ ) {
+			printf( "nmet%d=%d (%.1f%%) ", j, count[j], (double)100 * count[j] / cluster->members.size() );
 		}
+
+		printf( "mean(gene)=%f stddev(gene)=%f ", mean[i][imetabolism], stddev[i][imetabolism] );
 		printf("\n");
 	}
 	
