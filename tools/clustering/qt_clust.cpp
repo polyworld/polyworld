@@ -132,6 +132,7 @@ int main(int argc, char *argv[]) {
 	void util__centroidDists( const char *subdir );
 	void util__zscore( const char *subdir );
 	void util__metabolism( const char *subdir );
+	void util__ancestry( const char *subdir );
 
 	if( argc == 1 ) {
 		usage();
@@ -295,6 +296,20 @@ int main(int argc, char *argv[]) {
 			// --- METABOLISM
 			// ---
 			util__metabolism( subdir );
+		} else if( mode == "ancestry" ) {
+			if( optind >= argc ) err( "Missing subdir\n" );
+			const char *subdir = argv[optind++];
+
+			if( optind < argc ) {
+				cliParms.path_run = argv[optind++];
+			}
+
+			if( optind < argc ) err( "Unpexected arg '%s'\n", argv[optind] );
+
+			// ---
+			// --- ANCESTRY
+			// ---
+			util__ancestry( subdir );
 		} else {
 			err( "Unknown mode '%s'\n", mode.c_str() );
 		}
@@ -330,6 +345,9 @@ void usage() {
 	p("");
 	p( "qt_clust metabolism [-n max_clusters] [-g genomeCacheCapacity] subdir [run]" );
 	p( "   Show metabolsim counts for each cluster." );
+	p("");
+	p( "qt_clust ancestry [-n max_clusters] [-g genomeCacheCapacity] subdir [run]" );
+	p( "   Show ancestral clusters for each cluster." );
 	p("");
 	p("");
 	p( "Examples:" );
@@ -1536,6 +1554,7 @@ DistanceMetrics create_distance_metrics( PopulationPartitionVector &partitions )
 // ================================================================================
 
 typedef int ClusterId;
+typedef set<ClusterId> ClusterIdSet;
 
 class Cluster {
 public:
@@ -1763,15 +1782,19 @@ void write_results( ClusterVector &clusters ) {
 // --- Build a candidate cluster from a given starting agent.
 // ---
 // --------------------------------------------------------------------------------
-struct MaxDist {
-	AgentIndex index;
-	float dist;
-};
+namespace __create_candidate_cluster {
+	struct MaxDist {
+		AgentIndex index;
+		float dist;
+	};
+}
 
 AgentIdVector *create_candidate_cluster( float **distanceCache,
 										 PopulationPartition *partition,
 										 AgentIndex startAgent,
 										 AgentIndexSet &allAgents ) {
+	using namespace __create_candidate_cluster;
+
 	AgentIndex clusterAgents[ allAgents.size() ];
 	size_t numClusterAgents = 0;
 #define ADD_CLUSTER_AGENT( ID ) clusterAgents[numClusterAgents++] = ID;
@@ -2330,6 +2353,94 @@ void parse_gene_indexes( map<int,string> *index2name, map<string,int> *name2inde
 
 // --------------------------------------------------------------------------------
 // ---
+// --- FUNCTION parse_births_deaths
+// ---
+// --------------------------------------------------------------------------------
+class BirthsDeathsEntry {
+public:
+	AgentId id;
+	int birth;
+	int death;
+	AgentId parent1;
+	AgentId parent2;
+
+	BirthsDeathsEntry() {
+		id = 0;
+		birth = death = -1;
+		parent1 = parent2 = 0;
+	}
+};
+
+typedef map<AgentId, BirthsDeathsEntry> BirthsDeathsMap;
+
+void parse_births_deaths( BirthsDeathsMap &birthsDeaths ) {
+	char *path = get_run_path("BirthsDeaths.log");
+
+	errif( !is_regular_file(path), "Invalid file: %s\n", path );
+		
+	ifstream fin( path );
+	errif( !fin.is_open(), "Failed opening file %s\n", path );
+
+	{
+		char header[4096];
+		fin.getline( header, sizeof(header) );
+		errif( string(header) != "% Timestep Event Agent# Parent1 Parent2", "Unexpected header: '%s'\n", header );
+	}
+
+	while( fin ) {
+		int timestep;
+		string event;
+		AgentId agent;
+
+		fin >> timestep;
+		fin >> event;
+		fin >> agent;
+
+		if( event == "BIRTH" ) {
+			AgentId parent1;
+			AgentId parent2;
+			fin >> parent1;
+			fin >> parent2;
+
+			BirthsDeathsEntry entry;
+
+			entry.id = agent;
+			entry.birth = timestep;
+			entry.parent1 = parent1;
+			entry.parent2 = parent2;
+			
+			birthsDeaths[agent] = entry;
+		} else if( event == "CREATION" ) {
+			BirthsDeathsEntry entry;
+
+			entry.id = agent;
+			entry.birth = timestep;
+			
+			birthsDeaths[agent] = entry;
+		} else if( event == "DEATH" ) {
+			BirthsDeathsEntry &entry = birthsDeaths[agent];
+			entry.death = timestep;
+			if( entry.id == 0 ) {
+				// must have been created
+				entry.id = agent;
+			}
+		} else {
+			err( "Unexpected birth/death event '%s'\n", event.c_str() );
+		}
+
+		while( fin.peek() == '\n' ) {
+			fin.get();
+		}
+		if( fin.peek() == EOF ) {
+			break;
+		}
+	}
+
+	free( path );
+}
+
+// --------------------------------------------------------------------------------
+// ---
 // --- FUNCTION parse_clusters
 // ---
 // --------------------------------------------------------------------------------
@@ -2402,7 +2513,7 @@ void parse_clusters( const char *path, ParsedClusterVector &clusters ) {
 		}
 	}
 
-	delete buf;
+	delete [] buf;
 }
 
 // --------------------------------------------------------------------------------
@@ -2685,17 +2796,21 @@ void util__centroidDists( const char *subdir ) {
 // --- FUNCTION util__zscore
 // ---
 // --------------------------------------------------------------------------------
+namespace __util__zscore {
 	class ZScore {
 	public:
 		float value;
 		int igene;
 
 		static bool sort( const ZScore &x, const ZScore &y ) {
-			return y.value < x.value;
+			return fabs(y.value) < fabs(x.value);
 		}
 	};
+}
 
 void util__zscore( const char *subdir ) {
+	using namespace __util__zscore;
+
 	const int NGENES_SHOW = 10;
 	const char *subdirs[] = {subdir};
 
@@ -2742,8 +2857,8 @@ void util__zscore( const char *subdir ) {
 			zscore[i][j] = new ZScore[GENES];
 			for( int igene = 0; igene < GENES; igene++ ) {
 				zscore[i][j][igene].igene = igene;
-				zscore[i][j][igene].value = fabs( (mean[i][igene] - mean[j][igene]) / stddev[i][igene] );
-				//zscore[i][j][igene].value = ( (mean[i][igene] - mean[j][igene]) / stddev[i][igene] );
+				//zscore[i][j][igene].value = fabs( (mean[i][igene] - mean[j][igene]) / stddev[i][igene] );
+				zscore[i][j][igene].value = ( (mean[i][igene] - mean[j][igene]) / stddev[i][igene] );
 			}
 		}
 	}
@@ -2912,4 +3027,145 @@ void util__metabolism( const char *subdir ) {
 		printf("\n");
 	}
 	
+}
+
+// --------------------------------------------------------------------------------
+// ---
+// --- FUNCTION util__ancestry
+// ---
+// --------------------------------------------------------------------------------
+namespace __util__ancestry {
+	class TimeRange {
+	public:
+		int start;
+		int end;
+
+		TimeRange() {
+			start = -1;
+			end = -1;
+		}
+
+		void update( int t ) {
+			if( start == -1 ) {
+				assert(end == -1);
+				start = end = t;
+			} else if( t != -1 ) {
+				start = min(start, t);
+				end = max(end, t);
+			}
+		}
+	};
+
+	class AncestorInfo {
+	public:
+		int count;
+		TimeRange timeRange;
+
+		AncestorInfo() {
+			count = 0;
+		}
+	};
+
+	typedef pair<ClusterId,ClusterId> AncestorClusterIds;
+	typedef map<AncestorClusterIds, AncestorInfo> AncestorInfoMap;
+
+	class ClusterInfo {
+	public:
+		size_t nmembers;
+		TimeRange timeRange;
+		AncestorInfoMap ancestorInfos;
+
+		ClusterInfo() {
+			nmembers = 0;
+		}
+	};
+
+	typedef map<ClusterId, ClusterInfo> ClusterInfoMap;
+
+	bool sort_cluster_time( const pair<ClusterId,ClusterInfo> &a, const pair<ClusterId,ClusterInfo> &b ) {
+		return a.second.timeRange.start > b.second.timeRange.start;
+	}
+
+	bool sort_ancestor_time( const pair<AncestorClusterIds,AncestorInfo> &a, const pair<AncestorClusterIds,AncestorInfo> &b ) {
+		return a.second.timeRange.start < b.second.timeRange.start;
+	}
+}
+
+void util__ancestry( const char *subdir ) {
+	using namespace __util__ancestry;
+
+	BirthsDeathsMap birthsDeaths;
+	parse_births_deaths( birthsDeaths );
+
+	ParsedClusterVector clusters;
+	parse_clusters( get_results_path(subdir, "members_neighbors"), clusters );
+
+	typedef map<AgentId, ClusterId> ClusterIdMap;
+	ClusterIdMap clusterIdLookup;
+
+	ClusterInfoMap clusterInfos;
+
+	itfor( ParsedClusterVector, clusters, it_cluster ) {
+		ParsedCluster &cluster = *it_cluster;
+
+		ClusterInfo &clusterInfo = clusterInfos[cluster.id];
+		clusterInfo.nmembers = cluster.members.size();
+
+		itfor( AgentIdVector, cluster.members, it ) {
+			clusterIdLookup[*it] = cluster.id;
+			BirthsDeathsEntry &entry = birthsDeaths[*it];
+			clusterInfo.timeRange.update( entry.birth );
+			clusterInfo.timeRange.update( entry.death );
+		}
+	}
+
+	itfor( BirthsDeathsMap, birthsDeaths, it ) {
+		BirthsDeathsEntry &entry = it->second;
+
+		if( entry.parent1 > 0 ) {
+			assert( entry.parent2 > 0 );
+			assert( entry.parent1 != entry.parent2 );
+
+			ClusterId childClusterId = clusterIdLookup[entry.id];
+			ClusterId parent1ClusterId = clusterIdLookup[entry.parent1];
+			ClusterId parent2ClusterId = clusterIdLookup[entry.parent2];
+
+			if( (parent1ClusterId != childClusterId) && (parent2ClusterId != childClusterId) ) {
+				AncestorClusterIds ancestorIds = make_pair( min(parent1ClusterId, parent2ClusterId),
+															max(parent1ClusterId, parent2ClusterId) );
+				clusterInfos[childClusterId].ancestorInfos[ancestorIds].count++;
+				if( entry.birth > -1 ) {
+					clusterInfos[childClusterId].ancestorInfos[ancestorIds].timeRange.update( entry.birth );
+				}
+			}
+		}
+	}
+
+	typedef vector<pair<ClusterId,ClusterInfo> > ClusterInfoVector;
+	ClusterInfoVector clusterInfoVector( clusterInfos.begin(), clusterInfos.end() );
+	std::sort( clusterInfoVector.begin(), clusterInfoVector.end(), sort_cluster_time );
+
+	itfor( ClusterInfoVector, clusterInfoVector, it_cluster ) {
+		ClusterId clusterId = it_cluster->first;
+		ClusterInfo &clusterInfo = it_cluster->second;
+
+		if( clusterInfo.nmembers > 100 ) {
+			printf("cluster %d (n=%lu): T=[%d,%d]\n",
+				   clusterId, clusterInfo.nmembers, clusterInfo.timeRange.start, clusterInfo.timeRange.end );
+
+			typedef vector<pair<AncestorClusterIds,AncestorInfo> > AncestorInfoVector;
+			AncestorInfoVector ancestorInfoVector( clusterInfo.ancestorInfos.begin(), clusterInfo.ancestorInfos.end() );
+			std::sort( ancestorInfoVector.begin(), ancestorInfoVector.end(), sort_ancestor_time );
+
+			itfor( AncestorInfoVector, ancestorInfoVector, it_ancestor ) {
+				AncestorClusterIds ids = it_ancestor->first;
+				AncestorInfo &ancestorInfo = it_ancestor->second;
+				printf( "    (%d,%d): n=%d T=[%d,%d]\n",
+						ids.first, ids.second,
+						ancestorInfo.count,
+						ancestorInfo.timeRange.start, ancestorInfo.timeRange.end );
+						
+			}
+		}
+	}
 }
