@@ -607,6 +607,7 @@ void load_genome( AgentId id, unsigned char *genome ) {
 // --- FUNCTION set_genome_size
 // ---
 // --------------------------------------------------------------------------------
+int GENES_DIST = 0;
 void set_genome_size() {
 	char *lastline = read_last_nonblank_line( get_run_path("genome/meta/geneindex.txt") );
 	stringstream sin( lastline );
@@ -773,34 +774,36 @@ private:
 // ================================================================================
 // ================================================================================
 
-typedef list<class GenomeCacheSlot *> GenomeCacheSlotList;
+namespace __GenomeCache {
+	typedef list<class GenomeCacheSlot *> GenomeCacheSlotList;
 
-// --------------------------------------------------------------------------------
-// ---
-// --- CLASS GenomeCacheSlot
-// ---
-// --------------------------------------------------------------------------------
-class GenomeCacheSlot {
-public:
-	GenomeCacheSlot( AgentId id, const GenomeCacheSlotList::iterator &_it_unreferencedAllocatedSlots )
-		: it_unreferencedAllocatedSlots( _it_unreferencedAllocatedSlots )
-	{
-		this->id = id;
-		genes = NULL;
-		nreferences = 0;
-		offset_cacheFile = -1;
-		sorted = false;
-	}
+	// --------------------------------------------------------------------------------
+	// ---
+	// --- CLASS GenomeCacheSlot
+	// ---
+	// --------------------------------------------------------------------------------
+	class GenomeCacheSlot {
+	public:
+		GenomeCacheSlot( AgentId id, const GenomeCacheSlotList::iterator &_it_unreferencedAllocatedSlots )
+			: it_unreferencedAllocatedSlots( _it_unreferencedAllocatedSlots )
+		{
+			this->id = id;
+			genes = NULL;
+			nreferences = 0;
+			offset_cacheFile = -1;
+			sorted = false;
+		}
 
-	AgentId id;
-	unsigned char *genes;
-	int nreferences;
-	long offset_cacheFile;
-	bool sorted;
-	GenomeCacheSlotList::iterator it_unreferencedAllocatedSlots;
-};
+		AgentId id;
+		unsigned char *genes;
+		int nreferences;
+		long offset_cacheFile;
+		bool sorted;
+		GenomeCacheSlotList::iterator it_unreferencedAllocatedSlots;
+	};
 
-typedef map<AgentId, GenomeCacheSlot> GenomeCacheSlotLookup;
+	typedef map<AgentId, GenomeCacheSlot> GenomeCacheSlotLookup;
+}
 
 // --------------------------------------------------------------------------------
 // ---
@@ -814,7 +817,7 @@ public:
 		assert( false );
 	}
 
-	GenomeRef( class GenomeCache *cache, GenomeCacheSlot *slot ) {
+	GenomeRef( class GenomeCache *cache, __GenomeCache::GenomeCacheSlot *slot ) {
 		this->cache = cache;
 		this->slot = slot;
 	}
@@ -828,31 +831,7 @@ public:
 private:
 	GenomeCache *cache;
 	friend class GenomeCache;
-	GenomeCacheSlot *slot;
-};
-
-// --------------------------------------------------------------------------------
-// ---
-// --- CLASS GenomeCacheSlotSorter
-// ---
-// --------------------------------------------------------------------------------
-class GenomeCacheSlotSorter {
-public:
-	vector<int> &sortOrder;
-	unsigned char *genome;
-
-	GenomeCacheSlotSorter( vector<int> &_sortOrder, unsigned char *_genome )
-		: sortOrder(_sortOrder)
-		, genome(_genome)
-	{
-	}
-
-	bool operator()( const unsigned char &a, const unsigned char &b ) {
-		int ia = &a - genome;
-		int ib = &b - genome;
-
-		return sortOrder[ia] < sortOrder[ib];
-	}
+	__GenomeCache::GenomeCacheSlot *slot;
 };
 
 // --------------------------------------------------------------------------------
@@ -866,6 +845,8 @@ public:
 	// --- FUNCTION ctor
 	// --------------------------------------------------------------------------------
 	GenomeCache( int capacity, AgentIdVector *agents )	{
+		using namespace __GenomeCache;
+
 		this->capacity = capacity;
 		nallocated = 0;
 		sorted = false;
@@ -892,6 +873,8 @@ public:
 	// --- FUNCTION get
 	// --------------------------------------------------------------------------------
 	GenomeRef get( AgentId id ) {
+		using namespace __GenomeCache;
+
 		GenomeCacheSlot *slot = &( slotLookup.find(id)->second );
 		bool loadGenes = false;
 
@@ -916,6 +899,9 @@ public:
 						#pragma omp critical( slot_references )
 						{
 							slot->genes = genome;
+							if( sorted && !slot->sorted ) {
+								sort( slot );
+							}
 							add_reference( slot );
 						}
 					} else {
@@ -959,6 +945,8 @@ public:
 	// --- FUNCTION sort
 	// --------------------------------------------------------------------------------
 	void sort( vector<int> &order ) {
+		using namespace __GenomeCache;
+
 		sorted = true;
 		sortOrder = order;
 
@@ -980,6 +968,8 @@ private:
 	// --- FUNCTION remove_reference
 	// --------------------------------------------------------------------------------
 	inline void remove_reference( GenomeRef *ref ) {
+		using namespace __GenomeCache;
+
 		#pragma omp critical( slot_references )
 		{
 			GenomeCacheSlot *slot = ref->slot;
@@ -996,7 +986,7 @@ private:
 	// --------------------------------------------------------------------------------
 	// --- FUNCTION add_reference
 	// --------------------------------------------------------------------------------
-	inline void add_reference( GenomeCacheSlot *slot ) {
+	inline void add_reference( __GenomeCache::GenomeCacheSlot *slot ) {
 		slot->nreferences++;
 		if( (slot->nreferences == 1)
 			&& (slot->it_unreferencedAllocatedSlots != unreferencedAllocatedSlots.end()) )
@@ -1008,7 +998,9 @@ private:
 	// --------------------------------------------------------------------------------
 	// --- FUNCTION deallocate_slot
 	// --------------------------------------------------------------------------------
-	void deallocate_slot( GenomeCacheSlot **out_deallocatedSlot, unsigned char **out_genes ) {
+	void deallocate_slot( __GenomeCache::GenomeCacheSlot **out_deallocatedSlot, unsigned char **out_genes ) {
+		using namespace __GenomeCache;
+
 		errif( unreferencedAllocatedSlots.empty(), "genome references exceed cache capacity!\n" );
 
 		GenomeCacheSlot *deallocatedSlot = unreferencedAllocatedSlots.back();
@@ -1024,7 +1016,7 @@ private:
 	// --------------------------------------------------------------------------------
 	// --- FUNCTION load
 	// --------------------------------------------------------------------------------
-	void load( GenomeCacheSlot *slot, unsigned char *genes ) {
+	void load( __GenomeCache::GenomeCacheSlot *slot, unsigned char *genes ) {
 		if( slot->offset_cacheFile != -1 ) {
 			int rc;
 
@@ -1043,7 +1035,7 @@ private:
 	// --------------------------------------------------------------------------------
 	// --- FUNCTION store_cacheFile_slot
 	// --------------------------------------------------------------------------------
-	void store_cacheFile_slot( GenomeCacheSlot *slot, unsigned char *genes ) {
+	void store_cacheFile_slot( __GenomeCache::GenomeCacheSlot *slot, unsigned char *genes ) {
 		if( f_cacheFile == NULL ) {
 			errif( NULL == (f_cacheFile = fopen( GENOME_CACHE_FILE_PATH, "w+" )),
 				   "Failed creating genome cache file\n" );
@@ -1061,12 +1053,15 @@ private:
 	// --------------------------------------------------------------------------------
 	// --- FUNCTION sort
 	// --------------------------------------------------------------------------------
-	void sort( GenomeCacheSlot *slot ) {
+	void sort( __GenomeCache::GenomeCacheSlot *slot ) {
 		assert( !slot->sorted );
 
-		GenomeCacheSlotSorter sorter( sortOrder,slot->genes );
+		unsigned char buf[GENES];
+		memcpy( buf, slot->genes, GENES );
 
-		std::sort( slot->genes, slot->genes + GENES, sorter );
+		for( int i = 0; i < GENES; i++ ) {
+			slot->genes[i] = buf[ sortOrder[i] ];
+		}
 
 		slot->sorted = true;
 	}
@@ -1078,8 +1073,8 @@ private:
 	int nallocated;
 	bool sorted;
 	vector<int> sortOrder;
-	GenomeCacheSlotLookup slotLookup;
-	GenomeCacheSlotList unreferencedAllocatedSlots;
+	__GenomeCache::GenomeCacheSlotLookup slotLookup;
+	__GenomeCache::GenomeCacheSlotList unreferencedAllocatedSlots;
 };
 
 // --------------------------------------------------------------------------------
@@ -1219,7 +1214,6 @@ struct GeneDistanceDeltaCache {
 // --- Calculate distance between two genomes.
 // ---
 // --------------------------------------------------------------------------------
-
 inline float compute_distance( GeneDistanceDeltaCache *deltaCache, unsigned char *x, unsigned char *y ) {
 	float sum = 0;
 
@@ -1240,45 +1234,6 @@ inline float compute_distance( GeneDistanceDeltaCache *deltaCache, unsigned char
 inline float compute_distance( GeneDistanceDeltaCache *deltaCache, const GenomeRef &x, const GenomeRef &y ) {
 	return compute_distance( deltaCache, x.genes(), y.genes() );
 }
-
-/*
-inline float compute_distance(float *ents, float *stddev2, unsigned char *x, unsigned char *y) {
-	int tmp; float sum = 0;
-
-	for (int gene = 0; gene < (GENES*.80); gene++) {
-        tmp = x[gene] - y[gene];
-
-        if (tmp) {
-			tmp *= tmp;
-            sum += (ents[gene] * tmp) / stddev2[gene];
-		}
-	}
-
-	if( sum > THRESH ) return sum;
-
-	for (int gene = (GENES*.80); gene < (GENES*.90); gene++) {
-        tmp = x[gene] - y[gene];
-
-        if (tmp) {
-			tmp *= tmp;
-            sum += (ents[gene] * tmp) / stddev2[gene];
-		}
-	}
-
-	if( sum > THRESH ) return sum;
-
-	for (int gene = (GENES*.90); gene < (GENES); gene++) {
-        tmp = x[gene] - y[gene];
-
-        if (tmp) {
-			tmp *= tmp;
-            sum += (ents[gene] * tmp) / stddev2[gene];
-		}
-	}
-
-	return sum;
-}
-*/
 
 // --------------------------------------------------------------------------------
 // ---
@@ -1306,6 +1261,20 @@ GeneDistanceDeltaCache *create_distance_deltaCache( float *certainty, float *std
 	}
 
 	return deltaCache;
+}
+
+// --------------------------------------------------------------------------------
+// ---
+// --- FUNCTION sort_distance_deltaCache
+// ---
+// --------------------------------------------------------------------------------
+void sort_distance_deltaCache( GeneDistanceDeltaCache *deltaCache, vector<int> &order ) {
+	GeneDistanceDeltaCache buf[GENES];
+	memcpy( buf, deltaCache, sizeof(buf) );
+
+	for( int i = 0; i < GENES; i++ ) {
+		deltaCache[i] = buf[ order[i] ];
+	}
 }
 
 // --------------------------------------------------------------------------------
@@ -1498,6 +1467,8 @@ private:
 // --------------------------------------------------------------------------------
 struct DistanceMetrics {
 	GeneDistanceDeltaCache *deltaCache;
+	float *certainty;
+	float *stddev2;
 };
 
 DistanceMetrics create_distance_metrics( PopulationPartitionVector &partitions ) {
@@ -1520,20 +1491,17 @@ DistanceMetrics create_distance_metrics( PopulationPartitionVector &partitions )
 		}
 	}
 
-	float *certainty = certaintyCalculator.getResult();
-	float *stddev2 = stddev2Calculator.getResult();
+	DistanceMetrics result;
 
-	DistanceMetrics result = {NULL};
+	result.certainty = certaintyCalculator.getResult();
+	result.stddev2 = stddev2Calculator.getResult();
 
 	THRESH = 0;
     for( int i=0; i<GENES; i++ )
-        THRESH += certainty[i];
+        THRESH += result.certainty[i];
     THRESH *= cliParms.threshFact;
 
-	result.deltaCache = create_distance_deltaCache( certainty, stddev2 );
-
-	delete certainty;
-	delete stddev2;
+	result.deltaCache = create_distance_deltaCache( result.certainty, result.stddev2 );
 
 	double endTime = hirestime();
 	printf( "distance metrics time=%f seconds\n", endTime - startTime );
@@ -2199,6 +2167,43 @@ void find_neighbors( GeneDistanceDeltaCache *distance_deltaCache,
 // --- FUNCTION compute_clusters
 // ---
 // --------------------------------------------------------------------------------
+namespace __sort_genes {
+	class Sorter {
+	public:
+		float *certainty;
+		float *stddev2;
+		Sorter( float *certainty, float *stddev2 ) {this->certainty = certainty; this->stddev2=stddev2;}
+		bool operator()( const int &a, const int &b ) {
+			return certainty[a] > certainty[b];
+		}
+	};
+};
+
+// --------------------------------------------------------------------------------
+// ---
+// --- FUNCTION sort_genes
+// ---
+// --------------------------------------------------------------------------------
+void sort_genes( DistanceMetrics distanceMetrics, GenomeCache &genomeCache ) {
+	using namespace __sort_genes;
+
+	vector<int> &geneOrder = *(new vector<int>());
+	for( int i = 0; i < GENES; i++ ) {
+		geneOrder.push_back(i);
+	}
+	
+	Sorter sorter( distanceMetrics.certainty, distanceMetrics.stddev2 );
+	std::sort( geneOrder.begin(), geneOrder.end(), sorter );
+
+	genomeCache.sort( geneOrder );
+	sort_distance_deltaCache( distanceMetrics.deltaCache, geneOrder );
+}
+
+// --------------------------------------------------------------------------------
+// ---
+// --- FUNCTION compute_clusters
+// ---
+// --------------------------------------------------------------------------------
 void compute_clusters() {
 	printf("RUN: %s\n", cliParms.path_run);
 
@@ -2244,6 +2249,19 @@ void compute_clusters() {
 	cout << "num genome cache misses = " << genomeCache.nmisses << endl;
 
     printf("THRESH: %f\n", THRESH); 
+
+	/*
+	// ---
+	// --- SORT GENES
+	// ---
+	sort_genes( distanceMetrics, genomeCache );
+
+	GENES = int(Genes * 0.95);
+	GENESN4 = int(GENES / 4) * 4;
+	if( GENESN4 < GENES ) GENESN4 -= 4;
+	distanceMetrics = create_distance_metrics( partitions );
+	printf("THRESH: %f\n", THRESH); 
+	*/
 
 	// ---
 	// --- CREATE CLUSTERS
@@ -3130,13 +3148,11 @@ void util__ancestry( const char *subdir ) {
 			ClusterId parent1ClusterId = clusterIdLookup[entry.parent1];
 			ClusterId parent2ClusterId = clusterIdLookup[entry.parent2];
 
-			if( (parent1ClusterId != childClusterId) && (parent2ClusterId != childClusterId) ) {
-				AncestorClusterIds ancestorIds = make_pair( min(parent1ClusterId, parent2ClusterId),
-															max(parent1ClusterId, parent2ClusterId) );
-				clusterInfos[childClusterId].ancestorInfos[ancestorIds].count++;
-				if( entry.birth > -1 ) {
-					clusterInfos[childClusterId].ancestorInfos[ancestorIds].timeRange.update( entry.birth );
-				}
+			AncestorClusterIds ancestorIds = make_pair( min(parent1ClusterId, parent2ClusterId),
+														max(parent1ClusterId, parent2ClusterId) );
+			clusterInfos[childClusterId].ancestorInfos[ancestorIds].count++;
+			if( entry.birth > -1 ) {
+				clusterInfos[childClusterId].ancestorInfos[ancestorIds].timeRange.update( entry.birth );
 			}
 		}
 	}
@@ -3163,7 +3179,8 @@ void util__ancestry( const char *subdir ) {
 				printf( "    (%d,%d): n=%d T=[%d,%d]\n",
 						ids.first, ids.second,
 						ancestorInfo.count,
-						ancestorInfo.timeRange.start, ancestorInfo.timeRange.end );
+						(ancestorInfo.timeRange.start - clusterInfo.timeRange.start),
+						(ancestorInfo.timeRange.end - clusterInfo.timeRange.start) );
 						
 			}
 		}
