@@ -97,13 +97,24 @@ struct CliParms {
 	int clusterPartitionModulus;
 	float threshFact;
 	int genomeCacheCapacity;
+	int clusterStrideDivisor;
+	int neighborCandidateStride;
+	enum {
+		NA_MEASURE_MEMBERS,
+		NA_CLUSTER
+	} neighborAlgorithm;
+	const char *neighborAlgorithmName;
 	const char *path_run;
 	int nclusters;
 
 	CliParms() {
 		clusterPartitionModulus = 1;
 		threshFact = 2.125;
-		genomeCacheCapacity = 60000;
+		genomeCacheCapacity = -1;
+		clusterStrideDivisor = -1;
+		neighborCandidateStride = 1;
+		neighborAlgorithm = NA_MEASURE_MEMBERS;
+		neighborAlgorithmName = "measureMembers";
 		path_run = "./run";
 		nclusters = -1;
 	}
@@ -147,9 +158,23 @@ int main(int argc, char *argv[]) {
 	argv++;
 
 	if( mode == "cluster" ) {
-		int opt;
+		while( true ) {
+			static struct option long_options[] = {
+				{"clusterPartitionModulus", 1, 0, 'm'},
+				{"clusterStrideDivisor", 1, 0, 'd'},
+				{"threshFact", 1, 0, 'f'},
+				{"genomeCacheCapacity", 1, 0, 'g'},
+				{"neighborCandidateStride", 1, 0, 's'},
+				{"neighborAlgorithm", 1, 0, 'n'},
+				{0, 0, 0, 0}
+			};
+			int option_index = 0;
 
-		while( (opt = getopt(argc, argv, "m:f:g:")) != -1 ) {
+			int opt = getopt_long(argc, argv, "m:d:f:g:s:n:",
+								  long_options, &option_index);
+			if( opt == -1 )
+				break;
+
 			switch(opt) {
 			case 'm': {
 				char *endptr;
@@ -158,6 +183,15 @@ int main(int argc, char *argv[]) {
 					err( "Invalid -m value -- expecting int.\n" );
 				} else if( cliParms.clusterPartitionModulus < 1 ) {
 					err( "Invalid -m value -- must be >= 1.\n" );
+				}
+			} break;
+			case 'd': {
+				char *endptr;
+				cliParms.clusterStrideDivisor = strtol( optarg, &endptr, 10 );
+				if( *endptr ) {
+					err( "Invalid -d value -- expecting int.\n" );
+				} else if( cliParms.clusterStrideDivisor == 0 ) {
+					err( "Invalid -d value -- cannot be 0.\n" );
 				}
 			} break;
 			case 'f': {
@@ -174,9 +208,31 @@ int main(int argc, char *argv[]) {
 				cliParms.genomeCacheCapacity = strtol( optarg, &endptr, 10 );
 				if( *endptr ) {
 					err( "Invalid -g value -- expecting int.\n" );
-				} else if( cliParms.genomeCacheCapacity < 1 ) {
-					err( "Invalid -g value -- must be >= 1.\n" );
+				} else if( (cliParms.genomeCacheCapacity < -1) || (cliParms.genomeCacheCapacity == 0) ) {
+					err( "Invalid -g value -- must be > 0 or -1.\n" );
 				}
+			} break;
+			case 's': {
+				char *endptr;
+				cliParms.neighborCandidateStride = strtol( optarg, &endptr, 10 );
+				if( *endptr ) {
+					err( "Invalid -s value -- expecting int.\n" );
+				} else if( cliParms.neighborCandidateStride < 1 ) {
+					err( "Invalid -s value -- must be >= 1.\n" );
+				}
+			} break;
+			case 'n': {
+				string algname( optarg );
+
+				if( algname == "measureNeighbors" ) {
+					cliParms.neighborAlgorithm = CliParms::NA_MEASURE_MEMBERS;
+				} else if( algname == "cluster" ) {
+					cliParms.neighborAlgorithm = CliParms::NA_CLUSTER;
+				} else {
+					err( "Invalid -n value -- must be (measureNeighbors|cluster)\n" );
+				}
+
+				cliParms.neighborAlgorithmName = strdup( optarg );
 			} break;
 			default:
 				exit(1);
@@ -327,33 +383,58 @@ void usage() {
 	#define p(x...) fprintf( stderr, "%s\n", x )
 
 	p( "usage:" );
-	p("");
-	p( "qt_clust cluster [-m clusterPartitionModulus] [-f threshFact] [-g genomeCacheCapacity] [run]" );
+	p( "" );
+	p( "qt_clust cluster [opt...] [run]" );
 	p( "   Perform cluster analysis." );
-	p("");
+	p( "" );
+	p( "   -m,--clusterPartitionModulus arg" );
+	p( "        Modulus used for determining which agents are placed in the cluster partition." );
+	p( "      A value of 2 will result in 50% of agents being clustered, 3 will be 33%, etc." ); 
+	p( "" );
+	p( "   -d,--clusterStrideDivisor arg" );
+	p( "        Controls how many agents remaining to be clustered will be used as start agents." );
+	p( "      The set of agents will be stepped through with a value of:" );
+	p( "           max( 1, int(remainingAgents.size() / stride_divisor) )" );
+	p( "      A reasonable value is 1000 - 3000." );
+	p( "" );
+	p( "   -f,--threshFact arg" );
+	p( "        Set the value of THRESH_FACT." );
+	p( "" );
+	p( "   -g,--genomeCacheCapacity arg" );
+	p( "        Set the max number of genomes that will be cached in RAM." );
+	p( "" );
+	p( "   -s,--neighborCandidateStride arg" );
+	p( "        Sets the increment value for stepping through a cluster's members when determining" );
+	p( "      if a potential neighbor violates THRESH with a cluster. A reasonable value is 2." );
+	p( "" );
+	p( "   -n,--neighborAlgorithm arg" );
+	p( "        Specifies algorithm of neighboring pass. Values values are 'measureNeighbors' and" );
+	p( "      'cluster'. Default is 'measureNeighbors'." );
+	p( "" );
+	p( "" );
 	p( "qt_clust compareCentroids [-n max_clusters] [-g genomeCacheCapacity] subdir_A subdir_B [run]" );
 	p( "   Compute the distance between cluster centroids from two cluster files." );
-	p("");
+	p( "" );
 	p( "qt_clust checkThresh [-n max_clusters] [-g genomeCacheCapacity] subdir [run]" );
 	p( "   Analyze how well clusters conform to THRESH." );
-	p("");
+	p( "" );
 	p( "qt_clust centroidDists [-n max_clusters] [-g genomeCacheCapacity] subdir [run]" );
 	p( "   Compute distance between centroids of all clusters." );
-	p("");
+	p( "" );
 	p( "qt_clust zscore [-n max_clusters] [-g genomeCacheCapacity] subdir [run]" );
 	p( "   Compute zscore between clusters." );
-	p("");
+	p( "" );
 	p( "qt_clust metabolism [-n max_clusters] [-g genomeCacheCapacity] subdir [run]" );
 	p( "   Show metabolsim counts for each cluster." );
-	p("");
+	p( "" );
 	p( "qt_clust ancestry [-n max_clusters] [-g genomeCacheCapacity] subdir [run]" );
 	p( "   Show ancestral clusters for each cluster." );
-	p("");
-	p("");
+	p( "" );
+	p( "" );
 	p( "Examples:" );
-	p("");
+	p( "" );
 	p( "   qt_clust cluster -m 10 ./run" );
-	p("");
+	p( "" );
 	p( "   qt_clust compareCentroids -n 10 m1f2.125 m10f2.125" );
 
 	#undef p
@@ -1154,8 +1235,6 @@ public:
 
 public:
 	AgentIdVector &members;
-
-private:
 	GenomeCache *genomeCache;
 };
 
@@ -1291,8 +1370,6 @@ float **create_distanceCache( GeneDistanceDeltaCache *deltaCache, PopulationPart
 		distanceCache[i] = new float[numGenomes];
 	}
 
-	double startTime = hirestime();
-
 	for( AgentIndex i = 0; i < numGenomes; i++) {
 		float *D = distanceCache[i];
 		GenomeRef igenome = population->getGenomeByIndex(i);
@@ -1312,9 +1389,6 @@ float **create_distanceCache( GeneDistanceDeltaCache *deltaCache, PopulationPart
 			D[j] = d;
 		}
 	}
-
-	double endTime = hirestime();
-	printf( "distance time=%f seconds\n", endTime - startTime );
 
 	return distanceCache;
 }
@@ -1675,7 +1749,12 @@ void write_members_and_neighbors( FILE *f, Cluster *cluster ) {
 // --------------------------------------------------------------------------------
 void write_results( ClusterVector &clusters ) {
 	char subdir[1024];
-	sprintf( subdir, "m%df%g", cliParms.clusterPartitionModulus, cliParms.threshFact );
+	sprintf( subdir, "m%d_d%d_f%g_s%d_n%s",
+			 cliParms.clusterPartitionModulus,
+			 cliParms.clusterStrideDivisor,
+			 cliParms.threshFact,
+			 cliParms.neighborCandidateStride,
+			 cliParms.neighborAlgorithmName );
 
 	{
 		char cmd[1024 * 4];
@@ -1836,7 +1915,8 @@ AgentIdVector *create_candidate_cluster( float **distanceCache,
 Cluster *create_cluster( float **distanceCache,
 						 PopulationPartition *partition,
 						 AgentIndexSet &remainingAgents,
-						 ClusterId clusterId ) {
+						 ClusterId clusterId,
+						 int stride_divisor = -1 ) {
 
 	AgentIdVector *biggestMembers = NULL;
 	AgentIndex biggestStartAgent;
@@ -1844,8 +1924,7 @@ Cluster *create_cluster( float **distanceCache,
 	AgentIndexSet::iterator it = remainingAgents.begin();
 	AgentIndexSet::iterator it_end = remainingAgents.end();
 
-	//int stride = max( 1, int(remainingAgents.size() / 2000) );
-	int stride = 1;
+	int stride = max( 1, int(remainingAgents.size() / stride_divisor) );
 	
 	#pragma omp parallel
 	{
@@ -1909,7 +1988,16 @@ void create_clusters( GeneDistanceDeltaCache *distance_deltaCache,
 					  PopulationPartition *population,
 					  ClusterVector &allClusters ) {
 	printf("calculating distances...\n");
-	float **distanceCache = create_distanceCache( distance_deltaCache, population );
+	float **distanceCache;
+	{
+		double startTime = hirestime();
+
+		distanceCache = create_distanceCache( distance_deltaCache, population );
+
+		double endTime = hirestime();
+		printf( "distance time=%f seconds\n", endTime - startTime );
+	}
+
 
 	double startTime = hirestime();
 
@@ -1932,7 +2020,8 @@ void create_clusters( GeneDistanceDeltaCache *distance_deltaCache,
 		Cluster *cluster = create_cluster( distanceCache,
 										   population,
 										   remainingAgents,
-										   clusters.size() + allClusters.size());
+										   clusters.size() + allClusters.size(),
+										   cliParms.clusterStrideDivisor );
 		clusters.push_back( cluster );
 
 		// remove cluster members from agents needing processing
@@ -1982,6 +2071,132 @@ void create_clusters( GeneDistanceDeltaCache *distance_deltaCache,
 
 // --------------------------------------------------------------------------------
 // ---
+// --- FUNCTION find_valid_neighbors__measureNeighbors
+// ---
+// --------------------------------------------------------------------------------
+void find_valid_neighbors__measureNeighbors( Cluster *cluster,
+											 AgentIdVector &clusterNeighborCandidates,
+											 GeneDistanceDeltaCache *distance_deltaCache,
+											 PopulationPartition *neighborPartition ) {
+	AgentIdSet validNeighbors( clusterNeighborCandidates.begin(), clusterNeighborCandidates.end() );
+
+	typedef map<AgentId, AgentIdSet> ViolationMap;
+	ViolationMap violations;
+
+	typedef map<AgentId, double> DistMap;
+	DistMap dists;
+
+	for( int i = 0; i < (int)clusterNeighborCandidates.size(); i++ ) {
+		dists[ clusterNeighborCandidates[i] ] = 0;
+	}
+
+	for( int i = 0; i < (int)clusterNeighborCandidates.size(); i++ ) {
+		AgentId i_id = clusterNeighborCandidates[i];
+		GenomeRef i_genome = neighborPartition->getGenomeById( i_id );
+
+		#pragma omp parallel for
+		for( int j = i + 1; j < (int)clusterNeighborCandidates.size(); j++ ) {
+			AgentId j_id = clusterNeighborCandidates[j];
+			GenomeRef j_genome = neighborPartition->getGenomeById( j_id );
+
+			float dist = compute_distance( distance_deltaCache,
+										   i_genome,
+										   j_genome );
+
+			double &i_dist = dists[i_id];
+			#pragma omp atomic
+			i_dist += dist;
+
+			double &j_dist = dists[j_id];
+			#pragma omp atomic
+			j_dist += dist;
+
+			if( dist > THRESH ) {
+				#pragma omp critical(violations)
+				{
+					violations[i_id].insert( j_id );
+					violations[j_id].insert( i_id );
+				}
+			}
+		}
+	}
+
+	while( !violations.empty() ) {
+		ViolationMap::iterator it_biggest = violations.end();
+		
+		itfor( ViolationMap, violations, it_violations ) {
+			if( (it_biggest == violations.end()) || (it_violations->second.size() > it_biggest->second.size()) ) {
+				it_biggest = it_violations;
+			}
+		}
+
+		if( it_biggest->second.size() == 1 ) {
+			break;
+		}
+
+		itfor( AgentIdSet, it_biggest->second, it_id ) {
+			AgentIdSet &otherSet = violations[*it_id];
+			otherSet.erase( it_biggest->first );
+			if( otherSet.empty() ) {
+				violations.erase( *it_id );
+			}
+		}
+		validNeighbors.erase( it_biggest->first );
+		violations.erase( it_biggest );
+	}
+
+	itfor( ViolationMap, violations, it_violations ) {
+		AgentId first = it_violations->first;
+		AgentId second = *( it_violations->second.begin() );
+
+		if( first < second ) {
+			if( dists[first] < dists[second] ) {
+				validNeighbors.erase( second );
+			} else {
+				validNeighbors.erase( first );
+			}
+		}
+	}
+
+	cluster->neighbors.resize( validNeighbors.size() );
+	copy( validNeighbors.begin(), validNeighbors.end(), cluster->neighbors.begin() );
+}
+
+// --------------------------------------------------------------------------------
+// ---
+// --- FUNCTION find_valid_neighbors__cluster
+// ---
+// --------------------------------------------------------------------------------
+void find_valid_neighbors__cluster( Cluster *cluster,
+									AgentIdVector &clusterNeighborCandidates,
+									GeneDistanceDeltaCache *distance_deltaCache,
+									PopulationPartition *neighborPartition ) {
+	AgentIdSet candidatesSet;
+	for( size_t i = 0; i < clusterNeighborCandidates.size(); i++ ) {
+		candidatesSet.insert( (int)i );
+	}
+
+	PopulationPartition partition( new AgentIdVector(clusterNeighborCandidates),
+								   neighborPartition->genomeCache );
+
+	float **distanceCache = create_distanceCache( distance_deltaCache, &partition );
+
+	Cluster *neighborCluster = create_cluster( distanceCache,
+											   &partition,
+											   candidatesSet,
+											   0,
+											   cliParms.clusterStrideDivisor );
+	
+	cluster->neighbors.resize( neighborCluster->members.size() );
+	copy( neighborCluster->members.begin(), neighborCluster->members.end(),
+		  cluster->neighbors.begin() );	
+
+	delete neighborCluster;
+	dispose_distanceCache( distanceCache, &partition );
+}
+
+// --------------------------------------------------------------------------------
+// ---
 // --- FUNCTION find_neighbors
 // ---
 // --------------------------------------------------------------------------------
@@ -2025,7 +2240,7 @@ void find_neighbors( GeneDistanceDeltaCache *distance_deltaCache,
 
 			for( int iclusterMember = 0;
 				 isNeighbor && (iclusterMember < (int)cluster->members.size());
-				 iclusterMember++ )
+				 iclusterMember += cliParms.neighborCandidateStride )
 			{
 				AgentId clusterId = cluster->members[ iclusterMember ];
 				GenomeRef clusterGenome = clusterPartition->getGenomeById( clusterId );
@@ -2048,93 +2263,30 @@ void find_neighbors( GeneDistanceDeltaCache *distance_deltaCache,
 		// ---
 		// --- Eliminate neighbor candidates that violate THRESH with other candidates.
 		// ---
-		AgentIdSet validNeighbors( clusterNeighborCandidates.begin(), clusterNeighborCandidates.end() );
-
-		typedef map<AgentId, AgentIdSet> ViolationMap;
-		ViolationMap violations;
-
-		typedef map<AgentId, double> DistMap;
-		DistMap dists;
-
-		for( int i = 0; i < (int)clusterNeighborCandidates.size(); i++ ) {
-			dists[ clusterNeighborCandidates[i] ] = 0;
+		if( clusterNeighborCandidates.size() > 1000 ) {
+			printf("  cluster %d neighbor_candidates=%lu\n", cluster->id, clusterNeighborCandidates.size() );
+		}
+		switch( cliParms.neighborAlgorithm ) {
+		case CliParms::NA_MEASURE_MEMBERS:
+			find_valid_neighbors__measureNeighbors( cluster,
+													clusterNeighborCandidates,
+													distance_deltaCache,
+													neighborPartition );
+			break;
+		case CliParms::NA_CLUSTER:
+			find_valid_neighbors__cluster( cluster,
+										   clusterNeighborCandidates,
+										   distance_deltaCache,
+										   neighborPartition );
+			break;
+		default:
+			assert( false );
 		}
 
-		for( int i = 0; i < (int)clusterNeighborCandidates.size(); i++ ) {
-			AgentId i_id = clusterNeighborCandidates[i];
-			GenomeRef i_genome = neighborPartition->getGenomeById( i_id );
-
-			#pragma omp parallel for
-			for( int j = i + 1; j < (int)clusterNeighborCandidates.size(); j++ ) {
-				AgentId j_id = clusterNeighborCandidates[j];
-				GenomeRef j_genome = neighborPartition->getGenomeById( j_id );
-
-				float dist = compute_distance( distance_deltaCache,
-											   i_genome,
-											   j_genome );
-
-				double &i_dist = dists[i_id];
-				#pragma omp atomic
-				i_dist += dist;
-
-				double &j_dist = dists[j_id];
-				#pragma omp atomic
-				j_dist += dist;
-
-				if( dist > THRESH ) {
-					#pragma omp critical(violations)
-					{
-						violations[i_id].insert( j_id );
-						violations[j_id].insert( i_id );
-					}
-				}
-			}
-		}
-
-		while( !violations.empty() ) {
-			ViolationMap::iterator it_biggest = violations.end();
-		
-			itfor( ViolationMap, violations, it_violations ) {
-				if( (it_biggest == violations.end()) || (it_violations->second.size() > it_biggest->second.size()) ) {
-					it_biggest = it_violations;
-				}
-			}
-
-			if( it_biggest->second.size() == 1 ) {
-				break;
-			}
-
-			itfor( AgentIdSet, it_biggest->second, it_id ) {
-				AgentIdSet &otherSet = violations[*it_id];
-				otherSet.erase( it_biggest->first );
-				if( otherSet.empty() ) {
-					violations.erase( *it_id );
-				}
-			}
-			validNeighbors.erase( it_biggest->first );
-			violations.erase( it_biggest );
-		}
-
-		itfor( ViolationMap, violations, it_violations ) {
-			AgentId first = it_violations->first;
-			AgentId second = *( it_violations->second.begin() );
-
-			if( first < second ) {
-				if( dists[first] < dists[second] ) {
-					validNeighbors.erase( second );
-				} else {
-					validNeighbors.erase( first );
-				}
-			}
-		}
-
-		cluster->neighbors.resize( validNeighbors.size() );
-		copy( validNeighbors.begin(), validNeighbors.end(), cluster->neighbors.begin() );
-
-		itfor( AgentIdSet, validNeighbors, it ) {
+		itfor( AgentIdVector, cluster->neighbors, it ) {
 			neighborCandidates.erase( *it );
 		}
-	}
+	} // for each cluster
 
 	orphans.resize( neighborCandidates.size() );
 	copy( neighborCandidates.begin(), neighborCandidates.end(), orphans.begin() );
@@ -2164,7 +2316,7 @@ void find_neighbors( GeneDistanceDeltaCache *distance_deltaCache,
 
 // --------------------------------------------------------------------------------
 // ---
-// --- FUNCTION compute_clusters
+// --- FUNCTION sort_genes
 // ---
 // --------------------------------------------------------------------------------
 namespace __sort_genes {
@@ -2179,11 +2331,6 @@ namespace __sort_genes {
 	};
 };
 
-// --------------------------------------------------------------------------------
-// ---
-// --- FUNCTION sort_genes
-// ---
-// --------------------------------------------------------------------------------
 void sort_genes( DistanceMetrics distanceMetrics, GenomeCache &genomeCache ) {
 	using namespace __sort_genes;
 
@@ -2212,9 +2359,13 @@ void compute_clusters() {
     printf("GENES: %d\n", GENES); 
 
 	AgentIdVector *ids_global = get_agent_ids();
+	int genomeCacheCapacity = cliParms.genomeCacheCapacity;
+	if( genomeCacheCapacity == -1 ) {
+		genomeCacheCapacity = (int)ids_global->size();
+	}
 	printf( "POPSIZE: %lu\n", ids_global->size() );
-	GenomeCache genomeCache( cliParms.genomeCacheCapacity, ids_global );
-	printf( "GENOME CACHE CAPACITY: %d\n", cliParms.genomeCacheCapacity );
+	GenomeCache genomeCache( genomeCacheCapacity, ids_global );
+	printf( "GENOME CACHE CAPACITY: %d\n", genomeCacheCapacity );
 
 	// ---
 	// --- DEFINE PARTITIONS
@@ -2235,7 +2386,7 @@ void compute_clusters() {
 	printf( "NUM CLUSTERED AGENTS: %lu\n", clusterPartition->members.size() );
 	printf( "NUM NEIGHBORED AGENTS: %lu\n", neighborPartition->members.size() );
 
-	if( cliParms.genomeCacheCapacity < (int)clusterPartition->members.size() ) {
+	if( genomeCacheCapacity < (int)clusterPartition->members.size() ) {
 		cerr << "Warning! GenomeCacheCapacity (-g) is less than number of clustered agents. Execution time will be poor." << endl;
 	}
 
@@ -2578,7 +2729,11 @@ LoadedClusters load_clusters( bool singlePartition,
 		ids = new AgentIdVector( ids_all.begin(), ids_all.end() );
 	}
 
-	GenomeCache *genomeCache = new GenomeCache( cliParms.genomeCacheCapacity, ids );
+	int genomeCacheCapacity = cliParms.genomeCacheCapacity;
+	if( genomeCacheCapacity == -1 ) {
+		genomeCacheCapacity = (int)ids->size();
+	}
+	GenomeCache *genomeCache = new GenomeCache( genomeCacheCapacity, ids );
 	PopulationPartition *partition = new PopulationPartition(ids, genomeCache);
 	result.partitions->push_back( partition );
 
