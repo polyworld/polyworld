@@ -953,7 +953,14 @@ public:
 	// --------------------------------------------------------------------------------
 	// --- FUNCTION get
 	// --------------------------------------------------------------------------------
-	GenomeRef get( AgentId id ) {
+	inline GenomeRef get( AgentId id ) {
+		return GenomeRef( this, refslot(id) );
+	}
+
+	// --------------------------------------------------------------------------------
+	// --- FUNCTION refslot
+	// --------------------------------------------------------------------------------
+	__GenomeCache::GenomeCacheSlot *refslot( AgentId id ) {
 		using namespace __GenomeCache;
 
 		GenomeCacheSlot *slot = &( slotLookup.find(id)->second );
@@ -1019,7 +1026,28 @@ public:
 			}
 		}
 
-		return GenomeRef( this, slot );
+		return slot;
+	}
+
+	// --------------------------------------------------------------------------------
+	// --- FUNCTION unrefslot
+	// --------------------------------------------------------------------------------
+	inline void unrefslot( __GenomeCache::GenomeCacheSlot *slot ) {
+		#pragma omp critical( slot_references )
+		{
+			slot->nreferences--;
+			if( slot->nreferences == 0 ) {
+				unreferencedAllocatedSlots.push_front( slot );
+				slot->it_unreferencedAllocatedSlots = unreferencedAllocatedSlots.begin();
+			}
+		}
+	}
+
+	// --------------------------------------------------------------------------------
+	// --- FUNCTION unrefslot
+	// --------------------------------------------------------------------------------
+	inline void unrefslot( AgentId id ) {
+		unrefslot( &( slotLookup.find(id)->second ) );
 	}
 
 	// --------------------------------------------------------------------------------
@@ -1041,27 +1069,6 @@ public:
 
 public:
 	int nmisses;
-
-private:
-	friend class GenomeRef;
-
-	// --------------------------------------------------------------------------------
-	// --- FUNCTION remove_reference
-	// --------------------------------------------------------------------------------
-	inline void remove_reference( GenomeRef *ref ) {
-		using namespace __GenomeCache;
-
-		#pragma omp critical( slot_references )
-		{
-			GenomeCacheSlot *slot = ref->slot;
-
-			slot->nreferences--;
-			if( slot->nreferences == 0 ) {
-				unreferencedAllocatedSlots.push_front( slot );
-				slot->it_unreferencedAllocatedSlots = unreferencedAllocatedSlots.begin();
-			}
-		}
-	}
 
 private:
 	// --------------------------------------------------------------------------------
@@ -1164,7 +1171,7 @@ private:
 // ---
 // --------------------------------------------------------------------------------
 GenomeRef::~GenomeRef() {
-	cache->remove_reference( this );
+	cache->unrefslot( slot );
 	slot = NULL;
 }
 
@@ -1358,11 +1365,106 @@ void sort_distance_deltaCache( GeneDistanceDeltaCache *deltaCache, vector<int> &
 
 // --------------------------------------------------------------------------------
 // ---
+// --- FUNCTION compute_distances
+// ---
+// --- Computes distances between index_i and [index_j, index_j_end), where each
+// --- index is used to look up an ID in ids. Results are placed in dists at
+// --- [0, index_j_end - index_j).
+// ---
+// --- Note this function's complexity is primarily due to minimizing misses in
+// --- the CPU's cache.
+// --------------------------------------------------------------------------------
+void compute_distances( GeneDistanceDeltaCache *deltaCache,
+						GenomeCache *genomeCache,
+						AgentIdVector &ids,
+						int index_i,
+						int index_j,
+						int index_j_end,
+						float *dists ) {
+	__GenomeCache::GenomeCacheSlot *sloti = genomeCache->refslot( ids[index_i] );
+	unsigned char *genomei = sloti->genes;
+
+	memset( dists, 0, sizeof(float) * (index_j_end - index_j) );
+
+	for( int j = index_j; j < index_j_end; j += 32 ) {
+		int ngenomes_batch = min( 32, index_j_end - j );
+		__GenomeCache::GenomeCacheSlot *slots[ngenomes_batch];
+		unsigned char *genomes[ngenomes_batch];
+		for( int k = 0; k < ngenomes_batch; k++ ) {
+			slots[k] = genomeCache->refslot( ids[j + k] );
+			genomes[k] = slots[k]->genes;
+		}
+
+		#define genedist(GENOME_INDEX, GENE_INDEX)						\
+			dists[GENOME_INDEX+(j-index_j)] +=							\
+				deltaCache[GENE_INDEX].deltaValue[ abs(genomei[GENE_INDEX] - genomes[GENOME_INDEX][GENE_INDEX]) ];
+		#define genedist4(GENOME_INDEX,GENE_INDEX)						\
+			genedist(GENOME_INDEX, GENE_INDEX);							\
+			genedist(GENOME_INDEX, GENE_INDEX+1);						\
+			genedist(GENOME_INDEX, GENE_INDEX+2);						\
+			genedist(GENOME_INDEX, GENE_INDEX+3);
+						
+		if( ngenomes_batch < 32 ) {
+			for( int igene = 0; igene < GENESN4; igene +=4 ) {
+				for( int k = 0; k < ngenomes_batch; k++ ) {
+					genedist4(k,igene);
+				}
+			}
+			for( int igene = GENESN4; igene < GENES; igene++ ) {
+				for( int k = 0; k < ngenomes_batch; k++ ) {
+					genedist(k,igene);
+				}
+			}
+		} else {
+			for( int igene = 0; igene < GENESN4; igene +=4 ) {
+				#define genedist4_genome(GENOME_INDEX) genedist4(GENOME_INDEX,igene);
+				#define genedist4_genome4(GENOME_INDEX)					\
+					genedist4_genome(GENOME_INDEX);						\
+					genedist4_genome(GENOME_INDEX+1);					\
+					genedist4_genome(GENOME_INDEX+2);					\
+					genedist4_genome(GENOME_INDEX+3);
+				#define genedist4_genome16(GENOME_INDEX)				\
+					genedist4_genome4(GENOME_INDEX);					\
+					genedist4_genome4(GENOME_INDEX+4);					\
+					genedist4_genome4(GENOME_INDEX+8);					\
+					genedist4_genome4(GENOME_INDEX+12);
+
+				genedist4_genome16(0);
+				genedist4_genome16(16);
+			}
+			for( int igene = GENESN4; igene < GENES; igene++ ) {
+				#define genedist_genome(GENOME_INDEX) genedist(GENOME_INDEX,igene);
+				#define genedist_genome4(GENOME_INDEX)					\
+					genedist_genome(GENOME_INDEX);						\
+					genedist_genome(GENOME_INDEX+1);					\
+					genedist_genome(GENOME_INDEX+2);					\
+					genedist_genome(GENOME_INDEX+3);
+				#define genedist_genome16(GENOME_INDEX)					\
+					genedist_genome4(GENOME_INDEX);						\
+					genedist_genome4(GENOME_INDEX+4);					\
+					genedist_genome4(GENOME_INDEX+8);					\
+					genedist_genome4(GENOME_INDEX+12);
+
+				genedist_genome16(0);
+				genedist_genome16(16);
+			}
+		}
+
+		for( int k = 0; k < ngenomes_batch; k++ ) {
+			genomeCache->unrefslot( slots[k] );
+		}
+	}
+
+	genomeCache->unrefslot( sloti );
+}
+
+// --------------------------------------------------------------------------------
+// ---
 // --- FUNCTION create_distanceCache
 // ---
 // --------------------------------------------------------------------------------
-float **create_distanceCache( GeneDistanceDeltaCache *deltaCache, PopulationPartition *population ) {
-	int numGenomes = population->members.size();
+float **create_distanceCache( GeneDistanceDeltaCache *deltaCache, PopulationPartition *partition ) {
+	int numGenomes = partition->members.size();
 
 	// allocate distance cache
 	float **distanceCache = new float*[numGenomes];
@@ -1370,21 +1472,24 @@ float **create_distanceCache( GeneDistanceDeltaCache *deltaCache, PopulationPart
 		distanceCache[i] = new float[numGenomes];
 	}
 
-	for( AgentIndex i = 0; i < numGenomes; i++) {
+	#pragma omp parallel for schedule(dynamic)
+	for( int i = 0; i < numGenomes; i++ ) {
 		float *D = distanceCache[i];
-		GenomeRef igenome = population->getGenomeByIndex(i);
-        
-		#pragma omp parallel for
-		for( AgentIndex j = i+1; j < numGenomes; j++ ) {
-			GenomeRef jgenome = population->getGenomeByIndex(j);
-			float d = compute_distance(deltaCache, igenome, jgenome);
-			D[j] = d;
-		}
-        
+
+		compute_distances( deltaCache,
+						   partition->genomeCache,
+						   partition->members,
+						   i, i+1, numGenomes,
+						   D + (i+1) );
+	}
+
+	#pragma omp parallel for
+	for( int i = 0; i < numGenomes; i++ ) {
+		float *D = distanceCache[i];
+
 		D[i] = 0.0;
         
-		#pragma omp parallel for
-		for( AgentIndex j = 0; j < i; j++ ) {
+		for( int j = 0; j < i; j++ ) {
 			float d = distanceCache[j][i];
 			D[j] = d;
 		}
@@ -2084,30 +2189,33 @@ void find_valid_neighbors__measureNeighbors( Cluster *cluster,
 	ViolationMap violations;
 
 	typedef map<AgentId, double> DistMap;
-	DistMap dists;
+	DistMap distsTotal;
 
 	for( int i = 0; i < (int)clusterNeighborCandidates.size(); i++ ) {
-		dists[ clusterNeighborCandidates[i] ] = 0;
+		distsTotal[ clusterNeighborCandidates[i] ] = 0;
 	}
 
+	#pragma omp parallel for
 	for( int i = 0; i < (int)clusterNeighborCandidates.size(); i++ ) {
 		AgentId i_id = clusterNeighborCandidates[i];
-		GenomeRef i_genome = neighborPartition->getGenomeById( i_id );
 
-		#pragma omp parallel for
+		float dists[clusterNeighborCandidates.size() - (i+1)];
+
+		compute_distances( distance_deltaCache,
+						   neighborPartition->genomeCache,
+						   clusterNeighborCandidates,
+						   i, i+1, clusterNeighborCandidates.size(),
+						   dists );
+
 		for( int j = i + 1; j < (int)clusterNeighborCandidates.size(); j++ ) {
 			AgentId j_id = clusterNeighborCandidates[j];
-			GenomeRef j_genome = neighborPartition->getGenomeById( j_id );
+			float dist = dists[j - (i+1)];
 
-			float dist = compute_distance( distance_deltaCache,
-										   i_genome,
-										   j_genome );
-
-			double &i_dist = dists[i_id];
+			double &i_dist = distsTotal[i_id];
 			#pragma omp atomic
 			i_dist += dist;
 
-			double &j_dist = dists[j_id];
+			double &j_dist = distsTotal[j_id];
 			#pragma omp atomic
 			j_dist += dist;
 
@@ -2150,7 +2258,7 @@ void find_valid_neighbors__measureNeighbors( Cluster *cluster,
 		AgentId second = *( it_violations->second.begin() );
 
 		if( first < second ) {
-			if( dists[first] < dists[second] ) {
+			if( distsTotal[first] < distsTotal[second] ) {
 				validNeighbors.erase( second );
 			} else {
 				validNeighbors.erase( first );
@@ -2400,6 +2508,77 @@ void compute_clusters() {
 	cout << "num genome cache misses = " << genomeCache.nmisses << endl;
 
     printf("THRESH: %f\n", THRESH); 
+
+	if(false)
+	{
+		const int ngenomes = ids_global->size();
+		//float dists[ngenomes][ngenomes];
+		float **dists = new float*[ngenomes];
+		for( int i = 0; i < ngenomes; i++ ) {
+			dists[i] = new float[ngenomes];
+		}
+		
+		/*
+		unsigned char *genomes[ngenomes];
+		for( int i = 0; i < ngenomes; i++ ) {
+			genomes[i] = genomeCache.get( ids_global->at(i) ).genes();
+		}
+		*/
+
+		vector<double> times;
+
+		for( int bar = 0; bar < 5; bar++ ) {
+			double startTime = hirestime();
+			for( int foo = 0; foo < 1; foo++ ) {
+
+#if 0
+				for( int i = 0; i < ngenomes; i++ ) {
+					GenomeRef iref = genomeCache.get( ids_global->at(i) );
+					#pragma omp parallel for
+					for( int j = i+1; j < ngenomes; j++ ) {
+						GenomeRef jref = genomeCache.get( ids_global->at(j) );
+						dists[i][j] = compute_distance( distanceMetrics.deltaCache, iref, jref );
+					}
+				}
+#else				
+
+				#pragma omp parallel for schedule(dynamic)
+				for( int i = 0; i < ngenomes; i++ )  {
+					compute_distances( distanceMetrics.deltaCache,
+									   clusterPartition->genomeCache,
+									   clusterPartition->members,
+									   i, i+1, ids_global->size(),
+									   dists[i] + (i+1) );
+				}
+#endif
+
+			}
+			double endTime = hirestime();
+			printf( "\ttime=%lf seconds\n", endTime - startTime );
+			times.push_back( endTime - startTime );
+		}
+
+		std::sort( times.begin(), times.end() );
+		printf( "\tmin time=%lf\n", times[ 0 ] );
+
+		for( int i = 0; i < ngenomes; i++ ) {
+			for( int j = i+1; j < ngenomes; j++ ) {
+				float d = dists[i][j];
+				float cd = compute_distance( distanceMetrics.deltaCache,
+											 genomeCache.get( ids_global->at(i) ),
+											 genomeCache.get( ids_global->at(j) ) );
+				if( dists[i][j] != cd ) {
+					printf("failed for (%d,%d). d=%f, cd=%f\n", i, j, d, cd );
+					exit(0);
+				}
+			}
+		}
+
+		printf("OK\n");
+
+		exit(0);
+	}
+	
 
 	/*
 	// ---
