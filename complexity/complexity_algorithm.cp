@@ -1,18 +1,56 @@
-#include "complexity.h"
+#include "complexity_algorithm.h"
 
 #include <iostream>
 
+// RescaleCOV and Fix_I can go away, as RescaleCOV should always be off
+// and Fix_I should always be on.  I am only leaving them around for one
+// CVS check-in, so it is easy to provide backward compatibility (which
+// corresponds to RescaleCOV on and Fix_I off).
+#define RescaleCOV 0
+#define Fix_I 1
+
+// c_log should be the logarithm function we want to use to calculate
+// entropy and integration.  Normally I would prefer to stick with log2,
+// which lets us think in bits and is consistent with Cover & Thomas,
+// but the old code used log, the natural logarithm, so c_log has been
+// invented to make it easy to provide backward compatibility (which
+// would correspond to making c_log equal to log instead of log2).
+#define c_log log2
+
+#define DebugCalcC_k false
+
+#if DebugCalcC_k
+	#define calcC_k_print( format, data... ) printf( format, data )
+#else
+	#define calcC_k_print( format, data... )
+#endif
+
+static bool Gaussianize = true;
+
 using namespace std;
+
+
+//---------------------------------------------------------------------------
+// setGaussianize()
+//
+// allows client code to enable or disable the Gaussianization of data
+// prior to computing complexity
+//---------------------------------------------------------------------------
+void setGaussianize( bool gaussianize )
+{
+	Gaussianize = gaussianize;
+}
+
 
 //---------------------------------------------------------------------------
 // create_rng()
 //
 // constructs a random number generator and seeds it
 //---------------------------------------------------------------------------
-gsl_rng *create_rng(int seed)
+gsl_rng *create_rng( int seed )
 {
-	gsl_rng *rng = gsl_rng_alloc(gsl_rng_mt19937);
-	gsl_rng_set(rng, seed);
+	gsl_rng *rng = gsl_rng_alloc( gsl_rng_mt19937 );
+	gsl_rng_set( rng, seed );
 
 	return rng;
 }
@@ -22,57 +60,59 @@ gsl_rng *create_rng(int seed)
 //
 // disposes a random number generator
 //---------------------------------------------------------------------------
-void dispose_rng(gsl_rng *rng)
+void dispose_rng( gsl_rng *rng )
 {
-	gsl_rng_free(rng);
+	gsl_rng_free( rng );
 }
 
 
-int qsort_compare_double( const void *a, const void *b )
+int qsort_compare_double( const void* a, const void* b )
 {
-	if( *(double*)a < *(double*)b ) { return -1; }
-	else if( *(double*)a == *(double*)b ) { return 0; }
-	else { return 1; }
+	if( *(double*)a < *(double*)b )
+		return -1;
+	else if( *(double*)a == *(double*)b )
+		return 0;
+	else
+		return 1;
 }
 
-int qsort_compare_rows0( const void *a, const void *b )
+int qsort_compare_rows0( const void* a, const void* b )
 {
-/* Sorts gsl_vectors in ascending order by their first entry (entry 0) */
-	if(  gsl_vector_get( *(gsl_vector**)a, 0 )  <  gsl_vector_get( *(gsl_vector**)b, 0 )  ) { return -1; }
-	else if( gsl_vector_get( *(gsl_vector**)a, 0) == gsl_vector_get( *(gsl_vector**)b, 0) ) { return 0; }
-	else { return 1; }
+	// Sorts gsl_vectors in ascending order by their first entry (entry 0)
+	if(  gsl_vector_get( *(gsl_vector**)a, 0 )  <  gsl_vector_get( *(gsl_vector**)b, 0 )  )
+		return -1;
+	else if( gsl_vector_get( *(gsl_vector**)a, 0 ) == gsl_vector_get( *(gsl_vector**)b, 0 ) )
+		return 0;
+	else
+		return 1;
 }
 
-int qsort_compare_rows1( const void *a, const void *b )
+int qsort_compare_rows1( const void* a, const void* b )
 {
-/* Sorts gsl_vectors in ascending order by their second entry (entry 1) */
-	if(  gsl_vector_get( *(gsl_vector**)a, 1 )  <  gsl_vector_get( *(gsl_vector**)b, 1 )  ) { return -1; }
-	else if( gsl_vector_get( *(gsl_vector**)a, 1) == gsl_vector_get( *(gsl_vector**)b, 1) ) { return 0; }
-	else { return 1; }
+	// Sorts gsl_vectors in ascending order by their second entry (entry 1)
+	if(  gsl_vector_get( *(gsl_vector**)a, 1 )  <  gsl_vector_get( *(gsl_vector**)b, 1 )  )
+		return -1;
+	else if( gsl_vector_get( *(gsl_vector**)a, 1 ) == gsl_vector_get( *(gsl_vector**)b, 1 ) )
+		return 0;
+	else
+		return 1;
 }
 
-/*
-gsamp() function, a re-implementation of gsamp.m
-
-Description: Creates a timeseries with same rank order as the input but with Gaussian amp.
-
-Note: For efficiency, this gsamp() function is slightly different from gsamp.m.  It receives a tranpose and outputs a transpose of the matrix received/outputted by the MATLAB gsamp(). I.e.     A = some matrix      B = gsamp(A)
-	MATLAB: B' = gsamp(A')
-	C++: B = gsamp(A)
-*/
-gsl_matrix * gsamp( gsl_matrix_view x )
+//---------------------------------------------------------------------------
+// gsamp() function, a re-implementation of gsamp.m
+// 
+// Description: Creates a timeseries with same rank order as the input but with Gaussian amp.
+// 
+// Note: For efficiency, this gsamp() function is slightly different from gsamp.m.
+// It receives a tranpose and outputs a transpose of the matrix received/outputted
+// by the MATLAB gsamp(). I.e. for  A = some matrix  B = gsamp(A)
+// 	 MATLAB: B' = gsamp(A')
+// 	    C++: B  = gsamp(A)
+//---------------------------------------------------------------------------
+gsl_matrix* gsamp( gsl_matrix_view x )
 {
-
-/* MATLAB:	[r,c] = size(x);	*/
 	int r = (&x.matrix)->size1;
 	int c = (&x.matrix)->size2;
-
-
-/* MATLAB:
-	if r < c
-		x = x.';
-	end;
-*/
 
 	if( r < c )
 	{
@@ -80,78 +120,56 @@ gsl_matrix * gsamp( gsl_matrix_view x )
 		exit(1);
 	}
 
-
-/* MATLAB: [n, cc] = size(x); */
 	int n  = (&x.matrix)->size1;
 	int cc = (&x.matrix)->size2;
 
-/* MATLAB: m = 2^nextpow2(n)*/
-//	int m = int( pow(2,  int(ceil(log2(n)))  ) );
+	gsl_matrix* y = gsl_matrix_calloc( n, cc );
 
-/* MATLAB: yy=zeros(n,cc); 		Here there is a bug in the MATLAB code.  It should say 'y', not 'yy'*/
-	gsl_matrix * y = gsl_matrix_calloc( n, cc );
-
-/* MATLAB:
-	for i=1:cc	%create a gaussian timeseries with the same rank-order of x
-		z=zeros(n,3); gs = sortrows( randn(n,1) , 1 );
-		z(:,1)=x(:,i); z(:,2)=[1:n]'; z=sortrows(z,1);
-		z(:,3)=gs; z=sortrows(z,2); y(:,i)=z(:,3);
-	end
-*/
-	gsl_rng *randNumGen = create_rng(DEFAULT_SEED);
+	// create a gaussian timeseries with the same rank-order of x
+	gsl_rng *randNumGen = create_rng( DEFAULT_SEED );
 	
 	// this is nessecary for switching the columns around among the x, z, and y matrices
-	gsl_vector * tempcol = gsl_vector_alloc(n);
+	gsl_vector * tempcol = gsl_vector_alloc( n );
 
-	for( int i=0; i<cc; i++ )
+	for( int i = 0; i < cc; i++ )
 	{
-//MATLAB	z=zeros(n,3);
-		gsl_matrix * z = gsl_matrix_calloc( n, 3 );
+		gsl_matrix* z = gsl_matrix_calloc( n, 3 );
 
-//MATLAB	gs = sortrows( randn(n,1) , 1 );
-		double gs[n]; for( int j=0; j<n; j++ ) { gs[j] = gsl_ran_ugaussian(randNumGen); }
+		double gs[n]; for( int j = 0; j < n; j++ ) { gs[j] = gsl_ran_ugaussian(randNumGen); }
 		qsort( gs, n, sizeof(double), qsort_compare_double);
 
-//MATLAB	z(:,1)=x(:,i); z(:,2)=[1:n]'; z=sortrows(z,1);
-		gsl_matrix_get_col( tempcol, &x.matrix, i );			// get i'th column of X
+		gsl_matrix_get_col( tempcol, &x.matrix, i );		// get i'th column of X
 		gsl_matrix_set_col( z, 0, tempcol );				// put i'th column of X into z's first column
 
 		// there may be an error here.  In Matlab it's supposed to be [1:n], but this is [0:n-1]
-		for( int j=1; j<=n; j++ ) { gsl_matrix_set( z, j-1, 1, j ); }	// z(:,2)=[1:n]';
-
-//		print_matrix_column( z, 0 );
+		for( int j = 1; j <= n; j++ )
+			gsl_matrix_set( z, j-1, 1, j );
 
 		// now we must sort the rows of z by the first (0th) column.  First must pull out all of the rows, and put them into an array of vectors.
 		gsl_vector * zrows[n];
- 		for( int j=0; j<n; j++ ) { zrows[j] = gsl_vector_calloc(3); }		// all rows are initially zero.
+ 		for( int j = 0; j < n; j++ ) { zrows[j] = gsl_vector_calloc(3); }		// all rows are initially zero.
 
-		for( int j=0; j<n; j++ ) { gsl_matrix_get_row( zrows[j], z, j ); }	// get the rows
-//			for( int j=0; j<n; j++ ) { cout << "Row " << j << ", element 0: " << gsl_vector_get( zrows[j], 0 ) << endl; }
-		qsort( zrows, n, sizeof(zrows[0]), qsort_compare_rows0 );		// sort the rows by column 0
-//			for( int j=0; j<n; j++ ) { cout << "Row " << j << ", element 0: " << gsl_vector_get( zrows[j], 0 ) << endl; }
-		for( int j=0; j<n; j++ ) { gsl_matrix_set_row( z, j, zrows[j] ); }	// overwrite z with the sorted rows
+		for( int j = 0; j < n; j++ ) { gsl_matrix_get_row( zrows[j], z, j ); }	// get the rows
+		qsort( zrows, n, sizeof(zrows[0]), qsort_compare_rows0 );			// sort the rows by column 0
+		for( int j = 0; j < n; j++ ) { gsl_matrix_set_row( z, j, zrows[j] ); }	// overwrite z with the sorted rows
 
-
-//MATLAB        z(:,3)=gs; z=sortrows(z,2); y(:,i)=z(:,3);
-		for( int j=0; j<n; j++ ) { gsl_matrix_set( z, j, 2, gs[j] ); }		// z(:,3) = gs;
-
+		for( int j = 0; j < n; j++ ) { gsl_matrix_set( z, j, 2, gs[j] ); }		// z(:,3) = gs;
 
 		// now we must sort matrix z by the second (1'th) column.  As before, pull out all of the rows, call qsort, them put them back in.
-		for( int j=0; j<n; j++ ) { gsl_matrix_get_row( zrows[j], z, j ); }	// get the rows
+		for( int j = 0; j < n; j++ ) { gsl_matrix_get_row( zrows[j], z, j ); }	// get the rows
 		qsort( zrows, n, sizeof(zrows[0]), qsort_compare_rows1 );		// sort the rows by column 1
-		for( int j=0; j<n; j++ ) { gsl_matrix_set_row( z, j, zrows[j] ); }	// overwrite z with the sorted rows
+		for( int j = 0; j < n; j++ ) { gsl_matrix_set_row( z, j, zrows[j] ); }	// overwrite z with the sorted rows
 
-		for( int j=0; j<n; j++ ) { gsl_vector_free( zrows[j] ); }		// done with the temp sorting rows.  set them free.
+		for( int j = 0; j < n; j++ ) { gsl_vector_free( zrows[j] ); }		// done with the temp sorting rows.  set them free.
 
-//		y(:,i)=z(:,3);
-		gsl_matrix_get_col( tempcol, z, 2);	// get column 2 from matrix 'z'...
+		gsl_matrix_get_col( tempcol, z, 2);		// get column 2 from matrix 'z'...
 		gsl_matrix_set_col( y, i, tempcol );	// and put the 2nd column of 'z' into the i'th column of matrix 'y'
 
 		gsl_matrix_free( z );			// we're done with our temp matrix z now.
 	}
 	gsl_vector_free( tempcol );
 
-	dispose_rng(randNumGen);
+	dispose_rng( randNumGen );
 
 	if( r < c )
 	{
@@ -163,663 +181,493 @@ gsl_matrix * gsamp( gsl_matrix_view x )
 }
 
 
-gsl_matrix * COVtoCOR( gsl_matrix * COV )
+bool is_matrix_square( gsl_matrix* m )
 {
-/* MATLAB CODE: COR = COV ./ ( sqrt(diag(COV)) * sqrt(diag(COV))'); */
-
-	int N = COV->size1;
-	assert( COV->size1 == COV->size2 );		// make sure COV is square.
-	
-	gsl_matrix * COR = gsl_matrix_alloc( COV->size1, COV->size2 );
-
-	// We use our own function here because GSL's diag returns a vector
-	gsl_matrix * sqrt_diag_COV =  mget_matrix_diagonal( COV );	
-	gsl_matrix * sqrt_diag_COVtic = gsl_matrix_alloc( N , 1 );
-
-	for( int i=0; i<N; i++ )
-	{
-		gsl_matrix_set( sqrt_diag_COV, 0, i, sqrt(gsl_matrix_get(sqrt_diag_COV, 0, i)) );	//sqrt() the diagonal
-	}
-
-	gsl_matrix_transpose_memcpy( sqrt_diag_COVtic, sqrt_diag_COV );
-
-	
-	// To do the matrix multiplication we have to do the whole MatrixView mess again.
-	gsl_matrix_view MV_sqrt_diag_COV    = gsl_matrix_submatrix( sqrt_diag_COV   , 0, 0, 1, N);
-	gsl_matrix_view MV_sqrt_diag_COVtic = gsl_matrix_submatrix( sqrt_diag_COVtic, 0, 0, N, 1);
-	gsl_matrix * product = gsl_matrix_alloc( N, N );
-
-	gsl_blas_dgemm( CblasTrans, CblasTrans, 1.0, &MV_sqrt_diag_COV.matrix, &MV_sqrt_diag_COVtic.matrix, 0.0, product ); //product = sqrt(diag(COV)) * sqrt(diag(COV))'
-
-	gsl_matrix_memcpy( COR, COV );
-
-	gsl_matrix_div_elements( COR, product );
-
-	gsl_matrix_free( sqrt_diag_COV );
-	gsl_matrix_free( sqrt_diag_COVtic );
-	gsl_matrix_free( product );
-	
-	return COR;
+	if( m->size1 == m->size2 )
+		return true;
+	else
+		return false;
 }
 
 
-gsl_matrix * mCOV( gsl_matrix * M )
+gsl_matrix* calcCOV( gsl_matrix* m )
 {
-/*
-The input matrix may not be square, but the output will always be square NxN matrix where N is the number of columns in the input matrix. 
-*/
-	gsl_matrix * COV = gsl_matrix_alloc( M->size2, M->size2);
+	// The input matrix may not be square, but the output will always be a square NxN matrix
+	// where N is the number of columns in the input matrix. 
 
-	double array_col_i[M->size1];	// The GSL covariance function takes arrays
-	double array_col_j[M->size1];	// The GSL covariance function takes arrays
+	gsl_matrix* COV = gsl_matrix_alloc( m->size2, m->size2 );
 
-	for( unsigned int i=0; i<M->size2; i++ )
+	double array_col_i[m->size1];	// The GSL covariance function takes arrays
+	double array_col_j[m->size1];	// The GSL covariance function takes arrays
+
+	for( unsigned int i = 0; i < m->size2; i++ )
 	{
-		for( unsigned int j=0; j<=i; j++ )	// We only goto <= i because we need to only calculate covariance for half of the matrix.
+		for( unsigned int j = 0; j <= i; j++ )	// We only goto <= i because we need to only calculate covariance for half of the matrix.
 		{
-			gsl_vector_view col_i = gsl_matrix_column( M, i );
-			gsl_vector_view col_j = gsl_matrix_column( M, j );
+			gsl_vector_view col_i = gsl_matrix_column( m, i );
+			gsl_vector_view col_j = gsl_matrix_column( m, j );
 
-//DEBUG			cout << "::Size of column " << i << " = " << (&col_i.vector)->size << endl;
-//DEBUG			cout << "::Size of column " << j << " = " << (&col_j.vector)->size << endl;
-
-			for( unsigned int count=0; count<M->size1; count++ )	// Time to convert vectors to arrays
+			for( unsigned int count = 0; count < m->size1; count++ )	// Time to convert vectors to arrays
 			{
 				array_col_i[count] = gsl_vector_get( &col_i.vector, count);
 				array_col_j[count] = gsl_vector_get( &col_j.vector, count);
 			}
 
-//DEBUG			cout << "Covariance[" << i << "," << j	<< "] = " << gsl_stats_covariance( array_col_i, 1, array_col_j, 1, M->size1 ) << endl;
-			gsl_matrix_set( COV, i, j, gsl_stats_covariance( array_col_i, 1, array_col_j, 1, M->size1 ) ); 
+			gsl_matrix_set( COV, i, j, gsl_stats_covariance( array_col_i, 1, array_col_j, 1, m->size1 ) ); 
 		}
 	}
 
-
-	for( unsigned int i=0; i<M->size2; i++ )
+	// Many values in the matrix are repeated so we can just fill those in instead of recalculating them.
+	for( unsigned int i = 0; i < m->size2; i++ )
 	{
-		// Many values in the matrix are repeated so we can just fill those in instead of recalculating them.
-		for( unsigned int j=i+1; j<M->size2; j++ )
-		{
-			gsl_matrix_set( COV, i, j, gsl_matrix_get(COV, j, i) );
-		}
-	}
-
-	return COV;
-}
-
-
-bool is_matrix_square( gsl_matrix * M )
-{
-	if( M->size1 == M->size2 ) { return true; }
-	else                       { return false; }
-}
-
-gsl_matrix * calcCOV( gsl_matrix * CIJ, double r )
-/*
-Calculates a COVariance matrix based on these assumptions:
-1) linearity
-2) stationarity
-3) Gaussian multivariate process
-
-Intrinsic (uncorrelated) noise level is set to r.
-*/
-{
-/* Some basic checking not done in the MATLAB Code */
-
-	if( ! is_matrix_square(CIJ) )
-	{
-		cerr << "Error in calcCOV()! Input matrix must be square!  Dimenions are: " << CIJ->size1 << "x" << CIJ->size2<< endl;
-		exit(-1);
+		for( unsigned int j = i+1; j < m->size2; j++ )
+			gsl_matrix_set( COV, i, j, gsl_matrix_get( COV, j, i ) );
 	}
 	
-
-/* MATLAB CODE: N = size(CIJ,1); */
-	unsigned int N = CIJ->size1;
-
-/* MATLAB CODE: 
-	if( nnz( sum(CIJ)>1 ) >0 )
-	    disp(['Warning: column sum of connection weights exceeds 1']);
-	end;
-*/
-	for( unsigned int col=0; col<N; col++)
-	{
-        	double sum_col=0;
-		gsl_vector_view col_i = gsl_matrix_column( CIJ, col );
-		for( unsigned int temp=0; temp < N; temp++)
-		{
-			sum_col += gsl_vector_get( &col_i.vector, temp);
-		}
-
-		if( sum_col > 1 )
-		{
-			cerr << "Warning: Sum of connection weights in column " << col << "(0-based) exceeds 1.0 (sum=" << sum_col << ").  This may be true for other columns as well." << endl;
-			break ;
-		}
-	}
-
-/* MATLAB CODE: Q = inv(eye(N) - CIJ); */
-	gsl_matrix * eye_N = identity_matrix(N);        // Identity matrix of size N
-	gsl_matrix_sub( eye_N, CIJ );                   // Note that eye_N has now been overwritten with the result!!
-
-	//Now to get the inverse...
-	gsl_permutation * P = gsl_permutation_alloc(N);
-	int signum=1;
-	gsl_linalg_LU_decomp( eye_N, P, &signum );	// Note that eye_N has now been (re)overwritten with the LU decomposition!!
-
-	gsl_matrix * Q = gsl_matrix_alloc(N,N);
-	gsl_linalg_LU_invert( eye_N, P, Q );		// Q = inv(eye(N) - CIJ)
-	gsl_matrix_free( eye_N );
-
-/* Not in the original MATLAB Code */
-	gsl_matrix * R = identity_matrix(N);	// In the MATLAB code matrix R is passed.  Here we generate R from r.
-	gsl_matrix_scale(R,r);			// R = Identity Matrix * r
-
-/* MATLAB CODE: COV = Q'*R'*R*Q; % aka: (Q')*(R')*R*Q  */
-	gsl_matrix * Qtic = gsl_matrix_alloc(N,N);
-	gsl_matrix_transpose_memcpy( Qtic, Q) ;		// Qtic = Q'
-
-	gsl_matrix * Rtic = gsl_matrix_alloc(N,N);
-	gsl_matrix_transpose_memcpy( Rtic, R );		// Rtic = R'
-
-	gsl_matrix * COV = gsl_matrix_alloc(N,N);
-
-	// To do matrix multiplication, we have to make some gsl_matrix_view's ...
-	gsl_matrix_view MV_Qtic = gsl_matrix_submatrix( Qtic, 0, 0, N, N);
-	gsl_matrix_view MV_Rtic = gsl_matrix_submatrix( Rtic, 0, 0, N, N);
-	gsl_matrix_view MV_R = gsl_matrix_submatrix( R, 0, 0, N, N);
-	gsl_matrix_view MV_Q = gsl_matrix_submatrix( Q, 0, 0, N, N);
-	gsl_matrix_view MV_COV = gsl_matrix_submatrix( COV, 0, 0, N, N);
-
-	gsl_blas_dgemm( CblasNoTrans, CblasNoTrans, 1.0, &MV_Qtic.matrix, &MV_Rtic.matrix, 0.0, &MV_COV.matrix ); //COV = Q'*R'
-	gsl_blas_dgemm( CblasNoTrans, CblasNoTrans, 1.0, &MV_COV.matrix, &MV_R.matrix, 0.0, &MV_Qtic.matrix );    //Qtic = Q'*R'*R
-	gsl_blas_dgemm( CblasNoTrans, CblasNoTrans, 1.0, &MV_Qtic.matrix, &MV_Q.matrix, 0.0, &MV_COV.matrix );    //COV = Q'*R'*R*Q
-
-	gsl_matrix_free(Q);
-	gsl_matrix_free(Qtic);
-	gsl_matrix_free(R);
-	gsl_matrix_free(Rtic);
-
-/* MATLAB CODE: COR = COV ./ ( sqrt(diag(COV)) * sqrt(diag(COV))'); */
-
-	// In this version of calcCOV() we do not compute the COR matrix.
-
 	return COV;
 }
 
 
-gsl_matrix * calcCOV( gsl_matrix * CIJ, double r, gsl_matrix * COR )
-/*
-Calculates a COVariance and CORrelation matrix based on these assumptions:
-1) linearity
-2) stationarity
-3) Gaussian multivariate process
-
-Intrinsic (uncorrelated) noise level is set to r.
-*/
+void rescaleCOV( gsl_matrix* COV, double det )
 {
-/* Some basic checking not done in the MATLAB Code */
+	// MATLAB CODE:
+	// d1 = det( COR );
+	// while ~ d1
+	//    COR = COR.*1.3;
+	//    d1 = det(COR);
+	// end
+	// COR = COR./exp(log(d1)/N);
 
-	if( ! is_matrix_square(CIJ) )
+	int n = COV->size1;
+	double d1 = det;
+	while( d1 == 0 )
 	{
-		cerr << "Error in calcCOV()! Matrix CIJ (first parameter) is not square!  Dimenions are: " << CIJ->size1 << "x" << CIJ->size2<< endl;
-		exit(-1);
+		gsl_matrix_scale( COV, 1.3 );
+		d1 = determinant( COV );
 	}
-
-	if( ! is_matrix_square(COR) )
-	{
-
-		cerr << "Error in calcCOV()! Matrix COR (first parameter) is not square!  Dimenions are: " << COR->size1 << "x" << COR->size2<< endl;
-		exit(-1);
-	}
-
-	// We have already checked that the matrices are square so we only need to check size1
-	if( CIJ->size1 != COR->size1 )
-	{
-		cerr << "Matrix CIJ and COR must be of the same size" << endl;
-		exit(-1);
-	}
-	
-
-/* MATLAB CODE: N = size(CIJ,1); */
-	unsigned int N = CIJ->size1;
-
-/* MATLAB CODE: 
-	if( nnz( sum(CIJ)>1 ) >0 )
-	    disp(['Warning: column sum of connection weights exceeds 1']);
-	end;
-*/
-	for( unsigned int col=0; col<N; col++)
-	{
-        	double sum_col=0;
-		gsl_vector_view col_i = gsl_matrix_column( CIJ, col );
-		for( unsigned int temp=0; temp < N; temp++)
-		{
-			sum_col += gsl_vector_get( &col_i.vector, temp);
-		}
-
-		if( sum_col > 1 )
-		{
-			cerr << "Warning: Sum of connection weights in column " << col << "(0-based) exceeds 1.0 (sum=" << sum_col << ").  This may be true for other columns as well." << endl;
-			break ;
-		}
-	}
-
-/* MATLAB CODE: Q = inv(eye(N) - CIJ); */
-	gsl_matrix * eye_N = identity_matrix(N);        // Identity matrix of size N
-	gsl_matrix_sub( eye_N, CIJ );                   // Note that eye_N has now been overwritten with the result!!
-
-	//Now to get the inverse...
-	gsl_permutation * P = gsl_permutation_alloc(N);
-	int signum=1;
-	gsl_linalg_LU_decomp( eye_N, P, &signum );	// Note that eye_N has now been (re)overwritten with the LU decomposition!!
-
-	gsl_matrix * Q = gsl_matrix_alloc(N,N);
-	gsl_linalg_LU_invert( eye_N, P, Q );		// Q = inv(eye(N) - CIJ)
-	gsl_matrix_free( eye_N );
-
-/* Not in the original MATLAB Code */
-	gsl_matrix * R = identity_matrix(N);	// In the MATLAB code matrix R is passed.  Here we generate R from r.
-	gsl_matrix_scale(R,r);			// R = Identity Matrix * r
-
-/* MATLAB CODE: COV = Q'*R'*R*Q; % aka: (Q')*(R')*R*Q  */
-	gsl_matrix * Qtic = gsl_matrix_alloc(N,N);
-	gsl_matrix_transpose_memcpy( Qtic, Q) ;		// Qtic = Q'
-
-	gsl_matrix * Rtic = gsl_matrix_alloc(N,N);
-	gsl_matrix_transpose_memcpy( Rtic, R );		// Rtic = R'
-
-	gsl_matrix * COV = gsl_matrix_alloc( N, N );
-	// To do matrix multiplication, we have to make some gsl_matrix_view's ...
-	gsl_matrix_view MV_Qtic = gsl_matrix_submatrix( Qtic, 0, 0, N, N);
-	gsl_matrix_view MV_Rtic = gsl_matrix_submatrix( Rtic, 0, 0, N, N);
-	gsl_matrix_view MV_R = gsl_matrix_submatrix( R, 0, 0, N, N);
-	gsl_matrix_view MV_Q = gsl_matrix_submatrix( Q, 0, 0, N, N);
-	gsl_matrix_view MV_COV = gsl_matrix_submatrix( COV, 0, 0, N, N);
-
-	gsl_blas_dgemm( CblasNoTrans, CblasNoTrans, 1.0, &MV_Qtic.matrix, &MV_Rtic.matrix, 0.0, &MV_COV.matrix ); //COV = Q'*R'
-	gsl_blas_dgemm( CblasNoTrans, CblasNoTrans, 1.0, &MV_COV.matrix, &MV_R.matrix, 0.0, &MV_Qtic.matrix );    //Qtic = Q'*R'*R
-	gsl_blas_dgemm( CblasNoTrans, CblasNoTrans, 1.0, &MV_Qtic.matrix, &MV_Q.matrix, 0.0, &MV_COV.matrix );    //COV = Q'*R'*R*Q
-
-	gsl_matrix_free(Q);
-	gsl_matrix_free(Qtic);
-	gsl_matrix_free(R);
-	gsl_matrix_free(Rtic);
-
-/* MATLAB CODE: COR = COV ./ ( sqrt(diag(COV)) * sqrt(diag(COV))'); */
-
-	// We use our own function here because GSL's diag returns a vector
-	gsl_matrix * sqrt_diag_COV = mget_matrix_diagonal( COV );	
-	gsl_matrix * sqrt_diag_COVtic = gsl_matrix_alloc(N,1);
-
-	for( unsigned int i=0; i<N; i++ )
-	{
-		gsl_matrix_set( sqrt_diag_COV, 0, i, sqrt(gsl_matrix_get(sqrt_diag_COV, 0, i)) );	//sqrt() the diagonal
-	}
-
-	gsl_matrix_transpose_memcpy( sqrt_diag_COVtic, sqrt_diag_COV );
-
-	// To do the matrix multiplication we have to do the whole MatrixView mess again.
-	gsl_matrix_view MV_sqrt_diag_COV    = gsl_matrix_submatrix( sqrt_diag_COV   , 0, 0, 1, N);
-	gsl_matrix_view MV_sqrt_diag_COVtic = gsl_matrix_submatrix( sqrt_diag_COVtic, 0, 0, N, 1);
-	gsl_matrix * product = gsl_matrix_alloc( N, N );
-
-	gsl_blas_dgemm( CblasTrans, CblasTrans, 1.0, &MV_sqrt_diag_COV.matrix, &MV_sqrt_diag_COVtic.matrix, 0.0, product ); //product = sqrt(diag(COV)) * sqrt(diag(COV))'
-
-	gsl_matrix_memcpy( COR, COV );
-	gsl_matrix_div_elements( COR, product );
-
-	gsl_matrix_free( sqrt_diag_COV );
-	gsl_matrix_free( sqrt_diag_COVtic );
-	gsl_matrix_free( product );
-
-	return COV;
+	gsl_matrix_scale( COV, 1.0 / exp(c_log(d1)/n) );
 }
 
 
-gsl_matrix * mget_matrix_diagonal( gsl_matrix * M )
-{
-	int N;
-
-	if( M->size1 < M->size2 ) { N = M->size1; }	// in case M is not square
-	else                      { N = M->size2; }
-
-	gsl_matrix * diagonal = gsl_matrix_alloc(1,N);	// 1 row, N-columns.
-
-	for( int i=0; i<N; i++ )
-	{
-		gsl_matrix_set(diagonal, 0, i, gsl_matrix_get(M, i, i) );
-	}
-
-	return diagonal;
-}
-
-void print_matrix_row( gsl_matrix * M, int row )
+void print_matrix_row( gsl_matrix* m, int row )
 {
 
-	gsl_vector_view row_i = gsl_matrix_row( M, row );
+	gsl_vector_view row_i = gsl_matrix_row( m, row );
 	int row_length = (&row_i.vector)->size;
 
 	cout << "Length of row " << row << ": " << row_length << endl;
 	cout << "Values in row: ";
 
-	for(int temp=0; temp < row_length; temp++)
-	{
+	for( int temp = 0; temp < row_length; temp++ )
 		cout << gsl_vector_get( &row_i.vector, temp) << "  ";
-	}
 	cout << endl;
 
 }
 
-void print_matrix_column( gsl_matrix * M, int col )
+void print_matrix_column( gsl_matrix* m, int col )
 {
 
-	gsl_vector_view col_i = gsl_matrix_column( M, col );
+	gsl_vector_view col_i = gsl_matrix_column( m, col );
 	int col_length = (&col_i.vector)->size;
 
 	cout << "Length of col: " << col << ": " << col_length << endl;
 	cout << "Values in col: ";
 
-	for(int temp=0; temp < col_length; temp++)
-	{
+	for(int temp = 0; temp < col_length; temp++ )
 		cout << gsl_vector_get( &col_i.vector, temp) << "  ";
-	}
 	cout << endl;
 
 }
 
 
-
-gsl_matrix * identity_matrix( int N )
+void print_matrix( gsl_matrix* m )
 {
-	gsl_matrix * z = gsl_matrix_calloc( N, N );	// set all elements to zero
+	int end  = m->size2;	//These may need to be flipped, not sure.
+	int end2 = m->size1;	//These may need to be flipped, not sure.
 
-	for(int i=0; i<N; i++)
+	for( int i = 0; i < end2; i++ )
 	{
-		gsl_matrix_set( z,i,i,1 );		// sets the diagonal to 1's
-	}
-
-	return z;
-}
-
-double calcC_det3( gsl_matrix * foreignCOR )
-{
-	gsl_matrix * COR = gsl_matrix_alloc( foreignCOR->size1, foreignCOR->size2 );	// We do this so we don't overwrite the passed matrix COR
-	gsl_matrix_memcpy( COR, foreignCOR );
-
-/* MATLAB CODE:
-	N = size(COR,1);
-*/
-
-	int N = COR->size1;
-
-
-/* MATLAB CODE:
-	d1 = det( COR );
-*/
-
-	// These next few lines are nessecary to compute the Determinant of COR.
-	gsl_matrix * ludecomp = gsl_matrix_alloc( N, N );
-	gsl_matrix_memcpy( ludecomp, COR );		//make a copy so we don't overwrite COR when we decomp
-	gsl_permutation * P = gsl_permutation_alloc(N);
-	int signum = 1;
-	gsl_linalg_LU_decomp( ludecomp, P, &signum );
-	double d1 = fabs( gsl_linalg_LU_det( ludecomp, 1 ) );		//fabs() not in MATLAB code, but is nessecary sometimes.
-	gsl_permutation_free(P);
-
-
-/* MATLAB CODE:
-	while ~ d1
- 	   COR = COR.*1.3;
- 	   d1 = det(COR);
-	end
-*/
-
-	while( d1 == 0 )
-	{
-		gsl_matrix_scale( COR, 1.3 );
-		d1 = fabs( gsl_linalg_LU_det( COR, 1) );	// fabs() not in MATLAB code, but is nessecary sometimes.
-	}
-
-
-	gsl_matrix_scale( COR, 1 / exp(log(d1)/N) );	// MATLAB: COR = COR./exp(log(d1)/N);
-
-
-/* MATLAB CODE:
-	% calculate I at level N
-	I_n = calcI_det2(COR);
-
-	% calculate I at level N-1
-	I_n1 = zeros(1,N);
-	for i=1:N
-		vv = ones(1,N);
-		vv(i) = 0;
-		[a b c] = find(vv==1);
-		I_n1(i) = calcI_det2(COR(b,b));
-	end;
-*/
-
-
-	double I_n = calcI_det2(COR);
-	double I_n1[N];
-
-	for( int i=0;i<N;i++ )
-	{
-		int b[N-1];
-		int b_length = N-1;
-
-//DEBUG		cout << endl << "Value of i: " << i << "\t";
-
-		for( int j=0;j<N;j++ )
-		{
-			if( j < i )
-				b[j] = j;		
-			else if( j > i )
-				b[j-1] = j;
-		
-		}
-
-//DEBUG		cout << "b: "; for( int j=0;j<b_length;j++ ) { cout << b[j] << " "; } cout << endl;
-
-
-		//Technically we don't have to store this array, but for now lets stay consistent with the MATLAB code
-		gsl_matrix * Xed_COR =  matrix_crosssection( COR, b, b_length );
-		I_n1[i] = calcI_det2( Xed_COR );
-		gsl_matrix_free( Xed_COR );		//this should solve the big memory leak problem
-	}
-
-	double sumI_n1=0;
-	for( int i=0;i<N;i++) { sumI_n1 += I_n1[i]; }
-
-
-	double C = I_n - I_n/N - sumI_n1/N;
-	return C;
-}
-
-double calcC_det3__optimized( gsl_matrix * foreignCOR )
-{
-//	int status;
-//	gsl_set_error_handler_off();
-
-
-	gsl_matrix * COR = gsl_matrix_alloc( foreignCOR->size1, foreignCOR->size2 );	// We do this so we don't overwrite the passed matrix COR
-	gsl_matrix_memcpy( COR, foreignCOR );
-
-/* MATLAB CODE:
-	N = size(COR,1);
-*/
-
-	int N = COR->size1;
-
-
-/* MATLAB CODE:
-	d1 = det( COR );
-*/
-
-	// These next few lines are nessecary to compute the Determinant of COR.
-	gsl_matrix * ludecomp = gsl_matrix_alloc( N, N );
-	gsl_matrix_memcpy( ludecomp, COR );		//make a copy so we don't overwrite COR when we decomp
-	gsl_permutation * P = gsl_permutation_alloc(N);
-	int signum = 1;
-	gsl_linalg_LU_decomp( ludecomp, P, &signum );
-	double d1 = fabs( gsl_linalg_LU_det( ludecomp, 1 ) );		//fabs() not in MATLAB code, but is nessecary sometimes.
-	gsl_permutation_free(P);
-	gsl_matrix_free( ludecomp );					// don't need you anymore
-
-
-/* MATLAB CODE:
-	while ~ d1
- 	   COR = COR.*1.3;
- 	   d1 = det(COR);
-	end
-*/
-	while( d1 == 0 )
-	{
-		gsl_matrix_scale( COR, 1.3 );
-		d1 = fabs( gsl_linalg_LU_det( COR, 1) );	// fabs() not in MATLAB code, but is nessecary sometimes.
-	}
-
-
-	gsl_matrix_scale( COR, 1 / exp(log(d1)/N) );	// MATLAB: COR = COR./exp(log(d1)/N);
-
-
-/* MATLAB CODE:
-	% calculate I at level N
-	I_n = calcI_det2(COR);
-
-	% calculate I at level N-1
-	I_n1 = zeros(1,N);
-	for i=1:N
-		vv = ones(1,N);
-		vv(i) = 0;
-		[a b c] = find(vv==1);
-		I_n1(i) = calcI_det2(COR(b,b));
-	end;
-*/
-
-
-	double I_n = calcI_det2(COR);
-	double sumI_n1=0;
-
-	for( int i=0;i<N;i++ )
-	{
-		int b[N-1];
-		int b_length = N-1;
-
-//DEBUG		cout << endl << "Value of i: " << i << "\t";
-
-		for( int j=0;j<N;j++ )
-		{
-			if( j < i )
-				b[j] = j;		
-			else if( j > i )
-				b[j-1] = j;
-		
-		}
-
-//DEBUG		cout << "b: "; for( int j=0;j<b_length;j++ ) { cout << b[j] << " "; } cout << endl;
-
-
-
-		gsl_matrix * Xed_COR =  matrix_crosssection( COR, b, b_length );
-		sumI_n1 += calcI_det2( Xed_COR );
-		gsl_matrix_free( Xed_COR );		// this should solve the big memory leak problem
-	}
-
-	gsl_matrix_free( COR );
-
-	return( I_n - (I_n + sumI_n1)/N );
-}
-
-
-void print_matrix( gsl_matrix * M )
-{
-	int end  = M->size2;	//These may need to be flipped, not sure.
-	int end2 = M->size1;	//These may need to be flipped, not sure.
-
-	for(int i=0; i<end2; i++)
-	{
-		for(int j=0; j<end; j++)
-		{
-			cout << "[" << i << "," << j << "]: " << gsl_matrix_get(M, i, j) << "\t" ;
-		}
+		for( int j = 0; j < end; j++ )
+			cout << "[" << i << "," << j << "]: " << gsl_matrix_get( m, i, j ) << "\t" ;
 		cout << endl;
 	}
 }
 
 
-double calcI_det2(gsl_matrix * COR)
+//---------------------------------------------------------------------------
+// matrix_crosssection() takes 3 arguments:
+// 	1. The input matrix.
+// 	2. An array of which indexes you want the crosssections among (must be in ascending order).
+// 	   All values in the array must be between [0,N-1] where N is the size of the input matrix.
+// 	3. The length of array from #2
+// 
+// 	The returned matrix will be square of size indexArrayLength x indexArrayLength.
+//---------------------------------------------------------------------------
+gsl_matrix* matrix_crosssection( gsl_matrix* mInput, int* indexArray, int indexArrayLength )
 {
-/* MATLAB CODE:
-	function [I] = calcI_det2(COR)
-	% ------------------------------------------------------------------------------
-	% COV:      covariance matrix of X
-	% I:        integration
-	% ------------------------------------------------------------------------------
-	% Returns the integration for a system X.
-	% System dynamics is characterised by its covariance matrix COV.
-	% Computes integration from the determinant of the covariance matrix.
-	% Olaf Sporns, Indiana University, 2003
-	% ------------------------------------------------------------------------------
+	// Allocate our matrix to return
+	gsl_matrix* mOutput = gsl_matrix_alloc( indexArrayLength, indexArrayLength );
 
-	%N = size(COR,1);
-	%pie1 = 2*pi*exp(1);
-	%I = (sum(log(pie1*diag(COV))) - (N*log(pie1) + sum(log(diag(COV))) + log(det(COR))))/2;
-	I = - log(det(COR))/2;
-*/
+	for( int row = 0; row < indexArrayLength; row++ )
+	{
+		gsl_vector_view row_i = gsl_matrix_row( mInput, indexArray[row] );	
 
-//DEBUG	cout << endl << "COR: " << endl;
-//DEBUG	print_matrix(COR);
+		for( int col = 0; col < indexArrayLength; col++ )
+			gsl_matrix_set( mOutput, row, col, gsl_vector_get( &row_i.vector, indexArray[col] ) );
+	}
 
-	gsl_matrix * ludecomp = gsl_matrix_alloc( COR->size1, COR->size2 );
-	gsl_matrix_memcpy( ludecomp, COR );		//make a copy so we don't overwrite COR when we decomp
-	gsl_permutation * P = gsl_permutation_alloc(COR->size1);
-	int signum = 1;
-	gsl_linalg_LU_decomp( ludecomp, P, &signum );
-	double det = gsl_linalg_LU_det( ludecomp, signum );
-
-	gsl_permutation_free(P);
-	gsl_matrix_free( ludecomp );
-//	gsl_matrix_free( COR );		// this isn't the real COR (which we still need.  This is the cross_section'ed COR, which we no longer need.
-
-	det = fabs(det);
-
-	return( -1 * (double) log(det) / 2 );
+	return mOutput;
 }
 
-/*
-matrix_crosssection() takes 3 arguments:
-	1. The initial matrix.
-	2. An array of which indexes you want the crosssections among (must be in ascending order).
-		All values in the array must be between [0,N-1] where N is the size of the matrix.
-	3. The length of array from #2
 
-	The returned matrix will be square.
-*/
-gsl_matrix * matrix_crosssection( gsl_matrix * Minput, int* thearray, int thearray_length )
+double determinant( gsl_matrix* m )
 {
-	// Define our matrix to return
-	gsl_matrix * Mnew = gsl_matrix_alloc( thearray_length, thearray_length ); // defines a matrix with rows/columns [0 ... thearray_length-1]
+	int n = m->size1;
+	int signum;
+	
+	// Allocate the LU decomposition matrix so we don't overwrite m
+	gsl_matrix* ludecomp = gsl_matrix_alloc( n, n );
+	gsl_matrix_memcpy( ludecomp, m );
+	
+	gsl_permutation* p = gsl_permutation_alloc( n );
+	
+	gsl_linalg_LU_decomp( ludecomp, p, &signum );
+	double det = fabs( gsl_linalg_LU_det( ludecomp, signum ) );
+	
+	// Free our allocations
+	gsl_permutation_free( p );
+	gsl_matrix_free( ludecomp );
+	
+	return( det );
+}
 
 
-	for( int row=0; row<thearray_length; row++ )
+//---------------------------------------------------------------------------
+// Calculate C_k (linear I - actual I for subset size k)
+// For any but the edge cases, an approximation is calculated
+// based on NumSamples rather than using all possible subsets of size k.
+//
+//  C_k(X)   =  (k/N) I(X)  -  <I(X_k)>
+// <I(X_k)>  =  1/(n_choose_k)  Sum[i=1,n_choose_k] I(X_k_i)
+// I(X_k_i)  =  the i-th subset of X of size k
+//
+// May also be written:
+//
+//  C_k(X)   =  LI_k  -  EI_k
+//
+// where LI_k is the (k/N) linear portion of I(X)
+// and EI_k is the expected value of actual, calculated values
+// of all I_k_i subsets of size k (or, in practice, some number
+// of samples of I_k_i).
+//---------------------------------------------------------------------------
+double calcC_k( gsl_matrix* COV, double I_n, int k )
+{
+	#define NumSamples 100
+	
+	int n = COV->size1;
+
+	if( k == n-1 )	// next to last term, which is the usual "simplified TSE"
+		return( calcC_nm1( COV, I_n ) );
+	else if( k == 1 )	// second term
+		return( I_n / n );
+	else if( k == 0 || k == n )	// first or last term
+		return( 0.0 );
+	
+	// If we reach here, we are dealing with the general case (k > 1 and k < n-1)
+
+	// Calculate the linear, unstructured subset of I_n
+	double LI_k = I_n * k / n;
+	
+	// We will not even try to compute the true expected value of I_k, <I(X_k)>,
+	// as the number of subsets, N_choose_k, grows to astronomical values.
+	// Instead we approximate it with a modest number of samples.
+
+	gsl_rng *randNumGen = create_rng( DEFAULT_SEED );
+
+	int indexes[k];
+	double EI_k = 0.0;
+	
+	// printf( "---- n=%d, k=%d, s=%d ----\n", n, k, NumSamples );
+	for( int i = 0; i < NumSamples; i++ )
 	{
-		gsl_vector_view row_i = gsl_matrix_row( Minput, thearray[row] );	
-
-//		cout << "Length of Minput row_i" << "(" << i << "): " << (&row_i.vector)->size << " // Values in row_i: ";
-//		for(int temp=0; temp < (&row_i.vector)->size; temp++ )
-//		{
-//			cout << gsl_vector_get( &row_i.vector,	temp) << " ";
-//		}
-//		cout << endl;
-
-		for( int col=0; col<thearray_length; col++ )
+		// Choose a random subset of size k out of the n random variables
+		int numChosen = 0;
+		int numVisited = 0;
+		for( int j = 0; j < n; j++ )
 		{
-			gsl_matrix_set( Mnew, row, col, gsl_vector_get(&row_i.vector, thearray[col]) );
+			double prob = ((double) (k - numChosen)) / (n - numVisited);
+			if( gsl_rng_uniform(randNumGen) < prob )
+				indexes[numChosen++] = j;
+			numVisited++;
+		}
+		
+		EI_k += calcI_k( COV, indexes, k );
+		
+		// printf( "%d: EI_%d = %g\n", i, k, EI_k / (i+1) );
+	}
+	
+	dispose_rng( randNumGen );
+
+	EI_k /= NumSamples;
+	
+	return( LI_k - EI_k );
+}
+
+
+//---------------------------------------------------------------------------
+// Calculate C_k for k = n - 1
+//---------------------------------------------------------------------------
+double calcC_nm1( gsl_matrix* COV, double I_n )
+{
+	int n = COV->size1;
+
+	double sumI_n1=0;
+
+	for( int i = 0; i < n; i++ )
+	{
+		int b[n-1];
+		int b_length = n-1;
+
+		for( int j = 0; j < n; j++ )
+		{
+			if( j < i )
+				b[j] = j;		
+			else if( j > i )
+				b[j-1] = j;
+		
+		}
+
+		//Technically we don't have to store this array, but for now lets stay consistent with the MATLAB code
+		gsl_matrix* Xed_COV =  matrix_crosssection( COV, b, b_length );
+		double det = determinant( Xed_COV );
+		sumI_n1 += calcI( Xed_COV, det );
+		gsl_matrix_free( Xed_COV );		// this should solve the big memory leak problem
+	}
+
+	return( I_n - (I_n + sumI_n1)/n );
+}
+
+
+//---------------------------------------------------------------------------
+// calcI
+//
+// Calculates Integration, I(X), from the covariance matrix and its determinant.
+//---------------------------------------------------------------------------
+double calcI( gsl_matrix* COV, double det )
+{
+#if Fix_I
+	double sum_Hxi = 0.0;
+	for( size_t i = 0; i < COV->size1; i++ )
+		sum_Hxi += c_log( gsl_matrix_get( COV, i, i ) );
+	return( 0.5 * (sum_Hxi  -  c_log( det )) );
+#else
+	return( -0.5 * c_log( det ) );
+#endif
+}
+
+
+//---------------------------------------------------------------------------
+// Calculate I_k, the Integration of a k-sized subset of the full matrix
+// of random variables X, based on the provided:
+//    COV - the covariance matrix of the full X
+//    indexes - the randomly selected subset of k random variables from X
+//---------------------------------------------------------------------------
+double calcI_k( gsl_matrix* COV, int* indexes, int k )
+{
+	gsl_matrix* COV_k =  matrix_crosssection( COV, indexes, k );
+	double det = determinant( COV_k );
+#if Fix_I
+	double sum_Hxi = 0.0;
+	for( size_t i = 0; i < COV_k->size1; i++ )
+		sum_Hxi += c_log( gsl_matrix_get( COV_k, i, i ) );
+	gsl_matrix_free( COV_k );
+	
+	return( 0.5 * (sum_Hxi  -  c_log( det )) );
+#else
+	return( -0.5 * c_log( det ) );
+#endif
+}
+
+
+//---------------------------------------------------------------------------
+// CalcComplexityWithMatrix
+//---------------------------------------------------------------------------
+double CalcComplexityWithMatrix( gsl_matrix* data )
+{
+	return( CalcApproximateFullComplexityWithMatrix( data, 1 ) );
+}
+
+
+//---------------------------------------------------------------------------
+// CalcApproximateFullComplexityWithMatrix
+//
+// numPoints is the number of subset sizes k at which Ck(X) is calculated
+//---------------------------------------------------------------------------
+double CalcApproximateFullComplexityWithMatrix( gsl_matrix* data, int numPoints )
+{
+	double complexity = 0.0;
+	
+    // if have an invalid matrix return 0.
+    if( data == NULL )
+    	return complexity;
+
+    gsl_matrix* o = data;
+
+	// Inject a little bit of noise into the data matrix
+	gsl_rng *randNumGen = create_rng( DEFAULT_SEED );
+	
+	for( size_t i = 0; i < data->size1; i++ )
+		for( size_t j = 0; j < data->size2; j++ )
+			gsl_matrix_set( data, i, j, gsl_matrix_get( data, i, j ) + 0.00001*gsl_ran_ugaussian( randNumGen ) );	// we can do smaller values
+
+	dispose_rng( randNumGen );
+	
+	// If we're GSAMP'ing, do that now.
+    if( Gaussianize )
+    {
+		size_t numrows = data->size1;
+		size_t numcols = data->size2;
+	
+		// convert to gsl_matrix_view only for compatibility with gsamp()'s use in other complexity modules
+		gsl_matrix_view data_view = gsl_matrix_submatrix( data, 0, 0, numrows, numcols );
+		o = gsamp( data_view );	// allocates and returns new gsl_matrix
+	}
+	
+	// We calculate the covariance matrix and use it to compute Complexity.
+	gsl_matrix* COV = calcCOV( o );
+	size_t n = COV->size1;	// same as size2
+
+    if( Gaussianize )
+		gsl_matrix_free( o );	// free this iff we allocated it (don't free data)
+
+	double det = determinant( COV );
+	double I_n = calcI( COV, det );
+#if RescaleCOV
+	rescaleCOV( COV, det );
+#endif
+
+	if( numPoints <= 0 || (size_t) numPoints >= n )
+		numPoints = n-1;		// zero (or invalid value) means use all (non-zero) points
+
+	if( numPoints == 1 )	// use just the k=N-1 point, which is the original simplified TSE complexity
+	{
+		complexity = calcC_nm1( COV, I_n );
+	}
+	else if( (size_t) numPoints < n )
+	{
+		double delta_k = (float)(n-2) / (numPoints - 1);
+		calcC_k_print( "----- n=%ld, np=%d, dk=%g -----\n", n, numPoints, delta_k );
+		
+		// The zero term, C_k where k = 0, is always 0.0.
+		calcC_k_print( "%d: C_%d = %g, dk = %d, dc = %g, c = %g\n", 0, 0, 0.0, 0, 0.0, 0.0 );
+		
+		// The first non-zero term, C_k where k = 1, has zero EI_k, so is purely determined by I_n / n.
+		// It contributes to the integral through the initial triangular area defined by it and the k=0 term.
+		int k = 1;
+		int dk = 1;
+		double c_k = I_n / n;						// first non-zero term (c_1)
+		double delta_c = dk * 0.5 * c_k;			// area of left-most triangle
+		complexity = delta_c;
+		calcC_k_print( "%d: C_%d = %g, dk = %d, dc = %g, c = %g\n", 1, k, c_k, dk, complexity, complexity );
+		
+		// The second through (n-2) terms, C_k where k = 2,...,n-2, must be calculated from LI_k - EI_k.
+		// Each term is integrated into C via a quadrilateral area between the current and previous points.
+		// As explained in calcC_k(), LI_k is the linearly interpolated I(X) and EI_k is the expected
+		// value of actual I_k.
+		int k_prev = 1;
+		double c_prev = c_k;
+		double float_k = 1.0;
+		for( int i = 2; i < numPoints; i++ )
+		{
+			float_k += delta_k;
+			k = lround( float_k );
+			c_k = calcC_k( COV, I_n, k );
+			dk = k - k_prev;
+			delta_c = dk * 0.5 * (c_k + c_prev);	// area of next quadrilateral
+			complexity += delta_c;
+			calcC_k_print( "%d: C_%d = %g, dk = %d, dc = %g, c = %g\n", i, k, c_k, dk, delta_c, complexity );
+			k_prev = k;
+			c_prev = c_k;
+		}
+		
+		// The (n-1) term, C_k where k = n-1, is calculated specially, accurately, and is the
+		// same as the original simplified TSE (which is Olbrich's version of excess entropy).
+		k = n - 1;
+		dk = k - k_prev;
+		c_k = calcC_nm1( COV, I_n );				// last non-zero term (c_nm1) (nm1 == n-1)
+		delta_c = dk * 0.5 * (c_k + c_prev);		// area of final quadrilateral
+		complexity += delta_c;
+		calcC_k_print( "%d: C_%d = %g, dk = %d, dc = %g, c = %g\n", numPoints, k, c_k, dk, delta_c, complexity );
+		k_prev = k;
+		c_prev = c_k;
+		
+		// The final, n term, C_k where k = n, is always 0.0, but still contributes to the
+		// integral through the final triangular area defined by it and the (n-1) term.
+		k = n;
+		c_k = 0.0;
+		dk = k - k_prev;
+		delta_c = dk * 0.5 * (c_k + c_prev);		// area of right-most triangle
+		complexity += delta_c;
+		calcC_k_print( "%d: C_%d = %g, dk = %d, dc = %g, c = %g\n", numPoints+1, k, c_k, dk, delta_c, complexity );
+		complexity /= n;	// based on Olbrich et al 2008, How should complexity scale with system size?, Eur. Phys. J. B
+	}
+
+	gsl_matrix_free( COV );
+
+	return( complexity );
+}
+
+
+//---------------------------------------------------------------------------
+// CalcComplexityWithVector
+//
+// Vector is broken up into blocks of length blockDuration points,
+// separated by blockOffset points, to create a gsl_matrix
+//---------------------------------------------------------------------------
+double CalcComplexityWithVector( gsl_vector* vector, size_t blockDuration, size_t blockOffset )
+{
+	return( CalcApproximateFullComplexityWithVector( vector, blockDuration, blockOffset, 1 ) );
+}
+
+
+//---------------------------------------------------------------------------
+// CalcApproximateFullComplexityWithVector
+//
+// Vector is broken up into blocks of length blockDuration points,
+// separated by blockOffset points, to create a gsl_matrix
+//
+// numPoints is the number of subset sizes k at which Ck(X) is calculated
+//---------------------------------------------------------------------------
+double CalcApproximateFullComplexityWithVector( gsl_vector* vector, size_t blockDuration, size_t blockOffset, int numPoints )
+{
+    // if have an invalid vector, return 0.
+    if( vector == NULL )
+    	return 0.0;
+    
+    // Determine the number of blocks (columns; random variables)
+	size_t numBlocks = (vector->size - blockDuration) / blockOffset;
+	
+	// Allocate the matrix
+	gsl_matrix* m = gsl_matrix_alloc( blockDuration, numBlocks );
+	
+	// Populate the matrix, with each block as a random variable (column)
+	for( size_t col = 0; col < numBlocks; col++ )
+	{
+		size_t i = col * blockOffset;
+		
+		for( size_t row = 0; row < blockDuration; row++, i++ )
+		{
+			gsl_matrix_set( m, row, col, vector->data[i] );
 		}
 	}
 
-	return Mnew;
+    double complexity = CalcApproximateFullComplexityWithMatrix( m, numPoints );
+
+	gsl_matrix_free( m );
+
+	return( complexity );
 }
+
 
 // eof
 

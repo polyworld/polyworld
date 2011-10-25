@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include <iostream>
+#include <list>
 
 #include "AbstractFile.h"
 #include "complexity_algorithm.h"
@@ -113,7 +114,16 @@ double CalcComplexity_brainfunction(const char *fnameAct,
 															num_neurons,
 															&numinputneurons,
 															&numoutputneurons);
+	
+	// If the brain file was invalid or memory allocation failed, just return 0.0
+	if( activity == NULL )
+		return( 0.0 );
 
+    // If agent lived fewer timesteps than it has neurons, or it hasn't lived long enough,
+    // return Complexity = 0.0.
+    if( activity->size2 > activity->size1 || activity->size1 < IgnoreAgentsThatLivedLessThan_N_Timesteps )
+    	return( 0.0 );
+	
 	return CalcComplexityWithMatrix_brainfunction(activity,
 												  part,
 												  numinputneurons,
@@ -128,12 +138,6 @@ double CalcComplexityWithMatrix_brainfunction(gsl_matrix *activity,
 											  long numinputneurons,
 											  long numoutputneurons)
 {
-    // if had an invalid brain file, return 0.
-    if( activity == NULL ) { return 0.0; }
-
-    // If agent lived less timesteps than it has neurons, return Complexity = 0.0.
-    if( activity->size2 > activity->size1 || activity->size1 < IgnoreAgentsThatLivedLessThan_N_Timesteps ) { return 0.0; }
-	
     gsl_matrix * o;			// we don't need this guy yet but we will in a bit.  We need to define him here so the useGSAMP can assign to it.
 
 /* Now to inject a little bit of noise into the activity matrix */
@@ -184,7 +188,7 @@ double CalcComplexityWithMatrix_brainfunction(gsl_matrix *activity,
 
 
 	// We just calculate the covariance matrix and compute the Complexity of that instead of using the correlation matrix.  It uses less cycles and the results are identical.
-	gsl_matrix * COVwithbias = mCOV( o );
+	gsl_matrix * COVwithbias = calcCOV( o );
 	gsl_matrix_free( o );			// don't need this anymore
 
 	gsl_matrix * COV;
@@ -262,7 +266,9 @@ double CalcComplexityWithMatrix_brainfunction(gsl_matrix *activity,
 		
 	if (flag_All == 1)
 	{
-		double Complexity = calcC_det3__optimized( COV );
+		double det = determinant( COV );
+		double I_n = calcI( COV, det );
+		double Complexity = calcC_nm1( COV, I_n );
 		gsl_matrix_free( COV );
 		return Complexity;
 	}
@@ -300,11 +306,14 @@ double CalcComplexityWithMatrix_brainfunction(gsl_matrix *activity,
 	
 	int numCom = curIndex;
 
-	gsl_matrix * Xed_COR = matrix_crosssection( COV, Com_id, numCom );
+	gsl_matrix * Xed_COV = matrix_crosssection( COV, Com_id, numCom );
 	gsl_matrix_free( COV );
 	
-	float Cplx_Com = calcC_det3__optimized( Xed_COR );
-	gsl_matrix_free( Xed_COR );
+	double det = determinant( Xed_COV );
+	double I_n = calcI( Xed_COV, det );
+	float Cplx_Com = calcC_nm1( Xed_COV, I_n );
+	
+	gsl_matrix_free( Xed_COV );
 	
 	delete[] Com_id;
 	Com_id = NULL;

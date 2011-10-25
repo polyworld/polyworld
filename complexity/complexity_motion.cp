@@ -72,12 +72,15 @@ float MotionComplexity::calculate( Epoch &epoch )
 #define MFREE(MATRIX) gsl_matrix_free(MATRIX); MATRIX = NULL;
 
 		DEBUG( print_matrix(matrix_pos) );
-		gsl_matrix *COV = mCOV( matrix_pos );
+		gsl_matrix *COV = calcCOV( matrix_pos );
 		MFREE(matrix_pos);
 
 		DEBUG( print_matrix(COV) );
 
-		epoch.complexity.value = calcC_det3__optimized( COV );
+		double det = determinant( COV );
+		double I_n = calcI( COV, det );
+		epoch.complexity.value = calcC_nm1( COV, I_n );
+		
 		MFREE(COV);
 	}
 
