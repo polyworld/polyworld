@@ -5,7 +5,8 @@ CurrentVersion=2
 ### Configurable parameters
 OutputFilename2='ComplexityHist.plt'
 
-#CALC_COMPLEXITY_OVER_DIRECTORY="./CalcComplexityOverDirectory.sh"
+#CalcComplexity.py
+
 #### Don't modify anything beneath here unless you know what you're doing
 import abstractfile
 import algorithms

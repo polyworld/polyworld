@@ -13,18 +13,18 @@ DEFAULT_NUMBINS = 11
 ###
 ### FUNCTION calc_script()
 ###
-### Invoke the CalcComplexity script
+### Invoke the CalcComplexity.py script
 ###
 ####################################################################################
 def calc_script( args ):
     
-    script = os.path.join( os.path.dirname(sys.argv[0]), 'CalcComplexity' )
+    script = os.path.join( os.path.dirname(sys.argv[0]), 'CalcComplexity.py' )
     
-    cmd = 'CalcComplexity' + ' ' + ' '.join( map(lambda x: '"%s"' % x, args) )
+    cmd = 'CalcComplexity.py' + ' ' + ' '.join( map(lambda x: '"%s"' % x, args) )
     rc = os.system( cmd )
 
     if rc != 0:
-        raise Exception( 'CalcComplexity failed' )
+        raise Exception( 'CalcComplexity.py failed' )
 
 ####################################################################################
 ###
