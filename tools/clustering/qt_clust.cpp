@@ -1367,9 +1367,10 @@ void sort_distance_deltaCache( GeneDistanceDeltaCache *deltaCache, vector<int> &
 // ---
 // --- FUNCTION compute_distances
 // ---
-// --- Computes distances between index_i and [index_j, index_j_end), where each
-// --- index is used to look up an ID in ids. Results are placed in dists at
-// --- [0, index_j_end - index_j).
+// --- Computes distances between index_i and [index_j, index_j_end), where result
+// --- is placed in parameter <dists> like:
+// ---
+// ---    {dist(i,j), dist(i,j+1)... dist(i,j_end - 1)}
 // ---
 // --- Note this function's complexity is primarily due to minimizing misses in
 // --- the CPU's cache.
@@ -1381,13 +1382,23 @@ void compute_distances( GeneDistanceDeltaCache *deltaCache,
 						int index_j,
 						int index_j_end,
 						float *dists ) {
+	// Create a reference to i's genome so it won't be evicted from the cache.
 	__GenomeCache::GenomeCacheSlot *sloti = genomeCache->refslot( ids[index_i] );
 	unsigned char *genomei = sloti->genes;
 
+	// Init state of result.
 	memset( dists, 0, sizeof(float) * (index_j_end - index_j) );
 
+	// Iterate through the genomes, operating on 32 at a time.
+	// Note that the number 32 was found to do well on an i7 2600k, which
+	// effectively has a 16k L1 cache for each hyper-thread. We can increase
+	// this number in the future.
 	for( int j = index_j; j < index_j_end; j += 32 ) {
+		// Determine if we have a full batch of 32 remaining.
 		int ngenomes_batch = min( 32, index_j_end - j );
+
+		// For each of the genomes in the batch, create a reference to in the cache
+		// so they aren't evicted from underneath us.
 		__GenomeCache::GenomeCacheSlot *slots[ngenomes_batch];
 		unsigned char *genomes[ngenomes_batch];
 		for( int k = 0; k < ngenomes_batch; k++ ) {
@@ -1395,9 +1406,11 @@ void compute_distances( GeneDistanceDeltaCache *deltaCache,
 			genomes[k] = slots[k]->genes;
 		}
 
+		// Compute distance of single gene, updating result state.
 		#define genedist(GENOME_INDEX, GENE_INDEX)						\
 			dists[GENOME_INDEX+(j-index_j)] +=							\
 				deltaCache[GENE_INDEX].deltaValue[ abs(genomei[GENE_INDEX] - genomes[GENOME_INDEX][GENE_INDEX]) ];
+		// Compute distance of 4 genes. Performance optimization.
 		#define genedist4(GENOME_INDEX,GENE_INDEX)						\
 			genedist(GENOME_INDEX, GENE_INDEX);							\
 			genedist(GENOME_INDEX, GENE_INDEX+1);						\
@@ -1405,17 +1418,35 @@ void compute_distances( GeneDistanceDeltaCache *deltaCache,
 			genedist(GENOME_INDEX, GENE_INDEX+3);
 						
 		if( ngenomes_batch < 32 ) {
+			// We don't have a full batch, so use a less efficient rolled loop.
+
+			// Note that we want to iterate through genes in the outer loop, since
+			// the size of the delta cache for a single gene is 1024 bytes. We want to
+			// keep that data in CPU's L1 cache, and use it for several genomes before
+			// moving onto the next gene.
+
+			// This is an unrolled loop that operates on 4 genes at a time.
 			for( int igene = 0; igene < GENESN4; igene +=4 ) {
 				for( int k = 0; k < ngenomes_batch; k++ ) {
 					genedist4(k,igene);
 				}
 			}
+
+			// Less efficient loop that operates on 1 gene at a time.
 			for( int igene = GENESN4; igene < GENES; igene++ ) {
 				for( int k = 0; k < ngenomes_batch; k++ ) {
 					genedist(k,igene);
 				}
 			}
 		} else {
+			// We're operating on a full batch. We use macros to unroll the loops operating on the genomes.
+
+			// Note that we want to iterate through genes in the outer loop, since
+			// the size of the delta cache for a single gene is 1024 bytes. We want to
+			// keep that data in CPU's L1 cache, and use it for several genomes before
+			// moving onto the next gene.
+
+			// This is an unrolled loop that operates on 4 genes at a time.
 			for( int igene = 0; igene < GENESN4; igene +=4 ) {
 				#define genedist4_genome(GENOME_INDEX) genedist4(GENOME_INDEX,igene);
 				#define genedist4_genome4(GENOME_INDEX)					\
@@ -1429,9 +1460,11 @@ void compute_distances( GeneDistanceDeltaCache *deltaCache,
 					genedist4_genome4(GENOME_INDEX+8);					\
 					genedist4_genome4(GENOME_INDEX+12);
 
+				// Compute distances for 32 genomes.
 				genedist4_genome16(0);
 				genedist4_genome16(16);
 			}
+			// Less efficient loop that operates on 1 gene at a time.
 			for( int igene = GENESN4; igene < GENES; igene++ ) {
 				#define genedist_genome(GENOME_INDEX) genedist(GENOME_INDEX,igene);
 				#define genedist_genome4(GENOME_INDEX)					\
@@ -1445,11 +1478,13 @@ void compute_distances( GeneDistanceDeltaCache *deltaCache,
 					genedist_genome4(GENOME_INDEX+8);					\
 					genedist_genome4(GENOME_INDEX+12);
 
+				// Compute distances for 32 genomes.
 				genedist_genome16(0);
 				genedist_genome16(16);
 			}
 		}
 
+		// Release our references so the cache can evict them if necessary.
 		for( int k = 0; k < ngenomes_batch; k++ ) {
 			genomeCache->unrefslot( slots[k] );
 		}
