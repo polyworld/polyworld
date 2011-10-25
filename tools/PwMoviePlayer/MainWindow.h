@@ -31,9 +31,10 @@ public:
 				const Qt::WFlags windowFlags,
 				PwMovieReader* reader,
 				char** legend,
-				uint32_t startFrame,
-				uint32_t endFrame,
-				double frameRate );
+				uint32_t startFram,
+				uint32_t endFram,
+				double frameRate,
+				bool loop);
 	~MainWindow();
 
 protected:
@@ -47,6 +48,10 @@ private slots:
 //	void aboutQt();
 
 private:
+	uint32_t startFrame;
+	uint32_t endFrame;
+	bool looping;
+	
 	void SetFrame( uint32_t index );
 	void NextFrame();
 	void PrevFrame();

@@ -35,14 +35,18 @@ MainWindow::MainWindow( const char* windowTitle,
 						const Qt::WFlags windowFlags,
 						PwMovieReader* readerParam,
 						char** legend,
-						uint32_t startFrame,
-						uint32_t endFrame,
-						double frameRate )
+						uint32_t startFram,
+						uint32_t endFram,
+						double frameRate,
+						bool loop)
 	:	QMainWindow( NULL, windowFlags )
 {
 	setWindowTitle( windowTitle );
 	windowSettingsName = windowSettingsNameParam;
 	reader = readerParam;
+	startFrame = startFram;
+	endFrame = endFram;
+	looping = loop;
 	
 	// Create the main menubar
 	//CreateMenus( menuBar() );
@@ -100,6 +104,9 @@ void MainWindow::Tick()
 	if( state == PLAYING )
 	{
 		NextFrame();
+		
+		if( looping && frame.index == reader->getFrameCount() )
+			SetFrame( startFrame == 0 ? 1 : startFrame );
 	}
 }
 

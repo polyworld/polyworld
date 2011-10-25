@@ -88,9 +88,10 @@ PMPApp::PMPApp(int &argc, char** argv) : QApplication(argc, argv)
     char*			movieFileName	= NULL;
 	char*			legendFileName	= NULL;
 	char**			legend			= NULL;
-	uint32_t	startFrame		= 0;
-	uint32_t	endFrame		= 0;
+	uint32_t		startFrame		= 0;
+	uint32_t		endFrame		= 0;
 	double			frameRate		= 75.0;
+	bool			loop			= FALSE;
 	int				arg				= 1;
 		
 	while( arg < argc )
@@ -136,9 +137,15 @@ PMPApp::PMPApp(int &argc, char** argv) : QApplication(argc, argv)
 					frameRate = atof( argv[arg] );
 					break;
 				
+				case 'c':
+					arg++;
+					loop = TRUE;
+					break;
+				
 				default:
 					fprintf( stderr, "Unknown argument -%c\n", argv[arg][1] );
 					break;
+				
 			}
 		}
 		else
@@ -217,7 +224,7 @@ PMPApp::PMPApp(int &argc, char** argv) : QApplication(argc, argv)
 	QCoreApplication::setOrganizationDomain( "indiana.edu" );
 	QCoreApplication::setApplicationName( "pwmovieplayer" );
 	
-	mainWindow = new MainWindow( "Polyworld MoviePlayer", "Main", 0, reader, legend, startFrame, endFrame, frameRate );
+	mainWindow = new MainWindow( "Polyworld MoviePlayer", "Main", 0, reader, legend, startFrame, endFrame, frameRate, loop );
 	mainWindow->show();	
 }
 
