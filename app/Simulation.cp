@@ -31,6 +31,7 @@
 // System
 #include <fstream>
 #include <iostream>
+#include <omp.h>
 #include <sstream>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -5498,45 +5499,50 @@ void TSimulation::Kill( agent* c,
     	&& (globals::edges || ((c->x() >= 0.0) && (c->x() <=  globals::worldsize) &&
     	                       (c->z() <= 0.0) && (c->z() >= -globals::worldsize))) )
     {
-		fprintf( stderr, "Need to implement support for carcasses.\n" );
-		assert( false );
-		/* etodo
-        float foodenergy = c->FoodEnergy();
-		
-        if (foodenergy < fMinFoodEnergyAtDeath)	// it will be bumped up to fMinFoodEnergyAtDeath
-        {
-            if (fMinFoodEnergyAtDeath >= food::gMinFoodEnergy)			// it will get turned into food
-                fFoodEnergyIn += fMinFoodEnergyAtDeath - foodenergy;	// so account for the increase due to the bump (original amount already accounted for)
-            else														// else it'll just be disposed of
-                fFoodEnergyOut += foodenergy;							// so account for the lost energy
-
-            foodenergy = fMinFoodEnergyAtDeath;
-        }
-		else	// it will retain its original value (no bump due to the min)
+		const FoodType *carcassFoodType = c->GetMetabolism()->carcassFoodType;
+		if( carcassFoodType )
 		{
-			if( foodenergy < food::gMinFoodEnergy )	// it's going to be disposed of
-				fFoodEnergyOut += foodenergy;		// so account for the lost energy
-		}
+			// etodo: we probably want a way to move nutrients around... like map energy[0] of agent to energy[1]
+			// of food.
 
-        if (foodenergy >= food::gMinFoodEnergy)
-        {
-            food* f = new food( fStep, foodenergy, c->x(), c->z() );
-            Q_CHECK_PTR( f );
-			gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();
-			objectxsortedlist::gXSortedObjects.add( f );	// dead agent becomes food
-			objectxsortedlist::gXSortedObjects.setcurr( saveCurr );
-			fStage.AddObject( f );			// put replacement food into the world
-			if( fp )
+			Energy foodEnergy = c->GetFoodEnergy();
+			// Multiply by polarity^2 so that we have values > 0 and so that any polarity of UNDEFINED gets zeroed.
+			Energy minFoodEnergyAtDeath = Energy(fMinFoodEnergyAtDeath) * carcassFoodType->energyPolarity * carcassFoodType->energyPolarity;
+			Energy minFoodEnergy = Energy(food::gMinFoodEnergy) * carcassFoodType->energyPolarity * carcassFoodType->energyPolarity;
+
+			if( foodEnergy.isDepleted(minFoodEnergyAtDeath) )
 			{
-				fp->foodCount++;
-				f->setPatch( fp );
+				if( !minFoodEnergyAtDeath.isDepleted(minFoodEnergy) )
+				{
+					Energy addedEnergy;
+					foodEnergy.constrain( minFoodEnergyAtDeath, food::gMaxFoodEnergy, addedEnergy );
+					FoodEnergyIn( addedEnergy * -1 );
+				}
+			}
+
+			if( foodEnergy.isDepleted(minFoodEnergy) )
+			{
+				FoodEnergyOut( foodEnergy );
 			}
 			else
-				fprintf( stderr, "food created with no affiliated FoodPatch\n" );
-			f->domain( id );
-			fDomains[id].foodCount++;
-        }
-		*/
+			{
+				food* f = new food( carcassFoodType, fStep, foodEnergy, c->x(), c->z() );
+				Q_CHECK_PTR( f );
+				gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();
+				objectxsortedlist::gXSortedObjects.add( f );	// dead agent becomes food
+				objectxsortedlist::gXSortedObjects.setcurr( saveCurr );
+				fStage.AddObject( f );			// put replacement food into the world
+				if( fp )
+				{
+					fp->foodCount++;
+					f->setPatch( fp );
+				}
+				else
+					fprintf( stderr, "food created with no affiliated FoodPatch\n" );
+				f->domain( id );
+				fDomains[id].foodCount++;
+			}
+		}
     }
     else
     {
