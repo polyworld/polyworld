@@ -7,6 +7,7 @@
 #include "Gene.h"
 #include "GenomeLayout.h"
 #include "globals.h"
+#include "Metabolism.h"
 
 using namespace genome;
 
@@ -28,7 +29,8 @@ GenomeSchema *GenomeUtil::createSchema()
 #define RANGE(NAME,MIN,MAX) __CONST(#NAME"_min",MIN); __CONST(#NAME"_max",MAX)
 #define INTERPOLATED(NAME,MIN,MAX) schema->add( new ImmutableInterpolatedGene(#NAME, \
 																			  __CONST(#NAME"_min",MIN),	\
-																			  __CONST(#NAME"_max",MAX)) )
+																			  __CONST(#NAME"_max",MAX), \
+																			  __InterpolatedGene::ROUND_INT_NEAREST) )
 	RANGE( ID, 0.0, 1.0 );
 	RANGE( Size,
 		   agent::gMinAgentSize,
@@ -51,6 +53,13 @@ GenomeSchema *GenomeUtil::createSchema()
 	RANGE( MateEnergyFraction,
 		   genome::gMinmateenergy,
 		   genome::gMaxmateenergy );
+	assert( Metabolism::getNumberOfDefinitions() > 0 );
+	if( Metabolism::getNumberOfDefinitions() > 1 )
+	{
+		RANGE( MetabolismIndex,
+			   0,
+			   Metabolism::getNumberOfDefinitions() - 1 );
+	}
 	CONSTANT( MiscBias,
 			  genome::gMiscBias );
 	CONSTANT( MiscInvisSlope,
@@ -65,8 +74,7 @@ GenomeSchema *GenomeUtil::createSchema()
 		   genome::gMaxvispixels );
 	RANGE( LearningRate,
 		   genome::gMinlrate,
-		   genome::gMaxlrate );
-	
+		   genome::gMaxlrate );	
 	RANGE( InternalNeuronGroupCount,
 		   brain::gNeuralValues.mininternalneurgroups,
 		   brain::gNeuralValues.maxinternalneurgroups );
@@ -141,7 +149,12 @@ GenomeSchema *GenomeUtil::createSchema()
 	// ---
 #define SCALAR(NAME) schema->add( new MutableScalarGene(#NAME,			\
 														schema->get(#NAME"_min"), \
-														schema->get(#NAME"_max")) )
+														schema->get(#NAME"_max"), \
+														__InterpolatedGene::ROUND_INT_FLOOR) )
+#define INDEX(NAME) schema->add( new MutableScalarGene(#NAME,			\
+													   schema->get(#NAME"_min"), \
+													   schema->get(#NAME"_max"), \
+													   __InterpolatedGene::ROUND_INT_BIN) )
 #define INPUT1(NAME) schema->add( new ImmutableNeurGroupGene(#NAME,		\
 															 NGT_INPUT) )
 #define INPUT(NAME, RANGE_NAME) schema->add( new MutableNeurGroupGene(#NAME, \
@@ -172,6 +185,10 @@ GenomeSchema *GenomeUtil::createSchema()
 	SCALAR( Size );
 	SCALAR( MaxSpeed );
 	SCALAR( MateEnergyFraction );
+	if( Metabolism::getNumberOfDefinitions() > 1 )
+	{
+		INDEX( MetabolismIndex );
+	}
 
 	if( brain::gNeuralValues.model == brain::NeuralValues::SPIKING )
 	{
@@ -325,6 +342,11 @@ void GenomeUtil::seed( Genome *g )
 		}
 	}
 
+	if( Metabolism::getNumberOfDefinitions() > 1 )
+	{
+		SEED( MetabolismIndex, randpw() );
+	}
+
 	SEED( Red, 0.5 );
 	SEED( Green, 0.5 );
 	SEED( Blue, 0.5 );
@@ -398,6 +420,22 @@ void GenomeUtil::seed( Genome *g )
 #undef SEED
 #undef SEED_GROUP
 #undef SEED_SYNAPSE
+}
+
+const Metabolism *GenomeUtil::getMetabolism( Genome *g )
+{
+	int index;
+
+	if( Metabolism::getNumberOfDefinitions() == 1 )
+	{
+		index = 0;
+	}
+	else
+	{
+		index = (int)g->get( "MetabolismIndex" );
+	}
+
+	return Metabolism::get( index );
 }
 
 #include <fstream>

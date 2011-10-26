@@ -109,6 +109,7 @@ void ContactEntry::AgentInfo::encode( char **buf )
 		__SET( EAT_MATE_MIN_DISTANCE, 'i' );
 		__SET( MAX_DOMAIN, 'd' );
 		__SET( MAX_WORLD, 'x' );
+		__SET( MAX_METABOLISM, 't' );
 		__SET( MISC, 'm' );
 		__SET( MAX_VELOCITY, 'v' );
 

@@ -102,6 +102,7 @@ class DataLibWriter
 					 const char *colnames[],
 					 const datalib::Type coltypes[] );
 	void addRow( Variant col0, ... );
+	void addRow( Variant *cols );
 	void endTable();
 	void flush();
 

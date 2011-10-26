@@ -32,6 +32,7 @@
 #include "graybin.h"
 #include "misc.h"
 #include "MateWaitSensor.h"
+#include "Metabolism.h"
 #include "NervousSystem.h"
 #include "RandomSensor.h"
 #include "Resources.h"
@@ -261,12 +262,6 @@ agent* agent::getfreeagent(TSimulation* simulation, gstage* stage)
 	Q_CHECK_PTR(simulation);
 	Q_CHECK_PTR(stage);
 	
-	if (agent::agentsliving + 1 > simulation->GetMaxAgents())
-	{
-		printf("PolyWorld ERROR:: Unable to satisfy request for free agent. Max allocated: %ld\n", simulation->GetMaxAgents());
-		return NULL;
-	}
-
 	// Create the new agent
 	agent* c = new agent(simulation, stage);	
 	Q_CHECK_PTR(c);
@@ -372,9 +367,9 @@ void agent::dump(ostream& out)
     out << fIndex nl;
     out << fAge nl;
     out << fLastMate nl;
-    out << fEnergy nl;
-    out << fFoodEnergy nl;
-    out << fMaxEnergy nl;
+    assert( false ); // out << fEnergy nl;
+    assert( false ); // out << fFoodEnergy nl;
+    assert( false ); // out << fMaxEnergy nl;
     out << fSpeed2Energy nl;
     out << fYaw2Energy nl;
     out << fSizeAdvantage nl;
@@ -408,9 +403,9 @@ void agent::load(istream& in)
     in >> fIndex;
     in >> fAge;
     in >> fLastMate;
-    in >> fEnergy;
-    in >> fFoodEnergy;
-    in >> fMaxEnergy;
+    assert( false ); // in >> fEnergy;
+    assert( false ); // in >> fFoodEnergy;
+    assert( false ); // in >> fMaxEnergy;
     in >> fSpeed2Energy;
     in >> fYaw2Energy;
     in >> fSizeAdvantage;
@@ -618,7 +613,6 @@ void agent::grow( long mateWait,
     			 * (gMaxMaxEnergy - gMinMaxEnergy) / (gMaxAgentSize - gMinAgentSize) );
 	
     fEnergy = fMaxEnergy;
-	
 	fFoodEnergy = fMaxEnergy;
 	
 //	printf( "%s: energy initialized to %g\n", __func__, fEnergy );
@@ -659,39 +653,48 @@ void agent::setradius()
 
 //---------------------------------------------------------------------------
 // agent::eat
-//
-//	Return the amount of food energy actually lost to the world (if any)
 //---------------------------------------------------------------------------
-float agent::eat(food* f, float eatFitnessParameter, float eat2consume, float eatthreshold, long step)
+void agent::eat( food* f,
+				 float eatFitnessParameter,
+				 float eat2consume,
+				 float eatthreshold,
+				 long step,
+				 Energy &return_lost,
+				 Energy &return_actuallyEat )
 {
 	Q_CHECK_PTR(f);
 	
-	float result = 0;
+	return_lost = 0;
+	return_actuallyEat = 0;
 	
 	if (nerves.eat->get() > eatthreshold)
 	{
-		float trytoeat = nerves.eat->get() * eat2consume;
+		Energy trytoeat = nerves.eat->get() * eat2consume;
+		trytoeat.constrain( 0, fMaxEnergy - fEnergy );
 		
-		if ((fEnergy+trytoeat) > fMaxEnergy)
-			trytoeat = fMaxEnergy - fEnergy;
-		
-		float actuallyeat = f->eat(trytoeat);
-		fEnergy += actuallyeat;
-		fFoodEnergy += actuallyeat;
+		return_actuallyEat =
+			f->eat(trytoeat)
+			* geneCache.metabolism->energyPolarity
+			* f->getEnergyPolarity()
+			* geneCache.metabolism->eatMultiplier;
+
+		// The eatMultiplier could have made us exceed our limits.
+		return_actuallyEat.constrain( fEnergy * -1, fMaxEnergy - fEnergy );
+
+		fEnergy += return_actuallyEat;
+		fFoodEnergy += return_actuallyEat;
 
 	#ifdef OF1
-		mytotein += actuallyeat;
+		// this isn't right anymore... it's from before multi-nutrients.
+		assert( false );
+		mytotein += return_actuallyEat;
 	#endif
 
-		if (fFoodEnergy > fMaxEnergy)
-		{
-			result = fFoodEnergy - fMaxEnergy;
-			fFoodEnergy = fMaxEnergy;
-		}
+		fFoodEnergy.constrain( 0, fMaxEnergy, return_lost );
 				
-		fHeuristicFitness += eatFitnessParameter * actuallyeat / (eat2consume * MaxAge());
+		fHeuristicFitness += eatFitnessParameter * return_actuallyEat.sum() / (eat2consume * MaxAge());
 		
-		if( actuallyeat > 0.0 )
+		if( !return_actuallyEat.isZero() )
 		{
 			fLastEat = step;
 			fLastEatPosition[0] = fPosition[0];
@@ -699,56 +702,34 @@ float agent::eat(food* f, float eatFitnessParameter, float eat2consume, float ea
 			fLastEatPosition[2] = fPosition[2];
 		}
 	}
-	
-	return result;
 }
 
 //---------------------------------------------------------------------------
 // agent::receive
 //---------------------------------------------------------------------------    
-float agent::receive( agent *giver, float *e )
+Energy agent::receive( agent *giver, const Energy &requested )
 {
-	float actual = min( *e, fMaxEnergy - fEnergy );
-	float result = 0;
+	Energy amount = requested;
+	amount.constrain( 0, fMaxEnergy - fEnergy );
 
-	if( actual > 0 )
-	{
-		fEnergy += actual;
-#if GIVE_TODO
-		fFoodEnergy += actual;
-#endif
-		giver->fEnergy -= actual;
+	fEnergy += amount;
+	giver->fEnergy -= amount;
 
-#if GIVE_TODO
-		if( fFoodEnergy > fMaxEnergy )
-		{
-			result = fFoodEnergy - fMaxEnergy;
-			fFoodEnergy = fMaxEnergy;
-		}
-#endif
-	}
-	else
-	{
-		actual = 0;
-	}
-
-	*e = actual;
-
-	return result;
+	return amount;
 }
 
 //---------------------------------------------------------------------------
 // agent::damage
 //---------------------------------------------------------------------------    
-float agent::damage(float e, bool nullMode)
+Energy agent::damage(const Energy &e, bool nullMode)
 {
-	e *= gLowPopulationAdvantageFactor;
-	if (e>fEnergy) e = fEnergy;
+	Energy actual = e * gLowPopulationAdvantageFactor;
+	actual.constrain( 0, fEnergy );
 
 	if( !nullMode )
-		fEnergy -= e;
+		fEnergy -= actual;
 
-	return e;
+	return actual;
 }
 
 
@@ -767,7 +748,7 @@ float agent::MateProbability(agent* c)
 // Note:  This function must remain valid whether we are doing a virtual
 // or a real birth
 //---------------------------------------------------------------------------    
-float agent::mating( float mateFitnessParam, long mateWait )
+Energy agent::mating( float mateFitnessParam, long mateWait )
 {
 	fLastMate = fAge;
 	
@@ -775,9 +756,10 @@ float agent::mating( float mateFitnessParam, long mateWait )
 		mateWait = 1;
 	fHeuristicFitness += mateFitnessParam * mateWait / MaxAge();
 	
-	float mymateenergy = fGenome->get( "MateEnergyFraction" ) * fEnergy;	
+	Energy mymateenergy = fGenome->get( "MateEnergyFraction" ) * fEnergy;
 	fEnergy -= mymateenergy;
 	fFoodEnergy -= mymateenergy;
+	fFoodEnergy.constrain( 0, fMaxEnergy );
 	
 	return mymateenergy;
 }
@@ -799,7 +781,7 @@ void agent::rewardmovement(float moveFitnessParam, float speed2dpos)
 //---------------------------------------------------------------------------        
 void agent::lastrewards(float energyFitness, float ageFitness)
 {
-    fHeuristicFitness += energyFitness * fEnergy / fMaxEnergy
+    fHeuristicFitness += energyFitness * NormalizedEnergy()
               + ageFitness * fAge / MaxAge();
 }
     
@@ -811,7 +793,7 @@ float agent::ProjectedHeuristicFitness()
 {
 	if( fSimulation->LifeFractionSamples() >= 50 )
 		return( fHeuristicFitness * fSimulation->LifeFractionRecent() * MaxAge() / fAge +
-				fSimulation->EnergyFitnessParameter() * fEnergy / fMaxEnergy +
+				fSimulation->EnergyFitnessParameter() * NormalizedEnergy() +
 				fSimulation->AgeFitnessParameter() * fSimulation->LifeFractionRecent() );
 	else
 		return( fHeuristicFitness );
@@ -945,6 +927,7 @@ void agent::InitGeneCache()
 	geneCache.strength = fGenome->get("Strength");
 	geneCache.size = fGenome->get("Size");
 	geneCache.lifespan = fGenome->get("LifeSpan");
+	geneCache.metabolism = GenomeUtil::getMetabolism( fGenome );
 }
 
 //---------------------------------------------------------------------------
@@ -1089,14 +1072,14 @@ float agent::UpdateBody( float moveFitnessParam,
 		energyused += CarryEnergy();	// depends on number and size of items being carried
 	}
 
-    double denergy = energyused * Strength();
+    float denergy = energyused * Strength();
 
 	// Apply large-population energy penalty
-	double populationEnergyPenalty;
+	float populationEnergyPenalty;
 #if UniformPopulationEnergyPenalty
 	populationEnergyPenalty = gPopulationPenaltyFraction * 0.5 * (gMaxMaxEnergy + gMinMaxEnergy);
 #else
-	populationEnergyPenalty = gPopulationPenaltyFraction * fMaxEnergy;
+	populationEnergyPenalty = gPopulationPenaltyFraction * fMaxEnergy.mean();
 #endif
 	denergy += populationEnergyPenalty;
 	
@@ -1674,9 +1657,9 @@ void agent::print()
     gobject::print();
     cout << "  fAge = " << fAge nl;
     cout << "  fLastMate = " << fLastMate nl;
-    cout << "  fEnergy = " << fEnergy nl;
-    cout << "  fFoodEnergy = " << fFoodEnergy nl;
-    cout << "  fMaxEnergy = " << fMaxEnergy nl;
+    //cout << "  fEnergy = " << fEnergy nl; // etodo
+    //cout << "  fFoodEnergy = " << fFoodEnergy nl; // etodo
+    //cout << "  fMaxEnergy = " << fMaxEnergy nl; // etodo
     cout << "  myspeed2energy = " << fSpeed2Energy nl;
     cout << "  fYaw2Energy = " << fYaw2Energy nl;
     cout << "  fSizeAdvantage = " << fSizeAdvantage nl;
@@ -1756,6 +1739,9 @@ void agent::NumberToName()
 //---------------------------------------------------------------------------
 void agent::Heal( float HealingRate, float minFoodEnergy)
 {
+	// etodo
+	assert( false );
+	/*
 	// if agent has some FoodEnergy to spare, and agent can receive some Energy.
 	if( ( fFoodEnergy > minFoodEnergy) && (fMaxEnergy > fEnergy) )		
 	{
@@ -1766,6 +1752,7 @@ void agent::Heal( float HealingRate, float minFoodEnergy)
 		fFoodEnergy -= delta;					// take delta away from FoodEnergy
 		fEnergy     += delta;					// and add it to Energy
 	}
+	*/
 }
 
 

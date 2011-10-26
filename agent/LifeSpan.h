@@ -22,6 +22,7 @@ class LifeSpan
 		DEATH_TYPE(PATCH)						\
 		DEATH_TYPE(NATURAL)						\
 		DEATH_TYPE(FIGHT)						\
+		DEATH_TYPE(EAT)							\
 		DEATH_TYPE(LOCKSTEP)					\
 		DEATH_TYPE(RANDOM)
 

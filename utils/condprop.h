@@ -7,6 +7,8 @@
 #include <list>
 
 #include "datalib.h"
+#include "Energy.h"
+#include "globals.h"
 #include "misc.h"
 
 #pragma push_macro("ERR")
@@ -620,6 +622,7 @@ namespace condprop
 	float InterpolateFunction_float( float value, float endValue, float ratio );
 	long InterpolateFunction_long( long value, long endValue, float ratio );
 	LineSegment InterpolateFunction_LineSegment( LineSegment value, LineSegment endValue, float ratio );
+	EnergyMultiplier InterpolateFunction_EnergyMultiplier( EnergyMultiplier value, EnergyMultiplier endValue, float ratio );
 
 	//===========================================================================
 	// DistanceFunction Implementations
@@ -627,6 +630,7 @@ namespace condprop
 	float DistanceFunction_float( float a, float b );
 	float DistanceFunction_long( long a, long b );
 	float DistanceFunction_LineSegment( LineSegment a, LineSegment b );
+	float DistanceFunction_EnergyMultiplier( EnergyMultiplier a, EnergyMultiplier b );
 
 	//===========================================================================
 	// ScalarLogger
@@ -710,6 +714,71 @@ namespace condprop
 		virtual void log( long step, LineSegment value )
 		{
 			writer->addRow( step, value.xa, value.za, value.xb, value.zb );
+			writer->flush();
+		}
+
+	private:
+		std::string name;
+		DataLibWriter *writer;
+	};
+
+	//===========================================================================
+	// EnergyMultiplierLogger
+	//===========================================================================
+	class EnergyMultiplierLogger : public Logger<EnergyMultiplier>
+	{
+	public:
+		EnergyMultiplierLogger( const char *name )
+		{
+			this->name = name;
+		}
+		
+		virtual ~EnergyMultiplierLogger()
+		{
+			delete writer;
+		}
+
+		virtual void init()
+		{
+			writer = new DataLibWriter( (std::string("run/condprop/") + name + ".txt").c_str() );
+
+			const char *colnames[ 1 + globals::numEnergyTypes + 1 ];
+			datalib::Type coltypes[ 1 + globals::numEnergyTypes ];
+
+			colnames[0] = "Time";
+			coltypes[0] = datalib::INT;
+
+			for( int i = 0; i < globals::numEnergyTypes; i++ )
+			{
+				char buf[32];
+				sprintf( buf, "Nutrient%d", i );
+
+				colnames[ i + 1 ] = strdup( buf );
+				coltypes[ i + 1 ] = datalib::FLOAT;
+			}
+
+			colnames[1 + globals::numEnergyTypes] = NULL;
+
+			writer->beginTable( "Values",
+								colnames,
+								coltypes );
+
+			for( int i = 0; i < globals::numEnergyTypes; i++ )
+			{
+				free( const_cast<char *>( colnames[i + 1] ) );
+			}
+		}
+
+		virtual void log( long step, EnergyMultiplier value )
+		{
+			Variant cols[ 1 + globals::numEnergyTypes ];
+			cols[ 0 ] = step;
+			for( int i = 0; i < globals::numEnergyTypes; i++ )
+			{
+				cols[ i + 1 ] = value[ i ];
+			}
+
+			writer->addRow( cols );
 			writer->flush();
 		}
 

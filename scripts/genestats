@@ -27,7 +27,8 @@ statsPath = os.path.join( rundir, "genome/genestats.txt" )
 # gene name regexes
 geneNamePatterns = [
     'Tau_[0-9]+',
-    'CrossoverPointCount'
+    'CrossoverPointCount',
+    'MutationRate'
 ]
 # add beginning-of-string and end-of-string to regexes
 geneNamePatterns = map( lambda x: '^' + x + '$', geneNamePatterns )

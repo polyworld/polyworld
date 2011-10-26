@@ -6,8 +6,7 @@
 //	Copyright:
 //---------------------------------------------------------------------------
 
-#ifndef FOOD_H
-#define FOOD_H
+#pragma once
 
 // System
 #include <iostream>
@@ -16,6 +15,7 @@
 using namespace std;
 
 // Local
+#include "Energy.h"
 #include "gdlink.h"
 #include "gsquare.h"
 //#include "ObjectList.h"
@@ -44,19 +44,20 @@ public:
 	typedef list<food *> FoodList;
 	static FoodList gAllFood;
 
-    food( long step );
-    food( long step, float e );
-    food( long step, float e, float x, float z);
+    food( const FoodType *foodType, long step );
+    food( const FoodType *foodType, long step, const Energy &e );
+    food( const FoodType *foodType, long step, const Energy &e, float x, float z);
     ~food();
     
 	void dump(ostream& out);
 	void load(istream& in);
     
-	float eat(float e);
+	Energy eat(const Energy &e);
     
-	float energy();
-	
-	void setenergy(float e);
+	bool isDepleted();
+
+	const Energy &getEnergy();
+	const EnergyPolarity &getEnergyPolarity();
 
 	void setPatch(FoodPatch* fp);
 	FoodPatch* getPatch();
@@ -67,19 +68,20 @@ public:
 	long getAge( long step );
 
 protected:
-    void initfood( long step );
-    void initfood( long step, float e );
-    void initfood( long step, float e, float x, float z );
+    void initfood( const FoodType *foodType, long step );
+    void initfood( const FoodType *foodType, long step, const Energy &e );
+    void initfood( const FoodType *foodType, long step, const Energy &e, float x, float z );
 	void initlen();
 	void initrest();
    	virtual void setradius();
 	
     static unsigned long fFoodEver;
 
-    float fEnergy;
+	Energy fEnergy;
     short fDomain;
 
 	FoodPatch* patch; // pointer to this food's patch
+	const FoodType* foodType;
 
 	long fCreationStep;
 	// This iterator addresses this object in the global list. This
@@ -91,14 +93,9 @@ protected:
 //===========================================================================
 // inlines
 //===========================================================================
-inline float food::energy() { return fEnergy; }
+inline const Energy &food::getEnergy() { return fEnergy; }
+inline const EnergyPolarity &food::getEnergyPolarity() { return foodType->energyPolarity; }
 inline void food::setPatch(FoodPatch* fp) { patch=fp; }
 inline FoodPatch* food::getPatch() { return patch; }
 inline short food::domain() { return fDomain; }
 inline void food::domain(short id) { fDomain = id; }
-
-
-#endif
-
-
-

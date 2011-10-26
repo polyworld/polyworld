@@ -24,13 +24,20 @@ class IQueue
 	virtual void reset() = 0;
 };
 
+//
+// Posts may be performed by any thread context.
+//
 template <class T>
 class SerialQueue : public IQueue<T>
 {
  public:
-	SerialQueue( size_t capacity = 1024 )
+	SerialQueue( size_t capacity = 1024 * 16,
+				 IMutex *mutex = new SpinMutex(),
+				 bool deleteMutex = true )
 	{
 		this->capacity = capacity;
+		this->mutex = mutex;
+		this->deleteMutex = deleteMutex;
 
 		q = new T[capacity];
 
@@ -41,6 +48,8 @@ class SerialQueue : public IQueue<T>
 	virtual ~SerialQueue()
 	{
 		delete [] q;
+		if( deleteMutex )
+			delete mutex;
 	}
 
 	virtual void post( T val )
@@ -48,21 +57,24 @@ class SerialQueue : public IQueue<T>
 		assert( isPostingActive );
 		assert( tail <= capacity );
 
-		q[tail] = val;
 
-		tail++;
+		MUTEX( mutex, q[tail++] = val );
 	}
 
 	virtual bool fetch( T *val )
 	{
 		bool success = false;
 
-		if( head < tail )
-		{
-			*val = q[head];
-			success = true;
-			head++;
-		}
+		MUTEX(mutex,
+
+			  if( head < tail )
+			  {
+				  *val = q[head];
+				  success = true;
+				  head++;
+			  }
+
+			  );
 
 		return success;
 	}
@@ -86,6 +98,9 @@ class SerialQueue : public IQueue<T>
 	T *q;
 	bool isPostingActive;
 
+	IMutex *mutex;
+	bool deleteMutex;
+
 	size_t head;
 	size_t tail;
 };
@@ -93,12 +108,14 @@ class SerialQueue : public IQueue<T>
 // With this implementation the poster will never have to enter a mutex region
 // and will therefore never block. That is its key advantage.
 //
+// Note that posts must always be performed by the master thread.
+//
 // Fetchers run full tilt until fetch() can return.
 template <class T>
 class BusyFetchQueue : public IQueue<T>
 {
  public:
-	BusyFetchQueue( size_t capacity = 1024,
+	BusyFetchQueue( size_t capacity = 1024 * 16,
 					IMutex *mutex = new SpinMutex(),
 					bool deleteMutex = true )
 	{

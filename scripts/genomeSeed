@@ -180,7 +180,7 @@ usage: genomeSeed [option] rundir
 
   --worldfile, w
 
-             Edit <Polyworld Home>/worldfile to use seeds.
+             Edit <Polyworld Home>/current.wf to use seeds.
 """
 
     if msg != None:

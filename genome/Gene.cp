@@ -57,6 +57,16 @@ void Gene::printTitles( FILE *file )
 	fprintf( file, "%s :: %s\n", name.c_str(), name.c_str() );
 }
 
+void Gene::printRanges( FILE *file )
+{
+	if( !ismutable )
+	{
+		return;
+	}
+
+	fprintf( file, "%s :: %s\n", name.c_str(), name.c_str() );
+}
+
 void Gene::init( Type _type,
 				 bool _ismutable,
 				 const char *_name )
@@ -125,10 +135,10 @@ __InterpolatedGene::__InterpolatedGene( Type _type,
 										const char *_name,
 										Gene *_gmin,
 										Gene *_gmax,
-										bool _round )
+										Rounding _rounding )
 : smin( _gmin->to_ImmutableScalar()->get( NULL ) )
 , smax( _gmax->to_ImmutableScalar()->get( NULL ) )
-, round( _round )
+, rounding( _rounding )
 {
 	init( _type,
 		  _ismutable,
@@ -162,14 +172,23 @@ Scalar __InterpolatedGene::interpolate( double ratio )
 	switch(smin.type)
 	{
 	case Scalar::INT: {
-		float result = interp( ratio, int(smin), int(smax) );
-		if( round )
+		switch( rounding )
 		{
-			return nint( result );
-		}
-		else
-		{
-			return (int)result;
+		case ROUND_INT_FLOOR:
+			{
+				return (int)interp( ratio, int(smin), int(smax) );
+			}
+		case ROUND_INT_NEAREST:
+			{
+				return nint( interp(ratio, int(smin), int(smax)) );
+			}
+		case ROUND_INT_BIN:
+			{
+				return min( (int)interp( ratio, int(smin), int(smax) + 1 ),
+							int(smax) );
+			}
+		default:
+			assert( false );
 		}
 	}
 	case Scalar::FLOAT: {
@@ -178,6 +197,20 @@ Scalar __InterpolatedGene::interpolate( double ratio )
 	default:
 		assert(false);
 	}
+}
+
+void __InterpolatedGene::printRanges( FILE *file )
+{
+	const char *roundingNames[] = { "None", "IntFloor", "IntNearest", "IntBin" };
+	const char *roundingName = 
+		smin.type == Scalar::INT ? roundingNames[rounding] : roundingNames[ROUND_NONE];
+
+	fprintf( file,
+			 "%s %s %s %s\n",
+			 roundingName,
+			 smin.str().c_str(),
+			 smax.str().c_str(),
+			 name.c_str() );
 }
 
 
@@ -218,13 +251,14 @@ Scalar ImmutableScalarGene::get( Genome *genome )
 // ================================================================================
 MutableScalarGene::MutableScalarGene( const char *name,
 									  Gene *gmin,
-									  Gene *gmax )
+									  Gene *gmax,
+									  __InterpolatedGene::Rounding rounding )
 : __InterpolatedGene( SCALAR,
 					  true /* mutable */,
 					  name,
 					  gmin,
 					  gmax,
-					  false /* don't round */)
+					  rounding )
 {
 }
 
@@ -243,6 +277,11 @@ const Scalar &MutableScalarGene::getMax()
 	return __InterpolatedGene::getMax();
 }
 
+void MutableScalarGene::printRanges( FILE * file )
+{
+	 __InterpolatedGene::printRanges( file );
+}
+
 
 // ================================================================================
 // ===
@@ -251,13 +290,14 @@ const Scalar &MutableScalarGene::getMax()
 // ================================================================================
 ImmutableInterpolatedGene::ImmutableInterpolatedGene( const char *name,
 													  Gene *gmin,
-													  Gene *gmax )
+													  Gene *gmax,
+													  __InterpolatedGene::Rounding rounding )
 : __InterpolatedGene( SCALAR,
 					  false /* immutable */,
 					  name,
 					  gmin,
 					  gmax,
-					  true /* round */ )
+					  rounding )
 {
 }
 
@@ -329,7 +369,7 @@ MutableNeurGroupGene::MutableNeurGroupGene( const char *_name,
 					  _name,
 					  _gmin,
 					  _gmax,
-					  true /* round */ )
+					  ROUND_INT_NEAREST )
 {
 }
 
@@ -446,7 +486,7 @@ NeurGroupAttrGene::NeurGroupAttrGene( const char *_name,
 					  _name,
 					  _gmin,
 					  _gmax,
-					  true /* round */ )
+					  ROUND_INT_NEAREST )
 , group_type( _group_type )
 {
 }
@@ -542,7 +582,7 @@ SynapseAttrGene::SynapseAttrGene( const char *_name,
 					  _name,
 					  _gmin,
 					  _gmax,
-					  true /* round */ )
+					  ROUND_INT_NEAREST )
 , negateInhibitory( _negateInhibitory )
 , lessThanZero( _lessThanZero )
 {

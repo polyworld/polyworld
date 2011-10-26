@@ -10,6 +10,7 @@
 // Local
 #include "Brain.h"
 #include "debug.h"
+#include "Energy.h"
 #include "gcamera.h"
 #include "gdlink.h"
 #include "Genome.h"
@@ -34,6 +35,7 @@ class DataLibWriter;
 class EnergySensor;
 class food;
 class MateWaitSensor;
+class Metabolism;
 class NervousSystem;
 class RandomSensor;
 class Retina;
@@ -141,11 +143,17 @@ public:
 			   bool recordBrainFunction,
 			   bool recordPosition );    
     virtual void setradius();    
-    float eat(food* f, float eatFitnessParameter, float eat2consume, float eatthreshold, long step);
-	float receive( agent *giver, float *e );
-    float damage(float e, bool nullMode);
+	void eat( food* f,
+			  float eatFitnessParameter,
+			  float eat2consume,
+			  float eatthreshold,
+			  long step,
+			  Energy &return_lost,
+			  Energy &return_actuallyEat );
+	Energy receive( agent *giver, const Energy &e );
+    Energy damage(const Energy &e, bool nullMode);
     float MateProbability(agent* c);
-    float mating( float mateFitnessParam, long mateWait );
+    Energy mating( float mateFitnessParam, long mateWait );
     void rewardmovement(float moveFitnessParam, float speed2dpos);
     void lastrewards(float energyFitness, float ageFitness);
     void Die();
@@ -168,10 +176,14 @@ public:
 	float NormalizedYaw();
     float Mass();
     float SizeAdvantage();
-    float Energy();
-    void Energy(float e);
-    float FoodEnergy();
-    void FoodEnergy(float e);
+	const Metabolism *GetMetabolism();
+	const Energy &GetEnergy();
+	const Energy &GetFoodEnergy();
+	void SetEnergy( const Energy &e );
+	void SetFoodEnergy( const Energy &e );
+	const Energy &GetMaxEnergy();
+	float NormalizedEnergy();
+	float Eat();
 	float Fight();
 	float Give();
     float Strength();
@@ -181,7 +193,6 @@ public:
     float Size();
     long Age();
     long MaxAge();
-    float MaxEnergy();
     long LastMate();
 	long LastEat();
 	float LastEatDistance();
@@ -263,10 +274,12 @@ protected:
 	float fLastEatPosition[3];
 	LifeSpan fLifeSpan;
 	bool fDeathByPatch;
+
+	Energy fEnergy;
+	Energy fFoodEnergy;
+	Energy fMaxEnergy;
+	const Metabolism *fMetabolism;
     
-    float fEnergy;
-    float fFoodEnergy;
-    float fMaxEnergy;    
     float fSpeed2Energy;
     float fYaw2Energy;
     float fSizeAdvantage;
@@ -293,6 +306,7 @@ protected:
 		float strength;
 		float size;
 		long lifespan;
+		const Metabolism *metabolism;
 	} geneCache;
 
 	NervousSystem *fCns;
@@ -364,10 +378,14 @@ inline float agent::MaxSpeed() { return fMaxSpeed; }
 inline float agent::NormalizedSpeed() { return min( 1.0f, Speed() / agent::gMaxVelocity ); }
 inline float agent::Mass() { return fMass; }
 inline float agent::SizeAdvantage() { return fSizeAdvantage; }
-inline float agent::Energy() { return fEnergy; }
-inline void agent::Energy(float e) { fEnergy = e; }
-inline float agent::FoodEnergy() { return fFoodEnergy; }
-inline void agent::FoodEnergy(float e) { fFoodEnergy = e; }
+inline const Metabolism *agent::GetMetabolism() { return geneCache.metabolism; }
+inline const Energy &agent::GetEnergy() { return fEnergy; }
+inline const Energy &agent::GetFoodEnergy() { return fFoodEnergy; }
+inline void agent::SetEnergy( const Energy &e ) { fEnergy = e; }
+inline void agent::SetFoodEnergy( const Energy &e ) { fFoodEnergy = e; }
+inline const Energy &agent::GetMaxEnergy() { return fMaxEnergy; }
+inline float agent::NormalizedEnergy() { return fEnergy.sum() / fMaxEnergy.sum(); }
+inline float agent::Eat() { return nerves.eat->get(); }
 inline float agent::Fight() { return nerves.fight->get(); }
 inline float agent::Give() { return nerves.give->get(); }
 inline float agent::Strength() { return geneCache.strength; }
@@ -377,7 +395,6 @@ inline float agent::Drop() { return nerves.drop->get(); }
 inline float agent::Size() { return geneCache.size; }
 inline long agent::Age() { return fAge; }
 inline long agent::MaxAge() { return geneCache.lifespan; }
-inline float agent::MaxEnergy() { return fMaxEnergy; }
 inline long agent::LastMate() { return fLastMate; }
 inline long agent::LastEat() { return fLastEat; }
 inline float agent::LastEatDistance() { return dist( fPosition[0], fPosition[2], fLastEatPosition[0], fLastEatPosition[2] ); }

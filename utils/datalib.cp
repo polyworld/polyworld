@@ -146,30 +146,19 @@ void DataLibWriter::beginTable( const char *name,
 // ------------------------------------------------------------
 void DataLibWriter::addRow( Variant col0, ... )
 {
-	assert( table );
-
-	table->nrows++;
+	Variant colsdata[ cols.size() ];
 
 	va_list args;
-	char buf[4096];
-	char *b = buf;
-	bool first = true;
 
-	if( randomAccess )
-	{
-		sprintf( buf, "    " );
-		b += strlen( buf );
-	}
-
-	itfor( __ColVector, cols, it )
+	for( int i = 0; i < cols.size(); i++ )
 	{
 		// floats are automatically promoted to double by ...
 		// so we have to differentiate between actual type and
 		// vararg type
-#define DATA(VATYPE,CTYPE)								\
+#define TOVARIANT(VATYPE,CTYPE)							\
 		{												\
 			CTYPE val;									\
-			if( first )									\
+			if( i == 0 )								\
 			{											\
 				val = (CTYPE)col0;						\
 				va_start( args, col0 );					\
@@ -179,28 +168,77 @@ void DataLibWriter::addRow( Variant col0, ... )
 				val = (CTYPE)va_arg( args, VATYPE );	\
 			}											\
 														\
-			sprintf( b,									\
-					 it->format,						\
-					 val );								\
+			colsdata[i] = val;							\
+		}
+
+
+		switch( cols[i].type )
+		{
+		case datalib::INT:
+			TOVARIANT(int,int);
+			break;
+		case datalib::FLOAT:
+			TOVARIANT(double,float);
+			break;
+		case datalib::STRING:
+			TOVARIANT(const char *,const char *);
+			break;
+		default:
+			assert( false );
+		}
+
+#undef TOVARIANT
+	}
+
+	addRow( colsdata );
+}
+
+// ------------------------------------------------------------
+// --- addRow()
+// ------------------------------------------------------------
+void DataLibWriter::addRow( Variant *colsdata )
+{
+	assert( table );
+
+	table->nrows++;
+
+	char buf[4096];
+	char *b = buf;
+
+	if( randomAccess )
+	{
+		sprintf( buf, "    " );
+		b += strlen( buf );
+	}
+
+	itfor( __ColVector, cols, it )
+	{
+#define TOBUF(TYPE)								\
+		{										\
+			TYPE val = (TYPE)*(colsdata++);		\
+												\
+			sprintf( b,							\
+					 it->format,				\
+					 val );						\
 		}
 
 
 		switch( it->type )
 		{
 		case datalib::INT:
-			DATA(int,int);
+			TOBUF(int);
 			break;
 		case datalib::FLOAT:
-			DATA(double,float);
+			TOBUF(float);
 			break;
 		case datalib::STRING:
-			DATA(const char *,const char *);
+			TOBUF(const char *);
 			break;
 		default:
 			assert( false );
 		}
 
-#undef DATA
+#undef TOBUF
 
 		b += strlen( b );
 		if( !randomAccess )
@@ -208,8 +246,6 @@ void DataLibWriter::addRow( Variant col0, ... )
 			*(b++) = '\t';
 		}
 		assert( size_t(b - buf) < sizeof(buf) );
-
-		first = false;
 	}
 
 	if( !randomAccess )

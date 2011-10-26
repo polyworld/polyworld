@@ -1895,6 +1895,10 @@ namespace proplib
 		{
 			(bool)propValue;
 		}
+		else if( type == "STRING" )
+		{
+			(string)propValue;
+		}
 		else if( type == "ARRAY" )
 		{
 			if( !propValue.isArray() )
@@ -1940,7 +1944,10 @@ namespace proplib
 				if( propScalar )
 				{
 					string scalarType = propScalar->get( "type" );
-					if( scalarType == "INT" || scalarType == "FLOAT" || scalarType == "BOOL" )
+					if( scalarType == "INT"
+						|| scalarType == "FLOAT"
+						|| scalarType == "BOOL"
+						|| scalarType == "STRING" )
 					{
 						validateProperty( *propScalar, propValue );
 						valid = true;

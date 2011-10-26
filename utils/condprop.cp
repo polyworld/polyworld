@@ -2,6 +2,9 @@
 
 #include <math.h>
 
+#include "globals.h"
+#include "misc.h"
+
 namespace condprop
 {
 
@@ -33,6 +36,19 @@ long InterpolateFunction_long( long value, long endValue, float ratio )
  }
 
 //===========================================================================
+// InterpolateFunction_EnergyMultiplier
+//===========================================================================
+EnergyMultiplier InterpolateFunction_EnergyMultiplier( EnergyMultiplier value, EnergyMultiplier endValue, float ratio )
+{
+	float result[globals::numEnergyTypes];
+
+	for( int i = 0; i < globals::numEnergyTypes; i++ )
+		result[i] = InterpolateFunction_float( value[i], endValue[i], ratio );
+
+	return EnergyMultiplier( result );
+}
+
+//===========================================================================
 // DistanceFunction_float
 //===========================================================================
 float DistanceFunction_float( float a, float b )
@@ -53,10 +69,20 @@ float DistanceFunction_long( long a, long b )
 //===========================================================================
 float DistanceFunction_LineSegment( LineSegment a, LineSegment b )
 {
-#define dist(x1,z1,x2,z2) (sqrt((x1-x2)*(x1-x2) + (z1-z2)*(z1-z2)))
-#define segdist(c,d) (dist(c.xa,c.za,d.xa,d.za) + dist(c.xb,c.zb,d.xb,d.zb))
+	return dist(a.xa,a.za,b.xa,b.za) + dist(a.xb,a.zb,b.xb,b.zb);
+}
 
-	return segdist( a, b );
+//===========================================================================
+// DistanceFunction_EnergyMultiplier
+//===========================================================================
+float DistanceFunction_EnergyMultiplier( EnergyMultiplier a, EnergyMultiplier b )
+{
+	float result = 0;
+
+	for( int i = 0; i < globals::numEnergyTypes; i++ )
+		result += fabs( a[i] - b[i] );
+
+	return result;
 }
 
 }

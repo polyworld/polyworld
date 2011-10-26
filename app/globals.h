@@ -47,6 +47,7 @@ public:
 	static bool		wraparound;
 	static bool		edges;
 	static bool     stickyEdges;
+	static int      numEnergyTypes;
 	static AbstractFile::ConcreteFileType recordFileType;
 };
 

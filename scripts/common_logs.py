@@ -27,6 +27,10 @@ class LifeSpans:
 
         return lo, hi
 
+    def getAll( self ):
+        for row in self.table.rows():
+            yield row['Agent']
+
     def getAllWithDeathReason( self, deathReason, includeNilLifeSpan = False ):
         for row in self.table.rows():
             if row['DeathReason'] == deathReason:
@@ -37,3 +41,67 @@ class LifeSpans:
         for row in self.table.rows():
             if row['BirthStep'] <= time and row['DeathStep'] > time:
                 yield row['Agent']
+
+####################################################################################
+###
+### CLASS BirthsDeaths
+###
+####################################################################################
+class BirthsDeaths:
+    def __init__( self, path_run ):
+        self.entries = {}
+
+        f = open( os.path.join(path_run, 'BirthsDeaths.log') )
+
+        header = f.readline()
+        assert( header.strip() == '% Timestep Event Agent# Parent1 Parent2' )
+
+        firstAgent = True
+
+        for line in f:
+            fields = line.split()
+
+            timestep = int( fields[0] )
+            event = fields[1]
+            agent = int( fields[2] )
+
+            if firstAgent:
+                # make entries for initially created agents
+                firstAgent = False
+                for created in range(1,agent):
+                    entry = BirthsDeathsEntry( 'INIT', 1, None, None )
+                    self.entries[created] = entry
+
+
+            if event == 'BIRTH':
+                parent1 = int( fields[3] )
+                parent2 = int( fields[4] )
+
+                entry = BirthsDeathsEntry( event, timestep, parent1, parent2 )
+                self.entries[agent] = entry
+            elif event == 'CREATION':
+                entry = BirthsDeathsEntry( event, timestep, None, None )
+                self.entries[agent] = entry
+                
+            elif event == 'DEATH':
+                entry = self.entries[agent]
+                entry.death( timestep )
+                
+            else:
+                print event
+                assert( False )
+
+
+    def getEntry( self, agentNumber ):
+        return self.entries[ agentNumber ]
+
+class BirthsDeathsEntry:
+    def __init__( self, birthType, timestep, parent1, parent2 ):
+        self.birthType = birthType
+        self.birthTimestep = timestep
+        self.parent1 = parent1
+        self.parent2 = parent2
+        self.deathTimestep = None
+
+    def death( self, timestep ):
+        self.deathTimestep = timestep

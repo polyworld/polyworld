@@ -45,27 +45,27 @@ food::FoodList food::gAllFood;
 //-------------------------------------------------------------------------------------------
 // food::food
 //-------------------------------------------------------------------------------------------
-food::food( long step )
+food::food( const FoodType *foodType, long step )
 {
-	initfood( step );
+	initfood( foodType, step );
 }
 
 
 //-------------------------------------------------------------------------------------------
 // food::food
 //-------------------------------------------------------------------------------------------
-food::food( long step, float e )
+food::food( const FoodType *foodType, long step, const Energy &e )
 {
-	initfood( step, e );
+	initfood( foodType, step, e );
 }
 
 
 //-------------------------------------------------------------------------------------------
 // food::food
 //-------------------------------------------------------------------------------------------
-food::food( long step, float e, float x, float z )
+food::food( const FoodType *foodType, long step, const Energy &e, float x, float z )
 {
-	initfood( step, e, x, z );
+	initfood( foodType, step, e, x, z );
 }
 
 
@@ -84,7 +84,7 @@ food::~food()
 //-------------------------------------------------------------------------------------------
 void food::dump(ostream& out)
 {
-    out << fEnergy nl;
+    assert(false); //out << fEnergy nl;
     out << fPosition[0] sp fPosition[1] sp fPosition[2] nl;
 }
 
@@ -94,7 +94,7 @@ void food::dump(ostream& out)
 //-------------------------------------------------------------------------------------------
 void food::load(istream& in)
 {
-    in >> fEnergy;
+    assert(false); //in >> fEnergy;
     in >> fPosition[0] >> fPosition[1] >> fPosition[2];
 
     initlen();
@@ -104,13 +104,25 @@ void food::load(istream& in)
 //-------------------------------------------------------------------------------------------
 // food::eat
 //-------------------------------------------------------------------------------------------
-float food::eat(float e)
+Energy food::eat(const Energy &e)
 {
-	float er = e < fEnergy ? e : fEnergy;
-	fEnergy -= er;
+	Energy actual = e;
+	actual.constrain( 0, fEnergy );
+
+	fEnergy -= actual;
+
 	initlen();
 	
-	return er;
+	return actual;
+}
+
+
+//-------------------------------------------------------------------------------------------
+// food::isDepleted
+//-------------------------------------------------------------------------------------------
+bool food::isDepleted()
+{
+	return fEnergy.isDepleted( foodType->depletionThreshold );
 }
 
 
@@ -126,30 +138,31 @@ long food::getAge(long step)
 //-------------------------------------------------------------------------------------------
 // food::initfood
 //-------------------------------------------------------------------------------------------
-void food::initfood( long step )
+void food::initfood( const FoodType *foodType, long step )
 {
-	float e = randpw() * (gMaxFoodEnergy - gMinFoodEnergy) + gMinFoodEnergy;
-	initfood( step, e );
+	Energy e = randpw() * (gMaxFoodEnergy - gMinFoodEnergy) + gMinFoodEnergy;
+	initfood( foodType, step, e );
 }
 
 
 //-------------------------------------------------------------------------------------------
 // food::initfood
 //-------------------------------------------------------------------------------------------
-void food::initfood( long step, float e )
+void food::initfood( const FoodType *foodType, long step, const Energy &e )
 {
 	fEnergy = e;
 	float x = randpw() * globals::worldsize;
 	float z = randpw() * globals::worldsize;
-	initfood( step, e, x, z );
+	initfood( foodType, step, e, x, z );
 }
 
 
 //-------------------------------------------------------------------------------------------
 // food::initfood
 //-------------------------------------------------------------------------------------------
-void food::initfood( long step, float e, float x, float z )
+void food::initfood( const FoodType *foodType, long step, const Energy &e, float x, float z )
 {
+	this->foodType = foodType;
 	fEnergy = e;
 	initlen();
 	fPosition[0] = x;
@@ -169,7 +182,7 @@ void food::initfood( long step, float e, float x, float z )
 //-------------------------------------------------------------------------------------------       
 void food::initlen()
 {
-	float lxz = 0.75 * fEnergy / gSize2Energy;
+	float lxz = 0.75 * fEnergy.mean() / gSize2Energy;
 	float ly = gFoodHeight;
 	setlen( lxz, ly, lxz );
 }
@@ -182,17 +195,7 @@ void food::initrest()
 {
 	setType( FOODTYPE );
 	setTypeNumber( ++food::fFoodEver );
-	setcolor( gFoodColor );
-}
-
-
-//-------------------------------------------------------------------------------------------
-// food::setenergy
-//-------------------------------------------------------------------------------------------           
-void food::setenergy( float e )
-{
-	fEnergy = e;
-	initlen();
+	setcolor( foodType->color );
 }
 
 

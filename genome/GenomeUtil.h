@@ -2,6 +2,9 @@
 
 #include "Genome.h"
 
+// forward decls
+class Metabolism;
+
 namespace genome
 {
 	// forward decls
@@ -14,6 +17,7 @@ namespace genome
 		static Genome *createGenome( bool randomized = false );
 		static void randomize( Genome *g );
 		static void seed( Genome *g );
+		static const Metabolism *getMetabolism( Genome *g );
 
 		static void test();
 

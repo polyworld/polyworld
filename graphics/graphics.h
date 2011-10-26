@@ -21,10 +21,12 @@ struct Color
     GLfloat b;
     GLfloat a;
 
+	Color();
+	Color( GLfloat _r, GLfloat _g, GLfloat _b, GLfloat _a );
+	Color( proplib::Property &prop );
+
 	void set( GLfloat _r, GLfloat _g, GLfloat _b, GLfloat _a );
 	void set( GLfloat _r, GLfloat _g, GLfloat _b );
-
-	Color &operator=( proplib::Property &prop );
 };
 typedef struct Color Color;
 

@@ -18,6 +18,7 @@
 #include "barrier.h"
 #include "datalib.h"
 #include "EatStatistics.h"
+#include "Energy.h"
 #include "food.h"
 #include "Scheduler.h"
 #include "SeparationCache.h"
@@ -52,6 +53,7 @@ class TAgentPOVWindow;
 class TSimulation;
 
 static const int MAXDOMAINS = 10; // if you change this, you MUST change the schema file.
+static const int MAXMETABOLISMS = 10;
 static const int MAXFITNESSITEMS = 5;
 
 // Define file mode mask so that users can read+write, group and others can read (but not write)
@@ -72,8 +74,9 @@ static const int MAXFITNESSITEMS = 5;
 #define MATE__PREVENTED__OF1			(1 << 7)
 #define MATE__PREVENTED__MAX_DOMAIN		(1 << 8)
 #define MATE__PREVENTED__MAX_WORLD		(1 << 9)
-#define MATE__PREVENTED__MISC			(1 << 10)
-#define MATE__PREVENTED__MAX_VELOCITY	(1 << 11)
+#define MATE__PREVENTED__MAX_METABOLISM	(1 << 10)
+#define MATE__PREVENTED__MISC			(1 << 11)
+#define MATE__PREVENTED__MAX_VELOCITY	(1 << 12)
 
 
 // Used in logic related to Fighting as well as ContactEntry
@@ -503,11 +506,11 @@ private:
 	void EndCarryLog();
 
 	void InitEnergyLog();
-	enum EnergyLogEventType { ELET__GIVE = 0, ELET__FIGHT };
+	enum EnergyLogEventType { ELET__GIVE = 0, ELET__FIGHT, ELET__EAT };
 	void UpdateEnergyLog( agent *c,
 						  gobject *obj,
 						  float neuralActivation,
-						  float energy,
+						  const Energy &energy,
 						  EnergyLogEventType elet );
 	void EndEnergyLog();
 
@@ -541,13 +544,14 @@ private:
 				bool *cDied,
 				bool *dDied );
 	int GetGiveStatus( agent *x,
-					   float *out_energy );
+					   Energy &out_energy );
 	void Give( agent *x,
 			   agent *y,
 			   ContactEntry *contactEntry,
 			   bool *xDied,
 			   bool toMarkOnDeath );
-	void Eat( agent *c );
+	void Eat( agent *c,
+			  bool *cDied );
 	void Carry( agent *c );
 	void Pickup( agent *c );
 	void Drop( agent *c );
@@ -571,11 +575,17 @@ private:
 				LifeSpan::BirthReason reason,
 				agent* a_parent1 = NULL,
 				agent* a_parent2 = NULL );
+ private:
 	void Kill( agent* inAgent,
 			   LifeSpan::DeathReason reason );
 	void Kill_UpdateBrainData( agent *c );
 	void Kill_UpdateFittest( agent *c );
+	
+	void AddFood( long domainNumber, long patchNumber );
 	void RemoveFood( food *f );
+
+	void FoodEnergyIn( const Energy &e );
+	void FoodEnergyOut( const Energy &e );
 
 	float AgentFitness( agent* c );
 	
@@ -719,12 +729,15 @@ private:
 	float fPickupThreshold;
 	float fDropThreshold;
 	
+	long fNumberAlive;
+	long fNumberAliveWithMetabolism[ MAXMETABOLISMS ];
 	long fNumberBorn;
 	long fNumberBornVirtual;
 	long fNumberDied;
 	long fNumberDiedAge;
 	long fNumberDiedEnergy;
 	long fNumberDiedFight;
+	long fNumberDiedEat;
 	long fNumberDiedEdge;
 	long fNumberDiedSmite;
 	long fNumberDiedPatch;
@@ -808,6 +821,7 @@ private:
 	bool fStaticTimestepGeometry;
 	bool fParallelInitAgents;
 	bool fParallelInteract;
+	bool fParallelCreateAgents;
 	bool fParallelBrains;
 	bool fGraphics;
 	long fBrainMonitorStride;

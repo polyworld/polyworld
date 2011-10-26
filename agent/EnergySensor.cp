@@ -25,5 +25,5 @@ void EnergySensor::sensor_prebirth_signal( RandomNumberGenerator *rng )
 
 void EnergySensor::sensor_update( bool print )
 {
-	nerve->set( self->Energy() / self->MaxEnergy() );
+	nerve->set( self->NormalizedEnergy() );
 }

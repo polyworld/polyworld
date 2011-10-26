@@ -2,19 +2,22 @@
 //	File:		FoodPatch.h
 //---------------------------------------------------------------------------
 
-
-#ifndef FOODPATCH_H
-#define FOODPATCH_H
+#pragma once
 
 //System
 #include <iostream>
 #include <list>
+
+//Local
+#include "Energy.h"
+#include "FoodType.h"
 #include "gstage.h"
 #include "Patch.h"
 
 using namespace std;
 
 // Forward declarations
+class food;
 class FoodPatch;
 
 //===========================================================================
@@ -29,24 +32,10 @@ class FoodPatch : public Patch
 	FoodPatch();
 	~FoodPatch();
 
-	float growthRate;
-    
-	int foodCount;
-	int initFoodCount;
-	int minFoodCount;
-	int maxFoodCount;
-	int maxFoodGrownCount;
-
-	float fraction;    
-	float foodRate;
-
-	bool removeFood;
-	bool foodGrown;
-
 	float update();
-	float addFood( long step );
+	food *addFood( long step );
 	void setInitCounts( int initFood, int minFood, int maxFood, int maxFoodGrown, float newFraction );
-	void init( float x, float z, float sx, float sz, float rate, int initFood, int minFood, int maxFood, int maxFoodGrown, float patchFraction, int shape, int distribution, float nhsize, class OnCondition *onCondition, bool inRemoveFood, gstage* fStage, Domain* dm, int domainNumber );
+	void init( const FoodType *foodType, float x, float z, float sx, float sz, float rate, int initFood, int minFood, int maxFood, int maxFoodGrown, float patchFraction, int shape, int distribution, float nhsize, class OnCondition *onCondition, bool inRemoveFood, gstage* fStage, Domain* dm, int domainNumber );
 	void updateOn( long step );
 	bool on( long step );
 	bool turnedOff( long step );
@@ -134,8 +123,23 @@ class FoodPatch : public Patch
 		} state;
 	};
 
+	float growthRate;
+    
+	int foodCount;
+	int initFoodCount;
+	int minFoodCount;
+	int maxFoodCount;
+	int maxFoodGrownCount;
+
+	float fraction;    
+	float foodRate;
+
+	bool removeFood;
+	bool foodGrown;
+
  private:
 	OnCondition *onCondition;
+	const FoodType *foodType;
 };
 
 inline void FoodPatch::updateOn( long step )
@@ -162,6 +166,3 @@ inline void FoodPatch::initFoodGrown( bool setInitFoodGrown )
 {
 	foodGrown = setInitFoodGrown;
 }
-
-
-#endif

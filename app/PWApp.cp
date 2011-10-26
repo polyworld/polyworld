@@ -33,6 +33,7 @@
 
 #ifdef UNIT_TESTS
 #include "AbstractFile.h"
+#include "Energy.h"
 #endif
 
 //===========================================================================
@@ -42,6 +43,7 @@
 int main(int argc, char** argv)
 {
 #ifdef UNIT_TESTS
+	Energy::test();
 	AbstractFile::test();
 
 	printf("done with unit tests.\n");

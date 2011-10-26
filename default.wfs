@@ -169,6 +169,241 @@ RatioBarrierPositions {
   legacy  False
 }
 
+NumEnergyTypes {
+  type    INT
+  default 1
+  min     1
+}
+
+#------------------------------
+#--- Food Types 
+#------------------------------
+FoodTypes {
+  type    ARRAY
+  default [
+    Name Standard
+    EnergyPolarity [
+      1
+    ]
+    OverrideFoodColor False
+  ]
+  
+  element {
+    type    OBJECT
+    properties {
+
+      Name {
+        type    STRING
+      }
+    
+      EnergyPolarity {
+        type    ARRAY
+        min     $( NumEnergyTypes )
+        max     $( NumEnergyTypes )
+        element {
+          type    INT
+          min     -1
+          max     1
+        }
+      }
+
+      # Does this type have a color that overrides the global FoodColor?
+      OverrideFoodColor {
+        type    BOOL
+        default True
+      }
+
+      FoodColor {
+        type    OBJECT
+        default {
+          R    0.2
+          G    0.6
+          B    0.2
+        }
+      
+        properties {
+          R {
+            type    FLOAT
+            min     0.0
+            max     1.0
+          }
+          G {
+            type    FLOAT
+            min     0.0
+            max     1.0
+          }
+          B {
+            type    FLOAT
+            min     0.0
+            max     1.0
+          }
+        }
+      }
+
+    }
+  }
+}
+
+#------------------------------
+#--- Agent Metabolisms
+#------------------------------
+AgentMetabolisms {
+  type    ARRAY
+  min     1
+  default [
+    EnergyPolarity [
+      1
+    ]
+  ]
+
+  element {
+    type    OBJECT
+    properties {
+
+      # If named "Null", will be assigned name "MetabolismN"
+      Name {
+        type    STRING
+        default Null
+      }
+
+      EnergyPolarity {
+        type    ARRAY
+        min     $( NumEnergyTypes )
+        max     $( NumEnergyTypes )
+        default [
+          1
+        ]
+        element {
+          type    INT
+          min     -1
+          max     1
+        }
+      }
+
+      CarcassFoodTypeMode {
+        type    ENUM
+        default FindEnergyPolarity
+        values  [
+          None
+          FoodTypeName
+          FindEnergyPolarity
+        ]
+      }
+
+      CarcassFoodTypeName {
+        type    STRING
+        default Standard
+      }
+
+      EatMultiplier {
+        type OBJECT
+        default {
+          Conditions [
+            Value [
+              1
+            ]
+            Mode Time
+          ]
+        }
+        properties {
+
+          Record {
+            type    BOOL
+            default True
+          }
+
+          Conditions {
+            type    ARRAY
+            element {
+              type    OBJECT
+              properties {
+
+                CouplingRange {
+                  type    ENUM
+                  default None
+                  values [
+                    None
+                    Begin
+                    End
+                  ]
+                }
+          
+                Value {
+                  type    ARRAY
+                  min     $( NumEnergyTypes )
+                  max     $( NumEnergyTypes )
+                  element {
+                    type    FLOAT
+                  }
+                }
+
+                Mode {
+                  type    ENUM
+                  values [
+                    Time
+                    Count
+                  ]
+                }
+
+                Time {
+                  type    INT
+                  default 0
+                  min     0
+                  max     $( MaxSteps )
+                }
+      
+                Count {
+                  type    OBJECT
+                  default {
+                  }
+                  properties {
+      
+                    Value {
+                      type    ENUM
+                      default MetabolismAgents
+                      values [
+                        MetabolismAgents
+                      ]
+                    }
+      
+                    Op {
+                      type    ENUM
+                      default UNDEFINED
+                      values [
+                        UNDEFINED
+                        EQ
+                        GT
+                        LT
+                      ]
+                      if $( Mode == \"Count\" ) {
+                        assert $( Op != \"UNDEFINED\" )
+                      }
+                    }
+                      
+                    Threshold {
+                      type    INT
+                      default 0
+                    }
+      
+                    Duration {
+                      type    INT
+                      default 0
+                      min     0
+                    }
+      
+                  }
+                }
+
+              }
+            }
+          }
+        }
+      }
+      
+    }
+  }
+}
+
 #------------------------------
 # Barriers 
 #------------------------------
@@ -462,6 +697,11 @@ Domains {
           type    OBJECT
 
           properties { # Please pay attention to min/max/assert logic. I didn't put enough thought into it.
+
+            FoodTypeName {
+              type    STRING
+              default Standard
+            }
 
             FoodFraction {
               type    FLOAT
@@ -2425,6 +2665,12 @@ ParallelInitAgents {
 }
 
 ParallelInteract {
+  type    BOOL
+  default True
+  legacy  False
+}
+
+ParallelCreateAgents {
   type    BOOL
   default True
   legacy  False

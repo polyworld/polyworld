@@ -31,7 +31,7 @@
 // System
 #include <fstream>
 #include <iostream>
-#include <strstream>
+#include <sstream>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/errno.h>
@@ -57,6 +57,7 @@
 #include "Genome.h"
 #include "GenomeUtil.h"
 #include "proplib.h"
+#include "Metabolism.h"
 #include "Queue.h"
 #include "RandomNumberGenerator.h"
 #include "Resources.h"
@@ -176,6 +177,8 @@ inline float AverageAngles( float a, float b )
 
 #define IS_PREVENTED_BY_CARRY( ACTION, AGENT ) \
 	( (fCarryPrevents##ACTION != 0) && ((AGENT)->NumCarries() > 0) && (randpw() < fCarryPrevents##ACTION) )
+
+#define SYSTEM(cmd) {int rc = system(cmd); if(rc != 0) {fprintf(stderr, "Failed executing command '%s'\n", cmd); exit(1);}}
 
 //---------------------------------------------------------------------------
 // TSimulation::TSimulation
@@ -630,6 +633,8 @@ void TSimulation::Step()
 							   execInteract,
 							   !fParallelInteract );
 		
+	assert( fNumberAlive == objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE) );
+
 	debugcheck( "after Interact() in step %ld", fStep );
 
 //	fAverageFitness /= agent::gXSortedAgents.count();
@@ -646,11 +651,24 @@ void TSimulation::Step()
     if (fMonitorGeneSeparation && (fNewDeaths > 0))
         CalculateGeneSeparationAll();
 
-	// -----------------------
-	// ---- Create Agents ----
-	// -----------------------
-	// now for a little spontaneous generation!
-	CreateAgents();
+	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+	// ^^^ MASTER TASK CreateAgentsTask
+	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+	class CreateAgentsTask : public ITask
+	{
+	public:
+		virtual void task_exec( TSimulation *sim )
+		{
+			sim->CreateAgents();
+		}
+	} execCreateAgents;
+
+	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	// !!! EXEC MASTER
+	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	fScheduler.execMasterTask( this,
+							   execCreateAgents,
+							   !fParallelCreateAgents );
 
     if ((fNewLifes || fNewDeaths) && fMonitorGeneSeparation)
     {
@@ -1370,6 +1388,13 @@ void TSimulation::Init( const char *argWorldfilePath )
 	cout << "worldfile = " << docWorldFile->getName() << endl;
 
 	ProcessWorldFile( docWorldFile );
+
+	// Init array tracking number of agents with a given metabolism
+	assert( Metabolism::getNumberOfDefinitions() < MAXMETABOLISMS );
+	for( int i = 0; i < Metabolism::getNumberOfDefinitions(); i++ )
+	{
+		fNumberAliveWithMetabolism[i] = 0;
+	}
 	
 	if( fStaticTimestepGeometry )
 	{
@@ -1526,7 +1551,7 @@ void TSimulation::Init( const char *argWorldfilePath )
 		if( SetMaximumFiles( nfiles ) )
 		  {
 		    eprintf( "Error setting maximum files to %d (%d) -- consult ulimit\n", nfiles, errno );
-		    exit(1);
+		    //exit(1);
 		  }
 
 		if( mkdir( "run/brain", PwDirMode ) )
@@ -1641,7 +1666,7 @@ void TSimulation::Init( const char *argWorldfilePath )
 			exit(1);
 		}
 		
-		system( "cp LOCKSTEP-BirthsDeaths.log run/" );		// copy the LOCKSTEP file into the run/ directory.
+		SYSTEM( "cp LOCKSTEP-BirthsDeaths.log run/" );		// copy the LOCKSTEP file into the run/ directory.
 		SetNextLockstepEvent();								// setup for the first timestep in which Birth/Death events occurred.
 
 	}
@@ -1679,7 +1704,7 @@ void TSimulation::Init( const char *argWorldfilePath )
 		
 		fclose( f );
 
-		system( "cat run/genome/meta/genelayout.txt | sort -n > run/genome/meta/genelayout-sorted.txt" );
+		SYSTEM( "cat run/genome/meta/genelayout.txt | sort -n > run/genome/meta/genelayout-sorted.txt" );
 	}
 	{
 		FILE* f = fopen( "run/genome/meta/genetitle.txt", "w" );
@@ -1688,6 +1713,14 @@ void TSimulation::Init( const char *argWorldfilePath )
 		GenomeUtil::schema->printTitles( f );
 		
 		fclose( f );
+	}
+	{
+		FILE* f = fopen( "run/genome/meta/generange.txt", "w" );
+		Q_CHECK_PTR( f );
+		
+		GenomeUtil::schema->printRanges( f );
+		
+		fclose( f );		
 	}
 #endif
 
@@ -1701,9 +1734,9 @@ void TSimulation::Init( const char *argWorldfilePath )
 	{
 		if( docWorldFile->getPath() != "" )
 		{
-			system( ("cp " + docWorldFile->getPath() + " run/original.wf").c_str() );
+			SYSTEM( ("cp " + docWorldFile->getPath() + " run/original.wf").c_str() );
 		}
-		system( ("cp " + docSchema->getPath() + " run/original.wfs").c_str() );
+		SYSTEM( ("cp " + docSchema->getPath() + " run/original.wfs").c_str() );
 
 		{
 			ofstream out( "run/normalized.wf" );
@@ -1766,8 +1799,7 @@ void TSimulation::Init( const char *argWorldfilePath )
 					{
 						if( fDomains[domainNumber].foodCount < fDomains[domainNumber].maxFoodCount )
 						{
-							fFoodEnergyIn += fDomains[domainNumber].fFoodPatches[foodPatchNumber].addFood( fStep );
-							fDomains[domainNumber].foodCount++;
+							AddFood( domainNumber, foodPatchNumber );
 						}
 					}
 					fDomains[domainNumber].fFoodPatches[foodPatchNumber].initFoodGrown( true );
@@ -1967,7 +1999,8 @@ void TSimulation::InitAgents()
 		{
 			sim->fNeuronGroupCountStats.add( a->GetBrain()->NumNeuronGroups() );
 
-			sim->fFoodEnergyIn += a->FoodEnergy();
+			sim->FoodEnergyIn( a->GetFoodEnergy() );
+
 			if( sim->fRecordPosition )
 				a->RecordPosition();
 		}
@@ -2236,12 +2269,14 @@ void TSimulation::InitWorld()
     fNumberCreatedRandom = 0;
     fNumberCreated1Fit = 0;
     fNumberCreated2Fit = 0;
+	fNumberAlive = 0;
     fNumberBorn = 0;
 	fNumberBornVirtual = 0;
     fNumberDied = 0;
     fNumberDiedAge = 0;
     fNumberDiedEnergy = 0;
     fNumberDiedFight = 0;
+    fNumberDiedEat = 0;
     fNumberDiedEdge = 0;
 	fNumberDiedSmite = 0;
 	fNumberDiedPatch = 0;
@@ -2414,13 +2449,13 @@ void TSimulation::InitMonitoringWindows()
 	// Population
 	const Color popColor[7] =
 	{
-		{ 1.0, 0.0, 0.0, 0.0 },
-		{ 0.0, 1.0, 0.0, 0.0 },
-		{ 0.0, 0.0, 1.0, 0.0 },
-		{ 0.0, 1.0, 1.0, 0.0 },
-		{ 1.0, 0.0, 1.0, 0.0 },
-		{ 1.0, 1.0, 0.0, 0.0 },
-		{ 1.0, 1.0, 1.0, 1.0 }
+		Color( 1.0, 0.0, 0.0, 0.0 ),
+		Color( 0.0, 1.0, 0.0, 0.0 ),
+		Color( 0.0, 0.0, 1.0, 0.0 ),
+		Color( 0.0, 1.0, 1.0, 0.0 ),
+		Color( 1.0, 0.0, 1.0, 0.0 ),
+		Color( 1.0, 1.0, 0.0, 0.0 ),
+		Color( 1.0, 1.0, 1.0, 1.0 )
 	};
 	
 	const short numpop = (fNumDomains < 2) ? 1 : (fNumDomains + 1);
@@ -2578,7 +2613,7 @@ void TSimulation::ReadSeedFilePaths()
 		exit( 1 );
 	}
 
-	system( "cp genomeSeeds.txt run/genome" );
+	SYSTEM( "cp genomeSeeds.txt run/genome" );
 
 	char buf[1024 * 4];
 	while( !in.eof() )
@@ -2637,7 +2672,7 @@ void TSimulation::ReadSeedPositionsFromFile()
 		exit( 1 );
 	}
 
-	system( "cp seedPositions.txt run/motion/position" );
+	SYSTEM( "cp seedPositions.txt run/motion/position" );
 
 	while( !in.eof() )
 	{
@@ -2929,25 +2964,41 @@ void TSimulation::InitEnergyLog()
 
 	fEnergyLog = new DataLibWriter( "run/events/energy.log" );
 
-	const char *colnames[] =
+	const char *colnames_template[] =
 		{
 			"T",
 			"Agent",
 			"EventType",
 			"ObjectNumber",
 			"NeuralActivation",
-			"Energy",
-			NULL
 		};
-	const datalib::Type coltypes[] =
+	const datalib::Type coltypes_template[] =
 		{
 			datalib::INT,
 			datalib::INT,
 			datalib::STRING,
 			datalib::INT,
 			datalib::FLOAT,
-			datalib::FLOAT
 		};
+
+	int lenTemplate = sizeof(colnames_template) / sizeof(char *);
+
+	const char **colnames = new const char *[ lenTemplate + globals::numEnergyTypes + 1 ];
+	datalib::Type *coltypes = new datalib::Type[ lenTemplate + globals::numEnergyTypes ];
+	for( int i = 0; i < lenTemplate; i++ )
+	{
+		colnames[i] = colnames_template[i];
+		coltypes[i] = coltypes_template[i];
+	}
+	for( int i = 0; i < globals::numEnergyTypes; i++ )
+	{
+		char buf[128];
+		sprintf( buf, "Energy%d\n", i );
+		colnames[ lenTemplate + i ] = strdup( buf );
+
+		coltypes[ lenTemplate + i ] = datalib::FLOAT;
+	}
+	colnames[ lenTemplate + globals::numEnergyTypes ] = NULL;
 
 	fEnergyLog->beginTable( "Energy",
 							colnames,
@@ -2962,7 +3013,7 @@ void TSimulation::InitEnergyLog()
 void TSimulation::UpdateEnergyLog( agent *c,
 								   gobject *obj,
 								   float neuralActivation,
-								   float energy,
+								   const Energy &energy,
 								   EnergyLogEventType elet )
 {
 	if( !fRecordEnergy )
@@ -2971,15 +3022,22 @@ void TSimulation::UpdateEnergyLog( agent *c,
 	}
 
 	static const char *eventTypes[] = {"G",
-									   "F"};
+									   "F",
+									   "E"};
 	const char *eventType = eventTypes[elet];
 
-	fEnergyLog->addRow( fStep,
-						c->Number(),
-						eventType,
-						obj->getTypeNumber(),
-						neuralActivation,
-						energy );
+	Variant coldata[ 5 + globals::numEnergyTypes ];
+	coldata[0] = fStep;
+	coldata[1] = c->Number();
+	coldata[2] = eventType;
+	coldata[3] = (long)obj->getTypeNumber();
+	coldata[4] = neuralActivation;
+	for( int i = 0; i < globals::numEnergyTypes; i++ )
+	{
+		coldata[5 + i] = energy[i];
+	}
+
+	fEnergyLog->addRow( coldata );
 }
 
 
@@ -3406,7 +3464,11 @@ void TSimulation::Interact()
 		// -----------------------
 		// They finally get to eat (couldn't earlier to keep from conferring
 		// a special advantage on agents early in the sorted list)
-		Eat( c );
+		Eat( c, &cDied );
+
+		// It ate poison :-(
+		if( cDied )
+			continue;
 
 		// -----------------------
 		// -------- Carry --------
@@ -3499,7 +3561,7 @@ void TSimulation::DeathAndStats( void )
 			if( !fApplyLowPopulationAdvantage ||
 				((objectxsortedlist::gXSortedObjects.getCount( AGENTTYPE ) > fMinNumAgents) && (fDomains[c->Domain()].numAgents > fDomains[c->Domain()].minNumAgents)) )
 			{
-				if ( (c->Energy() <= 0.0)		||
+				if ( c->GetEnergy().isDepleted() ||
 					 (c->Age() >= c->MaxAge())  ||
 					 ((!globals::edges) && ((c->x() < 0.0) || (c->x() >  globals::worldsize) ||
 											(c->z() > 0.0) || (c->z() < -globals::worldsize))) ||
@@ -3509,7 +3571,7 @@ void TSimulation::DeathAndStats( void )
 
 					if (c->Age() >= c->MaxAge())
 						fNumberDiedAge++;
-					else if (c->Energy() <= 0.0)
+					else if ( c->GetEnergy().isDepleted() )
 						fNumberDiedEnergy++;
 					else if (c->GetDeathByPatch())
 					{
@@ -3749,12 +3811,11 @@ void TSimulation::MateLockstep( void )
 				 RecordBrainAnatomy( e->Number() ),
 				 RecordBrainFunction( e->Number() ),
 				 fRecordPosition );
-		float eenergy = c->mating( fMateFitnessParameter, fMateWait ) + d->mating( fMateFitnessParameter, fMateWait );
-		float minenergy = fMinMateFraction * ( c->MaxEnergy() + d->MaxEnergy() ) * 0.5;	// just a modest, reasonable amount; this doesn't really matter in lockstep mode
-		if( eenergy < minenergy )
-			eenergy = minenergy;
-		e->Energy(eenergy);
-		e->FoodEnergy(eenergy);
+		Energy eenergy = c->mating( fMateFitnessParameter, fMateWait ) + d->mating( fMateFitnessParameter, fMateWait );
+		Energy minenergy = fMinMateFraction * ( c->GetMaxEnergy() + d->GetMaxEnergy() ) * 0.5;	// just a modest, reasonable amount; this doesn't really matter in lockstep mode
+		eenergy.constrain( minenergy, e->GetMaxEnergy() );
+		e->SetEnergy(eenergy);
+		e->SetFoodEnergy(eenergy);
 		float x =  0.01 + randpw() * (globals::worldsize - 0.02);
 		float z = -0.01 - randpw() * (globals::worldsize - 0.02);
 		float y = 0.5 * agent::gAgentHeight;
@@ -3796,7 +3857,7 @@ int TSimulation::GetMatePotential( agent *x )
 
 		bool preventedByCarry = IS_PREVENTED_BY_CARRY( Mate, x );
 		bool preventedByMateWait = (x->Age() - x->LastMate()) < fMateWait;
-		bool preventedByEnergy = x->Energy() <= (fMinMateFraction * x->MaxEnergy());
+		bool preventedByEnergy = x->NormalizedEnergy() <= fMinMateFraction;
 		bool preventedByEatMateSpan = (fEatMateSpan > 0) && ( (fStep - x->LastEat()) >= fEatMateSpan );
 		bool preventedByEatMateMinDistance = (fEatMateMinDistance > 0) && (x->LastEat() > 0) && (x->LastEatDistance() < fEatMateMinDistance);
 		bool preventedByMaxVelocity = x->NormalizedSpeed() > fMaxMateVelocity;
@@ -3851,12 +3912,26 @@ int TSimulation::GetMateDenialStatus( agent *x, int *xStatus,
 	Domain &domain = fDomains[domainID];
 
 	bool preventedByMaxDomain = domain.numAgents >= domain.maxNumAgents;
-	bool preventedByMaxWorld = objectxsortedlist::gXSortedObjects.getCount( AGENTTYPE ) >= fMaxNumAgents;
+	bool preventedByMaxWorld = fNumberAlive >= fMaxNumAgents;
+
+	bool preventedByMaxMetabolism;
+	int nmetabolisms = Metabolism::getNumberOfDefinitions();
+	if( nmetabolisms > 1 ) {
+		// This allows one of the metabolism counts to be violated if the agents have different metabolism,
+		// but we want to reduce assortative bias.
+		preventedByMaxMetabolism =
+			( fNumberAliveWithMetabolism[x->GetMetabolism()->index] >= (fMaxNumAgents / nmetabolisms) )
+			&& (fNumberAliveWithMetabolism[y->GetMetabolism()->index] >= (fMaxNumAgents / nmetabolisms) ) ;
+	} else {
+		preventedByMaxMetabolism = false;
+	}
+
 
 #define __SET(var,macro) if( preventedBy##var ) status |= MATE__PREVENTED__##macro
 
 	__SET( MaxDomain, MAX_DOMAIN );
 	__SET( MaxWorld, MAX_WORLD );
+	__SET( MaxWorld, MAX_METABOLISM );
 
 	if( status == MATE__NIL )
 	{
@@ -3925,7 +4000,7 @@ void TSimulation::Mate( agent *c,
 				// so proceed with the normal mating process (attempt to mate for offspring production if there's room)
 				short kd = WhichDomain(0.5*(c->x()+d->x()),
 									   0.5*(c->z()+d->z()),
-									   kd);
+									   0);
 
 				Smite( kd, c, d );
 
@@ -3954,7 +4029,7 @@ void TSimulation::Mate( agent *c,
 
 					e->Genes()->crossover(c->Genes(), d->Genes(), true);
 
-					float eenergy = c->mating( fMateFitnessParameter, fMateWait ) + d->mating( fMateFitnessParameter, fMateWait );
+					Energy eenergy = c->mating( fMateFitnessParameter, fMateWait ) + d->mating( fMateFitnessParameter, fMateWait );
 
 					float x = 0.5*(c->x() + d->x());
 					float y = 0.5*(c->y() + d->y());
@@ -3996,8 +4071,8 @@ void TSimulation::Mate( agent *c,
 					{
 					public:
 						agent *e;
-						float eenergy;
-						GrowAgent( agent *e, float eenergy )
+						Energy eenergy;
+						GrowAgent( agent *e, const Energy &eenergy )
 						{
 							this->e = e;
 							this->eenergy = eenergy;
@@ -4011,8 +4086,8 @@ void TSimulation::Mate( agent *c,
 									 sim->RecordBrainFunction( e->Number() ),
 									 sim->fRecordPosition );
 
-							e->Energy(eenergy);
-							e->FoodEnergy(eenergy);
+							e->SetEnergy(eenergy);
+							e->SetFoodEnergy(eenergy);
 						}
 					};
 
@@ -4153,7 +4228,7 @@ int TSimulation::GetFightStatus( agent *x,
 	{
 		status |= FIGHT__DESIRED;
 
-		*out_power = fFightFraction * x->Strength() * x->SizeAdvantage() * x->Fight() * (x->Energy()/x->MaxEnergy());
+		*out_power = fFightFraction * x->Strength() * x->SizeAdvantage() * x->Fight() * x->NormalizedEnergy();
 
 		bool preventedByCarry = IS_PREVENTED_BY_CARRY( Fight, x );
 		bool preventedByShield = y->IsCarrying( fShieldObjects );
@@ -4210,22 +4285,22 @@ void TSimulation::Fight( agent *c,
 
 		if( cpower > 0.0 )
 		{
-			float ddamage = d->damage( cpower * fPower2Energy, fFightMode == FM_NULL );
-			if( ddamage > 0.0f )
+			Energy ddamage = d->damage( cpower * fPower2Energy, fFightMode == FM_NULL );
+			if( !ddamage.isZero() )
 				UpdateEnergyLog( c, d, c->Fight(), ddamage, ELET__FIGHT );
 		}
 
 		if( dpower > 0.0 )
 		{
-			float cdamage = c->damage( dpower * fPower2Energy, fFightMode == FM_NULL );
-			if( cdamage > 0.0 )
+			Energy cdamage = c->damage( dpower * fPower2Energy, fFightMode == FM_NULL );
+			if( !cdamage.isZero() )
 				UpdateEnergyLog( d, c, d->Fight(), cdamage, ELET__FIGHT );
 		}
 
 		if( !fLockStepWithBirthsDeathsLog )
 		{
 			// If we're not running in LockStep mode, allow natural deaths
-			if (d->Energy() <= 0.0)
+			if (d->GetEnergy().isDepleted())
 			{
 				//cout << "before deaths2 "; agent::gXSortedAgents.list();	//dbg
 				Kill( d, LifeSpan::DR_FIGHT );
@@ -4234,7 +4309,7 @@ void TSimulation::Fight( agent *c,
 
 				*dDied = true;
 			}
-			if (c->Energy() <= 0.0)
+			if (c->GetEnergy().isDepleted())
 			{
 				objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point back to c
 				Kill( c, LifeSpan::DR_FIGHT );
@@ -4255,7 +4330,7 @@ void TSimulation::Fight( agent *c,
 // TSimulation::GetGiveStatus
 //---------------------------------------------------------------------------
 int TSimulation::GetGiveStatus( agent *x,
-								float *out_energy )
+								Energy &out_energy )
 {
 	int status = GIVE__NIL;
 
@@ -4264,10 +4339,10 @@ int TSimulation::GetGiveStatus( agent *x,
 	{
 		status |= GIVE__DESIRED;
 
-		*out_energy = x->Energy() * x->Give() * fGiveFraction;
+		out_energy = x->GetEnergy() * x->Give() * fGiveFraction;
 
 		bool preventedByCarry = IS_PREVENTED_BY_CARRY( Give, x );
-		bool preventedByEnergy = *out_energy <= 0.0;
+		bool preventedByEnergy = out_energy.isDepleted();
 
 #define __SET(var,macro) if( preventedBy##var ) status |= GIVE__PREVENTED__##macro
 
@@ -4278,12 +4353,12 @@ int TSimulation::GetGiveStatus( agent *x,
 
 		if( status != GIVE__DESIRED )
 		{
-			*out_energy = 0.0;
+			out_energy = 0.0;
 		}
 	}
 	else
 	{
-		*out_energy = 0.0;
+		out_energy = 0.0;
 	}
 
 	return status;
@@ -4298,8 +4373,8 @@ void TSimulation::Give( agent *x,
 						bool *xDied,
 						bool toMarkOnDeath )
 {
-	float energy;
-	int xstatus = GetGiveStatus( x, &energy );
+	Energy energy;
+	int xstatus = GetGiveStatus( x, energy );
 
 	contactEntry->give( x, xstatus );
 
@@ -4307,16 +4382,15 @@ void TSimulation::Give( agent *x,
 	unsigned long xnum = x->Number();
 #endif
 
-	if( energy > 0 )
+	if( !energy.isDepleted() )
 	{
-		float result = y->receive( x, &energy );
-		fFoodEnergyOut += result;
+		y->receive( x, energy );
 
 		UpdateEnergyLog( x, y, x->Give(), energy, ELET__GIVE );
 
 		if( !fLockStepWithBirthsDeathsLog )
 		{
-			if (x->Energy() <= 0.0)
+			if (x->GetEnergy().isDepleted())
 			{
 				if( toMarkOnDeath )
 					objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point back to x
@@ -4338,7 +4412,7 @@ void TSimulation::Give( agent *x,
 //---------------------------------------------------------------------------
 // TSimulation::Eat
 //---------------------------------------------------------------------------
-void TSimulation::Eat( agent *c )
+void TSimulation::Eat( agent *c, bool *cDied )
 {
 	bool ateBackwardFood;
 	food* f = NULL;
@@ -4404,12 +4478,16 @@ void TSimulation::Eat( agent *c )
 					break;
 				// also overlap in z, so they really interact
 				ttPrint( "step %ld: agent # %ld is eating\n", fStep, c->Number() );
-				float foodEaten = c->eat( f, fEatFitnessParameter, fEat2Consume, fEatThreshold, fStep );
-				fFoodEnergyOut += foodEaten;
+				Energy foodEnergyLost;
+				Energy energyEaten;
+				c->eat( f, fEatFitnessParameter, fEat2Consume, fEatThreshold, fStep, foodEnergyLost, energyEaten );
+				UpdateEnergyLog( c, f, c->Eat(), energyEaten, ELET__EAT );
+								 
+				FoodEnergyOut( foodEnergyLost );
 				
 				eatPrint( "at step %ld, agent %ld at (%g,%g) with rad=%g wasted %g units of food at (%g,%g) with rad=%g\n", fStep, c->Number(), c->x(), c->z(), c->radius(), foodEaten, f->x(), f->z(), f->radius() );
 
-				if (f->energy() <= fFoodRemoveEnergy)  // all gone
+				if(f->isDepleted() )  // all gone
 				{
 					RemoveFood( f );
 				}
@@ -4454,12 +4532,16 @@ void TSimulation::Eat( agent *c )
 						break;
 					// also overlap in z, so they really interact
 					ttPrint( "step %ld: agent # %ld is eating\n", fStep, c->Number() );
-					float foodEaten = c->eat( f, fEatFitnessParameter, fEat2Consume, fEatThreshold, fStep );
-					fFoodEnergyOut += foodEaten;
+					Energy foodEnergyLost;
+					Energy energyEaten;
+					c->eat( f, fEatFitnessParameter, fEat2Consume, fEatThreshold, fStep, foodEnergyLost, energyEaten );
+					UpdateEnergyLog( c, f, c->Eat(), energyEaten, ELET__EAT );
+
+					FoodEnergyOut( foodEnergyLost );
 					
 					eatPrint( "at step %ld, agent %ld at (%g,%g) with rad=%g wasted %g units of food at (%g,%g) with rad=%g\n", fStep, c->Number(), c->x(), c->z(), c->radius(), foodEaten, f->x(), f->z(), f->radius() );
 
-					if (f->energy() <= fFoodRemoveEnergy)  // all gone
+					if( f->isDepleted() )  // all gone
 					{
 						RemoveFood( f );
 					}
@@ -4477,6 +4559,13 @@ void TSimulation::Eat( agent *c )
 	}
 
 	objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point list back to c
+	if( c->GetEnergy().isDepleted() )
+	{
+		// note: this leaves list pointing to item before c, and markedAgent set to previous agent
+		Kill( c, LifeSpan::DR_EAT );
+		fNumberDiedEat++;
+		*cDied = true;
+	}
 		
 	debugcheck( "after all agents had a chance to eat" );
 }
@@ -4758,12 +4847,53 @@ void TSimulation::CreateAgents( void )
 					gaPrint( "%5ld: domain %d creation random early (%4ld)\n", fStep, id, fNumberCreatedRandom );
                 }
 
-                newAgent->grow( fMateWait,
-								fRecordGenomes,
-								RecordBrainAnatomy( newAgent->Number() ),
-								RecordBrainFunction( newAgent->Number() ),
-								fRecordPosition );
-                fFoodEnergyIn += newAgent->FoodEnergy();
+				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+				// ^^^ PARALLEL TASK GrowAgent
+				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+				class GrowAgent : public ITask
+				{
+				public:
+					agent *a;
+					GrowAgent( agent *a )
+					{
+						this->a = a;
+					}
+
+					virtual void task_exec( TSimulation *sim )
+					{
+						a->grow( sim->fMateWait,
+								 sim->fRecordGenomes,
+								 sim->RecordBrainAnatomy( a->Number() ),
+								 sim->RecordBrainFunction( a->Number() ),
+								 sim->fRecordPosition );
+					}
+				};
+
+				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+				// ^^^ SERIAL TASK UpdateStats
+				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+				class UpdateStats : public ITask
+				{
+				public:
+					agent *a;
+					UpdateStats( agent *a )
+					{
+						this->a = a;
+					}
+
+					virtual void task_exec( TSimulation *sim )
+					{
+						sim->fNeuronGroupCountStats.add( a->GetBrain()->NumNeuronGroups() );
+
+						sim->FoodEnergyIn( a->GetFoodEnergy() );
+					}
+				};
+
+				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+				// !!! POST PARALLEL
+				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+				fScheduler.postParallel( new GrowAgent(newAgent) );
+
 				float x = randpw() * (fDomains[id].absoluteSizeX - 0.02) + fDomains[id].startX + 0.01;
 				float z = randpw() * (fDomains[id].absoluteSizeZ - 0.02) + fDomains[id].startZ + 0.01;
 				float y = 0.5 * agent::gAgentHeight;
@@ -4780,7 +4910,12 @@ void TSimulation::CreateAgents( void )
                 fDomains[id].numAgents++;
 				objectxsortedlist::gXSortedObjects.add(newAgent);
 				fNewLifes++;
-				fNeuronGroupCountStats.add( newAgent->GetBrain()->NumNeuronGroups() );
+
+
+				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+				// !!! POST SERIAL 
+				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+				fScheduler.postSerial( new UpdateStats(newAgent) );
 				
 				Birth( newAgent, LifeSpan::BR_CREATE );
             }
@@ -4852,7 +4987,8 @@ void TSimulation::CreateAgents( void )
 							RecordBrainAnatomy( newAgent->Number() ),
 							RecordBrainFunction( newAgent->Number() ),
 							fRecordPosition );
-            fFoodEnergyIn += newAgent->FoodEnergy();
+			FoodEnergyIn( newAgent->GetFoodEnergy() );
+
             newAgent->settranslation(randpw() * globals::worldsize, 0.5 * agent::gAgentHeight, randpw() * -globals::worldsize);
             newAgent->setyaw(randpw() * 360.0);
             id = WhichDomain(newAgent->x(), newAgent->z(), 0);
@@ -4919,7 +5055,6 @@ void TSimulation::MaintainFood()
 				break;
 			}
 
-			fFoodEnergyOut += f->energy();
 			objectxsortedlist::gXSortedObjects.setcurr( f->GetListLink() );
 			RemoveFood( f );
 		}
@@ -4947,8 +5082,7 @@ void TSimulation::MaintainFood()
 						{
 							if( fDomains[domainNumber].foodCount < fDomains[domainNumber].maxFoodCount )
 							{
-								fFoodEnergyIn += fDomains[domainNumber].fFoodPatches[patchNumber].addFood( fStep );
-								fDomains[domainNumber].foodCount++;
+								AddFood( domainNumber, patchNumber );
 							}
 						}
 						fDomains[domainNumber].fFoodPatches[patchNumber].initFoodGrown( true );
@@ -4968,8 +5102,7 @@ void TSimulation::MaintainFood()
 						int patchNumber = getRandomPatch( domainNumber );
 						if( patchNumber >= 0 )
 						{
-							fFoodEnergyIn += fDomains[domainNumber].fFoodPatches[patchNumber].addFood( fStep );
-							fDomains[domainNumber].foodCount++;
+							AddFood( domainNumber, patchNumber );
 						}
 					}
 
@@ -4980,8 +5113,7 @@ void TSimulation::MaintainFood()
 						int patchNumber = getRandomPatch( domainNumber );
 						if( patchNumber >= 0 )
 						{
-							fFoodEnergyIn += fDomains[domainNumber].fFoodPatches[patchNumber].addFood( fStep );
-							fDomains[domainNumber].foodCount++;
+							AddFood( domainNumber, patchNumber );
 						}
 						else
 							break;	// no active patches in this domain, so give up
@@ -4993,8 +5125,7 @@ void TSimulation::MaintainFood()
 						int patchNumber = getRandomPatch(domainNumber);
 						if( patchNumber >= 0 )
 						{
-							fFoodEnergyIn += fDomains[domainNumber].fFoodPatches[patchNumber].addFood( fStep );
-							fDomains[domainNumber].foodCount++;
+							AddFood( domainNumber, patchNumber );
 						}
 						else
 							break;	// no active patches in this domain, so give up
@@ -5014,23 +5145,20 @@ void TSimulation::MaintainFood()
 
 							if( randpw() < probAdd )
 							{
-								fFoodEnergyIn += fDomains[domainNumber].fFoodPatches[patchNumber].addFood( fStep );
-								fDomains[domainNumber].foodCount++;
+								AddFood( domainNumber, patchNumber );
 							}
 
 							// Grow by the integer part of the growthRate
 							int foodToGrow = (int) fDomains[domainNumber].fFoodPatches[patchNumber].growthRate; 
 							for( int i = 0; i < foodToGrow; i++ )
 							{
-								fFoodEnergyIn += fDomains[domainNumber].fFoodPatches[patchNumber].addFood( fStep );
-								fDomains[domainNumber].foodCount++;
+								AddFood( domainNumber, patchNumber );
 							}
 
 							int newFood = fDomains[domainNumber].fFoodPatches[patchNumber].minFoodCount - fDomains[domainNumber].fFoodPatches[patchNumber].foodCount;
 							for( int i = 0; i < newFood; i++ )
 							{
-								fFoodEnergyIn += fDomains[domainNumber].fFoodPatches[patchNumber].addFood( fStep );
-								fDomains[domainNumber].foodCount++;
+								AddFood( domainNumber, patchNumber );
 							}
 						}
 					}
@@ -5069,8 +5197,6 @@ void TSimulation::MaintainFood()
 				{
 					if( f->getPatch() == fFoodPatchesNeedingRemoval[i] )
 					{
-						fFoodEnergyOut += f->energy();
-
 						RemoveFood( f );
 						
 						break;	// found patch and deleted food, so get out of patch loop
@@ -5247,6 +5373,9 @@ void TSimulation::Birth( agent* a,
 						 agent* a_parent1,
 						 agent* a_parent2 )
 {
+	fNumberAlive++;
+	fNumberAliveWithMetabolism[ GenomeUtil::getMetabolism(a->Genes())->index ]++;
+
 	// ---
 	// --- Update LifeSpan
 	// ---
@@ -5304,6 +5433,9 @@ void TSimulation::Birth( agent* a,
 void TSimulation::Kill( agent* c,
 						LifeSpan::DeathReason reason )
 {
+	fNumberAlive--;
+	fNumberAliveWithMetabolism[c->GetMetabolism()->index]--;
+
 	// ---
 	// --- Update LifeSpan
 	// ---
@@ -5366,6 +5498,9 @@ void TSimulation::Kill( agent* c,
     	&& (globals::edges || ((c->x() >= 0.0) && (c->x() <=  globals::worldsize) &&
     	                       (c->z() <= 0.0) && (c->z() >= -globals::worldsize))) )
     {
+		fprintf( stderr, "Need to implement support for carcasses.\n" );
+		assert( false );
+		/* etodo
         float foodenergy = c->FoodEnergy();
 		
         if (foodenergy < fMinFoodEnergyAtDeath)	// it will be bumped up to fMinFoodEnergyAtDeath
@@ -5401,10 +5536,11 @@ void TSimulation::Kill( agent* c,
 			f->domain( id );
 			fDomains[id].foodCount++;
         }
+		*/
     }
     else
     {
-        fFoodEnergyOut += c->FoodEnergy();
+		FoodEnergyOut( c->GetFoodEnergy() );
     }
 	
 	// ---
@@ -5901,6 +6037,19 @@ void TSimulation::Kill_UpdateFittest( agent *c )
 }
 
 //-------------------------------------------------------------------------------------------
+// TSimulation::AddFood
+//-------------------------------------------------------------------------------------------
+void TSimulation::AddFood( long domainNumber, long patchNumber )
+{
+	food *f = fDomains[domainNumber].fFoodPatches[patchNumber].addFood( fStep );
+	if( f != NULL )
+	{
+		fDomains[domainNumber].foodCount++;
+		FoodEnergyIn( f->getEnergy() );
+	}
+}
+
+//-------------------------------------------------------------------------------------------
 // TSimulation::RemoveFood
 //-------------------------------------------------------------------------------------------
 void TSimulation::RemoveFood( food *f )
@@ -5908,6 +6057,8 @@ void TSimulation::RemoveFood( food *f )
 	FoodPatch *fp = f->getPatch();
 	if( fp ) fp->foodCount--;
 
+	int domain = f->domain();
+	assert( domain >= 0 && domain < fNumDomains );
 	fDomains[f->domain()].foodCount--;
 
 	assert( f == objectxsortedlist::gXSortedObjects.getcurr()->e );
@@ -5920,8 +6071,32 @@ void TSimulation::RemoveFood( food *f )
 		// if it's being carried, have to remove it from the carrier
 		((agent*)(f->CarriedBy()))->DropObject( (gobject*) f );
 	}
+
+	FoodEnergyOut( f->getEnergy() );
 					
 	delete f;	// get it out of memory
+}
+
+//-------------------------------------------------------------------------------------------
+// TSimulation::FoodEnergyIn
+//-------------------------------------------------------------------------------------------
+void TSimulation::FoodEnergyIn( const Energy &e ) {
+	static bool warn = true;
+	if( warn ) {
+		warn = false;
+
+		if( (globals::numEnergyTypes > 1) || (FoodType::getNumberDefinitions() > 1) ) {
+			fprintf( stderr, "WARNING! FoodEnergyIn/Out too simplistic for tracking this simulation!\n" );
+		}
+	}
+	fFoodEnergyIn += e[0];
+}
+
+//-------------------------------------------------------------------------------------------
+// TSimulation::FoodEnergyOut
+//-------------------------------------------------------------------------------------------
+void TSimulation::FoodEnergyOut( const Energy &e ) {
+	fFoodEnergyOut += e[0];
 }
 
 //-------------------------------------------------------------------------------------------
@@ -5993,11 +6168,13 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 			assert( false );
 	}
 	globals::stickyEdges = doc.get( "StickyEdges" );
+	globals::numEnergyTypes = doc.get( "NumEnergyTypes" );
 	agent::gVision = doc.get( "Vision" );
 	fShowVision = doc.get( "ShowVision" );
 	fStaticTimestepGeometry = doc.get( "StaticTimestepGeometry" );
 	fParallelInitAgents = doc.get( "ParallelInitAgents" );
 	fParallelInteract = doc.get( "ParallelInteract" );
+	fParallelCreateAgents = doc.get( "ParallelCreateAgents" );
 	fParallelBrains = doc.get( "ParallelBrains" );
 	brain::gMinWin = doc.get( "RetinaWidth" );
 	agent::gMaxVelocity = doc.get( "MaxVelocity" );
@@ -6899,6 +7076,182 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
     fChartFitness = doc.get( "ChartFitness" );
     fChartFoodEnergy = doc.get( "ChartFoodEnergy" );
     fChartPopulation = doc.get( "ChartPopulation" );
+
+	globals::numEnergyTypes = doc.get( "NumEnergyTypes" );
+
+	// Process FoodTypes
+	{
+		proplib::Property &propFoodTypes = doc.get( "FoodTypes" );
+		int numFoodTypes = propFoodTypes.size();
+
+		for( int ifoodType = 0; ifoodType < numFoodTypes; ifoodType++ )
+		{
+			proplib::Property &propFoodType = propFoodTypes.get( ifoodType );
+
+			string name = propFoodType.get( "Name" );
+			if( FoodType::lookup(name) != NULL )
+			{
+				propFoodType.err( "Duplicate name." );
+			}
+
+			bool overrideFoodColor = propFoodType.get( "OverrideFoodColor" );
+			Color foodColor = overrideFoodColor
+				? propFoodType.get( "FoodColor" )
+				: doc.get( "FoodColor" );
+			EnergyPolarity energyPolarity = propFoodType.get( "EnergyPolarity" );
+			Energy depletionThreshold = Energy::createDepletionThreshold( fFoodRemoveEnergy, energyPolarity );
+
+			FoodType::define( name, foodColor, energyPolarity, depletionThreshold );
+		}
+
+	}
+
+	// Process AgentMetabolisms
+	{
+		proplib::Property &propAgentMetabolisms = doc.get( "AgentMetabolisms" );
+		int numMetabolisms = propAgentMetabolisms.size();
+
+		for( int iMetabolism = 0; iMetabolism < numMetabolisms; iMetabolism++ )
+		{
+			proplib::Property &propMetabolism = propAgentMetabolisms.get( iMetabolism );
+
+			string name = propMetabolism.get( "Name" );
+			if( name == "Null" )
+			{
+				char tmp[128];
+				sprintf( tmp, "Metabolism%d", iMetabolism );
+				name = tmp;
+			}
+
+			EnergyPolarity energyPolarity = propMetabolism.get( "EnergyPolarity" );
+
+			const FoodType *carcassFoodType;
+			string carcassFoodTypeMode = propMetabolism.get( "CarcassFoodTypeMode" );
+
+			if( carcassFoodTypeMode == "None" )
+			{
+				carcassFoodType = NULL;
+			}
+			else if( carcassFoodTypeMode == "FoodTypeName" )
+			{
+				string foodTypeName = propMetabolism.get( "CarcassFoodTypeName" );
+				carcassFoodType = FoodType::lookup( foodTypeName );
+				if( carcassFoodType == NULL )
+				{
+					propMetabolism.err( "CarcassFoodTypeName references unknown FoodType '" + foodTypeName + "'" );
+				}
+			}
+			else if( carcassFoodTypeMode == "FindEnergyPolarity" )
+			{
+				carcassFoodType = FoodType::find( energyPolarity );
+				if( carcassFoodType == NULL )
+				{
+					propMetabolism.err( "Cannot find FoodType with matching energy polarity." );
+				}
+			}
+			else
+			{
+				assert( false );
+			}
+
+			EnergyMultiplier *eatMultiplier = new EnergyMultiplier();
+			{
+				proplib::Property &propEatMultiplier = propMetabolism.get( "EatMultiplier" );
+
+				proplib::Property &propConditions = propEatMultiplier.get( "Conditions" );
+				condprop::ConditionList<EnergyMultiplier> *conditions = new condprop::ConditionList<EnergyMultiplier>();
+				int nconditions = propConditions.size();
+
+				for( int iCondition = 0; iCondition < nconditions; iCondition++ )
+				{
+					proplib::Property &propCondition = propConditions.get( iCondition );
+
+					CouplingRange couplingRange;
+					{
+						string role = propCondition.get( "CouplingRange" );
+						if( role == "Begin" )
+							couplingRange = COUPLING_RANGE__BEGIN;
+						else if( role == "End" )
+							couplingRange = COUPLING_RANGE__END;
+						else if( role == "None" )
+							couplingRange = COUPLING_RANGE__NONE;
+						else
+							assert( false );
+					}
+
+					EnergyMultiplier value( propCondition.get( "Value" ) );
+					string mode = propCondition.get( "Mode" );
+
+					condprop::Condition<EnergyMultiplier> *condition;
+					if( mode == "Time" )
+					{
+						long step = propCondition.get( "Time" );
+						condition = new condprop::TimeCondition<EnergyMultiplier>( step, value, couplingRange );
+					}
+					else if( mode == "Count" )
+					{
+						proplib::Property &propCount = propCondition.get( "Count" );
+						string countValue = propCount.get( "Value" );
+						string opname = propCount.get( "Op" );
+						long threshold = propCount.get( "Threshold" );
+						long duration = propCount.get( "Duration" );
+				
+						const long *countPtr;
+						if( countValue == "MetabolismAgents" )
+						{
+							countPtr = &( fNumberAliveWithMetabolism[iMetabolism] );
+						}
+						else
+							assert( false );
+
+						condprop::ThresholdCondition<EnergyMultiplier,long>::Op op;
+						if( opname == "EQ" )
+							op = condprop::ThresholdCondition<EnergyMultiplier,long>::EQ;
+						else if( opname == "LT" )
+							op = condprop::ThresholdCondition<EnergyMultiplier,long>::LT;
+						else if( opname == "GT" )
+							op = condprop::ThresholdCondition<EnergyMultiplier,long>::GT;
+						else
+							assert( false );
+
+						condition = new condprop::ThresholdCondition<EnergyMultiplier,long>( countPtr,
+																							 op,
+																							 threshold,
+																							 duration,
+																							 value,
+																							 couplingRange );
+					}
+					else
+						assert( false );
+
+					conditions->add( condition );
+				}
+
+				condprop::EnergyMultiplierLogger *logger = NULL;
+				if( (bool)propEatMultiplier.get( "Record" ) )
+				{
+					char buf[128];
+					sprintf( buf, "EatMultiplier%d", iMetabolism );
+					logger = new condprop::EnergyMultiplierLogger( buf );
+				}
+
+				condprop::Property<EnergyMultiplier> *property =
+					new condprop::Property<EnergyMultiplier>( "EatMultiplier",
+															  eatMultiplier,
+															  &condprop::InterpolateFunction_EnergyMultiplier,
+															  &condprop::DistanceFunction_EnergyMultiplier,
+															  conditions,
+															  logger );
+
+				fConditionalProps->add( property );
+
+			}
+
+			Metabolism::define( name, energyPolarity, *eatMultiplier, carcassFoodType );
+		}
+	}
+
+	// Process Domains
 	{
 		proplib::Property &propDomains = doc.get( "Domains" );
 		fNumDomains = propDomains.size();
@@ -6991,6 +7344,7 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 
 			}
 
+			// Process FoodPatches
 			{
 				FoodPatch::MaxPopGroupOnCondition::Group *maxPopGroup_Domain = NULL;
 
@@ -7005,6 +7359,7 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 				{
 					proplib::Property &propPatch = propPatches.get( i );
 
+					const FoodType *foodType;
 					float foodFraction, foodRate;
 					float centerX, centerZ;  // should be from 0.0 -> 1.0
 					float sizeX, sizeZ;  // should be from 0.0 -> 1.0
@@ -7013,6 +7368,12 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 					int initFood, minFood, maxFood, maxFoodGrown;
 					int shape, distribution;
 					bool removeFood;
+
+					foodType = FoodType::lookup( propPatch.get("FoodTypeName") );
+					if( foodType == NULL )
+					{
+						propPatch.get( "FoodTypeName" ).err( "Unknown FoodType name" );
+					}							 
 
 					foodFraction = propPatch.get( "FoodFraction" );
 
@@ -7130,8 +7491,8 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 							assert( false );
 						}
 					}
-																									  
-					fDomains[id].fFoodPatches[i].init(centerX, centerZ, sizeX, sizeZ, foodRate, initFood, minFood, maxFood, maxFoodGrown, foodFraction, shape, distribution, nhsize, onCondition, removeFood, &fStage, &(fDomains[id]), id);
+
+					fDomains[id].fFoodPatches[i].init(foodType, centerX, centerZ, sizeX, sizeZ, foodRate, initFood, minFood, maxFood, maxFoodGrown, foodFraction, shape, distribution, nhsize, onCondition, removeFood, &fStage, &(fDomains[id]), id);
 
 					patchFractionSpecified += foodFraction;
 
@@ -7802,6 +8163,14 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 		strcat(t,")" );		
 	}
 	list.push_back( strdup( t ) );
+	if( Metabolism::getNumberOfDefinitions() > 1 )
+	{
+		for( int i = 0; i < Metabolism::getNumberOfDefinitions(); i++ )
+		{
+			sprintf( t, " -%s = %4ld", Metabolism::get(i)->name.c_str(), fNumberAliveWithMetabolism[i] );
+			list.push_back( strdup( t ) );
+		}
+	}
 
 	sprintf( t, "food = %4d", objectxsortedlist::gXSortedObjects.getCount(FOODTYPE) );
 	if (fNumDomains > 1)
@@ -7884,6 +8253,9 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 	list.push_back( strdup( t ) );
 	
 	sprintf( t, " -fight  = %4ld", fNumberDiedFight );
+	list.push_back( strdup( t ) );
+	
+	sprintf( t, " -eat  = %4ld", fNumberDiedEat );
 	list.push_back( strdup( t ) );
 	
 	sprintf( t, " -edge   = %4ld", fNumberDiedEdge );

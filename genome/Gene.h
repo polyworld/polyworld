@@ -42,6 +42,7 @@ namespace genome
 
 		virtual void printIndexes( FILE *file, GenomeLayout *layout );
 		virtual void printTitles( FILE *file );
+		virtual void printRanges( FILE *file );
 
 		Type type;
 		std::string name;
@@ -109,12 +110,20 @@ namespace genome
 	class __InterpolatedGene : virtual Gene
 	{
 	public:
+		enum Rounding
+		{
+			ROUND_NONE,
+			ROUND_INT_FLOOR,
+			ROUND_INT_NEAREST,
+			ROUND_INT_BIN
+		};
+
 		__InterpolatedGene( Type type,
 							bool ismutable,
 							const char *name,
 							Gene *gmin,
 							Gene *gmax,
-							bool round );
+							Rounding rounding );
 		virtual ~__InterpolatedGene() {}
 
 		const Scalar &getMin();
@@ -123,10 +132,12 @@ namespace genome
 		Scalar interpolate( unsigned char raw );
 		Scalar interpolate( double ratio );
 
+		void printRanges( FILE *file );
+
 	private:
 		const Scalar smin;
 		const Scalar smax;
-		bool round;
+		Rounding rounding;
 	};
 
 
@@ -180,13 +191,16 @@ namespace genome
 	public:
 		MutableScalarGene( const char *name,
 						   Gene *gmin,
-						   Gene *gmax );
+						   Gene *gmax,
+						   __InterpolatedGene::Rounding rounding );
 		virtual ~MutableScalarGene() {}
 
 		virtual Scalar get( Genome *genome );
 
 		const Scalar &getMin();
 		const Scalar &getMax();
+
+		virtual void printRanges( FILE *file );
 	};
 
 
@@ -204,7 +218,8 @@ namespace genome
 	public:
 		ImmutableInterpolatedGene( const char *name,
 								   Gene *gmin,
-								   Gene *gmax );
+								   Gene *gmax,
+								   __InterpolatedGene::Rounding rounding );
 		virtual ~ImmutableInterpolatedGene() {}
 
 		Scalar interpolate( double ratio );

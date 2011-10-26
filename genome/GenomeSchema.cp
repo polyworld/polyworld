@@ -444,3 +444,11 @@ void GenomeSchema::printTitles( FILE *f )
 		(*it)->printTitles( f );
 	}
 }
+
+void GenomeSchema::printRanges( FILE *f )
+{
+	itfor( GeneList, genes, it )
+	{
+		(*it)->printRanges( f );
+	}
+}

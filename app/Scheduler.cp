@@ -36,7 +36,6 @@ void Scheduler::execMasterTask( TSimulation *sim,
 				masterTask.task_exec( sim );
 
 				parallelTasks.endOfPosts();
-				serialTasks.endOfPosts();
 			}
 
 			//////////////////////////////////////////////////
@@ -64,6 +63,7 @@ void Scheduler::execMasterTask( TSimulation *sim,
 
 
 		// Now run all the serial tasks
+		serialTasks.endOfPosts();
 		{
 			ITask *task = NULL;
 

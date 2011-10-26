@@ -34,7 +34,7 @@ FoodPatch::FoodPatch()
 //-------------------------------------------------------------------------------------------
 // FoodPatch::FoodPatch
 //-------------------------------------------------------------------------------------------
-void FoodPatch::init(float x, float z, float sx, float sz, float rate, int initFood, int minFood, int maxFood, int maxFoodGrown, float patchFraction, int shape, int distrib, float nhsize, OnCondition *onCondition, bool inRemoveFood, gstage* fs, Domain* dm, int domainNumber){
+void FoodPatch::init( const FoodType *foodType, float x, float z, float sx, float sz, float rate, int initFood, int minFood, int maxFood, int maxFoodGrown, float patchFraction, int shape, int distrib, float nhsize, OnCondition *onCondition, bool inRemoveFood, gstage* fs, Domain* dm, int domainNumber ){
     
 	initBase(x, z,  sx, sz, shape, distrib, nhsize, fs, dm, domainNumber);
 
@@ -49,6 +49,7 @@ void FoodPatch::init(float x, float z, float sx, float sz, float rate, int initF
 	maxFoodGrownCount = maxFoodGrown;
 	
 	this->onCondition = onCondition;
+	this->foodType = foodType;
 
 	removeFood = inRemoveFood;
 
@@ -92,13 +93,13 @@ FoodPatch::~FoodPatch()
 
 // Add food to the FoodPatch.
 // Find an appropriate point in the patch (based on patch shape and distribution)
-float FoodPatch::addFood( long step )
+food *FoodPatch::addFood( long step )
 {
 	// Only add the food if there is room in the patch
 	if( foodCount < maxFoodCount )
 	{
 		float x, z;
-		food* f = new food( step );
+		food* f = new food( foodType, step );
 
 		// set the values of x and y to a legal point in the foodpatch
 		setPoint( &x, &z );
@@ -120,14 +121,14 @@ float FoodPatch::addFood( long step )
 
 		// Update the patch's count
 		foodCount++;
-		return( f->energy() );
+		return f;
 	}
 	
 #if DebugFoodPatches
 	printf( "%s: couldn't add food to patch because foodCount (%d) >= maxFoodCount (%d)\n", __FUNCTION__, foodCount, maxFoodCount );
 #endif
 	
-	return( 0 );
+	return NULL;
 }
 
 //===========================================================================

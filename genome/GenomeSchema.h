@@ -54,6 +54,7 @@ namespace genome
 
 		void printIndexes( FILE *f, GenomeLayout *layout = NULL );
 		void printTitles( FILE *f );
+		void printRanges( FILE *f );
 
 	private:
 		GeneMap name2gene;
