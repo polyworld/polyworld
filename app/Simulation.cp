@@ -3918,11 +3918,9 @@ int TSimulation::GetMateDenialStatus( agent *x, int *xStatus,
 	bool preventedByMaxMetabolism;
 	int nmetabolisms = Metabolism::getNumberOfDefinitions();
 	if( nmetabolisms > 1 ) {
-		// This allows one of the metabolism counts to be violated if the agents have different metabolism,
-		// but we want to reduce assortative bias.
 		preventedByMaxMetabolism =
 			( fNumberAliveWithMetabolism[x->GetMetabolism()->index] >= (fMaxNumAgents / nmetabolisms) )
-			&& (fNumberAliveWithMetabolism[y->GetMetabolism()->index] >= (fMaxNumAgents / nmetabolisms) ) ;
+			|| (fNumberAliveWithMetabolism[y->GetMetabolism()->index] >= (fMaxNumAgents / nmetabolisms) ) ;
 	} else {
 		preventedByMaxMetabolism = false;
 	}
@@ -3932,7 +3930,7 @@ int TSimulation::GetMateDenialStatus( agent *x, int *xStatus,
 
 	__SET( MaxDomain, MAX_DOMAIN );
 	__SET( MaxWorld, MAX_WORLD );
-	__SET( MaxWorld, MAX_METABOLISM );
+	__SET( MaxMetabolism, MAX_METABOLISM );
 
 	if( status == MATE__NIL )
 	{
