@@ -2549,9 +2549,119 @@ EnergyUseEat {
   default 0.01
 }
 
+EnergyUseMateMode {
+  type    ENUM
+  default Constant
+  values  [
+    Constant
+    Conditional
+  ]
+}
+
 EnergyUseMate {
   type    FLOAT
   default 0.1
+}
+
+EnergyUseMateConditional {
+  type    OBJECT
+  default {
+  } 
+  properties {
+
+    Record {
+      type    BOOL
+      default True
+    }
+
+    Conditions {
+      type    ARRAY
+      default [
+        Mode Time
+        Value 0.1
+        Time 0
+      ]
+      element {
+        type    OBJECT
+    
+        properties {
+
+          CouplingRange {
+            type    ENUM
+            default None
+            values [
+              None
+              Begin
+              End
+            ]
+          }
+    
+          Value {
+            type    FLOAT
+            min   0.0
+          }
+              
+          Mode {
+            type    ENUM
+            default IntThreshold
+            values [
+              Time
+              IntThreshold
+            ]
+          }
+              
+          Time {
+            type    INT
+            default 0
+            min     0
+            max     $( MaxSteps )
+          }
+    
+          IntThreshold {
+            type    OBJECT
+            default {
+            }
+            properties {
+    
+              Value {
+                type    ENUM
+                default Agents
+                values [
+                  Agents
+                ]
+              }
+    
+              Op {
+                type    ENUM
+                default UNDEFINED
+                values [
+                  UNDEFINED
+                  EQ
+                  GT
+                  LT
+                ]
+                if $( Mode == \"IntThreshold\" ) {
+                  assert $( Op != \"UNDEFINED\" )
+                }
+              }
+                    
+              Threshold {
+                type    INT
+                default 0
+              }
+    
+              Duration {
+                type    INT
+                default 0
+                min     0
+              }
+            }
+          }
+
+        }
+      }
+    }
+  }
 }
 
 EnergyUseFight {

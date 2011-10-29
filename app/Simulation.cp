@@ -6876,7 +6876,106 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	}
     fPower2Energy = doc.get( "DamageRate" );
     agent::gEat2Energy = doc.get( "EnergyUseEat" );
-    agent::gMate2Energy = doc.get( "EnergyUseMate" );
+
+	// EnergyUseMate
+	{
+		string energyUseMateMode = doc.get( "EnergyUseMateMode" );
+		if( energyUseMateMode == "Constant" )
+		{
+			agent::gMate2Energy = doc.get( "EnergyUseMate" );
+		}
+		else
+		{
+			proplib::Property &propEnergyUseMate = doc.get( "EnergyUseMateConditional" );
+
+			proplib::Property &propConditions = propEnergyUseMate.get( "Conditions" );
+			condprop::ConditionList<float> *conditions = new condprop::ConditionList<float>();
+			int nconditions = propConditions.size();
+
+			for( int i = 0; i < nconditions; i++ )
+			{
+				proplib::Property &propCondition = propConditions.get( i );
+
+				CouplingRange couplingRange;
+				{
+					string role = propCondition.get( "CouplingRange" );
+					if( role == "Begin" )
+						couplingRange = COUPLING_RANGE__BEGIN;
+					else if( role == "End" )
+						couplingRange = COUPLING_RANGE__END;
+					else if( role == "None" )
+						couplingRange = COUPLING_RANGE__NONE;
+					else
+						assert( false );
+				}
+
+				float value = propCondition.get( "Value" );
+				string mode = propCondition.get( "Mode" );
+
+				condprop::Condition<float> *condition;
+				if( mode == "Time" )
+				{
+					long step = propCondition.get( "Time" );
+					condition = new condprop::TimeCondition<float>( step, value, couplingRange );
+				}
+				else if( mode == "IntThreshold" )
+				{
+					proplib::Property &propCount = propCondition.get( "IntThreshold" );
+					string countValue = propCount.get( "Value" );
+					string opname = propCount.get( "Op" );
+					int threshold = propCount.get( "Threshold" );
+					long duration = propCount.get( "Duration" );
+				
+					const int *countPtr;
+					if( countValue == "Agents" )
+					{
+						countPtr = objectxsortedlist::gXSortedObjects.getCountPtr( AGENTTYPE );
+					}
+					else
+						assert( false );
+
+					condprop::ThresholdCondition<float,int>::Op op;
+					if( opname == "EQ" )
+						op = condprop::ThresholdCondition<float,int>::EQ;
+					else if( opname == "LT" )
+						op = condprop::ThresholdCondition<float,int>::LT;
+					else if( opname == "GT" )
+						op = condprop::ThresholdCondition<float,int>::GT;
+					else
+						assert( false );
+
+					condition = new condprop::ThresholdCondition<float,int>( countPtr,
+																			 op,
+																			 threshold,
+																			 duration,
+																			 value,
+																			 couplingRange );
+				}
+				else
+					assert( false );
+
+				conditions->add( condition );
+			}
+
+			condprop::Logger<float> *logger = NULL;
+			if( (bool)propEnergyUseMate.get( "Record" ) )
+			{
+				logger = new condprop::ScalarLogger<float>("EnergyUseMate",
+														   datalib::FLOAT);
+			}
+
+			condprop::Property<float> *property =
+				new condprop::Property<float>( "EnergyUseMate",
+											   &agent::gMate2Energy,
+											   &condprop::InterpolateFunction_float,
+											   &condprop::DistanceFunction_float,
+											   conditions,
+											   logger );
+
+			fConditionalProps->add( property );
+		}
+	}
+
     agent::gFight2Energy = doc.get( "EnergyUseFight" );
 	agent::gMinSizePenalty = doc.get( "MinSizeEnergyPenalty" );
     agent::gMaxSizePenalty = doc.get( "MaxSizeEnergyPenalty" );
