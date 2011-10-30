@@ -56,22 +56,12 @@ class BirthsDeaths:
         header = f.readline()
         assert( header.strip() == '% Timestep Event Agent# Parent1 Parent2' )
 
-        firstAgent = True
-
         for line in f:
             fields = line.split()
 
             timestep = int( fields[0] )
             event = fields[1]
             agent = int( fields[2] )
-
-            if firstAgent:
-                # make entries for initially created agents
-                firstAgent = False
-                for created in range(1,agent):
-                    entry = BirthsDeathsEntry( 'INIT', 1, None, None )
-                    self.entries[created] = entry
-
 
             if event == 'BIRTH':
                 parent1 = int( fields[3] )
@@ -84,7 +74,11 @@ class BirthsDeaths:
                 self.entries[agent] = entry
                 
             elif event == 'DEATH':
-                entry = self.entries[agent]
+                try:
+                    entry = self.entries[agent]
+                except:
+                    entry = BirthsDeathsEntry( 'UNKNOWN', -1, None, None )
+
                 entry.death( timestep )
                 
             else:
