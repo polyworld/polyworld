@@ -18,6 +18,7 @@ void usage( string msg = "" )
 	cerr << "       proputil reduce path_schema path_values" << endl;
 	cerr << "       proputil get path_values propname" << endl;
 	cerr << "       proputil set path_values propname=propvalue..." << endl;
+	cerr << "       proputil len path_values propname" << endl;
 
 	if( msg.length() > 0 )
 	{
@@ -55,7 +56,7 @@ void apply( const char *pathSchema, const char *pathValues );
 void reduce( const char *pathSchema, const char *pathValues );
 void get( const char *pathValues, const char *name );
 void set( const char *pathValues, NameValuePairList &pairs );
-
+void len( const char *pathValues, const char *name );
 
 int main( int argc, char **argv )
 {
@@ -108,6 +109,15 @@ int main( int argc, char **argv )
 		}
 
 		set( argv[2], pairs );
+	}
+	else if( mode == "len" )
+	{
+		if( argc != 4 )
+		{
+			usage();
+		}
+
+		len( argv[2], argv[3] );
 	}
 	else
 	{
@@ -164,6 +174,28 @@ void set( const char *pathValues, NameValuePairList &pairs )
 	}
 
 	docValues->write( cout );
+
+	delete docValues;
+}
+
+void len( const char *pathValues, const char *name )
+{
+	Document *docValues = Parser::parseFile( pathValues );
+	Property *prop = docValues->getp( name );
+	if( !prop )
+	{
+		cerr << "Unknown property '" << name << "'" << endl;
+		exit( 1 );
+	}
+	if( prop->isContainer() )
+	{
+		cout << prop->props().size() << endl;
+	}
+	else
+	{
+		cerr << "Cannot get length of scalar." << endl;
+		exit( 1 );
+	}
 
 	delete docValues;
 }

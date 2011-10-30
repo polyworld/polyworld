@@ -349,7 +349,6 @@ AgentMetabolisms {
                   type    INT
                   default 0
                   min     0
-                  max     $( MaxSteps )
                 }
       
                 Count {
@@ -462,7 +461,6 @@ Barriers {
               type    INT
               default 0
               min     0
-              max     $( MaxSteps )
             }
 
             Count {
@@ -825,7 +823,6 @@ Domains {
                       type    INT
                       default 0
                       min     0
-                      max     $( MaxSteps )
                     }
 
                     OnFraction {
@@ -1112,7 +1109,6 @@ MaxMateVelocity {
             type    INT
             default 0
             min     0
-            max     $( MaxSteps )
           }
     
           IntThreshold {
@@ -1215,7 +1211,6 @@ MinEatVelocity {
             type    INT
             default 0
             min     0
-            max     $( MaxSteps )
           }
     
           IntThreshold {
@@ -1361,7 +1356,6 @@ MaxEatVelocity {
             type    INT
             default 0
             min     0
-            max     $( MaxSteps )
           }
     
           IntThreshold {
@@ -1507,7 +1501,6 @@ MaxEatYaw {
             type    INT
             default 0
             min     0
-            max     $( MaxSteps )
           }
     
           IntThreshold {
@@ -1674,7 +1667,6 @@ EatMateMinDistance {
             type    INT
             default 0
             min     0
-            max     $( MaxSteps )
           }
     
           IntThreshold {
@@ -2614,7 +2606,6 @@ EnergyUseMateConditional {
             type    INT
             default 0
             min     0
-            max     $( MaxSteps )
           }
     
           IntThreshold {

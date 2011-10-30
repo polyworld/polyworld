@@ -51,6 +51,20 @@ def get_parameter( path_worldfile_or_run, parameter, assume_run_dir = True ):
 
 ####################################################################################
 ###
+### FUNCTION get_parameter_len()
+###
+####################################################################################
+def get_parameter_len( path_worldfile_or_run, parameter, assume_run_dir = True ):
+    if assume_run_dir:
+        # do automatic conversion
+        path_proplib = ensure_proplib_worldfile( path_worldfile_or_run )
+    else:
+        path_proplib = path_worldfile_or_run
+
+    return int(proputil( 'len', path_proplib, parameter ))
+
+####################################################################################
+###
 ### FUNCTION edit()
 ###
 ####################################################################################

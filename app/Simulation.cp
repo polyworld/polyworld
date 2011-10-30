@@ -2651,7 +2651,8 @@ void TSimulation::SetSeedPosition( agent *a, long numSeeded, float x, float y, f
 		{
 			Position &pos = fSeedPositions[numSeeded];
 			x = pos.x;
-			y = pos.y;
+			if( pos.y >= 0 ) // negative value means disregard
+				y = pos.y;
 			z = pos.z;
 		}
 	}
@@ -3581,7 +3582,7 @@ void TSimulation::DeathAndStats( void )
 					}
 					else
 						fNumberDiedEdge++;
-					Kill( c, LifeSpan::DR_PATCH );
+					Kill( c, reason );
 					continue; // nothing else to do for this poor schmo
 				}
 			}
@@ -4142,8 +4143,6 @@ void TSimulation::Smite( short kd,
 						 agent *c,
 						 agent *d )
 {
-	bool smited = false;
-
 	if( fSmiteMode == 'L' )		// smite the least fit
 	{
 		if( (fDomains[kd].numAgents >= fDomains[kd].maxNumAgents) &&	// too many agents to reproduce withing a bit of smiting
@@ -4164,7 +4163,6 @@ void TSimulation::Smite( short kd,
 				Kill( fDomains[kd].fLeastFit[fDomains[kd].fNumSmited], LifeSpan::DR_SMITE );
 				fDomains[kd].fNumSmited++;
 				fNumberDiedSmite++;
-				smited = true;
 				//cout << "********************* SMITE *******************" nlf;	//dbg
 			}
 		}
@@ -4206,7 +4204,6 @@ void TSimulation::Smite( short kd,
 			{
 				fDomains[kd].fNumSmited++;
 				fNumberDiedSmite++;
-				smited = true;
 				Kill( randAgent, LifeSpan::DR_SMITE );
 			}
 		}
@@ -5042,7 +5039,7 @@ void TSimulation::MaintainFood()
 	// Remove any food that has exceeded its lifespan
 	if( food::gMaxLifeSpan > 0 )
 	{
-		while( true )
+		while( !food::gAllFood.empty() )
 		{
 			// gAllFood is ordered by creation, so when we've encountered
 			// a piece that is too young to be removed, we can stop looking.

@@ -177,7 +177,11 @@ AbstractFile::AbstractFile( const char *abstractPath,
 		numFound++;
 	}
 
-	assert( numFound == 1 );
+	if( numFound != 1 )
+	{
+		fprintf( stderr, "Failed opening %s \n", abstractPath );
+		exit( 1 );
+	}
 
 	init( type, abstractPath, mode );
 }
@@ -527,7 +531,7 @@ char *AbstractFile::createPath( ConcreteFileType type, const char *abstractPath 
 void AbstractFile::test()
 {
 #define CLEANUP() \
-	system( "rm -f file.out file.out.rename file.out.link gzip.out gzip.out.gz gzip.out.rename gzip.out.rename.zip gzip.out.link.gz" );
+	{int __rc = system( "rm -f file.out file.out.rename file.out.link gzip.out gzip.out.gz gzip.out.rename gzip.out.rename.zip gzip.out.link.gz" ); assert( __rc==0 );}
 
 	CLEANUP();
 
