@@ -40,8 +40,10 @@ def computeAssortativeMating( path_run, path_output ):
     class Epoch:
         def __init__( self, timestep ):
             self.timestep = timestep
-            self.same = 0
-            self.diff = 0
+            self.mate_same = 0
+            self.mate_diff = 0
+            self.contact_same = 0
+            self.contact_diff = 0
     
     epochs = {}
     
@@ -72,23 +74,68 @@ def computeAssortativeMating( path_run, path_output ):
             parent2Metabolism = __getMetabolism( entry.parent2 )
     
             if parent1Metabolism == parent2Metabolism:
-                epoch.same += 1
+                epoch.mate_same += 1
             else:
-                epoch.diff += 1
+                epoch.mate_diff += 1
     
+    def __process_contact_row( row ):
+        step = row['Timestep']
+        agent1 = row['Agent1']
+        agent2 = row['Agent2']
+
+        epochIndex = step / epochLen
+        try:
+            epoch = epochs[epochIndex]
+        except:
+            epoch = Epoch( epochIndex * epochLen )
+            epochs[epochIndex] = epoch
+
+        agent1Metabolism = __getMetabolism( agent1 )
+        agent2Metabolism = __getMetabolism( agent2 )
+
+        if agent1Metabolism == agent2Metabolism:
+            epoch.contact_same += 1
+        else:
+            epoch.contact_diff += 1
+
+    datalib.parse( os.path.join(path_run, 'events/contacts.log'),
+                   tablenames = ['Contacts'],
+                   stream_row = __process_contact_row )
+
     epochIndexes = list(epochs.keys())
     epochIndexes.sort()
     
-    colnames = ['Timestep', 'Ratio']
-    coltypes = ['int', 'float']
+    colnames = ['Timestep', 'Ms', 'Md', 'PercentSame']
+    coltypes = ['int', 'int', 'int', 'float']
     table = datalib.Table( 'AssortativeMating', colnames, coltypes )
     
     for epoch in epochs.values():
         row = table.createRow()
         row['Timestep'] = epoch.timestep
-        row['Ratio'] = float(epoch.same) / (epoch.same + epoch.diff)
+        row['Ms'] = epoch.mate_same
+        row['Md'] = epoch.mate_diff
+        try:
+            row['PercentSame'] = 100 * float(epoch.mate_same) / (epoch.mate_same + epoch.mate_diff)
+        except ZeroDivisionError:
+            row['PercentSame'] = float('nan')
+
+    colnames = ['Timestep', 'Ms', 'Md', 'Cs', 'Cd', 'Ab']
+    coltypes = ['int', 'int', 'int', 'int', 'int', 'float']
+    table_contactNorm = datalib.Table( 'AssortativeMating_ContactNormalized', colnames, coltypes )
     
-    datalib.write( path_output, [table] )
+    for epoch in epochs.values():
+        row = table_contactNorm.createRow()
+        row['Timestep'] = epoch.timestep
+        row['Ms'] = epoch.mate_same
+        row['Md'] = epoch.mate_diff
+        row['Cs'] = epoch.contact_same
+        row['Cd'] = epoch.contact_diff
+        try:
+            row['Ab'] = (float(epoch.mate_same)/epoch.contact_same) / (float(epoch.mate_diff)/epoch.contact_diff);
+        except ZeroDivisionError:
+            row['Ab'] = float('nan')
+    
+    datalib.write( path_output, [table, table_contactNorm] )
     
     """
     
