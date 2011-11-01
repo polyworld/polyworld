@@ -699,6 +699,7 @@ private:
 	float fAgeFitnessParameter;
 
 	long fMinNumAgents; 
+	long fMinNumAgentsWithMetabolism[ MAXMETABOLISMS ];
 	long fInitNumAgents;
 	long fNumberToSeed;
 	float fProbabilityOfMutatingSeeds;

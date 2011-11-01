@@ -3561,7 +3561,9 @@ void TSimulation::DeathAndStats( void )
 			// If we're not using the LowPopulationAdvantage to prevent the population getting too low,
 			// or there are enough agents that we can still afford to lose one (globally & in agent's domain)...
 			if( !fApplyLowPopulationAdvantage ||
-				((objectxsortedlist::gXSortedObjects.getCount( AGENTTYPE ) > fMinNumAgents) && (fDomains[c->Domain()].numAgents > fDomains[c->Domain()].minNumAgents)) )
+				((objectxsortedlist::gXSortedObjects.getCount( AGENTTYPE ) > fMinNumAgents)
+				 && (fNumberAliveWithMetabolism[c->GetMetabolism()->index] > fMinNumAgentsWithMetabolism[c->GetMetabolism()->index])
+				 && (fDomains[c->Domain()].numAgents > fDomains[c->Domain()].minNumAgents)) )
 			{
 				if ( c->GetEnergy().isDepleted() ||
 					 (c->Age() >= c->MaxAge())  ||
@@ -7348,6 +7350,11 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 			}
 
 			Metabolism::define( name, energyPolarity, *eatMultiplier, carcassFoodType );
+		}
+
+		for( int i = 0; i < Metabolism::getNumberOfDefinitions(); i++ )
+		{
+			fMinNumAgentsWithMetabolism[i] = (int)doc.get("MinAgents") / Metabolism::getNumberOfDefinitions();
 		}
 	}
 
