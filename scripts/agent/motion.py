@@ -21,7 +21,7 @@ class Positions:
                           keycolname='Timestep')['Positions']
         
         positions = {}
-        for row in position_table.rowlist[:2]:
+        for row in position_table.rowlist:
             positions.update({ row['Timestep'] : (row['x'], row['y'], row['z']) })
         
         return positions
