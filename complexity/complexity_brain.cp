@@ -16,7 +16,7 @@ using namespace std;
 
 // Turn on no more than one of the *Options flags
 #define VirgilOptions 0
-#define OlafOptions 1
+#define OlafOptions 0
 
 // Note:  The bias neuron is not recorded in the brain function files, as it is always 1.0.
 // So I don't think turning on FLAG_subtractBias is ever a good idea, unless the subroutine
@@ -36,7 +36,7 @@ using namespace std;
 	#define MaxNumTimeStepsToComputeComplexityOver 500		// set this to a positive value to only compute Complexity over the final N timestesps of an agent's life.
 #else
 	#define FLAG_useGSAMP 1
-	#define FLAG_subtractBias 1
+	#define FLAG_subtractBias 0
 	#define IgnoreAgentsThatLivedLessThan_N_Timesteps 0
 	#define MaxNumTimeStepsToComputeComplexityOver 500		// set this to a positive value to only compute Complexity over the final N timestesps of an agent's life.
 #endif
@@ -107,13 +107,14 @@ double CalcComplexity_brainfunction(const char *fnameAct,
 	long numinputneurons = 0;		// this value will be defined by readin_brainfunction()
 	long numoutputneurons = 0;
 	
-	gsl_matrix * activity = readin_brainfunction__optimized(fnameAct,
-															ignore_timesteps_after,
-															agent_number,
-															lifespan,
-															num_neurons,
-															&numinputneurons,
-															&numoutputneurons);
+	gsl_matrix * activity = readin_brainfunction(fnameAct,
+												 ignore_timesteps_after,
+												 MaxNumTimeStepsToComputeComplexityOver,
+												 agent_number,
+												 lifespan,
+												 num_neurons,
+												 &numinputneurons,
+												 &numoutputneurons);
 	
 	// If the brain file was invalid or memory allocation failed, just return 0.0
 	if( activity == NULL )
@@ -124,10 +125,18 @@ double CalcComplexity_brainfunction(const char *fnameAct,
     if( activity->size2 > activity->size1 || activity->size1 < IgnoreAgentsThatLivedLessThan_N_Timesteps )
     	return( 0.0 );
 	
+// 	fflush( stdout );
+// 	printf( "\nactivity rows(size1) = %lu, columns(size2) = %lu\n", activity->size1, activity->size2 );
+// 	for( size_t i = 0; i < activity->size1; i++ )
+// 		printf( "%lu  %g\n", i, gsl_matrix_get( activity, i, 0 ));
+// 	fflush( stdout );
+
 	return CalcComplexityWithMatrix_brainfunction(activity,
 												  part,
 												  numinputneurons,
 												  numoutputneurons);
+	
+	gsl_matrix_free( activity );
 }
 
 //---------------------------------------------------------------------------
@@ -138,124 +147,57 @@ double CalcComplexityWithMatrix_brainfunction(gsl_matrix *activity,
 											  long numinputneurons,
 											  long numoutputneurons)
 {
-    gsl_matrix * o;			// we don't need this guy yet but we will in a bit.  We need to define him here so the useGSAMP can assign to it.
-
-/* Now to inject a little bit of noise into the activity matrix */
-
-    gsl_rng *randNumGen = create_rng(DEFAULT_SEED);
+	if( numinputneurons == 0 )
+		return( -2 );
 	
-    for( unsigned int i=0; i<activity->size1; i++)
-	for( unsigned int j=0; j<activity->size2; j++)
-		gsl_matrix_set(activity, i, j, gsl_matrix_get(activity, i,j) + 0.00001*gsl_ran_ugaussian(randNumGen));	// we can do smaller values
-
-    dispose_rng(randNumGen);
-
-
-    if( FLAG_useGSAMP )		// If we're GSAMP'ing, do that now.
-    {
-/*	MATLAB CODE:
-	o = gsamp( activity( size(activity,1) - min(500,size(activity,1)) + 1:size(activity,1) ,:)');
-*/
-	int numrows = int(activity->size1);
-	int numcols = int(activity->size2);
-	int beginning_timestep = 0;
-
-//	cout << "size(Activity) = " << activity->size1 << " x " << activity->size2 << endl;
-	// this next line puts a cap on the max number of timesteps to compute complexity over.  
-
-	// If we have a cap on the maximum number of timesteps to compute complexity over, run this:
-	if( MaxNumTimeStepsToComputeComplexityOver > 0 )
-	{
-		if( numrows > MaxNumTimeStepsToComputeComplexityOver )
-			beginning_timestep = numrows - MaxNumTimeStepsToComputeComplexityOver;
-	}
-
-//	cout << "We going to allocate a matrix_view with size: " << activity->size1 - beginning_timestep << " x " << numcols << endl;
-	gsl_matrix_view subset_of_activity = gsl_matrix_submatrix( activity, beginning_timestep, 0, numrows - beginning_timestep , numcols );
-//debug	print_matrix_row( &subset_of_activity.matrix, (&subset_of_activity.matrix)->size1 - 1);
-
-//	cout << "size(subset_of_activity) [before gsamp()] = " << (&subset_of_activity.matrix)->size1 << " x " << (&subset_of_activity.matrix)->size2 << endl;
-
-
-	o = gsamp( subset_of_activity );
-	gsl_matrix_free( activity );
-//	cout << "size(o) = " << o->size1 << " x " << o->size2 << endl;
-//debug	cout << "Array Size = " << array_size << endl;
-//	cout << "Beginning Timestep = " << beginning_timestep << endl;
-
-
-      }
-
-
-	// We just calculate the covariance matrix and compute the Complexity of that instead of using the correlation matrix.  It uses less cycles and the results are identical.
-	gsl_matrix * COVwithbias = calcCOV( o );
-	gsl_matrix_free( o );			// don't need this anymore
-
-	gsl_matrix * COV;
-	if( FLAG_subtractBias )
-	{
-		// Now time to through away the bias neuron from the COVwithbias matrix.
-		int numNeurons = COVwithbias->size1 - 1;
-		int Neurons[numNeurons];
-		for( int i=0;i<numNeurons;i++ ) { Neurons[i] = i; }
-		COV = matrix_crosssection( COVwithbias, Neurons, numNeurons );	// no more bias now!
-		gsl_matrix_free( COVwithbias );
-	}
-	else {
-		COV = COVwithbias;
-	}
-
-	int flag_All = 0;
-	int flag_Pro = 0;
-	int flag_Inp = 0;
-	int flag_Beh = 0;
-	int flag_Hea = 0;
+	setGaussianize( FLAG_useGSAMP );
 	
-	int PstartIndex = numinputneurons;
-	int PnumIndex = COV->size1 - numinputneurons;
-	int Pro_id[PnumIndex];
+	int flagAll = 0;
+	int flagPro = 0;
+	int flagInp = 0;
+	int flagBeh = 0;
+	int flagHea = 0;
 	
-	int IstartIndex = 0;
-	int InumIndex = numinputneurons;
-	int Inp_id[InumIndex];
+	int startPro = numinputneurons;
+	int numPro = activity->size2 - numinputneurons;	// size 2 is number of columns == number of neurons
+	int indexPro[numPro];
 	
-	int BstartIndex = numinputneurons;
-	int BnumIndex = numoutputneurons;
-	int Beh_id[BnumIndex];
+	int startInp = 0;
+	int numInp = numinputneurons;
+	int indexInp[numInp];
 	
-	int Hea_id = 1;
+	int startBeh = numinputneurons;
+	int numBeh = numoutputneurons;
+	int indexBeh[numBeh];
 	
-	// store the index of neurons related to the string complexity type
-	int *Com_id = new int[COV->size1];
-	
-	if( numinputneurons == 0 ) {return -2; }
+	int indexHea = 1;
 	
 	for( unsigned int j = 0; j < strlen( part ); j++ )
 	{
 		char complexityType = part[j];
 		
-		
-		switch(toupper(complexityType))
+		switch( toupper( complexityType ) )
 		{
 			case'A':
-				flag_All = 1;
+				flagAll = 1;
 				break;
 			case'P':
-				flag_Pro = 1;
-		
-				for(int i=0; i<PnumIndex; i++ ) { Pro_id[i] = PstartIndex+i; }
+				flagPro = 1;
+				for( int i = 0; i < numPro; i++ )
+					indexPro[i] = startPro + i;
 				break;
 			case'I':
-				flag_Inp = 1;
-			
-				for(int i=0; i<InumIndex; i++ ) { Inp_id[i] = IstartIndex+i; }
+				flagInp = 1;
+				for( int i = 0; i < numInp; i++ )
+					indexInp[i] = startInp + i;
 				break;
 			case'B':
-				flag_Beh = 1;
-				for(int i=0; i<BnumIndex; i++ ) { Beh_id[i] = BstartIndex+i; }
+				flagBeh = 1;
+				for( int i = 0; i < numBeh; i++ )
+					indexBeh[i] = startBeh+i;
 				break;
 			case'H':
-				flag_Hea = 1;
+				flagHea = 1;
 				break;
 			default:
 				fprintf( stderr, "%s: Invalid complexity type (%c)\n",
@@ -264,60 +206,56 @@ double CalcComplexityWithMatrix_brainfunction(gsl_matrix *activity,
 		}
 	}
 		
-	if (flag_All == 1)
+	if (flagAll == 1)
 	{
-		double det = determinant( COV );
-		double I_n = calcI( COV, det );
-		double Complexity = calcC_nm1( COV, I_n );
-		gsl_matrix_free( COV );
-		return Complexity;
+		double complexity = CalcComplexityWithMatrix( activity );
+		return complexity;
 	}
 	
-	int curIndex = 0;
-	if (flag_Inp == 1)
+	// Accumulate the indexes of neurons related to the requested complexity type
+	
+	int columns[activity->size2];	// size 2 is number of columns == number of neurons
+	int numColumns = 0;
+
+	if( flagInp == 1 )
 	{
 		int j = 0;
-		for(int i=curIndex;i<(InumIndex+curIndex);i++) {Com_id[i] = Inp_id[j++];}
-		curIndex = InumIndex + curIndex;
+		for( int i = numColumns; i < numInp; i++ )
+			columns[i] = indexInp[j++];
+		numColumns += numInp;
 	}
 	
-	
-	if (flag_Hea == 1 && flag_Inp == 0)
+	if( flagHea == 1 && flagInp == 0 )
 	{
-	    Com_id[0] = Hea_id;
-		curIndex = 1;
+	    columns[0] = indexHea;
+		numColumns = 1;
 	}
 	
-	if (flag_Pro == 1)
+	if( flagPro == 1 )
 	{
 		
 		int j = 0;
-		for(int i=curIndex;i<(PnumIndex+curIndex);i++){Com_id[i] = Pro_id[j++];}
-		curIndex = PnumIndex+curIndex;
+		for( int i = numColumns; i < (numPro + numColumns); i++ )
+			columns[i] = indexPro[j++];
+		numColumns += numPro;
 		
 	}
 			
-	if (flag_Beh == 1 && flag_Pro == 0)
+	if (flagBeh == 1 && flagPro == 0)
     {
 		int j = 0;
-		for(int i=curIndex;i<(BnumIndex+curIndex);i++) {Com_id[i] = Beh_id[j++];}
-		curIndex = BnumIndex + curIndex;
+		for( int i = numColumns; i < (numBeh + numColumns); i++)
+			columns[i] = indexBeh[j++];
+		numColumns += numBeh;
 	}
 	
-	int numCom = curIndex;
-
-	gsl_matrix * Xed_COV = matrix_crosssection( COV, Com_id, numCom );
-	gsl_matrix_free( COV );
+	gsl_matrix* subset = matrix_subset_col( activity, columns, numColumns );
 	
-	double det = determinant( Xed_COV );
-	double I_n = calcI( Xed_COV, det );
-	float Cplx_Com = calcC_nm1( Xed_COV, I_n );
+	double complexity = CalcComplexityWithMatrix( subset );
 	
-	gsl_matrix_free( Xed_COV );
+	gsl_matrix_free( subset );
 	
-	delete[] Com_id;
-	Com_id = NULL;
-	return Cplx_Com;				
+	return complexity;				
 }
 
 
@@ -556,151 +494,21 @@ gsl_matrix * readin_brainanatomy( const char* fname )
 //---------------------------------------------------------------------------
 // readin_brainfunction
 //---------------------------------------------------------------------------
-gsl_matrix * readin_brainfunction( const char* fname, int& numinputneurons )
+gsl_matrix * readin_brainfunction(const char* fname,
+								  int ignore_timesteps_after,
+								  int max_timesteps,
+								  long *agent_number,
+								  long *lifespan,
+								  long *num_neurons,
+								  long *num_ineurons,
+								  long *num_oneurons)
 {
-/* This function largely replicates the function of the MATLAB file readin_brainfunction.m (Calculates, but does not return filnum, fitness) */
-
-/* MATLAB CODE:
-        % strip fnames of spaces at the end
-        fname = fname(fname~=' ');                      // We don't need to do this.
-
-        % open file
-        fid = fopen(fname,'r');
-        if (fid==-1) fname = fname(1:end-1); fid = fopen(fname,'r'); end;
-*/
-
-	FILE * FunctionFile;
-	if( (FunctionFile = fopen(fname, "rt")) == NULL )
-	{
-		cerr << "Could not open file '" << fname << "' for reading. -- Terminating." << endl;
-		exit(1);
-	}
-
-	fseek( FunctionFile, 0, SEEK_END );
-	int filesize = ftell( FunctionFile );
-//	cout << "filesize = " << filesize << endl;
-	rewind( FunctionFile );
-
-/* MATLAB CODE: 
-        % read first line
-        tline = fgetl(fid);
-        % readin filenumber and cijsize
-        params = tline(15:length(tline));
-        [params] = str3num(params);
-        filnum = params(1);
-        numneu = params(2);
-*/
-	char tline[100];
-	fgets( tline, 100, FunctionFile );
-
-	string params = tline;
-	params = params.substr(14, params.length());
-
-	string filnum = params.substr( 0, params.find(" ",0));				//filnum actually isn't used anywhere
-	params.erase( 0, params.find(" ",0)+1 );						//Remove the filnum
-
-	string numneu = params.substr( 0 , params.find(" ",0) );
-	params.erase( 0, params.find(" ",0)+1 );						//Remove the numneu
-
-	numinputneurons = atoi( (params.substr(0,params.find(" ",0))).c_str() );
-
-//	cout << "filnum = " << filnum << endl;
-//	cout << "numneu = " << numneu << endl;
-//	cout << "numinputneurons = " << numinputneurons << endl;
-
-/* MATLAB CODE:
-        % start reading in the timesteps
-        nextl = fgetl(fid);
-        tstep = str2num(nextl);  tcnt = 1;
-        while ~isempty(tstep)
-                activity(tstep(1)+1,ceil(tcnt/numneu)) = tstep(2);
-                tcnt = tcnt+1;
-        nextl = fgetl(fid);
-        tstep = str2num(nextl);
-        end;
-*/
-
-	list<string> FileContents;
-
-	char nextl[200];
-	while( ftell(FunctionFile) < filesize )
-	{
-		fgets( nextl, 200, FunctionFile );      // get the next line
-		FileContents.push_back( nextl );
-	}
-
-	fclose( FunctionFile );                         // Don't need this anymore.
-
-	// We'll use this in the next MATLAB CODE Section
-	string LastLine = FileContents.back();
-	// End we'll use this later in the next MATLAB CODE Section
-
-	FileContents.pop_back();                        // get rid of the last line.
-
-	int numrows = atoi(numneu.c_str());
-	int numcols = int(round( FileContents.size() / numrows ));      // the minus 1 ignores the last line of the file
-
-//DEBUG	cout << "num rows = " << numrows;
-//DEBUG	cout << "num cols = " << numcols;
-
-
-	gsl_matrix * activity = gsl_matrix_alloc(numrows, numcols);
-
-	int tcnt=0;
-
-	list<string>::iterator FileContents_it;
-	for( FileContents_it = FileContents.begin(); FileContents_it != FileContents.end(); FileContents_it++)
-	{
-		int    tstep1 = atoi( ((*FileContents_it).substr( 0, (*FileContents_it).find(" ",0))).c_str() );
-		double tstep2 = atof( ((*FileContents_it).substr( (*FileContents_it).find(" ",0), (*FileContents_it).length())).c_str() );
-
-		//Recall that numrows = int(numneu), and that gsl_matrices start with zero, not 1.
-		gsl_matrix_set( activity, tstep1, tcnt/numrows, tstep2);
-		tcnt++;
-	}
-
-
-/* MATLAB CODE:
-        fitness = str2num(nextl(15:end));
-        eval(['save M',fname,'.mat']);
-        fclose(fid);
-        Mname = ['M',fname,'.mat'];
-*/
-
-//	fitness may be useful later, but right now it's not.
-//	float fitness = atof( LastLine.substr( 14, LastLine.length()).c_str() );		// Nothing uses this.
-
-	return activity;
-}
-
-
-//---------------------------------------------------------------------------
-// readin_brainfunction__optimized
-//---------------------------------------------------------------------------
-gsl_matrix * readin_brainfunction__optimized(const char* fname,
-											 int ignore_timesteps_after,
-											 long *agent_number,
-											 long *lifespan,
-											 long *num_neurons,
-											 long *num_ineurons,
-											 long *num_oneurons)
-{
-/* This function largely replicates the function of the MATLAB file
-   readin_brainfunction.m (Calculates, but does not return filnum,
-   fitness).  This function has also been extended to take a parameter
-   that calculates complexity only over the first 'ignore_timesteps_after'
-   of an agent's lifetime.
-*/
+	long numneur;
+	long numineur;
+	long numoneur;
+	
+// 	printf( "\nmax_timesteps = %d\n", max_timesteps );
 	assert( ignore_timesteps_after >= 0 );		// just to be safe.
-
-/* MATLAB CODE:
-        % strip fnames of spaces at the end
-        fname = fname(fname~=' ');                      // We don't need to do this.
-
-        % open file
-        fid = fopen(fname,'r');
-        if (fid==-1) fname = fname(1:end-1); fid = fopen(fname,'r'); end;
-*/
 
 	AbstractFile *FunctionFile;
 	if( (FunctionFile = AbstractFile::open(fname, "r")) == NULL )
@@ -709,19 +517,8 @@ gsl_matrix * readin_brainfunction__optimized(const char* fname,
 		exit(1);
 	}
 
-
-/* MATLAB CODE: 
-        % read first line
-        tline = fgetl(fid);
-        % readin filenumber and cijsize
-        params = tline(15:length(tline));
-        [params] = str3num(params);
-        filnum = params(1);
-        numneu = params(2);
-*/
 	char tline[100];
 	FunctionFile->gets( tline, 100 );
-	//cout << "First Line: " << tline << " // Length: " << strlen(tline) << endl;
 
 	int version;
 	if( 0 != strncmp(tline, "version ", 8) )
@@ -741,133 +538,132 @@ gsl_matrix * readin_brainfunction__optimized(const char* fname,
 	string params = tline;
 	params = params.substr(14, params.length());
 
-	string agentNum = params.substr( 0, params.find(" ",0));
-	params.erase( 0, params.find(" ",0)+1 );						//Remove the agentNum
-	if(agent_number) *agent_number = atoi(agentNum.c_str());
+	size_t indexSpace = params.find( " ", 0 );
+	string agentNum = params.substr( 0, indexSpace );
+	params.erase( 0, indexSpace + 1 );						//Remove the agentNum
+	if( agent_number )
+		*agent_number = atoi( agentNum.c_str() );
 
-	string numneu = params.substr( 0 , params.find(" ",0) );
-	params.erase( 0, params.find(" ",0)+1 );						//Remove the numneu
-	if(num_neurons) *num_neurons = atoi(numneu.c_str());
+	indexSpace = params.find( " ", 0 );
+	string numneu = params.substr( 0 , indexSpace );
+	params.erase( 0, indexSpace + 1 );						//Remove the numneu
+	numneur = atoi( numneu.c_str() );
+	if( num_neurons )
+		*num_neurons = numneur;
 
-	string numineu = params.substr(0,params.find(" ",0));
-	params.erase( 0, params.find(" ",0)+1 );						//Remove the numineu
-	if(num_ineurons) *num_ineurons = atoi(numineu.c_str());
+	indexSpace = params.find( " ", 0 );
+	string numineu = params.substr( 0, indexSpace );
+	params.erase( 0, indexSpace + 1 );						//Remove the numineu
+	numineur = atoi( numineu.c_str() );
+	if( num_ineurons )
+		*num_ineurons = numineur;
 
-	if(num_oneurons)
+	if( version == 0 )
 	{
-		if( version == 0 )
-		{
-			*num_oneurons = 7;
-		}
-		else
-		{
-			string numoneu = params.substr(0,params.find(" ",0));
-			params.erase( 0, params.find(" ",0)+1 );			//Remove the numoneu
-			*num_oneurons = atoi(numoneu.c_str());
-		}
+		numoneur = 7;
 	}
+	else
+	{
+		indexSpace = params.find( " ", 0 );
+		string numoneu = params.substr( 0, indexSpace );
+		params.erase( 0, indexSpace + 1 );					//Remove the numoneu
+		numoneur = atoi( numoneu.c_str() );
+	}
+	if( num_oneurons )
+		*num_oneurons = numoneur;
 	
-/* MATLAB CODE:
-        % start reading in the timesteps
-        nextl = fgetl(fid);
-        tstep = str2num(nextl);  tcnt = 1;
-        while ~isempty(tstep)
-                activity(tstep(1)+1,ceil(tcnt/numneu)) = tstep(2);
-                tcnt = tcnt+1;
-        nextl = fgetl(fid);
-        tstep = str2num(nextl);
-        end;
-*/
-
-	list<string> FileContents;
+	vector<string> FileContents;
 
 	char nextl[200];
 	while( FunctionFile->gets(nextl, 200) )	// returns null when at end of file
-	{
 		FileContents.push_back( nextl );
-	}
 
-	delete FunctionFile;                         // Don't need this anymore.
+	delete FunctionFile;					// Don't need this anymore.
 
-	int numcols = atoi(numneu.c_str());
+	int numcols = numneur;
 
-	if( FileContents.size() % numcols )		// This will be true anytime we are dealing with a complete brainfunction file.  It will FAIL to be true if we processing an incomplete brainfunction file.
-	{
-		FileContents.pop_back();                        // get rid of the last line (in complete files, it's useless).
-	}
+	if( FileContents.size() % numcols )	// true iff we are dealing with a complete brainfunction file
+		FileContents.pop_back();		// get rid of the last line (in complete files, it's fitness).
 	
+	int numrows = int( round( FileContents.size() / numcols ) );
+	if( lifespan )
+		*lifespan = numrows;
 
-	int numrows = int(round( FileContents.size() / numcols ));
-	if(lifespan) *lifespan = numrows;
-
-	if( numcols == *num_ineurons ) { *num_ineurons = 0; }	// make sure there was a num_ineurons
+	// bogus? if( numcols == *num_ineurons ) { *num_ineurons = 0; }	// make sure there was a num_ineurons
 
 	if( (float(numrows) - (FileContents.size() / numcols)) != 0.0 )
 	{
 		cerr << "Warning: #lines (" << FileContents.size() << ") in brainFunction file '" << fname << "' is not an even multiple of #neurons (" << numcols << ").  brainFunction file may be corrupt." << endl;
 	}
 
-	if( ignore_timesteps_after > 0 ) 	// if we are only looking at the first N timestep's of an agent's life...
+	if( ignore_timesteps_after > 0 ) 	// if we are only looking at the first N timesteps of an agent's life...
 	{
 		numrows = min( numrows, ignore_timesteps_after ); //
-		ignore_timesteps_after = min( numrows, ignore_timesteps_after ); //If ignore_timesteps is too big, make it small.
+		ignore_timesteps_after = numrows; //If ignore_timesteps is too big, make it small.
 	}
+	
+	if( max_timesteps > 0 )	// if we are only looking at last max_timesteps of an agent's life
+	{
+		numrows = min( numrows, max_timesteps );
+		max_timesteps = numrows;
+	}
+// 	printf( "numrows = %d\n", numrows );
 
 	gsl_matrix * activity = NULL;
 
 	// Make sure the matrix isn't invalid.  If it is, return NULL.
 	if( numcols <= 0 || numrows <= 0)
 	{
-//		cerr << "brainFunction file '" << fname << "' is corrupt.  Number of columns is zero." << endl;
+		cerr << "brainFunction file '" << fname << "' is corrupt; numcols=" << numcols << ", numrows=" << numrows << endl;
 		activity = NULL;
 		return activity;
 	}
 
-	assert( numcols > 0 && numrows > 0 );		// double checking that we're not going to allocate an impossible matrix.
-	activity = gsl_matrix_alloc(numrows, numcols);
+	activity = gsl_matrix_alloc( numrows, numcols );
 
-	int tcnt=0;
+	int tcnt = 0;
 
-	list<string>::iterator FileContents_it;
-
-	// For efficiency, we have a DIFFERENT FOR LOOP depending on whether ignore_timesteps_after is set.
-	if( ignore_timesteps_after == 0 )	// read in the entire agent's lifetime
-	{
-		for( FileContents_it = FileContents.begin(); FileContents_it != FileContents.end(); FileContents_it++)
-		{
-			int thespace = (*FileContents_it).find(" ",0);
-			int    tstep1 = atoi( ((*FileContents_it).substr( 0, thespace)).c_str() );
-			double  tstep2 = atof( ((*FileContents_it).substr( thespace, (*FileContents_it).length())).c_str() );
+	vector<string>::iterator FileContents_it;
+	vector<string>::iterator FileContents_begin;
+	vector<string>::iterator FileContents_end;
 	
-			gsl_matrix_set( activity, int(tcnt/numcols), tstep1, tstep2);
-//			cout << "set (" << int(tcnt/numcols) << "," << tstep1 << ") to " << tstep2 << " Matrix Size: " << numrows << "x" << numcols << "||| thespace = " << thespace << endl;
-			tcnt++;
-		}
-	}
-	else	// read in the agent's lifetime only up until ignore_timesteps_after
+	FileContents_begin = FileContents.begin();
+	if( ignore_timesteps_after > 0 )
+		FileContents_end = FileContents_begin  +  ignore_timesteps_after * numneur;
+	else
+		FileContents_end = FileContents.end();
+	if( max_timesteps > 0 && max_timesteps < (FileContents_end - FileContents_begin) )
+		FileContents_begin = FileContents_end  -  max_timesteps * numneur;
+
+#define DebugReadBrainFunction 0
+#if DebugReadBrainFunction
+	static int fileCount = 0;
+	fileCount++;
+	char debugFilename[256];
+	sprintf( debugFilename, "matrix_%d.txt", fileCount );
+	FILE* debugFile = fopen( debugFilename, "w" );
+	fprintf( debugFile, "Matrix size = %d rows x %d columns\n", numrows, numcols );
+	fprintf( debugFile, "Original numLines = %lu\n", (unsigned long) (FileContents.end() - FileContents.begin()) );
+	fprintf( debugFile, "firstLine = %lu\n", (unsigned long) (FileContents_begin - FileContents.begin() + 1) );
+	fprintf( debugFile, "numLines = %lu\n", (unsigned long) (FileContents_end - FileContents_begin) );
+#endif
+
+	for( FileContents_it = FileContents_begin; FileContents_it != FileContents_end; FileContents_it++ )
 	{
-		for( FileContents_it = FileContents.begin(); int(tcnt/numcols) < ignore_timesteps_after; FileContents_it++)
-		{
-			int thespace = (*FileContents_it).find(" ",0);
-			int    tstep1 = atoi( ((*FileContents_it).substr( 0, thespace)).c_str() );
-			double  tstep2 = atof( ((*FileContents_it).substr( thespace, (*FileContents_it).length())).c_str() );
-	
-			gsl_matrix_set( activity, int(tcnt/numcols), tstep1, tstep2);
-//			cout << "set (" << int(tcnt/numcols) << "," << tstep1 << ") to " << tstep2 << " Matrix Size: " << numrows << "x" << numcols << "||| thespace = " << thespace << endl;
-			tcnt++;
-		}
+		int thespace = (*FileContents_it).find( " ", 0 );
+		int    tstep1 = atoi( ((*FileContents_it).substr( 0, thespace )).c_str() );
+		double  tstep2 = atof( ((*FileContents_it).substr( thespace, (*FileContents_it).length() )).c_str() );
 
-
-
+		gsl_matrix_set( activity, int(tcnt/numcols), tstep1, tstep2);
+#if DebugReadBrainFunction
+		fprintf( debugFile, "set row=%d, col=%d = %g\n", int(tcnt/numcols), tstep1, tstep2 );
+#endif
+		tcnt++;
 	}
-/* MATLAB CODE:
-        fitness = str2num(nextl(15:end));
-        eval(['save M',fname,'.mat']);
-        fclose(fid);
-        Mname = ['M',fname,'.mat'];
-*/
 
-
+#if DebugReadBrainFunction
+	fclose( debugFile );
+#endif
 	return activity;
 }
 

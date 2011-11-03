@@ -15,7 +15,7 @@
 // but the old code used log, the natural logarithm, so c_log has been
 // invented to make it easy to provide backward compatibility (which
 // would correspond to making c_log equal to log instead of log2).
-#define c_log log2
+#define c_log log
 
 #define DebugCalcC_k false
 
@@ -55,6 +55,7 @@ gsl_rng *create_rng( int seed )
 	return rng;
 }
 
+
 //---------------------------------------------------------------------------
 // dispose_rng()
 //
@@ -66,42 +67,27 @@ void dispose_rng( gsl_rng *rng )
 }
 
 
-int qsort_compare_double( const void* a, const void* b )
+//---------------------------------------------------------------------------
+// sort_compare_double()
+//
+// Sorts a one-dimensional (or higher) array of doubles in ascending order
+// by the only (or first) element in the array
+//---------------------------------------------------------------------------
+int sort_compare_double( const void* a, const void* b )
 {
 	if( *(double*)a < *(double*)b )
 		return -1;
-	else if( *(double*)a == *(double*)b )
-		return 0;
-	else
+	else if( *(double*)a > *(double*)b )
 		return 1;
+	else
+		return 0;
 }
 
-int qsort_compare_rows0( const void* a, const void* b )
-{
-	// Sorts gsl_vectors in ascending order by their first entry (entry 0)
-	if(  gsl_vector_get( *(gsl_vector**)a, 0 )  <  gsl_vector_get( *(gsl_vector**)b, 0 )  )
-		return -1;
-	else if( gsl_vector_get( *(gsl_vector**)a, 0 ) == gsl_vector_get( *(gsl_vector**)b, 0 ) )
-		return 0;
-	else
-		return 1;
-}
-
-int qsort_compare_rows1( const void* a, const void* b )
-{
-	// Sorts gsl_vectors in ascending order by their second entry (entry 1)
-	if(  gsl_vector_get( *(gsl_vector**)a, 1 )  <  gsl_vector_get( *(gsl_vector**)b, 1 )  )
-		return -1;
-	else if( gsl_vector_get( *(gsl_vector**)a, 1 ) == gsl_vector_get( *(gsl_vector**)b, 1 ) )
-		return 0;
-	else
-		return 1;
-}
 
 //---------------------------------------------------------------------------
 // gsamp() function, a re-implementation of gsamp.m
 // 
-// Description: Creates a timeseries with same rank order as the input but with Gaussian amp.
+// Description: Creates a Gaussian timeseries with same rank order as the input matrix
 // 
 // Note: For efficiency, this gsamp() function is slightly different from gsamp.m.
 // It receives a tranpose and outputs a transpose of the matrix received/outputted
@@ -109,10 +95,10 @@ int qsort_compare_rows1( const void* a, const void* b )
 // 	 MATLAB: B' = gsamp(A')
 // 	    C++: B  = gsamp(A)
 //---------------------------------------------------------------------------
-gsl_matrix* gsamp( gsl_matrix_view x )
+gsl_matrix* gsamp( gsl_matrix* m )
 {
-	int r = (&x.matrix)->size1;
-	int c = (&x.matrix)->size2;
+	int r = m->size1;
+	int c = m->size2;
 
 	if( r < c )
 	{
@@ -120,64 +106,42 @@ gsl_matrix* gsamp( gsl_matrix_view x )
 		exit(1);
 	}
 
-	int n  = (&x.matrix)->size1;
-	int cc = (&x.matrix)->size2;
-
-	gsl_matrix* y = gsl_matrix_calloc( n, cc );
-
-	// create a gaussian timeseries with the same rank-order of x
 	gsl_rng *randNumGen = create_rng( DEFAULT_SEED );
+
+	gsl_matrix* mOut = gsl_matrix_alloc( r, c );	// the return matrix we create
 	
-	// this is nessecary for switching the columns around among the x, z, and y matrices
-	gsl_vector * tempcol = gsl_vector_alloc( n );
-
-	for( int i = 0; i < cc; i++ )
+	double data[r][2];	// array of structs to do the sorting (raw data, indexes)
+	double gauss[r];
+	
+	// replace each column (neuron) of raw data with equivalent rank-ordered Gaussian series
+	for( int j = 0; j < c; j++ )
 	{
-		gsl_matrix* z = gsl_matrix_calloc( n, 3 );
+		// put the original, raw data into the first element of data
+		// and the index into the second element of data
+		for( int i = 0; i < r; i++ )
+		{
+			data[i][0] = gsl_matrix_get( m, i, j );
+			data[i][1] = i;
+		}
 
-		double gs[n]; for( int j = 0; j < n; j++ ) { gs[j] = gsl_ran_ugaussian(randNumGen); }
-		qsort( gs, n, sizeof(double), qsort_compare_double);
+		// sort data based on the data (first element), which also shuffles indexes
+		mergesort( data, r, 2*sizeof(double), sort_compare_double );
+		
+		// create a random Gaussian series and sort it
+		for( int i = 0; i < r; i++ )
+			gauss[i] = gsl_ran_ugaussian( randNumGen );
+			
+		mergesort( gauss, r, sizeof(double), sort_compare_double );
 
-		gsl_matrix_get_col( tempcol, &x.matrix, i );		// get i'th column of X
-		gsl_matrix_set_col( z, 0, tempcol );				// put i'th column of X into z's first column
-
-		// there may be an error here.  In Matlab it's supposed to be [1:n], but this is [0:n-1]
-		for( int j = 1; j <= n; j++ )
-			gsl_matrix_set( z, j-1, 1, j );
-
-		// now we must sort the rows of z by the first (0th) column.  First must pull out all of the rows, and put them into an array of vectors.
-		gsl_vector * zrows[n];
- 		for( int j = 0; j < n; j++ ) { zrows[j] = gsl_vector_calloc(3); }		// all rows are initially zero.
-
-		for( int j = 0; j < n; j++ ) { gsl_matrix_get_row( zrows[j], z, j ); }	// get the rows
-		qsort( zrows, n, sizeof(zrows[0]), qsort_compare_rows0 );			// sort the rows by column 0
-		for( int j = 0; j < n; j++ ) { gsl_matrix_set_row( z, j, zrows[j] ); }	// overwrite z with the sorted rows
-
-		for( int j = 0; j < n; j++ ) { gsl_matrix_set( z, j, 2, gs[j] ); }		// z(:,3) = gs;
-
-		// now we must sort matrix z by the second (1'th) column.  As before, pull out all of the rows, call qsort, them put them back in.
-		for( int j = 0; j < n; j++ ) { gsl_matrix_get_row( zrows[j], z, j ); }	// get the rows
-		qsort( zrows, n, sizeof(zrows[0]), qsort_compare_rows1 );		// sort the rows by column 1
-		for( int j = 0; j < n; j++ ) { gsl_matrix_set_row( z, j, zrows[j] ); }	// overwrite z with the sorted rows
-
-		for( int j = 0; j < n; j++ ) { gsl_vector_free( zrows[j] ); }		// done with the temp sorting rows.  set them free.
-
-		gsl_matrix_get_col( tempcol, z, 2);		// get column 2 from matrix 'z'...
-		gsl_matrix_set_col( y, i, tempcol );	// and put the 2nd column of 'z' into the i'th column of matrix 'y'
-
-		gsl_matrix_free( z );			// we're done with our temp matrix z now.
+		// store the rank-ordered Gaussian series in the current column of new matrix mOut
+		// using the shuffled indexes to restore original series data order
+		for( int i = 0; i < r; i++ )
+			gsl_matrix_set( mOut, (int)round(data[i][1]), j, gauss[i] );	// round() is only to be safe
 	}
-	gsl_vector_free( tempcol );
-
+	
 	dispose_rng( randNumGen );
 
-	if( r < c )
-	{
-		cout << "end of gsamp(): r < c -- this should be impossible." << endl;
-		exit(1);
-	}
-
-	return y;
+	return( mOut );
 }
 
 
@@ -320,6 +284,33 @@ gsl_matrix* matrix_crosssection( gsl_matrix* mInput, int* indexArray, int indexA
 }
 
 
+//---------------------------------------------------------------------------
+// matrix_subset_col() takes 3 arguments:
+// 	1. The input matrix.
+// 	2. The array of column indexes you wish to retain (must be in ascending order).
+// 	   All values in the array must be between [0,N-1] where N is the number of
+//     columns in the input matrix (->size2).
+// 	3. The length of array from #2
+// 
+// 	The returned matrix will be of size mInput->size1 x numColumns.
+//---------------------------------------------------------------------------
+gsl_matrix* matrix_subset_col( gsl_matrix* mInput, int* columns, int numColumns )
+{
+	gsl_matrix* mOutput = gsl_matrix_alloc( mInput->size1, numColumns );
+	gsl_vector* column = gsl_vector_alloc( mInput->size1 );
+
+	for( int col = 0; col < numColumns; col++ )
+	{
+		gsl_matrix_get_col( column, mInput, columns[col] );
+		gsl_matrix_set_col( mOutput, col, column );
+	}
+	
+	gsl_vector_free( column );
+
+	return mOutput;
+}
+
+
 double determinant( gsl_matrix* m )
 {
 	int n = m->size1;
@@ -387,7 +378,6 @@ double calcC_k( gsl_matrix* COV, double I_n, int k )
 	int indexes[k];
 	double EI_k = 0.0;
 	
-	// printf( "---- n=%d, k=%d, s=%d ----\n", n, k, NumSamples );
 	for( int i = 0; i < NumSamples; i++ )
 	{
 		// Choose a random subset of size k out of the n random variables
@@ -402,8 +392,6 @@ double calcC_k( gsl_matrix* COV, double I_n, int k )
 		}
 		
 		EI_k += calcI_k( COV, indexes, k );
-		
-		// printf( "%d: EI_%d = %g\n", i, k, EI_k / (i+1) );
 	}
 	
 	dispose_rng( randNumGen );
@@ -509,9 +497,12 @@ double CalcApproximateFullComplexityWithMatrix( gsl_matrix* data, int numPoints 
 	
     // if have an invalid matrix return 0.
     if( data == NULL )
+    {
+    	fprintf( stderr, "\n%s passed NULL data matrix\n", __func__ );
     	return complexity;
-
-    gsl_matrix* o = data;
+	}
+	
+    gsl_matrix* o = NULL;
 
 	// Inject a little bit of noise into the data matrix
 	gsl_rng *randNumGen = create_rng( DEFAULT_SEED );
@@ -524,14 +515,10 @@ double CalcApproximateFullComplexityWithMatrix( gsl_matrix* data, int numPoints 
 	
 	// If we're GSAMP'ing, do that now.
     if( Gaussianize )
-    {
-		size_t numrows = data->size1;
-		size_t numcols = data->size2;
-	
-		// convert to gsl_matrix_view only for compatibility with gsamp()'s use in other complexity modules
-		gsl_matrix_view data_view = gsl_matrix_submatrix( data, 0, 0, numrows, numcols );
-		o = gsamp( data_view );	// allocates and returns new gsl_matrix
-	}
+		o = gsamp( data );	// allocates and returns new gsl_matrix
+	else
+	    o = data;
+
 	
 	// We calculate the covariance matrix and use it to compute Complexity.
 	gsl_matrix* COV = calcCOV( o );
@@ -559,7 +546,7 @@ double CalcApproximateFullComplexityWithMatrix( gsl_matrix* data, int numPoints 
 		calcC_k_print( "----- n=%ld, np=%d, dk=%g -----\n", n, numPoints, delta_k );
 		
 		// The zero term, C_k where k = 0, is always 0.0.
-		calcC_k_print( "%d: C_%d = %g, dk = %d, dc = %g, c = %g\n", 0, 0, 0.0, 0, 0.0, 0.0 );
+		calcC_k_print( "%d: I_%d = %g, C_%d = %g, dk = %d, dc = %g, c = %g\n", 0, 0, 0.0, 0, 0.0, 0, 0.0, 0.0 );
 		
 		// The first non-zero term, C_k where k = 1, has zero EI_k, so is purely determined by I_n / n.
 		// It contributes to the integral through the initial triangular area defined by it and the k=0 term.
@@ -568,7 +555,7 @@ double CalcApproximateFullComplexityWithMatrix( gsl_matrix* data, int numPoints 
 		double c_k = I_n / n;						// first non-zero term (c_1)
 		double delta_c = dk * 0.5 * c_k;			// area of left-most triangle
 		complexity = delta_c;
-		calcC_k_print( "%d: C_%d = %g, dk = %d, dc = %g, c = %g\n", 1, k, c_k, dk, complexity, complexity );
+		calcC_k_print( "%d: I_%d = %g, C_%d = %g, dk = %d, dc = %g, c = %g\n", 1, k, I_n/n, k, c_k, dk, complexity, complexity );
 		
 		// The second through (n-2) terms, C_k where k = 2,...,n-2, must be calculated from LI_k - EI_k.
 		// Each term is integrated into C via a quadrilateral area between the current and previous points.
@@ -585,7 +572,7 @@ double CalcApproximateFullComplexityWithMatrix( gsl_matrix* data, int numPoints 
 			dk = k - k_prev;
 			delta_c = dk * 0.5 * (c_k + c_prev);	// area of next quadrilateral
 			complexity += delta_c;
-			calcC_k_print( "%d: C_%d = %g, dk = %d, dc = %g, c = %g\n", i, k, c_k, dk, delta_c, complexity );
+			calcC_k_print( "%d: I_%d = %g, C_%d = %g, dk = %d, dc = %g, c = %g\n", i, k, I_n*i/n, k, c_k, dk, delta_c, complexity );
 			k_prev = k;
 			c_prev = c_k;
 		}
@@ -597,7 +584,7 @@ double CalcApproximateFullComplexityWithMatrix( gsl_matrix* data, int numPoints 
 		c_k = calcC_nm1( COV, I_n );				// last non-zero term (c_nm1) (nm1 == n-1)
 		delta_c = dk * 0.5 * (c_k + c_prev);		// area of final quadrilateral
 		complexity += delta_c;
-		calcC_k_print( "%d: C_%d = %g, dk = %d, dc = %g, c = %g\n", numPoints, k, c_k, dk, delta_c, complexity );
+		calcC_k_print( "%d: I_%d = %g, C_%d = %g, dk = %d, dc = %g, c = %g\n", numPoints, k, I_n*(n-1)/n, k, c_k, dk, delta_c, complexity );
 		k_prev = k;
 		c_prev = c_k;
 		
@@ -608,7 +595,7 @@ double CalcApproximateFullComplexityWithMatrix( gsl_matrix* data, int numPoints 
 		dk = k - k_prev;
 		delta_c = dk * 0.5 * (c_k + c_prev);		// area of right-most triangle
 		complexity += delta_c;
-		calcC_k_print( "%d: C_%d = %g, dk = %d, dc = %g, c = %g\n", numPoints+1, k, c_k, dk, delta_c, complexity );
+		calcC_k_print( "%d: I_%d = %g, C_%d = %g, dk = %d, dc = %g, c = %g\n", numPoints+1, k, I_n, k, c_k, dk, delta_c, complexity );
 		complexity /= n;	// based on Olbrich et al 2008, How should complexity scale with system size?, Eur. Phys. J. B
 	}
 

@@ -74,9 +74,9 @@ double CalcComplexityWithMatrix_brainfunction(gsl_matrix *matrix,
 std::vector<std::string> get_list_of_brainfunction_logfiles( std::string );
 std::vector<std::string> get_list_of_brainanatomy_logfiles( std::string );
 
-gsl_matrix * readin_brainfunction( const char* , int& );
-gsl_matrix * readin_brainfunction__optimized(const char *path,
+gsl_matrix * readin_brainfunction(const char *path,
 											 int ignore_timesteps_after,
+											 int max_timestapes,
 											 long *agent_number,
 											 long *lifespan,
 											 long *num_neurons,

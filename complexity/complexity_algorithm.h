@@ -26,6 +26,7 @@ void print_matrix_row(gsl_matrix*, int );
 void print_matrix_column(gsl_matrix*, int );
 bool is_matrix_square( gsl_matrix* );
 gsl_matrix* matrix_crosssection( gsl_matrix* m, int[], int );
+gsl_matrix* matrix_subset_col( gsl_matrix* mInput, int* columns, int numColumns );
 
 double determinant( gsl_matrix* );
 double calcI( gsl_matrix* COV, double det );
@@ -40,7 +41,6 @@ void rescaleCOV( gsl_matrix* COV, double det );
 gsl_matrix* gsamp( gsl_matrix_view x );
 int qsort_compare_double( const void *a, const void *b );
 int qsort_compare_rows0( const void *a, const void *b );
-int qsort_compare_rows1( const void *a, const void *b );
 
 double CalcComplexityWithMatrix( gsl_matrix* data );
 double CalcComplexityWithVector( gsl_vector* vector, size_t blockDuration, size_t blockOffset );
