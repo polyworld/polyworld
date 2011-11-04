@@ -73,6 +73,7 @@ CalcComplexity_brainfunction_result *
 		double Complexity = CalcComplexity_brainfunction(parm->path,
 								 parm->parts,
 								 parm->ignore_timesteps_after,
+								 parm->num_points,
 								 result->agent_number + iparm,
 								 result->lifespan + iparm,
 								 result->num_neurons + iparm);
@@ -99,6 +100,7 @@ CalcComplexity_brainfunction_result *
 double CalcComplexity_brainfunction(const char *fnameAct,
 				    const char *part,
 				    int ignore_timesteps_after,
+				    int num_points,
 				    long *agent_number,
 				    long *lifespan,
 				    long *num_neurons)
@@ -133,6 +135,7 @@ double CalcComplexity_brainfunction(const char *fnameAct,
 
 	return CalcComplexityWithMatrix_brainfunction(activity,
 												  part,
+												  num_points,
 												  numinputneurons,
 												  numoutputneurons);
 	
@@ -144,6 +147,7 @@ double CalcComplexity_brainfunction(const char *fnameAct,
 //---------------------------------------------------------------------------
 double CalcComplexityWithMatrix_brainfunction(gsl_matrix *activity,
 											  const char *part,
+											  int num_points,
 											  long numinputneurons,
 											  long numoutputneurons)
 {
@@ -208,7 +212,7 @@ double CalcComplexityWithMatrix_brainfunction(gsl_matrix *activity,
 		
 	if (flagAll == 1)
 	{
-		double complexity = CalcComplexityWithMatrix( activity );
+		double complexity = CalcApproximateFullComplexityWithMatrix( activity, num_points );
 		return complexity;
 	}
 	
@@ -251,7 +255,7 @@ double CalcComplexityWithMatrix_brainfunction(gsl_matrix *activity,
 	
 	gsl_matrix* subset = matrix_subset_col( activity, columns, numColumns );
 	
-	double complexity = CalcComplexityWithMatrix( subset );
+	double complexity = CalcApproximateFullComplexityWithMatrix( subset, num_points );
 	
 	gsl_matrix_free( subset );
 	

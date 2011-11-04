@@ -11,6 +11,7 @@ struct CalcComplexity_brainfunction_parms
 	const char *path;
 	const char *parts;
 	int ignore_timesteps_after;
+	int num_points;
 };
 
 class CalcComplexity_brainfunction_result
@@ -63,11 +64,13 @@ CalcComplexity_brainfunction_result *CalcComplexity_brainfunction(CalcComplexity
 double CalcComplexity_brainfunction(const char *path,
 									const char *parts,
 									int ignore_timesteps_after,
+									int num_points,
 									long *agent_number = NULL,
 									long *lifespan = NULL,
 									long *num_neurons = NULL);
 double CalcComplexityWithMatrix_brainfunction(gsl_matrix *matrix,
 											  const char *parts,
+											  int num_points,
 											  long numinputneurons,
 											  long numoutputneurons);
 
