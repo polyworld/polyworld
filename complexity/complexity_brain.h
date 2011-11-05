@@ -68,6 +68,13 @@ double CalcComplexity_brainfunction(const char *path,
 									long *agent_number = NULL,
 									long *lifespan = NULL,
 									long *num_neurons = NULL);
+double CalcComplexity_brainfunction(const char *path,
+									const char *parts,
+									int ignore_timesteps_after,
+									int num_points);
+double CalcComplexity_brainfunction(const char *path,
+									const char *parts,
+									int ignore_timesteps_after);
 double CalcComplexityWithMatrix_brainfunction(gsl_matrix *matrix,
 											  const char *parts,
 											  int num_points,

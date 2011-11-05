@@ -94,6 +94,32 @@ CalcComplexity_brainfunction_result *
 	return result;
 }
 
+
+//---------------------------------------------------------------------------
+// CalcComplexity_brainfunction
+//---------------------------------------------------------------------------
+double CalcComplexity_brainfunction(const char *fnameAct,
+				    const char *part,
+				    int ignore_timesteps_after)
+{
+	return( CalcComplexity_brainfunction( fnameAct, part, ignore_timesteps_after, 1,
+										  NULL, NULL, NULL ) );
+}
+
+
+//---------------------------------------------------------------------------
+// CalcComplexity_brainfunction
+//---------------------------------------------------------------------------
+double CalcComplexity_brainfunction(const char *fnameAct,
+				    const char *part,
+				    int ignore_timesteps_after,
+				    int num_points)
+{
+	return( CalcComplexity_brainfunction( fnameAct, part, ignore_timesteps_after, num_points,
+										  NULL, NULL, NULL ) );
+}
+
+
 //---------------------------------------------------------------------------
 // CalcComplexity_brainfunction
 //---------------------------------------------------------------------------
@@ -105,7 +131,6 @@ double CalcComplexity_brainfunction(const char *fnameAct,
 				    long *lifespan,
 				    long *num_neurons)
 {
-		
 	long numinputneurons = 0;		// this value will be defined by readin_brainfunction()
 	long numoutputneurons = 0;
 	
