@@ -73,7 +73,6 @@ CalcComplexity_brainfunction_result *
 		double Complexity = CalcComplexity_brainfunction(parm->path,
 								 parm->parts,
 								 parm->ignore_timesteps_after,
-								 parm->num_points,
 								 result->agent_number + iparm,
 								 result->lifespan + iparm,
 								 result->num_neurons + iparm);
@@ -100,33 +99,7 @@ CalcComplexity_brainfunction_result *
 //---------------------------------------------------------------------------
 double CalcComplexity_brainfunction(const char *fnameAct,
 				    const char *part,
-				    int ignore_timesteps_after)
-{
-	return( CalcComplexity_brainfunction( fnameAct, part, ignore_timesteps_after, 1,
-										  NULL, NULL, NULL ) );
-}
-
-
-//---------------------------------------------------------------------------
-// CalcComplexity_brainfunction
-//---------------------------------------------------------------------------
-double CalcComplexity_brainfunction(const char *fnameAct,
-				    const char *part,
 				    int ignore_timesteps_after,
-				    int num_points)
-{
-	return( CalcComplexity_brainfunction( fnameAct, part, ignore_timesteps_after, num_points,
-										  NULL, NULL, NULL ) );
-}
-
-
-//---------------------------------------------------------------------------
-// CalcComplexity_brainfunction
-//---------------------------------------------------------------------------
-double CalcComplexity_brainfunction(const char *fnameAct,
-				    const char *part,
-				    int ignore_timesteps_after,
-				    int num_points,
 				    long *agent_number,
 				    long *lifespan,
 				    long *num_neurons)
@@ -160,7 +133,6 @@ double CalcComplexity_brainfunction(const char *fnameAct,
 
 	return CalcComplexityWithMatrix_brainfunction(activity,
 												  part,
-												  num_points,
 												  numinputneurons,
 												  numoutputneurons);
 	
@@ -172,7 +144,6 @@ double CalcComplexity_brainfunction(const char *fnameAct,
 //---------------------------------------------------------------------------
 double CalcComplexityWithMatrix_brainfunction(gsl_matrix *activity,
 											  const char *part,
-											  int num_points,
 											  long numinputneurons,
 											  long numoutputneurons)
 {
@@ -201,8 +172,18 @@ double CalcComplexityWithMatrix_brainfunction(gsl_matrix *activity,
 	
 	int indexHea = 1;
 	
+	int num_points = 1;
+	
 	for( unsigned int j = 0; j < strlen( part ); j++ )
 	{
+		// trailing digits define num_points used for integrating the area between the curves
+		if( isdigit( part[j] ) )
+		{
+			const char* num_points_str = &(part[j]);
+			num_points = atoi( num_points_str );
+			break;
+		}
+		
 		char complexityType = part[j];
 		
 		switch( toupper( complexityType ) )

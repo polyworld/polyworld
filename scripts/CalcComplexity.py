@@ -59,8 +59,7 @@ def main():
 		recent_dirs.append( recent_dir )
 
 	for recent_dir in recent_dirs:
-		analyze_recent_dir(complexities,
-				   recent_dir)
+		analyze_recent_dir(complexities, recent_dir)
 
 	print "Done!"
 	return 0
@@ -111,6 +110,10 @@ def parse_args(argv):
 
 		if opt == 'C':
 			complexities = map(string.upper, value.split(','))
+			for i in range(0,len(complexities)):
+				# strip any trailing single-digit ones
+				if complexities[i][-1] == '1' and not complexities[i][-2].isdigit():
+					complexities[i] = complexities[i][:-1]
 		elif opt == 'l' or opt == 'legacy':
 			if value not in LEGACY_MODES:
 				show_usage('Invalid legacy mode (%s)' % value)
@@ -311,8 +314,7 @@ def compute_complexities(complexities,
 				print "Failed reading ", path, "(", e, ") ... regenerating"
 	
 	    
-	complexities_remaining = list_difference(complexities,
-						 complexities_read)
+	complexities_remaining = list_difference(complexities, complexities_read)
 	
 	print "  AlreadyHave =", complexities_read
 	print "  ComplexitiesToGet =", complexities_remaining
@@ -338,7 +340,7 @@ def compute_complexities(complexities,
 		if proc.returncode != 0:
 			err('Failed executing CalcComplexity, exit=%d' % exitvalue)
 	
-		colnames = ['CritterNumber', 'Complexity']
+		colnames = ['AgentNumber', 'Complexity']
 		coltypes = ['int', 'float']
 		tables = dict([(type, datalib.Table(type, colnames, coltypes))
 			       for type in complexities_remaining])
@@ -346,13 +348,13 @@ def compute_complexities(complexities,
 		# --- Parse the output
 		for line in complexity_all:
 			fields = line.split()
-			critter_number = fields.pop(0)
+			agent_number = fields.pop(0)
 
 			for type in complexities_remaining:
 				table = tables[type]
 				row = table.createRow()
 	
-				row.set('CritterNumber', critter_number)
+				row.set('AgentNumber', agent_number)
 				row.set('Complexity', fields.pop(0))
 	
 		# --- Write to file and normalize data (eg sort and remove 0's)
@@ -456,7 +458,12 @@ OPTIONS
      -C <C>[,<C>]...
                Override default NeuralComplexity types for analysis, where C can
             be a composite of types (e.g. HB). Multiple C specs are separated by
-            commas (e.g. -C P,HB,I).
+            commas (e.g. -C A,P,I,B,H,HB). Appended digits indicate the number
+            of points to use in integrating C between the I(X)(k/N) and <I(X_k)>
+            curves.  A value of zero indicates all points are to be used, thus
+            producing full TSE complexity.  No digits or a value of one
+            indicate just the N-1 point should be used, thus producing the
+            traditional "simplified" TSE complexity.  (E.g., -C A0,P1,HB15.)
             (default %s)
 
      -r <recent_type>
@@ -482,7 +489,7 @@ OPTIONS
      -b, --bins <n>
                Specify number of bins used in histogram calculations.
 	    (default %d)""" % (sys.argv[0],
-			       ','.join(common_complexity.DEFAULT_COMPLEXITIES),
+			       ','.join(map( lambda x: x + '1', common_complexity.DEFAULT_COMPLEXITIES )),
 			       ''.join(map( lambda x: '\n                  ' + x, common_functions.RECENT_TYPES )) ,
 			       DEFAULT_RECENT,
 			       common_complexity.DEFAULT_NUMBINS)

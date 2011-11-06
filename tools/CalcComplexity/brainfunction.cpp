@@ -34,8 +34,7 @@ const char *DEFAULT_PART_COMBOS[5] = {"A","P","I","B","HB"};
 static void show_args(list<string> &files,
 		      int ignore_timesteps_after,
 		      const char **part_combos,
-		      int ncombos,
-		      int num_points);
+		      int ncombos);
 #endif
 
 //---------------------------------------------------------------------------
@@ -52,7 +51,6 @@ int process_brainfunction(int argc, char *argv[])
 	// --- default values
 	bool bare = false;
 	int ignore_timesteps_after = 0;	// calculate complexity over the agent's entire lifetime.
-	int num_points = 1; // calculate comlexity using a single point (aka "simplified TSE")
 
 	// ---
 	// --- Process Command-Line Args
@@ -115,18 +113,6 @@ int process_brainfunction(int argc, char *argv[])
 		consume_arg(argc, argv, argi);
 	}
 	
-	arg = argv[argi];
-	
-	// --- get optional point count for integrating complexity bounding curves
-
-	if( arg == "-p" )
-	{
-		consume_arg( argc, argv, argi );
-		arg = argv[argi];
-		num_points = atoi( arg.c_str() );
-		consume_arg( argc, argv, argi );
-	}
-
 	// --- get optional timestep
 
 	if( argc > 1 && isdigit(argv[argi][0]) )
@@ -153,16 +139,13 @@ int process_brainfunction(int argc, char *argv[])
 	}
 	else
 	{
-		if( isdigit( argv[argc-1][0] ) )
-		{
-			// A final number specifies how many sample points to use in calculating C (default is 1)
-			num_points = atoi( argv[argc-1] );
-			argc--;
-		}
 		for(int i = argi ; i < argc; i++)
 		{
 			for(char *c = argv[i]; *c != 0; c++)
 			{
+				if(isdigit(*c))
+					continue;
+				
 				char C = toupper(*c);
 
 				if(part_names.find(C) == part_names.end())
@@ -186,7 +169,7 @@ int process_brainfunction(int argc, char *argv[])
 		}
 	}
 
-	DEBUG_STMT(show_args(files, ignore_timesteps_after, part_combos, ncombos, num_points));
+	DEBUG_STMT(show_args(files, ignore_timesteps_after, part_combos, ncombos));
 
 	// ---
 	// --- Perform Complexity Calculations
@@ -214,7 +197,6 @@ int process_brainfunction(int argc, char *argv[])
 			_parms->path = path;
 			_parms->parts = part_combos[icombo];
 			_parms->ignore_timesteps_after = ignore_timesteps_after;
-			_parms->num_points = num_points;
 		}
 	}
 
@@ -239,8 +221,7 @@ int process_brainfunction(int argc, char *argv[])
 void show_args(list<string> &files,
 	       int ignore_timesteps_after,
 	       const char **part_combos,
-	       int ncombos,
-	       int num_points)
+	       int ncombos)
 {
 	cout << "files:" << endl;
 	for(list<string>::iterator
@@ -259,8 +240,6 @@ void show_args(list<string> &files,
 	{
 		cout << "  " << part_combos[i] << endl;
 	}
-	
-	cout << "num_points: " << num_points << endl;
 
 }
 #endif

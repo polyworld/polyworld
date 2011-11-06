@@ -54,7 +54,7 @@ def get_names(types):
 ####################################################################################
 def normalize_complexities(data):
     data = map(float, data)
-    # ignore 0.0, since it is a critter that was ignored in the complexity
+    # ignore 0.0, since it is an agent that was ignored in the complexity
     # calculation due to short lifespan.
     #
     # also, must be sorted
