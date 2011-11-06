@@ -1,0 +1,29 @@
+#!/bin/bash
+
+set -e
+
+rundir=${1-run}
+plotdir=$rundir/plots
+
+mkdir -p $plotdir
+
+plot="plot a --noview"
+
+$plot -o $plotdir/contact_sameMetabolism.eps --title "Percent of Contacts with Same Metabolism" --ylabel1 "Percent" metabolism/events.txt Contact Timestep PercentSame $rundir
+$plot -o $plotdir/contactCount_diffMetabolism.eps --title "Number of Contacts with Different Metabolism" --ylabel1 "Number Contacts" metabolism/events.txt Contact Timestep Cd $rundir
+
+$plot -o $plotdir/givecount.eps --title "Give Events per 10k Epoch" --ylabel1 "Give Events" events/contacts_total.txt separations_G T total $rundir
+$plot -o $plotdir/givebias_genomicDistance.eps --title "Bias to Give to Nearest Distance Bins (>1 = bias to near)" --ylabel1 "Bias" events/contacts_bias_nearfar.txt G/C T ratio $rundir
+$plot -o $plotdir/giveprob.eps --title "Probability of Giving to Any Agent" --ylabel1 "Probability" events/contacts_bias_total.txt G/C T total $rundir
+$plot -o $plotdir/givebias_metabolism.eps --title "Bias to Give to Same Metabolism (>1 = bias to same)" --ylabel1 "Bias" metabolism/events.txt Give Timestep Bias $rundir
+$plot -o $plotdir/giveprob_sameMetabolism.eps --title "Probability of Giving to Same Metabolism" --ylabel1 "Probability" metabolism/events.txt Give Timestep Ps $rundir
+$plot -o $plotdir/giveprob_diffMetabolism.eps --title "Probability of Giving to Different Metabolism" --ylabel1 "Probability" metabolism/events.txt Give Timestep Pd $rundir
+
+$plot -o $plotdir/assortativeMating_metabolism.eps --title "Percent of Metabolism-Assortative Mating" --ylabel1 "Percent" metabolism/events.txt AssortativeMating Timestep PercentSame $rundir
+$plot -o $plotdir/assortativeMatingBias_metabolism.eps --title "Bias to Mate with Same Metabolism" --ylabel1 "Bias" metabolism/events.txt AssortativeMating_ContactNormalized Timestep Ab $rundir
+
+$plot -o $plotdir/mineatage0.eps --title "MinEatAge for Metabolism 0" --ylabel1 "MinEatAge" condprop/MinEatAge0.txt Values Step Value $rundir
+$plot -o $plotdir/mineatage1.eps --title "MinEatAge for Metabolism 1" --ylabel1 "MinEatAge" condprop/MinEatAge1.txt Values Step Value $rundir
+
+
+gnome-open $plotdir
