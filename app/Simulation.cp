@@ -4417,6 +4417,7 @@ void TSimulation::Eat( agent *c, bool *cDied )
 	bool eatAllowed = true;
 	bool eatFailedYaw = false;
 	bool eatFailedVel = false;
+	bool eatFailedMinAge = false;
 	bool eatAttempted = false;
 
 	// Just to be slightly more like the old multi-x-sorted list version of the code, look backwards first
@@ -4442,6 +4443,11 @@ void TSimulation::Eat( agent *c, bool *cDied )
 	{
 		eatAllowed = false;
 		eatFailedYaw = true;
+	}
+	if( c->Age() < c->GetMetabolism()->minEatAge )
+	{
+		eatAllowed = false;
+		eatFailedMinAge = true;
 	}
 
 	// look for food in the -x direction
@@ -4553,7 +4559,7 @@ void TSimulation::Eat( agent *c, bool *cDied )
 
 	if( eatAttempted )
 	{
-		fEatStatistics.AgentEatAttempt( eatAllowed, eatFailedYaw, eatFailedVel );
+		fEatStatistics.AgentEatAttempt( eatAllowed, eatFailedYaw, eatFailedVel, eatFailedMinAge );
 	}
 
 	objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point list back to c
@@ -6857,6 +6863,8 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 		proplib::Property &prop = doc.get( "BodyBlueChannel" );
 		if( (string)prop == "Mate" )
 			agent::gBodyBlueChannel = agent::BBC_MATE;
+		else if( (string) prop == "Energy" )
+			agent::gBodyBlueChannel = agent::BBC_ENERGY;
 		else
 		{
 			agent::gBodyBlueChannel = agent::BBC_CONST;
@@ -6976,6 +6984,7 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	}
 
     agent::gFight2Energy = doc.get( "EnergyUseFight" );
+    agent::gGive2Energy = doc.get( "EnergyUseGive" );
 	agent::gMinSizePenalty = doc.get( "MinSizeEnergyPenalty" );
     agent::gMaxSizePenalty = doc.get( "MaxSizeEnergyPenalty" );
     agent::gSpeed2Energy = doc.get( "EnergyUseMove" );
@@ -7349,7 +7358,100 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 
 			}
 
-			Metabolism::define( name, energyPolarity, *eatMultiplier, carcassFoodType );
+			float *minEatAge = new float[1];
+			{
+				proplib::Property &propMinEatAge = propMetabolism.get( "MinEatAge" );
+
+				proplib::Property &propConditions = propMinEatAge.get( "Conditions" );
+				condprop::ConditionList<float> *conditions = new condprop::ConditionList<float>();
+				int nconditions = propConditions.size();
+
+				for( int iCondition = 0; iCondition < nconditions; iCondition++ )
+				{
+					proplib::Property &propCondition = propConditions.get( iCondition );
+
+					CouplingRange couplingRange;
+					{
+						string role = propCondition.get( "CouplingRange" );
+						if( role == "Begin" )
+							couplingRange = COUPLING_RANGE__BEGIN;
+						else if( role == "End" )
+							couplingRange = COUPLING_RANGE__END;
+						else if( role == "None" )
+							couplingRange = COUPLING_RANGE__NONE;
+						else
+							assert( false );
+					}
+
+					float value = propCondition.get( "Value" );
+					string mode = propCondition.get( "Mode" );
+
+					condprop::Condition<float> *condition;
+					if( mode == "Time" )
+					{
+						long step = propCondition.get( "Time" );
+						condition = new condprop::TimeCondition<float>( step, value, couplingRange );
+					}
+					else if( mode == "Count" )
+					{
+						proplib::Property &propCount = propCondition.get( "Count" );
+						string countValue = propCount.get( "Value" );
+						string opname = propCount.get( "Op" );
+						long threshold = propCount.get( "Threshold" );
+						long duration = propCount.get( "Duration" );
+				
+						const long *countPtr;
+						if( countValue == "MetabolismAgents" )
+						{
+							countPtr = &( fNumberAliveWithMetabolism[iMetabolism] );
+						}
+						else
+							assert( false );
+
+						condprop::ThresholdCondition<float,long>::Op op;
+						if( opname == "EQ" )
+							op = condprop::ThresholdCondition<float,long>::EQ;
+						else if( opname == "LT" )
+							op = condprop::ThresholdCondition<float,long>::LT;
+						else if( opname == "GT" )
+							op = condprop::ThresholdCondition<float,long>::GT;
+						else
+							assert( false );
+
+						condition = new condprop::ThresholdCondition<float,long>( countPtr,
+																				  op,
+																				  threshold,
+																				  duration,
+																				  value,
+																				  couplingRange );
+					}
+					else
+						assert( false );
+
+					conditions->add( condition );
+				}
+
+				condprop::Logger<float> *logger = NULL;
+				if( (bool)propMinEatAge.get( "Record" ) )
+				{
+					char buf[128];
+					sprintf( buf, "MinEatAge%d", iMetabolism );
+					logger = new condprop::ScalarLogger<float>( buf, datalib::FLOAT );
+				}
+
+				condprop::Property<float> *property =
+					new condprop::Property<float>( "MinEatAge",
+												 minEatAge,
+												 &condprop::InterpolateFunction_float,
+												 &condprop::DistanceFunction_float,
+												 conditions,
+												 logger );
+
+				fConditionalProps->add( property );
+
+			}
+
+			Metabolism::define( name, energyPolarity, *eatMultiplier, *minEatAge, carcassFoodType );
 		}
 
 		for( int i = 0; i < Metabolism::getNumberOfDefinitions(); i++ )

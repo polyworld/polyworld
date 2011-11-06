@@ -93,7 +93,7 @@ void EatStatistics::StepEnd()
 	} 
 }
 
-void EatStatistics::AgentEatAttempt( bool success, bool failedYaw, bool failedVel )
+void EatStatistics::AgentEatAttempt( bool success, bool failedYaw, bool failedVel, bool failedMinAge )
 {
 	step.numAttempts++;
 

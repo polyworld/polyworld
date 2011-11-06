@@ -295,6 +295,104 @@ AgentMetabolisms {
         default Standard
       }
 
+      MinEatAge {
+        type OBJECT
+        default {
+          Conditions [
+            Value 0
+            Mode Time
+          ]
+        }
+        properties {
+
+          Record {
+            type    BOOL
+            default True
+          }
+
+          Conditions {
+            type    ARRAY
+            element {
+              type    OBJECT
+              properties {
+
+                CouplingRange {
+                  type    ENUM
+                  default None
+                  values [
+                    None
+                    Begin
+                    End
+                  ]
+                }
+          
+                Value {
+                  type    FLOAT
+                  min     0
+                }
+
+                Mode {
+                  type    ENUM
+                  values [
+                    Time
+                    Count
+                  ]
+                }
+
+                Time {
+                  type    INT
+                  default 0
+                  min     0
+                }
+      
+                Count {
+                  type    OBJECT
+                  default {
+                  }
+                  properties {
+      
+                    Value {
+                      type    ENUM
+                      default MetabolismAgents
+                      values [
+                        MetabolismAgents
+                      ]
+                    }
+      
+                    Op {
+                      type    ENUM
+                      default UNDEFINED
+                      values [
+                        UNDEFINED
+                        EQ
+                        GT
+                        LT
+                      ]
+                      if $( Mode == \"Count\" ) {
+                        assert $( Op != \"UNDEFINED\" )
+                      }
+                    }
+                      
+                    Threshold {
+                      type    INT
+                      default 0
+                    }
+      
+                    Duration {
+                      type    INT
+                      default 0
+                      min     0
+                    }
+      
+                  }
+                }
+
+              }
+            }
+          }
+        }
+      }
+
       EatMultiplier {
         type OBJECT
         default {
@@ -1896,6 +1994,7 @@ BodyBlueChannel {
   default Mate
   values [
     Mate
+    Energy
   ]
   scalar {
     type    FLOAT
@@ -2656,6 +2755,11 @@ EnergyUseMateConditional {
 }
 
 EnergyUseFight {
+  type    FLOAT
+  default 1.0
+}
+
+EnergyUseGive {
   type    FLOAT
   default 1.0
 }

@@ -14,6 +14,7 @@ class Metabolism
 	static void define( const std::string &name,
 						const EnergyPolarity &energyPolarity,
 						EnergyMultiplier &eatMultiplier,
+						float &minEatAge,
 						const FoodType *carcassFoodType );
 	static int getNumberOfDefinitions();
 	static const Metabolism *get( int index );
@@ -22,6 +23,7 @@ class Metabolism
 	const std::string name;
 	const EnergyPolarity energyPolarity;
 	EnergyMultiplier &eatMultiplier;
+	float &minEatAge;
 	const FoodType *carcassFoodType;
 
  private:
@@ -29,6 +31,7 @@ class Metabolism
 				const std::string &_name,
 				const EnergyPolarity &_energyPolarity,
 				EnergyMultiplier &_eatMultiplier,
+				float &_minEatAge,
 				const FoodType *_carcassFoodType );
 
 	static std::vector<const Metabolism *> metabolisms;

@@ -9,6 +9,8 @@ import datalib
 
 
 def main():
+    epochLen = 10000
+
     argv = sys.argv[1:]
 
     if len(argv) != 1:
@@ -24,40 +26,43 @@ def main():
     if not os.path.exists( dir_metabolism ):
         os.mkdir( dir_metabolism )
 
-    computeAssortativeMating( run, os.path.join(dir_metabolism, 'assortativeMating.txt') )
-    #createClusterFile( RUN, 'foo' )
+    metabolismCache = createMetabolismCache( run )
 
-def createClusterFile( path_run, path_output ):
-    for agent in common_logs.LifeSpans:
-        print agent
+    computeEvents( metabolismCache, epochLen, run, os.path.join(dir_metabolism, 'events.txt') )
 
-def computeAssortativeMating( path_run, path_output ):
-    birthsDeaths = common_logs.BirthsDeaths( path_run )
+def createMetabolismCache( path_run ):
+    metabolismCache = {}
+
     genomeSchema = common_genome.GenomeSchema( path_run )
-    
-    epochLen = 1000
-    
+    agents = common_logs.LifeSpans( path_run ).getAll()
+
+    for agent in agents:
+        genome = common_genome.Genome( genomeSchema, agent )
+        metabolism = genome.getGeneValue( 'MetabolismIndex' )
+        metabolismCache[agent] = metabolism
+
+    return metabolismCache
+
+def fdiv( x, y ):
+    try:
+        return float(x) / y
+    except:
+        return float('nan')
+
+def computeEvents( metabolismCache, epochLen, path_run, path_output ):
+    birthsDeaths = common_logs.BirthsDeaths( path_run )
+
     class Epoch:
         def __init__( self, timestep ):
             self.timestep = timestep
             self.mate_same = 0
             self.mate_diff = 0
+            self.give_same = 0
+            self.give_diff = 0
             self.contact_same = 0
             self.contact_diff = 0
     
     epochs = {}
-    
-    metabolismCache = {}
-    
-    def __getMetabolism( agent ):
-        try:
-            metabolism = metabolismCache[agent]
-        except:
-            genome = common_genome.Genome( genomeSchema, agent )
-            metabolism = genome.getGeneValue( 'MetabolismIndex' )
-            metabolismCache[agent] = metabolism
-    
-        return metabolism
     
     for agent in birthsDeaths.entries.keys():
         entry = birthsDeaths.getEntry( agent )
@@ -70,8 +75,8 @@ def computeAssortativeMating( path_run, path_output ):
                 epoch = Epoch( epochIndex * epochLen )
                 epochs[epochIndex] = epoch
     
-            parent1Metabolism = __getMetabolism( entry.parent1 )
-            parent2Metabolism = __getMetabolism( entry.parent2 )
+            parent1Metabolism = metabolismCache[ entry.parent1 ]
+            parent2Metabolism = metabolismCache[ entry.parent2 ]
     
             if parent1Metabolism == parent2Metabolism:
                 epoch.mate_same += 1
@@ -82,6 +87,7 @@ def computeAssortativeMating( path_run, path_output ):
         step = row['Timestep']
         agent1 = row['Agent1']
         agent2 = row['Agent2']
+        events = row['Events']
 
         epochIndex = step / epochLen
         try:
@@ -90,20 +96,26 @@ def computeAssortativeMating( path_run, path_output ):
             epoch = Epoch( epochIndex * epochLen )
             epochs[epochIndex] = epoch
 
-        agent1Metabolism = __getMetabolism( agent1 )
-        agent2Metabolism = __getMetabolism( agent2 )
+        agent1Metabolism = metabolismCache[ agent1 ]
+        agent2Metabolism = metabolismCache[ agent2 ]
+
+        ngive = events.count( 'G' )
 
         if agent1Metabolism == agent2Metabolism:
             epoch.contact_same += 1
+            epoch.give_same += ngive
         else:
             epoch.contact_diff += 1
+            epoch.give_diff += ngive
 
     datalib.parse( os.path.join(path_run, 'events/contacts.log'),
                    tablenames = ['Contacts'],
                    stream_row = __process_contact_row )
 
+    # HACK: DROP LAST EPOCH SINCE IT'S USUALLY JUST ONE STEP
     epochIndexes = list(epochs.keys())
     epochIndexes.sort()
+    del epochs[ epochIndexes[-1] ]
     
     colnames = ['Timestep', 'Ms', 'Md', 'PercentSame']
     coltypes = ['int', 'int', 'int', 'float']
@@ -114,10 +126,7 @@ def computeAssortativeMating( path_run, path_output ):
         row['Timestep'] = epoch.timestep
         row['Ms'] = epoch.mate_same
         row['Md'] = epoch.mate_diff
-        try:
-            row['PercentSame'] = 100 * float(epoch.mate_same) / (epoch.mate_same + epoch.mate_diff)
-        except ZeroDivisionError:
-            row['PercentSame'] = float('nan')
+        row['PercentSame'] = 100 * fdiv(epoch.mate_same, epoch.mate_same + epoch.mate_diff)
 
     colnames = ['Timestep', 'Ms', 'Md', 'Cs', 'Cd', 'Ab']
     coltypes = ['int', 'int', 'int', 'int', 'int', 'float']
@@ -130,23 +139,37 @@ def computeAssortativeMating( path_run, path_output ):
         row['Md'] = epoch.mate_diff
         row['Cs'] = epoch.contact_same
         row['Cd'] = epoch.contact_diff
-        try:
-            row['Ab'] = (float(epoch.mate_same)/epoch.contact_same) / (float(epoch.mate_diff)/epoch.contact_diff);
-        except ZeroDivisionError:
-            row['Ab'] = float('nan')
-    
-    datalib.write( path_output, [table, table_contactNorm] )
-    
-    """
-    
-    for i in range(1,2):
-        genome = common_genome.Genome( schema, i )
-    
-        name = 'Red'
-        print genome.getRawValue( name )
-        print genome.getGeneValue( name )
-    """
+        row['Ab'] = fdiv( fdiv(epoch.mate_same, epoch.contact_same),
+                          fdiv(epoch.mate_diff, epoch.contact_diff) );
 
+    colnames = ['Timestep', 'Gs', 'Gd', 'Cs', 'Cd', 'Ps', 'Pd', 'Bias']
+    coltypes = ['int', 'int', 'int', 'int', 'int', 'float', 'float', 'float']
+    table_give = datalib.Table( 'Give', colnames, coltypes )
+    
+    for epoch in epochs.values():
+        row = table_give.createRow()
+        row['Timestep'] = epoch.timestep
+        row['Gs'] = epoch.give_same
+        row['Gd'] = epoch.give_diff
+        row['Cs'] = epoch.contact_same
+        row['Cd'] = epoch.contact_diff
+        row['Ps'] = fdiv( epoch.give_same, epoch.contact_same )
+        row['Pd'] = fdiv( epoch.give_diff, epoch.contact_diff )
+        row['Bias'] = fdiv( fdiv(epoch.give_same, epoch.contact_same),
+                            fdiv(epoch.give_diff, epoch.contact_diff) );
+
+    colnames = ['Timestep', 'Cs', 'Cd', 'PercentSame']
+    coltypes = ['int', 'int', 'int', 'float']
+    table_contact = datalib.Table( 'Contact', colnames, coltypes )
+    
+    for epoch in epochs.values():
+        row = table_contact.createRow()
+        row['Timestep'] = epoch.timestep
+        row['Cs'] = epoch.contact_same
+        row['Cd'] = epoch.contact_diff
+        row['PercentSame'] = fdiv( epoch.contact_same, epoch.contact_same + epoch.contact_diff )
+    
+    datalib.write( path_output, [table, table_contactNorm, table_give, table_contact] )
 
 
 main()

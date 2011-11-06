@@ -61,7 +61,7 @@ public:
 	
 	enum BodyRedChannel { BRC_FIGHT, BRC_CONST };
 	enum BodyGreenChannel { BGC_ID, BGC_LIGHT, BGC_CONST };
-	enum BodyBlueChannel { BBC_MATE, BBC_CONST };
+	enum BodyBlueChannel { BBC_MATE, BBC_CONST, BBC_ENERGY };
 	enum NoseColor { NC_LIGHT, NC_CONST };
 	enum YawEncoding { YE_SQUASH, YE_OPPOSE };
 
@@ -71,6 +71,7 @@ public:
 	static float	gEat2Energy;
 	static float	gMate2Energy;
 	static float	gFight2Energy;
+	static float	gGive2Energy;
 	static float	gMinSizePenalty;
 	static float	gMaxSizePenalty;
 	static float	gSpeed2Energy;
