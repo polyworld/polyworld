@@ -3505,7 +3505,7 @@ void TSimulation::DeathAndStats( void )
 		// if we are running in Lockstep with a LOCKSTEP-BirthDeaths.log, we kill our agents here.
 		if( fLockstepTimestep == fStep )
 		{
-			lsPrint( "t%d: Triggering %d random deaths...\n", fStep, fLockstepNumDeathsAtTimestep );
+			lsPrint( "t%ld: Triggering %d random deaths...\n", fStep, fLockstepNumDeathsAtTimestep );
 			
 			for( int count = 0; count < fLockstepNumDeathsAtTimestep; count++ )
 			{
@@ -3537,7 +3537,7 @@ void TSimulation::DeathAndStats( void )
 				
 				Kill( randAgent, LifeSpan::DR_LOCKSTEP );
 				
-				lsPrint( "- Killed agent %d, randomIndex = %d\n", randAgent->Number(), randomIndex );						
+				lsPrint( "- Killed agent %ld, randomIndex = %d\n", randAgent->Number(), randomIndex );						
 			}	// end of for loop
 		}	// end of if( fLockstepTimestep == fStep )
 	}
@@ -3743,7 +3743,7 @@ void TSimulation::DeathAndStats( void )
 //---------------------------------------------------------------------------
 void TSimulation::MateLockstep( void )
 {
-	lsPrint( "t%d: Triggering %d random births...\n", fStep, fLockstepNumBirthsAtTimestep );
+	lsPrint( "t%ld: Triggering %d random births...\n", fStep, fLockstepNumBirthsAtTimestep );
 
 	agent* c = NULL;		// mommy
 	agent* d = NULL;		// daddy
@@ -4563,14 +4563,17 @@ void TSimulation::Eat( agent *c, bool *cDied )
 	}
 
 	objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point list back to c
-	if( c->GetEnergy().isDepleted() )
+	if( !fLockStepWithBirthsDeathsLog )
 	{
-		// note: this leaves list pointing to item before c, and markedAgent set to previous agent
-		Kill( c, LifeSpan::DR_EAT );
-		fNumberDiedEat++;
-		*cDied = true;
+		// If we're not running in LockStep mode, allow natural deaths
+		if( c->GetEnergy().isDepleted() )
+		{
+			// note: this leaves list pointing to item before c, and markedAgent set to previous agent
+			Kill( c, LifeSpan::DR_EAT );
+			fNumberDiedEat++;
+			*cDied = true;
+		}
 	}
-		
 	debugcheck( "after all agents had a chance to eat" );
 }
 
