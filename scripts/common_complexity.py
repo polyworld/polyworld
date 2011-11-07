@@ -4,7 +4,7 @@ import sys
 import datalib
 
 COMPLEXITY_TYPES = ['A', 'P', 'I', 'B', 'HB']
-COMPLEXITY_NAMES = {'A':'All', 'P':'Processing', 'I':'Input', 'B':'Behavior', 'HB':'Health+Behavior'}
+COMPLEXITY_NAMES = {'A':'All', 'P':'Processing', 'I':'Input', 'B':'Behavior', 'H':'Health'}
 DEFAULT_COMPLEXITIES = ['P']
 FILENAME_AVR = 'AvrComplexity.plt'
 DEFAULT_NUMBINS = 11
@@ -17,14 +17,14 @@ DEFAULT_NUMBINS = 11
 ###
 ####################################################################################
 def calc_script( args ):
-    
-    script = os.path.join( os.path.dirname(sys.argv[0]), 'CalcComplexity.py' )
-    
-    cmd = 'CalcComplexity.py' + ' ' + ' '.join( map(lambda x: '"%s"' % x, args) )
-    rc = os.system( cmd )
+	
+	script = os.path.join( os.path.dirname(sys.argv[0]), 'CalcComplexity.py' )
+	
+	cmd = 'CalcComplexity.py' + ' ' + ' '.join( map(lambda x: '"%s"' % x, args) )
+	rc = os.system( cmd )
 
-    if rc != 0:
-        raise Exception( 'CalcComplexity.py failed' )
+	if rc != 0:
+		raise Exception( 'CalcComplexity.py failed' )
 
 ####################################################################################
 ###
@@ -32,12 +32,27 @@ def calc_script( args ):
 ###
 ####################################################################################
 def get_name(type):
-    result = []
+	result = []
+	num_points = ''
+	
+	for c in type:
+		if c.isdigit():
+			num_points += c
+		else:
+			result.append(COMPLEXITY_NAMES[c])
 
-    for c in type:
-        result.append(COMPLEXITY_NAMES[c])
+	if num_points == '':
+		precision = ''
+	elif num_points == '0':
+		precision = 'Full '
+	elif num_points == '1':
+		precision = ''
+	else:
+		precision = num_points + '-point '
+	
+	name = precision + '+'.join(result)
 
-    return '+'.join(result)
+	return name
 
 ####################################################################################
 ###
@@ -45,7 +60,7 @@ def get_name(type):
 ###
 ####################################################################################
 def get_names(types):
-    return map(lambda x: get_name(x), types)
+	return map(lambda x: get_name(x), types)
 
 ####################################################################################
 ###
@@ -53,14 +68,14 @@ def get_names(types):
 ###
 ####################################################################################
 def normalize_complexities(data):
-    data = map(float, data)
-    # ignore 0.0, since it is an agent that was ignored in the complexity
-    # calculation due to short lifespan.
-    #
-    # also, must be sorted
-    data = filter(lambda x: x != 0.0 and str(x) != 'nan', data)
-    data.sort()
-    return data
+	data = map(float, data)
+	# ignore 0.0, since it is an agent that was ignored in the complexity
+	# calculation due to short lifespan.
+	#
+	# also, must be sorted
+	data = filter(lambda x: x != 0.0 and str(x) != 'nan', data)
+	data.sort()
+	return data
 
 ####################################################################################
 ###
@@ -69,16 +84,16 @@ def normalize_complexities(data):
 ####################################################################################
 def parse_legacy_complexities(path):
 
-    f = open(path, 'r')
+	f = open(path, 'r')
 
-    complexities = []
+	complexities = []
 
-    for line in f:
-        complexities.append(float(line.strip()))
+	for line in f:
+		complexities.append(float(line.strip()))
 
-    f.close()
+	f.close()
 
-    return complexities
+	return complexities
 
 ####################################################################################
 ###
@@ -86,7 +101,7 @@ def parse_legacy_complexities(path):
 ###
 ####################################################################################
 def relpath_avr(classification, recent_type):
-    return os.path.join('brain', recent_type, FILENAME_AVR)
+	return os.path.join('brain', recent_type, FILENAME_AVR)
 
 ####################################################################################
 ###
@@ -94,7 +109,7 @@ def relpath_avr(classification, recent_type):
 ###
 ####################################################################################
 def path_avr(path_run, classification, recent_type):
-    return os.path.join(path_run, relpath_avr(classification, recent_type))
+	return os.path.join(path_run, relpath_avr(classification, recent_type))
 
 ####################################################################################
 ###
@@ -102,9 +117,9 @@ def path_avr(path_run, classification, recent_type):
 ###
 ####################################################################################
 def path_run_from_avr(path_avr, classification, recent_type):
-    suffix = relpath_avr(classification, recent_type)
+	suffix = relpath_avr(classification, recent_type)
 
-    return path_avr[:-(len(suffix) + 1)]
+	return path_avr[:-(len(suffix) + 1)]
 
 ####################################################################################
 ###
@@ -112,21 +127,21 @@ def path_run_from_avr(path_avr, classification, recent_type):
 ###
 ####################################################################################
 def parse_avrs(run_paths, classification, recent_type, complexities, run_as_key = False):
-    # parse the AVRs for all the runs
-    avrs = datalib.parse_all( map(lambda x: path_avr( x, classification, recent_type ),
-                                  run_paths),
-                              complexities,
-                              datalib.REQUIRED,
-                              keycolname = 'Timestep' )
+	# parse the AVRs for all the runs
+	avrs = datalib.parse_all( map(lambda x: path_avr( x, classification, recent_type ),
+								  run_paths),
+							  complexities,
+							  datalib.REQUIRED,
+							  keycolname = 'Timestep' )
 
-    if run_as_key:
-        # modify the map to use run dir as key, not Avr file
-        avrs = dict( [(path_run_from_avr( x[0], classification, recent_type ),
-                       x[1])
-                      for x in avrs.items()] )
+	if run_as_key:
+		# modify the map to use run dir as key, not Avr file
+		avrs = dict( [(path_run_from_avr( x[0], classification, recent_type ),
+					   x[1])
+					  for x in avrs.items()] )
 
-    return avrs
-    
+	return avrs
+	
 ####################################################################################
 ###
 ### FUNCTION num_neurons
