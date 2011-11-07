@@ -15,7 +15,7 @@
 // but the old code used log, the natural logarithm, so c_log has been
 // invented to make it easy to provide backward compatibility (which
 // would correspond to making c_log equal to log instead of log2).
-#define c_log log
+#define c_log log2
 
 #define DebugCalcC_k false
 
@@ -125,13 +125,13 @@ gsl_matrix* gsamp( gsl_matrix* m )
 		}
 
 		// sort data based on the data (first element), which also shuffles indexes
-		mergesort( data, r, 2*sizeof(double), sort_compare_double );
+		qsort( data, r, 2*sizeof(double), sort_compare_double );
 		
 		// create a random Gaussian series and sort it
 		for( int i = 0; i < r; i++ )
 			gauss[i] = gsl_ran_ugaussian( randNumGen );
 			
-		mergesort( gauss, r, sizeof(double), sort_compare_double );
+		qsort( gauss, r, sizeof(double), sort_compare_double );
 
 		// store the rank-ordered Gaussian series in the current column of new matrix mOut
 		// using the shuffled indexes to restore original series data order
