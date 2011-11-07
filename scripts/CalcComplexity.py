@@ -218,7 +218,7 @@ def analyze_recent_dir(complexities, recent_dir):
 				   complexities,
 				   timesteps)
 	
-	datalib.write(outputpath, AVR)
+	datalib.write(outputpath, AVR, append=True)
 	
 	
 	#-----------------------------------------------------------------------------------
