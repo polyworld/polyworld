@@ -226,12 +226,15 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow, cons
 
 		fSceneView(sceneView),
 		fSceneWindow(sceneWindow),
+		fOverheadWindow(NULL),
 		fBirthrateWindow(NULL),
 		fFitnessWindow(NULL),
 		fFoodEnergyWindow(NULL),
 		fPopulationWindow(NULL),
 		fBrainMonitorWindow(NULL),
 		fGeneSeparationWindow(NULL),
+		fAgentPOVWindow(NULL),
+		fTextStatusWindow(NULL),
 		fMaxSteps(0),
 		fPaused(false),
 		fDelay(0),
@@ -1339,13 +1342,24 @@ void TSimulation::End( const string &reason )
 
 	fConditionalProps->dispose();
 
-	// Stop simulation
 	printf( "Simulation stopped after step %ld\n", fStep );
 
-	ofstream fout( "run/endReason.txt" );
-	fout << reason << endl;
-	fout.close();
+	{
+		ofstream fout( "run/endStep.txt" );
+		fout << fStep << endl;
+		fout.close();
+	}
 
+	{
+		ofstream fout( "run/endReason.txt" );
+		fout << reason << endl;
+		fout.close();
+	}
+
+	// TODO: Clean up the dispose path.
+	// Deleting the SceneWindow deletes *this*.
+	delete fSceneWindow;
+	
 	exit( 0 );
 }
 
