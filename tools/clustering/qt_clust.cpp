@@ -94,6 +94,10 @@ using namespace std;
 // ================================================================================
 
 struct CliParms {
+	string mode;
+	string subdir;
+	int clusterNumber;
+	int certaintyPower;
 	int clusterPartitionModulus;
 	float threshFact;
 	int genomeCacheCapacity;
@@ -108,6 +112,7 @@ struct CliParms {
 	int nclusters;
 
 	CliParms() {
+		certaintyPower = 1;
 		clusterPartitionModulus = 1;
 		threshFact = 2.125;
 		genomeCacheCapacity = -1;
@@ -144,12 +149,13 @@ int main(int argc, char *argv[]) {
 	void util__zscore( const char *subdir );
 	void util__metabolism( const char *subdir );
 	void util__ancestry( const char *subdir );
+	void util__genedist( const char *subdir );
 
 	if( argc == 1 ) {
 		usage();
 	}
 
-	string mode = argv[1];
+	cliParms.mode = argv[1];
 
 	// copy 0 to 1 so error messages from getopt show program name
 	argv[1] = argv[0];
@@ -157,9 +163,10 @@ int main(int argc, char *argv[]) {
 	argc--;
 	argv++;
 
-	if( mode == "cluster" ) {
+	if( (cliParms.mode == "cluster") || (cliParms.mode == "subcluster") ) {
 		while( true ) {
 			static struct option long_options[] = {
+				{"certaintyPower", 1, 0, 'p'},
 				{"clusterPartitionModulus", 1, 0, 'm'},
 				{"clusterStrideDivisor", 1, 0, 'd'},
 				{"threshFact", 1, 0, 'f'},
@@ -170,12 +177,21 @@ int main(int argc, char *argv[]) {
 			};
 			int option_index = 0;
 
-			int opt = getopt_long(argc, argv, "m:d:f:g:s:n:",
+			int opt = getopt_long(argc, argv, "p:m:d:f:g:s:n:",
 								  long_options, &option_index);
 			if( opt == -1 )
 				break;
 
 			switch(opt) {
+			case 'p': {
+				char *endptr;
+				cliParms.certaintyPower = strtol( optarg, &endptr, 10 );
+				if( *endptr ) {
+					err( "Invalid -p value -- expecting int.\n" );
+				} else if( cliParms.certaintyPower < 1 ) {
+					err( "Invalid -p value -- must be >= 1.\n" );
+				}
+			} break;
 			case 'm': {
 				char *endptr;
 				cliParms.clusterPartitionModulus = strtol( optarg, &endptr, 10 );
@@ -221,6 +237,7 @@ int main(int argc, char *argv[]) {
 					err( "Invalid -s value -- must be >= 1.\n" );
 				}
 			} break;
+				
 			case 'n': {
 				string algname( optarg );
 
@@ -236,6 +253,19 @@ int main(int argc, char *argv[]) {
 			} break;
 			default:
 				exit(1);
+			}
+		}
+
+		if( cliParms.mode == "subcluster" ) {
+			if( optind == argc ) err( "missing subdir\n" );
+			cliParms.subdir = argv[optind++];
+			if( optind == argc ) err( "missing clusterNumber\n" );
+			char *endptr;
+			cliParms.clusterNumber = strtol( argv[optind++], &endptr, 10 );
+			if( *endptr ) {
+				err( "Invalid clusterNumber -- expecting int.\n" );
+			} else if( cliParms.clusterNumber < 0 ) {
+				err( "Invalid clusterNumber -- must be >= 0.\n" );
 			}
 		}
 
@@ -279,7 +309,7 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
-		if( mode == "compareCentroids" ) {
+		if( cliParms.mode == "compareCentroids" ) {
 			if( optind >= argc ) err( "Missing subdir_A\n" );
 			const char *subdir_a = argv[optind++];
 
@@ -296,7 +326,7 @@ int main(int argc, char *argv[]) {
 			// --- COMPARE CENTROIDS
 			// ---
 			util__compareCentroids( subdir_a, subdir_b );
-		} else if( mode == "checkThresh" ) {
+		} else if( cliParms.mode == "checkThresh" ) {
 			if( optind >= argc ) err( "Missing subdir\n" );
 			const char *subdir = argv[optind++];
 
@@ -310,7 +340,7 @@ int main(int argc, char *argv[]) {
 			// --- CHECK THRESH
 			// ---
 			util__checkThresh( subdir );
-		} else if( mode == "centroidDists" ) {
+		} else if( cliParms.mode == "centroidDists" ) {
 			if( optind >= argc ) err( "Missing subdir\n" );
 			const char *subdir = argv[optind++];
 
@@ -324,7 +354,7 @@ int main(int argc, char *argv[]) {
 			// --- CENTROID DISTS
 			// ---
 			util__centroidDists( subdir );
-		} else if( mode == "zscore" ) {
+		} else if( cliParms.mode == "zscore" ) {
 			if( optind >= argc ) err( "Missing subdir\n" );
 			const char *subdir = argv[optind++];
 
@@ -338,7 +368,7 @@ int main(int argc, char *argv[]) {
 			// --- ZSCORE
 			// ---
 			util__zscore( subdir );
-		} else if( mode == "metabolism" ) {
+		} else if( cliParms.mode == "metabolism" ) {
 			if( optind >= argc ) err( "Missing subdir\n" );
 			const char *subdir = argv[optind++];
 
@@ -352,7 +382,7 @@ int main(int argc, char *argv[]) {
 			// --- METABOLISM
 			// ---
 			util__metabolism( subdir );
-		} else if( mode == "ancestry" ) {
+		} else if( cliParms.mode == "ancestry" ) {
 			if( optind >= argc ) err( "Missing subdir\n" );
 			const char *subdir = argv[optind++];
 
@@ -366,8 +396,22 @@ int main(int argc, char *argv[]) {
 			// --- ANCESTRY
 			// ---
 			util__ancestry( subdir );
+		} else if( cliParms.mode == "genedist" ) {
+			if( optind >= argc ) err( "Missing subdir\n" );
+			const char *subdir = argv[optind++];
+
+			if( optind < argc ) {
+				cliParms.path_run = argv[optind++];
+			}
+
+			if( optind < argc ) err( "Unpexected arg '%s'\n", argv[optind] );
+
+			// ---
+			// --- GENEDIST
+			// ---
+			util__genedist( subdir );
 		} else {
-			err( "Unknown mode '%s'\n", mode.c_str() );
+			err( "Unknown mode '%s'\n", cliParms.mode.c_str() );
 		}
 	}
 
@@ -385,7 +429,11 @@ void usage() {
 	p( "usage:" );
 	p( "" );
 	p( "qt_clust cluster [opt...] [run]" );
+	p( "qt_clust subcluster [opt...] subdir clusterNumber [run]" );
 	p( "   Perform cluster analysis." );
+	p( "" );
+	p( "   -p,--certaintyPower arg" );
+	p( "        Use certainty^N in distance calculations.");
 	p( "" );
 	p( "   -m,--clusterPartitionModulus arg" );
 	p( "        Modulus used for determining which agents are placed in the cluster partition." );
@@ -429,6 +477,9 @@ void usage() {
 	p( "" );
 	p( "qt_clust ancestry [-n max_clusters] [-g genomeCacheCapacity] subdir [run]" );
 	p( "   Show ancestral clusters for each cluster." );
+	p( "" );
+	p( "qt_clust genedist [-n max_clusters] [-g genomeCacheCapacity] subdir [run]" );
+	p( "   Determine which genes contribute most to distance between clusters." );
 	p( "" );
 	p( "" );
 	p( "Examples:" );
@@ -485,6 +536,8 @@ typedef int AgentIndex;
 typedef vector<AgentIndex> AgentIndexVector;
 typedef set<AgentIndex> AgentIndexSet;
 
+typedef int ClusterId;
+typedef set<ClusterId> ClusterIdSet;
 
 // ================================================================================
 // ================================================================================
@@ -704,26 +757,123 @@ void set_genome_size() {
 
 // --------------------------------------------------------------------------------
 // ---
+// --- FUNCTION parse_clusters
+// ---
+// --------------------------------------------------------------------------------
+class ParsedCluster {
+public:
+	ParsedCluster( ClusterId _id, AgentIdVector _members )
+		: id(_id)
+		, members(_members)
+	{}
+
+	ClusterId id;
+	AgentIdVector members;
+};
+
+typedef vector<ParsedCluster> ParsedClusterVector;
+typedef vector<ParsedClusterVector> ParsedClusterMatrix;
+
+void parse_clusters( const char *path, ParsedClusterVector &clusters ) {
+	errif( !is_regular_file(path), "Invalid file: %s\n", path );
+		
+	ifstream fin( path );
+	errif( !fin.is_open(), "Failed opening file %s\n", path );
+
+	const int BUF_SIZE = 1024 * 1024 * 64; // 64 MB line buffer should be plenty
+	char *buf = new char[ BUF_SIZE ];
+
+	set<ClusterId> clusterIds;
+
+	while( fin ) {
+		fin.getline( buf, BUF_SIZE );
+		assert( fin.gcount() < BUF_SIZE );
+
+		if( fin.gcount() > 0 ) {
+			istringstream lin( buf );
+			string token;
+
+			lin >> token;
+			if( token == "cluster" ) {
+				ClusterId id;
+				lin >> id;
+
+				errif( clusterIds.find(id) != clusterIds.end(), "Found duplicate cluster ID (%d) in %s.\n", id, path );
+				clusterIds.insert( id );
+					
+				// parse "(N"
+				lin >> token;
+				int nmembers = atoi( token.c_str() + 1 );
+
+				// skip "elts)" , ":"
+				lin >> token; lin >> token;
+					
+				AgentIdVector members;
+
+				while( lin ) {
+					AgentId agent = 0;
+					lin >> agent;
+					assert( !lin.fail() );
+					assert( agent );
+
+					members.push_back( agent );
+
+					while( (' ' == lin.peek()) || ('\n' == lin.peek()) ) {
+						lin.ignore( 1 );
+					}
+				}
+
+				assert( nmembers == (int)members.size() );
+				clusters.push_back( ParsedCluster(id, members) );
+			}
+		}
+	}
+
+	delete [] buf;
+}
+
+// --------------------------------------------------------------------------------
+// ---
 // --- FUNCTION get_agent_ids
 // ---
 // --------------------------------------------------------------------------------
 AgentIdVector *get_agent_ids() {
-	const char *path_genomes = get_run_path("genome/agents");
-
-	DIR *dir = opendir( path_genomes );
-	errif( !dir, "Failed opening dir %s\n", path_genomes );
-	
 	AgentIdVector *ids = new AgentIdVector();
 
-	dirent *ent;
-	while( NULL != (ent = readdir(dir)) ) {
-		if( 0 == strncmp(ent->d_name, "genome_", 7) ) {
-			AgentId id = atoi( ent->d_name + 7 );
-			ids->push_back( id );
-		}
-	}
+	if( cliParms.mode == "subcluster" ) {
+		char *path_clusters = get_results_path( cliParms.subdir.c_str(), "members_neighbors" );
+		ParsedClusterVector clusters;
 
-	closedir( dir );
+		parse_clusters( path_clusters, clusters );
+		bool found = false;
+
+		itfor( ParsedClusterVector, clusters, it ) {
+			if( it->id == cliParms.clusterNumber ) {
+				ids->resize( it->members.size() );
+				copy( it->members.begin(), it->members.end(), ids->begin() );
+				found = true;
+				break;
+			}
+		}
+
+		errif( !found, "Failed finding cluster %d\n", cliParms.clusterNumber );
+		
+	} else {
+		const char *path_genomes = get_run_path("genome/agents");
+
+		DIR *dir = opendir( path_genomes );
+		errif( !dir, "Failed opening dir %s\n", path_genomes );
+	
+		dirent *ent;
+		while( NULL != (ent = readdir(dir)) ) {
+			if( 0 == strncmp(ent->d_name, "genome_", 7) ) {
+				AgentId id = atoi( ent->d_name + 7 );
+				ids->push_back( id );
+			}
+		}
+
+		closedir( dir );
+	}
 
 	sort( ids->begin(), ids->end() );
 
@@ -1337,7 +1487,7 @@ GeneDistanceDeltaCache *create_distance_deltaCache( float *certainty, float *std
 
 			if (tmp) {
 				tmp *= tmp;
-				result = (certainty[igene] * tmp) / stddev2[igene];
+				result = ( powf(certainty[igene], cliParms.certaintyPower) * tmp ) / stddev2[igene];
 			} else {
 				result = 0;
 			}
@@ -1712,7 +1862,7 @@ DistanceMetrics create_distance_metrics( PopulationPartitionVector &partitions )
 
 	THRESH = 0;
     for( int i=0; i<GENES; i++ )
-        THRESH += result.certainty[i];
+        THRESH += powf( result.certainty[i], cliParms.certaintyPower );
     THRESH *= cliParms.threshFact;
 
 	result.deltaCache = create_distance_deltaCache( result.certainty, result.stddev2 );
@@ -1734,9 +1884,6 @@ DistanceMetrics create_distance_metrics( PopulationPartitionVector &partitions )
 // ================================================================================
 // ================================================================================
 // ================================================================================
-
-typedef int ClusterId;
-typedef set<ClusterId> ClusterIdSet;
 
 class Cluster {
 public:
@@ -1774,6 +1921,10 @@ public:
 
 	static bool sort__member_size_descending( const Cluster *x, const Cluster *y ) {
 		return y->members.size() < x->members.size();
+	}
+
+	static bool sort__id_ascending( const Cluster *x, const Cluster *y ) {
+		return x->id < y->id;
 	}
 
 	PopulationPartition *population;
@@ -1888,8 +2039,19 @@ void write_members_and_neighbors( FILE *f, Cluster *cluster ) {
 // ---
 // --------------------------------------------------------------------------------
 void write_results( ClusterVector &clusters ) {
-	char subdir[1024];
-	sprintf( subdir, "m%d_d%d_f%g_s%d_n%s",
+	char subdir_prefix[1024];
+	if( cliParms.mode == "subcluster" ) {
+		sprintf( subdir_prefix, "%s/cluster%d_",
+				 cliParms.subdir.c_str(),
+				 cliParms.clusterNumber );
+	} else {
+		subdir_prefix[0] = 0;
+	}
+
+	char subdir[1024 * 2];
+	sprintf( subdir, "%sp%d_m%d_d%d_f%g_s%d_n%s",
+			 subdir_prefix,
+			 cliParms.certaintyPower,
 			 cliParms.clusterPartitionModulus,
 			 cliParms.clusterStrideDivisor,
 			 cliParms.threshFact,
@@ -1899,7 +2061,7 @@ void write_results( ClusterVector &clusters ) {
 	{
 		char cmd[1024 * 4];
 		sprintf( cmd, "mkdir -p %s", get_results_dir(subdir) );
-		errif( 0 != system(cmd), "Failed executing '%s'\n", cmd );
+		errif( 0 != system(cmd), "Failed executing '%s' (%s)\n", cmd, strerror(errno) );
 	}
 
 #define FOPEN(HANDLE,TYPE)												\
@@ -1910,6 +2072,20 @@ void write_results( ClusterVector &clusters ) {
 		FOPEN(f, "threshFact");
 
 		fprintf( f, "%f\n", cliParms.threshFact );
+
+		fclose(f);
+	}
+	{
+		FOPEN(f, "thresh");
+
+		fprintf( f, "%f\n", THRESH );
+
+		fclose(f);
+	}
+	{
+		FOPEN(f, "certaintyPower");
+
+		fprintf( f, "%d\n", cliParms.certaintyPower );
 
 		fclose(f);
 	}
@@ -2824,83 +3000,6 @@ void parse_births_deaths( BirthsDeathsMap &birthsDeaths ) {
 
 // --------------------------------------------------------------------------------
 // ---
-// --- FUNCTION parse_clusters
-// ---
-// --------------------------------------------------------------------------------
-class ParsedCluster {
-public:
-	ParsedCluster( ClusterId _id, AgentIdVector _members )
-		: id(_id)
-		, members(_members)
-	{}
-
-	ClusterId id;
-	AgentIdVector members;
-};
-
-typedef vector<ParsedCluster> ParsedClusterVector;
-typedef vector<ParsedClusterVector> ParsedClusterMatrix;
-
-void parse_clusters( const char *path, ParsedClusterVector &clusters ) {
-	errif( !is_regular_file(path), "Invalid file: %s\n", path );
-		
-	ifstream fin( path );
-	errif( !fin.is_open(), "Failed opening file %s\n", path );
-
-	const int BUF_SIZE = 1024 * 1024 * 64; // 64 MB line buffer should be plenty
-	char *buf = new char[ BUF_SIZE ];
-
-	set<ClusterId> clusterIds;
-
-	while( fin ) {
-		fin.getline( buf, BUF_SIZE );
-		assert( fin.gcount() < BUF_SIZE );
-
-		if( fin.gcount() > 0 ) {
-			istringstream lin( buf );
-			string token;
-
-			lin >> token;
-			if( token == "cluster" ) {
-				ClusterId id;
-				lin >> id;
-
-				errif( clusterIds.find(id) != clusterIds.end(), "Found duplicate cluster ID (%d) in %s.\n", id, path );
-				clusterIds.insert( id );
-					
-				// parse "(N"
-				lin >> token;
-				int nmembers = atoi( token.c_str() + 1 );
-
-				// skip "elts)" , ":"
-				lin >> token; lin >> token;
-					
-				AgentIdVector members;
-
-				while( lin ) {
-					AgentId agent = 0;
-					lin >> agent;
-					assert( !lin.fail() );
-					assert( agent );
-
-					members.push_back( agent );
-
-					while( (' ' == lin.peek()) || ('\n' == lin.peek()) ) {
-						lin.ignore( 1 );
-					}
-				}
-
-				assert( nmembers == (int)members.size() );
-				clusters.push_back( ParsedCluster(id, members) );
-			}
-		}
-	}
-
-	delete [] buf;
-}
-
-// --------------------------------------------------------------------------------
-// ---
 // --- FUNCTION load_clusters
 // ---
 // --------------------------------------------------------------------------------
@@ -3212,6 +3311,7 @@ void util__zscore( const char *subdir ) {
 	int nclusters = cliParms.nclusters == -1 ? (int)clusters.size() : min(cliParms.nclusters, (int)clusters.size());
 
 	std::sort( clusters.begin(), clusters.end(), Cluster::sort__member_size_descending );
+	std::sort( clusters.begin(), clusters.begin() + 10, Cluster::sort__id_ascending );
 
 	float *mean[nclusters];
 	float *stddev[nclusters];
@@ -3241,18 +3341,19 @@ void util__zscore( const char *subdir ) {
 	// Compute z-score
 	for( int i = 0; i < nclusters; i++ ) {
 		for( int j = 0; j < nclusters; j++ ) {
+			if( i == j ) continue;
+
 			zscore[i][j] = new ZScore[GENES];
 			for( int igene = 0; igene < GENES; igene++ ) {
 				zscore[i][j][igene].igene = igene;
-				//zscore[i][j][igene].value = fabs( (mean[i][igene] - mean[j][igene]) / stddev[i][igene] );
-				zscore[i][j][igene].value = ( (mean[i][igene] - mean[j][igene]) / stddev[i][igene] );
+				zscore[i][j][igene].value = (mean[i][igene] - mean[j][igene]) / stddev[j][igene];
 			}
 		}
 	}
 
 	// Sort z-score from hi to lo
 	for( int i = 0; i < nclusters; i++ ) {
-		for( int j = 0; j < nclusters; j++ ) {
+		for( int j = i+1; j < nclusters; j++ ) {
 			std::sort( zscore[i][j], zscore[i][j] + GENES, ZScore::sort );
 		}
 	}
@@ -3261,19 +3362,20 @@ void util__zscore( const char *subdir ) {
 
 	for( int i = 0; i < nclusters; i++ ) {
 		for( int j = 0; j < nclusters; j++ ) {
-			if( i != j ) {
-				printf( "%d --> %d :\n", clusters[i]->id, clusters[j]->id );
-				for( int z = 0; z < NGENES_SHOW; z++ ) {
-					int igene = zscore[i][j][z].igene;
-					const char *name = geneNames[igene].c_str();
-					printf( "  [ %d : %s ] = %f ",
-							igene, name, zscore[i][j][z].value);
-					printf( "mean(%d)=%f mean(%d)=%f stddev(%d)=%f\n",
-							clusters[i]->id, mean[i][igene],
-							clusters[j]->id, mean[j][igene],
-							clusters[i]->id, stddev[i][igene] );
-				}
+			if( i == j ) continue;
+
+			int iid = clusters[i]->id;
+			int jid = clusters[j]->id;
+
+			printf( "cluster %d relative to cluster %d :\n", iid, jid );
+			printf( "    %-40s  zscore  mean(%3d)  mean(%3d)  stddev(%3d)  stddev(%3d)\n", "", iid, jid, iid, jid );
+			for( int z = 0; z < NGENES_SHOW; z++ ) {
+				int igene = zscore[i][j][z].igene;
+				const char *name = geneNames[igene].c_str();
+				printf( "    %-40s  %6.2f  %9.2f  %9.2f  %11.2f  %11.2f\n",
+						name, zscore[i][j][z].value, mean[i][igene], mean[j][igene], stddev[i][igene], stddev[j][igene] );
 			}
+			printf( "\n" );
 		}
 	}
 
@@ -3281,52 +3383,50 @@ void util__zscore( const char *subdir ) {
 
 	for( int i = 0; i < nclusters; i++ ) {
 		for( int j = 0; j < nclusters; j++ ) {
-			if( i != j ) {
-				float total = 0;
-				for( int z = 0; z < NGENES_SHOW; z++ ) {
-					total += zscore[i][j][z].value;
-				}
-				float mean = total / NGENES_SHOW;
-				printf( "%d --> %d : %f\n", clusters[i]->id, clusters[j]->id, mean );
-			}
-		}
-	}
+			if( i == j ) continue;
 
-	cout << "=== MEAN OF TOP " << NGENES_SHOW << " (i,j) + (j,i) ===" << endl;
-
-	for( int i = 0; i < nclusters; i++ ) {
-		for( int j = i + 1; j < nclusters; j++ ) {
 			float total = 0;
 			for( int z = 0; z < NGENES_SHOW; z++ ) {
-				total += zscore[i][j][z].value;
+				total += fabs( zscore[i][j][z].value );
 			}
-			for( int z = 0; z < NGENES_SHOW; z++ ) {
-				total += zscore[j][i][z].value;
-			}
-			float mean = total / (NGENES_SHOW*2);
-			printf( "%d --> %d : %f\n", clusters[i]->id, clusters[j]->id, mean );
+			float mean = total / NGENES_SHOW;
+			printf( "%3d relative to %3d = %8.3f\n", clusters[i]->id, clusters[j]->id, mean );
 		}
 	}
+	printf( "\n" );
 
 	cout << "=== UNIQUENESS ===" << endl;
 
 	for( int i = 0; i < nclusters; i++ ) {
 		float uniqueness = 0;
 		for( int j = 0 ; j < nclusters; j++ ) {
-			if( i != j ) {
-				float total = 0;
-				for( int z = 0; z < NGENES_SHOW; z++ ) {
-					total += zscore[i][j][z].value;
-				}
-				for( int z = 0; z < NGENES_SHOW; z++ ) {
-					total += zscore[j][i][z].value;
-				}
-				float mean = total / (NGENES_SHOW*2);
-				uniqueness += mean;
+			if( i == j ) continue;
+
+			float total = 0;
+			for( int z = 0; z < NGENES_SHOW; z++ ) {
+				total += fabs( zscore[i][j][z].value );
 			}
+			float mean = total / NGENES_SHOW;
+			uniqueness += mean;
 		}
 		uniqueness /= nclusters - 1;
-		printf( "%d : %f\n", clusters[i]->id, uniqueness );
+		printf( "%3d relative to X: %8.3f\n", clusters[i]->id, uniqueness );
+	}
+
+	for( int i = 0; i < nclusters; i++ ) {
+		float uniqueness = 0;
+		for( int j = 0 ; j < nclusters; j++ ) {
+			if( i == j ) continue;
+
+			float total = 0;
+			for( int z = 0; z < NGENES_SHOW; z++ ) {
+				total += fabs( zscore[j][i][z].value );
+			}
+			float mean = total / NGENES_SHOW;
+			uniqueness += mean;
+		}
+		uniqueness /= nclusters - 1;
+		printf( "X relative to %3d: %8.3f\n", clusters[i]->id, uniqueness );
 	}
 
 }
@@ -3355,6 +3455,9 @@ void util__metabolism( const char *subdir ) {
 	LoadedClusters loadedClusters = load_clusters( true, subdirs, 1 );
 
 	load_parms( subdirs, 1 );
+
+	BirthsDeathsMap birthsDeaths;
+	parse_births_deaths( birthsDeaths );
 
 	PopulationPartition *partition = loadedClusters.partitions->at(0);
 	ClusterVector &clusters = *(loadedClusters.clusterMatrix->at(0));
@@ -3389,14 +3492,21 @@ void util__metabolism( const char *subdir ) {
 	int imetabolism = 8;
 	fprintf( stderr, "Warning! Hard-coded imetabolism\n" );
 
+	char *path_result = get_results_path(subdir, "metabolism");
+	printf( "writing results to %s\n", path_result );
+	FILE *f = fopen( path_result, "w" );
+	errif( f == NULL, "Failed opening result file\n" );
+
 	for( int i = 0; i < nclusters; i++ ) {
 		Cluster *cluster = clusters[i];
 		GeneStdDev2Calculator calc;
 
-		printf( "cluster %d (n=%lu): ", i, cluster->members.size() );
+		fprintf( f, "cluster %2d (n=%6lu): ", cluster->id, cluster->members.size() );
 
 		int count[nmetabolisms];
 		memset( count, 0, sizeof(count) );
+
+		int begin = -1, end = -1;
 
 		itfor( AgentIdVector, cluster->members, it ) {
 			GenomeRef genome = partition->getGenomeById( *it );
@@ -3404,16 +3514,24 @@ void util__metabolism( const char *subdir ) {
 			int index = interpolate( raw, 0, nmetabolisms - 1 );
 			assert( index >= 0 && index < nmetabolisms );
 			count[index]++;
+
+			BirthsDeathsEntry &entry = birthsDeaths[*it];
+			if( (begin == -1) || ((entry.birth != -1) && (entry.birth < begin)) ) {
+				begin = entry.birth;
+			}
+			if( (end == -1) || ((entry.death != -1) && (entry.death > end)) ) {
+				end = entry.death;
+			}
+				
 		}
 
 		for( int j = 0; j < nmetabolisms; j++ ) {
-			printf( "nmet%d=%d (%.1f%%) ", j, count[j], (double)100 * count[j] / cluster->members.size() );
+			fprintf( f, "nmet%d=%5d (%5.1f%%) ", j, count[j], (double)100 * count[j] / cluster->members.size() );
 		}
-
-		printf( "mean(gene)=%f stddev(gene)=%f ", mean[i][imetabolism], stddev[i][imetabolism] );
-		printf("\n");
+		fprintf( f, "T=[%6d,%6d]", begin, end );
+		fprintf( f,"\n");
 	}
-	
+	fclose( f );
 }
 
 // --------------------------------------------------------------------------------
@@ -3526,6 +3644,11 @@ void util__ancestry( const char *subdir ) {
 		}
 	}
 
+	char *path_result = get_results_path(subdir, "ancestry");
+	printf( "writing results to %s\n", path_result );
+	FILE *f = fopen( path_result, "w" );
+	errif( f == NULL, "Failed opening result file\n" );
+
 	typedef vector<pair<ClusterId,ClusterInfo> > ClusterInfoVector;
 	ClusterInfoVector clusterInfoVector( clusterInfos.begin(), clusterInfos.end() );
 	std::sort( clusterInfoVector.begin(), clusterInfoVector.end(), sort_cluster_time );
@@ -3534,9 +3657,9 @@ void util__ancestry( const char *subdir ) {
 		ClusterId clusterId = it_cluster->first;
 		ClusterInfo &clusterInfo = it_cluster->second;
 
-		if( clusterInfo.nmembers > 100 ) {
-			printf("cluster %d (n=%lu): T=[%d,%d]\n",
-				   clusterId, clusterInfo.nmembers, clusterInfo.timeRange.start, clusterInfo.timeRange.end );
+		if( clusterInfo.nmembers > 500 ) {
+			fprintf( f,"cluster %d (n=%lu): T=[%d,%d]\n",
+					 clusterId, clusterInfo.nmembers, clusterInfo.timeRange.start, clusterInfo.timeRange.end );
 
 			typedef vector<pair<AncestorClusterIds,AncestorInfo> > AncestorInfoVector;
 			AncestorInfoVector ancestorInfoVector( clusterInfo.ancestorInfos.begin(), clusterInfo.ancestorInfos.end() );
@@ -3545,13 +3668,100 @@ void util__ancestry( const char *subdir ) {
 			itfor( AncestorInfoVector, ancestorInfoVector, it_ancestor ) {
 				AncestorClusterIds ids = it_ancestor->first;
 				AncestorInfo &ancestorInfo = it_ancestor->second;
-				printf( "    (%d,%d): n=%d T=[%d,%d]\n",
-						ids.first, ids.second,
-						ancestorInfo.count,
-						(ancestorInfo.timeRange.start - clusterInfo.timeRange.start),
-						(ancestorInfo.timeRange.end - clusterInfo.timeRange.start) );
+				fprintf( f, "    (%d,%d): n=%d T=[%d,%d]\n",
+						 ids.first, ids.second,
+						 ancestorInfo.count,
+						 (ancestorInfo.timeRange.start - clusterInfo.timeRange.start),
+						 (ancestorInfo.timeRange.end - clusterInfo.timeRange.start) );
 						
 			}
 		}
 	}
+
+	fclose( f );
 }
+
+// --------------------------------------------------------------------------------
+// ---
+// --- FUNCTION util__genedist
+// ---
+// --------------------------------------------------------------------------------
+namespace __util__genedist {
+	class GeneDist {
+	public:
+		float value;
+		int igene;
+
+		GeneDist( float value, int igene ) {
+			this->value = value;
+			this->igene = igene;
+		}
+
+		static bool sort( const GeneDist &x, const GeneDist &y ) {
+			return fabs(y.value) < fabs(x.value);
+		}
+	};
+}
+
+void util__genedist( const char *subdir ) {
+	using namespace __util__genedist;
+
+	const int NGENES_SHOW = 10;
+	const char *subdirs[] = {subdir};
+
+	map<int,string> geneNames;
+	parse_gene_indexes( &geneNames );
+
+	LoadedClusters loadedClusters = load_clusters( true, subdirs, 1 );
+	load_parms( subdirs, 1 );
+
+	DistanceMetrics distanceMetrics = create_distance_metrics( *(loadedClusters.partitions) );
+
+	PopulationPartition *partition = loadedClusters.partitions->at(0);
+	ClusterVector &clusters = *(loadedClusters.clusterMatrix->at(0));
+	int nclusters = cliParms.nclusters == -1 ? (int)clusters.size() : min(cliParms.nclusters, (int)clusters.size());
+
+	std::sort( clusters.begin(), clusters.end(), Cluster::sort__member_size_descending );
+
+	typedef vector<GeneDist> GeneDistVector;
+	GeneDistVector geneDists[nclusters][nclusters];
+
+	for( int i = 0; i < nclusters; i++ ) {
+		Cluster *clusteri = clusters[i];
+
+		for( int j = i+1; j < nclusters; j++ ) {
+			Cluster *clusterj = clusters[j];
+			
+			double geneDistTotals[ GENES ];
+			memset( geneDistTotals, 0, sizeof(geneDistTotals) );
+
+			for( int imember = 0; imember < (int)clusteri->members.size(); imember++ ) {
+				GenomeRef genomei = partition->getGenomeById( clusteri->members[imember] );
+
+				for( int jmember = 0; jmember < (int)clusterj->members.size(); jmember++ ) {
+					GenomeRef genomej = partition->getGenomeById( clusterj->members[jmember] );
+
+					#pragma omp parallel for
+					for( int igene = 0; igene < GENES; igene++ ) {
+						geneDistTotals[igene] += distanceMetrics.deltaCache[igene].deltaValue[ abs(genomei.genes()[igene] - genomej.genes()[igene]) ];
+					}
+				}
+			}
+
+			int ndists = clusteri->members.size() * clusterj->members.size();
+			for( int igene = 0; igene < GENES; igene++ ) {
+				geneDists[i][j].push_back( GeneDist( float(geneDistTotals[igene] / ndists), igene ) );
+			}
+
+			std::sort( geneDists[i][j].begin(), geneDists[i][j].end(), GeneDist::sort );
+
+			printf( "%d --> %d:\n", clusters[i]->id, clusters[j]->id );
+
+			for( int k = 0; k < NGENES_SHOW; k++ ) {
+				GeneDist &dist = geneDists[i][j][k];
+				printf( "    [ %d : %s ] = %f\n", dist.igene, geneNames[dist.igene].c_str(), dist.value );
+			}
+		}
+	}
+}
+
