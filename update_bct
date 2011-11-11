@@ -4,7 +4,9 @@ svn update
 make
 sudo make install
 make swig
-cp bct.py ../polyworld/scripts/
-cp _bct.so ../polyworld/scripts/
+cp bct_py.py ../polyworld/scripts/
+cp bct_gsl.py ../polyworld/scripts/
+cp _bct_py.so ../polyworld/scripts/
+cp _bct_gsl.so ../polyworld/scripts/
 cd ~/src/polyworld
 
