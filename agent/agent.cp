@@ -548,6 +548,7 @@ void agent::grow( long mateWait,
 		fColor[0] = gBodyRedChannelConstValue;
 		break;
 	case BRC_FIGHT:
+	case BRC_GIVE:
 		// no-op
 		break;
 	default:
@@ -1095,10 +1096,16 @@ float agent::UpdateBody( float moveFitnessParam,
 	{
 		SetRed( nerves.fight->get() );	// set red color according to desire to fight
 	}
+	else if( gBodyRedChannel == BRC_GIVE )
+	{
+		SetRed( nerves.give->get() );	// set red color according to desire to give
+	}
+
   	if( gBodyGreenChannel == BGC_LIGHT )
 	{
 		SetGreen(nerves.light->get());
 	}
+
 	if( gBodyBlueChannel == BBC_MATE )
 	{
 		SetBlue( nerves.mate->get() ); 	// set blue color according to desire to mate

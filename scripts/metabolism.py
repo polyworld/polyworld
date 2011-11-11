@@ -153,8 +153,8 @@ def computeEvents( metabolismCache, epochLen, path_run, path_output ):
         row['Gd'] = epoch.give_diff
         row['Cs'] = epoch.contact_same
         row['Cd'] = epoch.contact_diff
-        row['Ps'] = fdiv( epoch.give_same, epoch.contact_same )
-        row['Pd'] = fdiv( epoch.give_diff, epoch.contact_diff )
+        row['Ps'] = fdiv( epoch.give_same, epoch.contact_same * 2 )
+        row['Pd'] = fdiv( epoch.give_diff, epoch.contact_diff * 2 )
         row['Bias'] = fdiv( fdiv(epoch.give_same, epoch.contact_same),
                             fdiv(epoch.give_diff, epoch.contact_diff) );
 
@@ -167,7 +167,7 @@ def computeEvents( metabolismCache, epochLen, path_run, path_output ):
         row['Timestep'] = epoch.timestep
         row['Cs'] = epoch.contact_same
         row['Cd'] = epoch.contact_diff
-        row['PercentSame'] = fdiv( epoch.contact_same, epoch.contact_same + epoch.contact_diff )
+        row['PercentSame'] = 100 * fdiv( epoch.contact_same, epoch.contact_same + epoch.contact_diff )
     
     datalib.write( path_output, [table, table_contactNorm, table_give, table_contact] )
 

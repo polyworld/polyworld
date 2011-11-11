@@ -59,7 +59,7 @@ public:
 	static void agentdestruct();
 	static void agentdump(std::ostream& out);
 	
-	enum BodyRedChannel { BRC_FIGHT, BRC_CONST };
+	enum BodyRedChannel { BRC_FIGHT, BRC_CONST, BRC_GIVE };
 	enum BodyGreenChannel { BGC_ID, BGC_LIGHT, BGC_CONST };
 	enum BodyBlueChannel { BBC_MATE, BBC_CONST, BBC_ENERGY };
 	enum NoseColor { NC_LIGHT, NC_CONST };

@@ -2,15 +2,28 @@
 
 set -e
 
-rundir=${1-run}
-plotdir=$rundir/plots
+if [ "$1" == "-c" ]; then
+    calc=true
+    shift
+fi
 
+rundir=${1-run}
+
+if [ "$calc" == "true" ]; then
+    CalcEvents c $rundir
+    CalcEvents b $rundir
+    CalcEvents n $rundir
+    metabolism.py $rundir
+fi
+
+plotdir=$rundir/plots
 mkdir -p $plotdir
 
 plot="plot a --noview"
 
 $plot -o $plotdir/contact_sameMetabolism.eps --title "Percent of Contacts with Same Metabolism" --ylabel1 "Percent" metabolism/events.txt Contact Timestep PercentSame $rundir
 $plot -o $plotdir/contactCount_diffMetabolism.eps --title "Number of Contacts with Different Metabolism" --ylabel1 "Number Contacts" metabolism/events.txt Contact Timestep Cd $rundir
+$plot -o $plotdir/contactCount_sameMetabolism.eps --title "Number of Contacts with Same Metabolism" --ylabel1 "Number Contacts" metabolism/events.txt Contact Timestep Cs $rundir
 
 $plot -o $plotdir/givecount.eps --title "Give Events per 10k Epoch" --ylabel1 "Give Events" events/contacts_total.txt separations_G T total $rundir
 $plot -o $plotdir/givebias_genomicDistance.eps --title "Bias to Give to Nearest Distance Bins (>1 = bias to near)" --ylabel1 "Bias" events/contacts_bias_nearfar.txt G/C T ratio $rundir

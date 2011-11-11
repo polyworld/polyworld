@@ -416,9 +416,6 @@ void TSimulation::Stop()
         delete[] fRecentFittest;
     }
 	
-	if( fLeastFit )
-		delete fLeastFit;
-
     Brain::braindestruct();
 
     agent::agentdestruct();
@@ -6858,6 +6855,8 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 		proplib::Property &prop = doc.get( "BodyRedChannel" );
 		if( (string)prop == "Fight" )
 			agent::gBodyRedChannel = agent::BRC_FIGHT;
+		else if( (string)prop == "Give" )
+			agent::gBodyRedChannel = agent::BRC_GIVE;
 		else
 		{
 			agent::gBodyRedChannel = agent::BRC_CONST;

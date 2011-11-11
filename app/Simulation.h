@@ -817,7 +817,6 @@ private:
 	int fNumLeastFit;
 	int fMaxNumLeastFit;
 	int fNumSmited;
-	agent** fLeastFit;	// based on heuristic fitness
 	bool fShowVision;
 	bool fStaticTimestepGeometry;
 	bool fParallelInitAgents;
