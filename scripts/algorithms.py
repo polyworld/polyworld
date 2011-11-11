@@ -433,26 +433,25 @@ def count_edges(m, directed=True, threshold=0.0):
 
 ####################################################################################
 ###
-### FUNCTION w_to_d()  # converts matrix weights to distances (by inversion),
-###					   # leaving zeroes as zeroes,
-###					   # optionally capping distances to N (# of nodes),
-###					   # and assuring the diagonal elements are zero
-###					   # assumes a square matrix
+### FUNCTION w_to_d()  # Converts matrix weights to distances (by inversion),
+###					   # leaving zeroes as zeroes, and
+###					   # optionally zeroing weights smaller than min_weight.
+###					   # Assures the diagonal elements are zero.
+###					   # Assumes a square matrix.
 ###
 ####################################################################################
-def w_to_d(mw, cap=False):
+def w_to_d(mw, min_weight=0.0):
 	n = len(mw)
-	oneOverN = 1.0 / n
 	md = []
 	for i in range(n):
 		md.append([])
 		for j in range(n):
-			if mw[i][j] == 0 or i == j:
-				md[i].append(0.0)
-			elif not cap or mw[i][j] > oneOverN:
-				md[i].append(1.0 / mw[i][j])
+			w = mw[i][j]
+			if i == j or w <= min_weight:
+				d = 0.0
 			else:
-				md[i].append(n)
+				d = 1.0 / w
+			md[i].append(d)
 
 	return md
 

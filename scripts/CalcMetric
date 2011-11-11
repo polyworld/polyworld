@@ -18,13 +18,14 @@ import networkx as nx
 import networkx_extensions as nxe
 import numpy
 import datetime
-import bct
+import bct_gsl as bct
+
 
 ####################################################################################
 ###
 ### Global variables
 ###
-### Note:  One more global is defined below, after the functions is refers to
+### Note:  One more global is defined below, after the functions it refers to
 ###
 ####################################################################################
 OutputFilename = common_metric.FILENAME_AVR
@@ -44,6 +45,7 @@ EpochList = []
 G_py = {}
 G_set = {}
 G_size = {}
+G_max_weight = 1.0  # will be replaced with what is read from file
 
 
 ####################################################################################
@@ -103,9 +105,9 @@ def __initialize_graphs():
 ###
 ####################################################################################
 def __read_graphs(anatomy_file):
-	global G_py
+	global G_py, G_max_weight
 
-	G_py['a']['wd']['w'], G_py['p']['wd']['w'], header = common_metric.read_anatomy(anatomy_file)
+	G_py['a']['wd']['w'], G_py['p']['wd']['w'], G_max_weight, header = common_metric.read_anatomy(anatomy_file)
 	
 	return header
 
@@ -155,7 +157,7 @@ def __get_py_graph(neuron_set, graph_type, link_type):
 		if 'b' in graph_type:  # it's a binary graph, so no need to invert (weights & distances are both either zero or one)
 			G_py[neuron_set][graph_type]['d'] = G_py[neuron_set][graph_type]['w']
 		else:
-			G_py[neuron_set][graph_type]['d'] = algorithms.w_to_d(G_py[neuron_set][graph_type]['w'])
+			G_py[neuron_set][graph_type]['d'] = algorithms.w_to_d(G_py[neuron_set][graph_type]['w'], min_weight=0.001)
 	return G_py[neuron_set][graph_type][link_type]
 
 
@@ -395,10 +397,37 @@ def normalized_path_length(neuron_set, graph_type, random, preserving, index):
 	else:
 		graph = g_set.graph
 	weighted = 'w' in graph_type
+	if weighted:
+		max_weight = 1.0 # weights are recorded normalized by maxWeight, so this is always 1.0 instead of G_max_weight
+	else:
+		max_weight = 1.0
 	d = __get_distance_matrix(graph, package, weighted)
-	npl = bct.normalized_path_length(d, 1.0)
+	npl = bct.normalized_path_length(d, max_weight)
 
 	return npl
+
+
+####################################################################################
+###
+### FUNCTION mean_normalized_path_length()
+###
+####################################################################################
+def mean_normalized_path_length(neuron_set, graph_type, random, preserving, index):
+	link_type = 'd'	 # distance (not weight)
+	package = 'bct'  # 'bct' or 'nx'
+	g_set = __get_graph_set(package, neuron_set, graph_type, link_type)
+	if random:
+		graph = __get_random_graph(g_set, package, neuron_set, graph_type, link_type, preserving, index)
+	else:
+		graph = g_set.graph
+	weighted = 'w' in graph_type
+	if weighted:
+		max_weight = 1.0 # weights are recorded normalized by maxWeight, so this is always 1.0 instead of G_max_weight
+	else:
+		max_weight = 1.0
+	mnl = bct.normalized_path_length_m(graph.connection, max_weight)
+
+	return mnl
 
 
 ####################################################################################
@@ -421,6 +450,25 @@ def characteristic_path_length(neuron_set, graph_type, random, preserving, index
 		d = __get_distance_matrix(graph, package, weighted)
 		cpl = bct.charpath_lambda(d)
 	return cpl
+
+
+####################################################################################
+###
+### FUNCTION capped_characteristic_path_length()
+###
+####################################################################################
+def capped_characteristic_path_length(neuron_set, graph_type, random, preserving, index):
+	link_type = 'd'	 # distance (not weight)
+	package = 'bct'	 # 'bct' or 'nx'
+	g_set = __get_graph_set(package, neuron_set, graph_type, link_type)
+	weighted = 'w' in graph_type
+	if random:
+		graph = __get_random_graph(g_set, package, neuron_set, graph_type, link_type, preserving, index)
+	else:
+		graph = g_set.graph
+	d = __get_distance_matrix(graph, package, weighted)
+	ccl = bct.capped_charpath_lambda(d)
+	return ccl
 
 
 ####################################################################################
@@ -541,7 +589,9 @@ def edge_count(neuron_set, graph_type, random, preserving, index):
 Metric_Function = {'cc' : clustering_coefficient,
 				   'ccd': clustering_coefficient_distance,  # cc based on 'd' instead of 'w'
 				   'npl': normalized_path_length,
+				   'mnl': mean_normalized_path_length,
 				   'cpl': characteristic_path_length,
+				   'ccl': capped_characteristic_path_length,
 				   'cl' : connectivity_length,
 				   'nm' : newman_modularity,
 				   'lm' : louvain_modularity,
@@ -1162,50 +1212,51 @@ def make_percents(tables, totals):
 				row.mutate(bin, lambda x: 100 * x / total)
 
 
-####################################################################################
-###
-### FUNCTION compute_bins()
-###
-####################################################################################
-def compute_bins(DATA, timesteps, complexities, AVR, minfunc, maxfunc):
-	totals = dict([(t, {}) for t in timesteps])
-	
-	colnames = ['Timestep'] + [x for x in range(NUMBINS)]
-	coltypes = ['int'] + ['int' for x in range(NUMBINS)]
-	tables = {}
-	
-	for type in complexities:
-		table_bins = datalib.Table(type, colnames, coltypes)
-		tables[type] = table_bins
-	
-		table_avr = AVR[type]
-	
-		for row_avr in table_avr.rows():
-			t = row_avr.get('Timestep')
-			minimum = minfunc(row_avr)
-			maximum = maxfunc(row_avr)
-	
-			row_bins = table_bins.createRow()
-			row_bins.set('Timestep', t)
-			for bin in range(NUMBINS): row_bins.set(bin, 0)
-	
-			data = DATA[t][type]
-	
-			totals[t][type] = 0
-	
-			if(maximum > minimum):
-				for complexity in data:
-					bin = int(((complexity - minimum)/(maximum - minimum))*NUMBINS)
-					if bin >= NUMBINS:
-						bin -= 1
-					row_bins.mutate(bin, lambda x: x + 1)
-	
-					totals[t][type] += 1
-	
-	make_percents(tables, totals)
+# ####################################################################################
+# ###
+# ### FUNCTION compute_bins()
+# ###
+# ####################################################################################
+# def compute_bins(DATA, timesteps, complexities, AVR, minfunc, maxfunc):
+# 	totals = dict([(t, {}) for t in timesteps])
+# 	
+# 	colnames = ['Timestep'] + [x for x in range(NUMBINS)]
+# 	coltypes = ['int'] + ['int' for x in range(NUMBINS)]
+# 	tables = {}
+# 	
+# 	for type in complexities:
+# 		table_bins = datalib.Table(type, colnames, coltypes)
+# 		tables[type] = table_bins
+# 	
+# 		table_avr = AVR[type]
+# 	
+# 		for row_avr in table_avr.rows():
+# 			t = row_avr.get('Timestep')
+# 			minimum = minfunc(row_avr)
+# 			maximum = maxfunc(row_avr)
+# 	
+# 			row_bins = table_bins.createRow()
+# 			row_bins.set('Timestep', t)
+# 			for bin in range(NUMBINS): row_bins.set(bin, 0)
+# 	
+# 			data = DATA[t][type]
+# 	
+# 			totals[t][type] = 0
+# 	
+# 			if(maximum > minimum):
+# 				for complexity in data:
+# 					bin = int(((complexity - minimum)/(maximum - minimum))*NUMBINS)
+# 					if bin >= NUMBINS:
+# 						bin -= 1
+# 					row_bins.mutate(bin, lambda x: x + 1)
+# 	
+# 					totals[t][type] += 1
+# 	
+# 	make_percents(tables, totals)
+# 
+# 	return tables
 
-	return tables
-			
+
 ####################################################################################
 ###
 ### FUNCTION show_usage()

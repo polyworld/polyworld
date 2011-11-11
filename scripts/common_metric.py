@@ -5,8 +5,8 @@ import abstractfile
 import common_functions
 import datalib
 
-METRIC_ROOT_TYPES = ['cc', 'ccd', 'cpl', 'npl', 'cl', 'nm', 'lm', 'm3', 'swi', 'swid', 'swb', 'nc', 'ec', 'hf']
-METRIC_ROOT_NAMES = {'cc':'Clustering Coefficient', 'ccd':'Clustering Coefficient [d]', 'npl':'Normalized Path Length', 'cpl': 'Characteristic Path Length', 'cl':'Connectivity Length', 'swi':'Small World Index', 'swid':'Small World Index [d]', 'hf':'Heuristic Fitness', 'nm':'Newman Modularity', 'lm':'Louvain Modularity', 'nc':'Node Count', 'ec':'Edge Count', 'swb':'Small World Bias', 'm3':'3-Node Motifs'}
+METRIC_ROOT_TYPES = ['cc', 'ccd', 'cpl', 'npl', 'mnl', 'cl', 'ccl', 'nm', 'lm', 'm3', 'swi', 'swid', 'swb', 'nc', 'ec', 'hf']
+METRIC_ROOT_NAMES = {'cc':'Clustering Coefficient', 'ccd':'Clustering Coefficient [d]', 'npl':'Normalized Path Length', 'mnl':'Mean-Normalized Path Length', 'cpl': 'Characteristic Path Length', 'ccl':'Capped Characteristic Path Length', 'cl':'Connectivity Length', 'swi':'Small World Index', 'swid':'Small World Index [d]', 'hf':'Heuristic Fitness', 'nm':'Newman Modularity', 'lm':'Louvain Modularity', 'nc':'Node Count', 'ec':'Edge Count', 'swb':'Small World Bias', 'm3':'3-Node Motifs'}
 DEFAULT_METRICS = []
 METRICS_NO_GRAPH = ['hf']
 METRICS_NO_RANDOM = ['swi', 'swid', 'nc', 'ec', 'swb']
@@ -15,7 +15,7 @@ NEURON_SETS = ['a', 'p']  # all or processing
 GRAPH_TYPES = ['bu', 'bd', 'wu', 'wd']  # binary/weighted, undirected/directed
 LINK_TYPES = ['w', 'd']  # weight or distance
 PRESERVATIONS = ['np', 'wp', 'dp']
-LENGTH_TYPES = ['cpl', 'npl', 'cl']
+LENGTH_TYPES = ['cpl', 'npl', 'cl', 'ccl', 'mnl']
 RANDOM_PIECE = '_ran_'
 FILENAME_AVR = 'AvrMetric.plt'
 DEFAULT_NUMBINS = 11
@@ -206,8 +206,9 @@ def parse_avrs(run_paths,
 ### FUNCTION read_anatomy()
 ###
 ### Reads a brain anatomy file and returns the all-neuron matrix (ga),
-### the processing-neuron (non-sensory) matrix (gp), and the file header.
-### Neither ga nor gp contains the bias neuron or bias inputs.
+### the processing-neuron (non-sensory) matrix (gp), the maximum weight
+### allowed in the network during evolution, and the file header.
+### Neither ga nor gp contains the bias neuron or bias connections.
 ###
 ####################################################################################
 def read_anatomy(anatomy_file):
@@ -228,6 +229,13 @@ def read_anatomy(anatomy_file):
 			function_header = function_file.readline()
 			function_file.close()
 			return int(function_header.split(' ')[-2])
+
+	def __max_weight(header):
+		start = header.find('maxWeight')
+		start += header[start:].find('=') + 1
+		stop = start + header[start:].find(' ')
+		max_weight = float(header[start:stop])
+		return max_weight
 	
 	file = abstractfile.open(anatomy_file, 'r')
 	lines = file.readlines()
@@ -235,6 +243,7 @@ def read_anatomy(anatomy_file):
 	
 	header = lines[0].rstrip()  # get rid of the newline
 	num_input_neurons = __num_input_neurons(header)
+	max_weight = __max_weight(header)
 
 	lines.pop(0) # drop the header line
 
@@ -258,6 +267,7 @@ def read_anatomy(anatomy_file):
 		if i >= num_input_neurons:
 			gp.append(row_p)  # must agree with neuron-sets and graph-types in common_metric.py
 	
+	# Transpose the matrixes so g[i][j] describes a connection from i to j (not j to i, as stored)
 	for i in range(len(ga)):
 		for j in range(i):
 			temp = ga[i][j]
@@ -270,5 +280,5 @@ def read_anatomy(anatomy_file):
 			gp[i][j] = gp[j][i]
 			gp[j][i] = temp
 
-	return ga, gp, header
+	return ga, gp, max_weight, header
 
