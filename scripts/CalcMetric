@@ -46,6 +46,7 @@ G_py = {}
 G_set = {}
 G_size = {}
 G_max_weight = 1.0  # will be replaced with what is read from file
+G_filename = ""  # will be replaced with each current filename
 
 
 ####################################################################################
@@ -105,8 +106,9 @@ def __initialize_graphs():
 ###
 ####################################################################################
 def __read_graphs(anatomy_file):
-	global G_py, G_max_weight
+	global G_py, G_max_weight, G_filename
 
+	G_filename = anatomy_file
 	G_py['a']['wd']['w'], G_py['p']['wd']['w'], G_max_weight, header = common_metric.read_anatomy(anatomy_file)
 	
 	return header
@@ -466,8 +468,7 @@ def capped_characteristic_path_length(neuron_set, graph_type, random, preserving
 		graph = __get_random_graph(g_set, package, neuron_set, graph_type, link_type, preserving, index)
 	else:
 		graph = g_set.graph
-	d = __get_distance_matrix(graph, package, weighted)
-	ccl = bct.capped_charpath_lambda(d)
+	ccl = bct.capped_charpath_lambda(graph.connection)
 	return ccl
 
 
