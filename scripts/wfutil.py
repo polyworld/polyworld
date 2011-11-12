@@ -103,8 +103,13 @@ def ensure_proplib_worldfile( path_worldfile_or_run ):
         exitval, stdout = get_cmd_stdout( ['wfutil', 'conv', '-l', path_legacy] )
         if exitval != 0:
             err( "Cannot convert worldfile in rundir " + path_run )
-        
-        __tofile( path_proplib, stdout )
+
+        __tofile( '/tmp/converted.wf', stdout )
+
+        if not os.path.exists( path_schema() ):
+            err( "Cannot find schema. Expected at '%s'" % path_schema() )
+
+        __tofile( path_proplib, proputil('apply', path_schema(), '/tmp/converted.wf') )
 
         shutil.copy( path_schema(), path_run )
 
