@@ -391,7 +391,7 @@ double calcC_k( gsl_matrix* COV, double I_n, int k )
 			numVisited++;
 		}
 		
-		EI_k += calcI_k( COV, indexes, k );
+		EI_k += CalcI_k( COV, indexes, k );
 	}
 	
 	dispose_rng( randNumGen );
@@ -428,7 +428,7 @@ double calcC_nm1( gsl_matrix* COV, double I_n )
 		//Technically we don't have to store this array, but for now lets stay consistent with the MATLAB code
 		gsl_matrix* Xed_COV =  matrix_crosssection( COV, b, b_length );
 		double det = determinant( Xed_COV );
-		sumI_n1 += calcI( Xed_COV, det );
+		sumI_n1 += CalcI( Xed_COV, det );
 		gsl_matrix_free( Xed_COV );		// this should solve the big memory leak problem
 	}
 
@@ -437,11 +437,11 @@ double calcC_nm1( gsl_matrix* COV, double I_n )
 
 
 //---------------------------------------------------------------------------
-// calcI
+// CalcI
 //
 // Calculates Integration, I(X), from the covariance matrix and its determinant.
 //---------------------------------------------------------------------------
-double calcI( gsl_matrix* COV, double det )
+double CalcI( gsl_matrix* COV, double det )
 {
 #if Fix_I
 	double sum_Hxi = 0.0;
@@ -460,20 +460,13 @@ double calcI( gsl_matrix* COV, double det )
 //    COV - the covariance matrix of the full X
 //    indexes - the randomly selected subset of k random variables from X
 //---------------------------------------------------------------------------
-double calcI_k( gsl_matrix* COV, int* indexes, int k )
+double CalcI_k( gsl_matrix* COV, int* indexes, int k )
 {
 	gsl_matrix* COV_k =  matrix_crosssection( COV, indexes, k );
 	double det = determinant( COV_k );
-#if Fix_I
-	double sum_Hxi = 0.0;
-	for( size_t i = 0; i < COV_k->size1; i++ )
-		sum_Hxi += c_log( gsl_matrix_get( COV_k, i, i ) );
+	double I_k = CalcI( COV_k, det );
 	gsl_matrix_free( COV_k );
-	
-	return( 0.5 * (sum_Hxi  -  c_log( det )) );
-#else
-	return( -0.5 * c_log( det ) );
-#endif
+	return( I_k );
 }
 
 
@@ -528,7 +521,7 @@ double CalcApproximateFullComplexityWithMatrix( gsl_matrix* data, int numPoints 
 		gsl_matrix_free( o );	// free this iff we allocated it (don't free data)
 
 	double det = determinant( COV );
-	double I_n = calcI( COV, det );
+	double I_n = CalcI( COV, det );
 #if RescaleCOV
 	rescaleCOV( COV, det );
 #endif
