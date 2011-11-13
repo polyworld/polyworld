@@ -78,7 +78,7 @@ float MotionComplexity::calculate( Epoch &epoch )
 		DEBUG( print_matrix(COV) );
 
 		double det = determinant( COV );
-		double I_n = calcI( COV, det );
+		double I_n = CalcI( COV, det );
 		epoch.complexity.value = calcC_nm1( COV, I_n );
 		
 		MFREE(COV);

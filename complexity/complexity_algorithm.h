@@ -29,8 +29,8 @@ gsl_matrix* matrix_crosssection( gsl_matrix* m, int[], int );
 gsl_matrix* matrix_subset_col( gsl_matrix* mInput, int* columns, int numColumns );
 
 double determinant( gsl_matrix* );
-double calcI( gsl_matrix* COV, double det );
-double calcI_k( gsl_matrix*, int* , int );
+double CalcI( gsl_matrix* COV, double det );
+double CalcI_k( gsl_matrix*, int* , int );
 double calcC_nm1( gsl_matrix*, double ); // requires a square correlation (covariance) Matrix
 double calcC_k( gsl_matrix * COV, double I_n, int k );
 
