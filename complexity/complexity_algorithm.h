@@ -16,6 +16,7 @@
 
 #define DEFAULT_SEED 42
 
+bool n_choose_k_le_s( int n, int k, int s );
 void setGaussianize( bool gaussianize );
 
 gsl_rng *create_rng( int seed );
@@ -31,8 +32,9 @@ gsl_matrix* matrix_subset_col( gsl_matrix* mInput, int* columns, int numColumns 
 double determinant( gsl_matrix* );
 double CalcI( gsl_matrix* COV, double det );
 double CalcI_k( gsl_matrix*, int* , int );
-double calcC_nm1( gsl_matrix*, double ); // requires a square correlation (covariance) Matrix
+// double calcC_nm1( gsl_matrix*, double ); // requires a square covariance Matrix
 double calcC_k( gsl_matrix * COV, double I_n, int k );
+double calcC_k_exact( gsl_matrix* COV, double I_n, int k );
 
 gsl_matrix* calcCOV( gsl_matrix* );					// function overloaded for simpler, faster COV calculation
 gsl_matrix* calcCOV( gsl_matrix* CIJ, double r );	// function overloaded for when we don't need to compute COR

@@ -1,4 +1,5 @@
 #include "complexity_algorithm.h"
+#include "next_combination.h"
 
 #include <iostream>
 
@@ -28,6 +29,35 @@
 static bool Gaussianize = true;
 
 using namespace std;
+
+//---------------------------------------------------------------------------
+// n_choose_k_le_s()
+//
+// This is an efficient way to determine if <n choose k> is <= s.
+// It multiplies the terms from the largest to the smallest and stops
+// once s is exceeded, which will usually happen within a term or two.
+// It is used to determine whether to sample or exhaustively compute C_k.
+//
+// WARNING:  This is only accurate out to about <N choose k> < 10^13 or so,
+// but this should be more than adequate for our purposes.
+//---------------------------------------------------------------------------
+bool n_choose_k_le_s( int n, int k, int s )
+{
+	bool less_equal = true;
+	double product = 1.0;
+
+	for( int i = 1; i < k+1; i++ )
+	{
+		product *= (n - (k-i)) / (double) i;
+		if( product > s )
+		{
+			less_equal = false;
+			break;
+		}
+	}
+
+	return( less_equal );
+}
 
 
 //---------------------------------------------------------------------------
@@ -348,23 +378,25 @@ double determinant( gsl_matrix* m )
 //
 // where LI_k is the (k/N) linear portion of I(X)
 // and EI_k is the expected value of actual, calculated values
-// of all I_k_i subsets of size k (or, in practice, some number
+// of all I_k_i subsets of size k (or, usually, some number
 // of samples of I_k_i).
 //---------------------------------------------------------------------------
 double calcC_k( gsl_matrix* COV, double I_n, int k )
 {
-	#define NumSamples 100
+	#define NumSamples 1000
 	
 	int n = COV->size1;
 
 	if( k == n-1 )	// next to last term, which is the usual "simplified TSE"
-		return( calcC_nm1( COV, I_n ) );
+		return( calcC_k_exact( COV, I_n, k ) );
 	else if( k == 1 )	// second term
 		return( I_n / n );
 	else if( k == 0 || k == n )	// first or last term
 		return( 0.0 );
+	else if( n_choose_k_le_s( n, k, NumSamples ) )	// < NumSamples terms, so calculate exactly
+		return( calcC_k_exact( COV, I_n, k ) );
 	
-	// If we reach here, we are dealing with the general case (k > 1 and k < n-1)
+	// If we reach here, we are dealing with the general case (k > 1 and k < n-1 and many terms)
 
 	// Calculate the linear, unstructured subset of I_n
 	double LI_k = I_n * k / n;
@@ -405,34 +437,70 @@ double calcC_k( gsl_matrix* COV, double I_n, int k )
 //---------------------------------------------------------------------------
 // Calculate C_k for k = n - 1
 //---------------------------------------------------------------------------
-double calcC_nm1( gsl_matrix* COV, double I_n )
+// double calcC_nm1( gsl_matrix* COV, double I_n )
+// {
+// 	int n = COV->size1;
+// 
+// 	double sumI_nm1 = 0;
+// 
+// 	for( int i = 0; i < n; i++ )
+// 	{
+// 		int b[n-1];
+// 		int b_length = n-1;
+// 
+// 		for( int j = 0; j < n; j++ )
+// 		{
+// 			if( j < i )
+// 				b[j] = j;		
+// 			else if( j > i )
+// 				b[j-1] = j;
+// 		
+// 		}
+// 
+// 		//Technically we don't have to store this array, but for now lets stay consistent with the MATLAB code
+// 		gsl_matrix* Xed_COV =  matrix_crosssection( COV, b, b_length );
+// 		double det = determinant( Xed_COV );
+// 		sumI_nm1 += CalcI( Xed_COV, det );
+// 		gsl_matrix_free( Xed_COV );		// this should solve the big memory leak problem
+// 	}
+// 
+// 	return( I_n - (I_n + sumI_nm1)/n );
+// }
+
+
+//---------------------------------------------------------------------------
+// Calculate C_k exactly
+//
+// Uses all subsets of size k from set of size n.
+// next_combination() does the work of shuffling indexes so that the first
+// k indexes of the index[] array exhaustively cycle through all subsets.
+//---------------------------------------------------------------------------
+double calcC_k_exact( gsl_matrix* COV, double I_n, int k )
 {
 	int n = COV->size1;
-
-	double sumI_n1=0;
-
+	int index[n];
+	
 	for( int i = 0; i < n; i++ )
+		index[i] = i;
+
+	double sumI_k = 0;
+	int n_choose_k = 0;
+
+	do
 	{
-		int b[n-1];
-		int b_length = n-1;
-
-		for( int j = 0; j < n; j++ )
-		{
-			if( j < i )
-				b[j] = j;		
-			else if( j > i )
-				b[j-1] = j;
-		
-		}
-
-		//Technically we don't have to store this array, but for now lets stay consistent with the MATLAB code
-		gsl_matrix* Xed_COV =  matrix_crosssection( COV, b, b_length );
+		gsl_matrix* Xed_COV =  matrix_crosssection( COV, index, k );
 		double det = determinant( Xed_COV );
-		sumI_n1 += CalcI( Xed_COV, det );
-		gsl_matrix_free( Xed_COV );		// this should solve the big memory leak problem
+		sumI_k += CalcI( Xed_COV, det );
+		gsl_matrix_free( Xed_COV );
+		
+		n_choose_k++;
 	}
+	while( next_combination( index, index+k, index+n ) );
+	
+// 	printf( "Used %s, n=%d, k=%d, n_choose_k=%d, C_k=%g\n",
+// 			__func__, n, k, n_choose_k, (I_n * k / n  -  sumI_k / n_choose_k) );
 
-	return( I_n - (I_n + sumI_n1)/n );
+	return( I_n * k / n  -  sumI_k / n_choose_k );
 }
 
 
@@ -455,8 +523,8 @@ double CalcI( gsl_matrix* COV, double det )
 
 
 //---------------------------------------------------------------------------
-// Calculate I_k, the Integration of a k-sized subset of the full matrix
-// of random variables X, based on the provided:
+// Calculate I_k, the Integration of a specific k-sized subset of the full
+// matrix of random variables X, based on the provided:
 //    COV - the covariance matrix of the full X
 //    indexes - the randomly selected subset of k random variables from X
 //---------------------------------------------------------------------------
@@ -531,7 +599,7 @@ double CalcApproximateFullComplexityWithMatrix( gsl_matrix* data, int numPoints 
 
 	if( numPoints == 1 )	// use just the k=N-1 point, which is the original simplified TSE complexity
 	{
-		complexity = calcC_nm1( COV, I_n );
+		complexity = calcC_k_exact( COV, I_n, n-1 );
 	}
 	else if( (size_t) numPoints < n )
 	{
@@ -574,7 +642,7 @@ double CalcApproximateFullComplexityWithMatrix( gsl_matrix* data, int numPoints 
 		// same as the original simplified TSE (which is Olbrich's version of excess entropy).
 		k = n - 1;
 		dk = k - k_prev;
-		c_k = calcC_nm1( COV, I_n );				// last non-zero term (c_nm1) (nm1 == n-1)
+		c_k = calcC_k_exact( COV, I_n, k );			// last non-zero term
 		delta_c = dk * 0.5 * (c_k + c_prev);		// area of final quadrilateral
 		complexity += delta_c;
 		calcC_k_print( "%d: I_%d = %g, C_%d = %g, dk = %d, dc = %g, c = %g\n", numPoints, k, I_n*(n-1)/n, k, c_k, dk, delta_c, complexity );
