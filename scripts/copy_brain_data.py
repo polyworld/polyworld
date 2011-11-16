@@ -150,7 +150,14 @@ def copy_run_dir(source, target):
 
 	if not target_dir_specified:
 		copy(join(source, 'BirthsDeaths.log'), join(target, 'BirthsDeaths.log'))
-		copy(join(source, 'worldfile'), join(target, 'worldfile'))
+		if os.access(join(source, 'worldfile'), os.F_OK):
+			copy(join(source, 'worldfile'), join(target, 'worldfile'))
+		if os.access(join(source, 'original.wf'), os.F_OK):
+			copy(join(source, 'original.wf'), join(target, 'original.wf'))
+			copy(join(source, 'normalized.wf'), join(target, 'normalized.wf'))
+			copy(join(source, 'reduced.wf'), join(target, 'reduced.wf'))
+			copy(join(source, 'original.wfs'), join(target, 'original.wfs'))
+			copy(join(source, 'normalized.wfs'), join(target, 'normalized.wfs'))
 		mkdir(target_brain_dir)
 		mkdir(target_Recent_dir)
 	
@@ -200,7 +207,9 @@ def main():
 	for root, dirs, files in os.walk(source_dir):
 		break
 	
-	if 'worldfile' not in files and len(dirs) < 1:
+	worldfile = 'worldfile' in files or 'original.wf' in files
+	
+	if not worldfile and len(dirs) < 1:
 		print 'No worldfile and no directories, so nothing to do'
 		usage()
 		exit(1)
@@ -213,10 +222,11 @@ def main():
 		target_dir = source_dir+'_'+str(suffix)
 		mkdir(target_dir)
 
-	if 'worldfile' in files:
+	if worldfile:
 		# this is a single run directory,
 		# so just copy the desired pieces into the new directory
-		if target_dir_specified and not os.access(join(target_dir, 'worldfile'), os.F_OK):
+		if target_dir_specified and not os.access(join(target_dir, 'worldfile'), os.F_OK) \
+								and not os.access(join(target_dir, 'original.wf'), os.F_OK):
 			print 'Error: attempted to copy a run directory to a non-run directory'
 			usage()
 			exit(3)
@@ -226,16 +236,22 @@ def main():
 		# this is a directory of run directories,
 		# so recreate the run directories inside it,
 		# and copy the desired pieces into each new run directory
-		if target_dir_specified and os.access(join(target_dir, 'worldfile'), os.F_OK):
+		if target_dir_specified and (os.access(join(target_dir, 'worldfile'), os.F_OK) or \
+									 os.access(join(target_dir, 'original.wf'), os.F_OK)):
 			print 'Error: attempted to copy a non-run directory to a run directory'
 			usage()
 			exit(4)
 		else:
 			for run_dir in dirs:
+				source_run_dir = join(source_dir, run_dir)
+				if not os.access(join(source_run_dir, 'worldfile'), os.F_OK) and \
+				   not os.access(join(source_run_dir, 'original.wf'), os.F_OK):
+					print 'not copying non-run directory:', source_run_dir
+					continue
 				target_run_dir = join(target_dir, run_dir)
 				if not target_dir_specified:
 					mkdir(target_run_dir)
-				copy_run_dir(join(source_dir, run_dir), target_run_dir)
+				copy_run_dir(source_run_dir, target_run_dir)
 
 
 main()
