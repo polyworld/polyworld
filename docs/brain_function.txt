@@ -1,8 +1,18 @@
 Function files:
 
-There is one line of identifiers, counts,  and indexes.  It always starts with "brainFunction" and the agent ID number.  Next come a set of numbers, with no labels, which are:
+Current files have an initial line containing "version #", where # is the version number.  Older files do not have this line, and are considered version zero.
 
-numneurons numinputneurons numsynapses birthTime redStart-redEnd greenStart-greenEnd blueStart-blueEnd
+After the version line (if present) there follows one line of identifiers, counts, and indexes.  It always starts with "brainFunction".  Next come a set of numbers, with no labels, which are:
+
+	agent ID number
+    numneurons
+    numinputneurons
+    numoutputneurons (only in version 1 and later)
+    numsynapses
+    birthTime
+    redStart-redEnd
+    greenStart-greenEnd
+    blueStart-blueEnd
 
 ("birthTime" is the simulation time step at which the agent was introduced into the simulation.)
 
@@ -18,6 +28,7 @@ numneurons-1  <value>       /
 1             <value>        \_ Values for time step 1 for this agent
 ...                          /  (time step birthTime+1 in the simulation)
 numneurons-1  <value>       /
-and so on, for the life of the agent
+
+and so on, for the life of the agent.  (Note: The bias neuron activation is not recorded, because it is always 1.0.)
 
 There is a final line that records the final heuristic fitness of the agent at death:  "end fitness = <value>".
