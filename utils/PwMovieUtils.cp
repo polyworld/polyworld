@@ -1351,6 +1351,9 @@ void PwRecordMovie( FILE *f, long xleft, long ybottom, long width, long height )
         n = fwrite( rleBuf, 4, (int) rleBuf[0]+1, f );  // +1 to include (long) length
 		pmpPrint( "wrote %lu longs\n", n );
     }
+    
+    if( n < 0 )
+    	printf( "Can't happen\n" );
 }
 
 //---------------------------------------------------------------------------
