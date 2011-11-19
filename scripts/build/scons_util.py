@@ -262,10 +262,8 @@ def libprefix():
 def addlib(env, libname, path = None):
     if not path:
         path = env['LIBPATH'] + env['FRAMEWORKPATH'] + env['DEFAULTFRAMEWORKPATH']
-    print 'path =', path
 
     for dir in path:
-    	print ' dir =', dir
         if os.path.exists( os.path.join(dir, libname + '.framework') ):
                 env.Append( FRAMEWORKS = [libname] )
                 if dir not in env['DEFAULTFRAMEWORKPATH']:
