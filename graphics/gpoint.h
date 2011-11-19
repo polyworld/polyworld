@@ -22,4 +22,4 @@ public:
     virtual void draw();
 };
 
-#endif GPOINT_H
+#endif
