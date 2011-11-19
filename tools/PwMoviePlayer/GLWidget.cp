@@ -66,7 +66,7 @@ void GLWidget::Draw()
 		// Superimpose the timestep number
 		QFont font( "Monaco", 10 );
 		char timestepString[16];
-		sprintf( timestepString, "%8lu", frame->timestep );
+		sprintf( timestepString, "%8u", frame->timestep );
 		renderText( width() - 60, 15, timestepString, font );
 	
 		// Draw the legend
