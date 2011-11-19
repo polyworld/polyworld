@@ -14,7 +14,7 @@ Nerve::Nerve( Type _type,
 	, numneurons(0)
 	, index(-1)
 {
-	memset( activations, NULL, sizeof(activations) );
+	memset( activations, 0, sizeof(activations) );
 }
 
 float Nerve::get( int ineuron,
