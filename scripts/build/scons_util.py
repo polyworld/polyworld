@@ -13,11 +13,13 @@ def init_env(env):
                            '/usr/local/lib'] )
 
     if PFM == 'linux':
+        env.Append( DEFAULTFRAMEWORKPATH = [] )
         env.Append( FRAMEWORKPATH = [] )
         env.Append( LIBPATH = ['/usr/lib/x86_64-linux-gnu'] )
     elif PFM == 'mac':
-        env.Append( FRAMEWORKPATH = ['/System/Library/Frameworks',
-                                     '/Library/Frameworks'] )
+        env.Append( DEFAULTFRAMEWORKPATH = ['/System/Library/Frameworks',
+                                            '/Library/Frameworks'] )
+        env.Append( FRAMEWORKPATH = [] )
         
     return env
 
@@ -259,12 +261,15 @@ def libprefix():
 ################################################################################
 def addlib(env, libname, path = None):
     if not path:
-        path = env['LIBPATH'] + env['FRAMEWORKPATH']
+        path = env['LIBPATH'] + env['FRAMEWORKPATH'] + env['DEFAULTFRAMEWORKPATH']
+    print 'path =', path
 
     for dir in path:
+    	print ' dir =', dir
         if os.path.exists( os.path.join(dir, libname + '.framework') ):
                 env.Append( FRAMEWORKS = [libname] )
-                env.AppendUnique( FRAMEWORKPATH = [dir] )
+                if dir not in env['DEFAULTFRAMEWORKPATH']:
+	                env.AppendUnique( FRAMEWORKPATH = [dir] )
                 return
         else:
             for libsuffix in libsuffixes():
