@@ -150,7 +150,7 @@ void DataLibWriter::addRow( Variant col0, ... )
 
 	va_list args;
 
-	for( int i = 0; i < cols.size(); i++ )
+	for( unsigned int i = 0; i < cols.size(); i++ )
 	{
 		// floats are automatically promoted to double by ...
 		// so we have to differentiate between actual type and
