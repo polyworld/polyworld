@@ -104,7 +104,7 @@ void GenomeLayout::createNeurGroup( GenomeLayout *layout,
 	// --- 
 	for( int group = 0; group < MaxGroups; group++ )
 	{
-		NeurGroupType groupType = schema->getNeurGroupType( group );
+		//NeurGroupType groupType = schema->getNeurGroupType( group );
 		NeurGroupGene *groupGene = schema->getGroupGene( group );
 
 		DBPRINT( cout << "--- " << group << ", type=" << groupType << endl );
