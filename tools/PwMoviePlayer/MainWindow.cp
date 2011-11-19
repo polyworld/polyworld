@@ -312,8 +312,8 @@ void MainWindow::RestoreFromPrefs()
 	int defX = 1;
 	int titleHeight = 22;
 	int defY = kMenuBarHeight + titleHeight;	
-	int defWidth = desktop->width() - defX;
-	int defHeight = desktop->height() - defY;
+// 	int defWidth = desktop->width() - defX;
+// 	int defHeight = desktop->height() - defY;
 
 	// Attempt to restore window size and position from prefs
 	// Save size and location to prefs
