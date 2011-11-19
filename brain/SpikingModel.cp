@@ -199,7 +199,8 @@ void SpikingModel::update( bool bprint )
 	static long loop_counter=0;
     short i, j, n_steps;
     long k;
-	float u,v,activation;
+// 	float u;
+	float v,activation;
     if ((neuron == NULL) || (synapse == NULL) || (neuronactivation == NULL))
         return;
 	int outputNeuronFiringCounter[dims->numOutputNeurons];
@@ -322,7 +323,7 @@ void SpikingModel::update( bool bprint )
 				v = neuron[i].v;			
 			}	
 				
-			u=neuron[i].u;
+// 			u=neuron[i].u;
 			
 #if USE_BIAS			
 			//stochastically generate bias
