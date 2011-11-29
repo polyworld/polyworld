@@ -7,7 +7,7 @@ function usage()
     echo
     echo "  worldfile: path of worldfile to be executed (\"nil\" if only doing postrun analysis)."
     echo
-    echo "  run_id: unique id of run, which should use '/' for a hierarchy of classification."
+    echo "  run_id: unique id of run, which should use '/' for a hierarchy of classification (e.g. nutrients/barriers/give). This ultimately dictates where run is stored in file system."
     echo
     echo "  prerun_script: path of (optional) script to be executed prior to starting simulation."
     echo
@@ -46,6 +46,12 @@ if [ -z "$1" ]; then
 fi
 
 if [ "$1" == "--field" ]; then
+    ##############################
+    ###                        ###
+    ### EXECUTE ON REMOTE HOST ###
+    ###                        ###
+    ##############################
+
     payload_dir=`pwd`
     export POLYWORLD_PWFARM_WORLDFILE="$payload_dir/worldfile"
     RUNID=`cat $payload_dir/runid`
@@ -64,7 +70,7 @@ if [ "$1" == "--field" ]; then
 
     export DISPLAY=:0.0 # for Linux -- allow graphics from ssh
     export PATH=`canonpath scripts`:$PATH
-    ulimit -n 1024      # for Mac -- allow enough file descriptors
+    ulimit -n 4096      # for Mac -- allow enough file descriptors
 
     ###
     ### Unpack the input zip
@@ -108,14 +114,17 @@ if [ "$1" == "--field" ]; then
 	    else
 		seed=$PWFARM_ID
 	    fi
-	    ./scripts/edit_worldfile.py $POLYWORLD_PWFARM_WORLDFILE ./worldfile genomeSeed_also_used_for_position=$seed || exit 1
+	    cp $POLYWORLD_PWFARM_WORLDFILE ./worldfile
+	    ./scripts/wfutil edit ./worldfile SimulationSeed=$seed || exit 1
 
 	    ###
 	    ### Run Polyworld!!!
 	    ###
-	    if ! ./Polyworld; then
+	    if ! ./Polyworld ./worldfile; then
 		failed=true
 	    fi
+
+	    cp $POLYWORLD_PWFARM_WORLDFILE run/farm.wf
 	else
  	    ###
 	    ### Move the old run from good/failed archive into working directory
@@ -132,6 +141,17 @@ if [ "$1" == "--field" ]; then
 	    fi
 	fi
     fi
+
+    ###
+    ### Init Run Zip Args
+    ###
+    PWFARM_RUNZIP=$( pwd )/zipargs
+    export PWFARM_RUNZIP
+    rm -f $PWFARM_RUNZIP
+
+    echo 'stats/*' >> $PWFARM_RUNZIP
+    echo '*.wf' >> $PWFARM_RUNZIP
+    echo '*.wfs' >> $PWFARM_RUNZIP
 
     ###
     ### Execute the postrun script
@@ -154,14 +174,10 @@ if [ "$1" == "--field" ]; then
 
     scripts/run_history.sh src run $failed $payload_dir/postrun.sh
 
-    rundir=run_${PWFARM_ID}
-    archive=${rundir}.zip
-    if [ -e $archive ]; then
-	rm $archive
+    if [ -e run ]; then
+	cd run
+	zip -r $PWFARM_OUTPUT_FILE $( cat $PWFARM_RUNZIP | while read line; do echo $line; done )
     fi
-    mv run $rundir
-    zip -r $archive $rundir/brain/Recent/*.plt $rundir/events/*.txt $rundir/stats/* $rundir/worldfile $rundir/*.eps
-    mv $rundir run
 
     cd ~/polyworld_pwfarm
 
@@ -194,6 +210,12 @@ if [ "$1" == "--field" ]; then
 	exit 0
     fi
 else
+    ########################
+    ###                  ###
+    ### EXECUTE ON LOCAL ###
+    ###                  ###
+    ########################
+
     pwfarm_dir=`canondirname "$0"`
     poly_dir=`canonpath "$pwfarm_dir/../.."`
 
@@ -233,37 +255,14 @@ else
 
     echo "$RUNID" > $tmp_dir/runid
 
+    pushd .
     cd $tmp_dir
 
     zip -r payload.zip .
 
-    $pwfarm_dir/pwfarm_dispatcher.sh clear $PWHOSTNUMBERS
-    if $pwfarm_dir/pwfarm_dispatcher.sh dispatch $PWHOSTNUMBERS $USER payload.zip './poly_run.sh --field'
-    then
-	mkdir -p $DSTDIR/$RUNID
+    popd
 
-	pwhostnumbers=`cat $PWHOSTNUMBERS`
-
-	for x in $pwhostnumbers; do
-	    number=$x
-	    id=`printf "%02d" $number`
-	    pwhostname=pw$id
-	    eval pwhost=\$$pwhostname
-
-	    while ! scp $USER@$pwhost:~/polyworld_pwfarm/app/run_$number.zip $DSTDIR/$RUNID
-	    do
-		echo "Failed copying run.zip from $pwhostname"
-		sleep 2
-	    done
-	done
-
-	cd $DSTDIR/$RUNID
-	for x in *.zip; do
-	    unzip -o $x
-	done
-
-	rm *.zip
-    fi
+    $pwfarm_dir/pwfarm_dispatcher.sh dispatch $PWHOSTNUMBERS $USER $tmp_dir/payload.zip './poly_run.sh --field' run $DSTDIR/$RUNID
 
     rm -rf $tmp_dir
 fi

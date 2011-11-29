@@ -39,12 +39,27 @@ case "$MODE" in
 	export PWFARM_ID="$2"
 	export PWFARM_HOME="$3"
 	export PWFARM_COMPLETION_FILE="$4"
-	export PWFARM_COMMAND="$5"
+	export PWFARM_OUTPUT_EXISTS_FILE="$5"
+	export PWFARM_OUTPUT_FILE="$6"
+	export PWFARM_PASSWORD="$7"
+	export PWFARM_COMMAND="$8"
+
+	function PWFARM_SUDO()
+	{
+	    if [ "$PWFARM_PASSWORD" == "nil" ]; then
+		echo "PWFARM_SUDO invoked, but no password provided to script! pwfarm_dispatcher must be invoked with --password!" >&2
+		exit 1
+	    fi
+	    printf "$PWFARM_PASSWORD\n" | sudo -S $*
+ 	    # Make sure sudo queries us for a password on next invocation. 
+	    sudo -k
+	}
+	export -f PWFARM_SUDO
 	
 	#
 	# Try resuming from a disconnect
 	#
-	if screen -S pwfarm -r; then
+	if screen -S pwfarm -d -r; then
 	    msg RESUMED SCREEN
 	    if [ ! -e $PWFARM_COMPLETION_FILE ] ; then
 		echo 'Screen crashed' > $PWFARM_COMPLETION_FILE
@@ -86,11 +101,17 @@ case "$MODE" in
 	msg invoking _"$PWFARM_COMMAND"_
 
 	cd "$PWFARM_HOME/payload"
-	pwd
-	ls
+
+	rm -f $PWFARM_OUTPUT_FILE
 
 	bash -c "$PWFARM_COMMAND"
 	exitval=$?
+
+	if [ -e $PWFARM_OUTPUT_FILE ]; then
+	    echo "True" > $PWFARM_OUTPUT_EXISTS_FILE
+	else
+	    echo "False" > $PWFARM_OUTPUT_EXISTS_FILE
+	fi
 
 	if [ $exitval == 0 ] ; then
 	    echo 'yay'>$PWFARM_COMPLETION_FILE

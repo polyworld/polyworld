@@ -15,7 +15,8 @@ SRCDIRS="agent\
 MISCDIRS="scripts\
           objects"
 
-MISCFILES="Makefile"
+MISCFILES="Makefile\
+           default.wfs"
 
 if [ $# != 1 ]; then
     name=`basename $0`

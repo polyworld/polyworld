@@ -9,5 +9,10 @@ for x in $PWHOSTNUMBERS; do
     eval pwhost=\$$pwhostname
 
     echo --- $pwhostname ---
-    ssh -l $USER $pwhost killall Polyworld
+    ssh -l $USER $pwhost '\
+	find ~/polyworld_pwfarm/runs -name "normalized.wf" | \
+	while read x; do dirname $x; done; \
+	find ~/polyworld_pwfarm/runs -name "worldfile" | \
+	while read x; do dirname $x; done \'
+
 done

@@ -5,8 +5,11 @@ PWFARM_FIELD_HOST="$2"
 PWFARM_FIELD_ID="$3"
 PWFARM_FIELD_USER="$4"
 PWFARM_PAYLOAD="$5"
-PWFARM_COMMAND="$6"
-PWFARM_FIELD_COMPLETION="$7"
+PWFARM_PASSWORD="$6"
+PWFARM_COMMAND="$7"
+PWFARM_OUTPUT_BASENAME="$8"
+PWFARM_OUTPUT_DIR="$9"
+PWFARM_FIELD_COMPLETION="${10}"
 
 
 function err()
@@ -25,8 +28,14 @@ function canondirname()
     dirname `canonpath "$1"`
 }
 
-PWFARM_FIELD_COMPLETION__REMOTE="~/pwfarm/`basename $PWFARM_FIELD_COMPLETION`"
+# ssh macro that specifies user and a server timeout
+ssh="ssh -l $PWFARM_FIELD_USER -o ServerAliveInterval=60"
 
+PWFARM_FIELD_COMPLETION__REMOTE="~/pwfarm/`basename $PWFARM_FIELD_COMPLETION`"
+PWFARM_FIELD_OUTPUT_EXISTS__REMOTE="~/pwfarm/output_exists"
+PWFARM_FIELD_OUTPUT_EXISTS__LOCAL="${PWFARM_FARMER_STATUS}_output_exists"
+PWFARM_FIELD_OUTPUT__REMOTE="~/pwfarm/${PWFARM_OUTPUT_BASENAME}.zip"
+PWFARM_FIELD_OUTPUT__LOCAL="${PWFARM_OUTPUT_DIR}/${PWFARM_OUTPUT_BASENAME}_${PWFARM_FIELD_ID}.zip"
 
 #
 # Util functions for maintaining farmer status file
@@ -38,7 +47,7 @@ function step_begin()
     #echo "Begin step $step"
     #echo "press enter..."; read
 
-    ! grep "$step" "$PWFARM_FARMER_STATUS" 1>/dev/null
+    ! grep "^$step$" "$PWFARM_FARMER_STATUS" 1>/dev/null
 }
 
 function step_done()
@@ -55,7 +64,7 @@ function try
     while ! $*; do
 	echo "$0@$PWFARM_FIELD_HOST: FAILED ($*)"
 	# give user chance to ctrl-c
-	sleep 2
+	sleep 5
     done
 }
 
@@ -77,29 +86,10 @@ fi
 
 
 #
-# Transfer run script to remote machine
-#
-if step_begin "transfer_run"; then
-    try scp `canondirname "$0"`/pwfarm_field.sh "$PWFARM_FIELD_USER@$PWFARM_FIELD_HOST:~/"
-    step_done
-fi
-
-
-#
-# Transfer payload to remote machine
-#
-if step_begin "transfer_payload"; then
-    try scp "$PWFARM_PAYLOAD" "$PWFARM_FIELD_USER@$PWFARM_FIELD_HOST:~/pwfarm_payload.zip"
-
-    step_done
-fi
-
-
-#
 # Create home
 #
 if step_begin "create_home"; then
-    try ssh -l $PWFARM_FIELD_USER $PWFARM_FIELD_HOST "~/pwfarm_field.sh" create_home
+    try $ssh $PWFARM_FIELD_HOST "~/pwfarm_field.sh" create_home
 
     step_done
 fi
@@ -109,17 +99,16 @@ fi
 # Unpack payload & move run script
 #
 if step_begin "unpack_payload"; then
-    try ssh -l $PWFARM_FIELD_USER $PWFARM_FIELD_HOST "~/pwfarm_field.sh" unpack_payload
+    try $ssh $PWFARM_FIELD_HOST "~/pwfarm_field.sh" unpack_payload
 
     step_done
 fi
-
 
 #
 # Run script
 #
 if step_begin "run_script"; then
-    try ssh -t -l $PWFARM_FIELD_USER $PWFARM_FIELD_HOST "~/pwfarm/pwfarm_field.sh launch $PWFARM_FIELD_ID ~/pwfarm $PWFARM_FIELD_COMPLETION__REMOTE \"$PWFARM_COMMAND\""
+    try $ssh -t $PWFARM_FIELD_HOST "~/pwfarm/pwfarm_field.sh launch $PWFARM_FIELD_ID ~/pwfarm $PWFARM_FIELD_COMPLETION__REMOTE $PWFARM_FIELD_OUTPUT_EXISTS__REMOTE $PWFARM_FIELD_OUTPUT__REMOTE $PWFARM_PASSWORD \"$PWFARM_COMMAND\""
     step_done
 fi
 
@@ -136,7 +125,7 @@ function pwfarm_mv()
 	# strip user@host:
 	src=`echo $src | sed -e "s/.*://"`
 
-	try ssh -l $PWFARM_FIELD_USER $PWFARM_FIELD_HOST "rm -f $src"
+	try $ssh $PWFARM_FIELD_HOST "rm -f $src"
     fi
 }
 
@@ -149,10 +138,36 @@ if step_begin "fetch_completion"; then
     step_done
 fi
 
+#
+# Fetch output_exists file
+#
+if step_begin "fetch_output_exists"; then
+    pwfarm_mv $PWFARM_FIELD_USER@$PWFARM_FIELD_HOST:$PWFARM_FIELD_OUTPUT_EXISTS__REMOTE $PWFARM_FIELD_OUTPUT_EXISTS__LOCAL
+
+    step_done
+fi
+
+#
+# Fetch output file
+#
+if step_begin "fetch_output"; then
+
+    cat $PWFARM_FIELD_OUTPUT_EXISTS__LOCAL
+
+    if [ "$( cat $PWFARM_FIELD_OUTPUT_EXISTS__LOCAL )" == "True" ]; then
+	unzipdir="${PWFARM_OUTPUT_DIR}/${PWFARM_OUTPUT_BASENAME}_${PWFARM_FIELD_ID}"
+	mkdir -p $unzipdir
+
+	pwfarm_mv $PWFARM_FIELD_USER@$PWFARM_FIELD_HOST:$PWFARM_FIELD_OUTPUT__REMOTE $PWFARM_FIELD_OUTPUT__LOCAL
+
+	unzip -o -d $unzipdir $PWFARM_FIELD_OUTPUT__LOCAL
+	rm $PWFARM_FIELD_OUTPUT__LOCAL
+    fi
+
+    step_done
+fi
+
 if [ ! "`cat $PWFARM_FIELD_COMPLETION`" == "yay" ] ; then
-    echo --- completion ---
-    cat $PWFARM_FIELD_COMPLETION
-    read
     exit 1
 else
     exit 0

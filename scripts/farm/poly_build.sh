@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 function err()
 {
     echo "$*">&2
@@ -28,13 +30,46 @@ function build_bct()
 	cd bct-cpp
     fi
 
-    cat  Makefile | sed -e "s/CXXFLAGS[[:space:]]*=/CXXFLAGS = -arch i386 /" > Makefile.pw
+    # Note: If you change the following contents of Makefile.vars, be sure to escape $ (\$)
+    echo "\
+# Arguments to be sent to the C++ compiler
+# Some arguments may already be specified in Makefile
+CXXFLAGS                += -m32 -fopenmp
 
-    make -f Makefile.pw
-    make -f Makefile.pw swig
+# Installation directory
+install_dir              = /usr/local
 
-    cp bct.py ~/polyworld_pwfarm/app/scripts
-    cp _bct.so ~/polyworld_pwfarm/app/scripts
+# The following variables are only needed for SWIG
+# If you aren't generating Python bindings, you don't need to worry about them
+
+# A typical value for the Python header file directory is
+python_dir_apple         = /Library/Frameworks/Python.framework/Versions/Current/include/python2.6
+
+# Python header file directory
+# This points to the C header files required to compile the SWIG bindings
+# You may be able to use one of the previously defined variables
+# E.g., python_dir = \$(python_dir_apple)
+python_dir               = \$(python_dir_apple)
+
+# Typical values for swig_lib_flags in different environments
+# You probably don't need to change these
+swig_lib_flags_apple     = -bundle -flat_namespace -undefined suppress
+swig_lib_flags_linux     = -shared
+
+# Arguments for generating a shared library from SWIG wrappers
+# You can probably use one of the previously defined variables
+# E.g., swig_lib_flags = \$(swig_lib_flags_apple)
+swig_lib_flags          = \$(swig_lib_flags_apple)" \
+    > Makefile.vars
+
+    make
+    PWFARM_SUDO make install
+    make swig
+
+    cp bct_py.py ~/polyworld_pwfarm/app/scripts
+    cp bct_gsl.py ~/polyworld_pwfarm/app/scripts
+    cp _bct_py.so ~/polyworld_pwfarm/app/scripts
+    cp _bct_gsl.so ~/polyworld_pwfarm/app/scripts
 
     popd
 }
@@ -69,9 +104,7 @@ else
 
     scripts/package_source.sh $tmp_dir/src.zip
     
-
-    $pwfarm_dir/pwfarm_dispatcher.sh clear $PWHOSTNUMBERS
-    $pwfarm_dir/pwfarm_dispatcher.sh dispatch $PWHOSTNUMBERS $USER $tmp_dir/src.zip './scripts/farm/poly_build.sh --field'
+    $pwfarm_dir/pwfarm_dispatcher.sh --password dispatch $PWHOSTNUMBERS $USER $tmp_dir/src.zip './scripts/farm/poly_build.sh --field' nil nil
 
     rm -rf $tmp_dir
 fi
