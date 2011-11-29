@@ -166,5 +166,6 @@ done
 #
 step "Generating pwfarm config files"
 
+mkdir -p -m go-w ~/polyworld_pwfarm/etc/
 echo $pwnums > ~/polyworld_pwfarm/etc/pwhostnumbers
 echo $user > ~/polyworld_pwfarm/etc/pwuser
