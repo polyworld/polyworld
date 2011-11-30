@@ -487,6 +487,11 @@ void AbstractFile::init( ConcreteFileType type,
 		{
 			file.path = abstractPath;
 			file.fp = fopen( file.path, mode );
+			if( !file.fp )
+			{
+				fprintf( stderr, "Unable to open file at '%s'\n", abstractPath );
+				perror( file.path );
+			}
 			assert( file.fp );
 		}
 		break;
