@@ -5,8 +5,8 @@ import abstractfile
 import common_functions
 import datalib
 
-METRIC_ROOT_TYPES = ['cc', 'ccd', 'cpl', 'npl', 'mnl', 'cl', 'ccl', 'nm', 'lm', 'm3', 'swi', 'swid', 'swb', 'nc', 'ec', 'hf']
-METRIC_ROOT_NAMES = {'cc':'Clustering Coefficient', 'ccd':'Clustering Coefficient [d]', 'npl':'Normalized Path Length', 'mnl':'Mean-Normalized Path Length', 'cpl': 'Characteristic Path Length', 'ccl':'Capped Characteristic Path Length', 'cl':'Connectivity Length', 'swi':'Small World Index', 'swid':'Small World Index [d]', 'hf':'Heuristic Fitness', 'nm':'Newman Modularity', 'lm':'Louvain Modularity', 'nc':'Node Count', 'ec':'Edge Count', 'swb':'Small World Bias', 'm3':'3-Node Motifs'}
+METRIC_ROOT_TYPES = ['cc', 'ccd', 'cpl', 'npl', 'nl', 'cl', 'ccl', 'eff', 'nm', 'lm', 'm3', 'swi', 'swid', 'swb', 'nc', 'ec', 'hf']
+METRIC_ROOT_NAMES = {'cc':'Clustering Coefficient', 'ccd':'Clustering Coefficient [d]', 'npl':'Normalized Path Length', 'nl':'Normalized Length', 'cpl': 'Characteristic Path Length', 'ccl':'Capped Characteristic Path Length', 'cl':'Connectivity Length', 'eff':'Efficiency', 'swi':'Small World Index', 'swid':'Small World Index [d]', 'hf':'Heuristic Fitness', 'nm':'Newman Modularity', 'lm':'Louvain Modularity', 'nc':'Node Count', 'ec':'Edge Count', 'swb':'Small World Bias', 'm3':'3-Node Motifs'}
 DEFAULT_METRICS = []
 METRICS_NO_GRAPH = ['hf']
 METRICS_NO_RANDOM = ['swi', 'swid', 'nc', 'ec', 'swb']
@@ -15,7 +15,7 @@ NEURON_SETS = ['a', 'p']  # all or processing
 GRAPH_TYPES = ['bu', 'bd', 'wu', 'wd']  # binary/weighted, undirected/directed
 LINK_TYPES = ['w', 'd']  # weight or distance
 PRESERVATIONS = ['np', 'wp', 'dp']
-LENGTH_TYPES = ['cpl', 'npl', 'cl', 'ccl', 'mnl']
+LENGTH_TYPES = ['cpl', 'npl', 'cl', 'ccl', 'nl']
 RANDOM_PIECE = '_ran_'
 FILENAME_AVR = 'AvrMetric.plt'
 DEFAULT_NUMBINS = 11

@@ -411,10 +411,10 @@ def normalized_path_length(neuron_set, graph_type, random, preserving, index):
 
 ####################################################################################
 ###
-### FUNCTION mean_normalized_path_length()
+### FUNCTION normalized_length()
 ###
 ####################################################################################
-def mean_normalized_path_length(neuron_set, graph_type, random, preserving, index):
+def normalized_length(neuron_set, graph_type, random, preserving, index):
 	link_type = 'd'	 # distance (not weight)
 	package = 'bct'  # 'bct' or 'nx'
 	g_set = __get_graph_set(package, neuron_set, graph_type, link_type)
@@ -427,9 +427,9 @@ def mean_normalized_path_length(neuron_set, graph_type, random, preserving, inde
 		max_weight = 1.0 # weights are recorded normalized by maxWeight, so this is always 1.0 instead of G_max_weight
 	else:
 		max_weight = 1.0
-	mnl = bct.normalized_path_length_m(graph.connection, max_weight)
+	nl = bct.normalized_path_length_m(graph.connection, max_weight)
 
-	return mnl
+	return nl
 
 
 ####################################################################################
@@ -493,6 +493,25 @@ def connectivity_length(neuron_set, graph_type, random, preserving, index):
 		cl = bct.connectivity_length(graph.connection)
 	
 	return cl
+
+
+####################################################################################
+###
+### FUNCTION efficiency()
+###
+####################################################################################
+def efficiency(neuron_set, graph_type, random, preserving, index):
+	link_type = 'd'	 # distance (not weight)
+	package = 'bct'	 # 'bct' or 'nx'
+	g_set = __get_graph_set(package, neuron_set, graph_type, link_type)
+	if random:
+		graph = __get_random_graph(g_set, package, neuron_set, graph_type, link_type, preserving, index)
+	else:
+		graph = g_set.graph
+	weighted = 'w' in graph_type
+	eff = bct.efficiency_global(graph.connection)
+	
+	return eff
 
 
 ####################################################################################
@@ -590,10 +609,11 @@ def edge_count(neuron_set, graph_type, random, preserving, index):
 Metric_Function = {'cc' : clustering_coefficient,
 				   'ccd': clustering_coefficient_distance,  # cc based on 'd' instead of 'w'
 				   'npl': normalized_path_length,
-				   'mnl': mean_normalized_path_length,
+				   'nl' : normalized_length,
 				   'cpl': characteristic_path_length,
 				   'ccl': capped_characteristic_path_length,
 				   'cl' : connectivity_length,
+				   'eff': efficiency,
 				   'nm' : newman_modularity,
 				   'lm' : louvain_modularity,
 				   'm3' : motif_3,
