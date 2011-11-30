@@ -103,6 +103,7 @@ case "$MODE" in
 	cd "$PWFARM_HOME/payload"
 
 	rm -f $PWFARM_OUTPUT_FILE
+	echo "False" > $PWFARM_OUTPUT_EXISTS_FILE
 
 	bash -c "$PWFARM_COMMAND"
 	exitval=$?
