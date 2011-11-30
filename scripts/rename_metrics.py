@@ -17,7 +17,7 @@ import datalib
 
 DEFAULT_DIRECTORY = ''
 
-PASS = 3
+PASS = 4
 
 if PASS == 1:
 	# This was for the original massive renaming from our simple two-character names to
@@ -40,6 +40,12 @@ elif PASS == 3:
 	FILES_TO_ALTER = ['AvrMetric*.plt']
 	FILES_TO_RENAME = ['metric_*.plt']
 	METRICS_TO_RENAME = {'swi_a_bu_nsp_10_np':'swi_a_bu_npl_10_np'}
+elif PASS == 4:
+	# This was for renaming then-new 'mnl' to just 'nl'
+	# This should be after all of the above
+	FILES_TO_ALTER = ['AvrMetric*.plt']
+	FILES_TO_RENAME = ['metric_*.plt']
+	METRICS_TO_RENAME = {'mnl_p_wd':'nl_p_wd', 'mnl_p_wd_ran_10_wp':'nl_p_wd_ran_10_wp', 'swi_p_wd_mnl_10_wp':'swi_p_wd_nl_10_wp'}
 
 
 test = False
@@ -142,6 +148,7 @@ def rename_metrics_in_dir(directory):
 		rename_metrics_in_file(file, METRICS_TO_RENAME)
 	
 	# Rename the metric_* files in the epochs (and the metrics therein)
+	dirs = []
 	for root, dirs, files in os.walk(recent_dir):
 		break
 	for dir in dirs:
@@ -159,12 +166,14 @@ def main():
 	for root, dirs, files in os.walk(directory):
 		break
 	
-	if 'worldfile' not in files and len(dirs) < 1:
+	worldfile = 'worldfile' in files or 'original.wf' in files
+	
+	if not worldfile and len(dirs) < 1:
 		print 'No worldfile and no directories, so nothing to do'
 		usage()
 		exit(1)
 	
-	if 'worldfile' in files:
+	if worldfile:
 		# this is a single run directory,
 		# so just rename the files therein
 		rename_metrics_in_dir(directory)
