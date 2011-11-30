@@ -111,6 +111,10 @@ ssh -l $user $pwhost_master "
     echo .. \$hostname
     echo ..
     eval host=\\\$\$hostname
+    if [ -z \"\$host\" ]; then
+      echo Cannot resolve \\\$\$hostname>&2
+      exit 1
+    fi
     ping -c 1 \$host || exit 1
   done
 " || err "Failed pinging hosts"
@@ -159,6 +163,30 @@ for pwhostname in ${pwhostnames[*]}; do
     pwhost=$( pwhost_from_name $pwhostname )
     
     ssh -l $user $pwhost "hostname" || err "Failed ssh on $pwhostname"
+done
+
+#
+# Verify screen on all hosts 
+#
+step "Verifying screen on all hosts"
+
+for pwhostname in ${pwhostnames[*]}; do
+    substep $pwhostname
+    pwhost=$( pwhost_from_name $pwhostname )
+    
+    ssh -l $user $pwhost "which screen" || err "Failed finding screen on $pwhostname"
+done
+
+#
+# Verify svn on all hosts 
+#
+step "Verifying svn on all hosts"
+
+for pwhostname in ${pwhostnames[*]}; do
+    substep $pwhostname
+    pwhost=$( pwhost_from_name $pwhostname )
+    
+    ssh -l $user $pwhost "which svn" || err "Failed finding svn on $pwhostname"
 done
 
 #
