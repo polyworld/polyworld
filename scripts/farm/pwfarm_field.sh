@@ -59,7 +59,7 @@ case "$MODE" in
 	#
 	# Try resuming from a disconnect
 	#
-	if screen -S pwfarm -d -r; then
+	if screen -S pwfarm_field -d -r; then
 	    msg RESUMED SCREEN
 	    if [ ! -e $PWFARM_COMPLETION_FILE ] ; then
 		echo 'Screen crashed' > $PWFARM_COMPLETION_FILE
@@ -77,7 +77,7 @@ case "$MODE" in
 
 	msg "Creating Screen session"
 
-	screen -S pwfarm bash -c "$0 command"
+	screen -S pwfarm_field bash -c "$0 command"
 
 	if [ ! -e $PWFARM_COMPLETION_FILE ] ; then
 	    # This is a serious problem because if the completion file
