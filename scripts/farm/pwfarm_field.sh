@@ -117,7 +117,9 @@ case "$MODE" in
 	    echo 'yay'>$PWFARM_COMPLETION_FILE
 	else
 	    echo $?>$PWFARM_COMPLETION_FILE
-	    echo "press enter..." ; read
+	    echo "An error occurred. Press \"Ctrl-a Esc\" to use PgUp/PgDown to find error description."
+	    echo "When done looking, press Esc, then Enter..."
+	    read
 	fi
 
 	exit 0
