@@ -34,10 +34,13 @@ def calc_script( args ):
 def get_name(type):
 	result = []
 	num_points = ''
+	filter_events = ''
 	
 	for c in type:
 		if c.isdigit():
 			num_points += c
+		elif c.islower():
+			filter_events += c
 		else:
 			result.append(COMPLEXITY_NAMES[c])
 
@@ -50,7 +53,10 @@ def get_name(type):
 	else:
 		precision = num_points + '-point '
 	
-	name = precision + '+'.join(result)
+	if filter_events:
+		filter_events += '-filtered '
+	
+	name = filter_events + precision + '+'.join(result)
 
 	return name
 
@@ -128,6 +134,7 @@ def path_run_from_avr(path_avr, classification, recent_type):
 ####################################################################################
 def parse_avrs(run_paths, classification, recent_type, complexities, run_as_key = False):
 	# parse the AVRs for all the runs
+	print 'run_paths =', run_paths, 'classification =', classification, 'recent_type =', recent_type, 'complexities =', complexities, 'run_as_key =', run_as_key
 	avrs = datalib.parse_all( map(lambda x: path_avr( x, classification, recent_type ),
 								  run_paths),
 							  complexities,

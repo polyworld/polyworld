@@ -17,6 +17,7 @@ import common_complexity
 import datalib
 import shlex
 import subprocess
+import datetime
 
 ### Now initialize some global variables
 OutputFilename = common_complexity.FILENAME_AVR
@@ -109,7 +110,7 @@ def parse_args(argv):
 		opt = opt.strip('-')
 
 		if opt == 'C':
-			complexities = map(string.upper, value.split(','))
+			complexities = value.split(',')
 			for i in range(0,len(complexities)):
 				# strip any trailing single-digit ones
 				if complexities[i][-1] == '1' and not complexities[i][-2].isdigit():
@@ -177,11 +178,12 @@ def analyze_recent_dir(complexities, recent_dir):
 	DATA={ }
 	
 	print "Final Timestep: %s" % ( max(timesteps) )
+	print datetime.datetime.now()
 	print "Processing:",
 	
 	for t in timesteps:
 		timestep_directory = os.path.join(recent_dir, str(t))
-		print '%s...\n' % (t),
+		print '%s at %s...' % (t, datetime.datetime.now())
 		sys.stdout.flush()	
 	
 		DATA[t] = tdata = {}
@@ -339,6 +341,7 @@ def compute_complexities(complexities,
 		complexity_all = filter(lambda x: len(x), stdout.split('\n'))
 		if proc.returncode != 0:
 			err('Failed executing CalcComplexity, exit=%d' % exitvalue)
+		proc.stdout.close()
 	
 		colnames = ['AgentNumber', 'Complexity']
 		coltypes = ['int', 'float']
@@ -458,12 +461,18 @@ OPTIONS
      -C <C>[,<C>]...
                Override default NeuralComplexity types for analysis, where C can
             be a composite of types (e.g. HB). Multiple C specs are separated by
-            commas (e.g. -C A,P,I,B,H,HB). Appended digits indicate the number
-            of points to use in integrating C between the I(X)(k/N) and <I(X_k)>
-            curves.  A value of zero indicates all points are to be used, thus
-            producing full TSE complexity.  No digits or a value of one
-            indicate just the N-1 point should be used, thus producing the
-            traditional "simplified" TSE complexity.  (E.g., -C A0,P1,HB15.)
+            commas (e.g. -C A,P,I,B,H,HB).  <C> must be uppercase.
+            
+            Lowercase letters indicate event filters to be applied to neural
+            activation prior to computing C.  Currently acceptable values are
+            'm'ate and 'e'at.  (E.g., -C Am,Pe,Pme.)
+            
+            Appended digits indicate the number of points to use in integrating
+            C between the I(X)(k/N) and <I(X_k)> curves.  A value of zero
+            indicates all points are to be used, thus producing full TSE
+            complexity.  No digits or a value of one indicate just the N-1
+            point should be used, thus producing the traditional "simplified"
+            TSE complexity.  (E.g., -C A0,P1,HB15.)
             (default %s)
 
      -r <recent_type>

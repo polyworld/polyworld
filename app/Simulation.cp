@@ -873,7 +873,7 @@ void TSimulation::Step()
 			{
 				if( fFittest[i]->complexity == 0.0 )		// if Complexity is zero it means we have to Calculate it
 				{
-					fFittest[i]->complexity = CalcComplexity_brainfunction( t, "P", 0 );		// Complexity of Processing Units Only, all time steps
+					fFittest[i]->complexity = CalcComplexity_brainfunction( t, "P" );		// Complexity of Processing Units Only, all time steps
 					cout << "[COMPLEXITY] Agent: " << fFittest[i]->agentID << "\t Processing Complexity: " << fFittest[i]->complexity << endl;
 				}
 			}
@@ -915,7 +915,7 @@ void TSimulation::Step()
 				{
 					if( fRecentFittest[i]->complexity == 0.0 )		// if Complexity is zero it means we have to Calculate it
 					{
-						fRecentFittest[i]->complexity = CalcComplexity_brainfunction( t, "P", 0 );		// Complexity of Processing Units Only, all time steps
+						fRecentFittest[i]->complexity = CalcComplexity_brainfunction( t, "P" );		// Complexity of Processing Units Only, all time steps
 						cout << "[COMPLEXITY] Agent: " << fRecentFittest[i]->agentID << "\t Processing Complexity: " << fRecentFittest[i]->complexity << endl;
 					}
 				}
@@ -5715,14 +5715,14 @@ void TSimulation::Kill_UpdateBrainData( agent *c )
 		{
 			if( fComplexityType == "D" )	// special case the difference of complexities case
 			{
-				float pComplexity = CalcComplexity_brainfunction( t, "P", 0 );
-				float iComplexity = CalcComplexity_brainfunction( t, "I", 0 );
+				float pComplexity = CalcComplexity_brainfunction( t, "P" );
+				float iComplexity = CalcComplexity_brainfunction( t, "I" );
 				c->SetComplexity( pComplexity - iComplexity );
 			}
 			else if( fComplexityType != "Z" )	// avoid special hack case to evolve towards zero max velocity, for testing purposes only
 			{
 				// otherwise, fComplexityType has the right string in it
-				c->SetComplexity( CalcComplexity_brainfunction( t, fComplexityType.c_str(), 0 ) );
+				c->SetComplexity( CalcComplexity_brainfunction( t, fComplexityType.c_str() ) );
 			}
 		}
 	}
@@ -6151,12 +6151,12 @@ float TSimulation::AgentFitness( agent* c )
 			sprintf( filename, "run/brain/function/brainFunction_%ld.txt", c->Number() );
 			if( fComplexityType == "D" )	// difference between I and P complexity being used for fitness
 			{
-				float pComplexity = CalcComplexity_brainfunction( filename, "P", 0 );
-				float iComplexity = CalcComplexity_brainfunction( filename, "I", 0 );
+				float pComplexity = CalcComplexity_brainfunction( filename, "P" );
+				float iComplexity = CalcComplexity_brainfunction( filename, "I" );
 				c->SetComplexity( pComplexity - iComplexity );
 			}
 			else	// fComplexityType contains the appropriate string to select the type of complexity
-				c->SetComplexity( CalcComplexity_brainfunction( filename, fComplexityType.c_str(), 0 ) );
+				c->SetComplexity( CalcComplexity_brainfunction( filename, fComplexityType.c_str() ) );
 		}
 		// fitness is normalized (by the sum of the weights) after doing a weighted sum of normalized heuristic fitness and complexity
 		// (Complexity runs between 0.0 and 1.0 in the early simulations.  Is there a way to guarantee this?  Do we want to?)

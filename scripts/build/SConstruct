@@ -55,7 +55,8 @@ def build_CalcComplexity(env):
                     name = '*.cp')
     sources += ['src/utils/datalib.cp',
                 'src/utils/Variant.cp',
-                'src/utils/AbstractFile.cp']
+                'src/utils/AbstractFile.cp',
+                'src/utils/misc.cp']
 
     env.VariantDir(blddir, 'src', False)
 

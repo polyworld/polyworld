@@ -1,5 +1,6 @@
 #pragma once
 
+void usage_brainfunction();
 int process_brainfunction(int argc, char *argv[]);
 
 

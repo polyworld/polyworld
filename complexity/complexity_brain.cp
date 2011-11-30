@@ -46,6 +46,20 @@ using namespace std;
 	Second, read only the first MaxNumTimeStepsToComputeComplexityOver timesteps
 */
 
+#define DebugFiltering 0
+
+#if DebugFiltering
+	#define filprint( x... ) printf( x )
+#else
+	#define filprint( x... )
+#endif
+
+//===========================================================================
+// Function Prototypes
+//===========================================================================
+
+void FilterActivity( gsl_matrix* activity, const char* filter_events, const long agent_number, const long agent_birth, const long lifespan, Events* events );
+
 //===========================================================================
 // Function Implementations
 //===========================================================================
@@ -58,37 +72,31 @@ CalcComplexity_brainfunction_result *
 				     int nparms,
 				     CalcComplexity_brainfunction_callback *callback)
 {
-	CalcComplexity_brainfunction_result *result = new CalcComplexity_brainfunction_result(parms,
-											      nparms);
-	if(callback)
-	{
-		callback->begin(parms, nparms);
-	}
+	CalcComplexity_brainfunction_result *result = new CalcComplexity_brainfunction_result( parms, nparms );
+	
+	if( callback )
+		callback->begin( parms, nparms );
 
 #pragma omp parallel for
-	for(int iparm = 0; iparm < nparms; iparm++)
+	for( int iparm = 0; iparm < nparms; iparm++ )
 	{
 		CalcComplexity_brainfunction_parms *parm = &parms[iparm];
 
-		double Complexity = CalcComplexity_brainfunction(parm->path,
+		double complexity = CalcComplexity_brainfunction( parm->path,
 								 parm->parts,
 								 parm->ignore_timesteps_after,
+								 parm->events,
 								 result->agent_number + iparm,
 								 result->lifespan + iparm,
-								 result->num_neurons + iparm);
-		result->complexity[iparm] = Complexity;
+								 result->num_neurons + iparm );
+		result->complexity[iparm] = complexity;
 
-		if(callback)
-		{
-		  callback->parms_result(result,
-					 iparm);
-		}
+		if( callback )
+			callback->parms_result(result, iparm);
 	}
 
 	if(callback)
-	{
 		callback->end(result);
-	}
 
 	return result;
 }
@@ -100,17 +108,20 @@ CalcComplexity_brainfunction_result *
 double CalcComplexity_brainfunction(const char *fnameAct,
 				    const char *part,
 				    int ignore_timesteps_after,
+				    Events *events,
 				    long *agent_number,
 				    long *lifespan,
 				    long *num_neurons)
 {
 	long numinputneurons = 0;		// this value will be defined by readin_brainfunction()
 	long numoutputneurons = 0;
+	long agent_birth = -1;
 	
 	gsl_matrix * activity = readin_brainfunction(fnameAct,
 												 ignore_timesteps_after,
 												 MaxNumTimeStepsToComputeComplexityOver,
 												 agent_number,
+												 &agent_birth,
 												 lifespan,
 												 num_neurons,
 												 &numinputneurons,
@@ -124,12 +135,29 @@ double CalcComplexity_brainfunction(const char *fnameAct,
     // return Complexity = 0.0.
     if( activity->size2 > activity->size1 || activity->size1 < IgnoreAgentsThatLivedLessThan_N_Timesteps )
     	return( 0.0 );
-	
-// 	fflush( stdout );
-// 	printf( "\nactivity rows(size1) = %lu, columns(size2) = %lu\n", activity->size1, activity->size2 );
-// 	for( size_t i = 0; i < activity->size1; i++ )
-// 		printf( "%lu  %g\n", i, gsl_matrix_get( activity, i, 0 ));
-// 	fflush( stdout );
+    
+    if( events )
+    {
+    	int size_filter_events = 8;
+    	int num_filter_events = 0;
+    	char filter_events[size_filter_events];
+    	
+    	for( unsigned int i = 0; i < strlen( part ); i++ )
+    	{
+    		if( islower( part[i] ) )
+    		{
+    			filter_events[num_filter_events] = part[i];
+    			num_filter_events++;
+    			if( num_filter_events >= size_filter_events )
+    			{
+					cerr << "Error: too many filter events specified (" << __func__ << ")" << endl;
+					exit( 1 );
+    			}
+    		}
+    	}
+    	
+    	FilterActivity( activity, filter_events, *agent_number, agent_birth, *lifespan, events );
+    }
 
 	return CalcComplexityWithMatrix_brainfunction(activity,
 												  part,
@@ -147,6 +175,7 @@ double CalcComplexityWithMatrix_brainfunction(gsl_matrix *activity,
 											  long numinputneurons,
 											  long numoutputneurons)
 {
+// 	printf( "\n------- part = %s --------\n", part );
 	if( numinputneurons == 0 )
 		return( -2 );
 	
@@ -176,6 +205,10 @@ double CalcComplexityWithMatrix_brainfunction(gsl_matrix *activity,
 	
 	for( unsigned int j = 0; j < strlen( part ); j++ )
 	{
+		// lowercase characters indicate event filtering; ignore them here
+		if( islower( part[j] ) )
+			continue;
+		
 		// trailing digits define num_points used for integrating the area between the curves
 		if( isdigit( part[j] ) )
 		{
@@ -186,7 +219,7 @@ double CalcComplexityWithMatrix_brainfunction(gsl_matrix *activity,
 		
 		char complexityType = part[j];
 		
-		switch( toupper( complexityType ) )
+		switch( complexityType )
 		{
 			case'A':
 				flagAll = 1;
@@ -251,7 +284,7 @@ double CalcComplexityWithMatrix_brainfunction(gsl_matrix *activity,
 		
 	}
 			
-	if (flagBeh == 1 && flagPro == 0)
+	if( flagBeh == 1 && flagPro == 0 )
     {
 		int j = 0;
 		for( int i = numColumns; i < (numBeh + numColumns); i++)
@@ -260,6 +293,17 @@ double CalcComplexityWithMatrix_brainfunction(gsl_matrix *activity,
 	}
 	
 	gsl_matrix* subset = matrix_subset_col( activity, columns, numColumns );
+	
+// 	for( size_t j = 0; j < subset->size2; j++ )
+// 	{
+// 		double mean = 0.0;
+// 		for( size_t i = 0; i < subset->size1; i++ )
+// 			mean += gsl_matrix_get( subset, i, j );
+// 		mean /= subset->size1;
+// 
+// 		for( size_t i = 0; i < subset->size1/2; i++ )
+// 			gsl_matrix_set( subset, i, j, mean );
+// 	}
 	
 	double complexity = CalcApproximateFullComplexityWithMatrix( subset, num_points );
 	
@@ -508,6 +552,7 @@ gsl_matrix * readin_brainfunction(const char* fname,
 								  int ignore_timesteps_after,
 								  int max_timesteps,
 								  long *agent_number,
+								  long *agent_birth,
 								  long *lifespan,
 								  long *num_neurons,
 								  long *num_ineurons,
@@ -516,6 +561,8 @@ gsl_matrix * readin_brainfunction(const char* fname,
 	long numneur;
 	long numineur;
 	long numoneur;
+	
+// 	printf( "\n*************readin_brainfunction****************\n" );
 	
 // 	printf( "\nmax_timesteps = %d\n", max_timesteps );
 	assert( ignore_timesteps_after >= 0 );		// just to be safe.
@@ -540,8 +587,8 @@ gsl_matrix * readin_brainfunction(const char* fname,
 		version = atoi(tline + 8);
 
 		// read in line after version
-		char *nl = strchr(tline, '\n');
-		FunctionFile->seek( (nl - tline) + 1, SEEK_SET );
+		char *nlpos = strchr(tline, '\n');
+		FunctionFile->seek( (nlpos - tline) + 1, SEEK_SET );
 		FunctionFile->gets( tline, 100 );
 	}
 
@@ -568,6 +615,7 @@ gsl_matrix * readin_brainfunction(const char* fname,
 	if( num_ineurons )
 		*num_ineurons = numineur;
 
+	// Read (or set) number of output neurons
 	if( version == 0 )
 	{
 		numoneur = 7;
@@ -582,6 +630,18 @@ gsl_matrix * readin_brainfunction(const char* fname,
 	if( num_oneurons )
 		*num_oneurons = numoneur;
 	
+	// Read number of synapses out of the way
+	indexSpace = params.find( " ", 0 );
+	string num_synapses = params.substr( 0, indexSpace );
+	params.erase( 0, indexSpace + 1 );
+	
+	// Read birth time
+	indexSpace = params.find( " ", 0 );
+	string birth_time = params.substr( 0, indexSpace );
+	params.erase( 0, indexSpace + 1 );
+	if( agent_birth )
+		*agent_birth = atol( birth_time.c_str() );
+	
 	vector<string> FileContents;
 
 	char nextl[200];
@@ -595,9 +655,9 @@ gsl_matrix * readin_brainfunction(const char* fname,
 	if( FileContents.size() % numcols )	// true iff we are dealing with a complete brainfunction file
 		FileContents.pop_back();		// get rid of the last line (in complete files, it's fitness).
 	
-	int numrows = int( round( FileContents.size() / numcols ) );
+	int numrows = FileContents.size() / numcols;
 	if( lifespan )
-		*lifespan = numrows;
+		*lifespan = numrows;	// actual lifespan, not accounting for max_timestpes
 
 	// bogus? if( numcols == *num_ineurons ) { *num_ineurons = 0; }	// make sure there was a num_ineurons
 
@@ -675,6 +735,93 @@ gsl_matrix * readin_brainfunction(const char* fname,
 	fclose( debugFile );
 #endif
 	return activity;
+}
+
+//---------------------------------------------------------------------------
+// FilterActivity
+//---------------------------------------------------------------------------
+void FilterActivity( gsl_matrix* activity, const char* filter_events, const long agent_number, const long agent_birth, const long lifespan, Events* events )
+{
+	static int mate_filter_radius = 9;	// exclude center point
+	static int eat_filter_radius = 4;	// exclude center point
+	static double mate_filter[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0,
+									0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1 };
+	static double eat_filter[] = {0.1, 0.2, 0.3, 0.4, 0.5, 0.4, 0.3, 0.2, 0.1 };
+
+	long duration = activity->size1;	// may be less than lifespan due to MaxNumTimeStepsToComputeComplexityOver
+	long agent_death = agent_birth + lifespan;	// seems like this should be -1, but this agrees with BirthsDeaths.log
+	long agent_start = agent_death - duration + 1;
+	bool mate_filtering = strchr( filter_events, 'm' );
+	bool eat_filtering = strchr( filter_events, 'e' );
+// 	filprint( "%s: num=%ld, birth=%ld, lifespan=%ld, death=%ld, start=%ld, duration=%ld, mate=%c, eat=%c\n", __func__,
+// 			agent_number, agent_birth, lifespan, agent_death, agent_start, duration, mate_filtering ? 'T':'F', eat_filtering ? 'T':'F' );
+	
+	double* filter = (double*) calloc( duration, sizeof( *filter ) );	// 0.0 => mean, 1.0 => original signal
+	
+	for( long step = agent_start; step <= agent_death; step++ )
+	{
+	#if DebugFiltering
+		printf( "  Step %ld\n", step );
+		printf( "   Using GetAgentEventsMap and iterator:\n" );
+		
+		AgentEventsMapType agentEventsMap = events->GetAgentEventsMap( step );
+		
+		itfor( AgentEventsMapType, agentEventsMap, it )
+		{
+			printf( "    %ld: ", (*it).first );
+			AgentEvent agentEvent = (*it).second;
+			if( agentEvent.eat )
+				printf( "%c ", 'e' );
+			if( agentEvent.mate )
+				printf( "%c", 'm' );
+			printf( "\n" );
+		}
+	#endif
+	
+		AgentEvent agentEvent = events->GetAgentEvent( step, agent_number );
+		int activity_step = step - agent_start;
+		filprint( "   step=%ld, act_step=%d, .mate=%c, .eat=%c\n", step, activity_step, agentEvent.mate ? 'T':'F', agentEvent.eat ? 'T':'F' );
+		if( mate_filtering && agentEvent.mate )
+		{
+			int left = activity_step - mate_filter_radius;
+			int right = activity_step + mate_filter_radius;
+			int lo = left < 0 ? 0 : left;
+			int hi = right >= duration ? duration - 1 : right;
+			int offset = lo - left;
+			filprint( "m %ld: left=%d, right=%d, lo=%d, hi=%d, offset=%d\n", step, left, right, lo, hi, offset );
+			for( int i = lo; i <= hi; i++ )
+				filter[i] = fmin( 1.0, filter[i] + mate_filter[i-lo+offset] );
+		}
+		if( eat_filtering && agentEvent.eat )
+		{
+			int left = activity_step - eat_filter_radius;
+			int right = activity_step + eat_filter_radius;
+			int lo = left < 0 ? 0 : left;
+			int hi = right >= duration ? duration - 1 : right;
+			int offset = lo - left;
+			filprint( "e %ld: left=%d, right=%d, lo=%d, hi=%d, offset=%d\n", step, left, right, lo, hi, offset );
+			for( int i = lo; i <= hi; i++ )
+				filter[i] = fmin( 1.0, filter[i] + eat_filter[i-lo+offset] );
+		}
+	}
+	
+	for( size_t j = 0; j < activity->size2; j++ )
+	{
+		for( size_t i = 0; i < activity->size1; i++ )
+		{
+		#if DebugFiltering
+			if( j == 0 )
+				printf( "%lu,%lu: %g , %g => ", i, j, gsl_matrix_get( activity, i, j ), filter[i] );
+		#endif
+			gsl_matrix_set( activity, i, j, gsl_matrix_get( activity, i, j ) * filter[i]  +  0.5 * (1.0 - filter[i]) );
+		#if DebugFiltering
+			if( j == 0 )
+				printf( "%g\n", gsl_matrix_get( activity, i, j ) );
+		#endif
+		}
+	}
+	
+	free( filter );
 }
 
 // eof

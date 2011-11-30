@@ -6,11 +6,14 @@
 
 #include <gsl/gsl_matrix.h>
 
+#include "Events.h"
+
 struct CalcComplexity_brainfunction_parms
 {
 	const char *path;
 	const char *parts;
 	int ignore_timesteps_after;
+	Events *events;
 };
 
 class CalcComplexity_brainfunction_result
@@ -62,7 +65,8 @@ CalcComplexity_brainfunction_result *CalcComplexity_brainfunction(CalcComplexity
 							  CalcComplexity_brainfunction_callback *callback = 0);
 double CalcComplexity_brainfunction(const char *path,
 									const char *parts,
-									int ignore_timesteps_after,
+									int ignore_timesteps_after = 0,
+									Events *events = NULL,
 									long *agent_number = NULL,
 									long *lifespan = NULL,
 									long *num_neurons = NULL);
@@ -78,6 +82,7 @@ gsl_matrix * readin_brainfunction(const char *path,
 											 int ignore_timesteps_after,
 											 int max_timestapes,
 											 long *agent_number,
+											 long *agent_birth,
 											 long *lifespan,
 											 long *num_neurons,
 											 long *num_ineurons,
