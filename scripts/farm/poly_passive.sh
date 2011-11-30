@@ -1,8 +1,8 @@
-#!/bin/bash -x
+#!/bin/bash
 
 function usage()
 {
-    echo "usage: $0 run_id_driven run_id_passive dst_dir"
+    echo "usage: $( basename $0 ) run_id_driven run_id_passive (\"nil\"|postrun_script) dst_dir"
     exit 1
 }
 
@@ -29,29 +29,34 @@ if [ "$self" == "prerun.sh" ]; then
 	exit 1
     fi
 
-    if ! edit_worldfile.py ~/polyworld_pwfarm/runs/good/$run_id_driven/worldfile $POLYWORLD_PWFARM_WORLDFILE LockStepWithBirthsDeathsLog=1 ; then
-	err "Cannot locate good worldfile!"
+    if ! cp $run_dir/normalized.wf $POLYWORLD_PWFARM_WORLDFILE; then
+	err "Failed copying driven worldfile"
+    fi
+
+    if ! ./scripts/wfutil edit $POLYWORLD_PWFARM_WORLDFILE PassiveLockstep=True; then
+	err "Failed setting PassiveLockstep property"
     fi
 else
     if [ -z "$1" ]; then
 	usage
     fi
 
-    if [ $# != 3 ]; then
+    if [ $# != 4 ]; then
 	usage "Invalid number of parms"
     fi
 
     run_id_driven=$1
     run_id_passive=$2
-    dst_dir=$3
+    postrun_script=$3
+    dst_dir=$4
 
     tmp_dir=`mktemp -d /tmp/poly_passive.XXXXXXXX` || exit 1
     echo $run_id_driven>$tmp_dir/run_id_driven
 
     pushd .
     cd $tmp_dir
-    zip -r input.zip .
+    zip -qr input.zip .
     popd
 
-    `dirname $0`/poly_run.sh nil $run_id_passive $0 nil $tmp_dir/input.zip $dst_dir
+    `dirname $0`/poly_run.sh nil $run_id_passive $0 $postrun_script $tmp_dir/input.zip $dst_dir
 fi
