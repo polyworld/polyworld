@@ -176,7 +176,7 @@ if [ "$1" == "--field" ]; then
 
     if [ -e run ]; then
 	cd run
-	zip -r $PWFARM_OUTPUT_FILE $( cat $PWFARM_RUNZIP | while read line; do echo $line; done )
+	zip -qr $PWFARM_OUTPUT_FILE $( cat $PWFARM_RUNZIP | while read line; do echo $line; done )
     fi
 
     cd ~/polyworld_pwfarm

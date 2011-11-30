@@ -55,4 +55,4 @@ fi
 
 cd "$homedir"
 
-zip -r "$output" $SRCDIRS $MISCDIRS $MISCFILES -x "*.pyc" -x "*/CVS/*" -x "*~"
+zip -qr "$output" $SRCDIRS $MISCDIRS $MISCFILES -x "*.pyc" -x "*/CVS/*" -x "*~"
