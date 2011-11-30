@@ -152,6 +152,7 @@ if [ "$1" == "--field" ]; then
     echo 'stats/*' >> $PWFARM_RUNZIP
     echo '*.wf' >> $PWFARM_RUNZIP
     echo '*.wfs' >> $PWFARM_RUNZIP
+    echo 'brain/Recent/*.plt' >> $PWFARM_RUNZIP
 
     ###
     ### Execute the postrun script
@@ -176,7 +177,7 @@ if [ "$1" == "--field" ]; then
 
     if [ -e run ]; then
 	cd run
-	zip -qr $PWFARM_OUTPUT_FILE $( cat $PWFARM_RUNZIP | while read line; do echo $line; done )
+	zip -qr $PWFARM_OUTPUT_FILE $( cat $PWFARM_RUNZIP )
     fi
 
     cd ~/polyworld_pwfarm
