@@ -20,6 +20,11 @@ function canondirname()
 
 function build_bct()
 {
+    # Temporarily disable on Linux until build is fixed.
+    if [ "$( uname )" == "Linux" ]; then
+	return 0
+    fi
+
     pushd .
 
     if [ -d bct-cpp ]; then
