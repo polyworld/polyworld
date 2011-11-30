@@ -22,6 +22,11 @@
 #include <sys/errno.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <string>
+#include <vector>
+#include <iostream>
+
+using namespace std;
 
 char* concat(const char* s1, const char* s2)
 {
@@ -155,3 +160,38 @@ int GetMaximumFiles( long *filecount )
 	else
 		return errno;
 }
+
+
+vector<string> split( const string& str, const string& delimiters )
+{
+	vector<string> parts;
+	
+    // Skip delimiters at beginning.
+    string::size_type lastPos = str.find_first_not_of( delimiters, 0 );
+    // Find first delimiter after non-delimiters.
+    string::size_type pos     = str.find_first_of( delimiters, lastPos );
+
+    while (string::npos != pos || string::npos != lastPos)
+    {
+        // Found a token, add it to the vector.
+        parts.push_back( str.substr( lastPos, pos - lastPos ) );
+        // Skip delimiters.
+        lastPos = str.find_first_not_of( delimiters, pos );
+        // Find next delimiter after non-delimiters
+        pos = str.find_first_of( delimiters, lastPos );
+    }
+    
+    return( parts );
+}
+
+// int main( int argc, char** argv )
+// {
+// 	string sentence( "Now is the time for all good men" );
+// 	
+// 	vector<string> parts = split( sentence );
+// 	
+// 	itfor( vector<string>, parts, it )
+// 	{
+// 		cout << *it << endl;
+// 	}
+// }

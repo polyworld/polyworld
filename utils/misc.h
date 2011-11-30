@@ -13,6 +13,9 @@
 #include <float.h>
 #include <math.h>
 
+#include <string>
+#include <vector>
+
 #define nl <<"\n"
 #define pnl <<")\n"
 #define qnl <<"\"\n"
@@ -90,6 +93,8 @@ inline float dist( float x1, float y1, float x2, float y2 ) { return sqrt( (x1-x
 
 int SetMaximumFiles( long filecount );
 int GetMaximumFiles( long *filecount );
+
+std::vector<std::string> split( const std::string& str, const std::string& delimiters = " " );
 
 #ifndef PI
 #define PI M_PI
