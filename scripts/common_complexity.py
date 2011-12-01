@@ -134,7 +134,7 @@ def path_run_from_avr(path_avr, classification, recent_type):
 ####################################################################################
 def parse_avrs(run_paths, classification, recent_type, complexities, run_as_key = False):
 	# parse the AVRs for all the runs
-	print 'run_paths =', run_paths, 'classification =', classification, 'recent_type =', recent_type, 'complexities =', complexities, 'run_as_key =', run_as_key
+	# print 'run_paths =', run_paths, 'classification =', classification, 'recent_type =', recent_type, 'complexities =', complexities, 'run_as_key =', run_as_key
 	avrs = datalib.parse_all( map(lambda x: path_avr( x, classification, recent_type ),
 								  run_paths),
 							  complexities,
