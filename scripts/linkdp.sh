@@ -41,11 +41,10 @@ mkdir -p $1dp
 for dir in $1/*
 do
 	dp=`echo $dir | sed "s/.*\///g"`
-	if [[ $dp != "driven" && $dp != "passive" ]]; then
-		usage
+	if [[ $dp == "driven" || $dp == "passive" ]]; then
+		for file in $dir/*
+		do
+			ln -sf ../$file "$1dp/run_"$dp"_`echo $file | sed \"s/.*_//g\"`"
+		done
 	fi
-	for file in $dir/*
-	do
-		ln -sf ../$file "$1dp/run_"$dp"_`echo $file | sed \"s/.*_//g\"`"
-	done
 done
