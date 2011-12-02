@@ -10,7 +10,8 @@ class LifeSpan
 		BIRTH_TYPE(SIMINIT)						\
 		BIRTH_TYPE(CREATE)						\
 		BIRTH_TYPE(NATURAL)						\
-		BIRTH_TYPE(LOCKSTEP)
+		BIRTH_TYPE(LOCKSTEP)					\
+		BIRTH_TYPE(VIRTUAL)
 
 	// ---
 	// --- METAENUM Death
