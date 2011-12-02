@@ -2835,17 +2835,9 @@ EnergyUseFixed {
 #-------------------------------------------------------------------
 
 ComplexityType {
-  type    ENUM
+  type    STRING
   default P
-  values [
-    O        # Off
-    P        # Processing
-    A        # All
-    I        # Input
-    B        # Behavior
-    D        # Processing-Input
-    Z        # ZeroMaxVelocityHack
-  ]
+  legacy  O
 }
 
 RecordGeneSeparation {
@@ -2898,6 +2890,11 @@ CheckPointFrequency {
 StatusFrequency {
   type    INT
   default 100
+}
+
+StatusToStdout {
+  type    BOOL
+  default false
 }
 
 RetinaWidth {
