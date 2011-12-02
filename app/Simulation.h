@@ -257,7 +257,7 @@ class TSceneWindow: public QMainWindow
 	Q_OBJECT
 
 public:
-	TSceneWindow( const char *worldfilePath );
+	TSceneWindow( const char *worldfilePath, const bool statusToStdout );
 	virtual ~TSceneWindow();
 	
 	void CreateSimulationScheduler();
@@ -349,7 +349,7 @@ class TSimulation : public QObject
 	Q_OBJECT
 
 public:
-	TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow, const char *worldfilePath );
+	TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow, const char *worldfilePath, const bool statusToStdout );
 	virtual ~TSimulation();
 	
 	void Start();
@@ -465,7 +465,7 @@ public:
 private slots:
 	
 private:
-	void Init( const char *worldfilePath );
+	void Init( const char *worldfilePath, const bool statusToStdout );
 	void InitAgents();
 	void InitNeuralValues();
 	void InitWorld();
@@ -615,6 +615,7 @@ private:
 	int fDelay;
 	int fDumpFrequency;
 	int fStatusFrequency;
+	bool fStatusToStdout;
 	bool fLoadState;
 	bool inited;
 	
@@ -781,6 +782,8 @@ private:
 	float fTotalFoodEnergyOut;
 	float fAverageFoodEnergyIn;
 	float fAverageFoodEnergyOut;
+	Energy fEnergyEaten;
+	Energy fTotalEnergyEaten;
 	float fEat2Consume; // (converts eat neuron value to energy consumed)
 	int fFoodPatchOuterRange;
 	float fMinFoodEnergyAtDeath;
