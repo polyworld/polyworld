@@ -184,7 +184,7 @@ inline float AverageAngles( float a, float b )
 //---------------------------------------------------------------------------
 // TSimulation::TSimulation
 //---------------------------------------------------------------------------
-TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow, const char *worldfilePath )
+TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow, const char *worldfilePath, const bool statusToStdout )
 	:
 		fLockStepWithBirthsDeathsLog(false),
 		fLockstepFile(NULL),
@@ -276,7 +276,7 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow, cons
 		fNumAgentsNotInOrNearAnyFoodPatch(0),
 		fConditionalProps( new condprop::PropertyList() )
 {
-	Init( worldfilePath );
+	Init( worldfilePath, statusToStdout );
 }
 
 
@@ -516,6 +516,7 @@ void TSimulation::Step()
 	// Set up some per-step values
 	fFoodEnergyIn = 0.0;
 	fFoodEnergyOut = 0.0;
+	fEnergyEaten.zero();
 
 	// Update the barriers, now that they can be dynamic
 	barrier* b;
@@ -605,7 +606,7 @@ void TSimulation::Step()
 		fAgentPOVWindow->swapBuffers();
 	}
 
-	if( fHeuristicFitnessWeight != 0.0 )
+	if( (fHeuristicFitnessWeight != 0.0) || (fComplexityFitnessWeight != 0.0) )
 		oldNumBorn = fNumberBornVirtual;
 	else
 		oldNumBorn = fNumberBorn;
@@ -694,6 +695,7 @@ void TSimulation::Step()
 
 	fTotalFoodEnergyIn += fFoodEnergyIn;
 	fTotalFoodEnergyOut += fFoodEnergyOut;
+	fTotalEnergyEaten += fEnergyEaten;
 
 	fAverageFoodEnergyIn = (float(fStep - 1) * fAverageFoodEnergyIn + fFoodEnergyIn) / float(fStep);
 	fAverageFoodEnergyOut = (float(fStep - 1) * fAverageFoodEnergyOut + fFoodEnergyOut) / float(fStep);
@@ -746,7 +748,7 @@ void TSimulation::Step()
 		{
 			bool newBirths;
 			float birthRatio;
-			if( fHeuristicFitnessWeight != 0.0 )
+			if( (fHeuristicFitnessWeight != 0.0) || (fComplexityFitnessWeight != 0.0) )
 			{
 				newBirths = oldNumBorn != fNumberBornVirtual;
 				birthRatio = float( fNumberBornVirtual ) / float( fNumberBornVirtual + fNumberCreated );
@@ -1384,7 +1386,7 @@ string TSimulation::EndAt( long timestep )
 // The order that initializer functions are called is important as values
 // may depend on a variable initialized earlier.
 //---------------------------------------------------------------------------
-void TSimulation::Init( const char *argWorldfilePath )
+void TSimulation::Init( const char *argWorldfilePath, const bool statusToStdout )
 {
  	// Set up graphical constructs
 	Resources::loadPolygons( &fGround, "ground" );
@@ -1400,6 +1402,9 @@ void TSimulation::Init( const char *argWorldfilePath )
 	cout << "worldfile = " << docWorldFile->getName() << endl;
 
 	ProcessWorldFile( docWorldFile );
+	
+	if( statusToStdout )	// command-line arg overrides worldfile only if true
+		fStatusToStdout = true;
 
 	// Init array tracking number of agents with a given metabolism
 	assert( Metabolism::getNumberOfDefinitions() < MAXMETABOLISMS );
@@ -1774,6 +1779,7 @@ void TSimulation::Init( const char *argWorldfilePath )
 
 	fFoodEnergyIn = 0.0;
 	fFoodEnergyOut = 0.0;
+	fEnergyEaten.zero();
 
 	srand48(fGenomeSeed);
 
@@ -1833,6 +1839,7 @@ void TSimulation::Init( const char *argWorldfilePath )
 
     fTotalFoodEnergyIn = fFoodEnergyIn;
     fTotalFoodEnergyOut = fFoodEnergyOut;
+    fTotalEnergyEaten = fEnergyEaten;
     fAverageFoodEnergyIn = 0.0;
     fAverageFoodEnergyOut = 0.0;
 
@@ -3990,22 +3997,16 @@ void TSimulation::Mate( agent *c,
 			if( (fHeuristicFitnessWeight != 0.0) || (fComplexityFitnessWeight != 0.0) )
 			{
 				// we're using the steady state GA (instead of natural selection)
-				if( fHeuristicFitnessWeight != 0.0 )
-				{
-					// we're using the heuristic fitness function, so allow virtual offspring
-					// (count would-be offspring towards fitness, but don't actually instantiate them)
-					(void) c->mating( fMateFitnessParameter, fMateWait );
-					(void) d->mating( fMateFitnessParameter, fMateWait );
-					//							cout << "t=" << fStep sp "mating c=" << c->Number() sp "(m=" << c->Mate() << ",lm=" << c->LastMate() << ",e=" << c->Energy() << ",x=" << c->x() << ",z=" << c->z() << ",r=" << c->radius() << ")" nl;
-					//							cout << "          & d=" << d->Number() sp "(m=" << d->Mate() << ",lm=" << d->LastMate() << ",e=" << d->Energy() << ",x=" << d->x() << ",z=" << d->z() << ",r=" << d->radius() << ")" nl;
-					//							if( sqrt((d->x()-c->x())*(d->x()-c->x())+(d->z()-c->z())*(d->z()-c->z())) > (d->radius()+c->radius()) )
-					//								cout << "            ***** no overlap *****" nl;
-					fNumberBornVirtual++;
-				}
-				else
-				{
-					// we're not using the heuristic fitness function, so just disable the mating process altogether
-				}
+				// count virtual offspring (offspring that would have resulted from
+				// otherwise successful mating behaviors), but don't actually instantiate them
+				(void) c->mating( fMateFitnessParameter, fMateWait );
+				(void) d->mating( fMateFitnessParameter, fMateWait );
+				//cout << "t=" << fStep sp "mating c=" << c->Number() sp "(m=" << c->Mate() << ",lm=" << c->LastMate() << ",e=" << c->Energy() << ",x=" << c->x() << ",z=" << c->z() << ",r=" << c->radius() << ")" nl;
+				//cout << "          & d=" << d->Number() sp "(m=" << d->Mate() << ",lm=" << d->LastMate() << ",e=" << d->Energy() << ",x=" << d->x() << ",z=" << d->z() << ",r=" << d->radius() << ")" nl;
+				//if( sqrt((d->x()-c->x())*(d->x()-c->x())+(d->z()-c->z())*(d->z()-c->z())) > (d->radius()+c->radius()) )
+				//	cout << "            ***** no overlap *****" nl;
+				fNumberBornVirtual++;
+				Birth( NULL, LifeSpan::BR_VIRTUAL, c, d );
 			}
 			else
 			{
@@ -4499,6 +4500,7 @@ void TSimulation::Eat( agent *c, bool *cDied )
 				UpdateEnergyLog( c, f, c->Eat(), energyEaten, ELET__EAT );
 								 
 				FoodEnergyOut( foodEnergyLost );
+				fEnergyEaten += energyEaten;
 				
 				eatPrint( "at step %ld, agent %ld at (%g,%g) with rad=%g wasted %g units of food at (%g,%g) with rad=%g\n", fStep, c->Number(), c->x(), c->z(), c->radius(), foodEaten, f->x(), f->z(), f->radius() );
 
@@ -4553,6 +4555,7 @@ void TSimulation::Eat( agent *c, bool *cDied )
 					UpdateEnergyLog( c, f, c->Eat(), energyEaten, ELET__EAT );
 
 					FoodEnergyOut( foodEnergyLost );
+					fEnergyEaten += energyEaten;
 					
 					eatPrint( "at step %ld, agent %ld at (%g,%g) with rad=%g wasted %g units of food at (%g,%g) with rad=%g\n", fStep, c->Number(), c->x(), c->z(), c->radius(), foodEaten, f->x(), f->z(), f->radius() );
 
@@ -5391,21 +5394,24 @@ void TSimulation::Birth( agent* a,
 						 agent* a_parent1,
 						 agent* a_parent2 )
 {
-	fNumberAlive++;
-	fNumberAliveWithMetabolism[ GenomeUtil::getMetabolism(a->Genes())->index ]++;
-
-	// ---
-	// --- Update LifeSpan
-	// ---
-	a->GetLifeSpan()->set_birth( fStep,
-								 reason );
-
-
-	// ---
-	// --- Update Separation Cache
-	// ---
-	fSeparationCache.birth( a );
-
+	if( a )	// a will NULL for virtual births only
+	{
+		fNumberAlive++;
+		fNumberAliveWithMetabolism[ GenomeUtil::getMetabolism(a->Genes())->index ]++;
+	
+		// ---
+		// --- Update LifeSpan
+		// ---
+		a->GetLifeSpan()->set_birth( fStep,
+									 reason );
+	
+	
+		// ---
+		// --- Update Separation Cache
+		// ---
+		fSeparationCache.birth( a );
+	}
+	
 	// ---
 	// --- Update Birth/Death Log
 	// ---
@@ -5426,6 +5432,14 @@ void TSimulation::Birth( agent* a,
 					 "%ld BIRTH %ld %ld %ld\n",
 					 fStep,
 					 a->Number(),
+					 a_parent1->Number(),
+					 a_parent2->Number() );
+			break;
+		case LifeSpan::BR_VIRTUAL:
+			fprintf( File,
+					 "%ld VIRTUAL %d %ld %ld\n",
+					 fStep,
+					 0,	// agent IDs start with 1, so this also identifies virtual births
 					 a_parent1->Number(),
 					 a_parent2->Number() );
 			break;
@@ -5710,7 +5724,6 @@ void TSimulation::Kill_UpdateBrainData( agent *c )
 		sprintf( t, "run/brain/function/brainFunction_%ld.txt", c->Number() );
 		rename( s, t );
 
-		// Virgil
 		if ( fComplexityFitnessWeight > 0 )		// Are we using Complexity as a Fitness Function?  If so, set fitness = Complexity here
 		{
 			if( fComplexityType == "D" )	// special case the difference of complexities case
@@ -6161,7 +6174,7 @@ float TSimulation::AgentFitness( agent* c )
 		// fitness is normalized (by the sum of the weights) after doing a weighted sum of normalized heuristic fitness and complexity
 		// (Complexity runs between 0.0 and 1.0 in the early simulations.  Is there a way to guarantee this?  Do we want to?)
 		fitness = (fHeuristicFitnessWeight*c->HeuristicFitness()/fTotalHeuristicFitness + fComplexityFitnessWeight*c->Complexity()) / (fHeuristicFitnessWeight+fComplexityFitnessWeight);
-		cout << "fitness" eql fitness sp "hwt" eql fHeuristicFitnessWeight sp "hf" eql c->HeuristicFitness()/fTotalHeuristicFitness sp "cwt" eql fComplexityFitnessWeight sp "cf" eql c->Complexity() nl;
+		//cout << "fitness" eql fitness sp "hwt" eql fHeuristicFitnessWeight sp "hf" eql c->HeuristicFitness()/fTotalHeuristicFitness sp "cwt" eql fComplexityFitnessWeight sp "cf" eql c->Complexity() nl;
 	}
 	
 	return( fitness );
@@ -6179,6 +6192,7 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	fEndOnPopulationCrash = doc.get( "EndOnPopulationCrash" );
 	fDumpFrequency = doc.get( "CheckPointFrequency" );
 	fStatusFrequency = doc.get( "StatusFrequency" );
+	fStatusToStdout = doc.get( "StatusToStdout" );
 	{
 		globals::edges = false;
 		globals::wraparound = false;
@@ -8450,7 +8464,7 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 	}
 	list.push_back( strdup( t ) );
 	
-	if( fHeuristicFitnessWeight != 0.0 )
+	if( (fHeuristicFitnessWeight != 0.0) || (fComplexityFitnessWeight != 0.0) )
 	{
 		sprintf( t, "born(v)  = %4ld", fNumberBornVirtual );
 		list.push_back( strdup( t ) );
@@ -8526,7 +8540,7 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 	}
 	list.push_back( strdup( t ) );
 
-	if( fHeuristicFitnessWeight != 0.0 )
+	if( (fHeuristicFitnessWeight != 0.0) || (fComplexityFitnessWeight != 0.0) )
 		sprintf( t, "born(v)/(c+bv) = %.2f", float(fNumberBornVirtual) / float(fNumberCreated + fNumberBornVirtual) );
 	else
 		sprintf( t, "born/total = %.2f", float(fNumberBorn) / float(fNumberCreated + fNumberBorn) );
@@ -8582,7 +8596,30 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 	
 	sprintf( t, "totFoodEnergy = %.2f", (fTotalFoodEnergyIn - fTotalFoodEnergyOut) / (fTotalFoodEnergyIn + fTotalFoodEnergyOut) );
 	list.push_back( strdup( t ) );
-
+	
+	sprintf( t, "totEnergyEaten = %.1f", fTotalEnergyEaten[0] );
+	for( int i = 1; i < globals::numEnergyTypes; i++ )
+	{
+		sprintf( t2, ", %.1f", fTotalEnergyEaten[i] );
+		strcat( t, t2 );
+	}
+	list.push_back( strdup( t ) );
+	
+	static Energy lastTotalEnergyEaten;
+	static Energy deltaEnergy;
+    if( !(fStep % fStatusFrequency) )
+    {
+		deltaEnergy = fTotalEnergyEaten - lastTotalEnergyEaten;
+		lastTotalEnergyEaten = fTotalEnergyEaten;
+	}
+	sprintf( t, "EatRate = %.1f", deltaEnergy[0] / fStatusFrequency );
+	for( int i = 1; i < globals::numEnergyTypes; i++ )
+	{
+		sprintf( t2, ", %.1f", deltaEnergy[i] / fStatusFrequency );
+		strcat( t, t2 );
+	}
+	list.push_back( strdup( t ) );
+	
 	if (fMonitorGeneSeparation)
 	{
 		sprintf( t, "GeneSep = %5.3f [%5.3f, %5.3f]", fAverageGeneSeparation, fMinGeneSeparation, fMaxGeneSeparation );
@@ -8607,14 +8644,11 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 	sprintf( t, "CurSynapses = %.1f ± %.1f [%lu, %lu]", fCurrentSynapseCountStats.mean(), fCurrentSynapseCountStats.stddev(), (ulong) fCurrentSynapseCountStats.min(), (ulong) fCurrentSynapseCountStats.max() );
 	list.push_back( strdup( t ) );
 
-	if( fRecordPerformanceStats )
-	{
-		sprintf( t, "Rate %2.1f (%2.1f) %2.1f (%2.1f) %2.1f (%2.1f)",
-				 fFramesPerSecondInstantaneous, fSecondsPerFrameInstantaneous,
-				 fFramesPerSecondRecent,        fSecondsPerFrameRecent,
-				 fFramesPerSecondOverall,       fSecondsPerFrameOverall  );
-		list.push_back( strdup( t ) );
-	}
+	sprintf( t, "Rate %2.1f (%2.1f) %2.1f (%2.1f) %2.1f (%2.1f)",
+			 fFramesPerSecondInstantaneous, fSecondsPerFrameInstantaneous,
+			 fFramesPerSecondRecent,        fSecondsPerFrameRecent,
+			 fFramesPerSecondOverall,       fSecondsPerFrameOverall  );
+	list.push_back( strdup( t ) );
 	
 	if( fRecordFoodPatchStats )
 	{
@@ -8684,9 +8718,20 @@ void TSimulation::PopulateStatusList(TStatusList& list)
         FILE *statusFile = fopen( statusFileName, "w" );
 		Q_CHECK_PTR( statusFile );
 		
+		if( fStatusToStdout )
+			printf( "------------------------------------------------------------\n" );
+		
 		TStatusList::const_iterator iter = list.begin();
 		for( ; iter != list.end(); ++iter )
-			fprintf( statusFile, "%s\n", *iter );
+		{
+			bool record = true;
+			if( ! fRecordPerformanceStats && (0 == strncmp( *iter, "Rate", 4 )) )
+				record = false;
+			if( record )
+				fprintf( statusFile, "%s\n", *iter );
+			if( fStatusToStdout )
+				printf( "%s\n", *iter );
+		}
 
         fclose( statusFile );
     }
