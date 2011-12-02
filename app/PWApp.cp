@@ -1,10 +1,10 @@
-// Self
-#include "PWApp.h"
-//#include "SceneView.h"
-
+// System
 #include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
 
-// QT
+// Qt
 #include <qapplication.h>
 #include <qgl.h>
 #include <qlayout.h>
@@ -29,6 +29,9 @@
 #include "SceneView.h"
 #include "Simulation.h"
 
+// Self
+#include "PWApp.h"
+
 //#define UNIT_TESTS
 
 #ifdef UNIT_TESTS
@@ -37,36 +40,73 @@
 #endif
 
 //===========================================================================
+// usage
+//===========================================================================
+void usage( const char* format, ... )
+{
+	printf( "Usage:  Polyworld [--debug] [--status] worldfile\n" );
+	printf( "\t--debug: enable debug mode\n" );
+	printf( "\t--status: enable writing of status to stdout\n" );
+	
+	if( format )
+	{
+		printf( "Error:\n\t" );
+		va_list argv;
+		va_start( argv, format );
+		vprintf( format, argv );
+		va_end( argv );
+		printf( "\n" );
+	}
+	
+	exit( 1 );
+}
+
+void usage()
+{
+	usage( NULL );
+}
+
+//===========================================================================
 // main
 //===========================================================================
-
-int main(int argc, char** argv)
+int main( int argc, char** argv )
 {
 #ifdef UNIT_TESTS
 	Energy::test();
 	AbstractFile::test();
 
-	printf("done with unit tests.\n");
+	printf( "done with unit tests.\n" );
 
 	return 0;
 #endif
 
 	bool debugMode = false;
+	bool statusToStdout = false;
 	const char *worldfilePath = NULL;
-	if( argc > 1 )
+	
+	for( int argi = 1; argi < argc; argi++ )
 	{
-		int argi = 1;
-		if( 0 == strcmp(argv[argi], "--debug") )
+		if( argv[argi][0] == '-' )	// it's a flagged argument
 		{
-			debugMode = true;
-			argi++;
+			if( 0 == strcmp( argv[argi], "--debug" ) )
+				debugMode = true;
+			else if( 0 == strcmp( argv[argi], "--status" ) )
+				statusToStdout = true;
+			else
+				usage( "Unknown argument: %s", argv[argi] );
 		}
-
-		if( argi < argc )
+		else
 		{
-			worldfilePath = argv[argi];
-			argi++;
+			if( worldfilePath == NULL )
+				worldfilePath = argv[argi];
+			else
+				usage( "Only one worldfile path allowed, at least two specified (%s, %s)", worldfilePath, argv[argi] );
 		}
+	}
+	
+	if( ! worldfilePath )
+	{
+		usage( "A valid path to a worldfile must be specified" );
 	}
 
 	// Create application instance
@@ -86,7 +126,7 @@ int main(int argc, char** argv)
 
 	
 	// Create the main window (without passing a menubar)
-	TSceneWindow *sceneWindow = new TSceneWindow( worldfilePath );
+	TSceneWindow *sceneWindow = new TSceneWindow( worldfilePath, statusToStdout );
 
 	// Either create the debugger or construct the scheduler/gui-timer
 	if( debugMode )
@@ -217,7 +257,7 @@ TPWApp::TPWApp(int& argc, char** argv) : QApplication(argc, argv)
 //---------------------------------------------------------------------------
 // TSceneWindow::TSceneWindow
 //---------------------------------------------------------------------------
-TSceneWindow::TSceneWindow( const char *worldfilePath )
+TSceneWindow::TSceneWindow( const char *worldfilePath, const bool statusToStdout )
 //	:	QMainWindow(0, "Polyworld", WDestructiveClose | WGroupLeader),
 	:	QMainWindow( 0, 0 ),
 		fWindowsMenu(NULL)
@@ -255,7 +295,7 @@ TSceneWindow::TSceneWindow( const char *worldfilePath )
 	// Create the simulation
 	// NOTE: Must wait until after the above RestoreFromPrefs(), so the window
 	// is the right size when we create the TSimulation object below.
-	fSimulation = new TSimulation( fSceneView, this, worldfilePath );
+	fSimulation = new TSimulation( fSceneView, this, worldfilePath, statusToStdout );
 	fSceneView->SetSimulation( fSimulation );
 }
 
