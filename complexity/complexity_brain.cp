@@ -84,8 +84,8 @@ CalcComplexity_brainfunction_result *
 
 		double complexity = CalcComplexity_brainfunction( parm->path,
 								 parm->parts,
-								 parm->ignore_timesteps_after,
 								 parm->events,
+								 parm->ignore_timesteps_after,
 								 result->agent_number + iparm,
 								 result->lifespan + iparm,
 								 result->num_neurons + iparm );
@@ -107,25 +107,30 @@ CalcComplexity_brainfunction_result *
 //---------------------------------------------------------------------------
 double CalcComplexity_brainfunction(const char *fnameAct,
 				    const char *part,
-				    int ignore_timesteps_after,
 				    Events *events,
+				    int ignore_timesteps_after,
 				    long *agent_number,
 				    long *lifespan,
 				    long *num_neurons)
 {
+	double complexity;
 	long numinputneurons = 0;		// this value will be defined by readin_brainfunction()
 	long numoutputneurons = 0;
 	long agent_birth = -1;
+	long agent_num;
 	
 	gsl_matrix * activity = readin_brainfunction(fnameAct,
 												 ignore_timesteps_after,
 												 MaxNumTimeStepsToComputeComplexityOver,
-												 agent_number,
+												 &agent_num,
 												 &agent_birth,
 												 lifespan,
 												 num_neurons,
 												 &numinputneurons,
 												 &numoutputneurons);
+	
+	if( agent_number )
+		*agent_number = agent_num;
 	
 	// If the brain file was invalid or memory allocation failed, just return 0.0
 	if( activity == NULL )
@@ -159,12 +164,16 @@ double CalcComplexity_brainfunction(const char *fnameAct,
     	FilterActivity( activity, filter_events, *agent_number, agent_birth, *lifespan, events );
     }
 
-	return CalcComplexityWithMatrix_brainfunction(activity,
-												  part,
-												  numinputneurons,
-												  numoutputneurons);
+	complexity = CalcComplexityWithMatrix_brainfunction(activity,
+														part,
+														numinputneurons,
+														numoutputneurons);
 	
+// 	printf( "CalcComplexity for agent %ld part %s %s event filtering = %g\n", agent_num, part, events ? "with" : "without", complexity );
+
 	gsl_matrix_free( activity );
+
+	return( complexity );
 }
 
 //---------------------------------------------------------------------------

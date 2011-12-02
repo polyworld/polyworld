@@ -65,8 +65,8 @@ CalcComplexity_brainfunction_result *CalcComplexity_brainfunction(CalcComplexity
 							  CalcComplexity_brainfunction_callback *callback = 0);
 double CalcComplexity_brainfunction(const char *path,
 									const char *parts,
-									int ignore_timesteps_after = 0,
 									Events *events = NULL,
+									int ignore_timesteps_after = 0,
 									long *agent_number = NULL,
 									long *lifespan = NULL,
 									long *num_neurons = NULL);
