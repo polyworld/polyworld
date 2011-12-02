@@ -414,7 +414,8 @@ void parse_mate_events( ifstream& births_deaths, Events* events )
 	{
 		getline( births_deaths, line );
 		vector<string> parts = split( line );
-		if( parts.size() > 1 && parts[1].c_str()[0] == 'B' )	// only interested in BIRTH events
+		// If it was a normal BIRTH or VIRTUAL birth event, add a 'm'ate event for the parents
+		if( parts.size() > 1 && (parts[1].c_str()[0] == 'B' || parts[1].c_str()[0] == 'V' ) )
 		{
 			long step = atol( parts[0].c_str() );
 			long parent1 = atol( parts[3].c_str() );
