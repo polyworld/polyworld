@@ -146,6 +146,12 @@ float Energy::mean() const
 	return sum() / globals::numEnergyTypes;
 }
 
+void Energy::zero()
+{
+	for( int i = 0; i < globals::numEnergyTypes; i++ )
+		values[i] = 0.0;
+}
+
 void Energy::constrain( const Energy &minEnergy, const Energy &maxEnergy )
 {
 	for( int i = 0; i < globals::numEnergyTypes; i++ )

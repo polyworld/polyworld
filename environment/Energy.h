@@ -70,6 +70,7 @@ class Energy
 	bool isZero() const;
 	float sum() const;
 	float mean() const;
+	void zero();
 
 	void constrain( const Energy &minEnergy, const Energy &maxEnergy );
 	void constrain( const Energy &minEnergy, const Energy &maxEnergy, Energy &result_overflow );
