@@ -204,5 +204,5 @@ then
 	echo "** WARNING: Found Invalid brainFunction files in brain/bestRecent! **"
 	echo "$Invalids"
 else
-	echo "No invalids brainFunction files found in brain/bestRecent."
+	echo "No invalid brainFunction files found in brain/bestRecent."
 fi
