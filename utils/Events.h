@@ -31,7 +31,6 @@ class Events
   	void AddEvent( long step, long agentNumber, char event );
   	AgentEvent GetAgentEvent( long step, long agentNumber );
   	AgentEventsMapType GetAgentEventsMap( long step );
-  	long MaxSteps();
   
   private:
   	long maxSteps;
@@ -44,12 +43,12 @@ class Events
 inline Events::Events( long simMaxSteps )
 {
 	maxSteps = simMaxSteps;
-	events = new AgentEventsMapType[maxSteps];
+	events = new AgentEventsMapType[maxSteps+1];	// +1 due to steps counting from one
 }
 
 inline Events::~Events()
 {
-	for( long step = 0; step < maxSteps; step++ )
+	for( long step = 0; step <= maxSteps; step++ )
 		events[step].clear();
 	delete[] events;
 }
@@ -78,9 +77,4 @@ inline AgentEvent Events::GetAgentEvent( long step, long agentNumber )
 inline AgentEventsMapType Events::GetAgentEventsMap( long step )
 {
 	return( events[step] );
-}
-
-inline long Events::MaxSteps()
-{
-	return( maxSteps );
 }

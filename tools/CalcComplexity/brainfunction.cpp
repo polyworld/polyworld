@@ -319,7 +319,7 @@ Events* parse_events( char* filter_events, string brain_function_path )
 	// Determine maxSteps from the worldfile
 	long maxSteps = get_max_steps( worldfile );
 	
-	Events* events = new Events( maxSteps+1 );	// +1 due to steps counting from one
+	Events* events = new Events( maxSteps );
 	
 	// Parse BirthsDeaths.log to add mate events
 	if( strchr( filter_events, 'm' ) )
@@ -385,7 +385,7 @@ void find_filter_files( string brain_function_path,	// input
 //---------------------------------------------------------------------------
 long get_max_steps( ifstream& worldfile )
 {
-	long maxSteps = 30000;
+	long maxSteps = 0;
 	string line;
 	
 	// parse the worldfile to extract maxSteps
