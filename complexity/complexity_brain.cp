@@ -118,19 +118,23 @@ double CalcComplexity_brainfunction(const char *fnameAct,
 	long numoutputneurons = 0;
 	long agent_birth = -1;
 	long agent_num;
+	long agent_lifespan;
 	
 	gsl_matrix * activity = readin_brainfunction(fnameAct,
 												 ignore_timesteps_after,
 												 MaxNumTimeStepsToComputeComplexityOver,
 												 &agent_num,
 												 &agent_birth,
-												 lifespan,
+												 &agent_lifespan,
 												 num_neurons,
 												 &numinputneurons,
 												 &numoutputneurons);
 	
 	if( agent_number )
 		*agent_number = agent_num;
+	
+	if( lifespan )
+		*lifespan = agent_lifespan;
 	
 	// If the brain file was invalid or memory allocation failed, just return 0.0
 	if( activity == NULL )
@@ -161,7 +165,7 @@ double CalcComplexity_brainfunction(const char *fnameAct,
     		}
     	}
     	
-    	FilterActivity( activity, filter_events, *agent_number, agent_birth, *lifespan, events );
+    	FilterActivity( activity, filter_events, agent_num, agent_birth, agent_lifespan, events );
     }
 
 	complexity = CalcComplexityWithMatrix_brainfunction(activity,

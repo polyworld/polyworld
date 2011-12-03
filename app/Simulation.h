@@ -19,6 +19,7 @@
 #include "datalib.h"
 #include "EatStatistics.h"
 #include "Energy.h"
+#include "Events.h"
 #include "food.h"
 #include "Scheduler.h"
 #include "SeparationCache.h"
@@ -460,7 +461,9 @@ public:
 	float GetAgentHealingRate();				// Virgil Healing
 
 	int getRandomPatch(int domainNumber);
-	Domain fDomains[MAXDOMAINS];	
+	Domain fDomains[MAXDOMAINS];
+	
+	Events* fEvents;
 
 private slots:
 	

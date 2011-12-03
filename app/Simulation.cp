@@ -1961,7 +1961,24 @@ void TSimulation::Init( const char *argWorldfilePath, const bool statusToStdout 
 	InitCollisionsLog();
 	InitCarryLog();
 	InitEnergyLog();
-
+	
+	if( fComplexityFitnessWeight != 0.0 )
+	{
+		bool eventFiltering = false;
+		for( unsigned int i = 0; i < fComplexityType.size(); i++ )
+		{
+			if( islower( fComplexityType[i] ) )
+			{
+				eventFiltering = true;
+				break;
+			}
+		}
+		if( eventFiltering )
+			fEvents = new Events( fMaxSteps );
+		else
+			fEvents = NULL;
+	}
+	
 	inited = true;
 }
 
@@ -4498,6 +4515,8 @@ void TSimulation::Eat( agent *c, bool *cDied )
 				Energy energyEaten;
 				c->eat( f, fEatFitnessParameter, fEat2Consume, fEatThreshold, fStep, foodEnergyLost, energyEaten );
 				UpdateEnergyLog( c, f, c->Eat(), energyEaten, ELET__EAT );
+				if( fEvents )
+					fEvents->AddEvent( fStep, c->Number(), 'e' );
 								 
 				FoodEnergyOut( foodEnergyLost );
 				fEnergyEaten += energyEaten;
@@ -4553,6 +4572,8 @@ void TSimulation::Eat( agent *c, bool *cDied )
 					Energy energyEaten;
 					c->eat( f, fEatFitnessParameter, fEat2Consume, fEatThreshold, fStep, foodEnergyLost, energyEaten );
 					UpdateEnergyLog( c, f, c->Eat(), energyEaten, ELET__EAT );
+					if( fEvents )
+						fEvents->AddEvent( fStep, c->Number(), 'e' );
 
 					FoodEnergyOut( foodEnergyLost );
 					fEnergyEaten += energyEaten;
@@ -5434,6 +5455,11 @@ void TSimulation::Birth( agent* a,
 					 a->Number(),
 					 a_parent1->Number(),
 					 a_parent2->Number() );
+			if( fEvents )
+			{
+				fEvents->AddEvent( fStep, a_parent1->Number(), 'm' );
+				fEvents->AddEvent( fStep, a_parent2->Number(), 'm' );
+			}
 			break;
 		case LifeSpan::BR_VIRTUAL:
 			fprintf( File,
@@ -5442,6 +5468,11 @@ void TSimulation::Birth( agent* a,
 					 0,	// agent IDs start with 1, so this also identifies virtual births
 					 a_parent1->Number(),
 					 a_parent2->Number() );
+			if( fEvents )
+			{
+				fEvents->AddEvent( fStep, a_parent1->Number(), 'm' );
+				fEvents->AddEvent( fStep, a_parent2->Number(), 'm' );
+			}
 			break;
 		case LifeSpan::BR_CREATE:
 			fprintf( File,
@@ -5735,7 +5766,7 @@ void TSimulation::Kill_UpdateBrainData( agent *c )
 			else if( fComplexityType != "Z" )	// avoid special hack case to evolve towards zero max velocity, for testing purposes only
 			{
 				// otherwise, fComplexityType has the right string in it
-				c->SetComplexity( CalcComplexity_brainfunction( t, fComplexityType.c_str() ) );
+				c->SetComplexity( CalcComplexity_brainfunction( t, fComplexityType.c_str(), fEvents ) );
 			}
 		}
 	}
@@ -6169,7 +6200,7 @@ float TSimulation::AgentFitness( agent* c )
 				c->SetComplexity( pComplexity - iComplexity );
 			}
 			else	// fComplexityType contains the appropriate string to select the type of complexity
-				c->SetComplexity( CalcComplexity_brainfunction( filename, fComplexityType.c_str() ) );
+				c->SetComplexity( CalcComplexity_brainfunction( filename, fComplexityType.c_str(), fEvents ) );
 		}
 		// fitness is normalized (by the sum of the weights) after doing a weighted sum of normalized heuristic fitness and complexity
 		// (Complexity runs between 0.0 and 1.0 in the early simulations.  Is there a way to guarantee this?  Do we want to?)
@@ -8466,7 +8497,7 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 	
 	if( (fHeuristicFitnessWeight != 0.0) || (fComplexityFitnessWeight != 0.0) )
 	{
-		sprintf( t, "born(v)  = %4ld", fNumberBornVirtual );
+		sprintf( t, "born_v  = %4ld", fNumberBornVirtual );
 		list.push_back( strdup( t ) );
 	}
 
@@ -8541,7 +8572,7 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 	list.push_back( strdup( t ) );
 
 	if( (fHeuristicFitnessWeight != 0.0) || (fComplexityFitnessWeight != 0.0) )
-		sprintf( t, "born(v)/(c+bv) = %.2f", float(fNumberBornVirtual) / float(fNumberCreated + fNumberBornVirtual) );
+		sprintf( t, "born_v/(c+bv) = %.2f", float(fNumberBornVirtual) / float(fNumberCreated + fNumberBornVirtual) );
 	else
 		sprintf( t, "born/total = %.2f", float(fNumberBorn) / float(fNumberCreated + fNumberBorn) );
 	list.push_back( strdup( t ) );
@@ -8618,6 +8649,21 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 		sprintf( t2, ", %.1f", deltaEnergy[i] / fStatusFrequency );
 		strcat( t, t2 );
 	}
+	list.push_back( strdup( t ) );
+	
+	static long lastNumberBorn = 0;
+	static long deltaBorn;
+	long numberBorn;
+	if( (fComplexityFitnessWeight == 0.0) && (fHeuristicFitnessWeight == 0.0) )
+		numberBorn = fNumberBorn;
+	else
+		numberBorn = fNumberBornVirtual;
+    if( !(fStep % fStatusFrequency) )
+    {
+		deltaBorn = numberBorn - lastNumberBorn;
+		lastNumberBorn = numberBorn;
+	}
+	sprintf( t, "MateRate = %.1f", (double) deltaBorn / fStatusFrequency );
 	list.push_back( strdup( t ) );
 	
 	if (fMonitorGeneSeparation)
