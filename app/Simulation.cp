@@ -194,6 +194,7 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow, cons
 		fRotateWorld(false),
 //		fOverHeadRank(0),
 //		fMonitorAgent(NULL),
+		fBrainFunctionRecentRecordFrequency(1000),
 		fBestSoFarBrainAnatomyRecordFrequency(0),
 		fBestSoFarBrainFunctionRecordFrequency(0),
 		fBestRecentBrainAnatomyRecordFrequency(0),
@@ -838,6 +839,16 @@ void TSimulation::Step()
 //sleep( 10 );
 
 	debugcheck( "after brain monitor window in step %ld", fStep );
+	
+	// Archive the Recent brain function files, if we're doing that
+	if( fBrainFunctionRecentRecordFrequency && fStep >= fCurrentRecentEpoch )
+	{
+		char t[256];
+		fCurrentRecentEpoch += fBrainFunctionRecentRecordFrequency;
+		sprintf( t, "run/brain/Recent/%ld", fCurrentRecentEpoch );
+		if( mkdir( t, PwDirMode ) )
+			eprintf( "Error making %s directory (%d)\n", t, errno );
+	}
 
 	// Archive the bestSoFar brain anatomy and function files, if we're doing that
 	if( fBestSoFarBrainAnatomyRecordFrequency && ((fStep % fBestSoFarBrainAnatomyRecordFrequency) == 0) )
@@ -1015,7 +1026,7 @@ void TSimulation::Step()
 						if( unlink( s ) )
 							eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
 					}
-					if( (fBestRecentBrainFunctionRecordFrequency || fBestSoFarBrainFunctionRecordFrequency) && !fBrainFunctionRecordAll )
+					if( (fBestRecentBrainFunctionRecordFrequency || fBestSoFarBrainFunctionRecordFrequency) && !fBrainFunctionRecordAll && !fBrainFunctionRecentRecordFrequency )
 					{
 						sprintf( s, "run/brain/function/brainFunction_%ld.txt", fRecentFittest[i]->agentID );
 						if( unlink( s ) )
@@ -1554,7 +1565,7 @@ void TSimulation::Init( const char *argWorldfilePath, const bool statusToStdout 
 
 	if( fBestSoFarBrainAnatomyRecordFrequency || fBestSoFarBrainFunctionRecordFrequency ||
 		fBestRecentBrainAnatomyRecordFrequency || fBestRecentBrainFunctionRecordFrequency ||
-		fBrainAnatomyRecordAll || fBrainFunctionRecordAll ||
+		fBrainAnatomyRecordAll || fBrainFunctionRecordAll || fBrainFunctionRecentRecordFrequency ||
 		fBrainAnatomyRecordSeeds || fBrainFunctionRecordSeeds || fAdamiComplexityRecordFrequency || fRecordPosition)
 	{
 		int agent_factor = 0;
@@ -1583,7 +1594,7 @@ void TSimulation::Init( const char *argWorldfilePath, const bool statusToStdout 
 		if( fBestSoFarBrainAnatomyRecordFrequency || fBestRecentBrainAnatomyRecordFrequency || fBrainAnatomyRecordAll || fBrainAnatomyRecordSeeds )
 			if( mkdir( "run/brain/anatomy", PwDirMode ) )
 				eprintf( "Error making run/brain/anatomy directory (%d)\n", errno );
-		if( fBestSoFarBrainFunctionRecordFrequency || fBestRecentBrainFunctionRecordFrequency || fBrainFunctionRecordAll || fBrainFunctionRecordSeeds )
+		if( fBrainFunctionRecentRecordFrequency || fBestSoFarBrainFunctionRecordFrequency || fBestRecentBrainFunctionRecordFrequency || fBrainFunctionRecordAll || fBrainFunctionRecordSeeds )
 			if( mkdir( "run/brain/function", PwDirMode ) )
 				eprintf( "Error making run/brain/function directory (%d)\n", errno );
 		if( fBestSoFarBrainAnatomyRecordFrequency || fBestSoFarBrainFunctionRecordFrequency )
@@ -1602,6 +1613,17 @@ void TSimulation::Init( const char *argWorldfilePath, const bool statusToStdout 
 			if( fBrainFunctionRecordSeeds )
 				if( mkdir( "run/brain/seeds/function", PwDirMode ) )
 					eprintf( "Error making run/brain/seeds/function directory (%d)\n", errno );
+		}
+		if( fBrainFunctionRecentRecordFrequency )
+		{
+			if( mkdir( "run/brain/Recent", PwDirMode ) )
+				eprintf( "Error making run/brain/Recent directory (%d)\n", errno );
+			if( mkdir( "run/brain/Recent/0", PwDirMode ) )
+				eprintf( "Error making run/brain/Recent/0 directory (%d)\n", errno );
+			fCurrentRecentEpoch = fBrainFunctionRecentRecordFrequency;
+			sprintf( t, "run/brain/Recent/%ld", fCurrentRecentEpoch );
+			if( mkdir( t, PwDirMode ) )
+				eprintf( "Error making %s directory (%d)\n", t, errno );
 		}
 	}
 
@@ -5755,7 +5777,7 @@ void TSimulation::Kill_UpdateBrainData( agent *c )
 		sprintf( t, "run/brain/function/brainFunction_%ld.txt", c->Number() );
 		rename( s, t );
 
-		if ( fComplexityFitnessWeight > 0 )		// Are we using Complexity as a Fitness Function?  If so, set fitness = Complexity here
+		if ( fComplexityFitnessWeight != 0.0 )		// Are we using Complexity as a Fitness Function?  If so, set fitness = Complexity here
 		{
 			if( fComplexityType == "D" )	// special case the difference of complexities case
 			{
@@ -5767,6 +5789,23 @@ void TSimulation::Kill_UpdateBrainData( agent *c )
 			{
 				// otherwise, fComplexityType has the right string in it
 				c->SetComplexity( CalcComplexity_brainfunction( t, fComplexityType.c_str(), fEvents ) );
+			}
+		}
+		
+		if( fBrainFunctionRecentRecordFrequency )
+		{
+			// Note: Everywhere else I use 's' for source and 't' for target, but in this case
+			// what was just the target is now the source, so to avoid copying those bytes
+			// again I'll make an exception and reverse the roles of s and t here for efficiency...
+			sprintf( s, "run/brain/Recent/%ld/brainFunction_%ld.txt", fCurrentRecentEpoch, c->Number() );
+			if( link( t, s ) )
+				eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, t, s );
+			
+			if( c->Number() <= fInitNumAgents )
+			{
+				sprintf( s, "run/brain/Recent/0/brainFunction_%ld.txt", c->Number() );
+				if( link( t, s ) )
+					eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, t, s );
 			}
 		}
 	}
@@ -6043,7 +6082,7 @@ void TSimulation::Kill_UpdateFittest( agent *c )
 			if( unlink( s ) )
 				eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
 		}
-		if( (fBestRecentBrainFunctionRecordFrequency || fBestSoFarBrainFunctionRecordFrequency) && !fBrainFunctionRecordAll )
+		if( (fBestRecentBrainFunctionRecordFrequency || fBestSoFarBrainFunctionRecordFrequency) && !fBrainFunctionRecordAll && !fBrainFunctionRecentRecordFrequency )
 		{
 			sprintf( s, "run/brain/function/brainFunction_%lu.txt", loserIDBestSoFar );
 			if( unlink( s ) )
@@ -6070,7 +6109,7 @@ void TSimulation::Kill_UpdateFittest( agent *c )
 			if( unlink( s ) )
 				eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
 		}
-		if( (fBestRecentBrainFunctionRecordFrequency || fBestSoFarBrainFunctionRecordFrequency) && !fBrainFunctionRecordAll )
+		if( (fBestRecentBrainFunctionRecordFrequency || fBestSoFarBrainFunctionRecordFrequency) && !fBrainFunctionRecordAll && !fBrainFunctionRecentRecordFrequency )
 		{
 			sprintf( s, "run/brain/function/brainFunction_%lu.txt", loserIDBestRecent );
 			if( unlink( s ) )
@@ -6094,7 +6133,7 @@ void TSimulation::Kill_UpdateFittest( agent *c )
 	// If we're only archiving the best, and this isn't one of them, then nuke its brainFunction recording
 	if( (fBestSoFarBrainFunctionRecordFrequency || fBestRecentBrainFunctionRecordFrequency) &&
 		(!oneOfTheBestSoFar && !oneOfTheBestRecent) &&
-		!fBrainFunctionRecordAll )
+		!fBrainFunctionRecordAll && !fBrainFunctionRecentRecordFrequency )
 	{
 		char s[256];
 		sprintf( s, "run/brain/function/brainFunction_%lu.txt", c->Number() );
@@ -8012,6 +8051,7 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	fBrainFunctionRecordAll = doc.get( "BrainFunctionRecordAll" );
 	fBrainAnatomyRecordSeeds = doc.get( "BrainAnatomyRecordSeeds" );
 	fBrainFunctionRecordSeeds = doc.get( "BrainFunctionRecordSeeds" );
+	fBrainFunctionRecentRecordFrequency = doc.get( "BrainFunctionRecentRecordFrequency" );
 	fBestSoFarBrainAnatomyRecordFrequency = doc.get( "BestSoFarBrainAnatomyRecordFrequency" );
 	fBestSoFarBrainFunctionRecordFrequency = doc.get( "BestSoFarBrainFunctionRecordFrequency" );
 	fBestRecentBrainAnatomyRecordFrequency = doc.get( "BestRecentBrainAnatomyRecordFrequency" );
@@ -8024,6 +8064,23 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	fRecordComplexity = doc.get( "RecordComplexity" );
 	if( fRecordComplexity )
 	{
+		if( ! fBrainFunctionRecentRecordFrequency )
+		{
+			if( fBestRecentBrainFunctionRecordFrequency )
+				fBrainFunctionRecentRecordFrequency = fBestRecentBrainFunctionRecordFrequency;
+			else if( fBestSoFarBrainFunctionRecordFrequency )
+				fBrainFunctionRecentRecordFrequency = fBestSoFarBrainFunctionRecordFrequency;
+			else if( fBestRecentBrainAnatomyRecordFrequency )
+				fBrainFunctionRecentRecordFrequency = fBestRecentBrainAnatomyRecordFrequency;
+			else if( fBestSoFarBrainAnatomyRecordFrequency )
+				fBrainFunctionRecentRecordFrequency = fBestSoFarBrainAnatomyRecordFrequency;
+			else
+				fBestSoFarBrainFunctionRecordFrequency = 1000;
+			cerr << "Warning: Attempted to record Complexity without recording \"Recent\" brain function.  Setting BrainFunctionRecentRecordFrequency to " << fBrainFunctionRecentRecordFrequency nl;
+		}
+
+		// TODO: I don't think we need BestSoFar or BestRecent with the new RecordComplexity behavior - lsy 3 Dec 2011
+		// It also ignores the existence of fBrainFunctionRecentRecordFrequency, and probably shouldn't.
 		if( ! fBestSoFarBrainFunctionRecordFrequency )
 		{
 			if( fBestRecentBrainFunctionRecordFrequency )

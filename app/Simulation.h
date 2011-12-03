@@ -413,6 +413,9 @@ public:
 	static double fSecondsPerFrameInstantaneous;
 	static double fTimeStart;
 
+	int fBrainFunctionRecentRecordFrequency;
+	long fCurrentRecentEpoch;
+	
 	int fBestSoFarBrainAnatomyRecordFrequency;
 	int fBestSoFarBrainFunctionRecordFrequency;
 	int fBestRecentBrainAnatomyRecordFrequency;
@@ -897,6 +900,7 @@ inline bool TSimulation::RecordBrainFunction( long agentNumber )
 {
 	return( fBestSoFarBrainFunctionRecordFrequency ||
 			fBestRecentBrainFunctionRecordFrequency ||
+			fBrainFunctionRecentRecordFrequency ||
 			fBrainFunctionRecordAll ||
 			(fBrainFunctionRecordSeeds && (agentNumber <= fInitNumAgents))
 		  );

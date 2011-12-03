@@ -3174,6 +3174,11 @@ BrainFunctionRecordSeeds {
   legacy  False
 }
 
+BrainFunctionRecentRecordFrequency {
+  type    INT
+  default 1000
+}
+
 BestSoFarBrainAnatomyRecordFrequency {
   type    INT
   default 1000
@@ -3218,7 +3223,7 @@ RecordComplexity {
 
 RecordAdamiComplexity {
   type    BOOL
-  default True
+  default False
   legacy  False
 }
 
