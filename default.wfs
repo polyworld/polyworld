@@ -2894,7 +2894,7 @@ StatusFrequency {
 
 StatusToStdout {
   type    BOOL
-  default false
+  default False
 }
 
 RetinaWidth {
