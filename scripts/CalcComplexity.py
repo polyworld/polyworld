@@ -340,7 +340,7 @@ def compute_complexities(complexities,
 		stdout = proc.communicate()[0]
 		complexity_all = filter(lambda x: len(x), stdout.split('\n'))
 		if proc.returncode != 0:
-			err('Failed executing CalcComplexity, exit=%d' % exitvalue)
+			err('Failed executing CalcComplexity, exit=%d' % proc.returncode)
 		proc.stdout.close()
 	
 		colnames = ['AgentNumber', 'Complexity']
