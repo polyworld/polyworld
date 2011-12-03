@@ -5,7 +5,7 @@ import sys
 import datalib
 import glob
 
-STAT_TYPES = ['agents', 'food', 'born', 'created', 'died', 'LifeSpan', 'CurNeurons', 'NeurGroups', 'CurNeurGroups', 'Domain[domain_index]FP[foodpatch_index][stat_index]']
+STAT_TYPES = ['agents', 'food', 'born', 'bornv', 'created', 'died', 'EatRate', 'MateRate', 'LifeSpan', 'CurNeurons', 'NeurGroups', 'CurNeurGroups', 'Domain[domain_index]FP[foodpatch_index][stat_index]']
 FILENAME_DATALIB = 'datalib.txt'
 
 ####################################################################################
