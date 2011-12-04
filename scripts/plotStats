@@ -344,16 +344,22 @@ def get_minstatfreq(run_dirs):
 	minstatfreq=0
 
 	for run_dir in run_dirs:
-		if not os.path.isfile( run_dir + '/worldfile' ):
-			continue
-		
-		worldfile = open( run_dir + '/worldfile' )
-		for line in worldfile:
-			if 'statfreq' in line:
-				statfreq = int( re.match('([0-9]*)', line).groups(0)[0] )
-				if statfreq < minstatfreq or not minstatfreq: minstatfreq = statfreq
-				break
-		worldfile.close()
+		if os.path.isfile( run_dir + '/worldfile' ):
+			worldfile = open( run_dir + '/worldfile' )
+			for line in worldfile:
+				if 'statfreq' in line:
+					statfreq = int( re.match('([0-9]*)', line).groups(0)[0] )
+					if statfreq < minstatfreq or not minstatfreq: minstatfreq = statfreq
+					break
+			worldfile.close()
+		if os.path.isfile( run_dir + '/normalized.wf' ):
+			worldfile = open( run_dir + '/normalized.wf' )
+			for line in worldfile:
+				if 'StatusFrequency' in line:
+					parts = line.split()
+					statfreq = int( parts[1] )
+					if statfreq < minstatfreq or not minstatfreq: minstatfreq = statfreq
+					break
 
 	if not minstatfreq:
 		print "* Error: none of the run/ directories contained a worldfile with statfreq defined.  Exiting."
