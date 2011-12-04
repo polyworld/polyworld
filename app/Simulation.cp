@@ -8720,7 +8720,7 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 		deltaBorn = numberBorn - lastNumberBorn;
 		lastNumberBorn = numberBorn;
 	}
-	sprintf( t, "MateRate = %.1f", (double) deltaBorn / fStatusFrequency );
+	sprintf( t, "MateRate = %.2f", (double) deltaBorn / fStatusFrequency );
 	list.push_back( strdup( t ) );
 	
 	if (fMonitorGeneSeparation)
