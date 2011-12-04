@@ -841,7 +841,7 @@ void TSimulation::Step()
 	debugcheck( "after brain monitor window in step %ld", fStep );
 	
 	// Archive the Recent brain function files, if we're doing that
-	if( fBrainFunctionRecentRecordFrequency && fStep >= fCurrentRecentEpoch )
+	if( fBrainFunctionRecentRecordFrequency && fStep >= fCurrentRecentEpoch && fStep < fMaxSteps )
 	{
 		char t[256];
 		fCurrentRecentEpoch += fBrainFunctionRecentRecordFrequency;
