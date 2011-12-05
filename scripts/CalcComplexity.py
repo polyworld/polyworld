@@ -375,6 +375,17 @@ def compute_complexities(complexities,
 
 ####################################################################################
 ###
+### FUNCTION divide(numerator, denominator)
+###
+####################################################################################
+def divide(numerator, denominator):
+	if denominator == 0:
+		return 0.0
+	else:
+		return numerator / denominator
+
+####################################################################################
+###
 ### FUNCTION make_percents()
 ###
 ####################################################################################
@@ -385,7 +396,7 @@ def make_percents(tables, totals):
 			total = totals[t][table.name]
 
 			for bin in range(NUMBINS):
-				row.mutate(bin, lambda x: 100 * x / total)
+				row.mutate(bin, lambda x: 100 * divide(x, total))
 
 ####################################################################################
 ###
