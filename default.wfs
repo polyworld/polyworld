@@ -3302,6 +3302,7 @@ HeuristicFitnessWeight {
 TournamentSize {
   type    INT
   default 3
+  min     1
 }
 
 #-------------------------------------------------------------------
