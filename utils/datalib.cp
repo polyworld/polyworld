@@ -84,7 +84,11 @@ DataLibWriter::DataLibWriter( const char *path,
 , singleSchema( _singleSchema )
 {
 	f = fopen( path, "w" );
-	assert( f );
+	if( ! f )
+	{
+		perror( path );
+		assert( f );
+	}
 
 	table = NULL;
 
