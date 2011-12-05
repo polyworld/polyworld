@@ -3247,7 +3247,7 @@ RecordSeparations {
 CompressFiles {
   type    BOOL
   default True
-  legacy  False
+  legacy  True
 }
 
 #-------------------------------------------------------------------
