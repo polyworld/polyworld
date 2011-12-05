@@ -688,6 +688,7 @@ private:
 	long fFitness2Frequency;
 	short fFitI;
 	short fFitJ;
+	int fTournamentSize;
 	long fPositionSeed;
 	long fGenomeSeed;
 	long fSimulationSeed;

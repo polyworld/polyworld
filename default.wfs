@@ -3299,6 +3299,11 @@ HeuristicFitnessWeight {
   default 0.0
 }
 
+TournamentSize {
+  type    INT
+  default 3
+}
+
 #-------------------------------------------------------------------
 # SECTION Heuristic fitness function parameters
 #-------------------------------------------------------------------

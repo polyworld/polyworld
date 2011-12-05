@@ -3154,7 +3154,7 @@ void TSimulation::EndSeparationsLog()
 void TSimulation::PickParentsUsingTournament(int numInPool, int* iParent, int* jParent)
 {
 	*iParent = numInPool-1;
-	for (int z = 0; z < 5; z++)
+	for (int z = 0; z < fTournamentSize; z++)
 	{
 		int r = (int)floor(randpw()*numInPool);
 		if (*iParent > r)
@@ -3163,7 +3163,7 @@ void TSimulation::PickParentsUsingTournament(int numInPool, int* iParent, int* j
 	do
 	{
 		*jParent = numInPool-1;
-		for (int z = 0; z < 5; z++)
+		for (int z = 0; z < fTournamentSize; z++)
 		{
 			int r = (int)floor(randpw()*numInPool);
 			if (*jParent > r)
@@ -8139,6 +8139,7 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 			fBrainAnatomyRecordAll = true;				
 		}
 	}
+	fTournamentSize = doc.get( "TournamentSize" );
 		
 	fRecordGenomes = doc.get( "RecordGenomes" );
 	fRecordSeparations = doc.get( "RecordSeparations" );
