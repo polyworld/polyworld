@@ -1,19 +1,28 @@
-function pwfarm_set()
+#
+# Usage: fset [-q] [farm_name] [session_name]
+#
+# OPTIONS:
+#
+#     -q    Quiet.
+#
+function fset()
 {
     if ! which pwfarm_config.sh >/dev/null 2>&1; then
 	echo "Your PATH does not include scripts/farm!" >&2
 	return 1
     fi
 
-    alias config='pwfarm_config.sh'
-    alias build='pwfarm_build.sh'
-    alias run='pwfarm_run.sh'
-    alias passive='pwfarm_passive.sh'
-    alias disp='pwfarm_dispatcher.sh'
-    alias lsrun='pwfarm_lsrun.sh'
-    alias mvrun='pwfarm_mvrun.sh'
-    alias rmrun='pwfarm_rmrun.sh'
-    alias stat='pwfarm_stat.sh'
+    if [ "$1" == "-q" ]; then quiet=true ; shift; fi
+
+    alias fconfig='pwfarm_config.sh'
+    alias fbuild='pwfarm_build.sh'
+    alias frun='pwfarm_run.sh'
+    alias fpassive='pwfarm_passive.sh'
+    alias fdisp='pwfarm_dispatcher.sh'
+    alias flsrun='pwfarm_lsrun.sh'
+    alias fmvrun='pwfarm_mvrun.sh'
+    alias frmrun='pwfarm_rmrun.sh'
+    alias fstat='pwfarm_stat.sh'
 
     local farmname="$1"
     if [ -z "$farmname" ]; then
@@ -45,6 +54,6 @@ function pwfarm_set()
      if pwfarm_config.sh env set session $farmname $sessionname ; then
          . pwfarm_config.sh env set session $farmname $sessionname
 
-	 pwfarm_config.sh stat
+	 [ ! $quiet ] && pwfarm_config.sh stat
      fi
 }
