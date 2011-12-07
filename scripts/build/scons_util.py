@@ -9,8 +9,8 @@ import sys
 ###
 ################################################################################
 def init_env(env):
-    env.Append( LIBPATH = ['/usr/lib',
-                           '/usr/local/lib'] )
+    env.Append( LIBPATH = ['/usr/local/lib',
+                           '/usr/lib'] )
 
     if PFM == 'linux':
         env.Append( DEFAULTFRAMEWORKPATH = [] )
@@ -32,7 +32,8 @@ def import_OpenGL(env):
     env.Append( CPPPATH = [which('gl.h',
                                  dir = True,
                                  path = ['/usr/include/GL',
-                                         '/System/Library/Frameworks/AGL.framework/Versions/A/Headers'],
+                                         '/System/Library/Frameworks/OpenGL.framework/Versions/A/Headers',
+                                         '/System/Library/Frameworks/AGL.framework/Versions/A/Headers/'],
                                  err = 'Cannot locate OpenGL')] )
 
     if PFM == 'linux':

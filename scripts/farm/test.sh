@@ -1,33 +1,21 @@
-export PWFARM_COMMAND='sleep 30'
-export PWFARM_COMPLETION_FILE='test_completion'
+#!/bin/bash
 
-testcase="ssh"
+if [ "$1" != "--field" ]; then
+    __pwfarm_script.sh --password --output foo /tmp/test_output $0 --field $*
+else
+    echo "ARGS:"
+    echo $*
+    echo
+    echo "PWD:"
+    pwd
+    date
 
-function canonpath()
-{
-    python -c "import os.path; print os.path.realpath('$1')"
-}
+    echo hi > a;
+    mkdir bye
+    echo foo > bye/b
+    zip -r $PWFARM_OUTPUT_FILE .
 
-function canondirname()
-{
-    dirname `canonpath "$1"`
-}
+    PWFARM_SUDO echo
 
-case "$testcase" in
-    "ssh")
-	./pwfarm_install_ssh_keys.sh farmer `canondirname $0`/pwhostnumbers larryy
-	;;
-    "dispatcher")
-	./pwfarm_dispatcher.sh clear ./pwhostnumbers
-	./pwfarm_dispatcher.sh dispatch ./pwhostnumbers sean payload.zip './myscript.sh'
-	;;
-    *)
-	echo invalid testcase
-	;;
-esac
-
-if false ; then
-    rm ./test_completion
-    ./pwfarm_field.sh . ./test_completion 'sleep 30'
-    exit
+    read -p "[test] press enter..."
 fi

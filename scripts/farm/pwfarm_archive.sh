@@ -1,5 +1,7 @@
 #!/bin/bash
 
+echo "incompatible with current pwfarm implementation"
+exit 1
 
 if [ -z "$1" ]; then
     echo "usage: $0 run_id"
@@ -59,15 +61,14 @@ else
     tmp_dir=`mktemp -d /tmp/poly_tar.XXXXXXXX` || exit 1
     echo $tmp_dir
 
-    cp $0 $tmp_dir/poly_tar.sh || exit
+    cp $0 $tmp_dir/pwfarm_tar.sh || exit
     echo "$RUNID" > $tmp_dir/runid
 
     cd $tmp_dir
 
     zip -r payload.zip .
 
-    $pwfarm_dir/pwfarm_dispatcher.sh clear $PWHOSTNUMBERS
-    $pwfarm_dir/pwfarm_dispatcher.sh dispatch $PWHOSTNUMBERS $USER payload.zip './poly_tar.sh --field'
+    $pwfarm_dir/__pwfarm_dispatcher.sh dispatch $PWHOSTNUMBERS $USER payload.zip './pwfarm_tar.sh --field'
 
     rm -rf $tmp_dir
 fi

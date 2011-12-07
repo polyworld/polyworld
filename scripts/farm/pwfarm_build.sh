@@ -1,31 +1,16 @@
 #!/bin/bash
 
+if [ -z "$PWFARM_SCRIPTS_DIR" ]; then
+    source $( dirname $BASH_SOURCE )/__pwfarm_runutil.sh || exit 1
+else
+    source $PWFARM_SCRIPTS_DIR/__pwfarm_runutil.sh || exit 1
+fi
+
 set -e
-
-function err()
-{
-    echo "$*">&2
-    exit 1
-}
-
-function canonpath()
-{
-    python -c "import os.path; print os.path.realpath('$1')"
-}
-
-function canondirname()
-{
-    dirname `canonpath "$1"`
-}
 
 function build_bct()
 {
-    # Temporarily disable on Linux until build is fixed.
-    if [ "$( uname )" == "Linux" ]; then
-	return 0
-    fi
-
-    pushd .
+    pushd_quiet .
 
     if [ -d bct-cpp ]; then
 	cd bct-cpp
@@ -76,40 +61,49 @@ swig_lib_flags          = \$(swig_lib_flags_apple)" \
     cp _bct_py.so ~/polyworld_pwfarm/app/scripts
     cp _bct_gsl.so ~/polyworld_pwfarm/app/scripts
 
-    popd
+    popd_quiet
 }
 
 if [ "$1" == "--field" ]; then
-    if [ -e ~/polyworld_pwfarm/app ]; then
-	mkdir -p /tmp/polyworld_pwfarm
-	bak=/tmp/polyworld_pwfarm/`date | sed -e "s/ /_/g" -e "s/:/./g"`
-	echo "~/polyworld_pwfarm/app already exists! Moving to $bak"
-	
-	mv ~/polyworld_pwfarm/app $bak
+    shift
+    if [ "$1" == "--nobct" ]; then
+	bct=false
+	shift
+    else
+	bct=true
     fi
 
-    mkdir -p ~/polyworld_pwfarm/app
-    mv * ~/polyworld_pwfarm/app
-    cd ~/polyworld_pwfarm/app
+    store_orphan_run "$POLYWORLD_PWFARM_APP_DIR/run"
 
-    build_bct
+    if [ -e "$POLYWORLD_PWFARM_APP_DIR" ]; then
+	mkdir -p /tmp/polyworld_pwfarm
+	bak=/tmp/polyworld_pwfarm/`date | sed -e "s/ /_/g" -e "s/:/./g"`
+	echo "$POLYWORLD_PWFARM_APP_DIR exists! Moving to $bak"
+	
+	mv "$POLYWORLD_PWFARM_APP_DIR" "$bak"
+    fi
+
+    mkdir -p "$POLYWORLD_PWFARM_APP_DIR"
+    mv * "$POLYWORLD_PWFARM_APP_DIR"
+    cd "$POLYWORLD_PWFARM_APP_DIR"
+
+    if $bct; then
+	build_bct
+    fi
 
     make
 else
-    pwfarm_dir=`canondirname "$0"`
-    poly_dir=`canonpath "$pwfarm_dir/../.."`
-    scripts_dir=`canonpath "$poly_dir/scripts"`
-    PWHOSTNUMBERS=~/polyworld_pwfarm/etc/pwhostnumbers
-    USER=`cat ~/polyworld_pwfarm/etc/pwuser`
+    pwfarm_dir=$( canondirname "$0" )
+    poly_dir=$( canonpath "$pwfarm_dir/../.." )
+    scripts_dir=$( canonpath "$poly_dir/scripts" )
 
     tmp_dir=`mktemp -d /tmp/poly_build.XXXXXXXX` || exit 1
-    echo $tmp_dir
 
     cd $poly_dir
 
     scripts/package_source.sh $tmp_dir/src.zip
     
-    $pwfarm_dir/pwfarm_dispatcher.sh --password dispatch $PWHOSTNUMBERS $USER $tmp_dir/src.zip './scripts/farm/poly_build.sh --field' nil nil
+    $pwfarm_dir/__pwfarm_dispatcher.sh --password dispatch $tmp_dir/src.zip "./scripts/farm/pwfarm_build.sh --field $*" nil nil
 
     rm -rf $tmp_dir
 fi

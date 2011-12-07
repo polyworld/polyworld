@@ -11,7 +11,7 @@ if [ "$1" != "--field" ]; then
 	exit 1
     fi
 
-    poly_script.sh --password --input $1 $0 --field $*
+    __pwfarm_script.sh --password --input $1 $0 --field $*
 else
     shift
 

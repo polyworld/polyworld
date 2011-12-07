@@ -1,0 +1,50 @@
+function pwfarm_set()
+{
+    if ! which pwfarm_config.sh >/dev/null 2>&1; then
+	echo "Your PATH does not include scripts/farm!" >&2
+	return 1
+    fi
+
+    alias config='pwfarm_config.sh'
+    alias build='pwfarm_build.sh'
+    alias run='pwfarm_run.sh'
+    alias passive='pwfarm_passive.sh'
+    alias disp='pwfarm_dispatcher.sh'
+    alias lsrun='pwfarm_lsrun.sh'
+    alias mvrun='pwfarm_mvrun.sh'
+    alias rmrun='pwfarm_rmrun.sh'
+    alias stat='pwfarm_stat.sh'
+
+    local farmname="$1"
+    if [ -z "$farmname" ]; then
+	farmname=$( pwfarm_config.sh query farmnames | head -n 1 )
+	if [ -z "$farmname" ]; then
+	    echo "No farms defined!" >&2
+	    return 1
+	fi
+    fi
+    if ! $( pwfarm_config.sh query defined farm "$farmname" ); then
+	echo "Invalid farm name: $farmname!" >&2
+	return 1
+    fi
+
+    local sessionname="$2"
+    if [ -z "$sessionname" ]; then
+	sessionname=$( pwfarm_config.sh query sessionnames $farmname | head -n 1 )
+	if [ -z "$sessionname" ]; then
+	    echo "No sessions defined!" >&2
+	    return 1
+	fi
+    fi
+    if ! $( pwfarm_config.sh query defined session "$farmname" "$sessionname" ); then
+	echo "Invalid session name: $sessionname!" >&2
+	return 1
+    fi
+
+
+     if pwfarm_config.sh env set session $farmname $sessionname ; then
+         . pwfarm_config.sh env set session $farmname $sessionname
+
+	 pwfarm_config.sh stat
+     fi
+}

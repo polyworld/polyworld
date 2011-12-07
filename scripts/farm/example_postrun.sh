@@ -6,6 +6,11 @@ set -e
 # calculate complexity
 CalcComplexity.py run
 
+if ! which gnuplot; then
+# gnuplot not installed
+    exit
+fi
+
 # make some plots
 mkdir -p run/plots
 plotopts=--noview

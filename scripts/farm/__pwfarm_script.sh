@@ -1,20 +1,6 @@
 #!/bin/bash
 
-function err()
-{
-    echo "$*">&2
-    exit 1
-}
-
-function canonpath()
-{
-    python -c "import os.path; print os.path.realpath('$1')"
-}
-
-function canondirname()
-{
-    dirname `canonpath "$1"`
-}
+source $( dirname $BASH_SOURCE )/__lib.sh || exit 1
 
 if [ "$1" == "--password" ]; then
     shift
@@ -27,6 +13,17 @@ if [ "$1" == "--input" ]; then
     shift
     input="$1"
     shift
+fi
+
+if [ "$1" == "--output" ]; then
+    shift
+    output_basename="$1"
+    shift
+    output_dir="$1"
+    shift
+else
+    output_basename="nil"
+    output_dir="nil"
 fi
 
 script="$1"
@@ -44,16 +41,12 @@ if [ ! -z "$input" ]; then
     cp $input $tmpdir || exit
 fi
 
-pushd .
+pushd_quiet .
 cd $tmpdir
-zip -r payload.zip .
-popd
+zip -qr payload.zip .
+popd_quiet
 
 pwfarm_dir=`canondirname "$0"`
 
-PWHOSTNUMBERS=~/polyworld_pwfarm/etc/pwhostnumbers
-USER=`cat ~/polyworld_pwfarm/etc/pwuser`
-
-
-$pwfarm_dir/pwfarm_dispatcher.sh $passwordopt dispatch $PWHOSTNUMBERS $USER $tmpdir/payload.zip "$cmd" nil nil
+$pwfarm_dir/__pwfarm_dispatcher.sh $passwordopt dispatch $tmpdir/payload.zip "$cmd" "$output_basename" "$output_dir"
 rm -rf $tmp_dir
