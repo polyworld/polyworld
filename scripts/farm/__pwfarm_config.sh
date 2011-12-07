@@ -434,7 +434,7 @@ usage: $progname define farm <farm_name> <pwuser> <osuser> <dstdir> <field_numbe
 		    shift
 		    osuser="$1"
 		    shift
-		    runresults_dir="$1"
+		    runresults_dir="$( canonpath $1 )"
 		    shift
 		    fieldnumbers=( "$*" )
 
