@@ -444,6 +444,9 @@ public:
 	bool fApplyLowPopulationAdvantage;
 	
 	bool fRecordComplexity;				// record the Olaf Functional Complexity (neural)
+	DataLibWriter *fComplexityLog;
+	DataLibWriter *fComplexitySeedLog;
+// 	DataLibWriter *fAvrComplexityLog;
 
 	bool fRecordGenomes;
 	bool fRecordSeparations;
@@ -522,6 +525,11 @@ private:
 
 	void InitSeparationsLog();
 	void EndSeparationsLog();
+
+	void InitComplexityLog( long epoch );
+	void UpdateComplexityLog( agent *a );
+	void EndComplexityLog( long epoch );
+	DataLibWriter* OpenComplexityLog( long epoch );
 	
 	void PickParentsUsingTournament(int numInPool, int* iParent, int* jParent);
 	void UpdateAgents();

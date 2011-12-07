@@ -16,8 +16,6 @@
 
 #define CurrentWorldfileVersion 55
 
-#define TournamentSelection 1
-
 // CompatibilityMode makes the new code with a single x-sorted list behave *almost* identically to the old code.
 // Discrepancies still arise due to the old food list never being re-sorted and agents at the exact same x location
 // not always ending up sorted in the same order.  [Food centers remain sorted as long as they exist, but these lists
@@ -841,13 +839,18 @@ void TSimulation::Step()
 	debugcheck( "after brain monitor window in step %ld", fStep );
 	
 	// Archive the Recent brain function files, if we're doing that
-	if( fBrainFunctionRecentRecordFrequency && fStep >= fCurrentRecentEpoch && fStep < fMaxSteps )
+	if( fBrainFunctionRecentRecordFrequency && fStep >= fCurrentRecentEpoch )
 	{
-		char t[256];
-		fCurrentRecentEpoch += fBrainFunctionRecentRecordFrequency;
-		sprintf( t, "run/brain/Recent/%ld", fCurrentRecentEpoch );
-		if( mkdir( t, PwDirMode ) )
-			eprintf( "Error making %s directory (%d)\n", t, errno );
+		EndComplexityLog( fCurrentRecentEpoch );
+		if( fStep < fMaxSteps )
+		{
+			char t[256];
+			fCurrentRecentEpoch += fBrainFunctionRecentRecordFrequency;
+			sprintf( t, "run/brain/Recent/%ld", fCurrentRecentEpoch );
+			if( mkdir( t, PwDirMode ) )
+				eprintf( "Error making %s directory (%d)\n", t, errno );
+			InitComplexityLog( fCurrentRecentEpoch );
+		}
 	}
 
 	// Archive the bestSoFar brain anatomy and function files, if we're doing that
@@ -882,14 +885,14 @@ void TSimulation::Step()
 			// Note that we calculate complexity for the Processing units only, by default,
 			// but if we're using complexity as a fitness function then fFittest[i]->complexity
 			// could be any of the available types of complexity (including certain differences).
-			if(	fRecordComplexity )
-			{
-				if( fFittest[i]->complexity == 0.0 )		// if Complexity is zero it means we have to Calculate it
-				{
-					fFittest[i]->complexity = CalcComplexity_brainfunction( t, "P" );		// Complexity of Processing Units Only, all time steps
-					cout << "[COMPLEXITY] Agent: " << fFittest[i]->agentID << "\t Processing Complexity: " << fFittest[i]->complexity << endl;
-				}
-			}
+// 			if(	fRecordComplexity )
+// 			{
+// 				if( fFittest[i]->complexity == 0.0 )		// if Complexity is zero it means we have to Calculate it
+// 				{
+// 					fFittest[i]->complexity = CalcComplexity_brainfunction( t, "P" );		// Complexity of Processing Units Only, all time steps
+// 					cout << "[COMPLEXITY] Agent: " << fFittest[i]->agentID << "\t Processing Complexity: " << fFittest[i]->complexity << endl;
+// 				}
+// 			}
 
 		}
 	}
@@ -924,14 +927,14 @@ void TSimulation::Step()
 				if( link( s, t ) )
 					eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
 
-				if(	fRecordComplexity )
-				{
-					if( fRecentFittest[i]->complexity == 0.0 )		// if Complexity is zero it means we have to Calculate it
-					{
-						fRecentFittest[i]->complexity = CalcComplexity_brainfunction( t, "P" );		// Complexity of Processing Units Only, all time steps
-						cout << "[COMPLEXITY] Agent: " << fRecentFittest[i]->agentID << "\t Processing Complexity: " << fRecentFittest[i]->complexity << endl;
-					}
-				}
+// 				if(	fRecordComplexity )
+// 				{
+// 					if( fRecentFittest[i]->complexity == 0.0 )		// if Complexity is zero it means we have to Calculate it
+// 					{
+// 						fRecentFittest[i]->complexity = CalcComplexity_brainfunction( t, "P" );		// Complexity of Processing Units Only, all time steps
+// 						cout << "[COMPLEXITY] Agent: " << fRecentFittest[i]->agentID << "\t Processing Complexity: " << fRecentFittest[i]->complexity << endl;
+// 					}
+// 				}
 
 			}
 		
@@ -1983,8 +1986,10 @@ void TSimulation::Init( const char *argWorldfilePath, const bool statusToStdout 
 	InitCollisionsLog();
 	InitCarryLog();
 	InitEnergyLog();
+	InitComplexityLog( fBrainFunctionRecentRecordFrequency );
+// 	InitAvrComplexityLog();
 	
-	if( fComplexityFitnessWeight != 0.0 )
+	if( fComplexityFitnessWeight != 0.0 || fRecordComplexity )
 	{
 		bool eventFiltering = false;
 		for( unsigned int i = 0; i < fComplexityType.size(); i++ )
@@ -3146,6 +3151,187 @@ void TSimulation::EndSeparationsLog()
 		fSeparationsLog = NULL;
 	}
 }
+
+
+//---------------------------------------------------------------------------
+// TSimulation::InitComplexityLog
+//---------------------------------------------------------------------------
+
+void TSimulation::InitComplexityLog( long epoch )
+{
+	//printf( "%s %ld %s\n", __func__, epoch, fRecordComplexity ? "True" : "False" );
+
+	if( ! fRecordComplexity )
+		return;	
+
+	fComplexityLog = OpenComplexityLog( epoch );
+	
+	if( epoch == fBrainFunctionRecentRecordFrequency )	// first time only
+		fComplexitySeedLog = OpenComplexityLog( 0 );
+}
+
+
+//---------------------------------------------------------------------------
+// TSimulation::OpenComplexityLog
+//---------------------------------------------------------------------------
+
+DataLibWriter* TSimulation::OpenComplexityLog( long epoch )
+{
+	char path[256];
+	sprintf( path, "run/brain/Recent/%ld/complexity_%s.plt", epoch, fComplexityType.c_str() );
+	
+	//printf( "%s %s\n", __func__, path );
+
+	DataLibWriter* log = new DataLibWriter( path );
+
+	const char *colnames[] =
+		{
+			"AgentNumber",
+			"Complexity",
+			NULL
+		};
+	const datalib::Type coltypes[] =
+		{
+			datalib::INT,
+			datalib::FLOAT
+		};
+
+	log->beginTable( fComplexityType.c_str(),
+					 colnames,
+					 coltypes );
+	
+	return( log );
+}
+
+
+//---------------------------------------------------------------------------
+// TSimulation::UpdateComplexityLog
+//---------------------------------------------------------------------------
+
+void TSimulation::UpdateComplexityLog( agent *a )
+{
+	//printf( "%s %ld %g\n", __func__, a->Number(), a->Complexity() );
+	
+	fComplexityLog->addRow( a->Number(),
+							a->Complexity() );
+	
+	if( a->Number() <= fInitNumAgents )
+		fComplexitySeedLog->addRow( a->Number(),
+									a->Complexity() );
+}
+
+
+//---------------------------------------------------------------------------
+// TSimulation::EndComplexityLog
+//---------------------------------------------------------------------------
+
+void TSimulation::EndComplexityLog( long epoch )
+{
+	//printf( "%s %ld %p\n", __func__, epoch, fComplexityLog );
+
+	// If we've run long enough we can be sure all the seed agents
+	// have died, then close the complexity seed log (if it's still open)
+	if( fComplexitySeedLog && epoch >= genome::gMaxLifeSpan )
+	{
+		fComplexitySeedLog->endTable();
+// 		UpdateAvrComplexityLog( 0, fComplexitySeedLog );
+		delete fComplexitySeedLog;
+		fComplexitySeedLog = NULL;
+	}
+
+	if( fComplexityLog )
+	{
+		fComplexityLog->endTable();
+// 		UpdateAvrComplexityLog( epoch, fComplexityLog );
+		delete fComplexityLog;
+		fComplexityLog = NULL;
+	}
+}
+
+
+//---------------------------------------------------------------------------
+// TSimulation::InitAvrComplexityLog
+//---------------------------------------------------------------------------
+
+// void TSimulation::InitAvrComplexityLog()
+// {
+// 	if( ! fRecordComplexity )
+// 		return;
+// 	
+// 	fAvrComplexityLog = new DataLibWriter( "run/brain/Recent/AvrComplexity.plt" );
+// 
+// 	const char *colnames[] =
+// 		{
+// 			"Timestep",
+// 			"min",
+// 			"q1",
+// 			"median",
+// 			"q3",
+// 			"max",
+// 			"mean",
+// 			"mean_stderr",
+// 			"sampsize",
+// 			NULL
+// 		};
+// 	const datalib::Type coltypes[] =
+// 		{
+// 			datalib::INT,
+// 			datalib::FLOAT,
+// 			datalib::FLOAT,
+// 			datalib::FLOAT,
+// 			datalib::FLOAT,
+// 			datalib::FLOAT,
+// 			datalib::FLOAT,
+// 			datalib::FLOAT,
+// 			datalib::INT
+// 		};
+// 
+// 	fAvrComplexityLog->beginTable( fComplexityType.c_str(),
+// 								   colnames,
+// 								   coltypes );
+// }
+
+
+//---------------------------------------------------------------------------
+// TSimulation::UpdateAvrComplexityLog
+//---------------------------------------------------------------------------
+
+// NOTE: Following code is just leftover from UpdateComplexityLog() and must be entirely replaced
+// void TSimulation::UpdateAvrComplexityLog()
+// {
+// 	fComplexityLog->addRow( a->Number(),
+// 							a->GetComplexity() );
+// 	
+// 	if( a->Number() <= fInitAgents )
+// 		fComplexitySeedLog->addRow( a->Number(),
+// 									a->GetComplexity() );
+// }
+
+
+//---------------------------------------------------------------------------
+// TSimulation::EndAvrComplexityLog
+//---------------------------------------------------------------------------
+
+// NOTE: Following code is just leftover from EndComplexityLog() and must be entirely replaced
+// void TSimulation::EndAvrComplexityLog( long epoch )
+// {
+// 	if( fComplexityLog )
+// 	{
+// 		fComplexityLog->endTable();
+// 		delete fComplexityLog;
+// 		fComplexityLog = NULL;
+// 	}
+// 	
+// 	// If we've run long enough we can be sure all the seed agents
+// 	// have died, then close the complexity seed log (if it's still open)
+// 	if( fComplexitySeedLog && epoch >= genome::gMaxLifeSpan )
+// 	{
+// 		fComplexitySeedLog->endTable();
+// 		delete fComplexitySeedLog;
+// 		fComplexitySeedLog = NULL;
+// 	}
+// }
+
 
 //---------------------------------------------------------------------------
 // TSimulation::PickParentsUsingTournament
@@ -4878,22 +5064,27 @@ void TSimulation::CreateAgents( void )
                     		 && ((fDomains[id].numcreated / fFitness2Frequency) * fFitness2Frequency == fDomains[id].numcreated) )
                     {
                         // mate 2 from array of fittest
-					#if TournamentSelection
-						int parent1, parent2;
-						PickParentsUsingTournament(fNumberFit, &parent1, &parent2);
-						newAgent->Genes()->crossover(fDomains[id].fittest[parent1]->genes,
-													   fDomains[id].fittest[parent2]->genes,
-													   true);
-						fNumberCreated2Fit++;
-						gaPrint( "%5ld: domain %d creation from two (%d, %d) fittest (%4lu, %4lu) %4ld\n", fStep, id, parent1, parent2, fDomains[id].fittest[parent1]->agentID, fDomains[id].fittest[parent2]->agentID, fNumberCreated2Fit );
-					#else
-                        newAgent->Genes()->crossover(fDomains[id].fittest[fDomains[id].ifit]->genes,
-                            				  		   fDomains[id].fittest[fDomains[id].jfit]->genes,
-                            				  		   true);
-                        fNumberCreated2Fit++;
-						gaPrint( "%5ld: domain %d creation from two (%d, %d) fittest (%4lu, %4lu) %4ld\n", fStep, id, fDomains[id].ifit, fDomains[id].jfit, fDomains[id].fittest[fDomains[id].ifit]->agentID, fDomains[id].fittest[fDomains[id].jfit]->agentID, fNumberCreated2Fit );
-                        ijfitinc(&(fDomains[id].ifit), &(fDomains[id].jfit));
-					#endif
+						if( fTournamentSize > 0 )
+						{
+							// using tournament selection
+							int parent1, parent2;
+							PickParentsUsingTournament(fNumberFit, &parent1, &parent2);
+							newAgent->Genes()->crossover(fDomains[id].fittest[parent1]->genes,
+														   fDomains[id].fittest[parent2]->genes,
+														   true);
+							fNumberCreated2Fit++;
+							gaPrint( "%5ld: domain %d creation from two (%d, %d) fittest (%4lu, %4lu) %4ld\n", fStep, id, parent1, parent2, fDomains[id].fittest[parent1]->agentID, fDomains[id].fittest[parent2]->agentID, fNumberCreated2Fit );
+						}
+						else
+						{
+							// by iterating through the array of fittest
+							newAgent->Genes()->crossover(fDomains[id].fittest[fDomains[id].ifit]->genes,
+														   fDomains[id].fittest[fDomains[id].jfit]->genes,
+														   true);
+							fNumberCreated2Fit++;
+							gaPrint( "%5ld: domain %d creation from two (%d, %d) fittest (%4lu, %4lu) %4ld\n", fStep, id, fDomains[id].ifit, fDomains[id].jfit, fDomains[id].fittest[fDomains[id].ifit]->agentID, fDomains[id].fittest[fDomains[id].jfit]->agentID, fNumberCreated2Fit );
+							ijfitinc(&(fDomains[id].ifit), &(fDomains[id].jfit));
+                        }
                     }
                     else
                     {
@@ -5016,19 +5207,24 @@ void TSimulation::CreateAgents( void )
                 }
                 else if( fFitness2Frequency && ((numglobalcreated / fFitness2Frequency) * fFitness2Frequency == numglobalcreated) )
                 {
-				#if TournamentSelection
-					int parent1, parent2;
-					TSimulation::PickParentsUsingTournament(fNumberFit, &parent1, &parent2);
-                    newAgent->Genes()->crossover( fFittest[parent1]->genes, fFittest[parent2]->genes, true );
-                    fNumberCreated2Fit++;
-					gaPrint( "%5ld: global creation from two (%d, %d) fittest (%4lu, %4lu) %4ld\n", fStep, parent1, parent2, fFittest[parent1]->agentID, fFittest[parent2]->agentID, fNumberCreated2Fit );
-				#else
                     // mate 2 from array of fittest
-                    newAgent->Genes()->crossover( fFittest[fFitI]->genes, fFittest[fFitJ]->genes, true );
-                    fNumberCreated2Fit++;
-					gaPrint( "%5ld: global creation from two (%d, %d) fittest (%4lu, %4lu) %4ld\n", fStep, fFitI, fFitJ, fFittest[fFitI]->agentID, fFittest[fFitJ]->agentID, fNumberCreated2Fit );
-                    ijfitinc( &fFitI, &fFitJ );
-                #endif
+					if( fTournamentSize > 0 )
+					{
+						// using tournament selection
+						int parent1, parent2;
+						TSimulation::PickParentsUsingTournament(fNumberFit, &parent1, &parent2);
+						newAgent->Genes()->crossover( fFittest[parent1]->genes, fFittest[parent2]->genes, true );
+						fNumberCreated2Fit++;
+						gaPrint( "%5ld: global creation from two (%d, %d) fittest (%4lu, %4lu) %4ld\n", fStep, parent1, parent2, fFittest[parent1]->agentID, fFittest[parent2]->agentID, fNumberCreated2Fit );
+					}
+					else
+					{
+						// by iterating through the array of fittest
+						newAgent->Genes()->crossover( fFittest[fFitI]->genes, fFittest[fFitJ]->genes, true );
+						fNumberCreated2Fit++;
+						gaPrint( "%5ld: global creation from two (%d, %d) fittest (%4lu, %4lu) %4ld\n", fStep, fFitI, fFitJ, fFittest[fFitI]->agentID, fFittest[fFitJ]->agentID, fNumberCreated2Fit );
+						ijfitinc( &fFitI, &fFitJ );
+                    }
                 }
                 else
                 {
@@ -5777,7 +5973,7 @@ void TSimulation::Kill_UpdateBrainData( agent *c )
 		sprintf( t, "run/brain/function/brainFunction_%ld.txt", c->Number() );
 		rename( s, t );
 
-		if ( fComplexityFitnessWeight != 0.0 )		// Are we using Complexity as a Fitness Function?  If so, set fitness = Complexity here
+		if ( fComplexityFitnessWeight != 0.0 || fRecordComplexity )		// Are we using Complexity as a Fitness Function, or computing and saving it on the fly?  If so, calculate Complexity here
 		{
 			if( fComplexityType == "D" )	// special case the difference of complexities case
 			{
@@ -5790,6 +5986,8 @@ void TSimulation::Kill_UpdateBrainData( agent *c )
 				// otherwise, fComplexityType has the right string in it
 				c->SetComplexity( CalcComplexity_brainfunction( t, fComplexityType.c_str(), fEvents ) );
 			}
+			if( fRecordComplexity )
+				UpdateComplexityLog( c );
 		}
 		
 		if( fBrainFunctionRecentRecordFrequency )
@@ -6230,6 +6428,7 @@ float TSimulation::AgentFitness( agent* c )
 	{
 		if( c->Complexity() == 0.0 )
 		{
+			fprintf( stderr, "********** complexity being calculated when it should already be known **********\n" );
 			char filename[256];
 			sprintf( filename, "run/brain/function/brainFunction_%ld.txt", c->Number() );
 			if( fComplexityType == "D" )	// difference between I and P complexity being used for fitness
@@ -8075,7 +8274,7 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 			else if( fBestSoFarBrainAnatomyRecordFrequency )
 				fBrainFunctionRecentRecordFrequency = fBestSoFarBrainAnatomyRecordFrequency;
 			else
-				fBestSoFarBrainFunctionRecordFrequency = 1000;
+				fBrainFunctionRecentRecordFrequency = 1000;
 			cerr << "Warning: Attempted to record Complexity without recording \"Recent\" brain function.  Setting BrainFunctionRecentRecordFrequency to " << fBrainFunctionRecentRecordFrequency nl;
 		}
 
@@ -8121,7 +8320,7 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	fComplexityType = (string)doc.get( "ComplexityType" );
 	fComplexityFitnessWeight = doc.get( "ComplexityFitnessWeight" );
 	fHeuristicFitnessWeight = doc.get( "HeuristicFitnessWeight" );
-	if( fComplexityFitnessWeight > 0.0 )
+	if( fComplexityFitnessWeight != 0.0 )
 	{
 		if( ! fRecordComplexity )		//Not Recording Complexity?
 		{

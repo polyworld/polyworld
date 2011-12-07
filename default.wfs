@@ -3302,7 +3302,7 @@ HeuristicFitnessWeight {
 TournamentSize {
   type    INT
   default 3
-  min     1
+  min     0		# zero reverts to iteration through fittest list method
 }
 
 #-------------------------------------------------------------------
