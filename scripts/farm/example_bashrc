@@ -12,7 +12,7 @@ function fset()
 	return 1
     fi
 
-    if [ "$1" == "-q" ]; then quiet=true ; shift; fi
+    if [ "$1" == "-q" ]; then local quiet=true ; shift; fi
 
     alias fconfig='pwfarm_config.sh'
     alias fbuild='pwfarm_build.sh'
@@ -51,9 +51,9 @@ function fset()
     fi
 
 
-     if pwfarm_config.sh env set session $farmname $sessionname ; then
-         . pwfarm_config.sh env set session $farmname $sessionname
+    if pwfarm_config.sh env set session $farmname $sessionname ; then
+        . pwfarm_config.sh env set session $farmname $sessionname
 
-	 [ ! $quiet ] && pwfarm_config.sh stat
-     fi
+	[ ! $quiet ] && pwfarm_config.sh stat
+    fi
 }
