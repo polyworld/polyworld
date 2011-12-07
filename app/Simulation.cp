@@ -222,6 +222,8 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow, cons
 		fRecordSeparations(false),
 		fRecordAdamiComplexity(false),
 		fAdamiComplexityRecordFrequency(0),
+		
+		fEvents(NULL),
 
 		fSceneView(sceneView),
 		fSceneWindow(sceneWindow),
@@ -2002,8 +2004,6 @@ void TSimulation::Init( const char *argWorldfilePath, const bool statusToStdout 
 		}
 		if( eventFiltering )
 			fEvents = new Events( fMaxSteps );
-		else
-			fEvents = NULL;
 	}
 	
 	inited = true;
