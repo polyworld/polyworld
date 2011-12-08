@@ -3212,12 +3212,17 @@ void TSimulation::UpdateComplexityLog( agent *a )
 {
 	//printf( "%s: %ld %g\n", __func__, a->Number(), a->Complexity() );
 	
-	fComplexityLog->addRow( a->Number(),
-							a->Complexity() );
+	// complexity will only be 0.0 if it went uncomputed, such as when
+	// the number of neurons is more than the number of time steps the
+	// agent lived, or, under some running conditions, the agent's
+	// lifespan is simply too short (< 200 time steps).
+	if( a->Complexity() > 0.0 )
+	{
+		fComplexityLog->addRow( a->Number(), a->Complexity() );
 	
-	if( a->Number() <= fInitNumAgents )
-		fComplexitySeedLog->addRow( a->Number(),
-									a->Complexity() );
+		if( a->Number() <= fInitNumAgents )
+			fComplexitySeedLog->addRow( a->Number(), a->Complexity() );
+	}
 }
 
 
