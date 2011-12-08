@@ -215,6 +215,11 @@ namespace proplib
 		return type;
 	}
 
+	DocumentLocation &Node::getLocation()
+	{
+		return loc;
+	}
+
 	bool Node::isProp()
 	{
 		return type == PROPERTY;
@@ -2230,6 +2235,91 @@ namespace proplib
 		}
 
 		return propDefault;
+	}
+
+	// ----------------------------------------------------------------------
+	// ----------------------------------------------------------------------
+	// --- CLASS Overlay
+	// ----------------------------------------------------------------------
+	// ----------------------------------------------------------------------
+
+	bool Overlay::hasOverlay( Document *docOverlay, const string &selector )
+	{
+		return findOverlay( docOverlay, selector ) != NULL;
+	}
+
+	void Overlay::overlay( Document *docOverlay, Document *docValues, const string &selector )
+	{
+		Property *propOverlay = findOverlay( docOverlay, selector );
+		if( propOverlay )
+		{
+			overlay( propOverlay, docValues->toProp() );
+		}
+	}
+
+	Property *Overlay::findOverlay( Document *docOverlay, const string &selector )
+	{
+		validateOverlayDocument( docOverlay );
+
+		itfor( PropertyMap, docOverlay->props(), it )
+		{
+			if( selector == it->second->getName() )
+			{
+				return it->second;
+			}
+		}
+
+		return NULL;
+	}
+
+	void Overlay::validateOverlayDocument( Document *docOverlay )
+	{
+		itfor( PropertyMap, docOverlay->props(), it )
+		{
+			if( !it->second->isContainer() )
+			{
+				it->second->err( "Illegal top-level element." );
+			}
+		}
+	}
+
+	void Overlay::overlay( Property *propOverlay, Property *propOriginal )
+	{
+		assert( propOriginal->isContainer() && propOverlay->isContainer() );
+
+		if( propOverlay->isArray() || propOriginal->isArray() ) { cerr << "array overlay not implemented." << endl; exit(1); }
+
+		itfor( PropertyMap, propOverlay->props(), it )
+		{
+			Property *subpropOverlay = it->second;
+			Property *subpropOriginal = propOriginal->getp( subpropOverlay->getName() );
+
+			if( subpropOverlay->isArray() ) { cerr << "array overlay not implemented." << endl; exit(1); }
+
+			if( subpropOriginal )
+			{
+				if( subpropOriginal->isArray() ) { cerr << "array overlay not implemented." << endl; exit(1); }
+
+				if( subpropOriginal->isScalar() != subpropOverlay->isScalar() )
+				{
+					subpropOverlay->err( string("Incompatible with property at ") + subpropOriginal->getLocation().getDescription() );
+				}
+
+				if( subpropOverlay->isScalar() )
+				{
+					propOriginal->replaceScalar( subpropOriginal, (string)*subpropOverlay );
+					delete subpropOriginal;
+				}
+				else
+				{
+					overlay( subpropOverlay, subpropOriginal );
+				}
+			}
+			else
+			{
+				propOriginal->add( subpropOverlay->clone() );
+			}
+		}
 	}
 }
 

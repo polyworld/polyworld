@@ -11,7 +11,7 @@ ensure_farm_session
 function usage()
 {    
     cat <<EOF
-usage: $( basename $0 ) [-o:] runid|/
+usage: $( basename $0 ) [-o:c:] runid|/
 
     Checks if runid exists in either good or failed directories.
 
@@ -19,15 +19,21 @@ usage: $( basename $0 ) [-o:] runid|/
 subpath below the runs directories. For example, if you wanted to check the size of
 a movie file for run 'foo/x', you could invoke:
 
-    $(basename $0) -u foo/x/movie.pmv
+    lsrun -u foo/x/movie.pmv
 
 OPTIONS:
 
-    -o    Specify run owner, which is prepended to run ID. "nil" for no owner.
-        When used, orphan runs aren't listed.
+    -o  owner
+               Specify run owner, which is prepended to run ID. "nil" for no owner.
+            When used, orphan runs aren't listed.
 
-    -u    Show disk usage. May take a while for directories.
+    -u         Show disk usage. May take a while for directories.
 
+    -c command
+               Specify a command to be executed, where {} in the command will be
+            substituted with the file path.
+
+            EXAMPLE: lsrun -c 'grep MaxSteps {}' foo/x/original.wf
 EOF
     exit 1
 }
@@ -46,8 +52,9 @@ fi
 owner=$( pwenv pwuser )
 owner_override=false
 diskusage=false
+command="nil"
 
-while getopts "o:u" opt; do
+while getopts "o:uc:" opt; do
     case $opt in
 	o)
 	    owner="$OPTARG"
@@ -56,13 +63,16 @@ while getopts "o:u" opt; do
 	u)
 	    diskusage=true
 	    ;;
+	c)
+	    command="$OPTARG"
+	    ;;
 	*)
 	    exit 1
 	    ;;
     esac
 done
 
-args="$@"
+args=$( encode_args "$@" )
 shift $(( $OPTIND - 1 ))
 if [ $# != 1 ]; then
     usage
@@ -117,6 +127,13 @@ else
 	    else
 		echo "  details:" >> $tmpdir/out
 		ls -l "$path" | while read x; do echo "      $x"; done >> $tmpdir/out  2>&1
+	    fi
+
+	    if [ "$command" != "nil" ] ; then
+		scommand=$( echo "$command" | sed s/{}/\$path/ )
+		echo "Executing '$scommand'..."
+		echo "Executing '$scommand'..." >> $tmpdir/out  2>&1
+		eval $scommand >> $tmpdir/out  2>&1
 	    fi
 	fi
     }

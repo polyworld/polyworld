@@ -95,6 +95,8 @@ namespace proplib
 		virtual ~Node();
 
 		Type getNodeType();
+		DocumentLocation &getLocation();
+		
 
 		bool isProp();
 		bool isCond();
@@ -403,4 +405,22 @@ namespace proplib
 		static bool isLegacyMode( Document *docValues );
 		static Property *getDefaultProperty( Property *propSchema, bool legacyMode );
 	};
+
+	// ----------------------------------------------------------------------
+	// ----------------------------------------------------------------------
+	// --- CLASS Overlay
+	// ----------------------------------------------------------------------
+	// ----------------------------------------------------------------------
+	class Overlay
+	{
+	public:
+		static bool hasOverlay( Document *docOverlay, const std::string &selector );
+		static void overlay( Document *docOverlay, Document *docValues, const std::string &selector );
+
+	private:
+		static Property *findOverlay( Document *docOverlay, const std::string &selector );
+		static void validateOverlayDocument( Document *docOverlay );
+		static void overlay( Property *propOverlay, Property *propOriginal );
+	};
+
 };

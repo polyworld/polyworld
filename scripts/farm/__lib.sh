@@ -18,6 +18,7 @@ function canondirname()
 }
 
 export PWFARM_SCRIPTS_DIR=$( canondirname $BASH_SOURCE )
+export POLYWORLD_DIR=$( canonpath $PWFARM_SCRIPTS_DIR/../.. )
 
 function pushd_quiet()
 {
@@ -229,4 +230,27 @@ function trim()
 	read  -rd '' val <<< "$val"
     fi
     echo $val
+}
+
+function show_file_gui()
+{
+    case `uname` in
+	Linux)
+	    gnome-open $1 || kde-open $1
+	    ;;
+	Darwin)
+	    open $1
+	    ;;
+	*)
+	    err "Unknown Operating System (`uname`)"
+	    ;;
+    esac
+}
+
+function encode_args()
+{
+    while [ $# != 0 ]; do
+	echo -n \'$1\'" "
+	shift
+    done
 }

@@ -6,10 +6,12 @@ else
     source $PWFARM_SCRIPTS_DIR/__pwfarm_runutil.sh || exit 1
 fi
 
+ensure_farm_session
+
 function usage()
 {
     cat >&2 <<EOF
-usage: $( basename $0 ) [-w:c:a:i:o:] run_id
+usage: $( basename $0 ) [-w:p:a:o:c:i:] run_id
 
 ARGS:
 
@@ -21,19 +23,24 @@ OPTIONS:
                   Path of local worldfile to be executed. If not provided, it is
                 assumed a run already exists on the farm of run_id.
 
-   -c config_script
-                  Path of script that is to be executed prior to running 
-                simulation.
+   -p parms_overlay
+                  Path of local worldfile overlay file. Allows for setting parameters
+                on a per-machine basis.
 
    -a analysis_script
                   Path of script that is to be executed after simulation.
 
-   -i input_zip
-                  Path of zip file that is to be sent to each machine.
-
    -o run_owner
                   Specify owner of run, which is ultimately prepended to run IDs.
                 A value of "nil" indicates that no owner will be prepended.
+
+   -c config_script
+                  Path of script that is to be executed prior to running 
+                simulation.
+
+   -i input_zip
+                  Path of zip file that is to be sent to each machine.
+
 EOF
 
     if [ ! -z "$1" ]; then
@@ -67,9 +74,21 @@ if [ "$1" == "--field" ]; then
     RUNID=$( cat $PAYLOAD_DIR/runid )
 
     export DISPLAY=:0.0 # for Linux -- allow graphics from ssh
-    export PATH=$( canonpath scripts ):$PATH
+    export PATH=$( canonpath scripts ):$( canonpath bin ):$PATH
     ulimit -n 4096      # for Mac -- allow enough file descriptors
     ulimit -c unlimited # for Mac -- generate core dump on trap
+
+    ###
+    ### Check if in Parms Overlay
+    ###
+    if [ -e "$PAYLOAD_DIR/overlay" ]; then
+	fieldhostname=$( fieldhostname_from_num $(pwenv fieldnumber) )
+	matches=$( proputil overlay_matches "$PAYLOAD_DIR/overlay" "$fieldhostname" ) || exit 1
+	if [ -z "$matches" ]; then
+	    # No match found. Exit success.
+	    exit 0
+	fi
+    fi
 
     ###
     ### If a run is already here, store it away.
@@ -117,15 +136,24 @@ if [ "$1" == "--field" ]; then
     ###
     if [ -e $POLYWORLD_PWFARM_WORLDFILE ]; then
 	###
-	### Set the seed based on farm node
+	### Process Parms Overlay
 	###
-	if [ "$( pwenv fieldnumber )" == "0" ]; then
-	    seed=42
+	if [ -e "$PAYLOAD_DIR/overlay" ]; then
+	    fieldhostname=$( fieldhostname_from_num $(pwenv fieldnumber) )
+	    proputil overlay $POLYWORLD_PWFARM_WORLDFILE "$PAYLOAD_DIR/overlay" "$fieldhostname" > ./worldfile || exit 1
 	else
-	    seed="$( pwenv fieldnumber )"
+	    ###
+	    ### Set the seed based on farm node
+	    ###
+	    if [ "$( pwenv fieldnumber )" == "0" ]; then
+		seed=42
+	    else
+		seed="$( pwenv fieldnumber )"
+	    fi
+	    cp $POLYWORLD_PWFARM_WORLDFILE ./worldfile || exit 1
+	    ./scripts/wfutil edit ./worldfile SimulationSeed=$seed || exit 1
 	fi
-	cp $POLYWORLD_PWFARM_WORLDFILE ./worldfile || exit 1
-	./scripts/wfutil edit ./worldfile SimulationSeed=$seed || exit 1
+
 
 	########################
 	###                  ###
@@ -204,29 +232,33 @@ else
     poly_dir=`canonpath "$pwfarm_dir/../.."`
 
     WORLDFILE="nil"
+    OVERLAY="nil"
     PRERUN="nil"
     POSTRUN="nil"
     INPUT_ZIP="nil"
     OWNER=$( pwenv pwuser )
     OWNER_OVERRIDE=false
 
-    while getopts "w:c:a:i:o:" opt; do
+    while getopts "w:p:a:o:c:i:" opt; do
 	case $opt in
 	    w)
 		WORLDFILE="$OPTARG"
 		;;
-	    c)
-		PRERUN="$OPTARG"
+	    p)
+		OVERLAY="$OPTARG"
 		;;
 	    a)
 		POSTRUN="$OPTARG"
 		;;
-	    i)
-		INPUT_ZIP="$OPTARG"
-		;;
 	    o)
 		OWNER="$OPTARG"
 		OWNER_OVERRIDE=true
+		;;
+	    c)
+		PRERUN="$OPTARG"
+		;;
+	    i)
+		INPUT_ZIP="$OPTARG"
 		;;
 	    *)
 		exit 1
@@ -240,6 +272,44 @@ else
     elif [ $# -gt 1 ]; then
 	shift
 	usage "Unexpected arguments: $*"
+    fi
+
+    if [ "$OVERLAY" != "nil" ]; then
+	if [ "$WORLDFILE" == "nil" ]; then
+	    err "-p requires worldfile (-w)"
+	fi
+
+	fieldnames=( $( fieldhostnames_from_nums $(pwenv fieldnumbers) ) ) || exit 1
+	overlay_matches=( $(proputil overlay_matches "$OVERLAY" ${fieldnames[@]}) ) || err "Invalid parms_overlay file!"
+	if [ ${#overlay_matches[@]} == 0 ]; then
+	    err "No parms overlay matches!"
+	fi
+
+	overlay_tmpdir=$( mktemp -d /tmp/poly_run.XXXXXXXX ) || exit 1
+
+	for fieldname in ${overlay_matches[@]}; do
+	    overlayed_worldfile="$overlay_tmpdir/${fieldname}.wf"
+	    proputil overlay "$WORLDFILE" "$OVERLAY" "$fieldname" > "$overlayed_worldfile" || exit 1
+	    proputil apply "$POLYWORLD_DIR/default.wfs" "$overlayed_worldfile" > /dev/null || err "Overlayed file $overlayed_worldfile failed schema validation!"
+	done
+
+	echo "--------------------------------------------------------------------------------"
+	echo "---"
+	echo "--- A GUI window should now be showing the worldfiles that will be executed."
+	echo "---"
+	echo "--- The worldfiles are at $overlay_tmpdir"	    
+	echo "---"
+	echo "--------------------------------------------------------------------------------"
+	if [ ${#overlay_matches[@]} != ${#fieldnames[@]} ]; then
+	    echo "WARNING! Some field nodes were not matched to the parms_overlay file."
+	fi
+
+	show_file_gui $overlay_tmpdir
+	read -p "Do you approve? [y/n]: " reply
+	if [ "$reply" != "y" ]; then
+	    rm -rf $overlay_tmpdir
+	    err "User aborted"
+	fi
     fi
 
     RUNID=$( build_runid "$OWNER" "$1" )
@@ -263,6 +333,7 @@ else
     }
 
     cpopt "$WORLDFILE" worldfile
+    cpopt "$OVERLAY" overlay
     cpopt "$PRERUN" prerun.sh
     cpopt "$POSTRUN" postrun.sh
     cpopt "$INPUT_ZIP" input.zip
@@ -279,4 +350,5 @@ else
     $pwfarm_dir/__pwfarm_dispatcher.sh dispatch $tmp_dir/payload.zip './pwfarm_run.sh --field' run $DSTDIR/$RUNID_LOCAL
 
     rm -rf $tmp_dir
+    rm -rf $overlay_tmpdir
 fi

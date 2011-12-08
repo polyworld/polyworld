@@ -19,6 +19,8 @@ void usage( string msg = "" )
 	cerr << "       proputil get path_values propname" << endl;
 	cerr << "       proputil set path_values propname=propvalue..." << endl;
 	cerr << "       proputil len path_values propname" << endl;
+	cerr << "       proputil overlay_matches path_overlay selectors" << endl;
+	cerr << "       proputil overlay path_values path_overlay selector" << endl;
 
 	if( msg.length() > 0 )
 	{
@@ -57,8 +59,11 @@ void reduce( const char *pathSchema, const char *pathValues );
 void get( const char *pathValues, const char *name );
 void set( const char *pathValues, NameValuePairList &pairs );
 void len( const char *pathValues, const char *name );
+void select( const char *pathOverlay, const char *selector );
+void overlay_matches( const char *pathOverlay, const char **selectors, int nselectors );
+void overlay( const char *pathValues, const char *pathOverlay, const char *selector );
 
-int main( int argc, char **argv )
+int main( int argc, const char **argv )
 {
 	if( argc < 2 )
 	{
@@ -118,6 +123,24 @@ int main( int argc, char **argv )
 		}
 
 		len( argv[2], argv[3] );
+	}
+	else if( mode == "overlay_matches" )
+	{
+		if( argc < 4 )
+		{
+			usage();
+		}
+
+		overlay_matches( argv[2], argv + 3, argc - 3 );
+	}
+	else if( mode == "overlay" )
+	{
+		if( argc != 5 )
+		{
+			usage();
+		}
+
+		overlay( argv[2], argv[3], argv[4] );
 	}
 	else
 	{
@@ -199,3 +222,31 @@ void len( const char *pathValues, const char *name )
 
 	delete docValues;
 }
+
+void overlay_matches( const char *pathOverlay, const char **selectors, int nselectors )
+{
+	Document *docOverlay = Parser::parseFile( pathOverlay );
+
+	for( int i = 0; i < nselectors; i++ )
+	{
+		if( Overlay::hasOverlay(docOverlay, selectors[i]) )
+		{
+			cout << selectors[i] << endl;
+		}
+	}
+
+	delete docOverlay;
+}
+
+void overlay( const char *pathValues, const char *pathOverlay, const char *selector )
+{
+	Document *docValues = Parser::parseFile( pathValues );
+	Document *docOverlay = Parser::parseFile( pathOverlay );
+
+	Overlay::overlay( docOverlay, docValues, selector );
+	docValues->write( cout );
+
+	delete docValues;
+	delete docOverlay;
+}
+
