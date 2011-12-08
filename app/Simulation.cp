@@ -3210,7 +3210,7 @@ DataLibWriter* TSimulation::OpenComplexityLog( long epoch )
 
 void TSimulation::UpdateComplexityLog( agent *a )
 {
-	//printf( "%s %ld %g\n", __func__, a->Number(), a->Complexity() );
+	//printf( "%s: %ld %g\n", __func__, a->Number(), a->Complexity() );
 	
 	fComplexityLog->addRow( a->Number(),
 							a->Complexity() );
@@ -5954,6 +5954,8 @@ void TSimulation::Kill( agent* c,
 //---------------------------------------------------------------------------
 void TSimulation::Kill_UpdateBrainData( agent *c )
 {
+	//printf( "%s (beginning): %ld %g\n", __func__, c->Number(), c->Complexity() );
+
 	c->EndFunctional();
 
 #if HackForProcessingUnitComplexity
@@ -6007,7 +6009,7 @@ void TSimulation::Kill_UpdateBrainData( agent *c )
 			}
 		}
 	}
-
+	//printf( "%s (end): %ld %g\n", __func__, c->Number(), c->Complexity() );
 }
 
 //---------------------------------------------------------------------------
@@ -6015,6 +6017,8 @@ void TSimulation::Kill_UpdateBrainData( agent *c )
 //---------------------------------------------------------------------------
 void TSimulation::Kill_UpdateFittest( agent *c )
 {
+	//printf( "%s (beginning): %ld %g\n", __func__, c->Number(), c->Complexity() );
+
 	unsigned long loserIDBestSoFar = 0;	// the way this is used depends on fAgentNumber being 1-based in agent.cp
 	unsigned long loserIDBestRecent = 0;	// the way this is used depends on fAgentNumber being 1-based in agent.cp
 	bool oneOfTheBestSoFar = false;
@@ -6338,6 +6342,8 @@ void TSimulation::Kill_UpdateFittest( agent *c )
 		if( unlink( s ) )
 			eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
 	}
+
+	//printf( "%s (end): %ld %g\n", __func__, c->Number(), c->Complexity() );
 }
 
 //-------------------------------------------------------------------------------------------
@@ -6408,6 +6414,8 @@ void TSimulation::FoodEnergyOut( const Energy &e ) {
 //-------------------------------------------------------------------------------------------
 float TSimulation::AgentFitness( agent* c )
 {
+	//printf( "%s (beginning): %ld %g\n", __func__, c->Number(), c->Complexity() );
+	
 	float fitness = 0.0;
 	
 	if( c->Alive() )
@@ -6426,7 +6434,7 @@ float TSimulation::AgentFitness( agent* c )
 	}
 	else	// we are using complexity as a fitness function (and may be using heuristic fitness too)
 	{
-		if( c->Complexity() == 0.0 )
+		if( c->Complexity() < 0.0 )
 		{
 			fprintf( stderr, "********** complexity being calculated when it should already be known **********\n" );
 			char filename[256];
@@ -6446,6 +6454,8 @@ float TSimulation::AgentFitness( agent* c )
 		//cout << "fitness" eql fitness sp "hwt" eql fHeuristicFitnessWeight sp "hf" eql c->HeuristicFitness()/fTotalHeuristicFitness sp "cwt" eql fComplexityFitnessWeight sp "cf" eql c->Complexity() nl;
 	}
 	
+	//printf( "%s (end): %ld %g (%g)\n", __func__, c->Number(), c->Complexity(), fitness );
+
 	return( fitness );
 }
 

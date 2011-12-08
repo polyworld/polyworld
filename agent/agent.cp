@@ -134,6 +134,7 @@ agent::agent(TSimulation* sim, gstage* stage)
     	fDeathByPatch(false),
 		fMass(0.0), 		// mass - not used
 		fHeuristicFitness(0.0),  	// crude guess for keeping minimum population early on
+		fComplexity(-1.0),	// < 0.0 indicates not yet computed
 		fGenome(NULL),
 		fCns(NULL),
 		fRetina(NULL),
