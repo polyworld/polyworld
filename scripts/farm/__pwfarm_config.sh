@@ -27,7 +27,7 @@ usage: $progname define farm <farm_name> <pwuser> <osuser> <dstdir> <field_numbe
 
             $progname define farm mini frank admin /farmruns {0..9} 
 
-       $progname define session <farm_name> <session_name>
+       $progname define session <farm_name> <session_name> [<field_number>...]
 
           Define a farm session.
 
@@ -148,7 +148,7 @@ usage: $progname define farm <farm_name> <pwuser> <osuser> <dstdir> <field_numbe
 			    pwquery runresults_dir $PWFARM_CONFIG_ENV__FARM
 			    ;;
 			"fieldnumbers")
-			    pwquery fieldnumbers $PWFARM_CONFIG_ENV__FARM
+			    pwquery sessionfieldnumbers $PWFARM_CONFIG_ENV__FARM $PWFARM_CONFIG_ENV__SESSION
 			    ;;
 			"dispatcherstate_dir")
 			    pwquery dispatcherstate_dir $PWFARM_CONFIG_ENV__FARM $PWFARM_CONFIG_ENV__SESSION
@@ -190,14 +190,22 @@ usage: $progname define farm <farm_name> <pwuser> <osuser> <dstdir> <field_numbe
 		echo "OS user: $( pwquery osuser $farmname )"
 		echo "run results dir: $( pwquery runresults_dir $farmname )"
 		echo "field numbers: $( pwquery fieldnumbers $farmname )"
-		echo -n "sessions:"
-		pwquery sessionnames $farmname | while read x; do echo -n " $x"; done
+		echo "sessions:"
+		for sessionname in $( pwquery sessionnames $farmname ); do
+		    echo -n "  $sessionname: "
+		    if [ -e $(pwquery sessionfieldnumbers_path $farmname $sessionname) ]; then
+			echo "fields={$( pwquery sessionfieldnumbers $farmname $sessionname )}"
+		    else
+			echo "fields={*}"
+		    fi
+		done
 		echo
 		echo
 	    done
 
 	    echo "current farm: $( pwenv farmname 2>/dev/null || echo none )"
 	    echo "current session: $( pwenv sessionname 2>/dev/null || echo none )"
+	    echo "current fields: $( pwenv fieldnumbers 2>/dev/null || echo none )"
 	    ;;
 
         ###############################################################
@@ -265,6 +273,34 @@ usage: $progname define farm <farm_name> <pwuser> <osuser> <dstdir> <field_numbe
 		    dir=$( pwquery farmetc_dir $farmname )/sessions || exit 1
 		    if [ -e $dir ]; then
 			ls -1 $dir
+		    fi
+		    ;;
+		"sessionfieldnumbers_path")
+		    farmname="$3"
+		    if [ -z "$farmname" ]; then
+			err "Missing 'sessionfieldnumbers_path' farmname arg"
+		    fi
+		    sessionname="$4"
+		    if [ -z "$sessionname" ]; then
+			err "Missing 'sessionfieldnumbers_path' sessionname arg"
+		    fi
+		    val=$( pwquery sessionetc_dir $farmname $sessionname )/fieldnumbers || exit 1
+		    echo $val
+		    ;;
+		"sessionfieldnumbers")
+		    farmname="$3"
+		    if [ -z "$farmname" ]; then
+			err "Missing 'sessionfieldnumbers' farmname arg"
+		    fi
+		    sessionname="$4"
+		    if [ -z "$sessionname" ]; then
+			err "Missing 'sessionfieldnumbers' sessionname arg"
+		    fi
+		    path=$( pwquery sessionfieldnumbers_path $farmname $sessionname ) || exit 1
+		    if [ -e $path ]; then
+			cat $path
+		    else
+			pwquery fieldnumbers $farmname
 		    fi
 		    ;;
 		"dispatcherstate_dir")
@@ -648,11 +684,17 @@ usage: $progname define farm <farm_name> <pwuser> <osuser> <dstdir> <field_numbe
 		    if [ -z "$sessionname" ]; then
 			err "Missing 'define session' sessionname arg"
 		    fi
-		    if $( pwquery defined session "$farmname" "$sessionname" ); then
-			err "Session $sessionname already defined"
-		    fi
+
+		    shift 4
+		    fieldnumbers="$*"
 
 		    mkdir -p $( pwquery sessionetc_dir $farmname $sessionname ) || exit 1
+
+		    if [ -z "$fieldnumbers" ]; then
+			rm -f $( pwquery sessionfieldnumbers_path $farmname $sessionname )
+		    else
+			echo "$fieldnumbers" > $( pwquery sessionfieldnumbers_path $farmname $sessionname )
+		    fi
 		    
 		    ;; # end define session
 		*)
