@@ -23,6 +23,7 @@ function fset()
     alias fmvrun='pwfarm_mvrun.sh'
     alias frmrun='pwfarm_rmrun.sh'
     alias fstat='pwfarm_stat.sh'
+    alias fcmd='pwfarm_cmd.sh'
 
     local farmname="$1"
     if [ -z "$farmname" ]; then

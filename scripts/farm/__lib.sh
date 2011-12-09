@@ -229,7 +229,7 @@ function trim()
     else
 	read  -rd '' val <<< "$val"
     fi
-    echo $val
+    echo "$val"
 }
 
 function show_file_gui()
@@ -253,4 +253,17 @@ function encode_args()
 	echo -n \'$1\'" "
 	shift
     done
+}
+
+function decode_args()
+{
+    local result=""
+
+    while [ $# != 0 ]; do
+	local decoded=$(echo -n $1 | sed -e "s/^'//" -e "s/'$//")
+	result="$result $decoded"
+	shift
+    done
+
+    trim "$result"
 }
