@@ -56,10 +56,10 @@ swig_lib_flags          = \$(swig_lib_flags_apple)" \
     PWFARM_SUDO make install
     make swig
 
-    cp bct_py.py ~/polyworld_pwfarm/app/scripts
-    cp bct_gsl.py ~/polyworld_pwfarm/app/scripts
-    cp _bct_py.so ~/polyworld_pwfarm/app/scripts
-    cp _bct_gsl.so ~/polyworld_pwfarm/app/scripts
+    cp bct_py.py "$POLYWORLD_PWFARM_APP_DIR/scripts"
+    cp bct_gsl.py "$POLYWORLD_PWFARM_APP_DIR/scripts"
+    cp _bct_py.so "$POLYWORLD_PWFARM_APP_DIR/scripts"
+    cp _bct_gsl.so "$POLYWORLD_PWFARM_APP_DIR/scripts"
 
     popd_quiet
 }
