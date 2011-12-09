@@ -6,8 +6,6 @@ else
     source $PWFARM_SCRIPTS_DIR/__pwfarm_runutil.sh || exit 1
 fi
 
-ensure_farm_session
-
 function usage()
 {
     cat <<EOF
@@ -71,6 +69,8 @@ fi
 runid="$1"
 
 if ! $field; then
+    validate_farm_env
+
     if [ "$runid" == "/" ] && $good && ! $testing; then
 	read -p "You are about to delete all good runs! Are you sure? [y/n]: " response
 	if [ "$response" != "y" ]; then

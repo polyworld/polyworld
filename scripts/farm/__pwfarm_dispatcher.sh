@@ -2,7 +2,7 @@
 
 source $( dirname $BASH_SOURCE )/__lib.sh || exit 1
 
-ensure_farm_session
+validate_farm_env
 
 DISPATCHERSTATE_DIR=$( pwenv dispatcherstate_dir ) || exit 1
 require "$DISPATCHERSTATE_DIR" "dispatcher dir cannot be empty!!!"
@@ -12,13 +12,13 @@ SCREEN_SESSION="____pwfarm_dispatcher__farm_$( pwenv farmname )__session_$( pwen
 MUTEX=$DISPATCHERSTATE_DIR/mutex
 PARMS=$DISPATCHERSTATE_DIR/parms
 PID=$DISPATCHERSTATE_DIR/pid
+FIELDNUMBERS=$DISPATCHERSTATE_DIR/fieldnumbers
 
 BLOB_DIR=${DISPATCHERSTATE_DIR}/blob
 BLOB_LOCAL=${BLOB_DIR}/blob.zip
 BLOB_REMOTE="~/__pwfarm_blob__user_$( pwenv pwuser )__farm_$( pwenv farmname )__session_$( pwenv sessionname ).zip"
 BROADCAST_COMPLETE=$DISPATCHERSTATE_DIR/broadcast_complete
 
-FIELDNUMBERS=$( pwenv fieldnumbers )
 PWUSER=$( pwenv pwuser )
 OSUSER=$( pwenv osuser )
 
@@ -92,6 +92,7 @@ case "$mode" in
 	) > $PARMS
 
 	echo $$ > $PID
+	echo $( pwenv fieldnumbers ) > $FIELDNUMBERS
 
 	broadcast="true"
 
@@ -103,6 +104,10 @@ case "$mode" in
 	if [ ! -e "$PARMS" ]; then
 	    mutex_unlock $MUTEX
 	    err "Can't find task to recover. Is this the right session? (Does not exist: $PARMS)"
+	fi
+	if [ ! -e "$FIELDNUMBERS" ]; then
+	    mutex_unlock $MUTEX
+	    err "Can't find field numbers to recover. (Does not exist: $FIELDNUMBERS)"
 	fi
 	if screen_active ; then
 	    mutex_unlock $MUTEX
@@ -130,6 +135,8 @@ case "$mode" in
 	output_basename=$( field 3 )
 	output_dir=$( field 4 )
 
+	__pwfarm_config env set fieldnumbers $( fieldnums_from_hostnames $(cat $FIELDNUMBERS) )
+
 	echo $$ > $PID
 
 	broadcast="true"
@@ -137,7 +144,6 @@ case "$mode" in
 	mutex_unlock $MUTEX
 	;;
     "clear")
-
 	if [ "$2" == "--exit" ]; then
 	    # We're being invoked as part of the exit procedure
 	    echo "Performing healthy pwfarm state clear."
@@ -156,10 +162,12 @@ case "$mode" in
 	    fi
 
 	    kill_screen
+
+	    # Force clear of all machines on farm.
+	    pwquery fieldnumbers $(pwenv farmname) > $FIELDNUMBERS
 	fi
 	rm -f "$PARMS"
 	rm -f "$PID"
-	rm -f "$TASKID"
 	rm -f "$BROADCAST_COMPLETE"
 	rm -rf "$BLOB_DIR"
 	;;
@@ -240,45 +248,49 @@ fi
 ###
 ### Perform task on all field nodes
 ###
-for fieldnumber in $FIELDNUMBERS; do
+if [ -e $FIELDNUMBERS ]; then
+    for fieldnumber in $( cat $FIELDNUMBERS ); do
 
-    fieldhostname=$( fieldhostname_from_num $fieldnumber )
+	fieldhostname=$( fieldhostname_from_num $fieldnumber )
 
-    FARMER_SH="$PWFARM_SCRIPTS_DIR/__pwfarm_farmer.sh"
+	FARMER_SH="$PWFARM_SCRIPTS_DIR/__pwfarm_farmer.sh"
 
-    if [ "$mode" == "dispatch" ] || [ "$mode" == "recover" ]; then
-	title="$fieldhostname - $command"
-	screen -S "${SCREEN_SESSION}" -X screen -t "$title" "$FARMER_SH" $fieldnumber \
-                                                                         $mode \
-                                                                         "${BLOB_REMOTE}" \
-                                                                         "$PASSWORD" \
-                                                                         "$command" \
-                                                                         "$output_basename" \
-                                                                         "$output_dir"
-    else
-	case "$mode" in 
-	    "clear")
-		$FARMER_SH $fieldnumber clear
-		;;
+	if [ "$mode" == "dispatch" ] || [ "$mode" == "recover" ]; then
+	    title="$fieldhostname - $command"
+	    screen -S "${SCREEN_SESSION}" -X screen -t "$title" "$FARMER_SH" $fieldnumber \
+                $mode \
+                "${BLOB_REMOTE}" \
+                "$PASSWORD" \
+                "$command" \
+                "$output_basename" \
+                "$output_dir"
+	else
+	    case "$mode" in 
+		"clear")
+		    echo "Clearing $fieldnumber (farm=$(pwenv farmname), session=$(pwenv sessionname))..."
+		    $FARMER_SH $fieldnumber clear
+		    ;;
 
-	    "disconnect")
-		$FARMER_SH $fieldnumber disconnect
-		;;
+		"disconnect")
+		    echo "Disconnecting $fieldnumber..."
+		    $FARMER_SH $fieldnumber disconnect
+		    ;;
 
-	    "exit")
-		if ! $FARMER_SH $fieldnumber exit; then
-		    failed="${failed}$( fieldhostname_from_num $fieldnumber ) "
-		    exitval=1
-		else
-		    succeeded="${succeeded}$( fieldhostname_from_num $fieldnumber ) "
-		fi
-		;;
-	    *)
-		err "Invalid mode: $mode"
-		;;
-	esac
-    fi
-done
+		"exit")
+		    if ! $FARMER_SH $fieldnumber exit; then
+			failed="${failed}$( fieldhostname_from_num $fieldnumber ) "
+			exitval=1
+		    else
+			succeeded="${succeeded}$( fieldhostname_from_num $fieldnumber ) "
+		    fi
+		    ;;
+		*)
+		    err "Invalid mode: $mode"
+		    ;;
+	    esac
+	fi
+    done
+fi
 
 ###
 ### Mode-specific logic after interfacing with field nodes
@@ -298,6 +310,7 @@ if [ "$mode" == "dispatch" ] || [ "$mode" == "recover" ]; then
 else
     case "$mode" in
 	"clear")
+	    rm -f "$FIELDNUMBERS"
 	    mutex_unlock $MUTEX
 	    ;;
 

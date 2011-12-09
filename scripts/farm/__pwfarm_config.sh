@@ -116,6 +116,13 @@ usage: $progname define farm <farm_name> <pwuser> <osuser> <dstdir> <field_numbe
 
 			    export PWFARM_CONFIG_ENV__FIELD=$fieldnumber
 			    ;;
+			"fieldnumbers")
+			    shift 3
+			    fieldnumbers="$*"
+			    require "$fieldnumbers" "'env set fieldnumbers' arg fieldnumbers"
+
+			    export PWFARM_CONFIG_ENV__FIELDNUMBERS="$fieldnumbers"
+			    ;;
 			*)
 			    err "Invalid 'env set' name ($envname)"
 			    ;;
@@ -148,7 +155,11 @@ usage: $progname define farm <farm_name> <pwuser> <osuser> <dstdir> <field_numbe
 			    pwquery runresults_dir $PWFARM_CONFIG_ENV__FARM
 			    ;;
 			"fieldnumbers")
-			    pwquery sessionfieldnumbers $PWFARM_CONFIG_ENV__FARM $PWFARM_CONFIG_ENV__SESSION
+			    if [ ! -z "$PWFARM_CONFIG_ENV__FIELDNUMBERS" ]; then
+				echo $PWFARM_CONFIG_ENV__FIELDNUMBERS
+			    else
+				pwquery sessionfieldnumbers $PWFARM_CONFIG_ENV__FARM $PWFARM_CONFIG_ENV__SESSION
+			    fi
 			    ;;
 			"dispatcherstate_dir")
 			    pwquery dispatcherstate_dir $PWFARM_CONFIG_ENV__FARM $PWFARM_CONFIG_ENV__SESSION

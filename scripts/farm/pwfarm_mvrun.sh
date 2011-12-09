@@ -6,8 +6,6 @@ else
     source $PWFARM_SCRIPTS_DIR/__pwfarm_runutil.sh || exit 1
 fi
 
-ensure_farm_session
-
 function usage()
 {    
     cat <<EOF
@@ -62,6 +60,8 @@ runid_src="$1"
 runid_dst="$2"
 
 if ! $field; then
+    validate_farm_env
+
     __pwfarm_script.sh $0 --field $args || exit 1
 else
     runid_src=$( build_runid "$owner" "$runid_src" )

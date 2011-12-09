@@ -6,12 +6,10 @@ else
     source $PWFARM_SCRIPTS_DIR/__pwfarm_runutil.sh || exit 1
 fi
 
-ensure_farm_session
-
 function usage()
 {
     cat >&2 <<EOF
-usage: $( basename $0 ) [-w:p:a:o:c:i:] run_id
+usage: $( basename $0 ) [-w:p:a:f:o:c:i:] run_id
 
 ARGS:
 
@@ -29,6 +27,10 @@ OPTIONS:
 
    -a analysis_script
                   Path of script that is to be executed after simulation.
+
+   -f fields
+                  Specify fields on which this should run. Must be a single argument,
+                so use quotes. e.g. -f "0 1" or -f "{0..3}"
 
    -o run_owner
                   Specify owner of run, which is ultimately prepended to run IDs.
@@ -77,18 +79,6 @@ if [ "$1" == "--field" ]; then
     export PATH=$( canonpath scripts ):$( canonpath bin ):$PATH
     ulimit -n 4096      # for Mac -- allow enough file descriptors
     ulimit -c unlimited # for Mac -- generate core dump on trap
-
-    ###
-    ### Check if in Parms Overlay
-    ###
-    if [ -e "$PAYLOAD_DIR/overlay" ]; then
-	fieldhostname=$( fieldhostname_from_num $(pwenv fieldnumber) )
-	matches=$( proputil overlay_matches "$PAYLOAD_DIR/overlay" "$fieldhostname" ) || exit 1
-	if [ -z "$matches" ]; then
-	    # No match found. Exit success.
-	    exit 0
-	fi
-    fi
 
     ###
     ### If a run is already here, store it away.
@@ -222,6 +212,8 @@ if [ "$1" == "--field" ]; then
 	exit 0
     fi
 else
+    validate_farm_env
+
     ########################
     ###                  ###
     ### EXECUTE ON LOCAL ###
@@ -239,7 +231,7 @@ else
     OWNER=$( pwenv pwuser )
     OWNER_OVERRIDE=false
 
-    while getopts "w:p:a:o:c:i:" opt; do
+    while getopts "w:p:a:f:o:c:i:" opt; do
 	case $opt in
 	    w)
 		WORLDFILE="$OPTARG"
@@ -249,6 +241,10 @@ else
 		;;
 	    a)
 		POSTRUN="$OPTARG"
+		;;
+	    f)
+		__pwfarm_config env set fieldnumbers "$OPTARG"
+		validate_farm_env
 		;;
 	    o)
 		OWNER="$OPTARG"
@@ -284,6 +280,8 @@ else
 	if [ ${#overlay_matches[@]} == 0 ]; then
 	    err "No parms overlay matches!"
 	fi
+
+	__pwfarm_config env set fieldnumbers $( fieldnums_from_hostnames ${overlay_matches[@]} )
 
 	overlay_tmpdir=$( mktemp -d /tmp/poly_run.XXXXXXXX ) || exit 1
 

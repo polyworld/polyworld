@@ -175,21 +175,52 @@ function fieldhostnames_from_nums()
     done
 }
 
+function fieldnum_from_hostname()
+{
+    echo $1 | sed s/pw//g
+}
+
+function fieldnums_from_hostnames()
+{
+    for x in $*; do
+	fieldnum_from_hostname $x
+    done
+}
+
 function fieldhost_from_name()
 {
     eval pwhost=\$$1
     echo $pwhost
 }
 
-function ensure_farm_session()
+function validate_farm_env()
 {
-    if [ -z $( pwenv farmname ) ]; then
+    local farmname=$( pwenv farmname )
+    if [ -z "$farmname" ]; then
 	err "You haven't set your farm context."
     fi
-    if [ -z $( pwenv sessionname ) ]; then
+
+    local sessionname=$( pwenv sessionname )
+    if [ -z  "$sessionname" ]; then
 	err "You haven't set your session context."
     fi
 
+    local sessionfieldnumbers=$(pwquery sessionfieldnumbers $farmname $sessionname)
+    local farmfieldnumbers=$(pwquery fieldnumbers $farmname)
+    if ! is_subset_of "$sessionfieldnumbers" "$farmfieldnumbers"; then
+	err "\
+Session field numbers not a subset of farm field numbers!
+  session: $sessionfieldnumbers
+  farm:    $farmfieldnumbers"
+    fi
+
+    local envfieldnumbers=$(pwenv fieldnumbers)
+    if ! is_subset_of "$envfieldnumbers" "$sessionfieldnumbers"; then
+	err "\
+Environment field numbers not a subset of session field numbers!
+  env:     $envfieldnumbers
+  session: $sessionfieldnumbers"
+    fi
 }
 
 function ls_color_opt()
@@ -266,4 +297,27 @@ function decode_args()
     done
 
     trim "$result"
+}
+
+function is_subset_of()
+{
+    local some=( $1 )
+    local all=( $2 )
+
+    for (( i=0; i<${#some[@]}; i++ )); do
+	local found=false
+	for (( j = 0 ; j < ${#all[@]}; j++ )); do
+	    if [ "${some[$i]}" == "${all[$j]}" ]; then
+		found=true
+		break;
+	    fi
+	done
+
+	if ! $found; then
+	    return 1
+	fi
+
+    done
+
+    return 0
 }

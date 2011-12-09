@@ -6,8 +6,6 @@ else
     source $PWFARM_SCRIPTS_DIR/__lib.sh || exit 1
 fi
 
-ensure_farm_session
-
 function usage()
 {    
     cat <<EOF
@@ -37,6 +35,7 @@ fi
 tmpdir=$( mktemp -d /tmp/pwfarm_lsrun.XXXXXXXX ) || exit 1
 
 if ! $field; then
+    validate_farm_env
 
     __pwfarm_script.sh --output result "$tmpdir" $0 --field "$args" || exit 1
 
