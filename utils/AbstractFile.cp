@@ -499,7 +499,12 @@ void AbstractFile::init( ConcreteFileType type,
 		{
 			gzip.path = createPath( TYPE_GZIP_FILE, abstractPath );
 			gzip.fp = gzopen( gzip.path, mode );
-			assert( gzip.fp );
+			if( ! gzip.fp )
+			{
+				fprintf( stderr, "Unable to open file at '%s'\n", gzip.path );
+				perror( gzip.path );
+				assert( gzip.fp );
+			}
 		}
 		break;
 	default:
