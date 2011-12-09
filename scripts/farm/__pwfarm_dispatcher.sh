@@ -203,12 +203,16 @@ esac
 ### Prompt user for sudo password if needed
 ###
 if $prompt_password; then
-    # turn off echo for reading password
-    stty -echo
-    read -p "Please enter password of administrator on farm machines (for sudo): " PASSWORD
-    echo
-    # turn echo back on
-    stty echo
+    PASSWORD=""
+    
+    while [ -z "$PASSWORD" ]; do
+        # turn off echo for reading password
+	stty -echo
+	read -p "Please enter password of administrator on farm machines (for sudo): " PASSWORD
+	echo
+        # turn echo back on
+	stty echo
+    done
 else
     PASSWORD="nil"
 fi

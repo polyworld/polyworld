@@ -73,6 +73,8 @@ if [ "$1" == "--field" ]; then
 	bct=true
     fi
 
+    lock_app || exit 1
+
     store_orphan_run "$POLYWORLD_PWFARM_APP_DIR/run"
 
     if [ -e "$POLYWORLD_PWFARM_APP_DIR" ]; then
@@ -92,6 +94,8 @@ if [ "$1" == "--field" ]; then
     fi
 
     make
+
+    unlock_app
 else
     pwfarm_dir=$( canondirname "$0" )
     poly_dir=$( canonpath "$pwfarm_dir/../.." )

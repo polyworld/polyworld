@@ -65,8 +65,10 @@ if [ "$1" == "--field" ]; then
     ##############################
 
     if [ ! -e "$POLYWORLD_PWFARM_APP_DIR" ]; then
-	err "No app directory! Please do a pwfarm_build for this session."
+	err "No app directory! Please do a pwfarm_build."
     fi
+
+    lock_app || exit 1
 
     PAYLOAD_DIR=$( pwd )
     cd "$POLYWORLD_PWFARM_APP_DIR" || exit 1
@@ -206,6 +208,8 @@ if [ "$1" == "--field" ]; then
     ###
     ### Exit
     ###
+    unlock_app
+
     if $postrun_failed; then
 	exit 1
     else

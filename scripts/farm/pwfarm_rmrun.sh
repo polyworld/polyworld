@@ -112,8 +112,11 @@ else
 	orphanid="$POLYWORLD_PWFARM_APP_DIR/runid"
 	if [ -e "$orphan" ] && [ -e "$orphanid" ]; then
 	    if [ "$runid" == "/" ] || [ $(cat "$orphanid") == "$runid_full" ]; then
-		if ($good && is_good_run "$orhpan") || (! $good && ! is_good_run "$orphan"); then
-		    dorm "$orphan"
+		if lock_app; then
+		    if ($good && is_good_run "$orhpan") || (! $good && ! is_good_run "$orphan"); then
+			dorm "$orphan"
+		    fi
+		    unlock_app
 		fi
 	    fi
 	fi

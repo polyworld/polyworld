@@ -93,7 +93,12 @@ if ! $field; then
 else
     if ! $owner_override; then
 	if [ -e "$POLYWORLD_PWFARM_APP_DIR/run" ] ; then
-            echo WARNING! Contains orphan run! runid=$( cat "$POLYWORLD_PWFARM_APP_DIR/runid" ) >> $tmpdir/out 2>&1
+	    if lock_app; then
+		echo WARNING! Contains $(is_good_run "$POLYWORLD_PWFARM_APP_DIR/run" && echo "good" || echo "failed") orphan run! runid=$( cat "$POLYWORLD_PWFARM_APP_DIR/runid" ) >> $tmpdir/out 2>&1
+		unlock_app
+	    else
+		echo Simulation running or being analyzed. runid=$( cat "$POLYWORLD_PWFARM_APP_DIR/runid" ) >> $tmpdir/out 2>&1
+	    fi		
         fi
     fi
 

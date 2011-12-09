@@ -1,8 +1,41 @@
 source $( dirname $BASH_SOURCE )/__lib.sh || exit 1
 
 export POLYWORLD_PWFARM_HOME=$HOME/polyworld_pwfarm
-export POLYWORLD_PWFARM_APP_DIR=$POLYWORLD_PWFARM_HOME/$( pwenv pwuser )/$( pwenv farmname )/$( pwenv sessionname )/app
+
+export POLYWORLD_PWFARM_APP_DIR=$POLYWORLD_PWFARM_HOME/$( pwenv pwuser )/$( pwenv farmname )/app
+export POLYWORLD_PWFARM_APP_MUTEX=$( dirname $POLYWORLD_PWFARM_APP_DIR )/mutex
+export POLYWORLD_PWFARM_APP_PID=$( dirname $POLYWORLD_PWFARM_APP_DIR )/pid
+
 export POLYWORLD_PWFARM_RUNS_DIR=$POLYWORLD_PWFARM_HOME/runs
+
+function lock_app()
+{
+    while ! mutex_trylock $POLYWORLD_PWFARM_APP_MUTEX; do
+	echo "Failed locking app mutex"
+	if [ ! -e $POLYWORLD_PWFARM_APP_PID ]; then
+	    echo "  No app mutex pid, assuming someone else is locking"
+	    return 1
+	else
+	    if is_process_alive $POLYWORLD_PWFARM_APP_PID; then
+		echo "  Mutex is currently owned."
+		ps -p $(cat $POLYWORLD_PWFARM_APP_PID )
+		return 1
+	    else
+		echo "  Mutex owner is dead."
+		mutex_unlock $POLYWORLD_PWFARM_APP_MUTEX
+	    fi
+	fi
+    done
+
+    echo $$ > $POLYWORLD_PWFARM_APP_PID
+
+    return 0
+}
+
+function unlock_app()
+{
+    mutex_unlock $POLYWORLD_PWFARM_APP_MUTEX
+}
 
 function build_runid()
 {

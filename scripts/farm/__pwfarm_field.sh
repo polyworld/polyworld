@@ -213,13 +213,14 @@ case "$MODE" in
 	    cd "$FIELD_STATE_DIR"
 
 	    log "$RESULT_ZIP generated"
+
+	    rm "$LOG"
 	fi
 
 	rm -f $PID
 
 	mutex_unlock "$MUTEX"
 
-	log "LAUNCH DONE!"
 	exit 0
 	;;
     "command")
