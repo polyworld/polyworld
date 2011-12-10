@@ -18,6 +18,7 @@ import getopt
 from os.path import join
 from shutil import copy2
 import glob
+import subprocess
 import datalib
 
 DEFAULT_RECENT_FILES_TO_COPY = ['Avr*.plt', 'Complexity*.plt']
@@ -31,18 +32,21 @@ target_dir_specified = False
 test = False
 overwrite = False
 avr_only = False
+gzip = False
 recent_files_to_copy = DEFAULT_RECENT_FILES_TO_COPY[:]
 epoch_files_to_copy = DEFAULT_EPOCH_FILES_TO_COPY[:]
 metrics_to_copy = []
 
 def usage():
-	print 'Usage:  copy_brain_data.py [-t] [-a] [-o] [-e epoch_file_pattern,...] [-r recent_file_pattern,...] [-m metric,...] source_directory [target_directory]'
+	print 'Usage:  copy_brain_data.py [-t] [-a] [-o] [-g] [-e epoch_file_pattern,...] [-r recent_file_pattern,...] [-m metric,...] source_directory [target_directory]'
 	print '  source_directory may be a run directory or a collection of run directories'
 	print '  target_directory is optional, but if present must be the same kind of directory as source_directory'
 	print '    If target_directory is not specified, a new, unique target_directory will be created'
 	print '    If target_directory is specified, existing brain files will only be overwritten if -o is specified'
 	print '      and BirthsDeaths.log and worldfile will not be overwritten whether -o is specified or not'
 	print '  -a will copy only the Avr files (no epoch files)'
+	print '  -g will gzip any uncompressed .plt files as they are being copied'
+	print '     WARNING: -g is not really useful until datalib.py and datalib.cp have been updated to use AbstractFiles'
 	print '  -e comma-separated epoch files to copy (standard glob symbols allowed)'
 	print '     (default: %s)' % ','.join(DEFAULT_EPOCH_FILES_TO_COPY)
 	print '  -r comma-separated recent files to copy (standard glob symbols allowed)'
@@ -55,10 +59,10 @@ def usage():
 
 def parse_args():
 	global	source_dir, target_dir, target_dir_specified, test, overwrite, avr_only, \
-			recent_files_to_copy, epoch_files_to_copy, metrics_to_copy
+			gzip, recent_files_to_copy, epoch_files_to_copy, metrics_to_copy
 	
 	try:
-		opts, args = getopt.getopt(sys.argv[1:], 'toae:r:m:', ['test','overwrite','avr','epoch_files','recent_files','metrics'] )
+		opts, args = getopt.getopt(sys.argv[1:], 'toage:r:m:', ['test','overwrite','avr','gzip','epoch_files','recent_files','metrics'] )
 	except getopt.GetoptError, err:
 		print str(err) # will print something like "option -a not recognized"
 		usage()
@@ -90,6 +94,8 @@ def parse_args():
 		elif opt in ('-a', '--avr_only'):
 			avr_only = True
 			a = True
+		elif opt in ('-g', '--gzip'):
+			gzip = True
 		elif opt in ('-e', '--epoch_files'):
 			epoch_files_to_copy = arg.split(',')
 			e = True
@@ -117,11 +123,15 @@ def parse_args():
 		print '      None of the <epoch>/metric_*.plt files will be copied'
 
 def copy(source_file, target_file):
-	global test
+	global test, gzip
 	if test:
 		print '  copying', source_file, 'to', target_file
+		if gzip and target_file[-4:] == '.plt':
+			print '  gzipping', target_file, 'to', target_file+'.gz'
 	else:
 		copy2(source_file, target_file)
+		if gzip and target_file[-4:] == '.plt':
+			subprocess.call(['gzip', target_file])
 
 def mkdir(dir):
 	global test
@@ -202,6 +212,7 @@ def copy_run_dir(source, target):
 
 def main():
 	global source_dir, target_dir, target_dir_specified
+
 	parse_args()
 	
 	for root, dirs, files in os.walk(source_dir):
