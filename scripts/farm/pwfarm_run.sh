@@ -143,7 +143,7 @@ if [ "$1" == "--field" ]; then
 		seed="$( pwenv fieldnumber )"
 	    fi
 	    cp $POLYWORLD_PWFARM_WORLDFILE ./worldfile || exit 1
-	    ./scripts/wfutil edit ./worldfile SimulationSeed=$seed InitSeed=$seed || exit 1
+	    ./scripts/wfutil edit ./worldfile InitSeed=$seed || exit 1
 	fi
 
 
