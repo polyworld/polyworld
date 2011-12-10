@@ -47,12 +47,17 @@ PassiveLockstep {
 
 InitSeed {
   type    INT
-  default 42
+  default 42	# applied before agents, genomes, brains, food, bricks, etc. are initialized
 }
+
+PositionSeed {
+  type    INT   # not used
+  default 42    # intended to be applied before agents, food, bricks, etc.
+}               # are assigned their initial random positions in the world
 
 SimulationSeed {
   type    INT
-  default 0	# 0: not used
+  default 0		# applied just before first step of simulation (if == 0 seed is not used)
 }
 
 GenomeLayout {
@@ -3352,11 +3357,6 @@ ShowVision {
   type    BOOL
   default True
   assert $( ShowVision ) # make always true (until drawn offscreen, and then base on window visibility)
-}
-
-PositionSeed {
-  type    INT
-  default 42		# not used
 }
 
 MonitorAgentRank {
