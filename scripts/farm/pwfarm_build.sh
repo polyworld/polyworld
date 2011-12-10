@@ -6,6 +6,26 @@ else
     source $PWFARM_SCRIPTS_DIR/__pwfarm_runutil.sh || exit 1
 fi
 
+function usage()
+{    
+    cat <<EOF
+usage: $( basename $0 ) [--nobct] [-f:h]
+
+    Build Polyworld on farm.
+
+OPTIONS:
+
+   --nobct        Don't build BCT.
+
+   -f fields
+                  Specify fields on which this should run. Must be a single argument,
+                so use quotes. e.g. -f "0 1" or -f "{0..3}"
+
+   -h             Show this message.
+EOF
+    exit 1
+}
+
 set -e
 
 function build_bct()
@@ -66,14 +86,14 @@ swig_lib_flags          = \$(swig_lib_flags_apple)" \
 
 if [ "$1" == "--field" ]; then
     shift
+    lock_app || exit 1
+
     if [ "$1" == "--nobct" ]; then
 	bct=false
 	shift
     else
 	bct=true
     fi
-
-    lock_app || exit 1
 
     store_orphan_run "$POLYWORLD_PWFARM_APP_DIR/run"
 
@@ -97,6 +117,28 @@ if [ "$1" == "--field" ]; then
 
     unlock_app
 else
+    opts=""
+    if [ "$1" == "--nobct" ]; then
+	opts="$1"
+	shift
+    fi
+
+    while getopts "f:h" opt; do
+	case $opt in
+	    f)
+		__pwfarm_config env set fieldnumbers "$OPTARG"
+		validate_farm_env
+		;;
+            h)
+		usage
+		;;
+	    *)
+		exit 1
+		;;
+	esac
+    done
+    shift $(( $OPTIND - 1 ))
+
     pwfarm_dir=$( canondirname "$0" )
     poly_dir=$( canonpath "$pwfarm_dir/../.." )
     scripts_dir=$( canonpath "$poly_dir/scripts" )
@@ -107,7 +149,7 @@ else
 
     scripts/package_source.sh $tmp_dir/src.zip
     
-    $pwfarm_dir/__pwfarm_dispatcher.sh --password dispatch $tmp_dir/src.zip "./scripts/farm/pwfarm_build.sh --field $*" nil nil
+    $pwfarm_dir/__pwfarm_dispatcher.sh --password dispatch $tmp_dir/src.zip "./scripts/farm/pwfarm_build.sh --field $opts $*" nil nil
 
     rm -rf $tmp_dir
 fi

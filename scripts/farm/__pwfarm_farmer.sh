@@ -85,10 +85,12 @@ BLOB="$3"
 require "$BLOB" "blob arg"
 PASSWORD="$4"
 require "$PASSWORD" "password arg"
-COMMAND="$5"
+PROMPT_ERR="$5"
+require "$PROMPT_ERR" "prompt_err arg"
+COMMAND="$6"
 require "$COMMAND" "command arg"
-OUTPUT_BASENAME="$6"
-OUTPUT_DIR="$7"
+OUTPUT_BASENAME="$7"
+OUTPUT_DIR="$8"
 
 if is_process_alive $PID; then
     kill $( cat $PID )
@@ -143,6 +145,7 @@ if step_begin "run_script"; then
 	--display "ssh __pwfarm_field.sh launch" \
 	$SSH -t "
           export PASSWORD=\"$PASSWORD\" ;
+          export PROMPT_ERR=\"$PROMPT_ERR\" ;
           $( $PWFARM_SCRIPTS_DIR/pwfarm_config.sh env export )
           cd $FIELD_STATE_DIR ;
           scripts/__pwfarm_field.sh launch

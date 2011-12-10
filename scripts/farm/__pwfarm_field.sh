@@ -234,9 +234,13 @@ case "$MODE" in
 		echo "PWFARM_SUDO invoked, but no password provided to script! __pwfarm_dispatcher must be invoked with --password!" >&2
 		exit 1
 	    fi
-	    printf "$PASSWORD\n" | sudo -S $*
+	    printf "$PASSWORD\n" | sudo -S -E $*
+	    exitval=$?
+
  	    # Make sure sudo queries us for a password on next invocation. 
 	    sudo -k
+
+	    return $exitval
 	}
 	export -f PWFARM_SUDO
 
@@ -258,7 +262,7 @@ case "$MODE" in
 
 	echo "$exitval" > "$RESULT_DIR/exitval"
 
-	if [ $exitval != 0 ] ; then
+	if $PROMPT_ERR && [ $exitval != 0 ] ; then
 	    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" >&2
 	    echo "An error occurred. Press \"Ctrl-a Esc\" to use PgUp/PgDown to find error description." >&2
 	    echo "When done looking, press Esc, then Enter..." >&2

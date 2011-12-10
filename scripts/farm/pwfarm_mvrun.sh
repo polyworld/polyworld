@@ -18,8 +18,12 @@ usage: $( basename $0 ) [-o:] runid_src runid_dst
 
 OPTIONS:
 
-    -o   Specify run owner, which is prepended to run ID. "nil" for no owner.
+    -f fields
+               Specify fields on which this should run. Must be a single argument,
+            so use quotes. e.g. -f "0 1" or -f "{0..3}"
 
+    -o owner
+               Specify run owner, which is prepended to run ID. "nil" for no owner.
 EOF
     exit 1
 }
@@ -38,8 +42,12 @@ fi
 owner=$( pwenv pwuser )
 owner_override=false
 
-while getopts "o:" opt; do
+while getopts "f:o:" opt; do
     case $opt in
+	f)
+	    __pwfarm_config env set fieldnumbers "$OPTARG"
+	    validate_farm_env
+	    ;;
 	o)
 	    owner="$OPTARG"
 	    owner_override=true

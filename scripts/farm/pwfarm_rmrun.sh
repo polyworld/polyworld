@@ -16,12 +16,16 @@ operates on runs in failed directory and failed orphans.
 
 OPTIONS:
 
-    -n     Don't delete anything, just show what data would be operated on.
+    -n         Don't delete anything, just show what data would be operated on.
 
-    -g     Operate on good runs and good orphans.
+    -g         Operate on good runs and good orphans.
 
-    -o     Specify run owner, which is prepended to run ID. "nil" for no owner.
-        When used, orphan runs aren't effected.
+    -f fields
+               Specify fields on which this should run. Must be a single argument,
+            so use quotes. e.g. -f "0 1" or -f "{0..3}"
+
+    -o owner
+               Specify run owner, which is prepended to run ID. "nil" for no owner.
 EOF
 
     exit 1
@@ -42,13 +46,17 @@ good=false
 owner=$( pwenv pwuser )
 owner_override=false
 
-while getopts "ngo:" opt; do
+while getopts "ngf:o:" opt; do
     case $opt in
 	n)
 	    testing=true
 	    ;;
 	g)
 	    good=true
+	    ;;
+	f)
+	    __pwfarm_config env set fieldnumbers "$OPTARG"
+	    validate_farm_env
 	    ;;
 	o)
 	    owner="$OPTARG"

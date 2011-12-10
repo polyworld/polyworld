@@ -52,6 +52,13 @@ else
     prompt_password="false"
 fi
 
+if [ "$1" == "--noprompterr" ]; then
+    shift
+    prompt_err="false"
+else
+    prompt_err="true"
+fi
+
 broadcast="false"
 
 mode="$1"
@@ -85,6 +92,7 @@ case "$mode" in
 
 	(
 	    echo $prompt_password
+	    echo $prompt_err
 	    echo $payload
 	    echo $command
 	    echo $output_basename
@@ -130,10 +138,11 @@ case "$mode" in
 	}
 
 	prompt_password=$( field 0 )
-	payload=$( field 1 )
-	command=$( field 2 )
-	output_basename=$( field 3 )
-	output_dir=$( field 4 )
+	prompt_err=$( field 1 )
+	payload=$( field 2 )
+	command=$( field 3 )
+	output_basename=$( field 4 )
+	output_dir=$( field 5 )
 
 	__pwfarm_config env set fieldnumbers $( fieldnums_from_hostnames $(cat $FIELDNUMBERS) )
 
@@ -261,22 +270,25 @@ if [ -e $FIELDNUMBERS ]; then
 
 	if [ "$mode" == "dispatch" ] || [ "$mode" == "recover" ]; then
 	    title="$fieldhostname - $command"
-	    screen -S "${SCREEN_SESSION}" -X screen -t "$title" "$FARMER_SH" $fieldnumber \
+	    screen -S "${SCREEN_SESSION}" -X screen -t "$title" \
+		"$FARMER_SH" \
+		$fieldnumber \
                 $mode \
                 "${BLOB_REMOTE}" \
                 "$PASSWORD" \
-                "$command" \
+		"$prompt_err" \
+		"$command" \
                 "$output_basename" \
                 "$output_dir"
 	else
 	    case "$mode" in 
 		"clear")
-		    echo "Clearing $fieldnumber (farm=$(pwenv farmname), session=$(pwenv sessionname))..."
+		    echo "   [ Clearing $fieldnumber (farm=$(pwenv farmname), session=$(pwenv sessionname)) ]"
 		    $FARMER_SH $fieldnumber clear
 		    ;;
 
 		"disconnect")
-		    echo "Disconnecting $fieldnumber..."
+		    echo "   [ Disconnecting $fieldnumber... ]"
 		    $FARMER_SH $fieldnumber disconnect
 		    ;;
 

@@ -18,6 +18,12 @@ MODES:
     df       Show output from df util -- disk free.
 
     screen   Show output from screen -ls
+
+OPTIONS:
+
+   -f fields
+             Specify fields on which this should run. Must be a single argument,
+          so use quotes. e.g. -f "0 1" or -f "{0..3}"
 EOF
     exit 1
 }
@@ -32,6 +38,19 @@ if [ "$1" == "--field" ]; then
 else
     field=false
 fi
+
+while getopts "f:" opt; do
+    case $opt in
+	f)
+	    __pwfarm_config env set fieldnumbers "$OPTARG"
+	    validate_farm_env
+	    ;;
+	*)
+	    exit 1
+	    ;;
+    esac
+done
+shift $(( $OPTIND - 1 ))
 
 if [ $# != 1 ]; then
     usage

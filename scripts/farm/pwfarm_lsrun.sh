@@ -21,7 +21,11 @@ a movie file for run 'foo/x', you could invoke:
 
 OPTIONS:
 
-    -o  owner
+    -f fields
+               Specify fields on which this should run. Must be a single argument,
+            so use quotes. e.g. -f "0 1" or -f "{0..3}"
+
+    -o owner
                Specify run owner, which is prepended to run ID. "nil" for no owner.
             When used, orphan runs aren't listed.
 
@@ -52,8 +56,12 @@ owner_override=false
 diskusage=false
 command="nil"
 
-while getopts "o:uc:" opt; do
+while getopts "f:o:uc:" opt; do
     case $opt in
+	f)
+	    __pwfarm_config env set fieldnumbers "$OPTARG"
+	    validate_farm_env
+	    ;;
 	o)
 	    owner="$OPTARG"
 	    owner_override=true
