@@ -3465,8 +3465,8 @@ void util__metabolism( const char *subdir ) {
 
 	std::sort( clusters.begin(), clusters.end(), Cluster::sort__member_size_descending );
 
-	float *mean[nclusters];
-	float *stddev[nclusters];
+// 	float *mean[nclusters];
+// 	float *stddev[nclusters];
 
 	// Compute per-cluster gene mean and stddev
 	for( int i = 0; i < nclusters; i++ ) {
@@ -3478,13 +3478,13 @@ void util__metabolism( const char *subdir ) {
 			calc.addGenome( genome );
 		}
 
-		float *stddev2 = calc.getResult();
-		for( int j = 0; j < GENES; j++ ) {
-			stddev2[j] = sqrt( stddev2[j] );
-		}
-
-		stddev[i] = stddev2;
-		mean[i] = calc.getMean();
+// 		float *stddev2 = calc.getResult();
+// 		for( int j = 0; j < GENES; j++ ) {
+// 			stddev2[j] = sqrt( stddev2[j] );
+// 		}
+// 
+// 		stddev[i] = stddev2;
+// 		mean[i] = calc.getMean();
 	}
 
 	int nmetabolisms = 2;
