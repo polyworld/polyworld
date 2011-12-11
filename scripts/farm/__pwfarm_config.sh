@@ -15,7 +15,7 @@ function __pwfarm_config()
 
     local mode=$1
 
-    function usage()
+    function __usage()
     {
 	local progname=$( basename $0 )
 	echo "\
@@ -69,7 +69,7 @@ usage: $progname define farm <farm_name> <pwuser> <osuser> <dstdir> <field_numbe
     }
 
     if [ "$#" == 0 ]; then
-	usage
+	__usage
     fi
 
     ###############################################################
@@ -439,7 +439,7 @@ usage: $progname define farm <farm_name> <pwuser> <osuser> <dstdir> <field_numbe
 		    esac
 		    ;;
 		*)
-		    usage "Invalid query propname ($propname)"
+		    __usage "Invalid query propname ($propname)"
 		    ;;
 	    esac
 	    ;;
@@ -496,7 +496,7 @@ usage: $progname define farm <farm_name> <pwuser> <osuser> <dstdir> <field_numbe
 		    if $prompt; then
 			read -p "Is this correct? [y/n]: " reply
 			if [ "$reply" != "y" ]; then
-			    usage "Aborted by user"
+			    __usage "Aborted by user"
 			fi
 		    fi
 
@@ -504,7 +504,7 @@ usage: $progname define farm <farm_name> <pwuser> <osuser> <dstdir> <field_numbe
 			if $( pwquery defined farm $farmname ); then
 			    read -p "Farm of this name already defined. Continue? (Session definitions will be untouched) [y/n]: " reply
 			    if [ "$reply" != "y" ]; then
-				usage "Aborted by user"
+				__usage "Aborted by user"
 			    fi
 			fi
 		    fi

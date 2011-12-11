@@ -21,7 +21,7 @@ OPTIONS:
 
    -f fields
                   Specify fields on which this should run. Must be a single argument,
-                so use quotes. e.g. -f "0 1" or -f "{0..3}"
+                so use quotes. e.g. -f "0 1" or -f "\$(echo {0..3})"
 EOF
     exit 1
 }

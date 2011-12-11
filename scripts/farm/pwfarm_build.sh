@@ -24,7 +24,7 @@ OPTIONS:
 
    -f fields
                   Specify fields on which this should run. Must be a single argument,
-                so use quotes. e.g. -f "0 1" or -f "{0..3}"
+                so use quotes. e.g. -f "0 1" or -f "\$(echo {0..3})"
 
    -b             Don't build BCT.
 
@@ -59,8 +59,10 @@ while getopts "cf:bh" opt; do
 	    clean=true
 	    ;;
 	f)
-	    __pwfarm_config env set fieldnumbers "$OPTARG"
-	    validate_farm_env
+	    if ! $field; then
+		__pwfarm_config env set fieldnumbers "$OPTARG"
+		validate_farm_env
+	    fi
 	    ;;
 	b)
 	    bct=false
@@ -73,6 +75,8 @@ while getopts "cf:bh" opt; do
 	    ;;
     esac
 done
+
+args=$( encode_args "$@" )
 
 set -e
 
@@ -212,7 +216,7 @@ else
 
     scripts/package_source.sh $tmp_dir/src.zip
     
-    $PWFARM_SCRIPTS_DIR/__pwfarm_dispatcher.sh --password dispatch $tmp_dir/src.zip "./scripts/farm/pwfarm_build.sh --field $*" nil nil
+    $PWFARM_SCRIPTS_DIR/__pwfarm_dispatcher.sh --password dispatch $tmp_dir/src.zip "./scripts/farm/pwfarm_build.sh --field $args" nil nil
 
     rm -rf $tmp_dir
 fi

@@ -23,7 +23,7 @@ OPTIONS:
 
     -f fields
                Specify fields on which this should run. Must be a single argument,
-            so use quotes. e.g. -f "0 1" or -f "{0..3}"
+            so use quotes. e.g. -f "0 1" or -f "\$(echo {0..3})"
 
     -o owner
                Specify run owner, which is prepended to run ID. "nil" for no owner.
@@ -59,8 +59,10 @@ command="nil"
 while getopts "f:o:uc:" opt; do
     case $opt in
 	f)
-	    __pwfarm_config env set fieldnumbers "$OPTARG"
-	    validate_farm_env
+	    if ! $field; then
+		__pwfarm_config env set fieldnumbers "$OPTARG"
+		validate_farm_env
+	    fi
 	    ;;
 	o)
 	    owner="$OPTARG"
