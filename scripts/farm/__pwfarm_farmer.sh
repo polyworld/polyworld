@@ -15,6 +15,9 @@ require "$FARMER_STATE_DIR" "farmer dir cannot be empty!!!"
 mkdir -p $FARMER_STATE_DIR
 cd $FARMER_STATE_DIR
 
+FARM_NAME=$( pwenv farmname )
+SESSION_NAME=$( pwenv sessionname )
+
 FIELD_STATE_DIR="$( pwenv fieldstate_dir )" || exit 1
 require "$FIELD_STATE_DIR" "field dir cannot be empty!!!"
 
@@ -38,7 +41,7 @@ case "$mode" in
 	# no-op... fall through
 	;;
     "clear")	
-	$SSH "
+	repeat_til_success $SSH "
           if [ -e $FIELD_STATE_DIR/pid ]; then
             kill \$( cat $FIELD_STATE_DIR/pid ) 2>/dev/null ;
           fi ;
@@ -81,21 +84,23 @@ esac
 #####
 ################################################################################
 
-BLOB="$3"
-require "$BLOB" "blob arg"
-PASSWORD="$4"
-require "$PASSWORD" "password arg"
-PROMPT_ERR="$5"
-require "$PROMPT_ERR" "prompt_err arg"
-COMMAND="$6"
-require "$COMMAND" "command arg"
-OUTPUT_BASENAME="$7"
-OUTPUT_DIR="$8"
+SCREEN_WINDOW="$3"
+FIELD_BORN="$4"
+BLOB="$5"
+PASSWORD="$6"
+PROMPT_ERR="$7"
+COMMAND="$8"
+OUTPUT_BASENAME="$9"
+OUTPUT_DIR="${10}"
 
+# If a farmer is already alive, then kill it.
 if is_process_alive $PID; then
     kill $( cat $PID )
 fi
 echo $$ > $PID
+
+# Notify dispatcher we're born.
+touch $FIELD_BORN
 
 touch $STEPS
 
@@ -113,6 +118,13 @@ function step_done()
 {
     echo "$__step" >> "$STEPS"
 }
+
+function title()
+{
+    screen -S "${DISPATCHER_SCREEN_SESSION}" -p $SCREEN_WINDOW -X title "$FARM_NAME/$SESSION_NAME/$FIELD_HOSTNAME: $*"
+}
+
+title "Init Field"
 
 #
 # Init field state dir
@@ -135,6 +147,58 @@ if step_begin "init_statedir"; then
     step_done
 fi
 
+title "Launching"
+
+#
+# Launch Status Background Process
+#
+(
+    if [ "$mode" == "dispatch" ]; then
+	failstate=false
+    else
+	failstate=true
+    fi
+
+    while true; do
+	if $failstate; then
+	    status=$( $SSH "
+                        cd $FIELD_STATE_DIR > /dev/null ;
+                        scripts/__pwfarm_status.py status_state get
+                      " 2>/dev/null )
+
+	    if [ $? != 0 ]; then
+		failstate=true
+	    else
+		failstate=false
+	    fi
+	else
+	    status=$( $SSH "
+                        cd $FIELD_STATE_DIR > /dev/null ;
+                        scripts/__pwfarm_status.py status_state wait
+                      " 2>/dev/null )
+
+	    if [ $? != 0 ]; then
+		failstate=true
+	    else
+		failstate=false
+	    fi
+	fi
+
+	if $failstate; then
+	    status="CONNECTION FAILURE"
+	elif [ "$status" == $( $PWFARM_SCRIPTS_DIR/__pwfarm_status.py quit_signature ) ]; then
+	    break
+	fi
+
+	title $status
+
+	if $failstate; then
+	    sleep 5
+	fi
+    done
+
+) &
+
 #
 # Run script
 #
@@ -154,6 +218,11 @@ if step_begin "run_script"; then
 
     step_done
 fi
+
+# Wait for status background task to complete.
+wait
+
+title "Downloading Result"
 
 #
 # Fetch result file

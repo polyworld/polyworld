@@ -15,5 +15,7 @@ else
     echo foo > bye/b
     zip -r $PWFARM_OUTPUT_FILE .
 
-    read -p "[test] press enter..."
+    #read -p "[test] press enter..."
+    sleep 3
+    exit 1
 fi

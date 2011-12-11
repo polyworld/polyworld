@@ -8,7 +8,7 @@ DISPATCHERSTATE_DIR=$( pwenv dispatcherstate_dir ) || exit 1
 require "$DISPATCHERSTATE_DIR" "dispatcher dir cannot be empty!!!"
 mkdir -p "$DISPATCHERSTATE_DIR" || exit 1
 
-SCREEN_SESSION="____pwfarm_dispatcher__farm_$( pwenv farmname )__session_$( pwenv sessionname )____"
+export DISPATCHER_SCREEN_SESSION="____pwfarm_dispatcher__farm_$( pwenv farmname )__session_$( pwenv sessionname )____"
 MUTEX=$DISPATCHERSTATE_DIR/mutex
 PARMS=$DISPATCHERSTATE_DIR/parms
 PID=$DISPATCHERSTATE_DIR/pid
@@ -18,29 +18,30 @@ BLOB_DIR=${DISPATCHERSTATE_DIR}/blob
 BLOB_LOCAL=${BLOB_DIR}/blob.zip
 BLOB_REMOTE="~/__pwfarm_blob__user_$( pwenv pwuser )__farm_$( pwenv farmname )__session_$( pwenv sessionname ).zip"
 BROADCAST_COMPLETE=$DISPATCHERSTATE_DIR/broadcast_complete
+FIELD_BORN=$DISPATCHERSTATE_DIR/field_born
 
 PWUSER=$( pwenv pwuser )
 OSUSER=$( pwenv osuser )
 
 function screen_active()
 {
-    screen -ls | grep "\\b${SCREEN_SESSION}\\b" > /dev/null
+    screen -ls | grep "\\b${DISPATCHER_SCREEN_SESSION}\\b" > /dev/null
 }
 
 function init_screen()
 {
-    screen -d -m -S "${SCREEN_SESSION}"
+    screen -d -m -S "${DISPATCHER_SCREEN_SESSION}"
 }
 
 function resume_screen()
 {
-    screen -r -S "${SCREEN_SESSION}"
+    screen -r -S "${DISPATCHER_SCREEN_SESSION}"
 }
 
 function kill_screen()
 {
     while screen_active; do
-	screen -S "${SCREEN_SESSION}" -X quit
+	screen -S "${DISPATCHER_SCREEN_SESSION}" -X quit
 	sleep 1
     done
 }
@@ -245,6 +246,7 @@ if $broadcast; then
 	cp "$PWFARM_SCRIPTS_DIR/__pwfarm_field.sh" scripts
 	cp "$PWFARM_SCRIPTS_DIR/__pwfarm_runutil.sh" scripts
 	cp "$PWFARM_SCRIPTS_DIR/__pwfarm_config.sh" scripts
+	cp "$PWFARM_SCRIPTS_DIR/__pwfarm_status.py" scripts
 	zip -qr "$BLOB_LOCAL" *
 	popd_quiet
 	set +e
@@ -261,6 +263,8 @@ fi
 ###
 ### Perform task on all field nodes
 ###
+screen_window=1
+
 if [ -e $FIELDNUMBERS ]; then
     for fieldnumber in $( cat $FIELDNUMBERS ); do
 
@@ -269,22 +273,32 @@ if [ -e $FIELDNUMBERS ]; then
 	FARMER_SH="$PWFARM_SCRIPTS_DIR/__pwfarm_farmer.sh"
 
 	if [ "$mode" == "dispatch" ] || [ "$mode" == "recover" ]; then
+	    rm -f $FIELD_BORN
+
 	    title="$fieldhostname - $command"
-	    screen -S "${SCREEN_SESSION}" -X screen -t "$title" \
+	    screen -S "${DISPATCHER_SCREEN_SESSION}" -X screen -t "$title" \
 		"$FARMER_SH" \
 		$fieldnumber \
                 $mode \
+		$screen_window \
+		$FIELD_BORN \
                 "${BLOB_REMOTE}" \
                 "$PASSWORD" \
 		"$prompt_err" \
 		"$command" \
                 "$output_basename" \
                 "$output_dir"
+
+	    while [ ! -e $FIELD_BORN ]; do
+		sleep 0.1
+	    done
+
+	    screen_window=$(( $screen_window + 1 ))
 	else
 	    case "$mode" in 
 		"clear")
 		    echo "   [ Clearing $fieldnumber (farm=$(pwenv farmname), session=$(pwenv sessionname)) ]"
-		    $FARMER_SH $fieldnumber clear
+		    ( $FARMER_SH $fieldnumber clear )&
 		    ;;
 
 		"disconnect")
@@ -313,9 +327,9 @@ fi
 ###
 if [ "$mode" == "dispatch" ] || [ "$mode" == "recover" ]; then
     # kill window 0... it just has bash
-    screen -S "${SCREEN_SESSION}" -p 0 -X kill
+    screen -S "${DISPATCHER_SCREEN_SESSION}" -p 0 -X kill
     # bring up screen, starting at the windowlist
-    screen -S "${SCREEN_SESSION}" -p = -r
+    screen -S "${DISPATCHER_SCREEN_SESSION}" -p = -r
     while screen_active; do
 	echo "Dispatcher screen still active! Resuming..."
 	sleep 5
@@ -326,6 +340,7 @@ if [ "$mode" == "dispatch" ] || [ "$mode" == "recover" ]; then
 else
     case "$mode" in
 	"clear")
+	    wait
 	    rm -f "$FIELDNUMBERS"
 	    mutex_unlock $MUTEX
 	    ;;

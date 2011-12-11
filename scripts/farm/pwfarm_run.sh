@@ -111,6 +111,7 @@ if [ "$1" == "--field" ]; then
     ### Execute the prerun script if it exists
     ###
     if [ -f $PAYLOAD_DIR/prerun.sh ]; then
+	PWFARM_STATUS "Config Script"
 	chmod +x $PAYLOAD_DIR/prerun.sh
 	$PAYLOAD_DIR/prerun.sh || exit 1
     fi
@@ -152,6 +153,8 @@ if [ "$1" == "--field" ]; then
 	### Run Polyworld!!! ###
 	###                  ###
 	########################
+	PWFARM_STATUS "Polyworld"
+
 	./Polyworld --status ./worldfile
 	exitval=$?
 
@@ -181,12 +184,16 @@ if [ "$1" == "--field" ]; then
     postrun_failed=false
 
     if [ -f $PAYLOAD_DIR/postrun.sh ]; then
+	PWFARM_STATUS "Analysis Script"
+
 	chmod +x $PAYLOAD_DIR/postrun.sh
 
 	if ! $PAYLOAD_DIR/postrun.sh; then
 	    postrun_failed=true
 	fi
     fi
+
+    PWFARM_STATUS "Package Run"
 
     ###
     ### Store a code snapshot

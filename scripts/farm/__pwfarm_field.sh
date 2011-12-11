@@ -8,6 +8,7 @@ COMMAND=$2
 VERBOSE=false
 
 eval FIELD_STATE_DIR="$( pwenv fieldstate_dir )"
+export STATUS_STATE="$FIELD_STATE_DIR/status_state"
 RESULT_DIR="$FIELD_STATE_DIR/result"
 RESULT_ZIP="$FIELD_STATE_DIR/result.zip"
 LOG="/tmp/log_user$(pwenv pwuser)_field$(pwenv fieldnumber)_session$(pwenv sessionname)_farm$(pwenv farmname)"
@@ -226,6 +227,16 @@ case "$MODE" in
     "command")
 	touch "$COMMAND_BORN"
 
+	$PWFARM_SCRIPTS_DIR/__pwfarm_status.py $STATUS_STATE server &
+
+	function PWFARM_STATUS()
+	{
+	    $PWFARM_SCRIPTS_DIR/__pwfarm_status.py $STATUS_STATE set "$*"
+	}
+	export -f PWFARM_STATUS
+
+	PWFARM_STATUS "Init Task"
+	
 	echo $$ > $PID_COMMAND
 
 	function PWFARM_SUDO()
@@ -255,6 +266,8 @@ case "$MODE" in
 	#
 	log "Executing command"
 
+	PWFARM_STATUS "Running"
+
 	bash -c "cd payload && $COMMAND"
 	exitval=$?
 
@@ -262,12 +275,20 @@ case "$MODE" in
 
 	echo "$exitval" > "$RESULT_DIR/exitval"
 
+	if [ $exitval == 0 ]; then
+	    PWFARM_STATUS "Success"
+	else
+	    PWFARM_STATUS "ERROR"
+	fi
+
 	if $PROMPT_ERR && [ $exitval != 0 ] ; then
 	    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" >&2
 	    echo "An error occurred. Press \"Ctrl-a Esc\" to use PgUp/PgDown to find error description." >&2
 	    echo "When done looking, press Esc, then Enter..." >&2
 	    read
 	fi
+
+	$PWFARM_SCRIPTS_DIR/__pwfarm_status.py $STATUS_STATE quit 
 
 	rm $PID_COMMAND
 
