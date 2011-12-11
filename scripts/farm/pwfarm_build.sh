@@ -97,6 +97,13 @@ function build_bct()
 	cd bct-cpp
     fi
 
+    if [ "$(svn info -r HEAD | grep 'Revision:')" == "$(cat .pwfarm_build.revision)" ]; then
+	popd_quiet
+	return 0
+    fi
+
+    PWFARM_STATUS "Building BCT"
+
     # Note: If you change the following contents of Makefile.vars, be sure to escape $ (\$)
     echo "\
 # Arguments to be sent to the C++ compiler
@@ -137,6 +144,8 @@ swig_lib_flags          = \$(swig_lib_flags_apple)" \
     cp bct_gsl.py "$POLYWORLD_PWFARM_APP_DIR/scripts"
     cp _bct_py.so "$POLYWORLD_PWFARM_APP_DIR/scripts"
     cp _bct_gsl.so "$POLYWORLD_PWFARM_APP_DIR/scripts"
+
+    svn info | grep "Revision:" > .pwfarm_build.revision
 
     popd_quiet
 }
@@ -191,14 +200,14 @@ if $field; then
     cp -r . "$POLYWORLD_PWFARM_APP_DIR"
     cd "$POLYWORLD_PWFARM_APP_DIR"
 
+    if $bct; then
+	build_bct
+    fi
+
     if $clean; then
 	PWFARM_STATUS "Clean Build"
     else
 	PWFARM_STATUS "Incremental Build"
-    fi
-
-    if $bct; then
-	build_bct
     fi
 
     make
