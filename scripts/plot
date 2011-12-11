@@ -919,8 +919,14 @@ def plot_clause( doc,
 
     gopts = options['global']
 
+    # Sort values by run path. This effects ordering of legend.
+    def __sort_values( values ):
+        values = list( values )
+        values.sort( key = lambda x: x[value_names[0]].path )
+        return values
+
     for classification, values_list in values_classified.items():
-        for values in values_list:
+        for values in __sort_values( values_list ):
             for v in mode.normalizeValueNames(classification,
                                               value_names):
                 table = values[v]
@@ -942,7 +948,7 @@ def plot_clause( doc,
     for classification, curvetypes in values_meta.items():
         for curvetype, values in curvetypes.items():
             for v in mode.normalizeValueNames(classification,
-                              value_names):
+                                              value_names):
                 table = values[v]
 
                 create_curves( mode,
