@@ -103,7 +103,7 @@ else
 		user=$( echo $line | sed 's/\(.*pwfarm_field__user_\)\(.*\)\(__farm_.*\)/\2/g' )
 		session=$( echo $line | sed 's/\(.*pwfarm_field_.*__session_\)\(.*\)\(____.*\)/\2/g' )
 
-		if [ "$session" != $( pwenv sessionname ) ]; then
+		if [ "$user" != "$( pwenv pwuser)" ] || [ "$session" != "$( pwenv sessionname )" ]; then
 		    echo "$session (user=$user)" >> $tmpdir/out 2>&1
 		fi
 	    done
