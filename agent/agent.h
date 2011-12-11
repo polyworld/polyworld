@@ -114,6 +114,7 @@ public:
 	static double	gMaxPopulationPenaltyFraction;
 	static double	gPopulationPenaltyFraction;
 	static double	gLowPopulationAdvantageFactor;
+	static double	gEnergyUseMultiplier;
 
     agent(TSimulation* simulation, gstage* stage);
     ~agent();

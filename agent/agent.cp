@@ -118,6 +118,7 @@ int			agent::gNumDepletionSteps = 0;
 double		agent::gMaxPopulationPenaltyFraction = 0.0;
 double		agent::gPopulationPenaltyFraction = 0.0;
 double		agent::gLowPopulationAdvantageFactor = 1.0;
+double		agent::gEnergyUseMultiplier = 1.0;
 
 
 // [TODO] figure out a better way to track agent indices
@@ -1087,6 +1088,8 @@ float agent::UpdateBody( float moveFitnessParam,
 	
 	// Apply low-population energy advantage
 	denergy *= gLowPopulationAdvantageFactor;	// if population is getting too low, reduce energy consumption
+	
+	denergy *= gEnergyUseMultiplier;	// global control over rate at which energy is consumed
 
     fEnergy -= denergy;
     fFoodEnergy -= denergy;

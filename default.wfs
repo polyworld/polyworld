@@ -2658,7 +2658,12 @@ GiveFraction {
 #-------------------------------------------------------------------
 # SECTION Simulation parameters -- Energy Use
 #-------------------------------------------------------------------
-	
+
+EnergyUseMultiplier {
+  type    FLOAT
+  default 1.0
+}
+
 EnergyUseEat {
   type    FLOAT
   default 0.01

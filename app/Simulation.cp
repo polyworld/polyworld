@@ -2437,6 +2437,7 @@ void TSimulation::InitWorld()
     agent::gMaxFocus = 140.0;
     agent::gAgentFOV = 10.0;
     agent::gMaxSizeAdvantage = 2.5;
+    agent::gEnergyUseMultiplier = 1.0;
     agent::gEat2Energy = 0.01;
     agent::gMate2Energy = 0.1;
     agent::gFight2Energy = 1.0;
@@ -7215,6 +7216,7 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 		}
 	}
     fPower2Energy = doc.get( "DamageRate" );
+    agent::gEnergyUseMultiplier = doc.get( "EnergyUseMultiplier" );
     agent::gEat2Energy = doc.get( "EnergyUseEat" );
 
 	// EnergyUseMate
