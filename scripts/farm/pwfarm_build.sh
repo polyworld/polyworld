@@ -9,22 +9,55 @@ fi
 function usage()
 {    
     cat <<EOF
-usage: $( basename $0 ) [--nobct] [-f:h]
+usage: $( basename $0 ) [-cf:bh]
 
     Build Polyworld on farm.
 
 OPTIONS:
 
-   --nobct        Don't build BCT.
+   -c             Clean build.
 
    -f fields
                   Specify fields on which this should run. Must be a single argument,
                 so use quotes. e.g. -f "0 1" or -f "{0..3}"
 
+   -b             Don't build BCT.
+
    -h             Show this message.
 EOF
     exit 1
 }
+
+if [ "$1" == "--field" ]; then
+    field=true
+    shift
+else
+    field=false
+fi
+
+clean=false
+bct=true
+
+while getopts "cf:bh" opt; do
+    case $opt in
+	c)
+	    clean=true
+	    ;;
+	f)
+	    __pwfarm_config env set fieldnumbers "$OPTARG"
+	    validate_farm_env
+	    ;;
+	b)
+	    bct=false
+	    ;;
+        h)
+	    usage
+	    ;;
+	*)
+	    exit 1
+	    ;;
+    esac
+done
 
 set -e
 
@@ -84,20 +117,12 @@ swig_lib_flags          = \$(swig_lib_flags_apple)" \
     popd_quiet
 }
 
-if [ "$1" == "--field" ]; then
-    shift
+if $field; then
     lock_app || exit 1
-
-    if [ "$1" == "--nobct" ]; then
-	bct=false
-	shift
-    else
-	bct=true
-    fi
 
     store_orphan_run "$POLYWORLD_PWFARM_APP_DIR/run"
 
-    if [ -e "$POLYWORLD_PWFARM_APP_DIR" ]; then
+    if $clean && [ -e "$POLYWORLD_PWFARM_APP_DIR" ]; then
 	mkdir -p /tmp/polyworld_pwfarm
 	bak=/tmp/polyworld_pwfarm/`date | sed -e "s/ /_/g" -e "s/:/./g"`
 	echo "$POLYWORLD_PWFARM_APP_DIR exists! Moving to $bak"
@@ -106,7 +131,7 @@ if [ "$1" == "--field" ]; then
     fi
 
     mkdir -p "$POLYWORLD_PWFARM_APP_DIR"
-    mv * "$POLYWORLD_PWFARM_APP_DIR"
+    cp -r * "$POLYWORLD_PWFARM_APP_DIR"
     cd "$POLYWORLD_PWFARM_APP_DIR"
 
     if $bct; then
@@ -117,39 +142,13 @@ if [ "$1" == "--field" ]; then
 
     unlock_app
 else
-    opts=""
-    if [ "$1" == "--nobct" ]; then
-	opts="$1"
-	shift
-    fi
-
-    while getopts "f:h" opt; do
-	case $opt in
-	    f)
-		__pwfarm_config env set fieldnumbers "$OPTARG"
-		validate_farm_env
-		;;
-            h)
-		usage
-		;;
-	    *)
-		exit 1
-		;;
-	esac
-    done
-    shift $(( $OPTIND - 1 ))
-
-    pwfarm_dir=$( canondirname "$0" )
-    poly_dir=$( canonpath "$pwfarm_dir/../.." )
-    scripts_dir=$( canonpath "$poly_dir/scripts" )
-
     tmp_dir=`mktemp -d /tmp/poly_build.XXXXXXXX` || exit 1
 
-    cd $poly_dir
+    cd $PWFARM_SCRIPTS_DIR/../..
 
     scripts/package_source.sh $tmp_dir/src.zip
     
-    $pwfarm_dir/__pwfarm_dispatcher.sh --password dispatch $tmp_dir/src.zip "./scripts/farm/pwfarm_build.sh --field $opts $*" nil nil
+    $PWFARM_SCRIPTS_DIR/__pwfarm_dispatcher.sh --password dispatch $tmp_dir/src.zip "./scripts/farm/pwfarm_build.sh --field $*" nil nil
 
     rm -rf $tmp_dir
 fi
