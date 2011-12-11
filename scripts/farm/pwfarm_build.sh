@@ -6,6 +6,11 @@ else
     source $PWFARM_SCRIPTS_DIR/__pwfarm_runutil.sh || exit 1
 fi
 
+########################################
+###
+### USAGE
+###
+########################################
 function usage()
 {    
     cat <<EOF
@@ -28,6 +33,11 @@ EOF
     exit 1
 }
 
+########################################
+###
+### DETERMINE MACHINE ROLE
+###
+########################################
 if [ "$1" == "--field" ]; then
     field=true
     shift
@@ -35,6 +45,11 @@ else
     field=false
 fi
 
+########################################
+###
+### PROCESS OPTIONS
+###
+########################################
 clean=false
 bct=true
 
@@ -61,6 +76,11 @@ done
 
 set -e
 
+########################################
+###
+### BCT BUILD ROUTINE
+###
+########################################
 function build_bct()
 {
     pushd_quiet .
@@ -118,9 +138,42 @@ swig_lib_flags          = \$(swig_lib_flags_apple)" \
 }
 
 if $field; then
+    ########################################
+    ###
+    ### BUILD LOGIC ON FIELD MACHINE
+    ###
+    ########################################
     lock_app || exit 1
 
     store_orphan_run "$POLYWORLD_PWFARM_APP_DIR/run"
+
+    # Generate list of files we just transferred
+    find . > .pwfarm_build.payload
+
+    # Check if any files have been deleted.
+    if ! $clean && [ -e "$POLYWORLD_PWFARM_APP_DIR/.pwfarm_build.payload" ]; then
+	function files_deleted()
+	{
+	    old="$1"
+	    new="$2"
+	    (
+		cat "$old" | awk '{ print "old\t"$0 }'
+		cat "$new" | awk '{ print "new\t"$0 }'
+	    ) |
+	    sort -k 2 |
+	    uniq -u -f 1 |
+	    cut -f 1 |
+	    grep old > /dev/null
+	}
+
+	if files_deleted "$POLYWORLD_PWFARM_APP_DIR/.pwfarm_build.payload" .pwfarm_build.payload; then
+	    echo "DETECTED DELETED FILES. FORCING CLEAN."
+	    clean=true
+	fi
+    else
+	echo "DIDN'T FIND PAYLOAD LIST. FORCING CLEAN."
+	clean=true
+    fi
 
     if $clean && [ -e "$POLYWORLD_PWFARM_APP_DIR" ]; then
 	mkdir -p /tmp/polyworld_pwfarm
@@ -131,8 +184,14 @@ if $field; then
     fi
 
     mkdir -p "$POLYWORLD_PWFARM_APP_DIR"
-    cp -r * "$POLYWORLD_PWFARM_APP_DIR"
+    cp -r . "$POLYWORLD_PWFARM_APP_DIR"
     cd "$POLYWORLD_PWFARM_APP_DIR"
+
+    if $clean; then
+	PWFARM_STATUS "Clean Build"
+    else
+	PWFARM_STATUS "Incremental Build"
+    fi
 
     if $bct; then
 	build_bct
@@ -142,6 +201,11 @@ if $field; then
 
     unlock_app
 else
+    ########################################
+    ###
+    ### LOCAL PREPARATION
+    ###
+    ########################################
     tmp_dir=`mktemp -d /tmp/poly_build.XXXXXXXX` || exit 1
 
     cd $PWFARM_SCRIPTS_DIR/../..
