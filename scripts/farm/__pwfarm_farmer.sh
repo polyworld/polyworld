@@ -219,8 +219,8 @@ if step_begin "run_script"; then
     step_done
 fi
 
-# Wait for status background task to complete.
-wait
+# Kill status background.
+kill $!
 
 title "Downloading Result"
 

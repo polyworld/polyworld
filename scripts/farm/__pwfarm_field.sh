@@ -289,12 +289,15 @@ case "$MODE" in
 	fi
 
 	$PWFARM_SCRIPTS_DIR/__pwfarm_status.py $STATUS_STATE quit 
+	log "Waiting for status server to die..."
+	wait
 
 	rm $PID_COMMAND
 
 	touch "$COMMAND_DONE"
 
 	log "COMMAND DONE!"
+
 	exit 0
 	;;
     "*")
