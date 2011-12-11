@@ -180,7 +180,7 @@ int main( int argc, char** argv )
 		printf( "%d", i );
 		for( float bias = MinBias; bias < MaxBias + DeltaBias*0.1; bias += DeltaBias )
 		{
-			float a = biasedLogistic( (float) i, bias, brain::gLogisticsSlope );
+			float a = biasedLogistic( (float) i, bias, brain::gLogisticSlope );
 			printf( "\t%g", a );
 		}
 		printf( "\n" );

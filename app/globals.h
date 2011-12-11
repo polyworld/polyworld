@@ -45,7 +45,7 @@ class globals
 public:
 	static float	worldsize;
 	static bool		wraparound;
-	static bool		edges;
+	static bool		blockedEdges;
 	static bool     stickyEdges;
 	static int      numEnergyTypes;
 	static AbstractFile::ConcreteFileType recordFileType;
@@ -119,7 +119,7 @@ namespace brain
 	// Public globals	
     extern NeuralValues gNeuralValues;
     extern long gNumPrebirthCycles;
-	extern float gLogisticsSlope;
+	extern float gLogisticSlope;
 	extern float gMaxWeight;
 	extern bool gEnableInitWeightRngSeed;
 	extern long gMinInitWeightRngSeed;

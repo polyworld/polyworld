@@ -191,11 +191,11 @@ void FiringRateModel::update( bool bprint )
 		if( tauGene )
 		{
 			float tau = neuron[i].tau;
-			newneuronactivation[i] = (1.0 - tau) * neuronactivation[i]  +  tau * logistic( newneuronactivation[i], brain::gLogisticsSlope );
+			newneuronactivation[i] = (1.0 - tau) * neuronactivation[i]  +  tau * logistic( newneuronactivation[i], brain::gLogisticSlope );
 		}
 		else
 		{
-			newneuronactivation[i] = logistic( newneuronactivation[i], brain::gLogisticsSlope );
+			newneuronactivation[i] = logistic( newneuronactivation[i], brain::gLogisticSlope );
 		}
 	#endif
 //		if( newneuronactivation[i] < minActivation )
@@ -211,7 +211,7 @@ void FiringRateModel::update( bool bprint )
 //	printf( "X:  min=%6.1f  max=%6.1f  avg=%6.1f\n", minActivation, maxActivation, avgActivation );
 
 	long numneurons = dims->numneurons;
-	float logisticsSlope = brain::gLogisticsSlope;
+	float logisticSlope = brain::gLogisticSlope;
     for( i = dims->firstInternalNeuron; i < numneurons; i++ )
     {
 		float newactivation = neuron[i].bias;
@@ -220,16 +220,16 @@ void FiringRateModel::update( bool bprint )
             newactivation += synapse[k].efficacy *
                neuronactivation[abs(synapse[k].fromneuron)];
 		}
-        //newneuronactivation[i] = logistic(newneuronactivation[i], brain::gLogisticsSlope);
+        //newneuronactivation[i] = logistic(newneuronactivation[i], brain::gLogisticSlope);
 
 		if( tauGene )
 		{
 			float tau = neuron[i].tau;
-			newactivation = (1.0 - tau) * neuronactivation[i]  +  tau * logistic( newactivation, logisticsSlope );
+			newactivation = (1.0 - tau) * neuronactivation[i]  +  tau * logistic( newactivation, logisticSlope );
 		}
 		else
 		{
-			newactivation = logistic( newactivation, logisticsSlope );
+			newactivation = logistic( newactivation, logisticSlope );
 		}
 
         newneuronactivation[i] = newactivation;

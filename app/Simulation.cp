@@ -2268,7 +2268,8 @@ void TSimulation::InitWorld()
 {
 	globals::worldsize = 100.0;
 	globals::wraparound = false;
-	globals::edges = true;
+	globals::blockedEdges = true;
+	globals::stickyEdges = false;
 	
     fMinNumAgents = 15;
     fInitNumAgents = 15;
@@ -2282,7 +2283,7 @@ void TSimulation::InitWorld()
     fMiscAgents = 150;
 	fPositionSeed = 42;
     fGenomeSeed = 42;
-	fSimulationSeed = 42;
+	fSimulationSeed = 0;
     fAgentsRfood = RFOOD_TRUE;
     fFitness1Frequency = 100;
     fFitness2Frequency = 2;
@@ -2373,7 +2374,7 @@ void TSimulation::InitWorld()
 
     brain::gMinWin = 22;
     brain::gDecayRate = 0.9;
-    brain::gLogisticsSlope = 0.5;
+    brain::gLogisticSlope = 0.5;
     brain::gMaxWeight = 1.0;
     brain::gInitMaxWeight = 0.5;
 	brain::gNumPrebirthCycles = 25;
@@ -3814,9 +3815,10 @@ void TSimulation::DeathAndStats( void )
 				 && (fDomains[c->Domain()].numAgents > fDomains[c->Domain()].minNumAgents)) )
 			{
 				if ( c->GetEnergy().isDepleted() ||
-					 (c->Age() >= c->MaxAge())  ||
-					 ((!globals::edges) && ((c->x() < 0.0) || (c->x() >  globals::worldsize) ||
-											(c->z() > 0.0) || (c->z() < -globals::worldsize))) ||
+					 c->Age() >= c->MaxAge()     ||
+					 ( !globals::blockedEdges && !globals::wraparound &&
+					 	(c->x() < 0.0 || c->x() >  globals::worldsize ||
+						 c->z() > 0.0 || c->z() < -globals::worldsize) ) ||
 					 c->GetDeathByPatch() )
 				{
 					LifeSpan::DeathReason reason = LifeSpan::DR_NATURAL;
@@ -5781,14 +5783,14 @@ void TSimulation::Kill( agent* c,
     	&& ((long)objectxsortedlist::gXSortedObjects.getCount(FOODTYPE) < fMaxFoodCount)
 		&& (fDomains[id].foodCount < fDomains[id].maxFoodCount)	// ??? Matt had commented this out; why?
 		&& ((fp = fDomains[id].whichFoodPatch( c->x(), c->z() )) && (fp->foodCount < fp->maxFoodCount))	// ??? Matt had nothing like this here; why?
-    	&& (globals::edges || ((c->x() >= 0.0) && (c->x() <=  globals::worldsize) &&
-    	                       (c->z() <= 0.0) && (c->z() >= -globals::worldsize))) )
+    	&& (globals::blockedEdges || (c->x() >= 0.0 && c->x() <=  globals::worldsize &&
+    	                              c->z() <= 0.0 && c->z() >= -globals::worldsize)) )
     {
 		const FoodType *carcassFoodType = c->GetMetabolism()->carcassFoodType;
 		if( carcassFoodType )
 		{
-			// etodo: we probably want a way to move nutrients around... like map energy[0] of agent to energy[1]
-			// of food.
+			// etodo: we probably want a way to move nutrients around...
+			// like map energy[0] of agent to energy[1] of food.
 
 			Energy foodEnergy = c->GetFoodEnergy();
 			// Multiply by polarity^2 so that we have values > 0 and so that any polarity of UNDEFINED gets zeroed.
@@ -6478,17 +6480,34 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	fStatusFrequency = doc.get( "StatusFrequency" );
 	fStatusToStdout = doc.get( "StatusToStdout" );
 	{
-		globals::edges = false;
-		globals::wraparound = false;
 		string prop = doc.get( "Edges" );
 		if( prop == "B" )
-			globals::edges = true;
+		{
+			globals::blockedEdges = true;
+			globals::wraparound = false;
+			globals::stickyEdges = false;
+		}
 		else if( prop == "W" )
+		{
+			globals::blockedEdges = false;
 			globals::wraparound = true;
+			globals::stickyEdges = false;
+		}
+		else if( prop == "T" )
+		{
+			globals::blockedEdges = false;
+			globals::wraparound = false;
+			globals::stickyEdges = false;
+		}
+		else if( prop == "S" )
+		{
+			globals::blockedEdges = true;
+			globals::wraparound = false;
+			globals::stickyEdges = true;
+		}
 		else
 			assert( false );
 	}
-	globals::stickyEdges = doc.get( "StickyEdges" );
 	globals::numEnergyTypes = doc.get( "NumEnergyTypes" );
 	agent::gVision = doc.get( "Vision" );
 	fShowVision = doc.get( "ShowVision" );
@@ -7338,7 +7357,7 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	fDropThreshold = doc.get( "DropThreshold" );
     genome::gMiscBias = doc.get( "MiscegenationFunctionBias" );
     genome::gMiscInvisSlope = doc.get( "MiscegenationFunctionInverseSlope" );
-    brain::gLogisticsSlope = doc.get( "LogisticSlope" );
+    brain::gLogisticSlope = doc.get( "LogisticSlope" );
     brain::gMaxWeight = doc.get( "MaxSynapseWeight" );
 
 	brain::gEnableInitWeightRngSeed = doc.get( "EnableInitWeightRngSeed" );
@@ -9305,8 +9324,8 @@ void TSimulation::ReadWorldFile(const char* filename)
     cout << "fDumpFrequency" ses fDumpFrequency nl;
     in >> fStatusFrequency; in >> label;
     cout << "fStatusFrequency" ses fStatusFrequency nl;
-    in >> globals::edges; in >> label;
-    cout << "edges" ses globals::edges nl;
+    in >> globals::blockedEdges; in >> label;
+    cout << "edges" ses globals::blockedEdges nl;
 
 	// TODO figure out how to config agent using this
     in >> globals::wraparound; in >> label;
@@ -9757,8 +9776,8 @@ void TSimulation::ReadWorldFile(const char* filename)
     cout << "miscbias" ses genome::gMiscBias nl;
     in >> genome::gMiscInvisSlope; in >> label;
     cout << "miscinvslope" ses genome::gMiscInvisSlope nl;
-    in >> brain::gLogisticsSlope; in >> label;
-    cout << "logisticslope" ses brain::gLogisticsSlope nl;
+    in >> brain::gLogisticSlope; in >> label;
+    cout << "logisticslope" ses brain::gLogisticSlope nl;
     in >> brain::gMaxWeight; in >> label;
     cout << "maxweight" ses brain::gMaxWeight nl;
 	if( version >= 52 )

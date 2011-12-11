@@ -1241,42 +1241,30 @@ float agent::UpdateBody( float moveFitnessParam,
 		// Need to do something special with the agent list,
 		// when the agents do a wraparound (for the sake of efficiency
 		// and possibly correctness in the sort)
-		if( globals::edges )
+		if( globals::blockedEdges )
 		{
 			bool collision = false;
 
 			if( fPosition[0] > globals::worldsize )
 			{
 				collision = true;
-				if( globals::wraparound )
-					fPosition[0] -= globals::worldsize;
-				else
-					fPosition[0] = globals::worldsize;
+				fPosition[0] = globals::worldsize;
 			}
 			else if( fPosition[0] < 0.0 )
 			{
 				collision = true;
-				if( globals::wraparound )
-					fPosition[0] += globals::worldsize;
-				else
-					fPosition[0] = 0.0;
+				fPosition[0] = 0.0;
 			}
 			
 			if( fPosition[2] < -globals::worldsize )
 			{
 				collision = true;
-				if( globals::wraparound )
-					fPosition[2] += globals::worldsize;
-				else
-					fPosition[2] = -globals::worldsize;
+				fPosition[2] = -globals::worldsize;
 			}
 			else if( fPosition[2] > 0.0 )
 			{
 				collision = true;
-				if( globals::wraparound )
-					fPosition[2] -= globals::worldsize;
-				else
-					fPosition[2] = 0.0;
+				fPosition[2] = 0.0;
 			}
 
 			if( collision )
@@ -1289,6 +1277,18 @@ float agent::UpdateBody( float moveFitnessParam,
 
 				fSimulation->UpdateCollisionsLog( this, OT_EDGE );
 			}
+		}
+		else if( globals::wraparound )
+		{
+			if( fPosition[0] > globals::worldsize )
+				fPosition[0] -= globals::worldsize;
+			else if( fPosition[0] < 0.0 )
+				fPosition[0] += globals::worldsize;
+			
+			if( fPosition[2] < -globals::worldsize )
+				fPosition[2] += globals::worldsize;
+			else if( fPosition[2] > 0.0 )
+				fPosition[2] -= globals::worldsize;
 		}
 	} // if( ! BeingCarried() )
 
@@ -1749,7 +1749,7 @@ void agent::NumberToName()
 //---------------------------------------------------------------------------
 // agent::Heal
 //---------------------------------------------------------------------------
-void agent::Heal( float HealingRate, float minFoodEnergy)
+void agent::Heal( float healingRate, float minFoodEnergy)
 {
 	// etodo
 	assert( false );
@@ -1758,7 +1758,7 @@ void agent::Heal( float HealingRate, float minFoodEnergy)
 	if( ( fFoodEnergy > minFoodEnergy) && (fMaxEnergy > fEnergy) )		
 	{
 		// which is the smallest: healing rate, amount agent can give, or amount agent can receive?
-		float cangive = fminf( HealingRate, fFoodEnergy - minFoodEnergy );
+		float cangive = fminf( healingRate, fFoodEnergy - minFoodEnergy );
 		float delta = fminf( cangive, fMaxEnergy - fEnergy );
 
 		fFoodEnergy -= delta;					// take delta away from FoodEnergy

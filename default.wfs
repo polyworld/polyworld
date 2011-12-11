@@ -83,7 +83,7 @@ MaxSteps {
 MinAgents {
   type    INT
   default 90
-  min     0 # not sure about this... should it be no less than 2?
+  min     0
 }
 
 MaxAgents {
@@ -101,9 +101,10 @@ InitAgents {
 
 SeedAgents {
   type    INT
-  default $( InitAgents ) # think this is a good idea?
+  default $( InitAgents )
+  legacy  0
   min     0
-  max     $( InitAgents ) # is this right? I have to look at the code.
+  max     $( InitAgents )
 }
 
 SeedMutationProbability {
@@ -115,14 +116,15 @@ SeedMutationProbability {
 
 InitFood {
   type    INT
-  default $( MinFood ) # good idea?
+  default $( MinFood if MinFood > 0 else 90 )
   min     $( MinFood )
   max     $( MaxFood )
 }
 
 MinFood {
   type    INT
-  default 90
+  default 0
+  legacy  90
   min     0
 }
 
@@ -134,15 +136,16 @@ MaxFood {
 
 MaxFoodGrown {
   type    INT
-  default $( MinFood ) # good idea?
+  default $( MaxFood )
+  legacy  $( MinFood )
   max     $( MaxFood )
 }
 
 FoodGrowthRate {
   type    FLOAT
-  default 0.1
+  default 0.1	# decimal part multiplies (maxGrown - current) to give probability each step
   min     0.0
-  max     1.0 # is this right?
+  max     10.0	# integer part is raw count of pieces to add per step
 }
 
 FoodRemoveEnergy {
@@ -152,14 +155,14 @@ FoodRemoveEnergy {
 
 FoodMaxLifeSpan {
   type    INT
-  default 0 # 0 means infinity
+  default 0		# 0 means infinity
   min 0
 }
 
 MinFoodEnergy {
   type    FLOAT
   default 200.0
-  exmin   0.0 # does this have to be > 0, or >= 0?
+  min     0.0
 }
 
 MaxFoodEnergy {
@@ -312,7 +315,7 @@ AgentMetabolisms {
 
           Record {
             type    BOOL
-            default True
+            default $( RecordAll )	# should depend on whether property is actually conditional or not
           }
 
           Conditions {
@@ -412,7 +415,7 @@ AgentMetabolisms {
 
           Record {
             type    BOOL
-            default True
+            default $( RecordAll )	# should depend on whether property is actually conditional or not
           }
 
           Conditions {
@@ -512,20 +515,18 @@ AgentMetabolisms {
 Barriers {
   type    ARRAY
   default [
-    # I don't think we actually want these as default values. These are values I was playing
-    # with for shields. Note gaps on both ends of Z.
     KeyFrames [
-      X1    0.33
-      Z1    -0.9
-      X2    0.33
-      Z2    -0.1
+      X1    $(  0.3333 if RatioBarrierPositions else  33.33 )
+      Z1    $( -1.0    if RatioBarrierPositions else -Worldsize )
+      X2    $(  0.3333 if RatioBarrierPositions else  33.33 )
+      Z2    $( -0.1    if RatioBarrierPositions else -0.1*Worldsize )
     ]
   ,
     KeyFrames [
-      X1    0.67
-      Z1    -0.9
-      X2    0.67
-      Z2    -0.1
+      X1    $(  0.6667 if RatioBarrierPositions else  66.67 )
+      Z1    $( -1.0    if RatioBarrierPositions else -Worldsize )
+      X2    $(  0.6667 if RatioBarrierPositions else  66.67 )
+      Z2    $( -0.1    if RatioBarrierPositions else -0.1*Worldsize )
     ]
   ]
 
@@ -720,70 +721,70 @@ Domains {
 
       MinAgentsFraction {
         type    FLOAT
-	default -1.0
+        default -1.0
         max     1.0
         assert  $( (MinAgentsFraction == -1.0) or (MinAgentsFraction >= 0.0) )
       }
 
       MaxAgentsFraction {
         type    FLOAT
-	default -1.0
+        default -1.0
         max     1.0
         assert  $( (MaxAgentsFraction == -1.0) or (MaxAgentsFraction >= 0.0) )
       }
 
       InitAgentsFraction {
         type    FLOAT
-	default -1.0
+        default -1.0
         max     1.0
         assert  $( (InitAgentsFraction == -1.0) or (InitAgentsFraction >= 0.0) )
       }
 
       InitSeedsFraction {
         type    FLOAT
-	default -1.0
+        default -1.0
         max     1.0
         assert  $( (InitSeedsFraction == -1.0) or (InitSeedsFraction >= 0.0) )
       }
 
       ProbabilityOfMutatingSeeds {
         type    FLOAT
-	default -1.0
+        default -1.0
         max     1.0
         assert  $( (ProbabilityOfMutatingSeeds == -1.0) or (ProbabilityOfMutatingSeeds >= 0.0) )
       }
 
       InitFoodFraction {
         type    FLOAT
-	default -1.0
+        default -1.0
         max     1.0
         assert  $( (InitFoodFraction == -1.0) or (InitFoodFraction >= 0.0) )
       }
 
       MinFoodFraction {
         type    FLOAT
-	default -1.0
+        default -1.0
         max     1.0
         assert  $( (MinFoodFraction == -1.0) or (MinFoodFraction >= 0.0) )
       }
 
       MaxFoodFraction {
         type    FLOAT
-	default -1.0
+        default -1.0
         max     1.0
         assert  $( (MaxFoodFraction == -1.0) or (MaxFoodFraction >= 0.0) )
       }
 
       MaxFoodGrownFraction {
         type    FLOAT
-	default -1.0
+        default -1.0
         max     1.0
         assert  $( (MaxFoodGrownFraction == -1.0) or (MaxFoodGrownFraction >= 0.0) )
       }
 
       FoodRate {
         type    FLOAT
-	default -1.0
+        default -1.0
         max     1.0
         assert  $( (FoodRate == -1.0) or (FoodRate >= 0.0) )
       }
@@ -812,35 +813,35 @@ Domains {
 
             InitFoodFraction {
               type    FLOAT
-	      default -1.0
+              default -1.0
               max     1.0
               assert  $( (InitFoodFraction == -1.0) or (InitFoodFraction >= 0.0) )
             }
                                     
             MinFoodFraction {
               type    FLOAT
-	      default -1.0
+              default -1.0
               max     1.0
               assert  $( (MinFoodFraction == -1.0) or (MinFoodFraction >= 0.0) )
             }
                                     
             MaxFoodFraction {
               type    FLOAT
-	      default -1.0
+              default -1.0
               max     1.0
               assert  $( (MaxFoodFraction == -1.0) or (MaxFoodFraction >= 0.0) )
             }
                                     
             MaxFoodGrownFraction {
               type    FLOAT
-	      default -1.0
+              default -1.0
               max     1.0
               assert  $( (MaxFoodGrownFraction == -1.0) or (MaxFoodGrownFraction >= 0.0) )
             }
                                     
             FoodRate {
               type    FLOAT
-	      default -1.0
+              default -1.0
               max     1.0
               assert  $( (FoodRate == -1.0) or (FoodRate >= 0.0) )
             }
@@ -892,7 +893,7 @@ Domains {
               type    FLOAT
               default 10.0
               min     0.0
-              max     $( WorldSize ) # what should the max be? this is kind of a fudge factor, isn't it?
+              max     $( WorldSize )	# no great choice here, but should never be larger than this
             }
 
             RemoveFood {
@@ -1056,7 +1057,7 @@ Domains {
               type    FLOAT
               default 0.0
               min     0.0
-              max     $( WorldSize ) # what should the max be? this is kind of a fudge factor, isn't it?
+              max     $( WorldSize )	# no great choice here, but should never be larger than this
             }
 
             OverrideBrickColor {
@@ -1123,22 +1124,15 @@ WorldSize {
   exmin   0.0
 }
 
-Edges { # TODO: I don't know what this is in the code.
+Edges {
   type    ENUM
   default B
   values [
     B         # Blocked
     W         # Wraparound
-    T         # Tabletop    
+    T         # Tabletop
+    S         # Sticky (and Blocked)
   ]
-}
-
-#
-# Can the agents slide along the world edge?
-#
-StickyEdges {
-  type    BOOL
-  default False
 }
 
 #
@@ -1168,7 +1162,7 @@ MaxMateVelocity {
 
     Record {
       type    BOOL
-      default True
+      default $( RecordAll )	# should depend on whether property is actually conditional or not
     }
 
     Conditions {
@@ -1269,7 +1263,7 @@ MinEatVelocity {
 
     Record {
       type    BOOL
-      default True
+      default $( RecordAll )	# should depend on whether property is actually conditional or not
     }
 
     Conditions {
@@ -1414,7 +1408,7 @@ MaxEatVelocity {
 
     Record {
       type    BOOL
-      default True
+      default $( RecordAll )	# should depend on whether property is actually conditional or not
     }
 
     Conditions {
@@ -1559,7 +1553,7 @@ MaxEatYaw {
 
     Record {
       type    BOOL
-      default True
+      default $( RecordAll )	# should depend on whether property is actually conditional or not
     }
 
     Conditions {
@@ -1726,7 +1720,7 @@ EatMateMinDistance {
 
     Record {
       type    BOOL
-      default True
+      default $( RecordAll )	# should depend on whether property is actually conditional or not
     }
 
     Conditions {
@@ -1821,26 +1815,22 @@ EatMateMinDistance {
 
 EnableMateWaitFeedback {
   type    BOOL
-  default True
-  legacy  False
+  default False
 }
 
 EnableSpeedFeedback {
   type    BOOL
-  default True
-  legacy  False
+  default False
 }
 
 EnableGive {
   type    BOOL
-  default True
-  legacy  False
+  default False
 }
 
 EnableCarry {
   type    BOOL
-  default True
-  legacy  False
+  default False
 
   # TODO: 1) Enhance tokenizer to support quotes.
   #       2) Enhance eval() to automatically escape quotes in expressions.
@@ -1850,14 +1840,14 @@ EnableCarry {
     if $( MaxCarries == 0 ) {
       warn $( \"EnableCarry = True, but MaxCarries = 0\" )
     } elif $( not (CarryAgents or CarryFood or CarryBricks) ) {
-      warn $( \"EnableCarry = True, but CarryAgents, CarryFood, and CarryBricks all False.\" )
+      warn $( \"EnableCarry = True, but CarryAgents, CarryFood, and CarryBricks are all False.\" )
     }
   }
 }
 
 MaxCarries {
   type    INT
-  default 3
+  default 1
 }
 
 CarryAgents {
@@ -1887,32 +1877,31 @@ ShieldFood {
 
 ShieldBricks {
   type    BOOL
-  default True
-  legacy  False
+  default False
 }
 
-CarryPreventsEat {
+CarryPreventsEat {		# probability that agent carrying something prevents it from eating
   type    FLOAT
   default 0.0
   min     0.0
   max     1.0
 }
 
-CarryPreventsFight {
+CarryPreventsFight {	# probability that agent carrying something prevents it from fighting
   type    FLOAT
   default 0.0
   min     0.0
   max     1.0
 }
 
-CarryPreventsGive {
+CarryPreventsGive {		# probability that agent carrying something prevents it from giving
   type    FLOAT
   default 0.0
   min     0.0
   max     1.0
 }
 
-CarryPreventsMate {
+CarryPreventsMate {		# probability that agent carrying something prevents it from mating
   type    FLOAT
   default 0.0
   min     0.0
@@ -1921,8 +1910,7 @@ CarryPreventsMate {
 
 EnableVisionPitch {
   type    BOOL
-  default True
-  legacy  False
+  default False
 }
 
 MinVisionPitch {
@@ -1941,8 +1929,7 @@ MaxVisionPitch {
 
 EnableVisionYaw {
   type    BOOL
-  default True
-  legacy  False
+  default False
 }
 
 MinVisionYaw {
@@ -1961,8 +1948,7 @@ MaxVisionYaw {
 
 EyeHeight {
   type    FLOAT
-  default 1.0
-  legacy  0.5
+  default 0.5
   min     0.0
   max     1.0
 }
@@ -2041,8 +2027,7 @@ SolidFood {
 
 SolidBricks {
   type    BOOL
-  default False
-  legacy  True
+  default True
 }
 
 PreBirthCycles {
@@ -2144,7 +2129,7 @@ FoodConsumptionRate {
 
 MinMateEnergyFraction {
   type    FLOAT
-  default 0.0		# (eliminate someday?)
+  default 0.0
   min     0.0
   max     1.0
 }
@@ -2192,7 +2177,6 @@ DamageRate {
 ProbabilisticFoodPatches {
   type    BOOL
   default True
-  legacy  False
 }
 
 RandomBirthLocation {
@@ -2254,141 +2238,171 @@ LinearFogEnd {
 MinAgentSize {
   type    FLOAT
   default 0.5
+  exmin   0.0
 }
 
 MaxAgentSize {
   type    FLOAT
   default 2.0
+  exmin   $( MinAgentSize )
 }
 
 MinAgentStrength {
   type    FLOAT
   default 0.5
+  exmin   0.0
 }
 
 MaxAgentStrength {
   type    FLOAT
   default 2.0
+  exmin   $( MinAgentStrength )
 }
 
 MinAgentMaxSpeed {
   type    FLOAT
   default 0.5
+  exmin   0.0
 }
 
 MaxAgentMaxSpeed {
   type    FLOAT
   default 1.5
+  exmin   $( MinAgentMaxSpeed )
 }
 
 MinMutationRate {
   type    FLOAT
-  default 0.001
+  default 0.01
+  min     0.0
 }
 
 MaxMutationRate {
   type    FLOAT
-  default 0.005
+  default 0.05
+  min     0.0
 }
 
 MinCrossoverPoints {
   type    INT
   default 2
+  min     0
 }
 
 MaxCrossoverPoints {
   type    INT
-  default 8
+  default 100
+  legacy  8
+  min     $( MinCrossoverPoints )
 }
 
 MinLifeSpan {
   type    INT
   default 500
+  min     1
 }
 
 MaxLifeSpan {
   type    INT
   default 1000
+  min     $( MinLifeSpan )
 }
 
 MinEnergyFractionToOffspring {
   type    FLOAT
   default 0.2
+  exmin   0.0
 }
 
 MaxEnergyFractionToOffspring {
   type    FLOAT
   default 0.8
+  min     $( MinEnergyFractionToOffspring )
 }
 
 MinVisionNeuronsPerGroup {
   type    INT
   default 1
+  min     1
 }
 
 MaxVisionNeuronsPerGroup {
   type    INT
   default 16
+  min     $( MinVisionNeuronsPerGroup )
 }
 
 MinInternalNeuralGroups {
   type    INT
-  default 20
+  default 0
+  min     0
 }
 
 MaxInternalNeuralGroups {
   type    INT
   default 20
+  legacy  5
+  min     $( MinInternalNeuralGroups )
 }
 
 MinExcitatoryNeuronsPerGroup {
   type    INT
   default 0
+  min     0
 }
 
 MaxExcitatoryNeuronsPerGroup {
   type    INT
   default 16
+  min     $( MinExcitatoryNeuronsPerGroup )
 }
 
 MinInhibitoryNeuronsPerGroup {
   type    INT
   default 0
+  min     0
 }
 
 MaxInhibitoryNeuronsPerGroup {
   type    INT
   default 16
+  min     $( MinInhibitoryNeuronsPerGroup )
 }
 
 MinConnectionDensity {
   type    FLOAT
   default 0.0
+  min     0.0
 }
 
 MaxConnectionDensity {
   type    FLOAT
   default 1.0
+  min     $( MinConnectionDensity )
 }
 
 MinTopologicalDistortion {
   type    FLOAT
   default 0.0
+  min     0.0
 }
 
 MaxTopologicalDistortion {
   type    FLOAT
   default 1.0
+  min     $( MinTopologicalDistortion )
 }
 
 MinLearningRate {
   type    FLOAT
   default 0.0
+  min     0.0
 }
 
 MaxLearningRate {
   type    FLOAT
   default 0.1
+  min     $( MinLearningRate )
 }
 
 #-------------------------------------------------------------------
@@ -2409,8 +2423,7 @@ MaxInitialBitProb {
 
 EnableTopologicalDistortionRngSeed {
   type    BOOL
-  default True
-  legacy  False
+  default False
 }
 
 MinTopologicalDistortionRngSeed {
@@ -2427,8 +2440,7 @@ MaxTopologicalDistortionRngSeed {
 
 EnableInitWeightRngSeed {
   type    BOOL
-  default True
-  legacy  False
+  default False
 }
 
 MinInitWeightRngSeed {
@@ -2445,14 +2457,12 @@ MaxInitWeightRngSeed {
 
 SeedFightBias {
   type    FLOAT
-  default 0.0
-  legacy  0.5
+  default 0.5
 }
 
 SeedFightExcitation {
   type    FLOAT
-  default 0.0
-  legacy  1.0
+  default 1.0
 }
 
 SeedGiveBias {
@@ -2486,27 +2496,32 @@ SeedDropExcitation {
 
 LogisticSlope {
   type    FLOAT
-  default 0.5
+  default 1.0
+  legacy  0.5
 }
 
 MaxSynapseWeight {
   type    FLOAT
   default 8.0
+  exmin   0.0
 }
 
 MaxSynapseWeightInitial {
   type    FLOAT
   default 2.0
+  exmin   0.0
 }
 
 SynapseWeightDecayRate {
   type    FLOAT
   default 0.99
+  max     1.0
+  exmin   0.0
 }
 
 MaxBiasWeight {
   type    FLOAT
-  default 8.0
+  default $( MaxSynapseWeight )
 }
 
 NeuronModel {
@@ -2521,7 +2536,7 @@ NeuronModel {
 
 EnableSpikingGenes {
   type BOOL
-  default True
+  default $( True if NeuronModel == \"S\" else False )
 }
 
 SpikingAMin {
@@ -2532,6 +2547,7 @@ SpikingAMin {
 SpikingAMax {
   type    FLOAT
   default 0.2
+  min     $( SpikingAMin )
 }
 
 SpikingBMin {
@@ -2542,6 +2558,7 @@ SpikingBMin {
 SpikingBMax {
   type    FLOAT
   default 0.3
+  min     $( SpikingBMin )
 }
 
 SpikingCMin {
@@ -2552,6 +2569,7 @@ SpikingCMin {
 SpikingCMax {
   type    FLOAT
   default -30
+  min     $( SpikingCMax )
 }
 
 SpikingDMin {
@@ -2562,6 +2580,7 @@ SpikingDMin {
 SpikingDMax {
   type    FLOAT
   default 10
+  min     $( SpikingDMin )
 }
 
 
@@ -2573,6 +2592,7 @@ TauMin {
 TauMax {
   type    FLOAT
   default 1.0
+  min     $( TauMin )
 }
 
 TauSeed {
@@ -2602,8 +2622,7 @@ FightThreshold {
 
 GiveThreshold {
   type    FLOAT
-  default 0.3
-  legacy  0.2
+  default 0.2
 }
 
 PickupThreshold {
@@ -2633,7 +2652,6 @@ FightMultiplier {
 GiveFraction {
   type    FLOAT
   default 0.2
-  legacy  1.0
 }
 
 
@@ -2668,7 +2686,7 @@ EnergyUseMateConditional {
 
     Record {
       type    BOOL
-      default True
+      default $( RecordAll )	# should depend on whether property is actually conditional or not
     }
 
     Conditions {
@@ -2822,12 +2840,12 @@ EnergyUseCarryBrick {
 
 EnergyUseNeurons {
   type    FLOAT
-  default 1.84
+  default 0.1	# was 1.84; where did that come from?
 }
 
 EnergyUseSynapses {
   type    FLOAT
-  default 0.34
+  default 0.01	# was 0.34; where did that come from?
 }
 
 EnergyUseFixed {
@@ -2843,11 +2861,6 @@ ComplexityType {
   type    STRING
   default P
   legacy  O
-}
-
-RecordGeneSeparation {
-  type    BOOL
-  default False
 }
 
 EndOnPopulationCrash {
@@ -2889,7 +2902,7 @@ ParallelBrains {
 
 CheckPointFrequency {
   type    INT
-  default 1000
+  default 1000	# sadly, still not used
 }
 
 StatusFrequency {
@@ -3108,128 +3121,129 @@ GrayCoding {
   default False
 }
 
-RecordMovie {
+RecordAll {
   type    BOOL
   default False
+}
+
+RecordFrequency {
+  type    INT
+  default 1000
+}
+
+RecordMovie {
+  type    BOOL
+  default $( RecordAll )
+}
+
+RecordGeneSeparation {
+  type    BOOL
+  default False	# an exception to RecordAll because it is so computationally expensive
 }
 
 RecordBirthsDeaths {
   type    BOOL
-  default True
-  legacy  False
+  default $( RecordAll )
 }
 
 RecordPosition {
   type    BOOL
-  default True
-  legacy  False
+  default $( RecordAll )
 }
 
 RecordBarrierPosition {
   type    BOOL
-  default True
-  legacy  False
+  default $( RecordAll )
 }
 
 RecordContacts {
   type    BOOL
-  default True
-  legacy  False
+  default $( RecordAll )
 }
 
 RecordCollisions {
   type    BOOL
-  default True
-  legacy  False
+  default $( RecordAll )
 }
 
 RecordCarry {
   type    BOOL
-  default True
-  legacy  False
+  default $( RecordAll )
 }
 
 RecordEnergy {
   type    BOOL
-  default True
-  legacy  False
+  default $( RecordAll )
 }
 
 BrainAnatomyRecordAll {
   type    BOOL
-  default True
-  legacy  False
+  default $( RecordAll )
 }
 
 BrainFunctionRecordAll {
   type    BOOL
-  default True
-  legacy  False
+  default $( RecordAll )
 }
 
 BrainAnatomyRecordSeeds {
   type    BOOL
-  default True
-  legacy  False
+  default False		# why does this functionality exist?  eliminate it someday?
 }
 
 BrainFunctionRecordSeeds {
   type    BOOL
-  default True
-  legacy  False
+  default False		# why does this functionality exist?  eliminate it someday?
 }
 
 BrainFunctionRecentRecordFrequency {
   type    INT
-  default 1000
+  default $( RecordFrequency if RecordAll else 0 )
 }
 
 BestSoFarBrainAnatomyRecordFrequency {
   type    INT
-  default 1000
+  default $( RecordFrequency if RecordAll else 0 )
 }
 
 BestSoFarBrainFunctionRecordFrequency {
   type    INT
-  default 1000
+  default $( RecordFrequency if RecordAll else 0 )
 }
 
 BestRecentBrainAnatomyRecordFrequency {
   type    INT
-  default 1000
+  default $( RecordFrequency if RecordAll else 0 )
 }
 
 BestRecentBrainFunctionRecordFrequency {
   type    INT
-  default 1000
+  default $( RecordFrequency if RecordAll else 0 )
 }
 
 RecordGeneStats {
   type    BOOL
-  default True
-  legacy  False
+  default $( RecordAll )
 }
 
 RecordPerformanceStats {
   type    BOOL
-  default True
+  default False	# only affects recording of frame rate in stat files
 }
 
 RecordFoodPatchStats {
   type    BOOL
-  default True
-  legacy  False
+  default True	# only affects recording of food patch stats in stat files
 }
 
 RecordComplexity {
   type    BOOL
-  default False
+  default False	# an exception to RecordAll because it is so computationally expensive
 }
 
 RecordAdamiComplexity {
   type    BOOL
-  default False
-  legacy  False
+  default False	# an exception to RecordAll because of computational expense and we don't usually want it
 }
 
 AdamiComplexityRecordFrequency {
@@ -3239,14 +3253,12 @@ AdamiComplexityRecordFrequency {
 
 RecordGenomes {
   type    BOOL
-  default True
-  legacy  False
+  default $( RecordAll )
 }
 
 RecordSeparations {
   type    BOOL
-  default True
-  legacy  False
+  default $( RecordAll )
 }
 
 CompressFiles {
@@ -3343,11 +3355,6 @@ FitnessWeightLongevity {
 # SECTION Eliminate
 #-------------------------------------------------------------------
 
-WrapAround {
-  type    BOOL
-  default False	# now use "Borders", requires code change
-}
-
 Vision {
   type    BOOL
   default True	# make always true
@@ -3396,12 +3403,12 @@ ChartGeneSeparation {
 
 MinBiasLrate {
   type    FLOAT
-  default 0.0		# set to zero or disable entirely
+  default 0.0	# set to zero or disable entirely
 }
 
 MaxBiasLrate {
   type    FLOAT
-  default 0.0		# set to zero or disable entirely
+  default 0.0	# set to zero or disable entirely
 }
 
 OverHeadRank {
@@ -3489,7 +3496,7 @@ MaxSynapse2Energy			--->		EnergyUseSynapses
 FixedEnergyDrain			--->		EnergyUseFixed
 MinSizePenalty				--->		MinSizeEnergyPenalty
 MaxSizePenalty				--->		MaxSizeEnergyPenalty
-LogisticsSlope				--->		LogisticSlope
+LogisticSlope				--->		LogisticSlope
 MaxWeight					--->		MaxSynapseWeight
 InitMaxWeight				--->		MaxSynapseWeightInitial
 DecayRate					--->		SynapseWeightDecayRate

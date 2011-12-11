@@ -10,7 +10,7 @@
 
 float   globals::worldsize;		// agent, food
 bool	globals::wraparound;	// agent, sceneview, simulation
-bool	globals::edges;			// agent, simulation
+bool	globals::blockedEdges;	// agent, simulation
 bool	globals::stickyEdges;
 int     globals::numEnergyTypes;
 AbstractFile::ConcreteFileType globals::recordFileType;
@@ -20,7 +20,7 @@ namespace brain
 
     NeuralValues gNeuralValues;
     long gNumPrebirthCycles;
-	float gLogisticsSlope;
+	float gLogisticSlope;
 	float gMaxWeight;
 	bool gEnableInitWeightRngSeed;
 	long gMinInitWeightRngSeed;
