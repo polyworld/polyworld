@@ -297,10 +297,14 @@ else
 	overlay_tmpdir=$( mktemp -d /tmp/poly_run.XXXXXXXX ) || exit 1
 
 	for fieldname in ${overlay_matches[@]}; do
-	    overlayed_worldfile="$overlay_tmpdir/${fieldname}.wf"
-	    proputil overlay "$WORLDFILE" "$OVERLAY" "$fieldname" > "$overlayed_worldfile" || exit 1
-	    proputil apply "$POLYWORLD_DIR/default.wfs" "$overlayed_worldfile" > /dev/null || err "Overlayed file $overlayed_worldfile failed schema validation!"
+	    (
+		overlayed_worldfile="$overlay_tmpdir/${fieldname}.wf"
+		proputil overlay "$WORLDFILE" "$OVERLAY" "$fieldname" > "$overlayed_worldfile" || exit 1
+		proputil apply "$POLYWORLD_DIR/default.wfs" "$overlayed_worldfile" > /dev/null || err "Overlayed file $overlayed_worldfile failed schema validation!"
+	    ) &
 	done
+
+	wait
 
 	echo "--------------------------------------------------------------------------------"
 	echo "---"

@@ -109,6 +109,8 @@ function mutex_trylock()
     local mutex_name=$1
     require "$mutex_name" "mutex_lock( mutex_name )"
 
+    mkdir -p $( dirname $mutex_name )
+
     while ! mkdir $mutex_name 2>/dev/null; do
 	timeout=$(( timeout - 1 ))
 	if [ $timeout == 0 ]; then
@@ -124,6 +126,8 @@ function mutex_lock()
 {
     local mutex_name=$1
     require "$mutex_name" "mutex_lock( mutex_name )"
+
+    mkdir -p $( dirname $mutex_name )
 
     local blocked="false"
     while ! mkdir $mutex_name 2>/dev/null; do
@@ -177,7 +181,7 @@ function fieldhostnames_from_nums()
 
 function fieldnum_from_hostname()
 {
-    echo $1 | sed s/pw//g
+    echo $1 | sed -e s/pw0//g -e s/pw//g
 }
 
 function fieldnums_from_hostnames()
