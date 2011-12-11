@@ -1,5 +1,26 @@
 #!/usr/bin/env python
 
+#
+# This module implements a simple client/server for communicating the status of a "field"
+# machine back to the "dispatcher" machine.
+#
+# It has a few transactions between client/server:
+#
+#  Set : Client tells server what the new system status is.
+#
+#  Get : Client asks server what current system status is.
+#
+#  Wait : Client asks server to tell it when the system status has changed. The client
+#         will block until the status has changed. Although, if the status has changed
+#         since a previous invocation of get/wait, the client will immediately get
+#         an answer.
+#
+#
+# Note that multiple instances of the server must be able to co-exist on a machine, which
+# is why the server first tries binding to a number of ports until it succeeds. The port
+# it is using is then stored in the state file so clients know how to address the server.
+#
+
 import socket
 import sys
 import time
