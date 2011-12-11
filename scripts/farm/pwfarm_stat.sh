@@ -13,6 +13,9 @@ usage: $( basename $0 ) mode
 
 MODES:
 
+    sessions 
+             List active sessions on farm.
+
     top      Execute top util. (Interactive)
 
     df       Show output from df util -- disk free.
@@ -60,6 +63,8 @@ args="$*"
 mode="$1"
 
 case "$mode" in
+    "sessions")
+	;;
     "top")
 	;;
     "df")
@@ -89,6 +94,21 @@ if ! $field; then
     done
 else
     case "$mode" in
+	"sessions")
+	    screen -ls | grep pwfarm_field | 
+	    while read line; do
+		user=$( echo $line | sed 's/\(.*pwfarm_field__user_\)\(.*\)\(__farm_.*\)/\2/g' )
+		session=$( echo $line | sed 's/\(.*pwfarm_field_.*__session_\)\(.*\)\(____.*\)/\2/g' )
+
+		if [ "$session" != $( pwenv sessionname ) ]; then
+		    echo "$session (user=$user)" >> $tmpdir/out 2>&1
+		fi
+	    done
+
+	    if [ ! -e $tmpdir/out ]; then
+		echo "NO SESSIONS" >> $tmpdir/out 2>&1
+	    fi
+	    ;;
 	"top")
 	    top
 	    ;;
