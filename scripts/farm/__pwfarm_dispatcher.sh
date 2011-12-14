@@ -133,17 +133,17 @@ case "$mode" in
 	    err "Failed initing dispatcher screen!"
 	fi
 
-	function field()
+	function parm()
 	{
 	    head -n $(( $1 + 1 )) "$PARMS" | tail -n 1
 	}
 
-	prompt_password=$( field 0 )
-	prompt_err=$( field 1 )
-	payload=$( field 2 )
-	command=$( field 3 )
-	output_basename=$( field 4 )
-	output_dir=$( field 5 )
+	prompt_password=$( parm 0 )
+	prompt_err=$( parm 1 )
+	payload=$( parm 2 )
+	command=$( parm 3 )
+	output_basename=$( parm 4 )
+	output_dir=$( parm 5 )
 
 	__pwfarm_config env set fieldnumbers $( fieldnums_from_hostnames $(cat $FIELDNUMBERS) )
 

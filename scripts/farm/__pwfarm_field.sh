@@ -227,6 +227,7 @@ case "$MODE" in
     "command")
 	touch "$COMMAND_BORN"
 
+	# Start status server as background task.
 	$PWFARM_SCRIPTS_DIR/__pwfarm_status.py $STATUS_STATE server &
 
 	function PWFARM_STATUS()
