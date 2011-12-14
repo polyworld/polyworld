@@ -128,12 +128,13 @@ if [ "$1" == "--field" ]; then
     ### Execute Polyworld if worldfile exists
     ###
     if [ -e $POLYWORLD_PWFARM_WORLDFILE ]; then
+	fieldhostname=$( fieldhostname_from_num $(pwenv fieldnumber) )
+
 	###
 	### Process Parms Overlay
 	###
-	if [ -e "$PAYLOAD_DIR/overlay" ]; then
-	    fieldhostname=$( fieldhostname_from_num $(pwenv fieldnumber) )
-	    proputil overlay $POLYWORLD_PWFARM_WORLDFILE "$PAYLOAD_DIR/overlay" "$fieldhostname" > ./worldfile || exit 1
+	if [ -e "$PAYLOAD_DIR/parms.wfo" ]; then
+	    proputil overlay $POLYWORLD_PWFARM_WORLDFILE "$PAYLOAD_DIR/parms.wfo" "$fieldhostname" > ./worldfile || exit 1
 	else
 	    ###
 	    ### Set the seed based on farm node
@@ -164,6 +165,11 @@ if [ "$1" == "--field" ]; then
 	fi
 
 	cp $POLYWORLD_PWFARM_WORLDFILE run/farm.wf
+	if [ -e "$PAYLOAD_DIR/parms.wfo" ]; then
+	    cp "$PAYLOAD_DIR/parms.wfo" run/
+	fi
+
+	echo "$fieldhostname" > run/.fieldhostname
     fi
 
     ###
@@ -174,8 +180,10 @@ if [ "$1" == "--field" ]; then
     rm -f $PWFARM_RUNZIP
 
     echo 'stats/*' >> $PWFARM_RUNZIP
+    echo '.fieldhostname' >> $PWFARM_RUNZIP
     echo '*.wf' >> $PWFARM_RUNZIP
     echo '*.wfs' >> $PWFARM_RUNZIP
+    echo '*.wfo' >> $PWFARM_RUNZIP
     echo 'brain/Recent/*.plt' >> $PWFARM_RUNZIP
 
     ###
@@ -346,7 +354,7 @@ else
     }
 
     cpopt "$WORLDFILE" worldfile
-    cpopt "$OVERLAY" overlay
+    cpopt "$OVERLAY" parms.wfo
     cpopt "$PRERUN" prerun.sh
     cpopt "$POSTRUN" postrun.sh
     cpopt "$INPUT_ZIP" input.zip

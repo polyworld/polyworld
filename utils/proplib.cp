@@ -409,6 +409,33 @@ namespace proplib
 		return id.getName();
 	}
 
+	std::string Property::getFullName( int minDepth )
+	{
+		if( getDepth() < minDepth )
+		{
+			return "";
+		}
+		else if( parent == NULL )
+		{
+			return getName();
+		}
+		else
+		{
+			string parentFullName = parent->getFullName( minDepth );
+			if( parentFullName == "" )
+			{
+				return getName();
+			}
+			else
+			{
+				if( parent->isArray() )
+					return parentFullName + "[" + getName() + "]";
+				else
+					return parentFullName + "." + getName();
+			}
+		}
+	}
+
 	bool Property::isContainer()
 	{
 		return type == CONTAINER;
@@ -763,6 +790,23 @@ namespace proplib
 		}
 	}
 
+	void Property::writeScalarNames( ostream &out, int depth_start )
+	{
+		if( isScalar() )
+		{
+			string fullName = getFullName( depth_start );
+			if( ! fullName.empty() )
+				out << fullName << endl;
+		}
+		else
+		{
+			itfor( PropertyMap, props(), it )
+			{
+				it->second->writeScalarNames( out, depth_start );
+			}
+		}
+	}
+
 	void Property::resolve( StringList::iterator curr, StringList::iterator end, PropertyList &result )
 	{
 		if( curr == end )
@@ -831,6 +875,14 @@ namespace proplib
 
 			return result;
 		}
+	}
+
+	int Property::getDepth()
+	{
+		if( parent == NULL )
+			return 0;
+		else
+			return parent->getDepth() + 1;
 	}
 
 	// ----------------------------------------------------------------------

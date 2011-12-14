@@ -21,6 +21,7 @@ void usage( string msg = "" )
 	cerr << "       proputil len path_values propname" << endl;
 	cerr << "       proputil overlay_matches path_overlay selectors" << endl;
 	cerr << "       proputil overlay path_values path_overlay selector" << endl;
+	cerr << "       proputil scalarnames path_values depth_start" << endl;
 
 	if( msg.length() > 0 )
 	{
@@ -62,6 +63,7 @@ void len( const char *pathValues, const char *name );
 void select( const char *pathOverlay, const char *selector );
 void overlay_matches( const char *pathOverlay, const char **selectors, int nselectors );
 void overlay( const char *pathValues, const char *pathOverlay, const char *selector );
+void scalarnames( const char *pathValues, const char *depth_start );
 
 int main( int argc, const char **argv )
 {
@@ -141,6 +143,15 @@ int main( int argc, const char **argv )
 		}
 
 		overlay( argv[2], argv[3], argv[4] );
+	}
+	else if( mode == "scalarnames" )
+	{
+		if( argc != 4 )
+		{
+			usage();
+		}
+
+		scalarnames( argv[2], argv[3] );
 	}
 	else
 	{
@@ -248,5 +259,14 @@ void overlay( const char *pathValues, const char *pathOverlay, const char *selec
 
 	delete docValues;
 	delete docOverlay;
+}
+
+void scalarnames( const char *pathValues, const char *depth_start )
+{
+	Document *docValues = Parser::parseFile( pathValues );
+
+	docValues->writeScalarNames( cout, atoi(depth_start) );
+
+	delete docValues;
 }
 

@@ -167,6 +167,7 @@ namespace proplib
 		bool equals( Property *other );
 
 		const char *getName();
+		std::string getFullName( int minDepth = 0 );
 
 		bool isContainer();
 		bool isArray();
@@ -197,6 +198,7 @@ namespace proplib
 
 		virtual void dump( std::ostream &out, const char *indent = "" );
 		virtual void write( std::ostream &out, const char *indent = "" );
+		virtual void writeScalarNames( std::ostream &out, int depth_start = 0 );
 
 	protected:
 		void resolve( StringList::iterator curr, StringList::iterator end, PropertyList &result );
@@ -208,6 +210,7 @@ namespace proplib
 
 		std::string getDecoratedScalar();
 		Property *findSymbol( Identifier id );
+		int getDepth();
 
 		friend class Parser;
 		friend class Schema;

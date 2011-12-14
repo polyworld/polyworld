@@ -91,10 +91,10 @@ def main():
     #---
     #--- Plot
     #---
-    doc, plot, colordict, pathdict = plot_init( clauses,
-                                                macros,
-                                                run_paths,
-                                                run_dirs )
+    doc, plot, colordict, run_path2legend_id = plot_init( clauses,
+                                                          macros,
+                                                          run_paths,
+                                                          run_dirs )
 
     clauses[0].yaxis = 1
     if len(clauses) > 1:
@@ -105,7 +105,7 @@ def main():
                      plot,
                      colordict,
                      str(clause.index) + '-',
-                     pathdict,
+                     run_path2legend_id,
                      clause.mode,
                      clause.options,
                      macros,
@@ -530,10 +530,13 @@ def get_macros( clauses,
                 run_dirs ):
     clause1 = clauses[0]
 
+    title = ''
+
+    if len(run_paths) > 1 and len(wfutil.get_overlay_parameter_names(run_paths[0])):
+        title += 'Varying ({OVERLAY_PARMS}) ; '
+
     if len(clause1.groups) > 1:
-        title = '{GROUPS} -- '
-    else:
-        title = ''
+        title += '{GROUPS} -- '
     
     if 'Complexity' in clause1.mode.name:
         title += '{MODES}'
@@ -599,7 +602,8 @@ def get_macros( clauses,
               'RUN_PATHS': ', '.join(run_paths),
               'MODES': ', '.join(modes),
               'GROUPS': groups,
-              'GROUPS_TTEST': groups_ttest}
+              'GROUPS_TTEST': groups_ttest,
+              'OVERLAY_PARMS': ', '.join(wfutil.get_overlay_parameter_names(run_paths[0]))}
 
     __clause_macros( macros, 0 )
     __clause_macros( macros, 1 )
@@ -888,11 +892,26 @@ def plot_init( clauses,
     colordict = {}
 
     if len(run_paths) < 2:
-        pathdict = None
+        run_path2legend_id = None
     else:
-        pathdict = dict([(run_paths[i], run_dirs[i]) for i in range(len(run_paths))])
+        overlay_parms = wfutil.get_overlay_parameter_names( run_paths[0] )
+        if len(overlay_parms):
 
-    return doc, plot, colordict, pathdict
+            for run_path in run_paths:
+                if wfutil.get_overlay_parameter_names(run_path) != overlay_parms:
+                    err( "No support yet for plotting runs of different overlay settings." )
+
+            run_path2legend_id = {}
+            for run_path in run_paths:
+                parmvals = []
+                for parmname in overlay_parms:
+                    parmvals.append( wfutil.get_parameter(run_path, parmname) )
+            
+                run_path2legend_id[ run_path ] = ','.join( parmvals )
+        else:
+            run_path2legend_id = dict([(run_paths[i], run_dirs[i]) for i in range(len(run_paths))])
+
+    return doc, plot, colordict, run_path2legend_id
 
 
 ####################################################################################
@@ -904,7 +923,7 @@ def plot_clause( doc,
                  plot,
                  colordict,
                  colorkey_prefix,
-                 pathdict,
+                 run_path2legend_id,
                  mode,
                  options,
                  macros,
@@ -936,7 +955,7 @@ def plot_clause( doc,
                                macros,
                                colordict,
                                colorkey_prefix,
-                               pathdict,
+                               run_path2legend_id,
                                options,
                                'curvetypes',
                                dataset,
@@ -957,7 +976,7 @@ def plot_clause( doc,
                                macros,
                                colordict,
                                colorkey_prefix,
-                               pathdict,
+                               run_path2legend_id,
                                options,
                                'meta',
                                dataset,
@@ -1005,7 +1024,7 @@ def create_curves(mode,
                   macros,
                   colordict,
                   colorkey_prefix,
-                  pathdict,
+                  run_path2legend_id,
                   options,
                   optionclass,
                   dataset,
@@ -1137,8 +1156,8 @@ def create_curves(mode,
         elif ttest:
             title += expand_macros( ' ({GROUPS_TTEST})', macros )
         else:
-            if pathdict != None:
-                title += ' (' + pathdict[mode.pathRunFromValue(table.path, classification, dataset)] + ')'
+            if run_path2legend_id != None:
+                title += ' (' + run_path2legend_id[mode.pathRunFromValue(table.path, classification, dataset)] + ')'
 
         return title
     #---
@@ -1425,25 +1444,27 @@ MACROS
 
      Available macros:
 
-     TITLE                Standard title
+     TITLE               Standard title
 
-     XLABEL                Standard x-axis label
+     XLABEL              Standard x-axis label
 
-     YLABEL1            Standard y1-axis label
+     YLABEL1             Standard y1-axis label
 
-     YLABEL2            Standard y2-axis label
+     YLABEL2             Standard y2-axis label
 
      ARG_DIRS            List of paths passed to script with redundant path info
                      stripped.
 
-     ARG_PATHS            List of paths passed to script with no modification.
+     ARG_PATHS           List of paths passed to script with no modification.
 
      RUN_DIRS            List of run directory paths with redundant path info
                      stripped.
 
-     RUN_PATHS            List of run directory paths with no modification.
+     RUN_PATHS           List of run directory paths with no modification.
 
-     MODES                List of modes.
+     MODES               List of modes.
+
+     OVERLAY_PARMS       Names of parameters being changed in overlay file.
 
      DATASET1            Name of clause 1 dataset (e.g. Recent, bestRecent)
 
@@ -1457,7 +1478,7 @@ MACROS
 
      VALUE_NAMES2        List of clause 2 value types in user-friendly form.
 
-     GROUPS                List of groups.
+     GROUPS              List of groups.
 
      GROUPS_TTEST        List of groups used in T-test calculations.
 

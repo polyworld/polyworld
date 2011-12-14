@@ -37,6 +37,27 @@ def main():
 
 ####################################################################################
 ###
+### FUNCTION get_overlay_parameter_names()
+###
+####################################################################################
+def get_overlay_parameter_names( path_worldfile_or_run, assume_run_dir = True ):
+    if assume_run_dir:
+        # do automatic conversion
+        path_proplib = ensure_proplib_worldfile( path_worldfile_or_run )
+    else:
+        path_proplib = path_worldfile_or_run
+
+    path_overlay = os.path.join( os.path.dirname(path_proplib),
+                                 'parms.wfo' )
+
+    if not os.path.exists(path_overlay):
+        return set()
+
+    lines = proputil( 'scalarnames', path_overlay, 2 ).split()
+    return set( lines )
+
+####################################################################################
+###
 ### FUNCTION get_parameter()
 ###
 ####################################################################################
