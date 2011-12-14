@@ -9073,6 +9073,18 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 		}
 
         fclose( statusFile );
+
+		// If the shell function PWFARM_STATUS is defined, then use it to tell farm dispatcher
+		// our current status.
+		if( getenv("PWFARM_STATUS") )
+		{
+			char cmd[1024];
+			sprintf( cmd, "bash -c 'PWFARM_STATUS Polyworld \"[step=%ld agents=%d]\"'",
+					 fStep,
+					 objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE) );
+			int rc = system( cmd );
+			if( rc ) cerr << "Failed executing PWFARM_STATUS" << endl;
+		}
     }
 }
 
