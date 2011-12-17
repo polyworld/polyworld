@@ -157,6 +157,7 @@ case "$mode" in
 	if [ "$2" == "--exit" ]; then
 	    # We're being invoked as part of the exit procedure
 	    echo "Performing healthy pwfarm state clear."
+	    shift
 
 	    mutex_lock $MUTEX;
 	else
@@ -184,12 +185,14 @@ case "$mode" in
     "disconnect")
 	mutex_lock $MUTEX;
 
-	if is_process_alive $PID; then
-	    echo "Killing dispatcher process..." >&2
-	    pid=$( cat $PID )
-	    kill $pid  2>/dev/null
-	else
-	    echo "No dispatcher process detected" >&2
+	if [ "$2" != "--exit" ]; then
+	    if is_process_alive $PID; then
+		echo "Killing dispatcher process..." >&2
+		pid=$( cat $PID )
+		kill $pid  2>/dev/null
+	    else
+		echo "No dispatcher process detected" >&2
+	    fi
 	fi
 
 	if screen_active ; then
@@ -331,8 +334,28 @@ if [ "$mode" == "dispatch" ] || [ "$mode" == "recover" ]; then
     # bring up screen, starting at the windowlist
     screen -S "${DISPATCHER_SCREEN_SESSION}" -p = -r
     while screen_active; do
-	echo "Dispatcher screen still active! Resuming..."
-	sleep 5
+	echo
+	echo "You have detached the dispatcher screen."
+	echo
+        echo "  (r)esume"
+	echo "  (c)lear"
+	echo "  (d)isconnect"
+	echo
+	if read -p "Enter command: " -t 10 choice; then
+	    case "$choice" in
+		c)
+		    $0 clear --exit
+		    reset
+		    exit 1
+		    ;;
+		d)
+		    $0 disconnect --exit
+		    reset
+		    exit 1
+		    ;;
+	    esac
+	fi
+
 	resume_screen
     done
 
