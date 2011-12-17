@@ -105,7 +105,7 @@ class Curve:
                                                         self._spec_with(),
                                                         self.style.id)
         if self.title:
-            spec += ' title "%s"' % psencode(self.title)
+            spec += " title '%s'" % psencode(self.title)
         else:
             spec += ' notitle'
 
@@ -154,7 +154,7 @@ class Tick:
         if self.label == None:
             spec += '("%g" ' %  self.y
         else:
-            spec += '("%s" ' % psencode(self.label)
+            spec += "('%s' " % psencode(self.label)
 
         spec += '%g)' % self.y
 
@@ -378,15 +378,15 @@ class Plot:
             spec += 'unset key\n'
 
         if self.xlabel:
-            spec += 'set xlabel "%s" font "Times,12"\n' % psencode(self.xlabel)
+            spec += "set xlabel '%s' font 'Times,12'\n" % psencode(self.xlabel)
         else:
             spec += 'unset xlabel\n'
         if self.ylabel:
-            spec += 'set ylabel "%s" font "Times,12"\n' % psencode(self.ylabel)
+            spec += "set ylabel '%s' font 'Times,12'\n" % psencode(self.ylabel)
         else:
             spec += 'unset ylabel\n'
         if self.y2label:
-            spec += 'set y2label "%s" font "Times,12"\n' % psencode(self.y2label)
+            spec += "set y2label '%s' font 'Times,12'\n" % psencode(self.y2label)
         else:
             spec += 'unset y2label\n'
 
@@ -424,7 +424,7 @@ class Plot:
             spec += self.curvelist[i].style.getSpec()
 
         if self.title:
-            spec += 'set title "%s"\n' % psencode(self.title)
+            spec += "set title '%s'\n" % psencode(self.title)
             spec += 'show title\n'
 
         spec += 'plot '
@@ -502,17 +502,8 @@ class Document:
 ###
 ####################################################################################
 def psencode(text):
-    # escape '_' so it doesn't make a subscript, so long as the '_'
-    # proceeded by a letter.
-    text = re.subn( r'_([a-zA-Z])',
-                    r'\\\\_\1',
-                    text )[0]
-
-    # convert _num into _{num} for subscript
-    text = re.subn( r'_([0-9]+)([^a-zA-Z])',
-                    r'_{\1}\2',
-                    text )[0]
-    return text
+    # escape '_' so it doesn't make a subscript
+    return text.replace( '_', '\\_' )
 
 ####################################################################################
 ###
