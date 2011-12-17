@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 
 if [ -z "$PWFARM_SCRIPTS_DIR" ]; then
     source $( dirname $BASH_SOURCE )/__pwfarm_runutil.sh || exit 1
