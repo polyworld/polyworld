@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 
 if [ -z "$PWFARM_SCRIPTS_DIR" ]; then
     source $( dirname $BASH_SOURCE )/__pwfarm_runutil.sh || exit 1
@@ -30,6 +30,11 @@ OPTIONS:
 
    -a analysis_script
                   Path of script that is to be executed after simulation.
+
+   -F fetch_list
+                  Files to be pulled back from run. For example:
+
+                    -F "stat/* *.wf"
 
    -f fields
                   Specify fields on which this should run. Must be a single argument,
@@ -76,9 +81,13 @@ if [ "$1" == "--field" ]; then
     PAYLOAD_DIR=$( pwd )
     cd "$POLYWORLD_PWFARM_APP_DIR" || exit 1
 
+    SCRIPTS_DIR="$POLYWORLD_PWFARM_APP_DIR/scripts"
+
     export POLYWORLD_PWFARM_WORLDFILE="$PAYLOAD_DIR/worldfile"
     cp "$PAYLOAD_DIR/runid" .
     RUNID=$( cat $PAYLOAD_DIR/runid )
+
+    export POLYWORLD_PWFARM_RUN_PACKAGE=$PAYLOAD_DIR/run_package/input
 
     export DISPLAY=:0.0 # for Linux -- allow graphics from ssh
     export PATH=$( canonpath scripts ):$( canonpath bin ):$PATH
@@ -176,20 +185,6 @@ if [ "$1" == "--field" ]; then
     fi
 
     ###
-    ### Init Run Zip Args
-    ###
-    PWFARM_RUNZIP=$( pwd )/zipargs
-    export PWFARM_RUNZIP
-    rm -f $PWFARM_RUNZIP
-
-    echo 'stats/*' >> $PWFARM_RUNZIP
-    echo '.fieldhostname' >> $PWFARM_RUNZIP
-    echo '*.wf' >> $PWFARM_RUNZIP
-    echo '*.wfs' >> $PWFARM_RUNZIP
-    echo '*.wfo' >> $PWFARM_RUNZIP
-    echo 'brain/Recent/*.plt' >> $PWFARM_RUNZIP
-
-    ###
     ### Execute the postrun script
     ###
     postrun_failed=false
@@ -206,16 +201,33 @@ if [ "$1" == "--field" ]; then
 
     PWFARM_STATUS "Package Run"
 
-    ###
-    ### Store a code snapshot
-    ###
-    scripts/run_history.sh src run $postrun_failed $PAYLOAD_DIR/postrun.sh
+    if [ -e $PAYLOAD_DIR/postrun.sh ] || [ -e $PAYLOAD_DIR/prerun.sh ] || [ -e $POLYWORLD_PWFARM_WORLDFILE ]; then
+	###
+	### Store a code snapshot
+	###
+	if [ -e $PAYLOAD_DIR/postrun.sh ]; then
+	    scripts/run_history.sh src run $postrun_failed $PAYLOAD_DIR/postrun.sh
+	else
+	    scripts/run_history.sh src run "false"
+	fi
+    fi
 
     ###
     ### Create archive pulled to workstation
     ###
     cd run || err "postrun script moved ./run!!!"
-    zip -qr $PWFARM_OUTPUT_FILE $( cat $PWFARM_RUNZIP )
+
+    checksum=.pwfarm_run_package_checksums
+    archive_input="$( cat $POLYWORLD_PWFARM_RUN_PACKAGE | while read x; do [ ! -z "$x" ] && ls $x; done )"
+    read
+
+    if [ ! -z "$archive_input" ]; then
+	$SCRIPTS_DIR/archive_delta.sh -e $PAYLOAD_DIR/run_package/checksums_$(pwenv fieldnumber) $checksum $PWFARM_OUTPUT_FILE $archive_input
+	if [ -e $PWFARM_OUTPUT_FILE ]; then
+	    zip -q $PWFARM_OUTPUT_FILE $checksum
+	fi
+    fi
+
     cd ..
 
     ###
@@ -254,8 +266,9 @@ else
     INPUT_ZIP="nil"
     OWNER=$( pwenv pwuser )
     OWNER_OVERRIDE=false
+    FETCH_LIST="stats/* .fieldhostname *.wf *.wfs *.wfo brain/Recent/*.plt"
 
-    while getopts "iw:p:a:f:o:c:z:" opt; do
+    while getopts "iw:p:a:f:o:c:z:F:" opt; do
 	case $opt in
 	    i)
 		INTERACTIVE=true
@@ -282,6 +295,9 @@ else
 		;;
 	    z)
 		INPUT_ZIP="$OPTARG"
+		;;
+	    F)
+		FETCH_LIST="$OPTARG"
 		;;
 	    *)
 		exit 1
@@ -370,6 +386,19 @@ else
     cpopt "$INPUT_ZIP" input.zip
 
     echo "$RUNID" > $tmp_dir/runid
+
+    mkdir $tmp_dir/run_package
+
+    for x in "$FETCH_LIST"; do
+	echo "$x" >> $tmp_dir/run_package/input
+    done
+
+    for fieldnumber in $(pwenv fieldnumbers); do
+	local_field_run_package_checksums=$DSTDIR/$RUNID_LOCAL/run_${fieldnumber}/.pwfarm_run_package_checksums
+	if [ -e $local_field_run_package_checksums ]; then
+	    cp $local_field_run_package_checksums $tmp_dir/run_package/checksums_${fieldnumber}
+	fi
+    done
 
     pushd_quiet .
     cd $tmp_dir

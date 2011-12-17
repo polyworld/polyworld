@@ -18,4 +18,4 @@ plot neuralComplexity -o run/plots/complexity.eps $plotopts run
 plot stats -o run/plots/neurons.eps -v CurNeurons $plotopts run
 
 # specify which files should be pulled back to workstation
-echo 'plots/*.eps' >> $PWFARM_RUNZIP
+echo 'plots/*.eps' >> $POLYWORLD_PWFARM_RUN_PACKAGE
