@@ -9,13 +9,16 @@ fi
 function usage()
 {
     cat >&2 <<EOF
-usage: $( basename $0 ) [-w:p:a:f:o:c:i:] run_id
+usage: $( basename $0 ) [-iw:p:a:f:o:c:z:] run_id
 
 ARGS:
 
    run_id         Unique ID for run.
 
 OPTIONS:
+
+   -i             Interactive mode. When using -p, you will be shown the overlayed
+                worldfiles and prompted for approval prior to executing.
 
    -w worldfile
                   Path of local worldfile to be executed. If not provided, it is
@@ -40,7 +43,7 @@ OPTIONS:
                   Path of script that is to be executed prior to running 
                 simulation.
 
-   -i input_zip
+   -z input_zip
                   Path of zip file that is to be sent to each machine.
 
 EOF
@@ -242,6 +245,8 @@ else
     pwfarm_dir=`canondirname "$0"`
     poly_dir=`canonpath "$pwfarm_dir/../.."`
 
+    INTERACTIVE=false
+
     WORLDFILE="nil"
     OVERLAY="nil"
     PRERUN="nil"
@@ -250,8 +255,11 @@ else
     OWNER=$( pwenv pwuser )
     OWNER_OVERRIDE=false
 
-    while getopts "w:p:a:f:o:c:i:" opt; do
+    while getopts "iw:p:a:f:o:c:z:" opt; do
 	case $opt in
+	    i)
+		INTERACTIVE=true
+		;;
 	    w)
 		WORLDFILE="$OPTARG"
 		;;
@@ -272,7 +280,7 @@ else
 	    c)
 		PRERUN="$OPTARG"
 		;;
-	    i)
+	    z)
 		INPUT_ZIP="$OPTARG"
 		;;
 	    *)
@@ -314,22 +322,24 @@ else
 
 	wait
 
-	echo "--------------------------------------------------------------------------------"
-	echo "---"
-	echo "--- A GUI window should now be showing the worldfiles that will be executed."
-	echo "---"
-	echo "--- The worldfiles are at $overlay_tmpdir"	    
-	echo "---"
-	echo "--------------------------------------------------------------------------------"
-	if [ ${#overlay_matches[@]} != ${#fieldnames[@]} ]; then
-	    echo "WARNING! Some field nodes were not matched to the parms_overlay file."
-	fi
+	if $INTERACTIVE; then
+	    echo "--------------------------------------------------------------------------------"
+	    echo "---"
+	    echo "--- A GUI window should now be showing the worldfiles that will be executed."
+	    echo "---"
+	    echo "--- The worldfiles are at $overlay_tmpdir"	    
+	    echo "---"
+	    echo "--------------------------------------------------------------------------------"
+	    if [ ${#overlay_matches[@]} != ${#fieldnames[@]} ]; then
+		echo "WARNING! Some field nodes were not matched to the parms_overlay file."
+	    fi
 
-	show_file_gui $overlay_tmpdir
-	read -p "Do you approve? [y/n]: " reply
-	if [ "$reply" != "y" ]; then
-	    rm -rf $overlay_tmpdir
-	    err "User aborted"
+	    show_file_gui $overlay_tmpdir
+	    read -p "Do you approve? [y/n]: " reply
+	    if [ "$reply" != "y" ]; then
+		rm -rf $overlay_tmpdir
+		err "User aborted"
+	    fi
 	fi
     fi
 

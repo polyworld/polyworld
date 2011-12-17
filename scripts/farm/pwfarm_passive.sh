@@ -99,5 +99,5 @@ else
 	opts="$opts -o $owner"
     fi
 
-    $PWFARM_SCRIPTS_DIR/pwfarm_run.sh $opts -c "$0" -i "$tmp_dir/input.zip" "$run_id_passive"
+    $PWFARM_SCRIPTS_DIR/pwfarm_run.sh $opts -c "$0" -z "$tmp_dir/input.zip" "$run_id_passive"
 fi
