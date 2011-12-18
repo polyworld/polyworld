@@ -70,6 +70,7 @@ GenomeLayout {
   ]
 }
 
+
 #-------------------------------------------------------------------
 # SECTION Simulation parameters -- Primary
 #-------------------------------------------------------------------
@@ -143,9 +144,19 @@ MaxFoodGrown {
 
 FoodGrowthRate {
   type    FLOAT
-  default 0.1	# decimal part multiplies (maxGrown - current) to give probability each step
+  default 0.1	# decimal part gives probability each step (depending on FoodGrowthModel)
   min     0.0
   max     10.0	# integer part is raw count of pieces to add per step
+}
+
+FoodGrowthModel {
+  type    ENUM
+  default MaxIndependent
+  legacy  MaxRelative
+  values  [
+    MaxRelative     # decimal part multiplies (maxGrown - current) to give probability each step
+    MaxIndependent  # decimal part is the raw probability each step
+  ]
 }
 
 FoodRemoveEnergy {
@@ -2038,16 +2049,57 @@ PreBirthCycles {
 
 NumDepletionSteps {
   type    INT
-  default 125
+  default 0
   legacy  0
   min     0
 }
 
 ApplyLowPopulationAdvantage {
   type    BOOL
-  default True
+  default False
   legacy  False
 }
+
+EnergyBasedPopulationControl {
+  type    BOOL
+  default True
+  legacy  False
+  if $( EnergyBasedPopulationControl ) {
+    assert $( not ApplyLowPopulationAdvantage and ( NumDepletionSteps == 0 ) and ( PopControlGlobal or PopControlDomains ) )
+  }
+}
+
+# Following PopControl* parameters are ignored if EnergyBasedPopulationControl is False
+PopControlMinFixedRange {
+  type    FLOAT
+  default 0.25
+}
+
+PopControlMaxFixedRange {
+  type    FLOAT
+  default 0.75
+}
+
+PopControlMinScaleFactor {
+  type    FLOAT
+  default 0.0
+}
+
+PopControlMaxScaleFactor {
+  type    FLOAT
+  default 5.0
+}
+
+PopControlGlobal {
+  type    BOOL
+  default True
+}
+
+PopControlDomains {
+  type    BOOL
+  default False
+}
+
 
 #-------------------------------------------------------------------
 # SECTION Simulation parameters -- Tertiary
@@ -2231,6 +2283,7 @@ LinearFogEnd {
   default 33		# only applies to linear fog
 }
 
+
 #-------------------------------------------------------------------
 # SECTION Simulation parameters -- Gene Expression (in legacy gene order)
 #-------------------------------------------------------------------
@@ -2405,6 +2458,7 @@ MaxLearningRate {
   min     $( MinLearningRate )
 }
 
+
 #-------------------------------------------------------------------
 # SECTION Simulation parameters -- Gene Options
 #-------------------------------------------------------------------
@@ -2489,6 +2543,7 @@ SeedDropExcitation {
   type    FLOAT
   default 0.0
 }
+
 
 #-------------------------------------------------------------------
 # SECTION Simulation parameters -- Neural Function
@@ -2857,6 +2912,7 @@ EnergyUseFixed {
   type    FLOAT
   default 0.05
 }
+
 
 #-------------------------------------------------------------------
 # SECTION Simulator control
@@ -3272,6 +3328,7 @@ CompressFiles {
   legacy  True
 }
 
+
 #-------------------------------------------------------------------
 # SECTION Simulator resume control
 #-------------------------------------------------------------------
@@ -3285,6 +3342,7 @@ SeedPositionFromRun {
   type    BOOL
   default False
 }
+
 
 #-------------------------------------------------------------------
 # SECTION Genetic algorithm parameters
@@ -3327,6 +3385,7 @@ TournamentSize {
   min     0		# zero reverts to iteration through fittest list method
 }
 
+
 #-------------------------------------------------------------------
 # SECTION Heuristic fitness function parameters
 #-------------------------------------------------------------------
@@ -3355,6 +3414,7 @@ FitnessWeightLongevity {
   type    FLOAT
   default 25.0
 }
+
 
 #-------------------------------------------------------------------
 # SECTION Eliminate

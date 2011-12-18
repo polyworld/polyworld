@@ -726,7 +726,10 @@ Energy agent::receive( agent *giver, const Energy &requested )
 //---------------------------------------------------------------------------    
 Energy agent::damage(const Energy &e, bool nullMode)
 {
-	Energy actual = e * gLowPopulationAdvantageFactor;
+	double scaleFactor = gLowPopulationAdvantageFactor
+					   * fSimulation->fGlobalEnergyScaleFactor
+					   * fSimulation->fDomains[fDomain].energyScaleFactor;
+	Energy actual = e * scaleFactor;
 	actual.constrain( 0, fEnergy );
 
 	if( !nullMode )
@@ -1077,7 +1080,7 @@ float agent::UpdateBody( float moveFitnessParam,
 
     float denergy = energyused * Strength();
 
-	// Apply large-population energy penalty
+	// Apply large-population energy penalty (only if NumDepletionSteps > 0)
 	float populationEnergyPenalty;
 #if UniformPopulationEnergyPenalty
 	populationEnergyPenalty = gPopulationPenaltyFraction * 0.5 * (gMaxMaxEnergy + gMinMaxEnergy);
@@ -1086,8 +1089,11 @@ float agent::UpdateBody( float moveFitnessParam,
 #endif
 	denergy += populationEnergyPenalty;
 	
-	// Apply low-population energy advantage
-	denergy *= gLowPopulationAdvantageFactor;	// if population is getting too low, reduce energy consumption
+	// Apply energy-based population controls
+	double scaleFactor = gLowPopulationAdvantageFactor			// if ApplyLowPopulationAdvantage True
+					   * fSimulation->fGlobalEnergyScaleFactor	// if EnergyBasedPopulationControl True
+					   * fSimulation->fDomains[fDomain].energyScaleFactor;
+	denergy *= scaleFactor;	// if population is getting too low or too high, adjust energy consumption
 	
 	denergy *= gEnergyUseMultiplier;	// global control over rate at which energy is consumed
 

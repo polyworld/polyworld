@@ -215,8 +215,18 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow, cons
 		fBrainAnatomyRecordSeeds(false),
 		fBrainFunctionRecordSeeds(false),
 		fApplyLowPopulationAdvantage(false),
+		fEnergyBasedPopulationControl(false),
+		fPopControlGlobal(true),
+		fPopControlDomains(false),
+		fPopControlMinFixedRange(0.25),
+		fPopControlMaxFixedRange(0.75),
+		fPopControlMinScaleFactor(0.0),
+		fPopControlMaxScaleFactor(20.0),
+		fGlobalEnergyScaleFactor(1.0),
 
 		fRecordComplexity(false),
+		fComplexityLog(NULL),
+		fComplexitySeedLog(NULL),
 
 		fRecordGenomes(false),
 		fRecordSeparations(false),
@@ -538,61 +548,7 @@ void TSimulation::Step()
 		fAgentPOVWindow->qglClearColor( Qt::black );
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
-		// These are the agent counts to be used in applying either the LowPopulationAdvantage or the (high) PopulationPenalty
-		// Assume global settings apply, until we know better
-		long numAgents = objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE);
-		long initNumAgents = fInitNumAgents;
-		long minNumAgents = fMinNumAgents  +  lround( 0.1 * (fInitNumAgents - fMinNumAgents) );	// 10% buffer, to help prevent reaching actual min value and invoking GA
-		long maxNumAgents = fMaxNumAgents;
-		long excess = numAgents - fInitNumAgents;	// global excess
-
-		// Use the lowest excess value to produce the most help or the least penalty
-		if( fNumDomains > 1 )
-		{
-			for( int id = 0; id < fNumDomains; id++ )
-			{
-				long domainExcess = fDomains[id].numAgents - fDomains[id].initNumAgents;
-				if( domainExcess < excess )	// This is the domain that is in the worst shape
-				{
-					numAgents = fDomains[id].numAgents;
-					initNumAgents = fDomains[id].initNumAgents;
-					minNumAgents = fDomains[id].minNumAgents  +  lround( 0.1 * (fDomains[id].initNumAgents - fDomains[id].minNumAgents) );	// 10% buffer, to help prevent reaching actual min value and invoking GA
-					maxNumAgents = fDomains[id].maxNumAgents;
-					excess = domainExcess;
-				}
-			}
-		}
-		
-		// If the population is too low, globally or in any domain, then either help it or leave it alone
-		if( excess < 0 )
-		{
-			agent::gPopulationPenaltyFraction = 0.0;	// we're not currently applying the high population penalty
-
-			// If we want to help it, apply the low population advantage
-			if( fApplyLowPopulationAdvantage )
-			{
-				agent::gLowPopulationAdvantageFactor = 1.0 - (float) (initNumAgents - numAgents) / (initNumAgents - minNumAgents);
-				if( agent::gLowPopulationAdvantageFactor < 0.0 )
-					agent::gLowPopulationAdvantageFactor = 0.0;
-				if( agent::gLowPopulationAdvantageFactor > 1.0 )
-					agent::gLowPopulationAdvantageFactor = 1.0;
-			}
-		}
-		else if( excess > 0 )	// population is greater than initial level everywhere
-		{
-			agent::gLowPopulationAdvantageFactor = 1.0;	// we're not currently applying the low population advantage
-
-			// apply the high population penalty (if the max-penalty is non-zero)
-			agent::gPopulationPenaltyFraction = agent::gMaxPopulationPenaltyFraction * (numAgents - initNumAgents) / (maxNumAgents - initNumAgents);
-			if( agent::gPopulationPenaltyFraction < 0.0 )
-				agent::gPopulationPenaltyFraction = 0.0;
-			if( agent::gPopulationPenaltyFraction > agent::gMaxPopulationPenaltyFraction )
-				agent::gPopulationPenaltyFraction = agent::gMaxPopulationPenaltyFraction;
-		}
-		
-//		printf( "step=%4ld, pop=%3d, initPop=%3ld, minPop=%2ld, maxPop=%3ld, maxPopPenaltyFraction=%g, popPenaltyFraction=%g, lowPopAdvantageFactor=%g\n",
-//				fStep, numAgents, initNumAgents, minNumAgents, maxNumAgents,
-//				agent::gMaxPopulationPenaltyFraction, agent::gPopulationPenaltyFraction, agent::gLowPopulationAdvantageFactor );
+		MaintainEnergyCosts();
 		
 		if( fStaticTimestepGeometry )
 		{
@@ -2288,6 +2244,7 @@ void TSimulation::InitWorld()
     fFitness1Frequency = 100;
     fFitness2Frequency = 2;
 	fEat2Consume = 20.0;
+	fGlobalEnergyScaleFactor = 1.0;
     fNumberFit = 30;
 	fNumberRecentFit = 10;
     fEatFitnessParameter = 10.0;
@@ -3367,6 +3324,129 @@ void TSimulation::PickParentsUsingTournament(int numInPool, int* iParent, int* j
 
 
 //---------------------------------------------------------------------------
+// TSimulation::EnergyScaleFactor
+//---------------------------------------------------------------------------
+double TSimulation::EnergyScaleFactor( long minAgents, long maxAgents, long numAgents )
+{
+	double scaleFactor = 1.0;
+	
+	long topFixedRange = minAgents + lround( fPopControlMaxFixedRange * (maxAgents - minAgents) );
+	long botFixedRange = minAgents + lround( fPopControlMinFixedRange * (maxAgents - minAgents) );
+	
+	if( numAgents < botFixedRange )
+	{
+		double fraction = (botFixedRange - numAgents) / (float) (botFixedRange - minAgents);
+		scaleFactor = 1.0 - (1.0 - fPopControlMinScaleFactor) * fraction;
+		if( scaleFactor < 0.0 )
+			scaleFactor = 0.0;
+	}
+	else if( numAgents > topFixedRange )
+	{
+		double fraction = (numAgents - topFixedRange) / (float) (maxAgents - topFixedRange);
+		double fractionReduced = pow( fraction, 4.0 );
+		scaleFactor = 1.0 + (fPopControlMaxScaleFactor - 1.0) * fractionReduced;
+		// don't need to cap, the way we did with 0.0,
+		// because it'll be close enough and not suffer a sign change
+		//printf( "%ld: a=%ld gsf=%g f=%g fr=%g\n", fStep, numAgents, scaleFactor, fraction, fractionReduced );
+	}
+	
+	return( scaleFactor );
+}
+
+
+//---------------------------------------------------------------------------
+// TSimulation::MaintainEnergyCosts
+//---------------------------------------------------------------------------
+void TSimulation::MaintainEnergyCosts()
+{
+	if( fEnergyBasedPopulationControl )
+	{
+		if( fPopControlGlobal )
+		{
+			long numAgents = objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE);
+			fGlobalEnergyScaleFactor = EnergyScaleFactor( fMinNumAgents, fMaxNumAgents, numAgents );
+			//printf( "%ld: a=%ld gsf=%g\n", fStep, numAgents, fGlobalEnergyScaleFactor );
+		}
+
+		if( fPopControlDomains )
+		{
+			// We make the assumption that if there is only one domain
+			// it occupies the full global space, so we only want one
+			// of the domain-specific or global population controls.
+			// If there are multiple domains, then we assume none
+			// of them is identical to the global domain, so we use
+			// both, if the user requested both.
+			if( fNumDomains > 1  ||  ! fPopControlGlobal )
+			{
+				for( int i = 0; i < fNumDomains; i++ )
+					fDomains[i].energyScaleFactor = EnergyScaleFactor( fDomains[i].minNumAgents,
+																	   fDomains[i].maxNumAgents,
+																	   fDomains[i].numAgents );
+			}
+		}
+	}
+	else if( fApplyLowPopulationAdvantage || agent::gNumDepletionSteps )
+	{
+		// These are the agent counts to be used in applying either the LowPopulationAdvantage or the (high) PopulationPenalty
+		// Assume global settings apply, until we know better
+		long numAgents = objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE);
+		long initNumAgents = fInitNumAgents;
+		long minNumAgents = fMinNumAgents  +  lround( 0.1 * (fInitNumAgents - fMinNumAgents) );	// 10% buffer, to help prevent reaching actual min value and invoking GA
+		long maxNumAgents = fMaxNumAgents;
+		long excess = numAgents - fInitNumAgents;	// global excess
+
+		// Use the lowest excess value to produce the most help or the least penalty
+		if( fNumDomains > 1 )
+		{
+			for( int id = 0; id < fNumDomains; id++ )
+			{
+				long domainExcess = fDomains[id].numAgents - fDomains[id].initNumAgents;
+				if( domainExcess < excess )	// This is the domain that is in the worst shape
+				{
+					numAgents = fDomains[id].numAgents;
+					initNumAgents = fDomains[id].initNumAgents;
+					minNumAgents = fDomains[id].minNumAgents  +  lround( 0.1 * (fDomains[id].initNumAgents - fDomains[id].minNumAgents) );	// 10% buffer, to help prevent reaching actual min value and invoking GA
+					maxNumAgents = fDomains[id].maxNumAgents;
+					excess = domainExcess;
+				}
+			}
+		}
+		
+		// If the population is too low, globally or in any domain, then either help it or leave it alone
+		if( excess < 0 )
+		{
+			agent::gPopulationPenaltyFraction = 0.0;	// we're not currently applying the high population penalty
+
+			// If we want to help it, apply the low population advantage
+			if( fApplyLowPopulationAdvantage )
+			{
+				agent::gLowPopulationAdvantageFactor = 1.0 - (float) (initNumAgents - numAgents) / (initNumAgents - minNumAgents);
+				if( agent::gLowPopulationAdvantageFactor < 0.0 )
+					agent::gLowPopulationAdvantageFactor = 0.0;
+				if( agent::gLowPopulationAdvantageFactor > 1.0 )
+					agent::gLowPopulationAdvantageFactor = 1.0;
+			}
+		}
+		else if( excess > 0 )	// population is greater than initial level everywhere
+		{
+			agent::gLowPopulationAdvantageFactor = 1.0;	// we're not currently applying the low population advantage
+
+			// apply the high population penalty (if the max-penalty is non-zero)
+			agent::gPopulationPenaltyFraction = agent::gMaxPopulationPenaltyFraction * (numAgents - initNumAgents) / (maxNumAgents - initNumAgents);
+			if( agent::gPopulationPenaltyFraction < 0.0 )
+				agent::gPopulationPenaltyFraction = 0.0;
+			if( agent::gPopulationPenaltyFraction > agent::gMaxPopulationPenaltyFraction )
+				agent::gPopulationPenaltyFraction = agent::gMaxPopulationPenaltyFraction;
+		}
+		
+		//printf( "step=%4ld, pop=%3d, initPop=%3ld, minPop=%2ld, maxPop=%3ld, maxPopPenaltyFraction=%g, popPenaltyFraction=%g, lowPopAdvantageFactor=%g\n",
+		//		fStep, numAgents, initNumAgents, minNumAgents, maxNumAgents,
+		//		agent::gMaxPopulationPenaltyFraction, agent::gPopulationPenaltyFraction, agent::gLowPopulationAdvantageFactor );
+	}
+}
+
+
+//---------------------------------------------------------------------------
 // TSimulation::UpdateAgents
 //---------------------------------------------------------------------------
 void TSimulation::UpdateAgents()
@@ -3808,9 +3888,10 @@ void TSimulation::DeathAndStats( void )
 		if( ! fLockStepWithBirthsDeathsLog )
 		{
 			// If we're not running in LockStep mode, allow natural deaths
-			// If we're not using the LowPopulationAdvantage to prevent the population getting too low,
-			// or there are enough agents that we can still afford to lose one (globally & in agent's domain)...
-			if( !fApplyLowPopulationAdvantage ||
+			// If we're not using either of the energy-based population controls
+			// to prevent the population getting too low, or there are enough agents
+			// that we can still afford to lose one (globally & in agent's domain)...
+			if( (!fApplyLowPopulationAdvantage && !fEnergyBasedPopulationControl) ||
 				((objectxsortedlist::gXSortedObjects.getCount( AGENTTYPE ) > fMinNumAgents)
 				 && (fNumberAliveWithMetabolism[c->GetMetabolism()->index] > fMinNumAgentsWithMetabolism[c->GetMetabolism()->index])
 				 && (fDomains[c->Domain()].numAgents > fDomains[c->Domain()].minNumAgents)) )
@@ -5363,7 +5444,12 @@ void TSimulation::MaintainFood()
 			{
 				if( fDomains[domainNumber].foodCount < fDomains[domainNumber].maxFoodGrownCount )
 				{
-					float probAdd = (fDomains[domainNumber].maxFoodGrownCount - fDomains[domainNumber].foodCount) * fDomains[domainNumber].foodRate;
+					// Grow by a probability based on the decimal part of the foodRate of the domain
+					float probAdd;
+					if( fFoodGrowthModel == MaxRelative )
+						probAdd = (fDomains[domainNumber].maxFoodGrownCount - fDomains[domainNumber].foodCount) * (fDomains[domainNumber].foodRate - floor(fDomains[domainNumber].foodRate));
+					else
+						probAdd = fDomains[domainNumber].foodRate - floor(fDomains[domainNumber].foodRate);
 					if( randpw() < probAdd )
 					{
 						// Add food to a patch in the domain (chosen based on the patch's fraction)
@@ -5387,6 +5473,7 @@ void TSimulation::MaintainFood()
 							break;	// no active patches in this domain, so give up
 					}
 					
+					// Keep at least the minimum amount of food around
 					int newFood = fDomains[domainNumber].minFoodCount - fDomains[domainNumber].foodCount;
 					for( int i = 0; i < newFood; i++ )
 					{
@@ -5408,9 +5495,12 @@ void TSimulation::MaintainFood()
 					{
 						if( fDomains[domainNumber].fFoodPatches[patchNumber].foodCount < fDomains[domainNumber].fFoodPatches[patchNumber].maxFoodGrownCount )
 						{
-
-							float probAdd = (fDomains[domainNumber].fFoodPatches[patchNumber].maxFoodGrownCount - fDomains[domainNumber].fFoodPatches[patchNumber].foodCount) * fDomains[domainNumber].fFoodPatches[patchNumber].growthRate;
-
+							// Grow by a probability based on the decimal part of the growthRate of the patch
+							float probAdd;
+							if( fFoodGrowthModel == MaxRelative )
+								probAdd = (fDomains[domainNumber].fFoodPatches[patchNumber].maxFoodGrownCount - fDomains[domainNumber].fFoodPatches[patchNumber].foodCount) * (fDomains[domainNumber].fFoodPatches[patchNumber].growthRate - floor(fDomains[domainNumber].fFoodPatches[patchNumber].growthRate));
+							else
+								probAdd = fDomains[domainNumber].fFoodPatches[patchNumber].growthRate - floor(fDomains[domainNumber].fFoodPatches[patchNumber].growthRate);
 							if( randpw() < probAdd )
 							{
 								AddFood( domainNumber, patchNumber );
@@ -5423,6 +5513,7 @@ void TSimulation::MaintainFood()
 								AddFood( domainNumber, patchNumber );
 							}
 
+							// Keep at least the minimum amount of food around
 							int newFood = fDomains[domainNumber].fFoodPatches[patchNumber].minFoodCount - fDomains[domainNumber].fFoodPatches[patchNumber].foodCount;
 							for( int i = 0; i < newFood; i++ )
 							{
@@ -6532,6 +6623,13 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	fMaxFoodCount = doc.get( "MaxFood" );
 	fMaxFoodGrownCount = doc.get( "MaxFoodGrown" );
 	fFoodRate = doc.get( "FoodGrowthRate" );
+	{
+		string foodGrowthModel = (string) doc.get( "FoodGrowthModel" );
+		if( foodGrowthModel == "MaxIndependent" )
+			fFoodGrowthModel = MaxIndependent;
+		else
+			fFoodGrowthModel = MaxRelative;
+	}
 	fFoodRemoveEnergy = doc.get( "FoodRemoveEnergy" );
 	food::gMaxLifeSpan = doc.get( "FoodMaxLifeSpan" );
     fPositionSeed = doc.get( "PositionSeed" );
@@ -6541,7 +6639,7 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 		proplib::Property &rfood = doc.get( "AgentsAreFood" );
 		if( (string)rfood == "Fight" )
 			fAgentsRfood = RFOOD_TRUE__FIGHT_ONLY;
-		else if ( (bool)rfood )
+		else if( (bool)rfood )
 			fAgentsRfood = RFOOD_TRUE;
 		else
 			fAgentsRfood = RFOOD_FALSE;
@@ -8182,6 +8280,7 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 			fDomains[id].numdied = 0;
 			fDomains[id].lastcreate = 0;
 			fDomains[id].maxgapcreate = 0;
+			fDomains[id].energyScaleFactor = 1.0;
 			fDomains[id].ifit = 0;
 			fDomains[id].jfit = 1;
 			fDomains[id].fittest = NULL;
@@ -8276,6 +8375,13 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 		agent::gMaxPopulationPenaltyFraction = 1.0 / (float) agent::gNumDepletionSteps;
 
 	fApplyLowPopulationAdvantage = doc.get( "ApplyLowPopulationAdvantage" );
+	fEnergyBasedPopulationControl = doc.get( "EnergyBasedPopulationControl" );
+	fPopControlGlobal = doc.get( "PopControlGlobal" );
+	fPopControlDomains = doc.get( "PopControlDomains" );
+	fPopControlMinFixedRange = doc.get( "PopControlMinFixedRange" );
+	fPopControlMaxFixedRange = doc.get( "PopControlMaxFixedRange" );
+	fPopControlMinScaleFactor = doc.get( "PopControlMinScaleFactor" );
+	fPopControlMaxScaleFactor = doc.get( "PopControlMaxScaleFactor" );
 	fRecordBirthsDeaths = doc.get( "RecordBirthsDeaths" );
 	fRecordPosition = doc.get( "RecordPosition" );
 	fRecordContacts = doc.get( "RecordContacts" );
@@ -8421,6 +8527,7 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 		agent::gMaxPopulationPenaltyFraction = 0.0;
 		
 		fApplyLowPopulationAdvantage = false;
+		fEnergyBasedPopulationControl = false;
 		
 		cout << "Due to running in LockStepWithBirthsDeathsLog mode, the following parameter values have been forcibly reset as indicated:" nl;
 		cout << "  MinLifeSpan" ses genome::gMinLifeSpan nl;
@@ -8453,7 +8560,8 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 			fNumberToSeed = fMaxNumAgents;
 		fInitNumAgents = fMaxNumAgents;	// population starts at maximum
 		fMinNumAgents = fMaxNumAgents;		// population stays at mximum
-		fProbabilityOfMutatingSeeds = 1.0;	// so there is variation in the initial population
+		if( fProbabilityOfMutatingSeeds == 0.0 )
+			fProbabilityOfMutatingSeeds = 1.0;	// so there is variation in the initial population
 //		fMateThreshold = 1.5;				// so they can't reproduce on their own
 
 		for( int i = 0; i < fNumDomains; i++ )	// over all domains
@@ -8463,12 +8571,13 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 				fDomains[i].numberToSeed = fDomains[i].maxNumAgents;
 			fDomains[i].initNumAgents = fDomains[i].maxNumAgents;	// population starts at maximum
 			fDomains[i].minNumAgents  = fDomains[i].maxNumAgents;	// population stays at maximum
-			fDomains[i].probabilityOfMutatingSeeds = 1.0;				// so there is variation in the initial population
+			fDomains[i].probabilityOfMutatingSeeds = fProbabilityOfMutatingSeeds;				// so there is variation in the initial population
 		}
 
 		agent::gNumDepletionSteps = 0;				// turn off the high-population penalty
 		agent::gMaxPopulationPenaltyFraction = 0.0;	// ditto
 		fApplyLowPopulationAdvantage = false;			// turn off the low-population advantage
+		fEnergyBasedPopulationControl = false;			// turn off energy-based population control
 		
 		cout << "Due to running as a steady-state GA with a fitness function, the following parameter values have been forcibly reset as indicated:" nl;
 		cout << "  InitNumAgents" ses fInitNumAgents nl;
@@ -8487,6 +8596,7 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 		cout << "  NumDepletionSteps" ses agent::gNumDepletionSteps nl;
 		cout << "  .MaxPopulationPenaltyFraction" ses agent::gMaxPopulationPenaltyFraction nl;
 		cout << "  ApplyLowPopulationAdvantage" ses fApplyLowPopulationAdvantage nl;
+		cout << "  EnergyBasedPopulationControl" ses fEnergyBasedPopulationControl nl;
 		
 		if( fComplexityFitnessWeight != 0.0 )
 		{
@@ -9079,9 +9189,10 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 		if( getenv("PWFARM_STATUS") )
 		{
 			char cmd[1024];
-			sprintf( cmd, "bash -c 'PWFARM_STATUS Polyworld \"[step=%ld agents=%d]\"'",
+			sprintf( cmd, "bash -c 'PWFARM_STATUS Polyworld \"[step=%ld agents=%d food=%d]\"'",
 					 fStep,
-					 objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE) );
+					 objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE),
+					 objectxsortedlist::gXSortedObjects.getCount(FOODTYPE));
 			int rc = system( cmd );
 			if( rc ) cerr << "Failed executing PWFARM_STATUS" << endl;
 		}

@@ -155,6 +155,7 @@ class Domain
     long maxgapcreate;
 	long numToCreate;
 	float probabilityOfMutatingSeeds;
+	double energyScaleFactor;
     short ifit;
     short jfit;
     FitStruct** fittest;	// based on complete fitness, however it is being calculated in AgentFitness(c)
@@ -389,6 +390,8 @@ public:
 	void End( const std::string &reason );
 	std::string EndAt( long timestep );
 	void Update();
+	void MaintainEnergyCosts();
+	double EnergyScaleFactor( long minAgents, long maxAgents, long numAgents );
 
 	bool fLockStepWithBirthsDeathsLog;	// Are we running in lockstep mode?
 	FILE * fLockstepFile;				// Define a file pointer to our LOCKSTEP-BirthsDeaths.log
@@ -442,6 +445,14 @@ public:
 	bool fBrainFunctionRecordSeeds;
 	
 	bool fApplyLowPopulationAdvantage;
+	bool fEnergyBasedPopulationControl;
+	bool fPopControlGlobal;
+	bool fPopControlDomains;
+	double fPopControlMinFixedRange;
+	double fPopControlMaxFixedRange;
+	double fPopControlMinScaleFactor;
+	double fPopControlMaxScaleFactor;
+	double fGlobalEnergyScaleFactor;
 	
 	bool fRecordComplexity;				// record the Olaf Functional Complexity (neural)
 	DataLibWriter *fComplexityLog;
@@ -790,6 +801,12 @@ private:
 		RFOOD_TRUE__FIGHT_ONLY
 	} fAgentsRfood;
 	float fFoodRate;
+	enum
+	{
+		MaxRelative,
+		MaxIndependent
+	} fFoodGrowthModel;
+	
 	float fFoodRemoveEnergy;
 	float fFoodEnergyIn;
 	float fFoodEnergyOut;
