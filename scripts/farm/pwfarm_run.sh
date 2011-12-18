@@ -219,7 +219,6 @@ if [ "$1" == "--field" ]; then
 
     checksum=.pwfarm_run_package_checksums
     archive_input="$( cat $POLYWORLD_PWFARM_RUN_PACKAGE | while read x; do [ ! -z "$x" ] && ls $x; done )"
-    read
 
     if [ ! -z "$archive_input" ]; then
 	$SCRIPTS_DIR/archive_delta.sh -e $PAYLOAD_DIR/run_package/checksums_$(pwenv fieldnumber) $checksum $PWFARM_OUTPUT_FILE $archive_input
