@@ -329,9 +329,26 @@ fi
 ### Mode-specific logic after interfacing with field nodes
 ###
 if [ "$mode" == "dispatch" ] || [ "$mode" == "recover" ]; then
-    # kill window 0... it just has bash
-    screen -S "${DISPATCHER_SCREEN_SESSION}" -p 0 -X kill
+    win0pid=$DISPATCHERSTATE_DIR/win0pid
+    rm -f win0pid
+    # kill window 0. there's a race in just using -X kill and then attaching, so we "stuff" a command into the window.
+    # it writes its pid to a file, then exits... and we can wait for it to actually die
+    screen -S "${DISPATCHER_SCREEN_SESSION}" -p 0 -X stuff 'echo $$>'$win0pid'; exit'$'\n'
+
+    # wait for win0 to write its pid
+    echo "Waiting for win0 to write pid"
+    while [ ! -e $win0pid ]; do sleep 0.1; done
+
+    # wait for win0 to die
+    echo "Waiting for win0 to die"
+    while is_process_alive $win0pid; do sleep 0.1; done
+    rm $win0pid
+
+    # sleep another 1 second, just for good measure
+    sleep 1
+
     # bring up screen, starting at the windowlist
+    echo "Attaching to dispatcher screen..."
     screen -S "${DISPATCHER_SCREEN_SESSION}" -p = -r
     while screen_active; do
 	echo
