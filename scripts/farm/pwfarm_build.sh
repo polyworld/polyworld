@@ -104,6 +104,11 @@ function build_bct()
 
     PWFARM_STATUS "Building BCT"
 
+    local install_dir=$( canonpath ../bct-install )
+    mkdir -p $install_dir/include
+    mkdir -p $install_dir/lib
+
+
     # Note: If you change the following contents of Makefile.vars, be sure to escape $ (\$)
     echo "\
 # Arguments to be sent to the C++ compiler
@@ -111,7 +116,7 @@ function build_bct()
 CXXFLAGS                += -m32 -fopenmp
 
 # Installation directory
-install_dir              = /usr/local
+install_dir              = $install_dir
 
 # The following variables are only needed for SWIG
 # If you aren't generating Python bindings, you don't need to worry about them
@@ -137,7 +142,7 @@ swig_lib_flags          = \$(swig_lib_flags_apple)" \
     > Makefile.vars
 
     make
-    PWFARM_SUDO make install
+    make install
     make swig
 
     cp bct_py.py "$POLYWORLD_PWFARM_APP_DIR/scripts"
@@ -225,7 +230,7 @@ else
 
     scripts/package_source.sh $tmp_dir/src.zip
     
-    $PWFARM_SCRIPTS_DIR/__pwfarm_dispatcher.sh --password dispatch $tmp_dir/src.zip "./scripts/farm/pwfarm_build.sh --field $args" nil nil
+    $PWFARM_SCRIPTS_DIR/__pwfarm_dispatcher.sh dispatch $tmp_dir/src.zip "./scripts/farm/pwfarm_build.sh --field $args" nil nil
 
     rm -rf $tmp_dir
 fi
