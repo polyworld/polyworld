@@ -180,7 +180,7 @@ class BaseNeuronModel : public NeuronModel
 
 	virtual void dumpAnatomical( AbstractFile *file )
 	{
-		size_t	sizeCM;
+		size_t	dimCM;
 		float*	connectionMatrix;
 		short	i,j;
 		long	s;
@@ -189,15 +189,13 @@ class BaseNeuronModel : public NeuronModel
 		long imin = 10000;
 		long imax = -10000;
 
-		sizeCM = sizeof( *connectionMatrix ) * (dims->numneurons+1) * (dims->numneurons+1);	// +1 for bias neuron
-		connectionMatrix = (float*) alloca( sizeCM );
+		dimCM = (dims->numneurons+1) * (dims->numneurons+1);	// +1 for bias neuron
+		connectionMatrix = (float*) calloc( sizeof( *connectionMatrix ), dimCM );
 		if( !connectionMatrix )
 		{
 			fprintf( stderr, "%s: unable to alloca connectionMatrix\n", __FUNCTION__ );
 			return;
 		}
-
-		bzero( connectionMatrix, sizeCM );
 
 		daPrint( "%s: before filling connectionMatrix\n", __FUNCTION__ );
 
@@ -247,6 +245,8 @@ class BaseNeuronModel : public NeuronModel
 				file->printf( "%+06.4f ", connectionMatrix[j + i*(dims->numneurons+1)] * inverseMaxWeight );
 			file->printf( ";\n" );
 		}
+		
+		free( connectionMatrix );
 	}
 
 	virtual void startFunctional( AbstractFile *file )
