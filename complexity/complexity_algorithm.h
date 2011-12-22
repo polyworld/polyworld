@@ -40,7 +40,7 @@ gsl_matrix* calcCOV( gsl_matrix* );					// function overloaded for simpler, fast
 gsl_matrix* calcCOV( gsl_matrix* CIJ, double r );	// function overloaded for when we don't need to compute COR
 void rescaleCOV( gsl_matrix* COV, double det );
 
-gsl_matrix* gsamp( gsl_matrix_view x );
+void gsamp( gsl_matrix_view x );
 int qsort_compare_double( const void *a, const void *b );
 int qsort_compare_rows0( const void *a, const void *b );
 

@@ -125,7 +125,7 @@ int sort_compare_double( const void* a, const void* b )
 // 	 MATLAB: B' = gsamp(A')
 // 	    C++: B  = gsamp(A)
 //---------------------------------------------------------------------------
-gsl_matrix* gsamp( gsl_matrix* m )
+void gsamp( gsl_matrix* m )
 {
 	int r = m->size1;
 	int c = m->size2;
@@ -138,8 +138,6 @@ gsl_matrix* gsamp( gsl_matrix* m )
 
 	gsl_rng *randNumGen = create_rng( DEFAULT_SEED );
 
-	gsl_matrix* mOut = gsl_matrix_alloc( r, c );	// the return matrix we create
-	
 	double data[r][2];	// array of structs to do the sorting (raw data, indexes)
 	double gauss[r];
 	
@@ -163,15 +161,13 @@ gsl_matrix* gsamp( gsl_matrix* m )
 			
 		qsort( gauss, r, sizeof(double), sort_compare_double );
 
-		// store the rank-ordered Gaussian series in the current column of new matrix mOut
+		// store the rank-ordered Gaussian series back into the current column of matrix
 		// using the shuffled indexes to restore original series data order
 		for( int i = 0; i < r; i++ )
-			gsl_matrix_set( mOut, (int)round(data[i][1]), j, gauss[i] );	// round() is only to be safe
+			gsl_matrix_set( m, (int)round(data[i][1]), j, gauss[i] );	// round() is only to be super safe
 	}
 	
 	dispose_rng( randNumGen );
-
-	return( mOut );
 }
 
 
@@ -458,10 +454,10 @@ double calcC_k( gsl_matrix* COV, double I_n, int k )
 // 		}
 // 
 // 		//Technically we don't have to store this array, but for now lets stay consistent with the MATLAB code
-// 		gsl_matrix* Xed_COV =  matrix_crosssection( COV, b, b_length );
-// 		double det = determinant( Xed_COV );
-// 		sumI_nm1 += CalcI( Xed_COV, det );
-// 		gsl_matrix_free( Xed_COV );		// this should solve the big memory leak problem
+// 		gsl_matrix* xCOV =  matrix_crosssection( COV, b, b_length );
+// 		double det = determinant( xCOV );
+// 		sumI_nm1 += CalcI( xCOV, det );
+// 		gsl_matrix_free( xCOV );		// this should solve the big memory leak problem
 // 	}
 // 
 // 	return( I_n - (I_n + sumI_nm1)/n );
@@ -488,10 +484,10 @@ double calcC_k_exact( gsl_matrix* COV, double I_n, int k )
 
 	do
 	{
-		gsl_matrix* Xed_COV =  matrix_crosssection( COV, index, k );
-		double det = determinant( Xed_COV );
-		sumI_k += CalcI( Xed_COV, det );
-		gsl_matrix_free( Xed_COV );
+		gsl_matrix* xCOV =  matrix_crosssection( COV, index, k );
+		double det = determinant( xCOV );
+		sumI_k += CalcI( xCOV, det );
+		gsl_matrix_free( xCOV );
 		
 		n_choose_k++;
 	}
@@ -563,37 +559,67 @@ double CalcApproximateFullComplexityWithMatrix( gsl_matrix* data, int numPoints 
     	return complexity;
 	}
 	
-    gsl_matrix* o = NULL;
+	// Make room for a copy of the data, that we will add noise to and possibly Gaussianize
+    gsl_matrix* m = gsl_matrix_alloc( data->size1, data->size2 );
 
 	// Inject a little bit of noise into the data matrix
 	gsl_rng *randNumGen = create_rng( DEFAULT_SEED );
 	
+	double noise_scale = 0.00001;
 	for( size_t i = 0; i < data->size1; i++ )
 		for( size_t j = 0; j < data->size2; j++ )
-			gsl_matrix_set( data, i, j, gsl_matrix_get( data, i, j ) + 0.00001*gsl_ran_ugaussian( randNumGen ) );	// we can do smaller values
+			gsl_matrix_set( m, i, j, gsl_matrix_get( data, i, j ) + noise_scale*gsl_ran_ugaussian( randNumGen ) );
 
-	dispose_rng( randNumGen );
-	
 	// If we're GSAMP'ing, do that now.
     if( Gaussianize )
-		o = gsamp( data );	// allocates and returns new gsl_matrix
-	else
-	    o = data;
+		gsamp( m );	// replaces original columns by rank-equivalent Gaussian distributions
 
+	gsl_matrix* COV;
+	size_t n;
+	double det;
 	
-	// We calculate the covariance matrix and use it to compute Complexity.
-	gsl_matrix* COV = calcCOV( o );
-	size_t n = COV->size1;	// same as size2
+	do
+	{
+		// We calculate the covariance matrix and use it to compute Complexity.
+		COV = calcCOV( m );
+		n = COV->size1;	// same as size2
+	
+		det = determinant( COV );
+		
+		// If the determinant is zero, add more noise
+		//
+		// Being done after gsamp makes this somewhat inconsistent, but it happens extremely rarely,
+		// and then only for event-filtered complexities, in my experience so far.
+		// Something like this is needed to eliminate those very rare zero determinants.
+		
+		if( det == 0.0 )
+		{
+			if( noise_scale*10.0 < 1.1 )
+			{
+				noise_scale *= 10.0;
+				//cout << "Adding extra noise at scale " << noise_scale << endl;
+				for( size_t i = 0; i < data->size1; i++ )
+					for( size_t j = 0; j < data->size2; j++ )
+						gsl_matrix_set( m, i, j, gsl_matrix_get( m, i, j ) + noise_scale*gsl_ran_ugaussian( randNumGen ) );
+			}
+			else
+			{
+				//cerr << "Adding noise with scale " << noise_scale << " was insufficient to eliminate zero determinant" << endl;
+				det = 1.e-250;
+			}
+		}
+	}
+	while( det == 0.0 );
 
-    if( Gaussianize )
-		gsl_matrix_free( o );	// free this iff we allocated it (don't free data)
-
-	double det = determinant( COV );
 	double I_n = CalcI( COV, det );
+	
 #if RescaleCOV
 	rescaleCOV( COV, det );
 #endif
 
+	gsl_matrix_free( m );
+	dispose_rng( randNumGen );
+	
 	if( numPoints <= 0 || (size_t) numPoints >= n )
 		numPoints = n-1;		// zero (or invalid value) means use all (non-zero) points
 

@@ -58,7 +58,7 @@ using namespace std;
 // Function Prototypes
 //===========================================================================
 
-void FilterActivity( gsl_matrix* activity, const char* filter_events, const long agent_number, const long agent_birth, const long lifespan, Events* events );
+void FilterActivity( gsl_matrix* activity, const char* filter_events, const long agent_number, const long agent_birth, const long lifespan, Events* events, long numinputneurons );
 
 //===========================================================================
 // Function Implementations
@@ -165,7 +165,7 @@ double CalcComplexity_brainfunction(const char *fnameAct,
     		}
     	}
     	
-    	FilterActivity( activity, filter_events, agent_num, agent_birth, agent_lifespan, events );
+    	FilterActivity( activity, filter_events, agent_num, agent_birth, agent_lifespan, events, numinputneurons );
     }
 
 	complexity = CalcComplexityWithMatrix_brainfunction(activity,
@@ -753,7 +753,7 @@ gsl_matrix * readin_brainfunction(const char* fname,
 //---------------------------------------------------------------------------
 // FilterActivity
 //---------------------------------------------------------------------------
-void FilterActivity( gsl_matrix* activity, const char* filter_events, const long agent_number, const long agent_birth, const long lifespan, Events* events )
+void FilterActivity( gsl_matrix* activity, const char* filter_events, const long agent_number, const long agent_birth, const long lifespan, Events* events, long numinputneurons )
 {
 	static int mate_filter_radius = 9;	// exclude center point
 	static int eat_filter_radius = 4;	// exclude center point
@@ -823,12 +823,12 @@ void FilterActivity( gsl_matrix* activity, const char* filter_events, const long
 		for( size_t i = 0; i < activity->size1; i++ )
 		{
 		#if DebugFiltering
-			if( j == 0 )
+			if( j == numinputneurons )
 				printf( "%lu,%lu: %g , %g => ", i, j, gsl_matrix_get( activity, i, j ), filter[i] );
 		#endif
 			gsl_matrix_set( activity, i, j, gsl_matrix_get( activity, i, j ) * filter[i]  +  0.5 * (1.0 - filter[i]) );
 		#if DebugFiltering
-			if( j == 0 )
+			if( j == numinputneurons )
 				printf( "%g\n", gsl_matrix_get( activity, i, j ) );
 		#endif
 		}
