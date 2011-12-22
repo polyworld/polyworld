@@ -3182,11 +3182,22 @@ GrayCoding {
   default False
 }
 
+# RecordAll is a convenience parameter that is only used while processing the worldfile
+# It serves as a default state for all of the *Record* parameters
 RecordAll {
   type    BOOL
   default False
 }
 
+# RecordNeuralComplexityFiles is a convenience parameter that is only used while processing the worldfile
+# It serves as a default state for the *Record* parameters controlling files that may be needed for computing complexity
+RecordNeuralComplexityFiles {
+  type    BOOL
+  default False
+}
+
+# RecordFrequency is a convenience parameter that is only used while processing the worldfile
+# It serves as a default frequency for the *RecordFrequency parameters
 RecordFrequency {
   type    INT
   default 1000
@@ -3204,7 +3215,7 @@ RecordGeneSeparation {
 
 RecordBirthsDeaths {
   type    BOOL
-  default $( RecordAll )
+  default $( RecordAll or RecordNeuralComplexityFiles )
 }
 
 RecordPosition {
@@ -3234,17 +3245,17 @@ RecordCarry {
 
 RecordEnergy {
   type    BOOL
-  default $( RecordAll )
+  default $( RecordAll or RecordNeuralComplexityFiles )
 }
 
 BrainAnatomyRecordAll {
   type    BOOL
-  default $( RecordAll )
+  default $( RecordAll or RecordNeuralComplexityFiles )
 }
 
 BrainFunctionRecordAll {
   type    BOOL
-  default $( RecordAll )
+  default $( RecordAll or RecordNeuralComplexityFiles )
 }
 
 BrainAnatomyRecordSeeds {
@@ -3259,7 +3270,7 @@ BrainFunctionRecordSeeds {
 
 BrainFunctionRecentRecordFrequency {
   type    INT
-  default $( RecordFrequency if RecordAll else 0 )
+  default $( RecordFrequency if RecordAll or RecordNeuralComplexityFiles else 0 )
 }
 
 BestSoFarBrainAnatomyRecordFrequency {
