@@ -24,9 +24,10 @@ for (( index=0; index<${#fieldnumbers[@]}; index++ )); do
     if [ "$hostname" != "$hostname_master" ]; then
 	host=$( fieldhost_from_name $hostname )
 
-	echo Transfering $payload from $hostname_master to $hostname...
+	echo "Transferring $payload from $hostname_master to $hostname..."
 	( repeat_til_success scp "$osuser@$host_master:$dest" "$osuser@$host:$dest" ) &
     fi
 done
 
 wait
+echo "Transfer complete."

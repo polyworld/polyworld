@@ -2,11 +2,18 @@
 
 source $( dirname $BASH_SOURCE )/__lib.sh || exit 1
 
-if [ "$1" == "--password" ]; then
+if [ "$1" == "--noprompterr" ]; then
     shift
-    passwordopt="--password"
+    erropt="--noprompterr"
 else
-    passwordopt=""
+    erropt=""
+fi
+
+if [ "$1" == "--sudo" ]; then
+    shift
+    sudoopt="--sudo"
+else
+    sudoopt=""
 fi
 
 if [ "$1" == "--input" ]; then
@@ -16,14 +23,10 @@ if [ "$1" == "--input" ]; then
 fi
 
 if [ "$1" == "--output" ]; then
-    shift
-    output_basename="$1"
-    shift
-    output_dir="$1"
-    shift
+    outputdir="$2"
+    shift 2
 else
-    output_basename="nil"
-    output_dir="nil"
+    outputdir="nil"
 fi
 
 script="$1"
@@ -48,5 +51,11 @@ popd_quiet
 
 pwfarm_dir=`canondirname "$0"`
 
-$pwfarm_dir/__pwfarm_dispatcher.sh $passwordopt dispatch $tmpdir/payload.zip "$cmd" "$output_basename" "$output_dir"
+tasks=$( taskmeta create_field_tasks $tmpdir $erropt $sudoopt "$cmd" "$outputdir") || exit 1
+
+$pwfarm_dir/__pwfarm_dispatcher.sh dispatch $tmpdir/payload.zip $tasks
+exitval=$?
+
 rm -rf $tmp_dir
+
+exit $exitval

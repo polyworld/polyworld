@@ -19,8 +19,7 @@ void usage( string msg = "" )
 	cerr << "       proputil get path_values propname" << endl;
 	cerr << "       proputil set path_values propname=propvalue..." << endl;
 	cerr << "       proputil len path_values propname" << endl;
-	cerr << "       proputil overlay_matches path_overlay selectors" << endl;
-	cerr << "       proputil overlay path_values path_overlay selector" << endl;
+	cerr << "       proputil overlay path_values path_overlay index" << endl;
 	cerr << "       proputil scalarnames path_values depth_start" << endl;
 
 	if( msg.length() > 0 )
@@ -61,8 +60,7 @@ void get( const char *pathValues, const char *name );
 void set( const char *pathValues, NameValuePairList &pairs );
 void len( const char *pathValues, const char *name );
 void select( const char *pathOverlay, const char *selector );
-void overlay_matches( const char *pathOverlay, const char **selectors, int nselectors );
-void overlay( const char *pathValues, const char *pathOverlay, const char *selector );
+void overlay( const char *pathValues, const char *pathOverlay, const char *index );
 void scalarnames( const char *pathValues, const char *depth_start );
 
 int main( int argc, const char **argv )
@@ -125,15 +123,6 @@ int main( int argc, const char **argv )
 		}
 
 		len( argv[2], argv[3] );
-	}
-	else if( mode == "overlay_matches" )
-	{
-		if( argc < 4 )
-		{
-			usage();
-		}
-
-		overlay_matches( argv[2], argv + 3, argc - 3 );
 	}
 	else if( mode == "overlay" )
 	{
@@ -234,27 +223,12 @@ void len( const char *pathValues, const char *name )
 	delete docValues;
 }
 
-void overlay_matches( const char *pathOverlay, const char **selectors, int nselectors )
-{
-	Document *docOverlay = Parser::parseFile( pathOverlay );
-
-	for( int i = 0; i < nselectors; i++ )
-	{
-		if( Overlay::hasOverlay(docOverlay, selectors[i]) )
-		{
-			cout << selectors[i] << endl;
-		}
-	}
-
-	delete docOverlay;
-}
-
 void overlay( const char *pathValues, const char *pathOverlay, const char *selector )
 {
 	Document *docValues = Parser::parseFile( pathValues );
 	Document *docOverlay = Parser::parseFile( pathOverlay );
 
-	Overlay::overlay( docOverlay, docValues, selector );
+	Overlay::overlay( docOverlay, docValues, atoi(selector) );
 	docValues->write( cout );
 
 	delete docValues;
@@ -269,4 +243,3 @@ void scalarnames( const char *pathValues, const char *depth_start )
 
 	delete docValues;
 }
-

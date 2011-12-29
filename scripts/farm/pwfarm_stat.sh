@@ -26,7 +26,7 @@ OPTIONS:
 
    -f fields
              Specify fields on which this should run. Must be a single argument,
-          so use quotes. e.g. -f "0 1" or -f "\$(echo {0..3})"
+          so use quotes. e.g. -f "0 1" or -f "{0..3}"
 EOF
     exit 1
 }
@@ -36,16 +36,16 @@ if [ $# == 0 ]; then
 fi
 
 if [ "$1" == "--field" ]; then
-    field=true
+    FIELD=true
     shift
 else
-    field=false
+    FIELD=false
 fi
 
 while getopts "f:" opt; do
     case $opt in
 	f)
-	    if ! $field; then
+	    if ! $FIELD; then
 		__pwfarm_config env set fieldnumbers "$OPTARG"
 		validate_farm_env
 	    fi
@@ -55,17 +55,17 @@ while getopts "f:" opt; do
 	    ;;
     esac
 done
-args=$( encode_args "$@" )
+
+ARGS=$( encode_args "$@" )
 shift $(( $OPTIND - 1 ))
 
 if [ $# != 1 ]; then
     usage
 fi
 
-args="$*"
-mode="$1"
+MODE="$1"
 
-case "$mode" in
+case "$MODE" in
     "sessions")
 	;;
     "top")
@@ -79,57 +79,60 @@ case "$mode" in
 	;;
 esac
 
-tmpdir=$( mktemp -d /tmp/pwfarm_stat.XXXXXXXX ) || exit 1
+TMP_DIR=$( create_tmpdir ) || exit 1
 
-if ! $field; then
+if ! $FIELD; then
     validate_farm_env
 
-    __pwfarm_script.sh --output result "$tmpdir" $0 --field $args || exit 1
+    RESULTS_DIR=$TMP_DIR/result
+
+    __pwfarm_script.sh --output $RESULTS_DIR $0 --field $ARGS || exit 1
 
     for num in $( pwenv fieldnumbers ); do
-	if [ -e "$tmpdir/result_$num/out" ]; then
+	if [ -e "${RESULTS_DIR}_$num/out" ]; then
 	    echo -----
 	    echo ----- $( fieldhostname_from_num $num )
 	    echo -----
-	    cat "$tmpdir/result_$num/out"
+	    cat "${RESULTS_DIR}_$num/out"
 	    echo
 	fi
     done
 else
-    case "$mode" in
+    case "$MODE" in
 	"sessions")
-	    screen -ls | grep pwfarm_field | 
+	    screen -ls |
+	    grep pwfarm_field | 
 	    while read line; do
 		user=$( echo $line | sed 's/\(.*pwfarm_field__user_\)\(.*\)\(__farm_.*\)/\2/g' )
 		session=$( echo $line | sed 's/\(.*pwfarm_field_.*__session_\)\(.*\)\(____.*\)/\2/g' )
 
-		if [ "$user" != "$( pwenv pwuser)" ] || [ "$session" != "$( pwenv sessionname )" ]; then
-		    echo "$session (user=$user)" >> $tmpdir/out 2>&1
+		if [ "$user" != "$( pwenv pwuser )" ] || [ "$session" != "$( pwenv sessionname )" ]; then
+		    echo "$session (user=$user)" >> $TMP_DIR/out 2>&1
 		fi
 	    done
 
-	    if [ ! -e $tmpdir/out ]; then
-		echo "NO SESSIONS" >> $tmpdir/out 2>&1
+	    if [ ! -e $TMP_DIR/out ]; then
+		echo "NO SESSIONS" >> $TMP_DIR/out 2>&1
 	    fi
 	    ;;
 	"top")
 	    top
 	    ;;
 	"df")
-	    df -h > $tmpdir/out 2>&1
+	    df -h > $TMP_DIR/out 2>&1
 	    ;;
 	"screen")
-	    screen -ls > $tmpdir/out 2>&1
+	    screen -ls > $TMP_DIR/out 2>&1
 	    ;;
 	*)
 	    err "Invalid mode ($mode)"
 	    ;;
     esac
 
-    if [ -e $tmpdir/out ]; then
-	cd $tmpdir
-	zip -q $PWFARM_OUTPUT_FILE *
+    if [ -e $TMP_DIR/out ]; then
+	cd $TMP_DIR
+	zip -q $PWFARM_OUTPUT_FILE out
     fi
 fi
 
-rm -rf $tmpdir
+rm -rf $TMP_DIR

@@ -8,6 +8,10 @@ export POLYWORLD_PWFARM_APP_PID=$( dirname $POLYWORLD_PWFARM_APP_DIR )/pid
 
 export POLYWORLD_PWFARM_RUNS_DIR=$POLYWORLD_PWFARM_HOME/runs
 
+export POLYWORLD_PWFARM_SCRIPTS_DIR=$POLYWORLD_PWFARM_APP_DIR/scripts
+
+DEFAULT_FETCH_LIST="stats/* *.wf *.wfs *.wfo"
+
 function lock_app()
 {
     while ! mutex_trylock $POLYWORLD_PWFARM_APP_MUTEX; do
@@ -37,24 +41,163 @@ function unlock_app()
     mutex_unlock $POLYWORLD_PWFARM_APP_MUTEX
 }
 
-function build_runid()
+function validate_runid()
 {
-    local owner="$1"
-    local runid="$2"
-
-    if [ "$owner" == "nil" ]; then
-	echo $runid
+    if [ "$1" == "--ancestor" ]; then
+	local ancestor=true
+	shift
     else
-	echo $owner/$runid
+	local ancestor=false
+    fi
+    local runid="$1"
+
+    if echo "$runid" | grep [[:space:]] > /dev/null; then
+	err "A Run ID cannot contain whitespace"
+    fi
+
+    if echo "$runid" | grep "[\*\?]" > /dev/null; then
+	err "A Run ID cannot contain wildcards"
+    fi
+
+    if ! $ancestor && [ -z "$runid" ]; then
+	err "A Run ID cannot be empty"
+    fi
+
+    while [ ! -z "$runid" ]; do
+	local node=$(basename $runid)
+
+	if echo $node | grep "^run_[0-9]*$" > /dev/null; then
+	    err "A Run ID cannot contain 'run_[0-9]*'"
+	fi
+
+	prev=$runid
+	runid=$(dirname $runid)
+
+	if [ "$prev" == "$runid" ]; then
+	    break;
+	fi
+    done
+}
+
+function normalize_runid()
+{
+    local runid="$1"
+
+    echo "$runid" |
+    sed  -e "s|/\{1,\}|/|g" -e "s|^/||" -e "s|/$||"
+}
+
+function is_runid_ancestor_match()
+{
+    local runid="/$1/"
+    local ancestor="^/$2/"
+
+
+    ancestor=$(
+	echo "$ancestor" |
+	sed -e "s|\.|\\\\.|g" -e "s|\*|.*|g" -e "s|//|/|g"
+    )
+
+    echo "$runid" | grep "$ancestor" > /dev/null
+}
+
+function stored_run_path_field()
+{
+    if [ "$1" == "--subpath" ]; then
+	shift
+	local status="$1"
+	local owner="$2"
+	local runid="$3"
+
+	echo "$POLYWORLD_PWFARM_RUNS_DIR/$status/$owner/$runid"
+    else
+	local status="$1"
+	local owner="$2"
+	local runid="$3"
+	local nid="$4"
+
+	echo "$POLYWORLD_PWFARM_RUNS_DIR/$status/$owner/$runid/run_$nid"
     fi
 }
 
-function stored_run_path()
+function parse_stored_run_path_field()
 {
-    local status="$1"
-    local runid="$2"
+    local mode="$1"
+    local path="${2-stdin}"
 
-    echo "$POLYWORLD_PWFARM_RUNS_DIR/$status/$runid"
+    function __parse_path()
+    {
+	case $mode in
+	    "--runid")
+		echo $path |
+		sed "s|^$POLYWORLD_PWFARM_RUNS_DIR/[^/]*/[^/]*/\(.*\)/run_[0-9]*$|\1|"
+		;;
+	    "--nid")
+		echo $path |
+		sed "s|^.*/run_\([0-9]*\)$|\1|"
+		;;
+	    *)
+		err "Invalid parse_stored_run_path_field mode ($mode)"
+		;;
+	esac
+    }
+
+    if [ "$path" != "stdin" ]; then
+	__parse_path
+    else
+	while read path; do
+	    __parse_path
+	done
+    fi
+}
+
+function stored_run_path_local()
+{
+    if [ "$1" == "--subpath" ]; then
+	shift
+	local owner="$1"
+	local runid="$2"
+
+	echo "$(pwenv runresults_dir)/$owner/$runid"
+    else
+	local owner="$1"
+	local runid="$2"
+	local nid="$3"
+
+	echo "$(pwenv runresults_dir)/$owner/$runid/run_$nid"
+    fi
+}
+
+function parse_stored_run_path_local()
+{
+    local mode="$1"
+    local path="${2-stdin}"
+
+    function __parse_path()
+    {
+	case $mode in
+	    "--runid")
+		local resultsdir=$(pwenv runresults_dir)
+		echo $path |
+		sed "s|^$resultsdir/[^/]*/\(.*\)/run_[0-9]*$|\1|"
+		;;
+	    "--nid")
+		echo $path |
+		sed "s|^.*/run_\([0-9]*\)$|\1|"
+		;;
+	    *)
+		err "Invalid parse_stored_run_path_field mode ($mode)"
+		;;
+	esac
+    }
+
+    if [ "$path" != "stdin" ]; then
+	__parse_path
+    else
+	while read path; do
+	    __parse_path
+	done
+    fi
 }
 
 function is_good_run()
@@ -67,6 +210,10 @@ function is_good_run()
     fi
     local run="$1"
 
+    if ! is_run $run; then
+	return 1
+    fi
+
     if [ "$exitval" != "0" ]; then
 	return 1
     fi
@@ -78,15 +225,96 @@ function is_good_run()
     return 0
 }
 
-function good_run_exists()
+function is_run()
 {
-    local runid="$1"
+    dir="$1"
 
-    if [ -e $( stored_run_path "good" "$runid" ) ]; then
-	return 0
-    else
-	return 1
-    fi
+    [ -d $dir/stats ] || return 1
+    [ -f $dir/normalized.wf ] || return 1
+    [ -f $dir/original.wf ] || return 1
+
+    return 0
+}
+
+function conflicting_run_exists()
+{
+    local owner="$1"
+    local runid="$2"
+    local nid="$3"
+    local batchid="$4"
+
+    local runs=$(ls_runs_field "good" $owner $runid "*")
+
+    for run in $runs; do
+	if [ "$(cat $run/.pwfarm/batchid)" != "$batchid" ]; then
+	    echo "Found existing run with same Run ID, but different Batch ID at $run" >&2
+	    return 0
+	fi
+	if [ "$(cat $run/.pwfarm/nid)" == "$nid" ]; then
+	    echo "Conflicting nid at $run" >&2
+	    return 0
+	fi
+    done
+
+    return 1
+}
+
+function ls_runs_field()
+{
+    local status="$1"
+    local owner="$2"
+    local runid="$3"
+    local nid="$4"
+
+    local dir=$( stored_run_path_field "$status" "$owner" "$runid" "$nid" )
+
+    ls -d $dir 2>/dev/null
+}
+
+function find_runs_field()
+{
+    local status=$1
+    local owner=$2
+    local runid=$3
+    
+    (
+	export -f is_run
+
+	for runfile in $(stored_run_path_field --subpath "$status" "$owner" "$runid"); do
+	    if [ -e $runfile ]; then
+		find $runfile -exec bash -c "is_run {}" \; -print -prune
+	    fi
+	done |
+	canonpath
+    )
+}
+
+function ls_runs_local()
+{
+    local owner="$1"
+    local runid="$2"
+    local nid="$3"
+
+    local dir=$( stored_run_path_local "$owner" "$runid" "$nid" )
+
+    ls -d $dir 2>/dev/null
+}
+
+function find_runs_local()
+{
+    owner="$1"
+    runid="$2"
+
+    (
+	export -f is_run
+
+	for runfile in $(stored_run_path_local --subpath "$owner" "$runid"); do
+	    if [ -e $runfile ]; then
+		find $runfile -exec bash -c "is_run {}" \; -print -prune
+	    fi
+	done |
+	canonpath
+    )
 }
 
 function store_orphan_run()
@@ -96,36 +324,45 @@ function store_orphan_run()
     if [ -e $orphan ]; then
 	echo "Found orphan: $orphan"
 
-	if [ -e $( dirname $orphan)/runid ]; then
-	    local runid=$( cat $( dirname $orphan )/runid )
-	else
-	    echo "No associated run id!"
-	    local runid=$( date | sed -e "s/ /_/g" -e "s/:/./g" )
-	fi
-	echo "  run id=$runid"
+	local orphan_dir=$( dirname $orphan )
+	local owner=$( cat $orphan_dir/owner )
+	local runid=$( cat $orphan_dir/runid )
+	local nid=$( cat $orphan_dir/nid )
 
-	store_run "$runid" "$orphan"
+	[ ! -z "$owner" ] || err "Can't find orphan owner!"
+	[ ! -z "$runid" ] || err "Can't find orphan runid!"
+	[ ! -z "$nid" ] || err "Can't find orphan nid!"
+
+	echo "  owner=$owner"
+	echo "  runid=$runid"
+	echo "  nid=$nid"
+
+	store_run $owner $runid $nid $orphan
     fi
 }
 
 function store_run()
 {
-    local runid="$1"
-    local run="$2"
+    local owner="$1"
+    local runid="$2"
+    local nid="$3"
+    local run="$4"
 
-    if is_good_run "$run"; then
-	store_good_run "$runid" "$run"
+    if is_good_run $run; then
+	store_good_run $owner $runid $nid $run
     else
-	store_failed_run "$runid" "$run"
+	store_failed_run $owner $runid $nid $run
     fi
 }
 
 function store_good_run()
 {
-    local runid="$1"
-    local run="$2"
+    local owner="$1"
+    local runid="$2"
+    local nid="$3"
+    local run="$4"
 
-    local dst=$( stored_run_path "good" "$runid" )
+    local dst=$( stored_run_path_field "good" $owner $runid $nid )
 
     if [ -e "$dst" ]; then
 	err "Attempting to store run of id $runid, but it already exists under good/!!!"
@@ -138,14 +375,16 @@ function store_good_run()
 
 function store_failed_run()
 {
-    local runid="$1"
-    local run="$2"
+    local owner="$1"
+    local runid="$2"
+    local nid="$3"
+    local run="$4"
 
     if [ ! -e "$run" ]; then
 	return
     fi
 
-    local dst=$( stored_run_path "failed" "$runid" )
+    local dst=$( stored_run_path_field "failed" $owner $runid $nid )
 
     if [ -e "$dst" ]; then
 	local i=0
@@ -162,14 +401,18 @@ function store_failed_run()
 
 function unstore_run()
 {
-    local runid="$1"
-    local run="$2"
+    local owner="$1"
+    local runid="$2"
+    local nid="$3"
+    local run="$4"
 
-    if [ -e $( stored_run_path "good" "$runid" ) ]; then
-	local loc=$( stored_run_path "good" "$runid" )
-    else
+    local src=$( stored_run_path_field "good" $owner $runid $nid )
+
+    if [ ! -e $src ]; then
 	err "Cannot locate existing run of id $runid"
     fi
 
-    mv "$loc" "$run" || err "Failed unstoring run of id $runid!!!"
+    echo "unstoring run from $src"
+
+    mv "$src" "$run" || err "Failed unstoring run of id $runid!!!"
 }

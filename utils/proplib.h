@@ -417,8 +417,7 @@ namespace proplib
 	class Overlay
 	{
 	public:
-		static bool hasOverlay( Document *docOverlay, const std::string &selector );
-		static void overlay( Document *docOverlay, Document *docValues, const std::string &selector );
+		static void overlay( Document *docOverlay, Document *docValues, int index );
 
 	private:
 		static Property *findOverlay( Document *docOverlay, const std::string &selector );

@@ -946,13 +946,16 @@ def plot_clause( doc,
 
     gopts = options['global']
 
+    # Sort classification alphabetically, where classification is [0] of each tuple
+    def __sort_classified_tuples( tuples ):
+        return sorted( tuples, key = lambda x: x[0] )
+
+
     # Sort values by run path. This effects ordering of legend.
     def __sort_values( values ):
-        values = list( values )
-        values.sort( key = lambda x: x[value_names[0]].path )
-        return values
+        return sorted( values, key = lambda x: x[value_names[0]].path )
 
-    for classification, values_list in values_classified.items():
+    for classification, values_list in __sort_classified_tuples(values_classified.items()):
         for values in __sort_values( values_list ):
             for v in mode.normalizeValueNames(classification,
                                               value_names):
@@ -972,7 +975,7 @@ def plot_clause( doc,
                                None,
                                table )
 
-    for classification, curvetypes in values_meta.items():
+    for classification, curvetypes in __sort_classified_tuples(values_meta.items()):
         for curvetype, values in curvetypes.items():
             for v in mode.normalizeValueNames(classification,
                                               value_names):
@@ -1074,7 +1077,7 @@ def create_curves(mode,
 
         if styleMode == 'table':
             groupkey = table.name
-        elif gopts.get('group', 'auto') == 'off':
+        elif (gopts.get('group', 'auto') == 'off') or (styleMode == 'cmeta'):
             groupkey = curvetype
         else:
             groupkey = class_root
@@ -1086,17 +1089,21 @@ def create_curves(mode,
         else:
             groupname = groupkey
 
-        # check if we have a linetype preference
-        try:
-            preflinetype = CLASSIFICATION_LINETYPES[class_root]
-        except:
-            preflinetype = plotlib.StyleGroup.DOTTED
+        if styleMode == 'cmeta':
+            preflinetype = plotlib.StyleGroup.SOLID
+        else:
+            # check if we have a linetype preference
+            try:
+                preflinetype = CLASSIFICATION_LINETYPES[class_root]
+            except:
+                preflinetype = plotlib.StyleGroup.DOTTED
+                
 #         print 'class_root =', class_root, 'preflinetype =', preflinetype, 'curvetype =', curvetype, 'groupkey =', groupkey, 'groupname =', groupname
 
         try:
             group = plot.getStyleGroup(groupname)
         except KeyError:
-            if meta:
+            if meta and styleMode != 'cmeta':
                 try:
                     # use the values' line style, but thick
                     group = plot.createStyleGroup(groupname,
@@ -1113,7 +1120,7 @@ def create_curves(mode,
 
         # Use the color key to ensure consistent color between
         # style groups for each run.
-        if meta:
+        if meta and styleMode != 'cmeta':
             colorkey = 'meta'
             forcecolor = 'black'
         elif styleMode == 'table':
@@ -1417,6 +1424,7 @@ GENERAL OPTIONS
             Valid modes are:
                normal - standard behavior
                table  - same line style for each table
+               cmeta  - don't force meta lines to be black
               
 
      --title <title>

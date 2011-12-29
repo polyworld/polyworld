@@ -24,7 +24,7 @@ OPTIONS:
 
    -f fields
                   Specify fields on which this should run. Must be a single argument,
-                so use quotes. e.g. -f "0 1" or -f "\$(echo {0..3})"
+                so use quotes. e.g. -f "0 1" or -f "{0..3}"
 
    -b             Don't build BCT.
 
@@ -224,13 +224,16 @@ else
     ### LOCAL PREPARATION
     ###
     ########################################
-    tmp_dir=`mktemp -d /tmp/poly_build.XXXXXXXX` || exit 1
+    tmp_dir=$( create_tmpdir ) || exit 1
 
-    cd $PWFARM_SCRIPTS_DIR/../..
+    cd $POLYWORLD_DIR
 
-    scripts/package_source.sh $tmp_dir/src.zip
+    payload=$tmp_dir/src.zip
+    scripts/package_source.sh $payload
+
+    tasks=$( taskmeta create_field_tasks $tmp_dir "./scripts/farm/pwfarm_build.sh --field $args" nil )
     
-    $PWFARM_SCRIPTS_DIR/__pwfarm_dispatcher.sh dispatch $tmp_dir/src.zip "./scripts/farm/pwfarm_build.sh --field $args" nil nil
+    dispatcher dispatch $payload $tasks
 
     rm -rf $tmp_dir
 fi

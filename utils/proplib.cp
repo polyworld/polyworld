@@ -2295,44 +2295,28 @@ namespace proplib
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
 
-	bool Overlay::hasOverlay( Document *docOverlay, const string &selector )
-	{
-		return findOverlay( docOverlay, selector ) != NULL;
-	}
-
-	void Overlay::overlay( Document *docOverlay, Document *docValues, const string &selector )
-	{
-		Property *propOverlay = findOverlay( docOverlay, selector );
-		if( propOverlay )
-		{
-			overlay( propOverlay, docValues->toProp() );
-		}
-	}
-
-	Property *Overlay::findOverlay( Document *docOverlay, const string &selector )
+	void Overlay::overlay( Document *docOverlay, Document *docValues, int index )
 	{
 		validateOverlayDocument( docOverlay );
 
-		itfor( PropertyMap, docOverlay->props(), it )
+		Property *propOverlays = docOverlay->getp( "overlays" );
+		if( (index < 0) || (index >= (int)propOverlays->size()) )
 		{
-			if( selector == it->second->getName() )
-			{
-				return it->second;
-			}
+			cerr << "Invalid overlays index: " << index << endl;
+			exit( 1 );
 		}
 
-		return NULL;
+		Property *propOverlay = propOverlays->getp( index );
+		overlay( propOverlay, docValues->toProp() );
 	}
 
 	void Overlay::validateOverlayDocument( Document *docOverlay )
 	{
-		itfor( PropertyMap, docOverlay->props(), it )
-		{
-			if( !it->second->isContainer() )
-			{
-				it->second->err( "Illegal top-level element." );
-			}
-		}
+		assert( docOverlay->size() == 1 );
+
+		Property *propOverlays = docOverlay->props().begin()->second;
+		assert( string(propOverlays->getName()) == "overlays" );
+		assert( propOverlays->isArray() );
 	}
 
 	void Overlay::overlay( Property *propOverlay, Property *propOriginal )

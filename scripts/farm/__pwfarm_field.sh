@@ -3,19 +3,26 @@
 source $( dirname $BASH_SOURCE )/__lib.sh || exit 1
 
 MODE=$1
-COMMAND=$2
 
 VERBOSE=false
 
 eval FIELD_STATE_DIR="$( pwenv fieldstate_dir )"
-export STATUS_STATE="$FIELD_STATE_DIR/status_state"
+export PWFARM_TASKMETA_PATH=$FIELD_STATE_DIR/tasks/$( pwenv taskid )
+function PWFARM_TASKMETA()
+{
+    local mode=$1
+    shift
+    taskmeta $mode $PWFARM_TASKMETA_PATH "$@"
+}
+export -f PWFARM_TASKMETA
+export PWFARM_STATUS_STATE="$FIELD_STATE_DIR/status_state"
+COMMAND=$( PWFARM_TASKMETA get command )
 RESULT_DIR="$FIELD_STATE_DIR/result"
 RESULT_ZIP="$FIELD_STATE_DIR/result.zip"
 LOG="/tmp/log_user$(pwenv pwuser)_field$(pwenv fieldnumber)_session$(pwenv sessionname)_farm$(pwenv farmname)"
 MUTEX="${FIELD_STATE_DIR}/mutex"
 PID="${FIELD_STATE_DIR}/pid"
 PID_COMMAND="${FIELD_STATE_DIR}/pid_command"
-TASKID="${FIELD_STATE_DIR}/taskid"
 COMMAND_LAUNCH_BEGIN="${FIELD_STATE_DIR}/command_launch_begin"
 COMMAND_LAUNCH_END="${FIELD_STATE_DIR}/command_launch_end"
 COMMAND_BORN="${FIELD_STATE_DIR}/command_born"
@@ -82,7 +89,7 @@ function screen_resume()
 
 function screen_command()
 {
-    screen -d -m -S "${FIELD_SCREEN_SESSION}" bash -c "$0 command \"$COMMAND\""
+    screen -d -m -S "${FIELD_SCREEN_SESSION}" bash -c "$0 command"
 }
 
 function screen_wait_complete()
@@ -143,7 +150,6 @@ function kill_launcher()
 mkdir -p "${FIELD_STATE_DIR}"
 mkdir -p "${RESULT_DIR}"
 
-echo "__pwfarm_field.sh [$$]: Logging to $LOG" >&2
 log "===== INVOKED ===== args: $*"
 
 case "$MODE" in
@@ -199,12 +205,14 @@ case "$MODE" in
 	if [ ! -e "$RESULT_ZIP" ]; then
 	    log "creating $RESULT_ZIP"
 
-	    cd "$RESULT_DIR"
-	    if [ ! -e "exitval" ]; then
-		log "!!! DIDN'T FIND EXITVAL FILE! COMMAND MUST HAVE TRAPPED !!!"
-		echo "1" > exitval
+	    if ! PWFARM_TASKMETA has exitval; then
+		log "!!! DIDN'T FIND EXITVAL! COMMAND MUST HAVE TRAPPED !!!"
+		PWFARM_TASKMETA set exitval 1
 	    fi
 
+	    cd "$RESULT_DIR"
+
+	    cp "$PWFARM_TASKMETA_PATH" ./taskmeta
 	    cp "$LOG" ./log
 
 	    result_zip_tmp="/tmp/result.$$.zip"
@@ -228,11 +236,11 @@ case "$MODE" in
 	touch "$COMMAND_BORN"
 
 	# Start status server as background task.
-	$PWFARM_SCRIPTS_DIR/__pwfarm_status.py $STATUS_STATE server &
+	$PWFARM_SCRIPTS_DIR/__pwfarm_status.py $PWFARM_STATUS_STATE server &
 
 	function PWFARM_STATUS()
 	{
-	    $PWFARM_SCRIPTS_DIR/__pwfarm_status.py $STATUS_STATE set "$*"
+	    $PWFARM_SCRIPTS_DIR/__pwfarm_status.py $PWFARM_STATUS_STATE set "$*"
 	}
 	export -f PWFARM_STATUS
 
@@ -247,7 +255,7 @@ case "$MODE" in
 		exit 1
 	    fi
 	    printf "$PASSWORD\n" | sudo -S -E $*
-	    exitval=$?
+	    local exitval=$?
 
  	    # Make sure sudo queries us for a password on next invocation. 
 	    sudo -k
@@ -265,7 +273,7 @@ case "$MODE" in
 	#
 	# EXEC COMMAND
 	#
-	log "Executing command"
+	log "Executing command: $COMMAND"
 
 	PWFARM_STATUS "Running"
 
@@ -274,7 +282,7 @@ case "$MODE" in
 
 	log "Command complete. exitval=$exitval"
 
-	echo "$exitval" > "$RESULT_DIR/exitval"
+	PWFARM_TASKMETA set exitval $exitval
 
 	if [ $exitval == 0 ]; then
 	    PWFARM_STATUS "Success"
@@ -282,14 +290,14 @@ case "$MODE" in
 	    PWFARM_STATUS "ERROR"
 	fi
 
-	if $PROMPT_ERR && [ $exitval != 0 ] ; then
+	if [ "$(PWFARM_TASKMETA get prompterr)" != "false" ] && [ $exitval != 0 ] ; then
 	    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" >&2
 	    echo "An error occurred. Press \"Ctrl-a Esc\" to use PgUp/PgDown to find error description." >&2
 	    echo "When done looking, press Esc, then Enter..." >&2
 	    read
 	fi
 
-	$PWFARM_SCRIPTS_DIR/__pwfarm_status.py $STATUS_STATE quit 
+	$PWFARM_SCRIPTS_DIR/__pwfarm_status.py $PWFARM_STATUS_STATE quit 
 	log "Waiting for status server to die..."
 	wait
 

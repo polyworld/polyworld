@@ -2,9 +2,10 @@
 
 source $( dirname $BASH_SOURCE )/__lib.sh || exit 1
 
+
 FIELD_NUMBER="$1"
 require "$FIELD_NUMBER" "farmer field number"
-. $PWFARM_SCRIPTS_DIR/pwfarm_config.sh env set fieldnumber $FIELD_NUMBER
+__pwfarm_config env set fieldnumber $FIELD_NUMBER
 
 FIELD_HOSTNAME=$( fieldhostname_from_num $FIELD_NUMBER )
 FIELD_HOST=$( fieldhost_from_name $FIELD_HOSTNAME )
@@ -14,6 +15,7 @@ FARMER_STATE_DIR=$( pwenv farmerstate_dir ) || exit 1
 require "$FARMER_STATE_DIR" "farmer dir cannot be empty!!!"
 mkdir -p $FARMER_STATE_DIR
 cd $FARMER_STATE_DIR
+FARMER_TASKMETA=$FARMER_STATE_DIR/task
 
 FARM_NAME=$( pwenv farmname )
 SESSION_NAME=$( pwenv sessionname )
@@ -40,7 +42,9 @@ case "$mode" in
     "recover")
 	# no-op... fall through
 	;;
-    "clear")	
+    "clear")
+	BLOB="$3"
+
 	repeat_til_success $SSH "
           if [ -e $FIELD_STATE_DIR/pid ]; then
             kill \$( cat $FIELD_STATE_DIR/pid ) 2>/dev/null ;
@@ -52,6 +56,7 @@ case "$mode" in
             screen -S \"$FIELD_SCREEN_SESSION\" -X quit ;
             sleep 1 ;
           done ;
+          rm -f $BLOB ;
           rm -rf $FIELD_STATE_DIR"
 	if is_process_alive $PID; then
 	    kill $( cat $PID )
@@ -63,15 +68,9 @@ case "$mode" in
     "disconnect")
 	if is_process_alive $PID; then
 	    kill $( cat $PID )
+	    rm $PID
 	fi
 	exit 0
-	;;
-    "exit")
-	if [ -e $FARMER_STATE_DIR/result/exitval ]; then
-	    exit $( cat $FARMER_STATE_DIR/result/exitval )
-	else
-	    exit 1
-	fi
 	;;
     *)
 	err "Invalid farmer mode ($mode)"
@@ -88,10 +87,6 @@ SCREEN_WINDOW="$3"
 FIELD_BORN="$4"
 BLOB="$5"
 PASSWORD="$6"
-PROMPT_ERR="$7"
-COMMAND="$8"
-OUTPUT_BASENAME="$9"
-OUTPUT_DIR="${10}"
 
 # If a farmer is already alive, then kill it.
 if is_process_alive $PID; then
@@ -101,8 +96,6 @@ echo $$ > $PID
 
 # Notify dispatcher we're born.
 touch $FIELD_BORN
-
-touch $STEPS
 
 #
 # Util functions for maintaining steps file
@@ -119,158 +112,201 @@ function step_done()
     echo "$__step" >> "$STEPS"
 }
 
+TITLE_PREFIX="$FARM_NAME/$SESSION_NAME/$FIELD_HOSTNAME"
+TITLE_PREFIX_DETAILS=""
+
 function title()
 {
-    screen -S "${DISPATCHER_SCREEN_SESSION}" -p $SCREEN_WINDOW -X title "$FARM_NAME/$SESSION_NAME/$FIELD_HOSTNAME: $*"
+    screen -S "${DISPATCHER_SCREEN_SESSION}" -p $SCREEN_WINDOW -X title "${TITLE_PREFIX}${TITLE_PREFIX_DETAILS}: $*"
 }
 
-title "Init Field"
 
-#
-# Init field state dir
-#
-if step_begin "init_statedir"; then
-    repeat_til_success $SSH "
-      if [ -e $BLOB ]; then
-        rm -rf $FIELD_STATE_DIR ;
-        mkdir -p $FIELD_STATE_DIR ;
-        cd $FIELD_STATE_DIR ;
-        unzip -q $BLOB ;
-        cd payload ;
-        unzip -q payload.zip ;
-        rm payload.zip ;
+###
+### Loop as long as we get a task assignment
+###
+while true; do
+    touch $STEPS
 
-        rm $BLOB ;
-      fi ;
-    "
+    TITLE_PREFIX_DETAILS=""
+    
+    #
+    # Try to get task assignment
+    #
+    title "Get Task Assignment"
 
-    step_done
-fi
-
-title "Launching"
-
-#
-# Launch Status Background Process
-#
-(
-    if [ "$mode" == "dispatch" ]; then
-	failstate=false
-    else
-	failstate=true
-    fi
-
-    while true; do
-	if $failstate; then
-	    status=$( $SSH "
-                        cd $FIELD_STATE_DIR > /dev/null ;
-                        scripts/__pwfarm_status.py status_state get
-                      " 2>/dev/null )
-
-	    if [ $? != 0 ]; then
-		failstate=true
-	    else
-		failstate=false
-	    fi
-	else
-	    status=$( $SSH "
-                        cd $FIELD_STATE_DIR > /dev/null ;
-                        scripts/__pwfarm_status.py status_state wait
-                      " 2>/dev/null )
-
-	    if [ $? != 0 ]; then
-		failstate=true
-	    else
-		failstate=false
-	    fi
-	fi
-
-	if $failstate; then
-	    status="CONNECTION FAILURE"
-	elif [ "$status" == $( $PWFARM_SCRIPTS_DIR/__pwfarm_status.py quit_signature ) ]; then
+    if step_begin "task_get"; then
+	if ! $PWFARM_SCRIPTS_DIR/__pwfarm_dispatcher.sh task_get $FARMER_TASKMETA; then
 	    break
 	fi
 
-	title $status
+	step_done
+    fi
 
-	if $failstate; then
-	    sleep 5
-	fi
-    done
+    if taskmeta has $FARMER_TASKMETA statusid; then
+	TITLE_PREFIX_DETAILS="/$(taskmeta get $FARMER_TASKMETA statusid)"
+    fi
 
-) &
+    echo "--- Assigned Task ---"
+    cat $FARMER_TASKMETA
+    echo "---------------------"
 
-#
-# Run script
-#
-if step_begin "run_script"; then
-    
-    # set --display so we don't echo password to console
-    repeat_til_success \
-	--display "ssh __pwfarm_field.sh launch" \
-	$SSH -t "
-          export PASSWORD=\"$PASSWORD\" ;
-          export PROMPT_ERR=\"$PROMPT_ERR\" ;
-          $( $PWFARM_SCRIPTS_DIR/pwfarm_config.sh env export )
+    __pwfarm_config env set taskid $( taskmeta get $FARMER_TASKMETA id )
+
+    #
+    # Init field state dir
+    #
+    title "Init Field"
+
+    if step_begin "init_statedir"; then
+	repeat_til_success $SSH "
+          rm -rf $FIELD_STATE_DIR ;
+          mkdir -p $FIELD_STATE_DIR ;
           cd $FIELD_STATE_DIR ;
-          scripts/__pwfarm_field.sh launch
-                                    \"$COMMAND\"
-    "
+          unzip -q $BLOB ;
+          cd payload ;
+          unzip -q payload.zip ;
+          rm payload.zip ;
+        "
 
-    step_done
-fi
-
-# Kill status background.
-kill $!
-
-title "Downloading Result"
-
-#
-# Fetch result file
-#
-if step_begin "fetch_result"; then
-    repeat_til_success scp $OSUSER@$FIELD_HOST:$FIELD_STATE_DIR/result.zip $FARMER_STATE_DIR
-
-    step_done
-fi
-
-#
-# Unpack result file
-#
-if step_begin "unpack_result"; then
-    if [ -e result.zip ]; then
-	rm -rf result
-	mkdir result
-	unzip -q -d result result.zip
-	rm result.zip
+	step_done
     fi
 
-    step_done
-fi
+    #
+    # Launch Status Background Process
+    #
+    function status_background_process()
+    {
+	if [ "$mode" == "dispatch" ]; then
+	    failstate=false
+	else
+	    failstate=true
+	fi
 
-#
-# Save log file
-#
-if step_begin "save_log"; then
-    if [ -e result/log ]; then
-	cp result/log /tmp/log_field${FIELD_NUMBER}_session$(pwenv sessionname)_farm$(pwenv farmname)
+	function get_status()
+	{
+	    local op=$1
+	    status=$( $SSH "
+                        cd $FIELD_STATE_DIR > /dev/null ;
+                        scripts/__pwfarm_status.py status_state $op
+                      " 2>/dev/null )
+
+	    if [ $? != 0 ]; then
+		failstate=true
+		status="CONNECTION FAILURE"
+	    else
+		failstate=false
+	    fi
+	}
+
+	while true; do
+	    if $failstate; then
+		get_status "get"
+	    else
+		get_status "wait"
+	    fi
+
+	    if [ "$status" == $( $PWFARM_SCRIPTS_DIR/__pwfarm_status.py quit_signature ) ]; then
+		break
+	    fi
+
+	    title $status
+
+	    if $failstate; then
+		sleep 5
+	    fi
+	done
+    }
+
+    status_background_process &
+
+    #
+    # Launch Field
+    #
+    title "Launching"
+
+    if step_begin "run_script"; then	
+        # set --display so we don't echo password to console
+	repeat_til_success \
+	    --display "ssh __pwfarm_field.sh launch" \
+	    $SSH -t "
+              export PASSWORD=\"$PASSWORD\" ;
+              $( $PWFARM_SCRIPTS_DIR/pwfarm_config.sh env export )
+              cd $FIELD_STATE_DIR ;
+              scripts/__pwfarm_field.sh launch
+            "
+
+	step_done
+    fi
+    
+    # Kill status background.
+    kill $! > /dev/null 2>/dev/null
+
+    #
+    # Fetch result file
+    #
+    title "Downloading Result"
+
+    if step_begin "fetch_result"; then
+	repeat_til_success scp $OSUSER@$FIELD_HOST:$FIELD_STATE_DIR/result.zip $FARMER_STATE_DIR
+
+	step_done
     fi
 
-    step_done
-fi
+    #
+    # Unpack result file
+    #
+    if step_begin "unpack_result"; then
+	if [ -e result.zip ]; then
+	    rm -rf result
+	    mkdir result
+	    unzip -q -d result result.zip
+	    rm result.zip
+	fi
 
-#
-# Unpack output file
-#
-if step_begin "unpack_output"; then
-    if [ -e result/output.zip ]; then
-	unzipdir="${OUTPUT_DIR}/${OUTPUT_BASENAME}_${FIELD_NUMBER}"
-	mkdir -p $unzipdir
-	unzip -oq -d $unzipdir result/output.zip
-	rm result/output.zip
+	step_done
     fi
 
-    step_done
-fi
+    #
+    # Save log file
+    #
+    if step_begin "save_log"; then
+	if [ -e result/log ]; then
+	    cp result/log /tmp/log_task$(pwenv taskid)_field${FIELD_NUMBER}_session$(pwenv sessionname)_farm$(pwenv farmname)
+	fi
+
+	step_done
+    fi
+
+    #
+    # Unpack output file
+    #
+    if step_begin "unpack_output"; then
+	if [ -e result/output.zip ] && taskmeta has $FARMER_TASKMETA outputdir; then
+	    outputdir=$( taskmeta get $FARMER_TASKMETA outputdir )
+	    mkdir -p $outputdir
+	    unzip -oq -d $outputdir result/output.zip
+	    rm result/output.zip
+	fi
+
+	step_done
+    fi
+
+    #
+    # Inform dispatcher we're done with this task
+    #
+    if step_begin "task_done"; then
+	cp result/taskmeta $FARMER_TASKMETA
+	if ! taskmeta has $FARMER_TASKMETA exitval; then
+	    taskmeta set $FARMER_TASKMETA exitval 1
+	fi
+
+	$PWFARM_SCRIPTS_DIR/__pwfarm_dispatcher.sh task_done $FARMER_TASKMETA
+
+	step_done
+    fi
+
+    rm $STEPS
+done
 
 rm $PID
 

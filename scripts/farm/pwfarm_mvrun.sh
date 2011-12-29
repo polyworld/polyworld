@@ -20,10 +20,10 @@ OPTIONS:
 
     -f fields
                Specify fields on which this should run. Must be a single argument,
-            so use quotes. e.g. -f "0 1" or -f "\$(echo {0..3})"
+            so use quotes. e.g. -f "0 1" or -f "{0..3}"
 
-    -o owner
-               Specify run owner, which is prepended to run ID. "nil" for no owner.
+    -o run_owner
+               Specify owner of run.
 EOF
     exit 1
 }
@@ -33,26 +33,26 @@ if [ $# == 0 ]; then
 fi
 
 if [ "$1" == "--field" ]; then
-    field=true
+    FIELD=true
     shift
 else
-    field=false
+    FIELD=false
 fi
 
-owner=$( pwenv pwuser )
-owner_override=false
+OWNER=$( pwenv pwuser )
+OWNER_OVERRIDE=false
 
 while getopts "f:o:" opt; do
     case $opt in
 	f)
-	    if ! $field; then
+	    if ! $FIELD; then
 		__pwfarm_config env set fieldnumbers "$OPTARG"
 		validate_farm_env
 	    fi
 	    ;;
 	o)
-	    owner="$OPTARG"
-	    owner_override=true
+	    OWNER="$OPTARG"
+	    OWNER_OVERRIDE=true
 	    ;;
 	*)
 	    exit 1
@@ -60,31 +60,112 @@ while getopts "f:o:" opt; do
     esac
 done
 
-args=$( encode_args "$@" )
+ARGS=$( encode_args "$@" )
 shift $(( $OPTIND - 1 ))
 if [ $# != 2 ]; then
     usage
 fi
 
-runid_src="$1"
-runid_dst="$2"
+RUNID_SRC="$( normalize_runid "$1" )"
+validate_runid --ancestor "$RUNID_SRC"
 
-if ! $field; then
+RUNID_DST="$( normalize_runid "$2" )"
+validate_runid --ancestor "$RUNID_DST"
+
+if ! $FIELD; then
     validate_farm_env
 
-    __pwfarm_script.sh $0 --field $args || exit 1
-else
-    runid_src=$( build_runid "$owner" "$runid_src" )
-    runid_dst=$( build_runid "$owner" "$runid_dst" )
+    __pwfarm_script.sh $0 --field $ARGS || exit 1
 
-    path_src=$( stored_run_path "good" "$runid_src" )
-    if [ ! -e "$path_src" ]; then
-	err "Cannot locate source. Expecting $path_src"
+    TMP_DIR=$( create_tmpdir ) || exit 1
+
+    function runids()
+    {
+	local runid_ancestor="$1"
+
+	find_runs_local $OWNER "$runid_ancestor" |
+	parse_stored_run_path_local --runid |
+	sort |
+	uniq
+    }
+
+    runids $RUNID_SRC > $TMP_DIR/runids_src
+    if [ -z "$(cat $TMP_DIR/runids_src)" ]; then
+	err "No runs found for $RUNID_SRC"
     fi
-    path_dst=$( stored_run_path "good" "$runid_dst" )
-    if ! mkdir -p "$( dirname $path_dst )"; then
+
+    runids $RUNID_DST > $TMP_DIR/runids_dst
+
+    cat $TMP_DIR/runids_src |
+    sed "s|^$RUNID_SRC|$RUNID_DST|"  > $TMP_DIR/runids_moved
+
+
+    sort $TMP_DIR/runids_moved $TMP_DIR/runids_dst |
+    uniq -d > $TMP_DIR/runids_conflicting
+
+    if [ ! -z "$(cat $TMP_DIR/runids_conflicting)" ]; then
+	echo "Found conflicting Run IDs between source and destination:" 1>&2
+	cat $TMP_DIR/runids_conflicting 1>&2
 	exit 1
     fi
 
-    mv "$path_src" "$path_dst"
+    paste $TMP_DIR/runids_src $TMP_DIR/runids_moved |
+    while read line; do
+	runid_src=$(echo "$line" | cut -f 1)
+	runid_dst=$(echo "$line" | cut -f 2)
+
+	paths_src="$( stored_run_path_local $OWNER $runid_src "*")"
+	path_dst=$( stored_run_path_local --subpath $OWNER $runid_dst )
+
+	mkdir -p $path_dst || exit 1
+	mv $paths_src $path_dst || exit 1
+
+	prune_empty_directories $( stored_run_path_local --subpath $OWNER $runid_src )
+    done
+
+    rm -rf $TMP_DIR
+else
+    function runids()
+    {
+	local runid_ancestor="$1"
+
+	find_runs_field "good" $OWNER "$runid_ancestor" |
+	parse_stored_run_path_field --runid |
+	sort |
+	uniq
+    }
+
+    runids $RUNID_SRC > ./runids_src
+    if [ -z "$(cat ./runids_src)" ]; then
+	err "No runs found for $RUNID_SRC"
+    fi
+
+    runids $RUNID_DST > ./runids_dst
+
+    cat ./runids_src |
+    sed "s|^$RUNID_SRC|$RUNID_DST|"  > ./runids_moved
+
+
+    sort ./runids_moved ./runids_dst |
+    uniq -d > ./runids_conflicting
+
+    if [ ! -z "$(cat ./runids_conflicting)" ]; then
+	echo "Found conflicting Run IDs between source and destination:" 1>&2
+	cat ./runids_conflicting 1>&2
+	exit 1
+    fi
+
+    paste ./runids_src ./runids_moved |
+    while read line; do
+	runid_src=$(echo "$line" | cut -f 1)
+	runid_dst=$(echo "$line" | cut -f 2)
+
+	paths_src="$( stored_run_path_field "good" $OWNER $runid_src "*")"
+	path_dst=$( stored_run_path_field --subpath "good" $OWNER $runid_dst )
+
+	mkdir -p $path_dst || exit 1
+	mv $paths_src $path_dst || exit 1
+
+	prune_empty_directories $( stored_run_path_field --subpath "good" $OWNER $runid_src )
+    done
 fi

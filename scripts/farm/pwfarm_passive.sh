@@ -41,7 +41,7 @@ if [ "$self" == "prerun.sh" ]; then
     # we're running on the field
 
     run_id_driven=$( cat $POLYWORLD_PWFARM_INPUT/run_id_driven )
-    run_dir=$( stored_run_path "good" "$run_id_driven" )
+    run_dir=$( stored_run_path_field "good" "$run_id_driven" )
 
     if [ ! -d $run_dir ]; then
 	err "Cannot locate run at $run_dir"

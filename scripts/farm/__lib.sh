@@ -5,11 +5,25 @@ if [ -z "$BASH_SOURCE" ]; then
 fi
 
 source $( dirname $BASH_SOURCE )/__pwfarm_config.sh
+source $( dirname $BASH_SOURCE )/__pwfarm_taskmeta.sh
 
+function create_tmpdir()
+{
+    mkdir -p /tmp/pwfarm
+    mktemp -d /tmp/pwfarm/$(basename $0).XXXXXXXX
+}
 
 function canonpath()
 {
-    python -c "import os.path; print os.path.realpath('$1')"
+    local path="${1-stdin}"
+
+    if [ "$path" == "stdin" ]; then
+	while read path; do
+	    canonpath "$path"
+	done
+    else
+	python -c "import os.path; print os.path.realpath('$path')"
+    fi
 }
 
 function canondirname()
@@ -17,8 +31,14 @@ function canondirname()
     dirname `canonpath "$1"`
 }
 
+function relpath()
+{
+    python -c "import os.path; print os.path.relpath('$1', '$2')"
+}
+
 export PWFARM_SCRIPTS_DIR=$( canondirname $BASH_SOURCE )
 export POLYWORLD_DIR=$( canonpath $PWFARM_SCRIPTS_DIR/../.. )
+export POLYWORLD_SCRIPTS_DIR=$POLYWORLD_DIR/scripts
 
 function pushd_quiet()
 {
@@ -36,12 +56,30 @@ function err()
     exit 1
 }
 
+function warn()
+{
+    echo "$( basename $0 ): WARNING!" "$*">&2
+}
+
 function require()
 {
     if [ -z "$1" ]; then
 	shift
 	err "Missing required parameter: $*"
     fi
+}
+
+function assert()
+{
+    if ! $@; then
+	err "assertion failed: $@"
+    fi
+}
+
+function is_integer()
+{
+    [ ! -z "$1" ] || return 1
+    printf "%d" "$1" > /dev/null 2>&1
 }
 
 function repeat_til_success
@@ -53,7 +91,9 @@ function repeat_til_success
 	local display="$*"
     fi
     local errtime="0"
-    local errmsg="/tmp/pwfarm.repeat.err.txt.$$"
+    local errmsg="/tmp/pwfarm/repeat.err.txt.$$"
+
+    mkdir -p /tmp/pwfarm
 
     while ! $* 2>$errmsg; do
 	local now=$( date '+%s' )
@@ -165,6 +205,16 @@ function pwenv()
     __pwfarm_config env get $*
 }
 
+function taskmeta()
+{
+    __pwfarm_taskmeta "$@"
+}
+
+function dispatcher()
+{
+    $PWFARM_SCRIPTS_DIR/__pwfarm_dispatcher.sh "$@"
+}
+
 function fieldhostname_from_num()
 {
     local id=$( printf "%02d" $1 2>/dev/null ) || err "Invalid field number: $1"
@@ -253,7 +303,24 @@ function is_empty_directory()
 {
     local path="$1"
 
-    [ -d "$path" ] && [ -z $( ls -A "$path" ) ];
+    [ -d "$path" ] && [ -z "$( ls -A "$path" )" ];
+}
+
+function prune_empty_directories()
+{
+    local dir=$(canonpath $1)
+
+    while is_empty_directory $dir; do
+	rmdir $dir || return 1
+	dir=$( dirname $dir )
+    done
+}
+
+function any_files_exist()
+{
+    local files="$@"
+
+    ls -d $files >/dev/null 2>&1
 }
 
 function trim()
@@ -324,4 +391,28 @@ function is_subset_of()
     done
 
     return 0
+}
+
+function contains()
+{
+    local args=( "$@" )
+    local search_value=${args[$(( $# - 1 ))]}
+
+    for (( i=0; i < $(( $# - 1 )); i++ )); do
+	if [ "${args[$i]}" == "$search_value" ]; then
+	    return 0
+	fi
+    done
+
+    return 1
+}
+
+function len()
+{
+    echo $#
+}
+
+function indent()
+{
+    while read x; do printf "   $x\n"; done
 }

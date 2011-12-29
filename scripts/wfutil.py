@@ -53,7 +53,7 @@ def get_overlay_parameter_names( path_worldfile_or_run, assume_run_dir = True ):
     if not os.path.exists(path_overlay):
         return set()
 
-    lines = proputil( 'scalarnames', path_overlay, 2 ).split()
+    lines = proputil( 'scalarnames', path_overlay, 3 ).split()
     return set( lines )
 
 ####################################################################################

@@ -21,33 +21,32 @@ OPTIONS:
 
    -f fields
                   Specify fields on which this should run. Must be a single argument,
-                so use quotes. e.g. -f "0 1" or -f "\$(echo {0..3})"
+                so use quotes. e.g. -f "0 1" or -f "{0..3}"
 EOF
     exit 1
 }
 
 if [ "$1" == "--field" ]; then
-    field=true
+    FIELD=true
     shift
 else
-    field=false
+    FIELD=false
 fi
 
 
-if ! $field; then
+if ! $FIELD; then
     validate_farm_env
 
-    interactive=false
-    password=false
-    testing=false
+    INTERACTIVE=false
+    SUDO=false
 
     while getopts "isf:" opt; do
 	case $opt in
 	    i)
-		interactive=true
+		INTERACTIVE=true
 		;;
 	    s)
-		password=true
+		SUDO=true
 		;;
 	    f)
 		__pwfarm_config env set fieldnumbers "$OPTARG"
@@ -64,53 +63,58 @@ if ! $field; then
 	usage
     fi
 
-    payloaddir=$( mktemp -d /tmp/pwfarm_lsrun.XXXXXXXX ) || exit 1
+    TMP_DIR=$( create_tmpdir ) || exit 1
+    PAYLOAD_DIR=$TMP_DIR/payload
+    RESULTS_DIR=$TMP_DIR
+    
+    mkdir -p $PAYLOAD_DIR
 
-    cp $0 $payloaddir
-    echo $interactive > $payloaddir/interactive
-    echo "$@" > $payloaddir/command
-    echo $password > $payloaddir/password
+    cp $0 $PAYLOAD_DIR
+    echo $INTERACTIVE > $PAYLOAD_DIR/interactive
+    echo "$@" > $PAYLOAD_DIR/command
+    echo $SUDO > $PAYLOAD_DIR/sudo
+
+    PAYLOAD=$PAYLOAD_DIR/payload.zip
 
     pushd_quiet .
-    cd $payloaddir
-    zip -rq payload.zip .
+    cd $PAYLOAD_DIR
+    zip -rq $PAYLOAD .
     popd_quiet
 
-    farmcmd="./$( basename $0 ) --field"
-
-    opts=""
-    if $password; then
-	opts="--password $opts"
+    if $INTERACTIVE; then
+	opt_err=""
+	opt_out=""
+    else
+	opt_err="--noprompterr"
+	opt_out="--output $RESULTS_DIR"
     fi
-
-    if ! $interactive; then
-	opts="$opts --noprompterr"
-	resultdir=$( mktemp -d /tmp/pwfarm_lsrun.XXXXXXXX ) || exit 1
-	output_basename="result"
-	output_dir="$resultdir"
+    if $SUDO; then
+	opt_sudo="--sudo"
+    else
+	opt_sudo=""
     fi
+    opt_in="--input $PAYLOAD"
+    opts="$opt_err $opt_sudo $opt_in $opt_out"
 
-    $PWFARM_SCRIPTS_DIR/__pwfarm_dispatcher.sh $opts dispatch $payloaddir/payload.zip "$farmcmd" "$output_basename" "$output_dir"
-    
-    if ! $interactive; then
+    __pwfarm_script.sh $opts $0 --field
+
+    if ! $INTERACTIVE; then
 	for num in $( pwenv fieldnumbers ); do
-	    if [ -e "$resultdir/result_$num/out" ]; then
+	    if [ -e "${RESULTS_DIR}_$num/out" ]; then
 		echo ----- $( fieldhostname_from_num $num ) -----
 
-		cat "$resultdir/result_$num/out"
+		cat "${RESULTS_DIR}_$num/out"
 	    fi
 	done
-
-	rm -rf $resultdir
     fi
 
-    rm -rf $payloaddir
+    rm -rf $TMP_DIR
 else
     if [ -e interactive ] && ! $( cat interactive ); then
 	# Call this script again, but redirected.
 	rm ./interactive
 
-	tmpdir=$( mktemp -d /tmp/pwfarm_lsrun.XXXXXXXX ) || exit 1
+	tmpdir=$( create_tmpdir ) || exit 1
 
 	$0 --field > $tmpdir/out  2>&1
 	exitval=$?
@@ -118,9 +122,9 @@ else
 	cd $tmpdir
 	zip -q $PWFARM_OUTPUT_FILE *
 	rm -rf $tmpdir
-    elif [ -e password ] && $( cat password ); then
+    elif [ -e ./sudo ] && $( cat ./sudo ); then
 	# Call this script again, but with root access.
-	rm password
+	rm ./sudo
 
 	PWFARM_SUDO $0 --field
 	exitval=$?

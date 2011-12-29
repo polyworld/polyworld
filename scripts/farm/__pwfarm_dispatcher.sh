@@ -4,6 +4,15 @@ source $( dirname $BASH_SOURCE )/__lib.sh || exit 1
 
 validate_farm_env
 
+############################################
+#
+# DEBUG SETTINGS
+
+ZOMBIE_SCREENS=false
+#
+############################################
+
+
 DISPATCHERSTATE_DIR=$( pwenv dispatcherstate_dir ) || exit 1
 require "$DISPATCHERSTATE_DIR" "dispatcher dir cannot be empty!!!"
 mkdir -p "$DISPATCHERSTATE_DIR" || exit 1
@@ -11,6 +20,7 @@ mkdir -p "$DISPATCHERSTATE_DIR" || exit 1
 export DISPATCHER_SCREEN_SESSION="____pwfarm_dispatcher__farm_$( pwenv farmname )__session_$( pwenv sessionname )____"
 MUTEX=$DISPATCHERSTATE_DIR/mutex
 PARMS=$DISPATCHERSTATE_DIR/parms
+TASKS=$DISPATCHERSTATE_DIR/tasks
 PID=$DISPATCHERSTATE_DIR/pid
 FIELDNUMBERS=$DISPATCHERSTATE_DIR/fieldnumbers
 
@@ -31,6 +41,14 @@ function screen_active()
 function init_screen()
 {
     screen -d -m -S "${DISPATCHER_SCREEN_SESSION}"
+
+    if $ZOMBIE_SCREENS; then
+	while ! screen_active; do
+	    wait 0.1
+	done
+
+	screen -S "${DISPATCHER_SCREEN_SESSION}" -X zombie kr
+    fi
 }
 
 function resume_screen()
@@ -46,23 +64,10 @@ function kill_screen()
     done
 }
 
-if [ "$1" == "--password" ]; then
-    shift
-    prompt_password="true"
-else
-    prompt_password="false"
-fi
-
-if [ "$1" == "--noprompterr" ]; then
-    shift
-    prompt_err="false"
-else
-    prompt_err="true"
-fi
-
-broadcast="false"
-
 mode="$1"
+
+prompt_password=false
+broadcast=false
 
 ###
 ### Mode-specific logic prior to interfacing with field nodes
@@ -70,9 +75,28 @@ mode="$1"
 case "$mode" in
     "dispatch")
 	payload=$( canonpath "$2" )
-	command="$3"
-	output_basename="$4"
-	output_dir=$( canonpath "$5" )
+	shift 2
+	tasks="$@"
+
+	[ ! -z "$tasks" ] || err "No tasks given to dispatcher!"
+
+	if [ ! -z "$( for x in $tasks; do taskmeta get $x id; done | sort | uniq -d )" ]; then
+	    err "Duplicate task IDs found"
+	fi
+
+	if for x in $tasks; do taskmeta get $x sudo; done | grep "true" > /dev/null; then
+	    prompt_password=true
+	fi
+
+	for x in $tasks; do
+	    assert taskmeta validate $x
+	    if taskmeta has $x required_field; then
+		required_field="$(taskmeta get $x required_field)"
+		if ! pwenv fieldnumbers | grep "\b${required_field}\b" > /dev/null; then
+		    err "Task requires field $required_field! fields=$(pwenv fieldnumbers)"
+		fi
+	    fi
+	done
 
 	mutex_lock $MUTEX
 
@@ -84,6 +108,20 @@ case "$mode" in
 	    mutex_unlock $MUTEX
 	    err "You must be running a task in this session. (Dispatcher screen already active!)"
 	fi
+
+	rm -rf $TASKS
+	mkdir -p $TASKS/pending
+	mkdir -p $TASKS/running
+	mkdir -p $TASKS/complete
+
+	BATCHID=$(hostname)_${RANDOM}_$(date | sed -e "s/ /_/g" -e "s/:/./g")
+
+	for x in $tasks; do
+	    path=$TASKS/pending/$( taskmeta get $x id )
+	    cp $x $path
+	    taskmeta set $path batchid $BATCHID
+	done
+
 	if ! init_screen; then
 	    mutex_unlock $MUTEX
 	    err "Failed initing dispatcher screen!"
@@ -93,11 +131,7 @@ case "$mode" in
 
 	(
 	    echo $prompt_password
-	    echo $prompt_err
 	    echo $payload
-	    echo $command
-	    echo $output_basename
-	    echo $output_dir
 	) > $PARMS
 
 	echo $$ > $PID
@@ -112,7 +146,7 @@ case "$mode" in
 
 	if [ ! -e "$PARMS" ]; then
 	    mutex_unlock $MUTEX
-	    err "Can't find task to recover. Is this the right session? (Does not exist: $PARMS)"
+	    err "Can't find job to recover. Is this the right session? (Does not exist: $PARMS)"
 	fi
 	if [ ! -e "$FIELDNUMBERS" ]; then
 	    mutex_unlock $MUTEX
@@ -120,7 +154,7 @@ case "$mode" in
 	fi
 	if screen_active ; then
 	    mutex_unlock $MUTEX
-	    err "Dispatcher screen already active! You must be running a task in this session."
+	    err "Dispatcher screen already active! You must be running a job in this session."
 	fi
 	if [ -e "$PID" ]; then
 	    if ps -e | grep "\\b$( cat $PID )\\b"; then
@@ -139,11 +173,7 @@ case "$mode" in
 	}
 
 	prompt_password=$( parm 0 )
-	prompt_err=$( parm 1 )
-	payload=$( parm 2 )
-	command=$( parm 3 )
-	output_basename=$( parm 4 )
-	output_dir=$( parm 5 )
+	payload=$( parm 1 )
 
 	__pwfarm_config env set fieldnumbers $( fieldnums_from_hostnames $(cat $FIELDNUMBERS) )
 
@@ -152,6 +182,97 @@ case "$mode" in
 	broadcast="true"
 
 	mutex_unlock $MUTEX
+	;;
+    "task_get")
+	mutex_lock $MUTEX
+
+	path_result="$2"
+	rm -f $path_result
+
+	path_task=""
+
+	fieldnumber=$( pwenv fieldnumber )
+
+	function __sorted_tasks()
+	{
+	    local dir=$TASKS/$1
+	    ls $dir/* 2>/dev/null |
+	    while read x; do basename $x; done |
+	    sort -n |
+	    while read x; do echo $dir/$x; done
+	}
+
+	pending=$( __sorted_tasks pending )
+	running=$( __sorted_tasks running )
+
+	# we might be recovering from a crash
+	for x in $running $pending; do
+	    if [ "$( taskmeta get $x assigned )" == $fieldnumber ]; then
+		path_task=$x
+		break;
+	    fi
+	done
+
+	if [ -z "$path_task" ]; then
+	    # try to find task with field required_field
+	    for x in $pending; do
+		if [ "$( taskmeta get $x required_field )" == $fieldnumber ]; then
+		    path_task=$x
+		    break;
+		fi
+	    done
+	fi
+
+	if [ -z "$path_task" ]; then
+	    # any task will do, as long as it's not assigned and doesn't require a specific field
+	    for x in $pending; do
+		if ! taskmeta has $x assigned && ! taskmeta has $x required_field; then
+		    path_task=$x
+		    break;
+		fi
+	    done
+	fi
+
+	if [ ! -z "$path_task" ]; then
+	    taskmeta set $path_task assigned $fieldnumber
+	    cp $path_task $path_result
+	    if [ $(dirname $path_task) != $TASKS/running ]; then
+		mv $path_task $TASKS/running
+	    fi
+	fi
+
+	mutex_unlock $MUTEX
+
+	if [ -e $path_result ]; then
+	    exit 0
+	else
+	    exit 1
+	fi
+	;;
+    "task_done")
+	mutex_lock $MUTEX
+
+	path_task=$2
+
+	fieldnumber=$( pwenv fieldnumber )
+	taskmeta set $path_task assigned $fieldnumber
+
+	taskid=$( taskmeta get $path_task id )
+
+	exitval=0
+
+	if [ -e $TASKS/running/$taskid ]; then
+	    cp $path_task $TASKS/complete/$taskid
+	    rm $TASKS/running/$taskid
+	elif [ ! -e $TASKS/complete/$taskid ]; then
+	    # it might be in complete already if we're recovering from a system crash.
+	    warn "task_done invoked for $taskid, but it's not in running or complete!"
+	    exitval=1
+	fi
+
+	mutex_unlock $MUTEX
+
+	exit $exitval
 	;;
     "clear")
 	if [ "$2" == "--exit" ]; then
@@ -206,6 +327,23 @@ case "$mode" in
 	succeeded=""
 	failed=""
 	exitval=0
+
+	for x in $( find $TASKS/complete/ -type f | sort -n ); do
+	    field=$( fieldhostname_from_num $(taskmeta get $x assigned) )
+	    statusid="$( taskmeta get $x statusid )"
+	    if [ ! -z "$statusid" ]; then
+		name="$field/$statusid"
+	    else
+		name="$field"
+	    fi
+
+	    if [ "$(taskmeta get $x exitval)" != "0" ]; then
+		failed="${failed}${name} "
+		exitval=1
+	    else
+		succeeded="${succeeded}${name} "
+	    fi
+	done
 	;;
     *)
 	err "Invalid mode: $mode"
@@ -242,11 +380,14 @@ if $broadcast; then
 	mkdir -p "$BLOB_DIR"
 	pushd_quiet .
 	cd "$BLOB_DIR"
+	mkdir tasks
+	cp $TASKS/pending/* tasks
         mkdir payload
 	cp "$payload" payload/payload.zip
 	mkdir scripts
 	cp "$PWFARM_SCRIPTS_DIR/__lib.sh" scripts
 	cp "$PWFARM_SCRIPTS_DIR/__pwfarm_field.sh" scripts
+	cp "$PWFARM_SCRIPTS_DIR/__pwfarm_taskmeta.sh" scripts
 	cp "$PWFARM_SCRIPTS_DIR/__pwfarm_runutil.sh" scripts
 	cp "$PWFARM_SCRIPTS_DIR/__pwfarm_config.sh" scripts
 	cp "$PWFARM_SCRIPTS_DIR/__pwfarm_status.py" scripts
@@ -286,11 +427,7 @@ if [ -e $FIELDNUMBERS ]; then
 		$screen_window \
 		$FIELD_BORN \
                 "${BLOB_REMOTE}" \
-                "$PASSWORD" \
-		"$prompt_err" \
-		"$command" \
-                "$output_basename" \
-                "$output_dir"
+                "$PASSWORD"
 
 	    while [ ! -e $FIELD_BORN ]; do
 		sleep 0.1
@@ -301,7 +438,7 @@ if [ -e $FIELDNUMBERS ]; then
 	    case "$mode" in 
 		"clear")
 		    echo "   [ Clearing $fieldnumber (farm=$(pwenv farmname), session=$(pwenv sessionname)) ]"
-		    ( $FARMER_SH $fieldnumber clear )&
+		    ( $FARMER_SH $fieldnumber clear $BLOB_REMOTE)&
 		    ;;
 
 		"disconnect")
@@ -310,12 +447,7 @@ if [ -e $FIELDNUMBERS ]; then
 		    ;;
 
 		"exit")
-		    if ! $FARMER_SH $fieldnumber exit; then
-			failed="${failed}$( fieldhostname_from_num $fieldnumber ) "
-			exitval=1
-		    else
-			succeeded="${succeeded}$( fieldhostname_from_num $fieldnumber ) "
-		    fi
+		    # no-op
 		    ;;
 		*)
 		    err "Invalid mode: $mode"
@@ -381,8 +513,7 @@ else
     case "$mode" in
 	"clear")
 	    wait
-	    rm -f "$FIELDNUMBERS"
-	    mutex_unlock $MUTEX
+	    rm -rf "$DISPATCHERSTATE_DIR" # this also unlocks MUTEX
 	    ;;
 
 	"disconnect")

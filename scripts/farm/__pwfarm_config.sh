@@ -91,6 +91,7 @@ usage: $progname define farm <farm_name> <pwuser> <osuser> <dstdir> <field_numbe
 		    echo "export PWFARM_CONFIG_ENV__FARM=\"$PWFARM_CONFIG_ENV__FARM\" ;"
 		    echo "export PWFARM_CONFIG_ENV__SESSION=\"$PWFARM_CONFIG_ENV__SESSION\" ;"
 		    echo "export PWFARM_CONFIG_ENV__FIELD=\"$PWFARM_CONFIG_ENV__FIELD\" ;"
+		    echo "export PWFARM_CONFIG_ENV__TASKID=\"$PWFARM_CONFIG_ENV__TASKID\" ;"
 		    echo "export PWFARM_CONFIG_ENV__PWUSER=$( pwenv pwuser ) ;"
 		    ;;
 		"set")
@@ -118,10 +119,16 @@ usage: $progname define farm <farm_name> <pwuser> <osuser> <dstdir> <field_numbe
 			    ;;
 			"fieldnumbers")
 			    shift 3
-			    fieldnumbers="$*"
+			    fieldnumbers=$( eval echo $* )
 			    require "$fieldnumbers" "'env set fieldnumbers' arg fieldnumbers"
 
 			    export PWFARM_CONFIG_ENV__FIELDNUMBERS="$fieldnumbers"
+			    ;;
+			"taskid")
+			    taskid="$4"
+			    require "$taskid" "'env set taskid' arg taskid"
+
+			    export PWFARM_CONFIG_ENV__TASKID=$taskid
 			    ;;
 			*)
 			    err "Invalid 'env set' name ($envname)"
@@ -140,6 +147,9 @@ usage: $progname define farm <farm_name> <pwuser> <osuser> <dstdir> <field_numbe
 			    ;;
 			"fieldnumber")
 			    echo $PWFARM_CONFIG_ENV__FIELD
+			    ;;
+			"taskid")
+			    echo $PWFARM_CONFIG_ENV__TASKID
 			    ;;
 			"pwuser")
 			    if [ ! -z "$PWFARM_CONFIG_ENV__PWUSER" ]; then

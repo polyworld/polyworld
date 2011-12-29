@@ -8,34 +8,21 @@ fi
 
 function usage()
 {    
+################################################################################
     cat <<EOF
-usage: $( basename $0 ) [-o:c:] runid|/
+usage: $( basename $0 ) [-f:o:] runid|/
 
-    Checks if runid exists in either good or failed directories.
-
-    Note: It isn't strictly necessary that you specify a valid run ID. It can be any
-subpath below the runs directories. For example, if you wanted to check the size of
-a movie file for run 'foo/x', you could invoke:
-
-    lsrun -u foo/x/movie.pmv
+    Lists runs with a Run ID that starts with runid, which is to say it can
+  list a hierarchy of runs. You may use wildcards, but use quotes.
 
 OPTIONS:
 
     -f fields
-               Specify fields on which this should run. Must be a single argument,
-            so use quotes. e.g. -f "0 1" or -f "\$(echo {0..3})"
+               Specify fields on which this should run. Must be a single
+            argument, so use quotes. e.g. -f "0 1" or -f "{0..3}"
 
-    -o owner
-               Specify run owner, which is prepended to run ID. "nil" for no owner.
-            When used, orphan runs aren't listed.
-
-    -u         Show disk usage. May take a while for directories.
-
-    -c command
-               Specify a command to be executed, where {} in the command will be
-            substituted with the file path.
-
-            EXAMPLE: lsrun -c 'grep MaxSteps {}' foo/x/original.wf
+    -o run_owner
+               Specify run owner. When used, orphan runs aren't listed.
 EOF
     exit 1
 }
@@ -45,34 +32,26 @@ if [ $# == 0 ]; then
 fi
 
 if [ "$1" == "--field" ]; then
-    field=true
+    FIELD=true
     shift
 else
-    field=false
+    FIELD=false
 fi
 
-owner=$( pwenv pwuser )
-owner_override=false
-diskusage=false
-command="nil"
+OWNER=$( pwenv pwuser )
+OWNER_OVERRIDE=false
 
-while getopts "f:o:uc:" opt; do
+while getopts "f:o:" opt; do
     case $opt in
 	f)
-	    if ! $field; then
+	    if ! $FIELD; then
 		__pwfarm_config env set fieldnumbers "$OPTARG"
 		validate_farm_env
 	    fi
 	    ;;
 	o)
-	    owner="$OPTARG"
-	    owner_override=true
-	    ;;
-	u)
-	    diskusage=true
-	    ;;
-	c)
-	    command="$OPTARG"
+	    OWNER="$OPTARG"
+	    OWNER_OVERRIDE=true
 	    ;;
 	*)
 	    exit 1
@@ -80,87 +59,80 @@ while getopts "f:o:uc:" opt; do
     esac
 done
 
-args=$( encode_args "$@" )
+ARGS=$( encode_args "$@" )
 shift $(( $OPTIND - 1 ))
 if [ $# != 1 ]; then
     usage
 fi
 
-runid="$1"
+RUNID="$( normalize_runid "$1" )"
 
-tmpdir=$( mktemp -d /tmp/pwfarm_lsrun.XXXXXXXX ) || exit 1
+TMPDIR=$( create_tmpdir ) || exit 1
 
-if ! $field; then
+if ! $FIELD; then
     validate_farm_env
 
-    __pwfarm_script.sh --output result "$tmpdir" $0 --field $args || exit 1
+    __pwfarm_script.sh --output "$TMPDIR/result" $0 --field $ARGS || exit 1
 
     for num in $( pwenv fieldnumbers ); do
 	echo ----- $( fieldhostname_from_num $num ) -----
 
-	cat "$tmpdir/result_$num/out"
+	cat "$TMPDIR/result_$num/out"
     done
 else
-    if ! $owner_override; then
+    if ! $OWNER_OVERRIDE; then
 	if [ -e "$POLYWORLD_PWFARM_APP_DIR/run" ] ; then
 	    if lock_app; then
-		echo WARNING! Contains $(is_good_run "$POLYWORLD_PWFARM_APP_DIR/run" && echo "good" || echo "failed") orphan run! runid=$( cat "$POLYWORLD_PWFARM_APP_DIR/runid" ) >> $tmpdir/out 2>&1
+		echo WARNING! Contains $(is_good_run "$POLYWORLD_PWFARM_APP_DIR/run" && echo "good" || echo "failed") orphan run! runid=$( cat "$POLYWORLD_PWFARM_APP_DIR/runid" ) nid=$( cat "$POLYWORLD_PWFARM_APP_DIR/nid" )>> $TMPDIR/out 2>&1
 		unlock_app
 	    else
-		echo Simulation running or being analyzed. runid=$( cat "$POLYWORLD_PWFARM_APP_DIR/runid" ) >> $tmpdir/out 2>&1
+		echo Simulation running or being analyzed. runid=$( cat "$POLYWORLD_PWFARM_APP_DIR/runid" ) >> $TMPDIR/out 2>&1
 	    fi		
         fi
     fi
 
-    if [ "$runid" == "/" ]; then
-	runid=""
-    fi
-    runid=$( build_runid "$owner" "$runid" )
-
     function dols()
     {
 	local status="$1"
-	local path=$( stored_run_path $status $runid )
 
-	if [ -e "$path" ]; then
-	    if is_empty_directory "$path"; then
-		return 0
-	    fi
+	# find run directories
+	find_runs_field $status $OWNER "$RUNID" > $TMPDIR/runs
 
-	    echo "$( to_upper $status ):" >> $tmpdir/out
-	    echo "  path=$path" >> $tmpdir/out  2>&1
-	    if $diskusage; then
-		echo "Computing disk usage -- might take a while..."
-		echo "  disk usage=$( du -hs $path | cut -f 1 | trim - )" >> $tmpdir/out
-	    fi
-	    if [ -d "$path" ]; then
-		echo "  details:" >> $tmpdir/out
-		ls -ld "$path" | while read x; do echo "      $x"; done >> $tmpdir/out  2>&1
-		echo "  content:" >> $tmpdir/out
-		ls -F "$path" | while read x; do echo "      $x"; done >> $tmpdir/out  2>&1
-	    else
-		echo "  details:" >> $tmpdir/out
-		ls -l "$path" | while read x; do echo "      $x"; done >> $tmpdir/out  2>&1
-	    fi
+	local runids=$(
+	    cat $TMPDIR/runs |
+	    parse_stored_run_path_field --runid |
+	    sort |
+	    uniq
+	)
 
-	    if [ "$command" != "nil" ] ; then
-		scommand=$( echo "$command" | sed s/{}/\$path/ )
-		echo "Executing '$scommand'..."
-		echo "Executing '$scommand'..." >> $tmpdir/out  2>&1
-		eval $scommand >> $tmpdir/out  2>&1
-	    fi
+	if [ "$status" == "failed" ] && [ ! -z "$runids" ]; then
+	    echo "FAILED:" >> $TMPDIR/out
 	fi
+
+	for x in $runids; do
+	    nids=$(
+		cat $TMPDIR/runs |
+		while read run; do
+		    if [ "$x" == "$(parse_stored_run_path_field --runid $run)" ]; then
+			parse_stored_run_path_field --nid $run
+		    fi
+		done |
+		sort -n |
+		tr "\n" " "
+	    )
+	    echo "$x  ;  NIDs = $nids" >> $TMPDIR/out
+	done
     }
 
     dols "good"
     dols "failed"
 
-    if [ ! -e $tmpdir/out ]; then
-	echo "NO SUCH RUN" > $tmpdir/out
+    if [ ! -e $TMPDIR/out ]; then
+	echo "NO SUCH RUN" > $TMPDIR/out
     fi
 
-    cd $tmpdir
-    zip -q $PWFARM_OUTPUT_FILE *
+    cd $TMPDIR
+    zip -q $PWFARM_OUTPUT_FILE out
 fi
 
-rm -rf $tmpdir
+rm -rf $TMPDIR

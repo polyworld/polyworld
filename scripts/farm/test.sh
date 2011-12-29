@@ -1,13 +1,22 @@
 #!/bin/bash
 
 if [ "$1" != "--field" ]; then
-    __pwfarm_script.sh --output foo /tmp/test_output $0 --field $*
+    rm -rf /tmp/test_output
+    __pwfarm_script.sh --sudo --output /tmp/test_output/foo $0 --field $* || exit 1
+
+    find /tmp/test_output
 else
-    echo "ARGS:"
+    source $PWFARM_SCRIPTS_DIR/__lib.sh
+
+    echo -n "ARGS: "
     echo $*
-    echo
-    echo "PWD:"
+    echo -n "PWD: "
     pwd
+    echo -n "TASKID: "
+    PWFARM_TASKMETA get id
+    echo -n "COMMAND: "
+    PWFARM_TASKMETA get command
+    echo -n "DATE: "
     date
 
     echo hi > a;
@@ -15,7 +24,12 @@ else
     echo foo > bye/b
     zip -r $PWFARM_OUTPUT_FILE .
 
-    #read -p "[test] press enter..."
-    sleep 3
-    exit 1
+    PWFARM_STATUS "TEST (Press Enter)"
+
+    PWFARM_SUDO echo hi sudo
+
+    read -p "[test] press enter (f for fail exitval)..." input
+    if [ "$input" == "f" ]; then
+	exit 1
+    fi
 fi

@@ -9,7 +9,7 @@ fi
 function usage()
 {
     cat >&2 <<EOF
-usage: $( basename $0 ) [-iw:p:a:f:o:c:z:] run_id
+usage: $( basename $0 ) [-w:p:N:a:f:o:c:z:] run_id
 
 ARGS:
 
@@ -17,16 +17,17 @@ ARGS:
 
 OPTIONS:
 
-   -i             Interactive mode. When using -p, you will be shown the overlayed
-                worldfiles and prompted for approval prior to executing.
-
    -w worldfile
                   Path of local worldfile to be executed. If not provided, it is
                 assumed a run already exists on the farm of run_id.
 
    -p parms_overlay
                   Path of local worldfile overlay file. Allows for setting parameters
-                on a per-machine basis.
+                on a per-run basis.
+
+   -N num_runs
+                  Specify number of runs, allowing more runs than machines on farm.
+                Only legal with -w. Not legal with -p.
 
    -a analysis_script
                   Path of script that is to be executed after simulation.
@@ -36,13 +37,16 @@ OPTIONS:
 
                     -F "stat/* *.wf"
 
+                  By default, the following is fetched:
+
+                    $DEFAULT_FETCH_LIST
+
    -f fields
                   Specify fields on which this should run. Must be a single argument,
-                so use quotes. e.g. -f "0 1" or -f "\$(echo {0..3})"
+                so use quotes. e.g. -f "0 1" or -f "{0..3}"
 
    -o run_owner
-                  Specify owner of run, which is ultimately prepended to run IDs.
-                A value of "nil" indicates that no owner will be prepended.
+                  Specify owner of run.
 
    -c config_script
                   Path of script that is to be executed prior to running 
@@ -66,6 +70,244 @@ if [ -z "$1" ]; then
 fi
 
 if [ "$1" == "--field" ]; then
+    field=true
+else
+    field=false
+fi
+
+if ! $field; then
+    validate_farm_env
+
+    ########################
+    ###                  ###
+    ### EXECUTE ON LOCAL ###
+    ###                  ###
+    ########################
+
+    WORLDFILE="nil"
+    OVERLAY="nil"
+    NRUNS="nil"
+    PRERUN="nil"
+    POSTRUN="nil"
+    INPUT_ZIP="nil"
+    OWNER=$( pwenv pwuser )
+    FETCH_LIST="$DEFAULT_FETCH_LIST"
+
+    while getopts "w:p:N:a:f:o:c:z:F:" opt; do
+	case $opt in
+	    w)
+		WORLDFILE="$OPTARG"
+		;;
+	    p)
+		OVERLAY="$OPTARG"
+		;;
+	    N)
+		NRUNS="$OPTARG"
+		is_integer "$NRUNS" || err "-N value must be integer"
+		[ "$NRUNS" -gt "0" ] || err "-N value must be > 0"
+		;;
+	    a)
+		POSTRUN="$OPTARG"
+		;;
+	    f)
+		__pwfarm_config env set fieldnumbers "$OPTARG"
+		validate_farm_env
+		;;
+	    o)
+		OWNER="$OPTARG"
+		;;
+	    c)
+		PRERUN="$OPTARG"
+		;;
+	    z)
+		INPUT_ZIP="$OPTARG"
+		;;
+	    F)
+		FETCH_LIST="$OPTARG"
+		;;
+	    *)
+		exit 1
+		;;
+	esac
+    done
+
+    if [ "$NRUNS" != "nil" ]; then
+	[ "$WORLDFILE" != "nil" ] || err "-N requires -w"
+	[ "$OVERLAY" == "nil" ] || err "-N incompatible with -p"
+    fi
+
+    if [ "$OVERLAY" != "nil" ]; then
+	[ "$WORLDFILE" != "nil" ] || err "-p requires -w"
+    fi
+
+    shift $(( $OPTIND - 1 ))
+    if [ $# -lt 1 ]; then
+	usage "Missing arguments"
+    elif [ $# -gt 1 ]; then
+	shift
+	usage "Unexpected arguments: $*"
+    fi
+
+    RUNID="$( normalize_runid "$1" )"
+    validate_runid "$RUNID"
+
+    TMP_DIR=$( create_tmpdir )
+    PAYLOAD_DIR=$TMP_DIR/payload
+    TASKS_DIR=$TMP_DIR/tasks
+    RUN_PACKAGE_DIR=$PAYLOAD_DIR/run_package
+
+    mkdir -p $PAYLOAD_DIR
+    mkdir -p $TASKS_DIR
+    mkdir -p $RUN_PACKAGE_DIR
+
+    TASKS=""
+
+    if [ "$WORLDFILE" != "nil" ]; then
+	if [ "$OVERLAY" != "nil" ]; then
+	    ntasks=$( proputil len "$OVERLAY" overlays )
+
+	    mkdir -p $TMP_DIR/overlay
+
+	    # Verify we can apply the overlay, for catching errors quickly.
+	    for (( i=0; i < $ntasks; i++ )); do
+		(
+		    success=false
+		    if proputil overlay "$WORLDFILE" "$OVERLAY" $i >$TMP_DIR/overlay/$i; then
+			if proputil apply $POLYWORLD_DIR/default.wfs $TMP_DIR/overlay/$i >/dev/null; then
+			    success=true
+			fi
+		    fi
+		    if ! $success; then
+			touch $TMP_DIR/overlay/fail
+		    fi
+		) &
+	    done
+
+	    [ ! -e $TMP_DIR/overlay/fail ] || err "Invalid overlay"
+	elif [ "$NRUNS" != "nil" ]; then
+	    ntasks=$NRUNS
+	else
+	    ntasks=$( len $(pwenv fieldnumbers) )
+	fi
+
+	#
+	# Define Worldfile Tasks
+	#
+	for (( taskid=0; taskid < $ntasks; taskid++ )); do
+	    path=$TASKS_DIR/$taskid
+	    TASKS="$TASKS $path"
+
+	    taskmeta set $path id $taskid
+	    taskmeta set $path nid $taskid
+	done
+    else
+	#
+	# No Worldfile
+	#
+	if [ ! -e "$(stored_run_path_local $OWNER $RUNID "0")/.pwfarm" ]; then
+	    err "Cannot find local run data. Please fetch run data."
+	fi
+
+	#
+	#  Define Non-Worldfile Tasks
+	#
+	taskid=0
+
+	fieldnumbers=$( pwenv fieldnumbers )
+
+	for run in $(stored_run_path_local $OWNER $RUNID "*"); do
+	    assert [ -e $run/.pwfarm/fieldnumber ]
+	    assert [ -e $run/.pwfarm/nid ]
+
+	    fieldnumber=$(cat $run/.pwfarm/fieldnumber)
+
+	    if contains $fieldnumbers $fieldnumber; then
+		nid=$(cat $run/.pwfarm/nid)
+		assert [ "run_$nid" == "$(basename $run)" ]
+
+		path=$TASKS_DIR/$taskid
+		TASKS="$TASKS $path"
+
+		taskmeta set $path id $taskid
+		taskmeta set $path required_field $fieldnumber
+		taskmeta set $path nid $nid
+
+		taskid=$(( $taskid + 1 ))
+	    fi
+
+	done
+    fi
+
+    #
+    # Set Common Task Properties
+    #
+    fieldnumbers=$( pwenv fieldnumbers )
+    for path in $TASKS; do
+	taskmeta set $path command "./pwfarm_run.sh --field"
+	taskmeta set $path prompterr "true"
+	taskmeta set $path sudo "false"
+	taskmeta set $path outputdir "$( stored_run_path_local $OWNER $RUNID $(taskmeta get $path nid) )"
+	if [ $(len $TASKS) -gt $(len $fieldnumbers) ]; then
+	    taskmeta set $path statusid "$(taskmeta get $path id)"
+	fi
+    done
+
+    ###
+    ### Create Payload
+    ###
+
+    cp $0 $PAYLOAD_DIR/pwfarm_run.sh || exit 1
+
+    function cpopt()
+    {
+	if [ "$1" != "nil" ]; then
+	    cp "$1" "$PAYLOAD_DIR/$2" || exit 1
+	fi
+    }
+
+    cpopt "$WORLDFILE" worldfile
+    cpopt "$OVERLAY" parms.wfo
+    cpopt "$PRERUN" prerun.sh
+    cpopt "$POSTRUN" postrun.sh
+    cpopt "$INPUT_ZIP" input.zip
+
+    echo "$OWNER" > $PAYLOAD_DIR/owner
+    echo "$RUNID" > $PAYLOAD_DIR/runid
+
+    for x in "$FETCH_LIST"; do
+	echo "$x" >> $RUN_PACKAGE_DIR/input
+    done
+
+    if [ "$WORLDFILE" == "nil" ]; then
+	#
+	# Package the Checksums
+	#
+	for path_task in $TASKS; do
+	    rundir=$(taskmeta get $path_task outputdir)
+	    checksums=$RUN_PACKAGE_DIR/checksums_$( taskmeta get $path_task nid )
+
+	    $POLYWORLD_SCRIPTS_DIR/archive_delta.sh checksums \
+		$checksums \
+		$rundir \
+		"$FETCH_LIST"
+	done
+    fi
+
+    PAYLOAD=$PAYLOAD_DIR/payload.zip
+
+    pushd_quiet .
+    cd $PAYLOAD_DIR
+    zip -qr $PAYLOAD .
+    popd_quiet
+
+    ##
+    ## Execute
+    ##
+    dispatcher dispatch $PAYLOAD $TASKS
+
+    rm -rf $TMP_DIR
+    rm -rf $overlay_tmpdir
+else
     ##############################
     ###                        ###
     ### EXECUTE ON REMOTE HOST ###
@@ -81,30 +323,36 @@ if [ "$1" == "--field" ]; then
     PAYLOAD_DIR=$( pwd )
     cd "$POLYWORLD_PWFARM_APP_DIR" || exit 1
 
-    SCRIPTS_DIR="$POLYWORLD_PWFARM_APP_DIR/scripts"
-
     export POLYWORLD_PWFARM_WORLDFILE="$PAYLOAD_DIR/worldfile"
-    cp "$PAYLOAD_DIR/runid" .
-    RUNID=$( cat $PAYLOAD_DIR/runid )
-
     export POLYWORLD_PWFARM_RUN_PACKAGE=$PAYLOAD_DIR/run_package/input
 
     export DISPLAY=:0.0 # for Linux -- allow graphics from ssh
-    export PATH=$( canonpath scripts ):$( canonpath bin ):$PATH
     ulimit -n 4096      # for Mac -- allow enough file descriptors
     ulimit -c unlimited # for Mac -- generate core dump on trap
+    export PATH=$( canonpath scripts ):$( canonpath bin ):$PATH
+
+    OWNER=$(cat $PAYLOAD_DIR/owner)
+    RUNID=$(cat $PAYLOAD_DIR/runid)
+    NID=$(PWFARM_TASKMETA get nid)
+    BATCHID=$( PWFARM_TASKMETA get batchid )
 
     ###
     ### If a run is already here, store it away.
     ###
     store_orphan_run ./run
 
+    # These files will be used for run identity if our run gets orphaned.
+    echo $OWNER > ./owner
+    echo $RUNID > ./runid
+    echo $NID > ./nid
+
     ###
-    ### If we're running Polyworld, make sure a run of this ID doesn't already exist.
+    ### If we're running Polyworld, make sure a run with a conflicting ID doesn't already exist.
     ###
     if [ -e "$POLYWORLD_PWFARM_WORLDFILE" ]; then
-	if good_run_exists "$RUNID"; then
-	    err "A run of id $RUNID already exists!"
+	if conflicting_run_exists $OWNER $RUNID $NID $BATCHID; then
+	    # conflicting_run_exists will print details to stderr
+	    err "Aborting due to conflicting run!"
 	fi
     fi
 
@@ -133,28 +381,26 @@ if [ "$1" == "--field" ]; then
     ### If no worldfile, then relocate requested run to current directory
     ###
     if [ ! -e $POLYWORLD_PWFARM_WORLDFILE ]; then
-	unstore_run "$RUNID" ./run || exit 1
+	unstore_run $OWNER $RUNID $NID ./run || exit 1
     fi
 
     ###
     ### Execute Polyworld if worldfile exists
     ###
     if [ -e $POLYWORLD_PWFARM_WORLDFILE ]; then
-	fieldhostname=$( fieldhostname_from_num $(pwenv fieldnumber) )
-
 	###
 	### Process Parms Overlay
 	###
 	if [ -e "$PAYLOAD_DIR/parms.wfo" ]; then
-	    proputil overlay $POLYWORLD_PWFARM_WORLDFILE "$PAYLOAD_DIR/parms.wfo" "$fieldhostname" > ./worldfile || exit 1
+	    proputil overlay $POLYWORLD_PWFARM_WORLDFILE "$PAYLOAD_DIR/parms.wfo" "$NID" > ./worldfile || exit 1
 	else
 	    ###
-	    ### Set the seed based on farm node
+	    ### Set the seed based on NID
 	    ###
-	    if [ "$( pwenv fieldnumber )" == "0" ]; then
+	    if [ "$NID" == "0" ]; then
 		seed=42
 	    else
-		seed="$( pwenv fieldnumber )"
+		seed="$NID"
 	    fi
 	    cp $POLYWORLD_PWFARM_WORLDFILE ./worldfile || exit 1
 	    ./scripts/wfutil edit ./worldfile InitSeed=$seed || exit 1
@@ -172,7 +418,7 @@ if [ "$1" == "--field" ]; then
 	exitval=$?
 
 	if ! is_good_run --exit $exitval ./run; then
-	    store_failed_run "$RUNID" ./run
+	    store_failed_run $OWNER $RUNID $NID ./run
 	    exit 1
 	fi
 
@@ -181,7 +427,10 @@ if [ "$1" == "--field" ]; then
 	    cp "$PAYLOAD_DIR/parms.wfo" run/
 	fi
 
-	echo "$fieldhostname" > run/.fieldhostname
+	mkdir -p run/.pwfarm
+	echo $( pwenv fieldnumber ) > run/.pwfarm/fieldnumber
+	echo $( PWFARM_TASKMETA get nid ) > run/.pwfarm/nid
+	echo $BATCHID > run/.pwfarm/batchid
     fi
 
     ###
@@ -201,15 +450,13 @@ if [ "$1" == "--field" ]; then
 
     PWFARM_STATUS "Package Run"
 
-    if [ -e $PAYLOAD_DIR/postrun.sh ] || [ -e $PAYLOAD_DIR/prerun.sh ] || [ -e $POLYWORLD_PWFARM_WORLDFILE ]; then
-	###
-	### Store a code snapshot
-	###
-	if [ -e $PAYLOAD_DIR/postrun.sh ]; then
-	    scripts/run_history.sh src run $postrun_failed $PAYLOAD_DIR/postrun.sh
-	else
-	    scripts/run_history.sh src run "false"
-	fi
+    ###
+    ### Store a code snapshot
+    ###
+    if [ -e $PAYLOAD_DIR/postrun.sh ]; then
+	scripts/run_history.sh src run $postrun_failed $PAYLOAD_DIR/postrun.sh
+    else
+	scripts/run_history.sh src run "false"
     fi
 
     ###
@@ -217,22 +464,18 @@ if [ "$1" == "--field" ]; then
     ###
     cd run || err "postrun script moved ./run!!!"
 
-    checksum=.pwfarm_run_package_checksums
-    archive_input="$( cat $POLYWORLD_PWFARM_RUN_PACKAGE | while read x; do [ ! -z "$x" ] && ls $x; done )"
-
-    if [ ! -z "$archive_input" ]; then
-	$SCRIPTS_DIR/archive_delta.sh -e $PAYLOAD_DIR/run_package/checksums_$(pwenv fieldnumber) $checksum $PWFARM_OUTPUT_FILE $archive_input
-	if [ -e $PWFARM_OUTPUT_FILE ]; then
-	    zip -q $PWFARM_OUTPUT_FILE $checksum
-	fi
-    fi
+    $POLYWORLD_PWFARM_SCRIPTS_DIR/archive_delta.sh archive \
+	-e $PAYLOAD_DIR/run_package/checksums_$NID \
+	$PWFARM_OUTPUT_FILE \
+	. \
+	"$( cat $POLYWORLD_PWFARM_RUN_PACKAGE ) .pwfarm/*"
 
     cd ..
 
     ###
     ### Store run
     ###
-    store_good_run "$RUNID" "./run"
+    store_good_run $OWNER $RUNID $NID "./run"
 
     ###
     ### Exit
@@ -244,170 +487,4 @@ if [ "$1" == "--field" ]; then
     else
 	exit 0
     fi
-else
-    validate_farm_env
-
-    ########################
-    ###                  ###
-    ### EXECUTE ON LOCAL ###
-    ###                  ###
-    ########################
-
-    pwfarm_dir=`canondirname "$0"`
-    poly_dir=`canonpath "$pwfarm_dir/../.."`
-
-    INTERACTIVE=false
-
-    WORLDFILE="nil"
-    OVERLAY="nil"
-    PRERUN="nil"
-    POSTRUN="nil"
-    INPUT_ZIP="nil"
-    OWNER=$( pwenv pwuser )
-    OWNER_OVERRIDE=false
-    FETCH_LIST="stats/* .fieldhostname *.wf *.wfs *.wfo brain/Recent/*.plt"
-
-    while getopts "iw:p:a:f:o:c:z:F:" opt; do
-	case $opt in
-	    i)
-		INTERACTIVE=true
-		;;
-	    w)
-		WORLDFILE="$OPTARG"
-		;;
-	    p)
-		OVERLAY="$OPTARG"
-		;;
-	    a)
-		POSTRUN="$OPTARG"
-		;;
-	    f)
-		__pwfarm_config env set fieldnumbers "$OPTARG"
-		validate_farm_env
-		;;
-	    o)
-		OWNER="$OPTARG"
-		OWNER_OVERRIDE=true
-		;;
-	    c)
-		PRERUN="$OPTARG"
-		;;
-	    z)
-		INPUT_ZIP="$OPTARG"
-		;;
-	    F)
-		FETCH_LIST="$OPTARG"
-		;;
-	    *)
-		exit 1
-		;;
-	esac
-    done
-
-    shift $(( $OPTIND - 1 ))
-    if [ $# -lt 1 ]; then
-	usage "Missing arguments"
-    elif [ $# -gt 1 ]; then
-	shift
-	usage "Unexpected arguments: $*"
-    fi
-
-    if [ "$OVERLAY" != "nil" ]; then
-	if [ "$WORLDFILE" == "nil" ]; then
-	    err "-p requires worldfile (-w)"
-	fi
-
-	fieldnames=( $( fieldhostnames_from_nums $(pwenv fieldnumbers) ) ) || exit 1
-	overlay_matches=( $(proputil overlay_matches "$OVERLAY" ${fieldnames[@]}) ) || err "Invalid parms_overlay file!"
-	if [ ${#overlay_matches[@]} == 0 ]; then
-	    err "No parms overlay matches!"
-	fi
-
-	__pwfarm_config env set fieldnumbers $( fieldnums_from_hostnames ${overlay_matches[@]} )
-
-	overlay_tmpdir=$( mktemp -d /tmp/poly_run.XXXXXXXX ) || exit 1
-
-	for fieldname in ${overlay_matches[@]}; do
-	    (
-		overlayed_worldfile="$overlay_tmpdir/${fieldname}.wf"
-		proputil overlay "$WORLDFILE" "$OVERLAY" "$fieldname" > "$overlayed_worldfile" || exit 1
-		proputil apply "$POLYWORLD_DIR/default.wfs" "$overlayed_worldfile" > /dev/null || err "Overlayed file $overlayed_worldfile failed schema validation!"
-	    ) &
-	done
-
-	wait
-
-	if $INTERACTIVE; then
-	    echo "--------------------------------------------------------------------------------"
-	    echo "---"
-	    echo "--- A GUI window should now be showing the worldfiles that will be executed."
-	    echo "---"
-	    echo "--- The worldfiles are at $overlay_tmpdir"	    
-	    echo "---"
-	    echo "--------------------------------------------------------------------------------"
-	    if [ ${#overlay_matches[@]} != ${#fieldnames[@]} ]; then
-		echo "WARNING! Some field nodes were not matched to the parms_overlay file."
-	    fi
-
-	    show_file_gui $overlay_tmpdir
-	    read -p "Do you approve? [y/n]: " reply
-	    if [ "$reply" != "y" ]; then
-		rm -rf $overlay_tmpdir
-		err "User aborted"
-	    fi
-	fi
-    fi
-
-    RUNID=$( build_runid "$OWNER" "$1" )
-    if $OWNER_OVERRIDE; then
-	RUNID_LOCAL="$RUNID"
-    else
-	RUNID_LOCAL="$1"
-    fi
-
-    DSTDIR=$( pwenv runresults_dir )
-
-    tmp_dir=`mktemp -d /tmp/poly_run.XXXXXXXX` || exit 1
-
-    cp $0 $tmp_dir/pwfarm_run.sh || exit
-
-    function cpopt()
-    {
-	if [ "$1" != "nil" ]; then
-	    cp "$1" "$tmp_dir/$2" || exit 1
-	fi
-    }
-
-    cpopt "$WORLDFILE" worldfile
-    cpopt "$OVERLAY" parms.wfo
-    cpopt "$PRERUN" prerun.sh
-    cpopt "$POSTRUN" postrun.sh
-    cpopt "$INPUT_ZIP" input.zip
-
-    echo "$RUNID" > $tmp_dir/runid
-
-    mkdir $tmp_dir/run_package
-
-    for x in "$FETCH_LIST"; do
-	echo "$x" >> $tmp_dir/run_package/input
-    done
-
-    for fieldnumber in $(pwenv fieldnumbers); do
-	local_field_run_package_checksums=$DSTDIR/$RUNID_LOCAL/run_${fieldnumber}/.pwfarm_run_package_checksums
-	if [ -e $local_field_run_package_checksums ]; then
-	    cp $local_field_run_package_checksums $tmp_dir/run_package/checksums_${fieldnumber}
-	fi
-    done
-
-    pushd_quiet .
-    cd $tmp_dir
-
-    zip -qr payload.zip .
-
-    popd_quiet
-
-    $pwfarm_dir/__pwfarm_dispatcher.sh dispatch $tmp_dir/payload.zip './pwfarm_run.sh --field' run $DSTDIR/$RUNID_LOCAL
-
-    rm -rf $tmp_dir
-    rm -rf $overlay_tmpdir
 fi
