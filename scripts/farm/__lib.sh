@@ -412,6 +412,14 @@ function len()
     echo $#
 }
 
+function join()
+{
+    python - "$@" <<EOF
+import sys
+print sys.argv[1].join(sys.argv[2:])
+EOF
+}
+
 function indent()
 {
     while read x; do printf "   $x\n"; done

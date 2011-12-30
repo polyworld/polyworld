@@ -13,7 +13,12 @@ usage: $( basename $0 ) [-w:p:N:a:f:o:c:z:] run_id
 
 ARGS:
 
-   run_id         Unique ID for run.
+   run_id         If using -w, specifies Run ID of new run. If using -wpN, this is
+                the root Run ID, where each set of overlay clause runs is given
+                its own Run ID like <run_id>/overlay_<N>. If using -a without -w, then
+                run_id is operated on hierarchically, where any Run IDs beginning with
+                run_id will be processed. For example, 'frun -a ... foo' would operate on
+                runs with Run IDs {foo/overlay_0, foo/overlay_1}.
 
 OPTIONS:
 
@@ -25,9 +30,10 @@ OPTIONS:
                   Path of local worldfile overlay file. Allows for setting parameters
                 on a per-run basis.
 
-   -N num_runs
-                  Specify number of runs, allowing more runs than machines on farm.
-                Only legal with -w. Not legal with -p.
+   -N num_seeds
+                  Specify number of RNG seeds to be executed. When not using overlays,
+                this specifies the total number of runs. When used with overlays, this
+                specifies the number of runs per overlay clause. Only legal with -w.
 
    -a analysis_script
                   Path of script that is to be executed after simulation.
@@ -37,9 +43,13 @@ OPTIONS:
 
                     -F "stat/* *.wf"
 
-                  By default, the following is fetched:
+                  By default, the following is fetched but can be overridden:
 
                     $DEFAULT_FETCH_LIST
+
+                  The following is always fetched so scripts properly operate:
+
+                    $IMPLICIT_FETCH_LIST
 
    -f fields
                   Specify fields on which this should run. Must be a single argument,
@@ -133,7 +143,6 @@ if ! $field; then
 
     if [ "$NRUNS" != "nil" ]; then
 	[ "$WORLDFILE" != "nil" ] || err "-N requires -w"
-	[ "$OVERLAY" == "nil" ] || err "-N incompatible with -p"
     fi
 
     if [ "$OVERLAY" != "nil" ]; then
@@ -163,13 +172,22 @@ if ! $field; then
     TASKS=""
 
     if [ "$WORLDFILE" != "nil" ]; then
-	if [ "$OVERLAY" != "nil" ]; then
-	    ntasks=$( proputil len "$OVERLAY" overlays )
+	#
+	# Have Worldfile
+	#
+	create_default_worldfile_tasks=true
+	create_default_worldfile_tasks__rngseed=true
 
-	    mkdir -p $TMP_DIR/overlay
+	if [ "$OVERLAY" != "nil" ]; then
+	    #
+	    # Have Overlay
+	    #
+	    noverlays=$( proputil len "$OVERLAY" overlays ) || exit 1
 
 	    # Verify we can apply the overlay, for catching errors quickly.
-	    for (( i=0; i < $ntasks; i++ )); do
+	    mkdir -p $TMP_DIR/overlay
+
+	    for (( i=0; i < $noverlays; i++ )); do
 		(
 		    success=false
 		    if proputil overlay "$WORLDFILE" "$OVERLAY" $i >$TMP_DIR/overlay/$i; then
@@ -183,28 +201,73 @@ if ! $field; then
 		) &
 	    done
 
-	    [ ! -e $TMP_DIR/overlay/fail ] || err "Invalid overlay"
-	elif [ "$NRUNS" != "nil" ]; then
-	    ntasks=$NRUNS
+	    [ ! -e $TMP_DIR/overlay/fail ] || exit 1
+
+
+	    if [ "$NRUNS" == "nil" ]; then
+		#
+		# Define Overlay Tasks
+		#
+		for (( taskid=0; taskid < $noverlays; taskid++ )); do
+		    path=$TASKS_DIR/$taskid
+		    TASKS="$TASKS $path"
+
+		    taskmeta set $path id $taskid
+		    taskmeta set $path nid $taskid
+		    taskmeta set $path rngseed false
+		    taskmeta set $path ioverlay $taskid
+		done
+	    else
+		#
+		# Define N-Run Overlay Tasks
+		#
+		create_default_worldfile_tasks=false
+		taskid=0
+		for (( ioverlay=0; ioverlay < $noverlays; ioverlay++ )); do
+		    for (( nid=0; nid < $NRUNS; nid++ )); do
+			path=$TASKS_DIR/$taskid
+			TASKS="$TASKS $path"
+
+			taskmeta set $path id $taskid
+			taskmeta set $path nid $nid
+			taskmeta set $path runid $RUNID/overlay_$ioverlay
+			taskmeta set $path rngseed true
+			taskmeta set $path plotgroup overlay_values
+			taskmeta set $path ioverlay $ioverlay
+
+			taskid=$(( $taskid + 1 ))
+		    done
+		done
+	    fi
 	else
-	    ntasks=$( len $(pwenv fieldnumbers) )
+	    #
+	    # No Overlay
+	    #
+	    if [ "$NRUNS" != "nil" ]; then
+		ntasks=$NRUNS
+	    else
+		ntasks=$( len $(pwenv fieldnumbers) )
+	    fi
+
+	    #
+	    # Define Worldfile Tasks
+	    #
+	    for (( taskid=0; taskid < $ntasks; taskid++ )); do
+		path=$TASKS_DIR/$taskid
+		TASKS="$TASKS $path"
+
+		taskmeta set $path id $taskid
+		taskmeta set $path nid $taskid
+		taskmeta set $path rngseed true
+	    done
 	fi
-
-	#
-	# Define Worldfile Tasks
-	#
-	for (( taskid=0; taskid < $ntasks; taskid++ )); do
-	    path=$TASKS_DIR/$taskid
-	    TASKS="$TASKS $path"
-
-	    taskmeta set $path id $taskid
-	    taskmeta set $path nid $taskid
-	done
     else
 	#
 	# No Worldfile
 	#
-	if [ ! -e "$(stored_run_path_local $OWNER $RUNID "0")/.pwfarm" ]; then
+	runs=$( find_runs_local "$OWNER" "$RUNID" )
+
+	if [ -z "$runs" ]; then
 	    err "Cannot find local run data. Please fetch run data."
 	fi
 
@@ -215,7 +278,7 @@ if ! $field; then
 
 	fieldnumbers=$( pwenv fieldnumbers )
 
-	for run in $(stored_run_path_local $OWNER $RUNID "*"); do
+	for run in $runs; do
 	    assert [ -e $run/.pwfarm/fieldnumber ]
 	    assert [ -e $run/.pwfarm/nid ]
 
@@ -231,6 +294,16 @@ if ! $field; then
 		taskmeta set $path id $taskid
 		taskmeta set $path required_field $fieldnumber
 		taskmeta set $path nid $nid
+		taskmeta set $path runid $( parse_stored_run_path_local --runid $run )
+
+		#
+		# Package the Checksums
+		#
+		checksums=$RUN_PACKAGE_DIR/checksums_$taskid
+		$POLYWORLD_SCRIPTS_DIR/archive_delta.sh checksums \
+		    $checksums \
+		    $run \
+		    "$FETCH_LIST $IMPLICIT_FETCH_LIST"
 
 		taskid=$(( $taskid + 1 ))
 	    fi
@@ -246,7 +319,12 @@ if ! $field; then
 	taskmeta set $path command "./pwfarm_run.sh --field"
 	taskmeta set $path prompterr "true"
 	taskmeta set $path sudo "false"
-	taskmeta set $path outputdir "$( stored_run_path_local $OWNER $RUNID $(taskmeta get $path nid) )"
+
+	if ! taskmeta has $path runid; then
+	    taskmeta set $path runid $RUNID
+	fi
+
+	taskmeta set $path outputdir "$( stored_run_path_local $OWNER $(taskmeta get $path runid) $(taskmeta get $path nid) )"
 	if [ $(len $TASKS) -gt $(len $fieldnumbers) ]; then
 	    taskmeta set $path statusid "$(taskmeta get $path id)"
 	fi
@@ -272,26 +350,10 @@ if ! $field; then
     cpopt "$INPUT_ZIP" input.zip
 
     echo "$OWNER" > $PAYLOAD_DIR/owner
-    echo "$RUNID" > $PAYLOAD_DIR/runid
 
     for x in "$FETCH_LIST"; do
 	echo "$x" >> $RUN_PACKAGE_DIR/input
     done
-
-    if [ "$WORLDFILE" == "nil" ]; then
-	#
-	# Package the Checksums
-	#
-	for path_task in $TASKS; do
-	    rundir=$(taskmeta get $path_task outputdir)
-	    checksums=$RUN_PACKAGE_DIR/checksums_$( taskmeta get $path_task nid )
-
-	    $POLYWORLD_SCRIPTS_DIR/archive_delta.sh checksums \
-		$checksums \
-		$rundir \
-		"$FETCH_LIST"
-	done
-    fi
 
     PAYLOAD=$PAYLOAD_DIR/payload.zip
 
@@ -332,7 +394,7 @@ else
     export PATH=$( canonpath scripts ):$( canonpath bin ):$PATH
 
     OWNER=$(cat $PAYLOAD_DIR/owner)
-    RUNID=$(cat $PAYLOAD_DIR/runid)
+    RUNID=$(PWFARM_TASKMETA get runid)
     NID=$(PWFARM_TASKMETA get nid)
     BATCHID=$( PWFARM_TASKMETA get batchid )
 
@@ -392,8 +454,13 @@ else
 	### Process Parms Overlay
 	###
 	if [ -e "$PAYLOAD_DIR/parms.wfo" ]; then
-	    proputil overlay $POLYWORLD_PWFARM_WORLDFILE "$PAYLOAD_DIR/parms.wfo" "$NID" > ./worldfile || exit 1
+	    ioverlay=$(PWFARM_TASKMETA get ioverlay)
+	    proputil overlay $POLYWORLD_PWFARM_WORLDFILE "$PAYLOAD_DIR/parms.wfo" $ioverlay > ./worldfile || exit 1
 	else
+	    cp $POLYWORLD_PWFARM_WORLDFILE ./worldfile || exit 1
+	fi
+
+	if $( PWFARM_TASKMETA get rngseed ); then
 	    ###
 	    ### Set the seed based on NID
 	    ###
@@ -402,7 +469,6 @@ else
 	    else
 		seed="$NID"
 	    fi
-	    cp $POLYWORLD_PWFARM_WORLDFILE ./worldfile || exit 1
 	    ./scripts/wfutil edit ./worldfile InitSeed=$seed || exit 1
 	fi
 
@@ -431,6 +497,31 @@ else
 	echo $( pwenv fieldnumber ) > run/.pwfarm/fieldnumber
 	echo $( PWFARM_TASKMETA get nid ) > run/.pwfarm/nid
 	echo $BATCHID > run/.pwfarm/batchid
+
+	if PWFARM_TASKMETA has plotgroup; then
+	    plotgroup=""
+
+	    case $( PWFARM_TASKMETA get plotgroup ) in
+		overlay_values)
+		    propvals=$(
+			proputil scalarnames run/parms.wfo 3 |
+			sort |
+			uniq |
+			while read propname; do
+			    proputil get run/normalized.wf $propname
+			done
+		    )
+		    plotgroup="Meta ($(join ', ' $propvals))"
+		    ;;
+		*)
+		    err "Unknown plotgroup '$( PWFARM_TASKMETA get plotgroup )'"
+		    ;;
+	    esac
+
+	    if [ ! -z "$plotgroup" ]; then
+		echo "group	$plotgroup" >> run/plot.cfg
+	    fi
+	fi
     fi
 
     ###
@@ -465,10 +556,10 @@ else
     cd run || err "postrun script moved ./run!!!"
 
     $POLYWORLD_PWFARM_SCRIPTS_DIR/archive_delta.sh archive \
-	-e $PAYLOAD_DIR/run_package/checksums_$NID \
+	-e $PAYLOAD_DIR/run_package/checksums_$(PWFARM_TASKMETA get id) \
 	$PWFARM_OUTPUT_FILE \
 	. \
-	"$( cat $POLYWORLD_PWFARM_RUN_PACKAGE ) .pwfarm/*"
+	"$( cat $POLYWORLD_PWFARM_RUN_PACKAGE ) $IMPLICIT_FETCH_LIST"
 
     cd ..
 

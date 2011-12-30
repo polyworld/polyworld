@@ -17,14 +17,18 @@ usage: $( basename $0 ) [-F:f:o:] runid|/
 
 OPTIONS:
 
-   -F fetch_list
-                  Files to be pulled back from run. For example:
+    -F fetch_list
+               Files to be pulled back from run. For example:
 
                     -F "stat/* *.wf"
 
-                  By default, the following is fetched:
+               By default, the following is fetched but can be overridden:
 
                     $DEFAULT_FETCH_LIST
+
+               The following is always fetched so scripts properly operate:
+
+                    $IMPLICIT_FETCH_LIST
 
     -f fields
                Specify fields on which this should run. Must be a single argument,
@@ -105,7 +109,7 @@ if ! $field; then
 	$POLYWORLD_SCRIPTS_DIR/archive_delta.sh checksums \
 	    $CHECKSUMS_DIR/$runid/$nid \
 	    $rundir \
-	    "$FETCH_LIST"
+	    "$FETCH_LIST $IMPLICIT_FETCH_LIST"
     done
 
     #
@@ -162,7 +166,7 @@ else
 	    -e $PAYLOAD_DIR/checksums/$runid/$nid \
 	    $TMPDIR/$archive \
 	    $rundir \
-	    "$FETCH_LIST .pwfarm/*"
+	    "$FETCH_LIST $IMPLICIT_FETCH_LIST"
 
 	printf "${runid}\t${nid}\t${archive}\n" >> $TMPDIR/runs
     done
