@@ -19,13 +19,13 @@ function __pwfarm_config()
     {
 	local progname=$( basename $0 )
 	echo "\
-usage: $progname define farm <farm_name> <pwuser> <osuser> <dstdir> <field_number>...
+usage: $progname define farm <farm_name> <pwuser> <dstdir> (<osuser> <field_number>...)+
 
           Define a farm.
 
           EXAMPLE:
 
-            $progname define farm mini frank admin /farmruns {0..9} 
+            $progname define farm mini frank /farmruns adminX {0..9} adminY {100..109}
 
        $progname define session <farm_name> <session_name> [<field_number>...]
 
@@ -159,10 +159,21 @@ usage: $progname define farm <farm_name> <pwuser> <osuser> <dstdir> <field_numbe
 			    fi
 			    ;;
 			"osuser")
-			    pwquery osuser $PWFARM_CONFIG_ENV__FARM
+			    if [ ! -z "$4" ]; then
+				local fieldnumber="$4"
+			    elif [ ! -z "$PWFARM_CONFIG_ENV__FIELD" ]; then
+				local fieldnumber=$PWFARM_CONFIG_ENV__FIELD
+			    else
+				err "env get osuser requires field number"
+			    fi
+
+			    pwquery osuser $PWFARM_CONFIG_ENV__FARM $fieldnumber
 			    ;;
 			"runresults_dir")
 			    pwquery runresults_dir $PWFARM_CONFIG_ENV__FARM
+			    ;;
+			"domains")
+			    pwquery domains $PWFARM_CONFIG_ENV__FARM
 			    ;;
 			"fieldnumbers")
 			    if [ ! -z "$PWFARM_CONFIG_ENV__FIELDNUMBERS" ]; then
@@ -208,18 +219,21 @@ usage: $progname define farm <farm_name> <pwuser> <osuser> <dstdir> <field_numbe
 		echo "--- FARM $farmname"
 		echo "---"
 		echo "user: $( pwquery pwuser $farmname )"
-		echo "OS user: $( pwquery osuser $farmname )"
 		echo "run results dir: $( pwquery runresults_dir $farmname )"
-		echo "field numbers: $( pwquery fieldnumbers $farmname )"
+		echo "domains:"
+		pwquery domains $farmname |
+		sed "s|\(.*\):\(.*\)|osuser = \1 ; fieldnumbers = \2|" |
+		indent
 		echo "sessions:"
 		for sessionname in $( pwquery sessionnames $farmname ); do
-		    echo -n "  $sessionname: "
+		    echo -n "$sessionname: "
 		    if [ -e $(pwquery sessionfieldnumbers_path $farmname $sessionname) ]; then
-			echo "fields={$( pwquery sessionfieldnumbers $farmname $sessionname )}"
+			echo "fields = {$( pwquery sessionfieldnumbers $farmname $sessionname )}"
 		    else
-			echo "fields={*}"
+			echo "fields = {*}"
 		    fi
-		done
+		done |
+		indent
 		echo
 		echo
 	    done
@@ -380,15 +394,13 @@ usage: $progname define farm <farm_name> <pwuser> <osuser> <dstdir> <field_numbe
 		    path=$( pwquery pwuser_path $farmname ) || exit 1
 		    cat $path
 		    ;;
-		"osuser_path")
-		    farmname="$3"
-		    val=$( pwquery farmetc_dir $farmname )/osuser || exit 1
-		    echo $val
-		    ;;
 		"osuser")
 		    farmname="$3"
-		    path=$( pwquery osuser_path $farmname ) || exit 1
-		    cat $path
+		    fieldnumber="$4"
+
+		    local domain=$( grep "\b$fieldnumber\b" $(pwquery domains_path $farmname) ) || exit 1
+
+		    echo $domain | cut -d ":" -f 1
 		    ;;
 		"runresults_dir_path")
 		    farmname="$3"
@@ -400,15 +412,24 @@ usage: $progname define farm <farm_name> <pwuser> <osuser> <dstdir> <field_numbe
 		    path=$( pwquery runresults_dir_path $farmname ) || exit 1
 		    cat $path
 		    ;;
-		"fieldnumbers_path")
+		"domains_path")
 		    farmname="$3"
-		    val=$( pwquery farmetc_dir $farmname )/fieldnumbers || exit 1
+		    val=$( pwquery farmetc_dir $farmname )/domains || exit 1
 		    echo $val
+		    ;;
+		"domains")
+		    farmname="$3"
+		    path=$( pwquery domains_path $farmname ) || exit 1
+		    cat $path
 		    ;;
 		"fieldnumbers")
 		    farmname="$3"
-		    path=$( pwquery fieldnumbers_path $farmname ) || exit 1
-		    cat $path
+
+		    pwquery domains $farmname |
+		    cut -d ":" -f 2 |
+		    tr "\n" " "
+
+		    echo
 		    ;;
 		"defined")
 		    type="$3"
@@ -483,24 +504,65 @@ usage: $progname define farm <farm_name> <pwuser> <osuser> <dstdir> <field_numbe
                 ###
                 ###############################################################
 		"farm")
-		    shift
-		    shift
+		    shift 2
+
 		    farmname="$1"
 		    shift
+
 		    pwuser="$1"
 		    shift
-		    osuser="$1"
-		    shift
+
 		    runresults_dir="$( canonpath $1 )"
 		    shift
-		    fieldnumbers=( "$*" )
+
+		    domain_user=""
+		    domain_fieldnumbers=""
+		    domains=()
+
+		    function __create_domain()
+		    {
+			if [ ! -z "$domain_user" ]; then
+			    if [ -z "$domain_fieldnumbers" ]; then
+				err "No field numbers for user $domain_user"
+			    fi
+
+			    domains[${#domains[@]}]="$domain_user:$(trim "$domain_fieldnumbers")"
+
+			    domain_user=""
+			    domain_fieldnumbers=""
+			fi
+		    }
+
+		    for arg in $*; do
+			if is_integer "$arg"; then
+			    if [ -z "$domain_user" ]; then
+				err "Must provide osuser"
+			    fi
+
+			    domain_fieldnumbers="$domain_fieldnumbers $arg"
+			else
+			    __create_domain
+
+			    domain_user=$arg
+			fi
+		    done
+
+		    __create_domain
 
 		    echo "--- ARGS ---"
 		    echo farm name = $farmname
 		    echo farm user = $pwuser
-		    echo OS user = $osuser
 		    echo run results dir = $runresults_dir
-		    echo field numbers = $fieldnumbers
+
+		    for (( i=0; i < ${#domains[@]}; i++ )); do
+			user=$( echo ${domains[$i]} | cut -f 1 -d ":" )
+			fieldnumbers=$( echo ${domains[$i]} | cut -f 2 -d ":" )
+
+			echo "domain $i :"
+			echo "  user = $user"
+			echo "  fieldnumbers = $fieldnumbers"
+		    done
+
 		    echo "------------"
 
 		    if $prompt; then
@@ -519,22 +581,30 @@ usage: $progname define farm <farm_name> <pwuser> <osuser> <dstdir> <field_numbe
 			fi
 		    fi
 
-		    fieldhostnames=( $( fieldhostnames_from_nums $fieldnumbers ) )
+		    users=()
+		    hostnames=()
 
-                #
-                # Try pinging all the fields
-                #
+		    for (( i=0; i < ${#domains[@]}; i++ )); do
+			user=$( echo ${domains[$i]} | cut -f 1 -d ":" )
+			fieldnumbers=$( echo ${domains[$i]} | cut -f 2 -d ":" )
+
+			for x in ${fieldnumbers[@]}; do
+			    users[${#users[@]}]=$user
+			    hostnames[${#hostnames[@]}]=$(fieldhostname_from_num $x)
+			done
+		    done
+
+		    #
+                    # Try pinging all the fields
+                    #
 		    step "Pinging all fields"
 
-		    for hostname in ${fieldhostnames[*]}; do
+		    for hostname in ${hostnames[@]}; do
 			substep "Pinging $hostname..."
 
 			host=$( fieldhost_from_name $hostname )
 			ping -c 1 $host || err Cannot ping $hostname
 		    done
-
-		    fieldhostname_master=${fieldhostnames[0]}
-		    fieldhost_master=$( fieldhost_from_name $fieldhostname_master )
 
                     #
                     # Make sure we have public key
@@ -553,111 +623,103 @@ usage: $progname define farm <farm_name> <pwuser> <osuser> <dstdir> <field_numbe
 		    fi
 
 		    key_data=$( cat $path_rsa_pub )
-
-                    #
-                    # Install key on master
-                    #
-
 		    keys="~/.ssh/authorized_keys"
 
-		    key_install="
-            if [ ! -e $keys ]; then cd ; mkdir -p .ssh ; echo \"$key_data\" > $keys;
-            elif ! grep -q \"$key_data\" $keys; then echo \"$key_data\" >> $keys;
-            else echo Public key already installed
-            fi
-            "
-
-		    step "Installing key on $fieldhostname_master"
-
-		    ssh -l $osuser $fieldhost_master "$key_install"  || err Failed installing public key on $fieldhostname_master
-
                     #
-                    # Ensure master can ping other hosts
+                    # Install key on domain masters
                     #
-		    step "Pinging all hosts from $fieldhostname_master"
+		    for (( i=0; i < ${#domains[@]}; i++ )); do
+			domain_user=$( echo ${domains[$i]} | cut -f 1 -d ":" )
+			domain_fieldnumbers=( $(echo ${domains[$i]} | cut -f 2 -d ":") )
 
-		    ssh -l $osuser $fieldhost_master "
-        	    for hostname in ${fieldhostnames[*]}; do
-        		echo ..
-        		echo .. \$hostname
-        		echo ..
-        		eval host=\\\$\$hostname
-        		if [ -z \"\$host\" ]; then
-        		    echo Cannot resolve \\\$\$hostname>&2
-        		    exit 1
-        		fi
-        		ping -c 1 \$host || exit 1
-        	    done
-        	    " || err "Failed pinging hosts"
+			master_fieldnumber=${domain_fieldnumbers[0]}
+			master_hostname=$(fieldhostname_from_num $master_fieldnumber)
+			master_host=$(fieldhost_from_name $master_hostname)
+			unset domain_fieldnumbers[0]
 
-                    #
-               	    # Install key on all hosts
-               	    #
-    		    step "Installing key on all hosts"
+			domain_hostnames=( $(fieldhostnames_from_nums ${domain_fieldnumbers[@]}) )
 
-		    for hostname in ${fieldhostnames[*]}; do
-			if [ "$hostname" == "$fieldhostname_master" ]; then continue; fi
+			key_install="
+				if [ ! -e $keys ]; then cd ; mkdir -p .ssh ; echo \"$key_data\" > $keys;
+				elif ! grep -q \"$key_data\" $keys; then echo \"$key_data\" >> $keys;
+				else echo Public key already installed
+				fi
+			"
 
-			substep $hostname
+			step "Installing key on $master_hostname"
 
-			ssh -l $osuser $fieldhost_master "
-        		ssh \$$hostname \"
-        	        if [ ! -e $keys ]; then cd ; mkdir -p .ssh ; echo \\\"$key_data\\\" > $keys;
-        	        elif ! grep -q \\\"$key_data\\\" $keys; then echo \\\"$key_data\\\" >> $keys;
-        	        else echo Public key already installed
-        	        fi
-        		\"
-        		"
+			ssh -l $domain_user $master_host "$key_install"  || err Failed installing public key on $master_hostname
+
+			#
+			# Ensure master can ping other hosts in domain
+			#
+			step "Pinging all domain hosts from $master_hostname"
+
+			ssh -l $domain_user $master_host "
+				for hostname in ${domain_hostnames[@]}; do
+				    echo ..
+				    echo .. \$hostname
+				    echo ..
+				    eval host=\\\$\$hostname
+				    if [ -z \"\$host\" ]; then
+					echo Cannot resolve \\\$\$hostname>&2
+					exit 1
+				    fi
+				    ping -c 1 \$host || exit 1
+				    done
+			    " || err "Failed pinging hosts"
+
+			#
+			# Install key on all hosts
+			#
+    			step "Installing key on all hosts"
+
+			for hostname in ${domain_hostnames[@]}; do
+			    substep $hostname
+
+			    ssh -l $domain_user $master_host "
+				ssh \$$hostname \"
+				    if [ ! -e $keys ]; then cd ; mkdir -p .ssh ; echo \\\"$key_data\\\" > $keys;
+				    elif ! grep -q \\\"$key_data\\\" $keys; then echo \\\"$key_data\\\" >> $keys;
+				    else echo Public key already installed
+				    fi
+				\"
+        		    "
+			done
+
 		    done
 
-            	    #
-        	    # Update known_hosts
-        	    #
+		    #
+		    # Update known_hosts
+		    #
 		    step "Updating known_hosts"
 
-		    for hostname in ${fieldhostnames[*]}; do
+		    for hostname in ${hostnames[@]}; do
 			substep $hostname
+
 			host=$( fieldhost_from_name $hostname )
-        	        # remove any previous entry
+			# remove any previous entry
 			ssh-keygen -R $host
         	        # add entry
 			ssh-keyscan -H $host >> ~/.ssh/known_hosts 
 		    done
 
-        	    #
-        	    # Verify ssh into all hosts 
-        	    #
-		    step "Verifying ssh into all hosts"
+		    required_programs="screen svn"
 
-		    for hostname in ${fieldhostnames[*]}; do
+        	    #
+        	    # Verify required programs on all hosts 
+        	    #
+		    step "Verifying required programs on all hosts"
+
+		    for (( i=0; i < ${#hostnames[@]}; i++ )); do
+			hostname=${hostnames[$i]}
+			user=${users[$i]}
+
 			substep $hostname
+
 			host=$( fieldhost_from_name $hostname )
 			
-			ssh -l $osuser $host "hostname" || err "Failed ssh on $hostname"
-		    done
-
-        	    #
-        	    # Verify screen on all hosts 
-        	    #
-		    step "Verifying screen on all hosts"
-
-		    for hostname in ${fieldhostnames[*]}; do
-			substep $hostname
-			host=$( fieldhost_from_name $hostname )
-			
-			ssh -l $osuser $host "which screen" || err "Failed finding screen on $hostname"
-		    done
-
-        	    #
-        	    # Verify svn on all hosts 
-        	    #
-		    step "Verifying svn on all hosts"
-
-		    for hostname in ${fieldhostnames[*]}; do
-			substep $hostname
-			host=$( fieldhost_from_name $hostname )
-			
-			ssh -l $osuser $host "which svn" || err "Failed finding svn on $hostname"
+			ssh -l $user $host "for prog in $required_programs; do which \$prog; done" || exit 1
 		    done
 
         	    #
@@ -668,10 +730,11 @@ usage: $progname define farm <farm_name> <pwuser> <osuser> <dstdir> <field_numbe
 		    farmetc_dir=$( pwquery farmetc_dir $farmname  )
 		    mkdir -p $farmetc_dir || exit 1
 
-		    echo $fieldnumbers > $( pwquery fieldnumbers_path $farmname )
 		    echo $pwuser > $( pwquery pwuser_path $farmname )
-		    echo $osuser > $( pwquery osuser_path $farmname )
 		    echo $runresults_dir > $( pwquery runresults_dir_path $farmname )
+		    for (( i=0; i < ${#domains[@]}; i++ )); do
+			echo ${domains[$i]}
+		    done > $( pwquery domains_path $farmname )
 
         	    #
         	    # Ensure session defined

@@ -218,12 +218,12 @@ function dispatcher()
 function fieldhostname_from_num()
 {
     local id=$( printf "%02d" $1 2>/dev/null ) || err "Invalid field number: $1"
-    local hostname=pw$id
-    echo $hostname
+    echo "pw$id"
 }
 
 function fieldhostnames_from_nums()
 {
+    local x
     for x in $*; do 
 	fieldhostname_from_num $x
     done

@@ -30,8 +30,6 @@ BLOB_REMOTE="~/__pwfarm_blob__user_$( pwenv pwuser )__farm_$( pwenv farmname )__
 BROADCAST_COMPLETE=$DISPATCHERSTATE_DIR/broadcast_complete
 FIELD_BORN=$DISPATCHERSTATE_DIR/field_born
 
-PWUSER=$( pwenv pwuser )
-OSUSER=$( pwenv osuser )
 
 function screen_active()
 {
@@ -42,11 +40,11 @@ function init_screen()
 {
     screen -d -m -S "${DISPATCHER_SCREEN_SESSION}"
 
-    if $ZOMBIE_SCREENS; then
-	while ! screen_active; do
-	    wait 0.1
-	done
+    while ! screen_active; do
+	sleep 0.1
+    done
 
+    if $ZOMBIE_SCREENS; then
 	screen -S "${DISPATCHER_SCREEN_SESSION}" -X zombie kr
     fi
 }
@@ -122,11 +120,6 @@ case "$mode" in
 	    taskmeta set $path batchid $BATCHID
 	done
 
-	if ! init_screen; then
-	    mutex_unlock $MUTEX
-	    err "Failed initing dispatcher screen!"
-	fi
-
 	rm -f $BROADCAST_COMPLETE
 
 	(
@@ -161,10 +154,6 @@ case "$mode" in
 		mutex_unlock $MUTEX
 		err "Dispatcher already alive!"
 	    fi
-	fi
-	if ! init_screen; then
-	    mutex_unlock $MUTEX
-	    err "Failed initing dispatcher screen!"
 	fi
 
 	function parm()
@@ -354,19 +343,42 @@ esac
 ### Prompt user for sudo password if needed
 ###
 if $prompt_password; then
-    PASSWORD=""
-    
-    while [ -z "$PASSWORD" ]; do
-        # turn off echo for reading password
-	stty -echo
-	read -p "Please enter password of administrator on farm machines (for sudo): " PASSWORD
-	echo
-        # turn echo back on
-	stty echo
+    ndomains=$( pwenv domains | wc -l )
+
+    for (( idomain=1 ; idomain <= $ndomains; idomain++ )); do
+	domain=$( pwenv domains | head -n $idomain | tail -n 1 )
+	domain_fieldnumbers=$( echo $domain | cut -d ":" -f 2 )
+	active_fieldnumbers=$(
+	    (
+		echo $domain_fieldnumbers
+		cat $FIELDNUMBERS
+	    ) |
+	    tr " " "\n" |
+	    sort |
+	    uniq -d
+	)
+	if [ -z "$active_fieldnumbers" ]; then
+	    eval PASSWORD_$idomain="nil"
+	else
+	    input=""
+	    while [ -z "$input" ]; do
+		# turn off echo for reading password
+		stty -echo
+		read -p "\
+Using sudo for $( echo $domain | sed 's/:/ @ /' )
+Please enter password of administrator: " input
+		echo
+		# turn echo back on
+		stty echo
+	    done
+
+	    eval PASSWORD_$idomain=$input
+	fi
+
+	eval export PASSWORD_$idomain
     done
-else
-    PASSWORD="nil"
 fi
+
 
 ###
 ### Broadcast blob to field nodes if needed
@@ -405,6 +417,15 @@ if $broadcast; then
 fi
 
 ###
+### Create Screen Session
+###
+if [ "$mode" == "dispatch" ] || [ "$mode" == "recover" ]; then
+    if ! init_screen; then
+	err "Failed initing dispatcher screen!"
+    fi
+fi
+
+###
 ### Perform task on all field nodes
 ###
 screen_window=1
@@ -426,8 +447,7 @@ if [ -e $FIELDNUMBERS ]; then
                 $mode \
 		$screen_window \
 		$FIELD_BORN \
-                "${BLOB_REMOTE}" \
-                "$PASSWORD"
+                "${BLOB_REMOTE}"
 
 	    while [ ! -e $FIELD_BORN ]; do
 		sleep 0.1

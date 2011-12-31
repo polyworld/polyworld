@@ -224,12 +224,15 @@ while true; do
     #
     title "Launching"
 
+    idomain=$( pwenv domains | grep -n "\b$FIELD_NUMBER\b" | cut -d ':' -f 1 )
+    eval password="\$PASSWORD_$idomain"
+
     if step_begin "run_script"; then	
         # set --display so we don't echo password to console
 	repeat_til_success \
 	    --display "ssh __pwfarm_field.sh launch" \
 	    $SSH -t "
-              export PASSWORD=\"$PASSWORD\" ;
+              export PASSWORD=\"$password\" ;
               $( $PWFARM_SCRIPTS_DIR/pwfarm_config.sh env export )
               cd $FIELD_STATE_DIR ;
               scripts/__pwfarm_field.sh launch

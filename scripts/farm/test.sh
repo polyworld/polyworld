@@ -1,8 +1,21 @@
 #!/bin/bash
 
 if [ "$1" != "--field" ]; then
+    source $( dirname $BASH_SOURCE )/__lib.sh || exit 1
+
+    fieldnumbers=( $( pwenv fieldnumbers ) ) || exit 1
+    pwenv domains |
+    while read domain; do
+	user=$( echo $domain | cut -d ":" -f 1 )
+	domain_fieldnumbers=( $( echo $domain | cut -d ":" -f 2 ) )
+
+	echo $user
+	echo $domain_fieldnumbers
+    done
+
     rm -rf /tmp/test_output
     __pwfarm_script.sh --sudo --output /tmp/test_output/foo $0 --field $* || exit 1
+    #__pwfarm_script.sh --output /tmp/test_output/foo $0 --field $* || exit 1
 
     find /tmp/test_output
 else

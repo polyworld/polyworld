@@ -7,27 +7,50 @@ require "$payload" "payload arg"
 dest="$2"
 require "$dest" "dest arg"
 
-farm_fieldnumbers=( $(pwquery fieldnumbers $(pwenv farmname)) )
-fieldnumber_master=${farm_fieldnumbers[0]}
-hostname_master=$( fieldhostname_from_num $fieldnumber_master )
-host_master=$( fieldhost_from_name $hostname_master )
-
 fieldnumbers=( $( pwenv fieldnumbers ) ) || exit 1
-osuser=$( pwenv osuser )
 
-echo Transfering $payload to $hostname_master...
-repeat_til_success scp "$payload" "$osuser@$host_master:$dest"
+pwenv domains |
+(
+    while read domain; do
+	user=$( echo $domain | cut -d ":" -f 1 )
+	domain_fieldnumbers=( $( echo $domain | cut -d ":" -f 2 ) )
 
+	active_fieldnumbers=$(
+	    (
+		echo ${domain_fieldnumbers[@]}
+		echo ${fieldnumbers[@]}
+	    ) |
+	    tr " " "\n" |
+	    sort |
+	    uniq -d
+	)
 
-for (( index=0; index<${#fieldnumbers[@]}; index++ )); do
-    hostname=$( fieldhostname_from_num ${fieldnumbers[$index]} )
-    if [ "$hostname" != "$hostname_master" ]; then
-	host=$( fieldhost_from_name $hostname )
+	if [ ! -z "$active_fieldnumbers" ]; then
+	    master_fieldnumber=${domain_fieldnumbers[0]}
+	    master_hostname=$( fieldhostname_from_num $master_fieldnumber )
+	    master_host=$( fieldhost_from_name $master_hostname )
 
-	echo "Transferring $payload from $hostname_master to $hostname..."
-	( repeat_til_success scp "$osuser@$host_master:$dest" "$osuser@$host:$dest" ) &
-    fi
-done
+	    echo "Transferring $payload to $master_hostname..."
+	    (
+		repeat_til_success scp "$payload" "$user@$master_host:$dest"
 
-wait
+		for fieldnumber in $active_fieldnumbers; do
+		    if [ $fieldnumber != $master_fieldnumber ]; then
+			hostname=$( fieldhostname_from_num $fieldnumber )
+			echo "Transferring $payload from $master_hostname to $hostname..."
+			(
+			    host=$( fieldhost_from_name $hostname )
+			    repeat_til_success scp "$user@$master_host:$dest" "$user@$host:$dest"
+			) &
+		    fi
+		done
+
+		wait
+	    ) &
+	fi
+    done
+
+    wait
+)
+
 echo "Transfer complete."
