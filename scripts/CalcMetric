@@ -116,6 +116,19 @@ def __read_graphs(anatomy_file):
 
 ####################################################################################
 ###
+### FUNCTION __read_header()
+###
+####################################################################################
+def __read_header(anatomy_file):
+	file = abstractfile.open(anatomy_file, 'r')
+	header = file.readline().rstrip()
+	file.close()
+	
+	return header
+
+
+####################################################################################
+###
 ### FUNCTION __free_graphs()
 ###
 ####################################################################################
@@ -1179,12 +1192,16 @@ def calc_metrics(metrics, anatomy_files):
 		if need_any_graphs:
 			__initialize_graphs()
 			header = __read_graphs(anatomy_file)  # adds both 'a' and 'p' graphs, of type 'wd', to G_py
+		else:
+			header = __read_header(anatomy_file)  # just reads the header
 		
 		for metric in metrics:
 			debug_metrics(metric=metric)
 			details = metric.split('_')
 			root = details[0]
-			if root not in common_metric.METRICS_NO_GRAPH:
+			if root in common_metric.METRICS_NO_GRAPH:
+				num_samples = 1
+			else:
 				neuron_set = details[1]
 				graph_type = details[2]
 				if '_ran' in metric:
