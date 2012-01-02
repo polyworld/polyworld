@@ -99,6 +99,9 @@ class DataLibWriter
 	~DataLibWriter();
 
 	void beginTable( const char *name,
+					 std::vector<std::string> &colnames,
+					 std::vector<datalib::Type> &coltypes );
+	void beginTable( const char *name,
 					 const char *colnames[],
 					 const datalib::Type coltypes[] );
 	void addRow( Variant col0, ... );

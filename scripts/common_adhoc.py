@@ -13,7 +13,6 @@ def parseArgs( mode, options, args ):
     if len(args) < 5:
         raise Exception( "Missing arguments" )
 
-
     try:
         relpath = args.pop(0)
         tablename = args.pop(0)
@@ -26,15 +25,16 @@ def parseArgs( mode, options, args ):
         mode.colName_timestep = xcolname
         mode.curvetypes = ycolname.split(',')
         mode.defaultCurvetype = mode.curvetypes[0]
-
-        copts = options['curvetypes']
-        for curvetype in mode.curvetypes:
-            copts.settings[curvetype] = True
-        del copts.settings['adhoc_curvetype']
     
         metaopts = options['meta']
         metaopts.settings[ycolname] = metaopts.settings['adhoc_curvetype']
         del metaopts.settings['adhoc_curvetype']
+
+        copts = options['curvetypes']
+        if copts.nset != 0 or metaopts.nset == 0:
+            for curvetype in mode.curvetypes:
+                copts.settings[curvetype] = True
+        del copts.settings['adhoc_curvetype']
     
         mode.func_parseValues = lambda a, b, c, d, e: parseValues( mode, a, b, c, d, e )
     except:

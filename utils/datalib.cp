@@ -115,6 +115,34 @@ DataLibWriter::~DataLibWriter()
 // --- beginTable()
 // ------------------------------------------------------------
 void DataLibWriter::beginTable( const char *name,
+								vector<string> &colnames,
+								vector<datalib::Type> &coltypes )
+{
+	assert( colnames.size() == coltypes.size() );
+
+	const char *__colnames[ colnames.size() + 1 ];
+	datalib::Type __coltypes[ coltypes.size() ];
+
+	int i = 0;
+	itfor( vector<string>, colnames, it )
+	{
+		__colnames[i++] = it->c_str();
+	}
+	__colnames[i] = NULL;
+
+	i = 0;
+	itfor( vector<datalib::Type>, coltypes, it )
+	{
+		__coltypes[i++] = *it;
+	}
+
+	beginTable( name, __colnames, __coltypes );
+}
+
+// ------------------------------------------------------------
+// --- beginTable()
+// ------------------------------------------------------------
+void DataLibWriter::beginTable( const char *name,
 								const char *colnames[],
 								const datalib::Type coltypes[] )
 {

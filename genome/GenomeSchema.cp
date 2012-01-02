@@ -425,6 +425,22 @@ void GenomeSchema::complete()
 	state = STATE_COMPLETE;
 }
 
+void GenomeSchema::getIndexes( vector<string> &geneNames, vector<int> &result )
+{
+	itfor( vector<string>, geneNames, it )
+	{
+		Gene *gene = name2gene[*it];
+		if( gene == NULL )
+		{
+			result.push_back( -1 );
+		}
+		else
+		{
+			result.push_back( gene->offset );
+		}
+	}
+}
+
 void GenomeSchema::printIndexes( FILE *f, GenomeLayout *layout )
 {
 	for( GeneList::iterator

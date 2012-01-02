@@ -44,6 +44,9 @@ function init_screen()
 	sleep 0.1
     done
 
+    # for good measure
+    sleep 0.5
+
     if $ZOMBIE_SCREENS; then
 	screen -S "${DISPATCHER_SCREEN_SESSION}" -X zombie kr
     fi

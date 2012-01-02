@@ -126,6 +126,28 @@ class Genome:
 
         return int( line )
         
+####################################################################################
+###
+### CLASS GenomeSubset
+###
+####################################################################################
+class GenomeSubset:
+    def __init__( self, path_run ):
+        self.schema = GenomeSchema( path_run )
+        self.subsets = datalib.parse( os.path.join(path_run, 'genome/subset.log'), keycolname = 'Agent' )['GenomeSubset']
+
+    def getGeneNames( self ):
+        return self.subsets.colnames[1:]
+
+    def getGeneValue( self, agentNumber, geneName ):
+        range = self.schema.getRange( geneName )
+        raw = self.getRawValue( agentNumber, geneName )
+
+        return range.interpolate( raw )
+
+    def getRawValue( self, agentNumber, geneName ):
+        return self.subsets[agentNumber][geneName]
+
 
 ####################################################################################
 ###

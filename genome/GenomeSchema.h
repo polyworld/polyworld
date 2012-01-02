@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 #include <string>
+#include <vector>
 
 #include "Gene.h"
 #include "NeurGroupType.h"
@@ -51,6 +52,8 @@ namespace genome
 		int getMutableSize();
 
 		void complete();
+
+		void getIndexes( std::vector<std::string> &geneNames, std::vector<int> &result );
 
 		void printIndexes( FILE *f, GenomeLayout *layout = NULL );
 		void printTitles( FILE *f );

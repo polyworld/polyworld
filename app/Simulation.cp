@@ -1292,6 +1292,7 @@ void TSimulation::End( const string &reason )
 		Kill( a, LifeSpan::DR_SIMEND );
 	}	
 
+	EndGenomeSubsetLog();
 	EndSeparationsLog();
 	EndLifeSpanLog();
 	EndContactsLog();
@@ -1723,6 +1724,9 @@ void TSimulation::Init( const char *argWorldfilePath, const bool statusToStdout 
 		fclose( f );		
 	}
 #endif
+
+	InitGenomeSubsetLog();
+
 
 	//If we're recording the number of agents in or near various foodpatches, then open the stat file
 	if( fRecordFoodPatchStats )
@@ -3076,6 +3080,82 @@ void TSimulation::EndEnergyLog()
 	fEnergyLog->endTable();
 	delete fEnergyLog;
 	fEnergyLog = NULL;
+}
+
+//---------------------------------------------------------------------------
+// TSimulation::InitGenomeSubsetLog
+//---------------------------------------------------------------------------
+
+void TSimulation::InitGenomeSubsetLog()
+{
+	if( fGenomeSubsetLog.record )
+	{
+		fGenomeSubsetLog.geneIndexes.clear();
+		GenomeUtil::schema->getIndexes( fGenomeSubsetLog.geneNames, fGenomeSubsetLog.geneIndexes );
+		for( int i = 0; i < (int)fGenomeSubsetLog.geneNames.size(); i++ )
+		{
+			if( fGenomeSubsetLog.geneIndexes[i] < 0 )
+			{
+				cerr << "Invalid gene name for GenomeSubsetLog: " << fGenomeSubsetLog.geneNames[i] << endl;
+				exit( 1 );
+			}
+		}
+
+		vector<string> colnames;
+		vector<datalib::Type> coltypes;
+
+		colnames.push_back( "Agent" );
+		coltypes.push_back( datalib::INT );
+
+		itfor( vector<string>, fGenomeSubsetLog.geneNames, it )
+		{
+			colnames.push_back( *it );
+			coltypes.push_back( datalib::INT );
+		}
+
+		fGenomeSubsetLog.log = new DataLibWriter( "run/genome/subset.log" );
+		fGenomeSubsetLog.log->beginTable( "GenomeSubset",
+										  colnames,
+										  coltypes );
+	}
+	else
+	{
+		fGenomeSubsetLog.log = NULL;
+	}
+}
+
+//---------------------------------------------------------------------------
+// TSimulation::UpdateGenomeSubsetLog
+//---------------------------------------------------------------------------
+
+void TSimulation::UpdateGenomeSubsetLog( agent *a )
+{
+	if( fGenomeSubsetLog.record )
+	{
+		Variant values[ 1 + fGenomeSubsetLog.geneIndexes.size() ];
+
+		values[0] = a->Number();
+
+		for( int i = 0; i < (int)fGenomeSubsetLog.geneIndexes.size(); i++ )
+		{
+			values[ i + 1 ] = (int)a->Genes()->get_raw_uint( fGenomeSubsetLog.geneIndexes[i] );
+		}
+
+		fGenomeSubsetLog.log->addRow( values );
+	}
+}
+
+//---------------------------------------------------------------------------
+// TSimulation::EndGenomeSubsetLog
+//---------------------------------------------------------------------------
+
+void TSimulation::EndGenomeSubsetLog()
+{
+	if( fGenomeSubsetLog.log )
+	{
+		delete fGenomeSubsetLog.log;
+		fGenomeSubsetLog.log = NULL;
+	}
 }
 
 //---------------------------------------------------------------------------
@@ -5748,6 +5828,12 @@ void TSimulation::Birth( agent* a,
 		// --- Update Separation Cache
 		// ---
 		fSeparationCache.birth( a );
+
+
+		// ---
+		// --- Update Genome Subset Log
+		// ---
+		UpdateGenomeSubsetLog(  a );
 	}
 	
 	// ---
@@ -8483,6 +8569,18 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	fTournamentSize = doc.get( "TournamentSize" );
 		
 	fRecordGenomes = doc.get( "RecordGenomes" );
+	{
+		proplib::Property &propGenomeSubsetLog = doc.get( "GenomeSubsetLog" );
+
+		fGenomeSubsetLog.record = propGenomeSubsetLog.get( "Record" );
+
+		proplib::Property &propGeneNames = propGenomeSubsetLog.get( "GeneNames" );
+		fGenomeSubsetLog.geneNames.clear();
+		for( int i = 0; i < (int)propGeneNames.size(); i++ )
+		{
+			fGenomeSubsetLog.geneNames.push_back( (string)propGeneNames.get(i) );
+		}
+	}
 	fRecordSeparations = doc.get( "RecordSeparations" );
 	fRecordAdamiComplexity = doc.get( "RecordAdamiComplexity" );
 	fAdamiComplexityRecordFrequency = doc.get( "AdamiComplexityRecordFrequency" );

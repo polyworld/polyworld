@@ -3328,6 +3328,29 @@ RecordGenomes {
   default $( RecordAll )
 }
 
+GenomeSubsetLog {
+  type    OBJECT
+  default {
+  }
+
+  properties {
+    Record {
+      type    BOOL
+      default False
+    }
+
+    GeneNames {
+      type    ARRAY
+      default [
+      ]
+
+      element {
+        type    STRING
+      }
+    }
+  }
+}
+
 RecordSeparations {
   type    BOOL
   default $( RecordAll )

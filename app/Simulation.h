@@ -460,6 +460,12 @@ public:
 // 	DataLibWriter *fAvrComplexityLog;
 
 	bool fRecordGenomes;
+	struct {
+		bool record;
+		std::vector<std::string> geneNames;
+		std::vector<int> geneIndexes;
+		DataLibWriter *log;
+	} fGenomeSubsetLog;
 	bool fRecordSeparations;
 	DataLibWriter *fSeparationsLog;
 	bool fRecordAdamiComplexity;		// record the Adami Physical Complexity  (genetic)
@@ -533,6 +539,10 @@ private:
 						  const Energy &energy,
 						  EnergyLogEventType elet );
 	void EndEnergyLog();
+
+	void InitGenomeSubsetLog();
+	void UpdateGenomeSubsetLog( agent *a );
+	void EndGenomeSubsetLog();
 
 	void InitSeparationsLog();
 	void EndSeparationsLog();

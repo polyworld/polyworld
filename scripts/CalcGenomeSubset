@@ -1,0 +1,144 @@
+#!/usr/bin/env python
+
+import getopt
+import os
+import sys
+
+import common_functions
+from common_functions import err, warn
+import common_genome
+import common_logs
+import datalib
+import iterators
+
+DEFAULT_EPOCH = 1000
+
+####################################################################################
+###
+### main()
+###
+####################################################################################
+def main():
+    epoch_len = DEFAULT_EPOCH
+
+
+    shortopts = ''
+    longopts = ['epoch=']
+
+    try:
+        opts, args = getopt.getopt( sys.argv[1:], shortopts, longopts )
+    except getopt.GetoptError, e:
+        show_usage( e )
+
+    for opt, val in opts:
+        if opt == '--epoch':
+            try:
+                epoch_len = int(val)
+            except:
+                show_usage("Invalid epoch (%s). Expecting integer." % val)
+            if epoch_len <= 0:
+                show_usage("Epoch must be > 0")
+
+
+    if len(args) != 1:
+        show_usage("Expecting run directory.")
+
+    rundir = args[0]
+
+    genomes = common_genome.GenomeSubset( rundir )
+    lifespans = common_logs.LifeSpans( rundir )
+
+    class Epoch:
+        def __init__( self, timestep ):
+            self.timestep = timestep
+            self.geneTotals = {}
+            self.geneCounts = {}
+
+        def add( self, geneName, geneValue ):
+            try:
+                self.geneTotals[geneName] += geneValue
+                self.geneCounts[geneName] += 1
+            except KeyError:
+                self.geneTotals[geneName] = geneValue
+                self.geneCounts[geneName] = 1
+
+    geneNames = genomes.getGeneNames()
+
+    epochs = {}
+
+    for agent in lifespans.getAll():
+        birth = lifespans.getBirth( agent )
+        print birth,
+        epoch_timestep = int( (birth + epoch_len - 1) / epoch_len ) * epoch_len
+        print epoch_timestep
+        try:
+            epoch = epochs[epoch_timestep]
+        except KeyError:
+            epoch = Epoch( epoch_timestep )
+            epochs[epoch_timestep] = epoch
+
+        for geneName in geneNames:
+            epoch.add( geneName, genomes.getRawValue(agent, geneName) )
+        
+
+    epoch_timesteps = sorted( epochs.keys() )
+
+    colnames = ['Timestep'] + [x for x in geneNames]
+    coltypes = ['int'] + ['float' for x in geneNames]
+
+    table_normalized = datalib.Table('Normalized', colnames, coltypes)
+    for t in epoch_timesteps:
+        epoch = epochs[t]
+        row = table_normalized.createRow()
+        row['Timestep'] = t
+        for geneName in geneNames:
+            mean = float( epoch.geneTotals[geneName] ) / epoch.geneCounts[geneName]
+            normalized = mean / 255
+
+            row[geneName] = normalized
+
+    colnames = ['Timestep'] + [x for x in geneNames]
+    coltypes = ['int'] + ['float' for x in geneNames]
+
+    table_interpolated = datalib.Table('Interpolated', colnames, coltypes)
+    for t in epoch_timesteps:
+        epoch = epochs[t]
+        row = table_interpolated.createRow()
+        row['Timestep'] = t
+        for geneName in geneNames:
+            mean_raw = float( epoch.geneTotals[geneName] ) / epoch.geneCounts[geneName]
+            interpolated = genomes.schema.getRange(geneName).interpolate( mean_raw )
+
+            row[geneName] = interpolated
+
+    datalib.write( os.path.join(rundir, 'genome/subset_mean.txt'), [table_normalized, table_interpolated] )
+
+                                  
+####################################################################################
+###
+### function show_usage()
+###
+####################################################################################
+
+# 80 columns:
+################################################################################
+def show_usage(msg = None):
+    print """\
+USAGE
+
+     CalcGenomeSubset [option]... <rundir>
+
+OPTIONS
+
+     --epoch <steps>
+               Length of epochs. Used by mode c.
+
+               (default %d)
+""" % (DEFAULT_EPOCH)
+    
+    if msg:
+        print str(msg)
+
+    sys.exit(1)
+
+main()
