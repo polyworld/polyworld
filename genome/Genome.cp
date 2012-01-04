@@ -720,20 +720,6 @@ void Genome::print( long lobit, long hibit )
     cout nlf;
 }
 
-void Genome::set_raw( int offset,
-					  int n,
-					  unsigned char val )
-{
-	assert( (offset >= 0) && (offset + n <= nbytes) );
-
-	for( int i = 0; i < n; i++ )
-	{
-		int layoutOffset = layout->getMutableDataOffset( offset + i );
-
-		mutable_data[layoutOffset] = val;
-	}
-}
-
 void Genome::alloc()
 {
 	mutable_data = new unsigned char[nbytes];

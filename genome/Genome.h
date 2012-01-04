@@ -143,4 +143,24 @@ inline unsigned char Genome::get_raw( int offset )
 	return val;
 }
 
+inline void Genome::set_raw( int offset,
+							 int n,
+							 unsigned char val )
+{
+	assert( (offset >= 0) && (offset + n <= nbytes) );
+
+	if( gray )
+	{
+		val = grayofbin[val];
+	}
+
+	for( int i = 0; i < n; i++ )
+	{
+		int layoutOffset = layout->getMutableDataOffset( offset + i );
+
+		mutable_data[layoutOffset] = val;
+	}
+}
+
+
 } // namespace genome
