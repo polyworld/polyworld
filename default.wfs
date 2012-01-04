@@ -2508,40 +2508,61 @@ MaxInitWeightRngSeed {
 }
 
 
+SeedMutationRate {
+  type    FLOAT
+  default 0.5
+  min     0.0
+  max     1.0
+}
+
 
 SeedFightBias {
   type    FLOAT
   default 0.5
+  min     0
+  max     1.0
 }
 
 SeedFightExcitation {
   type    FLOAT
   default 1.0
+  min     0.0
+  max     1.0
 }
 
 SeedGiveBias {
   type    FLOAT
   default 0.0
+  min     0.0
+  max     1.0
 }
 
 SeedPickupBias {
   type    FLOAT
   default 0.0
+  min     0.0
+  max     1.0
 }
 
 SeedDropBias {
   type    FLOAT
   default 0.0
+  min     0.0
+  max     1.0
 }
 
 SeedPickupExcitation {
   type    FLOAT
   default 0.0
+  min     0.0
+  max     1.0
 }
 
 SeedDropExcitation {
   type    FLOAT
   default 0.0
+  min     0.0
+  max     1.0
 }
 
 

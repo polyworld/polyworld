@@ -142,6 +142,8 @@ namespace genome
     extern long gNumBytes;
 	extern GenomeLayout::LayoutType gLayoutType;
 
+	extern float gSeedMutationRate;
+
 	extern float gSeedFightBias;
 	extern float gSeedFightExcitation;
 

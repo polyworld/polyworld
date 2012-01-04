@@ -37,6 +37,8 @@ namespace genome
 {
 	GenomeLayout::LayoutType gLayoutType;
 
+	float gSeedMutationRate;
+
 	float gSeedFightBias;
 	float gSeedFightExcitation;
 

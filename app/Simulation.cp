@@ -8427,6 +8427,7 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	brain::gNeuralValues.maxneuron2energy = doc.get( "EnergyUseNeurons" );
 	brain::gNumPrebirthCycles = doc.get( "PreBirthCycles" );
 
+	genome::gSeedMutationRate = doc.get( "SeedMutationRate" );
 	genome::gSeedFightBias = doc.get( "SeedFightBias" );
 	genome::gSeedFightExcitation = doc.get( "SeedFightExcitation" );
 	genome::gSeedGiveBias = doc.get( "SeedGiveBias" );

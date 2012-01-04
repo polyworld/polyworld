@@ -342,6 +342,8 @@ void GenomeUtil::seed( Genome *g )
 		}
 	}
 
+	SEED( MutationRate, genome::gSeedMutationRate );
+
 	if( Metabolism::getNumberOfDefinitions() > 1 )
 	{
 		SEED( MetabolismIndex, randpw() );

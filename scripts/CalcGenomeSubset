@@ -68,9 +68,7 @@ def main():
 
     for agent in lifespans.getAll():
         birth = lifespans.getBirth( agent )
-        print birth,
         epoch_timestep = int( (birth + epoch_len - 1) / epoch_len ) * epoch_len
-        print epoch_timestep
         try:
             epoch = epochs[epoch_timestep]
         except KeyError:

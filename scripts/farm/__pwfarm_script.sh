@@ -38,7 +38,7 @@ if [ ! -e "$script" ]; then
     err "Cannot locate $script"
 fi
 
-tmpdir=`mktemp -d /tmp/poly_run.XXXXXXXX` || exit 1
+tmpdir=$( create_tmpdir ) || exit 1
 cp $script $tmpdir || exit
 if [ ! -z "$input" ]; then
     cp $input $tmpdir || exit
