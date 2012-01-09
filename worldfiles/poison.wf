@@ -1,0 +1,102 @@
+MaxSteps 30000
+
+FoodTypes [
+  Name Nutrition
+  EnergyPolarity [
+    1
+  ]
+  OverrideFoodColor True
+  FoodColor {
+    R 0.0
+    G 1.0
+    B 0.0   
+  }
+,
+  Name Poison
+  EnergyPolarity [
+    -1
+  ]
+  OverrideFoodColor True
+  FoodColor {
+    R 1.0
+    G 0.0
+    B 0.0   
+  }
+]
+
+Domains [
+    CenterX                   0.5
+    CenterZ                   0.5
+    SizeX                     1.0
+    SizeZ                     1.0
+    MinAgentsFraction         -1.0
+    MaxAgentsFraction         -1.0
+    InitAgentsFraction        -1.0
+    InitSeedsFraction         -1.0
+    ProbabilityOfMutatingSeeds -1.0
+    InitFoodFraction          -1.0
+    MinFoodFraction           -1.0
+    MaxFoodFraction           -1.0
+    MaxFoodGrownFraction      -1.0
+    FoodRate                  -1.0
+    FoodPatches [             
+        FoodFraction              0.15
+ 	FoodTypeName		  Nutrition
+        InitFoodFraction          -1.0
+        MinFoodFraction           -1.0
+        MaxFoodFraction           1.0
+        MaxFoodGrownFraction      1.0
+        FoodRate                  -1.0
+        CenterX                   0.5
+        CenterZ                   0.05
+        SizeX                     1.0
+        SizeZ                     0.1
+        Shape                     R
+        Distribution              U
+      ,                         
+        FoodFraction              0.05
+	FoodTypeName		  Poison
+        InitFoodFraction          -1.0
+        MinFoodFraction           -1.0
+        MaxFoodFraction           1.0
+        MaxFoodGrownFraction      1.0
+        FoodRate                  -1.0
+        CenterX                   0.5
+        CenterZ                   0.05
+        SizeX                     1.0
+        SizeZ                     0.1
+        Shape                     R
+        Distribution              U
+      ,                         
+        FoodFraction              0.6
+	FoodTypeName		  Nutrition
+        InitFoodFraction          -1.0
+        MinFoodFraction           -1.0
+        MaxFoodFraction           1.0
+        MaxFoodGrownFraction      1.0
+        FoodRate                  -1.0
+        CenterX                   0.5
+        CenterZ                   0.8
+        SizeX                     1.0
+        SizeZ                     0.4
+        Shape                     R
+        Distribution              U
+      ,
+        FoodFraction              0.2
+	FoodTypeName		  Poison
+        InitFoodFraction          -1.0
+        MinFoodFraction           -1.0
+        MaxFoodFraction           1.0
+        MaxFoodGrownFraction      1.0
+        FoodRate                  -1.0
+        CenterX                   0.5
+        CenterZ                   0.8
+        SizeX                     1.0
+        SizeZ                     0.4
+        Shape                     R
+        Distribution              U
+
+    ]
+    BrickPatches [
+    ]
+]
