@@ -113,7 +113,7 @@ function build_bct()
     echo "\
 # Arguments to be sent to the C++ compiler
 # Some arguments may already be specified in Makefile
-CXXFLAGS                += -m32 -fopenmp
+CXXFLAGS                += -m32 -fopenmp -DGSL_DOUBLE
 
 # Installation directory
 install_dir              = $install_dir
