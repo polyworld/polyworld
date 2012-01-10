@@ -1163,8 +1163,13 @@ def create_curves(mode,
                                                       preflinetype,
                                                       plotlib.StyleGroup.THICK)
             else:
+            	if groupname == 'ttest':
+            		linewidth = plotlib.StyleGroup.THICK	# so dashed lines can be seen
+            	else:
+            		linewidth = plotlib.StyleGroup.THIN	# the default
                 group = plot.createStyleGroup(groupname,
-                                              preflinetype)
+                                              preflinetype,
+                                              linewidth)
 
         # Use the color key to ensure consistent color between
         # style groups for each run.

@@ -20,6 +20,7 @@ class StyleGroup:
     LINE_TYPES = [SOLID, DASHED, DOTTED, DASHDOT, HASHED] * 4
 
     THIN = 1
+    MEDIUM = 2
     THICK = 3.5
     
     def __init__(self, plot, linetype, linewidth):
