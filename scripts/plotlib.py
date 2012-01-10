@@ -386,7 +386,7 @@ class Plot:
         else:
             spec += 'unset ylabel\n'
         if self.y2label:
-            spec += "set y2label '%s' font 'Times,12'\n" % psencode(self.y2label)
+            spec += "set y2label \"%s\" font 'Times,12'\n" % psencode(self.y2label)
         else:
             spec += 'unset y2label\n'
 
