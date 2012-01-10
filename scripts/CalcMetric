@@ -522,7 +522,8 @@ def efficiency(neuron_set, graph_type, random, preserving, index):
 	else:
 		graph = g_set.graph
 	weighted = 'w' in graph_type
-	eff = bct.efficiency_global(graph.connection)
+	d = __get_distance_matrix(graph, package, weighted)
+	eff = bct.efficiency_global(graph.connection, d)
 	
 	return eff
 
