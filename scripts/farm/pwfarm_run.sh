@@ -286,6 +286,16 @@ if ! $field; then
 
 	    if contains $fieldnumbers $fieldnumber; then
 		nid=$(cat $run/.pwfarm/nid)
+		#
+		# Following three lines of code are a work around
+		# for an error in the data migration to the task-based
+		# farm run format. The correct fix would be to update
+		# all the run/.pwfarm/nid files, but this will do for now.
+		# TODO: Fix the nid files.
+		#
+		if [[ $nid == "" ]]; then
+			nid=$fieldnumber
+		fi
 		assert [ "run_$nid" == "$(basename $run)" ]
 
 		path=$TASKS_DIR/$taskid
