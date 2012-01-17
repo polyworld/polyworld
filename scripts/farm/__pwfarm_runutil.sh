@@ -10,8 +10,8 @@ export POLYWORLD_PWFARM_RUNS_DIR=$POLYWORLD_PWFARM_HOME/runs
 
 export POLYWORLD_PWFARM_SCRIPTS_DIR=$POLYWORLD_PWFARM_APP_DIR/scripts
 
-DEFAULT_FETCH_LIST="*.wfs *.wfo"
-IMPLICIT_FETCH_LIST="stats/* *.wf plot.cfg .pwfarm/*"
+DEFAULT_FETCH_LIST=""
+IMPLICIT_FETCH_LIST="stats/* *.wfo *.wfs *.wf plot.cfg .pwfarm/*"
 
 function lock_app()
 {
@@ -50,13 +50,19 @@ function validate_runid()
     else
 	local ancestor=false
     fi
+    if [ "$1" == "--wildcards" ]; then
+	local wildcards=true
+	shift
+    else
+	local wildcards=false
+    fi
     local runid="$1"
 
     if echo "$runid" | grep [[:space:]] > /dev/null; then
 	err "A Run ID cannot contain whitespace"
     fi
 
-    if echo "$runid" | grep "[\*\?]" > /dev/null; then
+    if ! $wildcards && echo "$runid" | grep "[\*\?]" > /dev/null; then
 	err "A Run ID cannot contain wildcards"
     fi
 
@@ -239,6 +245,12 @@ function is_run()
 
 function conflicting_run_exists()
 {
+    if [ "$1" == "--ignorebatch" ]; then
+	local ignorebatch=true
+	shift
+    else
+	local ignorebatch=false
+    fi
     local owner="$1"
     local runid="$2"
     local nid="$3"
@@ -247,7 +259,7 @@ function conflicting_run_exists()
     local runs=$(ls_runs_field "good" $owner $runid "*")
 
     for run in $runs; do
-	if [ "$(cat $run/.pwfarm/batchid)" != "$batchid" ]; then
+	if ! $ignorebatch && [ "$(cat $run/.pwfarm/batchid)" != "$batchid" ]; then
 	    echo "Found existing run with same Run ID, but different Batch ID at $run" >&2
 	    return 0
 	fi
