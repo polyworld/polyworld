@@ -470,7 +470,9 @@ else
     PAYLOAD_DIR=$( pwd )
     cd "$POLYWORLD_PWFARM_APP_DIR" || exit 1
 
-    export POLYWORLD_PWFARM_WORLDFILE="$PAYLOAD_DIR/worldfiles/$(PWFARM_TASKMETA get worldfile)"
+    if PWFARM_TASKMETA has worldfile; then
+	export POLYWORLD_PWFARM_WORLDFILE="$PAYLOAD_DIR/worldfiles/$(PWFARM_TASKMETA get worldfile)"
+    fi
     export POLYWORLD_PWFARM_RUN_PACKAGE=$PAYLOAD_DIR/run_package/input
 
     export DISPLAY=:0.0 # for Linux -- allow graphics from ssh
@@ -496,7 +498,7 @@ else
     ###
     ### If we're running Polyworld, make sure a run with a conflicting ID doesn't already exist.
     ###
-    if [ -e "$POLYWORLD_PWFARM_WORLDFILE" ]; then
+    if PWFARM_TASKMETA has worldfile; then
 	if $( PWFARM_TASKMETA get append ); then
 	    opt_batch="--ignorebatch"
 	fi
@@ -527,17 +529,16 @@ else
     fi
 
 
-    ###
-    ### If no worldfile, then relocate requested run to current directory
-    ###
-    if [ ! -e $POLYWORLD_PWFARM_WORLDFILE ]; then
+    if ! PWFARM_TASKMETA has worldfile; then
+	###
+	### No worldfile, so relocate requested run to current directory
+	###
 	unstore_run $OWNER $RUNID $NID ./run || exit 1
-    fi
+    else
+	###
+	### Worldfile exists, so exec Polyworld
+	###
 
-    ###
-    ### Execute Polyworld if worldfile exists
-    ###
-    if [ -e $POLYWORLD_PWFARM_WORLDFILE ]; then
 	###
 	### Process Parms Overlay
 	###
