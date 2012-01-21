@@ -90,9 +90,13 @@ def get_parameter_len( path_worldfile_or_run, parameter, assume_run_dir = True )
 ###
 ####################################################################################
 def edit( path, edit_specs, path_new = None ):
-    __tofile( '/tmp/normalized.wf', proputil('apply', path_schema(), path) )
+    path_normalized = '/tmp/normalized.%s.wf' % os.getpid()
 
-    result = proputil( 'set', '/tmp/normalized.wf', *edit_specs )
+    __tofile( path_normalized, proputil('apply', path_schema(), path) )
+
+    result = proputil( 'set', path_normalized, *edit_specs )
+
+    os.remove( path_normalized )
 
     if path_new == None:
         path_new = path

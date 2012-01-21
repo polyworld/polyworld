@@ -218,6 +218,8 @@ if ! $field; then
 		) &
 	    done
 
+	    wait
+
 	    [ ! -e $TMP_DIR/overlay/fail ] || exit 1
 
 
@@ -328,12 +330,22 @@ if ! $field; then
 	     taskmeta set $path rngseed false
 
 	     cp $run/normalized.wf $WORLDFILE_DIR/worldfile_${taskid}.wf || exit 1
-	     wfutil edit $WORLDFILE_DIR/worldfile_${taskid}.wf PassiveLockstep=True || err "Failed setting PassiveLockstep property"
 	     taskmeta set $path worldfile worldfile_${taskid}.wf
 
 	     taskid=$(( $taskid + 1 ))
 
 	 done
+
+	 rm -f $TMP_DIR/failed
+	 for wf in $WORLDFILE_DIR/*.wf; do
+	     (
+		 wfutil.py edit $wf PassiveLockstep=True || touch $TMP_DIR/failed
+	     ) &
+	 done
+
+	 wait
+
+	 [ ! -e $TMP_DIR/failed ] || err "Failed setting PassiveLockstep property"
 
      else
 	#
