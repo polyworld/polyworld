@@ -9,7 +9,7 @@ fi
 function usage()
 {
     cat >&2 <<EOF
-usage: $( basename $0 ) [-w:p:N:a:f:o:c:z:] run_id
+usage: $( basename $0 ) [-w:p:N:a:D:f:o:] run_id
 
 ARGS:
 
@@ -47,6 +47,10 @@ OPTIONS:
    -a analysis_script
                   Path of script that is to be executed after simulation.
 
+   -D driven_runid
+                  Specify Run ID of driven run, meaning that you are executing passive.
+                Does not support -N, -p, or -w.
+
    -F fetch_list
                   Files to be pulled back from run. For example:
 
@@ -66,14 +70,6 @@ OPTIONS:
 
    -o run_owner
                   Specify owner of run.
-
-   -c config_script
-                  Path of script that is to be executed prior to running 
-                simulation.
-
-   -z input_zip
-                  Path of zip file that is to be sent to each machine.
-
 EOF
 
     if [ ! -z "$1" ]; then
@@ -106,13 +102,12 @@ if ! $field; then
     WORLDFILE="nil"
     OVERLAY="nil"
     NRUNS="nil"
-    PRERUN="nil"
     POSTRUN="nil"
-    INPUT_ZIP="nil"
+    DRIVEN="nil"
     OWNER=$( pwenv pwuser )
     FETCH_LIST="$DEFAULT_FETCH_LIST"
 
-    while getopts "w:p:N:a:f:o:c:z:F:" opt; do
+    while getopts "w:p:N:a:D:f:o:F:" opt; do
 	case $opt in
 	    w)
 		WORLDFILE="$OPTARG"
@@ -128,18 +123,16 @@ if ! $field; then
 	    a)
 		POSTRUN="$OPTARG"
 		;;
+	    D)
+		DRIVEN="$OPTARG"
+		validate_runid "$DRIVEN"
+		;;
 	    f)
 		__pwfarm_config env set fieldnumbers "$OPTARG"
 		validate_farm_env
 		;;
 	    o)
 		OWNER="$OPTARG"
-		;;
-	    c)
-		PRERUN="$OPTARG"
-		;;
-	    z)
-		INPUT_ZIP="$OPTARG"
 		;;
 	    F)
 		FETCH_LIST="$OPTARG"
@@ -155,9 +148,15 @@ if ! $field; then
     fi
 
     if [ "$WORLDFILE" == "nil" ]; then
-	if [ "$POSTRUN" == "nil" ] && [ "$NRUNS" == "nil" ]; then
-	    err "Nothing to do -- without -w, you must use -a or -N"
+	if [ "$POSTRUN" == "nil" ] && [ "$NRUNS" == "nil" ] && [ "$DRIVEN" == "nil" ]; then
+	    err "Nothing to do -- without -w, you must use -a or -N or -D"
 	fi
+    fi
+
+    if [ "$DRIVEN" != "nil" ]; then
+	[ "$WORLDFILE" == "nil" ] || err "-D doesn't support -w"
+	[ "$NRUNS" == "nil" ] || err "-D doesn't support -N"
+	[ "$OVERLAY" == "nil" ] || err "-D doesn't support -p"
     fi
 
     shift $(( $OPTIND - 1 ))
@@ -170,7 +169,7 @@ if ! $field; then
 
     RUNID="$( normalize_runid "$1" )"
 
-    if [ "$WORLDFILE" != "nil" ]; then
+    if [ "$WORLDFILE" != "nil" ] || [ "$DRIVEN" != "nil" ]; then
 	validate_runid "$RUNID"
     else
 	# Wildcards are allowed when -w not used.
@@ -285,7 +284,58 @@ if ! $field; then
 	for path in $TASKS; do
 	    taskmeta set $path worldfile worldfile.wf
 	done
-    else
+     elif [ "$DRIVEN" != "nil" ]; then
+	 #
+	 # Executing Passive
+	 #
+	 driven_runs=$( find_runs_local "$OWNER" "$DRIVEN" )
+
+	 if [ -z "$driven_runs" ]; then
+	     err "Cannot find local driven run data. Please fetch run data."
+	 fi
+
+	 taskid=0
+
+	 for run in $driven_runs; do
+	     assert [ -e $run/.pwfarm/fieldnumber ]
+	     assert [ -e $run/.pwfarm/nid ]
+	     assert [ -e $run/normalized.wf ]
+
+	     fieldnumber=$(cat $run/.pwfarm/fieldnumber)
+
+	     nid=$(cat $run/.pwfarm/nid)
+	     #
+	     # Following three lines of code are a work around
+	     # for an error in the data migration to the task-based
+	     # farm run format. The correct fix would be to update
+	     # all the run/.pwfarm/nid files, but this will do for now.
+	     # TODO: Fix the nid files.
+	     #
+	     if [[ $nid == "" ]]; then
+		 nid=$fieldnumber
+	     fi
+	     assert [ "run_$nid" == "$(basename $run)" ]
+
+	     path=$TASKS_DIR/$taskid
+	     TASKS="$TASKS $path"
+
+	     taskmeta set $path id $taskid
+	     taskmeta set $path required_field $fieldnumber
+	     taskmeta set $path nid $nid
+	     taskmeta set $path runid $RUNID
+	     taskmeta set $path driven_nid $nid
+	     taskmeta set $path driven_runid $DRIVEN
+	     taskmeta set $path rngseed false
+
+	     cp $run/normalized.wf $WORLDFILE_DIR/worldfile_${taskid}.wf || exit 1
+	     wfutil edit $WORLDFILE_DIR/worldfile_${taskid}.wf PassiveLockstep=True || err "Failed setting PassiveLockstep property"
+	     taskmeta set $path worldfile worldfile_${taskid}.wf
+
+	     taskid=$(( $taskid + 1 ))
+
+	 done
+
+     else
 	#
 	# No Worldfile
 	#
@@ -430,9 +480,7 @@ if ! $field; then
 	fi
     }
 
-    cpopt "$PRERUN" prerun.sh
     cpopt "$POSTRUN" postrun.sh
-    cpopt "$INPUT_ZIP" input.zip
 
     echo "$OWNER" > $PAYLOAD_DIR/owner
 
@@ -508,27 +556,6 @@ else
 	fi
     fi
 
-    ###
-    ### Unpack the input zip
-    ###
-    if [ -e $PAYLOAD_DIR/input.zip ]; then
-	export POLYWORLD_PWFARM_INPUT="$PAYLOAD_DIR/input"
-
-	rm -rf $POLYWORLD_PWFARM_INPUT
-	mkdir -p $POLYWORLD_PWFARM_INPUT || exit 1
-	unzip $PAYLOAD_DIR/input.zip -d $POLYWORLD_PWFARM_INPUT || exit 1
-    fi
-
-    ###
-    ### Execute the prerun script if it exists
-    ###
-    if [ -f $PAYLOAD_DIR/prerun.sh ]; then
-	PWFARM_STATUS "Config Script"
-	chmod +x $PAYLOAD_DIR/prerun.sh
-	$PAYLOAD_DIR/prerun.sh || exit 1
-    fi
-
-
     if ! PWFARM_TASKMETA has worldfile; then
 	###
 	### No worldfile, so relocate requested run to current directory
@@ -562,6 +589,13 @@ else
 	    ./scripts/wfutil edit ./worldfile InitSeed=$seed || exit 1
 	fi
 
+	if PWFARM_TASKMETA has driven_runid; then
+	    driven_runid=$( PWFARM_TASKMETA get driven_runid )
+	    driven_nid=$( PWFARM_TASKMETA get driven_nid )
+	    driven_run=$( stored_run_path_field "good" "$OWNER" "$driven_runid" "$driven_nid" )
+	    [ -e $driven_run ] || err "Cannot find driven run dir $driven_run"
+	    cp $driven_run/BirthsDeaths.log ./LOCKSTEP-BirthsDeaths.log || exit 1
+	fi
 
 	########################
 	###                  ###
