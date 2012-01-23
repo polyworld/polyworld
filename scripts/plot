@@ -844,6 +844,7 @@ def get_ttest( mode,
 #     print 'mode.normalizeValueNames(groupb, value_names) =', mode.normalizeValueNames(groupb, value_names)
 #     print 'timesteps =', timesteps
 #     print 'mode.curvetypes =', mode.curvetypes
+
     ttest = algorithms.ttest_table( runsa,
                                     runsb,
                                     nruns,
@@ -852,7 +853,8 @@ def get_ttest( mode,
                                     mode.normalizeValueNames(groupa, value_names),
                                     mode.normalizeValueNames(groupb, value_names),
                                     timesteps,
-                                    ['mean'], # mode.curvetypes,
+                                    #['mean'],
+                                    mode.curvetypes,
                                     __iter )
 
     datalib.write( '/tmp/ttest-%d.plt' % os.getpid(), ttest )
@@ -1280,6 +1282,7 @@ def create_curves(mode,
             x = mode.colName_timestep
 
             if ttest:
+                x = 'Timestep'
                 if gopts.get( 'pval' ):
                     result.append( {'col': 'pval', 'title': 'pval', 'axes': (1,2)} )
                 if gopts.get( 'tval' ):
