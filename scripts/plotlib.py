@@ -17,7 +17,7 @@ class StyleGroup:
     DASHED = 2
     HASHED = 3
     DASHDOT = 5
-    LINE_TYPES = [SOLID, DASHED, DOTTED, DASHDOT, HASHED] * 4
+    LINE_TYPES = [SOLID, DASHED, DASHDOT, HASHED, DOTTED] * 4
 
     THIN = 1
     MEDIUM = 2
@@ -379,15 +379,15 @@ class Plot:
             spec += 'unset key\n'
 
         if self.xlabel:
-            spec += "set xlabel '%s' font 'Times,12'\n" % psencode(self.xlabel)
+            spec += "set xlabel '%s' font 'Times,14'\n" % psencode(self.xlabel)
         else:
             spec += 'unset xlabel\n'
         if self.ylabel:
-            spec += "set ylabel '%s' font 'Times,12'\n" % psencode(self.ylabel)
+            spec += "set ylabel '%s' font 'Times,14'\n" % psencode(self.ylabel)
         else:
             spec += 'unset ylabel\n'
         if self.y2label:
-            spec += "set y2label \"%s\" font 'Times,12'\n" % psencode(self.y2label)
+            spec += "set y2label \"%s\" font 'Times,14'\n" % psencode(self.y2label)
         else:
             spec += 'unset y2label\n'
 
