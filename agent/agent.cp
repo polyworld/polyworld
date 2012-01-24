@@ -751,22 +751,32 @@ float agent::MateProbability(agent* c)
 //---------------------------------------------------------------------------
 // agent::mating
 //
-// Note:  This function must remain valid whether we are doing a virtual
-// or a real birth
+// If the birth is virtual, but not lockstep, update heuristic fitness, but
+// don't deplete any energy.  If it is virtual and lockstep, deplete energy,
+// but don't update heuristic fitness.  If it is not virtual do both.  (If
+// it is not virtual, then it is also guaranteed to not be lockstep.)
 //---------------------------------------------------------------------------    
-Energy agent::mating( float mateFitnessParam, long mateWait )
+Energy agent::mating( float mateFitnessParam, long mateWait, bool virt, bool lockstep )
 {
 	fLastMate = fAge;
 	
 	if( mateWait <= 0 )
 		mateWait = 1;
-	fHeuristicFitness += mateFitnessParam * mateWait / MaxAge();
 	
-	Energy mymateenergy = fGenome->get( "MateEnergyFraction" ) * fEnergy;
-	fEnergy -= mymateenergy;
-	fFoodEnergy -= mymateenergy;
-	fFoodEnergy.constrain( 0, fMaxEnergy );
+	if( !virt || !lockstep )
+		fHeuristicFitness += mateFitnessParam * mateWait / MaxAge();
 	
+	Energy mymateenergy;
+	if( !virt || lockstep )
+	{
+		mymateenergy = fGenome->get( "MateEnergyFraction" ) * fEnergy;
+		fEnergy -= mymateenergy;
+		fFoodEnergy -= mymateenergy;
+		fFoodEnergy.constrain( 0, fMaxEnergy );
+	}
+	else
+		mymateenergy = 0.0;
+		
 	return mymateenergy;
 }
     

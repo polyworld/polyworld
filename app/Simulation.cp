@@ -563,7 +563,7 @@ void TSimulation::Step()
 		fAgentPOVWindow->swapBuffers();
 	}
 
-	if( (fHeuristicFitnessWeight != 0.0) || (fComplexityFitnessWeight != 0.0) )
+	if( (fHeuristicFitnessWeight != 0.0) || (fComplexityFitnessWeight != 0.0) || fLockStepWithBirthsDeathsLog )
 		oldNumBorn = fNumberBornVirtual;
 	else
 		oldNumBorn = fNumberBorn;
@@ -705,7 +705,7 @@ void TSimulation::Step()
 		{
 			bool newBirths;
 			float birthRatio;
-			if( (fHeuristicFitnessWeight != 0.0) || (fComplexityFitnessWeight != 0.0) )
+			if( (fHeuristicFitnessWeight != 0.0) || (fComplexityFitnessWeight != 0.0) || fLockStepWithBirthsDeathsLog )
 			{
 				newBirths = oldNumBorn != fNumberBornVirtual;
 				birthRatio = float( fNumberBornVirtual ) / float( fNumberBornVirtual + fNumberCreated );
@@ -4227,7 +4227,8 @@ void TSimulation::MateLockstep( void )
 				 RecordBrainAnatomy( e->Number() ),
 				 RecordBrainFunction( e->Number() ),
 				 fRecordPosition );
-		Energy eenergy = c->mating( fMateFitnessParameter, fMateWait ) + d->mating( fMateFitnessParameter, fMateWait );
+		Energy eenergy = c->mating( fMateFitnessParameter, fMateWait, /*virt*/ true, /*lockstep*/ true )
+					   + d->mating( fMateFitnessParameter, fMateWait, /*virt*/ true, /*lockstep*/ true );
 		Energy minenergy = fMinMateFraction * ( c->GetMaxEnergy() + d->GetMaxEnergy() ) * 0.5;	// just a modest, reasonable amount; this doesn't really matter in lockstep mode
 		eenergy.constrain( minenergy, e->GetMaxEnergy() );
 		e->SetEnergy(eenergy);
@@ -4245,7 +4246,7 @@ void TSimulation::MateLockstep( void )
 					
 		fNewLifes++;
 		fDomains[kd].numAgents++;
-		fNumberBorn++;
+		//fNumberBorn++;	// we are count virtual births rather than actual births now when running in lockstep mode
 		fDomains[kd].numborn++;
 		fNumBornSinceCreated++;
 		fDomains[kd].numbornsincecreated++;
@@ -4379,164 +4380,164 @@ void TSimulation::Mate( agent *c,
 	int cMateStatus = GetMateStatus( cMatePotential, dMatePotential );
 	int dMateStatus = GetMateStatus( dMatePotential, cMatePotential );
 
-#ifndef OF1
-	if( !fLockStepWithBirthsDeathsLog )
+	if( (cMateStatus == MATE__DESIRED) && (dMateStatus == MATE__DESIRED) )
 	{
-#endif
-		if( (cMateStatus == MATE__DESIRED) && (dMateStatus == MATE__DESIRED) )
+		// the agents are mate-worthy, so now deal with other conditions...
+	
+		// test for steady-state GA vs. natural selection
+		if( (fHeuristicFitnessWeight != 0.0) || (fComplexityFitnessWeight != 0.0) || fLockStepWithBirthsDeathsLog )
 		{
-			// the agents are mate-worthy, so now deal with other conditions...
-		
-			// test for steady-state GA vs. natural selection
-			if( (fHeuristicFitnessWeight != 0.0) || (fComplexityFitnessWeight != 0.0) )
+			// we're using the steady state GA (instead of natural selection) or we're in lockstep mode
+			// count virtual offspring (offspring that would have resulted from
+			// otherwise successful mating behaviors), but don't actually instantiate them
+			
+			// We send lockstep = false to agent::mating() even when fLockStepWithBirthsDeathsLog is true,
+			// because this virtual birth was chosen by the agents, as opposed to the births foisted on
+			// agents at random as part of the lockstep mode.
+			(void) c->mating( fMateFitnessParameter, fMateWait, /*virt*/ true, /*lockstep*/ false );
+			(void) d->mating( fMateFitnessParameter, fMateWait, /*virt*/ true, /*lockstep*/ false );
+
+			//cout << "t=" << fStep sp "mating c=" << c->Number() sp "(m=" << c->Mate() << ",lm=" << c->LastMate() << ",e=" << c->Energy() << ",x=" << c->x() << ",z=" << c->z() << ",r=" << c->radius() << ")" nl;
+			//cout << "          & d=" << d->Number() sp "(m=" << d->Mate() << ",lm=" << d->LastMate() << ",e=" << d->Energy() << ",x=" << d->x() << ",z=" << d->z() << ",r=" << d->radius() << ")" nl;
+			//if( sqrt((d->x()-c->x())*(d->x()-c->x())+(d->z()-c->z())*(d->z()-c->z())) > (d->radius()+c->radius()) )
+			//	cout << "            ***** no overlap *****" nl;
+
+			fNumberBornVirtual++;
+			Birth( NULL, LifeSpan::BR_VIRTUAL, c, d );
+		}
+		else
+		{
+			// we're using natural selection (or are lockstepped to a previous natural selection run),
+			// so proceed with the normal mating process (attempt to mate for offspring production if there's room)
+			short kd = WhichDomain(0.5*(c->x()+d->x()),
+								   0.5*(c->z()+d->z()),
+								   0);
+
+			Smite( kd, c, d );
+
+			int denialStatus = GetMateDenialStatus( c, &cMateStatus,
+													d, &dMateStatus,
+													kd );
+
+			if( denialStatus != MATE__NIL )
 			{
-				// we're using the steady state GA (instead of natural selection)
-				// count virtual offspring (offspring that would have resulted from
-				// otherwise successful mating behaviors), but don't actually instantiate them
-				(void) c->mating( fMateFitnessParameter, fMateWait );
-				(void) d->mating( fMateFitnessParameter, fMateWait );
-				//cout << "t=" << fStep sp "mating c=" << c->Number() sp "(m=" << c->Mate() << ",lm=" << c->LastMate() << ",e=" << c->Energy() << ",x=" << c->x() << ",z=" << c->z() << ",r=" << c->radius() << ")" nl;
-				//cout << "          & d=" << d->Number() sp "(m=" << d->Mate() << ",lm=" << d->LastMate() << ",e=" << d->Energy() << ",x=" << d->x() << ",z=" << d->z() << ",r=" << d->radius() << ")" nl;
-				//if( sqrt((d->x()-c->x())*(d->x()-c->x())+(d->z()-c->z())*(d->z()-c->z())) > (d->radius()+c->radius()) )
-				//	cout << "            ***** no overlap *****" nl;
-				fNumberBornVirtual++;
-				Birth( NULL, LifeSpan::BR_VIRTUAL, c, d );
+				fBirthDenials++;
+
+				if( denialStatus & MATE__PREVENTED__MISC )
+				{
+					fMiscDenials++;
+				}
 			}
 			else
 			{
-				// we're using natural selection (or are lockstepped to a previous natural selection run),
-				// so proceed with the normal mating process (attempt to mate for offspring production if there's room)
-				short kd = WhichDomain(0.5*(c->x()+d->x()),
-									   0.5*(c->z()+d->z()),
-									   0);
+				ttPrint( "age %ld: agents # %ld & %ld are mating\n", fStep, c->Number(), d->Number() );
 
-				Smite( kd, c, d );
+				fNumBornSinceCreated++;
+				fDomains[kd].numbornsincecreated++;
+				
+				agent* e = agent::getfreeagent(this, &fStage);
+				Q_CHECK_PTR(e);
 
-				int denialStatus = GetMateDenialStatus( c, &cMateStatus,
-														d, &dMateStatus,
-														kd );
+				e->Genes()->crossover(c->Genes(), d->Genes(), true);
 
-				if( denialStatus != MATE__NIL )
+				Energy eenergy = c->mating( fMateFitnessParameter, fMateWait, /*virt*/ false, /*lockstep*/ false )
+							   + d->mating( fMateFitnessParameter, fMateWait, /*virt*/ false, /*lockstep*/ false );
+
+				float x = 0.5*(c->x() + d->x());
+				float y = 0.5*(c->y() + d->y());
+				float z = 0.5*(c->z() + d->z());
+				float yaw = AverageAngles( c->yaw(), d->yaw() );
+				if( fRandomBirthLocation )
 				{
-					fBirthDenials++;
-
-					if( denialStatus & MATE__PREVENTED__MISC )
-					{
-						fMiscDenials++;
-					}
-				}
-				else
-				{
-					ttPrint( "age %ld: agents # %ld & %ld are mating\n", fStep, c->Number(), d->Number() );
-
-					fNumBornSinceCreated++;
-					fDomains[kd].numbornsincecreated++;
+					float distance = globals::worldsize * fRandomBirthLocationRadius * randpw();
+					float angle = 2*M_PI * randpw();
 					
-					agent* e = agent::getfreeagent(this, &fStage);
-					Q_CHECK_PTR(e);
+					x += distance * cosf( angle );
+					z -= distance * sinf( angle );
 
-					e->Genes()->crossover(c->Genes(), d->Genes(), true);
+					x = clamp( x, 0.01, globals::worldsize - 0.01 );
+					z = clamp( z, -globals::worldsize + 0.01, -0.01 );
+				}
 
-					Energy eenergy = c->mating( fMateFitnessParameter, fMateWait ) + d->mating( fMateFitnessParameter, fMateWait );
+				e->settranslation( x, y, z );
+				e->setyaw( yaw );
 
-					float x = 0.5*(c->x() + d->x());
-					float y = 0.5*(c->y() + d->y());
-					float z = 0.5*(c->z() + d->z());
-					float yaw = AverageAngles( c->yaw(), d->yaw() );
-					if( fRandomBirthLocation )
+				e->Domain(kd);
+				fNewLifes++;
+				fDomains[kd].numAgents++;
+				fNumberBorn++;
+				fDomains[kd].numborn++;
+				//if( fStep > 50 )
+				//	exit( 0 );
+
+				ttPrint( "age %ld: agent # %ld is born\n", fStep, e->Number() );
+				birthPrint( "step %ld: agent # %ld born to %ld & %ld, at (%g,%g,%g), yaw=%g, energy=%g, domain %d (%d & %d)\n",
+							fStep, e->Number(), c->Number(), d->Number(), e->x(), e->y(), e->z(), e->yaw(), e->Energy(), kd, id, jd );
+
+				Birth( e, LifeSpan::BR_NATURAL, c, d );
+
+				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+				// ^^^ PARALLEL TASK GrowAgent
+				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+				class GrowAgent : public ITask
+				{
+				public:
+					agent *e;
+					Energy eenergy;
+					GrowAgent( agent *e, const Energy &eenergy )
 					{
-						float distance = globals::worldsize * fRandomBirthLocationRadius * randpw();
-						float angle = 2*M_PI * randpw();
-						
-						x += distance * cosf( angle );
-						z -= distance * sinf( angle );
-
-						x = clamp( x, 0.01, globals::worldsize - 0.01 );
-						z = clamp( z, -globals::worldsize + 0.01, -0.01 );
+						this->e = e;
+						this->eenergy = eenergy;
 					}
 
-					e->settranslation( x, y, z );
-					e->setyaw( yaw );
-
-					e->Domain(kd);
-					fNewLifes++;
-					fDomains[kd].numAgents++;
-					fNumberBorn++;
-					fDomains[kd].numborn++;
-					//if( fStep > 50 )
-					//	exit( 0 );
-
-					ttPrint( "age %ld: agent # %ld is born\n", fStep, e->Number() );
-					birthPrint( "step %ld: agent # %ld born to %ld & %ld, at (%g,%g,%g), yaw=%g, energy=%g, domain %d (%d & %d)\n",
-								fStep, e->Number(), c->Number(), d->Number(), e->x(), e->y(), e->z(), e->yaw(), e->Energy(), kd, id, jd );
-
-					Birth( e, LifeSpan::BR_NATURAL, c, d );
-
-					// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-					// ^^^ PARALLEL TASK GrowAgent
-					// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-					class GrowAgent : public ITask
+					virtual void task_exec( TSimulation *sim )
 					{
-					public:
-						agent *e;
-						Energy eenergy;
-						GrowAgent( agent *e, const Energy &eenergy )
-						{
-							this->e = e;
-							this->eenergy = eenergy;
-						}
+						e->grow( sim->fMateWait,
+								 sim->fRecordGenomes,
+								 sim->RecordBrainAnatomy( e->Number() ),
+								 sim->RecordBrainFunction( e->Number() ),
+								 sim->fRecordPosition );
 
-						virtual void task_exec( TSimulation *sim )
-						{
-							e->grow( sim->fMateWait,
-									 sim->fRecordGenomes,
-									 sim->RecordBrainAnatomy( e->Number() ),
-									 sim->RecordBrainFunction( e->Number() ),
-									 sim->fRecordPosition );
+						e->SetEnergy(eenergy);
+						e->SetFoodEnergy(eenergy);
+					}
+				};
 
-							e->SetEnergy(eenergy);
-							e->SetFoodEnergy(eenergy);
-						}
-					};
+				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+				// !!! POST PARALLEL
+				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+				fScheduler.postParallel( new GrowAgent(e, eenergy) );
 
-					// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-					// !!! POST PARALLEL
-					// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-					fScheduler.postParallel( new GrowAgent(e, eenergy) );
-
-					// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-					// ^^^ SERIAL TASK AddAgent
-					// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-					class AddAgent : public ITask
+				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+				// ^^^ SERIAL TASK AddAgent
+				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+				class AddAgent : public ITask
+				{
+				public:
+					agent *e;
+					AddAgent( agent *e )
 					{
-					public:
-						agent *e;
-						AddAgent( agent *e )
-						{
-							this->e = e;
-						}
+						this->e = e;
+					}
 
-						virtual void task_exec( TSimulation *sim )
-						{
-							sim->fStage.AddObject(e);
-							gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();
-							objectxsortedlist::gXSortedObjects.add(e); // Add the new agent directly to the list of objects (no new agent list); the e->listLink that gets auto stored here should be valid immediately
-							objectxsortedlist::gXSortedObjects.setcurr( saveCurr );
+					virtual void task_exec( TSimulation *sim )
+					{
+						sim->fStage.AddObject(e);
+						gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();
+						objectxsortedlist::gXSortedObjects.add(e); // Add the new agent directly to the list of objects (no new agent list); the e->listLink that gets auto stored here should be valid immediately
+						objectxsortedlist::gXSortedObjects.setcurr( saveCurr );
 
-							sim->fNeuronGroupCountStats.add( e->GetBrain()->NumNeuronGroups() );
-						}
-					};
+						sim->fNeuronGroupCountStats.add( e->GetBrain()->NumNeuronGroups() );
+					}
+				};
 
-					// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-					// !!! POST SERIAL
-					// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-					fScheduler.postSerial( new AddAgent(e) );
-				}
-			}	// steady-state GA vs. natural selection
-		}	// if agents are trying to mate
-#ifndef OF1
-	} // if not lockstep
-#endif
+				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+				// !!! POST SERIAL
+				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+				fScheduler.postSerial( new AddAgent(e) );
+			}
+		}	// steady-state GA vs. natural selection
+	}	// if agents are trying to mate
 
 	contactEntry->mate( c, cMateStatus );
 	contactEntry->mate( d, dMateStatus );
@@ -8997,7 +8998,7 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 	}
 	list.push_back( strdup( t ) );
 	
-	if( (fHeuristicFitnessWeight != 0.0) || (fComplexityFitnessWeight != 0.0) )
+	if( (fHeuristicFitnessWeight != 0.0) || (fComplexityFitnessWeight != 0.0) || fLockStepWithBirthsDeathsLog )
 	{
 		sprintf( t, "born_v  = %4ld", fNumberBornVirtual );
 		list.push_back( strdup( t ) );
@@ -9156,10 +9157,10 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 	static long lastNumberBorn = 0;
 	static long deltaBorn;
 	long numberBorn;
-	if( (fComplexityFitnessWeight == 0.0) && (fHeuristicFitnessWeight == 0.0) )
-		numberBorn = fNumberBorn;
-	else
+	if( (fComplexityFitnessWeight != 0.0) || (fHeuristicFitnessWeight != 0.0) || fLockStepWithBirthsDeathsLog )
 		numberBorn = fNumberBornVirtual;
+	else
+		numberBorn = fNumberBorn;
     if( !(fStep % fStatusFrequency) )
     {
 		deltaBorn = numberBorn - lastNumberBorn;
