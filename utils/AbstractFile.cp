@@ -177,7 +177,15 @@ AbstractFile::AbstractFile( const char *abstractPath,
 		numFound++;
 	}
 
-	if( numFound != 1 )
+	if( numFound > 1 )
+	{
+		if( &abstractPath[strlen(abstractPath)-strlen(GZIP_EXT)] )	// specified path ends in .gz
+			type = TYPE_GZIP_FILE;
+		else
+			type = TYPE_FILE;
+	}
+
+	if( numFound < 1 )
 	{
 		fprintf( stderr, "Failed opening %s \n", abstractPath );
 		exit( 1 );
@@ -491,8 +499,9 @@ void AbstractFile::init( ConcreteFileType type,
 			{
 				fprintf( stderr, "Unable to open file at '%s'\n", abstractPath );
 				perror( file.path );
+				system( "lsof -u `whoami`" );
+				assert( file.fp );
 			}
-			assert( file.fp );
 		}
 		break;
 	case TYPE_GZIP_FILE:
@@ -503,6 +512,7 @@ void AbstractFile::init( ConcreteFileType type,
 			{
 				fprintf( stderr, "Unable to open file at '%s'\n", gzip.path );
 				perror( gzip.path );
+				system( "lsof -u `whoami`" );
 				assert( gzip.fp );
 			}
 		}
@@ -522,13 +532,20 @@ char *AbstractFile::createPath( ConcreteFileType type, const char *abstractPath 
 	case TYPE_FILE:
 		{
 			path = strdup( abstractPath );
+			if( strstr( &path[strlen(path)-strlen(GZIP_EXT)], GZIP_EXT ) )
+				path[strlen(path)-strlen(GZIP_EXT)] = '\0';
 		}
 		break;
 	case TYPE_GZIP_FILE:
 		{
-			path = (char *)malloc( strlen(abstractPath) + strlen(GZIP_EXT) + 1 );
-			assert( path );
-			sprintf( path, "%s%s", abstractPath, GZIP_EXT );
+			if( strstr( &abstractPath[strlen(abstractPath)-strlen(GZIP_EXT)], GZIP_EXT ) )
+				path = strdup( abstractPath );
+			else
+			{
+				path = (char *)malloc( strlen(abstractPath) + strlen(GZIP_EXT) + 1 );
+				assert( path );
+				sprintf( path, "%s%s", abstractPath, GZIP_EXT );
+			}
 		}
 		break;
 	default:
