@@ -1,6 +1,7 @@
-* [ sean, 01/29/2012 ]: Mac windows/menus buggered
-* [ sean, 01/29/2012 ]: Should have an easy way to recover an orphaned farm run
-* [ sean, 01/29/2012 ]: Offscreen POV
+* [ sean,   01/29/2012 ]: Mac windows/menus buggered
+* [ sean,   01/29/2012 ]: Should have an easy way to recover an orphaned farm run
+* [ sean,   01/29/2012 ]: Offscreen POV
+* [ larryy, 01/29/2012 ]: complexity_brain.cp should allow both filtered and non-filtered
 
 
 -------------------------------------------------------------------
