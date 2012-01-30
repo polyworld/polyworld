@@ -155,7 +155,7 @@ public:
 	Energy receive( agent *giver, const Energy &e );
     Energy damage(const Energy &e, bool nullMode);
     float MateProbability(agent* c);
-    Energy mating( float mateFitnessParam, long mateWait, bool virt, bool lockstep );
+    Energy mating( float mateFitnessParam, long mateWait, bool lockstep );
     void rewardmovement(float moveFitnessParam, float speed2dpos);
     void lastrewards(float energyFitness, float ageFitness);
     void Die();

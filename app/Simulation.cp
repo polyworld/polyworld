@@ -4227,9 +4227,9 @@ void TSimulation::MateLockstep( void )
 				 RecordBrainAnatomy( e->Number() ),
 				 RecordBrainFunction( e->Number() ),
 				 fRecordPosition );
-		Energy eenergy = c->mating( fMateFitnessParameter, fMateWait, /*virt*/ true, /*lockstep*/ true )
-					   + d->mating( fMateFitnessParameter, fMateWait, /*virt*/ true, /*lockstep*/ true );
-		Energy minenergy = fMinMateFraction * ( c->GetMaxEnergy() + d->GetMaxEnergy() ) * 0.5;	// just a modest, reasonable amount; this doesn't really matter in lockstep mode
+		Energy eenergy = c->mating( fMateFitnessParameter, fMateWait, /*lockstep*/ true )
+					   + d->mating( fMateFitnessParameter, fMateWait, /*lockstep*/ true );
+		Energy minenergy = fMinMateFraction * ( c->GetMaxEnergy() + d->GetMaxEnergy() ) * 0.5;	// just a modest, reasonable amount; this doesn't matter as much in lockstep mode, though since we count virtual births it does matter a tiny bit; this leaves the agent requiring food prior to mating if the parents don't contribute enough
 		eenergy.constrain( minenergy, e->GetMaxEnergy() );
 		e->SetEnergy(eenergy);
 		e->SetFoodEnergy(eenergy);
@@ -4394,8 +4394,8 @@ void TSimulation::Mate( agent *c,
 			// We send lockstep = false to agent::mating() even when fLockStepWithBirthsDeathsLog is true,
 			// because this virtual birth was chosen by the agents, as opposed to the births foisted on
 			// agents at random as part of the lockstep mode.
-			(void) c->mating( fMateFitnessParameter, fMateWait, /*virt*/ true, /*lockstep*/ false );
-			(void) d->mating( fMateFitnessParameter, fMateWait, /*virt*/ true, /*lockstep*/ false );
+			(void) c->mating( fMateFitnessParameter, fMateWait, /*lockstep*/ false );
+			(void) d->mating( fMateFitnessParameter, fMateWait, /*lockstep*/ false );
 
 			//cout << "t=" << fStep sp "mating c=" << c->Number() sp "(m=" << c->Mate() << ",lm=" << c->LastMate() << ",e=" << c->Energy() << ",x=" << c->x() << ",z=" << c->z() << ",r=" << c->radius() << ")" nl;
 			//cout << "          & d=" << d->Number() sp "(m=" << d->Mate() << ",lm=" << d->LastMate() << ",e=" << d->Energy() << ",x=" << d->x() << ",z=" << d->z() << ",r=" << d->radius() << ")" nl;
@@ -4440,8 +4440,8 @@ void TSimulation::Mate( agent *c,
 
 				e->Genes()->crossover(c->Genes(), d->Genes(), true);
 
-				Energy eenergy = c->mating( fMateFitnessParameter, fMateWait, /*virt*/ false, /*lockstep*/ false )
-							   + d->mating( fMateFitnessParameter, fMateWait, /*virt*/ false, /*lockstep*/ false );
+				Energy eenergy = c->mating( fMateFitnessParameter, fMateWait, /*lockstep*/ false )
+							   + d->mating( fMateFitnessParameter, fMateWait, /*lockstep*/ false );
 
 				float x = 0.5*(c->x() + d->x());
 				float y = 0.5*(c->y() + d->y());
