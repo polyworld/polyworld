@@ -1,8 +1,8 @@
 REPORTED	ASSIGNED	DATE		DESC
 
-sean   		sean	  	01/29/2012  	Mac windows/menus buggered
-sean   		sean		01/29/2012  	Should have an easy way to recover an orphaned farm run
-sean   				01/29/2012 	Offscreen POV
+sean   		sean	  	01/29/2012  Mac windows/menus buggered
+sean   		sean		01/29/2012  Should have an easy way to recover an orphaned farm run
+sean   					01/29/2012 	Offscreen POV
 sean   		sean		01/30/2012 	If a user tries to ffetch without app dir, should at least get clear error message.
 larryy 		sean		01/30/2012 	add recursive functionality to ffetch
 larryy 		sean		01/30/2012 	reverse sense of -b in fbuild
