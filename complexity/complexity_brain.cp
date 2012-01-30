@@ -165,7 +165,8 @@ double CalcComplexity_brainfunction(const char *fnameAct,
     		}
     	}
     	
-    	FilterActivity( activity, filter_events, agent_num, agent_birth, agent_lifespan, events, numinputneurons );
+    	if( num_filter_events > 0 )
+	    	FilterActivity( activity, filter_events, agent_num, agent_birth, agent_lifespan, events, numinputneurons );
     }
 
 	complexity = CalcComplexityWithMatrix_brainfunction(activity,
@@ -755,17 +756,50 @@ gsl_matrix * readin_brainfunction(const char* fname,
 //---------------------------------------------------------------------------
 void FilterActivity( gsl_matrix* activity, const char* filter_events, const long agent_number, const long agent_birth, const long lifespan, Events* events, long numinputneurons )
 {
-	static int mate_filter_radius = 9;	// exclude center point
-	static int eat_filter_radius = 4;	// exclude center point
-	static double mate_filter[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0,
+// m9e4m1.0e0.5
+// 	static int mate_filter_radius = 9;	// exclude center point
+// 	static int eat_filter_radius = 4;	// exclude center point
+// 	static double mate_filter[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0,
+// 									0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1 };
+// 	static double eat_filter[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.4, 0.3, 0.2, 0.1 };
+
+// m9e9m1.0e1.0
+// 	static int mate_filter_radius = 9;	// exclude center point
+// 	static int eat_filter_radius = 9;	// exclude center point
+// 	static double mate_filter[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0,
+// 									0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1 };
+// 	static double  eat_filter[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0,
+// 									0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1 };
+
+// m4e4m0.5e0.5
+// 	static int mate_filter_radius = 4;	// exclude center point
+// 	static int eat_filter_radius = 4;	// exclude center point
+// 	static double mate_filter[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.4, 0.3, 0.2, 0.1 };
+// 	static double  eat_filter[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.4, 0.3, 0.2, 0.1 };
+
+// m4e4m1.0e1.0
+// 	static int mate_filter_radius = 4;	// exclude center point
+// 	static int eat_filter_radius = 4;	// exclude center point
+// 	static double mate_filter[] = { 0.2, 0.4, 0.6, 0.8, 1.0, 0.8, 0.6, 0.4, 0.2 };
+// 	static double  eat_filter[] = { 0.2, 0.4, 0.6, 0.8, 1.0, 0.8, 0.6, 0.4, 0.2 };
+
+// m19e9m1.0e1.0
+	static int mate_filter_radius = 19;	// exclude center point
+	static int eat_filter_radius = 9;	// exclude center point
+	static double mate_filter[] = { 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5,
+									0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0,
+									0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5,
+									0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.05};
+	static double  eat_filter[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0,
 									0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1 };
-	static double eat_filter[] = {0.1, 0.2, 0.3, 0.4, 0.5, 0.4, 0.3, 0.2, 0.1 };
 
 	long duration = activity->size1;	// may be less than lifespan due to MaxNumTimeStepsToComputeComplexityOver
 	long agent_death = agent_birth + lifespan;	// seems like this should be -1, but this agrees with BirthsDeaths.log
 	long agent_start = agent_death - duration + 1;
 	bool mate_filtering = strchr( filter_events, 'm' );
 	bool eat_filtering = strchr( filter_events, 'e' );
+
+
 // 	filprint( "%s: num=%ld, birth=%ld, lifespan=%ld, death=%ld, start=%ld, duration=%ld, mate=%c, eat=%c\n", __func__,
 // 			agent_number, agent_birth, lifespan, agent_death, agent_start, duration, mate_filtering ? 'T':'F', eat_filtering ? 'T':'F' );
 	

@@ -163,8 +163,6 @@ int process_brainfunction(int argc, char *argv[])
 	// --- get part combos
 	const char **part_combos;
 	int ncombos;
-	bool got_filtered = false;
-	bool got_not_filtered = false;
 
 	if( argc == 1 )
 	{
@@ -180,7 +178,6 @@ int process_brainfunction(int argc, char *argv[])
 				// lowercase letters indicate event filters
 				if( islower( *c ) )
 				{
-					got_filtered = true;
 					if( ! filter_events )
 						filter_events = (char*) calloc( size_filter_events, 1 );
 					bool already_there = false;
@@ -204,8 +201,6 @@ int process_brainfunction(int argc, char *argv[])
 					}
 					continue;
 				}
-				else
-					got_not_filtered = true;
 				
 				// digits indicate integration precision
 				if( isdigit(*c) )
@@ -218,13 +213,7 @@ int process_brainfunction(int argc, char *argv[])
 				}
 			}
 		}
-		
-		if( got_filtered && got_not_filtered )
-		{
-			cerr << "Error: Cannot calculate both filtered and non-filtered complexities at the same time" << endl;
-			exit( 1 );
-		}
-		
+				
 		if( filter_events )
 			filter_events[num_filter_events] = '\0'; 	// add c string terminator
 
