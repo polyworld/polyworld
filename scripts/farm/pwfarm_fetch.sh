@@ -147,6 +147,10 @@ else
     ###
     ### EXECUTE ON REMOTE
     ###
+    if [ ! -e "$POLYWORLD_PWFARM_APP_DIR" ]; then
+	err "No app directory! Please do a pwfarm_build."
+    fi
+
     PAYLOAD_DIR=$PWD
 
     touch $TMPDIR/runs
