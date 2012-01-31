@@ -1,7 +1,6 @@
 REPORTED	ASSIGNED	DATE		DESC
 
 sean   		sean	  	01/29/2012  Mac windows/menus buggered
-sean   		sean		01/29/2012  Should have an easy way to recover an orphaned farm run
 sean   					01/29/2012 	Offscreen POV
 larryy 		sean		01/30/2012 	add recursive functionality to ffetch
 
