@@ -26,7 +26,7 @@ OPTIONS:
                   Specify fields on which this should run. Must be a single argument,
                 so use quotes. e.g. -f "0 1" or -f "{0..3}"
 
-   -b             Don't build BCT.
+   -b             Build BCT.
 
    -h             Show this message.
 EOF
@@ -51,7 +51,7 @@ fi
 ###
 ########################################
 clean=false
-bct=true
+bct=false
 
 while getopts "cf:bh" opt; do
     case $opt in
@@ -65,7 +65,7 @@ while getopts "cf:bh" opt; do
 	    fi
 	    ;;
 	b)
-	    bct=false
+	    bct=true
 	    ;;
         h)
 	    usage
