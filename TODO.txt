@@ -1,11 +1,20 @@
 REPORTED	ASSIGNED	DATE		DESC
 
+[SIM]
 sean   		sean	  	01/29/2012  Mac windows/menus buggered
 sean   					01/29/2012 	Offscreen POV
-larryy 		sean		01/30/2012 	add recursive functionality to ffetch
 sean		sean		01/31/2012	compressed datalib
+
+[FARM]
+larryy 		sean		01/30/2012 	add recursive functionality to ffetch
 sean		sean		01/31/2012	Delete plot.cfg logic from farm scripts
+
+[PLOT]
 sean		sean		01/31/2012	allow plotting ttest at top of plot
+sean		sean		02/01/2012	clean plot /tmp files at end
+sean		sean		02/01/2012	add feature for interpolating timesteps when plotting condprops
+sean		sean		02/01/2012	plot mode: barriers
+sean		sean		02/01/2012	plot mode: genome subset
 
 -------------------------------------------------------------------
 -------------------------------------------------------------------
