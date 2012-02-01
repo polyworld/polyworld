@@ -162,12 +162,11 @@ while true; do
           rm -rf $FIELD_STATE_DIR ;
           mkdir -p $FIELD_STATE_DIR ;
           cd $FIELD_STATE_DIR ;
-          unzip -q $BLOB ;
+          $( archive unpack -e $BLOB ) ;
           cd payload ;
-          unzip -q payload.zip ;
-          rm payload.zip ;
+          $( archive unpack -e payload.tbz ) ;
+          rm payload.tbz ;
         "
-
 	step_done
     fi
 
@@ -250,7 +249,7 @@ while true; do
     title "Downloading Result"
 
     if step_begin "fetch_result"; then
-	repeat_til_success scp $OSUSER@$FIELD_HOST:$FIELD_STATE_DIR/result.zip $FARMER_STATE_DIR
+	repeat_til_success scp $OSUSER@$FIELD_HOST:$FIELD_STATE_DIR/result.tbz $FARMER_STATE_DIR
 
 	step_done
     fi
@@ -259,11 +258,10 @@ while true; do
     # Unpack result file
     #
     if step_begin "unpack_result"; then
-	if [ -e result.zip ]; then
+	if [ -e result.tbz ]; then
 	    rm -rf result
-	    mkdir result
-	    unzip -q -d result result.zip
-	    rm result.zip
+	    archive unpack -d result result.tbz
+	    rm result.tbz
 	fi
 
 	step_done
@@ -284,11 +282,10 @@ while true; do
     # Unpack output file
     #
     if step_begin "unpack_output"; then
-	if [ -e result/output.zip ] && taskmeta has $FARMER_TASKMETA outputdir; then
+	if [ -e result/output.tbz ] && taskmeta has $FARMER_TASKMETA outputdir; then
 	    outputdir=$( taskmeta get $FARMER_TASKMETA outputdir )
-	    mkdir -p $outputdir
-	    unzip -oq -d $outputdir result/output.zip
-	    rm result/output.zip
+	    archive unpack -d $outputdir result/output.tbz
+	    rm result/output.tbz
 	fi
 
 	step_done

@@ -52,15 +52,15 @@ OPTIONS:
                 Does not support -N, -p, or -w.
 
    -F fetch_list
-                  Files to be pulled back from run. For example:
+                Files to be pulled back from run. For example:
 
-                    -F "stat/* *.wf"
+                    -F "condprop/*.log brain/"
 
-                  By default, the following is fetched but can be overridden:
+                If a directory is specified, then all of its content including
+                subdirectories is fetched. Note that you may fetch an entire run
+                directory via "-F .".
 
-                    $DEFAULT_FETCH_LIST
-
-                  The following is always fetched so scripts properly operate:
+                The following is always fetched so scripts properly operate:
 
                     $IMPLICIT_FETCH_LIST
 
@@ -500,11 +500,11 @@ if ! $field; then
 	echo "$x" >> $RUN_PACKAGE_DIR/input
     done
 
-    PAYLOAD=$PAYLOAD_DIR/payload.zip
+    PAYLOAD=$TMP_DIR/payload.tbz
 
     pushd_quiet .
     cd $PAYLOAD_DIR
-    zip -qr $PAYLOAD .
+    archive pack $PAYLOAD .
     popd_quiet
 
     ##
@@ -696,7 +696,7 @@ else
 
     $POLYWORLD_PWFARM_SCRIPTS_DIR/archive_delta.sh archive \
 	-e $PAYLOAD_DIR/run_package/checksums_$(PWFARM_TASKMETA get id) \
-	$PWFARM_OUTPUT_FILE \
+	$PWFARM_OUTPUT_ARCHIVE \
 	. \
 	"$( cat $POLYWORLD_PWFARM_RUN_PACKAGE ) $IMPLICIT_FETCH_LIST"
 

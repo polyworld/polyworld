@@ -39,21 +39,24 @@ if [ ! -e "$script" ]; then
 fi
 
 tmpdir=$( create_tmpdir ) || exit 1
-cp $script $tmpdir || exit
+payload_dir=$tmpdir/payload
+mkdir -p $payload_dir
+payload=$tmpdir/payload.tbz
+cp $script $payload_dir || exit
 if [ ! -z "$input" ]; then
-    cp $input $tmpdir || exit
+    archive unpack -d $payload_dir $input
 fi
 
 pushd_quiet .
-cd $tmpdir
-zip -qr payload.zip .
+cd $payload_dir
+archive pack $payload .
 popd_quiet
 
 pwfarm_dir=`canondirname "$0"`
 
 tasks=$( taskmeta create_field_tasks $tmpdir $erropt $sudoopt "$cmd" "$outputdir") || exit 1
 
-$pwfarm_dir/__pwfarm_dispatcher.sh dispatch $tmpdir/payload.zip $tasks
+$pwfarm_dir/__pwfarm_dispatcher.sh dispatch $payload $tasks
 exitval=$?
 
 rm -rf $tmp_dir

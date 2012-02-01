@@ -29,7 +29,7 @@ $( basename $0 ) "archive" [-e:] output_archive dir input_spec...
 ARGS:
 
    output_archive
-                  Path of delta zip that is to be generated.
+                  Path of delta archive that is to be generated.
 
    dir           Root directory from which operation is performed. Paths in
                checksums file and archive will be relative to this.
@@ -62,6 +62,13 @@ function canonpath()
     python -c "import os.path; print os.path.realpath('$1')"
 }
 
+function canondirname()
+{
+    dirname `canonpath "$1"`
+}
+
+SRC_DIR=$( canondirname $BASH_SOURCE )
+
 function find_input_files()
 {
     local dir="$1"
@@ -71,7 +78,14 @@ function find_input_files()
     (
 	set +e
 	cd $dir >/dev/null #larryy tends to make noisy cd
-	ls $input 2>/dev/null
+	for i in $input; do
+	    if [ -f $i ]; then
+		ls $i 2>/dev/null
+	    elif [ -d $i ]; then
+		find $i -type f 2>/dev/null
+	    fi
+	done
+		
 	exit 0
     )
 }
@@ -82,6 +96,11 @@ function compute_checksum()
     pattern='MD5(\(.*\))= '
     subst='\1'$'\t'
     openssl md5 $@ | sed "s/$pattern/$subst/"
+}
+
+function archive()
+{
+    $SRC_DIR/archive.sh "$@"
 }
 
 MODE=$1
@@ -97,7 +116,7 @@ if [ "$MODE" == "checksums" ]; then
     shift 3
     input=$( find_input_files $dir "$@" )
 
-    if [ -z "$input_files" ]; then
+    if [ -z "$input" ]; then
 	rm -f $output_checksum
 	touch $output_checksum
 	exit
@@ -163,7 +182,7 @@ fi
 ###
 if [ -z "$existing_checksum" ] || [ ! -e $existing_checksum ]; then
     cd $dir
-    zip -q $output_archive $input_files
+    archive pack $output_archive $input_files
     exit
 fi
 
@@ -183,7 +202,7 @@ tmpdir=$( mktemp -d /tmp/archive_delta.XXXXXXXX )
 ### Figure out which files have actually changed or been added
 ###
 
-zip_input_files=$(
+archive_input_files=$(
     # concat old and new path/checksum info, with "old" or "new" prefixed to each line
     (
 	cat $tmpdir/input_checksum | while read x; do printf "new\t$x\n"; done
@@ -207,10 +226,10 @@ zip_input_files=$(
 ###
 ### CREATE DELTA ARCHIVE
 ###
-if [ ! -z "$zip_input_files" ]; then
+if [ ! -z "$archive_input_files" ]; then
     (
 	cd $dir
-	zip -q $output_archive $zip_input_files
+	archive pack $output_archive $archive_input_files
     )
 fi
 

@@ -25,8 +25,8 @@ PID=$DISPATCHERSTATE_DIR/pid
 FIELDNUMBERS=$DISPATCHERSTATE_DIR/fieldnumbers
 
 BLOB_DIR=${DISPATCHERSTATE_DIR}/blob
-BLOB_LOCAL=${BLOB_DIR}/blob.zip
-BLOB_REMOTE="~/__pwfarm_blob__user_$( pwenv pwuser )__farm_$( pwenv farmname )__session_$( pwenv sessionname ).zip"
+BLOB_LOCAL=${BLOB_DIR}/blob.tbz
+BLOB_REMOTE="~/__pwfarm_blob__user_$( pwenv pwuser )__farm_$( pwenv farmname )__session_$( pwenv sessionname ).tbz"
 BROADCAST_COMPLETE=$DISPATCHERSTATE_DIR/broadcast_complete
 FIELD_BORN=$DISPATCHERSTATE_DIR/field_born
 
@@ -398,15 +398,16 @@ if $broadcast; then
 	mkdir tasks
 	cp $TASKS/pending/* tasks
         mkdir payload
-	cp "$payload" payload/payload.zip
+	cp "$payload" payload/payload.tbz
 	mkdir scripts
 	cp "$PWFARM_SCRIPTS_DIR/__lib.sh" scripts
+	cp "$PWFARM_SCRIPTS_DIR/../archive.sh" scripts
 	cp "$PWFARM_SCRIPTS_DIR/__pwfarm_field.sh" scripts
 	cp "$PWFARM_SCRIPTS_DIR/__pwfarm_taskmeta.sh" scripts
 	cp "$PWFARM_SCRIPTS_DIR/__pwfarm_runutil.sh" scripts
 	cp "$PWFARM_SCRIPTS_DIR/__pwfarm_config.sh" scripts
 	cp "$PWFARM_SCRIPTS_DIR/__pwfarm_status.py" scripts
-	zip -qr "$BLOB_LOCAL" *
+	archive pack "$BLOB_LOCAL" *
 	popd_quiet
 	set +e
 

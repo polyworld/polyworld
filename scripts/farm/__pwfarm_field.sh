@@ -18,7 +18,7 @@ export -f PWFARM_TASKMETA
 export PWFARM_STATUS_STATE="$FIELD_STATE_DIR/status_state"
 COMMAND=$( PWFARM_TASKMETA get command )
 RESULT_DIR="$FIELD_STATE_DIR/result"
-RESULT_ZIP="$FIELD_STATE_DIR/result.zip"
+RESULT_ARCHIVE="$FIELD_STATE_DIR/result.tbz"
 LOG="/tmp/log_user$(pwenv pwuser)_field$(pwenv fieldnumber)_session$(pwenv sessionname)_farm$(pwenv farmname)"
 MUTEX="${FIELD_STATE_DIR}/mutex"
 PID="${FIELD_STATE_DIR}/pid"
@@ -28,6 +28,19 @@ COMMAND_LAUNCH_END="${FIELD_STATE_DIR}/command_launch_end"
 COMMAND_BORN="${FIELD_STATE_DIR}/command_born"
 COMMAND_DONE="${FIELD_STATE_DIR}/command_done"
 FIELD_SCREEN_SESSION="$( pwenv fieldscreensession )"
+
+function dbprompt()
+{
+    return
+
+    if [ $# != 0 ]; then
+	local prompt="[debug] $*"
+    else
+	local prompt="[debug] Press enter..."
+    fi
+
+    read -p "$prompt"
+}
 
 function log()
 {
@@ -202,8 +215,8 @@ case "$MODE" in
 
 	mutex_lock "$MUTEX"
 
-	if [ ! -e "$RESULT_ZIP" ]; then
-	    log "creating $RESULT_ZIP"
+	if [ ! -e "$RESULT_ARCHIVE" ]; then
+	    log "creating $RESULT_ARCHIVE"
 
 	    if ! PWFARM_TASKMETA has exitval; then
 		log "!!! DIDN'T FIND EXITVAL! COMMAND MUST HAVE TRAPPED !!!"
@@ -215,13 +228,13 @@ case "$MODE" in
 	    cp "$PWFARM_TASKMETA_PATH" ./taskmeta
 	    cp "$LOG" ./log
 
-	    result_zip_tmp="/tmp/result.$$.zip"
-	    echo "Creating temporary result archive $result_zip_tmp"
-	    zip -qr $result_zip_tmp .
-	    mv $result_zip_tmp "$RESULT_ZIP"
+	    result_archive_tmp="/tmp/result.$$.tbz"
+	    echo "Creating temporary result archive $result_archive_tmp"
+	    archive pack $result_archive_tmp .
+	    mv $result_archive_tmp "$RESULT_ARCHIVE"
 	    cd "$FIELD_STATE_DIR"
 
-	    log "$RESULT_ZIP generated"
+	    log "$RESULT_ARCHIVE generated"
 
 	    rm "$LOG"
 	fi
@@ -229,6 +242,8 @@ case "$MODE" in
 	rm -f $PID
 
 	mutex_unlock "$MUTEX"
+
+	dbprompt "end launch"
 
 	exit 0
 	;;
@@ -264,7 +279,7 @@ case "$MODE" in
 	}
 	export -f PWFARM_SUDO
 
-	export PWFARM_OUTPUT_FILE="${RESULT_DIR}/output.zip"
+	export PWFARM_OUTPUT_ARCHIVE="${RESULT_DIR}/output.tbz"
 
 	if [ "$( uname )" == "Darwin" ]; then
 	    export PATH=$PATH:/usr/local/bin:/Library/Frameworks/Python.framework/Versions/Current/bin
@@ -306,6 +321,8 @@ case "$MODE" in
 	touch "$COMMAND_DONE"
 
 	log "COMMAND DONE!"
+
+	dbprompt "end command"
 
 	exit 0
 	;;

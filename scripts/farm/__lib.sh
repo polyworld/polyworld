@@ -4,15 +4,6 @@ if [ -z "$BASH_SOURCE" ]; then
     exit 1
 fi
 
-source $( dirname $BASH_SOURCE )/__pwfarm_config.sh
-source $( dirname $BASH_SOURCE )/__pwfarm_taskmeta.sh
-
-function create_tmpdir()
-{
-    mkdir -p /tmp/pwfarm
-    mktemp -d /tmp/pwfarm/$(basename $0).XXXXXXXX
-}
-
 function canonpath()
 {
     local path="${1-stdin}"
@@ -29,6 +20,17 @@ function canonpath()
 function canondirname()
 {
     dirname `canonpath "$1"`
+}
+
+__LIB_DIR=$( canondirname $BASH_SOURCE )
+
+source $( dirname $BASH_SOURCE )/__pwfarm_config.sh
+source $( dirname $BASH_SOURCE )/__pwfarm_taskmeta.sh
+
+function create_tmpdir()
+{
+    mkdir -p /tmp/pwfarm
+    mktemp -d /tmp/pwfarm/$(basename $0).XXXXXXXX
 }
 
 function relpath()
@@ -80,6 +82,19 @@ function is_integer()
 {
     [ ! -z "$1" ] || return 1
     printf "%d" "$1" > /dev/null 2>&1
+}
+
+function archive()
+{
+    local srcdir=$__LIB_DIR
+
+    if [ -e $srcdir/archive.sh ]; then
+	$srcdir/archive.sh "$@"
+    elif [ -e $srcdir/../archive.sh ]; then
+	$srcdir/../archive.sh "$@"
+    else
+	err "Cannot locate archive.sh! srcdir=$srcdir"
+    fi
 }
 
 function repeat_til_success

@@ -74,11 +74,11 @@ if ! $FIELD; then
     echo "$@" > $PAYLOAD_DIR/command
     echo $SUDO > $PAYLOAD_DIR/sudo
 
-    PAYLOAD=$PAYLOAD_DIR/payload.zip
+    PAYLOAD=$TMP_DIR/payload.tbz
 
     pushd_quiet .
     cd $PAYLOAD_DIR
-    zip -rq $PAYLOAD .
+    archive pack $PAYLOAD .
     popd_quiet
 
     if $INTERACTIVE; then
@@ -120,7 +120,7 @@ else
 	exitval=$?
 
 	cd $tmpdir
-	zip -q $PWFARM_OUTPUT_FILE *
+	archive pack $PWFARM_OUTPUT_ARCHIVE *
 	rm -rf $tmpdir
     elif [ -e ./sudo ] && $( cat ./sudo ); then
 	# Call this script again, but with root access.

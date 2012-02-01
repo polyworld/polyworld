@@ -64,7 +64,7 @@ else
     fi
 
     cd $TMPDIR
-    zip -q $PWFARM_OUTPUT_FILE out
+    archive pack $PWFARM_OUTPUT_ARCHIVE out
 fi
 
 rm -rf $TMPDIR

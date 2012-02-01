@@ -50,7 +50,7 @@ fi
 
 SCRIPTS=`dirname $0`
 
-$SCRIPTS/package_source.sh $src_dir/src.zip
+$SCRIPTS/package_source.sh $src_dir/src.tbz
 
 if [ ! -z "$script" ]; then
     cp "$script" $src_dir/script

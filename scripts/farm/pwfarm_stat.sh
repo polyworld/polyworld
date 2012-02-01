@@ -131,7 +131,7 @@ else
 
     if [ -e $TMP_DIR/out ]; then
 	cd $TMP_DIR
-	zip -q $PWFARM_OUTPUT_FILE out
+	archive pack $PWFARM_OUTPUT_ARCHIVE out
     fi
 fi
 

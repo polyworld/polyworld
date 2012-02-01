@@ -35,7 +35,7 @@ else
     echo hi > a;
     mkdir bye
     echo foo > bye/b
-    zip -r $PWFARM_OUTPUT_FILE .
+    archive pack $PWFARM_OUTPUT_ARCHIVE .
 
     PWFARM_STATUS "TEST (Press Enter)"
 

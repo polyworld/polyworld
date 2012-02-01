@@ -10,7 +10,7 @@ function usage()
 {    
 ################################################################################
     cat <<EOF
-usage: $( basename $0 ) [-F:f:o:] runid|/
+usage: $( basename $0 ) [-F:f:o:v] runid|/
 
     Fetch runs with a Run ID that starts with runid, which is to say this can
   operate on a hierarchy of runs. You may use wildcards, but use quotes.
@@ -20,11 +20,11 @@ OPTIONS:
     -F fetch_list
                Files to be pulled back from run. For example:
 
-                    -F "stat/* *.wf"
+                    -F "condprop/*.log brain/"
 
-               By default, the following is fetched but can be overridden:
-
-                    $DEFAULT_FETCH_LIST
+               If a directory is specified, then all of its content including
+               subdirectories is fetched. Note that you may fetch an entire run
+               directory via "-F .".
 
                The following is always fetched so scripts properly operate:
 
@@ -36,6 +36,8 @@ OPTIONS:
 
     -o run_owner
                Specify owner of run.
+
+    -v         Verbose. Prints list of fetched files.
 EOF
     exit 1
 }
@@ -53,8 +55,9 @@ fi
 
 FETCH_LIST="$DEFAULT_FETCH_LIST"
 OWNER=$( pwenv pwuser )
+VERBOSE=false
 
-while getopts "F:f:o:" opt; do
+while getopts "F:f:o:v" opt; do
     case $opt in
 	F)
 	    FETCH_LIST="$OPTARG"
@@ -67,6 +70,9 @@ while getopts "F:f:o:" opt; do
 	    ;;
 	o)
 	    OWNER="$OPTARG"
+	    ;;
+	v)
+	    VERBOSE=true
 	    ;;
 	*)
 	    exit 1
@@ -115,11 +121,11 @@ if ! $field; then
     #
     # Create Payload
     #
-    PAYLOAD=$TMPDIR/payload.zip
+    PAYLOAD=$TMPDIR/payload.tbz
 
     pushd_quiet .
     cd $PAYLOAD_DIR
-    zip -rq $PAYLOAD .
+    archive pack $PAYLOAD .
     popd_quiet
 
     #
@@ -137,10 +143,18 @@ if ! $field; then
 	    nid=$( echo "$line" | cut -f 2 )
 	    archive=$resultdir/$( echo "$line" | cut -f 3 )
 
-	    rundir=$( stored_run_path_local $OWNER $runid $nid )
-	    mkdir -p $rundir
+	    if [ -e $archive ]; then
+		rundir=$( stored_run_path_local $OWNER $runid $nid )
+		mkdir -p $rundir
 
-	    unzip -oq -d $rundir $archive
+		if $VERBOSE; then
+		    archive ls $archive |
+		    while read relpath; do
+			echo $rundir/$relpath
+		    done
+		fi
+		archive unpack -d $rundir $archive
+	    fi
 	done
     done
 else
@@ -164,7 +178,7 @@ else
 
 	mkdir -p $TMPDIR/$runid/$nid
 
-	archive=$runid/$nid/run.zip
+	archive=$runid/$nid/run.tbz
 
 	$POLYWORLD_PWFARM_SCRIPTS_DIR/archive_delta.sh archive \
 	    -e $PAYLOAD_DIR/checksums/$runid/$nid \
@@ -176,7 +190,7 @@ else
     done
 
     cd $TMPDIR
-    zip -qr $PWFARM_OUTPUT_FILE .
+    archive pack $PWFARM_OUTPUT_ARCHIVE .
 fi
 
 rm -rf $TMPDIR

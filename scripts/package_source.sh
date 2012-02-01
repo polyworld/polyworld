@@ -37,6 +37,16 @@ function canonpath
 {
     python -c "import os.path; print os.path.realpath('$1')"
 }
+function canondirname()
+{
+    dirname `canonpath "$1"`
+}
+SCRIPTS_DIR=$( canondirname $BASH_SOURCE )
+function archive()
+{
+    $SCRIPTS_DIR/archive.sh "$@"
+}
+
 
 if [ -z "$1" ]; then
     err "Must specify output zip file"
@@ -45,14 +55,10 @@ fi
 homedir=$(canonpath `dirname "$0"`/..)
 output=$(canonpath "$1")
 
-if [ "${output##*.}" != "zip" ]; then
-    err "Not a path with zip extension: $output"
-fi
-
 if [ -f "$output" ]; then
     rm "$output" || exit 1
 fi
 
 cd "$homedir"
 
-zip -qr "$output" $SRCDIRS $MISCDIRS $MISCFILES -x "*.pyc" -x "*/CVS/*" -x "*~"
+archive pack -x "*.pyc" -x "*/CVS/*" -x "*~" $output $SRCDIRS $MISCDIRS $MISCFILES

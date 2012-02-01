@@ -228,7 +228,7 @@ else
 
     cd $POLYWORLD_DIR
 
-    payload=$tmp_dir/src.zip
+    payload=$tmp_dir/src.tbz
     scripts/package_source.sh $payload
 
     tasks=$( taskmeta create_field_tasks $tmp_dir "./scripts/farm/pwfarm_build.sh --field $args" nil )
