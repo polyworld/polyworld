@@ -3,6 +3,7 @@ import itertools
 from math import isnan, sqrt
 from scipy import stats
 
+import common_functions
 import datalib
 import iterators
 
@@ -169,6 +170,9 @@ def avr(data):
 ###
 ### FUNCTION avr_table()
 ###
+### TODO: This is a ridiculous interface. Code should be converted to use
+###       avr_table_from_tables(), which can then be renamed to avr_table()
+###
 ### Computes avr over DATA (see structure of DATA below), and places result in
 ### constructed table.
 ###
@@ -237,45 +241,56 @@ def avr_table( DATA, regions, timesteps, func_get_regiondata = None ):
 
 ####################################################################################
 ###
-### FUNCTION avr_meta()
-###
-### Computes avr of list of avrs, where each element of the list contains a dict
-### that maps from region/complexity to a datalib table. Put another way, each
-### list element should be in the form returned by datalib.parse().
-###
-### The col parameter must specify one of the fields in the input Avrs upon which
-### the calculation is to be performed (e.g. 'min', 'max', 'median')
-###
+### FUNCTION avr_table_from_tables()
 ###
 ####################################################################################
-def avr_meta( avr_list, regions, timesteps, col ):
-	def __get_regiondata( avr_list, region, t ):
-		return iterators.MatrixIterator( avr_list,
-						 range(len( avr_list )),
-						 [region],
-						 [t],
-						 [col])
+def avr_table_from_tables( avr_table_name, tables, xcolname, ycolname ):
+	colnames = [xcolname, 'min', 'q1', 'median', 'q3', 'max', 'mean', 'mean_stderr', 'sampsize']
+	xcoltype = tables[0].coltypes[ tables[0].colnames.index(xcolname) ]
+	coltypes = [xcoltype, 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'int']
 
-	return avr_table( avr_list,
-			  regions,
-			  timesteps,
-			  __get_regiondata )
+	result = datalib.Table(avr_table_name, colnames, coltypes)
+
+	xvalues = common_functions.get_timesteps( tables, xcolname )
+
+	for x in xvalues:
+		ydata = []
+		for table in tables:
+			ydata.append( table[x][ycolname] )
+		ydata.sort()
+                        
+                minimum, maximum, mean, mean_stderr, q1, q3, median = avr(ydata)
+
+		row = result.createRow()
+		row.set(xcolname, x)
+		row.set('min', minimum)
+		row.set('max', maximum)
+		row.set('mean', mean)
+		row.set('mean_stderr', mean_stderr)
+		row.set('median', median)
+		row.set('q1', q1)
+		row.set('q3', q3)
+		row.set('sampsize', len(ydata))
+
+	return result
 
 ####################################################################################
 ###
 ### FUNCTION ttest()
 ###
 ####################################################################################
-def ttest( data1, data2, n, func_iter ):
+def ttest( data1, data2 ):
+	assert( len(data1) == len(data2) )
+	n = len(data1)
 	if n < 2:
 		return 0.0, 0.0, 0.0, 0.0
 
-	mean = diff_mean( func_iter(data1),
-			  func_iter(data2) )
+	mean = diff_mean( iter(data1),
+			  iter(data2) )
 
 	dev = diff_stddev( mean,
-			   func_iter(data1),
-			   func_iter(data2) )
+			   iter(data1),
+			   iter(data2) )
 
 	_tval = tval( mean, dev, n )
 	_pval = pval( _tval, n )
@@ -287,49 +302,40 @@ def ttest( data1, data2, n, func_iter ):
 ### FUNCTION ttest_table()
 ###
 ####################################################################################
-def ttest_table( data1,
-		 data2,
-		 n,
+def ttest_table( ttest_table_name,
 		 tcrit,
-		 regions,  # general names
-		 regions1, # normalized for classification of data1
-		 regions2, # normalized for classification of data2
-		 timesteps,
-		 input_colnames,
-		 func_iter ):
+		 tables1,
+		 tables2,
+		 xcolname,
+		 ycolname ):
 
-    COLNAMES = ['Timestep', 'Mean', 'StdDev', 'Sig', 'tval', 'pval'] 
-    COLTYPES = ['int', 'float', 'float', 'int', 'float', 'float']
+    assert( len(tables1) == len(tables2) )
 
-    def __createTable( name ):
-        return (name, datalib.Table( name,
-                                     COLNAMES,
-                                     COLTYPES ))
+    colnames = [xcolname, 'Mean', 'StdDev', 'Sig', 'tval', 'pval'] 
+    xcoltype = tables1[0].coltypes[ tables1[0].colnames.index(xcolname) ]
+    coltypes = [xcoltype, 'float', 'float', 'int', 'float', 'float']
 
-    # {C-colname,table}, where colname is min, max, or mean
-    result = dict( [__createTable('-'.join( C_col ))
-		    for C_col in iterators.product(regions, input_colnames)] )
-    
-    for C, C1, C2 in iterators.IteratorUnion(iter(regions), iter(regions1), iter(regions2)):
-        for t in timesteps:
-            for col in input_colnames:
-                diffMean, stdDev, tval, pval = ttest( (data1,C1,t,col),
-						      (data2,C2,t,col),
-						      n,
-						      func_iter )
+    xvalues = common_functions.get_timesteps( tables1 + tables2, xcolname )
 
-                table = result[C+'-'+col]
-                row = table.createRow()
+    result = datalib.Table( ttest_table_name, colnames, coltypes )
 
-                row["Timestep"] = t
-                row["Mean"] = diffMean
-                row["StdDev"] = stdDev
-                if tval >= tcrit:
+    for x in xvalues:
+	    data1 = [ table[x][ycolname] for table in tables1 ]
+	    data2 = [ table[x][ycolname] for table in tables2 ]
+
+	    diffMean, stdDev, tval, pval = ttest( data1, data2 )
+
+	    row = result.createRow()
+
+	    row[xcolname] = x
+	    row["Mean"] = diffMean
+	    row["StdDev"] = stdDev
+	    if tval >= tcrit:
                     row["Sig"] = 1
-                else:
+	    else:
                     row["Sig"] = 0
-                row["tval"] = tval
-                row["pval"] = pval
+	    row["tval"] = tval
+	    row["pval"] = pval
 
     return result
 

@@ -18,62 +18,34 @@ def get_names(types):
 
 ####################################################################################
 ###
-### FUNCTION relpath_stats()
-###
-####################################################################################
-def relpath_stats():
-    return os.path.join('stats', FILENAME_DATALIB)
-
-####################################################################################
-###
 ### FUNCTION path_stats()
 ###
 ####################################################################################
 def path_stats(path_run):
-    return os.path.join(path_run, relpath_stats())
+    return os.path.join(path_run, 'stats', FILENAME_DATALIB)
 
 ####################################################################################
 ###
-### FUNCTION path_run_from_stats()
+### FUNCTION parse_stats
 ###
 ####################################################################################
-def path_run_from_stats(path_stats, classification, dataset):
-    suffix = relpath_stats()
+def parse_stats(run_path, types = None, quiet = False):
+    __ensure_datalib( run_path, quiet )
 
-    return path_stats[:-(len(suffix) + 1)]
+    return datalib.parse( path_stats(run_path),
+                          tablenames = types,
+                          required = datalib.REQUIRED,
+                          keycolname = 'step' )
 
 ####################################################################################
 ###
-### FUNCTION parse_complexity
+### FUNCTION __ensure_datalib
 ###
 ####################################################################################
-def parse_stats(run_paths, classification = None, dataset = None, types = None, run_as_key = False, quiet = False):
-    # make sure the datalib files exist
-    for path in run_paths:
-        __get_stats( path, quiet )
-
-    # parse the stats for all the runs
-    tables = datalib.parse_all( map(lambda x: path_stats( x ),
-                                    run_paths),
-                                types,
-                                datalib.REQUIRED,
-                                keycolname = 'step' )
-
-    if run_as_key:
-        # modify the map to use run dir as key, not Avr file
-        tables = dict( [(path_run_from_stats( x[0],
-                                              classification,
-                                              dataset),
-                         x[1])
-                        for x in tables.items()] )
-
-    return tables
-
-def __get_stats( path_run, quiet = False ):
-    path_datalib = os.path.join( path_run, 'stats', FILENAME_DATALIB )
+def __ensure_datalib( path_run, quiet = False ):
+    path_datalib = path_stats( path_run )
     if os.path.exists( path_datalib ):
-        return datalib.parse( path_datalib,
-                              keycolname = 'step' )
+        return
 
     if not quiet:
         # This can take a long time, so let the user we're not hung
@@ -94,8 +66,11 @@ def __get_stats( path_run, quiet = False ):
                    tables,
                    randomAccess = False )
 
-    return tables
-
+####################################################################################
+###
+### FUNCTION __parse_file
+###
+####################################################################################
 def __parse_file( path, quiet ):
     if not quiet:
         print '\rparsing %s' % path,
@@ -145,6 +120,11 @@ def __parse_file( path, quiet ):
                         yield label, type, number
 
 
+####################################################################################
+###
+### FUNCTION __create_tables
+###
+####################################################################################
 def __create_tables( path_run, quiet ):
     path = os.path.join( path_run, 'stats', 'stat.1' )
 
@@ -164,6 +144,11 @@ def __create_tables( path_run, quiet ):
 
     return tables
 
+####################################################################################
+###
+### FUNCTION __add_row
+###
+####################################################################################
 def __add_row( tables, path, quiet ):
     step = __path2step( path )
 
@@ -180,15 +165,10 @@ def __add_row( tables, path, quiet ):
             row['step'] = step
             row['value'] = value
 
+####################################################################################
+###
+### FUNCTION __path2step
+###
+####################################################################################
 def __path2step( path ):
     return int(path[ path.rfind('.') + 1 : ])
-
-def test():
-    #for x in __parse_file( '../run_tau60k_from18k_ws200/stats/stat.1' ):
-    #    print x
-
-    for tablename, table in datalib.parse( '../run_tau60k_from18k_ws200/stats/datalib.txt' ).items():
-        print '---', tablename, table.name, '---'
-        for row in table.rows():
-            print row['value']
-

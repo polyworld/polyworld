@@ -61,8 +61,7 @@ class ClassificationError(Exception):
 
 def classify_run(path_run,
 		 single_classification = False,
-		 constraints = CLASSIFICATIONS,
-		 dependents = None):
+		 constraints = CLASSIFICATIONS):
 	import common_metric
 	import wfutil
 
@@ -122,15 +121,6 @@ def classify_run(path_run,
 			pass
 
 	#
-	# Apply Dependents
-	#
-	if dependents != None:
-		nondependents = list_difference(classifications_constrained,
-						dependents)
-		if len(nondependents) == 0:
-			classifications_constrained = []
-
-	#
 	# Validate Result
 	#
 	if len(classifications_constrained) == 0:
@@ -142,44 +132,10 @@ def classify_run(path_run,
 	if single_classification and len(classifications_constrained) > 1:
 		raise ClassificationError( 'ambiguous', path_run + ' classification ambiguous (' + ','.join(classifications_constrained) + ')' )
 
-	return classifications_constrained
-
-####################################################################################
-###
-### FUNCTION classify_runs()
-###
-####################################################################################
-def classify_runs(run_paths,
-		  single_classification = False,
-		  constraints = CLASSIFICATIONS,
-		  dependents = None,
-		  func_notfound = None):
-
-	result = {}
-
-	for path in run_paths:
-		try:
-			classifications = classify_run( path,
-							single_classification,
-							constraints,
-							dependents)
-
-			for c in classifications:
-				try:
-					result[c].append(path)
-				except KeyError:
-					result[c] = [path]
-
-		except ClassificationError, x:
-			if x.reason == 'notfound':
-				if func_notfound == None:
-					raise x
-				else:
-					func_notfound(path, x)
-			else:
-				raise x
-
-	return result
+	if single_classification:
+		return classifications_constrained[0]
+	else:
+		return classifications_constrained
 
 ####################################################################################
 ###
@@ -337,7 +293,7 @@ def expand_abbreviations(abbreviations,
 					else:
 						match = f
 		if not match:
-			raise IllegalAbbreviationError( "Illegal value '"+a+"' (valid="+','.join(full)+")" )
+			raise IllegalAbbreviationError( "Illegal abbreviation '"+a+"' (choices="+','.join(full)+")" )
 		else:
 			result.append(match)
 

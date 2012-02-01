@@ -112,7 +112,7 @@ def get_random_classifications(path_run, recent_type = None):
 
         return classifications
 
-    path = path_avr( path_run, None, recent_type )
+    path = path_avr( path_run, recent_type )
     if os.path.exists( path ):
         digest = datalib.parse_digest( path )
 
@@ -129,35 +129,11 @@ def get_random_classifications(path_run, recent_type = None):
 
 ####################################################################################
 ###
-### FUNCTION relpath_avr()
-###
-####################################################################################
-def relpath_avr(classification,
-                recent_type):
-    return os.path.join('brain', recent_type, FILENAME_AVR)
-
-####################################################################################
-###
 ### FUNCTION path_avr()
 ###
 ####################################################################################
-def path_avr(path_run,
-             classification,
-             recent_type):
-    return os.path.join(path_run, relpath_avr(classification, recent_type))
-
-####################################################################################
-###
-### FUNCTION path_run_from_avr()
-###
-####################################################################################
-def path_run_from_avr(path_avr,
-                      classification,
-                      recent_type):
-    suffix = relpath_avr(classification,
-                         recent_type)
-
-    return path_avr[:-(len(suffix) + 1)]
+def path_avr(path_run, recent_type = "Recent"):
+    return os.path.join(path_run, 'brain', recent_type, FILENAME_AVR)
 
 ####################################################################################
 ###
@@ -175,31 +151,16 @@ def normalize_metrics_names( classification,
 
 ####################################################################################
 ###
-### FUNCTION parse_avrs()
+### FUNCTION parse_avr()
 ###
 ####################################################################################
-def parse_avrs(run_paths,
-               classification,
-               recent_type,
-               metrics,
-               run_as_key = False):
-
-    # parse the AVRs for all the runs
-
-    avrs = datalib.parse_all( map(lambda x: path_avr( x, classification, recent_type ),
-                                  run_paths),
-                              metrics,
-                              datalib.REQUIRED,
-                              keycolname = 'Timestep' )
-
-    if run_as_key:
-        # modify the map to use run dir as key, not Avr file
-        avrs = dict( [(path_run_from_avr( x[0], classification, recent_type ),
-                       x[1])
-                      for x in avrs.items()] )
-
-    return avrs
-
+def parse_avr( run_path,
+               recent_type = "Recent",
+               metrics = None ): # None gives you all metrics.
+    return datalib.parse( path_avr(run_path, recent_type),
+			  tablenames = metrics,
+			  required = datalib.REQUIRED,
+			  keycolname = 'Timestep' )
 
 ####################################################################################
 ###

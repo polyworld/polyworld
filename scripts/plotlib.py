@@ -1,71 +1,48 @@
 import os
 import re
+import sys
 
 import common_functions
 
-COLORS = ['red', 'green', 'blue', 'orange', 'pink', 'magenta', 'gray40', 'cyan', 'yellow', 'purple']
-GRAYSCALE = ['gray40', 'black']
+####################################################################################
+###
+### CLASS CurveStyle
+###
+####################################################################################
+class CurveStyle:
+    COLORS = ['red', 'green', 'blue', 'orange', 'pink', 'magenta', 'gray40', 'cyan', 'gold', 'purple']
 
-####################################################################################
-###
-### CLASS StyleGroup
-###
-####################################################################################
-class StyleGroup:
+    GRAY = 'gray40'
+    BLACK = 'black'
+    GRAYSCALE = [GRAY, BLACK]
+
     DOTTED = 0
     SOLID = 1
     DASHED = 2
     HASHED = 3
     DASHDOT = 5
-    LINE_TYPES = [SOLID, DASHED, DASHDOT, HASHED, DOTTED] * 4
+    LINE_TYPES = [SOLID, DASHED, DASHDOT, HASHED, DOTTED]
 
     THIN = 1
     MEDIUM = 2
     THICK = 3.5
-    
-    def __init__(self, plot, linetype, linewidth):
-        self.plot = plot
+
+    def __init__(self, doc, id, linetype, linewidth, color):
+        self.doc = doc
+        self.id = id
         self.linetype = linetype
         self.linewidth = linewidth
-        self.colors = list(COLORS)
-
-    def createStyle(self, color = None):
-        self.plot.doc.nstyles += 1
-        if color == None:
-            for color in self.colors:
-                if not color in self.plot.reserved_colors:
-                    self.colors.remove(color)
-                    break
-        else:
-            try:
-                self.colors.remove(color)
-            except ValueError:
-                # duplicate color in group, must be due to user intervention
-                pass
-
-        style = Style(self, self.plot.doc.nstyles, color)
-        return style
-
-####################################################################################
-###
-### CLASS Style
-###
-####################################################################################
-class Style:
-    def __init__(self, group, id, color):
-        self.group = group
-        self.id = id
         self.color = color
 
     def getSpec(self):
-        if self.group.plot.doc.nocolor and not self.color in GRAYSCALE:
-            color = 'gray40'
+        if self.doc.nocolor and not self.color in CurveStyle.GRAYSCALE:
+            color = CurveStyle.GRAY
         else:
             color = self.color
 
         spec = 'set style line %d lt %d lw %f lc rgb "%s"\n' % (self.id,
-                                                                self.group.linetype,
-                                                                self.group.linewidth,
+                                                                self.linetype,
+                                                                self.linewidth,
                                                                 color)
         return spec
 
@@ -80,20 +57,21 @@ class Curve:
                  col_x,
                  col_y,
                  style,
-                 smooth):
+                 smooth = False,
+                 points = False):
         assert(col_x.table == col_y.table)
         self.col_x = col_x
         self.col_y = col_y
 
-        self.init(title, col_x.table, style, smooth)
+        self.init(title, col_x.table, style, smooth, points)
 
-    def init(self, title, table, style, smooth):
+    def init(self, title, table, style, smooth = False, points = False):
         self.title = title
         self.table = table
         self.style = style
         self.smooth = smooth
+        self.points = points
 
-        self.points = False
         self.axes = [1,1]
 
     def getSpec(self):
@@ -181,13 +159,13 @@ class CandlestickCurve(Curve):
                  col_low,
                  col_high,
                  col_closing,
-                 whiskers,
-                 style):
+                 style,
+                 whiskers):
 
         self.cols = [col_x, col_opening, col_low, col_high, col_closing]
         self.whiskers = whiskers
 
-        self.init(title, col_x.table, style, False)
+        self.init(title, col_x.table, style)
 
     def _spec_using(self):
         indices = map(lambda col: str(col.index + 1), self.cols)
@@ -216,7 +194,7 @@ class ErrorbarCurve(Curve):
         self.col_y = col_y
         self.col_err = col_err
 
-        self.init(title, col_x.table, style, False)
+        self.init(title, col_x.table, style)
 
     def _spec_using(self):
         return '%d:%d:%d' % (self.col_x.index + 1,
@@ -242,11 +220,12 @@ class Plot:
 
         self.title = name
         self.xlabel = None
-        self.ylabel = None
+        self.y1label = None
         self.y2label = None
         self.xrange = None
         self.y1range = None
         self.y2range = None
+        self.y2ticks = False
         self.grid = True
         self.boxwidth = 0.5
         self.fill_opacity = 0.3
@@ -254,92 +233,64 @@ class Plot:
 
         self.rmargin = 0
 
-        self.style_tick = None
-        self.stylegroup = None
-        self.stylegroups = {}
-        self.linetypes = list(StyleGroup.LINE_TYPES)
-        self.reserved_colors = []
+        self.curve_styles = []
 
-    def createStyleGroup(self,
-                         name = None,
-                         linetype = None,
-                         linewidth = StyleGroup.THIN,
-                         make_context = True):
-        if linetype == None:
-            linetype = self.linetypes.pop(0)
-        else:
-            self.linetypes.remove(linetype)
-
-        self.stylegroup = StyleGroup(self, linetype, linewidth)
-        if name:
-            self.stylegroups[name] = self.stylegroup
-
-        return self.stylegroup
-
-    def setStyleGroup(self,
-                      name):
-        self.stylegroup = self.stylegroups[name]
-
-    def getStyleGroup(self,
-                      name):
-        return self.stylegroups[name]
-
-    def reserveColor(self, color):
-        self.reserved_colors.append(color)
+    def createCurveStyle( self, linetype, linewidth, color ):
+        style = CurveStyle( self.doc, len(self.curve_styles) + 1, linetype, linewidth, color )
+        self.curve_styles.append( style )
+        return style
 
     def createTick(self,
                    y,
                    label = None,
-                   line = False):
+                   line = False,
+                   linetype = CurveStyle.DASHED ):
 
-        if self.style_tick == None:
-            group = self.createStyleGroup('__tick',
-                                          StyleGroup.DASHED,
-                                          StyleGroup.THIN,
-                                          make_context = False)
-            self.style_tick = group.createStyle('gray40')
-        
         tick = Tick(len(self.ticks),
                     y,
                     label,
                     line,
-                    self.style_tick)
+                    self.createCurveStyle( linetype,
+                                           CurveStyle.THIN,
+                                           CurveStyle.GRAY ) )
 
         self.ticks.append(tick)
 
         return tick
 
-    def createCurve(self,
-                    table,
-                    title,
-                    name_col_x,
-                    name_col_y,
-                    style = None,
-                    smooth = False):
+    def createCurve( self,
+                     table,
+                     title,
+                     name_col_x,
+                     name_col_y,
+                     style,
+                     smooth = False,
+                     points = False ):
         return self.__createCurve(Curve(title,
                                         table.getColumn(name_col_x),
                                         table.getColumn(name_col_y),
-                                        self.__style(style),
-                                        smooth))
+                                        style,
+                                        smooth,
+                                        points))
 
-    def createCandlestickCurve(self,
-                               table,
-                               title,
-                               name_col_x,
-                               name_col_opening,
-                               name_col_low,
-                               name_col_high,
-                               name_col_closing,
-                               whiskers = False,
-                               style = None):
-        return self.__createCurve(CandlestickCurve(title,
-                                                   table.getColumn(name_col_x),
-                                                   table.getColumn(name_col_opening),
-                                                   table.getColumn(name_col_low),
-                                                   table.getColumn(name_col_high),
-                                                   table.getColumn(name_col_closing),
-                                                   whiskers,
-                                                   self.__style(style)))
+    def createCandlestickCurve( self,
+                                table,
+                                title,
+                                name_col_x,
+                                name_col_opening,
+                                name_col_low,
+                                name_col_high,
+                                name_col_closing,
+                                style,
+                                whiskers = False  ):
+        return self.__createCurve(CandlestickCurve( title,
+                                                    table.getColumn(name_col_x),
+                                                    table.getColumn(name_col_opening),
+                                                    table.getColumn(name_col_low),
+                                                    table.getColumn(name_col_high),
+                                                    table.getColumn(name_col_closing),
+                                                    style,
+                                                    whiskers ))
 
     def createErrorbarCurve(self,
                             table,
@@ -347,19 +298,12 @@ class Plot:
                             name_col_x,
                             name_col_y,
                             name_col_err,
-                            style = None):
+                            style):
         return self.__createCurve(ErrorbarCurve(title,
                                                 table.getColumn(name_col_x),
                                                 table.getColumn(name_col_y),
                                                 table.getColumn(name_col_err),
-                                                self.__style(style)))
-
-    def __style(self, style):
-        if not style:
-            if not self.stylegroup:
-                self.stylegroup = self.createStyleGroup()
-            style = self.stylegroup.createStyle()
-        return style
+                                                style))
 
     def __createCurve(self, curve):
         self.curvelist.append(curve)
@@ -382,14 +326,17 @@ class Plot:
             spec += "set xlabel '%s' font 'Times,14'\n" % psencode(self.xlabel)
         else:
             spec += 'unset xlabel\n'
-        if self.ylabel:
-            spec += "set ylabel '%s' font 'Times,14'\n" % psencode(self.ylabel)
+        if self.y1label:
+            spec += "set ylabel '%s' font 'Times,14'\n" % psencode(self.y1label)
         else:
             spec += 'unset ylabel\n'
         if self.y2label:
             spec += "set y2label \"%s\" font 'Times,14'\n" % psencode(self.y2label)
         else:
             spec += 'unset y2label\n'
+
+        if self.y2ticks:
+            spec += 'set y2tics border\n'
 
         if self.xrange:
             spec += 'set xrange [%f:%f]\n' % (self.xrange[0], self.xrange[1])
@@ -418,11 +365,8 @@ class Plot:
         spec += 'set style fill solid %f\n' % self.fill_opacity
         spec += 'set boxwidth %f relative\n' % self.boxwidth
 
-        if self.style_tick:
-            spec += self.style_tick.getSpec()
-
-        for i in range(len(self.curvelist)):
-            spec += self.curvelist[i].style.getSpec()
+        for style in self.curve_styles:
+            spec += style.getSpec()
 
         if self.title:
             spec += "set title '%s'\n" % psencode(self.title)
@@ -493,7 +437,10 @@ class Document:
         gnuplot = common_functions.pw_env('gnuplot')
             
         # redirect stderr because it's verbose even on no errors (why?!)
-        os.system('%s %s 2>%s.out' % (gnuplot, path_script, path_script))
+        rc = os.system('%s %s 2>%s.out' % (gnuplot, path_script, path_script))
+        if rc != 0:
+            os.system( 'cat %s.out' % path_script )
+            sys.exit(1)
 
         return path_doc, path_script
 
@@ -504,97 +451,8 @@ class Document:
 ####################################################################################
 def psencode(text):
     # escape '_' so it doesn't make a subscript
-    return text.replace( '_', '\\_' )
+    text = text.replace( '_', '\\_' )
+    # escape '{'  and '}'
+    text = text.replace( '{', '\\{' ).replace( '}', '\\}' )
 
-####################################################################################
-###
-### CLASS Options
-###
-### Used for command-line options. Not as general-purpose as preceding content of
-### this module.
-###
-####################################################################################
-class Options:
-    def __init__(self, flags, args):
-        self.flags = flags
-        self.args = args
-
-        self.settings = dict([(name, False) for name in self.flags.values()])
-        self.nset = 0
-
-    def __str__(self):
-        return """plotlib.Options:
-        flags = %s,
-        args = %s,
-        settings = %s,
-        nset = %d\n""" % (
-        str(self.flags),
-        str(self.args),
-        str(self.settings),
-        self.nset )
-
-    def get(self, setting_name, default = None):
-        try:
-            return self.settings[setting_name]
-        except KeyError, e:
-            if default != None:
-                return default
-            else:
-                raise e
-
-    def set(self, setting_name, value, count = True):
-        self.settings[setting_name] = value
-        if count:
-            self.nset += 1
-
-    def process_opt(self, opt, value):
-        if opt in self.flags.keys():
-            self.set(self.flags[opt], True)
-            return True
-        elif opt in self.args.keys():
-            self.set(self.args[opt], value)
-            return True
-        else:
-            return False
-
-####################################################################################
-###
-### FUNCTION getopts_encoding()
-###
-####################################################################################
-def getopts_encoding(options):
-    short = ""
-    long = []
-
-    for opts in options:
-        for flag in opts.flags.keys():
-            if len(flag) == 1:
-                short += flag
-            else:
-                long.append(flag)
-
-        for arg in opts.args.keys():
-            if len(arg) == 1:
-                short += arg + ":"
-            else:
-                long.append(arg + "=")
-
-    return short, long
-
-####################################################################################
-###
-### FUNCTION process_options()
-###
-####################################################################################
-def process_options(options, getopts_opts):
-    for opt, value in getopts_opts:
-        opt = opt.strip('-')
-
-        processed = False
-        for flag in options.values():
-            processed = flag.process_opt(opt, value)
-            if processed:
-                break
-
-        if not processed:
-            assert(False)
+    return text

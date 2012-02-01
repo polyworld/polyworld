@@ -5,6 +5,7 @@ sean   					01/29/2012 	Offscreen POV
 larryy 		sean		01/30/2012 	add recursive functionality to ffetch
 sean		sean		01/31/2012	compressed datalib
 
+sean		sean		01/31/2012	Delete plot.cfg logic from farm scripts
 
 -------------------------------------------------------------------
 -------------------------------------------------------------------
