@@ -7,6 +7,7 @@ sean		sean		01/31/2012	compressed datalib
 
 [FARM]
 sean		sean		01/31/2012	Delete plot.cfg logic from farm scripts
+sean		sean		02/01/2012	Pull back result and output archives separately if output huge
 
 [PLOT]
 sean		sean		01/31/2012	allow plotting ttest at top of plot
