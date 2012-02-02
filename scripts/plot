@@ -31,8 +31,6 @@ CLASSIFICATION_LINETYPES = {'Driven': plotlib.CurveStyle.SOLID,
                             'Passive': plotlib.CurveStyle.DASHED,
                             'Fitness': plotlib.CurveStyle.DASHDOT}
 
-# Please, please, please do not start using this as a general global
-mode_usage = None
 
 ####################################################################################
 ###
@@ -349,91 +347,100 @@ class CurveData:
 
 ####################################################################################
 ###
-### CLASS Clause
+### CLASS Mode
 ###
 ####################################################################################
-class Clause:
-    MODE_TITLE_LOOKUP = {
-        'neuralComplexity': 'Neural Complexity',
-        'graphMetric': 'Graph Metric',
-        'stats': 'Stats',
-        'adhoc': 'Ad hoc'
-        }
-    MODE_NAMES = sorted( MODE_TITLE_LOOKUP.keys() )
+class Mode:
+    #------------------------------------------------------------
+    #--- FUNCTION __get_modes()
+    #------------------------------------------------------------
+    MODES = None
+    @staticmethod
+    def __get_modes():
+        if not Mode.MODES:
+            Mode.MODES = [
+                NeuralComplexityMode(),
+                GraphMetricMode(),
+                StatsMode(),
+                BarrierPosMode(),
+                AdhocMode()
+                ]
+        return Mode.MODES
 
     #------------------------------------------------------------
     #--- FUNCTION __init__()
     #------------------------------------------------------------
-    def __init__( self, argv ):
-        if not len(argv):
-            err( "Missing mode name" )
-        if not Clause.is_mode_name( argv[0] ):
-            err( "Invalid mode name (%s)" % argv[0] )
-
-        self.mode_name = Clause.expand_mode_name( argv[0] )
-        self.argv = argv
-
-    #------------------------------------------------------------
-    #--- FUNCTION get_title()
-    #------------------------------------------------------------
-    def get_title( self ):
-        return Clause.MODE_TITLE_LOOKUP[ self.mode_name ]
-
-    #------------------------------------------------------------
-    #--- FUNCTION get_valuename_title()
-    #------------------------------------------------------------
-    @staticmethod
-    def get_valuenames_title( mode_name, valuenames ):
-        if mode_name == 'neuralComplexity':
-            valuetitles = [ common_complexity.get_name(x)
-                            for x in valuenames ]
-            return Clause.MODE_TITLE_LOOKUP[mode_name] + " (" + ", ".join(valuetitles) + ")"
-
-        elif mode_name == 'graphMetric':
-            valuetitles = [ common_metric.get_name(x)
-                            for x in valuenames ]
-            return ", ".join( valuetitles )
-
-        else:
-            return ", ".join( valuenames )
+    def __init__( self,
+                  name,
+                  title,
+                  numargs,
+                  isAvr,
+                  default_recent_type,   # if None, then mode doesn't use -r
+                  default_valuenames ):  # if None, then doesn't use -v
+        self.name = name
+        self.title = title
+        self.numargs = numargs
+        self.isAvr = isAvr
+        self.default_recent_type = default_recent_type
+        self.default_valuenames = default_valuenames
 
     #------------------------------------------------------------
-    #--- FUNCTION expand_mode_name()
+    #--- FUNCTION get_mode()
     #------------------------------------------------------------
     @staticmethod
-    def expand_mode_name( name ):
+    def get_mode( name ):
+        name = Mode.expand_name( name )
+        modes = filter( lambda x: x.name == name, Mode.__get_modes() )
+        if len(modes) != 1:
+            err( "Invalid mode name: " + name )
+        return modes[0]
+
+    #------------------------------------------------------------
+    #--- FUNCTION get_names()
+    #------------------------------------------------------------
+    @staticmethod
+    def get_names():
+        return map( lambda x: x.name, Mode.__get_modes() )
+
+    #------------------------------------------------------------
+    #--- FUNCTION expand_name()
+    #------------------------------------------------------------
+    @staticmethod
+    def expand_name( name ):
         try:
             return common_functions.expand_abbreviations( name,
-                                                          Clause.MODE_NAMES,
+                                                          Mode.get_names(),
                                                           case_sensitive = False )
         except common_functions.IllegalAbbreviationError, x:
             return None
 
     #------------------------------------------------------------
-    #--- FUNCTION is_mode_name()
+    #--- FUNCTION is_name()
     #------------------------------------------------------------
     @staticmethod
-    def is_mode_name( name ):
-        return Clause.expand_mode_name( name ) != None
+    def is_name( name ):
+        return Mode.expand_name( name ) != None
+
+    #------------------------------------------------------------
+    #--- FUNCTION get_valuenames_title()
+    #------------------------------------------------------------
+    def get_valuenames_title( self, valuenames ):
+        return ", ".join( valuenames )
 
     #------------------------------------------------------------
     #--- FUNCTION __parse_opts()
     #------------------------------------------------------------
-    def __parse_opts( self ):
+    def __parse_opts( self, argv ):
         longopts = []
         shortopts = ''
-        isAvr = False
 
-        if self.mode_name == 'neuralComplexity':
-            shortopts += 'r:v:'
-            isAvr = True
-        elif self.mode_name == 'graphMetric':
-            shortopts += 'r:v:'
-            isAvr = True
-        elif self.mode_name == 'stats':
+        if self.default_recent_type != None:
+            shortopts += 'r:'
+
+        if self.default_valuenames != None:
             shortopts += 'v:'
 
-        if isAvr:
+        if self.isAvr:
             shortopts += "mnxewMNXEW"
         else:
             shortopts += "mME"
@@ -447,35 +454,42 @@ class Clause:
         longopts += ['y2']
 
         try:
-            return  getopt.getopt( self.argv[1:], shortopts, longopts )
+            return  getopt.getopt( argv[1:], shortopts, longopts )
         except getopt.GetoptError, x:
-            err( "(mode " + self.mode_name + ") " + str(x) )
+            err( "(mode " + self.name + ") " + str(x) )
 
     #------------------------------------------------------------
-    #--- FUNCTION drop_global_args()
+    #--- FUNCTION init_valuenames()
     #------------------------------------------------------------
-    def drop_global_args( self ):
-        if self.mode_name == 'adhoc':
-            num_mode_args = 4
+    def init_valuenames( self, mode_opts, opts, args ):
+        if self.default_valuenames:
+            return self.default_valuenames
         else:
-            num_mode_args = 0
+            assert( False ) # Derived class must provide logic
 
-        opts, args = self.__parse_opts()
+    #------------------------------------------------------------
+    #--- FUNCTION split_global_args()
+    #------------------------------------------------------------
+    def split_global_args( self, argv ):
+        opts, args = self.__parse_opts( argv )
 
-        num_global_args = len(args) - num_mode_args
+        num_global_args = len(args) - self.numargs
         if num_global_args < 0:
-            err( "Missing args for mode " + self.mode_name )
+            err( "Missing args for mode " + self.name )
 
         global_args = args[-num_global_args:]
-        self.argv = self.argv[:-num_global_args]
+        argv = argv[:-num_global_args]
 
-        return global_args
+        return argv, global_args
 
     #------------------------------------------------------------
-    #--- FUNCTION __parse_argv
+    #--- FUNCTION parse_argv
     #------------------------------------------------------------
-    def __parse_argv( self ):
-        opts, args = self.__parse_opts()
+    def parse_argv( self, argv ):
+        opts, args = self.__parse_opts( argv )
+
+        if len(args) > self.numargs:
+            err( "Unexpected arg for mode %s (%s)" % (self.name, args[self.numargs]) )
 
         general_opts = {
             'tgroups': GlobalOptions.tgroups,
@@ -483,40 +497,15 @@ class Clause:
             'dots': False,
             'yaxis': 1,
             }
+
         mode_opts = {}
+        if self.default_recent_type:
+            mode_opts['recent_type'] = self.default_recent_type
+
         valueattrs = { "meta": set(), "individual": set(), "ttest": set() }
 
-        #
-        # Mode-Specific Init
-        #
-        if self.mode_name == 'neuralComplexity':
-            if len(args):
-                err( "Unexpected arg for neuralComplexity (" + args[0] + ")" )
-
-            mode_opts['recent_type'] = 'Recent'
-            valuenames = ['P']
-        elif self.mode_name == 'graphMetric':
-            if len(args):
-                err( "Unexpected arg for graphMetric (" + args[0] + ")" )
-
-            mode_opts['recent_type'] = 'Recent'
-            valuenames = ['cc_a_bu']
-        elif self.mode_name == 'stats':
-            if len(args):
-                err( "Unexpected arg for stats (" + args[0] + ")" )
-
-            valuenames = ['agents']
-        elif self.mode_name == 'adhoc':
-            if len(args) != 4:
-                err( "Expecting 4 args for adhoc, but found %s" % args )
-
-            mode_opts['relpath'] = args[0]
-            mode_opts['tablename'] = args[1]
-            mode_opts['xcolname'] = args[2]
-            mode_opts['ycolname'] = args[3]
-            valuenames = ["%s[%s[%s]]" % (os.path.splitext( os.path.basename(mode_opts['relpath']) )[0],
-                                          mode_opts['tablename'],
-                                          mode_opts['ycolname'])]
+        # This will typically be default_valuenames, but Adhoc has special needs.
+        valuenames = self.init_valuenames( mode_opts, opts, args )
 
         #
         # Process Options
@@ -584,7 +573,7 @@ class Clause:
             elif optname == 't':
                 valueattrs['ttest'].add( 'tval' )
             else:
-                err( "Unknown clause option: " + optname )
+                err( "Unknown mode option: " + optname )
 
         #
         # Set default value attribute if none specified
@@ -596,70 +585,360 @@ class Clause:
         return general_opts, mode_opts, valuenames, valueattrs
 
     #------------------------------------------------------------
-    #--- FUNCTION __createRunDatas()
+    #--- FUNCTION createRunDatas()
     #------------------------------------------------------------
-    def __createRunDatas( self, general_opts, mode_opts, valuenames, valueattrs, rundirs ):
-        #
-        # Mode-specific generation of RunData
-        #
+    def createRunDatas( self, general_opts, mode_opts, valuenames, valueattrs, rundirs ):
+        err( "Impl " + self.name + " createRunDatas()" )
+
+    #------------------------------------------------------------
+    #--- FUNCTION usage_valuenames()
+    #------------------------------------------------------------
+    def usage_valuenames( self ):
+        if self.default_valuenames:
+            print """\
+     -v <V>[,<V>]...
+               Specify values to be plotted.
+               ( default = %s )
+            """ % ','.join(self.default_valuenames)
+
+
+####################################################################################
+###
+### CLASS NeuralComplexityMode
+###
+####################################################################################
+class NeuralComplexityMode( Mode ):
+
+    #------------------------------------------------------------
+    #--- FUNCTION __init()__
+    #------------------------------------------------------------
+    def __init__( self ):
+        Mode.__init__( self,
+                       name = 'neuralComplexity',
+                       title = 'Neural Complexity',
+                       numargs = 0,
+                       isAvr = True,
+                       default_recent_type = 'Recent',
+                       default_valuenames = ['P'] )
+
+    #------------------------------------------------------------
+    #--- FUNCTION get_valuenames_title()
+    #------------------------------------------------------------
+    def get_valuenames_title( self, valuenames ):
+        valuetitles = [ common_complexity.get_name(x)
+                        for x in valuenames ]
+        return self.title + " (" + ", ".join(valuetitles) + ")"
+
+    #------------------------------------------------------------
+    #--- FUNCTION createRunDatas()
+    #------------------------------------------------------------
+    def createRunDatas( self, general_opts, mode_opts, valuenames, valueattrs, rundirs ):
         runDatas = []
 
-        if self.mode_name == 'neuralComplexity':
-            for rundir in rundirs:
-                tables = common_complexity.parse_avr( rundir.path,
-                                                      recent_type = mode_opts['recent_type'],
-                                                      complexities = valuenames )
-                for complexity, table in tables.items():
-                    runDatas.append( RunData(rundir,
-                                             complexity,
-                                             table,
-                                             'Timestep',
-                                             'mean') )
-        elif self.mode_name == 'graphMetric':
-            for rundir in rundirs:
-                tables = common_metric.parse_avr( rundir.path,
+        for rundir in rundirs:
+            tables = common_complexity.parse_avr( rundir.path,
                                                   recent_type = mode_opts['recent_type'],
-                                                  metrics = valuenames )
-                for metric, table in tables.items():
-                    runDatas.append( RunData(rundir,
-                                             metric,
-                                             table,
-                                             'Timestep',
-                                             'mean') )
-        elif self.mode_name == 'stats':
-            for rundir in rundirs:
-                tables = common_stats.parse_stats( rundir.path, types = valuenames )
-
-                for type, table in tables.items():
-                    runDatas.append( RunData(rundir,
-                                             type,
-                                             table,
-                                             'step',
-                                             'value') )
-        elif self.mode_name == 'adhoc':
-            for rundir in rundirs:
-                path = os.path.join( rundir.path, mode_opts['relpath'] )
-                table = datalib.parse( path,
-                                       tablenames = [mode_opts['tablename']],
-                                       required = datalib.REQUIRED,
-                                       keycolname = xcolname )[mode_opts['tablename']]
-
+                                                  complexities = valuenames )
+            for complexity, table in tables.items():
                 runDatas.append( RunData(rundir,
-                                         valuenames[0],
+                                         complexity,
                                          table,
-                                         mode_opts['xcolname'],
-                                         mode_opts['ycolname']) )
-        else:
-            err( "Impl " + self.mode_name )
+                                         'Timestep',
+                                         'mean') )
 
         return runDatas
+
+    #------------------------------------------------------------
+    #--- FUNCTION usage_valuenames()
+    #------------------------------------------------------------
+    def usage_valuenames( self ):
+        print """\
+     -v <C>[,<C>]...
+               Specify complexity types to be plotted.
+               ( default = %s )
+        """ % ','.join(self.default_valuenames)
+
+
+####################################################################################
+###
+### CLASS GraphMetricMode
+###
+####################################################################################
+class GraphMetricMode( Mode ):
+
+    #------------------------------------------------------------
+    #--- FUNCTION __init()__
+    #------------------------------------------------------------
+    def __init__( self ):
+        Mode.__init__( self,
+                       name = 'graphMetric',
+                       title = 'Graph Metric',
+                       isAvr = True,
+                       numargs = 0,
+                       default_recent_type = 'Recent',
+                       default_valuenames = ['cc_a_bu'] )
+
+    #------------------------------------------------------------
+    #--- FUNCTION get_valuenames_title()
+    #------------------------------------------------------------
+    def get_valuenames_title( self, valuenames ):
+        valuetitles = [ common_metric.get_name(x)
+                        for x in valuenames ]
+        return ", ".join( valuetitles )
+
+    #------------------------------------------------------------
+    #--- FUNCTION createRunDatas()
+    #------------------------------------------------------------
+    def createRunDatas( self, general_opts, mode_opts, valuenames, valueattrs, rundirs ):
+        runDatas = []
+
+        for rundir in rundirs:
+            tables = common_metric.parse_avr( rundir.path,
+                                              recent_type = mode_opts['recent_type'],
+                                              metrics = valuenames )
+            for metric, table in tables.items():
+                runDatas.append( RunData(rundir,
+                                         metric,
+                                         table,
+                                         'Timestep',
+                                         'mean') )
+
+        return runDatas
+
+    #------------------------------------------------------------
+    #--- FUNCTION usage_valuenames()
+    #------------------------------------------------------------
+    def usage_valuenames( self ):
+        print """\
+     -v <M>[,<M>]...
+               Specify metrics to be plotted.
+               ( default = %s )
+        """ % ','.join(self.default_valuenames)
+
+
+####################################################################################
+###
+### CLASS StatsMode
+###
+####################################################################################
+class StatsMode( Mode ):
+
+    #------------------------------------------------------------
+    #--- FUNCTION __init()__
+    #------------------------------------------------------------
+    def __init__( self ):
+        Mode.__init__( self,
+                       name = 'stats',
+                       title = 'Stats',
+                       isAvr = False,
+                       numargs = 0,
+                       default_recent_type = None,
+                       default_valuenames = ['agents'] )
+
+    #------------------------------------------------------------
+    #--- FUNCTION createRunDatas()
+    #------------------------------------------------------------
+    def createRunDatas( self, general_opts, mode_opts, valuenames, valueattrs, rundirs ):
+        runDatas = []
+
+        for rundir in rundirs:
+            tables = common_stats.parse_stats( rundir.path, types = valuenames )
+
+            for type, table in tables.items():
+                runDatas.append( RunData(rundir,
+                                         type,
+                                         table,
+                                         'step',
+                                         'value') )
+
+        return runDatas
+
+    #------------------------------------------------------------
+    #--- FUNCTION usage_valuenames()
+    #------------------------------------------------------------
+    def usage_valuenames( self ):
+        print """\
+     -v <S>[,<S>]...
+               Specify stats to be plotted.
+               ( default = %s )
+        """ % ','.join(self.default_valuenames)
+
+
+####################################################################################
+###
+### CLASS BarrierPosMode
+###
+####################################################################################
+class BarrierPosMode( Mode ):
+    PROPS = ["X1", "Z1", "X2", "Z2"]
+
+    #------------------------------------------------------------
+    #--- FUNCTION __init()__
+    #------------------------------------------------------------
+    def __init__( self ):
+        Mode.__init__( self,
+                       name = 'barrierpos',
+                       title = 'Barrier Position',
+                       isAvr = False,
+                       numargs = 0,
+                       default_recent_type = None,
+                       default_valuenames = ['0_Z2'] )
+
+    #------------------------------------------------------------
+    #--- FUNCTION get_valuenames_title()
+    #------------------------------------------------------------
+    def get_valuenames_title( self, valuenames ):
+        valuetitles = [ 'Barrier'+id+'.'+prop
+                        for id, prop in map(BarrierPosMode.__parse_valuename, valuenames) ]
+
+        return ", ".join( valuetitles )
+
+    #------------------------------------------------------------
+    #--- FUNCTION createRunDatas()
+    #------------------------------------------------------------
+    def createRunDatas( self, general_opts, mode_opts, valuenames, valueattrs, rundirs ):
+        runDatas = []
+
+        for rundir in rundirs:
+            for valuename in valuenames:
+                id, prop = BarrierPosMode.__parse_valuename( valuename )
+
+                path = os.path.join( rundir.path, "condprop/barrier%s.txt" % id )
+                table = datalib.parse( path,
+                                       tablenames = ['Values'],
+                                       required = datalib.REQUIRED,
+                                       keycolname = 'Time' )[ 'Values' ]
+
+                runDatas.append( RunData(rundir,
+                                         valuename,
+                                         table,
+                                         'Time',
+                                         prop) )
+
+        return runDatas
+
+    #------------------------------------------------------------
+    #--- FUNCTION usage_valuenames()
+    #------------------------------------------------------------
+    def usage_valuenames( self ):
+        print """\
+     -v <B>[,<B>]...
+               Specify barriers to be plotted, where <B> is in the form
+               <barrier id>_<prop>. Where <prop> can be one of
+               {%s}.
+               ( default = %s )
+        """ % ( ', '.join(BarrierPosMode.PROPS),
+                ','.join(self.default_valuenames) )
+
+    #------------------------------------------------------------
+    #--- FUNCTION __parse_valuename
+    #------------------------------------------------------------
+    @staticmethod
+    def __parse_valuename( valuename ):
+        fields = valuename.split( '_' )
+        if len(fields) != 2:
+            err( "Invalid barrier valuename (%s). Expecting <id>_<prop>." % valuename )
+        try:
+            int(fields[0])
+        except:
+            err( "Invalid barrier id (%s). Expecting int." % fields[0] )
+
+        
+        if not fields[1] in BarrierPosMode.PROPS:
+            err( "Invalid barrier prop (%s). Expecting one of: %s." % fields[1], ', '.join(BarrierPosMode.PROPS) )
+                     
+        return fields[0], fields[1]
+
+
+####################################################################################
+###
+### CLASS AdhocMode
+###
+####################################################################################
+class AdhocMode( Mode ):
+
+    #------------------------------------------------------------
+    #--- FUNCTION __init()__
+    #------------------------------------------------------------
+    def __init__( self ):
+        Mode.__init__( self,
+                       name = 'adhoc',
+                       title = 'Ad hoc',
+                       isAvr = False,
+                       numargs = 4,
+                       default_recent_type = None,
+                       default_valuenames = None )
+
+    #------------------------------------------------------------
+    #--- FUNCTION init_valuenames()
+    #------------------------------------------------------------
+    def init_valuenames( self, mode_opts, opts, args ):
+        mode_opts['relpath'] = args[0]
+        mode_opts['tablename'] = args[1]
+        mode_opts['xcolname'] = args[2]
+        mode_opts['ycolname'] = args[3]
+        valuenames = ["%s[%s[%s]]" % (os.path.splitext( os.path.basename(mode_opts['relpath']) )[0],
+                                      mode_opts['tablename'],
+                                      mode_opts['ycolname'])]
+
+        return valuenames
+
+    #------------------------------------------------------------
+    #--- FUNCTION createRunDatas()
+    #------------------------------------------------------------
+    def createRunDatas( self, general_opts, mode_opts, valuenames, valueattrs, rundirs ):
+        runDatas = []
+
+        for rundir in rundirs:
+            path = os.path.join( rundir.path, mode_opts['relpath'] )
+            table = datalib.parse( path,
+                                   tablenames = [mode_opts['tablename']],
+                                   required = datalib.REQUIRED,
+                                   keycolname = mode_opts['xcolname'] )[mode_opts['tablename']]
+
+            runDatas.append( RunData(rundir,
+                                     valuenames[0],
+                                     table,
+                                     mode_opts['xcolname'],
+                                     mode_opts['ycolname']) )
+
+        return runDatas
+
+
+####################################################################################
+###
+### CLASS Clause
+###
+####################################################################################
+class Clause:
+    #------------------------------------------------------------
+    #--- FUNCTION __init__()
+    #------------------------------------------------------------
+    def __init__( self, argv ):
+        if not len(argv):
+            err( "Missing mode name" )
+
+        self.mode = Mode.get_mode( argv[0] )
+        self.argv = argv
+
+    #------------------------------------------------------------
+    #--- FUNCTION drop_global_args()
+    #---
+    #--- The last clause is going to have global args (e.g. run
+    #--- directories) at the end of its argv. This method prunes
+    #--- those args from this clause's argv and returns them.
+    #------------------------------------------------------------
+    def drop_global_args( self ):
+        self.argv, global_args = self.mode.split_global_args( self.argv )
+
+        return global_args
 
     #------------------------------------------------------------
     #--- FUNCTION createCurveDatas()
     #------------------------------------------------------------
     def createCurveDatas( self, rundirs ):
-        general_opts, mode_opts, valuenames, valueattrs = self.__parse_argv()
-        runDatas = self.__createRunDatas( general_opts, mode_opts, valuenames, valueattrs, rundirs )
+        general_opts, mode_opts, valuenames, valueattrs = self.mode.parse_argv( self.argv )
+        runDatas = self.mode.createRunDatas( general_opts, mode_opts, valuenames, valueattrs, rundirs )
 
         curveDatas = []
 
@@ -842,12 +1121,13 @@ class Clause:
                                                  groups = tgroups,
                                                  rundirs = rundirs,
                                                  classifications = classifications) )
-
+            
+        #
+        # Remove any error bar curves from list and link them to
+        # their associated curve.
+        #
         for curveData in curveDatas:
-            if curveData.curvetype == 'line':
-                curveData.points = general_opts['dots']
-                curveData.smooth = general_opts['smooth']
-            elif curveData.curvetype == 'errorbar':
+            if curveData.curvetype == 'errorbar':
                 line = None
                 for x in curveDatas:
                     if ( x.rundirs == curveData.rundirs
@@ -861,6 +1141,15 @@ class Clause:
                 line.errorbar = curveData
 
         curveDatas = filter( lambda x: x.curvetype != 'errorbar', curveDatas )
+
+
+        #
+        # Apply any general style options
+        #
+        for curveData in curveDatas:
+            if curveData.curvetype == 'line':
+                curveData.points = general_opts['dots']
+                curveData.smooth = general_opts['smooth']
 
         return curveDatas
                     
@@ -1126,17 +1415,17 @@ def create_macros( clauses,
     groups = set([group
                   for curveData in curveDatas
                   for group in curveData.groups])
-    modes = set([ clause.get_title() for clause in clauses ])
+    modes = set([ clause.mode.title for clause in clauses ])
 
     # Create string like: Neural Complexity(Processing), Agents
     def __mode_values( curveDatas ):
         modevalues = {}
         for curveData in curveDatas:
-            mode = curveData.clause.mode_name
+            modename = curveData.clause.mode.name
             valuename = curveData.valuename
-            modevalues.setdefault( mode, set() ).add( valuename )
+            modevalues.setdefault( modename, set() ).add( valuename )
 
-        modevalues = ", ".join([ Clause.get_valuenames_title( x[0], x[1] )
+        modevalues = ", ".join([ Mode.get_mode(x[0]).get_valuenames_title( x[1] )
                                  for x in modevalues.items() ])
         return modevalues
         
@@ -1458,19 +1747,14 @@ def plot_curve( plot,
 ###
 ####################################################################################
 def show_usage(msg = None, arg = None):
-    global mode_usage
-
     if arg == None:
-        if mode_usage == None:
-            usage_default()
-        else:
-            usage_mode( mode_usage.shortname )
+        usage_default()
     elif arg == 'opts':
         usage_opts()
     elif arg == 'macros':
         usage_macros()
-    elif Clause.is_mode_name( arg ):
-        usage_mode( Clause.expand_mode_name(arg) )
+    elif Mode.is_name( arg ):
+        usage_mode( Mode.get_mode(arg) )
     else:
         print '\nInvalid help topic (%s)\n' % arg
         usage_default()
@@ -1523,7 +1807,7 @@ DESCRIPTION
 
         plot s -v CurNeurGroups : s --y2 -v CurSynapses ./run
  
-""" % ("\n          ".join(Clause.MODE_NAMES))
+""" % ("\n          ".join(Mode.get_names()))
 #-------------------------------------------------------------------------------
 
 
@@ -1664,10 +1948,10 @@ def usage_mode( mode ):
     #
     # Usage
     #
-    if mode == 'adhoc':
-        print "     plot [<global_opts>] %s [<mode_opts>] <relpath> <table> <x-column> <y-column> <directory>..."
+    if mode.name == 'adhoc':
+        print "     adhoc [<opts>] <relpath> <table> <x-column> <y-column>"
     else:
-        print "     plot [<global_opts>] %s [<mode_opts>] <directory>..." % mode
+        print "     %s [<opts>]" % mode.name
 
     print """
 OPTIONS
@@ -1675,46 +1959,25 @@ OPTIONS
     """
 
     #
-    # -r for neuralComplexity/graphMetric 
+    # -r recent_type
     #
-    if (mode == "neuralComplexity") or (mode == "graphMetric"):
+    if mode.default_recent_type:
         print """\
      -r <recent_type>
                Valid recent types:%s
                Note names may be abbreviated.
-               (Default Recent)
-        """ % ( "\n                  ".join([''] + common_functions.RECENT_TYPES) )
+               ( default = %s )
+        """ % ( "\n                  ".join([''] + common_functions.RECENT_TYPES), mode.default_recent_type )
 
     #
-    # -v for neuralComplexity
+    # -v
     #
-    if mode == "neuralComplexity":
-        print """\
-     -v <C>[,<C>]...
-               Specify complexity types to be plotted.
-        """
-    #
-    # -v for graphMetric
-    #
-    if mode == "graphMetric":
-        print """\
-     -v <M>[,<M>]...
-               Specify metrics to be plotted.
-        """
+    mode.usage_valuenames()
 
     #
-    # -v for stats
+    # AVR flags
     #
-    if mode == "stats":
-        print """\
-     -v <S>[,<S>]...
-               Specify stats to be plotted.
-        """
-
-    #
-    # valueattrs for neuralComplexity/graphMetric
-    #
-    if mode == "neuralComplexity" or mode == "graphMetric":
+    if mode.isAvr:
         print """\
      -m/M
                Plot mean/meta-mean of each value (-v) type. (default -m on)
