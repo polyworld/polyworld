@@ -22,7 +22,8 @@ import wfutil
 TCRIT_DEFAULT = (1.833,20,10)    # 95% confidence for 9 degrees of freedom (10 pairs of points)
 #TCRIT = 1.796    # 95% confidence for 11 degrees of freedom (12 pairs of points)
 ################################################################################
-TSCALE_DEFAULT = 0.25
+TBOTTOM_DEFAULT = 0.0
+TTOP_DEFAULT = 0.25
 
 DEFAULT_OUTPUT = './plot.eps'
 
@@ -89,7 +90,8 @@ def parse_argv( argv ):
         ( 'y2range',            None,       True ),
         ( 'tgroups',            None,       True ),
         ( 'tcrit',              None,       True ),
-        ( 'tscale',             None,       True ),
+        ( 'ttop',               None,       True ),
+        ( 'tbottom',            None,       True ),
         ( 'legend',             'l',        False ),
         ( 'noLegend',           'L',        False ),
         ( 'noview',             'V',        False),
@@ -191,8 +193,10 @@ def parse_argv( argv ):
             GlobalOptions.tgroups = optval
         elif optname == 'tcrit':
             GlobalOptions.tcrit = __parse_float( opt )
-        elif optname == 'tscale':
-            GlobalOptions.tscale = __parse_float( opt, 0, 1 )
+        elif optname == 'ttop':
+            GlobalOptions.ttop = __parse_float( opt, 0, 1 )
+        elif optname == 'tbottom':
+            GlobalOptions.tbottom = __parse_float( opt, 0, 1 )
         elif optname == 'legend':
             GlobalOptions.legend_individual = True
         elif optname == 'noLegend':
@@ -266,7 +270,8 @@ class GlobalOptions:
     y2range = None
     tgroups = None
     tcrit = TCRIT_DEFAULT[0]
-    tscale = TSCALE_DEFAULT
+    ttop = TTOP_DEFAULT
+    tbottom = TBOTTOM_DEFAULT
     legend_individual = False
     legend_meta = True
     view = True
@@ -1740,13 +1745,20 @@ def init_plot( macros, curveDatas):
                 tmax = max( tmax,
                             max(curveData.table.getColumn( 'tval' )) )
 
-            y2max = tmax / GlobalOptions.tscale
-
-            plot.y2range = (0, y2max)
             plot.y2label = "Dependent Student's T-test (p < 0.05)"
+
             plot.createTick( tcrit,
                              "T*",
                              line = True )
+
+            if GlobalOptions.ttop <= GlobalOptions.tbottom:
+                err( "ttop must be > tbottom" )
+
+            y2len = tmax / (GlobalOptions.ttop - GlobalOptions.tbottom)
+            y2bot = -( GlobalOptions.tbottom * y2len )
+            plot.y2range = (y2bot, y2bot + y2len)
+
+            
 
     plot.xlabel = expand_macros( GlobalOptions.xlabel, macros )
     plot.y1label = expand_macros( GlobalOptions.y1label, macros )
@@ -1949,12 +1961,15 @@ GLOBAL OPTIONS
                Specify value of T* (default %f, which corresponds to %d
             samples in %d pairs in a Dependent Student's T-test)
 
-     --tscale <scale>
-               Specify scale of y axis when displaying tval, where a value
-            of 1 will result in the max tval being at the very top of the
-            chart.
+     --tbottom <bottom>
+               For tval, specify where on the y2 axis the value 0 will be located.
+            Value can be any number between 0 and 1, where 0 = bottom of plot and
+            1 = top. (default '0')
 
-                    (default '0.25')
+     --ttop <top>
+               For tval, specify where on the y2 axis the max value 0 will be located.
+            Value can be any number between 0 and 1, where 0 = bottom of plot and
+            1 = top. (default '0.25')
 
      -l, --legend
                Display a legend for the individual runs.
