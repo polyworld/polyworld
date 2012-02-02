@@ -108,7 +108,7 @@ case $MODE in
 		    xopt="$xopt --exclude '$x'"
 		done
 
-		TAR caf "$ARCHIVE" $xopt "$@"
+		TAR -cjf "$ARCHIVE" $xopt "$@"
 		;;
 	    *)
 		err "Unhandled pack type"
@@ -157,7 +157,7 @@ case $MODE in
 		if [ ! -z "$DEST" ]; then
 		    dopt="-C $DEST"
 		fi
-		CMD=$( TAR --echo xf $ARCHIVE $dopt )
+		CMD=$( TAR --echo -xjf $ARCHIVE $dopt )
 		;;
 	    *)
 		err "Unhandled pack type"
