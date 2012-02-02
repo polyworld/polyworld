@@ -61,4 +61,4 @@ fi
 
 cd "$homedir"
 
-archive pack -x "*.pyc" -x "*/CVS/*" -x "*~" $output $SRCDIRS $MISCDIRS $MISCFILES
+archive pack -x "*.eps" -x "*.pdf" -x "*.plt" -x "*.pyc" -x "*/CVS/*" -x "*~" $output $SRCDIRS $MISCDIRS $MISCFILES
