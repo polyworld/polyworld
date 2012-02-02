@@ -61,4 +61,9 @@ fi
 
 cd "$homedir"
 
-archive pack -x "*.eps" -x "*.pdf" -x "*.plt" -x "*.pyc" -x "*/CVS/*" -x "*~" $output $SRCDIRS $MISCDIRS $MISCFILES
+archive pack \
+    -x "*.o" -x "*.so" -x "*.pyc" \
+    -x "*.eps" -x "*.pdf" -x "*.plt" \
+    -x "scripts/bct_*.py" \
+    -x "*/CVS/*" -x "*~" \
+	$output $SRCDIRS $MISCDIRS $MISCFILES
