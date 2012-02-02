@@ -363,6 +363,7 @@ class Mode:
                 GraphMetricMode(),
                 StatsMode(),
                 BarrierPosMode(),
+                GeneMode(),
                 AdhocMode()
                 ]
         return Mode.MODES
@@ -412,7 +413,7 @@ class Mode:
                                                           Mode.get_names(),
                                                           case_sensitive = False )
         except common_functions.IllegalAbbreviationError, x:
-            return None
+            err( "Failed disambiguating mode name. " + str(x) )
 
     #------------------------------------------------------------
     #--- FUNCTION is_name()
@@ -848,6 +849,95 @@ class BarrierPosMode( Mode ):
             err( "Invalid barrier prop (%s). Expecting one of: %s." % fields[1], ', '.join(BarrierPosMode.PROPS) )
                      
         return fields[0], fields[1]
+
+
+####################################################################################
+###
+### CLASS GeneMode
+###
+####################################################################################
+class GeneMode( Mode ):
+    TYPES = ["normalized", "interpolated"]
+
+    #------------------------------------------------------------
+    #--- FUNCTION __init()__
+    #------------------------------------------------------------
+    def __init__( self ):
+        Mode.__init__( self,
+                       name = 'gene',
+                       title = 'Gene',
+                       isAvr = False,
+                       numargs = 0,
+                       default_recent_type = None,
+                       default_valuenames = ['MutationRate_interpolated'] )
+
+    #------------------------------------------------------------
+    #--- FUNCTION get_valuenames_title()
+    #------------------------------------------------------------
+    def get_valuenames_title( self, valuenames ):
+        valuetitles = [ name + ( ' (' + type.capitalize() + ')' if type != 'interpolated' else '')
+                        for name, type in map(GeneMode.__parse_valuename, valuenames) ]
+
+        return ", ".join( valuetitles )
+
+    #------------------------------------------------------------
+    #--- FUNCTION createRunDatas()
+    #------------------------------------------------------------
+    def createRunDatas( self, general_opts, mode_opts, valuenames, valueattrs, rundirs ):
+        runDatas = []
+
+        for rundir in rundirs:
+            for valuename in valuenames:
+                name, type = GeneMode.__parse_valuename( valuename )
+
+                path = os.path.join( rundir.path, "genome/subset_mean.txt" )
+                tablename = type.capitalize()
+                table = datalib.parse( path,
+                                       tablenames = [tablename],
+                                       required = datalib.REQUIRED,
+                                       keycolname = 'Timestep' )[ tablename ]
+
+                runDatas.append( RunData(rundir,
+                                         valuename,
+                                         table,
+                                         'Timestep',
+                                         name) )
+
+        return runDatas
+
+    #------------------------------------------------------------
+    #--- FUNCTION usage_valuenames()
+    #------------------------------------------------------------
+    def usage_valuenames( self ):
+        print """\
+     -v <G>[,<G>]...
+               Specify genes to be plotted, where <G> is in the form
+               <gene_name>_<type>. Where <type> can be one of
+               {%s}.
+               Also note that <type> can be an abbreviation.
+               ( default = %s )
+        """ % ( ', '.join(GeneMode.TYPES),
+                ','.join(self.default_valuenames) )
+
+    #------------------------------------------------------------
+    #--- FUNCTION __parse_valuename
+    #------------------------------------------------------------
+    @staticmethod
+    def __parse_valuename( valuename ):
+        fields = valuename.split( '_' )
+        if len(fields) != 2:
+            err( "Invalid gene valuename (%s). Expecting <gene_name>_<type>." % valuename )
+
+        gene = fields[0]
+        type = fields[1]
+        try:
+            type = common_functions.expand_abbreviations( type,
+                                                          GeneMode.TYPES,
+                                                          case_sensitive = False )
+        except common_functions.IllegalAbbreviationError, x:
+            err( "Failed expanding gene valuname type: " + str(x) )
+                     
+        return gene, type
 
 
 ####################################################################################
