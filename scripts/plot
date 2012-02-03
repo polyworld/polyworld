@@ -1723,11 +1723,9 @@ def init_plot( macros, curveDatas):
             err( "Cannot plot both pval and tval" )
 
         if len(pval_curveDatas):
-            pmin = 0.8
-            pmax = 1.0
-            fracHeight = 1.0 / 6.0
+            tmin = 0.8
+            tmax = 1.0
 
-            plot.y2range = ( pmin, (pmin + (pmax-pmin)/fracHeight) )
             plot.y2label = "(1 - p-value)       Dependent Student's T-test"
 
             plot.createTick( 0.8 )
@@ -1738,8 +1736,8 @@ def init_plot( macros, curveDatas):
                              line = True,
                              linetype = plotlib.CurveStyle.DOTTED)
         else:
-            tcrit = GlobalOptions.tcrit
-            tmax = tcrit
+            tmin = 0
+            tmax = GlobalOptions.tcrit
 
             for curveData in tval_curveDatas:
                 tmax = max( tmax,
@@ -1747,18 +1745,19 @@ def init_plot( macros, curveDatas):
 
             plot.y2label = "Dependent Student's T-test (p < 0.05)"
 
-            plot.createTick( tcrit,
+            plot.createTick( GlobalOptions.tcrit,
                              "T*",
                              line = True )
 
-            if GlobalOptions.ttop <= GlobalOptions.tbottom:
-                err( "ttop must be > tbottom" )
+        #
+        # Set y2 range based on --ttop and --tbottom
+        #
+        if GlobalOptions.ttop <= GlobalOptions.tbottom:
+            err( "ttop must be > tbottom" )
 
-            y2len = tmax / (GlobalOptions.ttop - GlobalOptions.tbottom)
-            y2bot = -( GlobalOptions.tbottom * y2len )
-            plot.y2range = (y2bot, y2bot + y2len)
-
-            
+        y2len = (tmax - tmin) / (GlobalOptions.ttop - GlobalOptions.tbottom)
+        y2bot = tmin - ( GlobalOptions.tbottom * y2len )
+        plot.y2range = (y2bot, y2bot + y2len)
 
     plot.xlabel = expand_macros( GlobalOptions.xlabel, macros )
     plot.y1label = expand_macros( GlobalOptions.y1label, macros )
@@ -1962,12 +1961,12 @@ GLOBAL OPTIONS
             samples in %d pairs in a Dependent Student's T-test)
 
      --tbottom <bottom>
-               For tval, specify where on the y2 axis the value 0 will be located.
+               For ttest, specify where on the y2 axis the min value will be located.
             Value can be any number between 0 and 1, where 0 = bottom of plot and
             1 = top. (default '0')
 
      --ttop <top>
-               For tval, specify where on the y2 axis the max value will be located.
+               For ttest, specify where on the y2 axis the max value will be located.
             Value can be any number between 0 and 1, where 0 = bottom of plot and
             1 = top. (default '0.25')
 
