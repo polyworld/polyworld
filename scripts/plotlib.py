@@ -412,6 +412,7 @@ class Document:
 
     def save(self, path_doc):
         path_script = '/tmp/plot_%d.gnuplot' % (os.getpid())
+        path_err = path_script + '.err'
         
         f = open(path_script, 'w')
 
@@ -436,13 +437,14 @@ class Document:
 
         gnuplot = common_functions.pw_env('gnuplot')
             
-        # redirect stderr because it's verbose even on no errors (why?!)
-        rc = os.system('%s %s 2>%s.out' % (gnuplot, path_script, path_script))
+        # redirect stderr because it's verbose even on no errors
+        rc = os.system(gnuplot + " " +  path_script + " 2>" + path_err )
         if rc != 0:
-            os.system( 'cat %s.out' % path_script )
+            os.system( 'cat ' + path_err )
             sys.exit(1)
 
-        return path_doc, path_script
+        os.remove( path_script )
+        os.remove( path_err )
 
 ####################################################################################
 ###

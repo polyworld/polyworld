@@ -62,6 +62,8 @@ def main():
 
     finalize_plot( doc, plot )
 
+    delete_temp_tables()
+
     return 0
 
 
@@ -1256,9 +1258,19 @@ class Clause:
 ####################################################################################
 temp_tables = []
 def write_temp_table( table ):
-    datalib.write( '/tmp/plot-temp-table-%s.plt' % len(temp_tables), table )
-    temp_tables.append( table )
+    path = '/tmp/plot-temp-table-%d-%s.plt' % ( os.getpid(), len(temp_tables) )
+    datalib.write( path, table )
+    temp_tables.append( path )
 
+
+####################################################################################
+###
+### FUNCTION delete_temp_tables()
+###
+####################################################################################
+def delete_temp_tables():
+    for path in temp_tables:
+        os.remove( path )
 
 ####################################################################################
 ###
@@ -1764,9 +1776,9 @@ def init_plot( macros, curveDatas):
 ###
 ####################################################################################
 def finalize_plot( doc, plot ):
-    path_doc, path_script = doc.save( GlobalOptions.output )
+    doc.save( GlobalOptions.output )
     if GlobalOptions.view:
-        os.system( '%s %s' % (common_functions.pw_env('open'), path_doc) )
+        os.system( '%s %s' % (common_functions.pw_env('open'), GlobalOptions.output) )
 
 
 ####################################################################################
