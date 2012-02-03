@@ -71,6 +71,23 @@ def import_zlib(env):
 
 ################################################################################
 ###
+### FUNCTION import_python
+###
+################################################################################
+def import_python(env, version=None):
+    if PFM == 'linux':
+        if not version: version='2.7'
+        env.Append( CPPPATH = ['/usr/include/python'+version] )
+    elif PFM == 'mac':
+        if not version: version='2.6'
+        env.Append( CPPPATH = ['/System/Library/Frameworks/Python.framework/Versions/'+version+'/include/python'+version] )
+    else:
+        assert(False)
+
+    addlib(env, 'python'+version)
+
+################################################################################
+###
 ### FUNCTION import_Qt
 ###
 ################################################################################

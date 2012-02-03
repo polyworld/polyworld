@@ -4,7 +4,7 @@ import os
 import sys
 
 from scons_util import exclude, find, init_env, relocate_paths
-from scons_util import import_OpenGL, import_OpenMP, import_GSL, import_Qt, import_zlib
+from scons_util import import_OpenGL, import_OpenMP, import_GSL, import_Qt, import_zlib, import_python
 
 SRCDIRS = ['src/' + x
            for x in ['agent',
@@ -171,6 +171,7 @@ def env_create():
                            'QtGui',
                            'QtOpenGL'])
     import_zlib(env)
+    import_python(env)
 
     env = envs['CalcComplexity'] = env_common.Clone()
     import_zlib(env)
@@ -180,6 +181,7 @@ def env_create():
     envs['rancheck'] = envs['CalcComplexity'].Clone()
 
     envs['proputil'] = envs['CalcComplexity'].Clone()
+    import_python( envs['proputil'] )
 
     envs['pmvutil'] = envs['PwMoviePlayer'].Clone()
 

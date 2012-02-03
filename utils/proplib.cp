@@ -1,22 +1,37 @@
+#include <Python.h>
+
 #include "proplib.h"
 
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <fstream>
 #include <iostream>
 
 #include "misc.h"
 
+
 using namespace std;
 
 #define DEBUG_INPUT false
 #define DEBUG_EVAL false
 
+
 namespace proplib
 {
+	class StaticInit {
+	public:
+		StaticInit() {
+			Py_Initialize();
+		}
+		~StaticInit() {
+			Py_Finalize();
+		}
+	} init;
+
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
 	// --- FUNCTION _strndup()
@@ -61,30 +76,27 @@ namespace proplib
 		}
 		locals.append( "}" );
 
+		char output[128];
+		sprintf( output, "/tmp/proplib.%d", getpid() );
+
 		char script[1024 * 4];
 		sprintf( script,
 				 "import sys\n"
 				 "try:\n"
-				 "  print eval('%s', %s)\n"
-				 "  sys.stdout.flush()\n"
+				 "  f = open('%s','w')\n"
+				 "  f.write( str( eval('%s', %s) ) )\n"
+				 "  f.close()\n"
 				 "except:\n"
 				 "  print sys.exc_info()[1]\n"
 				 "  sys.stdout.flush()\n"
 				 "  sys.exit(1)\n",
+				 output,
 				 expr,
 				 locals.c_str());
 
-		char cmd[1024 * 4];
-		sprintf( cmd, "python -c \"%s\"", script );
-
-#if DEBUG_EVAL
-		cout << "<EVAL>" << endl;
-		cout << script << endl;
-		cout << "</EVAL>" << endl;
-#endif
-
-		FILE *f = popen( cmd, "r" );
-
+		PyRun_SimpleString( script );
+		
+		FILE *f = fopen( output, "r" );
 		char *result_orig = result;
 
 		size_t n;
@@ -96,7 +108,7 @@ namespace proplib
 			result_size -= n;
 		}
 
-		int rc = pclose( f );
+		int rc = fclose( f );
 
 		for( char *tail = result - 1; tail >= result_orig; tail-- )
 		{
@@ -105,6 +117,8 @@ namespace proplib
 			else
 				break;
 		}
+
+		remove( output );
 
 		return rc == 0;
 	}
