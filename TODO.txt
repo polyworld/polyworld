@@ -13,6 +13,7 @@ sean		sean		02/01/2012	organize scripts/.
 sean		sean		02/01/2012	Pull back result and output archives separately if output huge
 
 [PLOT]
+sean		sean		02/03/2012	allow generation of pdf, based on env var
 sean		sean		02/01/2012	clean plot /tmp files at end
 sean		sean		02/01/2012	add feature for interpolating timesteps when plotting condprops
 
