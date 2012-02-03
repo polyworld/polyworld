@@ -5,6 +5,8 @@
 #
 #     -q    Quiet.
 #
+alias fconfig='pwfarm_config.sh'
+
 function fset()
 {
     if ! which pwfarm_config.sh >/dev/null 2>&1; then
@@ -14,7 +16,7 @@ function fset()
 
     if [ "$1" == "-q" ]; then local quiet=true ; shift; fi
 
-    alias fconfig='pwfarm_config.sh'
+    alias fcstat='pwfarm_config.sh stat'
     alias fbuild='pwfarm_build.sh'
     alias frun='pwfarm_run.sh'
     alias fpassive='pwfarm_passive.sh'
@@ -24,6 +26,8 @@ function fset()
     alias frmrun='pwfarm_rmrun.sh'
     alias fstat='pwfarm_stat.sh'
     alias fcmd='pwfarm_cmd.sh'
+    alias ffetch='pwfarm_fetch.sh'
+    alias forphan='pwfarm_orphan.sh'
 
     local farmname="$1"
     if [ -z "$farmname" ]; then
@@ -52,9 +56,9 @@ function fset()
     fi
 
 
-    if pwfarm_config.sh env set session $farmname $sessionname ; then
-        . pwfarm_config.sh env set session $farmname $sessionname
+     if pwfarm_config.sh env set session $farmname $sessionname ; then
+         . pwfarm_config.sh env set session $farmname $sessionname
 
-	[ ! $quiet ] && pwfarm_config.sh stat
-    fi
+	 [ ! $quiet ] && pwfarm_config.sh stat
+     fi
 }
