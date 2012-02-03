@@ -1967,7 +1967,7 @@ GLOBAL OPTIONS
             1 = top. (default '0')
 
      --ttop <top>
-               For tval, specify where on the y2 axis the max value 0 will be located.
+               For tval, specify where on the y2 axis the max value will be located.
             Value can be any number between 0 and 1, where 0 = bottom of plot and
             1 = top. (default '0.25')
 
