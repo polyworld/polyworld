@@ -249,7 +249,6 @@ if ! $field; then
 		    taskmeta set $path nid $nid
 		    taskmeta set $path runid $RUNID/overlay_$ioverlay
 		    taskmeta set $path rngseed $rngseed
-		    taskmeta set $path plotgroup overlay_values
 		    taskmeta set $path ioverlay $ioverlay
 		    taskmeta set $path overlay overlay.wfo
 
@@ -447,7 +446,6 @@ if ! $field; then
 			taskmeta set $path overlay overlay${taskid}.wfo
 
 			taskmeta set $path ioverlay $( cat $run0/.pwfarm/ioverlay )
-			taskmeta set $path plotgroup overlay_values
 		    fi
 
 		    taskid=$(( $taskid + 1 ))
@@ -635,31 +633,6 @@ else
 	echo $BATCHID > run/.pwfarm/batchid
 	if PWFARM_TASKMETA has ioverlay; then
 	    PWFARM_TASKMETA get ioverlay > run/.pwfarm/ioverlay
-	fi
-
-	if PWFARM_TASKMETA has plotgroup; then
-	    plotgroup=""
-
-	    case $( PWFARM_TASKMETA get plotgroup ) in
-		overlay_values)
-		    propvals=$(
-			proputil scalarnames run/parms.wfo 3 |
-			sort |
-			uniq |
-			while read propname; do
-			    proputil get run/normalized.wf $propname
-			done
-		    )
-		    plotgroup="Meta ($(join ', ' $propvals))"
-		    ;;
-		*)
-		    err "Unknown plotgroup '$( PWFARM_TASKMETA get plotgroup )'"
-		    ;;
-	    esac
-
-	    if [ ! -z "$plotgroup" ]; then
-		echo "group	$plotgroup" >> run/plot.cfg
-	    fi
 	fi
     fi
 
