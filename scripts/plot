@@ -3,6 +3,7 @@
 import copy
 import getopt
 import os
+import shutil
 import sys
 from sys import exit
 
@@ -24,8 +25,6 @@ TCRIT_DEFAULT = (1.833,20,10)    # 95% confidence for 9 degrees of freedom (10 p
 ################################################################################
 TBOTTOM_DEFAULT = 0.0
 TTOP_DEFAULT = 0.25
-
-DEFAULT_OUTPUT = './plot.eps'
 
 TTEST_LINETYPE = plotlib.CurveStyle.DOTTED
 CLASSIFICATION_LINETYPES = {'Driven': plotlib.CurveStyle.SOLID,
@@ -60,7 +59,7 @@ def main():
     for curveData in curveDatas:
         plot_curve( plot, curveData )
 
-    finalize_plot( doc, plot )
+    finalize_plot( doc, plot, rundirs, curveDatas )
 
     delete_temp_tables()
 
@@ -264,7 +263,7 @@ def parse_argv( argv ):
 ###
 ####################################################################################
 class GlobalOptions:
-    output = DEFAULT_OUTPUT
+    output = None
     classifications = common_functions.CLASSIFICATIONS
     group = 'auto'
     xrange = None
@@ -1775,10 +1774,37 @@ def init_plot( macros, curveDatas):
 ### FUNCTION finalize_plot()
 ###
 ####################################################################################
-def finalize_plot( doc, plot ):
-    doc.save( GlobalOptions.output )
+def finalize_plot( doc, plot, rundirs, curveDatas ):
+    if GlobalOptions.output:
+        path = GlobalOptions.output
+    else:
+        modevalues = {}
+        for curveData in curveDatas:
+            modename = curveData.clause.mode.name
+            valuename = curveData.valuename
+            valueattr = curveData.valueattr
+            if valueattr != 'default':
+                valuename = valuename + '_' + valueattr
+
+            modevalues.setdefault( modename, set() ).add( curveData.valuename )
+
+        modevalues = "_".join([ x[0] + '[' + ','.join(x[1]) + ']'
+                                for x in modevalues.items() ])
+
+        path = "plot_" + modevalues + ".eps"
+
+        results_dir = common_functions.get_results_dir( map(lambda x: x.path, rundirs) )
+        path = os.path.join( results_dir, path )
+
+    print "Writing plot to " + path + "..."
+    if os.path.exists( path ):
+        path_bak = os.path.join( os.path.dirname(path), '.#' + os.path.basename(path) )
+        warn( "File already exists! Saving old file to " + path_bak )
+        shutil.copyfile( path, path_bak )
+
+    doc.save( path )
     if GlobalOptions.view:
-        os.system( '%s %s' % (common_functions.pw_env('open'), GlobalOptions.output) )
+        os.system( '%s %s' % (common_functions.pw_env('open'), path) )
 
 
 ####################################################################################
@@ -1917,7 +1943,6 @@ GLOBAL OPTIONS
 
      -o, --output  <path>
                Specify path of generated plot document.
-               (default %s)
 
      -C, --classifications <class>[,<class>]...
                <class>[,<class>]...: Constrain set of possible classifications,
@@ -1995,8 +2020,7 @@ GLOBAL OPTIONS
      --rmargin <n>
                Override size of right margin, where n is number of character
             widths. Necessary because of buggy gnuplot behavior.
-""" % (DEFAULT_OUTPUT,
-       ', '.join(common_functions.CLASSIFICATIONS),
+""" % (', '.join(common_functions.CLASSIFICATIONS),
        TCRIT_DEFAULT[0], TCRIT_DEFAULT[1], TCRIT_DEFAULT[2])
 
 ####################################################################################

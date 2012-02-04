@@ -567,6 +567,53 @@ def find_run_paths(paths_arg, required_subpath = None):
 
 ####################################################################################
 ###
+### FUNCTION get_common_ancestor()
+###
+####################################################################################
+def get_common_ancestor( paths ):
+  assert( len(paths) )
+  assert( os.path.sep == '/' )
+
+  paths = map( os.path.realpath, paths )
+  elements_matrix = [ path.split('/') for path in paths ]
+  nelements = min( map(len, elements_matrix) )
+
+  # elements of first path
+  elements_first = elements_matrix[0]
+  # elements of all other paths
+  elements_matrix = elements_matrix[1:]
+
+  for i in range(nelements):
+    match = True
+    for elements in elements_matrix:
+      if elements[i] != elements_first[i]:
+        match = False
+        break
+
+    if not match:
+      i -= 1
+      break
+
+  result = elements_first[:i+1]
+  # first element is just ''
+  result[0] = '/'
+
+  return os.path.join( *result )
+
+####################################################################################
+###
+### FUNCTION get_results_dir()
+###
+####################################################################################
+def get_results_dir( run_paths, make = True ):
+	dir = os.path.join( get_common_ancestor(run_paths), 'results' )
+	if make and not os.path.exists(dir):
+		os.makedirs(dir)
+
+	return dir
+
+####################################################################################
+###
 ### FUNCTION list_difference()
 ###
 ### returns list of elements in a but not in b
