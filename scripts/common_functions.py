@@ -543,6 +543,9 @@ def find_run_paths(paths_arg, required_subpath = None):
         if not os.path.isdir(path_arg):
             raise InvalidDirError(path_arg)
 
+	if os.path.basename( path_arg ) == 'results':
+		continue
+
         # if 'directory' is itself a run/ directory, just use that.
         if __isrundir(path_arg):
             run_paths.append(path_arg)
