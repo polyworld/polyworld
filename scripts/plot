@@ -59,7 +59,7 @@ def main():
     for curveData in curveDatas:
         plot_curve( plot, curveData )
 
-    finalize_plot( doc, plot, rundirs, curveDatas )
+    save_plot( doc, plot, rundirs, curveDatas )
 
     delete_temp_tables()
 
@@ -1332,6 +1332,19 @@ def group_runs( rundirs ):
             else:
                 err( "Invalid value for --group (%s)" % group_type )
 
+    #
+    # Warn user if groups have different number of runs
+    #
+    ngroupruns = {}
+    for rundir in rundirs:
+        ngroupruns.setdefault( rundir.group, [] ).append(rundir)
+
+    ngroupruns = list( ngroupruns.items() )
+    if not all( map(lambda x: len(x[1]) == len(ngroupruns[0][1]), ngroupruns[1:]) ):
+        warn( "Groups do not all have the same number of runs!" )
+        for x in ngroupruns:
+            print "  group %s: %s runs" % ( x[0], len(x[1]) )
+
 
 ####################################################################################
 ###
@@ -1771,10 +1784,10 @@ def init_plot( macros, curveDatas):
 
 ####################################################################################
 ###
-### FUNCTION finalize_plot()
+### FUNCTION save_plot()
 ###
 ####################################################################################
-def finalize_plot( doc, plot, rundirs, curveDatas ):
+def save_plot( doc, plot, rundirs, curveDatas ):
     if GlobalOptions.output:
         path = GlobalOptions.output
     else:
