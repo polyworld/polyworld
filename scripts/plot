@@ -1786,7 +1786,7 @@ def finalize_plot( doc, plot, rundirs, curveDatas ):
             if valueattr != 'default':
                 valuename = valuename + '_' + valueattr
 
-            modevalues.setdefault( modename, set() ).add( curveData.valuename )
+            modevalues.setdefault( modename, set() ).add( valuename )
 
         modevalues = "_".join([ x[0] + '[' + ','.join(x[1]) + ']'
                                 for x in modevalues.items() ])
