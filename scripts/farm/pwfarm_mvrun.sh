@@ -72,12 +72,24 @@ validate_runid --ancestor "$RUNID_SRC"
 RUNID_DST="$( normalize_runid "$2" )"
 validate_runid --ancestor "$RUNID_DST"
 
+TMP_DIR=$( create_tmpdir ) || exit 1
+
 if ! $FIELD; then
     validate_farm_env
 
-    __pwfarm_script.sh $0 --field $ARGS || exit 1
+    __pwfarm_script.sh --output "$TMP_DIR/result" $0 --field $ARGS || exit 1
 
-    TMP_DIR=$( create_tmpdir ) || exit 1
+    field_moved=false
+    for num in $( pwenv fieldnumbers ); do
+	if [ -e "$TMP_DIR/result_$num/moved" ]; then
+	    field_moved=true
+	    break
+	fi
+    done
+
+    if ! $field_moved; then
+	warn "No runs matching '$RUNID_SRC' found on field machines!"
+    fi
 
     function runids()
     {
@@ -91,7 +103,7 @@ if ! $FIELD; then
 
     runids $RUNID_SRC > $TMP_DIR/runids_src
     if [ -z "$(cat $TMP_DIR/runids_src)" ]; then
-	err "No runs found for $RUNID_SRC"
+	err "No local run data found for $RUNID_SRC"
     fi
 
     runids $RUNID_DST > $TMP_DIR/runids_dst
@@ -119,11 +131,25 @@ if ! $FIELD; then
 
 	mkdir -p $path_dst || exit 1
 	mv $paths_src $path_dst || exit 1
-
-	prune_empty_directories $( stored_run_path_local --subpath $OWNER $runid_src )
     done
 
-    rm -rf $TMP_DIR
+    find_results_local $OWNER $RUNID_SRC |
+    while read results_dir_src; do
+	results_dir_dst=$( echo $results_dir_src | sed "s|$RUNID_SRC|$RUNID_DST|" )
+	if [ -e $results_dir_dst ]; then
+	    echo "WARNING! Results dir conflict:"
+	    echo "  $results_dir_src"
+	    echo "  $results_dir_dst"
+	else
+	    mkdir -p $( dirname $results_dir_dst )
+	    mv $results_dir_src $results_dir_dst
+	fi
+    done
+
+    cat $TMP_DIR/runids_src |
+    while read runid_src; do
+	prune_empty_directories $( stored_run_path_local --subpath $OWNER $runid_src )
+    done
 else
     function runids()
     {
@@ -137,9 +163,9 @@ else
 
     runids $RUNID_SRC > ./runids_src
     if [ -z "$(cat ./runids_src)" ]; then
-	err "No runs found for $RUNID_SRC"
+	echo "No matching runs"
+	exit 0
     fi
-
     runids $RUNID_DST > ./runids_dst
 
     cat ./runids_src |
@@ -168,4 +194,11 @@ else
 
 	prune_empty_directories $( stored_run_path_field --subpath "good" $OWNER $runid_src )
     done
+
+    cd $TMP_DIR
+    touch moved
+    archive pack $PWFARM_OUTPUT_ARCHIVE moved
+    archive ls $PWFARM_OUTPUT_ARCHIVE
 fi
+
+rm -rf $TMP_DIR

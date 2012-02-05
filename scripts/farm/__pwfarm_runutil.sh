@@ -75,6 +75,8 @@ function validate_runid()
 
 	if echo $node | grep "^run_[0-9]*$" > /dev/null; then
 	    err "A Run ID cannot contain 'run_[0-9]*'"
+	elif [ "$node" == "results" ]; then
+	    err "A Run ID cannot contain /results/"
 	fi
 
 	prev=$runid
@@ -315,8 +317,8 @@ function ls_runs_local()
 
 function find_runs_local()
 {
-    owner="$1"
-    runid="$2"
+    local owner="$1"
+    local runid="$2"
 
     (
 	export -f is_run
@@ -328,6 +330,19 @@ function find_runs_local()
 	done |
 	canonpath
     )
+}
+
+function find_results_local()
+{
+    local owner="$1"
+    local runid="$2"
+
+    for dir in $(stored_run_path_local --subpath "$owner" "$runid"); do
+	if [ -e $dir ]; then
+	    find $dir -type d -name "results" -prune
+	fi
+    done |
+    canonpath
 }
 
 function store_orphan_run()
