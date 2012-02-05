@@ -86,13 +86,14 @@ def parse_argv( argv ):
         ( 'output',             'o',        True ),
         ( 'classifications',    'C',        True),
         ( 'group',              'g',        True),
-        ( 'xrange',             None,       True ),
-        ( 'y1range',            None,       True ),
-        ( 'y2range',            None,       True ),
+        ( 'epoch',              'e',        True),
         ( 'tgroups',            None,       True ),
         ( 'tcrit',              None,       True ),
         ( 'ttop',               None,       True ),
         ( 'tbottom',            None,       True ),
+        ( 'xrange',             None,       True ),
+        ( 'y1range',            None,       True ),
+        ( 'y2range',            None,       True ),
         ( 'legend',             'l',        False ),
         ( 'noLegend',           'L',        False ),
         ( 'noview',             'V',        False),
@@ -184,12 +185,8 @@ def parse_argv( argv ):
                                                                              case_sensitive = False )
             except common_functions.IllegalAbbreviationError, x:
                 err( x )
-        elif optname == 'xrange':
-            GlobalOptions.xrange = __parse_range( opt )
-        elif optname == 'y1range':
-            GlobalOptions.y1range = __parse_range( opt )
-        elif optname == 'y2range':
-            GlobalOptions.y2range = __parse_range( opt )
+        elif optname == 'epoch':
+            GlobalOptions.epoch = __parse_int( opt, minval = 1 )
         elif optname == 'tgroups':
             GlobalOptions.tgroups = optval
         elif optname == 'tcrit':
@@ -198,6 +195,12 @@ def parse_argv( argv ):
             GlobalOptions.ttop = __parse_float( opt, 0, 1 )
         elif optname == 'tbottom':
             GlobalOptions.tbottom = __parse_float( opt, 0, 1 )
+        elif optname == 'xrange':
+            GlobalOptions.xrange = __parse_range( opt )
+        elif optname == 'y1range':
+            GlobalOptions.y1range = __parse_range( opt )
+        elif optname == 'y2range':
+            GlobalOptions.y2range = __parse_range( opt )
         elif optname == 'legend':
             GlobalOptions.legend_individual = True
         elif optname == 'noLegend':
@@ -266,13 +269,14 @@ class GlobalOptions:
     output = None
     classifications = common_functions.CLASSIFICATIONS
     group = 'auto'
-    xrange = None
-    y1range = None
-    y2range = None
+    epoch = None
     tgroups = None
     tcrit = TCRIT_DEFAULT[0]
     ttop = TTOP_DEFAULT
     tbottom = TBOTTOM_DEFAULT
+    xrange = None
+    y1range = None
+    y2range = None
     legend_individual = False
     legend_meta = True
     view = True
@@ -752,6 +756,34 @@ class StatsMode( Mode ):
             tables = common_stats.parse_stats( rundir.path, types = valuenames )
 
             for type, table in tables.items():
+                if GlobalOptions.epoch:
+                    statfreq = table.rows()[1]['step'] - table.rows()[0]['step'] + 1
+                    if statfreq < GlobalOptions.epoch:
+                        finalstep = table.rows()[-1]['step']
+                        colnames = ['step', 'value']
+                        coltypes = ['int', 'float']
+                        table_epoch = datalib.Table( table.name + "-epoch",
+                                                     colnames,
+                                                     coltypes,
+                                                     keycolname = 'step' )
+                        row = table_epoch.createRow()
+                        row['step'] = 0
+                        row['value'] = float( table.rows()[0]['value'] )
+
+                        for epoch_start in range( statfreq, finalstep, GlobalOptions.epoch ):
+                            epoch_end = min( finalstep, epoch_start + GlobalOptions.epoch - statfreq )
+                            values = []
+                            for t in range( epoch_start, epoch_end + 1, statfreq ):
+                                values.append( table[t]['value'] )
+                            
+                            row = table_epoch.createRow()
+                            row['step'] = epoch_end
+                            row['value'] = sum(values) / len(values)
+                            
+
+                        write_temp_table( table_epoch )
+                        table = table_epoch
+                            
                 runDatas.append( RunData(rundir,
                                          type,
                                          table,
@@ -1976,14 +2008,9 @@ GLOBAL OPTIONS
 
             Note you may use abbreviations.
 
-     --xrange <xmin>,<xmax>
-               Specify min and max x values.
-
-     --y1range <ymin>,<ymax>
-               Specify min and max y values of plot for y1-axis.
-
-     --y2range <ymin>,<ymax>
-               Specify min and max y values of plot for y2-axis.
+     -e, --epoch <nsteps>
+               Specify preferred epoch size. Not all modes are capable of
+            changing their epoch size.
 
      --tgroups <group1>,<group2>
                Specify groups used in ttest T-test calculations.
@@ -2001,6 +2028,15 @@ GLOBAL OPTIONS
                For ttest, specify where on the y2 axis the max value will be located.
             Value can be any number between 0 and 1, where 0 = bottom of plot and
             1 = top. (default '0.25')
+
+     --xrange <xmin>,<xmax>
+               Specify min and max x values.
+
+     --y1range <ymin>,<ymax>
+               Specify min and max y values of plot for y1-axis.
+
+     --y2range <ymin>,<ymax>
+               Specify min and max y values of plot for y2-axis.
 
      -l, --legend
                Display a legend for the individual runs.

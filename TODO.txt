@@ -17,7 +17,7 @@ sean		sean		02/04/2012	when clearing farm, use kill screen, not -X quit
 
 [PLOT]
 sean		sean		02/01/2012	add feature for interpolating timesteps when plotting condprops
-sean		sean		02/04/2012	add feature for re-binning stats
+sean		sean		02/05/2012	move stats re-binning into library function
 
 -------------------------------------------------------------------
 -------------------------------------------------------------------
