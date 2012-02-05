@@ -22,6 +22,7 @@ larryy		sean		02/05/2012	add -q option to quiet script,
 										so no message about writing the file, etc.
 larryy		sean		02/05/2012	add -Q or -r or -R (or ?) option to quietly replace files,
 										so files are overwritten with no warning and not moved aside
+larryy		sean		02/05/2012	revise filenames to include groups
 
 -------------------------------------------------------------------
 -------------------------------------------------------------------
