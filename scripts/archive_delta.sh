@@ -127,9 +127,7 @@ if [ "$MODE" == "checksums" ]; then
     (
 	cd $dir
 
-	for file in $input; do
-	    compute_checksum $file >> $output_tmp
-	done
+	compute_checksum $input >> $output_tmp
     )
 
     mv $output_tmp $output_checksum
@@ -193,9 +191,7 @@ tmpdir=$( mktemp -d /tmp/archive_delta.XXXXXXXX )
 
 (
     cd $dir
-    for x in $input_files; do
-	compute_checksum $x >> $tmpdir/input_checksum
-    done
+    compute_checksum $input_files >> $tmpdir/input_checksum
 )
 
 ###
