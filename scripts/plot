@@ -758,7 +758,7 @@ class StatsMode( Mode ):
             for type, table in tables.items():
                 if GlobalOptions.epoch:
                     statfreq = table.rows()[1]['step'] - table.rows()[0]['step'] + 1
-                    if statfreq < GlobalOptions.epoch:
+                    if statfreq < GlobalOptions.epoch and GlobalOptions.epoch % statfreq == 0:
                         finalstep = table.rows()[-1]['step']
                         colnames = ['step', 'value']
                         coltypes = ['int', 'float']
@@ -779,7 +779,6 @@ class StatsMode( Mode ):
                             row = table_epoch.createRow()
                             row['step'] = epoch_end
                             row['value'] = sum(values) / len(values)
-                            
 
                         write_temp_table( table_epoch )
                         table = table_epoch
@@ -847,6 +846,43 @@ class BarrierPosMode( Mode ):
                                        tablenames = ['Values'],
                                        required = datalib.REQUIRED,
                                        keycolname = 'Time' )[ 'Values' ]
+
+                if GlobalOptions.epoch:
+                    import bisect
+
+                    endStep = common_functions.get_endStep( rundir.path )
+                    colnames = ['Time', prop]
+                    coltypes = ['int', 'float']
+                    table_epoch = datalib.Table( table.name + "-epoch",
+                                                 colnames,
+                                                 coltypes,
+                                                 keycolname = 'Time' )
+                    row = table_epoch.createRow()
+                    row['Time'] = 0
+                    row[prop] = table.rows()[0][prop]
+
+                    timeCol = table.getColumn( 'Time' ).data
+
+                    for epoch_start in range( 1, endStep, GlobalOptions.epoch ):
+                        epoch_end = min( epoch_start + GlobalOptions.epoch - 1, endStep )
+
+                        values = []
+                        t_index = bisect.bisect_left( timeCol, epoch_start )
+                        while t_index < len(timeCol) and timeCol[t_index] <= epoch_end:
+                            values.append( table.rows()[t_index][prop] )
+                            t_index += 1
+
+                        row = table_epoch.createRow()
+                        row['Time'] = epoch_end
+                        if len(values):
+                            row[prop] = float( sum(values) ) / len(values)
+                        else:
+                            # Use value from previous epoch
+                            row[prop] = table_epoch.rows()[-2][prop]
+
+                    
+                    write_temp_table( table_epoch )
+                    table = table_epoch
 
                 runDatas.append( RunData(rundir,
                                          valuename,

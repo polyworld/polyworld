@@ -11,7 +11,7 @@ export POLYWORLD_PWFARM_RUNS_DIR=$POLYWORLD_PWFARM_HOME/runs
 export POLYWORLD_PWFARM_SCRIPTS_DIR=$POLYWORLD_PWFARM_APP_DIR/scripts
 
 DEFAULT_FETCH_LIST=""
-IMPLICIT_FETCH_LIST="stats/* *.wfo *.wfs *.wf plot.cfg .pwfarm/*"
+IMPLICIT_FETCH_LIST="stats/* *.wfo *.wfs *.wf endStep.txt plot.cfg .pwfarm/*"
 
 function lock_app()
 {

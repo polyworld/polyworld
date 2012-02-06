@@ -19,8 +19,7 @@ sean		sean		02/06/2012	use run/ symlink
 
 
 [PLOT]
-sean		sean		02/01/2012	add feature for interpolating timesteps when plotting condprops
-sean		sean		02/05/2012	move stats re-binning into library function
+sean		sean		02/05/2012	move stats/barrier re-binning into library function -- might use barrier algorithm for both
 larryy		sean		02/05/2012	add -q option to quiet script,
 										so no message about writing the file, etc.
 larryy		sean		02/05/2012	add -Q or -r or -R (or ?) option to quietly replace files,
