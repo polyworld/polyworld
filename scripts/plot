@@ -767,9 +767,7 @@ class StatsMode( Mode ):
 
             for type, table in tables.items():
                 if GlobalOptions.epoch:
-                    table_epoch = algorithms.make_epochs( table, 'step', 'value', GlobalOptions.epoch )
-                    write_temp_table( table_epoch )
-                    table = table_epoch
+                    table = algorithms.make_epochs( table, 'step', 'value', GlobalOptions.epoch )
                             
                 runDatas.append( RunData(rundir,
                                          type,
@@ -837,9 +835,7 @@ class BarrierPosMode( Mode ):
 
                 if GlobalOptions.epoch:
                     endStep = common_functions.get_endStep( rundir.path )
-                    table_epoch = algorithms.make_epochs( table, 'Time', prop, GlobalOptions.epoch, endStep )
-                    write_temp_table( table_epoch )
-                    table = table_epoch
+                    table = algorithms.make_epochs( table, 'Time', prop, GlobalOptions.epoch, endStep )
 
                 runDatas.append( RunData(rundir,
                                          valuename,
@@ -1060,6 +1056,10 @@ class Clause:
     def createCurveDatas( self, rundirs ):
         general_opts, mode_opts, valuenames, valueattrs = self.mode.parse_argv( self.argv )
         runDatas = self.mode.createRunDatas( general_opts, mode_opts, valuenames, valueattrs, rundirs )
+
+        for runData in runDatas:
+            if runData.table.path == None:
+                write_temp_table( runData.table )
 
         curveDatas = []
 
