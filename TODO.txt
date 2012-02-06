@@ -20,7 +20,6 @@ sean		sean		02/06/2012	use run/ symlink
 
 [PLOT]
 sean		sean		02/05/2012	move stats/barrier re-binning into library function -- might use barrier algorithm for both
-larryy		sean		02/05/2012	revise filenames to include groups
 sean		sean		02/06/2012	make valueattr path encodings more concise
 
 -------------------------------------------------------------------

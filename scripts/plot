@@ -1882,7 +1882,9 @@ def save_plot( doc, plot, rundirs, curveDatas ):
         modevalues = "_".join([ x[0] + '[' + ','.join(x[1]) + ']'
                                 for x in modevalues.items() ])
 
-        path = "plot_" + modevalues + ".eps"
+        groupnames = "_".join( sorted(set([ rundir.group for rundir in rundirs ])) )
+
+        path = "plot_" + modevalues + "_" + groupnames + ".eps"
 
         results_dir = common_functions.get_results_dir( map(lambda x: x.path, rundirs) )
         path = os.path.join( results_dir, path )
