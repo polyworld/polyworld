@@ -84,18 +84,13 @@ esac
 ################################################################################
 
 SCREEN_WINDOW="$3"
-FIELD_BORN="$4"
-BLOB="$5"
-PASSWORD="$6"
+BLOB="$4"
 
 # If a farmer is already alive, then kill it.
 if is_process_alive $PID; then
     kill $( cat $PID )
 fi
 echo $$ > $PID
-
-# Notify dispatcher we're born.
-touch $FIELD_BORN
 
 #
 # Util functions for maintaining steps file

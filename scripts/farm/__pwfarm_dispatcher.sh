@@ -28,28 +28,11 @@ BLOB_DIR=${DISPATCHERSTATE_DIR}/blob
 BLOB_LOCAL=${BLOB_DIR}/blob.tbz
 BLOB_REMOTE="~/__pwfarm_blob__user_$( pwenv pwuser )__farm_$( pwenv farmname )__session_$( pwenv sessionname ).tbz"
 BROADCAST_COMPLETE=$DISPATCHERSTATE_DIR/broadcast_complete
-FIELD_BORN=$DISPATCHERSTATE_DIR/field_born
 
 
 function screen_active()
 {
     screen -ls | grep "\\b${DISPATCHER_SCREEN_SESSION}\\b" > /dev/null
-}
-
-function init_screen()
-{
-    screen -d -m -S "${DISPATCHER_SCREEN_SESSION}"
-
-    while ! screen_active; do
-	sleep 0.1
-    done
-
-    # for good measure
-    sleep 0.5
-
-    if $ZOMBIE_SCREENS; then
-	screen -S "${DISPATCHER_SCREEN_SESSION}" -X zombie kr
-    fi
 }
 
 function resume_screen()
@@ -59,10 +42,10 @@ function resume_screen()
 
 function kill_screen()
 {
-    while screen_active; do
-	screen -S "${DISPATCHER_SCREEN_SESSION}" -X quit
-	sleep 1
-    done
+    local pid_screen=$( screen -ls | grep "\\b${DISPATCHER_SCREEN_SESSION}\\b" | grep -o '^[[:space:]]\+[0-9]\+' 2>/dev/null )
+    if [ ! -z "$pid_screen" ]; then
+	kill $pid_screen
+    fi
 }
 
 mode="$1"
@@ -421,44 +404,39 @@ if $broadcast; then
 fi
 
 ###
-### Create Screen Session
-###
-if [ "$mode" == "dispatch" ] || [ "$mode" == "recover" ]; then
-    if ! init_screen; then
-	err "Failed initing dispatcher screen!"
-    fi
-fi
-
-###
 ### Perform task on all field nodes
 ###
-screen_window=1
-
 if [ -e $FIELDNUMBERS ]; then
-    for fieldnumber in $( cat $FIELDNUMBERS ); do
+    FARMER_SH="$PWFARM_SCRIPTS_DIR/__pwfarm_farmer.sh"
 
-	fieldhostname=$( fieldhostname_from_num $fieldnumber )
+    if [ "$mode" == "dispatch" ] || [ "$mode" == "recover" ]; then
+	tmp_dir=$( create_tmpdir )
+	screenrc=$tmp_dir/screenrc
+	screen_window=0
+	
+	for fieldnumber in $( cat $FIELDNUMBERS ); do
+	    fieldhostname=$( fieldhostname_from_num $fieldnumber )
 
-	FARMER_SH="$PWFARM_SCRIPTS_DIR/__pwfarm_farmer.sh"
+	    title="$fieldhostname"
 
-	if [ "$mode" == "dispatch" ] || [ "$mode" == "recover" ]; then
-	    rm -f $FIELD_BORN
-
-	    title="$fieldhostname - $command"
-	    screen -S "${DISPATCHER_SCREEN_SESSION}" -X screen -t "$title" \
+	    echo screen -t "$title" \
 		"$FARMER_SH" \
 		$fieldnumber \
                 $mode \
 		$screen_window \
-		$FIELD_BORN \
-                "${BLOB_REMOTE}"
-
-	    while [ ! -e $FIELD_BORN ]; do
-		sleep 0.1
-	    done
+                "${BLOB_REMOTE}" >> $screenrc
 
 	    screen_window=$(( $screen_window + 1 ))
-	else
+	done
+
+	echo "windowlist" >> $screenrc
+
+	screen -S "${DISPATCHER_SCREEN_SESSION}" -c $screenrc
+	rm -rf $tmp_dir
+    else
+	for fieldnumber in $( cat $FIELDNUMBERS ); do
+	    fieldhostname=$( fieldhostname_from_num $fieldnumber )
+	    
 	    case "$mode" in 
 		"clear")
 		    echo "   [ Clearing $fieldnumber (farm=$(pwenv farmname), session=$(pwenv sessionname)) ]"
@@ -477,35 +455,14 @@ if [ -e $FIELDNUMBERS ]; then
 		    err "Invalid mode: $mode"
 		    ;;
 	    esac
-	fi
-    done
+	done
+    fi
 fi
 
 ###
 ### Mode-specific logic after interfacing with field nodes
 ###
 if [ "$mode" == "dispatch" ] || [ "$mode" == "recover" ]; then
-    win0pid=$DISPATCHERSTATE_DIR/win0pid
-    rm -f win0pid
-    # kill window 0. there's a race in just using -X kill and then attaching, so we "stuff" a command into the window.
-    # it writes its pid to a file, then exits... and we can wait for it to actually die
-    screen -S "${DISPATCHER_SCREEN_SESSION}" -p 0 -X stuff 'echo $$>'$win0pid'; exit'$'\n'
-
-    # wait for win0 to write its pid
-    echo "Waiting for win0 to write pid"
-    while [ ! -e $win0pid ]; do sleep 0.1; done
-
-    # wait for win0 to die
-    echo "Waiting for win0 to die"
-    while is_process_alive $win0pid; do sleep 0.1; done
-    rm $win0pid
-
-    # sleep another 1 second, just for good measure
-    sleep 1
-
-    # bring up screen, starting at the windowlist
-    echo "Attaching to dispatcher screen..."
-    screen -S "${DISPATCHER_SCREEN_SESSION}" -p = -r
     while screen_active; do
 	echo
 	echo "You have detached the dispatcher screen."
