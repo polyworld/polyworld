@@ -15,6 +15,7 @@ sean		sean		02/04/2012	bashdb
 sean		sean		02/04/2012	when clearing farm, use kill screen, not -X quit
 sean		sean		02/06/2012	research more reliable use of screen, specifically in dispatcher.
 sean		sean		02/06/2012	make fetch detect when no fields fetched, and give user error message
+sean		sean		02/06/2012	use run/ symlink
 
 
 [PLOT]
