@@ -52,10 +52,10 @@ case "$mode" in
           if [ -e $FIELD_STATE_DIR/pid_command ]; then
             kill \$( cat $FIELD_STATE_DIR/pid_command ) 2>/dev/null;
           fi ;
-          while screen -ls | grep \"$FIELD_SCREEN_SESSION\" > /dev/null; do
-            screen -S \"$FIELD_SCREEN_SESSION\" -X quit ;
-            sleep 1 ;
-          done ;
+          screen -ls | grep \"$FIELD_SCREEN_SESSION\" | grep -o '^[[:space:]]\+[0-9]\+' 2>/dev/null > $FIELD_STATE_DIR/pid_screen ;
+          if [ ! -z \$( cat $FIELD_STATE_DIR/pid_screen ) ]; then
+            kill \$( cat $FIELD_STATE_DIR/pid_screen ) 2>/dev/null;
+          fi ;
           rm -f $BLOB ;
           rm -rf $FIELD_STATE_DIR"
 	if is_process_alive $PID; then
