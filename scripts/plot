@@ -84,6 +84,8 @@ def parse_argv( argv ):
     OPTS = [
         # Long                  Short       Arg
         ( 'output',             'o',        True ),
+        ( 'replace',            'r',        False ),
+        ( 'quiet',              'q',        False ),
         ( 'classifications',    'C',        True),
         ( 'group',              'g',        True),
         ( 'epoch',              'e',        True),
@@ -170,6 +172,10 @@ def parse_argv( argv ):
         
         if optname == 'output':
             GlobalOptions.output = optval
+        elif optname == 'replace':
+            GlobalOptions.replace = True
+        elif optname == 'quiet':
+            GlobalOptions.quiet = True
         elif optname == 'classifications':
             try:
                 GlobalOptions.classifications = common_functions.normalize_classifications( optval.split(',') )
@@ -267,6 +273,8 @@ def parse_argv( argv ):
 ####################################################################################
 class GlobalOptions:
     output = None
+    replace = False
+    quiet = False
     classifications = common_functions.CLASSIFICATIONS
     group = 'auto'
     epoch = None
@@ -753,7 +761,9 @@ class StatsMode( Mode ):
         runDatas = []
 
         for rundir in rundirs:
-            tables = common_stats.parse_stats( rundir.path, types = valuenames )
+            tables = common_stats.parse_stats( rundir.path,
+                                               types = valuenames,
+                                               quiet = GlobalOptions.quiet)
 
             for type, table in tables.items():
                 if GlobalOptions.epoch:
@@ -1877,10 +1887,13 @@ def save_plot( doc, plot, rundirs, curveDatas ):
         results_dir = common_functions.get_results_dir( map(lambda x: x.path, rundirs) )
         path = os.path.join( results_dir, path )
 
-    print "Writing plot to " + path + "..."
-    if os.path.exists( path ):
+    if not GlobalOptions.quiet:
+        print "Writing plot to " + path + "..."
+
+    if os.path.exists( path ) and not GlobalOptions.replace:
         path_bak = os.path.join( os.path.dirname(path), '.#' + os.path.basename(path) )
-        warn( "File already exists! Saving old file to " + path_bak )
+        if not GlobalOptions.quiet:
+            warn( "File already exists! Saving old file to " + path_bak )
         shutil.copyfile( path, path_bak )
 
     doc.save( path )
@@ -2024,6 +2037,12 @@ GLOBAL OPTIONS
 
      -o, --output  <path>
                Specify path of generated plot document.
+
+     -r, --replace
+               If output file already exists, do not create .# backup copy.
+
+     -q, --quiet
+               Minimize informational messages.
 
      -C, --classifications <class>[,<class>]...
                <class>[,<class>]...: Constrain set of possible classifications,
