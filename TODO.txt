@@ -15,6 +15,11 @@ sean		sean		02/04/2012	bashdb
 sean		sean		02/06/2012	research more reliable use of screen, specifically in dispatcher.
 sean		sean		02/06/2012	make fetch detect when no fields fetched, and give user error message
 sean		sean		02/06/2012	use run/ symlink
+larryy		sean		02/06/2012	when -F is specified to ffetch, don't get default data files
+									(assumption is -F is only used after successful frun or empty ffetch,
+									thus allowing smaller downloads and easier detection of failures)
+larryy		sean		02/06/2012	identify individual fields as having failed if a ffetch finds no data to retrieve
+									(does not affect good/failed status of original run)
 
 
 [PLOT]
