@@ -342,6 +342,49 @@ def ttest_table( ttest_table_name,
 
 ####################################################################################
 ###
+### FUNCTION make_epochs()
+###
+####################################################################################
+def make_epochs( table, xcolname, ycolname, epoch_len = 1000, endStep = None ):
+    timeCol = table.getColumn( xcolname ).data
+    if endStep == None:
+        endStep = timeCol[-1]
+
+    colnames = [xcolname, ycolname]
+    coltypes = ['int', 'float']
+    table_epoch = datalib.Table( table.name + "-epoch",
+                                 colnames,
+                                 coltypes,
+                                 keycolname = xcolname )
+
+    time_index = 0
+    row = table_epoch.createRow()
+    row[xcolname] = 0
+    row[ycolname] = table.rows()[time_index][ycolname]
+
+    time_index = 1
+
+    for epoch_start in range( 1, endStep, epoch_len ):
+        epoch_end = min( epoch_start + epoch_len - 1, endStep )
+
+        values = []
+        while time_index < len(timeCol) and timeCol[time_index] <= epoch_end:
+            values.append( table.rows()[time_index][ycolname] )
+            time_index += 1
+
+        row = table_epoch.createRow()
+        row[xcolname] = epoch_end
+        if len(values):
+            row[ycolname] = float( sum(values) ) / len(values)
+        else:
+            # Use value from previous epoch
+            row[ycolname] = table_epoch.rows()[-2][ycolname]
+
+    return table_epoch
+
+
+####################################################################################
+###
 ### FUNCTION copy_matrix()
 ###
 ####################################################################################

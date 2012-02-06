@@ -767,31 +767,9 @@ class StatsMode( Mode ):
 
             for type, table in tables.items():
                 if GlobalOptions.epoch:
-                    statfreq = table.rows()[1]['step'] - table.rows()[0]['step'] + 1
-                    if statfreq < GlobalOptions.epoch and GlobalOptions.epoch % statfreq == 0:
-                        finalstep = table.rows()[-1]['step']
-                        colnames = ['step', 'value']
-                        coltypes = ['int', 'float']
-                        table_epoch = datalib.Table( table.name + "-epoch",
-                                                     colnames,
-                                                     coltypes,
-                                                     keycolname = 'step' )
-                        row = table_epoch.createRow()
-                        row['step'] = 0
-                        row['value'] = float( table.rows()[0]['value'] )
-
-                        for epoch_start in range( statfreq, finalstep, GlobalOptions.epoch ):
-                            epoch_end = min( finalstep, epoch_start + GlobalOptions.epoch - statfreq )
-                            values = []
-                            for t in range( epoch_start, epoch_end + 1, statfreq ):
-                                values.append( table[t]['value'] )
-                            
-                            row = table_epoch.createRow()
-                            row['step'] = epoch_end
-                            row['value'] = sum(values) / len(values)
-
-                        write_temp_table( table_epoch )
-                        table = table_epoch
+                    table_epoch = algorithms.make_epochs( table, 'step', 'value', GlobalOptions.epoch )
+                    write_temp_table( table_epoch )
+                    table = table_epoch
                             
                 runDatas.append( RunData(rundir,
                                          type,
@@ -858,39 +836,8 @@ class BarrierPosMode( Mode ):
                                        keycolname = 'Time' )[ 'Values' ]
 
                 if GlobalOptions.epoch:
-                    import bisect
-
                     endStep = common_functions.get_endStep( rundir.path )
-                    colnames = ['Time', prop]
-                    coltypes = ['int', 'float']
-                    table_epoch = datalib.Table( table.name + "-epoch",
-                                                 colnames,
-                                                 coltypes,
-                                                 keycolname = 'Time' )
-                    row = table_epoch.createRow()
-                    row['Time'] = 0
-                    row[prop] = table.rows()[0][prop]
-
-                    timeCol = table.getColumn( 'Time' ).data
-
-                    for epoch_start in range( 1, endStep, GlobalOptions.epoch ):
-                        epoch_end = min( epoch_start + GlobalOptions.epoch - 1, endStep )
-
-                        values = []
-                        t_index = bisect.bisect_left( timeCol, epoch_start )
-                        while t_index < len(timeCol) and timeCol[t_index] <= epoch_end:
-                            values.append( table.rows()[t_index][prop] )
-                            t_index += 1
-
-                        row = table_epoch.createRow()
-                        row['Time'] = epoch_end
-                        if len(values):
-                            row[prop] = float( sum(values) ) / len(values)
-                        else:
-                            # Use value from previous epoch
-                            row[prop] = table_epoch.rows()[-2][prop]
-
-                    
+                    table_epoch = algorithms.make_epochs( table, 'Time', prop, GlobalOptions.epoch, endStep )
                     write_temp_table( table_epoch )
                     table = table_epoch
 
