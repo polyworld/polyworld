@@ -5,52 +5,12 @@ import sys
 import datalib
 import glob
 
-STAT_TYPES = ['agents', 'food', 'born', 'bornv', 'created', 'died', 'EatRate', 'MateRate', 'LifeSpan', 'CurNeurons', 'NeurGroups', 'CurNeurGroups', 'Domain[domain_index]FP[foodpatch_index][stat_index]']
-FILENAME_DATALIB = 'datalib.txt'
-
-####################################################################################
-###
-### FUNCTION get_names()
-###
-####################################################################################
-def get_names(types):
-    return types
-
-####################################################################################
-###
-### FUNCTION path_stats()
-###
-####################################################################################
-def path_stats(path_run):
-    return os.path.join(path_run, 'stats', FILENAME_DATALIB)
-
 ####################################################################################
 ###
 ### FUNCTION parse_stats
 ###
 ####################################################################################
-def parse_stats(run_path, types = None, quiet = False):
-    __ensure_datalib( run_path, quiet )
-
-    return datalib.parse( path_stats(run_path),
-                          tablenames = types,
-                          required = datalib.REQUIRED,
-                          keycolname = 'step' )
-
-####################################################################################
-###
-### FUNCTION __ensure_datalib
-###
-####################################################################################
-def __ensure_datalib( path_run, quiet = False ):
-    path_datalib = path_stats( path_run )
-    if os.path.exists( path_datalib ):
-        return
-
-    if not quiet:
-        # This can take a long time, so let the user we're not hung
-        print 'Converting stats files into datalib format for run', path_run
-
+def parse_stats(path_run, types = None, quiet = False):
     tables = __create_tables( path_run, quiet )
 
     paths = glob.glob( os.path.join(path_run, 'stats', 'stat.*') )
@@ -59,12 +19,12 @@ def __ensure_datalib( path_run, quiet = False ):
     for path in paths:
         __add_row( tables, path, quiet )
 
-    if not quiet:
-        print '\nwriting %s' % path_datalib
-
-    datalib.write( path_datalib,
-                   tables,
-                   randomAccess = False )
+    if not types:
+        return tables
+    else:
+        result = {}
+        for type in types: result[type] = tables[type]
+        return result
 
 ####################################################################################
 ###
