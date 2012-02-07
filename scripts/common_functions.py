@@ -540,43 +540,52 @@ def get_endStep(path_run):
 ###
 ####################################################################################
 def find_run_paths(paths_arg, required_subpath = None):
-    def __isrundir( path ):
-	    if required_subpath == None:
-		    return isrundir( path )
-	    else:
-		    path = os.path.join( path, required_subpath )
-		    return len( glob.glob(path) ) > 0
+	import farm
 
-    run_paths = []
+	def __isrundir( path ):
+		if required_subpath == None:
+			return isrundir( path )
+		else:
+			path = os.path.join( path, required_subpath )
+			return len( glob.glob(path) ) > 0
 
-    for path_arg in paths_arg:
-        if not os.path.isdir(path_arg):
-            raise InvalidDirError(path_arg)
+	run_paths = []
 
-	if os.path.basename( path_arg ) == 'results':
-		continue
+	for path_arg in paths_arg:
+		if not os.path.isdir(path_arg):
+			if farm.is_valid_env():
+				farm_runs = filter( __isrundir, farm.find_runs_local( path_arg ) )
+				if len(farm_runs):
+					run_paths += farm_runs
+				else:
+					raise InvalidDirError(path_arg)
+			else:
+				raise InvalidDirError(path_arg)
+		else:
+			if os.path.basename( path_arg ) == 'results':
+				continue
 
-        # if 'directory' is itself a run/ directory, just use that.
-        if __isrundir(path_arg):
-            run_paths.append(path_arg)
-        else:
-            found_run = False
+			# if 'directory' is itself a run/ directory, just use that.
+			if __isrundir(path_arg):
+				run_paths.append(path_arg)
+			else:
+				found_run = False
 
-            # 'directory' is a directory, but is NOT a run/ directory itself.  Is it a list of run directories?
-            for potential_runpath in os.listdir(path_arg):
-                subdir = os.path.join(path_arg, potential_runpath)
-                
-                # if potential_directory is a run/ directory, add it.
-                if __isrundir(subdir):
-                    run_paths.append(subdir)
-                    found_run = True
+				# 'directory' is a directory, but is NOT a run/ directory itself.  Is it a list of run directories?
+				for potential_runpath in os.listdir(path_arg):
+					subdir = os.path.join(path_arg, potential_runpath)
+				
+					# if potential_directory is a run/ directory, add it.
+					if __isrundir(subdir):
+						run_paths.append(subdir)
+						found_run = True
 
-            if not found_run:
-                raise InvalidDirError(path_arg, 'run/run-parent', required_subpath)
+				if not found_run:
+					raise InvalidDirError(path_arg, 'run/run-parent', required_subpath)
 
-    run_paths.sort()
+	run_paths.sort()
 
-    return map(lambda x: x.rstrip('/'), run_paths)
+	return map(lambda x: x.rstrip('/'), run_paths)
 
 ####################################################################################
 ###

@@ -19,7 +19,6 @@ larryy		sean		02/06/2012	identify individual fields as having failed if a ffetch
 
 [PLOT]
 sean		sean		02/06/2012	make valueattr path encodings more concise
-sean		sean		02/07/2012	run id as argument
 
 [PROPLIB]
 sean		sean		02/07/2012	templates

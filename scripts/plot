@@ -1940,7 +1940,7 @@ def usage_default():
 USAGE 
 
      plot help [<mode>|opts|macros]
-     plot [<global_opts>] <mode> [<mode_opts>] [ : <mode> [<mode_opts>]]... <directory>...
+     plot [<global_opts>] <mode> [<mode_opts>] [ : <mode> [<mode_opts>]]... <directory|runid>...
 
 DESCRIPTION
 
@@ -1955,7 +1955,8 @@ DESCRIPTION
      spelled fully.
 
      Directory arguments can specify a run directory or the parent of one or
-     more run directories.
+     more run directories. If your environment is setup for pwfarm, then you may use
+     a farm Run ID, where it will be operated on hierarchically.
 
      Note that all 'meta' averages can only be calculated if more than one run
      is specified. Meta-averages are computed only for those timesteps which exist
