@@ -6,6 +6,7 @@
 #     -q    Quiet.
 #
 alias fconfig='pwfarm_config.sh'
+alias fcstat='pwfarm_config.sh stat'
 
 function fset()
 {
@@ -16,12 +17,12 @@ function fset()
 
     if [ "$1" == "-q" ]; then local quiet=true ; shift; fi
 
-    alias fcstat='pwfarm_config.sh stat'
     alias fbuild='pwfarm_build.sh'
     alias frun='pwfarm_run.sh'
     alias fpassive='pwfarm_passive.sh'
     alias fdisp='pwfarm_dispatcher.sh'
     alias flsrun='pwfarm_lsrun.sh'
+    alias fid='pwfarm_local_id.sh'
     alias fmvrun='pwfarm_mvrun.sh'
     alias frmrun='pwfarm_rmrun.sh'
     alias fstat='pwfarm_stat.sh'

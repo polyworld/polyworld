@@ -16,7 +16,6 @@ sean		sean		02/06/2012	make fetch detect when no fields fetched, and give user e
 sean		sean		02/06/2012	use run/ symlink
 larryy		sean		02/06/2012	identify individual fields as having failed if a ffetch finds no data to retrieve
 									(does not affect good/failed status of original run)
-larryy		sean		02/06/2012	script for conveniently seeing nid/fid of run
 
 
 [PLOT]
