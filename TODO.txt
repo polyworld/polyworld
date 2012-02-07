@@ -19,6 +19,7 @@ larryy		sean		02/06/2012	identify individual fields as having failed if a ffetch
 
 [PLOT]
 sean		sean		02/06/2012	make valueattr path encodings more concise
+sean		sean		02/0y/2012	fix stat parsing to grab values not in stat.1 (e.g. Fittest)
 
 [PROPLIB]
 sean		sean		02/07/2012	templates
