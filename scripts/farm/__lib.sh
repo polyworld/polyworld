@@ -97,6 +97,19 @@ function archive()
     fi
 }
 
+function archive_delta()
+{
+    local srcdir=$__LIB_DIR
+
+    if [ -e $srcdir/archive_delta.sh ]; then
+	$srcdir/archive_delta.sh "$@"
+    elif [ -e $srcdir/../archive_delta.sh ]; then
+	$srcdir/../archive_delta.sh "$@"
+    else
+	err "Cannot locate archive_delta.sh! srcdir=$srcdir"
+    fi
+}
+
 function repeat_til_success
 {
     if [ "$1" == "--display" ]; then

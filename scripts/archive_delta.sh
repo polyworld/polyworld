@@ -21,7 +21,7 @@ ARGS:
    input_spec    One or more paths relative to <dir> arg, which may include
                wildcards.
 
-$( basename $0 ) "archive" [-e:] output_archive dir input_spec...
+$( basename $0 ) "archive" [-e:m:] output_archive dir input_spec...
 
       Creates a delta archive, where items in new archive are only those that are not
     in the old archive or whose content has changed (as determined by md5 checksum).
@@ -41,6 +41,9 @@ OPTIONS:
 
    -e existing_checksum
                   Path of checksum file for already existing archived files.
+
+   -m missing_input
+                  Path of file to which missing input specs should be written.
 EOF
 
     if [ ! -z "$1" ]; then
@@ -68,25 +71,40 @@ function canondirname()
 }
 
 SRC_DIR=$( canondirname $BASH_SOURCE )
+MISSING=""
 
 function find_input_files()
 {
+    set -e
+
     local dir="$1"
     shift
-    local input="$@"
+    local inputspecs="$@"
+
+    if [ ! -z "$MISSING" ]; then
+	rm -f $MISSING
+    fi
 
     (
-	set +e
 	cd $dir >/dev/null #larryy tends to make noisy cd
-	for i in $input; do
-	    if [ -f $i ]; then
-		ls $i 2>/dev/null
-	    elif [ -d $i ]; then
-		find $i -type f 2>/dev/null
+	for inputspec in $inputspecs; do
+	    if echo "$inputspec" | grep "^\[.*\]$" > /dev/null; then
+		local optional=true
+		inputspec=${inputspec:1:$((${#inputspec} - 2))} # strip [ ]
+	    else
+		local optional=false
 	    fi
+
+	    for i in $inputspec; do
+		if [ -f $i ]; then
+		    ls $i 2>/dev/null
+		elif [ -d $i ]; then
+		    find $i -type f 2>/dev/null
+		elif [ ! -z "$MISSING" ] && ! $optional; then
+		    echo "$i" >> $MISSING
+		fi
+	    done
 	done
-		
-	exit 0
     )
 }
 
@@ -149,10 +167,13 @@ shift
 
 existing_checksum=""
 
-while getopts "e:" opt; do
+while getopts "e:m:" opt; do
     case $opt in
 	e)
 	    existing_checksum="$OPTARG"
+	    ;;
+	m)
+	    MISSING="$OPTARG"
 	    ;;
 	*)
 	    exit 1

@@ -30,6 +30,9 @@ OPTIONS:
 
                     $IMPLICIT_FETCH_LIST
 
+               If a file spec is enclosed in [], then it is considered optional
+               and no error is reported if it isn't found.
+
     -f fields
                Specify fields on which this should run. Must be a single argument,
             so use quotes. e.g. -f "0 1" or -f "{0..3}"
@@ -112,7 +115,7 @@ if ! $field; then
 
 	mkdir -p $CHECKSUMS_DIR/$runid/
 
-	$POLYWORLD_SCRIPTS_DIR/archive_delta.sh checksums \
+	archive_delta checksums \
 	    $CHECKSUMS_DIR/$runid/$nid \
 	    $rundir \
 	    "$FETCH_LIST $IMPLICIT_FETCH_LIST"
@@ -134,29 +137,63 @@ if ! $field; then
     __pwfarm_script.sh --input $PAYLOAD --output "$TMPDIR/result" $0 --field $ARGS || exit 1
 
     #
+    # Check if any runs were found and if any files missing
+    #
+    anyfound=false
+
+    for fieldnumber in $(pwenv fieldnumbers); do
+	runs=$TMPDIR/result_$fieldnumber/runs
+	if [ -e $runs ] && [ ! -z "$( cat $runs )" ]; then
+	    anyfound=true
+	    break
+	fi
+    done
+
+    if ! $anyfound; then
+	err "Run ID not found on any fields!"
+    fi
+
+    #
     # Unpack fetched data
     #
-    for resultdir in $TMPDIR/result*; do
+    filesmissing=$TMPDIR/filesmissing
+    rm -f $filesmissing
+
+    for fieldnumber in $(pwenv fieldnumbers); do
+	resultdir=$TMPDIR/result_$fieldnumber
 	cat $resultdir/runs |
 	while read line; do
 	    runid=$( echo "$line" | cut -f 1 )
 	    nid=$( echo "$line" | cut -f 2 )
 	    archive=$resultdir/$( echo "$line" | cut -f 3 )
+	    missing=$( dirname $archive )/missing
 
 	    if [ -e $archive ]; then
 		rundir=$( stored_run_path_local $OWNER $runid $nid )
 		mkdir -p $rundir
 
 		if $VERBOSE; then
+		    echo "DOWNLOADED from $fieldnumber:${runid}_${nid}:"
 		    archive ls $archive |
 		    while read relpath; do
 			echo $rundir/$relpath
-		    done
+		    done |
+		    indent
 		fi
 		archive unpack -d $rundir $archive
 	    fi
+
+	    if [ -e $missing ]; then
+		touch $filesmissing
+		echo "MISSING from $fieldnumber:${runid}_${nid}:" >&2
+		cat $missing | indent >&2
+	    fi
 	done
     done
+
+    if [ -e $filesmissing ]; then
+	exit 1
+    fi
 else
     ###
     ### EXECUTE ON REMOTE
@@ -176,17 +213,20 @@ else
 	runid=$( parse_stored_run_path_field --runid  $rundir )
 	nid=$( parse_stored_run_path_field --nid  $rundir )
 
-	mkdir -p $TMPDIR/$runid/$nid
+	archive_relpath=$runid/$nid/run.tbz
+	archive=$TMPDIR/$archive_relpath
+	missing=$( dirname $archive )/missing
 
-	archive=$runid/$nid/run.tbz
+	mkdir -p $( dirname $archive )
 
-	$POLYWORLD_PWFARM_SCRIPTS_DIR/archive_delta.sh archive \
+	archive_delta archive \
 	    -e $PAYLOAD_DIR/checksums/$runid/$nid \
-	    $TMPDIR/$archive \
+	    -m $missing \
+	    $archive \
 	    $rundir \
 	    "$FETCH_LIST $IMPLICIT_FETCH_LIST"
 
-	printf "${runid}\t${nid}\t${archive}\n" >> $TMPDIR/runs
+	printf "${runid}\t${nid}\t${archive_relpath}\n" >> $TMPDIR/runs
     done
 
     cd $TMPDIR

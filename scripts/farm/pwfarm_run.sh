@@ -396,7 +396,7 @@ if ! $field; then
 		    # Package the Checksums
 		    #
 		    checksums=$RUN_PACKAGE_DIR/checksums_$taskid
-		    $POLYWORLD_SCRIPTS_DIR/archive_delta.sh checksums \
+		    archive_delta checksums \
 			$checksums \
 			$run \
 			"$FETCH_LIST $IMPLICIT_FETCH_LIST"
@@ -667,7 +667,7 @@ else
     ###
     cd run || err "postrun script moved ./run!!!"
 
-    $POLYWORLD_PWFARM_SCRIPTS_DIR/archive_delta.sh archive \
+    archive_delta archive \
 	-e $PAYLOAD_DIR/run_package/checksums_$(PWFARM_TASKMETA get id) \
 	$PWFARM_OUTPUT_ARCHIVE \
 	. \

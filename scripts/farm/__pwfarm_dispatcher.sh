@@ -385,6 +385,7 @@ if $broadcast; then
 	mkdir scripts
 	cp "$PWFARM_SCRIPTS_DIR/__lib.sh" scripts
 	cp "$PWFARM_SCRIPTS_DIR/../archive.sh" scripts
+	cp "$PWFARM_SCRIPTS_DIR/../archive_delta.sh" scripts
 	cp "$PWFARM_SCRIPTS_DIR/__pwfarm_field.sh" scripts
 	cp "$PWFARM_SCRIPTS_DIR/__pwfarm_taskmeta.sh" scripts
 	cp "$PWFARM_SCRIPTS_DIR/__pwfarm_runutil.sh" scripts
