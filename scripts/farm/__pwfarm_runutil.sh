@@ -351,6 +351,13 @@ function store_orphan_run()
 
     if [ -e $orphan ]; then
 	echo "Found orphan: $orphan"
+	
+	if [ -L $orphan ]; then
+	    echo "Orphan is just a symlink. Removing link."
+	    rm $orphan
+	    return
+	fi
+
 
 	local orphan_dir=$( dirname $orphan )
 	local owner=$( cat $orphan_dir/owner )
@@ -427,7 +434,7 @@ function store_failed_run()
     mv "$run" "$dst" || err "Failed storing failed run!!!"
 }
 
-function unstore_run()
+function link_run()
 {
     local owner="$1"
     local runid="$2"
@@ -440,7 +447,20 @@ function unstore_run()
 	err "Cannot locate existing run of id $runid"
     fi
 
-    echo "unstoring run from $src"
+    echo "Linking $run --> $src"
 
-    mv "$src" "$run" || err "Failed unstoring run of id $runid!!!"
+    ln -s "$src" "$run" || err "Failed linking run of id $runid!!!"
+}
+
+function unlink_run()
+{
+    local run="$1"
+
+    if [ ! -L $run ]; then
+	err "Not a symlink: $run"
+    fi
+
+    echo "Unlinking $run --> $(readlink $run)"
+
+    rm $run
 }

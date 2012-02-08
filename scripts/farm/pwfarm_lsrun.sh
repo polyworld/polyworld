@@ -81,12 +81,12 @@ if ! $FIELD; then
     done
 else
     if ! $OWNER_OVERRIDE; then
-	if [ -e "$POLYWORLD_PWFARM_APP_DIR/run" ] ; then
+	if [ -e "$POLYWORLD_PWFARM_APP_DIR/run" ] && [ ! -L "$POLYWORLD_PWFARM_APP_DIR/run" ]; then
 	    if lock_app; then
 		echo WARNING! Contains $(is_good_run "$POLYWORLD_PWFARM_APP_DIR/run" && echo "good" || echo "failed") orphan run! runid=$( cat "$POLYWORLD_PWFARM_APP_DIR/runid" ) nid=$( cat "$POLYWORLD_PWFARM_APP_DIR/nid" )>> $TMPDIR/out 2>&1
 		unlock_app
 	    else
-		echo Simulation running or being analyzed. runid=$( cat "$POLYWORLD_PWFARM_APP_DIR/runid" ) >> $TMPDIR/out 2>&1
+		echo Simulation running. runid=$( cat "$POLYWORLD_PWFARM_APP_DIR/runid" ) >> $TMPDIR/out 2>&1
 	    fi		
         fi
     fi

@@ -566,12 +566,7 @@ else
 	fi
     fi
 
-    if ! PWFARM_TASKMETA has worldfile; then
-	###
-	### No worldfile, so relocate requested run to current directory
-	###
-	unstore_run $OWNER $RUNID $NID ./run || exit 1
-    else
+    if PWFARM_TASKMETA has worldfile; then
 	###
 	### Worldfile exists, so exec Polyworld
 	###
@@ -617,16 +612,21 @@ else
 	./Polyworld --status ./worldfile
 	exitval=$?
 
+	###
+	### If failed, store and exit
+	###
 	if ! is_good_run --exit $exitval ./run; then
 	    store_failed_run $OWNER $RUNID $NID ./run
 	    exit 1
 	fi
 
+	###
+	### Do some bookkeeping
+	###
 	cp $POLYWORLD_PWFARM_WORLDFILE run/farm.wf
 	if [ ! -z "$PATH_OVERLAY" ]; then
 	    cp $PATH_OVERLAY run/parms.wfo
 	fi
-
 	mkdir -p run/.pwfarm
 	echo $( pwenv fieldnumber ) > run/.pwfarm/fieldnumber
 	echo $( PWFARM_TASKMETA get nid ) > run/.pwfarm/nid
@@ -634,7 +634,18 @@ else
 	if PWFARM_TASKMETA has ioverlay; then
 	    PWFARM_TASKMETA get ioverlay > run/.pwfarm/ioverlay
 	fi
+
+	###
+	### Store the run
+	###
+	store_good_run $OWNER $RUNID $NID "./run"
     fi
+
+    ###
+    ### Create sym link run/
+    ###
+    link_run $OWNER $RUNID $NID ./run || exit 1
+
 
     ###
     ### Execute the postrun script
@@ -676,9 +687,9 @@ else
     cd ..
 
     ###
-    ### Store run
+    ### Get rid of run/ symlink
     ###
-    store_good_run $OWNER $RUNID $NID "./run"
+    unlink_run "./run"
 
     ###
     ### Exit

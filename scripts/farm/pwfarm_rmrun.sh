@@ -14,7 +14,7 @@ usage: $( basename $0 ) [-tglf:o:] run_id|/
 
     Deletes runs with a Run ID that starts with runid, which is to say it can
   list a hierarchy of runs. You may use wildcards, but use quotes. By default,
-  operates on failed runs and failed orphans.
+  operates on failed runs.
 
     When deleting good runs, local data will also be deleted, unless -l is
   specified.
@@ -23,7 +23,7 @@ OPTIONS:
 
     -t         Don't delete anything, just show what data would be operated on.
 
-    -g         Operate on good runs and good orphans.
+    -g         Operate on good runs.
 
     -l         Don't delete local data when deleting good runs.
 
@@ -133,25 +133,11 @@ else
 
     if ! $OWNER_OVERRIDE; then
 	orphan="$POLYWORLD_PWFARM_APP_DIR/run"
-	if [ -e "$orphan" ]; then
-	    orphanid=$(cat $POLYWORLD_PWFARM_APP_DIR/runid)
-
-	    if is_runid_ancestor_match "$orphanid" "$RUNID"; then
-		if lock_app; then
-		    if ($GOOD && is_good_run "$orhpan") || (! $GOOD && ! is_good_run "$orphan"); then
-			if $TESTING; then
-			    echo "Delete orphan at $orphan (runid=$orphanid)."
-			    echo
-			else
-			    rm -rf $orphan
-			fi
-		    fi
-		    unlock_app
-		fi
-	    fi
+	if [ -e $orphan ] && lock_app; then
+	    store_orphan_run $orphan
+	    unlock_app
 	fi
     fi
-
 
     removed_dir=$( stored_run_path_field --subpath $STATUS $OWNER "$RUNID" )
 

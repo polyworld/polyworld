@@ -38,7 +38,7 @@ else
     ### REMOTE MACHINE
     ###
     ########################################
-    if [ !-e "$POLYWORLD_PWFARM_APP_DIR" ]; then
+    if [ ! -e "$POLYWORLD_PWFARM_APP_DIR" ]; then
 	echo "No app directory!" >> $OUT
     elif ! lock_app; then
 	echo "Failed locking app dir!" >> $OUT
