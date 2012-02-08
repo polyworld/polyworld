@@ -784,14 +784,58 @@ void FilterActivity( gsl_matrix* activity, const char* filter_events, const long
 // 	static double  eat_filter[] = { 0.2, 0.4, 0.6, 0.8, 1.0, 0.8, 0.6, 0.4, 0.2 };
 
 // m19e9m1.0e1.0
-	static int mate_filter_radius = 19;	// exclude center point
-	static int eat_filter_radius = 9;	// exclude center point
+// 	static int mate_filter_radius = 19;	// exclude center point
+// 	static int eat_filter_radius = 9;	// exclude center point
+// 	static double mate_filter[] = { 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5,
+// 									0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0,
+// 									0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5,
+// 									0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.05};
+// 	static double  eat_filter[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0,
+// 									0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1 };
+	static int mate_filter_pre = 19;	// exclude center point
+	static int mate_filter_post = 19;	// exclude center point
+	static int eat_filter_pre = 9;		// exclude center point
+	static int eat_filter_post = 9;		// exclude center point
 	static double mate_filter[] = { 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5,
 									0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0,
 									0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5,
 									0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.05};
 	static double  eat_filter[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0,
 									0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1 };
+
+// m19e19m1.0e1.0
+// 	static int mate_filter_radius = 19;	// exclude center point
+// 	static int eat_filter_radius = 19;	// exclude center point
+// 	static double mate_filter[] = { 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5,
+// 									0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0,
+// 									0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5,
+// 									0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.05 };
+// 	static double  eat_filter[] = { 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5,
+// 									0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0,
+// 									0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5,
+// 									0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.05 };
+
+// m19.4e9.4m1.0e1.0
+// 	static int mate_filter_pre = 19;	// exclude center point
+// 	static int mate_filter_post = 4;	// exclude center point
+// 	static int eat_filter_pre = 9;		// exclude center point
+// 	static int eat_filter_post = 4;		// exclude center point
+// 	static double mate_filter[] = { 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5,
+// 									0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0,
+// 									0.8, 0.6, 0.4, 0.2 };
+// 	static double  eat_filter[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0,
+// 									0.8, 0.6, 0.4, 0.2 };
+
+// m19.9e9.9m1.0e1.0
+// 	static int mate_filter_pre = 19;	// exclude center point
+// 	static int mate_filter_post = 4;	// exclude center point
+// 	static int eat_filter_pre = 9;		// exclude center point
+// 	static int eat_filter_post = 4;		// exclude center point
+// 	static double mate_filter[] = { 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5,
+// 									0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0,
+// 									0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1 };
+// 	static double  eat_filter[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0,
+// 									0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1 };
 
 	long duration = activity->size1;	// may be less than lifespan due to MaxNumTimeStepsToComputeComplexityOver
 	long agent_death = agent_birth + lifespan;	// seems like this should be -1, but this agrees with BirthsDeaths.log
@@ -830,8 +874,8 @@ void FilterActivity( gsl_matrix* activity, const char* filter_events, const long
 		filprint( "   step=%ld, act_step=%d, .mate=%c, .eat=%c\n", step, activity_step, agentEvent.mate ? 'T':'F', agentEvent.eat ? 'T':'F' );
 		if( mate_filtering && agentEvent.mate )
 		{
-			int left = activity_step - mate_filter_radius;
-			int right = activity_step + mate_filter_radius;
+			int left = activity_step - mate_filter_pre;
+			int right = activity_step + mate_filter_post;
 			int lo = left < 0 ? 0 : left;
 			int hi = right >= duration ? duration - 1 : right;
 			int offset = lo - left;
@@ -841,8 +885,8 @@ void FilterActivity( gsl_matrix* activity, const char* filter_events, const long
 		}
 		if( eat_filtering && agentEvent.eat )
 		{
-			int left = activity_step - eat_filter_radius;
-			int right = activity_step + eat_filter_radius;
+			int left = activity_step - eat_filter_pre;
+			int right = activity_step + eat_filter_post;
 			int lo = left < 0 ? 0 : left;
 			int hi = right >= duration ? duration - 1 : right;
 			int offset = lo - left;
