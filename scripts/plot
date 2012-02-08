@@ -192,7 +192,7 @@ def parse_argv( argv ):
             except common_functions.IllegalAbbreviationError, x:
                 err( x )
         elif optname == 'epoch':
-            GlobalOptions.epoch = __parse_int( opt, minval = 1 )
+            GlobalOptions.epoch = __parse_int( opt, minval = 0 )
         elif optname == 'tgroups':
             GlobalOptions.tgroups = optval
         elif optname == 'tcrit':
@@ -277,7 +277,7 @@ class GlobalOptions:
     quiet = False
     classifications = common_functions.CLASSIFICATIONS
     group = 'auto'
-    epoch = None
+    epoch = 1000
     tgroups = None
     tcrit = TCRIT_DEFAULT[0]
     ttop = TTOP_DEFAULT
@@ -742,49 +742,49 @@ class GraphMetricMode( Mode ):
 ####################################################################################
 class StatsMode( Mode ):
 
-    #------------------------------------------------------------
-    #--- FUNCTION __init()__
-    #------------------------------------------------------------
-    def __init__( self ):
-        Mode.__init__( self,
-                       name = 'stats',
-                       title = 'Stats',
-                       isAvr = False,
-                       numargs = 0,
-                       default_recent_type = None,
-                       default_valuenames = ['agents'] )
+	#------------------------------------------------------------
+	#--- FUNCTION __init()__
+	#------------------------------------------------------------
+	def __init__( self ):
+		Mode.__init__( self,
+					   name = 'stats',
+					   title = 'Stats',
+					   isAvr = False,
+					   numargs = 0,
+					   default_recent_type = None,
+					   default_valuenames = ['agents'] )
 
-    #------------------------------------------------------------
-    #--- FUNCTION createRunDatas()
-    #------------------------------------------------------------
-    def createRunDatas( self, general_opts, mode_opts, valuenames, valueattrs, rundirs ):
-        runDatas = []
+	#------------------------------------------------------------
+	#--- FUNCTION createRunDatas()
+	#------------------------------------------------------------
+	def createRunDatas( self, general_opts, mode_opts, valuenames, valueattrs, rundirs ):
+		runDatas = []
 
-        for rundir in rundirs:
-            tables = common_stats.parse_stats( rundir.path,
-                                               types = valuenames )
+		for rundir in rundirs:
+			tables = common_stats.parse_stats( rundir.path,
+											   types = valuenames )
 
-            for type, table in tables.items():
-                if GlobalOptions.epoch:
-                    table = algorithms.make_epochs( table, 'step', 'value', GlobalOptions.epoch )
-                            
-                runDatas.append( RunData(rundir,
-                                         type,
-                                         table,
-                                         'step',
-                                         'value') )
+			for type, table in tables.items():
+				if GlobalOptions.epoch:
+					table = algorithms.make_epochs( table, 'step', 'value', GlobalOptions.epoch )
+							
+				runDatas.append( RunData(rundir,
+										 type,
+										 table,
+										 'step',
+										 'value') )
 
-        return runDatas
+		return runDatas
 
-    #------------------------------------------------------------
-    #--- FUNCTION usage_valuenames()
-    #------------------------------------------------------------
-    def usage_valuenames( self ):
-        print """\
-     -v <S>[,<S>]...
-               Specify stats to be plotted.
-               ( default = %s )
-        """ % ','.join(self.default_valuenames)
+	#------------------------------------------------------------
+	#--- FUNCTION usage_valuenames()
+	#------------------------------------------------------------
+	def usage_valuenames( self ):
+		print """\
+	 -v <S>[,<S>]...
+			   Specify stats to be plotted.
+			   ( default = %s )
+		""" % ','.join(self.default_valuenames)
 
 
 ####################################################################################
@@ -2014,7 +2014,8 @@ GLOBAL OPTIONS
 
      -e, --epoch <nsteps>
                Specify preferred epoch size. Not all modes are capable of
-            changing their epoch size.
+            changing their epoch size. A value of 0 means no epoch computations
+            are performed. (default 1000)
 
      --tgroups <group1>,<group2>
                Specify groups used in ttest T-test calculations.
