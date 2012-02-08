@@ -9,12 +9,12 @@ function usage()
     cat >&2 <<EOF
 USAGE:
 
-    $( basename $0 )
+    $( basename $0 ) [dir]
 
-        With no args, you must be within your local farm run data directory. If you are under
-      a run directory (e.g. .../run_0/brain/) then information will be printed for that run. If
-      you are not under a run, then information will be printed for any runs under your current
-      location.
+        With no args, dir is your current directory. The dir must be within your local farm run
+      data directory. If the dir is under a run directory (e.g. .../run_0/brain/) then information
+      will be printed for that run. If the dir is not under a run, then information will be printed
+      for any runs under dir.
 
     $( basename $0 ) run_id [nid]
 
@@ -39,18 +39,33 @@ function report_run()
 }
 
 if [ $# == 0 ]; then
+    DIR=$( canonpath $PWD )
+elif [ -d $1 ]; then
+    DIR=$( canonpath $1 )
+else
+    RUNID=$1
+    validate_runid $RUNID
+    if [ ! -z "$2" ]; then
+	NID="$2"
+	if ! is_integer "$NID"; then
+	    err "nid argument must be integer"
+	fi
+    fi
+fi
+
+if [ ! -z "$DIR" ]; then
     ###
     ### First, check if we're under the local farm runs dir
     ###
     FARMDIR=$(pwenv runresults_dir)
-    if ! echo $PWD | grep "^$FARMDIR" > /dev/null; then
-	err "Not under local farm data dir. Please specify Run ID. For help, use -h."
+    if ! echo $DIR | grep "^$FARMDIR" > /dev/null; then
+	err "Not under local farm data dir: $DIR. Please specify Run ID. For help, use -h."
     fi
 
     ###
     ### Try to find a run directory above us in filesystem
     ###
-    dir=$PWD
+    dir=$DIR
     found_run=false
 
     while true; do
@@ -79,7 +94,7 @@ if [ $# == 0 ]; then
     ###
     export -f is_run
     rundirs=$(
-	find . -exec bash -c "is_run {}" \; -print -prune |
+	find $DIR -exec bash -c "is_run {}" \; -print -prune |
 	sort
     )
 
@@ -92,15 +107,6 @@ if [ $# == 0 ]; then
     done
 else
     OWNER=$( pwenv pwuser )
-    RUNID="$1"
-    validate_runid $RUNID
-
-    if [ ! -z "$2" ]; then
-	NID="$2"
-	if ! is_integer "$NID"; then
-	    err "nid argument must be integer"
-	fi
-    fi
 
     rundirs=$(
 	find_runs_local $OWNER $RUNID |
