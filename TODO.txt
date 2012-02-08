@@ -18,6 +18,8 @@ sean		sean		02/08/2012	if fmvrun fails on fields, shouldn't move local data.
 
 [PLOT]
 sean		sean		02/06/2012	make valueattr path encodings more concise
+larryy		sean		02/08/2012	add -p global option to generate .pdf from .eps using 'epstopdf'
+									(place in pdf/ directory inside usual .eps directory)
 
 [PROPLIB]
 sean		sean		02/07/2012	templates
