@@ -2,6 +2,7 @@ import os
 import sys
 
 import datalib
+import abstractfile
 
 COMPLEXITY_TYPES = ['A', 'P', 'I', 'B', 'HB']
 COMPLEXITY_NAMES = {'A':'All', 'P':'Processing', 'I':'Input', 'B':'Behavior', 'H':'Health'}
@@ -57,7 +58,7 @@ def get_name(type):
 		filter_events += '-filtered '
 	
 	name = filter_events + precision + '+'.join(result)
-
+	
 	return name
 
 ####################################################################################
@@ -128,8 +129,27 @@ def parse_avr(run_path, recent_type = 'Recent', complexities = None):
 ###
 ####################################################################################
 def num_neurons(function_file):
-	file = open(function_file, 'r')
+	file = abstractfile.open(function_file, 'r')
 	header = file.readline()
+	if 'version' in header:
+		header = file.readline()
 	file.close()
 	entries = header.split()
 	return int(entries[2])
+
+####################################################################################
+###
+### FUNCTION num_synapses
+###
+####################################################################################
+def num_synapses(function_file):
+	file = abstractfile.open(function_file, 'r')
+	header = file.readline()
+	if 'version' in header:
+		header = file.readline()
+		index = 5
+	else:
+		index = 4
+	file.close()
+	entries = header.split()
+	return int(entries[index])
