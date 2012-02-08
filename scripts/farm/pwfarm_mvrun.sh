@@ -11,7 +11,10 @@ function usage()
     cat <<EOF
 usage: $( basename $0 ) [-o:] runid_src runid_dst
 
-    Move good runs on farm.
+    Move good runs on farm. The semantics are different than posix 'mv'; this
+performs essentially a string substitution. For example, if you had a directory
+a/b/c and executed 'mv a/b/c x/y' the result would be 'x/y/c'. If you were to
+execute 'fmvrun a/b/c x/y' the result would be 'x/y'.
 
     Note: You may operate on a hierarchy of runs. For example, if you have runs
 'foo/x' and 'foo/y', you may move both in one operation via 'foo'.
