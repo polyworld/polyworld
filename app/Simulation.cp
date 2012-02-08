@@ -1369,6 +1369,7 @@ void TSimulation::Init( const char *argWorldfilePath, const bool statusToStdout 
 	fGraphics = true;
     InitWorld();
 
+	proplib::Interpreter::init();
 	proplib::Document *docWorldFile;
 	proplib::Document *docSchema;
 	Resources::parseWorldFile( &docWorldFile, &docSchema, argWorldfilePath );
@@ -1759,6 +1760,8 @@ void TSimulation::Init( const char *argWorldfilePath, const bool statusToStdout 
 
 		delete docWorldFile;
 		delete docSchema;
+
+		proplib::Interpreter::dispose();
 	}
 
     // Pass ownership of the cast to the stage [TODO] figure out ownership issues

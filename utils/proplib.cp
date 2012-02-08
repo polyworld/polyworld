@@ -22,45 +22,28 @@ using namespace std;
 
 namespace proplib
 {
-	class StaticInit {
-	public:
-		StaticInit() {
-			Py_Initialize();
-		}
-		~StaticInit() {
-			Py_Finalize();
-		}
-	} init;
+	bool Interpreter::alive = false;
 
-	// ----------------------------------------------------------------------
-	// ----------------------------------------------------------------------
-	// --- FUNCTION _strndup()
-	// ---
-	// --- Mac doesn't have strndup
-	// ----------------------------------------------------------------------
-	// ----------------------------------------------------------------------
-	static char* _strndup(const char *s, size_t n)
+	void Interpreter::init()
 	{
-		n = min( n, strlen(s) );
-		char *result = (char *)malloc( n + 1 );
-		memcpy( result, s, n );
-		result[ n ] = '\0';
-		return result;
+		assert( !alive );
+		Py_Initialize();
+		alive = true;
 	}
 
-	// ----------------------------------------------------------------------
-	// ----------------------------------------------------------------------
-	// --- FUNCTION eval()
-	// ---
-	// --- Use python to evaluate an expression
-	// ----------------------------------------------------------------------
-	// ----------------------------------------------------------------------
-	typedef map<string,string> SymbolTable;
-
-	static bool eval( const char *expr,
-					  SymbolTable &symbols,
-					  char *result, size_t result_size )
+	void Interpreter::dispose()
 	{
+		assert( alive );
+		Py_Finalize();
+		alive = false;
+	}
+
+	bool Interpreter::eval( const char *expr,
+							SymbolTable &symbols,
+							char *result, size_t result_size )
+	{
+		assert( alive );
+
 		// build a dict() mapping symbol name to value
 		string locals = "{";
 		itfor(SymbolTable, symbols, it )
@@ -121,6 +104,23 @@ namespace proplib
 		remove( output );
 
 		return rc == 0;
+	}
+
+
+	// ----------------------------------------------------------------------
+	// ----------------------------------------------------------------------
+	// --- FUNCTION _strndup()
+	// ---
+	// --- Mac doesn't have strndup
+	// ----------------------------------------------------------------------
+	// ----------------------------------------------------------------------
+	static char* _strndup(const char *s, size_t n)
+	{
+		n = min( n, strlen(s) );
+		char *result = (char *)malloc( n + 1 );
+		memcpy( result, s, n );
+		result[ n ] = '\0';
+		return result;
 	}
 
 	// ----------------------------------------------------------------------
@@ -643,7 +643,7 @@ namespace proplib
 			}
 			isEvaling = true;
 
-			SymbolTable symbolTable;
+			Interpreter::SymbolTable symbolTable;
 
 			StringList ids;
 			Parser::scanIdentifiers( sval, ids );
@@ -662,8 +662,8 @@ namespace proplib
 
 			char buf[1024];
 
-			bool success = eval( sval, symbolTable,
-								 buf, sizeof(buf) );
+			bool success = Interpreter::eval( sval, symbolTable,
+											  buf, sizeof(buf) );
 
 			if( !success )
 			{

@@ -2,7 +2,6 @@ REPORTED	ASSIGNED	DATE		DESC
 
 [SIM]
 sean   					01/29/2012 	Offscreen POV
-sean   					02/08/2012 	ctrl-c not working
 sean   					02/08/2012 	mac losing window position/open state on close
 
 [SCRIPTS]

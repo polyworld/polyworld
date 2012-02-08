@@ -17,6 +17,32 @@ namespace proplib
 
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
+	// --- CLASS Interpreter
+	// ---
+	// --- Manages python interpreter.
+	// ----------------------------------------------------------------------
+	// ----------------------------------------------------------------------
+	class Interpreter
+	{
+	public:
+		static void init();
+		static void dispose();
+
+	private:
+		friend class Property;
+
+		typedef std::map<std::string, std::string> SymbolTable;
+
+		static bool eval( const char *expr,
+						  SymbolTable &symbols,
+						  char *result, size_t result_size );
+
+	private:
+		static bool alive;
+	};
+
+	// ----------------------------------------------------------------------
+	// ----------------------------------------------------------------------
 	// --- CLASS Identifier
 	// ---
 	// --- This represents either a property name or an array index. The API

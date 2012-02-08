@@ -70,6 +70,8 @@ int main( int argc, const char **argv )
 		usage( "Must specify mode" );
 	}
 
+	Interpreter::init();
+
 	string mode = argv[1];
 
 	if( mode == "apply" )
@@ -146,6 +148,8 @@ int main( int argc, const char **argv )
 	{
 		usage( "Invalid mode" );
 	}
+
+	Interpreter::dispose();
 
 	return 0;
 }
