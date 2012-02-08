@@ -267,6 +267,11 @@ TSceneWindow::TSceneWindow( const char *worldfilePath, const bool statusToStdout
 	
 	setMinimumSize(QSize(200, 200));
 
+#if __APPLE__
+	fMenuBar = new QMenuBar(0);
+#else
+	fMenuBar = menuBar();
+#endif
 
 	// Add menus using built-in menubar()
 	//AddFileMenu();    
@@ -450,7 +455,7 @@ void TSceneWindow::keyReleaseEvent(QKeyEvent* event)
 void TSceneWindow::AddFileMenu()
 {
     QMenu* menu = new QMenu( "&File", this );
-    menuBar()->addMenu( menu );
+    fMenuBar->addMenu( menu );
 	menu->addAction( "&Open...", this, SLOT(choose()), Qt::CTRL+Qt::Key_O );
 	menu->addAction( "&Save", this, SLOT(save()), Qt::CTRL+Qt::Key_S );
 	menu->addAction( "Save &As...", this, SLOT(saveAs()));
@@ -467,7 +472,7 @@ void TSceneWindow::AddEditMenu()
 {
 	// Edit menu
 	QMenu* edit = new QMenu( "&Edit", this );
-	menuBar()->addMenu( edit );
+	fMenuBar->addMenu( edit );
 }
 
 
@@ -478,7 +483,7 @@ void TSceneWindow::AddRunMenu()
 {
 	// Run menu
 	QMenu* menu = new QMenu( "&Run", this );
-	menuBar()->addMenu( menu );
+	fMenuBar->addMenu( menu );
 	
 	menu->addAction( "End At &Timestep...", this, SLOT(endAtTimestep()));
 	menu->addAction( "End &Now", this, SLOT(endNow()));
@@ -493,7 +498,7 @@ void TSceneWindow::AddWindowMenu()
 	// Window menu
 	fWindowsMenu = new QMenu( "&Window", this );
 	connect(fWindowsMenu, SIGNAL(aboutToShow()), this, SLOT(windowsMenuAboutToShow()));
-	menuBar()->addMenu( fWindowsMenu );
+	fMenuBar->addMenu( fWindowsMenu );
 	
 	toggleBirthrateWindowAct = fWindowsMenu->addAction("Hide Birthrate Monitor", this, SLOT(ToggleBirthrateWindow()), Qt::CTRL+Qt::Key_1 );
 	toggleFitnessWindowAct = fWindowsMenu->addAction("Hide Fitness Monitor", this, SLOT(ToggleFitnessWindow()), Qt::CTRL+Qt::Key_2 );
@@ -807,7 +812,7 @@ void TSceneWindow::AddHelpMenu()
 	// Add help item
 //	fMenuBar->addSeparator();
 	QMenu* help = new QMenu( "&Help", this );
-	menuBar()->addMenu( help );
+	fMenuBar->addMenu( help );
 	
 	// Add about item
 	help->addAction("&About", this, SLOT(about()));

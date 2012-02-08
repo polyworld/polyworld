@@ -1,7 +1,6 @@
 REPORTED	ASSIGNED	DATE		DESC
 
 [SIM]
-sean   		sean	  	01/29/2012  Mac windows/menus buggered
 sean   					01/29/2012 	Offscreen POV
 
 [SCRIPTS]
