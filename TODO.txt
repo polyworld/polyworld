@@ -20,6 +20,7 @@ sean		sean		02/06/2012	make valueattr path encodings more concise
 
 [PROPLIB]
 sean		sean		02/07/2012	templates
+sean		sean		02/09/2012	fix 'reduce' of objects
 
 -------------------------------------------------------------------
 -------------------------------------------------------------------
