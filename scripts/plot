@@ -19,17 +19,17 @@ import plotlib
 import wfutil
 
 ################################################################################
-#TCRIT = 2.132    # 95% confidence for 4 degrees of freedom (5 pairs of points)
-TCRIT_DEFAULT = (1.833,20,10)    # 95% confidence for 9 degrees of freedom (10 pairs of points)
-#TCRIT = 1.796    # 95% confidence for 11 degrees of freedom (12 pairs of points)
+#TCRIT = 2.132	  # 95% confidence for 4 degrees of freedom (5 pairs of points)
+TCRIT_DEFAULT = (1.833,20,10)	 # 95% confidence for 9 degrees of freedom (10 pairs of points)
+#TCRIT = 1.796	  # 95% confidence for 11 degrees of freedom (12 pairs of points)
 ################################################################################
 TBOTTOM_DEFAULT = 0.0
 TTOP_DEFAULT = 0.25
 
 TTEST_LINETYPE = plotlib.CurveStyle.DOTTED
 CLASSIFICATION_LINETYPES = {'Driven': plotlib.CurveStyle.SOLID,
-                            'Passive': plotlib.CurveStyle.DASHED,
-                            'Fitness': plotlib.CurveStyle.DASHDOT}
+							'Passive': plotlib.CurveStyle.DASHED,
+							'Fitness': plotlib.CurveStyle.DASHDOT}
 
 
 ####################################################################################
@@ -38,32 +38,32 @@ CLASSIFICATION_LINETYPES = {'Driven': plotlib.CurveStyle.SOLID,
 ###
 ####################################################################################
 def main():
-    clauses, rundirs = parse_argv( sys.argv )
+	clauses, rundirs = parse_argv( sys.argv )
 
-    classify_runs( rundirs )
-    group_runs( rundirs )
+	classify_runs( rundirs )
+	group_runs( rundirs )
 
-    curveDatas = [ curveData
-                   for clause in clauses
-                   for curveData in clause.createCurveDatas(rundirs) ]
+	curveDatas = [ curveData
+				   for clause in clauses
+				   for curveData in clause.createCurveDatas(rundirs) ]
 
-    macros = create_macros( clauses,
-                            rundirs,
-                            curveDatas )
+	macros = create_macros( clauses,
+							rundirs,
+							curveDatas )
 
-    doc, plot = init_plot( macros, curveDatas )
+	doc, plot = init_plot( macros, curveDatas )
 
-    config_style( plot, curveDatas )
-    config_legend( plot, curveDatas )
+	config_style( plot, curveDatas )
+	config_legend( plot, curveDatas )
 
-    for curveData in curveDatas:
-        plot_curve( plot, curveData )
+	for curveData in curveDatas:
+		plot_curve( plot, curveData )
 
-    save_plot( doc, plot, rundirs, curveDatas )
+	save_plot( doc, plot, rundirs, curveDatas )
 
-    delete_temp_tables()
+	delete_temp_tables()
 
-    return 0
+	return 0
 
 
 ####################################################################################
@@ -72,198 +72,201 @@ def main():
 ###
 ####################################################################################
 def parse_argv( argv ):
-    if len(argv) == 1:
-        show_usage()
+	if len(argv) == 1:
+		show_usage()
 
-    if argv[1] == 'help':
-        if len(argv) > 2:
-            show_usage( arg = argv[2] )
-        else:
-            show_usage()
+	if argv[1] == 'help':
+		if len(argv) > 2:
+			show_usage( arg = argv[2] )
+		else:
+			show_usage()
 
-    OPTS = [
-        # Long                  Short       Arg
-        ( 'output',             'o',        True ),
-        ( 'replace',            'r',        False ),
-        ( 'quiet',              'q',        False ),
-        ( 'classifications',    'C',        True),
-        ( 'group',              'g',        True),
-        ( 'epoch',              'e',        True),
-        ( 'tgroups',            None,       True ),
-        ( 'tcrit',              None,       True ),
-        ( 'ttop',               None,       True ),
-        ( 'tbottom',            None,       True ),
-        ( 'xrange',             None,       True ),
-        ( 'y1range',            None,       True ),
-        ( 'y2range',            None,       True ),
-        ( 'legend',             'l',        False ),
-        ( 'noLegend',           'L',        False ),
-        ( 'noview',             'V',        False),
-        ( 'color',              'c',        False),
-        ( 'title',              None,       True ),
-        ( 'xlabel',             None,       True ),
-        ( 'y1label',            None,       True ),
-        ( 'y2label',            None,       True ),
-        ( 'rmargin',            None,       True ),
-        ]
+	OPTS = [
+		# Long					Short		Arg
+		( 'output',				'o',		True ),
+		( 'pdf',				'p',		False ),
+		( 'replace',			'r',		False ),
+		( 'quiet',				'q',		False ),
+		( 'classifications',	'C',		True),
+		( 'group',				'g',		True),
+		( 'epoch',				'e',		True),
+		( 'tgroups',			None,		True ),
+		( 'tcrit',				None,		True ),
+		( 'ttop',				None,		True ),
+		( 'tbottom',			None,		True ),
+		( 'xrange',				None,		True ),
+		( 'y1range',			None,		True ),
+		( 'y2range',			None,		True ),
+		( 'legend',				'l',		False ),
+		( 'noLegend',			'L',		False ),
+		( 'noview',				'V',		False),
+		( 'color',				'c',		False),
+		( 'title',				None,		True ),
+		( 'xlabel',				None,		True ),
+		( 'y1label',			None,		True ),
+		( 'y2label',			None,		True ),
+		( 'rmargin',			None,		True ),
+		]
 
-    def __optname( opt ):
-        opt = opt[0].strip( '-' )
-        for x in OPTS:
-            if opt == x[0] or opt == x[1]:
-                return x[0]
-        assert( False )
+	def __optname( opt ):
+		opt = opt[0].strip( '-' )
+		for x in OPTS:
+			if opt == x[0] or opt == x[1]:
+				return x[0]
+		assert( False )
 
-    def __parse_range( opt ):
-        try:
-            fields = opt[1].split(',')
-            if len(fields) != 2:
-                raise Exception( "Requires 2 comma-separated values" )
-            return ( float(fields[0]), float(fields[1]) )
-        except Exception, x:
-            optname = __optname( opt )
-            err( "Invalid value for " + optname + ": " + str(x) )
+	def __parse_range( opt ):
+		try:
+			fields = opt[1].split(',')
+			if len(fields) != 2:
+				raise Exception( "Requires 2 comma-separated values" )
+			return ( float(fields[0]), float(fields[1]) )
+		except Exception, x:
+			optname = __optname( opt )
+			err( "Invalid value for " + optname + ": " + str(x) )
 
-    def __parse_float( opt, minval = None, maxval = None ):
-        try:
-            val = float(opt[1])
-            if minval != None:
-                if val < minval:
-                    raise Exception( "Must be >= " + str(minval) )
-            if maxval != None:
-                if val > maxval:
-                    raise Exception( "Must be <= " + str(maxval) )
-            return val
-        except Exception, x:
-            optname = __optname( opt )
-            err( "Invalid value for " + optname + ": " + str(x) )
+	def __parse_float( opt, minval = None, maxval = None ):
+		try:
+			val = float(opt[1])
+			if minval != None:
+				if val < minval:
+					raise Exception( "Must be >= " + str(minval) )
+			if maxval != None:
+				if val > maxval:
+					raise Exception( "Must be <= " + str(maxval) )
+			return val
+		except Exception, x:
+			optname = __optname( opt )
+			err( "Invalid value for " + optname + ": " + str(x) )
 
-    def __parse_int( opt, minval = None, maxval = None ):
-        try:
-            val = int(opt[1])
-            if minval != None:
-                if val < minval:
-                    raise Exception( "Must be >= " + str(minval) )
-            if maxval != None:
-                if val > maxval:
-                    raise Exception( "Must be <= " + str(maxval) )
-            return val
-        except Exception, x:
-            optname = __optname( opt )
-            err( "Invalid value for " + optname + ": " + str(x) )
+	def __parse_int( opt, minval = None, maxval = None ):
+		try:
+			val = int(opt[1])
+			if minval != None:
+				if val < minval:
+					raise Exception( "Must be >= " + str(minval) )
+			if maxval != None:
+				if val > maxval:
+					raise Exception( "Must be <= " + str(maxval) )
+			return val
+		except Exception, x:
+			optname = __optname( opt )
+			err( "Invalid value for " + optname + ": " + str(x) )
 
-    longopts = []
-    shortopts = ''
+	longopts = []
+	shortopts = ''
 
-    for opt in OPTS:
-        if opt[0]:
-            longopts.append( opt[0] + ('=' if opt[2] else '') )
-        if opt[1]:
-            shortopts += opt[1] + (':' if opt[2] else '')
+	for opt in OPTS:
+		if opt[0]:
+			longopts.append( opt[0] + ('=' if opt[2] else '') )
+		if opt[1]:
+			shortopts += opt[1] + (':' if opt[2] else '')
 
-    try:
-        opts, args = getopt.getopt( argv[1:], shortopts, longopts )
-    except getopt.GetoptError, x:
-        err( x )
+	try:
+		opts, args = getopt.getopt( argv[1:], shortopts, longopts )
+	except getopt.GetoptError, x:
+		err( x )
 
-    for opt in opts:
-        optname = __optname(opt)
-        optval = opt[1]
-        
-        if optname == 'output':
-            GlobalOptions.output = optval
-        elif optname == 'replace':
-            GlobalOptions.replace = True
-        elif optname == 'quiet':
-            GlobalOptions.quiet = True
-        elif optname == 'classifications':
-            try:
-                GlobalOptions.classifications = common_functions.normalize_classifications( optval.split(',') )
-            except common_functions.IllegalAbbreviationError, x:
-                err(str(x))
-        elif optname == 'group':
-            try:
-                GlobalOptions.group = common_functions.expand_abbreviations( optval,
-                                                                             ['auto',
-                                                                              'classification',
-                                                                              'overlay',
-                                                                              'parentdir'],
-                                                                             case_sensitive = False )
-            except common_functions.IllegalAbbreviationError, x:
-                err( x )
-        elif optname == 'epoch':
-            GlobalOptions.epoch = __parse_int( opt, minval = 0 )
-        elif optname == 'tgroups':
-            GlobalOptions.tgroups = optval
-        elif optname == 'tcrit':
-            GlobalOptions.tcrit = __parse_float( opt )
-        elif optname == 'ttop':
-            GlobalOptions.ttop = __parse_float( opt, 0, 1 )
-        elif optname == 'tbottom':
-            GlobalOptions.tbottom = __parse_float( opt, 0, 1 )
-        elif optname == 'xrange':
-            GlobalOptions.xrange = __parse_range( opt )
-        elif optname == 'y1range':
-            GlobalOptions.y1range = __parse_range( opt )
-        elif optname == 'y2range':
-            GlobalOptions.y2range = __parse_range( opt )
-        elif optname == 'legend':
-            GlobalOptions.legend_individual = True
-        elif optname == 'noLegend':
-            GlobalOptions.legend_meta = False
-        elif optname == 'noview':
-            GlobalOptions.view = False
-        elif optname == 'color':
-            GlobalOptions.color = True
-        elif optname == 'title':
-            GlobalOptions.title = optval
-        elif optname == 'xlabel':
-            GlobalOptions.xlabel = optval
-        elif optname == 'y1label':
-            GlobalOptions.y1label = optval
-        elif optname == 'y2label':
-            GlobalOptions.y2label = optval
-        elif optname == 'rmargin':
-            GlobalOptions.rmargin = __parse_int( opt )
-        else: assert( False )
+	for opt in opts:
+		optname = __optname(opt)
+		optval = opt[1]
+		
+		if optname == 'output':
+			GlobalOptions.output = optval
+		elif optname == 'pdf':
+			GlobalOptions.pdf = True
+		elif optname == 'replace':
+			GlobalOptions.replace = True
+		elif optname == 'quiet':
+			GlobalOptions.quiet = True
+		elif optname == 'classifications':
+			try:
+				GlobalOptions.classifications = common_functions.normalize_classifications( optval.split(',') )
+			except common_functions.IllegalAbbreviationError, x:
+				err(str(x))
+		elif optname == 'group':
+			try:
+				GlobalOptions.group = common_functions.expand_abbreviations( optval,
+																			 ['auto',
+																			  'classification',
+																			  'overlay',
+																			  'parentdir'],
+																			 case_sensitive = False )
+			except common_functions.IllegalAbbreviationError, x:
+				err( x )
+		elif optname == 'epoch':
+			GlobalOptions.epoch = __parse_int( opt, minval = 0 )
+		elif optname == 'tgroups':
+			GlobalOptions.tgroups = optval
+		elif optname == 'tcrit':
+			GlobalOptions.tcrit = __parse_float( opt )
+		elif optname == 'ttop':
+			GlobalOptions.ttop = __parse_float( opt, 0, 1 )
+		elif optname == 'tbottom':
+			GlobalOptions.tbottom = __parse_float( opt, 0, 1 )
+		elif optname == 'xrange':
+			GlobalOptions.xrange = __parse_range( opt )
+		elif optname == 'y1range':
+			GlobalOptions.y1range = __parse_range( opt )
+		elif optname == 'y2range':
+			GlobalOptions.y2range = __parse_range( opt )
+		elif optname == 'legend':
+			GlobalOptions.legend_individual = True
+		elif optname == 'noLegend':
+			GlobalOptions.legend_meta = False
+		elif optname == 'noview':
+			GlobalOptions.view = False
+		elif optname == 'color':
+			GlobalOptions.color = True
+		elif optname == 'title':
+			GlobalOptions.title = optval
+		elif optname == 'xlabel':
+			GlobalOptions.xlabel = optval
+		elif optname == 'y1label':
+			GlobalOptions.y1label = optval
+		elif optname == 'y2label':
+			GlobalOptions.y2label = optval
+		elif optname == 'rmargin':
+			GlobalOptions.rmargin = __parse_int( opt )
+		else: assert( False )
 
-    args_clauses = [[]]
-    for arg in args:
-        if arg == ':':
-            args_clauses.append( [] )
-        else:
-            args_clauses[-1].append( arg )
+	args_clauses = [[]]
+	for arg in args:
+		if arg == ':':
+			args_clauses.append( [] )
+		else:
+			args_clauses[-1].append( arg )
 
-    clauses = []
+	clauses = []
 
-    for args_clause in args_clauses:
-        clauses.append( Clause(args_clause) )
+	for args_clause in args_clauses:
+		clauses.append( Clause(args_clause) )
 
-    args = clauses[-1].drop_global_args()
+	args = clauses[-1].drop_global_args()
 
-    rundirs = []
+	rundirs = []
 
-    group = None
-    new_group = False
-    for arg in args:
-        if arg == '@group':
-            new_group = True
-        elif new_group:
-            group = arg
-            new_group = False
-        else:
-            try:
-                paths = common_functions.find_run_paths( [arg] )
-            except common_functions.InvalidDirError, e:
-                err( str(e) )
+	group = None
+	new_group = False
+	for arg in args:
+		if arg == '@group':
+			new_group = True
+		elif new_group:
+			group = arg
+			new_group = False
+		else:
+			try:
+				paths = common_functions.find_run_paths( [arg] )
+			except common_functions.InvalidDirError, e:
+				err( str(e) )
 
-            for path in paths:
-                rundirs.append( RunDir(path, group) )
+			for path in paths:
+				rundirs.append( RunDir(path, group) )
 
-    if not len(rundirs):
-        err( "Must specify at least one run directory." )
+	if not len(rundirs):
+		err( "Must specify at least one run directory." )
 
-    return clauses, rundirs
+	return clauses, rundirs
 
 
 ####################################################################################
@@ -272,28 +275,29 @@ def parse_argv( argv ):
 ###
 ####################################################################################
 class GlobalOptions:
-    output = None
-    replace = False
-    quiet = False
-    classifications = common_functions.CLASSIFICATIONS
-    group = 'auto'
-    epoch = 1000
-    tgroups = None
-    tcrit = TCRIT_DEFAULT[0]
-    ttop = TTOP_DEFAULT
-    tbottom = TBOTTOM_DEFAULT
-    xrange = None
-    y1range = None
-    y2range = None
-    legend_individual = False
-    legend_meta = True
-    view = True
-    color = False
-    title = '{TITLE}'
-    xlabel = '{XLABEL}'
-    y1label = '{Y1LABEL}'
-    y2label = '{Y2LABEL}'
-    rmargin = None
+	output = None
+	pdf = False
+	replace = False
+	quiet = False
+	classifications = common_functions.CLASSIFICATIONS
+	group = 'auto'
+	epoch = 1000
+	tgroups = None
+	tcrit = TCRIT_DEFAULT[0]
+	ttop = TTOP_DEFAULT
+	tbottom = TBOTTOM_DEFAULT
+	xrange = None
+	y1range = None
+	y2range = None
+	legend_individual = False
+	legend_meta = True
+	view = True
+	color = False
+	title = '{TITLE}'
+	xlabel = '{XLABEL}'
+	y1label = '{Y1LABEL}'
+	y2label = '{Y2LABEL}'
+	rmargin = None
 
 
 ####################################################################################
@@ -302,13 +306,13 @@ class GlobalOptions:
 ###
 ####################################################################################
 class RunDir:
-    def __init__( self, path, group ):
-        self.path = path
-        self.group = group
-        self.classification = None
+	def __init__( self, path, group ):
+		self.path = path
+		self.group = group
+		self.classification = None
 
-    def __str__( self ):
-        return "RunDir(path=%s, group=%s, classification=%s)" % (self.path, self.group, self.classification)
+	def __str__( self ):
+		return "RunDir(path=%s, group=%s, classification=%s)" % (self.path, self.group, self.classification)
 
 
 ####################################################################################
@@ -317,17 +321,17 @@ class RunDir:
 ###
 ####################################################################################
 class RunData:
-    def __init__( self,
-                  rundir,
-                  valuename,
-                  table,
-                  xcolname,
-                  ycolname_default ):
-        self.rundir = rundir
-        self.valuename = valuename
-        self.table = table
-        self.xcolname = xcolname
-        self.ycolname_default = ycolname_default
+	def __init__( self,
+				  rundir,
+				  valuename,
+				  table,
+				  xcolname,
+				  ycolname_default ):
+		self.rundir = rundir
+		self.valuename = valuename
+		self.table = table
+		self.xcolname = xcolname
+		self.ycolname_default = ycolname_default
 
 
 ####################################################################################
@@ -336,31 +340,31 @@ class RunData:
 ###
 ####################################################################################
 class CurveData:
-    def __init__( self,
-                  clause,
-                  valuename,
-                  valueattr,
-                  datatype,
-                  curvetype,
-                  table,
-                  xcolname,
-                  ycolnames,
-                  yaxis,
-                  groups,
-                  rundirs,
-                  classifications ):
-        self.clause = clause
-        self.valuename = valuename
-        self.valueattr = valueattr
-        self.datatype = datatype
-        self.curvetype = curvetype
-        self.table = table
-        self.xcolname = xcolname
-        self.ycolnames = ycolnames
-        self.yaxis = yaxis
-        self.rundirs = tuple( set(rundirs) )
-        self.groups = tuple( set(groups) )
-        self.classifications = tuple( set(classifications) )
+	def __init__( self,
+				  clause,
+				  valuename,
+				  valueattr,
+				  datatype,
+				  curvetype,
+				  table,
+				  xcolname,
+				  ycolnames,
+				  yaxis,
+				  groups,
+				  rundirs,
+				  classifications ):
+		self.clause = clause
+		self.valuename = valuename
+		self.valueattr = valueattr
+		self.datatype = datatype
+		self.curvetype = curvetype
+		self.table = table
+		self.xcolname = xcolname
+		self.ycolnames = ycolnames
+		self.yaxis = yaxis
+		self.rundirs = tuple( set(rundirs) )
+		self.groups = tuple( set(groups) )
+		self.classifications = tuple( set(classifications) )
 
 
 ####################################################################################
@@ -369,256 +373,256 @@ class CurveData:
 ###
 ####################################################################################
 class Mode:
-    #------------------------------------------------------------
-    #--- FUNCTION __get_modes()
-    #------------------------------------------------------------
-    MODES = None
-    @staticmethod
-    def __get_modes():
-        if not Mode.MODES:
-            Mode.MODES = [
-                NeuralComplexityMode(),
-                GraphMetricMode(),
-                StatsMode(),
-                BarrierPosMode(),
-                GeneMode(),
-                AdhocMode()
-                ]
-        return Mode.MODES
+	#------------------------------------------------------------
+	#--- FUNCTION __get_modes()
+	#------------------------------------------------------------
+	MODES = None
+	@staticmethod
+	def __get_modes():
+		if not Mode.MODES:
+			Mode.MODES = [
+				NeuralComplexityMode(),
+				GraphMetricMode(),
+				StatsMode(),
+				BarrierPosMode(),
+				GeneMode(),
+				AdhocMode()
+				]
+		return Mode.MODES
 
-    #------------------------------------------------------------
-    #--- FUNCTION __init__()
-    #------------------------------------------------------------
-    def __init__( self,
-                  name,
-                  title,
-                  numargs,
-                  isAvr,
-                  default_recent_type,   # if None, then mode doesn't use -r
-                  default_valuenames ):  # if None, then doesn't use -v
-        self.name = name
-        self.title = title
-        self.numargs = numargs
-        self.isAvr = isAvr
-        self.default_recent_type = default_recent_type
-        self.default_valuenames = default_valuenames
+	#------------------------------------------------------------
+	#--- FUNCTION __init__()
+	#------------------------------------------------------------
+	def __init__( self,
+				  name,
+				  title,
+				  numargs,
+				  isAvr,
+				  default_recent_type,	 # if None, then mode doesn't use -r
+				  default_valuenames ):	 # if None, then doesn't use -v
+		self.name = name
+		self.title = title
+		self.numargs = numargs
+		self.isAvr = isAvr
+		self.default_recent_type = default_recent_type
+		self.default_valuenames = default_valuenames
 
-    #------------------------------------------------------------
-    #--- FUNCTION get_mode()
-    #------------------------------------------------------------
-    @staticmethod
-    def get_mode( name ):
-        name = Mode.expand_name( name )
-        modes = filter( lambda x: x.name == name, Mode.__get_modes() )
-        if len(modes) != 1:
-            err( "Invalid mode name: " + name )
-        return modes[0]
+	#------------------------------------------------------------
+	#--- FUNCTION get_mode()
+	#------------------------------------------------------------
+	@staticmethod
+	def get_mode( name ):
+		name = Mode.expand_name( name )
+		modes = filter( lambda x: x.name == name, Mode.__get_modes() )
+		if len(modes) != 1:
+			err( "Invalid mode name: " + name )
+		return modes[0]
 
-    #------------------------------------------------------------
-    #--- FUNCTION get_names()
-    #------------------------------------------------------------
-    @staticmethod
-    def get_names():
-        return map( lambda x: x.name, Mode.__get_modes() )
+	#------------------------------------------------------------
+	#--- FUNCTION get_names()
+	#------------------------------------------------------------
+	@staticmethod
+	def get_names():
+		return map( lambda x: x.name, Mode.__get_modes() )
 
-    #------------------------------------------------------------
-    #--- FUNCTION expand_name()
-    #------------------------------------------------------------
-    @staticmethod
-    def expand_name( name ):
-        try:
-            return common_functions.expand_abbreviations( name,
-                                                          Mode.get_names(),
-                                                          case_sensitive = False )
-        except common_functions.IllegalAbbreviationError, x:
-            err( "Failed disambiguating mode name. " + str(x) )
+	#------------------------------------------------------------
+	#--- FUNCTION expand_name()
+	#------------------------------------------------------------
+	@staticmethod
+	def expand_name( name ):
+		try:
+			return common_functions.expand_abbreviations( name,
+														  Mode.get_names(),
+														  case_sensitive = False )
+		except common_functions.IllegalAbbreviationError, x:
+			err( "Failed disambiguating mode name. " + str(x) )
 
-    #------------------------------------------------------------
-    #--- FUNCTION is_name()
-    #------------------------------------------------------------
-    @staticmethod
-    def is_name( name ):
-        return Mode.expand_name( name ) != None
+	#------------------------------------------------------------
+	#--- FUNCTION is_name()
+	#------------------------------------------------------------
+	@staticmethod
+	def is_name( name ):
+		return Mode.expand_name( name ) != None
 
-    #------------------------------------------------------------
-    #--- FUNCTION get_valuenames_title()
-    #------------------------------------------------------------
-    def get_valuenames_title( self, valuenames ):
-        return ", ".join( valuenames )
+	#------------------------------------------------------------
+	#--- FUNCTION get_valuenames_title()
+	#------------------------------------------------------------
+	def get_valuenames_title( self, valuenames ):
+		return ", ".join( valuenames )
 
-    #------------------------------------------------------------
-    #--- FUNCTION __parse_opts()
-    #------------------------------------------------------------
-    def __parse_opts( self, argv ):
-        longopts = []
-        shortopts = ''
+	#------------------------------------------------------------
+	#--- FUNCTION __parse_opts()
+	#------------------------------------------------------------
+	def __parse_opts( self, argv ):
+		longopts = []
+		shortopts = ''
 
-        if self.default_recent_type != None:
-            shortopts += 'r:'
+		if self.default_recent_type != None:
+			shortopts += 'r:'
 
-        if self.default_valuenames != None:
-            shortopts += 'v:'
+		if self.default_valuenames != None:
+			shortopts += 'v:'
 
-        if self.isAvr:
-            shortopts += "mnxewMNXEW"
-        else:
-            shortopts += "mME"
+		if self.isAvr:
+			shortopts += "mnxewMNXEW"
+		else:
+			shortopts += "mME"
 
-        # ttest
-        longopts += ['tgroups=']
-        shortopts += "pt"
+		# ttest
+		longopts += ['tgroups=']
+		shortopts += "pt"
 
-        # Misc general
-        shortopts += "sd"
-        longopts += ['y2']
+		# Misc general
+		shortopts += "sd"
+		longopts += ['y2']
 
-        try:
-            return  getopt.getopt( argv[1:], shortopts, longopts )
-        except getopt.GetoptError, x:
-            err( "(mode " + self.name + ") " + str(x) )
+		try:
+			return	getopt.getopt( argv[1:], shortopts, longopts )
+		except getopt.GetoptError, x:
+			err( "(mode " + self.name + ") " + str(x) )
 
-    #------------------------------------------------------------
-    #--- FUNCTION init_valuenames()
-    #------------------------------------------------------------
-    def init_valuenames( self, mode_opts, opts, args ):
-        if self.default_valuenames:
-            return self.default_valuenames
-        else:
-            assert( False ) # Derived class must provide logic
+	#------------------------------------------------------------
+	#--- FUNCTION init_valuenames()
+	#------------------------------------------------------------
+	def init_valuenames( self, mode_opts, opts, args ):
+		if self.default_valuenames:
+			return self.default_valuenames
+		else:
+			assert( False ) # Derived class must provide logic
 
-    #------------------------------------------------------------
-    #--- FUNCTION split_global_args()
-    #------------------------------------------------------------
-    def split_global_args( self, argv ):
-        opts, args = self.__parse_opts( argv )
+	#------------------------------------------------------------
+	#--- FUNCTION split_global_args()
+	#------------------------------------------------------------
+	def split_global_args( self, argv ):
+		opts, args = self.__parse_opts( argv )
 
-        num_global_args = len(args) - self.numargs
-        if num_global_args < 0:
-            err( "Missing args for mode " + self.name )
+		num_global_args = len(args) - self.numargs
+		if num_global_args < 0:
+			err( "Missing args for mode " + self.name )
 
-        global_args = args[-num_global_args:]
-        argv = argv[:-num_global_args]
+		global_args = args[-num_global_args:]
+		argv = argv[:-num_global_args]
 
-        return argv, global_args
+		return argv, global_args
 
-    #------------------------------------------------------------
-    #--- FUNCTION parse_argv
-    #------------------------------------------------------------
-    def parse_argv( self, argv ):
-        opts, args = self.__parse_opts( argv )
+	#------------------------------------------------------------
+	#--- FUNCTION parse_argv
+	#------------------------------------------------------------
+	def parse_argv( self, argv ):
+		opts, args = self.__parse_opts( argv )
 
-        if len(args) > self.numargs:
-            err( "Unexpected arg for mode %s (%s)" % (self.name, args[self.numargs]) )
+		if len(args) > self.numargs:
+			err( "Unexpected arg for mode %s (%s)" % (self.name, args[self.numargs]) )
 
-        general_opts = {
-            'tgroups': GlobalOptions.tgroups,
-            'smooth': False,
-            'dots': False,
-            'yaxis': 1,
-            }
+		general_opts = {
+			'tgroups': GlobalOptions.tgroups,
+			'smooth': False,
+			'dots': False,
+			'yaxis': 1,
+			}
 
-        mode_opts = {}
-        if self.default_recent_type:
-            mode_opts['recent_type'] = self.default_recent_type
+		mode_opts = {}
+		if self.default_recent_type:
+			mode_opts['recent_type'] = self.default_recent_type
 
-        valueattrs = { "meta": set(), "individual": set(), "ttest": set() }
+		valueattrs = { "meta": set(), "individual": set(), "ttest": set() }
 
-        # This will typically be default_valuenames, but Adhoc has special needs.
-        valuenames = self.init_valuenames( mode_opts, opts, args )
+		# This will typically be default_valuenames, but Adhoc has special needs.
+		valuenames = self.init_valuenames( mode_opts, opts, args )
 
-        #
-        # Process Options
-        #
-        for opt in opts:
-            optname = opt[0].strip( '-' )
-            optval = opt[1]
+		#
+		# Process Options
+		#
+		for opt in opts:
+			optname = opt[0].strip( '-' )
+			optval = opt[1]
 
-            #
-            # General Options
-            #
-            if optname == 'tgroups':
-                general_opts['tgroups'] = optval
-            elif optname == 's':
-                general_opts['smooth'] = True
-            elif optname == 'd':
-                general_opts['dots'] = True
-            elif optname == 'y2':
-                general_opts['yaxis'] = 2
-            #
-            # Data
-            #
-            elif optname == 'r':
-                try:
-                    mode_opts['recent_type'] = common_functions.expand_abbreviations( optval,
-                                                                                      common_functions.RECENT_TYPES,
-                                                                                      case_sensitive = False )
-                except common_functions.IllegalAbbreviationError, x:
-                    err( "Failed processing -r: " + str(x) )
-            elif optname == 'v':
-                valuenames = optval.split( ',' )
-            #
-            # Curves -- Individual Run
-            #
-            elif optname == 'm':
-                valueattrs['individual'].add( 'default' )
-            elif optname == 'n':
-                valueattrs['individual'].add( 'min' )
-            elif optname == 'x':
-                valueattrs['individual'].add( 'max' )
-            elif optname == 'e':
-                valueattrs['individual'].add( 'err' )
-                valueattrs['individual'].add( 'default' )
-            elif optname == 'w':
-                valueattrs['individual'].add( 'whisker' )
-            #
-            # Curves -- Meta
-            #
-            elif optname == 'M':
-                valueattrs['meta'].add( 'default' )
-            elif optname == 'N':
-                valueattrs['meta'].add( 'min' )
-            elif optname == 'X':
-                valueattrs['meta'].add( 'max' )
-            elif optname == 'E':
-                valueattrs['meta'].add( 'err' )
-                valueattrs['meta'].add( 'default' )
-            elif optname == 'W':
-                valueattrs['meta'].add( 'whisker' )
-            #
-            # Curves -- TTest
-            #
-            elif optname == 'p':
-                valueattrs['ttest'].add( 'pval' )
-            elif optname == 't':
-                valueattrs['ttest'].add( 'tval' )
-            else:
-                err( "Unknown mode option: " + optname )
+			#
+			# General Options
+			#
+			if optname == 'tgroups':
+				general_opts['tgroups'] = optval
+			elif optname == 's':
+				general_opts['smooth'] = True
+			elif optname == 'd':
+				general_opts['dots'] = True
+			elif optname == 'y2':
+				general_opts['yaxis'] = 2
+			#
+			# Data
+			#
+			elif optname == 'r':
+				try:
+					mode_opts['recent_type'] = common_functions.expand_abbreviations( optval,
+																					  common_functions.RECENT_TYPES,
+																					  case_sensitive = False )
+				except common_functions.IllegalAbbreviationError, x:
+					err( "Failed processing -r: " + str(x) )
+			elif optname == 'v':
+				valuenames = optval.split( ',' )
+			#
+			# Curves -- Individual Run
+			#
+			elif optname == 'm':
+				valueattrs['individual'].add( 'default' )
+			elif optname == 'n':
+				valueattrs['individual'].add( 'min' )
+			elif optname == 'x':
+				valueattrs['individual'].add( 'max' )
+			elif optname == 'e':
+				valueattrs['individual'].add( 'err' )
+				valueattrs['individual'].add( 'default' )
+			elif optname == 'w':
+				valueattrs['individual'].add( 'whisker' )
+			#
+			# Curves -- Meta
+			#
+			elif optname == 'M':
+				valueattrs['meta'].add( 'default' )
+			elif optname == 'N':
+				valueattrs['meta'].add( 'min' )
+			elif optname == 'X':
+				valueattrs['meta'].add( 'max' )
+			elif optname == 'E':
+				valueattrs['meta'].add( 'err' )
+				valueattrs['meta'].add( 'default' )
+			elif optname == 'W':
+				valueattrs['meta'].add( 'whisker' )
+			#
+			# Curves -- TTest
+			#
+			elif optname == 'p':
+				valueattrs['ttest'].add( 'pval' )
+			elif optname == 't':
+				valueattrs['ttest'].add( 'tval' )
+			else:
+				err( "Unknown mode option: " + optname )
 
-        #
-        # Set default value attribute if none specified
-        #
-        if len(valueattrs['meta']) == 0 and len(valueattrs['individual']) == 0:
-            valueattrs['individual'].add( 'default' )
+		#
+		# Set default value attribute if none specified
+		#
+		if len(valueattrs['meta']) == 0 and len(valueattrs['individual']) == 0:
+			valueattrs['individual'].add( 'default' )
 
 
-        return general_opts, mode_opts, valuenames, valueattrs
+		return general_opts, mode_opts, valuenames, valueattrs
 
-    #------------------------------------------------------------
-    #--- FUNCTION createRunDatas()
-    #------------------------------------------------------------
-    def createRunDatas( self, general_opts, mode_opts, valuenames, valueattrs, rundirs ):
-        err( "Impl " + self.name + " createRunDatas()" )
+	#------------------------------------------------------------
+	#--- FUNCTION createRunDatas()
+	#------------------------------------------------------------
+	def createRunDatas( self, general_opts, mode_opts, valuenames, valueattrs, rundirs ):
+		err( "Impl " + self.name + " createRunDatas()" )
 
-    #------------------------------------------------------------
-    #--- FUNCTION usage_valuenames()
-    #------------------------------------------------------------
-    def usage_valuenames( self ):
-        if self.default_valuenames:
-            print """\
+	#------------------------------------------------------------
+	#--- FUNCTION usage_valuenames()
+	#------------------------------------------------------------
+	def usage_valuenames( self ):
+		if self.default_valuenames:
+			print """\
      -v <V>[,<V>]...
                Specify values to be plotted.
                ( default = %s )
-            """ % ','.join(self.default_valuenames)
+			""" % ','.join(self.default_valuenames)
 
 
 ####################################################################################
@@ -628,54 +632,54 @@ class Mode:
 ####################################################################################
 class NeuralComplexityMode( Mode ):
 
-    #------------------------------------------------------------
-    #--- FUNCTION __init()__
-    #------------------------------------------------------------
-    def __init__( self ):
-        Mode.__init__( self,
-                       name = 'neuralComplexity',
-                       title = 'Neural Complexity',
-                       numargs = 0,
-                       isAvr = True,
-                       default_recent_type = 'Recent',
-                       default_valuenames = ['P'] )
+	#------------------------------------------------------------
+	#--- FUNCTION __init()__
+	#------------------------------------------------------------
+	def __init__( self ):
+		Mode.__init__( self,
+					   name = 'neuralComplexity',
+					   title = 'Neural Complexity',
+					   numargs = 0,
+					   isAvr = True,
+					   default_recent_type = 'Recent',
+					   default_valuenames = ['P'] )
 
-    #------------------------------------------------------------
-    #--- FUNCTION get_valuenames_title()
-    #------------------------------------------------------------
-    def get_valuenames_title( self, valuenames ):
-        valuetitles = [ common_complexity.get_name(x)
-                        for x in valuenames ]
-        return self.title + " (" + ", ".join(valuetitles) + ")"
+	#------------------------------------------------------------
+	#--- FUNCTION get_valuenames_title()
+	#------------------------------------------------------------
+	def get_valuenames_title( self, valuenames ):
+		valuetitles = [ common_complexity.get_name(x)
+						for x in valuenames ]
+		return self.title + " (" + ", ".join(valuetitles) + ")"
 
-    #------------------------------------------------------------
-    #--- FUNCTION createRunDatas()
-    #------------------------------------------------------------
-    def createRunDatas( self, general_opts, mode_opts, valuenames, valueattrs, rundirs ):
-        runDatas = []
+	#------------------------------------------------------------
+	#--- FUNCTION createRunDatas()
+	#------------------------------------------------------------
+	def createRunDatas( self, general_opts, mode_opts, valuenames, valueattrs, rundirs ):
+		runDatas = []
 
-        for rundir in rundirs:
-            tables = common_complexity.parse_avr( rundir.path,
-                                                  recent_type = mode_opts['recent_type'],
-                                                  complexities = valuenames )
-            for complexity, table in tables.items():
-                runDatas.append( RunData(rundir,
-                                         complexity,
-                                         table,
-                                         'Timestep',
-                                         'mean') )
+		for rundir in rundirs:
+			tables = common_complexity.parse_avr( rundir.path,
+												  recent_type = mode_opts['recent_type'],
+												  complexities = valuenames )
+			for complexity, table in tables.items():
+				runDatas.append( RunData(rundir,
+										 complexity,
+										 table,
+										 'Timestep',
+										 'mean') )
 
-        return runDatas
+		return runDatas
 
-    #------------------------------------------------------------
-    #--- FUNCTION usage_valuenames()
-    #------------------------------------------------------------
-    def usage_valuenames( self ):
-        print """\
+	#------------------------------------------------------------
+	#--- FUNCTION usage_valuenames()
+	#------------------------------------------------------------
+	def usage_valuenames( self ):
+		print """\
      -v <C>[,<C>]...
                Specify complexity types to be plotted.
                ( default = %s )
-        """ % ','.join(self.default_valuenames)
+		""" % ','.join(self.default_valuenames)
 
 
 ####################################################################################
@@ -685,54 +689,54 @@ class NeuralComplexityMode( Mode ):
 ####################################################################################
 class GraphMetricMode( Mode ):
 
-    #------------------------------------------------------------
-    #--- FUNCTION __init()__
-    #------------------------------------------------------------
-    def __init__( self ):
-        Mode.__init__( self,
-                       name = 'graphMetric',
-                       title = 'Graph Metric',
-                       isAvr = True,
-                       numargs = 0,
-                       default_recent_type = 'Recent',
-                       default_valuenames = ['cc_a_bu'] )
+	#------------------------------------------------------------
+	#--- FUNCTION __init()__
+	#------------------------------------------------------------
+	def __init__( self ):
+		Mode.__init__( self,
+					   name = 'graphMetric',
+					   title = 'Graph Metric',
+					   isAvr = True,
+					   numargs = 0,
+					   default_recent_type = 'Recent',
+					   default_valuenames = ['cc_a_bu'] )
 
-    #------------------------------------------------------------
-    #--- FUNCTION get_valuenames_title()
-    #------------------------------------------------------------
-    def get_valuenames_title( self, valuenames ):
-        valuetitles = [ common_metric.get_name(x)
-                        for x in valuenames ]
-        return ", ".join( valuetitles )
+	#------------------------------------------------------------
+	#--- FUNCTION get_valuenames_title()
+	#------------------------------------------------------------
+	def get_valuenames_title( self, valuenames ):
+		valuetitles = [ common_metric.get_name(x)
+						for x in valuenames ]
+		return ", ".join( valuetitles )
 
-    #------------------------------------------------------------
-    #--- FUNCTION createRunDatas()
-    #------------------------------------------------------------
-    def createRunDatas( self, general_opts, mode_opts, valuenames, valueattrs, rundirs ):
-        runDatas = []
+	#------------------------------------------------------------
+	#--- FUNCTION createRunDatas()
+	#------------------------------------------------------------
+	def createRunDatas( self, general_opts, mode_opts, valuenames, valueattrs, rundirs ):
+		runDatas = []
 
-        for rundir in rundirs:
-            tables = common_metric.parse_avr( rundir.path,
-                                              recent_type = mode_opts['recent_type'],
-                                              metrics = valuenames )
-            for metric, table in tables.items():
-                runDatas.append( RunData(rundir,
-                                         metric,
-                                         table,
-                                         'Timestep',
-                                         'mean') )
+		for rundir in rundirs:
+			tables = common_metric.parse_avr( rundir.path,
+											  recent_type = mode_opts['recent_type'],
+											  metrics = valuenames )
+			for metric, table in tables.items():
+				runDatas.append( RunData(rundir,
+										 metric,
+										 table,
+										 'Timestep',
+										 'mean') )
 
-        return runDatas
+		return runDatas
 
-    #------------------------------------------------------------
-    #--- FUNCTION usage_valuenames()
-    #------------------------------------------------------------
-    def usage_valuenames( self ):
-        print """\
+	#------------------------------------------------------------
+	#--- FUNCTION usage_valuenames()
+	#------------------------------------------------------------
+	def usage_valuenames( self ):
+		print """\
      -v <M>[,<M>]...
                Specify metrics to be plotted.
                ( default = %s )
-        """ % ','.join(self.default_valuenames)
+		""" % ','.join(self.default_valuenames)
 
 
 ####################################################################################
@@ -781,9 +785,9 @@ class StatsMode( Mode ):
 	#------------------------------------------------------------
 	def usage_valuenames( self ):
 		print """\
-	 -v <S>[,<S>]...
-			   Specify stats to be plotted.
-			   ( default = %s )
+     -v <S>[,<S>]...
+               Specify stats to be plotted.
+               ( default = %s )
 		""" % ','.join(self.default_valuenames)
 
 
@@ -793,88 +797,88 @@ class StatsMode( Mode ):
 ###
 ####################################################################################
 class BarrierPosMode( Mode ):
-    PROPS = ["X1", "Z1", "X2", "Z2"]
+	PROPS = ["X1", "Z1", "X2", "Z2"]
 
-    #------------------------------------------------------------
-    #--- FUNCTION __init()__
-    #------------------------------------------------------------
-    def __init__( self ):
-        Mode.__init__( self,
-                       name = 'barrierpos',
-                       title = 'Barrier Position',
-                       isAvr = False,
-                       numargs = 0,
-                       default_recent_type = None,
-                       default_valuenames = ['0_Z2'] )
+	#------------------------------------------------------------
+	#--- FUNCTION __init()__
+	#------------------------------------------------------------
+	def __init__( self ):
+		Mode.__init__( self,
+					   name = 'barrierpos',
+					   title = 'Barrier Position',
+					   isAvr = False,
+					   numargs = 0,
+					   default_recent_type = None,
+					   default_valuenames = ['0_Z2'] )
 
-    #------------------------------------------------------------
-    #--- FUNCTION get_valuenames_title()
-    #------------------------------------------------------------
-    def get_valuenames_title( self, valuenames ):
-        valuetitles = [ 'Barrier'+id+'.'+prop
-                        for id, prop in map(BarrierPosMode.__parse_valuename, valuenames) ]
+	#------------------------------------------------------------
+	#--- FUNCTION get_valuenames_title()
+	#------------------------------------------------------------
+	def get_valuenames_title( self, valuenames ):
+		valuetitles = [ 'Barrier'+id+'.'+prop
+						for id, prop in map(BarrierPosMode.__parse_valuename, valuenames) ]
 
-        return ", ".join( valuetitles )
+		return ", ".join( valuetitles )
 
-    #------------------------------------------------------------
-    #--- FUNCTION createRunDatas()
-    #------------------------------------------------------------
-    def createRunDatas( self, general_opts, mode_opts, valuenames, valueattrs, rundirs ):
-        runDatas = []
+	#------------------------------------------------------------
+	#--- FUNCTION createRunDatas()
+	#------------------------------------------------------------
+	def createRunDatas( self, general_opts, mode_opts, valuenames, valueattrs, rundirs ):
+		runDatas = []
 
-        for rundir in rundirs:
-            for valuename in valuenames:
-                id, prop = BarrierPosMode.__parse_valuename( valuename )
+		for rundir in rundirs:
+			for valuename in valuenames:
+				id, prop = BarrierPosMode.__parse_valuename( valuename )
 
-                path = os.path.join( rundir.path, "condprop/barrier%s.txt" % id )
-                table = datalib.parse( path,
-                                       tablenames = ['Values'],
-                                       required = datalib.REQUIRED,
-                                       keycolname = 'Time' )[ 'Values' ]
+				path = os.path.join( rundir.path, "condprop/barrier%s.txt" % id )
+				table = datalib.parse( path,
+									   tablenames = ['Values'],
+									   required = datalib.REQUIRED,
+									   keycolname = 'Time' )[ 'Values' ]
 
-                if GlobalOptions.epoch:
-                    endStep = common_functions.get_endStep( rundir.path )
-                    table = algorithms.make_epochs( table, 'Time', prop, GlobalOptions.epoch, endStep )
+				if GlobalOptions.epoch:
+					endStep = common_functions.get_endStep( rundir.path )
+					table = algorithms.make_epochs( table, 'Time', prop, GlobalOptions.epoch, endStep )
 
-                runDatas.append( RunData(rundir,
-                                         valuename,
-                                         table,
-                                         'Time',
-                                         prop) )
+				runDatas.append( RunData(rundir,
+										 valuename,
+										 table,
+										 'Time',
+										 prop) )
 
-        return runDatas
+		return runDatas
 
-    #------------------------------------------------------------
-    #--- FUNCTION usage_valuenames()
-    #------------------------------------------------------------
-    def usage_valuenames( self ):
-        print """\
+	#------------------------------------------------------------
+	#--- FUNCTION usage_valuenames()
+	#------------------------------------------------------------
+	def usage_valuenames( self ):
+		print """\
      -v <B>[,<B>]...
                Specify barriers to be plotted, where <B> is in the form
                <barrier id>_<prop>. Where <prop> can be one of
                {%s}.
                ( default = %s )
-        """ % ( ', '.join(BarrierPosMode.PROPS),
-                ','.join(self.default_valuenames) )
+		""" % ( ', '.join(BarrierPosMode.PROPS),
+				','.join(self.default_valuenames) )
 
-    #------------------------------------------------------------
-    #--- FUNCTION __parse_valuename
-    #------------------------------------------------------------
-    @staticmethod
-    def __parse_valuename( valuename ):
-        fields = valuename.split( '_' )
-        if len(fields) != 2:
-            err( "Invalid barrier valuename (%s). Expecting <id>_<prop>." % valuename )
-        try:
-            int(fields[0])
-        except:
-            err( "Invalid barrier id (%s). Expecting int." % fields[0] )
+	#------------------------------------------------------------
+	#--- FUNCTION __parse_valuename
+	#------------------------------------------------------------
+	@staticmethod
+	def __parse_valuename( valuename ):
+		fields = valuename.split( '_' )
+		if len(fields) != 2:
+			err( "Invalid barrier valuename (%s). Expecting <id>_<prop>." % valuename )
+		try:
+			int(fields[0])
+		except:
+			err( "Invalid barrier id (%s). Expecting int." % fields[0] )
 
-        
-        if not fields[1] in BarrierPosMode.PROPS:
-            err( "Invalid barrier prop (%s). Expecting one of: %s." % fields[1], ', '.join(BarrierPosMode.PROPS) )
-                     
-        return fields[0], fields[1]
+		
+		if not fields[1] in BarrierPosMode.PROPS:
+			err( "Invalid barrier prop (%s). Expecting one of: %s." % fields[1], ', '.join(BarrierPosMode.PROPS) )
+					 
+		return fields[0], fields[1]
 
 
 ####################################################################################
@@ -883,87 +887,87 @@ class BarrierPosMode( Mode ):
 ###
 ####################################################################################
 class GeneMode( Mode ):
-    TYPES = ["normalized", "interpolated"]
+	TYPES = ["normalized", "interpolated"]
 
-    #------------------------------------------------------------
-    #--- FUNCTION __init()__
-    #------------------------------------------------------------
-    def __init__( self ):
-        Mode.__init__( self,
-                       name = 'gene',
-                       title = 'Gene',
-                       isAvr = False,
-                       numargs = 0,
-                       default_recent_type = None,
-                       default_valuenames = ['MutationRate_interpolated'] )
+	#------------------------------------------------------------
+	#--- FUNCTION __init()__
+	#------------------------------------------------------------
+	def __init__( self ):
+		Mode.__init__( self,
+					   name = 'gene',
+					   title = 'Gene',
+					   isAvr = False,
+					   numargs = 0,
+					   default_recent_type = None,
+					   default_valuenames = ['MutationRate_interpolated'] )
 
-    #------------------------------------------------------------
-    #--- FUNCTION get_valuenames_title()
-    #------------------------------------------------------------
-    def get_valuenames_title( self, valuenames ):
-        valuetitles = [ name + ( ' (' + type.capitalize() + ')' if type != 'interpolated' else '')
-                        for name, type in map(GeneMode.__parse_valuename, valuenames) ]
+	#------------------------------------------------------------
+	#--- FUNCTION get_valuenames_title()
+	#------------------------------------------------------------
+	def get_valuenames_title( self, valuenames ):
+		valuetitles = [ name + ( ' (' + type.capitalize() + ')' if type != 'interpolated' else '')
+						for name, type in map(GeneMode.__parse_valuename, valuenames) ]
 
-        return ", ".join( valuetitles )
+		return ", ".join( valuetitles )
 
-    #------------------------------------------------------------
-    #--- FUNCTION createRunDatas()
-    #------------------------------------------------------------
-    def createRunDatas( self, general_opts, mode_opts, valuenames, valueattrs, rundirs ):
-        runDatas = []
+	#------------------------------------------------------------
+	#--- FUNCTION createRunDatas()
+	#------------------------------------------------------------
+	def createRunDatas( self, general_opts, mode_opts, valuenames, valueattrs, rundirs ):
+		runDatas = []
 
-        for rundir in rundirs:
-            for valuename in valuenames:
-                name, type = GeneMode.__parse_valuename( valuename )
+		for rundir in rundirs:
+			for valuename in valuenames:
+				name, type = GeneMode.__parse_valuename( valuename )
 
-                path = os.path.join( rundir.path, "genome/subset_mean.txt" )
-                tablename = type.capitalize()
-                table = datalib.parse( path,
-                                       tablenames = [tablename],
-                                       required = datalib.REQUIRED,
-                                       keycolname = 'Timestep' )[ tablename ]
+				path = os.path.join( rundir.path, "genome/subset_mean.txt" )
+				tablename = type.capitalize()
+				table = datalib.parse( path,
+									   tablenames = [tablename],
+									   required = datalib.REQUIRED,
+									   keycolname = 'Timestep' )[ tablename ]
 
-                runDatas.append( RunData(rundir,
-                                         valuename,
-                                         table,
-                                         'Timestep',
-                                         name) )
+				runDatas.append( RunData(rundir,
+										 valuename,
+										 table,
+										 'Timestep',
+										 name) )
 
-        return runDatas
+		return runDatas
 
-    #------------------------------------------------------------
-    #--- FUNCTION usage_valuenames()
-    #------------------------------------------------------------
-    def usage_valuenames( self ):
-        print """\
+	#------------------------------------------------------------
+	#--- FUNCTION usage_valuenames()
+	#------------------------------------------------------------
+	def usage_valuenames( self ):
+		print """\
      -v <G>[,<G>]...
                Specify genes to be plotted, where <G> is in the form
                <gene_name>_<type>. Where <type> can be one of
                {%s}.
                Also note that <type> can be an abbreviation.
                ( default = %s )
-        """ % ( ', '.join(GeneMode.TYPES),
-                ','.join(self.default_valuenames) )
+		""" % ( ', '.join(GeneMode.TYPES),
+				','.join(self.default_valuenames) )
 
-    #------------------------------------------------------------
-    #--- FUNCTION __parse_valuename
-    #------------------------------------------------------------
-    @staticmethod
-    def __parse_valuename( valuename ):
-        fields = valuename.split( '_' )
-        if len(fields) != 2:
-            err( "Invalid gene valuename (%s). Expecting <gene_name>_<type>." % valuename )
+	#------------------------------------------------------------
+	#--- FUNCTION __parse_valuename
+	#------------------------------------------------------------
+	@staticmethod
+	def __parse_valuename( valuename ):
+		fields = valuename.split( '_' )
+		if len(fields) != 2:
+			err( "Invalid gene valuename (%s). Expecting <gene_name>_<type>." % valuename )
 
-        gene = fields[0]
-        type = fields[1]
-        try:
-            type = common_functions.expand_abbreviations( type,
-                                                          GeneMode.TYPES,
-                                                          case_sensitive = False )
-        except common_functions.IllegalAbbreviationError, x:
-            err( "Failed expanding gene valuname type: " + str(x) )
-                     
-        return gene, type
+		gene = fields[0]
+		type = fields[1]
+		try:
+			type = common_functions.expand_abbreviations( type,
+														  GeneMode.TYPES,
+														  case_sensitive = False )
+		except common_functions.IllegalAbbreviationError, x:
+			err( "Failed expanding gene valuname type: " + str(x) )
+					 
+		return gene, type
 
 
 ####################################################################################
@@ -973,52 +977,52 @@ class GeneMode( Mode ):
 ####################################################################################
 class AdhocMode( Mode ):
 
-    #------------------------------------------------------------
-    #--- FUNCTION __init()__
-    #------------------------------------------------------------
-    def __init__( self ):
-        Mode.__init__( self,
-                       name = 'adhoc',
-                       title = 'Ad hoc',
-                       isAvr = False,
-                       numargs = 4,
-                       default_recent_type = None,
-                       default_valuenames = None )
+	#------------------------------------------------------------
+	#--- FUNCTION __init()__
+	#------------------------------------------------------------
+	def __init__( self ):
+		Mode.__init__( self,
+					   name = 'adhoc',
+					   title = 'Ad hoc',
+					   isAvr = False,
+					   numargs = 4,
+					   default_recent_type = None,
+					   default_valuenames = None )
 
-    #------------------------------------------------------------
-    #--- FUNCTION init_valuenames()
-    #------------------------------------------------------------
-    def init_valuenames( self, mode_opts, opts, args ):
-        mode_opts['relpath'] = args[0]
-        mode_opts['tablename'] = args[1]
-        mode_opts['xcolname'] = args[2]
-        mode_opts['ycolname'] = args[3]
-        valuenames = ["%s[%s[%s]]" % (os.path.splitext( os.path.basename(mode_opts['relpath']) )[0],
-                                      mode_opts['tablename'],
-                                      mode_opts['ycolname'])]
+	#------------------------------------------------------------
+	#--- FUNCTION init_valuenames()
+	#------------------------------------------------------------
+	def init_valuenames( self, mode_opts, opts, args ):
+		mode_opts['relpath'] = args[0]
+		mode_opts['tablename'] = args[1]
+		mode_opts['xcolname'] = args[2]
+		mode_opts['ycolname'] = args[3]
+		valuenames = ["%s[%s[%s]]" % (os.path.splitext( os.path.basename(mode_opts['relpath']) )[0],
+									  mode_opts['tablename'],
+									  mode_opts['ycolname'])]
 
-        return valuenames
+		return valuenames
 
-    #------------------------------------------------------------
-    #--- FUNCTION createRunDatas()
-    #------------------------------------------------------------
-    def createRunDatas( self, general_opts, mode_opts, valuenames, valueattrs, rundirs ):
-        runDatas = []
+	#------------------------------------------------------------
+	#--- FUNCTION createRunDatas()
+	#------------------------------------------------------------
+	def createRunDatas( self, general_opts, mode_opts, valuenames, valueattrs, rundirs ):
+		runDatas = []
 
-        for rundir in rundirs:
-            path = os.path.join( rundir.path, mode_opts['relpath'] )
-            table = datalib.parse( path,
-                                   tablenames = [mode_opts['tablename']],
-                                   required = datalib.REQUIRED,
-                                   keycolname = mode_opts['xcolname'] )[mode_opts['tablename']]
+		for rundir in rundirs:
+			path = os.path.join( rundir.path, mode_opts['relpath'] )
+			table = datalib.parse( path,
+								   tablenames = [mode_opts['tablename']],
+								   required = datalib.REQUIRED,
+								   keycolname = mode_opts['xcolname'] )[mode_opts['tablename']]
 
-            runDatas.append( RunData(rundir,
-                                     valuenames[0],
-                                     table,
-                                     mode_opts['xcolname'],
-                                     mode_opts['ycolname']) )
+			runDatas.append( RunData(rundir,
+									 valuenames[0],
+									 table,
+									 mode_opts['xcolname'],
+									 mode_opts['ycolname']) )
 
-        return runDatas
+		return runDatas
 
 
 ####################################################################################
@@ -1027,252 +1031,252 @@ class AdhocMode( Mode ):
 ###
 ####################################################################################
 class Clause:
-    #------------------------------------------------------------
-    #--- FUNCTION __init__()
-    #------------------------------------------------------------
-    def __init__( self, argv ):
-        if not len(argv):
-            err( "Missing mode name" )
+	#------------------------------------------------------------
+	#--- FUNCTION __init__()
+	#------------------------------------------------------------
+	def __init__( self, argv ):
+		if not len(argv):
+			err( "Missing mode name" )
 
-        self.mode = Mode.get_mode( argv[0] )
-        self.argv = argv
+		self.mode = Mode.get_mode( argv[0] )
+		self.argv = argv
 
-    #------------------------------------------------------------
-    #--- FUNCTION drop_global_args()
-    #---
-    #--- The last clause is going to have global args (e.g. run
-    #--- directories) at the end of its argv. This method prunes
-    #--- those args from this clause's argv and returns them.
-    #------------------------------------------------------------
-    def drop_global_args( self ):
-        self.argv, global_args = self.mode.split_global_args( self.argv )
+	#------------------------------------------------------------
+	#--- FUNCTION drop_global_args()
+	#---
+	#--- The last clause is going to have global args (e.g. run
+	#--- directories) at the end of its argv. This method prunes
+	#--- those args from this clause's argv and returns them.
+	#------------------------------------------------------------
+	def drop_global_args( self ):
+		self.argv, global_args = self.mode.split_global_args( self.argv )
 
-        return global_args
+		return global_args
 
-    #------------------------------------------------------------
-    #--- FUNCTION createCurveDatas()
-    #------------------------------------------------------------
-    def createCurveDatas( self, rundirs ):
-        general_opts, mode_opts, valuenames, valueattrs = self.mode.parse_argv( self.argv )
-        runDatas = self.mode.createRunDatas( general_opts, mode_opts, valuenames, valueattrs, rundirs )
+	#------------------------------------------------------------
+	#--- FUNCTION createCurveDatas()
+	#------------------------------------------------------------
+	def createCurveDatas( self, rundirs ):
+		general_opts, mode_opts, valuenames, valueattrs = self.mode.parse_argv( self.argv )
+		runDatas = self.mode.createRunDatas( general_opts, mode_opts, valuenames, valueattrs, rundirs )
 
-        for runData in runDatas:
-            if runData.table.path == None:
-                write_temp_table( runData.table )
+		for runData in runDatas:
+			if runData.table.path == None:
+				write_temp_table( runData.table )
 
-        curveDatas = []
+		curveDatas = []
 
-        #
-        # Create individual run CurveData
-        #
-        for runData in runDatas:
-            for valueattr in valueattrs['individual']:
-                if valueattr == 'default' or valueattr == 'min' or valueattr == 'max':
-                    if valueattr == 'default':
-                        ycolnames = [runData.ycolname_default]
-                    else:
-                        ycolnames = [valueattr]
-                    curvetype = 'line'
+		#
+		# Create individual run CurveData
+		#
+		for runData in runDatas:
+			for valueattr in valueattrs['individual']:
+				if valueattr == 'default' or valueattr == 'min' or valueattr == 'max':
+					if valueattr == 'default':
+						ycolnames = [runData.ycolname_default]
+					else:
+						ycolnames = [valueattr]
+					curvetype = 'line'
 
-                elif valueattr == 'err':
-                    ycolnames = ['mean', 'mean_stderr']
-                    curvetype = 'errorbar'
+				elif valueattr == 'err':
+					ycolnames = ['mean', 'mean_stderr']
+					curvetype = 'errorbar'
 
-                elif valueattr == 'whisker':
-                    ycolnames = ['q1','min','max','q3','median']
-                    curvetype = 'whisker'
+				elif valueattr == 'whisker':
+					ycolnames = ['q1','min','max','q3','median']
+					curvetype = 'whisker'
 
-                else:
-                    err( "Impl individual " + valueattr )
+				else:
+					err( "Impl individual " + valueattr )
 
-                curveDatas.append( CurveData(clause = self,
-                                             valuename = runData.valuename,
-                                             valueattr = valueattr,
-                                             datatype = 'individual',
-                                             curvetype = curvetype,
-                                             table = runData.table,
-                                             xcolname = runData.xcolname,
-                                             ycolnames = ycolnames,
-                                             yaxis = general_opts['yaxis'],
-                                             groups = [runData.rundir.group],
-                                             rundirs = [runData.rundir],
-                                             classifications = [runData.rundir.classification]) )
-
-
-        #
-        # Create meta CurveData
-        #
-        if len( valueattrs['meta'] ):
-            runDatas_grouped = {}
-            for runData in runDatas:
-                groupname = runData.rundir.group
-                runDatas_grouped.setdefault( groupname, [] ).append( runData )
-
-            for valuename in valuenames:
-                for groupname, runDatas_group in runDatas_grouped.items():
-                    runDatas_group = filter( lambda x: x.valuename == valuename, runDatas_group )
-                    tables = map( lambda x: x.table, runDatas_group )
-                    xcolname = runDatas_group[0].xcolname
-                    classifications = [ x.rundir.classification for x in runDatas_group ]
-                    rundirs = [ x.rundir for x in runDatas_group ]
-
-                    if len(runDatas_group) < 2:
-                        err( "Not enough runs for meta (" + groupname + ")" )
-
-                    for valueattr in valueattrs['meta']:
-                        if valueattr == 'default' or valueattr == 'min' or valueattr == 'max':
-                            if valueattr == 'default':
-                                ycolname = runData.ycolname_default
-                            else:
-                                ycolname = valueattr
-
-                            table_meta = algorithms.avr_table_from_tables( 'Meta-%s-%s-%s' % (groupname, valuename, valueattr),
-                                                                           tables,
-                                                                           xcolname,
-                                                                           ycolname )
-                            write_temp_table( table_meta )
-
-                            ycolnames = ['mean']
-                            curvetype = 'line'
-
-                        elif valueattr == 'err':
-                            table_meta = algorithms.avr_table_from_tables( 'Meta-%s-%s-%s' % (groupname, valuename, valueattr),
-                                                                           tables,
-                                                                           xcolname,
-                                                                           runData.ycolname_default )
-                            write_temp_table( table_meta )
-
-                            ycolnames = ['mean', 'mean_stderr']
-                            curvetype = 'errorbar'
-
-                        elif valueattr == 'whisker':
-                            table_meta = algorithms.avr_table_from_tables( 'Meta-%s-%s-%s' % (groupname, valuename, valueattr),
-                                                                           tables,
-                                                                           xcolname,
-                                                                           runData.ycolname_default )
-                            write_temp_table( table_meta )
-
-                            ycolnames = ['q1','min','max','q3','median']
-                            curvetype = 'whisker'
-
-                        else:
-                            err("impl")
-
-                        curveDatas.append( CurveData(clause = self,
-                                                     valuename = valuename,
-                                                     valueattr = valueattr,
-                                                     datatype = 'meta',
-                                                     curvetype = curvetype,
-                                                     table = table_meta,
-                                                     xcolname = xcolname,
-                                                     ycolnames = ycolnames,
-                                                     yaxis = general_opts['yaxis'],
-                                                     groups = [groupname],
-                                                     rundirs = rundirs,
-                                                     classifications = classifications) )
-
-        #
-        # Create ttest CurveData
-        #
-        if len( valueattrs['ttest'] ):
-            runDatas_grouped = {}
-            for runData in runDatas:
-                groupname = runData.rundir.group
-                runDatas_grouped.setdefault( groupname, [] ).append( runData )
-
-            if len(runDatas_grouped) < 2:
-                err( "ttest requires 2 groups." )
-            elif general_opts['tgroups'] == None:
-                if len(runDatas_grouped) > 2:
-                    err( "More than 2 groups. Please use --tgroups for ttest calculations." )
-                tgroups = runDatas_grouped.keys()
-            else:
-                tgroups = general_opts['tgroups'].split( ',' )
-                if len(tgroups) != 2:
-                    err( "Invalid --tgroups argument. Expecting 2 comma-separated values." )
-                try:
-                    tgroups = common_functions.expand_abbreviations( tgroups,
-                                                                     runDatas_grouped.keys(),
-                                                                     case_sensitive = False )
-                except common_functions.IllegalAbbreviationError, x:
-                    err( "Failed processing --tgroups: " + str(x) )
-
-            if tgroups[0] == tgroups[1]:
-                err( "ttest groups cannot be the same!" )
-                     
-            group1 = tgroups[0]
-            group2 = tgroups[1]
-
-            for valuename in valuenames:
-                runDatas_group1 = filter( lambda x: x.valuename == valuename, runDatas_grouped[group1] )
-                runDatas_group2 = filter( lambda x: x.valuename == valuename, runDatas_grouped[group2] )
-                tables1 = map( lambda x: x.table, runDatas_group1 )
-                tables2 = map( lambda x: x.table, runDatas_group2 )
-                
-                if len(tables1) != len(tables2):
-                    warn( "For TTest, Numbers of runs different between groups. Some runs ignored." )
-                
-                ntables = min( len(tables1), len(tables2) )
-
-                xcolname = runDatas_group1[0].xcolname
-                ycolname = runDatas_group1[0].ycolname_default
-                table_ttest = algorithms.ttest_table( 'TTest-%s' % valuename,
-                                                      GlobalOptions.tcrit,
-                                                      tables1[:ntables],
-                                                      tables2[:ntables],
-                                                      xcolname,
-                                                      ycolname )
-
-                write_temp_table( table_ttest )
-
-                classifications = [ x.rundir.classification for x in runDatas_group1 + runDatas_group2 ]
-                rundirs = [ x.rundir for x in runDatas_group1 + runDatas_group2 ]
-
-                for valueattr in valueattrs['ttest']:
-                    curveDatas.append( CurveData(clause = self,
-                                                 valuename = valuename,
-                                                 valueattr = valueattr,
-                                                 datatype = 'ttest',
-                                                 curvetype = 'line',
-                                                 table = table_ttest,
-                                                 xcolname = xcolname,
-                                                 ycolnames = [valueattr],
-                                                 yaxis = 2,
-                                                 groups = tgroups,
-                                                 rundirs = rundirs,
-                                                 classifications = classifications) )
-            
-        #
-        # Remove any error bar curves from list and link them to
-        # their associated curve.
-        #
-        for curveData in curveDatas:
-            if curveData.curvetype == 'errorbar':
-                line = None
-                for x in curveDatas:
-                    if ( x.rundirs == curveData.rundirs
-                         and x.groups == curveData.groups
-                         and x.valuename == curveData.valuename
-                         and x.valueattr == 'default'
-                         and x.curvetype == 'line' ):
-                        line = x
-                        break
-                assert( line )
-                line.errorbar = curveData
-
-        curveDatas = filter( lambda x: x.curvetype != 'errorbar', curveDatas )
+				curveDatas.append( CurveData(clause = self,
+											 valuename = runData.valuename,
+											 valueattr = valueattr,
+											 datatype = 'individual',
+											 curvetype = curvetype,
+											 table = runData.table,
+											 xcolname = runData.xcolname,
+											 ycolnames = ycolnames,
+											 yaxis = general_opts['yaxis'],
+											 groups = [runData.rundir.group],
+											 rundirs = [runData.rundir],
+											 classifications = [runData.rundir.classification]) )
 
 
-        #
-        # Apply any general style options
-        #
-        for curveData in curveDatas:
-            if curveData.curvetype == 'line':
-                curveData.points = general_opts['dots']
-                curveData.smooth = general_opts['smooth']
+		#
+		# Create meta CurveData
+		#
+		if len( valueattrs['meta'] ):
+			runDatas_grouped = {}
+			for runData in runDatas:
+				groupname = runData.rundir.group
+				runDatas_grouped.setdefault( groupname, [] ).append( runData )
 
-        return curveDatas
-                    
+			for valuename in valuenames:
+				for groupname, runDatas_group in runDatas_grouped.items():
+					runDatas_group = filter( lambda x: x.valuename == valuename, runDatas_group )
+					tables = map( lambda x: x.table, runDatas_group )
+					xcolname = runDatas_group[0].xcolname
+					classifications = [ x.rundir.classification for x in runDatas_group ]
+					rundirs = [ x.rundir for x in runDatas_group ]
+
+					if len(runDatas_group) < 2:
+						err( "Not enough runs for meta (" + groupname + ")" )
+
+					for valueattr in valueattrs['meta']:
+						if valueattr == 'default' or valueattr == 'min' or valueattr == 'max':
+							if valueattr == 'default':
+								ycolname = runData.ycolname_default
+							else:
+								ycolname = valueattr
+
+							table_meta = algorithms.avr_table_from_tables( 'Meta-%s-%s-%s' % (groupname, valuename, valueattr),
+																		   tables,
+																		   xcolname,
+																		   ycolname )
+							write_temp_table( table_meta )
+
+							ycolnames = ['mean']
+							curvetype = 'line'
+
+						elif valueattr == 'err':
+							table_meta = algorithms.avr_table_from_tables( 'Meta-%s-%s-%s' % (groupname, valuename, valueattr),
+																		   tables,
+																		   xcolname,
+																		   runData.ycolname_default )
+							write_temp_table( table_meta )
+
+							ycolnames = ['mean', 'mean_stderr']
+							curvetype = 'errorbar'
+
+						elif valueattr == 'whisker':
+							table_meta = algorithms.avr_table_from_tables( 'Meta-%s-%s-%s' % (groupname, valuename, valueattr),
+																		   tables,
+																		   xcolname,
+																		   runData.ycolname_default )
+							write_temp_table( table_meta )
+
+							ycolnames = ['q1','min','max','q3','median']
+							curvetype = 'whisker'
+
+						else:
+							err("impl")
+
+						curveDatas.append( CurveData(clause = self,
+													 valuename = valuename,
+													 valueattr = valueattr,
+													 datatype = 'meta',
+													 curvetype = curvetype,
+													 table = table_meta,
+													 xcolname = xcolname,
+													 ycolnames = ycolnames,
+													 yaxis = general_opts['yaxis'],
+													 groups = [groupname],
+													 rundirs = rundirs,
+													 classifications = classifications) )
+
+		#
+		# Create ttest CurveData
+		#
+		if len( valueattrs['ttest'] ):
+			runDatas_grouped = {}
+			for runData in runDatas:
+				groupname = runData.rundir.group
+				runDatas_grouped.setdefault( groupname, [] ).append( runData )
+
+			if len(runDatas_grouped) < 2:
+				err( "ttest requires 2 groups." )
+			elif general_opts['tgroups'] == None:
+				if len(runDatas_grouped) > 2:
+					err( "More than 2 groups. Please use --tgroups for ttest calculations." )
+				tgroups = runDatas_grouped.keys()
+			else:
+				tgroups = general_opts['tgroups'].split( ',' )
+				if len(tgroups) != 2:
+					err( "Invalid --tgroups argument. Expecting 2 comma-separated values." )
+				try:
+					tgroups = common_functions.expand_abbreviations( tgroups,
+																	 runDatas_grouped.keys(),
+																	 case_sensitive = False )
+				except common_functions.IllegalAbbreviationError, x:
+					err( "Failed processing --tgroups: " + str(x) )
+
+			if tgroups[0] == tgroups[1]:
+				err( "ttest groups cannot be the same!" )
+					 
+			group1 = tgroups[0]
+			group2 = tgroups[1]
+
+			for valuename in valuenames:
+				runDatas_group1 = filter( lambda x: x.valuename == valuename, runDatas_grouped[group1] )
+				runDatas_group2 = filter( lambda x: x.valuename == valuename, runDatas_grouped[group2] )
+				tables1 = map( lambda x: x.table, runDatas_group1 )
+				tables2 = map( lambda x: x.table, runDatas_group2 )
+				
+				if len(tables1) != len(tables2):
+					warn( "For TTest, Numbers of runs different between groups. Some runs ignored." )
+				
+				ntables = min( len(tables1), len(tables2) )
+
+				xcolname = runDatas_group1[0].xcolname
+				ycolname = runDatas_group1[0].ycolname_default
+				table_ttest = algorithms.ttest_table( 'TTest-%s' % valuename,
+													  GlobalOptions.tcrit,
+													  tables1[:ntables],
+													  tables2[:ntables],
+													  xcolname,
+													  ycolname )
+
+				write_temp_table( table_ttest )
+
+				classifications = [ x.rundir.classification for x in runDatas_group1 + runDatas_group2 ]
+				rundirs = [ x.rundir for x in runDatas_group1 + runDatas_group2 ]
+
+				for valueattr in valueattrs['ttest']:
+					curveDatas.append( CurveData(clause = self,
+												 valuename = valuename,
+												 valueattr = valueattr,
+												 datatype = 'ttest',
+												 curvetype = 'line',
+												 table = table_ttest,
+												 xcolname = xcolname,
+												 ycolnames = [valueattr],
+												 yaxis = 2,
+												 groups = tgroups,
+												 rundirs = rundirs,
+												 classifications = classifications) )
+			
+		#
+		# Remove any error bar curves from list and link them to
+		# their associated curve.
+		#
+		for curveData in curveDatas:
+			if curveData.curvetype == 'errorbar':
+				line = None
+				for x in curveDatas:
+					if ( x.rundirs == curveData.rundirs
+						 and x.groups == curveData.groups
+						 and x.valuename == curveData.valuename
+						 and x.valueattr == 'default'
+						 and x.curvetype == 'line' ):
+						line = x
+						break
+				assert( line )
+				line.errorbar = curveData
+
+		curveDatas = filter( lambda x: x.curvetype != 'errorbar', curveDatas )
+
+
+		#
+		# Apply any general style options
+		#
+		for curveData in curveDatas:
+			if curveData.curvetype == 'line':
+				curveData.points = general_opts['dots']
+				curveData.smooth = general_opts['smooth']
+
+		return curveDatas
+					
 
 ####################################################################################
 ###
@@ -1281,9 +1285,9 @@ class Clause:
 ####################################################################################
 temp_tables = []
 def write_temp_table( table ):
-    path = '/tmp/plot-temp-table-%d-%s.plt' % ( os.getpid(), len(temp_tables) )
-    datalib.write( path, table )
-    temp_tables.append( path )
+	path = '/tmp/plot-temp-table-%d-%s.plt' % ( os.getpid(), len(temp_tables) )
+	datalib.write( path, table )
+	temp_tables.append( path )
 
 
 ####################################################################################
@@ -1292,8 +1296,8 @@ def write_temp_table( table ):
 ###
 ####################################################################################
 def delete_temp_tables():
-    for path in temp_tables:
-        os.remove( path )
+	for path in temp_tables:
+		os.remove( path )
 
 ####################################################################################
 ###
@@ -1301,14 +1305,14 @@ def delete_temp_tables():
 ###
 ####################################################################################
 def classify_runs( rundirs ):
-    for rundir in rundirs:
-        try:
-            rundir.classification = common_functions.classify_run( rundir.path,
-                                                                   single_classification = True,
-                                                                   constraints = GlobalOptions.classifications )
-        except common_functions.ClassificationError, x:
-            warn( x )
-            rundir.classification = 'NoClassification'
+	for rundir in rundirs:
+		try:
+			rundir.classification = common_functions.classify_run( rundir.path,
+																   single_classification = True,
+																   constraints = GlobalOptions.classifications )
+		except common_functions.ClassificationError, x:
+			warn( x )
+			rundir.classification = 'NoClassification'
 
 
 ####################################################################################
@@ -1317,57 +1321,57 @@ def classify_runs( rundirs ):
 ###
 ####################################################################################
 def group_runs( rundirs ):
-    overlay_parameter_names = get_overlay_parameter_names( rundirs )
-    overlay_parameter_values = dict([ (rundir.path, get_parameter_values(overlay_parameter_names, rundir))
-                                      for rundir in rundirs ])
+	overlay_parameter_names = get_overlay_parameter_names( rundirs )
+	overlay_parameter_values = dict([ (rundir.path, get_parameter_values(overlay_parameter_names, rundir))
+									  for rundir in rundirs ])
 
-    def __parentdir( rundir ):
-        return os.path.basename(os.path.dirname(rundir.path))
+	def __parentdir( rundir ):
+		return os.path.basename(os.path.dirname(rundir.path))
 
-    if GlobalOptions.group != 'auto':
-        group_type = GlobalOptions.group
-    else:
-        group_type = 'classification'
+	if GlobalOptions.group != 'auto':
+		group_type = GlobalOptions.group
+	else:
+		group_type = 'classification'
 
-        if len( set(overlay_parameter_values.values()) ) > 1:
-            group_type = 'overlay'
-        else:
-            # If we're dealing with a collection of farm runs...
-            if all( map(lambda x: os.path.exists( os.path.join(rundir.path, '.pwfarm/') ),
-                        rundirs) ):
+		if len( set(overlay_parameter_values.values()) ) > 1:
+			group_type = 'overlay'
+		else:
+			# If we're dealing with a collection of farm runs...
+			if all( map(lambda x: os.path.exists( os.path.join(rundir.path, '.pwfarm/') ),
+						rundirs) ):
 
-                # Use parent dir as group, so long as parent dir doesn't contain mix of classifications
-                parentdir_classes = {}
-                for rundir in rundirs:
-                    parentdir_classes.setdefault( __parentdir(rundir), set() ).add( rundir.classification )
+				# Use parent dir as group, so long as parent dir doesn't contain mix of classifications
+				parentdir_classes = {}
+				for rundir in rundirs:
+					parentdir_classes.setdefault( __parentdir(rundir), set() ).add( rundir.classification )
 
-                if all( map(lambda classes: len(classes) == 1, parentdir_classes.values()) ):
-                    group_type = 'parentdir'
+				if all( map(lambda classes: len(classes) == 1, parentdir_classes.values()) ):
+					group_type = 'parentdir'
 
-    for rundir in rundirs:
-        # Might already have group due to @group in argv
-        if not rundir.group:
-            if group_type == 'overlay':
-                rundir.group = "(" + ",".join( overlay_parameter_values[rundir.path] ) + ")"
-            elif group_type == 'parentdir':
-                rundir.group = __parentdir( rundir ).capitalize()
-            elif group_type == 'classification':
-                rundir.group = rundir.classification
-            else:
-                err( "Invalid value for --group (%s)" % group_type )
+	for rundir in rundirs:
+		# Might already have group due to @group in argv
+		if not rundir.group:
+			if group_type == 'overlay':
+				rundir.group = "(" + ",".join( overlay_parameter_values[rundir.path] ) + ")"
+			elif group_type == 'parentdir':
+				rundir.group = __parentdir( rundir ).capitalize()
+			elif group_type == 'classification':
+				rundir.group = rundir.classification
+			else:
+				err( "Invalid value for --group (%s)" % group_type )
 
-    #
-    # Warn user if groups have different number of runs
-    #
-    ngroupruns = {}
-    for rundir in rundirs:
-        ngroupruns.setdefault( rundir.group, [] ).append(rundir)
+	#
+	# Warn user if groups have different number of runs
+	#
+	ngroupruns = {}
+	for rundir in rundirs:
+		ngroupruns.setdefault( rundir.group, [] ).append(rundir)
 
-    ngroupruns = list( ngroupruns.items() )
-    if not all( map(lambda x: len(x[1]) == len(ngroupruns[0][1]), ngroupruns[1:]) ):
-        warn( "Groups do not all have the same number of runs!" )
-        for x in ngroupruns:
-            print "  group %s: %s runs" % ( x[0], len(x[1]) )
+	ngroupruns = list( ngroupruns.items() )
+	if not all( map(lambda x: len(x[1]) == len(ngroupruns[0][1]), ngroupruns[1:]) ):
+		warn( "Groups do not all have the same number of runs!" )
+		for x in ngroupruns:
+			print "	 group %s: %s runs" % ( x[0], len(x[1]) )
 
 
 ####################################################################################
@@ -1376,135 +1380,135 @@ def group_runs( rundirs ):
 ###
 ####################################################################################
 def config_style( plot, curveDatas ):
-    curveDatas_individual = filter( lambda x: x.datatype == 'individual', curveDatas )
-    curveDatas_meta = filter( lambda x: x.datatype == 'meta', curveDatas )
-    curveDatas_ttest = filter( lambda x: x.datatype == 'ttest', curveDatas )
+	curveDatas_individual = filter( lambda x: x.datatype == 'individual', curveDatas )
+	curveDatas_meta = filter( lambda x: x.datatype == 'meta', curveDatas )
+	curveDatas_ttest = filter( lambda x: x.datatype == 'ttest', curveDatas )
 
-    __linetypes = list( plotlib.CurveStyle.LINE_TYPES )
+	__linetypes = list( plotlib.CurveStyle.LINE_TYPES )
 
-    ###
-    ### TTest Curves
-    ###
-    if len(curveDatas_ttest):
-        if len(curveDatas_ttest) > 1 and not GlobalOptions.color:
-            err( "Plotting more than 1 ttest requires color (-c)." )
+	###
+	### TTest Curves
+	###
+	if len(curveDatas_ttest):
+		if len(curveDatas_ttest) > 1 and not GlobalOptions.color:
+			err( "Plotting more than 1 ttest requires color (-c)." )
 
-        colors = list( plotlib.CurveStyle.COLORS )
-        # Use gray first. 
-        colors.remove( plotlib.CurveStyle.GRAY )
-        colors = [plotlib.CurveStyle.GRAY] + colors
+		colors = list( plotlib.CurveStyle.COLORS )
+		# Use gray first. 
+		colors.remove( plotlib.CurveStyle.GRAY )
+		colors = [plotlib.CurveStyle.GRAY] + colors
 
-        for curveData in curveDatas_ttest:
-            curveData.style = plot.createCurveStyle( TTEST_LINETYPE,
-                                                     plotlib.CurveStyle.THICK,
-                                                     colors.pop(0) )            
+		for curveData in curveDatas_ttest:
+			curveData.style = plot.createCurveStyle( TTEST_LINETYPE,
+													 plotlib.CurveStyle.THICK,
+													 colors.pop(0) )			
 
-    ###
-    ### Individual Curves
-    ###
-    if len(curveDatas_individual):
-        linetypes = list( __linetypes )
+	###
+	### Individual Curves
+	###
+	if len(curveDatas_individual):
+		linetypes = list( __linetypes )
 
-        if GlobalOptions.color:
-            colors = dict([ (linetype, list(plotlib.CurveStyle.COLORS) ) for linetype in linetypes ])
+		if GlobalOptions.color:
+			colors = dict([ (linetype, list(plotlib.CurveStyle.COLORS) ) for linetype in linetypes ])
 
-        for curveData in curveDatas_individual:
-            assert( len(curveData.classifications) == 1 )
-            classification = curveData.classifications[0]
-            if classification in CLASSIFICATION_LINETYPES:
-                linetype = CLASSIFICATION_LINETYPES[classification]
-            else:
-                linetype = plotlib.CurveStyle.SOLID
+		for curveData in curveDatas_individual:
+			assert( len(curveData.classifications) == 1 )
+			classification = curveData.classifications[0]
+			if classification in CLASSIFICATION_LINETYPES:
+				linetype = CLASSIFICATION_LINETYPES[classification]
+			else:
+				linetype = plotlib.CurveStyle.SOLID
 
-            if GlobalOptions.color:
-                if len(colors[linetype]) == 0:
-                    err( "Ran out of colors for individual runs!" )
-                color = colors[linetype].pop(0)
-            else:
-                color = plotlib.CurveStyle.GRAY
+			if GlobalOptions.color:
+				if len(colors[linetype]) == 0:
+					err( "Ran out of colors for individual runs!" )
+				color = colors[linetype].pop(0)
+			else:
+				color = plotlib.CurveStyle.GRAY
 
-            curveData.style = plot.createCurveStyle( linetype,
-                                                     plotlib.CurveStyle.THIN,
-                                                     color )
-            
+			curveData.style = plot.createCurveStyle( linetype,
+													 plotlib.CurveStyle.THIN,
+													 color )
+			
 
-    ###
-    ### Meta Curves
-    ###
-    if len(curveDatas_meta):        
-        if not GlobalOptions.color:
-            ###
-            ### Black-only Meta
-            ###
+	###
+	### Meta Curves
+	###
+	if len(curveDatas_meta):		
+		if not GlobalOptions.color:
+			###
+			### Black-only Meta
+			###
 
-            linetypes = list( __linetypes )
+			linetypes = list( __linetypes )
 
-            # First, try to assign classification-preferred linetypes. We can only
-            # do that if the curve has a single classification.
-            for curveData in curveDatas_meta:
-                if len(curveData.classifications) == 1:
-                    classification = curveData.classifications[0]
-                    if classification in CLASSIFICATION_LINETYPES:
-                        linetype = CLASSIFICATION_LINETYPES[classification]
-                        # Make sure we haven't already used this linetype.
-                        if linetype in linetypes:
-                            linetypes.remove( linetype )
-                            curveData.style = plot.createCurveStyle( linetype,
-                                                                     plotlib.CurveStyle.THICK,
-                                                                     plotlib.CurveStyle.BLACK )
+			# First, try to assign classification-preferred linetypes. We can only
+			# do that if the curve has a single classification.
+			for curveData in curveDatas_meta:
+				if len(curveData.classifications) == 1:
+					classification = curveData.classifications[0]
+					if classification in CLASSIFICATION_LINETYPES:
+						linetype = CLASSIFICATION_LINETYPES[classification]
+						# Make sure we haven't already used this linetype.
+						if linetype in linetypes:
+							linetypes.remove( linetype )
+							curveData.style = plot.createCurveStyle( linetype,
+																	 plotlib.CurveStyle.THICK,
+																	 plotlib.CurveStyle.BLACK )
 
-            # Assign available linetypes to remaining curves.
-            for curveData in curveDatas_meta:
-                if hasattr( curveData, 'style' ):
-                    continue
+			# Assign available linetypes to remaining curves.
+			for curveData in curveDatas_meta:
+				if hasattr( curveData, 'style' ):
+					continue
 
-                if len(linetypes) == 0:
-                    warn( "Number of meta curves exceeds number of line types. Consider using color (-c)." )
-                    linetypes = list( __linetypes )
+				if len(linetypes) == 0:
+					warn( "Number of meta curves exceeds number of line types. Consider using color (-c)." )
+					linetypes = list( __linetypes )
 
-                linetype = linetypes.pop( 0 )
-                curveData.style = plot.createCurveStyle( linetype,
-                                                         plotlib.CurveStyle.THICK,
-                                                         plotlib.CurveStyle.BLACK )
-        else:
-            ###
-            ### Color Meta
-            ###
-            colors = dict([ (linetype, [plotlib.CurveStyle.BLACK] + list(plotlib.CurveStyle.COLORS) ) for linetype in __linetypes ])
-            
-            for curveData in curveDatas_meta:
-                linetype = None
+				linetype = linetypes.pop( 0 )
+				curveData.style = plot.createCurveStyle( linetype,
+														 plotlib.CurveStyle.THICK,
+														 plotlib.CurveStyle.BLACK )
+		else:
+			###
+			### Color Meta
+			###
+			colors = dict([ (linetype, [plotlib.CurveStyle.BLACK] + list(plotlib.CurveStyle.COLORS) ) for linetype in __linetypes ])
+			
+			for curveData in curveDatas_meta:
+				linetype = None
 
-                # Try to use classification linetype
-                if len(curveData.classifications) == 1:
-                    classification = curveData.classifications[0]
-                    if classification in CLASSIFICATION_LINETYPES:
-                        linetype = CLASSIFICATION_LINETYPES[classification]
+				# Try to use classification linetype
+				if len(curveData.classifications) == 1:
+					classification = curveData.classifications[0]
+					if classification in CLASSIFICATION_LINETYPES:
+						linetype = CLASSIFICATION_LINETYPES[classification]
 
-                if not linetype:
-                    # Fall back to default. Might need to eventually allow multiple line types if we run out of colors
-                    linetype = plotlib.CurveStyle.SOLID
+				if not linetype:
+					# Fall back to default. Might need to eventually allow multiple line types if we run out of colors
+					linetype = plotlib.CurveStyle.SOLID
 
-                if not len(colors[linetype]):
-                    err( "Ran out of meta colors! Try adding more colors or code that cycles line types" )
+				if not len(colors[linetype]):
+					err( "Ran out of meta colors! Try adding more colors or code that cycles line types" )
 
-                curveData.style = plot.createCurveStyle( linetype,
-                                                         plotlib.CurveStyle.THICK,
-                                                         colors[linetype].pop(0) )
+				curveData.style = plot.createCurveStyle( linetype,
+														 plotlib.CurveStyle.THICK,
+														 colors[linetype].pop(0) )
 
-    
+	
 ####################################################################################
 ###
 ### FUNCTION get_overlay_parameter_names()
 ###
 ####################################################################################
 def get_overlay_parameter_names( rundirs ):
-    result = set()
+	result = set()
 
-    for rundir in rundirs:
-        result.update( wfutil.get_overlay_parameter_names(rundir.path) )
+	for rundir in rundirs:
+		result.update( wfutil.get_overlay_parameter_names(rundir.path) )
 
-    return result
+	return result
 
 
 ####################################################################################
@@ -1513,11 +1517,11 @@ def get_overlay_parameter_names( rundirs ):
 ###
 ####################################################################################
 def get_parameter_values( parameter_names, rundir ):
-    result = []
-    for parameter_name in parameter_names:
-        result.append( wfutil.get_parameter(rundir.path, parameter_name) )
+	result = []
+	for parameter_name in parameter_names:
+		result.append( wfutil.get_parameter(rundir.path, parameter_name) )
 
-    return tuple( result )
+	return tuple( result )
 
 
 ####################################################################################
@@ -1526,56 +1530,56 @@ def get_parameter_values( parameter_names, rundir ):
 ###
 ####################################################################################
 def create_macros( clauses,
-                   rundirs,
-                   curveDatas ):
+				   rundirs,
+				   curveDatas ):
 
-    overlay_parameter_names = get_overlay_parameter_names( rundirs )
-    overlay_parameter_values = set( [ get_parameter_values(overlay_parameter_names, rundir)
-                                      for rundir in rundirs ] )
-    if len( overlay_parameter_values ) <= 1:
-        use_overlay = False
-    else:
-        use_overlay = True
+	overlay_parameter_names = get_overlay_parameter_names( rundirs )
+	overlay_parameter_values = set( [ get_parameter_values(overlay_parameter_names, rundir)
+									  for rundir in rundirs ] )
+	if len( overlay_parameter_values ) <= 1:
+		use_overlay = False
+	else:
+		use_overlay = True
 
-    groups = set([group
-                  for curveData in curveDatas
-                  for group in curveData.groups])
-    modes = set([ clause.mode.title for clause in clauses ])
+	groups = set([group
+				  for curveData in curveDatas
+				  for group in curveData.groups])
+	modes = set([ clause.mode.title for clause in clauses ])
 
-    # Create string like: Neural Complexity(Processing), Agents
-    def __mode_values( curveDatas ):
-        modevalues = {}
-        for curveData in curveDatas:
-            modename = curveData.clause.mode.name
-            valuename = curveData.valuename
-            modevalues.setdefault( modename, set() ).add( valuename )
+	# Create string like: Neural Complexity(Processing), Agents
+	def __mode_values( curveDatas ):
+		modevalues = {}
+		for curveData in curveDatas:
+			modename = curveData.clause.mode.name
+			valuename = curveData.valuename
+			modevalues.setdefault( modename, set() ).add( valuename )
 
-        modevalues = ", ".join([ Mode.get_mode(x[0]).get_valuenames_title( x[1] )
-                                 for x in modevalues.items() ])
-        return modevalues
-        
-    modevalues = __mode_values( curveDatas )
-    y1values = __mode_values( filter(lambda x: x.yaxis == 1, curveDatas) )
-    y2values = __mode_values( filter(lambda x: x.yaxis == 2 and x.datatype != 'ttest', curveDatas) )
+		modevalues = ", ".join([ Mode.get_mode(x[0]).get_valuenames_title( x[1] )
+								 for x in modevalues.items() ])
+		return modevalues
+		
+	modevalues = __mode_values( curveDatas )
+	y1values = __mode_values( filter(lambda x: x.yaxis == 1, curveDatas) )
+	y2values = __mode_values( filter(lambda x: x.yaxis == 2 and x.datatype != 'ttest', curveDatas) )
 
-    title = '{MODE_VALUES}'
-    if use_overlay:
-        title = title + ' -- Varying ({OVERLAY_PARMS})'
-    elif len( groups ) > 1 and len( groups ) < 4:
-        title = '{GROUPS} -- ' + title
-    
-    macros = {'TITLE': title,
-              'XLABEL': 'Time',
-              'Y1LABEL': '{Y1VALUES}',
-              'Y2LABEL': '{Y2VALUES}',
-              'Y1VALUES': y1values,
-              'Y2VALUES': y2values,
-              'MODES': ', '.join(modes),
-              'MODE_VALUES': modevalues,
-              'GROUPS': ' vs. '.join(groups) if len(groups) == 2 else ', '.join(groups),
-              'OVERLAY_PARMS': ', '.join( overlay_parameter_names )}
+	title = '{MODE_VALUES}'
+	if use_overlay:
+		title = title + ' -- Varying ({OVERLAY_PARMS})'
+	elif len( groups ) > 1 and len( groups ) < 4:
+		title = '{GROUPS} -- ' + title
+	
+	macros = {'TITLE': title,
+			  'XLABEL': 'Time',
+			  'Y1LABEL': '{Y1VALUES}',
+			  'Y2LABEL': '{Y2VALUES}',
+			  'Y1VALUES': y1values,
+			  'Y2VALUES': y2values,
+			  'MODES': ', '.join(modes),
+			  'MODE_VALUES': modevalues,
+			  'GROUPS': ' vs. '.join(groups) if len(groups) == 2 else ', '.join(groups),
+			  'OVERLAY_PARMS': ', '.join( overlay_parameter_names )}
 
-    return macros
+	return macros
 
 
 ####################################################################################
@@ -1584,226 +1588,226 @@ def create_macros( clauses,
 ###
 ####################################################################################
 def config_legend( plot, curveDatas ):
-    curveDatas_individual = filter( lambda x: x.datatype == 'individual', curveDatas )
-    curveDatas_meta = filter( lambda x: x.datatype == 'meta', curveDatas )
-    curveDatas_ttest = filter( lambda x: x.datatype == 'ttest', curveDatas )
+	curveDatas_individual = filter( lambda x: x.datatype == 'individual', curveDatas )
+	curveDatas_meta = filter( lambda x: x.datatype == 'meta', curveDatas )
+	curveDatas_ttest = filter( lambda x: x.datatype == 'ttest', curveDatas )
 
-    groups = set([group
-                  for curveData in curveDatas
-                  for group in curveData.groups])
+	groups = set([group
+				  for curveData in curveDatas
+				  for group in curveData.groups])
 
-    def __valuetitle( curveData ):
-        if curveData.valueattr != 'default':
-            title = curveData.valueattr + " "
-        else:
-            title = ""
-        title += curveData.valuename
-        return title
+	def __valuetitle( curveData ):
+		if curveData.valueattr != 'default':
+			title = curveData.valueattr + " "
+		else:
+			title = ""
+		title += curveData.valuename
+		return title
 
-    ###
-    ### TTest
-    ###
-    if len(curveDatas_meta):
-        if GlobalOptions.legend_meta:
-            for curveData in curveDatas_ttest:
-                curveData.title = __valuetitle( curveData )
-        else:
-            for curveData in curveDatas_ttest:
-                curveData.title = None
+	###
+	### TTest
+	###
+	if len(curveDatas_meta):
+		if GlobalOptions.legend_meta:
+			for curveData in curveDatas_ttest:
+				curveData.title = __valuetitle( curveData )
+		else:
+			for curveData in curveDatas_ttest:
+				curveData.title = None
 
-    ###
-    ### Meta
-    ###
-    if len(curveDatas_meta):
-        if GlobalOptions.legend_meta:
-            valuetitles = set([ __valuetitle(x) for x in curveDatas_meta ])
+	###
+	### Meta
+	###
+	if len(curveDatas_meta):
+		if GlobalOptions.legend_meta:
+			valuetitles = set([ __valuetitle(x) for x in curveDatas_meta ])
 
-            for curveData in curveDatas_meta:
-                if len(curveDatas_individual) and GlobalOptions.legend_individual:
-                    title = "Meta "
-                else:
-                    title = ""
+			for curveData in curveDatas_meta:
+				if len(curveDatas_individual) and GlobalOptions.legend_individual:
+					title = "Meta "
+				else:
+					title = ""
 
-                if len(valuetitles) > 1:
-                    title += __valuetitle(curveData)
+				if len(valuetitles) > 1:
+					title += __valuetitle(curveData)
 
-                if len(groups) > 1:
-                    assert( len(curveData.groups) == 1 )
-                    groupname = curveData.groups[0]
-                    if len(title):
-                        title += " " + groupname
-                    else:
-                        title += groupname
+				if len(groups) > 1:
+					assert( len(curveData.groups) == 1 )
+					groupname = curveData.groups[0]
+					if len(title):
+						title += " " + groupname
+					else:
+						title += groupname
 
-                curveData.title = title
-        else:
-            for curveData in curveDatas_meta:
-                curveData.title = None
+				curveData.title = title
+		else:
+			for curveData in curveDatas_meta:
+				curveData.title = None
 
-    ###
-    ### Individual
-    ###
-    if len(curveDatas_individual):
-        if GlobalOptions.legend_individual:
-            # Make scalar versions of tuples, for convenience
-            for curveData in curveDatas_individual:
-                assert( len(curveData.groups) == 1 )
-                curveData.group = curveData.groups[0]
-                assert( len(curveData.rundirs) == 1 )
-                curveData.rundir = curveData.rundirs[0]
+	###
+	### Individual
+	###
+	if len(curveDatas_individual):
+		if GlobalOptions.legend_individual:
+			# Make scalar versions of tuples, for convenience
+			for curveData in curveDatas_individual:
+				assert( len(curveData.groups) == 1 )
+				curveData.group = curveData.groups[0]
+				assert( len(curveData.rundirs) == 1 )
+				curveData.rundir = curveData.rundirs[0]
 
-            valuetitles = set([ __valuetitle(x) for x in curveDatas_individual ])
+			valuetitles = set([ __valuetitle(x) for x in curveDatas_individual ])
 
-            groupruns = {}
+			groupruns = {}
 
-            for curveData in curveDatas_individual:
-                groupruns.setdefault(curveData.group, set()).add( curveData.rundir.path )
+			for curveData in curveDatas_individual:
+				groupruns.setdefault(curveData.group, set()).add( curveData.rundir.path )
 
-            def __path_id( runs ):
-                runs = list( runs )
-                short_paths = common_functions.truncate_paths( runs )
-                if len( set(short_paths) ) == 1:
-                    short_paths = ["" for x in short_paths]
-                return dict([ (runs[i], short_paths[i]) for i in range(len(runs)) ])
+			def __path_id( runs ):
+				runs = list( runs )
+				short_paths = common_functions.truncate_paths( runs )
+				if len( set(short_paths) ) == 1:
+					short_paths = ["" for x in short_paths]
+				return dict([ (runs[i], short_paths[i]) for i in range(len(runs)) ])
 
-            path_ids = {}
-            for group, runs in groupruns.items():
-                path_ids.update(  __path_id(runs) )
+			path_ids = {}
+			for group, runs in groupruns.items():
+				path_ids.update(  __path_id(runs) )
 
-            for curveData in curveDatas_individual:
-                title = ''
-                if len(valuetitles) > 1:
-                    title += __valuetitle( curveData )
+			for curveData in curveDatas_individual:
+				title = ''
+				if len(valuetitles) > 1:
+					title += __valuetitle( curveData )
 
-                path_id = path_ids[curveData.rundir.path]
-                if len(groupruns.keys()) > 1:
-                    if len(path_id):
-                        path_id = curveData.group + " [" + path_id + "]"
-                    else:
-                        path_id = curveData.group
+				path_id = path_ids[curveData.rundir.path]
+				if len(groupruns.keys()) > 1:
+					if len(path_id):
+						path_id = curveData.group + " [" + path_id + "]"
+					else:
+						path_id = curveData.group
 
-                if len(path_id):
-                    if len(title):
-                        title += "(" + path_id + ")"
-                    else:
-                        title = path_id
+				if len(path_id):
+					if len(title):
+						title += "(" + path_id + ")"
+					else:
+						title = path_id
 
-                curveData.title = title
+				curveData.title = title
 
-        else:
-            for curveData in curveDatas_individual:
-                curveData.title = None
-    
-    ###
-    ### Sort to dictate legend order.
-    ###
-    ### Note that curves are rendered from start to finish, so curves at end of
-    ### list obscure curves at beginning. So, we want meta and ttest at end. 
-    ###
-    def __key( curveData ):
-        key = ""
-        if curveData.title:
-            if curveData.datatype == 'ttest':
-                key += "2,"
-            elif curveData.datatype == 'meta':
-                key += "1,"
-            else:
-                key += "0,"
+		else:
+			for curveData in curveDatas_individual:
+				curveData.title = None
+	
+	###
+	### Sort to dictate legend order.
+	###
+	### Note that curves are rendered from start to finish, so curves at end of
+	### list obscure curves at beginning. So, we want meta and ttest at end. 
+	###
+	def __key( curveData ):
+		key = ""
+		if curveData.title:
+			if curveData.datatype == 'ttest':
+				key += "2,"
+			elif curveData.datatype == 'meta':
+				key += "1,"
+			else:
+				key += "0,"
 
-            key += curveData.title
+			key += curveData.title
 
-            return key
+			return key
 
-    curveDatas.sort( key = __key )
-    
+	curveDatas.sort( key = __key )
+	
 ####################################################################################
 ###
 ### FUNCTION init_plot()
 ###
 ####################################################################################
 def init_plot( macros, curveDatas):
-    doc = plotlib.Document()
-    doc.nocolor = not GlobalOptions.color
+	doc = plotlib.Document()
+	doc.nocolor = not GlobalOptions.color
 
-    title = expand_macros( GlobalOptions.title, macros )
-    plot = doc.createPlot( title )
+	title = expand_macros( GlobalOptions.title, macros )
+	plot = doc.createPlot( title )
 
-    ttest_curveDatas = filter( lambda x: x.datatype == 'ttest', curveDatas )
-    y2_curveDatas = filter( lambda x: x.yaxis == 2 and x.datatype != 'ttest', curveDatas )
+	ttest_curveDatas = filter( lambda x: x.datatype == 'ttest', curveDatas )
+	y2_curveDatas = filter( lambda x: x.yaxis == 2 and x.datatype != 'ttest', curveDatas )
 
-    if not len(ttest_curveDatas):
-        if len(y2_curveDatas):
-            plot.y2ticks = True
-            plot.rmargin = 10
-        else:
-            plot.rmargin = 4
+	if not len(ttest_curveDatas):
+		if len(y2_curveDatas):
+			plot.y2ticks = True
+			plot.rmargin = 10
+		else:
+			plot.rmargin = 4
 
-        if GlobalOptions.y2range:
-            plot.y2range = GlobalOptions.y2range
+		if GlobalOptions.y2range:
+			plot.y2range = GlobalOptions.y2range
 
-        plot.y2label = expand_macros( GlobalOptions.y2label, macros )
-    else:
-        pval_curveDatas = filter( lambda x: x.ycolnames[0] == 'pval', ttest_curveDatas )
-        tval_curveDatas = filter( lambda x: x.ycolnames[0] == 'tval', ttest_curveDatas )
+		plot.y2label = expand_macros( GlobalOptions.y2label, macros )
+	else:
+		pval_curveDatas = filter( lambda x: x.ycolnames[0] == 'pval', ttest_curveDatas )
+		tval_curveDatas = filter( lambda x: x.ycolnames[0] == 'tval', ttest_curveDatas )
 
-        if len( y2_curveDatas ):
-            err( "Cannot plot curves on y2axis when using ttest" )
+		if len( y2_curveDatas ):
+			err( "Cannot plot curves on y2axis when using ttest" )
 
-        if len(pval_curveDatas) and len(tval_curveDatas):
-            err( "Cannot plot both pval and tval" )
+		if len(pval_curveDatas) and len(tval_curveDatas):
+			err( "Cannot plot both pval and tval" )
 
-        if len(pval_curveDatas):
-            tmin = 0.8
-            tmax = 1.0
+		if len(pval_curveDatas):
+			tmin = 0.8
+			tmax = 1.0
 
-            plot.y2label = "(1 - p-value)       Dependent Student's T-test"
+			plot.y2label = "(1 - p-value)		Dependent Student's T-test"
 
-            plot.createTick( 0.8 )
-            plot.createTick( 0.95,
-                             line = True )
-            plot.createTick( 1.0,
-                             "1.0",
-                             line = True,
-                             linetype = plotlib.CurveStyle.DOTTED)
-        else:
-            tmin = 0
-            tmax = GlobalOptions.tcrit
+			plot.createTick( 0.8 )
+			plot.createTick( 0.95,
+							 line = True )
+			plot.createTick( 1.0,
+							 "1.0",
+							 line = True,
+							 linetype = plotlib.CurveStyle.DOTTED)
+		else:
+			tmin = 0
+			tmax = GlobalOptions.tcrit
 
-            for curveData in tval_curveDatas:
-                tmax = max( tmax,
-                            max(curveData.table.getColumn( 'tval' )) )
+			for curveData in tval_curveDatas:
+				tmax = max( tmax,
+							max(curveData.table.getColumn( 'tval' )) )
 
-            plot.y2label = "Dependent Student's T-test (p < 0.05)"
+			plot.y2label = "Dependent Student's T-test (p < 0.05)"
 
-            plot.createTick( GlobalOptions.tcrit,
-                             "T*",
-                             line = True )
+			plot.createTick( GlobalOptions.tcrit,
+							 "T*",
+							 line = True )
 
-        #
-        # Set y2 range based on --ttop and --tbottom
-        #
-        if GlobalOptions.ttop <= GlobalOptions.tbottom:
-            err( "ttop must be > tbottom" )
+		#
+		# Set y2 range based on --ttop and --tbottom
+		#
+		if GlobalOptions.ttop <= GlobalOptions.tbottom:
+			err( "ttop must be > tbottom" )
 
-        y2len = (tmax - tmin) / (GlobalOptions.ttop - GlobalOptions.tbottom)
-        y2bot = tmin - ( GlobalOptions.tbottom * y2len )
-        plot.y2range = (y2bot, y2bot + y2len)
+		y2len = (tmax - tmin) / (GlobalOptions.ttop - GlobalOptions.tbottom)
+		y2bot = tmin - ( GlobalOptions.tbottom * y2len )
+		plot.y2range = (y2bot, y2bot + y2len)
 
-    plot.xlabel = expand_macros( GlobalOptions.xlabel, macros )
-    plot.y1label = expand_macros( GlobalOptions.y1label, macros )
+	plot.xlabel = expand_macros( GlobalOptions.xlabel, macros )
+	plot.y1label = expand_macros( GlobalOptions.y1label, macros )
 
-    if GlobalOptions.xrange:
-        plot.xrange = GlobalOptions.xrange
+	if GlobalOptions.xrange:
+		plot.xrange = GlobalOptions.xrange
 
-    if GlobalOptions.y1range:
-        plot.y1range = GlobalOptions.y1range
+	if GlobalOptions.y1range:
+		plot.y1range = GlobalOptions.y1range
 
-    plot.legend = GlobalOptions.legend_individual or GlobalOptions.legend_meta
+	plot.legend = GlobalOptions.legend_individual or GlobalOptions.legend_meta
 
-    if GlobalOptions.rmargin:
-        plot.rmargin = GlobalOptions.rmargin
-            
-    return doc, plot
+	if GlobalOptions.rmargin:
+		plot.rmargin = GlobalOptions.rmargin
+			
+	return doc, plot
 
 
 ####################################################################################
@@ -1812,41 +1816,55 @@ def init_plot( macros, curveDatas):
 ###
 ####################################################################################
 def save_plot( doc, plot, rundirs, curveDatas ):
-    if GlobalOptions.output:
-        path = GlobalOptions.output
-    else:
-        modevalues = {}
-        for curveData in curveDatas:
-            modename = curveData.clause.mode.name
-            valuename = curveData.valuename
-            valueattr = curveData.valueattr
-            if valueattr != 'default':
-                valuename = valuename + '_' + valueattr
+	if GlobalOptions.output:
+		path = GlobalOptions.output
+	else:
+		modevalues = {}
+		for curveData in curveDatas:
+			modename = curveData.clause.mode.name
+			valuename = curveData.valuename
+			valueattr = curveData.valueattr
+			if valueattr != 'default':
+				valuename = valuename + '_' + valueattr
 
-            modevalues.setdefault( modename, set() ).add( valuename )
+			modevalues.setdefault( modename, set() ).add( valuename )
 
-        modevalues = "_".join([ x[0] + '[' + ','.join(x[1]) + ']'
-                                for x in modevalues.items() ])
+		modevalues = "_".join([ x[0] + '[' + ','.join(x[1]) + ']'
+								for x in modevalues.items() ])
 
-        groupnames = "_".join( sorted(set([ rundir.group for rundir in rundirs ])) )
+		groupnames = "_".join( sorted(set([ rundir.group for rundir in rundirs ])) )
 
-        path = "plot_" + modevalues + "_" + groupnames + ".eps"
+		path = "plot_" + modevalues + "_" + groupnames + ".eps"
 
-        results_dir = common_functions.get_results_dir( map(lambda x: x.path, rundirs) )
-        path = os.path.join( results_dir, path )
+		results_dir = common_functions.get_results_dir( map(lambda x: x.path, rundirs) )
+		path = os.path.join( results_dir, path )
 
-    if not GlobalOptions.quiet:
-        print "Writing plot to " + path + "..."
+	if not GlobalOptions.quiet:
+		print "Writing plot to " + path + "..."
 
-    if os.path.exists( path ) and not GlobalOptions.replace:
-        path_bak = os.path.join( os.path.dirname(path), '.#' + os.path.basename(path) )
-        if not GlobalOptions.quiet:
-            warn( "File already exists! Saving old file to " + path_bak )
-        shutil.copyfile( path, path_bak )
+	if os.path.exists( path ) and not GlobalOptions.replace:
+		path_bak = os.path.join( os.path.dirname(path), '.#' + os.path.basename(path) )
+		if not GlobalOptions.quiet:
+			warn( "File already exists! Saving old file to " + path_bak )
+		shutil.copyfile( path, path_bak )
 
-    doc.save( path )
-    if GlobalOptions.view:
-        os.system( '%s %s' % (common_functions.pw_env('open'), path) )
+	doc.save( path )
+
+	if GlobalOptions.pdf:
+		dir = os.path.join( os.path.dirname(path), 'pdf' )
+		if not os.path.exists( dir ):
+			os.mkdir( dir )
+		base = os.path.splitext( os.path.basename(path) )[0]
+		path_pdf = os.path.join( dir, base + ".pdf" )
+		rc = os.system( 'epstopdf --outfile %s %s' % (path_pdf, path) )
+		if rc != 0:
+			exit( rc )
+		path_view = path_pdf
+	else:
+		path_view = path
+
+	if GlobalOptions.view:
+		os.system( '%s %s' % (common_functions.pw_env('open'), path_view) )
 
 
 ####################################################################################
@@ -1855,53 +1873,53 @@ def save_plot( doc, plot, rundirs, curveDatas ):
 ###
 ####################################################################################
 def plot_curve( plot,
-                curveData ):
+				curveData ):
 
-    if curveData.curvetype == 'line':
-        curve = plot.createCurve( curveData.table,
-                                  curveData.title,
-                                  curveData.xcolname,
-                                  curveData.ycolnames[0],
-                                  curveData.style,
-                                  curveData.smooth,
-                                  curveData.points)
-        curve.axes[1] = curveData.yaxis
+	if curveData.curvetype == 'line':
+		curve = plot.createCurve( curveData.table,
+								  curveData.title,
+								  curveData.xcolname,
+								  curveData.ycolnames[0],
+								  curveData.style,
+								  curveData.smooth,
+								  curveData.points)
+		curve.axes[1] = curveData.yaxis
 
-        if hasattr( curveData, 'errorbar' ):
-            curveData.errorbar.style = curveData.style
-            plot_curve( plot, curveData.errorbar )
+		if hasattr( curveData, 'errorbar' ):
+			curveData.errorbar.style = curveData.style
+			plot_curve( plot, curveData.errorbar )
 
-    elif curveData.curvetype == 'whisker':
-        curve = plot.createCandlestickCurve( curveData.table,
-                                             curveData.title,
-                                             curveData.xcolname,
-                                             curveData.ycolnames[0],
-                                             curveData.ycolnames[1],
-                                             curveData.ycolnames[2],
-                                             curveData.ycolnames[3],
-                                             curveData.style,
-                                             plotlib.CandlestickCurve.WHISKERS )
-        curve.axes[1] = curveData.yaxis
+	elif curveData.curvetype == 'whisker':
+		curve = plot.createCandlestickCurve( curveData.table,
+											 curveData.title,
+											 curveData.xcolname,
+											 curveData.ycolnames[0],
+											 curveData.ycolnames[1],
+											 curveData.ycolnames[2],
+											 curveData.ycolnames[3],
+											 curveData.style,
+											 plotlib.CandlestickCurve.WHISKERS )
+		curve.axes[1] = curveData.yaxis
 
-        curve = plot.createCandlestickCurve( curveData.table,
-                                             None,
-                                             curveData.xcolname,
-                                             curveData.ycolnames[4],
-                                             curveData.ycolnames[4],
-                                             curveData.ycolnames[4],
-                                             curveData.ycolnames[4],
-                                             curveData.style,
-                                             not plotlib.CandlestickCurve.WHISKERS )
-        curve.axes[1] = curveData.yaxis
+		curve = plot.createCandlestickCurve( curveData.table,
+											 None,
+											 curveData.xcolname,
+											 curveData.ycolnames[4],
+											 curveData.ycolnames[4],
+											 curveData.ycolnames[4],
+											 curveData.ycolnames[4],
+											 curveData.style,
+											 not plotlib.CandlestickCurve.WHISKERS )
+		curve.axes[1] = curveData.yaxis
 
-    elif curveData.curvetype == 'errorbar':
-        curve = plot.createErrorbarCurve( curveData.table,
-                                          None,
-                                          curveData.xcolname,
-                                          curveData.ycolnames[0],
-                                          curveData.ycolnames[1],
-                                          curveData.style)
-        curve.axes[1] = curveData.yaxis
+	elif curveData.curvetype == 'errorbar':
+		curve = plot.createErrorbarCurve( curveData.table,
+										  None,
+										  curveData.xcolname,
+										  curveData.ycolnames[0],
+										  curveData.ycolnames[1],
+										  curveData.style)
+		curve.axes[1] = curveData.yaxis
 
 
 ####################################################################################
@@ -1910,24 +1928,24 @@ def plot_curve( plot,
 ###
 ####################################################################################
 def show_usage(msg = None, arg = None):
-    if arg == None:
-        usage_default()
-    elif arg == 'opts':
-        usage_opts()
-    elif arg == 'macros':
-        usage_macros()
-    elif Mode.is_name( arg ):
-        usage_mode( Mode.get_mode(arg) )
-    else:
-        print '\nInvalid help topic (%s)\n' % arg
-        usage_default()
+	if arg == None:
+		usage_default()
+	elif arg == 'opts':
+		usage_opts()
+	elif arg == 'macros':
+		usage_macros()
+	elif Mode.is_name( arg ):
+		usage_mode( Mode.get_mode(arg) )
+	else:
+		print '\nInvalid help topic (%s)\n' % arg
+		usage_default()
 
-    if msg:
-        print "--------------------------------------------------------------------------------"
-        print
-        print 'Error!', str(msg)
+	if msg:
+		print "--------------------------------------------------------------------------------"
+		print
+		print 'Error!', str(msg)
 
-    sys.exit(1)
+	sys.exit(1)
 
 ####################################################################################
 ###
@@ -1935,7 +1953,7 @@ def show_usage(msg = None, arg = None):
 ###
 ####################################################################################
 def usage_default():
-    print """\
+	print """\
 USAGE 
 
      plot help [<mode>|opts|macros]
@@ -1981,11 +1999,15 @@ DESCRIPTION
 ###
 ####################################################################################
 def usage_opts():
-    print """\
+	print """\
 GLOBAL OPTIONS
 
      -o, --output  <path>
                Specify path of generated plot document.
+
+     -p, --pdf
+               Generate pdf in addition to eps, where pdf is placed in a directory
+             pdf/ that is a sibling to the eps.
 
      -r, --replace
                If output file already exists, do not create .# backup copy.
@@ -2075,7 +2097,7 @@ GLOBAL OPTIONS
                Override size of right margin, where n is number of character
             widths. Necessary because of buggy gnuplot behavior.
 """ % (', '.join(common_functions.CLASSIFICATIONS),
-       TCRIT_DEFAULT[0], TCRIT_DEFAULT[1], TCRIT_DEFAULT[2])
+	   TCRIT_DEFAULT[0], TCRIT_DEFAULT[1], TCRIT_DEFAULT[2])
 
 ####################################################################################
 ###
@@ -2083,7 +2105,7 @@ GLOBAL OPTIONS
 ###
 ####################################################################################
 def usage_macros():
-    print """\
+	print """\
 MACROS
 
         Macros are allowed in the title, xlabel, and y1label options. Their
@@ -2118,43 +2140,43 @@ MACROS
 ###
 ####################################################################################
 def usage_mode( mode ):
-    print "USAGE"
-    print
+	print "USAGE"
+	print
 
-    #
-    # Usage
-    #
-    if mode.name == 'adhoc':
-        print "     adhoc [<opts>] <relpath> <table> <x-column> <y-column>"
-    else:
-        print "     %s [<opts>]" % mode.name
+	#
+	# Usage
+	#
+	if mode.name == 'adhoc':
+		print "     adhoc [<opts>] <relpath> <table> <x-column> <y-column>"
+	else:
+		print "     %s [<opts>]" % mode.name
 
-    print """
+	print """
 OPTIONS
      (use 'help opts' to see global options)
-    """
+	"""
 
-    #
-    # -r recent_type
-    #
-    if mode.default_recent_type:
-        print """\
+	#
+	# -r recent_type
+	#
+	if mode.default_recent_type:
+		print """\
      -r <recent_type>
                Valid recent types:%s
                Note names may be abbreviated.
                ( default = %s )
-        """ % ( "\n                  ".join([''] + common_functions.RECENT_TYPES), mode.default_recent_type )
+		""" % ( "\n					 ".join([''] + common_functions.RECENT_TYPES), mode.default_recent_type )
 
-    #
-    # -v
-    #
-    mode.usage_valuenames()
+	#
+	# -v
+	#
+	mode.usage_valuenames()
 
-    #
-    # AVR flags
-    #
-    if mode.isAvr:
-        print """\
+	#
+	# AVR flags
+	#
+	if mode.isAvr:
+		print """\
      -m/M
                Plot mean/meta-mean of each value (-v) type. (default -m on)
 
@@ -2169,23 +2191,23 @@ OPTIONS
 
      -w/W
                Box-and-Whiskers plot of run/meta-average.
-        """
-    #
-    # valueattrs for all others
-    #
-    else:
-        print """\
+		"""
+	#
+	# valueattrs for all others
+	#
+	else:
+		print """\
      -m/M
                Plot data/meta-data. (default -m on)
 
      -E
                Draw Standard Error bars for the meta-data.
-        """
+		"""
 
-    #
-    # options for all modes
-    #
-    print """\
+	#
+	# options for all modes
+	#
+	print """\
      --tgroups <group1>,<group2>
                For this clause, specify groups used in ttest T-test calculations.
 
@@ -2203,7 +2225,7 @@ OPTIONS
 
      --y2
                Place curves on y2-axis.
-    """
+	"""
 
 ####################################################################################
 ###
