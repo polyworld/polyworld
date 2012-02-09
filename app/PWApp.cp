@@ -487,6 +487,10 @@ void TSceneWindow::AddRunMenu()
 	
 	menu->addAction( "End At &Timestep...", this, SLOT(endAtTimestep()));
 	menu->addAction( "End &Now", this, SLOT(endNow()));
+#if __APPLE__
+	// This is automatically moved over to the application menu.
+    menu->addAction( "&Quit", this, SLOT(endNow()) );
+#endif
 }
 
 
