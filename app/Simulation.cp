@@ -1930,6 +1930,13 @@ void TSimulation::Init( const char *argWorldfilePath, const bool statusToStdout 
     }
 	
 	// Set up to record a movie, if requested
+#if __BIG_ENDIAN__
+	if( fRecordMovie )
+	{
+		eprintf( "Sorry, disabling movie recording, because they cannot currently be recorded on big endian machines\n" );
+		fRecordMovie = false;
+	}
+#else
 	if( fRecordMovie )
 	{
 		char	movieFileName[256] = "run/movie.pmv";	// put date and time into the name TODO
@@ -1944,6 +1951,7 @@ void TSimulation::Init( const char *argWorldfilePath, const bool statusToStdout 
 		fMovieWriter = new PwMovieWriter( movieFile );
 		fSceneView->SetMovieWriter( fMovieWriter );
 	}
+#endif
 
 	InitSeparationsLog();
 	InitLifeSpanLog();
