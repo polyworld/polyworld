@@ -4,6 +4,9 @@ REPORTED	ASSIGNED	DATE		DESC
 sean   					01/29/2012 	Offscreen POV
 sean   					02/09/2012 	cleanup ui code
 
+[BUILD]
+sean		sean		02/10/2012	auto-discover python version
+
 [SCRIPTS]
 sean		sean		02/01/2012	organize scripts/.
 										* maybe make scripts/lib/ and scripts/bin/?
