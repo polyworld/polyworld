@@ -3,6 +3,7 @@ REPORTED	ASSIGNED	DATE		DESC
 [SIM]
 sean   					01/29/2012 	Offscreen POV
 sean   					02/09/2012 	cleanup ui code
+sean   					02/09/2012 	add check verifying executing from correct directory
 
 [SCRIPTS]
 sean		sean		02/01/2012	organize scripts/.
