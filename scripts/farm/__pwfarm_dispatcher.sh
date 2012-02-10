@@ -161,6 +161,10 @@ case "$mode" in
     "task_get")
 	mutex_lock $MUTEX
 
+	if [ ! -z "$PWFARM_DELAY" ]; then
+	    sleep $PWFARM_DELAY
+	fi
+
 	path_result="$2"
 	rm -f $path_result
 
