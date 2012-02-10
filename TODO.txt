@@ -16,6 +16,7 @@ sean		sean		01/31/2012	compressed files
 sean		sean		02/04/2012	bashdb
 sean		sean		02/08/2012	investigate app/ per session -- utils without fbuild?
 sean		sean		02/08/2012	if fmvrun fails on fields, shouldn't move local data.
+sean		sean		02/10/2012	when expanding suite via -N, check for missing nids
 
 [PLOT]
 sean		sean		02/06/2012	make valueattr path encodings more concise
