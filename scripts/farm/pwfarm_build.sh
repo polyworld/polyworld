@@ -155,6 +155,8 @@ if $field; then
     ###
     ########################################
     lock_app || exit 1
+    
+    if [ -e ~/.bashrc ]; then source ~/.bashrc; fi
 
     store_orphan_run "$POLYWORLD_PWFARM_APP_DIR/run"
 
