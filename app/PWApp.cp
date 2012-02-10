@@ -32,12 +32,6 @@
 // Self
 #include "PWApp.h"
 
-//#define UNIT_TESTS
-
-#ifdef UNIT_TESTS
-#include "AbstractFile.h"
-#include "Energy.h"
-#endif
 
 //===========================================================================
 // usage
@@ -71,15 +65,6 @@ void usage()
 //===========================================================================
 int main( int argc, char** argv )
 {
-#ifdef UNIT_TESTS
-	Energy::test();
-	AbstractFile::test();
-
-	printf( "done with unit tests.\n" );
-
-	return 0;
-#endif
-
 	bool debugMode = false;
 	bool statusToStdout = false;
 	const char *worldfilePath = NULL;
@@ -109,6 +94,22 @@ int main( int argc, char** argv )
 		usage( "A valid path to a worldfile must be specified" );
 	}
 
+	// Make sure we're in an appropriate working directory
+#if __linux__
+	{
+		char exe[1024];
+		int rc = readlink( "/proc/self/exe", exe, sizeof(exe) );
+		exe[rc] = 0;
+		char *lastslash = strrchr( exe, '/' );
+		*lastslash = 0;
+		if( 0 != strcmp(exe, getenv("PWD")) )
+		{
+			fprintf( stderr, "Must execute from directory containing binary: %s\n", exe );
+			exit( 1 );
+		}
+	}
+#endif
+
 	// Create application instance
 	TPWApp app(argc, argv);
 	
@@ -118,7 +119,7 @@ int main( int argc, char** argv )
 		qWarning("This system has no OpenGL support. Exiting.");
 		return -1;
     }
-	
+
 	// Establish how are preference settings file will be named
 	QCoreApplication::setOrganizationDomain( "indiana.edu" );
 //	QCoreApplication::setOrganizationName( "indiana" );
