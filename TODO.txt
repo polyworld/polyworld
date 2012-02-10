@@ -14,6 +14,7 @@ sean		sean		01/31/2012	compressed files
 
 [FARM]
 sean		sean		02/10/2012	connectivity problems cause rogue background processes
+sean		sean		02/10/2012	figure out correct management of .bashrc -- remove hack in fbuild
 sean		sean		02/04/2012	bashdb
 sean		sean		02/08/2012	investigate app/ per session -- utils without fbuild?
 sean		sean		02/08/2012	if fmvrun fails on fields, shouldn't move local data.
