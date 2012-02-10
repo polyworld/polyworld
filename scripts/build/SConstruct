@@ -171,7 +171,15 @@ def env_create():
                            'QtGui',
                            'QtOpenGL'])
     import_zlib(env)
-    import_python(env)
+    try:
+    	python_version = os.environ['PYTHONVER']
+    except KeyError:
+    	python_version = None
+    
+    if python_version:
+        import_python(env, python_version)
+    else:
+        import_python(env)
 
     env = envs['CalcComplexity'] = env_common.Clone()
     import_zlib(env)
@@ -181,7 +189,11 @@ def env_create():
     envs['rancheck'] = envs['CalcComplexity'].Clone()
 
     envs['proputil'] = envs['CalcComplexity'].Clone()
-    import_python( envs['proputil'] )
+
+    if python_version:
+        import_python( envs['proputil'], python_version )
+    else:
+        import_python( envs['proputil'] )
 
     envs['pmvutil'] = envs['PwMoviePlayer'].Clone()
 
