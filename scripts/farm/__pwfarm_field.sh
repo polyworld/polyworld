@@ -23,6 +23,7 @@ LOG="/tmp/log_user$(pwenv pwuser)_field$(pwenv fieldnumber)_session$(pwenv sessi
 MUTEX="${FIELD_STATE_DIR}/mutex"
 PID="${FIELD_STATE_DIR}/pid"
 PID_COMMAND="${FIELD_STATE_DIR}/pid_command"
+PID_STATUS="${FIELD_STATE_DIR}/pid_status"
 COMMAND_LAUNCH_BEGIN="${FIELD_STATE_DIR}/command_launch_begin"
 COMMAND_LAUNCH_END="${FIELD_STATE_DIR}/command_launch_end"
 COMMAND_BORN="${FIELD_STATE_DIR}/command_born"
@@ -250,11 +251,9 @@ case "$MODE" in
     "command")
 	touch "$COMMAND_BORN"
 
-	# in case we die abnormally, kill status server
-	kill_jobs_on_termination
-
 	# Start status server as background task.
 	$PWFARM_SCRIPTS_DIR/__pwfarm_status.py $PWFARM_STATUS_STATE server &
+	echo $! > $PID_STATUS
 
 	function PWFARM_STATUS()
 	{
@@ -320,6 +319,7 @@ case "$MODE" in
 	wait
 
 	rm $PID_COMMAND
+	rm $PID_STATUS
 
 	touch "$COMMAND_DONE"
 

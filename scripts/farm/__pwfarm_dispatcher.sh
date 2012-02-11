@@ -256,6 +256,7 @@ case "$mode" in
     "clear")
 	if [ "$2" == "--local" ]; then
 	    clearfields=false
+	    shift
 	else
 	    clearfields=true
 	fi
@@ -268,6 +269,8 @@ case "$mode" in
 	    shift
 
 	    mutex_lock $MUTEX;
+
+	    kill_screen
 	else
 	    # This is an abort/force-clear operation.
 	    echo "Forcing pwfarm state clear. This could take a while."

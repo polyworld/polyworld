@@ -116,11 +116,11 @@ function __kill_jobs()
     if [ ! -z "$pids" ]; then
 	kill $pids 2>/dev/null
     fi
+    exit 1
 }
-
 function kill_jobs_on_termination()
 {
-    trap '__kill_jobs' SIGINT SIGTERM EXIT
+    trap '__kill_jobs' SIGINT SIGTERM
 }
 
 function repeat_til_success
