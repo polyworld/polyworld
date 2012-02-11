@@ -421,12 +421,17 @@ if ! $field; then
 
 	    for runid in $runids; do
 		runs=$( find_runs_local "$OWNER" "$runid" )
+		nids=$( for run in $runs; do parse_stored_run_path_local --nid $run; done )
 		run0=$( stored_run_path_local $OWNER $runid 0 )
 		nruns=$( echo $runs | wc -w )
 
 		echo "Executing $(python -c "print max(0, $NRUNS - $nruns)") runs for $runid"
 
-		for (( nid=$nruns; nid < $NRUNS; nid++ )); do
+		for (( nid=0; nid < $NRUNS; nid++ )); do
+		    if contains $nids $nid; then
+			continue
+		    fi
+
 		    path=$TASKS_DIR/$taskid
 		    TASKS="$TASKS $path"
 
