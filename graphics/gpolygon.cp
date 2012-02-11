@@ -210,7 +210,7 @@ void gpolyobj::clonegeom(const gpolyobj& inPolyObj)
 
 void gpolyobj::drawcolpolyrange(long i1, long i2, float* color)
 {
-	glColor4fv(color);
+	glColor3fv(color);
 	glPolygonMode(GL_FRONT, GL_FILL);      
 
 	for (long i = i1; i <= i2; i++)
