@@ -11,6 +11,8 @@ fieldnumbers=( $( pwenv fieldnumbers ) ) || exit 1
 
 pwenv domains |
 (
+    kill_jobs_on_termination
+
     while read domain; do
 	user=$( echo $domain | cut -d ":" -f 1 )
 	domain_fieldnumbers=( $( echo $domain | cut -d ":" -f 2 ) )
@@ -32,6 +34,8 @@ pwenv domains |
 
 	    echo "Transferring $payload to $master_hostname..."
 	    (
+		kill_jobs_on_termination
+
 		repeat_til_success scp "$payload" "$user@$master_host:$dest"
 
 		for fieldnumber in $active_fieldnumbers; do
@@ -53,4 +57,11 @@ pwenv domains |
     wait
 )
 
-echo "Transfer complete."
+exitval=$?
+if [ $exitval == 0 ]; then
+    echo "Transfer complete."
+else
+    echo "Transfer failed."
+fi
+
+exit $exitval

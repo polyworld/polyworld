@@ -110,6 +110,19 @@ function archive_delta()
     fi
 }
 
+function __kill_jobs()
+{
+    local pids=$( jobs -p )
+    if [ ! -z "$pids" ]; then
+	kill $pids 2>/dev/null
+    fi
+}
+
+function kill_jobs_on_termination()
+{
+    trap '__kill_jobs' SIGINT SIGTERM EXIT
+}
+
 function repeat_til_success
 {
     if [ "$1" == "--display" ]; then

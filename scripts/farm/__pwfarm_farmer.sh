@@ -211,6 +211,9 @@ while true; do
 	done
     }
 
+    # in case we die abnormally, kill status background
+    kill_jobs_on_termination
+
     status_background_process &
 
     #

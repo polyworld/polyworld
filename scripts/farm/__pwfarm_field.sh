@@ -250,6 +250,9 @@ case "$MODE" in
     "command")
 	touch "$COMMAND_BORN"
 
+	# in case we die abnormally, kill status server
+	kill_jobs_on_termination
+
 	# Start status server as background task.
 	$PWFARM_SCRIPTS_DIR/__pwfarm_status.py $PWFARM_STATUS_STATE server &
 

@@ -254,6 +254,14 @@ case "$mode" in
 	exit $exitval
 	;;
     "clear")
+	if [ "$2" == "--local" ]; then
+	    clearfields=false
+	else
+	    clearfields=true
+	fi
+
+	kill_jobs_on_termination
+
 	if [ "$2" == "--exit" ]; then
 	    # We're being invoked as part of the exit procedure
 	    echo "Performing healthy pwfarm state clear."
@@ -274,8 +282,13 @@ case "$mode" in
 
 	    kill_screen
 
-	    # Force clear of all machines on farm.
-	    pwquery fieldnumbers $(pwenv farmname) > $FIELDNUMBERS
+	    if $clearfields; then
+		# Force clear of all machines on farm.
+		pwquery fieldnumbers $(pwenv farmname) > $FIELDNUMBERS
+	    else
+		# Don't clear any machines on farm.
+		rm -f $FIELDNUMBERS
+	    fi
 	fi
 	rm -f "$PARMS"
 	rm -f "$PID"
@@ -402,7 +415,10 @@ if $broadcast; then
 	#
 	# Broadcast blob to fields
 	#
-	$PWFARM_SCRIPTS_DIR/__pwfarm_broadcast.sh "$BLOB_LOCAL" "$BLOB_REMOTE"
+	if ! $PWFARM_SCRIPTS_DIR/__pwfarm_broadcast.sh "$BLOB_LOCAL" "$BLOB_REMOTE"; then
+	    $0 "clear" --local
+	    exit 1
+	fi	    
 
 	touch "$BROADCAST_COMPLETE"
     fi
@@ -445,7 +461,7 @@ if [ -e $FIELDNUMBERS ]; then
 	    case "$mode" in 
 		"clear")
 		    echo "   [ Clearing $fieldnumber (farm=$(pwenv farmname), session=$(pwenv sessionname)) ]"
-		    ( $FARMER_SH $fieldnumber clear $BLOB_REMOTE)&
+		    ( $FARMER_SH $fieldnumber clear $BLOB_REMOTE )&
 		    ;;
 
 		"disconnect")
@@ -498,7 +514,7 @@ if [ "$mode" == "dispatch" ] || [ "$mode" == "recover" ]; then
 else
     case "$mode" in
 	"clear")
-	    wait
+	    wait # Wait for killing fields
 	    rm -rf "$DISPATCHERSTATE_DIR" # this also unlocks MUTEX
 	    ;;
 
