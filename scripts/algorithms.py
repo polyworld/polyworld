@@ -1,7 +1,14 @@
 from common_functions import warn
 import itertools
-from math import isnan, sqrt
+from math import sqrt
 from scipy import stats
+# following special treatment of isnan() is to allow scripts to work with Python 2.5 and earlier
+try:
+	from math import isnan
+except ImportError:
+	def isnan(x):
+		return x != x
+
 
 import common_functions
 import datalib
