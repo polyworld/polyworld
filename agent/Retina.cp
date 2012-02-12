@@ -105,15 +105,16 @@ void Retina::sensor_dump_anatomical( AbstractFile *f )
 	}
 }
 
-void Retina::updateBuffer( short xleft, short ypix )
+void Retina::updateBuffer( short x, short y,
+						   short width, short height )
 {
 	// The POV window must be the current GL context,
 	// when agent::UpdateVision is called, for both the
 	// DrawAgentPOV() call above and the glReadPixels()
 	// call below.  It is set in TSimulation::Step().
 			
-	glReadPixels(xleft,
-				 ypix,
+	glReadPixels(x,
+				 y + height / 2,
 				 width,
 				 1,
 				 GL_RGBA,

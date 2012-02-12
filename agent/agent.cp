@@ -10,15 +10,12 @@
 #include <gl.h>
 #include <string.h>
 
-// stl
-#include <bitset>
-
 // qt
 #include <qgl.h>
 
 // Local
 #include "AbstractFile.h"
-#include "AgentPOVWindow.h"
+#include "AgentPovRenderer.h"
 #include "barrier.h"
 #include "BeingCarriedSensor.h"
 #include "CarryingSensor.h"
@@ -56,10 +53,6 @@ bool		agent::gClassInited;
 unsigned long	agent::agentsEver;
 long		agent::agentsliving;
 gpolyobj*	agent::agentobj;
-short		agent::povcols;
-short		agent::povrows;
-short		agent::povwidth;
-short		agent::povheight;
 
 float		agent::gAgentHeight;
 float		agent::gMinAgentSize;
@@ -121,15 +114,12 @@ double		agent::gLowPopulationAdvantageFactor = 1.0;
 double		agent::gEnergyUseMultiplier = 1.0;
 
 
-// [TODO] figure out a better way to track agent indices
-bitset<1000> gAgentIndex;
-
 
 //---------------------------------------------------------------------------
 // agent::agent
 //---------------------------------------------------------------------------
 agent::agent(TSimulation* sim, gstage* stage)
-	:	xleft(-1),  		// to show it hasn't been initialized
+	:	fPovState(NULL),
 		fSimulation(sim),
 		fAlive(false), 		// must grow() to be truly alive
     	fDeathByPatch(false),
@@ -223,22 +213,6 @@ void agent::agentinit()
     agent::agentobj = new gpolyobj();
 	Resources::loadPolygons( agent::agentobj, "agent" );
 	agent::agentobj->SetName("agentobj");
-	
-	// If we decide we want the width W (in cells) to be a multiple of N (call it I)
-	// and we want the aspect ratio of W to height H (in cells) to be at least A,
-	// and we call maxAgents M, then (do the math or trust me):
-	// I = floor( (sqrt(M*A) + (N-1)) / N )
-	// W = I * N
-	// H = floor( (M + W - 1) / W )
-
-	int n = 10;
-	int a = 3;
-	int i = (int) (sqrt( (float) (TSimulation::fMaxNumAgents * a) ) + n - 1) / n;
-	agent::povcols = i * n;   // width in cells
-	agent::povrows = (TSimulation::fMaxNumAgents + agent::povcols - 1) / agent:: povcols;
-	agent::povwidth = agent::povcols * (brain::retinawidth + kPOVCellPad);
-	agent::povheight = agent::povrows * (brain::retinaheight + kPOVCellPad);
-//	cout << "numCols" ses agent::povcols cms "numRows" ses agent::povrows cms "w" ses agent::povwidth cms "h" ses agent::povheight nl;
 }
 
 
@@ -273,17 +247,7 @@ agent* agent::getfreeagent(TSimulation* simulation, gstage* stage)
     // Set number to total creatures that have ever lived (note this is 1-based)
     c->setTypeNumber( ++agent::agentsEver );
 
-	// Set agent index.  Used for POV drawing.
-	for (size_t index = 0; index < gAgentIndex.size(); ++index)
-	{
-		if (!gAgentIndex.test(index))
-		{
-			c->fIndex = index;
-			gAgentIndex.set(index);
-//			cout << "getfreeagent: c = " << c << ", agentNumber = " << c->getTypeNumber() << ", fIndex = " << c->fIndex << endl;
-			break;
-		}
-	}
+	simulation->GetAgentPovRenderer()->add( c );
 		
     return c;
 }
@@ -338,18 +302,6 @@ void agent::agentload(istream&)
             //agent::pc[i]->listLink = agent::gXSortedAgents.add(agent::pc[i]);
 	    	agent::pc[i]->listLink = allxsortedlist::gXSortedAll.add(agent::pc[i]);
             globals::worldstage.addobject(agent::pc[i]);
-            if ((agent::pc[i])->fIndex != i)
-            {
-                char msg[256];
-                sprintf(msg,
-                    	"pc[i]->fIndex (%ld) does not match actual index (%ld)",
-                    	(agent::pc[i])->fIndex,i);
-                error(2,msg);
-            }
-        }
-        else
-        {
-            (agent::pc[i])->fIndex = i;
         }
     }
 #endif
@@ -365,7 +317,6 @@ void agent::agentload(istream&)
 void agent::dump(ostream& out)
 {
     out << getTypeNumber() nl;
-    out << fIndex nl;
     out << fAge nl;
     out << fLastMate nl;
     assert( false ); // out << fEnergy nl;
@@ -401,7 +352,6 @@ void agent::load(istream& in)
 	
     in >> agentNumber;
 	setTypeNumber( agentNumber );
-    in >> fIndex;
     in >> fAge;
     in >> fLastMate;
     assert( false ); // in >> fEnergy;
@@ -839,9 +789,7 @@ void agent::Die()
 	agent::agentsliving--;	
 	Q_ASSERT(agent::agentsliving >= 0);
 	
-	// Clear index in bitset
-	//cout << "agent::Die: this = " << this << ", agentNumber = " << getTypeNumber() << ", fIndex = " << fIndex << "----------" << endl;
-	gAgentIndex.set(fIndex, false);
+	fSimulation->GetAgentPovRenderer()->remove( this );
 	
 	// Used to clear this agent's pane in the POV window/region, and call endbrainmonitoring()
 	
@@ -897,31 +845,14 @@ void agent::SetGraphics()
 
 	fCamera.SetAspect(fovx * brain::retinaheight / (gAgentFOV * brain::retinawidth));
     fCamera.settranslation(0.0, (gEyeHeight - 0.5) * gAgentHeight, -0.5 * fLengthZ);
-    
-    if (xleft < 0)  // not initialized yet
-    {
-        short irow = short(fIndex / povcols);            
-        short icol = short(fIndex) - (povcols * irow);
+	fCamera.SetNear(.01);
+	fCamera.SetFar(1.5 * globals::worldsize);
+	fCamera.SetFOV(gAgentFOV);
 
-        xleft = icol * (brain::retinawidth + kPOVCellPad)  +  kPOVCellPad;
-        xright = xleft + brain::retinawidth - 1;
-		ytop = agent::povheight  -  (irow) * (brain::retinaheight + kPOVCellPad)  -  kPOVCellPad  -  1;
-		ybottom = ytop  -  brain::retinaheight  +  1;
-		ypix = ybottom  +  brain::retinaheight / 2;		// +  1;
-
-//		cout << "****povheight" ses povheight cms "retinaheight" ses brain::retinaheight cms "povrows" ses povrows cms "irow" ses irow nl;
-//		cout << "    povwidth " ses povwidth  cms "retinawidth " ses brain::retinawidth  cms "povcols" ses povcols cms "icol" ses icol nl;
-//		cout << "    index" ses fIndex cms "xleft" ses xleft cms "xright" ses xright cms "ytop" ses ytop cms "ybottom" ses ybottom cms "ypix" ses ypix nl;
-
-        fCamera.SetNear(.01);
-        fCamera.SetFar(1.5 * globals::worldsize);
-        fCamera.SetFOV(gAgentFOV);
-
-		if( fSimulation->glFogFunction() != 'O' )
-			fCamera.SetFog(true, fSimulation->glFogFunction(), fSimulation->glExpFogDensity(), fSimulation->glLinearFogEnd() );
+	if( fSimulation->glFogFunction() != 'O' )
+		fCamera.SetFog(true, fSimulation->glFogFunction(), fSimulation->glExpFogDensity(), fSimulation->glLinearFogEnd() );
 		
-        fCamera.AttachTo(this);
-    }
+	fCamera.AttachTo(this);
 }
 
 
@@ -973,11 +904,9 @@ void agent::UpdateVision()
 			fCamera.setyaw( yaw );
 		}
 		
-		fSimulation->GetAgentPOVWindow()->DrawAgentPOV( this );
+		fSimulation->GetAgentPovRenderer()->render( this );
 
 		debugcheck( "after DrawAgentPOV" );
-
-		fRetina->updateBuffer( xleft, ypix );
 	}
 }
 

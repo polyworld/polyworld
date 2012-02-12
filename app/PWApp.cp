@@ -647,7 +647,6 @@ void TSceneWindow::TogglePOVWindow()
 	TAgentPOVWindow* window = fSimulation->GetAgentPOVWindow();
 	Q_ASSERT(window != NULL);
 	window->setHidden(window->isVisible());
-	window->SaveVisibility();
 }
 
 

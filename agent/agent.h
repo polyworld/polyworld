@@ -40,10 +40,8 @@ class NervousSystem;
 class RandomSensor;
 class Retina;
 class SpeedSensor;
-class TAgentPOVWindow;
 class TSimulation;
 
-#define kPOVCellPad 2
 
 //===========================================================================
 // agent
@@ -222,16 +220,7 @@ public:
 	static gpolyobj* GetAgentObj();
 //	gdlink<agent*>* GetListLink();
 
-	static short povcols;
-	static short povrows;
-    static short povwidth;
-    static short povheight;
-
-    short xleft;
-    short xright;
-    short ybottom;
-    short ytop;
-    short ypix;
+	void *fPovState;
 
     //gdlink<agent*>* listLink;
 
@@ -269,7 +258,6 @@ protected:
     static agent** pc;
 
     bool fAlive;
-	long fIndex;
     long fAge;
     long fLastMate;
 	long fLastEat;
@@ -414,7 +402,6 @@ inline float agent::CurrentHeuristicFitness() { return fHeuristicFitness; }
 inline short agent::Domain() { return fDomain; }
 inline void agent::Domain(short id) { fDomain = id; }
 inline bool agent::Alive() const { return fAlive; }
-inline long agent::Index() const { return fIndex; }
 inline LifeSpan* agent::GetLifeSpan() { return &fLifeSpan; }
 inline bool agent::GetDeathByPatch() { return fDeathByPatch; }
 inline void agent::SetDeathByPatch() { fDeathByPatch = true; }

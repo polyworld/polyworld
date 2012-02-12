@@ -373,6 +373,8 @@ public:
 	TAgentPOVWindow* GetAgentPOVWindow() const;
 	TTextStatusWindow* GetStatusWindow() const;
 	TOverheadView*   GetOverheadWindow() const;
+
+	class AgentPovRenderer *GetAgentPovRenderer();
 	
 //	bool GetShowBrain() const;
 //	void SetShowBrain(bool showBrain);
@@ -640,6 +642,8 @@ private:
 	TBinChartWindow* fGeneSeparationWindow;
 	TAgentPOVWindow* fAgentPOVWindow;
 	TTextStatusWindow* fTextStatusWindow;
+
+	class AgentPovRenderer *fAgentPovRenderer;
 
 	Scheduler fScheduler;
 	BusyFetchQueue<agent *> fUpdateBrainQueue;
@@ -909,6 +913,7 @@ inline TOverheadView* TSimulation::GetOverheadWindow() const { return fOverheadW
 inline TTextStatusWindow* TSimulation::GetStatusWindow() const { return fTextStatusWindow; }
 //inline bool TSimulation::GetShowBrain() const { return fBrainMonitorWindow->visible; }
 //inline void TSimulation::SetShowBrain(bool showBrain) { fBrainMonitorWindow->visible = showBrain; }
+inline class AgentPovRenderer *TSimulation::GetAgentPovRenderer() { return fAgentPovRenderer; }
 inline long TSimulation::GetMaxAgents() const { return fMaxNumAgents; }
 //inline short TSimulation::OverHeadRank( void ) { return fOverHeadRank; }
 inline long TSimulation::GetInitNumAgents() const { return fInitNumAgents; }

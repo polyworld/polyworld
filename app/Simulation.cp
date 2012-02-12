@@ -42,6 +42,7 @@
 
 // Local
 #include "AbstractFile.h"
+#include "AgentPovRenderer.h"
 #include "barrier.h"
 #include "Brain.h"
 #include "BrainMonitorWindow.h"
@@ -246,6 +247,8 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow, cons
 		fGeneSeparationWindow(NULL),
 		fAgentPOVWindow(NULL),
 		fTextStatusWindow(NULL),
+
+		fAgentPovRenderer(NULL),
 		fMaxSteps(0),
 		fPaused(false),
 		fDelay(0),
@@ -342,6 +345,8 @@ TSimulation::~TSimulation()
 	
 	if (fOverheadWindow != NULL)
 		delete fOverheadWindow;
+
+	delete fAgentPovRenderer;
 }
 
 
@@ -543,7 +548,7 @@ void TSimulation::Step()
 
 	// Update all agents, using their neurally controlled behaviors
 	{
-		fAgentPOVWindow->BeginStep();
+		fAgentPovRenderer->beginStep();
 				
 		if( fStaticTimestepGeometry )
 		{
@@ -555,7 +560,7 @@ void TSimulation::Step()
 		}
 
 		// Swap buffers for the agent POV window when they're all done
-		fAgentPOVWindow->EndStep();
+		fAgentPovRenderer->endStep();
 	}
 
 	if( (fHeuristicFitnessWeight != 0.0) || (fComplexityFitnessWeight != 0.0) || fLockStepWithBirthsDeathsLog )
@@ -1395,6 +1400,10 @@ void TSimulation::Init( const char *argWorldfilePath, const bool statusToStdout 
     agent::agentinit();
 	
 	GenomeUtil::createSchema();
+
+	fAgentPovRenderer = new AgentPovRenderer( fMaxNumAgents,
+											  brain::retinawidth,
+											  brain::retinaheight );
 	
 	 // Following is part of one way to speed up the graphics
 	 // Note:  this code must agree with the agent sizing in agent::grow()
@@ -2507,7 +2516,7 @@ void TSimulation::InitMonitoringWindows()
 //	fBrainMonitorWindow->setWindowTitle( QString( "Brain Monitor" ) );
 	
 	// Agent POV
-	fAgentPOVWindow = new TAgentPOVWindow();
+	fAgentPOVWindow = new TAgentPOVWindow( fAgentPovRenderer );
 	
 	// Status window
 	fTextStatusWindow = new TTextStatusWindow( this );

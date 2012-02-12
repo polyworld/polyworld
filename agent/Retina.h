@@ -19,8 +19,7 @@ class Retina : public Sensor
 	virtual void sensor_start_functional( AbstractFile *f );
 	virtual void sensor_dump_anatomical( AbstractFile *f );
 
-	void updateBuffer( short xleft,
-					   short ypix );
+	void updateBuffer( short x, short y, short width, short height );
 
 	const unsigned char *getBuffer();
 

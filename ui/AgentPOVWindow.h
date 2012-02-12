@@ -9,30 +9,26 @@
 #pragma once
 
 // qt
-#include <qgl.h>
+#include <QGLWidget>
 
 //===========================================================================
 // TAgentPOVWindow
 //===========================================================================
 class TAgentPOVWindow : public QGLWidget
 {
+	Q_OBJECT
+
 public:
-    TAgentPOVWindow();
+    TAgentPOVWindow( class AgentPovRenderer *renderer );
     virtual ~TAgentPOVWindow();
 	
-	void BeginStep();
-	void EndStep();
-	void DrawAgentPOV( class agent *c );
 	void RestoreFromPrefs(long x, long y);
-
-	void SaveVisibility();
-
-protected:
-	void SaveWindowState();
-    void SaveDimensions();
+	
+private slots:
+	void RenderPovBuffer();
 
 private:
-	class QGLPixelBuffer *fPixelBuffer;
-	QString windowSettingsName;
+	void SaveWindowState();
 
+	class AgentPovRenderer *fRenderer;
 };
