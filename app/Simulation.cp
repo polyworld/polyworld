@@ -539,17 +539,12 @@ void TSimulation::Step()
 	// Update the conditional properties
 	fConditionalProps->update( fStep );
 
+	MaintainEnergyCosts();
+
 	// Update all agents, using their neurally controlled behaviors
 	{
-		// Make the agent POV window the current GL context
-		fAgentPOVWindow->makeCurrent();
-		
-		// Clear the window's color and depth buffers
-		fAgentPOVWindow->qglClearColor( Qt::black );
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		
-		MaintainEnergyCosts();
-		
+		fAgentPOVWindow->BeginStep();
+				
 		if( fStaticTimestepGeometry )
 		{
 			UpdateAgents_StaticTimestepGeometry();
@@ -560,7 +555,7 @@ void TSimulation::Step()
 		}
 
 		// Swap buffers for the agent POV window when they're all done
-		fAgentPOVWindow->swapBuffers();
+		fAgentPOVWindow->EndStep();
 	}
 
 	if( (fHeuristicFitnessWeight != 0.0) || (fComplexityFitnessWeight != 0.0) || fLockStepWithBirthsDeathsLog )
@@ -2512,7 +2507,7 @@ void TSimulation::InitMonitoringWindows()
 //	fBrainMonitorWindow->setWindowTitle( QString( "Brain Monitor" ) );
 	
 	// Agent POV
-	fAgentPOVWindow = new TAgentPOVWindow( fMaxNumAgents, this );
+	fAgentPOVWindow = new TAgentPOVWindow();
 	
 	// Status window
 	fTextStatusWindow = new TTextStatusWindow( this );

@@ -3483,7 +3483,6 @@ Vision {
 ShowVision {
   type    BOOL
   default True
-  assert $( ShowVision ) # make always true (until drawn offscreen, and then base on window visibility)
 }
 
 MonitorAgentRank {
