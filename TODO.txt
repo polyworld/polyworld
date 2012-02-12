@@ -1,6 +1,7 @@
 REPORTED	ASSIGNED	DATE		DESC
 
 [SIM]
+sean   					02/09/2012 	windowless movie generation
 sean   					02/09/2012 	cleanup ui code
 
 [BUILD]
