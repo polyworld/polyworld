@@ -23,6 +23,7 @@ sean		sean		02/08/2012	investigate app/ per session -- utils without fbuild?
 sean		sean		02/08/2012	if fmvrun fails on fields, shouldn't move local data.
 sean		sean		02/10/2012	load-balancer/scheduler
 larryy		sean		02/13/2012	add -n <NIDs> to frun to run specific nids (as opposed to specific -f fields)
+sean		sean		02/13/2012	support # -F in postrun script
 
 [PLOT]
 sean		sean		02/06/2012	make valueattr path encodings more concise
