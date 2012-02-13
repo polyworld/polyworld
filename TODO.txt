@@ -25,6 +25,8 @@ sean		sean		02/10/2012	load-balancer/scheduler
 larryy		sean		02/13/2012	add -n <NIDs> to frun to run specific nids (as opposed to specific -f fields)
 larryy		sean		02/13/2012	have screen menu show nid even when frun is only doing -a
 sean		sean		02/13/2012	support # -F in postrun script
+larryy					02/13/2012	have CalcComplexity.py and CalcMetric update the screen menu
+										with epoch and current time (like stdout display)
 
 [PLOT]
 sean		sean		02/06/2012	make valueattr path encodings more concise
