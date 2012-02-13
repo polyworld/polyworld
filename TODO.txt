@@ -6,6 +6,7 @@ sean   					02/09/2012 	cleanup ui code
 
 [BUILD]
 sean		sean		02/10/2012	auto-discover python version
+larryy		sean		02/13/2012	make discovery of python executable and library more robust on Macs
 
 [SCRIPTS]
 sean		sean		02/01/2012	organize scripts/.
