@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# List archive and prompt on field 
+DEBUG_ARCHIVE=false
+
+
 if [ -z "$PWFARM_SCRIPTS_DIR" ]; then
     source $( dirname $BASH_SOURCE )/__pwfarm_runutil.sh || exit 1
 else
@@ -174,6 +178,11 @@ if ! $field; then
     else
 	# Wildcards are allowed when -w not used.
 	validate_runid --wildcards "$RUNID"
+    fi
+
+    # Scan for fetch list embedded in analysis script (# -F ...)
+    if [ "$POSTRUN" != "nil" ]; then
+	FETCH_LIST="$FETCH_LIST $( cat $POSTRUN | grep "^[[:space:]]*# -F[[:space:]]\+" | sed "s/# -F//" )"
     fi
 
     TMP_DIR=$( create_tmpdir )
@@ -688,6 +697,11 @@ else
 	$PWFARM_OUTPUT_ARCHIVE \
 	. \
 	"$( cat $POLYWORLD_PWFARM_RUN_PACKAGE ) $IMPLICIT_FETCH_LIST"
+
+    if $DEBUG_ARCHIVE; then
+	archive ls $PWFARM_OUTPUT_ARCHIVE
+	read -p "Listed archive, press enter..."
+    fi
 
     cd ..
 
