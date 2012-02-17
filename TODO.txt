@@ -28,6 +28,7 @@ larryy					02/13/2012	have CalcComplexity.py and CalcMetric update the screen me
 										with epoch and current time (like stdout display)
 sean		sean		02/16/2012	mutex around window list status update
 sean		sean		02/17/2012	if can't find farm.wf for -N, should err out. Don't assume nid 0.
+sean		sean		02/17/2012	show nid in addition to task id in status
 
 [PLOT]
 sean		sean		02/06/2012	make valueattr path encodings more concise
