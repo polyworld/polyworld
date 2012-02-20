@@ -486,9 +486,7 @@ if ! $field; then
 	fi
 
 	taskmeta set $path outputdir "$( stored_run_path_local $OWNER $(taskmeta get $path runid) $(taskmeta get $path nid) )"
-	if [ $(len $TASKS) -gt $(len $fieldnumbers) ]; then
-	    taskmeta set $path statusid "$(taskmeta get $path id)"
-	fi
+	taskmeta set $path statusid "task$(taskmeta get $path id)/nid$(taskmeta get $path nid)" 
     done
 
     ###
