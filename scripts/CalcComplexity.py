@@ -498,6 +498,9 @@ OPTIONS
             TSE complexity.  (E.g., -C A0,P1,HB15.)
             (default %s)
 
+     -O
+            Overwrite/recompute epoch complexity files if they exist.
+     
      -r <recent_type>
                Specify recent directory type. Valid values:
 %s
