@@ -44,16 +44,20 @@ OPTIONS:
 
                   If specified without a worldfile, it is assumed runs of this Run ID already
                 exist, but with number of individual runs < N. For example, if a previous
-                -N -w had been executed with N=3, you could then exeute -N 10 to cause an
+                -N -w had been executed with N=3, you could then execute -N 10 to cause an
                 additional 7 runs to be executed. Note this mode will operate hierarchically
                 on Run ID.
+
+   -n nids        Specify subset of NIDs to operate on. Valid only for analysis or append
+                tasks, which means -n cannot be used with -w. Must be a single argument, so
+                use quotes. e.g. -n "0 1" or -n "{0..3} 5"
 
    -a analysis_script
                   Path of script that is to be executed after simulation.
 
    -D driven_runid
                   Specify Run ID of driven run, meaning that you are executing passive.
-                Does not support -N, -p, or -w.
+                Does not support -N, -n, -p, or -w.
 
    -F fetch_list
                 Files to be pulled back from run. For example:
@@ -107,11 +111,12 @@ if ! $field; then
     OVERLAY="nil"
     NRUNS="nil"
     POSTRUN="nil"
+    NIDS="nil"
     DRIVEN="nil"
     OWNER=$( pwenv pwuser )
     FETCH_LIST="$DEFAULT_FETCH_LIST"
 
-    while getopts "w:p:N:a:D:f:o:F:" opt; do
+    while getopts "w:p:N:n:a:D:f:o:F:" opt; do
 	case $opt in
 	    w)
 		WORLDFILE="$OPTARG"
@@ -123,6 +128,10 @@ if ! $field; then
 		NRUNS="$OPTARG"
 		is_integer "$NRUNS" || err "-N value must be integer"
 		[ "$NRUNS" -gt "0" ] || err "-N value must be > 0"
+		;;
+	    n)
+		NIDS=$( expand_int_list $OPTARG )
+		is_integer_list $NIDS || err "-n requires list of integers"
 		;;
 	    a)
 		POSTRUN="$OPTARG"
@@ -155,11 +164,14 @@ if ! $field; then
 	if [ "$POSTRUN" == "nil" ] && [ "$NRUNS" == "nil" ] && [ "$DRIVEN" == "nil" ]; then
 	    err "Nothing to do -- without -w, you must use -a or -N or -D"
 	fi
+    else
+	[ "$NIDS" == "nil" ] || err "-n cannot be used with -w"
     fi
 
     if [ "$DRIVEN" != "nil" ]; then
 	[ "$WORLDFILE" == "nil" ] || err "-D doesn't support -w"
 	[ "$NRUNS" == "nil" ] || err "-D doesn't support -N"
+	[ "$NIDS" == "nil" ] || err "-D doesn't support -n"
 	[ "$OVERLAY" == "nil" ] || err "-D doesn't support -p"
     fi
 
@@ -393,6 +405,10 @@ if ! $field; then
 		    fi
 		    assert [ "run_$nid" == "$(basename $run)" ]
 
+		    if [ "$NIDS" != "nil" ] && ! contains $NIDS $nid; then
+			continue
+		    fi
+
 		    path=$TASKS_DIR/$taskid
 		    TASKS="$TASKS $path"
 
@@ -432,12 +448,12 @@ if ! $field; then
 		runs=$( find_runs_local "$OWNER" "$runid" )
 		nids=$( for run in $runs; do parse_stored_run_path_local --nid $run; done )
 		run0=$( stored_run_path_local $OWNER $runid 0 )
-		nruns=$( echo $runs | wc -w )
-
-		echo "Executing $(python -c "print max(0, $NRUNS - $nruns)") runs for $runid"
 
 		for (( nid=0; nid < $NRUNS; nid++ )); do
 		    if contains $nids $nid; then
+			continue
+		    fi
+		    if [ "$NIDS" != "nil" ] && ! contains $NIDS $nid; then
 			continue
 		    fi
 

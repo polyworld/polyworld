@@ -33,9 +33,12 @@ OPTIONS:
                If a file spec is enclosed in [], then it is considered optional
                and no error is reported if it isn't found.
 
+    -n nids    Specify subset of NIDs to operate on. Must be a single argument, so
+               use quotes. e.g. -n "0 1" or -n "{0..3} 5"
+
     -f fields
                Specify fields on which this should run. Must be a single argument,
-            so use quotes. e.g. -f "0 1" or -f "{0..3}"
+               so use quotes. e.g. -f "0 1" or -f "{0..3}"
 
     -o run_owner
                Specify owner of run.
@@ -59,11 +62,16 @@ fi
 FETCH_LIST="$DEFAULT_FETCH_LIST"
 OWNER=$( pwenv pwuser )
 VERBOSE=false
+NIDS="nil"
 
-while getopts "F:f:o:v" opt; do
+while getopts "F:n:f:o:v" opt; do
     case $opt in
 	F)
 	    FETCH_LIST="$OPTARG"
+	    ;;
+	n)
+	    NIDS=$( expand_int_list $OPTARG )
+	    is_integer_list $NIDS || err "-n requires list of integers"
 	    ;;
 	f)
 	    if ! $field; then
@@ -112,6 +120,10 @@ if ! $field; then
     while read rundir; do
 	runid=$( parse_stored_run_path_local --runid $rundir )
 	nid=$( parse_stored_run_path_local --nid $rundir )
+
+	if [ "$NIDS" != "nil" ] && ! contains $NIDS $nid; then
+	    continue
+	fi
 
 	mkdir -p $CHECKSUMS_DIR/$runid/
 
@@ -212,6 +224,10 @@ else
     for rundir in $(find_runs_field "good" $OWNER "$RUNID"); do
 	runid=$( parse_stored_run_path_field --runid  $rundir )
 	nid=$( parse_stored_run_path_field --nid  $rundir )
+
+	if [ "$NIDS" != "nil" ] && ! contains $NIDS $nid; then
+	    continue
+	fi
 
 	archive_relpath=$runid/$nid/run.tbz
 	archive=$TMPDIR/$archive_relpath

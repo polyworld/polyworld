@@ -119,7 +119,7 @@ usage: $progname define farm <farm_name> <pwuser> <dstdir> (<osuser> <field_numb
 			    ;;
 			"fieldnumbers")
 			    shift 3
-			    fieldnumbers=$( eval echo $* )
+			    fieldnumbers=$( expand_int_list $* )
 			    require "$fieldnumbers" "'env set fieldnumbers' arg fieldnumbers"
 
 			    export PWFARM_CONFIG_ENV__FIELDNUMBERS="$fieldnumbers"

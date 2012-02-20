@@ -84,6 +84,19 @@ function is_integer()
     printf "%d" "$1" > /dev/null 2>&1
 }
 
+function is_integer_list()
+{
+    [ ! -z "$1" ] || return 1
+
+    for x in $*; do
+	if ! is_integer $x; then
+	    return 1
+	fi
+    done
+
+    return 0
+}
+
 function archive()
 {
     local srcdir=$__LIB_DIR
@@ -409,6 +422,12 @@ function decode_args()
     done
 
     trim "$result"
+}
+
+# expand things like '{0..2}' to '0 1 2'
+function expand_int_list()
+{
+    eval echo $*
 }
 
 function is_subset_of()
