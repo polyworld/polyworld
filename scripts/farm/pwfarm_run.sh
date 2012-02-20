@@ -447,7 +447,9 @@ if ! $field; then
 	    for runid in $runids; do
 		runs=$( find_runs_local "$OWNER" "$runid" )
 		nids=$( for run in $runs; do parse_stored_run_path_local --nid $run; done )
-		run0=$( stored_run_path_local $OWNER $runid 0 )
+		run_template=$( echo $runs | cut -f 1 -d " " )
+
+		assert [ ! -z "$run_template" ]
 
 		for (( nid=0; nid < $NRUNS; nid++ )); do
 		    if contains $nids $nid; then
@@ -466,16 +468,16 @@ if ! $field; then
 		    taskmeta set $path runid $runid
 		    taskmeta set $path rngseed "true"
 
-		    cp $run0/farm.wf $WORLDFILE_DIR/worldfile${taskid}.wf
+		    cp $run_template/farm.wf $WORLDFILE_DIR/worldfile${taskid}.wf || exit 1
 		    taskmeta set $path worldfile worldfile${taskid}.wf
 
-		    if [ -e $run0/.pwfarm/ioverlay ]; then
-			assert [ -e $run0/parms.wfo ]
+		    if [ -e $run_template/.pwfarm/ioverlay ]; then
+			assert [ -e $run_template/parms.wfo ]
 
-			cp $run0/parms.wfo $OVERLAY_DIR/overlay${taskid}.wfo
+			cp $run_template/parms.wfo $OVERLAY_DIR/overlay${taskid}.wfo || exit 1
 			taskmeta set $path overlay overlay${taskid}.wfo
 
-			taskmeta set $path ioverlay $( cat $run0/.pwfarm/ioverlay )
+			taskmeta set $path ioverlay $( cat $run_template/.pwfarm/ioverlay )
 		    fi
 
 		    taskid=$(( $taskid + 1 ))

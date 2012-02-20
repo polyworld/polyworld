@@ -19,13 +19,11 @@ sean		sean		01/31/2012	compressed files
 
 [FARM]
 sean		sean		02/10/2012	figure out correct management of .bashrc -- remove hack in fbuild
-sean		sean		02/04/2012	bashdb
 sean		sean		02/08/2012	investigate app/ per session -- utils without fbuild?
 sean		sean		02/08/2012	if fmvrun fails on fields, shouldn't move local data.
 sean		sean		02/10/2012	load-balancer/scheduler
 larryy		larryy		02/13/2012	have CalcMetric update the screen menu with epoch and current time (like stdout display)
 sean		sean		02/16/2012	mutex around window list status update
-sean		sean		02/17/2012	if can't find farm.wf for -N, should err out. Don't assume nid 0.
 
 [PLOT]
 sean		sean		02/06/2012	make valueattr path encodings more concise
