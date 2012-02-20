@@ -15,6 +15,7 @@ import common_functions
 from common_functions import err, warn, list_difference
 import common_complexity
 import datalib
+import farm
 import shlex
 import subprocess
 import datetime
@@ -22,6 +23,7 @@ import datetime
 ### Now initialize some global variables
 OutputFilename = common_complexity.FILENAME_AVR
 NUMBINS = common_complexity.DEFAULT_NUMBINS
+OverwriteEpochComplexities=False
 
 DEFAULT_RECENT = 'Recent'
 
@@ -37,11 +39,11 @@ LegacyMode = 'off'
 def main():
 	check_environment()
 
-	complexities, recent_type, arg_paths = parse_args(sys.argv[1:])
+	complexities, recent_type, arg_paths = parse_args( sys.argv[1:] )
 
 	try:
-		run_paths = common_functions.find_run_paths(arg_paths,
-							    'brain/function/')
+		run_paths = common_functions.find_run_paths( arg_paths,
+													 'brain/function/' )
 	except common_functions.InvalidDirError, e:
 		show_usage(str(e))
 
@@ -90,7 +92,7 @@ def check_environment():
 ###
 ####################################################################################
 def parse_args(argv):
-	global NUMBINS, LegacyMode
+	global NUMBINS, OverwriteEpochComplexities, LegacyMode
 
 	if len(argv) == 0:
 		show_usage()
@@ -98,7 +100,7 @@ def parse_args(argv):
 	complexities = common_complexity.DEFAULT_COMPLEXITIES
 	recent_type = DEFAULT_RECENT
 
-	short = 'C:l:b:r:d'
+	short = 'C:Ol:b:r:d'
 	long = ['legacy=', 'bins=']
 
 	try:
@@ -115,6 +117,8 @@ def parse_args(argv):
 				# strip any trailing single-digit ones
 				if complexities[i][-1] == '1' and not complexities[i][-2].isdigit():
 					complexities[i] = complexities[i][:-1]
+		elif opt == 'O':
+			OverwriteEpochComplexities = True
 		elif opt == 'l' or opt == 'legacy':
 			if value not in LEGACY_MODES:
 				show_usage('Invalid legacy mode (%s)' % value)
@@ -134,6 +138,9 @@ def parse_args(argv):
 
 	if len(args) == 0:
 		show_usage('Must specify run/run-parent directory.')
+
+	if OverwriteEpochComplexities and LegacyMode != 'off':
+		err( '-O makes no sense with -l' )
 
 	paths = list(args)
 
@@ -190,12 +197,12 @@ def analyze_recent_dir(complexities, recent_dir):
 
 		complexities_remaining = complexities
 
-		if LegacyMode != 'off' :
-			complexities_read = read_legacy_complexities(complexities_remaining,
-								     timestep_directory,
-								     tdata)
-			complexities_remaining = list_difference(complexities_remaining,
-								 complexities_read)
+		if LegacyMode != 'off':
+			complexities_read = read_legacy_complexities( complexities_remaining,
+														  timestep_directory,
+														  tdata )
+			complexities_remaining = list_difference( complexities_remaining,
+													  complexities_read )
 			if len(complexities_remaining) != 0:
 				if LegacyMode == 'force':
 					err('Failed to find data for %s' % ','.join(complexities_remaining))
@@ -203,11 +210,12 @@ def analyze_recent_dir(complexities, recent_dir):
 			print '  Legacy =', complexities_read
 
 		if len(complexities_remaining) > 0:
-			complexities_computed = compute_complexities(complexities_remaining,
-								     timestep_directory,
-								     tdata)
-			complexities_remaining = list_difference(complexities_remaining,
-								 complexities_computed)
+			complexities_computed = compute_complexities( complexities_remaining,
+														  t,
+														  timestep_directory,
+														  tdata )
+			complexities_remaining = list_difference( complexities_remaining,
+													  complexities_computed )
 
 		assert(len(complexities_remaining) == 0)
 	
@@ -216,9 +224,9 @@ def analyze_recent_dir(complexities, recent_dir):
 	#-- Create 'Avr' File
 	#--
 	#-----------------------------------------------------------------------------------
-	AVR = algorithms.avr_table(DATA,
-				   complexities,
-				   timesteps)
+	AVR = algorithms.avr_table( DATA,
+								complexities,
+								timesteps )
 	
 	datalib.write(outputpath, AVR, append=True)
 	
@@ -228,12 +236,12 @@ def analyze_recent_dir(complexities, recent_dir):
 	#-- Create 'Norm' file
 	#--
 	#-----------------------------------------------------------------------------------
-	tables = compute_bins(DATA,
-			      timesteps,
-			      complexities,
-			      AVR,
-			      lambda row: row.get('min'),
-			      lambda row: row.get('max'))
+	tables = compute_bins( DATA,
+						   timesteps,
+						   complexities,
+						   AVR,
+						   lambda row: row.get('min'),
+						   lambda row: row.get('max') )
 	
 	outputpath = os.path.join(recent_dir, OutputFilename2.replace( '.', 'Norm.'))
 	
@@ -255,12 +263,12 @@ def analyze_recent_dir(complexities, recent_dir):
 			MAXGLOBAL[type] = max(MAXGLOBAL[type], row.get('max'));
 			MINGLOBAL[type] = min(MINGLOBAL[type], row.get('min'));
 	
-	tables = compute_bins(DATA,
-			      timesteps,
-			      complexities,
-			      AVR,
-			      lambda row: MINGLOBAL[row.table.name],
-			      lambda row: MAXGLOBAL[row.table.name])
+	tables = compute_bins( DATA,
+						   timesteps,
+						   complexities,
+						   AVR,
+						   lambda row: MINGLOBAL[row.table.name],
+						   lambda row: MAXGLOBAL[row.table.name] )
 	
 	outputpath = os.path.join(recent_dir, OutputFilename2.replace( '.', 'Raw.'))
 	
@@ -271,9 +279,9 @@ def analyze_recent_dir(complexities, recent_dir):
 ### FUNCTION read_legacy_complexities()
 ###
 ####################################################################################
-def read_legacy_complexities(complexities,
-			     timestep_directory,
-			     tdata):
+def read_legacy_complexities( complexities,
+							  timestep_directory,
+							  tdata ):
 	def __path(type):
 		return os.path.join(timestep_directory, 'complexity_' + type + '.txt')
 
@@ -293,27 +301,29 @@ def read_legacy_complexities(complexities,
 ### FUNCTION compute_complexities()
 ###
 ####################################################################################
-def compute_complexities(complexities,
-			 timestep_directory,
-			 tdata):
+def compute_complexities( complexities,
+						  timestep,
+						  timestep_directory,
+						  tdata ):
 	def __path(type):
 		return os.path.join(timestep_directory, 'complexity_' + type + '.plt')
-	
+
 	# --- Read in any complexities computed on a previous invocation of this script
 	complexities_read = []
-	for type in complexities:
-		path = __path(type)
+	if not OverwriteEpochComplexities:
+		for type in complexities:
+			path = __path(type)
 
-		if os.path.isfile(path):
-			try:
-				table = datalib.parse(path)[type]
-				data = table.getColumn('Complexity').data
-				tdata[type] = common_complexity.normalize_complexities(data)
+			if os.path.isfile(path):
+				try:
+					table = datalib.parse(path)[type]
+					data = table.getColumn('Complexity').data
+					tdata[type] = common_complexity.normalize_complexities(data)
 	
-				complexities_read.append(type)
-			except datalib.InvalidFileError, e:
-				# file must have been incomplete
-				print "Failed reading ", path, "(", e, ") ... regenerating"
+					complexities_read.append(type)
+				except datalib.InvalidFileError, e:
+					# file must have been incomplete
+					print "Failed reading ", path, "(", e, ") ... regenerating"
 	
 	    
 	complexities_remaining = list_difference(complexities, complexities_read)
@@ -323,6 +333,8 @@ def compute_complexities(complexities,
 	
 	# --- Compute complexities not already found on the file system
 	if complexities_remaining:
+		farm.status( 'CalcComplexity [%s at %s]' % (timestep, datetime.datetime.now()) )
+
 		# --- Execute CalcComplexity on all brainFunction files in the timestep dir
 		query = os.path.join(timestep_directory, "brainFunction*.txt")
 		brainFunction_files = abstractfile.ls([query], returnConcrete = False)

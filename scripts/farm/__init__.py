@@ -17,6 +17,15 @@ def is_valid_env():
 def find_runs_local( runid ):
 	return bash( 'find_runs_local "*" ' + runid ).stdout_lines()
 
+####################################################################################
+###
+### FUNCTION status()
+###
+####################################################################################
+def status( msg ):
+	if os.getenv( 'PWFARM_STATUS' ):
+		bash( 'PWFARM_STATUS "%s" ' % msg )
+
 
 FARMSRC = os.path.dirname( __file__ )
 RUNUTIL = os.path.join( FARMSRC, '__pwfarm_runutil.sh' )
