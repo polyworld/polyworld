@@ -3,6 +3,8 @@ REPORTED	ASSIGNED	DATE		DESC
 [SIM]
 sean   					02/09/2012 	windowless movie generation
 sean   					02/09/2012 	cleanup ui code
+sean   					02/19/2012 	gene separation monitor & cache
+sean   					02/19/2012 	agent trackers UI
 
 [BUILD]
 sean		sean		02/10/2012	auto-discover python version
