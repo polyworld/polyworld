@@ -641,6 +641,8 @@ else
 	fi
 	mkdir -p run/.pwfarm
 	echo $( pwenv fieldnumber ) > run/.pwfarm/fieldnumber
+	echo $( pwenv farmname ) > run/.pwfarm/farmname
+	echo $( pwenv sessionname ) > run/.pwfarm/sessionname
 	echo $( PWFARM_TASKMETA get nid ) > run/.pwfarm/nid
 	echo $BATCHID > run/.pwfarm/batchid
 	if PWFARM_TASKMETA has ioverlay; then
