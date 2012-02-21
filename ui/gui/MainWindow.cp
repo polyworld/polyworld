@@ -1,5 +1,8 @@
 #include "MainWindow.h"
 
+// System
+#include <climits>
+
 // Qt
 #include <QApplication>
 #include <QDesktopWidget>
