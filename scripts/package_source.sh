@@ -8,15 +8,17 @@ SRCDIRS="agent\
          environment\
          genome\
          graphics\
+         main\
+         monitor\
          tools\
          ui\
          utils"
 
 MISCDIRS="scripts\
-          objects"
+          objects\
+          etc"
 
-MISCFILES="Makefile\
-           default.wfs"
+MISCFILES="Makefile"
 
 if [ $# != 1 ]; then
     name=`basename $0`

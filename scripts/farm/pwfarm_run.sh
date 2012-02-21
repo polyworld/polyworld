@@ -639,7 +639,7 @@ else
 	########################
 	PWFARM_STATUS "Polyworld"
 
-	./Polyworld --status ./worldfile
+	./Polyworld --ui term ./worldfile
 	exitval=$?
 
 	###

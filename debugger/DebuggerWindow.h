@@ -1,3 +1,5 @@
+#if false
+
 #pragma once
 
 #include <QWidget>
@@ -8,11 +10,11 @@ class QTimer;
 
 class agent;
 class BehaviorPanel;
-class TSceneWindow;
+class MainWindow;
 class TSimulation;
 
 
-void createDebugger(TSceneWindow *sceneWindow);
+void createDebugger(MainWindow *mainWindow);
 
 
 //===========================================================================
@@ -24,7 +26,7 @@ class DebuggerWindow : public QWidget
 	Q_OBJECT
 
  public:
-	DebuggerWindow( TSceneWindow *sceneWindow );
+	DebuggerWindow( MainWindow *mainWindow );
 
 	virtual void closeEvent( QCloseEvent *e );
 
@@ -37,7 +39,7 @@ class DebuggerWindow : public QWidget
 	void fBtnRunPause_clicked();
 
  private:
-	TSceneWindow *fSceneWindow;
+	MainWindow *fMainWindow;
 	TSimulation *fSimulation;
 
 	QPushButton *fBtnStep;
@@ -47,3 +49,5 @@ class DebuggerWindow : public QWidget
 
 	QTimer *fTimer;
 };
+
+#endif

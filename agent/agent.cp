@@ -761,6 +761,15 @@ float agent::ProjectedHeuristicFitness()
 //---------------------------------------------------------------------------    
 void agent::Die()
 {
+	// No longer alive. :(		
+	fAlive = false;
+
+	itfor( AgentListeners, listeners, it )
+	{
+		(*it)->died( this );
+	}
+	listeners.clear();
+
 	if( fPositionWriter )
 	{
 		delete fPositionWriter;
@@ -790,11 +799,6 @@ void agent::Die()
 	Q_ASSERT(agent::agentsliving >= 0);
 	
 	fSimulation->GetAgentPovRenderer()->remove( this );
-	
-	// Used to clear this agent's pane in the POV window/region, and call endbrainmonitoring()
-	
-	// No longer alive. :(		
-	fAlive = false;
 }
 
 //---------------------------------------------------------------------------
@@ -916,7 +920,7 @@ void agent::UpdateVision()
 //---------------------------------------------------------------------------
 void agent::UpdateBrain()
 {
-	fCns->update( this == TSimulation::fMonitorAgent && TSimulation::fOverHeadRank );
+	fCns->update( false );
 
 	// If we're recording brain function, do it here
 	if( fBrainFuncFile )

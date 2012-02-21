@@ -1,3 +1,4 @@
+#if false
 #include "BehaviorPanel.h"
 
 #include <assert.h>
@@ -212,3 +213,4 @@ void BehaviorNeuronSpinBox::valueChanged( double val )
 {
 	fActivation = val;
 }
+#endif

@@ -13,9 +13,10 @@ class Resources
  public:
 	static bool loadPolygons( class gpolyobj *poly,
 							  std::string name );
-	static void parseWorldFile( proplib::Document **ret_docWorldFile,
-								proplib::Document **ret_docSchema,
-								const char *argWorldfilePath);
+	static void parseConfiguration( proplib::Document **ret_docValus,
+									proplib::Document **ret_docSchema,
+									std::string valuesPath,
+									std::string schemaPath );
 
  private:
 	static std::string find( std::string name );

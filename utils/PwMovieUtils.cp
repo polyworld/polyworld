@@ -32,6 +32,7 @@
 
 #include <gl.h>
 #include <QGLWidget>
+#include <QGLPixelBuffer>
 
 #include "misc.h"
 #include "PwMovieUtils.h"
@@ -146,8 +147,10 @@ void PwMovieWriter::writeFrame( uint32_t timestep,
 
 	if( (timestep != (this->timestep + 1)) || (frame == 1) )
 	{
-		useDiff = false;
 		setTimestep( timestep );
+
+		if( frame == 1 )
+			useDiff = false;
 	}
 
 	if( ((frame - 1) % CHECKPOINT_STRIDE) == 0 )
@@ -610,6 +613,55 @@ void PwMovieQGLWidgetRecorder::setDimensions()
 	rgbBufOld = (uint32_t *)malloc( rgbBufSize );
 	rgbBufNew = (uint32_t *)malloc( rgbBufSize );
 }
+
+
+//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
+//---
+//--- PwMovieQGLPixelBufferRecorder
+//---
+//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
+PwMovieQGLPixelBufferRecorder::PwMovieQGLPixelBufferRecorder( QGLPixelBuffer *pixelBuffer,
+															  PwMovieWriter *writer )
+{
+	this->pixelBuffer = pixelBuffer;
+	this->writer = writer;
+
+	width = pixelBuffer->size().width();
+	height = pixelBuffer->size().height();
+	
+	rgbBufOld = NULL;
+	rgbBufNew = NULL;
+
+	uint32_t rgbBufSize = width * height * sizeof(*rgbBufNew);
+	rgbBufOld = (uint32_t *)malloc( rgbBufSize );
+	rgbBufNew = (uint32_t *)malloc( rgbBufSize );
+}
+
+PwMovieQGLPixelBufferRecorder::~PwMovieQGLPixelBufferRecorder()
+{
+	if( rgbBufOld ) free( rgbBufOld );
+	if( rgbBufNew ) free( rgbBufNew );
+}
+
+void PwMovieQGLPixelBufferRecorder::recordFrame( uint32_t timestep )
+{
+	pixelBuffer->makeCurrent();
+
+	glReadPixels( 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, rgbBufNew );
+
+	writer->writeFrame( timestep, width, height, rgbBufOld, rgbBufNew );
+
+	uint32_t *rgbBufSwap = rgbBufNew;
+	rgbBufNew = rgbBufOld;
+	rgbBufOld = rgbBufSwap;
+
+	pixelBuffer->doneCurrent();
+}
+
 
 //---------------------------------------------------------------------------
 //---------------------------------------------------------------------------

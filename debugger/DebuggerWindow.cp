@@ -1,3 +1,5 @@
+#if false
+
 #include "DebuggerWindow.h"
 
 #include <QHBoxLayout>
@@ -7,23 +9,24 @@
 
 #include "BehaviorPanel.h"
 #include "GenomeUtil.h"
+#include "MainWindow.h"
 #include "Simulation.h"
 
 using namespace genome;
 
-void createDebugger(TSceneWindow *sceneWindow)
+void createDebugger(MainWindow *mainWindow)
 {
-	DebuggerWindow *debugger = new DebuggerWindow(sceneWindow);
+	DebuggerWindow *debugger = new DebuggerWindow(mainWindow);
 	debugger->show();
 }
 
 //---------------------------------------------------------------------------
 // DebuggerWindow::DebuggerWindow
 //---------------------------------------------------------------------------
-DebuggerWindow::DebuggerWindow( TSceneWindow *sceneWindow ) : QWidget( NULL )
+DebuggerWindow::DebuggerWindow( MainWindow *mainWindow ) : QWidget( NULL )
 {
-	fSceneWindow = sceneWindow;
-	fSimulation = fSceneWindow->GetSimulation();
+	fMainWindow = mainWindow;
+	fSimulation = fMainWindow->GetSimulation();
 
 	setWindowTitle( "PW Debugger" );
 
@@ -75,7 +78,7 @@ void DebuggerWindow::closeEvent( QCloseEvent *e )
 //---------------------------------------------------------------------------
 void DebuggerWindow::execTimeStep()
 {
-	fSceneWindow->timeStep();
+	fMainWindow->timeStep();
 
 	if( fSimulation->fStep == 1 )
 	{
@@ -118,3 +121,5 @@ void DebuggerWindow::fBtnRunPause_clicked()
 		fTimer->stop();
 	}
 }
+
+#endif

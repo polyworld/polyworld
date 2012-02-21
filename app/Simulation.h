@@ -1,5 +1,4 @@
-#ifndef SIMULATION_H
-#define SIMULATION_H
+#pragma once
 
 #ifdef linux
 	#include <errno.h>
@@ -8,390 +7,76 @@
 #include <string>
 
 // qt
-#include <qobject.h>
-#include <qapplication.h>
-#include <qmainwindow.h>
-#include <qmenu.h>
+#include <QObject>
 
 // Local
-#include "agent.h"
-#include "barrier.h"
-#include "datalib.h"
+#include "Domain.h"
 #include "EatStatistics.h"
 #include "Energy.h"
 #include "Events.h"
-#include "food.h"
+#include "LifeSpan.h"
 #include "Scheduler.h"
 #include "SeparationCache.h"
+#include "simconst.h"
+#include "simtypes.h"
 #include "gmisc.h"
+#include "gpolygon.h"
 #include "graphics.h"
 #include "gstage.h"
-#include "TextStatusWindow.h"
-#include "OverheadView.h"
+
+using namespace sim;
 
 // Forward declarations
-namespace condprop
-{
-	class PropertyList;
-}
-namespace proplib
-{
-	class Document;
-}
-namespace genome
-{
-	class Genome;
-}
+namespace condprop { class PropertyList; }
+namespace proplib { class Document; }
 class ContactEntry;
 class TBinChartWindow;
-class TBrainMonitorWindow;
-class TChartWindow;
-class TSceneView;
-class TOverheadView;
-class TAgentPOVWindow;
-//class QMenuBar;
-//class QTimer;
-class TSimulation;
 
-static const int MAXDOMAINS = 10; // if you change this, you MUST change the schema file.
-static const int MAXMETABOLISMS = 10;
-static const int MAXFITNESSITEMS = 5;
-
-// Define file mode mask so that users can read+write, group and others can read (but not write)
-#define	PwFileMode ( S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH )
-// Define directory mode mask the same, except you need execute privileges to use as a directory (go fig)
-#define	PwDirMode ( S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH )
-
-
-// Used in logic related to Mating as well as ContactEntry
-#define MATE__NIL						0
-#define MATE__DESIRED					(1 << 0)
-#define MATE__PREVENTED__PARTNER		(1 << 1)
-#define MATE__PREVENTED__CARRY			(1 << 2)
-#define MATE__PREVENTED__MATE_WAIT		(1 << 3)
-#define MATE__PREVENTED__ENERGY			(1 << 4)
-#define MATE__PREVENTED__EAT_MATE_SPAN	(1 << 5)
-#define MATE__PREVENTED__EAT_MATE_MIN_DISTANCE	(1 << 6)
-#define MATE__PREVENTED__OF1			(1 << 7)
-#define MATE__PREVENTED__MAX_DOMAIN		(1 << 8)
-#define MATE__PREVENTED__MAX_WORLD		(1 << 9)
-#define MATE__PREVENTED__MAX_METABOLISM	(1 << 10)
-#define MATE__PREVENTED__MISC			(1 << 11)
-#define MATE__PREVENTED__MAX_VELOCITY	(1 << 12)
-
-
-// Used in logic related to Fighting as well as ContactEntry
-#define FIGHT__NIL						0
-#define FIGHT__DESIRED					(1 << 0)
-#define FIGHT__PREVENTED__CARRY			(1 << 1)
-#define FIGHT__PREVENTED__SHIELD		(1 << 2)
-#define FIGHT__PREVENTED__POWER			(1 << 3)
-
-
-// Used in logic related to Giving as well as ContactEntry
-#define GIVE__NIL						0
-#define GIVE__DESIRED					(1 << 0)
-#define GIVE__PREVENTED__CARRY			(1 << 1)
-#define GIVE__PREVENTED__ENERGY			(1 << 2)
-
-struct Position
-{
-	float x;
-	float y;
-	float z;
-};
-
-struct FitStruct
-{
-	ulong	agentID;
-	float	fitness;
-	float   complexity;
-	genome::Genome*genes;
-};
-typedef struct FitStruct FitStruct;
-
-
-//===========================================================================
-// Domain
-//===========================================================================
-class Domain
-{
- public:
-	Domain();
-	~Domain();
-	
-    float centerX;
-    float centerZ;
-    float absoluteSizeX;
-    float absoluteSizeZ;
-    float sizeX;
-    float sizeZ;
-    float startX;
-    float startZ;
-    float endX;
-    float endZ;
-    int numFoodPatches;
-    int numBrickPatches;
-    float fraction;
-    float foodRate;
-    int foodCount;
-    int initFoodCount;
-    int minFoodCount;
-    int maxFoodCount;
-    int maxFoodGrownCount;
-	int numFoodPatchesGrown;
-	FoodPatch* fFoodPatches;
-	BrickPatch* fBrickPatches;
-    long minNumAgents;
-    long maxNumAgents;
-    long initNumAgents;
-	long numberToSeed;
-    long numAgents;
-    long numcreated;
-    long numborn;
-    long numbornsincecreated;
-    long numdied;
-    long lastcreate;
-    long maxgapcreate;
-	long numToCreate;
-	float probabilityOfMutatingSeeds;
-	double energyScaleFactor;
-    short ifit;
-    short jfit;
-    FitStruct** fittest;	// based on complete fitness, however it is being calculated in AgentFitness(c)
-	int fNumLeastFit;
-	int fMaxNumLeastFit;
-	int fNumSmited;
-	agent** fLeastFit;	// based on heuristic fitness
-
-	FoodPatch* whichFoodPatch( float x, float z );
-};
-
-inline Domain::Domain()
-{
-	foodCount = 0;
-}
-
-inline Domain::~Domain()
-{
-}
-
-inline FoodPatch* Domain::whichFoodPatch( float x, float z )
-{
-	FoodPatch* fp = NULL;
-	
-	for( int i = 0; i < numFoodPatches; i++ )
-	{
-		if( fFoodPatches[i].pointIsInside( x, z, 0.0 ) )
-		{
-			fp = &(fFoodPatches[i]);
-			break;
-		}
-	}
-	
-	return( fp );
-}
-
-
-//===========================================================================
-// Stat
-//===========================================================================
-class Stat
-{
-public:
-	Stat()					{ reset(); }
-	~Stat()					{}
-	
-	float	mean()			{ if( !count ) return( 0.0 ); return( sum / count ); }
-	float	stddev()		{ if( !count ) return( 0.0 ); register double m = sum / count;  return( sqrt( sum2 / count  -  m * m ) ); }
-	float	min()			{ if( !count ) return( 0.0 ); return( mn ); }
-	float	max()			{ if( !count ) return( 0.0 ); return( mx ); }
-	void	add( float v )	{ sum += v; sum2 += v*v; count++; mn = v < mn ? v : mn; mx = v > mx ? v : mx; }
-	void	reset()			{ mn = FLT_MAX; mx = FLT_MIN; sum = sum2 = count = 0; }
-	unsigned long samples() { return( count ); }
-
-private:
-	float	mn;		// minimum
-	float	mx;		// maximum
-	double	sum;	// sum
-	double	sum2;	// sum of squares
-	unsigned long	count;	// count
-};
-
-//===========================================================================
-// StatRecent
-//===========================================================================
-class StatRecent
-{
-public:
-	StatRecent( unsigned int width = 1000 )	{ w = width; history = (float*) malloc( w * sizeof(*history) ); Q_CHECK_PTR( history); reset(); }
-	~StatRecent()							{ if( history ) free( history ); }
-	
-	float	mean()			{ if( !count ) return( 0.0 ); return( sum / count ); }
-	float	stddev()		{ if( !count ) return( 0.0 ); register double m = sum / count;  return( sqrt( sum2 / count  -  m * m ) ); }
-	float	min()			{ if( !count ) return( 0.0 ); if( needMin ) recomputeMin(); return( mn ); }
-	float	max()			{ if( !count ) return( 0.0 ); if( needMax ) recomputeMax(); return( mx ); }
-	void	add( float v )	{ if( count < w ) { sum += v; sum2 += v*v; mn = v < mn ? v : mn; mx = v > mx ? v : mx; history[index++] = v; count++; } else { if( index >= w ) index = 0; sum += v - history[index]; sum2 += v*v - history[index]*history[index]; if( v >= mx ) mx = v; else if( history[index] == mx ) needMax = true; if( v <= mn ) mn = v; else if( history[index] == mn ) needMin = true; history[index++] = v; } }
-	void	reset()			{ mn = FLT_MAX; mx = FLT_MIN; sum = sum2 = count = index = 0; needMin = needMax = false; }
-	unsigned long samples() { return( count ); }
-
-private:
-	float	mn;		// minimum
-	float	mx;		// maximum
-	double	sum;	// sum
-	double	sum2;	// sum of squares
-	unsigned long	count;	// count
-	unsigned int	w;		// width of data window considered current (controls roll-off)
-	float*	history;	// w recent samples
-	unsigned int	index;	// point in history[] at which next sample is to be inserted
-	bool	needMin;
-	bool	needMax;
-	
-	void	recomputeMin()	{ mn = FLT_MAX; for( unsigned int i = 0; i < w; i++ ) mn = history[i] < mn ? history[i] : mn; needMin = false; }
-	void	recomputeMax()	{ mx = FLT_MIN; for( unsigned int i = 0; i < w; i++ ) mx = history[i] > mx ? history[i] : mx; needMax = false; }
-};
-
-//===========================================================================
-// TSceneWindow
-//===========================================================================
-class TSceneWindow: public QMainWindow
-{
-	Q_OBJECT
-
-public:
-	TSceneWindow( const char *worldfilePath, const bool statusToStdout );
-	virtual ~TSceneWindow();
-	
-	void CreateSimulationScheduler();
-	void Update();
-	TSimulation *GetSimulation();
-
-protected:
-    void closeEvent(QCloseEvent* event);    
-    virtual void keyReleaseEvent( QKeyEvent* event ); //Moved here from SceneView (CMB 3/26/06)
-    
-	void AddFileMenu();
-	void AddEditMenu();
-	void AddRunMenu();
-	void AddWindowMenu();
-	void AddHelpMenu();
-	
-	void SaveWindowState();
-	void SaveDimensions();
-	void SaveVisibility();
-	void RestoreFromPrefs();
-
-	bool exitOnUserConfirm();
-
-public slots:
-    void timeStep();
-
-private slots:
-
-	// File menu
-    void choose() {}
-    void save() {}
-    void saveAs() {}
-    void about() {}    
-    void windowsMenuAboutToShow();
-
-	// Run menu
-	void endAtTimestep();
-	void endNow();
-    
-    // Window menu
-    void ToggleEnergyWindow();
-    void ToggleFitnessWindow();
-    void TogglePopulationWindow();
-    void ToggleBirthrateWindow();
-    void ToggleOverheadWindow();
-	void ToggleBrainWindow();
-	void TogglePOVWindow();
-	void ToggleTextStatus();
-	void TileAllWindows();
-    
-private:
-	QMenuBar* fMenuBar;
-	QMenu* fWindowsMenu;
-	
-	TSceneView* fSceneView;
-	TOverheadView* fOverheadWindow; //CMB 3/17/06
-	TSimulation* fSimulation;
-	
-	QAction* toggleEnergyWindowAct;
-	QAction* toggleFitnessWindowAct;
-	QAction* togglePopulationWindowAct;
-	QAction* toggleBirthrateWindowAct;
-	QAction* toggleBrainWindowAct;
-	QAction* togglePOVWindowAct;
-	QAction* toggleTextStatusAct;
-	QAction* toggleOverheadWindowAct;
-	QAction* tileAllWindowsAct;
-
-	QString windowSettingsName;
-};
-
-//===========================================================================
-// ObjectType
-//===========================================================================
-enum ObjectType
-{
-	OT_AGENT = 0,
-	OT_FOOD,
-	OT_BRICK,
-	OT_BARRIER,
-	OT_EDGE
-};
 
 //===========================================================================
 // TSimulation
 //===========================================================================
+
 class TSimulation : public QObject
 {
 	Q_OBJECT
 
 public:
-	TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow, const char *worldfilePath, const bool statusToStdout );
+	TSimulation( std::string worldfilePath, std::string monitorfilePath );
 	virtual ~TSimulation();
-	
-	void Start();
-	void Stop();
-	void Pause();
-	
-	short WhichDomain( float x, float z, short d );
-	void SwitchDomain( short newDomain, short oldDomain, int objectType );
-	
-	gcamera& GetCamera();
-	gcamera& GetOverheadCamera();
 
-	TChartWindow* GetBirthrateWindow() const;
-	TChartWindow* GetFitnessWindow() const;
-	TChartWindow* GetEnergyWindow() const;
-	TChartWindow* GetPopulationWindow() const;	
-	TBrainMonitorWindow* GetBrainMonitorWindow() const;	
-	TBinChartWindow* GetGeneSeparationWindow() const;
-	TAgentPOVWindow* GetAgentPOVWindow() const;
-	TTextStatusWindow* GetStatusWindow() const;
-	TOverheadView*   GetOverheadWindow() const;
-
-	class AgentPovRenderer *GetAgentPovRenderer();
-	
-//	bool GetShowBrain() const;
-//	void SetShowBrain(bool showBrain);
-	long GetMaxAgents() const;
-	static long fMaxNumAgents;
-	long GetInitNumAgents() const;
-	
-//	short OverHeadRank( void );
-	
-	void PopulateStatusList(TStatusList& list);
-
-	long GetMaxSteps() const;
-	
 	void Step();
 	void End( const std::string &reason );
 	std::string EndAt( long timestep );
-	void Update();
+
+	short WhichDomain( float x, float z, short d );
+	void SwitchDomain( short newDomain, short oldDomain, int objectType );
+	
+	TBinChartWindow* GetGeneSeparationWindow() const;
+
+	class AgentPovRenderer *GetAgentPovRenderer();
+	class MonitorManager *getMonitorManager();
+	gstage &getStage();
+
+	bool isLockstep() const;
+	long GetMaxAgents() const;
+	static long fMaxNumAgents;
+	long GetInitNumAgents() const;
+	long getNumAgents( short domain = -1 );
+	long GetNumDomains() const;
+
+	long getNumBorn( AgentBirthType type );
+	class agent *getCurrentFittest( int rank );
+	float getFitnessWeight( FitnessWeightType type );
+	float getFitnessStat( FitnessStatType type );
+	float getFoodEnergyStat( FoodEnergyStatType type, FoodEnergyStatScope scope );
+	
+	void getStatusText( StatusText& statusText,
+						int statusFrequency );
+
+	long getStep() const;
+	long GetMaxSteps() const;
+	
 	void MaintainEnergyCosts();
 	double EnergyScaleFactor( long minAgents, long maxAgents, long numAgents );
 
@@ -404,12 +89,6 @@ public:
 
 
 	static long fStep;
-	bool fAgentTracking;		//Moving to public for access to sceneview and keypress (CMB 3/19/06)
-	long fMonitorAgentRank;	//Moving to public for access to sceneview and keypress (CMB 3/19/06)
-	long fMonitorAgentRankOld;
-	bool fRotateWorld;		//Turn world rotation on or off (CMB 3/19/06)
-	static short fOverHeadRank;    	
-	static agent* fMonitorAgent;	
 	static double fFramesPerSecondOverall;
 	static double fSecondsPerFrameOverall;
 	static double fFramesPerSecondRecent;
@@ -428,18 +107,18 @@ public:
 	
 	bool fRecordBirthsDeaths;
 
-	DataLibWriter *fLifeSpanLog;
+	class DataLibWriter *fLifeSpanLog;
 
 	bool fRecordPosition;
 	bool fRecordBarrierPosition;
 	bool fRecordContacts;
-	DataLibWriter *fContactsLog;
+	class DataLibWriter *fContactsLog;
 	bool fRecordCollisions;
-	DataLibWriter *fCollisionsLog;
+	class DataLibWriter *fCollisionsLog;
 	bool fRecordCarry;
-	DataLibWriter *fCarryLog;
+	class DataLibWriter *fCarryLog;
 	bool fRecordEnergy;
-	DataLibWriter *fEnergyLog;
+	class DataLibWriter *fEnergyLog;
 
 	bool fBrainAnatomyRecordAll;
 	bool fBrainFunctionRecordAll;
@@ -457,19 +136,19 @@ public:
 	double fGlobalEnergyScaleFactor;
 	
 	bool fRecordComplexity;				// record the Olaf Functional Complexity (neural)
-	DataLibWriter *fComplexityLog;
-	DataLibWriter *fComplexitySeedLog;
-// 	DataLibWriter *fAvrComplexityLog;
+	class DataLibWriter *fComplexityLog;
+	class DataLibWriter *fComplexitySeedLog;
+// 	class DataLibWriter *fAvrComplexityLog;
 
 	bool fRecordGenomes;
 	struct {
 		bool record;
 		std::vector<std::string> geneNames;
 		std::vector<int> geneIndexes;
-		DataLibWriter *log;
+		class DataLibWriter *log;
 	} fGenomeSubsetLog;
 	bool fRecordSeparations;
-	DataLibWriter *fSeparationsLog;
+	class DataLibWriter *fSeparationsLog;
 	bool fRecordAdamiComplexity;		// record the Adami Physical Complexity  (genetic)
 	int fAdamiComplexityRecordFrequency;
 	
@@ -490,14 +169,12 @@ public:
 	
 	Events* fEvents;
 
-private slots:
+signals:
+	void ended();
 	
 private:
-	void Init( const char *worldfilePath, const bool statusToStdout );
 	void InitAgents();
 	void InitNeuralValues();
-	void InitWorld();
-	void InitMonitoringWindows();
 
 	void SeedGenome( long agentNumber,
 					 genome::Genome *genes,
@@ -552,7 +229,7 @@ private:
 	void InitComplexityLog( long epoch );
 	void UpdateComplexityLog( agent *a );
 	void EndComplexityLog( long epoch );
-	DataLibWriter* OpenComplexityLog( long epoch );
+	class DataLibWriter* OpenComplexityLog( long epoch );
 	
 	void PickParentsUsingTournament(int numInPool, int* iParent, int* jParent);
 	void UpdateAgents();
@@ -596,6 +273,8 @@ private:
 	void CreateAgents();
 	void MaintainBricks();
 	void MaintainFood();
+
+	void UpdateMonitors();
 	
 	void RecordGeneSeparation();
 	void CalculateGeneSeparation(agent* ci);
@@ -630,33 +309,17 @@ private:
 
 	void Dump();
 	
-
-	TSceneView* fSceneView;
-	TSceneWindow* fSceneWindow;
-	TOverheadView* fOverheadWindow;      //CMB 3/17/06
-	TChartWindow* fBirthrateWindow;
-	TChartWindow* fFitnessWindow;
-	TChartWindow* fFoodEnergyWindow;
-	TChartWindow* fPopulationWindow;
-	TBrainMonitorWindow* fBrainMonitorWindow;
+#if false
 	TBinChartWindow* fGeneSeparationWindow;
-	TAgentPOVWindow* fAgentPOVWindow;
-	TTextStatusWindow* fTextStatusWindow;
-
-	class AgentPovRenderer *fAgentPovRenderer;
+#endif
 
 	Scheduler fScheduler;
 	BusyFetchQueue<agent *> fUpdateBrainQueue;
 	
 	long fMaxSteps;
 	bool fEndOnPopulationCrash;
-	bool fPaused;
-	int fDelay;
 	int fDumpFrequency;
-	int fStatusFrequency;
-	bool fStatusToStdout;
 	bool fLoadState;
-	bool inited;
 	
 	gstage fStage;	
 	TCastList fWorldCast;
@@ -675,22 +338,8 @@ private:
 	float fAgentHealingRate;	// Virgil Healing
 	bool fHealing;				// Virgil Healing
 	
-	//long fMonitorAgentRank;
-	//long fMonitorAgentRankOld;
-//	agent* fMonitorAgent;
-	//bool fAgentTracking;
 	float fGroundClearance;
-//	short fOverHeadRank;
-	short fOverHeadRankOld;
-	agent* fOverheadAgent;
-	bool fChartBorn;
-	bool fChartFitness;
-	bool fChartFoodEnergy;
-	bool fChartPopulation;
-//	bool fShowBrain;
-	bool fShowTextStatus;
 	bool fRecordGeneStats;
-	bool fRecordPerformanceStats;
 	bool fRecordFoodPatchStats;
 	bool fCalcFoodPatchAgentCounts;
 	
@@ -702,13 +351,6 @@ private:
 	long fNewDeaths;
 	
 	Color fGroundColor;
-	Color fCameraColor;
-	float fCameraRadius;
-	float fCameraHeight;
-	float fCameraRotationRate;
-	float fCameraAngleStart;
-	float fCameraAngle;
-	float fCameraFOV;
 
 	agent* fCurrentFittestAgent[MAXFITNESSITEMS];	// based on heuristic fitness
 	float fCurrentMaxFitness[MAXFITNESSITEMS];	// based on heuristic fitness
@@ -797,11 +439,11 @@ private:
 	bool fUseProbabilisticFoodPatches;
 	bool fFoodRemovalNeeded;
 	int fNumFoodPatches;
-	FoodPatch* fFoodPatches;
-	FoodPatch** fFoodPatchesNeedingRemoval;
+	class FoodPatch* fFoodPatches;
+	class FoodPatch** fFoodPatchesNeedingRemoval;
 
 	int fNumBrickPatches;
-	BrickPatch* fBrickPatches;
+	class BrickPatch* fBrickPatches;
 
 
 	long fMinFoodCount;
@@ -834,7 +476,6 @@ private:
 	int fFoodPatchOuterRange;
 	float fMinFoodEnergyAtDeath;
 	float fPower2Energy; // controls amount of damage to other agent
-	float fDeathProbability;
 	
 	char   fFogFunction;
 	float fExpFogDensity;
@@ -866,17 +507,11 @@ private:
 	int fNumLeastFit;
 	int fMaxNumLeastFit;
 	int fNumSmited;
-	bool fShowVision;
 	bool fStaticTimestepGeometry;
 	bool fParallelInitAgents;
 	bool fParallelInteract;
 	bool fParallelCreateAgents;
 	bool fParallelBrains;
-	bool fGraphics;
-	long fBrainMonitorStride;
-	
-	bool fRecordMovie;
-	class PwMovieWriter *fMovieWriter;
 	
 	unsigned long* fGeneSum;	// sum, for computing mean
 	unsigned long* fGeneSum2;	// sum of squares, for computing std. dev.
@@ -890,33 +525,103 @@ private:
 	unsigned long fNumAgentsNotInOrNearAnyFoodPatch;
 	unsigned long* fNumAgentsInFoodPatch;
 	
-    gcamera fCamera;
-    gcamera fOverheadCamera;
     gpolyobj fGround;
     TSetList fWorldSet;	
-    gscene fScene;
-    gscene fOverheadScene;
+
+	class AgentPovRenderer *agentPovRenderer;
+	class MonitorManager *monitorManager;
 
 	condprop::PropertyList *fConditionalProps;
 };
 
-inline gcamera& TSimulation::GetCamera() { return fCamera; }
-inline gcamera& TSimulation::GetOverheadCamera() { return fOverheadCamera; } //CMB 3/17/06
-inline TChartWindow* TSimulation::GetBirthrateWindow() const { return fBirthrateWindow; }
-inline TChartWindow* TSimulation::GetFitnessWindow() const { return fFitnessWindow; }
-inline TChartWindow* TSimulation::GetEnergyWindow() const { return fFoodEnergyWindow; }
-inline TChartWindow* TSimulation::GetPopulationWindow() const { return fPopulationWindow; }
-inline TBrainMonitorWindow* TSimulation::GetBrainMonitorWindow() const { return fBrainMonitorWindow; }
+#if false
 inline TBinChartWindow* TSimulation::GetGeneSeparationWindow() const { return fGeneSeparationWindow; }
-inline TAgentPOVWindow* TSimulation::GetAgentPOVWindow() const { return fAgentPOVWindow; }
-inline TOverheadView* TSimulation::GetOverheadWindow() const { return fOverheadWindow; }
-inline TTextStatusWindow* TSimulation::GetStatusWindow() const { return fTextStatusWindow; }
-//inline bool TSimulation::GetShowBrain() const { return fBrainMonitorWindow->visible; }
-//inline void TSimulation::SetShowBrain(bool showBrain) { fBrainMonitorWindow->visible = showBrain; }
-inline class AgentPovRenderer *TSimulation::GetAgentPovRenderer() { return fAgentPovRenderer; }
+#endif
+
+inline class AgentPovRenderer *TSimulation::GetAgentPovRenderer() { return agentPovRenderer; }
+inline MonitorManager *TSimulation::getMonitorManager() { return monitorManager; }
+inline gstage &TSimulation::getStage() { return fStage; }
+
+
+inline bool TSimulation::isLockstep() const { return fLockStepWithBirthsDeathsLog; }
 inline long TSimulation::GetMaxAgents() const { return fMaxNumAgents; }
-//inline short TSimulation::OverHeadRank( void ) { return fOverHeadRank; }
 inline long TSimulation::GetInitNumAgents() const { return fInitNumAgents; }
+inline long TSimulation::getNumAgents( short domain )
+{
+	if( domain == -1 )
+		return fNumberAlive;
+	else
+		return fDomains[domain].numAgents;
+}
+
+inline long TSimulation::GetNumDomains() const { return fNumDomains; }
+inline long TSimulation::getNumBorn( AgentBirthType type )
+{
+	switch( type )
+	{
+	case ABT__CREATED: return fNumberCreated;
+	case ABT__BORN: return fNumberBorn;
+	case ABT__BORN_VIRTUAL: return fNumberBornVirtual;
+	default: assert(false); return -1;
+	}
+}
+inline class agent *TSimulation::getCurrentFittest( int rank )
+{
+	assert( rank != 0 );
+	if(rank < 0) {
+		if(rank + fCurrentFittestCount >= 0)
+			return fCurrentFittestAgent[ rank + fCurrentFittestCount ];
+	}
+	else if( rank <= fCurrentFittestCount ) return fCurrentFittestAgent[rank - 1];
+	return NULL;
+}
+
+inline float TSimulation::getFitnessWeight( FitnessWeightType type )
+{
+	switch( type )
+	{
+	case FWT__COMPLEXITY: return fComplexityFitnessWeight;
+	case FWT__HEURISTIC: return fHeuristicFitnessWeight;
+	default: assert(false); return -1;
+	}
+}
+
+inline float TSimulation::getFitnessStat( FitnessStatType type )
+{
+	switch( type )
+	{
+	case FST__MAX_FITNESS: return fMaxFitness;
+	case FST__CURRENT_MAX_FITNESS: return fCurrentMaxFitness[0];
+	case FST__AVERAGE_FITNESS: return fAverageFitness;
+	default: assert(false); return -1;
+	}
+}
+inline float TSimulation::getFoodEnergyStat( FoodEnergyStatType type, FoodEnergyStatScope scope )
+{
+	switch( type )
+	{
+	case FEST__IN:
+		switch(scope)
+		{
+		case FESS__STEP: return fFoodEnergyIn;
+		case FESS__TOTAL: return fTotalFoodEnergyIn;
+		case FESS__AVERAGE: return fAverageFoodEnergyIn;
+		default: assert(false); return -1;
+		}
+		break;
+	case FEST__OUT:
+		switch(scope)
+		{
+		case FESS__STEP: return fFoodEnergyOut;
+		case FESS__TOTAL: return fTotalFoodEnergyOut;
+		case FESS__AVERAGE: return fAverageFoodEnergyOut;
+		default: assert(false); return -1;
+		}
+		break;
+	default: assert(false); return -1;
+	}
+}
+inline long TSimulation::getStep() const { return fStep; }
 inline long TSimulation::GetMaxSteps() const { return fMaxSteps; }
 inline float TSimulation::EnergyFitnessParameter() const { return fEnergyFitnessParameter; }
 inline float TSimulation::AgeFitnessParameter() const { return fAgeFitnessParameter; }
@@ -947,5 +652,3 @@ inline bool TSimulation::RecordBrainFunction( long agentNumber )
 		  );
 }
 
-
-#endif

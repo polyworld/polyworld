@@ -31,6 +31,9 @@ void PwReadMovieHeader ( FILE *f, uint32_t* version, uint32_t* width, uint32_t* 
 void PwWriteMovieHeader( FILE *f, uint32_t  version, uint32_t  width, uint32_t  height );
 
 
+//===========================================================================
+// PwMovieFileHeader
+//===========================================================================
 #pragma pack(push, 1)
 struct PwMovieFileHeader
 {
@@ -41,6 +44,9 @@ struct PwMovieFileHeader
 	uint64_t offsetMetaEntries;
 };
 
+//===========================================================================
+// PwMovieMetaEntry
+//===========================================================================
 namespace PwMovieMetaEntry
 {
 	enum Type
@@ -91,6 +97,9 @@ namespace PwMovieMetaEntry
 }
 #pragma pack(pop)
 
+//===========================================================================
+// PwMovieWriter
+//===========================================================================
 class PwMovieWriter
 {
  public:
@@ -127,6 +136,9 @@ class PwMovieWriter
 	EntryList metaEntries;
 };
 
+//===========================================================================
+// PwMovieReader
+//===========================================================================
 class PwMovieReader
 {
  public:
@@ -163,6 +175,9 @@ class PwMovieReader
 	FrameMetaEntryMap metaEntries[ PwMovieMetaEntry::__NTYPES ];
 };
 
+//===========================================================================
+// PwMovieQGLWidgetRecorder
+//===========================================================================
 class PwMovieQGLWidgetRecorder
 {
  public:
@@ -175,6 +190,26 @@ class PwMovieQGLWidgetRecorder
 	void setDimensions();
 
 	class QGLWidget *widget;
+	PwMovieWriter *writer;
+	uint32_t width;
+	uint32_t height;
+	uint32_t *rgbBufOld;
+	uint32_t *rgbBufNew;
+};
+
+//===========================================================================
+// PwMovieQGLPixelBufferRecorder
+//===========================================================================
+class PwMovieQGLPixelBufferRecorder
+{
+ public:
+	PwMovieQGLPixelBufferRecorder( class QGLPixelBuffer *pixelBuffer, PwMovieWriter *writer );
+	~PwMovieQGLPixelBufferRecorder();
+	
+	void recordFrame( uint32_t timestep );
+
+ private:
+	class QGLPixelBuffer *pixelBuffer;
 	PwMovieWriter *writer;
 	uint32_t width;
 	uint32_t height;

@@ -20,13 +20,13 @@ class AgentPovRenderer : public QObject
 	void beginStep();
 	void render( class agent *a );
 	void endStep();
-	void copyBufferTo( class QGLWidget *dst );
+	void copyTo( class QGLWidget *dst );
 
 	int getBufferWidth();
 	int getBufferHeight();
 
  signals:
-	void stepRenderComplete();
+	void renderComplete();
 
  private:
 	struct Viewport

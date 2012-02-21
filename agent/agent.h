@@ -8,6 +8,7 @@
 //#include <qrect.h>
 
 // Local
+#include "AgentListener.h"
 #include "Brain.h"
 #include "debug.h"
 #include "Energy.h"
@@ -158,6 +159,9 @@ public:
     void lastrewards(float energyFitness, float ageFitness);
     void Die();
 	void EndFunctional();
+
+	void addListener( AgentListener *listener );
+	void removeListener( AgentListener *listener );
     
     void SetLastX(float x);
     void SetLastY(float y);
@@ -216,6 +220,7 @@ public:
 	Retina* GetRetina();
 //	gscene& agent::GetScene();
 	gscene& GetScene();
+	gcamera &getCamera();
 	frustumXZ& GetFrustum();
 	static gpolyobj* GetAgentObj();
 //	gdlink<agent*>* GetListLink();
@@ -345,8 +350,12 @@ protected:
 	DataLibWriter *fPositionWriter;
 	
 	float fCarryRadius;
+
+	AgentListeners listeners;
 };
 
+inline void agent::addListener( AgentListener *listener ) { listeners.push_back(listener); }
+inline void agent::removeListener( AgentListener *listener ) { if( fAlive ) listeners.remove(listener); }
 inline void agent::SetVelocity(float x, float y, float z) { fVelocity[0] = x; fVelocity[1] = y; fVelocity[2] = z; }
 inline void agent::SetVelocity(short k, float f) { fVelocity[k] = f; }
 inline void agent::SetVelocityX(float f) { fVelocity[0] = f; }
@@ -408,6 +417,7 @@ inline void agent::SetDeathByPatch() { fDeathByPatch = true; }
 inline Brain* agent::GetBrain() { return fBrain; }
 inline Retina* agent::GetRetina() { return fRetina; }
 inline gscene& agent::GetScene() { return fScene; }
+inline gcamera &agent::getCamera() { return fCamera; }
 inline frustumXZ& agent::GetFrustum() { return fFrustum; }
 inline gpolyobj* agent::GetAgentObj() { return agentobj; }
 //inline gdlink<agent*>* agent::GetListLink() { return listLink; }

@@ -38,54 +38,23 @@ bool Resources::loadPolygons( gpolyobj *poly,
 }
 
 //---------------------------------------------------------------------------
-// Resources::parseWorldFile()
+// Resources::parseConfiguration()
 //---------------------------------------------------------------------------
 
-void Resources::parseWorldFile( proplib::Document **ret_docWorldFile,
-								proplib::Document **ret_docSchema,
-								const char *argWorldfilePath)
+void Resources::parseConfiguration( proplib::Document **ret_docValues,
+									proplib::Document **ret_docSchema,
+									string valuesPath,
+									string schemaPath )
 {
-	string worldfilePath;
-	string schemaPath;
+	if( !exists(valuesPath) )
+		error(2, "Failed locating file", valuesPath.c_str() );
 
-	if( argWorldfilePath )
-	{
-		if( !exists( argWorldfilePath ) )
-			error(2, "Failed locating file", argWorldfilePath );
-
-		worldfilePath = argWorldfilePath;
-	}
-	else
-	{
-		if( exists( "./current.wf" ) )
-			worldfilePath = "./current.wf";
-		else if( exists( "./nominal.wf" ) )
-			worldfilePath = "./nominal.wf";
-		else
-			worldfilePath = "";
-	}
-
-	proplib::Document *docWorldFile;
-	if( worldfilePath == "" )
-	{
-		docWorldFile = new proplib::Document( "(from schema)", "" );
-	}
-	else
-	{
-		docWorldFile = proplib::Parser::parseFile( worldfilePath.c_str() );
-	}
-
-	if( exists( "./.dumpwf" ) )
-	{
-		docWorldFile->write( cout );
-	}
-
-	schemaPath = "./default.wfs";
+	proplib::Document *docValues = proplib::Parser::parseFile( valuesPath.c_str() );
 
 	proplib::Document *docSchema = proplib::Parser::parseFile( schemaPath.c_str() );
-	proplib::Schema::apply( docSchema, docWorldFile );
+	proplib::Schema::apply( docSchema, docValues );
 
-	*ret_docWorldFile = docWorldFile;
+	*ret_docValues = docValues;
 	*ret_docSchema = docSchema;
 }
 

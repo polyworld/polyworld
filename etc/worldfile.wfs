@@ -2987,16 +2987,6 @@ CheckPointFrequency {
   default 1000	# sadly, still not used
 }
 
-StatusFrequency {
-  type    INT
-  default 100
-}
-
-StatusToStdout {
-  type    BOOL
-  default False
-}
-
 RetinaWidth {
   type    INT
   default 22
@@ -3141,63 +3131,6 @@ GroundClearance {
   default 0.0
 }
 
-CameraColor {
-  type    OBJECT
-  default {
-    R    0.3
-    G    0.3
-    B    0.3
-  }
-
-  properties {
-    R {
-      type    FLOAT
-      min     0.0
-      max     1.0
-    }
-    G {
-      type    FLOAT
-      min     0.0
-      max     1.0
-    }
-    B {
-      type    FLOAT
-      min     0.0
-      max     1.0
-    }
-  }
-}
-
-CameraRadius {
-  type    FLOAT
-  default 0.6
-}
-
-CameraHeight {
-  type    FLOAT
-  default 0.35
-}
-
-CameraRotationRate {
-  type    FLOAT
-  default 0.09
-}
-
-CameraAngleStart {
-  type    FLOAT
-  default 0.0
-}
-
-CameraFieldOfView {
-  type    FLOAT
-  default 90.0
-}
-
-BrainMonitorFrequency {
-  type    INT
-  default 1
-}
-
 GrayCoding {
   type    BOOL
   default False
@@ -3222,11 +3155,6 @@ RecordNeuralComplexityFiles {
 RecordFrequency {
   type    INT
   default 1000
-}
-
-RecordMovie {
-  type    BOOL
-  default $( RecordAll )
 }
 
 RecordGeneSeparation {
@@ -3317,11 +3245,6 @@ BestRecentBrainFunctionRecordFrequency {
 RecordGeneStats {
   type    BOOL
   default $( RecordAll )
-}
-
-RecordPerformanceStats {
-  type    BOOL
-  default False	# only affects recording of frame rate in stat files
 }
 
 RecordFoodPatchStats {
@@ -3480,44 +3403,9 @@ Vision {
   default True	# make always true
 }
 
-ShowVision {
-  type    BOOL
-  default True
-}
-
-MonitorAgentRank {
-  type    INT
-  default 1		# always initialize to 1
-}
-
 MonitorGeneSeparation {
   type    BOOL
   default False	# use visibility of the gene separation window and fRecordGeneSeparation in their respective places
-}
-
-ChartBorn {
-  type    BOOL
-  default True	# base it on window visibility; be careful as this metric is displayed and printed in stats
-}
-
-ChartFitness {
-  type    BOOL
-  default True	# base on window visibility
-}
-
-ChartFoodEnergy {
-  type    BOOL
-  default True	# base on window visibility
-}
-
-ChartPopulation {
-  type    BOOL
-  default True	# base on window visibility
-}
-
-ChartGeneSeparation {
-  type    BOOL
-  default False	# base on window visibility
 }
 
 MinBiasLrate {
@@ -3528,16 +3416,6 @@ MinBiasLrate {
 MaxBiasLrate {
   type    FLOAT
   default 0.0	# set to zero or disable entirely
-}
-
-OverHeadRank {
-  type    INT
-  default 1		# just always initialize fOverHeadRank to 1
-}
-
-AgentTracking {
-  type    BOOL
-  default True	# base on tracking/overhead-view window visibility
 }
 
 #********************************************************************************

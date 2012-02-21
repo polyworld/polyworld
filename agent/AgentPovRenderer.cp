@@ -145,19 +145,20 @@ void AgentPovRenderer::endStep()
 {
 	fPixelBuffer->doneCurrent();
 
-	emit stepRenderComplete();
+	emit renderComplete();
 }
 
 //---------------------------------------------------------------------------
-// AgentPovRenderer::copyBufferTo
+// AgentPovRenderer::copyTo
 //---------------------------------------------------------------------------
-void AgentPovRenderer::copyBufferTo( QGLWidget *dst)
+void AgentPovRenderer::copyTo( QGLWidget *dst)
 {
-	fPixelBuffer->doneCurrent();
-
-	QImage image = fPixelBuffer->toImage();
-	QPainter painter( dst );
-	painter.drawImage( QRect(0,0,fBufferWidth,fBufferHeight), image );
+	if( fPixelBuffer )
+	{
+		QImage image = fPixelBuffer->toImage();
+		QPainter painter( dst );
+		painter.drawImage( QRect(0,0,dst->width(),dst->height()), image );
+	}
 }
 
 //---------------------------------------------------------------------------

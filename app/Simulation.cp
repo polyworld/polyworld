@@ -36,20 +36,14 @@
 #include <sys/errno.h>
 #include <assert.h>
 
-// qt
-#include <qapplication.h>
-#include <qdesktopwidget.h>
-
 // Local
 #include "AbstractFile.h"
 #include "AgentPovRenderer.h"
 #include "barrier.h"
 #include "Brain.h"
-#include "BrainMonitorWindow.h"
-#include "ChartWindow.h"
+#include "CameraController.h"
 #include "ContactEntry.h"
 #include "condprop.h"
-#include "AgentPOVWindow.h"
 #include "debug.h"
 #include "food.h"
 #include "globals.h"
@@ -58,11 +52,11 @@
 #include "GenomeUtil.h"
 #include "proplib.h"
 #include "Metabolism.h"
+#include "MonitorManager.h"
 #include "Queue.h"
 #include "RandomNumberGenerator.h"
 #include "Resources.h"
-#include "SceneView.h"
-#include "TextStatusWindow.h"
+#include "SceneRenderer.h"
 #include "PwMovieUtils.h"
 #include "complexity.h"
 
@@ -77,6 +71,11 @@ using namespace condprop;
 using namespace genome;
 using namespace std;
 
+
+// Define directory mode mask the same, except you need execute privileges to use as a directory (go fig)
+#define	PwDirMode ( S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH )
+
+
 //===========================================================================
 // TSimulation
 //===========================================================================
@@ -85,8 +84,6 @@ static long numglobalcreated = 0;    // needs to be static so we only get warned
 
 long TSimulation::fMaxNumAgents;
 long TSimulation::fStep;
-short TSimulation::fOverHeadRank = 1;
-agent* TSimulation::fMonitorAgent = NULL;
 double TSimulation::fFramesPerSecondOverall;
 double TSimulation::fSecondsPerFrameOverall;
 double TSimulation::fFramesPerSecondRecent;
@@ -183,16 +180,10 @@ inline float AverageAngles( float a, float b )
 //---------------------------------------------------------------------------
 // TSimulation::TSimulation
 //---------------------------------------------------------------------------
-TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow, const char *worldfilePath, const bool statusToStdout )
+TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 	:
 		fLockStepWithBirthsDeathsLog(false),
 		fLockstepFile(NULL),
-		fAgentTracking(false),
-//		fMonitorAgentRank(0),
-		fMonitorAgentRankOld(0),
-		fRotateWorld(false),
-//		fOverHeadRank(0),
-//		fMonitorAgent(NULL),
 		fBrainFunctionRecentRecordFrequency(1000),
 		fBestSoFarBrainAnatomyRecordFrequency(0),
 		fBestSoFarBrainFunctionRecordFrequency(0),
@@ -236,61 +227,625 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow, cons
 		
 		fEvents(NULL),
 
-		fSceneView(sceneView),
-		fSceneWindow(sceneWindow),
-		fOverheadWindow(NULL),
-		fBirthrateWindow(NULL),
-		fFitnessWindow(NULL),
-		fFoodEnergyWindow(NULL),
-		fPopulationWindow(NULL),
-		fBrainMonitorWindow(NULL),
+#if false
 		fGeneSeparationWindow(NULL),
-		fAgentPOVWindow(NULL),
-		fTextStatusWindow(NULL),
+#endif
 
-		fAgentPovRenderer(NULL),
 		fMaxSteps(0),
-		fPaused(false),
-		fDelay(0),
 		fDumpFrequency(500),
-		fStatusFrequency(100),
 		fLoadState(false),
-		inited(false),
 		
 		fSolidObjects(0x4),	// only bricks are solid by default, for historical reasons
 
 		fHealing(0),
 		fGroundClearance(0.0),
-		fOverHeadRankOld(0),
-		fOverheadAgent(NULL),
 
-		fChartBorn(true),
-		fChartFitness(true),
-		fChartFoodEnergy(true),
-		fChartPopulation(true),
-//		fShowBrain(false),
-		fShowTextStatus(true),
 		fRecordGeneStats(false),
 		fRecordFoodPatchStats(false),
 		fCalcFoodPatchAgentCounts(false),
-
 		fNewDeaths(0),
 		fNumberFit(0),
 		fFittest(NULL),
-
 		fNumberRecentFit(0),
 		fRecentFittest(NULL),
-		fFogFunction('O'),
-		fBrainMonitorStride(25),
+		fFitI(0),
+		fFitJ(1),
+		fMaxFitness(0.),
+		fAverageFitness(0.),
+
+		fNumberAlive(0),
+		fNumberBorn(0),
+		fNumberBornVirtual(0),
+		fNumberDied(0),
+		fNumberDiedAge(0),
+		fNumberDiedEnergy(0),
+		fNumberDiedFight(0),
+		fNumberDiedEat(0),
+		fNumberDiedEdge(0),
+		fNumberDiedSmite(0),
+		fNumberDiedPatch(0),
+		fNumberCreated(0),
+		fNumberCreatedRandom(0),
+		fNumberCreated1Fit(0),
+		fNumberCreated2Fit(0),
+		fNumberFights(0),
+		fBirthDenials(0),
+		fMiscDenials(0),
+		fLastCreated(0),
+		fMaxGapCreate(0),
+		fNumBornSinceCreated(0),
+
+		fMaxGeneSeparation(0.0),
+		fMinGeneSeparation(1.e+10),
+		fAverageGeneSeparation(5.e+9),
+
 		fGeneSum(NULL),
 		fGeneSum2(NULL),
 		fGeneStatsAgents(NULL),
 		fGeneStatsFile(NULL),
 		fFoodPatchStatsFile(NULL),
 		fNumAgentsNotInOrNearAnyFoodPatch(0),
+		agentPovRenderer(NULL),
 		fConditionalProps( new condprop::PropertyList() )
 {
-	Init( worldfilePath, statusToStdout );
+	fStep = 0;
+
+ 	// Set up graphical constructs
+	Resources::loadPolygons( &fGround, "ground" );
+
+    srand(1);
+
+
+	proplib::Interpreter::init();
+	proplib::Document *docWorldFile;
+	proplib::Document *docSchema;
+	Resources::parseConfiguration( &docWorldFile, &docSchema, worldfilePath, "./etc/worldfile.wfs" );
+
+	ProcessWorldFile( docWorldFile );
+	
+	// Init array tracking number of agents with a given metabolism
+	assert( Metabolism::getNumberOfDefinitions() < MAXMETABOLISMS );
+	for( int i = 0; i < Metabolism::getNumberOfDefinitions(); i++ )
+	{
+		fNumberAliveWithMetabolism[i] = 0;
+	}
+	
+	if( fStaticTimestepGeometry )
+	{
+		// Brains execute in parallel, so we need brain-local RNG state
+		RandomNumberGenerator::set( RandomNumberGenerator::NERVOUS_SYSTEM,
+									RandomNumberGenerator::LOCAL );
+	}
+
+	InitNeuralValues();	 // Must be called before genome and brain init
+	
+    Brain::braininit();
+    agent::agentinit();
+	
+	GenomeUtil::createSchema();
+
+		
+	 // Following is part of one way to speed up the graphics
+	 // Note:  this code must agree with the agent sizing in agent::grow()
+	 // and the food sizing in food::initlen().
+
+	float maxagentlenx = agent::gMaxAgentSize / sqrt(genome::gMinmaxspeed);
+	float maxagentlenz = agent::gMaxAgentSize * sqrt(genome::gMaxmaxspeed);
+	float maxagentradius = 0.5 * sqrt(maxagentlenx*maxagentlenx + maxagentlenz*maxagentlenz);
+	float maxfoodlen = 0.75 * food::gMaxFoodEnergy / food::gSize2Energy;
+	float maxfoodradius = 0.5 * sqrt(maxfoodlen * maxfoodlen * 2.0);
+	food::gMaxFoodRadius = maxfoodradius;
+	agent::gMaxRadius = maxagentradius > maxfoodradius ?
+						  maxagentradius : maxfoodradius;
+
+    if( fNumberFit > 0 )
+    {
+        fFittest = new FitStruct*[fNumberFit];
+		Q_CHECK_PTR( fFittest );
+
+        for (int i = 0; i < fNumberFit; i++)
+        {
+			fFittest[i] = new FitStruct;
+			Q_CHECK_PTR( fFittest[i] );
+            fFittest[i]->genes = GenomeUtil::createGenome();
+			Q_CHECK_PTR( fFittest[i]->genes );
+            fFittest[i]->fitness = 0.0;
+			fFittest[i]->agentID = 0;
+			fFittest[i]->complexity = 0.0;
+        }
+		
+        fRecentFittest = new FitStruct*[fNumberRecentFit];
+		Q_CHECK_PTR( fRecentFittest );
+
+        for( int i = 0; i < fNumberRecentFit; i++ )
+        {
+			fRecentFittest[i] = new FitStruct;
+			Q_CHECK_PTR( fRecentFittest[i] );
+            fRecentFittest[i]->genes = NULL;	// GenomeUtil::createGenome()->legacy;	// we don't save the genes in the bestRecent list
+            fRecentFittest[i]->fitness = 0.0;
+			fRecentFittest[i]->agentID = 0;
+			fRecentFittest[i]->complexity = 0.0;
+        }
+		
+        for( int id = 0; id < fNumDomains; id++ )
+        {
+            fDomains[id].fittest = new FitStruct*[fNumberFit];
+			Q_CHECK_PTR( fDomains[id].fittest );
+
+            for (int i = 0; i < fNumberFit; i++)
+            {
+				fDomains[id].fittest[i] = new FitStruct;
+				Q_CHECK_PTR( fDomains[id].fittest[i] );
+                fDomains[id].fittest[i]->genes = GenomeUtil::createGenome();
+				Q_CHECK_PTR( fDomains[id].fittest[i]->genes );
+                fDomains[id].fittest[i]->fitness = 0.0;
+				fDomains[id].fittest[i]->agentID = 0;
+				fDomains[id].fittest[i]->complexity = 0.0;
+            }
+        }
+    }
+
+	if( fSmiteFrac > 0.0 )
+	{
+        for( int id = 0; id < fNumDomains; id++ )
+        {
+			fDomains[id].fNumLeastFit = 0;
+			fDomains[id].fMaxNumLeastFit = lround( fSmiteFrac * fDomains[id].maxNumAgents );
+			
+			smPrint( "for domain %d fMaxNumLeastFit = %d\n", id, fDomains[id].fMaxNumLeastFit );
+			
+			if( fDomains[id].fMaxNumLeastFit > 0 )
+			{
+				fDomains[id].fLeastFit = new agent*[fDomains[id].fMaxNumLeastFit];
+				
+				for( int i = 0; i < fDomains[id].fMaxNumLeastFit; i++ )
+					fDomains[id].fLeastFit[i] = NULL;
+			}
+        }
+	}
+
+	// Set up the run directory and its subsidiaries
+	char s[256];
+	char t[256];
+
+#define MKDIR(PATH)												\
+	if( mkdir( PATH, PwDirMode ) )								\
+		eprintf( "Error making %s directory (%d)\n", PATH, errno );
+
+	// First save the old directory, if it exists
+	sprintf( s, "run" );
+	sprintf( t, "run_%ld", time(NULL) );
+	(void) rename( s, t );
+
+	MKDIR( "run" );
+	MKDIR( "run/stats" );
+
+	MKDIR( "run/genome" );
+	MKDIR( "run/genome/meta" );
+	if( fRecordGenomes )
+	{
+		MKDIR( "run/genome/agents" );
+	}
+
+	if( fRecordPosition || fPositionSeedsFromFile || fRecordBarrierPosition )
+	{
+		MKDIR( "run/motion" );
+		MKDIR( "run/motion/position" );
+		if( fRecordPosition )
+			MKDIR( "run/motion/position/agents" );
+		if( fRecordBarrierPosition )
+			MKDIR( "run/motion/position/barriers" );
+	}
+
+	if( fRecordContacts || fRecordCollisions || fRecordCarry || fRecordEnergy )
+	{
+		MKDIR( "run/events" );
+	}
+
+	if( fConditionalProps->isLogging() )
+	{
+		MKDIR( "run/condprop" );
+	}
+	fConditionalProps->init();
+
+	if( fBestSoFarBrainAnatomyRecordFrequency || fBestSoFarBrainFunctionRecordFrequency ||
+		fBestRecentBrainAnatomyRecordFrequency || fBestRecentBrainFunctionRecordFrequency ||
+		fBrainAnatomyRecordAll || fBrainFunctionRecordAll || fBrainFunctionRecentRecordFrequency ||
+		fBrainAnatomyRecordSeeds || fBrainFunctionRecordSeeds || fAdamiComplexityRecordFrequency || fRecordPosition)
+	{
+		int agent_factor = 0;
+
+		if( RecordBrainFunction( 1 ) ) agent_factor++;
+		if( fRecordPosition ) agent_factor++;
+
+		int nfiles = 100 + (fMaxNumAgents * agent_factor);
+
+		// If we're going to be saving info on all these files, must increase the number allowed open
+		if( SetMaximumFiles( nfiles ) )
+		  {
+		    eprintf( "Error setting maximum files to %d (%d) -- consult ulimit\n", nfiles, errno );
+		    //exit(1);
+		  }
+
+		if( mkdir( "run/brain", PwDirMode ) )
+			eprintf( "Error making run/brain directory (%d)\n", errno );
+			
+			
+	#define RecordRandomBrainAnatomies 0
+	#if RecordRandomBrainAnatomies
+		if( mkdir( "run/brain/random", PwDirMode ) )
+			eprintf( "Error making run/brain/random directory (%d)\n", errno );
+	#endif
+		if( fBestSoFarBrainAnatomyRecordFrequency || fBestRecentBrainAnatomyRecordFrequency || fBrainAnatomyRecordAll || fBrainAnatomyRecordSeeds )
+			if( mkdir( "run/brain/anatomy", PwDirMode ) )
+				eprintf( "Error making run/brain/anatomy directory (%d)\n", errno );
+		if( fBrainFunctionRecentRecordFrequency || fBestSoFarBrainFunctionRecordFrequency || fBestRecentBrainFunctionRecordFrequency || fBrainFunctionRecordAll || fBrainFunctionRecordSeeds )
+			if( mkdir( "run/brain/function", PwDirMode ) )
+				eprintf( "Error making run/brain/function directory (%d)\n", errno );
+		if( fBestSoFarBrainAnatomyRecordFrequency || fBestSoFarBrainFunctionRecordFrequency )
+			if( mkdir( "run/brain/bestSoFar", PwDirMode ) )
+				eprintf( "Error making run/brain/bestSoFar directory (%d)\n", errno );
+		if( fBestRecentBrainAnatomyRecordFrequency || fBestRecentBrainFunctionRecordFrequency )
+			if( mkdir( "run/brain/bestRecent", PwDirMode ) )
+				eprintf( "Error making run/brain/bestRecent directory (%d)\n", errno );
+		if( fBrainAnatomyRecordSeeds || fBrainFunctionRecordSeeds )
+		{
+			if( mkdir( "run/brain/seeds", PwDirMode ) )
+				eprintf( "Error making run/brain/seeds directory (%d)\n", errno );
+			if( fBrainAnatomyRecordSeeds )
+				if( mkdir( "run/brain/seeds/anatomy", PwDirMode ) )
+					eprintf( "Error making run/brain/seeds/anatomy directory (%d)\n", errno );
+			if( fBrainFunctionRecordSeeds )
+				if( mkdir( "run/brain/seeds/function", PwDirMode ) )
+					eprintf( "Error making run/brain/seeds/function directory (%d)\n", errno );
+		}
+		if( fBrainFunctionRecentRecordFrequency )
+		{
+			if( mkdir( "run/brain/Recent", PwDirMode ) )
+				eprintf( "Error making run/brain/Recent directory (%d)\n", errno );
+			if( mkdir( "run/brain/Recent/0", PwDirMode ) )
+				eprintf( "Error making run/brain/Recent/0 directory (%d)\n", errno );
+			fCurrentRecentEpoch = fBrainFunctionRecentRecordFrequency;
+			sprintf( t, "run/brain/Recent/%ld", fCurrentRecentEpoch );
+			if( mkdir( t, PwDirMode ) )
+				eprintf( "Error making %s directory (%d)\n", t, errno );
+		}
+	}
+
+
+	if( fRecordAdamiComplexity )
+	{
+		FILE * File;
+		
+		if( (File = fopen("run/genome/AdamiComplexity-1bit.txt", "a")) == NULL )
+		{
+			cerr << "could not open run/genome/AdamiComplexity-1bit.txt for writing [1]. Exiting." << endl;
+			exit(1);
+		}
+		fprintf( File, "%% BitsInGenome: %d WindowSize: 1\n", GenomeUtil::schema->getMutableSize() * 8 );		// write the number of bits into the top of the file.
+		fclose( File );
+
+		if( (File = fopen("run/genome/AdamiComplexity-2bit.txt", "a")) == NULL )
+		{
+			cerr << "could not open run/genome/AdamiComplexity-2bit.txt for writing [1]. Exiting." << endl;
+			exit(1);
+		}
+		fprintf( File, "%% BitsInGenome: %d WindowSize: 2\n", GenomeUtil::schema->getMutableSize() * 8 );		// write the number of bits into the top of the file.
+		fclose( File );
+
+
+		if( (File = fopen("run/genome/AdamiComplexity-4bit.txt", "a")) == NULL )
+		{
+			cerr << "could not open run/genome/AdamiComplexity-4bit.txt for writing [1]. Exiting." << endl;
+			exit(1);
+		}
+		fprintf( File, "%% BitsInGenome: %d WindowSize: 4\n", GenomeUtil::schema->getMutableSize() * 8 );		// write the number of bits into the top of the file.
+		fclose( File );
+
+		if( (File = fopen("run/genome/AdamiComplexity-summary.txt", "a")) == NULL )
+		{
+			cerr << "could not open run/genome/AdamiComplexity-summary.txt for writing [1]. Exiting." << endl;
+			exit(1);
+		}
+		fprintf( File, "%% Timestep 1bit 2bit 4bit\n" );
+		fclose( File );
+	}
+	
+	if( fRecordBirthsDeaths )
+	{
+		FILE * File;
+		if( (File = fopen("run/BirthsDeaths.log", "a")) == NULL )
+		{
+			cerr << "could not open run/BirthsDeaths.log for writing [1]. Exiting." << endl;
+			exit(1);
+		}
+		fprintf( File, "%% Timestep Event Agent# Parent1 Parent2\n" );
+		fclose( File );
+	}
+
+	if( fLockStepWithBirthsDeathsLog )
+	{
+
+		cout << "*** Running in LOCKSTEP MODE with file 'LOCKSTEP-BirthsDeaths.log' ***" << endl;
+
+		if( (fLockstepFile = fopen("LOCKSTEP-BirthsDeaths.log", "r")) == NULL )
+		{
+			cerr << "ERROR/Init(): Could not open 'LOCKSTEP-BirthsDeaths.log' for reading. Exiting." << endl;
+			exit(1);
+		}
+		
+		char LockstepLine[512];
+		int currentpos=0;			// current position in fLockstepFile.
+
+		// bypass any header information
+		while( (fgets(LockstepLine, sizeof(LockstepLine), fLockstepFile)) != NULL )
+		{
+			if( LockstepLine[0] == '#' || LockstepLine[0] == '%' ) { currentpos = ftell( fLockstepFile ); continue; 	}				// if the line begins with a '#' or '%' (implying it is a header line), skip it.
+			else { fseek( fLockstepFile, currentpos, 0 ); break; }
+		}
+		
+		if( feof(fLockstepFile) )	// this should never happen, but lets make sure.
+		{
+			cout << "ERROR/Init(): Did not find any data lines in 'LOCKSTEP-BirthsDeaths.log'.  Exiting." << endl;
+			exit(1);
+		}
+		
+		SYSTEM( "cp LOCKSTEP-BirthsDeaths.log run/" );		// copy the LOCKSTEP file into the run/ directory.
+		SetNextLockstepEvent();								// setup for the first timestep in which Birth/Death events occurred.
+
+	}
+
+	// If we're going to record the gene means and std devs, we need to allocate a couple of stat arrays
+	if( fRecordGeneStats )
+	{
+		fGeneSum  = (unsigned long*) malloc( sizeof( *fGeneSum  ) * GenomeUtil::schema->getMutableSize() );
+		Q_CHECK_PTR( fGeneSum );
+		fGeneSum2 = (unsigned long*) malloc( sizeof( *fGeneSum2 ) * GenomeUtil::schema->getMutableSize() );
+		Q_CHECK_PTR( fGeneSum2 );
+		fGeneStatsAgents = (agent**) malloc( sizeof( *fGeneStatsAgents ) * GetMaxAgents() );
+		
+		fGeneStatsFile = fopen( "run/genome/genestats.txt", "w" );
+		Q_CHECK_PTR( fGeneStatsFile );
+		
+		fprintf( fGeneStatsFile, "%d\n", GenomeUtil::schema->getMutableSize() );
+	}
+
+#define PrintGeneIndexesFlag 1
+#if PrintGeneIndexesFlag
+	{
+		FILE* f = fopen( "run/genome/meta/geneindex.txt", "w" );
+		Q_CHECK_PTR( f );
+		
+		GenomeUtil::schema->printIndexes( f );
+		
+		fclose( f );
+	}
+	{
+		FILE* f = fopen( "run/genome/meta/genelayout.txt", "w" );
+		Q_CHECK_PTR( f );
+		
+		GenomeUtil::schema->printIndexes( f, GenomeUtil::layout );
+		
+		fclose( f );
+
+		SYSTEM( "cat run/genome/meta/genelayout.txt | sort -n > run/genome/meta/genelayout-sorted.txt" );
+	}
+	{
+		FILE* f = fopen( "run/genome/meta/genetitle.txt", "w" );
+		Q_CHECK_PTR( f );
+		
+		GenomeUtil::schema->printTitles( f );
+		
+		fclose( f );
+	}
+	{
+		FILE* f = fopen( "run/genome/meta/generange.txt", "w" );
+		Q_CHECK_PTR( f );
+		
+		GenomeUtil::schema->printRanges( f );
+		
+		fclose( f );		
+	}
+#endif
+
+	InitGenomeSubsetLog();
+
+
+	//If we're recording the number of agents in or near various foodpatches, then open the stat file
+	if( fRecordFoodPatchStats )
+	{
+			fFoodPatchStatsFile = fopen( "run/foodpatchstats.txt", "w" );
+			Q_CHECK_PTR( fFoodPatchStatsFile );
+	}
+	
+    // Pass ownership of the cast to the stage [TODO] figure out ownership issues
+    fStage.SetCast(&fWorldCast);
+
+	fFoodEnergyIn = 0.0;
+	fFoodEnergyOut = 0.0;
+	fEnergyEaten.zero();
+
+	srand48(fGenomeSeed);
+
+	agentPovRenderer = new AgentPovRenderer( fMaxNumAgents,
+											 brain::retinawidth,
+											 brain::retinaheight );
+
+	if (!fLoadState)
+	{
+		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+		// ^^^ MASTER TASK ExecInitAgents
+		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+		class ExecInitAgents : public ITask
+		{
+		public:
+			virtual void task_exec( TSimulation *sim )
+			{
+				sim->InitAgents();
+			}
+		} execInitAgents;
+
+		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		// !!! EXEC MASTER
+		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		fScheduler.execMasterTask( this,
+								   execInitAgents,
+								   !fParallelInitAgents );
+			
+		// Add food to the food patches until they each have their initFoodCount number of food pieces
+		for( int domainNumber = 0; domainNumber < fNumDomains; domainNumber++ )
+		{
+			fDomains[domainNumber].numFoodPatchesGrown = 0;
+			
+			for( int foodPatchNumber = 0; foodPatchNumber < fDomains[domainNumber].numFoodPatches; foodPatchNumber++ )
+			{
+				if( fDomains[domainNumber].fFoodPatches[foodPatchNumber].on( 0 ) )
+				{
+					for( int j = 0; j < fDomains[domainNumber].fFoodPatches[foodPatchNumber].initFoodCount; j++ )
+					{
+						if( fDomains[domainNumber].foodCount < fDomains[domainNumber].maxFoodCount )
+						{
+							AddFood( domainNumber, foodPatchNumber );
+						}
+					}
+					fDomains[domainNumber].fFoodPatches[foodPatchNumber].initFoodGrown( true );
+					fDomains[domainNumber].numFoodPatchesGrown++;
+				}
+			}
+		}
+
+		for( int domainNumber = 0; domainNumber < fNumDomains; domainNumber++ )
+		{
+			for( int brickPatchNumber = 0; brickPatchNumber < fDomains[domainNumber].numBrickPatches; brickPatchNumber++ )
+			{
+				fDomains[domainNumber].fBrickPatches[brickPatchNumber].updateOn( 0 );
+			}
+		}
+	}
+
+	fEatStatistics.Init();
+
+    fTotalFoodEnergyIn = fFoodEnergyIn;
+    fTotalFoodEnergyOut = fFoodEnergyOut;
+    fTotalEnergyEaten = fEnergyEaten;
+    fAverageFoodEnergyIn = 0.0;
+    fAverageFoodEnergyOut = 0.0;
+
+    fGround.sety(-fGroundClearance);
+    fGround.setscale(globals::worldsize);
+    fGround.setcolor(fGroundColor);
+    fWorldSet.Add(&fGround);
+    fStage.SetSet(&fWorldSet);
+
+	// Add barriers
+	barrier* b = NULL;
+	while( barrier::gXSortedBarriers.next(b) )
+		fWorldSet.Add(b);	
+
+#define DebugGenetics false
+#if DebugGenetics
+	// This little snippet of code confirms that genetic copying, crossover, and mutation are behaving somewhat reasonably
+	objectxsortedlist::gXSortedObjects.reset();
+	agent* c1 = NULL;
+	agent* c2 = NULL;
+	Genome* g1 = NULL;
+	Genome* g2 = NULL;
+	Genome g1c(GenomeUtil::schema), g1x2(GenomeUtil::schema), g1x2m(GenomeUtil::schema);
+	objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&c1 );
+	objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&c2 );
+	g1 = c1->Genes();
+	g2 = c2->Genes();
+	cout << "************** G1 **************" nl;
+	g1->print();
+	cout << "************** G2 **************" nl;
+	g2->print();
+	g1c.copyFrom( g1 );
+	g1x2.crossover( g1, g2, false );
+	g1x2m.crossover( g1, g2, true );
+	cout << "************** G1c **************" nl;
+	g1c.print();
+	cout << "************** G1x2 **************" nl;
+	g1x2.print();
+	cout << "************** G1x2m **************" nl;
+	g1x2m.print();
+	exit(0);
+#endif
+	
+	// Set up gene Separation monitoring
+	if (fMonitorGeneSeparation)
+    {
+		fGeneSepVals = new float[fMaxNumAgents * (fMaxNumAgents - 1) / 2];
+        fNumGeneSepVals = 0;
+        CalculateGeneSeparationAll();
+
+        if (fRecordGeneSeparation)
+        {
+            fGeneSeparationFile = fopen("run/genesep", "w");
+	    	RecordGeneSeparation();
+        }
+
+#if false
+		if (fChartGeneSeparation && fGeneSeparationWindow != NULL)
+			fGeneSeparationWindow->AddPoint(fGeneSepVals, fNumGeneSepVals);
+#endif
+    }
+	
+	// ---
+	// --- Init Monitors
+	// ---
+	monitorManager = new MonitorManager( this, monitorfilePath );
+
+	InitSeparationsLog();
+	InitLifeSpanLog();
+	InitContactsLog();
+	InitCollisionsLog();
+	InitCarryLog();
+	InitEnergyLog();
+	InitComplexityLog( fBrainFunctionRecentRecordFrequency );
+// 	InitAvrComplexityLog();
+	
+	if( fComplexityFitnessWeight != 0.0 || fRecordComplexity )
+	{
+		bool eventFiltering = false;
+		for( unsigned int i = 0; i < fComplexityType.size(); i++ )
+		{
+			if( islower( fComplexityType[i] ) )
+			{
+				eventFiltering = true;
+				break;
+			}
+		}
+		if( eventFiltering )
+			fEvents = new Events( fMaxSteps );
+	}
+
+	{
+		if( docWorldFile->getPath() != "" )
+		{
+			SYSTEM( ("cp " + docWorldFile->getPath() + " run/original.wf").c_str() );
+		}
+		SYSTEM( ("cp " + docSchema->getPath() + " run/original.wfs").c_str() );
+
+		{
+			ofstream out( "run/normalized.wf" );
+			docWorldFile->write( out );
+		}
+
+		{
+			ofstream out( "run/reduced.wf" );
+			proplib::Schema::reduce( docSchema, docWorldFile, false );
+			docWorldFile->write( out );
+		}
+		{
+			ofstream out( "run/normalized.wfs" );
+			docSchema->write( out );
+		}
+
+		delete docWorldFile;
+		delete docSchema;
+
+		proplib::Interpreter::dispose();
+	}
 }
 
 
@@ -299,71 +854,39 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow, cons
 //---------------------------------------------------------------------------
 TSimulation::~TSimulation()
 {
-	Stop();
+	agent *a;
 
+	objectxsortedlist::gXSortedObjects.reset();
+	while (objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&a))
+	{
+		Kill( a, LifeSpan::DR_SIMEND );
+	}	
 
-	// If we were keeping the simulation in sync with a LOCKSTEP-BirthsDeaths.log, close the file now that the simulation is over.
+	delete monitorManager;
+
+	EndGenomeSubsetLog();
+	EndSeparationsLog();
+	EndLifeSpanLog();
+	EndContactsLog();
+	EndCollisionsLog();
+	EndCarryLog();
+	EndEnergyLog();
+
 	if( fLockstepFile )
-		fclose( fLockstepFile );
-	
-	if( fGeneSum )
-		free( fGeneSum );
+		fclose( fLockstepFile );	
 
-	if( fGeneSum2 )
-		free( fGeneSum2 );
-
-    if( fGeneStatsAgents )
-		free( fGeneStatsAgents );
-		
 	if( fGeneStatsFile )
 		fclose( fGeneStatsFile );
 
-	// Close windows and save prefs
-	if (fBirthrateWindow != NULL)
-		delete fBirthrateWindow;
+	{
+		barrier* b;
+		barrier::gXSortedBarriers.reset();
+		while( barrier::gXSortedBarriers.next( b ) )
+			delete b;
+	}
 
-	if (fFitnessWindow != NULL)
-		delete fFitnessWindow;
+	fConditionalProps->dispose();
 
-	if (fFoodEnergyWindow != NULL)
-		delete fFoodEnergyWindow;
-
-	if (fPopulationWindow != NULL)
-		delete fPopulationWindow;
-	
-	if (fBrainMonitorWindow != NULL)
-		delete fBrainMonitorWindow;	
-
-	if (fGeneSeparationWindow != NULL)
-		delete fGeneSeparationWindow;
-
-	if (fAgentPOVWindow != NULL)
-		delete fAgentPOVWindow;
-
-	if (fTextStatusWindow != NULL)
-		delete fTextStatusWindow;
-	
-	if (fOverheadWindow != NULL)
-		delete fOverheadWindow;
-
-	delete fAgentPovRenderer;
-}
-
-
-//---------------------------------------------------------------------------
-// TSimulation::Start
-//---------------------------------------------------------------------------
-void TSimulation::Start()
-{
-
-}
-
-
-//---------------------------------------------------------------------------
-// TSimulation::Stop
-//---------------------------------------------------------------------------
-void TSimulation::Stop()
-{
 	// delete all objects
 	gobject* gob = NULL;
 
@@ -383,12 +906,12 @@ void TSimulation::Stop()
 	// TODO who owns items on stage?
 	fStage.Clear();
 
-    for (short id = 0; id < fNumDomains; id++)
-    {
-        if (fDomains[id].fittest)
-        {
-            for (int i = 0; i < fNumberFit; i++)
-            {
+	for (short id = 0; id < fNumDomains; id++)
+	{
+		if (fDomains[id].fittest)
+		{
+			for (int i = 0; i < fNumberFit; i++)
+			{
 				if (fDomains[id].fittest[i])
 				{
 					if (fDomains[id].fittest[i]->genes != NULL)
@@ -396,18 +919,18 @@ void TSimulation::Stop()
 					delete fDomains[id].fittest[i];
 				}
 			}
-            delete fDomains[id].fittest;
-        }
+			delete fDomains[id].fittest;
+		}
 		
 		if( fDomains[id].fLeastFit )
 			delete[] fDomains[id].fLeastFit;
-    }
+	}
 
 
-    if (fFittest != NULL)
-    {
-        for (int i = 0; i < fNumberFit; i++)
-        {
+	if (fFittest != NULL)
+	{
+		for (int i = 0; i < fNumberFit; i++)
+		{
 			if (fFittest[i])
 			{
 				if (fFittest[i]->genes != NULL)
@@ -415,26 +938,51 @@ void TSimulation::Stop()
 				delete fFittest[i];
 			}
 		}		
-        delete[] fFittest;
-    }
+		delete[] fFittest;
+	}
 	
-    if( fRecentFittest != NULL )
-    {
-        for( int i = 0; i < fNumberRecentFit; i++ )
-        {
+	if( fRecentFittest != NULL )
+	{
+		for( int i = 0; i < fNumberRecentFit; i++ )
+		{
 			if( fRecentFittest[i] )
 			{
-//				if( fRecentFittest[i]->genes != NULL )	// we don't save the genes in the bestRecent list
-//					delete fFittest[i]->genes;
+				//				if( fRecentFittest[i]->genes != NULL )	// we don't save the genes in the bestRecent list
+				//					delete fFittest[i]->genes;
 				delete fRecentFittest[i];
 			}
 		}		
-        delete[] fRecentFittest;
-    }
+		delete[] fRecentFittest;
+	}
 	
-    Brain::braindestruct();
+	Brain::braindestruct();
 
-    agent::agentdestruct();
+	agent::agentdestruct();
+
+	// If we were keeping the simulation in sync with a LOCKSTEP-BirthsDeaths.log, close the file now that the simulation is over.
+	if( fGeneSum )
+		free( fGeneSum );
+
+	if( fGeneSum2 )
+		free( fGeneSum2 );
+
+    if( fGeneStatsAgents )
+		free( fGeneStatsAgents );
+		
+#if false	
+	if (fGeneSeparationWindow != NULL)
+		delete fGeneSeparationWindow;
+#endif
+	
+	delete agentPovRenderer;
+
+	printf( "Simulation stopped after step %ld\n", fStep );
+
+	{
+		ofstream fout( "run/endStep.txt" );
+		fout << fStep << endl;
+		fout.close();
+	}
 }
 
 
@@ -447,15 +995,7 @@ void TSimulation::Step()
 	static double	sTimePrevious[RecentSteps];
 	static unsigned long frame = 0;
 	double			timeNow;
-	long			oldNumBorn;
-	long			oldNumCreated;
 
-	if( !inited )
-	{
-		printf( "%s: called before TSimulation::Init()\n", __FUNCTION__ );
-		return;
-	}
-	
 	if( (frame == 0) && (fSimulationSeed != 0) )
 	{
 		srand48(fSimulationSeed);
@@ -467,12 +1007,14 @@ void TSimulation::Step()
 	if( fMaxSteps && ((fStep+1) > fMaxSteps) )
 	{
 		End( "MaxSteps" );
+		return;
 	}
 	else if( fEndOnPopulationCrash && 
 			 (objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE) <= fMinNumAgents) )
 	{
 		cerr << "Population crash at step " << fStep << endl;
 		End( "PopulationCrash" );
+		return;
 	}
 		
 	fStep++;
@@ -548,7 +1090,7 @@ void TSimulation::Step()
 
 	// Update all agents, using their neurally controlled behaviors
 	{
-		fAgentPovRenderer->beginStep();
+		agentPovRenderer->beginStep();
 				
 		if( fStaticTimestepGeometry )
 		{
@@ -560,14 +1102,8 @@ void TSimulation::Step()
 		}
 
 		// Swap buffers for the agent POV window when they're all done
-		fAgentPovRenderer->endStep();
+		agentPovRenderer->endStep();
 	}
-
-	if( (fHeuristicFitnessWeight != 0.0) || (fComplexityFitnessWeight != 0.0) || fLockStepWithBirthsDeathsLog )
-		oldNumBorn = fNumberBornVirtual;
-	else
-		oldNumBorn = fNumberBorn;
-	oldNumCreated = fNumberCreated;
 	
 //  if( fDoCPUWork )
 
@@ -634,8 +1170,10 @@ void TSimulation::Step()
         if (fRecordGeneSeparation)
             RecordGeneSeparation();
 
+#if false
 		if (fChartGeneSeparation && fGeneSeparationWindow != NULL)
 			fGeneSeparationWindow->AddPoint(fGeneSepVals, fNumGeneSepVals);
+#endif
     }
 
 	// -------------------------
@@ -657,142 +1195,7 @@ void TSimulation::Step()
 	fAverageFoodEnergyIn = (float(fStep - 1) * fAverageFoodEnergyIn + fFoodEnergyIn) / float(fStep);
 	fAverageFoodEnergyOut = (float(fStep - 1) * fAverageFoodEnergyOut + fFoodEnergyOut) / float(fStep);
 	
-	// Update the various graphical windows
-	if (fGraphics)
-	{
-		fSceneView->Draw();
-		
-		// Text Status window
-		fTextStatusWindow->Draw();
-		
-		// Overhead window
-		if (fOverHeadRank)
-		{
-			if (!fAgentTracking
-				|| (fOverHeadRank != fOverHeadRankOld)
-				|| !fOverheadAgent
-				|| !(fOverheadAgent->Alive()))
-			{
-				fOverheadAgent = fCurrentFittestAgent[fOverHeadRank - 1];
-				fOverHeadRankOld = fOverHeadRank;
-			}
-			
-			if (fOverheadAgent != NULL)
-			{
-				fOverheadCamera.setx(fOverheadAgent->x());
-                                fOverheadCamera.setz(fOverheadAgent->z());
-			}
-		}
-		//Update the title of the overhead window with the rank, agent number and whether or not we are tracking (T) (CMB 3/26/06)
-		if( fOverheadWindow && fOverheadWindow->isVisible() && fOverheadAgent)
-		{
-			char overheadTitle[64];
-			if (fAgentTracking)
-			{
-			    sprintf( overheadTitle, "Overhead View (T%ld:%ld)", (long int) fOverHeadRank, fOverheadAgent->Number() );
-			}else{			
-			    sprintf( overheadTitle, "Overhead View (%ld:%ld)", (long int) fOverHeadRank, fOverheadAgent->Number() );
-			}
-			fOverheadWindow->setWindowTitle( QString(overheadTitle) );			
-		}
-		fOverheadWindow->Draw();
-		
-		// Born / (Born + Created) window
-		if (fChartBorn
-			&& fBirthrateWindow != NULL
-		/*  && fBirthrateWindow->isVisible() */
-		   )
-		{
-			bool newBirths;
-			float birthRatio;
-			if( (fHeuristicFitnessWeight != 0.0) || (fComplexityFitnessWeight != 0.0) || fLockStepWithBirthsDeathsLog )
-			{
-				newBirths = oldNumBorn != fNumberBornVirtual;
-				birthRatio = float( fNumberBornVirtual ) / float( fNumberBornVirtual + fNumberCreated );
-			}
-			else
-			{
-				newBirths = oldNumBorn != fNumberBorn;
-				birthRatio = float( fNumberBorn ) / float( fNumberBorn + fNumberCreated );
-			}
-			if( newBirths || (oldNumCreated != fNumberCreated) )
-				fBirthrateWindow->AddPoint( birthRatio );
-		}
-
-		// Fitness window
-		if( fChartFitness && fFitnessWindow != NULL /* && fFitnessWindow->isVisible() */ )
-		{
-			fFitnessWindow->AddPoint(0, fMaxFitness );
-			fFitnessWindow->AddPoint(1, fCurrentMaxFitness[0] );
-			fFitnessWindow->AddPoint(2, fAverageFitness );
-		}
-		
-		// Energy flux window
-		if( fChartFoodEnergy && fFoodEnergyWindow != NULL /* && fFoodEnergyWindow->isVisible() */ )
-		{
-			fFoodEnergyWindow->AddPoint(0, (fFoodEnergyIn - fFoodEnergyOut) / (fFoodEnergyIn + fFoodEnergyOut));
-			fFoodEnergyWindow->AddPoint(1, (fTotalFoodEnergyIn - fTotalFoodEnergyOut) / (fTotalFoodEnergyIn + fTotalFoodEnergyOut));
-			fFoodEnergyWindow->AddPoint(2, (fAverageFoodEnergyIn - fAverageFoodEnergyOut) / (fAverageFoodEnergyIn + fAverageFoodEnergyOut));
-		}
-		
-		// Population window
-		if( fChartPopulation && fPopulationWindow != NULL /* && fPopulationWindow->isVisible() */ )
-		{				
-			{
-				fPopulationWindow->AddPoint(0, float(objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE)));
-			}				
-			
-			if (fNumDomains > 1)
-			{
-				for (int id = 0; id < fNumDomains; id++)
-					fPopulationWindow->AddPoint((id + 1), float(fDomains[id].numAgents));
-			}
-		}
-
-//		dbprintf( "age=%ld, rank=%d, rankOld=%d, tracking=%s, fittest=%08lx, monitored=%08lx, alive=%s\n",
-//				  fStep, fMonitorAgentRank, fMonitorAgentRankOld, BoolString( fAgentTracking ), (ulong) fCurrentFittestAgent[fMonitorAgentRank-1], (ulong) fMonitorAgent, BoolString( !(!fMonitorAgent || !fMonitorAgent->Alive()) ) );
-
-		// Brain window
-		if ((fMonitorAgentRank != fMonitorAgentRankOld)
-			 || (fMonitorAgentRank && !fAgentTracking && (fCurrentFittestAgent[fMonitorAgentRank - 1] != fMonitorAgent))
-			 || (fMonitorAgentRank && fAgentTracking && (!fMonitorAgent || !fMonitorAgent->Alive())))
-		{			
-			if (fMonitorAgent != NULL)
-			{
-				if (fBrainMonitorWindow != NULL)
-					fBrainMonitorWindow->StopMonitoring();
-			}					
-							
-			if (fMonitorAgentRank && fBrainMonitorWindow != NULL && fBrainMonitorWindow->isVisible() )
-			{
-				Q_CHECK_PTR(fBrainMonitorWindow);
-				fMonitorAgent = fCurrentFittestAgent[fMonitorAgentRank - 1];
-				fBrainMonitorWindow->StartMonitoring(fMonitorAgent);					
-			}
-			else
-			{
-				fMonitorAgent = NULL;
-			}
-		
-			fMonitorAgentRankOld = fMonitorAgentRank;			
-		}
-		//Added T for title if we are in tracking mode (CMB 3/26/06)
-		if( fBrainMonitorWindow && fBrainMonitorWindow->isVisible() && fMonitorAgent && (fStep % fBrainMonitorStride == 0) )
-		{
-			char title[64];
-			if (fAgentTracking)
-			{
-			    sprintf( title, "Brain Monitor (T%ld:%ld)", fMonitorAgentRank, fMonitorAgent->Number() );
-			}else{			
-			    sprintf( title, "Brain Monitor (%ld:%ld)", fMonitorAgentRank, fMonitorAgent->Number() );
-			}			
-			fBrainMonitorWindow->setWindowTitle( QString(title) );
-			fBrainMonitorWindow->Draw();
-		}
-	}
-
-// xxx
-//sleep( 10 );
+	UpdateMonitors();
 
 	debugcheck( "after brain monitor window in step %ld", fStep );
 	
@@ -1268,15 +1671,6 @@ void TSimulation::Step()
 	// Handle tracking gene Separation
 	if( fMonitorGeneSeparation && fRecordGeneSeparation )
 		RecordGeneSeparation();
-
-	//Rotate the world a bit each time step... (CMB 3/10/06)
-	if (fRotateWorld)
-	{
-		fCameraAngle += fCameraRotationRate;
-		float camrad = fCameraAngle * DEGTORAD;
-		fCamera.settranslation((0.5+fCameraRadius*sin(camrad))*globals::worldsize, fCameraHeight*globals::worldsize,(-.5+fCameraRadius*cos(camrad))*
-globals::worldsize);
-	}
 }
 
 //---------------------------------------------------------------------------
@@ -1284,55 +1678,13 @@ globals::worldsize);
 //---------------------------------------------------------------------------
 void TSimulation::End( const string &reason )
 {
-	agent *a;
-
-	objectxsortedlist::gXSortedObjects.reset();
-	while (objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&a))
-	{
-		Kill( a, LifeSpan::DR_SIMEND );
-	}	
-
-	EndGenomeSubsetLog();
-	EndSeparationsLog();
-	EndLifeSpanLog();
-	EndContactsLog();
-	EndCollisionsLog();
-	EndCarryLog();
-	EndEnergyLog();
-
-	if( fRecordMovie )
-	{
-		fMovieWriter->close();
-	}
-
-	{
-		barrier* b;
-		barrier::gXSortedBarriers.reset();
-		while( barrier::gXSortedBarriers.next( b ) )
-			delete b;
-	}
-
-	fConditionalProps->dispose();
-
-	printf( "Simulation stopped after step %ld\n", fStep );
-
-	{
-		ofstream fout( "run/endStep.txt" );
-		fout << fStep << endl;
-		fout.close();
-	}
-
 	{
 		ofstream fout( "run/endReason.txt" );
 		fout << reason << endl;
 		fout.close();
 	}
 
-	// TODO: Clean up the dispose path.
-	// Deleting the SceneWindow deletes *this*.
-	delete fSceneWindow;
-	
-	exit( 0 );
+	emit ended();
 }
 
 //---------------------------------------------------------------------------
@@ -1350,638 +1702,6 @@ string TSimulation::EndAt( long timestep )
 	cout << "End At " << timestep << endl;
 
 	return "";
-}
-
-
-//---------------------------------------------------------------------------
-// TSimulation::Init
-//
-// The order that initializer functions are called is important as values
-// may depend on a variable initialized earlier.
-//---------------------------------------------------------------------------
-void TSimulation::Init( const char *argWorldfilePath, const bool statusToStdout )
-{
- 	// Set up graphical constructs
-	Resources::loadPolygons( &fGround, "ground" );
-
-    srand(1);
-
-	fGraphics = true;
-    InitWorld();
-
-	proplib::Interpreter::init();
-	proplib::Document *docWorldFile;
-	proplib::Document *docSchema;
-	Resources::parseWorldFile( &docWorldFile, &docSchema, argWorldfilePath );
-	cout << "worldfile = " << docWorldFile->getName() << endl;
-
-	ProcessWorldFile( docWorldFile );
-	
-	if( statusToStdout )	// command-line arg overrides worldfile only if true
-		fStatusToStdout = true;
-
-	// Init array tracking number of agents with a given metabolism
-	assert( Metabolism::getNumberOfDefinitions() < MAXMETABOLISMS );
-	for( int i = 0; i < Metabolism::getNumberOfDefinitions(); i++ )
-	{
-		fNumberAliveWithMetabolism[i] = 0;
-	}
-	
-	if( fStaticTimestepGeometry )
-	{
-		// Brains execute in parallel, so we need brain-local RNG state
-		RandomNumberGenerator::set( RandomNumberGenerator::NERVOUS_SYSTEM,
-									RandomNumberGenerator::LOCAL );
-	}
-
-	InitNeuralValues();	 // Must be called before genome and brain init
-	
-    Brain::braininit();
-    agent::agentinit();
-	
-	GenomeUtil::createSchema();
-
-	fAgentPovRenderer = new AgentPovRenderer( fMaxNumAgents,
-											  brain::retinawidth,
-											  brain::retinaheight );
-	
-	 // Following is part of one way to speed up the graphics
-	 // Note:  this code must agree with the agent sizing in agent::grow()
-	 // and the food sizing in food::initlen().
-
-	float maxagentlenx = agent::gMaxAgentSize / sqrt(genome::gMinmaxspeed);
-	float maxagentlenz = agent::gMaxAgentSize * sqrt(genome::gMaxmaxspeed);
-	float maxagentradius = 0.5 * sqrt(maxagentlenx*maxagentlenx + maxagentlenz*maxagentlenz);
-	float maxfoodlen = 0.75 * food::gMaxFoodEnergy / food::gSize2Energy;
-	float maxfoodradius = 0.5 * sqrt(maxfoodlen * maxfoodlen * 2.0);
-	food::gMaxFoodRadius = maxfoodradius;
-	agent::gMaxRadius = maxagentradius > maxfoodradius ?
-						  maxagentradius : maxfoodradius;
-
-    InitMonitoringWindows();
-
-    if( fNumberFit > 0 )
-    {
-        fFittest = new FitStruct*[fNumberFit];
-		Q_CHECK_PTR( fFittest );
-
-        for (int i = 0; i < fNumberFit; i++)
-        {
-			fFittest[i] = new FitStruct;
-			Q_CHECK_PTR( fFittest[i] );
-            fFittest[i]->genes = GenomeUtil::createGenome();
-			Q_CHECK_PTR( fFittest[i]->genes );
-            fFittest[i]->fitness = 0.0;
-			fFittest[i]->agentID = 0;
-			fFittest[i]->complexity = 0.0;
-        }
-		
-        fRecentFittest = new FitStruct*[fNumberRecentFit];
-		Q_CHECK_PTR( fRecentFittest );
-
-        for( int i = 0; i < fNumberRecentFit; i++ )
-        {
-			fRecentFittest[i] = new FitStruct;
-			Q_CHECK_PTR( fRecentFittest[i] );
-            fRecentFittest[i]->genes = NULL;	// GenomeUtil::createGenome()->legacy;	// we don't save the genes in the bestRecent list
-            fRecentFittest[i]->fitness = 0.0;
-			fRecentFittest[i]->agentID = 0;
-			fRecentFittest[i]->complexity = 0.0;
-        }
-		
-        for( int id = 0; id < fNumDomains; id++ )
-        {
-            fDomains[id].fittest = new FitStruct*[fNumberFit];
-			Q_CHECK_PTR( fDomains[id].fittest );
-
-            for (int i = 0; i < fNumberFit; i++)
-            {
-				fDomains[id].fittest[i] = new FitStruct;
-				Q_CHECK_PTR( fDomains[id].fittest[i] );
-                fDomains[id].fittest[i]->genes = GenomeUtil::createGenome();
-				Q_CHECK_PTR( fDomains[id].fittest[i]->genes );
-                fDomains[id].fittest[i]->fitness = 0.0;
-				fDomains[id].fittest[i]->agentID = 0;
-				fDomains[id].fittest[i]->complexity = 0.0;
-            }
-        }
-    }
-
-	if( fSmiteFrac > 0.0 )
-	{
-        for( int id = 0; id < fNumDomains; id++ )
-        {
-			fDomains[id].fNumLeastFit = 0;
-			fDomains[id].fMaxNumLeastFit = lround( fSmiteFrac * fDomains[id].maxNumAgents );
-			
-			smPrint( "for domain %d fMaxNumLeastFit = %d\n", id, fDomains[id].fMaxNumLeastFit );
-			
-			if( fDomains[id].fMaxNumLeastFit > 0 )
-			{
-				fDomains[id].fLeastFit = new agent*[fDomains[id].fMaxNumLeastFit];
-				
-				for( int i = 0; i < fDomains[id].fMaxNumLeastFit; i++ )
-					fDomains[id].fLeastFit[i] = NULL;
-			}
-        }
-	}
-
-	// Set up the run directory and its subsidiaries
-	char s[256];
-	char t[256];
-
-#define MKDIR(PATH)												\
-	if( mkdir( PATH, PwDirMode ) )								\
-		eprintf( "Error making %s directory (%d)\n", PATH, errno );
-
-	// First save the old directory, if it exists
-	sprintf( s, "run" );
-	sprintf( t, "run_%ld", time(NULL) );
-	(void) rename( s, t );
-
-	MKDIR( "run" );
-	MKDIR( "run/stats" );
-
-	MKDIR( "run/genome" );
-	MKDIR( "run/genome/meta" );
-	if( fRecordGenomes )
-	{
-		MKDIR( "run/genome/agents" );
-	}
-
-	if( fRecordPosition || fPositionSeedsFromFile || fRecordBarrierPosition )
-	{
-		MKDIR( "run/motion" );
-		MKDIR( "run/motion/position" );
-		if( fRecordPosition )
-			MKDIR( "run/motion/position/agents" );
-		if( fRecordBarrierPosition )
-			MKDIR( "run/motion/position/barriers" );
-	}
-
-	if( fRecordContacts || fRecordCollisions || fRecordCarry || fRecordEnergy )
-	{
-		MKDIR( "run/events" );
-	}
-
-	if( fConditionalProps->isLogging() )
-	{
-		MKDIR( "run/condprop" );
-	}
-	fConditionalProps->init();
-
-	if( fBestSoFarBrainAnatomyRecordFrequency || fBestSoFarBrainFunctionRecordFrequency ||
-		fBestRecentBrainAnatomyRecordFrequency || fBestRecentBrainFunctionRecordFrequency ||
-		fBrainAnatomyRecordAll || fBrainFunctionRecordAll || fBrainFunctionRecentRecordFrequency ||
-		fBrainAnatomyRecordSeeds || fBrainFunctionRecordSeeds || fAdamiComplexityRecordFrequency || fRecordPosition)
-	{
-		int agent_factor = 0;
-
-		if( RecordBrainFunction( 1 ) ) agent_factor++;
-		if( fRecordPosition ) agent_factor++;
-
-		int nfiles = 100 + (fMaxNumAgents * agent_factor);
-
-		// If we're going to be saving info on all these files, must increase the number allowed open
-		if( SetMaximumFiles( nfiles ) )
-		  {
-		    eprintf( "Error setting maximum files to %d (%d) -- consult ulimit\n", nfiles, errno );
-		    //exit(1);
-		  }
-
-		if( mkdir( "run/brain", PwDirMode ) )
-			eprintf( "Error making run/brain directory (%d)\n", errno );
-			
-			
-	#define RecordRandomBrainAnatomies 0
-	#if RecordRandomBrainAnatomies
-		if( mkdir( "run/brain/random", PwDirMode ) )
-			eprintf( "Error making run/brain/random directory (%d)\n", errno );
-	#endif
-		if( fBestSoFarBrainAnatomyRecordFrequency || fBestRecentBrainAnatomyRecordFrequency || fBrainAnatomyRecordAll || fBrainAnatomyRecordSeeds )
-			if( mkdir( "run/brain/anatomy", PwDirMode ) )
-				eprintf( "Error making run/brain/anatomy directory (%d)\n", errno );
-		if( fBrainFunctionRecentRecordFrequency || fBestSoFarBrainFunctionRecordFrequency || fBestRecentBrainFunctionRecordFrequency || fBrainFunctionRecordAll || fBrainFunctionRecordSeeds )
-			if( mkdir( "run/brain/function", PwDirMode ) )
-				eprintf( "Error making run/brain/function directory (%d)\n", errno );
-		if( fBestSoFarBrainAnatomyRecordFrequency || fBestSoFarBrainFunctionRecordFrequency )
-			if( mkdir( "run/brain/bestSoFar", PwDirMode ) )
-				eprintf( "Error making run/brain/bestSoFar directory (%d)\n", errno );
-		if( fBestRecentBrainAnatomyRecordFrequency || fBestRecentBrainFunctionRecordFrequency )
-			if( mkdir( "run/brain/bestRecent", PwDirMode ) )
-				eprintf( "Error making run/brain/bestRecent directory (%d)\n", errno );
-		if( fBrainAnatomyRecordSeeds || fBrainFunctionRecordSeeds )
-		{
-			if( mkdir( "run/brain/seeds", PwDirMode ) )
-				eprintf( "Error making run/brain/seeds directory (%d)\n", errno );
-			if( fBrainAnatomyRecordSeeds )
-				if( mkdir( "run/brain/seeds/anatomy", PwDirMode ) )
-					eprintf( "Error making run/brain/seeds/anatomy directory (%d)\n", errno );
-			if( fBrainFunctionRecordSeeds )
-				if( mkdir( "run/brain/seeds/function", PwDirMode ) )
-					eprintf( "Error making run/brain/seeds/function directory (%d)\n", errno );
-		}
-		if( fBrainFunctionRecentRecordFrequency )
-		{
-			if( mkdir( "run/brain/Recent", PwDirMode ) )
-				eprintf( "Error making run/brain/Recent directory (%d)\n", errno );
-			if( mkdir( "run/brain/Recent/0", PwDirMode ) )
-				eprintf( "Error making run/brain/Recent/0 directory (%d)\n", errno );
-			fCurrentRecentEpoch = fBrainFunctionRecentRecordFrequency;
-			sprintf( t, "run/brain/Recent/%ld", fCurrentRecentEpoch );
-			if( mkdir( t, PwDirMode ) )
-				eprintf( "Error making %s directory (%d)\n", t, errno );
-		}
-	}
-
-
-	if( fRecordAdamiComplexity )
-	{
-		FILE * File;
-		
-		if( (File = fopen("run/genome/AdamiComplexity-1bit.txt", "a")) == NULL )
-		{
-			cerr << "could not open run/genome/AdamiComplexity-1bit.txt for writing [1]. Exiting." << endl;
-			exit(1);
-		}
-		fprintf( File, "%% BitsInGenome: %d WindowSize: 1\n", GenomeUtil::schema->getMutableSize() * 8 );		// write the number of bits into the top of the file.
-		fclose( File );
-
-		if( (File = fopen("run/genome/AdamiComplexity-2bit.txt", "a")) == NULL )
-		{
-			cerr << "could not open run/genome/AdamiComplexity-2bit.txt for writing [1]. Exiting." << endl;
-			exit(1);
-		}
-		fprintf( File, "%% BitsInGenome: %d WindowSize: 2\n", GenomeUtil::schema->getMutableSize() * 8 );		// write the number of bits into the top of the file.
-		fclose( File );
-
-
-		if( (File = fopen("run/genome/AdamiComplexity-4bit.txt", "a")) == NULL )
-		{
-			cerr << "could not open run/genome/AdamiComplexity-4bit.txt for writing [1]. Exiting." << endl;
-			exit(1);
-		}
-		fprintf( File, "%% BitsInGenome: %d WindowSize: 4\n", GenomeUtil::schema->getMutableSize() * 8 );		// write the number of bits into the top of the file.
-		fclose( File );
-
-		if( (File = fopen("run/genome/AdamiComplexity-summary.txt", "a")) == NULL )
-		{
-			cerr << "could not open run/genome/AdamiComplexity-summary.txt for writing [1]. Exiting." << endl;
-			exit(1);
-		}
-		fprintf( File, "%% Timestep 1bit 2bit 4bit\n" );
-		fclose( File );
-	}
-	
-	if( fRecordBirthsDeaths )
-	{
-		FILE * File;
-		if( (File = fopen("run/BirthsDeaths.log", "a")) == NULL )
-		{
-			cerr << "could not open run/BirthsDeaths.log for writing [1]. Exiting." << endl;
-			exit(1);
-		}
-		fprintf( File, "%% Timestep Event Agent# Parent1 Parent2\n" );
-		fclose( File );
-	}
-
-	if( fLockStepWithBirthsDeathsLog )
-	{
-
-		cout << "*** Running in LOCKSTEP MODE with file 'LOCKSTEP-BirthsDeaths.log' ***" << endl;
-
-		if( (fLockstepFile = fopen("LOCKSTEP-BirthsDeaths.log", "r")) == NULL )
-		{
-			cerr << "ERROR/Init(): Could not open 'LOCKSTEP-BirthsDeaths.log' for reading. Exiting." << endl;
-			exit(1);
-		}
-		
-		char LockstepLine[512];
-		int currentpos=0;			// current position in fLockstepFile.
-
-		// bypass any header information
-		while( (fgets(LockstepLine, sizeof(LockstepLine), fLockstepFile)) != NULL )
-		{
-			if( LockstepLine[0] == '#' || LockstepLine[0] == '%' ) { currentpos = ftell( fLockstepFile ); continue; 	}				// if the line begins with a '#' or '%' (implying it is a header line), skip it.
-			else { fseek( fLockstepFile, currentpos, 0 ); break; }
-		}
-		
-		if( feof(fLockstepFile) )	// this should never happen, but lets make sure.
-		{
-			cout << "ERROR/Init(): Did not find any data lines in 'LOCKSTEP-BirthsDeaths.log'.  Exiting." << endl;
-			exit(1);
-		}
-		
-		SYSTEM( "cp LOCKSTEP-BirthsDeaths.log run/" );		// copy the LOCKSTEP file into the run/ directory.
-		SetNextLockstepEvent();								// setup for the first timestep in which Birth/Death events occurred.
-
-	}
-
-	// If we're going to record the gene means and std devs, we need to allocate a couple of stat arrays
-	if( fRecordGeneStats )
-	{
-		fGeneSum  = (unsigned long*) malloc( sizeof( *fGeneSum  ) * GenomeUtil::schema->getMutableSize() );
-		Q_CHECK_PTR( fGeneSum );
-		fGeneSum2 = (unsigned long*) malloc( sizeof( *fGeneSum2 ) * GenomeUtil::schema->getMutableSize() );
-		Q_CHECK_PTR( fGeneSum2 );
-		fGeneStatsAgents = (agent**) malloc( sizeof( *fGeneStatsAgents ) * GetMaxAgents() );
-		
-		fGeneStatsFile = fopen( "run/genome/genestats.txt", "w" );
-		Q_CHECK_PTR( fGeneStatsFile );
-		
-		fprintf( fGeneStatsFile, "%d\n", GenomeUtil::schema->getMutableSize() );
-	}
-
-#define PrintGeneIndexesFlag 1
-#if PrintGeneIndexesFlag
-	{
-		FILE* f = fopen( "run/genome/meta/geneindex.txt", "w" );
-		Q_CHECK_PTR( f );
-		
-		GenomeUtil::schema->printIndexes( f );
-		
-		fclose( f );
-	}
-	{
-		FILE* f = fopen( "run/genome/meta/genelayout.txt", "w" );
-		Q_CHECK_PTR( f );
-		
-		GenomeUtil::schema->printIndexes( f, GenomeUtil::layout );
-		
-		fclose( f );
-
-		SYSTEM( "cat run/genome/meta/genelayout.txt | sort -n > run/genome/meta/genelayout-sorted.txt" );
-	}
-	{
-		FILE* f = fopen( "run/genome/meta/genetitle.txt", "w" );
-		Q_CHECK_PTR( f );
-		
-		GenomeUtil::schema->printTitles( f );
-		
-		fclose( f );
-	}
-	{
-		FILE* f = fopen( "run/genome/meta/generange.txt", "w" );
-		Q_CHECK_PTR( f );
-		
-		GenomeUtil::schema->printRanges( f );
-		
-		fclose( f );		
-	}
-#endif
-
-	InitGenomeSubsetLog();
-
-
-	//If we're recording the number of agents in or near various foodpatches, then open the stat file
-	if( fRecordFoodPatchStats )
-	{
-			fFoodPatchStatsFile = fopen( "run/foodpatchstats.txt", "w" );
-			Q_CHECK_PTR( fFoodPatchStatsFile );
-	}
-	
-	{
-		if( docWorldFile->getPath() != "" )
-		{
-			SYSTEM( ("cp " + docWorldFile->getPath() + " run/original.wf").c_str() );
-		}
-		SYSTEM( ("cp " + docSchema->getPath() + " run/original.wfs").c_str() );
-
-		{
-			ofstream out( "run/normalized.wf" );
-			docWorldFile->write( out );
-		}
-
-		{
-			ofstream out( "run/reduced.wf" );
-			proplib::Schema::reduce( docSchema, docWorldFile, false );
-			docWorldFile->write( out );
-		}
-		{
-			ofstream out( "run/normalized.wfs" );
-			docSchema->write( out );
-		}
-
-		delete docWorldFile;
-		delete docSchema;
-
-		proplib::Interpreter::dispose();
-	}
-
-    // Pass ownership of the cast to the stage [TODO] figure out ownership issues
-    fStage.SetCast(&fWorldCast);
-
-	fFoodEnergyIn = 0.0;
-	fFoodEnergyOut = 0.0;
-	fEnergyEaten.zero();
-
-	srand48(fGenomeSeed);
-
-	if (!fLoadState)
-	{
-		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-		// ^^^ MASTER TASK ExecInitAgents
-		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-		class ExecInitAgents : public ITask
-		{
-		public:
-			virtual void task_exec( TSimulation *sim )
-			{
-				sim->InitAgents();
-			}
-		} execInitAgents;
-
-		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		// !!! EXEC MASTER
-		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		fScheduler.execMasterTask( this,
-								   execInitAgents,
-								   !fParallelInitAgents );
-			
-		// Add food to the food patches until they each have their initFoodCount number of food pieces
-		for( int domainNumber = 0; domainNumber < fNumDomains; domainNumber++ )
-		{
-			fDomains[domainNumber].numFoodPatchesGrown = 0;
-			
-			for( int foodPatchNumber = 0; foodPatchNumber < fDomains[domainNumber].numFoodPatches; foodPatchNumber++ )
-			{
-				if( fDomains[domainNumber].fFoodPatches[foodPatchNumber].on( 0 ) )
-				{
-					for( int j = 0; j < fDomains[domainNumber].fFoodPatches[foodPatchNumber].initFoodCount; j++ )
-					{
-						if( fDomains[domainNumber].foodCount < fDomains[domainNumber].maxFoodCount )
-						{
-							AddFood( domainNumber, foodPatchNumber );
-						}
-					}
-					fDomains[domainNumber].fFoodPatches[foodPatchNumber].initFoodGrown( true );
-					fDomains[domainNumber].numFoodPatchesGrown++;
-				}
-			}
-		}
-
-		for( int domainNumber = 0; domainNumber < fNumDomains; domainNumber++ )
-		{
-			for( int brickPatchNumber = 0; brickPatchNumber < fDomains[domainNumber].numBrickPatches; brickPatchNumber++ )
-			{
-				fDomains[domainNumber].fBrickPatches[brickPatchNumber].updateOn( 0 );
-			}
-		}
-	}
-
-	fEatStatistics.Init();
-
-    fTotalFoodEnergyIn = fFoodEnergyIn;
-    fTotalFoodEnergyOut = fFoodEnergyOut;
-    fTotalEnergyEaten = fEnergyEaten;
-    fAverageFoodEnergyIn = 0.0;
-    fAverageFoodEnergyOut = 0.0;
-
-    fGround.sety(-fGroundClearance);
-    fGround.setscale(globals::worldsize);
-    fGround.setcolor(fGroundColor);
-    fWorldSet.Add(&fGround);
-    fStage.SetSet(&fWorldSet);
-
-	// Add barriers
-	barrier* b = NULL;
-	while( barrier::gXSortedBarriers.next(b) )
-		fWorldSet.Add(b);
-
-	// Set up scene and camera
-	fScene.SetStage(&fStage);
-	fScene.SetCamera(&fCamera);
-	fCamera.SetPerspective(fCameraFOV, (float)fSceneView->width() / (float)fSceneView->height(), 0.01, 1.5 * globals::worldsize);	
-	
-	//The main camera will rotate around the world, so we need to set up the angle and translation  (CMB 03/10/06)
-	fCameraAngle = fCameraAngleStart;
-	float camrad = fCameraAngle * DEGTORAD;
-	fCamera.settranslation((0.5 + fCameraRadius * sin(camrad)) * globals::worldsize,
-						fCameraHeight * globals::worldsize, (-0.5 + fCameraRadius * cos(camrad)) * globals::worldsize);
-
-//	fCamera.SetRotation(0.0, -fCameraFOV / 3.0, 0.0);	
-	fCamera.setcolor(fCameraColor);
-	fCamera.UseLookAt();
-	fCamera.SetFixationPoint(0.5 * globals::worldsize, 0.0, -0.5 * globals::worldsize);	
-	fCamera.SetRotation(0.0, 90, 0.0);  	
-//	fStage.AddObject(&fCamera);
-	
-	//Set up the overhead camera view (CMB 3/13/06)
-	// Set up overhead scene and overhead camera
-	fOverheadScene.SetStage(&fStage);
-	fOverheadScene.SetCamera(&fOverheadCamera);
-
-	//Set up the overhead camera (CMB 3/13/06)
-	fOverheadCamera.setcolor(fCameraColor);
-//	fOverheadCamera.SetFog(false, glFogFunction(), glExpFogDensity(), glLinearFogEnd() );
-	fOverheadCamera.SetPerspective(fCameraFOV, (float)fSceneView->width() / (float)fSceneView->height(),0.01, 1.5 * globals::worldsize);
-	fOverheadCamera.settranslation(0.5*globals::worldsize, 0.2*globals::worldsize,-0.5*globals::worldsize);
-	fOverheadCamera.SetRotation(0.0, -fCameraFOV, 0.0);
-	//fOverheadCamera.UseLookAt();
-
-	//Add the overhead camera into the scene (CMB 3/13/06)
-//	fStage.AddObject(&fOverheadCamera);
-
-	// Add scene to scene view and to overhead view
-	Q_CHECK_PTR(fSceneView);
-	fSceneView->SetScene(&fScene);
-	fOverheadWindow->SetScene( &fOverheadScene );  //Set up overhead view (CMB 3/13/06)
-
-#define DebugGenetics false
-#if DebugGenetics
-	// This little snippet of code confirms that genetic copying, crossover, and mutation are behaving somewhat reasonably
-	objectxsortedlist::gXSortedObjects.reset();
-	agent* c1 = NULL;
-	agent* c2 = NULL;
-	Genome* g1 = NULL;
-	Genome* g2 = NULL;
-	Genome g1c(GenomeUtil::schema), g1x2(GenomeUtil::schema), g1x2m(GenomeUtil::schema);
-	objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&c1 );
-	objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&c2 );
-	g1 = c1->Genes();
-	g2 = c2->Genes();
-	cout << "************** G1 **************" nl;
-	g1->print();
-	cout << "************** G2 **************" nl;
-	g2->print();
-	g1c.copyFrom( g1 );
-	g1x2.crossover( g1, g2, false );
-	g1x2m.crossover( g1, g2, true );
-	cout << "************** G1c **************" nl;
-	g1c.print();
-	cout << "************** G1x2 **************" nl;
-	g1x2.print();
-	cout << "************** G1x2m **************" nl;
-	g1x2m.print();
-	exit(0);
-#endif
-	
-	// Set up gene Separation monitoring
-	if (fMonitorGeneSeparation)
-    {
-		fGeneSepVals = new float[fMaxNumAgents * (fMaxNumAgents - 1) / 2];
-        fNumGeneSepVals = 0;
-        CalculateGeneSeparationAll();
-
-        if (fRecordGeneSeparation)
-        {
-            fGeneSeparationFile = fopen("run/genesep", "w");
-	    	RecordGeneSeparation();
-        }
-
-		if (fChartGeneSeparation && fGeneSeparationWindow != NULL)
-			fGeneSeparationWindow->AddPoint(fGeneSepVals, fNumGeneSepVals);
-    }
-	
-	// Set up to record a movie, if requested
-#if __BIG_ENDIAN__
-	if( fRecordMovie )
-	{
-		eprintf( "Sorry, disabling movie recording, because they cannot currently be recorded on big endian machines\n" );
-		fRecordMovie = false;
-	}
-#else
-	if( fRecordMovie )
-	{
-		char	movieFileName[256] = "run/movie.pmv";	// put date and time into the name TODO
-				
-		FILE *movieFile = fopen( movieFileName, "wb" );
-		if( !movieFile )
-		{
-			eprintf( "Error opening movie file: %s\n", movieFileName );
-			exit( 1 );
-		}
-		
-		fMovieWriter = new PwMovieWriter( movieFile );
-		fSceneView->SetMovieWriter( fMovieWriter );
-	}
-#endif
-
-	InitSeparationsLog();
-	InitLifeSpanLog();
-	InitContactsLog();
-	InitCollisionsLog();
-	InitCarryLog();
-	InitEnergyLog();
-	InitComplexityLog( fBrainFunctionRecentRecordFrequency );
-// 	InitAvrComplexityLog();
-	
-	if( fComplexityFitnessWeight != 0.0 || fRecordComplexity )
-	{
-		bool eventFiltering = false;
-		for( unsigned int i = 0; i < fComplexityType.size(); i++ )
-		{
-			if( islower( fComplexityType[i] ) )
-			{
-				eventFiltering = true;
-				break;
-			}
-		}
-		if( eventFiltering )
-			fEvents = new Events( fMaxSteps );
-	}
-	
-	inited = true;
 }
 
 //---------------------------------------------------------------------------
@@ -2232,362 +1952,6 @@ void TSimulation::InitNeuralValues()
                 - brain::gNeuralValues.maxinternalneurons;                   									// internal/internal
 }
 
-
-//---------------------------------------------------------------------------
-// TSimulation::InitWorld
-//
-// Initialize simulation values. Pay attention to the ordering of the
-// value initialization, as values may depend on a previously set value.
-//---------------------------------------------------------------------------
-void TSimulation::InitWorld()
-{
-	globals::worldsize = 100.0;
-	globals::wraparound = false;
-	globals::blockedEdges = true;
-	globals::stickyEdges = false;
-	
-    fMinNumAgents = 15;
-    fInitNumAgents = 15;
-	fNumberToSeed = 0;
-	fProbabilityOfMutatingSeeds = 0.0;
-    fMinFoodCount = 15;
-    fMaxFoodCount = 50;
-    fMaxFoodGrownCount = 25;
-    fInitFoodCount = 25;
-    fFoodRate = 0.1;
-    fMiscAgents = 150;
-	fPositionSeed = 42;
-    fGenomeSeed = 42;
-	fSimulationSeed = 0;
-    fAgentsRfood = RFOOD_TRUE;
-    fFitness1Frequency = 100;
-    fFitness2Frequency = 2;
-	fEat2Consume = 20.0;
-	fGlobalEnergyScaleFactor = 1.0;
-    fNumberFit = 30;
-	fNumberRecentFit = 10;
-    fEatFitnessParameter = 10.0;
-    fMateFitnessParameter = 10.0;
-    fMoveFitnessParameter = 1.0;
-    fEnergyFitnessParameter = 1.0;
-    fAgeFitnessParameter = 1.0;
- 	fTotalHeuristicFitness = fEatFitnessParameter
-					+ fMateFitnessParameter
-					+ fMoveFitnessParameter
-					+ fEnergyFitnessParameter
-					+ fAgeFitnessParameter;
-    fMinMateFraction = 0.05;
-	fMateWait = 25;
-	fEatMateSpan = 0;
-    fPower2Energy = 2.5;
-	fEatThreshold = 0.2;
-    fMateThreshold = 0.5;
-    fFightThreshold = 0.2;
-	fFightFraction = 1.0;
-	fGiveThreshold = 0.2;
-	fPickupThreshold = 0.5;
-	fDropThreshold = 0.5;
-  	fGroundColor.r = 0.1;
-    fGroundColor.g = 0.15;
-    fGroundColor.b = 0.05;
-    fCameraColor.r = 1.0;
-    fCameraColor.g = 1.0;
-    fCameraColor.b = 1.0;
-    fCameraRadius = 0.6;
-    fCameraHeight = 0.35;
-    fCameraRotationRate = 0.09;
-    fRotateWorld = (fCameraRotationRate != 0.0);	//Boolean for enabling or disabling world roation (CMB 3/19/06)
-    fCameraAngleStart = 0.0;
-    fCameraFOV = 90.0;
-	fMonitorAgentRank = 1;
-	fMonitorAgentRankOld = 0;
-	fMonitorAgent = NULL;
-	fMonitorGeneSeparation = false;
-    fRecordGeneSeparation = false;
-
-    fNumberCreated = 0;
-    fNumberCreatedRandom = 0;
-    fNumberCreated1Fit = 0;
-    fNumberCreated2Fit = 0;
-	fNumberAlive = 0;
-    fNumberBorn = 0;
-	fNumberBornVirtual = 0;
-    fNumberDied = 0;
-    fNumberDiedAge = 0;
-    fNumberDiedEnergy = 0;
-    fNumberDiedFight = 0;
-    fNumberDiedEat = 0;
-    fNumberDiedEdge = 0;
-	fNumberDiedSmite = 0;
-	fNumberDiedPatch = 0;
-    fNumberFights = 0;
-    fMaxFitness = 0.;
-    fAverageFitness = 0.;
-	fBirthDenials = 0;
-    fMiscDenials = 0;
-    fLastCreated = 0;
-    fMaxGapCreate = 0;
-    fMinGeneSeparation = 1.e+10;
-    fMaxGeneSeparation = 0.0;
-    fAverageGeneSeparation = 5.e+9;
-    fNumBornSinceCreated = 0;
-    fChartGeneSeparation = false; // GeneSeparation (if true, genesepmon must be true)
-    fDeathProbability = 0.001;
-	fSmiteMode = 'L';
-    fSmiteFrac = 0.10;
-	fSmiteAgeFrac = 0.25;
-    fShowVision = true;
-	fStaticTimestepGeometry = false;
-	fRecordMovie = false;
-	fMovieWriter = NULL;
-	fRecordPerformanceStats = true;
-
-    fFitI = 0;
-    fFitJ = 1;
-		
-	fStep = 0;
-	globals::worldsize = 100.0;
-
-    brain::gMinWin = 22;
-    brain::gDecayRate = 0.9;
-    brain::gLogisticSlope = 0.5;
-    brain::gMaxWeight = 1.0;
-    brain::gInitMaxWeight = 0.5;
-	brain::gNumPrebirthCycles = 25;
- 	brain::gNeuralValues.mininternalneurgroups = 1;
-    brain::gNeuralValues.maxinternalneurgroups = 5;
-    brain::gNeuralValues.mineneurpergroup = 1;
-    brain::gNeuralValues.maxeneurpergroup = 8;
-    brain::gNeuralValues.minineurpergroup = 1;
-    brain::gNeuralValues.maxineurpergroup = 8;
-	brain::gNeuralValues.numoutneurgroups = 7;  // set dynamically in InitNeuralValues()
-    brain::gNeuralValues.numinputneurgroups = 5;  // set dynamically in InitNeuralValues()
-    brain::gNeuralValues.maxbias = 1.0;
-    brain::gNeuralValues.minbiaslrate = 0.0;
-    brain::gNeuralValues.maxbiaslrate = 0.2;
-    brain::gNeuralValues.minconnectiondensity = 0.0;
-    brain::gNeuralValues.maxconnectiondensity = 1.0;
-    brain::gNeuralValues.mintopologicaldistortion = 0.0;
-	brain::gNeuralValues.maxtopologicaldistortion = 1.0;
-    brain::gNeuralValues.maxsynapse2energy = 0.01;
-    brain::gNeuralValues.maxneuron2energy = 0.1;
-	
-    genome::gGrayCoding = true;
-    genome::gMinvispixels = 1;
-    genome::gMaxvispixels = 8;
-    genome::gMinMutationRate = 0.01;
-    genome::gMaxMutationRate = 0.1;
-    genome::gMinNumCpts = 1;
-    genome::gMaxNumCpts = 5;
-    genome::gMinLifeSpan = 1000;
-    genome::gMaxLifeSpan = 2000;
-	genome::gMinStrength = 0.5;
-	genome::gMaxStrength = 2.0;
-    genome::gMinmateenergy = 0.2;
-    genome::gMaxmateenergy = 0.8;
-    genome::gMinmaxspeed = 0.5;
-    genome::gMaxmaxspeed = 1.5;
-    genome::gMinlrate = 0.0;
-    genome::gMaxlrate = 0.1;
-    genome::gMiscBias = 1.0;
-    genome::gMiscInvisSlope = 2.0;
-    genome::gMinBitProb = 0.1;
-    genome::gMaxBitProb = 0.9;
-	genome::gEnableMateWaitFeedback = false;
-	genome::gEnableSpeedFeedback = false;
-	genome::gEnableGive = false;
-	genome::gEnableCarry = false;
-
-	fGraphics = true;
-    agent::gVision = true;
-    agent::gMaxVelocity = 1.0;
-    fMaxNumAgents = 50;
-    agent::gInitMateWait = 25;
-    agent::gMinAgentSize = 1.0;
-    agent::gMinAgentSize = 4.0;
-    agent::gMinMaxEnergy = 500.0;
-    agent::gMaxMaxEnergy = 1000.0;
-    agent::gSpeed2DPosition = 1.0;
-    agent::gYaw2DYaw = 1.0;
-    agent::gMinFocus = 20.0;
-    agent::gMaxFocus = 140.0;
-    agent::gAgentFOV = 10.0;
-    agent::gMaxSizeAdvantage = 2.5;
-    agent::gEnergyUseMultiplier = 1.0;
-    agent::gEat2Energy = 0.01;
-    agent::gMate2Energy = 0.1;
-    agent::gFight2Energy = 1.0;
-    agent::gMaxSizePenalty = 10.0;
-    agent::gSpeed2Energy = 0.1;
-    agent::gYaw2Energy = 0.1;
-    agent::gLight2Energy = 0.01;
-    agent::gFocus2Energy = 0.001;
-	agent::gPickup2Energy = 0.5;
-	agent::gDrop2Energy = 0.001;
-	agent::gCarryAgent2Energy = 0.05;
-	agent::gCarryAgentSize2Energy = 0.05;
-    agent::gFixedEnergyDrain = 0.1;
-	agent::gMaxCarries = 3;
-    agent::gAgentHeight = 0.2;
-
-	food::gMinFoodEnergy = 20.0;
-	fMinFoodEnergyAtDeath = food::gMinFoodEnergy;
-    food::gMaxFoodEnergy = 300.0;
-    food::gSize2Energy = 100.0;
-	food::gCarryFood2Energy = 0.01;
-    food::gFoodHeight = 0.6;
-    food::gFoodColor.r = 0.2;
-    food::gFoodColor.g = 0.6;
-    food::gFoodColor.b = 0.2;
-
-    barrier::gBarrierHeight = 5.0;
-    barrier::gBarrierColor.r = 0.35;
-    barrier::gBarrierColor.g = 0.25;
-    barrier::gBarrierColor.b = 0.15;
-
-	brick::gBrickHeight = 0.5;
-	brick::gCarryBrick2Energy = 0.01;
-
-}
-
-
-//---------------------------------------------------------------------------
-// TSimulation::InitMonitoringWindows
-//
-// Create and display monitoring windows
-//---------------------------------------------------------------------------
-
-void TSimulation::InitMonitoringWindows()
-{
-	// Agent birthrate
-	fBirthrateWindow = new TChartWindow( "born / (born + created)", "Birthrate" );
-//	fBirthrateWindow->setWindowTitle( QString( "born / (born + created)" ) );
-	sprintf( fBirthrateWindow->title, "born / (born + created)" );
-	fBirthrateWindow->SetRange(0.0, 1.0);
-	fBirthrateWindow->setFixedSize(TChartWindow::kMaxWidth, TChartWindow::kMaxHeight);
-
-	// Agent fitness		
-	fFitnessWindow = new TChartWindow( "maxfit, curmaxfit, avgfit", "Fitness", 3);
-//	fFitnessWindow->setWindowTitle( QString( "maxfit, curmaxfit, avgfit" ) );
-	sprintf( fFitnessWindow->title, "maxfit, curmaxfit, avgfit" );
-	fFitnessWindow->SetRange(0, 0.0, 1.0);
-	fFitnessWindow->SetRange(1, 0.0, 1.0);
-	fFitnessWindow->SetRange(2, 0.0, 1.0);
-	fFitnessWindow->SetColor(0, 1.0, 1.0, 1.0);
-	fFitnessWindow->SetColor(1, 1.0, 0.3, 0.0);
-	fFitnessWindow->SetColor(2, 0.0, 1.0, 1.0);
-	fFitnessWindow->setFixedSize(TChartWindow::kMaxWidth, TChartWindow::kMaxHeight);	
-	
-	// Food energy
-	fFoodEnergyWindow = new TChartWindow( "energy in, total, avg", "Energy", 3);
-//	fFoodEnergyWindow->setWindowTitle( QString( "energy in, total, avg" ) );
-	sprintf( fFoodEnergyWindow->title, "energy in, total, avg" );
-	fFoodEnergyWindow->SetRange(0, -1.0, 1.0);
-	fFoodEnergyWindow->SetRange(1, -1.0, 1.0);
-	fFoodEnergyWindow->SetRange(2, -1.0, 1.0);
-	fFoodEnergyWindow->setFixedSize(TChartWindow::kMaxWidth, TChartWindow::kMaxHeight);	
-	
-	// Population
-	const Color popColor[7] =
-	{
-		Color( 1.0, 0.0, 0.0, 0.0 ),
-		Color( 0.0, 1.0, 0.0, 0.0 ),
-		Color( 0.0, 0.0, 1.0, 0.0 ),
-		Color( 0.0, 1.0, 1.0, 0.0 ),
-		Color( 1.0, 0.0, 1.0, 0.0 ),
-		Color( 1.0, 1.0, 0.0, 0.0 ),
-		Color( 1.0, 1.0, 1.0, 1.0 )
-	};
-	
-	const short numpop = (fNumDomains < 2) ? 1 : (fNumDomains + 1);
-    fPopulationWindow = new TChartWindow( "Population", "Population", numpop);
-//	fPopulationWindow->setWindowTitle( "population size" );
-	sprintf( fPopulationWindow->title, "Population" );
-	for (int i = 0; i < numpop; i++)
-	{
-		int colorIndex = i % 7;
-		fPopulationWindow->SetRange(short(i), 0, fMaxNumAgents);
-		fPopulationWindow->SetColor(i, popColor[colorIndex]);
-	}
-	fPopulationWindow->setFixedSize(TChartWindow::kMaxWidth, TChartWindow::kMaxHeight);
-
-	// Brain monitor
-	fBrainMonitorWindow = new TBrainMonitorWindow();
-//	fBrainMonitorWindow->setWindowTitle( QString( "Brain Monitor" ) );
-	
-	// Agent POV
-	fAgentPOVWindow = new TAgentPOVWindow( fAgentPovRenderer );
-	
-	// Status window
-	fTextStatusWindow = new TTextStatusWindow( this );
-	
-	//Overhead window
-	fOverheadWindow = new TOverheadView(this);			
-
-#if 0
-	// Gene separation
-	fGeneSeparationWindow = new TBinChartWindow( "gene separation", "GeneSeparation" );
-//	fGeneSeparationWindow->setWindowTitle( "gene separation" );
-	fGeneSeparationWindow->SetRange(0.0, 1.0);
-	fGeneSeparationWindow->SetExponent(0.5);
-#endif
-		
-	// Tile and show them along the left edge of the screen
-//	const int titleHeight = fBirthrateWindow->frameGeometry().height() - TChartWindow::kMaxHeight;
-	const int titleHeight = fBirthrateWindow->frameGeometry().height() - fBirthrateWindow->geometry().height();
-
-	int topY = titleHeight + kMenuBarHeight;
-
-	if (fBirthrateWindow != NULL)
-	{
-		fBirthrateWindow->RestoreFromPrefs(0, topY);
-		topY = fBirthrateWindow->frameGeometry().bottom() + titleHeight + 1;
-	}
-
-	if (fFitnessWindow != NULL)
-	{	
-		fFitnessWindow->RestoreFromPrefs(0, topY);
-		topY = fFitnessWindow->frameGeometry().bottom() + titleHeight + 1;
-	}
-	
-	if (fFoodEnergyWindow != NULL)
-	{		
-		fFoodEnergyWindow->RestoreFromPrefs(0, topY);
-		topY = fFoodEnergyWindow->frameGeometry().bottom() + titleHeight + 1;
-	}
-	
-	if (fPopulationWindow != NULL)
-	{			
-		fPopulationWindow->RestoreFromPrefs(0, topY);
-		topY = fPopulationWindow->frameGeometry().bottom() + titleHeight + 1;
-	}
-	
-	if (fGeneSeparationWindow != NULL)
-	{
-		fGeneSeparationWindow->RestoreFromPrefs(0, topY);
-		topY = fGeneSeparationWindow->frameGeometry().bottom() + titleHeight + 1;
-	}
-	
-	const int mainWindowTitleHeight = 22;
-
-	if (fAgentPOVWindow != NULL)
-		fAgentPOVWindow->RestoreFromPrefs( fBirthrateWindow->width() + 1, kMenuBarHeight + mainWindowTitleHeight + titleHeight );
-	
-	if (fBrainMonitorWindow != NULL)
-		fBrainMonitorWindow->RestoreFromPrefs( fBirthrateWindow->width() + 1, kMenuBarHeight + mainWindowTitleHeight + titleHeight + titleHeight );
-
-	if (fTextStatusWindow != NULL)
-	{
-		QDesktopWidget* desktop = QApplication::desktop();
-		const QRect& screenSize = desktop->screenGeometry( desktop->primaryScreen() );
-		fTextStatusWindow->RestoreFromPrefs( screenSize.width() - TTextStatusWindow::kDefaultWidth, kMenuBarHeight /*+ mainWindowTitleHeight + titleHeight*/ );
-	}
- 	
-	//Open overhead window CMB 3/17/06
-	if (fOverheadWindow != NULL)
-		fOverheadWindow->RestoreFromPrefs( fBirthrateWindow->width() + 1, kMenuBarHeight + mainWindowTitleHeight + titleHeight + titleHeight );
-                //(screenleft,screenleft+.75*xscreensize, screenbottom,screenbottom+(5./6.)*yscreensize);
-}
 
 //---------------------------------------------------------------------------
 // TSimulation::SeedGenome
@@ -5677,6 +5041,16 @@ void TSimulation::MaintainFood()
     debugcheck( "after growing food and maintaining food patch stats" );
 }
 
+
+//---------------------------------------------------------------------------
+// TSimulation::UpdateMonitors()
+//---------------------------------------------------------------------------
+void TSimulation::UpdateMonitors()
+{
+
+	monitorManager->step();
+}
+
 //---------------------------------------------------------------------------
 // TSimulation::RecordGeneSeparation
 //---------------------------------------------------------------------------
@@ -6040,26 +5414,6 @@ void TSimulation::Kill( agent* c,
 	// --- Remove From Stage
 	// ---
     fStage.RemoveObject( c );
-
-	// ---
-	// --- Update Monitor Window
-	// ---
-	if (c == fMonitorAgent)
-	{
-		fMonitorAgent = NULL;
-
-		// Stop monitoring agent brain
-		if (fBrainMonitorWindow != NULL)
-			fBrainMonitorWindow->StopMonitoring();
-	}
-
-	// ---
-	// --- Update Overhead Agent
-	// ---
-	if (c == fOverheadAgent)
-	{
-		fOverheadAgent = NULL;
-	}
 
 	// ---
 	// --- Births Deaths Log
@@ -6671,8 +6025,6 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	fMaxSteps = doc.get( "MaxSteps" );
 	fEndOnPopulationCrash = doc.get( "EndOnPopulationCrash" );
 	fDumpFrequency = doc.get( "CheckPointFrequency" );
-	fStatusFrequency = doc.get( "StatusFrequency" );
-	fStatusToStdout = doc.get( "StatusToStdout" );
 	{
 		string prop = doc.get( "Edges" );
 		if( prop == "B" )
@@ -6704,7 +6056,6 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	}
 	globals::numEnergyTypes = doc.get( "NumEnergyTypes" );
 	agent::gVision = doc.get( "Vision" );
-	fShowVision = doc.get( "ShowVision" );
 	fStaticTimestepGeometry = doc.get( "StaticTimestepGeometry" );
 	fParallelInitAgents = doc.get( "ParallelInitAgents" );
 	fParallelInteract = doc.get( "ParallelInteract" );
@@ -7587,17 +6938,6 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	barrier::gStickyBarriers = doc.get( "StickyBarriers" );
     fGroundColor = doc.get( "GroundColor" );
     fGroundClearance = doc.get( "GroundClearance" );
-    fCameraColor = doc.get( "CameraColor" );
-    fCameraRadius = doc.get( "CameraRadius" );
-    fCameraHeight = doc.get( "CameraHeight" );
-    fCameraRotationRate = doc.get( "CameraRotationRate" );
-    fRotateWorld = (fCameraRotationRate != 0.0);	//Boolean for enabling or disabling world roation (CMB 3/19/06)
-    fCameraAngleStart = doc.get( "CameraAngleStart" );
-    fCameraFOV = doc.get( "CameraFieldOfView" );
-    fMonitorAgentRank = doc.get( "MonitorAgentRank" );
-    if (!fGraphics)
-        fMonitorAgentRank = 0; // cannot monitor agent brain without graphics
-    fBrainMonitorStride = doc.get( "BrainMonitorFrequency" );
     globals::worldsize = doc.get( "WorldSize" );
 	{
 		bool ratioBarrierPositions = doc.get( "RatioBarrierPositions" );
@@ -7718,10 +7058,6 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	}
     fMonitorGeneSeparation = doc.get( "MonitorGeneSeparation" );
     fRecordGeneSeparation = doc.get( "RecordGeneSeparation" );
-    fChartBorn = doc.get( "ChartBorn" );
-    fChartFitness = doc.get( "ChartFitness" );
-    fChartFoodEnergy = doc.get( "ChartFoodEnergy" );
-    fChartPopulation = doc.get( "ChartPopulation" );
 
 	globals::numEnergyTypes = doc.get( "NumEnergyTypes" );
 
@@ -8390,9 +7726,11 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	} // Domains
 	
 	fUseProbabilisticFoodPatches = doc.get( "ProbabilisticFoodPatches" );
+#if false
     fChartGeneSeparation = doc.get( "ChartGeneSeparation" );
     if (fChartGeneSeparation)
         fMonitorGeneSeparation = true;
+#endif
 
 	{
 		string val = doc.get( "NeuronModel" );
@@ -8454,8 +7792,6 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 
     InitNeuralValues();
 
-    fOverHeadRank = doc.get( "OverHeadRank" );
-    fAgentTracking = doc.get( "AgentTracking" );
     fMinFoodEnergyAtDeath = doc.get( "MinFoodEnergyAtDeath" );
     genome::gGrayCoding = doc.get( "GrayCoding" );
 	fRandomBirthLocation = doc.get( "RandomBirthLocation" );
@@ -8502,7 +7838,6 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	fBestRecentBrainFunctionRecordFrequency = doc.get( "BestRecentBrainFunctionRecordFrequency" );
 	
 	fRecordGeneStats = doc.get( "RecordGeneStats" );
-	fRecordPerformanceStats = doc.get( "RecordPerformanceStats" );
 	fRecordFoodPatchStats = doc.get( "RecordFoodPatchStats" );
 	fCalcFoodPatchAgentCounts |= fRecordFoodPatchStats;
 	fRecordComplexity = doc.get( "RecordComplexity" );
@@ -8614,8 +7949,6 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	// It defines the maximum distance a agent can see.
 	fLinearFogEnd = doc.get( "LinearFogEnd" );
 	
-	fRecordMovie = doc.get( "RecordMovie" );
-
 	// If this is a lockstep run, then we need to force certain parameter values (and warn the user)
 	if( fLockStepWithBirthsDeathsLog )
 	{
@@ -8740,7 +8073,6 @@ void TSimulation::Dump()
 
     out << version nl;
     out << fStep nl;
-    out << fCameraAngle nl;
     out << fNumberCreated nl;
     out << fNumberCreatedRandom nl;
     out << fNumberCreated1Fit nl;
@@ -8758,12 +8090,6 @@ void TSimulation::Dump()
     out << fLastCreated nl;
     out << fMaxGapCreate nl;
     out << fNumBornSinceCreated nl;
-
-    out << fMonitorAgentRank nl;
-    out << fMonitorAgentRankOld nl;
-    out << fAgentTracking nl;
-    out << fOverHeadRank nl;
-    out << fOverHeadRankOld nl;
     out << fMaxGeneSeparation nl;
     out << fMinGeneSeparation nl;
     out << fAverageGeneSeparation nl;
@@ -8836,22 +8162,12 @@ void TSimulation::Dump()
             out << numfitid nl;
     }
 	
-	// Dump monitor windows
-	if (fBirthrateWindow != NULL)
-		fBirthrateWindow->Dump(out);
+	monitorManager->dump( out );
 
-	if (fFitnessWindow != NULL)
-		fFitnessWindow->Dump(out);
-
-	if (fFoodEnergyWindow != NULL)
-		fFoodEnergyWindow->Dump(out);
-
-	if (fPopulationWindow != NULL)
-		fPopulationWindow->Dump(out);
-
+#if false
 	if (fGeneSeparationWindow != NULL)
 		fGeneSeparationWindow->Dump(out);
-		
+#endif		
 
     out.flush();
     fb.close();
@@ -8922,20 +8238,21 @@ void TSimulation::SwitchDomain(short newDomain, short oldDomain, int objectType)
 
 
 //---------------------------------------------------------------------------
-// TSimulation::PopulateStatusList
+// TSimulation::getStatusText
 //---------------------------------------------------------------------------
-void TSimulation::PopulateStatusList(TStatusList& list)
+void TSimulation::getStatusText( StatusText& statusText,
+								 int statusFrequency )
 {
 	char t[256];
 	char t2[256];
 	short id;
 	
 	// TODO: If we're neither updating the window, nor writing to the stat file,
-	// then we shouldn't sprintf all these strings, or put them in the list
+	// then we shouldn't sprintf all these strings, or put them in the statusText
 	// (but for now, the window always draws anyway, so it's not a big deal)
 	
 	sprintf( t, "step = %ld", fStep );
-	list.push_back( strdup( t ) );
+	statusText.push_back( strdup( t ) );
 	
 	sprintf( t, "agents = %4d", objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE) );
 	if (fNumDomains > 1)
@@ -8950,13 +8267,13 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 		
 		strcat(t,")" );		
 	}
-	list.push_back( strdup( t ) );
+	statusText.push_back( strdup( t ) );
 	if( Metabolism::getNumberOfDefinitions() > 1 )
 	{
 		for( int i = 0; i < Metabolism::getNumberOfDefinitions(); i++ )
 		{
 			sprintf( t, " -%s = %4ld", Metabolism::get(i)->name.c_str(), fNumberAliveWithMetabolism[i] );
-			list.push_back( strdup( t ) );
+			statusText.push_back( strdup( t ) );
 		}
 	}
 
@@ -8973,7 +8290,7 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 		
 		strcat(t,")" );		
 	}
-	list.push_back( strdup( t ) );
+	statusText.push_back( strdup( t ) );
 
 	sprintf( t, "created  = %4ld", fNumberCreated );
 	if (fNumDomains > 1)
@@ -8988,16 +8305,16 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 		}
 		strcat(t,")" );
 	}
-	list.push_back( strdup( t ) );
+	statusText.push_back( strdup( t ) );
 
 	sprintf( t, " -random = %4ld", fNumberCreatedRandom );
-	list.push_back( strdup( t ) );
+	statusText.push_back( strdup( t ) );
 
 	sprintf( t, " -two    = %4ld", fNumberCreated2Fit );
-	list.push_back( strdup( t ) );
+	statusText.push_back( strdup( t ) );
 
 	sprintf( t, " -one    = %4ld", fNumberCreated1Fit );
-	list.push_back( strdup( t ) );
+	statusText.push_back( strdup( t ) );
 
 	sprintf( t, "born     = %4ld", fNumberBorn );
 	if (fNumDomains > 1)
@@ -9011,12 +8328,12 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 		}
 		strcat(t,")" );
 	}
-	list.push_back( strdup( t ) );
+	statusText.push_back( strdup( t ) );
 	
 	if( (fHeuristicFitnessWeight != 0.0) || (fComplexityFitnessWeight != 0.0) || fLockStepWithBirthsDeathsLog )
 	{
 		sprintf( t, "born_v  = %4ld", fNumberBornVirtual );
-		list.push_back( strdup( t ) );
+		statusText.push_back( strdup( t ) );
 	}
 
 	sprintf( t, "died     = %4ld", fNumberDied );
@@ -9031,35 +8348,35 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 		}
 		strcat(t,")" );
 	}
-	list.push_back( strdup( t ) );
+	statusText.push_back( strdup( t ) );
 
 
 	sprintf( t, " -age    = %4ld", fNumberDiedAge );
-	list.push_back( strdup( t ) );
+	statusText.push_back( strdup( t ) );
 	
 	sprintf( t, " -energy = %4ld", fNumberDiedEnergy );
-	list.push_back( strdup( t ) );
+	statusText.push_back( strdup( t ) );
 	
 	sprintf( t, " -fight  = %4ld", fNumberDiedFight );
-	list.push_back( strdup( t ) );
+	statusText.push_back( strdup( t ) );
 	
 	sprintf( t, " -eat  = %4ld", fNumberDiedEat );
-	list.push_back( strdup( t ) );
+	statusText.push_back( strdup( t ) );
 	
 	sprintf( t, " -edge   = %4ld", fNumberDiedEdge );
-	list.push_back( strdup( t ) );
+	statusText.push_back( strdup( t ) );
 
 	sprintf( t, " -smite  = %4ld", fNumberDiedSmite );
-	list.push_back( strdup( t ) );
+	statusText.push_back( strdup( t ) );
 
 	sprintf( t, " -patch  = %4ld", fNumberDiedPatch );
-	list.push_back( strdup( t ) );
+	statusText.push_back( strdup( t ) );
 
     sprintf( t, "birthDenials = %ld", fBirthDenials );
-	list.push_back( strdup( t ) );
+	statusText.push_back( strdup( t ) );
 
     sprintf( t, "miscDenials = %ld", fMiscDenials );
-	list.push_back( strdup( t ) );
+	statusText.push_back( strdup( t ) );
 
     sprintf( t, "ageCreate = %ld", fLastCreated );
     if (fNumDomains > 1)
@@ -9073,7 +8390,7 @@ void TSimulation::PopulateStatusList(TStatusList& list)
         }
         strcat(t,")" );
     }
-	list.push_back( strdup( t ) );
+	statusText.push_back( strdup( t ) );
 
 	sprintf( t, "maxGapCreate = %ld", fMaxGapCreate );
 	if (fNumDomains > 1)
@@ -9087,19 +8404,19 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 	   	}
 	   	strcat(t,")" );
 	}
-	list.push_back( strdup( t ) );
+	statusText.push_back( strdup( t ) );
 
 	if( (fHeuristicFitnessWeight != 0.0) || (fComplexityFitnessWeight != 0.0) )
 		sprintf( t, "born_v/(c+bv) = %.2f", float(fNumberBornVirtual) / float(fNumberCreated + fNumberBornVirtual) );
 	else
 		sprintf( t, "born/total = %.2f", float(fNumberBorn) / float(fNumberCreated + fNumberBorn) );
-	list.push_back( strdup( t ) );
+	statusText.push_back( strdup( t ) );
 
 	sprintf( t, "Fitness m=%.2f, c=%.2f, a=%.2f", fMaxFitness, fCurrentMaxFitness[0] / fTotalHeuristicFitness, fAverageFitness );
-	list.push_back( strdup( t ) );
+	statusText.push_back( strdup( t ) );
 	
 //	sprintf( t, "NormFit m=%.2f, c=%.2f, a=%.2f", fMaxFitness / fTotalHeuristicFitness, fCurrentMaxFitness[0] / fTotalHeuristicFitness, fAverageFitness / fTotalHeuristicFitness );
-//	list.push_back( strdup( t ) );
+//	statusText.push_back( strdup( t ) );
 	
 	sprintf( t, "Fittest =" );
 	int fittestCount = min( 5, min( fNumberFit, (int) fNumberDied ));
@@ -9108,7 +8425,7 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 		sprintf( t2, " %lu", fFittest[i]->agentID );
 		strcat( t, t2 );
 	}
-	list.push_back( strdup( t ) );
+	statusText.push_back( strdup( t ) );
 	
 	if( fittestCount > 0 )
 	{
@@ -9118,7 +8435,7 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 			sprintf( t2, "  %.2f", fFittest[i]->fitness );
 			strcat( t, t2 );
 		}
-		list.push_back( strdup( t ) );
+		statusText.push_back( strdup( t ) );
 	}
 	
 	sprintf( t, "CurFit =" );
@@ -9127,7 +8444,7 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 		sprintf( t2, " %lu", fCurrentFittestAgent[i]->Number() );
 		strcat( t, t2 );
 	}
-	list.push_back( strdup( t ) );
+	statusText.push_back( strdup( t ) );
 	
 	if( fCurrentFittestCount > 0 )
 	{
@@ -9137,14 +8454,14 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 			sprintf( t2, "  %.2f", fCurrentFittestAgent[i]->HeuristicFitness() / fTotalHeuristicFitness );
 			strcat( t, t2 );
 		}
-		list.push_back( strdup( t ) );
+		statusText.push_back( strdup( t ) );
 	}
 	
 	sprintf( t, "avgFoodEnergy = %.2f", (fAverageFoodEnergyIn - fAverageFoodEnergyOut) / (fAverageFoodEnergyIn + fAverageFoodEnergyOut) );
-	list.push_back( strdup( t ) );
+	statusText.push_back( strdup( t ) );
 	
 	sprintf( t, "totFoodEnergy = %.2f", (fTotalFoodEnergyIn - fTotalFoodEnergyOut) / (fTotalFoodEnergyIn + fTotalFoodEnergyOut) );
-	list.push_back( strdup( t ) );
+	statusText.push_back( strdup( t ) );
 	
 	sprintf( t, "totEnergyEaten = %.1f", fTotalEnergyEaten[0] );
 	for( int i = 1; i < globals::numEnergyTypes; i++ )
@@ -9152,22 +8469,22 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 		sprintf( t2, ", %.1f", fTotalEnergyEaten[i] );
 		strcat( t, t2 );
 	}
-	list.push_back( strdup( t ) );
+	statusText.push_back( strdup( t ) );
 	
 	static Energy lastTotalEnergyEaten;
 	static Energy deltaEnergy;
-    if( !(fStep % fStatusFrequency) )
+    if( !(fStep % statusFrequency) )
     {
 		deltaEnergy = fTotalEnergyEaten - lastTotalEnergyEaten;
 		lastTotalEnergyEaten = fTotalEnergyEaten;
 	}
-	sprintf( t, "EatRate = %.1f", deltaEnergy[0] / fStatusFrequency );
+	sprintf( t, "EatRate = %.1f", deltaEnergy[0] / statusFrequency );
 	for( int i = 1; i < globals::numEnergyTypes; i++ )
 	{
-		sprintf( t2, ", %.1f", deltaEnergy[i] / fStatusFrequency );
+		sprintf( t2, ", %.1f", deltaEnergy[i] / statusFrequency );
 		strcat( t, t2 );
 	}
-	list.push_back( strdup( t ) );
+	statusText.push_back( strdup( t ) );
 	
 	static long lastNumberBorn = 0;
 	static long deltaBorn;
@@ -9176,43 +8493,43 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 		numberBorn = fNumberBornVirtual;
 	else
 		numberBorn = fNumberBorn;
-    if( !(fStep % fStatusFrequency) )
+    if( !(fStep % statusFrequency) )
     {
 		deltaBorn = numberBorn - lastNumberBorn;
 		lastNumberBorn = numberBorn;
 	}
-	sprintf( t, "MateRate = %.2f", (double) deltaBorn / fStatusFrequency );
-	list.push_back( strdup( t ) );
+	sprintf( t, "MateRate = %.2f", (double) deltaBorn / statusFrequency );
+	statusText.push_back( strdup( t ) );
 	
 	if (fMonitorGeneSeparation)
 	{
 		sprintf( t, "GeneSep = %5.3f [%5.3f, %5.3f]", fAverageGeneSeparation, fMinGeneSeparation, fMaxGeneSeparation );
-		list.push_back( strdup( t ) );
+		statusText.push_back( strdup( t ) );
 	}
 
 	sprintf( t, "LifeSpan = %lu ± %lu [%lu, %lu]", nint( fLifeSpanStats.mean() ), nint( fLifeSpanStats.stddev() ), (ulong) fLifeSpanStats.min(), (ulong) fLifeSpanStats.max() );
-	list.push_back( strdup( t ) );
+	statusText.push_back( strdup( t ) );
 
 	sprintf( t, "RecLifeSpan = %lu ± %lu [%lu, %lu]", nint( fLifeSpanRecentStats.mean() ), nint( fLifeSpanRecentStats.stddev() ), (ulong) fLifeSpanRecentStats.min(), (ulong) fLifeSpanRecentStats.max() );
-	list.push_back( strdup( t ) );
+	statusText.push_back( strdup( t ) );
 
 	sprintf( t, "CurNeurons = %.1f ± %.1f [%lu, %lu]", fCurrentNeuronCountStats.mean(), fCurrentNeuronCountStats.stddev(), (ulong) fCurrentNeuronCountStats.min(), (ulong) fCurrentNeuronCountStats.max() );
-	list.push_back( strdup( t ) );
+	statusText.push_back( strdup( t ) );
 
 	sprintf( t, "NeurGroups = %.1f ± %.1f [%lu, %lu]", fNeuronGroupCountStats.mean(), fNeuronGroupCountStats.stddev(), (ulong) fNeuronGroupCountStats.min(), (ulong) fNeuronGroupCountStats.max() );
-	list.push_back( strdup( t ) );
+	statusText.push_back( strdup( t ) );
 
 	sprintf( t, "CurNeurGroups = %.1f ± %.1f [%lu, %lu]", fCurrentNeuronGroupCountStats.mean(), fCurrentNeuronGroupCountStats.stddev(), (ulong) fCurrentNeuronGroupCountStats.min(), (ulong) fCurrentNeuronGroupCountStats.max() );
-	list.push_back( strdup( t ) );
+	statusText.push_back( strdup( t ) );
 
 	sprintf( t, "CurSynapses = %.1f ± %.1f [%lu, %lu]", fCurrentSynapseCountStats.mean(), fCurrentSynapseCountStats.stddev(), (ulong) fCurrentSynapseCountStats.min(), (ulong) fCurrentSynapseCountStats.max() );
-	list.push_back( strdup( t ) );
+	statusText.push_back( strdup( t ) );
 
 	sprintf( t, "Rate %2.1f (%2.1f) %2.1f (%2.1f) %2.1f (%2.1f)",
 			 fFramesPerSecondInstantaneous, fSecondsPerFrameInstantaneous,
 			 fFramesPerSecondRecent,        fSecondsPerFrameRecent,
 			 fFramesPerSecondOverall,       fSecondsPerFrameOverall  );
-	list.push_back( strdup( t ) );
+	statusText.push_back( strdup( t ) );
 	
 	if( fRecordFoodPatchStats )
 	{
@@ -9222,7 +8539,7 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 		for( int domainNumber = 0; domainNumber < fNumDomains; domainNumber++ )
 		{
 			sprintf( t, "Domain %d", domainNumber);
-			list.push_back( strdup( t ) );
+			statusText.push_back( strdup( t ) );
 			
 			int numAgentsInAnyFoodPatch = 0;
 			int numAgentsInOuterRanges = 0;
@@ -9246,7 +8563,7 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 						 fDomains[domainNumber].fFoodPatches[i].agentInsideCount * makePercent,
 						(fDomains[domainNumber].fFoodPatches[i].agentInsideCount + fDomains[domainNumber].fFoodPatches[i].agentNeighborhoodCount) * makePercent,
 						 fDomains[domainNumber].fFoodPatches[i].agentInsideCount * makePercentNorm );
-				list.push_back( strdup( t ) );
+				statusText.push_back( strdup( t ) );
 			}
 			
 			
@@ -9255,7 +8572,7 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 					 numAgentsInAnyFoodPatch + numAgentsInOuterRanges,
 					 numAgentsInAnyFoodPatch * makePercent,
 					(numAgentsInAnyFoodPatch + numAgentsInOuterRanges) * makePercent );
-			list.push_back( strdup( t ) );
+			statusText.push_back( strdup( t ) );
 
 			numAgentsInAnyFoodPatchInAnyDomain += numAgentsInAnyFoodPatch;
 			numAgentsInOuterRangesInAnyDomain += numAgentsInOuterRanges;
@@ -9270,96 +8587,9 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 					 numAgentsInAnyFoodPatchInAnyDomain + numAgentsInOuterRangesInAnyDomain,
 					 numAgentsInAnyFoodPatchInAnyDomain * makePercent,
 					(numAgentsInAnyFoodPatchInAnyDomain + numAgentsInOuterRangesInAnyDomain) * makePercent );
-			list.push_back( strdup( t ) );
+			statusText.push_back( strdup( t ) );
 		}
 	}
-	
-    if( !(fStep % fStatusFrequency) || (fStep == 1) )
-    {
-		char statusFileName[256];
-		
-		sprintf( statusFileName, "run/stats/stat.%ld", fStep );
-        FILE *statusFile = fopen( statusFileName, "w" );
-		Q_CHECK_PTR( statusFile );
-		
-		if( fStatusToStdout )
-			printf( "------------------------------------------------------------\n" );
-		
-		TStatusList::const_iterator iter = list.begin();
-		for( ; iter != list.end(); ++iter )
-		{
-			bool record = true;
-			if( ! fRecordPerformanceStats && (0 == strncmp( *iter, "Rate", 4 )) )
-				record = false;
-			if( record )
-				fprintf( statusFile, "%s\n", *iter );
-			if( fStatusToStdout )
-				printf( "%s\n", *iter );
-		}
-
-        fclose( statusFile );
-
-		// If the shell function PWFARM_STATUS is defined, then use it to tell farm dispatcher
-		// our current status.
-		if( getenv("PWFARM_STATUS") )
-		{
-			char cmd[1024];
-			sprintf( cmd, "bash -c 'PWFARM_STATUS Polyworld \"[step=%ld agents=%d food=%d]\"'",
-					 fStep,
-					 objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE),
-					 objectxsortedlist::gXSortedObjects.getCount(FOODTYPE));
-			int rc = system( cmd );
-			if( rc ) cerr << "Failed executing PWFARM_STATUS" << endl;
-		}
-    }
-}
-
-
-//---------------------------------------------------------------------------
-// TSimulation::Update
-//
-// Do not call this function as part of the simulation.  It is only used to
-// refresh all windows after something external, like a screen saver,
-// overwrote all the windows.
-//---------------------------------------------------------------------------
-void TSimulation::Update()
-{
-	// Redraw main simulation window
-	fSceneView->updateGL();
-
-	// Update agent POV window
-	if (fShowVision && fAgentPOVWindow != NULL && !fAgentPOVWindow->isHidden())
-		fAgentPOVWindow->updateGL();
-		//QApplication::postEvent(fAgentPOVWindow, new QCustomEvent(kUpdateEventType));	
-	
-	// Update chart windows
-	if (fChartBorn && fBirthrateWindow != NULL && fBirthrateWindow->isVisible())
-		fBirthrateWindow->updateGL();
-		//QApplication::postEvent(fBirthrateWindow, new QCustomEvent(kUpdateEventType));	
-			
-	if (fChartFitness && fFitnessWindow != NULL && fFitnessWindow->isVisible())
-		fFitnessWindow->updateGL();
-		//QApplication::postEvent(fFitnessWindow, new QCustomEvent(kUpdateEventType));	
-			
-	if (fChartFoodEnergy && fFoodEnergyWindow != NULL && fFoodEnergyWindow->isVisible())
-		fFoodEnergyWindow->updateGL();
-		//QApplication::postEvent(fFoodEnergyWindow, new QCustomEvent(kUpdateEventType));	
-	
-	if (fChartPopulation && fPopulationWindow != NULL && fPopulationWindow->isVisible())
-		fPopulationWindow->updateGL();
-		//QApplication::postEvent(fPopulationWindow, new QCustomEvent(kUpdateEventType));	
-
-	if (fBrainMonitorWindow != NULL && fBrainMonitorWindow->isVisible())
-		fBrainMonitorWindow->updateGL();
-		//QApplication::postEvent(fBrainMonitorWindow, new QCustomEvent(kUpdateEventType));	
-
-	if (fChartGeneSeparation && fGeneSeparationWindow != NULL)
-		fGeneSeparationWindow->updateGL();
-		//QApplication::postEvent(fGeneSeparationWindow, new QCustomEvent(kUpdateEventType));	
-		
-	if (fShowTextStatus && fTextStatusWindow != NULL)
-		fTextStatusWindow->Draw();
-		//QApplication::postEvent(fTextStatusWindow, new QCustomEvent(kUpdateEventType));	
 }
 
 
@@ -9477,1747 +8707,3 @@ char TSimulation::glFogFunction()
 
 float TSimulation::glExpFogDensity() { return fExpFogDensity; }
 int TSimulation::glLinearFogEnd()    { return fLinearFogEnd;  }
-
-#if 0
-/********************************************************************************
- ********************************************************************************
- ***
- *** BEGIN LEGACY WORLDFILE CODE
- ***
- ********************************************************************************
- ********************************************************************************/
-
-//-------------------------------------------------------------------------------------------
-// TSimulation::ReadWorldFile
-//-------------------------------------------------------------------------------------------
-void TSimulation::ReadWorldFile(const char* filename)
-{
-
-#define __PROP(LABEL,VAR)in >> VAR; ReadLabel(in, LABEL); cout << LABEL ses VAR nl;
-#define PROP(NAME) __PROP(#NAME,f##NAME)
-#define __VPROP(LABEL,VAR,VERSION,DEFAULT) \
-	if( version >= VERSION ) \
-	{						 \
-		__PROP(LABEL,VAR);	 \
-	}						 \
-	else					 \
-	{						 \
-		VAR = DEFAULT;		 \
-	}
-#define VPROP(NAME,VERSION,DEFAULT) __VPROP(#NAME,f##NAME,VERSION,DEFAULT)
-		
-
-    filebuf fb;
-	if( !Resources::openWorldFile( &fb, filename ) )
-	{
-		return;
-	}
-	
-	istream in( &fb );
-    short version;
-    char label[128];
-
-    in >> version; in >> label;
-	cout << "version" ses version nl;
-	
-    if( (version < 1) || (version > CurrentWorldfileVersion) )
-    {
-		if( version <  1 )
-		{
-			eprintf( "Invalid worldfile version (%d) < 1\n", version );
-		}
-		else
-		{
-			eprintf( "Invalid worldfile version (%d) > CurrentWorldfileVersion (%d)\n", version, CurrentWorldfileVersion );
-		}
-		cout nlf;
-     	fb.close();
-        exit( 1 );
-	}
-	
-	if( version >= 25 )
-	{
-		in >> fLockStepWithBirthsDeathsLog; in >> label;
-		cout << "LockStepWithBirthsDeathsLog" ses fLockStepWithBirthsDeathsLog nl;
-	}
-	else
-	{
-		fLockStepWithBirthsDeathsLog = false;
-		cout << "+LockStepWithBirthsDeathsLog" ses fLockStepWithBirthsDeathsLog nl;
-	}
-	
-	if( version >= 18 )
-	{
-		in >> fMaxSteps; in >> label;
-		cout << "maxSteps" ses fMaxSteps nl;
-	}
-	else
-		fMaxSteps = 0;  // don't terminate automatically
-
-	VPROP( EndOnPopulationCrash, 48, false );
-	
-	bool ignoreBool;
-    in >> ignoreBool; in >> label;
-    cout << "fDoCPUWork (ignored)" ses ignoreBool nl;
-
-    in >> fDumpFrequency; in >> label;
-    cout << "fDumpFrequency" ses fDumpFrequency nl;
-    in >> fStatusFrequency; in >> label;
-    cout << "fStatusFrequency" ses fStatusFrequency nl;
-    in >> globals::blockedEdges; in >> label;
-    cout << "edges" ses globals::blockedEdges nl;
-
-	// TODO figure out how to config agent using this
-    in >> globals::wraparound; in >> label;
-    cout << "wraparound" ses globals::wraparound nl;
-
-    in >> agent::gVision; in >> label;
-    if (!fGraphics)
-        agent::gVision = false;
-    cout << "vision" ses agent::gVision nl;
-    in >> fShowVision; in >> label;
-    if (!fGraphics)
-        fShowVision = false;
-    cout << "showvision" ses fShowVision nl;
-
-	VPROP( StaticTimestepGeometry, 34, false );
-	VPROP( ParallelInitAgents, 55, false );
-	VPROP( ParallelInteract, 55, false );
-	VPROP( ParallelBrains, 55, true );
-
-    in >> brain::gMinWin; in >> label;
-    cout << "minwin" ses brain::gMinWin nl;
-    in >> agent::gMaxVelocity; in >> label;
-    cout << "maxvel" ses agent::gMaxVelocity nl;
-
-    in >> fMinNumAgents; in >> label;
-    cout << "minNumAgents" ses fMinNumAgents nl;
-    in >> fMaxNumAgents; in >> label;
-    cout << "maxNumAgents" ses fMaxNumAgents nl;
-    in >> fInitNumAgents; in >> label;
-    cout << "initNumAgents" ses fInitNumAgents nl;
-	if( version >= 9 )
-	{
-		in >> fNumberToSeed; in >> label;
-		cout << "numberToSeed" ses fNumberToSeed nl;
-		in >> fProbabilityOfMutatingSeeds; in >> label;
-		cout << "probabilityOfMutatingSeeds" ses fProbabilityOfMutatingSeeds nl;
-	}
-	else
-	{
-		fNumberToSeed = 0;
-		fProbabilityOfMutatingSeeds = 0.0;
-	}
-
-	VPROP( SeedFromFile, 45, false );
-	VPROP( PositionSeedsFromFile, 49, false );
-
-    in >> fMiscAgents; in >> label;
-    cout << "miscagents" ses fMiscAgents nl;
-
-	if( version >= 32 )
-	{
-		in >> fInitFoodCount; in >> label;
-		cout << "initFoodCount" ses fInitFoodCount nl;
-		in >> fMinFoodCount; in >> label;
-		cout << "minFoodCount" ses fMinFoodCount nl;
-		in >> fMaxFoodCount; in >> label;
-		cout << "maxFoodCount" ses fMaxFoodCount nl;
-		in >> fMaxFoodGrownCount; in >> label;
-		cout << "maxFoodGrown" ses fMaxFoodGrownCount nl;
-		in >> fFoodRate; in >> label;
-		cout << "foodrate" ses fFoodRate nl;
-	}
-
-	VPROP( FoodRemoveEnergy, 46, 0.0f );
-
-    in >> fPositionSeed; in >> label;
-    cout << "positionSeed" ses fPositionSeed nl;
-    in >> fGenomeSeed; in >> label;
-    cout << "genomeSeed" ses fGenomeSeed nl;
-
-
-	VPROP( SimulationSeed, 44, 0 );
-
-	if( version < 32 )
-	{
-		in >> fMinFoodCount; in >> label;
-		cout << "minFoodCount" ses fMinFoodCount nl;
-		in >> fMaxFoodCount; in >> label;
-		cout << "maxFoodCount" ses fMaxFoodCount nl;
-		in >> fMaxFoodGrownCount; in >> label;
-		cout << "maxFoodGrown" ses fMaxFoodGrownCount nl;
-		in >> fInitFoodCount; in >> label;
-		cout << "initFoodCount" ses fInitFoodCount nl;
-		in >> fFoodRate; in >> label;
-		cout << "foodrate" ses fFoodRate nl;
-	}
-
-	if( version < 51 )
-	{
-		bool rfood;
-
-		in >> rfood; in >> label;
-		fAgentsRfood = rfood ? RFOOD_TRUE : RFOOD_FALSE;
-		cout << "agentsRfood" ses rfood nl;
-	}
-	else
-	{
-		string rfood;
-
-		__PROP( "agentsRfood", rfood );
-		if( rfood == "F" )
-		{
-			fAgentsRfood = RFOOD_TRUE__FIGHT_ONLY;
-		}
-		else if( rfood == "1" )
-		{
-			fAgentsRfood = RFOOD_TRUE;
-		}
-		else if( rfood == "0" )
-		{
-			fAgentsRfood = RFOOD_FALSE;
-		}
-		else
-		{
-			cerr << "Invalid agentsRfood value. Should be in {0,1,F}" << endl;
-			exit( 1 );
-		}
-	}
-    in >> fFitness1Frequency; in >> label;
-    cout << "fit1freq" ses fFitness1Frequency nl;
-    in >> fFitness2Frequency; in >> label;
-    cout << "fit2freq" ses fFitness2Frequency nl;
-    in >> fNumberFit; in >> label;
-    cout << "numfit" ses fNumberFit nl;
-	
-	if( version >= 14 )
-	{
-		in >> fNumberRecentFit; in >> label;
-		cout << "numRecentFit" ses fNumberRecentFit nl;
-	}
-	
-    in >> fEatFitnessParameter; in >> label;
-    cout << "eatfitparam" ses fEatFitnessParameter nl;
-    in >> fMateFitnessParameter; in >> label;
-    cout << "matefitparam" ses fMateFitnessParameter nl;
-    in >> fMoveFitnessParameter; in >> label;
-    cout << "movefitparam" ses fMoveFitnessParameter nl;
-    in >> fEnergyFitnessParameter; in >> label;
-    cout << "energyfitparam" ses fEnergyFitnessParameter nl;
-    in >> fAgeFitnessParameter; in >> label;
-    cout << "agefitparam" ses fAgeFitnessParameter nl;
-  	fTotalHeuristicFitness = fEatFitnessParameter + fMateFitnessParameter + fMoveFitnessParameter + fEnergyFitnessParameter + fAgeFitnessParameter;
-    in >> food::gMinFoodEnergy; in >> label;
-    cout << "minfoodenergy" ses food::gMinFoodEnergy nl;
-    in >> food::gMaxFoodEnergy; in >> label;
-    cout << "maxfoodenergy" ses food::gMaxFoodEnergy nl;
-    in >> food::gSize2Energy; in >> label;
-    cout << "size2energy" ses food::gSize2Energy nl;
-    in >> fEat2Consume; in >> label;
-    cout << "eat2consume" ses fEat2Consume nl;
-
-	if( version >= 53 )
-	{
-		string layout;
-
-		__PROP( "genomeLayout", layout );
-
-		if( layout == "L" )
-		{
-			genome::gLayoutType = genome::GenomeLayout::LEGACY;
-		}
-		else if( layout == "N" )
-		{
-			genome::gLayoutType = genome::GenomeLayout::NEURGROUP;
-		}
-		else
-		{
-			cerr << "bad value for genomeLayout." << endl;
-			exit( 1 );
-		}
-	}
-	else
-	{
-		genome::gLayoutType = genome::GenomeLayout::LEGACY;
-	}
-
-	if( version >= 48 )
-	{
-		// For earlier versions these will be initialized in initworld()
-		__PROP( "enableMateWaitFeedback", genome::gEnableMateWaitFeedback );
-	}
-
-	if( version >= 38 )
-	{
-		// For earlier versions these will be initialized in initworld()
-		__PROP( "enableSpeedFeedback", genome::gEnableSpeedFeedback );
-		__PROP( "enableGive", genome::gEnableGive );
-	}
-	
-	if( version >= 39 )
-	{
-		__PROP( "enableCarry", genome::gEnableCarry );
-		__PROP( "maxCarries", agent::gMaxCarries );
-	}
-
-	if( version >= 41 )
-	{
-		int agents, food, bricks;
-
-		fCarryObjects = 0;
-
-		__PROP( "carryAgents", agents );
-		__PROP( "carryFood", food );
-		__PROP( "carryBricks", bricks );
-
-#define __SET( VAR, MASK ) 	if( VAR ) fCarryObjects |= MASK##TYPE
-		__SET( agents, AGENT );
-		__SET( food, FOOD );
-		__SET( bricks, BRICK );
-#undef __SET
-
-		fShieldObjects = 0;
-
-		__PROP( "shieldAgents", agents );
-		__PROP( "shieldFood", food );
-		__PROP( "shieldBricks", bricks );
-
-#define __SET( VAR, MASK ) 	if( VAR ) fShieldObjects |= MASK##TYPE
-		__SET( agents, AGENT );
-		__SET( food, FOOD );
-		__SET( bricks, BRICK );
-#undef __SET
-
-		PROP( CarryPreventsEat );
-		PROP( CarryPreventsFight );
-		PROP( CarryPreventsGive );
-		PROP( CarryPreventsMate );
-	}
-	else
-	{
-		fCarryObjects = ANYTYPE;
-		fShieldObjects = 0;
-		fCarryPreventsEat = 0;
-		fCarryPreventsFight = 0;
-		fCarryPreventsGive = 0;
-		fCarryPreventsMate = 0;
-	}
-
-	
-    int ignoreShort1, ignoreShort2, ignoreShort3, ignoreShort4;
-    in >> ignoreShort1; in >> label;
-    cout << "minintneurons" ses ignoreShort1 nl;
-    in >> ignoreShort2; in >> label;
-    cout << "maxintneurons" ses ignoreShort2 nl;
-    // note: minintneurons & maxintneurons are no longer used
-    cout << "note: minintneurons & maxintneurons are no longer used" nl;
-
-    in >> genome::gMinvispixels; in >> label;
-    cout << "minvispixels" ses genome::gMinvispixels nl;
-    in >> genome::gMaxvispixels; in >> label;
-    cout << "maxvispixels" ses genome::gMaxvispixels nl;
-    in >> genome::gMinMutationRate; in >> label;
-    cout << "minmrate" ses genome::gMinMutationRate nl;
-    in >> genome::gMaxMutationRate; in >> label;
-    cout << "maxmrate" ses genome::gMaxMutationRate nl;
-    in >> genome::gMinNumCpts; in >> label;
-    cout << "minNumCpts" ses genome::gMinNumCpts nl;
-    in >> genome::gMaxNumCpts; in >> label;
-    cout << "maxNumCpts" ses genome::gMaxNumCpts nl;
-    in >> genome::gMinLifeSpan; in >> label;
-    cout << "minlifespan" ses genome::gMinLifeSpan nl;
-    in >> genome::gMaxLifeSpan; in >> label;
-    cout << "maxlifespan" ses genome::gMaxLifeSpan nl;
-    in >> fMateWait; in >> label;
-    cout << "matewait" ses fMateWait nl;
-    in >> agent::gInitMateWait; in >> label;
-    cout << "initmatewait" ses agent::gInitMateWait nl;
-	if( version >= 29 )
-	{
-		in >> fEatMateSpan; in >> label;
-		cout << "EatMateSpan" ses fEatMateSpan nl;
-	}
-	else
-	{
-		fEatMateSpan = 0;
-		cout << "+EatMateSpan" ses fEatMateSpan nl;
-	}
-    in >> genome::gMinStrength; in >> label;
-    cout << "minstrength" ses genome::gMinStrength nl;
-    in >> genome::gMaxStrength; in >> label;
-    cout << "maxstrength" ses genome::gMaxStrength nl;
-    in >> agent::gMinAgentSize; in >> label;
-    cout << "minAgentSize" ses agent::gMinAgentSize nl;
-    in >> agent::gMaxAgentSize; in >> label;
-    cout << "maxAgentSize" ses agent::gMaxAgentSize nl;
-    in >> agent::gMinMaxEnergy; in >> label;
-    cout << "minmaxenergy" ses agent::gMinMaxEnergy nl;
-    in >> agent::gMaxMaxEnergy; in >> label;
-    cout << "maxmaxenergy" ses agent::gMaxMaxEnergy nl;
-    in >> genome::gMinmateenergy; in >> label;
-    cout << "minmateenergy" ses genome::gMinmateenergy nl;
-    in >> genome::gMaxmateenergy; in >> label;
-    cout << "maxmateenergy" ses genome::gMaxmateenergy nl;
-    in >> fMinMateFraction; in >> label;
-    cout << "minmatefrac" ses fMinMateFraction nl;
-    in >> genome::gMinmaxspeed; in >> label;
-    cout << "minmaxspeed" ses genome::gMinmaxspeed nl;
-    in >> genome::gMaxmaxspeed; in >> label;
-    cout << "maxmaxspeed" ses genome::gMaxmaxspeed nl;
-    in >> agent::gSpeed2DPosition; in >> label;
-    cout << "speed2dpos" ses agent::gSpeed2DPosition nl;
-    in >> agent::gYaw2DYaw; in >> label;
-    cout << "yaw2dyaw" ses agent::gYaw2DYaw nl;
-    in >> genome::gMinlrate; in >> label;
-    cout << "minlrate" ses genome::gMinlrate nl;
-    in >> genome::gMaxlrate; in >> label;
-    cout << "maxlrate" ses genome::gMaxlrate nl;
-    in >> agent::gMinFocus; in >> label;
-    cout << "minfocus" ses agent::gMinFocus nl;
-    in >> agent::gMaxFocus; in >> label;
-    cout << "maxfocus" ses agent::gMaxFocus nl;
-    in >> agent::gAgentFOV; in >> label;
-    cout << "agentfovy" ses agent::gAgentFOV nl;
-    in >> agent::gMaxSizeAdvantage; in >> label;
-    cout << "maxsizeadvantage" ses agent::gMaxSizeAdvantage nl;
-
-	if( version >= 38 )
-	{
-		string value;
-
-		__PROP("bodyGreenChannel", value);
-
-		if( value == "I" )
-		{
-			agent::gBodyGreenChannel = agent::BGC_ID;
-		}
-		else if( value == "L" )
-		{
-			agent::gBodyGreenChannel = agent::BGC_LIGHT;
-		}
-		else
-		{
-			float fval = -1;
-			istrstream sin(value.c_str());
-			sin >> fval;
-			if( sin.fail() )
-			{
-				error(2, "Invalid float for property bodyGreenChannel (", value.c_str(), ")");
-			}
-
-			agent::gBodyGreenChannel = agent::BGC_CONST;
-			agent::gBodyGreenChannelConstValue = fval;
-		}
-
-		__PROP("noseColor", value);
-
-		if( value == "L" )
-		{
-			agent::gNoseColor = agent::NC_LIGHT;
-		}
-		else
-		{
-			float fval = -1;
-			istrstream sin(value.c_str());
-			sin >> fval;
-			if( sin.fail() )
-			{
-				error(2, "Invalid float for property noseColor (", value.c_str(), ")");
-			}
-
-			agent::gNoseColor = agent::NC_CONST;
-			agent::gNoseColorConstValue = fval;
-		}
-		
-	}
-	else
-	{
-		agent::gBodyGreenChannel = agent::BGC_ID;
-		agent::gNoseColor = agent::NC_LIGHT;
-	}
-
-    in >> fPower2Energy; in >> label;
-    cout << "power2energy" ses fPower2Energy nl;
-    in >> agent::gEat2Energy; in >> label;
-    cout << "eat2energy" ses agent::gEat2Energy nl;
-    in >> agent::gMate2Energy; in >> label;
-    cout << "mate2energy" ses agent::gMate2Energy nl;
-    in >> agent::gFight2Energy; in >> label;
-    cout << "fight2energy" ses agent::gFight2Energy nl;
-	if( version >= 47 )
-	{
-		__PROP( "minsizepenalty", agent::gMinSizePenalty );
-	}
-	else
-	{
-		agent::gMinSizePenalty = 0.0;
-	}
-    in >> agent::gMaxSizePenalty; in >> label;
-    cout << "maxsizepenalty" ses agent::gMaxSizePenalty nl;
-    in >> agent::gSpeed2Energy; in >> label;
-    cout << "speed2energy" ses agent::gSpeed2Energy nl;
-    in >> agent::gYaw2Energy; in >> label;
-    cout << "yaw2energy" ses agent::gYaw2Energy nl;
-    in >> agent::gLight2Energy; in >> label;
-    cout << "light2energy" ses agent::gLight2Energy nl;
-    in >> agent::gFocus2Energy; in >> label;
-    cout << "focus2energy" ses agent::gFocus2Energy nl;
-
-	if( version >= 39 )
-	{
-		// For earlier versions these will be initialized in initworld()
-		__PROP( "pickup2energy", agent::gPickup2Energy );
-		__PROP( "drop2energy", agent::gDrop2Energy );
-		__PROP( "carryAgent2energy", agent::gCarryAgent2Energy );
-		__PROP( "carryAgentSize2energy", agent::gCarryAgentSize2Energy );
-		__PROP( "carryFood2energy", food::gCarryFood2Energy );
-		__PROP( "carryBrick2energy", brick::gCarryBrick2Energy );
-	}
-	
-    in >> brain::gNeuralValues.maxsynapse2energy; in >> label;
-    cout << "maxsynapse2energy" ses brain::gNeuralValues.maxsynapse2energy nl;
-    in >> agent::gFixedEnergyDrain; in >> label;
-    cout << "fixedenergydrain" ses agent::gFixedEnergyDrain nl;
-    in >> brain::gDecayRate; in >> label;
-    cout << "decayrate" ses brain::gDecayRate nl;
-
-	if( version >= 18 )
-	{
-		in >> fAgentHealingRate; in >> label;
-		
-		if( fAgentHealingRate > 0.0 )
-			fHealing = 1;					// a bool flag to check to see if healing is turned on is faster than always comparing a float.
-		cout << "AgentHealingRate" ses fAgentHealingRate nl;
-	}
-	
-    in >> fEatThreshold; in >> label;
-    cout << "eatthreshold" ses fEatThreshold nl;
-    in >> fMateThreshold; in >> label;
-    cout << "matethreshold" ses fMateThreshold nl;
-    in >> fFightThreshold; in >> label;
-    cout << "fightthreshold" ses fFightThreshold nl;
-	if( version >= 43 )
-	{
-		PROP( FightFraction );
-	}
-	if( version >= 38 )
-	{
-
-		PROP(GiveThreshold);
-		PROP(GiveFraction);
-	}
-	if( version >= 39 )
-	{
-		PROP(PickupThreshold);
-		PROP(DropThreshold);
-	}
-    in >> genome::gMiscBias; in >> label;
-    cout << "miscbias" ses genome::gMiscBias nl;
-    in >> genome::gMiscInvisSlope; in >> label;
-    cout << "miscinvslope" ses genome::gMiscInvisSlope nl;
-    in >> brain::gLogisticSlope; in >> label;
-    cout << "logisticslope" ses brain::gLogisticSlope nl;
-    in >> brain::gMaxWeight; in >> label;
-    cout << "maxweight" ses brain::gMaxWeight nl;
-	if( version >= 52 )
-	{
-		__PROP( "enableInitWeightRngSeed", brain::gEnableInitWeightRngSeed );
-		__PROP( "minInitWeightRngSeed", brain::gMinInitWeightRngSeed );
-		__PROP( "maxInitWeightRngSeed", brain::gMaxInitWeightRngSeed );
-
-		RandomNumberGenerator::set( RandomNumberGenerator::INIT_WEIGHT,
-									RandomNumberGenerator::LOCAL );
-
-	}
-	else
-	{
-		brain::gEnableInitWeightRngSeed = false;
-	}
-    in >> brain::gInitMaxWeight; in >> label;
-    cout << "initmaxweight" ses brain::gInitMaxWeight nl;
-    in >> genome::gMinBitProb; in >> label;
-    cout << "minbitprob" ses genome::gMinBitProb nl;
-    in >> genome::gMaxBitProb; in >> label;
-    cout << "maxbitprob" ses genome::gMaxBitProb nl;
-	
-	if( version >= 31 )
-	{
-		fSolidObjects = 0;
-		int solidAgents, solidFood, solidBricks;
-		in >> solidAgents; in >> label;
-		cout << "solidAgents" ses solidAgents nl;
-		if( solidAgents ) fSolidObjects |= AGENTTYPE;
-		in >> solidFood; in >> label;
-		cout << "solidFood" ses solidFood nl;
-		if( solidFood ) fSolidObjects |= FOODTYPE;
-		in >> solidBricks; in >> label;
-		cout << "solidBricks" ses solidBricks nl;
-		if( solidBricks ) fSolidObjects |= BRICKTYPE;
-	}
-	else
-		fSolidObjects = BRICKTYPE;
-
-	printf( "\tfSolidObjects = 0x" );
-	for( unsigned int i = 0; i < sizeof(fSolidObjects)*8; i++ )
-		printf( "%d", (fSolidObjects>>(31-i)) & 1 );
-	printf( "\n" );
-	
-    in >> agent::gAgentHeight; in >> label;
-    cout << "agentheight" ses agent::gAgentHeight nl;
-    in >> food::gFoodHeight; in >> label;
-    cout << "foodheight" ses food::gFoodHeight nl;
-    in >> food::gFoodColor.r >> food::gFoodColor.g >> food::gFoodColor.b >> label;
-    cout << "foodcolor = (" << food::gFoodColor.r cms
-                               food::gFoodColor.g cms
-                               food::gFoodColor.b pnl;
-	if( version >= 47 )
-	{
-		__PROP( "brickheight", brick::gBrickHeight );
-	    __PROP( "brickcolor", brick::gBrickColor );
-	}
-	else
-	{
-		brick::gBrickColor.set( 0.6, 0.2, 0.2 );
-		brick::gBrickHeight = 0.5;
-	}
-    in >> barrier::gBarrierHeight; in >> label;
-    cout << "barrierheight" ses barrier::gBarrierHeight nl;
-    in >> barrier::gBarrierColor.r >> barrier::gBarrierColor.g >> barrier::gBarrierColor.b >> label;
-    cout << "barriercolor = (" << barrier::gBarrierColor.r cms
-                                  barrier::gBarrierColor.g cms
-                                  barrier::gBarrierColor.b pnl;
-    in >> fGroundColor.r >> fGroundColor.g >> fGroundColor.b >> label;
-    cout << "groundcolor = (" << fGroundColor.r cms
-                                 fGroundColor.g cms
-                                 fGroundColor.b pnl;
-    in >> fGroundClearance; in >> label;
-    cout << "fGroundClearance" ses fGroundClearance nl;
-    in >> fCameraColor.r >> fCameraColor.g >> fCameraColor.b >> label;
-    cout << "cameracolor = (" << fCameraColor.r cms
-                                 fCameraColor.g cms
-                                 fCameraColor.b pnl;
-    in >> fCameraRadius; in >> label;
-    cout << "camradius" ses fCameraRadius nl;
-    in >> fCameraHeight; in >> label;
-    cout << "camheight" ses fCameraHeight nl;
-    in >> fCameraRotationRate; in >> label;
-    cout << "camrotationrate" ses fCameraRotationRate nl;
-    fRotateWorld = (fCameraRotationRate != 0.0);	//Boolean for enabling or disabling world roation (CMB 3/19/06)
-    in >> fCameraAngleStart; in >> label;
-    cout << "camanglestart" ses fCameraAngleStart nl;
-    in >> fCameraFOV; in >> label;
-    cout << "camfov" ses fCameraFOV nl;
-    in >> fMonitorAgentRank; in >> label;
-    if (!fGraphics)
-        fMonitorAgentRank = 0; // cannot monitor agent brain without graphics
-    cout << "fMonitorAgentRank" ses fMonitorAgentRank nl;
-
-    in >> ignoreShort3; in >> label;
-    cout << "fMonitorCritWinWidth (ignored)" ses ignoreShort3 nl;
-    in >> ignoreShort4; in >> label;
-    cout << "fMonitorCritWinHeight (ignored)" ses ignoreShort4 nl;
-
-    in >> fBrainMonitorStride; in >> label;
-    cout << "fBrainMonitorStride" ses fBrainMonitorStride nl;
-    in >> globals::worldsize; in >> label;
-    cout << "worldsize" ses globals::worldsize nl;
-    long numbarriers;
-    float x1, z1, x2, z2;
-    in >> numbarriers; in >> label;
-    cout << "numbarriers = " << numbarriers nl;
-	if( version >= 27 )
-	{
-		bool ratioBarrierPositions = false;
-		
-		if( version >= 47 )
-		{
-			__PROP( "ratioBarrierPositions", ratioBarrierPositions );
-		}
-
-		for( int i = 0; i < numbarriers; i++ )
-		{
-			int numKeyFrames;
-			in >> numKeyFrames >> label;
-			cout << "barrier[" << i << "].numKeyFrames" ses numKeyFrames nl;
-			barrier* b = new barrier( numKeyFrames );
-			for( int j = 0; j < numKeyFrames; j++ )
-			{
-				long t;
-				in >> t >> x1 >> z1 >> x2 >> z2 >> label;
-				if( ratioBarrierPositions )
-				{
-					x1 *= globals::worldsize;
-					x2 *= globals::worldsize;
-					z1 *= globals::worldsize;
-					z2 *= globals::worldsize;
-				}
-				cout << "barrier[" << i << "].keyFrame[" << j << "]" ses t sp x1 sp z1 sp x2 sp z2 nl;
-				b->setKeyFrame( t, x1, z1, x2, z2 );
-			}
-			barrier::gXSortedBarriers.add( b );
-		}
-	}
-	else
-	{
-		for( int i = 0; i < numbarriers; i++ )
-		{
-			in >> x1 >> z1 >> x2 >> z2 >> label;
-			cout << "barrier #" << i << " position = ("
-				 << x1 cms z1 << ") to (" << x2 cms z2 pnl;
-			barrier* b = new barrier( 1 );
-			b->setKeyFrame( 0, x1, z1, x2, z2 );
-			barrier::gXSortedBarriers.add( b );
-		}
-	}
-	
-    if (version < 2)
-    {
-		cout nlf;
-     	fb.close();
-        return;
-	}
-
-    in >> fMonitorGeneSeparation; in >> label;
-    cout << "genesepmon" ses fMonitorGeneSeparation nl;
-    in >> fRecordGeneSeparation; in >> label;
-    cout << "geneseprec" ses fRecordGeneSeparation nl;
-
-    if (version < 3)
-    {
-		cout nlf;
-     	fb.close();
-        return;
-	}
-
-    in >> fChartBorn; in >> label;
-    cout << "fChartBorn" ses fChartBorn nl;
-    in >> fChartFitness; in >> label;
-    cout << "fChartFitness" ses fChartFitness nl;
-    in >> fChartFoodEnergy; in >> label;
-    cout << "fChartFoodEnergy" ses fChartFoodEnergy nl;
-    in >> fChartPopulation; in >> label;
-    cout << "fChartPopulation" ses fChartPopulation nl;
-
-    if (version < 4)
-    {
-		cout nlf;
-     	fb.close();
-        return;
-	}
-
-    in >> fNumDomains; in >> label;
-    cout << "numdomains" ses fNumDomains nl;
-    if (fNumDomains < 1)
-    {
-		char tempstring[256];
-        sprintf(tempstring,"%s %ld %s", "Number of fitness domains must always be > 0 (not ", fNumDomains,").\nIt will be reset to 1.");
-        error(1, tempstring);
-        fNumDomains = 1;
-    }
-    if (fNumDomains > MAXDOMAINS)
-    {
-		char tempstring[256];
-        sprintf(tempstring, "Too many fitness domains requested (%ld > %d)", fNumDomains, MAXDOMAINS);
-        error(2,tempstring);
-    }
-
-    short id;
-	long totmaxnumagents = 0;
-	long totminnumagents = 0;
-	int	numFoodPatchesNeedingRemoval = 0;
-	
-	for (id = 0; id < fNumDomains; id++)
-	{
-		if( version < 32 )
-		{
-			in >> fDomains[id].minNumAgents; in >> label;
-			cout << "minNumAgents in domains[" << id << "]" ses fDomains[id].minNumAgents nl;
-			in >> fDomains[id].maxNumAgents; in >> label;
-			cout << "maxNumAgents in domains[" << id << "]" ses fDomains[id].maxNumAgents nl;
-			in >> fDomains[id].initNumAgents; in >> label;
-			cout << "initNumAgents in domains[" << id << "]" ses fDomains[id].initNumAgents nl;
-			if( version >= 9 )
-			{
-				in >> fDomains[id].numberToSeed; in >> label;
-				cout << "numberToSeed in domains[" << id << "]" ses fDomains[id].numberToSeed nl;
-				in >> fDomains[id].probabilityOfMutatingSeeds; in >> label;
-				cout << "probabilityOfMutatingSeeds in domains [" << id << "]" ses fDomains[id].probabilityOfMutatingSeeds nl;
-			}
-			else
-			{
-				fDomains[id].numberToSeed = 0;
-				fDomains[id].probabilityOfMutatingSeeds = 0.0;
-			}
-		}
-		
-		if (version >= 19)
-		{
-			in >> fDomains[id].centerX; in >> label;
-			cout << "centerX of domains[" << id << "]" ses fDomains[id].centerX nl;
-			in >> fDomains[id].centerZ; in >> label;
-			cout << "centerZ of domains[" << id << "]" ses fDomains[id].centerZ nl;
-			in >> fDomains[id].sizeX; in >> label;
-			cout << "sizeX of domains[" << id << "]" ses fDomains[id].sizeX nl;
-			in >> fDomains[id].sizeZ; in >> label;
-			cout << "sizeZ of domains[" << id << "]" ses fDomains[id].sizeZ nl;
-
-			fDomains[id].absoluteSizeX = globals::worldsize * fDomains[id].sizeX;
-			fDomains[id].absoluteSizeZ = globals::worldsize * fDomains[id].sizeZ;
-
-			fDomains[id].startX = fDomains[id].centerX * globals::worldsize - (fDomains[id].absoluteSizeX / 2.0);
-			fDomains[id].startZ = - fDomains[id].centerZ * globals::worldsize - (fDomains[id].absoluteSizeZ / 2.0);
-
-			fDomains[id].endX = fDomains[id].centerX * globals::worldsize + (fDomains[id].absoluteSizeX / 2.0);
-			fDomains[id].endZ = - fDomains[id].centerZ * globals::worldsize + (fDomains[id].absoluteSizeZ / 2.0);
-			
-			// clean up for floating point precision a little
-			if( fDomains[id].startX < 0.0006 )
-				fDomains[id].startX = 0.0;
-			if( fDomains[id].startZ > -0.0006 )
-				fDomains[id].startZ = 0.0;
-			if( fDomains[id].endX > globals::worldsize * 0.9994 )
-				fDomains[id].endX = globals::worldsize;
-			if( fDomains[id].endZ < -globals::worldsize * 0.9994 )
-				fDomains[id].endZ = -globals::worldsize;
-
-			printf("NEW DOMAIN\n");
-			printf("\tstartX: %.2f\n", fDomains[id].startX);
-			printf("\tstartZ: %.2f\n", fDomains[id].startZ);
-			printf("\tendX: %.2f\n", fDomains[id].endX);
-			printf("\tendZ: %.2f\n", fDomains[id].endZ);
-			printf("\tabsoluteX: %.2f\n", fDomains[id].absoluteSizeX);
-			printf("\tabsoluteZ: %.2f\n", fDomains[id].absoluteSizeZ);
-
-			if( version >= 32 )
-			{
-				float minAgentsFraction, maxAgentsFraction, initAgentsFraction, initSeedsFraction;
-				
-				in >> minAgentsFraction; in >> label;
-				cout << "minAgentsFraction in domains[" << id << "]" ses minAgentsFraction nl;
-				if( minAgentsFraction < 0.0 )
-				{
-					minAgentsFraction = fDomains[id].sizeX * fDomains[id].sizeZ;
-					cout << "\tminAgentsFraction in domains[" << id << "]" ses minAgentsFraction nl;
-				}
-				fDomains[id].minNumAgents = nint( minAgentsFraction * fMinNumAgents );
-				cout << "\tminNumAgents in domains[" << id << "]" ses fDomains[id].minNumAgents nl;
-				
-				in >> maxAgentsFraction; in >> label;
-				cout << "maxAgentsFraction in domains[" << id << "]" ses maxAgentsFraction nl;
-				if( maxAgentsFraction < 0.0 )
-				{
-					maxAgentsFraction = fDomains[id].sizeX * fDomains[id].sizeZ;
-					cout << "\tmaxAgentsFraction in domains[" << id << "]" ses maxAgentsFraction nl;
-				}
-				fDomains[id].maxNumAgents = nint( maxAgentsFraction * fMaxNumAgents );
-				cout << "\tmaxNumAgents in domains[" << id << "]" ses fDomains[id].maxNumAgents nl;
-				
-				in >> initAgentsFraction; in >> label;
-				cout << "initAgentsFraction in domains[" << id << "]" ses initAgentsFraction nl;
-				if( initAgentsFraction < 0.0 )
-				{
-					initAgentsFraction = fDomains[id].sizeX * fDomains[id].sizeZ;
-					cout << "\tinitAgentsFraction in domains[" << id << "]" ses initAgentsFraction nl;
-				}
-				fDomains[id].initNumAgents = nint( initAgentsFraction * fInitNumAgents );
-				cout << "\tinitNumAgents in domains[" << id << "]" ses fDomains[id].initNumAgents nl;
-				
-				in >> initSeedsFraction; in >> label;
-				cout << "initSeedsFraction in domains[" << id << "]" ses initSeedsFraction nl;
-				if( initSeedsFraction < 0.0 )
-				{
-					initSeedsFraction = fDomains[id].sizeX * fDomains[id].sizeZ;
-					cout << "\tinitSeedsFraction in domains[" << id << "]" ses initSeedsFraction nl;
-				}
-				fDomains[id].numberToSeed = nint( initSeedsFraction * fNumberToSeed );
-				cout << "\tnumberToSeed in domains[" << id << "]" ses fDomains[id].numberToSeed nl;
-				
-				in >> fDomains[id].probabilityOfMutatingSeeds; in >> label;
-				cout << "probabilityOfMutatingSeeds in domains [" << id << "]" ses fDomains[id].probabilityOfMutatingSeeds nl;
-				if( fDomains[id].probabilityOfMutatingSeeds < 0.0 )
-				{
-					fDomains[id].probabilityOfMutatingSeeds = fProbabilityOfMutatingSeeds;
-					cout << "\tprobabilityOfMutatingSeeds in domains [" << id << "]" ses fDomains[id].probabilityOfMutatingSeeds nl;
-				}
-
-				float initFoodFraction;
-				in >> initFoodFraction; in >> label;
-				cout << "initFoodFraction of domains[" << id << "]" ses initFoodFraction nl;
-				if( initFoodFraction >= 0.0 )
-					fDomains[id].initFoodCount = nint( initFoodFraction * fInitFoodCount );
-				else
-					fDomains[id].initFoodCount = nint( fDomains[id].sizeX * fDomains[id].sizeZ * fInitFoodCount );
-				cout << "\tinitFoodCount of domains[" << id << "]" ses fDomains[id].initFoodCount nl;
-				float minFoodFraction;
-				in >> minFoodFraction; in >> label;
-				cout << "minFoodFraction of domains[" << id << "]" ses minFoodFraction nl;
-				if( minFoodFraction >= 0.0 )
-					fDomains[id].minFoodCount = nint( minFoodFraction * fMinFoodCount );
-				else
-					fDomains[id].minFoodCount = nint( fDomains[id].sizeX * fDomains[id].sizeZ * fMinFoodCount );
-				cout << "\tminFoodCount of domains[" << id << "]" ses fDomains[id].minFoodCount nl;
-				float maxFoodFraction;
-				in >> maxFoodFraction; in >> label;
-				cout << "maxFoodFraction of domains[" << id << "]" ses maxFoodFraction nl;
-				if( maxFoodFraction >= 0.0 )
-					fDomains[id].maxFoodCount = nint( maxFoodFraction * fMaxFoodCount );
-				else
-					fDomains[id].maxFoodCount = nint( fDomains[id].sizeX * fDomains[id].sizeZ * fMaxFoodCount );
-				cout << "\tmaxFoodCount of domains[" << id << "]" ses fDomains[id].maxFoodCount nl;
-				float maxFoodGrownFraction;
-				in >> maxFoodGrownFraction; in >> label;
-				cout << "maxFoodGrownFraction of domains[" << id << "]" ses maxFoodGrownFraction nl;
-				if( maxFoodGrownFraction >= 0.0 )
-					fDomains[id].maxFoodGrownCount = nint( maxFoodGrownFraction * fMaxFoodGrownCount );
-				else
-					fDomains[id].maxFoodGrownCount = nint( fDomains[id].sizeX * fDomains[id].sizeZ * fMaxFoodGrownCount );
-				cout << "\tmaxFoodGrownCount of domains[" << id << "]" ses fDomains[id].maxFoodGrownCount nl;
-				in >> fDomains[id].foodRate; in >> label;
-				if( fDomains[id].foodRate < 0.0 )
-					fDomains[id].foodRate = fFoodRate;
-				cout << "foodRate of domains[" << id << "]" ses fDomains[id].foodRate nl;
-				in >> fDomains[id].numFoodPatches; in >> label;
-				cout << "numFoodPatches of domains[" << id << "]" ses fDomains[id].numFoodPatches nl;
-				in >> fDomains[id].numBrickPatches; in >> label;
-				cout << "numBrickPatches of domains[" << id << "]" ses fDomains[id].numBrickPatches nl;
-			}
-			else
-			{
-				in >> fDomains[id].numFoodPatches; in >> label;
-				cout << "numFoodPatches of domains[" << id << "]" ses fDomains[id].numFoodPatches nl;
-				in >> fDomains[id].numBrickPatches; in >> label;
-				cout << "numBrickPatches of domains[" << id << "]" ses fDomains[id].numBrickPatches nl;
-				in >> fDomains[id].foodRate; in >> label;
-				if( fDomains[id].foodRate < 0.0 )
-					fDomains[id].foodRate = fFoodRate;
-				cout << "foodRate of domains[" << id << "]" ses fDomains[id].foodRate nl;
-				in >> fDomains[id].initFoodCount; in >> label;
-				cout << "initFoodCount of domains[" << id << "]" ses fDomains[id].initFoodCount nl;
-				in >> fDomains[id].minFoodCount; in >> label;
-				cout << "minFoodCount of domains[" << id << "]" ses fDomains[id].minFoodCount nl;
-				in >> fDomains[id].maxFoodCount; in >> label;
-				cout << "maxFoodCount of domains[" << id << "]" ses fDomains[id].maxFoodCount nl;
-				in >> fDomains[id].maxFoodGrownCount; in >> label;
-				cout << "maxFoodGrownCount of domains[" << id << "]" ses fDomains[id].maxFoodGrownCount nl;
-			}
-			
-			// Create an array of FoodPatches
-			fDomains[id].fFoodPatches = new FoodPatch[fDomains[id].numFoodPatches];
-			float patchFractionSpecified = 0.0;
-
-			for (int i = 0; i < fDomains[id].numFoodPatches; i++)
-			{
-				float foodFraction, foodRate;
-				float centerX, centerZ;  // should be from 0.0 -> 1.0
-				float sizeX, sizeZ;  // should be from 0.0 -> 1.0
-				float nhsize;
-				float initFoodFraction, minFoodFraction, maxFoodFraction, maxFoodGrownFraction;
-				int initFood, minFood, maxFood, maxFoodGrown;
-				int shape, distribution;
-				int period;
-				float onFraction, phase;
-				bool removeFood;
-
-				in >> foodFraction; in >> label;
-				cout << "foodFraction" ses foodFraction nl;
-
-				if( version >= 32 )
-				{
-					in >> initFoodFraction; in >> label;
-					cout << "initFoodFraction" ses initFoodFraction nl;
-					if( initFoodFraction < 0.0 )
-					{
-						initFoodFraction = foodFraction;
-						cout << "\tinitFoodFraction" ses initFoodFraction nl;
-					}
-					initFood = nint( initFoodFraction * fDomains[id].initFoodCount );
-					cout << "\tinitFood" ses initFood nl;
-					
-					in >> minFoodFraction; in >> label;
-					cout << "minFoodFraction" ses minFoodFraction nl;
-					if( minFoodFraction < 0.0 )
-					{
-						minFoodFraction = foodFraction;
-						cout << "\tminFoodFraction" ses minFoodFraction nl;
-					}
-					minFood = nint( minFoodFraction * fDomains[id].minFoodCount );
-					cout << "\tminFood" ses minFood nl;
-					
-					in >> maxFoodFraction; in >> label;
-					cout << "maxFoodFraction" ses maxFoodFraction nl;
-					if( maxFoodFraction < 0.0 )
-					{
-						maxFoodFraction = foodFraction;
-						cout << "\tmaxFoodFraction" ses maxFoodFraction nl;
-					}
-					maxFood = nint( maxFoodFraction * fDomains[id].maxFoodCount );
-					cout << "\tmaxFood" ses maxFood nl;
-					
-					in >> maxFoodGrownFraction; in >> label;
-					cout << "maxFoodFractionGrown" ses maxFoodGrownFraction nl;
-					if( maxFoodGrownFraction < 0.0 )
-					{
-						maxFoodGrownFraction = foodFraction;
-						cout << "\tmaxFoodGrownFraction" ses maxFoodGrownFraction nl;
-					}
-					maxFoodGrown = nint( maxFoodGrownFraction * fDomains[id].maxFoodGrownCount );
-					cout << "\tmaxFoodGrown" ses maxFoodGrown nl;
-					
-					in >> foodRate; in >> label;
-					cout << "foodRate" ses foodRate nl;
-					if (foodRate < 0.0)
-					{
-						foodRate = fDomains[id].foodRate;
-						cout << "\tfoodRate" ses foodRate nl;
-					}
-				}
-				else
-				{
-					in >> foodRate; in >> label;
-					cout << "foodRate" ses foodRate nl;
-					if (foodRate == 0.0)
-					{
-						foodRate = fDomains[id].foodRate;
-						cout << "\tfoodRate" ses foodRate nl;
-					}
-					in >> initFood; in >> label;
-					cout << "initFood" ses initFood nl;
-					in >> minFood; in >> label;
-					cout << "minFood" ses minFood nl;
-					in >> maxFood; in >> label;
-					cout << "maxFood" ses maxFood nl;
-					in >> maxFoodGrown; in >> label;
-					cout << "maxFoodGrown" ses maxFoodGrown nl;
-					// If we have a legitimate fraction specified, see if we need to set the food limits
-					if( foodFraction > 0.0 )
-					{
-						// Check for negative values...if found then use global food counts and this patch's fraction
-						if (initFood < 0) initFood = (int)(foodFraction * fDomains[id].initFoodCount);
-						if (minFood < 0) minFood = (int)(foodFraction * fDomains[id].minFoodCount);
-						if (maxFood < 0) maxFood = (int)(foodFraction * fDomains[id].maxFoodCount);
-						if (maxFoodGrown < 0) maxFoodGrown = (int)(foodFraction * fDomains[id].maxFoodGrownCount);
-					}
-				}
-				in >> centerX; in >> label;
-				cout << "centerX" ses centerX nl;
-				in >> centerZ; in >> label;
-				cout << "centerZ" ses centerZ nl;
-				in >> sizeX; in >> label;
-				cout << "sizeX" ses sizeX nl;
-				in >> sizeZ; in >> label;
-				cout << "sizeZ" ses sizeZ nl;
-				in >> shape; in >> label;
-				cout << "shape" ses shape nl;
-				in >> distribution; in >> label;
-				cout << "distribution" ses distribution nl;
-				in >> nhsize; in >> label;
-				cout << "neighborhoodSize" ses nhsize nl;
-				if( version >= 26 )
-				{
-					in >> period; in >> label;
-					cout << "period" ses period nl;
-					in >> onFraction; in >> label;
-					cout << "onFraction" ses onFraction nl;
-					in >> phase; in >> label;
-					cout << "phase" ses phase nl;
-					in >> removeFood; in >> label;
-					cout << "removeFood" ses removeFood nl;
-					if( removeFood )
-						numFoodPatchesNeedingRemoval++;
-				}
-				else
-				{
-					period = 0;
-					cout << "+period" ses period nl;
-					onFraction = 1.0;
-					cout << "+onFraction" ses onFraction nl;
-					phase = 0.0;
-					cout << "+phase" ses phase nl;
-					removeFood = false;
-					cout << "+removeFood" ses removeFood nl;
-				}
-				
-				fDomains[id].fFoodPatches[i].init(centerX, centerZ, sizeX, sizeZ, foodRate, initFood, minFood, maxFood, maxFoodGrown, foodFraction, shape, distribution, nhsize, period, onFraction, phase, removeFood, &fStage, &(fDomains[id]), id);
-
-				patchFractionSpecified += foodFraction;
-
-			}
-
-			// If all the fractions are 0.0, then set fractions based on patch area
-			if (patchFractionSpecified == 0.0)
-			{
-				float totalArea = 0.0;
-				// First calculate the total area from all the patches
-				for (int i=0; i<fDomains[id].numFoodPatches; i++)
-				{
-					totalArea += fDomains[id].fFoodPatches[i].getArea();
-				}
-				// Then calculate the fraction for each patch
-				for (int i=0; i<fDomains[id].numFoodPatches; i++)
-				{
-					float newFraction = fDomains[id].fFoodPatches[i].getArea() / totalArea;
-					fDomains[id].fFoodPatches[i].setInitCounts((int)(newFraction * fDomains[id].initFoodCount), (int)(newFraction * fDomains[id].minFoodCount), (int)(newFraction * fDomains[id].maxFoodCount), (int)(newFraction * fDomains[id].maxFoodGrownCount), newFraction);
-					patchFractionSpecified += newFraction;
-				}
-			}
-			
-			// Make sure fractions add up to 1.0 (allowing a little slop for floating point precision)
-			if( (patchFractionSpecified < 0.99999) || (patchFractionSpecified > 1.00001) )
-			{
-				printf( "Patch Fractions sum to %f, when they must sum to 1.0!\n", patchFractionSpecified );
-				exit( 1 );
-			}
-
-			// Create an array of BrickPatches
-			fDomains[id].fBrickPatches = new BrickPatch[fDomains[id].numBrickPatches];
-			for (int i = 0; i < fDomains[id].numBrickPatches; i++)
-			{
-				float centerX, centerZ;  // should be from 0.0 -> 1.0
-				float sizeX, sizeZ;  // should be from 0.0 -> 1.0
-				float nhsize;
-				int shape, distribution, brickCount;
-
-				in >> centerX; in >> label;
-				cout << "centerX" ses centerX nl;
-				in >> centerZ; in >> label;
-				cout << "centerZ" ses centerZ nl;
-				in >> sizeX; in >> label;
-				cout << "sizeX" ses sizeX nl;
-				in >> sizeZ; in >> label;
-				cout << "sizeZ" ses sizeZ nl;
-				in >> brickCount; in >> label;
-				cout << "brickCount" ses brickCount nl;
-				in >> shape; in >> label;
-				cout << "shape" ses shape nl;
-				in >> distribution; in >> label;
-				cout << "distribution" ses distribution nl;
-				in >> nhsize; in >> label;
-				cout << "neighborhoodSize" ses nhsize nl;
-
-				fDomains[id].fBrickPatches[i].init(centerX, centerZ, sizeX, sizeZ, brickCount, shape, distribution, nhsize, &fStage, &(fDomains[id]), id);
-			}
-
-		}
-
-		totmaxnumagents += fDomains[id].maxNumAgents;
-		totminnumagents += fDomains[id].minNumAgents;
-	}
-
-
-	if (totmaxnumagents > fMaxNumAgents)
-	{
-		char tempstring[256];
-		sprintf(tempstring,"%s %ld %s %ld %s",
-			"The maximum number of organisms in the world (",
-			fMaxNumAgents,
-			") is < the maximum summed over domains (",
-			totmaxnumagents,
-			"), so there may still be some indirect global influences.");
-		errorflash(0, tempstring);
-	}
-	if (totminnumagents < fMinNumAgents)
-	{
-		char tempstring[256];
-		sprintf(tempstring,"%s %ld %s %ld %s",
-			"The minimum number of organisms in the world (",
-			fMinNumAgents,
-			") is > the minimum summed over domains (",
-			totminnumagents,
-			"), so there may still be some indirect global influences.");
-		errorflash(0,tempstring);
-	}
-
-	if( numFoodPatchesNeedingRemoval > 0 )
-	{
-		// Allocate a maximally sized array to keep a list of food patches needing their food removed
-		fFoodPatchesNeedingRemoval = new FoodPatch*[numFoodPatchesNeedingRemoval];
-		fFoodRemovalNeeded = true;
-	}
-	else
-		fFoodRemovalNeeded = false;
-	
-    for (id = 0; id < fNumDomains; id++)
-    {
-        fDomains[id].numAgents = 0;
-        fDomains[id].numcreated = 0;
-        fDomains[id].numborn = 0;
-        fDomains[id].numbornsincecreated = 0;
-        fDomains[id].numdied = 0;
-        fDomains[id].lastcreate = 0;
-        fDomains[id].maxgapcreate = 0;
-        fDomains[id].ifit = 0;
-        fDomains[id].jfit = 1;
-        fDomains[id].fittest = NULL;
-	}
-	
-	if( version >= 17 )
-	{
-		in >> fUseProbabilisticFoodPatches; in >> label;
-		cout << "useProbabilisticFoodPatches" ses fUseProbabilisticFoodPatches nl;
-	}
-	else
-		fUseProbabilisticFoodPatches = false;
-
-    if (version < 5)
-    {
-		cout nlf;
-     	fb.close();
-        return;
-	}
-
-    in >> fChartGeneSeparation; in >> label;
-    cout << "fChartGeneSeparation" ses fChartGeneSeparation nl;
-    if (fChartGeneSeparation)
-        fMonitorGeneSeparation = true;
-
-    if (version < 6)
-	{
-		cout nlf;
-     	fb.close();
-        return;
-	}
-
-	if( version >= 36 )
-	{
-		string model;
-		in >> model; in >> label;
-
-		if( model == "F" )
-		{
-			brain::gNeuralValues.model = brain::NeuralValues::FIRING_RATE;
-		}
-		else if( model == "S" )
-		{
-			brain::gNeuralValues.model = brain::NeuralValues::SPIKING;			
-		}
-		else if( model == "T" )
-		{
-			assert( version >= 50 );
-			brain::gNeuralValues.model = brain::NeuralValues::TAU;
-		}
-		else
-		{
-			error(1, "Invalid NeuronModel in worldfile (%s)", model.c_str());
-		}
-	}
-	else
-	{
-		brain::gNeuralValues.model = brain::NeuralValues::FIRING_RATE;			
-	}
-	cout << "neuronModel" ses brain::gNeuralValues.model nl;
-
-	if( version >= 50 )
-	{
-		__PROP( "tauMin", brain::gNeuralValues.Tau.minVal );
-		__PROP( "tauMax", brain::gNeuralValues.Tau.maxVal );
-		__PROP( "tauSeed", brain::gNeuralValues.Tau.seedVal );
-	}
-
-    in >> brain::gNeuralValues.mininternalneurgroups; in >> label;
-    cout << "mininternalneurgroups" ses brain::gNeuralValues.mininternalneurgroups nl;
-    in >> brain::gNeuralValues.maxinternalneurgroups; in >> label;
-    cout << "maxinternalneurgroups" ses brain::gNeuralValues.maxinternalneurgroups nl;
-    in >> brain::gNeuralValues.mineneurpergroup; in >> label;
-    cout << "mineneurpergroup" ses brain::gNeuralValues.mineneurpergroup nl;
-    in >> brain::gNeuralValues.maxeneurpergroup; in >> label;
-    cout << "maxeneurpergroup" ses brain::gNeuralValues.maxeneurpergroup nl;
-    in >> brain::gNeuralValues.minineurpergroup; in >> label;
-    cout << "minineurpergroup" ses brain::gNeuralValues.minineurpergroup nl;
-    in >> brain::gNeuralValues.maxineurpergroup; in >> label;
-    cout << "maxineurpergroup" ses brain::gNeuralValues.maxineurpergroup nl;
-	float unusedFloat;
-    in >> unusedFloat; in >> label;
-    cout << "minbias (not used)" ses unusedFloat nl;
-    in >> brain::gNeuralValues.maxbias; in >> label;
-    cout << "maxbias" ses brain::gNeuralValues.maxbias nl;
-    in >> brain::gNeuralValues.minbiaslrate; in >> label;
-    cout << "minbiaslrate" ses brain::gNeuralValues.minbiaslrate nl;
-    in >> brain::gNeuralValues.maxbiaslrate; in >> label;
-    cout << "maxbiaslrate" ses brain::gNeuralValues.maxbiaslrate nl;
-    in >> brain::gNeuralValues.minconnectiondensity; in >> label;
-    cout << "minconnectiondensity" ses brain::gNeuralValues.minconnectiondensity nl;
-    in >> brain::gNeuralValues.maxconnectiondensity; in >> label;
-    cout << "maxconnectiondensity" ses brain::gNeuralValues.maxconnectiondensity nl;
-    in >> brain::gNeuralValues.mintopologicaldistortion; in >> label;
-    cout << "mintopologicaldistortion" ses brain::gNeuralValues.mintopologicaldistortion nl;
-    in >> brain::gNeuralValues.maxtopologicaldistortion; in >> label;
-    cout << "maxtopologicaldistortion" ses brain::gNeuralValues.maxtopologicaldistortion nl;
-	if( version >= 50 )
-	{
-		__PROP( "enableTopologicalDistortionRngSeed", brain::gNeuralValues.enableTopologicalDistortionRngSeed );
-		__PROP( "minTopologicalDistortionRngSeed", brain::gNeuralValues.minTopologicalDistortionRngSeed );
-		__PROP( "maxTopologicalDistortionRngSeed", brain::gNeuralValues.maxTopologicalDistortionRngSeed );
-
-		RandomNumberGenerator::set( RandomNumberGenerator::TOPOLOGICAL_DISTORTION,
-									RandomNumberGenerator::LOCAL );
-	}
-	else
-	{
-		brain::gNeuralValues.enableTopologicalDistortionRngSeed = false;
-	}
-    in >> brain::gNeuralValues.maxneuron2energy; in >> label;
-    cout << "maxneuron2energy" ses brain::gNeuralValues.maxneuron2energy nl;
-
-    in >> brain::gNumPrebirthCycles; in >> label;
-    cout << "numprebirthcycles" ses brain::gNumPrebirthCycles nl;
-
-	if( version >= 40 )
-	{
-		__PROP( "seedFightBias", genome::gSeedFightBias );
-		__PROP( "seedFightExcitation", genome::gSeedFightExcitation );
-		__PROP( "seedGiveBias", genome::gSeedGiveBias );
-	}
-	else
-	{
-		genome::gSeedFightBias = 0.5;
-		genome::gSeedFightExcitation = 1.0;
-		genome::gSeedGiveBias = 0.0;
-	}
-
-	if( version >= 39 )
-	{
-		// For earlier versions these will be initialized in initworld()
-		__PROP( "seedPickupBias", genome::gSeedPickupBias );
-		__PROP( "seedDropBias", genome::gSeedDropBias );
-		__PROP( "seedPickupExcitation", genome::gSeedPickupExcitation );
-		__PROP( "seedDropExcitation", genome::gSeedDropExcitation );
-	}
-
-    InitNeuralValues();
-
-    cout << "maxneurgroups" ses brain::gNeuralValues.maxneurgroups nl;
-    cout << "maxneurons" ses brain::gNeuralValues.maxneurons nl;
-    cout << "maxsynapses" ses brain::gNeuralValues.maxsynapses nl;
-
-    in >> fOverHeadRank; in >> label;
-    cout << "fOverHeadRank" ses fOverHeadRank nl;
-    in >> fAgentTracking; in >> label;
-    cout << "fAgentTracking" ses fAgentTracking nl;
-    in >> fMinFoodEnergyAtDeath; in >> label;
-    cout << "minfoodenergyatdeath" ses fMinFoodEnergyAtDeath nl;
-
-    in >> genome::gGrayCoding; in >> label;
-    cout << "graycoding" ses genome::gGrayCoding nl;
-
-    if (version < 7)
-    {
-		cout nlf;
-		fb.close();
-		return;
-	}
-	if( version >= 21 )
-	{
-		in >> fSmiteMode; in >> label;
-		cout << "smiteMode" ses fSmiteMode nl;
-		assert( fSmiteMode == 'L' || fSmiteMode == 'R' || fSmiteMode == 'O' );		// fSmiteMode must be 'L', 'R', or 'O'
-	}
-    in >> fSmiteFrac; in >> label;
-	
-    cout << "smiteFrac" ses fSmiteFrac nl;
-    in >> fSmiteAgeFrac; in >> label;
-    cout << "smiteAgeFrac" ses fSmiteAgeFrac nl;
-	
-	// agent::gNumDepletionSteps and agent:gMaxPopulationFraction must both be initialized to zero
-	// for backward compatibility, and we depend on that fact here, so don't change it
-	if( version >= 23 )
-	{
-		in >> agent::gNumDepletionSteps; in >> label;
-		cout << "NumDepletionSteps" ses agent::gNumDepletionSteps nl;
-		if( agent::gNumDepletionSteps )
-			agent::gMaxPopulationPenaltyFraction = 1.0 / (float) agent::gNumDepletionSteps;
-		cout << ".MaxPopulationPenaltyFraction" ses agent::gMaxPopulationPenaltyFraction nl;
-	}
-	else
-	{
-		cout << "+NumDepletionSteps" ses agent::gNumDepletionSteps nl;
-		cout << ".MaxPopulationPenaltyFraction" ses agent::gMaxPopulationPenaltyFraction nl;
-	}
-	
-	if( version >= 24 )
-	{
-		in >> fApplyLowPopulationAdvantage; in >> label;
-		cout << "ApplyLowPopulationAdvantage" ses fApplyLowPopulationAdvantage nl;
-	}
-	else
-	{
-		fApplyLowPopulationAdvantage = false;
-		cout << "+ApplyLowPopulationAdvantage" ses fApplyLowPopulationAdvantage nl;
-	}
-
-	if( version < 8 )
-	{
-		cout nlf;
-		fb.close();
-		return;
-	}
-	if( version >= 22 )
-	{
-		in >> fRecordBirthsDeaths; in >> label;
-		cout << "RecordBirthsDeaths" ses fRecordBirthsDeaths nl;
-	}
-
-	if( version >= 33 )
-	{
-		PROP( RecordPosition );
-	}
-
-	if( version >= 38 )
-	{
-		PROP( RecordContacts );
-		PROP( RecordCollisions );
-	}
-
-	if( version >= 42 )
-	{
-		PROP( RecordCarry );
-	}
-	
-	if( version >= 11 )
-	{
-		in >> fBrainAnatomyRecordAll; in >> label;
-		cout << "brainAnatomyRecordAll" ses fBrainAnatomyRecordAll nl;
-		in >> fBrainFunctionRecordAll; in >> label;
-		cout << "brainFunctionRecordAll" ses fBrainFunctionRecordAll nl;
-		
-		if( version >= 12 )
-		{
-			in >> fBrainAnatomyRecordSeeds; in >> label;
-			cout << "brainAnatomyRecordSeeds" ses fBrainAnatomyRecordSeeds nl;
-			in >> fBrainFunctionRecordSeeds; in >> label;
-			cout << "brainFunctionRecordSeeds" ses fBrainFunctionRecordSeeds nl;
-		}
-		
-		in >> fBestSoFarBrainAnatomyRecordFrequency; in >> label;
-		cout << "bestSoFarBrainAnatomyRecordFrequency" ses fBestSoFarBrainAnatomyRecordFrequency nl;
-		in >> fBestSoFarBrainFunctionRecordFrequency; in >> label;
-		cout << "bestSoFarBrainFunctionRecordFrequency" ses fBestSoFarBrainFunctionRecordFrequency nl;
-		
-		if( version >= 14 )
-		{
-			in >> fBestRecentBrainAnatomyRecordFrequency; in >> label;
-			cout << "bestRecentBrainAnatomyRecordFrequency" ses fBestRecentBrainAnatomyRecordFrequency nl;
-			in >> fBestRecentBrainFunctionRecordFrequency; in >> label;
-			cout << "bestRecentBrainFunctionRecordFrequency" ses fBestRecentBrainFunctionRecordFrequency nl;
-		}
-	}
-	
-	if( version >= 12 )
-	{
-		in >> fRecordGeneStats; in >> label;
-		cout << "recordGeneStats" ses fRecordGeneStats nl;
-	}
-
-	if( version >= 35 )
-	{
-		PROP( RecordPerformanceStats );
-	}
-
-	if( version >= 15 )
-	{
-		in >> fRecordFoodPatchStats; in >> label;
-		cout << "recordFoodPatchStats" ses fRecordFoodPatchStats nl;
-	}
-
-
-	if( version >= 18 )
-	{
-	
-
-		in >> fRecordComplexity; in >> label;
-		cout << "recordComplexity" ses fRecordComplexity nl;
-	
-		if( fRecordComplexity )
-		{
-			if( ! fBestSoFarBrainFunctionRecordFrequency )
-			{
-				if( fBestRecentBrainFunctionRecordFrequency )
-					fBestSoFarBrainFunctionRecordFrequency = fBestRecentBrainFunctionRecordFrequency;
-				else
-					fBestSoFarBrainFunctionRecordFrequency = 1000;
-				cerr << "Warning: Attempted to record Complexity without recording \"best so far\" brain function.  Setting BestSoFarBrainFunctionRecordFrequency to " << fBestSoFarBrainFunctionRecordFrequency nl;
-			}
-			
-			if( ! fBestSoFarBrainAnatomyRecordFrequency )
-			{
-				if( fBestRecentBrainAnatomyRecordFrequency )
-					fBestSoFarBrainAnatomyRecordFrequency = fBestRecentBrainAnatomyRecordFrequency;
-				else
-					fBestSoFarBrainAnatomyRecordFrequency = 1000;				
-				cerr << "Warning: Attempted to record Complexity without recording \"best so far\" brain anatomy.  Setting BestSoFarBrainAnatomyRecordFrequency to " << fBestSoFarBrainAnatomyRecordFrequency nl;
-			}
-
-			if( ! fBestRecentBrainFunctionRecordFrequency )
-			{
-				if( fBestSoFarBrainAnatomyRecordFrequency )
-					fBestRecentBrainFunctionRecordFrequency = fBestSoFarBrainAnatomyRecordFrequency;
-				else
-					fBestRecentBrainFunctionRecordFrequency = 1000;
-				cerr << "Warning: Attempted to record Complexity without recording \"best recent\" brain function.  Setting BestRecentBrainFunctionRecordFrequency to " << fBestRecentBrainFunctionRecordFrequency nl;
-			}
-			
-			if( ! fBestRecentBrainAnatomyRecordFrequency )
-			{
-				if( fBestSoFarBrainAnatomyRecordFrequency )
-					fBestRecentBrainAnatomyRecordFrequency = fBestSoFarBrainAnatomyRecordFrequency;
-				else
-					fBestRecentBrainAnatomyRecordFrequency = 1000;				
-				cerr << "Warning: Attempted to record Complexity without recording \"best recent\" brain anatomy.  Setting BestRecentBrainAnatomyRecordFrequency to " << fBestRecentBrainAnatomyRecordFrequency nl;
-			}
-		}
-		
-		in >> fComplexityType; in >> label;
-		if( version < 28 )
-		{
-			if( fComplexityType == "0" )	// zero used to mean off
-				fComplexityType = "O";
-			else
-				fComplexityType = "P";	// on used to assume processing complexity
-		}
-		cout << "complexityType" ses fComplexityType nl;
-
-		if( version >= 30 )
-		{
-			in >> fComplexityFitnessWeight; in >> label;
-			in >> fHeuristicFitnessWeight; in >> label;
-		}
-		else
-		{
-			if( fComplexityType == "O" )		// 'O' meant complexity as a fitness function was off
-				fComplexityFitnessWeight = 0.0;	// so set the complexity fitness weight to zero (turn it off)
-			else
-				fComplexityFitnessWeight = 1.0;	// any other complexity type used to mean use it as the fitness function
-			fHeuristicFitnessWeight = 0.0;		// heuristic fitness as an actual fitness function didn't used to exist
-		}
-		cout << "complexityFitnessWeight" ses fComplexityFitnessWeight nl;
-		cout << "heuristicFitnessWeight" ses fHeuristicFitnessWeight nl;
-
-		if( fComplexityFitnessWeight > 0.0 )
-		{
-			if( ! fRecordComplexity )		//Not Recording Complexity?
-			{
-				cerr << "Warning: Attempted to use Complexity as fitness func without recording Complexity.  Turning on RecordComplexity." nl;
-				fRecordComplexity = true;
-			}
-			if( ! fBrainFunctionRecordAll )	//Not recording BrainFunction?
-			{
-				cerr << "Warning: Attempted to use Complexity as fitness func without recording brain function.  Turning on RecordBrainFunctionAll." nl;
-				fBrainFunctionRecordAll = true;
-			}
-			if( ! fBrainAnatomyRecordAll )
-			{
-				cerr << "Warning: Attempted to use Complexity as fitness func without recording brain anatomy.  Turning on RecordBrainAnatomyAll." nl;
-				fBrainAnatomyRecordAll = true;				
-			}
-		}
-		
-		if( version >= 37 )
-		{
-			PROP( RecordGenomes );
-		}
-		else
-		{
-			fRecordGenomes = false;
-		}
-
-		if( version >= 38 )
-		{
-			PROP( RecordSeparations );
-		}
-		else
-		{
-			fRecordSeparations = false;
-		}
-
-		if( version >= 20 )
-		{
-			in >> fRecordAdamiComplexity; in >> label;
-			cout << "recordAdamiComplexity" ses fRecordAdamiComplexity nl;
-			
-			in >> fAdamiComplexityRecordFrequency; in >> label;
-			cout << "AdamiComplexityRecordFrequency" ses fAdamiComplexityRecordFrequency nl;
-		}
-		
-	}
-
-	if( version >= 54 )
-	{
-		bool compress;
-		__PROP( "compressFiles", compress );
-
-		globals::recordFileType = compress ? AbstractFile::TYPE_GZIP_FILE : AbstractFile::TYPE_FILE;
-	}
-	else
-	{
-		globals::recordFileType = AbstractFile::TYPE_FILE;
-	}
-
-	if( version >= 18 )
-	{
-		in >> fFogFunction; in >> label;
-		
-		if( toupper(fFogFunction) == 'E' )			//Exponential
-			fFogFunction = 'E';
-		else if( toupper(fFogFunction) == 'L' )			//Linear
-			fFogFunction = 'L';
-		else
-			fFogFunction = 'O';				// No Fog (OFF)
-
-		assert( (fFogFunction == 'O' || fFogFunction == 'E' || fFogFunction == 'L') );
-		cout << "FogFunction" ses fFogFunction nl;
-		assert( glFogFunction() == fFogFunction );
-			
-	
-		// This value only does something if Fog Function is exponential
-		// Acceptable values are between 0 and 1 (inclusive)
-		in >> fExpFogDensity; in >> label;
-		cout << "ExpFogDensity" ses fExpFogDensity nl;
-
-		// This value only does something if Fog Function is linear
-		// It defines the maximum distance a agent can see.
-		in >> fLinearFogEnd; in >> label;
-		cout << "LinearFogEnd" ses fLinearFogEnd nl;
-
-	}	
-	
-	
-	in >> fRecordMovie; in >> label;
-	cout << "recordMovie" ses fRecordMovie nl;
-	
-	// If this is a lockstep run, then we need to force certain parameter values (and warn the user)
-	if( fLockStepWithBirthsDeathsLog )
-	{
-		genome::gMinLifeSpan = fMaxSteps;
-		genome::gMaxLifeSpan = fMaxSteps;
-		
-		agent::gEat2Energy = 0.0;
-		agent::gMate2Energy = 0.0;
-		agent::gFight2Energy = 0.0;
-		agent::gMaxSizePenalty = 0.0;
-		agent::gSpeed2Energy = 0.0;
-		agent::gYaw2Energy = 0.0;
-		agent::gLight2Energy = 0.0;
-		agent::gFocus2Energy = 0.0;
-		agent::gPickup2Energy = 0.0;
-		agent::gDrop2Energy = 0.0;
-		agent::gCarryAgent2Energy = 0.0;
-		agent::gCarryAgentSize2Energy = 0.0;
-		food::gCarryFood2Energy = 0.0;
-		brick::gCarryBrick2Energy = 0.0;
-		agent::gFixedEnergyDrain = 0.0;
-
-		agent::gNumDepletionSteps = 0;
-		agent::gMaxPopulationPenaltyFraction = 0.0;
-		
-		fApplyLowPopulationAdvantage = false;
-		
-		cout << "Due to running in LockStepWithBirthsDeathsLog mode, the following parameter values have been forcibly reset as indicated:" nl;
-		cout << "  MinLifeSpan" ses genome::gMinLifeSpan nl;
-		cout << "  MaxLifeSpan" ses genome::gMaxLifeSpan nl;
-		cout << "  Eat2Energy" ses agent::gEat2Energy nl;
-		cout << "  Mate2Energy" ses agent::gMate2Energy nl;
-		cout << "  Fight2Energy" ses agent::gFight2Energy nl;
-		cout << "  MaxSizePenalty" ses agent::gMaxSizePenalty nl;
-		cout << "  Speed2Energy" ses agent::gSpeed2Energy nl;
-		cout << "  Yaw2Energy" ses agent::gYaw2Energy nl;
-		cout << "  Light2Energy" ses agent::gLight2Energy nl;
-		cout << "  Focus2Energy" ses agent::gFocus2Energy nl;
-		cout << "  Pickup2Energy" ses agent::gPickup2Energy nl;
-		cout << "  Drop2Energy" ses agent::gDrop2Energy nl;
-		cout << "  CarryAgent2Energy" ses agent::gCarryAgent2Energy nl;
-		cout << "  CarryAgentSize2Energy" ses agent::gCarryAgentSize2Energy nl;
-		cout << "  CarryFood2Energy" ses food::gCarryFood2Energy nl;
-		cout << "  CarryBrick2Energy" ses brick::gCarryBrick2Energy nl;
-		cout << "  FixedEnergyDrain" ses agent::gFixedEnergyDrain nl;
-		cout << "  NumDepletionSteps" ses agent::gNumDepletionSteps nl;
-		cout << "  .MaxPopulationPenaltyFraction" ses agent::gMaxPopulationPenaltyFraction nl;
-		cout << "  ApplyLowPopulationAdvantage" ses fApplyLowPopulationAdvantage nl;
-	}
-	
-	// If this is a steady-state GA run, then we need to force certain parameter values (and warn the user)
-	if( (fHeuristicFitnessWeight != 0.0) || (fComplexityFitnessWeight != 0) )
-	{
-		fNumberToSeed = lrint( fMaxNumAgents * (float) fNumberToSeed / fInitNumAgents );	// same proportion as originally specified (must calculate before changing fInitNumAgents)
-		if( fNumberToSeed > fMaxNumAgents )	// just to be safe
-			fNumberToSeed = fMaxNumAgents;
-		fInitNumAgents = fMaxNumAgents;	// population starts at maximum
-		fMinNumAgents = fMaxNumAgents;		// population stays at mximum
-		fProbabilityOfMutatingSeeds = 1.0;	// so there is variation in the initial population
-//		fMateThreshold = 1.5;				// so they can't reproduce on their own
-
-		for( int i = 0; i < fNumDomains; i++ )	// over all domains
-		{
-			fDomains[i].numberToSeed = lrint( fDomains[i].maxNumAgents * (float) fDomains[i].numberToSeed / fDomains[i].initNumAgents );	// same proportion as originally specified (must calculate before changing fInitNumAgents)
-			if( fDomains[i].numberToSeed > fDomains[i].maxNumAgents )	// just to be safe
-				fDomains[i].numberToSeed = fDomains[i].maxNumAgents;
-			fDomains[i].initNumAgents = fDomains[i].maxNumAgents;	// population starts at maximum
-			fDomains[i].minNumAgents  = fDomains[i].maxNumAgents;	// population stays at maximum
-			fDomains[i].probabilityOfMutatingSeeds = 1.0;				// so there is variation in the initial population
-		}
-
-		agent::gNumDepletionSteps = 0;				// turn off the high-population penalty
-		agent::gMaxPopulationPenaltyFraction = 0.0;	// ditto
-		fApplyLowPopulationAdvantage = false;			// turn off the low-population advantage
-		
-		cout << "Due to running as a steady-state GA with a fitness function, the following parameter values have been forcibly reset as indicated:" nl;
-		cout << "  InitNumAgents" ses fInitNumAgents nl;
-		cout << "  MinNumAgents" ses fMinNumAgents nl;
-		cout << "  NumberToSeed" ses fNumberToSeed nl;
-		cout << "  ProbabilityOfMutatingSeeds" ses fProbabilityOfMutatingSeeds nl;
-//		cout << "  MateThreshold" ses fMateThreshold nl;
-		for( int i = 0; i < fNumDomains; i++ )
-		{
-			cout << "  Domain " << i << ":" nl;
-			cout << "    initNumAgents" ses fDomains[i].initNumAgents nl;
-			cout << "    minNumAgents" ses fDomains[i].minNumAgents nl;
-			cout << "    numberToSeed" ses fDomains[i].numberToSeed nl;
-			cout << "    probabilityOfMutatingSeeds" ses fDomains[i].probabilityOfMutatingSeeds nl;
-		}
-		cout << "  NumDepletionSteps" ses agent::gNumDepletionSteps nl;
-		cout << "  .MaxPopulationPenaltyFraction" ses agent::gMaxPopulationPenaltyFraction nl;
-		cout << "  ApplyLowPopulationAdvantage" ses fApplyLowPopulationAdvantage nl;
-		
-		if( fComplexityFitnessWeight != 0.0 )
-		{
-			cout << "Due to running with Complexity as a fitness function, the following parameter values have been forcibly reset as indicated:" nl;
-			fRecordComplexity = true;						// record it, since we have to compute it
-			cout << "  RecordComplexity" ses fRecordComplexity nl;
-		}
-	}
-
-	cout nlf;
-    fb.close();
-	return;
-
-#undef PROP
-}
-
-
-//-------------------------------------------------------------------------------------------
-// TSimulation::ReadLabel
-//-------------------------------------------------------------------------------------------
-void TSimulation::ReadLabel(istream &in, const char *name)
-{
-	string label;
-	
-	in >> label;
-	
-	size_t i = label.find('_');
-	if( i != string::npos )
-	{
-		label = label.substr( 0, i );
-	}
-
-	if(0 != strcasecmp(name, label.c_str()))
-	{
-	  error(2, "expecting '", name, "' found '", label.c_str(), "'");
-	}
-}
-/********************************************************************************
- ********************************************************************************
- ***
- *** END LEGACY WORLDFILE CODE
- ***
- ********************************************************************************
- ********************************************************************************/
-#endif // if 0 -- old worldfile code

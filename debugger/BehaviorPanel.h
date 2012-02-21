@@ -1,3 +1,4 @@
+#if false
 #pragma once
 
 #include <string>
@@ -81,3 +82,4 @@ class BehaviorNeuronSpinBox : public QDoubleSpinBox
 	float *fActivationPointer;
 	bool fManualBehavior;
 };
+#endif
