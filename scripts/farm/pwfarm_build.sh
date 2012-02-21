@@ -107,31 +107,44 @@ function build_bct()
     local install_dir=$( canonpath ../bct-install )
     mkdir -p $install_dir/include
     mkdir -p $install_dir/lib
-
+    
+    if [ -n $PYTHONVER ]; then
+    	python_ver=$PYTHONVER
+    else
+    	python_ver="2.6"
+    fi
+    echo "python_ver = $python_ver"
 
     # Note: If you change the following contents of Makefile.vars, be sure to escape $ (\$)
     echo "\
 # Arguments to be sent to the C++ compiler
 # Some arguments may already be specified in Makefile
-CXXFLAGS                += -m32 -fopenmp -DGSL_DOUBLE
+CXXFLAGS                  += -m32 -fopenmp -DGSL_DOUBLE
 
 # Installation directory
-install_dir              = $install_dir
+install_dir                = $install_dir
+
+python_version             = $python_ver
 
 # The following variables are only needed for SWIG
 # If you aren't generating Python bindings, you don't need to worry about them
 
-python_include_dir_apple = /Library/Frameworks/Python.framework/Versions/Current/include/python2.6
-python_include_dir_linux = /usr/include/python2.6
-python_include_dir       = \$(python_include_dir_apple)
+python_include_dir_mac     = /Library/Frameworks/Python.framework/Versions/Current/include/python\$(python_version)
+python_include_dir_mac_EPD = /Library/Frameworks/EPD64.framework/Versions/Current/include/python\$(python_version)
+python_include_dir_linux   = /usr/include/python$(python_version)
+python_include_dir         = \$(python_include_dir_mac)
 
-python_package_dir_apple = /Library/Frameworks/Python.framework/Versions/Current/lib/python2.6/site-packages
-python_package_dir_linux = /usr/lib/python2.6/site-packages
-python_package_dir       = \$(python_package_dir_apple)
+python_package_dir_mac1    = /Library/Frameworks/Python.framework/Versions/Current/lib/python\$(python_version)/site-packages
+python_package_dir_mac2    = /Library/Python/\$(python_version)/site-packages
+python_package_dir_linux   = /usr/lib/python\$(python_version)/site-packages
+python_package_dir         = \$(python_package_dir_mac1)
 
-swig_lib_flags_apple     = -bundle -flat_namespace -undefined suppress
-swig_lib_flags_linux     = -shared
-swig_lib_flags           = \$(swig_lib_flags_apple)" \
+swig_cxx_flags_linux       = -fPIC
+swig_cxx_flags             =
+
+swig_lib_flags_mac         = -bundle -flat_namespace -undefined suppress
+swig_lib_flags_linux       = -shared
+swig_lib_flags             = \$(swig_lib_flags_mac)" \
     > Makefile.vars
 
     make
