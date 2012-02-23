@@ -4,6 +4,8 @@
 
 #include <QObject>
 
+#include "AgentAttachedData.h"
+
 class AgentPovRenderer : public QObject
 {
 	Q_OBJECT
@@ -40,6 +42,7 @@ class AgentPovRenderer : public QObject
 	class QGLPixelBuffer *fPixelBuffer;
 	int fBufferWidth;
 	int fBufferHeight;
+	AgentAttachedData::SlotHandle slotHandle;
 	Viewport *fViewports;
 	std::map<int, Viewport *> fFreeViewports;
 };

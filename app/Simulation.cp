@@ -50,6 +50,7 @@
 #include "food.h"
 #include "Genome.h"
 #include "GenomeUtil.h"
+#include "Logs.h"
 #include "proplib.h"
 #include "Metabolism.h"
 #include "MonitorManager.h"
@@ -189,18 +190,6 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 		fBestSoFarBrainFunctionRecordFrequency(0),
 		fBestRecentBrainAnatomyRecordFrequency(0),
 		fBestRecentBrainFunctionRecordFrequency(0),
-		fRecordBirthsDeaths(false),
-
-		fLifeSpanLog(NULL),
-		fRecordPosition(false),
-		fRecordContacts(false),
-		fContactsLog(NULL),
-		fRecordCollisions(false),
-		fCollisionsLog(NULL),
-		fRecordCarry(false),
-		fCarryLog(NULL),
-		fRecordEnergy(false),
-		fEnergyLog(NULL),
 
 		fBrainAnatomyRecordAll(false),
 		fBrainFunctionRecordAll(false),
@@ -220,11 +209,6 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 		fComplexityLog(NULL),
 		fComplexitySeedLog(NULL),
 
-		fRecordGenomes(false),
-		fRecordSeparations(false),
-		fRecordAdamiComplexity(false),
-		fAdamiComplexityRecordFrequency(0),
-		
 		fEvents(NULL),
 
 #if false
@@ -321,6 +305,7 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 	
     Brain::braininit();
     agent::agentinit();
+	SeparationCache::init();
 	
 	GenomeUtil::createSchema();
 
@@ -422,24 +407,13 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 
 	MKDIR( "run/genome" );
 	MKDIR( "run/genome/meta" );
-	if( fRecordGenomes )
-	{
-		MKDIR( "run/genome/agents" );
-	}
 
-	if( fRecordPosition || fPositionSeedsFromFile || fRecordBarrierPosition )
+	if( fPositionSeedsFromFile || fRecordBarrierPosition )
 	{
 		MKDIR( "run/motion" );
 		MKDIR( "run/motion/position" );
-		if( fRecordPosition )
-			MKDIR( "run/motion/position/agents" );
 		if( fRecordBarrierPosition )
 			MKDIR( "run/motion/position/barriers" );
-	}
-
-	if( fRecordContacts || fRecordCollisions || fRecordCarry || fRecordEnergy )
-	{
-		MKDIR( "run/events" );
 	}
 
 	if( fConditionalProps->isLogging() )
@@ -451,14 +425,15 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 	if( fBestSoFarBrainAnatomyRecordFrequency || fBestSoFarBrainFunctionRecordFrequency ||
 		fBestRecentBrainAnatomyRecordFrequency || fBestRecentBrainFunctionRecordFrequency ||
 		fBrainAnatomyRecordAll || fBrainFunctionRecordAll || fBrainFunctionRecentRecordFrequency ||
-		fBrainAnatomyRecordSeeds || fBrainFunctionRecordSeeds || fAdamiComplexityRecordFrequency || fRecordPosition)
+		fBrainAnatomyRecordSeeds || fBrainFunctionRecordSeeds )
 	{
 		int agent_factor = 0;
 
 		if( RecordBrainFunction( 1 ) ) agent_factor++;
-		if( fRecordPosition ) agent_factor++;
 
-		int nfiles = 100 + (fMaxNumAgents * agent_factor);
+		// logtodo
+		//int nfiles = 100 + (fMaxNumAgents * agent_factor);
+		int nfiles = 4096;
 
 		// If we're going to be saving info on all these files, must increase the number allowed open
 		if( SetMaximumFiles( nfiles ) )
@@ -512,56 +487,6 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 		}
 	}
 
-
-	if( fRecordAdamiComplexity )
-	{
-		FILE * File;
-		
-		if( (File = fopen("run/genome/AdamiComplexity-1bit.txt", "a")) == NULL )
-		{
-			cerr << "could not open run/genome/AdamiComplexity-1bit.txt for writing [1]. Exiting." << endl;
-			exit(1);
-		}
-		fprintf( File, "%% BitsInGenome: %d WindowSize: 1\n", GenomeUtil::schema->getMutableSize() * 8 );		// write the number of bits into the top of the file.
-		fclose( File );
-
-		if( (File = fopen("run/genome/AdamiComplexity-2bit.txt", "a")) == NULL )
-		{
-			cerr << "could not open run/genome/AdamiComplexity-2bit.txt for writing [1]. Exiting." << endl;
-			exit(1);
-		}
-		fprintf( File, "%% BitsInGenome: %d WindowSize: 2\n", GenomeUtil::schema->getMutableSize() * 8 );		// write the number of bits into the top of the file.
-		fclose( File );
-
-
-		if( (File = fopen("run/genome/AdamiComplexity-4bit.txt", "a")) == NULL )
-		{
-			cerr << "could not open run/genome/AdamiComplexity-4bit.txt for writing [1]. Exiting." << endl;
-			exit(1);
-		}
-		fprintf( File, "%% BitsInGenome: %d WindowSize: 4\n", GenomeUtil::schema->getMutableSize() * 8 );		// write the number of bits into the top of the file.
-		fclose( File );
-
-		if( (File = fopen("run/genome/AdamiComplexity-summary.txt", "a")) == NULL )
-		{
-			cerr << "could not open run/genome/AdamiComplexity-summary.txt for writing [1]. Exiting." << endl;
-			exit(1);
-		}
-		fprintf( File, "%% Timestep 1bit 2bit 4bit\n" );
-		fclose( File );
-	}
-	
-	if( fRecordBirthsDeaths )
-	{
-		FILE * File;
-		if( (File = fopen("run/BirthsDeaths.log", "a")) == NULL )
-		{
-			cerr << "could not open run/BirthsDeaths.log for writing [1]. Exiting." << endl;
-			exit(1);
-		}
-		fprintf( File, "%% Timestep Event Agent# Parent1 Parent2\n" );
-		fclose( File );
-	}
 
 	if( fLockStepWithBirthsDeathsLog )
 	{
@@ -648,9 +573,6 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 	}
 #endif
 
-	InitGenomeSubsetLog();
-
-
 	//If we're recording the number of agents in or near various foodpatches, then open the stat file
 	if( fRecordFoodPatchStats )
 	{
@@ -670,6 +592,11 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 	agentPovRenderer = new AgentPovRenderer( fMaxNumAgents,
 											 brain::retinawidth,
 											 brain::retinaheight );
+
+	// ---
+	// --- Init Logs
+	// ---
+	logs = new Logs( this, docWorldFile );
 
 	if (!fLoadState)
 	{
@@ -795,12 +722,6 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 	// ---
 	monitorManager = new MonitorManager( this, monitorfilePath );
 
-	InitSeparationsLog();
-	InitLifeSpanLog();
-	InitContactsLog();
-	InitCollisionsLog();
-	InitCarryLog();
-	InitEnergyLog();
 	InitComplexityLog( fBrainFunctionRecentRecordFrequency );
 // 	InitAvrComplexityLog();
 	
@@ -864,13 +785,10 @@ TSimulation::~TSimulation()
 
 	delete monitorManager;
 
-	EndGenomeSubsetLog();
-	EndSeparationsLog();
-	EndLifeSpanLog();
-	EndContactsLog();
-	EndCollisionsLog();
-	EndCarryLog();
-	EndEnergyLog();
+	// ---
+	// --- Dispose Logs
+	// ---
+	delete logs;
 
 	if( fLockstepFile )
 		fclose( fLockstepFile );	
@@ -1104,6 +1022,16 @@ void TSimulation::Step()
 		// Swap buffers for the agent POV window when they're all done
 		agentPovRenderer->endStep();
 	}
+
+	// Update position log for all agents
+	if( logs->agentPosition.isEnabled() )
+	{
+		xfor( AGENTTYPE, agent, a )
+		{
+			logs->agentPosition.update( a );
+		}
+	}
+
 	
 //  if( fDoCPUWork )
 
@@ -1407,266 +1335,7 @@ void TSimulation::Step()
 
 	}
 	
-	if( fRecordAdamiComplexity && ((fStep % fAdamiComplexityRecordFrequency) == 0) )		// lets compute our AdamiComplexity -- 1-bit window
-	{
-			unsigned int genevalue;
-			FILE * FileOneBit;
-			FILE * FileTwoBit;
-			FILE * FileFourBit;
-			FILE * FileSummary;
-
-			float SumInformationOneBit = 0;
-			float SumInformationTwoBit = 0;
-			float SumInformationFourBit = 0;
-			
-			float entropyOneBit[8];
-			float informationOneBit[8];
-			
-			float entropyTwoBit[4];
-			float informationTwoBit[4];
-			float entropyFourBit[2];
-			float informationFourBit[2];
-						
-			agent* c = NULL;
-
-			if( (FileOneBit = fopen("run/genome/AdamiComplexity-1bit.txt", "a")) == NULL )
-			{
-				cerr << "could not open run/genome/AdamiComplexity-1bit.txt for writing [2].  Exiting." << endl;
-				exit(1);
-			}
-			if( (FileTwoBit = fopen("run/genome/AdamiComplexity-2bit.txt", "a")) == NULL )
-			{
-				cerr << "could not open run/genome/AdamiComplexity-2bit.txt for writing [2].  Exiting." << endl;
-				exit(1);
-			}		
-			if( (FileFourBit = fopen("run/genome/AdamiComplexity-4bit.txt", "a")) == NULL )
-			{
-				cerr << "could not open run/genome/AdamiComplexity-4bit.txt for writing [2].  Exiting." << endl;
-				exit(1);
-			}
-			if( (FileSummary = fopen("run/genome/AdamiComplexity-summary.txt", "a")) == NULL )
-			{
-				cerr << "could not open run/genome/AdamiComplexity-summary.txt for writing [2].  Exiting." << endl;
-				exit(1);
-			}
-
-
-			fprintf( FileOneBit,  "%ld:", fStep );		// write the timestep on the beginning of the line
-			fprintf( FileTwoBit,  "%ld:", fStep );		// write the timestep on the beginning of the line
-			fprintf( FileFourBit, "%ld:", fStep );		// write the timestep on the beginning of the line
-			fprintf( FileSummary, "%ld ", fStep );		// write the timestep on the beginning of the line
-			
-			int numagents = objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE);
-
-			bool bits[numagents][8];
-		
-			for( int gene = 0, n = GenomeUtil::schema->getMutableSize(); gene < n; gene++ )			// for each gene ...
-			{
-				int count = 0;
-
-				objectxsortedlist::gXSortedObjects.reset();				
-		
-				while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**) &c ) )	// for each agent ...
-				{
-					genevalue = c->Genes()->get_raw_uint(gene);
-
-					
-					if( genevalue >= 128 ) { bits[count][0]=true; genevalue -= 128; } else { bits[count][0] = false; }
-					if( genevalue >= 64  ) { bits[count][1]=true; genevalue -= 64; }  else { bits[count][1] = false; }
-					if( genevalue >= 32  ) { bits[count][2]=true; genevalue -= 32; }  else { bits[count][2] = false; }
-					if( genevalue >= 16  ) { bits[count][3]=true; genevalue -= 16; }  else { bits[count][3] = false; }
-					if( genevalue >= 8   ) { bits[count][4]=true; genevalue -= 8; }   else { bits[count][4] = false; }
-					if( genevalue >= 4   ) { bits[count][5]=true; genevalue -= 4; }   else { bits[count][5] = false; }
-					if( genevalue >= 2   ) { bits[count][6]=true; genevalue -= 2; }   else { bits[count][6] = false; }
-					if( genevalue == 1   ) { bits[count][7]=true; }                   else { bits[count][7] = false; }
-
-					count++;
-				}
-				
-				
-				/* PRINT THE BYTE UNDER CONSIDERATION */
-				
-				/* DOING ONE BIT WINDOW */
-				for( int i=0; i<8; i++ )		// for each window 1-bits wide...
-				{
-					int number_of_ones=0;
-					
-					for( int agent=0; agent<numagents; agent++ )
-						if( bits[agent][i] == true ) { number_of_ones++; }		// if agent has a 1 in the column, increment number_of_ones
-										
-					float prob_1 = (float) number_of_ones / (float) numagents;
-					float prob_0 = 1.0 - prob_1;
-					float logprob_0, logprob_1;
-					
-					if( prob_1 == 0.0 ) logprob_1 = 0.0;
-					else logprob_1 = log2(prob_1);
-
-					if( prob_0 == 0.0 ) logprob_0 = 0.0;
-					else logprob_0 = log2(prob_0);
-
-					
-					entropyOneBit[i] = -1 * ( (prob_0 * logprob_0) + (prob_1 * logprob_1) );			// calculating the entropy for this bit...
-					informationOneBit[i] = 1.0 - entropyOneBit[i];										// 1.0 = maxentropy
-					SumInformationOneBit += informationOneBit[i];
-//DEBUG				cout << "Gene" << gene << "_bit[" << i << "]: probs =\t{" << prob_0 << "," << prob_1 << "}\tEntropy =\t" << entropyOneBit[i] << " bits\t\tInformation =\t" << informationOneBit[i] << endl;
-				}
-			
-				fprintf( FileOneBit, " %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f", informationOneBit[0], informationOneBit[1], informationOneBit[2], informationOneBit[3], informationOneBit[4], 
-					informationOneBit[5], informationOneBit[6], informationOneBit[7] );
-
-				/* DOING TWO BIT WINDOW */
-
-				for( int i=0; i<4; i++ )		// for each window 2-bits wide...
-				{
-					int number_of[4];
-					for( int j=0; j<4; j++) { number_of[j] = 0; }		// zero out the array
-
-					for( int agent=0; agent<numagents; agent++ )
-					{
-						if( bits[agent][i*2] )			// Bits: 1 ?
-						{
-							if( bits[agent][(i*2)+1] ) { number_of[3]++; }	// Bits: 1 1
-							else						 { number_of[2]++; }		// Bits: 1 0							
-						}
-						else							// Bits: 0 ?
-						{
-							if( bits[agent][(i*2)+1] ) { number_of[1]++; }		// Bits: 0 1
-							else						 { number_of[0]++; }		// Bits: 0 0
-						}
-					}
-
-
-
-					float prob[4];
-					float logprob[4];
-					float sum=0;
-					
-					for( int j=0; j<4; j++ )
-					{
-						prob[j] = (float) number_of[j] / (float) numagents;
-						if( prob[j] == 0.0 ) { logprob[j] = 0.0; }
-						else { logprob[j] = log2(prob[j]); }						// in units of mers
-
-						sum += prob[j] * logprob[j];						// H(X) = -1 * SUM{ p(x) * log p(x) }
-					}
-
-					entropyTwoBit[i] = (sum * -1);							// multiplying the sum by -1 to get the Entropy
-					informationTwoBit[i] = 2.0 - entropyTwoBit[i];			// since we're in units of mers, maxentroopy is always 1.0
-					SumInformationTwoBit += informationTwoBit[i];
-
-//DEBUG				cout << "Gene" << gene << "_window2bit[" << i << "]: probs =\t{" << prob[0] << "," << prob[1] << "," << prob[2] << "," << prob[3] << "}\tEntropy =\t" << entropyTwoBit[i] << " mers\t\tInformation =\t" << informationTwoBit[i] << endl;
-				}
-				
-				fprintf( FileTwoBit, " %.4f %.4f %.4f %.4f", informationTwoBit[0], informationTwoBit[1], informationTwoBit[2], informationTwoBit[3] );
-
-
-				/* DOING FOUR BIT WINDOW */
-
-				for( int i=0; i<2; i++ )		// for each window four-bits wide...
-				{
-					int number_of[16];
-					for( int j=0; j<16; j++) { number_of[j] = 0; }		// zero out the array
-
-					
-					for( int agent=0; agent<numagents; agent++ )
-					{
-						if( bits[agent][i*4] )					// 1 ? ? ?.  Possibilities are 8-15
-						{
-							if( bits[agent][(i*4)+1] )			// 1 1 ? ?.  Possibilities are 12-15
-							{
-								if( bits[agent][(i*4)+2] )		// 1 1 1 ?.  Possibilities are 14-15
-								{
-									if( bits[agent][(i*4)+3] )	{ number_of[15]++; }	// 1 1 1 1
-									else							{ number_of[14]++; }	// 1 1 1 0
-								}
-								else								// 1 1 0 ?.  Possibilities are 12-13
-								{
-									if( bits[agent][(i*4)+3] )	{ number_of[13]++; }	// 1 1 0 1
-									else							{ number_of[12]++; }	// 1 1 0 0
-								}
-							}
-							else									// 1 0 ? ?.  Possibilities are 8-11
-							{
-								if( bits[agent][(i*4)+2] )		// 1 0 1 ?.  Possibilities are 14-15
-								{
-									if( bits[agent][(i*4)+3] )	{ number_of[11]++; }	// 1 0 1 1
-									else							{ number_of[10]++; }	// 1 0 1 0
-								}
-								else								// 1 0 0 ?.  Possibilities are 12-13
-								{
-									if( bits[agent][(i*4)+3] )	{ number_of[9]++; }		// 1 0 0 1
-									else							{ number_of[8]++; }		// 1 0 0 0
-								}
-							}
-						}
-						else										// 0 ? ? ?.  Possibilities are 0-7
-						{
-							if( bits[agent][(i*4)+1] )			// 0 1 ? ?.  Possibilities are 4-8
-							{
-								if( bits[agent][(i*4)+2] )		// 0 1 1 ?.  Possibilities are 6-7
-								{
-									if( bits[agent][(i*4)+3] )	{ number_of[7]++; } // 0 1 1 1
-									else							{ number_of[6]++; }	// 0 1 0 0
-								}
-								else								// 0 1 0 ?.  Possibilities are 4-5
-								{
-									if( bits[agent][(i*4)+3] )	{ number_of[5]++; } // 0 1 0 1
-									else							{ number_of[4]++; }	// 0 1 0 0
-								}
-							}
-							else									// 0 0 ? ?.  Possibilities are 0-3
-							{
-								if( bits[agent][(i*4)+2] )		// 0 0 1 ?.  Possibilities are 2-3
-								{
-									if( bits[agent][(i*4)+3] )	{ number_of[3]++; } // 0 0 1 1
-									else							{ number_of[2]++; }	// 0 0 1 0
-								}
-								else								// 0 0 0 ?.  Possibilities are 0-1
-								{
-									if( bits[agent][(i*4)+3] )	{ number_of[1]++; } // 0 0 0 1
-									else							{ number_of[0]++; }	// 0 0 0 0
-								}							
-							}
-						}
-					}
-					
-					float prob[16];
-					float logprob[16];
-					float sum=0;
-					
-					for( int j=0; j<16; j++ )
-					{
-						prob[j] = (float) number_of[j] / (float) numagents;
-						if( prob[j] == 0.0 ) { logprob[j] = 0.0; }
-						else { logprob[j] = log2(prob[j]); }
-
-						sum += prob[j] * logprob[j];						// H(X) = -1 * SUM{ p(x) * log p(x) }
-					}
-					
-					entropyFourBit[i] = (sum * -1);							// multiplying the sum by -1 to get the Entropy
-					informationFourBit[i] = 4.0 - entropyFourBit[i];		// since we're in units of mers, maxentroopy is always 1.0
-					SumInformationFourBit += informationFourBit[i];
-//DEBUG				cout << "Gene" << gene << "_window4bit[" << i << "]: probs =\t{" << prob[0] << "," << prob[1] << "," << prob[2] << "," << prob[3] << "," << prob[4] << "," << 
-//DEBUG					prob[5] << "," << prob[6] << "," << prob[7] << "," << prob[8] << "," << prob[9] << "," << prob[10] << "," << prob[11] << "," << 
-//DEBUG					prob[12] << "," << prob[13] << "," << prob[14] << "," << prob[15] << "}\tEntropy =\t" << entropyFourBit[i] << " mers\t\tInformation =\t" << informationFourBit[i] << endl;
-				}
-
-				fprintf( FileFourBit, " %.4f %.4f", informationFourBit[0], informationFourBit[1] );
-
-			}
-
-			fprintf( FileOneBit,  "\n" );		// end the line
-			fprintf( FileTwoBit,  "\n" );		// end the line
-			fprintf( FileFourBit, "\n" );		// end the line
-			fprintf( FileSummary, "%.4f %.4f %.4f\n", SumInformationOneBit, SumInformationTwoBit, SumInformationFourBit );		// write the timestep on the beginning of the line
-
-			// Done computing AdamiComplexity.  Close our log files.
-			fclose( FileOneBit );
-			fclose( FileTwoBit );
-			fclose( FileFourBit );
-			fclose( FileSummary );
-	}
-
+	logs->adamiComplexity.update();
 
 	// Handle tracking gene Separation
 	if( fMonitorGeneSeparation && fRecordGeneSeparation )
@@ -1729,10 +1398,8 @@ void TSimulation::InitAgents()
 		virtual void task_exec( TSimulation *sim )
 		{
 			a->grow( sim->fMateWait,
-					 sim->fRecordGenomes,
 					 sim->RecordBrainAnatomy( a->Number() ),
-					 sim->RecordBrainFunction( a->Number() ),
-					 sim->fRecordPosition );
+					 sim->RecordBrainFunction( a->Number() ) );
 
 
 #if RecordRandomBrainAnatomies
@@ -1759,8 +1426,7 @@ void TSimulation::InitAgents()
 
 			sim->FoodEnergyIn( a->GetFoodEnergy() );
 
-			if( sim->fRecordPosition )
-				a->RecordPosition();
+			logs->agentPosition.update( a ); // todo: put this in a devoted serial task.
 		}
 	};
 
@@ -2120,456 +1786,6 @@ void TSimulation::ReadSeedPositionsFromFile()
 		exit( 1 );
 	}
 }
-
-//---------------------------------------------------------------------------
-// TSimulation::InitLifeSpanLog
-//---------------------------------------------------------------------------
-
-void TSimulation::InitLifeSpanLog()
-{
-	fLifeSpanLog = new DataLibWriter( "run/lifespans.txt" );
-
-	const char *colnames[] =
-		{
-			"Agent",
-			"BirthStep",
-			"BirthReason",
-			"DeathStep",
-			"DeathReason",
-			NULL
-		};
-	const datalib::Type coltypes[] =
-		{
-			datalib::INT,
-			datalib::INT,
-			datalib::STRING,
-			datalib::INT,
-			datalib::STRING
-		};
-
-	fLifeSpanLog->beginTable( "LifeSpans",
-							  colnames,
-							  coltypes );
-}
-
-//---------------------------------------------------------------------------
-// TSimulation::UpdateLifeSpanLog
-//---------------------------------------------------------------------------
-
-void TSimulation::UpdateLifeSpanLog( agent *a )
-{
-	LifeSpan *ls = a->GetLifeSpan();
-
-	fLifeSpanLog->addRow( a->Number(),
-						  ls->birth.step,
-						  LifeSpan::BR_NAMES[ls->birth.reason],
-						  ls->death.step,
-						  LifeSpan::DR_NAMES[ls->death.reason] );
-}
-
-//---------------------------------------------------------------------------
-// TSimulation::EndLifeSpanLog
-//---------------------------------------------------------------------------
-
-void TSimulation::EndLifeSpanLog()
-{
-	fLifeSpanLog->endTable();
-	delete fLifeSpanLog;
-	fLifeSpanLog = NULL;
-}
-
-//---------------------------------------------------------------------------
-// TSimulation::InitContactsLog
-//---------------------------------------------------------------------------
-
-void TSimulation::InitContactsLog()
-{
-	if( !fRecordContacts )
-		return;
-
-	fContactsLog = new DataLibWriter( "run/events/contacts.log" );
-
-	ContactEntry::start( fContactsLog );
-}
-
-//---------------------------------------------------------------------------
-// TSimulation::EndContactsLog
-//---------------------------------------------------------------------------
-
-void TSimulation::EndContactsLog()
-{
-	if( !fRecordContacts )
-		return;
-
-	ContactEntry::stop( fContactsLog );
-
-	delete fContactsLog;
-	fContactsLog = NULL;
-}
-
-//---------------------------------------------------------------------------
-// TSimulation::InitCollisionsLog
-//---------------------------------------------------------------------------
-
-void TSimulation::InitCollisionsLog()
-{
-	if( !fRecordCollisions )
-		return;
-
-	fCollisionsLog = new DataLibWriter( "run/events/collisions.log" );
-
-	const char *colnames[] =
-		{
-			"Step",
-			"Agent",
-			"Type",
-			NULL
-		};
-	const datalib::Type coltypes[] =
-		{
-			datalib::INT,
-			datalib::INT,
-			datalib::STRING
-		};
-
-	fCollisionsLog->beginTable( "Collisions",
-								colnames,
-								coltypes );
-}
-
-//---------------------------------------------------------------------------
-// TSimulation::UpdateCollisionsLog
-//---------------------------------------------------------------------------
-
-void TSimulation::UpdateCollisionsLog( agent *c,
-									   ObjectType ot )
-{
-	if( !fRecordCollisions )
-	{
-		return;
-	}
-
-	// We store type as a string since this data will most likely
-	// be processed by a script.
-	static const char *names[] = {"agent",
-								  "food",
-								  "brick",
-								  "barrier",
-								  "edge"};
-
-	fCollisionsLog->addRow( fStep,
-							c->Number(),
-							names[ot] );
-}
-
-//---------------------------------------------------------------------------
-// TSimulation::EndCollisionsLog
-//---------------------------------------------------------------------------
-
-void TSimulation::EndCollisionsLog()
-{
-	if( !fRecordCollisions )
-		return;
-
-	fCollisionsLog->endTable();
-	delete fCollisionsLog;
-	fCollisionsLog = NULL;
-}
-
-//---------------------------------------------------------------------------
-// TSimulation::InitCarryLog
-//---------------------------------------------------------------------------
-
-void TSimulation::InitCarryLog()
-{
-	if( !fRecordCarry )
-		return;
-
-	fCarryLog = new DataLibWriter( "run/events/carry.log" );
-
-	const char *colnames[] =
-		{
-			"T",
-			"Agent",
-			"Action",
-			"ObjectType",
-			"ObjectNumber",
-			NULL
-		};
-	const datalib::Type coltypes[] =
-		{
-			datalib::INT,
-			datalib::INT,
-			datalib::STRING,
-			datalib::STRING,
-			datalib::INT
-		};
-
-	fCarryLog->beginTable( "Carry",
-						   colnames,
-						   coltypes );
-}
-
-
-//---------------------------------------------------------------------------
-// TSimulation::UpdateCarryLog
-//---------------------------------------------------------------------------
-
-void TSimulation::UpdateCarryLog( agent *c,
-								  gobject *obj,
-								  CarryAction action )
-{
-	if( !fRecordCarry )
-	{
-		return;
-	}
-
-	static const char *actions[] = {"P",
-									"D",
-									"Do"};
-
-	const char *objectType;
-	switch(obj->getType())
-	{
-	case AGENTTYPE: objectType = "A"; break;
-	case FOODTYPE: objectType = "F"; break;
-	case BRICKTYPE: objectType = "B"; break;
-	default: assert(false);
-	}
-
-	fCarryLog->addRow( fStep,
-					   c->Number(),
-					   actions[action],
-					   objectType,
-					   obj->getTypeNumber() );
-}
-
-
-//---------------------------------------------------------------------------
-// TSimulation::EndCarryLog
-//---------------------------------------------------------------------------
-
-void TSimulation::EndCarryLog()
-{
-	if( !fRecordCarry )
-		return;
-
-	fCarryLog->endTable();
-	delete fCarryLog;
-	fCarryLog = NULL;
-}
-
-//---------------------------------------------------------------------------
-// TSimulation::InitEnergyLog
-//---------------------------------------------------------------------------
-
-void TSimulation::InitEnergyLog()
-{
-	if( !fRecordEnergy )
-		return;
-
-	fEnergyLog = new DataLibWriter( "run/events/energy.log" );
-
-	const char *colnames_template[] =
-		{
-			"T",
-			"Agent",
-			"EventType",
-			"ObjectNumber",
-			"NeuralActivation",
-		};
-	const datalib::Type coltypes_template[] =
-		{
-			datalib::INT,
-			datalib::INT,
-			datalib::STRING,
-			datalib::INT,
-			datalib::FLOAT,
-		};
-
-	int lenTemplate = sizeof(colnames_template) / sizeof(char *);
-
-	const char **colnames = new const char *[ lenTemplate + globals::numEnergyTypes + 1 ];
-	datalib::Type *coltypes = new datalib::Type[ lenTemplate + globals::numEnergyTypes ];
-	for( int i = 0; i < lenTemplate; i++ )
-	{
-		colnames[i] = colnames_template[i];
-		coltypes[i] = coltypes_template[i];
-	}
-	for( int i = 0; i < globals::numEnergyTypes; i++ )
-	{
-		char buf[128];
-		sprintf( buf, "Energy%d\n", i );
-		colnames[ lenTemplate + i ] = strdup( buf );
-
-		coltypes[ lenTemplate + i ] = datalib::FLOAT;
-	}
-	colnames[ lenTemplate + globals::numEnergyTypes ] = NULL;
-
-	fEnergyLog->beginTable( "Energy",
-							colnames,
-							coltypes );
-}
-
-
-//---------------------------------------------------------------------------
-// TSimulation::UpdateEnergyLog
-//---------------------------------------------------------------------------
-
-void TSimulation::UpdateEnergyLog( agent *c,
-								   gobject *obj,
-								   float neuralActivation,
-								   const Energy &energy,
-								   EnergyLogEventType elet )
-{
-	if( !fRecordEnergy )
-	{
-		return;
-	}
-
-	static const char *eventTypes[] = {"G",
-									   "F",
-									   "E"};
-	const char *eventType = eventTypes[elet];
-
-	Variant coldata[ 5 + globals::numEnergyTypes ];
-	coldata[0] = fStep;
-	coldata[1] = c->Number();
-	coldata[2] = eventType;
-	coldata[3] = (long)obj->getTypeNumber();
-	coldata[4] = neuralActivation;
-	for( int i = 0; i < globals::numEnergyTypes; i++ )
-	{
-		coldata[5 + i] = energy[i];
-	}
-
-	fEnergyLog->addRow( coldata );
-}
-
-
-//---------------------------------------------------------------------------
-// TSimulation::EndEnergyLog
-//---------------------------------------------------------------------------
-
-void TSimulation::EndEnergyLog()
-{
-	if( !fRecordEnergy )
-		return;
-
-	fEnergyLog->endTable();
-	delete fEnergyLog;
-	fEnergyLog = NULL;
-}
-
-//---------------------------------------------------------------------------
-// TSimulation::InitGenomeSubsetLog
-//---------------------------------------------------------------------------
-
-void TSimulation::InitGenomeSubsetLog()
-{
-	if( fGenomeSubsetLog.record )
-	{
-		fGenomeSubsetLog.geneIndexes.clear();
-		GenomeUtil::schema->getIndexes( fGenomeSubsetLog.geneNames, fGenomeSubsetLog.geneIndexes );
-		for( int i = 0; i < (int)fGenomeSubsetLog.geneNames.size(); i++ )
-		{
-			if( fGenomeSubsetLog.geneIndexes[i] < 0 )
-			{
-				cerr << "Invalid gene name for GenomeSubsetLog: " << fGenomeSubsetLog.geneNames[i] << endl;
-				exit( 1 );
-			}
-		}
-
-		vector<string> colnames;
-		vector<datalib::Type> coltypes;
-
-		colnames.push_back( "Agent" );
-		coltypes.push_back( datalib::INT );
-
-		itfor( vector<string>, fGenomeSubsetLog.geneNames, it )
-		{
-			colnames.push_back( *it );
-			coltypes.push_back( datalib::INT );
-		}
-
-		fGenomeSubsetLog.log = new DataLibWriter( "run/genome/subset.log" );
-		fGenomeSubsetLog.log->beginTable( "GenomeSubset",
-										  colnames,
-										  coltypes );
-	}
-	else
-	{
-		fGenomeSubsetLog.log = NULL;
-	}
-}
-
-//---------------------------------------------------------------------------
-// TSimulation::UpdateGenomeSubsetLog
-//---------------------------------------------------------------------------
-
-void TSimulation::UpdateGenomeSubsetLog( agent *a )
-{
-	if( fGenomeSubsetLog.record )
-	{
-		Variant values[ 1 + fGenomeSubsetLog.geneIndexes.size() ];
-
-		values[0] = a->Number();
-
-		for( int i = 0; i < (int)fGenomeSubsetLog.geneIndexes.size(); i++ )
-		{
-			values[ i + 1 ] = (int)a->Genes()->get_raw_uint( fGenomeSubsetLog.geneIndexes[i] );
-		}
-
-		fGenomeSubsetLog.log->addRow( values );
-	}
-}
-
-//---------------------------------------------------------------------------
-// TSimulation::EndGenomeSubsetLog
-//---------------------------------------------------------------------------
-
-void TSimulation::EndGenomeSubsetLog()
-{
-	if( fGenomeSubsetLog.log )
-	{
-		delete fGenomeSubsetLog.log;
-		fGenomeSubsetLog.log = NULL;
-	}
-}
-
-//---------------------------------------------------------------------------
-// TSimulation::InitSeparationsLog
-//---------------------------------------------------------------------------
-
-void TSimulation::InitSeparationsLog()
-{
-	if( fRecordSeparations )
-	{
-		fSeparationsLog = new DataLibWriter( "run/genome/separations.txt" );
-	}
-	else
-	{
-		fSeparationsLog = NULL;
-	}
-
-	fSeparationCache.start( fSeparationsLog );
-}
-
-//---------------------------------------------------------------------------
-// TSimulation::EndSeparationsLog
-//---------------------------------------------------------------------------
-
-void TSimulation::EndSeparationsLog()
-{
-	fSeparationCache.stop();
-
-	if( fRecordSeparations )
-	{
-		delete fSeparationsLog;
-		fSeparationsLog = NULL;
-	}
-}
-
 
 //---------------------------------------------------------------------------
 // TSimulation::InitComplexityLog
@@ -3201,11 +2417,7 @@ void TSimulation::Interact()
 
 				ContactEntry contactEntry( fStep, c, d );
 
-				if( fRecordSeparations )
-				{
-					// Force a separation calculation so it gets logged.
-					fSeparationCache.separation( c, d );
-				}
+				logs->separation.update( c, d );
 
 				// -----------------------
 				// ---- Mate (Normal) ----
@@ -3236,8 +2448,7 @@ void TSimulation::Interact()
 					}
 				}
 				
-				if( fRecordContacts )
-					contactEntry.log( fContactsLog );
+				logs->contact.update( contactEntry );
 
 				if( cDied )
 					break;
@@ -3602,10 +2813,8 @@ void TSimulation::MateLockstep( void )
 
 		e->Genes()->crossover(c->Genes(), d->Genes(), true);
 		e->grow( fMateWait,
-				 fRecordGenomes,
 				 RecordBrainAnatomy( e->Number() ),
-				 RecordBrainFunction( e->Number() ),
-				 fRecordPosition );
+				 RecordBrainFunction( e->Number() ) );
 		Energy eenergy = c->mating( fMateFitnessParameter, fMateWait, /*lockstep*/ true )
 					   + d->mating( fMateFitnessParameter, fMateWait, /*lockstep*/ true );
 		Energy minenergy = fMinMateFraction * ( c->GetMaxEnergy() + d->GetMaxEnergy() ) * 0.5;	// just a modest, reasonable amount; this doesn't matter as much in lockstep mode, though since we count virtual births it does matter a tiny bit; this leaves the agent requiring food prior to mating if the parents don't contribute enough
@@ -3872,10 +3081,8 @@ void TSimulation::Mate( agent *c,
 					virtual void task_exec( TSimulation *sim )
 					{
 						e->grow( sim->fMateWait,
-								 sim->fRecordGenomes,
 								 sim->RecordBrainAnatomy( e->Number() ),
-								 sim->RecordBrainFunction( e->Number() ),
-								 sim->fRecordPosition );
+								 sim->RecordBrainFunction( e->Number() ) );
 
 						e->SetEnergy(eenergy);
 						e->SetFoodEnergy(eenergy);
@@ -4071,14 +3278,14 @@ void TSimulation::Fight( agent *c,
 		{
 			Energy ddamage = d->damage( cpower * fPower2Energy, fFightMode == FM_NULL );
 			if( !ddamage.isZero() )
-				UpdateEnergyLog( c, d, c->Fight(), ddamage, ELET__FIGHT );
+				logs->energy.update( c, d, c->Fight(), ddamage, Logs::EnergyLog::Fight );
 		}
 
 		if( dpower > 0.0 )
 		{
 			Energy cdamage = c->damage( dpower * fPower2Energy, fFightMode == FM_NULL );
 			if( !cdamage.isZero() )
-				UpdateEnergyLog( d, c, d->Fight(), cdamage, ELET__FIGHT );
+				logs->energy.update( d, c, d->Fight(), cdamage, Logs::EnergyLog::Fight );
 		}
 
 		if( !fLockStepWithBirthsDeathsLog )
@@ -4170,7 +3377,7 @@ void TSimulation::Give( agent *x,
 	{
 		y->receive( x, energy );
 
-		UpdateEnergyLog( x, y, x->Give(), energy, ELET__GIVE );
+		logs->energy.update( x, y, x->Give(), energy, Logs::EnergyLog::Give );
 
 		if( !fLockStepWithBirthsDeathsLog )
 		{
@@ -4271,7 +3478,7 @@ void TSimulation::Eat( agent *c, bool *cDied )
 				Energy foodEnergyLost;
 				Energy energyEaten;
 				c->eat( f, fEatFitnessParameter, fEat2Consume, fEatThreshold, fStep, foodEnergyLost, energyEaten );
-				UpdateEnergyLog( c, f, c->Eat(), energyEaten, ELET__EAT );
+				logs->energy.update( c, f, c->Eat(), energyEaten, Logs::EnergyLog::Eat );
 				if( fEvents )
 					fEvents->AddEvent( fStep, c->Number(), 'e' );
 								 
@@ -4328,7 +3535,7 @@ void TSimulation::Eat( agent *c, bool *cDied )
 					Energy foodEnergyLost;
 					Energy energyEaten;
 					c->eat( f, fEatFitnessParameter, fEat2Consume, fEatThreshold, fStep, foodEnergyLost, energyEaten );
-					UpdateEnergyLog( c, f, c->Eat(), energyEaten, ELET__EAT );
+					logs->energy.update( c, f, c->Eat(), energyEaten, Logs::EnergyLog::Eat );
 					if( fEvents )
 						fEvents->AddEvent( fStep, c->Number(), 'e' );
 
@@ -4666,10 +3873,8 @@ void TSimulation::CreateAgents( void )
 					virtual void task_exec( TSimulation *sim )
 					{
 						a->grow( sim->fMateWait,
-								 sim->fRecordGenomes,
 								 sim->RecordBrainAnatomy( a->Number() ),
-								 sim->RecordBrainFunction( a->Number() ),
-								 sim->fRecordPosition );
+								 sim->RecordBrainFunction( a->Number() ) );
 					}
 				};
 
@@ -4792,10 +3997,8 @@ void TSimulation::CreateAgents( void )
             }
 
             newAgent->grow( fMateWait,
-							fRecordGenomes,
 							RecordBrainAnatomy( newAgent->Number() ),
-							RecordBrainFunction( newAgent->Number() ),
-							fRecordPosition );
+							RecordBrainFunction( newAgent->Number() ) );
 			FoodEnergyIn( newAgent->GetFoodEnergy() );
 
             newAgent->settranslation(randpw() * globals::worldsize, 0.5 * agent::gAgentHeight, randpw() * -globals::worldsize);
@@ -5202,82 +4405,49 @@ void TSimulation::Birth( agent* a,
 						 agent* a_parent1,
 						 agent* a_parent2 )
 {
+	AgentBirthEvent birthEvent( a, reason, a_parent1, a_parent2 );
+
+	logs->birth( birthEvent );
+
 	if( a )	// a will NULL for virtual births only
 	{
 		fNumberAlive++;
 		fNumberAliveWithMetabolism[ GenomeUtil::getMetabolism(a->Genes())->index ]++;
 	
 		// ---
-		// --- Update LifeSpan
+		// --- Update agent's LifeSpan
 		// ---
 		a->GetLifeSpan()->set_birth( fStep,
 									 reason );
-	
-	
-		// ---
-		// --- Update Separation Cache
-		// ---
-		fSeparationCache.birth( a );
-
 
 		// ---
-		// --- Update Genome Subset Log
+		// --- Create Separation Cache Entry
 		// ---
-		UpdateGenomeSubsetLog(  a );
+		SeparationCache::birth( birthEvent );
 	}
 	
 	// ---
-	// --- Update Birth/Death Log
+	// --- Update Events
 	// ---
-	if( fRecordBirthsDeaths && (reason != LifeSpan::BR_SIMINIT) )
+	if( fEvents && (reason != LifeSpan::BR_SIMINIT) )
 	{
-		FILE * File;
-		if( (File = fopen("run/BirthsDeaths.log", "a")) == NULL )
-		{
-			cerr << "could not open run/BirthsDeaths.log for writing. Exiting." << endl;
-			exit(1);
-		}
-
 		switch( reason )
 		{
 		case LifeSpan::BR_NATURAL:
 		case LifeSpan::BR_LOCKSTEP:
-			fprintf( File,
-					 "%ld BIRTH %ld %ld %ld\n",
-					 fStep,
-					 a->Number(),
-					 a_parent1->Number(),
-					 a_parent2->Number() );
-			if( fEvents )
-			{
-				fEvents->AddEvent( fStep, a_parent1->Number(), 'm' );
-				fEvents->AddEvent( fStep, a_parent2->Number(), 'm' );
-			}
+			fEvents->AddEvent( fStep, a_parent1->Number(), 'm' );
+			fEvents->AddEvent( fStep, a_parent2->Number(), 'm' );
 			break;
 		case LifeSpan::BR_VIRTUAL:
-			fprintf( File,
-					 "%ld VIRTUAL %d %ld %ld\n",
-					 fStep,
-					 0,	// agent IDs start with 1, so this also identifies virtual births
-					 a_parent1->Number(),
-					 a_parent2->Number() );
-			if( fEvents )
-			{
-				fEvents->AddEvent( fStep, a_parent1->Number(), 'm' );
-				fEvents->AddEvent( fStep, a_parent2->Number(), 'm' );
-			}
+			fEvents->AddEvent( fStep, a_parent1->Number(), 'm' );
+			fEvents->AddEvent( fStep, a_parent2->Number(), 'm' );
 			break;
 		case LifeSpan::BR_CREATE:
-			fprintf( File,
-					 "%ld CREATION %ld\n",
-					 fStep,
-					 a->Number() );
+			// no-op
 			break;
 		default:
 			assert( false );
 		}
-
-		fclose(File);
 	}
 }
 
@@ -5289,6 +4459,8 @@ void TSimulation::Birth( agent* a,
 void TSimulation::Kill( agent* c,
 						LifeSpan::DeathReason reason )
 {
+	AgentDeathEvent deathEvent(c, reason);
+
 	fNumberAlive--;
 	fNumberAliveWithMetabolism[c->GetMetabolism()->index]--;
 
@@ -5298,15 +4470,13 @@ void TSimulation::Kill( agent* c,
 	c->GetLifeSpan()->set_death( fStep,
 								 reason );
 
-	UpdateLifeSpanLog( c );
-
 	// ---
-	// --- Update Separation Cache
+	// --- Simulation Ending
 	// ---
-	fSeparationCache.death( c );
-
 	if( reason == LifeSpan::DR_SIMEND )
 	{
+		logs->death( deathEvent );
+		SeparationCache::death( deathEvent );
 		c->Die();
 
 		return;
@@ -5408,6 +4578,8 @@ void TSimulation::Kill( agent* c,
 	// --- Die()
 	// ---
 	// Must call Die() for the agent before any of the uses of Fitness() below, so we get the final, true, post-death fitness
+	logs->death( deathEvent );
+	SeparationCache::death( deathEvent );
 	c->Die();
 
 	// ---
@@ -5415,23 +4587,6 @@ void TSimulation::Kill( agent* c,
 	// ---
     fStage.RemoveObject( c );
 
-	// ---
-	// --- Births Deaths Log
-	// ---
-	if( fRecordBirthsDeaths )		// are we recording births, deaths, and creations?  If so, this agent will be included.
-	{
-		FILE * File;
-		
-		if( (File = fopen("run/BirthsDeaths.log", "a")) == NULL )
-		{
-			cerr << "could not open run/genome/run/BirthsDeaths.log for writing [1].  Exiting." << endl;
-			exit(1);
-		}
-		
-		fprintf( File, "%ld DEATH %ld\n", fStep, c->Number() );
-		fclose( File );
-	}
-	
 	// ---
 	// --- x-sorted list
 	// ---
@@ -7821,12 +6976,6 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	fPopControlMaxFixedRange = doc.get( "PopControlMaxFixedRange" );
 	fPopControlMinScaleFactor = doc.get( "PopControlMinScaleFactor" );
 	fPopControlMaxScaleFactor = doc.get( "PopControlMaxScaleFactor" );
-	fRecordBirthsDeaths = doc.get( "RecordBirthsDeaths" );
-	fRecordPosition = doc.get( "RecordPosition" );
-	fRecordContacts = doc.get( "RecordContacts" );
-	fRecordCollisions = doc.get( "RecordCollisions" );
-	fRecordCarry = doc.get( "RecordCarry" );
-	fRecordEnergy = doc.get( "RecordEnergy" );
 	fBrainAnatomyRecordAll = doc.get( "BrainAnatomyRecordAll" );
 	fBrainFunctionRecordAll = doc.get( "BrainFunctionRecordAll" );
 	fBrainAnatomyRecordSeeds = doc.get( "BrainAnatomyRecordSeeds" );
@@ -7920,22 +7069,6 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	}
 	fTournamentSize = doc.get( "TournamentSize" );
 		
-	fRecordGenomes = doc.get( "RecordGenomes" );
-	{
-		proplib::Property &propGenomeSubsetLog = doc.get( "GenomeSubsetLog" );
-
-		fGenomeSubsetLog.record = propGenomeSubsetLog.get( "Record" );
-
-		proplib::Property &propGeneNames = propGenomeSubsetLog.get( "GeneNames" );
-		fGenomeSubsetLog.geneNames.clear();
-		for( int i = 0; i < (int)propGeneNames.size(); i++ )
-		{
-			fGenomeSubsetLog.geneNames.push_back( (string)propGeneNames.get(i) );
-		}
-	}
-	fRecordSeparations = doc.get( "RecordSeparations" );
-	fRecordAdamiComplexity = doc.get( "RecordAdamiComplexity" );
-	fAdamiComplexityRecordFrequency = doc.get( "AdamiComplexityRecordFrequency" );
 	globals::recordFileType = (bool)doc.get( "CompressFiles" )
 		? AbstractFile::TYPE_GZIP_FILE
 		: AbstractFile::TYPE_FILE;

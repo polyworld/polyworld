@@ -32,6 +32,8 @@ AgentPovRenderer::AgentPovRenderer( int maxAgents,
 	fBufferWidth = ncols * (retinaWidth + CELL_PAD);
 	fBufferHeight = nrows * (retinaHeight + CELL_PAD);
 
+	slotHandle = AgentAttachedData::createSlot();
+
 	fViewports = new Viewport[ maxAgents ];
 	for( int i = 0; i < maxAgents; i++ )
 	{
@@ -67,12 +69,12 @@ AgentPovRenderer::~AgentPovRenderer()
 //---------------------------------------------------------------------------
 void AgentPovRenderer::add( agent *a )
 {
-	assert( a->fPovState == NULL );
+	assert( AgentAttachedData::get( a, slotHandle ) == NULL );
 
 	Viewport *viewport = fFreeViewports.begin()->second;
 	fFreeViewports.erase( fFreeViewports.begin() );
 
-	a->fPovState = viewport;
+	AgentAttachedData::set( a, slotHandle, viewport );
 }
 
 //---------------------------------------------------------------------------
@@ -80,10 +82,11 @@ void AgentPovRenderer::add( agent *a )
 //---------------------------------------------------------------------------
 void AgentPovRenderer::remove( agent *a )
 {
-	if( a->fPovState )
+	Viewport *viewport = (Viewport *)AgentAttachedData::get( a, slotHandle );
+
+	if( viewport )
 	{
-		Viewport *viewport = (Viewport *)a->fPovState;
-		a->fPovState = NULL;
+		AgentAttachedData::set( a, slotHandle, NULL );
 		fFreeViewports.insert( make_pair(viewport->index, viewport) );
 	}
 }
@@ -120,7 +123,7 @@ void AgentPovRenderer::beginStep()
 //---------------------------------------------------------------------------
 void AgentPovRenderer::render( agent *a )
 {
-	Viewport *viewport = (Viewport *)a->fPovState;
+	Viewport *viewport = (Viewport *)AgentAttachedData::get( a, slotHandle );
 
 	// Initialize projection
 	glMatrixMode(GL_PROJECTION);

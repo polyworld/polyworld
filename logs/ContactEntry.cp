@@ -3,38 +3,8 @@
 #include <assert.h>
 
 #include "agent.h"
-#include "datalib.h"
-#include "Simulation.h"
+#include "simconst.h"
 
-static const char *colnames[] =
-	{
-		"Timestep",
-		"Agent1",
-		"Agent2",
-		"Events",
-		NULL
-	};
-
-static const datalib::Type coltypes[] =
-	{
-		datalib::INT,
-		datalib::INT,
-		datalib::INT,
-		datalib::STRING,
-	};
-
-
-void ContactEntry::start( DataLibWriter *out )
-{
-	out->beginTable( "Contacts",
-					 colnames,
-					 coltypes );
-}
-
-void ContactEntry::stop( DataLibWriter *out )
-{
-	out->endTable();
-}
 
 
 ContactEntry::ContactEntry( long _step, agent *_c, agent *_d )
@@ -57,22 +27,6 @@ void ContactEntry::fight( agent *a, int status )
 void ContactEntry::give( agent *a, int status )
 {
 	get(a)->give = status;
-}
-
-void ContactEntry::log( DataLibWriter *out )
-{
-	char buf[32];
-	char *b = buf;
-
-	c.encode( &b );
-	*(b++) = 'C';
-	d.encode( &b );
-	*(b++) = 0;
-
-	out->addRow( step,
-				 c.number,
-				 d.number,
-				 buf );
 }
 
 ContactEntry::AgentInfo *ContactEntry::get( agent *a )

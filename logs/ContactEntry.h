@@ -1,14 +1,9 @@
 #pragma once
 
 class agent;
-class DataLibWriter;
 
 class ContactEntry
 {
- public:
-	static void start( DataLibWriter *out );
-	static void stop( DataLibWriter *out );
-
  public:
 	ContactEntry( long step, agent *c, agent *d );
 
@@ -16,9 +11,6 @@ class ContactEntry
 	void fight( agent *a, int status );
 	void give( agent *a, int status );
 
-	void log( DataLibWriter *out );
-
- private:
 	class AgentInfo
 	{
 	public:

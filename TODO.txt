@@ -3,7 +3,7 @@ REPORTED	ASSIGNED	DATE		DESC
 [SIM]
 sean   					02/19/2012 	gene separation monitor & cache
 sean   					02/19/2012 	agent trackers UI
-sean   					02/20/2012 	cleanup loggers
+sean   					02/22/2012 	finish loggers cleanup
 
 [BUILD]
 sean		sean		02/10/2012	auto-discover python version

@@ -6,12 +6,55 @@
 
 #include <vector>
 
+#include <QtGlobal>
+
+#include "LifeSpan.h"
+
+
 // Forward declarations
 namespace genome { class Genome; }
+class agent;
 
 
 namespace sim
 {
+	//===========================================================================
+	// AgentBirthEvent
+	//===========================================================================
+	struct AgentBirthEvent
+	{
+	AgentBirthEvent( agent *_a,
+					 LifeSpan::BirthReason _reason,
+					 agent *_parent1,
+					 agent *_parent2 )
+	: a(_a)
+	, reason(_reason)
+	, parent1(_parent1)
+	, parent2(_parent2)
+		{}
+
+		agent *a;
+		LifeSpan::BirthReason reason;
+		agent *parent1;
+		agent *parent2;
+	};
+
+	//===========================================================================
+	// AgentDeathEvent
+	//===========================================================================
+	struct AgentDeathEvent
+	{
+	AgentDeathEvent( agent *_a,
+					 LifeSpan::DeathReason _reason )
+	: a(_a)
+	, reason(_reason)
+		{}
+
+		agent *a;
+		LifeSpan::DeathReason reason;
+	};
+
+
 	typedef std::vector<char *> StatusText;
 
 	struct Position

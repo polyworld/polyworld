@@ -8,6 +8,7 @@ SRCDIRS="agent\
          environment\
          genome\
          graphics\
+         logs\
          main\
          monitor\
          tools\

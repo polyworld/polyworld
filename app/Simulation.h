@@ -29,7 +29,6 @@ using namespace sim;
 // Forward declarations
 namespace condprop { class PropertyList; }
 namespace proplib { class Document; }
-class ContactEntry;
 class TBinChartWindow;
 
 
@@ -105,20 +104,7 @@ public:
 	int fBestRecentBrainAnatomyRecordFrequency;
 	int fBestRecentBrainFunctionRecordFrequency;
 	
-	bool fRecordBirthsDeaths;
-
-	class DataLibWriter *fLifeSpanLog;
-
-	bool fRecordPosition;
 	bool fRecordBarrierPosition;
-	bool fRecordContacts;
-	class DataLibWriter *fContactsLog;
-	bool fRecordCollisions;
-	class DataLibWriter *fCollisionsLog;
-	bool fRecordCarry;
-	class DataLibWriter *fCarryLog;
-	bool fRecordEnergy;
-	class DataLibWriter *fEnergyLog;
 
 	bool fBrainAnatomyRecordAll;
 	bool fBrainFunctionRecordAll;
@@ -140,18 +126,6 @@ public:
 	class DataLibWriter *fComplexitySeedLog;
 // 	class DataLibWriter *fAvrComplexityLog;
 
-	bool fRecordGenomes;
-	struct {
-		bool record;
-		std::vector<std::string> geneNames;
-		std::vector<int> geneIndexes;
-		class DataLibWriter *log;
-	} fGenomeSubsetLog;
-	bool fRecordSeparations;
-	class DataLibWriter *fSeparationsLog;
-	bool fRecordAdamiComplexity;		// record the Adami Physical Complexity  (genetic)
-	int fAdamiComplexityRecordFrequency;
-	
 	float EnergyFitnessParameter() const;
 	float AgeFitnessParameter() const;
 	float LifeFractionRecent();
@@ -190,42 +164,6 @@ private:
 						  float x, float y, float z );
 	void ReadSeedPositionsFromFile();
 
-	void InitLifeSpanLog();
-	void UpdateLifeSpanLog( agent *a );
-	void EndLifeSpanLog();
-
-	void InitContactsLog();
-	void EndContactsLog();
-
-	void InitCollisionsLog();
- public:
-	void UpdateCollisionsLog( agent *c, ObjectType ot );
- private:
-	void EndCollisionsLog();
-
-	void InitCarryLog();
- public:
-	enum CarryAction { CA__PICKUP = 0, CA__DROP_RECENT, CA__DROP_OBJECT };
-	void UpdateCarryLog( agent *c, gobject *obj, CarryAction action );
- private:
-	void EndCarryLog();
-
-	void InitEnergyLog();
-	enum EnergyLogEventType { ELET__GIVE = 0, ELET__FIGHT, ELET__EAT };
-	void UpdateEnergyLog( agent *c,
-						  gobject *obj,
-						  float neuralActivation,
-						  const Energy &energy,
-						  EnergyLogEventType elet );
-	void EndEnergyLog();
-
-	void InitGenomeSubsetLog();
-	void UpdateGenomeSubsetLog( agent *a );
-	void EndGenomeSubsetLog();
-
-	void InitSeparationsLog();
-	void EndSeparationsLog();
-
 	void InitComplexityLog( long epoch );
 	void UpdateComplexityLog( agent *a );
 	void EndComplexityLog( long epoch );
@@ -245,7 +183,7 @@ private:
 							 short domainID );
 	void Mate( agent *c,
 			   agent *d,
-			   ContactEntry *contactEntry );
+			   class ContactEntry *contactEntry );
 	void Smite( short kd,
 				agent *c,
 				agent *d );
@@ -254,14 +192,14 @@ private:
 						float *out_power );
 	void Fight( agent *c,
 				agent *d,
-				ContactEntry *contactEntry,
+				class ContactEntry *contactEntry,
 				bool *cDied,
 				bool *dDied );
 	int GetGiveStatus( agent *x,
 					   Energy &out_energy );
 	void Give( agent *x,
 			   agent *y,
-			   ContactEntry *contactEntry,
+			   class ContactEntry *contactEntry,
 			   bool *xDied,
 			   bool toMarkOnDeath );
 	void Eat( agent *c,
@@ -518,8 +456,6 @@ private:
 	agent** fGeneStatsAgents;   // list of agents to be used for computing stats.
 	FILE* fGeneStatsFile;
 
-	SeparationCache fSeparationCache;
-	
 	FILE* fFoodPatchStatsFile;
 
 	unsigned long fNumAgentsNotInOrNearAnyFoodPatch;

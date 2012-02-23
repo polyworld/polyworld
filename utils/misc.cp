@@ -136,6 +136,14 @@ float gaussian( float x, float mean, float variance )
     return( exp( -(x-mean)*(x-mean) / variance ) );
 }
 
+void makeParentDir( const string &path )
+{
+	// todo: do this without shell
+	char cmd[1024];
+	sprintf( cmd, "mkdir -p $(dirname %s)", path.c_str() );
+	if( 0 != system(cmd) )
+		exit( 1 );
+}
 
 int SetMaximumFiles( long filecount )
 {

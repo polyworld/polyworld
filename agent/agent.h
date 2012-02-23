@@ -8,6 +8,7 @@
 //#include <qrect.h>
 
 // Local
+#include "AgentAttachedData.h"
 #include "AgentListener.h"
 #include "Brain.h"
 #include "debug.h"
@@ -139,10 +140,8 @@ public:
     
     virtual void draw();
     void grow( long mateWait,
-			   bool recordGenome,
 			   bool recordBrainAnatomy,
-			   bool recordBrainFunction,
-			   bool recordPosition );    
+			   bool recordBrainFunction );    
     virtual void setradius();    
 	void eat( food* f,
 			  float eatFitnessParameter,
@@ -218,16 +217,10 @@ public:
 	void SetDeathByPatch();
 	Brain* GetBrain();
 	Retina* GetRetina();
-//	gscene& agent::GetScene();
 	gscene& GetScene();
 	gcamera &getCamera();
 	frustumXZ& GetFrustum();
 	static gpolyobj* GetAgentObj();
-//	gdlink<agent*>* GetListLink();
-
-	void *fPovState;
-
-    //gdlink<agent*>* listLink;
 
 	void SetComplexity( float value );
 	
@@ -241,15 +234,8 @@ public:
 	bool Carrying( gobject* );
 	float CarryEnergy( void );
 	void PrintCarries( FILE* );
-	void RecordPosition( void );
 	TSimulation* fSimulation;
 	
- public:
-	struct ExternalData {
-		void *position_recorder;
-		void *separation_cache;
-	} external;
-
 protected:
     void NumberToName();
     void SetGeometry();
@@ -347,9 +333,11 @@ protected:
     short fDomain;
 	
 	AbstractFile *fBrainFuncFile;
-	DataLibWriter *fPositionWriter;
 	
 	float fCarryRadius;
+
+	friend class AgentAttachedData;
+	AgentAttachedData::SlotData *attachedData;
 
 	AgentListeners listeners;
 };

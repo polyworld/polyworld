@@ -28,6 +28,7 @@
 #include "graphics.h"
 #include "graybin.h"
 #include "misc.h"
+#include "Logs.h" // tmp include
 #include "MateWaitSensor.h"
 #include "Metabolism.h"
 #include "NervousSystem.h"
@@ -119,8 +120,7 @@ double		agent::gEnergyUseMultiplier = 1.0;
 // agent::agent
 //---------------------------------------------------------------------------
 agent::agent(TSimulation* sim, gstage* stage)
-	:	fPovState(NULL),
-		fSimulation(sim),
+	:	fSimulation(sim),
 		fAlive(false), 		// must grow() to be truly alive
     	fDeathByPatch(false),
 		fMass(0.0), 		// mass - not used
@@ -136,11 +136,12 @@ agent::agent(TSimulation* sim, gstage* stage)
 		fCarryingSensor(NULL),
 		fBeingCarriedSensor(NULL),
 		fBrain(NULL),
-		fBrainFuncFile(NULL),
-		fPositionWriter(NULL)
+		fBrainFuncFile(NULL)
 {
 	Q_CHECK_PTR(sim);
 	Q_CHECK_PTR(stage);
+
+	AgentAttachedData::alloc( this );
 	
 	/* Set object type to be AGENTTYPE */
 	setType(AGENTTYPE);
@@ -195,6 +196,8 @@ agent::~agent()
 	delete fCarryingSensor;
 	delete fBeingCarriedSensor;
 	delete fRetina;
+
+	AgentAttachedData::dispose( this );
 }
 
 
@@ -387,23 +390,12 @@ void agent::load(istream& in)
 // agent::grow
 //---------------------------------------------------------------------------
 void agent::grow( long mateWait,
-				  bool recordGenome,
 				  bool recordBrainAnatomy,
-				  bool recordBrainFunction,
-				  bool recordPosition )
+				  bool recordBrainFunction )
 {    
 	Q_CHECK_PTR(fBrain);
 	Q_CHECK_PTR(fGenome);
 	Q_CHECK_PTR(fCns);
-
-	if( recordGenome )
-	{
-		char path[256];
-		sprintf( path, "run/genome/agents/genome_%ld.txt", getTypeNumber() );
-		AbstractFile *out = AbstractFile::open( globals::recordFileType, path, "w" );
-		fGenome->dump( out );
-		delete out;
-	}
 
 	InitGeneCache();
 
@@ -470,22 +462,6 @@ void agent::grow( long mateWait,
 	// open the file to be used to write out neural activity
 	if( recordBrainFunction )
 		fBrainFuncFile = fBrain->startFunctional( getTypeNumber() );
-
-	if( recordPosition )
-	{
-		char path[512];
-		sprintf( path,
-				 "run/motion/position/agents/position_%ld.txt",
-				 getTypeNumber() );
-
-		fPositionWriter = new DataLibWriter( path, true, false );
-
-		const char *colnames[] = {"Timestep", "x", "y", "z", NULL};
-		const datalib::Type coltypes[] = {datalib::INT, datalib::FLOAT, datalib::FLOAT, datalib::FLOAT};
-		fPositionWriter->beginTable( "Positions",
-									 colnames,
-									 coltypes );		
-	}
 
     // setup the agent's geometry
     SetGeometry();
@@ -769,12 +745,6 @@ void agent::Die()
 		(*it)->died( this );
 	}
 	listeners.clear();
-
-	if( fPositionWriter )
-	{
-		delete fPositionWriter;
-		fPositionWriter = NULL;
-	}
 
 	if( fLifeSpan.death.reason == LifeSpan::DR_SIMEND )
 	{
@@ -1145,7 +1115,7 @@ float agent::UpdateBody( float moveFitnessParam,
 							}
 						}
 
-						fSimulation->UpdateCollisionsLog( this, OT_BARRIER );
+						logs->collision.update( this, OT_BARRIER );
 					} // overlap in z
 				} // beginning of barrier comes after end of agent
 			} // end of barrier comes after beginning of agent
@@ -1218,7 +1188,7 @@ float agent::UpdateBody( float moveFitnessParam,
 					fPosition[2] = LastZ();
 				}
 
-				fSimulation->UpdateCollisionsLog( this, OT_EDGE );
+				logs->collision.update( this, OT_EDGE );
 			}
 		}
 		else if( globals::wraparound )
@@ -1259,8 +1229,6 @@ float agent::UpdateBody( float moveFitnessParam,
 
 	rewardmovement( moveFitnessParam, speed2dpos );
 
-	RecordPosition();
-	
 	// Now update any objects we are carrying
 	// (They will not be updated in TSimulation::UpdateAgents*().)
 	itfor( gObjectList, fCarries, it )
@@ -1412,7 +1380,7 @@ void agent::AvoidCollisionDirectional( int direction, int solidObjects )
 				break;
 			}
 
-			fSimulation->UpdateCollisionsLog( this, ot );
+			logs->collision.update( this, ot );
 			//break;	// can only hit one
 		}
 	}
@@ -1528,9 +1496,9 @@ void agent::PickupObject( gobject* o )
 	if( o->radius() > fCarryRadius )
 		fCarryRadius = o->radius();
 
-	fSimulation->UpdateCarryLog( this,
-								 o,
-								 TSimulation::CA__PICKUP );
+	logs->carry.update( this,
+						o,
+						Logs::CarryLog::Pickup );
 }
 
 
@@ -1550,9 +1518,9 @@ void agent::DropMostRecent( void )
 		RecalculateCarryRadius();
 	}
 
-	fSimulation->UpdateCarryLog( this,
-								 o,
-								 TSimulation::CA__DROP_RECENT );
+	logs->carry.update( this,
+						o,
+						Logs::CarryLog::DropRecent );
 }
 
 
@@ -1570,9 +1538,9 @@ void agent::DropObject( gobject* o )
 		RecalculateCarryRadius();
 	}
 
-	fSimulation->UpdateCarryLog( this,
-								 o,
-								 TSimulation::CA__DROP_OBJECT );
+	logs->carry.update( this,
+						o,
+						Logs::CarryLog::DropObject );
 }
 
 
@@ -1753,24 +1721,6 @@ float agent::CarryEnergy( void )
 	}
 	
 	return energy;
-}
-
-
-//---------------------------------------------------------------------------
-// agent::RecordPosition
-//---------------------------------------------------------------------------
-void agent::RecordPosition( void )
-{
-	if( fPositionWriter )
-	{
-		//printf( "%3lu %3lu  %6.2f  %6.2f\n", fSimulation->fStep, getTypeNumber(), LastX(), x() );
-		if( LastX() > 5.0  &&  x() == 0.0 )
-			printf( "Got one: %3lu %3lu  %6.2f  %6.2f\n", fSimulation->fStep, getTypeNumber(), LastX(), x() );
-		fPositionWriter->addRow( fSimulation->fStep,
-								 x(),
-								 y(),
-								 z() );
-	}
 }
 
 

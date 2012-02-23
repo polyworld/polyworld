@@ -52,5 +52,8 @@ class objectxsortedlist : public gdlist<gobject*>
     static objectxsortedlist gXSortedObjects;
 };
 
+#define xfor( TYPE, VARTYPE, VAR )										\
+	objectxsortedlist::gXSortedObjects.reset();							\
+	for( VARTYPE *VAR; objectxsortedlist::gXSortedObjects.nextObj(TYPE, (gobject**)&VAR); ) \
 
 #endif
