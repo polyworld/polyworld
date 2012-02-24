@@ -145,7 +145,12 @@ signals:
 	void ended();
 	
 private:
+	void InitFittest();
+	void InitGround();
 	void InitAgents();
+	void InitFood();
+	void InitBricks();
+	void InitBarriers();
 	void InitNeuralValues();
 
 	void SeedGenome( long agentNumber,

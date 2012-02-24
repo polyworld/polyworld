@@ -232,12 +232,9 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 		fConditionalProps( new condprop::PropertyList() )
 {
 	fStep = 0;
-
- 	// Set up graphical constructs
-	Resources::loadPolygons( &fGround, "ground" );
+	memset( fNumberAliveWithMetabolism, 0, sizeof(fNumberAliveWithMetabolism) );
 
     srand(1);
-
 
 	proplib::Interpreter::init();
 	proplib::Document *docWorldFile;
@@ -246,20 +243,6 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 
 	ProcessWorldFile( docWorldFile );
 	
-	// Init array tracking number of agents with a given metabolism
-	assert( Metabolism::getNumberOfDefinitions() < MAXMETABOLISMS );
-	for( int i = 0; i < Metabolism::getNumberOfDefinitions(); i++ )
-	{
-		fNumberAliveWithMetabolism[i] = 0;
-	}
-	
-	if( fStaticTimestepGeometry )
-	{
-		// Brains execute in parallel, so we need brain-local RNG state
-		RandomNumberGenerator::set( RandomNumberGenerator::NERVOUS_SYSTEM,
-									RandomNumberGenerator::LOCAL );
-	}
-
 	InitNeuralValues();	 // Must be called before genome and brain init
 	
     Brain::braininit();
@@ -282,71 +265,7 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 	agent::gMaxRadius = maxagentradius > maxfoodradius ?
 						  maxagentradius : maxfoodradius;
 
-    if( fNumberFit > 0 )
-    {
-        fFittest = new FitStruct*[fNumberFit];
-		Q_CHECK_PTR( fFittest );
-
-        for (int i = 0; i < fNumberFit; i++)
-        {
-			fFittest[i] = new FitStruct;
-			Q_CHECK_PTR( fFittest[i] );
-            fFittest[i]->genes = GenomeUtil::createGenome();
-			Q_CHECK_PTR( fFittest[i]->genes );
-            fFittest[i]->fitness = 0.0;
-			fFittest[i]->agentID = 0;
-			fFittest[i]->complexity = 0.0;
-        }
-		
-        fRecentFittest = new FitStruct*[fNumberRecentFit];
-		Q_CHECK_PTR( fRecentFittest );
-
-        for( int i = 0; i < fNumberRecentFit; i++ )
-        {
-			fRecentFittest[i] = new FitStruct;
-			Q_CHECK_PTR( fRecentFittest[i] );
-            fRecentFittest[i]->genes = NULL;	// GenomeUtil::createGenome()->legacy;	// we don't save the genes in the bestRecent list
-            fRecentFittest[i]->fitness = 0.0;
-			fRecentFittest[i]->agentID = 0;
-			fRecentFittest[i]->complexity = 0.0;
-        }
-		
-        for( int id = 0; id < fNumDomains; id++ )
-        {
-            fDomains[id].fittest = new FitStruct*[fNumberFit];
-			Q_CHECK_PTR( fDomains[id].fittest );
-
-            for (int i = 0; i < fNumberFit; i++)
-            {
-				fDomains[id].fittest[i] = new FitStruct;
-				Q_CHECK_PTR( fDomains[id].fittest[i] );
-                fDomains[id].fittest[i]->genes = GenomeUtil::createGenome();
-				Q_CHECK_PTR( fDomains[id].fittest[i]->genes );
-                fDomains[id].fittest[i]->fitness = 0.0;
-				fDomains[id].fittest[i]->agentID = 0;
-				fDomains[id].fittest[i]->complexity = 0.0;
-            }
-        }
-    }
-
-	if( fSmiteFrac > 0.0 )
-	{
-        for( int id = 0; id < fNumDomains; id++ )
-        {
-			fDomains[id].fNumLeastFit = 0;
-			fDomains[id].fMaxNumLeastFit = lround( fSmiteFrac * fDomains[id].maxNumAgents );
-			
-			smPrint( "for domain %d fMaxNumLeastFit = %d\n", id, fDomains[id].fMaxNumLeastFit );
-			
-			if( fDomains[id].fMaxNumLeastFit > 0 )
-			{
-				fDomains[id].fLeastFit = new agent*[fDomains[id].fMaxNumLeastFit];
-				
-				for( int i = 0; i < fDomains[id].fMaxNumLeastFit; i++ )
-					fDomains[id].fLeastFit[i] = NULL;
-			}
-        }
-	}
+	InitFittest();
 
 	// Set up the run directory and its subsidiaries
 	char s[256];
@@ -511,6 +430,14 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 	// ---
 	logs = new Logs( this, docWorldFile );
 
+	// ---
+	// --- Init Ground
+	// ---
+	InitGround();
+
+	// ---
+	// --- Init Agents, Food, Bricks, and Barriers
+	// ---
 	if (!fLoadState)
 	{
 		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -531,36 +458,10 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 		fScheduler.execMasterTask( this,
 								   execInitAgents,
 								   !fParallelInitAgents );
-			
-		// Add food to the food patches until they each have their initFoodCount number of food pieces
-		for( int domainNumber = 0; domainNumber < fNumDomains; domainNumber++ )
-		{
-			fDomains[domainNumber].numFoodPatchesGrown = 0;
-			
-			for( int foodPatchNumber = 0; foodPatchNumber < fDomains[domainNumber].numFoodPatches; foodPatchNumber++ )
-			{
-				if( fDomains[domainNumber].fFoodPatches[foodPatchNumber].on( 0 ) )
-				{
-					for( int j = 0; j < fDomains[domainNumber].fFoodPatches[foodPatchNumber].initFoodCount; j++ )
-					{
-						if( fDomains[domainNumber].foodCount < fDomains[domainNumber].maxFoodCount )
-						{
-							AddFood( domainNumber, foodPatchNumber );
-						}
-					}
-					fDomains[domainNumber].fFoodPatches[foodPatchNumber].initFoodGrown( true );
-					fDomains[domainNumber].numFoodPatchesGrown++;
-				}
-			}
-		}
 
-		for( int domainNumber = 0; domainNumber < fNumDomains; domainNumber++ )
-		{
-			for( int brickPatchNumber = 0; brickPatchNumber < fDomains[domainNumber].numBrickPatches; brickPatchNumber++ )
-			{
-				fDomains[domainNumber].fBrickPatches[brickPatchNumber].updateOn( 0 );
-			}
-		}
+		InitFood();
+		InitBricks();
+		InitBarriers();
 	}
 
 	fEatStatistics.Init();
@@ -571,46 +472,8 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
     fAverageFoodEnergyIn = 0.0;
     fAverageFoodEnergyOut = 0.0;
 
-    fGround.sety(-fGroundClearance);
-    fGround.setscale(globals::worldsize);
-    fGround.setcolor(fGroundColor);
-    fWorldSet.Add(&fGround);
     fStage.SetSet(&fWorldSet);
 
-	// Add barriers
-	barrier* b = NULL;
-	while( barrier::gXSortedBarriers.next(b) )
-		fWorldSet.Add(b);	
-
-#define DebugGenetics false
-#if DebugGenetics
-	// This little snippet of code confirms that genetic copying, crossover, and mutation are behaving somewhat reasonably
-	objectxsortedlist::gXSortedObjects.reset();
-	agent* c1 = NULL;
-	agent* c2 = NULL;
-	Genome* g1 = NULL;
-	Genome* g2 = NULL;
-	Genome g1c(GenomeUtil::schema), g1x2(GenomeUtil::schema), g1x2m(GenomeUtil::schema);
-	objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&c1 );
-	objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&c2 );
-	g1 = c1->Genes();
-	g2 = c2->Genes();
-	cout << "************** G1 **************" nl;
-	g1->print();
-	cout << "************** G2 **************" nl;
-	g2->print();
-	g1c.copyFrom( g1 );
-	g1x2.crossover( g1, g2, false );
-	g1x2m.crossover( g1, g2, true );
-	cout << "************** G1c **************" nl;
-	g1c.print();
-	cout << "************** G1x2 **************" nl;
-	g1x2.print();
-	cout << "************** G1x2m **************" nl;
-	g1x2m.print();
-	exit(0);
-#endif
-	
 	// ---
 	// --- Init Monitors
 	// ---
@@ -619,6 +482,9 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 	InitComplexityLog( fBrainFunctionRecentRecordFrequency );
 // 	InitAvrComplexityLog();
 	
+	// ---
+	// --- Init Event Filtering
+	// ---
 	if( fComplexityFitnessWeight != 0.0 || fRecordComplexity )
 	{
 		bool eventFiltering = false;
@@ -1238,6 +1104,91 @@ string TSimulation::EndAt( long timestep )
 }
 
 //---------------------------------------------------------------------------
+// TSimulation::InitFittest
+//---------------------------------------------------------------------------
+void TSimulation::InitFittest()
+{
+    if( fNumberFit > 0 )
+    {
+        fFittest = new FitStruct*[fNumberFit];
+		Q_CHECK_PTR( fFittest );
+
+        for (int i = 0; i < fNumberFit; i++)
+        {
+			fFittest[i] = new FitStruct;
+			Q_CHECK_PTR( fFittest[i] );
+            fFittest[i]->genes = GenomeUtil::createGenome();
+			Q_CHECK_PTR( fFittest[i]->genes );
+            fFittest[i]->fitness = 0.0;
+			fFittest[i]->agentID = 0;
+			fFittest[i]->complexity = 0.0;
+        }
+		
+        fRecentFittest = new FitStruct*[fNumberRecentFit];
+		Q_CHECK_PTR( fRecentFittest );
+
+        for( int i = 0; i < fNumberRecentFit; i++ )
+        {
+			fRecentFittest[i] = new FitStruct;
+			Q_CHECK_PTR( fRecentFittest[i] );
+            fRecentFittest[i]->genes = NULL;	// GenomeUtil::createGenome()->legacy;	// we don't save the genes in the bestRecent list
+            fRecentFittest[i]->fitness = 0.0;
+			fRecentFittest[i]->agentID = 0;
+			fRecentFittest[i]->complexity = 0.0;
+        }
+		
+        for( int id = 0; id < fNumDomains; id++ )
+        {
+            fDomains[id].fittest = new FitStruct*[fNumberFit];
+			Q_CHECK_PTR( fDomains[id].fittest );
+
+            for (int i = 0; i < fNumberFit; i++)
+            {
+				fDomains[id].fittest[i] = new FitStruct;
+				Q_CHECK_PTR( fDomains[id].fittest[i] );
+                fDomains[id].fittest[i]->genes = GenomeUtil::createGenome();
+				Q_CHECK_PTR( fDomains[id].fittest[i]->genes );
+                fDomains[id].fittest[i]->fitness = 0.0;
+				fDomains[id].fittest[i]->agentID = 0;
+				fDomains[id].fittest[i]->complexity = 0.0;
+            }
+        }
+    }
+
+	if( fSmiteFrac > 0.0 )
+	{
+        for( int id = 0; id < fNumDomains; id++ )
+        {
+			fDomains[id].fNumLeastFit = 0;
+			fDomains[id].fMaxNumLeastFit = lround( fSmiteFrac * fDomains[id].maxNumAgents );
+			
+			smPrint( "for domain %d fMaxNumLeastFit = %d\n", id, fDomains[id].fMaxNumLeastFit );
+			
+			if( fDomains[id].fMaxNumLeastFit > 0 )
+			{
+				fDomains[id].fLeastFit = new agent*[fDomains[id].fMaxNumLeastFit];
+				
+				for( int i = 0; i < fDomains[id].fMaxNumLeastFit; i++ )
+					fDomains[id].fLeastFit[i] = NULL;
+			}
+        }
+	}
+}
+
+//---------------------------------------------------------------------------
+// TSimulation::InitGround
+//---------------------------------------------------------------------------
+void TSimulation::InitGround()
+{
+	Resources::loadPolygons( &fGround, "ground" );
+
+    fGround.sety(-fGroundClearance);
+    fGround.setscale(globals::worldsize);
+    fGround.setcolor(fGroundColor);
+    fWorldSet.Add(&fGround);
+}
+
+//---------------------------------------------------------------------------
 // TSimulation::InitAgents
 //---------------------------------------------------------------------------
 void TSimulation::InitAgents()
@@ -1435,6 +1386,60 @@ void TSimulation::InitAgents()
 
 		Birth(c, LifeSpan::BR_SIMINIT );
 	}
+}
+
+//---------------------------------------------------------------------------
+// TSimulation::InitFood
+//---------------------------------------------------------------------------
+void TSimulation::InitFood()
+{
+	// Add food to the food patches until they each have their initFoodCount number of food pieces
+	for( int domainNumber = 0; domainNumber < fNumDomains; domainNumber++ )
+	{
+		fDomains[domainNumber].numFoodPatchesGrown = 0;
+			
+		for( int foodPatchNumber = 0; foodPatchNumber < fDomains[domainNumber].numFoodPatches; foodPatchNumber++ )
+		{
+			if( fDomains[domainNumber].fFoodPatches[foodPatchNumber].on( 0 ) )
+			{
+				for( int j = 0; j < fDomains[domainNumber].fFoodPatches[foodPatchNumber].initFoodCount; j++ )
+				{
+					if( fDomains[domainNumber].foodCount < fDomains[domainNumber].maxFoodCount )
+					{
+						AddFood( domainNumber, foodPatchNumber );
+					}
+				}
+				fDomains[domainNumber].fFoodPatches[foodPatchNumber].initFoodGrown( true );
+				fDomains[domainNumber].numFoodPatchesGrown++;
+			}
+		}
+	}
+}
+
+//---------------------------------------------------------------------------
+// TSimulation::InitBricks
+//---------------------------------------------------------------------------
+void TSimulation::InitBricks()
+{
+	for( int domainNumber = 0; domainNumber < fNumDomains; domainNumber++ )
+	{
+		for( int brickPatchNumber = 0; brickPatchNumber < fDomains[domainNumber].numBrickPatches; brickPatchNumber++ )
+		{
+			fDomains[domainNumber].fBrickPatches[brickPatchNumber].updateOn( 0 );
+		}
+	}
+
+}
+
+//---------------------------------------------------------------------------
+// TSimulation::InitBarriers
+//---------------------------------------------------------------------------
+void TSimulation::InitBarriers()
+{
+	// Add barriers
+	barrier* b = NULL;
+	while( barrier::gXSortedBarriers.next(b) )
+		fWorldSet.Add(b);	
 }
 
 //---------------------------------------------------------------------------
@@ -4943,6 +4948,12 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	globals::numEnergyTypes = doc.get( "NumEnergyTypes" );
 	agent::gVision = doc.get( "Vision" );
 	fStaticTimestepGeometry = doc.get( "StaticTimestepGeometry" );
+	if( fStaticTimestepGeometry )
+	{
+		// Brains execute in parallel, so we need brain-local RNG state
+		RandomNumberGenerator::set( RandomNumberGenerator::NERVOUS_SYSTEM,
+									RandomNumberGenerator::LOCAL );
+	}
 	fParallelInitAgents = doc.get( "ParallelInitAgents" );
 	fParallelInteract = doc.get( "ParallelInteract" );
 	fParallelCreateAgents = doc.get( "ParallelCreateAgents" );
@@ -5976,6 +5987,10 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	{
 		proplib::Property &propAgentMetabolisms = doc.get( "AgentMetabolisms" );
 		int numMetabolisms = propAgentMetabolisms.size();
+
+		// Init array tracking number of agents with a given metabolism
+		assert( numMetabolisms <= MAXMETABOLISMS );
+
 
 		for( int iMetabolism = 0; iMetabolism < numMetabolisms; iMetabolism++ )
 		{
