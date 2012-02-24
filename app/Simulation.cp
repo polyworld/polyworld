@@ -183,47 +183,19 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 	:
 		fLockStepWithBirthsDeathsLog(false),
 		fLockstepFile(NULL),
-		fBrainFunctionRecentRecordFrequency(1000),
-		fBestSoFarBrainAnatomyRecordFrequency(0),
-		fBestSoFarBrainFunctionRecordFrequency(0),
-		fBestRecentBrainAnatomyRecordFrequency(0),
-		fBestRecentBrainFunctionRecordFrequency(0),
 
-		fBrainAnatomyRecordAll(false),
-		fBrainFunctionRecordAll(false),
-		fBrainAnatomyRecordSeeds(false),
-		fBrainFunctionRecordSeeds(false),
-		fApplyLowPopulationAdvantage(false),
-		fEnergyBasedPopulationControl(false),
-		fPopControlGlobal(true),
-		fPopControlDomains(false),
-		fPopControlMinFixedRange(0.25),
-		fPopControlMaxFixedRange(0.75),
-		fPopControlMinScaleFactor(0.0),
-		fPopControlMaxScaleFactor(20.0),
 		fGlobalEnergyScaleFactor(1.0),
 
-		fRecordComplexity(false),
 		fComplexityLog(NULL),
 		fComplexitySeedLog(NULL),
 
 		fEvents(NULL),
 
-		fMaxSteps(0),
-		fDumpFrequency(500),
 		fLoadState(false),
 		
-		fSolidObjects(0x4),	// only bricks are solid by default, for historical reasons
-
-		fHealing(0),
-		fGroundClearance(0.0),
-
-		fRecordGeneStats(false),
 		fCalcFoodPatchAgentCounts(true),
 		fNewDeaths(0),
-		fNumberFit(0),
 		fFittest(NULL),
-		fNumberRecentFit(0),
 		fRecentFittest(NULL),
 		fFitI(0),
 		fFitJ(1),
