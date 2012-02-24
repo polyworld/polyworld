@@ -19,6 +19,9 @@ def parse_stats( path_run, types = None ):
 	for path in paths:
 		__add_step( tables, path, types )
 
+	if types and set(tables.keys()) != set(types):
+		raise datalib.MissingTableError( "Cannot find: " + ", ".join(set(types).difference( set(tables.keys()) )) )
+
 	return tables
 
 
