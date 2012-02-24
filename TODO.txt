@@ -27,6 +27,7 @@ sean		sean		02/16/2012	mutex around window list status update
 [PLOT]
 sean		sean		02/06/2012	make valueattr path encodings more concise
 sean		sean		02/23/2012	grayscale bin plotting
+sean		sean		02/24/2012	provide easy means to enumerate available stats names
 
 [PROPLIB]
 sean		sean		02/07/2012	templates
