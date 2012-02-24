@@ -42,7 +42,6 @@
 #include "barrier.h"
 #include "Brain.h"
 #include "CameraController.h"
-#include "ContactEntry.h"
 #include "condprop.h"
 #include "debug.h"
 #include "food.h"
@@ -211,10 +210,6 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 
 		fEvents(NULL),
 
-#if false
-		fGeneSeparationWindow(NULL),
-#endif
-
 		fMaxSteps(0),
 		fDumpFrequency(500),
 		fLoadState(false),
@@ -258,10 +253,6 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 		fLastCreated(0),
 		fMaxGapCreate(0),
 		fNumBornSinceCreated(0),
-
-		fMaxGeneSeparation(0.0),
-		fMinGeneSeparation(1.e+10),
-		fAverageGeneSeparation(5.e+9),
 
 		fGeneSum(NULL),
 		fGeneSum2(NULL),
@@ -698,25 +689,6 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 	exit(0);
 #endif
 	
-	// Set up gene Separation monitoring
-	if (fMonitorGeneSeparation)
-    {
-		fGeneSepVals = new float[fMaxNumAgents * (fMaxNumAgents - 1) / 2];
-        fNumGeneSepVals = 0;
-        CalculateGeneSeparationAll();
-
-        if (fRecordGeneSeparation)
-        {
-            fGeneSeparationFile = fopen("run/genesep", "w");
-	    	RecordGeneSeparation();
-        }
-
-#if false
-		if (fChartGeneSeparation && fGeneSeparationWindow != NULL)
-			fGeneSeparationWindow->AddPoint(fGeneSepVals, fNumGeneSepVals);
-#endif
-    }
-	
 	// ---
 	// --- Init Monitors
 	// ---
@@ -887,11 +859,6 @@ TSimulation::~TSimulation()
     if( fGeneStatsAgents )
 		free( fGeneStatsAgents );
 		
-#if false	
-	if (fGeneSeparationWindow != NULL)
-		delete fGeneSeparationWindow;
-#endif
-	
 	delete agentPovRenderer;
 
 	printf( "Simulation stopped after step %ld\n", fStep );
@@ -1023,15 +990,6 @@ void TSimulation::Step()
 		agentPovRenderer->endStep();
 	}
 
-	// Update position log for all agents
-	if( logs->agentPosition.isEnabled() )
-	{
-		xfor( AGENTTYPE, agent, a )
-		{
-			logs->agentPosition.update( a );
-		}
-	}
-
 	
 //  if( fDoCPUWork )
 
@@ -1071,9 +1029,6 @@ void TSimulation::Step()
 	printf( "\n" );
 #endif
 
-    if (fMonitorGeneSeparation && (fNewDeaths > 0))
-        CalculateGeneSeparationAll();
-
 	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 	// ^^^ MASTER TASK CreateAgentsTask
 	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1092,17 +1047,6 @@ void TSimulation::Step()
 	fScheduler.execMasterTask( this,
 							   execCreateAgents,
 							   !fParallelCreateAgents );
-
-    if ((fNewLifes || fNewDeaths) && fMonitorGeneSeparation)
-    {
-        if (fRecordGeneSeparation)
-            RecordGeneSeparation();
-
-#if false
-		if (fChartGeneSeparation && fGeneSeparationWindow != NULL)
-			fGeneSeparationWindow->AddPoint(fGeneSepVals, fNumGeneSepVals);
-#endif
-    }
 
 	// -------------------------
 	// ---- Maintain Bricks ----
@@ -1335,11 +1279,7 @@ void TSimulation::Step()
 
 	}
 	
-	logs->adamiComplexity.update();
-
-	// Handle tracking gene Separation
-	if( fMonitorGeneSeparation && fRecordGeneSeparation )
-		RecordGeneSeparation();
+	logs->postEvent( StepEndEvent() );
 }
 
 //---------------------------------------------------------------------------
@@ -1426,7 +1366,8 @@ void TSimulation::InitAgents()
 
 			sim->FoodEnergyIn( a->GetFoodEnergy() );
 
-			logs->agentPosition.update( a ); // todo: put this in a devoted serial task.
+			// logtodo: put this in a devoted serial task.
+			logs->postEvent( AgentBodyUpdatedEvent(a) );
 		}
 	};
 
@@ -2415,14 +2356,14 @@ void TSimulation::Interact()
 
 				ttPrint( "age %ld: agents # %ld & %ld are close\n", fStep, c->Number(), d->Number() );
 
-				ContactEntry contactEntry( fStep, c, d );
+				AgentContactBeginEvent contactEvent( c, d );
 
-				logs->separation.update( c, d );
+				logs->postEvent( contactEvent );
 
 				// -----------------------
 				// ---- Mate (Normal) ----
 				// -----------------------
-                Mate( c, d, &contactEntry );
+                Mate( c, d, &contactEvent );
 
 				// -----------------------
 				// -------- Fight --------
@@ -2430,7 +2371,7 @@ void TSimulation::Interact()
 				bool dDied = false;
                 if (fPower2Energy > 0.0)
                 {
-					Fight( c, d, &contactEntry, &cDied, &dDied );
+					Fight( c, d, &contactEvent, &cDied, &dDied );
                 }
 
 				// -----------------------
@@ -2440,15 +2381,15 @@ void TSimulation::Interact()
 				{
 					if( !cDied && !dDied )
 					{
-						Give( c, d, &contactEntry, &cDied, true );
+						Give( c, d, &contactEvent, &cDied, true );
 						if(!cDied)
 						{				
-							Give( d, c, &contactEntry, &dDied, false );
+							Give( d, c, &contactEvent, &dDied, false );
 						}
 					}
 				}
-				
-				logs->contact.update( contactEntry );
+
+				logs->postEvent( AgentContactEndEvent(contactEvent) );
 
 				if( cDied )
 					break;
@@ -2961,7 +2902,7 @@ int TSimulation::GetMateDenialStatus( agent *x, int *xStatus,
 //---------------------------------------------------------------------------
 void TSimulation::Mate( agent *c,
 						agent *d,
-						ContactEntry *contactEntry )
+						AgentContactBeginEvent *contactEvent )
 {
 	int cMatePotential = GetMatePotential( c );
 	int dMatePotential = GetMatePotential( d );
@@ -3125,8 +3066,8 @@ void TSimulation::Mate( agent *c,
 		}	// steady-state GA vs. natural selection
 	}	// if agents are trying to mate
 
-	contactEntry->mate( c, cMateStatus );
-	contactEntry->mate( d, dMateStatus );
+	contactEvent->mate( c, cMateStatus );
+	contactEvent->mate( d, dMateStatus );
 
 	debugcheck( "after all mating is complete" );
 }
@@ -3251,7 +3192,7 @@ int TSimulation::GetFightStatus( agent *x,
 //---------------------------------------------------------------------------
 void TSimulation::Fight( agent *c,
 						 agent *d,
-						 ContactEntry *contactEntry,
+						 AgentContactBeginEvent *contactEvent,
 						 bool *cDied,
 						 bool *dDied)
 {
@@ -3264,8 +3205,8 @@ void TSimulation::Fight( agent *c,
 	int cstatus = GetFightStatus( c, d, &cpower );
 	int dstatus = GetFightStatus( d, c, &dpower );
 
-	contactEntry->fight( c, cstatus );
-	contactEntry->fight( d, dstatus );
+	contactEvent->fight( c, cstatus );
+	contactEvent->fight( d, dstatus );
 
 	if ( (cpower > 0.0) || (dpower > 0.0) )
 	{
@@ -3278,14 +3219,14 @@ void TSimulation::Fight( agent *c,
 		{
 			Energy ddamage = d->damage( cpower * fPower2Energy, fFightMode == FM_NULL );
 			if( !ddamage.isZero() )
-				logs->energy.update( c, d, c->Fight(), ddamage, Logs::EnergyLog::Fight );
+				logs->postEvent( EnergyEvent(c, d, c->Fight(), ddamage, EnergyEvent::Fight) );
 		}
 
 		if( dpower > 0.0 )
 		{
 			Energy cdamage = c->damage( dpower * fPower2Energy, fFightMode == FM_NULL );
 			if( !cdamage.isZero() )
-				logs->energy.update( d, c, d->Fight(), cdamage, Logs::EnergyLog::Fight );
+				logs->postEvent( EnergyEvent(d, c, d->Fight(), cdamage, EnergyEvent::Fight) );
 		}
 
 		if( !fLockStepWithBirthsDeathsLog )
@@ -3360,14 +3301,14 @@ int TSimulation::GetGiveStatus( agent *x,
 //---------------------------------------------------------------------------
 void TSimulation::Give( agent *x,
 						agent *y,
-						ContactEntry *contactEntry,
+						AgentContactBeginEvent *contactEvent,
 						bool *xDied,
 						bool toMarkOnDeath )
 {
 	Energy energy;
 	int xstatus = GetGiveStatus( x, energy );
 
-	contactEntry->give( x, xstatus );
+	contactEvent->give( x, xstatus );
 
 #if DEBUGCHECK
 	unsigned long xnum = x->Number();
@@ -3377,7 +3318,7 @@ void TSimulation::Give( agent *x,
 	{
 		y->receive( x, energy );
 
-		logs->energy.update( x, y, x->Give(), energy, Logs::EnergyLog::Give );
+		logs->postEvent( EnergyEvent(x, y, x->Give(), energy, EnergyEvent::Give) );
 
 		if( !fLockStepWithBirthsDeathsLog )
 		{
@@ -3478,7 +3419,7 @@ void TSimulation::Eat( agent *c, bool *cDied )
 				Energy foodEnergyLost;
 				Energy energyEaten;
 				c->eat( f, fEatFitnessParameter, fEat2Consume, fEatThreshold, fStep, foodEnergyLost, energyEaten );
-				logs->energy.update( c, f, c->Eat(), energyEaten, Logs::EnergyLog::Eat );
+				logs->postEvent( EnergyEvent(c, f, c->Eat(), energyEaten, EnergyEvent::Eat) );
 				if( fEvents )
 					fEvents->AddEvent( fStep, c->Number(), 'e' );
 								 
@@ -3535,7 +3476,7 @@ void TSimulation::Eat( agent *c, bool *cDied )
 					Energy foodEnergyLost;
 					Energy energyEaten;
 					c->eat( f, fEatFitnessParameter, fEat2Consume, fEatThreshold, fStep, foodEnergyLost, energyEaten );
-					logs->energy.update( c, f, c->Eat(), energyEaten, Logs::EnergyLog::Eat );
+					logs->postEvent( EnergyEvent(c, f, c->Eat(), energyEaten, EnergyEvent::Eat) );
 					if( fEvents )
 						fEvents->AddEvent( fStep, c->Number(), 'e' );
 
@@ -4255,125 +4196,6 @@ void TSimulation::UpdateMonitors()
 }
 
 //---------------------------------------------------------------------------
-// TSimulation::RecordGeneSeparation
-//---------------------------------------------------------------------------
-void TSimulation::RecordGeneSeparation()
-{
-	fprintf(fGeneSeparationFile, "%ld %g %g %g\n",
-			fStep,
-			fMaxGeneSeparation,
-			fMinGeneSeparation,
-			fAverageGeneSeparation);
-}
-
-
-//---------------------------------------------------------------------------
-// TSimulation::CalculateGeneSeparation
-//---------------------------------------------------------------------------
-void TSimulation::CalculateGeneSeparation(agent* ci)
-{
-	// TODO add assert to validate statement below
-	
-	// NOTE: This version assumes ci is *not* currently in gSortedAgents.
-    // It also marks the current position in the list on entry and returns
-    // there before exit so it can be invoked during the insertion of the
-    // newagents list into the existing gSortedAgents list.
-	
-    //objectxsortedlist::gXSortedObjects.mark();
-    objectxsortedlist::gXSortedObjects.setMark( AGENTTYPE );
-	
-    agent* cj = NULL;
-    float genesep;
-    float genesepsum = 0.0;
-    long numgsvalsold = fNumGeneSepVals;
-
-	objectxsortedlist::gXSortedObjects.reset();
-	while (objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&cj))
-    {
-		genesep = ci->Genes()->separation(cj->Genes());
-        fMaxGeneSeparation = fmax(genesep, fMaxGeneSeparation);
-        fMinGeneSeparation = fmin(genesep, fMinGeneSeparation);
-        genesepsum += genesep;
-        fGeneSepVals[fNumGeneSepVals++] = genesep;
-    }
-
-    long n = objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE);
-    if (numgsvalsold != (n * (n - 1) / 2))
-    {
-		char tempstring[256];
-        sprintf(tempstring,"%s %s %ld %s %ld %s %ld",
-				"genesepcalc: numgsvalsold not equal to n * (n - 1) / 2.\n",
-				"  numgsvals, n, n * (n - 1) / 2 = ",
-				numgsvalsold,", ",n,", ", n * (n - 1) / 2);
-		error(2, tempstring);
-    }
-
-    if (fNumGeneSepVals != (n * (n + 1) / 2))
-    {
-		char tempstring[256];
-        sprintf(tempstring,"%s %s %ld %s %ld %s %ld",
-			 	"genesepcalc: numgsvals not equal to n * (n + 1) / 2.\n",
-				"  numgsvals, n, n * (n + 1) / 2 = ",
-				fNumGeneSepVals,", ",n,", ",n*(n+1)/2);
-        error(2,tempstring);
-    }
-
-    fAverageGeneSeparation = (genesepsum + fAverageGeneSeparation * numgsvalsold) / fNumGeneSepVals;
-	
-    //objectxsortedlist::gXSortedObjects.tomark();
-    objectxsortedlist::gXSortedObjects.toMark(AGENTTYPE);
-}
-
-
-
-//---------------------------------------------------------------------------
-// TSimulation::CalculateGeneSeparationAll
-//---------------------------------------------------------------------------
-void TSimulation::CalculateGeneSeparationAll()
-{
-    agent* ci = NULL;
-    agent* cj = NULL;
-
-    float genesep;
-    float genesepsum = 0.0;
-    fMinGeneSeparation = 1.e+10;
-    fMaxGeneSeparation = 0.0;
-    fNumGeneSepVals = 0;
-
-    objectxsortedlist::gXSortedObjects.reset();
-    while (objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&ci))
-    {
-		objectxsortedlist::gXSortedObjects.setMark(AGENTTYPE);
-
-		while (objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&cj))
-		{	
-            genesep = ci->Genes()->separation(cj->Genes());
-            fMaxGeneSeparation = max(genesep, fMaxGeneSeparation);
-            fMinGeneSeparation = min(genesep, fMinGeneSeparation);
-            genesepsum += genesep;
-            fGeneSepVals[fNumGeneSepVals++] = genesep;
-        }
-		//objectxsortedlist::gXSortedObjects.tomark();
-		objectxsortedlist::gXSortedObjects.toMark(AGENTTYPE);
-    }
-
-    // n * (n - 1) / 2 is how many calculations were made
-	long n = objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE);
-    if (fNumGeneSepVals != (n * (n - 1) / 2))
-    {
-		char tempstring[256];
-        sprintf(tempstring, "%s %s %ld %s %ld %s %ld",
-            "genesepcalcall: numgsvals not equal to n * (n - 1) / 2.\n",
-            "  numgsvals, n, n * (n - 1) / 2 = ",
-            fNumGeneSepVals,", ",n,", ",n * (n - 1) / 2);
-        error(2, tempstring);
-    }
-
-    fAverageGeneSeparation = genesepsum / fNumGeneSepVals;
-}
-
-
-//---------------------------------------------------------------------------
 // TSimulation::ijfitinc
 //---------------------------------------------------------------------------
 void TSimulation::ijfitinc(short* i, short* j)
@@ -4407,7 +4229,7 @@ void TSimulation::Birth( agent* a,
 {
 	AgentBirthEvent birthEvent( a, reason, a_parent1, a_parent2 );
 
-	logs->birth( birthEvent );
+	logs->postEvent( birthEvent );
 
 	if( a )	// a will NULL for virtual births only
 	{
@@ -4475,7 +4297,7 @@ void TSimulation::Kill( agent* c,
 	// ---
 	if( reason == LifeSpan::DR_SIMEND )
 	{
-		logs->death( deathEvent );
+		logs->postEvent( deathEvent );
 		SeparationCache::death( deathEvent );
 		c->Die();
 
@@ -4578,7 +4400,7 @@ void TSimulation::Kill( agent* c,
 	// --- Die()
 	// ---
 	// Must call Die() for the agent before any of the uses of Fitness() below, so we get the final, true, post-death fitness
-	logs->death( deathEvent );
+	logs->postEvent( deathEvent );
 	SeparationCache::death( deathEvent );
 	c->Die();
 
@@ -6211,8 +6033,6 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 			barrier::gXSortedBarriers.add( b );
 		}
 	}
-    fMonitorGeneSeparation = doc.get( "MonitorGeneSeparation" );
-    fRecordGeneSeparation = doc.get( "RecordGeneSeparation" );
 
 	globals::numEnergyTypes = doc.get( "NumEnergyTypes" );
 
@@ -6881,11 +6701,6 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	} // Domains
 	
 	fUseProbabilisticFoodPatches = doc.get( "ProbabilisticFoodPatches" );
-#if false
-    fChartGeneSeparation = doc.get( "ChartGeneSeparation" );
-    if (fChartGeneSeparation)
-        fMonitorGeneSeparation = true;
-#endif
 
 	{
 		string val = doc.get( "NeuronModel" );
@@ -7223,9 +7038,6 @@ void TSimulation::Dump()
     out << fLastCreated nl;
     out << fMaxGapCreate nl;
     out << fNumBornSinceCreated nl;
-    out << fMaxGeneSeparation nl;
-    out << fMinGeneSeparation nl;
-    out << fAverageGeneSeparation nl;
     out << fMaxFitness nl;
     out << fAverageFitness nl;
     out << fAverageFoodEnergyIn nl;
@@ -7296,11 +7108,6 @@ void TSimulation::Dump()
     }
 	
 	monitorManager->dump( out );
-
-#if false
-	if (fGeneSeparationWindow != NULL)
-		fGeneSeparationWindow->Dump(out);
-#endif		
 
     out.flush();
     fb.close();
@@ -7634,12 +7441,6 @@ void TSimulation::getStatusText( StatusText& statusText,
 	sprintf( t, "MateRate = %.2f", (double) deltaBorn / statusFrequency );
 	statusText.push_back( strdup( t ) );
 	
-	if (fMonitorGeneSeparation)
-	{
-		sprintf( t, "GeneSep = %5.3f [%5.3f, %5.3f]", fAverageGeneSeparation, fMinGeneSeparation, fMaxGeneSeparation );
-		statusText.push_back( strdup( t ) );
-	}
-
 	sprintf( t, "LifeSpan = %lu ± %lu [%lu, %lu]", nint( fLifeSpanStats.mean() ), nint( fLifeSpanStats.stddev() ), (ulong) fLifeSpanStats.min(), (ulong) fLifeSpanStats.max() );
 	statusText.push_back( strdup( t ) );
 

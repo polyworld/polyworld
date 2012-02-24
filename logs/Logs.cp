@@ -27,7 +27,9 @@ using namespace std;
 //===========================================================================
 Logs *logs = NULL;
 
-Logs::LoggerList Logs::_loggers;
+Logs::LoggerList Logs::_installedLoggers;
+sim::EventType Logs::_registeredEvents;
+Logs::EventRegistry Logs::_eventRegistry;
 
 //---------------------------------------------------------------------------
 // Logs::Logs
@@ -36,7 +38,8 @@ Logs::Logs( TSimulation *sim, proplib::Document *doc )
 {
 	assert( logs == NULL );
 
-	itfor( LoggerList, _loggers, it )
+	_registeredEvents = 0;
+	itfor( LoggerList, _installedLoggers, it )
 	{
 		(*it)->init( sim, doc );
 	}
@@ -48,44 +51,68 @@ Logs::Logs( TSimulation *sim, proplib::Document *doc )
 Logs::~Logs()
 {
 	// We don't have to delete the loggers since they're part of this datastructure.
-	_loggers.clear();
+	_installedLoggers.clear();
 	logs = NULL;
 }
 
 //---------------------------------------------------------------------------
-// Logs::birth
+// Logs::installLogger
 //---------------------------------------------------------------------------
-void Logs::birth( const sim::AgentBirthEvent &birth )
+void Logs::installLogger( Logger *logger )
 {
-	itfor( LoggerList, _loggers, it )
-	{
-		(*it)->birth( birth );
-	}
+	_installedLoggers.push_back( logger );
 }
 
 //---------------------------------------------------------------------------
-// Logs::death
+// Logs::registerEvents
 //---------------------------------------------------------------------------
-void Logs::death( const sim::AgentDeathEvent &death )
+void Logs::registerEvents( Logger *logger, sim::EventType eventTypes )
 {
-	itfor( LoggerList, _loggers, it )
-	{
-		(*it)->death( death );
-	}
-}
+	int nbits = sizeof(sim::EventType) * 8;
 
+	for( int bit = 0; bit < nbits; bit++ )
+	{
+		sim::EventType type = sim::EventType(1) << bit;
+
+		if( eventTypes & type )
+		{
+			_eventRegistry[ type ].push_back( logger );
+		}
+	}
+
+	_registeredEvents |= eventTypes;
+}
 
 //===========================================================================
 // AdamiComplexityLog
 //===========================================================================
 
 //---------------------------------------------------------------------------
-// Logs::AdamiComplexityLog::update
+// Logs::AdamiComplexityLog::init
 //---------------------------------------------------------------------------
-void Logs::AdamiComplexityLog::update()
+void Logs::AdamiComplexityLog::init( TSimulation *sim, Document *doc )
 {
-	if( !_record ) return;
+	if( doc->get("RecordAdamiComplexity") )
+	{
+		_frequency = doc->get( "AdamiComplexityRecordFrequency" );
 
+		initRecording( sim, NullStateScope, sim::Event_StepEnd );
+	}
+}
+
+//---------------------------------------------------------------------------
+// Logs::AdamiComplexityLog::getMaxFileCount
+//---------------------------------------------------------------------------
+int Logs::AdamiComplexityLog::getMaxFileCount()
+{
+	return 4;
+}
+
+//---------------------------------------------------------------------------
+// Logs::AdamiComplexityLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::AdamiComplexityLog::processEvent( const StepEndEvent &e )
+{
 	if( getStep() % _frequency == 0 )
 	{
 		FILE *FileOneBit = createFile( "run/genome/AdamiComplexity-1bit.txt", "a" );
@@ -107,44 +134,10 @@ void Logs::AdamiComplexityLog::update()
 	}
 }
 
-//---------------------------------------------------------------------------
-// Logs::AdamiComplexityLog::init
-//---------------------------------------------------------------------------
-void Logs::AdamiComplexityLog::init( TSimulation *sim, Document *doc )
-{
-	if( doc->get("RecordAdamiComplexity") )
-	{
-		_frequency = doc->get( "AdamiComplexityRecordFrequency" );
-
-		initRecording( NullStateScope, sim );
-	}
-}
-
-//---------------------------------------------------------------------------
-// Logs::AdamiComplexityLog::getMaxFileCount
-//---------------------------------------------------------------------------
-int Logs::AdamiComplexityLog::getMaxFileCount()
-{
-	return 4;
-}
-
 
 //===========================================================================
 // AgentPositionLog
 //===========================================================================
-
-//---------------------------------------------------------------------------
-// Logs::AgentPositionLog::update
-//---------------------------------------------------------------------------
-void Logs::AgentPositionLog::update( agent *a )
-{
-	if( !_record ) return;
-
-	getWriter( a )->addRow( getStep(),
-							a->x(),
-							a->y(),
-							a->z() );
-}
 
 //---------------------------------------------------------------------------
 // Logs::AgentPositionLog::init
@@ -153,23 +146,23 @@ void Logs::AgentPositionLog::init( TSimulation *sim, Document *doc )
 {
 	if( doc->get("RecordPosition") )
 	{
-		initRecording( AgentStateScope, sim );
+		initRecording( sim,
+					   AgentStateScope,
+					   sim::Event_Birth | sim::Event_AgentBodyUpdated | sim::Event_Death );
 	}
 }
 
 //---------------------------------------------------------------------------
-// Logs::AgentPositionLog::birth
+// Logs::AgentPositionLog::processEvent
 //---------------------------------------------------------------------------
-void Logs::AgentPositionLog::birth( const sim::AgentBirthEvent &birth )
+void Logs::AgentPositionLog::processEvent( const sim::AgentBirthEvent &e )
 {
-	if( !_record ) return;
-
 	char path[512];
 	sprintf( path,
 			 "run/motion/position/agents/position_%ld.txt",
-			 birth.a->getTypeNumber() );
+			 e.a->getTypeNumber() );
 
-	DataLibWriter *writer = createWriter( birth.a, path, true, false );
+	DataLibWriter *writer = createWriter( e.a, path, true, false );
 
 	static const char *colnames[] = {"Timestep", "x", "y", "z", NULL};
 	static const datalib::Type coltypes[] = {datalib::INT, datalib::FLOAT, datalib::FLOAT, datalib::FLOAT};
@@ -180,13 +173,22 @@ void Logs::AgentPositionLog::birth( const sim::AgentBirthEvent &birth )
 }
 
 //---------------------------------------------------------------------------
-// Logs::AgentPositionLog::death
+// Logs::AgentPositionLog::processEvent
 //---------------------------------------------------------------------------
-void Logs::AgentPositionLog::death( const sim::AgentDeathEvent &death )
+void Logs::AgentPositionLog::processEvent( const AgentBodyUpdatedEvent &e )
 {
-	if( !_record ) return;
+	getWriter( e.a )->addRow( getStep(),
+							  e.a->x(),
+							  e.a->y(),
+							  e.a->z() );
+}
 
-	delete getWriter( death.a );
+//---------------------------------------------------------------------------
+// Logs::AgentPositionLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::AgentPositionLog::processEvent( const sim::AgentDeathEvent &e )
+{
+	delete getWriter( e.a );
 }
 
 
@@ -201,7 +203,7 @@ void Logs::BirthsDeathsLog::init( TSimulation *sim, Document *doc )
 {
 	if( doc->get("RecordBirthsDeaths") )
 	{
-		initRecording( SimulationStateScope, sim );
+		initRecording( sim, SimulationStateScope, sim::Event_Birth | sim::Event_Death );
 
 		createFile( "run/BirthsDeaths.log" );
 		fprintf( getFile(), "%% Timestep Event Agent# Parent1 Parent2\n" );
@@ -209,12 +211,10 @@ void Logs::BirthsDeathsLog::init( TSimulation *sim, Document *doc )
 }
 
 //---------------------------------------------------------------------------
-// Logs::BirthsDeathsLog::birth
+// Logs::BirthsDeathsLog::processEvent
 //---------------------------------------------------------------------------
-void Logs::BirthsDeathsLog::birth( const sim::AgentBirthEvent &birth )
+void Logs::BirthsDeathsLog::processEvent( const sim::AgentBirthEvent &birth )
 {
-	if( !_record ) return;
-
 	switch( birth.reason )
 	{
 	case LifeSpan::BR_SIMINIT:
@@ -249,12 +249,10 @@ void Logs::BirthsDeathsLog::birth( const sim::AgentBirthEvent &birth )
 }
 
 //---------------------------------------------------------------------------
-// Logs::BirthsDeathsLog::death
+// Logs::BirthsDeathsLog::processEvent
 //---------------------------------------------------------------------------
-void Logs::BirthsDeathsLog::death( const sim::AgentDeathEvent &death )
+void Logs::BirthsDeathsLog::processEvent( const sim::AgentDeathEvent &death )
 {
-	if( !_record ) return;
-
 	if( death.reason != LifeSpan::DR_SIMEND )
 	{
 		fprintf( getFile(), "%ld DEATH %ld\n", getStep(), death.a->Number() );
@@ -267,42 +265,13 @@ void Logs::BirthsDeathsLog::death( const sim::AgentDeathEvent &death )
 //===========================================================================
 
 //---------------------------------------------------------------------------
-// Logs::CarryLog::update
-//---------------------------------------------------------------------------
-void Logs::CarryLog::update( agent *a,
-						  gobject *obj,
-						  CarryAction action )
-{
-	if( !_record ) return;
-
-	static const char *actions[] = {"P",
-									"D",
-									"Do"};
-
-	const char *objectType;
-	switch(obj->getType())
-	{
-	case AGENTTYPE: objectType = "A"; break;
-	case FOODTYPE: objectType = "F"; break;
-	case BRICKTYPE: objectType = "B"; break;
-	default: assert(false);
-	}
-
-	getWriter()->addRow( getStep(),
-						 a->Number(),
-						 actions[action],
-						 objectType,
-						 obj->getTypeNumber() );
-}
-
-//---------------------------------------------------------------------------
 // Logs::CarryLog::init
 //---------------------------------------------------------------------------
 void Logs::CarryLog::init( TSimulation *sim, Document *doc )
 {
 	if( doc->get("RecordCarry") )
 	{
-		initRecording( SimulationStateScope, sim );
+		initRecording( sim, SimulationStateScope, sim::Event_Carry );
 
 		DataLibWriter *writer = createWriter( "run/events/carry.log" );
 
@@ -330,31 +299,35 @@ void Logs::CarryLog::init( TSimulation *sim, Document *doc )
 	}
 }
 
+//---------------------------------------------------------------------------
+// Logs::CarryLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::CarryLog::processEvent( const CarryEvent &e )
+{
+	static const char *actions[] = {"P",
+									"D",
+									"Do"};
+
+	const char *objectType;
+	switch( e.obj->getType() )
+	{
+	case AGENTTYPE: objectType = "A"; break;
+	case FOODTYPE: objectType = "F"; break;
+	case BRICKTYPE: objectType = "B"; break;
+	default: assert(false);
+	}
+
+	getWriter()->addRow( getStep(),
+						 e.a->Number(),
+						 actions[e.action],
+						 objectType,
+						 e.obj->getTypeNumber() );
+}
+
 
 //===========================================================================
 // CollisionLog
 //===========================================================================
-
-//---------------------------------------------------------------------------
-// Logs::CollisionLog::update
-//---------------------------------------------------------------------------
-void Logs::CollisionLog::update( agent *a,
-								 ObjectType ot )
-{
-	if( !_record ) return;
-
-	// We store type as a string since this data will most likely
-	// be processed by a script.
-	static const char *names[] = {"agent",
-								  "food",
-								  "brick",
-								  "barrier",
-								  "edge"};
-
-	getWriter()->addRow( getStep(),
-						 a->Number(),
-						 names[ot] );
-}
 
 //---------------------------------------------------------------------------
 // Logs::CollisionLog::init
@@ -363,7 +336,9 @@ void Logs::CollisionLog::init( TSimulation *sim, Document *doc )
 {
 	if( doc->get("RecordCollisions") )
 	{
-		initRecording( SimulationStateScope, sim );
+		initRecording( sim,
+					   SimulationStateScope,
+					   sim::Event_Collision );
 
 		DataLibWriter *writer = createWriter( "run/events/collisions.log" );
 
@@ -387,31 +362,28 @@ void Logs::CollisionLog::init( TSimulation *sim, Document *doc )
 	}
 }
 
+//---------------------------------------------------------------------------
+// Logs::CollisionLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::CollisionLog::processEvent( const sim::CollisionEvent &e )
+{
+	// We store type as a string since this data will most likely
+	// be processed by a script.
+	static const char *names[] = {"agent",
+								  "food",
+								  "brick",
+								  "barrier",
+								  "edge"};
+
+	getWriter()->addRow( getStep(),
+						 e.a->Number(),
+						 names[e.ot] );
+}
+
 
 //===========================================================================
 // ContactLog
 //===========================================================================
-
-//---------------------------------------------------------------------------
-// Logs::ContactLog::update
-//---------------------------------------------------------------------------
-void Logs::ContactLog::update( ContactEntry &entry )
-{
-	if( !_record ) return;
-
-	char buf[32];
-	char *b = buf;
-
-	entry.c.encode( &b );
-	*(b++) = 'C';
-	entry.d.encode( &b );
-	*(b++) = 0;
-
-	getWriter()->addRow( entry.step,
-						 entry.c.number,
-						 entry.d.number,
-						 buf );
-}
 
 //---------------------------------------------------------------------------
 // Logs::ContactLog::init
@@ -420,7 +392,7 @@ void Logs::ContactLog::init( TSimulation *sim, Document *doc )
 {
 	if( doc->get("RecordContacts") )
 	{
-		initRecording( SimulationStateScope, sim );
+		initRecording( sim, SimulationStateScope, sim::Event_ContactEnd );
 
 		DataLibWriter *writer = createWriter( "run/events/contacts.log" );
 
@@ -447,40 +419,91 @@ void Logs::ContactLog::init( TSimulation *sim, Document *doc )
 	}
 }
 
+//---------------------------------------------------------------------------
+// Logs::ContactLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::ContactLog::processEvent( const AgentContactEndEvent &e )
+{
+	char buf[32];
+	char *b = buf;
+
+	encode( e.c, &b );
+	*(b++) = 'C';
+	encode( e.d, &b );
+	*(b++) = 0;
+
+	getWriter()->addRow( getStep(),
+						 e.c.number,
+						 e.d.number,
+						 buf );
+}
+
+//---------------------------------------------------------------------------
+// Logs::ContactLog::encode
+//---------------------------------------------------------------------------
+void Logs::ContactLog::encode( const sim::AgentContactEndEvent::AgentInfo &info,
+							   char **buf )
+{
+	char *b = *buf;
+
+	if( info.mate )
+	{
+		*(b++) = 'M';
+		
+#define __SET( PREVENT_TYPE, CODE ) if( info.mate & MATE__PREVENTED__##PREVENT_TYPE ) *(b++) = CODE
+
+		__SET( PARTNER, 'p' );
+		__SET( CARRY, 'c' );
+		__SET( MATE_WAIT, 'w' );
+		__SET( ENERGY, 'e' );
+		__SET( EAT_MATE_SPAN, 'f' );
+		__SET( EAT_MATE_MIN_DISTANCE, 'i' );
+		__SET( MAX_DOMAIN, 'd' );
+		__SET( MAX_WORLD, 'x' );
+		__SET( MAX_METABOLISM, 't' );
+		__SET( MISC, 'm' );
+		__SET( MAX_VELOCITY, 'v' );
+
+#undef __SET
+
+#ifdef OF1
+		// implement
+		assert( false );
+#endif
+	}
+
+	if( info.fight )
+	{
+		*(b++) = 'F';
+
+#define __SET( PREVENT_TYPE, CODE ) if( info.fight & FIGHT__PREVENTED__##PREVENT_TYPE ) *(b++) = CODE
+
+		__SET( CARRY, 'c' );
+		__SET( SHIELD, 's' );
+		__SET( POWER, 'p' );
+
+#undef __SET
+	}
+
+	if( info.give )
+	{
+		*(b++) = 'G';
+
+#define __SET( PREVENT_TYPE, CODE ) if( info.give & GIVE__PREVENTED__##PREVENT_TYPE ) *(b++) = CODE
+
+		__SET( CARRY, 'c' );
+		__SET( ENERGY, 'e' );
+
+#undef __SET
+	}
+
+	*buf = b;
+}
+
 
 //===========================================================================
 // EnergyLog
 //===========================================================================
-
-//---------------------------------------------------------------------------
-// Logs::EnergyLog::update
-//---------------------------------------------------------------------------
-void Logs::EnergyLog::update( agent *c,
-							  gobject *obj,
-							  float neuralActivation,
-							  const Energy &energy,
-							  EventType elet )
-{
-	if( !_record ) return;
-
-	static const char *eventTypes[] = {"G",
-									   "F",
-									   "E"};
-	const char *eventType = eventTypes[elet];
-
-	Variant coldata[ 5 + globals::numEnergyTypes ];
-	coldata[0] = getStep();
-	coldata[1] = c->Number();
-	coldata[2] = eventType;
-	coldata[3] = (long)obj->getTypeNumber();
-	coldata[4] = neuralActivation;
-	for( int i = 0; i < globals::numEnergyTypes; i++ )
-	{
-		coldata[5 + i] = energy[i];
-	}
-
-	getWriter()->addRow( coldata );
-}
 
 //---------------------------------------------------------------------------
 // Logs::EnergyLog::init
@@ -489,7 +512,7 @@ void Logs::EnergyLog::init( TSimulation *sim, Document *doc )
 {
 	if( doc->get("RecordEnergy") )
 	{
-		initRecording( SimulationStateScope, sim );
+		initRecording( sim, SimulationStateScope, sim::Event_Energy );
 
 		DataLibWriter *writer = createWriter( "run/events/energy.log" );
 
@@ -536,6 +559,30 @@ void Logs::EnergyLog::init( TSimulation *sim, Document *doc )
 	}
 }
 
+//---------------------------------------------------------------------------
+// Logs::EnergyLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::EnergyLog::processEvent( const sim::EnergyEvent &e )
+{
+	static const char *actionNames[] = {"G",
+									   "F",
+									   "E"};
+	const char *actionName = actionNames[ e.action ];
+
+	Variant coldata[ 5 + globals::numEnergyTypes ];
+	coldata[0] = getStep();
+	coldata[1] = e.a->Number();
+	coldata[2] = actionName;
+	coldata[3] = (long)e.obj->getTypeNumber();
+	coldata[4] = e.neuralActivation;
+	for( int i = 0; i < globals::numEnergyTypes; i++ )
+	{
+		coldata[5 + i] = e.energy[i];
+	}
+
+	getWriter()->addRow( coldata );
+}
+
 
 //===========================================================================
 // GenomeLog
@@ -548,17 +595,15 @@ void Logs::GenomeLog::init( TSimulation *sim, Document *doc )
 {
 	if( doc->get("RecordGenomes") )
 	{
-		initRecording( NullStateScope, sim );
+		initRecording( sim, NullStateScope, sim::Event_Birth );
 	}
 }
 
 //---------------------------------------------------------------------------
-// Logs::GenomeLog::birth
+// Logs::GenomeLog::processEvent
 //---------------------------------------------------------------------------
-void Logs::GenomeLog::birth( const sim::AgentBirthEvent &birth )
+void Logs::GenomeLog::processEvent( const sim::AgentBirthEvent &birth )
 {
-	if( !_record ) return;
-
 	if( birth.reason != LifeSpan::BR_VIRTUAL )
 	{
 		char path[256];
@@ -582,7 +627,7 @@ void Logs::GenomeSubsetLog::init( TSimulation *sim, Document *doc )
 {
 	if( doc->get("GenomeSubsetLog").get("Record") )
 	{
-		initRecording( SimulationStateScope, sim );
+		initRecording( sim, SimulationStateScope, sim::Event_Birth );
 
 		Property &propGenomeSubsetLog = doc->get( "GenomeSubsetLog" );
 
@@ -623,12 +668,10 @@ void Logs::GenomeSubsetLog::init( TSimulation *sim, Document *doc )
 }
 
 //---------------------------------------------------------------------------
-// Logs::GenomeSubsetLog::birth
+// Logs::GenomeSubsetLog::processEvent
 //---------------------------------------------------------------------------
-void Logs::GenomeSubsetLog::birth( const sim::AgentBirthEvent &birth )
+void Logs::GenomeSubsetLog::processEvent( const sim::AgentBirthEvent &birth )
 {
-	if( !_record ) return;
-
 	if( birth.reason != LifeSpan::BR_VIRTUAL )
 	{
 		agent *a = birth.a;
@@ -655,7 +698,7 @@ void Logs::GenomeSubsetLog::birth( const sim::AgentBirthEvent &birth )
 //---------------------------------------------------------------------------
 void Logs::LifeSpanLog::init( TSimulation *sim, Document *doc )
 {
-	initRecording( SimulationStateScope, sim );
+	initRecording( sim, SimulationStateScope, sim::Event_Death );
 
 	createWriter( "run/lifespans.txt" );
 
@@ -683,9 +726,9 @@ void Logs::LifeSpanLog::init( TSimulation *sim, Document *doc )
 }
 
 //---------------------------------------------------------------------------
-// Logs::LifeSpanLog::death
+// Logs::LifeSpanLog::processEvent
 //---------------------------------------------------------------------------
-void Logs::LifeSpanLog::death( const sim::AgentDeathEvent &death )
+void Logs::LifeSpanLog::processEvent( const sim::AgentDeathEvent &death )
 {
 	agent *a = death.a;
 	LifeSpan *ls = a->GetLifeSpan();
@@ -703,36 +746,60 @@ void Logs::LifeSpanLog::death( const sim::AgentDeathEvent &death )
 //===========================================================================
 
 //---------------------------------------------------------------------------
-// Logs::SeparationLog::update
-//---------------------------------------------------------------------------
-void Logs::SeparationLog::update( agent *a, agent *b )
-{
-	if( !_record ) return;
-
-	// Force a separation calculation so it gets logged.
-	SeparationCache::separation( a, b );
-}
-
-//---------------------------------------------------------------------------
 // Logs::SeparationLog::init
 //---------------------------------------------------------------------------
 void Logs::SeparationLog::init( TSimulation *sim, Document *doc )
 {
-	if( doc->get("RecordSeparations") )
+	if( (string)doc->get("RecordSeparations") != "False" )
 	{
-		initRecording( SimulationStateScope, sim );
+		string mode = doc->get( "RecordSeparations" );
+		if( mode == "Contact" )
+		{
+			_mode = Contact;
+			initRecording( sim,
+						   SimulationStateScope,
+						   sim::Event_Death | sim::Event_ContactBegin );
+		}
+		else if( mode == "All" )
+		{
+			_mode = All;
+			initRecording( sim,
+						   SimulationStateScope,
+						   sim::Event_Death | sim::Event_Birth | sim::Event_StepEnd );
+		}
+		else
+			assert(false);
+
 
 		createWriter( "run/genome/separations.txt" );
 	}
 }
 
 //---------------------------------------------------------------------------
-// Logs::SeparationLog::death
+// Logs::SeparationLog::processEvent
 //---------------------------------------------------------------------------
-void Logs::SeparationLog::death( const sim::AgentDeathEvent &death )
+void Logs::SeparationLog::processEvent( const sim::AgentBirthEvent &birth )
 {
-	if( !_record ) return;
+	assert( _mode == All );
 
+	_births.push_back( birth.a );
+}
+
+//---------------------------------------------------------------------------
+// Logs::SeparationLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::SeparationLog::processEvent( const sim::AgentContactBeginEvent &e )
+{
+	assert( _mode == Contact );
+
+	SeparationCache::createEntry( e.c.a, e.d.a );
+}
+
+//---------------------------------------------------------------------------
+// Logs::SeparationLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::SeparationLog::processEvent( const sim::AgentDeathEvent &death )
+{
 	SeparationCache::AgentEntries &entries = SeparationCache::getEntries( death.a );
 	
 	if( entries.size() > 0 )
@@ -760,7 +827,6 @@ void Logs::SeparationLog::death( const sim::AgentDeathEvent &death )
 							coltypes );
 
 
-
 		itfor( SeparationCache::AgentEntries, entries, it )
 		{
 			writer->addRow( it->first, it->second );
@@ -770,4 +836,26 @@ void Logs::SeparationLog::death( const sim::AgentDeathEvent &death )
 	}
 }
 
+//---------------------------------------------------------------------------
+// Logs::SeparationLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::SeparationLog::processEvent( const sim::StepEndEvent &e )
+{
+	assert( _mode == All );
 
+	if( !_births.empty() )
+	{
+		itfor( list<agent *>, _births, it )
+		{
+			agent *a_born = *it;
+
+			xfor( AGENTTYPE, agent, a_other )
+			{
+				if( a_born != a_other )
+					SeparationCache::createEntry( a_born, a_other );
+			}
+		}
+
+		_births.clear();
+	}
+}

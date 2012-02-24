@@ -1,7 +1,6 @@
 REPORTED	ASSIGNED	DATE		DESC
 
 [SIM]
-sean   					02/19/2012 	gene separation monitor & cache
 sean   					02/19/2012 	agent trackers UI
 sean   					02/22/2012 	finish loggers cleanup
 

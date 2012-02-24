@@ -1,9 +1,10 @@
 #include <list>
+#include <map>
 #include <vector>
 
-#include "ContactEntry.h"
 #include "Energy.h"
 #include "Logger.h"
+#include "misc.h"
 #include "simconst.h"
 
 //===========================================================================
@@ -16,57 +17,83 @@ extern class Logs *logs;
 class Logs
 {
  private:
-	friend class Logger;
-
-	typedef std::list<Logger *> LoggerList;
-	static LoggerList _loggers;
-
- private:
 	friend class TSimulation;
 
 	Logs( class TSimulation *sim, proplib::Document *doc );
 	virtual ~Logs();
+
+ private:
+	friend class Logger;
+
+	// Invoked by Logger constructor.
+	static void installLogger( Logger *logger );
+
+	// Configure which events logger will receive.
+	static void registerEvents( Logger *logger,
+								sim::EventType eventTypes );
+
+ private:
+	typedef std::list<Logger *> LoggerList;
+	typedef std::map< sim::EventType, LoggerList > EventRegistry;
+
+	static LoggerList _installedLoggers;
+
+	// Bitwise OR of all registered event types.
+	static sim::EventType _registeredEvents;
+
+	// Maps from a given event type to all registered logs.
+	static EventRegistry _eventRegistry;
 	
-	void birth( const sim::AgentBirthEvent &birth );	
-	void death( const sim::AgentDeathEvent &death );
-
  public:
+	//---------------------------------------------------------------------------
+	// Logs::postEvent
 	//
-	// Note that the Logger base class constructor will automatically register
-	// a logger with Logs.
-	//
+	// Route event to appropriate processEvent() method of Loggers registered for this
+	// event type.
+	//---------------------------------------------------------------------------
+	template< typename T>
+	void postEvent( const T &e )
+	{
+		// Check if any loggers are registered.
+		if( _registeredEvents & e.getType() )
+		{
+			// Send event to loggers.
+			LoggerList &loggers = _eventRegistry[ e.getType() ];
+			itfor( LoggerList, loggers, it )
+			{
+				(*it)->processEvent( e );
+			}
+		}
+	}
 
+ private:
 	//===========================================================================
 	// AdamiComplexityLog
 	//===========================================================================
 	class AdamiComplexityLog : public FileLogger
 	{
-	public:
-		void update();
-
 	protected:
 		virtual void init( class TSimulation *sim, proplib::Document *doc );
 		virtual int getMaxFileCount();
+		virtual void processEvent( const sim::StepEndEvent &e );
 
 	private:
 		int _frequency;
 
-	} adamiComplexity;
+	} _adamiComplexity;
 
 	//===========================================================================
 	// AgentPositionLog
 	//===========================================================================
 	class AgentPositionLog : public DataLibLogger
 	{
-	public:
-		void update( class agent *a );
-
 	protected:
 		virtual void init( class TSimulation *sim, proplib::Document *doc );
-		virtual void birth( const sim::AgentBirthEvent &birth );
-		virtual void death( const sim::AgentDeathEvent &death );
+		virtual void processEvent( const sim::AgentBirthEvent &e );
+		virtual void processEvent( const sim::AgentBodyUpdatedEvent &e );
+		virtual void processEvent( const sim::AgentDeathEvent &e );
 
-	} agentPosition;
+	} _agentPosition;
 
 	//===========================================================================
 	// BirthsDeathsLog
@@ -75,70 +102,56 @@ class Logs
 	{
 	protected:
 		virtual void init( class TSimulation *sim, proplib::Document *doc );
-		virtual void birth( const sim::AgentBirthEvent &birth );
-		virtual void death( const sim::AgentDeathEvent &death );
+		virtual void processEvent( const sim::AgentBirthEvent &birth );
+		virtual void processEvent( const sim::AgentDeathEvent &death );
 
-	} birthsDeaths;
+	} _birthsDeaths;
 
 	//===========================================================================
 	// CarryLog
 	//===========================================================================
 	class CarryLog : public DataLibLogger
 	{
-	public:
-		enum CarryAction { Pickup = 0, DropRecent, DropObject };
-
-		void update( class agent *a,
-					 class gobject *obj,
-					 CarryAction action );
 	protected:
 		virtual void init( class TSimulation *sim, proplib::Document *doc );
+		virtual void processEvent( const sim::CarryEvent &e );
 
-	} carry;
+	} _carry;
 
 	//===========================================================================
 	// CollisionLog
 	//===========================================================================
 	class CollisionLog : public DataLibLogger
 	{
-	public:
-		void update( class agent *a,
-					 sim::ObjectType ot );
 	protected:
 		virtual void init( class TSimulation *sim, proplib::Document *doc );
+		virtual void processEvent( const sim::CollisionEvent &e );
 
-	} collision;
+	} _collision;
 
 	//===========================================================================
 	// ContactLog
 	//===========================================================================
 	class ContactLog : public DataLibLogger
 	{
-	public:
-		void update( ContactEntry &entry );
-
 	protected:
 		virtual void init( class TSimulation *sim, proplib::Document *doc );
+		virtual void processEvent( const sim::AgentContactEndEvent &e );
+	private:
+		void encode( const sim::AgentContactEndEvent::AgentInfo &info, char **buf );
 
-	} contact;
+	} _contact;
 
 	//===========================================================================
 	// EnergyLog
 	//===========================================================================
 	class EnergyLog : public DataLibLogger
 	{
-	public:
-		enum EventType { Give = 0, Fight, Eat };
-
-		void update( class agent *c,
-					 class gobject *obj,
-					 float neuralActivation,
-					 const Energy &energy,
-					 EventType elet );
 	protected:
 		virtual void init( class TSimulation *sim, proplib::Document *doc );
+		virtual void processEvent( const sim::EnergyEvent &e );
 
-	} energy;
+	} _energy;
 
 	//===========================================================================
 	// GenomeLog
@@ -147,8 +160,8 @@ class Logs
 	{
 	protected:
 		virtual void init( class TSimulation *sim, proplib::Document *doc );
-		virtual void birth( const sim::AgentBirthEvent &birth );
-	} genome;
+		virtual void processEvent( const sim::AgentBirthEvent &birth );
+	} _genome;
 
 	//===========================================================================
 	// GenomeSubsetLog
@@ -157,11 +170,11 @@ class Logs
 	{
 	protected:
 		virtual void init( class TSimulation *sim, proplib::Document *doc );
-		virtual void birth( const sim::AgentBirthEvent &birth );
+		virtual void processEvent( const sim::AgentBirthEvent &birth );
 
 	private:
 		std::vector<int> _geneIndexes;
-	} genomeSubset;
+	} _genomeSubset;
 
 	//===========================================================================
 	// LifeSpanLog
@@ -170,21 +183,24 @@ class Logs
 	{
 	protected:
 		virtual void init( class TSimulation *sim, proplib::Document *doc );
-		virtual void death( const sim::AgentDeathEvent &death );
-	} lifespan;
+		virtual void processEvent( const sim::AgentDeathEvent &death );
+	} _lifespan;
 
 	//===========================================================================
 	// SeparationLog
 	//===========================================================================
 	class SeparationLog : public DataLibLogger
 	{
-	public:
-		void update( class agent *a, class agent *b );
-
 	protected:
 		virtual void init( class TSimulation *sim, proplib::Document *doc );
-		virtual void death( const sim::AgentDeathEvent &death );
+		virtual void processEvent( const sim::AgentBirthEvent &birth );
+		virtual void processEvent( const sim::AgentContactBeginEvent &e );
+		virtual void processEvent( const sim::AgentDeathEvent &death );
+		virtual void processEvent( const sim::StepEndEvent &e );
 
-	} separation;
+	private:
+		enum { Contact, All } _mode;
+		std::list<class agent *> _births;
+	} _separation;
 
 };

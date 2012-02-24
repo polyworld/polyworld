@@ -46,9 +46,9 @@ SeparationCache::AgentEntries &SeparationCache::getEntries( agent *a )
 
 
 // --------------------------------------------------------------------------------
-// separation()
+// createEntry()
 // --------------------------------------------------------------------------------
-float SeparationCache::separation( agent *a, agent *b )
+float SeparationCache::createEntry( agent *a, agent *b )
 {
 	agent *x;
 	agent *y;

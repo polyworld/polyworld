@@ -33,7 +33,7 @@ Logger::Logger()
 	, _record( false )
 	, _dirMade( false )
 {
-	Logs::_loggers.push_back( const_cast<Logger *>(this) );
+	Logs::installLogger( const_cast<Logger *>(this) );
 }
 
 //---------------------------------------------------------------------------
@@ -41,14 +41,6 @@ Logger::Logger()
 //---------------------------------------------------------------------------
 Logger::~Logger()
 {
-}
-
-//---------------------------------------------------------------------------
-// Logger::isEnabled
-//---------------------------------------------------------------------------
-bool Logger::isEnabled()
-{
-	return _record;
 }
 
 //---------------------------------------------------------------------------
@@ -73,25 +65,9 @@ int Logger::getMaxFileCount()
 }
 
 //---------------------------------------------------------------------------
-// Logger::birth
-//---------------------------------------------------------------------------
-void Logger::birth( const sim::AgentBirthEvent &birth )
-{
-	// Derived classes can implement
-}
-
-//---------------------------------------------------------------------------
-// Logger::death
-//---------------------------------------------------------------------------
-void Logger::death( const sim::AgentDeathEvent &death )
-{
-	// Derived classes can implement
-}
-
-//---------------------------------------------------------------------------
 // Logger::initRecording
 //---------------------------------------------------------------------------
-void Logger::initRecording( StateScope scope, TSimulation *sim )
+void Logger::initRecording( TSimulation *sim, StateScope scope, sim::EventType events )
 {
 	_scope = scope;
 	_record = true;
@@ -111,6 +87,8 @@ void Logger::initRecording( StateScope scope, TSimulation *sim )
 	default:
 		assert( false );
 	}
+
+	Logs::registerEvents( this, events );
 }
 
 //---------------------------------------------------------------------------

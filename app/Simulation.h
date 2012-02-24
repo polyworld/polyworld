@@ -51,8 +51,6 @@ public:
 	short WhichDomain( float x, float z, short d );
 	void SwitchDomain( short newDomain, short oldDomain, int objectType );
 	
-	TBinChartWindow* GetGeneSeparationWindow() const;
-
 	class AgentPovRenderer *GetAgentPovRenderer();
 	class MonitorManager *getMonitorManager();
 	gstage &getStage();
@@ -183,7 +181,7 @@ private:
 							 short domainID );
 	void Mate( agent *c,
 			   agent *d,
-			   class ContactEntry *contactEntry );
+			   AgentContactBeginEvent *contactEvent );
 	void Smite( short kd,
 				agent *c,
 				agent *d );
@@ -192,14 +190,14 @@ private:
 						float *out_power );
 	void Fight( agent *c,
 				agent *d,
-				class ContactEntry *contactEntry,
+				AgentContactBeginEvent *contactEvent,
 				bool *cDied,
 				bool *dDied );
 	int GetGiveStatus( agent *x,
 					   Energy &out_energy );
 	void Give( agent *x,
 			   agent *y,
-			   class ContactEntry *contactEntry,
+			   AgentContactBeginEvent *contactEvent,
 			   bool *xDied,
 			   bool toMarkOnDeath );
 	void Eat( agent *c,
@@ -214,10 +212,6 @@ private:
 
 	void UpdateMonitors();
 	
-	void RecordGeneSeparation();
-	void CalculateGeneSeparation(agent* ci);
-	void CalculateGeneSeparationAll();
-
 	// Following two functions only determine whether or not we should create the relevant files.
 	// Linking, renaming, and unlinking are handled according to the specific recording options.
 	bool RecordBrainAnatomy( long agentNumber );
@@ -247,10 +241,6 @@ private:
 
 	void Dump();
 	
-#if false
-	TBinChartWindow* fGeneSeparationWindow;
-#endif
-
 	Scheduler fScheduler;
 	BusyFetchQueue<agent *> fUpdateBrainQueue;
 	
@@ -419,15 +409,6 @@ private:
 	float fExpFogDensity;
 	int   fLinearFogEnd;
 
-	bool fMonitorGeneSeparation; 	// whether gene-separation will be monitored or not
-	bool fRecordGeneSeparation; 	// whether gene-separation will be recorded or not
-	float fMaxGeneSeparation;
-	float fMinGeneSeparation;
-	float fAverageGeneSeparation;
-	FILE* fGeneSeparationFile;
-	bool fChartGeneSeparation;
-	float* fGeneSepVals;
-	long fNumGeneSepVals;
 	Stat fLifeSpanStats;
 	Stat fNeuronGroupCountStats;
 	Stat fCurrentNeuronGroupCountStats;
@@ -469,10 +450,6 @@ private:
 
 	condprop::PropertyList *fConditionalProps;
 };
-
-#if false
-inline TBinChartWindow* TSimulation::GetGeneSeparationWindow() const { return fGeneSeparationWindow; }
-#endif
 
 inline class AgentPovRenderer *TSimulation::GetAgentPovRenderer() { return agentPovRenderer; }
 inline MonitorManager *TSimulation::getMonitorManager() { return monitorManager; }

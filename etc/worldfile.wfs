@@ -3157,11 +3157,6 @@ RecordFrequency {
   default 1000
 }
 
-RecordGeneSeparation {
-  type    BOOL
-  default False	# an exception to RecordAll because it is so computationally expensive
-}
-
 RecordBirthsDeaths {
   type    BOOL
   default $( RecordAll or RecordNeuralComplexityFiles )
@@ -3296,8 +3291,13 @@ GenomeSubsetLog {
 }
 
 RecordSeparations {
-  type    BOOL
-  default $( RecordAll )
+  type    ENUM
+  default $( \"All\" if RecordAll else \"False\" )
+  values [
+    False
+    Contact
+    All
+  ]
 }
 
 CompressFiles {
@@ -3401,11 +3401,6 @@ FitnessWeightLongevity {
 Vision {
   type    BOOL
   default True	# make always true
-}
-
-MonitorGeneSeparation {
-  type    BOOL
-  default False	# use visibility of the gene separation window and fRecordGeneSeparation in their respective places
 }
 
 MinBiasLrate {

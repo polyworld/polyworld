@@ -8,29 +8,47 @@
 
 #include <QtGlobal>
 
+#include "Energy.h"
 #include "LifeSpan.h"
+#include "simconst.h"
 
 
 // Forward declarations
 namespace genome { class Genome; }
 class agent;
+class gobject;
 
 
 namespace sim
 {
+	typedef int EventType;
+
+	static const EventType Event_None = 0;
+	static const EventType Event_Birth = (1 << 0);
+	static const EventType Event_AgentBodyUpdated = (1 << 1);
+	static const EventType Event_ContactBegin = (1 << 2);
+	static const EventType Event_ContactEnd = (1 << 3);
+	static const EventType Event_Collision = (1 << 4);
+	static const EventType Event_Carry = (1 << 5);
+	static const EventType Event_Energy = (1 << 6);
+	static const EventType Event_Death = (1 << 7);
+	static const EventType Event_StepEnd = (1 << 8);
+
 	//===========================================================================
 	// AgentBirthEvent
 	//===========================================================================
 	struct AgentBirthEvent
 	{
-	AgentBirthEvent( agent *_a,
-					 LifeSpan::BirthReason _reason,
-					 agent *_parent1,
-					 agent *_parent2 )
-	: a(_a)
-	, reason(_reason)
-	, parent1(_parent1)
-	, parent2(_parent2)
+		inline EventType getType() const { return Event_Birth; }
+
+		AgentBirthEvent( agent *_a,
+						 LifeSpan::BirthReason _reason,
+						 agent *_parent1,
+						 agent *_parent2 )
+		: a(_a)
+		, reason(_reason)
+		, parent1(_parent1)
+		, parent2(_parent2)
 		{}
 
 		agent *a;
@@ -40,20 +58,141 @@ namespace sim
 	};
 
 	//===========================================================================
+	// AgentBodyUpdatedEvent
+	//===========================================================================
+	struct AgentBodyUpdatedEvent
+	{
+		inline EventType getType() const { return Event_AgentBodyUpdated; }
+
+		AgentBodyUpdatedEvent( agent *_a ) : a(_a) {}
+		
+		agent *a;
+	};
+
+	//===========================================================================
+	// AgentContactBeginEvent
+	//===========================================================================
+	struct AgentContactBeginEvent
+	{
+		inline EventType getType() const { return Event_ContactBegin; }
+
+		AgentContactBeginEvent( agent *_c, agent *_d );
+
+		struct AgentInfo
+		{
+			void init( agent *a );
+
+			agent *a;
+			long number;
+			int mate;
+			int fight;
+			int give;
+		} c, d;
+
+		void mate( agent *a, int status );
+		void fight( agent *a, int status );
+		void give( agent *a, int status );
+
+		AgentInfo *get( agent *a );
+	};
+
+	//===========================================================================
+	// AgentContactEndEvent
+	//===========================================================================
+	struct AgentContactEndEvent
+	{
+		inline EventType getType() const { return Event_ContactEnd; }
+
+		AgentContactEndEvent( const AgentContactBeginEvent &e );
+
+		struct AgentInfo
+		{
+			void init( const AgentContactBeginEvent::AgentInfo &begin );
+
+			long number;
+			int mate;
+			int fight;
+			int give;
+		} c, d;
+	};
+
+	//===========================================================================
+	// CollisionEvent
+	//===========================================================================
+	struct CollisionEvent
+	{
+		inline EventType getType() const { return Event_Collision; }
+
+		CollisionEvent( agent *_a, ObjectType _ot ) : a(_a), ot(_ot) {}
+		
+		agent *a;
+		ObjectType ot;
+	};
+
+	//===========================================================================
+	// CarryEvent
+	//===========================================================================
+	struct CarryEvent
+	{
+		inline EventType getType() const { return Event_Carry; }
+
+		enum Action { Pickup = 0, DropRecent, DropObject };
+
+		CarryEvent( agent *_a, Action _action, gobject *_obj )
+		: a(_a), action(_action), obj(_obj) {}
+
+		agent *a;
+		Action action;
+		gobject *obj;
+	};
+
+	//===========================================================================
+	// EnergyEvent
+	//===========================================================================
+	struct EnergyEvent
+	{
+		inline EventType getType() const { return Event_Energy; }
+
+		enum Action { Give = 0, Fight, Eat };
+
+		EnergyEvent( agent *_a,
+					 gobject *_obj,
+					 float _neuralActivation,
+					 const Energy &_energy,
+					 Action _action )
+		: a(_a), obj(_obj), neuralActivation(_neuralActivation), energy(_energy), action(_action) {}
+
+		agent *a;
+		gobject *obj;
+		float neuralActivation;
+		const Energy &energy;
+		Action action;
+	};
+
+	//===========================================================================
 	// AgentDeathEvent
 	//===========================================================================
 	struct AgentDeathEvent
 	{
-	AgentDeathEvent( agent *_a,
-					 LifeSpan::DeathReason _reason )
-	: a(_a)
-	, reason(_reason)
+		inline EventType getType() const { return Event_Death; }
+
+		AgentDeathEvent( agent *_a,
+						 LifeSpan::DeathReason _reason )
+		: a(_a)
+		, reason(_reason)
 		{}
 
 		agent *a;
 		LifeSpan::DeathReason reason;
 	};
 
+	//===========================================================================
+	// StepEndEvent
+	//===========================================================================
+	struct StepEndEvent
+	{
+		inline EventType getType() const { return Event_StepEnd; }
+	};
 
 	typedef std::vector<char *> StatusText;
 

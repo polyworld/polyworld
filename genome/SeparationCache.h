@@ -16,7 +16,7 @@ class SeparationCache
 	static void birth( const sim::AgentBirthEvent &birth );
 	static void death( const sim::AgentDeathEvent &death );
 
-	static float separation( agent *a, agent *b );
+	static float createEntry( agent *a, agent *b );
 
 	typedef std::map<long, float> AgentEntries;
 	static AgentEntries &getEntries( agent *a );

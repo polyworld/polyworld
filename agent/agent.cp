@@ -1115,7 +1115,7 @@ float agent::UpdateBody( float moveFitnessParam,
 							}
 						}
 
-						logs->collision.update( this, OT_BARRIER );
+						logs->postEvent( CollisionEvent(this, OT_BARRIER) );
 					} // overlap in z
 				} // beginning of barrier comes after end of agent
 			} // end of barrier comes after beginning of agent
@@ -1188,7 +1188,7 @@ float agent::UpdateBody( float moveFitnessParam,
 					fPosition[2] = LastZ();
 				}
 
-				logs->collision.update( this, OT_EDGE );
+				logs->postEvent( CollisionEvent(this, OT_EDGE) );
 			}
 		}
 		else if( globals::wraparound )
@@ -1262,6 +1262,8 @@ float agent::UpdateBody( float moveFitnessParam,
 				break;
 		}
 	}
+
+	logs->postEvent( AgentBodyUpdatedEvent(this) );
     
     return energyUsed;
 }
@@ -1380,7 +1382,7 @@ void agent::AvoidCollisionDirectional( int direction, int solidObjects )
 				break;
 			}
 
-			logs->collision.update( this, ot );
+			logs->postEvent( CollisionEvent(this, ot) );
 			//break;	// can only hit one
 		}
 	}
@@ -1496,9 +1498,9 @@ void agent::PickupObject( gobject* o )
 	if( o->radius() > fCarryRadius )
 		fCarryRadius = o->radius();
 
-	logs->carry.update( this,
-						o,
-						Logs::CarryLog::Pickup );
+	logs->postEvent( CarryEvent(this,
+								CarryEvent::Pickup,
+								o) );
 }
 
 
@@ -1518,9 +1520,9 @@ void agent::DropMostRecent( void )
 		RecalculateCarryRadius();
 	}
 
-	logs->carry.update( this,
-						o,
-						Logs::CarryLog::DropRecent );
+	logs->postEvent( CarryEvent(this,
+								CarryEvent::DropRecent,
+								o) );
 }
 
 
@@ -1538,9 +1540,9 @@ void agent::DropObject( gobject* o )
 		RecalculateCarryRadius();
 	}
 
-	logs->carry.update( this,
-						o,
-						Logs::CarryLog::DropObject );
+	logs->postEvent( CarryEvent(this,
+								CarryEvent::DropObject,
+								o) );
 }
 
 

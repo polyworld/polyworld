@@ -1,5 +1,7 @@
 #pragma once
 
+#include <assert.h>
+
 #include <string>
 
 #include "AgentAttachedData.h"
@@ -9,14 +11,26 @@
 namespace proplib { class Document; }
 
 
+
 //===========================================================================
 // Logger
+//
+// Base class for all loggers. Provides ability to register for various
+// events from the simulation. Derived classes must inform which events are
+// to be received via initRecording(), and must also override the appropriate
+// processEvent(). This class is also capable of maintaining state for derived 
+// classes (e.g. FILE *), where that state can be associated with the lifetime
+// of the simulation or with each agent.
+//
+// Derivations of this class will ultimately be members of the Logs class.
+// By defining a Logger derivation as a field of Logs, the Logger's
+// default constructor will be implicitly invoked, which ultimately will
+// call Logs::installLogger(). That is, to install a logger, just define
+// it in class Logs.
+//
 //===========================================================================
 class Logger
 {
- public:
-	bool isEnabled();
-
  protected:
 	friend class Logs;
 
@@ -25,20 +39,39 @@ class Logger
 	virtual void init( class TSimulation *sim, proplib::Document *doc ) = 0;
 	virtual int getMaxFileCount();
 
-	virtual void birth( const sim::AgentBirthEvent &birth );
-	virtual void death( const sim::AgentDeathEvent &death );
+	// 
+	// Derived classes must override any of these methods for which they register for events.
+	// e.g. if a derived class invokes initRecording(..., sim::Event_Birth), then it must
+	// override processEvent( AgentBirthEvent )
+	// 
+	virtual void processEvent( const sim::AgentBirthEvent &e ) { assert(false); }
+	virtual void processEvent( const sim::AgentBodyUpdatedEvent &e ) { assert(false); }
+	virtual void processEvent( const sim::AgentContactBeginEvent &e ) { assert(false); }
+	virtual void processEvent( const sim::AgentContactEndEvent &e ) { assert(false); }
+	virtual void processEvent( const sim::CollisionEvent &e ) { assert(false); }
+	virtual void processEvent( const sim::CarryEvent &e ) { assert(false); }
+	virtual void processEvent( const sim::EnergyEvent &e ) { assert(false); }
+	virtual void processEvent( const sim::AgentDeathEvent &e ) { assert(false); }
+	virtual void processEvent( const sim::StepEndEvent &e ) { assert(false); }
 
  protected:
 	enum StateScope
 	{
+		// The base logger class will not maintain any state (e.g. FILE *) on behalf
+		// of the derived logger class.
 		NullStateScope,
+		// The base logger class will maintain state (e.g. FILE *) for the
+		// duration of the simulation.
 		SimulationStateScope,
+		// The base logger class will maintain state (e.g. FILE *) for each agent.
 		AgentStateScope
 	};
-
+	
 	Logger();
 
-	void initRecording( StateScope scope, class TSimulation *sim );
+	void initRecording( class TSimulation *sim,
+						StateScope scope,
+						sim::EventType events = sim::Event_None );
 
 	long getStep();
 	void mkdirs( std::string path_log );
@@ -77,6 +110,9 @@ class Logger
 
 //===========================================================================
 // FileLogger
+//
+// A convenient base class for loggers that use stdio FILE
+//
 //===========================================================================
 class FileLogger : public Logger
 {
@@ -98,6 +134,9 @@ class FileLogger : public Logger
 
 //===========================================================================
 // AbstractFileLogger
+//
+// A convenient base class for loggers that use AbstractFile
+//
 //===========================================================================
 class AbstractFileLogger : public Logger
 {
@@ -119,6 +158,9 @@ class AbstractFileLogger : public Logger
 
 //===========================================================================
 // DataLibLogger
+//
+// A convenient base class for loggers that use stdio DataLibWriter
+//
 //===========================================================================
 class DataLibLogger : public Logger
 {
