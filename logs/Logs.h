@@ -154,6 +154,16 @@ class Logs
 	} _energy;
 
 	//===========================================================================
+	// GeneStatsLog
+	//===========================================================================
+	class GeneStatsLog : public FileLogger
+	{
+	protected:
+		virtual void init( class TSimulation *sim, proplib::Document *doc );
+		virtual void processEvent( const sim::StepEndEvent &e );
+	} _geneStats;
+
+	//===========================================================================
 	// GenomeLog
 	//===========================================================================
 	class GenomeLog : public AbstractFileLogger

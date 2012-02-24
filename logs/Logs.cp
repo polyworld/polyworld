@@ -585,6 +585,49 @@ void Logs::EnergyLog::processEvent( const sim::EnergyEvent &e )
 
 
 //===========================================================================
+// GeneStatsLog
+//===========================================================================
+
+//---------------------------------------------------------------------------
+// Logs::GeneStatsLog::init
+//---------------------------------------------------------------------------
+void Logs::GeneStatsLog::init( TSimulation *sim, Document *doc )
+{
+	if( doc->get("RecordGeneStats") )
+	{
+		initRecording( sim, SimulationStateScope, sim::Event_StepEnd );
+
+		sim->getGeneStats().init( sim->GetMaxAgents() );
+
+		FILE *f = createFile( "run/genome/genestats.txt" );
+
+		fprintf( f, "%d\n", GenomeUtil::schema->getMutableSize() );
+	}
+}
+
+//---------------------------------------------------------------------------
+// Logs::GeneStatsLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::GeneStatsLog::processEvent( const sim::StepEndEvent &e )
+{
+	float *mean = _simulation->getGeneStats().getMean();
+	float *stddev = _simulation->getGeneStats().getStddev();
+	int ngenes = GenomeUtil::schema->getMutableSize();
+
+	FILE *f = getFile();
+
+	fprintf( f, "%ld", getStep() );
+
+	for( int i = 0; i < ngenes; i++ )
+	{
+		fprintf( f, " %.1f,%.1f", mean[i], stddev[i] );
+	}
+
+	fprintf( f, "\n" );
+}
+
+
+//===========================================================================
 // GenomeLog
 //===========================================================================
 

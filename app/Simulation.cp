@@ -224,10 +224,6 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 		fMaxGapCreate(0),
 		fNumBornSinceCreated(0),
 
-		fGeneSum(NULL),
-		fGeneSum2(NULL),
-		fGeneStatsAgents(NULL),
-		fGeneStatsFile(NULL),
 		agentPovRenderer(NULL),
 		fConditionalProps( new condprop::PropertyList() )
 {
@@ -385,22 +381,6 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 
 	}
 
-	// If we're going to record the gene means and std devs, we need to allocate a couple of stat arrays
-	if( fRecordGeneStats )
-	{
-		fGeneSum  = (unsigned long*) malloc( sizeof( *fGeneSum  ) * GenomeUtil::schema->getMutableSize() );
-		Q_CHECK_PTR( fGeneSum );
-		fGeneSum2 = (unsigned long*) malloc( sizeof( *fGeneSum2 ) * GenomeUtil::schema->getMutableSize() );
-		Q_CHECK_PTR( fGeneSum2 );
-		fGeneStatsAgents = (agent**) malloc( sizeof( *fGeneStatsAgents ) * GetMaxAgents() );
-		
-		MKDIR( "run/genome" );
-		fGeneStatsFile = fopen( "run/genome/genestats.txt", "w" );
-		Q_CHECK_PTR( fGeneStatsFile );
-		
-		fprintf( fGeneStatsFile, "%d\n", GenomeUtil::schema->getMutableSize() );
-	}
-
     // Pass ownership of the cast to the stage [TODO] figure out ownership issues
     fStage.SetCast(&fWorldCast);
 
@@ -544,9 +524,6 @@ TSimulation::~TSimulation()
 	if( fLockstepFile )
 		fclose( fLockstepFile );	
 
-	if( fGeneStatsFile )
-		fclose( fGeneStatsFile );
-
 	{
 		barrier* b;
 		barrier::gXSortedBarriers.reset();
@@ -627,16 +604,6 @@ TSimulation::~TSimulation()
 	Brain::braindestruct();
 
 	agent::agentdestruct();
-
-	// If we were keeping the simulation in sync with a LOCKSTEP-BirthsDeaths.log, close the file now that the simulation is over.
-	if( fGeneSum )
-		free( fGeneSum );
-
-	if( fGeneSum2 )
-		free( fGeneSum2 );
-
-    if( fGeneStatsAgents )
-		free( fGeneStatsAgents );
 		
 	delete agentPovRenderer;
 
@@ -2537,64 +2504,7 @@ void TSimulation::DeathAndStats( void )
 //	if( fDomains[0].fNumLeastFit > 0 )
 //		printf( "%ld numSmitable = %d out of %d, from %ld agents out of %ld\n", fStep, fDomains[0].fNumLeastFit, fDomains[0].fMaxNumLeastFit, fDomains[0].numAgents, fDomains[0].maxNumAgents );
 
-	// If we're saving gene stats, compute them here
-	if( fRecordGeneStats )
-	{
-		// Because we'll be performing the stats calculations/recording in parallel
-		// with the master task, which will kill and birth agents, we must create a
-		// snapshot of the agents alive right now.
-		int nagents = objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE);
-		objectxsortedlist::gXSortedObjects.reset();
-		for( int i = 0; i < nagents; i++ )
-		{
-			objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**)fGeneStatsAgents + i );
-		}
-
-		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-		// ^^^ PARALLEL TASK RecordGeneStats
-		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-		class RecordGeneStats : public ITask
-		{
-		public:
-			int nagents;
-			RecordGeneStats( int nagents )
-			{
-				this->nagents = nagents;
-			}
-
-			virtual void task_exec( TSimulation *sim )
-			{
-				unsigned long *sum = sim->fGeneSum;
-				unsigned long *sum2 = sim->fGeneSum2;
-				int ngenes = GenomeUtil::schema->getMutableSize(); 
-
-				memset( sum, 0, sizeof(*sum) * ngenes );
-				memset( sum2, 0, sizeof(*sum2) * ngenes );
-
-				for( int i = 0; i < nagents; i++ )
-				{
-					sim->fGeneStatsAgents[i]->Genes()->updateSum( sum, sum2 );
-				}
-
-				fprintf( sim->fGeneStatsFile, "%ld", sim->fStep );
-				for( int i = 0; i < ngenes; i++ )
-				{
-					float mean, stddev;
-			
-					mean = (float) sum[i] / (float) nagents;
-					stddev = sqrt( (float) sum2[i] / (float) nagents  -  mean * mean );
-					fprintf( sim->fGeneStatsFile, " %.1f,%.1f", mean, stddev );
-				}
-				fprintf( sim->fGeneStatsFile, "\n" );
-			}
-		};
-
-		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		// !!! POST PARALLEL
-		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		fScheduler.postParallel( new RecordGeneStats(nagents) );
-	}
-
+	fGeneStats.compute( fScheduler );
 }
 
 //---------------------------------------------------------------------------
@@ -5829,8 +5739,6 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 		bool ratioBarrierPositions = doc.get( "RatioBarrierPositions" );
 		proplib::Property &propBarriers = doc.get( "Barriers" );
 
-		fRecordBarrierPosition = doc.get( "RecordBarrierPosition" );
-
 		itfor( proplib::PropertyMap, propBarriers.elements(), itBarrier )
 		{
 			barrier *b = new barrier();
@@ -5841,7 +5749,7 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 
 			ConditionList<LineSegment> *conditions = new ConditionList<LineSegment>();
 
-			LineSegmentLogger *logger = fRecordBarrierPosition
+			LineSegmentLogger *logger = (bool)doc.get( "RecordBarrierPosition" )
 				? new LineSegmentLogger( barrierName )
 				: NULL;
 
@@ -6715,7 +6623,6 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	fBestRecentBrainAnatomyRecordFrequency = doc.get( "BestRecentBrainAnatomyRecordFrequency" );
 	fBestRecentBrainFunctionRecordFrequency = doc.get( "BestRecentBrainFunctionRecordFrequency" );
 	
-	fRecordGeneStats = doc.get( "RecordGeneStats" );
 	fRecordComplexity = doc.get( "RecordComplexity" );
 	if( fRecordComplexity )
 	{

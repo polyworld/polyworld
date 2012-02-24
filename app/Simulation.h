@@ -19,6 +19,7 @@
 #include "SeparationCache.h"
 #include "simconst.h"
 #include "simtypes.h"
+#include "GeneStats.h"
 #include "gmisc.h"
 #include "gpolygon.h"
 #include "graphics.h"
@@ -29,7 +30,6 @@ using namespace sim;
 // Forward declarations
 namespace condprop { class PropertyList; }
 namespace proplib { class Document; }
-class TBinChartWindow;
 
 
 //===========================================================================
@@ -67,6 +67,7 @@ public:
 	float getFitnessWeight( FitnessWeightType type );
 	float getFitnessStat( FitnessStatType type );
 	float getFoodEnergyStat( FoodEnergyStatType type, FoodEnergyStatScope scope );
+	GeneStats &getGeneStats();
 	
 	void getStatusText( StatusText& statusText,
 						int statusFrequency );
@@ -102,8 +103,6 @@ public:
 	int fBestRecentBrainAnatomyRecordFrequency;
 	int fBestRecentBrainFunctionRecordFrequency;
 	
-	bool fRecordBarrierPosition;
-
 	bool fBrainAnatomyRecordAll;
 	bool fBrainFunctionRecordAll;
 	bool fBrainAnatomyRecordSeeds;
@@ -272,7 +271,6 @@ private:
 	bool fHealing;				// Virgil Healing
 	
 	float fGroundClearance;
-	bool fRecordGeneStats;
 	bool fCalcFoodPatchAgentCounts;
 	
 	std::string fComplexityType;
@@ -420,6 +418,7 @@ private:
 	Stat fCurrentSynapseCountStats;
 	StatRecent fLifeSpanRecentStats;
 	StatRecent fLifeFractionRecentStats;
+	GeneStats fGeneStats;
 
 	bool fRandomBirthLocation;
 	float fRandomBirthLocationRadius;
@@ -436,11 +435,6 @@ private:
 	bool fParallelCreateAgents;
 	bool fParallelBrains;
 	
-	unsigned long* fGeneSum;	// sum, for computing mean
-	unsigned long* fGeneSum2;	// sum of squares, for computing std. dev.
-	agent** fGeneStatsAgents;   // list of agents to be used for computing stats.
-	FILE* fGeneStatsFile;
-
     gpolyobj fGround;
     TSetList fWorldSet;	
 
@@ -533,6 +527,7 @@ inline float TSimulation::getFoodEnergyStat( FoodEnergyStatType type, FoodEnergy
 	default: assert(false); return -1;
 	}
 }
+inline GeneStats &TSimulation::getGeneStats() { return fGeneStats; }
 inline long TSimulation::getStep() const { return fStep; }
 inline long TSimulation::GetMaxSteps() const { return fMaxSteps; }
 inline float TSimulation::EnergyFitnessParameter() const { return fEnergyFitnessParameter; }
