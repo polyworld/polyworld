@@ -617,6 +617,56 @@ void Logs::GenomeLog::processEvent( const sim::AgentBirthEvent &birth )
 
 
 //===========================================================================
+// GenomeMetaLog
+//===========================================================================
+
+//---------------------------------------------------------------------------
+// Logs::GenomeMetaLog::init
+//---------------------------------------------------------------------------
+void Logs::GenomeMetaLog::init( TSimulation *sim, Document *doc )
+{
+	initRecording( sim, NullStateScope, sim::Event_SimInited );
+}
+
+//---------------------------------------------------------------------------
+// Logs::GenomeMetaLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::GenomeMetaLog::processEvent( const sim::SimInitedEvent &birth )
+{
+	{
+		FILE* f = createFile( "run/genome/meta/geneindex.txt" );
+		
+		GenomeUtil::schema->printIndexes( f );
+		
+		fclose( f );
+	}
+	{
+		FILE* f = createFile( "run/genome/meta/genelayout.txt" );
+		
+		GenomeUtil::schema->printIndexes( f, GenomeUtil::layout );
+		
+		fclose( f );
+
+		SYSTEM( "cat run/genome/meta/genelayout.txt | sort -n > run/genome/meta/genelayout-sorted.txt" );
+	}
+	{
+		FILE* f = createFile( "run/genome/meta/genetitle.txt" );
+		
+		GenomeUtil::schema->printTitles( f );
+		
+		fclose( f );
+	}
+	{
+		FILE* f = createFile( "run/genome/meta/generange.txt" );
+		
+		GenomeUtil::schema->printRanges( f );
+		
+		fclose( f );		
+	}
+}
+
+
+//===========================================================================
 // GenomeSubsetLog
 //===========================================================================
 

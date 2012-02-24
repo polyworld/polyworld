@@ -164,6 +164,16 @@ class Logs
 	} _genome;
 
 	//===========================================================================
+	// GenomeMetaLog
+	//===========================================================================
+	class GenomeMetaLog : public FileLogger
+	{
+	protected:
+		virtual void init( class TSimulation *sim, proplib::Document *doc );
+		virtual void processEvent( const sim::SimInitedEvent &e );
+	} _genomeMeta;
+
+	//===========================================================================
 	// GenomeSubsetLog
 	//===========================================================================
 	class GenomeSubsetLog : public DataLibLogger

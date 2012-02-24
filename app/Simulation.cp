@@ -175,7 +175,6 @@ inline float AverageAngles( float a, float b )
 #define IS_PREVENTED_BY_CARRY( ACTION, AGENT ) \
 	( (fCarryPrevents##ACTION != 0) && ((AGENT)->NumCarries() > 0) && (randpw() < fCarryPrevents##ACTION) )
 
-#define SYSTEM(cmd) {int rc = system(cmd); if(rc != 0) {fprintf(stderr, "Failed executing command '%s'\n", cmd); exit(1);}}
 
 //---------------------------------------------------------------------------
 // TSimulation::TSimulation
@@ -394,7 +393,6 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 	MKDIR( "run/stats" );
 
 	MKDIR( "run/genome" );
-	MKDIR( "run/genome/meta" );
 
 	if( fPositionSeedsFromFile || fRecordBarrierPosition )
 	{
@@ -522,44 +520,6 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 		
 		fprintf( fGeneStatsFile, "%d\n", GenomeUtil::schema->getMutableSize() );
 	}
-
-#define PrintGeneIndexesFlag 1
-#if PrintGeneIndexesFlag
-	{
-		FILE* f = fopen( "run/genome/meta/geneindex.txt", "w" );
-		Q_CHECK_PTR( f );
-		
-		GenomeUtil::schema->printIndexes( f );
-		
-		fclose( f );
-	}
-	{
-		FILE* f = fopen( "run/genome/meta/genelayout.txt", "w" );
-		Q_CHECK_PTR( f );
-		
-		GenomeUtil::schema->printIndexes( f, GenomeUtil::layout );
-		
-		fclose( f );
-
-		SYSTEM( "cat run/genome/meta/genelayout.txt | sort -n > run/genome/meta/genelayout-sorted.txt" );
-	}
-	{
-		FILE* f = fopen( "run/genome/meta/genetitle.txt", "w" );
-		Q_CHECK_PTR( f );
-		
-		GenomeUtil::schema->printTitles( f );
-		
-		fclose( f );
-	}
-	{
-		FILE* f = fopen( "run/genome/meta/generange.txt", "w" );
-		Q_CHECK_PTR( f );
-		
-		GenomeUtil::schema->printRanges( f );
-		
-		fclose( f );		
-	}
-#endif
 
     // Pass ownership of the cast to the stage [TODO] figure out ownership issues
     fStage.SetCast(&fWorldCast);
@@ -702,11 +662,11 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 			fEvents = new Events( fMaxSteps );
 	}
 
+	// ---
+	// --- Save worldfile data to run/ and dispose documents
+	// ---
 	{
-		if( docWorldFile->getPath() != "" )
-		{
-			SYSTEM( ("cp " + docWorldFile->getPath() + " run/original.wf").c_str() );
-		}
+		SYSTEM( ("cp " + docWorldFile->getPath() + " run/original.wf").c_str() );
 		SYSTEM( ("cp " + docSchema->getPath() + " run/original.wfs").c_str() );
 
 		{
@@ -729,6 +689,8 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 
 		proplib::Interpreter::dispose();
 	}
+
+	logs->postEvent( SimInitedEvent() );
 }
 
 

@@ -44,6 +44,7 @@ class Logger
 	// e.g. if a derived class invokes initRecording(..., sim::Event_Birth), then it must
 	// override processEvent( AgentBirthEvent )
 	// 
+	virtual void processEvent( const sim::SimInitedEvent &e ) { assert(false); }
 	virtual void processEvent( const sim::AgentBirthEvent &e ) { assert(false); }
 	virtual void processEvent( const sim::AgentBodyUpdatedEvent &e ) { assert(false); }
 	virtual void processEvent( const sim::AgentContactBeginEvent &e ) { assert(false); }

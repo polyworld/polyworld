@@ -24,15 +24,24 @@ namespace sim
 	typedef int EventType;
 
 	static const EventType Event_None = 0;
-	static const EventType Event_Birth = (1 << 0);
-	static const EventType Event_AgentBodyUpdated = (1 << 1);
-	static const EventType Event_ContactBegin = (1 << 2);
-	static const EventType Event_ContactEnd = (1 << 3);
-	static const EventType Event_Collision = (1 << 4);
-	static const EventType Event_Carry = (1 << 5);
-	static const EventType Event_Energy = (1 << 6);
-	static const EventType Event_Death = (1 << 7);
-	static const EventType Event_StepEnd = (1 << 8);
+	static const EventType Event_SimInited = (1 << 0);
+	static const EventType Event_Birth = (1 << 1);
+	static const EventType Event_AgentBodyUpdated = (1 << 2);
+	static const EventType Event_ContactBegin = (1 << 3);
+	static const EventType Event_ContactEnd = (1 << 4);
+	static const EventType Event_Collision = (1 << 5);
+	static const EventType Event_Carry = (1 << 6);
+	static const EventType Event_Energy = (1 << 7);
+	static const EventType Event_Death = (1 << 8);
+	static const EventType Event_StepEnd = (1 << 9);
+
+	//===========================================================================
+	// SimInitedEvent
+	//===========================================================================
+	struct SimInitedEvent
+	{
+		inline EventType getType() const { return Event_SimInited; }
+	};
 
 	//===========================================================================
 	// AgentBirthEvent
