@@ -220,8 +220,7 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 		fGroundClearance(0.0),
 
 		fRecordGeneStats(false),
-		fRecordFoodPatchStats(false),
-		fCalcFoodPatchAgentCounts(false),
+		fCalcFoodPatchAgentCounts(true),
 		fNewDeaths(0),
 		fNumberFit(0),
 		fFittest(NULL),
@@ -258,8 +257,6 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 		fGeneSum2(NULL),
 		fGeneStatsAgents(NULL),
 		fGeneStatsFile(NULL),
-		fFoodPatchStatsFile(NULL),
-		fNumAgentsNotInOrNearAnyFoodPatch(0),
 		agentPovRenderer(NULL),
 		fConditionalProps( new condprop::PropertyList() )
 {
@@ -564,13 +561,6 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 	}
 #endif
 
-	//If we're recording the number of agents in or near various foodpatches, then open the stat file
-	if( fRecordFoodPatchStats )
-	{
-			fFoodPatchStatsFile = fopen( "run/foodpatchstats.txt", "w" );
-			Q_CHECK_PTR( fFoodPatchStatsFile );
-	}
-	
     // Pass ownership of the cast to the stage [TODO] figure out ownership issues
     fStage.SetCast(&fWorldCast);
 
@@ -2247,20 +2237,6 @@ void TSimulation::Interact()
 		fDomains[i].fNumSmited = 0;
 	}
 
-	// reset all the FoodPatch agent counts to 0
-	if( fCalcFoodPatchAgentCounts )
-	{
-		fNumAgentsNotInOrNearAnyFoodPatch = 0;
-
-		for( int domainNumber = 0; domainNumber < fNumDomains; domainNumber++ )
-		{
-			for( int foodPatchNumber = 0; foodPatchNumber < fDomains[domainNumber].numFoodPatches; foodPatchNumber++ )
-			{
-				fDomains[domainNumber].fFoodPatches[foodPatchNumber].resetAgentCounts();
-			}
-		}
-	}
-
 	// -----------------------
 	// -------- Death --------
 	// -----------------------
@@ -2440,6 +2416,18 @@ void TSimulation::DeathAndStats( void )
 {
 	agent *c;
 	short id;
+
+	// reset all the FoodPatch agent counts to 0
+	if( fCalcFoodPatchAgentCounts )
+	{
+		for( int domainNumber = 0; domainNumber < fNumDomains; domainNumber++ )
+		{
+			for( int foodPatchNumber = 0; foodPatchNumber < fDomains[domainNumber].numFoodPatches; foodPatchNumber++ )
+			{
+				fDomains[domainNumber].fFoodPatches[foodPatchNumber].resetAgentCounts();
+			}
+		}
+	}
 	
 	if( fLockStepWithBirthsDeathsLog )
 	{
@@ -4167,19 +4155,6 @@ void TSimulation::MaintainFood()
 				}
 			}
 		}
-	}
-
-	if( fFoodPatchStatsFile )
-	{
-		fprintf( fFoodPatchStatsFile, "%ld: foodPatchCounts =", fStep );
-		for( int domainNumber = 0; domainNumber < fNumDomains; domainNumber++ )
-		{
-			for( int patchNumber = 0; patchNumber < fDomains[domainNumber].numFoodPatches; patchNumber++ )
-			{
-				fprintf( fFoodPatchStatsFile, " %d", fDomains[domainNumber].fFoodPatches[patchNumber].foodCount );
-			}
-		}
-		fprintf( fFoodPatchStatsFile, "\n");
 	}
 
     debugcheck( "after growing food and maintaining food patch stats" );
@@ -6533,6 +6508,7 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 								assert( false );
 							}
 
+							// State is based on number of agents in patch, so we must track agent count.
 							fCalcFoodPatchAgentCounts = true;
 
 							onCondition = new FoodPatch::MaxPopGroupOnCondition( &(fDomains[id].fFoodPatches[i]),
@@ -6802,8 +6778,6 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	fBestRecentBrainFunctionRecordFrequency = doc.get( "BestRecentBrainFunctionRecordFrequency" );
 	
 	fRecordGeneStats = doc.get( "RecordGeneStats" );
-	fRecordFoodPatchStats = doc.get( "RecordFoodPatchStats" );
-	fCalcFoodPatchAgentCounts |= fRecordFoodPatchStats;
 	fRecordComplexity = doc.get( "RecordComplexity" );
 	if( fRecordComplexity )
 	{
@@ -7465,7 +7439,7 @@ void TSimulation::getStatusText( StatusText& statusText,
 			 fFramesPerSecondOverall,       fSecondsPerFrameOverall  );
 	statusText.push_back( strdup( t ) );
 	
-	if( fRecordFoodPatchStats )
+	if( fCalcFoodPatchAgentCounts )
 	{
 		int numAgentsInAnyFoodPatchInAnyDomain = 0;
 		int numAgentsInOuterRangesInAnyDomain = 0;

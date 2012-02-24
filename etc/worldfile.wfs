@@ -3242,11 +3242,6 @@ RecordGeneStats {
   default $( RecordAll )
 }
 
-RecordFoodPatchStats {
-  type    BOOL
-  default True	# only affects recording of food patch stats in stat files
-}
-
 RecordComplexity {
   type    BOOL
   default False	# an exception to RecordAll because it is so computationally expensive

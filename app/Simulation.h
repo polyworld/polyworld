@@ -268,7 +268,6 @@ private:
 	
 	float fGroundClearance;
 	bool fRecordGeneStats;
-	bool fRecordFoodPatchStats;
 	bool fCalcFoodPatchAgentCounts;
 	
 	std::string fComplexityType;
@@ -437,11 +436,6 @@ private:
 	agent** fGeneStatsAgents;   // list of agents to be used for computing stats.
 	FILE* fGeneStatsFile;
 
-	FILE* fFoodPatchStatsFile;
-
-	unsigned long fNumAgentsNotInOrNearAnyFoodPatch;
-	unsigned long* fNumAgentsInFoodPatch;
-	
     gpolyobj fGround;
     TSetList fWorldSet;	
 
