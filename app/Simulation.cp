@@ -281,22 +281,10 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 	(void) rename( s, t );
 
 	MKDIR( "run" );
-	MKDIR( "run/stats" );
 
-	MKDIR( "run/genome" );
-
-	if( fPositionSeedsFromFile || fRecordBarrierPosition )
-	{
-		MKDIR( "run/motion" );
-		MKDIR( "run/motion/position" );
-		if( fRecordBarrierPosition )
-			MKDIR( "run/motion/position/barriers" );
-	}
-
-	if( fConditionalProps->isLogging() )
-	{
-		MKDIR( "run/condprop" );
-	}
+	// ---
+	// --- Init Conditional Properties
+	// ---
 	fConditionalProps->init();
 
 	if( fBestSoFarBrainAnatomyRecordFrequency || fBestSoFarBrainFunctionRecordFrequency ||
@@ -406,6 +394,7 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 		Q_CHECK_PTR( fGeneSum2 );
 		fGeneStatsAgents = (agent**) malloc( sizeof( *fGeneStatsAgents ) * GetMaxAgents() );
 		
+		MKDIR( "run/genome" );
 		fGeneStatsFile = fopen( "run/genome/genestats.txt", "w" );
 		Q_CHECK_PTR( fGeneStatsFile );
 		
@@ -1614,7 +1603,7 @@ void TSimulation::ReadSeedPositionsFromFile()
 		exit( 1 );
 	}
 
-	SYSTEM( "cp seedPositions.txt run/motion/position" );
+	SYSTEM( "mkdir -p run/motion/position && cp seedPositions.txt run/motion/position" );
 
 	while( !in.eof() )
 	{

@@ -338,6 +338,14 @@ namespace condprop
 
 		virtual void init() = 0;
 		virtual void log( long step, T value ) = 0;
+
+	protected:
+		DataLibWriter *createWriter( std::string name )
+		{
+			std::string path = std::string("run/condprop/") + name + ".txt";
+			makeParentDir( path );
+			return new DataLibWriter( path.c_str() );
+		}
 	};
 
 	//===========================================================================
@@ -653,7 +661,7 @@ namespace condprop
 
 		virtual void init()
 		{
-			writer = new DataLibWriter( (std::string("run/condprop/") + name + ".txt").c_str() );
+			writer = this->createWriter( name );
 
 			const char *colnames[] =
 				{
@@ -702,7 +710,7 @@ namespace condprop
 
 		virtual void init()
 		{
-			writer = new DataLibWriter( (std::string("run/condprop/") + name + ".txt").c_str() );
+			writer = createWriter( name );
 
 			const char *colnames[] = {"Time", "X1", "Z1", "X2","Z2", NULL};
 			const datalib::Type coltypes[] = {datalib::INT, datalib::FLOAT, datalib::FLOAT, datalib::FLOAT, datalib::FLOAT};
@@ -740,7 +748,7 @@ namespace condprop
 
 		virtual void init()
 		{
-			writer = new DataLibWriter( (std::string("run/condprop/") + name + ".txt").c_str() );
+			writer = createWriter( name );
 
 			const char *colnames[ 1 + globals::numEnergyTypes + 1 ];
 			datalib::Type coltypes[ 1 + globals::numEnergyTypes ];
