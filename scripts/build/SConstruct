@@ -146,7 +146,7 @@ def env_create():
     env = env_common = init_env(Environment())
     env.Append( CPPSUFFIXES = ['.cp'] )
     #cpp_flags = ['-g', '-Wall', '-O2' ]
-    cpp_flags = ['-g', '-Wall', '-std=c++0x' ]
+    cpp_flags = ['-g', '-Wall' ]
 
     if PERFORMANCE_PROFILER:
         # use the gnu gprof
