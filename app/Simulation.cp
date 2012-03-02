@@ -5883,8 +5883,8 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 			fNumberToSeed = fMaxNumAgents;
 		fInitNumAgents = fMaxNumAgents;	// population starts at maximum
 		fMinNumAgents = fMaxNumAgents;		// population stays at mximum
-		if( fProbabilityOfMutatingSeeds == 0.0 )
-			fProbabilityOfMutatingSeeds = 1.0;	// so there is variation in the initial population
+// 		if( fProbabilityOfMutatingSeeds == 0.0 )
+// 			fProbabilityOfMutatingSeeds = 1.0;	// so there is variation in the initial population
 //		fMateThreshold = 1.5;				// so they can't reproduce on their own
 
 		for( int i = 0; i < fNumDomains; i++ )	// over all domains
@@ -5894,7 +5894,7 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 				fDomains[i].numberToSeed = fDomains[i].maxNumAgents;
 			fDomains[i].initNumAgents = fDomains[i].maxNumAgents;	// population starts at maximum
 			fDomains[i].minNumAgents  = fDomains[i].maxNumAgents;	// population stays at maximum
-			fDomains[i].probabilityOfMutatingSeeds = fProbabilityOfMutatingSeeds;				// so there is variation in the initial population
+// 			fDomains[i].probabilityOfMutatingSeeds = fProbabilityOfMutatingSeeds;				// so there is variation in the initial population
 		}
 
 		agent::gNumDepletionSteps = 0;				// turn off the high-population penalty
@@ -5906,7 +5906,7 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 		cout << "  InitNumAgents" ses fInitNumAgents nl;
 		cout << "  MinNumAgents" ses fMinNumAgents nl;
 		cout << "  NumberToSeed" ses fNumberToSeed nl;
-		cout << "  ProbabilityOfMutatingSeeds" ses fProbabilityOfMutatingSeeds nl;
+// 		cout << "  ProbabilityOfMutatingSeeds" ses fProbabilityOfMutatingSeeds nl;
 //		cout << "  MateThreshold" ses fMateThreshold nl;
 		for( int i = 0; i < fNumDomains; i++ )
 		{
@@ -5914,7 +5914,7 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 			cout << "    initNumAgents" ses fDomains[i].initNumAgents nl;
 			cout << "    minNumAgents" ses fDomains[i].minNumAgents nl;
 			cout << "    numberToSeed" ses fDomains[i].numberToSeed nl;
-			cout << "    probabilityOfMutatingSeeds" ses fDomains[i].probabilityOfMutatingSeeds nl;
+// 			cout << "    probabilityOfMutatingSeeds" ses fDomains[i].probabilityOfMutatingSeeds nl;
 		}
 		cout << "  NumDepletionSteps" ses agent::gNumDepletionSteps nl;
 		cout << "  .MaxPopulationPenaltyFraction" ses agent::gMaxPopulationPenaltyFraction nl;
