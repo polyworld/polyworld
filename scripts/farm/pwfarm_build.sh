@@ -108,7 +108,7 @@ function build_bct()
     mkdir -p $install_dir/include
     mkdir -p $install_dir/lib
     
-    if [ -n $PYTHONVER ]; then
+    if [[ -n $PYTHONVER ]]; then
     	python_ver=$PYTHONVER
     else
     	python_ver="2.6"
