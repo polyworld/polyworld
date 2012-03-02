@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef linux
+#ifdef __linux__
 	#include <errno.h>
 #endif
 

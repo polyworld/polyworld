@@ -11,8 +11,8 @@
 
 // System
 
-#ifndef linux      /* how does one say #ifdef MAC_OSX ? */
-#include <mach/mach_time.h>
+#ifdef __APPLE__
+	#include <mach/mach_time.h>
 #endif
 
 #include <math.h>

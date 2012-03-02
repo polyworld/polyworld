@@ -1313,7 +1313,7 @@ char* sgets( char* string, size_t size, FILE* file )
 
 double hirestime( void )
 {
-#ifdef linux
+#ifdef __linux__
 
 	struct timeval tv;
 	gettimeofday( &tv, NULL );

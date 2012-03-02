@@ -63,8 +63,6 @@ char* concat(const char* s1, const char* s2, const char* s3, const char* s4, con
 char* itoa(long i);
 char* ftoa(float f);
 
-inline float fmax(float f1, float f2)
-    { return (f2>f1) ? f2 : f1; }
 inline float fmax(float f1, float f2, float f3)
     { return (f2>f1) ? fmax(f2,f3) : fmax(f1,f3); }
 inline float fmax(float f1, float f2, float f3, float f4)
@@ -73,8 +71,6 @@ inline float fmax(float f1, float f2, float f3, float f4, float f5)
     { return (f2>f1) ? fmax(f2,f3,f4,f5) : fmax(f1,f3,f4,f5); }
 
 
-inline float fmin(float f1, float f2)
-    { return (f2<f1) ? f2 : f1; }
 inline float fmin(float f1, float f2, float f3)
     { return (f2<f1) ? fmin(f2,f3) : fmin(f1,f3); }
 inline float fmin(float f1, float f2, float f3, float f4)

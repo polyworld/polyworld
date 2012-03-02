@@ -259,21 +259,23 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 
 	InitFittest();
 
-	// Set up the run directory and its subsidiaries
-	char s[256];
-	char t[256];
-
-#define MKDIR(PATH)												\
-
-	// First save the old directory, if it exists
-	sprintf( s, "run" );
-	sprintf( t, "run_%ld", time(NULL) );
-	(void) rename( s, t );
-
-	if( mkdir("run", PwDirMode) )
+	// ---
+	// --- Create the run directory
+	// ---
 	{
-		eprintf( "Error making run directory (%d)\n", errno );
-		exit( 1 );
+		char s[256];
+		char t[256];
+
+		// First save the old directory, if it exists
+		sprintf( s, "run" );
+		sprintf( t, "run_%ld", time(NULL) );
+		(void) rename( s, t );
+
+		if( mkdir("run", PwDirMode) )
+		{
+			eprintf( "Error making run directory (%d)\n", errno );
+			exit( 1 );
+		}
 	}
 
 	// ---
