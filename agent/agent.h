@@ -29,7 +29,6 @@
 
 
 // Forward declarations
-class AbstractFile;
 class agent;
 class BeingCarriedSensor;
 class CarryingSensor;
@@ -139,9 +138,7 @@ public:
     void SetMass(float f);
     
     virtual void draw();
-    void grow( long mateWait,
-			   bool recordBrainAnatomy,
-			   bool recordBrainFunction );    
+    void grow( long mateWait );    
     virtual void setradius();    
 	void eat( food* f,
 			  float eatFitnessParameter,
@@ -157,7 +154,6 @@ public:
     void rewardmovement(float moveFitnessParam, float speed2dpos);
     void lastrewards(float energyFitness, float ageFitness);
     void Die();
-	void EndFunctional();
 
 	void addListener( AgentListener *listener );
 	void removeListener( AgentListener *listener );
@@ -235,6 +231,11 @@ public:
 	float CarryEnergy( void );
 	void PrintCarries( FILE* );
 	TSimulation* fSimulation;
+
+	struct BrainAnalysisParms
+	{
+		std::string functionPath;
+	} brainAnalysisParms;
 	
 protected:
     void NumberToName();
@@ -331,8 +332,6 @@ protected:
     gscene fScene;
     frustumXZ fFrustum;
     short fDomain;
-	
-	AbstractFile *fBrainFuncFile;
 	
 	float fCarryRadius;
 

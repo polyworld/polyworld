@@ -147,7 +147,7 @@ NervousSystem::nerve_iterator NervousSystem::end_nerve( Nerve::Type type )
 	return lists[type].end();
 }
 
-void NervousSystem::grow( Genome *g, long agent_number, bool record_anatomy )
+void NervousSystem::grow( Genome *g )
 {
 	b->Grow( g );
 
@@ -159,8 +159,11 @@ void NervousSystem::grow( Genome *g, long agent_number, bool record_anatomy )
 	{
 		(*it)->sensor_grow( this );
 	}
+}
 
-	b->Prebirth( agent_number, record_anatomy );
+void NervousSystem::prebirth()
+{
+	b->Prebirth();
 }
 
 void NervousSystem::prebirthSignal()

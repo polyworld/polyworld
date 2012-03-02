@@ -680,6 +680,13 @@ namespace proplib
 		}
 	}
 
+	string Property::getRawScalarString()
+	{
+		assert( type == SCALAR );
+
+		return sval;
+	}
+
 	void Property::add( Node *node )
 	{
 		assert( type == CONTAINER );
@@ -2130,7 +2137,7 @@ namespace proplib
 
 				if( !result )
 				{
-					propValue.err( string("Failed assertion '") + (string)attrVal + "' at " + attrVal.loc.getDescription());
+					propValue.err( string("Failed assertion '") + attrVal.getRawScalarString() + "' at " + attrVal.loc.getDescription());
 				}
 			}
 

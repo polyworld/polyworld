@@ -22,6 +22,7 @@
 #include <sys/errno.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <set>
 #include <string>
 #include <vector>
 #include <iostream>
@@ -136,13 +137,39 @@ float gaussian( float x, float mean, float variance )
     return( exp( -(x-mean)*(x-mean) / variance ) );
 }
 
+string dirname( const string &path )
+{
+    size_t end = path.length() - 1;
+
+    if( path[end] == '/' )
+        end--;
+
+    end = path.rfind( '/', end );
+
+    return path.substr( 0, end );
+}
+
+void makeDirs( const string &path )
+{
+#pragma omp critical(alreadyMade)
+	{
+		static set<string> alreadyMade;
+
+		if( alreadyMade.find(path) == alreadyMade.end() )
+		{
+			char cmd[1024];
+			sprintf( cmd, "mkdir -p %s", path.c_str() );
+			if( 0 != system(cmd) )
+				exit( 1 );
+
+			alreadyMade.insert( path );
+		}
+	}
+}
+
 void makeParentDir( const string &path )
 {
-	// todo: do this without shell
-	char cmd[1024];
-	sprintf( cmd, "mkdir -p $(dirname %s)", path.c_str() );
-	if( 0 != system(cmd) )
-		exit( 1 );
+	makeDirs( dirname(path) );
 }
 
 int SetMaximumFiles( long filecount )

@@ -69,7 +69,7 @@ public:
 					   short *firstneur,
 					   long &synapseCount_brain,
 					   genome::SynapseType *synapseType );
-	void Prebirth( long agentNumber, bool recordBrainAnatomy );
+	void Prebirth();
     void Update( bool bprint );
 
     float BrainEnergy();
@@ -78,8 +78,9 @@ public:
     short GetNumNonInputNeurons();
 	short NumNeuronGroups( bool ignoreEmpty );
         
-	void dumpAnatomical( const char* directoryName, const char* suffix, long index, float fitness );
-	AbstractFile* startFunctional( long index );
+	void dumpAnatomical( AbstractFile *file, long index, float fitness );
+	
+	void startFunctional( AbstractFile *file, long index );
 	void endFunctional( AbstractFile* file, float fitness );
 	void writeFunctional( AbstractFile* file );
         

@@ -53,7 +53,8 @@ class NervousSystem
 	nerve_iterator begin_nerve( Nerve::Type type );
 	nerve_iterator end_nerve( Nerve::Type type );
 
-	void grow( genome::Genome *g, long agent_number, bool record_anatomy );
+	void grow( genome::Genome *g );
+	void prebirth();
 	void prebirthSignal();
 	void startFunctional( AbstractFile *f );
 	void dumpAnatomical( AbstractFile *f );

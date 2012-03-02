@@ -186,17 +186,13 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 
 		fGlobalEnergyScaleFactor(1.0),
 
-		fComplexityLog(NULL),
-		fComplexitySeedLog(NULL),
-
 		fEvents(NULL),
 
 		fLoadState(false),
 		
 		fCalcFoodPatchAgentCounts(true),
-		fNewDeaths(0),
-		fFittest(NULL),
-		fRecentFittest(NULL),
+		fCalcComplexity(false),
+
 		fFitI(0),
 		fFitJ(1),
 		fMaxFitness(0.),
@@ -268,86 +264,22 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 	char t[256];
 
 #define MKDIR(PATH)												\
-	if( mkdir( PATH, PwDirMode ) )								\
-		eprintf( "Error making %s directory (%d)\n", PATH, errno );
 
 	// First save the old directory, if it exists
 	sprintf( s, "run" );
 	sprintf( t, "run_%ld", time(NULL) );
 	(void) rename( s, t );
 
-	MKDIR( "run" );
+	if( mkdir("run", PwDirMode) )
+	{
+		eprintf( "Error making run directory (%d)\n", errno );
+		exit( 1 );
+	}
 
 	// ---
 	// --- Init Conditional Properties
 	// ---
 	fConditionalProps->init();
-
-	if( fBestSoFarBrainAnatomyRecordFrequency || fBestSoFarBrainFunctionRecordFrequency ||
-		fBestRecentBrainAnatomyRecordFrequency || fBestRecentBrainFunctionRecordFrequency ||
-		fBrainAnatomyRecordAll || fBrainFunctionRecordAll || fBrainFunctionRecentRecordFrequency ||
-		fBrainAnatomyRecordSeeds || fBrainFunctionRecordSeeds )
-	{
-		int agent_factor = 0;
-
-		if( RecordBrainFunction( 1 ) ) agent_factor++;
-
-		// logtodo
-		//int nfiles = 100 + (fMaxNumAgents * agent_factor);
-		int nfiles = 4096;
-
-		// If we're going to be saving info on all these files, must increase the number allowed open
-		if( SetMaximumFiles( nfiles ) )
-		  {
-		    eprintf( "Error setting maximum files to %d (%d) -- consult ulimit\n", nfiles, errno );
-		    //exit(1);
-		  }
-
-		if( mkdir( "run/brain", PwDirMode ) )
-			eprintf( "Error making run/brain directory (%d)\n", errno );
-			
-			
-	#define RecordRandomBrainAnatomies 0
-	#if RecordRandomBrainAnatomies
-		if( mkdir( "run/brain/random", PwDirMode ) )
-			eprintf( "Error making run/brain/random directory (%d)\n", errno );
-	#endif
-		if( fBestSoFarBrainAnatomyRecordFrequency || fBestRecentBrainAnatomyRecordFrequency || fBrainAnatomyRecordAll || fBrainAnatomyRecordSeeds )
-			if( mkdir( "run/brain/anatomy", PwDirMode ) )
-				eprintf( "Error making run/brain/anatomy directory (%d)\n", errno );
-		if( fBrainFunctionRecentRecordFrequency || fBestSoFarBrainFunctionRecordFrequency || fBestRecentBrainFunctionRecordFrequency || fBrainFunctionRecordAll || fBrainFunctionRecordSeeds )
-			if( mkdir( "run/brain/function", PwDirMode ) )
-				eprintf( "Error making run/brain/function directory (%d)\n", errno );
-		if( fBestSoFarBrainAnatomyRecordFrequency || fBestSoFarBrainFunctionRecordFrequency )
-			if( mkdir( "run/brain/bestSoFar", PwDirMode ) )
-				eprintf( "Error making run/brain/bestSoFar directory (%d)\n", errno );
-		if( fBestRecentBrainAnatomyRecordFrequency || fBestRecentBrainFunctionRecordFrequency )
-			if( mkdir( "run/brain/bestRecent", PwDirMode ) )
-				eprintf( "Error making run/brain/bestRecent directory (%d)\n", errno );
-		if( fBrainAnatomyRecordSeeds || fBrainFunctionRecordSeeds )
-		{
-			if( mkdir( "run/brain/seeds", PwDirMode ) )
-				eprintf( "Error making run/brain/seeds directory (%d)\n", errno );
-			if( fBrainAnatomyRecordSeeds )
-				if( mkdir( "run/brain/seeds/anatomy", PwDirMode ) )
-					eprintf( "Error making run/brain/seeds/anatomy directory (%d)\n", errno );
-			if( fBrainFunctionRecordSeeds )
-				if( mkdir( "run/brain/seeds/function", PwDirMode ) )
-					eprintf( "Error making run/brain/seeds/function directory (%d)\n", errno );
-		}
-		if( fBrainFunctionRecentRecordFrequency )
-		{
-			if( mkdir( "run/brain/Recent", PwDirMode ) )
-				eprintf( "Error making run/brain/Recent directory (%d)\n", errno );
-			if( mkdir( "run/brain/Recent/0", PwDirMode ) )
-				eprintf( "Error making run/brain/Recent/0 directory (%d)\n", errno );
-			fCurrentRecentEpoch = fBrainFunctionRecentRecordFrequency;
-			sprintf( t, "run/brain/Recent/%ld", fCurrentRecentEpoch );
-			if( mkdir( t, PwDirMode ) )
-				eprintf( "Error making %s directory (%d)\n", t, errno );
-		}
-	}
-
 
 	if( fLockStepWithBirthsDeathsLog )
 	{
@@ -400,6 +332,21 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 	logs = new Logs( this, docWorldFile );
 
 	// ---
+	// --- Set Maximum Open Files
+	// ---
+	{
+		int maxOpenFiles = 100; // just a fudge
+
+		maxOpenFiles += logs->getMaxOpenFiles();
+
+		// If we're going to be saving info on all these files, must increase the number allowed open
+		if( SetMaximumFiles( maxOpenFiles ) )
+		{
+		    eprintf( "Error setting maximum files to %d (%d) -- consult ulimit\n", maxOpenFiles, errno );
+		}
+	}
+
+	// ---
 	// --- Init Ground
 	// ---
 	InitGround();
@@ -448,13 +395,10 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 	// ---
 	monitorManager = new MonitorManager( this, monitorfilePath );
 
-	InitComplexityLog( fBrainFunctionRecentRecordFrequency );
-// 	InitAvrComplexityLog();
-	
 	// ---
 	// --- Init Event Filtering
 	// ---
-	if( fComplexityFitnessWeight != 0.0 || fRecordComplexity )
+	if( fCalcComplexity )
 	{
 		bool eventFiltering = false;
 		for( unsigned int i = 0; i < fComplexityType.size(); i++ )
@@ -555,18 +499,7 @@ TSimulation::~TSimulation()
 	for (short id = 0; id < fNumDomains; id++)
 	{
 		if (fDomains[id].fittest)
-		{
-			for (int i = 0; i < fNumberFit; i++)
-			{
-				if (fDomains[id].fittest[i])
-				{
-					if (fDomains[id].fittest[i]->genes != NULL)
-						delete fDomains[id].fittest[i]->genes;
-					delete fDomains[id].fittest[i];
-				}
-			}
 			delete fDomains[id].fittest;
-		}
 		
 		if( fDomains[id].fLeastFit )
 			delete[] fDomains[id].fLeastFit;
@@ -574,32 +507,10 @@ TSimulation::~TSimulation()
 
 
 	if (fFittest != NULL)
-	{
-		for (int i = 0; i < fNumberFit; i++)
-		{
-			if (fFittest[i])
-			{
-				if (fFittest[i]->genes != NULL)
-					delete fFittest[i]->genes;
-				delete fFittest[i];
-			}
-		}		
-		delete[] fFittest;
-	}
+		delete fFittest;
 	
 	if( fRecentFittest != NULL )
-	{
-		for( int i = 0; i < fNumberRecentFit; i++ )
-		{
-			if( fRecentFittest[i] )
-			{
-				//				if( fRecentFittest[i]->genes != NULL )	// we don't save the genes in the bestRecent list
-				//					delete fFittest[i]->genes;
-				delete fRecentFittest[i];
-			}
-		}		
-		delete[] fRecentFittest;
-	}
+		delete fRecentFittest;
 	
 	Brain::braindestruct();
 
@@ -737,8 +648,6 @@ void TSimulation::Step()
 	}
 
 	
-//  if( fDoCPUWork )
-
 	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 	// ^^^ MASTER TASK ExecInteract
 	// ^^^
@@ -764,7 +673,6 @@ void TSimulation::Step()
 
 	debugcheck( "after Interact() in step %ld", fStep );
 
-//	fAverageFitness /= agent::gXSortedAgents.count();
 	if( fNumAverageFitness > 0 )
 		fAverageFitness /= fNumAverageFitness * fTotalHeuristicFitness;
 
@@ -813,216 +721,23 @@ void TSimulation::Step()
 	fAverageFoodEnergyIn = (float(fStep - 1) * fAverageFoodEnergyIn + fFoodEnergyIn) / float(fStep);
 	fAverageFoodEnergyOut = (float(fStep - 1) * fAverageFoodEnergyOut + fFoodEnergyOut) / float(fStep);
 	
+	// -------------------------
+	// ---- Update Monitors ----
+	// -------------------------
 	UpdateMonitors();
 
 	debugcheck( "after brain monitor window in step %ld", fStep );
 	
-	// Archive the Recent brain function files, if we're doing that
-	if( fBrainFunctionRecentRecordFrequency && fStep >= fCurrentRecentEpoch )
+	// ---------------
+	// ---- Epoch ----
+	// ---------------
+	if( fEpochFrequency && ((fStep % fEpochFrequency) == 0) )
 	{
-		EndComplexityLog( fCurrentRecentEpoch );
-		if( fStep < fMaxSteps )
-		{
-			char t[256];
-			fCurrentRecentEpoch += fBrainFunctionRecentRecordFrequency;
-			sprintf( t, "run/brain/Recent/%ld", fCurrentRecentEpoch );
-			if( mkdir( t, PwDirMode ) )
-				eprintf( "Error making %s directory (%d)\n", t, errno );
-			InitComplexityLog( fCurrentRecentEpoch );
-		}
-	}
+		logs->postEvent( EpochEndEvent(fStep) );
 
-	// Archive the bestSoFar brain anatomy and function files, if we're doing that
-	if( fBestSoFarBrainAnatomyRecordFrequency && ((fStep % fBestSoFarBrainAnatomyRecordFrequency) == 0) )
-	{
-		char s[256];
-		int limit = fNumberDied < fNumberFit ? fNumberDied : fNumberFit;
+		fEpoch += fEpochFrequency;
 
-		sprintf( s, "run/brain/bestSoFar/%ld", fStep );
-		mkdir( s, PwDirMode );
-		for( int i = 0; i < limit; i++ )
-		{
-			char t[256];	// target (use s for source)
-			sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_incept.txt", fFittest[i]->agentID );
-			sprintf( t, "run/brain/bestSoFar/%ld/%d_brainAnatomy_%ld_incept.txt", fStep, i, fFittest[i]->agentID );
-			if( link( s, t ) )
-				eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
-			sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_birth.txt", fFittest[i]->agentID );
-			sprintf( t, "run/brain/bestSoFar/%ld/%d_brainAnatomy_%ld_birth.txt", fStep, i, fFittest[i]->agentID );
-			if( link( s, t ) )
-				eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
-			sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_death.txt", fFittest[i]->agentID );
-			sprintf( t, "run/brain/bestSoFar/%ld/%d_brainAnatomy_%ld_death.txt", fStep, i, fFittest[i]->agentID );
-			if( link( s, t ) )
-				eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
-			sprintf( s, "run/brain/function/brainFunction_%ld.txt", fFittest[i]->agentID );
-			sprintf( t, "run/brain/bestSoFar/%ld/%d_brainFunction_%ld.txt", fStep, i, fFittest[i]->agentID );
-			if( link( s, t ) )
-				eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
-			
-			// Generate the bestSoFar Complexity, if we're doing that.
-			// Note that we calculate complexity for the Processing units only, by default,
-			// but if we're using complexity as a fitness function then fFittest[i]->complexity
-			// could be any of the available types of complexity (including certain differences).
-// 			if(	fRecordComplexity )
-// 			{
-// 				if( fFittest[i]->complexity == 0.0 )		// if Complexity is zero it means we have to Calculate it
-// 				{
-// 					fFittest[i]->complexity = CalcComplexity_brainfunction( t, "P" );		// Complexity of Processing Units Only, all time steps
-// 					cout << "[COMPLEXITY] Agent: " << fFittest[i]->agentID << "\t Processing Complexity: " << fFittest[i]->complexity << endl;
-// 				}
-// 			}
-
-		}
-	}
-	
-	// Archive the bestRecent brain anatomy and function files, if we're doing that
-	if( fBestRecentBrainAnatomyRecordFrequency && ((fStep % fBestRecentBrainAnatomyRecordFrequency) == 0) )
-	{
-		char s[256];
-		int limit = fNumberDied < fNumberRecentFit ? fNumberDied : fNumberRecentFit;
-
-		sprintf( s, "run/brain/bestRecent/%ld", fStep );
-		mkdir( s, PwDirMode );
-		for( int i = 0; i < limit; i++ )
-		{
-			if( fRecentFittest[i]->agentID > 0 )
-			{
-				char t[256];	// target (use s for source)
-				sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_incept.txt", fRecentFittest[i]->agentID );
-				sprintf( t, "run/brain/bestRecent/%ld/%d_brainAnatomy_%ld_incept.txt", fStep, i, fRecentFittest[i]->agentID );
-				if( link( s, t ) )
-					eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
-				sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_birth.txt", fRecentFittest[i]->agentID );
-				sprintf( t, "run/brain/bestRecent/%ld/%d_brainAnatomy_%ld_birth.txt", fStep, i, fRecentFittest[i]->agentID );
-				if( link( s, t ) )
-					eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
-				sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_death.txt", fRecentFittest[i]->agentID );
-				sprintf( t, "run/brain/bestRecent/%ld/%d_brainAnatomy_%ld_death.txt", fStep, i, fRecentFittest[i]->agentID );
-				if( link( s, t ) )
-					eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
-				sprintf( s, "run/brain/function/brainFunction_%ld.txt", fRecentFittest[i]->agentID );
-				sprintf( t, "run/brain/bestRecent/%ld/%d_brainFunction_%ld.txt", fStep, i, fRecentFittest[i]->agentID );
-				if( link( s, t ) )
-					eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
-
-// 				if(	fRecordComplexity )
-// 				{
-// 					if( fRecentFittest[i]->complexity == 0.0 )		// if Complexity is zero it means we have to Calculate it
-// 					{
-// 						fRecentFittest[i]->complexity = CalcComplexity_brainfunction( t, "P" );		// Complexity of Processing Units Only, all time steps
-// 						cout << "[COMPLEXITY] Agent: " << fRecentFittest[i]->agentID << "\t Processing Complexity: " << fRecentFittest[i]->complexity << endl;
-// 					}
-// 				}
-
-			}
-		
-		}
-		
-		//Calculate Mean and StdDev of the fRecentFittest Complexities.
-		if( fRecordComplexity )
-		{
-			int limit2 = limit <= fNumberRecentFit ? limit : fNumberRecentFit;
-		
-			double mean=0;
-			double stddev=0;	//Complexity: Time to Average and StdDev the BestRecent List
-			int count=0;		//Keeps a count of the number of entries in fRecentFittest.
-			
-			for( int i=0; i<limit2; i++ )
-			{
-				if( fRecentFittest[i]->agentID > 0 )
-				{
-//					cout << "[" <<  fStep << "] " << fRecentFittest[i]->agentID << ": " << fRecentFittest[i]->complexity << endl;
-					mean += fRecentFittest[i]->complexity;		// Get Sum of all Complexities
-					count++;
-				}
-			}
-		
-			mean = mean / count;			// Divide by count to get the average
-		
-
-			if( ! (mean >= 0) )			// If mean is 'nan', make it zero instead of 'nan'  -- Only true before any agents have died.
-			{
-				mean = 0;
-				stddev = 0;
-			}
-			else						// Calculate the stddev (You'll do this except when before an agent has died)
-			{
-				for( int i=0; i<limit2; i++ )
-				{
-					if( fRecentFittest[i]->agentID > 0 )
-					{
-						stddev += pow(fRecentFittest[i]->complexity - mean, 2);		// Get Sum of all Complexities
-					}
-				}
-			}
-		
-			stddev = sqrt(stddev / (count-1) );		// note that this stddev is divided by N-1 (MATLAB default)
-			double StandardError = stddev / sqrt(count);
-//DEBUG			cout << "Mean = " << mean << "  //  StdDev = " << stddev << endl;
-			
-			FILE * cFile;
-			
-			if( (cFile =fopen("run/brain/bestRecent/complexity.txt", "a")) == NULL )
-			{
-				cerr << "could not open run/brain/bestRecent/complexity.txt for writing" << endl;
-				exit(1);
-			}
-			
-			// print to complexity.txt
-			fprintf( cFile, "%ld %f %f %f %d\n", fStep, mean, stddev, StandardError, count );
-			fclose( cFile );
-			
-		}
-
-		// Now delete all bestRecent agent files, unless they are also on the bestSoFar list
-		// Also empty the bestRecent list here, so we start over each epoch
-		int limit2 = fNumberDied < fNumberFit ? fNumberDied : fNumberFit;
-		for( int i = 0; i < limit; i++ )
-		{
-			if( !fBrainAnatomyRecordAll || !fBrainFunctionRecordAll )
-			{
-				// First determine whether or not each bestRecent agent is in the bestSoFar list or not
-				bool inBestSoFarList = false;
-				for( int j = 0; j < limit2; j++ )
-				{
-					if( fRecentFittest[i]->agentID == fFittest[j]->agentID )
-					{
-						inBestSoFarList = true;
-						break;
-					}
-				}
-				
-				// If each bestRecent agent is NOT in the bestSoFar list, then unlink all its files from their original location
-				if( !inBestSoFarList && (fRecentFittest[i]->agentID > 0) )
-				{
-					if( (fBestRecentBrainAnatomyRecordFrequency || fBestSoFarBrainAnatomyRecordFrequency) && !fBrainAnatomyRecordAll )
-					{
-						sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_incept.txt", fRecentFittest[i]->agentID );
-						if( unlink( s ) )
-							eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
-						sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_birth.txt", fRecentFittest[i]->agentID );
-						if( unlink( s ) )
-							eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
-						sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_death.txt", fRecentFittest[i]->agentID );
-						if( unlink( s ) )
-							eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
-					}
-					if( (fBestRecentBrainFunctionRecordFrequency || fBestSoFarBrainFunctionRecordFrequency) && !fBrainFunctionRecordAll && !fBrainFunctionRecentRecordFrequency )
-					{
-						sprintf( s, "run/brain/function/brainFunction_%ld.txt", fRecentFittest[i]->agentID );
-						if( unlink( s ) )
-							eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
-					}
-				}
-			}
-			
-			// Empty the bestRecent list by zeroing out agent IDs and fitnesses
-			fRecentFittest[i]->agentID = 0;
-			fRecentFittest[i]->fitness = 0.0;
-			fRecentFittest[i]->complexity = 0.0;
-		}
-
+		fRecentFittest->clear();
 	}
 	
 	logs->postEvent( StepEndEvent() );
@@ -1064,53 +779,6 @@ string TSimulation::EndAt( long timestep )
 //---------------------------------------------------------------------------
 void TSimulation::InitFittest()
 {
-    if( fNumberFit > 0 )
-    {
-        fFittest = new FitStruct*[fNumberFit];
-		Q_CHECK_PTR( fFittest );
-
-        for (int i = 0; i < fNumberFit; i++)
-        {
-			fFittest[i] = new FitStruct;
-			Q_CHECK_PTR( fFittest[i] );
-            fFittest[i]->genes = GenomeUtil::createGenome();
-			Q_CHECK_PTR( fFittest[i]->genes );
-            fFittest[i]->fitness = 0.0;
-			fFittest[i]->agentID = 0;
-			fFittest[i]->complexity = 0.0;
-        }
-		
-        fRecentFittest = new FitStruct*[fNumberRecentFit];
-		Q_CHECK_PTR( fRecentFittest );
-
-        for( int i = 0; i < fNumberRecentFit; i++ )
-        {
-			fRecentFittest[i] = new FitStruct;
-			Q_CHECK_PTR( fRecentFittest[i] );
-            fRecentFittest[i]->genes = NULL;	// GenomeUtil::createGenome()->legacy;	// we don't save the genes in the bestRecent list
-            fRecentFittest[i]->fitness = 0.0;
-			fRecentFittest[i]->agentID = 0;
-			fRecentFittest[i]->complexity = 0.0;
-        }
-		
-        for( int id = 0; id < fNumDomains; id++ )
-        {
-            fDomains[id].fittest = new FitStruct*[fNumberFit];
-			Q_CHECK_PTR( fDomains[id].fittest );
-
-            for (int i = 0; i < fNumberFit; i++)
-            {
-				fDomains[id].fittest[i] = new FitStruct;
-				Q_CHECK_PTR( fDomains[id].fittest[i] );
-                fDomains[id].fittest[i]->genes = GenomeUtil::createGenome();
-				Q_CHECK_PTR( fDomains[id].fittest[i]->genes );
-                fDomains[id].fittest[i]->fitness = 0.0;
-				fDomains[id].fittest[i]->agentID = 0;
-				fDomains[id].fittest[i]->complexity = 0.0;
-            }
-        }
-    }
-
 	if( fSmiteFrac > 0.0 )
 	{
         for( int id = 0; id < fNumDomains; id++ )
@@ -1168,14 +836,7 @@ void TSimulation::InitAgents()
 
 		virtual void task_exec( TSimulation *sim )
 		{
-			a->grow( sim->fMateWait,
-					 sim->RecordBrainAnatomy( a->Number() ),
-					 sim->RecordBrainFunction( a->Number() ) );
-
-
-#if RecordRandomBrainAnatomies
-			a->GetBrain()->dumpAnatomical( "run/brain/random", "birth", a->Number(), 0.0 );
-#endif
+			a->grow( sim->fMateWait );
 		}
 	};
 
@@ -1612,191 +1273,6 @@ void TSimulation::ReadSeedPositionsFromFile()
 		exit( 1 );
 	}
 }
-
-//---------------------------------------------------------------------------
-// TSimulation::InitComplexityLog
-//---------------------------------------------------------------------------
-
-void TSimulation::InitComplexityLog( long epoch )
-{
-	//printf( "%s %ld %s\n", __func__, epoch, fRecordComplexity ? "True" : "False" );
-
-	if( ! fRecordComplexity )
-		return;	
-
-	fComplexityLog = OpenComplexityLog( epoch );
-	
-	if( epoch == fBrainFunctionRecentRecordFrequency )	// first time only
-		fComplexitySeedLog = OpenComplexityLog( 0 );
-}
-
-
-//---------------------------------------------------------------------------
-// TSimulation::OpenComplexityLog
-//---------------------------------------------------------------------------
-
-DataLibWriter* TSimulation::OpenComplexityLog( long epoch )
-{
-	char path[256];
-	sprintf( path, "run/brain/Recent/%ld/complexity_%s.plt", epoch, fComplexityType.c_str() );
-	
-	//printf( "%s %s\n", __func__, path );
-
-	DataLibWriter* log = new DataLibWriter( path );
-
-	const char *colnames[] =
-		{
-			"AgentNumber",
-			"Complexity",
-			NULL
-		};
-	const datalib::Type coltypes[] =
-		{
-			datalib::INT,
-			datalib::FLOAT
-		};
-
-	log->beginTable( fComplexityType.c_str(),
-					 colnames,
-					 coltypes );
-	
-	return( log );
-}
-
-
-//---------------------------------------------------------------------------
-// TSimulation::UpdateComplexityLog
-//---------------------------------------------------------------------------
-
-void TSimulation::UpdateComplexityLog( agent *a )
-{
-	//printf( "%s: %ld %g\n", __func__, a->Number(), a->Complexity() );
-	
-	// complexity will only be 0.0 if it went uncomputed, such as when
-	// the number of neurons is more than the number of time steps the
-	// agent lived, or, under some running conditions, the agent's
-	// lifespan is simply too short (< 200 time steps).
-	if( a->Complexity() > 0.0 )
-	{
-		fComplexityLog->addRow( a->Number(), a->Complexity() );
-	
-		if( a->Number() <= fInitNumAgents )
-			fComplexitySeedLog->addRow( a->Number(), a->Complexity() );
-	}
-}
-
-
-//---------------------------------------------------------------------------
-// TSimulation::EndComplexityLog
-//---------------------------------------------------------------------------
-
-void TSimulation::EndComplexityLog( long epoch )
-{
-	//printf( "%s %ld %p\n", __func__, epoch, fComplexityLog );
-
-	// If we've run long enough we can be sure all the seed agents
-	// have died, then close the complexity seed log (if it's still open)
-	if( fComplexitySeedLog && epoch >= genome::gMaxLifeSpan )
-	{
-		fComplexitySeedLog->endTable();
-// 		UpdateAvrComplexityLog( 0, fComplexitySeedLog );
-		delete fComplexitySeedLog;
-		fComplexitySeedLog = NULL;
-	}
-
-	if( fComplexityLog )
-	{
-		fComplexityLog->endTable();
-// 		UpdateAvrComplexityLog( epoch, fComplexityLog );
-		delete fComplexityLog;
-		fComplexityLog = NULL;
-	}
-}
-
-
-//---------------------------------------------------------------------------
-// TSimulation::InitAvrComplexityLog
-//---------------------------------------------------------------------------
-
-// void TSimulation::InitAvrComplexityLog()
-// {
-// 	if( ! fRecordComplexity )
-// 		return;
-// 	
-// 	fAvrComplexityLog = new DataLibWriter( "run/brain/Recent/AvrComplexity.plt" );
-// 
-// 	const char *colnames[] =
-// 		{
-// 			"Timestep",
-// 			"min",
-// 			"q1",
-// 			"median",
-// 			"q3",
-// 			"max",
-// 			"mean",
-// 			"mean_stderr",
-// 			"sampsize",
-// 			NULL
-// 		};
-// 	const datalib::Type coltypes[] =
-// 		{
-// 			datalib::INT,
-// 			datalib::FLOAT,
-// 			datalib::FLOAT,
-// 			datalib::FLOAT,
-// 			datalib::FLOAT,
-// 			datalib::FLOAT,
-// 			datalib::FLOAT,
-// 			datalib::FLOAT,
-// 			datalib::INT
-// 		};
-// 
-// 	fAvrComplexityLog->beginTable( fComplexityType.c_str(),
-// 								   colnames,
-// 								   coltypes );
-// }
-
-
-//---------------------------------------------------------------------------
-// TSimulation::UpdateAvrComplexityLog
-//---------------------------------------------------------------------------
-
-// NOTE: Following code is just leftover from UpdateComplexityLog() and must be entirely replaced
-// void TSimulation::UpdateAvrComplexityLog()
-// {
-// 	fComplexityLog->addRow( a->Number(),
-// 							a->GetComplexity() );
-// 	
-// 	if( a->Number() <= fInitAgents )
-// 		fComplexitySeedLog->addRow( a->Number(),
-// 									a->GetComplexity() );
-// }
-
-
-//---------------------------------------------------------------------------
-// TSimulation::EndAvrComplexityLog
-//---------------------------------------------------------------------------
-
-// NOTE: Following code is just leftover from EndComplexityLog() and must be entirely replaced
-// void TSimulation::EndAvrComplexityLog( long epoch )
-// {
-// 	if( fComplexityLog )
-// 	{
-// 		fComplexityLog->endTable();
-// 		delete fComplexityLog;
-// 		fComplexityLog = NULL;
-// 	}
-// 	
-// 	// If we've run long enough we can be sure all the seed agents
-// 	// have died, then close the complexity seed log (if it's still open)
-// 	if( fComplexitySeedLog && epoch >= genome::gMaxLifeSpan )
-// 	{
-// 		fComplexitySeedLog->endTable();
-// 		delete fComplexitySeedLog;
-// 		fComplexitySeedLog = NULL;
-// 	}
-// }
-
 
 //---------------------------------------------------------------------------
 // TSimulation::PickParentsUsingTournament
@@ -2579,9 +2055,7 @@ void TSimulation::MateLockstep( void )
 		Q_CHECK_PTR(e);
 
 		e->Genes()->crossover(c->Genes(), d->Genes(), true);
-		e->grow( fMateWait,
-				 RecordBrainAnatomy( e->Number() ),
-				 RecordBrainFunction( e->Number() ) );
+		e->grow( fMateWait );
 		Energy eenergy = c->mating( fMateFitnessParameter, fMateWait, /*lockstep*/ true )
 					   + d->mating( fMateFitnessParameter, fMateWait, /*lockstep*/ true );
 		Energy minenergy = fMinMateFraction * ( c->GetMaxEnergy() + d->GetMaxEnergy() ) * 0.5;	// just a modest, reasonable amount; this doesn't matter as much in lockstep mode, though since we count virtual births it does matter a tiny bit; this leaves the agent requiring food prior to mating if the parents don't contribute enough
@@ -2847,9 +2321,7 @@ void TSimulation::Mate( agent *c,
 
 					virtual void task_exec( TSimulation *sim )
 					{
-						e->grow( sim->fMateWait,
-								 sim->RecordBrainAnatomy( e->Number() ),
-								 sim->RecordBrainFunction( e->Number() ) );
+						e->grow( sim->fMateWait );
 
 						e->SetEnergy(eenergy);
 						e->SetFoodEnergy(eenergy);
@@ -3572,16 +3044,16 @@ void TSimulation::CreateAgents( void )
                 agent* newAgent = agent::getfreeagent(this, &fStage);
                 Q_CHECK_PTR(newAgent);
 
-                if ( fNumberFit && (fDomains[id].numdied >= fNumberFit) )
+                if ( fDomains[id].fittest && fDomains[id].fittest->isFull() )
                 {
                     // the list exists and is full
                     if (fFitness1Frequency
                     	&& ((fDomains[id].numcreated / fFitness1Frequency) * fFitness1Frequency == fDomains[id].numcreated) )
                     {
                         // revive 1 fittest
-                        newAgent->Genes()->copyFrom(fDomains[id].fittest[0]->genes);
+                        newAgent->Genes()->copyFrom(fDomains[id].fittest->get(0)->genes);
                         fNumberCreated1Fit++;
-						gaPrint( "%5ld: domain %d creation from one fittest (%4lu) %4ld\n", fStep, id, fDomains[id].fittest[0]->agentID, fNumberCreated1Fit );
+						gaPrint( "%5ld: domain %d creation from one fittest (%4lu) %4ld\n", fStep, id, fDomains[id].fittest->get(0)->agentID, fNumberCreated1Fit );
                     }
                     else if (fFitness2Frequency
                     		 && ((fDomains[id].numcreated / fFitness2Frequency) * fFitness2Frequency == fDomains[id].numcreated) )
@@ -3591,22 +3063,22 @@ void TSimulation::CreateAgents( void )
 						{
 							// using tournament selection
 							int parent1, parent2;
-							PickParentsUsingTournament(fNumberFit, &parent1, &parent2);
-							newAgent->Genes()->crossover(fDomains[id].fittest[parent1]->genes,
-														   fDomains[id].fittest[parent2]->genes,
-														   true);
+							PickParentsUsingTournament(fDomains[id].fittest->size(), &parent1, &parent2);
+							newAgent->Genes()->crossover(fDomains[id].fittest->get(parent1)->genes,
+														 fDomains[id].fittest->get(parent2)->genes,
+														 true);
 							fNumberCreated2Fit++;
-							gaPrint( "%5ld: domain %d creation from two (%d, %d) fittest (%4lu, %4lu) %4ld\n", fStep, id, parent1, parent2, fDomains[id].fittest[parent1]->agentID, fDomains[id].fittest[parent2]->agentID, fNumberCreated2Fit );
+							gaPrint( "%5ld: domain %d creation from two (%d, %d) fittest (%4lu, %4lu) %4ld\n", fStep, id, parent1, parent2, fDomains[id].fittest->get(parent1)->agentID, fDomains[id].fittest->get(parent2)->agentID, fNumberCreated2Fit );
 						}
 						else
 						{
 							// by iterating through the array of fittest
-							newAgent->Genes()->crossover(fDomains[id].fittest[fDomains[id].ifit]->genes,
-														   fDomains[id].fittest[fDomains[id].jfit]->genes,
-														   true);
+							newAgent->Genes()->crossover(fDomains[id].fittest->get(fDomains[id].ifit)->genes,
+														 fDomains[id].fittest->get(fDomains[id].jfit)->genes,
+														 true);
 							fNumberCreated2Fit++;
-							gaPrint( "%5ld: domain %d creation from two (%d, %d) fittest (%4lu, %4lu) %4ld\n", fStep, id, fDomains[id].ifit, fDomains[id].jfit, fDomains[id].fittest[fDomains[id].ifit]->agentID, fDomains[id].fittest[fDomains[id].jfit]->agentID, fNumberCreated2Fit );
-							ijfitinc(&(fDomains[id].ifit), &(fDomains[id].jfit));
+							gaPrint( "%5ld: domain %d creation from two (%d, %d) fittest (%4lu, %4lu) %4ld\n", fStep, id, fDomains[id].ifit, fDomains[id].jfit, fDomains[id].fittest->get(fDomains[id].ifit)->agentID, fDomains[id].fittest->get(fDomains[id].jfit)->agentID, fNumberCreated2Fit );
+							ijfitinc(fDomains[id].fittest->size(), &(fDomains[id].ifit), &(fDomains[id].jfit));
                         }
                     }
                     else
@@ -3639,9 +3111,7 @@ void TSimulation::CreateAgents( void )
 
 					virtual void task_exec( TSimulation *sim )
 					{
-						a->grow( sim->fMateWait,
-								 sim->RecordBrainAnatomy( a->Number() ),
-								 sim->RecordBrainFunction( a->Number() ) );
+						a->grow( sim->fMateWait );
 					}
 				};
 
@@ -3715,16 +3185,15 @@ void TSimulation::CreateAgents( void )
             agent* newAgent = agent::getfreeagent(this, &fStage);
             Q_CHECK_PTR(newAgent);
 
-            if( fNumberFit && (fNumberDied >= fNumberFit) )
+            if( fFittest && fFittest->isFull() )
             {
-                // the list exists and is full
                 if( fFitness1Frequency
                 	&& ((numglobalcreated / fFitness1Frequency) * fFitness1Frequency == numglobalcreated) )
                 {
                     // revive 1 fittest
-                    newAgent->Genes()->copyFrom( fFittest[0]->genes );
+                    newAgent->Genes()->copyFrom( fFittest->get(0)->genes );
                     fNumberCreated1Fit++;
-					gaPrint( "%5ld: global creation from one fittest (%4lu) %4ld\n", fStep, fFittest[0]->agentID, fNumberCreated1Fit );
+					gaPrint( "%5ld: global creation from one fittest (%4lu) %4ld\n", fStep, fFittest->get(0)->agentID, fNumberCreated1Fit );
                 }
                 else if( fFitness2Frequency && ((numglobalcreated / fFitness2Frequency) * fFitness2Frequency == numglobalcreated) )
                 {
@@ -3733,18 +3202,18 @@ void TSimulation::CreateAgents( void )
 					{
 						// using tournament selection
 						int parent1, parent2;
-						TSimulation::PickParentsUsingTournament(fNumberFit, &parent1, &parent2);
-						newAgent->Genes()->crossover( fFittest[parent1]->genes, fFittest[parent2]->genes, true );
+						TSimulation::PickParentsUsingTournament(fFittest->size(), &parent1, &parent2);
+						newAgent->Genes()->crossover( fFittest->get(parent1)->genes, fFittest->get(parent2)->genes, true );
 						fNumberCreated2Fit++;
-						gaPrint( "%5ld: global creation from two (%d, %d) fittest (%4lu, %4lu) %4ld\n", fStep, parent1, parent2, fFittest[parent1]->agentID, fFittest[parent2]->agentID, fNumberCreated2Fit );
+						gaPrint( "%5ld: global creation from two (%d, %d) fittest (%4lu, %4lu) %4ld\n", fStep, parent1, parent2, fFittest->get(parent1)->agentID, fFittest->get(parent2)->agentID, fNumberCreated2Fit );
 					}
 					else
 					{
 						// by iterating through the array of fittest
-						newAgent->Genes()->crossover( fFittest[fFitI]->genes, fFittest[fFitJ]->genes, true );
+						newAgent->Genes()->crossover( fFittest->get(fFitI)->genes, fFittest->get(fFitJ)->genes, true );
 						fNumberCreated2Fit++;
-						gaPrint( "%5ld: global creation from two (%d, %d) fittest (%4lu, %4lu) %4ld\n", fStep, fFitI, fFitJ, fFittest[fFitI]->agentID, fFittest[fFitJ]->agentID, fNumberCreated2Fit );
-						ijfitinc( &fFitI, &fFitJ );
+						gaPrint( "%5ld: global creation from two (%d, %d) fittest (%4lu, %4lu) %4ld\n", fStep, fFitI, fFitJ, fFittest->get(fFitI)->agentID, fFittest->get(fFitJ)->agentID, fNumberCreated2Fit );
+						ijfitinc( fFittest->size(), &fFitI, &fFitJ );
                     }
                 }
                 else
@@ -3763,9 +3232,7 @@ void TSimulation::CreateAgents( void )
 				gaPrint( "%5ld: global creation random early (%4ld)\n", fStep, fNumberCreatedRandom );
             }
 
-            newAgent->grow( fMateWait,
-							RecordBrainAnatomy( newAgent->Number() ),
-							RecordBrainFunction( newAgent->Number() ) );
+            newAgent->grow( fMateWait );
 			FoodEnergyIn( newAgent->GetFoodEnergy() );
 
             newAgent->settranslation(randpw() * globals::worldsize, 0.5 * agent::gAgentHeight, randpw() * -globals::worldsize);
@@ -4011,21 +3478,21 @@ void TSimulation::UpdateMonitors()
 //---------------------------------------------------------------------------
 // TSimulation::ijfitinc
 //---------------------------------------------------------------------------
-void TSimulation::ijfitinc(short* i, short* j)
+void TSimulation::ijfitinc(short n, short* i, short* j)
 {
     (*j)++;
 
     if ((*j) == (*i))
         (*j)++;
 
-    if ((*j) > fNumberFit - 1)
+    if ((*j) > n - 1)
     {
         (*j) = 0;
         (*i)++;
 
-        if ((*i) > fNumberFit - 1)
+        if ((*i) > n - 1)
 		{
-            (*i) = 0;	// min(1, fNumberFit - 1);
+            (*i) = 0;	// min(1, n - 1);
 			(*j) = 1;
 		}
     }
@@ -4042,6 +3509,9 @@ void TSimulation::Birth( agent* a,
 {
 	AgentBirthEvent birthEvent( a, reason, a_parent1, a_parent2 );
 
+	// ---
+	// --- Update Logs
+	// ---
 	logs->postEvent( birthEvent );
 
 	if( a )	// a will NULL for virtual births only
@@ -4234,27 +3704,27 @@ void TSimulation::Kill( agent* c,
 	objectxsortedlist::gXSortedObjects.removeObjectWithLink( (gobject*) c );
 
 	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-	// ^^^ PARALLEL TASK UpdateBrainData
+	// ^^^ PARALLEL TASK AnalyzeBrain
 	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-	class UpdateBrainData : public ITask
+	class AnalyzeBrain : public ITask
 	{
 	public:
 		agent *a;
-		UpdateBrainData( agent *a )
+		AnalyzeBrain( agent *a )
 		{
 			this->a = a;
 		}
 
 		virtual void task_exec( TSimulation *sim )
 		{
-			sim->Kill_UpdateBrainData( a );
+			sim->analyzeBrain( a );
 		}
 	};
 
 	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	// !!! POST PARALLEL
 	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	fScheduler.postParallel( new UpdateBrainData(c) );
+	fScheduler.postParallel( new AnalyzeBrain(c) );
 
 	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 	// ^^^ SERIAL TASK UpdateFittestAndDeleteAgent
@@ -4275,7 +3745,7 @@ void TSimulation::Kill( agent* c,
 
 		virtual void task_exec( TSimulation *sim )
 		{
-			sim->Kill_UpdateFittest( a );
+			sim->updateFittest( a );
 
 			// Note: For the sake of computational efficiency, I used to never delete an agent,
 			// but "reinit" and reuse them as new agents were born or created.  But Gene made
@@ -4292,84 +3762,46 @@ void TSimulation::Kill( agent* c,
 	fScheduler.postSerial( new UpdateFittestAndDeleteAgent(c) );
 }
 
-#define HackForProcessingUnitComplexity 1
-
 //---------------------------------------------------------------------------
-// TSimulation::Kill_UpdateBrainData
+// TSimulation::analyzeBrain
+//
+// Analyze brain of dead agent.
 //---------------------------------------------------------------------------
-void TSimulation::Kill_UpdateBrainData( agent *c )
+void TSimulation::analyzeBrain( agent *c )
 {
-	//printf( "%s (beginning): %ld %g\n", __func__, c->Number(), c->Complexity() );
+	logs->postEvent( BrainAnalysisBeginEvent(c) );
 
-	c->EndFunctional();
-
-#if HackForProcessingUnitComplexity
-	if(  fBrainAnatomyRecordAll					||
-		 fBestSoFarBrainAnatomyRecordFrequency	||
-		 fBestRecentBrainAnatomyRecordFrequency	||
-		 (fBrainAnatomyRecordSeeds && (c->Number() <= fInitNumAgents))
-		 )
-		c->GetBrain()->dumpAnatomical( "run/brain/anatomy", "death", c->Number(), c->HeuristicFitness() );
-#endif
-
-	if( RecordBrainFunction( c->Number() ) )
+	if ( fCalcComplexity )
 	{
-		char s[256];
-		char t[256];
-		sprintf( s, "run/brain/function/incomplete_brainFunction_%ld.txt", c->Number() );
-		sprintf( t, "run/brain/function/brainFunction_%ld.txt", c->Number() );
-		rename( s, t );
+		// This should have been configured in response to the begin event.
+		const char *brainFunctionPath = c->brainAnalysisParms.functionPath.c_str();
+		// Fail if it's zero length.
+		assert( *brainFunctionPath );
 
-		if ( fComplexityFitnessWeight != 0.0 || fRecordComplexity )		// Are we using Complexity as a Fitness Function, or computing and saving it on the fly?  If so, calculate Complexity here
+		if( fComplexityType == "D" )	// special case the difference of complexities case
 		{
-			if( fComplexityType == "D" )	// special case the difference of complexities case
-			{
-				float pComplexity = CalcComplexity_brainfunction( t, "P" );
-				float iComplexity = CalcComplexity_brainfunction( t, "I" );
-				c->SetComplexity( pComplexity - iComplexity );
-			}
-			else if( fComplexityType != "Z" )	// avoid special hack case to evolve towards zero max velocity, for testing purposes only
-			{
-				// otherwise, fComplexityType has the right string in it
-				c->SetComplexity( CalcComplexity_brainfunction( t, fComplexityType.c_str(), fEvents ) );
-			}
-			if( fRecordComplexity )
-				UpdateComplexityLog( c );
+			float pComplexity = CalcComplexity_brainfunction( brainFunctionPath, "P" );
+			float iComplexity = CalcComplexity_brainfunction( brainFunctionPath, "I" );
+			c->SetComplexity( pComplexity - iComplexity );
 		}
-		
-		if( fBrainFunctionRecentRecordFrequency )
+		else if( fComplexityType != "Z" )	// avoid special hack case to evolve towards zero max velocity, for testing purposes only
 		{
-			// Note: Everywhere else I use 's' for source and 't' for target, but in this case
-			// what was just the target is now the source, so to avoid copying those bytes
-			// again I'll make an exception and reverse the roles of s and t here for efficiency...
-			sprintf( s, "run/brain/Recent/%ld/brainFunction_%ld.txt", fCurrentRecentEpoch, c->Number() );
-			if( link( t, s ) )
-				eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, t, s );
-			
-			if( c->Number() <= fInitNumAgents )
-			{
-				sprintf( s, "run/brain/Recent/0/brainFunction_%ld.txt", c->Number() );
-				if( link( t, s ) )
-					eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, t, s );
-			}
+			// otherwise, fComplexityType has the right string in it
+			c->SetComplexity( CalcComplexity_brainfunction( brainFunctionPath, fComplexityType.c_str(), fEvents ) );
 		}
 	}
-	//printf( "%s (end): %ld %g\n", __func__, c->Number(), c->Complexity() );
+
+	logs->postEvent( BrainAnalysisEndEvent(c) );
 }
 
 //---------------------------------------------------------------------------
-// TSimulation::Kill_UpdateFittest
+// TSimulation::updateFittest
+//
+// Update lists of fittest agents to contain recently died agent, if needed.
 //---------------------------------------------------------------------------
-void TSimulation::Kill_UpdateFittest( agent *c )
+void TSimulation::updateFittest( agent *c )
 {
-	//printf( "%s (beginning): %ld %g\n", __func__, c->Number(), c->Complexity() );
-
-	unsigned long loserIDBestSoFar = 0;	// the way this is used depends on fAgentNumber being 1-based in agent.cp
-	unsigned long loserIDBestRecent = 0;	// the way this is used depends on fAgentNumber being 1-based in agent.cp
-	bool oneOfTheBestSoFar = false;
-	bool oneOfTheBestRecent = false;
 	const short id = c->Domain();
-
 	
 	// Maintain the current-fittest list based on heuristic fitness
 	if( (fCurrentFittestCount > 0) && (c->HeuristicFitness() >= fCurrentMaxFitness[fCurrentFittestCount-1]) )	// a current-fittest agent is dying
@@ -4392,119 +3824,23 @@ void TSimulation::Kill_UpdateFittest( agent *c )
 	
 	// Maintain a list of the fittest agents ever, for use in the online/steady-state GA,
 	// based on complete fitness, however it is currently being calculated
-	// First on a domain-by-domain basis...
-	int newfit = 0;
-	FitStruct* saveFit;
 	float cFitness = AgentFitness( c );
-	if( (fDomains[id].numdied <= fNumberFit) || (cFitness > fDomains[id].fittest[fNumberFit-1]->fitness) )
-	{
-		int limit = fDomains[id].numdied < fNumberFit ? fDomains[id].numdied : fNumberFit;
-		newfit = limit - 1;
-		for( int i = 0; i < limit; i++ )
-		{
-			if( cFitness > fDomains[id].fittest[i]->fitness )
-			{
-				newfit = i;
-				break;
-			}
-		}
-		
-		// Note: This does some unnecessary work while numdied is less than fNumberFit,
-		// but it's not a big deal and doesn't hurt anything, and I don't want to deal
-		// with the logic to handle the newfit == limit case (adding a new one on the end)
-		// right now.
-		saveFit = fDomains[id].fittest[fNumberFit-1];				// this is to save the data structure, not its contents
-		for( short i = fNumberFit - 1; i > newfit; i-- )
-			fDomains[id].fittest[i] = fDomains[id].fittest[i-1];
-		fDomains[id].fittest[newfit] = saveFit;						// reuse the old data structure, but replace its contents...
-		fDomains[id].fittest[newfit]->fitness = cFitness;
-		fDomains[id].fittest[newfit]->genes->copyFrom( c->Genes() );
-		fDomains[id].fittest[newfit]->agentID = c->Number();
-		fDomains[id].fittest[newfit]->complexity = c->Complexity();
-		gaPrint( "%5ld: new domain %d fittest[%ld] id=%4ld fitness=%7.3f complexity=%7.3f\n", fStep, id, newfit, c->Number(), cFitness, c->Complexity() );
-	}
+
+	fMaxFitness = max( cFitness, fMaxFitness );
+
+	// First on a domain-by-domain basis...
+	if( fDomains[id].fittest )
+		fDomains[id].fittest->update( c, cFitness );
 
 	// Then on a whole-world basis...
-	if( (fNumberDied <= fNumberFit) || (cFitness > fFittest[fNumberFit-1]->fitness) )
-	{
-		oneOfTheBestSoFar = true;
-		
-		int limit = fNumberDied < fNumberFit ? fNumberDied : fNumberFit;
-		newfit = limit - 1;
-		for( short i = 0; i < limit; i++ )
-		{
-			if( cFitness > fFittest[i]->fitness )
-			{
-				newfit = i;
-				break;
-			}
-		}
-				
-		// Note: This does some unnecessary work while numdied is less than fNumberFit,
-		// but it's not a big deal and doesn't hurt anything, and I don't want to deal
-		// with the logic to handle the newfit == limit case (adding a new one on the end)
-		// right now.
-		if( fNumberDied > fNumberFit )
-			loserIDBestSoFar = fFittest[fNumberFit - 1]->agentID;	// this is the ID of the agent that is being booted from the bestSoFar (fFittest[]) list
-		else
-			loserIDBestSoFar = 0;	// nobody is being booted, because the list isn't full yet
-		saveFit = fFittest[fNumberFit - 1];		// this is to save the data structure, not its contents
-		for( short i = fNumberFit - 1; i > newfit; i-- )
-			fFittest[i] = fFittest[i - 1];
-		fFittest[newfit] = saveFit;				// reuse the old data structure, but replace its contents...
-		fFittest[newfit]->fitness = cFitness;
-		fFittest[newfit]->genes->copyFrom( c->Genes() );
-		fFittest[newfit]->agentID = c->Number();
-		fFittest[newfit]->complexity = c->Complexity();
-		gaPrint( "%5ld: new global   fittest[%ld] id=%4ld fitness=%7.3f complexity=%7.3f\n", fStep, newfit, c->Number(), cFitness, c->Complexity() );
-	}
-
-	if (cFitness > fMaxFitness)
-		fMaxFitness = cFitness;
+	fFittest->update( c, cFitness );
 	
 	// Keep a separate list of the recent fittest, purely for data-gathering purposes,
 	// also based on complete fitness, however it is being currently being calculated
 	// "Recent" means since the last archival recording of recent best, as determined by fBestRecentBrainAnatomyRecordFrequency
 	// (Don't bother, if we're not gathering that kind of data)
-	if( fBestRecentBrainAnatomyRecordFrequency && (cFitness > fRecentFittest[fNumberRecentFit-1]->fitness) )
-	{
-		oneOfTheBestRecent = true;
-		
-		for( short i = 0; i < fNumberRecentFit; i++ )
-		{
-			// If the agent booted off of the bestSoFar list happens to remain on the bestRecent list,
-			// then we don't want to let it be unlinked below, so clear loserIDBestSoFar
-			// This loop tests the first part of the fRecentFittest[] list, and the last part is tested
-			// below, so we don't need a separate loop to make this determination
-			if( loserIDBestSoFar == fRecentFittest[i]->agentID )
-				loserIDBestSoFar = 0;
-			
-			if( cFitness > fRecentFittest[i]->fitness )
-			{
-				newfit = i;
-				break;
-			}
-		}
-				
-		loserIDBestRecent = fRecentFittest[fNumberRecentFit - 1]->agentID;	// this is the ID of the agent that is being booted from the bestRecent (fRecentFittest[]) list
-		saveFit = fRecentFittest[fNumberRecentFit - 1];		// this is to save the data structure, not its contents
-		for( short i = fNumberRecentFit - 1; i > newfit; i-- )
-		{
-			// If the agent booted off of the bestSoFar list happens to remain on the bestRecent list,
-			// then we don't want to let it be unlinked below, so clear loserIDBestSoFar
-			// This loop tests the last part of the fRecentFittest[] list, and the first part was tested
-			// above, so we don't need a separate loop to make this determination
-			if( loserIDBestSoFar == fRecentFittest[i]->agentID )
-				loserIDBestSoFar = 0;
-			
-			fRecentFittest[i] = fRecentFittest[i - 1];
-		}
-		fRecentFittest[newfit] = saveFit;				// reuse the old data structure, but replace its contents...
-		fRecentFittest[newfit]->fitness = cFitness;
-		//		fRecentFittest[newfit]->genes->copyFrom( c->Genes() );	// we don't save the genes in the bestRecent list
-		fRecentFittest[newfit]->agentID = c->Number();
-		fRecentFittest[newfit]->complexity = c->Complexity();
-	}
+	if( fRecentFittest )
+		fRecentFittest->update( c, cFitness );
 
 	// Must also update the leastFit data structures, now that they
 	// are used on-demand in the main mate/fight/eat loop in Interact()
@@ -4522,173 +3858,6 @@ void TSimulation::Kill_UpdateFittest( agent *c )
 		fDomains[id].fNumLeastFit--;
 		break;	// c can only appear once in the list, so we're done
 	}
-
-	// If we're recording all anatomies or recording best anatomies and this was one of the fittest agents,
-	// then dump the anatomy to the appropriate location on disk
-	if(  fBrainAnatomyRecordAll ||
-		 (fBestSoFarBrainAnatomyRecordFrequency && oneOfTheBestSoFar) ||
-		 (fBestRecentBrainAnatomyRecordFrequency && oneOfTheBestRecent) ||
-		 (fBrainAnatomyRecordSeeds && (c->Number() <= fInitNumAgents))
-		 )
-	{
-#if ! HackForProcessingUnitComplexity
-		c->GetBrain()->dumpAnatomical( "run/brain/anatomy", "death", c->Number(), c->HeuristicFitness() );
-#endif
-	}
-	else if( fBestRecentBrainAnatomyRecordFrequency || fBestSoFarBrainAnatomyRecordFrequency )	// don't want brain anatomies for this agent, so must eliminate the "incept" and "birth" anatomies if they were recorded
-	{
-		char s[256];
-	
-		sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_incept.txt", c->Number() );
-		if( unlink( s ) )
-			eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
-		sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_birth.txt", c->Number() );
-		if( unlink( s ) )
-			eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
-
-#if HackForProcessingUnitComplexity
-		// I'm pretty sure the following tests are unnecessary but don't hurt anything (we should be able to just unlink the _death file if we reach here) - lsy 4/9/10
-		// Turns out we didn't want the "death" anatomy either, but we saved it above for the complexity measure
-		if( (fBestSoFarBrainAnatomyRecordFrequency  && !oneOfTheBestSoFar  && (!fBestRecentBrainAnatomyRecordFrequency || !oneOfTheBestRecent))	||
-			(fBestRecentBrainAnatomyRecordFrequency	&& !oneOfTheBestRecent && (!fBestSoFarBrainAnatomyRecordFrequency  || !oneOfTheBestSoFar ))
-			)
-		{
-			sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_death.txt", c->Number() );
-			if( unlink( s ) )
-				eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
-		}
-#endif
-	}
-		
-	// If this was one of the seed agents and we're recording their anatomies, then save the data in the appropriate directory
-	if( fBrainAnatomyRecordSeeds && (c->Number() <= fInitNumAgents) )
-	{
-		char s[256];	// source
-		char t[256];	// target
-		// Determine whether the original needs to stay around or not.  If so, create a hard link for the
-		// copy in "seeds"; if not, just rename (mv) the file into seeds, thus removing it from the original location
-		bool keep = ( fBrainAnatomyRecordAll || (fBestSoFarBrainAnatomyRecordFrequency && oneOfTheBestSoFar) || (fBestRecentBrainAnatomyRecordFrequency && oneOfTheBestRecent) );
-		
-		sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_incept.txt", c->Number() );
-		sprintf( t, "run/brain/seeds/anatomy/brainAnatomy_%ld_incept.txt", c->Number() );
-		if( keep )
-		{
-			if( link( s, t ) )
-				eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
-		}
-		else
-		{
-			if( rename( s, t ) )
-				eprintf( "Error (%d) renaming from \"%s\" to \"%s\"\n", errno, s, t );
-		}
-		sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_birth.txt", c->Number() );
-		sprintf( t, "run/brain/seeds/anatomy/brainAnatomy_%ld_birth.txt", c->Number() );
-		if( keep )
-		{
-			if( link( s, t ) )
-				eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
-		}
-		else
-		{
-			if( rename( s, t ) )
-				eprintf( "Error (%d) renaming from \"%s\" to \"%s\"\n", errno, s, t );
-		}
-		sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_death.txt", c->Number() );
-		sprintf( t, "run/brain/seeds/anatomy/brainAnatomy_%ld_death.txt", c->Number() );
-		if( keep )
-		{
-			if( link( s, t ) )
-				eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
-		}
-		else
-		{
-			if( rename( s, t ) )
-				eprintf( "Error (%d) renaming from \"%s\" to \"%s\"\n", errno, s, t );
-		}
-	}
-	
-	// If this agent was so good it displaced another agent from the bestSoFar (fFittest[]) list,
-	// then nuke the booted agent's brain anatomy & function recordings
-	// Note: A agent may be booted from the bestSoFar list, yet remain on the bestRecent list;
-	// if this happens, loserIDBestSoFar will be reset to zero above, so we won't execute this block
-	// of code and delete files that are needed for the bestRecent data logging
-	// In the rare case that a agent is simultaneously booted from both best lists,
-	// don't delete it here (so we don't try to delete it more than once)
-	if( loserIDBestSoFar && (loserIDBestSoFar != loserIDBestRecent) )	//  depends on fAgentNumber being 1-based in agent.cp
-	{
-		char s[256];
-		if( (fBestRecentBrainAnatomyRecordFrequency || fBestSoFarBrainAnatomyRecordFrequency) && !fBrainAnatomyRecordAll )
-		{
-			sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_incept.txt", loserIDBestSoFar );
-			if( unlink( s ) )
-				eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
-			sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_birth.txt", loserIDBestSoFar );
-			if( unlink( s ) )
-				eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
-			sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_death.txt", loserIDBestSoFar );
-			if( unlink( s ) )
-				eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
-		}
-		if( (fBestRecentBrainFunctionRecordFrequency || fBestSoFarBrainFunctionRecordFrequency) && !fBrainFunctionRecordAll && !fBrainFunctionRecentRecordFrequency )
-		{
-			sprintf( s, "run/brain/function/brainFunction_%lu.txt", loserIDBestSoFar );
-			if( unlink( s ) )
-				eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
-		}
-	}
-
-	// If this agent was so good it displaced another agent from the bestRecent (fRecentFittest[]) list,
-	// then nuke the booted agent's brain anatomy & function recordings
-	// In the rare case that a agent is simultaneously booted from both best lists,
-	// we will only delete it here
-	if( loserIDBestRecent )	//  depends on fAgentNumber being 1-based in agent.cp
-	{
-		char s[256];
-		if( (fBestRecentBrainAnatomyRecordFrequency || fBestSoFarBrainAnatomyRecordFrequency) && !fBrainAnatomyRecordAll )
-		{
-			sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_incept.txt", loserIDBestRecent );
-			if( unlink( s ) )
-				eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
-			sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_birth.txt", loserIDBestRecent );
-			if( unlink( s ) )
-				eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
-			sprintf( s, "run/brain/anatomy/brainAnatomy_%lu_death.txt", loserIDBestRecent );
-			if( unlink( s ) )
-				eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
-		}
-		if( (fBestRecentBrainFunctionRecordFrequency || fBestSoFarBrainFunctionRecordFrequency) && !fBrainFunctionRecordAll && !fBrainFunctionRecentRecordFrequency )
-		{
-			sprintf( s, "run/brain/function/brainFunction_%lu.txt", loserIDBestRecent );
-			if( unlink( s ) )
-				eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
-		}
-	}
-
-	// If this was one of the seed agents and we're recording their functioning, then save the data in the appropriate directory
-	// NOTE:  Must be done after c->Die(), as that is where the brainFunction file is closed
-	if( fBrainFunctionRecordSeeds && (c->Number() <= fInitNumAgents) )
-	{
-		char s[256];	// source
-		char t[256];	// target
-		
-		sprintf( s, "run/brain/function/brainFunction_%ld.txt", c->Number() );
-		sprintf( t, "run/brain/seeds/function/brainFunction_%ld.txt", c->Number() );
-		if( link( s, t ) )
-			eprintf( "Error (%d) linking from \"%s\" to \"%s\"\n", errno, s, t );
-	}
-	
-	// If we're only archiving the best, and this isn't one of them, then nuke its brainFunction recording
-	if( (fBestSoFarBrainFunctionRecordFrequency || fBestRecentBrainFunctionRecordFrequency) &&
-		(!oneOfTheBestSoFar && !oneOfTheBestRecent) &&
-		!fBrainFunctionRecordAll && !fBrainFunctionRecentRecordFrequency )
-	{
-		char s[256];
-		sprintf( s, "run/brain/function/brainFunction_%lu.txt", c->Number() );
-		if( unlink( s ) )
-			eprintf( "Error (%d) unlinking \"%s\"\n", errno, s );
-	}
-
-	//printf( "%s (end): %ld %g\n", __func__, c->Number(), c->Complexity() );
 }
 
 //-------------------------------------------------------------------------------------------
@@ -4895,8 +4064,22 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	}
 	fFitness1Frequency = doc.get( "EliteFrequency" );
     fFitness2Frequency = doc.get( "PairFrequency" );
-    fNumberFit = doc.get( "NumberFittest" );
-	fNumberRecentFit = doc.get( "NumberRecentFittest" );
+	fEpochFrequency = doc.get( "EpochFrequency" );
+	fEpoch = fEpochFrequency;
+	{
+		int numberFittest = doc.get( "NumberFittest" );
+		if( numberFittest > 0 )
+			fFittest = new FittestList( numberFittest, true );
+		else
+			fFittest = NULL;
+	}
+	{
+		int numberRecentFittest = doc.get( "NumberRecentFittest" );
+		if( (numberRecentFittest > 0) && (fEpochFrequency > 0) )
+			fRecentFittest = new FittestList( numberRecentFittest, false );
+		else
+			fRecentFittest = NULL;
+	}
     fEatFitnessParameter = doc.get( "FitnessWeightEating" );
     fMateFitnessParameter = doc.get( "FitnessWeightMating" );
     fMoveFitnessParameter = doc.get( "FitnessWeightMoving" );
@@ -6506,6 +5689,8 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	
 		FoodPatch::MaxPopGroupOnCondition::Group::validate( maxPopGroup_World );
 
+		int numberFittest = doc.get( "NumberFittest" );
+
 		for (int id = 0; id < fNumDomains; id++)
 		{
 			fDomains[id].numAgents = 0;
@@ -6518,7 +5703,10 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 			fDomains[id].energyScaleFactor = 1.0;
 			fDomains[id].ifit = 0;
 			fDomains[id].jfit = 1;
-			fDomains[id].fittest = NULL;
+			if( numberFittest > 0 )
+				fDomains[id].fittest = new FittestList( numberFittest, true );
+			else
+				fDomains[id].fittest = NULL;
 		}
 	} // Domains
 	
@@ -6613,94 +5801,14 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	fPopControlMaxFixedRange = doc.get( "PopControlMaxFixedRange" );
 	fPopControlMinScaleFactor = doc.get( "PopControlMinScaleFactor" );
 	fPopControlMaxScaleFactor = doc.get( "PopControlMaxScaleFactor" );
-	fBrainAnatomyRecordAll = doc.get( "BrainAnatomyRecordAll" );
-	fBrainFunctionRecordAll = doc.get( "BrainFunctionRecordAll" );
-	fBrainAnatomyRecordSeeds = doc.get( "BrainAnatomyRecordSeeds" );
-	fBrainFunctionRecordSeeds = doc.get( "BrainFunctionRecordSeeds" );
-	fBrainFunctionRecentRecordFrequency = doc.get( "BrainFunctionRecentRecordFrequency" );
-	fBestSoFarBrainAnatomyRecordFrequency = doc.get( "BestSoFarBrainAnatomyRecordFrequency" );
-	fBestSoFarBrainFunctionRecordFrequency = doc.get( "BestSoFarBrainFunctionRecordFrequency" );
-	fBestRecentBrainAnatomyRecordFrequency = doc.get( "BestRecentBrainAnatomyRecordFrequency" );
-	fBestRecentBrainFunctionRecordFrequency = doc.get( "BestRecentBrainFunctionRecordFrequency" );
 	
-	fRecordComplexity = doc.get( "RecordComplexity" );
-	if( fRecordComplexity )
-	{
-		if( ! fBrainFunctionRecentRecordFrequency )
-		{
-			if( fBestRecentBrainFunctionRecordFrequency )
-				fBrainFunctionRecentRecordFrequency = fBestRecentBrainFunctionRecordFrequency;
-			else if( fBestSoFarBrainFunctionRecordFrequency )
-				fBrainFunctionRecentRecordFrequency = fBestSoFarBrainFunctionRecordFrequency;
-			else if( fBestRecentBrainAnatomyRecordFrequency )
-				fBrainFunctionRecentRecordFrequency = fBestRecentBrainAnatomyRecordFrequency;
-			else if( fBestSoFarBrainAnatomyRecordFrequency )
-				fBrainFunctionRecentRecordFrequency = fBestSoFarBrainAnatomyRecordFrequency;
-			else
-				fBrainFunctionRecentRecordFrequency = 1000;
-			cerr << "Warning: Attempted to record Complexity without recording \"Recent\" brain function.  Setting BrainFunctionRecentRecordFrequency to " << fBrainFunctionRecentRecordFrequency nl;
-		}
-
-		// TODO: I don't think we need BestSoFar or BestRecent with the new RecordComplexity behavior - lsy 3 Dec 2011
-		// It also ignores the existence of fBrainFunctionRecentRecordFrequency, and probably shouldn't.
-		if( ! fBestSoFarBrainFunctionRecordFrequency )
-		{
-			if( fBestRecentBrainFunctionRecordFrequency )
-				fBestSoFarBrainFunctionRecordFrequency = fBestRecentBrainFunctionRecordFrequency;
-			else
-				fBestSoFarBrainFunctionRecordFrequency = 1000;
-			cerr << "Warning: Attempted to record Complexity without recording \"best so far\" brain function.  Setting BestSoFarBrainFunctionRecordFrequency to " << fBestSoFarBrainFunctionRecordFrequency nl;
-		}
-			
-		if( ! fBestSoFarBrainAnatomyRecordFrequency )
-		{
-			if( fBestRecentBrainAnatomyRecordFrequency )
-				fBestSoFarBrainAnatomyRecordFrequency = fBestRecentBrainAnatomyRecordFrequency;
-			else
-				fBestSoFarBrainAnatomyRecordFrequency = 1000;				
-			cerr << "Warning: Attempted to record Complexity without recording \"best so far\" brain anatomy.  Setting BestSoFarBrainAnatomyRecordFrequency to " << fBestSoFarBrainAnatomyRecordFrequency nl;
-		}
-
-		if( ! fBestRecentBrainFunctionRecordFrequency )
-		{
-			if( fBestSoFarBrainAnatomyRecordFrequency )
-				fBestRecentBrainFunctionRecordFrequency = fBestSoFarBrainAnatomyRecordFrequency;
-			else
-				fBestRecentBrainFunctionRecordFrequency = 1000;
-			cerr << "Warning: Attempted to record Complexity without recording \"best recent\" brain function.  Setting BestRecentBrainFunctionRecordFrequency to " << fBestRecentBrainFunctionRecordFrequency nl;
-		}
-			
-		if( ! fBestRecentBrainAnatomyRecordFrequency )
-		{
-			if( fBestSoFarBrainAnatomyRecordFrequency )
-				fBestRecentBrainAnatomyRecordFrequency = fBestSoFarBrainAnatomyRecordFrequency;
-			else
-				fBestRecentBrainAnatomyRecordFrequency = 1000;				
-			cerr << "Warning: Attempted to record Complexity without recording \"best recent\" brain anatomy.  Setting BestRecentBrainAnatomyRecordFrequency to " << fBestRecentBrainAnatomyRecordFrequency nl;
-		}
-	}
 		
 	fComplexityType = (string)doc.get( "ComplexityType" );
 	fComplexityFitnessWeight = doc.get( "ComplexityFitnessWeight" );
+	if( fComplexityFitnessWeight )
+		fCalcComplexity = true;
 	fHeuristicFitnessWeight = doc.get( "HeuristicFitnessWeight" );
-	if( fComplexityFitnessWeight != 0.0 )
-	{
-		if( ! fRecordComplexity )		//Not Recording Complexity?
-		{
-			cerr << "Warning: Attempted to use Complexity as fitness func without recording Complexity.  Turning on RecordComplexity." nl;
-			fRecordComplexity = true;
-		}
-		if( ! fBrainFunctionRecordAll )	//Not recording BrainFunction?
-		{
-			cerr << "Warning: Attempted to use Complexity as fitness func without recording brain function.  Turning on RecordBrainFunctionAll." nl;
-			fBrainFunctionRecordAll = true;
-		}
-		if( ! fBrainAnatomyRecordAll )
-		{
-			cerr << "Warning: Attempted to use Complexity as fitness func without recording brain anatomy.  Turning on RecordBrainAnatomyAll." nl;
-			fBrainAnatomyRecordAll = true;				
-		}
-	}
+
 	fTournamentSize = doc.get( "TournamentSize" );
 		
 	globals::recordFileType = (bool)doc.get( "CompressFiles" )
@@ -6812,13 +5920,6 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 		cout << "  .MaxPopulationPenaltyFraction" ses agent::gMaxPopulationPenaltyFraction nl;
 		cout << "  ApplyLowPopulationAdvantage" ses fApplyLowPopulationAdvantage nl;
 		cout << "  EnergyBasedPopulationControl" ses fEnergyBasedPopulationControl nl;
-		
-		if( fComplexityFitnessWeight != 0.0 )
-		{
-			cout << "Due to running with Complexity as a fitness function, the following parameter values have been forcibly reset as indicated:" nl;
-			fRecordComplexity = true;						// record it, since we have to compute it
-			cout << "  RecordComplexity" ses fRecordComplexity nl;
-		}
 	}	
 }
 
@@ -6872,22 +5973,12 @@ void TSimulation::Dump()
 	while (objectxsortedlist::gXSortedObjects.nextObj(FOODTYPE, (gobject**)&f))
 		f->dump(out);
 					
-    out << fNumberFit nl;
     out << fFitI nl;
     out << fFitJ nl;
-    for (int index = 0; index < fNumberFit; index++)
-    {
-		out << fFittest[index]->agentID nl;
-        out << fFittest[index]->fitness nl;
-        assert(false); // fFittest[index]->genes->dump(out); // port to AbstractFile
-    }
-	out << fNumberRecentFit nl;
-    for (int index = 0; index < fNumberRecentFit; index++)
-    {
-		out << fRecentFittest[index]->agentID nl;
-		out << fRecentFittest[index]->fitness nl;
-//		fRecentFittest[index]->genes->Dump(out);	// we don't save the genes in the bestRecent list
-    }
+	if( fFittest )
+		fFittest->dump( out );
+	if( fRecentFittest)
+		fRecentFittest->dump( out );
 
     out << fNumDomains nl;
     for (int id = 0; id < fNumDomains; id++)
@@ -6902,28 +5993,8 @@ void TSimulation::Dump()
         out << fDomains[id].ifit nl;
         out << fDomains[id].jfit nl;
 
-        int numfitid = 0;
         if (fDomains[id].fittest)
-        {
-            int i;
-            for (i = 0; i < fNumberFit; i++)
-            {
-                if (fDomains[id].fittest[i])
-                    numfitid++;
-                else
-                    break;
-            }
-            out << numfitid nl;
-
-            for (i = 0; i < numfitid; i++)
-            {
-				out << fDomains[id].fittest[i]->agentID nl;
-                out << fDomains[id].fittest[i]->fitness nl;
-                assert(false); // fDomains[id].fittest[i]->genes->dump(out); // port to AbstractFile
-            }
-        }
-        else
-            out << numfitid nl;
+			fDomains[id].fittest->dump( out );
     }
 	
 	monitorManager->dump( out );
@@ -7178,10 +6249,10 @@ void TSimulation::getStatusText( StatusText& statusText,
 //	statusText.push_back( strdup( t ) );
 	
 	sprintf( t, "Fittest =" );
-	int fittestCount = min( 5, min( fNumberFit, (int) fNumberDied ));
+	int fittestCount = min( 5, fFittest->size() );
 	for( int i = 0; i < fittestCount; i++ )
 	{
-		sprintf( t2, " %lu", fFittest[i]->agentID );
+		sprintf( t2, " %lu", fFittest->get(i)->agentID );
 		strcat( t, t2 );
 	}
 	statusText.push_back( strdup( t ) );
@@ -7191,7 +6262,7 @@ void TSimulation::getStatusText( StatusText& statusText,
 		sprintf( t, " " );
 		for( int i = 0; i < fittestCount; i++ )
 		{
-			sprintf( t2, "  %.2f", fFittest[i]->fitness );
+			sprintf( t2, "  %.2f", fFittest->get(i)->fitness );
 			strcat( t, t2 );
 		}
 		statusText.push_back( strdup( t ) );

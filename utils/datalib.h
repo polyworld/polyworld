@@ -71,7 +71,8 @@ namespace datalib
 		__Column();
 		__Column( const char *name,
 				  datalib::Type type,
-				  bool pad);
+				  const char *format,
+				  bool pad );
 
 		std::string name;
 		datalib::Type type;
@@ -103,7 +104,8 @@ class DataLibWriter
 					 std::vector<datalib::Type> &coltypes );
 	void beginTable( const char *name,
 					 const char *colnames[],
-					 const datalib::Type coltypes[] );
+					 const datalib::Type coltypes[],
+					 const char *colformats[] = NULL );
 	void addRow( Variant col0, ... );
 	void addRow( Variant *cols );
 	void endTable();

@@ -14,6 +14,7 @@
 #include "EatStatistics.h"
 #include "Energy.h"
 #include "Events.h"
+#include "FittestList.h"
 #include "LifeSpan.h"
 #include "Scheduler.h"
 #include "SeparationCache.h"
@@ -48,6 +49,8 @@ public:
 	void End( const std::string &reason );
 	std::string EndAt( long timestep );
 
+	void enableComplexityCalculations();
+
 	short WhichDomain( float x, float z, short d );
 	void SwitchDomain( short newDomain, short oldDomain, int objectType );
 	
@@ -63,6 +66,8 @@ public:
 	long GetNumDomains() const;
 
 	long getNumBorn( AgentBirthType type );
+	long getEpoch();
+	FittestList *getFittest( FitnessScope scope );
 	class agent *getCurrentFittest( int rank );
 	float getFitnessWeight( FitnessWeightType type );
 	float getFitnessStat( FitnessStatType type );
@@ -95,18 +100,8 @@ public:
 	static double fSecondsPerFrameInstantaneous;
 	static double fTimeStart;
 
-	int fBrainFunctionRecentRecordFrequency;
-	long fCurrentRecentEpoch;
-	
-	int fBestSoFarBrainAnatomyRecordFrequency;
-	int fBestSoFarBrainFunctionRecordFrequency;
-	int fBestRecentBrainAnatomyRecordFrequency;
-	int fBestRecentBrainFunctionRecordFrequency;
-	
-	bool fBrainAnatomyRecordAll;
-	bool fBrainFunctionRecordAll;
-	bool fBrainAnatomyRecordSeeds;
-	bool fBrainFunctionRecordSeeds;
+	int fEpochFrequency;
+	long fEpoch;
 	
 	bool fApplyLowPopulationAdvantage;
 	bool fEnergyBasedPopulationControl;
@@ -118,11 +113,6 @@ public:
 	double fPopControlMaxScaleFactor;
 	double fGlobalEnergyScaleFactor;
 	
-	bool fRecordComplexity;				// record the Olaf Functional Complexity (neural)
-	class DataLibWriter *fComplexityLog;
-	class DataLibWriter *fComplexitySeedLog;
-// 	class DataLibWriter *fAvrComplexityLog;
-
 	float EnergyFitnessParameter() const;
 	float AgeFitnessParameter() const;
 	float LifeFractionRecent();
@@ -166,11 +156,6 @@ private:
 						  float x, float y, float z );
 	void ReadSeedPositionsFromFile();
 
-	void InitComplexityLog( long epoch );
-	void UpdateComplexityLog( agent *a );
-	void EndComplexityLog( long epoch );
-	class DataLibWriter* OpenComplexityLog( long epoch );
-	
 	void PickParentsUsingTournament(int numInPool, int* iParent, int* jParent);
 	void UpdateAgents();
 	void UpdateAgents_StaticTimestepGeometry();
@@ -221,7 +206,7 @@ private:
 	bool RecordBrainAnatomy( long agentNumber );
 	bool RecordBrainFunction( long agentNumber );
 	
-	void ijfitinc(short* i, short* j);
+	void ijfitinc(short n, short* i, short* j);
 
 	void Birth( agent* a,
 				LifeSpan::BirthReason reason,
@@ -230,8 +215,8 @@ private:
  private:
 	void Kill( agent* inAgent,
 			   LifeSpan::DeathReason reason );
-	void Kill_UpdateBrainData( agent *c );
-	void Kill_UpdateFittest( agent *c );
+	void analyzeBrain( agent *c );
+	void updateFittest( agent *c );
 	
 	void AddFood( long domainNumber, long patchNumber );
 	void RemoveFood( food *f );
@@ -274,6 +259,7 @@ private:
 	bool fCalcFoodPatchAgentCounts;
 	
 	std::string fComplexityType;
+	bool fCalcComplexity;
 	float fComplexityFitnessWeight;
 	float fHeuristicFitnessWeight;
 
@@ -285,10 +271,8 @@ private:
 	agent* fCurrentFittestAgent[MAXFITNESSITEMS];	// based on heuristic fitness
 	float fCurrentMaxFitness[MAXFITNESSITEMS];	// based on heuristic fitness
 	int fCurrentFittestCount;
-	int fNumberFit;
-	FitStruct** fFittest;	// based on the complete fitness, however it is being calculated in AgentFitness(c)
-	int fNumberRecentFit;
-	FitStruct** fRecentFittest;	// based on the complete fitness, however it is being calculated in AgentFitness(c)
+	FittestList *fFittest;	// based on the complete fitness, however it is being calculated in AgentFitness(c)
+	FittestList *fRecentFittest;	// based on the complete fitness, however it is being calculated in AgentFitness(c)
 	long fFitness1Frequency;
 	long fFitness2Frequency;
 	short fFitI;
@@ -444,6 +428,8 @@ private:
 	condprop::PropertyList *fConditionalProps;
 };
 
+inline void TSimulation::enableComplexityCalculations() { fCalcComplexity = true; }
+
 inline class AgentPovRenderer *TSimulation::GetAgentPovRenderer() { return agentPovRenderer; }
 inline MonitorManager *TSimulation::getMonitorManager() { return monitorManager; }
 inline gstage &TSimulation::getStage() { return fStage; }
@@ -469,6 +455,16 @@ inline long TSimulation::getNumBorn( AgentBirthType type )
 	case ABT__BORN: return fNumberBorn;
 	case ABT__BORN_VIRTUAL: return fNumberBornVirtual;
 	default: assert(false); return -1;
+	}
+}
+inline long TSimulation::getEpoch() { return fEpoch; }
+inline FittestList *TSimulation::getFittest( FitnessScope scope )
+{
+	switch( scope )
+	{
+	case FS_OVERALL: return fFittest;
+	case FS_RECENT: return fRecentFittest;
+	default: assert(false); return NULL;
 	}
 }
 inline class agent *TSimulation::getCurrentFittest( int rank )
@@ -537,25 +533,4 @@ inline unsigned long TSimulation::LifeFractionSamples() { return fLifeFractionRe
 
 
 inline float TSimulation::GetAgentHealingRate() { return fAgentHealingRate;	} 
-
-
-// Following two functions only determine whether or not we should create the relevant files.
-// Linking, renaming, and unlinking are handled according to the specific recording options.
-inline bool TSimulation::RecordBrainAnatomy( long agentNumber )
-{
-	return( fBestSoFarBrainAnatomyRecordFrequency ||
-			fBestRecentBrainAnatomyRecordFrequency ||
-			fBrainAnatomyRecordAll ||
-			(fBrainAnatomyRecordSeeds && (agentNumber <= fInitNumAgents))
-		  );
-}
-inline bool TSimulation::RecordBrainFunction( long agentNumber )
-{
-	return( fBestSoFarBrainFunctionRecordFrequency ||
-			fBestRecentBrainFunctionRecordFrequency ||
-			fBrainFunctionRecentRecordFrequency ||
-			fBrainFunctionRecordAll ||
-			(fBrainFunctionRecordSeeds && (agentNumber <= fInitNumAgents))
-		  );
-}
 

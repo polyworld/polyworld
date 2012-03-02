@@ -31,7 +31,6 @@ using namespace std;
 Logger::Logger()
 	: _simulation( NULL )
 	, _record( false )
-	, _dirMade( false )
 {
 	Logs::installLogger( const_cast<Logger *>(this) );
 }
@@ -44,23 +43,20 @@ Logger::~Logger()
 }
 
 //---------------------------------------------------------------------------
-// Logger::getMaxFileCount
+// Logger::getMaxOpenFiles
 //---------------------------------------------------------------------------
-int Logger::getMaxFileCount()
+int Logger::getMaxOpenFiles()
 {
-	assert( _simulation );
-
 	if( !_record ) return 0;
+
+	assert( _simulation );
 
 	switch( _scope )
 	{
-	case SimulationStateScope:
-		return 1;
 	case AgentStateScope:
 		return _simulation->GetMaxAgents();
 	default:
-		assert( false );
-		return -1;
+		return 1;
 	}
 }
 
@@ -97,18 +93,6 @@ void Logger::initRecording( TSimulation *sim, StateScope scope, sim::EventType e
 long Logger::getStep()
 {
 	return _simulation->getStep();
-}
-
-//---------------------------------------------------------------------------
-// Logger::mkdirs
-//---------------------------------------------------------------------------
-void Logger::mkdirs( string path_log )
-{
-	if( !_dirMade )
-	{
-		makeParentDir( path_log );
-		_dirMade = true;
-	}
 }
 
 //---------------------------------------------------------------------------
@@ -178,7 +162,7 @@ FileLogger::~FileLogger()
 //---------------------------------------------------------------------------
 FILE *FileLogger::createFile( const string &path, const char *mode )
 {
-	mkdirs( path );
+	makeParentDir( path );
 
 	FILE *file = fopen( path.c_str(), mode );
 
@@ -201,7 +185,7 @@ FILE *FileLogger::getFile()
 //---------------------------------------------------------------------------
 FILE *FileLogger::createFile( agent *a, const string &path, const char *mode )
 {
-	mkdirs( path );
+	makeParentDir( path );
 
 	FILE *file = fopen( path.c_str(), mode );
 	setAgentState( a, file );
@@ -246,7 +230,7 @@ AbstractFileLogger::~AbstractFileLogger()
 //---------------------------------------------------------------------------
 AbstractFile *AbstractFileLogger::createFile( const string &path )
 {
-	mkdirs( path );
+	makeParentDir( path );
 
 	AbstractFile *file = AbstractFile::open( globals::recordFileType, path.c_str(), "w" );
 
@@ -269,7 +253,7 @@ AbstractFile *AbstractFileLogger::getFile()
 //---------------------------------------------------------------------------
 AbstractFile *AbstractFileLogger::createFile( agent *a, const string &path )
 {
-	mkdirs( path );
+	makeParentDir( path );
 
 	AbstractFile *file = AbstractFile::open( globals::recordFileType, path.c_str(), "w" );
 	setAgentState( a, file );
@@ -316,7 +300,7 @@ DataLibWriter *DataLibLogger::createWriter( const string &path,
 											bool randomAccess,
 											bool singleSchema )
 {
-	mkdirs( path );
+	makeParentDir( path );
 	DataLibWriter *writer = new DataLibWriter( path.c_str(), randomAccess, singleSchema );
 
 	if( _scope == SimulationStateScope )
@@ -341,7 +325,7 @@ DataLibWriter *DataLibLogger::createWriter( agent *a,
 											bool randomAccess,
 											bool singleSchema )
 {
-	mkdirs( path );
+	makeParentDir( path );
 	DataLibWriter *writer = new DataLibWriter( path.c_str(), randomAccess, singleSchema );
 	setAgentState( a, writer );
 

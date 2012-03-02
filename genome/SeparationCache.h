@@ -22,5 +22,6 @@ class SeparationCache
 	static AgentEntries &getEntries( agent *a );
 
  private:
+	// This gives us a reference to a per-agent opaque pointer.
 	static AgentAttachedData::SlotHandle _slotHandle;
 };

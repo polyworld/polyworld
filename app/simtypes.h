@@ -23,17 +23,25 @@ namespace sim
 {
 	typedef int EventType;
 
+	// Each value must be a single unique bit since we use them with bitwise OR.
+	// Note that we can go all the way to 128 bits on gcc with __int128.
 	static const EventType Event_None = 0;
 	static const EventType Event_SimInited = (1 << 0);
-	static const EventType Event_Birth = (1 << 1);
-	static const EventType Event_AgentBodyUpdated = (1 << 2);
-	static const EventType Event_ContactBegin = (1 << 3);
-	static const EventType Event_ContactEnd = (1 << 4);
-	static const EventType Event_Collision = (1 << 5);
-	static const EventType Event_Carry = (1 << 6);
-	static const EventType Event_Energy = (1 << 7);
-	static const EventType Event_Death = (1 << 8);
-	static const EventType Event_StepEnd = (1 << 9);
+	static const EventType Event_AgentBirth = (1 << 1);
+	static const EventType Event_BrainGrown = (1 << 2);
+	static const EventType Event_AgentGrown = (1 << 3);
+	static const EventType Event_BrainUpdated = (1 << 4);
+	static const EventType Event_BodyUpdated = (1 << 5);
+	static const EventType Event_ContactBegin = (1 << 6);
+	static const EventType Event_ContactEnd = (1 << 7);
+	static const EventType Event_Collision = (1 << 8);
+	static const EventType Event_Carry = (1 << 9);
+	static const EventType Event_Energy = (1 << 10);
+	static const EventType Event_AgentDeath = (1 << 11);
+	static const EventType Event_BrainAnalysisBegin = (1 << 12);
+	static const EventType Event_BrainAnalysisEnd = (1 << 13);
+	static const EventType Event_StepEnd = (1 << 14);
+	static const EventType Event_EpochEnd = (1 << 15);
 
 	//===========================================================================
 	// SimInitedEvent
@@ -48,7 +56,7 @@ namespace sim
 	//===========================================================================
 	struct AgentBirthEvent
 	{
-		inline EventType getType() const { return Event_Birth; }
+		inline EventType getType() const { return Event_AgentBirth; }
 
 		AgentBirthEvent( agent *_a,
 						 LifeSpan::BirthReason _reason,
@@ -67,13 +75,53 @@ namespace sim
 	};
 
 	//===========================================================================
+	// BrainGrownEvent
+	//===========================================================================
+	struct BrainGrownEvent
+	{
+		inline EventType getType() const { return Event_BrainGrown; }
+
+		BrainGrownEvent( agent *_a )
+		: a(_a)
+		{}
+
+		agent *a;
+	};
+
+	//===========================================================================
+	// AgentGrownEvent
+	//===========================================================================
+	struct AgentGrownEvent
+	{
+		inline EventType getType() const { return Event_AgentGrown; }
+
+		AgentGrownEvent( agent *_a )
+		: a(_a)
+		{}
+
+		agent *a;
+	};
+
+	//===========================================================================
 	// AgentBodyUpdatedEvent
 	//===========================================================================
 	struct AgentBodyUpdatedEvent
 	{
-		inline EventType getType() const { return Event_AgentBodyUpdated; }
+		inline EventType getType() const { return Event_BodyUpdated; }
 
 		AgentBodyUpdatedEvent( agent *_a ) : a(_a) {}
+		
+		agent *a;
+	};
+
+	//===========================================================================
+	// BrainUpdatedEvent
+	//===========================================================================
+	struct BrainUpdatedEvent
+	{
+		inline EventType getType() const { return Event_BrainUpdated; }
+
+		BrainUpdatedEvent( agent *_a ) : a(_a) {}
 		
 		agent *a;
 	};
@@ -183,7 +231,7 @@ namespace sim
 	//===========================================================================
 	struct AgentDeathEvent
 	{
-		inline EventType getType() const { return Event_Death; }
+		inline EventType getType() const { return Event_AgentDeath; }
 
 		AgentDeathEvent( agent *_a,
 						 LifeSpan::DeathReason _reason )
@@ -196,6 +244,34 @@ namespace sim
 	};
 
 	//===========================================================================
+	// BrainAnalysisBeginEvent
+	//===========================================================================
+	struct BrainAnalysisBeginEvent
+	{
+		inline EventType getType() const { return Event_BrainAnalysisBegin; }
+
+		BrainAnalysisBeginEvent( agent *_a )
+		: a(_a)
+		{}
+
+		agent *a;
+	};
+
+	//===========================================================================
+	// BrainAnalysisEndEvent
+	//===========================================================================
+	struct BrainAnalysisEndEvent
+	{
+		inline EventType getType() const { return Event_BrainAnalysisEnd; }
+
+		BrainAnalysisEndEvent( agent *_a )
+		: a(_a)
+		{}
+
+		agent *a;
+	};
+
+	//===========================================================================
 	// StepEndEvent
 	//===========================================================================
 	struct StepEndEvent
@@ -203,23 +279,32 @@ namespace sim
 		inline EventType getType() const { return Event_StepEnd; }
 	};
 
+	//===========================================================================
+	// EpochEndEvent
+	//===========================================================================
+	struct EpochEndEvent
+	{
+		inline EventType getType() const { return Event_EpochEnd; }
+
+		EpochEndEvent( long _epoch ) : epoch(_epoch) {}
+
+		long epoch;
+	};
+
+	//===========================================================================
+	// StatusText
+	//===========================================================================
 	typedef std::vector<char *> StatusText;
 
+	//===========================================================================
+	// Position
+	//===========================================================================
 	struct Position
 	{
 		float x;
 		float y;
 		float z;
 	};
-
-	struct FitStruct
-	{
-		ulong	agentID;
-		float	fitness;
-		float   complexity;
-		genome::Genome *genes;
-	};
-	typedef struct FitStruct FitStruct;
 
 	//===========================================================================
 	// Stat

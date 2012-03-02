@@ -135,8 +135,7 @@ agent::agent(TSimulation* sim, gstage* stage)
 		fSpeedSensor(NULL),
 		fCarryingSensor(NULL),
 		fBeingCarriedSensor(NULL),
-		fBrain(NULL),
-		fBrainFuncFile(NULL)
+		fBrain(NULL)
 {
 	Q_CHECK_PTR(sim);
 	Q_CHECK_PTR(stage);
@@ -389,9 +388,7 @@ void agent::load(istream& in)
 //---------------------------------------------------------------------------
 // agent::grow
 //---------------------------------------------------------------------------
-void agent::grow( long mateWait,
-				  bool recordBrainAnatomy,
-				  bool recordBrainFunction )
+void agent::grow( long mateWait )
 {    
 	Q_CHECK_PTR(fBrain);
 	Q_CHECK_PTR(fGenome);
@@ -456,12 +453,10 @@ void agent::grow( long mateWait,
 		fCns->add( fBeingCarriedSensor = new BeingCarriedSensor(this) );
 	}
 
-	fCns->grow( fGenome, getTypeNumber(), recordBrainAnatomy );
+	fCns->grow( fGenome );
+	logs->postEvent( BrainGrownEvent(this) );
 
-	// If we're recording brain function,
-	// open the file to be used to write out neural activity
-	if( recordBrainFunction )
-		fBrainFuncFile = fBrain->startFunctional( getTypeNumber() );
+	fCns->prebirth();
 
     // setup the agent's geometry
     SetGeometry();
@@ -565,6 +560,8 @@ void agent::grow( long mateWait,
     SetGraphics();
 
     fAlive = true;
+
+	logs->postEvent( AgentGrownEvent(this) );
 }
 
 
@@ -772,18 +769,6 @@ void agent::Die()
 }
 
 //---------------------------------------------------------------------------
-// agent::EndFunctional
-//---------------------------------------------------------------------------    
-void agent::EndFunctional()
-{
-	// If we're recording brain function, end it here
-	if( fBrainFuncFile )
-		fBrain->endFunctional( fBrainFuncFile, fHeuristicFitness );
-	fBrainFuncFile = NULL;
-}
-
-
-//---------------------------------------------------------------------------
 // agent::SetGeometry
 //---------------------------------------------------------------------------    
 void agent::SetGeometry()
@@ -892,9 +877,7 @@ void agent::UpdateBrain()
 {
 	fCns->update( false );
 
-	// If we're recording brain function, do it here
-	if( fBrainFuncFile )
-		fBrain->writeFunctional( fBrainFuncFile );
+	logs->postEvent( BrainUpdatedEvent(this) );
 }
 
 //---------------------------------------------------------------------------

@@ -15,6 +15,12 @@ namespace sim
 		OT_EDGE
 	};
 
+	enum FitnessScope
+	{
+		FS_OVERALL,
+		FS_RECENT
+	};
+
 	enum FitnessWeightType
 	{
 		FWT__COMPLEXITY,

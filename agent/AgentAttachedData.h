@@ -2,6 +2,9 @@
 
 //===========================================================================
 // AgentAttachedData
+//
+// Allows for data to be associated with an agent without having to declare
+// additional fields in the agent class.
 //===========================================================================
 class AgentAttachedData
 {

@@ -43,6 +43,7 @@ __Column::__Column()
 
 __Column::__Column( const char *name,
 					datalib::Type type,
+					const char *format,
 					bool pad )
 {
 	this->name = name;
@@ -52,18 +53,35 @@ __Column::__Column( const char *name,
 	{
 	case datalib::INT:
 		tname = "int";
-		format = pad ? "%-20d" : "%d";
 		break;
 	case datalib::FLOAT:
 		tname = "float";
-		format = pad ? "%-20f" : "%f";
 		break;
 	case datalib::STRING:
 		tname = "string";
-		format = pad ? "%-20s" : "%s";
 		break;
 	default:
 		assert( false );
+	}
+
+	if( format )
+		this->format = format;
+	else
+	{
+		switch( type )
+		{
+		case datalib::INT:
+			this->format = pad ? "%-20d" : "%d";
+			break;
+		case datalib::FLOAT:
+			this->format = pad ? "%-20f" : "%f";
+			break;
+		case datalib::STRING:
+			this->format = pad ? "%-20s" : "%s";
+			break;
+		default:
+			assert( false );
+		}
 	}
 }
 
@@ -144,7 +162,8 @@ void DataLibWriter::beginTable( const char *name,
 // ------------------------------------------------------------
 void DataLibWriter::beginTable( const char *name,
 								const char *colnames[],
-								const datalib::Type coltypes[] )
+								const datalib::Type coltypes[],
+								const char *colformats[] )
 {
 	assert( table == NULL );
 
@@ -163,8 +182,11 @@ void DataLibWriter::beginTable( const char *name,
 			break;
 		}
 
+		const char *colformat = colformats ? colformats[i] : NULL;
+
 		cols.push_back( __Column(colname,
 								 coltypes[i],
+								 colformat,
 								 randomAccess) );
 	}
 
@@ -816,6 +838,7 @@ void DataLibReader::parseTableHeader()
 	{
 		__Column col( names[i].c_str(),
 					  types[i],
+					  NULL,
 					  false );
 
 		cols.push_back( col );

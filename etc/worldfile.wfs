@@ -2939,6 +2939,11 @@ EnergyUseFixed {
 # SECTION Simulator control
 #-------------------------------------------------------------------
 
+EpochFrequency {
+  type    INT
+  default $( RecordFrequency )
+}
+
 ComplexityType {
   type    STRING
   default P
@@ -3163,8 +3168,13 @@ RecordBirthsDeaths {
 }
 
 RecordPosition {
-  type    BOOL
-  default $( RecordAll )
+  type    ENUM
+  values  [
+    False
+    Precise      # X,Y,Z to full precision
+    Approximate  # X,Z rounded to 2 decimal places
+  ]
+  default $( \"Approximate\" if RecordAll else \"False\" )
 }
 
 RecordBarrierPosition {
@@ -3192,49 +3202,24 @@ RecordEnergy {
   default $( RecordAll or RecordNeuralComplexityFiles )
 }
 
-BrainAnatomyRecordAll {
+RecordBrain {
   type    BOOL
   default $( RecordAll or RecordNeuralComplexityFiles )
 }
 
-BrainFunctionRecordAll {
+RecordBrainRecent {
   type    BOOL
-  default $( RecordAll or RecordNeuralComplexityFiles )
+  default $( RecordBrain )
 }
 
-BrainAnatomyRecordSeeds {
+RecordBrainBestRecent {
   type    BOOL
-  default False		# why does this functionality exist?  eliminate it someday?
+  default $( RecordBrain )
 }
 
-BrainFunctionRecordSeeds {
+RecordBrainBestSoFar {
   type    BOOL
-  default False		# why does this functionality exist?  eliminate it someday?
-}
-
-BrainFunctionRecentRecordFrequency {
-  type    INT
-  default $( RecordFrequency if RecordAll or RecordNeuralComplexityFiles else 0 )
-}
-
-BestSoFarBrainAnatomyRecordFrequency {
-  type    INT
-  default $( RecordFrequency if RecordAll else 0 )
-}
-
-BestSoFarBrainFunctionRecordFrequency {
-  type    INT
-  default $( RecordFrequency if RecordAll else 0 )
-}
-
-BestRecentBrainAnatomyRecordFrequency {
-  type    INT
-  default $( RecordFrequency if RecordAll else 0 )
-}
-
-BestRecentBrainFunctionRecordFrequency {
-  type    INT
-  default $( RecordFrequency if RecordAll else 0 )
+  default $( RecordBrain )
 }
 
 RecordGeneStats {
@@ -3245,6 +3230,7 @@ RecordGeneStats {
 RecordComplexity {
   type    BOOL
   default False	# an exception to RecordAll because it is so computationally expensive
+  assert $( not RecordComplexity or RecordAll or RecordNeuralComplexityFiles )
 }
 
 RecordAdamiComplexity {

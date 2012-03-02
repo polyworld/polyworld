@@ -42,6 +42,7 @@ class AgentPovRenderer : public QObject
 	class QGLPixelBuffer *fPixelBuffer;
 	int fBufferWidth;
 	int fBufferHeight;
+	// This gives us a reference to a per-agent opaque pointer.
 	AgentAttachedData::SlotHandle slotHandle;
 	Viewport *fViewports;
 	std::map<int, Viewport *> fFreeViewports;

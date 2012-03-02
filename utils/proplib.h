@@ -220,6 +220,8 @@ namespace proplib
 
 		std::string evalScalar();
 
+		std::string getRawScalarString();
+
 		virtual void add( Node *node );
 
 		virtual void dump( std::ostream &out, const char *indent = "" );

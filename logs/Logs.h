@@ -66,6 +66,8 @@ class Logs
 		}
 	}
 
+	int getMaxOpenFiles();
+
  private:
 	//===========================================================================
 	// AdamiComplexityLog
@@ -74,7 +76,7 @@ class Logs
 	{
 	protected:
 		virtual void init( class TSimulation *sim, proplib::Document *doc );
-		virtual int getMaxFileCount();
+		virtual int getMaxOpenFiles();
 		virtual void processEvent( const sim::StepEndEvent &e );
 
 	private:
@@ -93,6 +95,13 @@ class Logs
 		virtual void processEvent( const sim::AgentBodyUpdatedEvent &e );
 		virtual void processEvent( const sim::AgentDeathEvent &e );
 
+	private:
+		enum Mode
+		{
+			Precise,
+			Approximate
+		} _mode;
+
 	} _agentPosition;
 
 	//===========================================================================
@@ -106,6 +115,77 @@ class Logs
 		virtual void processEvent( const sim::AgentDeathEvent &death );
 
 	} _birthsDeaths;
+
+	//===========================================================================
+	// BrainAnatomyLog
+	//===========================================================================
+	class BrainAnatomyLog : public AbstractFileLogger
+	{
+	protected:
+		virtual void init( class TSimulation *sim, proplib::Document *doc );
+		virtual void processEvent( const sim::BrainGrownEvent &e );
+		virtual void processEvent( const sim::AgentGrownEvent &e );
+		virtual void processEvent( const sim::BrainAnalysisBeginEvent &e );
+		virtual void processEvent( const sim::EpochEndEvent &e );
+
+	private:
+		void createAnatomyFile( agent *a, const char *suffix, float fitness );
+		void recordEpochFittest( long step, sim::FitnessScope scope, const char *scopeName );
+
+		bool _recordRecent;
+		bool _recordBestRecent;
+		bool _recordBestSoFar;
+
+	} _brainAnatomy;
+
+	//===========================================================================
+	// BrainComplexityLog
+	//===========================================================================
+	class BrainComplexityLog : public DataLibLogger
+	{
+	public:
+		virtual ~BrainComplexityLog();
+	protected:
+
+		virtual void init( class TSimulation *sim, proplib::Document *doc );
+		virtual void processEvent( const sim::BrainAnalysisEndEvent &e );
+		virtual void processEvent( const sim::EpochEndEvent &e );
+
+	private:
+		typedef std::map< long, float> ComplexityMap;
+
+		void writeComplexityFile( long epoch, ComplexityMap &complexities );
+		void writeBestRecent( long epoch );
+
+		int _nseeds;
+		int _seedsRemaining;
+		std::string _complexityType;
+		ComplexityMap _seedComplexity;
+		ComplexityMap _recentComplexity;
+		bool _recordBestRecent;
+	} _brainComplexity;
+
+	//===========================================================================
+	// BrainFunctionLog
+	//===========================================================================
+	class BrainFunctionLog : public AbstractFileLogger
+	{
+	protected:
+		virtual void init( class TSimulation *sim, proplib::Document *doc );
+		virtual void processEvent( const sim::AgentGrownEvent &e );
+		virtual void processEvent( const sim::BrainUpdatedEvent &e );
+		virtual void processEvent( const sim::BrainAnalysisBeginEvent &e );
+		virtual void processEvent( const sim::EpochEndEvent &e );
+
+	private:
+		void recordEpochFittest( long step, sim::FitnessScope scope, const char *scopeName );
+
+		bool _recordRecent;
+		bool _recordBestRecent;
+		bool _recordBestSoFar;
+		int _nseeds;
+
+	} _brainFunction;
 
 	//===========================================================================
 	// CarryLog

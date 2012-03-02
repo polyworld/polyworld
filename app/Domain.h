@@ -1,5 +1,6 @@
 #pragma once
 
+#include "FittestList.h"
 #include "FoodPatch.h"
 #include "simtypes.h"
 
@@ -52,7 +53,7 @@ class Domain
 	double energyScaleFactor;
     short ifit;
     short jfit;
-    FitStruct** fittest;	// based on complete fitness, however it is being calculated in AgentFitness(c)
+    FittestList *fittest;	// based on complete fitness, however it is being calculated in AgentFitness(c)
 	int fNumLeastFit;
 	int fMaxNumLeastFit;
 	int fNumSmited;

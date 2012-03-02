@@ -37,15 +37,18 @@ class Logger
 	virtual ~Logger();
 
 	virtual void init( class TSimulation *sim, proplib::Document *doc ) = 0;
-	virtual int getMaxFileCount();
+	virtual int getMaxOpenFiles();
 
 	// 
 	// Derived classes must override any of these methods for which they register for events.
-	// e.g. if a derived class invokes initRecording(..., sim::Event_Birth), then it must
+	// e.g. if a derived class invokes initRecording(..., sim::Event_AgentBirth), then it must
 	// override processEvent( AgentBirthEvent )
 	// 
 	virtual void processEvent( const sim::SimInitedEvent &e ) { assert(false); }
 	virtual void processEvent( const sim::AgentBirthEvent &e ) { assert(false); }
+	virtual void processEvent( const sim::BrainGrownEvent &e ) { assert(false); }
+	virtual void processEvent( const sim::AgentGrownEvent &e ) { assert(false); }
+	virtual void processEvent( const sim::BrainUpdatedEvent &e ) { assert(false); }
 	virtual void processEvent( const sim::AgentBodyUpdatedEvent &e ) { assert(false); }
 	virtual void processEvent( const sim::AgentContactBeginEvent &e ) { assert(false); }
 	virtual void processEvent( const sim::AgentContactEndEvent &e ) { assert(false); }
@@ -53,7 +56,10 @@ class Logger
 	virtual void processEvent( const sim::CarryEvent &e ) { assert(false); }
 	virtual void processEvent( const sim::EnergyEvent &e ) { assert(false); }
 	virtual void processEvent( const sim::AgentDeathEvent &e ) { assert(false); }
+	virtual void processEvent( const sim::BrainAnalysisBeginEvent &e ) { assert(false); }
+	virtual void processEvent( const sim::BrainAnalysisEndEvent &e ) { assert(false); }
 	virtual void processEvent( const sim::StepEndEvent &e ) { assert(false); }
+	virtual void processEvent( const sim::EpochEndEvent &e ) { assert(false); }
 
  protected:
 	enum StateScope
@@ -75,7 +81,6 @@ class Logger
 						sim::EventType events = sim::Event_None );
 
 	long getStep();
-	void mkdirs( std::string path_log );
 
 	void *getSimulationState();
 	void *getAgentState( class agent *a );
@@ -88,8 +93,6 @@ class Logger
 	bool _record;
 
  private:
-	bool _dirMade;
-
 	union
 	{
 		struct
@@ -103,6 +106,7 @@ class Logger
 
 		struct
 		{
+			// This gives us a reference to a per-agent opaque pointer.
 			AgentAttachedData::SlotHandle slotHandle;
 		} _agentScope;
 	};

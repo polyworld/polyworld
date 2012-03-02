@@ -143,19 +143,8 @@ Brain::~Brain()
 //---------------------------------------------------------------------------
 // Brain::dumpAnatomical
 //---------------------------------------------------------------------------
-void Brain::dumpAnatomical( const char* directoryName, const char* suffix, long index, float fitness )
+void Brain::dumpAnatomical( AbstractFile *file, long index, float fitness )
 {
-	AbstractFile *file;
-	char	filename[256];
-
-	sprintf( filename, "%s/brainAnatomy_%ld_%s.txt", directoryName, index, suffix );
-	file = AbstractFile::open( globals::recordFileType, filename, "w" );
-	if( !file )
-	{
-		fprintf( stderr, "%s: could not open file %s\n", __FUNCTION__, filename );
-		return;
-	}
-
 	// print the header, with index, fitness, and number of neurons
 	file->printf( "brain %ld fitness=%g numneurons+1=%d maxWeight=%g maxBias=%g",
 				  index, fitness, dims.numneurons+1, brain::gMaxWeight, brain::gNeuralValues.maxbias );
@@ -164,29 +153,13 @@ void Brain::dumpAnatomical( const char* directoryName, const char* suffix, long 
 	file->printf( "\n" );
 
 	neuralnet->dumpAnatomical( file );
-	
-	delete file;
-
-	daPrint( "%s: done with anatomy file for %ld\n", __FUNCTION__, index );
 }
 
 //---------------------------------------------------------------------------
 // Brain::startFunctional
 //---------------------------------------------------------------------------
-AbstractFile *Brain::startFunctional( long index )
+void Brain::startFunctional( AbstractFile *file, long index )
 {
-	AbstractFile *file;
-	char filename[256];
-
-	sprintf( filename, "run/brain/function/incomplete_brainFunction_%ld.txt", index );
-	file = AbstractFile::open( globals::recordFileType, filename, "w" );
-
-	if( !file )
-	{
-		fprintf( stderr, "%s: could not open file %s\n", __FUNCTION__, filename );
-		goto bail;
-	}
-
 	file->printf( "version 1\n" );
 
 	// print the header, with index (agent number)
@@ -202,10 +175,6 @@ AbstractFile *Brain::startFunctional( long index )
 	cns->startFunctional( file );
 
 	file->printf( "\n" );
-	
-bail:
-
-	return( file );
 }
 
 //---------------------------------------------------------------------------
@@ -213,11 +182,7 @@ bail:
 //---------------------------------------------------------------------------
 void Brain::endFunctional( AbstractFile *file, float fitness )
 {
-	if( !file )
-		return;
-
 	file->printf( "end fitness = %g\n", fitness );
-	delete file;
 }
 
 //---------------------------------------------------------------------------
@@ -225,9 +190,6 @@ void Brain::endFunctional( AbstractFile *file, float fitness )
 //---------------------------------------------------------------------------
 void Brain::writeFunctional( AbstractFile *file )
 {
-	if( !file )
-		return;
-
 	neuralnet->writeFunctional( file );
 }
 
@@ -1720,15 +1682,11 @@ void Brain::Grow( Genome* g )
 //---------------------------------------------------------------------------
 // Brain::Prebirth
 //---------------------------------------------------------------------------
-void Brain::Prebirth( long agentNumber, bool recordBrainAnatomy )
+void Brain::Prebirth()
 {
 #if DesignerBrains
 	return;
 #endif
-
-	// "incept" brain anatomy is as initially generated, with random weights
-	if( recordBrainAnatomy )
-		dumpAnatomical( "run/brain/anatomy", "incept", agentNumber, 0.0 );
 	
     // now send some signals through the system
     // try pure noise for now...
@@ -1738,10 +1696,6 @@ void Brain::Prebirth( long agentNumber, bool recordBrainAnatomy )
 
 		Update( false );
     }
-	
-	// "birth" anatomy is after gestation (updating with random noise in the inputs for a while)
-	if( recordBrainAnatomy )
-		dumpAnatomical( "run/brain/anatomy", "birth", agentNumber, 0.0 );
 
     debugcheck( "after prebirth cycling" );
 }
