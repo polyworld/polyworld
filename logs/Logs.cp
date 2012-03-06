@@ -184,6 +184,9 @@ void Logs::AgentPositionLog::init( TSimulation *sim, Document *doc )
 //---------------------------------------------------------------------------
 void Logs::AgentPositionLog::processEvent( const sim::AgentBirthEvent &e )
 {
+	if( e.reason == LifeSpan::BR_VIRTUAL )
+		return;
+
 	char path[512];
 	sprintf( path,
 			 "run/motion/position/agents/position_%ld.txt",
@@ -1353,11 +1356,14 @@ void Logs::SeparationLog::init( TSimulation *sim, Document *doc )
 //---------------------------------------------------------------------------
 // Logs::SeparationLog::processEvent
 //---------------------------------------------------------------------------
-void Logs::SeparationLog::processEvent( const sim::AgentBirthEvent &birth )
+void Logs::SeparationLog::processEvent( const sim::AgentBirthEvent &e )
 {
+	if( e.reason == LifeSpan::BR_VIRTUAL )
+		return;
+
 	assert( _mode == All );
 
-	_births.push_back( birth.a );
+	_births.push_back( e.a );
 }
 
 //---------------------------------------------------------------------------
