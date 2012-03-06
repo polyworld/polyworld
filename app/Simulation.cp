@@ -2014,8 +2014,8 @@ void TSimulation::MateLockstep( void )
 		objectxsortedlist::gXSortedObjects.reset();
 		while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**) &testAgent ) )
 		{
-			// Make sure it's old enough (anything except just birthed), and it has been long enough since it mated
-			if( (testAgent->Age() > 0) && ((testAgent->Age() - testAgent->LastMate()) >= fMateWait) )
+			// Make sure it wasn't just birthed
+			if( testAgent->Age() > 0 )
 				c = testAgent;	// as long as there's a single legitimate agent for mating, Mommy will be non-NULL
 			
 			i++;
@@ -2035,8 +2035,8 @@ void TSimulation::MateLockstep( void )
 		objectxsortedlist::gXSortedObjects.reset();
 		while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**) &testAgent ) )
 		{
-			// If it was not just birthed, it has been long enough since it mated, and it's not the same as mommy, it'll do for daddy.
-			if( (testAgent->Age() > 0) && ((testAgent->Age() - testAgent->LastMate()) >= fMateWait) && (testAgent->Number() != c->Number()) )
+			// If it was not just birthed and it's not the same as mommy, it'll do for daddy.
+			if( (testAgent->Age() > 0) && (testAgent->Number() != c->Number()) )
 				d = testAgent;	// as long as there's another single legitimate agent for mating, Daddy will be non-NULL
 
 			i++;
