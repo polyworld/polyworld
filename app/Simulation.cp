@@ -12,7 +12,7 @@
 #define DebugLockStep 0
 
 #define MinDebugStep 0
-#define MaxDebugStep INT_MAX
+#define MaxDebugStep MAX_INT
 
 #define CurrentWorldfileVersion 55
 
@@ -167,7 +167,8 @@ inline float AverageAngles( float a, float b )
 #endif
 
 #if DebugLockStep
-	#define lsPrint( x... ) { if( (fStep >= MinDebugStep) && (fStep <= MaxDebugStep) ) printf( x ); }
+	FILE* fdls = NULL;
+	#define lsPrint( x... ) { if( (fStep >= MinDebugStep) && (fStep <= MaxDebugStep) ) fprintf( fdls, x ); }
 #else
 	#define lsPrint( x... )
 #endif
@@ -442,6 +443,15 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 
 		proplib::Interpreter::dispose();
 	}
+
+#if DebugLockStep
+	fdls = fopen( "LockStep.log", "w" );
+	if( !fdls )
+	{
+		fprintf( stderr, "Unable to open LockStep.log\n" );
+		exit( 1 );
+	}
+#endif
 
 	logs->postEvent( SimInitedEvent() );
 }
@@ -1992,11 +2002,11 @@ void TSimulation::MateLockstep( void )
 {
 	lsPrint( "t%ld: Triggering %d random births...\n", fStep, fLockstepNumBirthsAtTimestep );
 
-	agent* c = NULL;		// mommy
-	agent* d = NULL;		// daddy
-	
 	for( int count = 0; count < fLockstepNumBirthsAtTimestep; count++ ) 
 	{
+		agent* c = NULL;		// mommy
+		agent* d = NULL;		// daddy
+	
 		/* select mommy. */
 
 		int i = 0;
@@ -2048,6 +2058,16 @@ void TSimulation::MateLockstep( void )
 		assert( c != NULL && d != NULL );				// If for some reason we can't select parents, then we'll become out of sync with LOCKSTEP-BirthDeaths.log
 		
 		lsPrint( "* I have selected Mommy(%ld) and Daddy(%ld). Population size = %d\n", c->Number(), d->Number(), numAgents );
+		
+		if( c == d )	// shouldn't be possible, but...
+		{
+			fprintf( stderr, "%s: c == d (%p, %ld)\n", __FUNCTION__, c, c->Number() );
+		#if DebugLockStep
+			fprintf( fdls, "%s: c == d (%p, %ld)\n", __FUNCTION__, c, c->Number() );
+			fclose( fdls );
+		#endif
+			assert( c != d );
+		}
 		
 		/* === We've selected our parents, now time to birth our agent. */
 			
