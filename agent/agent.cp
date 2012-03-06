@@ -676,8 +676,6 @@ float agent::MateProbability(agent* c)
 //---------------------------------------------------------------------------    
 Energy agent::mating( float mateFitnessParam, long mateWait, bool lockstep )
 {
-	fLastMate = fAge;
-	
 	if( mateWait <= 0 )
 		mateWait = 1;
 	
@@ -685,6 +683,7 @@ Energy agent::mating( float mateFitnessParam, long mateWait, bool lockstep )
 
 	if( !lockstep )
 	{
+		fLastMate = fAge;
 		fHeuristicFitness += mateFitnessParam * mateWait / MaxAge();
 		fEnergy -= mymateenergy;
 		fFoodEnergy -= mymateenergy;
