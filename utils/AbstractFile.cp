@@ -499,7 +499,13 @@ void AbstractFile::init( ConcreteFileType type,
 			{
 				fprintf( stderr, "Unable to open file at '%s'\n", abstractPath );
 				perror( file.path );
-				system( "lsof -u `whoami`" );
+				system( "echo hello from file path" );
+				while( true )
+					sleep(1);
+			  #pragma omp critical(lsof)
+			  {
+				system( "lsof -u `whoami` > /tmp/lsof.txt" );
+			  }
 				assert( file.fp );
 			}
 		}
@@ -512,7 +518,13 @@ void AbstractFile::init( ConcreteFileType type,
 			{
 				fprintf( stderr, "Unable to open file at '%s'\n", gzip.path );
 				perror( gzip.path );
-				system( "lsof -u `whoami`" );
+				system( "echo hello from gzip path" );
+				while( true )
+					sleep(1);
+			  #pragma omp critical(lsof)
+			  {
+				system( "lsof -u `whoami` > /tmp/lsof.txt" );
+			  }
 				assert( gzip.fp );
 			}
 		}
