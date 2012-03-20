@@ -516,8 +516,8 @@ def isrundir(path):
 
 	if os.path.exists( os.path.join(path, 'docs') ) and os.path.exists( os.path.join(path, 'scripts') ):
 		return False
-	if not os.path.exists( os.path.join(path, 'stats') ):
-		return False
+# 	if not os.path.exists( os.path.join(path, 'stats') ):
+# 		return False
 	if os.path.exists( wfutil.path_worldfile(path, legacy = False) ):
 		return True
 	if os.path.exists( wfutil.path_worldfile(path, legacy = True) ):
