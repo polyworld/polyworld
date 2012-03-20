@@ -756,6 +756,12 @@ gsl_matrix * readin_brainfunction(const char* fname,
 //---------------------------------------------------------------------------
 void FilterActivity( gsl_matrix* activity, const char* filter_events, const long agent_number, const long agent_birth, const long lifespan, Events* events, long numinputneurons )
 {
+	// #define just one of the following filter types to 1, others to 0
+	#define FILTER_SUM 0
+	#define FILTER_MAX 1
+	#define FILTER_BOX 0
+	#define FILTER_BOX_ZERO 0
+
 // m9e4m1.0e0.5
 // 	static int mate_filter_radius = 9;	// exclude center point
 // 	static int eat_filter_radius = 4;	// exclude center point
@@ -763,9 +769,11 @@ void FilterActivity( gsl_matrix* activity, const char* filter_events, const long
 // 									0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1 };
 // 	static double eat_filter[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.4, 0.3, 0.2, 0.1 };
 
-// m9e9m1.0e1.0
-// 	static int mate_filter_radius = 9;	// exclude center point
-// 	static int eat_filter_radius = 9;	// exclude center point
+// m9.9e9.9e1.0e1.0 (aka m9e9m1.0e1.0)
+// 	static int mate_filter_pre = 9;	// exclude center point
+// 	static int mate_filter_post = 9;	// exclude center point
+// 	static int eat_filter_pre = 9;		// exclude center point
+// 	static int eat_filter_post = 9;		// exclude center point
 // 	static double mate_filter[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0,
 // 									0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1 };
 // 	static double  eat_filter[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0,
@@ -783,37 +791,31 @@ void FilterActivity( gsl_matrix* activity, const char* filter_events, const long
 // 	static double mate_filter[] = { 0.2, 0.4, 0.6, 0.8, 1.0, 0.8, 0.6, 0.4, 0.2 };
 // 	static double  eat_filter[] = { 0.2, 0.4, 0.6, 0.8, 1.0, 0.8, 0.6, 0.4, 0.2 };
 
-// m19e9m1.0e1.0
-// 	static int mate_filter_radius = 19;	// exclude center point
-// 	static int eat_filter_radius = 9;	// exclude center point
+// m19.19e9.9m1.0e1.0 (aka m19e9m1.0e1.0)
+// 	static int mate_filter_pre = 19;	// exclude center point
+// 	static int mate_filter_post = 19;	// exclude center point
+// 	static int eat_filter_pre = 9;		// exclude center point
+// 	static int eat_filter_post = 9;		// exclude center point
 // 	static double mate_filter[] = { 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5,
 // 									0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0,
 // 									0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5,
 // 									0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.05};
 // 	static double  eat_filter[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0,
 // 									0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1 };
+
+// m19.19e19.19m1.0e1.0  (aka m19e19m1.0e1.0)
 	static int mate_filter_pre = 19;	// exclude center point
 	static int mate_filter_post = 19;	// exclude center point
-	static int eat_filter_pre = 9;		// exclude center point
-	static int eat_filter_post = 9;		// exclude center point
+	static int eat_filter_pre = 19;		// exclude center point
+	static int eat_filter_post = 19;		// exclude center point
 	static double mate_filter[] = { 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5,
 									0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0,
 									0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5,
 									0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.05};
-	static double  eat_filter[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0,
-									0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1 };
-
-// m19e19m1.0e1.0
-// 	static int mate_filter_radius = 19;	// exclude center point
-// 	static int eat_filter_radius = 19;	// exclude center point
-// 	static double mate_filter[] = { 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5,
-// 									0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0,
-// 									0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5,
-// 									0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.05 };
-// 	static double  eat_filter[] = { 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5,
-// 									0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0,
-// 									0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5,
-// 									0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.05 };
+	static double  eat_filter[] = { 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5,
+									0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0,
+									0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5,
+									0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.05};
 
 // m19.4e9.4m1.0e1.0
 // 	static int mate_filter_pre = 19;	// exclude center point
@@ -828,6 +830,39 @@ void FilterActivity( gsl_matrix* activity, const char* filter_events, const long
 
 // m19.9e9.9m1.0e1.0
 // 	static int mate_filter_pre = 19;	// exclude center point
+// 	static int mate_filter_post = 9;	// exclude center point
+// 	static int eat_filter_pre = 9;		// exclude center point
+// 	static int eat_filter_post = 9;		// exclude center point
+// 	static double mate_filter[] = { 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5,
+// 									0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0,
+// 									0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1 };
+// 	static double  eat_filter[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0,
+// 									0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1 };
+
+// m19.9e19.9m1.0e1.0
+// 	static int mate_filter_pre = 19;	// exclude center point
+// 	static int mate_filter_post = 9;	// exclude center point
+// 	static int eat_filter_pre = 19;		// exclude center point
+// 	static int eat_filter_post = 9;		// exclude center point
+// 	static double mate_filter[] = { 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5,
+// 									0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0,
+// 									0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1 };
+// 	static double  eat_filter[] = { 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5,
+// 									0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0,
+// 									0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1 };
+
+// m9.4e9.4m1.0e1.0
+// 	static int mate_filter_pre = 9;	// exclude center point
+// 	static int mate_filter_post = 4;	// exclude center point
+// 	static int eat_filter_pre = 9;		// exclude center point
+// 	static int eat_filter_post = 4;		// exclude center point
+// 	static double mate_filter[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0,
+// 									0.8, 0.6, 0.4, 0.2 };
+// 	static double  eat_filter[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0,
+// 									0.8, 0.6, 0.4, 0.2 };
+
+// m19.9e9.4m1.0e1.0
+// 	static int mate_filter_pre = 19;	// exclude center point
 // 	static int mate_filter_post = 4;	// exclude center point
 // 	static int eat_filter_pre = 9;		// exclude center point
 // 	static int eat_filter_post = 4;		// exclude center point
@@ -835,7 +870,7 @@ void FilterActivity( gsl_matrix* activity, const char* filter_events, const long
 // 									0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0,
 // 									0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1 };
 // 	static double  eat_filter[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0,
-// 									0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1 };
+// 									0.8, 0.6, 0.4, 0.2 };
 
 	long duration = activity->size1;	// may be less than lifespan due to MaxNumTimeStepsToComputeComplexityOver
 	long agent_death = agent_birth + lifespan;	// seems like this should be -1, but this agrees with BirthsDeaths.log
@@ -881,7 +916,15 @@ void FilterActivity( gsl_matrix* activity, const char* filter_events, const long
 			int offset = lo - left;
 			filprint( "m %ld: left=%d, right=%d, lo=%d, hi=%d, offset=%d\n", step, left, right, lo, hi, offset );
 			for( int i = lo; i <= hi; i++ )
-				filter[i] = fmin( 1.0, filter[i] + mate_filter[i-lo+offset] );
+			#if FILTER_SUM
+ 				filter[i] = fmin( 1.0, filter[i] + mate_filter[i-lo+offset] );
+			#elif FILTER_MAX
+				filter[i] = fmax( filter[i], mate_filter[i-lo+offset] );
+			#elif FILTER_BOX
+				filter[i] = 1.0;
+			#elif FILTER_BOX_ZERO
+				filter[i] = 1.0;
+			#endif
 		}
 		if( eat_filtering && agentEvent.eat )
 		{
@@ -892,7 +935,15 @@ void FilterActivity( gsl_matrix* activity, const char* filter_events, const long
 			int offset = lo - left;
 			filprint( "e %ld: left=%d, right=%d, lo=%d, hi=%d, offset=%d\n", step, left, right, lo, hi, offset );
 			for( int i = lo; i <= hi; i++ )
-				filter[i] = fmin( 1.0, filter[i] + eat_filter[i-lo+offset] );
+			#if FILTER_SUM
+ 				filter[i] = fmin( 1.0, filter[i] + eat_filter[i-lo+offset] );
+			#elif FILTER_MAX
+				filter[i] = fmax( filter[i], eat_filter[i-lo+offset] );
+			#elif FILTER_BOX
+				filter[i] = 1.0;
+			#elif FILTER_BOX_ZERO
+				filter[i] = 1.0;
+			#endif
 		}
 	}
 	
@@ -904,7 +955,12 @@ void FilterActivity( gsl_matrix* activity, const char* filter_events, const long
 			if( j == numinputneurons )
 				printf( "%lu,%lu: %g , %g => ", i, j, gsl_matrix_get( activity, i, j ), filter[i] );
 		#endif
+		#if FILTER_BOX_ZERO
+			if( filter[i] == 0.0 )
+				gsl_matrix_set( activity, i, j, 0.0 );
+		#else
 			gsl_matrix_set( activity, i, j, gsl_matrix_get( activity, i, j ) * filter[i]  +  0.5 * (1.0 - filter[i]) );
+		#endif
 		#if DebugFiltering
 			if( j == numinputneurons )
 				printf( "%g\n", gsl_matrix_get( activity, i, j ) );
