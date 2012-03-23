@@ -2,6 +2,12 @@ REPORTED	ASSIGNED	DATE		DESC
 
 [SIM]
 sean   					02/19/2012 	agent trackers UI
+larryy					03/23/2012	Record fitness, distinct from heuristic fitness (needed for jobs using
+									complexity as fitness, whether in combination with heuristic fitness or not).
+									May require two death logging events, first to trigger brain function
+									file closing (required to calculate complexity) and second to trigger
+									fitness recording (possibly in brain anatomy file, where heuristic
+									fitness is currently recorded, or possibly in its own datalib file).
 
 [BUILD]
 sean		sean		02/10/2012	auto-discover python version
@@ -27,6 +33,8 @@ sean		sean		02/16/2012	mutex around window list status update
 sean		sean		02/06/2012	make valueattr path encodings more concise
 sean		sean		02/23/2012	grayscale bin plotting
 sean		sean		02/24/2012	provide easy means to enumerate available stats names
+larryy					03/23/2012	allow up to 10 non-color line styles by using current set
+									of 5 line types plus both black and dark gray (gray70?)
 
 [PROPLIB]
 sean		sean		02/07/2012	templates
