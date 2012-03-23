@@ -640,31 +640,25 @@ Metric_Function = {'cc' : clustering_coefficient,
 ### FUNCTION small_world_index()
 ###
 ####################################################################################
-def small_world_index(timestep_directory, length_metric, randomization, distance):
-	def __list_division(a,b):
-		assert(len(a) == len(b))
-		c = []
-		for i in range(len(a)):
-			if b[i] == 0:
-				c.append(0.0)
-			else:
-				c.append(float(a[i])/float(b[i]))
-		return c
-
-	# Unpack the length_metric
-	pieces = length_metric.split('_')
-	neuron_set = pieces[1]
-	graph_type = pieces[2]
+def small_world_index(details, timestep_directory):
+	# Unpack the details
+	distance = 'd' in details[0]
+	neuron_set = details[1]
+	graph_type = details[2]
+	length_metric = details[3]
+	randomization = '_ran'
+	for detail in details[4:]:
+		randomization += '_' + detail
 	
 	# Define the metrics and files that will be needed
 	if distance:
 		cc_metric = 'ccd'
 	else:
 		cc_metric = 'cc'
-	sw_metrics = [cc_metric+'_'+neuron_set+'_'+graph_type,
-				  cc_metric+'_'+neuron_set+'_'+graph_type+randomization,
-				  length_metric,
-				  length_metric+randomization]
+	sw_metrics = [    cc_metric+'_'+neuron_set+'_'+graph_type,
+				      cc_metric+'_'+neuron_set+'_'+graph_type+randomization,
+				  length_metric+'_'+neuron_set+'_'+graph_type,
+				  length_metric+'_'+neuron_set+'_'+graph_type+randomization]
 	sw_metric_files = ['metric_'+sw_metrics[0]+'.plt',
 					   'metric_'+sw_metrics[1]+'.plt',
 					   'metric_'+sw_metrics[2]+'.plt',
@@ -704,11 +698,83 @@ def small_world_index(timestep_directory, length_metric, randomization, distance
 		elif len(metric_data[0]) != len(metric_data[2]):
 			print 'small_world_index: mismatched %s and %s vectors' % (sw_metrics[0], sw_metrics[2])
 
-		g = __list_division(metric_data[0], metric_data[1])
-		l = __list_division(metric_data[2], metric_data[3])
-		s = __list_division(g, l)
+		g = common_functions.list_division(metric_data[0], metric_data[1])
+		l = common_functions.list_division(metric_data[2], metric_data[3])
+		s = common_functions.list_division(g, l)
 		
 		return s
+
+
+####################################################################################
+###
+### FUNCTION metric_normalized()
+###
+####################################################################################
+def metric_normalized(details, timestep_directory):
+	# Unpack and recombine the details
+	root_metric = details[0]
+	neuron_set = details[1]
+	graph_type = details[2]
+	normalization = details[3]	# n or z
+	metric_to_compute = root_metric + '_' + neuron_set + '_' + graph_type + '_' + normalization
+	randomization = '_ran'
+	for detail in details[4:]:
+		_detail = '_' + detail
+		randomization += _detail
+		metric_to_compute += _detail
+	
+	# Define the metrics and files that will be needed
+	metrics = [ root_metric + '_' + neuron_set + '_' + graph_type,
+				root_metric + '_' + neuron_set + '_' + graph_type + randomization]
+	metric_files = ['metric_' + metrics[0] + '.plt',
+					'metric_' + metrics[1] + '.plt']
+
+	files_needed = []
+	for f in metric_files:
+		temp_file = os.path.join(timestep_directory, f)
+		files_needed.append(temp_file)
+
+	files_avail = glob.glob(os.path.join(timestep_directory, "*.plt"))
+
+	# Make sure we have all the files we need
+	if common_functions.list_intersection(files_needed, files_avail) != files_needed:
+		err('Must have %s and %s to calculate %s!' % (metrics[0], metrics[1], metric_to_compute))
+		return []  # not executed because err() exits
+	else:
+		# Upon completion metric_data should contain [metric, metric_random] or
+		# [metric, metric_random, metric_random_stddev] if normalization if 'z'
+		metric_data = []
+		for i in range(len(files_needed)):
+			file = files_needed[i]
+			metric = metrics[i]
+			try:
+				table = datalib.parse(file)[metric]
+			except MissingTableError, x:
+				err('Unable to find metric %s in file %s' % metric, file)
+				return []  # not executed because err() exits
+			try:
+				data = table.getColumn('Mean').data
+			except KeyError, x:	 # Maybe it's of an older format
+				data = table.getColumn('Metric').data
+			metric_data.append(data)
+			if normalization == 'z' and '_ran_' in metric:
+				try:
+					data = table.getColumn('StdDev').data
+				except KeyError, x:
+					err('Unable to find StdDev for %s in file %s' % metric, file)
+					return []  # not executed because err() exits
+				metric_data.append(data)
+
+		if len(metric_data[0]) != len(metric_data[1]):
+			print 'metric_normalized: mismatched %s and %s vectors' % (metrics[0], metrics[1])
+		# Don't need to check metrics[2], since it will come from same source as metrics[1]
+
+		if normalization == 'n':
+			computed_metric = common_functions.list_division(metric_data[0], metric_data[1])
+		elif normalization == 'z':
+			computed_metric = common_functions.list_zscore(metric_data[0], metric_data[1], metric_data[2])
+					
+		return computed_metric
 
 
 ####################################################################################
@@ -868,19 +934,30 @@ def analyze_recent_dir(metrics, recent_dir):
 			preserving = details[5]
 			for required_root in ['cc', length_metric]:
 				required_metric = required_root + '_' + neuron_set + '_' + graph_type
-				if required_metric not in metrics_avail and \
-				   required_metric not in metrics_remaining and \
-				   required_metric not in dependent_metrics:
-					dependent_metrics.append(required_metric)
 				required_metric_random = required_metric + '_ran_' + num_samples + '_' + preserving
-				if required_metric_random not in metrics_avail and \
-				   required_metric_random not in metrics_remaining and \
-				   required_metric_random not in dependent_metrics:
-					dependent_metrics.append(required_metric_random)
+				dependent_metrics.append(required_metric)
+				dependent_metrics.append(required_metric_random)
+		if 'n' in details or 'z' in details:
+			# e.g., cpl_p_wd_n_10_wp, cpl_p_wd_z_10_wp
+			neuron_set = details[1]
+			graph_type = details[2]
+			num_samples = details[4]
+			preserving = details[5]
+			required_metric = root + '_' + neuron_set + '_' + graph_type
+			required_metric_random = required_metric + '_ran_' + num_samples + '_' + preserving
+			dependent_metrics.append(required_metric)
+			dependent_metrics.append(required_metric_random)
 
-	if dependent_metrics:
-		print 'To calculate swi must also calculate', dependent_metrics
-		metrics_remaining += dependent_metrics
+	additional_metrics = []
+	for metric in dependent_metrics:
+		if metric not in metrics_avail and \
+		   metric not in metrics_remaining and \
+		   metric not in additional_metrics:
+			additional_metrics.append(metric)
+
+	if additional_metrics:
+		print 'To calculate specified metrics must also calculate', additional_metrics
+		metrics_remaining += additional_metrics
 	
 	if metrics_remaining:
 		__analyze_recent_dir(metrics_remaining, recent_dir)
@@ -1052,63 +1129,48 @@ def compute_metrics(metrics,
 				
 		anatomy_directory = os.path.join(timestep_directory, "..", "..", "anatomy")
 		
-		# The following should be a drastically more efficient means of obtaining the
-		# sorted list of brain anatomy files, compared to the old method below it
+		# Create a sorted list of brain anatomy files
 		number_list.sort()
 		brainAnatomy_files = []
 		for id in number_list:
 			brainAnatomy_files.append(os.path.join(anatomy_directory, 'brainAnatomy_' + str(id) + '_death.txt'))
 											   
-#		brainAnatomy_files_all = glob.glob(os.path.join(anatomy_directory, "*death.txt"))
-# 
-#		#Pick out those brainAnatomy files with corresponding critter number to brainFunction files.
-#		brainAnatomy_files = []
-#		for anatomyFile in brainAnatomy_files_all:
-#			if int(os.path.basename(anatomyFile)[13:-10]) in number_list:
-#				brainAnatomy_files.append(anatomyFile)
-# 
-#		brainAnatomy_files.sort(lambda x, y: cmp(int(os.path.basename(x)[13:-10]),
-#							  int(os.path.basename(y)[13:-10])))
-
-		if len(brainAnatomy_files) == 0:
-			err('No brainanatomy files found in %s' % anatomy_directory)
-
-		# Separate out the derived 'swi' metrics from the other metrics
+		# Separate out the derived metrics (swi, n, z) from the other metrics
 		metrics_to_compute = []
-		swi_metrics_to_compute = []
-		swi_details = []
+		derived_metrics_to_compute = []
+		derived_details = []
 		for metric in metrics_remaining:
 			details = metric.split('_')
-			if details[0] == 'swi' or details[0] == 'swid':
-				swi_metrics_to_compute.append(metric)
-				swi_details.append(details)
+			if details[0] == 'swi' or details[0] == 'swid' or \
+			  (len(details) >= 4 and details[3] in ('z', 'n')):
+				derived_metrics_to_compute.append(metric)
+				derived_details.append(details)
 			else:
 				metrics_to_compute.append(metric)
 				
-		if metrics_to_compute:	# computing something other than 'swi' metrics
+		if metrics_to_compute:	# computing something other than derived metrics
 			metric_data = calc_metrics(metrics_to_compute, brainAnatomy_files)
 			save_metrics(metrics_to_compute, metric_data, timestep_directory, tdata)
 
-		if swi_metrics_to_compute:
-			swis = []
-			for i in range(len(swi_metrics_to_compute)):
-				details = swi_details[i]
-				length_metric = details[3] + '_' + details[1] + '_' + details[2]  #	 <metric>_<neuron-set>_<graph-type>
-				randomization = '_ran'
-				for detail in details[4:]:
-					randomization += '_' + detail
-				swi = small_world_index(timestep_directory, length_metric, randomization, 'd' in details[0])
-				swis.append(swi)
+		if derived_metrics_to_compute:
+			derived_metrics = []
+			for i in range(len(derived_metrics_to_compute)):
+				details = derived_details[i]
+				if details[0] in ('swi', 'swid'):
+					derived_metric = small_world_index(details, timestep_directory)
+				elif len(details) >= 4 and details[3] in ('n', 'z'):
+					derived_metric = metric_normalized(details, timestep_directory)
+				derived_metrics.append(derived_metric)
 			metric_data = []
 			i = 0
 			for anatomy_file in brainAnatomy_files:
 				agent = os.path.basename(anatomy_file)[13:-10]
 				result = {}
-				for j in range(len(swi_metrics_to_compute)):
-					result[swi_metrics_to_compute[j]] = [swis[j][i]]
+				for j in range(len(derived_metrics_to_compute)):
+					result[derived_metrics_to_compute[j]] = [derived_metrics[j][i]]
 				metric_data.append({'agent': agent, 'metrics': result})
 				i += 1
-			save_metrics(swi_metrics_to_compute, metric_data, timestep_directory, tdata)
+			save_metrics(derived_metrics_to_compute, metric_data, timestep_directory, tdata)
 
 	return metrics
 
