@@ -2947,7 +2947,6 @@ EpochFrequency {
 ComplexityType {
   type    STRING
   default P
-  legacy  O
 }
 
 EndOnPopulationCrash {
