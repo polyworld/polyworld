@@ -3330,7 +3330,6 @@ NumberRecentFittest {
 ComplexityFitnessWeight {
   type    FLOAT
   default 0.0
-  legacy  $( 0.0 if ComplexityType == \"O\" else 1.0 )
 }
 
 HeuristicFitnessWeight {
