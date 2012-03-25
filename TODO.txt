@@ -35,6 +35,10 @@ sean		sean		02/23/2012	grayscale bin plotting
 sean		sean		02/24/2012	provide easy means to enumerate available stats names
 larryy					03/23/2012	allow up to 10 non-color line styles by using current set
 									of 5 line types plus both black and dark gray (gray70?)
+larryy					03/25/2012	option to color individual runs all the same as the meta-mean,
+									and only identify meta-means/groups in legends (possibly
+									make this the default if plotting both means and meta-means
+									with color and legends)
 
 [PROPLIB]
 sean		sean		02/07/2012	templates
