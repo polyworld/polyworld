@@ -2131,7 +2131,7 @@ RecordPosition {
     Precise,     # X,Y,Z to full precision
     Approximate  # X,Z rounded to 2 decimal places
   }
-  default ( "Approximate" if RecordAll else "False" )
+  default Approximate if RecordAll else False
 }
 
 RecordBarrierPosition {
@@ -2229,7 +2229,7 @@ GenomeSubsetLog {
 
 RecordSeparations {
   type    Enum
-  default ( "All" if RecordAll else "False" )
+  default All if RecordAll else False
   enum    Values {
     False,
     Contact,
