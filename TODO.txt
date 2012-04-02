@@ -42,6 +42,7 @@ larryy					03/25/2012	option to color individual runs all the same as the meta-m
 
 [PROPLIB]
 sean		sean		04/02/2012	Document delete not fully implemented. Tokens never deleted.
+sean		sean		04/02/2012	Write documentation about enums (qualification and quotes)
 
 -------------------------------------------------------------------
 -------------------------------------------------------------------
