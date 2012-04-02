@@ -92,6 +92,12 @@ void RandomNumberGenerator::seed( long x )
 	}
 }
 
+void RandomNumberGenerator::seedIfLocal( long x )
+{
+	if( type == LOCAL )
+		seed( x );
+}
+
 double RandomNumberGenerator::drand()
 {
 	switch( type )

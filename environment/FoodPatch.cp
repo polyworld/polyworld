@@ -34,7 +34,7 @@ FoodPatch::FoodPatch()
 //-------------------------------------------------------------------------------------------
 // FoodPatch::FoodPatch
 //-------------------------------------------------------------------------------------------
-void FoodPatch::init( const FoodType *foodType, float x, float z, float sx, float sz, float rate, int initFood, int minFood, int maxFood, int maxFoodGrown, float patchFraction, int shape, int distrib, float nhsize, OnCondition *onCondition, bool inRemoveFood, gstage* fs, Domain* dm, int domainNumber ){
+void FoodPatch::init( const FoodType *foodType, float x, float z, float sx, float sz, float rate, int initFood, int minFood, int maxFood, int maxFoodGrown, float patchFraction, int shape, int distrib, float nhsize, bool on, bool inRemoveFood, gstage* fs, Domain* dm, int domainNumber ){
     
 	initBase(x, z,  sx, sz, shape, distrib, nhsize, fs, dm, domainNumber);
 
@@ -48,7 +48,8 @@ void FoodPatch::init( const FoodType *foodType, float x, float z, float sx, floa
  	maxFoodCount = maxFood;
 	maxFoodGrownCount = maxFoodGrown;
 	
-	this->onCondition = onCondition;
+	this->on = on;
+	this->onPrev = false;
 	this->foodType = foodType;
 
 	removeFood = inRemoveFood;
@@ -86,13 +87,16 @@ void FoodPatch::setInitCounts( int initFood, int minFood, int maxFood, int maxFo
 //-------------------------------------------------------------------------------------------
 FoodPatch::~FoodPatch()
 {
-	delete onCondition;
 }
 
 
 
+//-------------------------------------------------------------------------------------------
+// FoodPatch::addFood
+//
 // Add food to the FoodPatch.
 // Find an appropriate point in the patch (based on patch shape and distribution)
+//-------------------------------------------------------------------------------------------
 food *FoodPatch::addFood( long step )
 {
 	// Only add the food if there is room in the patch
@@ -131,195 +135,28 @@ food *FoodPatch::addFood( long step )
 	return NULL;
 }
 
-//===========================================================================
-// TimeOnCondition
-//===========================================================================
-FoodPatch::TimeOnCondition::TimeOnCondition( int _period,
-											 float _onFraction,
-											 float _phase )
+//-------------------------------------------------------------------------------------------
+// FoodPatch::isOn
+//-------------------------------------------------------------------------------------------
+bool FoodPatch::isOn()
 {
-	period = _period;
-	inversePeriod = 1. / _period;
-	onFraction = _onFraction;
-	phase = _phase;
+	return on;
 }
 
-FoodPatch::TimeOnCondition::~TimeOnCondition()
+//-------------------------------------------------------------------------------------------
+// FoodPatch::isOnChanged
+//
+// Note that changes would come from a dynamic property in the worldfile.
+//-------------------------------------------------------------------------------------------
+bool FoodPatch::isOnChanged()
 {
+	return on != onPrev;
 }
 
-void FoodPatch::TimeOnCondition::updateOn( long step )
+//-------------------------------------------------------------------------------------------
+// FoodPatch::endStep
+//-------------------------------------------------------------------------------------------
+void FoodPatch::endStep()
 {
-	// no-op
-}
-
-bool FoodPatch::TimeOnCondition::on( long step )
-{
-	if( (period == 0) || (onFraction == 1.0) )
-		return( true );
-	
-	float floatCycles = step * inversePeriod;
-	int intCycles = (int) floatCycles;
-	float cycleFraction = floatCycles  -  intCycles;
-	if( (cycleFraction >= phase) && (cycleFraction < (phase + onFraction)) )
-		return( true );
-	else
-		return( false );
-}
-
-bool FoodPatch::TimeOnCondition::turnedOff( long step )
-{
-	return on( step ) && !on( step + 1 );
-}
-
-//===========================================================================
-// MaxPopGroupOnCondition
-//===========================================================================
-void FoodPatch::MaxPopGroupOnCondition::Group::validate( Group *group )
-{
-	if( group != NULL )
-	{
-		if( group->members.size() < 2 )
-		{
-			cerr << "MaxPopGroup must have at least 2 patches" << endl;
-			exit( 1 );
-		}
-	}
-}
-
-void FoodPatch::MaxPopGroupOnCondition::Group::findNext( long step, MaxPopGroupOnCondition *exclude )
-{
-	MaxPopGroupOnCondition *minMember = NULL;
-
-	itfor( MemberList, members, it )
-	{
-		MaxPopGroupOnCondition *member = *it;
-		if( !exclude || (member != exclude) )
-		{
-			if( minMember == NULL )
-			{
-				minMember = member;
-			}
-			else
-			{
-				long count = member->parms.patch->agentInsideCount;
-				long countMin = minMember->parms.patch->agentInsideCount;
-
-				if( (count < countMin)
-					|| ( (count == countMin) && (member->state.end < minMember->state.end) ) )
-				{
-					minMember = member;
-				}
-			}
-		}
-	}
-
-	assert( minMember );
-
-	minMember->state.start = step;
-
-	// it's a hack to do this here. we want some kind of 'death patch' infrastructure.
-	if( exclude == NULL )
-	{
-		FoodPatch *newPatch = minMember->parms.patch;
-
-		// we only do killing if it wasn't a timeout, which we can tell by a null exclude
-		agent *a;
-		objectxsortedlist::gXSortedObjects.reset();
-		while (objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&a))
-		{
-			if( newPatch->pointIsInside( a->x(), a->z(), 5 ) )
-			{
-				a->SetDeathByPatch();
-			}
-		}
-	}
-}
-
-FoodPatch::MaxPopGroupOnCondition::MaxPopGroupOnCondition( FoodPatch *patch,
-														   Group *group,
-														   int maxPopulation,
-														   int timeout,
-														   int delay )
-{
-	parms.patch = patch;
-	parms.group = group;
-	parms.maxPopulation = maxPopulation;
-	parms.timeout = timeout;
-	parms.delay = delay;
-
-	if( parms.group->members.size() == 0 )
-	{
-		// activate the first one
-		state.start = 1;
-	}
-	else
-	{
-		state.start = -1;
-	}
-	state.end = -1;
-	state.findNext = -1;
-
-	parms.group->members.push_back( this );
-}
-
-FoodPatch::MaxPopGroupOnCondition::~MaxPopGroupOnCondition()
-{
-	parms.group->members.remove( this );
-	if( parms.group->members.size() == 0 )
-	{
-		delete parms.group;
-	}
-}
-
-void FoodPatch::MaxPopGroupOnCondition::updateOn( long step )
-{
-	if( state.findNext == step )
-	{
-		state.findNext = -1;
-		parms.group->findNext( step );
-	}
-	else if( (state.start > -1) && (step > state.start) )
-	{
-		bool isOn = true;
-		bool findImmediate = false;
-
-		if( (parms.timeout > 0) && ((step - state.start) >= parms.timeout) )
-		{
-			isOn = false;
-			findImmediate = true;
-			cout << "TIMEOUT @ " << step << "(timeout=" << parms.timeout << ")" << endl;
-		}
-		else if( parms.patch->agentInsideCount >= parms.maxPopulation )
-		{
-			isOn = false;
-			cout << "MAXPOP @ " << step << "(count=" << parms.patch->agentInsideCount << ")" << endl;
-		}
-
-		if( !isOn )
-		{
-			state.start = -1;
-			state.end = step;
-
-			if( findImmediate )
-			{
-				state.findNext = -1;
-				parms.group->findNext( step, this );
-			}
-			else
-			{
-				state.findNext = step + parms.delay;
-			}
-		}
-	}
-}
-
-bool FoodPatch::MaxPopGroupOnCondition::on( long step )
-{
-	return (state.start != -1) && (state.start <= step);
-}
-
-bool FoodPatch::MaxPopGroupOnCondition::turnedOff( long step )
-{
-	return state.end == step;
+	onPrev = on;
 }

@@ -12,6 +12,7 @@
 #include <errno.h>
 #include <float.h>
 #include <math.h>
+#include <stdlib.h>
 
 #include <string>
 #include <vector>
@@ -87,6 +88,7 @@ float gaussian( float x, float mean, float variance );
 
 inline float dist( float x1, float y1, float x2, float y2 ) { return sqrt( (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2) ); }
 
+bool exists( const std::string &path );
 std::string dirname( const std::string &path );
 void makeDirs( const std::string &path );
 void makeParentDir( const std::string &path );
@@ -124,3 +126,5 @@ std::vector<std::string> split( const std::string& str, const std::string& delim
 
 #define SYS(STMT) {int rc = STMT; if(rc == -1) perror(#STMT);}
 #define SYSTEM(cmd) {int rc = system(cmd); if(rc != 0) {fprintf(stderr, "Failed executing command '%s'\n", cmd); exit(1);}}
+
+#define errif( STMT, MSG... ) if( STMT ) { fprintf(stderr, MSG); fprintf(stderr, "\n"); exit(1); }

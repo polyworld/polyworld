@@ -42,7 +42,6 @@
 #include "barrier.h"
 #include "Brain.h"
 #include "CameraController.h"
-#include "condprop.h"
 #include "debug.h"
 #include "food.h"
 #include "globals.h"
@@ -50,9 +49,9 @@
 #include "Genome.h"
 #include "GenomeUtil.h"
 #include "Logs.h"
-#include "proplib.h"
 #include "Metabolism.h"
 #include "MonitorManager.h"
+#include "proplib.h"
 #include "Queue.h"
 #include "RandomNumberGenerator.h"
 #include "Resources.h"
@@ -67,7 +66,6 @@
 #include "brick.h"
 
 
-using namespace condprop;
 using namespace genome;
 using namespace std;
 
@@ -221,21 +219,65 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 		fMaxGapCreate(0),
 		fNumBornSinceCreated(0),
 
-		agentPovRenderer(NULL),
-		fConditionalProps( new condprop::PropertyList() )
+		agentPovRenderer(NULL)
 {
 	fStep = 0;
 	memset( fNumberAliveWithMetabolism, 0, sizeof(fNumberAliveWithMetabolism) );
 
     srand(1);
 
+	/*
+	{
+		proplib::Parser parser;
+		parser.parseDocument( worldfilePath, new ifstream(worldfilePath.c_str()) )->dump(cout);
+		exit( 0 );
+	}
+	*/
 	proplib::Interpreter::init();
-	proplib::Document *docWorldFile;
-	proplib::Document *docSchema;
-	Resources::parseConfiguration( &docWorldFile, &docSchema, worldfilePath, "./etc/worldfile.wfs" );
 
-	ProcessWorldFile( docWorldFile );
-	
+	// ---
+	// --- Create the run directory
+	// ---
+	{
+		char s[256];
+		char t[256];
+
+		// First save the old directory, if it exists
+		sprintf( s, "run" );
+		sprintf( t, "run_%ld", time(NULL) );
+		(void) rename( s, t );
+
+		if( mkdir("run", PwDirMode) )
+		{
+			eprintf( "Error making run directory (%d)\n", errno );
+			exit( 1 );
+		}
+	}
+
+	// ---
+	// --- Process the Worldfile
+	// ---
+	proplib::SchemaDocument *schema;
+	proplib::Document *worldfile;
+	{
+		proplib::DocumentBuilder builder;
+		schema = builder.buildSchemaDocument( "./etc/worldfile.wfs" );
+		worldfile = builder.buildWorldfileDocument( schema, worldfilePath );
+
+		{
+			ofstream out( "run/converted.wf" );
+			proplib::DocumentWriter writer( out );
+			writer.write( worldfile );
+		}
+
+		schema->apply( worldfile );
+	}		
+	ProcessWorldFile( worldfile );
+	InitDynamicProperties( worldfile );
+
+	// ---
+	// --- General Init
+	// ---
 	InitNeuralValues();	 // Must be called before genome and brain init
 	
     Brain::braininit();
@@ -259,30 +301,6 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 						  maxagentradius : maxfoodradius;
 
 	InitFittest();
-
-	// ---
-	// --- Create the run directory
-	// ---
-	{
-		char s[256];
-		char t[256];
-
-		// First save the old directory, if it exists
-		sprintf( s, "run" );
-		sprintf( t, "run_%ld", time(NULL) );
-		(void) rename( s, t );
-
-		if( mkdir("run", PwDirMode) )
-		{
-			eprintf( "Error making run directory (%d)\n", errno );
-			exit( 1 );
-		}
-	}
-
-	// ---
-	// --- Init Conditional Properties
-	// ---
-	fConditionalProps->init();
 
 	if( fLockStepWithBirthsDeathsLog )
 	{
@@ -332,7 +350,7 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 	// ---
 	// --- Init Logs
 	// ---
-	logs = new Logs( this, docWorldFile );
+	logs = new Logs( this, worldfile );
 
 	// ---
 	// --- Set Maximum Open Files
@@ -420,26 +438,17 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 	// --- Save worldfile data to run/ and dispose documents
 	// ---
 	{
-		SYSTEM( ("cp " + docWorldFile->getPath() + " run/original.wf").c_str() );
-		SYSTEM( ("cp " + docSchema->getPath() + " run/original.wfs").c_str() );
+		SYSTEM( ("cp " + worldfile->getPath() + " run/original.wf").c_str() );
+		SYSTEM( ("cp " + schema->getPath() + " run/original.wfs").c_str() );
 
 		{
 			ofstream out( "run/normalized.wf" );
-			docWorldFile->write( out );
+			proplib::DocumentWriter writer( out );
+			writer.write( worldfile );
 		}
 
-		{
-			ofstream out( "run/reduced.wf" );
-			proplib::Schema::reduce( docSchema, docWorldFile, false );
-			docWorldFile->write( out );
-		}
-		{
-			ofstream out( "run/normalized.wfs" );
-			docSchema->write( out );
-		}
-
-		delete docWorldFile;
-		delete docSchema;
+		delete worldfile;
+		delete schema;
 
 		proplib::Interpreter::dispose();
 	}
@@ -486,8 +495,6 @@ TSimulation::~TSimulation()
 		while( barrier::gXSortedBarriers.next( b ) )
 			delete b;
 	}
-
-	fConditionalProps->dispose();
 
 	// delete all objects
 	gobject* gob = NULL;
@@ -630,15 +637,15 @@ void TSimulation::Step()
 	fFoodEnergyOut = 0.0;
 	fEnergyEaten.zero();
 
+	// Update dynamic properties
+	proplib::DynamicProperties::update();
+
 	// Update the barriers, now that they can be dynamic
 	barrier* b;
 	barrier::gXSortedBarriers.reset();
 	while( barrier::gXSortedBarriers.next( b ) )
 		b->update();
 	barrier::gXSortedBarriers.xsort();
-	
-	// Update the conditional properties
-	fConditionalProps->update( fStep );
 
 	MaintainEnergyCosts();
 
@@ -786,6 +793,16 @@ string TSimulation::EndAt( long timestep )
 	return "";
 }
 
+//-------------------------------------------------------------------------------------------
+// TSimulation::InitDynamicProperties()
+//-------------------------------------------------------------------------------------------
+void TSimulation::InitDynamicProperties( proplib::Document *docWorldFile )
+{
+	proplib::DynamicProperties::UpdateContext *context = new proplib::DynamicProperties::UpdateContext( this );
+	proplib::DynamicProperties::init( docWorldFile, context );
+
+}
+
 //---------------------------------------------------------------------------
 // TSimulation::InitFittest
 //---------------------------------------------------------------------------
@@ -869,9 +886,6 @@ void TSimulation::InitAgents()
 			sim->fNeuronGroupCountStats.add( a->GetBrain()->NumNeuronGroups() );
 
 			sim->FoodEnergyIn( a->GetFoodEnergy() );
-
-			// logtodo: put this in a devoted serial task.
-			logs->postEvent( AgentBodyUpdatedEvent(a) );
 		}
 	};
 
@@ -904,6 +918,8 @@ void TSimulation::InitAgents()
 			}
 			else
 				c->Genes()->randomize();
+
+			c->setGenomeReady();
 
 			// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 			// !!! POST PARALLEL
@@ -980,6 +996,8 @@ void TSimulation::InitAgents()
 		else
 			c->Genes()->randomize();
 
+		c->setGenomeReady();
+
 		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		// !!! POST PARALLEL
 		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1029,7 +1047,7 @@ void TSimulation::InitFood()
 			
 		for( int foodPatchNumber = 0; foodPatchNumber < fDomains[domainNumber].numFoodPatches; foodPatchNumber++ )
 		{
-			if( fDomains[domainNumber].fFoodPatches[foodPatchNumber].on( 0 ) )
+			if( fDomains[domainNumber].fFoodPatches[foodPatchNumber].isOn() )
 			{
 				for( int j = 0; j < fDomains[domainNumber].fFoodPatches[foodPatchNumber].initFoodCount; j++ )
 				{
@@ -1054,7 +1072,7 @@ void TSimulation::InitBricks()
 	{
 		for( int brickPatchNumber = 0; brickPatchNumber < fDomains[domainNumber].numBrickPatches; brickPatchNumber++ )
 		{
-			fDomains[domainNumber].fBrickPatches[brickPatchNumber].updateOn( 0 );
+			fDomains[domainNumber].fBrickPatches[brickPatchNumber].updateOn();
 		}
 	}
 
@@ -2077,6 +2095,7 @@ void TSimulation::MateLockstep( void )
 		Q_CHECK_PTR(e);
 
 		e->Genes()->crossover(c->Genes(), d->Genes(), true);
+		e->setGenomeReady();
 		e->grow( fMateWait );
 		Energy eenergy = c->mating( fMateFitnessParameter, fMateWait, /*lockstep*/ true )
 					   + d->mating( fMateFitnessParameter, fMateWait, /*lockstep*/ true );
@@ -2290,6 +2309,7 @@ void TSimulation::Mate( agent *c,
 				Q_CHECK_PTR(e);
 
 				e->Genes()->crossover(c->Genes(), d->Genes(), true);
+				e->setGenomeReady();
 
 				Energy eenergy = c->mating( fMateFitnessParameter, fMateWait, /*lockstep*/ false )
 							   + d->mating( fMateFitnessParameter, fMateWait, /*lockstep*/ false );
@@ -2702,6 +2722,10 @@ void TSimulation::Eat( agent *c, bool *cDied )
 	{
 		eatAllowed = false;
 		eatFailedMinAge = true;
+	}
+	if( (fStep - c->LastEat()) < fEatWait )
+	{
+		eatAllowed = false;
 	}
 
 	// look for food in the -x direction
@@ -3119,6 +3143,8 @@ void TSimulation::CreateAgents( void )
 					gaPrint( "%5ld: domain %d creation random early (%4ld)\n", fStep, id, fNumberCreatedRandom );
                 }
 
+				newAgent->setGenomeReady();
+
 				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 				// ^^^ PARALLEL TASK GrowAgent
 				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -3254,6 +3280,8 @@ void TSimulation::CreateAgents( void )
 				gaPrint( "%5ld: global creation random early (%4ld)\n", fStep, fNumberCreatedRandom );
             }
 
+			newAgent->setGenomeReady();
+
             newAgent->grow( fMateWait );
 			FoodEnergyIn( newAgent->GetFoodEnergy() );
 
@@ -3289,7 +3317,7 @@ void TSimulation::MaintainBricks()
 	{
 		for( int patch = 0; patch < fDomains[domain].numBrickPatches; patch++ )
 		{
-			fDomains[domain].fBrickPatches[patch].updateOn( fStep );
+			fDomains[domain].fBrickPatches[patch].updateOn();
 		}
 	}
 }
@@ -3299,15 +3327,6 @@ void TSimulation::MaintainBricks()
 //---------------------------------------------------------------------------
 void TSimulation::MaintainFood()
 {
-	// Update on/off state of food patches
-	for( int domain = 0; domain < fNumDomains; domain++ )
-	{
-		for( int patch = 0; patch < fDomains[domain].numFoodPatches; patch++ )
-		{
-			fDomains[domain].fFoodPatches[patch].updateOn( fStep );
-		}
-	}
-
 	// Remove any food that has exceeded its lifespan
 	if( food::gMaxLifeSpan > 0 )
 	{
@@ -3344,7 +3363,7 @@ void TSimulation::MaintainFood()
 				// and they are now active, perform the initial growth now
 				for( int patchNumber = 0; patchNumber < fDomains[domainNumber].numFoodPatches; patchNumber++ )
 				{
-					if( !fDomains[domainNumber].fFoodPatches[patchNumber].initFoodGrown() && fDomains[domainNumber].fFoodPatches[patchNumber].on( fStep ) )
+					if( !fDomains[domainNumber].fFoodPatches[patchNumber].initFoodGrown() && fDomains[domainNumber].fFoodPatches[patchNumber].isOn() )
 					{
 						for( int j = 0; j < fDomains[domainNumber].fFoodPatches[patchNumber].initFoodCount; j++ )
 						{
@@ -3410,7 +3429,7 @@ void TSimulation::MaintainFood()
 			{
 				for( int patchNumber = 0; patchNumber < fDomains[domainNumber].numFoodPatches; patchNumber++ )
 				{
-					if( fDomains[domainNumber].fFoodPatches[patchNumber].on( fStep ) )
+					if( fDomains[domainNumber].fFoodPatches[patchNumber].isOn() )
 					{
 						if( fDomains[domainNumber].fFoodPatches[patchNumber].foodCount < fDomains[domainNumber].fFoodPatches[patchNumber].maxFoodGrownCount )
 						{
@@ -3452,13 +3471,13 @@ void TSimulation::MaintainFood()
 		int numPatchesNeedingRemoval = 0;
 		for( int domain = 0; domain < fNumDomains; domain++ )
 		{
-			for( int patch = 0; patch < fDomains[domain].numFoodPatches; patch++ )
+			for( int ipatch = 0; ipatch < fDomains[domain].numFoodPatches; ipatch++ )
 			{
-				// printf( "%2ld: d=%d, p=%d, on=%d, on1=%d, r=%d\n", fStep, domain, patch, fDomains[domain].fFoodPatches[patch].on( fStep ), fDomains[domain].fFoodPatches[patch].on( fStep+1 ), fDomains[domain].fFoodPatches[patch].removeFood );
+				FoodPatch &patch = fDomains[domain].fFoodPatches[ipatch];
 				// If the patch is on now, but off in the next time step, and it is supposed to remove its food when it is off...
-				if( fDomains[domain].fFoodPatches[patch].removeFood && fDomains[domain].fFoodPatches[patch].turnedOff( fStep ) )
+				if( patch.removeFood && !patch.isOn() && patch.isOnChanged() )
 				{
-					fFoodPatchesNeedingRemoval[numPatchesNeedingRemoval++] = &(fDomains[domain].fFoodPatches[patch]);
+					fFoodPatchesNeedingRemoval[numPatchesNeedingRemoval++] = &patch;
 				}
 			}
 		}
@@ -3481,6 +3500,14 @@ void TSimulation::MaintainFood()
 					}
 				}
 			}
+		}
+	}
+
+	for( int domain = 0; domain < fNumDomains; domain++ )
+	{
+		for( int patch = 0; patch < fDomains[domain].numFoodPatches; patch++ )
+		{
+			fDomains[domain].fFoodPatches[patch].endStep();
 		}
 	}
 
@@ -3539,7 +3566,7 @@ void TSimulation::Birth( agent* a,
 	if( a )	// a will NULL for virtual births only
 	{
 		fNumberAlive++;
-		fNumberAliveWithMetabolism[ GenomeUtil::getMetabolism(a->Genes())->index ]++;
+		fNumberAliveWithMetabolism[ a->GetMetabolism()->index ]++;
 	
 		// ---
 		// --- Update agent's LifeSpan
@@ -4163,536 +4190,16 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
     genome::gMaxNumCpts = doc.get( "MaxCrossoverPoints" );
     genome::gMinLifeSpan = doc.get( "MinLifeSpan" );
     genome::gMaxLifeSpan = doc.get( "MaxLifeSpan" );
+	fEatWait = doc.get( "EatWait" );
     fMateWait = doc.get( "MateWait" );
     agent::gInitMateWait = doc.get( "InitMateWait" );
 	fEatMateSpan = doc.get( "EatMateWait" );
-	{
-		proplib::Property &propEatMateMinDistance = doc.get( "EatMateMinDistance" );
+	fEatMateMinDistance = doc.get( "EatMateMinDistance" );
+	fMaxMateVelocity = doc.get( "MaxMateVelocity" );
+	fMinEatVelocity = doc.get( "MinEatVelocity" );
+	fMaxEatVelocity = doc.get( "MaxEatVelocity" );
+	fMaxEatYaw = doc.get( "MaxEatYaw" );
 
-		proplib::Property &propConditions = propEatMateMinDistance.get( "Conditions" );
-		condprop::ConditionList<float> *conditions = new condprop::ConditionList<float>();
-		int nconditions = propConditions.size();
-
-		for( int i = 0; i < nconditions; i++ )
-		{
-			proplib::Property &propCondition = propConditions.get( i );
-
-			CouplingRange couplingRange;
-			{
-				string role = propCondition.get( "CouplingRange" );
-				if( role == "Begin" )
-					couplingRange = COUPLING_RANGE__BEGIN;
-				else if( role == "End" )
-					couplingRange = COUPLING_RANGE__END;
-				else if( role == "None" )
-					couplingRange = COUPLING_RANGE__NONE;
-				else
-					assert( false );
-			}
-
-			float value = propCondition.get( "Value" );
-			string mode = propCondition.get( "Mode" );
-
-			condprop::Condition<float> *condition;
-			if( mode == "Time" )
-			{
-				long step = propCondition.get( "Time" );
-				condition = new condprop::TimeCondition<float>( step, value, couplingRange );
-			}
-			else if( mode == "IntThreshold" )
-			{
-				proplib::Property &propCount = propCondition.get( "IntThreshold" );
-				string countValue = propCount.get( "Value" );
-				string opname = propCount.get( "Op" );
-				int threshold = propCount.get( "Threshold" );
-				long duration = propCount.get( "Duration" );
-				
-				const int *countPtr;
-				if( countValue == "Agents" )
-				{
-					countPtr = objectxsortedlist::gXSortedObjects.getCountPtr( AGENTTYPE );
-				}
-				else
-					assert( false );
-
-				condprop::ThresholdCondition<float,int>::Op op;
-				if( opname == "EQ" )
-					op = condprop::ThresholdCondition<float,int>::EQ;
-				else if( opname == "LT" )
-					op = condprop::ThresholdCondition<float,int>::LT;
-				else if( opname == "GT" )
-					op = condprop::ThresholdCondition<float,int>::GT;
-				else
-					assert( false );
-
-				condition = new condprop::ThresholdCondition<float,int>( countPtr,
-																		 op,
-																		 threshold,
-																		 duration,
-																		 value,
-																		 couplingRange );
-			}
-			else
-				assert( false );
-
-			conditions->add( condition );
-		}
-
-		condprop::Logger<float> *logger = NULL;
-		if( (bool)propEatMateMinDistance.get( "Record" ) )
-		{
-			logger = new condprop::ScalarLogger<float>("EatMateMinDistance",
-													   datalib::FLOAT);
-		}
-
-		condprop::Property<float> *property =
-			new condprop::Property<float>( "EatMateMinDistance",
-										   &fEatMateMinDistance,
-										   &condprop::InterpolateFunction_float,
-										   &condprop::DistanceFunction_float,
-										   conditions,
-										   logger );
-
-		fConditionalProps->add( property );
-	}
-	{
-		proplib::Property &propMinEatVelocity = doc.get( "MinEatVelocity" );
-
-		proplib::Property &propConditions = propMinEatVelocity.get( "Conditions" );
-		condprop::ConditionList<float> *conditions = new condprop::ConditionList<float>();
-		int nconditions = propConditions.size();
-
-		for( int i = 0; i < nconditions; i++ )
-		{
-			proplib::Property &propCondition = propConditions.get( i );
-
-			CouplingRange couplingRange;
-			{
-				string role = propCondition.get( "CouplingRange" );
-				if( role == "Begin" )
-					couplingRange = COUPLING_RANGE__BEGIN;
-				else if( role == "End" )
-					couplingRange = COUPLING_RANGE__END;
-				else if( role == "None" )
-					couplingRange = COUPLING_RANGE__NONE;
-				else
-					assert( false );
-			}
-
-			float value = propCondition.get( "Value" );
-			string mode = propCondition.get( "Mode" );
-
-			condprop::Condition<float> *condition;
-			if( mode == "Time" )
-			{
-				long step = propCondition.get( "Time" );
-				condition = new condprop::TimeCondition<float>( step, value, couplingRange );
-			}
-			else if( mode == "IntThreshold" )
-			{
-				proplib::Property &propCount = propCondition.get( "IntThreshold" );
-				string countValue = propCount.get( "Value" );
-				string opname = propCount.get( "Op" );
-				int threshold = propCount.get( "Threshold" );
-				long duration = propCount.get( "Duration" );
-				
-				const int *countPtr;
-				if( countValue == "Agents" )
-				{
-					countPtr = objectxsortedlist::gXSortedObjects.getCountPtr( AGENTTYPE );
-				}
-				else
-					assert( false );
-
-				condprop::ThresholdCondition<float,int>::Op op;
-				if( opname == "EQ" )
-					op = condprop::ThresholdCondition<float,int>::EQ;
-				else if( opname == "LT" )
-					op = condprop::ThresholdCondition<float,int>::LT;
-				else if( opname == "GT" )
-					op = condprop::ThresholdCondition<float,int>::GT;
-				else
-					assert( false );
-
-				condition = new condprop::ThresholdCondition<float,int>( countPtr,
-																		 op,
-																		 threshold,
-																		 duration,
-																		 value,
-																		 couplingRange );
-			}
-			else if( mode == "FloatThreshold" )
-			{
-				proplib::Property &propCount = propCondition.get( "FloatThreshold" );
-				string ratioValue = propCount.get( "Value" );
-				string opname = propCount.get( "Op" );
-				float threshold = propCount.get( "Threshold" );
-				long duration = propCount.get( "Duration" );
-				
-				const float *ratioPtr = fEatStatistics.GetProperty( ratioValue );
-
-				condprop::ThresholdCondition<float,float>::Op op;
-				if( opname == "EQ" )
-					op = condprop::ThresholdCondition<float,float>::EQ;
-				else if( opname == "LT" )
-					op = condprop::ThresholdCondition<float,float>::LT;
-				else if( opname == "GT" )
-					op = condprop::ThresholdCondition<float,float>::GT;
-				else
-					assert( false );
-
-				condition = new condprop::ThresholdCondition<float,float>( ratioPtr,
-																		   op,
-																		   threshold,
-																		   duration,
-																		   value,
-																		   couplingRange );
-			}
-			else
-				assert( false );
-
-			conditions->add( condition );
-		}
-
-		condprop::Logger<float> *logger = NULL;
-		if( (bool)propMinEatVelocity.get( "Record" ) )
-		{
-			logger = new condprop::ScalarLogger<float>("MinEatVelocity",
-													   datalib::FLOAT);
-		}
-
-		condprop::Property<float> *property =
-			new condprop::Property<float>( "MinEatVelocity",
-										   &fMinEatVelocity,
-										   &condprop::InterpolateFunction_float,
-										   &condprop::DistanceFunction_float,
-										   conditions,
-										   logger );
-
-		fConditionalProps->add( property );
-	}
-	{
-		proplib::Property &propMaxEatVelocity = doc.get( "MaxEatVelocity" );
-
-		proplib::Property &propConditions = propMaxEatVelocity.get( "Conditions" );
-		condprop::ConditionList<float> *conditions = new condprop::ConditionList<float>();
-		int nconditions = propConditions.size();
-
-		for( int i = 0; i < nconditions; i++ )
-		{
-			proplib::Property &propCondition = propConditions.get( i );
-
-			CouplingRange couplingRange;
-			{
-				string role = propCondition.get( "CouplingRange" );
-				if( role == "Begin" )
-					couplingRange = COUPLING_RANGE__BEGIN;
-				else if( role == "End" )
-					couplingRange = COUPLING_RANGE__END;
-				else if( role == "None" )
-					couplingRange = COUPLING_RANGE__NONE;
-				else
-					assert( false );
-			}
-
-			float value = propCondition.get( "Value" );
-			string mode = propCondition.get( "Mode" );
-
-			condprop::Condition<float> *condition;
-			if( mode == "Time" )
-			{
-				long step = propCondition.get( "Time" );
-				condition = new condprop::TimeCondition<float>( step, value, couplingRange );
-			}
-			else if( mode == "IntThreshold" )
-			{
-				proplib::Property &propCount = propCondition.get( "IntThreshold" );
-				string countValue = propCount.get( "Value" );
-				string opname = propCount.get( "Op" );
-				int threshold = propCount.get( "Threshold" );
-				long duration = propCount.get( "Duration" );
-				
-				const int *countPtr;
-				if( countValue == "Agents" )
-				{
-					countPtr = objectxsortedlist::gXSortedObjects.getCountPtr( AGENTTYPE );
-				}
-				else
-					assert( false );
-
-				condprop::ThresholdCondition<float,int>::Op op;
-				if( opname == "EQ" )
-					op = condprop::ThresholdCondition<float,int>::EQ;
-				else if( opname == "LT" )
-					op = condprop::ThresholdCondition<float,int>::LT;
-				else if( opname == "GT" )
-					op = condprop::ThresholdCondition<float,int>::GT;
-				else
-					assert( false );
-
-				condition = new condprop::ThresholdCondition<float,int>( countPtr,
-																		 op,
-																		 threshold,
-																		 duration,
-																		 value,
-																		 couplingRange );
-			}
-			else if( mode == "FloatThreshold" )
-			{
-				proplib::Property &propCount = propCondition.get( "FloatThreshold" );
-				string ratioValue = propCount.get( "Value" );
-				string opname = propCount.get( "Op" );
-				float threshold = propCount.get( "Threshold" );
-				long duration = propCount.get( "Duration" );
-				
-				const float *ratioPtr = fEatStatistics.GetProperty( ratioValue );
-
-				condprop::ThresholdCondition<float,float>::Op op;
-				if( opname == "EQ" )
-					op = condprop::ThresholdCondition<float,float>::EQ;
-				else if( opname == "LT" )
-					op = condprop::ThresholdCondition<float,float>::LT;
-				else if( opname == "GT" )
-					op = condprop::ThresholdCondition<float,float>::GT;
-				else
-					assert( false );
-
-				condition = new condprop::ThresholdCondition<float,float>( ratioPtr,
-																		   op,
-																		   threshold,
-																		   duration,
-																		   value,
-																		   couplingRange );
-			}
-			else
-				assert( false );
-
-			conditions->add( condition );
-		}
-
-		condprop::Logger<float> *logger = NULL;
-		if( (bool)propMaxEatVelocity.get( "Record" ) )
-		{
-			logger = new condprop::ScalarLogger<float>("MaxEatVelocity",
-													   datalib::FLOAT);
-		}
-
-		condprop::Property<float> *property =
-			new condprop::Property<float>( "MaxEatVelocity",
-										   &fMaxEatVelocity,
-										   &condprop::InterpolateFunction_float,
-										   &condprop::DistanceFunction_float,
-										   conditions,
-										   logger );
-
-		fConditionalProps->add( property );
-	}
-	{
-		proplib::Property &propMaxEatYaw = doc.get( "MaxEatYaw" );
-
-		proplib::Property &propConditions = propMaxEatYaw.get( "Conditions" );
-		condprop::ConditionList<float> *conditions = new condprop::ConditionList<float>();
-		int nconditions = propConditions.size();
-
-		for( int i = 0; i < nconditions; i++ )
-		{
-			proplib::Property &propCondition = propConditions.get( i );
-
-			CouplingRange couplingRange;
-			{
-				string role = propCondition.get( "CouplingRange" );
-				if( role == "Begin" )
-					couplingRange = COUPLING_RANGE__BEGIN;
-				else if( role == "End" )
-					couplingRange = COUPLING_RANGE__END;
-				else if( role == "None" )
-					couplingRange = COUPLING_RANGE__NONE;
-				else
-					assert( false );
-			}
-
-			float value = propCondition.get( "Value" );
-			string mode = propCondition.get( "Mode" );
-
-			condprop::Condition<float> *condition;
-			if( mode == "Time" )
-			{
-				long step = propCondition.get( "Time" );
-				condition = new condprop::TimeCondition<float>( step, value, couplingRange );
-			}
-			else if( mode == "IntThreshold" )
-			{
-				proplib::Property &propCount = propCondition.get( "IntThreshold" );
-				string countValue = propCount.get( "Value" );
-				string opname = propCount.get( "Op" );
-				int threshold = propCount.get( "Threshold" );
-				long duration = propCount.get( "Duration" );
-				
-				const int *countPtr;
-				if( countValue == "Agents" )
-				{
-					countPtr = objectxsortedlist::gXSortedObjects.getCountPtr( AGENTTYPE );
-				}
-				else
-					assert( false );
-
-				condprop::ThresholdCondition<float,int>::Op op;
-				if( opname == "EQ" )
-					op = condprop::ThresholdCondition<float,int>::EQ;
-				else if( opname == "LT" )
-					op = condprop::ThresholdCondition<float,int>::LT;
-				else if( opname == "GT" )
-					op = condprop::ThresholdCondition<float,int>::GT;
-				else
-					assert( false );
-
-				condition = new condprop::ThresholdCondition<float,int>( countPtr,
-																		 op,
-																		 threshold,
-																		 duration,
-																		 value,
-																		 couplingRange );
-			}
-			else if( mode == "FloatThreshold" )
-			{
-				proplib::Property &propCount = propCondition.get( "FloatThreshold" );
-				string ratioValue = propCount.get( "Value" );
-				string opname = propCount.get( "Op" );
-				float threshold = propCount.get( "Threshold" );
-				long duration = propCount.get( "Duration" );
-				
-				const float *ratioPtr = fEatStatistics.GetProperty( ratioValue );
-
-				condprop::ThresholdCondition<float,float>::Op op;
-				if( opname == "EQ" )
-					op = condprop::ThresholdCondition<float,float>::EQ;
-				else if( opname == "LT" )
-					op = condprop::ThresholdCondition<float,float>::LT;
-				else if( opname == "GT" )
-					op = condprop::ThresholdCondition<float,float>::GT;
-				else
-					assert( false );
-
-				condition = new condprop::ThresholdCondition<float,float>( ratioPtr,
-																		   op,
-																		   threshold,
-																		   duration,
-																		   value,
-																		   couplingRange );
-			}
-
-			else
-				assert( false );
-
-			conditions->add( condition );
-		}
-
-		condprop::Logger<float> *logger = NULL;
-		if( (bool)propMaxEatYaw.get( "Record" ) )
-		{
-			logger = new condprop::ScalarLogger<float>("MaxEatYaw",
-													   datalib::FLOAT);
-		}
-
-		condprop::Property<float> *property =
-			new condprop::Property<float>( "MaxEatYaw",
-										   &fMaxEatYaw,
-										   &condprop::InterpolateFunction_float,
-										   &condprop::DistanceFunction_float,
-										   conditions,
-										   logger );
-
-		fConditionalProps->add( property );
-	}
-	{
-		proplib::Property &propMaxMateVelocity = doc.get( "MaxMateVelocity" );
-
-		proplib::Property &propConditions = propMaxMateVelocity.get( "Conditions" );
-		condprop::ConditionList<float> *conditions = new condprop::ConditionList<float>();
-		int nconditions = propConditions.size();
-
-		for( int i = 0; i < nconditions; i++ )
-		{
-			proplib::Property &propCondition = propConditions.get( i );
-
-			CouplingRange couplingRange;
-			{
-				string role = propCondition.get( "CouplingRange" );
-				if( role == "Begin" )
-					couplingRange = COUPLING_RANGE__BEGIN;
-				else if( role == "End" )
-					couplingRange = COUPLING_RANGE__END;
-				else if( role == "None" )
-					couplingRange = COUPLING_RANGE__NONE;
-				else
-					assert( false );
-			}
-
-			float value = propCondition.get( "Value" );
-			string mode = propCondition.get( "Mode" );
-
-			condprop::Condition<float> *condition;
-			if( mode == "Time" )
-			{
-				long step = propCondition.get( "Time" );
-				condition = new condprop::TimeCondition<float>( step, value, couplingRange );
-			}
-			else if( mode == "IntThreshold" )
-			{
-				proplib::Property &propCount = propCondition.get( "IntThreshold" );
-				string countValue = propCount.get( "Value" );
-				string opname = propCount.get( "Op" );
-				int threshold = propCount.get( "Threshold" );
-				long duration = propCount.get( "Duration" );
-				
-				const int *countPtr;
-				if( countValue == "Agents" )
-				{
-					countPtr = objectxsortedlist::gXSortedObjects.getCountPtr( AGENTTYPE );
-				}
-				else
-					assert( false );
-
-				condprop::ThresholdCondition<float,int>::Op op;
-				if( opname == "EQ" )
-					op = condprop::ThresholdCondition<float,int>::EQ;
-				else if( opname == "LT" )
-					op = condprop::ThresholdCondition<float,int>::LT;
-				else if( opname == "GT" )
-					op = condprop::ThresholdCondition<float,int>::GT;
-				else
-					assert( false );
-
-				condition = new condprop::ThresholdCondition<float,int>( countPtr,
-																		 op,
-																		 threshold,
-																		 duration,
-																		 value,
-																		 couplingRange );
-			}
-			else
-				assert( false );
-
-			conditions->add( condition );
-		}
-
-		condprop::Logger<float> *logger = NULL;
-		if( (bool)propMaxMateVelocity.get( "Record" ) )
-		{
-			logger = new condprop::ScalarLogger<float>("MaxMateVelocity",
-													   datalib::FLOAT);
-		}
-
-		condprop::Property<float> *property =
-			new condprop::Property<float>( "MaxMateVelocity",
-										   &fMaxMateVelocity,
-										   &condprop::InterpolateFunction_float,
-										   &condprop::DistanceFunction_float,
-										   conditions,
-										   logger );
-
-		fConditionalProps->add( property );
-	}
     genome::gMinStrength = doc.get( "MinAgentStrength" );
     genome::gMaxStrength = doc.get( "MaxAgentStrength" );
     agent::gMinAgentSize = doc.get( "MinAgentSize" );
@@ -4770,106 +4277,7 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
     fPower2Energy = doc.get( "DamageRate" );
     agent::gEnergyUseMultiplier = doc.get( "EnergyUseMultiplier" );
     agent::gEat2Energy = doc.get( "EnergyUseEat" );
-
-	// EnergyUseMate
-	{
-		string energyUseMateMode = doc.get( "EnergyUseMateMode" );
-		if( energyUseMateMode == "Constant" )
-		{
-			agent::gMate2Energy = doc.get( "EnergyUseMate" );
-		}
-		else
-		{
-			proplib::Property &propEnergyUseMate = doc.get( "EnergyUseMateConditional" );
-
-			proplib::Property &propConditions = propEnergyUseMate.get( "Conditions" );
-			condprop::ConditionList<float> *conditions = new condprop::ConditionList<float>();
-			int nconditions = propConditions.size();
-
-			for( int i = 0; i < nconditions; i++ )
-			{
-				proplib::Property &propCondition = propConditions.get( i );
-
-				CouplingRange couplingRange;
-				{
-					string role = propCondition.get( "CouplingRange" );
-					if( role == "Begin" )
-						couplingRange = COUPLING_RANGE__BEGIN;
-					else if( role == "End" )
-						couplingRange = COUPLING_RANGE__END;
-					else if( role == "None" )
-						couplingRange = COUPLING_RANGE__NONE;
-					else
-						assert( false );
-				}
-
-				float value = propCondition.get( "Value" );
-				string mode = propCondition.get( "Mode" );
-
-				condprop::Condition<float> *condition;
-				if( mode == "Time" )
-				{
-					long step = propCondition.get( "Time" );
-					condition = new condprop::TimeCondition<float>( step, value, couplingRange );
-				}
-				else if( mode == "IntThreshold" )
-				{
-					proplib::Property &propCount = propCondition.get( "IntThreshold" );
-					string countValue = propCount.get( "Value" );
-					string opname = propCount.get( "Op" );
-					int threshold = propCount.get( "Threshold" );
-					long duration = propCount.get( "Duration" );
-				
-					const int *countPtr;
-					if( countValue == "Agents" )
-					{
-						countPtr = objectxsortedlist::gXSortedObjects.getCountPtr( AGENTTYPE );
-					}
-					else
-						assert( false );
-
-					condprop::ThresholdCondition<float,int>::Op op;
-					if( opname == "EQ" )
-						op = condprop::ThresholdCondition<float,int>::EQ;
-					else if( opname == "LT" )
-						op = condprop::ThresholdCondition<float,int>::LT;
-					else if( opname == "GT" )
-						op = condprop::ThresholdCondition<float,int>::GT;
-					else
-						assert( false );
-
-					condition = new condprop::ThresholdCondition<float,int>( countPtr,
-																			 op,
-																			 threshold,
-																			 duration,
-																			 value,
-																			 couplingRange );
-				}
-				else
-					assert( false );
-
-				conditions->add( condition );
-			}
-
-			condprop::Logger<float> *logger = NULL;
-			if( (bool)propEnergyUseMate.get( "Record" ) )
-			{
-				logger = new condprop::ScalarLogger<float>("EnergyUseMate",
-														   datalib::FLOAT);
-			}
-
-			condprop::Property<float> *property =
-				new condprop::Property<float>( "EnergyUseMate",
-											   &agent::gMate2Energy,
-											   &condprop::InterpolateFunction_float,
-											   &condprop::DistanceFunction_float,
-											   conditions,
-											   logger );
-
-			fConditionalProps->add( property );
-		}
-	}
-
+	agent::gMate2Energy = doc.get( "EnergyUseMate" );
     agent::gFight2Energy = doc.get( "EnergyUseFight" );
     agent::gGive2Energy = doc.get( "EnergyUseGive" );
 	agent::gMinSizePenalty = doc.get( "MinSizeEnergyPenalty" );
@@ -4937,120 +4345,30 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
     barrier::gBarrierHeight = doc.get( "BarrierHeight" );
     barrier::gBarrierColor = doc.get( "BarrierColor" );
 	barrier::gStickyBarriers = doc.get( "StickyBarriers" );
+	barrier::gRatioPositions = doc.get( "RatioBarrierPositions" );
     fGroundColor = doc.get( "GroundColor" );
     fGroundClearance = doc.get( "GroundClearance" );
     globals::worldsize = doc.get( "WorldSize" );
+
+	// ---
+	// --- Barriers
+	// ---
 	{
-		bool ratioBarrierPositions = doc.get( "RatioBarrierPositions" );
 		proplib::Property &propBarriers = doc.get( "Barriers" );
 
-		itfor( proplib::PropertyMap, propBarriers.elements(), itBarrier )
+		for( int ibarrier = 0; ibarrier < (int)propBarriers.elements().size(); ibarrier++ )
 		{
+			proplib::Property &propBarrier = propBarriers.get( ibarrier );
+			// Note that barriers were already allocated in InitDynamicProperties()
 			barrier *b = new barrier();
+			barrier::gBarriers.push_back( b );
 
-			int id = barrier::gXSortedBarriers.count();
-			char barrierName[128];
-			sprintf( barrierName, "barrier%d", id );
+			b->getPosition().xa = propBarrier.get( "X1" );
+			b->getPosition().za = propBarrier.get( "Z1" );
+			b->getPosition().xb = propBarrier.get( "X2" );
+			b->getPosition().zb = propBarrier.get( "Z2" );
 
-			ConditionList<LineSegment> *conditions = new ConditionList<LineSegment>();
-
-			LineSegmentLogger *logger = (bool)doc.get( "RecordBarrierPosition" )
-				? new LineSegmentLogger( barrierName )
-				: NULL;
-
-			proplib::Property &propKeyFrames = itBarrier->second->get( "KeyFrames" );
-
-			itfor( proplib::PropertyMap, propKeyFrames.elements(), itKeyFrame )
-			{
-				float x1 = itKeyFrame->second->get( "X1" );
-				float z1 = itKeyFrame->second->get( "Z1" );
-				float x2 = itKeyFrame->second->get( "X2" );
-				float z2 = itKeyFrame->second->get( "Z2" );
-				if( ratioBarrierPositions )
-				{
-					x1 *= globals::worldsize;
-					z1 *= globals::worldsize;
-					x2 *= globals::worldsize;
-					z2 *= globals::worldsize;
-				}
-				LineSegment position( x1, z1, x2, z2);
-
-				Condition<LineSegment> *condition;
-
-				CouplingRange couplingRange;
-				{
-					string role = itKeyFrame->second->get( "CouplingRange" );
-					if( role == "Begin" )
-						couplingRange = COUPLING_RANGE__BEGIN;
-					else if( role == "End" )
-						couplingRange = COUPLING_RANGE__END;
-					else if( role == "None" )
-						couplingRange = COUPLING_RANGE__NONE;
-					else
-						assert( false );
-				}
-
-				string mode = itKeyFrame->second->get( "Mode" );
-				if( mode == "Time" )
-				{
-					long t = itKeyFrame->second->get( "Time" );
-					condition = new TimeCondition<LineSegment>( t,
-																position,
-																couplingRange );
-				}
-				else if( mode == "Count" )
-				{
-					proplib::Property &propCount = itKeyFrame->second->get( "Count" );
-					string value = propCount.get( "Value" );
-					string opname = propCount.get( "Op" );
-					int threshold = propCount.get( "Threshold" );
-					long duration = propCount.get( "Duration" );
-
-					const int *count;
-					if( value == "Agents" )
-					{
-						count = objectxsortedlist::gXSortedObjects.getCountPtr( AGENTTYPE );
-					}
-					else
-					{
-						assert( false );
-					}
-
-					ThresholdCondition<LineSegment, int>::Op op;
-					if( opname == "EQ" )
-						op = ThresholdCondition<LineSegment, int>::EQ;
-					else if( opname == "LT" )
-						op = ThresholdCondition<LineSegment, int>::LT;
-					else if( opname == "GT" )
-						op = ThresholdCondition<LineSegment, int>::GT;
-					else
-						assert( false );
-
-					
-					condition = new ThresholdCondition<LineSegment, int>( count,
-																		  op,
-																		  threshold,
-																		  duration,
-																		  position,
-																		  couplingRange );
-				}
-				else
-				{
-					assert( false );
-				}
-
-				conditions->add( condition );
-			}
-
-			Property<LineSegment> *property = 
-				new Property<LineSegment>( barrierName,
-										   b->getPosition(),
-										   InterpolateFunction_LineSegment,
-										   DistanceFunction_LineSegment,
-										   conditions,
-										   logger );
-
-			fConditionalProps->add( property );
+			b->init();
 
 			barrier::gXSortedBarriers.add( b );
 		}
@@ -5137,193 +4455,10 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 				assert( false );
 			}
 
-			EnergyMultiplier *eatMultiplier = new EnergyMultiplier();
-			{
-				proplib::Property &propEatMultiplier = propMetabolism.get( "EatMultiplier" );
+			EnergyMultiplier eatMultiplier = propMetabolism.get( "EatMultiplier" );
+			float minEatAge = propMetabolism.get( "MinEatAge" );
 
-				proplib::Property &propConditions = propEatMultiplier.get( "Conditions" );
-				condprop::ConditionList<EnergyMultiplier> *conditions = new condprop::ConditionList<EnergyMultiplier>();
-				int nconditions = propConditions.size();
-
-				for( int iCondition = 0; iCondition < nconditions; iCondition++ )
-				{
-					proplib::Property &propCondition = propConditions.get( iCondition );
-
-					CouplingRange couplingRange;
-					{
-						string role = propCondition.get( "CouplingRange" );
-						if( role == "Begin" )
-							couplingRange = COUPLING_RANGE__BEGIN;
-						else if( role == "End" )
-							couplingRange = COUPLING_RANGE__END;
-						else if( role == "None" )
-							couplingRange = COUPLING_RANGE__NONE;
-						else
-							assert( false );
-					}
-
-					EnergyMultiplier value( propCondition.get( "Value" ) );
-					string mode = propCondition.get( "Mode" );
-
-					condprop::Condition<EnergyMultiplier> *condition;
-					if( mode == "Time" )
-					{
-						long step = propCondition.get( "Time" );
-						condition = new condprop::TimeCondition<EnergyMultiplier>( step, value, couplingRange );
-					}
-					else if( mode == "Count" )
-					{
-						proplib::Property &propCount = propCondition.get( "Count" );
-						string countValue = propCount.get( "Value" );
-						string opname = propCount.get( "Op" );
-						long threshold = propCount.get( "Threshold" );
-						long duration = propCount.get( "Duration" );
-				
-						const long *countPtr;
-						if( countValue == "MetabolismAgents" )
-						{
-							countPtr = &( fNumberAliveWithMetabolism[iMetabolism] );
-						}
-						else
-							assert( false );
-
-						condprop::ThresholdCondition<EnergyMultiplier,long>::Op op;
-						if( opname == "EQ" )
-							op = condprop::ThresholdCondition<EnergyMultiplier,long>::EQ;
-						else if( opname == "LT" )
-							op = condprop::ThresholdCondition<EnergyMultiplier,long>::LT;
-						else if( opname == "GT" )
-							op = condprop::ThresholdCondition<EnergyMultiplier,long>::GT;
-						else
-							assert( false );
-
-						condition = new condprop::ThresholdCondition<EnergyMultiplier,long>( countPtr,
-																							 op,
-																							 threshold,
-																							 duration,
-																							 value,
-																							 couplingRange );
-					}
-					else
-						assert( false );
-
-					conditions->add( condition );
-				}
-
-				condprop::EnergyMultiplierLogger *logger = NULL;
-				if( (bool)propEatMultiplier.get( "Record" ) )
-				{
-					char buf[128];
-					sprintf( buf, "EatMultiplier%d", iMetabolism );
-					logger = new condprop::EnergyMultiplierLogger( buf );
-				}
-
-				condprop::Property<EnergyMultiplier> *property =
-					new condprop::Property<EnergyMultiplier>( "EatMultiplier",
-															  eatMultiplier,
-															  &condprop::InterpolateFunction_EnergyMultiplier,
-															  &condprop::DistanceFunction_EnergyMultiplier,
-															  conditions,
-															  logger );
-
-				fConditionalProps->add( property );
-
-			}
-
-			float *minEatAge = new float[1];
-			{
-				proplib::Property &propMinEatAge = propMetabolism.get( "MinEatAge" );
-
-				proplib::Property &propConditions = propMinEatAge.get( "Conditions" );
-				condprop::ConditionList<float> *conditions = new condprop::ConditionList<float>();
-				int nconditions = propConditions.size();
-
-				for( int iCondition = 0; iCondition < nconditions; iCondition++ )
-				{
-					proplib::Property &propCondition = propConditions.get( iCondition );
-
-					CouplingRange couplingRange;
-					{
-						string role = propCondition.get( "CouplingRange" );
-						if( role == "Begin" )
-							couplingRange = COUPLING_RANGE__BEGIN;
-						else if( role == "End" )
-							couplingRange = COUPLING_RANGE__END;
-						else if( role == "None" )
-							couplingRange = COUPLING_RANGE__NONE;
-						else
-							assert( false );
-					}
-
-					float value = propCondition.get( "Value" );
-					string mode = propCondition.get( "Mode" );
-
-					condprop::Condition<float> *condition;
-					if( mode == "Time" )
-					{
-						long step = propCondition.get( "Time" );
-						condition = new condprop::TimeCondition<float>( step, value, couplingRange );
-					}
-					else if( mode == "Count" )
-					{
-						proplib::Property &propCount = propCondition.get( "Count" );
-						string countValue = propCount.get( "Value" );
-						string opname = propCount.get( "Op" );
-						long threshold = propCount.get( "Threshold" );
-						long duration = propCount.get( "Duration" );
-				
-						const long *countPtr;
-						if( countValue == "MetabolismAgents" )
-						{
-							countPtr = &( fNumberAliveWithMetabolism[iMetabolism] );
-						}
-						else
-							assert( false );
-
-						condprop::ThresholdCondition<float,long>::Op op;
-						if( opname == "EQ" )
-							op = condprop::ThresholdCondition<float,long>::EQ;
-						else if( opname == "LT" )
-							op = condprop::ThresholdCondition<float,long>::LT;
-						else if( opname == "GT" )
-							op = condprop::ThresholdCondition<float,long>::GT;
-						else
-							assert( false );
-
-						condition = new condprop::ThresholdCondition<float,long>( countPtr,
-																				  op,
-																				  threshold,
-																				  duration,
-																				  value,
-																				  couplingRange );
-					}
-					else
-						assert( false );
-
-					conditions->add( condition );
-				}
-
-				condprop::Logger<float> *logger = NULL;
-				if( (bool)propMinEatAge.get( "Record" ) )
-				{
-					char buf[128];
-					sprintf( buf, "MinEatAge%d", iMetabolism );
-					logger = new condprop::ScalarLogger<float>( buf, datalib::FLOAT );
-				}
-
-				condprop::Property<float> *property =
-					new condprop::Property<float>( "MinEatAge",
-												 minEatAge,
-												 &condprop::InterpolateFunction_float,
-												 &condprop::DistanceFunction_float,
-												 conditions,
-												 logger );
-
-				fConditionalProps->add( property );
-
-			}
-
-			Metabolism::define( name, energyPolarity, *eatMultiplier, *minEatAge, carcassFoodType );
+			Metabolism::define( name, energyPolarity, eatMultiplier, minEatAge, carcassFoodType );
 		}
 
 		for( int i = 0; i < Metabolism::getNumberOfDefinitions(); i++ )
@@ -5332,11 +4467,21 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 		}
 	}
 
+	// AgentMetabolismsSelectionMode
+	{
+		string mode = doc.get( "AgentMetabolismSelectionMode" );
+		if( mode == "Gene" )
+			Metabolism::selectionMode = Metabolism::Gene;
+		else if( mode == "Random" )
+			Metabolism::selectionMode = Metabolism::Random;
+		else
+			assert( false );
+	}
+
 	// Process Domains
 	{
 		proplib::Property &propDomains = doc.get( "Domains" );
 		fNumDomains = propDomains.size();
-		FoodPatch::MaxPopGroupOnCondition::Group *maxPopGroup_World = NULL;
 
 		long totmaxnumagents = 0;
 		long totminnumagents = 0;
@@ -5427,8 +4572,6 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 
 			// Process FoodPatches
 			{
-				FoodPatch::MaxPopGroupOnCondition::Group *maxPopGroup_Domain = NULL;
-
 				proplib::Property &propPatches = dom.get( "FoodPatches" );
 				fDomains[id].numFoodPatches = propPatches.size();
 
@@ -5511,70 +4654,9 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 					if( removeFood )
 						numFoodPatchesNeedingRemoval++;
 
-					FoodPatch::OnCondition *onCondition;
-					{
-						proplib::Property &propOnCondition = propPatch.get( "OnCondition" );
-						string mode = propOnCondition.get( "Mode" );
+					bool on = propPatch.get( "On" );
 
-						if( mode == "Time" )
-						{
-							proplib::Property &propTime = propOnCondition.get( "Time" );
-
-							int period = propTime.get( "Period" );
-							float onFraction = propTime.get( "OnFraction" );
-							float phase = propTime.get( "Phase" );
-
-							onCondition = new FoodPatch::TimeOnCondition( period,
-																		  onFraction,
-																		  phase );
-						}
-						else if( mode == "MaxPopGroup" )
-						{
-
-							proplib::Property &propMaxPopGroup = propOnCondition.get( "MaxPopGroup" );
-							int maxAgents = propMaxPopGroup.get( "MaxAgents" );
-							int timeout = propMaxPopGroup.get( "Timeout" );
-							int delay = propMaxPopGroup.get( "Delay" );
-							
-							FoodPatch::MaxPopGroupOnCondition::Group *group;
-							string groupType = propMaxPopGroup.get( "Group" );
-							if( groupType == "Domain" )
-							{
-								if( maxPopGroup_Domain == NULL )
-								{
-									maxPopGroup_Domain = new FoodPatch::MaxPopGroupOnCondition::Group();
-								}
-								group = maxPopGroup_Domain;
-							}
-							else if( groupType == "World" )
-							{
-								if( maxPopGroup_World == NULL )
-								{
-									maxPopGroup_World = new FoodPatch::MaxPopGroupOnCondition::Group();
-								}
-								group = maxPopGroup_World;
-							}
-							else
-							{
-								assert( false );
-							}
-
-							// State is based on number of agents in patch, so we must track agent count.
-							fCalcFoodPatchAgentCounts = true;
-
-							onCondition = new FoodPatch::MaxPopGroupOnCondition( &(fDomains[id].fFoodPatches[i]),
-																				 group,
-																				 maxAgents,
-																				 timeout,
-																				 delay );
-						}
-						else
-						{
-							assert( false );
-						}
-					}
-
-					fDomains[id].fFoodPatches[i].init(foodType, centerX, centerZ, sizeX, sizeZ, foodRate, initFood, minFood, maxFood, maxFoodGrown, foodFraction, shape, distribution, nhsize, onCondition, removeFood, &fStage, &(fDomains[id]), id);
+					fDomains[id].fFoodPatches[i].init(foodType, centerX, centerZ, sizeX, sizeZ, foodRate, initFood, minFood, maxFood, maxFoodGrown, foodFraction, shape, distribution, nhsize, on, removeFood, &fStage, &(fDomains[id]), id);
 
 					patchFractionSpecified += foodFraction;
 
@@ -5604,8 +4686,6 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 					printf( "Patch Fractions sum to %f, when they must sum to 1.0!\n", patchFractionSpecified );
 					exit( 1 );
 				}
-
-				FoodPatch::MaxPopGroupOnCondition::Group::validate( maxPopGroup_Domain );
 			}
 
 			{
@@ -5660,15 +4740,9 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 						color = doc.get( "BrickColor" );
 					}
 
-					FoodPatch *onSyncFoodPatch = NULL;
-					int onSyncFoodPatchIndex = propPatch.get( "OnSyncFoodPatchIndex" );
-					if( onSyncFoodPatchIndex > -1 )
-					{
-						assert( onSyncFoodPatchIndex < fDomains[id].numFoodPatches );
-						onSyncFoodPatch = &( fDomains[id].fFoodPatches[ onSyncFoodPatchIndex ] );
-					}
+					bool on = propPatch.get( "On" );
 
-					fDomains[id].fBrickPatches[i].init(color, centerX, centerZ, sizeX, sizeZ, brickCount, shape, distribution, nhsize, &fStage, &(fDomains[id]), id, onSyncFoodPatch);
+					fDomains[id].fBrickPatches[i].init(color, centerX, centerZ, sizeX, sizeZ, brickCount, shape, distribution, nhsize, &fStage, &(fDomains[id]), id, on);
 
 				}
 			}
@@ -5709,8 +4783,6 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 		else
 			fFoodRemovalNeeded = false;
 	
-		FoodPatch::MaxPopGroupOnCondition::Group::validate( maxPopGroup_World );
-
 		int numberFittest = doc.get( "NumberFittest" );
 
 		for (int id = 0; id < fNumDomains; id++)
@@ -6436,6 +5508,37 @@ void TSimulation::getStatusText( StatusText& statusText,
 			statusText.push_back( strdup( t ) );
 		}
 	}
+
+	// Dynamic Properties
+	{
+		int ndyn;
+		proplib::DynamicProperties::PropertyMetadata *metadata;
+		proplib::DynamicProperties::getMetadata( &metadata, &ndyn );
+
+		for( int i = 0; i < ndyn; i++ )
+		{
+			bool display = true;
+
+			switch( metadata[i].type )
+			{
+			case datalib::INT:
+				sprintf( t, "%s = %d", metadata[i].name.c_str(), *((int *)metadata[i].value) );
+				break;
+			case datalib::FLOAT:
+				sprintf( t, "%s = %f", metadata[i].name.c_str(), *((float *)metadata[i].value) );
+				break;
+			case datalib::BOOL:
+				sprintf( t, "%s = %s", metadata[i].name.c_str(), *((bool *)metadata[i].value) ? "true" : "false" );
+				break;
+			default:
+				display = false;
+				break;
+			}
+
+			if( display )
+				statusText.push_back( strdup(t) );
+		}
+	}
 }
 
 
@@ -6448,7 +5551,7 @@ int TSimulation::getRandomPatch( int domainNumber )
 	// Since not all patches may be "on", we need to calculate the maximum fraction
 	// attainable by those patches that are on, and therefore allowed to grow food
 	for( short i = 0; i < fDomains[domainNumber].numFoodPatches; i++ )
-		if( fDomains[domainNumber].fFoodPatches[i].on( fStep ) )
+		if( fDomains[domainNumber].fFoodPatches[i].isOn() )
 			maxFractions += fDomains[domainNumber].fFoodPatches[i].fraction;
 	
 	if( maxFractions > 0.0 )	// there is an active patch in this domain
@@ -6461,7 +5564,7 @@ int TSimulation::getRandomPatch( int domainNumber )
 
 		for( short i = 0; i < fDomains[domainNumber].numFoodPatches; i++ )
 		{
-			if( fDomains[domainNumber].fFoodPatches[i].on( fStep ) )
+			if( fDomains[domainNumber].fFoodPatches[i].isOn() )
 			{
 				sumFractions += fDomains[domainNumber].fFoodPatches[i].fraction;
 				if( ranval <= sumFractions )

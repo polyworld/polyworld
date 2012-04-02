@@ -25,49 +25,52 @@
 #
 #   legacy = value used if not specified and LegacyMode == True
 #
-#   $(...) = expression evaluated by Python. Symbols are properties
-#            in the values file.
+#   $[...] = logical symbol reference in cppsym:
 #
+#              $[sim]: TSimulation pointer.
+#              $[index]: index of element in array.
+#              $[ancestor]: cppsym value of nearest ancestor.
 ##########################################################################
+
 
 #-------------------------------------------------------------------
 # SECTION Simulation meta-information
 #-------------------------------------------------------------------
 
 LegacyMode {
-  type    BOOL
+  type    Bool
   default False # This *has* to be False, because underlying proplib.cpp
                 # assumes False if it doesn't find it in the values file.
 }
 
 PassiveLockstep {
-  type    BOOL
+  type    Bool
   default False
 }
 
 InitSeed {
-  type    INT
-  default 42	# applied before agents, genomes, brains, food, bricks, etc. are initialized
+  type    Int
+  default 42    # applied before agents, genomes, brains, food, bricks, etc. are initialized
 }
 
 PositionSeed {
-  type    INT   # not used
+  type    Int   # not used
   default 42    # intended to be applied before agents, food, bricks, etc.
 }               # are assigned their initial random positions in the world
 
 SimulationSeed {
-  type    INT
-  default 0		# applied just before first step of simulation (if == 0 seed is not used)
+  type    Int
+  default 0             # applied just before first step of simulation (if == 0 seed is not used)
 }
 
 GenomeLayout {
-  type    ENUM
+  type    Enum
   default N
   legacy  L
-  values  [
-    N           # NeurGroup
-    L           # Legacy
-  ]
+  enum    Values {
+    N,           # NeurGroup
+    L            # Legacy
+  }
 }
 
 
@@ -76,120 +79,120 @@ GenomeLayout {
 #-------------------------------------------------------------------
 
 MaxSteps {
-  type    INT
+  type    Int
   default 30000
   min   0
 }
 
 MinAgents {
-  type    INT
+  type    Int
   default 90
   min     0
 }
 
 MaxAgents {
-  type    INT
+  type    Int
   default 300
-  min     $( MinAgents )
+  min     MinAgents
 }
 
 InitAgents {
-  type    INT
+  type    Int
   default 180
-  min     $( MinAgents )
-  max     $( MaxAgents )
+  min     MinAgents
+  max     MaxAgents
 }
 
 SeedAgents {
-  type    INT
-  default $( InitAgents )
+  type    Int
+  default InitAgents
   legacy  0
   min     0
-  max     $( InitAgents )
+  max     InitAgents
 }
 
 SeedMutationProbability {
-  type    FLOAT
+  type    Float
   default 0.0
   min     0.0
   max     1.0
 }  
 
 InitFood {
-  type    INT
-  default $( MinFood if MinFood > 0 else 90 )
-  min     $( MinFood )
-  max     $( MaxFood )
+  type    Int
+  default ( MinFood if MinFood > 0 else 90 )
+  min     MinFood
+  max     MaxFood
 }
 
 MinFood {
-  type    INT
+  type    Int
   default 0
   legacy  90
   min     0
 }
 
 MaxFood {
-  type    INT
+  type    Int
   default 120
-  min     $( MinFood )
+  min     MinFood
 }
 
 MaxFoodGrown {
-  type    INT
-  default $( MaxFood )
-  legacy  $( MinFood )
-  max     $( MaxFood )
+  type    Int
+  default MaxFood
+  legacy  MinFood
+  max     MaxFood
 }
 
 FoodGrowthRate {
-  type    FLOAT
-  default 0.1	# decimal part gives probability each step (depending on FoodGrowthModel)
+  type    Float
+  default 0.1   # decimal part gives probability each step (depending on FoodGrowthModel)
   min     0.0
-  max     10.0	# integer part is raw count of pieces to add per step
+  max     10.0  # integer part is raw count of pieces to add per step
 }
 
 FoodGrowthModel {
-  type    ENUM
+  type    Enum
   default MaxIndependent
   legacy  MaxRelative
-  values  [
-    MaxRelative     # decimal part multiplies (maxGrown - current) to give probability each step
-    MaxIndependent  # decimal part is the raw probability each step
-  ]
+  enum    Values {
+    MaxRelative,     # decimal part multiplies (maxGrown - current) to give probability each step
+    MaxIndependent   # decimal part is the raw probability each step
+  }
 }
 
 FoodRemoveEnergy {
-  type    FLOAT
+  type    Float
   default 0.0
 }
 
 FoodMaxLifeSpan {
-  type    INT
-  default 0		# 0 means infinity
+  type    Int
+  default 0             # 0 means infinity
   min 0
 }
 
 MinFoodEnergy {
-  type    FLOAT
+  type    Float
   default 200.0
   min     0.0
 }
 
 MaxFoodEnergy {
-  type    FLOAT
+  type    Float
   default 1000.0
-  min     $( MinFoodEnergy )
+  min     MinFoodEnergy
 }
 
 RatioBarrierPositions {
-  type    BOOL
+  type    Bool
   default True
   legacy  False
 }
 
 NumEnergyTypes {
-  type    INT
+  type    Int
   default 1
   min     1
 }
@@ -198,29 +201,29 @@ NumEnergyTypes {
 #--- Food Types 
 #------------------------------
 FoodTypes {
-  type    ARRAY
+  type    Array
   default [
-    Name Standard
-    EnergyPolarity [
-      1
-    ]
-    OverrideFoodColor False
+    {
+      Name "Standard"
+      EnergyPolarity [ 1 ]
+      OverrideFoodColor False
+    }
   ]
   
   element {
-    type    OBJECT
+    type    Object
     properties {
 
       Name {
-        type    STRING
+        type    String
       }
     
       EnergyPolarity {
-        type    ARRAY
-        min     $( NumEnergyTypes )
-        max     $( NumEnergyTypes )
+        type    Array
+        min     NumEnergyTypes
+        max     NumEnergyTypes
         element {
-          type    INT
+          type    Int
           min     -1
           max     1
         }
@@ -228,12 +231,12 @@ FoodTypes {
 
       # Does this type have a color that overrides the global FoodColor?
       OverrideFoodColor {
-        type    BOOL
+        type    Bool
         default True
       }
 
       FoodColor {
-        type    OBJECT
+        type    Object
         default {
           R    0.2
           G    0.6
@@ -242,17 +245,17 @@ FoodTypes {
       
         properties {
           R {
-            type    FLOAT
+            type    Float
             min     0.0
             max     1.0
           }
           G {
-            type    FLOAT
+            type    Float
             min     0.0
             max     1.0
           }
           B {
-            type    FLOAT
+            type    Float
             min     0.0
             max     1.0
           }
@@ -267,381 +270,141 @@ FoodTypes {
 #--- Agent Metabolisms
 #------------------------------
 AgentMetabolisms {
-  type    ARRAY
+  type    Array
   min     1
   default [
-    EnergyPolarity [
-      1
-    ]
+    {
+      EnergyPolarity [ 1 ]
+    }
   ]
 
   element {
-    type    OBJECT
+    type    Object
+    cppsym  "Metabolism::get( $[index] )"
     properties {
 
       # If named "Null", will be assigned name "MetabolismN"
       Name {
-        type    STRING
-        default Null
+        type    String
+        default "Null"
       }
 
       EnergyPolarity {
-        type    ARRAY
-        min     $( NumEnergyTypes )
-        max     $( NumEnergyTypes )
-        default [
-          1
-        ]
+        type    Array
+        min     NumEnergyTypes
+        max     NumEnergyTypes
+        default [ 1 ]
         element {
-          type    INT
+          type    Int
           min     -1
           max     1
         }
       }
 
       CarcassFoodTypeMode {
-        type    ENUM
+        type    Enum
         default FindEnergyPolarity
-        values  [
-          None
-          FoodTypeName
+        enum    Values {
+          None,
+          FoodTypeName,
           FindEnergyPolarity
-        ]
+        }
       }
 
       CarcassFoodTypeName {
-        type    STRING
-        default Standard
+        type    String
+        default "Standard"
       }
 
       MinEatAge {
-        type OBJECT
-        default {
-          Conditions [
-            Value 0
-            Mode Time
-          ]
-        }
-        properties {
-
-          Record {
-            type    BOOL
-            default $( RecordAll )	# should depend on whether property is actually conditional or not
-          }
-
-          Conditions {
-            type    ARRAY
-            element {
-              type    OBJECT
-              properties {
-
-                CouplingRange {
-                  type    ENUM
-                  default None
-                  values [
-                    None
-                    Begin
-                    End
-                  ]
-                }
-          
-                Value {
-                  type    FLOAT
-                  min     0
-                }
-
-                Mode {
-                  type    ENUM
-                  values [
-                    Time
-                    Count
-                  ]
-                }
-
-                Time {
-                  type    INT
-                  default 0
-                  min     0
-                }
-      
-                Count {
-                  type    OBJECT
-                  default {
-                  }
-                  properties {
-      
-                    Value {
-                      type    ENUM
-                      default MetabolismAgents
-                      values [
-                        MetabolismAgents
-                      ]
-                    }
-      
-                    Op {
-                      type    ENUM
-                      default UNDEFINED
-                      values [
-                        UNDEFINED
-                        EQ
-                        GT
-                        LT
-                      ]
-                      if $( Mode == \"Count\" ) {
-                        assert $( Op != \"UNDEFINED\" )
-                      }
-                    }
-                      
-                    Threshold {
-                      type    INT
-                      default 0
-                    }
-      
-                    Duration {
-                      type    INT
-                      default 0
-                      min     0
-                    }
-      
-                  }
-                }
-
-              }
-            }
-          }
-        }
+        type    Int
+        min     0
+        max     MaxLifeSpan
+        default 0
       }
 
       EatMultiplier {
-        type OBJECT
-        default {
-          Conditions [
-            Value [
-              1
-            ]
-            Mode Time
-          ]
-        }
-        properties {
-
-          Record {
-            type    BOOL
-            default $( RecordAll )	# should depend on whether property is actually conditional or not
-          }
-
-          Conditions {
-            type    ARRAY
-            element {
-              type    OBJECT
-              properties {
-
-                CouplingRange {
-                  type    ENUM
-                  default None
-                  values [
-                    None
-                    Begin
-                    End
-                  ]
-                }
-          
-                Value {
-                  type    ARRAY
-                  min     $( NumEnergyTypes )
-                  max     $( NumEnergyTypes )
-                  element {
-                    type    FLOAT
-                  }
-                }
-
-                Mode {
-                  type    ENUM
-                  values [
-                    Time
-                    Count
-                  ]
-                }
-
-                Time {
-                  type    INT
-                  default 0
-                  min     0
-                }
-      
-                Count {
-                  type    OBJECT
-                  default {
-                  }
-                  properties {
-      
-                    Value {
-                      type    ENUM
-                      default MetabolismAgents
-                      values [
-                        MetabolismAgents
-                      ]
-                    }
-      
-                    Op {
-                      type    ENUM
-                      default UNDEFINED
-                      values [
-                        UNDEFINED
-                        EQ
-                        GT
-                        LT
-                      ]
-                      if $( Mode == \"Count\" ) {
-                        assert $( Op != \"UNDEFINED\" )
-                      }
-                    }
-                      
-                    Threshold {
-                      type    INT
-                      default 0
-                    }
-      
-                    Duration {
-                      type    INT
-                      default 0
-                      min     0
-                    }
-      
-                  }
-                }
-
-              }
-            }
-          }
+        type    Array
+        cppsym  "$[ancestor]->eatMultiplier"
+        min     NumEnergyTypes
+        max     NumEnergyTypes
+        default [ 1 ]
+        element {
+          type    Float
+          cppsym  "$[ancestor].values[ $[index] ]"
         }
       }
-      
+     
+      NumberAliveWithMetabolism {
+        type    Int
+        runtime True
+        cppsym  "$[sim]->fNumberAliveWithMetabolism[ $[ancestor]->index ]"
+      }
+ 
     }
   }
+}
+
+AgentMetabolismSelectionMode {
+  type    Enum
+  enum    Values {
+    Gene,
+    Random
+  }
+  default Gene
 }
 
 #------------------------------
 # Barriers 
 #------------------------------
 Barriers {
-  type    ARRAY
+  type    Array
+
   default [
-    KeyFrames [
-      X1    $(  0.3333 if RatioBarrierPositions else  33.33 )
-      Z1    $( -1.0    if RatioBarrierPositions else -Worldsize )
-      X2    $(  0.3333 if RatioBarrierPositions else  33.33 )
-      Z2    $( -0.1    if RatioBarrierPositions else -0.1*Worldsize )
-    ]
-  ,
-    KeyFrames [
-      X1    $(  0.6667 if RatioBarrierPositions else  66.67 )
-      Z1    $( -1.0    if RatioBarrierPositions else -Worldsize )
-      X2    $(  0.6667 if RatioBarrierPositions else  66.67 )
-      Z2    $( -0.1    if RatioBarrierPositions else -0.1*Worldsize )
-    ]
-  ]
+    {
+      X1    (  0.3333 if RatioBarrierPositions else  (0.3333 * Worldsize) )
+      Z1    ( -1.0    if RatioBarrierPositions else -Worldsize )
+      X2    (  0.3333 if RatioBarrierPositions else  (0.3333 * Worldsize) )
+      Z2    ( -0.1    if RatioBarrierPositions else -0.1*Worldsize )
+    }
+    ,
+    {
+      X1    (  0.6667 if RatioBarrierPositions else  (0.6667 * Worldsize) )
+      Z1    ( -1.0    if RatioBarrierPositions else -Worldsize )
+      X2    (  0.6667 if RatioBarrierPositions else  (0.6667 * Worldsize) )
+      Z2    ( -0.1    if RatioBarrierPositions else -0.1*Worldsize )
+    }
+ ]
 
-  element {               # element of Barriers[]
-    type    OBJECT
+  element {
+    type    Object
+    cppsym  "barrier::gBarriers[ $[index] ]"
     
-    properties {          # properties of Barrier
+    properties {
+      X1 {
+        type    Float
+        min     0.0
+        max     ( 1.0 if RatioBarrierPositions else WorldSize )
+        cppsym  "$[ancestor]->getPosition().xa"
+      }
+      Z1 {
+        type    Float
+        max     0.0
+        min     ( -1.0 if RatioBarrierPositions else -WorldSize )
+        cppsym  "$[ancestor]->getPosition().za"
+      }
 
-      KeyFrames {
-        type    ARRAY
-
-        element {         # element of KeyFrames[]
-          type    OBJECT
-          properties {    # properties of KeyFrame
-            
-            CouplingRange {
-              type    ENUM
-              default None
-              values [
-                None
-                Begin
-                End
-              ]
-            }
-
-	    Mode {
-              type    ENUM
-              default Time
-              values [
-                Time
-                Count
-              ]
-            }
-
-            Time {
-              type    INT
-              default 0
-              min     0
-            }
-
-            Count {
-              type    OBJECT
-              default {
-              }
-              properties {
-
-                Value {
-                  type    ENUM
-                  default Agents
-                  values [
-                    Agents
-                  ]
-                }
-
-                Op {
-                  type    ENUM
-                  default UNDEFINED
-                  values [
-                    UNDEFINED
-                    EQ
-                    GT
-                    LT
-                  ]
-                  if $( Mode == \"Count\" ) {
-                    assert $( Op != \"UNDEFINED\" )
-                  }
-                }
-                
-                Threshold {
-                  type    INT
-                  default 0
-                }
-
-                Duration {
-                  type    INT
-                  default 0
-                  min     0
-                }
-              }
-            }
-
-            X1 {
-              type    FLOAT
-              min     0.0
-              max     $( 1.0 if RatioBarrierPositions else WorldSize )
-            }
-            Z1 {
-              type    FLOAT
-              max     0.0
-              min     $( -1.0 if RatioBarrierPositions else -WorldSize )
-            }
-
-            X2 {
-              type    FLOAT
-              min     0.0
-              max     $( 1.0 if RatioBarrierPositions else WorldSize )
-            }
-            Z2 {
-              type    FLOAT
-              max     0.0
-              min     $( -1.0 if RatioBarrierPositions else -WorldSize )
-            }
-          }
-        }
+      X2 {
+        type    Float
+        min     0.0
+        max     ( 1.0 if RatioBarrierPositions else WorldSize )
+        cppsym  "$[ancestor]->getPosition().xb"
+      }
+      Z2 {
+        type    Float
+        max     0.0
+        min     ( -1.0 if RatioBarrierPositions else -WorldSize )
+        cppsym  "$[ancestor]->getPosition().zb"
       }
     }
   }
@@ -651,351 +414,259 @@ Barriers {
 #--- Domains 
 #------------------------------
 Domains {
-  type    ARRAY
+  type    Array
 
   default [
-    CenterX                   0.5
-    CenterZ                   0.5
-    SizeX                     1.0
-    SizeZ                     1.0
-    MinAgentsFraction         -1.0
-    MaxAgentsFraction         -1.0
-    InitAgentsFraction        -1.0
-    InitSeedsFraction         -1.0
-    ProbabilityOfMutatingSeeds -1.0
-    InitFoodFraction          -1.0
-    MinFoodFraction           -1.0
-    MaxFoodFraction           -1.0
-    MaxFoodGrownFraction      -1.0
-    FoodRate                  -1.0
-    FoodPatches [             
-        FoodFraction              0.2
-        InitFoodFraction          -1.0
-        MinFoodFraction           -1.0
-        MaxFoodFraction           1.0
-        MaxFoodGrownFraction      1.0
-        FoodRate                  -1.0
-        CenterX                   0.5
-        CenterZ                   0.05
-        SizeX                     1.0
-        SizeZ                     0.1
-        Shape                     R
-        Distribution              U
-      ,                         
-        FoodFraction              0.8
-        InitFoodFraction          -1.0
-        MinFoodFraction           -1.0
-        MaxFoodFraction           1.0
-        MaxFoodGrownFraction      1.0
-        FoodRate                  -1.0
-        CenterX                   0.5
-        CenterZ                   0.8
-        SizeX                     1.0
-        SizeZ                     0.4
-        Shape                     R
-        Distribution              U
-    ]
-    BrickPatches [
-    ]
+    {
+      CenterX                   0.5
+      CenterZ                   0.5
+      SizeX                     1.0
+      SizeZ                     1.0
+      FoodPatches [
+        {
+          FoodFraction              0.2
+          MaxFoodFraction           1.0
+          MaxFoodGrownFraction      1.0
+          CenterX                   0.5
+          CenterZ                   0.05
+          SizeX                     1.0
+          SizeZ                     0.1
+        }
+        ,
+        {                         
+          FoodFraction              0.8
+          MaxFoodFraction           1.0
+          MaxFoodGrownFraction      1.0
+          CenterX                   0.5
+          CenterZ                   0.8
+          SizeX                     1.0
+          SizeZ                     0.4
+        }
+      ]
+    }
   ]
 
   exmin   0
   max     10 # This number comes from the MAXDOMAINS symbol in Simulation.h. It is critical they match.
 
   element {
-    type    OBJECT
+    type    Object
+    cppsym  "$[sim]->fDomains[ $[index] ]"
+
     properties {
 
       CenterX {
-        type    FLOAT
+        type    Float
         exmin   0.0
         exmax   1.0
       }
 
       CenterZ {
-        type    FLOAT
+        type    Float
         exmin   0.0
         exmax   1.0
       }
 
       SizeX {
-        type    FLOAT
+        type    Float
         exmin   0.0
         max     1.0
       }
 
       SizeZ {
-        type    FLOAT
+        type    Float
         exmin   0.0
         max     1.0
       }
 
       MinAgentsFraction {
-        type    FLOAT
+        type    Float
         default -1.0
         max     1.0
-        assert  $( (MinAgentsFraction == -1.0) or (MinAgentsFraction >= 0.0) )
+        assert  ( (MinAgentsFraction == -1.0) or (MinAgentsFraction >= 0.0) )
       }
 
       MaxAgentsFraction {
-        type    FLOAT
+        type    Float
         default -1.0
         max     1.0
-        assert  $( (MaxAgentsFraction == -1.0) or (MaxAgentsFraction >= 0.0) )
+        assert  ( (MaxAgentsFraction == -1.0) or (MaxAgentsFraction >= 0.0) )
       }
 
       InitAgentsFraction {
-        type    FLOAT
+        type    Float
         default -1.0
         max     1.0
-        assert  $( (InitAgentsFraction == -1.0) or (InitAgentsFraction >= 0.0) )
+        assert  ( (InitAgentsFraction == -1.0) or (InitAgentsFraction >= 0.0) )
       }
 
       InitSeedsFraction {
-        type    FLOAT
+        type    Float
         default -1.0
         max     1.0
-        assert  $( (InitSeedsFraction == -1.0) or (InitSeedsFraction >= 0.0) )
+        assert  ( (InitSeedsFraction == -1.0) or (InitSeedsFraction >= 0.0) )
       }
 
       ProbabilityOfMutatingSeeds {
-        type    FLOAT
+        type    Float
         default -1.0
         max     1.0
-        assert  $( (ProbabilityOfMutatingSeeds == -1.0) or (ProbabilityOfMutatingSeeds >= 0.0) )
+        assert  ( (ProbabilityOfMutatingSeeds == -1.0) or (ProbabilityOfMutatingSeeds >= 0.0) )
       }
 
       InitFoodFraction {
-        type    FLOAT
+        type    Float
         default -1.0
         max     1.0
-        assert  $( (InitFoodFraction == -1.0) or (InitFoodFraction >= 0.0) )
+        assert  ( (InitFoodFraction == -1.0) or (InitFoodFraction >= 0.0) )
       }
 
       MinFoodFraction {
-        type    FLOAT
+        type    Float
         default -1.0
         max     1.0
-        assert  $( (MinFoodFraction == -1.0) or (MinFoodFraction >= 0.0) )
+        assert  ( (MinFoodFraction == -1.0) or (MinFoodFraction >= 0.0) )
       }
 
       MaxFoodFraction {
-        type    FLOAT
+        type    Float
         default -1.0
         max     1.0
-        assert  $( (MaxFoodFraction == -1.0) or (MaxFoodFraction >= 0.0) )
+        assert  ( (MaxFoodFraction == -1.0) or (MaxFoodFraction >= 0.0) )
       }
 
       MaxFoodGrownFraction {
-        type    FLOAT
+        type    Float
         default -1.0
         max     1.0
-        assert  $( (MaxFoodGrownFraction == -1.0) or (MaxFoodGrownFraction >= 0.0) )
+        assert  ( (MaxFoodGrownFraction == -1.0) or (MaxFoodGrownFraction >= 0.0) )
       }
 
       FoodRate {
-        type    FLOAT
+        type    Float
         default -1.0
         max     1.0
-        assert  $( (FoodRate == -1.0) or (FoodRate >= 0.0) )
+        assert  ( (FoodRate == -1.0) or (FoodRate >= 0.0) )
       }
 
       #------------------------------
       # FoodPatches
       #------------------------------
       FoodPatches {
-        type    ARRAY
+        type    Array
 
         element {
-          type    OBJECT
+          type    Object
+          cppsym  "$[ancestor].fFoodPatches[ $[index] ]"
 
           properties { # Please pay attention to min/max/assert logic. I didn't put enough thought into it.
 
             FoodTypeName {
-              type    STRING
-              default Standard
+              type    String
+              default "Standard"
             }
 
             FoodFraction {
-              type    FLOAT
+              type    Float
               exmin   0.0
               max     1.0
             }
 
             InitFoodFraction {
-              type    FLOAT
+              type    Float
               default -1.0
               max     1.0
-              assert  $( (InitFoodFraction == -1.0) or (InitFoodFraction >= 0.0) )
+              assert  ( (InitFoodFraction == -1.0) or (InitFoodFraction >= 0.0) )
             }
                                     
             MinFoodFraction {
-              type    FLOAT
+              type    Float
               default -1.0
               max     1.0
-              assert  $( (MinFoodFraction == -1.0) or (MinFoodFraction >= 0.0) )
+              assert  ( (MinFoodFraction == -1.0) or (MinFoodFraction >= 0.0) )
             }
                                     
             MaxFoodFraction {
-              type    FLOAT
+              type    Float
               default -1.0
               max     1.0
-              assert  $( (MaxFoodFraction == -1.0) or (MaxFoodFraction >= 0.0) )
+              assert  ( (MaxFoodFraction == -1.0) or (MaxFoodFraction >= 0.0) )
             }
                                     
             MaxFoodGrownFraction {
-              type    FLOAT
+              type    Float
               default -1.0
               max     1.0
-              assert  $( (MaxFoodGrownFraction == -1.0) or (MaxFoodGrownFraction >= 0.0) )
+              assert  ( (MaxFoodGrownFraction == -1.0) or (MaxFoodGrownFraction >= 0.0) )
             }
                                     
             FoodRate {
-              type    FLOAT
+              type    Float
               default -1.0
               max     1.0
-              assert  $( (FoodRate == -1.0) or (FoodRate >= 0.0) )
+              assert  ( (FoodRate == -1.0) or (FoodRate >= 0.0) )
             }
 
             CenterX {
-              type    FLOAT
+              type    Float
               exmin   0.0
               exmax   1.0
             }
       
             CenterZ {
-              type    FLOAT
+              type    Float
               exmin   0.0
               exmax   1.0
             }
       
             SizeX {
-              type    FLOAT
+              type    Float
               exmin   0.0
               max     1.0
             }
       
             SizeZ {
-              type    FLOAT
+              type    Float
               exmin   0.0
               max     1.0
             }
 
             Shape {
-              type    ENUM
+              type    Enum
               default R
-              values [
-                R           # Rectangular
-                E           # Elliptical
-              ]
+              enum    Values {
+                R,           # Rectangular
+                E            # Elliptical
+              }
             }
 
             Distribution {
-              type    ENUM
+              type    Enum
               default U
-              values [
-                U           # Uniform
-                L           # Linear
-                G           # Gaussian
-              ]
+              enum    Values {
+                U,           # Uniform
+                L,           # Linear
+                G            # Gaussian
+              }
             }
 
             NeighborhoodSize {
-              type    FLOAT
+              type    Float
               default 10.0
               min     0.0
-              max     $( WorldSize )	# no great choice here, but should never be larger than this
+              max     WorldSize # no great choice here, but should never be larger than this
             }
 
             RemoveFood {
-              type    BOOL
+              type    Bool
               default False
             }
 
-            OnCondition {
-              type    OBJECT
-              default {
-              }
-
-              properties {
-                Mode {
-                  type    ENUM
-                  default Time
-                  values [
-                    Time
-                    MaxPopGroup
-                  ]
-                }
-
-                Time {
-                  type    OBJECT
-                  default {
-                  }
-
-                  properties {
-                
-                    Period {
-                      type    INT
-                      default 0
-                      min     0
-                    }
-
-                    OnFraction {
-                      type    FLOAT
-                      default 1.0
-                      min     0.0
-                      max     1.0
-                    }
-
-                    Phase {
-                      type    FLOAT
-                      default 0.0
-                      min     0.0
-                      max     1.0
-                    }
-
-                  } # Time properties
-                } # Time
-
-                MaxPopGroup {
-                  type    OBJECT
-                  default {
-                  }
-
-                  properties {
-
-                    MaxAgents {
-                      type    INT
-                      default 200
-                      min     0
-                    }
-
-                    Timeout {
-                      type    INT
-                      default 2000
-                      assert  $( Timeout == -1 or Timeout > 0 )
-                    }
-
-                    Delay {
-                      type    INT
-                      default 0
-                      min     0
-                    }
-
-                    Group {
-                      type    ENUM
-                      default Domain
-                      values [
-                        Domain
-                        World
-                      ]
-                    }
-
-                  } # MaxPopGroup properties
-                } # MaxPopGroup
-
-              } # OnCondition properties
-            } # OnCondition
+            On {
+              type    Bool
+              default True
+              cppsym  "$[ancestor].on"
+            }
                                     
           } # FoodPatch properties
         } # FoodPatches[] element
@@ -1006,73 +677,73 @@ Domains {
       # BrickPatches
       #------------------------------
       BrickPatches {
-        type    ARRAY
+        type    Array
 
-        default [
-        ]
+        default [ ]
 
         element {
-          type    OBJECT
+          type    Object
+          cppsym  "$[ancestor].fBrickPatches[ $[index] ]"
 
           properties {
 
             CenterX {
-              type    FLOAT
+              type    Float
               exmin   0.0
               exmax   1.0
             }
       
             CenterZ {
-              type    FLOAT
+              type    Float
               #exmin   0.0
               #exmax   1.0
             }
       
             SizeX {
-              type    FLOAT
+              type    Float
               exmin   0.0
               max     1.0
             }
       
             SizeZ {
-              type    FLOAT
+              type    Float
               exmin   0.0
               max     1.0
             }
 
             BrickCount {
-              type    INT
+              type    Int
               exmin   0
             }
 
             Shape {
-              type    ENUM
+              type    Enum
               default R
-              values [
-                R           # Rectangular
-                E           # Elliptical
-              ]
+              enum    Values {
+                R,           # Rectangular
+                E            # Elliptical
+              }
             }
 
             Distribution {
-              type    ENUM
+              type    Enum
               default U
-              values [
-                U           # Uniform
-                L           # Linear
-                G           # Gaussian
-              ]
+              enum    Values {
+                U,           # Uniform
+                L,           # Linear
+                G            # Gaussian
+              }
             }
 
             NeighborhoodSize {
-              type    FLOAT
+              type    Float
               default 0.0
               min     0.0
-              max     $( WorldSize )	# no great choice here, but should never be larger than this
+              max     WorldSize # no great choice here, but should never be larger than this
             }
 
             OverrideBrickColor {
-              type    BOOL
+              type    Bool
               default False
             }
 
@@ -1080,7 +751,7 @@ Domains {
             # Optional color override for this patch.
             #
             BrickColor {
-              type    OBJECT
+              type    Object
               default {
                 R    0.6
                 G    0.2
@@ -1089,31 +760,27 @@ Domains {
             
               properties {
                 R {
-                  type    FLOAT
+                  type    Float
                   min     0.0
                   max     1.0
                 }
                 G {
-                  type    FLOAT
+                  type    Float
                   min     0.0
                   max     1.0
                 }
                 B {
-                  type    FLOAT
+                  type    Float
                   min     0.0
                   max     1.0
                 }
               }
             }
 
-            #
-            # Index of food patch to which this brick patch's On state is linked.
-            # -1 == No sync
-            #
-            OnSyncFoodPatchIndex {
-              type    INT
-              min     -1
-              default -1
+            On {
+              type    Bool
+              default True
+              cppsym  "$[ancestor].on"
             }
 
           } # BrickPatch properties
@@ -1130,973 +797,371 @@ Domains {
 #-------------------------------------------------------------------
 
 WorldSize {
-  type    FLOAT
+  type    Float
   default 100.0
   exmin   0.0
 }
 
 Edges {
-  type    ENUM
+  type    Enum
   default B
-  values [
-    B         # Blocked
-    W         # Wraparound
-    T         # Tabletop
-    S         # Sticky (and Blocked)
-  ]
+  enum    Values {
+    B,         # Blocked
+    W,         # Wraparound
+    T,         # Tabletop
+    S          # Sticky (and Blocked)
+  }
 }
 
 #
 # Can the agents slide along barriers?
 #
 StickyBarriers {
-  type    BOOL
+  type    Bool
   default False
 }
 
 AgentsAreFood {
-  type    ENUM
+  type    Enum
   default True
-  values [
+  enum    Values {
     Fight        # If died by fight.
-  ]
+  }
   scalar {
-    type    BOOL
+    type    Bool
   }
 }
 
 MaxMateVelocity {
-  type    OBJECT
-  default {
-  } 
-  properties {
-
-    Record {
-      type    BOOL
-      default $( RecordAll )	# should depend on whether property is actually conditional or not
-    }
-
-    Conditions {
-      type    ARRAY
-      default [
-        Mode Time
-        Value 1.0
-        Time 0
-      ]
-      element {
-        type    OBJECT
-    
-        properties {
-
-          CouplingRange {
-            type    ENUM
-            default None
-            values [
-              None
-              Begin
-              End
-            ]
-          }
-    
-          Value {
-            type    FLOAT
-            exmin   0.0
-            max     1.0
-          }
-              
-          Mode {
-            type    ENUM
-            default IntThreshold
-            values [
-              Time
-              IntThreshold
-            ]
-          }
-              
-          Time {
-            type    INT
-            default 0
-            min     0
-          }
-    
-          IntThreshold {
-            type    OBJECT
-            default {
-            }
-            properties {
-    
-              Value {
-                type    ENUM
-                default Agents
-                values [
-                  Agents
-                ]
-              }
-    
-              Op {
-                type    ENUM
-                default UNDEFINED
-                values [
-                  UNDEFINED
-                  EQ
-                  GT
-                  LT
-                ]
-                if $( Mode == \"IntThreshold\" ) {
-                  assert $( Op != \"UNDEFINED\" )
-                }
-              }
-                    
-              Threshold {
-                type    INT
-                default 0
-              }
-    
-              Duration {
-                type    INT
-                default 0
-                min     0
-              }
-            }
-          }
-
-        }
-      }
-    }
-  }
+  type    Float
+  default 1.0
+  min     0
+  max     1.0
+  cppsym  "$[sim]->fMaxMateVelocity"
 }
 
 MinEatVelocity {
-  type    OBJECT
-  default {
-  } 
-  properties {
-
-    Record {
-      type    BOOL
-      default $( RecordAll )	# should depend on whether property is actually conditional or not
-    }
-
-    Conditions {
-      type    ARRAY
-      default [
-        Mode Time
-        Value 0.0
-        Time 0
-      ]
-      element {
-        type    OBJECT
-    
-        properties {
-
-          CouplingRange {
-            type    ENUM
-            default None
-            values [
-              None
-              Begin
-              End
-            ]
-          }
-    
-          Value {
-            type    FLOAT
-            min     0.0
-            exmax   1.0
-          }
-              
-          Mode {
-            type    ENUM
-            default IntThreshold
-            values [
-              Time
-              IntThreshold
-	      FloatThreshold
-            ]
-          }
-              
-          Time {
-            type    INT
-            default 0
-            min     0
-          }
-    
-          IntThreshold {
-            type    OBJECT
-            default {
-            }
-            properties {
-    
-              Value {
-                type    ENUM
-                default Agents
-                values [
-                  Agents
-                ]
-              }
-    
-              Op {
-                type    ENUM
-                default UNDEFINED
-                values [
-                  UNDEFINED
-                  EQ
-                  GT
-                  LT
-                ]
-                if $( Mode == \"IntThreshold\" ) {
-                  assert $( Op != \"UNDEFINED\" )
-                }
-              }
-                    
-              Threshold {
-                type    INT
-                default 0
-              }
-    
-              Duration {
-                type    INT
-                default 0
-                min     0
-              }
-            }
-          }
-
-          FloatThreshold {
-            type    OBJECT
-            default {
-            }
-            properties {
-    
-              Value {
-                type    ENUM
-                default EatFailed
-                values [
-                  EatFailed
-                  EatFailedYaw
-                  EatFailedVel
-                ]
-              }
-    
-              Op {
-                type    ENUM
-                default UNDEFINED
-                values [
-                  UNDEFINED
-                  EQ
-                  GT
-                  LT
-                ]
-                if $( Mode == \"FloatThreshold\" ) {
-                  assert $( Op != \"UNDEFINED\" )
-                }
-              }
-                    
-              Threshold {
-                type    FLOAT
-                default 0
-              }
-    
-              Duration {
-                type    INT
-                default 0
-                min     0
-              }
-            }
-          }
-
-        }
-      }
-    }
-  }
+  type    Float
+  default 0.0
+  min     0
+  max     1.0
+  cppsym  "$[sim]->fMinEatVelocity"
 }
 
 MaxEatVelocity {
-  type    OBJECT
-  default {
-  } 
-  properties {
-
-    Record {
-      type    BOOL
-      default $( RecordAll )	# should depend on whether property is actually conditional or not
-    }
-
-    Conditions {
-      type    ARRAY
-      default [
-        Mode Time
-        Value 1.0
-        Time 0
-      ]
-      element {
-        type    OBJECT
-    
-        properties {
-
-          CouplingRange {
-            type    ENUM
-            default None
-            values [
-              None
-              Begin
-              End
-            ]
-          }
-    
-          Value {
-            type    FLOAT
-            exmin   0.0
-            max     1.0
-          }
-              
-          Mode {
-            type    ENUM
-            default IntThreshold
-            values [
-              Time
-              IntThreshold
-	      FloatThreshold
-            ]
-          }
-              
-          Time {
-            type    INT
-            default 0
-            min     0
-          }
-    
-          IntThreshold {
-            type    OBJECT
-            default {
-            }
-            properties {
-    
-              Value {
-                type    ENUM
-                default Agents
-                values [
-                  Agents
-                ]
-              }
-    
-              Op {
-                type    ENUM
-                default UNDEFINED
-                values [
-                  UNDEFINED
-                  EQ
-                  GT
-                  LT
-                ]
-                if $( Mode == \"IntThreshold\" ) {
-                  assert $( Op != \"UNDEFINED\" )
-                }
-              }
-                    
-              Threshold {
-                type    INT
-                default 0
-              }
-    
-              Duration {
-                type    INT
-                default 0
-                min     0
-              }
-            }
-          }
-
-          FloatThreshold {
-            type    OBJECT
-            default {
-            }
-            properties {
-    
-              Value {
-                type    ENUM
-                default EatFailed
-                values [
-                  EatFailed
-                  EatFailedYaw
-                  EatFailedVel
-                ]
-              }
-    
-              Op {
-                type    ENUM
-                default UNDEFINED
-                values [
-                  UNDEFINED
-                  EQ
-                  GT
-                  LT
-                ]
-                if $( Mode == \"FloatThreshold\" ) {
-                  assert $( Op != \"UNDEFINED\" )
-                }
-              }
-                    
-              Threshold {
-                type    FLOAT
-                default 0
-              }
-    
-              Duration {
-                type    INT
-                default 0
-                min     0
-              }
-            }
-          }
-
-        }
-      }
-    }
-  }
+  type    Float
+  default 1.0
+  min     0
+  max     1.0
+  cppsym  "$[sim]->fMaxEatVelocity"
 }
 
 MaxEatYaw {
-  type    OBJECT
-  default {
-  } 
-  properties {
+  type    Float
+  default 1.0
+  min     0
+  max     1.0
+  cppsym  "$[sim]->fMaxEatYaw"
+}
 
-    Record {
-      type    BOOL
-      default $( RecordAll )	# should depend on whether property is actually conditional or not
-    }
-
-    Conditions {
-      type    ARRAY
-      default [
-        Mode Time
-        Value 1.0
-        Time 0
-      ]
-      element {
-        type    OBJECT
-    
-        properties {
-
-          CouplingRange {
-            type    ENUM
-            default None
-            values [
-              None
-              Begin
-              End
-            ]
-          }
-    
-          Value {
-            type    FLOAT
-            exmin   0.0
-            max     1.0
-          }
-              
-          Mode {
-            type    ENUM
-            default IntThreshold
-            values [
-              Time
-              IntThreshold
-	      FloatThreshold
-            ]
-          }
-              
-          Time {
-            type    INT
-            default 0
-            min     0
-          }
-    
-          IntThreshold {
-            type    OBJECT
-            default {
-            }
-            properties {
-    
-              Value {
-                type    ENUM
-                default Agents
-                values [
-                  Agents
-                ]
-              }
-    
-              Op {
-                type    ENUM
-                default UNDEFINED
-                values [
-                  UNDEFINED
-                  EQ
-                  GT
-                  LT
-                ]
-                if $( Mode == \"IntThreshold\" ) {
-                  assert $( Op != \"UNDEFINED\" )
-                }
-              }
-                    
-              Threshold {
-                type    INT
-                default 0
-              }
-    
-              Duration {
-                type    INT
-                default 0
-                min     0
-              }
-            }
-          }
-
-          FloatThreshold {
-            type    OBJECT
-            default {
-            }
-            properties {
-    
-              Value {
-                type    ENUM
-                default EatFailed
-                values [
-                  EatFailed
-                  EatFailedYaw
-                  EatFailedVel
-                ]
-              }
-    
-              Op {
-                type    ENUM
-                default UNDEFINED
-                values [
-                  UNDEFINED
-                  EQ
-                  GT
-                  LT
-                ]
-                if $( Mode == \"FloatThreshold\" ) {
-                  assert $( Op != \"UNDEFINED\" )
-                }
-              }
-                    
-              Threshold {
-                type    FLOAT
-                default 0
-              }
-    
-              Duration {
-                type    INT
-                default 0
-                min     0
-              }
-            }
-          }
-
-        }
-      }
-    }
-  }
+EatWait {
+  type    Int
+  default 0
+  min     0
+  exmax   MaxLifeSpan
+  cppsym  "$[sim]->fEatWait"
 }
 
 MateWait {
-  type    INT
+  type    Int
   default 25
   min     0
-  exmax   $( MaxLifeSpan )
+  exmax   MaxLifeSpan
+  cppsym  "$[sim]->fMateWait"
 }
 
 InitMateWait {
-  type    INT
+  type    Int
   default 0
   min     0
-  exmax   $( MaxLifeSpan )
+  exmax   MaxLifeSpan
 }
 
 EatMateWait {
-  type    INT
+  type    Int
   default 0
   min     0
-  exmax   $( MaxLifeSpan )
+  exmax   MaxLifeSpan
 }
 
 # Minimum distance agent must be from last eat position before can mate.
 EatMateMinDistance {
-  type    OBJECT
-  default {
-  } 
-  properties {
-
-    Record {
-      type    BOOL
-      default $( RecordAll )	# should depend on whether property is actually conditional or not
-    }
-
-    Conditions {
-      type    ARRAY
-      default [
-        Mode Time
-        Value 0.0
-        Time 0
-      ]
-      element {
-        type    OBJECT
-    
-        properties {
-
-          CouplingRange {
-            type    ENUM
-            default None
-            values [
-              None
-              Begin
-              End
-            ]
-          }
-    
-          Value {
-            type    FLOAT
-            min   0.0
-            max     $(WorldSize)
-          }
-              
-          Mode {
-            type    ENUM
-            default IntThreshold
-            values [
-              Time
-              IntThreshold
-            ]
-          }
-              
-          Time {
-            type    INT
-            default 0
-            min     0
-          }
-    
-          IntThreshold {
-            type    OBJECT
-            default {
-            }
-            properties {
-    
-              Value {
-                type    ENUM
-                default Agents
-                values [
-                  Agents
-                ]
-              }
-    
-              Op {
-                type    ENUM
-                default UNDEFINED
-                values [
-                  UNDEFINED
-                  EQ
-                  GT
-                  LT
-                ]
-                if $( Mode == \"IntThreshold\" ) {
-                  assert $( Op != \"UNDEFINED\" )
-                }
-              }
-                    
-              Threshold {
-                type    INT
-                default 0
-              }
-    
-              Duration {
-                type    INT
-                default 0
-                min     0
-              }
-            }
-          }
-
-        }
-      }
-    }
-  }
+  type    Float
+  default 0.0
+  min     0.0
+  max     WorldSize
+  cppsym  "$[sim]->fEatMateMinDistance"
 }
 
 EnableMateWaitFeedback {
-  type    BOOL
+  type    Bool
   default False
 }
 
 EnableSpeedFeedback {
-  type    BOOL
+  type    Bool
   default False
 }
 
 EnableGive {
-  type    BOOL
+  type    Bool
   default False
 }
 
 EnableCarry {
-  type    BOOL
+  type    Bool
   default False
-
-  # TODO: 1) Enhance tokenizer to support quotes.
-  #       2) Enhance eval() to automatically escape quotes in expressions.
-  #       3) Support new "statement" node so we can have multiple warn or assert statements in the
-  #          same scope. Currently, they're properties, so there is a name clash.
-  if $( EnableCarry ) {
-    if $( MaxCarries == 0 ) {
-      warn $( \"EnableCarry = True, but MaxCarries = 0\" )
-    } elif $( not (CarryAgents or CarryFood or CarryBricks) ) {
-      warn $( \"EnableCarry = True, but CarryAgents, CarryFood, and CarryBricks are all False.\" )
-    }
-  }
 }
 
 MaxCarries {
-  type    INT
+  type    Int
   default 1
 }
 
 CarryAgents {
-  type    BOOL
+  type    Bool
   default True
 }
 
 CarryFood {
-  type    BOOL
+  type    Bool
   default True
 }
 
 CarryBricks {
-  type    BOOL
+  type    Bool
   default True
 }
 
 ShieldAgents {
-  type    BOOL
+  type    Bool
   default False
 }
 
 ShieldFood {
-  type    BOOL
+  type    Bool
   default False
 }
 
 ShieldBricks {
-  type    BOOL
+  type    Bool
   default False
 }
 
-CarryPreventsEat {		# probability that agent carrying something prevents it from eating
-  type    FLOAT
+CarryPreventsEat {              # probability that agent carrying something prevents it from eating
+  type    Float
   default 0.0
   min     0.0
   max     1.0
 }
 
-CarryPreventsFight {	# probability that agent carrying something prevents it from fighting
-  type    FLOAT
+CarryPreventsFight {    # probability that agent carrying something prevents it from fighting
+  type    Float
   default 0.0
   min     0.0
   max     1.0
 }
 
-CarryPreventsGive {		# probability that agent carrying something prevents it from giving
-  type    FLOAT
+CarryPreventsGive {             # probability that agent carrying something prevents it from giving
+  type    Float
   default 0.0
   min     0.0
   max     1.0
 }
 
-CarryPreventsMate {		# probability that agent carrying something prevents it from mating
-  type    FLOAT
+CarryPreventsMate {             # probability that agent carrying something prevents it from mating
+  type    Float
   default 0.0
   min     0.0
   max     1.0
 }
 
 EnableVisionPitch {
-  type    BOOL
+  type    Bool
   default False
 }
 
 MinVisionPitch {
-  type    FLOAT
+  type    Float
   default -7.5
   min     -90.0
   max     0.0
 }
 
 MaxVisionPitch {
-  type    FLOAT
+  type    Float
   default 7.5
   min     0
   max     90.0
 }
 
 EnableVisionYaw {
-  type    BOOL
+  type    Bool
   default False
 }
 
 MinVisionYaw {
-  type    FLOAT
+  type    Float
   default -90.0
   min     -180.0
   max     0.0
 }
 
 MaxVisionYaw {
-  type    FLOAT
+  type    Float
   default 90
   min     0
   max     180.0
 }
 
 EyeHeight {
-  type    FLOAT
+  type    Float
   default 0.5
   min     0.0
   max     1.0
 }
 
 BodyRedChannel {
-  type    ENUM
+  type    Enum
   default Fight
-  values [
-    Fight
+  enum    Values {
+    Fight,
     Give
-  ]
+  }
   scalar {
-    type    FLOAT
+    type    Float
     min     0.0
     max     1.0
   }
 }
 
 BodyGreenChannel {
-  type    ENUM
+  type    Enum
   default I
-  values [
-    I             # ID gene
-    L             # Light neuron
-  ]
+  enum    Values {
+    I,             # ID gene
+    L              # Light neuron
+  }
   scalar {
-    type    FLOAT
+    type    Float
     min     0.0
     max     1.0
   }
 }
 
 BodyBlueChannel {
-  type    ENUM
+  type    Enum
   default Mate
-  values [
-    Mate
+  enum    Values {
+    Mate,
     Energy
-  ]
+  }
   scalar {
-    type    FLOAT
+    type    Float
     min     0.0
     max     1.0
   }
 }
 
 NoseColor {
-  type    ENUM
+  type    Enum
   default L
-  values [
+  enum    Values {
     L            # Light neuron
-  ]
+  }
   scalar {
-    type    FLOAT
+    type    Float
     min     0.0
     max     1.0
   }
 }
 
 AgentHealingRate {
-  type    FLOAT
+  type    Float
   default 0.0
   min     0.0
-  max     $( MaxAgentMaxEnergy )
+  max     MaxAgentMaxEnergy
 }
 
 SolidAgents {
-  type    BOOL
+  type    Bool
   default False
 }
 
 SolidFood {
-  type    BOOL
+  type    Bool
   default False
 }
 
 SolidBricks {
-  type    BOOL
+  type    Bool
   default True
 }
 
 PreBirthCycles {
-  type    INT
+  type    Int
   default 25
   min     0
 }
 
 NumDepletionSteps {
-  type    INT
+  type    Int
   default 0
   legacy  0
   min     0
 }
 
 ApplyLowPopulationAdvantage {
-  type    BOOL
+  type    Bool
   default False
   legacy  False
 }
 
 EnergyBasedPopulationControl {
-  type    BOOL
+  type    Bool
   default True
   legacy  False
-  if $( EnergyBasedPopulationControl ) {
-    assert $( not ApplyLowPopulationAdvantage and ( NumDepletionSteps == 0 ) and ( PopControlGlobal or PopControlDomains ) )
-  }
+  assert  not EnergyBasedPopulationControl or ( not ApplyLowPopulationAdvantage and ( NumDepletionSteps == 0 ) and ( PopControlGlobal or PopControlDomains ) )
 }
 
 # Following PopControl* parameters are ignored if EnergyBasedPopulationControl is False
 PopControlMinFixedRange {
-  type    FLOAT
+  type    Float
   default 0.25
 }
 
 PopControlMaxFixedRange {
-  type    FLOAT
+  type    Float
   default 0.75
 }
 
 PopControlMinScaleFactor {
-  type    FLOAT
+  type    Float
   default 0.0
 }
 
 PopControlMaxScaleFactor {
-  type    FLOAT
+  type    Float
   default 5.0
 }
 
 PopControlGlobal {
-  type    BOOL
+  type    Bool
   default True
 }
 
 PopControlDomains {
-  type    BOOL
+  type    Bool
   default False
 }
 
@@ -2104,183 +1169,183 @@ PopControlDomains {
 #-------------------------------------------------------------------
 # SECTION Simulation parameters -- Tertiary
 #-------------------------------------------------------------------
-	
+        
 MaxVelocity {
-  type    FLOAT
+  type    Float
   default 1.0
   exmin   0.0
 }
 
 MotionRate {
-  type    FLOAT
+  type    Float
   default 1.0
   exmin   0.0
 }
 
 YawRate {
-  type    FLOAT
+  type    Float
   default 20.0
   exmin   0.0
 }
 
 YawEncoding {
-  type    ENUM
-  values [
-    Oppose
+  type    Enum
+  enum    Values {
+    Oppose,
     Squash
-  ]
+  }
   default Oppose
   legacy  Squash
 }
 
 MinAgentMaxEnergy {
-  type    FLOAT
+  type    Float
   default 500.0
   exmin   0.0
 }
 
 MaxAgentMaxEnergy {
-  type    FLOAT
+  type    Float
   default 1000.0
-  min     $( MinAgentMaxEnergy )
+  min     MinAgentMaxEnergy
 }
 
 MinFoodEnergyAtDeath {
-  type    FLOAT
+  type    Float
   default 0.0
   min     0.0
 }
 
 MiscegenationDelay {
-  type    INT
+  type    Int
   default -1       # -1: off
   min     -1
 }
 
 MiscegenationFunctionBias {
-  type    FLOAT
+  type    Float
   default 1.0
 }
 
 MiscegenationFunctionInverseSlope {
-  type    FLOAT
+  type    Float
   default 2.0
 }
 
 FoodEnergySizeScale {
-  type    FLOAT
+  type    Float
   default 400.0
   exmin   0.0
 }
 
 FoodConsumptionRate {
-  type    FLOAT
+  type    Float
   default 100.0
   exmin   0.0
 }
 
 MinMateEnergyFraction {
-  type    FLOAT
+  type    Float
   default 0.0
   min     0.0
   max     1.0
 }
 
 MinHorizontalFieldOfView {
-  type    FLOAT
+  type    Float
   default 20.0
   exmin   0.0
 }
 
 MaxHorizontalFieldOfView {
-  type    FLOAT
+  type    Float
   default 140.0
-  min     $( MinHorizontalFieldOfView )
+  min     MinHorizontalFieldOfView
 }
 
 VerticalFieldOfView {
-  type    FLOAT
+  type    Float
   default 10.0
   exmin   0.0
 }
 
 MaxSizeFightAdvantage {
-  type    FLOAT
+  type    Float
   default 2.5
 }
 
 MinSizeEnergyPenalty {
-  type    FLOAT
+  type    Float
   default 0.0
   min     0.0
 }
 
 MaxSizeEnergyPenalty {
-  type    FLOAT
+  type    Float
   default 10.0
-  min     $( MinSizeEnergyPenalty )
+  min     MinSizeEnergyPenalty
 }
 
 DamageRate {
-  type    FLOAT
+  type    Float
   default 2.5
 }
 
 ProbabilisticFoodPatches {
-  type    BOOL
+  type    Bool
   default True
 }
 
 RandomBirthLocation {
-  type    BOOL
+  type    Bool
   default False
 }
 
 RandomBirthLocationRadius {
-  type    FLOAT
+  type    Float
   default 1.0
   min     0.0
   max     1.0
 }
 
 SmiteMode {
-  type    ENUM
+  type    Enum
   default O
-  values [
-    O         # Off
-    R         # Random
-    L         # Least Fit
-  ]
+  enum    Values {
+    O,         # Off
+    R,         # Random
+    L          # Least Fit
+  }
 }
 
 SmiteFrac {
-  type    FLOAT
+  type    Float
   default 0.1
 }
 
 SmiteAgeFrac {
-  type    FLOAT
+  type    Float
   default 0.25
 }
 
 FogFunction {
-  type    ENUM
+  type    Enum
   default O
-  values [
-    O        # Off
-    L        # Linear
-    E        # Exponential
-  ]
+  enum    Values {
+    O,        # Off
+    L,        # Linear
+    E         # Exponential
+  }
 }
 
 ExpFogDensity {
-  type    FLOAT
-  default 0.1		# only applies to exponential fog
+  type    Float
+  default 0.1           # only applies to exponential fog
 }
 
 LinearFogEnd {
-  type    INT
-  default 33		# only applies to linear fog
+  type    Int
+  default 33            # only applies to linear fog
 }
 
 
@@ -2289,173 +1354,173 @@ LinearFogEnd {
 #-------------------------------------------------------------------
 
 MinAgentSize {
-  type    FLOAT
+  type    Float
   default 0.5
   exmin   0.0
 }
 
 MaxAgentSize {
-  type    FLOAT
+  type    Float
   default 2.0
-  exmin   $( MinAgentSize )
+  exmin   MinAgentSize
 }
 
 MinAgentStrength {
-  type    FLOAT
+  type    Float
   default 0.5
   exmin   0.0
 }
 
 MaxAgentStrength {
-  type    FLOAT
+  type    Float
   default 2.0
-  exmin   $( MinAgentStrength )
+  exmin   MinAgentStrength
 }
 
 MinAgentMaxSpeed {
-  type    FLOAT
+  type    Float
   default 0.5
   exmin   0.0
 }
 
 MaxAgentMaxSpeed {
-  type    FLOAT
+  type    Float
   default 1.5
-  exmin   $( MinAgentMaxSpeed )
+  exmin   MinAgentMaxSpeed
 }
 
 MinMutationRate {
-  type    FLOAT
+  type    Float
   default 0.01
   min     0.0
 }
 
 MaxMutationRate {
-  type    FLOAT
+  type    Float
   default 0.05
   min     0.0
 }
 
 MinCrossoverPoints {
-  type    INT
+  type    Int
   default 2
   min     0
 }
 
 MaxCrossoverPoints {
-  type    INT
+  type    Int
   default 100
   legacy  8
-  min     $( MinCrossoverPoints )
+  min     MinCrossoverPoints
 }
 
 MinLifeSpan {
-  type    INT
+  type    Int
   default 500
   min     1
 }
 
 MaxLifeSpan {
-  type    INT
+  type    Int
   default 1000
-  min     $( MinLifeSpan )
+  min     MinLifeSpan
 }
 
 MinEnergyFractionToOffspring {
-  type    FLOAT
+  type    Float
   default 0.2
   exmin   0.0
 }
 
 MaxEnergyFractionToOffspring {
-  type    FLOAT
+  type    Float
   default 0.8
-  min     $( MinEnergyFractionToOffspring )
+  min     MinEnergyFractionToOffspring
 }
 
 MinVisionNeuronsPerGroup {
-  type    INT
+  type    Int
   default 1
   min     1
 }
 
 MaxVisionNeuronsPerGroup {
-  type    INT
+  type    Int
   default 16
-  min     $( MinVisionNeuronsPerGroup )
+  min     MinVisionNeuronsPerGroup
 }
 
 MinInternalNeuralGroups {
-  type    INT
+  type    Int
   default 0
   min     0
 }
 
 MaxInternalNeuralGroups {
-  type    INT
+  type    Int
   default 20
   legacy  5
-  min     $( MinInternalNeuralGroups )
+  min     MinInternalNeuralGroups
 }
 
 MinExcitatoryNeuronsPerGroup {
-  type    INT
+  type    Int
   default 0
   min     0
 }
 
 MaxExcitatoryNeuronsPerGroup {
-  type    INT
+  type    Int
   default 16
-  min     $( MinExcitatoryNeuronsPerGroup )
+  min     MinExcitatoryNeuronsPerGroup
 }
 
 MinInhibitoryNeuronsPerGroup {
-  type    INT
+  type    Int
   default 0
   min     0
 }
 
 MaxInhibitoryNeuronsPerGroup {
-  type    INT
+  type    Int
   default 16
-  min     $( MinInhibitoryNeuronsPerGroup )
+  min     MinInhibitoryNeuronsPerGroup
 }
 
 MinConnectionDensity {
-  type    FLOAT
+  type    Float
   default 0.0
   min     0.0
 }
 
 MaxConnectionDensity {
-  type    FLOAT
+  type    Float
   default 1.0
-  min     $( MinConnectionDensity )
+  min     MinConnectionDensity
 }
 
 MinTopologicalDistortion {
-  type    FLOAT
+  type    Float
   default 0.0
   min     0.0
 }
 
 MaxTopologicalDistortion {
-  type    FLOAT
+  type    Float
   default 1.0
-  min     $( MinTopologicalDistortion )
+  min     MinTopologicalDistortion
 }
 
 MinLearningRate {
-  type    FLOAT
+  type    Float
   default 0.0
   min     0.0
 }
 
 MaxLearningRate {
-  type    FLOAT
+  type    Float
   default 0.1
-  min     $( MinLearningRate )
+  min     MinLearningRate
 }
 
 
@@ -2464,52 +1529,52 @@ MaxLearningRate {
 #-------------------------------------------------------------------
 
 MinInitialBitProb {
-  type    FLOAT
-  default 0.1		# default to 0.5?
+  type    Float
+  default 0.1           # default to 0.5?
 }
 
 MaxInitialBitProb {
-  type    FLOAT
-  default 0.6		# default to 0.5?
+  type    Float
+  default 0.6           # default to 0.5?
 }
 
 
 
 EnableTopologicalDistortionRngSeed {
-  type    BOOL
+  type    Bool
   default False
 }
 
 MinTopologicalDistortionRngSeed {
-  type    INT
+  type    Int
   default 0
 }
 
 MaxTopologicalDistortionRngSeed {
-  type    INT
+  type    Int
   default 255
 }
 
 
 
 EnableInitWeightRngSeed {
-  type    BOOL
+  type    Bool
   default False
 }
 
 MinInitWeightRngSeed {
-  type    INT
+  type    Int
   default 0
 }
 
 MaxInitWeightRngSeed {
-  type    INT
+  type    Int
   default 255
 }
 
 
 SeedMutationRate {
-  type    FLOAT
+  type    Float
   default 0.5
   min     0.0
   max     1.0
@@ -2517,49 +1582,49 @@ SeedMutationRate {
 
 
 SeedFightBias {
-  type    FLOAT
+  type    Float
   default 0.5
   min     0
   max     1.0
 }
 
 SeedFightExcitation {
-  type    FLOAT
+  type    Float
   default 1.0
   min     0.0
   max     1.0
 }
 
 SeedGiveBias {
-  type    FLOAT
+  type    Float
   default 0.0
   min     0.0
   max     1.0
 }
 
 SeedPickupBias {
-  type    FLOAT
+  type    Float
   default 0.0
   min     0.0
   max     1.0
 }
 
 SeedDropBias {
-  type    FLOAT
+  type    Float
   default 0.0
   min     0.0
   max     1.0
 }
 
 SeedPickupExcitation {
-  type    FLOAT
+  type    Float
   default 0.0
   min     0.0
   max     1.0
 }
 
 SeedDropExcitation {
-  type    FLOAT
+  type    Float
   default 0.0
   min     0.0
   max     1.0
@@ -2571,108 +1636,108 @@ SeedDropExcitation {
 #-------------------------------------------------------------------
 
 LogisticSlope {
-  type    FLOAT
+  type    Float
   default 1.0
   legacy  0.5
 }
 
 MaxSynapseWeight {
-  type    FLOAT
+  type    Float
   default 8.0
   exmin   0.0
 }
 
 MaxSynapseWeightInitial {
-  type    FLOAT
+  type    Float
   default 2.0
   exmin   0.0
 }
 
 SynapseWeightDecayRate {
-  type    FLOAT
+  type    Float
   default 0.99
   max     1.0
   exmin   0.0
 }
 
 MaxBiasWeight {
-  type    FLOAT
-  default $( MaxSynapseWeight )
+  type    Float
+  default MaxSynapseWeight
 }
 
 NeuronModel {
-  type    ENUM
+  type    Enum
   default F
-  values [
-    F             # Firing Rate
-    T             # Tau
-    S             # Spiking
-  ]
+  enum    Values {
+    F,           # Firing Rate
+    T,           # Tau
+    S            # Spiking
+  }
 }
 
 EnableSpikingGenes {
-  type BOOL
-  default $( True if NeuronModel == \"S\" else False )
+  type Bool
+  default ( True if NeuronModel == NeuronModel.S else False )
 }
 
 SpikingAMin {
-  type    FLOAT
+  type    Float
   default 0.001
 }
 
 SpikingAMax {
-  type    FLOAT
+  type    Float
   default 0.2
-  min     $( SpikingAMin )
+  min     SpikingAMin
 }
 
 SpikingBMin {
-  type    FLOAT
+  type    Float
   default 0.01
 }
 
 SpikingBMax {
-  type    FLOAT
+  type    Float
   default 0.3
-  min     $( SpikingBMin )
+  min     SpikingBMin
 }
 
 SpikingCMin {
-  type    FLOAT
+  type    Float
   default -80
 }
 
 SpikingCMax {
-  type    FLOAT
+  type    Float
   default -30
-  min     $( SpikingCMax )
+  min     SpikingCMax
 }
 
 SpikingDMin {
-  type    FLOAT
+  type    Float
   default 0.1
 }
 
 SpikingDMax {
-  type    FLOAT
+  type    Float
   default 10
-  min     $( SpikingDMin )
+  min     SpikingDMin
 }
 
 
 TauMin {
-  type    FLOAT
+  type    Float
   default 0.01
 }
 
 TauMax {
-  type    FLOAT
+  type    Float
   default 1.0
-  min     $( TauMin )
+  min     TauMin
 }
 
 TauSeed {
-  type    FLOAT
+  type    Float
   default 1.0
 }
 
@@ -2682,51 +1747,51 @@ TauSeed {
 #-------------------------------------------------------------------
 
 EatThreshold {
-  type    FLOAT
+  type    Float
   default 0.2
 }
 
 MateThreshold {
-  type    FLOAT
+  type    Float
   default 0.5
 }
 
 FightThreshold {
-  type    FLOAT
+  type    Float
   default 0.2
 }
 
 GiveThreshold {
-  type    FLOAT
+  type    Float
   default 0.2
 }
 
 PickupThreshold {
-  type    FLOAT
+  type    Float
   default 0.5
 }
 
 DropThreshold {
-  type    FLOAT
+  type    Float
   default 0.5
 }
 
 FightMode {
-  type    ENUM
+  type    Enum
   default Normal
-  values [
-    Normal
+  enum    Values {
+    Normal,
     Null
-  ]
+  }
 }
 
 FightMultiplier {
-  type    FLOAT
+  type    Float
   default 1.0
 }
 
 GiveFraction {
-  type    FLOAT
+  type    Float
   default 0.2
 }
 
@@ -2736,201 +1801,94 @@ GiveFraction {
 #-------------------------------------------------------------------
 
 EnergyUseMultiplier {
-  type    FLOAT
+  type    Float
   default 1.0
 }
 
 EnergyUseEat {
-  type    FLOAT
+  type    Float
   default 0.01
 }
 
-EnergyUseMateMode {
-  type    ENUM
-  default Constant
-  values  [
-    Constant
-    Conditional
-  ]
-}
-
 EnergyUseMate {
-  type    FLOAT
+  type    Float
   default 0.1
-}
-
-EnergyUseMateConditional {
-  type    OBJECT
-  default {
-  } 
-  properties {
-
-    Record {
-      type    BOOL
-      default $( RecordAll )	# should depend on whether property is actually conditional or not
-    }
-
-    Conditions {
-      type    ARRAY
-      default [
-        Mode Time
-        Value 0.1
-        Time 0
-      ]
-      element {
-        type    OBJECT
-    
-        properties {
-
-          CouplingRange {
-            type    ENUM
-            default None
-            values [
-              None
-              Begin
-              End
-            ]
-          }
-    
-          Value {
-            type    FLOAT
-            min   0.0
-          }
-              
-          Mode {
-            type    ENUM
-            default IntThreshold
-            values [
-              Time
-              IntThreshold
-            ]
-          }
-              
-          Time {
-            type    INT
-            default 0
-            min     0
-          }
-    
-          IntThreshold {
-            type    OBJECT
-            default {
-            }
-            properties {
-    
-              Value {
-                type    ENUM
-                default Agents
-                values [
-                  Agents
-                ]
-              }
-    
-              Op {
-                type    ENUM
-                default UNDEFINED
-                values [
-                  UNDEFINED
-                  EQ
-                  GT
-                  LT
-                ]
-                if $( Mode == \"IntThreshold\" ) {
-                  assert $( Op != \"UNDEFINED\" )
-                }
-              }
-                    
-              Threshold {
-                type    INT
-                default 0
-              }
-    
-              Duration {
-                type    INT
-                default 0
-                min     0
-              }
-            }
-          }
-
-        }
-      }
-    }
-  }
+  min     0.0
+  cppsym  "agent::gEat2Energy"
 }
 
 EnergyUseFight {
-  type    FLOAT
+  type    Float
   default 1.0
 }
 
 EnergyUseGive {
-  type    FLOAT
+  type    Float
   default 1.0
 }
 
 EnergyUseMove {
-  type    FLOAT
+  type    Float
   default 0.1
 }
 
 EnergyUseTurn {
-  type    FLOAT
+  type    Float
   default 0.1
 }
 
 EnergyUseLight {
-  type    FLOAT
+  type    Float
   default 0.01
 }
 
 EnergyUseFocus {
-  type    FLOAT
+  type    Float
   default 0.001
 }
 
 EnergyUsePickup {
-  type    FLOAT
+  type    Float
   default 0.5
 }
 
 EnergyUseDrop {
-  type    FLOAT
+  type    Float
   default 0.001
 }
 
 EnergyUseCarryAgent {
-  type    FLOAT
+  type    Float
   default 0.05
 }
 
 EnergyUseCarryAgentSize {
-  type    FLOAT
+  type    Float
   default 0.05
 }
 
 EnergyUseCarryFood {
-  type    FLOAT
+  type    Float
   default 0.01
 }
 
 EnergyUseCarryBrick {
-  type    FLOAT
+  type    Float
   default 0.01
 }
 
 EnergyUseNeurons {
-  type    FLOAT
-  default 0.1	# was 1.84; where did that come from?
+  type    Float
+  default 0.1   # was 1.84; where did that come from?
 }
 
 EnergyUseSynapses {
-  type    FLOAT
-  default 0.01	# was 0.34; where did that come from?
+  type    Float
+  default 0.01  # was 0.34; where did that come from?
 }
 
 EnergyUseFixed {
-  type    FLOAT
+  type    Float
   default 0.05
 }
 
@@ -2940,40 +1898,40 @@ EnergyUseFixed {
 #-------------------------------------------------------------------
 
 EpochFrequency {
-  type    INT
-  default $( RecordFrequency )
+  type    Int
+  default RecordFrequency
 }
 
 ComplexityType {
-  type    STRING
-  default P
+  type    String
+  default "P"
 }
 
 EndOnPopulationCrash {
-  type    BOOL
+  type    Bool
   default False
 }
 
 StaticTimestepGeometry {
-  type    BOOL
+  type    Bool
   default True
   legacy  False
 }
 
 ParallelInitAgents {
-  type    BOOL
+  type    Bool
   default True
   legacy  False
 }
 
 ParallelInteract {
-  type    BOOL
+  type    Bool
   default True
   legacy  False
 }
 
 ParallelCreateAgents {
-  type    BOOL
+  type    Bool
   default True
   legacy  False
 }
@@ -2981,39 +1939,39 @@ ParallelCreateAgents {
 # This only takes effect if StaticTimestepGeometry is True.
 # Its primary purpose is for easing debugging with False value.
 ParallelBrains {
-  type    BOOL
+  type    Bool
   default True
   legacy  True
 }
 
 CheckPointFrequency {
-  type    INT
-  default 1000	# sadly, still not used
+  type    Int
+  default 1000  # sadly, still not used
 }
 
 RetinaWidth {
-  type    INT
+  type    Int
   default 22
 }
 
 RetinaHeight {
-  type    INT
-  default $( RetinaWidth )
-  assert $( RetinaWidth == RetinaHeight ) # change this when we support more than one row
+  type    Int
+  default RetinaWidth
+  assert ( RetinaWidth == RetinaHeight ) # change this when we support more than one row
 }
 
 AgentHeight {
-  type    FLOAT
+  type    Float
   default 0.2
 }
 
 FoodHeight {
-  type    FLOAT
+  type    Float
   default 0.6
 }
 
 FoodColor {
-  type    OBJECT
+  type    Object
   default {
     R    0.2
     G    0.6
@@ -3022,17 +1980,17 @@ FoodColor {
 
   properties {
     R {
-      type    FLOAT
+      type    Float
       min     0.0
       max     1.0
     }
     G {
-      type    FLOAT
+      type    Float
       min     0.0
       max     1.0
     }
     B {
-      type    FLOAT
+      type    Float
       min     0.0
       max     1.0
     }
@@ -3040,12 +1998,12 @@ FoodColor {
 }
 
 BrickHeight {
-  type    FLOAT
+  type    Float
   default 0.5
 }
 
 BrickColor {
-  type    OBJECT
+  type    Object
   default {
     R    0.6
     G    0.2
@@ -3054,17 +2012,17 @@ BrickColor {
 
   properties {
     R {
-      type    FLOAT
+      type    Float
       min     0.0
       max     1.0
     }
     G {
-      type    FLOAT
+      type    Float
       min     0.0
       max     1.0
     }
     B {
-      type    FLOAT
+      type    Float
       min     0.0
       max     1.0
     }
@@ -3072,12 +2030,12 @@ BrickColor {
 }
 
 BarrierHeight {
-  type    FLOAT
+  type    Float
   default 5.0
 }
 
 BarrierColor {
-  type    OBJECT
+  type    Object
   default {
     R    0.35
     G    0.25
@@ -3086,17 +2044,17 @@ BarrierColor {
 
   properties {
     R {
-      type    FLOAT
+      type    Float
       min     0.0
       max     1.0
     }
     G {
-      type    FLOAT
+      type    Float
       min     0.0
       max     1.0
     }
     B {
-      type    FLOAT
+      type    Float
       min     0.0
       max     1.0
     }
@@ -3104,7 +2062,7 @@ BarrierColor {
 }
 
 GroundColor {
-  type    OBJECT
+  type    Object
   default {
     R    0.1
     G    0.15
@@ -3113,17 +2071,17 @@ GroundColor {
 
   properties {
     R {
-      type    FLOAT
+      type    Float
       min     0.0
       max     1.0
     }
     G {
-      type    FLOAT
+      type    Float
       min     0.0
       max     1.0
     }
     B {
-      type    FLOAT
+      type    Float
       min     0.0
       max     1.0
     }
@@ -3131,157 +2089,156 @@ GroundColor {
 }
 
 GroundClearance {
-  type    FLOAT
+  type    Float
   default 0.0
 }
 
 GrayCoding {
-  type    BOOL
+  type    Bool
   default False
 }
 
 # RecordAll is a convenience parameter that is only used while processing the worldfile
 # It serves as a default state for all of the *Record* parameters
 RecordAll {
-  type    BOOL
+  type    Bool
   default False
 }
 
 # RecordNeuralComplexityFiles is a convenience parameter that is only used while processing the worldfile
 # It serves as a default state for the *Record* parameters controlling files that may be needed for computing complexity
 RecordNeuralComplexityFiles {
-  type    BOOL
+  type    Bool
   default False
 }
 
 # RecordFrequency is a convenience parameter that is only used while processing the worldfile
 # It serves as a default frequency for the *RecordFrequency parameters
 RecordFrequency {
-  type    INT
+  type    Int
   default 1000
 }
 
 RecordBirthsDeaths {
-  type    BOOL
-  default $( RecordAll or RecordNeuralComplexityFiles )
+  type    Bool
+  default ( RecordAll or RecordNeuralComplexityFiles )
 }
 
 RecordPosition {
-  type    ENUM
-  values  [
-    False
-    Precise      # X,Y,Z to full precision
+  type    Enum
+  enum    Values {
+    False,
+    Precise,     # X,Y,Z to full precision
     Approximate  # X,Z rounded to 2 decimal places
-  ]
-  default $( \"Approximate\" if RecordAll else \"False\" )
+  }
+  default ( "Approximate" if RecordAll else "False" )
 }
 
 RecordBarrierPosition {
-  type    BOOL
-  default $( RecordAll )
+  type    Bool
+  default RecordAll
 }
 
 RecordContacts {
-  type    BOOL
-  default $( RecordAll )
+  type    Bool
+  default RecordAll
 }
 
 RecordCollisions {
-  type    BOOL
-  default $( RecordAll )
+  type    Bool
+  default RecordAll
 }
 
 RecordCarry {
-  type    BOOL
-  default $( RecordAll )
+  type    Bool
+  default RecordAll
 }
 
 RecordEnergy {
-  type    BOOL
-  default $( RecordAll or RecordNeuralComplexityFiles )
+  type    Bool
+  default ( RecordAll or RecordNeuralComplexityFiles )
 }
 
 RecordBrain {
-  type    BOOL
-  default $( RecordAll or RecordNeuralComplexityFiles )
+  type    Bool
+  default ( RecordAll or RecordNeuralComplexityFiles )
 }
 
 RecordBrainRecent {
-  type    BOOL
-  default $( RecordBrain )
+  type    Bool
+  default RecordBrain
 }
 
 RecordBrainBestRecent {
-  type    BOOL
-  default $( RecordBrain )
+  type    Bool
+  default RecordBrain
 }
 
 RecordBrainBestSoFar {
-  type    BOOL
-  default $( RecordBrain )
+  type    Bool
+  default RecordBrain
 }
 
 RecordGeneStats {
-  type    BOOL
-  default $( RecordAll )
+  type    Bool
+  default RecordAll
 }
 
 RecordComplexity {
-  type    BOOL
-  default False	# an exception to RecordAll because it is so computationally expensive
-  assert $( not RecordComplexity or RecordAll or RecordNeuralComplexityFiles )
+  type    Bool
+  default False # an exception to RecordAll because it is so computationally expensive
+  assert ( not RecordComplexity or RecordAll or RecordNeuralComplexityFiles )
 }
 
 RecordAdamiComplexity {
-  type    BOOL
-  default False	# an exception to RecordAll because of computational expense and we don't usually want it
+  type    Bool
+  default False # an exception to RecordAll because of computational expense and we don't usually want it
 }
 
 AdamiComplexityRecordFrequency {
-  type    INT
+  type    Int
   default 200
 }
 
 RecordGenomes {
-  type    BOOL
-  default $( RecordAll )
+  type    Bool
+  default RecordAll
 }
 
 GenomeSubsetLog {
-  type    OBJECT
+  type    Object
   default {
   }
 
   properties {
     Record {
-      type    BOOL
+      type    Bool
       default False
     }
 
     GeneNames {
-      type    ARRAY
-      default [
-      ]
+      type    Array
+      default [ ]
 
       element {
-        type    STRING
+        type    String
       }
     }
   }
 }
 
 RecordSeparations {
-  type    ENUM
-  default $( \"All\" if RecordAll else \"False\" )
-  values [
-    False
-    Contact
+  type    Enum
+  default ( "All" if RecordAll else "False" )
+  enum    Values {
+    False,
+    Contact,
     All
-  ]
+  }
 }
 
 CompressFiles {
-  type    BOOL
+  type    Bool
   default True
   legacy  True
 }
@@ -3292,12 +2249,12 @@ CompressFiles {
 #-------------------------------------------------------------------
 
 SeedGenomeFromRun {
-  type    BOOL
+  type    Bool
   default False
 }
 
 SeedPositionFromRun {
-  type    BOOL
+  type    Bool
   default False
 }
 
@@ -3307,39 +2264,39 @@ SeedPositionFromRun {
 #-------------------------------------------------------------------
 
 EliteFrequency {
-  type    INT
+  type    Int
   default 100
 }
 
 PairFrequency {
-  type    INT
+  type    Int
   default 2
 }
 
 NumberFittest {
-  type    INT
+  type    Int
   default 30
 }
 
 NumberRecentFittest {
-  type    INT
+  type    Int
   default 10
 }
 
 ComplexityFitnessWeight {
-  type    FLOAT
+  type    Float
   default 0.0
 }
 
 HeuristicFitnessWeight {
-  type    FLOAT
+  type    Float
   default 0.0
 }
 
 TournamentSize {
-  type    INT
+  type    Int
   default 3
-  min     0		# zero reverts to iteration through fittest list method
+  min     0             # zero reverts to iteration through fittest list method
 }
 
 
@@ -3348,28 +2305,44 @@ TournamentSize {
 #-------------------------------------------------------------------
 
 FitnessWeightEating {
-  type    FLOAT
+  type    Float
   default 10.0
 }
 
 FitnessWeightMating {
-  type    FLOAT
+  type    Float
   default 100.0
 }
 
 FitnessWeightMoving {
-  type    FLOAT
+  type    Float
   default 0.1
 }
 
 FitnessWeightEnergyAtDeath {
-  type    FLOAT
+  type    Float
   default 5.0
 }
 
 FitnessWeightLongevity {
-  type    FLOAT
+  type    Float
   default 25.0
+}
+
+
+#-------------------------------------------------------------------
+# SECTION Runtime Simulation Properties
+#-------------------------------------------------------------------
+NumberAlive {
+  type    Int
+  runtime True
+  cppsym  "$[sim]->fNumberAlive"
+}
+
+Step {
+  type    Int
+  runtime True
+  cppsym  "$[sim]->fStep"
 }
 
 
@@ -3378,111 +2351,16 @@ FitnessWeightLongevity {
 #-------------------------------------------------------------------
 
 Vision {
-  type    BOOL
-  default True	# make always true
+  type    Bool
+  default True  # make always true
 }
 
 MinBiasLrate {
-  type    FLOAT
-  default 0.0	# set to zero or disable entirely
+  type    Float
+  default 0.0   # set to zero or disable entirely
 }
 
 MaxBiasLrate {
-  type    FLOAT
-  default 0.0	# set to zero or disable entirely
+  type    Float
+  default 0.0   # set to zero or disable entirely
 }
-
-#********************************************************************************
-#-------------------------------------------------------------------
-# Rename (as above)
-#-------------------------------------------------------------------
-
-DumpFrequency				--->		CheckPointFrequency
-MinWin						--->		RetinaWidth, RetinaHeight
-MinNumAgents				--->		MinAgents
-MaxNumAgents				--->		MaxAgents
-InitNumAgents				--->		InitAgents
-NumberToSeed				--->		SeedAgents
-ProbabilityOfMutatingSeeds	--->		SeedMutationProbability
-SeedFromFile				--->		SeedGenomeFromRun
-PositionSeedsFromFile		--->		SeedPositionFromRun
-MiscAgents					--->		MiscegenationDelay
-MiscBias					--->		MiscegenationFunctionBias
-MiscInvisSlope				--->		MiscegenationFunctionInverseSlope
-InitFoodCount				--->		InitFood
-MinFoodCount				--->		MinFood
-MaxFoodCount				--->		MaxFood
-FoodRate					--->		FoodGrowthRate
-GenomeSeed					--->		InitSeed
-AgentsRfood					--->		AgentsAreFood
-Fitness1Frequency			--->		EliteFrequency
-Fitness2Frequency			--->		PairFrequency
-NumberFit					--->		NumberFittest
-NumberRecentFit				--->		NumberRecentFittest
-EatMateSpan					--->		EatMateWait
-EatFitnessParameter			--->		FitnessWeightEating
-MateFitnessParameter		--->		FitnessWeightMating
-MoveFitnessParameter		--->		FitnessWeightMoving
-EnergyFitnessParameter		--->		FitnessWeightEnergyAtDeath
-AgeFitnessParameter			--->		FitnessWeightLongevity
-Size2Energy					--->		FoodEnergySizeScale
-Eat2Consome					--->		FoodConsumptionRate
-MinVisPixels				--->		MinVisionNeuronsPerGroup
-MaxVisPixels				--->		MaxVisionNeuronsPerGroup
-MinNumCpts					--->		MinCrossoverPoints
-MaxNumCpts					--->		MaxCrossoverPoints
-MinStrength					--->		MinAgentStrength
-MaxStrength					--->		MaxAgentStrength
-MinMaxEnergy				--->		MinAgentMaxEnergy
-MaxMaxEnergy				--->		MaxAgentMaxEnergy
-MinMateEnergy				--->		MinEnergyFractionToOffspring
-MaxMateEnergy				--->		MaxEnergyFractionToOffspring
-MinMateFrac					--->		MinMateEnergyFraction
-MinMaxSpeed					--->		MinAgentMaxSpeed
-MaxMaxSpeed					--->		MaxAgentMaxSpeed
-Speed2DPosition				--->		MotionRate
-Yaw2DYaw					--->		YawRate
-MinLRate					--->		MinLearningRate
-MaxLRate					--->		MaxLearningRate
-MinFocus					--->		MinHorizontalFieldOfView
-MaxFocus					--->		MaxHorizontalFieldOfView
-AgentFOV					--->		VerticalFieldOfView
-MaxSizeAdvantage			--->		MaxSizeFightAdvantage
-Power2Energy				--->		DamageRate
-Eat2Energy					--->		EnergyUseEat
-Mate2Energy					--->		EnergyUseMate
-Fight2Energy				--->		EnergyUseFight
-Speed2Energy				--->		EnergyUseMove
-Yaw2Energy					--->		EnergyUseTurn
-Light2Energy				--->		EnergyUseLight
-Focus2Energy				--->		EnergyUseFocus
-Pickup2Energy				--->		EnergyUsePickup
-Drop2Energy					--->		EnergyUseDrop
-CarryAgent2Energy			--->		EnergyUseCarryAgent
-CarryAgentSize2Energy		--->		EnergyUseCarryAgentSize
-CarryFood2Energy			--->		EnergyUseCarryFood
-CarryBrick2Energy			--->		EnergyUseCarryBrick
-MaxNeuron2Energy			--->		EnergyUseNeurons
-MaxSynapse2Energy			--->		EnergyUseSynapses
-FixedEnergyDrain			--->		EnergyUseFixed
-MinSizePenalty				--->		MinSizeEnergyPenalty
-MaxSizePenalty				--->		MaxSizeEnergyPenalty
-LogisticSlope				--->		LogisticSlope
-MaxWeight					--->		MaxSynapseWeight
-InitMaxWeight				--->		MaxSynapseWeightInitial
-DecayRate					--->		SynapseWeightDecayRate
-FightFraction				--->		FightMultiplier
-MinBitProb					--->		MinInitialBitProb
-MaxBitProb					--->		MaxInitialBitProb
-CameraFOV					--->		CameraFieldOfView
-BrainMonitorStride			--->		BrainMonitorFrequency
-UseProbabilisticFoodPatches --->		ProbabilisticFoodPatches
-MinInternalNeurGroups		--->		MinInternalNeuralGroups
-MaxInternalNeurGroups		--->		MaxInternalNeuralGroups
-MinENeurPerGroup			--->		MinExcitatoryNeuronsPerGroup
-MaxENeurPerGroup			--->		MaxExcitatoryNeuronsPerGroup
-MinINeurPerGroup			--->		MinInhibitoryNeuronsPerGroup
-MaxINeurPerGroup			--->		MaxInhibitoryNeuronsPerGroup
-MaxBias						--->		MaxBiasWeight
-NumPreBirthCycles			--->		PreBirthCycles
-********************************************************************************#

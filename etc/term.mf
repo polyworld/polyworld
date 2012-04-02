@@ -30,7 +30,7 @@ Population {
 Brain {
   Enabled      False
   Frequency    1
-  AgentTracker Fittest
+  AgentTracker "Fittest"
 }
 
 
@@ -78,23 +78,24 @@ Farm {
 ########################################
 
 Scenes [
-
-  ###
-  ### Main Scene
-  ###
-
-  Name                      Main
-  CameraSettings            Default
-  CameraControllerSettings  Main
-  Buffer {
-    Width                   640
-    Height                  480
-  }
-  Movie {
-    Record                  True
-    Path 		    movie.pmv
-    SampleFrequency	    1
-    SampleDuration	    1
+  {
+    ###
+    ### Main Scene
+    ###
+  
+    Name                      "Main"
+    CameraSettings            "Default"
+    CameraControllerSettings  "Main"
+    Buffer {
+      Width                   640
+      Height                  480
+    }
+    Movie {
+      Record                  True
+      Path                    "movie.pmv"
+      SampleFrequency         1
+      SampleDuration          1
+    }
   }
 ]
 
@@ -116,13 +117,15 @@ AgentTrackers [
 ########################################
 
 CameraSettings [
-  Name        Default
-  Color {
-    R         0.3
-    G         0.3
-    B         0.3
+  {
+    Name        "Default"
+    Color {
+      R         0.3
+      G         0.3
+      B         0.3
+    }
+    FieldOfView 90.0
   }
-  FieldOfView 90.0
 ]
 
 
@@ -133,17 +136,19 @@ CameraSettings [
 ########################################
 
 CameraControllerSettings [
-  Name            Main
-  Mode            Rotate
-  Rotate {
-    Radius        0.6
-    Height        0.35
-    Rate          0.09
-    AngleStart    0.0
-    Fixation {
-      X	          0.5
-      Y		  0.0
-      Z		  0.5
+  {  
+    Name            "Main"
+    Mode            Rotate
+    Rotate {
+      Radius        0.6
+      Height        0.35
+      Rate          0.09
+      AngleStart    0.0
+      Fixation {
+        X           0.5
+        Y           0.0
+        Z           0.5
+      }
     }
   }
 ]

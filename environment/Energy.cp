@@ -24,7 +24,7 @@ EnergyPolarity::EnergyPolarity()
 
 EnergyPolarity::EnergyPolarity( proplib::Property &prop )
 {
-	assert( prop.isArray() );
+	assert( prop.getType() == proplib::Node::Array );
 	assert( (int)prop.elements().size() == globals::numEnergyTypes );
 
 	for( int i = 0; i < globals::numEnergyTypes; i++ )
@@ -59,7 +59,7 @@ EnergyMultiplier::EnergyMultiplier( float *values )
 
 EnergyMultiplier::EnergyMultiplier( proplib::Property &prop )
 {
-	assert( prop.isArray() );
+	assert( prop.getType() == proplib::Node::Array );
 	assert( (int)prop.elements().size() == globals::numEnergyTypes );
 
 	for( int i = 0; i < globals::numEnergyTypes; i++ )

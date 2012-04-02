@@ -52,6 +52,7 @@ class RandomNumberGenerator
 
  public:
 	void seed( long x );
+	void seedIfLocal( long x );
 	double drand();
 	double range( double lo,
 				  double hi );

@@ -5,44 +5,44 @@
 ########################################
 
 BirthRate {
-  type    OBJECT
+  type    Object
   properties {
     
     Enabled {
-      type    BOOL
+      type    Bool
     }
 
   }
 }
 
 Fitness {
-  type    OBJECT
+  type    Object
   properties {
     
     Enabled {
-      type    BOOL
+      type    Bool
     }
 
   }
 }
 
 FoodEnergy {
-  type    OBJECT
+  type    Object
   properties {
     
     Enabled {
-      type    BOOL
+      type    Bool
     }
 
   }
 }
 
 Population {
-  type    OBJECT
+  type    Object
   properties {
     
     Enabled {
-      type    BOOL
+      type    Bool
     }
 
   }
@@ -56,20 +56,20 @@ Population {
 ########################################
 
 Brain {
-  type    OBJECT
+  type    Object
   properties {
     
     Enabled {
-      type    BOOL
+      type    Bool
     }
 
     Frequency {
-      type    INT
+      type    Int
       min     1
     }
 
     AgentTracker {
-      type    STRING
+      type    String
     }
 
   }
@@ -83,11 +83,11 @@ Brain {
 ########################################
 
 POV {
-  type    OBJECT
+  type    Object
   properties {
     
     Enabled {
-      type    BOOL
+      type    Bool
     }
 
   }
@@ -101,27 +101,27 @@ POV {
 ########################################
 
 StatusText {
-  type    OBJECT
+  type    Object
   properties {
     
     Enabled {
-      type    BOOL
+      type    Bool
     }
 
     FrequencyDisplay {
-      type    INT
+      type    Int
       min     1
       default 1
     }
 
     FrequencyStore {
-      type    INT
+      type    Int
       min     1
       default 100
     }
 
     StorePerformance {
-      type    BOOL
+      type    Bool
       default False
     }
 
@@ -136,15 +136,15 @@ StatusText {
 ########################################
 
 Farm {
-  type    OBJECT
+  type    Object
   properties {
     
     Enabled {
-      type    BOOL
+      type    Bool
     }
 
     Frequency {
-      type    INT
+      type    Int
       min     1
       default 100
     }
@@ -160,39 +160,39 @@ Farm {
 ########################################
 
 Scenes {
-  type    ARRAY
+  type    Array
   element {
-    type    OBJECT
+    type    Object
     properties {
 
       Name {
-        type    STRING
+        type    String
       }
 
       Title {
-        type    STRING
-        default $( Name )
+        type    String
+        default Name
       }
 
       CameraSettings {
-        type    STRING
+        type    String
       }
 
       CameraControllerSettings {
-        type    STRING
+        type    String
       }
 
       Buffer {
-        type    OBJECT
+        type    Object
 	properties {
 
           Width {
-            type    INT
+            type    Int
             min     1
           }
     
           Height {
-            type    INT
+            type    Int
             min     1
           }
 
@@ -200,26 +200,26 @@ Scenes {
       }
 
       Movie {
-        type    OBJECT
+        type    Object
 	properties {
 
 	  Record {
-	    type    BOOL
+	    type    Bool
 	  }
 
 	  Path {
-	    type    STRING
+	    type    String
 	  }
 
 	  SampleFrequency {
-	    type    INT
+	    type    Int
 	    min	    1
 	  }
 
 	  SampleDuration {
-	    type    INT
+	    type    Int
 	    min	    1
-	    max	    $( SampleFrequency )
+	    max	    SampleFrequency
 	  }
 
 	}
@@ -237,41 +237,41 @@ Scenes {
 ########################################
 
 AgentTrackers {
-  type    ARRAY
+  type    Array
   element {
-    type    OBJECT
+    type    Object
     properties {
 
       Name {
-        type    STRING
+        type    String
       }
 
       TrackMode {
-        type    ENUM
+        type    Enum
         default Agent
-        values  [
-          Agent
+        enum    Values {
+          Agent,
           Slot
-        ]
+        }
       }
 
       SelectionMode {
-        type    ENUM
+        type    Enum
         default Fitness
-        values  [
+        enum    Values {
           Fitness
-        ]
+        }
       }
 
       Fitness {
-        type    OBJECT
+        type    Object
         default {
         }
         properties {
           Rank {
-            type    INT
+            type    Int
             default 1
-	    assert $( Rank != 0 ) # 1 = best, -1 = worst
+	    assert ( Rank != 0 ) # 1 = best, -1 = worst
           }
         }
       }
@@ -288,30 +288,30 @@ AgentTrackers {
 ########################################
 
 CameraSettings {
-  type    ARRAY
+  type    Array
   element {
-    type    OBJECT
+    type    Object
     properties {
 
       Name {
-        type    STRING
+        type    String
       }
 
       Color {
-        type    OBJECT
+        type    Object
         properties {
           R {
-            type    FLOAT
+            type    Float
             min     0.0
             max     1.0
           }
           G {
-            type    FLOAT
+            type    Float
             min     0.0
             max     1.0
           }
           B {
-            type    FLOAT
+            type    Float
             min     0.0
             max     1.0
           }
@@ -319,7 +319,7 @@ CameraSettings {
       }
 
       FieldOfView {
-        type    FLOAT
+        type    Float
         default 90.0
       }
 
@@ -335,71 +335,71 @@ CameraSettings {
 ########################################
 
 CameraControllerSettings {
-  type    ARRAY
+  type    Array
   element {
-    type    OBJECT
+    type    Object
     properties {
 
       Name {
-        type    STRING
+        type    String
       }
 
       Mode {
-        type    ENUM
-	values  [
-	  Rotate
+        type    Enum
+	enum    Values {
+	  Rotate,
 	  AgentTracking
-   	]
+   	}
       }
 
       Rotate {
-        type    OBJECT
+        type    Object
 	default {
 	}
 	properties {
 
           Radius {
-            type    FLOAT
+            type    Float
             default 0.6
           }
           
           Height {
-            type    FLOAT
+            type    Float
             default 0.35
           }
           
           Rate {
-            type    FLOAT
+            type    Float
             default 0.09
           }
           
           AngleStart {
-            type    FLOAT
+            type    Float
             default 0.0
           }
 
 	  Fixation {
-	    type    OBJECT
+	    type    Object
 	    default {
 	    }	    
 	    properties {
 
 	      X {
-	        type    FLOAT
+	        type    Float
 		default 0.5
 		min	0.0
 		max	1.0
 	      }
 
 	      Y {
-	        type    FLOAT
+	        type    Float
 		default 0.0
 		min	0.0
 		max	1.0
 	      }
 
 	      Z {
-	        type    FLOAT
+	        type    Float
 		default 0.5
 		min	0.0
 		max	1.0
@@ -412,23 +412,23 @@ CameraControllerSettings {
       }
 
       AgentTracking {
-        type    OBJECT
+        type    Object
 	default {
 	}
 	properties {
 	  
 	  AgentTracker {
-	    type    STRING
-	    default nil
+	    type    String
+	    default "nil"
 	  }
 
 	  Perspective {
-	    type    ENUM
+	    type    Enum
 	    default Overhead
-	    values  [
-	      Overhead
+	    enum    Values {
+	      Overhead,
 	      POV
-	    ]
+	    }
 	  }
 
 	}        

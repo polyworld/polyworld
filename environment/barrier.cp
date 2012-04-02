@@ -20,10 +20,12 @@
 #include "graphics.h"
 
 // barrier globals
-bxsortedlist barrier::gXSortedBarriers;
 float barrier::gBarrierHeight;
 Color barrier::gBarrierColor;
 bool barrier::gStickyBarriers;
+bool barrier::gRatioPositions;
+bxsortedlist barrier::gXSortedBarriers;
+vector<barrier *> barrier::gBarriers;
 
 
 //===========================================================================
@@ -34,17 +36,15 @@ bool barrier::gStickyBarriers;
 // barrier::barrier
 //---------------------------------------------------------------------------
 barrier::barrier()
-: position(0,0,0,0)
-, verticesPosition(0,0,0,0)
+: nextPosition(0,0,0,0)
+, currPosition(0,0,0,0)
+, absCurrPosition(0,0,0,0)
 {
 	fNumPoints = 4;
-	setcolor(gBarrierColor);
 
 	fVertices = new float[12];  
 	if( !fVertices )
 		error( 1, "Insufficient memory to setup barrier vertices" );
-
-	updateVertices();
 }
 
 
@@ -57,13 +57,21 @@ barrier::~barrier()
 		delete [] fVertices;
 }
 
+//---------------------------------------------------------------------------
+// barrier::init
+//---------------------------------------------------------------------------
+void barrier::init()
+{
+	setcolor(gBarrierColor);
+	updateVertices();
+}
 
 //---------------------------------------------------------------------------
 // barrier::update
 //---------------------------------------------------------------------------
 void barrier::update()
 {
-	if( position != verticesPosition )
+	if( nextPosition != currPosition )
 		updateVertices();
 }
 
@@ -73,42 +81,50 @@ void barrier::update()
 //---------------------------------------------------------------------------
 void barrier::updateVertices()
 {
-	verticesPosition = position;
+	currPosition = nextPosition;
+	absCurrPosition = currPosition;
+	if( gRatioPositions )
+	{
+		absCurrPosition.xa *= globals::worldsize;
+		absCurrPosition.za *= globals::worldsize;
+		absCurrPosition.xb *= globals::worldsize;
+		absCurrPosition.zb *= globals::worldsize;
+	}
 
 	float x1;
 	float z1;
 	float x2;
 	float z2;
 
-	fVertices[ 0] = position.xa; fVertices[ 1] = 0.; 			 fVertices[ 2] = position.za;
-	fVertices[ 3] = position.xa; fVertices[ 4] = gBarrierHeight; fVertices[ 5] = position.za;
-	fVertices[ 6] = position.xb; fVertices[ 7] = gBarrierHeight; fVertices[ 8] = position.zb;
-	fVertices[ 9] = position.xb; fVertices[10] = 0.; 			 fVertices[11] = position.zb;
+	fVertices[ 0] = absCurrPosition.xa; fVertices[ 1] = 0.; 			 fVertices[ 2] = absCurrPosition.za;
+	fVertices[ 3] = absCurrPosition.xa; fVertices[ 4] = gBarrierHeight; fVertices[ 5] = absCurrPosition.za;
+	fVertices[ 6] = absCurrPosition.xb; fVertices[ 7] = gBarrierHeight; fVertices[ 8] = absCurrPosition.zb;
+	fVertices[ 9] = absCurrPosition.xb; fVertices[10] = 0.; 			 fVertices[11] = absCurrPosition.zb;
 		
-	if( position.xa < position.xb )
+	if( absCurrPosition.xa < absCurrPosition.xb )
 	{
-		xmn = x1 = position.xa;
-		xmx = x2 = position.xb;
-		z1 = position.za;
-		z2 = position.zb;
+		xmn = x1 = absCurrPosition.xa;
+		xmx = x2 = absCurrPosition.xb;
+		z1 = absCurrPosition.za;
+		z2 = absCurrPosition.zb;
 	}
 	else
 	{
-		xmn = x1 = position.xb;
-		xmx = x2 = position.xa;
-		z1 = position.zb;
-		z2 = position.za;
+		xmn = x1 = absCurrPosition.xb;
+		xmx = x2 = absCurrPosition.xa;
+		z1 = absCurrPosition.zb;
+		z2 = absCurrPosition.za;
 	}
 		
-	if( position.za < position.zb )
+	if( absCurrPosition.za < absCurrPosition.zb )
 	{
-		zmn = position.za;
-		zmx = position.zb;
+		zmn = absCurrPosition.za;
+		zmx = absCurrPosition.zb;
 	}
 	else
 	{
-		zmn = position.zb;
-		zmx = position.za;
+		zmn = absCurrPosition.zb;
+		zmx = absCurrPosition.za;
 	}
 		
 	a = z2 - z1;

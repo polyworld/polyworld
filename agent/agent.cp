@@ -32,6 +32,7 @@
 #include "MateWaitSensor.h"
 #include "Metabolism.h"
 #include "NervousSystem.h"
+#include "RandomNumberGenerator.h"
 #include "RandomSensor.h"
 #include "Resources.h"
 #include "Retina.h"
@@ -172,6 +173,8 @@ agent::agent(TSimulation* sim, gstage* stage)
 	
 	fBrain = new Brain(fCns);
 	Q_CHECK_PTR(fBrain);
+
+	fMetabolism = NULL;
 	
 	// Set up agent POV	
 	fScene.SetStage(stage);	
@@ -248,6 +251,7 @@ agent* agent::getfreeagent(TSimulation* simulation, gstage* stage)
     
     // Set number to total creatures that have ever lived (note this is 1-based)
     c->setTypeNumber( ++agent::agentsEver );
+	c->fCns->getRNG()->seedIfLocal( agent::agentsEver );
 
 	simulation->GetAgentPovRenderer()->add( c );
 		
@@ -384,6 +388,26 @@ void agent::load(istream& in)
     fDomain = fSimulation->WhichDomain(fPosition[0], fPosition[2], 0);
 }
 
+//---------------------------------------------------------------------------
+// agent::setGenomeReady
+//---------------------------------------------------------------------------
+void agent::setGenomeReady()
+{
+	switch( Metabolism::selectionMode )
+	{
+	case Metabolism::Gene:
+		fMetabolism = GenomeUtil::getMetabolism( fGenome );
+		break;
+	case Metabolism::Random:
+		{
+			int index = nint( (Metabolism::getNumberOfDefinitions() - 1) * fCns->getRNG()->drand() );
+			fMetabolism = Metabolism::get( index );
+		}
+		break;
+	default:
+		assert( false );
+	}
+}
 
 //---------------------------------------------------------------------------
 // agent::grow
@@ -600,9 +624,9 @@ void agent::eat( food* f,
 		
 		return_actuallyEat =
 			f->eat(trytoeat)
-			* geneCache.metabolism->energyPolarity
+			* fMetabolism->energyPolarity
 			* f->getEnergyPolarity()
-			* geneCache.metabolism->eatMultiplier;
+			* fMetabolism->eatMultiplier;
 
 		// The eatMultiplier could have made us exceed our limits.
 		return_actuallyEat.constrain( fEnergy * -1, fMaxEnergy - fEnergy );
@@ -823,7 +847,6 @@ void agent::InitGeneCache()
 	geneCache.strength = fGenome->get("Strength");
 	geneCache.size = fGenome->get("Size");
 	geneCache.lifespan = fGenome->get("LifeSpan");
-	geneCache.metabolism = GenomeUtil::getMetabolism( fGenome );
 }
 
 //---------------------------------------------------------------------------

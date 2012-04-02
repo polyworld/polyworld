@@ -11,6 +11,7 @@
 
 // Local
 #include "Domain.h"
+#include "dynamic.h"
 #include "EatStatistics.h"
 #include "Energy.h"
 #include "Events.h"
@@ -29,7 +30,6 @@
 using namespace sim;
 
 // Forward declarations
-namespace condprop { class PropertyList; }
 namespace proplib { class Document; }
 
 
@@ -40,6 +40,7 @@ namespace proplib { class Document; }
 class TSimulation : public QObject
 {
 	Q_OBJECT
+	PROPLIB_DYNAMIC_PROPERTIES
 
 public:
 	TSimulation( std::string worldfilePath, std::string monitorfilePath );
@@ -134,6 +135,7 @@ signals:
 	void ended();
 	
 private:
+	void InitDynamicProperties( proplib::Document *docWorldFile );
 	void InitFittest();
 	void InitGround();
 	void InitAgents();
@@ -305,6 +307,7 @@ private:
 	bool fPositionSeedsFromFile;
 	std::vector<Position> fSeedPositions;
 	float fMinMateFraction;
+	long fEatWait;
 	long fMateWait;
 	long fMiscAgents; // number of agents born without intervening creation before miscegenation function kicks in
 	float fMateThreshold;
@@ -424,8 +427,6 @@ private:
 
 	class AgentPovRenderer *agentPovRenderer;
 	class MonitorManager *monitorManager;
-
-	condprop::PropertyList *fConditionalProps;
 };
 
 inline void TSimulation::enableComplexityCalculations() { fCalcComplexity = true; }

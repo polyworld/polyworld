@@ -9,10 +9,9 @@
 #define BARRIER_H
 
 // STL
-//#include <list>
+#include <vector>
 
 // Local
-#include "condprop.h"
 #include "gdlink.h"
 #include "gpolygon.h"
 #include "objectlist.h"
@@ -22,7 +21,7 @@ class barrier;
 
 
 //===========================================================================
-// TSortedBarrierList
+// bxsortedlist
 //===========================================================================
 
 class bxsortedlist : public gdlist<barrier*>
@@ -39,24 +38,60 @@ private:
 
 inline void bxsortedlist::xsort() { if( needXSort ) actuallyXSort(); }
 
-
 //===========================================================================
 // barrier
 //===========================================================================
 class barrier : public gpoly
 {
 public:
+	//===========================================================================
+	//=== LineSegment
+	//===========================================================================
+	class LineSegment
+	{
+	public:
+		LineSegment( float xa, float za, float xb, float zb )
+		{
+			this->xa = xa;
+			this->za = za;
+			this->xb = xb;
+			this->zb = zb;
+		}
+
+		bool operator !=( const LineSegment &other )
+		{
+			return !(*this == other);
+		}
+
+		bool operator ==( const LineSegment &other )
+		{
+			return xa == other.xa
+				&& za == other.za
+				&& xb == other.xb
+				&& zb == other.zb;
+		}
+
+		float xa;
+		float za;
+		float xb;
+		float zb;
+	}; 
+
 	static float gBarrierHeight;
 	static Color gBarrierColor;
 	static bool gStickyBarriers;
+	static bool gRatioPositions;
 	static bxsortedlist gXSortedBarriers;	
+	static std::vector<barrier *> gBarriers;
 
     barrier();
     ~barrier();
     
+	void init();
+
 	void update();
 	
-	condprop::LineSegment *getPosition();
+	LineSegment &getPosition();
 
     float xmin();
     float xmax();
@@ -71,8 +106,9 @@ public:
 protected:
     void updateVertices();
 
-	condprop::LineSegment position;
-	condprop::LineSegment verticesPosition;
+	LineSegment nextPosition;
+	LineSegment currPosition;
+	LineSegment absCurrPosition;
 
     float xmn;
     float xmx;
@@ -86,7 +122,7 @@ protected:
     float csa;
 };
 
-inline condprop::LineSegment *barrier::getPosition() { return &position; }
+inline barrier::LineSegment &barrier::getPosition() { return nextPosition; }
 inline float barrier::xmin() { return xmn; }
 inline float barrier::xmax() { return xmx; }
 inline float barrier::zmin() { return zmn; }

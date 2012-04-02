@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/errno.h>
+#include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <set>
@@ -135,6 +136,12 @@ float biasedLogistic(float x, float bias, float slope)
 float gaussian( float x, float mean, float variance )
 {
     return( exp( -(x-mean)*(x-mean) / variance ) );
+}
+
+bool exists( const string &path )
+{
+	struct stat _stat;
+	return 0 == stat(path.c_str(), &_stat);
 }
 
 string dirname( const string &path )

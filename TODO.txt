@@ -41,9 +41,7 @@ larryy					03/25/2012	option to color individual runs all the same as the meta-m
 									with color and legends)
 
 [PROPLIB]
-sean		sean		02/07/2012	templates
-sean		sean		02/09/2012	fix 'reduce' of objects
-sean		sean		02/20/2012	concise edit output
+sean		sean		04/02/2012	Document delete not fully implemented. Tokens never deleted.
 
 -------------------------------------------------------------------
 -------------------------------------------------------------------

@@ -2,27 +2,28 @@
 
 using namespace std;
 
-vector<const Metabolism *> Metabolism::metabolisms;
+vector<Metabolism *> Metabolism::metabolisms;
+Metabolism::SelectionMode Metabolism::selectionMode;
 
-Metabolism::Metabolism( int _index,
-						const string &_name,
-						const EnergyPolarity &_energyPolarity,
-						EnergyMultiplier &_eatMultiplier,
-						float &_minEatAge,
-						const FoodType *_carcassFoodType )
-: index( _index )
-, name( _name )
-, energyPolarity( _energyPolarity )
-, eatMultiplier( _eatMultiplier )
-, minEatAge( _minEatAge )
-, carcassFoodType( _carcassFoodType )
+Metabolism::Metabolism( int index_,
+						const string &name_,
+						const EnergyPolarity &energyPolarity_,
+						EnergyMultiplier eatMultiplier_,
+						float minEatAge_,
+						const FoodType *carcassFoodType_ )
+: index( index_ )
+, name( name_ )
+, energyPolarity( energyPolarity_ )
+, eatMultiplier( eatMultiplier_ )
+, minEatAge( minEatAge_ )
+, carcassFoodType( carcassFoodType_ )
 {
 }
 
 void Metabolism::define( const string &name,
 						 const EnergyPolarity &energyPolarity,
-						 EnergyMultiplier &eatMultiplier,
-						 float &minEatAge,
+						 EnergyMultiplier eatMultiplier,
+						 float minEatAge,
 						 const FoodType *carcassFoodType )
 {
 	Metabolism *metabolism = new Metabolism( metabolisms.size(),
@@ -39,7 +40,7 @@ int Metabolism::getNumberOfDefinitions()
 	return metabolisms.size();
 }
 
-const Metabolism *Metabolism::get( int index )
+Metabolism *Metabolism::get( int index )
 {
 	return metabolisms[index];
 }

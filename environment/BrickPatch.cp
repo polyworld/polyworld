@@ -33,13 +33,14 @@ BrickPatch::BrickPatch(){
 //-------------------------------------------------------------------------------------------
 // BrickPatch::BrickPatch
 //-------------------------------------------------------------------------------------------
-void BrickPatch::init(Color color, float x, float z, float sx, float sz, int numberBricks, int shape, int distrib, float nhsize, gstage* fs, Domain* dm, int domainNumber, FoodPatch *onSyncFoodPatch)
+void BrickPatch::init(Color color, float x, float z, float sx, float sz, int numberBricks, int shape, int distrib, float nhsize, gstage* fs, Domain* dm, int domainNumber, bool on)
 {
 	initBase(x, z,  sx, sz, shape, distrib, nhsize, fs, dm, domainNumber);
 	brickCount = numberBricks;
 	brickColor = color;
-	this->onSyncFoodPatch = onSyncFoodPatch;
-	isOn = false;
+
+	onPrev = false;
+	this->on = on;
 }
 
 //-------------------------------------------------------------------------------------------
@@ -49,34 +50,16 @@ BrickPatch::~BrickPatch()
 {
 }
 
-void BrickPatch::updateOn( long step )
+void BrickPatch::updateOn()
 {
-	if( onSyncFoodPatch )
+	if( on != onPrev )
 	{
-		if( onSyncFoodPatch->on( step ) )
-		{
-			if( !isOn )
-			{
-				addBricks();
-				isOn = true;
-			}
-		}
-		else
-		{
-			if( isOn )
-			{
-				removeBricks();
-				isOn = false;
-			}
-		}
-	}
-	else
-	{
-		if( !isOn )
-		{
+		if( on )
 			addBricks();
-			isOn = true;
-		}
+		else
+			removeBricks();
+
+		onPrev = on;
 	}
 }
 

@@ -225,11 +225,13 @@ if ! $field; then
 	    # Verify we can apply the overlay, for catching errors quickly.
 	    mkdir -p $TMP_DIR/overlay
 
+	    schema=$POLYWORLD_DIR/etc/worldfile.wfs
+
 	    for (( i=0; i < $noverlays; i++ )); do
 		(
 		    success=false
-		    if proputil overlay "$WORLDFILE" "$OVERLAY" $i >$TMP_DIR/overlay/$i; then
-			if proputil apply $POLYWORLD_DIR/default.wfs $TMP_DIR/overlay/$i >/dev/null; then
+		    if proputil overlay -s $schema "$WORLDFILE" "$OVERLAY" $i >$TMP_DIR/overlay/$i; then
+			if proputil -w apply $schema $TMP_DIR/overlay/$i >/dev/null; then
 			    success=true
 			fi
 		    fi
@@ -607,7 +609,7 @@ else
 	if PWFARM_TASKMETA has overlay; then
 	    ioverlay=$(PWFARM_TASKMETA get ioverlay)
 	    PATH_OVERLAY="$PAYLOAD_DIR/overlays/$(PWFARM_TASKMETA get overlay)"
-	    proputil overlay $POLYWORLD_PWFARM_WORLDFILE $PATH_OVERLAY $ioverlay > ./worldfile || exit 1
+	    proputil overlay -s etc/worldfile.wfs $POLYWORLD_PWFARM_WORLDFILE $PATH_OVERLAY $ioverlay > ./worldfile || exit 1
 	else
 	    cp $POLYWORLD_PWFARM_WORLDFILE ./worldfile || exit 1
 	fi
@@ -621,7 +623,7 @@ else
 	    else
 		seed="$NID"
 	    fi
-	    ./scripts/wfutil edit ./worldfile InitSeed=$seed || exit 1
+	    ./scripts/wfutil.py edit ./worldfile InitSeed=$seed || exit 1
 	fi
 
 	if PWFARM_TASKMETA has driven_runid; then

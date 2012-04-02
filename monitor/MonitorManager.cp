@@ -22,9 +22,9 @@ using namespace std;
 MonitorManager::MonitorManager( TSimulation *_simulation, string monitorfilePath )
 	: simulation( _simulation )
 {
-	proplib::Document *pdoc;
-	proplib::Document *pschema;
-	Resources::parseConfiguration( &pdoc, &pschema, monitorfilePath, "./etc/monitors.mfs" );
+	proplib::DocumentBuilder builder;
+	proplib::SchemaDocument *pschema = builder.buildSchemaDocument( "./etc/monitors.mfs" );
+	proplib::Document *pdoc = builder.buildDocument( monitorfilePath );
 	proplib::Document &doc = *pdoc;
 
 	// ---

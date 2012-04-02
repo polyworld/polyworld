@@ -13,26 +13,34 @@ class Metabolism
  public:
 	static void define( const std::string &name,
 						const EnergyPolarity &energyPolarity,
-						EnergyMultiplier &eatMultiplier,
-						float &minEatAge,
+						EnergyMultiplier eatMultiplier,
+						float minEatAge,
 						const FoodType *carcassFoodType );
 	static int getNumberOfDefinitions();
-	static const Metabolism *get( int index );
+	static Metabolism *get( int index );
+
+	enum SelectionMode
+	{
+		Gene,
+		Random
+	};
+
+	static SelectionMode selectionMode;
 
 	const int index;
 	const std::string name;
 	const EnergyPolarity energyPolarity;
-	EnergyMultiplier &eatMultiplier;
-	float &minEatAge;
+	EnergyMultiplier eatMultiplier;
+	float minEatAge;
 	const FoodType *carcassFoodType;
 
  private:
 	Metabolism( int _index,
 				const std::string &_name,
 				const EnergyPolarity &_energyPolarity,
-				EnergyMultiplier &_eatMultiplier,
-				float &_minEatAge,
+				EnergyMultiplier _eatMultiplier,
+				float _minEatAge,
 				const FoodType *_carcassFoodType );
 
-	static std::vector<const Metabolism *> metabolisms;
+	static std::vector<Metabolism *> metabolisms;
 };

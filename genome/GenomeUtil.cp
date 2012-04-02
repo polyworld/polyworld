@@ -54,7 +54,8 @@ GenomeSchema *GenomeUtil::createSchema()
 		   genome::gMinmateenergy,
 		   genome::gMaxmateenergy );
 	assert( Metabolism::getNumberOfDefinitions() > 0 );
-	if( Metabolism::getNumberOfDefinitions() > 1 )
+	if( Metabolism::selectionMode == Metabolism::Gene 
+		&& Metabolism::getNumberOfDefinitions() > 1 )
 	{
 		RANGE( MetabolismIndex,
 			   0,
@@ -185,7 +186,8 @@ GenomeSchema *GenomeUtil::createSchema()
 	SCALAR( Size );
 	SCALAR( MaxSpeed );
 	SCALAR( MateEnergyFraction );
-	if( Metabolism::getNumberOfDefinitions() > 1 )
+	if( Metabolism::selectionMode == Metabolism::Gene
+		&& Metabolism::getNumberOfDefinitions() > 1 )
 	{
 		INDEX( MetabolismIndex );
 	}
@@ -344,7 +346,8 @@ void GenomeUtil::seed( Genome *g )
 
 	SEED( MutationRate, genome::gSeedMutationRate );
 
-	if( Metabolism::getNumberOfDefinitions() > 1 )
+	if( Metabolism::selectionMode == Metabolism::Gene
+		&& Metabolism::getNumberOfDefinitions() > 1 )
 	{
 		SEED( MetabolismIndex, randpw() );
 	}

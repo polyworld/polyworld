@@ -1856,7 +1856,7 @@ def save_plot( doc, plot, rundirs, curveDatas ):
 			os.mkdir( dir )
 		base = os.path.splitext( os.path.basename(path) )[0]
 		path_pdf = os.path.join( dir, base + ".pdf" )
-		rc = os.system( 'epstopdf --outfile %s %s' % (path_pdf, path) )
+		rc = os.system( 'epstopdf --outfile "%s" "%s"' % (path_pdf, path) )
 		if rc != 0:
 			exit( rc )
 		path_view = path_pdf
@@ -1864,7 +1864,7 @@ def save_plot( doc, plot, rundirs, curveDatas ):
 		path_view = path
 
 	if GlobalOptions.view:
-		os.system( '%s %s' % (common_functions.pw_env('open'), path_view) )
+		os.system( '%s "%s"' % (common_functions.pw_env('open'), path_view) )
 
 
 ####################################################################################

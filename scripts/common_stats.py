@@ -63,7 +63,7 @@ def __add_step( tables, path, labels ):
 ###
 ####################################################################################
 def __parse_file( path ):
-	regex_label = r'-?[a-zA-Z]+'
+	regex_label = r'-?[a-zA-Z\.\[\]0-9]+'
 	regex_number = r'-?[0-9]+(?:\.[0-9]+)?'
 	regex_equals = r'\s*(%s)\s*=\s*(%s)(\s*$|\s+[^0-9])' % (regex_label, regex_number)
 

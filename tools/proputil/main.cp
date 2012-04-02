@@ -7,20 +7,32 @@
 #include <utility>
 
 #include "misc.h"
-#include "proplib.h"
+#include "builder.h"
+#include "editor.h"
+#include "overlay.h"
+#include "schema.h"
+#include "writer.h"
 
 using namespace proplib;
 using namespace std;
 
+void err( string msg )
+{
+	cerr << msg << endl;
+	exit( 1 );
+}
+
 void usage( string msg = "" )
 {
-	cerr << "usage: proputil apply path_schema path_values" << endl;
-	cerr << "       proputil reduce path_schema path_values" << endl;
-	cerr << "       proputil get path_values propname" << endl;
-	cerr << "       proputil set path_values propname=propvalue..." << endl;
-	cerr << "       proputil len path_values propname" << endl;
-	cerr << "       proputil overlay path_values path_overlay index" << endl;
-	cerr << "       proputil scalarnames path_values depth_start" << endl;
+	cerr << "usage: proputil [-w] apply path_schema path_doc" << endl;
+	cerr << "       proputil [-w] get [-s path_schema] path_doc propname" << endl;
+	cerr << "       proputil [-w] set [-s path_schema] path_doc propname=propvalue..." << endl;
+	cerr << "       proputil [-w] len [-s path_schema] path_doc propname" << endl;
+	cerr << "       proputil [-w] overlay [-s path_schema] path_doc path_overlay index" << endl;
+	cerr << "       proputil scalarnames path_doc depth_start" << endl;
+	cerr << "";
+	cerr << "   -w: Treat doc as worldfile, which may entail property conversion." << endl;
+	cerr << "       If used, then -s must also be used." << endl;
 
 	if( msg.length() > 0 )
 	{
@@ -54,17 +66,42 @@ class NameValuePair
 };
 typedef list<NameValuePair> NameValuePairList;
 
-void apply( const char *pathSchema, const char *pathValues );
-void reduce( const char *pathSchema, const char *pathValues );
-void get( const char *pathValues, const char *name );
-void set( const char *pathValues, NameValuePairList &pairs );
-void len( const char *pathValues, const char *name );
-void select( const char *pathOverlay, const char *selector );
-void overlay( const char *pathValues, const char *pathOverlay, const char *index );
-void scalarnames( const char *pathValues, const char *depth_start );
+bool isWorldfile = false;
+
+void apply( const char *pathSchema, const char *pathDoc );
+void get( const char *pathDoc, const char *name );
+void get( const char *pathSchema, const char *pathDoc, const char *name );
+void set( const char *pathDoc, NameValuePairList &pairs );
+void set( const char *pathSchema, const char *pathDoc, NameValuePairList &pairs );
+void len( const char *pathSchema, const char *pathDoc, const char *name );
+void len( const char *pathDoc, const char *name );
+void overlay( const char *pathDoc, const char *pathOverlay, const char *index );
+void overlay( const char *pathSchema, const char *pathDoc, const char *pathOverlay, const char *index );
+void scalarnames( const char *pathDoc, const char *depth_start );
 
 int main( int argc, const char **argv )
 {
+	if( argc >= 2 )
+	{
+		if( string(argv[1]) == "-w" )
+		{
+			isWorldfile = true;
+
+			bool schema = false;
+
+			argc--;
+			for( int i = 1; i < argc; i++ )
+			{
+				argv[i] = argv[ i + 1 ];
+				if( string(argv[i]) == "-s" )
+					schema = true;
+			}
+
+			if( !schema )
+				usage( "-w requires -s" );
+		}
+	}
+
 	if( argc < 2 )
 	{
 		usage( "Must specify mode" );
@@ -83,23 +120,21 @@ int main( int argc, const char **argv )
 
 		apply( argv[2], argv[3] );
 	}
-	else if( mode == "reduce" )
-	{
-		if( argc != 4 )
-		{
-			usage();
-		}
-
-		reduce( argv[2], argv[3] );
-	}
 	else if( mode == "get" )
 	{
-		if( argc != 4 )
+		if( argc == 4 )
 		{
-			usage();
+			get( argv[2], argv[3] );
 		}
+		else if( argc == 6 )
+		{
+			if( string(argv[2]) != "-s" )
+				usage();
 
-		get( argv[2], argv[3] );
+			get( argv[3], argv[4], argv[5] );
+		}
+		else
+			usage();
 	}
 	else if( mode == "set" )
 	{
@@ -108,32 +143,55 @@ int main( int argc, const char **argv )
 			usage();
 		}
 
-		NameValuePairList pairs;
-
-		for( int i = 3; i < argc; i++ )
+		if( string(argv[2]) == "-s" )
 		{
-			pairs.push_back( NameValuePair::parse(argv[i]) );
-		}
+			NameValuePairList pairs;
 
-		set( argv[2], pairs );
+			for( int i = 5; i < argc; i++ )
+				pairs.push_back( NameValuePair::parse(argv[i]) );
+
+			::set( argv[3], argv[4], pairs );
+		}
+		else
+		{
+			NameValuePairList pairs;
+
+			for( int i = 3; i < argc; i++ )
+				pairs.push_back( NameValuePair::parse(argv[i]) );
+
+			::set( argv[2], pairs );
+		}
 	}
 	else if( mode == "len" )
 	{
-		if( argc != 4 )
+		if( argc == 4 )
 		{
-			usage();
+			len( argv[2], argv[3] );
 		}
+		else if( argc == 6 )
+		{
+			if( string(argv[2]) != "-s" )
+				usage();
 
-		len( argv[2], argv[3] );
+			len( argv[3], argv[4], argv[5] );
+		}
+		else
+			usage();
+
 	}
 	else if( mode == "overlay" )
 	{
-		if( argc != 5 )
+		if( argc == 5 )
 		{
-			usage();
+			overlay( argv[2], argv[3], argv[4] );
 		}
+		else if( argc == 7 )
+		{
+			if( string(argv[2]) != "-s" )
+				usage();
 
-		overlay( argv[2], argv[3], argv[4] );
+			overlay( argv[3], argv[4], argv[5], argv[6] );
+		}
 	}
 	else if( mode == "scalarnames" )
 	{
@@ -154,96 +212,184 @@ int main( int argc, const char **argv )
 	return 0;
 }
 
-void apply( const char *pathSchema, const char *pathValues )
+Document *parseDoc( SchemaDocument *schema, const char *pathDoc )
 {
-	Document *docSchema = Parser::parseFile( pathSchema );
-	Document *docValues = Parser::parseFile( pathValues );
+	DocumentBuilder builder;
 
-	Schema::apply( docSchema, docValues );
-
-	docValues->write( cout );
-
-	delete docSchema;
-	delete docValues;
+	if( isWorldfile )
+		return builder.buildWorldfileDocument( schema, pathDoc );
+	else
+		return builder.buildDocument( pathDoc );
 }
 
-void reduce( const char *pathSchema, const char *pathValues )
+void apply( const char *pathSchema, const char *pathDoc )
 {
-	Document *docSchema = Parser::parseFile( pathSchema );
-	Document *docValues = Parser::parseFile( pathValues );
+	DocumentBuilder builder;
+	SchemaDocument *schema = builder.buildSchemaDocument( pathSchema );
+	Document *doc = parseDoc( schema, pathDoc );
 
-	Schema::reduce( docSchema, docValues );
+	schema->apply( doc );
 
-	docValues->write( cout );
+	DocumentWriter writer( cout );
+	writer.write( doc );
 
-	delete docSchema;
-	delete docValues;
+	delete schema;
+	delete doc;
 }
 
-void get( const char *pathValues, const char *name )
+void __get( Document *doc, const char *name )
 {
-	Document *docValues = Parser::parseFile( pathValues );
+	DocumentBuilder builder;
+	SymbolPath *symbolPath = builder.buildSymbolPath( name );
 
-	cout << docValues->get( name ).evalScalar() << endl;
+	Symbol sym;
+	if( !doc->props().begin()->second->findSymbol(symbolPath, sym) )
+		err( string("Cannot locate '") + symbolPath->toString() + "'" );
 
-	delete docValues;
-}
-
-void set( const char *pathValues, NameValuePairList &pairs )
-{
-	Document *docValues = Parser::parseFile( pathValues );
-
-	itfor( NameValuePairList, pairs, it )
+	if( (sym.type == Symbol::Property)
+		&& (sym.prop->getType() == Node::Scalar)
+		&& (sym.prop->getSubtype() == Node::Const) )
 	{
-		StringList path = Parser::parsePropertyPath( it->name );
-		
-		docValues->set( path, it->value );
-	}
-
-	docValues->write( cout );
-
-	delete docValues;
-}
-
-void len( const char *pathValues, const char *name )
-{
-	Document *docValues = Parser::parseFile( pathValues );
-	Property *prop = docValues->getp( name );
-	if( !prop )
-	{
-		cerr << "Unknown property '" << name << "'" << endl;
-		exit( 1 );
-	}
-	if( prop->isContainer() )
-	{
-		cout << prop->props().size() << endl;
+		cout << (string)*sym.prop << endl;
 	}
 	else
-	{
-		cerr << "Cannot get length of scalar." << endl;
-		exit( 1 );
-	}
+		err( "Not a valid property type for querying." );
 
-	delete docValues;
+	delete symbolPath;
 }
 
-void overlay( const char *pathValues, const char *pathOverlay, const char *selector )
+void get( const char *pathDoc, const char *name )
 {
-	Document *docValues = Parser::parseFile( pathValues );
-	Document *docOverlay = Parser::parseFile( pathOverlay );
+	DocumentBuilder builder;
+	Document *doc = builder.buildDocument( pathDoc );
 
-	Overlay::overlay( docOverlay, docValues, atoi(selector) );
-	docValues->write( cout );
+	__get( doc, name );
 
-	delete docValues;
-	delete docOverlay;
+	delete doc;
 }
 
-void scalarnames( const char *pathValues, const char *depth_start )
+void get( const char *pathSchema, const char *pathDoc, const char *name )
 {
-	Document *docValues = Parser::parseFile( pathValues );
+	DocumentBuilder builder;
+	SchemaDocument *schema = builder.buildSchemaDocument( pathSchema );
+	Document *doc = parseDoc( schema, pathDoc );
 
-	docValues->writeScalarNames( cout, atoi(depth_start) );
+	schema->apply( doc );
 
-	delete docValues;
+	__get( doc, name );
+
+	delete schema;
+	delete doc;
+}
+
+void set( const char *pathDoc, NameValuePairList &pairs )
+{
+	DocumentBuilder builder;
+	Document *doc = builder.buildDocument( pathDoc );
+	DocumentEditor editor( doc );
+
+	itfor( NameValuePairList, pairs, it )
+		editor.set( it->name, it->value );
+
+	DocumentWriter writer( cout );
+	writer.write( doc );
+
+	delete doc;
+}
+
+void set( const char *pathSchema, const char *pathDoc, NameValuePairList &pairs )
+{
+	DocumentBuilder builder;
+	SchemaDocument *schema = builder.buildSchemaDocument( pathSchema );
+	Document *doc = parseDoc( schema, pathDoc );
+	DocumentEditor editor( schema, doc );
+
+	itfor( NameValuePairList, pairs, it )
+		editor.set( it->name, it->value );
+
+	DocumentWriter writer( cout );
+	writer.write( doc );
+
+	delete schema;
+	delete doc;
+}
+
+void __len( Document *doc, const char *name )
+{
+	DocumentBuilder builder;
+	SymbolPath *symbolPath = builder.buildSymbolPath( name );
+
+	Symbol sym;
+	if( !doc->props().begin()->second->findSymbol(symbolPath, sym) )
+		err( string("Cannot locate '") + symbolPath->toString() + "'" );
+
+	if( (sym.type == Symbol::Property)
+		&& (sym.prop->getType() == Node::Array) )
+		cout << sym.prop->size() << endl;
+	else
+		err( "Not an array property." );
+
+	delete symbolPath;
+}
+
+void len( const char *pathDoc, const char *name )
+{
+	DocumentBuilder builder;
+	Document *doc = builder.buildDocument( pathDoc );
+
+	__len( doc, name );
+
+	delete doc;
+}
+
+void len( const char *pathSchema, const char *pathDoc, const char *name )
+{
+	DocumentBuilder builder;
+	SchemaDocument *schema = builder.buildSchemaDocument( pathSchema );
+	Document *doc = parseDoc( schema, pathDoc );
+
+	schema->apply( doc );
+
+	__len( doc, name );
+
+	delete schema;
+	delete doc;
+}
+
+void overlay( const char *pathDoc, const char *pathOverlay, const char *selector )
+{
+	DocumentBuilder builder;
+	Document *doc = builder.buildDocument( pathDoc );
+	OverlayDocument *overlay = builder.buildOverlayDocument( pathOverlay );
+
+	DocumentEditor editor( doc );
+	overlay->apply( atoi(selector), &editor );
+
+	DocumentWriter writer( cout );
+	writer.write( doc );
+}
+
+void overlay( const char *pathSchema, const char *pathDoc, const char *pathOverlay, const char *selector )
+{
+	DocumentBuilder builder;
+	SchemaDocument *schema = builder.buildSchemaDocument( pathSchema );
+	Document *doc = parseDoc( schema, pathDoc );
+	OverlayDocument *overlay = builder.buildOverlayDocument( pathOverlay );
+
+	DocumentEditor editor( schema, doc );
+	overlay->apply( atoi(selector), &editor );
+
+	DocumentWriter writer( cout );
+	writer.write( doc );
+}
+
+void scalarnames( const char *pathDoc, const char *depth_start )
+{
+	DocumentBuilder builder;
+	Document *doc = builder.buildDocument( pathDoc );
+
+	DocumentWriter writer( cout );
+	writer.writeScalarNames( doc, atoi(depth_start) );
+
+	delete doc;
 }

@@ -138,6 +138,7 @@ public:
     void SetMass(float f);
     
     virtual void draw();
+	void setGenomeReady();
     void grow( long mateWait );    
     virtual void setradius();    
 	void eat( food* f,
@@ -288,7 +289,6 @@ protected:
 		float strength;
 		float size;
 		long lifespan;
-		const Metabolism *metabolism;
 	} geneCache;
 
 	NervousSystem *fCns;
@@ -364,7 +364,7 @@ inline float agent::MaxSpeed() { return fMaxSpeed; }
 inline float agent::NormalizedSpeed() { return min( 1.0f, Speed() / agent::gMaxVelocity ); }
 inline float agent::Mass() { return fMass; }
 inline float agent::SizeAdvantage() { return fSizeAdvantage; }
-inline const Metabolism *agent::GetMetabolism() { return geneCache.metabolism; }
+inline const Metabolism *agent::GetMetabolism() { return fMetabolism; }
 inline const Energy &agent::GetEnergy() { return fEnergy; }
 inline const Energy &agent::GetFoodEnergy() { return fFoodEnergy; }
 inline void agent::SetEnergy( const Energy &e ) { fEnergy = e; }

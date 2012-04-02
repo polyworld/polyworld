@@ -30,7 +30,8 @@ namespace datalib
 		INVALID,
 		INT,
 		FLOAT,
-		STRING
+		STRING,
+		BOOL
 	};
 
 	// ------------------------------------------------------------

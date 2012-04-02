@@ -60,6 +60,9 @@ __Column::__Column( const char *name,
 	case datalib::STRING:
 		tname = "string";
 		break;
+	case datalib::BOOL:
+		tname = "bool";
+		break;
 	default:
 		assert( false );
 	}
@@ -78,6 +81,9 @@ __Column::__Column( const char *name,
 			break;
 		case datalib::STRING:
 			this->format = pad ? "%-20s" : "%s";
+			break;
+		case datalib::BOOL:
+			this->format = pad ? "%-20d" : "%d";
 			break;
 		default:
 			assert( false );
@@ -237,6 +243,9 @@ void DataLibWriter::addRow( Variant col0, ... )
 		case datalib::STRING:
 			TOVARIANT(const char *,const char *);
 			break;
+		case datalib::BOOL:
+			TOVARIANT(int,bool);
+			break;
 		default:
 			assert( false );
 		}
@@ -287,6 +296,9 @@ void DataLibWriter::addRow( Variant *colsdata )
 			break;
 		case datalib::STRING:
 			TOBUF(const char *);
+			break;
+		case datalib::BOOL:
+			TOBUF(bool);
 			break;
 		default:
 			assert( false );
@@ -813,6 +825,10 @@ void DataLibReader::parseTableHeader()
 			else if( 0 == strncmp(start, "string", n) )
 			{
 				types->push_back( datalib::STRING );
+			}
+			else if( 0 == strncmp(start, "bool", n) )
+			{
+				types->push_back( datalib::BOOL );
 			}
 			else
 			{

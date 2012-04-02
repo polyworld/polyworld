@@ -9,6 +9,7 @@ SRCDIRS="agent\
          genome\
          graphics\
          logs\
+         proplib\
          main\
          monitor\
          tools\

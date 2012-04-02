@@ -3,232 +3,248 @@ PERFORMANCE_PROFILER = False # temp hack. add command-line switch
 import os
 import sys
 
-from scons_util import exclude, find, init_env, relocate_paths
+from scons_util import exclude, find, init_env, relocate_paths, export_dynamic
 from scons_util import import_OpenGL, import_OpenMP, import_GSL, import_Qt, import_zlib, import_python
 
 SRCDIRS = ['src/' + x
-           for x in ['agent',
-                     'app',
-                     'brain',
-                     'complexity',
-                     'debugger',
-                     'environment',
-                     'genome',
-                     'graphics',
+		   for x in ['agent',
+					 'app',
+					 'brain',
+					 'complexity',
+					 'debugger',
+					 'environment',
+					 'genome',
+					 'graphics',
 					 'logs',
+					 'proplib',
 					 'main',
 					 'monitor',
-                     'tools',
-                     'ui',
-                     'utils']]
+					 'tools',
+					 'ui',
+					 'utils']]
 
 def build():
-    envs = env_create()
+	envs = env_create()
 
-    Default( build_Polyworld(envs['Polyworld']) )
-    Default( build_CalcComplexity(envs['CalcComplexity']) )
-    Default( build_PwMoviePlayer(envs['PwMoviePlayer']) )
-    Default( build_rancheck(envs['rancheck']) )
-    Default( build_proputil(envs['proputil']) )
-    Default( build_pmvutil(envs['pmvutil']) )
-    Default( build_qt_clust(envs['qt_clust']) )
+	Default( build_Polyworld(envs['Polyworld']) )
+	Default( build_CalcComplexity(envs['CalcComplexity']) )
+	Default( build_PwMoviePlayer(envs['PwMoviePlayer']) )
+	Default( build_rancheck(envs['rancheck']) )
+	Default( build_proputil(envs['proputil']) )
+	Default( build_pmvutil(envs['pmvutil']) )
+	Default( build_qt_clust(envs['qt_clust']) )
+	build_dynprop(envs['dynprop'])
 
 def build_Polyworld(env):
-    blddir = '.bld/Polyworld'
+	blddir = '.bld/Polyworld'
 
-    srcdirs = exclude(SRCDIRS, ['src/tools'])
-    env.Replace( CPPPATH = exclude(env['CPPPATH'], ['src/tools']) )
+	srcdirs = exclude(SRCDIRS, ['src/tools'])
+	env.Replace( CPPPATH = exclude(env['CPPPATH'], ['src/tools']) )
 
-    sources = Flatten([find(srcdir,
-                            name = '*.cp')
-                       for srcdir in srcdirs])
+	sources = Flatten([find(srcdir,
+							name = '*.cp')
+					   for srcdir in srcdirs])
 
-    env.VariantDir(blddir, 'src', False)
+	env.VariantDir(blddir, 'src', False)
 
-    return env.Program('Polyworld',
-                       relocate_paths(sources,
-                                      'src',
-                                      blddir))
+	return env.Program('Polyworld',
+					   relocate_paths(sources,
+									  'src',
+									  blddir))
 
 def build_CalcComplexity(env):
-    blddir = '.bld/CalcComplexity'
+	blddir = '.bld/CalcComplexity'
 
-    sources = find('src/tools/CalcComplexity',
-                   name = '*.cpp')
-    sources += find('src/complexity',
-                    name = 'complexity_*.cp')
-    sources += ['src/utils/datalib.cp',
-                'src/utils/Variant.cp',
-                'src/utils/AbstractFile.cp',
-                'src/utils/misc.cp']
+	sources = find('src/tools/CalcComplexity',
+				   name = '*.cpp')
+	sources += find('src/complexity',
+					name = 'complexity_*.cp')
+	sources += ['src/utils/datalib.cp',
+				'src/utils/Variant.cp',
+				'src/utils/AbstractFile.cp',
+				'src/utils/misc.cp']
 
-    env.VariantDir(blddir, 'src', False)
+	env.VariantDir(blddir, 'src', False)
 
-    return env.Program('bin/CalcComplexity',
-                       relocate_paths(sources,
-                                      'src',
-                                      blddir))
+	return env.Program('bin/CalcComplexity',
+					   relocate_paths(sources,
+									  'src',
+									  blddir))
 
 def build_PwMoviePlayer(env):
-    blddir = '.bld/PwMoviePlayer'
+	blddir = '.bld/PwMoviePlayer'
 
-    sources = find('src/tools/PwMoviePlayer',
-                   name = '*.cp')
-    sources += ['src/utils/PwMovieUtils.cp']
+	sources = find('src/tools/PwMoviePlayer',
+				   name = '*.cp')
+	sources += ['src/utils/PwMovieUtils.cp']
 
-    env.VariantDir(blddir, 'src', False)
+	env.VariantDir(blddir, 'src', False)
 
-    return env.Program('bin/PwMoviePlayer',
-                       relocate_paths(sources,
-                                      'src',
-                                      blddir))
+	return env.Program('bin/PwMoviePlayer',
+					   relocate_paths(sources,
+									  'src',
+									  blddir))
 
 def build_rancheck(env):
-    blddir = '.bld/rancheck'
+	blddir = '.bld/rancheck'
 
-    sources = ['src/tools/rancheck/rancheck.c']
+	sources = ['src/tools/rancheck/rancheck.c']
 
-    env.VariantDir(blddir, 'src', False)
+	env.VariantDir(blddir, 'src', False)
 
-    return env.Program('bin/rancheck',
-                       relocate_paths(sources,
-                                      'src',
-                                      blddir))
+	return env.Program('bin/rancheck',
+					   relocate_paths(sources,
+									  'src',
+									  blddir))
 
 def build_proputil(env):
-    blddir = '.bld/proputil'
+	blddir = '.bld/proputil'
 
-    sources = find('src/tools/proputil',
-                   name = '*.cp')
-    sources += ['src/utils/proplib.cp']
+	sources = find('src/tools/proputil',
+				   name = '*.cp')
+	sources += find( 'src/proplib',
+					 name = '*.cp',
+					 ignore = ['state.cp'] )
+	sources += ['src/utils/misc.cp']
 
-    env.VariantDir(blddir, 'src', False)
+	env.VariantDir(blddir, 'src', False)
 
-    return env.Program('bin/proputil',
-                       relocate_paths(sources,
-                                      'src',
-                                      blddir))
+	return env.Program('bin/proputil',
+					   relocate_paths(sources,
+									  'src',
+									  blddir))
 
 def build_pmvutil(env):
-    blddir = '.bld/pmvutil'
+	blddir = '.bld/pmvutil'
 
-    sources = find('src/tools/pmvutil',
-                   name = '*.cp')
-    sources += ['src/utils/PwMovieUtils.cp']
+	sources = find('src/tools/pmvutil',
+				   name = '*.cp')
+	sources += ['src/utils/PwMovieUtils.cp']
 
-    env.VariantDir(blddir, 'src', False)
+	env.VariantDir(blddir, 'src', False)
 
-    return env.Program('bin/pmvutil',
-                       relocate_paths(sources,
-                                      'src',
-                                      blddir))
+	return env.Program('bin/pmvutil',
+					   relocate_paths(sources,
+									  'src',
+									  blddir))
 
 def build_qt_clust(env):
-    blddir = '.bld/qt_clust'
+	blddir = '.bld/qt_clust'
 
-    """
-    sources = find('src/tools/clustering',
-                   name = '*.cpp')
-"""
-    sources = ['src/tools/clustering/qt_clust.cpp']
+	sources = ['src/tools/clustering/qt_clust.cpp']
 
-    env.VariantDir(blddir, 'src', False)
+	env.VariantDir(blddir, 'src', False)
 
-    return env.Program('bin/qt_clust',
-                       relocate_paths(sources,
-                                      'src',
-                                      blddir))
+	return env.Program('bin/qt_clust',
+					   relocate_paths(sources,
+									  'src',
+									  blddir))
+
+def build_dynprop(env):
+	blddir = '.bld/dynprop/bld'
+
+	sources = ['.bld/dynprop/src/generated.cpp']
+
+	env.VariantDir(blddir, '.bld/dynprop/src', False)
+
+	return env.SharedLibrary( '.bld/dynprop/bin/dynprop',
+							  sources )
 
 def env_create():
-    envs = {}
+	envs = {}
 
 
-    env = env_common = init_env(Environment())
-    env.Append( CPPSUFFIXES = ['.cp'] )
-    #cpp_flags = ['-g', '-Wall', '-O2' ]
-    cpp_flags = ['-g', '-Wall' ]
+	env = env_common = init_env(Environment())
+	env.Append( CPPSUFFIXES = ['.cp'] )
+	#cpp_flags = ['-g', '-Wall', '-O2' ]
+	cpp_flags = ['-g', '-Wall', '-Wno-format-security' ]
 
-    if PERFORMANCE_PROFILER:
-        # use the gnu gprof
-        cpp_flags += ['-pg']
-        env.Append( LINKFLAGS = ['-pg'] )
+	if PERFORMANCE_PROFILER:
+		# use the gnu gprof
+		cpp_flags += ['-pg']
+		env.Append( LINKFLAGS = ['-pg'] )
 
-    try:
-    	cpp_flags += os.environ['CPPFLAGS'].split(' ')
-    except KeyError:
-    	pass
-    env.Append( CPPFLAGS = cpp_flags )    
-    env.Append( CPPPATH = find('src',
-                               type = 'dir') )
-    try:
-        env.Append( LINKFLAGS = os.environ['LDFLAGS'].split(' ') )
-    except KeyError:
-        pass
+	try:
+		cpp_flags += os.environ['CPPFLAGS'].split(' ')
+	except KeyError:
+		pass
+	env.Append( CPPFLAGS = cpp_flags )	  
+	env.Append( CPPPATH = find('src',
+							   type = 'dir') )
+	try:
+		env.Append( LINKFLAGS = os.environ['LDFLAGS'].split(' ') )
+	except KeyError:
+		pass
 
-    import_OpenMP(env)
-    import_GSL(env)
+	# This allows proplib dynamic properties to reference globals in Polyworld.
+	export_dynamic(env)
 
-    env = envs['Polyworld'] = env_common.Clone()    
-    import_OpenGL(env)
-    import_Qt(env,
-              qtversion = 4,
-              qtmodules = ['QtCore',
-                           'QtGui',
-                           'QtOpenGL'])
-    import_zlib(env)
-    try:
-    	python_version = os.environ['PYTHONVER']
-    except KeyError:
-    	python_version = None
-    
-    if python_version:
-        import_python(env, python_version)
-    else:
-        import_python(env)
+	import_OpenMP(env)
+	import_GSL(env)
 
-    env = envs['CalcComplexity'] = env_common.Clone()
-    import_zlib(env)
+	env = envs['Polyworld'] = env_common.Clone()	
+	import_OpenGL(env)
+	import_Qt(env,
+			  qtversion = 4,
+			  qtmodules = ['QtCore',
+						   'QtGui',
+						   'QtOpenGL'])
+	import_zlib(env)
+	try:
+		python_version = os.environ['PYTHONVER']
+	except KeyError:
+		python_version = None
+	
+	if python_version:
+		import_python(env, python_version)
+	else:
+		import_python(env)
 
-    envs['PwMoviePlayer'] = envs['Polyworld'].Clone()
+	env = envs['CalcComplexity'] = env_common.Clone()
+	import_zlib(env)
 
-    envs['rancheck'] = envs['CalcComplexity'].Clone()
+	envs['PwMoviePlayer'] = envs['Polyworld'].Clone()
 
-    envs['proputil'] = envs['CalcComplexity'].Clone()
+	envs['rancheck'] = envs['CalcComplexity'].Clone()
 
-    if python_version:
-        import_python( envs['proputil'], python_version )
-    else:
-        import_python( envs['proputil'] )
+	envs['proputil'] = envs['CalcComplexity'].Clone()
 
-    envs['pmvutil'] = envs['PwMoviePlayer'].Clone()
+	if python_version:
+		import_python( envs['proputil'], python_version )
+	else:
+		import_python( envs['proputil'] )
 
-    envs['qt_clust'] = envs['CalcComplexity'].Clone()
+	envs['pmvutil'] = envs['PwMoviePlayer'].Clone()
 
-    return envs
+	envs['qt_clust'] = envs['CalcComplexity'].Clone()
+
+	envs['dynprop'] = envs['Polyworld'].Clone()
+
+	return envs
 
 def hack_addCpExtension():
-    # treat *.cp as C++ source
-    module = __import__('SCons.Tool.c++',
-                        globals(),
-                        locals(),
-                        ['CXXSuffixes'])
-    module.CXXSuffixes += ['.cp']
+	# treat *.cp as C++ source
+	module = __import__('SCons.Tool.c++',
+						globals(),
+						locals(),
+						['CXXSuffixes'])
+	module.CXXSuffixes += ['.cp']
 
-    # scan *.cp for #include
-    from SCons.Scanner.C import CScanner
-    builder_object = DefaultEnvironment()["BUILDERS"]["Object"]
-    builder_object.source_scanner.add_scanner('.cp',
-                                              CScanner())
+	# scan *.cp for #include
+	from SCons.Scanner.C import CScanner
+	builder_object = DefaultEnvironment()["BUILDERS"]["Object"]
+	builder_object.source_scanner.add_scanner('.cp',
+											  CScanner())
 
 def hack_createSrcDir():
-    if not os.path.exists('src'):
-        os.mkdir('src')
+	if not os.path.exists('src'):
+		os.mkdir('src')
 
-    for dir in SRCDIRS:
-        if not os.path.exists(dir):
-            src = '../' + dir[4:] # strip src/
-            dst = dir
-            os.symlink(src,dst)
+	for dir in SRCDIRS:
+		if not os.path.exists(dir):
+			src = '../' + dir[4:] # strip src/
+			dst = dir
+			os.symlink(src,dst)
 
 ################################################################################
 

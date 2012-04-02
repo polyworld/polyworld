@@ -23,23 +23,25 @@ class FoodPatch;
 //===========================================================================
 class BrickPatch : public Patch
 {
+	PROPLIB_DYNAMIC_PROPERTIES
+
  public:
 	BrickPatch();
 	~BrickPatch();
 	
 	int brickCount;
 
-	void init(Color color, float x, float z, float sx, float sz, int numberBricks, int shape, int distrib, float nhsize, gstage* fs, Domain* dm, int domainNumber, FoodPatch *onSyncFoodPatch);
+	void init( Color color, float x, float z, float sx, float sz, int numberBricks, int shape, int distrib, float nhsize, gstage* fs, Domain* dm, int domainNumber, bool on );
 
-	void updateOn( long step );
+	void updateOn();
 
  private:
 	void addBricks();
 	void removeBricks();
 
 	Color brickColor;
-	FoodPatch *onSyncFoodPatch;
-	bool isOn;
+	bool on;
+	bool onPrev;
 };
 
 

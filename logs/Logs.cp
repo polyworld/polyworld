@@ -34,7 +34,7 @@ Logs::EventRegistry Logs::_eventRegistry;
 //---------------------------------------------------------------------------
 // Logs::Logs
 //---------------------------------------------------------------------------
-Logs::Logs( TSimulation *sim, proplib::Document *doc )
+Logs::Logs( TSimulation *sim, Document *doc )
 {
 	assert( logs == NULL );
 
@@ -1018,7 +1018,7 @@ void Logs::EnergyLog::init( TSimulation *sim, Document *doc )
 		for( int i = 0; i < globals::numEnergyTypes; i++ )
 		{
 			char buf[128];
-			sprintf( buf, "Energy%d\n", i );
+			sprintf( buf, "Energy%d", i );
 			colnames[ lenTemplate + i ] = strdup( buf );
 
 			coltypes[ lenTemplate + i ] = datalib::FLOAT;

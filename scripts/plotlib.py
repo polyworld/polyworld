@@ -438,7 +438,7 @@ class Document:
         gnuplot = common_functions.pw_env('gnuplot')
             
         # redirect stderr because it's verbose even on no errors
-        rc = os.system(gnuplot + " " +  path_script + " 2>" + path_err )
+        rc = os.system(gnuplot + " '" +  path_script + "' 2>'" + path_err + "'" )
         if rc != 0:
             os.system( 'cat ' + path_err )
             sys.exit(1)

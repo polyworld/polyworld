@@ -1,10 +1,10 @@
 #include "Resources.h"
 
 #include <string.h>
-#include <sys/stat.h>
 
 #include "error.h"
 #include "gpolygon.h"
+#include "misc.h"
 #include "proplib.h"
 
 using namespace std;
@@ -41,21 +41,28 @@ bool Resources::loadPolygons( gpolyobj *poly,
 // Resources::parseConfiguration()
 //---------------------------------------------------------------------------
 
-void Resources::parseConfiguration( proplib::Document **ret_docValues,
-									proplib::Document **ret_docSchema,
-									string valuesPath,
-									string schemaPath )
+void Resources::parseConfiguration( string schemaPath,
+									string docPath,
+									bool isWorldfile,
+									proplib::SchemaDocument **ret_schema,
+									proplib::Document **ret_doc )
 {
-	if( !exists(valuesPath) )
-		error(2, "Failed locating file", valuesPath.c_str() );
+	if( !exists(schemaPath) )
+		error(2, "Failed locating file", schemaPath.c_str() );
+	if( !exists(docPath) )
+		error(2, "Failed locating file", docPath.c_str() );
 
-	proplib::Document *docValues = proplib::Parser::parseFile( valuesPath.c_str() );
+	proplib::DocumentBuilder builder;
+	proplib::SchemaDocument *schema = builder.buildSchemaDocument( schemaPath );
+	proplib::Document *doc;
+	if( isWorldfile )
+		doc = builder.buildWorldfileDocument( schema, docPath );
+	else
+		doc = builder.buildDocument( docPath );
+	schema->apply( doc );
 
-	proplib::Document *docSchema = proplib::Parser::parseFile( schemaPath.c_str() );
-	proplib::Schema::apply( docSchema, docValues );
-
-	*ret_docValues = docValues;
-	*ret_docSchema = docSchema;
+	*ret_schema = schema;
+	*ret_doc = doc;
 }
 
 //---------------------------------------------------------------------------
@@ -80,14 +87,4 @@ string Resources::find( string name )
 	}
 
 	return "";
-}
-
-//---------------------------------------------------------------------------
-// Resources::exists()
-//---------------------------------------------------------------------------
-
-bool Resources::exists( string path )
-{
-	struct stat _stat;
-	return 0 == stat(path.c_str(), &_stat);
 }

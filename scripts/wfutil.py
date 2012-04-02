@@ -28,8 +28,6 @@ def main():
 
     if mode == "conv":
         shell_conv( argv[1:] )
-    elif mode == "reduce":
-        shell_reduce( argv[1:] )
     elif mode == "edit":
         shell_edit( argv[1:] )
     else:
@@ -68,7 +66,7 @@ def get_parameter( path_worldfile_or_run, parameter, assume_run_dir = True ):
     else:
         path_proplib = path_worldfile_or_run
 
-    return proputil( 'get', path_proplib, parameter )
+    return proputil( '-w', 'get', '-s', path_schema(), path_proplib, parameter )
 
 ####################################################################################
 ###
@@ -82,7 +80,7 @@ def get_parameter_len( path_worldfile_or_run, parameter, assume_run_dir = True )
     else:
         path_proplib = path_worldfile_or_run
 
-    return int(proputil( 'len', path_proplib, parameter ))
+    return int(proputil( '-w', 'len', '-s', path_schema(), path_proplib, parameter ))
 
 ####################################################################################
 ###
@@ -90,13 +88,7 @@ def get_parameter_len( path_worldfile_or_run, parameter, assume_run_dir = True )
 ###
 ####################################################################################
 def edit( path, edit_specs, path_new = None ):
-    path_normalized = '/tmp/normalized.%s.wf' % os.getpid()
-
-    __tofile( path_normalized, proputil('apply', path_schema(), path) )
-
-    result = proputil( 'set', path_normalized, *edit_specs )
-
-    os.remove( path_normalized )
+    result = proputil( '-w', 'set', '-s', path_schema(), path, *edit_specs )
 
     if path_new == None:
         path_new = path
@@ -125,7 +117,7 @@ def ensure_proplib_worldfile( path_worldfile_or_run ):
         if not os.path.exists( path_legacy ):
             err( "Cannot locate proplib or legacy worldfile in rundir " + path_run )
 
-        exitval, stdout = get_cmd_stdout( ['wfutil', 'conv', '-l', path_legacy] )
+        exitval, stdout = get_cmd_stdout( ['wfutil.py', 'conv', '-l', path_legacy] )
         if exitval != 0:
             err( "Cannot convert worldfile in rundir " + path_run )
 
@@ -134,7 +126,7 @@ def ensure_proplib_worldfile( path_worldfile_or_run ):
         if not os.path.exists( path_schema() ):
             err( "Cannot find schema. Expected at '%s'" % path_schema() )
 
-        __tofile( path_proplib, proputil('apply', path_schema(), '/tmp/converted.wf') )
+        __tofile( path_proplib, proputil('-w', 'apply', path_schema(), '/tmp/converted.wf') )
 
         shutil.copy( path_schema(), path_run )
 
@@ -197,36 +189,11 @@ def shell_conv( argv ):
         
 
     if len(args) == 1:
-        worldfile = parsePreVersion101( args[0] )
-        normalizePreVersion101( worldfile, legacyMode )
-        printV101Format( worldfile )
-    elif len(args) == 2:
-        path_worldfile = args[0]
-        path_schema_legacy = args[1]
-        path_schema_current = path_schema()
-
-        __tofile( '/tmp/applied.wf', proputil('apply', path_schema_legacy, path_worldfile) )
-        __tofile( '/tmp/set.wf', proputil('set', '/tmp/applied.wf', 'LegacyMode=' % legacyMode) )
-        print proputil( 'apply',  path_schema_current, '/tmp/set.wf' )
-            
+        worldfile = parsePreProplib( args[0] )
+        normalizePreProplib( worldfile, legacyMode )
+        printProplibFormat( worldfile )
     else:
         usage()
-
-################################################################################
-################################################################################
-###
-### FUNCTION shell_reduce()
-###
-################################################################################
-################################################################################
-def shell_reduce( args ):
-    if len(args) != 1:
-        usage()
-
-    path_worldfile = args[0]
-
-    result = proputil( 'reduce', path_schema(), path_worldfile )
-    __tofile( path_worldfile, result )
 
 ################################################################################
 ################################################################################
@@ -351,7 +318,7 @@ class Container:
                     value = ' '.join( map(str,value) )
                 print "%-30s %s" % ( value, self.fullname(name) )
 
-    def printV101Format( self, indent = "" ):
+    def printProplibFormat( self, indent = "" ):
         def __print( name, data ):
             print "%s%-25s %s" % (indent, name, data)
 
@@ -374,7 +341,7 @@ class Container:
                     #__print( prop.name + " " + open, "" )
                     __print( prop.name +" "+open, "" )
 
-                value.printV101Format(indent + "  " )
+                value.printProplibFormat(indent + "  " )
 
                 if not self.isarray():
                     #__print( close, "" )
@@ -403,21 +370,21 @@ class Container:
 ################################################################################
 ################################################################################
 ###
-### FUNCTION printV101Format()
+### FUNCTION printProplibFormat()
 ###
 ################################################################################
 ################################################################################
-def printV101Format( container ):
-    container.printV101Format()
+def printProplibFormat( container ):
+    container.printProplibFormat()
 
 ################################################################################
 ################################################################################
 ###
-### FUNCTION normalizePreVersion101()
+### FUNCTION normalizePreProplib()
 ###
 ################################################################################
 ################################################################################
-def normalizePreVersion101( container, legacyMode ):
+def normalizePreProplib( container, legacyMode ):
     wfversion = container.get( 'Version' ).value
 
     edges = container.get( 'Edges' ).value
@@ -511,11 +478,11 @@ def normalizePreVersion101( container, legacyMode ):
 ################################################################################
 ################################################################################
 ###
-### FUNCTION parsePreVersion101()
+### FUNCTION parsePreProplib()
 ###
 ################################################################################
 ################################################################################
-def parsePreVersion101( path ):
+def parsePreProplib( path ):
     f = open( path, 'r' )
 
     def __line():
@@ -626,7 +593,7 @@ def parsePreVersion101( path ):
         wfversion = 0
 
     if (wfversion < 1) or (wfversion > 55):
-        err( "Invalid pre-v101 worldfile (didn't find version on first line)" )
+        err( "Invalid pre-proplib worldfile (didn't find version on first line)" )
 
     pbool( 'PassiveLockstep', 25, False )
     pint( 'MaxSteps', 18, 0 )
@@ -1063,7 +1030,7 @@ def usage( msg = None ):
     print """\
 usage: wfutil conv [-l] worldfile
 
-     Converts a pre-v101 worldfile to be compatible with the current schema.
+     Converts a pre-proplib worldfile to be compatible with the current schema.
 
    Result is written to stdout.
  
@@ -1072,36 +1039,12 @@ usage: wfutil conv [-l] worldfile
        schema default values will be adopted for properties that were
        introduced since the original worldfile was created, which will likely
        change simulation results.
-
---
-
-usage: wfutil conv [-l] worldfile legacy_schemafile
-
-     Converts a v101 worldfile to be compatible with the current schema.
-
-   Result is written to stdout.
- 
-   -l    Enable LegacyMode, which should result in a worldfile that produces
-       the same results as the old worldfile. If this is not specified, then
-       schema default values will be adopted for properties that were
-       introduced since the original worldfile was created, which will likely
-       change simulation results.
-
---
-
-usage: wfutil reduce worldfile
-
-     Strips a v101 worldfile of any values that are the same as the default values
-   in the schema. Note that the setting of LegacyMode effects the determination
-   of schema default values.
-
-   Result is written to original file.
 
 --
 
 usage: wfutil edit worldfile (propname=value)+
 
-     Set one or more properties, where array indices may be '*'.
+     Set one or more properties.
 
    Result is written to original file.
 """

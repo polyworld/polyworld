@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+#include "dynamic.h"
+
 // We allocate arrays for the maximum potential number of energy types so that
 // we don't have to malloc an array for every Energy instantiated. We want class
 // Energy to be fairly cheap to instantiate because we create a lot of temp instances.
@@ -40,6 +42,8 @@ class EnergyPolarity
 
 class EnergyMultiplier
 {
+	PROPLIB_DYNAMIC_PROPERTIES
+
  public:
 	EnergyMultiplier();
 	EnergyMultiplier( float *values );
