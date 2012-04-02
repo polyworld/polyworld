@@ -38,34 +38,6 @@ bool Resources::loadPolygons( gpolyobj *poly,
 }
 
 //---------------------------------------------------------------------------
-// Resources::parseConfiguration()
-//---------------------------------------------------------------------------
-
-void Resources::parseConfiguration( string schemaPath,
-									string docPath,
-									bool isWorldfile,
-									proplib::SchemaDocument **ret_schema,
-									proplib::Document **ret_doc )
-{
-	if( !exists(schemaPath) )
-		error(2, "Failed locating file", schemaPath.c_str() );
-	if( !exists(docPath) )
-		error(2, "Failed locating file", docPath.c_str() );
-
-	proplib::DocumentBuilder builder;
-	proplib::SchemaDocument *schema = builder.buildSchemaDocument( schemaPath );
-	proplib::Document *doc;
-	if( isWorldfile )
-		doc = builder.buildWorldfileDocument( schema, docPath );
-	else
-		doc = builder.buildDocument( docPath );
-	schema->apply( doc );
-
-	*ret_schema = schema;
-	*ret_doc = doc;
-}
-
-//---------------------------------------------------------------------------
 // Resources::find()
 //---------------------------------------------------------------------------
 

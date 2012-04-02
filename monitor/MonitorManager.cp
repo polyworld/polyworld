@@ -25,6 +25,7 @@ MonitorManager::MonitorManager( TSimulation *_simulation, string monitorfilePath
 	proplib::DocumentBuilder builder;
 	proplib::SchemaDocument *pschema = builder.buildSchemaDocument( "./etc/monitors.mfs" );
 	proplib::Document *pdoc = builder.buildDocument( monitorfilePath );
+	pschema->apply( pdoc );
 	proplib::Document &doc = *pdoc;
 
 	// ---
