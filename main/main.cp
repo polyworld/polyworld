@@ -25,7 +25,7 @@ using namespace std;
 //===========================================================================
 void usage( const char* format, ... )
 {
-	printf( "Usage:  Polyworld [--ui gui|term] [--mf monitorfile] worldfile\n" );
+	printf( "Usage:  Polyworld [--ui gui|term] worldfile\n" );
 	
 	if( format )
 	{
@@ -51,7 +51,6 @@ void usage()
 int main( int argc, char** argv )
 {
 	const char *worldfilePath = NULL;
-	string monitorfilePath;
 	string ui = "gui";
 	
 	for( int argi = 1; argi < argc; argi++ )
@@ -68,13 +67,6 @@ int main( int argc, char** argv )
 				ui = argv[argi];
 				if( (ui != "gui") && (ui != "term") )
 					usage( "Invalid --ui arg (%s)", argv[argi] );
-			}
-			else if( arg == "--mf" )
-			{
-				if( ++argi >= argc )
-					usage( "Missing --mf arg" );
-
-				monitorfilePath = argv[argi];
 			}
 			else
 				usage( "Unknown argument: %s", argv[argi] );
@@ -93,9 +85,18 @@ int main( int argc, char** argv )
 		usage( "A valid path to a worldfile must be specified" );
 	}
 
-	if( monitorfilePath == "" )
+	string monitorPath;
+	string monitorOverlayPath;
 	{
-		monitorfilePath = string("./etc/") + ui + ".mf";
+		if( exists("./" + ui + ".mf") )
+			monitorPath = "./" + ui + ".mf";
+		else if( exists("./" + ui + ".mfo") )
+		{
+			monitorPath = "./etc/" + ui + ".mf";
+			monitorOverlayPath = "./" + ui  + ".mfo";
+		}
+		else
+			monitorPath = "./etc/" + ui + ".mf";
 	}
 
 	// Make sure we're in an appropriate working directory
@@ -127,7 +128,7 @@ int main( int argc, char** argv )
 	QCoreApplication::setApplicationName( "polyworld" );
 
 
-	TSimulation *simulation = new TSimulation( worldfilePath, monitorfilePath );
+	TSimulation *simulation = new TSimulation( worldfilePath, monitorPath, monitorOverlayPath );
 	SimulationController *simulationController = new SimulationController( simulation );
 
 	int exitval;

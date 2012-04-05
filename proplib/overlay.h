@@ -16,11 +16,14 @@ namespace proplib
 		virtual ~OverlayDocument();
 
 		void validate();
+		void apply( class DocumentEditor *editor );
 		void apply( int index, class DocumentEditor *editor );
 		Property &getClause( int index );
 		std::string getDocumentPropertyName( Property &overlayProperty );
 
 	private:
 		void apply( Property &overlayProp, class DocumentEditor *editor );
+
+		bool _hasClauses;
 	};
 }

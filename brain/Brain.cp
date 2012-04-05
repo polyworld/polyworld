@@ -1170,6 +1170,9 @@ void Brain::GrowSynapses( Genome *g,
 
 	for (int groupIndex_from = 0; groupIndex_from < dims.numgroups; groupIndex_from++)
 	{
+		if( !brain::gSynapseFromOutputNeurons && IsOutputNeuralGroup(groupIndex_from) )
+			continue;
+
 		int neuronCount_from = g->getNeuronCount(synapseType->nt_from, groupIndex_from);
 
 #if DebugBrainGrow
@@ -1660,10 +1663,13 @@ void Brain::Grow( Genome* g )
 
     if( numsyn != dims.numsynapses )
 	{
-		if( (numsyn > dims.numsynapses)
-			|| (( (dims.numsynapses - numsyn) / float(dims.numsynapses) ) > 1.e-3) )
+		if( brain::gSynapseFromOutputNeurons )
 		{
-			error(2,"Bad neural architecture, numsyn (",numsyn,") not equal to numsynapses (",dims.numsynapses,")");
+			if( (numsyn > dims.numsynapses)
+				|| (( (dims.numsynapses - numsyn) / float(dims.numsynapses) ) > 1.e-3) )
+			{
+				error(2,"Bad neural architecture, numsyn (",numsyn,") not equal to numsynapses (",dims.numsynapses,")");
+			}
 		}
 
 		dims.numsynapses = numsyn;

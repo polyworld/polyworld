@@ -27,9 +27,11 @@
 #
 #   $[...] = logical symbol reference in cppsym:
 #
-#              $[sim]: TSimulation pointer.
-#              $[index]: index of element in array.
-#              $[ancestor]: cppsym value of nearest ancestor.
+#      $[sim]: TSimulation pointer.
+#      $[index]: index of element in array.
+#      $[ancestor]: cppsym value of nearest ancestor.
+#      $[gene, GENE_NAME, MEMBER]: member of gene object,
+#                                  where MEMBER can be: min, max.
 ##########################################################################
 
 
@@ -165,6 +167,11 @@ FoodGrowthModel {
 FoodRemoveEnergy {
   type    Float
   default 0.0
+}
+
+FoodRemoveFirstEat {
+  type    Bool
+  default False
 }
 
 FoodMaxLifeSpan {
@@ -1428,12 +1435,14 @@ MaxLifeSpan {
 
 MinEnergyFractionToOffspring {
   type    Float
+  cppsym  "$[gene, MateEnergyFraction, min]"
   default 0.2
   exmin   0.0
 }
 
 MaxEnergyFractionToOffspring {
   type    Float
+  cppsym  "$[gene, MateEnergyFraction, max]"
   default 0.8
   min     MinEnergyFractionToOffspring
 }
@@ -1523,6 +1532,10 @@ MaxLearningRate {
   min     MinLearningRate
 }
 
+SynapseFromOutputNeurons {
+  type    Bool
+  default True
+}
 
 #-------------------------------------------------------------------
 # SECTION Simulation parameters -- Gene Options

@@ -19,12 +19,21 @@ using namespace std;
 // MonitorManager
 //===========================================================================
 
-MonitorManager::MonitorManager( TSimulation *_simulation, string monitorfilePath )
+MonitorManager::MonitorManager( TSimulation *_simulation,
+								string monitorPath,
+								string monitorOverlayPath )
 	: simulation( _simulation )
 {
 	proplib::DocumentBuilder builder;
 	proplib::SchemaDocument *pschema = builder.buildSchemaDocument( "./etc/monitors.mfs" );
-	proplib::Document *pdoc = builder.buildDocument( monitorfilePath );
+	proplib::Document *pdoc = builder.buildDocument( monitorPath );
+	if( !monitorOverlayPath.empty() )
+	{
+		proplib::DocumentEditor editor( pschema, pdoc );
+		proplib::OverlayDocument *overlay = builder.buildOverlayDocument( monitorOverlayPath );
+		overlay->apply( &editor );
+		delete overlay;
+	}
 	pschema->apply( pdoc );
 	proplib::Document &doc = *pdoc;
 

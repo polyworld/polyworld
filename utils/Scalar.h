@@ -30,6 +30,7 @@ struct Scalar
 
 	Type type;
 	union {
+		void *__val;
 		int ival;
 		float fval;
 		bool bval;

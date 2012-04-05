@@ -178,7 +178,7 @@ inline float AverageAngles( float a, float b )
 //---------------------------------------------------------------------------
 // TSimulation::TSimulation
 //---------------------------------------------------------------------------
-TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
+TSimulation::TSimulation( string worldfilePath, string monitorPath, string monitorOverlayPath )
 	:
 		fLockStepWithBirthsDeathsLog(false),
 		fLockstepFile(NULL),
@@ -273,7 +273,6 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 		schema->apply( worldfile );
 	}		
 	ProcessWorldFile( worldfile );
-	InitDynamicProperties( worldfile );
 
 	// ---
 	// --- General Init
@@ -285,6 +284,11 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 	SeparationCache::init();
 	
 	GenomeUtil::createSchema();
+
+	// ---
+	// --- Init Dynamic Properties
+	// ---
+	InitDynamicProperties( worldfile );
 
 		
 	 // Following is part of one way to speed up the graphics
@@ -414,7 +418,7 @@ TSimulation::TSimulation( string worldfilePath, string monitorfilePath )
 	// ---
 	// --- Init Monitors
 	// ---
-	monitorManager = new MonitorManager( this, monitorfilePath );
+	monitorManager = new MonitorManager( this, monitorPath, monitorOverlayPath );
 
 	// ---
 	// --- Init Event Filtering
@@ -1117,7 +1121,7 @@ void TSimulation::InitNeuralValues()
     brain::gNeuralValues.maxneurgroups = brain::gNeuralValues.maxnoninputneurgroups + brain::gNeuralValues.numinputneurgroups;
     brain::gNeuralValues.maxneurpergroup = brain::gNeuralValues.maxeneurpergroup + brain::gNeuralValues.maxineurpergroup;
     brain::gNeuralValues.maxinternalneurons = brain::gNeuralValues.maxneurpergroup * brain::gNeuralValues.maxinternalneurgroups;
-    brain::gNeuralValues.maxinputneurons = genome::gMaxvispixels * 3 + 2;
+    brain::gNeuralValues.maxinputneurons = genome::gMaxvispixels * 3 + (numinputneurgroups - 1);
     brain::gNeuralValues.maxnoninputneurons = brain::gNeuralValues.maxinternalneurons + brain::gNeuralValues.numoutneurgroups;
     brain::gNeuralValues.maxneurons = brain::gNeuralValues.maxinternalneurons + brain::gNeuralValues.maxinputneurons + brain::gNeuralValues.numoutneurgroups;
 
@@ -2772,7 +2776,7 @@ void TSimulation::Eat( agent *c, bool *cDied )
 				
 				eatPrint( "at step %ld, agent %ld at (%g,%g) with rad=%g wasted %g units of food at (%g,%g) with rad=%g\n", fStep, c->Number(), c->x(), c->z(), c->radius(), foodEaten, f->x(), f->z(), f->radius() );
 
-				if(f->isDepleted() )  // all gone
+				if( f->isDepleted() || fFoodRemoveFirstEat )  // all gone
 				{
 					RemoveFood( f );
 				}
@@ -2829,7 +2833,7 @@ void TSimulation::Eat( agent *c, bool *cDied )
 					
 					eatPrint( "at step %ld, agent %ld at (%g,%g) with rad=%g wasted %g units of food at (%g,%g) with rad=%g\n", fStep, c->Number(), c->x(), c->z(), c->radius(), foodEaten, f->x(), f->z(), f->radius() );
 
-					if( f->isDepleted() )  // all gone
+					if( f->isDepleted() || fFoodRemoveFirstEat )  // all gone
 					{
 						RemoveFood( f );
 					}
@@ -4098,6 +4102,7 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 			fFoodGrowthModel = MaxRelative;
 	}
 	fFoodRemoveEnergy = doc.get( "FoodRemoveEnergy" );
+	fFoodRemoveFirstEat = doc.get( "FoodRemoveFirstEat" );
 	food::gMaxLifeSpan = doc.get( "FoodMaxLifeSpan" );
     fPositionSeed = doc.get( "PositionSeed" );
     fGenomeSeed = doc.get( "InitSeed" );
@@ -4853,6 +4858,7 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	RandomNumberGenerator::set( RandomNumberGenerator::TOPOLOGICAL_DISTORTION,
 								RandomNumberGenerator::LOCAL );
 	brain::gNeuralValues.maxneuron2energy = doc.get( "EnergyUseNeurons" );
+	brain::gSynapseFromOutputNeurons = doc.get( "SynapseFromOutputNeurons" );
 	brain::gNumPrebirthCycles = doc.get( "PreBirthCycles" );
 
 	genome::gSeedMutationRate = doc.get( "SeedMutationRate" );

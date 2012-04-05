@@ -61,6 +61,8 @@ char* concat(const char* s1, const char* s2, const char* s3, const char* s4, con
              const char* s7);
 
 
+std::string operator+(const char *, const std::string &);
+
 char* itoa(long i);
 char* ftoa(float f);
 

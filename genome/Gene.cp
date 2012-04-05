@@ -100,6 +100,7 @@ CAST_TO(ImmutableInterpolated);
 CAST_TO(NeurGroup);
 CAST_TO(NeurGroupAttr);
 CAST_TO(SynapseAttr);
+CAST_TO(__Interpolated);
 
 #undef CAST_TO
 

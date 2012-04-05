@@ -443,6 +443,17 @@ const Metabolism *GenomeUtil::getMetabolism( Genome *g )
 	return Metabolism::get( index );
 }
 
+Gene *GenomeUtil::getGene( const std::string &name, const std::string &err )
+{
+	Gene *gene = schema->get( name );
+	if( !gene && !err.empty() )
+	{
+		cerr << err << endl;
+		exit( 1 );
+	}
+	return gene;
+}
+
 #include <fstream>
 
 using namespace std;

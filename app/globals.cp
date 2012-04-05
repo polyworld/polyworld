@@ -19,6 +19,7 @@ namespace brain
 {
 
     NeuralValues gNeuralValues;
+	bool gSynapseFromOutputNeurons;
     long gNumPrebirthCycles;
 	float gLogisticSlope;
 	float gMaxWeight;

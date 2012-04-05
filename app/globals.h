@@ -118,6 +118,7 @@ namespace brain
 
 	// Public globals	
     extern NeuralValues gNeuralValues;
+	extern bool gSynapseFromOutputNeurons;
     extern long gNumPrebirthCycles;
 	extern float gLogisticSlope;
 	extern float gMaxWeight;

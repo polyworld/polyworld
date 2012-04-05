@@ -25,22 +25,38 @@ OverlayDocument::~OverlayDocument()
 
 void OverlayDocument::validate()
 {
-	if( size() != 1 )
-		err( "Overlay document should consist only of 'overlays' at top-level." );
+	_hasClauses = getp( "overlays" ) != NULL;
 
-	Property &overlays = get( "overlays" );
-	if( overlays.getType() != Node::Array )
-		overlays.err( "Should be an array." );
-
-	itfor( PropertyMap, overlays.elements(), it )
+	if( _hasClauses )
 	{
-		if( it->second->getType() != Node::Object )
-			it->second->err( "Expecting Object" );
+		if( size() != 1 )
+			err( "Overlay document should consist only of 'overlays' at top-level." );
+
+		Property &overlays = get( "overlays" );
+		if( overlays.getType() != Node::Array )
+			overlays.err( "Should be an array." );
+
+		itfor( PropertyMap, overlays.elements(), it )
+		{
+			if( it->second->getType() != Node::Object )
+				it->second->err( "Expecting Object" );
+		}
 	}
+}
+
+void OverlayDocument::apply( DocumentEditor *editor )
+{
+	if( _hasClauses )
+		err( "Expected to have only single overlay clause -- not expecting overlays[]" );
+
+	apply( *this, editor );
 }
 
 void OverlayDocument::apply( int index, DocumentEditor *editor )
 {
+	if( !_hasClauses )
+		err( "Expected to have overlays[] at document root." );
+
 	apply( getClause(index), editor );
 }
 
@@ -51,7 +67,10 @@ Property &OverlayDocument::getClause( int index )
 
 string OverlayDocument::getDocumentPropertyName( Property &overlayProperty )
 {
-	return overlayProperty.getFullName( 3 );
+	if( _hasClauses )
+		return overlayProperty.getFullName( 3 );
+	else
+		return overlayProperty.getFullName( 1 );
 }
 
 void OverlayDocument::apply( Property &overlayProp, DocumentEditor *editor )

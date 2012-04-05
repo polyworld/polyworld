@@ -19,6 +19,8 @@ namespace genome
 		static void seed( Genome *g );
 		static const Metabolism *getMetabolism( Genome *g );
 
+		static Gene *getGene( const std::string &name, const std::string &err = "" );
+
 		static void test();
 
 	public:

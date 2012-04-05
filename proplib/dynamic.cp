@@ -101,6 +101,8 @@ void DynamicProperties::generateLibrarySource()
 	l( "#include <sstream>" );
 	l( "#include \"dynamic.h\"" );
 	l( "#include \"barrier.h\"" );
+	l( "#include \"GenomeUtil.h\"" );
+	l( "#include \"globals.h\"" );
 	l( "#include \"Metabolism.h\"" );
 	l( "#include \"Simulation.h\"" );
 	l( "#include \"state.h\"" );
@@ -108,6 +110,10 @@ void DynamicProperties::generateLibrarySource()
 	l( "using namespace proplib;" );
 	l( "" );
 	l( "static bool inited = false;" );
+
+	l( "");
+	l( "namespace proplib {" );
+	l( "");
 
 	// ---
 	// --- Generate State Datastructures
@@ -151,6 +157,9 @@ void DynamicProperties::generateLibrarySource()
 	l( "    *result_metadata = metadata;" );
 	l( "    *result_count = " << dynamicProperties.size() << ";" );
 	l( "  }" );
+	l( "}" );
+
+	l( "" );
 	l( "}" );
 }
 
@@ -225,7 +234,7 @@ void DynamicProperties::generateInitSource( ofstream &out,
 	itfor( DynamicPropertyList, dynamicProperties, it )
 	{
 		DynamicScalarProperty *prop = *it;
-		prop2initBody[prop] = generateInitFunctionBody( prop, prop2antecedents[prop] );
+		prop2initBody[prop] = generateInitFunctionBody( prop, prop2antecedents[prop], indexMap );
 	}	
 
 	sortDynamicProperties( dynamicProperties, prop2antecedents );
@@ -270,7 +279,8 @@ void DynamicProperties::generateInitSource( ofstream &out,
 }
 
 string DynamicProperties::generateInitFunctionBody( DynamicScalarProperty *prop,
-													DynamicPropertyList &antecedents )
+													DynamicPropertyList &antecedents,
+													DynamicPropertyIndexMap &indexMap )
 {
 	if( prop->getAttr("init") == NULL )
 	{
@@ -319,7 +329,7 @@ string DynamicProperties::generateInitFunctionBody( DynamicScalarProperty *prop,
 								text = (string)*sym.prop;
 								break;
 							case Node::Dynamic:
-								text = getCppSymbol( sym.prop );
+								text = getMetadataLValue( sym.prop, indexMap );
 								antecedents.push_back( dynamic_cast<DynamicScalarProperty *>(sym.prop) );
 								break;
 							case Node::Runtime:
@@ -374,7 +384,7 @@ void DynamicProperties::generateUpdateSource( ofstream &out,
 	{
 		DynamicScalarProperty *prop = *it;
 
-		prop2updateBody[prop] = generateUpdateFunctionBody( prop, prop2antecedents[prop] );
+		prop2updateBody[prop] = generateUpdateFunctionBody( prop, prop2antecedents[prop], indexMap );
 	}	
 
 	sortDynamicProperties( dynamicProperties, prop2antecedents );
@@ -414,7 +424,7 @@ void DynamicProperties::generateUpdateSource( ofstream &out,
 		l( "    };" );
 		l( "    " << getCppType(prop) << " newval = local::update( context );" );
 		//l( "    cout << \"" << prop->getFullName(1) << "= \" << newval << endl;" ); 
-		l( "    if( newval == " << getCppSymbol(prop) << ")" );
+		l( "    if( newval == " << getMetadataLValue(prop, indexMap) << ")" );
 		l( "      metadata[" << index << "].valueChanged = false;" );
 		l( "    else" );
 		l( "    {" );
@@ -433,7 +443,7 @@ void DynamicProperties::generateUpdateSource( ofstream &out,
 				l( "      assert( newval < " << (string)*it_attr->second << " );" );
 		}
 			
-		l( "      " << getCppSymbol(prop) << " = newval;" );
+		l( "      *((" << getCppType(prop) << " *)metadata[" << index << "].value) = newval;" );
 		l( "    }" );
 		l( "  }" );
 	}
@@ -443,7 +453,8 @@ void DynamicProperties::generateUpdateSource( ofstream &out,
 }
 
 string DynamicProperties::generateUpdateFunctionBody( DynamicScalarProperty *prop,
-													  DynamicPropertyList &antecedents )
+													  DynamicPropertyList &antecedents,
+													  DynamicPropertyIndexMap &indexMap )
 {
 	Expression *expr;
 	bool skipBraces;
@@ -511,7 +522,7 @@ string DynamicProperties::generateUpdateFunctionBody( DynamicScalarProperty *pro
 								text = (string)*sym.prop;
 								break;
 							case Node::Dynamic:
-								text = getCppSymbol( sym.prop );
+								text = getMetadataLValue( sym.prop, indexMap );
 								antecedents.push_back( dynamic_cast<DynamicScalarProperty *>(sym.prop) );
 								break;
 							case Node::Runtime:
@@ -610,41 +621,132 @@ string DynamicProperties::getCppType( Property *prop )
 	}
 }
 
+string DynamicProperties::getMetadataLValue( Property *prop_, DynamicPropertyIndexMap &indexMap )
+{
+	DynamicScalarProperty *prop = dynamic_cast<DynamicScalarProperty *>( prop_ );
+
+	stringstream buf;
+	buf << "*((" << getCppType(prop) << "*)metadata[/*" << prop->getFullName(1) << "*/ " << indexMap[prop] << "].value)";
+
+	return buf.str();
+}
+
+static bool findSymMacro( Property &prop,
+						  string cppsym,
+						  int *result_start,
+						  int *result_len,
+						  vector<string> *result_args )
+{
+	result_args->clear();
+
+	size_t start = cppsym.find( "$[" );
+	if( start != string::npos )
+	{
+		size_t end = cppsym.find( "]", start );
+		if( end == string::npos )
+			prop.err( "Missing ']'" );
+
+		*result_start = (int)start;
+		*result_len = (int)(end - start + 1);
+
+		size_t pos = start + 2;
+		while( pos < end )
+		{
+			size_t tokStart = cppsym.find_first_not_of( " \t\n", pos );
+			if( (cppsym[tokStart] == ',') || (cppsym[tokStart] == ']') )
+			{
+				pos = tokStart + 1;
+				result_args->push_back( "" );
+			}
+			else
+			{
+				size_t tokEnd = cppsym.find_first_of( " \t\n,]", tokStart );
+				result_args->push_back( cppsym.substr(tokStart, tokEnd - tokStart) );
+				pos = cppsym.find_first_of( ",]", tokEnd ) + 1;
+			}
+		}
+
+		return true;
+	}
+
+	return false;
+}
+
 string DynamicProperties::getCppSymbol( Property *prop )
 {
-	string sym = prop->getSchema()->get( "cppsym" );
+	Property &propSym = prop->getSchema()->get( "cppsym" );
+	string sym = propSym;
 
 	while( true )
 	{
-		size_t i;
+		vector<string> macro_args;
+		int macro_start;
+		int macro_len;
 
-		if( (i = sym.find("$[sim]")) != string::npos )
+		if( !findSymMacro(propSym, sym, &macro_start, &macro_len, &macro_args) )
+			break;
+
+		if( macro_args[0] == "sim" )
 		{
-			sym.replace( i, strlen("$[sim]"), "context->sim" );
+			if( macro_args.size() != 1 )
+				propSym.err( "$[sim] takes no args." );
+
+			sym.replace( macro_start, macro_len, "context->sim" );
 		}
-		else if( (i = sym.find("$[index]")) != string::npos )
+		else if( macro_args[0] == "index" )
 		{
+			if( macro_args.size() != 1 )
+				propSym.err( "$[index] takes no args." );
 			if( prop->getParent()->getType() != Node::Array )
-			{
-				prop->getSchema()->get( "cppsym" ).err( "$[index] only valid for element of array." );
-			}
-			sym.replace( i, strlen("$[index]"), prop->getName() );
+				propSym.err( "$[index] only valid for element of array." );
+
+			sym.replace( macro_start, macro_len, prop->getName() );
 		}
-		else if( (i = sym.find("$[ancestor]")) != string::npos )
+		else if( macro_args[0] == "ancestor" )
 		{
+			if( macro_args.size() != 1 )
+				propSym.err( "$[ancestor] takes no args." );
+
 			bool resolved = false;
 			for( Property *parent = prop->getParent(); parent; parent = parent->getParent() )
 			{
 				if( parent->getSchema()->getp("cppsym") )
 				{
 					resolved = true;
-					sym.replace( i, strlen("$[ancestor]"), getCppSymbol(parent) );
+					sym.replace( macro_start, macro_len, getCppSymbol(parent) );
 					break;
 				}
 			}
+
 			if( !resolved )
-				prop->getSchema()->get( "cppsym" ).err( "Cannot resolve $[ancestor]" );
+				propSym.err( "Cannot resolve $[ancestor]" );
 		} 
+		else if( macro_args[0] == "gene" )
+		{
+			if( macro_args.size() != 3 )
+				propSym.err( "expecting $[gene, GENE_NAME, MEMBER]" );
+
+			string geneName = macro_args[1];
+			string member = macro_args[2];
+			string expansion;
+
+			string err = propSym.getLocation().getDescription() + ": Cannot find gene '" + geneName + "'";
+
+			if( member == "min" )
+			{
+				expansion = string("genome::GenomeUtil::getGene(\"") + geneName + "\", \"" + err + "\")->to___Interpolated()->smin.__val";
+			}
+			else if( member == "max" )
+			{
+				expansion = string("genome::GenomeUtil::getGene(\"") + geneName + "\", \"" + err + "\")->to___Interpolated()->smax.__val";
+			}
+			else
+			{
+				propSym.err( "Invalid gene member." );
+			}
+
+			sym.replace( macro_start, macro_len, expansion );
+		}
 		else
 		{
 			break;

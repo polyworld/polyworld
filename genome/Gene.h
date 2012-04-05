@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "dynamic.h"
 #include "NeurGroupType.h"
 #include "Scalar.h"
 
@@ -74,6 +75,7 @@ namespace genome
 	CAST_TO(NeurGroup);
 	CAST_TO(NeurGroupAttr);
 	CAST_TO(SynapseAttr);
+	CAST_TO(__Interpolated);
 #undef CAST_TO
 	};
 
@@ -109,6 +111,8 @@ namespace genome
 	// ================================================================================
 	class __InterpolatedGene : virtual Gene
 	{
+		PROPLIB_DYNAMIC_PROPERTIES
+
 	public:
 		enum Rounding
 		{
@@ -135,8 +139,8 @@ namespace genome
 		void printRanges( FILE *file );
 
 	private:
-		const Scalar smin;
-		const Scalar smax;
+		Scalar smin;
+		Scalar smax;
 		Rounding rounding;
 	};
 
@@ -186,7 +190,7 @@ namespace genome
 	// === For public use; holds single mutable value interpolated over a range.
 	// ===
 	// ================================================================================
-	class MutableScalarGene : public NonVectorGene, private __InterpolatedGene
+	class MutableScalarGene : public NonVectorGene, public __InterpolatedGene
 	{
 	public:
 		MutableScalarGene( const char *name,
@@ -213,7 +217,7 @@ namespace genome
 	// === the mutable data of the Genome.
 	// ===
 	// ================================================================================
-	class ImmutableInterpolatedGene : virtual public Gene, private __InterpolatedGene
+	class ImmutableInterpolatedGene : virtual public Gene, public __InterpolatedGene
 	{
 	public:
 		ImmutableInterpolatedGene( const char *name,
@@ -267,7 +271,7 @@ namespace genome
 	// === variable neuron counts
 	// ===
 	// ================================================================================
-	class MutableNeurGroupGene : public NeurGroupGene, private __InterpolatedGene
+	class MutableNeurGroupGene : public NeurGroupGene, public __InterpolatedGene
 	{
 	public:
 		MutableNeurGroupGene( const char *name,
@@ -316,7 +320,7 @@ namespace genome
 	// === For public use; provides a per-group attribute vector
 	// ===
 	// ================================================================================
-	class NeurGroupAttrGene : virtual public Gene, private __InterpolatedGene
+	class NeurGroupAttrGene : virtual public Gene, public __InterpolatedGene
 	{
 	public:
 		NeurGroupAttrGene( const char *name,
@@ -355,7 +359,7 @@ namespace genome
 	// === For public use; provides a per-synapse attribute matrix
 	// ===
 	// ================================================================================
-	class SynapseAttrGene : virtual public Gene, private __InterpolatedGene
+	class SynapseAttrGene : virtual public Gene, public __InterpolatedGene
 	{
 	public:
 		SynapseAttrGene( const char *name,

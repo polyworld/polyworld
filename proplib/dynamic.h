@@ -11,8 +11,8 @@ class TSimulation;
 // Putting this macro in a class declaration provides the dynamic properties evaluation function access
 // to private members.
 #define PROPLIB_DYNAMIC_PROPERTIES \
-	friend void DynamicProperties_Init( proplib::DynamicProperties::UpdateContext *context ); \
-	friend void DynamicProperties_Update( proplib::DynamicProperties::UpdateContext *context );
+	friend void proplib::DynamicProperties_Init( proplib::DynamicProperties::UpdateContext *context ); \
+	friend void proplib::DynamicProperties_Update( proplib::DynamicProperties::UpdateContext *context );
 
 namespace proplib
 {
@@ -73,17 +73,20 @@ namespace proplib
 										DynamicPropertyList &dynamicProperties,
 										DynamicPropertyIndexMap &indexMap );
 		static std::string generateInitFunctionBody( class DynamicScalarProperty *prop,
-													 DynamicPropertyList &antecedents );
+													 DynamicPropertyList &antecedents,
+													 DynamicPropertyIndexMap &indexMap );
 		static void generateUpdateSource( std::ofstream &out,
 										  DynamicPropertyList &dynamicProperties,
 										  DynamicPropertyIndexMap &indexMap );
 		static std::string generateUpdateFunctionBody( class DynamicScalarProperty *prop,
-													   DynamicPropertyList &antecedents );
+													   DynamicPropertyList &antecedents,
+													   DynamicPropertyIndexMap &indexMap );
 
 		static std::string getStateStructName( DynamicScalarProperty *prop );
 		static std::string getDataLibType( DynamicScalarProperty *prop );
 		static std::string getCppType( class Property *prop );
 		static std::string getCppSymbol( class Property *prop );
+		static std::string getMetadataLValue( class Property *prop, DynamicPropertyIndexMap &indexMap );
 
 		static void getDynamicProperties( Property *container, DynamicPropertyList &result );
 		static void sortDynamicProperties( DynamicPropertyList &properties,
@@ -100,4 +103,7 @@ namespace proplib
 		static UpdateContext *_context;
 	};
 
+	// These functions are implemented by the generated code.
+	void DynamicProperties_Init( DynamicProperties::UpdateContext *context );
+	void DynamicProperties_Update( DynamicProperties::UpdateContext *context );
 }

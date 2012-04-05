@@ -43,7 +43,7 @@ class TSimulation : public QObject
 	PROPLIB_DYNAMIC_PROPERTIES
 
 public:
-	TSimulation( std::string worldfilePath, std::string monitorfilePath );
+	TSimulation( std::string worldfilePath, std::string monitorPath, std::string monitorOverlayPath );
 	virtual ~TSimulation();
 
 	void Step();
@@ -381,6 +381,7 @@ private:
 	} fFoodGrowthModel;
 	
 	float fFoodRemoveEnergy;
+	bool fFoodRemoveFirstEat;
 	float fFoodEnergyIn;
 	float fFoodEnergyOut;
 	float fTotalFoodEnergyIn;

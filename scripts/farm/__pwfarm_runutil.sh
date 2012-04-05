@@ -77,6 +77,8 @@ function validate_runid()
 	    err "A Run ID cannot contain 'run_[0-9]*'"
 	elif [ "$node" == "results" ]; then
 	    err "A Run ID cannot contain /results/"
+	elif [ "$node" == ".." ]; then
+	    err "A Run ID cannot contain '..'"
 	fi
 
 	prev=$runid
