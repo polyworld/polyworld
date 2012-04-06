@@ -1,3 +1,8 @@
+RecordMovie {
+  type    Bool
+  default True
+}
+
 ########################################
 ###
 ### Charts
@@ -6,10 +11,12 @@
 
 BirthRate {
   type    Object
+  default {}
   properties {
     
     Enabled {
       type    Bool
+      defaults { gui True; term False }
     }
 
   }
@@ -17,10 +24,12 @@ BirthRate {
 
 Fitness {
   type    Object
+  default {}
   properties {
     
     Enabled {
       type    Bool
+      defaults { gui True; term False }
     }
 
   }
@@ -28,10 +37,12 @@ Fitness {
 
 FoodEnergy {
   type    Object
+  default {}
   properties {
     
     Enabled {
       type    Bool
+      defaults { gui True; term False }
     }
 
   }
@@ -39,10 +50,12 @@ FoodEnergy {
 
 Population {
   type    Object
+  default {}
   properties {
     
     Enabled {
       type    Bool
+      defaults { gui True; term False }
     }
 
   }
@@ -57,19 +70,23 @@ Population {
 
 Brain {
   type    Object
+  default {}
   properties {
     
     Enabled {
       type    Bool
+      defaults { gui True; term False }
     }
 
     Frequency {
       type    Int
       min     1
+      default 1
     }
 
     AgentTracker {
       type    String
+      default "Fittest"
     }
 
   }
@@ -84,10 +101,12 @@ Brain {
 
 POV {
   type    Object
+  default {}
   properties {
     
     Enabled {
       type    Bool
+      defaults { gui True; term False }
     }
 
   }
@@ -102,16 +121,18 @@ POV {
 
 StatusText {
   type    Object
+  default {}
   properties {
     
     Enabled {
       type    Bool
+      default True
     }
 
     FrequencyDisplay {
       type    Int
       min     1
-      default 1
+      defaults { gui 1; term 100 }
     }
 
     FrequencyStore {
@@ -137,10 +158,12 @@ StatusText {
 
 Farm {
   type    Object
+  default {}
   properties {
     
     Enabled {
       type    Bool
+      default True
     }
 
     Frequency {
@@ -155,76 +178,134 @@ Farm {
 
 ########################################
 ###
+### CLASS Scene
+###
+########################################
+
+class Scene {
+  Enabled {
+    type    Bool
+    defaults { gui True; term False }
+  }
+
+  Name {
+    type    String
+    default ""
+    assert ( not Enabled or (len(Name) > 0) )
+  }
+
+  Title {
+    type    String
+    default Name
+  }
+
+  CameraSettings {
+    type    String
+    default "Default"
+  }
+
+  CameraControllerSettings {
+    type    String
+    default ""
+    assert ( not Enabled or (len(CameraControllerSettings) > 0) )
+  }
+
+  Buffer {
+    type    Object
+    default {}
+    properties {
+
+      Width {
+        type    Int
+        min     1
+        default 300
+      }
+    
+      Height {
+        type    Int
+        min     1
+        default 300
+      }
+
+    }
+  }
+
+  Movie {
+    type    Object
+    default {}
+    properties {
+
+      Record {
+        type    Bool
+        default RecordMovie
+      }
+
+      Path {
+        type    String
+        default ""
+        assert ( not Record or not Enabled or (len(Path) > 0) )
+      }
+
+      SampleFrequency {
+        type    Int
+        min     1
+        default 1
+      }
+
+      SampleDuration {
+        type    Int
+        min     1
+        max     SampleFrequency
+        default 1
+      }
+    }
+  }
+}
+
+
+########################################
+###
 ### Scenes
 ###
 ########################################
 
-Scenes {
-  type    Array
-  element {
-    type    Object
-    properties {
+MainScene {
+  type    Scene
+  default {
+    Enabled                   True
+    Name                      "Main"
+    CameraControllerSettings  "Main"
+    Buffer {
+      Width                   640
+      Height                  480
+    }
+    Movie {
+      Path                    "movie.pmv"
+    }
+  }
+}
 
-      Name {
-        type    String
-      }
+OverheadScene {
+  type    Scene
+  default {
+    Name                      "Overhead"
+    CameraControllerSettings  "Overhead"
+    Movie {
+      Record                  False
+      Path                    "overhead.pmv"
+    }
+  }
+}
 
-      Title {
-        type    String
-        default Name
-      }
-
-      CameraSettings {
-        type    String
-      }
-
-      CameraControllerSettings {
-        type    String
-      }
-
-      Buffer {
-        type    Object
-	properties {
-
-          Width {
-            type    Int
-            min     1
-          }
-    
-          Height {
-            type    Int
-            min     1
-          }
-
-	}
-      }
-
-      Movie {
-        type    Object
-	properties {
-
-	  Record {
-	    type    Bool
-	  }
-
-	  Path {
-	    type    String
-	  }
-
-	  SampleFrequency {
-	    type    Int
-	    min	    1
-	  }
-
-	  SampleDuration {
-	    type    Int
-	    min	    1
-	    max	    SampleFrequency
-	  }
-
-	}
-      }
-
+FittestPOVScene {
+  type    Scene
+  default {
+    Name                      "FittestPOV"
+    Title                     "Fittest POV"
+    CameraControllerSettings  "POV"
+    Movie {
+      Record                  False
+      Path                    "fittestpov.pmv"
     }
   }
 }
@@ -238,6 +319,16 @@ Scenes {
 
 AgentTrackers {
   type    Array
+  default [
+    {
+      Name          "Fittest"
+      TrackMode     Agent
+      SelectionMode Fitness
+      Fitness {
+        Rank        1
+      }
+    }
+  ]
   element {
     type    Object
     properties {
@@ -271,7 +362,7 @@ AgentTrackers {
           Rank {
             type    Int
             default 1
-	    assert ( Rank != 0 ) # 1 = best, -1 = worst
+            assert ( Rank != 0 ) # 1 = best, -1 = worst
           }
         }
       }
@@ -289,6 +380,17 @@ AgentTrackers {
 
 CameraSettings {
   type    Array
+  default [
+    {
+      Name        "Default"
+      Color {
+        R         0.3
+        G         0.3
+        B         0.3
+      }
+      FieldOfView 90.0
+    }
+  ]
   element {
     type    Object
     properties {
@@ -336,6 +438,41 @@ CameraSettings {
 
 CameraControllerSettings {
   type    Array
+  default [
+    {  
+      Name            "Main"
+      Mode            Rotate
+      Rotate {
+        Radius        0.6
+        Height        0.35
+        Rate          0.09
+        AngleStart    0.0
+        Fixation {
+          X           0.5
+          Y           0.0
+          Z           0.5
+        }
+      }
+    }
+    ,
+    {
+      Name            "Overhead"
+      Mode            AgentTracking
+      AgentTracking {
+        AgentTracker  "Fittest"
+        Perspective   Overhead
+      }
+    }
+    ,
+    {
+      Name            "POV"
+      Mode            AgentTracking
+      AgentTracking {
+        AgentTracker  "Fittest"
+        Perspective   POV
+      }
+    }
+  ]
   element {
     type    Object
     properties {
@@ -346,17 +483,17 @@ CameraControllerSettings {
 
       Mode {
         type    Enum
-	enum    Values {
-	  Rotate,
-	  AgentTracking
-   	}
+        enum    Values {
+          Rotate,
+          AgentTracking
+        }
       }
 
       Rotate {
         type    Object
-	default {
-	}
-	properties {
+        default {
+        }
+        properties {
 
           Radius {
             type    Float
@@ -378,60 +515,60 @@ CameraControllerSettings {
             default 0.0
           }
 
-	  Fixation {
-	    type    Object
-	    default {
-	    }	    
-	    properties {
+          Fixation {
+            type    Object
+            default {
+            }       
+            properties {
 
-	      X {
-	        type    Float
-		default 0.5
-		min	0.0
-		max	1.0
-	      }
+              X {
+                type    Float
+                default 0.5
+                min     0.0
+                max     1.0
+              }
 
-	      Y {
-	        type    Float
-		default 0.0
-		min	0.0
-		max	1.0
-	      }
+              Y {
+                type    Float
+                default 0.0
+                min     0.0
+                max     1.0
+              }
 
-	      Z {
-	        type    Float
-		default 0.5
-		min	0.0
-		max	1.0
-	      }
+              Z {
+                type    Float
+                default 0.5
+                min     0.0
+                max     1.0
+              }
 
-	    }
-	  }
+            }
+          }
 
-	}
+        }
       }
 
       AgentTracking {
         type    Object
-	default {
-	}
-	properties {
-	  
-	  AgentTracker {
-	    type    String
-	    default "nil"
-	  }
+        default {
+        }
+        properties {
+          
+          AgentTracker {
+            type    String
+            default "nil"
+          }
 
-	  Perspective {
-	    type    Enum
-	    default Overhead
-	    enum    Values {
-	      Overhead,
-	      POV
-	    }
-	  }
+          Perspective {
+            type    Enum
+            default Overhead
+            enum    Values {
+              Overhead,
+              POV
+            }
+          }
 
-	}        
+        }        
       }
 
     }

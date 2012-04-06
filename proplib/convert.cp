@@ -4,6 +4,7 @@
 #include <map>
 #include <stack>
 
+#include "builder.h"
 #include "dom.h"
 #include "editor.h"
 #include "misc.h"
@@ -376,6 +377,28 @@ void WorldfileConverter::convertV1PropertiesToV2( DocumentEditor *editor, Docume
 
 void WorldfileConverter::convertDeprecatedV2Properties( DocumentEditor *editor, Document *doc )
 {
+	// ---
+	// --- LegacyMode
+	// ---
+	{
+		Property *legacy = doc->getp( "LegacyMode" );
+		if( legacy )
+		{
+			if( (bool)*legacy )
+				editor->setMeta( "@defaults", "legacy" );
+
+			editor->remove( legacy );
+		}
+	}
+
+	// ---
+	// --- @defaults
+	// ---
+	{
+		if( !doc->hasMeta("@defaults") )
+			editor->setMeta( "@defaults", "rev0" );
+	}
+
 	// ---
 	// --- FoodTypes
 	// ---

@@ -372,10 +372,11 @@ void overlay( const char *pathDoc, const char *pathOverlay, const char *selector
 {
 	DocumentBuilder builder;
 	Document *doc = builder.buildDocument( pathDoc );
-	OverlayDocument *overlay = builder.buildOverlayDocument( pathOverlay );
+	Document *overlayDoc = builder.buildDocument( pathOverlay );
 
 	DocumentEditor editor( doc );
-	overlay->apply( atoi(selector), &editor );
+	Overlay overlay;
+	overlay.applyDocument( overlayDoc, atoi(selector), &editor );
 
 	DocumentWriter writer( cout );
 	writer.write( doc );
@@ -386,10 +387,11 @@ void overlay( const char *pathSchema, const char *pathDoc, const char *pathOverl
 	DocumentBuilder builder;
 	SchemaDocument *schema = builder.buildSchemaDocument( pathSchema );
 	Document *doc = parseDoc( schema, pathDoc );
-	OverlayDocument *overlay = builder.buildOverlayDocument( pathOverlay );
+	Document *overlayDoc = builder.buildDocument( pathOverlay );
 
 	DocumentEditor editor( schema, doc );
-	overlay->apply( atoi(selector), &editor );
+	Overlay overlay;
+	overlay.applyDocument( overlayDoc, atoi(selector), &editor );
 
 	DocumentWriter writer( cout );
 	writer.write( doc );

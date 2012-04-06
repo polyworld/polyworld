@@ -24,7 +24,8 @@ DocumentWriter::DocumentWriter( ostream &out )
 
 void DocumentWriter::write( Document *doc )
 {
-	_firstProperty = true;
+	_doc = doc;
+	_prevPropertyDoc = doc;
 	writeMetaProperties( doc );
 	writeProperties( doc );
 }
@@ -145,7 +146,22 @@ void DocumentWriter::writeMetaProperties( Document *doc )
 
 	itfor( vector<MetaProperty *>, sorted, it )
 	{
-		writeToken( findBeginToken(*it, Token::MetaId) );
+		MetaProperty *prop = *it;
+		Token *tokId = findBeginToken(prop, Token::MetaId);
+		if( tokId )
+		{
+			if( (prop != sorted.front()) && !tokId->hasNewline() )
+				_out << "\n";
+			writeToken( tokId );
+		}
+		else
+		{
+			if( prop != sorted.front() )
+				_out << "\n";
+			
+			_out << prop->getId().getName();
+		}
+
 		writeExpression( (*it)->getExpression() );
 	}
 }
@@ -155,18 +171,8 @@ void DocumentWriter::writeProperties( ObjectProperty *object )
 	vector<Property *> sorted;
 	sortChildren( object, sorted );
 
-	Document *docPrev = NULL;
-
 	itfor( vector<Property *>, sorted, it )
-	{
-		Document *doc = (*it)->getLocation().getDocument(); 
-		if( docPrev && (doc != docPrev) )
-			_out << "\n";
-
 		writeProperty( *it );
-
-		docPrev = doc;
-	}
 }
 
 void DocumentWriter::writeProperty( Property *prop )
@@ -176,17 +182,17 @@ void DocumentWriter::writeProperty( Property *prop )
 
 	if( prop->getParent()->getType() != Node::Array )
 	{
-		string decoration = findBeginToken( prop, Token::Id )->getDecorationString();
-		if( !_firstProperty && decoration.empty() )
-		{
-			// This must be the first property from another document.
-			decoration = "\n";
-		}
+		Token *tokId = findBeginToken( prop, Token::Id );
+		string decoration = tokId->getDecorationString();
+
+		Document *doc = prop->getLocation().getDocument();
+		if( ( (doc != _doc) || (doc != _prevPropertyDoc) ) && !tokId->hasNewline() )
+			decoration = "\n" + decoration;
+		_prevPropertyDoc = doc;
+
 		_out << decoration;
 		_out << prop->getName();
 	}
-
-	_firstProperty = false;
 
 	switch( prop->getType() )
 	{

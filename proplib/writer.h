@@ -44,7 +44,8 @@ namespace proplib
 
 		void writeScalarNames( class Property *prop, int depthStart );
 
-		bool _firstProperty;
+		Document *_prevPropertyDoc;
+		Document *_doc;
 		std::ostream &_out;
 	};
 

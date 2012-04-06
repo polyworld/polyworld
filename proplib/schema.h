@@ -1,5 +1,6 @@
 #pragma once
 
+#include <list>
 #include <set>
 
 #include "dom.h"
@@ -23,7 +24,7 @@ namespace proplib
 
 		virtual ~SchemaDocument();
 
-		void apply( Document *values );
+		void apply( Document *doc );
 		void makePathDefaults( Document *values, SymbolPath *symbolPath );
 
 	private:
@@ -43,9 +44,9 @@ namespace proplib
 
 		void makePathDefaults( ObjectProperty &schema, __ContainerProperty &value, SymbolPath::Element *pathElement );
 
-		bool isLegacyMode( Document *values );
+		void parseDefaults( Document *doc );
 		Property *createDefault( Property &schema );
 
-		bool _legacyMode;
+		std::list<std::string> _defaults;
 	};
 }

@@ -107,6 +107,7 @@ namespace proplib
 			MetaProperty,
 			Object,
 			Property,
+			PropertyValue,
 			Id,
 			Array,
 			Enum,
@@ -141,7 +142,8 @@ namespace proplib
 	public:
 		SyntaxNode *parseDocument( std::string path, std::istream *in );
 		SyntaxNode *parseSymbolPath( std::string text );
-		SyntaxNode *parseExpression( std::string text );
+		SyntaxNode *parsePropertyValue( std::string text );
+		SyntaxNode *parseMetaPropertyValue( std::string text );
 
 	private:
 		void init( std::string path, std::istream *in );
@@ -155,6 +157,7 @@ namespace proplib
 		void parseMetaProperties();
 		void parseObject();
 		void parseProperty();
+		SyntaxNode *parsePropertyValue();
 		void parseArray();
 		void parseDyn();
 		void parseDynAttrs();

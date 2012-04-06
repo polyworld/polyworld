@@ -10,70 +10,44 @@ using namespace proplib;
 
 // ----------------------------------------------------------------------
 // ----------------------------------------------------------------------
-// --- CLASS OverlayDocument
+// --- CLASS Overlay
 // ----------------------------------------------------------------------
 // ----------------------------------------------------------------------
 
-OverlayDocument::OverlayDocument( string name, string path )
-: Document( name, path )
+void Overlay::applyDocument( Document *overlay, DocumentEditor *editor )
 {
+	_depth = 1;
+	apply( *overlay, editor );
 }
 
-OverlayDocument::~OverlayDocument()
+void Overlay::applyDocument( Document *overlay, int overlayIndex, DocumentEditor *editor )
 {
+	Property &overlays = overlay->get( "overlays" );
+	if( overlay->props().size() > 1 )
+		overlay->err( "Expecting only 'overlays' at top-level." );
+
+	_depth = 3;
+
+	Property &overlayClause = overlays.get( overlayIndex );
+	if( overlayClause.getType() != Node::Object )
+		overlayClause.err( "Expecting Object" );
+	
+	apply( overlayClause, editor );
 }
 
-void OverlayDocument::validate()
+void Overlay::applyEmbedded( Document *doc, DocumentEditor *editor )
 {
-	_hasClauses = getp( "overlays" ) != NULL;
-
-	if( _hasClauses )
-	{
-		if( size() != 1 )
-			err( "Overlay document should consist only of 'overlays' at top-level." );
-
-		Property &overlays = get( "overlays" );
-		if( overlays.getType() != Node::Array )
-			overlays.err( "Should be an array." );
-
-		itfor( PropertyMap, overlays.elements(), it )
-		{
-			if( it->second->getType() != Node::Object )
-				it->second->err( "Expecting Object" );
-		}
-	}
+	Property &overlay = doc->get( "overlay" );
+	_depth = 2;
+	apply( overlay, editor );
 }
 
-void OverlayDocument::apply( DocumentEditor *editor )
+string Overlay::getDocumentPropertyName( Property &overlayProperty )
 {
-	if( _hasClauses )
-		err( "Expected to have only single overlay clause -- not expecting overlays[]" );
-
-	apply( *this, editor );
+	return overlayProperty.getFullName( _depth );
 }
 
-void OverlayDocument::apply( int index, DocumentEditor *editor )
-{
-	if( !_hasClauses )
-		err( "Expected to have overlays[] at document root." );
-
-	apply( getClause(index), editor );
-}
-
-Property &OverlayDocument::getClause( int index )
-{
-	return get( "overlays" ).get( index );
-}
-
-string OverlayDocument::getDocumentPropertyName( Property &overlayProperty )
-{
-	if( _hasClauses )
-		return overlayProperty.getFullName( 3 );
-	else
-		return overlayProperty.getFullName( 1 );
-}
-
-void OverlayDocument::apply( Property &overlayProp, DocumentEditor *editor )
+void Overlay::apply( Property &overlayProp, DocumentEditor *editor )
 {
 	if( overlayProp.getType() == Node::Scalar )
 	{

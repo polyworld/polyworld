@@ -17,6 +17,7 @@ namespace proplib
 
 		virtual ~DocumentEditor();
 
+		void setMeta( std::string name, std::string value );
 		void set( std::string symbolPath, std::string value );
 		void set( class Property *prop, std::string value );
 		void move( class Property *prop, class Property *newParent, bool modifyOldParent );

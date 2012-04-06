@@ -178,7 +178,7 @@ inline float AverageAngles( float a, float b )
 //---------------------------------------------------------------------------
 // TSimulation::TSimulation
 //---------------------------------------------------------------------------
-TSimulation::TSimulation( string worldfilePath, string monitorPath, string monitorOverlayPath )
+TSimulation::TSimulation( string worldfilePath, string monitorPath )
 	:
 		fLockStepWithBirthsDeathsLog(false),
 		fLockstepFile(NULL),
@@ -411,7 +411,7 @@ TSimulation::TSimulation( string worldfilePath, string monitorPath, string monit
 	// ---
 	// --- Init Monitors
 	// ---
-	monitorManager = new MonitorManager( this, monitorPath, monitorOverlayPath );
+	monitorManager = new MonitorManager( this, monitorPath );
 
 	// ---
 	// --- Init Event Filtering

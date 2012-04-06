@@ -3,10 +3,12 @@
 #include <assert.h>
 
 #include <string>
+#include <sstream>
 
 #include "builder.h"
 #include "editor.h"
 #include "misc.h"
+#include "overlay.h"
 
 using namespace std;
 using namespace proplib;
@@ -47,18 +49,24 @@ void SchemaDocument::init()
 	injectClasses( this );
 }
 
-void SchemaDocument::apply( Document *values )
+void SchemaDocument::apply( Document *doc )
 {
-	_legacyMode = isLegacyMode( values );
+	parseDefaults( doc );
 
-	normalize( *this, *values );
-	validate( *values );
+	if( doc->getp("overlay") )
+	{
+		DocumentEditor editor( this, doc );
+		Overlay overlay;
+		overlay.applyEmbedded( doc, &editor );
+	}
+
+	normalize( *this, *doc );
+	validate( *doc );
 }
 
 void SchemaDocument::makePathDefaults( Document *values, SymbolPath *symbolPath )
 {
-	_legacyMode = isLegacyMode( values );
-
+	parseDefaults( values );
 	makePathDefaults( *this, *values, symbolPath->head );
 }
 
@@ -207,6 +215,12 @@ void SchemaDocument::normalizeArray( ObjectProperty &propertySchema, ArrayProper
 
 void SchemaDocument::validate( Property &propertyValue )
 {
+	if( (0 == strcmp(propertyValue.getName(), "overlay"))
+		&& (propertyValue.getParent()->getSubtype() == Node::Document) )
+	{
+		return;
+	}
+
 	if( propertyValue.getSchema() == NULL )
 		propertyValue.err( "No definition in schema." );
 
@@ -439,7 +453,7 @@ void SchemaDocument::validateCommonAttribute( Property &attr, Property &value )
 			 || attrName == "cppsym"
 			 || attrName == "type"
 			 || attrName == "default"
-			 || attrName == "legacy"
+			 || attrName == "defaults"
 			 || attrName == "optional" )
 	{
 		// no-op
@@ -505,27 +519,48 @@ void SchemaDocument::makePathDefaults( ObjectProperty &schema, __ContainerProper
 	}
 }
 
-bool SchemaDocument::isLegacyMode( Document *values )
+void SchemaDocument::parseDefaults( Document *doc )
 {
-	bool legacyMode = false;
-	Property *propLegacyMode = values->getp( "LegacyMode" );
-	if( propLegacyMode != NULL )
+	_defaults.clear();
+
+	if( doc->hasMeta("@defaults") )
 	{
-		legacyMode = (bool)*propLegacyMode;
+		string defaults = doc->getMeta("@defaults")->getExpression()->toString();
+		istringstream in( defaults );
+
+		while( !in.eof() )
+		{
+			string value;
+			in >> value;
+			assert( !value.empty() );
+			_defaults.push_back( value );
+		}
 	}
-	return legacyMode;
 }
 
 Property *SchemaDocument::createDefault( Property &schema )
 {
-	Property *propDefault = NULL;
-	if( _legacyMode )
-		propDefault = schema.getp( "legacy" );
+	Property *propDefault = schema.getp( "default" );
+	if( !propDefault )
+	{
+		Property *propDefaults = schema.getp( "defaults" );
+		if( propDefaults )
+		{
+			itfor( list<string>, _defaults, it )
+			{
+				propDefault = propDefaults->getp( *it );
+				if( propDefault )
+					break;
+			}
 
-	if( propDefault == NULL )
-		propDefault = schema.getp( "default" );
+			if( !propDefault )
+				propDefault = propDefaults->getp( "default" );
+		}
+	}
+	else if( schema.getp("defaults") )
+		propDefault->err( "If 'defaults' exists, 'default' must be a child of it." );
 
-	if( propDefault == NULL )
+	if( !propDefault )
 		return NULL;
 	else
 		return propDefault->clone( schema.getId() );

@@ -6,24 +6,21 @@ namespace proplib
 {
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
-	// --- CLASS OverlayDocument
+	// --- CLASS Overlay
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
-	class OverlayDocument : public Document
+	class Overlay
 	{
 	public:
-		OverlayDocument( std::string name, std::string path );
-		virtual ~OverlayDocument();
-
-		void validate();
-		void apply( class DocumentEditor *editor );
-		void apply( int index, class DocumentEditor *editor );
-		Property &getClause( int index );
-		std::string getDocumentPropertyName( Property &overlayProperty );
+		void applyDocument( Document *overlay, class DocumentEditor *editor );
+		void applyDocument( Document *overlay, int overlayIndex, class DocumentEditor *editor );
+		void applyEmbedded( Document *doc, class DocumentEditor *editor );
 
 	private:
 		void apply( Property &overlayProp, class DocumentEditor *editor );
 
-		bool _hasClauses;
+		std::string getDocumentPropertyName( Property &overlayProperty );
+
+		int _depth;
 	};
 }

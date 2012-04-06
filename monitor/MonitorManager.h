@@ -11,7 +11,7 @@ typedef std::list<class AgentTracker *> AgentTrackers;
 class MonitorManager
 {
  public:
-	MonitorManager( class TSimulation *simulation, std::string monitorPath, std::string monitorOverlayPath );
+	MonitorManager( class TSimulation *simulation, std::string monitorPath );
 	virtual ~MonitorManager();
 
 	const Monitors &getMonitors();

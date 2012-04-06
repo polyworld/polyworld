@@ -1068,9 +1068,23 @@ string Document::getPath()
 	return _path;
 }
 
+bool Document::hasMeta( string name )
+{
+	return getMeta( name ) != NULL;
+}
+
+MetaProperty *Document::getMeta( string name )
+{
+	MetaPropertyMap::iterator it = _metaprops.find(name);
+	if( it != _metaprops.end() )
+		return it->second;
+	else
+		return NULL;
+}
+
 void Document::addMeta( MetaProperty *prop )
 {
-	if( _metaprops.find( prop->getId() ) != _metaprops.end() )
+	if( hasMeta(prop->getId().getName()) )
 		prop->err( "Duplicate meta property" );
 
 	_metaprops[prop->getId()] = prop;

@@ -482,7 +482,22 @@ SyntaxNode *Parser::parseSymbolPath( string text )
 	return result;
 }
 
-SyntaxNode *Parser::parseExpression( string text )
+SyntaxNode *Parser::parsePropertyValue( string text )
+{
+	init( "<string>", new istringstream(text) );
+
+	next( Token::Bof );
+
+	SyntaxNode *result = parsePropertyValue();
+
+	next( Token::Eof );
+
+	delete _tokenizer;
+
+	return result;
+}
+
+SyntaxNode *Parser::parseMetaPropertyValue( string text )
 {
 	init( "<string>", new istringstream(text) );
 
@@ -615,6 +630,15 @@ void Parser::parseProperty()
 
 	PUSH_POP( Id );
 
+	parsePropertyValue();
+
+	POP( Property );
+}
+
+SyntaxNode *Parser::parsePropertyValue()
+{
+	PUSH_PEEK( PropertyValue );
+
 	switch( peek()->type )
 	{
 	case Token::LeftCurly:
@@ -633,7 +657,7 @@ void Parser::parseProperty()
 		break;
 	}
 
-	POP( Property );
+	return POP( PropertyValue );
 }
 
 void Parser::parseArray()
@@ -650,8 +674,11 @@ void Parser::parseArray()
 		while( true )
 		{
 			next( Token::LeftCurly );
+			PUSH( PropertyValue );
 			parseObject();
 			next( Token::RightCurly );
+			POP( PropertyValue );
+
 			if( peek()->type == Token::Comma )
 				next( Token::Comma );
 			else
@@ -661,6 +688,7 @@ void Parser::parseArray()
 	default:
 		while( true )
 		{
+			PUSH_PEEK( PropertyValue );
 			if( peek()->type == Token::Dyn )
 			{
 				parseDyn();
@@ -669,6 +697,8 @@ void Parser::parseArray()
 			{
 				parseExpression();
 			}
+			POP( PropertyValue );
+
 			if( peek()->type == Token::Comma )
 				next( Token::Comma );
 			else

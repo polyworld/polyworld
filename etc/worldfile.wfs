@@ -20,11 +20,6 @@
 #
 #   assert = expression that results in error if evaluates to False.
 #
-#   default = value used if not specified and LegacyMode == False or
-#             LegacyMode == True and legacy value is not provided.
-#
-#   legacy = value used if not specified and LegacyMode == True
-#
 #   $[...] = logical symbol reference in cppsym:
 #
 #      $[sim]: TSimulation pointer.
@@ -64,12 +59,6 @@ class Color {
 # SECTION Simulation meta-information
 #-------------------------------------------------------------------
 
-LegacyMode {
-  type    Bool
-  default False # This *has* to be False, because underlying proplib.cpp
-                # assumes False if it doesn't find it in the values file.
-}
-
 PassiveLockstep {
   type    Bool
   default False
@@ -92,8 +81,7 @@ SimulationSeed {
 
 GenomeLayout {
   type    Enum
-  default N
-  legacy  L
+  defaults { default N; legacy L }
   enum    Values {
     N,           # NeurGroup
     L            # Legacy
@@ -132,8 +120,7 @@ InitAgents {
 
 SeedAgents {
   type    Int
-  default InitAgents
-  legacy  0
+  defaults { default InitAgents; legacy 0 }
   min     0
   max     InitAgents
 }
@@ -154,8 +141,7 @@ InitFood {
 
 MinFood {
   type    Int
-  default 0
-  legacy  90
+  defaults { default 0; legacy 90 }
   min     0
 }
 
@@ -167,8 +153,7 @@ MaxFood {
 
 MaxFoodGrown {
   type    Int
-  default MaxFood
-  legacy  MinFood
+  defaults { default MaxFood; legacy MinFood }
   max     MaxFood
 }
 
@@ -181,8 +166,7 @@ FoodGrowthRate {
 
 FoodGrowthModel {
   type    Enum
-  default MaxIndependent
-  legacy  MaxRelative
+  defaults { default MaxIndependent; legacy MaxRelative }
   enum    Values {
     MaxRelative,     # decimal part multiplies (maxGrown - current) to give probability each step
     MaxIndependent   # decimal part is the raw probability each step
@@ -219,8 +203,7 @@ MaxFoodEnergy {
 
 RatioBarrierPositions {
   type    Bool
-  default True
-  legacy  False
+  defaults { default True; legacy False }
 }
 
 NumEnergyTypes {
@@ -1103,21 +1086,18 @@ PreBirthCycles {
 
 NumDepletionSteps {
   type    Int
-  default 0
-  legacy  0
+  defaults { default 0; legacy 0 }
   min     0
 }
 
 ApplyLowPopulationAdvantage {
   type    Bool
-  default False
-  legacy  False
+  defaults { default False; legacy False }
 }
 
 EnergyBasedPopulationControl {
   type    Bool
-  default True
-  legacy  False
+  defaults { default True; legacy False }
   assert  not EnergyBasedPopulationControl or ( not ApplyLowPopulationAdvantage and ( NumDepletionSteps == 0 ) and ( PopControlGlobal or PopControlDomains ) )
 }
 
@@ -1181,8 +1161,7 @@ YawEncoding {
     Oppose,
     Squash
   }
-  default Oppose
-  legacy  Squash
+  defaults { default Oppose; legacy Squash }
 }
 
 MinAgentMaxEnergy {
@@ -1397,8 +1376,7 @@ MinCrossoverPoints {
 
 MaxCrossoverPoints {
   type    Int
-  default 100
-  legacy  8
+  defaults { default 100; legacy 8 }
   min     MinCrossoverPoints
 }
 
@@ -1448,8 +1426,7 @@ MinInternalNeuralGroups {
 
 MaxInternalNeuralGroups {
   type    Int
-  default 20
-  legacy  5
+  defaults { default 20; legacy 5 }
   min     MinInternalNeuralGroups
 }
 
@@ -1631,8 +1608,7 @@ SeedDropExcitation {
 
 LogisticSlope {
   type    Float
-  default 1.0
-  legacy  0.5
+  defaults { default 1.0; legacy 0.5 }
 }
 
 MaxSynapseWeight {
@@ -1908,26 +1884,22 @@ EndOnPopulationCrash {
 
 StaticTimestepGeometry {
   type    Bool
-  default True
-  legacy  False
+  defaults { default True; legacy False }
 }
 
 ParallelInitAgents {
   type    Bool
-  default True
-  legacy  False
+  defaults { default True; legacy False }
 }
 
 ParallelInteract {
   type    Bool
-  default True
-  legacy  False
+  defaults { default True; legacy False }
 }
 
 ParallelCreateAgents {
   type    Bool
-  default True
-  legacy  False
+  defaults { default True; legacy False }
 }
 
 # This only takes effect if StaticTimestepGeometry is True.
@@ -1935,7 +1907,6 @@ ParallelCreateAgents {
 ParallelBrains {
   type    Bool
   default True
-  legacy  True
 }
 
 CheckPointFrequency {
@@ -2162,7 +2133,6 @@ RecordSeparations {
 CompressFiles {
   type    Bool
   default True
-  legacy  True
 }
 
 

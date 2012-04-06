@@ -86,15 +86,9 @@ int main( int argc, char** argv )
 	}
 
 	string monitorPath;
-	string monitorOverlayPath;
 	{
 		if( exists("./" + ui + ".mf") )
 			monitorPath = "./" + ui + ".mf";
-		else if( exists("./" + ui + ".mfo") )
-		{
-			monitorPath = "./etc/" + ui + ".mf";
-			monitorOverlayPath = "./" + ui  + ".mfo";
-		}
 		else
 			monitorPath = "./etc/" + ui + ".mf";
 	}
@@ -128,7 +122,7 @@ int main( int argc, char** argv )
 	QCoreApplication::setApplicationName( "polyworld" );
 
 
-	TSimulation *simulation = new TSimulation( worldfilePath, monitorPath, monitorOverlayPath );
+	TSimulation *simulation = new TSimulation( worldfilePath, monitorPath );
 	SimulationController *simulationController = new SimulationController( simulation );
 
 	int exitval;

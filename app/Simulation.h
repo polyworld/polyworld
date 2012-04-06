@@ -43,7 +43,7 @@ class TSimulation : public QObject
 	PROPLIB_DYNAMIC_PROPERTIES
 
 public:
-	TSimulation( std::string worldfilePath, std::string monitorPath, std::string monitorOverlayPath );
+	TSimulation( std::string worldfilePath, std::string monitorPath );
 	virtual ~TSimulation();
 
 	void Step();

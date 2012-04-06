@@ -39,6 +39,14 @@ DocumentEditor::~DocumentEditor()
 {
 }
 
+void DocumentEditor::setMeta( string name, string value )
+{
+	proplib::DocumentBuilder builder;
+	_doc->metaprops()[Identifier(name)] = builder.buildMetaProperty( DocumentLocation(_doc),
+																	 Identifier(name),
+																	 " " + value );
+}
+
 void DocumentEditor::set( string symbolPathString, string valueString )
 {
 	proplib::DocumentBuilder builder;
@@ -58,7 +66,7 @@ void DocumentEditor::set( string symbolPathString, string valueString )
 
 	if( sym.type != Symbol::Property )
 	{
-		err( string("Only non-runtime scalars can be edited. (") + symbolPathString + ")" );
+		err( string("Only properties can be edited. (") + symbolPathString + ")" );
 	}
 
 	set( sym.prop, valueString );
@@ -66,16 +74,15 @@ void DocumentEditor::set( string symbolPathString, string valueString )
 
 void DocumentEditor::set( Property *prop, std::string valueString )
 {
-	if( (prop->getType() != Node::Scalar)
-		|| (prop->getSubtype() == proplib::Node::Runtime) )
+	if( prop->getSubtype() == proplib::Node::Runtime )
 	{
-		err( string("Only non-runtime scalars can be edited. (") + prop->getFullName(1) + ")" );
+		err( string("Runtime properties cannot be edited. (") + prop->getFullName(1) + ")" );
 	}
 
 	proplib::DocumentBuilder builder;
-	Property *newProp = builder.buildConstScalarProperty( prop->getLocation(),
-														  prop->getName(),
-														  " " + valueString );
+	Property *newProp = builder.buildProperty( prop->getLocation(),
+											   prop->getName(),
+											   " " + valueString );
 	dynamic_cast<__ContainerProperty *>( prop->getParent() )->replace( newProp );
 }
 

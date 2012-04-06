@@ -535,6 +535,8 @@ namespace proplib
 
 		std::string getPath();
 
+		bool hasMeta( std::string name );
+		MetaProperty *getMeta( std::string name );
 		void addMeta( MetaProperty *prop );
 		MetaPropertyMap &metaprops();
 

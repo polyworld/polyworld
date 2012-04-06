@@ -20,20 +20,12 @@ using namespace std;
 //===========================================================================
 
 MonitorManager::MonitorManager( TSimulation *_simulation,
-								string monitorPath,
-								string monitorOverlayPath )
+								string monitorPath )
 	: simulation( _simulation )
 {
 	proplib::DocumentBuilder builder;
 	proplib::SchemaDocument *pschema = builder.buildSchemaDocument( "./etc/monitors.mfs" );
 	proplib::Document *pdoc = builder.buildDocument( monitorPath );
-	if( !monitorOverlayPath.empty() )
-	{
-		proplib::DocumentEditor editor( pschema, pdoc );
-		proplib::OverlayDocument *overlay = builder.buildOverlayDocument( monitorOverlayPath );
-		overlay->apply( &editor );
-		delete overlay;
-	}
 	pschema->apply( pdoc );
 	proplib::Document &doc = *pdoc;
 
@@ -130,10 +122,18 @@ MonitorManager::MonitorManager( TSimulation *_simulation,
 	// --- Scenes
 	// ---
 	{
-		size_t nscenes = doc.get( "Scenes" ).size();
-		for( size_t iscene = 0; iscene < nscenes; iscene++ )
+		const char *scenes[] = { "MainScene", "OverheadScene", "FittestPOVScene" };
+		int nscenes = sizeof(scenes) / sizeof(char*);
+
+		for( int iscene = 0; iscene < nscenes; iscene++ )
 		{
-			proplib::Property &propScene = doc.get( "Scenes" ).get( iscene );
+			proplib::Property &propScene = doc.get( scenes[iscene] );
+
+			// ---
+			// --- Enabled
+			// ---
+			if( !(bool)propScene.get("Enabled") )
+				continue;
 
 			// ---
 			// --- Camera Settings
