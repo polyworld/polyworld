@@ -226,13 +226,6 @@ TSimulation::TSimulation( string worldfilePath, string monitorPath, string monit
 
     srand(1);
 
-	/*
-	{
-		proplib::Parser parser;
-		parser.parseDocument( worldfilePath, new ifstream(worldfilePath.c_str()) )->dump(cout);
-		exit( 0 );
-	}
-	*/
 	proplib::Interpreter::init();
 
 	// ---
@@ -4396,10 +4389,11 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 				propFoodType.err( "Duplicate name." );
 			}
 
-			bool overrideFoodColor = propFoodType.get( "OverrideFoodColor" );
-			Color foodColor = overrideFoodColor
-				? propFoodType.get( "FoodColor" )
-				: doc.get( "FoodColor" );
+			Color foodColor;
+			if( propFoodType.hasProperty("FoodColor") )
+				foodColor = propFoodType.get( "FoodColor" );
+			else
+				foodColor = doc.get( "FoodColor" );
 			EnergyPolarity energyPolarity = propFoodType.get( "EnergyPolarity" );
 			Energy depletionThreshold = Energy::createDepletionThreshold( fFoodRemoveEnergy, energyPolarity );
 
@@ -4736,14 +4730,10 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 					}
 					nhsize = propPatch.get( "NeighborhoodSize" );
 
-					if( (bool)propPatch.get( "OverrideBrickColor" ) )
-					{
+					if( propPatch.hasProperty("BrickColor") )
 						color = propPatch.get( "BrickColor" );
-					}
 					else
-					{
 						color = doc.get( "BrickColor" );
-					}
 
 					bool on = propPatch.get( "On" );
 

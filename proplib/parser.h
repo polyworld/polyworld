@@ -20,6 +20,7 @@ namespace proplib
 			Comment,
 			Whitespace,
 			Enum,
+			Class,
 			Dyn,
 			Attrs,
 			MetaId,
@@ -57,6 +58,7 @@ namespace proplib
 		Token *prev;
 		Token *decoration;
 		int lineno;
+		int number;
 	};
 
 	// ----------------------------------------------------------------------
@@ -86,6 +88,7 @@ namespace proplib
 		std::string _sourceName;
 		std::istream *_in;
 		int _lineno;
+		int _number;
 
 		Token *_prev;
 	};
@@ -108,6 +111,7 @@ namespace proplib
 			Array,
 			Enum,
 			EnumValues,
+			Class,
 			Dyn,
 			DynAttr,
 			CppClause,
@@ -159,6 +163,7 @@ namespace proplib
 		SyntaxNode *parseExpression( bool parenDelimited = false);
 		SyntaxNode *parseSymbolPath();
 		void parseEnum();
+		void parseClass();
 
 		std::string _path;
 		Tokenizer *_tokenizer;

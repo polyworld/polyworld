@@ -12,6 +12,18 @@
 using namespace std;
 using namespace proplib;
 
+#define REMOVE( CONTAINER, PROPNAME )					\
+	{													\
+		Property *prop = (CONTAINER)->getp(PROPNAME);	\
+		if( prop )										\
+		{												\
+			editor->remove( prop );						\
+		}												\
+	}
+
+#define RAWVAL( PROP ) dynamic_cast<ConstScalarProperty *>(PROP)->getExpression()->toString(false)
+
+
 bool WorldfileConverter::isV1( string path )
 {
 	ifstream in( path.c_str() );
@@ -94,8 +106,6 @@ void WorldfileConverter::convertV1SyntaxToV2( string pathIn, string pathOut )
 
 void WorldfileConverter::convertV1PropertiesToV2( DocumentEditor *editor, Document *doc )
 {
-#define RAWVAL( PROP ) dynamic_cast<ConstScalarProperty *>(PROP)->getExpression()->toString(false)
-
 #define QUOTE( CONTAINER, PROPNAME )									\
 	{																	\
 		Property *prop = (CONTAINER)->getp(PROPNAME);					\
@@ -104,15 +114,6 @@ void WorldfileConverter::convertV1PropertiesToV2( DocumentEditor *editor, Docume
 			string value = RAWVAL(prop);								\
 			editor->set( prop, string("\"") + value + "\"" );			\
 		}																\
-	}
-
-#define REMOVE( CONTAINER, PROPNAME )					\
-	{													\
-		Property *prop = (CONTAINER)->getp(PROPNAME);	\
-		if( prop )										\
-		{												\
-			editor->remove( prop );						\
-		}												\
 	}
 
 #define SETIF( CONTAINER, PROPNAME, OLDVAL, NEWVAL )		\
@@ -371,4 +372,61 @@ void WorldfileConverter::convertV1PropertiesToV2( DocumentEditor *editor, Docume
 		}
 	}
 
+}
+
+void WorldfileConverter::convertDeprecatedV2Properties( DocumentEditor *editor, Document *doc )
+{
+	// ---
+	// --- FoodTypes
+	// ---
+	{
+		Property *foodTypes = doc->getp( "FoodTypes" );
+		if( foodTypes )
+		{
+			itfor( PropertyMap, foodTypes->elements(), it_foodType )
+			{
+				Property *foodType = it_foodType->second;
+
+				Property *overrideColor = foodType->getp( "OverrideFoodColor" );
+				if( overrideColor )
+				{
+					if( !(bool)*overrideColor )
+						REMOVE( foodType, "FoodColor" );
+
+					editor->remove( overrideColor );
+				}
+			}
+		}
+	}
+
+	// ---
+	// --- Domains
+	// ---
+	{
+		Property *domains = doc->getp( "Domains" );
+		if( domains )
+		{
+			itfor( PropertyMap, domains->elements(), it_domain )
+			{
+				Property *domain = it_domain->second;
+
+				Property *brickPatches = domain->getp( "BrickPatches" );
+				if( brickPatches )
+				{
+					itfor( PropertyMap, brickPatches->props(), it_patch )
+					{
+						Property *patch = it_patch->second;
+						Property *overrideColor = patch->getp( "OverrideBrickColor" );
+						if( overrideColor )
+						{
+							if( !(bool)*overrideColor )
+								REMOVE( patch, "BrickColor" );
+
+							editor->remove( overrideColor );
+						}
+					}
+				}
+			}
+		}
+	}
 }

@@ -34,6 +34,31 @@
 #                                  where MEMBER can be: min, max.
 ##########################################################################
 
+#-------------------------------------------------------------------
+# SECTION Custom Datatypes
+#-------------------------------------------------------------------
+
+class Color {
+  R {
+    type    Float
+    min     0.0
+    max     1.0
+    default 0.0
+  }
+  G {
+    type    Float
+    min     0.0
+    max     1.0
+    default 0.0
+  }
+  B {
+    type    Float
+    min     0.0
+    max     1.0
+    default 0.0
+  }
+}
+
 
 #-------------------------------------------------------------------
 # SECTION Simulation meta-information
@@ -213,7 +238,6 @@ FoodTypes {
     {
       Name "Standard"
       EnergyPolarity [ 1 ]
-      OverrideFoodColor False
     }
   ]
   
@@ -236,37 +260,10 @@ FoodTypes {
         }
       }
 
-      # Does this type have a color that overrides the global FoodColor?
-      OverrideFoodColor {
-        type    Bool
-        default True
-      }
-
+      # Optional override of global FoodColor
       FoodColor {
-        type    Object
-        default {
-          R    0.2
-          G    0.6
-          B    0.2
-        }
-      
-        properties {
-          R {
-            type    Float
-            min     0.0
-            max     1.0
-          }
-          G {
-            type    Float
-            min     0.0
-            max     1.0
-          }
-          B {
-            type    Float
-            min     0.0
-            max     1.0
-          }
-        }
+        type     Color
+        optional True
       }
 
     }
@@ -332,10 +329,10 @@ AgentMetabolisms {
 
       EatMultiplier {
         type    Array
-        cppsym  "$[ancestor]->eatMultiplier"
         min     NumEnergyTypes
         max     NumEnergyTypes
         default [ 1 ]
+        cppsym  "$[ancestor]->eatMultiplier"
         element {
           type    Float
           cppsym  "$[ancestor].values[ $[index] ]"
@@ -464,24 +461,28 @@ Domains {
 
       CenterX {
         type    Float
+        default 0.5
         exmin   0.0
         exmax   1.0
       }
 
       CenterZ {
         type    Float
+        default 0.5
         exmin   0.0
         exmax   1.0
       }
 
       SizeX {
         type    Float
+        default 1.0
         exmin   0.0
         max     1.0
       }
 
       SizeZ {
         type    Float
+        default 1.0
         exmin   0.0
         max     1.0
       }
@@ -616,24 +617,28 @@ Domains {
 
             CenterX {
               type    Float
+              default 0.5
               exmin   0.0
               exmax   1.0
             }
       
             CenterZ {
               type    Float
+              default 0.5
               exmin   0.0
               exmax   1.0
             }
       
             SizeX {
               type    Float
+              default 1.0
               exmin   0.0
               max     1.0
             }
       
             SizeZ {
               type    Float
+              default 1.0
               exmin   0.0
               max     1.0
             }
@@ -696,24 +701,28 @@ Domains {
 
             CenterX {
               type    Float
+              default 0.5
               exmin   0.0
               exmax   1.0
             }
       
             CenterZ {
               type    Float
+              default 0.5
               #exmin   0.0
               #exmax   1.0
             }
       
             SizeX {
               type    Float
+              default 1.0
               exmin   0.0
               max     1.0
             }
       
             SizeZ {
               type    Float
+              default 1.0
               exmin   0.0
               max     1.0
             }
@@ -749,39 +758,10 @@ Domains {
               max     WorldSize # no great choice here, but should never be larger than this
             }
 
-            OverrideBrickColor {
-              type    Bool
-              default False
-            }
-
-            #
             # Optional color override for this patch.
-            #
             BrickColor {
-              type    Object
-              default {
-                R    0.6
-                G    0.2
-                B    0.2
-              }
-            
-              properties {
-                R {
-                  type    Float
-                  min     0.0
-                  max     1.0
-                }
-                G {
-                  type    Float
-                  min     0.0
-                  max     1.0
-                }
-                B {
-                  type    Float
-                  min     0.0
-                  max     1.0
-                }
-              }
+              type     Color
+              optional True
             }
 
             On {
@@ -1256,6 +1236,7 @@ MinMateEnergyFraction {
   default 0.0
   min     0.0
   max     1.0
+  cppsym  "$[sim]->fMinMateFraction"
 }
 
 MinHorizontalFieldOfView {
@@ -1435,16 +1416,16 @@ MaxLifeSpan {
 
 MinEnergyFractionToOffspring {
   type    Float
-  cppsym  "$[gene, MateEnergyFraction, min]"
   default 0.2
   exmin   0.0
+  cppsym  "$[gene, MateEnergyFraction, min]"
 }
 
 MaxEnergyFractionToOffspring {
   type    Float
-  cppsym  "$[gene, MateEnergyFraction, max]"
   default 0.8
   min     MinEnergyFractionToOffspring
+  cppsym  "$[gene, MateEnergyFraction, max]"
 }
 
 MinVisionNeuronsPerGroup {
@@ -1984,29 +1965,11 @@ FoodHeight {
 }
 
 FoodColor {
-  type    Object
+  type    Color
   default {
     R    0.2
     G    0.6
     B    0.2
-  }
-
-  properties {
-    R {
-      type    Float
-      min     0.0
-      max     1.0
-    }
-    G {
-      type    Float
-      min     0.0
-      max     1.0
-    }
-    B {
-      type    Float
-      min     0.0
-      max     1.0
-    }
   }
 }
 
@@ -2016,29 +1979,11 @@ BrickHeight {
 }
 
 BrickColor {
-  type    Object
+  type    Color
   default {
     R    0.6
     G    0.2
     B    0.2
-  }
-
-  properties {
-    R {
-      type    Float
-      min     0.0
-      max     1.0
-    }
-    G {
-      type    Float
-      min     0.0
-      max     1.0
-    }
-    B {
-      type    Float
-      min     0.0
-      max     1.0
-    }
   }
 }
 
@@ -2048,56 +1993,20 @@ BarrierHeight {
 }
 
 BarrierColor {
-  type    Object
+  type    Color
   default {
     R    0.35
     G    0.25
     B    0.15
   }
-
-  properties {
-    R {
-      type    Float
-      min     0.0
-      max     1.0
-    }
-    G {
-      type    Float
-      min     0.0
-      max     1.0
-    }
-    B {
-      type    Float
-      min     0.0
-      max     1.0
-    }
-  }
 }
 
 GroundColor {
-  type    Object
+  type    Color
   default {
     R    0.1
     G    0.15
     B    0.05
-  }
-
-  properties {
-    R {
-      type    Float
-      min     0.0
-      max     1.0
-    }
-    G {
-      type    Float
-      min     0.0
-      max     1.0
-    }
-    B {
-      type    Float
-      min     0.0
-      max     1.0
-    }
   }
 }
 

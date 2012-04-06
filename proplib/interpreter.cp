@@ -59,7 +59,9 @@ string Interpreter::ExpressionEvaluator::evaluate( Property *prop )
 				if( it != _expr->elements.begin() )
 					exprbuf << element->token->getDecorationString();
 
-				exprbuf << element->token->text;
+				// Don't add trailing semicolon
+				if( (element != _expr->elements.back()) || (element->token->type != Token::Semicolon) )
+					exprbuf << element->token->text;
 			}
 			break;
 		case ExpressionElement::Symbol:
@@ -77,6 +79,7 @@ string Interpreter::ExpressionEvaluator::evaluate( Property *prop )
 					switch( sym.type )
 					{
 					case Symbol::EnumValue:
+					case Symbol::Class:
 						exprbuf << '"' << symbolPath->tail->getText() << '"';
 						break;
 					case Symbol::Property:

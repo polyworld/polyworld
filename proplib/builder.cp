@@ -70,6 +70,9 @@ Document *DocumentBuilder::buildWorldfileDocument( SchemaDocument *schema, const
 		buildDocument( node );
 	}
 
+	DocumentEditor editor( schema, _doc );
+	WorldfileConverter::convertDeprecatedV2Properties( &editor, _doc );
+
 	return _doc;
 }
 
@@ -93,13 +96,8 @@ SchemaDocument *DocumentBuilder::buildSchemaDocument( const string &path )
 
 	// schema file does not declare this enum of types, so inject it.
 	proplib::Enum *enum_ = new proplib::Enum( DocumentLocation(doc), "__types" );
-	enum_->addValue( "Int" );
-	enum_->addValue( "Float" );
-	enum_->addValue( "Bool" );
-	enum_->addValue( "Object" );
-	enum_->addValue( "Array" );
-	enum_->addValue( "String" );
-	enum_->addValue( "Enum" );
+	itfor( set<string>, SchemaDocument::standardTypes, it )
+		enum_->addValue( *it );
 
 	doc->addEnum( enum_ );
 
@@ -107,6 +105,8 @@ SchemaDocument *DocumentBuilder::buildSchemaDocument( const string &path )
 	_path = path;
 	_doc = doc;
 	buildDocument( node, properties );
+
+	doc->init();
 
 	return doc;
 }
@@ -183,9 +183,9 @@ MetaProperty *DocumentBuilder::buildMetaProperty( SyntaxNode *node )
 							 buildExpression(node->children[1]) );
 }
 
-Property *DocumentBuilder::buildObjectProperty( SyntaxNode *node,
-												Identifier id,
-												ObjectProperty *obj )
+ObjectProperty *DocumentBuilder::buildObjectProperty( SyntaxNode *node,
+													  Identifier id,
+													  ObjectProperty *obj )
 {
 	if( obj == NULL )
 	{
@@ -198,7 +198,7 @@ Property *DocumentBuilder::buildObjectProperty( SyntaxNode *node,
 				node = node->children[1];
 			}
 			break;
-		case SyntaxNode::Object: // Array Element
+		case SyntaxNode::Object: // Array Element or Class
 			{
 				obj = new ObjectProperty( createLocation(node),
 										  id );
@@ -222,6 +222,9 @@ Property *DocumentBuilder::buildObjectProperty( SyntaxNode *node,
 			break;
 		case SyntaxNode::Enum:
 			obj->addEnum( buildEnum(childNode) );
+			break;
+		case SyntaxNode::Class:
+			obj->addClass( buildClass(childNode) );
 			break;
 		default:
 			assert( false );
@@ -368,6 +371,17 @@ Enum *DocumentBuilder::buildEnum( SyntaxNode *node )
 	}
 
 	return enum_;
+}
+
+Class *DocumentBuilder::buildClass( SyntaxNode *node )
+{
+	ObjectProperty *definition = buildObjectProperty( node->children[1], "definition" );
+
+	Class *klass = new Class( createLocation(node),
+							  createId(node->children[0]),
+							  definition );
+
+	return klass;
 }
 
 Expression *DocumentBuilder::buildExpression( SyntaxNode *node )

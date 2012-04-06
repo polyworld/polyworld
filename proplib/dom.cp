@@ -10,6 +10,7 @@
 
 #include "interpreter.h"
 #include "misc.h"
+#include "parser.h"
 
 using namespace std;
 using namespace proplib;
@@ -140,7 +141,14 @@ namespace proplib
 		if( cmp != 0 )
 			return cmp < 0;
 
-		return a._lineno < b._lineno;
+		cmp = a._lineno - b._lineno;
+		if( cmp != 0 )
+			return cmp < 0;
+
+		if( a._beginToken && b._beginToken )
+			return a._beginToken->number < b._beginToken->number;
+		else
+			return true;
 	}
 }
 
@@ -208,7 +216,7 @@ bool Node::findSymbol( SymbolPath::Element *name, Symbol &sym )
 {
 	if( (_symbolSource != NULL) && _symbolSource->findSymbol(name, sym) )
 		return true;
-	else if( findLocalSymbol(name, sym) )
+	else if( __findLocalSymbol(name, sym) )
 		return true;
 	else if( _parent )
 		return _parent->findSymbol( name, sym );
@@ -216,7 +224,7 @@ bool Node::findSymbol( SymbolPath::Element *name, Symbol &sym )
 		return false;
 }
 
-bool Node::findLocalSymbol( SymbolPath::Element *name, Symbol &sym )
+bool Node::__findLocalSymbol( SymbolPath::Element *name, Symbol &sym )
 {
 	return false;
 }
@@ -260,7 +268,7 @@ bool Enum::contains( const string &name )
 	return _values.find(name) != _values.end();
 }
 
-bool Enum::findLocalSymbol( SymbolPath::Element *name, Symbol &sym )
+bool Enum::__findLocalSymbol( SymbolPath::Element *name, Symbol &sym )
 {
 	if( (name->next == NULL) && contains(name->getText()) )
 	{
@@ -276,6 +284,43 @@ Enum *Enum::clone()
 {
 	Enum *clone = new Enum( getLocation(), _id );
 	clone->_values = _values;
+	return clone;
+}
+
+
+// ----------------------------------------------------------------------
+// ----------------------------------------------------------------------
+// --- CLASS Class
+// ----------------------------------------------------------------------
+// ----------------------------------------------------------------------
+Class::Class( DocumentLocation loc,
+			  Identifier id,
+			  ObjectProperty *definition)
+: Node( Node::Class, Node::None, loc )
+, _id( id )
+, _definition( definition )
+{
+}
+
+Class::~Class()
+{
+}
+
+const Identifier &Class::getId()
+{
+	return _id;
+}
+
+ObjectProperty *Class::getDefinition()
+{
+	return _definition;
+}
+
+Class *Class::clone()
+{
+	Class *clone = new Class( getLocation(),
+							  _id,
+							  dynamic_cast<ObjectProperty *>(_definition->clone(_definition->getName())) );
 	return clone;
 }
 
@@ -358,6 +403,11 @@ Property *Property::getParent()
 	return dynamic_cast<Property *>( _parent );
 }
 
+bool Property::hasProperty( Identifier id )
+{
+	return getp(id) != NULL;
+}
+
 PropertyMap &Property::elements()
 {
 	return props();
@@ -368,18 +418,18 @@ size_t Property::size()
 	return props().size();
 }
 
-bool Property::findLocalSymbol( SymbolPath::Element *name, Symbol &sym )
+bool Property::__findLocalSymbol( SymbolPath::Element *name, Symbol &sym )
 {
 	itfor( EnumMap, _enums, it )
 	{
-		if( it->second->findLocalSymbol(name, sym) )
+		if( it->second->__findLocalSymbol(name, sym) )
 			return true;
 	}
 
 	if( (name->getText() == "parent") && getParent() )
 	{
 		if( name->next )
-			return getParent()->findLocalSymbol( name->next, sym );
+			return getParent()->__findLocalSymbol( name->next, sym );
 
 		sym.type = Symbol::Property;
 		sym.prop = getParent();
@@ -827,7 +877,7 @@ void __ContainerProperty::dump( ostream &out, string indent )
 	out << indent << "}" << endl;
 }
 
-bool __ContainerProperty::findLocalSymbol( SymbolPath::Element *name, Symbol &sym )
+bool __ContainerProperty::__findLocalSymbol( SymbolPath::Element *name, Symbol &sym )
 {
 	Property *child = getp( name->getText() );
 
@@ -835,7 +885,7 @@ bool __ContainerProperty::findLocalSymbol( SymbolPath::Element *name, Symbol &sy
 	{
 		if( name->next )
 		{
-			return child->findLocalSymbol( name->next, sym );
+			return child->__findLocalSymbol( name->next, sym );
 		}
 		else
 		{
@@ -846,7 +896,7 @@ bool __ContainerProperty::findLocalSymbol( SymbolPath::Element *name, Symbol &sy
 		}
 	}
 
-	return Property::findLocalSymbol( name, sym );
+	return Property::__findLocalSymbol( name, sym );
 }
 
 
@@ -882,11 +932,54 @@ Property *ObjectProperty::clone( Identifier cloneId )
 											   cloneId );
 
 	itfor( PropertyMap, props(), it )
-	{
 		prop->add( it->second->clone(it->second->getId()) );
-	}
+
+	itfor( ClassMap, _classes, it )
+		prop->addClass( it->second->clone() );
 
 	return baseClone( prop );
+}
+
+bool ObjectProperty::__findLocalSymbol( SymbolPath::Element *name, Symbol &sym )
+{
+	class Class *klass = getClass( name->getText() );
+
+	if( klass )
+	{
+		if( name->next )
+		{
+			return klass->__findLocalSymbol( name->next, sym );
+		}
+		else
+		{
+			sym.type = Symbol::Class;
+			sym.klass = klass;
+
+			return true;
+		}
+	}
+
+	return __ContainerProperty::__findLocalSymbol( name, sym );
+}
+
+void ObjectProperty::addClass( class Class *klass )
+{
+	if( _classes.find(klass->getId()) != _classes.end() )
+	{
+		klass->err( "Duplicate class" );
+	}
+
+	_classes[ klass->getId() ] = klass;
+	Node::add( klass );
+}
+
+Class *ObjectProperty::getClass( const string &name )
+{
+	ClassMap::iterator it = _classes.find( name );
+	if( it == _classes.end() )
+		return NULL;
+	else
+		return it->second;
 }
 
 

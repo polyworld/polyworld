@@ -1,5 +1,7 @@
 #pragma once
 
+#include <set>
+
 #include "dom.h"
 
 namespace proplib
@@ -14,14 +16,19 @@ namespace proplib
 	private:
 		friend class DocumentBuilder;
 		SchemaDocument( std::string name, std::string path );
+		void init();
 
 	public:
+		static std::set<std::string> standardTypes;
+
 		virtual ~SchemaDocument();
 
 		void apply( Document *values );
 		void makePathDefaults( Document *values, SymbolPath *symbolPath );
 
 	private:
+		void injectClasses( Property *prop );
+
 		void normalize( ObjectProperty &propertySchema, Property &propertyValue );
 		void normalizeObject( ObjectProperty &propertySchema, ObjectProperty &propertyValue );
 		void normalizeArray( ObjectProperty &propertySchema, ArrayProperty &propertyValue );

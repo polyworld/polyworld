@@ -90,12 +90,17 @@ namespace proplib
 	public:
 		enum Type
 		{
+			Class,
 			Property,
 			EnumValue
 		};
 
 		Type type;
-		class Property *prop;
+		union
+		{
+			class Property *prop;
+			class Class *klass;
+		};
 	};
 
 
@@ -110,6 +115,7 @@ namespace proplib
 		enum Type
 		{
 			Enum,
+			Class,
 			Scalar,
 			Object,
 			Array,
@@ -143,9 +149,9 @@ namespace proplib
 		virtual void dump( std::ostream &out, std::string = "" );
 
 		bool findSymbol( SymbolPath *name, Symbol &sym );
+		virtual bool __findLocalSymbol( SymbolPath::Element *name, Symbol &sym );
 
 	protected:
-		virtual bool findLocalSymbol( SymbolPath::Element *name, Symbol &sym );
 		void add( Node *node );
 
 		Node *_parent;
@@ -177,15 +183,39 @@ namespace proplib
 		bool contains( const std::string &name );
 
 		Enum *clone();
-
-	protected:
-		friend class Property;
-
-		virtual bool findLocalSymbol( SymbolPath::Element *name, Symbol &sym );
+		virtual bool __findLocalSymbol( SymbolPath::Element *name, Symbol &sym );
 
 	private:
 		Identifier _id;
 		std::set<std::string> _values;
+	};
+
+	// ----------------------------------------------------------------------
+	// ----------------------------------------------------------------------
+	// --- CLASS Class
+	// ----------------------------------------------------------------------
+	// ----------------------------------------------------------------------
+	typedef std::map<Identifier, class Class *> ClassMap;
+
+	class Class : public Node
+	{
+	public:
+		Class( DocumentLocation loc,
+			   Identifier id,
+			   class ObjectProperty *definition );
+		virtual ~Class();
+
+		const Identifier &getId();
+		class ObjectProperty *getDefinition();
+
+		Class *clone();
+
+	protected:
+		friend class Property;
+
+	private:
+		Identifier _id;
+		class ObjectProperty *_definition;
 	};
 
 	// ----------------------------------------------------------------------
@@ -203,14 +233,16 @@ namespace proplib
 
 	protected:
 		Property( Node::Type type, Node::Subtype subtype, DocumentLocation loc, Identifier id );
-		virtual ~Property();
 
 	public:
+		virtual ~Property();
+
 		const Identifier &getId();
 		const char *getName();
 		std::string getFullName( int minDepth = 0, const char *delimiter = NULL );
 
 		Property *getParent();
+		bool hasProperty( Identifier id );
 		virtual Property &get( Identifier id ) = 0;
 		virtual Property *getp( Identifier id ) = 0;
 
@@ -238,12 +270,10 @@ namespace proplib
 
 		virtual bool hasBinding();
 
+		virtual bool __findLocalSymbol( SymbolPath::Element *name, Symbol &sym );
+
 	protected:
-		friend class __ContainerProperty;
-
-		virtual bool findLocalSymbol( SymbolPath::Element *name, Symbol &sym );
 		int getDepth();
-
 		Property *baseClone( Property *clone );
 
 		EnumMap _enums;
@@ -421,7 +451,7 @@ namespace proplib
 
 		virtual void dump( std::ostream &out, std::string indent = "" );
 
-		virtual bool findLocalSymbol( SymbolPath::Element *name, Symbol &sym );
+		virtual bool __findLocalSymbol( SymbolPath::Element *name, Symbol &sym );
 
 	private:
 		PropertyMap _props;
@@ -444,6 +474,13 @@ namespace proplib
 		virtual void add( Property *prop );
 
 		virtual Property *clone( Identifier cloneId );
+		virtual bool __findLocalSymbol( SymbolPath::Element *name, Symbol &sym );
+
+		void addClass( class Class *class_ );
+		class Class *getClass( const std::string &name );
+
+	private:
+		ClassMap _classes;
 	};
 
 	// ----------------------------------------------------------------------

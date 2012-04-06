@@ -155,8 +155,18 @@ void DocumentWriter::writeProperties( ObjectProperty *object )
 	vector<Property *> sorted;
 	sortChildren( object, sorted );
 
+	Document *docPrev = NULL;
+
 	itfor( vector<Property *>, sorted, it )
+	{
+		Document *doc = (*it)->getLocation().getDocument(); 
+		if( docPrev && (doc != docPrev) )
+			_out << "\n";
+
 		writeProperty( *it );
+
+		docPrev = doc;
+	}
 }
 
 void DocumentWriter::writeProperty( Property *prop )

@@ -5,6 +5,7 @@
 #include <string>
 
 #include "builder.h"
+#include "editor.h"
 #include "misc.h"
 
 using namespace std;
@@ -15,6 +16,23 @@ using namespace proplib;
 // --- CLASS SchemaDocument
 // ----------------------------------------------------------------------
 // ----------------------------------------------------------------------
+set<string> SchemaDocument::standardTypes;
+
+static class SchemaDocumentInit
+{
+ public:
+	SchemaDocumentInit()
+	{
+		SchemaDocument::standardTypes.insert( "Int" );
+		SchemaDocument::standardTypes.insert( "Float" );
+		SchemaDocument::standardTypes.insert( "Bool" );
+		SchemaDocument::standardTypes.insert( "Object" );
+		SchemaDocument::standardTypes.insert( "Array" );
+		SchemaDocument::standardTypes.insert( "String" );
+		SchemaDocument::standardTypes.insert( "Enum" );
+	}
+} _schemaDocumentInit;
+
 SchemaDocument::SchemaDocument( std::string name, std::string path )
 : Document( name, path )
 {
@@ -22,6 +40,11 @@ SchemaDocument::SchemaDocument( std::string name, std::string path )
 
 SchemaDocument::~SchemaDocument()
 {
+}
+
+void SchemaDocument::init()
+{
+	injectClasses( this );
 }
 
 void SchemaDocument::apply( Document *values )
@@ -37,6 +60,38 @@ void SchemaDocument::makePathDefaults( Document *values, SymbolPath *symbolPath 
 	_legacyMode = isLegacyMode( values );
 
 	makePathDefaults( *this, *values, symbolPath->head );
+}
+
+void SchemaDocument::injectClasses( Property *prop_ )
+{
+	if( prop_->getType() == Node::Object )
+	{
+		ObjectProperty *prop = dynamic_cast<ObjectProperty *>( prop_ );
+		Property *propType = prop->getp( "type" );
+		if( propType )
+		{
+			string type = *propType;
+			if( standardTypes.find(type) == standardTypes.end() )
+			{
+				DocumentBuilder builder;
+				SymbolPath *symbolPath = builder.buildSymbolPath( type );
+				Symbol sym;
+				if( !prop->findSymbol(symbolPath, sym) )
+					propType->err( "Invalid type name." );
+
+				if( sym.type != Symbol::Class )
+					propType->err( "Expecting class name." );
+
+				DocumentEditor editor( this );
+				
+				editor.set( propType, "Object" );
+				prop->add( sym.klass->getDefinition()->clone("properties") );
+			}
+		}
+
+		itfor( PropertyMap, prop->props(), it )
+			injectClasses( it->second );
+	}
 }
 
 void SchemaDocument::normalize( ObjectProperty &propertySchema, Property &propertyValue )
@@ -100,9 +155,15 @@ void SchemaDocument::normalizeObject( ObjectProperty &objectSchema, ObjectProper
 				Property *propDefault = createDefault( propertySchema );
 
 				if( propDefault == NULL )
-					objectValue.err( string("Missing property ") + propertySchema.getName() );
-
-				objectValue.add( propDefault );
+				{
+					Property *propOptional = propertySchema.getp( "optional" );
+					if( !propOptional || !(bool)*propOptional )
+						objectValue.err( string("Missing property ") + propertySchema.getName() );
+				}
+				else
+				{
+					objectValue.add( propDefault );
+				}
 			}
 		}
 	}
@@ -118,9 +179,12 @@ void SchemaDocument::normalizeObject( ObjectProperty &objectSchema, ObjectProper
 			childSchema_.err( "Expecting property schema definition, which should be an object." );
 
 		ObjectProperty &childSchema = dynamic_cast<ObjectProperty &>( childSchema_ );
-		Property &childValue = objectValue.get( childSchema.getName() );
+		Property *childValue = objectValue.getp( childSchema.getName() );
 
-		normalize( childSchema, childValue );
+		if( childValue )
+			normalize( childSchema, *childValue );
+		else
+			assert( (bool)childSchema.get("optional") );
 	}
 }
 
@@ -375,7 +439,8 @@ void SchemaDocument::validateCommonAttribute( Property &attr, Property &value )
 			 || attrName == "cppsym"
 			 || attrName == "type"
 			 || attrName == "default"
-			 || attrName == "legacy" )
+			 || attrName == "legacy"
+			 || attrName == "optional" )
 	{
 		// no-op
 	}

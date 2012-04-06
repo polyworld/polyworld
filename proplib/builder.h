@@ -34,9 +34,10 @@ namespace proplib
 		ConstScalarProperty *buildConstScalarProperty( SyntaxNode *node, Identifier id = -1 );
 		Property *buildDynamicScalarProperty( SyntaxNode *node, Identifier id = -1 );
 		DynamicScalarAttribute *buildDynamicScalarAttribute( SyntaxNode *node );
-		Property *buildObjectProperty( SyntaxNode *node, Identifier id = -1, ObjectProperty *obj = NULL );
+		ObjectProperty *buildObjectProperty( SyntaxNode *node, Identifier id = -1, ObjectProperty *obj = NULL );
 		Property *buildArrayProperty( SyntaxNode *node );
 		Enum *buildEnum( SyntaxNode *node );
+		Class *buildClass( SyntaxNode *node );
 		class Expression *buildExpression( SyntaxNode *node );
 		class SymbolPath *buildSymbolPath( SyntaxNode *node );
 

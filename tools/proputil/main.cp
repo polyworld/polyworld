@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <fstream>
 #include <iostream>
 #include <list>
 #include <string>
@@ -30,6 +31,7 @@ void usage( string msg = "" )
 	cerr << "       proputil [-w] len [-s path_schema] path_doc propname" << endl;
 	cerr << "       proputil [-w] overlay [-s path_schema] path_doc path_overlay index" << endl;
 	cerr << "       proputil scalarnames path_doc depth_start" << endl;
+	cerr << "       proputil dbgsyntax path_doc" << endl;
 	cerr << "";
 	cerr << "   -w: Treat doc as worldfile, which may entail property conversion." << endl;
 	cerr << "       If used, then -s must also be used." << endl;
@@ -78,6 +80,7 @@ void len( const char *pathDoc, const char *name );
 void overlay( const char *pathDoc, const char *pathOverlay, const char *index );
 void overlay( const char *pathSchema, const char *pathDoc, const char *pathOverlay, const char *index );
 void scalarnames( const char *pathDoc, const char *depth_start );
+void dbgsyntax( const char *pathDoc );
 
 int main( int argc, const char **argv )
 {
@@ -201,6 +204,15 @@ int main( int argc, const char **argv )
 		}
 
 		scalarnames( argv[2], argv[3] );
+	}
+	else if( mode == "dbgsyntax" )
+	{
+		if( argc != 3 )
+		{
+			usage();
+		}
+
+		dbgsyntax( argv[2] );
 	}
 	else
 	{
@@ -392,4 +404,10 @@ void scalarnames( const char *pathDoc, const char *depth_start )
 	writer.writeScalarNames( doc, atoi(depth_start) );
 
 	delete doc;
+}
+
+void dbgsyntax( const char *pathDoc )
+{
+	Parser parser;
+	parser.parseDocument( pathDoc, new ifstream(pathDoc) )->dump( cout );
 }

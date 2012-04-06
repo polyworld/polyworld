@@ -25,6 +25,7 @@ Token::Token( Type type_, const char *typeName_, const string &text_ )
 	, prev( NULL )
 	, decoration( NULL )
 	, lineno( -1 )
+	, number( -1 )
 {
 }
 
@@ -109,6 +110,7 @@ Token *Tokenizer::next()
 
 		Token *tok = __next();
 		tok->lineno = lineno;
+		tok->number = ++_number;
 			
 		if( tok->isDecoration() )
 		{
@@ -302,6 +304,8 @@ Token *Tokenizer::parseWord()
 
 	if( text == "enum" )
 		return NEW_TOKEN( Enum, "enum" );
+	if( text == "class" )
+		return NEW_TOKEN( Class, "class" );
 	if( text == "dyn" )
 		return NEW_TOKEN( Dyn, "dyn" );
 	if( text == "attrs" )
@@ -592,6 +596,9 @@ void Parser::parseObject()
 		case Token::Enum:
 			parseEnum();
 			break;
+		case Token::Class:
+			parseClass();
+			break;
 		default:
 			containerComplete = true;
 			break;
@@ -800,6 +807,10 @@ SyntaxNode *Parser::parseExpression( bool parenDelimited )
 				{
 					switch( peek()->type )
 					{
+					case Token::Semicolon:
+						complete = true;
+						tok = next();
+						break;
 					case Token::Comma:
 					case Token::RightSquare:
 					case Token::LeftCurly:
@@ -946,6 +957,21 @@ void Parser::parseEnum()
 	next( Token::RightCurly );
 	POP( EnumValues );
 	POP( Enum );
+}
+
+void Parser::parseClass()
+{
+	next( Token::Class );
+	PUSH( Class );
+
+	next( Token::Id );
+	PUSH( Id ); POP( Id );
+
+	next( Token::LeftCurly );
+	parseObject();
+	next( Token::RightCurly );
+
+	POP( Class );
 }
 
 #undef ptrc
