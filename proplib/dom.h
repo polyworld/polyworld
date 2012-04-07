@@ -509,15 +509,15 @@ namespace proplib
 	public:
 		MetaProperty( DocumentLocation loc,
 					  Identifier id,
-					  Expression *expr );
+					  std::string value );
 		virtual ~MetaProperty();
 
 		Identifier getId();
-		Expression *getExpression();
+		std::string getValue();
 
 	private:
 		Identifier _id;
-		Expression *_expr;
+		std::string _value;
 	};
 
 	typedef std::map<Identifier, MetaProperty *> MetaPropertyMap;

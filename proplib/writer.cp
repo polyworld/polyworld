@@ -162,7 +162,7 @@ void DocumentWriter::writeMetaProperties( Document *doc )
 			_out << prop->getId().getName();
 		}
 
-		writeExpression( (*it)->getExpression() );
+		_out << " " << prop->getValue();
 	}
 }
 

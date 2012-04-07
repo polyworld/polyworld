@@ -105,6 +105,7 @@ namespace proplib
 		{
 			Document,
 			MetaProperty,
+			MetaPropertyValue,
 			Object,
 			Property,
 			PropertyValue,
@@ -155,6 +156,7 @@ namespace proplib
 		SyntaxNode *popNode( SyntaxNode::Type type, const char *typeName, Token *end );
 
 		void parseMetaProperties();
+		SyntaxNode *parseMetaPropertyValue();
 		void parseObject();
 		void parseProperty();
 		SyntaxNode *parsePropertyValue();

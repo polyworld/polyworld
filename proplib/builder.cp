@@ -176,11 +176,15 @@ void DocumentBuilder::buildDocument( SyntaxNode *node, ObjectProperty *rootConta
 
 MetaProperty *DocumentBuilder::buildMetaProperty( DocumentLocation loc, Identifier id, SyntaxNode *nodeValue )
 {
-	assert( nodeValue->type == SyntaxNode::Expression );
+	assert( nodeValue->type == SyntaxNode::MetaPropertyValue );
 
-	return new MetaProperty( loc,
-							 id,
-							 buildExpression(nodeValue) );
+	string value;
+	if( nodeValue->children.empty() )
+		value = "";
+	else
+		value = Token::toString( nodeValue->beginToken, nodeValue->endToken );
+
+	return new MetaProperty( loc, id, value );
 }
 
 Property *DocumentBuilder::buildProperty( SyntaxNode *node )

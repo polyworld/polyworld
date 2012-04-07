@@ -1025,10 +1025,10 @@ Property *ArrayProperty::clone( Identifier cloneId )
 // ----------------------------------------------------------------------
 MetaProperty::MetaProperty( DocumentLocation loc,
 							Identifier id,
-							Expression *expr )
+							string value )
 : Node( Node::Attr, Node::Dynamic, loc )
 , _id( id )
-, _expr( expr )
+, _value( value )
 {
 }
 
@@ -1041,9 +1041,9 @@ Identifier MetaProperty::getId()
 	return _id;
 }
 
-Expression *MetaProperty::getExpression()
+string MetaProperty::getValue()
 {
-	return _expr;
+	return _value;
 }
 
 

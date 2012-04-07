@@ -525,7 +525,7 @@ void SchemaDocument::parseDefaults( Document *doc )
 
 	if( doc->hasMeta("@defaults") )
 	{
-		string defaults = doc->getMeta("@defaults")->getExpression()->toString();
+		string defaults = doc->getMeta("@defaults")->getValue();
 		istringstream in( defaults );
 
 		while( !in.eof() )
@@ -533,7 +533,33 @@ void SchemaDocument::parseDefaults( Document *doc )
 			string value;
 			in >> value;
 			assert( !value.empty() );
-			_defaults.push_back( value );
+
+			char last = value[ value.length() - 1 ];
+			if( last == '.' )
+				_defaults.push_back( value.substr(0, value.length() - 1) );
+			else if( isdigit(last) )
+			{
+				const char *numstr;
+				for( numstr = value.c_str() + value.length() - 1;
+					 isdigit(*numstr);
+					 numstr-- )
+				{}
+				numstr++;
+
+				string prefix = value.substr( 0, numstr - value.c_str() );
+				
+				int num = atoi( numstr );
+				assert( num < 200 ); // sanity check.
+				for( ; num >= 0; num-- )
+				{
+					char buf[ 128 ];
+					sprintf( buf, "%s%d", prefix.c_str(), num );
+
+					_defaults.push_back( buf );
+				}
+			}
+			else
+				_defaults.push_back( value );
 		}
 	}
 }

@@ -503,7 +503,7 @@ SyntaxNode *Parser::parseMetaPropertyValue( string text )
 
 	next( Token::Bof );
 
-	SyntaxNode *result = parseExpression();
+	SyntaxNode *result = parseMetaPropertyValue();
 
 	next( Token::Eof );
 
@@ -589,10 +589,22 @@ void Parser::parseMetaProperties()
 		PUSH( MetaProperty );
 
 		PUSH_POP( Id );
-		parseExpression();
+
+		parseMetaPropertyValue();
 
 		POP( MetaProperty );
 	}
+}
+
+SyntaxNode *Parser::parseMetaPropertyValue()
+{
+	PUSH_PEEK( MetaPropertyValue );
+	while( !peek()->hasNewline() && (peek()->type != Token::Eof) )
+	{
+		next();
+		PUSH_POP( Misc );
+	}
+	return POP( MetaPropertyValue );
 }
 
 void Parser::parseObject()
