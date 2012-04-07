@@ -96,8 +96,11 @@ int main( int argc, const char **argv )
 			for( int i = 1; i < argc; i++ )
 			{
 				argv[i] = argv[ i + 1 ];
-				if( string(argv[i]) == "-s" )
+				string arg = argv[i];
+				if( arg == "-s" || arg == "apply" )
+				{
 					schema = true;
+				}
 			}
 
 			if( !schema )
