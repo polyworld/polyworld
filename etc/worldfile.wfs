@@ -349,17 +349,17 @@ Barriers {
 
   default [
     {
-      X1    (  0.3333 if RatioBarrierPositions else  (0.3333 * Worldsize) )
-      Z1    ( -1.0    if RatioBarrierPositions else -Worldsize )
-      X2    (  0.3333 if RatioBarrierPositions else  (0.3333 * Worldsize) )
-      Z2    ( -0.1    if RatioBarrierPositions else -0.1*Worldsize )
+      X1    (  0.3333 if RatioBarrierPositions else  (0.3333 * WorldSize) )
+      Z1    ( -1.0    if RatioBarrierPositions else -WorldSize )
+      X2    (  0.3333 if RatioBarrierPositions else  (0.3333 * WorldSize) )
+      Z2    ( -0.1    if RatioBarrierPositions else -0.1*WorldSize )
     }
     ,
     {
-      X1    (  0.6667 if RatioBarrierPositions else  (0.6667 * Worldsize) )
-      Z1    ( -1.0    if RatioBarrierPositions else -Worldsize )
-      X2    (  0.6667 if RatioBarrierPositions else  (0.6667 * Worldsize) )
-      Z2    ( -0.1    if RatioBarrierPositions else -0.1*Worldsize )
+      X1    (  0.6667 if RatioBarrierPositions else  (0.6667 * WorldSize) )
+      Z1    ( -1.0    if RatioBarrierPositions else -WorldSize )
+      X2    (  0.6667 if RatioBarrierPositions else  (0.6667 * WorldSize) )
+      Z2    ( -0.1    if RatioBarrierPositions else -0.1*WorldSize )
     }
  ]
 

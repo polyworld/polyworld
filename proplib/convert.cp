@@ -392,14 +392,6 @@ void WorldfileConverter::convertDeprecatedV2Properties( DocumentEditor *editor, 
 	}
 
 	// ---
-	// --- @defaults
-	// ---
-	{
-		if( !doc->hasMeta("@defaults") )
-			editor->setMeta( "@defaults", "rev0" );
-	}
-
-	// ---
 	// --- FoodTypes
 	// ---
 	{
