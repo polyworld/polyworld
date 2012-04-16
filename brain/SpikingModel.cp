@@ -135,9 +135,6 @@ void SpikingModel::dump( ostream &out )
 			nl;
 	}
 
-    for (i = 0; i < dims->numgroups; i++)
-        out << groupblrate[i] nl;
-
     for (i = 0; i < (dims->numgroups * dims->numgroups * 4); i++)
         out << grouplrate[i] nl;
 }
@@ -177,9 +174,6 @@ void SpikingModel::load( istream &in )
 		   >> s.toneuron
 		   >> s.delta;
 	}
-
-    for (i = 0; i < dims->numgroups; i++)
-        in >> groupblrate[i];
 
     for (i = 0; i < (dims->numgroups * dims->numgroups * 4); i++)
         in >> grouplrate[i];
@@ -565,25 +559,6 @@ void SpikingModel::update( bool bprint )
 //###################################################################################################################################	
 	
 	
-	//	ira added not used no bias as of yet
-#if USE_BIAS	
-	for (i = dims->firstNonInputNeuron; i < dims->numneurons; i++)
-    {
-        neuron[i].bias += groupblrate[neuron[i].group]
-                        * (newneuronactivation[i]-0.5f)
-                        * 0.5f;
-        if (fabs(neuron[i].bias) > (0.5 * brain::gNeuralValues.maxbias))
-        {
-            neuron[i].bias *= 1.0 - (1.0f - brain::gDecayRate) *
-                (fabs(neuron[i].bias) - 0.5f * brain::gNeuralValues.maxbias) / (0.5f * brain::gNeuralValues.maxbias);
-            if (neuron[i].bias > brain::gNeuralValues.maxbias)
-                neuron[i].bias = brain::gNeuralValues.maxbias;
-            else if (neuron[i].bias < -brain::gNeuralValues.maxbias)
-                neuron[i].bias = -brain::gNeuralValues.maxbias;
-        }
-    }
-#endif
-
 //watch your ass buddy I got a damn sigbus here check out run_sigbus do I need to lock the file
 //this can't be threaded.  I did switch moniters maybe that cause the error?????
 #if 1

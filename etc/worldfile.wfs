@@ -2278,13 +2278,3 @@ Vision {
   type    Bool
   default True  # make always true
 }
-
-MinBiasLrate {
-  type    Float
-  default 0.0   # set to zero or disable entirely
-}
-
-MaxBiasLrate {
-  type    Float
-  default 0.0   # set to zero or disable entirely
-}

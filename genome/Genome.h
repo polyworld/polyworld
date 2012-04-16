@@ -41,7 +41,6 @@ namespace genome
 		Gene *INHIBITORY_COUNT;
 		Gene *EXCITATORY_COUNT;
 		Gene *BIAS;
-		Gene *BIAS_LEARNING_RATE;
 		Gene *INTERNAL;
 
 		Gene *gene( const char *name );

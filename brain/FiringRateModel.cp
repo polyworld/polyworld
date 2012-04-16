@@ -95,9 +95,6 @@ void FiringRateModel::dump( ostream &out )
 			nl;
 	}
 
-    for (i = 0; i < dims->numgroups; i++)
-        out << groupblrate[i] nl;
-
     for (i = 0; i < (dims->numgroups * dims->numgroups * 4); i++)
         out << grouplrate[i] nl;
 }
@@ -130,9 +127,6 @@ void FiringRateModel::load( istream &in )
 		   >> s.fromneuron
 		   >> s.toneuron;
 	}
-
-    for (i = 0; i < dims->numgroups; i++)
-        in >> groupblrate[i];
 
     for (i = 0; i < (dims->numgroups * dims->numgroups * 4); i++)
         in >> grouplrate[i];	
@@ -349,29 +343,6 @@ void FiringRateModel::update( bool bprint )
     }
 
     debugcheck( "after updating synapses" );
-
-#if 0
-	if( gNeuralValues.maxbiaslrate > 0.0 )
-	{
-		for (i = firstnoninputneuron; i < dims->numneurons; i++)
-		{
-			neuron[i].bias += groupblrate[neuron[i].group]
-							* (newneuronactivation[i]-0.5f)
-							* 0.5f;
-			if (fabs(neuron[i].bias) > (0.5 * gNeuralValues.maxbias))
-			{
-				neuron[i].bias *= 1.0 - (1.0f - brain::gDecayRate) *
-					(fabs(neuron[i].bias) - 0.5f * gNeuralValues.maxbias) / (0.5f * gNeuralValues.maxbias);
-				if (neuron[i].bias > gNeuralValues.maxbias)
-					neuron[i].bias = gNeuralValues.maxbias;
-				else if (neuron[i].bias < -gNeuralValues.maxbias)
-					neuron[i].bias = -gNeuralValues.maxbias;
-			}
-		}
-	}
-
-    debugcheck( "after updating biases" );
-#endif
 
     float* saveneuronactivation = neuronactivation;
     neuronactivation = newneuronactivation;

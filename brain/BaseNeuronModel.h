@@ -26,7 +26,6 @@ class BaseNeuronModel : public NeuronModel
 		neuronactivation = NULL;
 		newneuronactivation = NULL;
 		synapse = NULL;
-		groupblrate = NULL;
 		grouplrate = NULL;
 
 #if PrintBrain
@@ -44,7 +43,6 @@ class BaseNeuronModel : public NeuronModel
 		free( neuronactivation );
 		free( newneuronactivation );
 		free( synapse );
-		free( groupblrate );
 		free( grouplrate );
 
 #if DesignerBrains
@@ -69,7 +67,6 @@ class BaseNeuronModel : public NeuronModel
 
 		__ALLOC( synapse, T_synapse, dims->numsynapses );
 
-		__ALLOC( groupblrate, float, dims->numgroups );
 		__ALLOC( grouplrate, float, dims->numgroups * dims->numgroups * 4 );
 
 #if DesignerBrains
@@ -166,17 +163,6 @@ class BaseNeuronModel : public NeuronModel
 						  dims->numgroups, 2, 2)] = lrate;
 	}
 
-
-	virtual void set_groupblrate( int group,
-								  float value )
-	{
-		groupblrate[group] = value;
-
-#if DebugBrainGrow
-		if( DebugBrainGrowPrint )
-			cout << "  groupbiaslearningrate = " << value nlf;
-#endif
-	}
 
 	virtual void dumpAnatomical( AbstractFile *file )
 	{
@@ -517,7 +503,6 @@ class BaseNeuronModel : public NeuronModel
 	float *neuronactivation;
 	float *newneuronactivation;
 	T_synapse *synapse;
-	float *groupblrate;
 	float *grouplrate;
 
 #if PrintBrain

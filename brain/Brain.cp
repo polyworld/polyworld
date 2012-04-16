@@ -531,9 +531,6 @@ void Brain::GrowDesignedBrain( Genome* g )
 			cout << "  groupbias = " << groupbias nlf;
 #endif
 
-		neuralnet->set_groupblrate( i,
-									0.0 );
-
         for (j = 0; j < dims.numgroups; j++)
         {
             eeremainder[j] = 0.0;
@@ -1525,9 +1522,6 @@ void Brain::Grow( Genome* g )
 		if( DebugBrainGrowPrint )
 			cout << "  groupbias = " << groupbias nlf;
 #endif
-
-		neuralnet->set_groupblrate( groupIndex_to,
-									g->get(g->BIAS_LEARNING_RATE, groupIndex_to) );
 
         for (int groupIndex_from = 0; groupIndex_from < dims.numgroups; groupIndex_from++)
         {

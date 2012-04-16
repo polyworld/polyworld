@@ -90,9 +90,6 @@ GenomeSchema *GenomeUtil::createSchema()
 	RANGE( Bias,
 		   -brain::gNeuralValues.maxbias,
 		   brain::gNeuralValues.maxbias );
-	RANGE( BiasLearningRate,
-		   brain::gNeuralValues.minbiaslrate,
-		   brain::gNeuralValues.maxbiaslrate );
 	if( brain::gNeuralValues.model == brain::NeuralValues::TAU )
 	{
 		RANGE( Tau,
@@ -244,7 +241,6 @@ GenomeSchema *GenomeUtil::createSchema()
 	GROUP_ATTR( ExcitatoryNeuronCount, INTERNAL );
 	GROUP_ATTR( InhibitoryNeuronCount, INTERNAL );
 	GROUP_ATTR( Bias, NONINPUT );
-	GROUP_ATTR( BiasLearningRate, NONINPUT );
 	if( brain::gNeuralValues.model == brain::NeuralValues::TAU )
 	{
 		GROUP_ATTR( Tau, NONINPUT );

@@ -105,8 +105,6 @@ namespace brain
 		short maxinputneurons;
 		short maxnoninputneurons;
 		float maxbias;
-		float minbiaslrate;
-		float maxbiaslrate;
 		float minconnectiondensity;
 		float maxconnectiondensity;
 		float mintopologicaldistortion;

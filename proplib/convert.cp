@@ -377,6 +377,9 @@ void WorldfileConverter::convertV1PropertiesToV2( DocumentEditor *editor, Docume
 
 void WorldfileConverter::convertDeprecatedV2Properties( DocumentEditor *editor, Document *doc )
 {
+	REMOVE( doc, "MinBiasLrate" );
+	REMOVE( doc, "MaxBiasLrate" );
+
 	// ---
 	// --- LegacyMode
 	// ---

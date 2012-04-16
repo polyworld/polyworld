@@ -4842,8 +4842,6 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
     brain::gNeuralValues.minineurpergroup = doc.get( "MinInhibitoryNeuronsPerGroup" );
     brain::gNeuralValues.maxineurpergroup = doc.get( "MaxInhibitoryNeuronsPerGroup" );
     brain::gNeuralValues.maxbias = doc.get( "MaxBiasWeight" );
-    brain::gNeuralValues.minbiaslrate = doc.get( "MinBiasLrate" );
-    brain::gNeuralValues.maxbiaslrate = doc.get( "MaxBiasLrate" );
     brain::gNeuralValues.minconnectiondensity = doc.get( "MinConnectionDensity" );
     brain::gNeuralValues.maxconnectiondensity = doc.get( "MaxConnectionDensity" );
     brain::gNeuralValues.mintopologicaldistortion = doc.get( "MinTopologicalDistortion" );

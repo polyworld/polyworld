@@ -51,7 +51,6 @@ Genome::Genome( GenomeSchema *schema,
 	INHIBITORY_COUNT = gene("InhibitoryNeuronCount");
 	EXCITATORY_COUNT = gene("ExcitatoryNeuronCount");
 	BIAS = gene("Bias");
-	BIAS_LEARNING_RATE = gene("BiasLearningRate");
 	INTERNAL = schema->getGroupGene( schema->getFirstGroup(NGT_INTERNAL) );
 
 	nbytes = schema->getMutableSize();
