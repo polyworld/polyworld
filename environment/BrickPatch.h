@@ -23,7 +23,7 @@ class FoodPatch;
 //===========================================================================
 class BrickPatch : public Patch
 {
-	PROPLIB_DYNAMIC_PROPERTIES
+	PROPLIB_CPP_PROPERTIES
 
  public:
 	BrickPatch();

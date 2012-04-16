@@ -11,7 +11,7 @@
 
 // Local
 #include "Domain.h"
-#include "dynamic.h"
+#include "cppprops.h"
 #include "EatStatistics.h"
 #include "Energy.h"
 #include "Events.h"
@@ -40,7 +40,7 @@ namespace proplib { class Document; }
 class TSimulation : public QObject
 {
 	Q_OBJECT
-	PROPLIB_DYNAMIC_PROPERTIES
+	PROPLIB_CPP_PROPERTIES
 
 public:
 	TSimulation( std::string worldfilePath, std::string monitorPath );
@@ -135,7 +135,7 @@ signals:
 	void ended();
 	
 private:
-	void InitDynamicProperties( proplib::Document *docWorldFile );
+	void InitCppProperties( proplib::Document *docWorldFile );
 	void InitFittest();
 	void InitGround();
 	void InitAgents();

@@ -1,4 +1,4 @@
-#include "dynamic.h"
+#include "cppprops.h"
 
 #include <assert.h>
 #include <dlfcn.h>
@@ -17,65 +17,96 @@
 using namespace proplib;
 using namespace std;
 
-#define SrcDynProp ".bld/dynprop/src/generated.cpp"
+#define SrcCppprops ".bld/cppprops/src/generated.cpp"
 #if __linux__
-#define LibDynProp ".bld/dynprop/bin/libdynprop.so"
+#define LibCppprops ".bld/cppprops/bin/libcppprops.so"
 #else
-#define LibDynProp ".bld/dynprop/bin/libdynprop.dylib"
+#define LibCppprops ".bld/cppprops/bin/libcppprops.dylib"
 #endif
 
 #define l(content) out << content << endl
 
 // ----------------------------------------------------------------------
 // ----------------------------------------------------------------------
-// --- CLASS DynamicProperties
+// --- CLASS PropertyMetadata
+// ----------------------------------------------------------------------
+// ----------------------------------------------------------------------
+const char *CppProperties::PropertyMetadata::toString()
+{
+	switch( valueType )
+	{
+	case datalib::INT:
+		sprintf( __toStringBuf, "%d", *((int *)value) );
+		break;
+	case datalib::FLOAT:
+		sprintf( __toStringBuf, "%g", *((float *)value) );
+		break;
+	case datalib::BOOL:
+		sprintf( __toStringBuf, "%s", *((bool *)value) ? "True" : "False" );
+		break;
+	default:
+		assert( false );
+		break;
+	}
+
+	return __toStringBuf;
+}
+
+// ----------------------------------------------------------------------
+// ----------------------------------------------------------------------
+// --- CLASS CppProperties
 // ----------------------------------------------------------------------
 // ----------------------------------------------------------------------
 
-DynamicProperties::LibraryUpdate DynamicProperties::_update = NULL;
-DynamicProperties::LibraryGetMetadata DynamicProperties::_getMetadata = NULL;
-Document *DynamicProperties::_doc = NULL;
-DynamicProperties::UpdateContext *DynamicProperties::_context = NULL;
+CppProperties::LibraryUpdate CppProperties::_update = NULL;
+CppProperties::LibraryGetMetadata CppProperties::_getMetadata = NULL;
+Document *CppProperties::_doc = NULL;
+CppProperties::UpdateContext *CppProperties::_context = NULL;
 
-void DynamicProperties::init( Document *doc, UpdateContext *context )
+void CppProperties::init( Document *doc, UpdateContext *context )
 {
 	_doc = doc;
 	_context = context;
 
 	generateLibrarySource();
 
-	SYSTEM( "scons -f scripts/build/SConstruct " LibDynProp " 1>/dev/null" );
+	SYSTEM( "scons -f scripts/build/SConstruct " LibCppprops " 1>/dev/null" );
 
-	void *libHandle = dlopen( LibDynProp, RTLD_LAZY );
-	errif( !libHandle, "Failed opening " LibDynProp );
+	void *libHandle = dlopen( LibCppprops, RTLD_LAZY );
+	errif( !libHandle, "Failed opening " LibCppprops );
 
 	typedef void (*LibraryInit)( UpdateContext *context );
-	LibraryInit init = (LibraryInit)dlsym( libHandle, "__clink__DynamicProperties_Init" );
+	LibraryInit init = (LibraryInit)dlsym( libHandle, "__clink__CppProperties_Init" );
 	errif( dlerror() != NULL, dlerror() );
 
-	_update = (LibraryUpdate)dlsym( libHandle, "__clink__DynamicProperties_Update" );
+	_update = (LibraryUpdate)dlsym( libHandle, "__clink__CppProperties_Update" );
 	errif( dlerror() != NULL, dlerror() );
 
-	_getMetadata = (LibraryGetMetadata)dlsym( libHandle, "__clink__DynamicProperties_GetMetadata" );
+	_getMetadata = (LibraryGetMetadata)dlsym( libHandle, "__clink__CppProperties_GetMetadata" );
 	errif( dlerror() != NULL, dlerror() );
 
 	init( context );
 }
 
-void DynamicProperties::update()
+void CppProperties::update()
 {
 	_update( _context );
 }
 
-void DynamicProperties::getMetadata( PropertyMetadata **metadata, int *count )
+void CppProperties::getMetadata( PropertyMetadata **metadata, int *count )
 {
 	_getMetadata( metadata, count );
 }
 
-void DynamicProperties::generateLibrarySource()
+void CppProperties::generateLibrarySource()
 {
+	CppPropertyList cppProperties;
 	DynamicPropertyList dynamicProperties;
-	getDynamicProperties( _doc, dynamicProperties );
+	RuntimePropertyList runtimeProperties;
+	getCppProperties( _doc,
+					  cppProperties,
+					  dynamicProperties,
+					  runtimeProperties );
 
 	itfor( DynamicPropertyList, dynamicProperties, it )
 	{
@@ -91,15 +122,15 @@ void DynamicProperties::generateLibrarySource()
 		}
 	}
 
-	SYSTEM( "mkdir -p $(dirname " SrcDynProp ")" );
-	ofstream out( SrcDynProp );
+	SYSTEM( "mkdir -p $(dirname " SrcCppprops ")" );
+	ofstream out( SrcCppprops );
 
 	l( "// This file is machine-generated. See " << __FILE__ );
 	l( "" );
 	l( "#include <assert.h>" );
 	l( "#include <iostream>" );
 	l( "#include <sstream>" );
-	l( "#include \"dynamic.h\"" );
+	l( "#include \"cppprops.h\"" );
 	l( "#include \"barrier.h\"" );
 	l( "#include \"GenomeUtil.h\"" );
 	l( "#include \"globals.h\"" );
@@ -123,13 +154,13 @@ void DynamicProperties::generateLibrarySource()
 	// ---
 	// --- Generate Metadata
 	// ---
-	DynamicPropertyIndexMap indexMap;
-	generateMetadata( out, dynamicProperties, indexMap );
+	CppPropertyMetadataIndexMap indexMap;
+	generateMetadata( out, cppProperties, indexMap );
 
 	// ---
 	// --- Generate Init Function
 	// ---
-	generateInitSource( out, dynamicProperties, indexMap );
+	generateInitSource( out, cppProperties, dynamicProperties, indexMap );
 
 	// ---
 	// --- Generate Update Function
@@ -143,19 +174,19 @@ void DynamicProperties::generateLibrarySource()
 	l( "// These provide public symbols we can access via dlsym()" );
 	l(	"extern \"C\"" );
 	l( "{" );
-	l( "  void __clink__DynamicProperties_Init( proplib::DynamicProperties::UpdateContext *context )" );
+	l( "  void __clink__CppProperties_Init( proplib::CppProperties::UpdateContext *context )" );
 	l( "  {" );
-	l( "    DynamicProperties_Init( context );" );
+	l( "    CppProperties_Init( context );" );
 	l( "  }" );
-	l( "  void __clink__DynamicProperties_Update( proplib::DynamicProperties::UpdateContext *context )" );
+	l( "  void __clink__CppProperties_Update( proplib::CppProperties::UpdateContext *context )" );
 	l( "  {" );
-	l( "    DynamicProperties_Update( context );" );
+	l( "    CppProperties_Update( context );" );
 	l( "  }" );
-	l( "  void __clink__DynamicProperties_GetMetadata( proplib::DynamicProperties::PropertyMetadata **result_metadata, int *result_count )" );
+	l( "  void __clink__CppProperties_GetMetadata( proplib::CppProperties::PropertyMetadata **result_metadata, int *result_count )" );
 	l( "  {" );
 	l( "    assert( inited );" );
 	l( "    *result_metadata = metadata;" );
-	l( "    *result_count = " << dynamicProperties.size() << ";" );
+	l( "    *result_count = " << cppProperties.size() << ";" );
 	l( "  }" );
 	l( "}" );
 
@@ -163,7 +194,7 @@ void DynamicProperties::generateLibrarySource()
 	l( "}" );
 }
 
-void DynamicProperties::generateStateStructs( ofstream &out, DynamicPropertyList &dynamicProperties )
+void CppProperties::generateStateStructs( ofstream &out, DynamicPropertyList &dynamicProperties )
 {
 	itfor( DynamicPropertyList, dynamicProperties, it )
 	{
@@ -181,16 +212,17 @@ void DynamicProperties::generateStateStructs( ofstream &out, DynamicPropertyList
 	}	
 }
 
-void DynamicProperties::generateMetadata( ofstream &out,
-										  DynamicPropertyList &dynamicProperties, 
-										  DynamicPropertyIndexMap &indexMap )
+void CppProperties::generateMetadata( ofstream &out,
+									  CppPropertyList &cppProperties, 
+									  CppPropertyMetadataIndexMap &indexMap )
 {
-	l( "static proplib::DynamicProperties::PropertyMetadata metadata[] =" );
+	l( "static proplib::CppProperties::PropertyMetadata metadata[] =" );
 	l( "{" );
 
-	itfor( DynamicPropertyList, dynamicProperties, it )
+	itfor( CppPropertyList, cppProperties, it )
 	{
-		DynamicScalarProperty *prop = *it;
+		__ScalarProperty *prop = *it;
+		DynamicScalarProperty *dynprop = dynamic_cast<DynamicScalarProperty *>( prop );
 
 		int index = (int)indexMap.size();
 		indexMap[prop] = index;
@@ -201,21 +233,24 @@ void DynamicProperties::generateMetadata( ofstream &out,
 		l( "    " << '"' << prop->getFullName(1) << '"' << "," );
 
 		// type
+		if( dynprop )
+			l( "    CppProperties::PropertyMetadata::Dynamic," );
+		else
+			l( "    CppProperties::PropertyMetadata::Runtime," );
+
+		// valueType
 		l( "    " << getDataLibType(prop) << "," );
 
 		// value
 		l( "    NULL," );
 
-		// valueChanged
-		l( "    false," );
-
 		// state
-		if( prop->getAttr("state") )
-			l( "    new " << getStateStructName(prop) );
+		if( dynprop && dynprop->getAttr("state") )
+			l( "    new " << getStateStructName(dynprop) );
 		else
 			l( "    NULL" );
 
-		if( prop != dynamicProperties.back() )
+		if( prop != cppProperties.back() )
 			l( "  }," );
 		else
 			l( "  }" );
@@ -225,9 +260,10 @@ void DynamicProperties::generateMetadata( ofstream &out,
 	l( "" );
 }
 
-void DynamicProperties::generateInitSource( ofstream &out,
-											DynamicPropertyList &dynamicProperties,
-											DynamicPropertyIndexMap &indexMap )
+void CppProperties::generateInitSource( ofstream &out,
+										CppPropertyList &cppProperties,
+										DynamicPropertyList &dynamicProperties,
+										CppPropertyMetadataIndexMap &indexMap )
 {
 	map<DynamicScalarProperty *, string> prop2initBody;
 	map<DynamicScalarProperty *, DynamicPropertyList> prop2antecedents;
@@ -244,30 +280,32 @@ void DynamicProperties::generateInitSource( ofstream &out,
 	// ---
 
 	l( "// ------------------------------------------------------------" );
-	l( "// --- DynamicProperties_Init()" );
+	l( "// --- CppProperties_Init()" );
 	l( "// ---" );
 	l( "// --- Invoked at init." );
 	l( "// ------------------------------------------------------------" );
-	l( "void DynamicProperties_Init( proplib::DynamicProperties::UpdateContext *context )" );
+	l( "void CppProperties_Init( proplib::CppProperties::UpdateContext *context )" );
 	l( "{" );
 	l( "  assert( !inited );" );
 
-	itfor( DynamicPropertyList, dynamicProperties, it )
+	itfor( CppPropertyList, cppProperties, it )
 	{
-		DynamicScalarProperty *prop = *it;
+		__ScalarProperty *prop = *it;
+		DynamicScalarProperty *dynprop = dynamic_cast<DynamicScalarProperty *>( prop );
 		int index = indexMap[prop];
 
 		l( "  // " << prop->getFullName(1) );
 		l( "  {" );
 		l( "    metadata[" << index << "].value = &(" << getCppSymbol(prop) << ");" );
-		if( prop->getAttr("state") )
+		if( dynprop && dynprop->getAttr("state") )
 		{
-			l( "    " << getStateStructName(prop) << " *state = (" << getStateStructName(prop) << "*) metadata[" << index << "].state;" );
+			l( "    " << getStateStructName(dynprop) << " *state = (" << getStateStructName(dynprop) << "*) metadata[" << index << "].state;" );
 		}
-		if( !prop2initBody[prop].empty() )
+
+		if( dynprop && !prop2initBody[dynprop].empty() )
 		{
 			l( "    // START EXPRESSION" );
-			l( prop2initBody[prop] );
+			l( prop2initBody[dynprop] );
 			l( "    // END EXPRESSION" );
 		}
 		l( "  }" );
@@ -278,9 +316,9 @@ void DynamicProperties::generateInitSource( ofstream &out,
 	l( "" );
 }
 
-string DynamicProperties::generateInitFunctionBody( DynamicScalarProperty *prop,
-													DynamicPropertyList &antecedents,
-													DynamicPropertyIndexMap &indexMap )
+string CppProperties::generateInitFunctionBody( DynamicScalarProperty *prop,
+												DynamicPropertyList &antecedents,
+												CppPropertyMetadataIndexMap &indexMap )
 {
 	if( prop->getAttr("init") == NULL )
 	{
@@ -329,11 +367,10 @@ string DynamicProperties::generateInitFunctionBody( DynamicScalarProperty *prop,
 								text = (string)*sym.prop;
 								break;
 							case Node::Dynamic:
-								text = getMetadataLValue( sym.prop, indexMap );
 								antecedents.push_back( dynamic_cast<DynamicScalarProperty *>(sym.prop) );
-								break;
+								// fall through.
 							case Node::Runtime:
-								text = getCppSymbol( sym.prop );
+								text = getMetadataLValue( sym.prop, indexMap );
 								break;
 							default:
 								assert( false );
@@ -374,9 +411,9 @@ string DynamicProperties::generateInitFunctionBody( DynamicScalarProperty *prop,
 	return out.str();
 }
 
-void DynamicProperties::generateUpdateSource( ofstream &out,
+void CppProperties::generateUpdateSource( ofstream &out,
 											  DynamicPropertyList &dynamicProperties,
-											  DynamicPropertyIndexMap &indexMap )
+											  CppPropertyMetadataIndexMap &indexMap )
 {
 	map<DynamicScalarProperty *, string> prop2updateBody;
 	map<DynamicScalarProperty *, DynamicPropertyList> prop2antecedents;
@@ -394,11 +431,11 @@ void DynamicProperties::generateUpdateSource( ofstream &out,
 	// ---
 
 	l( "// ------------------------------------------------------------" );
-	l( "// --- DynamicProperties_Update()" );
+	l( "// --- CppProperties_Update()" );
 	l( "// ---" );
 	l( "// --- Invoked once per step. Updates all dynamic properties." );
 	l( "// ------------------------------------------------------------" );
-	l( "void DynamicProperties_Update( proplib::DynamicProperties::UpdateContext *context )" );
+	l( "void CppProperties_Update( proplib::CppProperties::UpdateContext *context )" );
 	l( "{" );
 	l( "  assert( inited );" );
 
@@ -411,7 +448,7 @@ void DynamicProperties::generateUpdateSource( ofstream &out,
 		l( "  {" );
 		l( "    struct local" );
 		l( "    {" );
-		l( "      static inline " << getCppType(prop) << " update( proplib::DynamicProperties::UpdateContext *context ) " );
+		l( "      static inline " << getCppType(prop) << " update( proplib::CppProperties::UpdateContext *context ) " );
 		l( "      {" );
 		if( prop->getAttr("state") )
 		{
@@ -423,12 +460,8 @@ void DynamicProperties::generateUpdateSource( ofstream &out,
 		l( "      }" );
 		l( "    };" );
 		l( "    " << getCppType(prop) << " newval = local::update( context );" );
-		//l( "    cout << \"" << prop->getFullName(1) << "= \" << newval << endl;" ); 
-		l( "    if( newval == " << getMetadataLValue(prop, indexMap) << ")" );
-		l( "      metadata[" << index << "].valueChanged = false;" );
-		l( "    else" );
+		l( "    if( newval != " << getMetadataLValue(prop, indexMap) << ")" );
 		l( "    {" );
-		l( "      metadata[" << index << "].valueChanged = true;" );
 		itfor( PropertyMap, prop->getSchema()->props(), it_attr )
 		{
 			string attrName = it_attr->second->getName();
@@ -452,9 +485,9 @@ void DynamicProperties::generateUpdateSource( ofstream &out,
 	l( "" );
 }
 
-string DynamicProperties::generateUpdateFunctionBody( DynamicScalarProperty *prop,
+string CppProperties::generateUpdateFunctionBody( DynamicScalarProperty *prop,
 													  DynamicPropertyList &antecedents,
-													  DynamicPropertyIndexMap &indexMap )
+													  CppPropertyMetadataIndexMap &indexMap )
 {
 	Expression *expr;
 	bool skipBraces;
@@ -522,11 +555,10 @@ string DynamicProperties::generateUpdateFunctionBody( DynamicScalarProperty *pro
 								text = (string)*sym.prop;
 								break;
 							case Node::Dynamic:
-								text = getMetadataLValue( sym.prop, indexMap );
 								antecedents.push_back( dynamic_cast<DynamicScalarProperty *>(sym.prop) );
-								break;
+								// fall through.
 							case Node::Runtime:
-								text = getCppSymbol( sym.prop );
+								text = getMetadataLValue( sym.prop, indexMap );
 								break;
 							default:
 								assert( false );
@@ -574,12 +606,12 @@ string DynamicProperties::generateUpdateFunctionBody( DynamicScalarProperty *pro
 		return out.str();
 }
 
-string DynamicProperties::getStateStructName( DynamicScalarProperty *prop )
+string CppProperties::getStateStructName( DynamicScalarProperty *prop )
 {
 	return string("State___") + prop->getFullName( 1, "__" );
 }
 
-string DynamicProperties::getDataLibType( DynamicScalarProperty *prop )
+string CppProperties::getDataLibType( __ScalarProperty *prop )
 {
 	string dtype = "";
 
@@ -594,12 +626,12 @@ string DynamicProperties::getDataLibType( DynamicScalarProperty *prop )
 		dtype = "BOOL";
 
 	if( dtype.empty() )
-		prop->err( "No appropriate datalib type for dynamic property." );
+		prop->err( "No appropriate datalib type for cpp property." );
 
 	return string("datalib::") + dtype;
 }
 
-string DynamicProperties::getCppType( Property *prop )
+string CppProperties::getCppType( Property *prop )
 {
 	Property *propType = prop->getSchema()->getp( "cpptype" );
 	if( propType )
@@ -621,9 +653,9 @@ string DynamicProperties::getCppType( Property *prop )
 	}
 }
 
-string DynamicProperties::getMetadataLValue( Property *prop_, DynamicPropertyIndexMap &indexMap )
+string CppProperties::getMetadataLValue( Property *prop_, CppPropertyMetadataIndexMap &indexMap )
 {
-	DynamicScalarProperty *prop = dynamic_cast<DynamicScalarProperty *>( prop_ );
+	__ScalarProperty *prop = dynamic_cast<__ScalarProperty *>( prop_ );
 
 	stringstream buf;
 	buf << "*((" << getCppType(prop) << "*)metadata[/*" << prop->getFullName(1) << "*/ " << indexMap[prop] << "].value)";
@@ -672,7 +704,7 @@ static bool findSymMacro( Property &prop,
 	return false;
 }
 
-string DynamicProperties::getCppSymbol( Property *prop )
+string CppProperties::getCppSymbol( Property *prop )
 {
 	Property &propSym = prop->getSchema()->get( "cppsym" );
 	string sym = propSym;
@@ -756,7 +788,10 @@ string DynamicProperties::getCppSymbol( Property *prop )
 	return sym;
 }
 
-void DynamicProperties::getDynamicProperties( Property *container, DynamicPropertyList &result )
+void CppProperties::getCppProperties( Property *container,
+									  CppPropertyList &result_all,
+									  DynamicPropertyList &result_dynamic,
+									  RuntimePropertyList &result_runtime )
 {
 	itfor( PropertyMap, container->props(), it )
 	{
@@ -765,11 +800,19 @@ void DynamicProperties::getDynamicProperties( Property *container, DynamicProper
 		{
 		case Node::Object:
 		case Node::Array:
-			getDynamicProperties( prop, result );
+			getCppProperties( prop, result_all, result_dynamic, result_runtime );
 			break;
 		case Node::Scalar:
 			if( prop->getSubtype() == Node::Dynamic )
-				result.push_back( dynamic_cast<DynamicScalarProperty *>(prop) );
+			{
+				result_all.push_back( dynamic_cast<__ScalarProperty *>(prop) );
+				result_dynamic.push_back( dynamic_cast<DynamicScalarProperty *>(prop) );
+			}
+			else if( prop->getSubtype() == Node::Runtime )
+			{
+				result_all.push_back( dynamic_cast<__ScalarProperty *>(prop) );
+				result_runtime.push_back( dynamic_cast<RuntimeScalarProperty *>(prop) );
+			}
 			break;
 		default:
 			// no-op
@@ -778,8 +821,8 @@ void DynamicProperties::getDynamicProperties( Property *container, DynamicProper
 	}
 }
 
-void DynamicProperties::sortDynamicProperties( DynamicPropertyList &properties,
-											   map<DynamicScalarProperty *, DynamicPropertyList> &prop2antecedents )
+void CppProperties::sortDynamicProperties( DynamicPropertyList &properties,
+										   map<DynamicScalarProperty *, DynamicPropertyList> &prop2antecedents )
 {
 	struct local
 	{

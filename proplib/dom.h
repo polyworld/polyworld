@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "interpreter.h"
-#include "dynamic.h"
+#include "cppprops.h"
 #include "expression.h"
 
 namespace proplib

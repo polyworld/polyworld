@@ -6,7 +6,9 @@
 
 #include <QObject>
 
+#include "datalib.h"
 #include "MovieController.h"
+#include "proplib.h"
 #include "simconst.h"
 #include "simtypes.h"
 
@@ -219,13 +221,25 @@ class FarmMonitor : public Monitor
  public:
 	static bool isFarmEnv();
 
+	class Property
+	{
+	public:
+		Property( std::string name_, std::string title_ ) : name(name_), title(title_), metadata(NULL) {}
+
+		std::string name;
+		std::string title;
+		proplib::CppProperties::PropertyMetadata *metadata;
+	};
+
 	FarmMonitor( class TSimulation *sim,
-				 int frequency );
+				 int frequency,
+				 const std::vector<Property> &properties );
 
 	virtual void step( long timestep );
 
  private:
-	int frequency;
+	int _frequency;
+	std::vector<Property> _properties;
 };
 
 //===========================================================================

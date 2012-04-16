@@ -1536,18 +1536,35 @@ void Brain::Grow( Genome* g )
             iiremainder[groupIndex_from] = 0.0;
             ieremainder[groupIndex_from] = 0.0;
 
-			// synapseTypes = EE, EI, IE, II
-			citfor( SynapseTypeList, g->getSynapseTypes(), it )
+			if( !brain::gOutputSynapseLearning
+				&& (IsOutputNeuralGroup(groupIndex_from) || IsOutputNeuralGroup(groupIndex_to)) )
 			{
-				SynapseType *synapseType = *it;
+				// Set learning to 0
+				citfor( SynapseTypeList, g->getSynapseTypes(), it )
+				{
+					SynapseType *synapseType = *it;
 
-				neuralnet->set_grouplrate( synapseType,
-										   groupIndex_from,
-										   groupIndex_to,
-										   g->get(g->LEARNING_RATE,
-												  synapseType,
-												  groupIndex_from,
-												  groupIndex_to) );
+					neuralnet->set_grouplrate( synapseType,
+											   groupIndex_from,
+											   groupIndex_to,
+											   0 );
+				}
+			}
+			else
+			{
+				// synapseTypes = EE, EI, IE, II
+				citfor( SynapseTypeList, g->getSynapseTypes(), it )
+				{
+					SynapseType *synapseType = *it;
+
+					neuralnet->set_grouplrate( synapseType,
+											   groupIndex_from,
+											   groupIndex_to,
+											   g->get(g->LEARNING_RATE,
+													  synapseType,
+													  groupIndex_from,
+													  groupIndex_to) );
+				}
 			}
         }
 

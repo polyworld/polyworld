@@ -9,7 +9,7 @@
 #include <list>
 
 //Local
-#include "dynamic.h"
+#include "cppprops.h"
 #include "Energy.h"
 #include "FoodType.h"
 #include "gstage.h"
@@ -26,7 +26,7 @@ class FoodPatch;
 //===========================================================================
 class FoodPatch : public Patch
 {
-	PROPLIB_DYNAMIC_PROPERTIES
+	PROPLIB_CPP_PROPERTIES
 
  public:
 	// forward decl

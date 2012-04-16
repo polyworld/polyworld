@@ -4,6 +4,7 @@
 #define NEXT 1
 #define PREV 2
 
+#include "cppprops.h"
 #include "gdlink.h"
 #include "gobject.h"
 #include "food.h"
@@ -19,6 +20,7 @@ using namespace std;
 
 class objectxsortedlist : public gdlist<gobject*>
 {
+	PROPLIB_CPP_PROPERTIES
 
  private:
     int agentCount;
@@ -37,7 +39,6 @@ class objectxsortedlist : public gdlist<gobject*>
     void sort();
     void list();
     int getCount( int objType );
-	const int *getCountPtr( int objType );
     int nextObj( int objType, gobject** gob );
     int prevObj( int objType, gobject** gob );
     int lastObj( int objType, gobject** gob );

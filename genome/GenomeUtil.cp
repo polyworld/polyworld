@@ -8,7 +8,9 @@
 #include "GenomeLayout.h"
 #include "globals.h"
 #include "Metabolism.h"
+#include "misc.h"
 
+using namespace std;
 using namespace genome;
 
 GenomeSchema *GenomeUtil::schema = NULL;
@@ -282,6 +284,28 @@ GenomeSchema *GenomeUtil::createSchema()
 	// --- Finalization
 	// ---
 	schema->complete();	
+
+	// ---
+	// --- Configure Interpolation
+	// ---
+	itfor( GeneInterpolationPowers, gGeneInterpolationPower, it )
+	{
+		Gene *gene = schema->get( it->first );
+		if( !gene )
+		{
+			cerr << "Invalid gene name for interpolation power: " << it->first << endl;
+			exit( 1 );
+		}
+
+		__InterpolatedGene *igene = gene->to___Interpolated();
+		if( !igene )
+		{
+			cerr << "Invalid gene for interpolation power: " << it->first << endl;
+			exit( 1 );
+		}
+		
+		igene->setInterpolationPower( it->second );
+	}
 
 	// ---
 	// --- Layout

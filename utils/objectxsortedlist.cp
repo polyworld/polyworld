@@ -52,24 +52,6 @@ int objectxsortedlist::getCount( int objType )
 }
 
 //---------------------------------------------------------------------------
-// objectxsortedlist::getCountPtr
-//---------------------------------------------------------------------------
-const int *objectxsortedlist::getCountPtr( int objType )
-{
-	switch( objType )
-	{
-	case AGENTTYPE:
-		return &agentCount;
-	case FOODTYPE:
-		return &foodCount;
-	case BRICKTYPE:
-		return  &brickCount;
-	default:
-		assert( false );
-	}
-}
-
-//---------------------------------------------------------------------------
 // objectxsortedlist::lastObj
 //---------------------------------------------------------------------------
 int objectxsortedlist::lastObj( int objType, gobject** g )

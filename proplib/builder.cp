@@ -5,7 +5,7 @@
 #include <sstream>
 
 #include "convert.h"
-#include "dynamic.h"
+#include "cppprops.h"
 #include "editor.h"
 #include "expression.h"
 #include "interpreter.h"

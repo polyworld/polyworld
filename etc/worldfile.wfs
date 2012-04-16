@@ -322,7 +322,7 @@ AgentMetabolisms {
         }
       }
      
-      NumberAliveWithMetabolism {
+      MetabolismAgentCount {
         type    Int
         runtime True
         cppsym  "$[sim]->fNumberAliveWithMetabolism[ $[ancestor]->index ]"
@@ -1490,14 +1490,39 @@ MaxLearningRate {
   min     MinLearningRate
 }
 
+OutputSynapseLearning {
+  type    Bool
+  default True
+}
+
 SynapseFromOutputNeurons {
   type    Bool
   default True
 }
 
+
 #-------------------------------------------------------------------
 # SECTION Simulation parameters -- Gene Options
 #-------------------------------------------------------------------
+
+GeneInterpolationPower {
+  type    Array
+  default []
+  element {
+    type    Object
+    properties {
+
+      Name {
+        type    String
+      }
+
+      Power {
+        type    Float
+      }
+
+    }
+  }
+}
 
 MinInitialBitProb {
   type    Float
@@ -2225,16 +2250,23 @@ FitnessWeightLongevity {
 #-------------------------------------------------------------------
 # SECTION Runtime Simulation Properties
 #-------------------------------------------------------------------
-NumberAlive {
-  type    Int
-  runtime True
-  cppsym  "$[sim]->fNumberAlive"
-}
 
 Step {
   type    Int
   runtime True
   cppsym  "$[sim]->fStep"
+}
+
+AgentCount {
+  type    Int
+  runtime True
+  cppsym  "objectxsortedlist::gXSortedObjects.agentCount"
+}
+
+FoodCount {
+  type    Int
+  runtime True
+  cppsym  "objectxsortedlist::gXSortedObjects.foodCount"
 }
 
 

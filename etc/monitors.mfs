@@ -172,6 +172,30 @@ Farm {
       default 100
     }
 
+    Properties {
+      type    Array
+      default [
+        { Name "Step"; Title "step" },
+        { Name "AgentCount"; Title "agents" },
+	{ Name "FoodCount"; Title "food" }
+      ]
+      element {
+        type    Object
+        properties {
+          
+          Name {
+            type    String
+          }
+
+          Title {
+            type    String
+            default Name
+          }
+
+        }
+      }
+    }
+
   }
 }
 

@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "dynamic.h"
+#include "cppprops.h"
 #include "NeurGroupType.h"
 #include "Scalar.h"
 
@@ -111,7 +111,7 @@ namespace genome
 	// ================================================================================
 	class __InterpolatedGene : virtual Gene
 	{
-		PROPLIB_DYNAMIC_PROPERTIES
+		PROPLIB_CPP_PROPERTIES
 
 	public:
 		enum Rounding
@@ -133,6 +133,8 @@ namespace genome
 		const Scalar &getMin();
 		const Scalar &getMax();
 
+		void setInterpolationPower( double interpolationPower );
+
 		Scalar interpolate( unsigned char raw );
 		Scalar interpolate( double ratio );
 
@@ -142,6 +144,7 @@ namespace genome
 		Scalar smin;
 		Scalar smax;
 		Rounding rounding;
+		double interpolationPower;
 	};
 
 

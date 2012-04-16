@@ -33,7 +33,7 @@ def build():
 	Default( build_proputil(envs['proputil']) )
 	Default( build_pmvutil(envs['pmvutil']) )
 	Default( build_qt_clust(envs['qt_clust']) )
-	build_dynprop(envs['dynprop'])
+	build_cppprops(envs['cppprops'])
 
 def build_Polyworld(env):
 	blddir = '.bld/Polyworld'
@@ -140,14 +140,14 @@ def build_qt_clust(env):
 									  'src',
 									  blddir))
 
-def build_dynprop(env):
-	blddir = '.bld/dynprop/bld'
+def build_cppprops(env):
+	blddir = '.bld/cppprops/bld'
 
-	sources = ['.bld/dynprop/src/generated.cpp']
+	sources = ['.bld/cppprops/src/generated.cpp']
 
-	env.VariantDir(blddir, '.bld/dynprop/src', False)
+	env.VariantDir(blddir, '.bld/cppprops/src', False)
 
-	return env.SharedLibrary( '.bld/dynprop/bin/dynprop',
+	return env.SharedLibrary( '.bld/cppprops/bin/cppprops',
 							  sources )
 
 def env_create():
@@ -218,7 +218,7 @@ def env_create():
 
 	envs['qt_clust'] = envs['CalcComplexity'].Clone()
 
-	envs['dynprop'] = envs['Polyworld'].Clone()
+	envs['cppprops'] = envs['Polyworld'].Clone()
 
 	return envs
 

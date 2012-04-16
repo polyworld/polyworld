@@ -1,6 +1,7 @@
 #include "Monitor.h"
 
 #include <iostream>
+#include <sstream>
 
 #include "AgentTracker.h"
 #include "CameraController.h"
@@ -328,23 +329,57 @@ bool FarmMonitor::isFarmEnv()
 	return getenv("PWFARM_STATUS") != NULL;
 }
 
-FarmMonitor::FarmMonitor( TSimulation *_sim,
-						  int _frequency )
-: Monitor(FARM, _sim, "farm", "Farm", "Farm")
-	, frequency( _frequency )
+FarmMonitor::FarmMonitor( TSimulation *sim,
+						  int frequency,
+						  const vector<Property> &properties )
+: Monitor(FARM, sim, "farm", "Farm", "Farm")
+, _frequency( frequency )
+, _properties( properties )
 {
+	int nmetadata;
+	proplib::CppProperties::PropertyMetadata *metadata;
+	proplib::CppProperties::getMetadata( &metadata, &nmetadata );
+
+	itfor( vector<Property>, _properties, it )
+	{
+		for( int i = 0; i < nmetadata; i++ )
+		{
+			if( it->name == metadata[i].name )
+			{
+				it->metadata = metadata + i;
+				break;
+			}
+		}
+	}
 }
 
 void FarmMonitor::step( long timestep )
 {
-	if( (timestep == 1) || (timestep % frequency == 0) )
+	if( (timestep == 1) || (timestep % _frequency == 0) )
 	{
-		char cmd[1024];
-		sprintf( cmd, "bash -c 'PWFARM_STATUS Polyworld \"[step=%ld agents=%d food=%d]\"'",
-				 timestep,
-				 objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE),
-				 objectxsortedlist::gXSortedObjects.getCount(FOODTYPE));
-		int rc = system( cmd );
+		stringstream cmd;
+
+		cmd << "bash -c 'PWFARM_STATUS Polyworld \"[";
+
+		bool first = true;
+		itfor( vector<Property>, _properties, it )
+		{
+			if( it->metadata )
+			{
+				if( !first )
+				{
+					cmd << " ";
+				}
+				else
+					first = false;
+
+				cmd << it->title << "=" << it->metadata->toString();
+			}
+		}
+
+		cmd << "]\"'";
+
+		int rc = system( cmd.str().c_str() );
 		if( rc ) cerr << "Failed executing PWFARM_STATUS" << endl;
 	}
 }

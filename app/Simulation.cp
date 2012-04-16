@@ -279,9 +279,9 @@ TSimulation::TSimulation( string worldfilePath, string monitorPath )
 	GenomeUtil::createSchema();
 
 	// ---
-	// --- Init Dynamic Properties
+	// --- Init Cpp Properties
 	// ---
-	InitDynamicProperties( worldfile );
+	InitCppProperties( worldfile );
 
 		
 	 // Following is part of one way to speed up the graphics
@@ -635,9 +635,9 @@ void TSimulation::Step()
 	fEnergyEaten.zero();
 
 	// Update dynamic properties
-	proplib::DynamicProperties::update();
+	proplib::CppProperties::update();
 
-	// Update the barriers, now that they can be dynamic
+	// Update the barriers, since they can be dynamic
 	barrier* b;
 	barrier::gXSortedBarriers.reset();
 	while( barrier::gXSortedBarriers.next( b ) )
@@ -791,12 +791,12 @@ string TSimulation::EndAt( long timestep )
 }
 
 //-------------------------------------------------------------------------------------------
-// TSimulation::InitDynamicProperties()
+// TSimulation::InitCppProperties()
 //-------------------------------------------------------------------------------------------
-void TSimulation::InitDynamicProperties( proplib::Document *docWorldFile )
+void TSimulation::InitCppProperties( proplib::Document *docWorldFile )
 {
-	proplib::DynamicProperties::UpdateContext *context = new proplib::DynamicProperties::UpdateContext( this );
-	proplib::DynamicProperties::init( docWorldFile, context );
+	proplib::CppProperties::UpdateContext *context = new proplib::CppProperties::UpdateContext( this );
+	proplib::CppProperties::init( docWorldFile, context );
 
 }
 
@@ -4326,6 +4326,13 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	RandomNumberGenerator::set( RandomNumberGenerator::INIT_WEIGHT,
 								RandomNumberGenerator::LOCAL );
     brain::gInitMaxWeight = doc.get( "MaxSynapseWeightInitial" );
+	{
+		proplib::Property &propPowers = doc.get( "GeneInterpolationPower" );
+		itfor( proplib::PropertyMap, propPowers.elements(), it )
+		{
+			genome::gGeneInterpolationPower[ it->second->get("Name") ] = it->second->get( "Power" );
+		}
+	}
     genome::gMinBitProb = doc.get( "MinInitialBitProb" );
     genome::gMaxBitProb = doc.get( "MaxInitialBitProb" );
 	{
@@ -4357,7 +4364,7 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 		for( int ibarrier = 0; ibarrier < (int)propBarriers.elements().size(); ibarrier++ )
 		{
 			proplib::Property &propBarrier = propBarriers.get( ibarrier );
-			// Note that barriers were already allocated in InitDynamicProperties()
+			// Note that barriers were already allocated in InitCppProperties()
 			barrier *b = new barrier();
 			barrier::gBarriers.push_back( b );
 
@@ -4848,6 +4855,7 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	RandomNumberGenerator::set( RandomNumberGenerator::TOPOLOGICAL_DISTORTION,
 								RandomNumberGenerator::LOCAL );
 	brain::gNeuralValues.maxneuron2energy = doc.get( "EnergyUseNeurons" );
+	brain::gOutputSynapseLearning = doc.get( "OutputSynapseLearning" );
 	brain::gSynapseFromOutputNeurons = doc.get( "SynapseFromOutputNeurons" );
 	brain::gNumPrebirthCycles = doc.get( "PreBirthCycles" );
 
@@ -5507,32 +5515,17 @@ void TSimulation::getStatusText( StatusText& statusText,
 
 	// Dynamic Properties
 	{
-		int ndyn;
-		proplib::DynamicProperties::PropertyMetadata *metadata;
-		proplib::DynamicProperties::getMetadata( &metadata, &ndyn );
+		int nprops;
+		proplib::CppProperties::PropertyMetadata *metadata;
+		proplib::CppProperties::getMetadata( &metadata, &nprops );
 
-		for( int i = 0; i < ndyn; i++ )
+		for( int i = 0; i < nprops; i++ )
 		{
-			bool display = true;
-
-			switch( metadata[i].type )
+			if( metadata[i].type == proplib::CppProperties::PropertyMetadata::Dynamic )
 			{
-			case datalib::INT:
-				sprintf( t, "%s = %d", metadata[i].name.c_str(), *((int *)metadata[i].value) );
-				break;
-			case datalib::FLOAT:
-				sprintf( t, "%s = %f", metadata[i].name.c_str(), *((float *)metadata[i].value) );
-				break;
-			case datalib::BOOL:
-				sprintf( t, "%s = %s", metadata[i].name.c_str(), *((bool *)metadata[i].value) ? "true" : "false" );
-				break;
-			default:
-				display = false;
-				break;
-			}
-
-			if( display )
+				sprintf( t, "%s = %s", metadata[i].name.c_str(), metadata[i].toString() );
 				statusText.push_back( strdup(t) );
+			}
 		}
 	}
 }

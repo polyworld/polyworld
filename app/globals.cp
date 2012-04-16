@@ -15,10 +15,13 @@ bool	globals::stickyEdges;
 int     globals::numEnergyTypes;
 AbstractFile::ConcreteFileType globals::recordFileType;
 
+using namespace std;
+
 namespace brain
 {
 
     NeuralValues gNeuralValues;
+	bool gOutputSynapseLearning;
 	bool gSynapseFromOutputNeurons;
     long gNumPrebirthCycles;
 	float gLogisticSlope;
@@ -37,6 +40,8 @@ namespace brain
 namespace genome
 {
 	GenomeLayout::LayoutType gLayoutType;
+
+	GeneInterpolationPowers gGeneInterpolationPower;
 
 	float gSeedMutationRate;
 

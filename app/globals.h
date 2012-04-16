@@ -11,6 +11,10 @@
 // System
 #include <stdio.h>
 
+// STL
+#include <map>
+#include <string>
+
 // qt
 #include <qevent.h>
 
@@ -118,6 +122,7 @@ namespace brain
 
 	// Public globals	
     extern NeuralValues gNeuralValues;
+	extern bool gOutputSynapseLearning;
 	extern bool gSynapseFromOutputNeurons;
     extern long gNumPrebirthCycles;
 	extern float gLogisticSlope;
@@ -142,6 +147,9 @@ namespace genome
     // External globals
     extern long gNumBytes;
 	extern GenomeLayout::LayoutType gLayoutType;
+
+	typedef std::map<std::string,float> GeneInterpolationPowers;
+	extern GeneInterpolationPowers gGeneInterpolationPower;
 
 	extern float gSeedMutationRate;
 

@@ -11,14 +11,14 @@ using namespace proplib;
 // --- CLASS __StateObject
 // ----------------------------------------------------------------------
 // ----------------------------------------------------------------------
-DynamicProperties::UpdateContext *__StateObject::getUpdateContext()
+CppProperties::UpdateContext *__StateObject::getUpdateContext()
 {
-	return DynamicProperties::_context;
+	return CppProperties::_context;
 }
 
 long __StateObject::getStep()
 {
-	return DynamicProperties::_context->sim->getStep();
+	return CppProperties::_context->sim->getStep();
 }
 
 

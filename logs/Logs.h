@@ -2,7 +2,7 @@
 #include <map>
 #include <vector>
 
-#include "dynamic.h"
+#include "cppprops.h"
 #include "Energy.h"
 #include "Logger.h"
 #include "misc.h"

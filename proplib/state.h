@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include "dynamic.h"
+#include "cppprops.h"
 #include "FoodPatch.h"
 
 
@@ -11,7 +11,7 @@ namespace proplib
 		class __StateObject
 		{
 		protected:
-			static DynamicProperties::UpdateContext *getUpdateContext();
+			static CppProperties::UpdateContext *getUpdateContext();
 			static long getStep();
 		};
 

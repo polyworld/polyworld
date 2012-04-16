@@ -140,6 +140,7 @@ __InterpolatedGene::__InterpolatedGene( Type _type,
 : smin( _gmin->to_ImmutableScalar()->get( NULL ) )
 , smax( _gmax->to_ImmutableScalar()->get( NULL ) )
 , rounding( _rounding )
+, interpolationPower( 1.0 )
 {
 	init( _type,
 		  _ismutable,
@@ -158,12 +159,19 @@ const Scalar &__InterpolatedGene::getMax()
 	return smax;
 }
 
+void __InterpolatedGene::setInterpolationPower( double power )
+{
+	interpolationPower = power;
+}
+
 Scalar __InterpolatedGene::interpolate( unsigned char raw )
 {
 	static const float OneOver255 = 1. / 255.;
 
 	// temporarily cast to double for backwards compatibility
 	double ratio = float(raw) * OneOver255;
+	if( interpolationPower != 1.0 )
+		ratio = pow( ratio, interpolationPower );
 
 	return interpolate( ratio );
 }

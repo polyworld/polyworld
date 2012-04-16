@@ -1,6 +1,7 @@
 #include "MonitorManager.h"
 
 #include <map>
+#include <vector>
 
 #include "AgentTracker.h"
 #include "CameraController.h"
@@ -114,8 +115,17 @@ MonitorManager::MonitorManager( TSimulation *_simulation,
 	// ---
 	if( FarmMonitor::isFarmEnv() && (bool)doc.get("Farm").get("Enabled") )
 	{
+		vector<FarmMonitor::Property> properties;
+
+		itfor( proplib::PropertyMap, doc.get("Farm").get("Properties").elements(), it )
+		{
+			properties.push_back( FarmMonitor::Property(it->second->get("Name"),
+														it->second->get("Title")) );
+		}
+
 		addMonitor( new FarmMonitor(simulation,
-										  doc.get("Farm").get("Frequency")) );
+									doc.get("Farm").get("Frequency"),
+									properties) );
 	}
 
 	// ---
