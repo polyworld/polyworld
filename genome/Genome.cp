@@ -345,13 +345,23 @@ void Genome::crossover( Genome *g1, Genome *g2, bool mutate )
 	assert(g1 != NULL && g2 != NULL);
 	assert(g1 != g2);
 	assert(mutable_data != NULL);
-	
+
     // Randomly select number of crossover points from chosen genome
     long numCrossPoints;
     if (randpw() < 0.5)
         numCrossPoints = g1->get( "CrossoverPointCount" );
     else
 		numCrossPoints = g2->get( "CrossoverPointCount" );
+
+	if( numCrossPoints == 0 )
+	{
+		Genome *gTemplate = (randpw() < 0.5) ? g1 : g2;
+
+		copyFrom( gTemplate );
+		if( mutate )
+			this->mutate();
+		return;
+	}
     
 	// allocate crossover buffer on stack -- fast & automatically free'd
 	long *crossoverPoints = (long *)alloca( numCrossPoints * sizeof(long) );
