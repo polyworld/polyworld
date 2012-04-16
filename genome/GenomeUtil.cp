@@ -381,7 +381,6 @@ void GenomeUtil::seed( Genome *g )
 	SEED( InhibitoryNeuronCount, 0 );
 
 	SEED( Bias, 0.5 );
-	SEED( BiasLearningRate, 0 );
 	if( brain::gNeuralValues.model == brain::NeuralValues::TAU )
 	{
 		SEED( Tau, brain::gNeuralValues.Tau.seedVal );
