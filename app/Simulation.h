@@ -104,7 +104,11 @@ public:
 	int fEpochFrequency;
 	long fEpoch;
 	
+	int fNumDepletionSteps;
+	double fMaxPopulationPenaltyFraction;
 	bool fApplyLowPopulationAdvantage;
+	double fLowPopulationAdvantageFactor;
+	double fPopulationPenaltyFraction;
 	bool fEnergyBasedPopulationControl;
 	bool fPopControlGlobal;
 	bool fPopControlDomains;
@@ -142,7 +146,6 @@ private:
 	void InitFood();
 	void InitBricks();
 	void InitBarriers();
-	void InitNeuralValues();
 
 	void SeedGenome( long agentNumber,
 					 genome::Genome *genes,
@@ -228,7 +231,9 @@ private:
 
 	float AgentFitness( agent* c );
 	
-	void ProcessWorldFile( proplib::Document *docWorldFile );
+	void processWorldFile( proplib::Document *docWorldFile );
+	void initLockstepMode();
+	void initFitnessMode();
 
 	void Dump();
 	
@@ -400,7 +405,6 @@ private:
 	int   fLinearFogEnd;
 
 	Stat fLifeSpanStats;
-	Stat fNeuronGroupCountStats;
 	Stat fCurrentNeuronGroupCountStats;
 	Stat fCurrentNeuronCountStats;
 	Stat fCurrentSynapseCountStats;

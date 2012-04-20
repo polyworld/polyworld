@@ -4,8 +4,6 @@
 
 #include <iostream>
 
-#include "Genome.h"
-
 // forward decls
 class AbstractFile;
 
@@ -24,8 +22,6 @@ class NeuronModel
 	{
 		int numneurons;
 		long numsynapses;
-		int numgroups;
-		int numgroupsWithNeurons;
 		
 		int numInputNeurons;
 		int numNonInputNeurons;
@@ -38,13 +34,11 @@ class NeuronModel
 
 	virtual ~NeuronModel() {}
 
-	virtual void init( genome::Genome *genes,
-					   Dimensions *dims,
+	virtual void init( Dimensions *dims,
 					   float initial_activation ) = 0;
 
 	virtual void set_neuron( int index,
-							 int group,
-							 float bias,
+							 void *attributes,
 							 int startsynapses = -1,
 							 int endsynapses = -1 ) = 0;
 	virtual void set_neuron_endsynapses( int index,
@@ -52,12 +46,8 @@ class NeuronModel
 	virtual void set_synapse( int index,
 							  int from,
 							  int to,
-							  float efficacy ) = 0;
-
-	virtual void set_grouplrate( genome::SynapseType *syntype,
-								 int from,
-								 int to,
-								 float lrate ) = 0;
+							  float efficacy,
+							  float lrate ) = 0;
 
 	virtual void update( bool bprint ) = 0;
 
@@ -65,9 +55,4 @@ class NeuronModel
 
 	virtual void startFunctional( AbstractFile *file ) = 0;
 	virtual void writeFunctional( AbstractFile *file ) = 0;
-
-	virtual void dump( std::ostream &out ) = 0;
-	virtual void load( std::istream &in ) = 0;
-
-	virtual void render( short patchwidth, short patchheight ) = 0;
 };

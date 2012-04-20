@@ -6,6 +6,7 @@ namespace genome
 {
 	// forward decls
 	class GenomeSchema;
+	class GroupsGenomeSchema;
 
 	// ================================================================================
 	// ===
@@ -31,7 +32,7 @@ namespace genome
 	private:
 		static void createLegacy( GenomeLayout *layout );
 		static void createNeurGroup( GenomeLayout *layout,
-									 GenomeSchema *schema );
+									 GroupsGenomeSchema *schema );
 
 	private:
 		GenomeLayout( GenomeSchema *schema );

@@ -766,11 +766,11 @@ string CppProperties::getCppSymbol( Property *prop )
 
 			if( member == "min" )
 			{
-				expansion = string("genome::GenomeUtil::getGene(\"") + geneName + "\", \"" + err + "\")->to___Interpolated()->smin.__val";
+				expansion = string("genome::GeneType::to___Interpolated(genome::GenomeUtil::getGene(\"") + geneName + "\", \"" + err + "\"))->smin.__val";
 			}
 			else if( member == "max" )
 			{
-				expansion = string("genome::GenomeUtil::getGene(\"") + geneName + "\", \"" + err + "\")->to___Interpolated()->smax.__val";
+				expansion = string("genome::GeneType::to___Interpolated(genome::GenomeUtil::getGene(\"") + geneName + "\", \"" + err + "\"))->smax.__val";
 			}
 			else
 			{

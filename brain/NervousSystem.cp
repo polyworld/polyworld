@@ -149,7 +149,7 @@ NervousSystem::nerve_iterator NervousSystem::end_nerve( Nerve::Type type )
 
 void NervousSystem::grow( Genome *g )
 {
-	b->Grow( g );
+	b->grow( g );
 
 	for( SensorList::iterator
 			 it = sensors.begin(),

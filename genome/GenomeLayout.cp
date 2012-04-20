@@ -8,6 +8,8 @@
 
 #include "Gene.h"
 #include "GenomeSchema.h"
+#include "GroupsGene.h"
+#include "GroupsGenomeSchema.h"
 #include "misc.h"
 
 using namespace std;
@@ -32,7 +34,7 @@ GenomeLayout *GenomeLayout::create( GenomeSchema *schema,
 		createLegacy( layout );
 		break;
 	case NEURGROUP:
-		createNeurGroup( layout, schema );
+		createNeurGroup( layout, dynamic_cast<GroupsGenomeSchema *>(schema) );
 		break;
 	default:
 		assert( false );
@@ -56,7 +58,7 @@ void GenomeLayout::createLegacy( GenomeLayout *layout )
 }
 
 void GenomeLayout::createNeurGroup( GenomeLayout *layout,
-									GenomeSchema *schema )
+									GroupsGenomeSchema *schema )
 {
 	int __index = 0;
 #define ADD(GENE_OFFSET,N)												\
@@ -73,7 +75,7 @@ void GenomeLayout::createNeurGroup( GenomeLayout *layout,
 	// ---
 	// --- SCALARS
 	// --- 
-	citfor( GeneVector, schema->getAll(Gene::SCALAR), it )
+	citfor( GeneVector, schema->getAll(GeneType::SCALAR), it )
 	{
 		Gene *gene = *it;
 		if( gene->ismutable )
@@ -86,7 +88,7 @@ void GenomeLayout::createNeurGroup( GenomeLayout *layout,
 	// ---
 	// --- NEURGROUP
 	// --- 
-	citfor( GeneVector, schema->getAll(Gene::NEURGROUP), it )
+	citfor( GeneVector, schema->getAll(GroupsGeneType::NEURGROUP), it )
 	{
 		Gene *gene = *it;
 
@@ -112,9 +114,9 @@ void GenomeLayout::createNeurGroup( GenomeLayout *layout,
 		// ---
 		// --- NEURGROUP_ATTR
 		// --- 
-		citfor( GeneVector, schema->getAll(Gene::NEURGROUP_ATTR), it )
+		citfor( GeneVector, schema->getAll(GroupsGeneType::NEURGROUP_ATTR), it )
 		{
-			NeurGroupAttrGene *attrGene = (*it)->to_NeurGroupAttr();
+			NeurGroupAttrGene *attrGene = GroupsGeneType::to_NeurGroupAttr(*it);
 
 			if( groupGene->isMember(attrGene->group_type) )
 			{
@@ -134,13 +136,13 @@ void GenomeLayout::createNeurGroup( GenomeLayout *layout,
 		{
 			if( NGT_INPUT != schema->getNeurGroupType(group_to) )
 			{
-				citfor( SynapseTypeList, schema->getSynapseTypes(), it_syntype )
+				citfor( GroupsSynapseTypeList, schema->getSynapseTypes(), it_syntype )
 				{
-					SynapseType *syntype = *it_syntype;
+					GroupsSynapseType *syntype = *it_syntype;
 
-					citfor( GeneVector, schema->getAll(Gene::SYNAPSE_ATTR), it )
+					citfor( GeneVector, schema->getAll(GroupsGeneType::SYNAPSE_ATTR), it )
 					{
-						SynapseAttrGene *attrGene = (*it)->to_SynapseAttr();
+						SynapseAttrGene *attrGene = GroupsGeneType::to_SynapseAttr(*it);
 
 						DBPRINT( cout << attrGene->name << endl );
 

@@ -27,6 +27,7 @@
 #include "GenomeUtil.h"
 #include "graphics.h"
 #include "graybin.h"
+#include "GroupsBrain.h"
 #include "misc.h"
 #include "Logs.h" // tmp include
 #include "MateWaitSensor.h"
@@ -56,66 +57,120 @@ unsigned long	agent::agentsEver;
 long		agent::agentsliving;
 gpolyobj*	agent::agentobj;
 
-float		agent::gAgentHeight;
-float		agent::gMinAgentSize;
-float		agent::gMaxAgentSize;
-float		agent::gEat2Energy;
-float		agent::gMate2Energy;
-float		agent::gFight2Energy;
-float		agent::gGive2Energy;
-float       agent::gMinSizePenalty;
-float		agent::gMaxSizePenalty;
-float		agent::gSpeed2Energy;
-float		agent::gYaw2Energy;
-float		agent::gLight2Energy;
-float		agent::gFocus2Energy;
-float		agent::gPickup2Energy;
-float		agent::gDrop2Energy;
-float		agent::gCarryAgent2Energy;
-float		agent::gCarryAgentSize2Energy;
-float		agent::gFixedEnergyDrain;
-float		agent::gMaxCarries;
-bool		agent::gVision;
-long		agent::gInitMateWait;
-float		agent::gSpeed2DPosition;
-float		agent::gMaxRadius;
-float		agent::gMaxVelocity;
-float		agent::gMinMaxEnergy;
-float		agent::gMaxMaxEnergy;
-float		agent::gYaw2DYaw;
-agent::YawEncoding agent::gYawEncoding;
-float		agent::gMinFocus;
-float		agent::gMaxFocus;
-float		agent::gAgentFOV;
-float       agent::gMinVisionPitch;
-float		agent::gMaxVisionPitch;
-float       agent::gMinVisionYaw;
-float		agent::gMaxVisionYaw;
-float		agent::gEyeHeight;
-float		agent::gMaxSizeAdvantage;
+agent::Configuration agent::config;
 
-agent::BodyRedChannel agent::gBodyRedChannel;
-float				  agent::gBodyRedChannelConstValue;
+//---------------------------------------------------------------------------
+// agent::processWorldfile
+//---------------------------------------------------------------------------
+void agent::processWorldfile( proplib::Document &doc )
+{
+    agent::config.agentHeight = doc.get( "AgentHeight" );
+	agent::config.vision = doc.get( "Vision" );
+	agent::config.maxVelocity = doc.get( "MaxVelocity" );
+	agent::config.maxCarries = doc.get( "MaxCarries" );
+	agent::config.minVisionPitch = doc.get( "MinVisionPitch" );
+	agent::config.maxVisionPitch = doc.get( "MaxVisionPitch" );
+	agent::config.minVisionYaw = doc.get( "MinVisionYaw" );
+	agent::config.maxVisionYaw = doc.get( "MaxVisionYaw" );
+	agent::config.eyeHeight = doc.get( "EyeHeight" );
+    agent::config.initMateWait = doc.get( "InitMateWait" );
+    agent::config.minAgentSize = doc.get( "MinAgentSize" );
+    agent::config.maxAgentSize = doc.get( "MaxAgentSize" );
+    agent::config.minLifeSpan = doc.get( "MinLifeSpan" );
+    agent::config.maxLifeSpan = doc.get( "MaxLifeSpan" );
+    agent::config.minStrength = doc.get( "MinAgentStrength" );
+    agent::config.maxStrength = doc.get( "MaxAgentStrength" );
+    agent::config.minmaxspeed = doc.get( "MinAgentMaxSpeed" );
+    agent::config.maxmaxspeed = doc.get( "MaxAgentMaxSpeed" );
+    agent::config.minmateenergy = doc.get( "MinEnergyFractionToOffspring" );
+    agent::config.maxmateenergy = doc.get( "MaxEnergyFractionToOffspring" );
+    agent::config.minMaxEnergy = doc.get( "MinAgentMaxEnergy" );
+    agent::config.maxMaxEnergy = doc.get( "MaxAgentMaxEnergy" );
+    agent::config.speed2DPosition = doc.get( "MotionRate" );
+    agent::config.yaw2DYaw = doc.get( "YawRate" );
+	{
+		string encoding = doc.get( "YawEncoding" );
+		if( encoding == "Oppose" )
+			agent::config.yawEncoding = agent::YE_OPPOSE;
+		else if( encoding == "Squash" )
+			agent::config.yawEncoding = agent::YE_SQUASH;
+		else
+			assert( false );
+	}
+    agent::config.minFocus = doc.get( "MinHorizontalFieldOfView" );
+    agent::config.maxFocus = doc.get( "MaxHorizontalFieldOfView" );
+    agent::config.agentFOV = doc.get( "VerticalFieldOfView" );
+    agent::config.maxSizeAdvantage = doc.get( "MaxSizeFightAdvantage" );
+	{
+		proplib::Property &prop = doc.get( "BodyRedChannel" );
+		if( (string)prop == "Fight" )
+			agent::config.bodyRedChannel = agent::BRC_FIGHT;
+		else if( (string)prop == "Give" )
+			agent::config.bodyRedChannel = agent::BRC_GIVE;
+		else
+		{
+			agent::config.bodyRedChannel = agent::BRC_CONST;
+			agent::config.bodyRedChannelConstValue = (float)prop;
+		}
+	}
+	{
+		proplib::Property &prop = doc.get( "BodyGreenChannel" );
+		if( (string)prop == "I" )
+			agent::config.bodyGreenChannel = agent::BGC_ID;
+		else if( (string)prop == "L" )
+			agent::config.bodyGreenChannel = agent::BGC_LIGHT;
+		else
+		{
+			agent::config.bodyGreenChannel = agent::BGC_CONST;
+			agent::config.bodyGreenChannelConstValue = (float)prop;
+		}
+	}
+	{
+		proplib::Property &prop = doc.get( "BodyBlueChannel" );
+		if( (string)prop == "Mate" )
+			agent::config.bodyBlueChannel = agent::BBC_MATE;
+		else if( (string) prop == "Energy" )
+			agent::config.bodyBlueChannel = agent::BBC_ENERGY;
+		else
+		{
+			agent::config.bodyBlueChannel = agent::BBC_CONST;
+			agent::config.bodyBlueChannelConstValue = (float)prop;
+		}
+	}
+	{
+		proplib::Property &prop = doc.get( "NoseColor" );
+		if( (string)prop == "L" )
+			agent::config.noseColor = agent::NC_LIGHT;
+		else
+		{
+			agent::config.noseColor = agent::NC_CONST;
+			agent::config.noseColorConstValue = (float)prop;
+		}
+	}
+    agent::config.energyUseMultiplier = doc.get( "EnergyUseMultiplier" );
+    agent::config.eat2Energy = doc.get( "EnergyUseEat" );
+	agent::config.mate2Energy = doc.get( "EnergyUseMate" );
+    agent::config.fight2Energy = doc.get( "EnergyUseFight" );
+    agent::config.give2Energy = doc.get( "EnergyUseGive" );
+	agent::config.minSizePenalty = doc.get( "MinSizeEnergyPenalty" );
+    agent::config.maxSizePenalty = doc.get( "MaxSizeEnergyPenalty" );
+    agent::config.speed2Energy = doc.get( "EnergyUseMove" );
+    agent::config.yaw2Energy = doc.get( "EnergyUseTurn" );
+    agent::config.light2Energy = doc.get( "EnergyUseLight" );
+    agent::config.focus2Energy = doc.get( "EnergyUseFocus" );
+	agent::config.pickup2Energy = doc.get( "EnergyUsePickup" );
+	agent::config.drop2Energy = doc.get( "EnergyUseDrop" );
+	agent::config.carryAgent2Energy = doc.get( "EnergyUseCarryAgent" );
+	agent::config.carryAgentSize2Energy = doc.get( "EnergyUseCarryAgentSize" );
+    agent::config.fixedEnergyDrain = doc.get( "EnergyUseFixed" );
 
-agent::BodyGreenChannel agent::gBodyGreenChannel;
-float					agent::gBodyGreenChannelConstValue;
-
-agent::BodyBlueChannel agent::gBodyBlueChannel;
-float				   agent::gBodyBlueChannelConstValue;
-
-agent::NoseColor agent::gNoseColor;
-float            agent::gNoseColorConstValue;
-
-// agent::gNumDepletionSteps and agent:gMaxPopulationFraction must both be initialized to zero
-// for backward compatibility, and we depend on that fact in ReadWorldFile(), so don't change it
-
-int			agent::gNumDepletionSteps = 0;
-double		agent::gMaxPopulationPenaltyFraction = 0.0;
-double		agent::gPopulationPenaltyFraction = 0.0;
-double		agent::gLowPopulationAdvantageFactor = 1.0;
-double		agent::gEnergyUseMultiplier = 1.0;
-
-
+	agent::config.enableMateWaitFeedback = doc.get( "EnableMateWaitFeedback" );
+	agent::config.enableSpeedFeedback = doc.get( "EnableSpeedFeedback" );
+	agent::config.enableGive = doc.get( "EnableGive" );
+	agent::config.enableCarry = doc.get( "EnableCarry" );
+	agent::config.enableVisionPitch = doc.get( "EnableVisionPitch" );
+	agent::config.enableVisionYaw = doc.get( "EnableVisionYaw" );
+}
 
 //---------------------------------------------------------------------------
 // agent::agent
@@ -171,7 +226,7 @@ agent::agent(TSimulation* sim, gstage* stage)
 	fCns = new NervousSystem();
 	Q_CHECK_PTR(fCns);
 	
-	fBrain = new Brain(fCns);
+	fBrain = new GroupsBrain( fCns );
 	Q_CHECK_PTR(fBrain);
 
 	fMetabolism = NULL;
@@ -284,13 +339,13 @@ void agent::agentload(istream&)
 	
 	long i;
 		
-    for (i = 0; i < gMaxNumAgents; i++)
+    for (i = 0; i < agent::config.maxNumAgents; i++)
         if (!agent::pc[i])
             break;
     if (i)
         error(2,"agent::pc[] array not empty during agentload");
         
-    //    if (agent::gXSortedAgents.count())
+    //    if (agent::config.xSortedAgents.count())
     //        error(2,"gXSortedAgents list not empty during agentload");
     if (allxsortedlist::gXSortedAll.getCount(AGENTTYPE))
         error(2,"gXSortedAll list not empty during agentload");
@@ -305,7 +360,7 @@ void agent::agentload(istream&)
         if (agent::agentlist->isone(i))
         {
             (agent::pc[i])->load(in);
-            //agent::pc[i]->listLink = agent::gXSortedAgents.add(agent::pc[i]);
+            //agent::pc[i]->listLink = agent::config.xSortedAgents.add(agent::pc[i]);
 	    	agent::pc[i]->listLink = allxsortedlist::gXSortedAll.add(agent::pc[i]);
             globals::worldstage.addobject(agent::pc[i]);
         }
@@ -340,10 +395,13 @@ void agent::dump(ostream& out)
     gobject::dump(out);
 
     	assert( false ); //fGenome->dump(out); // must port this to AbstractFile
+
+		/* implement
     if (fBrain != NULL)
         fBrain->Dump(out);
     else
         error(1, "Attempted to dump a agent with no brain");
+		*/
 }
 
 
@@ -375,12 +433,14 @@ void agent::load(istream& in)
     gobject::load(in);
 	
     assert( false ); //fGenome->load(in); // must port this to AbstractFile
+	/* implement
     if (fBrain == NULL)
     {
         fBrain = new Brain(fCns);
         Q_CHECK_PTR(fBrain);
     }
     fBrain->Load(in);
+	*/
 
     // done loading in raw information, now setup some derived quantities
     SetGeometry();
@@ -425,11 +485,11 @@ void agent::grow( long mateWait )
 #define INPUT(NAME) nerves.NAME = fCns->add( Nerve::INPUT, #NAME )
 	INPUT(random);
 	INPUT(energy);
-	if( genome::gEnableMateWaitFeedback )
+	if( agent::config.enableMateWaitFeedback )
 		INPUT(mateWaitFeedback);
-	if( genome::gEnableSpeedFeedback )
+	if( agent::config.enableSpeedFeedback )
 		INPUT(speedFeedback);
-	if( genome::gEnableCarry )
+	if( agent::config.enableCarry )
 	{
 		INPUT(carrying);
 		INPUT(beingCarried);
@@ -445,33 +505,33 @@ void agent::grow( long mateWait )
 	OUTPUT(fight, Fight);
 	OUTPUT(speed, Speed);
 	OUTPUT(yaw, Yaw);
-	if( gYawEncoding == YE_OPPOSE )
+	if( agent::config.yawEncoding == YE_OPPOSE )
 		OUTPUT(yawOppose, YawOppose);
 	OUTPUT(light, Light);
 	OUTPUT(focus, Focus);
-	if( genome::gEnableVisionPitch )
+	if( agent::config.enableVisionPitch )
 		OUTPUT(visionPitch, VisionPitch);
-	if( genome::gEnableVisionYaw )
+	if( agent::config.enableVisionYaw )
 		OUTPUT(visionYaw, VisionYaw);
-	if( genome::gEnableGive )
+	if( agent::config.enableGive )
 		OUTPUT(give, Give);
-	if( genome::gEnableCarry )
+	if( agent::config.enableCarry )
 	{
 		OUTPUT(pickup, Pickup);
 		OUTPUT(drop, Drop);
 	}
 #undef OUTPUT
 
-	fCns->add( fRetina = new Retina(brain::retinawidth) );
+	fCns->add( fRetina = new Retina(Brain::config.retinaWidth) );
 	fCns->add( fEnergySensor = new EnergySensor(this) );
-	fCns->add( fRandomSensor = new RandomSensor(fBrain->rng) );
-	if( genome::gEnableMateWaitFeedback )
+	fCns->add( fRandomSensor = new RandomSensor(fCns->getRNG()) );
+	if( agent::config.enableMateWaitFeedback )
 		fCns->add( fMateWaitSensor = new MateWaitSensor(this, mateWait) );
-	if( genome::gEnableSpeedFeedback )
+	if( agent::config.enableSpeedFeedback )
 		fCns->add( fSpeedSensor = new SpeedSensor(this) );
-	if( genome::gEnableSpeedFeedback )
+	if( agent::config.enableSpeedFeedback )
 		fCns->add( fSpeedSensor = new SpeedSensor(this) );
-	if( genome::gEnableCarry )
+	if( agent::config.enableCarry )
 	{
 		fCns->add( fCarryingSensor = new CarryingSensor(this) );
 		fCns->add( fBeingCarriedSensor = new BeingCarriedSensor(this) );
@@ -489,10 +549,10 @@ void agent::grow( long mateWait )
     fColor[0] = fColor[2] = 0.0;
     
 	// set body red channel
-	switch(gBodyRedChannel)
+	switch(agent::config.bodyRedChannel)
 	{
 	case BRC_CONST:
-		fColor[0] = gBodyRedChannelConstValue;
+		fColor[0] = agent::config.bodyRedChannelConstValue;
 		break;
 	case BRC_FIGHT:
 	case BRC_GIVE:
@@ -504,13 +564,13 @@ void agent::grow( long mateWait )
 	}
     
 	// set body green channel
-	switch(gBodyGreenChannel)
+	switch(agent::config.bodyGreenChannel)
 	{
 	case BGC_ID:
 		fColor[1] = fGenome->get( "ID" );
 		break;
 	case BGC_CONST:
-		fColor[1] = gBodyGreenChannelConstValue;
+		fColor[1] = agent::config.bodyGreenChannelConstValue;
 		break;
 	case BGC_LIGHT:
 		// no-op
@@ -521,10 +581,10 @@ void agent::grow( long mateWait )
 	}
     
 	// set body blue channel
-	switch(gBodyBlueChannel)
+	switch(agent::config.bodyBlueChannel)
 	{
 	case BBC_CONST:
-		fColor[2] = gBodyBlueChannelConstValue;
+		fColor[2] = agent::config.bodyBlueChannelConstValue;
 		break;
 	case BBC_MATE:
 	case BBC_ENERGY:
@@ -537,10 +597,10 @@ void agent::grow( long mateWait )
     
 	// set the initial nose color
 	float noseColor;
-	switch(gNoseColor)
+	switch(agent::config.noseColor)
 	{
 	case NC_CONST:
-		noseColor = gNoseColorConstValue;
+		noseColor = agent::config.noseColorConstValue;
 		break;
 	case NC_LIGHT:
 		// start neutral gray
@@ -553,12 +613,12 @@ void agent::grow( long mateWait )
     fNoseColor[0] = fNoseColor[1] = fNoseColor[2] = noseColor;
     
     fAge = 0;
-    fLastMate = gInitMateWait;
+    fLastMate = agent::config.initMateWait;
     
-	float size_rel = geneCache.size - gMinAgentSize;
+	float size_rel = geneCache.size - agent::config.minAgentSize;
 
-    fMaxEnergy = gMinMaxEnergy + (size_rel
-    			 * (gMaxMaxEnergy - gMinMaxEnergy) / (gMaxAgentSize - gMinAgentSize) );
+    fMaxEnergy = agent::config.minMaxEnergy + (size_rel
+    			 * (agent::config.maxMaxEnergy - agent::config.minMaxEnergy) / (agent::config.maxAgentSize - agent::config.minAgentSize) );
 	
     fEnergy = fMaxEnergy;
 	fFoodEnergy = fMaxEnergy;
@@ -567,18 +627,18 @@ void agent::grow( long mateWait )
     
 	// Note: gMinSizePenalty can be used to prevent size_rel==0 from giving
 	// the agents "free" speed.
-    fSpeed2Energy = gSpeed2Energy * geneCache.maxSpeed
-		            * (gMinSizePenalty + size_rel) * (gMaxSizePenalty - 1.0)
-					/ (gMaxAgentSize - gMinAgentSize);
+    fSpeed2Energy = agent::config.speed2Energy * geneCache.maxSpeed
+		            * (agent::config.minSizePenalty + size_rel) * (agent::config.maxSizePenalty - 1.0)
+					/ (agent::config.maxAgentSize - agent::config.minAgentSize);
     
 	// Note: gMinSizePenalty can be used to prevent size_rel==0 from giving
 	// the agents "free" yaw.
-    fYaw2Energy = gYaw2Energy * geneCache.maxSpeed
-		          * (gMinSizePenalty + size_rel) * (gMaxSizePenalty - 1.0)
-              	  / (gMaxAgentSize - gMinAgentSize);
+    fYaw2Energy = agent::config.yaw2Energy * geneCache.maxSpeed
+		          * (agent::config.minSizePenalty + size_rel) * (agent::config.maxSizePenalty - 1.0)
+              	  / (agent::config.maxAgentSize - agent::config.minAgentSize);
     
     fSizeAdvantage = 1.0 + ( size_rel *
-                (gMaxSizeAdvantage - 1.0) / (gMaxAgentSize - gMinAgentSize) );
+                (agent::config.maxSizeAdvantage - 1.0) / (agent::config.maxAgentSize - agent::config.minAgentSize) );
 
     // now setup the camera & window for our agent to see the world in
     SetGraphics();
@@ -673,7 +733,7 @@ Energy agent::receive( agent *giver, const Energy &requested )
 //---------------------------------------------------------------------------    
 Energy agent::damage(const Energy &e, bool nullMode)
 {
-	double scaleFactor = gLowPopulationAdvantageFactor
+	double scaleFactor = fSimulation->fLowPopulationAdvantageFactor
 					   * fSimulation->fGlobalEnergyScaleFactor
 					   * fSimulation->fDomains[fDomain].energyScaleFactor;
 	Energy actual = e * scaleFactor;
@@ -802,13 +862,13 @@ void agent::SetGeometry()
     // then adjust the geometry to fit size, speed, & agentheight
     fLengthX = Size() / sqrt(geneCache.maxSpeed);
     fLengthZ = Size() * sqrt(geneCache.maxSpeed);
-    srPrint( "agent::%s(): min=%g, max=%g, speed=%g, size=%g, lx=%g, lz=%g\n", __FUNCTION__, gMinAgentSize, gMaxAgentSize, geneCache.maxSpeed, Size(), fLengthX, fLengthZ );
+    srPrint( "agent::%s(): min=%g, max=%g, speed=%g, size=%g, lx=%g, lz=%g\n", __FUNCTION__, agent::config.minAgentSize, agent::config.maxAgentSize, geneCache.maxSpeed, Size(), fLengthX, fLengthZ );
     for (long i = 0; i < fNumPolygons; i++)
     {
         for (long j = 0; j < fPolygon[i].fNumPoints; j++)
         {
             fPolygon[i].fVertices[j * 3  ] *= fLengthX;
-            fPolygon[i].fVertices[j * 3 + 1] *= gAgentHeight;
+            fPolygon[i].fVertices[j * 3 + 1] *= agent::config.agentHeight;
             fPolygon[i].fVertices[j * 3 + 2] *= fLengthZ;
         }
     }
@@ -825,11 +885,11 @@ void agent::SetGraphics()
     // setup the camera & window for our agent to see the world in
 	float fovx = FieldOfView();
 
-	fCamera.SetAspect(fovx * brain::retinaheight / (gAgentFOV * brain::retinawidth));
-    fCamera.settranslation(0.0, (gEyeHeight - 0.5) * gAgentHeight, -0.5 * fLengthZ);
+	fCamera.SetAspect(fovx * Brain::config.retinaHeight / (agent::config.agentFOV * Brain::config.retinaWidth));
+    fCamera.settranslation(0.0, (agent::config.eyeHeight - 0.5) * agent::config.agentHeight, -0.5 * fLengthZ);
 	fCamera.SetNear(.01);
 	fCamera.SetFar(1.5 * globals::worldsize);
-	fCamera.SetFOV(gAgentFOV);
+	fCamera.SetFOV(agent::config.agentFOV);
 
 	if( fSimulation->glFogFunction() != 'O' )
 		fCamera.SetFog(true, fSimulation->glFogFunction(), fSimulation->glExpFogDensity(), fSimulation->glLinearFogEnd() );
@@ -865,23 +925,23 @@ void agent::SaveLastPosition()
 //---------------------------------------------------------------------------
 void agent::UpdateVision()
 {
-    if (gVision)
+    if (agent::config.vision)
     {
 		// create retinal pixmap, based on values of focus & numvisneurons
-        const float fovx = nerves.focus->get() * (gMaxFocus - gMinFocus) + gMinFocus;
+        const float fovx = nerves.focus->get() * (agent::config.maxFocus - agent::config.minFocus) + agent::config.minFocus;
         		
-		fFrustum.Set(fPosition[0], fPosition[2], fAngle[0], fovx, gMaxRadius);
-		fCamera.SetAspect(fovx * brain::retinaheight / (gAgentFOV * brain::retinawidth));
+		fFrustum.Set(fPosition[0], fPosition[2], fAngle[0], fovx, agent::config.maxRadius);
+		fCamera.SetAspect(fovx * Brain::config.retinaHeight / (agent::config.agentFOV * Brain::config.retinaWidth));
 
-		if( genome::gEnableVisionPitch )
+		if( agent::config.enableVisionPitch )
 		{
-			const float pitch = nerves.visionPitch->get() * (gMaxVisionPitch - gMinVisionPitch) + gMinVisionPitch;
+			const float pitch = nerves.visionPitch->get() * (agent::config.maxVisionPitch - agent::config.minVisionPitch) + agent::config.minVisionPitch;
 			fCamera.setpitch( pitch );
 		}
 		
-		if( genome::gEnableVisionYaw )
+		if( agent::config.enableVisionYaw )
 		{
-			const float yaw = nerves.visionYaw->get() * (gMaxVisionYaw - gMinVisionYaw) + gMinVisionYaw;
+			const float yaw = nerves.visionYaw->get() * (agent::config.maxVisionYaw - agent::config.minVisionYaw) + agent::config.minVisionYaw;
 			fCamera.setyaw( yaw );
 		}
 		
@@ -936,9 +996,9 @@ float agent::UpdateBody( float moveFitnessParam,
 	#if TestWorld
 		dx = dz = 0.0;
 	#else
-		float dpos = nerves.speed->get() * geneCache.maxSpeed * gSpeed2DPosition;
-		if( dpos > gMaxVelocity )
-			dpos = gMaxVelocity;
+		float dpos = nerves.speed->get() * geneCache.maxSpeed * agent::config.speed2DPosition;
+		if( dpos > agent::config.maxVelocity )
+			dpos = agent::config.maxVelocity;
 		dx = -dpos * sin( yaw() * DEGTORAD );
 		dz = -dpos * cos( yaw() * DEGTORAD );
 		addx( dx );
@@ -951,7 +1011,7 @@ float agent::UpdateBody( float moveFitnessParam,
 	setyaw( nerves.yaw->get() * 360.0 );
   #else
 	float dyaw;
-	switch(gYawEncoding)
+	switch(agent::config.yawEncoding)
 	{
 	case YE_OPPOSE:
 		dyaw = nerves.yaw->get() - nerves.yawOppose->get();
@@ -963,26 +1023,26 @@ float agent::UpdateBody( float moveFitnessParam,
 		assert(false);
 		break;
 	}
-	addyaw( dyaw * geneCache.maxSpeed * gYaw2DYaw );
+	addyaw( dyaw * geneCache.maxSpeed * agent::config.yaw2DYaw );
   #endif
 #endif
 
 	// Whether being carried or not, behaviors cost energy
-    float energyused = nerves.eat->get()   * gEat2Energy
-                     + nerves.mate->get()  * gMate2Energy
-                     + nerves.fight->get() * gFight2Energy
+    float energyused = nerves.eat->get()   * agent::config.eat2Energy
+                     + nerves.mate->get()  * agent::config.mate2Energy
+                     + nerves.fight->get() * agent::config.fight2Energy
                      + nerves.speed->get() * fSpeed2Energy
                      + fabs(dyaw) * fYaw2Energy
-                     + nerves.light->get() * gLight2Energy
+                     + nerves.light->get() * agent::config.light2Energy
                      + fBrain->BrainEnergy()
-                     + gFixedEnergyDrain;
+                     + agent::config.fixedEnergyDrain;
 
-	if( genome::gEnableGive )
+	if( agent::config.enableGive )
 	{
-		energyused += nerves.give->get() * gGive2Energy;
+		energyused += nerves.give->get() * agent::config.give2Energy;
 	}
 	
-	if( genome::gEnableCarry )
+	if( agent::config.enableCarry )
 	{
 		energyused += CarryEnergy();	// depends on number and size of items being carried
 	}
@@ -992,49 +1052,49 @@ float agent::UpdateBody( float moveFitnessParam,
 	// Apply large-population energy penalty (only if NumDepletionSteps > 0)
 	float populationEnergyPenalty;
 #if UniformPopulationEnergyPenalty
-	populationEnergyPenalty = gPopulationPenaltyFraction * 0.5 * (gMaxMaxEnergy + gMinMaxEnergy);
+	populationEnergyPenalty = fSimulation->fPopulationPenaltyFraction * 0.5 * (agent::config.maxMaxEnergy + agent::config.minMaxEnergy);
 #else
-	populationEnergyPenalty = gPopulationPenaltyFraction * fMaxEnergy.mean();
+	populationEnergyPenalty = fSimulation->fPopulationPenaltyFraction * fMaxEnergy.mean();
 #endif
 	denergy += populationEnergyPenalty;
 	
 	// Apply energy-based population controls
-	double scaleFactor = gLowPopulationAdvantageFactor			// if ApplyLowPopulationAdvantage True
+	double scaleFactor = fSimulation->fLowPopulationAdvantageFactor			// if ApplyLowPopulationAdvantage True
 					   * fSimulation->fGlobalEnergyScaleFactor	// if EnergyBasedPopulationControl True
 					   * fSimulation->fDomains[fDomain].energyScaleFactor;
 	denergy *= scaleFactor;	// if population is getting too low or too high, adjust energy consumption
 	
-	denergy *= gEnergyUseMultiplier;	// global control over rate at which energy is consumed
+	denergy *= agent::config.energyUseMultiplier;	// global control over rate at which energy is consumed
 
     fEnergy -= denergy;
     fFoodEnergy -= denergy;
 
 	energyUsed = denergy;
 
-	if( gBodyRedChannel == BRC_FIGHT )
+	if( agent::config.bodyRedChannel == BRC_FIGHT )
 	{
 		SetRed( nerves.fight->get() );	// set red color according to desire to fight
 	}
-	else if( gBodyRedChannel == BRC_GIVE )
+	else if( agent::config.bodyRedChannel == BRC_GIVE )
 	{
 		SetRed( nerves.give->get() );	// set red color according to desire to give
 	}
 
-  	if( gBodyGreenChannel == BGC_LIGHT )
+  	if( agent::config.bodyGreenChannel == BGC_LIGHT )
 	{
 		SetGreen(nerves.light->get());
 	}
 
-	if( gBodyBlueChannel == BBC_MATE )
+	if( agent::config.bodyBlueChannel == BBC_MATE )
 	{
 		SetBlue( nerves.mate->get() ); 	// set blue color according to desire to mate
 	}
-	else if( gBodyBlueChannel == BBC_ENERGY )
+	else if( agent::config.bodyBlueChannel == BBC_ENERGY )
 	{
 		SetBlue( 1 - NormalizedEnergy() );
 	}
 
-	if( gNoseColor == NC_LIGHT )
+	if( agent::config.noseColor == NC_LIGHT )
 	{
 		fNoseColor[0] = fNoseColor[1] = fNoseColor[2] = nerves.light->get();
 	}
@@ -1632,12 +1692,12 @@ void agent::print()
 //---------------------------------------------------------------------------
 float agent::NormalizedYaw()
 {
-	switch(gYawEncoding)
+	switch(agent::config.yawEncoding)
 	{
 	case YE_OPPOSE:
-		return clamp( ((nerves.yaw->get() - nerves.yawOppose->get()) * geneCache.maxSpeed) / genome::gMaxmaxspeed, -1.0, 1.0 );
+		return clamp( ((nerves.yaw->get() - nerves.yawOppose->get()) * geneCache.maxSpeed) / agent::config.maxmaxspeed, -1.0, 1.0 );
 	case YE_SQUASH:
-		return clamp( ((2.0 * nerves.yaw->get() - 1.0) * geneCache.maxSpeed) / genome::gMaxmaxspeed, -1.0, 1.0 );
+		return clamp( ((2.0 * nerves.yaw->get() - 1.0) * geneCache.maxSpeed) / agent::config.maxmaxspeed, -1.0, 1.0 );
 	default:
 		assert(false);
 		return 0.0f;
@@ -1649,7 +1709,7 @@ float agent::NormalizedYaw()
 //---------------------------------------------------------------------------
 float agent::FieldOfView()
 {
-	return nerves.focus->get() * (gMaxFocus - gMinFocus) + gMinFocus;
+	return nerves.focus->get() * (agent::config.maxFocus - agent::config.minFocus) + agent::config.minFocus;
 }
 
 
@@ -1709,8 +1769,8 @@ float agent::CarryEnergy( void )
 		switch( o->getType() )
 		{
 			case AGENTTYPE:
-				energy += agent::gCarryAgent2Energy +
-						  agent::gCarryAgentSize2Energy * (((agent*)o)->Size() - agent::gMinAgentSize) / (agent::gMaxAgentSize - agent::gMinAgentSize);
+				energy += agent::config.carryAgent2Energy +
+						  agent::config.carryAgentSize2Energy * (((agent*)o)->Size() - agent::config.minAgentSize) / (agent::config.maxAgentSize - agent::config.minAgentSize);
 				break;
 			
 			case FOODTYPE:

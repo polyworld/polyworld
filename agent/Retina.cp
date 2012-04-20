@@ -72,18 +72,18 @@ void Retina::sensor_update( bool bprint )
 	IF_BPRINT
 	(
         printf("***** step = %ld ****** overheadrank = %d ******\n", TSimulation::fStep, TSimulation::fOverHeadRank);
-        printf("retinaBuf [0 - %d]\n",(brain::retinawidth - 1));
+        printf("retinaBuf [0 - %d]\n",(Brain::config.retinaWidth - 1));
         printf("red:");
         
-        for( int i = 0; i < (brain::retinawidth * 4); i+=4 )
+        for( int i = 0; i < (Brain::config.retinaWidth * 4); i+=4 )
             printf(" %3d", buf[i]);
         printf("\ngreen:");
         
-        for( int i = 1; i < (brain::retinawidth * 4); i+=4 )
+        for( int i = 1; i < (Brain::config.retinaWidth * 4); i+=4 )
             printf(" %3d",buf[i]);
         printf("\nblue:");
         
-        for( int i = 2; i < (brain::retinawidth * 4); i+=4 )
+        for( int i = 2; i < (Brain::config.retinaWidth * 4); i+=4 )
             printf(" %3d", buf[i]);
         printf("\n");		
 	)

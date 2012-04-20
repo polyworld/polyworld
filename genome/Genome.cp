@@ -34,24 +34,9 @@ Genome::Genome( GenomeSchema *schema,
 	this->schema = schema;
 	this->layout = layout;
 
-	gray = get( "GrayCoding" );
-
-#define ST(NAME) NAME = schema->getSynapseType(#NAME)
-	ST(EE);
-	ST(EI);
-	ST(IE);
-	ST(II);
-#undef ST
-
-	CONNECTION_DENSITY = gene("ConnectionDensity");
-	TOPOLOGICAL_DISTORTION = gene("TopologicalDistortion");
-	LEARNING_RATE = gene("LearningRate");
 	MISC_BIAS = gene("MiscBias");
 	MISC_INVIS_SLOPE = gene("MiscInvisSlope");
-	INHIBITORY_COUNT = gene("InhibitoryNeuronCount");
-	EXCITATORY_COUNT = gene("ExcitatoryNeuronCount");
-	BIAS = gene("Bias");
-	INTERNAL = schema->getGroupGene( schema->getFirstGroup(NGT_INTERNAL) );
+	gray = get( "GrayCoding" );
 
 	nbytes = schema->getMutableSize();
 
@@ -75,25 +60,7 @@ Scalar Genome::get( const char *name )
 
 Scalar Genome::get( Gene *gene )
 {
-	return gene->to_NonVector()->get( this );
-}
-
-Scalar Genome::get( Gene *gene,
-					 int group )
-{
-	return gene->to_NeurGroupAttr()->get( this,
-										  group );
-}
-
-Scalar Genome::get( Gene *gene,
-					 SynapseType *synapseType,
-					 int from,
-					 int to )
-{
-	return gene->to_SynapseAttr()->get( this,
-										synapseType,
-										from,
-										to );
+	return GeneType::to_NonVector( gene )->get( this );
 }
 
 unsigned int Genome::get_raw_uint( long byte )
@@ -132,178 +99,16 @@ void Genome::updateSum( unsigned long *sum, unsigned long *sum2 )
 	}
 }
 
-int Genome::getGroupCount( NeurGroupType type )
-{
-	if( (type == NGT_INPUT) || (type == NGT_OUTPUT) )
-	{
-		return schema->getMaxGroupCount( type );
-	}
-	else
-	{
-		int noninternal;
-
-		switch( type )
-		{
-		case NGT_ANY:
-			noninternal = schema->getMaxGroupCount( NGT_INPUT )
-				+ schema->getMaxGroupCount( NGT_OUTPUT );
-			break;
-		case NGT_INTERNAL:
-			noninternal = 0;
-			break;
-		case NGT_NONINPUT:
-			noninternal = schema->getMaxGroupCount( NGT_OUTPUT );
-			break;
-		default:
-			assert(false);
-		}
-
-		return noninternal + get( INTERNAL );
-	}
-}
-
-int Genome::getNeuronCount( NeuronType type,
-							 int group )
-{
-	NeurGroupGene *g = schema->getGroupGene( group );
-
-	switch( g->getGroupType() )
-	{
-	case NGT_INPUT:
-	case NGT_OUTPUT:
-		return get( g );
-	case NGT_INTERNAL:
-		switch(type)
-		{
-		case INHIBITORY:
-			return get( INHIBITORY_COUNT,
-						group );
-		case EXCITATORY:
-			return get( EXCITATORY_COUNT,
-						group );
-		default:
-			assert(false);
-		}
-	default:
-		assert(false);
-	}
-}
-
-int Genome::getNeuronCount( int group )
-{
-	switch( schema->getNeurGroupType(group) )
-	{
-	case NGT_INPUT:
-	case NGT_OUTPUT:
-		return getNeuronCount( INHIBITORY,
-							   group );
-	case NGT_INTERNAL:
-		return getNeuronCount( INHIBITORY,
-							   group ) 
-			+ getNeuronCount( EXCITATORY,
-							  group );
-	default:
-		assert(false);
-	}
-}
-
-const SynapseTypeList &Genome::getSynapseTypes()
-{
-	return schema->getSynapseTypes();
-}
-
-int Genome::getSynapseCount( SynapseType *synapseType,
-							  int from,
-							  int to )
-{
-	NeuronType nt_from = synapseType->nt_from;
-	NeuronType nt_to = synapseType->nt_to;
-	bool to_output = schema->getNeurGroupType(to) == NGT_OUTPUT;
-
-	if( (nt_to == INHIBITORY) && to_output )
-	{
-		// As targets, the output neurons are treated exclusively as excitatory
-		return 0;
-	}
-
-	float cd = get( CONNECTION_DENSITY,
-					synapseType,
-					from,
-					to );
-
-	int nfrom = getNeuronCount( nt_from, from );
-	int nto = getNeuronCount( nt_to, to );
-
-	if( from == to )
-	{
-		if( (synapseType == IE) && to_output )
-		{
-			// If the source and target groups are the same, and both are an output
-			// group, then this will evaluate to zero.
-			nto--;
-		}
-		else if( nt_from == nt_to )
-		{
-			nto--;
-		}
-	}
-
-	return nint(cd * nfrom * nto);
-}
-
-int Genome::getSynapseCount( int from,
-							 int to )
-{
-	int n = 0;
-
-	for( SynapseTypeList::const_iterator
-			 it = schema->getSynapseTypes().begin(),
-			 end = schema->getSynapseTypes().end();
-		 it != end;
-		 it++ )
-	{
-		n += getSynapseCount( *it, from, to );
-	}
-
-	return n;
-}
-
 #define SEEDCHECK(VAL) assert(((VAL) >= 0) && ((VAL) <= 1))
 #define SEEDVAL(VAL) (unsigned char)((VAL) * 255)
 
 void Genome::seed( Gene *gene,
-					float rawval_ratio )
+				   float rawval_ratio )
 {
 	SEEDCHECK(rawval_ratio);
 
 	gene->seed( this,
 				SEEDVAL(rawval_ratio) );
-}
-
-void Genome::seed( Gene *attr,
-					Gene *group,
-					float rawval_ratio )
-{
-	SEEDCHECK(rawval_ratio);
-
-	attr->to_NeurGroupAttr()->seed( this,
-									group->to_NeurGroup(),
-									SEEDVAL(rawval_ratio) );
-}
-
-void Genome::seed( Gene *gene,
-					SynapseType *synapseType,
-					Gene *from,
-					Gene *to,
-					float rawval_ratio )
-{
-	SEEDCHECK(rawval_ratio);
-
-	gene->to_SynapseAttr()->seed( this,
-								  synapseType,
-								  from->to_NeurGroup(),
-								  to->to_NeurGroup(),
-								  SEEDVAL(rawval_ratio) );
 }
 
 void Genome::randomize( float bitonprob )
@@ -323,7 +128,7 @@ void Genome::randomize( float bitonprob )
 
 void Genome::randomize()
 {
-	randomize( gene("BitProbability")->to_ImmutableInterpolated()->interpolate(randpw()) );
+	randomize( GeneType::to_ImmutableInterpolated(gene("BitProbability"))->interpolate(randpw()) );
 }
 
 void Genome::mutate()

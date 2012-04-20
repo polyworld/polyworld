@@ -21,7 +21,7 @@ using namespace genome;
 
 
 FiringRateModel::FiringRateModel( NervousSystem *cns )
-: BaseNeuronModel<Neuron, Synapse>( cns )
+: BaseNeuronModel<Neuron, NeuronAttrs, Synapse>( cns )
 {
 }
 
@@ -31,112 +31,31 @@ FiringRateModel::~FiringRateModel()
 
 void FiringRateModel::init_derived( float initial_activation )
 {
-	if( brain::gNeuralValues.model == brain::NeuralValues::TAU )
-	{
-		tauGene = genes->gene( "Tau" );
-	}
-	else
-	{
-		tauGene = NULL;
-	}
 
 	for( int i = 0; i < dims->numneurons; i++ )
-	{
 		neuronactivation[i] = initial_activation;
-	}	
 }
 
 void FiringRateModel::set_neuron( int index,
-								  int group,
-								  float bias,
+								  void *attributes,
 								  int startsynapses,
 								  int endsynapses )
 {
-	BaseNeuronModel<Neuron, Synapse>::set_neuron( index,
-												  group,
-												  bias,
-												  startsynapses,
-												  endsynapses );
+	BaseNeuronModel<Neuron, NeuronAttrs, Synapse>::set_neuron( index,
+															   attributes,
+															   startsynapses,
+															   endsynapses );
+	NeuronAttrs *attrs = (NeuronAttrs *)attributes;
 	Neuron &n = neuron[index];
 
-	if( tauGene )
-	{
-		if( genes->schema->getNeurGroupType(group) != NGT_INPUT )
-		{
-			n.tau = genes->get( tauGene, group );
-		}
-	}
-}
-
-void FiringRateModel::dump( ostream &out )
-{
-	long i;
-
-    for (i = 0; i < dims->numneurons; i++)
-	{
-		Neuron &n = neuron[i];
-        out << n.group
-			sp n.bias
-			sp n.tau
-			sp n.startsynapses
-			sp n.endsynapses
-			nl;
-	}
-
-    for (i = 0; i < dims->numneurons; i++)
-        out << neuronactivation[i] nl;
-
-    for (i = 0; i < dims->numsynapses; i++)
-	{
-		Synapse &s = synapse[i];
-        out << s.efficacy
-            sp s.fromneuron
-			sp s.toneuron
-			nl;
-	}
-
-    for (i = 0; i < (dims->numgroups * dims->numgroups * 4); i++)
-        out << grouplrate[i] nl;
-}
-
-void FiringRateModel::load( istream &in )
-{
-	long i;
-
-    for (i = 0; i < dims->numneurons; i++)
-	{
-		Neuron &n = neuron[i];
-        in >> n.group
-		   >> n.bias
-		   >> n.tau
-		   >> n.startsynapses
-		   >> n.endsynapses;
-
-#if DesignerBrains
-		groupsize[i]++;
-#endif
-	}
-
-    for (i = 0; i < dims->numneurons; i++)
-        in >> neuronactivation[i];
-
-    for (i = 0; i < dims->numsynapses; i++)
-	{
-		Synapse &s = synapse[i];
-        in >> s.efficacy
-		   >> s.fromneuron
-		   >> s.toneuron;
-	}
-
-    for (i = 0; i < (dims->numgroups * dims->numgroups * 4); i++)
-        in >> grouplrate[i];	
+	n.tau = attrs->tau;
 }
 
 void FiringRateModel::update( bool bprint )
 {
     debugcheck( "(firing-rate brain) on entry" );
 
-    short i,j,ii,jj;
+    short i;
     long k;
     if ((neuron == NULL) || (synapse == NULL) || (neuronactivation == NULL))
         return;
@@ -157,66 +76,42 @@ void FiringRateModel::update( bool bprint )
 	)
 
 
-    debugcheck( "after updating vision" );
-
-//	float minExcitation = FLT_MAX;
-//	float maxExcitation = -FLT_MAX;
-//	float avgExcitation = 0.0;
-//	float minActivation = FLT_MAX;
-//	float maxActivation = -FLT_MAX;
-//	float avgActivation = 0.0;
-
 	for( i = dims->firstOutputNeuron; i < dims->firstInternalNeuron; i++ )
 	{
         newneuronactivation[i] = neuron[i].bias;
         for( k = neuron[i].startsynapses; k < neuron[i].endsynapses; k++ )
         {
             newneuronactivation[i] += synapse[k].efficacy *
-               neuronactivation[abs(synapse[k].fromneuron)];
+               neuronactivation[synapse[k].fromneuron];
 		}              
-//		if( newneuronactivation[i] < minExcitation )
-//			minExcitation = newneuronactivation[i];
-//		if( newneuronactivation[i] > maxExcitation )
-//			maxExcitation = newneuronactivation[i];
-//		avgExcitation += newneuronactivation[i];
 	#if GaussianOutputNeurons
         newneuronactivation[i] = gaussian( newneuronactivation[i], GaussianActivationMean, GaussianActivationVariance );
 	#else
-		if( tauGene )
+		if( Brain::config.neuronModel == Brain::Configuration::TAU )
 		{
 			float tau = neuron[i].tau;
-			newneuronactivation[i] = (1.0 - tau) * neuronactivation[i]  +  tau * logistic( newneuronactivation[i], brain::gLogisticSlope );
+			newneuronactivation[i] = (1.0 - tau) * neuronactivation[i]  +  tau * logistic( newneuronactivation[i], Brain::config.logisticSlope );
 		}
 		else
 		{
-			newneuronactivation[i] = logistic( newneuronactivation[i], brain::gLogisticSlope );
+			newneuronactivation[i] = logistic( newneuronactivation[i], Brain::config.logisticSlope );
 		}
 	#endif
-//		if( newneuronactivation[i] < minActivation )
-//			minActivation = newneuronactivation[i];
-//		if( newneuronactivation[i] > maxActivation )
-//			maxActivation = newneuronactivation[i];
-//		avgActivation += newneuronactivation[i];
 	}
-//	avgExcitation /= dims->numOutputNeurons;
-//	avgActivation /= dims->numOutputNeurons;
-
-//	printf( "X:  min=%6.1f  max=%6.1f  avg=%6.1f\n", minExcitation, maxExcitation, avgExcitation );
-//	printf( "X:  min=%6.1f  max=%6.1f  avg=%6.1f\n", minActivation, maxActivation, avgActivation );
 
 	long numneurons = dims->numneurons;
-	float logisticSlope = brain::gLogisticSlope;
+	float logisticSlope = Brain::config.logisticSlope;
     for( i = dims->firstInternalNeuron; i < numneurons; i++ )
     {
 		float newactivation = neuron[i].bias;
         for( k = neuron[i].startsynapses; k < neuron[i].endsynapses; k++ )
         {
             newactivation += synapse[k].efficacy *
-               neuronactivation[abs(synapse[k].fromneuron)];
+               neuronactivation[synapse[k].fromneuron];
 		}
-        //newneuronactivation[i] = logistic(newneuronactivation[i], brain::gLogisticSlope);
+        //newneuronactivation[i] = logistic(newneuronactivation[i], Brain::config.logisticSlope);
 
-		if( tauGene )
+		if( Brain::config.neuronModel == Brain::Configuration::TAU )
 		{
 			float tau = neuron[i].tau;
 			newactivation = (1.0 - tau) * neuronactivation[i]  +  tau * logistic( newactivation, logisticSlope );
@@ -235,8 +130,6 @@ void FiringRateModel::update( bool bprint )
 	if( (TSimulation::fAge > 1) && (numDebugBrains < 10) )
 	{
 		numDebugBrains++;
-//		if( numDebugBrains > 2 )
-//			exit( 0 );
 		printf( "***** age = %ld *****\n", TSimulation::fAge );
 		printf( "random neuron [%d] = %g\n", randomneuron, neuronactivation[randomneuron] );
 		printf( "energy neuron [%d] = %g\n", energyneuron, neuronactivation[energyneuron] );
@@ -254,14 +147,14 @@ void FiringRateModel::update( bool bprint )
 		{
 			printf( "    %3d  %g  %g synapses (%ld):\n", i, neuron[i].bias, newneuronactivation[i], neuron[i].endsynapses - neuron[i].startsynapses );
 			for( k = neuron[i].startsynapses; k < neuron[i].endsynapses; k++ )
-				printf( "        %4ld  %2ld  %2d  %g  %g\n", k, k-neuron[i].startsynapses, synapse[k].fromneuron, synapse[k].efficacy, neuronactivation[abs(synapse[k].fromneuron)] );
+				printf( "        %4ld  %2ld  %2d  %g  %g\n", k, k-neuron[i].startsynapses, synapse[k].fromneuron, synapse[k].efficacy, neuronactivation[synapse[k].fromneuron] );
 		}
 		printf( "internal neurons (%d):\n", numnoninputneurons-dims->numOutputNeurons );
 		for( i = dims->firstInternalNeuron; i < dims->numneurons; i++ )
 		{
 			printf( "    %3d  %g  %g synapses (%ld):\n", i, neuron[i].bias, newneuronactivation[i], neuron[i].endsynapses - neuron[i].startsynapses );
 			for( k = neuron[i].startsynapses; k < neuron[i].endsynapses; k++ )
-				printf( "        %4ld  %2ld  %2d  %g  %g\n", k, k-neuron[i].startsynapses, synapse[k].fromneuron, synapse[k].efficacy, neuronactivation[abs(synapse[k].fromneuron)] );
+				printf( "        %4ld  %2ld  %2d  %g  %g\n", k, k-neuron[i].startsynapses, synapse[k].fromneuron, synapse[k].efficacy, neuronactivation[synapse[k].fromneuron] );
 		}
 	}
 #endif
@@ -279,52 +172,24 @@ void FiringRateModel::update( bool bprint )
 
     float learningrate;
 	long numsynapses = dims->numsynapses;
-	long numgroups = dims->numgroups;
     for (k = 0; k < numsynapses; k++)
     {
 		FiringRateModel__Synapse &syn = synapse[k];
 
-        if (syn.toneuron >= 0) // 0 can't happen it's an input neuron
-        {
-            i = syn.toneuron;
-            ii = 0;
-        }
-        else
-        {
-            i = -syn.toneuron;
-            ii = 1;
-        }
-        if ( (syn.fromneuron > 0) ||
-            ((syn.toneuron  == 0) && (syn.efficacy >= 0.0)) )
-        {
-            j = syn.fromneuron;
-            jj = 0;
-        }
-        else
-        {
-            j = -syn.fromneuron;
-            jj = 1;
-        }
-        // Note: If .toneuron == 0, and .efficacy were to equal
-        // 0.0 for an inhibitory synapse, we would choose the
-        // wrong learningrate, but we prevent efficacy from going
-        // to zero below & during initialization to prevent this.
-        // Similarly, learningrate is guaranteed to be < 0.0 for
-        // inhibitory synapses.
-        learningrate = grouplrate[index4(neuron[i].group,neuron[j].group,ii,jj, numgroups,2,2)];
+		learningrate = syn.lrate;
 
 		float efficacy = syn.efficacy + learningrate
-			             * (newneuronactivation[i]-0.5f)
-			             * (   neuronactivation[j]-0.5f);
+			* (newneuronactivation[syn.toneuron]-0.5f)
+			* (   neuronactivation[syn.fromneuron]-0.5f);
 
-        if (fabs(efficacy) > (0.5f * brain::gMaxWeight))
+        if (fabs(efficacy) > (0.5f * Brain::config.maxWeight))
         {
-            efficacy *= 1.0f - (1.0f - brain::gDecayRate) *
-                (fabs(efficacy) - 0.5f * brain::gMaxWeight) / (0.5f * brain::gMaxWeight);
-            if (efficacy > brain::gMaxWeight)
-                efficacy = brain::gMaxWeight;
-            else if (efficacy < -brain::gMaxWeight)
-                efficacy = -brain::gMaxWeight;
+            efficacy *= 1.0f - (1.0f - Brain::config.decayRate) *
+                (fabs(efficacy) - 0.5f * Brain::config.maxWeight) / (0.5f * Brain::config.maxWeight);
+            if (efficacy > Brain::config.maxWeight)
+                efficacy = Brain::config.maxWeight;
+            else if (efficacy < -Brain::config.maxWeight)
+                efficacy = -Brain::config.maxWeight;
         }
         else
         {
@@ -332,7 +197,7 @@ void FiringRateModel::update( bool bprint )
 #define MAX(x,y) ((x) > (y) ? (x) : (y))
             // not strictly correct for this to be in an else clause,
             // but if lrate is reasonable, efficacy should never change
-            // sign with a new magnitude greater than 0.5 * brain::gMaxWeight
+            // sign with a new magnitude greater than 0.5 * Brain::config.maxWeight
             if (learningrate >= 0.0f)  // excitatory
                 efficacy = MAX(0.0f, efficacy);
             if (learningrate < 0.0f)  // inhibitory

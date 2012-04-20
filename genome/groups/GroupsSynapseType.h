@@ -10,14 +10,14 @@ namespace genome
 {
 
 	// forward decls
-	class GenomeSchema;
+	class GroupsGenomeSchema;
 
 	// ================================================================================
 	// ===
-	// === CLASS SynapseType
+	// === CLASS GroupsSynapseType
 	// ===
 	// ================================================================================
-	class SynapseType
+	class GroupsSynapseType
 	{
 	public:
 		std::string name;
@@ -27,25 +27,25 @@ namespace genome
 		int getOffset( int from, int to );
 
 	private:
-		friend class GenomeSchema;
+		friend class GroupsGenomeSchema;
 		friend class SynapseAttrGene;
 
-		SynapseType( GenomeSchema *schema,
-					 const char *name,
-					 int index );
+		GroupsSynapseType( GroupsGenomeSchema *schema,
+						   const char *name,
+						   int index );
 
 		void complete( int *groupCount );
 
 		int getMutableSize();
 
 	private:
-		GenomeSchema *schema;
+		GroupsGenomeSchema *schema;
 		int index;
 		int *groupCount;
 		int mutableSize;
 	};	
 
-	typedef std::list<SynapseType *> SynapseTypeList;
-	typedef std::map<std::string, SynapseType *> SynapseTypeMap;
+	typedef std::list<GroupsSynapseType *> GroupsSynapseTypeList;
+	typedef std::map<std::string, GroupsSynapseType *> GroupsSynapseTypeMap;
 
 }

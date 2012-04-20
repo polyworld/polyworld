@@ -50,7 +50,7 @@ BehaviorPanel::BehaviorPanel( DebuggerWindow *debuggerWindow,
 
 	int ngroups = 0;
 
-	citfor( GeneVector, genomeSchema->getAll(Gene::NEURGROUP), it )
+	citfor( GeneVector, genomeSchema->getAll(GroupsGeneType::NEURGROUP), it )
 	{
 		NeurGroupGene *gene = (*it)->to_NeurGroup();
 

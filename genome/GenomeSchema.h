@@ -6,14 +6,11 @@
 #include <vector>
 
 #include "Gene.h"
-#include "NeurGroupType.h"
-#include "SynapseType.h"
+#include "GenomeLayout.h"
+#include "proplib.h"
 
 namespace genome
 {
-	// forward decl
-	class GenomeLayout;
-
 	// ================================================================================
 	// ===
 	// === CLASS GenomeSchema
@@ -22,36 +19,55 @@ namespace genome
 	class GenomeSchema
 	{
 	public:
-		GenomeSchema();
-		~GenomeSchema();
+		static struct Configuration
+		{
+			GenomeLayout::LayoutType layoutType;
 
-		Gene *add( Gene *gene );
+			typedef std::map<std::string,float> GeneInterpolationPowers;
+			GeneInterpolationPowers geneInterpolationPower;
+
+			float seedMutationRate;
+			float seedFightBias;
+			float seedFightExcitation;
+			float seedGiveBias;
+			float seedPickupBias;
+			float seedDropBias;
+			float seedPickupExcitation;
+			float seedDropExcitation;
+
+			float minMutationRate;
+			float maxMutationRate;
+			long minNumCpts;
+			long maxNumCpts;
+			float miscBias;
+			float miscInvisSlope;
+			float minBitProb;
+			float maxBitProb;
+			bool grayCoding;
+		} config;
+
+		static void processWorldfile( proplib::Document &doc );
+
+		GenomeSchema();
+		virtual ~GenomeSchema();
+
+		virtual void defineImmutable();
+		virtual void defineMutable();
+		virtual void seed( Genome *genome );
+
+		virtual Gene *add( Gene *gene );
 
 		Gene *get( const std::string &name );
 		Gene *get( const char *name );
-		Gene *get( Gene::Type type );
-		const GeneVector &getAll( Gene::Type type );
+		Gene *get( const GeneType *type );
+		const GeneVector &getAll( const GeneType *type );
 
-		int getGeneCount( Gene::Type type );
+		int getGeneCount( const GeneType *type );
 
 		int getPhysicalCount();
-
-		int getMaxGroupCount( NeurGroupType group );
-		int getFirstGroup( Gene *gene );
-		int getFirstGroup( NeurGroupType group );
-		NeurGroupGene *getGroupGene( int group );
-		int getMaxNeuronCount( NeurGroupType group );
-		NeurGroupType getNeurGroupType( int group );
-
-		int getSynapseTypeCount();
-		int getMaxSynapseCount();
-
-		const SynapseTypeList &getSynapseTypes();
-		SynapseType *getSynapseType( const char *name );
-
 		int getMutableSize();
 
-		void complete();
+		virtual void complete() = 0;
 
 		void getIndexes( std::vector<std::string> &geneNames, std::vector<int> &result );
 
@@ -59,24 +75,9 @@ namespace genome
 		void printTitles( FILE *f );
 		void printRanges( FILE *f );
 
-	private:
-		GeneMap name2gene;
-		GeneTypeMap type2genes;
-		GeneList neurgroups;
-		GeneList genes;
-
-		SynapseTypeMap synapseTypeMap;
-		SynapseTypeList synapseTypes;
-
-		struct Cache
-		{
-			int groupCount[__NGT_COUNT];
-			int groupStart[__NGT_COUNT];
-			int neuronCount[__NGT_COUNT];
-			int physicalCount;
-			int synapseCount;
-			int mutableSize;
-		} cache;
+	protected:
+		void beginComplete();
+		void endComplete();
 
 		enum State
 		{
@@ -84,6 +85,16 @@ namespace genome
 			STATE_CACHING,
 			STATE_COMPLETE
 		} state;
+
+		GeneMap name2gene;
+		GeneTypeMap type2genes;
+		GeneList genes;
+
+		struct Cache
+		{
+			int physicalCount;
+			int mutableSize;
+		} cache;
 	};
 
 } // namespace genome

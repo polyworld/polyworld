@@ -26,6 +26,7 @@
 #include "Nerve.h"
 #include "objectlist.h"
 #include "objectxsortedlist.h"
+#include "proplib.h"
 
 
 // Forward declarations
@@ -51,69 +52,85 @@ class agent : public gpolyobj
 {
 	friend void operator>>(const char **, agent&);
 
-public:
-	static void agentinit();
-	static agent* getfreeagent(TSimulation* simulation, gstage* stage);
-	static void agentload(std::istream& in);
-	static void agentdestruct();
-	static void agentdump(std::ostream& out);
-	
+public:	
 	enum BodyRedChannel { BRC_FIGHT, BRC_CONST, BRC_GIVE };
 	enum BodyGreenChannel { BGC_ID, BGC_LIGHT, BGC_CONST };
 	enum BodyBlueChannel { BBC_MATE, BBC_CONST, BBC_ENERGY };
 	enum NoseColor { NC_LIGHT, NC_CONST };
 	enum YawEncoding { YE_SQUASH, YE_OPPOSE };
 
-	static float	gAgentHeight;	
-	static float	gMinAgentSize;
-	static float	gMaxAgentSize;
-	static float	gEat2Energy;
-	static float	gMate2Energy;
-	static float	gFight2Energy;
-	static float	gGive2Energy;
-	static float	gMinSizePenalty;
-	static float	gMaxSizePenalty;
-	static float	gSpeed2Energy;
-	static float	gYaw2Energy;
-	static float	gLight2Energy;
-	static float	gFocus2Energy;
-	static float	gPickup2Energy;
-	static float	gDrop2Energy;
-	static float	gCarryAgent2Energy;
-	static float	gCarryAgentSize2Energy;
-	static float	gFixedEnergyDrain;
-	static float	gMaxCarries;
-	static bool		gVision;
-	static long 	gInitMateWait;
-	static float	gSpeed2DPosition;
-	static float	gMaxRadius;
-	static float	gMaxVelocity;
-	static float	gMinMaxEnergy;
-	static float	gMaxMaxEnergy;
-	static float	gYaw2DYaw;
-	static YawEncoding gYawEncoding;
-	static float	gMinFocus;
-	static float	gMaxFocus;
-	static float	gAgentFOV;
-	static float    gMinVisionPitch;
-	static float    gMaxVisionPitch;
-	static float    gMinVisionYaw;
-	static float    gMaxVisionYaw;
-	static float    gEyeHeight;
-	static float	gMaxSizeAdvantage;
-	static BodyRedChannel gBodyRedChannel;
-	static float    gBodyRedChannelConstValue;
-	static BodyGreenChannel gBodyGreenChannel;
-	static float    gBodyGreenChannelConstValue;
-	static BodyBlueChannel gBodyBlueChannel;
-	static float    gBodyBlueChannelConstValue;
-	static NoseColor gNoseColor;
-	static float    gNoseColorConstValue;
-	static int		gNumDepletionSteps;
-	static double	gMaxPopulationPenaltyFraction;
-	static double	gPopulationPenaltyFraction;
-	static double	gLowPopulationAdvantageFactor;
-	static double	gEnergyUseMultiplier;
+	static struct Configuration
+	{
+		float	agentHeight;	
+		float	minAgentSize;
+		float	maxAgentSize;
+		long	minLifeSpan;
+		long	maxLifeSpan;
+		float	minStrength;
+		float	maxStrength;
+		float	minmaxspeed;
+		float	maxmaxspeed;
+		float	minmateenergy;
+		float	maxmateenergy;
+		float	eat2Energy;
+		float	mate2Energy;
+		float	fight2Energy;
+		float	give2Energy;
+		float	minSizePenalty;
+		float	maxSizePenalty;
+		float	speed2Energy;
+		float	yaw2Energy;
+		float	light2Energy;
+		float	focus2Energy;
+		float	pickup2Energy;
+		float	drop2Energy;
+		float	carryAgent2Energy;
+		float	carryAgentSize2Energy;
+		float	fixedEnergyDrain;
+		float	maxCarries;
+		bool	vision;
+		long 	initMateWait;
+		float	speed2DPosition;
+		float	maxRadius;
+		float	maxVelocity;
+		float	minMaxEnergy;
+		float	maxMaxEnergy;
+		float	yaw2DYaw;
+		YawEncoding yawEncoding;
+		float	minFocus;
+		float	maxFocus;
+		float	agentFOV;
+		float   minVisionPitch;
+		float   maxVisionPitch;
+		float   minVisionYaw;
+		float   maxVisionYaw;
+		float   eyeHeight;
+		float	maxSizeAdvantage;
+		BodyRedChannel bodyRedChannel;
+		float   bodyRedChannelConstValue;
+		BodyGreenChannel bodyGreenChannel;
+		float   bodyGreenChannelConstValue;
+		BodyBlueChannel bodyBlueChannel;
+		float   bodyBlueChannelConstValue;
+		NoseColor noseColor;
+		float   noseColorConstValue;
+		double	energyUseMultiplier;
+
+		bool	enableMateWaitFeedback;
+		bool	enableSpeedFeedback;
+		bool	enableGive;
+		bool	enableCarry;
+		bool	enableVisionPitch;
+		bool	enableVisionYaw;
+		
+	} config;
+
+	static void processWorldfile( proplib::Document &doc );
+	static void agentinit();
+	static agent* getfreeagent(TSimulation* simulation, gstage* stage);
+	static void agentload(std::istream& in);
+	static void agentdestruct();
+	static void agentdump(std::ostream& out);
 
     agent(TSimulation* simulation, gstage* stage);
     ~agent();
@@ -361,7 +378,7 @@ inline float agent::VelocityY() { return fVelocity[1]; }
 inline float agent::VelocityZ() { return fVelocity[2]; }
 inline float agent::Speed() { return fSpeed; }
 inline float agent::MaxSpeed() { return fMaxSpeed; }
-inline float agent::NormalizedSpeed() { return min( 1.0f, Speed() / agent::gMaxVelocity ); }
+inline float agent::NormalizedSpeed() { return min( 1.0f, Speed() / agent::config.maxVelocity ); }
 inline float agent::Mass() { return fMass; }
 inline float agent::SizeAdvantage() { return fSizeAdvantage; }
 inline const Metabolism *agent::GetMetabolism() { return fMetabolism; }

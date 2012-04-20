@@ -16,7 +16,26 @@ namespace genome
 	class Genome;
 	class GenomeLayout;
 	class GenomeSchema;
-	class SynapseType;
+
+	// ================================================================================
+	// ===
+	// === CLASS GeneType
+	// ===
+	// ================================================================================
+	class GeneType
+	{
+	public:
+		static const GeneType *SCALAR;
+
+#define CAST_TO(TYPE)											\
+		static class TYPE##Gene *to_##TYPE(class Gene *gene);
+		CAST_TO(NonVector);
+		CAST_TO(ImmutableScalar);
+		CAST_TO(MutableScalar);
+		CAST_TO(ImmutableInterpolated);
+		CAST_TO(__Interpolated);
+#undef CAST_TO
+	};
 
 	// ================================================================================
 	// ===
@@ -26,14 +45,6 @@ namespace genome
 	class Gene
 	{
 	public:
-		enum Type
-		{
-			SCALAR,
-			NEURGROUP,
-			NEURGROUP_ATTR,
-			SYNAPSE_ATTR
-		};
-
 		virtual ~Gene() {}
 
 		void seed( Genome *genome,
@@ -45,13 +56,13 @@ namespace genome
 		virtual void printTitles( FILE *file );
 		virtual void printRanges( FILE *file );
 
-		Type type;
+		const GeneType *type;
 		std::string name;
 		bool ismutable;
 
 	protected:
 		Gene() {}
-		void init( Type type,
+		void init( const GeneType *type,
 				   bool ismutable,
 				   const char *name );
 
@@ -64,19 +75,6 @@ namespace genome
 		friend class GenomeLayout;
 
 		int offset;
-
-	public:
-#define CAST_TO(TYPE) \
-		class TYPE##Gene *to_##TYPE();
-	CAST_TO(NonVector);
-	CAST_TO(ImmutableScalar);
-	CAST_TO(MutableScalar);
-	CAST_TO(ImmutableInterpolated);
-	CAST_TO(NeurGroup);
-	CAST_TO(NeurGroupAttr);
-	CAST_TO(SynapseAttr);
-	CAST_TO(__Interpolated);
-#undef CAST_TO
 	};
 
 
@@ -90,7 +88,7 @@ namespace genome
 	class __ConstantGene : virtual Gene
 	{
 	public:
-		__ConstantGene( Type type,
+		__ConstantGene( const GeneType *type,
 						const char *name,
 						const Scalar &value );
 		virtual ~__ConstantGene() {}
@@ -122,7 +120,7 @@ namespace genome
 			ROUND_INT_BIN
 		};
 
-		__InterpolatedGene( Type type,
+		__InterpolatedGene( const GeneType *type,
 							bool ismutable,
 							const char *name,
 							Gene *gmin,
@@ -235,180 +233,12 @@ namespace genome
 
 	// ================================================================================
 	// ===
-	// === CLASS NeurGroupGene
-	// ===
-	// === Common base class for neural group genes.
-	// ===
-	// ================================================================================
-	class NeurGroupGene : public NonVectorGene
-	{
-	public:
-		NeurGroupGene( NeurGroupType group_type );				   
-		virtual ~NeurGroupGene() {}
-
-		virtual Scalar get( Genome *genome ) = 0;
-
-		bool isMember( NeurGroupType group_type );
-		NeurGroupType getGroupType();
-
-		virtual int getMaxGroupCount() = 0;
-		virtual int getMaxNeuronCount() = 0;
-
-		virtual std::string getTitle( int group ) = 0;
-
-	protected:
-		friend class GenomeSchema;
-
-		int first_group;
-
-	private:
-		NeurGroupType group_type;
-	};
-
-
-	// ================================================================================
-	// ===
-	// === CLASS MutableNeurGroupGene
-	// ===
-	// === For public use; represents Internal groups as well as Input groups with
-	// === variable neuron counts
-	// ===
-	// ================================================================================
-	class MutableNeurGroupGene : public NeurGroupGene, public __InterpolatedGene
-	{
-	public:
-		MutableNeurGroupGene( const char *name,
-							  NeurGroupType group_type,
-							  Gene *gmin,
-							  Gene *gmax );
-		virtual ~MutableNeurGroupGene() {}
-
-		virtual Scalar get( Genome *genome );
-
-		virtual int getMaxGroupCount();
-		virtual int getMaxNeuronCount();
-
-		virtual std::string getTitle( int group );
-	};
-
-
-	// ================================================================================
-	// ===
-	// === CLASS ImmutableNeurGroupGene
-	// ===
-	// === For public use; represents Input groups with fixed neuron counts as well as
-	// === Output groups.
-	// ===
-	// ================================================================================
-	class ImmutableNeurGroupGene : public NeurGroupGene, private __ConstantGene
-	{
-	public:
-		ImmutableNeurGroupGene( const char *name,
-								NeurGroupType group_type );
-		virtual ~ImmutableNeurGroupGene() {}
-
-		virtual Scalar get( Genome *genome );
-
-		virtual int getMaxGroupCount();
-		virtual int getMaxNeuronCount();
-
-		virtual std::string getTitle( int group );
-	};
-
-
-	// ================================================================================
-	// ===
-	// === CLASS NeurGroupAttrGene
-	// ===
-	// === For public use; provides a per-group attribute vector
-	// ===
-	// ================================================================================
-	class NeurGroupAttrGene : virtual public Gene, public __InterpolatedGene
-	{
-	public:
-		NeurGroupAttrGene( const char *name,
-						   NeurGroupType group_type,
-						   Gene *gmin,
-						   Gene *gmax );
-		virtual ~NeurGroupAttrGene() {}
-
-		virtual Scalar get( Genome *genome,
-							int group );
-
-		const Scalar &getMin();
-		const Scalar &getMax();
-
-		void seed( Genome *genome,
-				   NeurGroupGene *group,
-				   unsigned char rawval );
-
-		virtual void printIndexes( FILE *file, GenomeLayout *layout );
-		virtual void printTitles( FILE *file );
-
-		const NeurGroupType group_type;
-
-	protected:
-		virtual int getMutableSizeImpl();
-
-		friend class GenomeLayout;
-
-		int getOffset( int group );
-	};
-
-	// ================================================================================
-	// ===
-	// === CLASS SynapseAttrGene
-	// ===
-	// === For public use; provides a per-synapse attribute matrix
-	// ===
-	// ================================================================================
-	class SynapseAttrGene : virtual public Gene, public __InterpolatedGene
-	{
-	public:
-		SynapseAttrGene( const char *name,
-						 bool negateInhibitory,
-						 bool lessThanZero,
-						 Gene *gmin,
-						 Gene *gmax );
-		virtual ~SynapseAttrGene() {}
-
-		virtual Scalar get( Genome *genome,
-							SynapseType *synapseType,
-							int group_from,
-							int group_to );
-
-		void seed( Genome *genome,
-				   SynapseType *synapseType,
-				   NeurGroupGene *from,
-				   NeurGroupGene *to,
-				   unsigned char rawval );
-
-		virtual void printIndexes( FILE *file, GenomeLayout *layout );
-		virtual void printTitles( FILE *file );
-
-	protected:
-		virtual int getMutableSizeImpl();
-
-		friend class GenomeLayout;
-
-		int getOffset( SynapseType *synapseType,
-					   int from,
-					   int to );
-
-	private:
-		bool negateInhibitory;
-		bool lessThanZero;
-	};
-
-
-	// ================================================================================
-	// ===
 	// === Collections
 	// ===
 	// ================================================================================
 	typedef std::vector<Gene *> GeneVector;
 	typedef std::map<std::string, Gene *> GeneMap;
 	typedef std::list<Gene *> GeneList;
-	typedef std::map<Gene::Type, GeneVector> GeneTypeMap;
+	typedef std::map<const GeneType *, GeneVector> GeneTypeMap;
 
 } // namespace genome

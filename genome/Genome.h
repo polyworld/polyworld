@@ -26,62 +26,20 @@ namespace genome
 	public:
 		Genome( GenomeSchema *schema,
 				GenomeLayout *layout );
-		~Genome();
+		virtual ~Genome();
 
-		SynapseType *EE;
-		SynapseType *EI;
-		SynapseType *IE;
-		SynapseType *II;
-
-		Gene *CONNECTION_DENSITY;
-		Gene *TOPOLOGICAL_DISTORTION;
-		Gene *LEARNING_RATE;
 		Gene *MISC_BIAS;
 		Gene *MISC_INVIS_SLOPE;
-		Gene *INHIBITORY_COUNT;
-		Gene *EXCITATORY_COUNT;
-		Gene *BIAS;
-		Gene *INTERNAL;
 
 		Gene *gene( const char *name );
 
 		Scalar get( const char *name );
 		Scalar get( Gene *gene );
-		Scalar get( Gene *gene,
-					int group );
-		Scalar get( Gene *gene,
-					SynapseType *synapseType,
-					int from,
-					int to );
 
 		unsigned int get_raw_uint( long byte );
 		void updateSum( unsigned long *sum, unsigned long *sum2 );
 
-		int getGroupCount( NeurGroupType type );
-		int getNeuronCount( NeuronType type,
-							int group );
-		int getNeuronCount( int group );
-
-
-		const SynapseTypeList &getSynapseTypes();
-
-		int getSynapseCount( SynapseType *synapseType,
-							 int from,
-							 int to );
-		int getSynapseCount( int from,
-							 int to );
-
 		void seed( Gene *gene,
-				   float rawval_ratio );
-
-		void seed( Gene *attr,
-				   Gene *group,
-				   float rawval_ratio );
-
-		void seed( Gene *gene,
-				   SynapseType *synapseType,
-				   Gene *from,
-				   Gene *to,
 				   float rawval_ratio );
 
 		void randomize( float bitonprob );
@@ -101,8 +59,6 @@ namespace genome
 		void print();
 		void print( long lobit, long hibit );
 
-		GenomeSchema *schema;
-
 	protected:
 		friend class Gene;
 		friend class MutableScalarGene;
@@ -118,6 +74,7 @@ namespace genome
 	private:
 		void alloc();
 
+		GenomeSchema *schema;
 		GenomeLayout *layout;
 		unsigned char *mutable_data;
 		int nbytes;
@@ -160,6 +117,5 @@ inline void Genome::set_raw( int offset,
 		mutable_data[layoutOffset] = val;
 	}
 }
-
 
 } // namespace genome

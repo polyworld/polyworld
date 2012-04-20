@@ -48,6 +48,7 @@
 #include "food.h"
 #include "Genome.h"
 #include "GenomeUtil.h"
+#include "GroupsBrain.h"
 #include "Logs.h"
 #include "Metabolism.h"
 #include "MonitorManager.h"
@@ -183,6 +184,9 @@ TSimulation::TSimulation( string worldfilePath, string monitorPath )
 		fLockStepWithBirthsDeathsLog(false),
 		fLockstepFile(NULL),
 
+		fMaxPopulationPenaltyFraction(0.0),
+		fLowPopulationAdvantageFactor(1.0),
+		fPopulationPenaltyFraction(0.0),
 		fGlobalEnergyScaleFactor(1.0),
 
 		fEvents(NULL),
@@ -265,14 +269,26 @@ TSimulation::TSimulation( string worldfilePath, string monitorPath )
 
 		schema->apply( worldfile );
 	}		
-	ProcessWorldFile( worldfile );
+	processWorldFile( worldfile );
+	agent::processWorldfile( *worldfile );
+	GenomeSchema::processWorldfile( *worldfile );
+	Brain::processWorldfile( *worldfile );
+
+	// If this is a lockstep run, then we need to force certain parameter values (and warn the user)
+	if( fLockStepWithBirthsDeathsLog )
+	{
+		initLockstepMode();
+	}
+	// If this is a steady-state GA run, then we need to force certain parameter values (and warn the user)
+	if( (fHeuristicFitnessWeight != 0.0) || (fComplexityFitnessWeight != 0) )
+	{
+		initFitnessMode();
+	}
 
 	// ---
 	// --- General Init
 	// ---
-	InitNeuralValues();	 // Must be called before genome and brain init
-	
-    Brain::braininit();
+	Brain::init();
     agent::agentinit();
 	SeparationCache::init();
 	
@@ -288,13 +304,13 @@ TSimulation::TSimulation( string worldfilePath, string monitorPath )
 	 // Note:  this code must agree with the agent sizing in agent::grow()
 	 // and the food sizing in food::initlen().
 
-	float maxagentlenx = agent::gMaxAgentSize / sqrt(genome::gMinmaxspeed);
-	float maxagentlenz = agent::gMaxAgentSize * sqrt(genome::gMaxmaxspeed);
+	float maxagentlenx = agent::config.maxAgentSize / sqrt(agent::config.minmaxspeed);
+	float maxagentlenz = agent::config.maxAgentSize * sqrt(agent::config.maxmaxspeed);
 	float maxagentradius = 0.5 * sqrt(maxagentlenx*maxagentlenx + maxagentlenz*maxagentlenz);
 	float maxfoodlen = 0.75 * food::gMaxFoodEnergy / food::gSize2Energy;
 	float maxfoodradius = 0.5 * sqrt(maxfoodlen * maxfoodlen * 2.0);
 	food::gMaxFoodRadius = maxfoodradius;
-	agent::gMaxRadius = maxagentradius > maxfoodradius ?
+	agent::config.maxRadius = maxagentradius > maxfoodradius ?
 						  maxagentradius : maxfoodradius;
 
 	InitFittest();
@@ -341,8 +357,8 @@ TSimulation::TSimulation( string worldfilePath, string monitorPath )
 	srand48(fGenomeSeed);
 
 	agentPovRenderer = new AgentPovRenderer( fMaxNumAgents,
-											 brain::retinawidth,
-											 brain::retinaheight );
+											 Brain::config.retinaWidth,
+											 Brain::config.retinaHeight );
 
 	// ---
 	// --- Init Logs
@@ -528,8 +544,6 @@ TSimulation::~TSimulation()
 	if( fRecentFittest != NULL )
 		delete fRecentFittest;
 	
-	Brain::braindestruct();
-
 	agent::agentdestruct();
 		
 	delete agentPovRenderer;
@@ -880,8 +894,6 @@ void TSimulation::InitAgents()
 
 		virtual void task_exec( TSimulation *sim )
 		{
-			sim->fNeuronGroupCountStats.add( a->GetBrain()->NumNeuronGroups() );
-
 			sim->FoodEnergyIn( a->GetFoodEnergy() );
 		}
 	};
@@ -928,7 +940,7 @@ void TSimulation::InitAgents()
 			float x = randpw() * (fDomains[id].absoluteSizeX - 0.02) + fDomains[id].startX + 0.01;
 			float z = randpw() * (fDomains[id].absoluteSizeZ - 0.02) + fDomains[id].startZ + 0.01;
 			//float z = -0.01 - randpw() * (globals::worldsize - 0.02);
-			float y = 0.5 * agent::gAgentHeight;
+			float y = 0.5 * agent::config.agentHeight;
 #if TestWorld
 			// evenly distribute the agents
 			x = fDomains[id].xleft  +  0.666 * fDomains[id].xsize;
@@ -1004,7 +1016,7 @@ void TSimulation::InitAgents()
 			
 		float x =  0.01 + randpw() * (globals::worldsize - 0.02);
 		float z = -0.01 - randpw() * (globals::worldsize - 0.02);
-		float y = 0.5 * agent::gAgentHeight;
+		float y = 0.5 * agent::config.agentHeight;
 		if( isSeed )
 		{
 			SetSeedPosition( c, numSeededTotal - 1, x, y, z );
@@ -1085,53 +1097,6 @@ void TSimulation::InitBarriers()
 	while( barrier::gXSortedBarriers.next(b) )
 		fWorldSet.Add(b);	
 }
-
-//---------------------------------------------------------------------------
-// TSimulation::InitNeuralValues
-//
-// Calculate neural values based either defalt neural values or persistant
-// values that were loaded prior to this call.
-//---------------------------------------------------------------------------
-void TSimulation::InitNeuralValues()
-{
-	int numinputneurgroups = 5;
-	if( genome::gEnableMateWaitFeedback )
-		numinputneurgroups++;
-	if( genome::gEnableSpeedFeedback )
-		numinputneurgroups++;
-	if( genome::gEnableCarry )
-		numinputneurgroups += 2;
-	brain::gNeuralValues.numinputneurgroups = numinputneurgroups;
-
-	int numoutneurgroups = 7;
-	if( genome::gEnableGive )
-		numoutneurgroups++;
-	if( genome::gEnableCarry )
-		numoutneurgroups += 2;
-	brain::gNeuralValues.numoutneurgroups = numoutneurgroups;
-
-    brain::gNeuralValues.maxnoninputneurgroups = brain::gNeuralValues.maxinternalneurgroups + brain::gNeuralValues.numoutneurgroups;
-    brain::gNeuralValues.maxneurgroups = brain::gNeuralValues.maxnoninputneurgroups + brain::gNeuralValues.numinputneurgroups;
-    brain::gNeuralValues.maxneurpergroup = brain::gNeuralValues.maxeneurpergroup + brain::gNeuralValues.maxineurpergroup;
-    brain::gNeuralValues.maxinternalneurons = brain::gNeuralValues.maxneurpergroup * brain::gNeuralValues.maxinternalneurgroups;
-    brain::gNeuralValues.maxinputneurons = genome::gMaxvispixels * 3 + (numinputneurgroups - 1);
-    brain::gNeuralValues.maxnoninputneurons = brain::gNeuralValues.maxinternalneurons + brain::gNeuralValues.numoutneurgroups;
-    brain::gNeuralValues.maxneurons = brain::gNeuralValues.maxinternalneurons + brain::gNeuralValues.maxinputneurons + brain::gNeuralValues.numoutneurgroups;
-
-    // the 2's are due to the input & output neurons
-    //     doubling as e & i presynaptically
-    // the 3's are due to the output neurons also acting as e-neurons
-    //     postsynaptically, accepting internal connections
-    // the -'s are due to the output & internal neurons not self-stimulating
-    brain::gNeuralValues.maxsynapses = brain::gNeuralValues.maxinternalneurons * brain::gNeuralValues.maxinternalneurons 	// internal
-                + 2 * brain::gNeuralValues.numoutneurgroups * brain::gNeuralValues.numoutneurgroups					// output
-                + 3 * brain::gNeuralValues.maxinternalneurons * brain::gNeuralValues.numoutneurgroups       			// internal/output
-                + 2 * brain::gNeuralValues.maxinternalneurons * brain::gNeuralValues.maxinputneurons  				// internal/input
-                + 2 * brain::gNeuralValues.maxinputneurons * brain::gNeuralValues.numoutneurgroups       				// input/output
-                - 2 * brain::gNeuralValues.numoutneurgroups													// output/output
-                - brain::gNeuralValues.maxinternalneurons;                   									// internal/internal
-}
-
 
 //---------------------------------------------------------------------------
 // TSimulation::SeedGenome
@@ -1389,7 +1354,7 @@ void TSimulation::MaintainEnergyCosts()
 			}
 		}
 	}
-	else if( fApplyLowPopulationAdvantage || agent::gNumDepletionSteps )
+	else if( fApplyLowPopulationAdvantage || fNumDepletionSteps )
 	{
 		// These are the agent counts to be used in applying either the LowPopulationAdvantage or the (high) PopulationPenalty
 		// Assume global settings apply, until we know better
@@ -1419,33 +1384,33 @@ void TSimulation::MaintainEnergyCosts()
 		// If the population is too low, globally or in any domain, then either help it or leave it alone
 		if( excess < 0 )
 		{
-			agent::gPopulationPenaltyFraction = 0.0;	// we're not currently applying the high population penalty
+			fPopulationPenaltyFraction = 0.0;	// we're not currently applying the high population penalty
 
 			// If we want to help it, apply the low population advantage
 			if( fApplyLowPopulationAdvantage )
 			{
-				agent::gLowPopulationAdvantageFactor = 1.0 - (float) (initNumAgents - numAgents) / (initNumAgents - minNumAgents);
-				if( agent::gLowPopulationAdvantageFactor < 0.0 )
-					agent::gLowPopulationAdvantageFactor = 0.0;
-				if( agent::gLowPopulationAdvantageFactor > 1.0 )
-					agent::gLowPopulationAdvantageFactor = 1.0;
+				fLowPopulationAdvantageFactor = 1.0 - (float) (initNumAgents - numAgents) / (initNumAgents - minNumAgents);
+				if( fLowPopulationAdvantageFactor < 0.0 )
+					fLowPopulationAdvantageFactor = 0.0;
+				if( fLowPopulationAdvantageFactor > 1.0 )
+					fLowPopulationAdvantageFactor = 1.0;
 			}
 		}
 		else if( excess > 0 )	// population is greater than initial level everywhere
 		{
-			agent::gLowPopulationAdvantageFactor = 1.0;	// we're not currently applying the low population advantage
+			fLowPopulationAdvantageFactor = 1.0;	// we're not currently applying the low population advantage
 
 			// apply the high population penalty (if the max-penalty is non-zero)
-			agent::gPopulationPenaltyFraction = agent::gMaxPopulationPenaltyFraction * (numAgents - initNumAgents) / (maxNumAgents - initNumAgents);
-			if( agent::gPopulationPenaltyFraction < 0.0 )
-				agent::gPopulationPenaltyFraction = 0.0;
-			if( agent::gPopulationPenaltyFraction > agent::gMaxPopulationPenaltyFraction )
-				agent::gPopulationPenaltyFraction = agent::gMaxPopulationPenaltyFraction;
+			fPopulationPenaltyFraction = fMaxPopulationPenaltyFraction * (numAgents - initNumAgents) / (maxNumAgents - initNumAgents);
+			if( fPopulationPenaltyFraction < 0.0 )
+				fPopulationPenaltyFraction = 0.0;
+			if( fPopulationPenaltyFraction > fMaxPopulationPenaltyFraction )
+				fPopulationPenaltyFraction = fMaxPopulationPenaltyFraction;
 		}
 		
 		//printf( "step=%4ld, pop=%3d, initPop=%3ld, minPop=%2ld, maxPop=%3ld, maxPopPenaltyFraction=%g, popPenaltyFraction=%g, lowPopAdvantageFactor=%g\n",
 		//		fStep, numAgents, initNumAgents, minNumAgents, maxNumAgents,
-		//		agent::gMaxPopulationPenaltyFraction, agent::gPopulationPenaltyFraction, agent::gLowPopulationAdvantageFactor );
+		//		fMaxPopulationPenaltyFraction, fPopulationPenaltyFraction, fLowPopulationAdvantageFactor );
 	}
 }
 
@@ -1475,7 +1440,7 @@ void TSimulation::UpdateAgents()
 		a->UpdateBrain();
 		if( !a->BeingCarried() )
 			fFoodEnergyOut += a->UpdateBody(fMoveFitnessParameter,
-											agent::gSpeed2DPosition,
+											agent::config.speed2DPosition,
 											fSolidObjects,
 											NULL);
 	}
@@ -1573,7 +1538,7 @@ void TSimulation::UpdateAgents_StaticTimestepGeometry()
 		{
 			if( !a->BeingCarried() )
 				fFoodEnergyOut += a->UpdateBody( fMoveFitnessParameter,
-												 agent::gSpeed2DPosition,
+												 agent::config.speed2DPosition,
 												 fSolidObjects,
 												 NULL );
 		}
@@ -1751,7 +1716,7 @@ void TSimulation::Interact()
 				// -----------------------
 				// -------- Give ---------
 				// -----------------------
-				if( genome::gEnableGive )
+				if( agent::config.enableGive )
 				{
 					if( !cDied && !dDied )
 					{
@@ -1769,7 +1734,7 @@ void TSimulation::Interact()
 					break;
 
             }  // if close enough
-        }  // while (agent::gXSortedAgents.next(d))
+        }  // while (agent::config.xSortedAgents.next(d))
 
         debugcheck( "after all agent interactions" );
 
@@ -1792,7 +1757,7 @@ void TSimulation::Interact()
 		// -----------------------
 		// Have to do carry testing here instead of inside inner loop above,
 		// because agents can carry any kind of object, not just other agents
-		if( genome::gEnableCarry )
+		if( agent::config.enableCarry )
 			Carry( c );
 
 		// -----------------------
@@ -1875,8 +1840,7 @@ void TSimulation::DeathAndStats( void )
 	objectxsortedlist::gXSortedObjects.reset();
     while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**) &c ) )
     {
-
-		fCurrentNeuronGroupCountStats.add( c->GetBrain()->NumNeuronGroups() );
+		fCurrentNeuronGroupCountStats.add( dynamic_cast<GroupsBrain *>(c->GetBrain())->NumNeuronGroups() );
 		fCurrentNeuronCountStats.add( c->GetBrain()->GetNumNeurons() );
 		fCurrentSynapseCountStats.add( c->GetBrain()->GetNumSynapses() );
 
@@ -2102,7 +2066,7 @@ void TSimulation::MateLockstep( void )
 		e->SetFoodEnergy(eenergy);
 		float x =  0.01 + randpw() * (globals::worldsize - 0.02);
 		float z = -0.01 - randpw() * (globals::worldsize - 0.02);
-		float y = 0.5 * agent::gAgentHeight;
+		float y = 0.5 * agent::config.agentHeight;
 		e->settranslation(x, y, z);
 		float yaw =  360.0 * randpw();
 		c->setyaw(yaw);
@@ -2117,10 +2081,9 @@ void TSimulation::MateLockstep( void )
 		fDomains[kd].numborn++;
 		fNumBornSinceCreated++;
 		fDomains[kd].numbornsincecreated++;
-		fNeuronGroupCountStats.add( e->GetBrain()->NumNeuronGroups() );
 		ttPrint( "age %ld: agent # %ld is born\n", fStep, e->Number() );
-		birthPrint( "step %ld: agent # %ld born to %ld & %ld, at (%g,%g,%g), yaw=%g, energy=%g, domain %d (%d & %d), neurgroups=%d\n",
-			fStep, e->Number(), c->Number(), d->Number(), e->x(), e->y(), e->z(), e->yaw(), e->Energy(), kd, id, jd, e->GetBrain()->NumNeuronGroups() );
+		birthPrint( "step %ld: agent # %ld born to %ld & %ld, at (%g,%g,%g), yaw=%g, energy=%g, domain %d (%d & %d)\n",
+			fStep, e->Number(), c->Number(), d->Number(), e->x(), e->y(), e->z(), e->yaw(), e->Energy(), kd, id, jd );
 
 		Birth( e, LifeSpan::BR_LOCKSTEP, c, d );
 									
@@ -2390,8 +2353,6 @@ void TSimulation::Mate( agent *c,
 						gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();
 						objectxsortedlist::gXSortedObjects.add(e); // Add the new agent directly to the list of objects (no new agent list); the e->listLink that gets auto stored here should be valid immediately
 						objectxsortedlist::gXSortedObjects.setcurr( saveCurr );
-
-						sim->fNeuronGroupCountStats.add( e->GetBrain()->NumNeuronGroups() );
 					}
 				};
 
@@ -2571,10 +2532,10 @@ void TSimulation::Fight( agent *c,
 			// If we're not running in LockStep mode, allow natural deaths
 			if (d->GetEnergy().isDepleted())
 			{
-				//cout << "before deaths2 "; agent::gXSortedAgents.list();	//dbg
+				//cout << "before deaths2 "; agent::config.xSortedAgents.list();	//dbg
 				Kill( d, LifeSpan::DR_FIGHT );
 				fNumberDiedFight++;
-				//cout << "after deaths2 "; agent::gXSortedAgents.list();	//dbg
+				//cout << "after deaths2 "; agent::config.xSortedAgents.list();	//dbg
 
 				*dDied = true;
 			}
@@ -2586,7 +2547,7 @@ void TSimulation::Fight( agent *c,
 
 				// note: this leaves list pointing to item before c, and markedAgent set to previous agent
 				//objectxsortedlist::gXSortedObjects.setMarkPrevious( AGENTTYPE );	// if previous object was a agent, this would step one too far back, I think - lsy
-				//cout << "after deaths3 "; agent::gXSortedAgents.list();	//dbg
+				//cout << "after deaths3 "; agent::config.xSortedAgents.list();	//dbg
 				*cDied = true;
 			}
 		}
@@ -2869,7 +2830,7 @@ void TSimulation::Carry( agent* c )
 	if( c->Pickup() > fPickupThreshold )
 	{
 		// Don't pick up more than we can carry
-		if( c->NumCarries() < agent::gMaxCarries )
+		if( c->NumCarries() < agent::config.maxCarries )
 		{
 			Pickup( c );
 		}
@@ -2907,7 +2868,7 @@ void TSimulation::Pickup( agent* c )
 			// end of object comes before beginning of agent, so there is no overlap
 			// if we've gone so far back that the largest possible object could not overlap us,
 			// then we can stop searching for this agent's possible pickups in the backward direction
-			if( ( o->x() + 2.0 * max( max( food::gMaxFoodRadius, agent::gMaxRadius ), brick::gBrickRadius ) ) < ( c->x() - c->radius() ) )
+			if( ( o->x() + 2.0 * max( max( food::gMaxFoodRadius, agent::config.maxRadius ), brick::gBrickRadius ) ) < ( c->x() - c->radius() ) )
 				break;  // so get out of the backward object while loop
 		}
 		else
@@ -2921,14 +2882,14 @@ void TSimulation::Pickup( agent* c )
 				
 				c->PickupObject( o );
 
-				if( c->NumCarries() >= agent::gMaxCarries )	// carrying as much as we can,
+				if( c->NumCarries() >= agent::config.maxCarries )	// carrying as much as we can,
 					break;								// so get out of the backward while loop
 			}
 		}
 	}
 
 	// can we pick up anything else?
-	if( c->NumCarries() < agent::gMaxCarries )
+	if( c->NumCarries() < agent::config.maxCarries )
 	{
 		// set the list back to the agent mark, so we can look forward from that point
 		objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point list back to c
@@ -2956,7 +2917,7 @@ void TSimulation::Pickup( agent* c )
 					
 					c->PickupObject( o );
 					
-					if( c->NumCarries() >= agent::gMaxCarries )	// carrying as much as we can,
+					if( c->NumCarries() >= agent::config.maxCarries )	// carrying as much as we can,
 						break;								// so get out of the forward while loop
 				}
 			}
@@ -3174,8 +3135,6 @@ void TSimulation::CreateAgents( void )
 
 					virtual void task_exec( TSimulation *sim )
 					{
-						sim->fNeuronGroupCountStats.add( a->GetBrain()->NumNeuronGroups() );
-
 						sim->FoodEnergyIn( a->GetFoodEnergy() );
 					}
 				};
@@ -3187,7 +3146,7 @@ void TSimulation::CreateAgents( void )
 
 				float x = randpw() * (fDomains[id].absoluteSizeX - 0.02) + fDomains[id].startX + 0.01;
 				float z = randpw() * (fDomains[id].absoluteSizeZ - 0.02) + fDomains[id].startZ + 0.01;
-				float y = 0.5 * agent::gAgentHeight;
+				float y = 0.5 * agent::config.agentHeight;
 				float yaw = randpw() * 360.0;
 			#if TestWorld
 				x = fDomains[id].xleft  +  0.666 * fDomains[id].xsize;
@@ -3282,7 +3241,7 @@ void TSimulation::CreateAgents( void )
             newAgent->grow( fMateWait );
 			FoodEnergyIn( newAgent->GetFoodEnergy() );
 
-            newAgent->settranslation(randpw() * globals::worldsize, 0.5 * agent::gAgentHeight, randpw() * -globals::worldsize);
+            newAgent->settranslation(randpw() * globals::worldsize, 0.5 * agent::config.agentHeight, randpw() * -globals::worldsize);
             newAgent->setyaw(randpw() * 360.0);
             id = WhichDomain(newAgent->x(), newAgent->z(), 0);
             newAgent->Domain(id);
@@ -3293,7 +3252,6 @@ void TSimulation::CreateAgents( void )
 	    	objectxsortedlist::gXSortedObjects.add(newAgent); // add new agent to list of all objejcts; the newAgent->listLink that gets auto stored here should be valid immediately
 	    	fNewLifes++;
             //newAgents.add(newAgent); // add it to the full list later; the e->listLink that gets auto stored here must be replaced with one from full list below
-			fNeuronGroupCountStats.add( newAgent->GetBrain()->NumNeuronGroups() );
 
 			Birth( newAgent, LifeSpan::BR_CREATE );
         }
@@ -3743,7 +3701,7 @@ void TSimulation::Kill( agent* c,
 	// ---
 	// following assumes (requires!) list to be currently pointing to c,
     // and will leave the list pointing to the previous agent
-	// agent::gXSortedAgents.remove(); // get agent out of the list
+	// agent::config.xSortedAgents.remove(); // get agent out of the list
 	// objectxsortedlist::gXSortedObjects.removeCurrentObject(); // get agent out of the list
 	
 	// Following assumes (requires!) the agent to have stored c->listLink correctly
@@ -4020,9 +3978,9 @@ float TSimulation::AgentFitness( agent* c )
 }
 
 //-------------------------------------------------------------------------------------------
-// TSimulation::ProcessWorldFile
+// TSimulation::processWorldFile
 //-------------------------------------------------------------------------------------------
-void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
+void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 {
 	proplib::Document &doc = *docWorldFile;
 
@@ -4060,7 +4018,6 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 			assert( false );
 	}
 	globals::numEnergyTypes = doc.get( "NumEnergyTypes" );
-	agent::gVision = doc.get( "Vision" );
 	fStaticTimestepGeometry = doc.get( "StaticTimestepGeometry" );
 	if( fStaticTimestepGeometry )
 	{
@@ -4072,8 +4029,6 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	fParallelInteract = doc.get( "ParallelInteract" );
 	fParallelCreateAgents = doc.get( "ParallelCreateAgents" );
 	fParallelBrains = doc.get( "ParallelBrains" );
-	brain::gMinWin = doc.get( "RetinaWidth" );
-	agent::gMaxVelocity = doc.get( "MaxVelocity" );
 	fMinNumAgents = doc.get( "MinAgents" );
 	fMaxNumAgents = doc.get( "MaxAgents" );
 	fInitNumAgents = doc.get( "InitAgents" );
@@ -4138,20 +4093,6 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	food::gSize2Energy = doc.get( "FoodEnergySizeScale" );
 	fEat2Consume = doc.get( "FoodConsumptionRate" );
 	{
-		string layout = doc.get( "GenomeLayout" );
-		if( layout == "N" )
-			genome::gLayoutType = genome::GenomeLayout::NEURGROUP;
-		else if( layout == "L" )
-			genome::gLayoutType = genome::GenomeLayout::LEGACY;
-		else
-			assert( false );
-	}
-	genome::gEnableMateWaitFeedback = doc.get( "EnableMateWaitFeedback" );
-	genome::gEnableSpeedFeedback = doc.get( "EnableSpeedFeedback" );
-	genome::gEnableGive = doc.get( "EnableGive" );
-	genome::gEnableCarry = doc.get( "EnableCarry" );
-	agent::gMaxCarries = doc.get( "MaxCarries" );
-	{
 		fCarryObjects = 0;
 #define __SET( PROP, MASK ) if( (bool)doc.get("Carry"PROP) ) fCarryObjects |= MASK##TYPE
 		__SET( "Agents", AGENT );
@@ -4172,25 +4113,8 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	fCarryPreventsGive = doc.get( "CarryPreventsGive" );
 	fCarryPreventsMate = doc.get( "CarryPreventsMate" );
 
-	genome::gEnableVisionPitch = doc.get( "EnableVisionPitch" );
-	agent::gMinVisionPitch = doc.get( "MinVisionPitch" );
-	agent::gMaxVisionPitch = doc.get( "MaxVisionPitch" );
-	genome::gEnableVisionYaw = doc.get( "EnableVisionYaw" );
-	agent::gMinVisionYaw = doc.get( "MinVisionYaw" );
-	agent::gMaxVisionYaw = doc.get( "MaxVisionYaw" );
-	agent::gEyeHeight = doc.get( "EyeHeight" );
-
-    genome::gMinvispixels = doc.get( "MinVisionNeuronsPerGroup" );
-    genome::gMaxvispixels = doc.get( "MaxVisionNeuronsPerGroup" );
-    genome::gMinMutationRate = doc.get( "MinMutationRate" );
-    genome::gMaxMutationRate = doc.get( "MaxMutationRate" );
-    genome::gMinNumCpts = doc.get( "MinCrossoverPoints" );
-    genome::gMaxNumCpts = doc.get( "MaxCrossoverPoints" );
-    genome::gMinLifeSpan = doc.get( "MinLifeSpan" );
-    genome::gMaxLifeSpan = doc.get( "MaxLifeSpan" );
 	fEatWait = doc.get( "EatWait" );
     fMateWait = doc.get( "MateWait" );
-    agent::gInitMateWait = doc.get( "InitMateWait" );
 	fEatMateSpan = doc.get( "EatMateWait" );
 	fEatMateMinDistance = doc.get( "EatMateMinDistance" );
 	fMaxMateVelocity = doc.get( "MaxMateVelocity" );
@@ -4198,101 +4122,10 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	fMaxEatVelocity = doc.get( "MaxEatVelocity" );
 	fMaxEatYaw = doc.get( "MaxEatYaw" );
 
-    genome::gMinStrength = doc.get( "MinAgentStrength" );
-    genome::gMaxStrength = doc.get( "MaxAgentStrength" );
-    agent::gMinAgentSize = doc.get( "MinAgentSize" );
-    agent::gMaxAgentSize = doc.get( "MaxAgentSize" );
-    agent::gMinMaxEnergy = doc.get( "MinAgentMaxEnergy" );
-    agent::gMaxMaxEnergy = doc.get( "MaxAgentMaxEnergy" );
-    genome::gMinmateenergy = doc.get( "MinEnergyFractionToOffspring" );
-    genome::gMaxmateenergy = doc.get( "MaxEnergyFractionToOffspring" );
     fMinMateFraction = doc.get( "MinMateEnergyFraction" );
-    genome::gMinmaxspeed = doc.get( "MinAgentMaxSpeed" );
-    genome::gMaxmaxspeed = doc.get( "MaxAgentMaxSpeed" );
-    agent::gSpeed2DPosition = doc.get( "MotionRate" );
-    agent::gYaw2DYaw = doc.get( "YawRate" );
-	{
-		string encoding = doc.get( "YawEncoding" );
-		if( encoding == "Oppose" )
-			agent::gYawEncoding = agent::YE_OPPOSE;
-		else if( encoding == "Squash" )
-			agent::gYawEncoding = agent::YE_SQUASH;
-		else
-			assert( false );
-	}
-    genome::gMinlrate = doc.get( "MinLearningRate" );
-    genome::gMaxlrate = doc.get( "MaxLearningRate" );
-    agent::gMinFocus = doc.get( "MinHorizontalFieldOfView" );
-    agent::gMaxFocus = doc.get( "MaxHorizontalFieldOfView" );
-    agent::gAgentFOV = doc.get( "VerticalFieldOfView" );
-    agent::gMaxSizeAdvantage = doc.get( "MaxSizeFightAdvantage" );
-	{
-		proplib::Property &prop = doc.get( "BodyRedChannel" );
-		if( (string)prop == "Fight" )
-			agent::gBodyRedChannel = agent::BRC_FIGHT;
-		else if( (string)prop == "Give" )
-			agent::gBodyRedChannel = agent::BRC_GIVE;
-		else
-		{
-			agent::gBodyRedChannel = agent::BRC_CONST;
-			agent::gBodyRedChannelConstValue = (float)prop;
-		}
-	}
-	{
-		proplib::Property &prop = doc.get( "BodyGreenChannel" );
-		if( (string)prop == "I" )
-			agent::gBodyGreenChannel = agent::BGC_ID;
-		else if( (string)prop == "L" )
-			agent::gBodyGreenChannel = agent::BGC_LIGHT;
-		else
-		{
-			agent::gBodyGreenChannel = agent::BGC_CONST;
-			agent::gBodyGreenChannelConstValue = (float)prop;
-		}
-	}
-	{
-		proplib::Property &prop = doc.get( "BodyBlueChannel" );
-		if( (string)prop == "Mate" )
-			agent::gBodyBlueChannel = agent::BBC_MATE;
-		else if( (string) prop == "Energy" )
-			agent::gBodyBlueChannel = agent::BBC_ENERGY;
-		else
-		{
-			agent::gBodyBlueChannel = agent::BBC_CONST;
-			agent::gBodyBlueChannelConstValue = (float)prop;
-		}
-	}
-	{
-		proplib::Property &prop = doc.get( "NoseColor" );
-		if( (string)prop == "L" )
-			agent::gNoseColor = agent::NC_LIGHT;
-		else
-		{
-			agent::gNoseColor = agent::NC_CONST;
-			agent::gNoseColorConstValue = (float)prop;
-		}
-	}
     fPower2Energy = doc.get( "DamageRate" );
-    agent::gEnergyUseMultiplier = doc.get( "EnergyUseMultiplier" );
-    agent::gEat2Energy = doc.get( "EnergyUseEat" );
-	agent::gMate2Energy = doc.get( "EnergyUseMate" );
-    agent::gFight2Energy = doc.get( "EnergyUseFight" );
-    agent::gGive2Energy = doc.get( "EnergyUseGive" );
-	agent::gMinSizePenalty = doc.get( "MinSizeEnergyPenalty" );
-    agent::gMaxSizePenalty = doc.get( "MaxSizeEnergyPenalty" );
-    agent::gSpeed2Energy = doc.get( "EnergyUseMove" );
-    agent::gYaw2Energy = doc.get( "EnergyUseTurn" );
-    agent::gLight2Energy = doc.get( "EnergyUseLight" );
-    agent::gFocus2Energy = doc.get( "EnergyUseFocus" );
-	agent::gPickup2Energy = doc.get( "EnergyUsePickup" );
-	agent::gDrop2Energy = doc.get( "EnergyUseDrop" );
-	agent::gCarryAgent2Energy = doc.get( "EnergyUseCarryAgent" );
-	agent::gCarryAgentSize2Energy = doc.get( "EnergyUseCarryAgentSize" );
 	food::gCarryFood2Energy = doc.get( "EnergyUseCarryFood" );
 	brick::gCarryBrick2Energy = doc.get( "EnergyUseCarryBrick" );
-    brain::gNeuralValues.maxsynapse2energy = doc.get( "EnergyUseSynapses" );
-    agent::gFixedEnergyDrain = doc.get( "EnergyUseFixed" );
-    brain::gDecayRate = doc.get( "SynapseWeightDecayRate" );
 	{
 		fAgentHealingRate = doc.get( "AgentHealingRate" );
 		// a bool flag to check to see if healing is turned on is faster than always comparing a float.
@@ -4315,26 +4148,6 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	fGiveFraction = doc.get( "GiveFraction" );
 	fPickupThreshold = doc.get( "PickupThreshold" );
 	fDropThreshold = doc.get( "DropThreshold" );
-    genome::gMiscBias = doc.get( "MiscegenationFunctionBias" );
-    genome::gMiscInvisSlope = doc.get( "MiscegenationFunctionInverseSlope" );
-    brain::gLogisticSlope = doc.get( "LogisticSlope" );
-    brain::gMaxWeight = doc.get( "MaxSynapseWeight" );
-
-	brain::gEnableInitWeightRngSeed = doc.get( "EnableInitWeightRngSeed" );
-	brain::gMinInitWeightRngSeed = doc.get( "MinInitWeightRngSeed" );
-	brain::gMaxInitWeightRngSeed = doc.get( "MaxInitWeightRngSeed" );
-	RandomNumberGenerator::set( RandomNumberGenerator::INIT_WEIGHT,
-								RandomNumberGenerator::LOCAL );
-    brain::gInitMaxWeight = doc.get( "MaxSynapseWeightInitial" );
-	{
-		proplib::Property &propPowers = doc.get( "GeneInterpolationPower" );
-		itfor( proplib::PropertyMap, propPowers.elements(), it )
-		{
-			genome::gGeneInterpolationPower[ it->second->get("Name") ] = it->second->get( "Power" );
-		}
-	}
-    genome::gMinBitProb = doc.get( "MinInitialBitProb" );
-    genome::gMaxBitProb = doc.get( "MaxInitialBitProb" );
 	{
 		fSolidObjects = 0;
 #define __SET( PROP, MASK ) if( (bool)doc.get("Solid"PROP) ) fSolidObjects |= MASK##TYPE
@@ -4343,7 +4156,6 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 		__SET( "Bricks", BRICK );
 #undef __SET
 	}
-    agent::gAgentHeight = doc.get( "AgentHeight" );
     food::gFoodHeight = doc.get( "FoodHeight" );
     food::gFoodColor = doc.get( "FoodColor" );
 	brick::gBrickHeight = doc.get( "BrickHeight" );
@@ -4808,68 +4620,8 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	
 	fUseProbabilisticFoodPatches = doc.get( "ProbabilisticFoodPatches" );
 
-	{
-		string val = doc.get( "NeuronModel" );
-		if( val == "F" )
-			brain::gNeuralValues.model = brain::NeuralValues::FIRING_RATE;
-		else if( val == "T" )
-			brain::gNeuralValues.model = brain::NeuralValues::TAU;
-		else if( val == "S" )
-			brain::gNeuralValues.model = brain::NeuralValues::SPIKING;
-		else
-			assert( false );
-	}
-
-    brain::gNeuralValues.enableSpikingGenes = doc.get( "EnableSpikingGenes" );
-
-	brain::gNeuralValues.Spiking.aMinVal = doc.get( "SpikingAMin" );
-	brain::gNeuralValues.Spiking.aMaxVal = doc.get( "SpikingAMax" );
-	brain::gNeuralValues.Spiking.bMinVal = doc.get( "SpikingBMin" );
-	brain::gNeuralValues.Spiking.bMaxVal = doc.get( "SpikingBMax" );
-	brain::gNeuralValues.Spiking.cMinVal = doc.get( "SpikingCMin" );
-	brain::gNeuralValues.Spiking.cMaxVal = doc.get( "SpikingCMax" );
-	brain::gNeuralValues.Spiking.dMinVal = doc.get( "SpikingDMin" );
-	brain::gNeuralValues.Spiking.dMaxVal = doc.get( "SpikingDMax" );
-
-	brain::gNeuralValues.Tau.minVal = doc.get( "TauMin" );
-	brain::gNeuralValues.Tau.maxVal = doc.get( "TauMax" );
-	brain::gNeuralValues.Tau.seedVal = doc.get( "TauSeed" );
-
-    brain::gNeuralValues.mininternalneurgroups = doc.get( "MinInternalNeuralGroups" );
-    brain::gNeuralValues.maxinternalneurgroups = doc.get( "MaxInternalNeuralGroups" );
-    brain::gNeuralValues.mineneurpergroup = doc.get( "MinExcitatoryNeuronsPerGroup" );
-    brain::gNeuralValues.maxeneurpergroup = doc.get( "MaxExcitatoryNeuronsPerGroup" );
-    brain::gNeuralValues.minineurpergroup = doc.get( "MinInhibitoryNeuronsPerGroup" );
-    brain::gNeuralValues.maxineurpergroup = doc.get( "MaxInhibitoryNeuronsPerGroup" );
-    brain::gNeuralValues.maxbias = doc.get( "MaxBiasWeight" );
-    brain::gNeuralValues.minconnectiondensity = doc.get( "MinConnectionDensity" );
-    brain::gNeuralValues.maxconnectiondensity = doc.get( "MaxConnectionDensity" );
-    brain::gNeuralValues.mintopologicaldistortion = doc.get( "MinTopologicalDistortion" );
-    brain::gNeuralValues.maxtopologicaldistortion = doc.get( "MaxTopologicalDistortion" );
-	brain::gNeuralValues.enableTopologicalDistortionRngSeed = doc.get( "EnableTopologicalDistortionRngSeed" );
-	brain::gNeuralValues.minTopologicalDistortionRngSeed = doc.get( "MinTopologicalDistortionRngSeed" );
-	brain::gNeuralValues.maxTopologicalDistortionRngSeed = doc.get( "MaxTopologicalDistortionRngSeed" );
-
-	RandomNumberGenerator::set( RandomNumberGenerator::TOPOLOGICAL_DISTORTION,
-								RandomNumberGenerator::LOCAL );
-	brain::gNeuralValues.maxneuron2energy = doc.get( "EnergyUseNeurons" );
-	brain::gOutputSynapseLearning = doc.get( "OutputSynapseLearning" );
-	brain::gSynapseFromOutputNeurons = doc.get( "SynapseFromOutputNeurons" );
-	brain::gNumPrebirthCycles = doc.get( "PreBirthCycles" );
-
-	genome::gSeedMutationRate = doc.get( "SeedMutationRate" );
-	genome::gSeedFightBias = doc.get( "SeedFightBias" );
-	genome::gSeedFightExcitation = doc.get( "SeedFightExcitation" );
-	genome::gSeedGiveBias = doc.get( "SeedGiveBias" );
-	genome::gSeedPickupBias = doc.get( "SeedPickupBias" );
-	genome::gSeedDropBias = doc.get( "SeedDropBias" );
-	genome::gSeedPickupExcitation = doc.get( "SeedPickupExcitation" );
-	genome::gSeedDropExcitation = doc.get( "SeedDropExcitation" );
-
-    InitNeuralValues();
 
     fMinFoodEnergyAtDeath = doc.get( "MinFoodEnergyAtDeath" );
-    genome::gGrayCoding = doc.get( "GrayCoding" );
 	fRandomBirthLocation = doc.get( "RandomBirthLocation" );
 	fRandomBirthLocationRadius = doc.get( "RandomBirthLocationRadius" );
 	{
@@ -4885,11 +4637,13 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	}
     fSmiteFrac = doc.get( "SmiteFrac" );
     fSmiteAgeFrac = doc.get( "SmiteAgeFrac" );
-	agent::gNumDepletionSteps = doc.get( "NumDepletionSteps" );
-	if( agent::gNumDepletionSteps )
-		agent::gMaxPopulationPenaltyFraction = 1.0 / (float) agent::gNumDepletionSteps;
+
+	fNumDepletionSteps = doc.get( "NumDepletionSteps" );
+	if( fNumDepletionSteps )
+		fMaxPopulationPenaltyFraction = 1.0 / (float) fNumDepletionSteps;
 
 	fApplyLowPopulationAdvantage = doc.get( "ApplyLowPopulationAdvantage" );
+
 	fEnergyBasedPopulationControl = doc.get( "EnergyBasedPopulationControl" );
 	fPopControlGlobal = doc.get( "PopControlGlobal" );
 	fPopControlDomains = doc.get( "PopControlDomains" );
@@ -4918,105 +4672,109 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	fExpFogDensity = doc.get( "ExpFogDensity" );
 	// This value only does something if Fog Function is linear
 	// It defines the maximum distance a agent can see.
-	fLinearFogEnd = doc.get( "LinearFogEnd" );
-	
-	// If this is a lockstep run, then we need to force certain parameter values (and warn the user)
-	if( fLockStepWithBirthsDeathsLog )
-	{
-		genome::gMinLifeSpan = fMaxSteps;
-		genome::gMaxLifeSpan = fMaxSteps;
-		
-		agent::gEat2Energy = 0.0;
-		agent::gMate2Energy = 0.0;
-		agent::gFight2Energy = 0.0;
-		agent::gMaxSizePenalty = 0.0;
-		agent::gSpeed2Energy = 0.0;
-		agent::gYaw2Energy = 0.0;
-		agent::gLight2Energy = 0.0;
-		agent::gFocus2Energy = 0.0;
-		agent::gPickup2Energy = 0.0;
-		agent::gDrop2Energy = 0.0;
-		agent::gCarryAgent2Energy = 0.0;
-		agent::gCarryAgentSize2Energy = 0.0;
-		food::gCarryFood2Energy = 0.0;
-		brick::gCarryBrick2Energy = 0.0;
-		agent::gFixedEnergyDrain = 0.0;
+	fLinearFogEnd = doc.get( "LinearFogEnd" );	
+}
 
-		agent::gNumDepletionSteps = 0;
-		agent::gMaxPopulationPenaltyFraction = 0.0;
+//-------------------------------------------------------------------------------------------
+// TSimulation::initLockstepMode
+//-------------------------------------------------------------------------------------------
+void TSimulation::initLockstepMode()
+{
+	agent::config.minLifeSpan = fMaxSteps;
+	agent::config.maxLifeSpan = fMaxSteps;
 		
-		fApplyLowPopulationAdvantage = false;
-		fEnergyBasedPopulationControl = false;
+	agent::config.eat2Energy = 0.0;
+	agent::config.mate2Energy = 0.0;
+	agent::config.fight2Energy = 0.0;
+	agent::config.maxSizePenalty = 0.0;
+	agent::config.speed2Energy = 0.0;
+	agent::config.yaw2Energy = 0.0;
+	agent::config.light2Energy = 0.0;
+	agent::config.focus2Energy = 0.0;
+	agent::config.pickup2Energy = 0.0;
+	agent::config.drop2Energy = 0.0;
+	agent::config.carryAgent2Energy = 0.0;
+	agent::config.carryAgentSize2Energy = 0.0;
+	food::gCarryFood2Energy = 0.0;
+	brick::gCarryBrick2Energy = 0.0;
+	agent::config.fixedEnergyDrain = 0.0;
+
+	fNumDepletionSteps = 0;
+	fMaxPopulationPenaltyFraction = 0.0;
 		
-		cout << "Due to running in LockStepWithBirthsDeathsLog mode, the following parameter values have been forcibly reset as indicated:" nl;
-		cout << "  MinLifeSpan" ses genome::gMinLifeSpan nl;
-		cout << "  MaxLifeSpan" ses genome::gMaxLifeSpan nl;
-		cout << "  Eat2Energy" ses agent::gEat2Energy nl;
-		cout << "  Mate2Energy" ses agent::gMate2Energy nl;
-		cout << "  Fight2Energy" ses agent::gFight2Energy nl;
-		cout << "  MaxSizePenalty" ses agent::gMaxSizePenalty nl;
-		cout << "  Speed2Energy" ses agent::gSpeed2Energy nl;
-		cout << "  Yaw2Energy" ses agent::gYaw2Energy nl;
-		cout << "  Light2Energy" ses agent::gLight2Energy nl;
-		cout << "  Focus2Energy" ses agent::gFocus2Energy nl;
-		cout << "  Pickup2Energy" ses agent::gPickup2Energy nl;
-		cout << "  Drop2Energy" ses agent::gDrop2Energy nl;
-		cout << "  CarryAgent2Energy" ses agent::gCarryAgent2Energy nl;
-		cout << "  CarryAgentSize2Energy" ses agent::gCarryAgentSize2Energy nl;
-		cout << "  CarryFood2Energy" ses food::gCarryFood2Energy nl;
-		cout << "  CarryBrick2Energy" ses brick::gCarryBrick2Energy nl;
-		cout << "  FixedEnergyDrain" ses agent::gFixedEnergyDrain nl;
-		cout << "  NumDepletionSteps" ses agent::gNumDepletionSteps nl;
-		cout << "  .MaxPopulationPenaltyFraction" ses agent::gMaxPopulationPenaltyFraction nl;
-		cout << "  ApplyLowPopulationAdvantage" ses fApplyLowPopulationAdvantage nl;
+	fApplyLowPopulationAdvantage = false;
+	fEnergyBasedPopulationControl = false;
+		
+	cout << "Due to running in LockStepWithBirthsDeathsLog mode, the following parameter values have been forcibly reset as indicated:" nl;
+	cout << "  MinLifeSpan" ses agent::config.minLifeSpan nl;
+	cout << "  MaxLifeSpan" ses agent::config.maxLifeSpan nl;
+	cout << "  Eat2Energy" ses agent::config.eat2Energy nl;
+	cout << "  Mate2Energy" ses agent::config.mate2Energy nl;
+	cout << "  Fight2Energy" ses agent::config.fight2Energy nl;
+	cout << "  MaxSizePenalty" ses agent::config.maxSizePenalty nl;
+	cout << "  Speed2Energy" ses agent::config.speed2Energy nl;
+	cout << "  Yaw2Energy" ses agent::config.yaw2Energy nl;
+	cout << "  Light2Energy" ses agent::config.light2Energy nl;
+	cout << "  Focus2Energy" ses agent::config.focus2Energy nl;
+	cout << "  Pickup2Energy" ses agent::config.pickup2Energy nl;
+	cout << "  Drop2Energy" ses agent::config.drop2Energy nl;
+	cout << "  CarryAgent2Energy" ses agent::config.carryAgent2Energy nl;
+	cout << "  CarryAgentSize2Energy" ses agent::config.carryAgentSize2Energy nl;
+	cout << "  CarryFood2Energy" ses food::gCarryFood2Energy nl;
+	cout << "  CarryBrick2Energy" ses brick::gCarryBrick2Energy nl;
+	cout << "  FixedEnergyDrain" ses agent::config.fixedEnergyDrain nl;
+	cout << "  NumDepletionSteps" ses fNumDepletionSteps nl;
+	cout << "  .MaxPopulationPenaltyFraction" ses fMaxPopulationPenaltyFraction nl;
+	cout << "  ApplyLowPopulationAdvantage" ses fApplyLowPopulationAdvantage nl;
+}
+
+//-------------------------------------------------------------------------------------------
+// TSimulation::initFitnessMode
+//-------------------------------------------------------------------------------------------
+void TSimulation::initFitnessMode()
+{
+	fNumberToSeed = lrint( fMaxNumAgents * (float) fNumberToSeed / fInitNumAgents );	// same proportion as originally specified (must calculate before changing fInitNumAgents)
+	if( fNumberToSeed > fMaxNumAgents )	// just to be safe
+		fNumberToSeed = fMaxNumAgents;
+	fInitNumAgents = fMaxNumAgents;	// population starts at maximum
+	fMinNumAgents = fMaxNumAgents;		// population stays at mximum
+	// 		if( fProbabilityOfMutatingSeeds == 0.0 )
+	// 			fProbabilityOfMutatingSeeds = 1.0;	// so there is variation in the initial population
+	//		fMateThreshold = 1.5;				// so they can't reproduce on their own
+
+	for( int i = 0; i < fNumDomains; i++ )	// over all domains
+	{
+		fDomains[i].numberToSeed = lrint( fDomains[i].maxNumAgents * (float) fDomains[i].numberToSeed / fDomains[i].initNumAgents );	// same proportion as originally specified (must calculate before changing fInitNumAgents)
+		if( fDomains[i].numberToSeed > fDomains[i].maxNumAgents )	// just to be safe
+			fDomains[i].numberToSeed = fDomains[i].maxNumAgents;
+		fDomains[i].initNumAgents = fDomains[i].maxNumAgents;	// population starts at maximum
+		fDomains[i].minNumAgents  = fDomains[i].maxNumAgents;	// population stays at maximum
+		// 			fDomains[i].probabilityOfMutatingSeeds = fProbabilityOfMutatingSeeds;				// so there is variation in the initial population
 	}
-	
-	// If this is a steady-state GA run, then we need to force certain parameter values (and warn the user)
-	if( (fHeuristicFitnessWeight != 0.0) || (fComplexityFitnessWeight != 0) )
-	{
-		fNumberToSeed = lrint( fMaxNumAgents * (float) fNumberToSeed / fInitNumAgents );	// same proportion as originally specified (must calculate before changing fInitNumAgents)
-		if( fNumberToSeed > fMaxNumAgents )	// just to be safe
-			fNumberToSeed = fMaxNumAgents;
-		fInitNumAgents = fMaxNumAgents;	// population starts at maximum
-		fMinNumAgents = fMaxNumAgents;		// population stays at mximum
-// 		if( fProbabilityOfMutatingSeeds == 0.0 )
-// 			fProbabilityOfMutatingSeeds = 1.0;	// so there is variation in the initial population
-//		fMateThreshold = 1.5;				// so they can't reproduce on their own
 
-		for( int i = 0; i < fNumDomains; i++ )	// over all domains
-		{
-			fDomains[i].numberToSeed = lrint( fDomains[i].maxNumAgents * (float) fDomains[i].numberToSeed / fDomains[i].initNumAgents );	// same proportion as originally specified (must calculate before changing fInitNumAgents)
-			if( fDomains[i].numberToSeed > fDomains[i].maxNumAgents )	// just to be safe
-				fDomains[i].numberToSeed = fDomains[i].maxNumAgents;
-			fDomains[i].initNumAgents = fDomains[i].maxNumAgents;	// population starts at maximum
-			fDomains[i].minNumAgents  = fDomains[i].maxNumAgents;	// population stays at maximum
-// 			fDomains[i].probabilityOfMutatingSeeds = fProbabilityOfMutatingSeeds;				// so there is variation in the initial population
-		}
-
-		agent::gNumDepletionSteps = 0;				// turn off the high-population penalty
-		agent::gMaxPopulationPenaltyFraction = 0.0;	// ditto
-		fApplyLowPopulationAdvantage = false;			// turn off the low-population advantage
-		fEnergyBasedPopulationControl = false;			// turn off energy-based population control
+	fNumDepletionSteps = 0;				// turn off the high-population penalty
+	fMaxPopulationPenaltyFraction = 0.0;	// ditto
+	fApplyLowPopulationAdvantage = false;			// turn off the low-population advantage
+	fEnergyBasedPopulationControl = false;			// turn off energy-based population control
 		
-		cout << "Due to running as a steady-state GA with a fitness function, the following parameter values have been forcibly reset as indicated:" nl;
-		cout << "  InitNumAgents" ses fInitNumAgents nl;
-		cout << "  MinNumAgents" ses fMinNumAgents nl;
-		cout << "  NumberToSeed" ses fNumberToSeed nl;
-// 		cout << "  ProbabilityOfMutatingSeeds" ses fProbabilityOfMutatingSeeds nl;
-//		cout << "  MateThreshold" ses fMateThreshold nl;
-		for( int i = 0; i < fNumDomains; i++ )
-		{
-			cout << "  Domain " << i << ":" nl;
-			cout << "    initNumAgents" ses fDomains[i].initNumAgents nl;
-			cout << "    minNumAgents" ses fDomains[i].minNumAgents nl;
-			cout << "    numberToSeed" ses fDomains[i].numberToSeed nl;
-// 			cout << "    probabilityOfMutatingSeeds" ses fDomains[i].probabilityOfMutatingSeeds nl;
-		}
-		cout << "  NumDepletionSteps" ses agent::gNumDepletionSteps nl;
-		cout << "  .MaxPopulationPenaltyFraction" ses agent::gMaxPopulationPenaltyFraction nl;
-		cout << "  ApplyLowPopulationAdvantage" ses fApplyLowPopulationAdvantage nl;
-		cout << "  EnergyBasedPopulationControl" ses fEnergyBasedPopulationControl nl;
-	}	
+	cout << "Due to running as a steady-state GA with a fitness function, the following parameter values have been forcibly reset as indicated:" nl;
+	cout << "  InitNumAgents" ses fInitNumAgents nl;
+	cout << "  MinNumAgents" ses fMinNumAgents nl;
+	cout << "  NumberToSeed" ses fNumberToSeed nl;
+	// 		cout << "  ProbabilityOfMutatingSeeds" ses fProbabilityOfMutatingSeeds nl;
+	//		cout << "  MateThreshold" ses fMateThreshold nl;
+	for( int i = 0; i < fNumDomains; i++ )
+	{
+		cout << "  Domain " << i << ":" nl;
+		cout << "    initNumAgents" ses fDomains[i].initNumAgents nl;
+		cout << "    minNumAgents" ses fDomains[i].minNumAgents nl;
+		cout << "    numberToSeed" ses fDomains[i].numberToSeed nl;
+		// 			cout << "    probabilityOfMutatingSeeds" ses fDomains[i].probabilityOfMutatingSeeds nl;
+	}
+	cout << "  NumDepletionSteps" ses fNumDepletionSteps nl;
+	cout << "  .MaxPopulationPenaltyFraction" ses fMaxPopulationPenaltyFraction nl;
+	cout << "  ApplyLowPopulationAdvantage" ses fApplyLowPopulationAdvantage nl;
+	cout << "  EnergyBasedPopulationControl" ses fEnergyBasedPopulationControl nl;
 }
 
 //---------------------------------------------------------------------------
@@ -5434,9 +5192,6 @@ void TSimulation::getStatusText( StatusText& statusText,
 	statusText.push_back( strdup( t ) );
 
 	sprintf( t, "CurNeurons = %.1f ± %.1f [%lu, %lu]", fCurrentNeuronCountStats.mean(), fCurrentNeuronCountStats.stddev(), (ulong) fCurrentNeuronCountStats.min(), (ulong) fCurrentNeuronCountStats.max() );
-	statusText.push_back( strdup( t ) );
-
-	sprintf( t, "NeurGroups = %.1f ± %.1f [%lu, %lu]", fNeuronGroupCountStats.mean(), fNeuronGroupCountStats.stddev(), (ulong) fNeuronGroupCountStats.min(), (ulong) fNeuronGroupCountStats.max() );
 	statusText.push_back( strdup( t ) );
 
 	sprintf( t, "CurNeurGroups = %.1f ± %.1f [%lu, %lu]", fCurrentNeuronGroupCountStats.mean(), fCurrentNeuronGroupCountStats.stddev(), (ulong) fCurrentNeuronGroupCountStats.min(), (ulong) fCurrentNeuronGroupCountStats.max() );

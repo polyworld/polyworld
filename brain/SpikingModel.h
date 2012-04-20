@@ -32,11 +32,22 @@ struct SpikingModel__Neuron
 	double SpikingParameter_d;
 };
 
+struct SpikingModel__NeuronAttrs
+{
+	short group;
+	float bias;
+	double SpikingParameter_a;
+	double SpikingParameter_b;
+	double SpikingParameter_c;
+	double SpikingParameter_d;
+};
+
 struct SpikingModel__Synapse
 {
 	float efficacy;   // > 0 for excitatory, < 0 for inhibitory
-	short fromneuron; // > 0 for excitatory, < 0 for inhibitory
-	short toneuron;   // > 0 for excitatory, < 0 for inhibitory
+	float lrate;
+	short fromneuron;
+	short toneuron;
 	float delta;  //!from iz intead of effecting weights directly
 };
 
@@ -44,25 +55,22 @@ struct SpikingModel__Synapse
 class NervousSystem;
 class RandomNumberGenerator;
 
-class SpikingModel : public BaseNeuronModel<SpikingModel__Neuron, SpikingModel__Synapse>
+class SpikingModel : public BaseNeuronModel<SpikingModel__Neuron, SpikingModel__NeuronAttrs, SpikingModel__Synapse>
 {
 	typedef SpikingModel__Neuron Neuron;
+	typedef SpikingModel__NeuronAttrs NeuronAttrs;
 	typedef SpikingModel__Synapse Synapse;
 
  public:
-	SpikingModel( NervousSystem *cns );
+	SpikingModel( NervousSystem *cns, float scale_latest_spikes );
 	virtual ~SpikingModel();
 
 	virtual void init_derived( float initial_activation );
 
 	virtual void set_neuron( int index,
-							 int group,
-							 float bias,
+							 void *attributes,
 							 int startsynapses,
 							 int endsynapses );
-
-	virtual void dump( std::ostream &out );
-	virtual void load( std::istream &in );
 
 	virtual void update( bool bprint );
 
@@ -72,10 +80,4 @@ class SpikingModel : public BaseNeuronModel<SpikingModel__Neuron, SpikingModel__
 	float scale_latest_spikes;
 
 	float *outputActivation;
-
-    genome::Gene *spikingGeneA;
-    genome::Gene *spikingGeneB;
-    genome::Gene *spikingGeneC;
-    genome::Gene *spikingGeneD;
-
 };

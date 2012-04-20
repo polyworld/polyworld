@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Genome.h"
+#include "GroupsGenome.h"
 
 // forward decls
 class Metabolism;
@@ -20,8 +21,6 @@ namespace genome
 		static const Metabolism *getMetabolism( Genome *g );
 
 		static Gene *getGene( const std::string &name, const std::string &err = "" );
-
-		static void test();
 
 	public:
 		static GenomeSchema *schema;

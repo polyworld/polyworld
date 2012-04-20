@@ -96,14 +96,14 @@ void BrainMonitorView::draw()
 	{
 		// Frame and draw the actual vision pixels
 		qglColor( Qt::gray );
-		glRecti( 2*PATCH_WIDTH-1, 0, (2+brain::retinawidth)*PATCH_WIDTH+1, PATCH_HEIGHT );
+		glRecti( 2*PATCH_WIDTH-1, 0, (2+Brain::config.retinaWidth)*PATCH_WIDTH+1, PATCH_HEIGHT );
 		glPixelZoom( float(PATCH_WIDTH), float(PATCH_HEIGHT) );
 		glRasterPos2i( 2*PATCH_WIDTH, 0 );
-		glDrawPixels( brain::retinawidth, 1, GL_RGBA, GL_UNSIGNED_BYTE, fAgent->GetRetina()->getBuffer() );
+		glDrawPixels( Brain::config.retinaWidth, 1, GL_RGBA, GL_UNSIGNED_BYTE, fAgent->GetRetina()->getBuffer() );
 		glPixelZoom( 1.0, 1.0 );
 
 		// Render brain
-		fAgent->GetBrain()->Render(PATCH_WIDTH, PATCH_HEIGHT);
+		fAgent->GetBrain()->getRenderer()->render( PATCH_WIDTH, PATCH_HEIGHT );
 	}
 
 	swapBuffers();
@@ -121,11 +121,10 @@ void BrainMonitorView::updateTarget( AgentTracker *tracker )
 	}
 	else
 	{
-		long winWidth = fAgent->GetBrain()->GetNumNeurons()
-			* PATCH_WIDTH + 2 * PATCH_WIDTH;						  
-		long winHeight = fAgent->GetBrain()->GetNumNonInputNeurons()
-			* PATCH_HEIGHT + 2 * PATCH_HEIGHT;
-					   	   
+		short winWidth;
+		short winHeight;
+
+		fAgent->GetBrain()->getRenderer()->getSize( PATCH_WIDTH, PATCH_HEIGHT, &winWidth, &winHeight );				  
 		setFixedSize(winWidth, winHeight);
 	}
 

@@ -15,8 +15,9 @@
 using namespace std;
 
 
-SpikingModel::SpikingModel( NervousSystem *cns )
-: BaseNeuronModel<Neuron, Synapse>( cns )
+SpikingModel::SpikingModel( NervousSystem *cns, float scale_latest_spikes_ )
+: BaseNeuronModel<Neuron, NeuronAttrs, Synapse>( cns )
+, scale_latest_spikes( scale_latest_spikes_ )
 {
 	this->rng = cns->getRNG();
 
@@ -44,7 +45,7 @@ void SpikingModel::init_derived( float initial_activation )
 	
 	for( int i = 0; i < dims->numOutputNeurons; i++ )
 	{
-		outputActivation[i]= 0.0;	// fmax((double)neuron[acc+dims->firstOutputNeuron].bias / brain::brain::gNeuralValues.maxbias, 0.0);
+		outputActivation[i]= 0.0;	// fmax((double)neuron[acc+dims->firstOutputNeuron].bias / brain::Brain::config.maxbias, 0.0);
 	}
 
 	Nerve *nerve = cns->get( "yaw" );
@@ -52,131 +53,27 @@ void SpikingModel::init_derived( float initial_activation )
 	{
 		outputActivation[nerve->getIndex()-dims->firstOutputNeuron] = 0.5;	// equivalent to 0.0 for the yaw/turn neuron
 	}
-
-	scale_latest_spikes = genes->get( "ScaleLatestSpikes" );
-
-	if(brain::gNeuralValues.enableSpikingGenes == false) {
-        /*
-		  spikingGeneA = NULL;
-		  spikingGeneB = NULL;
-		  spikingGeneC = NULL;
-		  spikingGeneD = NULL;
-        */
-	} else {
-        spikingGeneA = genes->gene("SpikingParameterA");
-        spikingGeneB = genes->gene("SpikingParameterB");
-        spikingGeneC = genes->gene("SpikingParameterC");
-        spikingGeneD = genes->gene("SpikingParameterD");
-    }
 }
 
 void SpikingModel::set_neuron( int index,
-							   int group,
-							   float bias,
+							   void *attributes,
 							   int startsynapses,
 							   int endsynapses )
 {
-	BaseNeuronModel<Neuron, Synapse>::set_neuron( index,
-												  group,
-												  bias,
-												  startsynapses,
-												  endsynapses );
+	BaseNeuronModel<Neuron, NeuronAttrs, Synapse>::set_neuron( index,
+															   attributes,
+															   startsynapses,
+															   endsynapses );
+	NeuronAttrs *attrs = (NeuronAttrs *)attributes;
 	Neuron &n = neuron[index];
 
-
-	if(brain::gNeuralValues.enableSpikingGenes == false) {
-		n.SpikingParameter_a = 0.02;
-		n.SpikingParameter_b = 0.2;
-		n.SpikingParameter_c = -65;
-		n.SpikingParameter_d = 6;
-	} else {
-		n.SpikingParameter_a = genes->get(spikingGeneA, group);
-		n.SpikingParameter_b = genes->get(spikingGeneB, group);
-		n.SpikingParameter_c = genes->get(spikingGeneC, group);
-		n.SpikingParameter_d = genes->get(spikingGeneD, group);
-	}
-
+	n.SpikingParameter_a = attrs->SpikingParameter_a;
+	n.SpikingParameter_b = attrs->SpikingParameter_b;
+	n.SpikingParameter_c = attrs->SpikingParameter_c;
+	n.SpikingParameter_d = attrs->SpikingParameter_d;
 	n.v = -70;
 	n.u = -14;
 	n.maxfiringcount = 1;
-}
-
-void SpikingModel::dump( ostream &out )
-{
-	long i;
-
-    for (i = 0; i < dims->numneurons; i++)
-	{
-		Neuron &n = neuron[i];
-        out << n.group
-			sp n.bias
-			sp n.startsynapses
-			sp n.endsynapses
-			sp n.v
-			sp n.u
-			sp n.STDP
-			sp n.maxfiringcount
-			nl;
-	}
-
-    for (i = 0; i < dims->numneurons; i++)
-        out << neuronactivation[i] nl;
-
-    for (i = 0; i < dims->numOutputNeurons; i++)
-        out << outputActivation[i] nl;
-
-    for (i = 0; i < dims->numsynapses; i++)
-	{
-		Synapse &s = synapse[i];
-        out << s.efficacy
-            sp s.fromneuron
-			sp s.toneuron
-			sp s.delta
-			nl;
-	}
-
-    for (i = 0; i < (dims->numgroups * dims->numgroups * 4); i++)
-        out << grouplrate[i] nl;
-}
-
-void SpikingModel::load( istream &in )
-{
-	long i;
-
-    for (i = 0; i < dims->numneurons; i++)
-	{
-		Neuron &n = neuron[i];
-        in >> n.group
-		   >> n.bias
-		   >> n.startsynapses
-		   >> n.endsynapses
-		   >> n.v
-		   >> n.u
-		   >> n.STDP
-		   >> n.maxfiringcount;
-
-#if DesignerBrains
-		groupsize[i]++;
-#endif
-	}
-
-    for (i = 0; i < dims->numneurons; i++)
-        in >> neuronactivation[i];
-
-    for (i = 0; i < dims->numOutputNeurons; i++)
-        in >> outputActivation[i];
-
-    for (i = 0; i < dims->numsynapses; i++)
-	{
-		Synapse &s = synapse[i];
-        in >> s.efficacy
-		   >> s.fromneuron
-		   >> s.toneuron
-		   >> s.delta;
-	}
-
-    for (i = 0; i < (dims->numgroups * dims->numgroups * 4); i++)
-        in >> grouplrate[i];
 }
 
 void SpikingModel::update( bool bprint )
@@ -191,7 +88,7 @@ void SpikingModel::update( bool bprint )
     debugcheck( "(spiking brain) on entry" );
 	float inputFiringProbability[dims->numInputNeurons];
 	static long loop_counter=0;
-    short i, j, n_steps;
+    short i, n_steps;
     long k;
 // 	float u;
 	float v,activation;
@@ -451,48 +348,25 @@ void SpikingModel::update( bool bprint )
 	//the actual synapse efficacies until all brain steps is complete is two fold one Izhikevich does it and two
 	//for the sake of efficiency.
 	float learningrate;
-	// float half_max_weight = .5f * brain::gMaxWeight, one_minus_decay = 1. - brain::gDecayRate;
-	int ii,jj;
+	// float half_max_weight = .5f * Brain::config.maxWeight, one_minus_decay = 1. - Brain::config.decayRate;
 				
     for (k = 0; k < dims->numsynapses; k++)
     {
-        if (synapse[k].toneuron >= 0) // 0 can't happen it's an input neuron
-        {
-            i = synapse[k].toneuron;
-            ii = 0;
-        }
-        else
-        {
-            i = -synapse[k].toneuron;
-            ii = 1;
-        }
-        if ( (synapse[k].fromneuron > 0) ||
-            ((synapse[k].toneuron  == 0) && (synapse[k].efficacy >= 0.0)) )
-        {
-            j = synapse[k].fromneuron;
-            jj = 0;
-        }
-        else
-        {
-            j = -synapse[k].fromneuron;
-            jj = 1;
-        }
-
-        learningrate = grouplrate[index4(neuron[i].group,neuron[j].group,ii,jj, dims->numgroups,2,2)];		
+		learningrate = synapse[k].lrate;
 		synapse[k].delta *= .9; //cheating a little
 		if (synapse[k].efficacy >= 0)
 			synapse[k].efficacy += (.01 + synapse[k].delta * learningrate);// * delta t; need a delta t 
 		else
 			synapse[k].efficacy -= (.01 + synapse[k].delta * learningrate);
 
-        if (fabs(synapse[k].efficacy) > (0.5f * brain::gMaxWeight))
+        if (fabs(synapse[k].efficacy) > (0.5f * Brain::config.maxWeight))
         {
-            synapse[k].efficacy *= 1.0f - (1.0f - brain::gDecayRate) *
-                (fabs(synapse[k].efficacy) - 0.5f * brain::gMaxWeight) / (0.5f * brain::gMaxWeight);
-            if (synapse[k].efficacy > brain::gMaxWeight)
-                synapse[k].efficacy = brain::gMaxWeight;
-            else if (synapse[k].efficacy < -brain::gMaxWeight)
-                synapse[k].efficacy = -brain::gMaxWeight;
+            synapse[k].efficacy *= 1.0f - (1.0f - Brain::config.decayRate) *
+                (fabs(synapse[k].efficacy) - 0.5f * Brain::config.maxWeight) / (0.5f * Brain::config.maxWeight);
+            if (synapse[k].efficacy > Brain::config.maxWeight)
+                synapse[k].efficacy = Brain::config.maxWeight;
+            else if (synapse[k].efficacy < -Brain::config.maxWeight)
+                synapse[k].efficacy = -Brain::config.maxWeight;
         }
         else
         {
@@ -509,8 +383,8 @@ void SpikingModel::update( bool bprint )
 		if (synapse[k].efficacy >= 0)
 		{
 			synapse[k].efficacy += .01 + synapse[k].delta * learningrate;// * delta t; need a delta t 
-			if (synapse[k].efficacy > brain::gMaxWeight)
-                synapse[k].efficacy = brain::gMaxWeight - (one_minus_decay);
+			if (synapse[k].efficacy > Brain::config.maxWeight)
+                synapse[k].efficacy = Brain::config.maxWeight - (one_minus_decay);
 			else if (synapse[k].efficacy > half_max_weight)
 				synapse[k].efficacy *= 1.0f - (one_minus_decay) * (synapse[k].efficacy - half_max_weight) / (half_max_weight);
 			else
@@ -519,8 +393,8 @@ void SpikingModel::update( bool bprint )
 		else 
 		{
 			synapse[k].efficacy -= .01 + synapse[k].delta * learningrate;
-			if (synapse[k].efficacy < -brain::gMaxWeight)
-                synapse[k].efficacy = -brain::gMaxWeight + (one_minus_decay);
+			if (synapse[k].efficacy < -Brain::config.maxWeight)
+                synapse[k].efficacy = -Brain::config.maxWeight + (one_minus_decay);
 			else if(synapse[k].efficacy < -half_max_weight)
 			//fix me later should be a      +
 				synapse[k].efficacy *= 1.0f - one_minus_decay * (fabs(synapse[k].efficacy) - half_max_weight) / half_max_weight;

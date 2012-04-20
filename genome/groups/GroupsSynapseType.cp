@@ -1,20 +1,20 @@
-#include "SynapseType.h"
+#include "GroupsSynapseType.h"
 
 #include <assert.h>
 
-#include "GenomeSchema.h"
+#include "GroupsGenomeSchema.h"
 
 using namespace genome;
 using namespace std;
 
 // ================================================================================
 // ===
-// === CLASS SynapseType
+// === CLASS GroupsSynapseType
 // ===
 // ================================================================================
-SynapseType::SynapseType( GenomeSchema *_schema,
-						  const char *_name,
-						  int _index )
+GroupsSynapseType::GroupsSynapseType( GroupsGenomeSchema *_schema,
+									  const char *_name,
+									  int _index )
 : name(_name)
 , schema(_schema)
 , index(_index)
@@ -23,14 +23,14 @@ SynapseType::SynapseType( GenomeSchema *_schema,
 	nt_to = _name[1] == 'I' ? INHIBITORY : EXCITATORY;
 }
 
-int SynapseType::getOffset( int from, int to )
+int GroupsSynapseType::getOffset( int from, int to )
 {
 	assert( to >= groupCount[NGT_INPUT] );
 
 	return (index * mutableSize) + from + ( (to - groupCount[NGT_INPUT]) * groupCount[NGT_ANY] );
 }
 
-void SynapseType::complete( int *groupCount )
+void GroupsSynapseType::complete( int *groupCount )
 {
 	this->groupCount = groupCount;
 
@@ -39,7 +39,7 @@ void SynapseType::complete( int *groupCount )
 		* (groupCount[NGT_ANY] - groupCount[NGT_INPUT]);
 }
 
-int SynapseType::getMutableSize()
+int GroupsSynapseType::getMutableSize()
 {
 	return mutableSize;
 }
