@@ -32,7 +32,7 @@ FiringRateModel::~FiringRateModel()
 void FiringRateModel::init_derived( float initial_activation )
 {
 
-	for( int i = 0; i < dims->numneurons; i++ )
+	for( int i = 0; i < dims->numNeurons; i++ )
 		neuronactivation[i] = initial_activation;
 }
 
@@ -48,6 +48,7 @@ void FiringRateModel::set_neuron( int index,
 	NeuronAttrs *attrs = (NeuronAttrs *)attributes;
 	Neuron &n = neuron[index];
 
+	assert( !isnan(attrs->tau) );
 	n.tau = attrs->tau;
 }
 
@@ -64,7 +65,7 @@ void FiringRateModel::update( bool bprint )
 	(
         printf("neuron (toneuron)  fromneuron   synapse   efficacy\n");
         
-        for( i = dims->firstNonInputNeuron; i < dims->numneurons; i++ )
+        for( i = dims->getFirstOutputNeuron(); i < dims->numNeurons; i++ )
         {
             for( k = neuron[i].startsynapses; k < neuron[i].endsynapses; k++ )
             {
@@ -76,7 +77,7 @@ void FiringRateModel::update( bool bprint )
 	)
 
 
-	for( i = dims->firstOutputNeuron; i < dims->firstInternalNeuron; i++ )
+	for( i = dims->getFirstOutputNeuron(); i < dims->getFirstInternalNeuron(); i++ )
 	{
         newneuronactivation[i] = neuron[i].bias;
         for( k = neuron[i].startsynapses; k < neuron[i].endsynapses; k++ )
@@ -99,9 +100,9 @@ void FiringRateModel::update( bool bprint )
 	#endif
 	}
 
-	long numneurons = dims->numneurons;
+	long numneurons = dims->numNeurons;
 	float logisticSlope = Brain::config.logisticSlope;
-    for( i = dims->firstInternalNeuron; i < numneurons; i++ )
+    for( i = dims->getFirstInternalNeuron(); i < numneurons; i++ )
     {
 		float newactivation = neuron[i].bias;
         for( k = neuron[i].startsynapses; k < neuron[i].endsynapses; k++ )
@@ -124,54 +125,19 @@ void FiringRateModel::update( bool bprint )
         newneuronactivation[i] = newactivation;
     }
 
-#define DebugBrain 0
-#if DebugBrain
-	static int numDebugBrains = 0;
-	if( (TSimulation::fAge > 1) && (numDebugBrains < 10) )
-	{
-		numDebugBrains++;
-		printf( "***** age = %ld *****\n", TSimulation::fAge );
-		printf( "random neuron [%d] = %g\n", randomneuron, neuronactivation[randomneuron] );
-		printf( "energy neuron [%d] = %g\n", energyneuron, neuronactivation[energyneuron] );
-		printf( "red neurons (%d):\n", fNumRedNeurons );
-		for( i = 0; i < fNumRedNeurons; i++ )
-			printf( "    %3d  %2d  %g\n", i+redneuron, i, neuronactivation[i+redneuron] );
-		printf( "green neurons (%d):\n", fNumGreenNeurons );
-		for( i = 0; i < fNumGreenNeurons; i++ )
-			printf( "    %3d  %2d  %g\n", i+greenneuron, i, neuronactivation[i+greenneuron] );
-		printf( "blue neurons (%d):\n", fNumBlueNeurons );
-		for( i = 0; i < fNumBlueNeurons; i++ )
-			printf( "    %3d  %2d  %g\n", i+blueneuron, i, neuronactivation[i+blueneuron] );
-		printf( "output neurons (%d):\n", dims->numOutputNeurons );
-		for( i = dims->firstOutputNeuron; i < dims->firstInternalNeuron; i++ )
-		{
-			printf( "    %3d  %g  %g synapses (%ld):\n", i, neuron[i].bias, newneuronactivation[i], neuron[i].endsynapses - neuron[i].startsynapses );
-			for( k = neuron[i].startsynapses; k < neuron[i].endsynapses; k++ )
-				printf( "        %4ld  %2ld  %2d  %g  %g\n", k, k-neuron[i].startsynapses, synapse[k].fromneuron, synapse[k].efficacy, neuronactivation[synapse[k].fromneuron] );
-		}
-		printf( "internal neurons (%d):\n", numnoninputneurons-dims->numOutputNeurons );
-		for( i = dims->firstInternalNeuron; i < dims->numneurons; i++ )
-		{
-			printf( "    %3d  %g  %g synapses (%ld):\n", i, neuron[i].bias, newneuronactivation[i], neuron[i].endsynapses - neuron[i].startsynapses );
-			for( k = neuron[i].startsynapses; k < neuron[i].endsynapses; k++ )
-				printf( "        %4ld  %2ld  %2d  %g  %g\n", k, k-neuron[i].startsynapses, synapse[k].fromneuron, synapse[k].efficacy, neuronactivation[synapse[k].fromneuron] );
-		}
-	}
-#endif
-
     debugcheck( "after updating neurons" );
 
 	IF_BPRINT
 	(
         printf("  i neuron[i].bias neuronactivation[i] newneuronactivation[i]\n");
-        for (i = 0; i < dims->numneurons; i++)
+        for (i = 0; i < dims->numNeurons; i++)
             printf( "%3d  %1.4f  %1.4f  %1.4f\n", i, neuron[i].bias, neuronactivation[i], newneuronactivation[i] );
 	)
 
 //	printf( "yaw activation = %g\n", newneuronactivation[yawneuron] );
 
     float learningrate;
-	long numsynapses = dims->numsynapses;
+	long numsynapses = dims->numSynapses;
     for (k = 0; k < numsynapses; k++)
     {
 		FiringRateModel__Synapse &syn = synapse[k];

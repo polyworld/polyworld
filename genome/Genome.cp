@@ -36,7 +36,7 @@ Genome::Genome( GenomeSchema *schema,
 
 	MISC_BIAS = gene("MiscBias");
 	MISC_INVIS_SLOPE = gene("MiscInvisSlope");
-	gray = get( "GrayCoding" );
+	gray = GenomeSchema::config.grayCoding;
 
 	nbytes = schema->getMutableSize();
 
@@ -167,59 +167,17 @@ void Genome::crossover( Genome *g1, Genome *g2, bool mutate )
 			this->mutate();
 		return;
 	}
+
+	// Sanity checking
+	assert( numCrossPoints <= GenomeSchema::config.maxNumCpts );
     
 	// allocate crossover buffer on stack -- fast & automatically free'd
 	long *crossoverPoints = (long *)alloca( numCrossPoints * sizeof(long) );
 
-	long numphysbytes = schema->getPhysicalCount();
-
-    // guarantee crossover in "physiology" genes
-    crossoverPoints[0] = long(randpw() * numphysbytes * 8 - 1);
-    crossoverPoints[1] = numphysbytes * 8;
-
-	// Sanity checking
-	assert(numCrossPoints <= get( "CrossoverPointCount_max" ));
+	// figure out crossover points -- derived class logic.
+	getCrossoverPoints( crossoverPoints, numCrossPoints );
 	
-	// Generate & order the crossover points.
-	// Start iteration at [2], as [0], [1] set above
     long i, j;
-    
-    for (i = 2; i <= numCrossPoints; i++) 
-    {
-        long newCrossPoint = long(randpw() * (nbytes - numphysbytes) * 8 - 1) + crossoverPoints[1];
-        bool equal;
-        do
-        {
-            equal = false;
-            for (j = 1; j < i; j++)
-            {
-                if (newCrossPoint == crossoverPoints[j])
-                    equal = true;
-            }
-            
-            if (equal)
-                newCrossPoint = long(randpw() * (nbytes - numphysbytes) * 8 - 1) + crossoverPoints[1];
-                
-        } while (equal);
-        
-        if (newCrossPoint > crossoverPoints[i-1])
-        {
-            crossoverPoints[i] = newCrossPoint;  // happened to come out ordered
-		}           
-        else
-        {
-            for (j = 2; j < i; j++)
-            {
-                if (newCrossPoint < crossoverPoints[j])
-                {
-                    for (long k = i; k > j; k--)
-                        crossoverPoints[k] = crossoverPoints[k-1];
-                    crossoverPoints[j] = newCrossPoint;
-                    break;
-                }
-            }
-        }
-    }
     
 #ifdef DUMPBITS    
     cout << "**The crossover bits(bytes) are:" nl << "  ";
@@ -532,6 +490,12 @@ void Genome::print( long lobit, long hibit )
         cout << ((get_raw(byte) >> (7-bit)) & 1);
     }
     cout nlf;
+}
+
+void Genome::getCrossoverPoints( long *crossoverPoints, long numCrossPoints )
+{
+	// Derived class must either override crossover() or implement this function.
+	assert( false );
 }
 
 void Genome::alloc()

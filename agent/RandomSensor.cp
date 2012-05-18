@@ -14,7 +14,7 @@ RandomSensor::~RandomSensor()
 
 void RandomSensor::sensor_grow( NervousSystem *cns )
 {
-	nerve = cns->get("random");
+	nerve = cns->getNerve( "Random" );
 }
 
 void RandomSensor::sensor_prebirth_signal( RandomNumberGenerator *rng )

@@ -48,10 +48,8 @@ class GroupsBrain : public Brain
 	static void init();
 
  public:
-	GroupsBrain( NervousSystem *cns );
+	GroupsBrain( NervousSystem *cns, genome::GroupsGenome *g );
 	virtual ~GroupsBrain();
-
-	void grow( genome::Genome *g );
 
 	short NumNeuronGroups( bool ignoreEmpty = true );
 

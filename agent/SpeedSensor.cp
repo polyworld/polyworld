@@ -19,7 +19,7 @@ SpeedSensor::~SpeedSensor()
 
 void SpeedSensor::sensor_grow( NervousSystem *cns )
 {
-	nerve = cns->get("speedFeedback");
+	nerve = cns->getNerve( "SpeedFeedback" );
 }
 
 void SpeedSensor::sensor_prebirth_signal( RandomNumberGenerator *rng )

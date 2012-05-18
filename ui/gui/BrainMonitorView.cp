@@ -115,9 +115,10 @@ void BrainMonitorView::draw()
 void BrainMonitorView::updateTarget( AgentTracker *tracker )
 {
 	fAgent = tracker->getTarget();
-	if( fAgent == NULL )
+	if( (fAgent == NULL) || (fAgent->GetBrain()->getRenderer() == NULL) )
 	{
 		setFixedSize( DEFAULT_WIDTH, DEFAULT_HEIGHT );
+		fAgent = NULL;
 	}
 	else
 	{

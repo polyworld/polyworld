@@ -34,7 +34,6 @@ struct SpikingModel__Neuron
 
 struct SpikingModel__NeuronAttrs
 {
-	short group;
 	float bias;
 	double SpikingParameter_a;
 	double SpikingParameter_b;

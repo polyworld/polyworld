@@ -16,11 +16,12 @@ using namespace std;
 // ===
 // ================================================================================
 const GeneType *GeneType::SCALAR = new GeneType();
+const GeneType *GeneType::CONTAINER = new GeneType();
 
 #define CAST_TO(TYPE)											\
 	TYPE##Gene *GeneType::to_##TYPE( Gene *gene_ )				\
 	{															\
-		assert( gene_ );										\
+		if( !gene_ ) return NULL;								\
 		TYPE##Gene *gene = dynamic_cast<TYPE##Gene *>( gene_ );	\
 		assert( gene ); /* catch cast failure */				\
 		return gene;											\
@@ -30,6 +31,7 @@ const GeneType *GeneType::SCALAR = new GeneType();
 	CAST_TO(MutableScalar);
 	CAST_TO(ImmutableInterpolated);
 	CAST_TO(__Interpolated);
+	CAST_TO(Container);
 #undef CAST_TO
 
 // ================================================================================
@@ -52,7 +54,12 @@ int Gene::getMutableSize()
 	return ismutable ? getMutableSizeImpl() : 0;
 }
 
-void Gene::printIndexes( FILE *file, GenomeLayout *layout )
+int Gene::getOffset()
+{
+	return offset;
+}
+
+void Gene::printIndexes( FILE *file, const std::string &prefix, GenomeLayout *layout )
 {
 	if( !ismutable )
 	{
@@ -65,34 +72,29 @@ void Gene::printIndexes( FILE *file, GenomeLayout *layout )
 		index = layout->getMutableDataOffset( index );
 	}
 
-	fprintf( file, "%d\t%s\n", index, name.c_str() );	
+	fprintf( file, "%d\t%s%s\n", index, prefix.c_str(), name.c_str() );	
 }
 
-void Gene::printTitles( FILE *file )
+void Gene::printTitles( FILE *file, const string &prefix )
 {
 	if( !ismutable )
-	{
 		return;
-	}
 
-	fprintf( file, "%s :: %s\n", name.c_str(), name.c_str() );
+	fprintf( file, "%s%s :: %s%s\n", prefix.c_str(), name.c_str(), prefix.c_str(), name.c_str() );
 }
 
-void Gene::printRanges( FILE *file )
+void Gene::printRanges( FILE *file, const std::string &prefix )
 {
 	if( !ismutable )
-	{
 		return;
-	}
 
-	fprintf( file, "%s :: %s\n", name.c_str(), name.c_str() );
+	fprintf( file, "%s%s :: %s%s\n", prefix.c_str(), name.c_str(), prefix.c_str(), name.c_str() );
 }
 
 void Gene::init( const GeneType *_type,
 				 bool _ismutable,
 				 const char *_name )
 {
-	schema = NULL;
 	type = _type;
 	ismutable = _ismutable;
 	name = _name;
@@ -135,11 +137,11 @@ const Scalar &__ConstantGene::get()
 __InterpolatedGene::__InterpolatedGene( const GeneType *_type,
 										bool _ismutable,
 										const char *_name,
-										Gene *_gmin,
-										Gene *_gmax,
+										Scalar min_,
+										Scalar max_,
 										Rounding _rounding )
-: smin( GeneType::to_ImmutableScalar(_gmin)->get( NULL ) )
-, smax( GeneType::to_ImmutableScalar(_gmax)->get( NULL ) )
+: smin( min_ )
+, smax( max_ )
 , rounding( _rounding )
 , interpolationPower( 1.0 )
 {
@@ -209,18 +211,18 @@ Scalar __InterpolatedGene::interpolate( double ratio )
 	}
 }
 
-void __InterpolatedGene::printRanges( FILE *file )
+void __InterpolatedGene::printRanges( FILE *file, const string &prefix )
 {
 	const char *roundingNames[] = { "None", "IntFloor", "IntNearest", "IntBin" };
 	const char *roundingName = 
 		smin.type == Scalar::INT ? roundingNames[rounding] : roundingNames[ROUND_NONE];
 
 	fprintf( file,
-			 "%s %s %s %s\n",
+			 "%s %s %s %s%s\n",
 			 roundingName,
 			 smin.str().c_str(),
 			 smax.str().c_str(),
-			 name.c_str() );
+			 prefix.c_str(), name.c_str() );
 }
 
 
@@ -260,14 +262,14 @@ Scalar ImmutableScalarGene::get( Genome *genome )
 // ===
 // ================================================================================
 MutableScalarGene::MutableScalarGene( const char *name,
-									  Gene *gmin,
-									  Gene *gmax,
+									  Scalar min_,
+									  Scalar max_,
 									  __InterpolatedGene::Rounding rounding )
 : __InterpolatedGene( GeneType::SCALAR,
 					  true /* mutable */,
 					  name,
-					  gmin,
-					  gmax,
+					  min_,
+					  max_,
 					  rounding )
 {
 }
@@ -287,9 +289,9 @@ const Scalar &MutableScalarGene::getMax()
 	return __InterpolatedGene::getMax();
 }
 
-void MutableScalarGene::printRanges( FILE * file )
+void MutableScalarGene::printRanges( FILE * file, const string &prefix )
 {
-	 __InterpolatedGene::printRanges( file );
+	__InterpolatedGene::printRanges( file, prefix );
 }
 
 
@@ -299,14 +301,14 @@ void MutableScalarGene::printRanges( FILE * file )
 // ===
 // ================================================================================
 ImmutableInterpolatedGene::ImmutableInterpolatedGene( const char *name,
-													  Gene *gmin,
-													  Gene *gmax,
+													  Scalar min_,
+													  Scalar max_,
 													  __InterpolatedGene::Rounding rounding )
 : __InterpolatedGene( GeneType::SCALAR,
 					  false /* immutable */,
 					  name,
-					  gmin,
-					  gmax,
+					  min_,
+					  max_,
 					  rounding )
 {
 }
@@ -314,4 +316,77 @@ ImmutableInterpolatedGene::ImmutableInterpolatedGene( const char *name,
 Scalar ImmutableInterpolatedGene::interpolate( double ratio )
 {
 	return __InterpolatedGene::interpolate( ratio );
+}
+
+// ================================================================================
+// ===
+// === CLASS ContainerGene
+// ===
+// ================================================================================
+ContainerGene::ContainerGene( const char *name )
+: Gene()
+, _containerSchema( new GeneSchema() )
+{
+	init( GeneType::CONTAINER,
+		  true,
+		  name );
+}
+
+ContainerGene::~ContainerGene()
+{
+	delete _containerSchema;
+}
+
+void ContainerGene::add( Gene *gene )
+{
+	_containerSchema->add( gene );
+}
+
+Gene *ContainerGene::gene( const std::string &name )
+{
+	return _containerSchema->get( name );
+}
+
+Scalar ContainerGene::getConst( const std::string &name )
+{
+	return GeneType::to_ImmutableScalar( _containerSchema->get(name) )->get( NULL );
+}
+
+const GeneVector &ContainerGene::getAll()
+{
+	return _containerSchema->getAll();
+}
+
+void ContainerGene::complete()
+{
+	_containerSchema->complete( offset );
+}
+
+void ContainerGene::printIndexes( FILE *file, const string &prefix, GenomeLayout *layout )
+{
+	if( !ismutable )
+		return;
+
+	_containerSchema->printIndexes( file, layout, prefix + name + "." );
+}
+
+void ContainerGene::printTitles( FILE *file, const string &prefix )
+{
+	if( !ismutable )
+		return;
+
+	_containerSchema->printTitles( file, prefix + name + "." );
+}
+
+void ContainerGene::printRanges( FILE *file, const string &prefix )
+{
+	if( !ismutable )
+		return;
+
+	_containerSchema->printRanges( file, prefix + name + "." );
+}
+
+int ContainerGene::getMutableSizeImpl()
+{
+	return _containerSchema->getMutableSize();
 }

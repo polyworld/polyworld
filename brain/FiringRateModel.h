@@ -11,7 +11,6 @@ class NervousSystem;
 // copied.
 struct FiringRateModel__Neuron
 {
-	short group;
 	float bias;
 	float tau;
 	long  startsynapses;
@@ -20,7 +19,6 @@ struct FiringRateModel__Neuron
 
 struct FiringRateModel__NeuronAttrs
 {
-	short group;
 	float bias;
 	float tau;
 };

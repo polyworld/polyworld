@@ -21,45 +21,34 @@ class NervousSystem
 {
  public:
 	typedef std::vector<Nerve *> NerveList;
-	typedef NerveList::iterator nerve_iterator;
 
  public:
 	NervousSystem();
 	~NervousSystem();
 
+	void grow( genome::Genome *g );
 	void update( bool bprint );
 
-	void setBrain( Brain *b );
-	Brain *getBrain();
-
 	RandomNumberGenerator *getRNG();
+	Brain *getBrain();
+	float getEnergyUse();
 
-	Nerve *add( Nerve::Type type,
-				const std::string &name );
+	Nerve *createNerve( Nerve::Type type, const std::string &name );
+	Nerve *getNerve( const std::string &name );
 
-	Nerve *get( const std::string &name );
-	Nerve *get( int igroup );
-	Nerve *get( Nerve::Type type,
-				int i );
-
-	void add( Sensor *sensor );
+	void addSensor( Sensor *sensor );
 
 	int getNerveCount();
 	int getNerveCount( Nerve::Type type );
 	int getNeuronCount( Nerve::Type type );
 
-	nerve_iterator begin_nerve();
-	nerve_iterator end_nerve();
-	nerve_iterator begin_nerve( Nerve::Type type );
-	nerve_iterator end_nerve( Nerve::Type type );
+	const NerveList &getNerves();
+	const NerveList &getNerves( Nerve::Type type );
 
-	void grow( genome::Genome *g );
 	void prebirth();
 	void prebirthSignal();
 	void startFunctional( AbstractFile *f );
 	void dumpAnatomical( AbstractFile *f );
-
-	void __test();
 	
  private:
 	Brain *b;

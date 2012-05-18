@@ -24,6 +24,7 @@
 #include "LifeSpan.h"
 #include "misc.h"
 #include "Nerve.h"
+#include "NervousSystem.h"
 #include "objectlist.h"
 #include "objectxsortedlist.h"
 #include "proplib.h"
@@ -316,20 +317,8 @@ protected:
 	SpeedSensor *fSpeedSensor;
 	CarryingSensor *fCarryingSensor;
 	BeingCarriedSensor *fBeingCarriedSensor;
-	Brain* fBrain;
-	struct Nerves
+	struct OutputNerves
 	{
-		// Inputs
-		Nerve *random;
-		Nerve *energy;
-		Nerve *mateWaitFeedback;
-		Nerve *speedFeedback;
-		Nerve *carrying;
-		Nerve *beingCarried;
-		Nerve *red;
-		Nerve *green;
-		Nerve *blue;
-		// Outputs
 		Nerve *eat;
 		Nerve *mate;
 		Nerve *fight;
@@ -343,7 +332,7 @@ protected:
 		Nerve *give;
 		Nerve *pickup;
 		Nerve *drop;
-	} nerves;
+	} outputNerves;
 
     gcamera fCamera;
     gscene fScene;
@@ -388,13 +377,13 @@ inline void agent::SetEnergy( const Energy &e ) { fEnergy = e; }
 inline void agent::SetFoodEnergy( const Energy &e ) { fFoodEnergy = e; }
 inline const Energy &agent::GetMaxEnergy() { return fMaxEnergy; }
 inline float agent::NormalizedEnergy() { return fEnergy.sum() / fMaxEnergy.sum(); }
-inline float agent::Eat() { return nerves.eat->get(); }
-inline float agent::Fight() { return nerves.fight->get(); }
-inline float agent::Give() { return nerves.give->get(); }
+inline float agent::Eat() { return outputNerves.eat->get(); }
+inline float agent::Fight() { return outputNerves.fight->get(); }
+inline float agent::Give() { return outputNerves.give->get(); }
 inline float agent::Strength() { return geneCache.strength; }
-inline float agent::Mate() { return nerves.mate->get(); }
-inline float agent::Pickup() { return nerves.pickup->get(); }
-inline float agent::Drop() { return nerves.drop->get(); }
+inline float agent::Mate() { return outputNerves.mate->get(); }
+inline float agent::Pickup() { return outputNerves.pickup->get(); }
+inline float agent::Drop() { return outputNerves.drop->get(); }
 inline float agent::Size() { return geneCache.size; }
 inline long agent::Age() { return fAge; }
 inline long agent::MaxAge() { return geneCache.lifespan; }
@@ -418,7 +407,7 @@ inline bool agent::Alive() const { return fAlive; }
 inline LifeSpan* agent::GetLifeSpan() { return &fLifeSpan; }
 inline bool agent::GetDeathByPatch() { return fDeathByPatch; }
 inline void agent::SetDeathByPatch() { fDeathByPatch = true; }
-inline Brain* agent::GetBrain() { return fBrain; }
+inline Brain* agent::GetBrain() { return fCns->getBrain(); }
 inline Retina* agent::GetRetina() { return fRetina; }
 inline gscene& agent::GetScene() { return fScene; }
 inline gcamera &agent::getCamera() { return fCamera; }

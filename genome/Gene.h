@@ -19,6 +19,16 @@ namespace genome
 
 	// ================================================================================
 	// ===
+	// === Collections
+	// ===
+	// ================================================================================
+	typedef std::vector<class Gene *> GeneVector;
+	typedef std::map<std::string, class Gene *> GeneMap;
+	typedef std::list<class Gene *> GeneList;
+	typedef std::map<const class GeneType *, GeneVector> GeneTypeMap;
+
+	// ================================================================================
+	// ===
 	// === CLASS GeneType
 	// ===
 	// ================================================================================
@@ -26,6 +36,7 @@ namespace genome
 	{
 	public:
 		static const GeneType *SCALAR;
+		static const GeneType *CONTAINER;
 
 #define CAST_TO(TYPE)											\
 		static class TYPE##Gene *to_##TYPE(class Gene *gene);
@@ -34,6 +45,7 @@ namespace genome
 		CAST_TO(MutableScalar);
 		CAST_TO(ImmutableInterpolated);
 		CAST_TO(__Interpolated);
+		CAST_TO(Container);
 #undef CAST_TO
 	};
 
@@ -51,10 +63,11 @@ namespace genome
 				   unsigned char rawval );
 
 		int getMutableSize();
+		int getOffset();
 
-		virtual void printIndexes( FILE *file, GenomeLayout *layout );
-		virtual void printTitles( FILE *file );
-		virtual void printRanges( FILE *file );
+		virtual void printIndexes( FILE *file, const std::string &prefix, GenomeLayout *layout );
+		virtual void printTitles( FILE *file, const std::string &prefix );
+		virtual void printRanges( FILE *file, const std::string &prefix );
 
 		const GeneType *type;
 		std::string name;
@@ -68,10 +81,8 @@ namespace genome
 
 		virtual int getMutableSizeImpl();
 
-		GenomeSchema *schema;
-
 	protected:
-		friend class GenomeSchema;
+		friend class GeneSchema;
 		friend class GenomeLayout;
 
 		int offset;
@@ -123,8 +134,8 @@ namespace genome
 		__InterpolatedGene( const GeneType *type,
 							bool ismutable,
 							const char *name,
-							Gene *gmin,
-							Gene *gmax,
+							Scalar min_,
+							Scalar max_,
 							Rounding rounding );
 		virtual ~__InterpolatedGene() {}
 
@@ -136,7 +147,7 @@ namespace genome
 		Scalar interpolate( unsigned char raw );
 		Scalar interpolate( double ratio );
 
-		void printRanges( FILE *file );
+		void printRanges( FILE *file, const std::string &prefix );
 
 	private:
 		Scalar smin;
@@ -195,8 +206,8 @@ namespace genome
 	{
 	public:
 		MutableScalarGene( const char *name,
-						   Gene *gmin,
-						   Gene *gmax,
+						   Scalar min_,
+						   Scalar max_,
 						   __InterpolatedGene::Rounding rounding );
 		virtual ~MutableScalarGene() {}
 
@@ -205,7 +216,7 @@ namespace genome
 		const Scalar &getMin();
 		const Scalar &getMax();
 
-		virtual void printRanges( FILE *file );
+		virtual void printRanges( FILE *file, const std::string &prefix );
 	};
 
 
@@ -222,8 +233,8 @@ namespace genome
 	{
 	public:
 		ImmutableInterpolatedGene( const char *name,
-								   Gene *gmin,
-								   Gene *gmax,
+								   Scalar min_,
+								   Scalar max_,
 								   __InterpolatedGene::Rounding rounding );
 		virtual ~ImmutableInterpolatedGene() {}
 
@@ -233,12 +244,31 @@ namespace genome
 
 	// ================================================================================
 	// ===
-	// === Collections
+	// === CLASS ContainerGene
 	// ===
 	// ================================================================================
-	typedef std::vector<Gene *> GeneVector;
-	typedef std::map<std::string, Gene *> GeneMap;
-	typedef std::list<Gene *> GeneList;
-	typedef std::map<const GeneType *, GeneVector> GeneTypeMap;
+	class ContainerGene : public Gene
+	{
+	public:
+		ContainerGene( const char *name );
+		virtual ~ContainerGene();
+
+		void add( Gene *gene );
+		Gene *gene( const std::string &name );
+		Scalar getConst( const std::string &name );
+		const GeneVector &getAll();
+
+		void complete();
+
+		virtual void printIndexes( FILE *file, const std::string &prefix, GenomeLayout *layout );
+		virtual void printTitles( FILE *file, const std::string &prefix );
+		virtual void printRanges( FILE *file, const std::string &prefix );
+
+	protected:
+		virtual int getMutableSizeImpl();
+
+	private:
+		class GeneSchema *_containerSchema;
+	};
 
 } // namespace genome

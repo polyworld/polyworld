@@ -22,7 +22,32 @@ using namespace proplib;
 		}												\
 	}
 
+#define SETIF( CONTAINER, PROPNAME, OLDVAL, NEWVAL )		\
+	{														\
+		Property *prop = CONTAINER->getp(PROPNAME);			\
+		if( prop )											\
+		{													\
+			if( (string)*prop == OLDVAL )					\
+			{												\
+				editor->set( prop, NEWVAL );				\
+			}												\
+		}													\
+	}														\
+
+
 #define RAWVAL( PROP ) dynamic_cast<ConstScalarProperty *>(PROP)->getExpression()->toString(false)
+
+#define SETIFRAW( CONTAINER, PROPNAME, OLDVAL, NEWVAL )		\
+	{														\
+		Property *prop = CONTAINER->getp(PROPNAME);			\
+		if( prop )											\
+		{													\
+			if( RAWVAL(prop) == OLDVAL )					\
+			{												\
+				editor->set( prop, NEWVAL );				\
+			}												\
+		}													\
+	}														\
 
 
 bool WorldfileConverter::isV1( string path )
@@ -116,19 +141,6 @@ void WorldfileConverter::convertV1PropertiesToV2( DocumentEditor *editor, Docume
 			editor->set( prop, string("\"") + value + "\"" );			\
 		}																\
 	}
-
-#define SETIF( CONTAINER, PROPNAME, OLDVAL, NEWVAL )		\
-	{														\
-		Property *prop = CONTAINER->getp(PROPNAME);			\
-		if( prop )											\
-		{													\
-			if( (string)*prop == OLDVAL )					\
-			{												\
-				editor->set( prop, NEWVAL );				\
-			}												\
-		}													\
-	}														\
-
 
 #define CONDITION_TO_DYN( CONTAINER, PROPNAME )							\
 	{																	\
@@ -379,6 +391,9 @@ void WorldfileConverter::convertDeprecatedV2Properties( DocumentEditor *editor, 
 {
 	REMOVE( doc, "MinBiasLrate" );
 	REMOVE( doc, "MaxBiasLrate" );
+
+	SETIFRAW( doc, "GenomeLayout", "L", "None" );
+	SETIFRAW( doc, "GenomeLayout", "N", "NeurGroup" );
 
 	// ---
 	// --- LegacyMode

@@ -81,10 +81,13 @@ SimulationSeed {
 
 GenomeLayout {
   type    Enum
-  defaults { default N; legacy L }
+  defaults {
+    default NeurGroup if BrainArchitecture == BrainArchitecture.Groups else None
+    legacy None
+  }
   enum    Values {
-    N,           # NeurGroup
-    L            # Legacy
+    NeurGroup,
+    None
   }
 }
 
@@ -1626,10 +1629,18 @@ SeedDropExcitation {
   max     1.0
 }
 
-
 #-------------------------------------------------------------------
 # SECTION Simulation parameters -- Neural Function
 #-------------------------------------------------------------------
+
+BrainArchitecture {
+  type    Enum
+  enum    Values {
+    Groups,
+    Sheets
+  }
+  default Groups
+}
 
 LogisticSlope {
   type    Float
@@ -1736,6 +1747,225 @@ TauSeed {
   default 1.0
 }
 
+
+#-------------------------------------------------------------------
+# SECTION Sheets parameters
+#-------------------------------------------------------------------
+
+Sheets {
+  type    Object
+  default {}
+  properties {
+
+    MinBrainSize {
+      type    Object
+      default {}
+      properties {
+    
+        X {
+          type    Float
+          default 1.0
+          exmin   0.0
+          max     MaxBrainSize.X
+        }
+    
+        Y {
+          type    Float
+          default 0.1
+          exmin   0.0
+          max     MaxBrainSize.Y
+        }
+    
+        Z {
+          type    Float
+          default 0.1
+          exmin   0.0
+          max     MaxBrainSize.Z
+        }
+    
+      }
+    }
+    
+    MaxBrainSize {
+      type    Object
+      default {}
+      properties {
+    
+        X {
+          type    Float
+          default 1.0
+          min     MinBrainSize.X
+        }
+    
+        Y {
+          type    Float
+          default 1.0
+          min     MinBrainSize.Y
+        }
+    
+        Z {
+          type    Float
+          default 1.0
+          min     MinBrainSize.Z
+        }
+    
+      }
+    }
+
+    MinSynapseProbabilityX {
+      type    Float
+      default 1.0
+      exmin   0.0
+      max     MaxSynapseProbabilityX
+    }
+
+    MaxSynapseProbabilityX {
+      type    Float
+      default MinSynapseProbabilityX
+      min     MinSynapseProbabilityX
+    }
+
+    MinLearningRate {
+      type    Float
+      default 0.0
+      min     0.0
+      max     MaxLearningRate
+    }
+
+    MaxLearningRate {
+      type    Float
+      default 0.1
+      min     MinLearningRate
+    }
+
+    MinVisionNeuronsPerSheet {
+      type    Int
+      default 1
+      min     1
+      max     MaxVisionNeuronsPerSheet
+    }
+    
+    MaxVisionNeuronsPerSheet {
+      type    Int
+      default 16
+      min     MinVisionNeuronsPerSheet
+    }
+    
+    MinInternalSheetsCount {
+      type    Int
+      default 0
+      min     0
+      max     MaxInternalSheetsCount
+    }
+    
+    MaxInternalSheetsCount {
+      type    Int
+      default 5
+      min     MinInternalSheetsCount
+    }
+    
+    MinInternalSheetSize {
+      type    Float
+      default 0.1
+      exmin   0.0
+      max     MaxInternalSheetSize
+    }
+    
+    MaxInternalSheetSize {
+      type    Float
+      default 1.0
+      min     MinInternalSheetSize
+      max     1.0
+    }
+    
+    MinInternalSheetNeuronCount {
+      type    Int
+      default 1
+      min     0
+      max     MaxInternalSheetNeuronCount
+    }
+    
+    MaxInternalSheetNeuronCount {
+      type    Int
+      default 10
+      min     MinInternalSheetNeuronCount
+    }
+
+    CrossoverProbability {
+      type    Object
+      default {}
+      properties {
+        Sheet {
+	  type    Float
+	  default 0.0
+	  min     0.0
+          max     1.0
+	}
+
+        ReceptiveField {
+	  type    Float
+	  default 0.0
+	  min     0.0
+          max     1.0
+	}
+
+        NeuronAttr {
+	  type    Float
+	  default 0.0
+	  min     0.0
+          max     1.0
+	}
+
+        Gene {
+	  type    Float
+	  default 1.0
+	  min     0.0
+          max     1.0
+	}
+      }
+    }
+
+    NeuronAttrEncoding {
+      type    Enum
+      enum    Values {
+        Sheet,
+        Neuron
+      }
+      default Sheet
+    }  
+
+    SynapseAttrEncoding {
+      type    Enum
+      enum    Values {
+        Field
+      }
+      default Field
+    }
+
+    ReceptiveFieldEncoding {
+      type    Enum
+      enum    Values {
+        Permutations,
+	ExplicitVector
+      }
+      default Permutations
+    }
+
+    MinExplicitVectorSize {
+      type    Int
+      default 1
+      min     0
+      max     MaxExplicitVectorSize
+    }
+
+    MaxExplicitVectorSize {
+      type    Int
+      default 10
+      min     MinExplicitVectorSize
+    }
+
+  }
+}
 
 #-------------------------------------------------------------------
 # SECTION Simulation parameters -- Behavior Control

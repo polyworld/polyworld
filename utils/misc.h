@@ -130,3 +130,5 @@ std::vector<std::string> split( const std::string& str, const std::string& delim
 #define SYSTEM(cmd) {int rc = system(cmd); if(rc != 0) {fprintf(stderr, "Failed executing command '%s'\n", cmd); exit(1);}}
 
 #define errif( STMT, MSG... ) if( STMT ) { fprintf(stderr, MSG); fprintf(stderr, "\n"); exit(1); }
+
+#define WARN_ONCE(msg) {static bool __warned = false; if(!__warned) {fprintf(stderr, "%s\n", msg); __warned = true;}}

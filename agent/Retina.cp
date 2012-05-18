@@ -37,9 +37,9 @@ Retina::~Retina()
 
 void Retina::sensor_grow( NervousSystem *cns )
 {
-	channels[0].init( this, cns, 0, "red" );
-	channels[1].init( this, cns, 1, "green" );
-	channels[2].init( this, cns, 2, "blue" );
+	channels[0].init( this, cns, 0, "Red" );
+	channels[1].init( this, cns, 1, "Green" );
+	channels[2].init( this, cns, 2, "Blue" );
 }
 
 void Retina::sensor_prebirth_signal( RandomNumberGenerator *rng )
@@ -159,23 +159,29 @@ void Retina::Channel::init( Retina *retina,
 	this->index = index;
 	buf = retina->buf;
 
-	nerve = cns->get( name );
+	nerve = cns->getNerve( name );
 
 	numneurons = nerve->getNeuronCount();
 
 	int width = retina->width;
 
-	xwidth = float(width) / numneurons;
-	xintwidth = width / numneurons;
-
-	if( (xintwidth * numneurons) != width )
+	if( numneurons > 0 )
 	{
-		xintwidth = 0;
+		xwidth = float(width) / numneurons;
+		xintwidth = width / numneurons;
+
+		if( (xintwidth * numneurons) != width )
+		{
+			xintwidth = 0;
+		}
 	}
 }
 
 void Retina::Channel::update( bool bprint )
 {
+	if( numneurons == 0 )
+		return;
+
     short pixel;
     float avgcolor;
     float endpixloc;
@@ -255,5 +261,8 @@ void Retina::Channel::dump_anatomical( AbstractFile *f )
 {
 	int i = nerve->getIndex();
 
-	f->printf( " %sinput=%d-%d", nerve->name.c_str(), i, i + numneurons - 1 );
+	char name[128];
+	sprintf( name, "%c%sinput", tolower(nerve->name[0]), nerve->name.substr(1).c_str() );
+
+	f->printf( " %s=%d-%d", name, i, i + numneurons - 1 );
 }

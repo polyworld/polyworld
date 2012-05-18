@@ -44,91 +44,36 @@ GroupsGenomeSchema::~GroupsGenomeSchema()
 }
 
 //-------------------------------------------------------------------------------------------
-// GroupsGenomeSchema::defineImmutable
+// GroupsGenomeSchema::define
 //-------------------------------------------------------------------------------------------
-void GroupsGenomeSchema::defineImmutable()
+void GroupsGenomeSchema::define()
 {
 	// ---
 	// --- Base Class
 	// ---
-	GenomeSchema::defineImmutable();
-
-#define __CONST(NAME, VAL) add( new ImmutableScalarGene(NAME, VAL) )
-#define CONSTANT(NAME, VAL) __CONST(#NAME, VAL)
-#define RANGE(NAME,MIN,MAX) __CONST(#NAME"_min",MIN); __CONST(#NAME"_max",MAX)
-#define INTERPOLATED(NAME,MIN,MAX) add( new ImmutableInterpolatedGene(#NAME, \
-																	  __CONST(#NAME"_min",MIN),	\
-																	  __CONST(#NAME"_max",MAX), \
-																	  __InterpolatedGene::ROUND_INT_NEAREST) )
-
-	RANGE( VisionNeuronCount,
-		   GroupsBrain::config.minvisneurpergroup,
-		   GroupsBrain::config.maxvisneurpergroup );
-	RANGE( InternalNeuronGroupCount,
-		   GroupsBrain::config.mininternalneurgroups,
-		   GroupsBrain::config.maxinternalneurgroups );
-	RANGE( ExcitatoryNeuronCount,
-		   GroupsBrain::config.mineneurpergroup,
-		   GroupsBrain::config.maxeneurpergroup );
-	RANGE( InhibitoryNeuronCount,
-		   GroupsBrain::config.minineurpergroup,
-		   GroupsBrain::config.maxineurpergroup );
-	RANGE( ConnectionDensity,
-		   GroupsBrain::config.minconnectiondensity,
-		   GroupsBrain::config.maxconnectiondensity );
-	RANGE( TopologicalDistortion,
-		   GroupsBrain::config.mintopologicaldistortion,
-		   GroupsBrain::config.maxtopologicaldistortion );
-	if( GroupsBrain::config.enableTopologicalDistortionRngSeed )
-	{
-		RANGE( TopologicalDistortionRngSeed,
-			   GroupsBrain::config.minTopologicalDistortionRngSeed,
-			   GroupsBrain::config.maxTopologicalDistortionRngSeed );
-	}
-	if( GroupsBrain::config.enableInitWeightRngSeed )
-	{
-		RANGE( InitWeightRngSeed,
-			   GroupsBrain::config.minInitWeightRngSeed,
-			   GroupsBrain::config.maxInitWeightRngSeed );
-	}
-
-#undef __CONST
-#undef CONSTANT
-#undef RANGE
-#undef INTERPOLATED
-}
-
-//-------------------------------------------------------------------------------------------
-// GroupsGenomeSchema::defineMutable
-//-------------------------------------------------------------------------------------------
-void GroupsGenomeSchema::defineMutable()
-{
-	// ---
-	// --- Base Class
-	// ---
-	GenomeSchema::defineMutable();
+	GenomeSchema::define();
 
 #define INPUT1(NAME) add( new ImmutableNeurGroupGene(#NAME,			\
 													 NGT_INPUT) )
-#define INPUT(NAME, RANGE_NAME) add( new MutableNeurGroupGene(#NAME,	\
-															  NGT_INPUT, \
-															  get(#RANGE_NAME"_min"), \
-															  get(#RANGE_NAME"_max")) )
+#define INPUT(NAME, MINNEUR, MAXNEUR) add( new MutableNeurGroupGene(#NAME, \
+																	NGT_INPUT, \
+																	MINNEUR, \
+																	MAXNEUR) )
 #define OUTPUT(NAME) add( new ImmutableNeurGroupGene(#NAME,			\
 													 NGT_OUTPUT) )
-#define INTERNAL(NAME) add( new MutableNeurGroupGene(#NAME,				\
-													 NGT_INTERNAL,		\
-													 get(#NAME"_min"),	\
-													 get(#NAME"_max")) )
-#define GROUP_ATTR(NAME, GROUP) add( new NeurGroupAttrGene(#NAME,		\
-														   NGT_##GROUP,	\
-														   get(#NAME"_min"), \
-														   get(#NAME"_max")) )
-#define SYNAPSE_ATTR(NAME,NEGATE_I,LESS_THAN_ZERO) add( new SynapseAttrGene(#NAME, \
-																			NEGATE_I, \
-																			LESS_THAN_ZERO, \
-																			get(#NAME"_min"), \
-																			get(#NAME"_max")) )
+#define INTERNAL(NAME, MINNEUR, MAXNEUR) add( new MutableNeurGroupGene(#NAME, \
+																	   NGT_INTERNAL, \
+																	   MINNEUR, \
+																	   MAXNEUR) )
+#define GROUP_ATTR(NAME, GROUP, MINVAL, MAXVAL) add( new NeurGroupAttrGene(#NAME, \
+																		   NGT_##GROUP,	\
+																		   MINVAL, \
+																		   MAXVAL) )
+#define SYNAPSE_ATTR(NAME,NEGATE_I,LESS_THAN_ZERO, MINVAL, MAXVAL) add( new SynapseAttrGene(#NAME, \
+																							NEGATE_I, \
+																							LESS_THAN_ZERO, \
+																							MINVAL, \
+																							MAXVAL) )
 
 	INPUT1( Random );
 	INPUT1( Energy );
@@ -141,9 +86,15 @@ void GroupsGenomeSchema::defineMutable()
 		INPUT1( Carrying );
 		INPUT1( BeingCarried );
 	}
-	INPUT( Red, VisionNeuronCount );
-	INPUT( Green, VisionNeuronCount );
-	INPUT( Blue, VisionNeuronCount );
+	INPUT( Red,
+		   GroupsBrain::config.minvisneurpergroup,
+		   GroupsBrain::config.maxvisneurpergroup );
+	INPUT( Green,
+		   GroupsBrain::config.minvisneurpergroup,
+		   GroupsBrain::config.maxvisneurpergroup );
+	INPUT( Blue,
+		   GroupsBrain::config.minvisneurpergroup,
+		   GroupsBrain::config.maxvisneurpergroup );
 
 	OUTPUT( Eat );
 	OUTPUT( Mate );
@@ -170,36 +121,91 @@ void GroupsGenomeSchema::defineMutable()
 		OUTPUT( Drop );
 	}
 
-	INTERNAL( InternalNeuronGroupCount );
+	INTERNAL( InternalNeuronGroupCount,
+			  GroupsBrain::config.mininternalneurgroups,
+			  GroupsBrain::config.maxinternalneurgroups );
 
-	GROUP_ATTR( ExcitatoryNeuronCount, INTERNAL );
-	GROUP_ATTR( InhibitoryNeuronCount, INTERNAL );
-	GROUP_ATTR( Bias, NONINPUT );
+	GROUP_ATTR( ExcitatoryNeuronCount,
+				INTERNAL,
+				GroupsBrain::config.mineneurpergroup,
+				GroupsBrain::config.maxeneurpergroup );
+
+	GROUP_ATTR( InhibitoryNeuronCount,
+				INTERNAL,
+				GroupsBrain::config.minineurpergroup,
+				GroupsBrain::config.maxineurpergroup );
+				
+	GROUP_ATTR( Bias,
+				NONINPUT,
+				-Brain::config.maxbias,
+				Brain::config.maxbias );
+				
 	if( Brain::config.neuronModel == Brain::Configuration::TAU )
 	{
-		GROUP_ATTR( Tau, NONINPUT );
+		GROUP_ATTR( Tau,
+					NONINPUT,
+					Brain::config.Tau.minVal,
+					Brain::config.Tau.maxVal );
 	}
 
-
-	if( Brain::config.neuronModel == Brain::Configuration::SPIKING &&
-		Brain::config.Spiking.enableGenes == true )
+	if( Brain::config.neuronModel == Brain::Configuration::SPIKING
+		&& Brain::config.Spiking.enableGenes == true )
 	{
-		GROUP_ATTR( SpikingParameterA, NONINPUT );
-		GROUP_ATTR( SpikingParameterB, NONINPUT );
-		GROUP_ATTR( SpikingParameterC, NONINPUT );
-		GROUP_ATTR( SpikingParameterD, NONINPUT );
+		GROUP_ATTR( SpikingParameterA,
+					NONINPUT,
+					Brain::config.Spiking.aMinVal,
+					Brain::config.Spiking.aMaxVal );
+
+		GROUP_ATTR( SpikingParameterB,
+					NONINPUT,
+					Brain::config.Spiking.bMinVal,
+					Brain::config.Spiking.bMaxVal );
+
+		GROUP_ATTR( SpikingParameterC,
+					NONINPUT,
+					Brain::config.Spiking.cMinVal,
+					Brain::config.Spiking.cMaxVal );
+
+		GROUP_ATTR( SpikingParameterD,
+					NONINPUT,
+					Brain::config.Spiking.dMinVal,
+					Brain::config.Spiking.dMaxVal );
 	}
 
-	SYNAPSE_ATTR( ConnectionDensity, false, false );
-	SYNAPSE_ATTR( LearningRate, true, true );
-	SYNAPSE_ATTR( TopologicalDistortion, false, false );
+	SYNAPSE_ATTR( ConnectionDensity,
+				  false,
+				  false,
+				  GroupsBrain::config.minconnectiondensity,
+				  GroupsBrain::config.maxconnectiondensity );
+
+	SYNAPSE_ATTR( LearningRate,
+				  true,
+				  true,
+				  Brain::config.minlrate,
+				  Brain::config.maxlrate );	
+
+	SYNAPSE_ATTR( TopologicalDistortion,
+				  false,
+				  false,
+				  GroupsBrain::config.mintopologicaldistortion,
+				  GroupsBrain::config.maxtopologicaldistortion );
+				  
 	if( GroupsBrain::config.enableTopologicalDistortionRngSeed )
 	{
-		SYNAPSE_ATTR( TopologicalDistortionRngSeed, false, false );
+		SYNAPSE_ATTR( TopologicalDistortionRngSeed,
+					  false,
+					  false,
+					  GroupsBrain::config.minTopologicalDistortionRngSeed,
+					  GroupsBrain::config.maxTopologicalDistortionRngSeed );
+
 	}
 	if( GroupsBrain::config.enableInitWeightRngSeed )
 	{
-		SYNAPSE_ATTR( InitWeightRngSeed, false, false );
+		SYNAPSE_ATTR( InitWeightRngSeed,
+					  false,
+					  false,
+					  GroupsBrain::config.minInitWeightRngSeed,
+					  GroupsBrain::config.maxInitWeightRngSeed );
 	}
 	
 #undef INPUT1
@@ -309,6 +315,14 @@ void GroupsGenomeSchema::seed( Genome *g_ )
 }
 
 //-------------------------------------------------------------------------------------------
+// GroupsGenomeSchema::createGenome
+//-------------------------------------------------------------------------------------------
+Genome *GroupsGenomeSchema::createGenome( GenomeLayout *layout )
+{
+	return new GroupsGenome( this, layout );
+}
+
+//-------------------------------------------------------------------------------------------
 // GroupsGenomeSchema::add
 //-------------------------------------------------------------------------------------------
 Gene *GroupsGenomeSchema::add( Gene *gene )
@@ -316,9 +330,53 @@ Gene *GroupsGenomeSchema::add( Gene *gene )
 	gene = GenomeSchema::add( gene );
 
 	if( gene->type == GroupsGeneType::NEURGROUP )
+	{
 		neurgroups.push_back( gene );
+		GroupsGeneType::to_NeurGroup(gene)->schema = this;
+	}
+	else if( gene->type == GroupsGeneType::NEURGROUP_ATTR )
+	{
+		GroupsGeneType::to_NeurGroupAttr(gene)->schema = this;
+	}
+	else if( gene->type == GroupsGeneType::SYNAPSE_ATTR )
+	{
+		GroupsGeneType::to_SynapseAttr(gene)->schema = this;
+	}
 
 	return gene;
+}
+
+//-------------------------------------------------------------------------------------------
+// GroupsGenomeSchema::getPhysicalCount
+//-------------------------------------------------------------------------------------------
+int GroupsGenomeSchema::getPhysicalCount()
+{
+	switch(_state)
+	{
+	case STATE_COMPLETE:
+		return cache.physicalCount;
+	case STATE_CACHING: {
+		int n = 0;
+
+		itfor( GeneVector, _genes, it )
+		{
+			Gene *g = *it;
+
+			if( !g->ismutable )
+				continue;
+
+			if( g->type == GeneType::SCALAR )
+				n++;
+			else
+				return cache.physicalCount = n;
+		}
+
+		assert(false); // fell through!
+		return -1;
+	}
+	default:
+		assert(false);
+	}
 }
 
 //-------------------------------------------------------------------------------------------
@@ -326,18 +384,14 @@ Gene *GroupsGenomeSchema::add( Gene *gene )
 //-------------------------------------------------------------------------------------------
 int GroupsGenomeSchema::getMaxGroupCount( NeurGroupType group )
 {
-	switch(state)
+	switch(_state)
 	{
 	case STATE_COMPLETE:
 		return cache.groupCount[group];
 	case STATE_CACHING: {
 		int n = 0;
 
-		for( GeneList::iterator
-				 it = neurgroups.begin(),
-				 end = neurgroups.end();
-			 it != end;
-			 it++ )
+		itfor( GeneVector, neurgroups, it )
 		{
 			NeurGroupGene *gene = GroupsGeneType::to_NeurGroup(*it);
 
@@ -361,18 +415,14 @@ int GroupsGenomeSchema::getFirstGroup( Gene *_gene )
 {
 	NeurGroupGene *gene = GroupsGeneType::to_NeurGroup(_gene);
 
-	switch(state)
+	switch(_state)
 	{
 	case STATE_COMPLETE:
 		return gene->first_group;
 	case STATE_CACHING: {
 		int group = 0;
 
-		for( GeneList::iterator
-				 it = neurgroups.begin(),
-				 end = neurgroups.end();
-			 it != end;
-			 it++ )
+		itfor( GeneVector, neurgroups, it )
 		{
 			NeurGroupGene *other = GroupsGeneType::to_NeurGroup(*it);
 			if( other == gene )
@@ -394,7 +444,7 @@ int GroupsGenomeSchema::getFirstGroup( Gene *_gene )
 //-------------------------------------------------------------------------------------------
 int GroupsGenomeSchema::getFirstGroup( NeurGroupType group )
 {
-	switch(state)
+	switch(_state)
 	{
 	case STATE_COMPLETE:
 		return cache.groupStart[group];
@@ -436,10 +486,10 @@ NeurGroupGene *GroupsGenomeSchema::getGroupGene( int group )
 	{
 	case NGT_INPUT:
 	case NGT_OUTPUT:
-		gene = type2genes[GroupsGeneType::NEURGROUP][group];
+		gene = _type2genes[GroupsGeneType::NEURGROUP][group];
 		break;
 	case NGT_INTERNAL:
-		gene = type2genes[GroupsGeneType::NEURGROUP].back();
+		gene = _type2genes[GroupsGeneType::NEURGROUP].back();
 		break;
 	default:
 		assert(false);
@@ -453,18 +503,14 @@ NeurGroupGene *GroupsGenomeSchema::getGroupGene( int group )
 //-------------------------------------------------------------------------------------------
 int GroupsGenomeSchema::getMaxNeuronCount( NeurGroupType group )
 {
-	switch(state)
+	switch(_state)
 	{
 	case STATE_COMPLETE:
 		return cache.neuronCount[group];
 	case STATE_CACHING: {
 		int n = 0;
 
-		for( GeneList::iterator
-				 it = neurgroups.begin(),
-				 end = neurgroups.end();
-			 it != end;
-			 it++ )
+		itfor( GeneVector, neurgroups, it )
 		{
 			NeurGroupGene *gene = GroupsGeneType::to_NeurGroup(*it);
 
@@ -530,7 +576,7 @@ GroupsSynapseType *GroupsGenomeSchema::getSynapseType( const char *name )
 //-------------------------------------------------------------------------------------------
 int GroupsGenomeSchema::getMaxSynapseCount()
 {
-	switch(state)
+	switch(_state)
 	{
 	case STATE_COMPLETE:
 		return cache.synapseCount;
@@ -556,9 +602,11 @@ int GroupsGenomeSchema::getMaxSynapseCount()
 //-------------------------------------------------------------------------------------------
 // GroupsGenomeSchema::complete
 //-------------------------------------------------------------------------------------------
-void GroupsGenomeSchema::complete()
+void GroupsGenomeSchema::complete( int offset )
 {
-	beginComplete();
+	beginComplete( offset );
+
+	getPhysicalCount();
 
 #define NG_CACHE(NAME)								\
 	getMaxGroupCount(NGT_##NAME);				\
@@ -575,11 +623,7 @@ void GroupsGenomeSchema::complete()
 
 	getMaxSynapseCount();
 
-	for( GeneList::iterator
-			 it = neurgroups.begin(),
-			 end = neurgroups.end();
-		 it != end;
-		 it++ )
+	itfor( GeneVector, neurgroups, it )
 	{
 		Gene *gene = *it;
 

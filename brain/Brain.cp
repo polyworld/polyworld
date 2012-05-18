@@ -24,6 +24,7 @@
 #include "misc.h"
 #include "NervousSystem.h"
 #include "NeuronModel.h"
+#include "SheetsBrain.h"
 #include "Simulation.h"
 
 using namespace genome;
@@ -45,6 +46,15 @@ Brain::Configuration Brain::config;
 //---------------------------------------------------------------------------
 void Brain::processWorldfile( proplib::Document &doc )
 {
+	{
+		string val = doc.get( "BrainArchitecture" );
+		if( val == "Groups" )
+			Brain::config.architecture = Brain::Configuration::Groups;
+		else if( val == "Sheets" )
+			Brain::config.architecture = Brain::Configuration::Sheets;
+		else
+			assert( false );
+	}
 	{
 		string val = doc.get( "NeuronModel" );
 		if( val == "F" )
@@ -91,6 +101,7 @@ void Brain::processWorldfile( proplib::Document &doc )
 	Brain::config.minWin = doc.get( "RetinaWidth" );
 
 	GroupsBrain::processWorldfile( doc );
+	SheetsBrain::processWorldfile( doc );
 }
 
 //---------------------------------------------------------------------------
@@ -109,6 +120,7 @@ void Brain::init()
         Brain::config.retinaHeight++;
 
 	GroupsBrain::init();
+	SheetsBrain::init();
 }
 
 //---------------------------------------------------------------------------
@@ -139,7 +151,7 @@ void Brain::dumpAnatomical( AbstractFile *file, long index, float fitness )
 {
 	// print the header, with index, fitness, and number of neurons
 	file->printf( "brain %ld fitness=%g numneurons+1=%d maxWeight=%g maxBias=%g",
-				  index, fitness, _dims.numneurons+1, Brain::config.maxWeight, Brain::config.maxbias );
+				  index, fitness, _dims.numNeurons+1, Brain::config.maxWeight, Brain::config.maxbias );
 
 	_cns->dumpAnatomical( file );
 	file->printf( "\n" );
@@ -186,9 +198,9 @@ void Brain::writeFunctional( AbstractFile *file )
 }
 
 //---------------------------------------------------------------------------
-// Brain::Prebirth
+// Brain::prebirth
 //---------------------------------------------------------------------------
-void Brain::Prebirth()
+void Brain::prebirth()
 {
     // now send some signals through the system
     // try pure noise for now...
@@ -196,16 +208,16 @@ void Brain::Prebirth()
     {
 		_cns->prebirthSignal();
 
-		Update( false );
+		update( false );
     }
 
     debugcheck( "after prebirth cycling" );
 }
 
 //---------------------------------------------------------------------------
-// Brain::Update
+// Brain::update
 //---------------------------------------------------------------------------
-void Brain::Update( bool bprint )
+void Brain::update( bool bprint )
 {	 
 	_neuralnet->update( bprint );
 }

@@ -10,9 +10,8 @@ Nerve::Nerve( Type _type,
 			  int _igroup )
 : type(_type)
 , name(_name)
-	, igroup(_igroup)
-	, numneurons(0)
-	, index(-1)
+, numneurons(0)
+, index(-1)
 {
 	memset( activations, 0, sizeof(activations) );
 }
@@ -20,6 +19,9 @@ Nerve::Nerve( Type _type,
 float Nerve::get( int ineuron,
 				  ActivationBuffer buf )
 {
+	if( numneurons == 0 )
+		return 0.0;
+
 	assert( (ineuron >= 0) && (ineuron < numneurons) && (index > -1) );
 	
 	return (*(activations[buf]))[index + ineuron];
@@ -28,6 +30,9 @@ float Nerve::get( int ineuron,
 void Nerve::set( float activation,
 				 ActivationBuffer buf )
 {
+	if( numneurons == 0 )
+		return;
+
 	assert( numneurons == 1 );
 	
 	set( 0, activation, buf );

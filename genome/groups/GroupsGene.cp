@@ -38,10 +38,10 @@ CAST_TO(SynapseAttr);
 // === CLASS NeurGroupGene
 // ===
 // ================================================================================
-NeurGroupGene::NeurGroupGene( NeurGroupType _group_type )
+NeurGroupGene::NeurGroupGene( NeurGroupType group_type_ )
 {
 	first_group = -1; // this will be set by the schema
-	group_type = _group_type;
+	group_type = group_type_;
 
 	switch(group_type)
 	{
@@ -55,9 +55,9 @@ NeurGroupGene::NeurGroupGene( NeurGroupType _group_type )
 	}
 }
 
-bool NeurGroupGene::isMember( NeurGroupType _group_type )
+bool NeurGroupGene::isMember( NeurGroupType group_type_ )
 {
-	if( (_group_type == NGT_ANY) || (_group_type == this->group_type) )
+	if( (group_type_ == NGT_ANY) || (group_type_ == this->group_type) )
 	{
 		return true;
 	}
@@ -68,7 +68,7 @@ bool NeurGroupGene::isMember( NeurGroupType _group_type )
 		return false;
 	case NGT_OUTPUT:
 	case NGT_INTERNAL:
-		return (_group_type == NGT_ANY) || (_group_type == NGT_NONINPUT);
+		return (group_type_ == NGT_ANY) || (group_type_ == NGT_NONINPUT);
 	default:
 		assert(false);
 	}
@@ -85,16 +85,16 @@ NeurGroupType NeurGroupGene::getGroupType()
 // === CLASS MutableNeurGroupGene
 // ===
 // ================================================================================
-MutableNeurGroupGene::MutableNeurGroupGene( const char *_name,
-											NeurGroupType _group_type,
-											Gene *_gmin,
-											Gene *_gmax )
-: NeurGroupGene( _group_type )
+MutableNeurGroupGene::MutableNeurGroupGene( const char *name_,
+											NeurGroupType group_type_,
+											Scalar min_,
+											Scalar max_ )
+: NeurGroupGene( group_type_ )
 , __InterpolatedGene( GroupsGeneType::NEURGROUP,
 					  true /* mutable */,
-					  _name,
-					  _gmin,
-					  _gmax,
+					  name_,
+					  min_,
+					  max_,
 					  ROUND_INT_NEAREST )
 {
 }
@@ -166,11 +166,11 @@ std::string MutableNeurGroupGene::getTitle( int group )
 // === CLASS ImmutableNeurGroupGene
 // ===
 // ================================================================================
-ImmutableNeurGroupGene::ImmutableNeurGroupGene( const char *_name,
-												NeurGroupType _group_type )
-: NeurGroupGene( _group_type )
+ImmutableNeurGroupGene::ImmutableNeurGroupGene( const char *name_,
+												NeurGroupType group_type_ )
+: NeurGroupGene( group_type_ )
 , __ConstantGene( GroupsGeneType::NEURGROUP,
-				  _name,
+				  name_,
 				  1 )
 {
 }
@@ -203,17 +203,17 @@ std::string ImmutableNeurGroupGene::getTitle( int group )
 // === CLASS NeurGroupAttrGene
 // ===
 // ================================================================================
-NeurGroupAttrGene::NeurGroupAttrGene( const char *_name,
-									  NeurGroupType _group_type,
-									  Gene *_gmin,
-									  Gene *_gmax )
+NeurGroupAttrGene::NeurGroupAttrGene( const char *name_,
+									  NeurGroupType group_type_,
+									  Scalar min_,
+									  Scalar max_ )
 : __InterpolatedGene( GroupsGeneType::NEURGROUP_ATTR,
 					  true /* mutable */,
-					  _name,
-					  _gmin,
-					  _gmax,
+					  name_,
+					  min_,
+					  max_,
 					  ROUND_INT_NEAREST )
-, group_type( _group_type )
+, group_type( group_type_ )
 {
 }
 
@@ -239,7 +239,7 @@ void NeurGroupAttrGene::seed( Genome *genome,
 							  NeurGroupGene *group,
 							  unsigned char rawval )
 {
-	int igroup = dynamic_cast<GroupsGenomeSchema *>(schema)->getFirstGroup( group );
+	int igroup = schema->getFirstGroup( group );
 	int offset = getOffset( igroup );
 	int ngroups = group->getMaxGroupCount();
 
@@ -248,9 +248,9 @@ void NeurGroupAttrGene::seed( Genome *genome,
 					 rawval );
 }
 
-void NeurGroupAttrGene::printIndexes( FILE *file, GenomeLayout *layout )
+void NeurGroupAttrGene::printIndexes( FILE *file, const std::string &prefix, GenomeLayout *layout )
 {
-	int n = dynamic_cast<GroupsGenomeSchema *>(schema)->getMaxGroupCount( group_type );
+	int n = schema->getMaxGroupCount( group_type );
 
 	for( int i = 0; i < n; i++ )
 	{
@@ -260,36 +260,36 @@ void NeurGroupAttrGene::printIndexes( FILE *file, GenomeLayout *layout )
 			index = layout->getMutableDataOffset( index );
 		}
 
-		fprintf( file, "%d\t%s_%d\n", index, name.c_str(), i );
+		fprintf( file, "%d\t%s%s_%d\n", index, prefix.c_str(), name.c_str(), i );
 	}
 }
 
-void NeurGroupAttrGene::printTitles( FILE *file )
+void NeurGroupAttrGene::printTitles( FILE *file, const string &prefix )
 {
-	int first_group = dynamic_cast<GroupsGenomeSchema *>(schema)->getFirstGroup( group_type );
-	int ngroups = dynamic_cast<GroupsGenomeSchema *>(schema)->getMaxGroupCount( group_type );
+	int first_group = schema->getFirstGroup( group_type );
+	int ngroups = schema->getMaxGroupCount( group_type );
 
 	for( int i = 0; i < ngroups; i++ )
 	{
 		int group = first_group + i;
-		NeurGroupGene *groupGene = dynamic_cast<GroupsGenomeSchema *>(schema)->getGroupGene( group );
+		NeurGroupGene *groupGene = schema->getGroupGene( group );
 		string groupTitle = groupGene->getTitle( group );
 
 		fprintf( file,
-				 "%s[%s] :: %s_%d\n",
-				 name.c_str(), groupTitle.c_str(),
-				 name.c_str(), i );
+				 "%s%s[%s] :: %s%s_%d\n",
+				 prefix.c_str(), name.c_str(), groupTitle.c_str(),
+				 prefix.c_str(), name.c_str(), i );
 	}
 }
 
 int NeurGroupAttrGene::getMutableSizeImpl()
 {
-	return sizeof(unsigned char) * dynamic_cast<GroupsGenomeSchema *>(schema)->getMaxGroupCount( group_type );
+	return sizeof(unsigned char) * schema->getMaxGroupCount( group_type );
 }
 
 int NeurGroupAttrGene::getOffset( int group )
 {
-	return this->offset + (group - dynamic_cast<GroupsGenomeSchema *>(schema)->getFirstGroup( group_type ));
+	return this->offset + (group - schema->getFirstGroup( group_type ));
 }
 
 
@@ -298,19 +298,19 @@ int NeurGroupAttrGene::getOffset( int group )
 // === CLASS SynapseAttrGene
 // ===
 // ================================================================================
-SynapseAttrGene::SynapseAttrGene( const char *_name,
-								  bool _negateInhibitory,
-								  bool _lessThanZero,
-								  Gene *_gmin,
-								  Gene *_gmax )
+SynapseAttrGene::SynapseAttrGene( const char *name_,
+								  bool negateInhibitory_,
+								  bool lessThanZero_,
+								  Scalar min_,
+								  Scalar max_ )
 : __InterpolatedGene( GroupsGeneType::SYNAPSE_ATTR,
 					  true /* mutable */,
-					  _name,
-					  _gmin,
-					  _gmax,
+					  name_,
+					  min_,
+					  max_,
 					  ROUND_INT_NEAREST )
-, negateInhibitory( _negateInhibitory )
-, lessThanZero( _lessThanZero )
+, negateInhibitory( negateInhibitory_ )
+, lessThanZero( lessThanZero_ )
 {
 }
 
@@ -353,22 +353,22 @@ void SynapseAttrGene::seed( Genome *genome,
 	assert( to->getGroupType() == NGT_OUTPUT );
 
 	int offset = getOffset( synapseType,
-							dynamic_cast<GroupsGenomeSchema *>(schema)->getFirstGroup(from),
-							dynamic_cast<GroupsGenomeSchema *>(schema)->getFirstGroup(to) );
+							schema->getFirstGroup(from),
+							schema->getFirstGroup(to) );
 
 	genome->set_raw( offset,
 					 sizeof(unsigned char),
 					 rawval );
 }
 
-void SynapseAttrGene::printIndexes( FILE *file, GenomeLayout *layout )
+void SynapseAttrGene::printIndexes( FILE *file, const string &prefix, GenomeLayout *layout )
 {
-	int nin = dynamic_cast<GroupsGenomeSchema *>(schema)->getMaxGroupCount( NGT_INPUT );
-	int nany = dynamic_cast<GroupsGenomeSchema *>(schema)->getMaxGroupCount( NGT_ANY );
+	int nin = schema->getMaxGroupCount( NGT_INPUT );
+	int nany = schema->getMaxGroupCount( NGT_ANY );
 
 	for( GroupsSynapseTypeList::const_iterator
-			 it = dynamic_cast<GroupsGenomeSchema *>(schema)->getSynapseTypes().begin(),
-			 end = dynamic_cast<GroupsGenomeSchema *>(schema)->getSynapseTypes().end();
+			 it = schema->getSynapseTypes().begin(),
+			 end = schema->getSynapseTypes().end();
 		 it != end;
 		 it++ )
 	{
@@ -384,16 +384,16 @@ void SynapseAttrGene::printIndexes( FILE *file, GenomeLayout *layout )
 					index = layout->getMutableDataOffset( index );
 				}
 
-				fprintf( file, "%d\t%s%s_%d->%d\n",
+				fprintf( file, "%d\t%s%s%s_%d->%d\n",
 						 index,
-						 st->name.c_str(), this->name.c_str(),
+						 prefix.c_str(), st->name.c_str(), this->name.c_str(),
 						 from, to );
 			}
 		}
 	}	
 }
 
-void SynapseAttrGene::printTitles( FILE *file )
+void SynapseAttrGene::printTitles( FILE *file, const string &prefix )
 {
 	// we don't currently investigate this data, not implemented yet.
 }
@@ -403,8 +403,8 @@ int SynapseAttrGene::getMutableSizeImpl()
 	int size = 0;
 
 	for( GroupsSynapseTypeList::const_iterator
-			 it = dynamic_cast<GroupsGenomeSchema *>(schema)->getSynapseTypes().begin(),
-			 end = dynamic_cast<GroupsGenomeSchema *>(schema)->getSynapseTypes().end();
+			 it = schema->getSynapseTypes().begin(),
+			 end = schema->getSynapseTypes().end();
 		 it != end;
 		 it++ )
 	{

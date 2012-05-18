@@ -50,6 +50,8 @@ namespace genome
 
 		virtual std::string getTitle( int group ) = 0;
 
+		class GroupsGenomeSchema *schema;
+
 	protected:
 		friend class GroupsGenomeSchema;
 
@@ -73,8 +75,8 @@ namespace genome
 	public:
 		MutableNeurGroupGene( const char *name,
 							  NeurGroupType group_type,
-							  Gene *gmin,
-							  Gene *gmax );
+							  Scalar min_,
+							  Scalar max_ );
 		virtual ~MutableNeurGroupGene() {}
 
 		virtual Scalar get( Genome *genome );
@@ -122,8 +124,8 @@ namespace genome
 	public:
 		NeurGroupAttrGene( const char *name,
 						   NeurGroupType group_type,
-						   Gene *gmin,
-						   Gene *gmax );
+						   Scalar min_,
+						   Scalar max_ );
 		virtual ~NeurGroupAttrGene() {}
 
 		virtual Scalar get( Genome *genome,
@@ -136,10 +138,12 @@ namespace genome
 				   NeurGroupGene *group,
 				   unsigned char rawval );
 
-		virtual void printIndexes( FILE *file, GenomeLayout *layout );
-		virtual void printTitles( FILE *file );
+		virtual void printIndexes( FILE *file, const std::string &prefix, GenomeLayout *layout );
+		virtual void printTitles( FILE *file, const std::string &prefix );
 
 		const NeurGroupType group_type;
+
+		class GroupsGenomeSchema *schema;
 
 	protected:
 		virtual int getMutableSizeImpl();
@@ -162,8 +166,8 @@ namespace genome
 		SynapseAttrGene( const char *name,
 						 bool negateInhibitory,
 						 bool lessThanZero,
-						 Gene *gmin,
-						 Gene *gmax );
+						 Scalar min_,
+						 Scalar max_ );
 		virtual ~SynapseAttrGene() {}
 
 		virtual Scalar get( Genome *genome,
@@ -177,8 +181,10 @@ namespace genome
 				   NeurGroupGene *to,
 				   unsigned char rawval );
 
-		virtual void printIndexes( FILE *file, GenomeLayout *layout );
-		virtual void printTitles( FILE *file );
+		virtual void printIndexes( FILE *file, const std::string &prefix, GenomeLayout *layout );
+		virtual void printTitles( FILE *file, const std::string &prefix );
+
+		class GroupsGenomeSchema *schema;
 
 	protected:
 		virtual int getMutableSizeImpl();

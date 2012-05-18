@@ -16,7 +16,6 @@ using namespace std;
 
 using namespace genome;
 
-//#define DEBUG_REVERSE_LEGACY
 #if 1
 #define DBPRINT(stmt)
 #else
@@ -30,10 +29,10 @@ GenomeLayout *GenomeLayout::create( GenomeSchema *schema,
 	
 	switch( type )
 	{
-	case LEGACY:
-		createLegacy( layout );
+	case None:
+		createNone( layout );
 		break;
-	case NEURGROUP:
+	case NeurGroup:
 		createNeurGroup( layout, dynamic_cast<GroupsGenomeSchema *>(schema) );
 		break;
 	default:
@@ -45,15 +44,11 @@ GenomeLayout *GenomeLayout::create( GenomeSchema *schema,
 	return layout;
 }
 
-void GenomeLayout::createLegacy( GenomeLayout *layout )
+void GenomeLayout::createNone( GenomeLayout *layout )
 {
 	for( int i = 0; i < layout->numOffsets; i++ )
 	{
-#ifdef DEBUG_REVERSE_LEGACY
-		layout->geneOffset2mutableDataOffset[i] = layout->numOffsets - i - 1;
-#else
 		layout->geneOffset2mutableDataOffset[i] = i;
-#endif
 	}
 }
 

@@ -1,12 +1,6 @@
 #pragma once
 
-#include <stdio.h>
-
-#include <string>
-#include <vector>
-
-#include "Gene.h"
-#include "GenomeLayout.h"
+#include "GeneSchema.h"
 #include "proplib.h"
 
 namespace genome
@@ -16,7 +10,7 @@ namespace genome
 	// === CLASS GenomeSchema
 	// ===
 	// ================================================================================
-	class GenomeSchema
+	class GenomeSchema : public GeneSchema
 	{
 	public:
 		static struct Configuration
@@ -51,50 +45,10 @@ namespace genome
 		GenomeSchema();
 		virtual ~GenomeSchema();
 
-		virtual void defineImmutable();
-		virtual void defineMutable();
+		virtual void define();
 		virtual void seed( Genome *genome );
 
-		virtual Gene *add( Gene *gene );
-
-		Gene *get( const std::string &name );
-		Gene *get( const char *name );
-		Gene *get( const GeneType *type );
-		const GeneVector &getAll( const GeneType *type );
-
-		int getGeneCount( const GeneType *type );
-
-		int getPhysicalCount();
-		int getMutableSize();
-
-		virtual void complete() = 0;
-
-		void getIndexes( std::vector<std::string> &geneNames, std::vector<int> &result );
-
-		void printIndexes( FILE *f, GenomeLayout *layout = NULL );
-		void printTitles( FILE *f );
-		void printRanges( FILE *f );
-
-	protected:
-		void beginComplete();
-		void endComplete();
-
-		enum State
-		{
-			STATE_CONSTRUCTING,
-			STATE_CACHING,
-			STATE_COMPLETE
-		} state;
-
-		GeneMap name2gene;
-		GeneTypeMap type2genes;
-		GeneList genes;
-
-		struct Cache
-		{
-			int physicalCount;
-			int mutableSize;
-		} cache;
+		virtual Genome *createGenome( GenomeLayout *layout ) = 0;
 	};
 
 } // namespace genome

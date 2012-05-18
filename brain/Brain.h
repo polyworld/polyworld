@@ -52,6 +52,11 @@ public:
 	{
 		enum
 		{
+			Groups,
+			Sheets
+		} architecture;
+		enum
+		{
 			FIRING_RATE,
 			TAU,
 			SPIKING
@@ -97,15 +102,14 @@ public:
     Brain( NervousSystem *cns );
     virtual ~Brain();
     
-    virtual void grow( genome::Genome* g ) = 0;
-	void Prebirth();
-    void Update( bool bprint );
+	void prebirth();
+    void update( bool bprint );
 
 	NeuralNetRenderer *getRenderer();
 
-    float BrainEnergy();
-    short GetNumNeurons();
-	long  GetNumSynapses();
+    float getEnergyUse();
+    short getNumNeurons();
+	long  getNumSynapses();
         
 	void dumpAnatomical( AbstractFile *file, long index, float fitness );
 	
@@ -126,8 +130,8 @@ protected:
 //===========================================================================
 // inlines
 //===========================================================================
-inline float Brain::BrainEnergy() { return _energyUse; }
-inline short Brain::GetNumNeurons() { return _dims.numneurons; }
-inline long Brain::GetNumSynapses() { return _dims.numsynapses; }
+inline float Brain::getEnergyUse() { return _energyUse; }
+inline short Brain::getNumNeurons() { return _dims.numNeurons; }
+inline long Brain::getNumSynapses() { return _dims.numSynapses; }
 
 // Macros

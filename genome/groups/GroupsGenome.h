@@ -33,6 +33,8 @@ namespace genome
 					  GenomeLayout *layout );
 		virtual ~GroupsGenome();
 
+		Brain *createBrain( NervousSystem *cns );
+
 		GroupsGenomeSchema *getSchema();
 
 		int getGroupCount( NeurGroupType type );
@@ -68,6 +70,9 @@ namespace genome
 				   Gene *from,
 				   Gene *to,
 				   float rawval_ratio );
+
+	protected:
+		virtual void getCrossoverPoints( long *crossoverPoints, long numCrossPoints );
 
 	private:
 		GroupsGenomeSchema *_schema;

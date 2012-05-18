@@ -21,7 +21,7 @@ MateWaitSensor::~MateWaitSensor()
 
 void MateWaitSensor::sensor_grow( NervousSystem *cns )
 {
-	nerve = cns->get("mateWaitFeedback");
+	nerve = cns->getNerve( "MateWaitFeedback" );
 }
 
 void MateWaitSensor::sensor_prebirth_signal( RandomNumberGenerator *rng )

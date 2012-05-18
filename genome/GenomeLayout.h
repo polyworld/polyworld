@@ -18,8 +18,8 @@ namespace genome
 	public:
 		enum LayoutType
 		{
-			LEGACY,
-			NEURGROUP
+			None,
+			NeurGroup
 		};
 
 		static GenomeLayout *create( GenomeSchema *schema,
@@ -30,7 +30,7 @@ namespace genome
 		int getMutableDataOffset_nocheck( int geneOffset );
 
 	private:
-		static void createLegacy( GenomeLayout *layout );
+		static void createNone( GenomeLayout *layout );
 		static void createNeurGroup( GenomeLayout *layout,
 									 GroupsGenomeSchema *schema );
 

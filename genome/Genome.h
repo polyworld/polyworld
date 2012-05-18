@@ -10,6 +10,8 @@
 
 // forward decl
 class AbstractFile;
+class Brain;
+class NervousSystem;
 
 namespace genome
 {
@@ -27,6 +29,8 @@ namespace genome
 		Genome( GenomeSchema *schema,
 				GenomeLayout *layout );
 		virtual ~Genome();
+
+		virtual Brain *createBrain( NervousSystem *cns ) = 0;
 
 		Gene *MISC_BIAS;
 		Gene *MISC_INVIS_SLOPE;
@@ -46,9 +50,9 @@ namespace genome
 		void randomize();
 
 		void mutate();
-		void crossover( Genome *g1,
-						Genome *g2,
-						bool mutate );
+		virtual void crossover( Genome *g1,
+								Genome *g2,
+								bool mutate );
 		void copyFrom( Genome *g );
 		float separation( Genome *g );
 		float mateProbability( Genome *g );
@@ -66,18 +70,21 @@ namespace genome
 		friend class NeurGroupAttrGene;
 		friend class SynapseAttrGene;
 
+		virtual void getCrossoverPoints( long *crossoverPoints, long numCrossPoints );
+
 		unsigned char get_raw( int offset );
 		void set_raw( int offset,
 					  int n,
 					  unsigned char rawval );
+
+		int nbytes;
+		unsigned char *mutable_data;
 
 	private:
 		void alloc();
 
 		GenomeSchema *schema;
 		GenomeLayout *layout;
-		unsigned char *mutable_data;
-		int nbytes;
 		bool gray;
 	};
 

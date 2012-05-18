@@ -13,11 +13,13 @@ namespace genome
 		GroupsGenomeSchema();
 		virtual ~GroupsGenomeSchema();
 
-		virtual void defineImmutable();
-		virtual void defineMutable();
+		virtual void define();
 		virtual void seed( Genome *genome );
+		virtual Genome *createGenome( GenomeLayout *layout );
 
 		virtual Gene *add( Gene *gene );
+
+		int getPhysicalCount();
 
 		int getMaxGroupCount( NeurGroupType group );
 		int getFirstGroup( Gene *gene );
@@ -31,15 +33,16 @@ namespace genome
 		GroupsSynapseType *getSynapseType( const char *name );
 		int getMaxSynapseCount();
 
-		virtual void complete();
+		virtual void complete( int offset = 0 );
 
 	private:
 		GroupsSynapseTypeMap synapseTypeMap;
 		GroupsSynapseTypeList synapseTypes;
-		GeneList neurgroups;
+		GeneVector neurgroups;
 
 		struct Cache
 		{
+			int physicalCount;
 			int groupCount[__NGT_COUNT];
 			int groupStart[__NGT_COUNT];
 			int neuronCount[__NGT_COUNT];

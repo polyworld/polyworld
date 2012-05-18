@@ -122,22 +122,19 @@ colnames = ['T', 'AllEats', 'IgnoreFirstEat', 'IgnoreFirstEat_UniqueFood', 'Seco
 coltypes = ['int', 'float', 'float', 'float', 'float', 'float', 'float']
 table_fractionGood = datalib.Table( 'FractionGood', colnames, coltypes )
 
+def __div( a, b, zerodivval = 0.0 ):
+	return float(a) / b if b != 0.0 else zerodivval
+
 for tepoch in tepochs:
 	epoch = epochs[tepoch]
 	row = table_fractionGood.createRow()
 	row['T'] = epoch.timestep
-	row['AllEats'] = float(epoch.goodAllCount) / (epoch.goodAllCount + epoch.badAllCount)
-	row['IgnoreFirstEat'] = float(epoch.goodIgnoreFirstCount) / (epoch.goodIgnoreFirstCount + epoch.badIgnoreFirstCount)
-	row['IgnoreFirstEat_UniqueFood'] = float(epoch.goodUniqueCount) / (epoch.goodUniqueCount + epoch.badUniqueCount)
-	if (epoch.goodSecondPieceCount + epoch.badSecondPieceCount) > 0:
-		row['SecondPiece'] = float(epoch.goodSecondPieceCount) / (epoch.goodSecondPieceCount + epoch.badSecondPieceCount)
-	else:
-		row['SecondPiece'] = 0.0
-	if epoch.afterBadCount > 0:
-		row['GoodAfterBad'] = float(epoch.goodAfterBad) / epoch.afterBadCount
-	else:
-		row['GoodAfterBad'] = 0.0
-	row['GoodAfterGood'] = float(epoch.goodAfterGood) / epoch.afterGoodCount
+	row['AllEats'] = __div( epoch.goodAllCount, epoch.goodAllCount + epoch.badAllCount )
+	row['IgnoreFirstEat'] = __div(epoch.goodIgnoreFirstCount, epoch.goodIgnoreFirstCount + epoch.badIgnoreFirstCount )
+	row['IgnoreFirstEat_UniqueFood'] = __div( epoch.goodUniqueCount, epoch.goodUniqueCount + epoch.badUniqueCount )
+	row['SecondPiece'] = __div( epoch.goodSecondPieceCount, epoch.goodSecondPieceCount + epoch.badSecondPieceCount )
+	row['GoodAfterBad'] = __div( epoch.goodAfterBad, epoch.afterBadCount )
+	row['GoodAfterGood'] = __div( epoch.goodAfterGood, epoch.afterGoodCount )
 
 
 colnames = ['T', 'All', 'Good', 'Bad']
@@ -160,9 +157,6 @@ for tepoch in tepochs:
 	epoch = epochs[tepoch]
 	row = table_energy.createRow()
 	row['T'] = epoch.timestep
-	if epoch.badAllEnergy != 0:
-		row['GoodOverBad'] = epoch.goodAllEnergy / epoch.badAllEnergy * -1
-	else:
-		row['GoodOverBad'] = epoch.goodAllEnergy
+	row['GoodOverBad'] = __div( epoch.goodAllEnergy, epoch.badAllEnergy * -1, epoch.goodAllEnergy )
 
 datalib.write( run + '/events/eatlearn.txt', [table_fractionGood, table_counts, table_energy] )

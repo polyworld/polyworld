@@ -16,8 +16,8 @@ class GroupsNeuralNetRenderer : public NeuralNetRenderer
 	void getSize( short patchWidth, short patchHeight,
 				  short *ret_width, short *ret_height )
 	{
-		*ret_width = _neuronModel->dims->numneurons * patchWidth + 2 * patchWidth;						  
-		*ret_height = _neuronModel->dims->numNonInputNeurons * patchHeight + 2 * patchHeight;
+		*ret_width = _neuronModel->dims->numNeurons * patchWidth + 2 * patchWidth;						  
+		*ret_height = _neuronModel->dims->getNumNonInputNeurons() * patchHeight + 2 * patchHeight;
 	}
 
 	void render( short patchwidth, short patchheight )
@@ -40,7 +40,7 @@ class GroupsNeuralNetRenderer : public NeuralNetRenderer
 		// at the previous time step used to calculate the new values
 		short y1 = patchheight;
 		short y2 = y1 + patchheight;
-		for (i = 0, x1 = 2 * patchwidth; i < short(_neuronModel->dims->numneurons); i++, x1+=patchwidth)
+		for (i = 0, x1 = 2 * patchwidth; i < short(_neuronModel->dims->numNeurons); i++, x1+=patchwidth)
 		{
 			// the following reference to "newneuron" really gets the old
 			// values, except for the clamped input neuron values (which are new)
@@ -54,7 +54,7 @@ class GroupsNeuralNetRenderer : public NeuralNetRenderer
 		// neuronal states which are adjacent) in all non-input neurons
 		x1 = 0;
 		x2 = patchwidth;
-		for (i = _neuronModel->dims->firstNonInputNeuron, y1 = 2*patchheight; i < _neuronModel->dims->numneurons; i++, y1 += patchheight)
+		for (i = _neuronModel->dims->getFirstOutputNeuron(), y1 = 2*patchheight; i < _neuronModel->dims->numNeurons; i++, y1 += patchheight)
 		{
 			const unsigned char mag = (unsigned char)((Brain::config.maxWeight + _neuronModel->neuron[i].bias) * 127.5 / Brain::config.maxWeight);
 			glColor3ub(mag, mag, mag);
@@ -65,7 +65,7 @@ class GroupsNeuralNetRenderer : public NeuralNetRenderer
 		// unclamped neurons, including the output neurons
 		x1 = x2;
 		x2 = x1 + patchwidth;
-		for (i = _neuronModel->dims->firstNonInputNeuron, y1 = 2*patchheight; i < _neuronModel->dims->numneurons;
+		for (i = _neuronModel->dims->getFirstOutputNeuron(), y1 = 2*patchheight; i < _neuronModel->dims->numNeurons;
 			 i++, y1 += patchheight)
 		{
 			const unsigned char mag = (unsigned char)(_neuronModel->neuronactivation[i] * 255.);
@@ -83,21 +83,21 @@ class GroupsNeuralNetRenderer : public NeuralNetRenderer
 		glColor3ub(127, 127, 127);
 		glRecti(xoff,
 				yoff,
-				xoff + short(_neuronModel->dims->numneurons) * patchwidth,
-				yoff + short(_neuronModel->dims->numNonInputNeurons) * patchheight);
+				xoff + short(_neuronModel->dims->numNeurons) * patchwidth,
+				yoff + short(_neuronModel->dims->getNumNonInputNeurons()) * patchheight);
 	
 		glLineWidth( 1.0 );	
 		rPrint( "**************************************************************\n");
-		for (k = 0; k < _neuronModel->dims->numsynapses; k++)
+		for (k = 0; k < _neuronModel->dims->numSynapses; k++)
 		{
 			const unsigned char mag = (unsigned char)((Brain::config.maxWeight + _neuronModel->synapse[k].efficacy) * 127.5 / Brain::config.maxWeight);
 
 			// Fill the rect
 			glColor3ub(mag, mag, mag);
 			x1 = xoff  +   abs(_neuronModel->synapse[k].fromneuron) * patchwidth;
-			y1 = yoff  +  (abs(_neuronModel->synapse[k].toneuron)-_neuronModel->dims->firstNonInputNeuron) * patchheight;   
+			y1 = yoff  +  (abs(_neuronModel->synapse[k].toneuron)-_neuronModel->dims->getFirstOutputNeuron()) * patchheight;   
 
-			if( abs( _neuronModel->synapse[k].fromneuron ) < _neuronModel->dims->firstInternalNeuron )	// input or output neuron, so it can be both excitatory and inhibitory
+			if( abs( _neuronModel->synapse[k].fromneuron ) < _neuronModel->dims->getFirstInternalNeuron() )	// input or output neuron, so it can be both excitatory and inhibitory
 			{
 				if( _neuronModel->synapse[k].efficacy >= 0.0 )	// excitatory
 				{
@@ -151,7 +151,7 @@ class GroupsNeuralNetRenderer : public NeuralNetRenderer
 				glEnd();       
 			}
 			rPrint( "k = %ld, eff = %5.2f, mag = %d, x1 = %d, y1 = %d, abs(from) = %d, abs(to) = %d, firstOutputNeuron = %d, firstInternalNeuron = %d\n",
-					k, _neuronModel->synapse[k].efficacy, mag, x1, y1, abs(_neuronModel->synapse[k].fromneuron), abs(_neuronModel->synapse[k].toneuron), _neuronModel->dims->firstOutputNeuron, _neuronModel->dims->firstInternalNeuron );
+					k, _neuronModel->synapse[k].efficacy, mag, x1, y1, abs(_neuronModel->synapse[k].fromneuron), abs(_neuronModel->synapse[k].toneuron), _neuronModel->dims->getFirstOutputNeuron(), _neuronModel->dims->getFirstInternalNeuron() );
 		}
 
 		//
@@ -160,7 +160,7 @@ class GroupsNeuralNetRenderer : public NeuralNetRenderer
 		Nerve *nerve;
 
 		// Red
-		nerve = _neuronModel->cns->get("red");
+		nerve = _neuronModel->cns->getNerve( "Red" );
 		if( nerve )
 		{
 			y1 = patchheight;
@@ -180,7 +180,7 @@ class GroupsNeuralNetRenderer : public NeuralNetRenderer
 		}
 
 		// Green
-		nerve = _neuronModel->cns->get("green");
+		nerve = _neuronModel->cns->getNerve( "Green" );
 		if( nerve )
 		{
 			x1 = x2;
@@ -196,7 +196,7 @@ class GroupsNeuralNetRenderer : public NeuralNetRenderer
 		}
 
 		// Blue
-		nerve = _neuronModel->cns->get("blue");
+		nerve = _neuronModel->cns->getNerve( "Blue" );
 		if( nerve )
 		{
 			x1 = x2;

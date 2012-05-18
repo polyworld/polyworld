@@ -28,6 +28,7 @@
 
 // System
 #include <fstream>
+#include <functional>
 #include <iostream>
 #include <omp.h>
 #include <sstream>
@@ -57,6 +58,7 @@
 #include "RandomNumberGenerator.h"
 #include "Resources.h"
 #include "SceneRenderer.h"
+#include "SheetsBrain.h"
 #include "PwMovieUtils.h"
 #include "complexity.h"
 
@@ -74,7 +76,16 @@ using namespace std;
 // Define directory mode mask the same, except you need execute privileges to use as a directory (go fig)
 #define	PwDirMode ( S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH )
 
-
+struct SheetSynapseType { sheets::Sheet::Type from, to; };
+static vector<SheetSynapseType> SheetSynapseTypes = 
+	{
+		{ sheets::Sheet::Input, sheets::Sheet::Internal },
+		{ sheets::Sheet::Input, sheets::Sheet::Output },
+		{ sheets::Sheet::Internal, sheets::Sheet::Internal },
+		{ sheets::Sheet::Internal, sheets::Sheet::Output },
+		{ sheets::Sheet::Output, sheets::Sheet::Internal },
+		{ sheets::Sheet::Output, sheets::Sheet::Output },
+	};
 //===========================================================================
 // TSimulation
 //===========================================================================
@@ -227,6 +238,10 @@ TSimulation::TSimulation( string worldfilePath, string monitorPath )
 {
 	fStep = 0;
 	memset( fNumberAliveWithMetabolism, 0, sizeof(fNumberAliveWithMetabolism) );
+
+	fCurrentBrainStats.sheets.synapseCount = new Stat *[ sheets::Sheet::__NTYPES ];
+	for( int i = 0; i < sheets::Sheet::__NTYPES; i++ )
+		fCurrentBrainStats.sheets.synapseCount[i] = new Stat[ sheets::Sheet::__NTYPES ];
 
     srand(1);
 
@@ -484,6 +499,10 @@ TSimulation::TSimulation( string worldfilePath, string monitorPath )
 //---------------------------------------------------------------------------
 TSimulation::~TSimulation()
 {
+	for( int i = 0; i < sheets::Sheet::__NTYPES; i++ )
+		delete [] fCurrentBrainStats.sheets.synapseCount[i];
+	delete [] fCurrentBrainStats.sheets.synapseCount;
+
 	agent *a;
 
 	objectxsortedlist::gXSortedObjects.reset();
@@ -1834,15 +1853,47 @@ void TSimulation::DeathAndStats( void )
 		}	// end of if( fLockstepTimestep == fStep )
 	}
 
-	fCurrentNeuronGroupCountStats.reset();
-	fCurrentNeuronCountStats.reset();
-	fCurrentSynapseCountStats.reset();
+	switch( Brain::config.architecture )
+	{
+	case Brain::Configuration::Groups:
+		fCurrentBrainStats.groups.groupCount.reset();
+		break;
+	case Brain::Configuration::Sheets:
+		fCurrentBrainStats.sheets.internalSheetCount.reset();
+		fCurrentBrainStats.sheets.internalNeuronCount.reset();
+		for( SheetSynapseType &type : SheetSynapseTypes )
+			fCurrentBrainStats.sheets.synapseCount[ type.from ][ type.to ].reset();
+		break;
+	default:
+		assert( false );
+	}
+	fCurrentBrainStats.neuronCount.reset();
+	fCurrentBrainStats.synapseCount.reset();
 	objectxsortedlist::gXSortedObjects.reset();
     while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**) &c ) )
     {
-		fCurrentNeuronGroupCountStats.add( dynamic_cast<GroupsBrain *>(c->GetBrain())->NumNeuronGroups() );
-		fCurrentNeuronCountStats.add( c->GetBrain()->GetNumNeurons() );
-		fCurrentSynapseCountStats.add( c->GetBrain()->GetNumSynapses() );
+		switch( Brain::config.architecture )
+		{
+		case Brain::Configuration::Groups:
+			{
+				GroupsBrain *brain = dynamic_cast<GroupsBrain *>( c->GetBrain() );
+				fCurrentBrainStats.groups.groupCount.add( brain->NumNeuronGroups() );
+			}
+			break;
+		case Brain::Configuration::Sheets:
+			{
+				SheetsBrain *brain = dynamic_cast<SheetsBrain *>( c->GetBrain() );
+				fCurrentBrainStats.sheets.internalSheetCount.add( brain->getNumInternalSheets() );
+				fCurrentBrainStats.sheets.internalNeuronCount.add( brain->getNumInternalNeurons() );
+				for( SheetSynapseType &type : SheetSynapseTypes )
+					fCurrentBrainStats.sheets.synapseCount[type.from][type.to].add( brain->getNumSynapses(type.from, type.to) );
+			}
+			break;
+		default:
+			assert( false );
+		}
+		fCurrentBrainStats.neuronCount.add( c->GetBrain()->getNumNeurons() );
+		fCurrentBrainStats.synapseCount.add( c->GetBrain()->getNumSynapses() );
 
         id = c->Domain();						// Determine the domain in which the agent currently is located
 	
@@ -5191,14 +5242,40 @@ void TSimulation::getStatusText( StatusText& statusText,
 	sprintf( t, "RecLifeSpan = %lu ± %lu [%lu, %lu]", nint( fLifeSpanRecentStats.mean() ), nint( fLifeSpanRecentStats.stddev() ), (ulong) fLifeSpanRecentStats.min(), (ulong) fLifeSpanRecentStats.max() );
 	statusText.push_back( strdup( t ) );
 
-	sprintf( t, "CurNeurons = %.1f ± %.1f [%lu, %lu]", fCurrentNeuronCountStats.mean(), fCurrentNeuronCountStats.stddev(), (ulong) fCurrentNeuronCountStats.min(), (ulong) fCurrentNeuronCountStats.max() );
-	statusText.push_back( strdup( t ) );
+	// ---
+	// --- addStat()
+	// ---
+	function<void (const char *, Stat &)> addStat =
+		[&t, &statusText] ( const char *name, Stat &stat )
+		{
+			sprintf( t, "%s = %.1f ± %.1f [%lu, %lu]",
+					 name, stat.mean(), stat.stddev(), (ulong) stat.min(), (ulong) stat.max() );
+			statusText.push_back( strdup( t ) );
+		};
 
-	sprintf( t, "CurNeurGroups = %.1f ± %.1f [%lu, %lu]", fCurrentNeuronGroupCountStats.mean(), fCurrentNeuronGroupCountStats.stddev(), (ulong) fCurrentNeuronGroupCountStats.min(), (ulong) fCurrentNeuronGroupCountStats.max() );
-	statusText.push_back( strdup( t ) );
+	addStat( "CurNeurons", fCurrentBrainStats.neuronCount );
 
-	sprintf( t, "CurSynapses = %.1f ± %.1f [%lu, %lu]", fCurrentSynapseCountStats.mean(), fCurrentSynapseCountStats.stddev(), (ulong) fCurrentSynapseCountStats.min(), (ulong) fCurrentSynapseCountStats.max() );
-	statusText.push_back( strdup( t ) );
+	switch( Brain::config.architecture )
+	{
+	case Brain::Configuration::Groups:
+		addStat( "CurNeurGroups", fCurrentBrainStats.groups.groupCount );
+		break;
+	case Brain::Configuration::Sheets:
+		addStat( "CurInternalSheets", fCurrentBrainStats.sheets.internalSheetCount );
+		addStat( "CurInternalNeurons", fCurrentBrainStats.sheets.internalNeuronCount );
+		for( SheetSynapseType &type : SheetSynapseTypes )
+		{
+			char name[ 64 ];
+			sprintf( name, "CurSynapse%sTo%s", sheets::Sheet::getName(type.from), sheets::Sheet::getName(type.to) );
+
+			addStat( name, fCurrentBrainStats.sheets.synapseCount[type.from][type.to] );
+		}
+		break;
+	default:
+		assert( false );
+	}
+
+	addStat( "CurSynapses", fCurrentBrainStats.synapseCount );
 
 	sprintf( t, "Rate %2.1f (%2.1f) %2.1f (%2.1f) %2.1f (%2.1f)",
 			 fFramesPerSecondInstantaneous, fSecondsPerFrameInstantaneous,

@@ -5,6 +5,8 @@
 
 #include "AbstractFile.h"
 #include "Brain.h"
+#include "Genome.h"
+#include "misc.h"
 #include "Nerve.h"
 #include "RandomNumberGenerator.h"
 
@@ -18,16 +20,26 @@ NervousSystem::NervousSystem()
 
 NervousSystem::~NervousSystem()
 {
-	for( nerve_iterator
-			 it = begin_nerve(),
-			 end = this->end_nerve();
+	itfor( NerveList, all, it )
+		delete *it;
+
+	RandomNumberGenerator::dispose( rng );
+
+	delete b;
+}
+
+void NervousSystem::grow( Genome *g )
+{
+	b = g->createBrain( this );
+
+	for( SensorList::iterator
+			 it = sensors.begin(),
+			 end = sensors.end();
 		 it != end;
 		 it++ )
 	{
-		delete *it;
+		(*it)->sensor_grow( this );
 	}
-
-	RandomNumberGenerator::dispose( rng );
 }
 
 void NervousSystem::update( bool bprint )
@@ -41,12 +53,12 @@ void NervousSystem::update( bool bprint )
 		(*it)->sensor_update( bprint );
 	}	
 
-	b->Update( bprint );
+	b->update( bprint );
 }
 
-void NervousSystem::setBrain( Brain *b )
+float NervousSystem::getEnergyUse()
 {
-	this->b = b;
+	return b->getEnergyUse();
 }
 
 Brain *NervousSystem::getBrain()
@@ -59,8 +71,7 @@ RandomNumberGenerator *NervousSystem::getRNG()
 	return rng;
 }
 
-Nerve *NervousSystem::add( Nerve::Type type,
-						   const std::string &name )
+Nerve *NervousSystem::createNerve( Nerve::Type type, const std::string &name )
 {
 	Nerve *nerve = new Nerve( type,
 							  name,
@@ -72,29 +83,12 @@ Nerve *NervousSystem::add( Nerve::Type type,
 	return nerve;
 }
 
-Nerve *NervousSystem::get( const std::string &name )
+Nerve *NervousSystem::getNerve( const std::string &name )
 {
 	return map[name];
 }
 
-Nerve *NervousSystem::get( int igroup )
-{
-	return all[igroup];
-}
-
-Nerve *NervousSystem::get( Nerve::Type type,
-						   int i )
-{
-	NerveList &list = lists[type];
-	if( i < 0 )
-	{
-		i = list.size() - i;
-	}
-
-	return list[i];
-}
-
-void NervousSystem::add( Sensor *sensor )
+void NervousSystem::addSensor( Sensor *sensor )
 {
 	sensors.push_back( sensor );
 }
@@ -113,11 +107,7 @@ int NervousSystem::getNeuronCount( Nerve::Type type )
 {
 	int count = 0;
 
-	for( nerve_iterator
-			 it = begin_nerve( type ),
-			 end = this->end_nerve( type );
-		 it != end;
-		 it++ )
+	citfor( NerveList, getNerves(type), it )
 	{
 		Nerve *nerve = *it;
 
@@ -127,43 +117,19 @@ int NervousSystem::getNeuronCount( Nerve::Type type )
 	return count;
 }
 
-NervousSystem::nerve_iterator NervousSystem::begin_nerve()
+const NervousSystem::NerveList &NervousSystem::getNerves()
 {
-	return all.begin();
+	return all;
 }
 
-NervousSystem::nerve_iterator NervousSystem::end_nerve()
+const NervousSystem::NerveList &NervousSystem::getNerves( Nerve::Type type )
 {
-	return all.end();
-}
-
-NervousSystem::nerve_iterator NervousSystem::begin_nerve( Nerve::Type type )
-{
-	return lists[type].begin();
-}
-
-NervousSystem::nerve_iterator NervousSystem::end_nerve( Nerve::Type type )
-{
-	return lists[type].end();
-}
-
-void NervousSystem::grow( Genome *g )
-{
-	b->grow( g );
-
-	for( SensorList::iterator
-			 it = sensors.begin(),
-			 end = sensors.end();
-		 it != end;
-		 it++ )
-	{
-		(*it)->sensor_grow( this );
-	}
+	return lists[type];
 }
 
 void NervousSystem::prebirth()
 {
-	b->Prebirth();
+	b->prebirth();
 }
 
 void NervousSystem::prebirthSignal()
@@ -200,14 +166,4 @@ void NervousSystem::dumpAnatomical( AbstractFile *f )
 	{
 		(*it)->sensor_dump_anatomical( f );
 	}	
-}
-
-void NervousSystem::__test()
-{
-	NervousSystem ifs;
-
-	ifs.add( Nerve::INPUT,
-			 "red" );
-
-	ifs.get( "red" );
 }

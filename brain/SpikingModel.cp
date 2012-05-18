@@ -38,20 +38,14 @@ void SpikingModel::init_derived( float initial_activation )
 #undef ALLOC
 
 	// TODO: initial_activation is currently ignored for backwards-compatibility
-	for( int i = 0; i < dims->numneurons; i++ )
+	for( int i = 0; i < dims->numNeurons; i++ )
 	{		
 		neuronactivation[i] = SpikingActivation; 
 	}		
 	
 	for( int i = 0; i < dims->numOutputNeurons; i++ )
 	{
-		outputActivation[i]= 0.0;	// fmax((double)neuron[acc+dims->firstOutputNeuron].bias / brain::Brain::config.maxbias, 0.0);
-	}
-
-	Nerve *nerve = cns->get( "yaw" );
-	if( nerve )
-	{
-		outputActivation[nerve->getIndex()-dims->firstOutputNeuron] = 0.5;	// equivalent to 0.0 for the yaw/turn neuron
+		outputActivation[i]= 0.0;	// fmax((double)neuron[acc+dims->getFirstOutputNeuron()].bias / brain::Brain::config.maxbias, 0.0);
 	}
 }
 
@@ -80,8 +74,8 @@ void SpikingModel::update( bool bprint )
 {
 	FILE *fHandle = NULL;
 
-	unsigned char spikeMatrix[dims->numneurons][BrainStepsPerWorldStep];  //assuming BrainStepsPerWorldStep = 100
-	for (int j=0; j <  dims->numneurons; j++)
+	unsigned char spikeMatrix[dims->numNeurons][BrainStepsPerWorldStep];  //assuming BrainStepsPerWorldStep = 100
+	for (int j=0; j <  dims->numNeurons; j++)
 		for (int i = 0; i< BrainStepsPerWorldStep; i++)
 			spikeMatrix[j][i] = '0';
 	
@@ -96,7 +90,7 @@ void SpikingModel::update( bool bprint )
         return;
 	int outputNeuronFiringCounter[dims->numOutputNeurons];
 	loop_counter++;
-	short NeuronFiringCounter[dims->numneurons];
+	short NeuronFiringCounter[dims->numNeurons];
 	
 #if IraDebug	
 	//???????????????????????????????????????????????????????????????????????????????
@@ -106,7 +100,7 @@ void SpikingModel::update( bool bprint )
 	else
 	{
 		for (i = 0; i < dims->numOutputNeurons; i++)
-			neuronactivation[i+dims->firstOutputNeuron]=0;
+			neuronactivation[i+dims->getFirstOutputNeuron()]=0;
 		neuronactivation[yawneuron]=.5;	
 		return;
 	}	
@@ -114,7 +108,7 @@ void SpikingModel::update( bool bprint )
 #endif
 	
 
-	for (i = 0; i < dims->numneurons; i++)
+	for (i = 0; i < dims->numNeurons; i++)
 		NeuronFiringCounter[i]=0;						//since we start a new brain step reset firing counter
 		
 	//Further down in the code I turn output neuron activation into firing rates.  This has to be done because
@@ -125,10 +119,10 @@ void SpikingModel::update( bool bprint )
 	for (i = 0; i < dims->numOutputNeurons; i++)
 	{
 		outputNeuronFiringCounter[i]=0;
-		if(neuron[i+dims->firstOutputNeuron].v>=30)	
-			neuronactivation[i+dims->firstOutputNeuron]=SpikingActivation;//previously had this as one....eeek!
+		if(neuron[i+dims->getFirstOutputNeuron()].v>=30)	
+			neuronactivation[i+dims->getFirstOutputNeuron()]=SpikingActivation;//previously had this as one....eeek!
 		else
-			neuronactivation[i+dims->firstOutputNeuron]=0;
+			neuronactivation[i+dims->getFirstOutputNeuron()]=0;
 	}
 
 	for( i = 0; i < dims->numInputNeurons; i++ )
@@ -147,7 +141,7 @@ void SpikingModel::update( bool bprint )
     float* saveneuronactivation = neuronactivation;
 	
 	//calculate activity in each neuron i then learn for each synapse in i
-	long synapsesToDepress[dims->numsynapses];
+	long synapsesToDepress[dims->numSynapses];
 	int numSynapsesToDepress = 0, startSynapsesToDepress = 0;
 	short fromNeuron = 0;
 	for (n_steps = 0; n_steps < BrainStepsPerWorldStep; n_steps++)
@@ -159,7 +153,7 @@ void SpikingModel::update( bool bprint )
 		//now here I scan though the list of input neurons.  They should have a firing probability,  see inputFiringProbability above,
 		//that we can generate a random number, check against that random number to see if the inputFiringProbability is less than the 
 		//number, if so we have exeded the probability theshold and can force the neuron to fire.  Otherwise force the activation to zero.
-		for (i = 0; i < dims->firstNonInputNeuron; i++)
+		for (i = 0; i < dims->getFirstOutputNeuron(); i++)
 		{
 //			printf("input firing prob = %f\n", inputFiringProbability[i]);
 			if( rng->drand() < inputFiringProbability[i])
@@ -179,7 +173,7 @@ void SpikingModel::update( bool bprint )
 		}
 
 		//here we itterate though the non-input neurons
-		for (i = dims->firstNonInputNeuron; i < dims->numneurons; i++)
+		for (i = dims->getFirstOutputNeuron(); i < dims->numNeurons; i++)
 		{
 			//The bias seemed to be negatively affecting timing in out learning rule which corelates timing with 
 			//how stronly you learned.  Forcing the neuron to spike based on bias could cause associations that have 
@@ -243,8 +237,8 @@ void SpikingModel::update( bool bprint )
 				numSynapsesToDepress = startSynapsesToDepress;			//since we fired there is no need to depress
 				spikeMatrix[i][n_steps] = '1';							//printout matrix gets a one for a spike
 				NeuronFiringCounter[i]++;								//we fired thus we increment
-				if(i < dims->firstInternalNeuron && i >= dims->firstOutputNeuron)	//see if it's an output neuron
-					outputNeuronFiringCounter[i - dims->firstOutputNeuron]++; //keep track of the total number of spike for output firing rate
+				if(i < dims->getFirstInternalNeuron() && i >= dims->getFirstOutputNeuron())	//see if it's an output neuron
+					outputNeuronFiringCounter[i - dims->getFirstOutputNeuron()]++; //keep track of the total number of spike for output firing rate
 				newneuronactivation[i]=SpikingActivation;               //v>30 means a firing!
 				
 
@@ -332,7 +326,7 @@ void SpikingModel::update( bool bprint )
 		newneuronactivation = saveneuronactivation;
 		//I feel this must be done here sorry no other exp  
 		//I did have it outside the brainsteps........how stupid!
-		for (i = 0; i < dims->numneurons; i++)	
+		for (i = 0; i < dims->numNeurons; i++)	
 		{
 			if(neuron[i].v>30)
 				neuron[i].STDP = STDP_RESET;
@@ -350,7 +344,7 @@ void SpikingModel::update( bool bprint )
 	float learningrate;
 	// float half_max_weight = .5f * Brain::config.maxWeight, one_minus_decay = 1. - Brain::config.decayRate;
 				
-    for (k = 0; k < dims->numsynapses; k++)
+    for (k = 0; k < dims->numSynapses; k++)
     {
 		learningrate = synapse[k].lrate;
 		synapse[k].delta *= .9; //cheating a little
@@ -416,16 +410,16 @@ void SpikingModel::update( bool bprint )
 	float currentActivationLevel[dims->numOutputNeurons], scale_total_spikes = 1.0-scale_latest_spikes;
 	for (i = 0; i < dims->numOutputNeurons; i++)
 	{
-		neuron[i+dims->firstOutputNeuron].maxfiringcount = max(outputNeuronFiringCounter[i], (int) neuron[i+dims->firstOutputNeuron].maxfiringcount);
+		neuron[i+dims->getFirstOutputNeuron()].maxfiringcount = max(outputNeuronFiringCounter[i], (int) neuron[i+dims->getFirstOutputNeuron()].maxfiringcount);
 
 #if USE_BIAS		
 		currentActivationLevel[i]=fmin(1.0, (double)outputNeuronFiringCounter[i] / (double)BrainStepsPerWorldStep);
 #else
-		currentActivationLevel[i]=fmin(1.0, (double)outputNeuronFiringCounter[i] / (double)neuron[i+dims->firstOutputNeuron].maxfiringcount);
+		currentActivationLevel[i]=fmin(1.0, (double)outputNeuronFiringCounter[i] / (double)neuron[i+dims->getFirstOutputNeuron()].maxfiringcount);
 #endif
 		outputActivation[i] = scale_total_spikes * outputActivation[i]  +  scale_latest_spikes * currentActivationLevel[i];
 
-		neuronactivation[i+dims->firstOutputNeuron] = outputActivation[i];
+		neuronactivation[i+dims->getFirstOutputNeuron()] = outputActivation[i];
 
 	}
 
@@ -438,14 +432,14 @@ void SpikingModel::update( bool bprint )
 #if 1
 	if(fHandle)
 	{
-		for(int i = 0; i < dims->firstOutputNeuron; i++ )
+		for(int i = 0; i < dims->getFirstOutputNeuron(); i++ )
 		{
 			fprintf( fHandle, "%d %1.4f\t", i, (float)NeuronFiringCounter[i]/BrainStepsPerWorldStep);
 			for(int j=0; j<BrainStepsPerWorldStep; j++)
 				fprintf( fHandle, "%c", spikeMatrix[i][j] );
 			fprintf( fHandle, "\n");
 		}
-		for (int i = dims->firstOutputNeuron; i < dims->numneurons; i++)
+		for (int i = dims->getFirstOutputNeuron(); i < dims->numNeurons; i++)
 		{
 			fprintf( fHandle, "%d %1.4f\t", i, neuronactivation[i]);
 			for(int j=0; j<BrainStepsPerWorldStep; j++)

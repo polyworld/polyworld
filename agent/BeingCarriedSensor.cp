@@ -19,7 +19,7 @@ BeingCarriedSensor::~BeingCarriedSensor()
 
 void BeingCarriedSensor::sensor_grow( NervousSystem *cns )
 {
-	nerve = cns->get( "beingCarried" );
+	nerve = cns->getNerve( "BeingCarried" );
 }
 
 void BeingCarriedSensor::sensor_prebirth_signal( RandomNumberGenerator *rng )

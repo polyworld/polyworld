@@ -11,6 +11,7 @@
 #include "GroupsGenomeSchema.h"
 #include "Metabolism.h"
 #include "misc.h"
+#include "SheetsGenomeSchema.h"
 
 using namespace std;
 using namespace genome;
@@ -26,9 +27,19 @@ GenomeSchema *GenomeUtil::createSchema()
 	// ---
 	// --- Schema
 	// ---
-	schema = new GroupsGenomeSchema();
-	schema->defineImmutable();
-	schema->defineMutable();
+	switch( Brain::config.architecture )
+	{
+	case Brain::Configuration::Groups:
+		schema = new GroupsGenomeSchema();
+		break;
+	case Brain::Configuration::Sheets:
+		schema = new SheetsGenomeSchema();
+		break;
+	default:
+		assert( false );
+	}
+
+	schema->define();
 	schema->complete();	
 
 	// ---
@@ -58,6 +69,13 @@ GenomeSchema *GenomeUtil::createSchema()
 	// ---
 	layout = GenomeLayout::create( schema, GenomeSchema::config.layoutType );
 
+	
+#if false
+	//	schema->printIndexes( stdout );
+	Genome *g = schema->createGenome( layout );
+	exit( 0 );
+#endif
+
 	return schema;
 }
 
@@ -66,7 +84,7 @@ Genome *GenomeUtil::createGenome( bool randomized )
 	assert(schema);
 	assert(layout);
 
-	Genome *g = new GroupsGenome( dynamic_cast<GroupsGenomeSchema *>(schema), layout );
+	Genome *g = schema->createGenome( layout );
 
 	if( randomized )
 	{

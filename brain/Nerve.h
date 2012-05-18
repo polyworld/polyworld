@@ -21,7 +21,6 @@ class Nerve
 
 	const Type type;
 	const std::string name;
-	const int igroup;
 
  private:
 	friend class NervousSystem;

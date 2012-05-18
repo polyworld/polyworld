@@ -1,7 +1,7 @@
 #include "GroupsGenome.h"
 
-#include "Brain.h"
 #include "globals.h"
+#include "GroupsBrain.h"
 #include "GroupsGenomeSchema.h"
 
 using namespace genome;
@@ -51,6 +51,11 @@ GroupsGenome::GroupsGenome( GroupsGenomeSchema *schema,
 
 GroupsGenome::~GroupsGenome()
 {
+}
+
+Brain *GroupsGenome::createBrain( NervousSystem *cns )
+{
+	return new GroupsBrain( cns, this );
 }
 
 GroupsGenomeSchema *GroupsGenome::getSchema()
@@ -239,4 +244,54 @@ void GroupsGenome::seed( Gene *gene,
 												GroupsGeneType::to_NeurGroup(from),
 												GroupsGeneType::to_NeurGroup(to),
 												SEEDVAL(rawval_ratio) );
+}
+
+void GroupsGenome::getCrossoverPoints( long *crossoverPoints, long numCrossPoints )
+{
+	long numphysbytes = _schema->getPhysicalCount();
+
+    // guarantee crossover in "physiology" genes
+    crossoverPoints[0] = long(randpw() * numphysbytes * 8 - 1);
+    crossoverPoints[1] = numphysbytes * 8;
+
+	// Generate & order the crossover points.
+	// Start iteration at [2], as [0], [1] set above
+    long i, j;
+    
+    for (i = 2; i <= numCrossPoints; i++) 
+    {
+        long newCrossPoint = long(randpw() * (nbytes - numphysbytes) * 8 - 1) + crossoverPoints[1];
+        bool equal;
+        do
+        {
+            equal = false;
+            for (j = 1; j < i; j++)
+            {
+                if (newCrossPoint == crossoverPoints[j])
+                    equal = true;
+            }
+            
+            if (equal)
+                newCrossPoint = long(randpw() * (nbytes - numphysbytes) * 8 - 1) + crossoverPoints[1];
+                
+        } while (equal);
+        
+        if (newCrossPoint > crossoverPoints[i-1])
+        {
+            crossoverPoints[i] = newCrossPoint;  // happened to come out ordered
+		}           
+        else
+        {
+            for (j = 2; j < i; j++)
+            {
+                if (newCrossPoint < crossoverPoints[j])
+                {
+                    for (long k = i; k > j; k--)
+                        crossoverPoints[k] = crossoverPoints[k-1];
+                    crossoverPoints[j] = newCrossPoint;
+                    break;
+                }
+            }
+        }
+    }
 }

@@ -20,16 +20,19 @@ class NeuronModel
  public:
 	struct Dimensions
 	{
-		int numneurons;
-		long numsynapses;
-		
+		Dimensions() { numNeurons = numInputNeurons = numOutputNeurons = numSynapses = 0; }
+
+		int numNeurons;
 		int numInputNeurons;
-		int numNonInputNeurons;
 		int numOutputNeurons;
 
-		int firstOutputNeuron;
-		int firstNonInputNeuron;
-		int firstInternalNeuron;
+		long numSynapses;
+
+		inline int getFirstInputNeuron() { return 0; }
+		inline int getFirstOutputNeuron() { return numInputNeurons; }
+		inline int getFirstInternalNeuron() { return numInputNeurons + numOutputNeurons; }
+
+		inline int getNumNonInputNeurons() { return numNeurons - numInputNeurons; }
 	};
 
 	virtual ~NeuronModel() {}

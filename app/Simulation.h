@@ -405,9 +405,21 @@ private:
 	int   fLinearFogEnd;
 
 	Stat fLifeSpanStats;
-	Stat fCurrentNeuronGroupCountStats;
-	Stat fCurrentNeuronCountStats;
-	Stat fCurrentSynapseCountStats;
+	struct CurrentBrainStats
+	{
+		Stat neuronCount;
+		Stat synapseCount;
+		struct Groups
+		{
+			Stat groupCount;
+		} groups;
+		struct Sheets
+		{
+			Stat internalSheetCount;
+			Stat internalNeuronCount;
+			Stat **synapseCount;
+		} sheets;
+	} fCurrentBrainStats;
 	StatRecent fLifeSpanRecentStats;
 	StatRecent fLifeFractionRecentStats;
 	GeneStats fGeneStats;

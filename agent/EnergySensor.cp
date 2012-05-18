@@ -15,7 +15,7 @@ EnergySensor::~EnergySensor()
 
 void EnergySensor::sensor_grow( NervousSystem *cns )
 {
-	nerve = cns->get("energy");
+	nerve = cns->getNerve( "Energy" );
 }
 
 void EnergySensor::sensor_prebirth_signal( RandomNumberGenerator *rng )

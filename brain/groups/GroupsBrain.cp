@@ -32,8 +32,8 @@ static float initminweight = 0.0; // could read this in
 	ALLOC_STACK_BUFFER( ieremainder, float );							\
 	__ALLOC_STACK_BUFFER( neurused,										\
 						  bool,											\
-						  max((int)_genome->get("ExcitatoryNeuronCount_max"), \
-							  (int)_genome->get("InhibitoryNeuronCount_max")) )
+						  max(GroupsBrain::config.maxeneurpergroup,		\
+							  GroupsBrain::config.maxineurpergroup) )
 
 
 GroupsBrain::Configuration GroupsBrain::config;
@@ -115,12 +115,13 @@ void GroupsBrain::init()
 //---------------------------------------------------------------------------
 // GroupsBrain::GroupsBrain
 //---------------------------------------------------------------------------
-GroupsBrain::GroupsBrain( NervousSystem *cns )
+GroupsBrain::GroupsBrain( NervousSystem *cns, GroupsGenome *g )
 : Brain( cns )
-, _genome(NULL)
+, _genome(g)
 , _numgroups(0)
 , _numgroupsWithNeurons(0)
 {
+	grow();
 }
 
 //---------------------------------------------------------------------------
@@ -128,15 +129,6 @@ GroupsBrain::GroupsBrain( NervousSystem *cns )
 //---------------------------------------------------------------------------
 GroupsBrain::~GroupsBrain()
 {
-}
-
-//---------------------------------------------------------------------------
-// GroupsBrain::grow
-//---------------------------------------------------------------------------
-void GroupsBrain::grow( Genome *genome )
-{
-	_genome = dynamic_cast<GroupsGenome *>(genome);
-	grow();
 }
 
 //---------------------------------------------------------------------------
@@ -249,54 +241,36 @@ void GroupsBrain::grow()
 	}
 #endif
 
-	_dims.numInputNeurons = 0;
-	_dims.numNonInputNeurons = 0;
-
 	// ---
-	// --- Configure Input/Output Neurons
+	// --- Configure Input/Output Neurons/Nerves
 	// ---
-	int index = 0;
-	for( NervousSystem::nerve_iterator
-			 it = _cns->begin_nerve(),
-			 end = _cns->end_nerve();
-		 it != end;
-		 it++ )
 	{
-		Nerve *nerve = *it;
+		int neuronIndex = 0;
+		int numInOutGroups = _genome->getSchema()->getMaxGroupCount( NGT_INPUT )
+			+ _genome->getSchema()->getMaxGroupCount( NGT_OUTPUT );
 
-		int numneurons = _genome->getNeuronCount( EXCITATORY, nerve->igroup );
-		nerve->config( numneurons, index );
-
-        firsteneur[nerve->igroup] = index;
-        firstineur[nerve->igroup] = index; // input/output neurons double as e & i
-
-		if( nerve->type == Nerve::INPUT )
+		for( int group = 0; group < numInOutGroups; group++ )
 		{
-			_dims.numInputNeurons += numneurons;
-		}
-		else
-		{
-			_dims.numNonInputNeurons += numneurons;
-		}
+			NeurGroupGene *groupGene = _genome->getSchema()->getGroupGene( group );
+			Nerve *nerve = _cns->getNerve( groupGene->name );
+			int numneurons = _genome->getNeuronCount( EXCITATORY, group );
 
-		index += numneurons;
+			nerve->config( numneurons, neuronIndex );
+			firsteneur[group] = neuronIndex;
+			firstineur[group] = neuronIndex; // input/output neurons double as e & i
 
-#if DebugBrainGrow
-		if( DebugBrainGrowPrint )
-			cout << "group " << nerve->igroup << " (" << nerve->name << ") has " << nerve->getNeuronCount() << " neurons" nlf;
-#endif
+			neuronIndex += numneurons;
+		}
 	}
 
 #if DebugBrainGrow
 	if( DebugBrainGrowPrint )
 		cout << "numinputneurons = " << _dims.numInputNeurons nlf;
 #endif
-    _dims.firstNonInputNeuron = _dims.numInputNeurons;
-
+	_dims.numInputNeurons = _cns->getNeuronCount( Nerve::INPUT );
 	_dims.numOutputNeurons = _cns->getNeuronCount( Nerve::OUTPUT );
 
-	_dims.firstOutputNeuron = _cns->get( Nerve::OUTPUT, 0 )->getIndex();
-	_dims.firstInternalNeuron = _dims.firstOutputNeuron + _dims.numOutputNeurons;
+	int numNonInputNeurons = _dims.numOutputNeurons;
 
 	// ---
 	// --- Configure Internal Groups
@@ -305,10 +279,10 @@ void GroupsBrain::grow()
 		 i < _numgroups;
 		 i++ )
     {
-		firsteneur[i] = _dims.numInputNeurons + _dims.numNonInputNeurons;
-		_dims.numNonInputNeurons += _genome->getNeuronCount(EXCITATORY, i);
-		firstineur[i] = _dims.numInputNeurons + _dims.numNonInputNeurons;
-		_dims.numNonInputNeurons += _genome->getNeuronCount(INHIBITORY, i);
+		firsteneur[i] = _dims.numInputNeurons + numNonInputNeurons;
+		numNonInputNeurons += _genome->getNeuronCount(EXCITATORY, i);
+		firstineur[i] = _dims.numInputNeurons + numNonInputNeurons;
+		numNonInputNeurons += _genome->getNeuronCount(INHIBITORY, i);
 
 #if DebugBrainGrow
 		if( DebugBrainGrowPrint )
@@ -330,8 +304,6 @@ void GroupsBrain::grow()
 	// ---
 	// --- Count Synapses
 	// ---
-    _dims.numsynapses = 0;
-
     for( int i = _cns->getNerveCount( Nerve::INPUT );
 		 i < _numgroups;
 		 i++ )
@@ -345,7 +317,7 @@ void GroupsBrain::grow()
 #endif
         for (int j = 0; j < _numgroups; j++)
         {
-            _dims.numsynapses += _genome->getSynapseCount(j,i);
+            _dims.numSynapses += _genome->getSynapseCount(j,i);
 
 #if DebugBrainGrow
 			if( DebugBrainGrowPrint )
@@ -366,18 +338,18 @@ void GroupsBrain::grow()
         }
     }
     
-    _dims.numneurons = _dims.numNonInputNeurons + _dims.numInputNeurons;
-	if( _dims.numneurons > config.maxneurons )
-		error( 2, "numneurons (", _dims.numneurons, ") > maxneurons (", config.maxneurons, ") in brain::grow" );
+    _dims.numNeurons = numNonInputNeurons + _dims.numInputNeurons;
+	if( _dims.numNeurons > config.maxneurons )
+		error( 2, "numneurons (", _dims.numNeurons, ") > maxneurons (", config.maxneurons, ") in brain::grow" );
         
-	if( _dims.numsynapses > config.maxsynapses )
-		error( 2, "numsynapses (", _dims.numsynapses, ") > maxsynapses (", config.maxsynapses, ") in brain::grow" );
+	if( _dims.numSynapses > config.maxsynapses )
+		error( 2, "numsynapses (", _dims.numSynapses, ") > maxsynapses (", config.maxsynapses, ") in brain::grow" );
 
 #if DebugBrainGrow
 	if( DebugBrainGrowPrint )
 	{
-		cout << "numneurons = " << _dims.numneurons << "  (of " << config.maxneurons pnlf;
-		cout << "numsynapses = " << _dims.numsynapses << "  (of " << config.maxsynapses pnlf;
+		cout << "numneurons = " << _dims.numNeurons << "  (of " << config.maxneurons pnlf;
+		cout << "numsynapses = " << _dims.numSynapses << "  (of " << config.maxsynapses pnlf;
 	}
 #endif
 
@@ -446,19 +418,6 @@ void GroupsBrain::grow()
     {
         for (int j = 0; j < _genome->getNeuronCount(EXCITATORY, i); j++, ineur++)
         {
-			switch( Brain::config.neuronModel )
-			{
-			case Brain::Configuration::SPIKING:
-				neuronAttrs.spiking->group = i;
-					break;
-			case Brain::Configuration::FIRING_RATE:
-			case Brain::Configuration::TAU:
-				neuronAttrs.firingRate->group = i;
-				break;
-			default:
-				assert(false);
-			}
-
 			_neuralnet->set_neuron( ineur, neuronAttrs.opaque );
         }
     }
@@ -476,7 +435,6 @@ void GroupsBrain::grow()
 		switch( Brain::config.neuronModel )
 		{
 		case Brain::Configuration::SPIKING:
-			neuronAttrs.spiking->group = groupIndex_to;
 			neuronAttrs.spiking->bias = _genome->get(_genome->BIAS,groupIndex_to);
 			if(Brain::config.Spiking.enableGenes) {
 				neuronAttrs.spiking->SpikingParameter_a = _genome->get(_genome->SPIKING_A, groupIndex_to);
@@ -494,7 +452,6 @@ void GroupsBrain::grow()
 			neuronAttrs.firingRate->tau = _genome->get(_genome->TAU,groupIndex_to);
 			// fall through
 		case Brain::Configuration::FIRING_RATE:
-			neuronAttrs.firingRate->group = groupIndex_to;
 			neuronAttrs.firingRate->bias = _genome->get(_genome->BIAS,groupIndex_to);
 			break;
 		default:
@@ -614,29 +571,29 @@ void GroupsBrain::grow()
 	// ---
 	// --- Sanity Checks
 	// ---
-	if (numneur != (_dims.numneurons))
-        error(2,"Bad neural architecture, numneur (",numneur,") not equal to numneurons (",_dims.numneurons,")");
+	if (numneur != (_dims.numNeurons))
+        error(2,"Bad neural architecture, numneur (",numneur,") not equal to numneurons (",_dims.numNeurons,")");
 
-    if( numsyn != _dims.numsynapses )
+    if( numsyn != _dims.numSynapses )
 	{
 		if( Brain::config.synapseFromOutputNeurons )
 		{
-			if( (numsyn > _dims.numsynapses)
-				|| (( (_dims.numsynapses - numsyn) / float(_dims.numsynapses) ) > 1.e-3) )
+			if( (numsyn > _dims.numSynapses)
+				|| (( (_dims.numSynapses - numsyn) / float(_dims.numSynapses) ) > 1.e-3) )
 			{
-				error(2,"Bad neural architecture, numsyn (",numsyn,") not equal to numsynapses (",_dims.numsynapses,")");
+				error(2,"Bad neural architecture, numsyn (",numsyn,") not equal to numsynapses (",_dims.numSynapses,")");
 			}
 		}
 
-		_dims.numsynapses = numsyn;
+		_dims.numSynapses = numsyn;
 	}
 	//printf( "numsynapses=%ld\n", numsyn );
 	
 	// ---
 	// --- Calculate Energy Use
 	// ---
-    _energyUse = Brain::config.maxneuron2energy * float(_dims.numneurons) / float(config.maxneurons)
-		+ Brain::config.maxsynapse2energy * float(_dims.numsynapses) / float(config.maxsynapses);
+    _energyUse = Brain::config.maxneuron2energy * float(_dims.numNeurons) / float(config.maxneurons)
+		+ Brain::config.maxsynapse2energy * float(_dims.numSynapses) / float(config.maxsynapses);
 
     debugcheck( "after setting up brain architecture" );
 }

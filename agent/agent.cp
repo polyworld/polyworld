@@ -190,8 +190,7 @@ agent::agent(TSimulation* sim, gstage* stage)
 		fMateWaitSensor(NULL),
 		fSpeedSensor(NULL),
 		fCarryingSensor(NULL),
-		fBeingCarriedSensor(NULL),
-		fBrain(NULL)
+		fBeingCarriedSensor(NULL)
 {
 	Q_CHECK_PTR(sim);
 	Q_CHECK_PTR(stage);
@@ -226,9 +225,6 @@ agent::agent(TSimulation* sim, gstage* stage)
 	fCns = new NervousSystem();
 	Q_CHECK_PTR(fCns);
 	
-	fBrain = new GroupsBrain( fCns );
-	Q_CHECK_PTR(fBrain);
-
 	fMetabolism = NULL;
 	
 	// Set up agent POV	
@@ -245,7 +241,6 @@ agent::~agent()
 //	delete fPolygon;
 	delete fGenome;
 	delete fCns;
-	delete fBrain;
 	delete fRandomSensor;
 	delete fEnergySensor;
 	delete fMateWaitSensor;
@@ -474,69 +469,78 @@ void agent::setGenomeReady()
 //---------------------------------------------------------------------------
 void agent::grow( long mateWait )
 {    
-	Q_CHECK_PTR(fBrain);
 	Q_CHECK_PTR(fGenome);
 	Q_CHECK_PTR(fCns);
 
 	InitGeneCache();
 
-	fCns->setBrain( fBrain );
-
-#define INPUT(NAME) nerves.NAME = fCns->add( Nerve::INPUT, #NAME )
-	INPUT(random);
-	INPUT(energy);
+	// ---
+	// --- Create Input Nerves
+	// ---
+#define INPUT_NERVE( NAME ) fCns->createNerve( Nerve::INPUT, NAME )
+	INPUT_NERVE( "Random" );
+	INPUT_NERVE( "Energy" );
 	if( agent::config.enableMateWaitFeedback )
-		INPUT(mateWaitFeedback);
+		INPUT_NERVE( "MateWaitFeedback" );
 	if( agent::config.enableSpeedFeedback )
-		INPUT(speedFeedback);
+		INPUT_NERVE( "SpeedFeedback" );
 	if( agent::config.enableCarry )
 	{
-		INPUT(carrying);
-		INPUT(beingCarried);
+		INPUT_NERVE( "Carrying" );
+		INPUT_NERVE( "BeingCarried" );
 	}
-	INPUT(red);
-	INPUT(green);
-	INPUT(blue);
-#undef INPUT
+	INPUT_NERVE( "Red" );
+	INPUT_NERVE( "Green" );
+	INPUT_NERVE( "Blue" );
+#undef INPUT_NERVE
 
-#define OUTPUT(FIELD, NAME) nerves.FIELD = fCns->add( Nerve::OUTPUT, #NAME )
-	OUTPUT(eat, Eat);
-	OUTPUT(mate, Mate);
-	OUTPUT(fight, Fight);
-	OUTPUT(speed, Speed);
-	OUTPUT(yaw, Yaw);
+	// ---
+	// --- Create Output Nerves
+	// ---
+#define OUTPUT_NERVE(FIELD, NAME) outputNerves.FIELD = fCns->createNerve( Nerve::OUTPUT, NAME )
+	OUTPUT_NERVE(eat, "Eat");
+	OUTPUT_NERVE(mate, "Mate");
+	OUTPUT_NERVE(fight, "Fight");
+	OUTPUT_NERVE(speed, "Speed");
+	OUTPUT_NERVE(yaw, "Yaw");
 	if( agent::config.yawEncoding == YE_OPPOSE )
-		OUTPUT(yawOppose, YawOppose);
-	OUTPUT(light, Light);
-	OUTPUT(focus, Focus);
+		OUTPUT_NERVE(yawOppose, "YawOppose");
+	OUTPUT_NERVE(light, "Light");
+	OUTPUT_NERVE(focus, "Focus");
 	if( agent::config.enableVisionPitch )
-		OUTPUT(visionPitch, VisionPitch);
+		OUTPUT_NERVE(visionPitch, "VisionPitch");
 	if( agent::config.enableVisionYaw )
-		OUTPUT(visionYaw, VisionYaw);
+		OUTPUT_NERVE(visionYaw, "VisionYaw");
 	if( agent::config.enableGive )
-		OUTPUT(give, Give);
+		OUTPUT_NERVE(give, "Give");
 	if( agent::config.enableCarry )
 	{
-		OUTPUT(pickup, Pickup);
-		OUTPUT(drop, Drop);
+		OUTPUT_NERVE(pickup, "Pickup");
+		OUTPUT_NERVE(drop, "Drop");
 	}
-#undef OUTPUT
+#undef OUTPUT_NERVE
 
-	fCns->add( fRetina = new Retina(Brain::config.retinaWidth) );
-	fCns->add( fEnergySensor = new EnergySensor(this) );
-	fCns->add( fRandomSensor = new RandomSensor(fCns->getRNG()) );
+	// ---
+	// --- Create Sensors
+	// ---
+	fCns->addSensor( fRetina = new Retina(Brain::config.retinaWidth) );
+	fCns->addSensor( fEnergySensor = new EnergySensor(this) );
+	fCns->addSensor( fRandomSensor = new RandomSensor(fCns->getRNG()) );
 	if( agent::config.enableMateWaitFeedback )
-		fCns->add( fMateWaitSensor = new MateWaitSensor(this, mateWait) );
+		fCns->addSensor( fMateWaitSensor = new MateWaitSensor(this, mateWait) );
 	if( agent::config.enableSpeedFeedback )
-		fCns->add( fSpeedSensor = new SpeedSensor(this) );
+		fCns->addSensor( fSpeedSensor = new SpeedSensor(this) );
 	if( agent::config.enableSpeedFeedback )
-		fCns->add( fSpeedSensor = new SpeedSensor(this) );
+		fCns->addSensor( fSpeedSensor = new SpeedSensor(this) );
 	if( agent::config.enableCarry )
 	{
-		fCns->add( fCarryingSensor = new CarryingSensor(this) );
-		fCns->add( fBeingCarriedSensor = new BeingCarriedSensor(this) );
+		fCns->addSensor( fCarryingSensor = new CarryingSensor(this) );
+		fCns->addSensor( fBeingCarriedSensor = new BeingCarriedSensor(this) );
 	}
 
+	// ---
+	// --- Grow Nervous System (Brain)
+	// ---
 	fCns->grow( fGenome );
 	logs->postEvent( BrainGrownEvent(this) );
 
@@ -677,9 +681,9 @@ void agent::eat( food* f,
 	return_lost = 0;
 	return_actuallyEat = 0;
 	
-	if (nerves.eat->get() > eatthreshold)
+	if (outputNerves.eat->get() > eatthreshold)
 	{
-		Energy trytoeat = nerves.eat->get() * eat2consume;
+		Energy trytoeat = outputNerves.eat->get() * eat2consume;
 		trytoeat.constrain( 0, fMaxEnergy - fEnergy );
 		
 		return_actuallyEat =
@@ -928,20 +932,20 @@ void agent::UpdateVision()
     if (agent::config.vision)
     {
 		// create retinal pixmap, based on values of focus & numvisneurons
-        const float fovx = nerves.focus->get() * (agent::config.maxFocus - agent::config.minFocus) + agent::config.minFocus;
+        const float fovx = outputNerves.focus->get() * (agent::config.maxFocus - agent::config.minFocus) + agent::config.minFocus;
         		
 		fFrustum.Set(fPosition[0], fPosition[2], fAngle[0], fovx, agent::config.maxRadius);
 		fCamera.SetAspect(fovx * Brain::config.retinaHeight / (agent::config.agentFOV * Brain::config.retinaWidth));
 
 		if( agent::config.enableVisionPitch )
 		{
-			const float pitch = nerves.visionPitch->get() * (agent::config.maxVisionPitch - agent::config.minVisionPitch) + agent::config.minVisionPitch;
+			const float pitch = outputNerves.visionPitch->get() * (agent::config.maxVisionPitch - agent::config.minVisionPitch) + agent::config.minVisionPitch;
 			fCamera.setpitch( pitch );
 		}
 		
 		if( agent::config.enableVisionYaw )
 		{
-			const float yaw = nerves.visionYaw->get() * (agent::config.maxVisionYaw - agent::config.minVisionYaw) + agent::config.minVisionYaw;
+			const float yaw = outputNerves.visionYaw->get() * (agent::config.maxVisionYaw - agent::config.minVisionYaw) + agent::config.minVisionYaw;
 			fCamera.setyaw( yaw );
 		}
 		
@@ -996,7 +1000,7 @@ float agent::UpdateBody( float moveFitnessParam,
 	#if TestWorld
 		dx = dz = 0.0;
 	#else
-		float dpos = nerves.speed->get() * geneCache.maxSpeed * agent::config.speed2DPosition;
+		float dpos = outputNerves.speed->get() * geneCache.maxSpeed * agent::config.speed2DPosition;
 		if( dpos > agent::config.maxVelocity )
 			dpos = agent::config.maxVelocity;
 		dx = -dpos * sin( yaw() * DEGTORAD );
@@ -1008,16 +1012,16 @@ float agent::UpdateBody( float moveFitnessParam,
 
 #if ! TestWorld
   #if DirectYaw
-	setyaw( nerves.yaw->get() * 360.0 );
+	setyaw( outputNerves.yaw->get() * 360.0 );
   #else
 	float dyaw;
 	switch(agent::config.yawEncoding)
 	{
 	case YE_OPPOSE:
-		dyaw = nerves.yaw->get() - nerves.yawOppose->get();
+		dyaw = outputNerves.yaw->get() - outputNerves.yawOppose->get();
 		break;
 	case YE_SQUASH:
-		dyaw = 2.0 * nerves.yaw->get() - 1.0;
+		dyaw = 2.0 * outputNerves.yaw->get() - 1.0;
 		break;
 	default:
 		assert(false);
@@ -1028,18 +1032,18 @@ float agent::UpdateBody( float moveFitnessParam,
 #endif
 
 	// Whether being carried or not, behaviors cost energy
-    float energyused = nerves.eat->get()   * agent::config.eat2Energy
-                     + nerves.mate->get()  * agent::config.mate2Energy
-                     + nerves.fight->get() * agent::config.fight2Energy
-                     + nerves.speed->get() * fSpeed2Energy
+    float energyused = outputNerves.eat->get()   * agent::config.eat2Energy
+                     + outputNerves.mate->get()  * agent::config.mate2Energy
+                     + outputNerves.fight->get() * agent::config.fight2Energy
+                     + outputNerves.speed->get() * fSpeed2Energy
                      + fabs(dyaw) * fYaw2Energy
-                     + nerves.light->get() * agent::config.light2Energy
-                     + fBrain->BrainEnergy()
+                     + outputNerves.light->get() * agent::config.light2Energy
+                     + fCns->getEnergyUse()
                      + agent::config.fixedEnergyDrain;
 
 	if( agent::config.enableGive )
 	{
-		energyused += nerves.give->get() * agent::config.give2Energy;
+		energyused += outputNerves.give->get() * agent::config.give2Energy;
 	}
 	
 	if( agent::config.enableCarry )
@@ -1073,21 +1077,21 @@ float agent::UpdateBody( float moveFitnessParam,
 
 	if( agent::config.bodyRedChannel == BRC_FIGHT )
 	{
-		SetRed( nerves.fight->get() );	// set red color according to desire to fight
+		SetRed( outputNerves.fight->get() );	// set red color according to desire to fight
 	}
 	else if( agent::config.bodyRedChannel == BRC_GIVE )
 	{
-		SetRed( nerves.give->get() );	// set red color according to desire to give
+		SetRed( outputNerves.give->get() );	// set red color according to desire to give
 	}
 
   	if( agent::config.bodyGreenChannel == BGC_LIGHT )
 	{
-		SetGreen(nerves.light->get());
+		SetGreen(outputNerves.light->get());
 	}
 
 	if( agent::config.bodyBlueChannel == BBC_MATE )
 	{
-		SetBlue( nerves.mate->get() ); 	// set blue color according to desire to mate
+		SetBlue( outputNerves.mate->get() ); 	// set blue color according to desire to mate
 	}
 	else if( agent::config.bodyBlueChannel == BBC_ENERGY )
 	{
@@ -1096,7 +1100,7 @@ float agent::UpdateBody( float moveFitnessParam,
 
 	if( agent::config.noseColor == NC_LIGHT )
 	{
-		fNoseColor[0] = fNoseColor[1] = fNoseColor[2] = nerves.light->get();
+		fNoseColor[0] = fNoseColor[1] = fNoseColor[2] = outputNerves.light->get();
 	}
 
     fAge++;
@@ -1671,18 +1675,14 @@ void agent::print()
         cout << "  genome is not yet defined" nl;
 	}
 	      
-    if (fBrain != NULL)
-    {
-        cout << "  fBrain->brainenergy() = " << fBrain->BrainEnergy() nl;
-        cout << "  fBrain->eat() = " << nerves.eat->get() nl;
-        cout << "  fBrain->mate() = " << nerves.mate->get() nl;
-        cout << "  fBrain->fight() = " << nerves.fight->get() nl;
-        cout << "  fBrain->speed() = " << nerves.speed->get() nl;
-        cout << "  fBrain->yaw() = " << nerves.yaw->get() nl;
-        cout << "  fBrain->light() = " << nerves.light->get() nl;
-    }
-    else
-        cout << "  brain is not yet defined" nl;
+	cout << "  fBrain->brainenergy() = " << fCns->getEnergyUse() nl;
+	cout << "  fBrain->eat() = " << outputNerves.eat->get() nl;
+	cout << "  fBrain->mate() = " << outputNerves.mate->get() nl;
+	cout << "  fBrain->fight() = " << outputNerves.fight->get() nl;
+	cout << "  fBrain->speed() = " << outputNerves.speed->get() nl;
+	cout << "  fBrain->yaw() = " << outputNerves.yaw->get() nl;
+	cout << "  fBrain->light() = " << outputNerves.light->get() nl;
+
     cout.flush();
 }
 
@@ -1695,9 +1695,9 @@ float agent::NormalizedYaw()
 	switch(agent::config.yawEncoding)
 	{
 	case YE_OPPOSE:
-		return clamp( ((nerves.yaw->get() - nerves.yawOppose->get()) * geneCache.maxSpeed) / agent::config.maxmaxspeed, -1.0, 1.0 );
+		return clamp( ((outputNerves.yaw->get() - outputNerves.yawOppose->get()) * geneCache.maxSpeed) / agent::config.maxmaxspeed, -1.0, 1.0 );
 	case YE_SQUASH:
-		return clamp( ((2.0 * nerves.yaw->get() - 1.0) * geneCache.maxSpeed) / agent::config.maxmaxspeed, -1.0, 1.0 );
+		return clamp( ((2.0 * outputNerves.yaw->get() - 1.0) * geneCache.maxSpeed) / agent::config.maxmaxspeed, -1.0, 1.0 );
 	default:
 		assert(false);
 		return 0.0f;
@@ -1709,7 +1709,7 @@ float agent::NormalizedYaw()
 //---------------------------------------------------------------------------
 float agent::FieldOfView()
 {
-	return nerves.focus->get() * (agent::config.maxFocus - agent::config.minFocus) + agent::config.minFocus;
+	return outputNerves.focus->get() * (agent::config.maxFocus - agent::config.minFocus) + agent::config.minFocus;
 }
 
 
