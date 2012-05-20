@@ -656,6 +656,54 @@ def list_intersection(a, b):
 
 ####################################################################################
 ###
+### FUNCTION list_division()
+###
+### returns list of elements of a divided by elements of b
+###
+####################################################################################
+def list_division(a, b):
+	assert(len(a) == len(b))
+	c = []
+	for i in range(len(a)):
+		if b[i] == 0:
+			c.append(0.0)
+		else:
+			c.append(float(a[i])/float(b[i]))
+	return c
+
+####################################################################################
+###
+### FUNCTION list_subtraction()
+###
+### returns list of elements of b subtracted from elements of a
+###
+####################################################################################
+def list_subtraction(a, b):
+	assert(len(a) == len(b))
+	c = []
+	for i in range(len(a)):
+		c.append(a[i]-b[i])
+	return c
+
+####################################################################################
+###
+### FUNCTION list_zscore()
+###
+### returns list of zscores of elements of a relative to elements of b with std dev from c
+###
+####################################################################################
+def list_zscore(a, b, c):
+	assert(len(a) == len(b) == len(c))
+	z = []
+	for i in range(len(a)):
+		if c[i] == 0:
+			z.append(0.0)
+		else:
+			z.append((a[i]-b[i])/float(c[i]))
+	return z
+
+####################################################################################
+###
 ### FUNCTION list_unique()
 ###
 ### returns order-preserving list of unique elements in list a
@@ -663,7 +711,6 @@ def list_intersection(a, b):
 ####################################################################################
 def list_unique(a):
 	b = [] 
-#	[b.append(i) for i in a if not b.count(i)] 
 	[b.append(i) for i in a if i not in b] 
 	return b
 
