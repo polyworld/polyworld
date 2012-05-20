@@ -11,8 +11,10 @@
 #define DebugDomainFoodBands 0
 #define DebugLockStep 0
 
+#include <limits>
+
 #define MinDebugStep 0
-#define MaxDebugStep MAX_INT
+#define MaxDebugStep INT_MAX
 
 #define CurrentWorldfileVersion 55
 
@@ -1786,8 +1788,19 @@ void TSimulation::Interact()
 		Fitness( c );
 
     } // while loop on agents (c)
-
+    
 	fEatStatistics.StepEnd();
+
+// 	if( fFittest->size() > 0 )
+// 	{
+// 		printf( "Step %ld fFittest list...\n", fStep );
+// 		for( int i = 0; i < fFittest->size(); i++ )
+// 		{
+// 			FitStruct* fit = fFittest->get(i);
+// 			printf( "  %d: a=%ld f=%5.2f c=%5.2f\n", i, fit->agentID, fit->fitness, fit->complexity );
+// 			
+// 		}
+// 	}
 }
 
 
@@ -3983,7 +3996,7 @@ void TSimulation::FoodEnergyOut( const Energy &e ) {
 //-------------------------------------------------------------------------------------------
 float TSimulation::AgentFitness( agent* c )
 {
-	//printf( "%s (beginning): %ld %g\n", __func__, c->Number(), c->Complexity() );
+// 	printf( "%s (beginning): %ld %g\n", __func__, c->Number(), c->Complexity() );
 	
 	float fitness = 0.0;
 	
@@ -4020,10 +4033,10 @@ float TSimulation::AgentFitness( agent* c )
 		// fitness is normalized (by the sum of the weights) after doing a weighted sum of normalized heuristic fitness and complexity
 		// (Complexity runs between 0.0 and 1.0 in the early simulations.  Is there a way to guarantee this?  Do we want to?)
 		fitness = (fHeuristicFitnessWeight*c->HeuristicFitness()/fTotalHeuristicFitness + fComplexityFitnessWeight*c->Complexity()) / (fHeuristicFitnessWeight+fComplexityFitnessWeight);
-		//cout << "fitness" eql fitness sp "hwt" eql fHeuristicFitnessWeight sp "hf" eql c->HeuristicFitness()/fTotalHeuristicFitness sp "cwt" eql fComplexityFitnessWeight sp "cf" eql c->Complexity() nl;
+// 		cout << "fitness" eql fitness sp "hwt" eql fHeuristicFitnessWeight sp "hf" eql c->HeuristicFitness()/fTotalHeuristicFitness sp "cwt" eql fComplexityFitnessWeight sp "cf" eql c->Complexity() nl;
 	}
 	
-	//printf( "%s (end): %ld %g (%g)\n", __func__, c->Number(), c->Complexity(), fitness );
+// 	printf( "%s (end): %ld %g (%g)\n", __func__, c->Number(), c->Complexity(), fitness );
 
 	return( fitness );
 }
