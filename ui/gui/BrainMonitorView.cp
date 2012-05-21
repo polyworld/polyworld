@@ -1,6 +1,8 @@
 // Self
 #include "BrainMonitorView.h"
 
+#include <glu.h>
+
 // Local
 #include "agent.h"
 #include "AgentTracker.h"

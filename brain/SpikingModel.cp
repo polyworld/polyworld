@@ -277,7 +277,7 @@ void SpikingModel::update( bool bprint )
 				//what Izhikevich does in his code is to give an STDP value to each synapse.  					
 					    
 				for( k = neuron[i].startsynapses; k < neuron[i].endsynapses; k++ )			
-					synapse[k].delta += neuron[abs(synapse[k].fromneuron)].STDP;	//I have fired reward all my incoming conections
+					synapse[k].delta += neuron[(int)abs(synapse[k].fromneuron)].STDP;	//I have fired reward all my incoming conections
 			
 			}
 			// there is no spike thus default activation for the neuron is 0	

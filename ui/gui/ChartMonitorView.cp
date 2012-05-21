@@ -4,6 +4,7 @@
 // System
 #include <iostream>
 
+#include <glu.h>
 #include <stdio.h>
 
 // Local
