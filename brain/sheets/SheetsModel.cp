@@ -18,7 +18,7 @@ namespace sheets
 {
 	std::ostream &operator<<( std::ostream &out, const NeuronSubset &n )
 	{
-		return out << "{" << n.begin << " --> " << n.end << "}";
+		return out << "{" << n._begin << " --> " << n._end << "}";
 	}
 }
 
@@ -39,6 +39,41 @@ Neuron::~Neuron()
 {
 	itfor( SynapseMap, synapsesOut, it )
 		delete it->second;
+}
+
+//===========================================================================
+// NeuronSubset
+//===========================================================================
+
+NeuronSubset::Iterator::Iterator( NeuronSubset *subset, const Vector2i &index ) : _subset(subset), _index(index)
+{
+}
+
+Vector2i &NeuronSubset::Iterator::operator*()
+{
+	return _index;
+}
+
+NeuronSubset::Iterator &NeuronSubset::Iterator::operator++()
+{
+	_index.b++;
+	if( _index.b > _subset->_end.b )
+	{
+		_index.a++;
+		_index.b = _subset->_begin.b;
+	}
+
+	return *this;
+}
+
+bool NeuronSubset::Iterator::operator!=( const Iterator &other ) const
+{
+	return _index.a != other._index.a || _index.b != other._index.b;
+}
+
+size_t NeuronSubset::size()
+{
+	return max(0, _end.a - _begin.a + 1) * max(0, _end.b - _begin.b + 1);
 }
 
 //===========================================================================
@@ -162,12 +197,19 @@ Neuron *Sheet::getNeuron( Vector2i index )
 // Sheet::addReceptiveField
 //---------------------------------------------------------------------------
 void Sheet::addReceptiveField( ReceptiveFieldRole role,
+							   Vector2f currentCenter,
+							   Vector2f currentSize,
+							   Vector2f otherCenter,
+							   Vector2f otherSize,
 							   Vector2f fieldOffset,
 							   Vector2f fieldSize,
 							   Sheet *other,
 							   function<bool (Neuron *, ReceptiveFieldNeuronRole)> neuronPredicate,
 							   function<void (Synapse *)> synapseCreated )
 {
+	currentSize.a = max( currentSize.a, _neuronSpacing.a );
+	currentSize.b = max( currentSize.b, _neuronSpacing.b );
+
 	fieldSize.a = max( fieldSize.a, other->_neuronSpacing.a );
 	fieldSize.b = max( fieldSize.b, other->_neuronSpacing.b );
 
@@ -187,10 +229,13 @@ void Sheet::addReceptiveField( ReceptiveFieldRole role,
 		assert( false );
 	}
 
-	// Iterate over each neuron in this sheet.
-	for( int i = 0; i < _nneurons; i++ )
+	NeuronSubset currentNeurons = findNeurons( currentCenter, currentSize );
+	NeuronSubset otherNeurons = other->findNeurons( otherCenter, otherSize );
+
+	// Iterate over each neuron in this sheet's region.
+	for( Vector2i currentNeuronIndex : currentNeurons )
 	{
-		Neuron *currentNeuron = _neurons + i;
+		Neuron *currentNeuron = getNeuron( currentNeuronIndex );
 
 		if( !neuronPredicate(currentNeuron, currentNeuronRole) )
 			continue;
@@ -202,32 +247,46 @@ void Sheet::addReceptiveField( ReceptiveFieldRole role,
 			other->findReceptiveFieldNeurons( currentNeuron->sheetPosition,
 											  fieldOffset,
 											  fieldSize );
+
+		// ---
+		// --- Constrain by other center/size
+		// ---
+		NeuronSubset constrainedReceptiveFieldNeurons;
+		constrainedReceptiveFieldNeurons._begin.a = max( allReceptiveFieldNeurons._begin.a,
+														 otherNeurons._begin.a );
+		constrainedReceptiveFieldNeurons._begin.b = max( allReceptiveFieldNeurons._begin.b,
+														 otherNeurons._begin.b );
+		constrainedReceptiveFieldNeurons._end.a = min( allReceptiveFieldNeurons._end.a,
+													   otherNeurons._end.a );
+		constrainedReceptiveFieldNeurons._end.b = min( allReceptiveFieldNeurons._end.b,
+													   otherNeurons._end.b );
+
+		//cout << "otherCount=" << other->_neuronCount << ", otherCenter=" << otherCenter << ", otherSize=" << otherSize << ", otherNeurons=" << otherNeurons << ", allRF=" << allReceptiveFieldNeurons << ", constrainRF=" << constrainedReceptiveFieldNeurons << ", size=" << constrainedReceptiveFieldNeurons.size() << endl;
+
+		if( constrainedReceptiveFieldNeurons.size() < 1 )
+			continue;
 		
 		// ---
 		// --- Find which neurons pass the predicate, and determine the mean distance.
 		// ---
 
-		Neuron *fieldNeurons[ (allReceptiveFieldNeurons.end.a - allReceptiveFieldNeurons.begin.a + 1)
-							  * (allReceptiveFieldNeurons.end.b - allReceptiveFieldNeurons.begin.b + 1) ];
+		Neuron *fieldNeurons[ constrainedReceptiveFieldNeurons.size() ];
 		int nfieldNeurons = 0;
 		float totalDistance = 0;
 
-		for( int a = allReceptiveFieldNeurons.begin.a; a <= allReceptiveFieldNeurons.end.a; a++ )
+		for( Vector2i otherNeuronIndex : constrainedReceptiveFieldNeurons )
 		{
-			for( int b = allReceptiveFieldNeurons.begin.b; b <= allReceptiveFieldNeurons.end.b; b++ )
-			{
-				Neuron *otherNeuron = other->getNeuron( a, b );
+			Neuron *otherNeuron = other->getNeuron( otherNeuronIndex );
 
-				// Ignore self-synapse
-				if( currentNeuron == otherNeuron )
-					continue;
+			// Ignore self-synapse
+			if( currentNeuron == otherNeuron )
+				continue;
 
-				if( !neuronPredicate(otherNeuron, otherNeuronRole) )
-					continue;
+			if( !neuronPredicate(otherNeuron, otherNeuronRole) )
+				continue;
 
-				fieldNeurons[ nfieldNeurons++ ] = otherNeuron;
-				totalDistance += currentNeuron->absPosition.distance( otherNeuron->absPosition );
-			}
+			fieldNeurons[ nfieldNeurons++ ] = otherNeuron;
+			totalDistance += currentNeuron->absPosition.distance( otherNeuron->absPosition );
 		}
 
 		// No neurons in receptive field.
@@ -357,15 +416,18 @@ void Sheet::createNeurons( function<void (Neuron*)> &neuronCreated )
 //---------------------------------------------------------------------------
 // Sheet::findNeurons
 //---------------------------------------------------------------------------
-NeuronSubset Sheet::findNeurons( const Vector2f &ul,
-								 const Vector2f &lr )
+NeuronSubset Sheet::findNeurons( const Vector2f &center,
+								 const Vector2f &size )
 {
 	NeuronSubset result;
 
-	result.begin.a = max( 0, (int)ceilf( (ul.a - _neuronInsets.a) / _neuronSpacing.a ) );
-	result.end.a = min( _neuronCount.a - 1, (int)floorf( (lr.a - _neuronInsets.a) / _neuronSpacing.a ) );
-	result.begin.b = max( 0, (int)ceilf( (ul.b - _neuronInsets.b) / _neuronSpacing.b ) );
-	result.end.b = min( _neuronCount.b - 1, (int)floorf( (lr.b - _neuronInsets.b) / _neuronSpacing.b ) );
+	Vector2f ul = center - (size / 2);
+	Vector2f lr = center + (size / 2);
+
+	result._begin.a = max( 0, (int)ceilf( (ul.a - _neuronInsets.a) / _neuronSpacing.a ) );
+	result._end.a = min( _neuronCount.a - 1, (int)floorf( (lr.a - _neuronInsets.a) / _neuronSpacing.a ) );
+	result._begin.b = max( 0, (int)ceilf( (ul.b - _neuronInsets.b) / _neuronSpacing.b ) );
+	result._end.b = min( _neuronCount.b - 1, (int)floorf( (lr.b - _neuronInsets.b) / _neuronSpacing.b ) );
 
 	return result;
 }
@@ -397,12 +459,7 @@ NeuronSubset Sheet::findReceptiveFieldNeurons( const Vector2f &neuronPosition,
 
 	vtrc( "  Adjusted center=" << center );
 
-	Vector2f ul = center - (fieldSize / 2);
-	Vector2f lr = center + (fieldSize / 2);
-
-	vtrc( "  ul=" << ul << ", lr=" << lr );
-
-	return findNeurons( ul, lr );
+	return findNeurons( center, fieldSize );
 }
 
 //---------------------------------------------------------------------------
@@ -508,6 +565,9 @@ Sheet *SheetsModel::createSheet( string name,
 //---------------------------------------------------------------------------
 Sheet *SheetsModel::getSheet( int id )
 {
+	if( id >= (int)_allSheets.size() )
+		return NULL;
+
 	return _allSheets[ id ];
 }
 
@@ -567,7 +627,10 @@ NeuronVector &SheetsModel::getNeurons()
 //---------------------------------------------------------------------------
 float SheetsModel::getProbabilitySynapse( float distance )
 {
-	return (1 / _synapseProbabilityX) * exp(-distance/_synapseProbabilityX);
+	if( _synapseProbabilityX == 0.0 )
+		return 1.0;
+	else		
+		return (1 / _synapseProbabilityX) * exp(-distance/_synapseProbabilityX);
 }
 
 //---------------------------------------------------------------------------
@@ -648,95 +711,3 @@ void SheetsModel::addNonCulledNeurons( SheetVector &sheets )
 	}
 
 }
-
-//===========================================================================
-// TEST
-//===========================================================================
-static void test()
-{
-	/*
-	SheetsModel model( Vector3f(1, 1, 1),	// size
-					   1.);					// probability synapse X
-
-	Sheet *sheetInput = model.createSheet( -1,
-										   Sheet::Input,
-										   PlaneXZ,
-										   0.5,							// slot
-										   Vector2f(0.25, 0.5),			// center
-										   Vector2f(1.),				// size
-										   Vector2i(2, 2) );				// neuronCount
-	Sheet *sheetOutput = model.createSheet( -1,
-											Sheet::Output,
-											PlaneXZ,
-											0.5,							// slot
-											Vector2f(0.25, 0.5),			// center
-											Vector2f(1.),				// size
-											Vector2i(2, 2) );				// neuronCount
-	Sheet *sheetInternal = model.createSheet( -1,
-											  Sheet::Internal,
-											  PlaneXZ,
-											  0.5,							// slot
-											  Vector2f(0.25, 0.5),			// center
-											  Vector2f(1.),				// size
-											  Vector2i(2, 2) );				// neuronCount
-	Sheet *sheetInternal1 = model.createSheet( -1,
-											   Sheet::Internal,
-											   PlaneXZ,
-											   0.5,							// slot
-											   Vector2f(0.25, 0.5),			// center
-											   Vector2f(1.),				// size
-											   Vector2i(2, 2) );				// neuronCount
-
-	sheetInput->addReceptiveField( Sheet::Target,
-								   Vector2f(0.0, 0.0),	// offset
-								   Vector2f(0.1),		// size
-								   sheetInternal,
-								   NULL );
-	sheetOutput->addReceptiveField( Sheet::Source,
-									Vector2f(0.0, 0.0),	// offset
-									Vector2f(0.5),		// size
-									sheetInternal,
-									NULL );
-
-	sheetInternal1->addReceptiveField( Sheet::Source,
-									   Vector2f(0.0, 0.0),	// offset
-									   Vector2f(0.5),		// size
-									   sheetInternal,
-									   NULL );
-
-	model.cull();
-
-	cout << "Neurons: " << endl;
-	itfor( NeuronVector, model.getNeurons(), it )
-	{
-		cout << (*it)->id << " " << (*it)->absPosition << endl;
-	}
-	*/
-	/*
-	sheet->addReceptiveField( Sheet::Target,
-							  Vector2f(0.5, 0.5),	// offset
-							  Vector2f(.1),		// size
-							  sheet,
-							  NULL );
-	*/
-
-	/*
-	NeuronSubset fieldNeurons = sheet->findReceptiveFieldNeurons( Vector2f(0.5, 0.5),   // neuron pos
-																  Vector2f(-0.5, 0.5),       // field offset      
-																  Vector2f(0.5, 0.5) ); // field size
-	cout << fieldNeurons << endl;
-	*/
-
-	//cout << sheet->findNeurons( Vector2f(0.15, 0.15), Vector2f(0.2, 0.2) ) << endl;
-
-
-	exit(0);
-
-}
-
-#if false
-static class sinit {
- public:
-	sinit() { test(); }
-} _sinit;
-#endif

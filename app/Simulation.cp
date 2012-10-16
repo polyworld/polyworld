@@ -1919,7 +1919,9 @@ void TSimulation::DeathAndStats( void )
 			if( (!fApplyLowPopulationAdvantage && !fEnergyBasedPopulationControl) ||
 				((objectxsortedlist::gXSortedObjects.getCount( AGENTTYPE ) > fMinNumAgents)
 				 && (fNumberAliveWithMetabolism[c->GetMetabolism()->index] > fMinNumAgentsWithMetabolism[c->GetMetabolism()->index])
-				 && (fDomains[c->Domain()].numAgents > fDomains[c->Domain()].minNumAgents)) )
+				 && (fDomains[c->Domain()].numAgents > fDomains[c->Domain()].minNumAgents)) ||
+				(fAllowMinDeaths && (randpw() > float(fNumberBorn)/float(fNumberCreated + fNumberBorn))) )
+
 			{
 				if ( c->GetEnergy().isDepleted() ||
 					 c->Age() >= c->MaxAge()     ||
@@ -4716,6 +4718,7 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 	fPopControlMinScaleFactor = doc.get( "PopControlMinScaleFactor" );
 	fPopControlMaxScaleFactor = doc.get( "PopControlMaxScaleFactor" );
 	
+	fAllowMinDeaths = doc.get( "AllowMinDeaths" );
 		
 	fComplexityType = (string)doc.get( "ComplexityType" );
 	fComplexityFitnessWeight = doc.get( "ComplexityFitnessWeight" );

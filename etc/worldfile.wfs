@@ -1135,6 +1135,10 @@ PopControlDomains {
   default False
 }
 
+AllowMinDeaths {
+  type    Bool
+  default False
+}
 
 #-------------------------------------------------------------------
 # SECTION Simulation parameters -- Tertiary
@@ -1767,6 +1771,7 @@ Sheets {
           default 1.0
           exmin   0.0
           max     MaxBrainSize.X
+	  cppsym  "$[gene, SizeX, min]"
         }
     
         Y {
@@ -1774,6 +1779,7 @@ Sheets {
           default 0.1
           exmin   0.0
           max     MaxBrainSize.Y
+	  cppsym  "$[gene, SizeY, min]"
         }
     
         Z {
@@ -1781,6 +1787,7 @@ Sheets {
           default 0.1
           exmin   0.0
           max     MaxBrainSize.Z
+	  cppsym  "$[gene, SizeZ, min]"
         }
     
       }
@@ -1795,27 +1802,31 @@ Sheets {
           type    Float
           default 1.0
           min     MinBrainSize.X
+	  cppsym  "$[gene, SizeX, max]"
         }
     
         Y {
           type    Float
           default 1.0
           min     MinBrainSize.Y
+	  cppsym  "$[gene, SizeY, max]"
         }
     
         Z {
           type    Float
           default 1.0
           min     MinBrainSize.Z
+	  cppsym  "$[gene, SizeZ, max]"
         }
     
       }
     }
 
+    # Value of 0.0 disables distance penalty
     MinSynapseProbabilityX {
       type    Float
       default 1.0
-      exmin   0.0
+      min     0.0
       max     MaxSynapseProbabilityX
     }
 
@@ -1949,6 +1960,16 @@ Sheets {
 	ExplicitVector
       }
       default Permutations
+    }
+
+    EnableReceptiveFieldCurrentRegion {
+      type    Bool
+      default False
+    }
+
+    EnableReceptiveFieldOtherRegion {
+      type    Bool
+      default False
     }
 
     MinExplicitVectorSize {

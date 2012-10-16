@@ -33,6 +33,8 @@ namespace genome
 				Permutations,
 				ExplicitVector
 			} receptiveFieldEncoding;
+			bool enableReceptiveFieldCurrentRegion;
+			bool enableReceptiveFieldOtherRegion;
 			int minExplicitVectorSize;
 			int maxExplicitVectorSize;
 		} config;
@@ -100,7 +102,7 @@ namespace genome
 		sheets::SheetsModel *createSheetsModel( class SheetsGenome *genome ); 
 
 	private:
-		void createSheets( sheets::SheetsModel *model, SheetsGenome *g, Gene *sheetsGene );
+		void createSheets( sheets::SheetsModel *model, SheetsGenome *g, Gene *sheetsGene, int numSheets = -1 );
 		void createSheet( sheets::SheetsModel *model, SheetsGenome *g, ContainerGene *sheetGene );
 		sheets::Neuron::Attributes decodeNeuronAttrs( SheetsGenome *g,
 													  ContainerGene *attrsGene );

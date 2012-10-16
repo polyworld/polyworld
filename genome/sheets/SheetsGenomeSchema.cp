@@ -63,6 +63,9 @@ void SheetsGenomeSchema::processWorldfile( proplib::Document &doc )
 		else
 			assert( false );
 	}
+
+	SheetsGenomeSchema::config.enableReceptiveFieldCurrentRegion = sheets.get( "EnableReceptiveFieldCurrentRegion" );
+	SheetsGenomeSchema::config.enableReceptiveFieldOtherRegion = sheets.get( "EnableReceptiveFieldOtherRegion" );
 }
 
 
@@ -176,6 +179,8 @@ void SheetsGenomeSchema::define()
 	SCALAR( this, "SizeX", SheetsBrain::config.minBrainSize.x, SheetsBrain::config.maxBrainSize.x );
 	SCALAR( this, "SizeY", SheetsBrain::config.minBrainSize.y, SheetsBrain::config.maxBrainSize.y );
 	SCALAR( this, "SizeZ", SheetsBrain::config.minBrainSize.z, SheetsBrain::config.maxBrainSize.z );
+
+	SCALAR( this, "InternalSheetsCount", SheetsBrain::config.minInternalSheetsCount, SheetsBrain::config.maxInternalSheetsCount );
 
 	SCALAR( this, "SynapseProbabilityX", SheetsBrain::config.minSynapseProbabilityX, SheetsBrain::config.maxSynapseProbabilityX );
 
@@ -620,9 +625,37 @@ void SheetsGenomeSchema::defineReceptiveField( ContainerGene *currentSheet,
 	
 	ContainerGene *field = new ContainerGene( itoa(fieldArray->getAll().size()) );
 
-	CONST( field, "Role", (int)role );
 	SCALARV( field, "OtherSheetId", otherSheetId );
+	CONST( field, "Role", (int)role );
 	SCALARV( field, "SynapseType", synapseType );
+	if( SheetsGenomeSchema::config.enableReceptiveFieldCurrentRegion )
+	{
+		SCALAR( field, "CurrentCenterA", 0.0, 1.0 );
+		SCALAR( field, "CurrentCenterB", 0.0, 1.0 );
+		SCALAR( field, "CurrentSizeA", 0.0, 1.0 );
+		SCALAR( field, "CurrentSizeB", 0.0, 1.0 );
+	}
+	else
+	{
+		SCALAR( field, "CurrentCenterA", 0.5, 0.5 );
+		SCALAR( field, "CurrentCenterB", 0.5, 0.5 );
+		SCALAR( field, "CurrentSizeA", 1.0, 1.0 );
+		SCALAR( field, "CurrentSizeB", 1.0, 1.0 );
+	}
+	if( SheetsGenomeSchema::config.enableReceptiveFieldOtherRegion )
+	{
+		SCALAR( field, "OtherCenterA", 0.0, 1.0 );
+		SCALAR( field, "OtherCenterB", 0.0, 1.0 );
+		SCALAR( field, "OtherSizeA", 0.0, 1.0 );
+		SCALAR( field, "OtherSizeB", 0.0, 1.0 );
+	}
+	else
+	{
+		SCALAR( field, "OtherCenterA", 0.5, 0.5 );
+		SCALAR( field, "OtherCenterB", 0.5, 0.5 );
+		SCALAR( field, "OtherSizeA", 1.0, 1.0 );
+		SCALAR( field, "OtherSizeB", 1.0, 1.0 );
+	}
 	SCALAR( field, "OffsetA", -1.0f, 1.0f );
 	SCALAR( field, "OffsetB", -1.0f, 1.0f );
 	SCALAR( field, "SizeA", 0.0f, 1.0f );
@@ -654,7 +687,7 @@ SheetsModel *SheetsGenomeSchema::createSheetsModel( SheetsGenome *genome )
 	
 	createSheets( model, genome, genome->gene("InputSheets") );
 	createSheets( model, genome, genome->gene("OutputSheets") );
-	createSheets( model, genome, genome->gene("InternalSheets") );
+	createSheets( model, genome, genome->gene("InternalSheets"), genome->get("InternalSheetsCount") );
 
 	createReceptiveFields( model, genome, genome->gene("InputSheets") );
 	createReceptiveFields( model, genome, genome->gene("OutputSheets") );
@@ -665,13 +698,15 @@ SheetsModel *SheetsGenomeSchema::createSheetsModel( SheetsGenome *genome )
 	return model;
 }
 
-void SheetsGenomeSchema::createSheets( SheetsModel *model, SheetsGenome *g, Gene *sheetsGene )
+void SheetsGenomeSchema::createSheets( SheetsModel *model, SheetsGenome *g, Gene *sheetsGene, int numSheets )
 {
 	ContainerGene *container = GeneType::to_Container( sheetsGene );
+	if( numSheets == -1 )
+		numSheets = (int)container->getAll().size();
 
-	citfor( GeneVector, container->getAll(), it )
+	for( int i = 0; i < numSheets; i++ )
 	{
-		ContainerGene *sheetGene = GeneType::to_Container( *it );
+		ContainerGene *sheetGene = GeneType::to_Container( container->getAll()[i] );
 
 		createSheet( model, g, sheetGene );
 	}
@@ -721,6 +756,8 @@ void SheetsGenomeSchema::createSheet( SheetsModel *model, SheetsGenome *g, Conta
 					? Neuron::Attributes::E
 					: Neuron::Attributes::I;
 				break;
+			default:
+				assert( false );
 			}
 		};
 
@@ -816,7 +853,8 @@ void SheetsGenomeSchema::createReceptiveFields( SheetsModel *model, SheetsGenome
 
 		int id = g->get( sheetGene->gene("Id") );
 		Sheet *sheet = model->getSheet( id );
-		assert( sheet->getId() == id );
+		if( sheet == NULL )
+			continue;
 
 		vector<const char*> vectorNames = { "SourceReceptiveFields", "TargetReceptiveFields" };
 
@@ -857,10 +895,21 @@ void SheetsGenomeSchema::createReceptiveField( SheetsModel *model,
 	// ---
 	// --- Fetch field attributes
 	// ---
-	Sheet::ReceptiveFieldRole role = (Sheet::ReceptiveFieldRole)(int)g->get( fieldGene->gene("Role") );
 	int otherSheetId = g->get( fieldGene->gene("OtherSheetId") );
 	Sheet *otherSheet = model->getSheet( otherSheetId );
+	if( otherSheet == NULL )
+		return;
+
+	Sheet::ReceptiveFieldRole role = (Sheet::ReceptiveFieldRole)(int)g->get( fieldGene->gene("Role") );
 	SynapseType synapseType = (SynapseType)(int)g->get( fieldGene->gene("SynapseType") );
+	Vector2f currentCenter( g->get( fieldGene->gene("CurrentCenterA") ),
+							g->get( fieldGene->gene("CurrentCenterB") ) );
+	Vector2f currentSize( g->get( fieldGene->gene("CurrentSizeA") ),
+						  g->get( fieldGene->gene("CurrentSizeB") ) );
+	Vector2f otherCenter( g->get( fieldGene->gene("OtherCenterA") ),
+							g->get( fieldGene->gene("OtherCenterB") ) );
+	Vector2f otherSize( g->get( fieldGene->gene("OtherSizeA") ),
+						  g->get( fieldGene->gene("OtherSizeB") ) );
 	Vector2f offset( g->get( fieldGene->gene("OffsetA") ),
 					 g->get( fieldGene->gene("OffsetB") ) );
 	Vector2f size( g->get( fieldGene->gene("SizeA") ),
@@ -906,6 +955,10 @@ void SheetsGenomeSchema::createReceptiveField( SheetsModel *model,
 	}
 
 	sheet->addReceptiveField( role,
+							  currentCenter,
+							  currentSize,
+							  otherCenter,
+							  otherSize,
 							  offset,
 							  size,
 							  otherSheet,

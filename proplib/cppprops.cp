@@ -115,7 +115,9 @@ void CppProperties::generateLibrarySource()
 			string name = it_attr->second->getName();
 			if( (name != "state")
 				&& (name != "init")
-				&& (name != "update") )
+				&& (name != "update")
+				&& (name != "end")
+				&& (name != "stage") )
 			{
 				it_attr->second->err( "Invalid attribute name." );
 			}
@@ -154,18 +156,44 @@ void CppProperties::generateLibrarySource()
 	// ---
 	// --- Generate Metadata
 	// ---
-	CppPropertyMetadataIndexMap indexMap;
-	generateMetadata( out, cppProperties, indexMap );
+	CppPropertyInfoMap infoMap;
+	generateMetadata( out, cppProperties, infoMap );
+
+	// ---
+	// --- Determine Stages
+	// ---
+	{
+		int minStage = -1;
+		for( DynamicScalarProperty *prop : dynamicProperties )
+		{
+			int stage = -1;
+			if( prop->getAttr("stage") )
+			{
+				Interpreter::ExpressionEvaluator eval( prop->getAttr("stage")->getExpression() );
+				stage = atoi( eval.evaluate( prop ).c_str() );
+				if( stage < 0 )
+					prop->err( "stage must be integer >= 0" );
+
+				if( (minStage == -1) || (stage < minStage) )
+					minStage = stage;
+			}
+
+			infoMap[prop].stage = stage;
+		}
+
+		l( "static int stage = " << minStage << ";" );
+		l( "" );
+	}
 
 	// ---
 	// --- Generate Init Function
 	// ---
-	generateInitSource( out, cppProperties, dynamicProperties, indexMap );
+	generateInitSource( out, cppProperties, dynamicProperties, infoMap );
 
 	// ---
 	// --- Generate Update Function
 	// ---
-	generateUpdateSource( out, dynamicProperties, indexMap );
+	generateUpdateSource( out, dynamicProperties, infoMap );
 
 	// ---
 	// --- Generate C Linkage Entry Points
@@ -214,7 +242,7 @@ void CppProperties::generateStateStructs( ofstream &out, DynamicPropertyList &dy
 
 void CppProperties::generateMetadata( ofstream &out,
 									  CppPropertyList &cppProperties, 
-									  CppPropertyMetadataIndexMap &indexMap )
+									  CppPropertyInfoMap &infoMap )
 {
 	l( "static proplib::CppProperties::PropertyMetadata metadata[] =" );
 	l( "{" );
@@ -224,8 +252,8 @@ void CppProperties::generateMetadata( ofstream &out,
 		__ScalarProperty *prop = *it;
 		DynamicScalarProperty *dynprop = dynamic_cast<DynamicScalarProperty *>( prop );
 
-		int index = (int)indexMap.size();
-		indexMap[prop] = index;
+		int index = (int)infoMap.size();
+		infoMap[prop].metadataIndex = index;
 
 		l( "  { " );
 
@@ -263,14 +291,14 @@ void CppProperties::generateMetadata( ofstream &out,
 void CppProperties::generateInitSource( ofstream &out,
 										CppPropertyList &cppProperties,
 										DynamicPropertyList &dynamicProperties,
-										CppPropertyMetadataIndexMap &indexMap )
+										CppPropertyInfoMap &infoMap )
 {
 	map<DynamicScalarProperty *, string> prop2initBody;
 	map<DynamicScalarProperty *, DynamicPropertyList> prop2antecedents;
 	itfor( DynamicPropertyList, dynamicProperties, it )
 	{
 		DynamicScalarProperty *prop = *it;
-		prop2initBody[prop] = generateInitFunctionBody( prop, prop2antecedents[prop], indexMap );
+		prop2initBody[prop] = generateInitFunctionBody( prop, prop2antecedents[prop], infoMap );
 	}	
 
 	sortDynamicProperties( dynamicProperties, prop2antecedents );
@@ -292,7 +320,7 @@ void CppProperties::generateInitSource( ofstream &out,
 	{
 		__ScalarProperty *prop = *it;
 		DynamicScalarProperty *dynprop = dynamic_cast<DynamicScalarProperty *>( prop );
-		int index = indexMap[prop];
+		int index = infoMap[prop].metadataIndex;
 
 		l( "  // " << prop->getFullName(1) );
 		l( "  {" );
@@ -318,7 +346,7 @@ void CppProperties::generateInitSource( ofstream &out,
 
 string CppProperties::generateInitFunctionBody( DynamicScalarProperty *prop,
 												DynamicPropertyList &antecedents,
-												CppPropertyMetadataIndexMap &indexMap )
+												CppPropertyInfoMap &infoMap )
 {
 	if( prop->getAttr("init") == NULL )
 	{
@@ -370,7 +398,7 @@ string CppProperties::generateInitFunctionBody( DynamicScalarProperty *prop,
 								antecedents.push_back( dynamic_cast<DynamicScalarProperty *>(sym.prop) );
 								// fall through.
 							case Node::Runtime:
-								text = getMetadataLValue( sym.prop, indexMap );
+								text = getMetadataLValue( sym.prop, infoMap );
 								break;
 							default:
 								assert( false );
@@ -413,7 +441,7 @@ string CppProperties::generateInitFunctionBody( DynamicScalarProperty *prop,
 
 void CppProperties::generateUpdateSource( ofstream &out,
 											  DynamicPropertyList &dynamicProperties,
-											  CppPropertyMetadataIndexMap &indexMap )
+											  CppPropertyInfoMap &infoMap )
 {
 	map<DynamicScalarProperty *, string> prop2updateBody;
 	map<DynamicScalarProperty *, DynamicPropertyList> prop2antecedents;
@@ -421,7 +449,7 @@ void CppProperties::generateUpdateSource( ofstream &out,
 	{
 		DynamicScalarProperty *prop = *it;
 
-		prop2updateBody[prop] = generateUpdateFunctionBody( prop, prop2antecedents[prop], indexMap );
+		prop2updateBody[prop] = generateUpdateFunctionBody( prop, prop2antecedents[prop], infoMap );
 	}	
 
 	sortDynamicProperties( dynamicProperties, prop2antecedents );
@@ -429,6 +457,8 @@ void CppProperties::generateUpdateSource( ofstream &out,
 	// ---
 	// --- Write Update Source
 	// ---
+
+	map<int, DynamicPropertyList> stages;
 
 	l( "// ------------------------------------------------------------" );
 	l( "// --- CppProperties_Update()" );
@@ -442,9 +472,13 @@ void CppProperties::generateUpdateSource( ofstream &out,
 	itfor( DynamicPropertyList, dynamicProperties, it )
 	{
 		DynamicScalarProperty *prop = *it;
-		int index = indexMap[prop];
+		int index = infoMap[prop].metadataIndex;
 
 		l( "  // " << prop->getFullName(1) );
+		if( infoMap[prop].stage != -1 )
+		{
+			l( "  if( stage == " << infoMap[prop].stage << " )" );
+		}
 		l( "  {" );
 		l( "    struct local" );
 		l( "    {" );
@@ -460,11 +494,14 @@ void CppProperties::generateUpdateSource( ofstream &out,
 		l( "      }" );
 		l( "    };" );
 		l( "    " << getCppType(prop) << " newval = local::update( context );" );
-		l( "    if( newval != " << getMetadataLValue(prop, indexMap) << ")" );
+		l( "    if( newval != " << getMetadataLValue(prop, infoMap) << ")" );
 		l( "    {" );
 		itfor( PropertyMap, prop->getSchema()->props(), it_attr )
 		{
 			string attrName = it_attr->second->getName();
+
+			WARN_ONCE( "Support dynamic attr asserts" );
+			continue;
 
 			if( attrName == "min" )
 				l( "      assert( newval >= " << (string)*it_attr->second << " );" );
@@ -481,13 +518,52 @@ void CppProperties::generateUpdateSource( ofstream &out,
 		l( "  }" );
 	}
 
+	{
+		map<int, DynamicPropertyList> stageProps;
+		
+		for( DynamicScalarProperty *prop : dynamicProperties )
+			if( infoMap[prop].stage != -1 )
+				stageProps[ infoMap[prop].stage ].push_back( prop );
+
+		if( stageProps.size() > 1 )
+		{
+			int stages[ stageProps.size() ];
+			{
+				int i = 0;
+				for( pair<int, DynamicPropertyList> stage: stageProps )
+					stages[ i++ ] = stage.first;
+			}
+
+			l( "  switch( stage )" );
+			l( "  {" );
+
+			for( size_t i = 0; i < stageProps.size() - 1; i++ )
+			{
+				l( "    case " << stages[i] << ":" );
+				for( DynamicScalarProperty *prop : stageProps[ stages[i] ] )
+				{
+					Interpreter::ExpressionEvaluator eval( prop->getAttr("end")->getExpression() );
+					string end = eval.evaluate( prop );
+					l( "      if( *((" << getCppType(prop) << " *)metadata[" << infoMap[prop].metadataIndex << "].value) != " << end << ")" );
+					l( "        break;" );
+				}
+				l( "      stage = " << stages[i + 1] << ";" );
+				l( "      break;" );
+			}
+			l( "    case " << stages[ stageProps.size() - 1 ] << ":" );
+			l( "      break; // no-op" );
+			l( "    default: assert(false);" );
+			l( "  }" );
+		}
+	}
+
 	l( "}" );
 	l( "" );
 }
 
 string CppProperties::generateUpdateFunctionBody( DynamicScalarProperty *prop,
-													  DynamicPropertyList &antecedents,
-													  CppPropertyMetadataIndexMap &indexMap )
+												  DynamicPropertyList &antecedents,
+												  CppPropertyInfoMap &infoMap )
 {
 	Expression *expr;
 	bool skipBraces;
@@ -525,71 +601,92 @@ string CppProperties::generateUpdateFunctionBody( DynamicScalarProperty *prop,
 			{
 				SymbolExpressionElement *element = dynamic_cast<SymbolExpressionElement *>( *it );
 				SymbolPath *symbolPath = element->symbolPath;
-				bool usesValueKeyword = false;
+				string symbolText = symbolPath->toString();
+				string substitutedKeyword = "";
 
-				if( symbolPath->head->getText() == "value" )
+				string text;
+				bool resolved = false;
+
+				if( symbolText == "value" )
 				{
-					usesValueKeyword = true;
+					substitutedKeyword = "value";
 					symbolPath->head->token->text = prop->getName();
+				}
+				else if( symbolText == "begin" )
+				{
+					text = (string)*prop;
+					resolved = true;
+				}
+				else if( symbolText == "end" )
+				{
+					DynamicScalarAttribute *endAttr = prop->getAttr( "end" );
+					if( endAttr == NULL )
+						prop->err( "No 'end' attr declaration" );
+
+					Interpreter::ExpressionEvaluator eval( endAttr->getExpression() );
+
+					text = eval.evaluate( prop );
+					resolved = true;
 				}
 				else if( symbolPath->head->getText() == "return" )
 				{
 					hasReturn = true;
 				}
 
-				string text;
-				bool resolved = false;
-
-				Symbol sym;
-				if( prop->findSymbol(symbolPath, sym) )
+				if( !resolved )
 				{
-					switch( sym.type )
+					Symbol sym;
+
+					if( prop->findSymbol(symbolPath, sym) )
 					{
-					case Symbol::Property:
-						if( sym.prop->getType() == Node::Scalar )
+						switch( sym.type )
 						{
-							resolved = true;
-							switch( sym.prop->getSubtype() )
-							{
-							case Node::Const:
-								text = (string)*sym.prop;
-								break;
-							case Node::Dynamic:
-								antecedents.push_back( dynamic_cast<DynamicScalarProperty *>(sym.prop) );
-								// fall through.
-							case Node::Runtime:
-								text = getMetadataLValue( sym.prop, indexMap );
-								break;
-							default:
-								assert( false );
-							}
-						}
-						else
-						{
-							if( sym.prop->getSchema()->getp("cppsym") )
+						case Symbol::Property:
+							if( sym.prop->getType() == Node::Scalar )
 							{
 								resolved = true;
-								text = getCppSymbol( sym.prop );
+								switch( sym.prop->getSubtype() )
+								{
+								case Node::Const:
+									text = (string)*sym.prop;
+									break;
+								case Node::Dynamic:
+									antecedents.push_back( dynamic_cast<DynamicScalarProperty *>(sym.prop) );
+									// fall through.
+								case Node::Runtime:
+									text = getMetadataLValue( sym.prop, infoMap );
+									break;
+								default:
+									assert( false );
+								}
+							}
+							else
+							{
+								if( sym.prop->getSchema()->getp("cppsym") )
+								{
+									resolved = true;
+									text = getCppSymbol( sym.prop );
+								}
+								break;
 							}
 							break;
+						case Symbol::EnumValue:
+							text = string("\"") + symbolPath->tail->getText() + "\"";
+							break;
+						default:
+							// no-op
+							break;
 						}
-						break;
-					case Symbol::EnumValue:
-						text = string("\"") + symbolPath->tail->getText() + "\"";
-						break;
-					default:
-						// no-op
-						break;
 					}
+
+					// Must be a C++ symbol.
+					if( !resolved )
+						text = symbolPath->toString();
 				}
 
-				// Must be a C++ symbol.
-				if( !resolved )
-					text = symbolPath->toString();
-
 				// Restore original state.
-				if( usesValueKeyword )
-					symbolPath->head->token->text = "value";
+				if( !substitutedKeyword.empty() )
+					symbolPath->head->token->text = substitutedKeyword;
 
 				out << symbolPath->head->token->getDecorationString();
 				out << text;
@@ -653,12 +750,12 @@ string CppProperties::getCppType( Property *prop )
 	}
 }
 
-string CppProperties::getMetadataLValue( Property *prop_, CppPropertyMetadataIndexMap &indexMap )
+string CppProperties::getMetadataLValue( Property *prop_, CppPropertyInfoMap &infoMap )
 {
 	__ScalarProperty *prop = dynamic_cast<__ScalarProperty *>( prop_ );
 
 	stringstream buf;
-	buf << "*((" << getCppType(prop) << "*)metadata[/*" << prop->getFullName(1) << "*/ " << indexMap[prop] << "].value)";
+	buf << "*((" << getCppType(prop) << "*)metadata[/*" << prop->getFullName(1) << "*/ " << infoMap[prop].metadataIndex << "].value)";
 
 	return buf.str();
 }

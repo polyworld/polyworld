@@ -70,35 +70,41 @@ namespace proplib
 		static void getMetadata( PropertyMetadata **metadata, int *count );
 
 	private:
+		struct CppPropertyInfo
+		{
+			int metadataIndex;
+			int stage;
+		};
+
 		typedef std::list<class __ScalarProperty *> CppPropertyList;
 		typedef std::list<class DynamicScalarProperty *> DynamicPropertyList;
 		typedef std::list<class RuntimeScalarProperty *> RuntimePropertyList;
-		typedef std::map<class Property *, int> CppPropertyMetadataIndexMap;
+		typedef std::map<class Property *, CppPropertyInfo> CppPropertyInfoMap;
 
 		static void generateLibrarySource();
 		static void generateStateStructs( std::ofstream &out, DynamicPropertyList &dynamicProperties );
 		static void generateMetadata( std::ofstream &out,
 									  CppPropertyList &cppProperties, 
-									  CppPropertyMetadataIndexMap &indexMap );
+									  CppPropertyInfoMap &infoMap );
 		static void generateInitSource( std::ofstream &out,
 										CppPropertyList &cppProperties,
 										DynamicPropertyList &dynamicProperties,
-										CppPropertyMetadataIndexMap &indexMap );
+										CppPropertyInfoMap &infoMap );
 		static std::string generateInitFunctionBody( class DynamicScalarProperty *prop,
 													 DynamicPropertyList &antecedents,
-													 CppPropertyMetadataIndexMap &indexMap );
+													 CppPropertyInfoMap &infoMap );
 		static void generateUpdateSource( std::ofstream &out,
 										  DynamicPropertyList &dynamicProperties,
-										  CppPropertyMetadataIndexMap &indexMap );
+										  CppPropertyInfoMap &infoMap );
 		static std::string generateUpdateFunctionBody( class DynamicScalarProperty *prop,
 													   DynamicPropertyList &antecedents,
-													   CppPropertyMetadataIndexMap &indexMap );
+													   CppPropertyInfoMap &infoMap );
 
 		static std::string getStateStructName( class DynamicScalarProperty *prop );
 		static std::string getDataLibType( class __ScalarProperty *prop );
 		static std::string getCppType( class Property *prop );
 		static std::string getCppSymbol( class Property *prop );
-		static std::string getMetadataLValue( class Property *prop, CppPropertyMetadataIndexMap &indexMap );
+		static std::string getMetadataLValue( class Property *prop, CppPropertyInfoMap &infoMap );
 
 		static void getCppProperties( class Property *container,
 									  CppPropertyList &result_all,

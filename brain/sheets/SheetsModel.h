@@ -147,8 +147,25 @@ namespace sheets
 	//===========================================================================
 	struct NeuronSubset
 	{
-		Vector2i begin;
-		Vector2i end;
+		Vector2i _begin;
+		Vector2i _end;
+
+		struct Iterator
+		{
+			NeuronSubset *_subset;
+			Vector2i _index;
+
+			Iterator( NeuronSubset *subset, const Vector2i &index );
+
+			Vector2i &operator*();
+			Iterator &operator++();
+			bool operator!=( const Iterator &other ) const;
+		};
+
+		Iterator begin() { return Iterator(this, _begin); }
+		Iterator end() { return Iterator(this, Vector2i(_end.a + 1, _begin.b)); }
+
+		size_t size();
 	};
 
 	std::ostream &operator<<( std::ostream &out, const NeuronSubset &n );
@@ -203,6 +220,10 @@ namespace sheets
 			From, To
 		};
 		void addReceptiveField( ReceptiveFieldRole role,
+								Vector2f currentCenter,
+								Vector2f currentSize,
+								Vector2f otherCenter,
+								Vector2f otherSize,
 								Vector2f fieldOffset,
 								Vector2f fieldSize,
 								Sheet *other,
@@ -210,8 +231,8 @@ namespace sheets
 								std::function<void (Synapse *)> synapseCreated );
 
 	private:
-		NeuronSubset findNeurons( const Vector2f &ul,
-								  const Vector2f &lr );
+		NeuronSubset findNeurons( const Vector2f &center,
+								  const Vector2f &size );
 		NeuronSubset findReceptiveFieldNeurons( const Vector2f &neuronPosition,
 												const Vector2f &fieldOffset,
 												const Vector2f &fieldSize );

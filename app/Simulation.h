@@ -117,6 +117,8 @@ public:
 	double fPopControlMinScaleFactor;
 	double fPopControlMaxScaleFactor;
 	double fGlobalEnergyScaleFactor;
+
+	bool fAllowMinDeaths;
 	
 	float EnergyFitnessParameter() const;
 	float AgeFitnessParameter() const;
