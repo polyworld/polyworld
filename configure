@@ -1,0 +1,70 @@
+#!/bin/bash
+
+###
+### This script sets up your environment for building and executing Polyworld.
+###
+### Supported:
+###
+###	Ubuntu 12.04
+###	Mint 13
+### 
+### The current implementation only supports very specific versions of Linux. If
+### you're using Mac, then you can't use this. If you're using a Debian-based
+### distro/release not specifically supported by this script, there's a good
+### chance that you can simply tweak this script to go down the Mint/Ubuntu path.
+###
+
+set -e
+
+function err()
+{
+    echo $@ >&2
+    exit 1
+}
+
+if [ `uname` != "Linux" ]; then
+    err "Only Linux supported by this script."
+fi
+
+
+###
+### Determine distro and release
+###
+distro=$( lsb_release -is ) || err "Cannot determine distro via lsb_release"
+release=$( lsb_release -rs ) || err "Cannot determine release via lsb_release"
+
+
+if ([ "$distro" == "LinuxMint" ] && [ "$release" == "13" ]) || \
+   ([ "$distro" == "Ubuntu" ] && [ "$release" == "12.04" ])
+    then
+    ###
+    ### Install Polyworld Packages
+    ###
+    pw_packages="
+	g++
+        scons
+        libgsl0-dev
+        libqt4-opengl-dev
+        zlib1g-dev
+        python2.7-dev
+    "
+
+    apt-get install $pw_packages
+
+
+    ###
+    ### Install Farm Packages
+    ###
+    farm_packages="
+        openssh-server
+        screen
+        subversion
+    "
+
+    apt-get install $farm_packages
+else
+    err "Don't know how to configure '$distro' '$release'"
+fi
+
+echo
+echo "configure complete"
