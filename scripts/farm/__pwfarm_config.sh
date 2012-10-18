@@ -677,7 +677,8 @@ usage: $progname define farm <farm_name> <pwuser> <dstdir> (<osuser> <field_numb
 			for hostname in ${domain_hostnames[@]}; do
 			    substep $hostname
 
-			    ssh -l $domain_user $master_host "
+			    # Force presence of tty via -t in case user must enter password.
+			    ssh -t -l $domain_user $master_host "
 				ssh \$$hostname \"
 				    if [ ! -e $keys ]; then cd ; mkdir -p .ssh ; echo \\\"$key_data\\\" > $keys;
 				    elif ! grep -q \\\"$key_data\\\" $keys; then echo \\\"$key_data\\\" >> $keys;
@@ -719,7 +720,7 @@ usage: $progname define farm <farm_name> <pwuser> <dstdir> (<osuser> <field_numb
 
 			host=$( fieldhost_from_name $hostname )
 			
-			ssh -l $user $host "for prog in $required_programs; do which \$prog; done" || exit 1
+			ssh -l $user $host "for prog in $required_programs; do if ! which \$prog; then echo Cannot locate \$prog; exit 1; fi; done" || exit 1
 		    done
 
         	    #
