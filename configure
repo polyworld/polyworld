@@ -47,6 +47,7 @@ if ([ "$distro" == "LinuxMint" ] && [ "$release" == "13" ]) || \
         libqt4-opengl-dev
         zlib1g-dev
         python2.7-dev
+	python-scipy
     "
 
     apt-get install $pw_packages
