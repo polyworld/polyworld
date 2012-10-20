@@ -1836,6 +1836,9 @@ def save_plot( doc, plot, rundirs, curveDatas ):
 
 		path = "plot_" + modevalues + "_" + groupnames + ".eps"
 
+		# we don't want '/' in a path
+		path = path.replace( '/', '\\' )
+
 		results_dir = common_functions.get_results_dir( map(lambda x: x.path, rundirs) )
 		path = os.path.join( results_dir, path )
 
