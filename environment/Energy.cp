@@ -96,6 +96,16 @@ Energy::Energy( float val )
 	init( val );
 }
 
+Energy::Energy( proplib::Property &prop )
+{
+	assert( prop.getType() == proplib::Node::Array );
+	assert( (int)prop.elements().size() == globals::numEnergyTypes );
+
+	for( int i = 0; i < globals::numEnergyTypes; i++ )
+		values[i] = (float)prop.get( i );
+}
+
+
 void Energy::init( float val )
 {
 	assert( globals::numEnergyTypes <= MAX_ENERGY_TYPES );

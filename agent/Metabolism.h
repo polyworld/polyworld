@@ -14,6 +14,7 @@ class Metabolism
 	static void define( const std::string &name,
 						const EnergyPolarity &energyPolarity,
 						EnergyMultiplier eatMultiplier,
+						const Energy &energyDelta,
 						float minEatAge,
 						const FoodType *carcassFoodType );
 	static int getNumberOfDefinitions();
@@ -31,6 +32,7 @@ class Metabolism
 	const std::string name;
 	const EnergyPolarity energyPolarity;
 	EnergyMultiplier eatMultiplier;
+	Energy energyDelta;
 	float minEatAge;
 	const FoodType *carcassFoodType;
 
@@ -39,6 +41,7 @@ class Metabolism
 				const std::string &_name,
 				const EnergyPolarity &_energyPolarity,
 				EnergyMultiplier _eatMultiplier,
+				const Energy &energyDelta,
 				float _minEatAge,
 				const FoodType *_carcassFoodType );
 

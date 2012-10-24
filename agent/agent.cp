@@ -981,6 +981,13 @@ float agent::UpdateBody( float moveFitnessParam,
     debugcheck( "%lu", Number() );
 	Q_ASSERT( lxor( !BeingCarried(), carrier ) );
 	
+	// In some simulations, we use a dynamic energy delta to shape difficulty.
+	if( !fMetabolism->energyDelta.isZero() )
+	{
+		fEnergy += fMetabolism->energyDelta;
+		fEnergy.constrain( 0, fMaxEnergy );
+	}
+
 	float dx;
 	float dz;
 	float energyUsed = 0;
@@ -1333,7 +1340,7 @@ float agent::UpdateBody( float moveFitnessParam,
 	}
 
 	logs->postEvent( AgentBodyUpdatedEvent(this) );
-    
+
     return energyUsed;
 }
 

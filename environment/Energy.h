@@ -65,9 +65,12 @@ bool operator!=( const EnergyMultiplier &a, const EnergyMultiplier &b );
 
 class Energy
 {
+	PROPLIB_CPP_PROPERTIES
+
  public:
 	Energy();
 	Energy( float val );
+	Energy( proplib::Property &prop );
 
 	bool isDepleted() const;
 	bool isDepleted( const Energy &threshold ) const;

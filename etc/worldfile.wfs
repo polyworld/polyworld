@@ -324,6 +324,18 @@ AgentMetabolisms {
           cppsym  "$[ancestor].values[ $[index] ]"
         }
       }
+
+      EnergyDelta {
+        type    Array
+        min     NumEnergyTypes
+        max     NumEnergyTypes
+        default [ 0 ]
+        cppsym  "$[ancestor]->energyDelta"
+        element {
+          type    Float
+          cppsym  "$[ancestor].values[ $[index] ]"
+        }
+      }
      
       MetabolismAgentCount {
         type    Int

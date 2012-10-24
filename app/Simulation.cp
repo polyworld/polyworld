@@ -4340,9 +4340,10 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 			}
 
 			EnergyMultiplier eatMultiplier = propMetabolism.get( "EatMultiplier" );
+			Energy energyDelta = propMetabolism.get( "EnergyDelta" );
 			float minEatAge = propMetabolism.get( "MinEatAge" );
 
-			Metabolism::define( name, energyPolarity, eatMultiplier, minEatAge, carcassFoodType );
+			Metabolism::define( name, energyPolarity, eatMultiplier, energyDelta, minEatAge, carcassFoodType );
 		}
 
 		for( int i = 0; i < Metabolism::getNumberOfDefinitions(); i++ )
