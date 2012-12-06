@@ -4160,7 +4160,7 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 	fEat2Consume = doc.get( "FoodConsumptionRate" );
 	{
 		fCarryObjects = 0;
-#define __SET( PROP, MASK ) if( (bool)doc.get("Carry"PROP) ) fCarryObjects |= MASK##TYPE
+#define __SET( PROP, MASK ) if( (bool)doc.get("Carry" PROP) ) fCarryObjects |= MASK##TYPE
 		__SET( "Agents", AGENT );
 		__SET( "Food", FOOD );
 		__SET( "Bricks", BRICK );
@@ -4168,7 +4168,7 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 	}
 	{
 		fShieldObjects = 0;
-#define __SET( PROP, MASK ) if( (bool)doc.get("Shield"PROP) ) fShieldObjects |= MASK##TYPE
+#define __SET( PROP, MASK ) if( (bool)doc.get("Shield" PROP) ) fShieldObjects |= MASK##TYPE
 		__SET( "Agents", AGENT );
 		__SET( "Food", FOOD );
 		__SET( "Bricks", BRICK );
@@ -4216,7 +4216,7 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 	fDropThreshold = doc.get( "DropThreshold" );
 	{
 		fSolidObjects = 0;
-#define __SET( PROP, MASK ) if( (bool)doc.get("Solid"PROP) ) fSolidObjects |= MASK##TYPE
+#define __SET( PROP, MASK ) if( (bool)doc.get("Solid" PROP) ) fSolidObjects |= MASK##TYPE
 		__SET( "Agents", AGENT );
 		__SET( "Food", FOOD );
 		__SET( "Bricks", BRICK );
