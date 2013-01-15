@@ -306,10 +306,10 @@ void SchemaDocument::validateScalar( ObjectProperty &schema, Property &value )
 			else if( type == "Float" )									\
 				valid = (float)value OP (float)attr;					\
 			else														\
-				attr.err( string("'")+attrName+"' is not valid for type " + type ); \
+				attr.err( string("'") + attrName + "' is not valid for type " + type ); \
 																		\
 			if( !valid )												\
-				value.err( (string)value + " "ERRDESC" "+attrName+" " + (string)attr ); \
+				value.err( (string)value + " " ERRDESC " " + attrName + " " + (string)attr ); \
 		}
 
 		if( attrName == "min" )
