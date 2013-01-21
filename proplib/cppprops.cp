@@ -170,7 +170,8 @@ void CppProperties::generateLibrarySource()
 			if( prop->getAttr("stage") )
 			{
 				Interpreter::ExpressionEvaluator eval( prop->getAttr("stage")->getExpression() );
-				stage = atoi( eval.evaluate( prop ).c_str() );
+				string stageStr = eval.evaluate( prop );
+				stage = atoi( stageStr.c_str() );
 				if( stage < 0 )
 					prop->err( "stage must be integer >= 0" );
 

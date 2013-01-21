@@ -124,20 +124,25 @@ Token *DocumentLocation::getEndToken()
 
 void DocumentLocation::err( string msg )
 {
-	fprintf( stderr, "%s: ERROR! %s\n", getDescription().c_str(), msg.c_str() );
+	string desc = getDescription();
+	fprintf( stderr, "%s: ERROR! %s\n", desc.c_str(), msg.c_str() );
 	exit( 1 );
 }
 
 void DocumentLocation::warn( string msg )
 {
-	fprintf( stderr, "%s: WARNING! %s\n", getDescription().c_str(), msg.c_str() );
+	string desc = getDescription();
+	fprintf( stderr, "%s: WARNING! %s\n", desc.c_str(), msg.c_str() );
 }
 
 namespace proplib
 {
 	bool operator<( const DocumentLocation &a, const DocumentLocation &b )
 	{
-		int cmp = strcmp( a.getPath().c_str(), b.getPath().c_str() );
+		string apath = a.getPath();
+		string bpath = b.getPath();
+
+		int cmp = strcmp( apath.c_str(), bpath.c_str() );
 		if( cmp != 0 )
 			return cmp < 0;
 
@@ -581,7 +586,8 @@ void __ScalarProperty::dump( ostream &out, string indent )
 int __ScalarProperty::toInt()
 {
 	char *end;
-	int result = (int)strtol( getEvaledString().c_str(), &end, 10 );
+	string evaled = getEvaledString();
+	int result = (int)strtol( evaled.c_str(), &end, 10 );
 
 	if( *end != '\0' )
 		err( "Expecting integer." );
@@ -592,7 +598,8 @@ int __ScalarProperty::toInt()
 float __ScalarProperty::toFloat()
 {
 	char *end;
-	float result = (float)strtof( getEvaledString().c_str(), &end );
+	string evaled = getEvaledString();
+	float result = (float)strtof( evaled.c_str(), &end );
 
 	if( *end != '\0' )
 		err( "Expecting float." );
