@@ -8,7 +8,7 @@
 # Brain Type
 #
 ################################################################################
-NeuronModel	    T
+NeuronModel         T
 BrainArchitecture   Groups
 
 
@@ -17,10 +17,10 @@ BrainArchitecture   Groups
 # Groups Brain
 #
 ################################################################################
-MinInternalNeuralGroups		    0
-MaxInternalNeuralGroups		    5
+MinInternalNeuralGroups             0
+MaxInternalNeuralGroups             5
 EnableTopologicalDistortionRngSeed  True
-EnableInitWeightRngSeed		    True
+EnableInitWeightRngSeed             True
 
 
 ################################################################################
@@ -28,11 +28,11 @@ EnableInitWeightRngSeed		    True
 # Genome
 #
 ################################################################################
-GenomeLayout	    NeurGroup
-MinMutationRate	    0.001
-MaxMutationRate	    0.005
+GenomeLayout        NeurGroup
+MinMutationRate     0.001
+MaxMutationRate     0.005
 MaxCrossoverPoints  8
-GrayCoding	    True
+GrayCoding          True
 
 
 ################################################################################
@@ -40,14 +40,14 @@ GrayCoding	    True
 # Simulation
 #
 ################################################################################
-MaxSteps	200000
-MinFood		90
-MaxFood		MinFood
-SeedAgents	0
-AgentsAreFood	False
-EnableCarry	False
+MaxSteps        200000
+MinFood         90
+MaxFood         MinFood
+SeedAgents      0
+AgentsAreFood   False
+EnableCarry     False
 
-BrickHeight	3.0
+BrickHeight     3.0
 BrickColor {
   R 0.4
   G 0.4
@@ -65,29 +65,29 @@ BrickColor {
 Barriers
 [
   {
-    X1	0.3333 
+    X1  0.3333 
     Z1  -1.0
     X2  X1
 
     # Initialized to be Z1. Eventually grows to value of -0.1.
     Z2  dyn( Z1 )
         {
-	  // We're now in C++ syntax.
+          // We're now in C++ syntax.
 
-	  // For first 10,000 steps we don't want barriers.
+          // For first 10,000 steps we don't want barriers.
           if( Step < 10000 )
-	    return value;
+            return value;
 
-	  // If population healthy, grow barrier.
+          // If population healthy, grow barrier.
           if( AgentCount > 175 )
-	    return min( -0.1, value + 0.0001 ); // Don't let it go past -0.1
+            return min( -0.1, value + 0.0001 ); // Don't let it go past -0.1
 
-	  // If population struggling, shrink barrier.
-	  if( AgentCount < 100 )
-	    return max( Z1, value - 0.0001 );   // Don't let it go past Z1
+          // If population struggling, shrink barrier.
+          if( AgentCount < 100 )
+            return max( Z1, value - 0.0001 );   // Don't let it go past Z1
 
-	  // Don't change anything
-	  return value;
+          // Don't change anything
+          return value;
         }
   }
   ,
@@ -128,10 +128,10 @@ Domains
     [
       {
         BrickCount  100
-    	CenterX	    0.5
-	CenterZ	    0.999
-    	SizeX 	    1.0
-    	SizeZ 	    0.0001
+        CenterX     0.5
+        CenterZ     0.999
+        SizeX       1.0
+        SizeZ       0.0001
       }
     ]
 
@@ -151,24 +151,24 @@ Domains
         SizeZ                   0.5
         FoodFraction            0.33
         MaxFoodFraction         1.0
-        MaxFoodGrownFraction	1.0
-        RemoveFood 		True
+        MaxFoodGrownFraction    1.0
+        RemoveFood              True
         On                      dyn (False)
                                 attrs
-				{
+                                {
                                   init
-				  {
-				    // C++ syntax
-				    FoodPatchTokenRing::add( FoodPatches[0], // patch
-				    			     150,            // maxPopulation
-							     2000,   	     // timeout
-							     400 );  	     // delay
-				  }
+                                  {
+                                    // C++ syntax
+                                    FoodPatchTokenRing::add( FoodPatches[0], // patch
+                                                             150,            // maxPopulation
+                                                             2000,           // timeout
+                                                             400 );          // delay
+                                  }
                                   update
-				  {
-				    // C++ syntax
-				    FoodPatchTokenRing::update( parent )
-				  }
+                                  {
+                                    // C++ syntax
+                                    FoodPatchTokenRing::update( parent )
+                                  }
                                 }
       }
       ,
@@ -180,10 +180,10 @@ Domains
         FoodFraction              0.33
         MaxFoodFraction           1.0
         MaxFoodGrownFraction      1.0
-        RemoveFood 		  True
+        RemoveFood                True
         On                        dyn (False)
                                   attrs
-				  {
+                                  {
                                     init { FoodPatchTokenRing::add( FoodPatches[1] ); }
                                     update { FoodPatchTokenRing::update( parent ) }
                                   }
@@ -197,10 +197,10 @@ Domains
         FoodFraction              0.34
         MaxFoodFraction           1.0
         MaxFoodGrownFraction      1.0
-        RemoveFood		  True
+        RemoveFood                True
         On                        dyn (False)
                                   attrs
-				  {
+                                  {
                                     init { FoodPatchTokenRing::add( FoodPatches[2] ); }
                                     update { FoodPatchTokenRing::update( parent ) }
                                   }
