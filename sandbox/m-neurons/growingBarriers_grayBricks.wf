@@ -82,8 +82,12 @@ Barriers
           if( AgentCount > 175 )
             return min( -0.1, value + 0.0001 ); // Don't let it go past -0.1
 
+          // If population crashing, shrink barrier quickly.
+          if( AgentCount <= 90 )
+            return max( Z1, value - 0.0005 );   // Don't let it go past Z1
+
           // If population struggling, shrink barrier.
-          if( AgentCount < 100 )
+          if( AgentCount < 120 )
             return max( Z1, value - 0.0001 );   // Don't let it go past Z1
 
           // Don't change anything
