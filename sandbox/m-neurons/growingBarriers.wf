@@ -1,0 +1,196 @@
+@version 2
+
+# Warning! It's important to start file with "@version 2" so the parser knows
+# which grammar to use.
+
+################################################################################
+#
+# Brain Type
+#
+################################################################################
+NeuronModel         T
+BrainArchitecture   Groups
+
+
+################################################################################
+#
+# Groups Brain
+#
+################################################################################
+MinInternalNeuralGroups             0
+MaxInternalNeuralGroups             5
+EnableTopologicalDistortionRngSeed  True
+EnableInitWeightRngSeed             True
+
+
+################################################################################
+#
+# Genome
+#
+################################################################################
+GenomeLayout        NeurGroup
+MinMutationRate     0.001
+MaxMutationRate     0.005
+MaxCrossoverPoints  8
+GrayCoding          True
+
+
+################################################################################
+#
+# Simulation
+#
+################################################################################
+MaxSteps        200000
+MinFood         90
+MaxFood         MinFood
+SeedAgents      0
+AgentsAreFood   False
+EnableCarry     False
+
+BrickHeight     3.0
+BrickColor {
+  R 0.4
+  G 0.4
+  B 0.4
+}
+
+
+################################################################################
+#
+# Barriers
+#
+#   Defines 2 barriers that grow/shrink in response to population size.
+#
+################################################################################
+Barriers
+[
+  {
+    X1  0.3333 
+    Z1  -1.0
+    X2  X1
+
+    # Initialized to be Z1. Eventually grows to value of -0.1.
+    Z2  dyn( Z1 )
+        {
+          // We're now in C++ syntax.
+
+          // For first 10,000 steps we don't want barriers.
+          if( Step < 10000 )
+            return value;
+
+          // If population healthy, grow barrier.
+          if( AgentCount > 175 )
+            return min( -0.1, value + 0.0001 ); // Don't let it go past -0.1
+
+          // If population crashing, shrink barrier quickly.
+          if( AgentCount <= 90 )
+            return max( Z1, value - 0.001 );   // Don't let it go past Z1
+
+          // If population struggling, shrink barrier.
+          if( AgentCount < 120 )
+            return max( Z1, value - 0.0005 );   // Don't let it go past Z1
+
+          // Don't change anything
+          return value;
+        }
+  }
+  ,
+  {
+    X1  0.6667
+    Z1  Barriers[0].Z1
+    X2  X1
+    Z2  dyn( Barriers[0].Z2 )  # Dynamically linked to Barriers[0].Z2
+  }
+]
+
+################################################################################
+#
+# Domains
+#
+#   Defines a single domain with three food patches, where no more than 1 food
+# patch will be active at any given moment. The food patches activate in a 
+# manner that is supposed to encourage migration of the swarm.
+#
+################################################################################
+Domains
+[
+  {
+    CenterX 0.5
+    CenterZ 0.5
+    SizeX   1.0
+    SizeZ   1.0
+
+    ########################################
+    #
+    # Food Patches
+    #
+    #   Three patches in a "token ring"
+    #
+    ########################################
+    FoodPatches
+    [
+      {
+        CenterX                 0.167
+        CenterZ                 0.25
+        SizeX                   0.33
+        SizeZ                   0.5
+        FoodFraction            0.33
+        MaxFoodFraction         1.0
+        MaxFoodGrownFraction    1.0
+        RemoveFood              True
+        On                      dyn (False)
+                                attrs
+                                {
+                                  init
+                                  {
+                                    // C++ syntax
+                                    FoodPatchTokenRing::add( FoodPatches[0], // patch
+                                                             150,            // maxPopulation
+                                                             2000,           // timeout
+                                                             400 );          // delay
+                                  }
+                                  update
+                                  {
+                                    // C++ syntax
+                                    FoodPatchTokenRing::update( parent )
+                                  }
+                                }
+      }
+      ,
+      {
+        CenterX                   0.5
+        CenterZ                   0.25
+        SizeX                     0.33
+        SizeZ                     0.5
+        FoodFraction              0.33
+        MaxFoodFraction           1.0
+        MaxFoodGrownFraction      1.0
+        RemoveFood                True
+        On                        dyn (False)
+                                  attrs
+                                  {
+                                    init { FoodPatchTokenRing::add( FoodPatches[1] ); }
+                                    update { FoodPatchTokenRing::update( parent ) }
+                                  }
+      }
+      ,
+      {
+        CenterX                   0.833
+        CenterZ                   0.25
+        SizeX                     0.33
+        SizeZ                     0.5
+        FoodFraction              0.34
+        MaxFoodFraction           1.0
+        MaxFoodGrownFraction      1.0
+        RemoveFood                True
+        On                        dyn (False)
+                                  attrs
+                                  {
+                                    init { FoodPatchTokenRing::add( FoodPatches[2] ); }
+                                    update { FoodPatchTokenRing::update( parent ) }
+                                  }
+      }
+    ]
+
+  }
+]
