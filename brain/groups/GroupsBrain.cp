@@ -297,7 +297,7 @@ void GroupsBrain::grow()
 	if( DebugBrainGrowPrint )
 	{
 		cout << "fNumRedNeurons, fNumGreenNeurons, fNumBlueNeurons = "
-			 << _cns->get("red")->getNeuronCount() cms _cns->get("green")->getNeuronCount() cms _cns->get("blue")->getNeuronCount() nlf;;
+			 << _cns->getNerve("Red")->getNeuronCount() cms _cns->getNerve("Green")->getNeuronCount() cms _cns->getNerve("Blue")->getNeuronCount() nlf;;
 	}
 #endif
 
@@ -448,20 +448,24 @@ void GroupsBrain::grow()
 				neuronAttrs.spiking->SpikingParameter_d = 6;
 			}
 			break;
+			#if DebugBrainGrow
+				if( DebugBrainGrowPrint )
+					cout << "  groupbias = " << neuronAttrs.spiking->bias nlf;
+			#endif
 		case Brain::Configuration::TAU:
 			neuronAttrs.firingRate->tau = _genome->get(_genome->TAU,groupIndex_to);
 			// fall through
 		case Brain::Configuration::FIRING_RATE:
 			neuronAttrs.firingRate->bias = _genome->get(_genome->BIAS,groupIndex_to);
 			break;
+
+			#if DebugBrainGrow
+				if( DebugBrainGrowPrint )
+					cout << "  groupbias = " << neuronAttrs.firingRate->bias nlf;
+			#endif
 		default:
 			assert(false);
 		}
-
-#if DebugBrainGrow
-		if( DebugBrainGrowPrint )
-			cout << "  groupbias = " << groupbias nlf;
-#endif
 
         for (int groupIndex_from = 0; groupIndex_from < _numgroups; groupIndex_from++)
         {

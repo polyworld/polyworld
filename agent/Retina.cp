@@ -71,7 +71,7 @@ void Retina::sensor_update( bool bprint )
 
 	IF_BPRINT
 	(
-        printf("***** step = %ld ****** overheadrank = %d ******\n", TSimulation::fStep, TSimulation::fOverHeadRank);
+        printf("***** step = %ld ******\n", TSimulation::fStep);
         printf("retinaBuf [0 - %d]\n",(Brain::config.retinaWidth - 1));
         printf("red:");
         
