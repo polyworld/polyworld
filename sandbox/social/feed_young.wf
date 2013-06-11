@@ -1,0 +1,74 @@
+@version 2
+
+# Lots of receives by step 149k, almost 100%. But, no internal groups.
+# MinEatAge reached ~280
+
+# Warning! It's important to start file with "@version 2" so the parser knows
+# which grammar to use.
+
+################################################################################
+#
+# Brain Type
+#
+################################################################################
+NeuronModel         T
+BrainArchitecture   Groups
+
+
+################################################################################
+#
+# Groups Brain
+#
+################################################################################
+MinInternalNeuralGroups             0
+MaxInternalNeuralGroups             5
+EnableTopologicalDistortionRngSeed  True
+EnableInitWeightRngSeed             True
+
+
+################################################################################
+#
+# Genome
+#
+################################################################################
+GenomeLayout        NeurGroup
+MinMutationRate     0.001
+MaxMutationRate     0.005
+MaxCrossoverPoints  8
+GrayCoding          True
+
+
+################################################################################
+#
+# Simulation
+#
+################################################################################
+MaxSteps        200000
+SeedAgents      0
+AgentsAreFood   False
+EnableCarry     False
+
+RecordContacts True
+
+InitFood MinFood
+FoodMaxLifeSpan 300
+EnableGive True
+EnergyUseGive 0.0
+EnergyUseMultiplier 1.0
+MinEnergyFractionToOffspring 0.01
+MaxEnergyFractionToOffspring 0.02
+
+AgentMetabolisms [
+  {
+    MinEatAge dyn (1)
+              {
+	        if(AgentCount > 250)
+		  return min(750.0, value + 0.05);
+	        if(AgentCount > 150)
+		  return min(750.0, value + 0.01);
+		if(AgentCount < 100)
+		  return max(0.0, value - 0.05);
+		return value;
+              }
+  }
+]
