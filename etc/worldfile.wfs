@@ -307,10 +307,11 @@ AgentMetabolisms {
       }
 
       MinEatAge {
-        type    Int
+        type    Float
         min     0
         max     MaxLifeSpan
         default 0
+	cppsym  "$[ancestor]->minEatAge"
       }
 
       EatMultiplier {
