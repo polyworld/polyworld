@@ -79,7 +79,7 @@ using namespace std;
 #define	PwDirMode ( S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH )
 
 struct SheetSynapseType { sheets::Sheet::Type from, to; };
-static vector<SheetSynapseType> SheetSynapseTypes = 
+static vector<SheetSynapseType> SheetSynapseTypes =
 	{
 		{ sheets::Sheet::Input, sheets::Sheet::Internal },
 		{ sheets::Sheet::Input, sheets::Sheet::Output },
@@ -120,7 +120,7 @@ float AverageAngles( float a, float b );
 inline float AverageAngles( float a, float b )
 {
 	float c;
-	
+
 	if( fabs( a - b ) > 180.0 )
 	{
 		c = 0.5 * (a + b)  +  180.0;
@@ -129,7 +129,7 @@ inline float AverageAngles( float a, float b )
 	}
 	else
 		c = 0.5 * (a + b);
-	
+
 	return( c );
 }
 
@@ -205,7 +205,7 @@ TSimulation::TSimulation( string worldfilePath, string monitorPath )
 		fEvents(NULL),
 
 		fLoadState(false),
-		
+
 		fCalcFoodPatchAgentCounts(true),
 		fCalcComplexity(false),
 
@@ -285,7 +285,7 @@ TSimulation::TSimulation( string worldfilePath, string monitorPath )
 		}
 
 		schema->apply( worldfile );
-	}		
+	}
 	processWorldFile( worldfile );
 	agent::processWorldfile( *worldfile );
 	GenomeSchema::processWorldfile( *worldfile );
@@ -308,7 +308,7 @@ TSimulation::TSimulation( string worldfilePath, string monitorPath )
 	Brain::init();
     agent::agentinit();
 	SeparationCache::init();
-	
+
 	GenomeUtil::createSchema();
 
 	// ---
@@ -316,7 +316,7 @@ TSimulation::TSimulation( string worldfilePath, string monitorPath )
 	// ---
 	InitCppProperties( worldfile );
 
-		
+
 	 // Following is part of one way to speed up the graphics
 	 // Note:  this code must agree with the agent sizing in agent::grow()
 	 // and the food sizing in food::initlen().
@@ -342,7 +342,7 @@ TSimulation::TSimulation( string worldfilePath, string monitorPath )
 			cerr << "ERROR/Init(): Could not open 'LOCKSTEP-BirthsDeaths.log' for reading. Exiting." << endl;
 			exit(1);
 		}
-		
+
 		char LockstepLine[512];
 		int currentpos=0;			// current position in fLockstepFile.
 
@@ -352,13 +352,13 @@ TSimulation::TSimulation( string worldfilePath, string monitorPath )
 			if( LockstepLine[0] == '#' || LockstepLine[0] == '%' ) { currentpos = ftell( fLockstepFile ); continue; 	}				// if the line begins with a '#' or '%' (implying it is a header line), skip it.
 			else { fseek( fLockstepFile, currentpos, 0 ); break; }
 		}
-		
+
 		if( feof(fLockstepFile) )	// this should never happen, but lets make sure.
 		{
 			cout << "ERROR/Init(): Did not find any data lines in 'LOCKSTEP-BirthsDeaths.log'.  Exiting." << endl;
 			exit(1);
 		}
-		
+
 		SYSTEM( "cp LOCKSTEP-BirthsDeaths.log run/" );		// copy the LOCKSTEP file into the run/ directory.
 		SetNextLockstepEvent();								// setup for the first timestep in which Birth/Death events occurred.
 
@@ -511,7 +511,7 @@ TSimulation::~TSimulation()
 	while (objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&a))
 	{
 		Kill( a, LifeSpan::DR_SIMEND );
-	}	
+	}
 
 	delete monitorManager;
 
@@ -521,7 +521,7 @@ TSimulation::~TSimulation()
 	delete logs;
 
 	if( fLockstepFile )
-		fclose( fLockstepFile );	
+		fclose( fLockstepFile );
 
 	{
 		barrier* b;
@@ -545,7 +545,7 @@ TSimulation::~TSimulation()
 	// rather than cycling through them in xsortedagents here
 	objectxsortedlist::gXSortedObjects.clear();
 
-	
+
 	// TODO who owns items on stage?
 	fStage.Clear();
 
@@ -553,7 +553,7 @@ TSimulation::~TSimulation()
 	{
 		if (fDomains[id].fittest)
 			delete fDomains[id].fittest;
-		
+
 		if( fDomains[id].fLeastFit )
 			delete[] fDomains[id].fLeastFit;
 	}
@@ -561,12 +561,12 @@ TSimulation::~TSimulation()
 
 	if (fFittest != NULL)
 		delete fFittest;
-	
+
 	if( fRecentFittest != NULL )
 		delete fRecentFittest;
-	
+
 	agent::agentdestruct();
-		
+
 	delete agentPovRenderer;
 
 	printf( "Simulation stopped after step %ld\n", fStep );
@@ -593,25 +593,25 @@ void TSimulation::Step()
 	{
 		srand48(fSimulationSeed);
 	}
-	
+
 	frame++;
 //	printf( "%s: frame = %lu\n", __FUNCTION__, frame );
-	
+
 	if( fMaxSteps && ((fStep+1) > fMaxSteps) )
 	{
 		End( "MaxSteps" );
 		return;
 	}
-	else if( fEndOnPopulationCrash && 
+	else if( fEndOnPopulationCrash &&
 			 (objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE) <= fMinNumAgents) )
 	{
 		cerr << "Population crash at step " << fStep << endl;
 		End( "PopulationCrash" );
 		return;
 	}
-		
+
 	fStep++;
-	
+
 	debugcheck( "beginning of step %ld", fStep );
 
 	// compute some frame rates
@@ -633,7 +633,7 @@ void TSimulation::Step()
 	{
 		fFramesPerSecondOverall = fStep / (timeNow - fTimeStart);
 		fSecondsPerFrameOverall = 1. / fFramesPerSecondOverall;
-		
+
 		if( fStep > RecentSteps )
 		{
 			fFramesPerSecondRecent = RecentSteps / (timeNow - sTimePrevious[RecentSteps-1]);
@@ -648,7 +648,7 @@ void TSimulation::Step()
 			sTimePrevious[i] = sTimePrevious[i-1];
 	}
 	sTimePrevious[0] = timeNow;
-	
+
 	if (((fStep - fLastCreated) > fMaxGapCreate) && (fLastCreated > 0) )
 		fMaxGapCreate = fStep - fLastCreated;
 
@@ -663,7 +663,7 @@ void TSimulation::Step()
 			}
 		}
 	}
-	
+
 	// Set up some per-step values
 	fFoodEnergyIn = 0.0;
 	fFoodEnergyOut = 0.0;
@@ -684,7 +684,7 @@ void TSimulation::Step()
 	// Update all agents, using their neurally controlled behaviors
 	{
 		agentPovRenderer->beginStep();
-				
+
 		if( fStaticTimestepGeometry )
 		{
 			UpdateAgents_StaticTimestepGeometry();
@@ -698,7 +698,7 @@ void TSimulation::Step()
 		agentPovRenderer->endStep();
 	}
 
-	
+
 	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 	// ^^^ MASTER TASK ExecInteract
 	// ^^^
@@ -719,7 +719,7 @@ void TSimulation::Step()
 	fScheduler.execMasterTask( this,
 							   execInteract,
 							   !fParallelInteract );
-		
+
 	assert( fNumberAlive == objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE) );
 
 	debugcheck( "after Interact() in step %ld", fStep );
@@ -771,14 +771,14 @@ void TSimulation::Step()
 
 	fAverageFoodEnergyIn = (float(fStep - 1) * fAverageFoodEnergyIn + fFoodEnergyIn) / float(fStep);
 	fAverageFoodEnergyOut = (float(fStep - 1) * fAverageFoodEnergyOut + fFoodEnergyOut) / float(fStep);
-	
+
 	// -------------------------
 	// ---- Update Monitors ----
 	// -------------------------
 	UpdateMonitors();
 
 	debugcheck( "after brain monitor window in step %ld", fStep );
-	
+
 	// ---------------
 	// ---- Epoch ----
 	// ---------------
@@ -790,7 +790,7 @@ void TSimulation::Step()
 
 		fRecentFittest->clear();
 	}
-	
+
 	logs->postEvent( StepEndEvent() );
 }
 
@@ -817,7 +817,7 @@ string TSimulation::EndAt( long timestep )
 {
 	if( timestep < fStep )
 		return "Invalid end timestep. Simulation already beyond.";
-	
+
 	fMaxSteps = timestep;
 
 	cout << "End At " << timestep << endl;
@@ -846,13 +846,13 @@ void TSimulation::InitFittest()
         {
 			fDomains[id].fNumLeastFit = 0;
 			fDomains[id].fMaxNumLeastFit = lround( fSmiteFrac * fDomains[id].maxNumAgents );
-			
+
 			smPrint( "for domain %d fMaxNumLeastFit = %d\n", id, fDomains[id].fMaxNumLeastFit );
-			
+
 			if( fDomains[id].fMaxNumLeastFit > 0 )
 			{
 				fDomains[id].fLeastFit = new agent*[fDomains[id].fMaxNumLeastFit];
-				
+
 				for( int i = 0; i < fDomains[id].fMaxNumLeastFit; i++ )
 					fDomains[id].fLeastFit[i] = NULL;
 			}
@@ -931,11 +931,11 @@ void TSimulation::InitAgents()
 
 			c = agent::getfreeagent(this, &fStage);
 			Q_ASSERT(c != NULL);
-				
+
 			fNumberCreated++;
 			fNumberCreatedRandom++;
 			fDomains[id].numcreated++;
-				
+
 			if( numSeededDomain < fDomains[id].numberToSeed )
 			{
 				isSeed = true;
@@ -955,9 +955,9 @@ void TSimulation::InitAgents()
 			// !!! POST PARALLEL
 			// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 			fScheduler.postParallel( new GrowAgent(c) );
-				
+
 			fStage.AddObject(c);
-				
+
 			float x = randpw() * (fDomains[id].absoluteSizeX - 0.02) + fDomains[id].startX + 0.01;
 			float z = randpw() * (fDomains[id].absoluteSizeZ - 0.02) + fDomains[id].startZ + 0.01;
 			//float z = -0.01 - randpw() * (globals::worldsize - 0.02);
@@ -976,33 +976,33 @@ void TSimulation::InitAgents()
 				c->settranslation(x, y, z);
 			}
 			c->SaveLastPosition();
-								
+
 			float yaw =  360.0 * randpw();
 #if TestWorld
 			// point them all the same way
 			yaw = 95.0;
 #endif
 			c->setyaw(yaw);
-				
+
 			objectxsortedlist::gXSortedObjects.add(c);	// stores c->listLink
 
 			c->Domain(id);
 			fDomains[id].numAgents++;
 
 			// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-			// !!! POST SERIAL 
+			// !!! POST SERIAL
 			// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 			fScheduler.postSerial( new UpdateStats(c) );
 
 			Birth( c, LifeSpan::BR_SIMINIT );
 		}
-			
+
 		numSeededTotal += numSeededDomain;
 	}
-	
+
 	// Handle global initial creations, if necessary
 	Q_ASSERT( fInitNumAgents <= fMaxNumAgents );
-		
+
 	while( (int)objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE) < fInitNumAgents )
 	{
 		bool isSeed = true;
@@ -1012,7 +1012,7 @@ void TSimulation::InitAgents()
 
 		fNumberCreated++;
 		fNumberCreatedRandom++;
-			
+
 		if( numSeededTotal < fNumberToSeed )
 		{
 			isSeed = true;
@@ -1032,9 +1032,9 @@ void TSimulation::InitAgents()
 		// !!! POST PARALLEL
 		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		fScheduler.postParallel( new GrowAgent(c) );
-			
+
 		fStage.AddObject(c);
-			
+
 		float x =  0.01 + randpw() * (globals::worldsize - 0.02);
 		float z = -0.01 - randpw() * (globals::worldsize - 0.02);
 		float y = 0.5 * agent::config.agentHeight;
@@ -1049,15 +1049,15 @@ void TSimulation::InitAgents()
 
 		float yaw =  360.0 * randpw();
 		c->setyaw(yaw);
-			
+
 		objectxsortedlist::gXSortedObjects.add(c);	// stores c->listLink
-			
+
 		id = WhichDomain(x, z, 0);
 		c->Domain(id);
 		fDomains[id].numAgents++;
 
 		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		// !!! POST SERIAL 
+		// !!! POST SERIAL
 		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		fScheduler.postSerial( new UpdateStats(c) );
 
@@ -1074,7 +1074,7 @@ void TSimulation::InitFood()
 	for( int domainNumber = 0; domainNumber < fNumDomains; domainNumber++ )
 	{
 		fDomains[domainNumber].numFoodPatchesGrown = 0;
-			
+
 		for( int foodPatchNumber = 0; foodPatchNumber < fDomains[domainNumber].numFoodPatches; foodPatchNumber++ )
 		{
 			if( fDomains[domainNumber].fFoodPatches[foodPatchNumber].isOn() )
@@ -1116,7 +1116,7 @@ void TSimulation::InitBarriers()
 	// Add barriers
 	barrier* b = NULL;
 	while( barrier::gXSortedBarriers.next(b) )
-		fWorldSet.Add(b);	
+		fWorldSet.Add(b);
 }
 
 //---------------------------------------------------------------------------
@@ -1319,10 +1319,10 @@ void TSimulation::PickParentsUsingTournament(int numInPool, int* iParent, int* j
 double TSimulation::EnergyScaleFactor( long minAgents, long maxAgents, long numAgents )
 {
 	double scaleFactor = 1.0;
-	
+
 	long topFixedRange = minAgents + lround( fPopControlMaxFixedRange * (maxAgents - minAgents) );
 	long botFixedRange = minAgents + lround( fPopControlMinFixedRange * (maxAgents - minAgents) );
-	
+
 	if( numAgents < botFixedRange )
 	{
 		double fraction = (botFixedRange - numAgents) / (float) (botFixedRange - minAgents);
@@ -1339,7 +1339,7 @@ double TSimulation::EnergyScaleFactor( long minAgents, long maxAgents, long numA
 		// because it'll be close enough and not suffer a sign change
 		//printf( "%ld: a=%ld gsf=%g f=%g fr=%g\n", fStep, numAgents, scaleFactor, fraction, fractionReduced );
 	}
-	
+
 	return( scaleFactor );
 }
 
@@ -1401,7 +1401,7 @@ void TSimulation::MaintainEnergyCosts()
 				}
 			}
 		}
-		
+
 		// If the population is too low, globally or in any domain, then either help it or leave it alone
 		if( excess < 0 )
 		{
@@ -1428,7 +1428,7 @@ void TSimulation::MaintainEnergyCosts()
 			if( fPopulationPenaltyFraction > fMaxPopulationPenaltyFraction )
 				fPopulationPenaltyFraction = fMaxPopulationPenaltyFraction;
 		}
-		
+
 		//printf( "step=%4ld, pop=%3d, initPop=%3ld, minPop=%2ld, maxPop=%3ld, maxPopPenaltyFraction=%g, popPenaltyFraction=%g, lowPopAdvantageFactor=%g\n",
 		//		fStep, numAgents, initNumAgents, minNumAgents, maxNumAgents,
 		//		fMaxPopulationPenaltyFraction, fPopulationPenaltyFraction, fLowPopulationAdvantageFactor );
@@ -1688,7 +1688,7 @@ void TSimulation::Interact()
 			continue;
 
 		objectxsortedlist::gXSortedObjects.setMark( AGENTTYPE ); // so can point back to this agent later
-        cDied = FALSE;
+        cDied = false;
 
 		// See if there's an overlap with any other agents
         while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**) &d ) ) // to end of list or...
@@ -1698,7 +1698,7 @@ void TSimulation::Interact()
 				printf( "***************** d == c **************\n" );
 				continue;
 			}
-			
+
             if( (d->x() - d->radius()) >= (c->x() + c->radius()) )
                 break;  // this guy (& everybody else in list) is too far away
 
@@ -1743,7 +1743,7 @@ void TSimulation::Interact()
 					{
 						Give( c, d, &contactEvent, &cDied, true );
 						if(!cDied)
-						{				
+						{
 							Give( d, c, &contactEvent, &dDied, false );
 						}
 					}
@@ -1761,7 +1761,7 @@ void TSimulation::Interact()
 
         if( cDied )
 			continue; // nothing else to do with c, it's gone!
-	
+
 		// -----------------------
 		// --------- Eat ---------
 		// -----------------------
@@ -1788,7 +1788,7 @@ void TSimulation::Interact()
 		Fitness( c );
 
     } // while loop on agents (c)
-    
+
 	fEatStatistics.StepEnd();
 
 // 	if( fFittest->size() > 0 )
@@ -1798,7 +1798,7 @@ void TSimulation::Interact()
 // 		{
 // 			FitStruct* fit = fFittest->get(i);
 // 			printf( "  %d: a=%ld f=%5.2f c=%5.2f\n", i, fit->agentID, fit->fitness, fit->complexity );
-// 			
+//
 // 		}
 // 	}
 }
@@ -1823,14 +1823,14 @@ void TSimulation::DeathAndStats( void )
 			}
 		}
 	}
-	
+
 	if( fLockStepWithBirthsDeathsLog )
 	{
 		// if we are running in Lockstep with a LOCKSTEP-BirthDeaths.log, we kill our agents here.
 		if( fLockstepTimestep == fStep )
 		{
 			lsPrint( "t%ld: Triggering %d random deaths...\n", fStep, fLockstepNumDeathsAtTimestep );
-			
+
 			for( int count = 0; count < fLockstepNumDeathsAtTimestep; count++ )
 			{
 				int i = 0;
@@ -1850,18 +1850,18 @@ void TSimulation::DeathAndStats( void )
 					randAgent = testAgent;	// as long as there's a single legitimate agent for killing, randAgent will be non-NULL
 
 					i++;
-					
+
 					if( i > randomIndex )	// don't need to test for non-NULL randAgent, as it is always non-NULL by the time we reach here
 						break;
 				}
 
 				objectxsortedlist::gXSortedObjects.setcurr( saveCurr );	// restore the state of the x-sorted list  V???
-				
+
 				assert( randAgent != NULL );		// In we're in LOCKSTEP mode, we should *always* have a agent to kill.  If we don't kill a agent, then we are no longer in sync in the LOCKSTEP-BirthsDeaths.log
-				
+
 				Kill( randAgent, LifeSpan::DR_LOCKSTEP );
-				
-				lsPrint( "- Killed agent %ld, randomIndex = %d\n", randAgent->Number(), randomIndex );						
+
+				lsPrint( "- Killed agent %ld, randomIndex = %d\n", randAgent->Number(), randomIndex );
 			}	// end of for loop
 		}	// end of if( fLockstepTimestep == fStep )
 	}
@@ -1909,7 +1909,7 @@ void TSimulation::DeathAndStats( void )
 		fCurrentBrainStats.synapseCount.add( c->GetBrain()->getNumSynapses() );
 
         id = c->Domain();						// Determine the domain in which the agent currently is located
-	
+
 		if( ! fLockStepWithBirthsDeathsLog )
 		{
 			// If we're not running in LockStep mode, allow natural deaths
@@ -1968,19 +1968,19 @@ void TSimulation::DeathAndStats( void )
 				for( int foodPatchNumber = 0; foodPatchNumber < fDomains[domainNumber].numFoodPatches; foodPatchNumber++ )
 				{
 					// if agent is inside, then update FoodPatch's agentInsideCount
-					fDomains[domainNumber].fFoodPatches[foodPatchNumber].checkIfAgentIsInside(c->x(), c->z());  
+					fDomains[domainNumber].fFoodPatches[foodPatchNumber].checkIfAgentIsInside(c->x(), c->z());
 
 					// if agent is inside the outerrange, then update FoodPatch's agentOuterRangeCount
-					fDomains[domainNumber].fFoodPatches[foodPatchNumber].checkIfAgentIsInsideNeighborhood(c->x(), c->z());  
+					fDomains[domainNumber].fFoodPatches[foodPatchNumber].checkIfAgentIsInsideNeighborhood(c->x(), c->z());
 				}
 			}
-		}	
-		
+		}
+
 		// Figure out who is least fit, if we're doing smiting to make room for births
-		
+
 		// Do the bookkeeping for the specific domain, if we're using domains
 		// Note: I think we must have at least one domain these days - lsy 6/1/05
-		
+
 		// The test against average fitness is an attempt to keep fit organisms from being smited, in general,
 		// but it also helps protect against the situation when there are so few potential low-fitness candidates,
 		// due to the age constraint and/or population size, that agents can end up on both the highest fitness
@@ -2003,16 +2003,16 @@ void TSimulation::DeathAndStats( void )
 				else
 				{
 					int i;
-					
+
 					// Find the position to be replaced
 					for( i = 0; i < fDomains[id].fNumLeastFit; i++ )
 						if( c->HeuristicFitness() < fDomains[id].fLeastFit[i]->HeuristicFitness() )	// worse than the one in this slot
 							break;
-					
+
 					if( i < fDomains[id].fNumLeastFit )
 					{
 						// We need to move some of the items in the list down
-						
+
 						// If there's room left, add a slot
 						if( fDomains[id].fNumLeastFit < fDomains[id].fMaxNumLeastFit )
 							fDomains[id].fNumLeastFit++;
@@ -2024,7 +2024,7 @@ void TSimulation::DeathAndStats( void )
 					}
 					else
 						fDomains[id].fNumLeastFit++;	// we're adding to the end of the list, so increment the count
-					
+
 					// Store the new i-th worst
 					fDomains[id].fLeastFit[i] = c;
 					smPrint( "agent %ld added to least fit list for domain %d at position %d with fitness %g\n", c->Number(), id, i, c->HeuristicFitness() );
@@ -2047,22 +2047,22 @@ void TSimulation::MateLockstep( void )
 {
 	lsPrint( "t%ld: Triggering %d random births...\n", fStep, fLockstepNumBirthsAtTimestep );
 
-	for( int count = 0; count < fLockstepNumBirthsAtTimestep; count++ ) 
+	for( int count = 0; count < fLockstepNumBirthsAtTimestep; count++ )
 	{
 		agent* c = NULL;		// mommy
 		agent* d = NULL;		// daddy
-	
+
 		/* select mommy. */
 
 		int i = 0;
-		
+
 		int numAgents = objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE);
 		assert( numAgents < fMaxNumAgents );			// Since we've already done all the deaths that occurred at this timestep, we should always have enough room to process the births that happened at this timestep.
-		
+
 		agent* testAgent = NULL;
 		//int randomIndex = int( round( randpw() * fDomains[kd].numAgents ) );	// pick from this domain V???
 		int randomIndex = int( round( randpw() * numAgents ) );
-						
+
 		// As written, randAgent may not actually be the randomIndex-th agent in the domain, but it will be close,
 		// and as long as there's a single legitimate agent for mating (right domain, long enough since last mating,
 		// and long enough since birth) we will find and use it
@@ -2072,9 +2072,9 @@ void TSimulation::MateLockstep( void )
 			// Make sure it wasn't just birthed
 			if( testAgent->Age() > 0 )
 				c = testAgent;	// as long as there's a single legitimate agent for mating, Mommy will be non-NULL
-			
+
 			i++;
-			
+
 			if( (i > randomIndex) && (c != NULL) )
 				break;
 		}
@@ -2083,7 +2083,7 @@ void TSimulation::MateLockstep( void )
 
 		i = 0;
 		randomIndex = int( round( randpw() * numAgents ) );
-						
+
 		// As written, randAgent may not actually be the randomIndex-th agent in the domain, but it will be close,
 		// and as long as there's a single legitimate agent for mating (right domain, long enough since last mating, and
 		// has enough energy, plus not the same as the mommy), we will find and use it
@@ -2095,15 +2095,15 @@ void TSimulation::MateLockstep( void )
 				d = testAgent;	// as long as there's another single legitimate agent for mating, Daddy will be non-NULL
 
 			i++;
-				
+
 			if( (i > randomIndex) && (d != NULL) )
 				break;
 		}
 
 		assert( c != NULL && d != NULL );				// If for some reason we can't select parents, then we'll become out of sync with LOCKSTEP-BirthDeaths.log
-		
+
 		lsPrint( "* I have selected Mommy(%ld) and Daddy(%ld). Population size = %d\n", c->Number(), d->Number(), numAgents );
-		
+
 		if( c == d )	// shouldn't be possible, but...
 		{
 			fprintf( stderr, "%s: c == d (%p, %ld)\n", __FUNCTION__, c, c->Number() );
@@ -2113,11 +2113,11 @@ void TSimulation::MateLockstep( void )
 		#endif
 			assert( c != d );
 		}
-		
+
 		/* === We've selected our parents, now time to birth our agent. */
-			
+
 		ttPrint( "age %ld: agents # %ld & %ld are mating randomly\n", fStep, c->Number(), d->Number() );
-		
+
 		agent* e = agent::getfreeagent( this, &fStage );
 		Q_CHECK_PTR(e);
 
@@ -2140,7 +2140,7 @@ void TSimulation::MateLockstep( void )
 		e->Domain(kd);
 		fStage.AddObject(e);
 		objectxsortedlist::gXSortedObjects.add(e); // Add the new agent directly to the list of objects (no new agent list); the e->listLink that gets auto stored here should be valid immediately
-					
+
 		fNewLifes++;
 		fDomains[kd].numAgents++;
 		//fNumberBorn++;	// we are count virtual births rather than actual births now when running in lockstep mode
@@ -2152,7 +2152,7 @@ void TSimulation::MateLockstep( void )
 			fStep, e->Number(), c->Number(), d->Number(), e->x(), e->y(), e->z(), e->yaw(), e->Energy(), kd, id, jd );
 
 		Birth( e, LifeSpan::BR_LOCKSTEP, c, d );
-									
+
 	}	// end of loop 'for( int count=0; count<fLockstepNumBirthsAtTimestep; count++ )'
 }
 
@@ -2279,14 +2279,14 @@ void TSimulation::Mate( agent *c,
 	if( (cMateStatus == MATE__DESIRED) && (dMateStatus == MATE__DESIRED) )
 	{
 		// the agents are mate-worthy, so now deal with other conditions...
-	
+
 		// test for steady-state GA vs. natural selection
 		if( (fHeuristicFitnessWeight != 0.0) || (fComplexityFitnessWeight != 0.0) || fLockStepWithBirthsDeathsLog )
 		{
 			// we're using the steady state GA (instead of natural selection) or we're in lockstep mode
 			// count virtual offspring (offspring that would have resulted from
 			// otherwise successful mating behaviors), but don't actually instantiate them
-			
+
 			// We send lockstep = false to agent::mating() even when fLockStepWithBirthsDeathsLog is true,
 			// because this virtual birth was chosen by the agents, as opposed to the births foisted on
 			// agents at random as part of the lockstep mode.
@@ -2330,7 +2330,7 @@ void TSimulation::Mate( agent *c,
 
 				fNumBornSinceCreated++;
 				fDomains[kd].numbornsincecreated++;
-				
+
 				agent* e = agent::getfreeagent(this, &fStage);
 				Q_CHECK_PTR(e);
 
@@ -2348,7 +2348,7 @@ void TSimulation::Mate( agent *c,
 				{
 					float distance = globals::worldsize * fRandomBirthLocationRadius * randpw();
 					float angle = 2*M_PI * randpw();
-					
+
 					x += distance * cosf( angle );
 					z -= distance * sinf( angle );
 
@@ -2489,17 +2489,17 @@ void TSimulation::Smite( short kd,
 				if( testAgent->Domain() == kd )
 				{
 					i++;	// if it's in the right domain, increment even if we're not allowed to smite it
-							
+
 					if( (testAgent->Age() > fSmiteAgeFrac*testAgent->MaxAge()) && (testAgent->Number() != c->Number()) && (testAgent->Number() != d->Number()) )
 						randAgent = testAgent;	// as long as there's a single legitimate agent for smiting in this domain, randAgent will be non-NULL
 				}
-						
+
 				if( (i > randomIndex) && (randAgent != NULL) )
 					break;
 			}
-														
+
 			objectxsortedlist::gXSortedObjects.setcurr( saveCurr );	// restore the state of the x-sorted list
-					
+
 			if( randAgent )	// if we found any legitimately smitable agent...
 			{
 				fDomains[kd].fNumSmited++;
@@ -2618,7 +2618,7 @@ void TSimulation::Fight( agent *c,
 			}
 		}
 	}
-	
+
 	debugcheck( "after fight between agents %lu and %lu, %s", cnum, dnum, *cDied ? (*dDied ? "both died" : "c died") : (*dDied ? "d died" : "neither died") );
 }
 
@@ -2699,7 +2699,7 @@ void TSimulation::Give( agent *x,
 			}
 		}
 	}
-		
+
 	debugcheck( "after %lu gave %g energy to %lu%s", xnum, energy, y->Number(), energy == 0.0 ? " (did NOT give)" : "" );
 }
 
@@ -2790,10 +2790,10 @@ void TSimulation::Eat( agent *c, bool *cDied )
 				logs->postEvent( EnergyEvent(c, f, c->Eat(), energyEaten, EnergyEvent::Eat) );
 				if( fEvents )
 					fEvents->AddEvent( fStep, c->Number(), 'e' );
-								 
+
 				FoodEnergyOut( foodEnergyLost );
 				fEnergyEaten += energyEaten;
-				
+
 				eatPrint( "at step %ld, agent %ld at (%g,%g) with rad=%g wasted %g units of food at (%g,%g) with rad=%g\n", fStep, c->Number(), c->x(), c->z(), c->radius(), foodEaten, f->x(), f->z(), f->radius() );
 
 				if( f->isDepleted() || fFoodRemoveFirstEat )  // all gone
@@ -2815,7 +2815,7 @@ void TSimulation::Eat( agent *c, bool *cDied )
 		// set the list back to the agent mark, so we can look forward from that point
 		objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point list back to c
 	#endif
-	
+
 		// look for food in the +x direction
 		while( objectxsortedlist::gXSortedObjects.nextObj( FOODTYPE, (gobject**) &f ) )
 		{
@@ -2850,7 +2850,7 @@ void TSimulation::Eat( agent *c, bool *cDied )
 
 					FoodEnergyOut( foodEnergyLost );
 					fEnergyEaten += energyEaten;
-					
+
 					eatPrint( "at step %ld, agent %ld at (%g,%g) with rad=%g wasted %g units of food at (%g,%g) with rad=%g\n", fStep, c->Number(), c->x(), c->z(), c->radius(), foodEaten, f->x(), f->z(), f->radius() );
 
 					if( f->isDepleted() || fFoodRemoveFirstEat )  // all gone
@@ -2891,7 +2891,7 @@ void TSimulation::Eat( agent *c, bool *cDied )
 void TSimulation::Carry( agent* c )
 {
 	// Look for objects for this agent to carry
-	
+
 	// Is the agent expressing its pickup behavior?
 	if( c->Pickup() > fPickupThreshold )
 	{
@@ -2901,7 +2901,7 @@ void TSimulation::Carry( agent* c )
 			Pickup( c );
 		}
 	}
-	
+
 	// Is the agent expressing its drop behavior?
 	if( c->Drop() > fDropThreshold )
 	{
@@ -2919,7 +2919,7 @@ void TSimulation::Carry( agent* c )
 void TSimulation::Pickup( agent* c )
 {
 	gobject* o;
-	
+
 	// set the list back to the agent mark, so we can look backward from that point
 	objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point list back to c
 
@@ -2945,7 +2945,7 @@ void TSimulation::Pickup( agent* c )
 			{
 				// also overlap in z, so they really interact
 				ttPrint( "step %ld: agent # %ld is picking up object of type %lu\n", fStep, c->Number(), o->getType() );
-				
+
 				c->PickupObject( o );
 
 				if( c->NumCarries() >= agent::config.maxCarries )	// carrying as much as we can,
@@ -2959,13 +2959,13 @@ void TSimulation::Pickup( agent* c )
 	{
 		// set the list back to the agent mark, so we can look forward from that point
 		objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point list back to c
-	
+
 		// look in the +x direction for something to pick up
 		while( objectxsortedlist::gXSortedObjects.nextObj( fCarryObjects, (gobject**) &o ) )
 		{
 			if( o->BeingCarried() || (o->NumCarries() > 0) )
 				continue;	// already carrying or being carried, so nothing we can do with it
-		
+
 			if( (o->x() - o->radius()) > (c->x() + c->radius()) )
 			{
 				// beginning of object comes after end of agent, so there is no overlap,
@@ -2980,9 +2980,9 @@ void TSimulation::Pickup( agent* c )
 				{
 					// also overlap in z, so they really interact
 					ttPrint( "step %ld: agent # %ld is picking up object of type %d\n", fStep, c->Number(), o->getType() );
-					
+
 					c->PickupObject( o );
-					
+
 					if( c->NumCarries() >= agent::config.maxCarries )	// carrying as much as we can,
 						break;								// so get out of the forward while loop
 				}
@@ -2991,7 +2991,7 @@ void TSimulation::Pickup( agent* c )
 	}
 
 	objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point list back to c
-		
+
 	debugcheck( "after all agents had a chance to pickup objects" );
 }
 
@@ -3001,7 +3001,7 @@ void TSimulation::Pickup( agent* c )
 void TSimulation::Drop( agent* c )
 {
 	c->DropMostRecent();
-			
+
 	debugcheck( "after dropping most recent" );
 }
 
@@ -3029,19 +3029,19 @@ void TSimulation::Fitness( agent *c )
 		else	// must insert
 		{
 			int i;
-			
+
 			for( i = 0; i <  fCurrentFittestCount ; i++ )
 			{
 				if( c->HeuristicFitness() > fCurrentMaxFitness[i] )
 					break;
 			}
-			
+
 			for( int j = min( fCurrentFittestCount, MAXFITNESSITEMS-1 ); j > i; j-- )
 			{
 				fCurrentMaxFitness[j] = fCurrentMaxFitness[j-1];
 				fCurrentFittestAgent[j] = fCurrentFittestAgent[j-1];
 			}
-			
+
 			fCurrentMaxFitness[i] = c->HeuristicFitness();
 			fCurrentFittestAgent[i] = c;
 			if( fCurrentFittestCount < MAXFITNESSITEMS )
@@ -3051,7 +3051,7 @@ void TSimulation::Fitness( agent *c )
 		#endif
 		}
 	}
-		
+
 	debugcheck( "after current fitness lists maintained" );
 }
 
@@ -3079,7 +3079,7 @@ void TSimulation::CreateAgents( void )
 		}
 //		printf( "num[0]= %ld, num[1] = %ld, num[2] = %ld, num = %ld, max = %ld\n",
 //				fDomains[0].numToCreate, fDomains[1].numToCreate, fDomains[2].numToCreate,
-//				numToCreate, maxToCreate ); 
+//				numToCreate, maxToCreate );
 		while( numToCreate > maxToCreate )
 		{
 			int domainWithLeastNeed = -1;
@@ -3094,7 +3094,7 @@ void TSimulation::CreateAgents( void )
 			}
 //			printf( "num[0]= %ld, num[1] = %ld, num[2] = %ld, num = %ld, max = %ld, least = %ld, domLeast = %d\n",
 //					fDomains[0].numToCreate, fDomains[1].numToCreate, fDomains[2].numToCreate,
-//					numToCreate, maxToCreate, leastAgentsNeeded, domainWithLeastNeed ); 
+//					numToCreate, maxToCreate, leastAgentsNeeded, domainWithLeastNeed );
 			fDomains[domainWithLeastNeed].numToCreate--;
 			numToCreate--;
 		}
@@ -3229,10 +3229,10 @@ void TSimulation::CreateAgents( void )
 
 
 				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-				// !!! POST SERIAL 
+				// !!! POST SERIAL
 				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 				fScheduler.postSerial( new UpdateStats(newAgent) );
-				
+
 				Birth( newAgent, LifeSpan::BR_CREATE );
             }
         }
@@ -3372,7 +3372,7 @@ void TSimulation::MaintainFood()
 
 	// Go through each of the food patches and bring them up to minFoodCount size
 	// and create a new piece based on the foodRate probability
-	if( (long)objectxsortedlist::gXSortedObjects.getCount(FOODTYPE) < fMaxFoodCount ) 
+	if( (long)objectxsortedlist::gXSortedObjects.getCount(FOODTYPE) < fMaxFoodCount )
 	{
 		for( int domainNumber = 0; domainNumber < fNumDomains; domainNumber++ )
 		{
@@ -3420,7 +3420,7 @@ void TSimulation::MaintainFood()
 					}
 
 					// Grow by the integer part of the foodRate of the domain
-					int foodToGrow = (int)fDomains[domainNumber].foodRate; 
+					int foodToGrow = (int)fDomains[domainNumber].foodRate;
 					for( int i = 0; i < foodToGrow; i++ )
 					{
 						int patchNumber = getRandomPatch( domainNumber );
@@ -3431,7 +3431,7 @@ void TSimulation::MaintainFood()
 						else
 							break;	// no active patches in this domain, so give up
 					}
-					
+
 					// Keep at least the minimum amount of food around
 					int newFood = fDomains[domainNumber].minFoodCount - fDomains[domainNumber].foodCount;
 					for( int i = 0; i < newFood; i++ )
@@ -3446,7 +3446,7 @@ void TSimulation::MaintainFood()
 					}
 				}
 			}
-			else 
+			else
 			{
 				for( int patchNumber = 0; patchNumber < fDomains[domainNumber].numFoodPatches; patchNumber++ )
 				{
@@ -3466,7 +3466,7 @@ void TSimulation::MaintainFood()
 							}
 
 							// Grow by the integer part of the growthRate
-							int foodToGrow = (int) fDomains[domainNumber].fFoodPatches[patchNumber].growthRate; 
+							int foodToGrow = (int) fDomains[domainNumber].fFoodPatches[patchNumber].growthRate;
 							for( int i = 0; i < foodToGrow; i++ )
 							{
 								AddFood( domainNumber, patchNumber );
@@ -3502,11 +3502,11 @@ void TSimulation::MaintainFood()
 				}
 			}
 		}
-		
+
 		if( numPatchesNeedingRemoval > 0 )
 		{
 			food* f;
-			
+
 			// There are patches currently needing removal, so do it
 			objectxsortedlist::gXSortedObjects.reset();
 			while( objectxsortedlist::gXSortedObjects.nextObj( FOODTYPE, (gobject**) &f ) )
@@ -3516,7 +3516,7 @@ void TSimulation::MaintainFood()
 					if( f->getPatch() == fFoodPatchesNeedingRemoval[i] )
 					{
 						RemoveFood( f );
-						
+
 						break;	// found patch and deleted food, so get out of patch loop
 					}
 				}
@@ -3588,7 +3588,7 @@ void TSimulation::Birth( agent* a,
 	{
 		fNumberAlive++;
 		fNumberAliveWithMetabolism[ a->GetMetabolism()->index ]++;
-	
+
 		// ---
 		// --- Update agent's LifeSpan
 		// ---
@@ -3600,7 +3600,7 @@ void TSimulation::Birth( agent* a,
 		// ---
 		SeparationCache::birth( birthEvent );
 	}
-	
+
 	// ---
 	// --- Update Events
 	// ---
@@ -3659,9 +3659,9 @@ void TSimulation::Kill( agent* c,
 
 	Q_CHECK_PTR(c);
 	const short id = c->Domain();
-	
+
 	ttPrint( "age %ld: agent # %ld has died\n", fStep, c->Number() );
-	
+
 	// ---
 	// --- Update Tallies
 	// ---
@@ -3669,14 +3669,14 @@ void TSimulation::Kill( agent* c,
     fNumberDied++;
     fDomains[id].numdied++;
     fDomains[id].numAgents--;
-	
+
 	// ---
 	// --- Update Stats
 	// ---
 	fLifeSpanStats.add( c->Age() );
 	fLifeSpanRecentStats.add( c->Age() );
 	fLifeFractionRecentStats.add( c->Age() / c->MaxAge() );
-	
+
 	// ---
 	// --- Update Fitness
 	// ---
@@ -3687,7 +3687,7 @@ void TSimulation::Kill( agent* c,
 	// --- Turn into food, if applicable
 	// ---
 	FoodPatch* fp;
-	
+
 	bool rFood = (fAgentsRfood == RFOOD_TRUE)
 		|| ( (fAgentsRfood == RFOOD_TRUE__FIGHT_ONLY) && (reason == LifeSpan::DR_FIGHT) );
 
@@ -3748,7 +3748,7 @@ void TSimulation::Kill( agent* c,
     {
 		FoodEnergyOut( c->GetFoodEnergy() );
     }
-	
+
 	// ---
 	// --- Die()
 	// ---
@@ -3769,7 +3769,7 @@ void TSimulation::Kill( agent* c,
     // and will leave the list pointing to the previous agent
 	// agent::config.xSortedAgents.remove(); // get agent out of the list
 	// objectxsortedlist::gXSortedObjects.removeCurrentObject(); // get agent out of the list
-	
+
 	// Following assumes (requires!) the agent to have stored c->listLink correctly
 	objectxsortedlist::gXSortedObjects.removeObjectWithLink( (gobject*) c );
 
@@ -3872,7 +3872,7 @@ void TSimulation::analyzeBrain( agent *c )
 void TSimulation::updateFittest( agent *c )
 {
 	const short id = c->Domain();
-	
+
 	// Maintain the current-fittest list based on heuristic fitness
 	if( (fCurrentFittestCount > 0) && (c->HeuristicFitness() >= fCurrentMaxFitness[fCurrentFittestCount-1]) )	// a current-fittest agent is dying
 	{
@@ -3884,14 +3884,14 @@ void TSimulation::updateFittest( agent *c )
 			else
 				haveFitAgent = 1;
 		}
-	
+
 		if( haveFitAgent == 1 )		// this should usually be true, but lets make sure.
 		{
 			fCurrentFittestAgent[ (fCurrentFittestCount-1) ] = NULL;	// Null out the last agent in the list, just to be polite
 			fCurrentFittestCount--;		// decrement the number of agents in the list now that we've removed the recently deceased agent (c) from it.
 		}
 	}
-	
+
 	// Maintain a list of the fittest agents ever, for use in the online/steady-state GA,
 	// based on complete fitness, however it is currently being calculated
 	float cFitness = AgentFitness( c );
@@ -3904,7 +3904,7 @@ void TSimulation::updateFittest( agent *c )
 
 	// Then on a whole-world basis...
 	fFittest->update( c, cFitness );
-	
+
 	// Keep a separate list of the recent fittest, purely for data-gathering purposes,
 	// also based on complete fitness, however it is being currently being calculated
 	// "Recent" means since the last archival recording of recent best, as determined by fBestRecentBrainAnatomyRecordFrequency
@@ -3959,7 +3959,7 @@ void TSimulation::RemoveFood( food *f )
 	objectxsortedlist::gXSortedObjects.removeCurrentObject();   // get it out of the list
 
 	fStage.RemoveObject( f );  // get it out of the world
-					
+
 	if( f->BeingCarried() )
 	{
 		// if it's being carried, have to remove it from the carrier
@@ -3967,7 +3967,7 @@ void TSimulation::RemoveFood( food *f )
 	}
 
 	FoodEnergyOut( f->getEnergy() );
-					
+
 	delete f;	// get it out of memory
 }
 
@@ -3999,15 +3999,15 @@ void TSimulation::FoodEnergyOut( const Energy &e ) {
 float TSimulation::AgentFitness( agent* c )
 {
 // 	printf( "%s (beginning): %ld %g\n", __func__, c->Number(), c->Complexity() );
-	
+
 	float fitness = 0.0;
-	
+
 	if( c->Alive() )
 	{
 		cerr << "Error: Simulation's AgentFitness(agent) function called while agent is still alive" nl;
 		exit(1);
 	}
-	
+
 	if( fComplexityFitnessWeight == 0.0 )	// complexity as fitness is turned off
 	{
 		fitness = c->HeuristicFitness() / fTotalHeuristicFitness;
@@ -4037,7 +4037,7 @@ float TSimulation::AgentFitness( agent* c )
 		fitness = (fHeuristicFitnessWeight*c->HeuristicFitness()/fTotalHeuristicFitness + fComplexityFitnessWeight*c->Complexity()) / (fHeuristicFitnessWeight+fComplexityFitnessWeight);
 // 		cout << "fitness" eql fitness sp "hwt" eql fHeuristicFitnessWeight sp "hf" eql c->HeuristicFitness()/fTotalHeuristicFitness sp "cwt" eql fComplexityFitnessWeight sp "cf" eql c->Complexity() nl;
 	}
-	
+
 // 	printf( "%s (end): %ld %g (%g)\n", __func__, c->Number(), c->Complexity(), fitness );
 
 	return( fitness );
@@ -4407,22 +4407,22 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 				if( minAgentsFraction < 0.0 )
 					minAgentsFraction = fDomains[id].sizeX * fDomains[id].sizeZ;
 				fDomains[id].minNumAgents = nint( minAgentsFraction * fMinNumAgents );
-				
+
 				float maxAgentsFraction = dom.get( "MaxAgentsFraction" );
 				if( maxAgentsFraction < 0.0 )
 					maxAgentsFraction = fDomains[id].sizeX * fDomains[id].sizeZ;
 				fDomains[id].maxNumAgents = nint( maxAgentsFraction * fMaxNumAgents );
-				
+
 				float initAgentsFraction = dom.get( "InitAgentsFraction" );
 				if( initAgentsFraction < 0.0 )
 					initAgentsFraction = fDomains[id].sizeX * fDomains[id].sizeZ;
 				fDomains[id].initNumAgents = nint( initAgentsFraction * fInitNumAgents );
-				
+
 				float initSeedsFraction = dom.get( "InitSeedsFraction" );
 				if( initSeedsFraction < 0.0 )
 					initSeedsFraction = fDomains[id].sizeX * fDomains[id].sizeZ;
 				fDomains[id].numberToSeed = nint( initSeedsFraction * fNumberToSeed );
-				
+
 				fDomains[id].probabilityOfMutatingSeeds = dom.get( "ProbabilityOfMutatingSeeds" );
 				if( fDomains[id].probabilityOfMutatingSeeds < 0.0 )
 					fDomains[id].probabilityOfMutatingSeeds = fProbabilityOfMutatingSeeds;
@@ -4482,7 +4482,7 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 					if( foodType == NULL )
 					{
 						propPatch.get( "FoodTypeName" ).err( "Unknown FoodType name" );
-					}							 
+					}
 
 					foodFraction = propPatch.get( "FoodFraction" );
 
@@ -4490,22 +4490,22 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 					if( initFoodFraction < 0.0 )
 						initFoodFraction = foodFraction;
 					initFood = nint( initFoodFraction * fDomains[id].initFoodCount );
-					
+
 					minFoodFraction = propPatch.get( "MinFoodFraction" );
 					if( minFoodFraction < 0.0 )
 						minFoodFraction = foodFraction;
 					minFood = nint( minFoodFraction * fDomains[id].minFoodCount );
-					
+
 					maxFoodFraction = propPatch.get( "MaxFoodFraction" );
 					if( maxFoodFraction < 0.0 )
 						maxFoodFraction = foodFraction;
 					maxFood = nint( maxFoodFraction * fDomains[id].maxFoodCount );
-					
+
 					maxFoodGrownFraction = propPatch.get( "MaxFoodGrownFraction" );
 					if( maxFoodGrownFraction < 0.0 )
 						maxFoodGrownFraction = foodFraction;
 					maxFoodGrown = nint( maxFoodGrownFraction * fDomains[id].maxFoodGrownCount );
-					
+
 					foodRate = propPatch.get( "FoodRate" );
 					if (foodRate < 0.0)
 						foodRate = fDomains[id].foodRate;
@@ -4564,7 +4564,7 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 						patchFractionSpecified += newFraction;
 					}
 				}
-			
+
 				// Make sure fractions add up to 1.0 (allowing a little slop for floating point precision)
 				if( (patchFractionSpecified < 0.99999) || (patchFractionSpecified > 1.00001) )
 				{
@@ -4663,7 +4663,7 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 		}
 		else
 			fFoodRemovalNeeded = false;
-	
+
 		int numberFittest = doc.get( "NumberFittest" );
 
 		for (int id = 0; id < fNumDomains; id++)
@@ -4684,7 +4684,7 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 				fDomains[id].fittest = NULL;
 		}
 	} // Domains
-	
+
 	fUseProbabilisticFoodPatches = doc.get( "ProbabilisticFoodPatches" );
 
 
@@ -4718,9 +4718,9 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 	fPopControlMaxFixedRange = doc.get( "PopControlMaxFixedRange" );
 	fPopControlMinScaleFactor = doc.get( "PopControlMinScaleFactor" );
 	fPopControlMaxScaleFactor = doc.get( "PopControlMaxScaleFactor" );
-	
+
 	fAllowMinDeaths = doc.get( "AllowMinDeaths" );
-		
+
 	fComplexityType = (string)doc.get( "ComplexityType" );
 	fComplexityFitnessWeight = doc.get( "ComplexityFitnessWeight" );
 	if( fComplexityFitnessWeight )
@@ -4728,7 +4728,7 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 	fHeuristicFitnessWeight = doc.get( "HeuristicFitnessWeight" );
 
 	fTournamentSize = doc.get( "TournamentSize" );
-		
+
 	globals::recordFileType = (bool)doc.get( "CompressFiles" )
 		? AbstractFile::TYPE_GZIP_FILE
 		: AbstractFile::TYPE_FILE;
@@ -4740,7 +4740,7 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 	fExpFogDensity = doc.get( "ExpFogDensity" );
 	// This value only does something if Fog Function is linear
 	// It defines the maximum distance a agent can see.
-	fLinearFogEnd = doc.get( "LinearFogEnd" );	
+	fLinearFogEnd = doc.get( "LinearFogEnd" );
 }
 
 //-------------------------------------------------------------------------------------------
@@ -4750,7 +4750,7 @@ void TSimulation::initLockstepMode()
 {
 	agent::config.minLifeSpan = fMaxSteps;
 	agent::config.maxLifeSpan = fMaxSteps;
-		
+
 	agent::config.eat2Energy = 0.0;
 	agent::config.mate2Energy = 0.0;
 	agent::config.fight2Energy = 0.0;
@@ -4769,10 +4769,10 @@ void TSimulation::initLockstepMode()
 
 	fNumDepletionSteps = 0;
 	fMaxPopulationPenaltyFraction = 0.0;
-		
+
 	fApplyLowPopulationAdvantage = false;
 	fEnergyBasedPopulationControl = false;
-		
+
 	cout << "Due to running in LockStepWithBirthsDeathsLog mode, the following parameter values have been forcibly reset as indicated:" nl;
 	cout << "  MinLifeSpan" ses agent::config.minLifeSpan nl;
 	cout << "  MaxLifeSpan" ses agent::config.maxLifeSpan nl;
@@ -4824,7 +4824,7 @@ void TSimulation::initFitnessMode()
 	fMaxPopulationPenaltyFraction = 0.0;	// ditto
 	fApplyLowPopulationAdvantage = false;			// turn off the low-population advantage
 	fEnergyBasedPopulationControl = false;			// turn off energy-based population control
-		
+
 	cout << "Due to running as a steady-state GA with a fitness function, the following parameter values have been forcibly reset as indicated:" nl;
 	cout << "  InitNumAgents" ses fInitNumAgents nl;
 	cout << "  MinNumAgents" ses fMinNumAgents nl;
@@ -4894,7 +4894,7 @@ void TSimulation::Dump()
 	objectxsortedlist::gXSortedObjects.reset();
 	while (objectxsortedlist::gXSortedObjects.nextObj(FOODTYPE, (gobject**)&f))
 		f->dump(out);
-					
+
     out << fFitI nl;
     out << fFitJ nl;
 	if( fFittest )
@@ -4918,7 +4918,7 @@ void TSimulation::Dump()
         if (fDomains[id].fittest)
 			fDomains[id].fittest->dump( out );
     }
-	
+
 	monitorManager->dump( out );
 
     out.flush();
@@ -4933,25 +4933,25 @@ short TSimulation::WhichDomain(float x, float z, short d)
 {
 	for (short i = 0; i < fNumDomains; i++)
 	{
-		if (((x >= fDomains[i].startX) && (x <= fDomains[i].endX)) && 
+		if (((x >= fDomains[i].startX) && (x <= fDomains[i].endX)) &&
 			((z >= fDomains[i].startZ) && (z <= fDomains[i].endZ)))
 			return i;
 	}
 
 	// If we reach here, we failed to find a domain, so kvetch and quit
-	
+
 	char errorString[256];
-	
+
 	printf( "Domain not found in %ld domains, located at:\n", fNumDomains );
 	for( int i = 0; i < fNumDomains; i++ )
 		printf( "  %d: ranging over x = (%f -> %f) and z = (%f -> %f)\n",
 				i, fDomains[i].startX, fDomains[i].endX, fDomains[i].startZ, fDomains[i].endZ );
-	
+
 	sprintf(errorString,"%s (%g, %g) %s %d, %ld",
 			"WhichDomain failed to find any domain for point at (x, z) = ",
 			x, z, " & d, nd = ", d, fNumDomains);
 	error(2, errorString);
-	
+
 	return( -1 );	// not really returning, as error(2,...) will abort
 }
 
@@ -4965,26 +4965,26 @@ void TSimulation::SwitchDomain(short newDomain, short oldDomain, int objectType)
 {
 	if( newDomain == oldDomain )
 		return;
-	
+
 	switch( objectType )
 	{
 		case AGENTTYPE:
 			fDomains[newDomain].numAgents++;
 			fDomains[oldDomain].numAgents--;
 			break;
-		
+
 		case FOODTYPE:
 			fDomains[newDomain].foodCount++;
 			fDomains[oldDomain].foodCount--;
 			break;
-		
+
 		case BRICKTYPE:
 			// Domains do not currently keep track of brick counts
 			break;
-		
+
 		default:
 			error( 2, "unknown object type %d", objectType, "" );
-			break; 
+			break;
 	}
 }
 
@@ -4998,14 +4998,14 @@ void TSimulation::getStatusText( StatusText& statusText,
 	char t[256];
 	char t2[256];
 	short id;
-	
+
 	// TODO: If we're neither updating the window, nor writing to the stat file,
 	// then we shouldn't sprintf all these strings, or put them in the statusText
 	// (but for now, the window always draws anyway, so it's not a big deal)
-	
+
 	sprintf( t, "step = %ld", fStep );
 	statusText.push_back( strdup( t ) );
-	
+
 	sprintf( t, "agents = %4d", objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE) );
 	if (fNumDomains > 1)
 	{
@@ -5016,8 +5016,8 @@ void TSimulation::getStatusText( StatusText& statusText,
 			sprintf(t2, ", %ld", fDomains[id].numAgents );
 			strcat( t, t2 );
 		}
-		
-		strcat(t,")" );		
+
+		strcat(t,")" );
 	}
 	statusText.push_back( strdup( t ) );
 	if( Metabolism::getNumberOfDefinitions() > 1 )
@@ -5039,8 +5039,8 @@ void TSimulation::getStatusText( StatusText& statusText,
 			sprintf(t2, ", %d", fDomains[id].foodCount );
 			strcat( t, t2 );
 		}
-		
-		strcat(t,")" );		
+
+		strcat(t,")" );
 	}
 	statusText.push_back( strdup( t ) );
 
@@ -5049,7 +5049,7 @@ void TSimulation::getStatusText( StatusText& statusText,
 	{
 		sprintf( t2, " (%ld",fDomains[0].numcreated );
 		strcat( t, t2 );
-		
+
 		for (id = 1; id < fNumDomains; id++)
 		{
 			sprintf( t2, ",%ld",fDomains[id].numcreated );
@@ -5081,7 +5081,7 @@ void TSimulation::getStatusText( StatusText& statusText,
 		strcat(t,")" );
 	}
 	statusText.push_back( strdup( t ) );
-	
+
 	if( (fHeuristicFitnessWeight != 0.0) || (fComplexityFitnessWeight != 0.0) || fLockStepWithBirthsDeathsLog )
 	{
 		sprintf( t, "born_v  = %4ld", fNumberBornVirtual );
@@ -5105,16 +5105,16 @@ void TSimulation::getStatusText( StatusText& statusText,
 
 	sprintf( t, " -age    = %4ld", fNumberDiedAge );
 	statusText.push_back( strdup( t ) );
-	
+
 	sprintf( t, " -energy = %4ld", fNumberDiedEnergy );
 	statusText.push_back( strdup( t ) );
-	
+
 	sprintf( t, " -fight  = %4ld", fNumberDiedFight );
 	statusText.push_back( strdup( t ) );
-	
+
 	sprintf( t, " -eat  = %4ld", fNumberDiedEat );
 	statusText.push_back( strdup( t ) );
-	
+
 	sprintf( t, " -edge   = %4ld", fNumberDiedEdge );
 	statusText.push_back( strdup( t ) );
 
@@ -5166,10 +5166,10 @@ void TSimulation::getStatusText( StatusText& statusText,
 
 	sprintf( t, "Fitness m=%.2f, c=%.2f, a=%.2f", fMaxFitness, fCurrentMaxFitness[0] / fTotalHeuristicFitness, fAverageFitness );
 	statusText.push_back( strdup( t ) );
-	
+
 //	sprintf( t, "NormFit m=%.2f, c=%.2f, a=%.2f", fMaxFitness / fTotalHeuristicFitness, fCurrentMaxFitness[0] / fTotalHeuristicFitness, fAverageFitness / fTotalHeuristicFitness );
 //	statusText.push_back( strdup( t ) );
-	
+
 	sprintf( t, "Fittest =" );
 	int fittestCount = min( 5, fFittest->size() );
 	for( int i = 0; i < fittestCount; i++ )
@@ -5178,7 +5178,7 @@ void TSimulation::getStatusText( StatusText& statusText,
 		strcat( t, t2 );
 	}
 	statusText.push_back( strdup( t ) );
-	
+
 	if( fittestCount > 0 )
 	{
 		sprintf( t, " " );
@@ -5189,7 +5189,7 @@ void TSimulation::getStatusText( StatusText& statusText,
 		}
 		statusText.push_back( strdup( t ) );
 	}
-	
+
 	sprintf( t, "CurFit =" );
 	for( int i = 0; i < fCurrentFittestCount; i++ )
 	{
@@ -5197,7 +5197,7 @@ void TSimulation::getStatusText( StatusText& statusText,
 		strcat( t, t2 );
 	}
 	statusText.push_back( strdup( t ) );
-	
+
 	if( fCurrentFittestCount > 0 )
 	{
 		sprintf( t, " " );
@@ -5208,13 +5208,13 @@ void TSimulation::getStatusText( StatusText& statusText,
 		}
 		statusText.push_back( strdup( t ) );
 	}
-	
+
 	sprintf( t, "avgFoodEnergy = %.2f", (fAverageFoodEnergyIn - fAverageFoodEnergyOut) / (fAverageFoodEnergyIn + fAverageFoodEnergyOut) );
 	statusText.push_back( strdup( t ) );
-	
+
 	sprintf( t, "totFoodEnergy = %.2f", (fTotalFoodEnergyIn - fTotalFoodEnergyOut) / (fTotalFoodEnergyIn + fTotalFoodEnergyOut) );
 	statusText.push_back( strdup( t ) );
-	
+
 	sprintf( t, "totEnergyEaten = %.1f", fTotalEnergyEaten[0] );
 	for( int i = 1; i < globals::numEnergyTypes; i++ )
 	{
@@ -5222,7 +5222,7 @@ void TSimulation::getStatusText( StatusText& statusText,
 		strcat( t, t2 );
 	}
 	statusText.push_back( strdup( t ) );
-	
+
 	static Energy lastTotalEnergyEaten;
 	static Energy deltaEnergy;
     if( !(fStep % statusFrequency) )
@@ -5237,7 +5237,7 @@ void TSimulation::getStatusText( StatusText& statusText,
 		strcat( t, t2 );
 	}
 	statusText.push_back( strdup( t ) );
-	
+
 	static long lastNumberBorn = 0;
 	static long deltaBorn;
 	long numberBorn;
@@ -5252,7 +5252,7 @@ void TSimulation::getStatusText( StatusText& statusText,
 	}
 	sprintf( t, "MateRate = %.2f", (double) deltaBorn / statusFrequency );
 	statusText.push_back( strdup( t ) );
-	
+
 	sprintf( t, "LifeSpan = %lu ± %lu [%lu, %lu]", nint( fLifeSpanStats.mean() ), nint( fLifeSpanStats.stddev() ), (ulong) fLifeSpanStats.min(), (ulong) fLifeSpanStats.max() );
 	statusText.push_back( strdup( t ) );
 
@@ -5299,7 +5299,7 @@ void TSimulation::getStatusText( StatusText& statusText,
 			 fFramesPerSecondRecent,        fSecondsPerFrameRecent,
 			 fFramesPerSecondOverall,       fSecondsPerFrameOverall  );
 	statusText.push_back( strdup( t ) );
-	
+
 	if( fCalcFoodPatchAgentCounts )
 	{
 		int numAgentsInAnyFoodPatchInAnyDomain = 0;
@@ -5309,7 +5309,7 @@ void TSimulation::getStatusText( StatusText& statusText,
 		{
 			sprintf( t, "Domain %d", domainNumber);
 			statusText.push_back( strdup( t ) );
-			
+
 			int numAgentsInAnyFoodPatch = 0;
 			int numAgentsInOuterRanges = 0;
 
@@ -5318,7 +5318,7 @@ void TSimulation::getStatusText( StatusText& statusText,
 				numAgentsInAnyFoodPatch += fDomains[domainNumber].fFoodPatches[i].agentInsideCount;
 				numAgentsInOuterRanges += fDomains[domainNumber].fFoodPatches[i].agentNeighborhoodCount;
 			}
-			
+
 			float makePercent = 100.0 / fDomains[domainNumber].numAgents;
 			float makePercentNorm = 100.0 / numAgentsInAnyFoodPatch;
 
@@ -5334,8 +5334,8 @@ void TSimulation::getStatusText( StatusText& statusText,
 						 fDomains[domainNumber].fFoodPatches[i].agentInsideCount * makePercentNorm );
 				statusText.push_back( strdup( t ) );
 			}
-			
-			
+
+
 			sprintf( t, "  FP* %3d %3d  %4.1f %4.1f 100.0",
 					 numAgentsInAnyFoodPatch,
 					 numAgentsInAnyFoodPatch + numAgentsInOuterRanges,
@@ -5383,17 +5383,17 @@ int TSimulation::getRandomPatch( int domainNumber )
 	int patch;
 	float ranval;
 	float maxFractions = 0.0;
-	
+
 	// Since not all patches may be "on", we need to calculate the maximum fraction
 	// attainable by those patches that are on, and therefore allowed to grow food
 	for( short i = 0; i < fDomains[domainNumber].numFoodPatches; i++ )
 		if( fDomains[domainNumber].fFoodPatches[i].isOn() )
 			maxFractions += fDomains[domainNumber].fFoodPatches[i].fraction;
-	
+
 	if( maxFractions > 0.0 )	// there is an active patch in this domain
 	{
 		float sumFractions = 0.0;
-		
+
 		// Weight the random value by the maximum attainable fraction, so we always get
 		// a valid patch selection (if possible--they could all be off)
 		ranval = randpw() * maxFractions;
@@ -5407,7 +5407,7 @@ int TSimulation::getRandomPatch( int domainNumber )
 					return( i );    // this is the patch
 			}
 		}
-	
+
 		// Shouldn't get here
 		patch = int( floor( ranval * fDomains[domainNumber].numFoodPatches ) );
 		if( patch >= fDomains[domainNumber].numFoodPatches )
@@ -5416,7 +5416,7 @@ int TSimulation::getRandomPatch( int domainNumber )
 	}
 	else
 		patch = -1;	// no patches are active in this domain
-	
+
 	return( patch );
 }
 
@@ -5428,7 +5428,7 @@ void TSimulation::SetNextLockstepEvent()
 		cerr << "ERROR: You called SetNextLockstepEvent() and 'fLockStepWithBirthsDeathsLog' isn't set to true.  Though not fatal, it's certain that you didn't intend to do this.  Exiting." << endl;
 		exit(1);
 	}
-	
+
 	const char *delimiters = " ";		// a single space is the field delimiter
 	char LockstepLine[512];				// making this big in case we add longer lines in the future.
 
@@ -5465,16 +5465,16 @@ void TSimulation::SetNextLockstepEvent()
 				cerr << "Latest Event: '" << LockstepEvent << "'" << endl;
 				exit(1);
 			}
-			
+
 			currentpos = ftell( fLockstepFile );
 
 			//=======================
-						
+
 			if( (fgets(LockstepLine, sizeof(LockstepLine), fLockstepFile)) != NULL )		// if LOCKSTEP-BirthsDeaths.log still has entries in it, nexttimestep is the timestep of the next line.
 				nexttimestep = atoi( strtok( LockstepLine, delimiters ) );    // token => timestep
-			
+
 		} while( fLockstepTimestep == nexttimestep );
-		
+
 		// reset to the beginning of the next timestep
 		fseek( fLockstepFile, currentpos, 0 );
 		lsPrint( "SetNextLockstepEvent()/ Timestep: %d\tDeaths: %d\tBirths: %d\n", fLockstepTimestep, fLockstepNumDeathsAtTimestep, fLockstepNumBirthsAtTimestep );

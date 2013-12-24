@@ -156,6 +156,9 @@ def env_create():
 
 	env = env_common = init_env(Environment())
 	env.Append( CPPSUFFIXES = ['.cp'] )
+	if os.popen('uname').readlines()[0].strip() == 'Darwin':
+		env['CXX'] = '/usr/local/bin/g++'
+		env['CC'] = '/usr/local/bin/g++'
 	#cpp_flags = ['-g', '-Wall', '-O2' ]
 	cpp_flags = ['-g', '-Wall', '-Wno-format-security', '-std=gnu++0x' ]
 
@@ -168,7 +171,7 @@ def env_create():
 		cpp_flags += os.environ['CPPFLAGS'].split(' ')
 	except KeyError:
 		pass
-	env.Append( CPPFLAGS = cpp_flags )	  
+	env.Append( CPPFLAGS = cpp_flags )
 	env.Append( CPPPATH = find('src',
 							   type = 'dir') )
 	try:
@@ -182,10 +185,9 @@ def env_create():
 	import_OpenMP(env)
 	import_GSL(env)
 
-	env = envs['Polyworld'] = env_common.Clone()	
+	env = envs['Polyworld'] = env_common.Clone()
 	import_OpenGL(env)
 	import_Qt(env,
-			  qtversion = 4,
 			  qtmodules = ['QtCore',
 						   'QtGui',
 						   'QtOpenGL'])
@@ -194,7 +196,7 @@ def env_create():
 		python_version = os.environ['PYTHONVER']
 	except KeyError:
 		python_version = None
-	
+
 	if python_version:
 		import_python(env, python_version)
 	else:

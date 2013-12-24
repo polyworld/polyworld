@@ -4,8 +4,12 @@
 
 using namespace datalib;
 using namespace std;
-using namespace std::tr1;
-using namespace std::tr1::placeholders;
+#if __cplusplus >= 201103L
+	using namespace std::placeholders;
+#else
+	using namespace std::tr1;
+	using namespace std::tr1::placeholders;
+#endif
 
 #define SIGNATURE "#datalib\n"
 #define VERSION_STR "#version="
@@ -345,7 +349,7 @@ void DataLibWriter::addRow( Variant *colsdata )
 void DataLibWriter::endTable()
 {
 	assert( table );
-		
+
 	tableFooter();
 
 	table = NULL;
@@ -480,7 +484,7 @@ DataLibReader::DataLibReader( const char *path )
 {
 	f = fopen( path, "r" );
 	assert( f );
-		
+
 	table = NULL;
 	this->path = path;
 

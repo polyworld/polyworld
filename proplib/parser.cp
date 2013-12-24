@@ -83,7 +83,7 @@ Tokenizer::Tokenizer( string sourceName, istream *in )
 , _in( in )
 , _lineno( 1 )
 , _prev( NULL )
-		
+
 {
 }
 
@@ -111,7 +111,7 @@ Token *Tokenizer::next()
 		Token *tok = __next();
 		tok->lineno = lineno;
 		tok->number = ++_number;
-			
+
 		if( tok->isDecoration() )
 		{
 			if( decoration )
@@ -142,6 +142,34 @@ char Tokenizer::get()
 	if( c == '\n' )
 		_lineno++;
 	return c;
+}
+
+bool isspace(char c) {
+	if (c == ' ' || c == '\n' || c == '\t' || c == '\r' || c == '\v' || c == '\f')
+		return true;
+	else
+		return false;
+}
+
+bool isalpha(char c) {
+	if ((c >= 65 && c <= 90) || (c >= 97 && c <= 122))
+		return true;
+	else
+		return false;
+}
+
+bool isdigit(char c) {
+	if (c >= 48 && c <= 57)
+		return true;
+	else
+		return false;
+}
+
+bool isalnum(char c) {
+	if (isdigit(c) || isalpha(c))
+		return true;
+	else
+		return false;
 }
 
 Token *Tokenizer::__next()
@@ -327,7 +355,7 @@ Token *Tokenizer::parseString()
 
 	stringstream buf;
 	buf << '"';
-		
+
 	enum State {
 		Init,
 		Escape,
@@ -373,7 +401,7 @@ Token *Tokenizer::parseNumber()
 	while( _in->good() && (state != Complete) )
 	{
 		char c = _in->peek();
-			
+
 		if( c == '.' )
 		{
 			if( state == Dot )
@@ -400,7 +428,7 @@ Token *Tokenizer::parseNumber()
 			state = Complete;
 			break;
 		}
-			
+
 		buf << get();
 	}
 
@@ -760,7 +788,7 @@ void Parser::parseDynAttrs()
 		PUSH( DynAttr );
 
 		PUSH_POP( Id );
-	
+
 		if( peek()->type == Token::LeftCurly )
 			parseCppClause();
 		else

@@ -28,7 +28,7 @@ class MainWindow : public QWidget
 public:
 	MainWindow( const char* windowTitle,
 				const char* windowSettingsNameParam,
-				const Qt::WFlags windowFlags,
+				const Qt::WindowFlags windowFlags,
 				PwMovieReader* reader,
 				char** legend,
 				uint32_t startFram,
@@ -51,7 +51,7 @@ private:
 	uint32_t startFrame;
 	uint32_t endFrame;
 	bool looping;
-	
+
 	void SetFrame( uint32_t index );
 	void NextFrame();
 	void PrevFrame();
@@ -59,26 +59,26 @@ private:
 	void CreateMenus( QMenuBar* menuBar );
 	void AddFileMenu( QMenuBar* menuBar );
 	void AddHelpMenu( QMenuBar* menuBar );
-	
+
 	void RestoreFromPrefs();
 	void SaveWindowState();
 	void SaveDimensions();
 	void SaveVisibility();
-	
+
 	GLWidget*	glWidget;
 	GLWidget::Frame frame;
 
 	QSlider* slider;
-	
+
 	enum State
 	{
 		STOPPED,
 		PLAYING,
 		PAUSED
 	} state;
-	
+
 	PwMovieReader* reader;
-	
+
 	QMenu*		fileMenu;
 	QMenu*		helpMenu;
 

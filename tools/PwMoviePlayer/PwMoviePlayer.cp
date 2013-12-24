@@ -56,7 +56,7 @@ int main( int argc, char **argv )
 		qWarning("This system has no OpenGL support. Exiting.");
 		return -1;
     }
-	
+
 #if 0
 	// Just confirms behavior of shift and mask on big-endian and little-endian machines is the same
 	for( int i = 0; i < 1000; i += 16 )
@@ -72,7 +72,7 @@ int main( int argc, char **argv )
 	}
 	exit( 0 );
 #endif
-	
+
 	return( app.exec() );
 };
 
@@ -91,9 +91,9 @@ PMPApp::PMPApp(int &argc, char** argv) : QApplication(argc, argv)
 	uint32_t		startFrame		= 0;
 	uint32_t		endFrame		= 0;
 	double			frameRate		= 75.0;
-	bool			loop			= FALSE;
+	bool			loop			= false;
 	int				arg				= 1;
-		
+
 	while( arg < argc )
 	{
 		if( argv[arg][0] == '-' )
@@ -108,7 +108,7 @@ PMPApp::PMPApp(int &argc, char** argv) : QApplication(argc, argv)
 					else
 						fprintf( stderr, "Unable to allocate %lu bytes of memory for movieFileName\n", strlen( argv[arg] ) + 1 );
 					break;
-				
+
 				case 'l':
 					arg++;
 					legendFileName = (char*) malloc( strlen( argv[arg] ) + 1 );
@@ -125,27 +125,27 @@ PMPApp::PMPApp(int &argc, char** argv) : QApplication(argc, argv)
 					arg++;
 					startFrame = strtoul( argv[arg], NULL, 10 );
 					break;
-				
+
 				case 'e':
 					arg++;
 					endFrame = strtoul( argv[arg], NULL, 10 );
 //					printf( "endFrame = %lu\n", endFrame );
 					break;
-				
+
 				case 'r':
 					arg++;
 					frameRate = atof( argv[arg] );
 					break;
-				
+
 				case 'c':
 					arg++;
-					loop = TRUE;
+					loop = true;
 					break;
-				
+
 				default:
 					fprintf( stderr, "Unknown argument -%c\n", argv[arg][1] );
 					break;
-				
+
 			}
 		}
 		else
@@ -172,7 +172,7 @@ PMPApp::PMPApp(int &argc, char** argv) : QApplication(argc, argv)
 		if( legendFileName )
 		{
 			FILE* legendFile = fopen( legendFileName, "r" );
-			
+
 			if( legendFile )
 			{
 				legend = (char**) malloc( (MaxLegendLines+1) * sizeof( char* ) );	// +1 to have NULL terminating pointer
@@ -180,11 +180,11 @@ PMPApp::PMPApp(int &argc, char** argv) : QApplication(argc, argv)
 				if( legend )
 				{
 					int i;
-					
+
 					for( i = 0; i < MaxLegendLines; i++ )
 					{
 						char* test;
-						
+
 						legend[i] = (char*) malloc( MaxLegendLength + 1 );	// +1 for null terminator
 						if( legend[i] )
 						{
@@ -223,9 +223,9 @@ PMPApp::PMPApp(int &argc, char** argv) : QApplication(argc, argv)
 	// Establish how our preference settings file will be named
 	QCoreApplication::setOrganizationDomain( "indiana.edu" );
 	QCoreApplication::setApplicationName( "pwmovieplayer" );
-	
+
 	mainWindow = new MainWindow( "Polyworld MoviePlayer", "Main", 0, reader, legend, startFrame, endFrame, frameRate, loop );
-	mainWindow->show();	
+	mainWindow->show();
 }
 
 
@@ -246,10 +246,10 @@ void PMPApp::NextFrame()
 {
 	/*
 	static uint32_t frame;
-	
+
 	if( !mainMovieFile )
 		exit( 0 );
-	
+
 	frame++;
 #if 0
 	if( frame == 3 )
@@ -258,7 +258,7 @@ void PMPApp::NextFrame()
 		mainWindow->menuBar()->dumpObjectTree();
 	}
 #endif
-	
+
 	mainWindow->NextFrame();
 	*/
 }

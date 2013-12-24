@@ -133,7 +133,7 @@ SeedMutationProbability {
   default 0.0
   min     0.0
   max     1.0
-}  
+}
 
 InitFood {
   type    Int
@@ -216,7 +216,7 @@ NumEnergyTypes {
 }
 
 #------------------------------
-#--- Food Types 
+#--- Food Types
 #------------------------------
 FoodTypes {
   type    Array
@@ -226,7 +226,7 @@ FoodTypes {
       EnergyPolarity [ 1 ]
     }
   ]
-  
+
   element {
     type    Object
     properties {
@@ -234,7 +234,7 @@ FoodTypes {
       Name {
         type    String
       }
-    
+
       EnergyPolarity {
         type    Array
         min     NumEnergyTypes
@@ -337,13 +337,13 @@ AgentMetabolisms {
           cppsym  "$[ancestor].values[ $[index] ]"
         }
       }
-     
+
       MetabolismAgentCount {
         type    Int
         runtime True
         cppsym  "$[sim]->fNumberAliveWithMetabolism[ $[ancestor]->index ]"
       }
- 
+
     }
   }
 }
@@ -358,7 +358,7 @@ AgentMetabolismSelectionMode {
 }
 
 #------------------------------
-# Barriers 
+# Barriers
 #------------------------------
 Barriers {
   type    Array
@@ -382,7 +382,7 @@ Barriers {
   element {
     type    Object
     cppsym  "barrier::gBarriers[ $[index] ]"
-    
+
     properties {
       X1 {
         type    Float
@@ -414,7 +414,7 @@ Barriers {
 }
 
 #------------------------------
-#--- Domains 
+#--- Domains
 #------------------------------
 Domains {
   type    Array
@@ -436,7 +436,7 @@ Domains {
           SizeZ                     0.1
         }
         ,
-        {                         
+        {
           FoodFraction              0.8
           MaxFoodFraction           1.0
           MaxFoodGrownFraction      1.0
@@ -585,28 +585,28 @@ Domains {
               max     1.0
               assert  ( (InitFoodFraction == -1.0) or (InitFoodFraction >= 0.0) )
             }
-                                    
+
             MinFoodFraction {
               type    Float
               default -1.0
               max     1.0
               assert  ( (MinFoodFraction == -1.0) or (MinFoodFraction >= 0.0) )
             }
-                                    
+
             MaxFoodFraction {
               type    Float
               default -1.0
               max     1.0
               assert  ( (MaxFoodFraction == -1.0) or (MaxFoodFraction >= 0.0) )
             }
-                                    
+
             MaxFoodGrownFraction {
               type    Float
               default -1.0
               max     1.0
               assert  ( (MaxFoodGrownFraction == -1.0) or (MaxFoodGrownFraction >= 0.0) )
             }
-                                    
+
             FoodRate {
               type    Float
               default -1.0
@@ -620,21 +620,21 @@ Domains {
               exmin   0.0
               exmax   1.0
             }
-      
+
             CenterZ {
               type    Float
               default 0.5
               exmin   0.0
               exmax   1.0
             }
-      
+
             SizeX {
               type    Float
               default 1.0
               exmin   0.0
               max     1.0
             }
-      
+
             SizeZ {
               type    Float
               default 1.0
@@ -678,7 +678,7 @@ Domains {
               default True
               cppsym  "$[ancestor].on"
             }
-                                    
+
           } # FoodPatch properties
         } # FoodPatches[] element
       }  # FoodPatches[]
@@ -704,21 +704,21 @@ Domains {
               exmin   0.0
               exmax   1.0
             }
-      
+
             CenterZ {
               type    Float
               default 0.5
               #exmin   0.0
               #exmax   1.0
             }
-      
+
             SizeX {
               type    Float
               default 1.0
               exmin   0.0
               max     1.0
             }
-      
+
             SizeZ {
               type    Float
               default 1.0
@@ -1156,7 +1156,7 @@ AllowMinDeaths {
 #-------------------------------------------------------------------
 # SECTION Simulation parameters -- Tertiary
 #-------------------------------------------------------------------
-        
+
 MaxVelocity {
   type    Float
   default 1.0
@@ -1778,7 +1778,7 @@ Sheets {
       type    Object
       default {}
       properties {
-    
+
         X {
           type    Float
           default 1.0
@@ -1786,7 +1786,7 @@ Sheets {
           max     MaxBrainSize.X
 	  cppsym  "$[gene, SizeX, min]"
         }
-    
+
         Y {
           type    Float
           default 0.1
@@ -1794,7 +1794,7 @@ Sheets {
           max     MaxBrainSize.Y
 	  cppsym  "$[gene, SizeY, min]"
         }
-    
+
         Z {
           type    Float
           default 0.1
@@ -1802,36 +1802,36 @@ Sheets {
           max     MaxBrainSize.Z
 	  cppsym  "$[gene, SizeZ, min]"
         }
-    
+
       }
     }
-    
+
     MaxBrainSize {
       type    Object
       default {}
       properties {
-    
+
         X {
           type    Float
           default 1.0
           min     MinBrainSize.X
 	  cppsym  "$[gene, SizeX, max]"
         }
-    
+
         Y {
           type    Float
           default 1.0
           min     MinBrainSize.Y
 	  cppsym  "$[gene, SizeY, max]"
         }
-    
+
         Z {
           type    Float
           default 1.0
           min     MinBrainSize.Z
 	  cppsym  "$[gene, SizeZ, max]"
         }
-    
+
       }
     }
 
@@ -1868,47 +1868,47 @@ Sheets {
       min     1
       max     MaxVisionNeuronsPerSheet
     }
-    
+
     MaxVisionNeuronsPerSheet {
       type    Int
       default 16
       min     MinVisionNeuronsPerSheet
     }
-    
+
     MinInternalSheetsCount {
       type    Int
       default 0
       min     0
       max     MaxInternalSheetsCount
     }
-    
+
     MaxInternalSheetsCount {
       type    Int
       default 5
       min     MinInternalSheetsCount
     }
-    
+
     MinInternalSheetSize {
       type    Float
       default 0.1
       exmin   0.0
       max     MaxInternalSheetSize
     }
-    
+
     MaxInternalSheetSize {
       type    Float
       default 1.0
       min     MinInternalSheetSize
       max     1.0
     }
-    
+
     MinInternalSheetNeuronCount {
       type    Int
       default 1
       min     0
       max     MaxInternalSheetNeuronCount
     }
-    
+
     MaxInternalSheetNeuronCount {
       type    Int
       default 10
@@ -1956,7 +1956,7 @@ Sheets {
         Neuron
       }
       default Sheet
-    }  
+    }
 
     SynapseAttrEncoding {
       type    Enum

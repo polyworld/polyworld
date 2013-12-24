@@ -32,7 +32,7 @@ using namespace std;
 //---------------------------------------------------------------------------
 MainWindow::MainWindow( const char* windowTitle,
 						const char* windowSettingsNameParam,
-						const Qt::WFlags windowFlags,
+						const Qt::WindowFlags windowFlags,
 						PwMovieReader* readerParam,
 						char** legend,
 						uint32_t startFram,
@@ -47,7 +47,7 @@ MainWindow::MainWindow( const char* windowTitle,
 	startFrame = startFram;
 	endFrame = endFram;
 	looping = loop;
-	
+
 	// Create the main menubar
 	//CreateMenus( menuBar() );
 
@@ -57,13 +57,13 @@ MainWindow::MainWindow( const char* windowTitle,
 	//ReadMovieFileHeader();
 
 //	printf( "movieWidth = %lu, movieHeight = %lu\n", movieWidth, movieHeight );
-	
+
 	// Display the main simulation window
 	RestoreFromPrefs();
 
 	QWidget *content = new QWidget( this );
 	QVBoxLayout *contentLayout = new QVBoxLayout( content );
-	
+
 	// Set up the OpenGL view
 	glWidget = new GLWidget( content, legend );
 
@@ -75,7 +75,7 @@ MainWindow::MainWindow( const char* windowTitle,
 	contentLayout->addWidget( glWidget );
 	contentLayout->addWidget( slider );
 	content->setLayout( contentLayout );
-	
+
 	setCentralWidget( content );
 
 	state = PAUSED;
@@ -104,7 +104,7 @@ void MainWindow::Tick()
 	if( state == PLAYING )
 	{
 		NextFrame();
-		
+
 		if( looping && frame.index == reader->getFrameCount() )
 			SetFrame( startFrame == 0 ? 1 : startFrame );
 	}
@@ -167,17 +167,17 @@ void MainWindow::keyReleaseEvent( QKeyEvent* event )
 				? PLAYING
 				: PAUSED;
 			break;
-		
+
 		case Qt::Key_Right:
 			state = PAUSED;
 			NextFrame();
 			break;
-		
+
 		case Qt::Key_Left:
 			state = PAUSED;
 			PrevFrame();
 			break;
-		
+
 		default:
 			event->ignore();
 			break;
@@ -271,12 +271,12 @@ void MainWindow::SaveDimensions()
 {
 	// Save size and location to prefs
 	QSettings settings;
-  
+
 	settings.beginGroup( kWindowsGroupSettingsName );
 		settings.beginGroup( windowSettingsName );
-		
+
 			settings.setValue( "width", geometry().width() );
-			settings.setValue( "height", geometry().height() );			
+			settings.setValue( "height", geometry().height() );
 			settings.setValue( "x", geometry().x() );
 			settings.setValue( "y", geometry().y() );
 
@@ -294,7 +294,7 @@ void MainWindow::SaveVisibility()
 
 	settings.beginGroup( kWindowsGroupSettingsName );
 		settings.beginGroup( windowSettingsName );
-		
+
 			settings.setValue( "visible", isVisible() );
 
 		settings.endGroup();
@@ -311,7 +311,7 @@ void MainWindow::RestoreFromPrefs()
 	// Set up some defaults
 	int defX = 1;
 	int titleHeight = 22;
-	int defY = kMenuBarHeight + titleHeight;	
+	int defY = kMenuBarHeight + titleHeight;
 // 	int defWidth = desktop->width() - defX;
 // 	int defHeight = desktop->height() - defY;
 
@@ -330,10 +330,10 @@ void MainWindow::RestoreFromPrefs()
 				defX = settings.value( "x" ).toInt();
 			if( settings.contains( "y" ) )
 				defY = settings.value( "y" ).toInt();
-			
+
 		settings.endGroup();
 	settings.endGroup();
-	
+
 	// Pin values
 	if (defX < desktop->x() || defX > desktop->width())
 		defX = 0;
@@ -349,7 +349,7 @@ void MainWindow::RestoreFromPrefs()
   	setGeometry( position );
 	//setFixedSize( defWidth, defHeight );
 	show();
-	
-	// Save settings for future restore		
-	SaveWindowState();		
+
+	// Save settings for future restore
+	SaveWindowState();
 }

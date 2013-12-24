@@ -20,7 +20,7 @@ def init_env(env):
 		env.Append( DEFAULTFRAMEWORKPATH = ['/System/Library/Frameworks',
 											'/Library/Frameworks'] )
 		env.Append( FRAMEWORKPATH = [] )
-		
+
 	return env
 
 ################################################################################
@@ -79,7 +79,7 @@ def import_python(env, version=None):
 		if not version: version='2.7'
 		env.Append( CPPPATH = ['/usr/include/python'+version] )
 	elif PFM == 'mac':
-		if not version: version='2.6'
+		if not version: version='2.7'
 		env.Append( CPPPATH = ['/System/Library/Frameworks/Python.framework/Versions/'+version+'/include/python'+version] )
 	else:
 		assert(False)
@@ -92,7 +92,6 @@ def import_python(env, version=None):
 ###
 ################################################################################
 def import_Qt(env,
-			  qtversion = 4,
 			  qtmodules = ['QtCore']):
 
 	def expand(path, module = ""):
@@ -111,12 +110,21 @@ def import_Qt(env,
 		qthome = os.path.expanduser( '~/QtSDK/Desktop/Qt/4.8.1/gcc' )
 		if os.path.exists( qthome ):
 			PFM_CPPPATH = [qthome + '/include/$MODULE']
+			qtversion = 4
 		else:
-			qthome = None
-			PFM_CPPPATH = ['/Library/Frameworks/$MODULE.framework/Versions/$VERSION/Headers']
+			qthome = os.path.expanduser( '~/Qt5.2.0/5.2.0/clang_64' )
+			if os.path.exists( qthome ):
+				PFM_CPPPATH = [qthome + '/lib/$MODULE.framework/Headers']
+				qtversion = 5
+			else:
+				qthome = None
+				PFM_CPPPATH = ['/Library/Frameworks/$MODULE.framework/Versions/$VERSION/Headers']
+				qtversion = 4
 	else:
 		assert(false)
 
+	if qtversion >= 5:
+		qtmodules += ['QtWidgets']
 	for mod in qtmodules:
 		env.AppendUnique( CPPPATH = [which(mod,
 										   dir = True,
@@ -162,7 +170,7 @@ def import_Qt(env,
 ################################################################################
 def export_dynamic( env ):
 	if PFM == 'linux':
-		env.Append( LINKFLAGS = ['-rdynamic'] ) 
+		env.Append( LINKFLAGS = ['-rdynamic'] )
 	elif PFM == 'mac':
 		env.Append( LINKFLAGS = ['-undefined', 'dynamic_lookup'] )
 	else:
@@ -206,7 +214,7 @@ def find(topdir = '.',
 			children = dirinfo[2]
 		else:
 			assert(false)
-		
+
 		for filename in children:
 			if filename in ignore:
 				continue
@@ -234,8 +242,8 @@ def which(name,
 		  path = os.environ['PATH'].split(':'),
 		  err = None):
 
-	for dir in path:
-		p = os.path.join(dir, name)
+	for a_path in path:
+		p = os.path.join(a_path, name)
 		if os.path.exists(p):
 			abspath = os.path.abspath(p)
 			if dir:

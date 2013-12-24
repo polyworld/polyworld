@@ -8,7 +8,12 @@
 #include <map>
 #include <string>
 #include <vector>
-#include <tr1/functional>
+#if __cplusplus >= 201103L
+	#include <functional>
+#else
+	#include <tr1/functional>
+#endif
+
 
 #include "misc.h"
 #include "Variant.h"
@@ -153,7 +158,11 @@ class DataLibReader
 	void parseDigest();
 	void parseTableHeader();
 	void parseLine( const char *line,
+#if __cplusplus >= 201103L
+					std::function<void (const char *start,
+#else
 					std::tr1::function<void (const char *start,
+#endif
 											 const char *end)> callback);
 
  private:
