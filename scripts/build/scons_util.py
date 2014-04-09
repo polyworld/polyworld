@@ -104,6 +104,7 @@ def import_Qt(env,
 	if PFM == 'linux':
 		qthome = None
 		PFM_CPPPATH = ['/usr/share/qt$VERSION/include/$MODULE']
+		qtversion = 4
 
 		env.Append( CPPPATH = expand(['/usr/share/qt$VERSION/include/']) )
 	elif PFM == 'mac':
