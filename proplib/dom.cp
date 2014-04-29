@@ -599,7 +599,12 @@ float __ScalarProperty::toFloat()
 {
 	char *end;
 	string evaled = getEvaledString();
+	// It is necessary to force the "C" locale here, so floats specified
+	// with a period work correctly even in locales that normally use a comma
+	// for the decimal mark.
+	char *saved_locale = setlocale( LC_NUMERIC, "C" );
 	float result = (float)strtof( evaled.c_str(), &end );
+	setlocale( LC_NUMERIC, saved_locale );
 
 	if( *end != '\0' )
 		err( "Expecting float." );
@@ -803,7 +808,7 @@ void __ContainerProperty::add( Property *prop )
 {
 	if( getp(prop->getName()) != NULL )
 	{
-		
+
 		prop->err( string("Duplicate property name '") + prop->getName() + "' (see " + getp(prop->getName())->getLocation().getDescription() + ")" );
 	}
 
