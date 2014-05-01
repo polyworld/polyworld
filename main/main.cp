@@ -26,7 +26,7 @@ using namespace std;
 void usage( const char* format, ... )
 {
 	printf( "Usage:  Polyworld [--ui gui|term] worldfile\n" );
-	
+
 	if( format )
 	{
 		printf( "Error:\n\t" );
@@ -36,7 +36,7 @@ void usage( const char* format, ... )
 		va_end( argv );
 		printf( "\n" );
 	}
-	
+
 	exit( 1 );
 }
 
@@ -52,7 +52,7 @@ int main( int argc, char** argv )
 {
 	const char *worldfilePath = NULL;
 	string ui = "gui";
-	
+
 	for( int argi = 1; argi < argc; argi++ )
 	{
 		string arg = argv[argi];
@@ -63,7 +63,7 @@ int main( int argc, char** argv )
 			{
 				if( ++argi >= argc )
 					usage( "Missing --ui arg" );
-			
+
 				ui = argv[argi];
 				if( (ui != "gui") && (ui != "term") )
 					usage( "Invalid --ui arg (%s)", argv[argi] );
@@ -79,7 +79,7 @@ int main( int argc, char** argv )
 				usage( "Only one worldfile path allowed, at least two specified (%s, %s)", worldfilePath, argv[argi] );
 		}
 	}
-	
+
 	if( ! worldfilePath )
 	{
 		usage( "A valid path to a worldfile must be specified" );
@@ -115,12 +115,16 @@ int main( int argc, char** argv )
     {
 		qWarning("This system has no OpenGL support. Exiting.");
 		return -1;
-    }	
+    }
 
 	// Establish how our preference settings file will be named
 	QCoreApplication::setOrganizationDomain( "indiana.edu" );
 	QCoreApplication::setApplicationName( "polyworld" );
 
+	// It is necessary to force the "C" locale because Qt adopts the system
+	// locale, but we want floats specified with a period to work correctly
+	// even in locales that normally use a comma for the decimal mark.
+	setlocale( LC_NUMERIC, "C" );
 
 	TSimulation *simulation = new TSimulation( worldfilePath, monitorPath );
 	SimulationController *simulationController = new SimulationController( simulation );
