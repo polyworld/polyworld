@@ -167,6 +167,9 @@ void Genome::crossover( Genome *g1, Genome *g2, bool mutate )
 			this->mutate();
 		return;
 	}
+	
+	if( numCrossPoints == 1)
+		numCrossPoints = 2;	// make room for minimum number of crossover points
 
 	// Sanity checking
 	assert( numCrossPoints <= GenomeSchema::config.maxNumCpts );
@@ -181,7 +184,7 @@ void Genome::crossover( Genome *g1, Genome *g2, bool mutate )
     
 #ifdef DUMPBITS    
     cout << "**The crossover bits(bytes) are:" nl << "  ";
-    for (i = 0; i <= numCrossPoints; i++)
+    for (i = 0; i < numCrossPoints; i++)
     {
         long byte = crossoverPoints[i] >> 3;
         cout << crossoverPoints[i] << "(" << byte << ") ";
@@ -205,10 +208,10 @@ void Genome::crossover( Genome *g1, Genome *g2, bool mutate )
     const Genome* g;
     
 	// now do crossover using the ordered pts
-    for (i = 0; i <= numCrossPoints + 1; i++)
+    for (i = 0; i <= numCrossPoints; i++)
     {
 		// for copying the end of the genome
-        if (i == numCrossPoints + 1)
+        if (i == numCrossPoints)
         {
             if (endbyte == nbytes - 1)
             {
@@ -252,7 +255,7 @@ void Genome::crossover( Genome *g1, Genome *g2, bool mutate )
                 mutable_data[j] = g->mutable_data[j];    // copy from the appropriate genome
         }
         
-        if (i != (numCrossPoints + 1))  // except on the last stretch...
+        if (i < numCrossPoints)  // except on the last stretch...
         {
             first = !first;
             bit = crossoverPoints[i] - (endbyte << 3);

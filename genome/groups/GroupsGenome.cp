@@ -251,16 +251,16 @@ void GroupsGenome::getCrossoverPoints( long *crossoverPoints, long numCrossPoint
 	long numphysbytes = _schema->getPhysicalCount();
 
     // guarantee crossover in "physiology" genes
-    crossoverPoints[0] = long(randpw() * numphysbytes * 8 - 1);
+    crossoverPoints[0] = long(randpw() * numphysbytes * 8);	// requires [0.0, 1.0) range for randpw()
     crossoverPoints[1] = numphysbytes * 8;
 
 	// Generate & order the crossover points.
 	// Start iteration at [2], as [0], [1] set above
     long i, j;
     
-    for (i = 2; i <= numCrossPoints; i++) 
+    for (i = 2; i < numCrossPoints; i++) 
     {
-        long newCrossPoint = long(randpw() * (nbytes - numphysbytes) * 8 - 1) + crossoverPoints[1];
+        long newCrossPoint = long(randpw() * (nbytes - numphysbytes) * 8) + crossoverPoints[1];
         bool equal;
         do
         {
@@ -272,7 +272,7 @@ void GroupsGenome::getCrossoverPoints( long *crossoverPoints, long numCrossPoint
             }
             
             if (equal)
-                newCrossPoint = long(randpw() * (nbytes - numphysbytes) * 8 - 1) + crossoverPoints[1];
+                newCrossPoint = long(randpw() * (nbytes - numphysbytes) * 8) + crossoverPoints[1];
                 
         } while (equal);
         
