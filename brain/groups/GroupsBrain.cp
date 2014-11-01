@@ -84,6 +84,12 @@ void GroupsBrain::init()
 	config.numinputneurgroups = numinputneurgroups;
 
 	int numoutneurgroups = 7;
+	if( agent::config.yawEncoding == YE_OPPOSE )
+		numoutneurgroups++;
+	if( agent::config.enableVisionPitch )
+		numoutneurgroups++;
+	if( agent::config.enableVisionYaw )
+		numoutneurgroups++;
 	if( agent::config.enableGive )
 		numoutneurgroups++;
 	if( agent::config.enableCarry )
