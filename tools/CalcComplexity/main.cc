@@ -1,5 +1,5 @@
 // Command line tool to calculate the Complexity of a brainfunction file.
-// Compile with: g++ CalcComplexity.cpp -lgsl -lgslcblas -lm -o CalcComplexity
+// Compile with: g++ CalcComplexity.cc -lgsl -lgslcblas -lm -o CalcComplexity
 // Return values:
 // >0	actual complexity
 // 0	not enough timesteps in agentlifetime
@@ -63,12 +63,12 @@ void show_usage(string msg)
 	cerr << endl;
 	cerr << "--- Brain Function ---" << endl << endl;
 
-	usage_brainfunction();	// in tools/CalcComplexity/brainfunction.cpp
+	usage_brainfunction();	// in tools/CalcComplexity/brainfunction.cc
 	
 	cerr << endl;
 	cerr << "--- Motion ---" << endl << endl;
 
-	usage_motion();			// in tools/CalcComplexity/motion.cpp
+	usage_motion();			// in tools/CalcComplexity/motion.cc
 
 	cerr << endl;
 

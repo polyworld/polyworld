@@ -42,7 +42,7 @@ def build_Polyworld(env):
 	env.Replace( CPPPATH = exclude(env['CPPPATH'], ['src/tools']) )
 
 	sources = Flatten([find(srcdir,
-							name = '*.cp')
+							name = '*.cc')
 					   for srcdir in srcdirs])
 
 	env.VariantDir(blddir, 'src', False)
@@ -56,13 +56,13 @@ def build_CalcComplexity(env):
 	blddir = '.bld/CalcComplexity'
 
 	sources = find('src/tools/CalcComplexity',
-				   name = '*.cpp')
+				   name = '*.cc')
 	sources += find('src/complexity',
-					name = 'complexity_*.cp')
-	sources += ['src/utils/datalib.cp',
-				'src/utils/Variant.cp',
-				'src/utils/AbstractFile.cp',
-				'src/utils/misc.cp']
+					name = 'complexity_*.cc')
+	sources += ['src/utils/datalib.cc',
+				'src/utils/Variant.cc',
+				'src/utils/AbstractFile.cc',
+				'src/utils/misc.cc']
 
 	env.VariantDir(blddir, 'src', False)
 
@@ -75,8 +75,8 @@ def build_PwMoviePlayer(env):
 	blddir = '.bld/PwMoviePlayer'
 
 	sources = find('src/tools/PwMoviePlayer',
-				   name = '*.cp')
-	sources += ['src/utils/PwMovieUtils.cp']
+				   name = '*.cc')
+	sources += ['src/utils/PwMovieUtils.cc']
 
 	env.VariantDir(blddir, 'src', False)
 
@@ -101,11 +101,11 @@ def build_proputil(env):
 	blddir = '.bld/proputil'
 
 	sources = find('src/tools/proputil',
-				   name = '*.cp')
+				   name = '*.cc')
 	sources += find( 'src/proplib',
-					 name = '*.cp',
-					 ignore = ['state.cp'] )
-	sources += ['src/utils/misc.cp']
+					 name = '*.cc',
+					 ignore = ['state.cc'] )
+	sources += ['src/utils/misc.cc']
 
 	env.VariantDir(blddir, 'src', False)
 
@@ -118,8 +118,8 @@ def build_pmvutil(env):
 	blddir = '.bld/pmvutil'
 
 	sources = find('src/tools/pmvutil',
-				   name = '*.cp')
-	sources += ['src/utils/PwMovieUtils.cp']
+				   name = '*.cc')
+	sources += ['src/utils/PwMovieUtils.cc']
 
 	env.VariantDir(blddir, 'src', False)
 
@@ -131,7 +131,7 @@ def build_pmvutil(env):
 def build_qt_clust(env):
 	blddir = '.bld/qt_clust'
 
-	sources = ['src/tools/clustering/qt_clust.cpp']
+	sources = ['src/tools/clustering/qt_clust.cc']
 
 	env.VariantDir(blddir, 'src', False)
 
@@ -143,7 +143,7 @@ def build_qt_clust(env):
 def build_cppprops(env):
 	blddir = '.bld/cppprops/bld'
 
-	sources = ['.bld/cppprops/src/generated.cpp']
+	sources = ['.bld/cppprops/src/generated.cc']
 
 	env.VariantDir(blddir, '.bld/cppprops/src', False)
 
@@ -155,7 +155,7 @@ def env_create():
 
 
 	env = env_common = init_env(Environment())
-	env.Append( CPPSUFFIXES = ['.cp'] )
+	env.Append( CPPSUFFIXES = ['.cc'] )
 	if os.popen('uname').readlines()[0].strip() == 'Darwin':
 		env['CXX'] = '/usr/local/bin/g++'
 		env['CC'] = '/usr/local/bin/g++'
@@ -224,20 +224,6 @@ def env_create():
 
 	return envs
 
-def hack_addCpExtension():
-	# treat *.cp as C++ source
-	module = __import__('SCons.Tool.c++',
-						globals(),
-						locals(),
-						['CXXSuffixes'])
-	module.CXXSuffixes += ['.cp']
-
-	# scan *.cp for #include
-	from SCons.Scanner.C import CScanner
-	builder_object = DefaultEnvironment()["BUILDERS"]["Object"]
-	builder_object.source_scanner.add_scanner('.cp',
-											  CScanner())
-
 def hack_createSrcDir():
 	if not os.path.exists('src'):
 		os.mkdir('src')
@@ -250,7 +236,6 @@ def hack_createSrcDir():
 
 ################################################################################
 
-hack_addCpExtension()
 hack_createSrcDir()
 
 build()

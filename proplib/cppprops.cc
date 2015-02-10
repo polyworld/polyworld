@@ -17,7 +17,7 @@
 using namespace proplib;
 using namespace std;
 
-#define SrcCppprops ".bld/cppprops/src/generated.cpp"
+#define SrcCppprops ".bld/cppprops/src/generated.cc"
 #if __linux__
 #define LibCppprops ".bld/cppprops/bin/libcppprops.so"
 #else

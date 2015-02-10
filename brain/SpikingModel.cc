@@ -400,7 +400,7 @@ void SpikingModel::update( bool bprint )
 */
 	
 
-	//simulation.cpp readworldfile
+	//simulation.cc readworldfile
 	//when you change bump the version number
 	//when version < new version then set spiking to false.
 	//tsimulation object might want fUseSpikingModel or something similair.	
