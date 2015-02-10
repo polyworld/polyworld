@@ -20,4 +20,5 @@ Polyworld_xc.app
 Polyworld_qt.app
 .xobj
 worldfile.*
-
+*.wf
+run*/
