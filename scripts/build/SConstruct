@@ -224,18 +224,6 @@ def env_create():
 
 	return envs
 
-def hack_createSrcDir():
-	if not os.path.exists('src'):
-		os.mkdir('src')
-
-	for dir in SRCDIRS:
-		if not os.path.exists(dir):
-			src = '../' + dir[4:] # strip src/
-			dst = dir
-			os.symlink(src,dst)
-
 ################################################################################
-
-hack_createSrcDir()
 
 build()
