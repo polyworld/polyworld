@@ -15,11 +15,14 @@ def init_env(env):
 	if PFM == 'linux':
 		env.Append( DEFAULTFRAMEWORKPATH = [] )
 		env.Append( FRAMEWORKPATH = [] )
-		env.Append( LIBPATH = ['/usr/lib/x86_64-linux-gnu'] )
+		env.Append( LIBPATH = ['/usr/lib/x86_64-linux-gnu', '/usr/lib/i386-linux-gnu'] )
 	elif PFM == 'mac':
 		env.Append( DEFAULTFRAMEWORKPATH = ['/System/Library/Frameworks',
 											'/Library/Frameworks'] )
 		env.Append( FRAMEWORKPATH = [] )
+
+        addlib(env, 'pthread')
+        addlib(env, 'dl')
 
 	return env
 
