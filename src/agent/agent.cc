@@ -187,9 +187,6 @@ agent::agent(TSimulation* sim, gstage* stage)
 		fCarryingSensor(NULL),
 		fBeingCarriedSensor(NULL)
 {
-	Q_CHECK_PTR(sim);
-	Q_CHECK_PTR(stage);
-
 	AgentAttachedData::alloc( this );
 	
 	/* Set object type to be AGENTTYPE */
@@ -215,11 +212,7 @@ agent::agent(TSimulation* sim, gstage* stage)
 	fLastEatPosition[2] = 0.0;
 
 	fGenome = GenomeUtil::createGenome();
-	Q_CHECK_PTR(fGenome);
-
 	fCns = new NervousSystem();
-	Q_CHECK_PTR(fCns);
-	
 	fMetabolism = NULL;
 	
 	// Set up agent POV	
@@ -284,12 +277,8 @@ void agent::agentdestruct()
 //-------------------------------------------------------------------------------------------
 agent* agent::getfreeagent(TSimulation* simulation, gstage* stage)
 {
-	Q_CHECK_PTR(simulation);
-	Q_CHECK_PTR(stage);
-	
 	// Create the new agent
 	agent* c = new agent(simulation, stage);	
-	Q_CHECK_PTR(c);
 	
     // Increase current total of creatures alive
     agent::agentsliving++;
@@ -320,7 +309,7 @@ void agent::agentdump(ostream& out)
 //---------------------------------------------------------------------------    
 void agent::agentload(istream&)
 {
-	qWarning("agent::agentload called. Not supported.");
+    WARN_ONCE("agent::agentload called. Not supported.");
 #if 0
     in >> agent::agentsEver;
     in >> agent::agentsliving;
@@ -397,7 +386,7 @@ void agent::dump(ostream& out)
 //---------------------------------------------------------------------------    
 void agent::load(istream& in)
 {
-	qWarning("fix domain issue");
+	WARN_ONCE("fix domain issue");
 	
 	unsigned long agentNumber;
 	
@@ -461,9 +450,6 @@ void agent::setGenomeReady()
 //---------------------------------------------------------------------------
 void agent::grow( long mateWait )
 {    
-	Q_CHECK_PTR(fGenome);
-	Q_CHECK_PTR(fCns);
-
 	InitGeneCache();
 
 	// ---
@@ -668,8 +654,6 @@ void agent::eat( food* f,
 				 Energy &return_lost,
 				 Energy &return_actuallyEat )
 {
-	Q_CHECK_PTR(f);
-	
 	return_lost = 0;
 	return_actuallyEat = 0;
 	
@@ -842,7 +826,7 @@ void agent::Die()
 
 	// Decrement total number of agents
 	agent::agentsliving--;	
-	Q_ASSERT(agent::agentsliving >= 0);
+	assert(agent::agentsliving >= 0);
 	
 	fSimulation->GetAgentPovRenderer()->remove( this );
 }
@@ -971,7 +955,7 @@ float agent::UpdateBody( float moveFitnessParam,
 						 agent* carrier )
 {
     debugcheck( "%lu", Number() );
-	Q_ASSERT( lxor( !BeingCarried(), carrier ) );
+	assert( lxor( !BeingCarried(), carrier ) );
 	
 	// In some simulations, we use a dynamic energy delta to shape difficulty.
 	if( !fMetabolism->energyDelta.isZero() )
@@ -1326,8 +1310,7 @@ float agent::UpdateBody( float moveFitnessParam,
 				break;
 			
 			default:
-				Q_ASSERT_X( false, "updating carried objects", "encountered unknown object type" );
-				break;
+				ERR( "updating carried objects; encountered unknown object type" );
 		}
 	}
 

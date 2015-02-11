@@ -1,4 +1,4 @@
-#include "AgentPovRenderer.h"
+#include "QtAgentPovRenderer.h"
 
 #include <assert.h>
 
@@ -13,9 +13,19 @@
 //---------------------------------------------------------------------------
 // AgentPovRenderer::AgentPovRenderer
 //---------------------------------------------------------------------------
-AgentPovRenderer::AgentPovRenderer( int maxAgents,
-									int retinaWidth,
-									int retinaHeight )
+AgentPovRenderer *AgentPovRenderer::create( int maxAgents,
+                                            int retinaWidth,
+                                            int retinaHeight )
+{
+    return new QtAgentPovRenderer( maxAgents, retinaWidth, retinaHeight );
+}
+
+//---------------------------------------------------------------------------
+// QtAgentPovRenderer::QtAgentPovRenderer
+//---------------------------------------------------------------------------
+QtAgentPovRenderer::QtAgentPovRenderer( int maxAgents,
+                                        int retinaWidth,
+                                        int retinaHeight )
 : fPixelBuffer( NULL )
 {
 	// If we decide we want the width W (in cells) to be a multiple of N (call it I)
@@ -56,18 +66,18 @@ AgentPovRenderer::AgentPovRenderer( int maxAgents,
 }
 
 //---------------------------------------------------------------------------
-// AgentPovRenderer::~AgentPovRenderer
+// QtAgentPovRenderer::~QtAgentPovRenderer
 //---------------------------------------------------------------------------
-AgentPovRenderer::~AgentPovRenderer()
+QtAgentPovRenderer::~QtAgentPovRenderer()
 {
 	delete fPixelBuffer;
 	delete [] fViewports;
 }
 
 //---------------------------------------------------------------------------
-// AgentPovRenderer::add
+// QtAgentPovRenderer::add
 //---------------------------------------------------------------------------
-void AgentPovRenderer::add( agent *a )
+void QtAgentPovRenderer::add( agent *a )
 {
 	assert( AgentAttachedData::get( a, slotHandle ) == NULL );
 
@@ -78,9 +88,9 @@ void AgentPovRenderer::add( agent *a )
 }
 
 //---------------------------------------------------------------------------
-// AgentPovRenderer::remove
+// QtAgentPovRenderer::remove
 //---------------------------------------------------------------------------
-void AgentPovRenderer::remove( agent *a )
+void QtAgentPovRenderer::remove( agent *a )
 {
 	Viewport *viewport = (Viewport *)AgentAttachedData::get( a, slotHandle );
 
@@ -92,9 +102,9 @@ void AgentPovRenderer::remove( agent *a )
 }
 
 //---------------------------------------------------------------------------
-// AgentPovRenderer::beginStep
+// QtAgentPovRenderer::beginStep
 //---------------------------------------------------------------------------
-void AgentPovRenderer::beginStep()
+void QtAgentPovRenderer::beginStep()
 {
 	if( fPixelBuffer == NULL )
 	{
@@ -119,9 +129,9 @@ void AgentPovRenderer::beginStep()
 }
 
 //---------------------------------------------------------------------------
-// AgentPovRenderer::render
+// QtAgentPovRenderer::render
 //---------------------------------------------------------------------------
-void AgentPovRenderer::render( agent *a )
+void QtAgentPovRenderer::render( agent *a )
 {
 	Viewport *viewport = (Viewport *)AgentAttachedData::get( a, slotHandle );
 
@@ -142,19 +152,19 @@ void AgentPovRenderer::render( agent *a )
 }
 
 //---------------------------------------------------------------------------
-// AgentPovRenderer::endStep
+// QtAgentPovRenderer::endStep
 //---------------------------------------------------------------------------
-void AgentPovRenderer::endStep()
+void QtAgentPovRenderer::endStep()
 {
 	fPixelBuffer->doneCurrent();
 
-	emit renderComplete();
+	renderComplete();
 }
 
 //---------------------------------------------------------------------------
-// AgentPovRenderer::copyTo
+// QtAgentPovRenderer::copyTo
 //---------------------------------------------------------------------------
-void AgentPovRenderer::copyTo( QGLWidget *dst)
+void QtAgentPovRenderer::copyTo( QGLWidget *dst)
 {
 	if( fPixelBuffer )
 	{
@@ -165,17 +175,17 @@ void AgentPovRenderer::copyTo( QGLWidget *dst)
 }
 
 //---------------------------------------------------------------------------
-// AgentPovRenderer::getBufferWidth
+// QtAgentPovRenderer::getBufferWidth
 //---------------------------------------------------------------------------
-int AgentPovRenderer::getBufferWidth()
+int QtAgentPovRenderer::getBufferWidth()
 {
 	return fBufferWidth;
 }
 
 //---------------------------------------------------------------------------
-// AgentPovRenderer::getBufferHeight
+// QtAgentPovRenderer::getBufferHeight
 //---------------------------------------------------------------------------
-int AgentPovRenderer::getBufferHeight()
+int QtAgentPovRenderer::getBufferHeight()
 {
 	return fBufferHeight;
 }

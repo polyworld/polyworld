@@ -19,6 +19,7 @@ SRCDIRS = ['src/' + x
 					 'proplib',
 					 'main',
 					 'monitor',
+					 'renderer',
 					 'tools',
 					 'ui',
 					 'utils']]

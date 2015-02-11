@@ -20,5 +20,5 @@ class PovMonitorView : public MonitorView
 	void draw();
 
  private:
-	class AgentPovRenderer *renderer;
+	class QtAgentPovRenderer *renderer;
 };

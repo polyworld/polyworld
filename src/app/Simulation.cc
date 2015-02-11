@@ -373,9 +373,9 @@ TSimulation::TSimulation( string worldfilePath, string monitorPath )
 
 	srand48(fGenomeSeed);
 
-	agentPovRenderer = new AgentPovRenderer( fMaxNumAgents,
-											 Brain::config.retinaWidth,
-											 Brain::config.retinaHeight );
+	agentPovRenderer = AgentPovRenderer::create( fMaxNumAgents,
+                                                 Brain::config.retinaWidth,
+                                                 Brain::config.retinaHeight );
 
 	// ---
 	// --- Init Logs

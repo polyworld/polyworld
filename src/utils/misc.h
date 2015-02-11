@@ -12,6 +12,7 @@
 #include <errno.h>
 #include <float.h>
 #include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #include <string>
@@ -129,6 +130,8 @@ std::vector<std::string> split( const std::string& str, const std::string& delim
 #define SYS(STMT) {int rc = STMT; if(rc == -1) perror(#STMT);}
 #define SYSTEM(cmd) {int rc = system(cmd); if(rc != 0) {fprintf(stderr, "Failed executing command '%s'\n", cmd); exit(1);}}
 
-#define errif( STMT, MSG... ) if( STMT ) { fprintf(stderr, MSG); fprintf(stderr, "\n"); exit(1); }
+#define ERR(MSG...) {fprintf(stderr, MSG); fprintf(stderr, "\n"); exit(1);}
+// todo: capitalize errif macro
+#define errif( STMT, MSG... ) if( STMT ) ERR(MSG)
 
 #define WARN_ONCE(msg) {static bool __warned = false; if(!__warned) {fprintf(stderr, "%s\n", msg); __warned = true;}}

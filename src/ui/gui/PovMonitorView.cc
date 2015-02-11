@@ -2,8 +2,10 @@
 #include "PovMonitorView.h"
 
 // Local
-#include "AgentPovRenderer.h"
+#include "QtAgentPovRenderer.h"
 #include "Monitor.h"
+
+QtAgentPovRenderer *to_qt(AgentPovRenderer *r) {return dynamic_cast<QtAgentPovRenderer *>(r);}
 
 //===========================================================================
 // PovMonitorView
@@ -14,13 +16,12 @@
 //---------------------------------------------------------------------------
 PovMonitorView::PovMonitorView( PovMonitor *monitor )
 	: MonitorView( monitor,
-				   monitor->getRenderer()->getBufferWidth(),
-				   monitor->getRenderer()->getBufferHeight(),
+				   to_qt(monitor->getRenderer())->getBufferWidth(),
+				   to_qt(monitor->getRenderer())->getBufferHeight(),
 				   false )
-	, renderer( monitor->getRenderer() )
+	, renderer( to_qt(monitor->getRenderer()) )
 {
-	connect( renderer, SIGNAL(renderComplete()),
-			 this, SLOT(draw()) );
+    renderer->renderComplete += [=]() {this->draw();};
 }
 
 
