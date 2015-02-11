@@ -5,6 +5,7 @@
 
 // Qt
 #include <QApplication>
+#include <QCloseEvent>
 #include <QDesktopWidget>
 #include <QInputDialog>
 #include <QMenuBar>

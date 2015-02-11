@@ -10,9 +10,6 @@
 #include <gl.h>
 #include <string.h>
 
-// qt
-#include <qgl.h>
-
 // Local
 #include "AbstractFile.h"
 #include "AgentPovRenderer.h"
@@ -41,8 +38,6 @@
 #include "SpeedSensor.h"
 
 using namespace genome;
-
-#pragma mark -
 
 // UniformPopulationEnergyPenalty controls whether or not the population energy penalty
 // is the same for all agents (1) or based on each agent's own maximum energy capacity (0).
@@ -362,9 +357,6 @@ void agent::agentload(istream&)
     }
 #endif
 }
-
-
-#pragma mark -
 
 
 //---------------------------------------------------------------------------

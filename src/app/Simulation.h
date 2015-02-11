@@ -6,9 +6,6 @@
 
 #include <string>
 
-// qt
-#include <QObject>
-
 // Local
 #include "Domain.h"
 #include "cppprops.h"

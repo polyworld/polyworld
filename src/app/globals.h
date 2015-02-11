@@ -15,33 +15,16 @@
 #include <map>
 #include <string>
 
-// qt
-#include <qevent.h>
-
 // Local
 #include "AbstractFile.h"
 #include "GenomeLayout.h"
 #include "graphics.h"
 
-// Forward declarations
-class agent;
-
-// Custom events
-const int kUpdateEventType = QEvent::User + 1;
-
 static const int kMenuBarHeight = 22;
 
-// [TODO] 
-static const long XMAXSCREEN = 1024;
-static const long YMAXSCREEN = 768;
-static const long xscreensize = XMAXSCREEN + 1;
-static const long yscreensize = YMAXSCREEN + 1;
 static const int MAXLIGHTS = 10;
 
 // Prefs
-//static const char kPrefPath[] = "edu.indiana.polyworld";
-//static const char kPrefSection[] = "polyworld";
-//static const char kAppSettingsName[] = "polyworld";
 static const char kWindowsGroupSettingsName[] = "windows";
 
 class globals

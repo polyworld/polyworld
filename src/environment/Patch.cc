@@ -7,9 +7,6 @@
 // System
 #include <ostream>
 
-// qt
-#include <qapplication.h>
-
 // Local
 #include "agent.h"
 #include "globals.h"

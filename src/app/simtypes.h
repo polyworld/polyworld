@@ -6,8 +6,6 @@
 
 #include <vector>
 
-#include <QtGlobal>
-
 #include "Energy.h"
 #include "LifeSpan.h"
 #include "simconst.h"
@@ -337,7 +335,7 @@ namespace sim
 	class StatRecent
 	{
 	public:
-		StatRecent( unsigned int width = 1000 )	{ w = width; history = (float*) malloc( w * sizeof(*history) ); Q_CHECK_PTR( history); reset(); }
+		StatRecent( unsigned int width = 1000 )	{ w = width; history = (float*) malloc( w * sizeof(*history) ); reset(); }
 	~StatRecent()							{ if( history ) free( history ); }
 	
 	float	mean()			{ if( !count ) return( 0.0 ); return( sum / count ); }

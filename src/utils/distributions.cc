@@ -20,9 +20,6 @@
 #include <ostream>
 #include <stdlib.h>
 
-// qt
-#include <qapplication.h>
-
 // Polyworld
 #include "misc.h"
 

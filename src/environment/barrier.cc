@@ -12,9 +12,6 @@
 // System
 #include <stdlib.h>
 
-// qt
-#include <qapplication.h>
-
 // Local
 #include "globals.h"
 #include "graphics.h"
@@ -147,8 +144,6 @@ void barrier::updateVertices()
 }
 
 
-#pragma mark -
-
 #if 0
 //===========================================================================
 // CompareMinX (predicate)
@@ -167,8 +162,6 @@ struct CompareMinX
 //---------------------------------------------------------------------------
 void bxsortedlist::add(barrier* newBarrier)
 {
-    Q_CHECK_PTR(newBarrier);
-    
     bool inserted = false;
 	barrier* oldBarrier;
 

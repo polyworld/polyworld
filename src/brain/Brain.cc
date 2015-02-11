@@ -12,9 +12,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-// qt
-#include <qapplication.h>
-
 // Local
 #include "AbstractFile.h"
 #include "agent.h"

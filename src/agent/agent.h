@@ -4,9 +4,6 @@
 // System
 #include <algorithm>
 
-// qt
-//#include <qrect.h>
-
 // Local
 #include "AgentAttachedData.h"
 #include "AgentListener.h"
