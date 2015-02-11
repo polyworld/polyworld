@@ -7,22 +7,13 @@ from scons_util import exclude, find, init_env, relocate_paths, export_dynamic
 from scons_util import import_OpenGL, import_OpenMP, import_GSL, import_Qt, import_zlib, import_python
 
 SRCDIRS = ['src/' + x
-		   for x in ['agent',
-					 'brain',
-					 'complexity',
-					 'debugger',
-					 'environment',
-					 'genome',
-					 'graphics',
-					 'logs',
-					 'proplib',
+		   for x in ['core',
+                     'debugger',
 					 'main',
 					 'monitor',
 					 'renderer',
-                     'sim',
 					 'tools',
-					 'ui',
-					 'utils']]
+					 'ui']]
 
 def build():
 	envs = env_create()
@@ -58,12 +49,12 @@ def build_CalcComplexity(env):
 
 	sources = find('src/tools/CalcComplexity',
 				   name = '*.cc')
-	sources += find('src/complexity',
+	sources += find('src/core/complexity',
 					name = 'complexity_*.cc')
-	sources += ['src/utils/datalib.cc',
-				'src/utils/Variant.cc',
-				'src/utils/AbstractFile.cc',
-				'src/utils/misc.cc']
+	sources += ['src/core/utils/datalib.cc',
+				'src/core/utils/Variant.cc',
+				'src/core/utils/AbstractFile.cc',
+				'src/core/utils/misc.cc']
 
 	env.VariantDir(blddir, 'src', False)
 
@@ -77,7 +68,7 @@ def build_PwMoviePlayer(env):
 
 	sources = find('src/tools/PwMoviePlayer',
 				   name = '*.cc')
-	sources += ['src/utils/PwMovieUtils.cc']
+	sources += ['src/core/utils/PwMovieUtils.cc']
 
 	env.VariantDir(blddir, 'src', False)
 
@@ -103,10 +94,10 @@ def build_proputil(env):
 
 	sources = find('src/tools/proputil',
 				   name = '*.cc')
-	sources += find( 'src/proplib',
+	sources += find( 'src/core/proplib',
 					 name = '*.cc',
 					 ignore = ['state.cc'] )
-	sources += ['src/utils/misc.cc']
+	sources += ['src/core/utils/misc.cc']
 
 	env.VariantDir(blddir, 'src', False)
 
@@ -120,7 +111,7 @@ def build_pmvutil(env):
 
 	sources = find('src/tools/pmvutil',
 				   name = '*.cc')
-	sources += ['src/utils/PwMovieUtils.cc']
+	sources += ['src/core/utils/PwMovieUtils.cc']
 
 	env.VariantDir(blddir, 'src', False)
 
