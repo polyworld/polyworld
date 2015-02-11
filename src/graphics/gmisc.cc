@@ -11,9 +11,6 @@
 #include <gl.h>
 #include <math.h>
 
-// qt
-#include <qapplication.h>
-
 // Local
 #include "glight.h"
 #include "globals.h"
@@ -94,7 +91,6 @@ void TGraphicObjectList::Draw()
 	for (; iter != end(); ++iter)
 	{
 		gobject* obj = *iter;
-		Q_CHECK_PTR(obj);
 				
 		if (obj != (gobject*)fCurrentCamera)
         	obj->draw();
@@ -114,7 +110,6 @@ void TGraphicObjectList::Draw(const frustumXZ& fxz)
 	for (; iter != end(); ++iter)
 	{
 		gobject* obj = *iter;
-		Q_CHECK_PTR(obj);
 				
 		if (obj != (gobject*)fCurrentCamera)
 		{
@@ -142,7 +137,6 @@ void TGraphicObjectList::Print()
 	for (; iter != end(); ++iter)
 	{
 		gobject* obj = *iter;
-		Q_CHECK_PTR(obj);
 		obj->print();		
 	}
 }
@@ -157,7 +151,6 @@ void TLightList::Draw()
 	for (; iter != end(); ++iter)
 	{
 		glight* light = *iter;
-		Q_CHECK_PTR(light);
 		light->Draw();		
 	}
 }
@@ -172,7 +165,6 @@ void TLightList::Draw(const frustumXZ& fxz)
 	for (; iter != end(); ++iter)
 	{
 		glight* light = *iter;
-		Q_CHECK_PTR(light);
         if (fxz.Inside(light->getposptr())) // object position inside frustum?
 			light->Draw();		
     }
@@ -197,7 +189,6 @@ void TLightList::Use()
 		}
 				 
 		glight* light = *iter;
-		Q_CHECK_PTR(light);
 		light->Use(count - 1);  // subtract 1 due to 0-based light numbering
 	}
 	
@@ -216,7 +207,6 @@ void TLightList::Print()
 	for (; iter != end(); ++iter)
 	{
 		glight* light = *iter;
-		Q_CHECK_PTR(light);
 		light->Print();		
 	}
 }

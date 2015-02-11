@@ -5,9 +5,6 @@
 // System
 #include <fstream>
 
-// qt
-#include <qapplication.h>
-
 // Local
 #include "misc.h"
 
@@ -139,8 +136,6 @@ void gpoly::init()
 
 
 
-#pragma mark -
-
 gpolyobj::gpolyobj()
 {
 	init(0, NULL);
@@ -184,12 +179,9 @@ void gpolyobj::clonegeom(const gpolyobj& inPolyObj)
     if (fPolygon == NULL)
     {
         fPolygon = new opoly[inPolyObj.fNumPolygons];
-        Q_CHECK_PTR(fPolygon);
-
         for (long i = 0; i < inPolyObj.fNumPolygons; i++)
         {
 			fPolygon[i].fVertices = new float[inPolyObj.fPolygon[i].fNumPoints * 3];
-			Q_CHECK_PTR(fPolygon[i].fVertices);
         }
     }
     else
@@ -325,8 +317,6 @@ void gpolyobj::setscale(float s)
 	setradius();
 }
 
-
-#pragma mark -
 
 istream& operator>>(istream& s, opoly& op)
 {

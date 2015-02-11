@@ -10,9 +10,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-// qt
-#include <qapplication.h>
-
 // Local
 #include "error.h"
 #include "glight.h"
@@ -91,7 +88,6 @@ void gstage::SetLights(TGraphicsLightList* pl)
 //---------------------------------------------------------------------------
 void gstage::SetCurrentCamera(gcamera* pcam)
 {
-	Q_CHECK_PTR(fCastList);
 	fCastList->SetCurrentCamera(pcam);
 }
 
@@ -247,7 +243,6 @@ void gstage::Print()
 //---------------------------------------------------------------------------
 void gstage::AddObject(gobject* po)
 {
-    Q_CHECK_PTR(po);
 	fCastList->Add(po);
 }
 
@@ -257,8 +252,6 @@ void gstage::AddObject(gobject* po)
 //---------------------------------------------------------------------------
 void gstage::AddLight(glight* pl)
 {
-	Q_CHECK_PTR(fLightList);
-	
 	if (fLightList->size() >= MAXLIGHTS)
 	{
 		char msg[256];
@@ -278,8 +271,6 @@ void gstage::AddLight(glight* pl)
 //---------------------------------------------------------------------------
 void gstage::RemoveLight(glight* pl)
 {
-	Q_CHECK_PTR(fLightList);
-
 #if 1
 	fLightList->Remove(pl);
 #else
@@ -295,8 +286,6 @@ void gstage::RemoveLight(glight* pl)
 //---------------------------------------------------------------------------
 void gstage::RemoveObject(gobject* po)
 {
-	Q_CHECK_PTR(fCastList);
-
 #if 1
 	fCastList->Remove(po);
 #else

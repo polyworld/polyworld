@@ -13,9 +13,6 @@
 #include <iostream>
 #include <gl.h>
 
-// qt
-#include <qapplication.h>
-
 // Local
 #include "gcamera.h"
 #include "graphics.h"
@@ -62,7 +59,6 @@ gscene::~gscene()
 void gscene::MakeCamera()
 {
     fCamera = new gcamera();  // just take defaults
-    Q_CHECK_PTR(fCamera);
     fMadeCamera = true;
 }
 
