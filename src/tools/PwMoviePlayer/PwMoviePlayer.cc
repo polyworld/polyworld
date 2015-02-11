@@ -106,7 +106,7 @@ PMPApp::PMPApp(int &argc, char** argv) : QApplication(argc, argv)
 					if( movieFileName )
 						strcpy( movieFileName, argv[arg] );
 					else
-						fprintf( stderr, "Unable to allocate %lu bytes of memory for movieFileName\n", strlen( argv[arg] ) + 1 );
+						fprintf( stderr, "Unable to allocate %z bytes of memory for movieFileName\n", strlen( argv[arg] ) + 1 );
 					break;
 
 				case 'l':

@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 #include "SceneRenderer.h"
+#include "PwMovieQGLPixelBufferRecorder.h"
 #include "PwMovieUtils.h"
 
 

@@ -5,6 +5,7 @@
 
 #include "CameraController.h"
 #include "globals.h"
+#include "PwMovieQGLPixelBufferRecorder.h"
 #include "PwMovieUtils.h"
 
 //===========================================================================

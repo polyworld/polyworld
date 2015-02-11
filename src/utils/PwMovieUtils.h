@@ -25,8 +25,6 @@
 	#define kCurrentMovieVersion (kCurrentMovieVersionHost+100)
 #endif
 
-void PwRecordMovie( FILE *f, long xleft, long ybottom, long width, long height );
-
 void PwReadMovieHeader ( FILE *f, uint32_t* version, uint32_t* width, uint32_t* height );
 void PwWriteMovieHeader( FILE *f, uint32_t  version, uint32_t  width, uint32_t  height );
 
@@ -173,48 +171,6 @@ class PwMovieReader
 	typedef std::map<uint32_t, PwMovieMetaEntry::Entry *, std::greater<uint32_t> > FrameMetaEntryMap;
 
 	FrameMetaEntryMap metaEntries[ PwMovieMetaEntry::__NTYPES ];
-};
-
-//===========================================================================
-// PwMovieQGLWidgetRecorder
-//===========================================================================
-class PwMovieQGLWidgetRecorder
-{
- public:
-	PwMovieQGLWidgetRecorder( class QGLWidget *widget, PwMovieWriter *writer );
-	~PwMovieQGLWidgetRecorder();
-	
-	void recordFrame( uint32_t timestep );
-
- private:
-	void setDimensions();
-
-	class QGLWidget *widget;
-	PwMovieWriter *writer;
-	uint32_t width;
-	uint32_t height;
-	uint32_t *rgbBufOld;
-	uint32_t *rgbBufNew;
-};
-
-//===========================================================================
-// PwMovieQGLPixelBufferRecorder
-//===========================================================================
-class PwMovieQGLPixelBufferRecorder
-{
- public:
-	PwMovieQGLPixelBufferRecorder( class QGLPixelBuffer *pixelBuffer, PwMovieWriter *writer );
-	~PwMovieQGLPixelBufferRecorder();
-	
-	void recordFrame( uint32_t timestep );
-
- private:
-	class QGLPixelBuffer *pixelBuffer;
-	PwMovieWriter *writer;
-	uint32_t width;
-	uint32_t height;
-	uint32_t *rgbBufOld;
-	uint32_t *rgbBufNew;
 };
 
 void rleproc( register uint32_t *rgb,

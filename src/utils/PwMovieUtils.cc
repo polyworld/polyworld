@@ -30,10 +30,6 @@
 
 #include <iostream>
 
-#include <gl.h>
-#include <QGLWidget>
-#include <QGLPixelBuffer>
-
 #include "misc.h"
 #include "PwMovieUtils.h"
 
@@ -556,110 +552,6 @@ void PwMovieReader::nextFrame()
 	pmpdb( cout << "end of nextFrame(), width=" << width << ", height=" << height << endl );
 
 	frame++;
-}
-
-//---------------------------------------------------------------------------
-//---------------------------------------------------------------------------
-//---------------------------------------------------------------------------
-//---
-//--- PwMovieQGLWidgetRecorder
-//---
-//---------------------------------------------------------------------------
-//---------------------------------------------------------------------------
-//---------------------------------------------------------------------------
-PwMovieQGLWidgetRecorder::PwMovieQGLWidgetRecorder( QGLWidget *widget, PwMovieWriter *writer )
-{
-	this->widget = widget;
-	this->writer = writer;
-
-	width = 0;
-	height = 0;
-	
-	rgbBufOld = NULL;
-	rgbBufNew = NULL;
-}
-
-PwMovieQGLWidgetRecorder::~PwMovieQGLWidgetRecorder()
-{
-	if( rgbBufOld ) free( rgbBufOld );
-	if( rgbBufNew ) free( rgbBufNew );
-}
-
-void PwMovieQGLWidgetRecorder::recordFrame( uint32_t timestep )
-{
-	if( (uint32_t(widget->width()) != width) || (uint32_t(widget->height()) != height) )
-	{
-		setDimensions();
-	}
-
-	glReadPixels( 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, rgbBufNew );
-
-	writer->writeFrame( timestep, width, height, rgbBufOld, rgbBufNew );
-
-	uint32_t *rgbBufSwap = rgbBufNew;
-	rgbBufNew = rgbBufOld;
-	rgbBufOld = rgbBufSwap;
-}
-
-void PwMovieQGLWidgetRecorder::setDimensions()
-{
-	if( rgbBufOld ) free( rgbBufOld );
-	if( rgbBufNew ) free( rgbBufNew );
-
-	this->width = widget->width();
-	this->height = widget->height();
-
-	uint32_t rgbBufSize = width * height * sizeof(*rgbBufNew);
-	rgbBufOld = (uint32_t *)malloc( rgbBufSize );
-	rgbBufNew = (uint32_t *)malloc( rgbBufSize );
-}
-
-
-//---------------------------------------------------------------------------
-//---------------------------------------------------------------------------
-//---------------------------------------------------------------------------
-//---
-//--- PwMovieQGLPixelBufferRecorder
-//---
-//---------------------------------------------------------------------------
-//---------------------------------------------------------------------------
-//---------------------------------------------------------------------------
-PwMovieQGLPixelBufferRecorder::PwMovieQGLPixelBufferRecorder( QGLPixelBuffer *pixelBuffer,
-															  PwMovieWriter *writer )
-{
-	this->pixelBuffer = pixelBuffer;
-	this->writer = writer;
-
-	width = pixelBuffer->size().width();
-	height = pixelBuffer->size().height();
-	
-	rgbBufOld = NULL;
-	rgbBufNew = NULL;
-
-	uint32_t rgbBufSize = width * height * sizeof(*rgbBufNew);
-	rgbBufOld = (uint32_t *)malloc( rgbBufSize );
-	rgbBufNew = (uint32_t *)malloc( rgbBufSize );
-}
-
-PwMovieQGLPixelBufferRecorder::~PwMovieQGLPixelBufferRecorder()
-{
-	if( rgbBufOld ) free( rgbBufOld );
-	if( rgbBufNew ) free( rgbBufNew );
-}
-
-void PwMovieQGLPixelBufferRecorder::recordFrame( uint32_t timestep )
-{
-	pixelBuffer->makeCurrent();
-
-	glReadPixels( 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, rgbBufNew );
-
-	writer->writeFrame( timestep, width, height, rgbBufOld, rgbBufNew );
-
-	uint32_t *rgbBufSwap = rgbBufNew;
-	rgbBufNew = rgbBufOld;
-	rgbBufOld = rgbBufSwap;
-
-	pixelBuffer->doneCurrent();
 }
 
 
@@ -1340,72 +1232,6 @@ double hirestime( void )
     return (double)(now * (double)num / denom / NSEC_PER_SEC);
 
 #endif
-}
-
-
-//---------------------------------------------------------------------------
-// PwRecordMovie
-//---------------------------------------------------------------------------
-void PwRecordMovie( FILE *f, long xleft, long ybottom, long width, long height )
-{
-    register uint32_t n;
-	// Note: We depend on the fact that the following static pointers
-	// will be initialized to NULL by the linker/loader
-	static uint32_t*	rgbBuf1;
-	static uint32_t*	rgbBuf2;
-	static uint32_t*	rleBuf;
-	static uint32_t*	rgbBufNew;
-	static uint32_t*	rgbBufOld;
-	static uint32_t	rgbBufSize;
-	static uint32_t	rleBufSize;
-
-#ifdef PLAINRLE
-	if( !rgbBufNew )	// first time
-	{
-		PwWriteMovieHeader( f, kCurrentMovieVersion, width, height );
-		rgbBuf1 = (uint32_t*) malloc( rgbBufSize );
-		rgbBufNew = rgbBuf1;
-	}
-#else
-    if( !rgbBufNew )	// first time
-	{
-		PwWriteMovieHeader( f, kCurrentMovieVersion, width, height );
-		rgbBufSize = width * height * sizeof( *rgbBuf1 );
-		rleBufSize = rgbBufSize + 1;	// it better compress!
-		rgbBuf1 = (uint32_t*) malloc( rgbBufSize );
-		rgbBuf2 = (uint32_t*) malloc( rgbBufSize );
-		rleBuf  = (uint32_t*) malloc( rleBufSize );
-        rgbBufNew = rgbBuf1;
-	}
-    else	// all but the first time
-	{
-        register uint32_t *rgbBufsave;
-        rgbBufsave = rgbBufNew;
-        if (rgbBufOld)
-            rgbBufNew = rgbBufOld;
-        else
-            rgbBufNew = rgbBuf2;
-        rgbBufOld = rgbBufsave;
-    }
-#endif
-
-	glReadPixels( xleft, ybottom, width, height, GL_RGBA, GL_UNSIGNED_BYTE, rgbBufNew );
-    
-    rlediff4( rgbBufNew, rgbBufOld, width, height, rleBuf, rleBufSize );
-
-    if( rgbBufOld )
-	{  // frames 2 and on
-        n = fwrite( rleBuf, 2, (int) rleBuf[0]+2, f );  // +2 to include (long) length
-		pmpPrint( "wrote %lu shorts\n", n );
-    }
-    else
-	{
-        n = fwrite( rleBuf, 4, (int) rleBuf[0]+1, f );  // +1 to include (long) length
-		pmpPrint( "wrote %lu longs\n", n );
-    }
-    
-    if( n < 0 )
-    	printf( "Can't happen\n" );
 }
 
 //---------------------------------------------------------------------------
