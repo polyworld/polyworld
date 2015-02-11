@@ -8,7 +8,6 @@ from scons_util import import_OpenGL, import_OpenMP, import_GSL, import_Qt, impo
 
 SRCDIRS = ['src/' + x
 		   for x in ['agent',
-					 'app',
 					 'brain',
 					 'complexity',
 					 'debugger',
@@ -20,6 +19,7 @@ SRCDIRS = ['src/' + x
 					 'main',
 					 'monitor',
 					 'renderer',
+                     'sim',
 					 'tools',
 					 'ui',
 					 'utils']]

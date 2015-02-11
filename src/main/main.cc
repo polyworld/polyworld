@@ -13,6 +13,7 @@
 // Local
 #include "MainWindow.h"
 #include "Monitor.h"
+#include "MonitorManager.h"
 #include "Simulation.h"
 #include "SimulationController.h"
 #include "TerminalUI.h"
@@ -126,8 +127,14 @@ int main( int argc, char** argv )
 	// even in locales that normally use a comma for the decimal mark.
 	setlocale( LC_NUMERIC, "C" );
 
-	TSimulation *simulation = new TSimulation( worldfilePath, monitorPath );
-	SimulationController *simulationController = new SimulationController( simulation );
+	proplib::Interpreter::init();
+
+	TSimulation *simulation = new TSimulation( worldfilePath );
+    MonitorManager *monitorManager = new MonitorManager(simulation, monitorPath);
+	SimulationController *simulationController = new SimulationController( simulation,
+                                                                           monitorManager);
+
+    proplib::Interpreter::dispose();
 
 	int exitval;
 
@@ -149,6 +156,7 @@ int main( int argc, char** argv )
 		assert( false );
 
 	delete simulationController;
+    delete monitorManager;
 	delete simulation;
 
 	return exitval;

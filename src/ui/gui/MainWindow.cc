@@ -105,7 +105,7 @@ void MainWindow::closeEvent(QCloseEvent* ce)
 //---------------------------------------------------------------------------
 void MainWindow::createMonitorViews()
 {
-	citfor( Monitors, simulationController->getSimulation()->getMonitorManager()->getMonitors(), it )
+	citfor( Monitors, simulationController->getMonitorManager()->getMonitors(), it )
 	{
 		Monitor *_monitor = *it;
 		MonitorView *view = NULL;

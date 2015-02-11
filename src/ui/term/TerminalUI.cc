@@ -48,7 +48,7 @@ TerminalUI::~TerminalUI()
 //---------------------------------------------------------------------------
 void TerminalUI::connectMonitors()
 {
-	citfor( Monitors, simulationController->getSimulation()->getMonitorManager()->getMonitors(), it )
+	citfor( Monitors, simulationController->getMonitorManager()->getMonitors(), it )
 	{
 		Monitor *monitor = *it;
 

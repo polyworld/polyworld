@@ -40,7 +40,7 @@ class TSimulation
 	PROPLIB_CPP_PROPERTIES
 
 public:
-	TSimulation( std::string worldfilePath, std::string monitorPath );
+	TSimulation( std::string worldfilePath );
 	virtual ~TSimulation();
 
 	void Step();
@@ -53,7 +53,6 @@ public:
 	void SwitchDomain( short newDomain, short oldDomain, int objectType );
 	
 	class AgentPovRenderer *GetAgentPovRenderer();
-	class MonitorManager *getMonitorManager();
 	gstage &getStage();
 
 	bool isLockstep() const;
@@ -134,6 +133,7 @@ public:
 	
 	Events* fEvents;
 
+    util::Signal<> stepEnding;
     util::Signal<> ended;
 
 private:
@@ -202,8 +202,6 @@ private:
 	void MaintainBricks();
 	void MaintainFood();
 
-	void UpdateMonitors();
-	
 	// Following two functions only determine whether or not we should create the relevant files.
 	// Linking, renaming, and unlinking are handled according to the specific recording options.
 	bool RecordBrainAnatomy( long agentNumber );
@@ -441,13 +439,11 @@ private:
     TSetList fWorldSet;	
 
 	class AgentPovRenderer *agentPovRenderer;
-	class MonitorManager *monitorManager;
 };
 
 inline void TSimulation::enableComplexityCalculations() { fCalcComplexity = true; }
 
 inline class AgentPovRenderer *TSimulation::GetAgentPovRenderer() { return agentPovRenderer; }
-inline MonitorManager *TSimulation::getMonitorManager() { return monitorManager; }
 inline gstage &TSimulation::getStage() { return fStage; }
 
 

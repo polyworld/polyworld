@@ -54,7 +54,6 @@
 #include "GroupsBrain.h"
 #include "Logs.h"
 #include "Metabolism.h"
-#include "MonitorManager.h"
 #include "proplib.h"
 #include "Queue.h"
 #include "RandomNumberGenerator.h"
@@ -192,7 +191,7 @@ inline float AverageAngles( float a, float b )
 //---------------------------------------------------------------------------
 // TSimulation::TSimulation
 //---------------------------------------------------------------------------
-TSimulation::TSimulation( string worldfilePath, string monitorPath )
+TSimulation::TSimulation( string worldfilePath )
 	:
 		fLockStepWithBirthsDeathsLog(false),
 		fLockstepFile(NULL),
@@ -246,8 +245,6 @@ TSimulation::TSimulation( string worldfilePath, string monitorPath )
 		fCurrentBrainStats.sheets.synapseCount[i] = new Stat[ sheets::Sheet::__NTYPES ];
 
     srand(1);
-
-	proplib::Interpreter::init();
 
 	// ---
 	// --- Create the run directory
@@ -442,11 +439,6 @@ TSimulation::TSimulation( string worldfilePath, string monitorPath )
     fStage.SetSet(&fWorldSet);
 
 	// ---
-	// --- Init Monitors
-	// ---
-	monitorManager = new MonitorManager( this, monitorPath );
-
-	// ---
 	// --- Init Event Filtering
 	// ---
 	if( fCalcComplexity )
@@ -479,8 +471,6 @@ TSimulation::TSimulation( string worldfilePath, string monitorPath )
 
 		delete worldfile;
 		delete schema;
-
-		proplib::Interpreter::dispose();
 	}
 
 #if DebugLockStep
@@ -512,8 +502,6 @@ TSimulation::~TSimulation()
 	{
 		Kill( a, LifeSpan::DR_SIMEND );
 	}
-
-	delete monitorManager;
 
 	// ---
 	// --- Dispose Logs
@@ -772,12 +760,10 @@ void TSimulation::Step()
 	fAverageFoodEnergyIn = (float(fStep - 1) * fAverageFoodEnergyIn + fFoodEnergyIn) / float(fStep);
 	fAverageFoodEnergyOut = (float(fStep - 1) * fAverageFoodEnergyOut + fFoodEnergyOut) / float(fStep);
 
-	// -------------------------
-	// ---- Update Monitors ----
-	// -------------------------
-	UpdateMonitors();
-
-	debugcheck( "after brain monitor window in step %ld", fStep );
+	// ---------------------------------------------------
+	// ---- Step Ending Signal (e.g. update monitors) ----
+	// ---------------------------------------------------
+    stepEnding();
 
 	// ---------------
 	// ---- Epoch ----
@@ -3535,16 +3521,6 @@ void TSimulation::MaintainFood()
     debugcheck( "after growing food and maintaining food patch stats" );
 }
 
-
-//---------------------------------------------------------------------------
-// TSimulation::UpdateMonitors()
-//---------------------------------------------------------------------------
-void TSimulation::UpdateMonitors()
-{
-
-	monitorManager->step();
-}
-
 //---------------------------------------------------------------------------
 // TSimulation::ijfitinc
 //---------------------------------------------------------------------------
@@ -4918,8 +4894,6 @@ void TSimulation::Dump()
         if (fDomains[id].fittest)
 			fDomains[id].fittest->dump( out );
     }
-
-	monitorManager->dump( out );
 
     out.flush();
     fb.close();

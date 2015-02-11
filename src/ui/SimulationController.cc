@@ -4,6 +4,7 @@
 #include <QTimer>
 
 #include "Simulation.h"
+#include "MonitorManager.h"
 
 //===========================================================================
 // SimulationController
@@ -12,13 +13,16 @@
 //---------------------------------------------------------------------------
 // SimulationController::SimulationController
 //---------------------------------------------------------------------------
-SimulationController::SimulationController( TSimulation *_simulation )
-	: simulation( _simulation )
+SimulationController::SimulationController( TSimulation *simulation_,
+                                            MonitorManager *monitorManager_ )
+	: simulation( simulation_ )
+    , monitorManager( monitorManager_ )
 	, timer( new QTimer(this) )
 	, paused( false )
 {
 	connect(timer, SIGNAL(timeout()), this, SLOT(execStep()));
 
+    simulation->stepEnding += [=]{monitorManager->step();};
     simulation->ended += [=](){simulationEnded();};
 }
 
@@ -35,6 +39,14 @@ SimulationController::~SimulationController()
 TSimulation *SimulationController::getSimulation()
 {
 	return simulation;
+}
+
+//---------------------------------------------------------------------------
+// SimulationController::getMonitorManager
+//---------------------------------------------------------------------------
+MonitorManager *SimulationController::getMonitorManager()
+{
+	return monitorManager;
 }
 
 //---------------------------------------------------------------------------

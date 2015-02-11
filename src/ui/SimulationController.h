@@ -14,10 +14,12 @@ class SimulationController : public QObject
 	Q_OBJECT
 
  public:
-	SimulationController( class TSimulation *simulation );
+	SimulationController( class TSimulation *simulation,
+                          class MonitorManager *monitorManager );
 	virtual ~SimulationController();
 
 	class TSimulation *getSimulation();
+    class MonitorManager *getMonitorManager();
 
 	void start();
 	std::string end( long timestep = -1 );
@@ -38,6 +40,7 @@ class SimulationController : public QObject
 
  private:
 	class TSimulation *simulation;
+    class MonitorManager *monitorManager;
 	class QTimer *timer;
 	bool paused;
 };
