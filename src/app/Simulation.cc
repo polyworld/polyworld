@@ -805,7 +805,7 @@ void TSimulation::End( const string &reason )
 		fout.close();
 	}
 
-	emit ended();
+	ended();
 }
 
 //---------------------------------------------------------------------------

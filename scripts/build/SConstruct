@@ -160,7 +160,7 @@ def env_create():
 		env['CXX'] = '/usr/local/bin/g++'
 		env['CC'] = '/usr/local/bin/g++'
 	#cpp_flags = ['-g', '-Wall', '-O2' ]
-	cpp_flags = ['-g', '-Wall', '-Wno-format-security', '-std=gnu++0x' ]
+	cpp_flags = ['-g', '-Wall', '-Wno-format-security', '-std=c++11' ]
 
 	if PERFORMANCE_PROFILER:
 		# use the gnu gprof

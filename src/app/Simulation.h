@@ -19,6 +19,7 @@
 #include "LifeSpan.h"
 #include "Scheduler.h"
 #include "SeparationCache.h"
+#include "Signal.h"
 #include "simconst.h"
 #include "simtypes.h"
 #include "GeneStats.h"
@@ -37,9 +38,8 @@ namespace proplib { class Document; }
 // TSimulation
 //===========================================================================
 
-class TSimulation : public QObject
+class TSimulation
 {
-	Q_OBJECT
 	PROPLIB_CPP_PROPERTIES
 
 public:
@@ -137,9 +137,8 @@ public:
 	
 	Events* fEvents;
 
-signals:
-	void ended();
-	
+    util::Signal<> ended;
+
 private:
 	void InitCppProperties( proplib::Document *docWorldFile );
 	void InitFittest();

@@ -19,8 +19,7 @@ SimulationController::SimulationController( TSimulation *_simulation )
 {
 	connect(timer, SIGNAL(timeout()), this, SLOT(execStep()));
 
-	connect( simulation, SIGNAL(ended()),
-			 this, SLOT(simulationEnded()) );
+    simulation->ended += [=](){simulationEnded();};
 }
 
 //---------------------------------------------------------------------------
