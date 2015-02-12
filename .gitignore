@@ -4,6 +4,7 @@ bin/
 run*/
 *.pyc
 Polyworld
+Polyworld-app
 Polyworld.app
 .DS_Store
 *.diff
