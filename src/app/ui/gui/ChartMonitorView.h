@@ -4,8 +4,8 @@
 #include <iostream>
 
 // Local
-#include "graphics/graphics.h"
 #include "MonitorView.h"
+#include "graphics/graphics.h"
 
 //===========================================================================
 // ChartMonitorView

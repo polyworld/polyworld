@@ -11,11 +11,11 @@
 #include <QApplication>
 
 // Local
-#include "ui/gui/MainWindow.h"
 #include "monitor/Monitor.h"
 #include "monitor/MonitorManager.h"
 #include "sim/Simulation.h"
 #include "ui/SimulationController.h"
+#include "ui/gui/MainWindow.h"
 #include "ui/term/TerminalUI.h"
 
 

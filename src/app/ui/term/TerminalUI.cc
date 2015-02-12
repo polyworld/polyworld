@@ -3,12 +3,12 @@
 #include <QApplication>
 #include <QTimer>
 
-#include "utils/misc.h"
-#include "ui/gui/MainWindow.h"
+#include "Prompt.h"
 #include "monitor/Monitor.h"
 #include "monitor/MonitorManager.h"
-#include "Prompt.h"
 #include "sim/Simulation.h"
+#include "utils/misc.h"
+#include "ui/gui/MainWindow.h"
 #include "ui/SimulationController.h"
 
 using namespace std;

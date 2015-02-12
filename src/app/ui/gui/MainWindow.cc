@@ -13,20 +13,20 @@
 #include <QSettings>
 
 // Local
-#include "agent/agent.h"
 #include "BrainMonitorView.h"
 #include "ChartMonitorView.h"
-#include "sim/globals.h"
 #include "MainWindow.h"
-#include "monitor/Monitor.h"
-#include "monitor/MonitorManager.h"
-#include "utils/misc.h"
 #include "PovMonitorView.h"
 #include "SceneMonitorView.h"
-#include "sim/Simulation.h"
-#include "ui/SimulationController.h"
 #include "StatusTextMonitorView.h"
 #include "ToggleWidgetOpenAction.h"
+#include "agent/agent.h"
+#include "monitor/Monitor.h"
+#include "monitor/MonitorManager.h"
+#include "sim/globals.h"
+#include "sim/Simulation.h"
+#include "ui/SimulationController.h"
+#include "utils/misc.h"
 
 #if __APPLE__
 static QMenuBar *menuBar = NULL;

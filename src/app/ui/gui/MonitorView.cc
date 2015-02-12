@@ -5,8 +5,8 @@
 #include <QSettings>
 #include <QWidget>
 
-#include "monitor/Monitor.h"
 #include "ToggleWidgetOpenAction.h"
+#include "monitor/Monitor.h"
 
 using namespace std;
 

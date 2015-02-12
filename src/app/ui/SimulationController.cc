@@ -3,8 +3,8 @@
 #include <QApplication>
 #include <QTimer>
 
-#include "sim/Simulation.h"
 #include "monitor/MonitorManager.h"
+#include "sim/Simulation.h"
 
 //===========================================================================
 // SimulationController

@@ -2,8 +2,8 @@
 #include <QGLWidget>
 
 #include "PwMovieQGLPixelBufferRecorder.h"
-#include "utils/PwMovieUtils.h"
 #include "QtSceneRenderer.h"
+#include "utils/PwMovieUtils.h"
 
 //===========================================================================
 // SceneRenderer

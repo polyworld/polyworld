@@ -2,8 +2,8 @@
 #include "PovMonitorView.h"
 
 // Local
-#include "renderer/qt/QtAgentPovRenderer.h"
 #include "monitor/Monitor.h"
+#include "renderer/qt/QtAgentPovRenderer.h"
 
 QtAgentPovRenderer *to_qt(AgentPovRenderer *r) {return dynamic_cast<QtAgentPovRenderer *>(r);}
 

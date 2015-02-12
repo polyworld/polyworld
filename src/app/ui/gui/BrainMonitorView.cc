@@ -5,10 +5,10 @@
 
 // Local
 #include "agent/agent.h"
-#include "monitor/AgentTracker.h"
-#include "brain/Brain.h"
-#include "monitor/Monitor.h"
 #include "agent/Retina.h"
+#include "brain/Brain.h"
+#include "monitor/AgentTracker.h"
+#include "monitor/Monitor.h"
 
 
 using namespace std;
