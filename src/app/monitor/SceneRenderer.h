@@ -1,15 +1,12 @@
 #pragma once
 
-#include <QObject>
-
 #include "gcamera.h"
 #include "gscene.h"
 #include "gstage.h"
+#include "Signal.h"
 
-class SceneRenderer : public QObject
+class SceneRenderer
 {
-	Q_OBJECT
-
  public:
 	class CameraProperties
 	{
@@ -38,8 +35,7 @@ class SceneRenderer : public QObject
 	void copyTo( class QGLWidget *dst );
 	class PwMovieQGLPixelBufferRecorder *createMovieRecorder( class PwMovieWriter *writer );
 
- signals:
-	void renderComplete();
+    util::Signal<> renderComplete;
 
  private:
 	gcamera camera;

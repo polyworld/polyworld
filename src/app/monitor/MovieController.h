@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include <QObject>
+#include "Signal.h"
 
 
 class MovieSettings
@@ -54,20 +54,18 @@ class MovieSettings
 };
 
 
-class SceneMovieController : public QObject
+class SceneMovieController
 {
-	Q_OBJECT
-
  public:
 	SceneMovieController( class SceneRenderer *_renderer, const MovieSettings &settings );
 	virtual ~SceneMovieController();
 
 	void step( long timestep );
 
- private slots:
-	void renderComplete();
-
  private:
+	void renderComplete();
+    util::Signal<>::SlotHandle renderComplete_handle;
+
 	class SceneRenderer *renderer;
 	MovieSettings settings;
 	class PwMovieWriter *writer;

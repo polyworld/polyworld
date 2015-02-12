@@ -42,8 +42,8 @@ void SceneMovieController::step( long timestep )
 	{
 		if( !connectedToRenderer )
 		{
-			connect( renderer, SIGNAL(renderComplete()),
-					 this, SLOT(renderComplete()) );
+            renderComplete_handle =
+                renderer->renderComplete += [=]() {this->renderComplete();};
 			connectedToRenderer = true;
 		}
 	}
@@ -51,8 +51,7 @@ void SceneMovieController::step( long timestep )
 	{
 		if( connectedToRenderer )
 		{
-			disconnect( renderer, SIGNAL(renderComplete()),
-						this, SLOT(renderComplete()) );
+            renderer->renderComplete -= renderComplete_handle;
 			connectedToRenderer = false;
 		}
 	}

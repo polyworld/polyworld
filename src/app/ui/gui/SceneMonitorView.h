@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MonitorView.h"
+#include "Signal.h"
 
 class SceneMonitorView : public MonitorView
 {
@@ -23,6 +24,7 @@ class SceneMonitorView : public MonitorView
 	void setTracker( class AgentTracker *tracker );
 
  protected:
+    util::Signal<>::SlotHandle draw_handle;
 	class SceneRenderer *renderer;
 	class CameraController *cameraController;
 };

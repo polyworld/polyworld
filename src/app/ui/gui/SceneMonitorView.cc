@@ -35,8 +35,8 @@ SceneMonitorView::~SceneMonitorView()
 //---------------------------------------------------------------------------
 void SceneMonitorView::showEvent( QShowEvent *event )
 {
-	connect( renderer, SIGNAL(renderComplete()),
-			 this, SLOT(draw()) );
+    draw_handle =
+        renderer->renderComplete += [=]() {this->draw();};
 
 	QGLWidget::showEvent( event );
 }
@@ -46,8 +46,7 @@ void SceneMonitorView::showEvent( QShowEvent *event )
 //---------------------------------------------------------------------------
 void SceneMonitorView::hideEvent( QHideEvent *event )
 {
-	disconnect( renderer, SIGNAL(renderComplete()),
-				this, SLOT(draw()) );
+    renderer->renderComplete -= draw_handle;
 
 	QGLWidget::hideEvent( event );
 }

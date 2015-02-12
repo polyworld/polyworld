@@ -1,7 +1,7 @@
 #pragma once
 
 #include <functional>
-#include <vector>
+#include <list>
 
 namespace util
 {
@@ -10,24 +10,30 @@ namespace util
     class Signal
     {
     public:
-        typedef std::function<void(Args...)> Callback;
+        typedef std::function<void(Args...)> Slot;
+        typedef typename std::list<Slot>::iterator SlotHandle;
 
-        void operator+=(const Callback &callback)
+        SlotHandle operator+=(const Slot &slot)
         {
-            this->callbacks.push_back(callback);
+            _slots.push_back(slot);
+            return --_slots.end();
+        }
+
+        void operator-=(SlotHandle handle) {
+            _slots.erase(handle);
         }
 
         void operator()(Args... args)
         {
-            for(Callback &c: callbacks)
+            for(Slot &c: _slots)
                 c(args...);
         }
 
         size_t receivers() {
-            return callbacks.size();
+            return _slots.size();
         }
 
     private:
-        std::vector<Callback> callbacks;
+        std::list<Slot> _slots;
     };
 }

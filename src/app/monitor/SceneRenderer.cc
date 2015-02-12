@@ -72,7 +72,7 @@ int SceneRenderer::getBufferHeight()
 void SceneRenderer::render()
 {
 	// Don't render if no slots connected
-	if( receivers( SIGNAL(renderComplete()) ) == 0 )
+	if( renderComplete.receivers() == 0 )
 	{
 		return;
 	}
@@ -114,7 +114,7 @@ void SceneRenderer::render()
 
 	pixelBuffer->doneCurrent();
 
-	emit renderComplete();
+	renderComplete();
 }
 
 //---------------------------------------------------------------------------
