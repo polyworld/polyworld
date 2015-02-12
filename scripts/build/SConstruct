@@ -8,12 +8,8 @@ from scons_util import import_OpenGL, import_OpenMP, import_GSL, import_Qt, impo
 
 SRCDIRS = ['src/' + x
 		   for x in ['core',
-                     'debugger',
-					 'main',
-					 'monitor',
-					 'renderer',
-					 'tools',
-					 'ui']]
+                     'app',
+					 'tools']]
 
 def build():
 	envs = env_create()
