@@ -1,16 +1,17 @@
 conf=../../Makefile.conf
 include ${conf}
 
-cxxflags=${CXXFLAGS} ${OPENGL_CXXFLAGS} ${PYTHON_CXXFLAGS} ${OMP_CXXFLAGS}
+target=${LIBRARY_TARGET}
+blddir=${LIBRARY_BLDDIR}
+
+cxxflags=${CXXFLAGS} ${OPENGL_CXXFLAGS} ${PYTHON_CXXFLAGS} ${OMP_CXXFLAGS} -MMD
 ldflags=${SHARED_LDFLAGS}
 libs=${OPENGL_LIBS} ${DLOPEN_LIBS} ${GSL_LIBS} ${PYTHON_LIBS} ${OMP_LIBS}
 
-blddir=${LIBRARY_BLDDIR}
 includes=$(patsubst %, -I%, $(shell find . -type d))
 sources=$(shell find . -name "*.cc")
 objects=$(patsubst ./%.cc, ${blddir}/%.o, ${sources})
-
-target=${LIBRARY_TARGET}
+depends=$(patsubst %.o, %.d, ${objects})
 
 ${target}: ${objects}
 	@mkdir -p $(shell dirname $@)
@@ -19,3 +20,5 @@ ${target}: ${objects}
 ${blddir}/%.o: ./%.cc
 	@mkdir -p $(shell dirname $@)
 	${CXX} ${cxxflags} ${includes} -o $@ $<
+
+-include ${depends}
