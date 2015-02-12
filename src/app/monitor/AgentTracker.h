@@ -2,15 +2,12 @@
 
 #include <string>
 
-#include <QObject>
-
 #include "AgentListener.h"
+#include "Signal.h"
 
 
-class AgentTracker : public QObject
+class AgentTracker
 {
-	Q_OBJECT
-
  public:
 
 	enum Mode
@@ -41,14 +38,13 @@ class AgentTracker : public QObject
 	const Parms &getParms();
 	std::string getStateTitle();
 
+    util::Signal<AgentTracker *> targetChanged;
+
  private:
 	friend class Listener;
 	friend class MonitorManager;
 
 	void setTarget( class agent *a );
-
- signals:
-	void targetChanged( AgentTracker *tracker );
 
  private:
 	class Listener : public AgentListener

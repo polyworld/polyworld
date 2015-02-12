@@ -68,7 +68,7 @@ void AgentTracker::setTarget( agent *a )
 		if( target )
 			target->addListener( &listener );
 
-		emit targetChanged( this );
+		targetChanged( this );
 	}
 }
 

@@ -75,8 +75,7 @@ void SceneMonitorView::setTracker( AgentTracker *tracker )
 {
 	if( tracker )
 	{
-		connect( tracker, SIGNAL(targetChanged(AgentTracker*)),
-				 this, SLOT(updateTarget(AgentTracker*)) );
+        tracker->targetChanged += [=](AgentTracker *tracker) {this->updateTarget(tracker);};
 
 		updateTarget( tracker );
 	}
