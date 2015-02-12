@@ -4,12 +4,12 @@
 #define NEXT 1
 #define PREV 2
 
-#include "proplib/cppprops.h"
 #include "gdlink.h"
-#include "graphics/gobject.h"
-#include "environment/food.h"
 #include "agent/agent.h"
 #include "environment/brick.h"
+#include "environment/food.h"
+#include "graphics/gobject.h"
+#include "proplib/cppprops.h"
 
 using namespace std;
 

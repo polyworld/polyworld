@@ -8,9 +8,11 @@
 
 //System
 #include <iostream>
+
+//Local
+#include "Patch.h"
 #include "graphics/graphics.h"
 #include "graphics/gstage.h"
-#include "Patch.h"
 
 using namespace std;
 

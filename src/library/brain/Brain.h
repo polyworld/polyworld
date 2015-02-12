@@ -8,8 +8,8 @@
 // Local
 #include "NeuralNetRenderer.h"
 #include "NeuronModel.h"
-#include "utils/objectlist.h"
 #include "proplib/proplib.h"
+#include "utils/objectlist.h"
 
 
 #define DebugBrainGrow false

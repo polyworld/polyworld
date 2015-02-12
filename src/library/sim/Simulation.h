@@ -8,22 +8,22 @@
 
 // Local
 #include "Domain.h"
-#include "proplib/cppprops.h"
 #include "EatStatistics.h"
 #include "environment/Energy.h"
-#include "utils/Events.h"
 #include "FittestList.h"
-#include "agent/LifeSpan.h"
 #include "Scheduler.h"
-#include "genome/SeparationCache.h"
-#include "utils/Signal.h"
 #include "simconst.h"
 #include "simtypes.h"
 #include "GeneStats.h"
+#include "agent/LifeSpan.h"
+#include "genome/SeparationCache.h"
 #include "graphics/gmisc.h"
 #include "graphics/gpolygon.h"
 #include "graphics/graphics.h"
 #include "graphics/gstage.h"
+#include "proplib/cppprops.h"
+#include "utils/Events.h"
+#include "utils/Signal.h"
 
 using namespace sim;
 

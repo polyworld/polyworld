@@ -29,8 +29,8 @@
 #include <string>
 
 // Local
-#include "utils/error.h"
 #include "graphics/graphics.h"
+#include "utils/error.h"
 #include "utils/gdlink.h"
 #include "utils/misc.h"
 

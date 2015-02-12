@@ -1,7 +1,7 @@
 #pragma once
 
-#include "agent/agent.h"
 #include "Scheduler.h"
+#include "agent/agent.h"
 
 class GeneStats
 {

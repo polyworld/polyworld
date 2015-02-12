@@ -16,11 +16,9 @@ using namespace std;
 
 // Local
 #include "Energy.h"
-#include "utils/gdlink.h"
-#include "graphics/gsquare.h"
-//#include "ObjectList.h"
-
 #include "FoodPatch.h"
+#include "graphics/gsquare.h"
+#include "utils/gdlink.h"
 
 // Forward declarations
 class food;

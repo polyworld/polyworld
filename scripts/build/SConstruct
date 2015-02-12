@@ -9,6 +9,7 @@ from scons_util import import_OpenGL, import_OpenMP, import_GSL, import_Qt, impo
 SRCDIRS = ['src/' + x
 		   for x in ['app',
                      'library',
+                     'qtrenderer',
 					 'tools']]
 
 def build():

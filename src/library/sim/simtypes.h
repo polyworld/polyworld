@@ -6,9 +6,9 @@
 
 #include <vector>
 
-#include "environment/Energy.h"
-#include "agent/LifeSpan.h"
 #include "simconst.h"
+#include "agent/LifeSpan.h"
+#include "environment/Energy.h"
 
 
 // Forward declarations

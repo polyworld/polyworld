@@ -11,9 +11,9 @@
 using namespace std;
 
 // Local
-#include "utils/gdlink.h"
-#include "graphics/gsquare.h"
 #include "BrickPatch.h"
+#include "graphics/gsquare.h"
+#include "utils/gdlink.h"
 
 // Forward declarations
 class brick;
