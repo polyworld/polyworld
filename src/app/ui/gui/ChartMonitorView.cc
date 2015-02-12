@@ -40,8 +40,7 @@ ChartMonitorView::ChartMonitorView( ChartMonitor *monitor )
 			setColor( curve.id, curve.color[0], curve.color[1], curve.color[2] );
 	}
 
-	connect( monitor, SIGNAL(curveUpdated(short,float)),
-			 this, SLOT(addPoint(short,float)) );
+    monitor->curveUpdated += [=](short curve, float data) {this->addPoint(curve, data);};
 }
 
 //---------------------------------------------------------------------------

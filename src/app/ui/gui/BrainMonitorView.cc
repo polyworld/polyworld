@@ -36,8 +36,7 @@ BrainMonitorView::BrainMonitorView( BrainMonitor *monitor )
 	connect( monitor->getTracker(), SIGNAL(targetChanged(AgentTracker*)),
 			 this, SLOT(updateTarget(AgentTracker*)) );
 
-	connect( monitor, SIGNAL(update()),
-			 this, SLOT(draw()) );
+    monitor->update += [=]() {this->draw();};
 }
 
 

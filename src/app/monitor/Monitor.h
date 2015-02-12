@@ -9,6 +9,7 @@
 #include "datalib.h"
 #include "MovieController.h"
 #include "proplib.h"
+#include "Signal.h"
 #include "simconst.h"
 #include "simtypes.h"
 
@@ -16,10 +17,8 @@
 //===========================================================================
 // Monitor
 //===========================================================================
-class Monitor : public QObject
+class Monitor
 {
-	Q_OBJECT
-
  public:
 	enum Type
 	{
@@ -63,8 +62,6 @@ class Monitor : public QObject
 //===========================================================================
 class ChartMonitor : public Monitor
 {
-	Q_OBJECT
-
  public:
 	virtual ~ChartMonitor();
 
@@ -79,8 +76,8 @@ class ChartMonitor : public Monitor
 	
 	const CurveDefs &getCurveDefs() { return curves; }
 
- signals:
-	void curveUpdated( short curve, float data );
+    // (short curve, float data)
+    util::Signal<short, float> curveUpdated;
 
  protected:
 	ChartMonitor( class TSimulation *_sim,
@@ -154,8 +151,6 @@ class PopulationMonitor : public ChartMonitor
 //===========================================================================
 class BrainMonitor : public Monitor
 {
-	Q_OBJECT
-
  public:
 	BrainMonitor( class TSimulation *_sim, int _frequency, class AgentTracker *_tracker );
 
@@ -163,8 +158,7 @@ class BrainMonitor : public Monitor
 
 	virtual void step( long timestep );
 
- signals:
-	void update();
+    util::Signal<> update;
 
  private:
 	int frequency;
@@ -189,8 +183,6 @@ class PovMonitor : public Monitor
 //===========================================================================
 class StatusTextMonitor : public Monitor
 {
-	Q_OBJECT
-
  public:
 	StatusTextMonitor( class TSimulation *sim,
 					   int frequencyDisplay,
@@ -201,8 +193,7 @@ class StatusTextMonitor : public Monitor
 
 	virtual void step( long timestep );
 
- signals:
-	void update();
+    util::Signal<> update;
 
  private:
 	sim::StatusText statusText;
@@ -216,8 +207,6 @@ class StatusTextMonitor : public Monitor
 //===========================================================================
 class FarmMonitor : public Monitor
 {
-	Q_OBJECT
-
  public:
 	static bool isFarmEnv();
 

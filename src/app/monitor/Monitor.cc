@@ -119,7 +119,7 @@ void BirthRateMonitor::step( long timestep )
 		prevBorn = numBorn;
 		prevCreated = numCreated;
 
-		emit curveUpdated( 0, float(numBorn) / float(numBorn + numCreated) );
+		curveUpdated( 0, float(numBorn) / float(numBorn + numCreated) );
 	}
 }
 
@@ -143,9 +143,9 @@ FitnessMonitor::~FitnessMonitor()
 
 void FitnessMonitor::step( long timestep )
 {
-	emit curveUpdated( 0, sim->getFitnessStat(FST__MAX_FITNESS) );
-	emit curveUpdated( 1, sim->getFitnessStat(FST__CURRENT_MAX_FITNESS) );
-	emit curveUpdated( 2, sim->getFitnessStat(FST__AVERAGE_FITNESS) );
+	curveUpdated( 0, sim->getFitnessStat(FST__MAX_FITNESS) );
+	curveUpdated( 1, sim->getFitnessStat(FST__CURRENT_MAX_FITNESS) );
+	curveUpdated( 2, sim->getFitnessStat(FST__AVERAGE_FITNESS) );
 }
 
 //===========================================================================
@@ -175,7 +175,7 @@ void FoodEnergyMonitor::updateCurve( int curve, FoodEnergyStatScope scope )
 	float in = sim->getFoodEnergyStat( FEST__IN, scope );
 	float out = sim->getFoodEnergyStat( FEST__OUT, scope );
 
-	emit curveUpdated( curve, (in - out) / (in + out) );
+	curveUpdated( curve, (in - out) / (in + out) );
 }
 
 //===========================================================================
@@ -209,11 +209,11 @@ PopulationMonitor::~PopulationMonitor()
 
 void PopulationMonitor::step( long timestep )
 {
-	emit curveUpdated( 0, sim->getNumAgents() );
+	curveUpdated( 0, sim->getNumAgents() );
 	if( sim->GetNumDomains() > 1 )
 	{
 		for( short domain = 0; domain < sim->GetNumDomains(); domain++ )
-			emit curveUpdated( domain + 1, sim->getNumAgents(domain) );
+			curveUpdated( domain + 1, sim->getNumAgents(domain) );
 	}
 }
 
@@ -235,7 +235,7 @@ AgentTracker *BrainMonitor::getTracker()
 void BrainMonitor::step( long timestep )
 {
 	if( (timestep % frequency) == 0 )
-		emit update();
+		update();
 }
 
 //===========================================================================
@@ -279,7 +279,7 @@ void StatusTextMonitor::step( long timestep )
 {
 	bool doDisplay =
 		((timestep == 1) || (timestep % frequencyDisplay == 0))
-		&& (receivers( SIGNAL(update()) ) > 0);
+		&& (update.receivers() > 0);
 	bool doStore =
 		((timestep == 1) || (timestep % frequencyStore == 0));
 
@@ -295,7 +295,7 @@ void StatusTextMonitor::step( long timestep )
 
 		if( doDisplay )
 		{
-			emit update();
+			update();
 		}
 
 		if( doStore )

@@ -23,6 +23,10 @@ namespace util
                 c(args...);
         }
 
+        size_t receivers() {
+            return callbacks.size();
+        }
+
     private:
         std::vector<Callback> callbacks;
     };

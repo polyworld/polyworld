@@ -30,8 +30,7 @@ StatusTextMonitorView::StatusTextMonitorView( StatusTextMonitor *_monitor )
 	, nlines( 0 )
 	
 {
-	connect( monitor, SIGNAL(update()),
-			 this, SLOT(update()) );
+    monitor->update += [=](){this->update();};
 }
 
 

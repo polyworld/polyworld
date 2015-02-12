@@ -55,8 +55,7 @@ void TerminalUI::connectMonitors()
 		if( monitor->getType() == Monitor::STATUS_TEXT )
 		{
 			statusTextMonitor = dynamic_cast<StatusTextMonitor *>( monitor );
-			connect( statusTextMonitor, SIGNAL(update()),
-					 this, SLOT(status()) );
+            statusTextMonitor->update += [=]() {this->status();};
 		}
 	}
 }
