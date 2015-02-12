@@ -4,7 +4,7 @@
 
 #include <QThread>
 
-#include "Mutex.h"
+#include "utils/Mutex.h"
 
 class Prompt
 {

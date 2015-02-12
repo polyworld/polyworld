@@ -1,9 +1,9 @@
 #include "SceneMonitorView.h"
 
-#include "AgentTracker.h"
-#include "CameraController.h"
-#include "Monitor.h"
-#include "QtSceneRenderer.h"
+#include "monitor/AgentTracker.h"
+#include "monitor/CameraController.h"
+#include "monitor/Monitor.h"
+#include "renderer/qt/QtSceneRenderer.h"
 
 //===========================================================================
 // SceneMonitorView

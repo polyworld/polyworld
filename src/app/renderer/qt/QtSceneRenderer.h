@@ -1,6 +1,6 @@
 #pragma once
 
-#include "SceneRenderer.h"
+#include "monitor/SceneRenderer.h"
 
 class QtSceneRenderer : public SceneRenderer
 {

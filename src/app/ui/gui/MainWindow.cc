@@ -13,18 +13,18 @@
 #include <QSettings>
 
 // Local
-#include "agent.h"
+#include "agent/agent.h"
 #include "BrainMonitorView.h"
 #include "ChartMonitorView.h"
-#include "globals.h"
+#include "sim/globals.h"
 #include "MainWindow.h"
-#include "Monitor.h"
-#include "MonitorManager.h"
-#include "misc.h"
+#include "monitor/Monitor.h"
+#include "monitor/MonitorManager.h"
+#include "utils/misc.h"
 #include "PovMonitorView.h"
 #include "SceneMonitorView.h"
-#include "Simulation.h"
-#include "SimulationController.h"
+#include "sim/Simulation.h"
+#include "ui/SimulationController.h"
 #include "StatusTextMonitorView.h"
 #include "ToggleWidgetOpenAction.h"
 

@@ -8,7 +8,7 @@
 #ifndef ERROR_H
 #define ERROR_H
 
-#include "debug.h"
+#include "sim/debug.h"
 
 void error(     int level, int delay, const char* msg);
 void error(     int level, const char* msg);

@@ -29,10 +29,10 @@
 #include <string>
 
 // Local
-#include "error.h"
-#include "graphics.h"
-#include "gdlink.h"
-#include "misc.h"
+#include "utils/error.h"
+#include "graphics/graphics.h"
+#include "utils/gdlink.h"
+#include "utils/misc.h"
 
 // Orientation, like with gcameras, is handled by yaw, pitch, and roll
 // (rotate-y, rotate-x, rotate-z) applied in that order.

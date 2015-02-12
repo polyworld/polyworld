@@ -1,6 +1,6 @@
 #pragma once
 
-#include "gcamera.h"
+#include "graphics/gcamera.h"
 
 class CameraController
 {

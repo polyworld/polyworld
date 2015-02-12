@@ -1,7 +1,7 @@
 #pragma once
 
 #include "FittestList.h"
-#include "FoodPatch.h"
+#include "environment/FoodPatch.h"
 #include "simtypes.h"
 
 using namespace sim;

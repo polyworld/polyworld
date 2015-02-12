@@ -1,7 +1,7 @@
 #pragma once
 
 #include "GeneSchema.h"
-#include "proplib.h"
+#include "proplib/proplib.h"
 
 namespace genome
 {

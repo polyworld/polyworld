@@ -1,9 +1,9 @@
 #pragma once
 
-#include "gcamera.h"
-#include "gscene.h"
-#include "gstage.h"
-#include "Signal.h"
+#include "graphics/gcamera.h"
+#include "graphics/gscene.h"
+#include "graphics/gstage.h"
+#include "utils/Signal.h"
 
 class SceneRenderer
 {

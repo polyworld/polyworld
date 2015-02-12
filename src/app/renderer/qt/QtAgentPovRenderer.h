@@ -2,8 +2,8 @@
 
 #include <map>
 
-#include "AgentAttachedData.h"
-#include "AgentPovRenderer.h"
+#include "agent/AgentAttachedData.h"
+#include "agent/AgentPovRenderer.h"
 
 
 class QtAgentPovRenderer : public AgentPovRenderer

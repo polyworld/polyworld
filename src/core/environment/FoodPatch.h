@@ -9,10 +9,10 @@
 #include <list>
 
 //Local
-#include "cppprops.h"
+#include "proplib/cppprops.h"
 #include "Energy.h"
 #include "FoodType.h"
-#include "gstage.h"
+#include "graphics/gstage.h"
 #include "Patch.h"
 
 using namespace std;

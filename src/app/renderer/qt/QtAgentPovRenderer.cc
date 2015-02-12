@@ -5,8 +5,8 @@
 #include <QGLPixelBuffer>
 #include <QGLWidget>
 
-#include "agent.h"
-#include "Retina.h"
+#include "agent/agent.h"
+#include "agent/Retina.h"
 
 #define CELL_PAD 2
 

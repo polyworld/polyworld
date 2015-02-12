@@ -4,9 +4,9 @@
 #include <glu.h>
 
 // Local
-#include "misc.h"
-#include "Monitor.h"
-#include "simtypes.h"
+#include "utils/misc.h"
+#include "monitor/Monitor.h"
+#include "sim/simtypes.h"
 
 using namespace sim;
 using namespace std;

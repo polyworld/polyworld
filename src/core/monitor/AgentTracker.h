@@ -2,8 +2,8 @@
 
 #include <string>
 
-#include "AgentListener.h"
-#include "Signal.h"
+#include "agent/AgentListener.h"
+#include "utils/Signal.h"
 
 
 class AgentTracker

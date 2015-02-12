@@ -8,9 +8,9 @@
 #include <stdio.h>
 
 // Local
-#include "error.h"
-#include "Monitor.h"
-#include "misc.h"
+#include "utils/error.h"
+#include "monitor/Monitor.h"
+#include "utils/misc.h"
 
 using namespace std;
 

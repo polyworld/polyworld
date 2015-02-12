@@ -11,12 +11,12 @@
 #include <QApplication>
 
 // Local
-#include "MainWindow.h"
-#include "Monitor.h"
-#include "MonitorManager.h"
-#include "Simulation.h"
-#include "SimulationController.h"
-#include "TerminalUI.h"
+#include "ui/gui/MainWindow.h"
+#include "monitor/Monitor.h"
+#include "monitor/MonitorManager.h"
+#include "sim/Simulation.h"
+#include "ui/SimulationController.h"
+#include "ui/term/TerminalUI.h"
 
 
 using namespace std;

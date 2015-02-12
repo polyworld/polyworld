@@ -4,7 +4,7 @@
 #include <iostream>
 
 // Local
-#include "graphics.h"
+#include "graphics/graphics.h"
 #include "MonitorView.h"
 
 //===========================================================================

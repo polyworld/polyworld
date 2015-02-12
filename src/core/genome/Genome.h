@@ -6,7 +6,7 @@
 
 #include "GenomeLayout.h"
 #include "GenomeSchema.h"
-#include "graybin.h"
+#include "utils/graybin.h"
 
 // forward decl
 class AbstractFile;

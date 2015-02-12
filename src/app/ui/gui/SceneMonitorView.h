@@ -1,7 +1,7 @@
 #pragma once
 
 #include "MonitorView.h"
-#include "Signal.h"
+#include "utils/Signal.h"
 
 class SceneMonitorView : public MonitorView
 {

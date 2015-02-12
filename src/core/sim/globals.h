@@ -16,9 +16,9 @@
 #include <string>
 
 // Local
-#include "AbstractFile.h"
-#include "GenomeLayout.h"
-#include "graphics.h"
+#include "utils/AbstractFile.h"
+#include "genome/GenomeLayout.h"
+#include "graphics/graphics.h"
 
 static const int kMenuBarHeight = 22;
 

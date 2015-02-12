@@ -8,8 +8,8 @@
 
 //System
 #include <iostream>
-#include "graphics.h"
-#include "gstage.h"
+#include "graphics/graphics.h"
+#include "graphics/gstage.h"
 #include "Patch.h"
 
 using namespace std;

@@ -6,8 +6,8 @@
 
 #include <vector>
 
-#include "Energy.h"
-#include "LifeSpan.h"
+#include "environment/Energy.h"
+#include "agent/LifeSpan.h"
 #include "simconst.h"
 
 

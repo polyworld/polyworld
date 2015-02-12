@@ -4,11 +4,11 @@
 #include <glu.h>
 
 // Local
-#include "agent.h"
-#include "AgentTracker.h"
-#include "Brain.h"
-#include "Monitor.h"
-#include "Retina.h"
+#include "agent/agent.h"
+#include "monitor/AgentTracker.h"
+#include "brain/Brain.h"
+#include "monitor/Monitor.h"
+#include "agent/Retina.h"
 
 
 using namespace std;

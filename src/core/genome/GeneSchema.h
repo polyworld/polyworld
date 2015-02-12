@@ -7,7 +7,7 @@
 
 #include "Gene.h"
 #include "GenomeLayout.h"
-#include "proplib.h"
+#include "proplib/proplib.h"
 
 namespace genome
 {

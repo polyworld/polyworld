@@ -4,12 +4,12 @@
 #include <string>
 #include <vector>
 
-#include "datalib.h"
+#include "utils/datalib.h"
 #include "MovieController.h"
-#include "proplib.h"
-#include "Signal.h"
-#include "simconst.h"
-#include "simtypes.h"
+#include "proplib/proplib.h"
+#include "utils/Signal.h"
+#include "sim/simconst.h"
+#include "sim/simtypes.h"
 
 
 //===========================================================================

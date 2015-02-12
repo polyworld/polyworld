@@ -16,8 +16,8 @@ using namespace std;
 
 // Local
 #include "Energy.h"
-#include "gdlink.h"
-#include "gsquare.h"
+#include "utils/gdlink.h"
+#include "graphics/gsquare.h"
 //#include "ObjectList.h"
 
 #include "FoodPatch.h"

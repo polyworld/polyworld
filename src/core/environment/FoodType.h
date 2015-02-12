@@ -4,7 +4,7 @@
 #include <string>
 
 #include "Energy.h"
-#include "graphics.h"
+#include "graphics/graphics.h"
 
 class FoodType
 {

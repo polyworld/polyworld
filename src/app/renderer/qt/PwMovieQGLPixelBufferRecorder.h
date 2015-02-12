@@ -1,7 +1,7 @@
 #pragma once
 
-#include "MovieRecorder.h"
-#include "PwMovieUtils.h"
+#include "monitor/MovieRecorder.h"
+#include "utils/PwMovieUtils.h"
 
 //===========================================================================
 // PwMovieQGLPixelBufferRecorder

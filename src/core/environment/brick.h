@@ -11,8 +11,8 @@
 using namespace std;
 
 // Local
-#include "gdlink.h"
-#include "gsquare.h"
+#include "utils/gdlink.h"
+#include "graphics/gsquare.h"
 #include "BrickPatch.h"
 
 // Forward declarations

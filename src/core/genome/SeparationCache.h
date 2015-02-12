@@ -2,8 +2,8 @@
 
 #include <map>
 
-#include "AgentAttachedData.h"
-#include "simtypes.h"
+#include "agent/AgentAttachedData.h"
+#include "sim/simtypes.h"
 
 class SeparationCache
 {

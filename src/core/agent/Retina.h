@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Brain.h"
-#include "Sensor.h"
+#include "brain/Brain.h"
+#include "brain/Sensor.h"
 
 class Nerve;
 class NervousSystem;

@@ -8,7 +8,7 @@
 
 //System
 #include <iostream>
-#include "gstage.h"
+#include "graphics/gstage.h"
 
 #define RECTANGULAR 0
 #define ELLIPTICAL 1

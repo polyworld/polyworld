@@ -13,7 +13,7 @@
 #include <stddef.h>
 
 // Local
-#include "objectlist.h"
+#include "utils/objectlist.h"
 
 // Forward declarations
 class gcamera;
