@@ -18,10 +18,11 @@ class SceneRenderer
 		float fov;
 	};
 
-	SceneRenderer( gstage &stage,
-				   const CameraProperties &cameraProps,
-				   int width,
-				   int height );
+    static SceneRenderer *create(gstage &stage,
+                                 const CameraProperties &cameraProps,
+                                 int width,
+                                 int height);
+
 	virtual ~SceneRenderer();
 
 	gcamera &getCamera();
@@ -29,19 +30,20 @@ class SceneRenderer
 	int getBufferWidth();
 	int getBufferHeight();
 
-	// Only renders if slots connected to renderComplete()
-	void render();
-
-	void copyTo( class QGLWidget *dst );
-	class PwMovieQGLPixelBufferRecorder *createMovieRecorder( class PwMovieWriter *writer );
-
     util::Signal<> renderComplete;
 
- private:
+    virtual class MovieRecorder *createMovieRecorder(class PwMovieWriter *writer) = 0;
+	// Only renders if slots connected to renderComplete()
+	virtual void render() = 0;
+
+ protected:
+	SceneRenderer( gstage &stage,
+				   const CameraProperties &cameraProps,
+				   int width,
+				   int height );
+
 	gcamera camera;
 	gscene scene;
 	int width;
 	int height;
-	class QGLPixelBuffer *pixelBuffer;
-
 };

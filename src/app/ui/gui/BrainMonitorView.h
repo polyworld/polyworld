@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MonitorView.h"
+#include "Signal.h"
 
 //===========================================================================
 // BrainMonitorView
@@ -20,8 +21,11 @@ protected:
 
     class agent* fAgent;
 
+private:
+	void updateTarget( class AgentTracker * );
+    util::Signal<class AgentTracker *>::SlotHandle updateTarget_handle;
+
 private slots:
     void draw();
-	void updateTarget( class AgentTracker * );
 };
 

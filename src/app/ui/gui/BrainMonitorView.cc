@@ -33,7 +33,8 @@ BrainMonitorView::BrainMonitorView( BrainMonitor *monitor )
 {
 	updateTarget( monitor->getTracker() );
 
-    monitor->getTracker()->targetChanged += [=](AgentTracker *tracker) {this->updateTarget(tracker);};
+    updateTarget_handle =
+        monitor->getTracker()->targetChanged += [=](AgentTracker *tracker) {this->updateTarget(tracker);};
     monitor->update += [=]() {this->draw();};
 }
 
@@ -43,6 +44,7 @@ BrainMonitorView::BrainMonitorView( BrainMonitor *monitor )
 //---------------------------------------------------------------------------
 BrainMonitorView::~BrainMonitorView()
 {
+    ((BrainMonitor*)getMonitor())->getTracker()->targetChanged -= updateTarget_handle;
 }
 
 

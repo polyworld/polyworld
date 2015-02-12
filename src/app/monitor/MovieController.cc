@@ -3,9 +3,10 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include "SceneRenderer.h"
+#include "MovieRecorder.h"
 #include "PwMovieQGLPixelBufferRecorder.h"
 #include "PwMovieUtils.h"
+#include "SceneRenderer.h"
 
 
 SceneMovieController::SceneMovieController( SceneRenderer *_renderer,

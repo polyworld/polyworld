@@ -1,12 +1,7 @@
 #include "SceneRenderer.h"
 
-#include <QGLPixelBuffer>
-#include <QGLWidget>
-
 #include "CameraController.h"
 #include "globals.h"
-#include "PwMovieQGLPixelBufferRecorder.h"
-#include "PwMovieUtils.h"
 
 //===========================================================================
 // SceneRenderer
@@ -17,11 +12,10 @@
 //---------------------------------------------------------------------------
 SceneRenderer::SceneRenderer( gstage &stage,
 							  const CameraProperties &cameraProps,
-							  int _width,
-							  int _height )
-: width( _width )
-, height( _height )
-, pixelBuffer( NULL )
+							  int width_,
+							  int height_ )
+: width( width_ )
+, height( height_ )
 {
 	scene.SetStage( &stage );
 	scene.SetCamera( &camera );
@@ -38,8 +32,6 @@ SceneRenderer::SceneRenderer( gstage &stage,
 //---------------------------------------------------------------------------
 SceneRenderer::~SceneRenderer()
 {
-	if( pixelBuffer )
-		delete pixelBuffer;
 }
 
 //---------------------------------------------------------------------------
@@ -64,78 +56,4 @@ int SceneRenderer::getBufferWidth()
 int SceneRenderer::getBufferHeight()
 {
 	return height;
-}
-
-//---------------------------------------------------------------------------
-// SceneRenderer::render
-//---------------------------------------------------------------------------
-void SceneRenderer::render()
-{
-	// Don't render if no slots connected
-	if( renderComplete.receivers() == 0 )
-	{
-		return;
-	}
-
-	if( pixelBuffer == NULL )
-	{
-		pixelBuffer = new QGLPixelBuffer( width, height );
-		pixelBuffer->makeCurrent();
-
-		static GLfloat pos[4] = { 5.0, 5.0, 10.0, 1.0 };
-		glLightfv( GL_LIGHT0, GL_POSITION, pos );
-    
-		//glEnable(GL_CULL_FACE);
-		glEnable( GL_DEPTH_TEST );
-		glEnable( GL_NORMALIZE );
-
-		glViewport( 0, 0, width, height );
-
-		glMatrixMode( GL_PROJECTION );
-		glLoadIdentity();
-		glMatrixMode( GL_MODELVIEW );
-		glLoadIdentity();
-
-		GLfloat w = (float) width / (float) height;
-		GLfloat h = 1.0;
-		glFrustum( -w, w, -h, h, 5.0, 60.0 );
-	}
-	else
-	{
-		pixelBuffer->makeCurrent();
-	}
-
-	glClearColor( 0, 0, 0, 1 );
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	glPushMatrix();
-		scene.Draw();
-	glPopMatrix();
-
-	pixelBuffer->doneCurrent();
-
-	renderComplete();
-}
-
-//---------------------------------------------------------------------------
-// SceneRenderer::copyTo
-//---------------------------------------------------------------------------
-void SceneRenderer::copyTo( QGLWidget *dst )
-{
-	if( pixelBuffer )
-	{
-		QImage image = pixelBuffer->toImage();
-		QPainter painter( dst );
-		painter.drawImage( QRect(0,0,dst->width(),dst->height()), image );
-	}
-}
-
-//---------------------------------------------------------------------------
-// SceneRenderer::createMovieRecorder
-//---------------------------------------------------------------------------
-PwMovieQGLPixelBufferRecorder *SceneRenderer::createMovieRecorder( PwMovieWriter *writer )
-{
-	assert( pixelBuffer );
-
-	return new PwMovieQGLPixelBufferRecorder( pixelBuffer, writer );
 }

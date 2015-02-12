@@ -1,17 +1,18 @@
 #pragma once
 
+#include "MovieRecorder.h"
 #include "PwMovieUtils.h"
 
 //===========================================================================
 // PwMovieQGLPixelBufferRecorder
 //===========================================================================
-class PwMovieQGLPixelBufferRecorder
+class PwMovieQGLPixelBufferRecorder : public MovieRecorder
 {
  public:
 	PwMovieQGLPixelBufferRecorder( class QGLPixelBuffer *pixelBuffer, PwMovieWriter *writer );
-	~PwMovieQGLPixelBufferRecorder();
+	virtual ~PwMovieQGLPixelBufferRecorder();
 	
-	void recordFrame( uint32_t timestep );
+	virtual void recordFrame( uint32_t timestep ) override;
 
  private:
 	class QGLPixelBuffer *pixelBuffer;

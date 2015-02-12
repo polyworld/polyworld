@@ -16,15 +16,15 @@ class SceneMonitorView : public MonitorView
 	virtual void hideEvent( QHideEvent *event );
 	virtual void paintGL();
 
- private slots:
+ private:
 	void draw();
 	void updateTarget( class AgentTracker *tracker );
 
- private:
 	void setTracker( class AgentTracker *tracker );
 
- protected:
     util::Signal<>::SlotHandle draw_handle;
-	class SceneRenderer *renderer;
+    util::Signal<class AgentTracker *>::SlotHandle updateTarget_handle;
+	class QtSceneRenderer *renderer;
 	class CameraController *cameraController;
+    class AgentTracker *tracker;
 };

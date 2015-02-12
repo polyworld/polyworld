@@ -137,27 +137,29 @@ int main( int argc, char** argv )
     proplib::Interpreter::dispose();
 
 	int exitval;
+    function<void()> dispose_ui;
 
 	if( ui == "gui" )
 	{
 		MainWindow *mainWindow = new MainWindow( simulationController );
-		simulationController->start();
-		exitval = app.exec();
-		delete mainWindow;
+        dispose_ui = [mainWindow]() {delete mainWindow;};
 	}
 	else if( ui == "term" )
 	{
 		TerminalUI *term = new TerminalUI( simulationController );
-		simulationController->start();
-		exitval = app.exec();
-		delete term;
+		dispose_ui = [term]() {delete term;};
 	}
 	else
 		assert( false );
 
+    simulationController->start();
+    exitval = app.exec();
+
+    dispose_ui();
+
 	delete simulationController;
-    delete monitorManager;
 	delete simulation;
+    delete monitorManager;
 
 	return exitval;
 }

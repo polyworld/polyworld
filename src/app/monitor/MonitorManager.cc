@@ -185,10 +185,10 @@ MonitorManager::MonitorManager( TSimulation *_simulation,
 			// ---
 			// --- Construct Renderer
 			// ---
-			SceneRenderer *renderer = new SceneRenderer( simulation->getStage(),
-														 cameraProperties,
-														 bufferWidth,
-														 bufferHeight );
+			SceneRenderer *renderer = SceneRenderer::create( simulation->getStage(),
+                                                             cameraProperties,
+                                                             bufferWidth,
+                                                             bufferHeight );
 
 			// ---
 			// --- Camera Controller

@@ -3,7 +3,7 @@
 #include "AgentTracker.h"
 #include "CameraController.h"
 #include "Monitor.h"
-#include "SceneRenderer.h"
+#include "QtSceneRenderer.h"
 
 //===========================================================================
 // SceneMonitorView
@@ -17,8 +17,9 @@ SceneMonitorView::SceneMonitorView( SceneMonitor *monitor )
 				   monitor->getRenderer()->getBufferWidth(),
 				   monitor->getRenderer()->getBufferHeight(),
 				   false)
-	, renderer( monitor->getRenderer()  )
+	, renderer( dynamic_cast<QtSceneRenderer *>(monitor->getRenderer())  )
 	, cameraController( monitor->getCameraController() )
+    , tracker(nullptr)
 {
 	setTracker( cameraController->getAgentTracker() );
 }
@@ -28,6 +29,9 @@ SceneMonitorView::SceneMonitorView( SceneMonitor *monitor )
 //---------------------------------------------------------------------------
 SceneMonitorView::~SceneMonitorView()
 {
+    if(tracker) {
+        tracker->targetChanged -= updateTarget_handle;
+    }
 }
 
 //---------------------------------------------------------------------------
@@ -70,11 +74,14 @@ void SceneMonitorView::draw()
 //---------------------------------------------------------------------------
 // SceneMonitorView::setTracker
 //---------------------------------------------------------------------------
-void SceneMonitorView::setTracker( AgentTracker *tracker )
+void SceneMonitorView::setTracker( AgentTracker *tracker_ )
 {
-	if( tracker )
+	if( tracker_ )
 	{
-        tracker->targetChanged += [=](AgentTracker *tracker) {this->updateTarget(tracker);};
+        assert(!tracker);
+        tracker = tracker_;
+        updateTarget_handle =
+            tracker->targetChanged += [=](AgentTracker *tracker) {this->updateTarget(tracker);};
 
 		updateTarget( tracker );
 	}

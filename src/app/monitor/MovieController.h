@@ -69,7 +69,7 @@ class SceneMovieController
 	class SceneRenderer *renderer;
 	MovieSettings settings;
 	class PwMovieWriter *writer;
-	class PwMovieQGLPixelBufferRecorder *recorder;
+	class MovieRecorder *recorder;
 	bool connectedToRenderer;
 	long timestep;
 };
