@@ -4,8 +4,6 @@
 #include <string>
 #include <vector>
 
-#include <QObject>
-
 #include "datalib.h"
 #include "MovieController.h"
 #include "proplib.h"

@@ -306,7 +306,7 @@ void StatusTextMonitor::step( long timestep )
 			makeParentDir( statusFileName );
 
 			FILE *statusFile = fopen( statusFileName, "w" );
-			Q_CHECK_PTR( statusFile );
+			errif( statusFile == nullptr, "Failed opening %s", statusFileName );
 
 			StatusText::const_iterator iter = statusText.begin();
 			for( ; iter != statusText.end(); ++iter )
