@@ -70,48 +70,31 @@ void GeneStats::compute( Scheduler &scheduler)
 			objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**)_agents + i );
 		}
 
-		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-		// ^^^ PARALLEL TASK Compute
-		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-		class Compute : public ITask
-		{
-		public:
-			GeneStats *stats;
-
-			Compute( GeneStats *stats )
-			{
-				this->stats = stats;
-			}
-
-			virtual void task_exec( TSimulation *sim )
-			{
-				long nagents = stats->_nagents;
-				agent **agents = stats->_agents;
-				unsigned long *sum = stats->_sum;
-				unsigned long *sum2 = stats->_sum2;
-				int ngenes = GenomeUtil::schema->getMutableSize(); 
-
-				memset( sum, 0, sizeof(*sum) * ngenes );
-				memset( sum2, 0, sizeof(*sum2) * ngenes );
-
-				for( int i = 0; i < nagents; i++ )
-				{
-					agents[i]->Genes()->updateSum( sum, sum2 );
-				}
-
-				float *mean = stats->_mean;
-				float *stddev = stats->_stddev;
-				for( int i = 0; i < ngenes; i++ )
-				{
-					mean[i] = (float) sum[i] / (float) nagents;
-					stddev[i] = sqrt( (float) sum2[i] / (float) nagents  -  mean[i] * mean[i] );
-				}
-			}
-		};
-
 		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		// !!! POST PARALLEL
 		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		scheduler.postParallel( new Compute(this) );
+		scheduler.postParallel( new FTask([=]() {
+                    long nagents = _nagents;
+                    agent **agents = _agents;
+                    unsigned long *sum = _sum;
+                    unsigned long *sum2 = _sum2;
+                    int ngenes = GenomeUtil::schema->getMutableSize(); 
+
+                    memset( sum, 0, sizeof(*sum) * ngenes );
+                    memset( sum2, 0, sizeof(*sum2) * ngenes );
+
+                    for( int i = 0; i < nagents; i++ )
+                    {
+                        agents[i]->Genes()->updateSum( sum, sum2 );
+                    }
+
+                    float *mean = _mean;
+                    float *stddev = _stddev;
+                    for( int i = 0; i < ngenes; i++ )
+                    {
+                        mean[i] = (float) sum[i] / (float) nagents;
+                        stddev[i] = sqrt( (float) sum2[i] / (float) nagents  -  mean[i] * mean[i] );
+                    }
+                }));
 	}
 }
