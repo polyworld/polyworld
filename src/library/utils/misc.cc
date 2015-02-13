@@ -16,6 +16,7 @@
 #endif
 
 #include <math.h>
+#include <mutex>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -163,9 +164,11 @@ string dirname( const string &path )
 
 void makeDirs( const string &path )
 {
-#pragma omp critical(alreadyMade)
+    static set<string> alreadyMade;
+    static mutex alreadyMade_mutex;
+
 	{
-		static set<string> alreadyMade;
+        lock_guard<mutex> lock(alreadyMade_mutex);
 
 		if( alreadyMade.find(path) == alreadyMade.end() )
 		{

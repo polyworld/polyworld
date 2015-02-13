@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
+#include <mutex>
 
 #include "adami.h"
 #include "agent.h"
@@ -481,9 +482,11 @@ void Logs::BrainComplexityLog::init( TSimulation *sim, Document *doc )
 //---------------------------------------------------------------------------
 void Logs::BrainComplexityLog::processEvent( const sim::BrainAnalysisEndEvent &e )
 {
-	// Analysis is performed on different threads, so we must do the following in a mutex.
-#pragma omp critical(BrainComplexityLog)
+    static mutex log_mutex;
 	{
+        // Analysis is performed on different threads, so we must do the following in a mutex.
+        lock_guard<mutex> lock(log_mutex);
+
 		if( _seedsRemaining && (e.a->Number() < _nseeds) )
 		{
 			if( e.a->Complexity() > 0.0 )
