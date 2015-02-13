@@ -492,43 +492,33 @@ void AbstractFile::init( ConcreteFileType type,
 	switch( type )
 	{
 	case TYPE_FILE:
-		{
-			file.path = abstractPath;
-			file.fp = fopen( file.path, mode );
-			if( !file.fp )
-			{
-				fprintf( stderr, "Unable to open file at '%s'\n", abstractPath );
-				perror( file.path );
-				system( "echo hello from file path" );
-				while( true )
-					sleep(1);
-			  #pragma omp critical(lsof)
-			  {
-				system( "lsof -u `whoami` > /tmp/lsof.txt" );
-			  }
-				assert( file.fp );
-			}
-		}
-		break;
+    {
+        file.path = abstractPath;
+        file.fp = fopen( file.path, mode );
+        if( !file.fp )
+        {
+            fprintf( stderr, "Unable to open file at '%s'\n", abstractPath );
+            perror( file.path );
+            fprintf( stderr, "Sleeping forever...\n"); fflush(stderr);
+            while( true )
+                sleep(1);
+        }
+    }
+    break;
 	case TYPE_GZIP_FILE:
-		{
-			gzip.path = createPath( TYPE_GZIP_FILE, abstractPath );
-			gzip.fp = gzopen( gzip.path, mode );
-			if( ! gzip.fp )
-			{
-				fprintf( stderr, "Unable to open file at '%s'\n", gzip.path );
-				perror( gzip.path );
-				system( "echo hello from gzip path" );
-				while( true )
-					sleep(1);
-			  #pragma omp critical(lsof)
-			  {
-				system( "lsof -u `whoami` > /tmp/lsof.txt" );
-			  }
-				assert( gzip.fp );
-			}
-		}
-		break;
+    {
+        gzip.path = createPath( TYPE_GZIP_FILE, abstractPath );
+        gzip.fp = gzopen( gzip.path, mode );
+        if( ! gzip.fp )
+        {
+            fprintf( stderr, "Unable to open file at '%s'\n", gzip.path );
+            perror( gzip.path );
+            fprintf( stderr, "Sleeping forever...\n"); fflush(stderr);
+            while( true )
+                sleep(1);
+        }
+    }
+    break;
 	default:
 		assert( false );
 	}
