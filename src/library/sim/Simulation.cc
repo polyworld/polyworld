@@ -402,12 +402,10 @@ TSimulation::TSimulation( string worldfilePath )
 	// ---
 	if (!fLoadState)
 	{
-        FTask task = FTask([=]() { InitAgents(); });
 		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		// !!! EXEC MASTER
 		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		fScheduler.execMasterTask( this,
-								   task,
+		fScheduler.execMasterTask( [=]() { InitAgents(); },
 								   !fParallelInitAgents );
 
 		InitFood();
@@ -673,14 +671,10 @@ void TSimulation::Step()
 		agentPovRenderer->endStep();
 	}
 
-
-    FTask task = FTask( [=]() { Interact(); } );
-
 	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	// !!! EXEC MASTER
 	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	fScheduler.execMasterTask( this,
-							   task,
+	fScheduler.execMasterTask( [=]() { Interact(); },
 							   !fParallelInteract );
 
 	assert( fNumberAlive == objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE) );
@@ -697,12 +691,10 @@ void TSimulation::Step()
 	printf( "\n" );
 #endif
 
-    FTask taskCreateAgents = FTask([=]() { CreateAgents(); });
 	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	// !!! EXEC MASTER
 	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	fScheduler.execMasterTask( this,
-							   taskCreateAgents,
+	fScheduler.execMasterTask( [=]() { CreateAgents(); },
 							   !fParallelCreateAgents );
 
 	// -------------------------
@@ -868,10 +860,9 @@ void TSimulation::InitAgents()
 			// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 			// !!! POST PARALLEL
 			// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            fScheduler.postParallel(
-                new FTask([=]() {
+            fScheduler.postParallel([=]() {
                         c->grow( fMateWait );
-                    }));
+                });
 
 			fStage.AddObject(c);
 
@@ -909,10 +900,9 @@ void TSimulation::InitAgents()
 			// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 			// !!! POST SERIAL
 			// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            fScheduler.postSerial(
-                new FTask([=]() {
-                        FoodEnergyIn( c->GetFoodEnergy() );
-                    }));
+            fScheduler.postSerial( [=]() {
+                    FoodEnergyIn( c->GetFoodEnergy() );
+                });
 
 			Birth( c, LifeSpan::BR_SIMINIT );
 		}
@@ -950,10 +940,9 @@ void TSimulation::InitAgents()
 		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		// !!! POST PARALLEL
 		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        fScheduler.postParallel(
-            new FTask([=]() {
-                    c->grow( fMateWait );
-                }));
+        fScheduler.postParallel( [=]() {
+                c->grow( fMateWait );
+            });
 
 		fStage.AddObject(c);
 
@@ -981,10 +970,9 @@ void TSimulation::InitAgents()
 		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		// !!! POST SERIAL
 		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        fScheduler.postSerial(
-            new FTask([=]() {
-                    FoodEnergyIn( c->GetFoodEnergy() );
-                }));
+        fScheduler.postSerial( [=]() {
+                FoodEnergyIn( c->GetFoodEnergy() );
+            });
 
 		Birth(c, LifeSpan::BR_SIMINIT );
 	}
@@ -2299,24 +2287,22 @@ void TSimulation::Mate( agent *c,
 				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 				// !!! POST PARALLEL
 				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                fScheduler.postParallel(
-                    new FTask([=]() {
-                            e->grow( fMateWait );
+                fScheduler.postParallel( [=]() {
+                        e->grow( fMateWait );
 
-                            e->SetEnergy(eenergy);
-                            e->SetFoodEnergy(eenergy);
-                        }));                            
+                        e->SetEnergy(eenergy);
+                        e->SetFoodEnergy(eenergy);
+                    });                            
 
 				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 				// !!! POST SERIAL
 				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                fScheduler.postSerial(
-                    new FTask([=]() {
-                            fStage.AddObject(e);
-                            gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();
-                            objectxsortedlist::gXSortedObjects.add(e); // Add the new agent directly to the list of objects (no new agent list); the e->listLink that gets auto stored here should be valid immediately
-                            objectxsortedlist::gXSortedObjects.setcurr( saveCurr );
-                        }));
+                fScheduler.postSerial( [=]() {
+                        fStage.AddObject(e);
+                        gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();
+                        objectxsortedlist::gXSortedObjects.add(e); // Add the new agent directly to the list of objects (no new agent list); the e->listLink that gets auto stored here should be valid immediately
+                        objectxsortedlist::gXSortedObjects.setcurr( saveCurr );
+                    });
 			}
 		}	// steady-state GA vs. natural selection
 	}	// if agents are trying to mate
@@ -3062,10 +3048,9 @@ void TSimulation::CreateAgents( void )
 				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 				// !!! POST PARALLEL
 				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                fScheduler.postParallel(
-                    new FTask([=]() {
-                            newAgent->grow( fMateWait );
-                        }));
+                fScheduler.postParallel( [=]() {
+                        newAgent->grow( fMateWait );
+                    });
 
 				float x = randpw() * (fDomains[id].absoluteSizeX - 0.02) + fDomains[id].startX + 0.01;
 				float z = randpw() * (fDomains[id].absoluteSizeZ - 0.02) + fDomains[id].startZ + 0.01;
@@ -3088,10 +3073,9 @@ void TSimulation::CreateAgents( void )
 				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 				// !!! POST SERIAL
 				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                fScheduler.postSerial(
-                    new FTask([=]() {
-                            FoodEnergyIn( newAgent->GetFoodEnergy() );
-                        }));
+                fScheduler.postSerial( [=]() {
+                        FoodEnergyIn( newAgent->GetFoodEnergy() );
+                    });
 
 				Birth( newAgent, LifeSpan::BR_CREATE );
             }
@@ -3623,25 +3607,23 @@ void TSimulation::Kill( agent* c,
 	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	// !!! POST PARALLEL
 	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    fScheduler.postParallel(
-        new FTask([=]() {
-                analyzeBrain( c );
-            }));
+    fScheduler.postParallel( [=]() {
+            analyzeBrain( c );
+        });
 
 	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	// !!! POST SERIAL
 	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    fScheduler.postSerial(
-        new FTask([=]() {
-                updateFittest( c );
+    fScheduler.postSerial( [=]() {
+            updateFittest( c );
 
-                // Note: For the sake of computational efficiency, I used to never delete an agent,
-                // but "reinit" and reuse them as new agents were born or created.  But Gene made
-                // agents be allocated afresh on birth or creation, so we now need to delete the
-                // old ones here when they die.  Remove this if I ever get a chance to go back to the
-                // more efficient reinit and reuse technique.
-                delete c;
-            }));
+            // Note: For the sake of computational efficiency, I used to never delete an agent,
+            // but "reinit" and reuse them as new agents were born or created.  But Gene made
+            // agents be allocated afresh on birth or creation, so we now need to delete the
+            // old ones here when they die.  Remove this if I ever get a chance to go back to the
+            // more efficient reinit and reuse technique.
+            delete c;
+        });
 }
 
 //---------------------------------------------------------------------------

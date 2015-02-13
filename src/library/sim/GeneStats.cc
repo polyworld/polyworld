@@ -73,7 +73,7 @@ void GeneStats::compute( Scheduler &scheduler)
 		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		// !!! POST PARALLEL
 		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		scheduler.postParallel( new FTask([=]() {
+		scheduler.postParallel( [=]() {
                     long nagents = _nagents;
                     agent **agents = _agents;
                     unsigned long *sum = _sum;
@@ -95,6 +95,6 @@ void GeneStats::compute( Scheduler &scheduler)
                         mean[i] = (float) sum[i] / (float) nagents;
                         stddev[i] = sqrt( (float) sum2[i] / (float) nagents  -  mean[i] * mean[i] );
                     }
-                }));
+                });
 	}
 }

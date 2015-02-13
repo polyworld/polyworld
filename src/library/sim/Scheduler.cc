@@ -1,15 +1,13 @@
 #include "Scheduler.h"
 
-void Scheduler::execMasterTask( TSimulation *sim,
-								ITask &masterTask,
+void Scheduler::execMasterTask( Task masterTask,
 								bool forceAllSerial )
 {
-	this->sim = sim;
 	this->forceAllSerial = forceAllSerial;
 
 	if( forceAllSerial )
 	{
-		masterTask.task_exec( sim );
+		masterTask();
 	}
 	else
 	{
@@ -33,7 +31,7 @@ void Scheduler::execMasterTask( TSimulation *sim,
 			//////////////////////////////////////////////////
 #pragma omp master
 			{
-				masterTask.task_exec( sim );
+				masterTask();
 
 				parallelTasks.endOfPosts();
 			}
@@ -42,12 +40,11 @@ void Scheduler::execMasterTask( TSimulation *sim,
 			//// MASTER & SLAVES
 			//////////////////////////////////////////////////
 			{
-				ITask *task = NULL;
+				Task task;
 
 				while( parallelTasks.fetch(&task) )
 				{
-					task->task_exec( sim );
-					delete task;
+					task();
 				}
 			}
 		}
@@ -65,24 +62,22 @@ void Scheduler::execMasterTask( TSimulation *sim,
 		// Now run all the serial tasks
 		serialTasks.endOfPosts();
 		{
-			ITask *task = NULL;
+			Task task;
 
 			while( serialTasks.fetch(&task) )
 			{
-				task->task_exec( sim );
-				delete task;
+				task();
 			}
 		}
 
 	}
 }
 
-void Scheduler::postParallel( ITask *task )
+void Scheduler::postParallel( Task task )
 {
 	if( forceAllSerial )
 	{
-		task->task_exec( sim );
-		delete task;
+		task();
 	}
 	else
 	{
@@ -90,12 +85,11 @@ void Scheduler::postParallel( ITask *task )
 	}
 }
 
-void Scheduler::postSerial( ITask *task )
+void Scheduler::postSerial( Task task )
 {
 	if( forceAllSerial )
 	{
-		task->task_exec( sim );
-		delete task;
+		task();
 	}
 	else
 	{

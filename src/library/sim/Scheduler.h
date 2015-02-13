@@ -4,41 +4,18 @@
 
 #include "utils/Queue.h"
 
-// forward decl
-class TSimulation;
-
-class ITask
-{
- public:
-	virtual ~ITask() {}
-
-	virtual void task_exec( TSimulation *sim ) = 0;
-};
-
-class FTask : public ITask
-{
-public:
-    FTask( std::function<void()> func ) : _func(func) {}
-    virtual ~FTask() {}
-
-    virtual void task_exec( TSimulation *sim ) { _func(); }
-
-private:
-    std::function<void()> _func;
-};
-
 class Scheduler
 {
  public:
-	void execMasterTask( TSimulation *sim,
-						 ITask &masterTask,
-						 bool forceAllSerial );
-	void postParallel( ITask *task );
-	void postSerial( ITask *task );
+    typedef std::function<void()> Task;
+
+	void execMasterTask(Task masterTask,
+                        bool forceAllSerial );
+	void postParallel( Task task );
+	void postSerial( Task task );
 
  private:
-	BusyFetchQueue<ITask *> parallelTasks;
-	SerialQueue<ITask *> serialTasks;
+	BusyFetchQueue<Task> parallelTasks;
+	SerialQueue<Task> serialTasks;
 	bool forceAllSerial;
-	TSimulation *sim;
 };
