@@ -402,23 +402,12 @@ TSimulation::TSimulation( string worldfilePath )
 	// ---
 	if (!fLoadState)
 	{
-		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-		// ^^^ MASTER TASK ExecInitAgents
-		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-		class ExecInitAgents : public ITask
-		{
-		public:
-			virtual void task_exec( TSimulation *sim )
-			{
-				sim->InitAgents();
-			}
-		} execInitAgents;
-
+        FTask task = FTask([=]() { InitAgents(); });
 		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		// !!! EXEC MASTER
 		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		fScheduler.execMasterTask( this,
-								   execInitAgents,
+								   task,
 								   !fParallelInitAgents );
 
 		InitFood();
@@ -685,25 +674,13 @@ void TSimulation::Step()
 	}
 
 
-	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-	// ^^^ MASTER TASK ExecInteract
-	// ^^^
-	// ^^^ Handles collisions, matings, fights, deaths, births, etc
-	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-	class ExecInteract : public ITask
-	{
-	public:
-		virtual void task_exec( TSimulation *sim )
-		{
-			sim->Interact();
-		}
-	} execInteract;
+    FTask task = FTask( [=]() { Interact(); } );
 
 	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	// !!! EXEC MASTER
 	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	fScheduler.execMasterTask( this,
-							   execInteract,
+							   task,
 							   !fParallelInteract );
 
 	assert( fNumberAlive == objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE) );
@@ -720,23 +697,12 @@ void TSimulation::Step()
 	printf( "\n" );
 #endif
 
-	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-	// ^^^ MASTER TASK CreateAgentsTask
-	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-	class CreateAgentsTask : public ITask
-	{
-	public:
-		virtual void task_exec( TSimulation *sim )
-		{
-			sim->CreateAgents();
-		}
-	} execCreateAgents;
-
+    FTask taskCreateAgents = FTask([=]() { CreateAgents(); });
 	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	// !!! EXEC MASTER
 	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	fScheduler.execMasterTask( this,
-							   execCreateAgents,
+							   taskCreateAgents,
 							   !fParallelCreateAgents );
 
 	// -------------------------
@@ -867,42 +833,6 @@ void TSimulation::InitAgents()
     agent* c = NULL;
 	int id;
 
-	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-	// ^^^ PARALLEL TASK GrowAgent
-	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-	class GrowAgent : public ITask
-	{
-	public:
-		agent *a;
-		GrowAgent( agent *a )
-		{
-			this->a = a;
-		}
-
-		virtual void task_exec( TSimulation *sim )
-		{
-			a->grow( sim->fMateWait );
-		}
-	};
-
-	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-	// ^^^ SERIAL TASK UpdateStats
-	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-	class UpdateStats : public ITask
-	{
-	public:
-		agent *a;
-		UpdateStats( agent *a )
-		{
-			this->a = a;
-		}
-
-		virtual void task_exec( TSimulation *sim )
-		{
-			sim->FoodEnergyIn( a->GetFoodEnergy() );
-		}
-	};
-
 	// first handle the individual domains
 	for (id = 0; id < fNumDomains; id++)
 	{
@@ -938,7 +868,10 @@ void TSimulation::InitAgents()
 			// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 			// !!! POST PARALLEL
 			// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-			fScheduler.postParallel( new GrowAgent(c) );
+            fScheduler.postParallel(
+                new FTask([=]() {
+                        c->grow( fMateWait );
+                    }));
 
 			fStage.AddObject(c);
 
@@ -976,7 +909,10 @@ void TSimulation::InitAgents()
 			// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 			// !!! POST SERIAL
 			// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-			fScheduler.postSerial( new UpdateStats(c) );
+            fScheduler.postSerial(
+                new FTask([=]() {
+                        FoodEnergyIn( c->GetFoodEnergy() );
+                    }));
 
 			Birth( c, LifeSpan::BR_SIMINIT );
 		}
@@ -1014,7 +950,10 @@ void TSimulation::InitAgents()
 		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		// !!! POST PARALLEL
 		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		fScheduler.postParallel( new GrowAgent(c) );
+        fScheduler.postParallel(
+            new FTask([=]() {
+                    c->grow( fMateWait );
+                }));
 
 		fStage.AddObject(c);
 
@@ -1042,7 +981,10 @@ void TSimulation::InitAgents()
 		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		// !!! POST SERIAL
 		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		fScheduler.postSerial( new UpdateStats(c) );
+        fScheduler.postSerial(
+            new FTask([=]() {
+                    FoodEnergyIn( c->GetFoodEnergy() );
+                }));
 
 		Birth(c, LifeSpan::BR_SIMINIT );
 	}
@@ -2354,59 +2296,27 @@ void TSimulation::Mate( agent *c,
 
 				Birth( e, LifeSpan::BR_NATURAL, c, d );
 
-				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-				// ^^^ PARALLEL TASK GrowAgent
-				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-				class GrowAgent : public ITask
-				{
-				public:
-					agent *e;
-					Energy eenergy;
-					GrowAgent( agent *e, const Energy &eenergy )
-					{
-						this->e = e;
-						this->eenergy = eenergy;
-					}
-
-					virtual void task_exec( TSimulation *sim )
-					{
-						e->grow( sim->fMateWait );
-
-						e->SetEnergy(eenergy);
-						e->SetFoodEnergy(eenergy);
-					}
-				};
-
 				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 				// !!! POST PARALLEL
 				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-				fScheduler.postParallel( new GrowAgent(e, eenergy) );
+                fScheduler.postParallel(
+                    new FTask([=]() {
+                            e->grow( fMateWait );
 
-				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-				// ^^^ SERIAL TASK AddAgent
-				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-				class AddAgent : public ITask
-				{
-				public:
-					agent *e;
-					AddAgent( agent *e )
-					{
-						this->e = e;
-					}
-
-					virtual void task_exec( TSimulation *sim )
-					{
-						sim->fStage.AddObject(e);
-						gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();
-						objectxsortedlist::gXSortedObjects.add(e); // Add the new agent directly to the list of objects (no new agent list); the e->listLink that gets auto stored here should be valid immediately
-						objectxsortedlist::gXSortedObjects.setcurr( saveCurr );
-					}
-				};
+                            e->SetEnergy(eenergy);
+                            e->SetFoodEnergy(eenergy);
+                        }));                            
 
 				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 				// !!! POST SERIAL
 				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-				fScheduler.postSerial( new AddAgent(e) );
+                fScheduler.postSerial(
+                    new FTask([=]() {
+                            fStage.AddObject(e);
+                            gdlink<gobject*> *saveCurr = objectxsortedlist::gXSortedObjects.getcurr();
+                            objectxsortedlist::gXSortedObjects.add(e); // Add the new agent directly to the list of objects (no new agent list); the e->listLink that gets auto stored here should be valid immediately
+                            objectxsortedlist::gXSortedObjects.setcurr( saveCurr );
+                        }));
 			}
 		}	// steady-state GA vs. natural selection
 	}	// if agents are trying to mate
@@ -3149,46 +3059,13 @@ void TSimulation::CreateAgents( void )
 
 				newAgent->setGenomeReady();
 
-				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-				// ^^^ PARALLEL TASK GrowAgent
-				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-				class GrowAgent : public ITask
-				{
-				public:
-					agent *a;
-					GrowAgent( agent *a )
-					{
-						this->a = a;
-					}
-
-					virtual void task_exec( TSimulation *sim )
-					{
-						a->grow( sim->fMateWait );
-					}
-				};
-
-				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-				// ^^^ SERIAL TASK UpdateStats
-				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-				class UpdateStats : public ITask
-				{
-				public:
-					agent *a;
-					UpdateStats( agent *a )
-					{
-						this->a = a;
-					}
-
-					virtual void task_exec( TSimulation *sim )
-					{
-						sim->FoodEnergyIn( a->GetFoodEnergy() );
-					}
-				};
-
 				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 				// !!! POST PARALLEL
 				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-				fScheduler.postParallel( new GrowAgent(newAgent) );
+                fScheduler.postParallel(
+                    new FTask([=]() {
+                            newAgent->grow( fMateWait );
+                        }));
 
 				float x = randpw() * (fDomains[id].absoluteSizeX - 0.02) + fDomains[id].startX + 0.01;
 				float z = randpw() * (fDomains[id].absoluteSizeZ - 0.02) + fDomains[id].startZ + 0.01;
@@ -3211,7 +3088,10 @@ void TSimulation::CreateAgents( void )
 				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 				// !!! POST SERIAL
 				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-				fScheduler.postSerial( new UpdateStats(newAgent) );
+                fScheduler.postSerial(
+                    new FTask([=]() {
+                            FoodEnergyIn( newAgent->GetFoodEnergy() );
+                        }));
 
 				Birth( newAgent, LifeSpan::BR_CREATE );
             }
@@ -3740,63 +3620,28 @@ void TSimulation::Kill( agent* c,
 	// Following assumes (requires!) the agent to have stored c->listLink correctly
 	objectxsortedlist::gXSortedObjects.removeObjectWithLink( (gobject*) c );
 
-	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-	// ^^^ PARALLEL TASK AnalyzeBrain
-	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-	class AnalyzeBrain : public ITask
-	{
-	public:
-		agent *a;
-		AnalyzeBrain( agent *a )
-		{
-			this->a = a;
-		}
-
-		virtual void task_exec( TSimulation *sim )
-		{
-			sim->analyzeBrain( a );
-		}
-	};
-
 	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	// !!! POST PARALLEL
 	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	fScheduler.postParallel( new AnalyzeBrain(c) );
-
-	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-	// ^^^ SERIAL TASK UpdateFittestAndDeleteAgent
-	// ^^^
-	// ^^^ It's important that we not deallocate the agent from
-	// ^^^ memory until all parallel tasks are done. For example,
-	// ^^^ The RecordGeneStats task might need this agent's
-	// ^^^ genome.
-	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-	class UpdateFittestAndDeleteAgent : public ITask
-	{
-	public:
-		agent *a;
-		UpdateFittestAndDeleteAgent( agent *a )
-		{
-			this->a = a;
-		}
-
-		virtual void task_exec( TSimulation *sim )
-		{
-			sim->updateFittest( a );
-
-			// Note: For the sake of computational efficiency, I used to never delete an agent,
-			// but "reinit" and reuse them as new agents were born or created.  But Gene made
-			// agents be allocated afresh on birth or creation, so we now need to delete the
-			// old ones here when they die.  Remove this if I ever get a chance to go back to the
-			// more efficient reinit and reuse technique.
-			delete a;
-		}
-	};
+    fScheduler.postParallel(
+        new FTask([=]() {
+                analyzeBrain( c );
+            }));
 
 	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	// !!! POST SERIAL
 	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	fScheduler.postSerial( new UpdateFittestAndDeleteAgent(c) );
+    fScheduler.postSerial(
+        new FTask([=]() {
+                updateFittest( c );
+
+                // Note: For the sake of computational efficiency, I used to never delete an agent,
+                // but "reinit" and reuse them as new agents were born or created.  But Gene made
+                // agents be allocated afresh on birth or creation, so we now need to delete the
+                // old ones here when they die.  Remove this if I ever get a chance to go back to the
+                // more efficient reinit and reuse technique.
+                delete c;
+            }));
 }
 
 //---------------------------------------------------------------------------

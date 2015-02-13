@@ -1,5 +1,7 @@
 #pragma once
 
+#include <functional>
+
 #include "utils/Queue.h"
 
 // forward decl
@@ -11,6 +13,18 @@ class ITask
 	virtual ~ITask() {}
 
 	virtual void task_exec( TSimulation *sim ) = 0;
+};
+
+class FTask : public ITask
+{
+public:
+    FTask( std::function<void()> func ) : _func(func) {}
+    virtual ~FTask() {}
+
+    virtual void task_exec( TSimulation *sim ) { _func(); }
+
+private:
+    std::function<void()> _func;
 };
 
 class Scheduler
