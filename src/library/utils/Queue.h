@@ -1,6 +1,7 @@
 #pragma once
 
 #include <assert.h>
+#include <atomic>
 
 #include "Mutex.h"
 
@@ -145,7 +146,6 @@ class BusyFetchQueue : public IQueue<T>
 
 		q[tail] = val;
 
-#pragma omp atomic
 		tail++;
 	}
 
@@ -193,7 +193,7 @@ class BusyFetchQueue : public IQueue<T>
 	bool deleteMutex;
 
 	size_t head;
-	size_t tail;
+    std::atomic_size_t tail;
 };
 
 // With this implementation the poster must enter a mutex region and
