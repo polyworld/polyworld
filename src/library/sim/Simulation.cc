@@ -53,7 +53,6 @@
 #include "Logs.h"
 #include "Metabolism.h"
 #include "proplib.h"
-#include "Queue.h"
 #include "RandomNumberGenerator.h"
 #include "Resources.h"
 #include "SheetsBrain.h"

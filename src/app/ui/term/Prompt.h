@@ -4,7 +4,7 @@
 
 #include <QThread>
 
-#include "utils/Mutex.h"
+#include <mutex>
 
 class Prompt
 {
@@ -38,5 +38,5 @@ class Prompt
 	typedef	std::queue<char *> StringQueue;
 	StringQueue userInputQueue;
 	bool pendingDismiss;
-	SpinMutex lock;
+    std::mutex lock;
 };

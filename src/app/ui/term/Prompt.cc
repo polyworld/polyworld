@@ -54,35 +54,36 @@ char *Prompt::getUserInput()
 {
 	char *result = NULL;
 
-	MUTEX( lock,
-		   {
-			   if( pendingDismiss )
-			   {
-				   inputThread->wait();
-				   delete inputThread;
-				   inputThread = NULL;
-				   pendingDismiss = false;
+    {
+        lock_guard<mutex> lg(lock);
 
-				   termio::setBlockingInput( false );
-				   termio::setEchoEnabled( false );
-			   }
+        if( pendingDismiss )
+        {
+            inputThread->wait();
+            delete inputThread;
+            inputThread = NULL;
+            pendingDismiss = false;
 
-			   if( (inputThread == NULL) && termio::isKeyPressed() )
-			   {
-				   termio::discardInput();
-				   termio::setBlockingInput( true );
-				   termio::setEchoEnabled( true );
+            termio::setBlockingInput( false );
+            termio::setEchoEnabled( false );
+        }
+
+        if( (inputThread == NULL) && termio::isKeyPressed() )
+        {
+            termio::discardInput();
+            termio::setBlockingInput( true );
+            termio::setEchoEnabled( true );
 				   
-				   inputThread = new InputThread( this );
-				   inputThread->start();
-			   }
+            inputThread = new InputThread( this );
+            inputThread->start();
+        }
 
-			   if( !userInputQueue.empty() )
-			   {
-				   result = userInputQueue.front();
-				   userInputQueue.pop();
-			   }
-		   } );
+        if( !userInputQueue.empty() )
+        {
+            result = userInputQueue.front();
+            userInputQueue.pop();
+        }
+    }
 
 	return result;
 }
@@ -100,10 +101,11 @@ void Prompt::dismissed()
 //---------------------------------------------------------------------------
 void Prompt::addUserInput( char *input )
 {
-	MUTEX( lock,
-		   {
-			   userInputQueue.push( input );
-		   } );
+    {
+        lock_guard<mutex> lg(lock);
+
+        userInputQueue.push( input );
+    }
 }
 
 //===========================================================================
