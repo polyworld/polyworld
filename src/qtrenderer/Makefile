@@ -40,6 +40,7 @@ ${qt_project}:
 	@echo "MOC_DIR = ${blddir}" >> $@
 	@find -name "*.cc" | awk '{printf "SOURCES += " $$1 "\n"}' >> $@
 	@find -name "*.h" | awk '{printf "HEADERS += " $$1 "\n"}' >> $@
+	@find ${LIBRARY_SRC} -type d | awk '{printf "DEPENDPATH += " $$1 "\n"}' >> $@
 
 clean:
 	rm -rf ${blddir}
