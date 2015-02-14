@@ -32,7 +32,6 @@
 #include <fstream>
 #include <functional>
 #include <iostream>
-#include <omp.h>
 #include <sstream>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -662,7 +661,7 @@ void TSimulation::Step()
 		{
 			UpdateAgents_StaticTimestepGeometry();
 		}
-		else // if( fStaticTimestepGeometry )
+		else
 		{
 			UpdateAgents();
 		}
@@ -1386,83 +1385,35 @@ void TSimulation::UpdateAgents()
 //---------------------------------------------------------------------------
 void TSimulation::UpdateAgents_StaticTimestepGeometry()
 {
-	if( fParallelBrains )
-	{
-		//************************************************************
-		//************************************************************
-		//************************************************************
-		//*****
-		//***** BEGIN PARALLEL REGION
-		//*****
-		//************************************************************
-		//************************************************************
-		//************************************************************
-		fUpdateBrainQueue.reset();
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // !!! EXEC MASTER
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    fScheduler.execMasterTask([=]() {
+            fStage.Compile();
+            objectxsortedlist::gXSortedObjects.reset();
 
-#pragma omp parallel
-		{
-			//////////////////////////////////////////////////
-			//// MASTER ONLY
-			//////////////////////////////////////////////////
-#pragma omp master
-			{
-				fStage.Compile();
-				objectxsortedlist::gXSortedObjects.reset();
+            agent *a = NULL;
+            while (objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&a))
+            {
+                // ---
+                // --- Update POV (3D rendering... expensive)
+                // ---
+                a->UpdateVision();
 
-				agent *avision = NULL;
+                fScheduler.postParallel([=]() {
+                        // ---
+                        // --- Execute Neural Net
+                        // ---
+                        a->UpdateBrain();
+                    });
+            }
 
-				while (objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&avision))
-				{
-					avision->UpdateVision();
-
-					fUpdateBrainQueue.post( avision );
-				}
-
-				fUpdateBrainQueue.endOfPosts();
-
-				fStage.Decompile();
-			}
-
-			//////////////////////////////////////////////////
-			//// MASTER & SLAVES
-			//////////////////////////////////////////////////
-			{
-				agent *abrain = NULL;
-
-				while( fUpdateBrainQueue.fetch(&abrain) )
-				{
-					abrain->UpdateBrain();
-				}
-			}
-		}
-		//************************************************************
-		//************************************************************
-		//************************************************************
-		//*****
-		//***** END PARALLEL REGION
-		//*****
-		//************************************************************
-		//************************************************************
-		//************************************************************
-	}
-	else
-	{
-		fStage.Compile();
-		objectxsortedlist::gXSortedObjects.reset();
-
-		agent *a = NULL;
-
-		while (objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, (gobject**)&a))
-		{
-			a->UpdateVision();
-			a->UpdateBrain();
-		}
-
-		fStage.Decompile();
-	}
+            fStage.Decompile();
+        },
+        !fParallelBrains);
 
 	// ---
-	// --- Body (Serial)
+	// --- Body
 	// ---
 	{
 		agent *a;

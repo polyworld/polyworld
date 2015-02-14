@@ -234,7 +234,6 @@ private:
 	void Dump();
 	
 	Scheduler fScheduler;
-	BusyFetchQueue<agent *> fUpdateBrainQueue;
 	
 	long fMaxSteps;
 	bool fEndOnPopulationCrash;
