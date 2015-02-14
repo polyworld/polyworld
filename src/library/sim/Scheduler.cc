@@ -1,5 +1,28 @@
 #include "Scheduler.h"
 
+#include <assert.h>
+#include <iostream>
+#include <thread>
+
+using namespace std;
+
+static unsigned get_thread_count()
+{
+    unsigned ncores = thread::hardware_concurrency();
+    if(ncores == 0)
+    {
+        ncores = 1;
+        cerr << "Unable to determine CPU core count via thread::hardware_concurrency(), assuming 1 core." << endl;
+    }
+    return ncores - 1; // (ncores - 1) helper threads in thread pool + 1 master thread
+                       // occupies CPU.
+}
+
+Scheduler::Scheduler()
+    : threadPool(get_thread_count())
+{
+}
+
 void Scheduler::execMasterTask( Task masterTask,
 								bool forceAllSerial )
 {
@@ -11,65 +34,22 @@ void Scheduler::execMasterTask( Task masterTask,
 	}
 	else
 	{
-		//************************************************************
-		//************************************************************
-		//************************************************************
-		//*****
-		//***** BEGIN PARALLEL REGION
-		//*****
-		//************************************************************
-		//************************************************************
-		//************************************************************
-		parallelTasks.reset();
-		serialTasks.reset();
+        assert(state == Idle);
+        state = Master;
 
+        masterTask();
 
-#pragma omp parallel
-		{
-			//////////////////////////////////////////////////
-			//// MASTER ONLY
-			//////////////////////////////////////////////////
-#pragma omp master
-			{
-				masterTask();
+        state = Parallel;
+        threadPool.join();
 
-				parallelTasks.endOfPosts();
-			}
+        state = Serial;
+        for(Task &task: serialTasks)
+        {
+            task();
+        }
+        serialTasks.clear();
 
-			//////////////////////////////////////////////////
-			//// MASTER & SLAVES
-			//////////////////////////////////////////////////
-			{
-				Task task;
-
-				while( parallelTasks.fetch(&task) )
-				{
-					task();
-				}
-			}
-		}
-		//************************************************************
-		//************************************************************
-		//************************************************************
-		//*****
-		//***** END PARALLEL REGION
-		//*****
-		//************************************************************
-		//************************************************************
-		//************************************************************
-
-
-		// Now run all the serial tasks
-		serialTasks.endOfPosts();
-		{
-			Task task;
-
-			while( serialTasks.fetch(&task) )
-			{
-				task();
-			}
-		}
-
+        state = Idle;
 	}
 }
 
@@ -81,7 +61,8 @@ void Scheduler::postParallel( Task task )
 	}
 	else
 	{
-		parallelTasks.post( task );
+        assert(state == Master);
+        threadPool.schedule( task );
 	}
 }
 
@@ -93,7 +74,10 @@ void Scheduler::postSerial( Task task )
 	}
 	else
 	{
-		serialTasks.post( task );
+        lock_guard<mutex> lock(serialMutex);
+        assert(state == Master);
+
+        serialTasks.push_back(task);
 	}
 		
 }

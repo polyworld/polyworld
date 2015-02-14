@@ -1,13 +1,17 @@
 #pragma once
 
 #include <functional>
+#include <mutex>
+#include <vector>
 
-#include "utils/Queue.h"
+#include "utils/ThreadPool.h"
 
 class Scheduler
 {
  public:
     typedef std::function<void()> Task;
+
+    Scheduler();
 
 	void execMasterTask(Task masterTask,
                         bool forceAllSerial );
@@ -15,7 +19,11 @@ class Scheduler
 	void postSerial( Task task );
 
  private:
-	BusyFetchQueue<Task> parallelTasks;
-	SerialQueue<Task> serialTasks;
+    enum State {Idle, Master, Parallel, Serial} state = Idle;
+
+    ThreadPool threadPool;
+
+    std::vector<Task> serialTasks;
+    std::mutex serialMutex;
 	bool forceAllSerial;
 };
