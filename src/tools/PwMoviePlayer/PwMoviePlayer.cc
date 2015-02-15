@@ -15,8 +15,8 @@
 
 // Self
 #include "PwMoviePlayer.h"
-#include "PwMovieUtils.h"
 #include "MainWindow.h"
+#include "utils/PwMovieUtils.h"
 
 #define MaxLegendLines 10
 #define MaxLegendLength 80

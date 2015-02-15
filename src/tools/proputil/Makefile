@@ -1,14 +1,12 @@
-conf=../../Makefile.conf
+conf=../../../Makefile.conf
 include ${conf}
 
-target=${LIBRARY_TARGET}
-blddir=${LIBRARY_BLDDIR}
+target=${PROPUTIL_TARGET}
+blddir=${PROPUTIL_BLDDIR}
 
-cxxflags=${CXXFLAGS} ${OPENGL_CXXFLAGS} ${PYTHON_CXXFLAGS} ${OMP_CXXFLAGS}
-ldflags=${SHARED_LDFLAGS}
-libs=${OPENGL_LIBS} ${DLOPEN_LIBS} ${GSL_LIBS} ${PYTHON_LIBS} ${OMP_LIBS}
+cxxflags=${CXXFLAGS} ${GSL_CXXFLAGS} ${LIBRARY_CXXFLAGS}
+libs=${GSL_LIBS} ${LIBRARY_LIBS} ${QTRENDERER_LIBS} #todo: nullrenderer instead of qtrenderer
 
-includes=$(patsubst %, -I%, $(shell find . -type d))
 sources=$(shell find . -name "*.cc")
 objects=$(patsubst ./%.cc, ${blddir}/%.o, ${sources})
 depends=$(patsubst %.o, %.d, ${objects})

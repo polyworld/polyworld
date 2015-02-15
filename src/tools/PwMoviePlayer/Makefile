@@ -1,17 +1,17 @@
-conf=../../Makefile.conf
+conf=../../../Makefile.conf
 include ${conf}
 
-target=${APP_TARGET}
-target_name=${APP_TARGET_NAME}
-blddir=${APP_BLDDIR}
+target=${PWMOVIEPLAYER_TARGET}
+target_name=${PWMOVIEPLAYER_TARGET_NAME}
+blddir=${PWMOVIEPLAYER_BLDDIR}
 
 # The generated Qt project and make files
 qt_project=./.qt.pro
 qt_makefile=./.qt.mak
 
 qt_modules=gui opengl core
-cxxflags=${CXXFLAGS} ${LIBRARY_CXXFLAGS} ${QTRENDERER_CXXFLAGS} ${OMP_CXXFLAGS} ${OPENGL_CXXFLAGS}
-libs=${LIBRARY_LIBS} ${QTRENDERER_LIBS} ${OMP_LIBS} ${OPENGL_LIBS}
+cxxflags=${CXXFLAGS} ${LIBRARY_CXXFLAGS} ${QTRENDERER_CXXFLAGS} ${OPENGL_CXXFLAGS}
+libs=${LIBRARY_LIBS} ${QTRENDERER_LIBS} ${OPENGL_LIBS}
 
 .PHONY: ${qt_project} qt_build clean
 

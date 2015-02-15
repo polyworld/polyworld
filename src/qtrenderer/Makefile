@@ -35,8 +35,8 @@ ${qt_project}:
 	@echo "QMAKE_CXXFLAGS += ${cxxflags}" >> $@
 	@echo "DEPENDPATH += ${LIBRARY_SRC}" >> $@
 	@echo "LIBS += ${libs}" >> $@
-	@echo "SOURCES += $(find -name '*.cc')" >> $@
-	@echo "HEADERS += $(find -name '*.h')" >> $@
+	@echo "SOURCES += $(shell find -name '*.cc')" >> $@
+	@echo "HEADERS += $(shell find -name '*.h')" >> $@
 	@echo "TARGET = ${target_name}" >> $@
 	@echo "DESTDIR = $(shell dirname ${target})" >> $@
 	@echo "OBJECTS_DIR = ${blddir}" >> $@

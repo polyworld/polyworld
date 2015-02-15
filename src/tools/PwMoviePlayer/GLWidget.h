@@ -5,7 +5,7 @@
 
 #include <QGLWidget>
 
-#include "PwMovieUtils.h"
+#include "utils/PwMovieUtils.h"
 
 class GLWidget : public QGLWidget
 {

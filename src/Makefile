@@ -1,6 +1,8 @@
-.PHONY: all library app qtrenderer
+targets=all library app qtrenderer rancheck PwMoviePlayer proputil pmvutil qt_clust
 
-all: library app qtrenderer
+.PHONY: ${targets}
+
+all: ${targets}
 
 library:
 	+ make -C library/
@@ -10,3 +12,18 @@ qtrenderer: library
 
 app: library qtrenderer
 	+ make -C app/
+
+rancheck:
+	+ make -C tools/rancheck
+
+PwMoviePlayer: library qtrenderer
+	+ make -C tools/PwMoviePlayer
+
+proputil: library qtrenderer #todo: nullrenderer instead of qtrenderer
+	+ make -C tools/proputil
+
+pmvutil: library qtrenderer #todo: nullrenderer instead of qtrenderer
+	+ make -C tools/pmvutil
+
+qt_clust:
+	+ make -C tools/clustering

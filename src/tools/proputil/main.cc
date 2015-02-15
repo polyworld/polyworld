@@ -7,12 +7,12 @@
 #include <string>
 #include <utility>
 
-#include "misc.h"
-#include "builder.h"
-#include "editor.h"
-#include "overlay.h"
-#include "schema.h"
-#include "writer.h"
+#include "proplib/builder.h"
+#include "proplib/editor.h"
+#include "proplib/overlay.h"
+#include "proplib/schema.h"
+#include "proplib/writer.h"
+#include "utils/misc.h"
 
 using namespace proplib;
 using namespace std;

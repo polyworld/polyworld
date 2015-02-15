@@ -18,8 +18,8 @@
 // Self
 #include "GLWidget.h"
 #include "MainWindow.h"
-#include "PwMovieUtils.h"
 #include "PwMoviePlayer.h"
+#include "utils/PwMovieUtils.h"
 
 using namespace std;
 
