@@ -32,14 +32,15 @@ ${qt_project}:
 	@echo "QT = ${qt_modules}" >> $@
 	@echo "QMAKE_CXX=${CXX}" >> $@
 	@echo "QMAKE_CXXFLAGS += ${cxxflags}" >> $@
+	@echo "DEPENDPATH += ${LIBRARY_SRC}" >> $@
+	@echo "DEPENDPATH += ${QTRENDERER_SRC}" >> $@
 	@echo "LIBS += ${libs}" >> $@
+	@echo "SOURCES += $(find -name '*.cc')" >> $@
+	@echo "HEADERS += $(find -name '*.h')" >> $@
 	@echo "TARGET = ${target_name}" >> $@
 	@echo "DESTDIR = $(shell dirname ${target})" >> $@
 	@echo "OBJECTS_DIR = ${blddir}" >> $@
 	@echo "MOC_DIR = ${blddir}" >> $@
-	@find -name "*.cc" | awk '{printf "SOURCES += " $$1 "\n"}' >> $@
-	@find -name "*.h" | awk '{printf "HEADERS += " $$1 "\n"}' >> $@
-	@find ${LIBRARY_SRC} -type d | awk '{printf "DEPENDPATH += " $$1 "\n"}' >> $@
 
 
 clean:
