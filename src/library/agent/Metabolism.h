@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include "Energy.h"
+#include "environment/Energy.h"
 
 // forward decls
 class FoodType;

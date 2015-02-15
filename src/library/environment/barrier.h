@@ -12,9 +12,9 @@
 #include <vector>
 
 // Local
-#include "gdlink.h"
-#include "gpolygon.h"
-#include "objectlist.h"
+#include "graphics/gpolygon.h"
+#include "utils/gdlink.h"
+#include "utils/objectlist.h"
 
 // Forward declarations
 class barrier;

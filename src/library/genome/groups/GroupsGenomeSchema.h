@@ -1,9 +1,9 @@
 #pragma once
 
-#include "GenomeSchema.h"
 #include "GroupsGene.h"
-#include "NeurGroupType.h"
 #include "GroupsSynapseType.h"
+#include "genome/GenomeSchema.h"
+#include "genome/NeurGroupType.h"
 
 namespace genome
 {

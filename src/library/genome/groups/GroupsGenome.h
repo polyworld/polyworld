@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Genome.h"
 #include "GroupsGenomeSchema.h"
+#include "genome/Genome.h"
 
 namespace genome
 {

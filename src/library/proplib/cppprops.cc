@@ -17,12 +17,9 @@
 using namespace proplib;
 using namespace std;
 
-#define SrcCppprops ".bld/cppprops/src/generated.cc"
-#if __linux__
-#define LibCppprops ".bld/cppprops/bin/libcppprops.so"
-#else
-#define LibCppprops ".bld/cppprops/bin/libcppprops.dylib"
-#endif
+#define GENDIR "run/.cppprops"
+#define GENSRC GENDIR "/generated.cc"
+#define GENLIB GENDIR "/" CPPPROPS_TARGET
 
 #define l(content) out << content << endl
 
@@ -70,10 +67,10 @@ void CppProperties::init( Document *doc, UpdateContext *context )
 
 	generateLibrarySource();
 
-	SYSTEM( "scons -f scripts/build/SConstruct " LibCppprops " 1>/dev/null" );
+    SYSTEM("cp " PWHOME "/etc/bld/cppprops.mak " GENDIR "/Makefile && export conf=" PWHOME "/Makefile.conf && make -C " GENDIR);
 
-	void *libHandle = dlopen( LibCppprops, RTLD_LAZY );
-	errif( !libHandle, "Failed opening " LibCppprops );
+	void *libHandle = dlopen( GENLIB, RTLD_LAZY );
+	errif( !libHandle, "Failed opening " GENLIB );
 
 	typedef void (*LibraryInit)( UpdateContext *context );
 	LibraryInit init = (LibraryInit)dlsym( libHandle, "__clink__CppProperties_Init" );
@@ -124,21 +121,21 @@ void CppProperties::generateLibrarySource()
 		}
 	}
 
-	SYSTEM( "mkdir -p $(dirname " SrcCppprops ")" );
-	ofstream out( SrcCppprops );
+	SYSTEM( "mkdir -p " GENDIR);
+	ofstream out( GENSRC );
 
 	l( "// This file is machine-generated. See " << __FILE__ );
 	l( "" );
 	l( "#include <assert.h>" );
 	l( "#include <iostream>" );
 	l( "#include <sstream>" );
-	l( "#include \"cppprops.h\"" );
-	l( "#include \"barrier.h\"" );
-	l( "#include \"GenomeUtil.h\"" );
-	l( "#include \"globals.h\"" );
-	l( "#include \"Metabolism.h\"" );
-	l( "#include \"Simulation.h\"" );
-	l( "#include \"state.h\"" );
+	l( "#include \"agent/Metabolism.h\"" );
+	l( "#include \"environment/barrier.h\"" );
+	l( "#include \"genome/GenomeUtil.h\"" );
+	l( "#include \"proplib/cppprops.h\"" );
+	l( "#include \"proplib/state.h\"" );
+	l( "#include \"sim/globals.h\"" );
+	l( "#include \"sim/Simulation.h\"" );
 	l( "using namespace std;" );
 	l( "using namespace proplib;" );
 	l( "" );

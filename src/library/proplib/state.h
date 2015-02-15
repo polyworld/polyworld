@@ -2,8 +2,8 @@
 
 #include <vector>
 
-#include "cppprops.h"
-#include "FoodPatch.h"
+#include "environment/FoodPatch.h"
+#include "proplib/cppprops.h"
 
 
 namespace proplib

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Genome.h"
-#include "GroupsGenome.h"
+#include "groups/GroupsGenome.h"
 
 // forward decls
 class Metabolism;

@@ -4,7 +4,7 @@
 #include <map>
 #include <string>
 
-#include "NeuronType.h"
+#include "genome/NeuronType.h"
 
 namespace genome
 {
