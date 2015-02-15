@@ -11,7 +11,7 @@ Polyworld.app
 *.patch
 *.eps
 .gdb_history
-*.wf
+/*.wf
 
 # Legacy build
 .bld
