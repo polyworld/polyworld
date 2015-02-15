@@ -1,39 +1,34 @@
-# This file should never be executable
+include Makefile.conf
 
-SCONS = scons -j 2 -f scripts/build/SConstruct
+targets=all library app qtrenderer rancheck PwMoviePlayer proputil pmvutil qt_clust
 
-.PHONY: all clean \
-	app Polyworld \
-	comp CalcComplexity \
-	mp PwMoviePlayer \
-	rancheck \
-	proputil \
-	qt_clust
+.PHONY: ${targets} clean
 
-all:
-	${SCONS}
+all: ${targets}
 
-clean:
-	${SCONS} --clean
-	rm -rf .bld
-	rm -rf bin
-	rm -f .sconsign.dblite
-	rm -f config.log
+library:
+	+ make -C src/library/
 
-app Polyworld:
-	${SCONS} Polyworld
+qtrenderer: library
+	+ make -C src/qtrenderer/
 
-comp CalcComplexity:
-	${SCONS} bin/CalcComplexity
-
-mp PwMoviePlayer:
-	${SCONS} bin/PwMoviePlayer
+app: library qtrenderer
+	+ make -C src/app/
 
 rancheck:
-	${SCONS} bin/rancheck
+	+ make -C src/tools/rancheck
 
-proputil:
-	${SCONS} bin/proputil
+PwMoviePlayer: library qtrenderer
+	+ make -C src/tools/PwMoviePlayer
+
+proputil: library qtrenderer #todo: nullrenderer instead of qtrenderer
+	+ make -C src/tools/proputil
+
+pmvutil: library qtrenderer #todo: nullrenderer instead of qtrenderer
+	+ make -C src/tools/pmvutil
 
 qt_clust:
-	${SCONS} bin/qt_clust
+	+ make -C src/tools/clustering
+
+clean:
+	rm -rf ${PWBLD}

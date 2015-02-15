@@ -1044,7 +1044,7 @@ void Logs::EnergyLog::processEvent( const sim::EnergyEvent &e )
 									   "E"};
 	const char *actionName = actionNames[ e.action ];
 
-	Variant coldata[ 5 + globals::numEnergyTypes ];
+	Variant *coldata = (Variant *)alloca(sizeof(Variant) * (5 + globals::numEnergyTypes));
 	coldata[0] = getStep();
 	coldata[1] = e.a->Number();
 	coldata[2] = actionName;
@@ -1252,7 +1252,7 @@ void Logs::GenomeSubsetLog::processEvent( const sim::AgentBirthEvent &birth )
 	{
 		agent *a = birth.a;
 
-		Variant values[ 1 + _geneIndexes.size() ];
+		Variant *values = (Variant *)alloca( sizeof(Variant) * (1 + _geneIndexes.size()));
 		values[0] = a->Number();
 
 		for( int i = 0; i < (int)_geneIndexes.size(); i++ )

@@ -210,7 +210,7 @@ void DataLibWriter::beginTable( const char *name,
 // ------------------------------------------------------------
 void DataLibWriter::addRow( Variant col0, ... )
 {
-	Variant colsdata[ cols.size() ];
+	Variant *colsdata = (Variant *)alloca(sizeof(Variant) * cols.size());
 
 	va_list args;
 

@@ -3724,7 +3724,11 @@ void util__genedist( const char *subdir ) {
 	std::sort( clusters.begin(), clusters.end(), Cluster::sort__member_size_descending );
 
 	typedef vector<GeneDist> GeneDistVector;
-	GeneDistVector geneDists[nclusters][nclusters];
+    vector<vector<GeneDistVector>> geneDists;
+    geneDists.resize(nclusters);
+    for(int i = 0; i < nclusters; i++) {
+        geneDists[i].resize(nclusters);
+    }
 
 	for( int i = 0; i < nclusters; i++ ) {
 		Cluster *clusteri = clusters[i];
