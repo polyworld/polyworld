@@ -6,6 +6,8 @@
 
 #include "expression.h"
 
+class InterpreterProcess;
+
 namespace proplib
 {
 	// ----------------------------------------------------------------------
@@ -51,6 +53,6 @@ namespace proplib
 		static bool eval( const std::string &expr,
 						  char *result, size_t result_size );
 
-		static bool alive;
+        static InterpreterProcess *process;
 	};
 }

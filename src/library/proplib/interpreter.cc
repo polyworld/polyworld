@@ -1,19 +1,18 @@
-#include <Python.h>
-
 #include "interpreter.h"
 
 #include <assert.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include <sstream>
 
 #include "dom.h"
 #include "misc.h"
 #include "parser.h"
+#include "Resources.h"
 
 using namespace std;
 using namespace proplib;
-
 
 // ----------------------------------------------------------------------
 // ----------------------------------------------------------------------
@@ -98,7 +97,7 @@ string Interpreter::ExpressionEvaluator::evaluate( Property *prop )
 						}
 						break;
 					default:
-						assert( false );
+						PANIC();
 					}
 				}
 				else
@@ -109,8 +108,7 @@ string Interpreter::ExpressionEvaluator::evaluate( Property *prop )
 			}
 			break;
 		default:
-			assert( false );
-			break;
+			PANIC();
 		}
 	}
 
@@ -135,98 +133,109 @@ string Interpreter::ExpressionEvaluator::evaluate( Property *prop )
 
 // ----------------------------------------------------------------------
 // ----------------------------------------------------------------------
+// --- CLASS InterpreterProcess
+// ----------------------------------------------------------------------
+// ----------------------------------------------------------------------
+class InterpreterProcess {
+    int const PIPE_READ = 0;
+    int const PIPE_WRITE = 1;
+
+    int stdinPipe[2];
+    int stdoutPipe[2];
+
+    ssize_t write(void const *buf, size_t n) {
+        return ::write(stdinPipe[PIPE_WRITE], buf, n);
+    }
+
+    ssize_t read(void *buf, size_t n) {
+        return ::read(stdoutPipe[PIPE_READ], buf, n);
+    }
+
+    void createPythonProcess() {
+        REQUIRE( 0 == pipe(stdinPipe) );
+        REQUIRE( 0 == pipe(stdoutPipe) );
+
+        string script_path = Resources::getInterpreterScript();
+
+        if(0 == fork()) {
+            // child process
+
+            // redirect stdin
+            REQUIRE( -1 != dup2(stdinPipe[PIPE_READ], STDIN_FILENO) );
+            // redirect stdout
+            REQUIRE( -1 != dup2(stdoutPipe[PIPE_WRITE], STDOUT_FILENO) );
+
+            // run child process image
+            execlp("python", "python", script_path.c_str(), NULL);
+            PANIC();
+        }
+    }
+
+    void closePipes() {
+        close(stdinPipe[PIPE_READ]);
+        close(stdinPipe[PIPE_WRITE]);
+        close(stdoutPipe[PIPE_READ]);
+        close(stdoutPipe[PIPE_WRITE]);
+    }
+
+public:
+    InterpreterProcess() {
+        createPythonProcess();
+    }
+
+    ~InterpreterProcess() {
+        write("exit\n", 5);
+        closePipes();
+    }
+
+    bool eval(const std::string &expr,
+              char *result, size_t result_size) {
+        
+        char writebuf[1024*8];
+        sprintf(writebuf, "<expr>\n%s\n</expr>\n", expr.c_str());
+        size_t writelen = strlen(writebuf);
+        REQUIRE( writelen == write(writebuf, writelen) );
+
+        char success;
+        REQUIRE( 1 == read(&success, 1) );
+        REQUIRE( success == 'S' || success == 'F' );
+        
+        char readlen_str[11];
+        REQUIRE( 10 == read(readlen_str, 10) );
+        readlen_str[10] = '\0';
+        size_t readlen = (size_t)atoi(readlen_str);
+        
+        REQUIRE( readlen < result_size );
+        REQUIRE( readlen == read(result, readlen) );
+        result[readlen] = '\0';
+
+        return success == 'S';
+    }
+};
+
+// ----------------------------------------------------------------------
+// ----------------------------------------------------------------------
 // --- CLASS Interpreter
 // ----------------------------------------------------------------------
 // ----------------------------------------------------------------------
 
-bool Interpreter::alive = false;
+InterpreterProcess *Interpreter::process = nullptr;
 
 void Interpreter::init()
 {
-	assert( !alive );
-	Py_Initialize();
-	alive = true;
+	REQUIRE( !process );
+    process = new InterpreterProcess();
 }
 
 void Interpreter::dispose()
 {
-	assert( alive );
-	Py_Finalize();
-	alive = false;
+	REQUIRE( process );
+    delete process;
+    process = nullptr;
 }
 
 bool Interpreter::eval( const std::string &expr,
 						char *result, size_t result_size )
 {
-	assert( alive );
-
-	char outputPath[128];
-	sprintf( outputPath, "/tmp/proplib.%d", getpid() );
-
-	char script[1024 * 4];
-	sprintf( script,
-			 "import sys\n"
-			 "f = open('%s','w')\n"
-			 "try:\n"
-			 "  expr=\"\"\"\\\n"
-			 "%s \"\"\"\n"
-			 "  result = str( eval(expr) )\n"
-			 "  f.write( '0' )\n"
-			 "  f.write( result )\n"
-			 "  f.close()\n"
-			 "except:\n"
-			 "  f.write( '1' )\n"
-			 "  f.write( str(sys.exc_info()[1]) )\n"
-			 "  f.close()\n",
-			 outputPath,
-			 expr.c_str() );
-	assert( strlen(script) < sizeof(script) );
-
-	int rc = PyRun_SimpleString( script );
-	if( rc != 0 )
-	{
-		fprintf( stderr, "PyRun_SimpleString failed! rc=%d\n", rc );
-		exit( 1 );
-	}
-
-	FILE *f = fopen( outputPath, "r" );
-	char *result_orig = result;
-
-	size_t n;
-
-	char scriptRC;
-	n = fread( &scriptRC, 1, 1, f );
-	if( n != 1 )
-	{
-		fprintf( stderr, "Failed reading script output rc! path=%s\n", outputPath );
-		exit( 1 );
-	}
-
-	while( !feof(f) && (result_size > 0) )
-	{
-		n = fread(result, 1, result_size, f);
-		result[n] = 0;
-		result += n;
-		result_size -= n;
-	}
-
-	if( !feof(f) )
-	{
-		fprintf( stderr, "Output of python script exceeds result buffer.\n" );
-		exit( 1 );
-	}
-
-	fclose( f );
-
-	for( char *tail = result - 1; tail >= result_orig; tail-- )
-	{
-		if( *tail == '\n' )
-			*tail = 0;
-		else
-			break;
-	}
-
-	remove( outputPath );
-
-	return scriptRC == '0';
+    return process->eval(expr, result, result_size);
 }

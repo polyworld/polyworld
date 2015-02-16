@@ -11,6 +11,8 @@ class Resources
 	static bool loadPolygons( class gpolyobj *poly,
 							  std::string name );
 
+    static std::string getInterpreterScript();
+
  private:
 	static std::string find( std::string name );
 };

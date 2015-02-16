@@ -130,7 +130,9 @@ std::vector<std::string> split( const std::string& str, const std::string& delim
 #define SYS(STMT) {int rc = STMT; if(rc == -1) perror(#STMT);}
 #define SYSTEM(cmd) {int rc = system(cmd); if(rc != 0) {fprintf(stderr, "Failed executing command '%s'\n", cmd); exit(1);}}
 
+#define PANIC() { fprintf(stderr, "PANIC! [%s:%d]\n", __FILE__, __LINE__); abort(); }
 #define ERR(MSG...) {fprintf(stderr, MSG); fprintf(stderr, "\n"); exit(1);}
+#define REQUIRE( STMT ) if( !(STMT) ) {ERR("Required statement failed: %s", #STMT);}
 // todo: capitalize errif macro
 #define errif( STMT, MSG... ) if( STMT ) ERR(MSG)
 
