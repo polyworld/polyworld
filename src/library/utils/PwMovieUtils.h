@@ -173,58 +173,58 @@ class PwMovieReader
 	FrameMetaEntryMap metaEntries[ PwMovieMetaEntry::__NTYPES ];
 };
 
-void rleproc( register uint32_t *rgb,
-			  register uint32_t width,
-			  register uint32_t height,
-			  register uint32_t *rle,
-			  register uint32_t rleBufSize );
+void rleproc( uint32_t *rgb,
+			  uint32_t width,
+			  uint32_t height,
+			  uint32_t *rle,
+			  uint32_t rleBufSize );
 
-void rlediff2( register uint32_t *rgbnew,
-			   register uint32_t *rgbold,
-			   register uint32_t width,
-			   register uint32_t height,
-			   register uint32_t *rle,
-			   register uint32_t rleBufSize );
+void rlediff2( uint32_t *rgbnew,
+			   uint32_t *rgbold,
+			   uint32_t width,
+			   uint32_t height,
+			   uint32_t *rle,
+			   uint32_t rleBufSize );
 
-void rlediff3( register uint32_t *rgbnew,
-               register uint32_t *rgbold,
-			   register uint32_t width,
-			   register uint32_t height,
-               register uint32_t *rle,
-			   register uint32_t rleBufSize );
+void rlediff3( uint32_t *rgbnew,
+               uint32_t *rgbold,
+			   uint32_t width,
+			   uint32_t height,
+               uint32_t *rle,
+			   uint32_t rleBufSize );
 
-void rlediff4( register uint32_t *rgbnew,
-               register uint32_t *rgbold,
-			   register uint32_t width,
-			   register uint32_t height,
-               register uint32_t *rle,
-			   register uint32_t rleBufSize );
+void rlediff4( uint32_t *rgbnew,
+               uint32_t *rgbold,
+			   uint32_t width,
+			   uint32_t height,
+               uint32_t *rle,
+			   uint32_t rleBufSize );
 
-void unrle( register uint32_t *rle,
-			register uint32_t *rgb,
-			register uint32_t width,
-			register uint32_t height,
-			register uint32_t version );
+void unrle( uint32_t *rle,
+			uint32_t *rgb,
+			uint32_t width,
+			uint32_t height,
+			uint32_t version );
 
-void unrlediff2( register uint32_t *rle,
-				 register uint32_t *rgb,
-				 register uint32_t width,
-				 register uint32_t height,
-				 register uint32_t version );
+void unrlediff2( uint32_t *rle,
+				 uint32_t *rgb,
+				 uint32_t width,
+				 uint32_t height,
+				 uint32_t version );
 
-void unrlediff3( register uint32_t *rle,
-				 register uint32_t *rgb,
-				 register uint32_t width,
-				 register uint32_t height,
-				 register uint32_t version );
+void unrlediff3( uint32_t *rle,
+				 uint32_t *rgb,
+				 uint32_t width,
+				 uint32_t height,
+				 uint32_t version );
 
-void unrlediff4( register uint32_t *rle,
-				 register uint32_t *rgb,
-				 register uint32_t width,
-				 register uint32_t height,
-				 register uint32_t version );
+void unrlediff4( uint32_t *rle,
+				 uint32_t *rgb,
+				 uint32_t width,
+				 uint32_t height,
+				 uint32_t version );
 
-int readrle( register FILE *f, register uint32_t *rle, register uint32_t version, register bool firstFrame );
+int readrle( FILE *f, uint32_t *rle, uint32_t version, bool firstFrame );
 
 char* sgets( char* string, size_t size, FILE* file );
 double hirestime( void );

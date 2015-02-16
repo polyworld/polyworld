@@ -61,7 +61,7 @@ void indexlist::dump(ostream& out)
         return;
     }
     
-    for (register int i = 0; i < numbytes; i++)
+    for (int i = 0; i < numbytes; i++)
 		out << (int)(pind[i]) nl;
 }
 
@@ -91,7 +91,7 @@ void indexlist::load(istream& in)
     }
     
     int num = 0;
-    for (register int i = 0; i < numbytes; i++)
+    for (int i = 0; i < numbytes; i++)
     {
         in >> num;
         pind[i] = (unsigned char)num;

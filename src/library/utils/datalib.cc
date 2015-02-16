@@ -690,7 +690,7 @@ void DataLibReader::parseDigest()
 			   f );
 	assert( n > 0 );
 	buf[n] = '\0';
-	for( size_t i = n - 1; i >= 0; i++ )
+	for( ssize_t i = ssize_t(n) - 1; i >= 0; i++ )
 	{
 		if( buf[i] == '\n' )
 		{

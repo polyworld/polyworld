@@ -375,7 +375,7 @@ void ChartMonitorView::load(std::istream& in)
     for (long ic = 0; ic < numCurves; ic++)
     {
         in >> numPoints[ic];
-        for (register long i = 0; i < numPoints[ic]; i++)
+        for (long i = 0; i < numPoints[ic]; i++)
         {
             in >> y[(ic*maxPoints)+i];
         }

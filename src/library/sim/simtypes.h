@@ -314,7 +314,7 @@ namespace sim
 		~Stat()					{}
 	
 		float	mean()			{ if( !count ) return( 0.0 ); return( sum / count ); }
-		float	stddev()		{ if( !count ) return( 0.0 ); register double m = sum / count;  return( sqrt( sum2 / count  -  m * m ) ); }
+		float	stddev()		{ if( !count ) return( 0.0 ); double m = sum / count;  return( sqrt( sum2 / count  -  m * m ) ); }
 		float	min()			{ if( !count ) return( 0.0 ); return( mn ); }
 		float	max()			{ if( !count ) return( 0.0 ); return( mx ); }
 		void	add( float v )	{ sum += v; sum2 += v*v; count++; mn = v < mn ? v : mn; mx = v > mx ? v : mx; }
@@ -339,7 +339,7 @@ namespace sim
 	~StatRecent()							{ if( history ) free( history ); }
 	
 	float	mean()			{ if( !count ) return( 0.0 ); return( sum / count ); }
-	float	stddev()		{ if( !count ) return( 0.0 ); register double m = sum / count;  return( sqrt( sum2 / count  -  m * m ) ); }
+	float	stddev()		{ if( !count ) return( 0.0 ); double m = sum / count;  return( sqrt( sum2 / count  -  m * m ) ); }
 	float	min()			{ if( !count ) return( 0.0 ); if( needMin ) recomputeMin(); return( mn ); }
 	float	max()			{ if( !count ) return( 0.0 ); if( needMax ) recomputeMax(); return( mx ); }
 	void	add( float v )	{ if( count < w ) { sum += v; sum2 += v*v; mn = v < mn ? v : mn; mx = v > mx ? v : mx; history[index++] = v; count++; } else { if( index >= w ) index = 0; sum += v - history[index]; sum2 += v*v - history[index]*history[index]; if( v >= mx ) mx = v; else if( history[index] == mx ) needMax = true; if( v <= mn ) mn = v; else if( history[index] == mn ) needMin = true; history[index++] = v; } }
