@@ -27,7 +27,7 @@ namespace sheets
 // Neuron
 //===========================================================================
 
-bool NeuronKeyCompare::operator()( Neuron *x, Neuron *y )
+bool NeuronKeyCompare::operator()( Neuron *x, Neuron *y ) const
 {
 	return x->nonCulledId < y->nonCulledId;
 }

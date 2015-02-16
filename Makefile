@@ -1,6 +1,6 @@
 include Makefile.conf
 
-targets=all library app qtrenderer rancheck PwMoviePlayer proputil pmvutil qt_clust
+targets=library app qtrenderer rancheck PwMoviePlayer proputil pmvutil qt_clust
 
 .PHONY: ${targets} clean
 

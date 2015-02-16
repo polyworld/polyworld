@@ -288,7 +288,7 @@ private:
 	float fEatThreshold;
 	
 	float fMaxFitness;
-	ulong fNumAverageFitness;
+	unsigned long fNumAverageFitness;
 	float fAverageFitness;
 	float fPrevAvgFitness;
 	float fTotalHeuristicFitness;

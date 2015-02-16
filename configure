@@ -14,13 +14,14 @@ import sys
 ######################################################################
 Conf='Makefile.conf'
 
-Supported_OSes = ['linux']
+Supported_OSes = ['linux', 'darwin']
 Supported_OSes_display = ','.join(Supported_OSes)
 
 Supported_Toolchains = ['clang', 'gcc']
 Supported_Toolchains_display = ','.join(Supported_Toolchains)
 
-Default_CXX = {'linux': 'g++'}
+Default_CXX = {'linux': 'g++',
+               'darwin': 'clang++'}
 
 ######################################################################
 #

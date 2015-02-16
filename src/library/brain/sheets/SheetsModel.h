@@ -106,7 +106,7 @@ namespace sheets
 	//===========================================================================
 	struct NeuronKeyCompare
 	{
-		bool operator()( class Neuron *, class Neuron * );
+		bool operator()( class Neuron *, class Neuron * ) const;
 	};
 	typedef std::map<class Neuron *, Synapse *, NeuronKeyCompare> SynapseMap;
 

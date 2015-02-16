@@ -685,7 +685,7 @@ void TSimulation::Step()
 #if DebugMaxFitness
 	printf( "At age %ld (c,n,fit,c->fit) =", fStep );
 	for( i = 0; i < fCurrentFittestCount; i++ )
-		printf( " (%08lx,%ld,%5.2f,%5.2f)", (ulong) fCurrentFittestAgent[i], fCurrentFittestAgent[i]->Number(), fCurrentMaxFitness[i], fCurrentFittestAgent[i]->HeuristicFitness() );
+		printf( " (%08lx,%ld,%5.2f,%5.2f)", (unsigned long) fCurrentFittestAgent[i], fCurrentFittestAgent[i]->Number(), fCurrentMaxFitness[i], fCurrentFittestAgent[i]->HeuristicFitness() );
 	printf( "\n" );
 #endif
 
@@ -1498,7 +1498,7 @@ void TSimulation::Interact()
 		{
 			printf( "At age %ld in domain %d (c,n,c->fit) =", fStep, id );
 			for( i = 0; i < fDomains[id].fNumLeastFit; i++ )
-				printf( " (%08lx,%ld,%5.2f)", (ulong) fDomains[id].fLeastFit[i], fDomains[id].fLeastFit[i]->Number(), fDomains[id].fLeastFit[i]->HeuristicFitness() );
+				printf( " (%08lx,%ld,%5.2f)", (unsigned long) fDomains[id].fLeastFit[i], fDomains[id].fLeastFit[i]->Number(), fDomains[id].fLeastFit[i]->HeuristicFitness() );
 			printf( "\n" );
 		}
 	}
@@ -1511,7 +1511,7 @@ void TSimulation::Interact()
 		objectxsortedlist::gXSortedObjects.nextObj(AGENTTYPE, c);
 		agent* lastAgent;
 		objectxsortedlist::gXSortedObjects.lastObj(AGENTTYPE, (gobject**) &lastAgent );
-		printf( "%s: at age %ld about to process %ld agents, %ld pieces of food, starting with agent %08lx (%4ld), ending with agent %08lx (%4ld)\n", __FUNCTION__, fStep, objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE), objectxsortedlist::gXSortedObjects.getCount(FOODTYPE), (ulong) c, c->Number(), (ulong) lastAgent, lastAgent->Number() );
+		printf( "%s: at age %ld about to process %ld agents, %ld pieces of food, starting with agent %08lx (%4ld), ending with agent %08lx (%4ld)\n", __FUNCTION__, fStep, objectxsortedlist::gXSortedObjects.getCount(AGENTTYPE), objectxsortedlist::gXSortedObjects.getCount(FOODTYPE), (unsigned long) c, c->Number(), (unsigned long) lastAgent, lastAgent->Number() );
 	}
 #endif
 
@@ -2850,7 +2850,7 @@ void TSimulation::Fitness( agent *c )
 			fCurrentFittestAgent[fCurrentFittestCount] = c;
 			fCurrentFittestCount++;
 		#if DebugMaxFitness
-			printf( "appended agent %08lx (%4ld) to fittest list at position %d with fitness %g, count = %d\n", (ulong) c, c->Number(), fCurrentFittestCount-1, c->HeuristicFitness(), fCurrentFittestCount );
+			printf( "appended agent %08lx (%4ld) to fittest list at position %d with fitness %g, count = %d\n", (unsigned long) c, c->Number(), fCurrentFittestCount-1, c->HeuristicFitness(), fCurrentFittestCount );
 		#endif
 		}
 		else	// must insert
@@ -2874,7 +2874,7 @@ void TSimulation::Fitness( agent *c )
 			if( fCurrentFittestCount < MAXFITNESSITEMS )
 				fCurrentFittestCount++;
 		#if DebugMaxFitness
-			printf( "inserted agent %08lx (%4ld) into fittest list at position %ld with fitness %g, count = %d\n", (ulong) c, c->Number(), i, c->HeuristicFitness(), fCurrentFittestCount );
+			printf( "inserted agent %08lx (%4ld) into fittest list at position %ld with fitness %g, count = %d\n", (unsigned long) c, c->Number(), i, c->HeuristicFitness(), fCurrentFittestCount );
 		#endif
 		}
 	}
@@ -4995,10 +4995,10 @@ void TSimulation::getStatusText( StatusText& statusText,
 	sprintf( t, "MateRate = %.2f", (double) deltaBorn / statusFrequency );
 	statusText.push_back( strdup( t ) );
 
-	sprintf( t, "LifeSpan = %lu ± %lu [%lu, %lu]", nint( fLifeSpanStats.mean() ), nint( fLifeSpanStats.stddev() ), (ulong) fLifeSpanStats.min(), (ulong) fLifeSpanStats.max() );
+	sprintf( t, "LifeSpan = %lu ± %lu [%lu, %lu]", nint( fLifeSpanStats.mean() ), nint( fLifeSpanStats.stddev() ), (unsigned long) fLifeSpanStats.min(), (unsigned long) fLifeSpanStats.max() );
 	statusText.push_back( strdup( t ) );
 
-	sprintf( t, "RecLifeSpan = %lu ± %lu [%lu, %lu]", nint( fLifeSpanRecentStats.mean() ), nint( fLifeSpanRecentStats.stddev() ), (ulong) fLifeSpanRecentStats.min(), (ulong) fLifeSpanRecentStats.max() );
+	sprintf( t, "RecLifeSpan = %lu ± %lu [%lu, %lu]", nint( fLifeSpanRecentStats.mean() ), nint( fLifeSpanRecentStats.stddev() ), (unsigned long) fLifeSpanRecentStats.min(), (unsigned long) fLifeSpanRecentStats.max() );
 	statusText.push_back( strdup( t ) );
 
 	// ---
@@ -5008,7 +5008,7 @@ void TSimulation::getStatusText( StatusText& statusText,
 		[&t, &statusText] ( const char *name, Stat &stat )
 		{
 			sprintf( t, "%s = %.1f ± %.1f [%lu, %lu]",
-					 name, stat.mean(), stat.stddev(), (ulong) stat.min(), (ulong) stat.max() );
+					 name, stat.mean(), stat.stddev(), (unsigned long) stat.min(), (unsigned long) stat.max() );
 			statusText.push_back( strdup( t ) );
 		};
 

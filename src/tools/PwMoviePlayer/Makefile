@@ -24,6 +24,7 @@ qt_build: ${qt_makefile}
 # Generate a makefile from the Qt project file
 ${qt_makefile}: ${qt_project}
 	@qmake -o ${qt_makefile} ${qt_project}
+	@${QMAKE_FIXUP}
 
 # Generate the Qt project file
 ${qt_project}:
@@ -35,8 +36,8 @@ ${qt_project}:
 	@echo "DEPENDPATH += ${LIBRARY_SRC}" >> $@
 	@echo "DEPENDPATH += ${QTRENDERER_SRC}" >> $@
 	@echo "LIBS += ${libs}" >> $@
-	@echo "SOURCES += $(shell find -name '*.cc')" >> $@
-	@echo "HEADERS += $(shell find -name '*.h')" >> $@
+	@echo "SOURCES += $(shell find . -name '*.cc')" >> $@
+	@echo "HEADERS += $(shell find . -name '*.h')" >> $@
 	@echo "TARGET = ${target_name}" >> $@
 	@echo "DESTDIR = $(shell dirname ${target})" >> $@
 	@echo "OBJECTS_DIR = ${blddir}" >> $@
