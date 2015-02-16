@@ -2,6 +2,7 @@ lib/
 bin/
 run*/
 .bld/
+/Makefile.conf
 *.pyc
 Polyworld
 Polyworld.app

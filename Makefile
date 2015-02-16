@@ -30,6 +30,10 @@ pmvutil: library qtrenderer #todo: nullrenderer instead of qtrenderer
 qt_clust:
 	+ make -C src/tools/clustering
 
+omp_test:
+	+ make -C src/tools/omp_test
+	bin/omp_test
+
 clean:
 	rm -rf ${PWBLD}
 	rm -f ${APP_TARGET}

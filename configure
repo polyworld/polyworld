@@ -1,71 +1,143 @@
-#!/bin/bash
+#!/usr/bin/env python
 
-###
-### This script sets up your environment for building and executing Polyworld.
-###
-### Supported:
-###
-###	Ubuntu 12.04
-###	Mint 13
-### 
-### The current implementation only supports very specific versions of Linux. If
-### you're using Mac, then you can't use this. If you're using a Debian-based
-### distro/release not specifically supported by this script, there's a good
-### chance that you can simply tweak this script to go down the Mint/Ubuntu path.
-###
+import argparse
+import os
+import os.path
+import platform
+import subprocess
+import sys
 
-set -e
+######################################################################
+#
+# Constants
+#
+######################################################################
+Conf='Makefile.conf'
 
-function err()
-{
-    echo $@ >&2
-    exit 1
-}
+Supported_OSes = ['linux']
+Supported_OSes_display = ','.join(Supported_OSes)
 
-if [ `uname` != "Linux" ]; then
-    err "Only Linux supported by this script."
-fi
+Supported_Toolchains = ['clang', 'gcc']
+Supported_Toolchains_display = ','.join(Supported_Toolchains)
 
+Default_CXX = {'linux': 'g++'}
 
-###
-### Determine distro and release
-###
-distro=$( lsb_release -is ) || err "Cannot determine distro via lsb_release"
-release=$( lsb_release -rs ) || err "Cannot determine release via lsb_release"
+######################################################################
+#
+# main()
+#
+######################################################################
+def main():
+    # sanity check
+    if not check_exit('which bash'):
+        sys.exit("Failed locating bash!")
+    
+    #
+    # Parse command-line
+    #
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-g', '--debug',
+                        action = 'store_true',
+                        default = False,
+                        help = "debug build")
+    parser.add_argument('-c', '--cxx',
+                        nargs = 1,
+                        help = "specify compiler with optional path (e.g. clang++, /usr/bin/g++-4.9)")
+    parser.add_argument('--toolchain',
+                        nargs = 1,
+                        help = "specify toolchain ("+Supported_Toolchains_display+")")
+    parser.add_argument('--os',
+                        nargs = 1,
+                        help = "specify OS ("+Supported_OSes_display+")")
 
+    config = vars(parser.parse_args())
+    
+    #
+    # Determine OS
+    #
+    if not config['os']:
+        config['os'] = platform.system().lower()
+    else:
+        config['os'] = config['os'][0]
+    
+    if not config['os'] in Supported_OSes:
+        sys.exit("Unsupported OS (" + config['os'] + "). Supported = " + Supported_OSes_display)
+    
+    print 'Operating System:', config['os']
+    
+    #
+    # Determine compiler
+    #
+    if not config['cxx']:
+        config['cxx'] = Default_CXX[config['os']]
+    else:
+        config['cxx'] = config['cxx'][0]
+    print 'CXX:', config['cxx']
+    
+    if not check_exit('which '+config['cxx']):
+        sys.exit('Cannot locate compiler')
+    
+    if 'clang' in config['cxx']:
+        config['toolchain'] = 'clang'
+    else:
+        config['toolchain'] = 'gcc'
+    print 'Toolchain:', config['toolchain']
+    
+    #
+    # Determine optimization level
+    #
+    config['optimization'] = 'debug' if config['debug'] else 'optimized'
+    
+    #
+    # Create speculative conf and clean
+    #
+    config['omp'] = 'omp'
+    generate_conf(config)
+    if not check_exit('make clean'):
+        sys.stderr.write("Warning! Encountered errors when cleaning build environment!\n")
+    
+    #
+    # Check OpenMP support
+    #
+    if not check_exit('make omp_test'):
+        config['omp'] = 'no-omp'
+    print 'OpenMP Supported:', config['omp'] == 'omp'
+    
+    #
+    # Create final configuration
+    #
+    generate_conf(config)
+    
 
-if ([ "$distro" == "LinuxMint" ] && [ "$release" == "13" ]) || \
-   ([ "$distro" == "Ubuntu" ] && [ "$release" == "12.04" ])
-    then
-    ###
-    ### Install Polyworld Packages
-    ###
-    pw_packages="
-	g++
-        scons
-        libgsl0-dev
-        libqt4-opengl-dev
-        zlib1g-dev
-        python2.7-dev
-	python-scipy
-    "
+######################################################################
+#
+# Run cmd in bash and return True if succeeded (output not shown)
+#
+######################################################################
+def check_exit(cmd):
+    try:
+        subprocess.check_output(['bash', '-c', cmd], stderr=subprocess.STDOUT)
+        return True
+    except:
+        return False
 
-    apt-get install $pw_packages
+######################################################################
+#
+# Create ./Makefile.conf
+#
+######################################################################
+def generate_conf(config):
+    pwhome=os.path.realpath('.')
+    f = open( os.path.join(pwhome, Conf), 'w' )
 
+    f.write( 'PWHOME = %s\n' % pwhome )
+    
+    confs = [config['os'], config['toolchain'], config['optimization'], config['omp'], 'common']
+    for conf in confs:
+        f.write('include ${PWHOME}/etc/bld/Makefile.%s.conf\n' % conf)
+    
+    f.write('CXX = %s\n' % config['cxx'])
 
-    ###
-    ### Install Farm Packages
-    ###
-    farm_packages="
-        openssh-server
-        screen
-        subversion
-    "
+    f.close()
 
-    apt-get install $farm_packages
-else
-    err "Don't know how to configure '$distro' '$release'"
-fi
-
-echo
-echo "configure complete"
+main()
