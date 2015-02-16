@@ -73,7 +73,7 @@ void gstage::SetLights(TGraphicsLightList* pl)
 	     char num[16];
 	     
 	     strcpy(msg, "Can only use MAXLIGHTS of the ");
-	     sprintf(num, "%ld", (pl->size()) + 1);
+	     sprintf(num, "%zd", (pl->size()) + 1);
 	     strcat(msg, num);
 	     strcat(msg," lights in this list");
 	     error(0, msg);
@@ -257,7 +257,7 @@ void gstage::AddLight(glight* pl)
 		char msg[256];
 		char num[16];
 		strcpy(msg,"Can only use MAXLIGHTS of the ");
-		sprintf(num,"%ld", (fLightList->size()) + 1);
+		sprintf(num,"%zd", (fLightList->size()) + 1);
 		strcat(msg, num);
 		strcat(msg," lights in this list");
 		error(0,msg);

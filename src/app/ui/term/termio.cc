@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "utils/misc.h"
 
 namespace termio
 {
@@ -55,9 +56,13 @@ namespace termio
 	void setEchoEnabled( bool enabled )
 	{
 		if( enabled )
-			system( "stty echo" );
+        {
+			SYSTEM( "stty echo" );
+        }
 		else
-			system( "stty -echo" );
+        {
+			SYSTEM( "stty -echo" );
+        }
 	}
 
 }

@@ -23,7 +23,7 @@ ToggleWidgetOpenAction::~ToggleWidgetOpenAction()
 {
 }
 
-bool ToggleWidgetOpenAction::eventFilter( QObject *obj, QEvent *event )
+bool ToggleWidgetOpenAction::eventFilter( QObject *, QEvent *event )
 {
 	switch( event->type() )
 	{

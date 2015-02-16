@@ -8,7 +8,7 @@ class AgentListener
  public:
 	virtual ~AgentListener() {}
 
-	virtual void died( class agent *a ) {}
+	virtual void died( class agent * ) {}
 };
 
 

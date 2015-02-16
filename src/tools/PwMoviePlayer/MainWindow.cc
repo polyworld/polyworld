@@ -194,8 +194,6 @@ void MainWindow::closeEvent(QCloseEvent* ce)
 }
 #endif
 
-#pragma mark -
-
 //---------------------------------------------------------------------------
 // MainWindow::AddFileMenu
 //---------------------------------------------------------------------------
@@ -251,8 +249,6 @@ void MainWindow::openFile()
 {
    QMessageBox::about( this, tr("Open File..."), tr( "Not yet implemented.  Sorry." ) );
 }
-
-#pragma mark -
 
 //---------------------------------------------------------------------------
 // MainWindow::SaveWindowState

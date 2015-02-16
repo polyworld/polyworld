@@ -148,10 +148,6 @@ void gsquare::setradius()
 		fRadius = sqrt(fLengthX * fLengthX + fLengthY * fLengthY) * fRadiusScale * fScale * 0.5;
 }    
 
-
-
-#pragma mark -
-
 void gbox::setradius()
 {
     if (!fRadiusFixed)  //  only set radius anew if not set manually

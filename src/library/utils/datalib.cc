@@ -382,23 +382,23 @@ void DataLibWriter::fileFooter()
 	size_t digest_start = ftell( f );
 
 	fprintf( f, "\n" );
-	fprintf( f, "#TABLES %lu\n", tables.size() );
+	fprintf( f, "#TABLES %zu\n", tables.size() );
 
 	itfor( __TableVector, tables, it )
 	{
 		fprintf( f,
-				 "# %s %lu %lu %lu %lu\n",
+				 "# %s %zu %zu %zu %zu\n",
 				 it->name.c_str(), it->offset, it->data, it->nrows, it->rowlen );
 	}
 
 	size_t digest_end = ftell( f );
 
 	fprintf( f,
-			 "#START %lu\n",
+			 "#START %zu\n",
 			 digest_start );
 
 	fprintf( f,
-			 "#SIZE %lu",
+			 "#SIZE %zu",
 			 digest_end - digest_start );
 }
 
@@ -711,12 +711,12 @@ void DataLibReader::parseDigest()
 
 	size_t size;
 	sscanf( line_size,
-			"#SIZE %lu",
+			"#SIZE %zu",
 			&size );
 
 	size_t start;
 	sscanf( line_start,
-			"#START %lu",
+			"#START %zu",
 			&start );
 
 	// ---
@@ -739,7 +739,7 @@ void DataLibReader::parseDigest()
 	// --- number of tables
 	size_t ntables;
 	sscanf( digest,
-			"#TABLES %lu",
+			"#TABLES %zu",
 			&ntables );
 
 	// --- table info
@@ -752,7 +752,7 @@ void DataLibReader::parseDigest()
 		__Table table;
 
 		sscanf( line,
-				"# %s %lu %lu %lu %lu",
+				"# %s %zu %zu %zu %zu",
 				name, &table.offset, &table.data, &table.nrows, &table.rowlen );
 
 		table.name = name;

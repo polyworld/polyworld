@@ -194,7 +194,7 @@ public:
         char writebuf[1024*8];
         sprintf(writebuf, "<expr>\n%s\n</expr>\n", expr.c_str());
         size_t writelen = strlen(writebuf);
-        REQUIRE( writelen == write(writebuf, writelen) );
+        REQUIRE( ssize_t(writelen) == write(writebuf, writelen) );
 
         char success;
         REQUIRE( 1 == read(&success, 1) );
@@ -206,7 +206,7 @@ public:
         size_t readlen = (size_t)atoi(readlen_str);
         
         REQUIRE( readlen < result_size );
-        REQUIRE( readlen == read(result, readlen) );
+        REQUIRE( ssize_t(readlen) == read(result, readlen) );
         result[readlen] = '\0';
 
         return success == 'S';

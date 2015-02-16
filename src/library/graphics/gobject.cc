@@ -14,8 +14,6 @@
 
 using namespace std;
 
-#pragma mark -
-
 gobject::gobject()
 {
 	init();

@@ -41,7 +41,7 @@ Identifier::Identifier( int index )
 Identifier::Identifier( size_t index )
 {
 	char buf[32];
-	sprintf( buf, "%lu", index );
+	sprintf( buf, "%zu", index );
 	_name = buf;
 }
 

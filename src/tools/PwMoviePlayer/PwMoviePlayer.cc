@@ -106,7 +106,7 @@ PMPApp::PMPApp(int &argc, char** argv) : QApplication(argc, argv)
 					if( movieFileName )
 						strcpy( movieFileName, argv[arg] );
 					else
-						fprintf( stderr, "Unable to allocate %z bytes of memory for movieFileName\n", strlen( argv[arg] ) + 1 );
+						fprintf( stderr, "Unable to allocate %zu bytes of memory for movieFileName\n", strlen( argv[arg] ) + 1 );
 					break;
 
 				case 'l':
@@ -118,7 +118,7 @@ PMPApp::PMPApp(int &argc, char** argv) : QApplication(argc, argv)
 //						printf( "legendFileName = %s\n", legendFileName );
 					}
 					else
-						fprintf( stderr, "Unable to allocate %lu bytes of memory for legendFileName\n", strlen( argv[arg] ) + 1 );
+						fprintf( stderr, "Unable to allocate %zu bytes of memory for legendFileName\n", strlen( argv[arg] ) + 1 );
 					break;
 
 				case 's':
@@ -206,7 +206,7 @@ PMPApp::PMPApp(int &argc, char** argv) : QApplication(argc, argv)
 				}
 				else
 				{
-					fprintf( stderr, "Unable to allocate %lu bytes of memory for legend\n", (MaxLegendLines+1) * sizeof( char* ) );
+					fprintf( stderr, "Unable to allocate %zu bytes of memory for legend\n", (MaxLegendLines+1) * sizeof( char* ) );
 				}
 			}
 			else

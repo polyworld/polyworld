@@ -29,12 +29,7 @@ static float initminweight = 0.0; // could read this in
 	ALLOC_STACK_BUFFER( eeremainder, float );							\
 	ALLOC_STACK_BUFFER( eiremainder, float );							\
 	ALLOC_STACK_BUFFER( iiremainder, float );							\
-	ALLOC_STACK_BUFFER( ieremainder, float );							\
-	__ALLOC_STACK_BUFFER( neurused,										\
-						  bool,											\
-						  max(GroupsBrain::config.maxeneurpergroup,		\
-							  GroupsBrain::config.maxineurpergroup) )
-
+	ALLOC_STACK_BUFFER( ieremainder, float )
 
 GroupsBrain::Configuration GroupsBrain::config;
 

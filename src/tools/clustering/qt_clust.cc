@@ -716,7 +716,7 @@ void load_genome( AgentId id, unsigned char *genome ) {
 	}
 
 	errif( (nread == 0) || (nread >= sizeof(buf)),
-		   "Unreasonable number of bytes read: %lu\n", nread );
+		   "Unreasonable number of bytes read: %zu\n", nread );
 
 	size_t i = 0;
 	int igene = 0;
@@ -1987,7 +1987,7 @@ void create_centroids( float **distance_deltaCache,
 // --------------------------------------------------------------------------------
 void write_members( FILE *f, Cluster *cluster ) {
 	if( !cluster->members.empty() ) {
-		fprintf( f, "cluster %d (%lu elts) : ", cluster->id, cluster->members.size() );
+		fprintf( f, "cluster %d (%zu elts) : ", cluster->id, cluster->members.size() );
 
 		itfor( AgentIdVector, cluster->members, it ) {
 			fprintf( f, "%d ", *it );
@@ -2003,7 +2003,7 @@ void write_members( FILE *f, Cluster *cluster ) {
 // --------------------------------------------------------------------------------
 void write_neighbors( FILE *f, Cluster *cluster ) {
 	if( !cluster->neighbors.empty() ) {
-		fprintf( f, "cluster %d (%lu elts) : ", cluster->id, cluster->neighbors.size() );
+		fprintf( f, "cluster %d (%zu elts) : ", cluster->id, cluster->neighbors.size() );
 
 		itfor( AgentIdVector, cluster->neighbors, it ) {
 			fprintf( f, "%d ", *it );
@@ -2025,7 +2025,7 @@ void write_members_and_neighbors( FILE *f, Cluster *cluster ) {
 			   cluster->neighbors.begin(), cluster->neighbors.end(),
 			   all.begin() );
 		
-		fprintf( f, "cluster %d (%lu elts) : ", cluster->id, all.size() );
+		fprintf( f, "cluster %d (%zu elts) : ", cluster->id, all.size() );
 		itfor( AgentIdVector, all, it ) {
 			fprintf( f, "%d ", *it );
 		}
@@ -2215,7 +2215,7 @@ AgentIdVector *create_candidate_cluster( float **distanceCache,
 
 	AgentIndexVector *result = partition->createAgentIdVector( clusterAgents, numClusterAgents );
 
-	if (DEBUG) printf("%dC | (len %lu)\n", startAgent, result->size());
+	if (DEBUG) printf("%dC | (len %zu)\n", startAgent, result->size());
 
 	return result;
 }
@@ -2583,7 +2583,7 @@ void find_neighbors( GeneDistanceDeltaCache *distance_deltaCache,
 		// --- Eliminate neighbor candidates that violate THRESH with other candidates.
 		// ---
 		if( clusterNeighborCandidates.size() > 1000 ) {
-			printf("  cluster %d neighbor_candidates=%lu\n", cluster->id, clusterNeighborCandidates.size() );
+			printf("  cluster %d neighbor_candidates=%zu\n", cluster->id, clusterNeighborCandidates.size() );
 		}
 		switch( cliParms.neighborAlgorithm ) {
 		case CliParms::NA_MEASURE_MEMBERS:
@@ -2627,7 +2627,7 @@ void find_neighbors( GeneDistanceDeltaCache *distance_deltaCache,
 #endif
 
 	printf( "find neighbors time=%f seconds\n", endTime - startTime );
-	printf( "  %% orphans=%f (%lu/%lu)\n",
+	printf( "  %% orphans=%f (%zu/%zu)\n",
 			float(orphans.size()) / neighborPartition->members.size(),
 			orphans.size(),
 			neighborPartition->members.size() );
@@ -2682,7 +2682,7 @@ void compute_clusters() {
 	if( genomeCacheCapacity == -1 ) {
 		genomeCacheCapacity = (int)ids_global->size();
 	}
-	printf( "POPSIZE: %lu\n", ids_global->size() );
+	printf( "POPSIZE: %zu\n", ids_global->size() );
 	GenomeCache genomeCache( genomeCacheCapacity, ids_global );
 	printf( "GENOME CACHE CAPACITY: %d\n", genomeCacheCapacity );
 
@@ -2702,8 +2702,8 @@ void compute_clusters() {
 	// so that its genomes are still in the genome cache for creating the distance cache.
 	partitions.push_back( clusterPartition );
 
-	printf( "NUM CLUSTERED AGENTS: %lu\n", clusterPartition->members.size() );
-	printf( "NUM NEIGHBORED AGENTS: %lu\n", neighborPartition->members.size() );
+	printf( "NUM CLUSTERED AGENTS: %zu\n", clusterPartition->members.size() );
+	printf( "NUM NEIGHBORED AGENTS: %zu\n", neighborPartition->members.size() );
 
 	if( genomeCacheCapacity < (int)clusterPartition->members.size() ) {
 		cerr << "Warning! GenomeCacheCapacity (-g) is less than number of clustered agents. Execution time will be poor." << endl;
@@ -3229,7 +3229,7 @@ void util__checkThresh( const char *subdir ) {
 				}
 			}
 
-			printf( "\t%d (n=%lu): Nd=%d Nd>THRESH=%d (%.2f%%)\n",
+			printf( "\t%d (n=%zu): Nd=%d Nd>THRESH=%d (%.2f%%)\n",
 					cluster->id, cluster->members.size(),
 					total, nexceedThresh, 100.0f * nexceedThresh / total );
 		}
@@ -3501,7 +3501,7 @@ void util__metabolism( const char *subdir ) {
 		Cluster *cluster = clusters[i];
 		GeneStdDev2Calculator calc;
 
-		fprintf( f, "cluster %2d (n=%6lu): ", cluster->id, cluster->members.size() );
+		fprintf( f, "cluster %2d (n=%6zu): ", cluster->id, cluster->members.size() );
 
 		int count[nmetabolisms];
 		memset( count, 0, sizeof(count) );
@@ -3658,7 +3658,7 @@ void util__ancestry( const char *subdir ) {
 		ClusterInfo &clusterInfo = it_cluster->second;
 
 		if( clusterInfo.nmembers > 500 ) {
-			fprintf( f,"cluster %d (n=%lu): T=[%d,%d]\n",
+			fprintf( f,"cluster %d (n=%zu): T=[%d,%d]\n",
 					 clusterId, clusterInfo.nmembers, clusterInfo.timeRange.start, clusterInfo.timeRange.end );
 
 			typedef vector<pair<AncestorClusterIds,AncestorInfo> > AncestorInfoVector;

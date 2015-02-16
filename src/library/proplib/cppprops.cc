@@ -70,17 +70,17 @@ void CppProperties::init( Document *doc, UpdateContext *context )
     SYSTEM("cp " PWHOME "/etc/bld/cppprops.mak " GENDIR "/Makefile && export conf=" PWHOME "/Makefile.conf && make -C " GENDIR);
 
 	void *libHandle = dlopen( GENLIB, RTLD_LAZY );
-	errif( !libHandle, "Failed opening " GENLIB );
+	ERRIF( !libHandle, "Failed opening " GENLIB );
 
 	typedef void (*LibraryInit)( UpdateContext *context );
 	LibraryInit init = (LibraryInit)dlsym( libHandle, "__clink__CppProperties_Init" );
-	errif( dlerror() != NULL, dlerror() );
+	ERRIF( dlerror() != NULL, "%s", dlerror() );
 
 	_update = (LibraryUpdate)dlsym( libHandle, "__clink__CppProperties_Update" );
-	errif( dlerror() != NULL, dlerror() );
+	ERRIF( dlerror() != NULL, "%s", dlerror() );
 
 	_getMetadata = (LibraryGetMetadata)dlsym( libHandle, "__clink__CppProperties_GetMetadata" );
-	errif( dlerror() != NULL, dlerror() );
+	ERRIF( dlerror() != NULL, "%s", dlerror() );
 
 	init( context );
 }
