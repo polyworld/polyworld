@@ -32,3 +32,4 @@ qt_clust:
 
 clean:
 	rm -rf ${PWBLD}
+	rm -f ${APP_TARGET}

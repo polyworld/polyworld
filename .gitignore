@@ -1,18 +1,13 @@
-/bld/
 lib/
 bin/
 run*/
+.bld/
 *.pyc
 Polyworld
-Polyworld-app
 Polyworld.app
 .DS_Store
 *.diff
 *.patch
 *.eps
 .gdb_history
-/*.wf
 
-# Legacy build
-.bld
-.sconsign.dblite
