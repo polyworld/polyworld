@@ -12,9 +12,8 @@
 #include <fstream>
 
 #include "brainfunction.h"
-#include "Events.h"
-
 #include "main.h"
+#include "utils/Events.h"
 
 using namespace std;
 

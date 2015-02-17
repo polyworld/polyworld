@@ -6,7 +6,7 @@
 
 #include <gsl/gsl_matrix.h>
 
-#include "Events.h"
+#include "utils/Events.h"
 
 struct CalcComplexity_brainfunction_parms
 {

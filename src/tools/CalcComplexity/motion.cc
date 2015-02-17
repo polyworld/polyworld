@@ -6,12 +6,12 @@
 #include <iostream>
 #include <string>
 
+#include "main.h"
 #include "motion.h"
 
-#include "complexity_motion.h"
-#include "datalib.h"
-#include "main.h"
-#include "misc.h"
+#include "complexity/complexity_motion.h"
+#include "utils/datalib.h"
+#include "utils/misc.h"
 
 using namespace std;
 
