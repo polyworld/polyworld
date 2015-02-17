@@ -108,7 +108,11 @@ def main():
     # Create final configuration
     #
     generate_conf(config)
-    
+
+    #
+    # Let user know we're done
+    #
+    print 'Configure complete.'
 
 ######################################################################
 #
