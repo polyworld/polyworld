@@ -10,7 +10,6 @@
 #include <math.h>
 #include <string.h>
 #include "readline.h"
-#include <omp.h>
 #include <unistd.h>
 #include <zlib.h>
 #include <sys/stat.h>

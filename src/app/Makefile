@@ -23,15 +23,17 @@ qt_build: ${qt_makefile}
 
 # Generate a makefile from the Qt project file
 ${qt_makefile}: ${qt_project}
-	qmake -o ${qt_makefile} ${qt_project}
+	${QMAKE} -o ${qt_makefile} ${qt_project}
 	$(call FIXUP_QT_MAKEFILE,$@)
 
 # Generate the Qt project file
 ${qt_project}:
 	@rm -f $@
 	@echo "CONFIG += qt" >> $@
+	@echo "CONFIG -= app_bundle" >> $@
 	@echo "QT = ${qt_modules}" >> $@
 	@echo "QMAKE_CXX=${CXX}" >> $@
+	@echo "QMAKE_LINK=${LD}" >> $@
 	@echo "QMAKE_CXXFLAGS += ${cxxflags}" >> $@
 	@echo "DEPENDPATH += ${LIBRARY_SRC}" >> $@
 	@echo "DEPENDPATH += ${QTRENDERER_SRC}" >> $@

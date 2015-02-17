@@ -17,7 +17,7 @@ Conf='Makefile.conf'
 Supported_OSes = ['linux', 'darwin']
 Supported_OSes_display = ','.join(Supported_OSes)
 
-Supported_Toolchains = ['clang', 'gcc']
+Supported_Toolchains = ['gcc', 'llvm']
 Supported_Toolchains_display = ','.join(Supported_Toolchains)
 
 Default_CXX = {'linux': 'g++',
@@ -79,7 +79,7 @@ def main():
         sys.exit('Cannot locate compiler')
     
     if 'clang' in config['cxx']:
-        config['toolchain'] = 'clang'
+        config['toolchain'] = 'llvm'
     else:
         config['toolchain'] = 'gcc'
     print 'Toolchain:', config['toolchain']
