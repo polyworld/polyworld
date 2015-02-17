@@ -10,7 +10,7 @@ target=${CPPPROPS_TARGET}
 blddir=${CPPPROPS_BLDDIR}
 
 cxxflags=${CXXFLAGS} ${LIBRARY_CXXFLAGS} ${OPENGL_CXXFLAGS} -Wno-unused-variable
-ldflags=${SHARED_LDFLAGS}
+ldflags=${SHARED_LDFLAGS} ${PWLIB_LDFLAGS}
 libs=${LIBRARY_LIBS}
 
 sources=$(shell find . -name "*.cc")

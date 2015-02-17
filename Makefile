@@ -36,4 +36,6 @@ omp_test:
 
 clean:
 	rm -rf ${PWBLD}
+	rm -rf ${PWLIB}
+	rm -rf ${PWBIN}
 	rm -f ${APP_TARGET}
