@@ -44,6 +44,9 @@ def main():
     parser.add_argument('-c', '--cxx',
                         nargs = 1,
                         help = "specify compiler with optional path (e.g. clang++, /usr/bin/g++-4.9)")
+    parser.add_argument('-q', '--qmake',
+                        nargs = 1,
+                        help = "specify qmake with optional path (e.g. qmake, /usr/bin/qmake)")
     parser.add_argument('--toolchain',
                         nargs = 1,
                         help = "specify toolchain ("+Supported_Toolchains_display+")")
@@ -83,6 +86,17 @@ def main():
     else:
         config['toolchain'] = 'gcc'
     print 'Toolchain:', config['toolchain']
+
+    #
+    # Verify qmake
+    #
+    if not config['qmake']:
+        config['qmake'] = 'qmake'
+    else:
+        config['qmake'] = config['qmake'][0]
+    if not check_exit('which '+config['qmake']):
+        sys.exit('Cannot locate qmake')
+    print 'QMake:', config['qmake']
     
     #
     # Determine optimization level
@@ -93,7 +107,7 @@ def main():
     #
     # Create speculative conf and clean
     #
-    config['omp'] = 'omp'
+    config['omp'] = True
     generate_conf(config)
     if not check_exit('make clean'):
         sys.stderr.write("Warning! Encountered errors when cleaning build environment!\n")
@@ -102,8 +116,8 @@ def main():
     # Check OpenMP support
     #
     if not check_exit('make omp_test'):
-        config['omp'] = 'no-omp'
-    print 'OpenMP Supported:', config['omp'] == 'omp'
+        config['omp'] = False
+    print 'OpenMP Supported:', config['omp']
     
     #
     # Create final configuration
@@ -137,12 +151,14 @@ def generate_conf(config):
     f = open( os.path.join(pwhome, Conf), 'w' )
 
     f.write( 'PWHOME = %s\n' % pwhome )
+    f.write( 'PWOS = %s\n' % config['os'] )
+    f.write( 'PWTOOLCHAIN = %s\n' % config['toolchain'] )
+    f.write( 'PWOMP = %s\n' % config['omp'] )
+    f.write( 'PWOPT = %s\n' % config['optimization'] )
+    f.write( 'PWQMAKE = %s\n' % config['qmake'] )
+    f.write( 'CXX = %s\n' % config['cxx'] )
     
-    confs = [config['os'], config['toolchain'], config['optimization'], config['omp'], 'common']
-    for conf in confs:
-        f.write('include ${PWHOME}/etc/bld/Makefile.%s.conf\n' % conf)
-    
-    f.write('CXX = %s\n' % config['cxx'])
+    f.write( 'include ${PWHOME}/etc/bld/Makefile.conf\n' )
 
     f.close()
 
