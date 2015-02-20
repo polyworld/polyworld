@@ -1,0 +1,14 @@
+lib/
+bin/
+run*/
+.bld/
+/Makefile.conf
+*.pyc
+Polyworld
+Polyworld.app
+.DS_Store
+*.diff
+*.patch
+*.eps
+.gdb_history
+
