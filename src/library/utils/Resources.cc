@@ -10,7 +10,7 @@
 using namespace std;
 
 static const char *RPATH[] = {"./Polyworld.app/Contents/Resources/",
-							  "./objects/",
+							  "./etc/objects/",
 							  "./",
 							  NULL};
 
