@@ -1,0 +1,17 @@
+@version 2
+
+RecordFrequency 100
+RecordAll True
+
+MaxSteps 301
+
+MinAgents 50
+MaxAgents 75
+InitAgents MaxAgents
+
+MinFood 10
+MaxFood 30
+
+MaxInternalNeuralGroups 5
+
+WorldSize 25
