@@ -199,7 +199,7 @@ void SchemaDocument::normalizeObject( ObjectProperty &objectSchema, ObjectProper
 void SchemaDocument::normalizeArray( ObjectProperty &propertySchema, ArrayProperty &propertyValue )
 {
 	Property &elementSchema_ = propertySchema.get( "element" );
-	if( !elementSchema_.getType() == Node::Object )
+	if( elementSchema_.getType() != Node::Object )
 		elementSchema_.err( "Illegal schema. 'element' should be an Object." );
 
 	ObjectProperty &elementSchema = dynamic_cast<ObjectProperty &>(elementSchema_);
@@ -268,26 +268,28 @@ void SchemaDocument::validateScalar( ObjectProperty &schema, Property &value )
 {
 	string type = schema.get( "type" );
 
+#define __test_cast(TYPE) TYPE __unused __attribute__((unused)) = (TYPE)value;
 	if( type == "Int" )
 	{
-		(int)value;
+        __test_cast(int);
 	}
 	else if( type == "Float" )
 	{
-		(float)value;
+        __test_cast(float);
 	}
 	else if( type == "Bool" )
 	{
-		(bool)value;
+        __test_cast(bool);
 	}
 	else if( type == "String" )
 	{
-		(string)value;
+        __test_cast(string);
 	}
 	else
 	{
 		schema.get("type").err( "Invalid scalar type." );
 	}
+#undef __test_cast
 
 	itfor( PropertyMap, schema.props(), it )
 	{
