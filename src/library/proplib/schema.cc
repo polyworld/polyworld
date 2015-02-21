@@ -268,7 +268,7 @@ void SchemaDocument::validateScalar( ObjectProperty &schema, Property &value )
 {
 	string type = schema.get( "type" );
 
-#define __test_cast(TYPE) TYPE __unused __attribute__((unused)) = (TYPE)value;
+#define __test_cast(TYPE) TYPE unused __attribute__((unused)); unused = (TYPE)value;
 	if( type == "Int" )
 	{
         __test_cast(int);
