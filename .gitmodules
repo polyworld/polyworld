@@ -1,0 +1,3 @@
+[submodule "docs/wiki/md"]
+	path = docs/wiki/md
+	url = https://github.com/polyworld/polyworld.wiki.git

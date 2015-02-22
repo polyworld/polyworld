@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+set -e
+
+. $(dirname $0)/__util
+
+check_pwd
+cd ${MD_DIR}
+git pull origin master
