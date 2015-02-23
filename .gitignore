@@ -2,6 +2,9 @@ lib/
 bin/
 run*/
 .bld/
+tmp/
+.tmp/
+/docs/wiki/html
 /Makefile.conf
 *.pyc
 Polyworld

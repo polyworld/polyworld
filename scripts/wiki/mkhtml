@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+
+set -e
+
+. $(dirname $0)/__util
+
+if [ "$1" == "-d" ]; then
+    $(dirname $0)/download
+    shift
+else
+    check_pwd
+fi
+
+if [ ! -d ${FLAVOR_DIR} ]; then
+    echo "Downloading converter."
+    mkdir -p $(dirname ${FLAVOR_DIR})
+    git clone ${FLAVOR_REPO} ${FLAVOR_DIR}
+fi
+
+rm -rf ${HTML_DIR}
+mkdir -p ${HTML_DIR}
+
+for md in ${MD_DIR}/*.md; do
+    html="${HTML_DIR}/$(basename ${md%.md})"
+    echo "Converting $md into $html"
+    ruby ${FLAVOR_DIR}/flavor.rb $md > $html
+done
+
+echo "Conversion complete."

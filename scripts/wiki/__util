@@ -1,0 +1,22 @@
+function err() {
+    echo "$@" >&2
+    exit 1
+}
+
+PWHOME=${PWD}
+DOC_DIR=docs
+SRC_DIR=src
+WIKI_DIR=${DOC_DIR}/wiki
+MD_DIR=${WIKI_DIR}/md
+HTML_DIR=${WIKI_DIR}/html
+TMP_DIR=${WIKI_DIR}/.tmp
+FLAVOR_DIR=${TMP_DIR}/flavor
+
+WIKI_REPO=https://github.com/polyworld/polyworld.wiki.git
+FLAVOR_REPO=https://gist.github.com/sean-dougherty/2f40e8939eb556cac9eb
+
+function check_pwd() {
+    if [ ! -d ${DOC_DIR} ] || [ ! -d ${SRC_DIR} ]; then
+        err "Expecting to be in project home."
+    fi
+}
