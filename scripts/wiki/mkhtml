@@ -4,11 +4,12 @@ set -e
 
 . $(dirname $0)/__util
 
-if [ "$1" == "-d" ]; then
-    $(dirname $0)/download
-    shift
-else
-    check_pwd
+check_pwd
+
+if ! is_wiki_downloaded; then
+    err -e "Error: Wiki is not present in local repo.\n"\
+           "To download the wiki for this branch, execute './scripts/wiki/checkout'\n"\
+           "To download the latest wiki version, execute  './scripts/wiki/pull'"
 fi
 
 if [ ! -d ${FLAVOR_DIR} ]; then

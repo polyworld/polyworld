@@ -7,3 +7,5 @@ set -e
 check_pwd
 cd ${MD_DIR}
 git pull origin master
+
+remove_html
