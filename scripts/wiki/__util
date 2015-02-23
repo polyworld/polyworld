@@ -20,3 +20,14 @@ function check_pwd() {
         err "Expecting to be in project home."
     fi
 }
+
+function is_wiki_downloaded() {
+    test -f ${MD_DIR}/Home.md || return 1
+}
+
+function remove_html() {
+    if [ -d ${HTML_DIR} ]; then
+        echo "Removing old html conversion."
+        rm -rf ${HTML_DIR}
+    fi
+}
