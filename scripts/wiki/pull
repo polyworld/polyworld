@@ -5,7 +5,6 @@ set -e
 . $(dirname $0)/__util
 
 check_pwd
-cd ${MD_DIR}
-git pull origin master
+git subtree pull --prefix ${MD_DIR} ${WIKI_REPO} master --squash
 
 remove_html
