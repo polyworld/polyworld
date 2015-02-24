@@ -11,12 +11,12 @@
 #include <stdio.h>
 
 // Local
-#include "error.h"
 #include "glight.h"
 #include "gmisc.h"
 #include "graphics.h"
-#include "misc.h"
-#include "objectlist.h"
+#include "utils/error.h"
+#include "utils/misc.h"
+#include "utils/objectlist.h"
 
 // Self
 #include "gstage.h"

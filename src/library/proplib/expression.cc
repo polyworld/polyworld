@@ -4,8 +4,8 @@
 
 #include <sstream>
 
-#include "misc.h"
 #include "parser.h"
+#include "utils/misc.h"
 
 using namespace std;
 using namespace proplib;

@@ -2,7 +2,7 @@
 
 #include <assert.h>
 
-#include "misc.h"
+#include "utils/misc.h"
 
 using namespace std;
 

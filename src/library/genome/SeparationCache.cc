@@ -1,7 +1,7 @@
 #include "SeparationCache.h"
 
-#include "agent.h"
-#include "datalib.h"
+#include "agent/agent.h"
+#include "utils/datalib.h"
 
 using namespace std;
 

@@ -13,7 +13,7 @@
 #include <stdio.h>
 
 // Local
-#include "graphics.h"
+#include "graphics/graphics.h"
 
 // Self
 #include "error.h"

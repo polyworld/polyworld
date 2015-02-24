@@ -7,15 +7,15 @@
 #include <iostream>
 #include <mutex>
 
-#include "adami.h"
-#include "agent.h"
-#include "datalib.h"
-#include "GenomeUtil.h"
-#include "globals.h"
-#include "misc.h"
-#include "proplib.h"
-#include "SeparationCache.h"
-#include "Simulation.h"
+#include "agent/agent.h"
+#include "complexity/adami.h"
+#include "genome/GenomeUtil.h"
+#include "genome/SeparationCache.h"
+#include "proplib/proplib.h"
+#include "sim/globals.h"
+#include "sim/Simulation.h"
+#include "utils/datalib.h"
+#include "utils/misc.h"
 
 using namespace datalib;
 using namespace genome;

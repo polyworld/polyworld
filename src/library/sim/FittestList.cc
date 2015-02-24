@@ -1,7 +1,7 @@
 #include "FittestList.h"
 
-#include "agent.h"
-#include "GenomeUtil.h"
+#include "agent/agent.h"
+#include "genome/GenomeUtil.h"
 
 using namespace genome;
 using namespace std;

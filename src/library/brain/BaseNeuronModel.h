@@ -6,12 +6,12 @@
 #include <string.h>
 #include <strings.h>
 
-#include "AbstractFile.h"
 #include "Brain.h"
-#include "globals.h"
-#include "misc.h"
 #include "NervousSystem.h"
 #include "NeuronModel.h"
+#include "sim/globals.h"
+#include "utils/AbstractFile.h"
+#include "utils/misc.h"
 
 template <typename T_neuron, typename T_neuronattrs, typename T_synapse>
 class BaseNeuronModel : public NeuronModel

@@ -1,7 +1,7 @@
 #include "overlay.h"
 
 #include "editor.h"
-#include "misc.h"
+#include "utils/misc.h"
 
 
 using namespace std;

@@ -12,13 +12,13 @@
 #include "debug.h"
 
 // Local
-#include "agent.h"
-#include "barrier.h"
-#include "error.h"
-#include "gpolygon.h"
-#include "graphics.h"
-#include "misc.h"
 #include "Simulation.h"
+#include "agent/agent.h"
+#include "environment/barrier.h"
+#include "graphics/gpolygon.h"
+#include "graphics/graphics.h"
+#include "utils/error.h"
+#include "utils/misc.h"
 
 #define DEBUGCHECK_SPECIFICS 1
 

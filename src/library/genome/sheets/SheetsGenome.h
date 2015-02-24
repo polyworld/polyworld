@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Genome.h"
+#include "genome/Genome.h"
 
 namespace genome
 {

@@ -13,16 +13,16 @@
 #include <sys/stat.h>
 
 // Local
-#include "AbstractFile.h"
-#include "agent.h"
-#include "debug.h"
-#include "globals.h"
-#include "GroupsBrain.h"
-#include "misc.h"
 #include "NervousSystem.h"
 #include "NeuronModel.h"
-#include "SheetsBrain.h"
-#include "Simulation.h"
+#include "agent/agent.h"
+#include "brain/groups/GroupsBrain.h"
+#include "brain/sheets/SheetsBrain.h"
+#include "sim/debug.h"
+#include "sim/globals.h"
+#include "sim/Simulation.h"
+#include "utils/AbstractFile.h"
+#include "utils/misc.h"
 
 using namespace genome;
 

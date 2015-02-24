@@ -7,12 +7,12 @@
 #include <ostream>
 
 // Local
-#include "agent.h"
-#include "globals.h"
-#include "graphics.h"
 #include "food.h"
-#include "distributions.h"
-#include "Simulation.h"
+#include "agent/agent.h"
+#include "graphics/graphics.h"
+#include "sim/globals.h"
+#include "sim/Simulation.h"
+#include "utils/distributions.h"
 
 
 using namespace std;

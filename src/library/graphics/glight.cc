@@ -8,11 +8,11 @@
 #include "glight.h"
 
 // Local
-#include "globals.h"
 #include "gobject.h"
 #include "graphics.h"
-#include "indexlist.h"
-#include "misc.h"
+#include "sim/globals.h"
+#include "utils/indexlist.h"
+#include "utils/misc.h"
 
 using namespace std;
 

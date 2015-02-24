@@ -2,11 +2,11 @@
 
 #include <assert.h>
 
-#include "FiringRateModel.h"
-#include "misc.h"
-#include "NervousSystem.h"
-#include "SheetsGenome.h"
-#include "SpikingModel.h"
+#include "brain/FiringRateModel.h"
+#include "brain/NervousSystem.h"
+#include "brain/SpikingModel.h"
+#include "genome/sheets/SheetsGenome.h"
+#include "utils/misc.h"
 
 using namespace genome;
 using namespace sheets;

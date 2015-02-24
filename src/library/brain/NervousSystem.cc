@@ -3,12 +3,12 @@
 #include <assert.h>
 #include <string.h>
 
-#include "AbstractFile.h"
 #include "Brain.h"
-#include "Genome.h"
-#include "misc.h"
 #include "Nerve.h"
-#include "RandomNumberGenerator.h"
+#include "genome/Genome.h"
+#include "utils/AbstractFile.h"
+#include "utils/RandomNumberGenerator.h"
+#include "utils/misc.h"
 
 using namespace genome;
 

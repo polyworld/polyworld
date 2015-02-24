@@ -8,9 +8,9 @@
 #include <stdlib.h>
 
 // Local
-#include "globals.h"
 #include "gmisc.h"
-#include "misc.h"
+#include "sim/globals.h"
+#include "utils/misc.h"
 
 using namespace std;
 

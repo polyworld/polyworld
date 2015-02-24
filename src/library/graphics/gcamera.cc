@@ -15,8 +15,8 @@
 #include <stdlib.h>
 
 // Local
-#include "misc.h"
 #include "graphics.h"
+#include "utils/misc.h"
 
 using namespace std;
 

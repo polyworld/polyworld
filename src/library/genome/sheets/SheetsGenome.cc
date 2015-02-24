@@ -2,8 +2,8 @@
 
 #include <iostream>
 
-#include "SheetsBrain.h"
 #include "SheetsGenomeSchema.h"
+#include "brain/sheets/SheetsBrain.h"
 
 using namespace std;
 using namespace genome;

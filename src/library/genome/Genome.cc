@@ -4,9 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "AbstractFile.h"
 #include "GenomeLayout.h"
-#include "misc.h"
+#include "utils/AbstractFile.h"
+#include "utils/misc.h"
 
 
 #ifdef __ALTIVEC__

@@ -13,10 +13,10 @@
 
 // Local
 #include "glight.h"
-#include "globals.h"
 #include "gobject.h"
 #include "graphics.h"
-#include "misc.h"
+#include "sim/globals.h"
+#include "utils/misc.h"
 
 // Self
 #include "gmisc.h"

@@ -4,8 +4,8 @@
 #include <stdio.h>
 
 #include "MovieRecorder.h"
-#include "PwMovieUtils.h"
 #include "SceneRenderer.h"
+#include "utils/PwMovieUtils.h"
 
 
 SceneMovieController::SceneMovieController( SceneRenderer *_renderer,

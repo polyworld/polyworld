@@ -1,6 +1,6 @@
 #include "state.h"
 
-#include "Simulation.h"
+#include "sim/Simulation.h"
 
 using namespace std;
 using namespace proplib;

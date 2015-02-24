@@ -9,10 +9,10 @@
 #include "editor.h"
 #include "expression.h"
 #include "interpreter.h"
-#include "misc.h"
 #include "overlay.h"
 #include "parser.h"
 #include "schema.h"
+#include "utils/misc.h"
 
 
 using namespace std;

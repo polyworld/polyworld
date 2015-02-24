@@ -1,7 +1,7 @@
 #include "GeneStats.h"
 
-#include "GenomeUtil.h"
-#include "objectxsortedlist.h"
+#include "genome/GenomeUtil.h"
+#include "utils/objectxsortedlist.h"
 
 using namespace genome;
 

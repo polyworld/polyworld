@@ -3,8 +3,8 @@
 #include <assert.h>
 
 #include "agent.h"
-#include "NervousSystem.h"
-#include "RandomNumberGenerator.h"
+#include "brain/NervousSystem.h"
+#include "utils/RandomNumberGenerator.h"
 
 #define DISABLE_PROPRIOCEPTION false
 

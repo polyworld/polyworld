@@ -1,7 +1,7 @@
 #include "simtypes.h"
 
-#include "agent.h"
 #include "simconst.h"
+#include "agent/agent.h"
 
 using namespace sim;
 

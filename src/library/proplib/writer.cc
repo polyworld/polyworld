@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "dom.h"
-#include "misc.h"
+#include "utils/misc.h"
 
 using namespace std;
 using namespace proplib;

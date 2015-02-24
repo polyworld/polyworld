@@ -1,14 +1,14 @@
 #include "GroupsBrain.h"
 
-#include "agent.h"
-#include "error.h"
-#include "FiringRateModel.h"
-#include "globals.h"
-#include "GroupsGenome.h"
 #include "GroupsNeuralNetRenderer.h"
-#include "NervousSystem.h"
-#include "RandomNumberGenerator.h"
-#include "SpikingModel.h"
+#include "agent/agent.h"
+#include "brain/FiringRateModel.h"
+#include "brain/NervousSystem.h"
+#include "brain/SpikingModel.h"
+#include "genome/groups/GroupsGenome.h"
+#include "sim/globals.h"
+#include "utils/error.h"
+#include "utils/RandomNumberGenerator.h"
 
 using namespace genome;
 

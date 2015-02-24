@@ -9,7 +9,7 @@
 #include <assert.h>
 
 #include "objectxsortedlist.h"
-#include "agent.h"
+#include "agent/agent.h"
 
 #define DebugCounts 0
 

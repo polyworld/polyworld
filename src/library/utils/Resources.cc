@@ -3,9 +3,9 @@
 #include <string.h>
 
 #include "error.h"
-#include "gpolygon.h"
 #include "misc.h"
-#include "proplib.h"
+#include "graphics/gpolygon.h"
+#include "proplib/proplib.h"
 
 using namespace std;
 

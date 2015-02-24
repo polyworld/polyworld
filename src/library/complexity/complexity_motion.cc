@@ -5,8 +5,8 @@
 #include <map>
 #include <string>
 
-#include "datalib.h"
-#include "misc.h"
+#include "utils/datalib.h"
+#include "utils/misc.h"
 
 
 using namespace std;

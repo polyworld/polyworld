@@ -5,7 +5,7 @@
 #include "Genome.h"
 #include "GenomeLayout.h"
 #include "GenomeSchema.h"
-#include "misc.h"
+#include "utils/misc.h"
 
 using namespace genome;
 using namespace std;

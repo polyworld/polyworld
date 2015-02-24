@@ -2,9 +2,9 @@
 
 #include <assert.h>
 
-#include "agent.h"
 #include "AgentTracker.h"
-#include "globals.h"
+#include "agent/agent.h"
+#include "sim/globals.h"
 
 CameraController::CameraController( gcamera &_camera )
 : camera( _camera )

@@ -8,7 +8,7 @@
 // Local
 #include "gmisc.h"
 #include "graphics.h"
-#include "misc.h"
+#include "utils/misc.h"
 
 
 using namespace std;
