@@ -1,16 +1,3 @@
-# Downloading a Local Wiki Snapshot
-To download the wiki state for your local release state:
-```
-./scripts/wiki/checkout
-```
-
-To download the latest online wiki state:
-```
-./scripts/wiki/pull
-```
-
-Note that these scripts will delete any past html conversions of the wiki in your local repo.
-
 # Markdown Contents
 A snapshot of the wiki contents is contained within your local repository at `docs/wiki/md/*.md`, where the content is in the form of Github Flavored Markdown (GFM). The GFM format is plaintext, so it can be viewed from within any text editor. If you do use a text editor to view the GFM, you'll probably want to enable line wrapping.
 
@@ -55,3 +42,14 @@ You should now be able to enter a URL similar to the following in your web brows
 file:///home/fred/polyworld/docs/wiki/html/Home
 ```
 
+# Downloading a Local Wiki Snapshot
+To download the wiki state for your local release state:
+```
+./scripts/wiki/checkout
+```
+
+To download the latest online wiki state:
+```
+./scripts/wiki/pull
+```
+Note that the pull will result in a merge operation, creating a commit. This is mostly intended for admins.
