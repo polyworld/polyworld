@@ -2,13 +2,13 @@
 First, use `git` to download the repository. If you're downloading the official repository, then issue
 the following command in the terminal:
 ```
-git clone --recursive https://github.com/polyworld/polyworld.git
+git clone https://github.com/polyworld/polyworld.git
 ```
 This will create a directory `polyworld` under the directory from which you issued the command.
 
 If you're downloading a developer's forked repository, simply substitute that repository, e.g.:
 ```
-git clone --recursive https://github.com/sean-dougherty/polyworld.git
+git clone https://github.com/sean-dougherty/polyworld.git
 ```
 
 Now, move to the directory containing the source:
