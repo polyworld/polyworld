@@ -6,6 +6,6 @@ set -e
 
 check_pwd
 
-git submodule update ${MD_DIR}
+git checkout ${MD_DIR}
 
 remove_html
