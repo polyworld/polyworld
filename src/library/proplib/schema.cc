@@ -7,8 +7,8 @@
 
 #include "builder.h"
 #include "editor.h"
-#include "misc.h"
 #include "overlay.h"
+#include "utils/misc.h"
 
 using namespace std;
 using namespace proplib;

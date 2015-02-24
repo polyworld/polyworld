@@ -6,9 +6,9 @@
 #include "AgentTracker.h"
 #include "CameraController.h"
 #include "MovieController.h"
-#include "objectxsortedlist.h"
 #include "SceneRenderer.h"
-#include "Simulation.h"
+#include "sim/Simulation.h"
+#include "utils/objectxsortedlist.h"
 
 using namespace std;
 

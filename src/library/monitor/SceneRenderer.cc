@@ -1,7 +1,7 @@
 #include "SceneRenderer.h"
 
 #include "CameraController.h"
-#include "globals.h"
+#include "sim/globals.h"
 
 //===========================================================================
 // SceneRenderer

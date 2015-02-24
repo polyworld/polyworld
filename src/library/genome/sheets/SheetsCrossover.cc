@@ -4,8 +4,8 @@
 
 #include <algorithm>
 
-#include "Gene.h"
-#include "GenomeSchema.h"
+#include "genome/Gene.h"
+#include "genome/GenomeSchema.h"
 
 using namespace genome;
 using namespace std;

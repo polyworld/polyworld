@@ -1,7 +1,8 @@
 #include "complexity_algorithm.h"
-#include "next_combination.h"
 
 #include <iostream>
+
+#include "utils/next_combination.h"
 
 // RescaleCOV and Fix_I can go away, as RescaleCOV should always be off
 // and Fix_I should always be on.  I am only leaving them around for one

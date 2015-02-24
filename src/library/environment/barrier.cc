@@ -13,8 +13,8 @@
 #include <stdlib.h>
 
 // Local
-#include "globals.h"
-#include "graphics.h"
+#include "graphics/graphics.h"
+#include "sim/globals.h"
 
 // barrier globals
 float barrier::gBarrierHeight;

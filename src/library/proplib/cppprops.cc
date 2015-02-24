@@ -11,8 +11,8 @@
 #include "dom.h"
 #include "expression.h"
 #include "interpreter.h"
-#include "misc.h"
 #include "parser.h"
+#include "utils/misc.h"
 
 using namespace proplib;
 using namespace std;

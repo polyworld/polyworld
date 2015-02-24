@@ -1,6 +1,6 @@
 #include "AgentTracker.h"
 
-#include "agent.h"
+#include "agent/agent.h"
 
 using namespace std;
 

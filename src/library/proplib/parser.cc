@@ -5,7 +5,7 @@
 
 #include <sstream>
 
-#include "misc.h"
+#include "utils/misc.h"
 
 using namespace std;
 using namespace proplib;

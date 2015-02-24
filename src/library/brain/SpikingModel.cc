@@ -3,14 +3,13 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#include "debug.h"
-#include "Genome.h"
-#include "GenomeSchema.h"
-#include "misc.h"
 #include "NervousSystem.h"
-#include "RandomNumberGenerator.h"
+#include "genome/Genome.h"
+#include "genome/GenomeSchema.h"
+#include "sim/debug.h"
+#include "utils/misc.h"
+#include "utils/RandomNumberGenerator.h"
 
-#include "Brain.h" // temporary
 
 using namespace std;
 

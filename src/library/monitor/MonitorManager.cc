@@ -5,12 +5,12 @@
 
 #include "AgentTracker.h"
 #include "CameraController.h"
-#include "globals.h"
 #include "Monitor.h"
-#include "proplib.h"
-#include "Resources.h"
 #include "SceneRenderer.h"
-#include "Simulation.h"
+#include "proplib/proplib.h"
+#include "sim/globals.h"
+#include "sim/Simulation.h"
+#include "utils/Resources.h"
 
 
 using namespace std;

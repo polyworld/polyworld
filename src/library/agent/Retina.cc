@@ -4,11 +4,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "AbstractFile.h"
-#include "Brain.h"
-#include "NervousSystem.h"
-#include "RandomNumberGenerator.h"
-#include "Simulation.h"
+#include "brain/Brain.h"
+#include "brain/NervousSystem.h"
+#include "sim/Simulation.h"
+#include "utils/AbstractFile.h"
+#include "utils/RandomNumberGenerator.h"
 
 // SlowVision, if turned on, will cause the vision neurons to slowly
 // integrate what is rendered in front of them into their input neural activation.

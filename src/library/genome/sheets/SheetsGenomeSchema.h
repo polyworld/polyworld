@@ -1,9 +1,9 @@
 #pragma once
 
-#include "GenomeSchema.h"
-#include "proplib.h"
 #include "SheetsCrossover.h"
-#include "SheetsModel.h"
+#include "brain/sheets/SheetsModel.h"
+#include "genome/GenomeSchema.h"
+#include "proplib/proplib.h"
 
 namespace genome
 {

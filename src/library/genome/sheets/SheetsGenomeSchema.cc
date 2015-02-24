@@ -5,9 +5,9 @@
 
 #include <iostream>
 
-#include "agent.h"
-#include "SheetsBrain.h"
 #include "SheetsGenome.h"
+#include "agent/agent.h"
+#include "brain/sheets/SheetsBrain.h"
 
 using namespace std;
 using namespace genome;

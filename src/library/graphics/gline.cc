@@ -8,7 +8,7 @@
 #include <ostream>
 
 // Local
-#include "misc.h"
+#include "utils/misc.h"
 
 using namespace std;
 

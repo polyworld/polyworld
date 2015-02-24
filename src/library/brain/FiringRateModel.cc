@@ -1,11 +1,10 @@
 #include "FiringRateModel.h"
 
-#include "debug.h"
-#include "Genome.h"
-#include "GenomeSchema.h"
-#include "misc.h"
+#include "genome/Genome.h"
+#include "genome/GenomeSchema.h"
+#include "sim/debug.h"
+#include "utils/misc.h"
 
-#include "Brain.h" // temporary
 
 using namespace std;
 

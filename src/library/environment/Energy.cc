@@ -5,9 +5,9 @@
 
 #include <limits>
 
-#include "globals.h"
-#include "misc.h"
-#include "proplib.h"
+#include "proplib/proplib.h"
+#include "sim/globals.h"
+#include "utils/misc.h"
 
 using namespace std;
 

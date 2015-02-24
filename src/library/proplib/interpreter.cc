@@ -7,9 +7,9 @@
 #include <sstream>
 
 #include "dom.h"
-#include "misc.h"
 #include "parser.h"
-#include "Resources.h"
+#include "utils/misc.h"
+#include "utils/Resources.h"
 
 using namespace std;
 using namespace proplib;

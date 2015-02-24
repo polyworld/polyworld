@@ -13,9 +13,9 @@
 #include <ostream>
 
 // Local
-#include "agent.h"
-#include "globals.h"
-#include "graphics.h"
+#include "agent/agent.h"
+#include "graphics/graphics.h"
+#include "sim/globals.h"
 
 
 using namespace std;

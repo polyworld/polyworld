@@ -2,11 +2,11 @@
 #include <map>
 #include <vector>
 
-#include "cppprops.h"
-#include "Energy.h"
 #include "Logger.h"
-#include "misc.h"
-#include "simconst.h"
+#include "environment/Energy.h"
+#include "proplib/cppprops.h"
+#include "utils/misc.h"
+#include "sim/simconst.h"
 
 //===========================================================================
 // Logs

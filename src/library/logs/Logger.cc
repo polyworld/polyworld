@@ -1,19 +1,17 @@
-// todo prune includes
-
 #include "Logger.h"
-#include "Logs.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
 
-#include "AbstractFile.h"
-#include "agent.h"
-#include "datalib.h"
-#include "globals.h"
-#include "misc.h"
-#include "proplib.h"
-#include "Simulation.h"
+#include "Logs.h"
+#include "agent/agent.h"
+#include "proplib/proplib.h"
+#include "sim/globals.h"
+#include "sim/Simulation.h"
+#include "utils/AbstractFile.h"
+#include "utils/datalib.h"
+#include "utils/misc.h"
 
 
 using namespace datalib;

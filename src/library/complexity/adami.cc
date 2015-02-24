@@ -2,9 +2,9 @@
 
 #include <stdio.h>
 
-#include "GenomeUtil.h"
-#include "objectxsortedlist.h"
-#include "Simulation.h"
+#include "genome/GenomeUtil.h"
+#include "sim/Simulation.h"
+#include "utils/objectxsortedlist.h"
 
 using namespace genome;
 

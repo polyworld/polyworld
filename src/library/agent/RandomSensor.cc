@@ -1,7 +1,7 @@
 #include "RandomSensor.h"
 
-#include "NervousSystem.h"
-#include "RandomNumberGenerator.h"
+#include "brain/NervousSystem.h"
+#include "utils/RandomNumberGenerator.h"
 
 RandomSensor::RandomSensor( RandomNumberGenerator *rng )
 {

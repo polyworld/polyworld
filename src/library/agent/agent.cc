@@ -11,31 +11,32 @@
 #include <string.h>
 
 // Local
-#include "AbstractFile.h"
 #include "AgentPovRenderer.h"
-#include "barrier.h"
 #include "BeingCarriedSensor.h"
 #include "CarryingSensor.h"
-#include "datalib.h"
-#include "debug.h"
-#include "food.h"
 #include "EnergySensor.h"
-#include "globals.h"
-#include "GenomeUtil.h"
-#include "graphics.h"
-#include "graybin.h"
-#include "GroupsBrain.h"
-#include "misc.h"
-#include "Logs.h" // tmp include
 #include "MateWaitSensor.h"
 #include "Metabolism.h"
-#include "NervousSystem.h"
-#include "RandomNumberGenerator.h"
 #include "RandomSensor.h"
-#include "Resources.h"
 #include "Retina.h"
-#include "Simulation.h"
 #include "SpeedSensor.h"
+
+#include "brain/NervousSystem.h"
+#include "brain/groups/GroupsBrain.h"
+#include "genome/GenomeUtil.h"
+#include "graphics/graphics.h"
+#include "environment/barrier.h"
+#include "environment/food.h"
+#include "logs/Logs.h"
+#include "sim/debug.h"
+#include "sim/globals.h"
+#include "sim/Simulation.h"
+#include "utils/AbstractFile.h"
+#include "utils/datalib.h"
+#include "utils/graybin.h"
+#include "utils/misc.h"
+#include "utils/RandomNumberGenerator.h"
+#include "utils/Resources.h"
 
 using namespace genome;
 

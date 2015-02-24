@@ -2,16 +2,17 @@
 
 #include <assert.h>
 
-#include "agent.h"
-#include "Brain.h"
 #include "Gene.h"
 #include "GenomeLayout.h"
-#include "globals.h"
-#include "GroupsGenome.h"
-#include "GroupsGenomeSchema.h"
-#include "Metabolism.h"
-#include "misc.h"
-#include "SheetsGenomeSchema.h"
+
+#include "agent/agent.h"
+#include "agent/Metabolism.h"
+#include "brain/Brain.h"
+#include "genome/groups/GroupsGenome.h"
+#include "genome/groups/GroupsGenomeSchema.h"
+#include "genome/sheets/SheetsGenomeSchema.h"
+#include "sim/globals.h"
+#include "utils/misc.h"
 
 using namespace std;
 using namespace genome;

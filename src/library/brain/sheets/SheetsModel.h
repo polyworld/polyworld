@@ -8,8 +8,8 @@
 #include <string>
 #include <vector>
 
-#include "FiringRateModel.h"
-#include "SpikingModel.h"
+#include "brain/FiringRateModel.h"
+#include "brain/SpikingModel.h"
 
 namespace sheets
 {

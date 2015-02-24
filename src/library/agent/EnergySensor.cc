@@ -1,8 +1,8 @@
 #include "EnergySensor.h"
 
 #include "agent.h"
-#include "NervousSystem.h"
-#include "RandomNumberGenerator.h"
+#include "brain/NervousSystem.h"
+#include "utils/RandomNumberGenerator.h"
 
 EnergySensor::EnergySensor( agent *self )
 {

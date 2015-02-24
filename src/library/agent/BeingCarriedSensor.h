@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Sensor.h"
+#include "brain/Sensor.h"
 
 class agent;
 class Nerve;

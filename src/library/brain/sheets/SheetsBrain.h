@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Brain.h"
 #include "SheetsModel.h"
+#include "brain/Brain.h"
 
 namespace genome { class SheetsGenome; }
 

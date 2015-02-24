@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Brain.h"
-#include "NeuronModel.h"
-#include "GroupsSynapseType.h"
+#include "brain/Brain.h"
+#include "brain/NeuronModel.h"
+#include "genome/groups/GroupsSynapseType.h"
 
 namespace genome { class GroupsGenome; }
 

@@ -17,7 +17,7 @@
 #include "gcamera.h"
 #include "graphics.h"
 #include "gstage.h"
-#include "misc.h"
+#include "utils/misc.h"
 
 
 using namespace std;

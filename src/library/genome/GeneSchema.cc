@@ -3,9 +3,9 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#include "agent.h"
-#include "Metabolism.h"
-#include "misc.h"
+#include "agent/agent.h"
+#include "agent/Metabolism.h"
+#include "utils/misc.h"
 
 using namespace genome;
 using namespace std;
