@@ -95,7 +95,7 @@ void GroupsBrain::init()
     config.maxneurgroups = config.maxnoninputneurgroups + config.numinputneurgroups;
     config.maxneurpergroup = config.maxeneurpergroup + config.maxineurpergroup;
     config.maxinternalneurons = config.maxneurpergroup * config.maxinternalneurgroups;
-    config.maxinputneurons = GroupsBrain::config.maxvisneurpergroup * 3 + (numinputneurgroups - 1);
+    config.maxinputneurons = GroupsBrain::config.maxvisneurpergroup * 3 + (numinputneurgroups - 3);
     config.maxnoninputneurons = config.maxinternalneurons + config.numoutneurgroups;
     config.maxneurons = config.maxinternalneurons + config.maxinputneurons + config.numoutneurgroups;
 
