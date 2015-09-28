@@ -553,6 +553,7 @@ Domains {
         type    Float
         default -1.0
         max     1.0
+        cppsym  "$[ancestor].foodRate"
         assert  ( (FoodRate == -1.0) or (FoodRate >= 0.0) )
       }
 
