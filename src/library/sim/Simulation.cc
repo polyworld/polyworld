@@ -850,7 +850,7 @@ void TSimulation::InitAgents()
 				numSeededDomain++;
 			}
 			else
-				c->Genes()->randomize();
+				c->Genes()->randomizeBytes();
 
 			c->setGenomeReady();
 
@@ -930,7 +930,7 @@ void TSimulation::InitAgents()
 			numSeededTotal++;
 		}
 		else
-			c->Genes()->randomize();
+			c->Genes()->randomizeBytes();
 
 		c->setGenomeReady();
 
@@ -2979,7 +2979,7 @@ void TSimulation::CreateAgents( void )
                     else
                     {
                         // otherwise, just generate a random, hopeful monster
-                        newAgent->Genes()->randomize();
+                        newAgent->Genes()->randomizeBytes();
                         fNumberCreatedRandom++;
 						gaPrint( "%5ld: domain %d creation random (%4ld)\n", fStep, id, fNumberCreatedRandom );
                     }
@@ -2987,7 +2987,7 @@ void TSimulation::CreateAgents( void )
                 else
                 {
                     // otherwise, just generate a random, hopeful monster
-                    newAgent->Genes()->randomize();
+                    newAgent->Genes()->randomizeBytes();
                     fNumberCreatedRandom++;
 					gaPrint( "%5ld: domain %d creation random early (%4ld)\n", fStep, id, fNumberCreatedRandom );
                 }
@@ -3081,7 +3081,7 @@ void TSimulation::CreateAgents( void )
                 else
                 {
                     // otherwise, just generate a random, hopeful monster
-                    newAgent->Genes()->randomize();
+                    newAgent->Genes()->randomizeBytes();
                     fNumberCreatedRandom++;
 					gaPrint( "%5ld: global creation random (%4ld)\n", fStep, fNumberCreatedRandom );
                 }
@@ -3089,7 +3089,7 @@ void TSimulation::CreateAgents( void )
             else
             {
                 // otherwise, just generate a random, hopeful monster
-                newAgent->Genes()->randomize();
+                newAgent->Genes()->randomizeBytes();
                 fNumberCreatedRandom++;
 				gaPrint( "%5ld: global creation random early (%4ld)\n", fStep, fNumberCreatedRandom );
             }

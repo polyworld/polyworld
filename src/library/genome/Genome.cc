@@ -141,6 +141,11 @@ void Genome::randomizeBytes( float mean, float stdev )
 	}
 }
 
+void Genome::randomizeBytes()
+{
+	randomizeBytes( GenomeSchema::config.byteMean, GenomeSchema::config.byteStdev );
+}
+
 void Genome::mutate()
 {
 	float rate = get( "MutationRate" );

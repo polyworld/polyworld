@@ -49,6 +49,8 @@ void GenomeSchema::processWorldfile( proplib::Document &doc )
 	}
     GenomeSchema::config.minBitProb = doc.get( "MinInitialBitProb" );
     GenomeSchema::config.maxBitProb = doc.get( "MaxInitialBitProb" );
+    GenomeSchema::config.byteMean = doc.get( "InitialByteMean" );
+    GenomeSchema::config.byteStdev = doc.get( "InitialByteStdev" );
 	GenomeSchema::config.seedMutationRate = doc.get( "SeedMutationRate" );
 	GenomeSchema::config.seedFightBias = doc.get( "SeedFightBias" );
 	GenomeSchema::config.seedFightExcitation = doc.get( "SeedFightExcitation" );

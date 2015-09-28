@@ -37,6 +37,8 @@ namespace genome
 			float miscInvisSlope;
 			float minBitProb;
 			float maxBitProb;
+			float byteMean;
+			float byteStdev;
 			bool grayCoding;
 		} config;
 

@@ -1555,6 +1555,19 @@ MaxInitialBitProb {
   default 0.6           # default to 0.5?
 }
 
+InitialByteMean {
+  type    Float
+  default 128.0
+  min     0.0
+  max     256.0
+}
+
+InitialByteStdev {
+  type    Float
+  default 64.0
+  min     0.0
+}
+
 
 
 EnableTopologicalDistortionRngSeed {
