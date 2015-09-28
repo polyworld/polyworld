@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+# Seeds a worldfile with the current timestamp.
+# Prints the location of the seeded copy to allow invocation of Polyworld:
+# $ ./Polyworld $(./scripts/seed /path/to/worldfile.wf)
+
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 WORLDFILE"
+    exit 1
+fi
+ORIG_FILE="$1"
+SEED_FILE=$(mktemp --suffix=.wf)
+HAS_SEED=$(grep "\bInitSeed\b" "$ORIG_FILE")
+SEED=$(date +%s)
+if [ -z "$HAS_SEED" ]; then
+    cp "$ORIG_FILE" "$SEED_FILE"
+    echo >> "$SEED_FILE"
+    echo "InitSeed $SEED" >> "$SEED_FILE"
+else
+    sed "s/\bInitSeed\b.*/InitSeed $SEED/" "$ORIG_FILE" > "$SEED_FILE"
+fi
+echo "$SEED_FILE"
