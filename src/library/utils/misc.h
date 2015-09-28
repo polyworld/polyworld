@@ -39,6 +39,8 @@
 
 #define randpw() drand48()
 #define rrand(lo,hi) (interp(randpw(),(lo),(hi)))
+double nrand();
+double nrand(double mean, double stdev);
 
 #define index2(i,j,nj) ((i)*(nj)+(j))
 #define index3(i,j,k,nj,nk) ((i)*(nj)*(nk)+(j)*(nk)+(k))

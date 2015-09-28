@@ -31,6 +31,32 @@
 
 using namespace std;
 
+// https://en.wikipedia.org/wiki/Marsaglia_polar_method
+double nrand()
+{
+    static bool spare = false;
+    static double u, v, s, c;
+    if (spare)
+    {
+        spare = false;
+        return c * v;
+    }
+    do
+    {
+        u = 2.0 * randpw() - 1.0;
+        v = 2.0 * randpw() - 1.0;
+        s = u * u + v * v;
+    } while (s == 0.0 || s >= 1.0);
+    c = sqrt(-2.0 * log(s) / s);
+    spare = true;
+    return c * u;
+}
+
+double nrand(double mean, double stdev)
+{
+    return mean + nrand() * stdev;
+}
+
 char* concat(const char* s1, const char* s2)
 {
     char* s = new char[strlen(s1)+strlen(s2)+1];

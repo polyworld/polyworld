@@ -131,6 +131,16 @@ void Genome::randomize()
 	randomize( GeneType::to_ImmutableInterpolated(gene("BitProbability"))->interpolate(randpw()) );
 }
 
+void Genome::randomizeBytes( float mean, float stdev )
+{
+	for (long byte = 0; byte < nbytes; byte++)
+	{
+		int val = round( nrand( mean, stdev ) );
+		val = clamp( val, 0, 255 );
+		set_raw( byte, 1, val );
+	}
+}
+
 void Genome::mutate()
 {
 	float rate = get( "MutationRate" );
