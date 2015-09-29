@@ -146,6 +146,7 @@ void agent::processWorldfile( proplib::Document &doc )
 		}
 	}
     agent::config.energyUseMultiplier = doc.get( "EnergyUseMultiplier" );
+    agent::config.ageEnergyMultiplier = doc.get( "AgeEnergyMultiplier" );
     agent::config.eat2Energy = doc.get( "EnergyUseEat" );
 	agent::config.mate2Energy = doc.get( "EnergyUseMate" );
     agent::config.fight2Energy = doc.get( "EnergyUseFight" );
@@ -1044,7 +1045,7 @@ float agent::UpdateBody( float moveFitnessParam,
 		energyused += CarryEnergy();	// depends on number and size of items being carried
 	}
 
-    float denergy = energyused * Strength();
+    float denergy = energyused * Strength() * (1.0f + agent::config.ageEnergyMultiplier * fAge);
 
 	// Apply large-population energy penalty (only if NumDepletionSteps > 0)
 	float populationEnergyPenalty;

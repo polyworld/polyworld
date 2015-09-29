@@ -1786,7 +1786,7 @@ void TSimulation::DeathAndStats( void )
 
 			{
 				if ( c->GetEnergy().isDepleted() ||
-					 c->Age() >= c->MaxAge()     ||
+					 ( fDieAtMaxAge && c->Age() >= c->MaxAge() ) ||
 					 ( !globals::blockedEdges && !globals::wraparound &&
 					 	(c->x() < 0.0 || c->x() >  globals::worldsize ||
 						 c->z() > 0.0 || c->z() < -globals::worldsize) ) ||
@@ -1794,7 +1794,7 @@ void TSimulation::DeathAndStats( void )
 				{
 					LifeSpan::DeathReason reason = LifeSpan::DR_NATURAL;
 
-					if (c->Age() >= c->MaxAge())
+					if (fDieAtMaxAge && c->Age() >= c->MaxAge())
 						fNumberDiedAge++;
 					else if ( c->GetEnergy().isDepleted() )
 						fNumberDiedEnergy++;
@@ -4464,6 +4464,7 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 	fPopControlMaxScaleFactor = doc.get( "PopControlMaxScaleFactor" );
 
 	fAllowMinDeaths = doc.get( "AllowMinDeaths" );
+	fDieAtMaxAge = doc.get( "DieAtMaxAge" );
 
 	fComplexityType = (string)doc.get( "ComplexityType" );
 	fComplexityFitnessWeight = doc.get( "ComplexityFitnessWeight" );

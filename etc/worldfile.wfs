@@ -1160,6 +1160,17 @@ AllowMinDeaths {
   default False
 }
 
+DieAtMaxAge {
+  type    Bool
+  default True
+}
+
+AgeEnergyMultiplier {
+  type    Float
+  default 0.0
+  min     0.0
+}
+
 #-------------------------------------------------------------------
 # SECTION Simulation parameters -- Tertiary
 #-------------------------------------------------------------------

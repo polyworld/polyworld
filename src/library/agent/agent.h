@@ -113,6 +113,7 @@ public:
 		NoseColor noseColor;
 		float   noseColorConstValue;
 		double	energyUseMultiplier;
+		float	ageEnergyMultiplier;
 
 		bool	enableMateWaitFeedback;
 		bool	enableSpeedFeedback;

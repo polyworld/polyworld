@@ -115,6 +115,7 @@ public:
 	double fGlobalEnergyScaleFactor;
 
 	bool fAllowMinDeaths;
+	bool fDieAtMaxAge;
 	
 	float EnergyFitnessParameter() const;
 	float AgeFitnessParameter() const;
