@@ -154,7 +154,7 @@ public:
     
     virtual void draw();
 	void setGenomeReady();
-    void grow( long mateWait );    
+    void grow( long mateWait, bool randomEnergy = false );    
     virtual void setradius();    
 	void eat( food* f,
 			  float eatFitnessParameter,

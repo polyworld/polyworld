@@ -121,6 +121,11 @@ InitAgents {
   max     MaxAgents
 }
 
+RandomInitEnergy {
+  type    Bool
+  default False
+}
+
 SeedAgents {
   type    Int
   defaults { default InitAgents; legacy 0 }

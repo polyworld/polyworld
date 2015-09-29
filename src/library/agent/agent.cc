@@ -449,7 +449,7 @@ void agent::setGenomeReady()
 //---------------------------------------------------------------------------
 // agent::grow
 //---------------------------------------------------------------------------
-void agent::grow( long mateWait )
+void agent::grow( long mateWait, bool randomEnergy )
 {    
 	InitGeneCache();
 
@@ -605,6 +605,12 @@ void agent::grow( long mateWait )
 	
     fEnergy = fMaxEnergy;
 	fFoodEnergy = fMaxEnergy;
+	
+	if( randomEnergy )
+	{
+		fEnergy = randpw() * fMaxEnergy;
+		fFoodEnergy = fEnergy;
+	}
 	
 //	printf( "%s: energy initialized to %g\n", __func__, fEnergy );
     
