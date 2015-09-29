@@ -1042,7 +1042,8 @@ BodyGreenChannel {
   default I
   enum    Values {
     I,             # ID gene
-    L              # Light neuron
+    L,             # Light neuron
+    E              # Eat neuron
   }
   scalar {
     type    Float
