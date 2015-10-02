@@ -160,17 +160,21 @@ void Genome::mutateBits()
     }
 }
 
+void Genome::mutateOneByte( long byte )
+{
+    int val = round( nrand( mutable_data[byte], GenomeSchema::config.mutationStdev ) );
+    val = clamp( val, 0, 255 );
+    set_raw( byte, 1, val );
+}
+
 void Genome::mutate()
 {
     float rate = get( "MutationRate" );
-    float stdev = GenomeSchema::config.mutationStdev;
     for (long byte = 0; byte < nbytes; byte++)
     {
         if (randpw() < rate)
         {
-            int val = round( nrand( mutable_data[byte], stdev ) );
-            val = clamp( val, 0, 255 );
-            set_raw( byte, 1, val );
+            mutateOneByte( byte );
         }
     }
 }
@@ -213,11 +217,10 @@ void Genome::crossover( Genome *g1, Genome *g2, bool mutate )
     long i, j;
     
 #ifdef DUMPBITS    
-    cout << "**The crossover bits(bytes) are:" nl << "  ";
+    cout << "**The crossover bytes are:" nl << "  ";
     for (i = 0; i < numCrossPoints; i++)
     {
-        long byte = crossoverPoints[i] >> 3;
-        cout << crossoverPoints[i] << "(" << byte << ") ";
+        cout << crossoverPoints[i] << " ";
     }
     cout nlf;
 #endif
@@ -233,7 +236,6 @@ void Genome::crossover( Genome *g1, Genome *g2, bool mutate )
     
     long begbyte = 0;
     long endbyte = -1;
-    long bit;
     bool first = (randpw() < 0.5);
     const Genome* g;
     
@@ -243,17 +245,11 @@ void Genome::crossover( Genome *g1, Genome *g2, bool mutate )
 		// for copying the end of the genome
         if (i == numCrossPoints)
         {
-            if (endbyte == nbytes - 1)
-            {
-            	// already copied last byte (done) so just get out of the loop
-                break;
-			}             
-                
-            endbyte = nbytes - 1;
+            endbyte = nbytes;
         }
         else
         {
-            endbyte = crossoverPoints[i] >> 3;
+            endbyte = crossoverPoints[i];
 		}
         g = first ? g1 : g2;
         
@@ -272,11 +268,8 @@ void Genome::crossover( Genome *g1, Genome *g2, bool mutate )
             for (j = begbyte; j < endbyte; j++)
             {
                 mutable_data[j] = g->mutable_data[j];    // copy from the appropriate genome
-                for (bit = 0; bit < 8; bit++)
-                {
-                    if (randpw() < mrate)
-                        mutable_data[j] ^= char(1 << (7-bit));	// this goes left to right, corresponding more directly to little-endian machines, but leave it alone (at least for now)
-                }
+                if (randpw() < mrate)
+                    mutateOneByte( j );
             }
         }
         else
@@ -285,37 +278,8 @@ void Genome::crossover( Genome *g1, Genome *g2, bool mutate )
                 mutable_data[j] = g->mutable_data[j];    // copy from the appropriate genome
         }
         
-        if (i < numCrossPoints)  // except on the last stretch...
-        {
-            first = !first;
-            bit = crossoverPoints[i] - (endbyte << 3);
-            
-            if (first)
-            {	// this goes left to right, corresponding more directly to little-endian machines, but leave it alone (at least for now)
-                mutable_data[endbyte] = char((g2->mutable_data[endbyte] & (255 << (8 - bit)))
-                   					 | (g1->mutable_data[endbyte] & (255 >> bit)));
-			}                  
-            else
-            {	// this goes left to right, corresponding more directly to little-endian machines, but leave it alone (at least for now)
-                mutable_data[endbyte] = char((g1->mutable_data[endbyte] & (255 << (8 - bit)))
-                   					 | (g2->mutable_data[endbyte] & (255 >> bit)));
-			}
-						              
-            begbyte = endbyte + 1;
-        }
-        else
-        {
-            mutable_data[endbyte] = g->mutable_data[endbyte];
-		}
-		            
-        if (mutate)
-        {
-            for (bit = 0; bit < 8; bit++)
-            {
-                if (randpw() < mrate)
-                    mutable_data[endbyte] ^= char(1 << (7 - bit));	// this goes left to right, corresponding more directly to little-endian machines, but leave it alone (at least for now)
-            }
-        }
+        first = !first;
+        begbyte = endbyte + 1;
     }
 }
 
