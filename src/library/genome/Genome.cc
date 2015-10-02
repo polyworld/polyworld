@@ -146,7 +146,7 @@ void Genome::randomize()
 	randomize( GenomeSchema::config.byteMean, GenomeSchema::config.byteStdev );
 }
 
-void Genome::mutate()
+void Genome::mutateBits()
 {
 	float rate = get( "MutationRate" );
 
@@ -156,6 +156,21 @@ void Genome::mutate()
         {
             if (randpw() < rate)
                 mutable_data[byte] ^= char(1 << (7-bit));
+        }
+    }
+}
+
+void Genome::mutate()
+{
+    float rate = get( "MutationRate" );
+    float stdev = GenomeSchema::config.mutationStdev;
+    for (long byte = 0; byte < nbytes; byte++)
+    {
+        if (randpw() < rate)
+        {
+            int val = round( nrand( mutable_data[byte], stdev ) );
+            val = clamp( val, 0, 255 );
+            set_raw( byte, 1, val );
         }
     }
 }

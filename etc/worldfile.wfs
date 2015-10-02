@@ -1585,6 +1585,12 @@ InitialByteStdev {
   min     0.0
 }
 
+MutationStdev {
+  type    Float
+  default 64.0
+  min     0.0
+}
+
 
 
 EnableTopologicalDistortionRngSeed {

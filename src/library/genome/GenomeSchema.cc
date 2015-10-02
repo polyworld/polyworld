@@ -36,6 +36,7 @@ void GenomeSchema::processWorldfile( proplib::Document &doc )
 	}
     GenomeSchema::config.minMutationRate = doc.get( "MinMutationRate" );
     GenomeSchema::config.maxMutationRate = doc.get( "MaxMutationRate" );
+    GenomeSchema::config.mutationStdev = doc.get( "MutationStdev" );
     GenomeSchema::config.minNumCpts = doc.get( "MinCrossoverPoints" );
     GenomeSchema::config.maxNumCpts = doc.get( "MaxCrossoverPoints" );
     GenomeSchema::config.miscBias = doc.get( "MiscegenationFunctionBias" );

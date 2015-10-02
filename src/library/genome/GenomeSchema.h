@@ -31,6 +31,7 @@ namespace genome
 
 			float minMutationRate;
 			float maxMutationRate;
+			float mutationStdev;
 			long minNumCpts;
 			long maxNumCpts;
 			float miscBias;
