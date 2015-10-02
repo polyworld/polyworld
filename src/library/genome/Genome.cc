@@ -111,7 +111,7 @@ void Genome::seed( Gene *gene,
 				SEEDVAL(rawval_ratio) );
 }
 
-void Genome::randomize( float bitonprob )
+void Genome::randomizeBits( float bitonprob )
 {
 	// do a random initialization of the bitstring
     for (long byte = 0; byte < nbytes; byte++)
@@ -126,12 +126,12 @@ void Genome::randomize( float bitonprob )
 	}		              	
 }
 
-void Genome::randomize()
+void Genome::randomizeBits()
 {
-	randomize( GeneType::to_ImmutableInterpolated(gene("BitProbability"))->interpolate(randpw()) );
+	randomizeBits( GeneType::to_ImmutableInterpolated(gene("BitProbability"))->interpolate(randpw()) );
 }
 
-void Genome::randomizeBytes( float mean, float stdev )
+void Genome::randomize( float mean, float stdev )
 {
 	for (long byte = 0; byte < nbytes; byte++)
 	{
@@ -141,9 +141,9 @@ void Genome::randomizeBytes( float mean, float stdev )
 	}
 }
 
-void Genome::randomizeBytes()
+void Genome::randomize()
 {
-	randomizeBytes( GenomeSchema::config.byteMean, GenomeSchema::config.byteStdev );
+	randomize( GenomeSchema::config.byteMean, GenomeSchema::config.byteStdev );
 }
 
 void Genome::mutate()

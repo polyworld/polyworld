@@ -46,10 +46,10 @@ namespace genome
 		void seed( Gene *gene,
 				   float rawval_ratio );
 
-		void randomize( float bitonprob );
+		void randomizeBits( float bitonprob );
+		void randomizeBits();
+		void randomize( float mean, float stdev );
 		void randomize();
-		void randomizeBytes( float mean, float stdev );
-		void randomizeBytes();
 
 		void mutate();
 		virtual void crossover( Genome *g1,
