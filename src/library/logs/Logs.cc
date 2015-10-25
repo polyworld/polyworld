@@ -154,6 +154,63 @@ void Logs::AdamiComplexityLog::processEvent( const StepEndEvent &e )
 
 
 //===========================================================================
+// AgentEnergyLog
+//===========================================================================
+
+//---------------------------------------------------------------------------
+// Logs::AgentEnergyLog::init
+//---------------------------------------------------------------------------
+void Logs::AgentEnergyLog::init( TSimulation *sim, Document *doc )
+{
+	if( doc->get("RecordAgentEnergy") )
+	{
+		initRecording( sim,
+					   AgentStateScope,
+					   sim::Event_AgentBirth
+					   | sim::Event_BodyUpdated
+					   | sim::Event_AgentDeath );
+	}
+}
+
+//---------------------------------------------------------------------------
+// Logs::AgentEnergyLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::AgentEnergyLog::processEvent( const sim::AgentBirthEvent &e )
+{
+	char path[512];
+	sprintf( path,
+			 "run/energy/agent_%ld.txt",
+			 e.a->getTypeNumber() );
+
+	DataLibWriter *writer = createWriter( e.a, path, true, false );
+
+	static const char *colnames[] = {"Timestep", "Energy", NULL};
+	static const datalib::Type coltypes[] = {datalib::INT, datalib::FLOAT};
+
+	writer->beginTable( "AgentEnergy",
+						colnames,
+						coltypes );
+}
+
+//---------------------------------------------------------------------------
+// Logs::AgentEnergyLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::AgentEnergyLog::processEvent( const sim::AgentBodyUpdatedEvent &e )
+{
+	getWriter( e.a )->addRow( getStep(),
+							  e.a->GetEnergy().sum() );
+}
+
+//---------------------------------------------------------------------------
+// Logs::AgentEnergyLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::AgentEnergyLog::processEvent( const sim::AgentDeathEvent &e )
+{
+	delete getWriter( e.a );
+}
+
+
+//===========================================================================
 // AgentPositionLog
 //===========================================================================
 
