@@ -140,6 +140,11 @@ SeedMutationProbability {
   max     1.0
 }
 
+SimpleSeed {
+  type    Bool
+  default False
+}
+
 InitFood {
   type    Int
   default ( MinFood if MinFood > 0 else 90 )

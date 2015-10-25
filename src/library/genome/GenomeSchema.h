@@ -20,6 +20,8 @@ namespace genome
 			typedef std::map<std::string,float> GeneInterpolationPowers;
 			GeneInterpolationPowers geneInterpolationPower;
 
+			bool simpleSeed;
+
 			float seedMutationRate;
 			float seedFightBias;
 			float seedFightExcitation;

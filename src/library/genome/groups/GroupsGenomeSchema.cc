@@ -221,6 +221,11 @@ void GroupsGenomeSchema::define()
 //-------------------------------------------------------------------------------------------
 void GroupsGenomeSchema::seed( Genome *g_ )
 {
+	if( GenomeSchema::config.simpleSeed )
+	{
+		g_->randomize();
+	}
+
 	// ---
 	// --- Base Class
 	// ---
@@ -244,6 +249,11 @@ void GroupsGenomeSchema::seed( Genome *g_ )
 	SEED( Green, 0.5 );
 	SEED( Blue, 0.5 );
 	SEED( InternalNeuronGroupCount, 0 );
+
+	if( GenomeSchema::config.simpleSeed )
+	{
+		return;
+	}
 
 	SEED( ExcitatoryNeuronCount, 0 );
 	SEED( InhibitoryNeuronCount, 0 );
