@@ -2461,6 +2461,11 @@ RecordSeparations {
   }
 }
 
+RecordPopulation {
+  type    Bool
+  default RecordAll
+}
+
 CompressFiles {
   type    Bool
   default True

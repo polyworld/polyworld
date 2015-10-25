@@ -1320,6 +1320,51 @@ void Logs::LifeSpanLog::processEvent( const sim::AgentDeathEvent &death )
 
 
 //===========================================================================
+// PopulationLog
+//===========================================================================
+
+//---------------------------------------------------------------------------
+// Logs::PopulationLog::init
+//---------------------------------------------------------------------------
+void Logs::PopulationLog::init( TSimulation *sim, Document *doc )
+{
+	if( doc->get("RecordPopulation") )
+	{
+		initRecording( sim,
+					   SimulationStateScope,
+					   sim::Event_StepEnd );
+
+		createWriter( "run/population.txt" );
+
+		const char *colnames[] =
+			{
+				"T",
+				"Population",
+				NULL
+			};
+		const datalib::Type coltypes[] =
+			{
+				datalib::INT,
+				datalib::INT
+			};
+
+		getWriter()->beginTable( "Population",
+								  colnames,
+								  coltypes );
+	}
+}
+
+//---------------------------------------------------------------------------
+// Logs::PopulationLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::PopulationLog::processEvent( const sim::StepEndEvent &e )
+{
+	getWriter()->addRow( getStep(),
+						 _simulation->getNumAgents() );
+}
+
+
+//===========================================================================
 // SeparationLog
 //===========================================================================
 

@@ -288,6 +288,16 @@ class Logs
 	} _lifespan;
 
 	//===========================================================================
+	// PopulationLog
+	//===========================================================================
+	class PopulationLog : public DataLibLogger
+	{
+	protected:
+		virtual void init( class TSimulation *sim, proplib::Document *doc );
+		virtual void processEvent( const sim::StepEndEvent &e );
+	} _population;
+
+	//===========================================================================
 	// SeparationLog
 	//===========================================================================
 	class SeparationLog : public DataLibLogger
