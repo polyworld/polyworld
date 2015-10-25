@@ -2466,6 +2466,11 @@ RecordPopulation {
   default RecordAll
 }
 
+RecordFoodEnergy {
+  type    Bool
+  default RecordAll
+}
+
 CompressFiles {
   type    Bool
   default True

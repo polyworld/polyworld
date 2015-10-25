@@ -69,6 +69,7 @@ public:
 	float getFitnessWeight( FitnessWeightType type );
 	float getFitnessStat( FitnessStatType type );
 	float getFoodEnergyStat( FoodEnergyStatType type, FoodEnergyStatScope scope );
+	float getFoodEnergy();
 	GeneStats &getGeneStats();
 	
 	void getStatusText( StatusText& statusText,
@@ -535,6 +536,17 @@ inline float TSimulation::getFoodEnergyStat( FoodEnergyStatType type, FoodEnergy
 		break;
 	default: assert(false); return -1;
 	}
+}
+inline float TSimulation::getFoodEnergy()
+{
+	float foodEnergy = 0.0f;
+	food* f;
+	objectxsortedlist::gXSortedObjects.reset();
+	while( objectxsortedlist::gXSortedObjects.nextObj( FOODTYPE, (gobject**) &f ) )
+	{
+		foodEnergy += f->getEnergy().sum();
+	}
+	return foodEnergy;
 }
 inline GeneStats &TSimulation::getGeneStats() { return fGeneStats; }
 inline long TSimulation::getStep() const { return fStep; }

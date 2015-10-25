@@ -235,6 +235,16 @@ class Logs
 	} _energy;
 
 	//===========================================================================
+	// FoodEnergyLog
+	//===========================================================================
+	class FoodEnergyLog : public DataLibLogger
+	{
+	protected:
+		virtual void init( class TSimulation *sim, proplib::Document *doc );
+		virtual void processEvent( const sim::StepEndEvent &e );
+	} _foodEnergy;
+
+	//===========================================================================
 	// GeneStatsLog
 	//===========================================================================
 	class GeneStatsLog : public FileLogger

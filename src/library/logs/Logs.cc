@@ -1060,6 +1060,51 @@ void Logs::EnergyLog::processEvent( const sim::EnergyEvent &e )
 
 
 //===========================================================================
+// FoodEnergyLog
+//===========================================================================
+
+//---------------------------------------------------------------------------
+// Logs::FoodEnergyLog::init
+//---------------------------------------------------------------------------
+void Logs::FoodEnergyLog::init( TSimulation *sim, Document *doc )
+{
+	if( doc->get("RecordFoodEnergy") )
+	{
+		initRecording( sim,
+					   SimulationStateScope,
+					   sim::Event_StepEnd );
+
+		createWriter( "run/energy/food.txt" );
+
+		const char *colnames[] =
+			{
+				"Timestep",
+				"Energy",
+				NULL
+			};
+		const datalib::Type coltypes[] =
+			{
+				datalib::INT,
+				datalib::FLOAT
+			};
+
+		getWriter()->beginTable( "FoodEnergy",
+								  colnames,
+								  coltypes );
+	}
+}
+
+//---------------------------------------------------------------------------
+// Logs::FoodEnergyLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::FoodEnergyLog::processEvent( const sim::StepEndEvent &e )
+{
+	getWriter()->addRow( getStep(),
+						 _simulation->getFoodEnergy() );
+}
+
+
+//===========================================================================
 // GeneStatsLog
 //===========================================================================
 
