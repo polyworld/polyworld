@@ -21,6 +21,7 @@ namespace genome
 			GeneInterpolationPowers geneInterpolationPower;
 
 			bool simpleSeed;
+			bool enableEvolution;
 
 			float seedMutationRate;
 			float seedFightBias;

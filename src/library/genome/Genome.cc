@@ -169,6 +169,9 @@ void Genome::mutateOneByte( long byte )
 
 void Genome::mutate()
 {
+    if (!GenomeSchema::config.enableEvolution)
+        return;
+
     float rate = get( "MutationRate" );
     for (long byte = 0; byte < nbytes; byte++)
     {
@@ -191,6 +194,9 @@ void Genome::crossover( Genome *g1, Genome *g2, bool mutate )
         numCrossPoints = g1->get( "CrossoverPointCount" );
     else
 		numCrossPoints = g2->get( "CrossoverPointCount" );
+
+	if (!GenomeSchema::config.enableEvolution)
+		numCrossPoints = 0;
 
 	if( numCrossPoints == 0 )
 	{

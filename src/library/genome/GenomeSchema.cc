@@ -35,6 +35,7 @@ void GenomeSchema::processWorldfile( proplib::Document &doc )
 			assert( false );
 	}
     GenomeSchema::config.simpleSeed = doc.get( "SimpleSeed" );
+    GenomeSchema::config.enableEvolution = doc.get( "EnableEvolution" );
     GenomeSchema::config.minMutationRate = doc.get( "MinMutationRate" );
     GenomeSchema::config.maxMutationRate = doc.get( "MaxMutationRate" );
     GenomeSchema::config.mutationStdev = doc.get( "MutationStdev" );

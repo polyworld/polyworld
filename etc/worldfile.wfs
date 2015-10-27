@@ -1165,6 +1165,11 @@ AllowMinDeaths {
   default False
 }
 
+EnableEvolution {
+  type    Bool
+  default True
+}
+
 DieAtMaxAge {
   type    Bool
   default True
