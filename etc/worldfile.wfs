@@ -1416,6 +1416,18 @@ MaxMutationRate {
   min     0.0
 }
 
+MinMutationStdev {
+  type    Float
+  default 1.0
+  exmin   0.0
+}
+
+MaxMutationStdev {
+  type    Float
+  default 128.0
+  min     MinMutationStdev
+}
+
 MinCrossoverPoints {
   type    Int
   default 2
@@ -1590,12 +1602,6 @@ InitialByteMean {
 }
 
 InitialByteStdev {
-  type    Float
-  default 64.0
-  min     0.0
-}
-
-MutationStdev {
   type    Float
   default 64.0
   min     0.0

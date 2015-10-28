@@ -162,7 +162,7 @@ void Genome::mutateBits()
 
 void Genome::mutateOneByte( long byte )
 {
-    int val = round( nrand( mutable_data[byte], GenomeSchema::config.mutationStdev ) );
+    int val = round( nrand( mutable_data[byte], get( "MutationStdev" ) ) );
     val = clamp( val, 0, 255 );
     set_raw( byte, 1, val );
 }

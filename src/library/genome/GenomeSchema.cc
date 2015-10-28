@@ -38,7 +38,8 @@ void GenomeSchema::processWorldfile( proplib::Document &doc )
     GenomeSchema::config.enableEvolution = doc.get( "EnableEvolution" );
     GenomeSchema::config.minMutationRate = doc.get( "MinMutationRate" );
     GenomeSchema::config.maxMutationRate = doc.get( "MaxMutationRate" );
-    GenomeSchema::config.mutationStdev = doc.get( "MutationStdev" );
+    GenomeSchema::config.minMutationStdev = doc.get( "MinMutationStdev" );
+    GenomeSchema::config.maxMutationStdev = doc.get( "MaxMutationStdev" );
     GenomeSchema::config.minNumCpts = doc.get( "MinCrossoverPoints" );
     GenomeSchema::config.maxNumCpts = doc.get( "MaxCrossoverPoints" );
     GenomeSchema::config.miscBias = doc.get( "MiscegenationFunctionBias" );
@@ -110,6 +111,10 @@ void GenomeSchema::define()
 	SCALAR( MutationRate,
 			GenomeSchema::config.minMutationRate,
 			GenomeSchema::config.maxMutationRate );
+
+	SCALAR( MutationStdev,
+			GenomeSchema::config.minMutationStdev,
+			GenomeSchema::config.maxMutationStdev );
 
 	SCALAR( CrossoverPointCount,
 		   GenomeSchema::config.minNumCpts,
