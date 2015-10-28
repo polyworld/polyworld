@@ -2487,6 +2487,11 @@ RecordAgentEnergy {
   default RecordAll
 }
 
+RecordGitRevision {
+  type    Bool
+  default False
+}
+
 CompressFiles {
   type    Bool
   default True

@@ -300,6 +300,16 @@ class Logs
 	} _genomeSubset;
 
 	//===========================================================================
+	// GitRevisionLog
+	//===========================================================================
+	class GitRevisionLog : public Logger
+	{
+	protected:
+		virtual void init( class TSimulation *sim, proplib::Document *doc );
+		virtual void processEvent( const sim::SimInitedEvent &e );
+	} _gitRevision;
+
+	//===========================================================================
 	// LifeSpanLog
 	//===========================================================================
 	class LifeSpanLog : public DataLibLogger

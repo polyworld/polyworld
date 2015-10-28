@@ -1368,6 +1368,32 @@ void Logs::GenomeSubsetLog::processEvent( const sim::AgentBirthEvent &birth )
 
 
 //===========================================================================
+// GitRevisionLog
+//===========================================================================
+
+//---------------------------------------------------------------------------
+// Logs::GitRevisionLog::init
+//---------------------------------------------------------------------------
+void Logs::GitRevisionLog::init( TSimulation *sim, Document *doc )
+{
+	if( doc->get("RecordGitRevision") )
+	{
+		initRecording( sim,
+					   NullStateScope,
+					   sim::Event_SimInited );
+	}
+}
+
+//---------------------------------------------------------------------------
+// Logs::GitRevisionLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::GitRevisionLog::processEvent( const sim::SimInitedEvent &birth )
+{
+	SYSTEM( "git rev-parse HEAD > run/gitrevision.txt" );
+}
+
+
+//===========================================================================
 // LifeSpanLog
 //===========================================================================
 
