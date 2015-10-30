@@ -4,6 +4,8 @@
 #include <math.h>
 #include <stdlib.h>
 
+#include <map>
+#include <string>
 #include <vector>
 
 #include "simconst.h"
@@ -19,6 +21,7 @@ class gobject;
 
 namespace sim
 {
+	typedef std::map<std::string, std::string> ParameterMap;
 	typedef int EventType;
 
 	// Each value must be a single unique bit since we use them with bitwise OR.

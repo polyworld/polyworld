@@ -14,6 +14,7 @@
 #include "monitor/Monitor.h"
 #include "monitor/MonitorManager.h"
 #include "sim/Simulation.h"
+#include "sim/simtypes.h"
 #include "ui/SimulationController.h"
 #include "ui/gui/MainWindow.h"
 #include "ui/term/TerminalUI.h"
@@ -53,6 +54,7 @@ int main( int argc, char** argv )
 {
 	const char *worldfilePath = NULL;
 	string ui = "gui";
+	ParameterMap parameters;
 
 	for( int argi = 1; argi < argc; argi++ )
 	{
@@ -60,17 +62,18 @@ int main( int argc, char** argv )
 
 		if( arg[0] == '-' )	// it's a flagged argument
 		{
-			if( arg == "--ui" )
+			if( arg[1] != '-' )
 			{
-				if( ++argi >= argc )
-					usage( "Missing --ui arg" );
-
-				ui = argv[argi];
-				if( (ui != "gui") && (ui != "term") )
-					usage( "Invalid --ui arg (%s)", argv[argi] );
+				usage( "Unknown argument: %s", arg.c_str() );
 			}
+			string key = arg.substr(2);
+			if( ++argi >= argc )
+				usage( "Missing %s arg", arg.c_str() );
+			string value( argv[argi] );
+			if( key == "ui" )
+				ui = value;
 			else
-				usage( "Unknown argument: %s", argv[argi] );
+				parameters[key] = value;
 		}
 		else
 		{
@@ -79,6 +82,11 @@ int main( int argc, char** argv )
 			else
 				usage( "Only one worldfile path allowed, at least two specified (%s, %s)", worldfilePath, argv[argi] );
 		}
+	}
+
+	if( (ui != "gui") && (ui != "term") )
+	{
+		usage( "Invalid --ui arg (%s)", ui.c_str() );
 	}
 
 	if( ! worldfilePath )
@@ -129,7 +137,7 @@ int main( int argc, char** argv )
 
 	proplib::Interpreter::init();
 
-	TSimulation *simulation = new TSimulation( worldfilePath );
+	TSimulation *simulation = new TSimulation( worldfilePath, parameters );
     MonitorManager *monitorManager = new MonitorManager(simulation, monitorPath);
 	SimulationController *simulationController = new SimulationController( simulation,
                                                                            monitorManager);

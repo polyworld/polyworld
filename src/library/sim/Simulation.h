@@ -40,7 +40,7 @@ class TSimulation
 	PROPLIB_CPP_PROPERTIES
 
 public:
-	TSimulation( std::string worldfilePath );
+	TSimulation( std::string worldfilePath, ParameterMap parameters );
 	virtual ~TSimulation();
 
 	void Step();
