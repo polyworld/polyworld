@@ -112,7 +112,7 @@ public:
 		float   bodyBlueChannelConstValue;
 		NoseColor noseColor;
 		float   noseColorConstValue;
-		double	energyUseMultiplier;
+		float	energyUseMultiplier;
 		float	ageEnergyMultiplier;
 
 		bool	enableMateWaitFeedback;

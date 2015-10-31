@@ -2115,6 +2115,7 @@ GiveFraction {
 EnergyUseMultiplier {
   type    Float
   default 1.0
+  cppsym  "agent::config.energyUseMultiplier"
 }
 
 EnergyUseEat {
