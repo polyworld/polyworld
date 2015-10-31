@@ -1329,7 +1329,7 @@ float agent::UpdateBody( float moveFitnessParam,
 		}
 	}
 
-	logs->postEvent( AgentBodyUpdatedEvent(this) );
+	logs->postEvent( AgentBodyUpdatedEvent(this, energyused) );
 
     return energyUsed;
 }

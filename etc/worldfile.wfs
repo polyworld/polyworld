@@ -2482,7 +2482,17 @@ RecordFoodEnergy {
   default RecordAll
 }
 
-RecordAgentEnergy {
+RecordAgentEnergyIn {
+  type    Bool
+  default RecordAll
+}
+
+RecordAgentEnergyOut {
+  type    Bool
+  default RecordAll
+}
+
+RecordAgentEnergyTotal {
   type    Bool
   default RecordAll
 }

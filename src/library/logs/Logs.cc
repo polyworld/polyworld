@@ -154,15 +154,75 @@ void Logs::AdamiComplexityLog::processEvent( const StepEndEvent &e )
 
 
 //===========================================================================
-// AgentEnergyLog
+// AgentEnergyInLog
 //===========================================================================
 
 //---------------------------------------------------------------------------
-// Logs::AgentEnergyLog::init
+// Logs::AgentEnergyInLog::init
 //---------------------------------------------------------------------------
-void Logs::AgentEnergyLog::init( TSimulation *sim, Document *doc )
+void Logs::AgentEnergyInLog::init( TSimulation *sim, Document *doc )
 {
-	if( doc->get("RecordAgentEnergy") )
+	if( doc->get("RecordAgentEnergyIn") )
+	{
+		initRecording( sim,
+					   AgentStateScope,
+					   sim::Event_AgentBirth
+					   | sim::Event_Energy
+					   | sim::Event_AgentDeath );
+	}
+}
+
+//---------------------------------------------------------------------------
+// Logs::AgentEnergyInLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::AgentEnergyInLog::processEvent( const sim::AgentBirthEvent &e )
+{
+	char path[512];
+	sprintf( path,
+			 "run/energy/in/agent_%ld.txt",
+			 e.a->getTypeNumber() );
+
+	DataLibWriter *writer = createWriter( e.a, path, true, false );
+
+	static const char *colnames[] = {"Timestep", "Energy", NULL};
+	static const datalib::Type coltypes[] = {datalib::INT, datalib::FLOAT};
+
+	writer->beginTable( "AgentEnergyIn",
+						colnames,
+						coltypes );
+}
+
+//---------------------------------------------------------------------------
+// Logs::AgentEnergyInLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::AgentEnergyInLog::processEvent( const sim::EnergyEvent &e )
+{
+	if( e.action != EnergyEvent::Eat )
+		return;
+
+	getWriter( e.a )->addRow( getStep(),
+							  e.energy.sum() );
+}
+
+//---------------------------------------------------------------------------
+// Logs::AgentEnergyInLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::AgentEnergyInLog::processEvent( const sim::AgentDeathEvent &e )
+{
+	delete getWriter( e.a );
+}
+
+
+//===========================================================================
+// AgentEnergyOutLog
+//===========================================================================
+
+//---------------------------------------------------------------------------
+// Logs::AgentEnergyOutLog::init
+//---------------------------------------------------------------------------
+void Logs::AgentEnergyOutLog::init( TSimulation *sim, Document *doc )
+{
+	if( doc->get("RecordAgentEnergyOut") )
 	{
 		initRecording( sim,
 					   AgentStateScope,
@@ -173,13 +233,13 @@ void Logs::AgentEnergyLog::init( TSimulation *sim, Document *doc )
 }
 
 //---------------------------------------------------------------------------
-// Logs::AgentEnergyLog::processEvent
+// Logs::AgentEnergyOutLog::processEvent
 //---------------------------------------------------------------------------
-void Logs::AgentEnergyLog::processEvent( const sim::AgentBirthEvent &e )
+void Logs::AgentEnergyOutLog::processEvent( const sim::AgentBirthEvent &e )
 {
 	char path[512];
 	sprintf( path,
-			 "run/energy/agent_%ld.txt",
+			 "run/energy/out/agent_%ld.txt",
 			 e.a->getTypeNumber() );
 
 	DataLibWriter *writer = createWriter( e.a, path, true, false );
@@ -187,24 +247,81 @@ void Logs::AgentEnergyLog::processEvent( const sim::AgentBirthEvent &e )
 	static const char *colnames[] = {"Timestep", "Energy", NULL};
 	static const datalib::Type coltypes[] = {datalib::INT, datalib::FLOAT};
 
-	writer->beginTable( "AgentEnergy",
+	writer->beginTable( "AgentEnergyOut",
 						colnames,
 						coltypes );
 }
 
 //---------------------------------------------------------------------------
-// Logs::AgentEnergyLog::processEvent
+// Logs::AgentEnergyOutLog::processEvent
 //---------------------------------------------------------------------------
-void Logs::AgentEnergyLog::processEvent( const sim::AgentBodyUpdatedEvent &e )
+void Logs::AgentEnergyOutLog::processEvent( const sim::AgentBodyUpdatedEvent &e )
+{
+	getWriter( e.a )->addRow( getStep(),
+							  e.energyUsed );
+}
+
+//---------------------------------------------------------------------------
+// Logs::AgentEnergyOutLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::AgentEnergyOutLog::processEvent( const sim::AgentDeathEvent &e )
+{
+	delete getWriter( e.a );
+}
+
+
+//===========================================================================
+// AgentEnergyTotalLog
+//===========================================================================
+
+//---------------------------------------------------------------------------
+// Logs::AgentEnergyTotalLog::init
+//---------------------------------------------------------------------------
+void Logs::AgentEnergyTotalLog::init( TSimulation *sim, Document *doc )
+{
+	if( doc->get("RecordAgentEnergyTotal") )
+	{
+		initRecording( sim,
+					   AgentStateScope,
+					   sim::Event_AgentBirth
+					   | sim::Event_BodyUpdated
+					   | sim::Event_AgentDeath );
+	}
+}
+
+//---------------------------------------------------------------------------
+// Logs::AgentEnergyTotalLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::AgentEnergyTotalLog::processEvent( const sim::AgentBirthEvent &e )
+{
+	char path[512];
+	sprintf( path,
+			 "run/energy/total/agent_%ld.txt",
+			 e.a->getTypeNumber() );
+
+	DataLibWriter *writer = createWriter( e.a, path, true, false );
+
+	static const char *colnames[] = {"Timestep", "Energy", NULL};
+	static const datalib::Type coltypes[] = {datalib::INT, datalib::FLOAT};
+
+	writer->beginTable( "AgentEnergyTotal",
+						colnames,
+						coltypes );
+}
+
+//---------------------------------------------------------------------------
+// Logs::AgentEnergyTotalLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::AgentEnergyTotalLog::processEvent( const sim::AgentBodyUpdatedEvent &e )
 {
 	getWriter( e.a )->addRow( getStep(),
 							  e.a->GetEnergy().sum() );
 }
 
 //---------------------------------------------------------------------------
-// Logs::AgentEnergyLog::processEvent
+// Logs::AgentEnergyTotalLog::processEvent
 //---------------------------------------------------------------------------
-void Logs::AgentEnergyLog::processEvent( const sim::AgentDeathEvent &e )
+void Logs::AgentEnergyTotalLog::processEvent( const sim::AgentDeathEvent &e )
 {
 	delete getWriter( e.a );
 }

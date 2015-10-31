@@ -110,9 +110,14 @@ namespace sim
 	{
 		inline EventType getType() const { return Event_BodyUpdated; }
 
-		AgentBodyUpdatedEvent( agent *_a ) : a(_a) {}
+		AgentBodyUpdatedEvent( agent *_a,
+							   float _energyUsed )
+		: a(_a)
+		, energyUsed(_energyUsed)
+		{}
 		
 		agent *a;
+		float energyUsed;
 	};
 
 	//===========================================================================

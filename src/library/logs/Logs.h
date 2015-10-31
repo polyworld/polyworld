@@ -86,16 +86,40 @@ class Logs
 	} _adamiComplexity;
 
 	//===========================================================================
-	// AgentEnergyLog
+	// AgentEnergyInLog
 	//===========================================================================
-	class AgentEnergyLog : public DataLibLogger
+	class AgentEnergyInLog : public DataLibLogger
+	{
+	protected:
+		virtual void init( class TSimulation *sim, proplib::Document *doc );
+		virtual void processEvent( const sim::AgentBirthEvent &e );
+		virtual void processEvent( const sim::EnergyEvent &e );
+		virtual void processEvent( const sim::AgentDeathEvent &e );
+	} _agentEnergyIn;
+
+	//===========================================================================
+	// AgentEnergyOutLog
+	//===========================================================================
+	class AgentEnergyOutLog : public DataLibLogger
 	{
 	protected:
 		virtual void init( class TSimulation *sim, proplib::Document *doc );
 		virtual void processEvent( const sim::AgentBirthEvent &e );
 		virtual void processEvent( const sim::AgentBodyUpdatedEvent &e );
 		virtual void processEvent( const sim::AgentDeathEvent &e );
-	} _agentEnergy;
+	} _agentEnergyOut;
+
+	//===========================================================================
+	// AgentEnergyTotalLog
+	//===========================================================================
+	class AgentEnergyTotalLog : public DataLibLogger
+	{
+	protected:
+		virtual void init( class TSimulation *sim, proplib::Document *doc );
+		virtual void processEvent( const sim::AgentBirthEvent &e );
+		virtual void processEvent( const sim::AgentBodyUpdatedEvent &e );
+		virtual void processEvent( const sim::AgentDeathEvent &e );
+	} _agentEnergyTotal;
 
 	//===========================================================================
 	// AgentPositionLog
