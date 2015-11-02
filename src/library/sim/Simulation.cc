@@ -4801,6 +4801,9 @@ void TSimulation::getStatusText( StatusText& statusText,
 	}
 	statusText.push_back( strdup( t ) );
 
+	sprintf( t, "foodEnergy = %.1f", getFoodEnergy() );
+	statusText.push_back( strdup( t ) );
+
 	sprintf( t, "created  = %4ld", fNumberCreated );
 	if (fNumDomains > 1)
 	{
