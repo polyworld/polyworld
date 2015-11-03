@@ -600,7 +600,7 @@ void agent::grow( long mateWait, bool randomEnergy )
     fNoseColor[0] = fNoseColor[1] = fNoseColor[2] = noseColor;
     
     fAge = 0;
-    fLastMate = agent::config.initMateWait;
+    fLastMate = agent::config.initMateWait - mateWait;
     
 	float size_rel = geneCache.size - agent::config.minAgentSize;
 
