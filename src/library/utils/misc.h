@@ -89,6 +89,7 @@ inline float fmin(float f1, float f2, float f3, float f4, float f5)
 
 float logistic(float x, float slope);
 float biasedLogistic(float x, float bias, float slope);
+float generalLogistic(float x, float bias, float slope, float yneg, float ypos);
 float gaussian( float x, float mean, float variance );
 
 inline float dist( float x1, float y1, float x2, float y2 ) { return sqrt( (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2) ); }
