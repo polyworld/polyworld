@@ -136,6 +136,7 @@ void CppProperties::generateLibrarySource()
 	l( "#include \"proplib/state.h\"" );
 	l( "#include \"sim/globals.h\"" );
 	l( "#include \"sim/Simulation.h\"" );
+	l( "#include \"utils/misc.h\"" );
 	l( "using namespace std;" );
 	l( "using namespace proplib;" );
 	l( "" );
