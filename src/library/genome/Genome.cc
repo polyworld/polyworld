@@ -159,9 +159,9 @@ void Genome::mutateBits()
     }
 }
 
-void Genome::mutateOneByte( long byte )
+void Genome::mutateOneByte( long byte, float stdev )
 {
-    int val = round( nrand( mutable_data[byte], get( "MutationStdev" ) ) );
+    int val = round( nrand( mutable_data[byte], stdev ) );
     mutable_data[byte] = clamp( val, 0, 255 );
 }
 
@@ -171,11 +171,12 @@ void Genome::mutate()
         return;
 
     float rate = get( "MutationRate" );
+    float stdev = get( "MutationStdev" );
     for (long byte = 0; byte < nbytes; byte++)
     {
         if (randpw() < rate)
         {
-            mutateOneByte( byte );
+            mutateOneByte( byte, stdev );
         }
     }
 }
@@ -230,12 +231,19 @@ void Genome::crossover( Genome *g1, Genome *g2, bool mutate )
 #endif
     
 	float mrate = 0.0;
+	float stdev = 0.0;
     if (mutate)
     {
         if (randpw() < 0.5)
+        {
             mrate = g1->get( "MutationRate" );
+            stdev = g1->get( "MutationStdev" );
+        }
         else
+        {
             mrate = g2->get( "MutationRate" );
+            stdev = g2->get( "MutationStdev" );
+        }
     }
     
     long begbyte = 0;
@@ -273,7 +281,7 @@ void Genome::crossover( Genome *g1, Genome *g2, bool mutate )
             {
                 mutable_data[j] = g->mutable_data[j];    // copy from the appropriate genome
                 if (randpw() < mrate)
-                    mutateOneByte( j );
+                    mutateOneByte( j, stdev );
             }
         }
         else
