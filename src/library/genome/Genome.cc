@@ -136,8 +136,7 @@ void Genome::randomize( float mean, float stdev )
 	for (long byte = 0; byte < nbytes; byte++)
 	{
 		int val = round( nrand( mean, stdev ) );
-		val = clamp( val, 0, 255 );
-		set_raw( byte, 1, val );
+		mutable_data[byte] = clamp( val, 0, 255 );
 	}
 }
 
@@ -163,8 +162,7 @@ void Genome::mutateBits()
 void Genome::mutateOneByte( long byte )
 {
     int val = round( nrand( mutable_data[byte], get( "MutationStdev" ) ) );
-    val = clamp( val, 0, 255 );
-    set_raw( byte, 1, val );
+    mutable_data[byte] = clamp( val, 0, 255 );
 }
 
 void Genome::mutate()
