@@ -872,7 +872,7 @@ void TSimulation::InitAgents()
 			// !!! POST PARALLEL
 			// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             fScheduler.postParallel([=]() {
-                        c->grow( fMateWait, fRandomInitEnergy );
+                        c->grow( fMateWait, true );
                 });
 
 			fStage.AddObject(c);
@@ -952,7 +952,7 @@ void TSimulation::InitAgents()
 		// !!! POST PARALLEL
 		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         fScheduler.postParallel( [=]() {
-                c->grow( fMateWait, fRandomInitEnergy );
+                c->grow( fMateWait, true );
             });
 
 		fStage.AddObject(c);
@@ -3855,7 +3855,6 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 	fMinNumAgents = doc.get( "MinAgents" );
 	fMaxNumAgents = doc.get( "MaxAgents" );
 	fInitNumAgents = doc.get( "InitAgents" );
-	fRandomInitEnergy = doc.get( "RandomInitEnergy" );
 	fNumberToSeed = doc.get( "SeedAgents" );
 	fProbabilityOfMutatingSeeds = doc.get( "SeedMutationProbability" );
 	fSeedFromFile = doc.get( "SeedGenomeFromRun" );

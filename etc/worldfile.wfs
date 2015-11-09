@@ -879,7 +879,7 @@ MateWait {
 
 InitMateWait {
   type    Int
-  default 0
+  default MateWait
   min     0
   exmax   MaxLifeSpan
 }

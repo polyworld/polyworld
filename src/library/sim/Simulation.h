@@ -302,7 +302,6 @@ private:
 	long fMinNumAgents; 
 	long fMinNumAgentsWithMetabolism[ MAXMETABOLISMS ];
 	long fInitNumAgents;
-	bool fRandomInitEnergy;
 	long fNumberToSeed;
 	float fProbabilityOfMutatingSeeds;
 	bool fSeedFromFile;

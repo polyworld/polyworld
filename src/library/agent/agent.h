@@ -112,6 +112,7 @@ public:
 		float   bodyBlueChannelConstValue;
 		NoseColor noseColor;
 		float   noseColorConstValue;
+		bool	randomInitEnergy;
 		float	energyUseMultiplier;
 		float	ageEnergyMultiplier;
 
@@ -155,7 +156,7 @@ public:
     
     virtual void draw();
 	void setGenomeReady();
-    void grow( long mateWait, bool randomEnergy = false );    
+    void grow( long mateWait, bool seeding = false );    
     virtual void setradius();    
 	void eat( food* f,
 			  float eatFitnessParameter,

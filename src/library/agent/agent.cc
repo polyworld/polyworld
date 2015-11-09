@@ -145,6 +145,7 @@ void agent::processWorldfile( proplib::Document &doc )
 			agent::config.noseColorConstValue = (float)prop;
 		}
 	}
+    agent::config.randomInitEnergy = doc.get( "RandomInitEnergy" );
     agent::config.energyUseMultiplier = doc.get( "EnergyUseMultiplier" );
     agent::config.ageEnergyMultiplier = doc.get( "AgeEnergyMultiplier" );
     agent::config.eat2Energy = doc.get( "EnergyUseEat" );
@@ -452,7 +453,7 @@ void agent::setGenomeReady()
 //---------------------------------------------------------------------------
 // agent::grow
 //---------------------------------------------------------------------------
-void agent::grow( long mateWait, bool randomEnergy )
+void agent::grow( long mateWait, bool seeding )
 {    
 	InitGeneCache();
 
@@ -600,7 +601,10 @@ void agent::grow( long mateWait, bool randomEnergy )
     fNoseColor[0] = fNoseColor[1] = fNoseColor[2] = noseColor;
     
     fAge = 0;
-    fLastMate = agent::config.initMateWait - mateWait;
+    if( seeding )
+        fLastMate = -mateWait;
+    else
+        fLastMate = agent::config.initMateWait - mateWait;
     
 	float size_rel = geneCache.size - agent::config.minAgentSize;
 
@@ -610,7 +614,7 @@ void agent::grow( long mateWait, bool randomEnergy )
     fEnergy = fMaxEnergy;
 	fFoodEnergy = fMaxEnergy;
 	
-	if( randomEnergy )
+	if( seeding && agent::config.randomInitEnergy )
 	{
 		fEnergy = randpw() * fMaxEnergy;
 		fFoodEnergy = fEnergy;
