@@ -285,7 +285,7 @@ void Genome::crossover( Genome *g1, Genome *g2, bool mutate )
         }
         
         first = !first;
-        begbyte = endbyte + 1;
+        begbyte = endbyte;
     }
 }
 
