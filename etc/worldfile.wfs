@@ -1424,7 +1424,7 @@ MinMutationStdev {
 
 MaxMutationStdev {
   type    Float
-  default 128.0
+  default 8.0
   min     MinMutationStdev
 }
 
