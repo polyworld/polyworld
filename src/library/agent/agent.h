@@ -115,6 +115,7 @@ public:
 		bool	randomInitEnergy;
 		float	energyUseMultiplier;
 		float	ageEnergyMultiplier;
+		bool	dieAtMaxAge;
 
 		bool	enableMateWaitFeedback;
 		bool	enableSpeedFeedback;

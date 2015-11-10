@@ -35,6 +35,7 @@ void GenomeSchema::processWorldfile( proplib::Document &doc )
 			assert( false );
 	}
     GenomeSchema::config.simpleSeed = doc.get( "SimpleSeed" );
+    GenomeSchema::config.dieAtMaxAge = doc.get( "DieAtMaxAge" );
     GenomeSchema::config.enableEvolution = doc.get( "EnableEvolution" );
     GenomeSchema::config.minMutationRate = doc.get( "MinMutationRate" );
     GenomeSchema::config.maxMutationRate = doc.get( "MaxMutationRate" );
@@ -120,13 +121,19 @@ void GenomeSchema::define()
 		   GenomeSchema::config.minNumCpts,
 		   GenomeSchema::config.maxNumCpts );
 
-	SCALAR( LifeSpan,
-		   agent::config.minLifeSpan,
-		   agent::config.maxLifeSpan );
+	if( GenomeSchema::config.dieAtMaxAge )
+	{
+		SCALAR( LifeSpan,
+			   agent::config.minLifeSpan,
+			   agent::config.maxLifeSpan );
+	}
 
-	SCALAR( ID,
-			0.0,
-			1.0 );
+	if( agent::config.bodyGreenChannel == agent::BGC_ID )
+	{
+		SCALAR( ID,
+				0.0,
+				1.0 );
+	}
 
 	SCALAR( Strength,
 		   agent::config.minStrength,

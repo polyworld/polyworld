@@ -21,6 +21,7 @@ namespace genome
 			GeneInterpolationPowers geneInterpolationPower;
 
 			bool simpleSeed;
+			bool dieAtMaxAge;
 			bool enableEvolution;
 
 			float seedMutationRate;

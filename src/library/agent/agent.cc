@@ -148,6 +148,7 @@ void agent::processWorldfile( proplib::Document &doc )
     agent::config.randomInitEnergy = doc.get( "RandomInitEnergy" );
     agent::config.energyUseMultiplier = doc.get( "EnergyUseMultiplier" );
     agent::config.ageEnergyMultiplier = doc.get( "AgeEnergyMultiplier" );
+    agent::config.dieAtMaxAge = doc.get( "DieAtMaxAge" );
     agent::config.eat2Energy = doc.get( "EnergyUseEat" );
 	agent::config.mate2Energy = doc.get( "EnergyUseMate" );
     agent::config.fight2Energy = doc.get( "EnergyUseFight" );
@@ -901,7 +902,10 @@ void agent::InitGeneCache()
 	geneCache.maxSpeed = fGenome->get("MaxSpeed");
 	geneCache.strength = fGenome->get("Strength");
 	geneCache.size = fGenome->get("Size");
-	geneCache.lifespan = fGenome->get("LifeSpan");
+	if( agent::config.dieAtMaxAge )
+		geneCache.lifespan = fGenome->get("LifeSpan");
+	else
+		geneCache.lifespan = fSimulation->GetMaxSteps();
 }
 
 //---------------------------------------------------------------------------
