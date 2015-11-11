@@ -140,9 +140,14 @@ SeedMutationProbability {
   max     1.0
 }
 
-SimpleSeed {
-  type    Bool
-  default False
+SeedType {
+  type    Enum
+  enum    Values {
+    Legacy,
+    Simple,
+    Random
+  }
+  default Legacy
 }
 
 InitFood {

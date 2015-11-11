@@ -61,6 +61,7 @@ namespace genome
 
 		void seed( Genome *genome,
 				   unsigned char rawval );
+		void randomize( Genome *genome );
 
 		int getMutableSize();
 		int getOffset();

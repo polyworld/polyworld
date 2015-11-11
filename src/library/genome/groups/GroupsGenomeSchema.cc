@@ -221,10 +221,14 @@ void GroupsGenomeSchema::define()
 //-------------------------------------------------------------------------------------------
 void GroupsGenomeSchema::seed( Genome *g_ )
 {
-	if( GenomeSchema::config.simpleSeed )
+	if( GenomeSchema::config.seedType == GenomeSchema::SEED_RANDOM )
 	{
 		g_->randomize();
 		return;
+	}
+	else if( GenomeSchema::config.seedType == GenomeSchema::SEED_SIMPLE )
+	{
+		g_->setAll( 0 );
 	}
 
 	// ---
@@ -234,6 +238,7 @@ void GroupsGenomeSchema::seed( Genome *g_ )
 
 	GroupsGenome *g = dynamic_cast<GroupsGenome *>( g_ );
 
+#define RANDOMIZE(NAME) get(#NAME)->randomize( g )
 #define SEED(NAME,VAL) g->seed( get(#NAME), VAL)
 #define SEED_GROUP(NAME,GROUP,VAL)				\
 	g->seed( get(#NAME),						\
@@ -245,6 +250,12 @@ void GroupsGenomeSchema::seed( Genome *g_ )
 			 get(#FROM),						\
 			 get(#TO),							\
 			 VAL )
+
+	if( GenomeSchema::config.seedType == GenomeSchema::SEED_SIMPLE )
+	{
+		RANDOMIZE( Bias );
+		return;
+	}
 
 	SEED( Red, 0.5 );
 	SEED( Green, 0.5 );

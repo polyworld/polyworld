@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "agent/agent.h"
 #include "agent/Metabolism.h"
@@ -34,7 +35,6 @@ void GenomeSchema::processWorldfile( proplib::Document &doc )
 		else
 			assert( false );
 	}
-    GenomeSchema::config.simpleSeed = doc.get( "SimpleSeed" );
     GenomeSchema::config.dieAtMaxAge = doc.get( "DieAtMaxAge" );
     GenomeSchema::config.enableEvolution = doc.get( "EnableEvolution" );
     GenomeSchema::config.minMutationRate = doc.get( "MinMutationRate" );
@@ -56,6 +56,17 @@ void GenomeSchema::processWorldfile( proplib::Document &doc )
     GenomeSchema::config.maxBitProb = doc.get( "MaxInitialBitProb" );
     GenomeSchema::config.byteMean = doc.get( "InitialByteMean" );
     GenomeSchema::config.byteStdev = doc.get( "InitialByteStdev" );
+	{
+		string seedType = doc.get( "SeedType" );
+		if( seedType == "Legacy" )
+			GenomeSchema::config.seedType = GenomeSchema::SEED_LEGACY;
+		else if( seedType == "Simple" )
+			GenomeSchema::config.seedType = GenomeSchema::SEED_SIMPLE;
+		else if( seedType == "Random" )
+			GenomeSchema::config.seedType = GenomeSchema::SEED_RANDOM;
+		else
+			assert( false );
+	}
 	GenomeSchema::config.seedMutationRate = doc.get( "SeedMutationRate" );
 	GenomeSchema::config.seedFightBias = doc.get( "SeedFightBias" );
 	GenomeSchema::config.seedFightExcitation = doc.get( "SeedFightExcitation" );

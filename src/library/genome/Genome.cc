@@ -6,7 +6,6 @@
 
 #include "GenomeLayout.h"
 #include "utils/AbstractFile.h"
-#include "utils/misc.h"
 
 
 #ifdef __ALTIVEC__
@@ -96,6 +95,14 @@ void Genome::updateSum( unsigned long *sum, unsigned long *sum2 )
 			sum[i] += raw;
 			sum2[i] += raw * raw;
 		}
+	}
+}
+
+void Genome::setAll( unsigned char val )
+{
+	for (long byte = 0; byte < nbytes; byte++)
+	{
+		mutable_data[byte] = val;
 	}
 }
 

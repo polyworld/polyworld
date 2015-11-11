@@ -7,6 +7,7 @@
 #include "GenomeLayout.h"
 #include "GenomeSchema.h"
 #include "utils/graybin.h"
+#include "utils/misc.h"
 
 // forward decl
 class AbstractFile;
@@ -43,6 +44,7 @@ namespace genome
 		unsigned int get_raw_uint( long byte );
 		void updateSum( unsigned long *sum, unsigned long *sum2 );
 
+		void setAll( unsigned char val );
 		void seed( Gene *gene,
 				   float rawval_ratio );
 
@@ -80,6 +82,8 @@ namespace genome
 		void set_raw( int offset,
 					  int n,
 					  unsigned char rawval );
+		void set_raw_random( int offset,
+							 int n );
 
 		int nbytes;
 		unsigned char *mutable_data;
@@ -126,6 +130,19 @@ inline void Genome::set_raw( int offset,
 		int layoutOffset = layout->getMutableDataOffset( offset + i );
 
 		mutable_data[layoutOffset] = val;
+	}
+}
+
+inline void Genome::set_raw_random( int offset,
+									int n )
+{
+	assert( (offset >= 0) && (offset + n <= nbytes) );
+
+	for( int i = 0; i < n; i++ )
+	{
+		int layoutOffset = layout->getMutableDataOffset( offset + i );
+
+		mutable_data[layoutOffset] = (unsigned char)rrand( 0, 256 );
 	}
 }
 

@@ -13,6 +13,13 @@ namespace genome
 	class GenomeSchema : public GeneSchema
 	{
 	public:
+		enum SeedType
+		{
+			SEED_LEGACY,
+			SEED_SIMPLE,
+			SEED_RANDOM
+		};
+
 		static struct Configuration
 		{
 			GenomeLayout::LayoutType layoutType;
@@ -20,10 +27,10 @@ namespace genome
 			typedef std::map<std::string,float> GeneInterpolationPowers;
 			GeneInterpolationPowers geneInterpolationPower;
 
-			bool simpleSeed;
 			bool dieAtMaxAge;
 			bool enableEvolution;
 
+			SeedType seedType;
 			float seedMutationRate;
 			float seedFightBias;
 			float seedFightExcitation;

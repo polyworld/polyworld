@@ -49,6 +49,14 @@ void Gene::seed( Genome *genome,
 					 rawval );
 }
 
+void Gene::randomize( Genome *genome )
+{
+	assert( ismutable && offset > -1 );
+
+	genome->set_raw_random( offset,
+							getMutableSize() );
+}
+
 int Gene::getMutableSize()
 {
 	return ismutable ? getMutableSizeImpl() : 0;
