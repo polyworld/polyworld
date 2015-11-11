@@ -100,7 +100,7 @@ void Genome::updateSum( unsigned long *sum, unsigned long *sum2 )
 }
 
 #define SEEDCHECK(VAL) assert(((VAL) >= 0) && ((VAL) <= 1))
-#define SEEDVAL(VAL) (unsigned char)((VAL) * 255)
+#define SEEDVAL(VAL) (unsigned char)((VAL) == 1 ? 255 : (VAL) * 256)
 
 void Genome::seed( Gene *gene,
 				   float rawval_ratio )

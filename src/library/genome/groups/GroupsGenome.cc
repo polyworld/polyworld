@@ -218,7 +218,7 @@ Scalar GroupsGenome::get( Gene *gene,
 }
 
 #define SEEDCHECK(VAL) assert(((VAL) >= 0) && ((VAL) <= 1))
-#define SEEDVAL(VAL) (unsigned char)((VAL) * 255)
+#define SEEDVAL(VAL) (unsigned char)((VAL) == 1 ? 255 : (VAL) * 256)
 
 void GroupsGenome::seed( Gene *attr,
 						 Gene *group,
