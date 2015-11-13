@@ -1,9 +1,12 @@
 #pragma once
 
+#include <map>
 #include <string>
 
 namespace proplib
 {
+	typedef std::map<std::string, std::string> ParameterMap;
+
 	// ----------------------------------------------------------------------
 	// ----------------------------------------------------------------------
 	// --- CLASS DocumentEditor

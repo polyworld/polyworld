@@ -59,7 +59,6 @@
 #include "logs/Logs.h"
 #include "proplib/proplib.h"
 #include "utils/AbstractFile.h"
-#include "utils/misc.h"
 #include "utils/objectxsortedlist.h"
 #include "utils/PwMovieUtils.h"
 #include "utils/RandomNumberGenerator.h"
@@ -187,7 +186,7 @@ inline float AverageAngles( float a, float b )
 //---------------------------------------------------------------------------
 // TSimulation::TSimulation
 //---------------------------------------------------------------------------
-TSimulation::TSimulation( string worldfilePath, ParameterMap parameters )
+TSimulation::TSimulation( string worldfilePath, proplib::ParameterMap parameters )
 	:
 		fLockStepWithBirthsDeathsLog(false),
 		fLockstepFile(NULL),
@@ -260,22 +259,6 @@ TSimulation::TSimulation( string worldfilePath, ParameterMap parameters )
 			exit( 1 );
 		}
 	}
-	SYSTEM( ("cp " + worldfilePath + " run/original.wf").c_str() );
-	SYSTEM( "cp ./etc/worldfile.wfs run/original.wfs" );
-
-	// ---
-	// --- Add parameters (if any) to the worldfile
-	// ----
-	{
-		ifstream in( worldfilePath.c_str() );
-		ofstream out( "run/original.wf" );
-		out << in.rdbuf();
-		out << endl;
-		itfor( ParameterMap, parameters, parameter )
-		{
-			out << parameter->first << " " << parameter->second << endl;
-		}
-	}
 
 	// ---
 	// --- Process the Worldfile
@@ -285,7 +268,7 @@ TSimulation::TSimulation( string worldfilePath, ParameterMap parameters )
 	{
 		proplib::DocumentBuilder builder;
 		schema = builder.buildSchemaDocument( "./etc/worldfile.wfs" );
-		worldfile = builder.buildWorldfileDocument( schema, "run/original.wf" );
+		worldfile = builder.buildWorldfileDocument( schema, worldfilePath, parameters );
 
 		{
 			ofstream out( "run/converted.wf" );
@@ -459,6 +442,9 @@ TSimulation::TSimulation( string worldfilePath, ParameterMap parameters )
 	// --- Save worldfile data to run/ and dispose documents
 	// ---
 	{
+		SYSTEM( ("cp " + worldfile->getPath() + " run/original.wf").c_str() );
+		SYSTEM( ("cp " + schema->getPath() + " run/original.wfs").c_str() );
+
 		{
 			ofstream out( "run/normalized.wf" );
 			proplib::DocumentWriter writer( out );

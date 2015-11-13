@@ -463,3 +463,11 @@ void WorldfileConverter::convertDeprecatedV2Properties( DocumentEditor *editor, 
 		}
 	}
 }
+
+void WorldfileConverter::setParameters( DocumentEditor *editor, ParameterMap parameters )
+{
+	itfor( ParameterMap, parameters, parameter )
+	{
+		editor->set( parameter->first, parameter->second );
+	}
+}

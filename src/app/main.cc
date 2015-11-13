@@ -13,8 +13,8 @@
 // Local
 #include "monitor/Monitor.h"
 #include "monitor/MonitorManager.h"
+#include "proplib/proplib.h"
 #include "sim/Simulation.h"
-#include "sim/simtypes.h"
 #include "ui/SimulationController.h"
 #include "ui/gui/MainWindow.h"
 #include "ui/term/TerminalUI.h"
@@ -54,7 +54,7 @@ int main( int argc, char** argv )
 {
 	const char *worldfilePath = NULL;
 	string ui = "gui";
-	ParameterMap parameters;
+	proplib::ParameterMap parameters;
 
 	for( int argi = 1; argi < argc; argi++ )
 	{

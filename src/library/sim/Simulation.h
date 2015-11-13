@@ -22,6 +22,7 @@
 #include "graphics/graphics.h"
 #include "graphics/gstage.h"
 #include "proplib/cppprops.h"
+#include "proplib/proplib.h"
 #include "utils/Events.h"
 #include "utils/Signal.h"
 
@@ -40,7 +41,7 @@ class TSimulation
 	PROPLIB_CPP_PROPERTIES
 
 public:
-	TSimulation( std::string worldfilePath, ParameterMap parameters );
+	TSimulation( std::string worldfilePath, proplib::ParameterMap parameters );
 	virtual ~TSimulation();
 
 	void Step();

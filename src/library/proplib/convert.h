@@ -2,6 +2,8 @@
 
 #include <string>
 
+#include "editor.h"
+
 namespace proplib
 {
 
@@ -12,6 +14,7 @@ namespace proplib
 		static void convertV1SyntaxToV2( std::string pathIn, std::string pathOut );
 		static void convertV1PropertiesToV2( class DocumentEditor *editor, class Document *doc );
 		static void convertDeprecatedV2Properties( class DocumentEditor *editor, class Document *doc );
+		static void setParameters( class DocumentEditor *editor, ParameterMap parameters );
 	};
 
 }

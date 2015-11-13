@@ -76,6 +76,14 @@ Document *DocumentBuilder::buildWorldfileDocument( SchemaDocument *schema, const
 	return _doc;
 }
 
+Document *DocumentBuilder::buildWorldfileDocument( SchemaDocument *schema, const std::string &path, ParameterMap parameters )
+{
+	Document *_doc = buildWorldfileDocument( schema, path );
+	DocumentEditor editor( schema, _doc );
+	WorldfileConverter::setParameters( &editor, parameters );
+	return _doc;
+}
+
 SchemaDocument *DocumentBuilder::buildSchemaDocument( const string &path )
 {
 	proplib::Parser parser;
