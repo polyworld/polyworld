@@ -254,6 +254,10 @@ void GroupsGenomeSchema::seed( Genome *g_ )
 	if( GenomeSchema::config.seedType == GenomeSchema::SEED_SIMPLE )
 	{
 		RANDOMIZE( Bias );
+		if( GroupsBrain::config.mirroredtopologicaldistortion )
+		{
+			SEED( TopologicalDistortion, 0.5 );
+		}
 		return;
 	}
 

@@ -49,6 +49,7 @@ void GroupsBrain::processWorldfile( proplib::Document &doc )
     GroupsBrain::config.maxineurpergroup = doc.get( "MaxInhibitoryNeuronsPerGroup" );
     GroupsBrain::config.minconnectiondensity = doc.get( "MinConnectionDensity" );
     GroupsBrain::config.maxconnectiondensity = doc.get( "MaxConnectionDensity" );
+    GroupsBrain::config.mirroredtopologicaldistortion = doc.get( "MirroredTopologicalDistortion" );
     GroupsBrain::config.mintopologicaldistortion = doc.get( "MinTopologicalDistortion" );
     GroupsBrain::config.maxtopologicaldistortion = doc.get( "MaxTopologicalDistortion" );
 	GroupsBrain::config.enableTopologicalDistortionRngSeed = doc.get( "EnableTopologicalDistortionRngSeed" );
@@ -692,6 +693,10 @@ void GroupsBrain::growSynapses( int groupIndex_to,
 		// the group as opposed to the entire neuron array.
 		int neuronLocalIndex_fromBase = short((float(neuronLocalIndex_to) / float(neuronCount_to)) * float(neuronCount_from) - float(synapseCount_new) * 0.5);
 		neuronLocalIndex_fromBase = max<short>(0, min<short>(neuronCount_from - synapseCount_new, neuronLocalIndex_fromBase));
+		if( GroupsBrain::config.mirroredtopologicaldistortion && td_fromto >= 0.5 )
+		{
+			neuronLocalIndex_fromBase = (neuronCount_from - 1) - neuronLocalIndex_fromBase;
+		}
 
 #if DebugBrainGrow
 		if( DebugBrainGrowPrint )
@@ -703,14 +708,21 @@ void GroupsBrain::growSynapses( int groupIndex_to,
 		}
 #endif
 
-		if ((neuronLocalIndex_fromBase + synapseCount_new) > neuronCount_from)
 		{
-			char msg[128];
-			sprintf( msg, "more %s synapses from group ", synapseType->name.c_str() );
-			error(2,"Illegal architecture generated: ",
-				  msg, groupIndex_from,
-				  " to group ",groupIndex_to,
-				  " than there are i-neurons in group ",groupIndex_from);
+			bool legal = true;
+			if (!GroupsBrain::config.mirroredtopologicaldistortion || td_fromto < 0.5)
+				legal = neuronLocalIndex_fromBase + synapseCount_new <= neuronCount_from;
+			else
+				legal = neuronLocalIndex_fromBase - synapseCount_new >= -1;
+			if (!legal)
+			{
+				char msg[128];
+				sprintf( msg, "more %s synapses from group ", synapseType->name.c_str() );
+				error(2,"Illegal architecture generated: ",
+					  msg, groupIndex_from,
+					  " to group ",groupIndex_to,
+					  " than there are i-neurons in group ",groupIndex_from);
+			}
 		}
 
 		bool neurused[neuronCount_from];
@@ -722,10 +734,30 @@ void GroupsBrain::growSynapses( int groupIndex_to,
 			// the group as opposed to the entire neuron array.
 			int neuronLocalIndex_from;
 
-			if (td_rng->drand() < td_fromto)
+			if (GroupsBrain::config.mirroredtopologicaldistortion || td_rng->drand() < td_fromto)
 			{
-				short distortion = short(nint(td_rng->range(-0.5,0.5)*td_fromto*neuronCount_from));
-				neuronLocalIndex_from = isyn + neuronLocalIndex_fromBase + distortion;
+				float td_fromto_abs;
+				if (GroupsBrain::config.mirroredtopologicaldistortion)
+				{
+					if (td_fromto < 0.5)
+					{
+						neuronLocalIndex_from = neuronLocalIndex_fromBase + isyn;
+						td_fromto_abs = td_fromto * 2;
+					}
+					else
+					{
+						neuronLocalIndex_from = neuronLocalIndex_fromBase - isyn;
+						td_fromto_abs = (1 - td_fromto) * 2;
+					}
+				}
+				else
+				{
+					neuronLocalIndex_from = neuronLocalIndex_fromBase + isyn;
+					td_fromto_abs = td_fromto;
+				}
+
+				short distortion = short(nint(td_rng->range(-0.5,0.5)*td_fromto_abs*neuronCount_from));
+				neuronLocalIndex_from += distortion;
                         
 				if (neuronLocalIndex_from < 0)
 					neuronLocalIndex_from += neuronCount_from;

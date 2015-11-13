@@ -32,6 +32,7 @@ class GroupsBrain : public Brain
 		short maxnoninputneurons;
 		float minconnectiondensity;
 		float maxconnectiondensity;
+		bool mirroredtopologicaldistortion;
 		float mintopologicaldistortion;
 		float maxtopologicaldistortion;
 

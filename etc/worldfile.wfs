@@ -1531,6 +1531,11 @@ MaxConnectionDensity {
   min     MinConnectionDensity
 }
 
+MirroredTopologicalDistortion {
+  type    Bool
+  default False
+}
+
 MinTopologicalDistortion {
   type    Float
   default 0.0
