@@ -37,6 +37,7 @@ MainWindow::MainWindow( const char* windowTitle,
 						char** legend,
 						uint32_t startFram,
 						uint32_t endFram,
+						uint32_t framDelta,
 						double frameRate,
 						bool loop)
 	:	QMainWindow( NULL, windowFlags )
@@ -46,6 +47,7 @@ MainWindow::MainWindow( const char* windowTitle,
 	reader = readerParam;
 	startFrame = startFram;
 	endFrame = endFram;
+	frameDelta = framDelta;
 	looping = loop;
 
 	// Create the main menubar
@@ -142,17 +144,27 @@ void MainWindow::SetFrame( uint32_t index )
 //---------------------------------------------------------------------------
 // MainWindow::NextFrame()
 //---------------------------------------------------------------------------
-void MainWindow::NextFrame()
+void MainWindow::NextFrame( uint32_t delta )
 {
-	SetFrame( frame.index + 1 );
+	if( delta == 0 )
+		delta = frameDelta;
+	uint32_t index = frame.index + delta;
+	if( index > reader->getFrameCount() )
+		index = reader->getFrameCount();
+	SetFrame( index );
 }
 
 //---------------------------------------------------------------------------
 // MainWindow::PrevFrame()
 //---------------------------------------------------------------------------
-void MainWindow::PrevFrame()
+void MainWindow::PrevFrame( uint32_t delta )
 {
-	SetFrame( frame.index - 1 );
+	if( delta == 0 )
+		delta = frameDelta;
+	uint32_t index = frame.index - delta;
+	if( index > frame.index )
+		index = 1;
+	SetFrame( index );
 }
 
 //---------------------------------------------------------------------------
@@ -160,6 +172,12 @@ void MainWindow::PrevFrame()
 //---------------------------------------------------------------------------
 void MainWindow::keyReleaseEvent( QKeyEvent* event )
 {
+	uint32_t delta = 0;
+	if( event->modifiers() & Qt::ShiftModifier )
+		delta = 1;
+	else if( event->modifiers() & Qt::ControlModifier )
+		delta = 10 * frameDelta;
+
 	switch( event->key() )
 	{
 		case Qt::Key_Space:
@@ -170,12 +188,12 @@ void MainWindow::keyReleaseEvent( QKeyEvent* event )
 
 		case Qt::Key_Right:
 			state = PAUSED;
-			NextFrame();
+			NextFrame( delta );
 			break;
 
 		case Qt::Key_Left:
 			state = PAUSED;
-			PrevFrame();
+			PrevFrame( delta );
 			break;
 
 		default:

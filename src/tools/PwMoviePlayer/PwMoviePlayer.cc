@@ -90,6 +90,7 @@ PMPApp::PMPApp(int &argc, char** argv) : QApplication(argc, argv)
 	char**			legend			= NULL;
 	uint32_t		startFrame		= 0;
 	uint32_t		endFrame		= 0;
+	uint32_t		frameDelta		= 1;
 	double			frameRate		= 75.0;
 	bool			loop			= false;
 	int				arg				= 1;
@@ -130,6 +131,11 @@ PMPApp::PMPApp(int &argc, char** argv) : QApplication(argc, argv)
 					arg++;
 					endFrame = strtoul( argv[arg], NULL, 10 );
 //					printf( "endFrame = %lu\n", endFrame );
+					break;
+
+				case 'd':
+					arg++;
+					frameDelta = strtoul( argv[arg], NULL, 10 );
 					break;
 
 				case 'r':
@@ -224,7 +230,7 @@ PMPApp::PMPApp(int &argc, char** argv) : QApplication(argc, argv)
 	QCoreApplication::setOrganizationDomain( "indiana.edu" );
 	QCoreApplication::setApplicationName( "pwmovieplayer" );
 
-	mainWindow = new MainWindow( "Polyworld MoviePlayer", "Main", 0, reader, legend, startFrame, endFrame, frameRate, loop );
+	mainWindow = new MainWindow( "Polyworld MoviePlayer", "Main", 0, reader, legend, startFrame, endFrame, frameDelta, frameRate, loop );
 	mainWindow->show();
 }
 

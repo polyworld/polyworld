@@ -33,6 +33,7 @@ public:
 				char** legend,
 				uint32_t startFram,
 				uint32_t endFram,
+				uint32_t framDelta,
 				double frameRate,
 				bool loop);
 	~MainWindow();
@@ -50,11 +51,12 @@ private slots:
 private:
 	uint32_t startFrame;
 	uint32_t endFrame;
+	uint32_t frameDelta;
 	bool looping;
 
 	void SetFrame( uint32_t index );
-	void NextFrame();
-	void PrevFrame();
+	void NextFrame( uint32_t delta = 0 );
+	void PrevFrame( uint32_t delta = 0 );
 
 	void CreateMenus( QMenuBar* menuBar );
 	void AddFileMenu( QMenuBar* menuBar );
