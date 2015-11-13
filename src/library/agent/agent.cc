@@ -1111,6 +1111,8 @@ float agent::UpdateBody( float moveFitnessParam,
 
     fAge++;
 
+	bool skipDomainCheck = false;
+
 	// Do collision detection for barriers, edges, and solid objects, if not being carried
 	if( ! BeingCarried() )
 	{
@@ -1278,15 +1280,24 @@ float agent::UpdateBody( float moveFitnessParam,
 			else if( fPosition[2] > 0.0 )
 				fPosition[2] -= globals::worldsize;
 		}
+		else
+		{
+			if( fPosition[0] > globals::worldsize || fPosition[0] < 0.0 ||
+				fPosition[2] < -globals::worldsize || fPosition[2] > 0.0 )
+				skipDomainCheck = true;
+		}
 	} // if( ! BeingCarried() )
 
 
 	// Keep track of the domain in which the agent resides
-    short newDomain = fSimulation->WhichDomain( fPosition[0], fPosition[2], fDomain );
-    if( newDomain != fDomain )
+    if( !skipDomainCheck )
     {
-        fSimulation->SwitchDomain( newDomain, fDomain, AGENTTYPE );
-        fDomain = newDomain;
+        short newDomain = fSimulation->WhichDomain( fPosition[0], fPosition[2], fDomain );
+        if( newDomain != fDomain )
+        {
+            fSimulation->SwitchDomain( newDomain, fDomain, AGENTTYPE );
+            fDomain = newDomain;
+        }
     }
         
 #ifdef OF1
