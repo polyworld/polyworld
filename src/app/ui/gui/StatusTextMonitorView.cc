@@ -25,7 +25,7 @@ using namespace std;
 StatusTextMonitorView::StatusTextMonitorView( StatusTextMonitor *_monitor )
 	: MonitorView( _monitor, DEFAULT_WIDTH, DEFAULT_HEIGHT, false )
 	, monitor( _monitor )
-	, font( "Futura Condensed Medium", 12, QFont::Normal )
+	, font( "Futura Condensed Medium", 10, QFont::Normal )
 	, lineHeight( QFontMetrics(font).height() )
 	, nlines( 0 )
 	
