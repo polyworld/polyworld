@@ -4998,10 +4998,10 @@ void TSimulation::getStatusText( StatusText& statusText,
 	sprintf( t, "MateRate = %.2f", (double) deltaBorn / statusFrequency );
 	statusText.push_back( strdup( t ) );
 
-	sprintf( t, "LifeSpan = %lu ± %lu [%lu, %lu]", nint( fLifeSpanStats.mean() ), nint( fLifeSpanStats.stddev() ), (unsigned long) fLifeSpanStats.min(), (unsigned long) fLifeSpanStats.max() );
+	sprintf( t, "LifeSpan = %lu \xb1 %lu [%lu, %lu]", nint( fLifeSpanStats.mean() ), nint( fLifeSpanStats.stddev() ), (unsigned long) fLifeSpanStats.min(), (unsigned long) fLifeSpanStats.max() );
 	statusText.push_back( strdup( t ) );
 
-	sprintf( t, "RecLifeSpan = %lu ± %lu [%lu, %lu]", nint( fLifeSpanRecentStats.mean() ), nint( fLifeSpanRecentStats.stddev() ), (unsigned long) fLifeSpanRecentStats.min(), (unsigned long) fLifeSpanRecentStats.max() );
+	sprintf( t, "RecLifeSpan = %lu \xb1 %lu [%lu, %lu]", nint( fLifeSpanRecentStats.mean() ), nint( fLifeSpanRecentStats.stddev() ), (unsigned long) fLifeSpanRecentStats.min(), (unsigned long) fLifeSpanRecentStats.max() );
 	statusText.push_back( strdup( t ) );
 
 	// ---
@@ -5010,7 +5010,7 @@ void TSimulation::getStatusText( StatusText& statusText,
 	function<void (const char *, Stat &)> addStat =
 		[&t, &statusText] ( const char *name, Stat &stat )
 		{
-			sprintf( t, "%s = %.1f ± %.1f [%lu, %lu]",
+			sprintf( t, "%s = %.1f \xb1 %.1f [%lu, %lu]",
 					 name, stat.mean(), stat.stddev(), (unsigned long) stat.min(), (unsigned long) stat.max() );
 			statusText.push_back( strdup( t ) );
 		};
