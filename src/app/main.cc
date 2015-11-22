@@ -27,7 +27,7 @@ using namespace std;
 //===========================================================================
 void usage( const char* format, ... )
 {
-	printf( "Usage:  Polyworld [--ui gui|term] worldfile\n" );
+	printf( "Usage:  Polyworld [--ui gui|term] [--key value]... worldfile\n" );
 
 	if( format )
 	{
