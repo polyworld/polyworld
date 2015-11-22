@@ -139,12 +139,15 @@ void agent::processWorldfile( proplib::Document &doc )
 		proplib::Property &prop = doc.get( "NoseColor" );
 		if( (string)prop == "L" )
 			agent::config.noseColor = agent::NC_LIGHT;
+		else if( (string)prop == "B" )
+			agent::config.noseColor = agent::NC_BODY;
 		else
 		{
 			agent::config.noseColor = agent::NC_CONST;
 			agent::config.noseColorConstValue = (float)prop;
 		}
 	}
+    agent::config.hasLightBehavior = agent::config.bodyGreenChannel == agent::BGC_LIGHT || agent::config.noseColor == agent::NC_LIGHT;
     agent::config.randomInitEnergy = doc.get( "RandomInitEnergy" );
     agent::config.energyUseMultiplier = doc.get( "EnergyUseMultiplier" );
     agent::config.ageEnergyMultiplier = doc.get( "AgeEnergyMultiplier" );
@@ -489,7 +492,8 @@ void agent::grow( long mateWait, bool seeding )
 	OUTPUT_NERVE(yaw, "Yaw");
 	if( agent::config.yawEncoding == YE_OPPOSE )
 		OUTPUT_NERVE(yawOppose, "YawOppose");
-	OUTPUT_NERVE(light, "Light");
+	if( agent::config.hasLightBehavior )
+		OUTPUT_NERVE(light, "Light");
 	OUTPUT_NERVE(focus, "Focus");
 	if( agent::config.enableVisionPitch )
 		OUTPUT_NERVE(visionPitch, "VisionPitch");
@@ -592,6 +596,7 @@ void agent::grow( long mateWait, bool seeding )
 		noseColor = agent::config.noseColorConstValue;
 		break;
 	case NC_LIGHT:
+	case NC_BODY:
 		// start neutral gray
 		noseColor = 0.5;
 		break;
@@ -1039,9 +1044,13 @@ float agent::UpdateBody( float moveFitnessParam,
                      + outputNerves.fight->get() * agent::config.fight2Energy
                      + outputNerves.speed->get() * fSpeed2Energy
                      + fabs(dyaw) * fYaw2Energy
-                     + outputNerves.light->get() * agent::config.light2Energy
                      + fCns->getEnergyUse()
                      + agent::config.fixedEnergyDrain;
+
+	if( agent::config.hasLightBehavior )
+	{
+		energyused += outputNerves.light->get() * agent::config.light2Energy;
+	}
 
 	if( agent::config.enableGive )
 	{
@@ -1654,7 +1663,10 @@ void agent::draw()
 	glPushMatrix();
 		position();
 		glScalef(fScale, fScale, fScale);
-		gpolyobj::drawcolpolyrange(0, 4, fNoseColor);
+		if( agent::config.noseColor == agent::NC_BODY )
+			gpolyobj::drawcolpolyrange(0, 4, fColor);
+		else
+			gpolyobj::drawcolpolyrange(0, 4, fNoseColor);
 		gpolyobj::drawcolpolyrange(5, 9, fColor);
 //		fCamera.draw();
 	glPopMatrix();
@@ -1697,7 +1709,10 @@ void agent::print()
 	cout << "  fBrain->fight() = " << outputNerves.fight->get() nl;
 	cout << "  fBrain->speed() = " << outputNerves.speed->get() nl;
 	cout << "  fBrain->yaw() = " << outputNerves.yaw->get() nl;
-	cout << "  fBrain->light() = " << outputNerves.light->get() nl;
+	if (agent::config.hasLightBehavior)
+	{
+		cout << "  fBrain->light() = " << outputNerves.light->get() nl;
+	}
 
     cout.flush();
 }

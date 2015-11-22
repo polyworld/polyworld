@@ -54,7 +54,7 @@ public:
 	enum BodyRedChannel { BRC_FIGHT, BRC_CONST, BRC_GIVE };
 	enum BodyGreenChannel { BGC_ID, BGC_LIGHT, BGC_EAT, BGC_CONST };
 	enum BodyBlueChannel { BBC_MATE, BBC_CONST, BBC_ENERGY };
-	enum NoseColor { NC_LIGHT, NC_CONST };
+	enum NoseColor { NC_LIGHT, NC_BODY, NC_CONST };
 	enum YawEncoding { YE_SQUASH, YE_OPPOSE };
 
 	static struct Configuration
@@ -112,6 +112,7 @@ public:
 		float   bodyBlueChannelConstValue;
 		NoseColor noseColor;
 		float   noseColorConstValue;
+		bool    hasLightBehavior;
 		bool	randomInitEnergy;
 		float	energyUseMultiplier;
 		float	ageEnergyMultiplier;

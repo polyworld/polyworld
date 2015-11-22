@@ -103,7 +103,8 @@ void GroupsGenomeSchema::define()
 	OUTPUT( Yaw );
 	if( agent::config.yawEncoding == agent::YE_OPPOSE )
 		OUTPUT( YawOppose );
-	OUTPUT( Light );
+	if( agent::config.hasLightBehavior )
+		OUTPUT( Light );
 	OUTPUT( Focus );
 
 	if( agent::config.enableVisionPitch )
