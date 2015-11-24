@@ -1099,7 +1099,7 @@ float agent::UpdateBody( float moveFitnessParam,
 	{
 		SetGreen(outputNerves.light->get());
 	}
-	if( agent::config.bodyGreenChannel == BGC_EAT )
+	else if( agent::config.bodyGreenChannel == BGC_EAT )
 	{
 		SetGreen(outputNerves.eat->get());
 	}
