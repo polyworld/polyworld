@@ -2024,7 +2024,7 @@ int TSimulation::GetMatePotential( agent *x )
 {
 	int potential = MATE__NIL;
 
-	bool desiresMate = x->Mate() > fMateThreshold;
+	bool desiresMate = x->Mate() > fMateThreshold && randpw() < x->Mate();
 	if( desiresMate )
 	{
 		potential |= MATE__DESIRED;
