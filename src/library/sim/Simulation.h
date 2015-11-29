@@ -396,6 +396,8 @@ private:
 	float fEat2Consume; // (converts eat neuron value to energy consumed)
 	int fFoodPatchOuterRange;
 	float fMinFoodEnergyAtDeath;
+	float fStarvationFoodEnergy;
+	int fStarvationWait;
 	float fPower2Energy; // controls amount of damage to other agent
 	
 	char   fFogFunction;
