@@ -465,18 +465,7 @@ CameraControllerSettings {
   default [
     {  
       Name            "Main"
-      Mode            Rotate
-      Rotate {
-        Radius        0.6
-        Height        0.35
-        Rate          0.09
-        AngleStart    0.0
-        Fixation {
-          X           0.5
-          Y           0.0
-          Z           0.5
-        }
-      }
+      Mode            Static
     }
     ,
     {
@@ -509,7 +498,8 @@ CameraControllerSettings {
         type    Enum
         enum    Values {
           Rotate,
-          AgentTracking
+          AgentTracking,
+          Static
         }
       }
 
@@ -593,6 +583,20 @@ CameraControllerSettings {
           }
 
         }        
+      }
+
+      Static {
+        type    Object
+        default {
+        }
+        properties {
+
+          Height {
+            type    Float
+            default 0.6
+          }
+
+        }
       }
 
     }

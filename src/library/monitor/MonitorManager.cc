@@ -251,6 +251,17 @@ MonitorManager::MonitorManager( TSimulation *_simulation,
 
 							cameraController->initAgentTracking( agentTrackingParms );
 						}
+						else if( mode == "Static" )
+						{
+							proplib::Property &propMode = propSettings.get( "Static" );
+
+							float height = propMode.get( "Height" );
+
+							cameraController = new CameraController( renderer->getCamera() );
+
+							CameraController::StaticParms staticParms( height );
+							cameraController->initStatic( staticParms );
+						}
 					}
 				}
 
