@@ -159,14 +159,14 @@ float logistic(float x, float slope)
     return (1.0 / (1.0 + exp(-1 * x * slope)));
 }
 
-float biasedLogistic(float x, float bias, float slope)
+float biasedLogistic(float x, float midpoint, float slope)
 {
-    return (1.0 / (1.0 + exp(-1 * (x-bias) * slope)));
+    return (1.0 / (1.0 + exp(-1 * (x-midpoint) * slope)));
 }
 
-float generalLogistic(float x, float bias, float slope, float yneg, float ypos)
+float generalLogistic(float x, float midpoint, float slope, float yneg, float ypos)
 {
-    return yneg + (ypos - yneg) * biasedLogistic(x, bias, slope);
+    return yneg + (ypos - yneg) * biasedLogistic(x, midpoint, slope);
 }
 
 
