@@ -86,6 +86,7 @@ public:
 		float logisticSlope;
 		float maxWeight;
 		float initMaxWeight;
+		bool enableLearning;
 		float minlrate;
 		float maxlrate;
 		float decayRate;

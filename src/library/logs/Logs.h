@@ -169,6 +169,7 @@ class Logs
 		void createAnatomyFile( agent *a, const char *suffix, float fitness );
 		void recordEpochFittest( long step, sim::FitnessScope scope, const char *scopeName );
 
+		bool _enableLearning;
 		bool _recordRecent;
 		bool _recordBestRecent;
 		bool _recordBestSoFar;

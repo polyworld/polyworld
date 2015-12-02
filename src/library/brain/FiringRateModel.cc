@@ -135,41 +135,44 @@ void FiringRateModel::update( bool bprint )
 
 //	printf( "yaw activation = %g\n", newneuronactivation[yawneuron] );
 
-    float learningrate;
-	long numsynapses = dims->numSynapses;
-    for (k = 0; k < numsynapses; k++)
+    if (Brain::config.enableLearning)
     {
-		FiringRateModel__Synapse &syn = synapse[k];
-
-		learningrate = syn.lrate;
-
-		float efficacy = syn.efficacy + learningrate
-			* (newneuronactivation[syn.toneuron]-0.5f)
-			* (   neuronactivation[syn.fromneuron]-0.5f);
-
-        if (fabs(efficacy) > (0.5f * Brain::config.maxWeight))
+        float learningrate;
+		long numsynapses = dims->numSynapses;
+        for (k = 0; k < numsynapses; k++)
         {
-            efficacy *= 1.0f - (1.0f - Brain::config.decayRate) *
-                (fabs(efficacy) - 0.5f * Brain::config.maxWeight) / (0.5f * Brain::config.maxWeight);
-            if (efficacy > Brain::config.maxWeight)
-                efficacy = Brain::config.maxWeight;
-            else if (efficacy < -Brain::config.maxWeight)
-                efficacy = -Brain::config.maxWeight;
-        }
-        else
-        {
+			FiringRateModel__Synapse &syn = synapse[k];
+
+			learningrate = syn.lrate;
+
+			float efficacy = syn.efficacy + learningrate
+				* (newneuronactivation[syn.toneuron]-0.5f)
+				* (   neuronactivation[syn.fromneuron]-0.5f);
+
+            if (fabs(efficacy) > (0.5f * Brain::config.maxWeight))
+            {
+                efficacy *= 1.0f - (1.0f - Brain::config.decayRate) *
+                    (fabs(efficacy) - 0.5f * Brain::config.maxWeight) / (0.5f * Brain::config.maxWeight);
+                if (efficacy > Brain::config.maxWeight)
+                    efficacy = Brain::config.maxWeight;
+                else if (efficacy < -Brain::config.maxWeight)
+                    efficacy = -Brain::config.maxWeight;
+            }
+            else
+            {
 #define MIN(x,y) ((x) < (y) ? (x) : (y))
 #define MAX(x,y) ((x) > (y) ? (x) : (y))
-            // not strictly correct for this to be in an else clause,
-            // but if lrate is reasonable, efficacy should never change
-            // sign with a new magnitude greater than 0.5 * Brain::config.maxWeight
-            if (learningrate >= 0.0f)  // excitatory
-                efficacy = MAX(0.0f, efficacy);
-            if (learningrate < 0.0f)  // inhibitory
-                efficacy = MIN(-1.e-10f, efficacy);
-        }
+                // not strictly correct for this to be in an else clause,
+                // but if lrate is reasonable, efficacy should never change
+                // sign with a new magnitude greater than 0.5 * Brain::config.maxWeight
+                if (learningrate >= 0.0f)  // excitatory
+                    efficacy = MAX(0.0f, efficacy);
+                if (learningrate < 0.0f)  // inhibitory
+                    efficacy = MIN(-1.e-10f, efficacy);
+            }
 
-		syn.efficacy = efficacy;
+			syn.efficacy = efficacy;
+        }
     }
 
     debugcheck( "after updating synapses" );

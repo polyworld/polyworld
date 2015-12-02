@@ -336,67 +336,70 @@ void SpikingModel::update( bool bprint )
 	}//end brainsteps
 	
 	 	
-	//now this is where learning actually takes place.  It's here that we take the delta's we've been modifying
-	//this whole time and actually use them to modify the efficacy of the synapses.  The reason we wait to modify
-	//the actual synapse efficacies until all brain steps is complete is two fold one Izhikevich does it and two
-	//for the sake of efficiency.
-	float learningrate;
-	// float half_max_weight = .5f * Brain::config.maxWeight, one_minus_decay = 1. - Brain::config.decayRate;
-				
-    for (k = 0; k < dims->numSynapses; k++)
-    {
-		learningrate = synapse[k].lrate;
-		synapse[k].delta *= .9; //cheating a little
-		if (synapse[k].efficacy >= 0)
-			synapse[k].efficacy += (.01 + synapse[k].delta * learningrate);// * delta t; need a delta t 
-		else
-			synapse[k].efficacy -= (.01 + synapse[k].delta * learningrate);
+	if (Brain::config.enableLearning)
+	{
+		//now this is where learning actually takes place.  It's here that we take the delta's we've been modifying
+		//this whole time and actually use them to modify the efficacy of the synapses.  The reason we wait to modify
+		//the actual synapse efficacies until all brain steps is complete is two fold one Izhikevich does it and two
+		//for the sake of efficiency.
+		float learningrate;
+		// float half_max_weight = .5f * Brain::config.maxWeight, one_minus_decay = 1. - Brain::config.decayRate;
+					
+        for (k = 0; k < dims->numSynapses; k++)
+        {
+			learningrate = synapse[k].lrate;
+			synapse[k].delta *= .9; //cheating a little
+			if (synapse[k].efficacy >= 0)
+				synapse[k].efficacy += (.01 + synapse[k].delta * learningrate);// * delta t; need a delta t 
+			else
+				synapse[k].efficacy -= (.01 + synapse[k].delta * learningrate);
 
-        if (fabs(synapse[k].efficacy) > (0.5f * Brain::config.maxWeight))
-        {
-            synapse[k].efficacy *= 1.0f - (1.0f - Brain::config.decayRate) *
-                (fabs(synapse[k].efficacy) - 0.5f * Brain::config.maxWeight) / (0.5f * Brain::config.maxWeight);
-            if (synapse[k].efficacy > Brain::config.maxWeight)
-                synapse[k].efficacy = Brain::config.maxWeight;
-            else if (synapse[k].efficacy < -Brain::config.maxWeight)
-                synapse[k].efficacy = -Brain::config.maxWeight;
+            if (fabs(synapse[k].efficacy) > (0.5f * Brain::config.maxWeight))
+            {
+                synapse[k].efficacy *= 1.0f - (1.0f - Brain::config.decayRate) *
+                    (fabs(synapse[k].efficacy) - 0.5f * Brain::config.maxWeight) / (0.5f * Brain::config.maxWeight);
+                if (synapse[k].efficacy > Brain::config.maxWeight)
+                    synapse[k].efficacy = Brain::config.maxWeight;
+                else if (synapse[k].efficacy < -Brain::config.maxWeight)
+                    synapse[k].efficacy = -Brain::config.maxWeight;
+            }
+            else
+            {
+                if (learningrate >= 0.0f)  // excitatory
+                    synapse[k].efficacy = max(0.0f, synapse[k].efficacy);
+                if (learningrate < 0.0f)  // inhibitory
+                    synapse[k].efficacy = min(-1.e-10f, synapse[k].efficacy);
+            }
         }
-        else
-        {
-            if (learningrate >= 0.0f)  // excitatory
-                synapse[k].efficacy = max(0.0f, synapse[k].efficacy);
-            if (learningrate < 0.0f)  // inhibitory
-                synapse[k].efficacy = min(-1.e-10f, synapse[k].efficacy);
-        }
-    }
 
 /*
-        learningrate = grouplrate[index4(neuron[i].group,neuron[j].group,ii,jj, dims->numgroups,2,2)];
-		synapse[k].delta *= .9; //cheating a little iz did it
-		if (synapse[k].efficacy >= 0)
-		{
-			synapse[k].efficacy += .01 + synapse[k].delta * learningrate;// * delta t; need a delta t 
-			if (synapse[k].efficacy > Brain::config.maxWeight)
-                synapse[k].efficacy = Brain::config.maxWeight - (one_minus_decay);
-			else if (synapse[k].efficacy > half_max_weight)
-				synapse[k].efficacy *= 1.0f - (one_minus_decay) * (synapse[k].efficacy - half_max_weight) / (half_max_weight);
-			else
-				synapse[k].efficacy = max(0.0f, synapse[k].efficacy);
+            learningrate = grouplrate[index4(neuron[i].group,neuron[j].group,ii,jj, dims->numgroups,2,2)];
+			synapse[k].delta *= .9; //cheating a little iz did it
+			if (synapse[k].efficacy >= 0)
+			{
+				synapse[k].efficacy += .01 + synapse[k].delta * learningrate;// * delta t; need a delta t 
+				if (synapse[k].efficacy > Brain::config.maxWeight)
+                    synapse[k].efficacy = Brain::config.maxWeight - (one_minus_decay);
+				else if (synapse[k].efficacy > half_max_weight)
+					synapse[k].efficacy *= 1.0f - (one_minus_decay) * (synapse[k].efficacy - half_max_weight) / (half_max_weight);
+				else
+					synapse[k].efficacy = max(0.0f, synapse[k].efficacy);
+			}
+			else 
+			{
+				synapse[k].efficacy -= .01 + synapse[k].delta * learningrate;
+				if (synapse[k].efficacy < -Brain::config.maxWeight)
+                    synapse[k].efficacy = -Brain::config.maxWeight + (one_minus_decay);
+				else if(synapse[k].efficacy < -half_max_weight)
+				//fix me later should be a      +
+					synapse[k].efficacy *= 1.0f - one_minus_decay * (fabs(synapse[k].efficacy) - half_max_weight) / half_max_weight;
+				else
+					synapse[k].efficacy = min(-1.e-10f, synapse[k].efficacy);
+			
+			}
 		}
-		else 
-		{
-			synapse[k].efficacy -= .01 + synapse[k].delta * learningrate;
-			if (synapse[k].efficacy < -Brain::config.maxWeight)
-                synapse[k].efficacy = -Brain::config.maxWeight + (one_minus_decay);
-			else if(synapse[k].efficacy < -half_max_weight)
-			//fix me later should be a      +
-				synapse[k].efficacy *= 1.0f - one_minus_decay * (fabs(synapse[k].efficacy) - half_max_weight) / half_max_weight;
-			else
-				synapse[k].efficacy = min(-1.e-10f, synapse[k].efficacy);
-		
-		}
-	}
 */
+    }
 	
 
 	//simulation.cc readworldfile

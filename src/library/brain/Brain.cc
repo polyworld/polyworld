@@ -88,6 +88,7 @@ void Brain::processWorldfile( proplib::Document &doc )
     Brain::config.maxWeight = doc.get( "MaxSynapseWeight" );
     Brain::config.initMaxWeight = doc.get( "MaxSynapseWeightInitial" );
 
+    Brain::config.enableLearning = doc.get( "EnableLearning" );
     Brain::config.minlrate = doc.get( "MinLearningRate" );
     Brain::config.maxlrate = doc.get( "MaxLearningRate" );
 

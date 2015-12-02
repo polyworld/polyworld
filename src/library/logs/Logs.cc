@@ -514,6 +514,7 @@ void Logs::BrainAnatomyLog::init( TSimulation *sim, Document *doc )
 {
 	if( doc->get("RecordBrain") )
 	{
+		_enableLearning = doc->get( "EnableLearning" );
 		_recordRecent = doc->get( "RecordBrainRecent" );
 		_recordBestRecent = doc->get( "RecordBrainBestRecent" );
 		_recordBestSoFar = doc->get( "RecordBrainBestSoFar" );
@@ -543,7 +544,8 @@ void Logs::BrainAnatomyLog::init( TSimulation *sim, Document *doc )
 //---------------------------------------------------------------------------
 void Logs::BrainAnatomyLog::processEvent( const BrainGrownEvent &e )
 {
-	createAnatomyFile( e.a, "incept", 0.0 );
+	if( _enableLearning )
+		createAnatomyFile( e.a, "incept", 0.0 );
 }
 
 //---------------------------------------------------------------------------
@@ -559,7 +561,8 @@ void Logs::BrainAnatomyLog::processEvent( const AgentGrownEvent &e )
 //---------------------------------------------------------------------------
 void Logs::BrainAnatomyLog::processEvent( const BrainAnalysisBeginEvent &e )
 {
-	createAnatomyFile( e.a, "death", e.a->CurrentHeuristicFitness() );
+	if( _enableLearning )
+		createAnatomyFile( e.a, "death", e.a->CurrentHeuristicFitness() );
 }
 
 //---------------------------------------------------------------------------
@@ -580,7 +583,10 @@ void Logs::BrainAnatomyLog::processEvent( const EpochEndEvent &e )
 void Logs::BrainAnatomyLog::createAnatomyFile( agent *a, const char *suffix, float fitness )
 {
 	char path[256];
-	sprintf( path, "run/brain/anatomy/brainAnatomy_%ld_%s.txt", a->Number(), suffix );
+	if( _enableLearning )
+		sprintf( path, "run/brain/anatomy/brainAnatomy_%ld_%s.txt", a->Number(), suffix );
+	else
+		sprintf( path, "run/brain/anatomy/brainAnatomy_%ld.txt", a->Number() );
 
 	AbstractFile *file = createFile( path );
 	a->GetBrain()->dumpAnatomical( file, a->Number(), fitness );
@@ -599,13 +605,23 @@ void Logs::BrainAnatomyLog::recordEpochFittest( long step, sim::FitnessScope sco
 	makeDirs( s );
 	for( int i = 0; i < fittest->size(); i++ )
 	{
-		static const char *prefixes[] = { "incept", "birth", "death", NULL };
+		if( _enableLearning )
+		{
+			static const char *prefixes[] = { "incept", "birth", "death", NULL };
 
-		for( const char **prefix = prefixes; *prefix; prefix++ )
+			for( const char **prefix = prefixes; *prefix; prefix++ )
+			{
+				char t[256];	// target (use s for source)
+				sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_%s.txt", fittest->get(i)->agentID, *prefix );
+				sprintf( t, "run/brain/%s/%ld/%d_brainAnatomy_%ld_%s.txt", scopeName, step, i, fittest->get(i)->agentID, *prefix );
+				AbstractFile::link( s, t );
+			}
+		}
+		else
 		{
 			char t[256];	// target (use s for source)
-			sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_%s.txt", fittest->get(i)->agentID, *prefix );
-			sprintf( t, "run/brain/%s/%ld/%d_brainAnatomy_%ld_%s.txt", scopeName, step, i, fittest->get(i)->agentID, *prefix );
+			sprintf( s, "run/brain/anatomy/brainAnatomy_%ld.txt", fittest->get(i)->agentID );
+			sprintf( t, "run/brain/%s/%ld/%d_brainAnatomy_%ld.txt", scopeName, step, i, fittest->get(i)->agentID );
 			AbstractFile::link( s, t );
 		}
 	}

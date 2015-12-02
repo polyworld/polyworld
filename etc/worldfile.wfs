@@ -1774,6 +1774,11 @@ NeuronModel {
   }
 }
 
+EnableLearning {
+  type    Bool
+  default True
+}
+
 EnableSpikingGenes {
   type Bool
   default ( True if NeuronModel == NeuronModel.S else False )
