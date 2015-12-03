@@ -4229,7 +4229,14 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 						propPatch.get( "FoodTypeName" ).err( "Unknown FoodType name" );
 					}
 
+					centerX = propPatch.get( "CenterX" );
+					centerZ = propPatch.get( "CenterZ" );
+					sizeX = propPatch.get( "SizeX" );
+					sizeZ = propPatch.get( "SizeZ" );
+
 					foodFraction = propPatch.get( "FoodFraction" );
+					if( foodFraction < 0.0 )
+						foodFraction = sizeX * sizeZ;
 
 					initFoodFraction = propPatch.get( "InitFoodFraction" );
 					if( initFoodFraction < 0.0 )
@@ -4255,10 +4262,6 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 					if (foodRate < 0.0)
 						foodRate = fDomains[id].foodRate;
 
-					centerX = propPatch.get( "CenterX" );
-					centerZ = propPatch.get( "CenterZ" );
-					sizeX = propPatch.get( "SizeX" );
-					sizeZ = propPatch.get( "SizeZ" );
 					{
 						string val = propPatch.get( "Shape" );
 						if( val == "R" )

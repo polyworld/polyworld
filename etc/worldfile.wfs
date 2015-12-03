@@ -591,8 +591,9 @@ Domains {
 
             FoodFraction {
               type    Float
-              min     0.0
+              default -1.0
               max     1.0
+              assert  ( (FoodFraction == -1.0) or (FoodFraction >= 0.0) )
             }
 
             InitFoodFraction {
