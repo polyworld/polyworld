@@ -252,6 +252,11 @@ void GroupsGenomeSchema::seed( Genome *g_ )
 			 get(#TO),							\
 			 VAL )
 
+	if( Brain::config.neuronModel == Brain::Configuration::TAU )
+	{
+		SEED( Tau, Brain::config.Tau.seedVal );
+	}
+
 	if( GenomeSchema::config.seedType == GenomeSchema::SEED_SIMPLE )
 	{
 		RANDOMIZE( Bias );
@@ -271,10 +276,6 @@ void GroupsGenomeSchema::seed( Genome *g_ )
 	SEED( InhibitoryNeuronCount, 0 );
 
 	SEED( Bias, 0.5 );
-	if( Brain::config.neuronModel == Brain::Configuration::TAU )
-	{
-		SEED( Tau, Brain::config.Tau.seedVal );
-	}
 
 	SEED_GROUP( Bias, Mate, 1.0 );
 	SEED_GROUP( Bias, Fight, GenomeSchema::config.seedFightBias );
