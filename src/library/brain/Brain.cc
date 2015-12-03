@@ -200,6 +200,9 @@ void Brain::writeFunctional( AbstractFile *file )
 //---------------------------------------------------------------------------
 void Brain::prebirth()
 {
+    if( !Brain::config.enableLearning )
+        return;
+
     // now send some signals through the system
     // try pure noise for now...
     for( int i = 0; i < Brain::config.numPrebirthCycles; i++ )
