@@ -513,7 +513,7 @@ void SheetsGenomeSchema::defineNeuronAttrs( ContainerGene *attrs )
 	case Brain::Configuration::FIRING_RATE:
 		// no-op
 		break;
-	case Brain::Configuration::TAU:
+	case Brain::Configuration::TAU_GAIN:
 		SCALAR( attrs, "Tau", Brain::config.Tau.minVal, Brain::config.Tau.maxVal );
 		break;
 	case Brain::Configuration::SPIKING:
@@ -822,7 +822,7 @@ Neuron::Attributes SheetsGenomeSchema::decodeNeuronAttrs( SheetsGenome *g,
 	case Brain::Configuration::FIRING_RATE:
 		attrs.neuronModel.firingRate.bias = g->get( attrsGene->gene("Bias") );
 		break;
-	case Brain::Configuration::TAU:
+	case Brain::Configuration::TAU_GAIN:
 		attrs.neuronModel.tau.bias = g->get( attrsGene->gene("Bias") );
 		attrs.neuronModel.tau.tau = g->get( attrsGene->gene("Tau") );
 		break;

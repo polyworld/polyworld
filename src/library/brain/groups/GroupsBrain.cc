@@ -149,7 +149,7 @@ void GroupsBrain::initNeuralNet( float initial_activation )
 		}
 		break;
 	case Brain::Configuration::FIRING_RATE:
-	case Brain::Configuration::TAU:
+	case Brain::Configuration::TAU_GAIN:
 		{
 			FiringRateModel *firingRate = new FiringRateModel( _cns );
 			_neuralnet = firingRate;
@@ -388,7 +388,7 @@ void GroupsBrain::grow()
 		neuronAttrs.spiking = (SpikingModel__NeuronAttrs *)alloca( sizeof(SpikingModel__NeuronAttrs) );
 		break;
 	case Brain::Configuration::FIRING_RATE:
-	case Brain::Configuration::TAU:
+	case Brain::Configuration::TAU_GAIN:
 		neuronAttrs.firingRate = (FiringRateModel__NeuronAttrs *)alloca( sizeof(FiringRateModel__NeuronAttrs) );
 		break;
 	default:
@@ -408,9 +408,10 @@ void GroupsBrain::grow()
 		neuronAttrs.spiking->bias = 0.0;
 		break;
 	case Brain::Configuration::FIRING_RATE:
-	case Brain::Configuration::TAU:
+	case Brain::Configuration::TAU_GAIN:
 		neuronAttrs.firingRate->tau = 0.0;
 		neuronAttrs.firingRate->bias = 0.0;
+		neuronAttrs.firingRate->gain = 0.0;
 		break;
 	default:
 		assert(false);
@@ -454,8 +455,9 @@ void GroupsBrain::grow()
 				if( DebugBrainGrowPrint )
 					cout << "  groupbias = " << neuronAttrs.spiking->bias nlf;
 			#endif
-		case Brain::Configuration::TAU:
+		case Brain::Configuration::TAU_GAIN:
 			neuronAttrs.firingRate->tau = _genome->get(_genome->TAU,groupIndex_to);
+			neuronAttrs.firingRate->gain = _genome->get(_genome->GAIN,groupIndex_to);
 			// fall through
 		case Brain::Configuration::FIRING_RATE:
 			neuronAttrs.firingRate->bias = _genome->get(_genome->BIAS,groupIndex_to);

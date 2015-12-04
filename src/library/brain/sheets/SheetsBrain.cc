@@ -159,7 +159,7 @@ void SheetsBrain::grow( SheetsGenome *genome, SheetsModel *model )
 			}
 			break;
 		case Brain::Configuration::FIRING_RATE:
-		case Brain::Configuration::TAU:
+		case Brain::Configuration::TAU_GAIN:
 			{
 				FiringRateModel *firingRate = new FiringRateModel( _cns );
 				_neuralnet = firingRate;

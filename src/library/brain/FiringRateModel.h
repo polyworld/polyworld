@@ -13,6 +13,7 @@ struct FiringRateModel__Neuron
 {
 	float bias;
 	float tau;
+	float gain;
 	long  startsynapses;
 	long  endsynapses;
 };
@@ -21,6 +22,7 @@ struct FiringRateModel__NeuronAttrs
 {
 	float bias;
 	float tau;
+	float gain;
 };
 
 struct FiringRateModel__Synapse

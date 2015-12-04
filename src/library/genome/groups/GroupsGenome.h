@@ -23,6 +23,7 @@ namespace genome
 		Gene *INTERNAL;
 
 		Gene *TAU;
+		Gene *GAIN;
 
 		Gene *SPIKING_A;
 		Gene *SPIKING_B;

@@ -141,12 +141,16 @@ void GroupsGenomeSchema::define()
 				-Brain::config.maxbias,
 				Brain::config.maxbias );
 				
-	if( Brain::config.neuronModel == Brain::Configuration::TAU )
+	if( Brain::config.neuronModel == Brain::Configuration::TAU_GAIN )
 	{
 		GROUP_ATTR( Tau,
 					NONINPUT,
 					Brain::config.Tau.minVal,
 					Brain::config.Tau.maxVal );
+		GROUP_ATTR( Gain,
+					NONINPUT,
+					Brain::config.Gain.minVal,
+					Brain::config.Gain.maxVal );
 	}
 
 	if( Brain::config.neuronModel == Brain::Configuration::SPIKING
@@ -252,9 +256,10 @@ void GroupsGenomeSchema::seed( Genome *g_ )
 			 get(#TO),							\
 			 VAL )
 
-	if( Brain::config.neuronModel == Brain::Configuration::TAU )
+	if( Brain::config.neuronModel == Brain::Configuration::TAU_GAIN )
 	{
 		SEED( Tau, Brain::config.Tau.seedVal );
+		SEED( Gain, Brain::config.Gain.seedVal );
 	}
 
 	if( GenomeSchema::config.seedType == GenomeSchema::SEED_SIMPLE )

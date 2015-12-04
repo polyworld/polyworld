@@ -20,10 +20,16 @@ GroupsGenome::GroupsGenome( GroupsGenomeSchema *schema,
 	BIAS = gene("Bias");
 	INTERNAL = schema->getGroupGene( schema->getFirstGroup(NGT_INTERNAL) );
 
-	if( Brain::config.neuronModel == Brain::Configuration::TAU )
+	if( Brain::config.neuronModel == Brain::Configuration::TAU_GAIN )
+	{
 		TAU = gene( "Tau" );
+		GAIN = gene( "Gain" );
+	}
 	else
+	{
 		TAU = NULL;
+		GAIN = NULL;
+	}
 
 	if( (Brain::config.neuronModel == Brain::Configuration::SPIKING)
 		&& Brain::config.Spiking.enableGenes )

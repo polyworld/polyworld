@@ -57,7 +57,7 @@ void Brain::processWorldfile( proplib::Document &doc )
 		if( val == "F" )
 			Brain::config.neuronModel = Brain::Configuration::FIRING_RATE;
 		else if( val == "T" )
-			Brain::config.neuronModel = Brain::Configuration::TAU;
+			Brain::config.neuronModel = Brain::Configuration::TAU_GAIN;
 		else if( val == "S" )
 			Brain::config.neuronModel = Brain::Configuration::SPIKING;
 		else
@@ -77,6 +77,10 @@ void Brain::processWorldfile( proplib::Document &doc )
 	Brain::config.Tau.minVal = doc.get( "TauMin" );
 	Brain::config.Tau.maxVal = doc.get( "TauMax" );
 	Brain::config.Tau.seedVal = doc.get( "TauSeed" );
+
+	Brain::config.Gain.minVal = doc.get( "GainMin" );
+	Brain::config.Gain.maxVal = doc.get( "GainMax" );
+	Brain::config.Gain.seedVal = doc.get( "GainSeed" );
 
     Brain::config.maxbias = doc.get( "MaxBiasWeight" );
 	Brain::config.maxneuron2energy = doc.get( "EnergyUseNeurons" );

@@ -58,7 +58,7 @@ public:
 		enum
 		{
 			FIRING_RATE,
-			TAU,
+			TAU_GAIN,
 			SPIKING
 		} neuronModel;
 		struct
@@ -67,6 +67,12 @@ public:
 			float maxVal;
 			float seedVal;
 		} Tau;
+		struct
+		{
+			float minVal;
+			float maxVal;
+			float seedVal;
+		} Gain;
 		struct
 		{
 			bool enableGenes;

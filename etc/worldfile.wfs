@@ -1770,7 +1770,7 @@ NeuronModel {
   default F
   enum    Values {
     F,           # Firing Rate
-    T,           # Tau
+    T,           # Tau/Gain
     S            # Spiking
   }
 }
@@ -1844,6 +1844,25 @@ TauMax {
 TauSeed {
   type    Float
   default 1.0
+}
+
+GainMin {
+  type    Float
+  default 0.1
+  exmin   0.0
+}
+
+GainMax {
+  type    Float
+  default 10.0
+  min     GainMin
+}
+
+GainSeed {
+  type    Float
+  default 1.0
+  min     GainMin
+  max     GainMax
 }
 
 

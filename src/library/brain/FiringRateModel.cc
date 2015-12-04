@@ -48,7 +48,9 @@ void FiringRateModel::set_neuron( int index,
 	Neuron &n = neuron[index];
 
 	assert( !isnan(attrs->tau) );
+	assert( !isnan(attrs->gain) );
 	n.tau = attrs->tau;
+	n.gain = attrs->gain;
 }
 
 void FiringRateModel::update( bool bprint )
@@ -87,10 +89,11 @@ void FiringRateModel::update( bool bprint )
 	#if GaussianOutputNeurons
         newneuronactivation[i] = gaussian( newneuronactivation[i], GaussianActivationMean, GaussianActivationVariance );
 	#else
-		if( Brain::config.neuronModel == Brain::Configuration::TAU )
+		if( Brain::config.neuronModel == Brain::Configuration::TAU_GAIN )
 		{
 			float tau = neuron[i].tau;
-			newneuronactivation[i] = (1.0 - tau) * neuronactivation[i]  +  tau * logistic( newneuronactivation[i], Brain::config.logisticSlope );
+			float gain = neuron[i].gain;
+			newneuronactivation[i] = (1.0 - tau) * neuronactivation[i]  +  tau * logistic( newneuronactivation[i], gain );
 		}
 		else
 		{
@@ -111,10 +114,11 @@ void FiringRateModel::update( bool bprint )
 		}
         //newneuronactivation[i] = logistic(newneuronactivation[i], Brain::config.logisticSlope);
 
-		if( Brain::config.neuronModel == Brain::Configuration::TAU )
+		if( Brain::config.neuronModel == Brain::Configuration::TAU_GAIN )
 		{
 			float tau = neuron[i].tau;
-			newactivation = (1.0 - tau) * neuronactivation[i]  +  tau * logistic( newactivation, logisticSlope );
+			float gain = neuron[i].gain;
+			newactivation = (1.0 - tau) * neuronactivation[i]  +  tau * logistic( newactivation, gain );
 		}
 		else
 		{
