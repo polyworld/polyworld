@@ -863,9 +863,8 @@ void TSimulation::InitAgents()
 
 			fStage.AddObject(c);
 
-			float x = randpw() * (fDomains[id].absoluteSizeX - 0.02) + fDomains[id].startX + 0.01;
-			float z = randpw() * (fDomains[id].absoluteSizeZ - 0.02) + fDomains[id].startZ + 0.01;
-			//float z = -0.01 - randpw() * (globals::worldsize - 0.02);
+			float x, z;
+			fDomains[id].initAgentsPatch->setPoint( &x, &z );
 			float y = 0.5 * agent::config.agentHeight;
 #if TestWorld
 			// evenly distribute the agents
@@ -4198,6 +4197,44 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 				if( fDomains[id].foodRate < 0.0 )
 					fDomains[id].foodRate = fFoodRate;
 
+			}
+
+			// Process InitAgentsPatch
+			{
+				proplib::Property &propPatch = dom.get( "InitAgentsPatch" );
+
+				float centerX, centerZ;
+				float sizeX, sizeZ;
+				int shape, distribution;
+
+				centerX = propPatch.get( "CenterX" );
+				centerZ = propPatch.get( "CenterZ" );
+				sizeX = propPatch.get( "SizeX" );
+				sizeZ = propPatch.get( "SizeZ" );
+
+				{
+					string val = propPatch.get( "Shape" );
+					if( val == "R" )
+						shape = 0;
+					else if( val == "E" )
+						shape = 1;
+					else
+						assert( false );
+				}
+				{
+					string val = propPatch.get( "Distribution" );
+					if( val == "U" )
+						distribution = 0;
+					else if( val == "L" )
+						distribution = 1;
+					else if( val == "G" )
+						distribution = 2;
+					else
+						assert( false );
+				}
+
+				fDomains[id].initAgentsPatch = new Patch();
+				fDomains[id].initAgentsPatch->initBase(centerX, centerZ, sizeX, sizeZ, shape, distribution, 0.0, &fStage, &(fDomains[id]), id);
 			}
 
 			// Process FoodPatches

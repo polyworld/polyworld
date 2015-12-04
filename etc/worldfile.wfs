@@ -572,6 +572,62 @@ Domains {
         assert  ( (FoodRate == -1.0) or (FoodRate >= 0.0) )
       }
 
+      InitAgentsPatch {
+        type    Object
+        default {}
+
+        properties {
+
+          CenterX {
+            type    Float
+            default 0.5
+            exmin   0.0
+            exmax   1.0
+          }
+
+          CenterZ {
+            type    Float
+            default 0.5
+            exmin   0.0
+            exmax   1.0
+          }
+
+          SizeX {
+            type    Float
+            default 1.0
+            exmin   0.0
+            max     1.0
+          }
+
+          SizeZ {
+            type    Float
+            default 1.0
+            exmin   0.0
+            max     1.0
+          }
+
+          Shape {
+            type    Enum
+            default R
+            enum    Values {
+              R,           # Rectangular
+              E            # Elliptical
+            }
+          }
+
+          Distribution {
+            type    Enum
+            default U
+            enum    Values {
+              U,           # Uniform
+              L,           # Linear
+              G            # Gaussian
+            }
+          }
+
+        }
+      }
+
       #------------------------------
       # FoodPatches
       #------------------------------

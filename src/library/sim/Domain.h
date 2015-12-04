@@ -40,6 +40,7 @@ class Domain
     long minNumAgents;
     long maxNumAgents;
     long initNumAgents;
+    Patch* initAgentsPatch;
 	long numberToSeed;
     long numAgents;
     long numcreated;
