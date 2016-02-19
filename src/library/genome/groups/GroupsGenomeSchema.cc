@@ -183,11 +183,12 @@ void GroupsGenomeSchema::define()
 				  GroupsBrain::config.minconnectiondensity,
 				  GroupsBrain::config.maxconnectiondensity );
 
-	SYNAPSE_ATTR( LearningRate,
-				  true,
-				  true,
-				  Brain::config.minlrate,
-				  Brain::config.maxlrate );	
+	if( Brain::config.enableLearning )
+		SYNAPSE_ATTR( LearningRate,
+					  true,
+					  true,
+					  Brain::config.minlrate,
+					  Brain::config.maxlrate );	
 
 	SYNAPSE_ATTR( TopologicalDistortion,
 				  false,
@@ -295,7 +296,10 @@ void GroupsGenomeSchema::seed( Genome *g_ )
 	}
 
 	SEED( ConnectionDensity, 0 );
-	SEED( LearningRate, 0 );
+	if( Brain::config.enableLearning )
+	{
+		SEED( LearningRate, 0 );
+	}
 	SEED( TopologicalDistortion, 0 );
 	if( GroupsBrain::config.enableTopologicalDistortionRngSeed )
 	{

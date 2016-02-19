@@ -806,8 +806,12 @@ void GroupsBrain::growSynapses( int groupIndex_to,
 			}				
 
 			float lrate;
-			if( !Brain::config.outputSynapseLearning
-				&& (IsOutputNeuralGroup(groupIndex_from) || IsOutputNeuralGroup(groupIndex_to)) )
+			if( !Brain::config.enableLearning )
+			{
+				lrate = 0;
+			}
+			else if( !Brain::config.outputSynapseLearning
+					 && (IsOutputNeuralGroup(groupIndex_from) || IsOutputNeuralGroup(groupIndex_to)) )
 			{
 				lrate = 0;
 			}

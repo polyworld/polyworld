@@ -14,7 +14,16 @@ GroupsGenome::GroupsGenome( GroupsGenomeSchema *schema,
 {
 	CONNECTION_DENSITY = gene("ConnectionDensity");
 	TOPOLOGICAL_DISTORTION = gene("TopologicalDistortion");
-	LEARNING_RATE = gene("LearningRate");
+
+	if( Brain::config.enableLearning )
+	{
+		LEARNING_RATE = gene("LearningRate");
+	}
+	else
+	{
+		LEARNING_RATE = NULL;
+	}
+
 	INHIBITORY_COUNT = gene("InhibitoryNeuronCount");
 	EXCITATORY_COUNT = gene("ExcitatoryNeuronCount");
 	BIAS = gene("Bias");
