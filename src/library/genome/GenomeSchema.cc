@@ -204,7 +204,15 @@ void GenomeSchema::seed( Genome *g )
 		}
 	}
 
-	SEED( MutationRate, GenomeSchema::config.seedMutationRate );
+	if( GenomeSchema::config.seedType == GenomeSchema::SEED_SIMPLE )
+	{
+		SEED( MutationRate, 1.0 );
+		SEED( MutationStdev, 1.0 );
+	}
+	else
+	{
+		SEED( MutationRate, GenomeSchema::config.seedMutationRate );
+	}
 
 	if( Metabolism::selectionMode == Metabolism::Gene
 		&& Metabolism::getNumberOfDefinitions() > 1 )
