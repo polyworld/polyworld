@@ -8,6 +8,7 @@
 #include "genome/groups/GroupsGenome.h"
 #include "sim/globals.h"
 #include "utils/error.h"
+#include "utils/misc.h"
 #include "utils/RandomNumberGenerator.h"
 
 using namespace genome;
@@ -796,14 +797,31 @@ void GroupsBrain::growSynapses( int groupIndex_to,
 			assert( neuronIndex_from != neuronIndex_to );
 
 			float efficacy;
-			if( synapseType->nt_from == INHIBITORY )
+			if( Brain::config.gaussianInitWeight )
 			{
-				efficacy = min(-1.e-10, -weight_rng->range(initminweight, Brain::config.initMaxWeight));
+				float stdev = _genome->get( _genome->INIT_WEIGHT_SCALED_STDEV,
+											synapseType,
+											groupIndex_from,
+											groupIndex_to )
+							  * Brain::config.initMaxWeight;
+				efficacy = nrand(0.0, stdev);
+				if( efficacy < 0.0 )
+				{
+					efficacy = -efficacy;
+				}
+				if( efficacy > Brain::config.maxWeight )
+				{
+					efficacy = Brain::config.maxWeight;
+				}
 			}
 			else
 			{
 				efficacy = weight_rng->range(initminweight, Brain::config.initMaxWeight);
 			}				
+			if( synapseType->nt_from == INHIBITORY )
+			{
+				efficacy = min(-1.e-10f, -efficacy);
+			}
 
 			float lrate;
 			if( !Brain::config.enableLearning )

@@ -12,6 +12,15 @@ GroupsGenome::GroupsGenome( GroupsGenomeSchema *schema,
 		  layout )
 , _schema( schema )
 {
+	if( Brain::config.gaussianInitWeight )
+	{
+		INIT_WEIGHT_SCALED_STDEV = gene("InitWeightScaledStdev");
+	}
+	else
+	{
+		INIT_WEIGHT_SCALED_STDEV = NULL;
+	}
+
 	CONNECTION_DENSITY = gene("ConnectionDensity");
 	TOPOLOGICAL_DISTORTION = gene("TopologicalDistortion");
 

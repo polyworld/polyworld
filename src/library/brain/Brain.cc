@@ -89,6 +89,7 @@ void Brain::processWorldfile( proplib::Document &doc )
 	Brain::config.numPrebirthCycles = doc.get( "PreBirthCycles" );
 
     Brain::config.logisticSlope = doc.get( "LogisticSlope" );
+    Brain::config.gaussianInitWeight = doc.get( "GaussianInitSynapseWeight" );
     Brain::config.maxWeight = doc.get( "MaxSynapseWeight" );
     Brain::config.initMaxWeight = doc.get( "MaxSynapseWeightInitial" );
 

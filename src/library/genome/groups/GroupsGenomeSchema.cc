@@ -177,6 +177,15 @@ void GroupsGenomeSchema::define()
 					Brain::config.Spiking.dMaxVal );
 	}
 
+	if( Brain::config.gaussianInitWeight )
+	{
+		SYNAPSE_ATTR( InitWeightScaledStdev,
+					  false,
+					  false,
+					  0.0,
+					  1.0 );
+	}
+
 	SYNAPSE_ATTR( ConnectionDensity,
 				  false,
 				  false,
