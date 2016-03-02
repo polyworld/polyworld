@@ -26,7 +26,10 @@ void MateWaitSensor::sensor_grow( NervousSystem *cns )
 
 void MateWaitSensor::sensor_prebirth_signal( RandomNumberGenerator *rng )
 {
-	nerve->set( rng->drand() );
+	if( Brain::config.enableLearning )
+		nerve->set( rng->drand() );
+	else
+		nerve->set( 0.0 );
 }
 
 void MateWaitSensor::sensor_update( bool print )

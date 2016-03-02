@@ -44,9 +44,19 @@ void Retina::sensor_grow( NervousSystem *cns )
 
 void Retina::sensor_prebirth_signal( RandomNumberGenerator *rng )
 {
-	for( int i = 0; i < width * 4; i++ )
+	if( Brain::config.enableLearning )
 	{
-		buf[i] = (unsigned char)(rng->range(0.0, 255.0));
+		for( int i = 0; i < width * 4; i++ )
+		{
+			buf[i] = (unsigned char)(rng->range(0.0, 255.0));
+		}
+	}
+	else
+	{
+		for( int i = 0; i < width * 4; i++ )
+		{
+			buf[i] = 0;
+		}
 	}
 
 	sensor_update( false );

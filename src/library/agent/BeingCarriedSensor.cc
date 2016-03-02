@@ -24,7 +24,10 @@ void BeingCarriedSensor::sensor_grow( NervousSystem *cns )
 
 void BeingCarriedSensor::sensor_prebirth_signal( RandomNumberGenerator *rng )
 {
-	nerve->set( rng->drand() );
+	if( Brain::config.enableLearning )
+		nerve->set( rng->drand() );
+	else
+		nerve->set( 0.0 );
 }
 
 void BeingCarriedSensor::sensor_update( bool print )
