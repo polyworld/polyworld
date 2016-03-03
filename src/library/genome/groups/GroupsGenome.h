@@ -14,7 +14,7 @@ namespace genome
 		GroupsSynapseType *IE;
 		GroupsSynapseType *II;
 
-		Gene *INIT_WEIGHT_SCALED_STDEV;
+		Gene *WEIGHT_STDEV;
 		Gene *CONNECTION_DENSITY;
 		Gene *TOPOLOGICAL_DISTORTION;
 		Gene *LEARNING_RATE;

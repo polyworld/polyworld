@@ -179,7 +179,7 @@ void GroupsGenomeSchema::define()
 
 	if( Brain::config.gaussianInitWeight )
 	{
-		SYNAPSE_ATTR( InitWeightScaledStdev,
+		SYNAPSE_ATTR( WeightStdev,
 					  false,
 					  false,
 					  0.0,

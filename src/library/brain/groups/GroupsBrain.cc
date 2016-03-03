@@ -799,7 +799,7 @@ void GroupsBrain::growSynapses( int groupIndex_to,
 			float efficacy;
 			if( Brain::config.gaussianInitWeight )
 			{
-				float stdev = _genome->get( _genome->INIT_WEIGHT_SCALED_STDEV,
+				float stdev = _genome->get( _genome->WEIGHT_STDEV,
 											synapseType,
 											groupIndex_from,
 											groupIndex_to )

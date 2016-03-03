@@ -14,11 +14,11 @@ GroupsGenome::GroupsGenome( GroupsGenomeSchema *schema,
 {
 	if( Brain::config.gaussianInitWeight )
 	{
-		INIT_WEIGHT_SCALED_STDEV = gene("InitWeightScaledStdev");
+		WEIGHT_STDEV = gene("WeightStdev");
 	}
 	else
 	{
-		INIT_WEIGHT_SCALED_STDEV = NULL;
+		WEIGHT_STDEV = NULL;
 	}
 
 	CONNECTION_DENSITY = gene("ConnectionDensity");
