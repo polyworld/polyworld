@@ -139,7 +139,7 @@ void FiringRateModel::update( bool bprint )
 
 //	printf( "yaw activation = %g\n", newneuronactivation[yawneuron] );
 
-    if (Brain::config.enableLearning)
+    if (Brain::config.enableLearning && !cns->getBrain()->isFrozen())
     {
         float learningrate;
 		long numsynapses = dims->numSynapses;

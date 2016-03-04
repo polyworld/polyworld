@@ -336,7 +336,7 @@ void SpikingModel::update( bool bprint )
 	}//end brainsteps
 	
 	 	
-	if (Brain::config.enableLearning)
+	if (Brain::config.enableLearning && !cns->getBrain()->isFrozen())
 	{
 		//now this is where learning actually takes place.  It's here that we take the delta's we've been modifying
 		//this whole time and actually use them to modify the efficacy of the synapses.  The reason we wait to modify

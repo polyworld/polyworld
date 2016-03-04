@@ -134,6 +134,7 @@ Brain::Brain( NervousSystem *cns )
 , _neuralnet(NULL)
 , _renderer(NULL)
 , _energyUse(0)
+, _frozen(false)
 {
 }
 

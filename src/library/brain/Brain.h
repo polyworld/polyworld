@@ -123,6 +123,10 @@ public:
 	void getActivations( double *activations, int start, int count );
 	void setActivations( double *activations, int start, int count );
 
+	bool isFrozen();
+	void freeze();
+	void unfreeze();
+
 	void dumpAnatomical( AbstractFile *file, long index, float fitness );
 	
 	void startFunctional( AbstractFile *file, long index );
@@ -137,6 +141,7 @@ protected:
 	NeuronModel *_neuralnet;
 	NeuralNetRenderer *_renderer;
 	float _energyUse;
+	bool _frozen;
 };
 
 //===========================================================================
@@ -148,5 +153,8 @@ inline long Brain::getNumSynapses() { return _dims.numSynapses; }
 inline NeuronModel::Dimensions Brain::getDimensions() { return _dims; }
 inline void Brain::getActivations( double *activations, int start, int count ) { return _neuralnet->getActivations( activations, start, count ); }
 inline void Brain::setActivations( double *activations, int start, int count ) { return _neuralnet->setActivations( activations, start, count ); }
+inline bool Brain::isFrozen() { return _frozen; }
+inline void Brain::freeze() { _frozen = true; }
+inline void Brain::unfreeze() { _frozen = false; }
 
 // Macros
