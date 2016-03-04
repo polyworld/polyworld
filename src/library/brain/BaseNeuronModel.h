@@ -124,6 +124,22 @@ class BaseNeuronModel : public NeuronModel
 
 	}
 
+	virtual void getActivations( double *activations, int start, int count )
+	{
+		for( int i = 0; i < count; i++ )
+		{
+			activations[i] = neuronactivation[start + i];
+		}
+	}
+
+	virtual void setActivations( double *activations, int start, int count )
+	{
+		for( int i = 0; i < count; i++ )
+		{
+			neuronactivation[start + i] = activations[i];
+		}
+	}
+
 	virtual void dumpAnatomical( AbstractFile *file )
 	{
 		size_t	dimCM;

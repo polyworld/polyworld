@@ -54,6 +54,9 @@ class NeuronModel
 
 	virtual void update( bool bprint ) = 0;
 
+	virtual void getActivations( double *activations, int start, int count ) = 0;
+	virtual void setActivations( double *activations, int start, int count ) = 0;
+
 	virtual void dumpAnatomical( AbstractFile *file ) = 0;
 
 	virtual void startFunctional( AbstractFile *file ) = 0;
