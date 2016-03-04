@@ -39,18 +39,18 @@ class BaseNeuronModel : public NeuronModel
 		free( synapse );
 	}
 
-	virtual void init_derived( float initial_activation ) = 0;
+	virtual void init_derived( double initial_activation ) = 0;
 
 	virtual void init( Dimensions *dims,
-					   float initial_activation )
+					   double initial_activation )
 	{
 		this->dims = dims;
 
 #define __ALLOC(NAME, TYPE, N) if(NAME) free(NAME); NAME = (TYPE *)calloc(N, sizeof(TYPE)); assert(NAME);
 
 		__ALLOC( neuron, T_neuron, dims->numNeurons );
-		__ALLOC( neuronactivation, float, dims->numNeurons );
-		__ALLOC( newneuronactivation, float, dims->numNeurons );
+		__ALLOC( neuronactivation, double, dims->numNeurons );
+		__ALLOC( newneuronactivation, double, dims->numNeurons );
 
 		__ALLOC( synapse, T_synapse, dims->numSynapses );
 
@@ -214,8 +214,8 @@ class BaseNeuronModel : public NeuronModel
 	Dimensions *dims;
 
 	T_neuron *neuron;
-	float *neuronactivation;
-	float *newneuronactivation;
+	double *neuronactivation;
+	double *newneuronactivation;
 	T_synapse *synapse;
 
 #if PrintBrain

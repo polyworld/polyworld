@@ -169,7 +169,7 @@ void SheetsBrain::grow( SheetsGenome *genome, SheetsModel *model )
 			assert(false);
 		}
 
-		_neuralnet->init( &_dims, 0.0f );
+		_neuralnet->init( &_dims, 0.0 );
 	}
 
 	// ---

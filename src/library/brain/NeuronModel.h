@@ -38,7 +38,7 @@ class NeuronModel
 	virtual ~NeuronModel() {}
 
 	virtual void init( Dimensions *dims,
-					   float initial_activation ) = 0;
+					   double initial_activation ) = 0;
 
 	virtual void set_neuron( int index,
 							 void *attributes,

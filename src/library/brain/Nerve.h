@@ -30,12 +30,12 @@ class Nerve
 		   int igroup );
 
  public:
-	float get( int ineuron = 0,
-			   ActivationBuffer buf = CURRENT );
-	void set( float activation,
+	double get( int ineuron = 0,
+			    ActivationBuffer buf = CURRENT );
+	void set( double activation,
 			  ActivationBuffer buf = CURRENT );
 	void set( int ineuron,
-			  float activation,
+			  double activation,
 			  ActivationBuffer buf = CURRENT );
 	int getIndex();
 	int getNeuronCount();
@@ -43,11 +43,11 @@ class Nerve
  public:
 	void config( int numneurons,
 				 int index );
-	void config( float **activations,
-				 float **activations_swap );
+	void config( double **activations,
+				 double **activations_swap );
 	
  private:
 	int numneurons;
-	float **activations[__NBUFFERS];
+	double **activations[__NBUFFERS];
 	int index;
 };

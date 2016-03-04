@@ -28,11 +28,11 @@ SpikingModel::~SpikingModel()
 	free( outputActivation );
 }
 
-void SpikingModel::init_derived( float initial_activation )
+void SpikingModel::init_derived( double initial_activation )
 {
 #define ALLOC(NAME, TYPE, N) if(NAME) free(NAME); NAME = (TYPE *)calloc(N, sizeof(TYPE)); assert(NAME);
 
-	ALLOC( outputActivation, float, dims->numOutputNeurons );
+	ALLOC( outputActivation, double, dims->numOutputNeurons );
 
 #undef ALLOC
 
@@ -83,8 +83,8 @@ void SpikingModel::update( bool bprint )
 	static long loop_counter=0;
     short i, n_steps;
     long k;
-// 	float u;
-	float v,activation;
+// 	double u;
+	double v,activation;
     if ((neuron == NULL) || (synapse == NULL) || (neuronactivation == NULL))
         return;
 	int outputNeuronFiringCounter[dims->numOutputNeurons];
@@ -137,7 +137,7 @@ void SpikingModel::update( bool bprint )
 	//Note I treat newneuronactivation as input to Izhikevich's voltage equasions
 	//######################################################################################################################
 	//scale the bias learning rate
-    float* saveneuronactivation = neuronactivation;
+    double* saveneuronactivation = neuronactivation;
 	
 	//calculate activity in each neuron i then learn for each synapse in i
 	long synapsesToDepress[dims->numSynapses];
@@ -409,7 +409,8 @@ void SpikingModel::update( bool bprint )
 
 	// compute smoothed output unit activation levels
 	
-	float currentActivationLevel[dims->numOutputNeurons], scale_total_spikes = 1.0-scale_latest_spikes;
+	double currentActivationLevel[dims->numOutputNeurons];
+	float scale_total_spikes = 1.0-scale_latest_spikes;
 	for (i = 0; i < dims->numOutputNeurons; i++)
 	{
 		neuron[i+dims->getFirstOutputNeuron()].maxfiringcount = max(outputNeuronFiringCounter[i], (int) neuron[i+dims->getFirstOutputNeuron()].maxfiringcount);

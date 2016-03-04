@@ -55,7 +55,7 @@ class GroupsBrain : public Brain
 	short NumNeuronGroups( bool ignoreEmpty = true );
 
  private:
-	void initNeuralNet( float initial_activation );
+	void initNeuralNet( double initial_activation );
 	short nearestFreeNeuron(short iin, bool* used, short num, short exclude);
 
 	void grow();

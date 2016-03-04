@@ -137,7 +137,7 @@ GroupsBrain::~GroupsBrain()
 //---------------------------------------------------------------------------
 // GroupsBrain::initNeuralNet
 //---------------------------------------------------------------------------
-void GroupsBrain::initNeuralNet( float initial_activation )
+void GroupsBrain::initNeuralNet( double initial_activation )
 {
 	switch( Brain::config.neuronModel )
 	{

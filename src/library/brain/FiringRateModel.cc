@@ -28,7 +28,7 @@ FiringRateModel::~FiringRateModel()
 {
 }
 
-void FiringRateModel::init_derived( float initial_activation )
+void FiringRateModel::init_derived( double initial_activation )
 {
 
 	for( int i = 0; i < dims->numNeurons; i++ )
@@ -106,7 +106,7 @@ void FiringRateModel::update( bool bprint )
 	float logisticSlope = Brain::config.logisticSlope;
     for( i = dims->getFirstInternalNeuron(); i < numneurons; i++ )
     {
-		float newactivation = neuron[i].bias;
+		double newactivation = neuron[i].bias;
         for( k = neuron[i].startsynapses; k < neuron[i].endsynapses; k++ )
         {
             newactivation += synapse[k].efficacy *
@@ -150,8 +150,8 @@ void FiringRateModel::update( bool bprint )
 			learningrate = syn.lrate;
 
 			float efficacy = syn.efficacy + learningrate
-				* (newneuronactivation[syn.toneuron]-0.5f)
-				* (   neuronactivation[syn.fromneuron]-0.5f);
+				* (newneuronactivation[syn.toneuron]-0.5)
+				* (   neuronactivation[syn.fromneuron]-0.5);
 
             if (fabs(efficacy) > (0.5f * Brain::config.maxWeight))
             {
@@ -181,7 +181,7 @@ void FiringRateModel::update( bool bprint )
 
     debugcheck( "after updating synapses" );
 
-    float* saveneuronactivation = neuronactivation;
+    double* saveneuronactivation = neuronactivation;
     neuronactivation = newneuronactivation;
     newneuronactivation = saveneuronactivation;
 }

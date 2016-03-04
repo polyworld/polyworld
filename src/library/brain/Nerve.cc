@@ -16,8 +16,8 @@ Nerve::Nerve( Type _type,
 	memset( activations, 0, sizeof(activations) );
 }
 
-float Nerve::get( int ineuron,
-				  ActivationBuffer buf )
+double Nerve::get( int ineuron,
+				   ActivationBuffer buf )
 {
 	if( numneurons == 0 )
 		return 0.0;
@@ -27,7 +27,7 @@ float Nerve::get( int ineuron,
 	return (*(activations[buf]))[index + ineuron];
 }
 
-void Nerve::set( float activation,
+void Nerve::set( double activation,
 				 ActivationBuffer buf )
 {
 	if( numneurons == 0 )
@@ -39,7 +39,7 @@ void Nerve::set( float activation,
 }
 
 void Nerve::set( int ineuron,
-				 float activation,
+				 double activation,
 				 ActivationBuffer buf )
 {
 	assert( (ineuron >= 0) && (ineuron < numneurons) && (index > -1) );
@@ -64,8 +64,8 @@ void Nerve::config( int _numneurons,
 	index = _index;
 }
 
-void Nerve::config( float **_activations,
-					float **_activations_swap )
+void Nerve::config( double **_activations,
+					double **_activations_swap )
 {
 	activations[CURRENT] = _activations;
 	activations[SWAP] = _activations_swap;

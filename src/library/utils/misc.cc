@@ -154,23 +154,23 @@ char* ftoa(float f)
 }
 
 
-float logistic(float x, float slope)
+double logistic(double x, double slope)
 {
     return (1.0 / (1.0 + exp(-1 * x * slope)));
 }
 
-float biasedLogistic(float x, float midpoint, float slope)
+double biasedLogistic(double x, double midpoint, double slope)
 {
     return (1.0 / (1.0 + exp(-1 * (x-midpoint) * slope)));
 }
 
-float generalLogistic(float x, float midpoint, float slope, float yneg, float ypos)
+double generalLogistic(double x, double midpoint, double slope, double yneg, double ypos)
 {
     return yneg + (ypos - yneg) * biasedLogistic(x, midpoint, slope);
 }
 
 
-float gaussian( float x, float mean, float variance )
+double gaussian( double x, double mean, double variance )
 {
     return( exp( -(x-mean)*(x-mean) / variance ) );
 }
