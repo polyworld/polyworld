@@ -97,6 +97,20 @@ class BaseNeuronModel : public NeuronModel
 		n.endsynapses = endsynapses;
 	}
 
+	virtual void get_synapse( int index,
+							  short &from,
+							  short &to,
+							  float &efficacy,
+							  float &lrate )
+	{
+		T_synapse &s = synapse[index];
+
+		from = s.fromneuron;
+		to = s.toneuron;
+		efficacy = s.efficacy;
+		lrate = s.lrate;
+	}
+
 	virtual void set_synapse( int index,
 							  int from,
 							  int to,
@@ -232,6 +246,47 @@ class BaseNeuronModel : public NeuronModel
 			T_synapse &s = synapse[i];
 			file->printf( "%hd %hd %g %g\n", s.fromneuron, s.toneuron, s.efficacy, s.lrate );
 		}
+	}
+
+	virtual void setSynapses( T_synapse *newsynapse )
+	{
+		short prevtoneuron = -1;
+		for( long i = 0; i < dims->numSynapses; i++ )
+		{
+			T_synapse &s = newsynapse[i];
+			set_synapse( i, s.fromneuron, s.toneuron, s.efficacy, s.lrate );
+			if( s.toneuron != prevtoneuron )
+			{
+				neuron[s.toneuron].startsynapses = i;
+			}
+			neuron[s.toneuron].endsynapses = i + 1;
+			prevtoneuron = s.toneuron;
+		}
+	}
+
+	virtual void loadSynapses( AbstractFile *file )
+	{
+		T_synapse *newsynapse = new T_synapse[dims->numSynapses];
+		for( long i = 0; i < dims->numSynapses; i++ )
+		{
+			T_synapse &s = newsynapse[i];
+			int rc = file->scanf( "%hd %hd %g %g", &s.fromneuron, &s.toneuron, &s.efficacy, &s.lrate );
+			assert( rc == 4 );
+		}
+		setSynapses( newsynapse );
+		delete[] newsynapse;
+	}
+
+	virtual void copySynapses( NeuronModel *other )
+	{
+		T_synapse *newsynapse = new T_synapse[dims->numSynapses];
+		for( long i = 0; i < dims->numSynapses; i++ )
+		{
+			T_synapse &s = newsynapse[i];
+			other->get_synapse( i, s.fromneuron, s.toneuron, s.efficacy, s.lrate );
+		}
+		setSynapses( newsynapse );
+		delete[] newsynapse;
 	}
 
 	//protected:

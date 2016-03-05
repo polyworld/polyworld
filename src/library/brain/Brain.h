@@ -134,6 +134,8 @@ public:
 	void writeFunctional( AbstractFile* file );
 
 	void dumpSynapses( AbstractFile *file, long index );
+	void loadSynapses( AbstractFile *file );
+	void copySynapses( Brain *other );
 	
 protected:
 	friend class agent;

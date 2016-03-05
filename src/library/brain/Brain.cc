@@ -212,6 +212,38 @@ void Brain::dumpSynapses( AbstractFile *file, long index )
 }
 
 //---------------------------------------------------------------------------
+// Brain::loadSynapses
+//---------------------------------------------------------------------------
+void Brain::loadSynapses( AbstractFile *file )
+{
+	long index;
+	long numSynapses;
+	int numNeurons;
+	int numInputNeurons;
+	int numOutputNeurons;
+	int rc = file->scanf( "synapses %ld numsynapses=%ld numneurons=%d numinputneurons=%d numoutputneurons=%d\n",
+						  &index, &numSynapses, &numNeurons, &numInputNeurons, &numOutputNeurons );
+	assert( rc == 5 );
+	assert( numSynapses == _dims.numSynapses );
+	assert( numNeurons == _dims.numNeurons );
+	assert( numInputNeurons == _dims.numInputNeurons );
+	assert( numOutputNeurons == _dims.numOutputNeurons );
+	_neuralnet->loadSynapses( file );
+}
+
+//---------------------------------------------------------------------------
+// Brain::copySynapses
+//---------------------------------------------------------------------------
+void Brain::copySynapses( Brain *other )
+{
+	assert( other->_dims.numSynapses == _dims.numSynapses );
+	assert( other->_dims.numNeurons == _dims.numNeurons );
+	assert( other->_dims.numInputNeurons == _dims.numInputNeurons );
+	assert( other->_dims.numOutputNeurons == _dims.numOutputNeurons );
+	_neuralnet->copySynapses( other->_neuralnet );
+}
+
+//---------------------------------------------------------------------------
 // Brain::prebirth
 //---------------------------------------------------------------------------
 void Brain::prebirth()

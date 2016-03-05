@@ -46,6 +46,11 @@ class NeuronModel
 							 int endsynapses = -1 ) = 0;
 	virtual void set_neuron_endsynapses( int index,
 										 int endsynapses ) = 0;
+	virtual void get_synapse( int index,
+							  short &from,
+							  short &to,
+							  float &efficacy,
+							  float &lrate ) = 0;
 	virtual void set_synapse( int index,
 							  int from,
 							  int to,
@@ -63,4 +68,6 @@ class NeuronModel
 	virtual void writeFunctional( AbstractFile *file ) = 0;
 
 	virtual void dumpSynapses( AbstractFile *file ) = 0;
+	virtual void loadSynapses( AbstractFile *file ) = 0;
+	virtual void copySynapses( NeuronModel *other ) = 0;
 };
