@@ -202,6 +202,16 @@ void Brain::writeFunctional( AbstractFile *file )
 }
 
 //---------------------------------------------------------------------------
+// Brain::dumpSynapses
+//---------------------------------------------------------------------------
+void Brain::dumpSynapses( AbstractFile *file, long index )
+{
+	file->printf( "synapses %ld numsynapses=%ld numneurons=%d numinputneurons=%d numoutputneurons=%d\n",
+				  index, _dims.numSynapses, _dims.numNeurons, _dims.numInputNeurons, _dims.numOutputNeurons );
+	_neuralnet->dumpSynapses( file );
+}
+
+//---------------------------------------------------------------------------
 // Brain::prebirth
 //---------------------------------------------------------------------------
 void Brain::prebirth()

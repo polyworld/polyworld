@@ -371,4 +371,21 @@ class Logs
 		std::list<class agent *> _births;
 	} _separation;
 
+	//===========================================================================
+	// SynapseLog
+	//===========================================================================
+	class SynapseLog : public AbstractFileLogger
+	{
+	protected:
+		virtual void init( class TSimulation *sim, proplib::Document *doc );
+		virtual void processEvent( const sim::BrainGrownEvent &e );
+		virtual void processEvent( const sim::AgentGrownEvent &e );
+		virtual void processEvent( const sim::BrainAnalysisBeginEvent &e );
+
+	private:
+		void createSynapseFile( agent *a, const char *suffix );
+
+		bool _enableLearning;
+	} _synapse;
+
 };

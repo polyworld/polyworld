@@ -61,4 +61,6 @@ class NeuronModel
 
 	virtual void startFunctional( AbstractFile *file ) = 0;
 	virtual void writeFunctional( AbstractFile *file ) = 0;
+
+	virtual void dumpSynapses( AbstractFile *file ) = 0;
 };

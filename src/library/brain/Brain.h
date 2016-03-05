@@ -132,6 +132,8 @@ public:
 	void startFunctional( AbstractFile *file, long index );
 	void endFunctional( AbstractFile* file, float fitness );
 	void writeFunctional( AbstractFile* file );
+
+	void dumpSynapses( AbstractFile *file, long index );
 	
 protected:
 	friend class agent;

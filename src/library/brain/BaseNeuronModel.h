@@ -225,6 +225,15 @@ class BaseNeuronModel : public NeuronModel
 		}
 	}
 
+	virtual void dumpSynapses( AbstractFile *file )
+	{
+		for( long i = 0; i < dims->numSynapses; i++ )
+		{
+			T_synapse &s = synapse[i];
+			file->printf( "%hd %hd %g %g\n", s.fromneuron, s.toneuron, s.efficacy, s.lrate );
+		}
+	}
+
 	//protected:
 	NervousSystem *cns;
 	Dimensions *dims;

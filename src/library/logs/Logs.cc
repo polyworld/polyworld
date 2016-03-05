@@ -1749,3 +1749,66 @@ void Logs::SeparationLog::processEvent( const sim::StepEndEvent &e )
 		_births.clear();
 	}
 }
+
+
+//===========================================================================
+// SynapseLog
+//===========================================================================
+
+//---------------------------------------------------------------------------
+// Logs::SynapseLog::init
+//---------------------------------------------------------------------------
+void Logs::SynapseLog::init( TSimulation *sim, Document *doc )
+{
+	if( doc->get("RecordSynapses") )
+	{
+		_enableLearning = doc->get( "EnableLearning" );
+		initRecording( sim,
+					   NullStateScope,
+					   sim::Event_BrainGrown
+					   | sim::Event_AgentGrown
+					   | sim::Event_BrainAnalysisBegin );
+	}
+}
+
+//---------------------------------------------------------------------------
+// Logs::SynapseLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::SynapseLog::processEvent( const BrainGrownEvent &e )
+{
+	if( _enableLearning )
+		createSynapseFile( e.a, "incept" );
+}
+
+//---------------------------------------------------------------------------
+// Logs::SynapseLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::SynapseLog::processEvent( const AgentGrownEvent &e )
+{
+	createSynapseFile( e.a, "birth" );
+}
+
+//---------------------------------------------------------------------------
+// Logs::SynapseLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::SynapseLog::processEvent( const BrainAnalysisBeginEvent &e )
+{
+	if( _enableLearning )
+		createSynapseFile( e.a, "death" );
+}
+
+//---------------------------------------------------------------------------
+// Logs::SynapseLog::createSynapseFile
+//---------------------------------------------------------------------------
+void Logs::SynapseLog::createSynapseFile( agent *a, const char *suffix )
+{
+	char path[256];
+	if( _enableLearning )
+		sprintf( path, "run/brain/synapses/synapses_%ld_%s.txt", a->Number(), suffix );
+	else
+		sprintf( path, "run/brain/synapses/synapses_%ld.txt", a->Number() );
+
+	AbstractFile *file = createFile( path );
+	a->GetBrain()->dumpSynapses( file, a->Number() );
+	delete file;
+}
