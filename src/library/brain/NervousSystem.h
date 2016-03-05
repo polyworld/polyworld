@@ -24,9 +24,9 @@ class NervousSystem
 
  public:
 	NervousSystem();
-	~NervousSystem();
+	virtual ~NervousSystem();
 
-	void grow( genome::Genome *g );
+	virtual void grow( genome::Genome *g );
 	void update( bool bprint );
 
 	RandomNumberGenerator *getRNG();
@@ -50,7 +50,7 @@ class NervousSystem
 	void startFunctional( AbstractFile *f );
 	void dumpAnatomical( AbstractFile *f );
 	
- private:
+ protected:
 	Brain *b;
 	RandomNumberGenerator *rng;
 
