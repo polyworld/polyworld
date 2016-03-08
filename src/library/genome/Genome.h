@@ -46,6 +46,9 @@ namespace genome
 
 		void seed( Gene *gene,
 				   float rawval_ratio );
+		void seedRandom( Gene *gene,
+						 float rawval_ratio_min,
+						 float rawval_ratio_max );
 		void seedAll( float rawval_ratio );
 
 		void randomizeBits( float bitonprob );
@@ -83,7 +86,9 @@ namespace genome
 					  int n,
 					  unsigned char rawval );
 		void set_raw_random( int offset,
-							 int n );
+							 int n,
+							 int min,
+							 int max );
 
 		int nbytes;
 		unsigned char *mutable_data;
@@ -134,7 +139,9 @@ inline void Genome::set_raw( int offset,
 }
 
 inline void Genome::set_raw_random( int offset,
-									int n )
+									int n,
+									int min,
+									int max )
 {
 	assert( (offset >= 0) && (offset + n <= nbytes) );
 
@@ -142,7 +149,7 @@ inline void Genome::set_raw_random( int offset,
 	{
 		int layoutOffset = layout->getMutableDataOffset( offset + i );
 
-		mutable_data[layoutOffset] = (unsigned char)rrand( 0, 256 );
+		mutable_data[layoutOffset] = (unsigned char)rrand( min, max + 1 );
 	}
 }
 

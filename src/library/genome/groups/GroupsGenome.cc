@@ -270,6 +270,20 @@ void GroupsGenome::seed( Gene *gene,
 												SEEDVAL(rawval_ratio) );
 }
 
+void GroupsGenome::seedRandom( Gene *attr,
+							   Gene *group,
+							   float rawval_ratio_min,
+							   float rawval_ratio_max )
+{
+	SEEDCHECK(rawval_ratio_min);
+	SEEDCHECK(rawval_ratio_max);
+
+	GroupsGeneType::to_NeurGroupAttr(attr)->randomize( this,
+													   GroupsGeneType::to_NeurGroup(group),
+													   SEEDVAL(rawval_ratio_min),
+													   SEEDVAL(rawval_ratio_max) );
+}
+
 void GroupsGenome::getCrossoverPoints( long *crossoverPoints, long numCrossPoints )
 {
 	long numphysbytes = _schema->getPhysicalCount();

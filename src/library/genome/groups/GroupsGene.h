@@ -137,6 +137,10 @@ namespace genome
 		void seed( Genome *genome,
 				   NeurGroupGene *group,
 				   unsigned char rawval );
+		void randomize( Genome *genome,
+						NeurGroupGene *group,
+						unsigned char rawval_min,
+						unsigned char rawval_max );
 
 		virtual void printIndexes( FILE *file, const std::string &prefix, GenomeLayout *layout );
 		virtual void printTitles( FILE *file, const std::string &prefix );

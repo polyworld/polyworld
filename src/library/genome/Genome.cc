@@ -110,6 +110,18 @@ void Genome::seed( Gene *gene,
 				SEEDVAL(rawval_ratio) );
 }
 
+void Genome::seedRandom( Gene *gene,
+						 float rawval_ratio_min,
+						 float rawval_ratio_max )
+{
+	SEEDCHECK(rawval_ratio_min);
+	SEEDCHECK(rawval_ratio_max);
+
+	gene->randomize( this,
+					 SEEDVAL(rawval_ratio_min),
+					 SEEDVAL(rawval_ratio_max) );
+}
+
 void Genome::seedAll( float rawval_ratio )
 {
 	SEEDCHECK(rawval_ratio);

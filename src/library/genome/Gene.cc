@@ -49,12 +49,16 @@ void Gene::seed( Genome *genome,
 					 rawval );
 }
 
-void Gene::randomize( Genome *genome )
+void Gene::randomize( Genome *genome,
+					  unsigned char rawval_min,
+					  unsigned char rawval_max )
 {
 	assert( ismutable && offset > -1 );
 
 	genome->set_raw_random( offset,
-							getMutableSize() );
+							getMutableSize(),
+							rawval_min,
+							rawval_max );
 }
 
 int Gene::getMutableSize()

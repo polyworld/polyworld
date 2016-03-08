@@ -62,6 +62,7 @@ namespace genome
 					int to );
 
 		using Genome::seed;
+		using Genome::seedRandom;
 
 		void seed( Gene *attr,
 				   Gene *group,
@@ -72,6 +73,11 @@ namespace genome
 				   Gene *from,
 				   Gene *to,
 				   float rawval_ratio );
+
+		void seedRandom( Gene *attr,
+						 Gene *group,
+						 float rawval_ratio_min,
+						 float rawval_ratio_max );
 
 	protected:
 		virtual void getCrossoverPoints( long *crossoverPoints, long numCrossPoints );

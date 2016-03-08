@@ -248,6 +248,21 @@ void NeurGroupAttrGene::seed( Genome *genome,
 					 rawval );
 }
 
+void NeurGroupAttrGene::randomize( Genome *genome,
+								   NeurGroupGene *group,
+								   unsigned char rawval_min,
+								   unsigned char rawval_max )
+{
+	int igroup = schema->getFirstGroup( group );
+	int offset = getOffset( igroup );
+	int ngroups = group->getMaxGroupCount();
+
+	genome->set_raw_random( offset,
+							ngroups * sizeof(unsigned char),
+							rawval_min,
+							rawval_max );
+}
+
 void NeurGroupAttrGene::printIndexes( FILE *file, const std::string &prefix, GenomeLayout *layout )
 {
 	int n = schema->getMaxGroupCount( group_type );
