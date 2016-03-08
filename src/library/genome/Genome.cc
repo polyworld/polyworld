@@ -98,14 +98,6 @@ void Genome::updateSum( unsigned long *sum, unsigned long *sum2 )
 	}
 }
 
-void Genome::setAll( unsigned char val )
-{
-	for (long byte = 0; byte < nbytes; byte++)
-	{
-		mutable_data[byte] = val;
-	}
-}
-
 #define SEEDCHECK(VAL) assert(((VAL) >= 0) && ((VAL) <= 1))
 #define SEEDVAL(VAL) (unsigned char)((VAL) == 1 ? 255 : (VAL) * 256)
 
@@ -116,6 +108,17 @@ void Genome::seed( Gene *gene,
 
 	gene->seed( this,
 				SEEDVAL(rawval_ratio) );
+}
+
+void Genome::seedAll( float rawval_ratio )
+{
+	SEEDCHECK(rawval_ratio);
+
+	unsigned char val = SEEDVAL(rawval_ratio);
+	for (long byte = 0; byte < nbytes; byte++)
+	{
+		mutable_data[byte] = val;
+	}
 }
 
 void Genome::randomizeBits( float bitonprob )

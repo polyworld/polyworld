@@ -243,7 +243,7 @@ void GroupsGenomeSchema::seed( Genome *g_ )
 	}
 	else if( GenomeSchema::config.seedType == GenomeSchema::SEED_SIMPLE )
 	{
-		g_->setAll( 0 );
+		g_->seedAll( 0 );
 	}
 
 	// ---

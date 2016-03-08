@@ -44,9 +44,9 @@ namespace genome
 		unsigned int get_raw_uint( long byte );
 		void updateSum( unsigned long *sum, unsigned long *sum2 );
 
-		void setAll( unsigned char val );
 		void seed( Gene *gene,
 				   float rawval_ratio );
+		void seedAll( float rawval_ratio );
 
 		void randomizeBits( float bitonprob );
 		void randomizeBits();
