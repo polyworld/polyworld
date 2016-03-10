@@ -167,6 +167,8 @@ class DataLibReader
 
  private:
 	FILE *f;
+	bool randomAccess;
+	bool singleSchema;
 	int row;
 	datalib::__TableMap tables;
 	datalib::__Table *table;
