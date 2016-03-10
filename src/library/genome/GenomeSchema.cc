@@ -68,6 +68,7 @@ void GenomeSchema::processWorldfile( proplib::Document &doc )
 			assert( false );
 	}
 	GenomeSchema::config.seedMutationRate = doc.get( "SeedMutationRate" );
+	GenomeSchema::config.seedMutationStdev = doc.get( "SeedMutationStdev" );
 	GenomeSchema::config.seedFightBias = doc.get( "SeedFightBias" );
 	GenomeSchema::config.seedFightExcitation = doc.get( "SeedFightExcitation" );
 	GenomeSchema::config.seedGiveBias = doc.get( "SeedGiveBias" );
@@ -204,15 +205,8 @@ void GenomeSchema::seed( Genome *g )
 		}
 	}
 
-	if( GenomeSchema::config.seedType == GenomeSchema::SEED_SIMPLE )
-	{
-		SEED( MutationRate, 1.0 );
-		SEED( MutationStdev, 1.0 );
-	}
-	else
-	{
-		SEED( MutationRate, GenomeSchema::config.seedMutationRate );
-	}
+	SEED( MutationRate, GenomeSchema::config.seedMutationRate );
+	SEED( MutationStdev, GenomeSchema::config.seedMutationStdev );
 
 	if( Metabolism::selectionMode == Metabolism::Gene
 		&& Metabolism::getNumberOfDefinitions() > 1 )
