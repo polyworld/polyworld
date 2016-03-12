@@ -941,9 +941,14 @@ MateWait {
 
 InitMateWait {
   type    Int
-  default MateWait
+  default 0
   min     0
   exmax   MaxLifeSpan
+}
+
+RandomSeedMateWait {
+  type    Bool
+  default False
 }
 
 EatMateWait {

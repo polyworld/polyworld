@@ -88,6 +88,7 @@ public:
 		float	maxCarries;
 		bool	vision;
 		long 	initMateWait;
+		bool	randomSeedMateWait;
 		float	speed2DPosition;
 		float	maxRadius;
 		float	maxVelocity;

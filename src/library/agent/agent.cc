@@ -70,6 +70,7 @@ void agent::processWorldfile( proplib::Document &doc )
 	agent::config.maxVisionYaw = doc.get( "MaxVisionYaw" );
 	agent::config.eyeHeight = doc.get( "EyeHeight" );
     agent::config.initMateWait = doc.get( "InitMateWait" );
+    agent::config.randomSeedMateWait = doc.get( "RandomSeedMateWait" );
     agent::config.minAgentSize = doc.get( "MinAgentSize" );
     agent::config.maxAgentSize = doc.get( "MaxAgentSize" );
     agent::config.minLifeSpan = doc.get( "MinLifeSpan" );
@@ -608,9 +609,20 @@ void agent::grow( long mateWait, bool seeding )
     
     fAge = 0;
     if( seeding )
-        fLastMate = -mateWait;
+    {
+        if( agent::config.randomSeedMateWait )
+        {
+            fLastMate = (long)(randpw() * -mateWait);
+        }
+        else
+        {
+            fLastMate = -mateWait;
+        }
+    }
     else
-        fLastMate = agent::config.initMateWait - mateWait;
+    {
+        fLastMate = agent::config.initMateWait;
+    }
     
 	float size_rel = geneCache.size - agent::config.minAgentSize;
 
