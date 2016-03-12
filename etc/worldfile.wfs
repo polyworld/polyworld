@@ -121,7 +121,7 @@ InitAgents {
   max     MaxAgents
 }
 
-RandomInitEnergy {
+RandomSeedEnergy {
   type    Bool
   default False
 }

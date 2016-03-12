@@ -114,7 +114,7 @@ public:
 		NoseColor noseColor;
 		float   noseColorConstValue;
 		bool    hasLightBehavior;
-		bool	randomInitEnergy;
+		bool	randomSeedEnergy;
 		float	energyUseMultiplier;
 		float	ageEnergyMultiplier;
 		bool	dieAtMaxAge;
