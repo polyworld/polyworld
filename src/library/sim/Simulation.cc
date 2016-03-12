@@ -2699,9 +2699,9 @@ void TSimulation::Eat( agent *c, bool *cDied )
 	if( !fLockStepWithBirthsDeathsLog )
 	{
 		// If we're not running in LockStep mode, allow natural deaths
-		Energy starvationFoodEnergy = Energy( fStarvationFoodEnergy );
+		static Energy starvationFoodEnergy = Energy( agent::config.starvationFoodEnergy );
 		if( c->GetEnergy().isDepleted() ||
-			(c->Age() >= fStarvationWait && c->GetFoodEnergy().isDepleted( starvationFoodEnergy )) )
+			((c->IsSeed() || c->Age() >= agent::config.starvationWait) && c->GetFoodEnergy().isDepleted( starvationFoodEnergy )) )
 		{
 			// note: this leaves list pointing to item before c, and markedAgent set to previous agent
 			Kill( c, LifeSpan::DR_EAT );
@@ -4474,8 +4474,6 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 
 
     fMinFoodEnergyAtDeath = doc.get( "MinFoodEnergyAtDeath" );
-    fStarvationFoodEnergy = doc.get( "StarvationFoodEnergy" );
-    fStarvationWait = doc.get( "StarvationWait" );
 	fRandomBirthLocation = doc.get( "RandomBirthLocation" );
 	fRandomBirthLocationRadius = doc.get( "RandomBirthLocationRadius" );
 	{

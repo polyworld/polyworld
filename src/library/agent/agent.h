@@ -118,6 +118,8 @@ public:
 		float	energyUseMultiplier;
 		float	ageEnergyMultiplier;
 		bool	dieAtMaxAge;
+		float	starvationFoodEnergy;
+		int 	starvationWait;
 
 		bool	enableMateWaitFeedback;
 		bool	enableSpeedFeedback;
@@ -211,6 +213,7 @@ public:
 	float Pickup();
 	float Drop();
     float Size();
+    bool IsSeed();
     long Age();
     long MaxAge();
     long LastMate();
@@ -271,6 +274,7 @@ protected:
     static agent** pc;
 
     bool fAlive;
+    bool fIsSeed;
     long fAge;
     long fLastMate;
 	long fLastEat;
@@ -387,6 +391,7 @@ inline float agent::Mate() { return outputNerves.mate->get(); }
 inline float agent::Pickup() { return outputNerves.pickup->get(); }
 inline float agent::Drop() { return outputNerves.drop->get(); }
 inline float agent::Size() { return geneCache.size; }
+inline bool agent::IsSeed() { return fIsSeed; }
 inline long agent::Age() { return fAge; }
 inline long agent::MaxAge() { return geneCache.lifespan; }
 inline long agent::LastMate() { return fLastMate; }

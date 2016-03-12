@@ -153,6 +153,8 @@ void agent::processWorldfile( proplib::Document &doc )
     agent::config.energyUseMultiplier = doc.get( "EnergyUseMultiplier" );
     agent::config.ageEnergyMultiplier = doc.get( "AgeEnergyMultiplier" );
     agent::config.dieAtMaxAge = doc.get( "DieAtMaxAge" );
+    agent::config.starvationFoodEnergy = doc.get( "StarvationFoodEnergy" );
+    agent::config.starvationWait = doc.get( "StarvationWait" );
     agent::config.eat2Energy = doc.get( "EnergyUseEat" );
 	agent::config.mate2Energy = doc.get( "EnergyUseMate" );
     agent::config.fight2Energy = doc.get( "EnergyUseFight" );
@@ -607,6 +609,7 @@ void agent::grow( long mateWait, bool seeding )
 	}
     fNoseColor[0] = fNoseColor[1] = fNoseColor[2] = noseColor;
     
+    fIsSeed = seeding;
     fAge = 0;
     if( seeding )
     {
@@ -626,16 +629,18 @@ void agent::grow( long mateWait, bool seeding )
     
 	float size_rel = geneCache.size - agent::config.minAgentSize;
 
-    fMaxEnergy = agent::config.minMaxEnergy + (size_rel
-    			 * (agent::config.maxMaxEnergy - agent::config.minMaxEnergy) / (agent::config.maxAgentSize - agent::config.minAgentSize) );
+    float maxEnergy = agent::config.minMaxEnergy + (size_rel
+    				  * (agent::config.maxMaxEnergy - agent::config.minMaxEnergy) / (agent::config.maxAgentSize - agent::config.minAgentSize) );
+    fMaxEnergy = maxEnergy;
 	
     fEnergy = fMaxEnergy;
 	fFoodEnergy = fMaxEnergy;
 	
 	if( seeding && agent::config.randomSeedEnergy )
 	{
-		fEnergy = randpw() * fMaxEnergy;
-		fFoodEnergy = fEnergy;
+		float energy = agent::config.starvationFoodEnergy + randpw() * (maxEnergy - agent::config.starvationFoodEnergy);
+		fEnergy = energy;
+		fFoodEnergy = energy;
 	}
 	
 //	printf( "%s: energy initialized to %g\n", __func__, fEnergy );
