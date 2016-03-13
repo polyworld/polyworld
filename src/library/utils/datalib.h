@@ -150,6 +150,7 @@ class DataLibReader
 	size_t nrows();
 	void seekRow( int index );
 	bool nextRow();
+	int position();
 	const Variant &col( const char *name );
 
 

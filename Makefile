@@ -1,6 +1,6 @@
 include Makefile.conf
 
-targets=library app qtrenderer rancheck PwMoviePlayer proputil pmvutil qt_clust
+targets=library app qtrenderer rancheck PwMoviePlayer proputil pmvutil qt_clust brainfunction
 
 .PHONY: ${targets} clean
 
@@ -33,6 +33,9 @@ qt_clust:
 omp_test:
 	+ make -C src/tools/omp_test
 	bin/omp_test
+
+brainfunction:
+	+ make -C src/tools/brainfunction
 
 clean:
 	rm -rf ${PWBLD}
