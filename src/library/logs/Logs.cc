@@ -512,7 +512,7 @@ void Logs::BirthsDeathsLog::processEvent( const sim::AgentDeathEvent &death )
 //---------------------------------------------------------------------------
 void Logs::BrainAnatomyLog::init( TSimulation *sim, Document *doc )
 {
-	if( doc->get("RecordBrain") )
+	if( doc->get("RecordBrain") && doc->get("RecordBrainAnatomy") )
 	{
 		_enableLearning = doc->get( "EnableLearning" );
 		_recordRecent = doc->get( "RecordBrainRecent" );
@@ -799,7 +799,7 @@ void Logs::BrainComplexityLog::writeBestRecent( long epoch )
 //---------------------------------------------------------------------------
 void Logs::BrainFunctionLog::init( TSimulation *sim, Document *doc )
 {
-	if( doc->get("RecordBrain") )
+	if( doc->get("RecordBrain") && doc->get("RecordBrainFunction") )
 	{
 		_recordRecent = doc->get( "RecordBrainRecent" );
 		_recordBestRecent = doc->get( "RecordBrainBestRecent" );

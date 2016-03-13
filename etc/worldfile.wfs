@@ -2521,6 +2521,16 @@ RecordBrain {
   default ( RecordAll or RecordNeuralComplexityFiles )
 }
 
+RecordBrainAnatomy {
+  type    Bool
+  default RecordBrain
+}
+
+RecordBrainFunction {
+  type    Bool
+  default RecordBrain
+}
+
 RecordBrainRecent {
   type    Bool
   default RecordBrain
