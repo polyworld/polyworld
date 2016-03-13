@@ -6,6 +6,7 @@
 #include "agent/agent.h"
 #include "brain/Brain.h"
 #include "brain/NervousSystem.h"
+#include "brain/NeuronModel.h"
 #include "brain/RqNervousSystem.h"
 #include "genome/Genome.h"
 #include "genome/GenomeSchema.h"
@@ -15,7 +16,6 @@
 #include "proplib/interpreter.h"
 #include "proplib/schema.h"
 #include "sim/globals.h"
-#include "sim/Simulation.h"
 #include "utils/AbstractFile.h"
 #include "utils/datalib.h"
 #include "utils/misc.h"
@@ -42,25 +42,32 @@ int main(int argc, char** argv) {
     initialize(args.run);
     DataLibReader lifeSpans((args.run + "/lifespans.txt").c_str());
     lifeSpans.seekTable("LifeSpans");
-    makeDirs(args.run + "/brain/function");
     while (lifeSpans.nextRow()) {
-        if (lifeSpans.position() % 100 == 0) {
-            std::cerr << lifeSpans.position() << std::endl;
-        }
         int agent = lifeSpans.col("Agent");
         Genome* genome = loadGenome(args.run, agent);
         RqNervousSystem* cns = loadNervousSystem(genome, args.run, agent);
         delete genome;
-        TSimulation::fStep = lifeSpans.col("BirthStep");
-        std::string path = args.run + "/brain/function/brainFunction_" + std::to_string(agent) + ".txt";
-        AbstractFile* file = AbstractFile::open(globals::recordFileType, path.c_str(), "w");
-        cns->getBrain()->startFunctional(file, agent);
+        NeuronModel::Dimensions dims = cns->getBrain()->getDimensions();
+        double* activations = new double[dims.numNeurons];
+        std::cout << "# BEGIN";
+        std::cout << " agent=" << agent;
+        std::cout << " numNeurons=" << dims.numNeurons;
+        std::cout << " numInputNeurons=" << dims.numInputNeurons;
+        std::cout << " numOutputNeurons=" << dims.numOutputNeurons;
+        std::cout << std::endl;
         for (int step = 1; step <= args.steps; step++) {
             cns->update(false);
-            cns->getBrain()->writeFunctional(file);
+            cns->getBrain()->getActivations(activations, 0, dims.numNeurons);
+            for (int neuron = 0; neuron < dims.numNeurons; neuron++) {
+                if (neuron > 0) {
+                    std::cout << " ";
+                }
+                std::cout << activations[neuron];
+            }
+            std::cout << std::endl;
         }
-        cns->getBrain()->endFunctional(file, 0.0f);
-        delete file;
+        std::cout << "# END" << std::endl;
+        delete[] activations;
         delete cns;
     }
     return 0;
