@@ -1,8 +1,8 @@
 conf=../../../Makefile.conf
 include ${conf}
 
-target=${BRAINFUNCTION_TARGET}
-blddir=${BRAINFUNCTION_BLDDIR}
+target=${TIMESERIES_TARGET}
+blddir=${TIMESERIES_BLDDIR}
 
 cxxflags=${CXXFLAGS} ${OPENGL_CXXFLAGS} ${LIBRARY_CXXFLAGS}
 ldflags=${PWLIB_LDFLAGS}
