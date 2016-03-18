@@ -119,6 +119,7 @@ public:
     short getNumNeurons();
 	long  getNumSynapses();
 	NeuronModel::Dimensions getDimensions();
+	NeuronModel *getNeuronModel();
         
 	void getActivations( double *activations, int start, int count );
 	void setActivations( double *activations, int start, int count );
@@ -155,6 +156,7 @@ inline float Brain::getEnergyUse() { return _energyUse; }
 inline short Brain::getNumNeurons() { return _dims.numNeurons; }
 inline long Brain::getNumSynapses() { return _dims.numSynapses; }
 inline NeuronModel::Dimensions Brain::getDimensions() { return _dims; }
+inline NeuronModel *Brain::getNeuronModel() { return _neuralnet; }
 inline void Brain::getActivations( double *activations, int start, int count ) { return _neuralnet->getActivations( activations, start, count ); }
 inline void Brain::setActivations( double *activations, int start, int count ) { return _neuralnet->setActivations( activations, start, count ); }
 inline bool Brain::isFrozen() { return _frozen; }
