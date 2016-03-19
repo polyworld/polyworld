@@ -1,5 +1,6 @@
 #include <iostream>
 #include <map>
+#include <math.h>
 #include <set>
 #include <stdlib.h>
 #include <string>
@@ -29,6 +30,7 @@ struct Args {
     int count;
     int transient;
     int steps;
+    float threshold;
 };
 
 bool tryParseArgs(int, char**, Args&);
@@ -36,13 +38,13 @@ void initialize(const std::string&);
 Genome* loadGenome(const std::string&, int);
 RqNervousSystem* loadNervousSystem(Genome*, const std::string&, int);
 void printHeader(int, NervousSystem*);
-void printSynapses(NervousSystem*);
+void printSynapses(NervousSystem*, float);
 void printTimeSeries(NervousSystem*, int, int);
 
 int main(int argc, char** argv) {
     Args args;
     if (!tryParseArgs(argc, argv, args)) {
-        std::cerr << "Usage: " << argv[0] << " RUN COUNT TRANSIENT STEPS" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " RUN COUNT TRANSIENT STEPS [THRESHOLD]" << std::endl;
         std::cerr << std::endl;
         std::cerr << "Generates neural activation time series using random inputs." << std::endl;
         std::cerr << std::endl;
@@ -50,6 +52,7 @@ int main(int argc, char** argv) {
         std::cerr << "  COUNT      Number of time series per agent" << std::endl;
         std::cerr << "  TRANSIENT  Initial number of timesteps to ignore" << std::endl;
         std::cerr << "  STEPS      Number of timesteps to display" << std::endl;
+        std::cerr << "  THRESHOLD  Threshold synaptic weight" << std::endl;
         return 1;
     }
     initialize(args.run);
@@ -61,7 +64,7 @@ int main(int argc, char** argv) {
         RqNervousSystem* cns = loadNervousSystem(genome, args.run, agent);
         delete genome;
         printHeader(agent, cns);
-        printSynapses(cns);
+        printSynapses(cns, args.threshold);
         for (int index = 0; index < args.count; index++) {
             printTimeSeries(cns, args.transient, args.steps);
         }
@@ -71,13 +74,14 @@ int main(int argc, char** argv) {
 }
 
 bool tryParseArgs(int argc, char** argv, Args& args) {
-    if (argc != 5) {
+    if (argc < 5 || argc > 6) {
         return false;
     }
     std::string run;
     int count;
     int transient;
     int steps;
+    float threshold = 1e-6f;
     try {
         run = std::string(argv[1]);
         if (!exists(run + "/endStep.txt")) {
@@ -95,6 +99,12 @@ bool tryParseArgs(int argc, char** argv, Args& args) {
         if (steps < 1) {
             return false;
         }
+        if (argc == 6) {
+            threshold = atof(argv[5]);
+            if (threshold < 0.0f) {
+                return false;
+            }
+        }
     } catch (...) {
         return false;
     }
@@ -102,6 +112,7 @@ bool tryParseArgs(int argc, char** argv, Args& args) {
     args.count = count;
     args.transient = transient;
     args.steps = steps;
+    args.threshold = threshold;
     return true;
 }
 
@@ -156,7 +167,7 @@ void printHeader(int agent, NervousSystem* cns) {
     std::cout << std::endl;
 }
 
-void printSynapses(NervousSystem* cns) {
+void printSynapses(NervousSystem* cns, float threshold) {
     std::map<short, std::set<short> > synapses;
     NeuronModel::Dimensions dims = cns->getBrain()->getDimensions();
     NeuronModel* model = cns->getBrain()->getNeuronModel();
@@ -166,6 +177,9 @@ void printSynapses(NervousSystem* cns) {
         float weight;
         float learningRate;
         model->get_synapse(synapse, neuron1, neuron2, weight, learningRate);
+        if (fabs(weight) < threshold) {
+            continue;
+        }
         synapses[neuron1].insert(neuron2);
     }
     std::cout << "# BEGIN SYNAPSES" << std::endl;
