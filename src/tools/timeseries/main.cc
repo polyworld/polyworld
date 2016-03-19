@@ -1,7 +1,6 @@
 #include <iostream>
 #include <map>
 #include <set>
-#include <sstream>
 #include <stdlib.h>
 #include <string>
 #include <time.h>
@@ -20,57 +19,90 @@
 #include "proplib/schema.h"
 #include "sim/globals.h"
 #include "utils/AbstractFile.h"
+#include "utils/datalib.h"
 #include "utils/misc.h"
 
 using namespace genome;
 
+struct Args {
+    std::string run;
+    int count;
+    int transient;
+    int steps;
+};
+
+bool tryParseArgs(int, char**, Args&);
 void initialize(const std::string&);
 Genome* loadGenome(const std::string&, int);
 RqNervousSystem* loadNervousSystem(Genome*, const std::string&, int);
-void printDimensions(NervousSystem*);
+void printHeader(int, NervousSystem*);
 void printSynapses(NervousSystem*);
 void printTimeSeries(NervousSystem*, int, int);
 
 int main(int argc, char** argv) {
-    if (argc != 2) {
-        std::cerr << "Usage: " << argv[0] << " RUN" << std::endl;
-        std::cerr << "       AGENT COUNT TRANSIENT STEPS" << std::endl;
+    Args args;
+    if (!tryParseArgs(argc, argv, args)) {
+        std::cerr << "Usage: " << argv[0] << " RUN COUNT TRANSIENT STEPS" << std::endl;
         std::cerr << std::endl;
         std::cerr << "Generates neural activation time series using random inputs." << std::endl;
         std::cerr << std::endl;
         std::cerr << "  RUN        Run directory" << std::endl;
-        std::cerr << "  AGENT      Agent number" << std::endl;
-        std::cerr << "  COUNT      Number of time series to generate" << std::endl;
+        std::cerr << "  COUNT      Number of time series per agent" << std::endl;
         std::cerr << "  TRANSIENT  Initial number of timesteps to ignore" << std::endl;
         std::cerr << "  STEPS      Number of timesteps to display" << std::endl;
         return 1;
     }
-    std::string run(argv[1]);
-    initialize(run);
-    while (true) {
-        std::cerr << "AGENT COUNT TRANSIENT STEPS" << std::endl;
-        std::string line;
-        if (!std::getline(std::cin, line)) {
-            break;
-        }
-        int agent;
-        int count;
-        int transient;
-        int steps;
-        std::istringstream in(line);
-        in.exceptions(in.failbit | in.badbit);
-        in >> agent >> count >> transient >> steps;
-        Genome* genome = loadGenome(run, agent);
-        RqNervousSystem* cns = loadNervousSystem(genome, run, agent);
+    initialize(args.run);
+    DataLibReader lifeSpans((args.run + "/lifespans.txt").c_str());
+    lifeSpans.seekTable("LifeSpans");
+    while (lifeSpans.nextRow()) {
+        int agent = lifeSpans.col("Agent");
+        Genome* genome = loadGenome(args.run, agent);
+        RqNervousSystem* cns = loadNervousSystem(genome, args.run, agent);
         delete genome;
-        printDimensions(cns);
+        printHeader(agent, cns);
         printSynapses(cns);
-        for (int index = 0; index < count; index++) {
-            printTimeSeries(cns, transient, steps);
+        for (int index = 0; index < args.count; index++) {
+            printTimeSeries(cns, args.transient, args.steps);
         }
         delete cns;
     }
     return 0;
+}
+
+bool tryParseArgs(int argc, char** argv, Args& args) {
+    if (argc != 5) {
+        return false;
+    }
+    std::string run;
+    int count;
+    int transient;
+    int steps;
+    try {
+        run = std::string(argv[1]);
+        if (!exists(run + "/endStep.txt")) {
+            return false;
+        }
+        count = atoi(argv[2]);
+        if (count < 1) {
+            return false;
+        }
+        transient = atoi(argv[3]);
+        if (transient < 0) {
+            return false;
+        }
+        steps = atoi(argv[4]);
+        if (steps < 1) {
+            return false;
+        }
+    } catch (...) {
+        return false;
+    }
+    args.run = run;
+    args.count = count;
+    args.transient = transient;
+    args.steps = steps;
+    return true;
 }
 
 void initialize(const std::string& run) {
@@ -114,7 +146,8 @@ RqNervousSystem* loadNervousSystem(Genome* genome, const std::string& run, int a
     return cns;
 }
 
-void printDimensions(NervousSystem* cns) {
+void printHeader(int agent, NervousSystem* cns) {
+    std::cout << "# AGENT " << agent << std::endl;
     NeuronModel::Dimensions dims = cns->getBrain()->getDimensions();
     std::cout << "# DIMENSIONS";
     std::cout << " " << dims.numNeurons;
