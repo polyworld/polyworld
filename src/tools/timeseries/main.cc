@@ -65,9 +65,11 @@ int main(int argc, char** argv) {
         delete genome;
         printHeader(agent, cns);
         printSynapses(cns, args.threshold);
+        std::cout << "# BEGIN ENSEMBLE" << std::endl;
         for (int index = 0; index < args.count; index++) {
             printTimeSeries(cns, args.transient, args.steps);
         }
+        std::cout << "# END ENSEMBLE" << std::endl;
         delete cns;
     }
     return 0;
