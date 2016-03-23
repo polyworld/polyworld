@@ -154,6 +154,14 @@ class BaseNeuronModel : public NeuronModel
 		}
 	}
 
+	virtual void randomizeActivations()
+	{
+		for( int i = 0; i < dims->numNeurons; i++ )
+		{
+			neuronactivation[i] = randpw();
+		}
+	}
+
 	virtual void dumpAnatomical( AbstractFile *file )
 	{
 		size_t	dimCM;

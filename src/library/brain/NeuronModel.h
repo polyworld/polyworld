@@ -61,6 +61,7 @@ class NeuronModel
 
 	virtual void getActivations( double *activations, int start, int count ) = 0;
 	virtual void setActivations( double *activations, int start, int count ) = 0;
+	virtual void randomizeActivations() = 0;
 
 	virtual void dumpAnatomical( AbstractFile *file ) = 0;
 

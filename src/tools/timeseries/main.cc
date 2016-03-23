@@ -199,6 +199,7 @@ void printSynapses(NervousSystem* cns, float threshold) {
 }
 
 void printTimeSeries(NervousSystem* cns, int transient, int steps) {
+    cns->getBrain()->randomizeActivations();
     for (int step = 1; step <= transient; step++) {
         cns->update(false);
     }
