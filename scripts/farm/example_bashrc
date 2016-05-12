@@ -1,0 +1,65 @@
+#
+# Usage: fset [-q] [farm_name] [session_name]
+#
+# OPTIONS:
+#
+#     -q    Quiet.
+#
+alias fconfig='pwfarm_config.sh'
+alias fcstat='pwfarm_config.sh stat'
+
+function fset()
+{
+    if ! which pwfarm_config.sh >/dev/null 2>&1; then
+	echo "Your PATH does not include scripts/farm!" >&2
+	return 1
+    fi
+
+    if [ "$1" == "-q" ]; then local quiet=true ; shift; fi
+
+    alias fbuild='pwfarm_build.sh'
+    alias frun='pwfarm_run.sh'
+    alias fpassive='pwfarm_passive.sh'
+    alias fdisp='pwfarm_dispatcher.sh'
+    alias flsrun='pwfarm_lsrun.sh'
+    alias fid='pwfarm_local_id.sh'
+    alias fmvrun='pwfarm_mvrun.sh'
+    alias frmrun='pwfarm_rmrun.sh'
+    alias fstat='pwfarm_stat.sh'
+    alias fcmd='pwfarm_cmd.sh'
+    alias ffetch='pwfarm_fetch.sh'
+    alias forphan='pwfarm_orphan.sh'
+
+    local farmname="$1"
+    if [ -z "$farmname" ]; then
+	farmname=$( pwfarm_config.sh query farmnames | head -n 1 )
+	if [ -z "$farmname" ]; then
+	    echo "No farms defined!" >&2
+	    return 1
+	fi
+    fi
+    if ! $( pwfarm_config.sh query defined farm "$farmname" ); then
+	echo "Invalid farm name: $farmname!" >&2
+	return 1
+    fi
+
+    local sessionname="$2"
+    if [ -z "$sessionname" ]; then
+	sessionname=$( pwfarm_config.sh query sessionnames $farmname | head -n 1 )
+	if [ -z "$sessionname" ]; then
+	    echo "No sessions defined!" >&2
+	    return 1
+	fi
+    fi
+    if ! $( pwfarm_config.sh query defined session "$farmname" "$sessionname" ); then
+	echo "Invalid session name: $sessionname!" >&2
+	return 1
+    fi
+
+
+     if pwfarm_config.sh env set session $farmname $sessionname ; then
+         . pwfarm_config.sh env set session $farmname $sessionname
+
+	 [ ! $quiet ] && pwfarm_config.sh stat
+     fi
+}
