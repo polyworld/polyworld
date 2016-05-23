@@ -27,6 +27,7 @@ using namespace genome;
 
 struct Args {
     std::string run;
+    std::string stage;
     int count;
     int transient;
     int steps;
@@ -36,7 +37,7 @@ struct Args {
 bool tryParseArgs(int, char**, Args&);
 void initialize(const std::string&);
 Genome* loadGenome(const std::string&, int);
-RqNervousSystem* loadNervousSystem(Genome*, const std::string&, int);
+RqNervousSystem* loadNervousSystem(Genome*, const std::string&, const std::string&, int);
 void printHeader(int, NervousSystem*);
 void printSynapses(NervousSystem*, float);
 void printTimeSeries(NervousSystem*, int, int);
@@ -44,11 +45,12 @@ void printTimeSeries(NervousSystem*, int, int);
 int main(int argc, char** argv) {
     Args args;
     if (!tryParseArgs(argc, argv, args)) {
-        std::cerr << "Usage: " << argv[0] << " RUN COUNT TRANSIENT STEPS [THRESHOLD]" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " RUN STAGE COUNT TRANSIENT STEPS [THRESHOLD]" << std::endl;
         std::cerr << std::endl;
         std::cerr << "Generates neural activation time series using random inputs." << std::endl;
         std::cerr << std::endl;
         std::cerr << "  RUN        Run directory" << std::endl;
+        std::cerr << "  STAGE      Life stage (incept, birth, or death)" << std::endl;
         std::cerr << "  COUNT      Number of time series per agent" << std::endl;
         std::cerr << "  TRANSIENT  Initial number of timesteps to ignore" << std::endl;
         std::cerr << "  STEPS      Number of timesteps to display" << std::endl;
@@ -61,7 +63,7 @@ int main(int argc, char** argv) {
     while (lifeSpans.nextRow()) {
         int agent = lifeSpans.col("Agent");
         Genome* genome = loadGenome(args.run, agent);
-        RqNervousSystem* cns = loadNervousSystem(genome, args.run, agent);
+        RqNervousSystem* cns = loadNervousSystem(genome, args.run, args.stage, agent);
         delete genome;
         printHeader(agent, cns);
         printSynapses(cns, args.threshold);
@@ -76,10 +78,11 @@ int main(int argc, char** argv) {
 }
 
 bool tryParseArgs(int argc, char** argv, Args& args) {
-    if (argc < 5 || argc > 6) {
+    if (argc < 6 || argc > 7) {
         return false;
     }
     std::string run;
+    std::string stage;
     int count;
     int transient;
     int steps;
@@ -89,20 +92,24 @@ bool tryParseArgs(int argc, char** argv, Args& args) {
         if (!exists(run + "/endStep.txt")) {
             return false;
         }
-        count = atoi(argv[2]);
+        stage = std::string(argv[2]);
+        if (stage != "incept" && stage != "birth" && stage != "death") {
+            return false;
+        }
+        count = atoi(argv[3]);
         if (count < 1) {
             return false;
         }
-        transient = atoi(argv[3]);
+        transient = atoi(argv[4]);
         if (transient < 0) {
             return false;
         }
-        steps = atoi(argv[4]);
+        steps = atoi(argv[5]);
         if (steps < 1) {
             return false;
         }
-        if (argc == 6) {
-            threshold = atof(argv[5]);
+        if (argc == 7) {
+            threshold = atof(argv[6]);
             if (threshold < 0.0f) {
                 return false;
             }
@@ -111,6 +118,7 @@ bool tryParseArgs(int argc, char** argv, Args& args) {
         return false;
     }
     args.run = run;
+    args.stage = stage;
     args.count = count;
     args.transient = transient;
     args.steps = steps;
@@ -147,10 +155,10 @@ Genome* loadGenome(const std::string& run, int agent) {
     return genome;
 }
 
-RqNervousSystem* loadNervousSystem(Genome* genome, const std::string& run, int agent) {
+RqNervousSystem* loadNervousSystem(Genome* genome, const std::string& run, const std::string& stage, int agent) {
     RqNervousSystem* cns = new RqNervousSystem();
     cns->grow(genome);
-    std::string path = run + "/brain/synapses/synapses_" + std::to_string(agent) + ".txt";
+    std::string path = run + "/brain/synapses/synapses_" + std::to_string(agent) + "_" + stage + ".txt";
     AbstractFile* file = AbstractFile::open(globals::recordFileType, path.c_str(), "r");
     cns->getBrain()->loadSynapses(file);
     delete file;

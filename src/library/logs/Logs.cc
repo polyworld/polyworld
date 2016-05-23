@@ -1803,10 +1803,7 @@ void Logs::SynapseLog::processEvent( const BrainAnalysisBeginEvent &e )
 void Logs::SynapseLog::createSynapseFile( agent *a, const char *suffix )
 {
 	char path[256];
-	if( _enableLearning )
-		sprintf( path, "run/brain/synapses/synapses_%ld_%s.txt", a->Number(), suffix );
-	else
-		sprintf( path, "run/brain/synapses/synapses_%ld.txt", a->Number() );
+	sprintf( path, "run/brain/synapses/synapses_%ld_%s.txt", a->Number(), suffix );
 
 	AbstractFile *file = createFile( path );
 	a->GetBrain()->dumpSynapses( file, a->Number() );
