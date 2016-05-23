@@ -1658,7 +1658,7 @@ void Logs::SeparationLog::init( TSimulation *sim, Document *doc )
 			assert(false);
 
 
-		createWriter( "run/genome/separations.txt" );
+		createWriter( "run/genome/separations.txt", false, false );
 	}
 }
 
