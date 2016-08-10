@@ -36,8 +36,9 @@ struct Args {
 bool tryParseArgs(int, char**, Args&);
 void printArgs(const Args&);
 void initialize(const std::string&);
+AbstractFile* getSynapses(const std::string&, const std::string&, int);
 Genome* loadGenome(const std::string&, int);
-RqNervousSystem* loadNervousSystem(Genome*, const std::string&, const std::string&, int);
+RqNervousSystem* loadNervousSystem(Genome*, AbstractFile*);
 void printHeader(int, NervousSystem*);
 void printSynapses(NervousSystem*);
 void printTimeSeries(NervousSystem*, int, int);
@@ -62,17 +63,21 @@ int main(int argc, char** argv) {
     lifeSpans.seekTable("LifeSpans");
     while (lifeSpans.nextRow()) {
         int agent = lifeSpans.col("Agent");
-        Genome* genome = loadGenome(args.run, agent);
-        RqNervousSystem* cns = loadNervousSystem(genome, args.run, args.stage, agent);
-        delete genome;
-        printHeader(agent, cns);
-        printSynapses(cns);
-        std::cout << "# BEGIN ENSEMBLE" << std::endl;
-        for (int index = 0; index < args.count; index++) {
-            printTimeSeries(cns, args.transient, args.steps);
+        AbstractFile* synapses = getSynapses(args.run, args.stage, agent);
+        if (synapses != NULL) {
+            Genome* genome = loadGenome(args.run, agent);
+            RqNervousSystem* cns = loadNervousSystem(genome, synapses);
+            delete genome;
+            printHeader(agent, cns);
+            printSynapses(cns);
+            std::cout << "# BEGIN ENSEMBLE" << std::endl;
+            for (int index = 0; index < args.count; index++) {
+                printTimeSeries(cns, args.transient, args.steps);
+            }
+            std::cout << "# END ENSEMBLE" << std::endl;
+            delete cns;
         }
-        std::cout << "# END ENSEMBLE" << std::endl;
-        delete cns;
+        delete synapses;
     }
     return 0;
 }
@@ -145,6 +150,15 @@ void initialize(const std::string& run) {
     srand48(time(NULL));
 }
 
+AbstractFile* getSynapses(const std::string& run, const std::string& stage, int agent) {
+    std::string path = run + "/brain/synapses/synapses_" + std::to_string(agent) + "_" + stage + ".txt";
+    if (AbstractFile::exists(path.c_str())) {
+        return AbstractFile::open(globals::recordFileType, path.c_str(), "r");
+    } else {
+        return NULL;
+    }
+}
+
 Genome* loadGenome(const std::string& run, int agent) {
     std::string path = run + "/genome/agents/genome_" + std::to_string(agent) + ".txt";
     AbstractFile* file = AbstractFile::open(globals::recordFileType, path.c_str(), "r");
@@ -154,13 +168,10 @@ Genome* loadGenome(const std::string& run, int agent) {
     return genome;
 }
 
-RqNervousSystem* loadNervousSystem(Genome* genome, const std::string& run, const std::string& stage, int agent) {
+RqNervousSystem* loadNervousSystem(Genome* genome, AbstractFile* synapses) {
     RqNervousSystem* cns = new RqNervousSystem();
     cns->grow(genome);
-    std::string path = run + "/brain/synapses/synapses_" + std::to_string(agent) + "_" + stage + ".txt";
-    AbstractFile* file = AbstractFile::open(globals::recordFileType, path.c_str(), "r");
-    cns->getBrain()->loadSynapses(file);
-    delete file;
+    cns->getBrain()->loadSynapses(synapses);
     cns->prebirth();
     cns->getBrain()->freeze();
     return cns;
