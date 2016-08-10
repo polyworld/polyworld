@@ -124,10 +124,12 @@ bool tryParseArgs(int argc, char** argv, Args& args) {
 }
 
 void printArgs(const Args& args) {
-    std::cout << "# STAGE = " << args.stage << std::endl;
-    std::cout << "# COUNT = " << args.count << std::endl;
-    std::cout << "# TRANSIENT = " << args.transient << std::endl;
-    std::cout << "# STEPS = " << args.steps << std::endl;
+    std::cout << "# BEGIN ARGUMENTS" << std::endl;
+    std::cout << "stage = " << args.stage << std::endl;
+    std::cout << "count = " << args.count << std::endl;
+    std::cout << "transient = " << args.transient << std::endl;
+    std::cout << "steps = " << args.steps << std::endl;
+    std::cout << "# END ARGUMENTS" << std::endl;
 }
 
 void initialize(const std::string& run) {
