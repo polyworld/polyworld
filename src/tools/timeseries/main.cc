@@ -34,6 +34,7 @@ struct Args {
 };
 
 bool tryParseArgs(int, char**, Args&);
+void printArgs(const Args&);
 void initialize(const std::string&);
 Genome* loadGenome(const std::string&, int);
 RqNervousSystem* loadNervousSystem(Genome*, const std::string&, const std::string&, int);
@@ -55,6 +56,7 @@ int main(int argc, char** argv) {
         std::cerr << "  STEPS      Number of timesteps to display" << std::endl;
         return 1;
     }
+    printArgs(args);
     initialize(args.run);
     DataLibReader lifeSpans((args.run + "/lifespans.txt").c_str());
     lifeSpans.seekTable("LifeSpans");
@@ -114,6 +116,13 @@ bool tryParseArgs(int argc, char** argv, Args& args) {
     args.transient = transient;
     args.steps = steps;
     return true;
+}
+
+void printArgs(const Args& args) {
+    std::cout << "# STAGE = " << args.stage << std::endl;
+    std::cout << "# COUNT = " << args.count << std::endl;
+    std::cout << "# TRANSIENT = " << args.transient << std::endl;
+    std::cout << "# STEPS = " << args.steps << std::endl;
 }
 
 void initialize(const std::string& run) {
