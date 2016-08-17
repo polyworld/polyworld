@@ -28,7 +28,7 @@ using namespace genome;
 struct Args {
     std::string run;
     std::string stage;
-    int count;
+    int repeats;
     int transient;
     int steps;
 };
@@ -46,13 +46,13 @@ void printTimeSeries(NervousSystem*, int, int);
 int main(int argc, char** argv) {
     Args args;
     if (!tryParseArgs(argc, argv, args)) {
-        std::cerr << "Usage: " << argv[0] << " RUN STAGE COUNT TRANSIENT STEPS" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " RUN STAGE REPEATS TRANSIENT STEPS" << std::endl;
         std::cerr << std::endl;
         std::cerr << "Generates neural activation time series using random inputs." << std::endl;
         std::cerr << std::endl;
         std::cerr << "  RUN        Run directory" << std::endl;
         std::cerr << "  STAGE      Life stage (incept, birth, or death)" << std::endl;
-        std::cerr << "  COUNT      Number of time series per agent" << std::endl;
+        std::cerr << "  REPEATS    Number of time series per agent" << std::endl;
         std::cerr << "  TRANSIENT  Initial number of timesteps to ignore" << std::endl;
         std::cerr << "  STEPS      Number of timesteps to display" << std::endl;
         return 1;
@@ -71,7 +71,7 @@ int main(int argc, char** argv) {
             printHeader(agent, cns);
             printSynapses(cns);
             std::cout << "# BEGIN ENSEMBLE" << std::endl;
-            for (int index = 0; index < args.count; index++) {
+            for (int index = 0; index < args.repeats; index++) {
                 printTimeSeries(cns, args.transient, args.steps);
             }
             std::cout << "# END ENSEMBLE" << std::endl;
@@ -88,7 +88,7 @@ bool tryParseArgs(int argc, char** argv, Args& args) {
     }
     std::string run;
     std::string stage;
-    int count;
+    int repeats;
     int transient;
     int steps;
     try {
@@ -100,8 +100,8 @@ bool tryParseArgs(int argc, char** argv, Args& args) {
         if (stage != "incept" && stage != "birth" && stage != "death") {
             return false;
         }
-        count = atoi(argv[3]);
-        if (count < 1) {
+        repeats = atoi(argv[3]);
+        if (repeats < 1) {
             return false;
         }
         transient = atoi(argv[4]);
@@ -117,7 +117,7 @@ bool tryParseArgs(int argc, char** argv, Args& args) {
     }
     args.run = run;
     args.stage = stage;
-    args.count = count;
+    args.repeats = repeats;
     args.transient = transient;
     args.steps = steps;
     return true;
@@ -126,7 +126,7 @@ bool tryParseArgs(int argc, char** argv, Args& args) {
 void printArgs(const Args& args) {
     std::cout << "# BEGIN ARGUMENTS" << std::endl;
     std::cout << "stage = " << args.stage << std::endl;
-    std::cout << "count = " << args.count << std::endl;
+    std::cout << "repeats = " << args.repeats << std::endl;
     std::cout << "transient = " << args.transient << std::endl;
     std::cout << "steps = " << args.steps << std::endl;
     std::cout << "# END ARGUMENTS" << std::endl;
