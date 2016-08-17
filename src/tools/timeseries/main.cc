@@ -31,6 +31,7 @@ struct Args {
     int repeats;
     int transient;
     int steps;
+    int after;
 };
 
 bool tryParseArgs(int, char**, Args&);
@@ -46,7 +47,7 @@ void printTimeSeries(NervousSystem*, int, int);
 int main(int argc, char** argv) {
     Args args;
     if (!tryParseArgs(argc, argv, args)) {
-        std::cerr << "Usage: " << argv[0] << " RUN STAGE REPEATS TRANSIENT STEPS" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " RUN STAGE REPEATS TRANSIENT STEPS [AFTER]" << std::endl;
         std::cerr << std::endl;
         std::cerr << "Generates neural activation time series using random inputs." << std::endl;
         std::cerr << std::endl;
@@ -55,14 +56,22 @@ int main(int argc, char** argv) {
         std::cerr << "  REPEATS    Number of time series per agent" << std::endl;
         std::cerr << "  TRANSIENT  Initial number of timesteps to ignore" << std::endl;
         std::cerr << "  STEPS      Number of timesteps to display" << std::endl;
+        std::cerr << "  AFTER      Ignore agents until after this index" << std::endl;
         return 1;
     }
     printArgs(args);
     initialize(args.run);
     DataLibReader lifeSpans((args.run + "/lifespans.txt").c_str());
     lifeSpans.seekTable("LifeSpans");
+    bool generating = args.after == 0;
     while (lifeSpans.nextRow()) {
         int agent = lifeSpans.col("Agent");
+        if (!generating) {
+            if (agent == args.after) {
+                generating = true;
+            }
+            continue;
+        }
         AbstractFile* synapses = getSynapses(args.run, args.stage, agent);
         if (synapses != NULL) {
             Genome* genome = loadGenome(args.run, agent);
@@ -83,7 +92,7 @@ int main(int argc, char** argv) {
 }
 
 bool tryParseArgs(int argc, char** argv, Args& args) {
-    if (argc != 6) {
+    if (argc < 6 || argc > 7) {
         return false;
     }
     std::string run;
@@ -91,6 +100,7 @@ bool tryParseArgs(int argc, char** argv, Args& args) {
     int repeats;
     int transient;
     int steps;
+    int after = 0;
     try {
         run = std::string(argv[1]);
         if (!exists(run + "/endStep.txt")) {
@@ -112,6 +122,12 @@ bool tryParseArgs(int argc, char** argv, Args& args) {
         if (steps < 1) {
             return false;
         }
+        if (argc == 7) {
+            after = atoi(argv[6]);
+            if (after < 1) {
+                return false;
+            }
+        }
     } catch (...) {
         return false;
     }
@@ -120,6 +136,7 @@ bool tryParseArgs(int argc, char** argv, Args& args) {
     args.repeats = repeats;
     args.transient = transient;
     args.steps = steps;
+    args.after = after;
     return true;
 }
 
