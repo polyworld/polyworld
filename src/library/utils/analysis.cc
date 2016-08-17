@@ -39,16 +39,9 @@ void analysis::initialize(const std::string& run) {
 }
 
 int analysis::getMaxAgent(const std::string& run) {
-    int maxAgent = 0;
-    DataLibReader lifeSpans((run + "/lifespans.txt").c_str());
-    lifeSpans.seekTable("LifeSpans");
-    while (lifeSpans.nextRow()) {
-        int agent = lifeSpans.col("Agent");
-        if (agent > maxAgent) {
-            maxAgent = agent;
-        }
-    }
-    return maxAgent;
+    DataLibReader reader((run + "/lifespans.txt").c_str());
+    reader.seekTable("LifeSpans");
+    return reader.nrows();
 }
 
 genome::Genome* analysis::getGenome(const std::string& run, int agent) {
