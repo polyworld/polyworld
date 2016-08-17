@@ -1,29 +1,14 @@
 #include <iostream>
 #include <map>
-#include <math.h>
 #include <set>
 #include <stdlib.h>
 #include <string>
-#include <time.h>
 
-#include "agent/agent.h"
 #include "brain/Brain.h"
-#include "brain/NervousSystem.h"
 #include "brain/NeuronModel.h"
 #include "brain/RqNervousSystem.h"
-#include "genome/Genome.h"
-#include "genome/GenomeSchema.h"
-#include "genome/GenomeUtil.h"
-#include "proplib/builder.h"
-#include "proplib/dom.h"
-#include "proplib/interpreter.h"
-#include "proplib/schema.h"
-#include "sim/globals.h"
-#include "utils/AbstractFile.h"
-#include "utils/datalib.h"
+#include "utils/analysis.h"
 #include "utils/misc.h"
-
-using namespace genome;
 
 struct Args {
     std::string run;
@@ -36,13 +21,9 @@ struct Args {
 
 bool tryParseArgs(int, char**, Args&);
 void printArgs(const Args&);
-void initialize(const std::string&);
-AbstractFile* getSynapses(const std::string&, const std::string&, int);
-Genome* loadGenome(const std::string&, int);
-RqNervousSystem* loadNervousSystem(Genome*, AbstractFile*);
-void printHeader(int, NervousSystem*);
-void printSynapses(NervousSystem*);
-void printTimeSeries(NervousSystem*, int, int);
+void printHeader(int, RqNervousSystem*);
+void printSynapses(RqNervousSystem*);
+void printTimeSeries(RqNervousSystem*, int, int);
 
 int main(int argc, char** argv) {
     Args args;
@@ -60,23 +41,19 @@ int main(int argc, char** argv) {
         return 1;
     }
     printArgs(args);
-    initialize(args.run);
-    DataLibReader lifeSpans((args.run + "/lifespans.txt").c_str());
-    lifeSpans.seekTable("LifeSpans");
-    bool generating = args.after == 0;
-    while (lifeSpans.nextRow()) {
-        int agent = lifeSpans.col("Agent");
-        if (!generating) {
+    analysis::initialize(args.run);
+    int maxAgent = analysis::getMaxAgent(args.run);
+    bool ignoring = args.after > 0;
+    for (int agent = 1; agent <= maxAgent; agent++) {
+        if (ignoring) {
             if (agent == args.after) {
-                generating = true;
+                ignoring = false;
             }
             continue;
         }
-        AbstractFile* synapses = getSynapses(args.run, args.stage, agent);
-        if (synapses != NULL) {
-            Genome* genome = loadGenome(args.run, agent);
-            RqNervousSystem* cns = loadNervousSystem(genome, synapses);
-            delete genome;
+        RqNervousSystem* cns = analysis::getRqNervousSystem(args.run, agent, args.stage);
+        if (cns != NULL) {
+            cns->getBrain()->freeze();
             printHeader(agent, cns);
             printSynapses(cns);
             std::cout << "# BEGIN ENSEMBLE" << std::endl;
@@ -86,7 +63,6 @@ int main(int argc, char** argv) {
             std::cout << "# END ENSEMBLE" << std::endl;
             delete cns;
         }
-        delete synapses;
     }
     return 0;
 }
@@ -149,54 +125,7 @@ void printArgs(const Args& args) {
     std::cout << "# END ARGUMENTS" << std::endl;
 }
 
-void initialize(const std::string& run) {
-    proplib::Interpreter::init();
-    proplib::DocumentBuilder builder;
-    proplib::SchemaDocument* schema;
-    proplib::Document* worldfile;
-    schema = builder.buildSchemaDocument(run + "/original.wfs");
-    worldfile = builder.buildWorldfileDocument(schema, run + "/original.wf");
-    schema->apply(worldfile);
-    globals::recordFileType = (bool)worldfile->get("CompressFiles") ? AbstractFile::TYPE_GZIP_FILE : AbstractFile::TYPE_FILE;
-    agent::processWorldfile(*worldfile);
-    genome::GenomeSchema::processWorldfile(*worldfile);
-    Brain::processWorldfile(*worldfile);
-    proplib::Interpreter::dispose();
-    delete worldfile;
-    delete schema;
-    Brain::init();
-    genome::GenomeUtil::createSchema();
-    srand48(time(NULL));
-}
-
-AbstractFile* getSynapses(const std::string& run, const std::string& stage, int agent) {
-    std::string path = run + "/brain/synapses/synapses_" + std::to_string(agent) + "_" + stage + ".txt";
-    if (AbstractFile::exists(path.c_str())) {
-        return AbstractFile::open(globals::recordFileType, path.c_str(), "r");
-    } else {
-        return NULL;
-    }
-}
-
-Genome* loadGenome(const std::string& run, int agent) {
-    std::string path = run + "/genome/agents/genome_" + std::to_string(agent) + ".txt";
-    AbstractFile* file = AbstractFile::open(globals::recordFileType, path.c_str(), "r");
-    Genome* genome = GenomeUtil::createGenome();
-    genome->load(file);
-    delete file;
-    return genome;
-}
-
-RqNervousSystem* loadNervousSystem(Genome* genome, AbstractFile* synapses) {
-    RqNervousSystem* cns = new RqNervousSystem();
-    cns->grow(genome);
-    cns->getBrain()->loadSynapses(synapses);
-    cns->prebirth();
-    cns->getBrain()->freeze();
-    return cns;
-}
-
-void printHeader(int agent, NervousSystem* cns) {
+void printHeader(int agent, RqNervousSystem* cns) {
     std::cout << "# AGENT " << agent << std::endl;
     NeuronModel::Dimensions dims = cns->getBrain()->getDimensions();
     std::cout << "# DIMENSIONS";
@@ -206,7 +135,7 @@ void printHeader(int agent, NervousSystem* cns) {
     std::cout << std::endl;
 }
 
-void printSynapses(NervousSystem* cns) {
+void printSynapses(RqNervousSystem* cns) {
     std::map<short, std::set<short> > synapses;
     NeuronModel::Dimensions dims = cns->getBrain()->getDimensions();
     NeuronModel* model = cns->getBrain()->getNeuronModel();
@@ -232,7 +161,7 @@ void printSynapses(NervousSystem* cns) {
     std::cout << "# END SYNAPSES" << std::endl;
 }
 
-void printTimeSeries(NervousSystem* cns, int transient, int steps) {
+void printTimeSeries(RqNervousSystem* cns, int transient, int steps) {
     cns->getBrain()->randomizeActivations();
     for (int step = 1; step <= transient; step++) {
         cns->update(false);
