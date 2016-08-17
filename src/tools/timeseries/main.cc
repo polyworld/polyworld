@@ -16,7 +16,7 @@ struct Args {
     int repeats;
     int transient;
     int steps;
-    int after;
+    int start;
 };
 
 bool tryParseArgs(int, char**, Args&);
@@ -28,7 +28,7 @@ void printTimeSeries(RqNervousSystem*, int, int);
 int main(int argc, char** argv) {
     Args args;
     if (!tryParseArgs(argc, argv, args)) {
-        std::cerr << "Usage: " << argv[0] << " RUN STAGE REPEATS TRANSIENT STEPS [AFTER]" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " RUN STAGE REPEATS TRANSIENT STEPS [START]" << std::endl;
         std::cerr << std::endl;
         std::cerr << "Generates neural activation time series using random inputs." << std::endl;
         std::cerr << std::endl;
@@ -37,20 +37,13 @@ int main(int argc, char** argv) {
         std::cerr << "  REPEATS    Number of time series per agent" << std::endl;
         std::cerr << "  TRANSIENT  Initial number of timesteps to ignore" << std::endl;
         std::cerr << "  STEPS      Number of timesteps to display" << std::endl;
-        std::cerr << "  AFTER      Ignore agents until after this index" << std::endl;
+        std::cerr << "  START      Starting agent" << std::endl;
         return 1;
     }
     printArgs(args);
     analysis::initialize(args.run);
     int maxAgent = analysis::getMaxAgent(args.run);
-    bool ignoring = args.after > 0;
-    for (int agent = 1; agent <= maxAgent; agent++) {
-        if (ignoring) {
-            if (agent == args.after) {
-                ignoring = false;
-            }
-            continue;
-        }
+    for (int agent = args.start; agent <= maxAgent; agent++) {
         RqNervousSystem* cns = analysis::getRqNervousSystem(args.run, agent, args.stage);
         if (cns != NULL) {
             cns->getBrain()->freeze();
@@ -76,7 +69,7 @@ bool tryParseArgs(int argc, char** argv, Args& args) {
     int repeats;
     int transient;
     int steps;
-    int after = 0;
+    int start = 1;
     try {
         run = std::string(argv[1]);
         if (!exists(run + "/endStep.txt")) {
@@ -99,8 +92,8 @@ bool tryParseArgs(int argc, char** argv, Args& args) {
             return false;
         }
         if (argc == 7) {
-            after = atoi(argv[6]);
-            if (after < 1) {
+            start = atoi(argv[6]);
+            if (start < 1) {
                 return false;
             }
         }
@@ -112,7 +105,7 @@ bool tryParseArgs(int argc, char** argv, Args& args) {
     args.repeats = repeats;
     args.transient = transient;
     args.steps = steps;
-    args.after = after;
+    args.start = start;
     return true;
 }
 
