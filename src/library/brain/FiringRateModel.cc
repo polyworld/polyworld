@@ -78,6 +78,11 @@ void FiringRateModel::update( bool bprint )
 	)
 
 
+	for( i = 0; i < dims->getFirstOutputNeuron(); i++ )
+	{
+		newneuronactivation[i] = neuronactivation[i];
+	}
+
 	for( i = dims->getFirstOutputNeuron(); i < dims->getFirstInternalNeuron(); i++ )
 	{
         newneuronactivation[i] = neuron[i].bias;
