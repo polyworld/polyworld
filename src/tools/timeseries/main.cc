@@ -44,7 +44,7 @@ int main(int argc, char** argv) {
     analysis::initialize(args.run);
     int maxAgent = analysis::getMaxAgent(args.run);
     for (int agent = args.start; agent <= maxAgent; agent++) {
-        RqNervousSystem* cns = analysis::getRqNervousSystem(args.run, agent, args.stage);
+        RqNervousSystem* cns = analysis::getNervousSystem(args.run, agent, args.stage);
         if (cns != NULL) {
             cns->getBrain()->freeze();
             printHeader(agent, cns);

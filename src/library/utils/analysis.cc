@@ -62,21 +62,21 @@ AbstractFile* analysis::getSynapses(const std::string& run, int agent, const std
     }
 }
 
-RqNervousSystem* analysis::getRqNervousSystem(genome::Genome* genome, AbstractFile* synapses) {
+RqNervousSystem* analysis::getNervousSystem(genome::Genome* genome, AbstractFile* synapses) {
     RqNervousSystem* cns = new RqNervousSystem();
     cns->grow(genome);
     cns->getBrain()->loadSynapses(synapses);
     return cns;
 }
 
-RqNervousSystem* analysis::getRqNervousSystem(const std::string& run, int agent, const std::string& stage) {
+RqNervousSystem* analysis::getNervousSystem(const std::string& run, int agent, const std::string& stage) {
     AbstractFile* synapses = getSynapses(run, agent, stage);
     RqNervousSystem* cns;
     if (synapses == NULL) {
         cns = NULL;
     } else {
         genome::Genome* genome = getGenome(run, agent);
-        cns = getRqNervousSystem(genome, synapses);
+        cns = getNervousSystem(genome, synapses);
         delete genome;
     }
     delete synapses;
