@@ -45,17 +45,18 @@ int main(int argc, char** argv) {
     int maxAgent = analysis::getMaxAgent(args.run);
     for (int agent = args.start; agent <= maxAgent; agent++) {
         RqNervousSystem* cns = analysis::getNervousSystem(args.run, agent, args.stage);
-        if (cns != NULL) {
-            cns->getBrain()->freeze();
-            printHeader(agent, cns);
-            printSynapses(cns);
-            std::cout << "# BEGIN ENSEMBLE" << std::endl;
-            for (int index = 0; index < args.repeats; index++) {
-                printTimeSeries(cns, args.transient, args.steps);
-            }
-            std::cout << "# END ENSEMBLE" << std::endl;
-            delete cns;
+        if (cns == NULL) {
+            continue;
         }
+        cns->getBrain()->freeze();
+        printHeader(agent, cns);
+        printSynapses(cns);
+        std::cout << "# BEGIN ENSEMBLE" << std::endl;
+        for (int index = 0; index < args.repeats; index++) {
+            printTimeSeries(cns, args.transient, args.steps);
+        }
+        std::cout << "# END ENSEMBLE" << std::endl;
+        delete cns;
     }
     return 0;
 }
