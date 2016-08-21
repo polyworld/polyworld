@@ -1,11 +1,9 @@
 #include "analysis.h"
 
-#include <limits>
 #include <math.h>
 #include <stdlib.h>
 #include <string>
 #include <time.h>
-#include <vector>
 
 #include "agent/agent.h"
 #include "brain/Brain.h"
@@ -22,8 +20,6 @@
 #include "utils/AbstractFile.h"
 #include "utils/datalib.h"
 #include "utils/misc.h"
-
-const double analysis::inf = std::numeric_limits<double>::infinity();
 
 void analysis::Vector::add(Vector& addend1, Vector& addend2, Vector& sum) {
     for (int index = 0; index < sum.size; index++) {
@@ -148,7 +144,7 @@ RqNervousSystem* analysis::copyNervousSystem(genome::Genome* genome, RqNervousSy
     return cns;
 }
 
-double analysis::getLyapunov(genome::Genome* genome, RqNervousSystem* cns, double perturbation, int repeats, int random, int quiescent, int steps) {
+double analysis::getExpansion(genome::Genome* genome, RqNervousSystem* cns, double perturbation, int repeats, int random, int quiescent, int steps) {
     
     // Set up nervous systems
     RqNervousSystem* cns1 = copyNervousSystem(genome, cns);  // Reference
@@ -165,8 +161,8 @@ double analysis::getLyapunov(genome::Genome* genome, RqNervousSystem* cns, doubl
     Vector activations2(ncount);  // Perturbed
     Vector deltas(ncount);
     
-    // Perform set of calculation attempts
-    std::vector<double> lyapunovs;
+    // Perform set of calculations
+    double sum = 0.0;
     for (int index = 0; index < repeats; index++) {
         
         // Iterate with random inputs
@@ -190,7 +186,7 @@ double analysis::getLyapunov(genome::Genome* genome, RqNervousSystem* cns, doubl
         cns2->getBrain()->setActivations(activations2.values, nstart, ncount);
         
         // Measure effect of perturbation
-        double sum = 0.0;
+        double _sum = 0.0;
         for (int step = 1; step <= steps; step++) {
             
             // Step both with quiescent inputs
@@ -203,39 +199,28 @@ double analysis::getLyapunov(genome::Genome* genome, RqNervousSystem* cns, doubl
             Vector::subtract(activations2, activations1, deltas);
             double distance = deltas.getMagnitude();
             
-            // Check if trajectories converged
-            if (distance == 0.0) {
-                sum = -inf;
-                break;
-            }
-            
             // Add to running total
-            sum += log(distance);
+            _sum += distance;
             
             // Rescale to initial perturbation
-            deltas.scaleBy(perturbation / distance);
+            if (distance == 0.0) {
+                deltas.randomize(0.0, 1.0);
+                deltas.scaleTo(perturbation);
+            } else {
+                deltas.scaleBy(perturbation / distance);
+            }
             Vector::add(activations1, deltas, activations2);
             cns2->getBrain()->setActivations(activations2.values, nstart, ncount);
         }
         
-        // Save result of this attempt
-        if (sum != -inf) {
-            lyapunovs.push_back(sum / steps - log(perturbation));
-        }
+        // Save result
+        sum += _sum / (steps * perturbation);
     }
     
     // Clean up
     delete cns1;
     delete cns2;
     
-    // Return average of attempts
-    if (lyapunovs.empty()) {
-        return -inf;
-    } else {
-        double sum = 0.0;
-        for (std::vector<double>::iterator it = lyapunovs.begin(); it != lyapunovs.end(); it++) {
-            sum += *it;
-        }
-        return sum / lyapunovs.size();
-    }
+    // Return average of results
+    return sum / repeats;
 }

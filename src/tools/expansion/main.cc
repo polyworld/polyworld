@@ -26,7 +26,7 @@ int main(int argc, char** argv) {
     if (!tryParseArgs(argc, argv, args)) {
         std::cerr << "Usage: " << argv[0] << " RUN STAGE PERTURBATION REPEATS RANDOM QUIESCENT STEPS [START]" << std::endl;
         std::cerr << std::endl;
-        std::cerr << "Calculates maximal Lyapunov exponents." << std::endl;
+        std::cerr << "Calculates phase space expansion." << std::endl;
         std::cerr << std::endl;
         std::cerr << "  RUN           Run directory" << std::endl;
         std::cerr << "  STAGE         Life stage (incept, birth, or death)" << std::endl;
@@ -48,11 +48,8 @@ int main(int argc, char** argv) {
         }
         genome::Genome* genome = analysis::getGenome(args.run, agent);
         RqNervousSystem* cns = analysis::getNervousSystem(genome, synapses);
-        double lyapunov = analysis::getLyapunov(genome, cns, args.perturbation, args.repeats, args.random, args.quiescent, args.steps);
-        if (lyapunov == -analysis::inf) {
-            std::cout << "# ";
-        }
-        std::cout << agent << " " << lyapunov << std::endl;
+        double expansion = analysis::getExpansion(genome, cns, args.perturbation, args.repeats, args.random, args.quiescent, args.steps);
+        std::cout << agent << " " << expansion << std::endl;
         delete cns;
         delete genome;
         delete synapses;

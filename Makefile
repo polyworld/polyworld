@@ -1,6 +1,6 @@
 include Makefile.conf
 
-targets=library app qtrenderer rancheck PwMoviePlayer proputil pmvutil qt_clust lyapunov timeseries
+targets=library app qtrenderer rancheck PwMoviePlayer proputil pmvutil qt_clust expansion timeseries
 
 .PHONY: ${targets} clean
 
@@ -34,8 +34,8 @@ omp_test:
 	+ make -C src/tools/omp_test
 	bin/omp_test
 
-lyapunov:
-	+ make -C src/tools/lyapunov
+expansion:
+	+ make -C src/tools/expansion
 
 timeseries:
 	+ make -C src/tools/timeseries
