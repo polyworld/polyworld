@@ -118,7 +118,7 @@ public:
 		float	energyUseMultiplier;
 		float	ageEnergyMultiplier;
 		bool	dieAtMaxAge;
-		float	starvationFoodEnergy;
+		float	starvationEnergyFraction;
 		int 	starvationWait;
 
 		bool	enableMateWaitFeedback;
@@ -204,6 +204,7 @@ public:
 	void SetEnergy( const Energy &e );
 	void SetFoodEnergy( const Energy &e );
 	const Energy &GetMaxEnergy();
+	const Energy &GetStarvationFoodEnergy();
 	float NormalizedEnergy();
 	float Eat();
 	float Fight();
@@ -285,6 +286,7 @@ protected:
 	Energy fEnergy;
 	Energy fFoodEnergy;
 	Energy fMaxEnergy;
+	Energy fStarvationFoodEnergy;
 	const Metabolism *fMetabolism;
     
     float fSpeed2Energy;
@@ -382,6 +384,7 @@ inline const Energy &agent::GetFoodEnergy() { return fFoodEnergy; }
 inline void agent::SetEnergy( const Energy &e ) { fEnergy = e; }
 inline void agent::SetFoodEnergy( const Energy &e ) { fFoodEnergy = e; }
 inline const Energy &agent::GetMaxEnergy() { return fMaxEnergy; }
+inline const Energy &agent::GetStarvationFoodEnergy() { return fStarvationFoodEnergy; }
 inline float agent::NormalizedEnergy() { return fEnergy.sum() / fMaxEnergy.sum(); }
 inline float agent::Eat() { return outputNerves.eat->get(); }
 inline float agent::Fight() { return outputNerves.fight->get(); }

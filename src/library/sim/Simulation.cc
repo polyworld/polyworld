@@ -2699,9 +2699,8 @@ void TSimulation::Eat( agent *c, bool *cDied )
 	if( !fLockStepWithBirthsDeathsLog )
 	{
 		// If we're not running in LockStep mode, allow natural deaths
-		static Energy starvationFoodEnergy = Energy( agent::config.starvationFoodEnergy );
 		if( c->GetEnergy().isDepleted() ||
-			((c->IsSeed() || c->Age() >= agent::config.starvationWait) && c->GetFoodEnergy().isDepleted( starvationFoodEnergy )) )
+			((c->IsSeed() || c->Age() >= agent::config.starvationWait) && c->GetFoodEnergy().isDepleted( c->GetStarvationFoodEnergy() )) )
 		{
 			// note: this leaves list pointing to item before c, and markedAgent set to previous agent
 			Kill( c, LifeSpan::DR_EAT );

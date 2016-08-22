@@ -153,7 +153,7 @@ void agent::processWorldfile( proplib::Document &doc )
     agent::config.energyUseMultiplier = doc.get( "EnergyUseMultiplier" );
     agent::config.ageEnergyMultiplier = doc.get( "AgeEnergyMultiplier" );
     agent::config.dieAtMaxAge = doc.get( "DieAtMaxAge" );
-    agent::config.starvationFoodEnergy = doc.get( "StarvationFoodEnergy" );
+    agent::config.starvationEnergyFraction = doc.get( "StarvationEnergyFraction" );
     agent::config.starvationWait = doc.get( "StarvationWait" );
     agent::config.eat2Energy = doc.get( "EnergyUseEat" );
 	agent::config.mate2Energy = doc.get( "EnergyUseMate" );
@@ -632,13 +632,14 @@ void agent::grow( long mateWait, bool seeding )
     float maxEnergy = agent::config.minMaxEnergy + (size_rel
     				  * (agent::config.maxMaxEnergy - agent::config.minMaxEnergy) / (agent::config.maxAgentSize - agent::config.minAgentSize) );
     fMaxEnergy = maxEnergy;
+    fStarvationFoodEnergy = agent::config.starvationEnergyFraction * maxEnergy;
 	
     fEnergy = fMaxEnergy;
 	fFoodEnergy = fMaxEnergy;
 	
 	if( seeding && agent::config.randomSeedEnergy )
 	{
-		float energy = agent::config.starvationFoodEnergy + randpw() * (maxEnergy - agent::config.starvationFoodEnergy);
+		float energy = (agent::config.starvationEnergyFraction + randpw() * (1.0 - agent::config.starvationEnergyFraction)) * maxEnergy;
 		fEnergy = energy;
 		fFoodEnergy = energy;
 	}
