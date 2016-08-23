@@ -206,8 +206,8 @@ void Brain::writeFunctional( AbstractFile *file )
 //---------------------------------------------------------------------------
 void Brain::dumpSynapses( AbstractFile *file, long index )
 {
-	file->printf( "synapses %ld numsynapses=%ld numneurons=%d numinputneurons=%d numoutputneurons=%d\n",
-				  index, _dims.numSynapses, _dims.numNeurons, _dims.numInputNeurons, _dims.numOutputNeurons );
+	file->printf( "synapses %ld maxweight=%g numsynapses=%ld numneurons=%d numinputneurons=%d numoutputneurons=%d\n",
+				  index, Brain::config.maxWeight, _dims.numSynapses, _dims.numNeurons, _dims.numInputNeurons, _dims.numOutputNeurons );
 	_neuralnet->dumpSynapses( file );
 }
 
@@ -217,13 +217,14 @@ void Brain::dumpSynapses( AbstractFile *file, long index )
 void Brain::loadSynapses( AbstractFile *file )
 {
 	long index;
+	float maxWeight;
 	long numSynapses;
 	int numNeurons;
 	int numInputNeurons;
 	int numOutputNeurons;
-	int rc = file->scanf( "synapses %ld numsynapses=%ld numneurons=%d numinputneurons=%d numoutputneurons=%d\n",
-						  &index, &numSynapses, &numNeurons, &numInputNeurons, &numOutputNeurons );
-	assert( rc == 5 );
+	int rc = file->scanf( "synapses %ld maxweight=%g numsynapses=%ld numneurons=%d numinputneurons=%d numoutputneurons=%d\n",
+						  &index, &maxWeight, &numSynapses, &numNeurons, &numInputNeurons, &numOutputNeurons );
+	assert( rc == 6 );
 	assert( numSynapses == _dims.numSynapses );
 	assert( numNeurons == _dims.numNeurons );
 	assert( numInputNeurons == _dims.numInputNeurons );
