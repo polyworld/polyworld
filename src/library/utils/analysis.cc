@@ -165,8 +165,11 @@ double analysis::getExpansion(genome::Genome* genome, RqNervousSystem* cns, doub
     double sum = 0.0;
     for (int index = 0; index < repeats; index++) {
         
+        // Initialize
+        activations1.reset();
+        cns1->getBrain()->setActivations(activations1.values, nstart, ncount);
+        
         // Iterate with random inputs
-        cns1->getBrain()->randomizeActivations();
         cns1->setMode(RqNervousSystem::RANDOM);
         for (int step = 1; step <= random; step++) {
             cns1->update(false);
