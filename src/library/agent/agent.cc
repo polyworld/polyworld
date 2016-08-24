@@ -609,6 +609,8 @@ void agent::grow( long mateWait, bool seeding )
 	}
     fNoseColor[0] = fNoseColor[1] = fNoseColor[2] = noseColor;
     
+    UpdateColor();
+    
     fIsSeed = seeding;
     fAge = 0;
     if( seeding )
@@ -1104,37 +1106,7 @@ float agent::UpdateBody( float moveFitnessParam,
 
 	energyUsed = denergy;
 
-	if( agent::config.bodyRedChannel == BRC_FIGHT )
-	{
-		SetRed( outputNerves.fight->get() );	// set red color according to desire to fight
-	}
-	else if( agent::config.bodyRedChannel == BRC_GIVE )
-	{
-		SetRed( outputNerves.give->get() );	// set red color according to desire to give
-	}
-
-  	if( agent::config.bodyGreenChannel == BGC_LIGHT )
-	{
-		SetGreen(outputNerves.light->get());
-	}
-	else if( agent::config.bodyGreenChannel == BGC_EAT )
-	{
-		SetGreen(outputNerves.eat->get());
-	}
-
-	if( agent::config.bodyBlueChannel == BBC_MATE )
-	{
-		SetBlue( outputNerves.mate->get() ); 	// set blue color according to desire to mate
-	}
-	else if( agent::config.bodyBlueChannel == BBC_ENERGY )
-	{
-		SetBlue( 1 - NormalizedEnergy() );
-	}
-
-	if( agent::config.noseColor == NC_LIGHT )
-	{
-		fNoseColor[0] = fNoseColor[1] = fNoseColor[2] = outputNerves.light->get();
-	}
+	UpdateColor();
 
     fAge++;
 
@@ -1386,6 +1358,45 @@ float agent::UpdateBody( float moveFitnessParam,
 	logs->postEvent( AgentBodyUpdatedEvent(this, energyused) );
 
     return energyUsed;
+}
+
+
+//---------------------------------------------------------------------------
+// agent::UpdateColor
+//---------------------------------------------------------------------------
+void agent::UpdateColor()
+{
+	if( agent::config.bodyRedChannel == BRC_FIGHT )
+	{
+		SetRed( outputNerves.fight->get() );	// set red color according to desire to fight
+	}
+	else if( agent::config.bodyRedChannel == BRC_GIVE )
+	{
+		SetRed( outputNerves.give->get() );	// set red color according to desire to give
+	}
+
+  	if( agent::config.bodyGreenChannel == BGC_LIGHT )
+	{
+		SetGreen(outputNerves.light->get());
+	}
+	else if( agent::config.bodyGreenChannel == BGC_EAT )
+	{
+		SetGreen(outputNerves.eat->get());
+	}
+
+	if( agent::config.bodyBlueChannel == BBC_MATE )
+	{
+		SetBlue( outputNerves.mate->get() ); 	// set blue color according to desire to mate
+	}
+	else if( agent::config.bodyBlueChannel == BBC_ENERGY )
+	{
+		SetBlue( 1 - NormalizedEnergy() );
+	}
+
+	if( agent::config.noseColor == NC_LIGHT )
+	{
+		fNoseColor[0] = fNoseColor[1] = fNoseColor[2] = outputNerves.light->get();
+	}
 }
 
 
