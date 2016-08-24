@@ -24,10 +24,7 @@ void SpeedSensor::sensor_grow( NervousSystem *cns )
 
 void SpeedSensor::sensor_prebirth_signal( RandomNumberGenerator *rng )
 {
-	if( Brain::config.enableLearning )
-		nerve->set( rng->drand() );
-	else
-		nerve->set( 0.0 );
+	nerve->set( rng->drand() );
 }
 
 void SpeedSensor::sensor_update( bool print )
