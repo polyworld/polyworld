@@ -93,6 +93,7 @@ PMPApp::PMPApp(int &argc, char** argv) : QApplication(argc, argv)
 	uint32_t		frameDelta		= 1;
 	double			frameRate		= 75.0;
 	bool			loop			= false;
+	bool			write			= false;
 	int				arg				= 1;
 
 	while( arg < argc )
@@ -145,6 +146,10 @@ PMPApp::PMPApp(int &argc, char** argv) : QApplication(argc, argv)
 
 				case 'c':
 					loop = true;
+					break;
+
+				case 'w':
+					write = true;
 					break;
 
 				default:
@@ -229,7 +234,7 @@ PMPApp::PMPApp(int &argc, char** argv) : QApplication(argc, argv)
 	QCoreApplication::setOrganizationDomain( "indiana.edu" );
 	QCoreApplication::setApplicationName( "pwmovieplayer" );
 
-	mainWindow = new MainWindow( "Polyworld MoviePlayer", "Main", 0, reader, legend, startFrame, endFrame, frameDelta, frameRate, loop );
+	mainWindow = new MainWindow( "Polyworld MoviePlayer", "Main", 0, reader, legend, startFrame, endFrame, frameDelta, frameRate, loop, write );
 	mainWindow->show();
 }
 

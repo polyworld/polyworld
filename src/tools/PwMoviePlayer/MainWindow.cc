@@ -1,4 +1,5 @@
 #include <iostream>
+#include <stdio.h>
 
 // OpenGL
 #include <gl.h>
@@ -39,7 +40,8 @@ MainWindow::MainWindow( const char* windowTitle,
 						uint32_t endFram,
 						uint32_t framDelta,
 						double frameRate,
-						bool loop)
+						bool loop,
+						bool write )
 	:	QMainWindow( NULL, windowFlags )
 {
 	setWindowTitle( windowTitle );
@@ -49,6 +51,7 @@ MainWindow::MainWindow( const char* windowTitle,
 	endFrame = endFram == 0 ? reader->getFrameCount() : endFram;
 	frameDelta = framDelta;
 	looping = loop;
+	writing = write;
 
 	// Create the main menubar
 	//CreateMenus( menuBar() );
@@ -80,7 +83,10 @@ MainWindow::MainWindow( const char* windowTitle,
 
 	setCentralWidget( content );
 
-	state = PAUSED;
+	if( write )
+		state = PLAYING;
+	else
+		state = PAUSED;
 	SetFrame( startFrame );
 
 	// Create playback timer
@@ -133,6 +139,8 @@ void MainWindow::SetFrame( uint32_t index )
 						   &frame.rgbBuf );
 
 		glWidget->SetFrame( &frame );
+		if( writing )
+			glWidget->Write( stdout );
 
 		slider->setSliderPosition( index );
 	}
@@ -155,9 +163,16 @@ void MainWindow::NextFrame( uint32_t delta )
 		else
 		{
 			if( looping )
+			{
 				SetFrame( startFrame );
+			}
 			else
-				state = PAUSED;
+			{
+				if( writing )
+					close();
+				else
+					state = PAUSED;
+			}
 		}
 	}
 	else

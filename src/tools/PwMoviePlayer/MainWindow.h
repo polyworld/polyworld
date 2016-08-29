@@ -35,7 +35,8 @@ public:
 				uint32_t endFram,
 				uint32_t framDelta,
 				double frameRate,
-				bool loop);
+				bool loop,
+				bool write );
 	~MainWindow();
 
 protected:
@@ -53,6 +54,7 @@ private:
 	uint32_t endFrame;
 	uint32_t frameDelta;
 	bool looping;
+	bool writing;
 
 	void SetFrame( uint32_t index );
 	void NextFrame( uint32_t delta = 0 );

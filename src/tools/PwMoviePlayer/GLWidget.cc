@@ -3,6 +3,7 @@
 // System
 #include <assert.h>
 #include <math.h>
+#include <stdio.h>
 
 // Qt
 #include <QtGui>
@@ -91,6 +92,11 @@ void GLWidget::Draw()
 	
 	// Done drawing, so show it
 	swapBuffers();
+}
+
+void GLWidget::Write( FILE *file )
+{
+	fwrite( frame->rgbBuf, sizeof(uint32_t), frame->width * frame->height, file );
 }
 
 void GLWidget::paintGL()
