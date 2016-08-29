@@ -144,7 +144,6 @@ PMPApp::PMPApp(int &argc, char** argv) : QApplication(argc, argv)
 					break;
 
 				case 'c':
-					arg++;
 					loop = true;
 					break;
 

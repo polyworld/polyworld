@@ -45,8 +45,8 @@ MainWindow::MainWindow( const char* windowTitle,
 	setWindowTitle( windowTitle );
 	windowSettingsName = windowSettingsNameParam;
 	reader = readerParam;
-	startFrame = startFram;
-	endFrame = endFram;
+	startFrame = startFram == 0 ? 1 : startFram;
+	endFrame = endFram == 0 ? reader->getFrameCount() : endFram;
 	frameDelta = framDelta;
 	looping = loop;
 
@@ -70,8 +70,8 @@ MainWindow::MainWindow( const char* windowTitle,
 	glWidget = new GLWidget( content, legend );
 
 	slider = new QSlider( Qt::Horizontal, content );
-	slider->setMinimum( 1 );
-	slider->setMaximum( reader->getFrameCount() );
+	slider->setMinimum( startFrame );
+	slider->setMaximum( endFrame );
 	connect( slider, SIGNAL( sliderMoved(int) ), this, SLOT( sliderMoved(int) ) );
 
 	contentLayout->addWidget( glWidget );
@@ -81,7 +81,7 @@ MainWindow::MainWindow( const char* windowTitle,
 	setCentralWidget( content );
 
 	state = PAUSED;
-	SetFrame( startFrame == 0 ? 1 : startFrame );
+	SetFrame( startFrame );
 
 	// Create playback timer
 	QTimer* idleTimer = new QTimer( this );
@@ -106,9 +106,6 @@ void MainWindow::Tick()
 	if( state == PLAYING )
 	{
 		NextFrame();
-
-		if( looping && frame.index == reader->getFrameCount() )
-			SetFrame( startFrame == 0 ? 1 : startFrame );
 	}
 }
 
@@ -125,7 +122,7 @@ void MainWindow::sliderMoved( int value )
 //---------------------------------------------------------------------------
 void MainWindow::SetFrame( uint32_t index )
 {
-	if( (index > 0) && (index <= reader->getFrameCount()) )
+	if( (index >= startFrame) && (index <= endFrame) )
 	{
 		frame.index = index;
 
@@ -149,9 +146,24 @@ void MainWindow::NextFrame( uint32_t delta )
 	if( delta == 0 )
 		delta = frameDelta;
 	uint32_t index = frame.index + delta;
-	if( index > reader->getFrameCount() )
-		index = reader->getFrameCount();
-	SetFrame( index );
+	if( index > endFrame )
+	{
+		if( frame.index < endFrame )
+		{
+			SetFrame( endFrame );
+		}
+		else
+		{
+			if( looping )
+				SetFrame( startFrame );
+			else
+				state = PAUSED;
+		}
+	}
+	else
+	{
+		SetFrame( index );
+	}
 }
 
 //---------------------------------------------------------------------------
@@ -162,8 +174,8 @@ void MainWindow::PrevFrame( uint32_t delta )
 	if( delta == 0 )
 		delta = frameDelta;
 	uint32_t index = frame.index - delta;
-	if( index > frame.index )
-		index = 1;
+	if( index < startFrame || index > frame.index )
+		index = startFrame;
 	SetFrame( index );
 }
 
