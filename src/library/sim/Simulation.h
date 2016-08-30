@@ -311,6 +311,7 @@ private:
 	std::vector<Position> fSeedPositions;
 	float fMinMateFraction;
 	long fEatWait;
+	bool fProbabilisticMating;
 	long fMateWait;
 	long fMiscAgents; // number of agents born without intervening creation before miscegenation function kicks in
 	float fMateThreshold;

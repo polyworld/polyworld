@@ -2023,7 +2023,10 @@ int TSimulation::GetMatePotential( agent *x )
 {
 	int potential = MATE__NIL;
 
-	bool desiresMate = x->Mate() > fMateThreshold && randpw() < x->Mate();
+	bool desiresMate = x->Mate() > fMateThreshold;
+	if( fProbabilisticMating && desiresMate )
+		desiresMate = randpw() < x->Mate();
+
 	if( desiresMate )
 	{
 		potential |= MATE__DESIRED;
@@ -3923,6 +3926,7 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 	fCarryPreventsMate = doc.get( "CarryPreventsMate" );
 
 	fEatWait = doc.get( "EatWait" );
+	fProbabilisticMating = doc.get( "ProbabilisticMating" );
     fMateWait = doc.get( "MateWait" );
 	fEatMateSpan = doc.get( "EatMateWait" );
 	fEatMateMinDistance = doc.get( "EatMateMinDistance" );
