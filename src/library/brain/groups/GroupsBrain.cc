@@ -803,7 +803,7 @@ void GroupsBrain::growSynapses( int groupIndex_to,
 											synapseType,
 											groupIndex_from,
 											groupIndex_to )
-							  * Brain::config.initMaxWeight;
+							  * Brain::config.gaussianInitMaxStdev;
 				efficacy = nrand(0.0, stdev);
 				if( efficacy < 0.0 )
 				{

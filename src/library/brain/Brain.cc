@@ -90,6 +90,7 @@ void Brain::processWorldfile( proplib::Document &doc )
 
     Brain::config.logisticSlope = doc.get( "LogisticSlope" );
     Brain::config.gaussianInitWeight = doc.get( "GaussianInitSynapseWeight" );
+    Brain::config.gaussianInitMaxStdev = doc.get( "GaussianInitSynapseWeightMaxStdev" );
     Brain::config.maxWeight = doc.get( "MaxSynapseWeight" );
     Brain::config.initMaxWeight = doc.get( "MaxSynapseWeightInitial" );
 

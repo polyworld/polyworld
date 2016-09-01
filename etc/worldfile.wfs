@@ -1832,6 +1832,12 @@ GaussianInitSynapseWeight {
   default False
 }
 
+GaussianInitSynapseWeightMaxStdev {
+  type    Float
+  default 2.0
+  exmin   0.0
+}
+
 SynapseWeightDecayRate {
   type    Float
   default 0.99

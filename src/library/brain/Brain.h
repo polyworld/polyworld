@@ -91,6 +91,7 @@ public:
 		long numPrebirthCycles;
 		float logisticSlope;
 		bool gaussianInitWeight;
+		float gaussianInitMaxStdev;
 		float maxWeight;
 		float initMaxWeight;
 		bool enableLearning;
