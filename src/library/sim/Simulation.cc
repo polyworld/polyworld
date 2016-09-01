@@ -3504,7 +3504,7 @@ void TSimulation::Kill( agent* c,
 				}
 			}
 
-			if( foodEnergy.isDepleted(minFoodEnergy) )
+			if( !fSkipCarcassMinFoodEnergyCheck && foodEnergy.isDepleted(minFoodEnergy) )
 			{
 				FoodEnergyOut( foodEnergy );
 			}
@@ -4477,6 +4477,7 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 
 
     fMinFoodEnergyAtDeath = doc.get( "MinFoodEnergyAtDeath" );
+    fSkipCarcassMinFoodEnergyCheck = doc.get( "SkipCarcassMinFoodEnergyCheck" );
 	fRandomBirthLocation = doc.get( "RandomBirthLocation" );
 	fRandomBirthLocationRadius = doc.get( "RandomBirthLocationRadius" );
 	{

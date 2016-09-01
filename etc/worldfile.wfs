@@ -1303,6 +1303,11 @@ MinFoodEnergyAtDeath {
   min     0.0
 }
 
+SkipCarcassMinFoodEnergyCheck {
+  type    Bool
+  default False
+}
+
 StarvationEnergyFraction {
   type    Float
   default 0.0
