@@ -1454,6 +1454,15 @@ LinearFogEnd {
 # SECTION Simulation parameters -- Gene Expression (in legacy gene order)
 #-------------------------------------------------------------------
 
+GeneticOperatorResolution {
+  type    Enum
+  enum    Values {
+    Bit,
+    Byte
+  }
+  default Bit
+}
+
 MinAgentSize {
   type    Float
   default 0.5

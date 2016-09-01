@@ -35,6 +35,15 @@ void GenomeSchema::processWorldfile( proplib::Document &doc )
 		else
 			assert( false );
 	}
+	{
+		string resolution = doc.get( "GeneticOperatorResolution" );
+		if( resolution == "Bit" )
+			GenomeSchema::config.resolution = GenomeSchema::RESOLUTION_BIT;
+		else if( resolution == "Byte" )
+			GenomeSchema::config.resolution = GenomeSchema::RESOLUTION_BYTE;
+		else
+			assert( false );
+	}
     GenomeSchema::config.dieAtMaxAge = doc.get( "DieAtMaxAge" );
     GenomeSchema::config.enableEvolution = doc.get( "EnableEvolution" );
     GenomeSchema::config.minMutationRate = doc.get( "MinMutationRate" );
@@ -125,9 +134,12 @@ void GenomeSchema::define()
 			GenomeSchema::config.minMutationRate,
 			GenomeSchema::config.maxMutationRate );
 
-	SCALAR( MutationStdev,
-			GenomeSchema::config.minMutationStdev,
-			GenomeSchema::config.maxMutationStdev );
+	if( GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BYTE )
+	{
+		SCALAR( MutationStdev,
+				GenomeSchema::config.minMutationStdev,
+				GenomeSchema::config.maxMutationStdev );
+	}
 
 	SCALAR( CrossoverPointCount,
 		   GenomeSchema::config.minNumCpts,
@@ -206,7 +218,10 @@ void GenomeSchema::seed( Genome *g )
 	}
 
 	SEED( MutationRate, GenomeSchema::config.seedMutationRate );
-	SEED( MutationStdev, GenomeSchema::config.seedMutationStdev );
+	if( GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BYTE )
+	{
+		SEED( MutationStdev, GenomeSchema::config.seedMutationStdev );
+	}
 
 	if( Metabolism::selectionMode == Metabolism::Gene
 		&& Metabolism::getNumberOfDefinitions() > 1 )

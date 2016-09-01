@@ -13,6 +13,12 @@ namespace genome
 	class GenomeSchema : public GeneSchema
 	{
 	public:
+		enum Resolution
+		{
+			RESOLUTION_BIT,
+			RESOLUTION_BYTE
+		};
+
 		enum SeedType
 		{
 			SEED_LEGACY,
@@ -23,7 +29,7 @@ namespace genome
 		static struct Configuration
 		{
 			GenomeLayout::LayoutType layoutType;
-
+			Resolution resolution;
 			typedef std::map<std::string,float> GeneInterpolationPowers;
 			GeneInterpolationPowers geneInterpolationPower;
 

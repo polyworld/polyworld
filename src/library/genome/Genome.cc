@@ -153,7 +153,7 @@ void Genome::randomizeBits()
 	randomizeBits( GeneType::to_ImmutableInterpolated(gene("BitProbability"))->interpolate(randpw()) );
 }
 
-void Genome::randomize( float mean, float stdev )
+void Genome::randomizeBytes( float mean, float stdev )
 {
 	for (long byte = 0; byte < nbytes; byte++)
 	{
@@ -162,9 +162,19 @@ void Genome::randomize( float mean, float stdev )
 	}
 }
 
+void Genome::randomizeBytes()
+{
+	randomizeBytes( GenomeSchema::config.byteMean, GenomeSchema::config.byteStdev );
+}
+
 void Genome::randomize()
 {
-	randomize( GenomeSchema::config.byteMean, GenomeSchema::config.byteStdev );
+	if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BIT)
+		randomizeBits();
+	else if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BYTE)
+		randomizeBytes();
+	else
+		assert( false );
 }
 
 void Genome::mutateBits()
@@ -187,7 +197,7 @@ void Genome::mutateOneByte( long byte, float stdev )
     mutable_data[byte] = clamp( val, 0, 255 );
 }
 
-void Genome::mutate()
+void Genome::mutateBytes()
 {
     if (!GenomeSchema::config.enableEvolution)
         return;
@@ -201,6 +211,16 @@ void Genome::mutate()
             mutateOneByte( byte, stdev );
         }
     }
+}
+
+void Genome::mutate()
+{
+	if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BIT)
+		mutateBits();
+	else if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BYTE)
+		mutateBytes();
+	else
+		assert( false );
 }
 
 void Genome::crossover( Genome *g1, Genome *g2, bool mutate )
@@ -244,32 +264,44 @@ void Genome::crossover( Genome *g1, Genome *g2, bool mutate )
     long i, j;
     
 #ifdef DUMPBITS    
-    cout << "**The crossover bytes are:" nl << "  ";
-    for (i = 0; i < numCrossPoints; i++)
+    if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BIT)
     {
-        cout << crossoverPoints[i] << " ";
+        cout << "**The crossover bits(bytes) are:" nl << "  ";
+        for (i = 0; i < numCrossPoints; i++)
+        {
+            long byte = crossoverPoints[i] >> 3;
+            cout << crossoverPoints[i] << "(" << byte << ") ";
+        }
+        cout nlf;
     }
-    cout nlf;
+    else if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BYTE)
+    {
+        cout << "**The crossover bytes are:" nl << "  ";
+        for (i = 0; i < numCrossPoints; i++)
+        {
+            cout << crossoverPoints[i] << " ";
+        }
+        cout nlf;
+    }
+    else
+    {
+        assert( false );
+    }
 #endif
     
 	float mrate = 0.0;
 	float stdev = 0.0;
     if (mutate)
     {
-        if (randpw() < 0.5)
-        {
-            mrate = g1->get( "MutationRate" );
-            stdev = g1->get( "MutationStdev" );
-        }
-        else
-        {
-            mrate = g2->get( "MutationRate" );
-            stdev = g2->get( "MutationStdev" );
-        }
+        Genome *gTemplate = (randpw() < 0.5) ? g1 : g2;
+        mrate = gTemplate->get( "MutationRate" );
+        if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BYTE)
+            stdev = gTemplate->get( "MutationStdev" );
     }
     
     long begbyte = 0;
     long endbyte = -1;
+    long bit;
     bool first = (randpw() < 0.5);
     const Genome* g;
     
@@ -283,7 +315,12 @@ void Genome::crossover( Genome *g1, Genome *g2, bool mutate )
         }
         else
         {
-            endbyte = crossoverPoints[i];
+            if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BIT)
+                endbyte = crossoverPoints[i] >> 3;
+            else if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BYTE)
+                endbyte = crossoverPoints[i];
+            else
+                assert( false );
 		}
         g = first ? g1 : g2;
         
@@ -302,14 +339,55 @@ void Genome::crossover( Genome *g1, Genome *g2, bool mutate )
             for (j = begbyte; j < endbyte; j++)
             {
                 mutable_data[j] = g->mutable_data[j];    // copy from the appropriate genome
-                if (randpw() < mrate)
-                    mutateOneByte( j, stdev );
+                if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BIT)
+                {
+                    for (bit = 0; bit < 8; bit++)
+                    {
+                        if (randpw() < mrate)
+                            mutable_data[j] ^= char(1 << (7-bit));	// this goes left to right, corresponding more directly to little-endian machines, but leave it alone (at least for now)
+                    }
+                }
+                else if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BYTE)
+                {
+                    if (randpw() < mrate)
+                        mutateOneByte( j, stdev );
+                }
+                else
+                {
+                    assert( false );
+                }
             }
         }
         else
         {
             for (j = begbyte; j < endbyte; j++)
                 mutable_data[j] = g->mutable_data[j];    // copy from the appropriate genome
+        }
+        
+        if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BIT)
+        {
+            if (i < numCrossPoints)  // except on the last stretch...
+            {
+                bit = crossoverPoints[i] - (endbyte << 3);
+                if (first)
+                {   // this goes left to right, corresponding more directly to little-endian machines, but leave it alone (at least for now)
+                    mutable_data[endbyte] = char((g1->mutable_data[endbyte] & (255 << (8 - bit)))
+                                            | (g2->mutable_data[endbyte] & (255 >> bit)));
+                }
+                else
+                {   // this goes left to right, corresponding more directly to little-endian machines, but leave it alone (at least for now)
+                    mutable_data[endbyte] = char((g2->mutable_data[endbyte] & (255 << (8 - bit)))
+                                            | (g1->mutable_data[endbyte] & (255 >> bit)));
+                }
+            }
+            if (mutate)
+            {
+                for (bit = 0; bit < 8; bit++)
+                {
+                    if (randpw() < mrate)
+                        mutable_data[endbyte] ^= char(1 << (7 - bit));  // this goes left to right, corresponding more directly to little-endian machines, but leave it alone (at least for now)
+                }
+            }
         }
         
         first = !first;
