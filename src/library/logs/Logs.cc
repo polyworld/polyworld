@@ -315,7 +315,7 @@ void Logs::AgentEnergyTotalLog::processEvent( const sim::AgentBirthEvent &e )
 void Logs::AgentEnergyTotalLog::processEvent( const sim::AgentBodyUpdatedEvent &e )
 {
 	getWriter( e.a )->addRow( getStep(),
-							  e.a->GetEnergy().sum() );
+							  e.a->NormalizedEnergy() );
 }
 
 //---------------------------------------------------------------------------
