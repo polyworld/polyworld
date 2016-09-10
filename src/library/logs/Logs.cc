@@ -177,6 +177,9 @@ void Logs::AgentEnergyInLog::init( TSimulation *sim, Document *doc )
 //---------------------------------------------------------------------------
 void Logs::AgentEnergyInLog::processEvent( const sim::AgentBirthEvent &e )
 {
+	if( e.reason == LifeSpan::BR_VIRTUAL )
+		return;
+
 	char path[512];
 	sprintf( path,
 			 "run/energy/in/agent_%ld.txt",
@@ -237,6 +240,9 @@ void Logs::AgentEnergyOutLog::init( TSimulation *sim, Document *doc )
 //---------------------------------------------------------------------------
 void Logs::AgentEnergyOutLog::processEvent( const sim::AgentBirthEvent &e )
 {
+	if( e.reason == LifeSpan::BR_VIRTUAL )
+		return;
+
 	char path[512];
 	sprintf( path,
 			 "run/energy/out/agent_%ld.txt",
@@ -294,6 +300,9 @@ void Logs::AgentEnergyTotalLog::init( TSimulation *sim, Document *doc )
 //---------------------------------------------------------------------------
 void Logs::AgentEnergyTotalLog::processEvent( const sim::AgentBirthEvent &e )
 {
+	if( e.reason == LifeSpan::BR_VIRTUAL )
+		return;
+
 	char path[512];
 	sprintf( path,
 			 "run/energy/total/agent_%ld.txt",
