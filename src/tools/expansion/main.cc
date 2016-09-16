@@ -2,8 +2,8 @@
 #include <stdlib.h>
 #include <string>
 
-#include "brain/Brain.h"
 #include "brain/RqNervousSystem.h"
+#include "genome/Genome.h"
 #include "utils/AbstractFile.h"
 #include "utils/analysis.h"
 
