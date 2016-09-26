@@ -144,6 +144,10 @@ RqNervousSystem* analysis::copyNervousSystem(genome::Genome* genome, RqNervousSy
     return cns;
 }
 
+void analysis::setMaxWeight(RqNervousSystem* cns, AbstractFile* synapses, float maxWeight) {
+    cns->getBrain()->loadSynapses(synapses, maxWeight);
+}
+
 double analysis::getExpansion(genome::Genome* genome, RqNervousSystem* cns, double perturbation, int repeats, int random, int quiescent, int steps) {
     
     // Set up nervous systems

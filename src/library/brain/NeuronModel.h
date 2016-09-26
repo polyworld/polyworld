@@ -71,4 +71,5 @@ class NeuronModel
 	virtual void dumpSynapses( AbstractFile *file ) = 0;
 	virtual void loadSynapses( AbstractFile *file ) = 0;
 	virtual void copySynapses( NeuronModel *other ) = 0;
+	virtual void scaleSynapses( float factor ) = 0;
 };

@@ -215,22 +215,24 @@ void Brain::dumpSynapses( AbstractFile *file, long index )
 //---------------------------------------------------------------------------
 // Brain::loadSynapses
 //---------------------------------------------------------------------------
-void Brain::loadSynapses( AbstractFile *file )
+void Brain::loadSynapses( AbstractFile *file, float maxWeight )
 {
 	long index;
-	float maxWeight;
+	float fileMaxWeight;
 	long numSynapses;
 	int numNeurons;
 	int numInputNeurons;
 	int numOutputNeurons;
 	int rc = file->scanf( "synapses %ld maxweight=%g numsynapses=%ld numneurons=%d numinputneurons=%d numoutputneurons=%d\n",
-						  &index, &maxWeight, &numSynapses, &numNeurons, &numInputNeurons, &numOutputNeurons );
+						  &index, &fileMaxWeight, &numSynapses, &numNeurons, &numInputNeurons, &numOutputNeurons );
 	assert( rc == 6 );
 	assert( numSynapses == _dims.numSynapses );
 	assert( numNeurons == _dims.numNeurons );
 	assert( numInputNeurons == _dims.numInputNeurons );
 	assert( numOutputNeurons == _dims.numOutputNeurons );
 	_neuralnet->loadSynapses( file );
+	if( maxWeight != 0.0f )
+		_neuralnet->scaleSynapses( maxWeight / fileMaxWeight );
 }
 
 //---------------------------------------------------------------------------

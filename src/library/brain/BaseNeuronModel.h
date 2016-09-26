@@ -297,6 +297,15 @@ class BaseNeuronModel : public NeuronModel
 		delete[] newsynapse;
 	}
 
+	virtual void scaleSynapses( float factor )
+	{
+		for( long i = 0; i < dims->numSynapses; i++ )
+		{
+			T_synapse &s = synapse[i];
+			s.efficacy *= factor;
+		}
+	}
+
 	//protected:
 	NervousSystem *cns;
 	Dimensions *dims;
