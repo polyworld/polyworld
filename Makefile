@@ -1,6 +1,6 @@
 include Makefile.conf
 
-targets=library app qtrenderer rancheck PwMoviePlayer proputil pmvutil qt_clust expansion onset timeseries
+targets=library app qtrenderer rancheck PwMoviePlayer proputil pmvutil qt_clust expansion timeseries
 
 .PHONY: ${targets} clean
 
@@ -36,9 +36,6 @@ omp_test:
 
 expansion:
 	+ make -C src/tools/expansion
-
-onset:
-	+ make -C src/tools/onset
 
 timeseries:
 	+ make -C src/tools/timeseries
