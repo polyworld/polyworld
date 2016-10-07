@@ -1874,9 +1874,14 @@ NeuronModel {
   }
 }
 
-EnableLearning {
-  type    Bool
-  default True
+LearningMode {
+  type    Enum
+  enum    Values {
+    None,
+    Prebirth,
+    All
+  }
+  default All
 }
 
 EnableSpikingGenes {

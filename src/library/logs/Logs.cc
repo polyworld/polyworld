@@ -523,7 +523,7 @@ void Logs::BrainAnatomyLog::init( TSimulation *sim, Document *doc )
 {
 	if( doc->get("RecordBrain") && doc->get("RecordBrainAnatomy") )
 	{
-		_enableLearning = doc->get( "EnableLearning" );
+		_enableLearning = (string)doc->get( "LearningMode" ) != "None";
 		_recordRecent = doc->get( "RecordBrainRecent" );
 		_recordBestRecent = doc->get( "RecordBrainBestRecent" );
 		_recordBestSoFar = doc->get( "RecordBrainBestSoFar" );
@@ -1771,7 +1771,7 @@ void Logs::SynapseLog::init( TSimulation *sim, Document *doc )
 {
 	if( doc->get("RecordSynapses") )
 	{
-		_enableLearning = doc->get( "EnableLearning" );
+		_enableLearning = (string)doc->get( "LearningMode" ) != "None";
 		initRecording( sim,
 					   NullStateScope,
 					   sim::Event_BrainGrown

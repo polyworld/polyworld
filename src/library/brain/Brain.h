@@ -61,6 +61,12 @@ public:
 			TAU_GAIN,
 			SPIKING
 		} neuronModel;
+		enum
+		{
+			LEARN_NONE,
+			LEARN_PREBIRTH,
+			LEARN_ALL
+		} learningMode;
 		struct
 		{
 			float minVal;

@@ -536,6 +536,8 @@ void agent::grow( long mateWait, bool seeding )
 	logs->postEvent( BrainGrownEvent(this) );
 
 	fCns->prebirth();
+	if( Brain::config.learningMode == Brain::Configuration::LEARN_PREBIRTH )
+		fCns->getBrain()->freeze();
 
     // setup the agent's geometry
     SetGeometry();

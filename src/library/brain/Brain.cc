@@ -63,6 +63,17 @@ void Brain::processWorldfile( proplib::Document &doc )
 		else
 			assert( false );
 	}
+	{
+		string val = doc.get( "LearningMode" );
+		if( val == "None" )
+			Brain::config.learningMode = Brain::Configuration::LEARN_NONE;
+		else if( val == "Prebirth" )
+			Brain::config.learningMode = Brain::Configuration::LEARN_PREBIRTH;
+		else if( val == "All" )
+			Brain::config.learningMode = Brain::Configuration::LEARN_ALL;
+		else
+			assert( false );
+	}
 
     Brain::config.Spiking.enableGenes = doc.get( "EnableSpikingGenes" );
 	Brain::config.Spiking.aMinVal = doc.get( "SpikingAMin" );
@@ -94,7 +105,7 @@ void Brain::processWorldfile( proplib::Document &doc )
     Brain::config.maxWeight = doc.get( "MaxSynapseWeight" );
     Brain::config.initMaxWeight = doc.get( "MaxSynapseWeightInitial" );
 
-    Brain::config.enableLearning = doc.get( "EnableLearning" );
+    Brain::config.enableLearning = Brain::config.learningMode != Brain::Configuration::LEARN_NONE;
     Brain::config.minlrate = doc.get( "MinLearningRate" );
     Brain::config.maxlrate = doc.get( "MaxLearningRate" );
 
