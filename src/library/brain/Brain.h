@@ -96,6 +96,7 @@ public:
 		bool synapseFromOutputNeurons;
 		long numPrebirthCycles;
 		float logisticSlope;
+		bool fixedInitWeight;
 		bool gaussianInitWeight;
 		float gaussianInitMaxStdev;
 		float maxWeight;

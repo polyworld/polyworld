@@ -1841,9 +1841,15 @@ MaxSynapseWeightInitial {
   exmin   0.0
 }
 
+FixedInitSynapseWeight {
+  type    Bool
+  default False
+}
+
 GaussianInitSynapseWeight {
   type    Bool
   default False
+  assert  not FixedInitSynapseWeight or not GaussianInitSynapseWeight
 }
 
 GaussianInitSynapseWeightMaxStdev {

@@ -797,7 +797,11 @@ void GroupsBrain::growSynapses( int groupIndex_to,
 			assert( neuronIndex_from != neuronIndex_to );
 
 			float efficacy;
-			if( Brain::config.gaussianInitWeight )
+			if( Brain::config.fixedInitWeight )
+			{
+				efficacy = Brain::config.initMaxWeight;
+			}
+			else if( Brain::config.gaussianInitWeight )
 			{
 				float stdev = _genome->get( _genome->WEIGHT_STDEV,
 											synapseType,
