@@ -19,6 +19,7 @@ struct Args {
     int start;
 };
 
+void printUsage(int, char**);
 bool tryParseArgs(int, char**, Args&);
 void printArgs(const Args&);
 void printHeader(int, RqNervousSystem*);
@@ -28,16 +29,7 @@ void printTimeSeries(RqNervousSystem*, int, int);
 int main(int argc, char** argv) {
     Args args;
     if (!tryParseArgs(argc, argv, args)) {
-        std::cerr << "Usage: " << argv[0] << " RUN STAGE REPEATS TRANSIENT STEPS [START]" << std::endl;
-        std::cerr << std::endl;
-        std::cerr << "Generates neural activation time series using random inputs." << std::endl;
-        std::cerr << std::endl;
-        std::cerr << "  RUN        Run directory" << std::endl;
-        std::cerr << "  STAGE      Life stage (incept, birth, or death)" << std::endl;
-        std::cerr << "  REPEATS    Number of time series per agent" << std::endl;
-        std::cerr << "  TRANSIENT  Initial number of timesteps to ignore" << std::endl;
-        std::cerr << "  STEPS      Number of timesteps to display" << std::endl;
-        std::cerr << "  START      Starting agent" << std::endl;
+        printUsage(argc, argv);
         return 1;
     }
     printArgs(args);
@@ -59,6 +51,19 @@ int main(int argc, char** argv) {
         delete cns;
     }
     return 0;
+}
+
+void printUsage(int argc, char** argv) {
+    std::cerr << "Usage: " << argv[0] << " RUN STAGE REPEATS TRANSIENT STEPS [START]" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "Generates neural activation time series using random inputs." << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "  RUN        Run directory" << std::endl;
+    std::cerr << "  STAGE      Life stage (incept, birth, or death)" << std::endl;
+    std::cerr << "  REPEATS    Number of time series per agent" << std::endl;
+    std::cerr << "  TRANSIENT  Initial number of timesteps to ignore" << std::endl;
+    std::cerr << "  STEPS      Number of timesteps to display" << std::endl;
+    std::cerr << "  START      Starting agent index" << std::endl;
 }
 
 bool tryParseArgs(int argc, char** argv, Args& args) {
