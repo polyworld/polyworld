@@ -1,6 +1,6 @@
 include Makefile.conf
 
-targets=library app qtrenderer rancheck PwMoviePlayer proputil pmvutil qt_clust expansion timeseries
+targets=library app qtrenderer rancheck PwMoviePlayer proputil pmvutil qt_clust expansion bifurcation timeseries
 
 .PHONY: ${targets} clean
 
@@ -36,6 +36,9 @@ omp_test:
 
 expansion:
 	+ make -C src/tools/expansion
+
+bifurcation:
+	+ make -C src/tools/bifurcation
 
 timeseries:
 	+ make -C src/tools/timeseries
