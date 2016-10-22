@@ -47,21 +47,39 @@ int main(int argc, char** argv) {
         if (args.mode == "all") {
             double expansion = analysis::getExpansion(genome, cns, args.perturbation, args.repeats, args.random, args.quiescent, args.steps);
             std::cout << agent << " " << expansion << std::endl;
-        } else {
-            bool done = false;
-            for (float wmax = args.wmaxMin; wmax <= args.wmaxMax && !done; wmax += args.wmaxInc) {
+        } else if (args.mode == "single") {
+            for (float wmax = args.wmaxMin; wmax <= args.wmaxMax; wmax += args.wmaxInc) {
                 synapses->seek(0, SEEK_SET);
                 analysis::setMaxWeight(cns, synapses, wmax);
                 double expansion = analysis::getExpansion(genome, cns, args.perturbation, args.repeats, args.random, args.quiescent, args.steps);
-                if (args.mode == "single") {
-                    std::cout << wmax << " " << expansion << std::endl;
-                } else if (expansion >= args.threshold) {
-                    std::cout << agent << " " << wmax << std::endl;
-                    done = true;
+                std::cout << wmax << " " << expansion << std::endl;
+            }
+        } else if (args.mode == "onset") {
+            float wmaxInc = args.wmaxInc;
+            int stage = 1;
+            bool done = false;
+            for (float wmax = args.wmaxMin; wmax <= args.wmaxMax && !done; wmax += wmaxInc) {
+                synapses->seek(0, SEEK_SET);
+                analysis::setMaxWeight(cns, synapses, wmax);
+                double expansion = analysis::getExpansion(genome, cns, args.perturbation, args.repeats, args.random, args.quiescent, args.steps);
+                if (expansion >= args.threshold) {
+                    if (stage == 2) {
+                        wmax -= wmaxInc;
+                        wmaxInc = args.wmaxInc;
+                        stage = 3;
+                    } else {
+                        std::cout << agent << " " << wmax << std::endl;
+                        done = true;
+                    }
+                } else {
+                    if (stage == 1 && wmax >= args.wmaxMax / 10.0f) {
+                        wmaxInc = args.wmaxInc * 10.0f;
+                        stage = 2;
+                    }
                 }
             }
-            if (args.mode == "onset" && !done) {
-                std::cout << "# " << agent << " -" << std::endl;
+            if (!done) {
+                std::cout << agent << " -" << std::endl;
             }
         }
         delete cns;
@@ -75,7 +93,7 @@ void printUsage(int argc, char** argv) {
     std::cerr << "Usage:" << std::endl;
     std::cerr << "  " << argv[0] << " all RUN STAGE PERTURBATION REPEATS RANDOM QUIESCENT STEPS [AGENT]" << std::endl;
     std::cerr << "  " << argv[0] << " single RUN STAGE WMAX_MIN WMAX_MAX WMAX_INC PERTURBATION REPEATS RANDOM QUIESCENT STEPS AGENT" << std::endl;
-    std::cerr << "  " << argv[0] << " onset RUN STAGE WMAX_MIN WMAX_MAX WMAX_INC PERTURBATION REPEATS RANDOM QUIESCENT STEPS THRESHOLD [AGENT]" << std::endl;
+    std::cerr << "  " << argv[0] << " onset RUN STAGE PERTURBATION REPEATS RANDOM QUIESCENT STEPS THRESHOLD [AGENT]" << std::endl;
     std::cerr << std::endl;
     std::cerr << "Calculates phase space expansion." << std::endl;
     std::cerr << std::endl;
@@ -122,7 +140,7 @@ bool tryParseArgs(int argc, char** argv, Args& args) {
                 return false;
             }
         } else if (mode == "onset") {
-            if (argc < 13 || argc > 14) {
+            if (argc < 10 || argc > 11) {
                 return false;
             }
         }
@@ -134,7 +152,7 @@ bool tryParseArgs(int argc, char** argv, Args& args) {
         if (stage != "incept" && stage != "birth" && stage != "death") {
             return false;
         }
-        if (mode == "single" || mode == "onset") {
+        if (mode == "single") {
             wmaxMin = atof(argv[argi++]);
             if (wmaxMin <= 0.0f) {
                 return false;
@@ -147,6 +165,10 @@ bool tryParseArgs(int argc, char** argv, Args& args) {
             if (wmaxInc <= 0.0f) {
                 return false;
             }
+        } else if (mode == "onset") {
+            wmaxMin = 1.0f;
+            wmaxMax = 1000.0f;
+            wmaxInc = 1.0f;
         } else {
             wmaxMin = 0.0f;
             wmaxMax = 0.0f;
