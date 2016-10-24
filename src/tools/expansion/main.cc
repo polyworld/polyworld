@@ -154,7 +154,7 @@ bool tryParseArgs(int argc, char** argv, Args& args) {
         }
         if (mode == "single") {
             wmaxMin = atof(argv[argi++]);
-            if (wmaxMin <= 0.0f) {
+            if (wmaxMin < 0.0f) {
                 return false;
             }
             wmaxMax = atof(argv[argi++]);

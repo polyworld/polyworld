@@ -107,7 +107,7 @@ bool tryParseArgs(int argc, char** argv, Args& args) {
             return false;
         }
         wmaxMin = atof(argv[3]);
-        if (wmaxMin <= 0.0f) {
+        if (wmaxMin < 0.0f) {
             return false;
         }
         wmaxMax = atof(argv[4]);

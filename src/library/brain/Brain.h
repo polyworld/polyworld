@@ -144,7 +144,7 @@ public:
 	void writeFunctional( AbstractFile* file );
 
 	void dumpSynapses( AbstractFile *file, long index );
-	void loadSynapses( AbstractFile *file, float maxWeight = 0.0f );
+	void loadSynapses( AbstractFile *file, float maxWeight = -1.0f );
 	void copySynapses( Brain *other );
 	
 protected:

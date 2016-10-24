@@ -243,7 +243,7 @@ void Brain::loadSynapses( AbstractFile *file, float maxWeight )
 	assert( numInputNeurons == _dims.numInputNeurons );
 	assert( numOutputNeurons == _dims.numOutputNeurons );
 	_neuralnet->loadSynapses( file );
-	if( maxWeight != 0.0f )
+	if( maxWeight >= 0.0f )
 		_neuralnet->scaleSynapses( maxWeight / fileMaxWeight );
 }
 
