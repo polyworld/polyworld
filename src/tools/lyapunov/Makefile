@@ -1,8 +1,8 @@
 conf=../../../Makefile.conf
 include ${conf}
 
-target=${EXPANSION_TARGET}
-blddir=${EXPANSION_BLDDIR}
+target=${LYAPUNOV_TARGET}
+blddir=${LYAPUNOV_BLDDIR}
 
 cxxflags=${CXXFLAGS} ${OPENGL_CXXFLAGS} ${LIBRARY_CXXFLAGS}
 ldflags=${PWLIB_LDFLAGS}
