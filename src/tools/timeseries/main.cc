@@ -1,4 +1,5 @@
 #include <iostream>
+#include <limits>
 #include <map>
 #include <set>
 #include <stdlib.h>
@@ -17,6 +18,7 @@ struct Args {
     int transient;
     int steps;
     int start;
+    int count;
 };
 
 void printUsage(int, char**);
@@ -35,7 +37,11 @@ int main(int argc, char** argv) {
     printArgs(args);
     analysis::initialize(args.run);
     int maxAgent = analysis::getMaxAgent(args.run);
-    for (int agent = args.start; agent <= maxAgent; agent++) {
+    for (int index = 0; index < args.count; index++) {
+        int agent = args.start + index;
+        if (agent > maxAgent) {
+            break;
+        }
         RqNervousSystem* cns = analysis::getNervousSystem(args.run, agent, args.stage);
         if (cns == NULL) {
             continue;
@@ -54,7 +60,7 @@ int main(int argc, char** argv) {
 }
 
 void printUsage(int argc, char** argv) {
-    std::cerr << "Usage: " << argv[0] << " RUN STAGE REPEATS TRANSIENT STEPS [START]" << std::endl;
+    std::cerr << "Usage: " << argv[0] << " RUN STAGE REPEATS TRANSIENT STEPS [START [COUNT]]" << std::endl;
     std::cerr << std::endl;
     std::cerr << "Generates neural activation time series using random inputs." << std::endl;
     std::cerr << std::endl;
@@ -64,10 +70,11 @@ void printUsage(int argc, char** argv) {
     std::cerr << "  TRANSIENT  Initial number of timesteps to ignore" << std::endl;
     std::cerr << "  STEPS      Number of timesteps to display" << std::endl;
     std::cerr << "  START      Starting agent index" << std::endl;
+    std::cerr << "  COUNT      Number of agents" << std::endl;
 }
 
 bool tryParseArgs(int argc, char** argv, Args& args) {
-    if (argc < 6 || argc > 7) {
+    if (argc < 6 || argc > 8) {
         return false;
     }
     std::string run;
@@ -76,6 +83,7 @@ bool tryParseArgs(int argc, char** argv, Args& args) {
     int transient;
     int steps;
     int start = 1;
+    int count = std::numeric_limits<int>::max();
     try {
         run = std::string(argv[1]);
         if (!exists(run + "/endStep.txt")) {
@@ -97,10 +105,16 @@ bool tryParseArgs(int argc, char** argv, Args& args) {
         if (steps < 1) {
             return false;
         }
-        if (argc == 7) {
+        if (argc > 6) {
             start = atoi(argv[6]);
             if (start < 1) {
                 return false;
+            }
+            if (argc == 8) {
+                count = atoi(argv[7]);
+                if (count < 1) {
+                    return false;
+                }
             }
         }
     } catch (...) {
@@ -112,6 +126,7 @@ bool tryParseArgs(int argc, char** argv, Args& args) {
     args.transient = transient;
     args.steps = steps;
     args.start = start;
+    args.count = count;
     return true;
 }
 
