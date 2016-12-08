@@ -3504,7 +3504,7 @@ void TSimulation::Kill( agent* c,
 				}
 			}
 
-			if( !fSkipCarcassMinFoodEnergyCheck && foodEnergy.isDepleted(minFoodEnergy) )
+			if( foodEnergy.isDepleted() || (!fSkipCarcassMinFoodEnergyCheck && foodEnergy.isDepleted(minFoodEnergy)) )
 			{
 				FoodEnergyOut( foodEnergy );
 			}
