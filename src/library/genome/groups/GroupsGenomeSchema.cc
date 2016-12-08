@@ -282,7 +282,6 @@ void GroupsGenomeSchema::seed( Genome *g_ )
 		RANDOMIZE( Bias, 0, 1.0 );
 		RANDOMIZE_GROUP( Bias, Eat, 0.5, 1.0 );
 		RANDOMIZE_GROUP( Bias, Mate, 0.5, 1.0 );
-		RANDOMIZE_GROUP( Bias, Speed, 0.5, 1.0 );
 		if( GroupsBrain::config.mirroredtopologicaldistortion )
 		{
 			SEED( TopologicalDistortion, 0.5 );
