@@ -211,12 +211,14 @@ MinFoodEnergy {
   type    Float
   default 200.0
   min     0.0
+  cppsym  "food::gMinFoodEnergy"
 }
 
 MaxFoodEnergy {
   type    Float
   default 1000.0
   min     MinFoodEnergy
+  cppsym  "food::gMaxFoodEnergy"
 }
 
 RatioBarrierPositions {
