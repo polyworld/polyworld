@@ -22,7 +22,7 @@ Supported_Toolchains_display = ','.join(Supported_Toolchains)
 
 Default_CXX = {'linux': 'g++',
                'darwin': 'clang++',
-               'bigred2': 'CC'}
+               'bigred2': 'g++'}
 
 ######################################################################
 #
