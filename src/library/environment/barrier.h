@@ -88,6 +88,7 @@ public:
     ~barrier();
     
 	void init();
+	void draw();
 
 	void update();
 	

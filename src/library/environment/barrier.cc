@@ -64,6 +64,19 @@ void barrier::init()
 }
 
 //---------------------------------------------------------------------------
+// barrier::draw
+//---------------------------------------------------------------------------
+void barrier::draw()
+{
+	gpoly::draw();
+	setcolor(gBarrierColor);
+	glBegin(GL_LINES);
+		glVertex3f(absCurrPosition.xa, gBarrierHeight, absCurrPosition.za);
+		glVertex3f(absCurrPosition.xb, gBarrierHeight, absCurrPosition.zb);
+	glEnd();
+}
+
+//---------------------------------------------------------------------------
 // barrier::update
 //---------------------------------------------------------------------------
 void barrier::update()
