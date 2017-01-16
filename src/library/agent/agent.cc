@@ -1022,7 +1022,7 @@ float agent::UpdateBody( float moveFitnessParam,
 		setx( carrier->x() );
 		setz( carrier->z() );
 		dx = x() - LastX();
-		dz = z() - LastX();
+		dz = z() - LastZ();
 	}
 	else  // this is a normal update (the agent is not being carried)
 	{
