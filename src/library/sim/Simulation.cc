@@ -1024,6 +1024,7 @@ void TSimulation::InitBarriers()
 {
 	// Add barriers
 	barrier* b = NULL;
+	barrier::gXSortedBarriers.reset();
 	while( barrier::gXSortedBarriers.next(b) )
 		fWorldSet.Add(b);
 }
