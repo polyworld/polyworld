@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import gzip
 import os.path
 import pw_brainAnatomy, pw_brainFunction
 from numpy import sum
@@ -17,10 +18,14 @@ class pw_agent:
 		assert filename2 is None or os.path.isfile( filename2), "filename2 was specified but wasn't a valid file"
 		
 		
-		f1 = open(filename1)
+		f1 = gzip.open(filename1)
 		header1 = f1.readline()
-		if header1.startswith('brainFunction'):
-			self.func_filename = filename1
+		if header1.startswith('version 1'):
+			header1 = f1.readline()
+			if header1.startswith('brainFunction'):
+				self.func_filename = filename1
+			else:
+				raise ValueError, "filename1 was not a polyworld file"
 		elif header1.startswith('brain'):
 			self.anat_filename = filename1
 		else:
@@ -29,11 +34,15 @@ class pw_agent:
 		f1.close()
 		
 		if filename2:
-			f2 = open(filename2)
+			f2 = gzip.open(filename2)
 			header2 = f2.readline()
-			if header2.startswith('brainFunction'):
-				assert self.func_filename is None, "func_filename already defined!"
-				self.func_filename = filename2
+			if header2.startswith('version 1'):
+				header2 = f2.readline()
+				if header2.startswith('brainFunction'):
+					assert self.func_filename is None, "func_filename already defined!"
+					self.func_filename = filename2
+				else:
+					raise ValueError, "filename2 was not a polyworld file"
 			elif header2.startswith('brain'):
 				assert self.anat_filename is None, "anat_filename already defined!"				
 				self.anat_filename = filename2

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import gzip
 from numpy import array, matrix, exp, pi, sqrt, mean, round, random, ones
 import numpy
 #from pprint import pprint
@@ -24,7 +25,9 @@ class pw_brainFunction:
 		if not input_filename:
 			return None
 		
-		lines = [ x.strip() for x in open( input_filename ).readlines() ]
+		lines = [ x.strip() for x in gzip.open( input_filename ).readlines() ]
+		if lines[0] == "version 1":
+			lines.pop(0)
 
 		# brainFunction 157 15 8 17 0 2-3 4-5 6-7
 		# format: 
@@ -41,17 +44,17 @@ class pw_brainFunction:
 		self.num_inputneurons = int(self.header[3])
 		self.agent_index = int(self.header[1])
 		self.num_neurons = int(self.header[2])
-		self.num_synapes = int(self.header[4])
-		self.timestep_born = int(self.header[5])
+		self.num_synapes = int(self.header[5])
+		self.timestep_born = int(self.header[6])
 
 		self.neurons = {}
-		Rstart, Rend = [ int(x) for x in self.header[6].split('-') ]
+		Rstart, Rend = [ int(x) for x in self.header[7].split('-') ]
 		self.neurons['red'] = range(Rstart,Rend+1)
 
-		Gstart, Gend = [ int(x) for x in self.header[7].split('-') ]
+		Gstart, Gend = [ int(x) for x in self.header[8].split('-') ]
 		self.neurons['green'] = range(Gstart,Gend+1)
 
-		Bstart, Bend = [ int(x) for x in self.header[8].split('-') ]
+		Bstart, Bend = [ int(x) for x in self.header[9].split('-') ]
 		self.neurons['blue'] = range(Bstart,Bend+1)
 	
 		self.timesteps_lived = int(len(lines) / self.num_neurons)

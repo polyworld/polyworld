@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import gzip
 from pprint import pprint
 from numpy import array, matrix, zeros
 import os.path
@@ -9,7 +10,7 @@ class pw_brainAnatomy:
 		
 		assert os.path.isfile( input_filename ), "passed input_filename was not a valid file"
 		
-		lines = [ x.strip('\n; ') for x in open(input_filename).readlines() ]
+		lines = [ x.strip('\n; ') for x in gzip.open(input_filename).readlines() ]
 
 		self.header = lines.pop(0).split(' ')
 		assert( self.header[0] == 'brain' )
