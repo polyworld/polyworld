@@ -10,7 +10,6 @@
 
 using namespace genome;
 
-
 RqNervousSystem::~RqNervousSystem()
 {
 	itfor( SensorList, sensors, it )
