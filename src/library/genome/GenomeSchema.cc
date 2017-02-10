@@ -48,8 +48,7 @@ void GenomeSchema::processWorldfile( proplib::Document &doc )
     GenomeSchema::config.enableEvolution = doc.get( "EnableEvolution" );
     GenomeSchema::config.minMutationRate = doc.get( "MinMutationRate" );
     GenomeSchema::config.maxMutationRate = doc.get( "MaxMutationRate" );
-    GenomeSchema::config.minMutationStdev = doc.get( "MinMutationStdev" );
-    GenomeSchema::config.maxMutationStdev = doc.get( "MaxMutationStdev" );
+    GenomeSchema::config.mutationStdev = doc.get( "MutationStdev" );
     GenomeSchema::config.minNumCpts = doc.get( "MinCrossoverPoints" );
     GenomeSchema::config.maxNumCpts = doc.get( "MaxCrossoverPoints" );
     GenomeSchema::config.miscBias = doc.get( "MiscegenationFunctionBias" );
@@ -63,8 +62,6 @@ void GenomeSchema::processWorldfile( proplib::Document &doc )
 	}
     GenomeSchema::config.minBitProb = doc.get( "MinInitialBitProb" );
     GenomeSchema::config.maxBitProb = doc.get( "MaxInitialBitProb" );
-    GenomeSchema::config.byteMean = doc.get( "InitialByteMean" );
-    GenomeSchema::config.byteStdev = doc.get( "InitialByteStdev" );
 	{
 		string seedType = doc.get( "SeedType" );
 		if( seedType == "Legacy" )
@@ -77,7 +74,6 @@ void GenomeSchema::processWorldfile( proplib::Document &doc )
 			assert( false );
 	}
 	GenomeSchema::config.seedMutationRate = doc.get( "SeedMutationRate" );
-	GenomeSchema::config.seedMutationStdev = doc.get( "SeedMutationStdev" );
 	GenomeSchema::config.seedFightBias = doc.get( "SeedFightBias" );
 	GenomeSchema::config.seedFightExcitation = doc.get( "SeedFightExcitation" );
 	GenomeSchema::config.seedGiveBias = doc.get( "SeedGiveBias" );
@@ -130,15 +126,11 @@ void GenomeSchema::define()
 							GenomeSchema::config.minBitProb,
 							GenomeSchema::config.maxBitProb );
 
-	SCALAR( MutationRate,
-			GenomeSchema::config.minMutationRate,
-			GenomeSchema::config.maxMutationRate );
-
-	if( GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BYTE )
+	if( GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BIT )
 	{
-		SCALAR( MutationStdev,
-				GenomeSchema::config.minMutationStdev,
-				GenomeSchema::config.maxMutationStdev );
+		SCALAR( MutationRate,
+				GenomeSchema::config.minMutationRate,
+				GenomeSchema::config.maxMutationRate );
 	}
 
 	SCALAR( CrossoverPointCount,
@@ -217,10 +209,9 @@ void GenomeSchema::seed( Genome *g )
 		}
 	}
 
-	SEED( MutationRate, GenomeSchema::config.seedMutationRate );
-	if( GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BYTE )
+	if( GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BIT )
 	{
-		SEED( MutationStdev, GenomeSchema::config.seedMutationStdev );
+		SEED( MutationRate, GenomeSchema::config.seedMutationRate );
 	}
 
 	if( Metabolism::selectionMode == Metabolism::Gene

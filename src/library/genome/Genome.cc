@@ -153,18 +153,9 @@ void Genome::randomizeBits()
 	randomizeBits( GeneType::to_ImmutableInterpolated(gene("BitProbability"))->interpolate(randpw()) );
 }
 
-void Genome::randomizeBytes( float mean, float stdev )
-{
-	for (long byte = 0; byte < nbytes; byte++)
-	{
-		int val = round( nrand( mean, stdev ) );
-		mutable_data[byte] = clamp( val, 0, 255 );
-	}
-}
-
 void Genome::randomizeBytes()
 {
-	randomizeBytes( GenomeSchema::config.byteMean, GenomeSchema::config.byteStdev );
+	set_raw_random( 0, nbytes, 0, 255 );
 }
 
 void Genome::randomize()
@@ -191,25 +182,17 @@ void Genome::mutateBits()
     }
 }
 
-void Genome::mutateOneByte( long byte, float stdev )
+void Genome::mutateOneByte( long byte )
 {
-    int val = round( nrand( mutable_data[byte], stdev ) );
+    int val = round( nrand( mutable_data[byte], GenomeSchema::config.mutationStdev ) );
     mutable_data[byte] = clamp( val, 0, 255 );
 }
 
 void Genome::mutateBytes()
 {
-    if (!GenomeSchema::config.enableEvolution)
-        return;
-
-    float rate = get( "MutationRate" );
-    float stdev = get( "MutationStdev" );
     for (long byte = 0; byte < nbytes; byte++)
     {
-        if (randpw() < rate)
-        {
-            mutateOneByte( byte, stdev );
-        }
+        mutateOneByte( byte );
     }
 }
 
@@ -244,7 +227,7 @@ void Genome::crossover( Genome *g1, Genome *g2, bool mutate )
 		Genome *gTemplate = (randpw() < 0.5) ? g1 : g2;
 
 		copyFrom( gTemplate );
-		if( mutate )
+		if( mutate && GenomeSchema::config.enableEvolution )
 			this->mutate();
 		return;
 	}
@@ -290,13 +273,11 @@ void Genome::crossover( Genome *g1, Genome *g2, bool mutate )
 #endif
     
 	float mrate = 0.0;
-	float stdev = 0.0;
     if (mutate)
     {
         Genome *gTemplate = (randpw() < 0.5) ? g1 : g2;
-        mrate = gTemplate->get( "MutationRate" );
-        if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BYTE)
-            stdev = gTemplate->get( "MutationStdev" );
+        if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BIT)
+            mrate = gTemplate->get( "MutationRate" );
     }
     
     long begbyte = 0;
@@ -349,8 +330,7 @@ void Genome::crossover( Genome *g1, Genome *g2, bool mutate )
                 }
                 else if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BYTE)
                 {
-                    if (randpw() < mrate)
-                        mutateOneByte( j, stdev );
+                    mutateOneByte( j );
                 }
                 else
                 {

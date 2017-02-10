@@ -38,7 +38,6 @@ namespace genome
 
 			SeedType seedType;
 			float seedMutationRate;
-			float seedMutationStdev;
 			float seedFightBias;
 			float seedFightExcitation;
 			float seedGiveBias;
@@ -49,16 +48,13 @@ namespace genome
 
 			float minMutationRate;
 			float maxMutationRate;
-			float minMutationStdev;
-			float maxMutationStdev;
+			float mutationStdev;
 			long minNumCpts;
 			long maxNumCpts;
 			float miscBias;
 			float miscInvisSlope;
 			float minBitProb;
 			float maxBitProb;
-			float byteMean;
-			float byteStdev;
 			bool grayCoding;
 		} config;
 

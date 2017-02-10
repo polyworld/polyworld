@@ -53,12 +53,11 @@ namespace genome
 
 		void randomizeBits( float bitonprob );
 		void randomizeBits();
-		void randomizeBytes( float mean, float stdev );
 		void randomizeBytes();
 		void randomize();
 
 		void mutateBits();
-		void mutateOneByte( long byte, float stdev );
+		void mutateOneByte( long byte );
 		void mutateBytes();
 		void mutate();
 		virtual void crossover( Genome *g1,
