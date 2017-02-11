@@ -213,6 +213,7 @@ class Logs
 		virtual void processEvent( const sim::BrainUpdatedEvent &e );
 		virtual void processEvent( const sim::BrainAnalysisBeginEvent &e );
 		virtual void processEvent( const sim::EpochEndEvent &e );
+		virtual void processEvent( const sim::SimEndEvent &e );
 
 	private:
 		void recordEpochFittest( long step, sim::FitnessScope scope, const char *scopeName );

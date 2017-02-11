@@ -810,7 +810,8 @@ void Logs::BrainFunctionLog::init( TSimulation *sim, Document *doc )
 						   sim::Event_AgentGrown
 						   | sim::Event_BrainUpdated
 						   | sim::Event_BrainAnalysisBegin
-						   | sim::Event_EpochEnd );
+						   | sim::Event_EpochEnd
+						   | sim::Event_SimEnd );
 		}
 		else
 		{
@@ -818,7 +819,8 @@ void Logs::BrainFunctionLog::init( TSimulation *sim, Document *doc )
 						   AgentStateScope,
 						   sim::Event_AgentGrown
 						   | sim::Event_BrainUpdated
-						   | sim::Event_BrainAnalysisBegin );
+						   | sim::Event_BrainAnalysisBegin
+						   | sim::Event_SimEnd );
 		}
 	}
 }
@@ -894,6 +896,17 @@ void Logs::BrainFunctionLog::processEvent( const EpochEndEvent &e )
 
 	if( _recordBestSoFar )
 		recordEpochFittest( e.epoch, FS_OVERALL, "bestSoFar" );
+}
+
+//---------------------------------------------------------------------------
+// Logs::BrainFunctionLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::BrainFunctionLog::processEvent( const SimEndEvent &e )
+{
+	agent *a;
+	objectxsortedlist::gXSortedObjects.reset();
+	while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**)&a ) )
+		delete getFile( a );
 }
 
 //---------------------------------------------------------------------------

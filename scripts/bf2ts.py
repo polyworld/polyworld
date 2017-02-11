@@ -1,5 +1,6 @@
 import argparse
 import os
+import re
 import pw_agent
 import sys
 
@@ -11,11 +12,14 @@ def parseArgs():
 args = parseArgs()
 sys.stdout.write("# BEGIN ARGUMENTS\n")
 sys.stdout.write("# END ARGUMENTS\n")
-path = os.path.join(args.run, "brain", "function")
-for fileName in os.listdir(path):
-    if fileName.startswith("incomplete"):
+funcPath = os.path.join(args.run, "brain", "function")
+anatPath = os.path.join(args.run, "brain", "anatomy")
+for funcFileName in os.listdir(funcPath):
+    match = re.search(r"^(?:incomplete_)?brainFunction_(\d+)(\.txt(?:\.gz)?)$", funcFileName)
+    if match is None:
         continue
-    agent = pw_agent.pw_agent(os.path.join(path, fileName))
+    anatFileName = "brainAnatomy_{0}_incept{1}".format(match.group(1), match.group(2))
+    agent = pw_agent.pw_agent(os.path.join(funcPath, funcFileName), os.path.join(anatPath, anatFileName))
     sys.stdout.write("# AGENT {0}\n".format(agent.func.agent_index))
     sys.stdout.write("# DIMENSIONS {0} {1} {2}\n".format(agent.func.num_neurons - 1, agent.func.num_inputneurons, len(agent.func.neurons["behavior"])))
     sys.stdout.write("# BEGIN SYNAPSES\n")

@@ -743,6 +743,7 @@ void TSimulation::End( const string &reason )
 		fout << reason << endl;
 		fout.close();
 	}
+	logs->postEvent( SimEndEvent() );
 
 	ended();
 }

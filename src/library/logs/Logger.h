@@ -60,6 +60,7 @@ class Logger
 	virtual void processEvent( const sim::BrainAnalysisEndEvent &e ) { assert(false); }
 	virtual void processEvent( const sim::StepEndEvent &e ) { assert(false); }
 	virtual void processEvent( const sim::EpochEndEvent &e ) { assert(false); }
+	virtual void processEvent( const sim::SimEndEvent &e ) { assert(false); }
 
  protected:
 	enum StateScope
