@@ -7,6 +7,7 @@ import sys
 def parseArgs():
     parser = argparse.ArgumentParser(description = "Converts brain function files to time series.")
     parser.add_argument("run", metavar = "RUN", help = "run directory")
+    parser.add_argument("--steps", metavar = "STEPS", type = int, help = "number of timesteps")
     return parser.parse_args()
 
 args = parseArgs()
@@ -31,12 +32,19 @@ for funcFileName in os.listdir(funcPath):
         sys.stdout.write("\n")
     sys.stdout.write("# END SYNAPSES\n")
     sys.stdout.write("# BEGIN ENSEMBLE\n")
-    sys.stdout.write("# BEGIN TIME SERIES\n")
-    for step in range(agent.func.timesteps_lived):
-        for neuron in range(agent.func.num_neurons - 1):
-            if neuron > 0:
-                sys.stdout.write(" ")
-            sys.stdout.write("{0}".format(agent.func.acts[neuron, step]))
-        sys.stdout.write("\n")
-    sys.stdout.write("# END TIME SERIES\n")
+    stepCount = 0
+    while True:
+        sys.stdout.write("# BEGIN TIME SERIES\n")
+        for step in range(agent.func.timesteps_lived):
+            for neuron in range(agent.func.num_neurons - 1):
+                if neuron > 0:
+                    sys.stdout.write(" ")
+                sys.stdout.write("{0}".format(agent.func.acts[neuron, step]))
+            sys.stdout.write("\n")
+            stepCount += 1
+            if args.steps is not None and stepCount == args.steps:
+                break
+        sys.stdout.write("# END TIME SERIES\n")
+        if args.steps is None or stepCount == args.steps:
+            break
     sys.stdout.write("# END ENSEMBLE\n")
