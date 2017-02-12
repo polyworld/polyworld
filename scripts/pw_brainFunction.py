@@ -37,7 +37,7 @@ class pw_brainFunction:
 		assert self.header[0] == 'brainFunction', "was not a brainFunction file"
 		assert len(self.header) >= 9, "header line has less than 9 parts"
 
-		if lines[-1].startswith('end fitness'):
+		if len(lines) > 0 and lines[-1].startswith('end fitness'):
 			self.agent_fitness = float(lines.pop().split('=')[-1].strip())
 		else:
 			self.agent_fitness = None

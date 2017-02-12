@@ -678,6 +678,8 @@ gsl_matrix * readin_brainfunction(const char* fname,
 	int numrows = FileContents.size() / numcols;
 	if( lifespan )
 		*lifespan = numrows;	// actual lifespan, not accounting for max_timestpes
+	if( numrows == 0 )
+		return NULL;
 
 	// bogus? if( numcols == *num_ineurons ) { *num_ineurons = 0; }	// make sure there was a num_ineurons
 

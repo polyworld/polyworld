@@ -36,6 +36,8 @@ for funcFileName in os.listdir(funcPath):
         continue
     anatFileName = "brainAnatomy_{0}_incept{1}".format(match.group(1), match.group(2))
     agent = pw_agent.pw_agent(os.path.join(funcPath, funcFileName), os.path.join(anatPath, anatFileName))
+    if agent.func.timesteps_lived == 0:
+        continue
     sys.stdout.write("# AGENT {0}\n".format(agent.func.agent_index))
     sys.stdout.write("# DIMENSIONS {0} {1} {2}\n".format(agent.func.num_neurons - 1, agent.func.num_inputneurons, len(agent.func.neurons["behavior"])))
     sys.stdout.write("# BEGIN SYNAPSES\n")
