@@ -35,7 +35,7 @@ const char *DEFAULT_PART_COMBOS[5] = {"A","P","I","B","HB"};
 
 #if DEBUG
 static void show_args(list<string> &files,
-		      int ignore_timesteps_after,
+		      int num_timesteps,
 		      const char **part_combos,
 		      int ncombos);
 #endif
@@ -55,8 +55,9 @@ void parse_eat_events( ifstream& energy_log, Events* events );
 //---------------------------------------------------------------------------
 void usage_brainfunction()
 {
-	cerr << "CalcComplexity brainfunction [--bare] (<func_file> | --list <func_file>... --) [N] [[APIBH]+[me]*\\d*]..." << endl;
-	cerr << "\t--bare :  If set will CalcComplexity will output bare numerical values, with no labels.\n\t\tUsed by CalcComplexity.py, but normally not used from the command line." << endl;
+	cerr << "CalcComplexity brainfunction [--bare] [--tile] (<func_file> | --list <func_file>... --) [N] [[APIBH]+[me]*\\d*]..." << endl;
+	cerr << "\t--bare :  If set, CalcComplexity will output bare numerical values, with no labels.\n\t\tUsed by CalcComplexity.py, but normally not used from the command line." << endl;
+	cerr << "\t--tile :  If set, CalcComplexity will tile shorter brainFunction files to produce N timesteps (if given)." << endl;
 	cerr << "\t<func_file> | --list <func_file>... -- :  The brainFunction file to compute complexity for.\n\t\tIf --list is used, provide a list of files followed by '--'.\n\t\tBoth complete and incomplete brainFunction files are supported." << endl;
 	cerr << "\tN :  Optional length of the agent's life (in timesteps) over which Complexity is to be computed.\n\t\tEx: a value of 100 will compute Complexity across the first 100 steps of the agent's life." << endl; 
 	cerr << "\t[[APIBH]+[me]*\\d*]... :  Optional space-separated list of complexity types to calculate.\n\t\tThis can be (uppercase only) 'A', 'P', 'I', 'B', 'H' or any meaningful combination thereof.\n\t\tIt specifies whether you want to compute the Complexity of All, Processing, Input, Behavior,\n\t\tor Health+Behavior neurons. By default it computes the Complexity for A, P, I, B, and HB.\n\t\tAny of the complexity types may have one or more lowercase letters appendeded to indicate \n\t\tthat neural activity should be filtered based on behavioral events prior to the\n\t\tcalculation of Complexity. Currently acceptable values are 'm'ate and 'e'at. Warning:\n\t\tFilter order uniquely identifies datalib entries, but doesn't alter what is calculated.\n\t\tAny of the complexity types may have one or more digits appended to specify the number of\n\t\tpoints to use in integrating the area between the (k/N)I(X) and <I(X_k)> curves. If not\n\t\tspecified, the default is effectively 1 (one), which yields the traditional 'simplified\n\t\tTSE complexity'. A value of 0 (zero) will use all points (all values of k) thus yielding\n\t\tfull TSE complexity (though <I(X_k)> will be approximated for large values of N_choose_k)." << endl;
@@ -76,7 +77,8 @@ int process_brainfunction(int argc, char *argv[])
 
 	// --- default values
 	bool bare = false;
-	int ignore_timesteps_after = 0;	// calculate complexity over the agent's entire lifetime.
+	bool tile = false;
+	int num_timesteps = 0;	// calculate complexity over the agent's entire lifetime.
 	char* filter_events = NULL;
 	int num_filter_events = 0;
 	// Note: size_filter_events allows room for 7 characters plus terminator (only 2 needed)
@@ -99,6 +101,13 @@ int process_brainfunction(int argc, char *argv[])
 	if(arg == "--bare")
 	{
 		bare = true;
+		consume_arg(argc, argv, argi);
+		arg = argv[argi];
+	}
+
+	if(arg == "--tile")
+	{
+		tile = true;
 		consume_arg(argc, argv, argi);
 		arg = argv[argi];
 	}
@@ -148,9 +157,9 @@ int process_brainfunction(int argc, char *argv[])
 
 	if( argc > 1 && isdigit(argv[argi][0]) )
 	{
-		ignore_timesteps_after = atoi( argv[argi] );
+		num_timesteps = atoi( argv[argi] );
 
-		if( ignore_timesteps_after < WARN_IF_COMPUTING_COMPLEXITY_OVER_LESSTHAN_N_TIMESTEPS )
+		if( num_timesteps < WARN_IF_COMPUTING_COMPLEXITY_OVER_LESSTHAN_N_TIMESTEPS )
 		{
 			cerr << "* Warning: Computing Complexity with less than ";
 			cerr << WARN_IF_COMPUTING_COMPLEXITY_OVER_LESSTHAN_N_TIMESTEPS << " time samples." << endl;
@@ -219,15 +228,15 @@ int process_brainfunction(int argc, char *argv[])
 		ncombos = argc - argi;
 		part_combos = (const char **)argv + 1; // skip program name in arg 0
 	
-		assert( ignore_timesteps_after >= 0 );
-		if( ignore_timesteps_after < WARN_IF_COMPUTING_COMPLEXITY_OVER_LESSTHAN_N_TIMESTEPS )
+		assert( num_timesteps >= 0 );
+		if( num_timesteps < WARN_IF_COMPUTING_COMPLEXITY_OVER_LESSTHAN_N_TIMESTEPS )
 		{
 			cerr << "* Warning: Computing Complexity with less than ";
 			cerr << WARN_IF_COMPUTING_COMPLEXITY_OVER_LESSTHAN_N_TIMESTEPS << " time samples." << endl;
 		}
 	}
 
-	DEBUG_STMT(show_args(files, ignore_timesteps_after, part_combos, ncombos));
+	DEBUG_STMT(show_args(files, num_timesteps, part_combos, ncombos));
 
 	// ---
 	// --- Perform Complexity Calculations
@@ -258,7 +267,8 @@ int process_brainfunction(int argc, char *argv[])
 		{
 			_parms->path = path;
 			_parms->parts = part_combos[icombo];
-			_parms->ignore_timesteps_after = ignore_timesteps_after;
+			_parms->tile = tile;
+			_parms->num_timesteps = num_timesteps;
 			_parms->events = events;
 		}
 	}
@@ -455,7 +465,7 @@ void parse_eat_events( ifstream& energy_log, Events* events )
 // show_args
 //---------------------------------------------------------------------------
 void show_args(list<string> &files,
-	       int ignore_timesteps_after,
+	       int num_timesteps,
 	       const char **part_combos,
 	       int ncombos)
 {
@@ -469,7 +479,7 @@ void show_args(list<string> &files,
 		cout << "  " << *it << endl;
 	}
 
-	cout << "ignore_timesteps_after: " << ignore_timesteps_after << endl;
+	cout << "num_timesteps: " << num_timesteps << endl;
 
 	cout << "part combos:" << endl;
 	for(int i = 0; i < ncombos; i++)

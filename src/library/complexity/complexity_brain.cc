@@ -41,9 +41,10 @@ using namespace std;
 	#define MaxNumTimeStepsToComputeComplexityOver 500		// set this to a positive value to only compute Complexity over the final N timestesps of an agent's life.
 #endif
 /*
-   If both CalcComplexity's ignore_timesteps_after AND MaxNumTimeStepsToComputeComplexityOver are defined, it will:
-	First, reduce the matrix to only the first ignore_timesteps_after timesteps.
+   If both CalcComplexity's num_timesteps AND MaxNumTimeStepsToComputeComplexityOver are defined, it will:
+	First, reduce the matrix to only the first num_timesteps timesteps.
 	Second, read only the first MaxNumTimeStepsToComputeComplexityOver timesteps
+	Note that MaxNumTimeStepsToComputerComplexityOver is ignored when tile is set.
 */
 
 #define DebugFiltering 0
@@ -85,7 +86,8 @@ CalcComplexity_brainfunction_result *
 		double complexity = CalcComplexity_brainfunction( parm->path,
 								 parm->parts,
 								 parm->events,
-								 parm->ignore_timesteps_after,
+								 parm->tile,
+								 parm->num_timesteps,
 								 result->agent_number + iparm,
 								 result->lifespan + iparm,
 								 result->num_neurons + iparm );
@@ -108,7 +110,8 @@ CalcComplexity_brainfunction_result *
 double CalcComplexity_brainfunction(const char *fnameAct,
 				    const char *part,
 				    Events *events,
-				    int ignore_timesteps_after,
+				    bool tile,
+				    int num_timesteps,
 				    long *agent_number,
 				    long *lifespan,
 				    long *num_neurons)
@@ -121,8 +124,9 @@ double CalcComplexity_brainfunction(const char *fnameAct,
 	long agent_lifespan;
 	
 	gsl_matrix * activity = readin_brainfunction(fnameAct,
-												 ignore_timesteps_after,
-												 MaxNumTimeStepsToComputeComplexityOver,
+												 tile,
+												 num_timesteps,
+												 tile ? 0 : MaxNumTimeStepsToComputeComplexityOver,
 												 &agent_num,
 												 &agent_birth,
 												 &agent_lifespan,
@@ -563,7 +567,8 @@ gsl_matrix * readin_brainanatomy( const char* fname )
 // readin_brainfunction
 //---------------------------------------------------------------------------
 gsl_matrix * readin_brainfunction(const char* fname,
-								  int ignore_timesteps_after,
+								  bool tile,
+								  int num_timesteps,
 								  int max_timesteps,
 								  long *agent_number,
 								  long *agent_birth,
@@ -579,7 +584,8 @@ gsl_matrix * readin_brainfunction(const char* fname,
 // 	printf( "\n*************readin_brainfunction****************\n" );
 	
 // 	printf( "\nmax_timesteps = %d\n", max_timesteps );
-	assert( ignore_timesteps_after >= 0 );		// just to be safe.
+	assert( !tile || max_timesteps == 0 );
+	assert( num_timesteps >= 0 );		// just to be safe.
 
 	AbstractFile *FunctionFile;
 	if( (FunctionFile = AbstractFile::open(fname, "r")) == NULL )
@@ -680,10 +686,17 @@ gsl_matrix * readin_brainfunction(const char* fname,
 		cerr << "Warning: #lines (" << FileContents.size() << ") in brainFunction file '" << fname << "' is not an even multiple of #neurons (" << numcols << ").  brainFunction file may be corrupt." << endl;
 	}
 
-	if( ignore_timesteps_after > 0 ) 	// if we are only looking at the first N timesteps of an agent's life...
+	if( num_timesteps > 0 )
 	{
-		numrows = min( numrows, ignore_timesteps_after ); //
-		ignore_timesteps_after = numrows; //If ignore_timesteps is too big, make it small.
+		if( tile )
+		{
+			numrows = num_timesteps;
+		}
+		else	// if we are only looking at the first N timesteps of an agent's life...
+		{
+			numrows = min( numrows, num_timesteps ); //
+			num_timesteps = numrows; //If num_timesteps is too big, make it small.
+		}
 	}
 	
 	if( max_timesteps > 0 )	// if we are only looking at last max_timesteps of an agent's life
@@ -712,8 +725,21 @@ gsl_matrix * readin_brainfunction(const char* fname,
 	vector<string>::iterator FileContents_end;
 	
 	FileContents_begin = FileContents.begin();
-	if( ignore_timesteps_after > 0 )
-		FileContents_end = FileContents_begin  +  ignore_timesteps_after * numneur;
+	if( num_timesteps > 0 )
+	{
+		unsigned num_lines = num_timesteps * numneur;
+		if( tile && FileContents.size() < num_lines )
+		{
+			FileContents.reserve( num_lines );
+			FileContents_begin = FileContents.begin();
+			FileContents_it = FileContents.begin();
+			while( FileContents.size() < num_lines )
+			{
+				FileContents.push_back( *(FileContents_it++) );
+			}
+		}
+		FileContents_end = FileContents_begin  +  num_timesteps * numneur;
+	}
 	else
 		FileContents_end = FileContents.end();
 	if( max_timesteps > 0 && max_timesteps < (FileContents_end - FileContents_begin) )
