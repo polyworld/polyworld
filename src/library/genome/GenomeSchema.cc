@@ -126,12 +126,9 @@ void GenomeSchema::define()
 							GenomeSchema::config.minBitProb,
 							GenomeSchema::config.maxBitProb );
 
-	if( GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BIT )
-	{
-		SCALAR( MutationRate,
-				GenomeSchema::config.minMutationRate,
-				GenomeSchema::config.maxMutationRate );
-	}
+	SCALAR( MutationRate,
+			GenomeSchema::config.minMutationRate,
+			GenomeSchema::config.maxMutationRate );
 
 	SCALAR( CrossoverPointCount,
 		   GenomeSchema::config.minNumCpts,
@@ -209,10 +206,7 @@ void GenomeSchema::seed( Genome *g )
 		}
 	}
 
-	if( GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BIT )
-	{
-		SEED( MutationRate, GenomeSchema::config.seedMutationRate );
-	}
+	SEED( MutationRate, GenomeSchema::config.seedMutationRate );
 
 	if( Metabolism::selectionMode == Metabolism::Gene
 		&& Metabolism::getNumberOfDefinitions() > 1 )

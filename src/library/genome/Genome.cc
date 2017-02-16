@@ -190,14 +190,18 @@ void Genome::mutateOneByte( long byte )
 
 void Genome::mutateBytes()
 {
+    float rate = get( "MutationRate" );
     for (long byte = 0; byte < nbytes; byte++)
     {
-        mutateOneByte( byte );
+        if (randpw() < rate)
+            mutateOneByte( byte );
     }
 }
 
 void Genome::mutate()
 {
+	if (!GenomeSchema::config.enableEvolution)
+		return;
 	if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BIT)
 		mutateBits();
 	else if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BYTE)
@@ -227,7 +231,7 @@ void Genome::crossover( Genome *g1, Genome *g2, bool mutate )
 		Genome *gTemplate = (randpw() < 0.5) ? g1 : g2;
 
 		copyFrom( gTemplate );
-		if( mutate && GenomeSchema::config.enableEvolution )
+		if( mutate )
 			this->mutate();
 		return;
 	}
@@ -276,8 +280,7 @@ void Genome::crossover( Genome *g1, Genome *g2, bool mutate )
     if (mutate)
     {
         Genome *gTemplate = (randpw() < 0.5) ? g1 : g2;
-        if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BIT)
-            mrate = gTemplate->get( "MutationRate" );
+        mrate = gTemplate->get( "MutationRate" );
     }
     
     long begbyte = 0;
@@ -330,7 +333,8 @@ void Genome::crossover( Genome *g1, Genome *g2, bool mutate )
                 }
                 else if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BYTE)
                 {
-                    mutateOneByte( j );
+                    if (randpw() < mrate)
+                        mutateOneByte( j );
                 }
                 else
                 {
