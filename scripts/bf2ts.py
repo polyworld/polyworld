@@ -35,7 +35,10 @@ for funcFileName in os.listdir(funcPath):
     if match is None:
         continue
     anatFileName = "brainAnatomy_{0}_incept{1}".format(match.group(1), match.group(2))
-    agent = pw_agent.pw_agent(os.path.join(funcPath, funcFileName), os.path.join(anatPath, anatFileName))
+    try:
+        agent = pw_agent.pw_agent(os.path.join(funcPath, funcFileName), os.path.join(anatPath, anatFileName))
+    except:
+        continue
     if agent.func.timesteps_lived == 0:
         continue
     sys.stdout.write("# AGENT {0}\n".format(agent.func.agent_index))
