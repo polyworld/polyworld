@@ -118,6 +118,8 @@ void agent::processWorldfile( proplib::Document &doc )
 			agent::config.bodyGreenChannel = agent::BGC_LIGHT;
 		else if( (string)prop == "E" )
 			agent::config.bodyGreenChannel = agent::BGC_EAT;
+		else if( (string)prop == "F" )
+			agent::config.bodyGreenChannel = agent::BGC_FOOD;
 		else
 		{
 			agent::config.bodyGreenChannel = agent::BGC_CONST;
@@ -571,6 +573,7 @@ void agent::grow( long mateWait, bool seeding )
 		break;
 	case BGC_LIGHT:
 	case BGC_EAT:
+	case BGC_FOOD:
 		// no-op
 		break;
 	default:
@@ -1384,6 +1387,10 @@ void agent::UpdateColor()
 	else if( agent::config.bodyGreenChannel == BGC_EAT )
 	{
 		SetGreen(outputNerves.eat->get());
+	}
+	else if( agent::config.bodyGreenChannel == BGC_FOOD )
+	{
+		SetGreen(NormalizedFoodEnergy());
 	}
 
 	if( agent::config.bodyBlueChannel == BBC_MATE )

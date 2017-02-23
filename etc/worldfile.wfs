@@ -1123,7 +1123,8 @@ BodyGreenChannel {
   enum    Values {
     I,             # ID gene
     L,             # Light neuron
-    E              # Eat neuron
+    E,             # Eat neuron
+    F              # Food energy
   }
   scalar {
     type    Float

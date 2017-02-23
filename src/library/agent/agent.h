@@ -52,7 +52,7 @@ class agent : public gpolyobj
 
 public:	
 	enum BodyRedChannel { BRC_FIGHT, BRC_CONST, BRC_GIVE };
-	enum BodyGreenChannel { BGC_ID, BGC_LIGHT, BGC_EAT, BGC_CONST };
+	enum BodyGreenChannel { BGC_ID, BGC_LIGHT, BGC_EAT, BGC_FOOD, BGC_CONST };
 	enum BodyBlueChannel { BBC_MATE, BBC_CONST, BBC_ENERGY };
 	enum NoseColor { NC_LIGHT, NC_BODY, NC_CONST };
 	enum YawEncoding { YE_SQUASH, YE_OPPOSE };
@@ -207,6 +207,7 @@ public:
 	const Energy &GetMaxEnergy();
 	const Energy &GetStarvationFoodEnergy();
 	float NormalizedEnergy();
+	float NormalizedFoodEnergy();
 	float Eat();
 	float Fight();
 	float Give();
@@ -387,6 +388,7 @@ inline void agent::SetFoodEnergy( const Energy &e ) { fFoodEnergy = e; }
 inline const Energy &agent::GetMaxEnergy() { return fMaxEnergy; }
 inline const Energy &agent::GetStarvationFoodEnergy() { return fStarvationFoodEnergy; }
 inline float agent::NormalizedEnergy() { return fEnergy.sum() / fMaxEnergy.sum(); }
+inline float agent::NormalizedFoodEnergy() { return fFoodEnergy.sum() / fMaxEnergy.sum(); }
 inline float agent::Eat() { return outputNerves.eat->get(); }
 inline float agent::Fight() { return outputNerves.fight->get(); }
 inline float agent::Give() { return outputNerves.give->get(); }
