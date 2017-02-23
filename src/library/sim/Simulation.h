@@ -386,6 +386,7 @@ private:
 	
 	float fFoodRemoveEnergy;
 	bool fFoodRemoveFirstEat;
+	bool fRandomInitFoodAge;
 	float fFoodEnergyIn;
 	float fFoodEnergyOut;
 	float fTotalFoodEnergyIn;

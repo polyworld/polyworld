@@ -207,6 +207,11 @@ FoodMaxLifeSpan {
   min 0
 }
 
+RandomInitFoodAge {
+  type    Bool
+  default False
+}
+
 MinFoodEnergy {
   type    Float
   default 200.0

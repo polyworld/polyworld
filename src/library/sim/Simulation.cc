@@ -3683,7 +3683,10 @@ void TSimulation::updateFittest( agent *c )
 //-------------------------------------------------------------------------------------------
 void TSimulation::AddFood( long domainNumber, long patchNumber )
 {
-	food *f = fDomains[domainNumber].fFoodPatches[patchNumber].addFood( fStep );
+	long step = fStep;
+	if( fStep == 0 && fRandomInitFoodAge )
+		step = (int)rrand( -food::gMaxLifeSpan, 0 );
+	food *f = fDomains[domainNumber].fFoodPatches[patchNumber].addFood( step );
 	if( f != NULL )
 	{
 		fDomains[domainNumber].foodCount++;
@@ -3866,6 +3869,7 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 	fFoodRemoveEnergy = doc.get( "FoodRemoveEnergy" );
 	fFoodRemoveFirstEat = doc.get( "FoodRemoveFirstEat" );
 	food::gMaxLifeSpan = doc.get( "FoodMaxLifeSpan" );
+	fRandomInitFoodAge = doc.get( "RandomInitFoodAge" );
     fPositionSeed = doc.get( "PositionSeed" );
     fGenomeSeed = doc.get( "InitSeed" );
 	fSimulationSeed = doc.get( "SimulationSeed" );
