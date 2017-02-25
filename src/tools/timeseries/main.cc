@@ -1,7 +1,5 @@
 #include <iostream>
 #include <limits>
-#include <map>
-#include <set>
 #include <stdlib.h>
 #include <string>
 #include <string.h>
@@ -30,7 +28,6 @@ void printUsage(int, char**);
 bool tryParseArgs(int, char**, Args&);
 void printArgs(const Args&);
 void printHeader(int, RqNervousSystem*);
-void printSynapses(RqNervousSystem*);
 void printTimeSeries(RqNervousSystem*, int, int);
 void writeBrainFunction(AbstractFile*, int, RqNervousSystem*, int, int, int);
 
@@ -65,7 +62,6 @@ int main(int argc, char** argv) {
             delete file;
         } else {
             printHeader(agent, cns);
-            printSynapses(cns);
             std::cout << "# BEGIN ENSEMBLE" << std::endl;
             for (int index = 0; index < args.repeats; index++) {
                 printTimeSeries(cns, args.transient, args.steps);
@@ -180,32 +176,6 @@ void printHeader(int agent, RqNervousSystem* cns) {
     std::cout << " " << dims.numInputNeurons;
     std::cout << " " << dims.numOutputNeurons;
     std::cout << std::endl;
-}
-
-void printSynapses(RqNervousSystem* cns) {
-    std::map<short, std::set<short> > synapses;
-    NeuronModel::Dimensions dims = cns->getBrain()->getDimensions();
-    NeuronModel* model = cns->getBrain()->getNeuronModel();
-    for (int synapse = 0; synapse < dims.numSynapses; synapse++) {
-        short neuron1;
-        short neuron2;
-        float weight;
-        float learningRate;
-        model->get_synapse(synapse, neuron1, neuron2, weight, learningRate);
-        synapses[neuron1].insert(neuron2);
-    }
-    std::cout << "# BEGIN SYNAPSES" << std::endl;
-    for (int neuron = 0; neuron < dims.numNeurons; neuron++) {
-        if (synapses[neuron].size() == 0) {
-            continue;
-        }
-        std::cout << neuron;
-        citfor(std::set<short>, synapses[neuron], it) {
-            std::cout << " " << *it;
-        }
-        std::cout << std::endl;
-    }
-    std::cout << "# END SYNAPSES" << std::endl;
 }
 
 void printTimeSeries(RqNervousSystem* cns, int transient, int steps) {

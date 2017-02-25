@@ -43,14 +43,6 @@ for funcFileName in os.listdir(funcPath):
         continue
     sys.stdout.write("# AGENT {0}\n".format(agent.func.agent_index))
     sys.stdout.write("# DIMENSIONS {0} {1} {2}\n".format(agent.func.num_neurons - 1, agent.func.num_inputneurons, len(agent.func.neurons["behavior"])))
-    sys.stdout.write("# BEGIN SYNAPSES\n")
-    for neuron1 in range(agent.anat.num_neurons - 1):
-        sys.stdout.write("{0}".format(neuron1))
-        for neuron2 in range(agent.anat.num_neurons - 1):
-            if agent.anat.cxnmatrix[neuron2, neuron1] != 0:
-                sys.stdout.write(" {0}".format(neuron2))
-        sys.stdout.write("\n")
-    sys.stdout.write("# END SYNAPSES\n")
     sys.stdout.write("# BEGIN ENSEMBLE\n")
     if args.max_steps is None:
         if args.steps is None:
