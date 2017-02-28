@@ -552,7 +552,7 @@ def parse_digest( path ):
 	#
 	# Parse the digest
 	#
-	f.seek( start, os.SEEK_SET )
+	f.seek( start + 1, os.SEEK_SET )
 	
 	line = f.readline()
 	assert( line.startswith('#TABLES') )
