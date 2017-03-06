@@ -2240,9 +2240,10 @@ void TSimulation::Mate( agent *c,
 				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 				// !!! POST PARALLEL
 				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                fScheduler.postParallel( [=]() {
+                fScheduler.postParallel( [=]() mutable {
                         e->grow( fMateWait );
 
+                        eenergy.constrain(0, e->GetMaxEnergy());
                         e->SetEnergy(eenergy);
                         e->SetFoodEnergy(eenergy);
                     });                            
