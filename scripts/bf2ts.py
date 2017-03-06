@@ -26,7 +26,7 @@ sys.stdout.write("# BEGIN ARGUMENTS\n")
 if args.steps is not None:
     sys.stdout.write("steps = {0}\n".format(args.steps))
 elif args.max_steps is not None:
-    sys.stdout.write("max-steps = {0}\n".format(args.max_steps))
+    sys.stdout.write("max_steps = {0}\n".format(args.max_steps))
 sys.stdout.write("# END ARGUMENTS\n")
 funcPath = os.path.join(args.run, "brain", "function")
 anatPath = os.path.join(args.run, "brain", "anatomy")
