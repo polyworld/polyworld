@@ -205,7 +205,7 @@ void Logs::AgentEnergyInLog::processEvent( const sim::EnergyEvent &e )
 		return;
 
 	getWriter( e.a )->addRow( getStep(),
-							  e.energy.sum() );
+							  e.energy.sum() / e.a->GetMaxEnergy().sum() );
 }
 
 //---------------------------------------------------------------------------
@@ -265,7 +265,7 @@ void Logs::AgentEnergyOutLog::processEvent( const sim::AgentBirthEvent &e )
 void Logs::AgentEnergyOutLog::processEvent( const sim::AgentBodyUpdatedEvent &e )
 {
 	getWriter( e.a )->addRow( getStep(),
-							  e.energyUsed );
+							  e.energyUsed / e.a->GetMaxEnergy().mean() );
 }
 
 //---------------------------------------------------------------------------
