@@ -46,14 +46,14 @@ int main(int argc, char** argv) {
         genome::Genome* genome = analysis::getGenome(args.run, agent);
         RqNervousSystem* cns = analysis::getNervousSystem(genome, synapses);
         if (args.mode == "all") {
-            double lyapunov = analysis::getLyapunov(genome, cns, args.perturbation, args.repeats, args.random, args.quiescent, args.steps);
-            std::cout << agent << " " << lyapunov << std::endl;
+            double expansion = analysis::getExpansion(genome, cns, args.perturbation, args.repeats, args.random, args.quiescent, args.steps);
+            std::cout << agent << " " << expansion << std::endl;
         } else if (args.mode == "single") {
             for (float wmax = args.wmaxMin; wmax <= args.wmaxMax; wmax += args.wmaxInc) {
                 synapses->seek(0, SEEK_SET);
                 analysis::setMaxWeight(cns, synapses, wmax);
-                double lyapunov = analysis::getLyapunov(genome, cns, args.perturbation, args.repeats, args.random, args.quiescent, args.steps);
-                std::cout << wmax << " " << lyapunov << std::endl;
+                double expansion = analysis::getExpansion(genome, cns, args.perturbation, args.repeats, args.random, args.quiescent, args.steps);
+                std::cout << wmax << " " << expansion << std::endl;
             }
         } else if (args.mode == "onset") {
             float wmaxInc = args.wmaxInc;
@@ -62,8 +62,8 @@ int main(int argc, char** argv) {
             for (float wmax = args.wmaxMin; wmax <= args.wmaxMax && !done; wmax += wmaxInc) {
                 synapses->seek(0, SEEK_SET);
                 analysis::setMaxWeight(cns, synapses, wmax);
-                double lyapunov = analysis::getLyapunov(genome, cns, args.perturbation, args.repeats, args.random, args.quiescent, args.steps);
-                if (lyapunov >= args.threshold) {
+                double expansion = analysis::getExpansion(genome, cns, args.perturbation, args.repeats, args.random, args.quiescent, args.steps);
+                if (expansion >= args.threshold) {
                     if (stage == 2) {
                         wmax -= wmaxInc;
                         wmaxInc = args.wmaxInc;
@@ -96,7 +96,7 @@ void printUsage(int argc, char** argv) {
     std::cerr << "  " << argv[0] << " single RUN STAGE WMAX_MIN WMAX_MAX WMAX_INC PERTURBATION REPEATS RANDOM QUIESCENT STEPS AGENT" << std::endl;
     std::cerr << "  " << argv[0] << " onset RUN STAGE PERTURBATION REPEATS RANDOM QUIESCENT STEPS THRESHOLD [AGENT]" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "Calculates maximal Lyapunov exponents." << std::endl;
+    std::cerr << "Calculates phase space expansion." << std::endl;
     std::cerr << std::endl;
     std::cerr << "  RUN           Run directory" << std::endl;
     std::cerr << "  STAGE         Life stage (incept, birth, or death)" << std::endl;
@@ -108,7 +108,7 @@ void printUsage(int argc, char** argv) {
     std::cerr << "  RANDOM        Number of random timesteps" << std::endl;
     std::cerr << "  QUIESCENT     Number of quiescent timesteps" << std::endl;
     std::cerr << "  STEPS         Number of calculation timesteps" << std::endl;
-    std::cerr << "  THRESHOLD     Threshold maximal Lyapunov exponent" << std::endl;
+    std::cerr << "  THRESHOLD     Threshold phase space expansion" << std::endl;
     std::cerr << "  AGENT         [Starting] agent index" << std::endl;
 }
 

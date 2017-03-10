@@ -32,5 +32,5 @@ namespace analysis {
     RqNervousSystem* getNervousSystem(const std::string&, int, const std::string&);
     RqNervousSystem* copyNervousSystem(genome::Genome*, RqNervousSystem*);
     void setMaxWeight(RqNervousSystem*, AbstractFile*, float);
-    double getLyapunov(genome::Genome*, RqNervousSystem*, double, int, int, int, int);
+    double getExpansion(genome::Genome*, RqNervousSystem*, double, int, int, int, int);
 }
