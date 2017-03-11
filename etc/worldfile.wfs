@@ -2624,6 +2624,11 @@ RecordPopulation {
   default RecordAll
 }
 
+RecordFoodDistance {
+  type    Bool
+  default RecordAll
+}
+
 RecordFoodEnergy {
   type    Bool
   default RecordAll

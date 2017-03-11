@@ -1260,6 +1260,74 @@ void Logs::EnergyLog::processEvent( const sim::EnergyEvent &e )
 
 
 //===========================================================================
+// FoodDistanceLog
+//===========================================================================
+
+//---------------------------------------------------------------------------
+// Logs::FoodDistanceLog::init
+//---------------------------------------------------------------------------
+void Logs::FoodDistanceLog::init( TSimulation *sim, Document *doc )
+{
+	if( doc->get("RecordFoodDistance") )
+	{
+		initRecording( sim,
+					   SimulationStateScope,
+					   sim::Event_StepEnd );
+
+		createWriter( "run/food/distance.txt" );
+
+		const char *colnames[] =
+			{
+				"Timestep",
+				"Distance",
+				NULL
+			};
+		const datalib::Type coltypes[] =
+			{
+				datalib::INT,
+				datalib::FLOAT
+			};
+
+		getWriter()->beginTable( "FoodDistance",
+								  colnames,
+								  coltypes );
+	}
+}
+
+//---------------------------------------------------------------------------
+// Logs::FoodDistanceLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::FoodDistanceLog::processEvent( const sim::StepEndEvent &e )
+{
+	float cx, cz, energysum;
+	food* f;
+	objectxsortedlist::gXSortedObjects.reset();
+	while( objectxsortedlist::gXSortedObjects.nextObj( FOODTYPE, (gobject**)&f ) )
+	{
+		float energy = f->getEnergy().sum();
+		cx += energy * f->x();
+		cz += energy * f->z();
+		energysum += energy;
+	}
+	cx /= energysum;
+	cz /= energysum;
+	float dsum;
+	agent* a;
+	objectxsortedlist::gXSortedObjects.reset();
+	while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**)&a ) )
+	{
+		float dx = a->x() - cx;
+		float dz = a->z() - cz;
+		float d = sqrt( dx * dx + dz * dz );
+		dsum += d;
+	}
+	float davg = dsum / objectxsortedlist::gXSortedObjects.getCount( AGENTTYPE );
+	getWriter()->addRow( getStep(),
+						 davg );
+}
+
+
+//===========================================================================
 // FoodEnergyLog
 //===========================================================================
 
@@ -1274,7 +1342,7 @@ void Logs::FoodEnergyLog::init( TSimulation *sim, Document *doc )
 					   SimulationStateScope,
 					   sim::Event_StepEnd );
 
-		createWriter( "run/energy/food.txt" );
+		createWriter( "run/food/energy.txt" );
 
 		const char *colnames[] =
 			{

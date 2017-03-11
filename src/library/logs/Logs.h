@@ -272,6 +272,16 @@ class Logs
 	} _energy;
 
 	//===========================================================================
+	// FoodDistanceLog
+	//===========================================================================
+	class FoodDistanceLog : public DataLibLogger
+	{
+	protected:
+		virtual void init( class TSimulation *sim, proplib::Document *doc );
+		virtual void processEvent( const sim::StepEndEvent &e );
+	} _foodDistance;
+
+	//===========================================================================
 	// FoodEnergyLog
 	//===========================================================================
 	class FoodEnergyLog : public DataLibLogger
