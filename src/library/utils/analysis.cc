@@ -1,5 +1,6 @@
 #include "analysis.h"
 
+#include <fstream>
 #include <math.h>
 #include <stdlib.h>
 #include <string>
@@ -92,14 +93,35 @@ void analysis::initialize(const std::string& run) {
     srand48(time(NULL));
 }
 
+int analysis::getMaxTimestep(const std::string& run) {
+    int maxTimestep;
+    std::ifstream in(run + "/endStep.txt");
+    in >> maxTimestep;
+    return maxTimestep;
+}
+
+int analysis::getInitAgentCount(const std::string& run) {
+    int initAgentCount;
+    std::ifstream in(run + "/normalized.wf");
+    std::string parameter;
+    while (in >> parameter) {
+        if (parameter == "InitAgents") {
+            in >> initAgentCount;
+            return initAgentCount;
+        }
+    }
+    return 0;
+}
+
 int analysis::getMaxAgent(const std::string& run) {
     DataLibReader reader((run + "/lifespans.txt").c_str());
     reader.seekTable("LifeSpans");
     return reader.nrows();
 }
 
-genome::Genome* analysis::getGenome(const std::string& run, int agent) {
-    std::string path = run + "/genome/agents/genome_" + std::to_string(agent) + ".txt";
+genome::Genome* analysis::getGenome(const std::string& run, int agent, bool passive) {
+    std::string pathBase = passive ? run + "/passive" : run;
+    std::string path = pathBase + "/genome/agents/genome_" + std::to_string(agent) + ".txt";
     AbstractFile* file = AbstractFile::open(globals::recordFileType, path.c_str(), "r");
     genome::Genome* genome = genome::GenomeUtil::createGenome();
     genome->load(file);
@@ -107,8 +129,9 @@ genome::Genome* analysis::getGenome(const std::string& run, int agent) {
     return genome;
 }
 
-AbstractFile* analysis::getSynapses(const std::string& run, int agent, const std::string& stage) {
-    std::string path = run + "/brain/synapses/synapses_" + std::to_string(agent) + "_" + stage + ".txt";
+AbstractFile* analysis::getSynapses(const std::string& run, int agent, const std::string& stage, bool passive) {
+    std::string pathBase = passive ? run + "/passive" : run;
+    std::string path = pathBase + "/brain/synapses/synapses_" + std::to_string(agent) + "_" + stage + ".txt";
     if (AbstractFile::exists(path.c_str())) {
         return AbstractFile::open(globals::recordFileType, path.c_str(), "r");
     } else {
@@ -123,13 +146,13 @@ RqNervousSystem* analysis::getNervousSystem(genome::Genome* genome, AbstractFile
     return cns;
 }
 
-RqNervousSystem* analysis::getNervousSystem(const std::string& run, int agent, const std::string& stage) {
-    AbstractFile* synapses = getSynapses(run, agent, stage);
+RqNervousSystem* analysis::getNervousSystem(const std::string& run, int agent, const std::string& stage, bool passive) {
+    AbstractFile* synapses = getSynapses(run, agent, stage, passive);
     RqNervousSystem* cns;
     if (synapses == NULL) {
         cns = NULL;
     } else {
-        genome::Genome* genome = getGenome(run, agent);
+        genome::Genome* genome = getGenome(run, agent, passive);
         cns = getNervousSystem(genome, synapses);
         delete genome;
     }
