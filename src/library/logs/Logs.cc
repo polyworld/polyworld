@@ -1299,7 +1299,9 @@ void Logs::FoodDistanceLog::init( TSimulation *sim, Document *doc )
 //---------------------------------------------------------------------------
 void Logs::FoodDistanceLog::processEvent( const sim::StepEndEvent &e )
 {
-	float cx, cz, energysum;
+	float cx = 0.0f;
+	float cz = 0.0f;
+	float energysum = 0.0f;
 	food* f;
 	objectxsortedlist::gXSortedObjects.reset();
 	while( objectxsortedlist::gXSortedObjects.nextObj( FOODTYPE, (gobject**)&f ) )
@@ -1309,9 +1311,12 @@ void Logs::FoodDistanceLog::processEvent( const sim::StepEndEvent &e )
 		cz += energy * f->z();
 		energysum += energy;
 	}
-	cx /= energysum;
-	cz /= energysum;
-	float dsum;
+	if (energysum != 0.0f) {
+		cx /= energysum;
+		cz /= energysum;
+	}
+	float dsum = 0.0f;
+	int count = 0;
 	agent* a;
 	objectxsortedlist::gXSortedObjects.reset();
 	while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**)&a ) )
@@ -1320,8 +1325,9 @@ void Logs::FoodDistanceLog::processEvent( const sim::StepEndEvent &e )
 		float dz = a->z() - cz;
 		float d = sqrt( dx * dx + dz * dz );
 		dsum += d;
+		count += 1;
 	}
-	float davg = dsum / objectxsortedlist::gXSortedObjects.getCount( AGENTTYPE );
+	float davg = dsum / ( sqrt( 2.0 ) * globals::worldsize ) / count;
 	getWriter()->addRow( getStep(),
 						 davg );
 }
