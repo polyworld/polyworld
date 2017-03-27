@@ -1,8 +1,10 @@
 #include <assert.h>
 #include <iterator>
+#include <limits.h>
 #include <list>
 #include <map>
 #include <sstream>
+#include <stdlib.h>
 #include <string>
 #include <string.h>
 
@@ -15,9 +17,11 @@
 #include "utils/analysis.h"
 #include "utils/misc.h"
 
+#define COMMA ,
+
 struct Args {
     std::string run;
-    bool keep;
+    int batch;
 };
 
 struct Event {
@@ -38,10 +42,12 @@ int main(int argc, char** argv) {
         printUsage(argc, argv);
         return 1;
     }
+    makeDirs(args.run + "/passive");
+    ofstream out(args.run + "/passive/batches.txt");
     analysis::initialize(args.run);
     makeDirs(args.run + "/passive/genome/agents");
     makeDirs(args.run + "/passive/brain/synapses");
-    std::map<int, genome::Genome*> genomes;
+    std::map<int, genome::Genome*> originalGenomes;
     int initAgentCount = analysis::getInitAgentCount(args.run);
     for (int agent = 1; agent <= initAgentCount; agent++) {
         std::string path;
@@ -53,9 +59,11 @@ int main(int argc, char** argv) {
         }
         path = "/brain/synapses/synapses_" + std::to_string(agent) + "_birth.txt";
         AbstractFile::link((args.run + path).c_str(), (args.run + "/passive" + path).c_str());
-        genomes[agent] = analysis::getGenome(args.run, agent);
+        originalGenomes[agent] = analysis::getGenome(args.run, agent);
     }
+    std::map<int, genome::Genome*> batchGenomes(originalGenomes);
     std::map<int, std::list<Event> > events = getEvents(args.run);
+    int count = 0;
     int maxTimestep = analysis::getMaxTimestep(args.run);
     for (int timestep = 1; timestep <= maxTimestep; timestep++) {
         if (timestep % 100 == 0) {
@@ -66,10 +74,10 @@ int main(int argc, char** argv) {
             itfor(std::list<Event>, eventsIter->second, timestepEventsIter) {
                 Event event = *timestepEventsIter;
                 if (event.type == "BIRTH") {
-                    genome::Genome* parent1 = getParent(genomes);
+                    genome::Genome* parent1 = getParent(batchGenomes);
                     genome::Genome* parent2;
                     do {
-                        parent2 = getParent(genomes);
+                        parent2 = getParent(batchGenomes);
                     } while (parent2 == parent1);
                     genome::Genome* child = genome::GenomeUtil::createGenome();
                     child->crossover(parent1, parent2, true);
@@ -82,31 +90,41 @@ int main(int argc, char** argv) {
                     cns->prebirth();
                     logSynapses(args.run, event.agent, "birth", cns);
                     delete cns;
-                    if (args.keep) {
-                        genomes[event.agent] = child;
-                    } else {
-                        delete child;
-                        genomes[event.agent] = analysis::getGenome(args.run, event.agent);
+                    batchGenomes[event.agent] = child;
+                    originalGenomes[event.agent] = analysis::getGenome(args.run, event.agent);
+                    count++;
+                    if (count % args.batch == 0) {
+                        itfor(std::map<int COMMA genome::Genome*>, batchGenomes, batchGenomesIter) {
+                            if (batchGenomesIter->second != originalGenomes[batchGenomesIter->first]) {
+                                delete batchGenomesIter->second;
+                            }
+                        }
+                        out << eventsIter->first << " " << (event.agent - args.batch + 1) << " " << event.agent << std::endl;
+                        batchGenomes = originalGenomes;
                     }
                 } else if (event.type == "DEATH") {
-                    delete genomes[event.agent];
-                    genomes.erase(event.agent);
+                    if (batchGenomes[event.agent] != originalGenomes[event.agent]) {
+                        delete batchGenomes[event.agent];
+                    }
+                    delete originalGenomes[event.agent];
+                    batchGenomes.erase(event.agent);
+                    originalGenomes.erase(event.agent);
                 } else {
                     assert(false);
                 }
             }
         }
     }
+    out.close();
 }
 
 void printUsage(int argc, char** argv) {
-    std::cerr << "Usage: " << argv[0] << " [--keep] RUN" << std::endl;
+    std::cerr << "Usage: " << argv[0] << " RUN [BATCH]" << std::endl;
     std::cerr << std::endl;
     std::cerr << "Generates selection-agnostic agents paired to a given run." << std::endl;
     std::cerr << std::endl;
-    std::cerr << "  RUN     Run directory" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "  --keep  Keep passive agents in population" << std::endl;
+    std::cerr << "  RUN    Run directory" << std::endl;
+    std::cerr << "  BATCH  Number of agents per batch" << std::endl;
 }
 
 bool tryParseArgs(int argc, char** argv, Args& args) {
@@ -114,22 +132,24 @@ bool tryParseArgs(int argc, char** argv, Args& args) {
         return false;
     }
     std::string run;
-    bool keep = false;
+    int batch = INT_MAX;
     try {
         int argi = 1;
-        if (strcmp(argv[argi], "--keep") == 0) {
-            keep = true;
-            argi++;
-        }
         run = std::string(argv[argi++]);
         if (!exists(run + "/endStep.txt")) {
             return false;
+        }
+        if (argc > argi) {
+            batch = atoi(argv[argi++]);
+            if (batch < 1) {
+                return false;
+            }
         }
     } catch (...) {
         return false;
     }
     args.run = run;
-    args.keep = keep;
+    args.batch = batch;
     return true;
 }
 
