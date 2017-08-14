@@ -278,7 +278,9 @@ class Logs
 	{
 	protected:
 		virtual void init( class TSimulation *sim, proplib::Document *doc );
-		virtual void processEvent( const sim::StepEndEvent &e );
+		virtual void processEvent( const sim::AgentBirthEvent &e );
+		virtual void processEvent( const sim::AgentBodyUpdatedEvent &e );
+		virtual void processEvent( const sim::AgentDeathEvent &e );
 	} _foodDistance;
 
 	//===========================================================================

@@ -1271,65 +1271,65 @@ void Logs::FoodDistanceLog::init( TSimulation *sim, Document *doc )
 	if( doc->get("RecordFoodDistance") )
 	{
 		initRecording( sim,
-					   SimulationStateScope,
-					   sim::Event_StepEnd );
-
-		createWriter( "run/food/distance.txt" );
-
-		const char *colnames[] =
-			{
-				"Timestep",
-				"Distance",
-				NULL
-			};
-		const datalib::Type coltypes[] =
-			{
-				datalib::INT,
-				datalib::FLOAT
-			};
-
-		getWriter()->beginTable( "FoodDistance",
-								  colnames,
-								  coltypes );
+					   AgentStateScope,
+					   sim::Event_AgentBirth
+					   | sim::Event_BodyUpdated
+					   | sim::Event_AgentDeath );
 	}
 }
 
 //---------------------------------------------------------------------------
 // Logs::FoodDistanceLog::processEvent
 //---------------------------------------------------------------------------
-void Logs::FoodDistanceLog::processEvent( const sim::StepEndEvent &e )
+void Logs::FoodDistanceLog::processEvent( const sim::AgentBirthEvent &e )
 {
-	float cx = 0.0f;
-	float cz = 0.0f;
-	float energysum = 0.0f;
+	if( e.reason == LifeSpan::BR_VIRTUAL )
+		return;
+
+	char path[512];
+	sprintf( path,
+			 "run/food/distance/agent_%ld.txt",
+			 e.a->getTypeNumber() );
+
+	DataLibWriter *writer = createWriter( e.a, path, true, false );
+
+	static const char *colnames[] = {"Timestep", "Distance", NULL};
+	static const datalib::Type coltypes[] = {datalib::INT, datalib::FLOAT};
+
+	writer->beginTable( "FoodDistance",
+						colnames,
+						coltypes );
+}
+
+//---------------------------------------------------------------------------
+// Logs::FoodDistanceLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::FoodDistanceLog::processEvent( const sim::AgentBodyUpdatedEvent &e )
+{
+	objectxsortedlist::gXSortedObjects.setMark( AGENTTYPE );
+	float dmin = -1.0f;
 	food* f;
 	objectxsortedlist::gXSortedObjects.reset();
 	while( objectxsortedlist::gXSortedObjects.nextObj( FOODTYPE, (gobject**)&f ) )
 	{
-		float energy = f->getEnergy().sum();
-		cx += energy * f->x();
-		cz += energy * f->z();
-		energysum += energy;
-	}
-	if (energysum != 0.0f) {
-		cx /= energysum;
-		cz /= energysum;
-	}
-	float dsum = 0.0f;
-	int count = 0;
-	agent* a;
-	objectxsortedlist::gXSortedObjects.reset();
-	while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**)&a ) )
-	{
-		float dx = a->x() - cx;
-		float dz = a->z() - cz;
+		float dx = e.a->x() - f->x();
+		float dz = e.a->z() - f->z();
 		float d = sqrt( dx * dx + dz * dz );
-		dsum += d;
-		count += 1;
+		if( dmin < 0.0f || d < dmin )
+			dmin = d;
 	}
-	float davg = dsum / ( sqrt( 2.0 ) * globals::worldsize ) / count;
-	getWriter()->addRow( getStep(),
-						 davg );
+	if( dmin >= 0.0f )
+		getWriter( e.a )->addRow( getStep(),
+								  dmin );
+	objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE );
+}
+
+//---------------------------------------------------------------------------
+// Logs::FoodDistanceLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::FoodDistanceLog::processEvent( const sim::AgentDeathEvent &e )
+{
+	delete getWriter( e.a );
 }
 
 
