@@ -22,7 +22,7 @@ using namespace std;
 char *rfind( char *begin, char *end, char c );
 char *rfind( char *begin, char *end, char c )
 {
-	for( char *p = end - 1; p != begin; p-- )
+	for( char *p = end - 1; p != begin - 1; p-- )
 	{
 		if( *p == c )
 		{
