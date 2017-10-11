@@ -20,7 +20,6 @@ struct Args {
     int steps;
     int start;
     int count;
-    bool passive;
     bool bf;
     std::string output;
 };
@@ -50,7 +49,7 @@ int main(int argc, char** argv) {
         if (agent > maxAgent) {
             break;
         }
-        RqNervousSystem* cns = analysis::getNervousSystem(args.run, agent, args.stage, args.passive);
+        RqNervousSystem* cns = analysis::getNervousSystem(args.run, agent, args.stage);
         if (cns == NULL) {
             continue;
         }
@@ -75,7 +74,7 @@ int main(int argc, char** argv) {
 }
 
 void printUsage(int argc, char** argv) {
-    std::cerr << "Usage: " << argv[0] << " [--passive] [--bf OUTPUT] RUN STAGE REPEATS TRANSIENT STEPS [START [COUNT]]" << std::endl;
+    std::cerr << "Usage: " << argv[0] << " [--bf OUTPUT] RUN STAGE REPEATS TRANSIENT STEPS [START [COUNT]]" << std::endl;
     std::cerr << std::endl;
     std::cerr << "Generates neural activation time series using random inputs." << std::endl;
     std::cerr << std::endl;
@@ -87,12 +86,11 @@ void printUsage(int argc, char** argv) {
     std::cerr << "  START        Starting agent index" << std::endl;
     std::cerr << "  COUNT        Number of agents" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "  --passive    Use passive agents" << std::endl;
     std::cerr << "  --bf OUTPUT  Write brain function files to OUTPUT directory" << std::endl;
 }
 
 bool tryParseArgs(int argc, char** argv, Args& args) {
-    if (argc < 6 || argc > 11) {
+    if (argc < 6 || argc > 10) {
         return false;
     }
     std::string run;
@@ -102,15 +100,10 @@ bool tryParseArgs(int argc, char** argv, Args& args) {
     int steps;
     int start = 1;
     int count = std::numeric_limits<int>::max();
-    bool passive = false;
     bool bf = false;
     std::string output;
     try {
         int argi = 1;
-        if (strcmp(argv[argi], "--passive") == 0) {
-            passive = true;
-            argi++;
-        }
         if (strcmp(argv[argi], "--bf") == 0) {
             bf = true;
             argi++;
@@ -161,7 +154,6 @@ bool tryParseArgs(int argc, char** argv, Args& args) {
     args.steps = steps;
     args.start = start;
     args.count = count;
-    args.passive = passive;
     args.bf = bf;
     args.output = output;
     return true;

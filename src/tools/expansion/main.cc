@@ -24,7 +24,6 @@ struct Args {
     int steps;
     double threshold;
     int agent;
-    bool passive;
 };
 
 void printUsage(int, char**);
@@ -41,11 +40,11 @@ int main(int argc, char** argv) {
     analysis::initialize(args.run);
     int maxAgent = args.mode == "single" ? args.agent : analysis::getMaxAgent(args.run);
     for (int agent = args.agent; agent <= maxAgent; agent++) {
-        AbstractFile* synapses = analysis::getSynapses(args.run, agent, args.stage, args.passive);
+        AbstractFile* synapses = analysis::getSynapses(args.run, agent, args.stage);
         if (synapses == NULL) {
             continue;
         }
-        genome::Genome* genome = analysis::getGenome(args.run, agent, args.passive);
+        genome::Genome* genome = analysis::getGenome(args.run, agent);
         RqNervousSystem* cns = analysis::getNervousSystem(genome, synapses);
         if (args.mode == "all") {
             double expansion = analysis::getExpansion(genome, cns, args.perturbation, args.repeats, args.random, args.quiescent, args.steps);
@@ -94,9 +93,9 @@ int main(int argc, char** argv) {
 
 void printUsage(int argc, char** argv) {
     std::cerr << "Usage:" << std::endl;
-    std::cerr << "  " << argv[0] << " all [--passive] RUN STAGE PERTURBATION REPEATS RANDOM QUIESCENT STEPS [AGENT]" << std::endl;
-    std::cerr << "  " << argv[0] << " single [--passive] RUN STAGE WMAX_MIN WMAX_MAX WMAX_INC PERTURBATION REPEATS RANDOM QUIESCENT STEPS AGENT" << std::endl;
-    std::cerr << "  " << argv[0] << " onset [--passive] RUN STAGE PERTURBATION REPEATS RANDOM QUIESCENT STEPS THRESHOLD [AGENT]" << std::endl;
+    std::cerr << "  " << argv[0] << " all RUN STAGE PERTURBATION REPEATS RANDOM QUIESCENT STEPS [AGENT]" << std::endl;
+    std::cerr << "  " << argv[0] << " single RUN STAGE WMAX_MIN WMAX_MAX WMAX_INC PERTURBATION REPEATS RANDOM QUIESCENT STEPS AGENT" << std::endl;
+    std::cerr << "  " << argv[0] << " onset RUN STAGE PERTURBATION REPEATS RANDOM QUIESCENT STEPS THRESHOLD [AGENT]" << std::endl;
     std::cerr << std::endl;
     std::cerr << "Calculates phase space expansion." << std::endl;
     std::cerr << std::endl;
@@ -112,8 +111,6 @@ void printUsage(int argc, char** argv) {
     std::cerr << "  STEPS         Number of calculation timesteps" << std::endl;
     std::cerr << "  THRESHOLD     Threshold phase space expansion" << std::endl;
     std::cerr << "  AGENT         [Starting] agent index" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "  --passive     Use passive agents" << std::endl;
 }
 
 bool tryParseArgs(int argc, char** argv, Args& args) {
@@ -130,7 +127,6 @@ bool tryParseArgs(int argc, char** argv, Args& args) {
     int steps;
     double threshold;
     int agent;
-    bool passive = false;
     try {
         if (argc < 2) {
             return false;
@@ -138,21 +134,17 @@ bool tryParseArgs(int argc, char** argv, Args& args) {
         int argi = 1;
         mode = std::string(argv[argi++]);
         if (mode == "all") {
-            if (argc < 9 || argc > 11) {
+            if (argc < 9 || argc > 10) {
                 return false;
             }
         } else if (mode == "single") {
-            if (argc < 13 || argc > 14) {
+            if (argc != 13) {
                 return false;
             }
         } else if (mode == "onset") {
-            if (argc < 10 || argc > 12) {
+            if (argc < 10 || argc > 11) {
                 return false;
             }
-        }
-        if (strcmp(argv[argi], "--passive") == 0) {
-            passive = true;
-            argi++;
         }
         run = std::string(argv[argi++]);
         if (!exists(run + "/endStep.txt")) {
@@ -221,7 +213,6 @@ bool tryParseArgs(int argc, char** argv, Args& args) {
         return false;
     }
     args.mode = mode;
-    args.passive = passive;
     args.run = run;
     args.stage = stage;
     args.wmaxMin = wmaxMin;

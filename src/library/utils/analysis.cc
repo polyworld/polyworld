@@ -119,9 +119,8 @@ int analysis::getMaxAgent(const std::string& run) {
     return reader.nrows();
 }
 
-genome::Genome* analysis::getGenome(const std::string& run, int agent, bool passive) {
-    std::string pathBase = passive ? run + "/passive" : run;
-    std::string path = pathBase + "/genome/agents/genome_" + std::to_string(agent) + ".txt";
+genome::Genome* analysis::getGenome(const std::string& run, int agent) {
+    std::string path = run + "/genome/agents/genome_" + std::to_string(agent) + ".txt";
     AbstractFile* file = AbstractFile::open(globals::recordFileType, path.c_str(), "r");
     genome::Genome* genome = genome::GenomeUtil::createGenome();
     genome->load(file);
@@ -129,9 +128,8 @@ genome::Genome* analysis::getGenome(const std::string& run, int agent, bool pass
     return genome;
 }
 
-AbstractFile* analysis::getSynapses(const std::string& run, int agent, const std::string& stage, bool passive) {
-    std::string pathBase = passive ? run + "/passive" : run;
-    std::string path = pathBase + "/brain/synapses/synapses_" + std::to_string(agent) + "_" + stage + ".txt";
+AbstractFile* analysis::getSynapses(const std::string& run, int agent, const std::string& stage) {
+    std::string path = run + "/brain/synapses/synapses_" + std::to_string(agent) + "_" + stage + ".txt";
     if (AbstractFile::exists(path.c_str())) {
         return AbstractFile::open(globals::recordFileType, path.c_str(), "r");
     } else {
@@ -146,13 +144,13 @@ RqNervousSystem* analysis::getNervousSystem(genome::Genome* genome, AbstractFile
     return cns;
 }
 
-RqNervousSystem* analysis::getNervousSystem(const std::string& run, int agent, const std::string& stage, bool passive) {
-    AbstractFile* synapses = getSynapses(run, agent, stage, passive);
+RqNervousSystem* analysis::getNervousSystem(const std::string& run, int agent, const std::string& stage) {
+    AbstractFile* synapses = getSynapses(run, agent, stage);
     RqNervousSystem* cns;
     if (synapses == NULL) {
         cns = NULL;
     } else {
-        genome::Genome* genome = getGenome(run, agent, passive);
+        genome::Genome* genome = getGenome(run, agent);
         cns = getNervousSystem(genome, synapses);
         delete genome;
     }
