@@ -656,14 +656,14 @@ void agent::grow( long mateWait, bool seeding )
 	// Note: gMinSizePenalty can be used to prevent size_rel==0 from giving
 	// the agents "free" speed.
     fSpeed2Energy = agent::config.speed2Energy * geneCache.maxSpeed
-		            * (agent::config.minSizePenalty + size_rel) * (agent::config.maxSizePenalty - 1.0)
-					/ (agent::config.maxAgentSize - agent::config.minAgentSize);
+		            * (agent::config.minSizePenalty + size_rel) * agent::config.maxSizePenalty
+					/ (agent::config.minSizePenalty + agent::config.maxAgentSize - agent::config.minAgentSize);
     
 	// Note: gMinSizePenalty can be used to prevent size_rel==0 from giving
 	// the agents "free" yaw.
     fYaw2Energy = agent::config.yaw2Energy * geneCache.maxSpeed
-		          * (agent::config.minSizePenalty + size_rel) * (agent::config.maxSizePenalty - 1.0)
-              	  / (agent::config.maxAgentSize - agent::config.minAgentSize);
+		          * (agent::config.minSizePenalty + size_rel) * agent::config.maxSizePenalty
+              	  / (agent::config.minSizePenalty + agent::config.maxAgentSize - agent::config.minAgentSize);
     
     fSizeAdvantage = 1.0 + ( size_rel *
                 (agent::config.maxSizeAdvantage - 1.0) / (agent::config.maxAgentSize - agent::config.minAgentSize) );
