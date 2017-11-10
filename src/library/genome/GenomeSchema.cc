@@ -113,10 +113,10 @@ void GenomeSchema::define()
 																				MIN, \
 																				MAX, \
 																				__InterpolatedGene::ROUND_INT_NEAREST) )
-#define SCALAR(NAME, MINVAL, MAXVAL) add( new MutableScalarGene(#NAME,	\
-																MINVAL,	\
-																MAXVAL,	\
-																__InterpolatedGene::ROUND_INT_FLOOR) )
+#define SCALAR(NAME, MINVAL, MAXVAL) if( MINVAL == MAXVAL ) \
+									 add( new ImmutableScalarGene(#NAME, MINVAL) ); \
+									 else \
+									 add( new MutableScalarGene(#NAME, MINVAL, MAXVAL, __InterpolatedGene::ROUND_INT_FLOOR) )
 #define INDEX(NAME, MINVAL, MAXVAL) add( new MutableScalarGene(#NAME,	\
 															   MINVAL,	\
 															   MAXVAL,	\
