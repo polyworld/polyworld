@@ -641,6 +641,8 @@ Domains {
       FoodPatches {
         type    Array
 
+        default [ {} ]
+
         element {
           type    Object
           cppsym  "$[ancestor].fFoodPatches[ $[index] ]"
