@@ -2208,7 +2208,7 @@ EatThreshold {
 
 MateThreshold {
   type    Float
-  default 0.5
+  default ( 0.2 if ProbabilisticMating else 0.5 )
 }
 
 FightThreshold {
