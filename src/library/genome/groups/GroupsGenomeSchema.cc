@@ -286,6 +286,10 @@ void GroupsGenomeSchema::seed( Genome *g_ )
 		{
 			SEED( TopologicalDistortion, 0.5 );
 		}
+		else
+		{
+			SEED( TopologicalDistortion, 1.0 );
+		}
 		return;
 	}
 
