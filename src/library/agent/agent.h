@@ -122,6 +122,7 @@ public:
 		int 	starvationWait;
 
 		bool	enableMateWaitFeedback;
+		bool	invertMateWaitFeedback;
 		bool	enableSpeedFeedback;
 		bool	enableGive;
 		bool	enableCarry;

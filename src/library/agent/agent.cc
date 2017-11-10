@@ -174,6 +174,7 @@ void agent::processWorldfile( proplib::Document &doc )
     agent::config.fixedEnergyDrain = doc.get( "EnergyUseFixed" );
 
 	agent::config.enableMateWaitFeedback = doc.get( "EnableMateWaitFeedback" );
+	agent::config.invertMateWaitFeedback = doc.get( "InvertMateWaitFeedback" );
 	agent::config.enableSpeedFeedback = doc.get( "EnableSpeedFeedback" );
 	agent::config.enableGive = doc.get( "EnableGive" );
 	agent::config.enableCarry = doc.get( "EnableCarry" );

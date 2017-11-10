@@ -985,6 +985,11 @@ EnableMateWaitFeedback {
   default False
 }
 
+InvertMateWaitFeedback {
+  type    Bool
+  default False
+}
+
 EnableSpeedFeedback {
   type    Bool
   default False
