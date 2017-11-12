@@ -1517,13 +1517,13 @@ MaxAgentMaxSpeed {
 
 MinMutationRate {
   type    Float
-  default 0.01
+  default ( 0.01 if GeneticOperatorResolution == GeneticOperatorResolution.Bit else 0.08 )
   min     0.0
 }
 
 MaxMutationRate {
   type    Float
-  default 0.05
+  default ( 0.05 if GeneticOperatorResolution == GeneticOperatorResolution.Bit else 0.4 )
   min     0.0
 }
 
