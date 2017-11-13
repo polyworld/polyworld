@@ -63,7 +63,7 @@ ChartMonitorView::~ChartMonitorView()
 //---------------------------------------------------------------------------
 void ChartMonitorView::init( short ncurves, int width, int height )
 {
-	lowX = 25;
+	lowX = 35;
 	highX = width - 10;
 	lowY = 5;
 	highY = height - 5;
@@ -220,7 +220,8 @@ void ChartMonitorView::drawAxes()
 	glEnd();
 
 
-	QFont font("helvetica", 12, QFont::Normal);
+	QFont font("Monospace", 8, QFont::Normal);
+	font.setStyleHint(QFont::TypeWriter);
 	QFontMetrics metrics(font);
 	    
     if (highV[0] > 1.0 && highV[0] == highV[0] && lowV[0] == lowV[0])

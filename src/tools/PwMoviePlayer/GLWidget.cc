@@ -65,7 +65,8 @@ void GLWidget::Draw()
 		glDrawPixels( frame->width, frame->height, GL_RGBA, GL_UNSIGNED_BYTE, frame->rgbBuf );
 
 		// Superimpose the timestep number
-		QFont font( "Monaco", 10 );
+		QFont font( "Monospace", 8 );
+		font.setStyleHint( QFont::TypeWriter );
 		char timestepString[16];
 		sprintf( timestepString, "%8u", frame->timestep );
 		renderText( width() - 60, 15, timestepString, font );

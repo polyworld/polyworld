@@ -25,11 +25,12 @@ using namespace std;
 StatusTextMonitorView::StatusTextMonitorView( StatusTextMonitor *_monitor )
 	: MonitorView( _monitor, DEFAULT_WIDTH, DEFAULT_HEIGHT, false )
 	, monitor( _monitor )
-	, font( "Futura Condensed Medium", 10, QFont::Normal )
+	, font( "Monospace", 8, QFont::Normal )
 	, lineHeight( QFontMetrics(font).height() )
 	, nlines( 0 )
 	
 {
+    font.setStyleHint(QFont::TypeWriter);
     monitor->update += [=](){this->update();};
 }
 

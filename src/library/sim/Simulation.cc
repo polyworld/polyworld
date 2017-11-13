@@ -4909,7 +4909,7 @@ void TSimulation::getStatusText( StatusText& statusText,
 	sprintf( t, " -fight  = %4ld", fNumberDiedFight );
 	statusText.push_back( strdup( t ) );
 
-	sprintf( t, " -eat  = %4ld", fNumberDiedEat );
+	sprintf( t, " -eat    = %4ld", fNumberDiedEat );
 	statusText.push_back( strdup( t ) );
 
 	sprintf( t, " -edge   = %4ld", fNumberDiedEdge );
