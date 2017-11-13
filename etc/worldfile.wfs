@@ -1631,6 +1631,13 @@ MaxConnectionDensity {
   min     MinConnectionDensity
 }
 
+SeedConnectionDensity {
+  type    Float
+  default MinConnectionDensity
+  min     MinConnectionDensity
+  max     MaxConnectionDensity
+}
+
 MirroredTopologicalDistortion {
   type    Bool
   default False
