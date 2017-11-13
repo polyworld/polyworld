@@ -167,17 +167,18 @@ std::string MutableNeurGroupGene::getTitle( int group )
 // ===
 // ================================================================================
 ImmutableNeurGroupGene::ImmutableNeurGroupGene( const char *name_,
-												NeurGroupType group_type_ )
+												NeurGroupType group_type_,
+												int count )
 : NeurGroupGene( group_type_ )
 , __ConstantGene( GroupsGeneType::NEURGROUP,
 				  name_,
-				  1 )
+				  count )
 {
 }
 
 Scalar ImmutableNeurGroupGene::get( Genome *genome )
 {
-	return 1;
+	return __ConstantGene::get();
 }
 
 int ImmutableNeurGroupGene::getMaxGroupCount()
@@ -187,7 +188,7 @@ int ImmutableNeurGroupGene::getMaxGroupCount()
 
 int ImmutableNeurGroupGene::getMaxNeuronCount()
 {
-	return 1;
+	return __ConstantGene::get();
 }
 
 std::string ImmutableNeurGroupGene::getTitle( int group )

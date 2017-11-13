@@ -55,10 +55,10 @@ void GroupsGenomeSchema::define()
 
 #define INPUT1(NAME) add( new ImmutableNeurGroupGene(#NAME,			\
 													 NGT_INPUT) )
-#define INPUT(NAME, MINNEUR, MAXNEUR) add( new MutableNeurGroupGene(#NAME, \
-																	NGT_INPUT, \
-																	MINNEUR, \
-																	MAXNEUR) )
+#define INPUT(NAME, MINNEUR, MAXNEUR) if( MINNEUR == MAXNEUR ) \
+									  add( new ImmutableNeurGroupGene(#NAME, NGT_INPUT, MINNEUR) ); \
+									  else \
+									  add( new MutableNeurGroupGene(#NAME, NGT_INPUT, MINNEUR, MAXNEUR) )
 #define OUTPUT(NAME) add( new ImmutableNeurGroupGene(#NAME,			\
 													 NGT_OUTPUT) )
 #define INTERNAL(NAME, MINNEUR, MAXNEUR) add( new MutableNeurGroupGene(#NAME, \
@@ -295,9 +295,12 @@ void GroupsGenomeSchema::seed( Genome *g_ )
 		return;
 	}
 
-	SEED( Red, 0.5 );
-	SEED( Green, 0.5 );
-	SEED( Blue, 0.5 );
+	if( GroupsBrain::config.minvisneurpergroup != GroupsBrain::config.maxvisneurpergroup )
+	{
+		SEED( Red, 0.5 );
+		SEED( Green, 0.5 );
+		SEED( Blue, 0.5 );
+	}
 	SEED( InternalNeuronGroupCount, 0 );
 
 	SEED( ExcitatoryNeuronCount, 0 );
