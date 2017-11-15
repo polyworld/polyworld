@@ -3686,7 +3686,7 @@ void TSimulation::AddFood( long domainNumber, long patchNumber )
 {
 	long step = fStep;
 	if( fStep == 0 && fRandomInitFoodAge )
-		step = (int)rrand( -food::gMaxLifeSpan, 0 );
+		step = (int)trand( -food::gMaxLifeSpan, 0 );
 	food *f = fDomains[domainNumber].fFoodPatches[patchNumber].addFood( step );
 	if( f != NULL )
 	{

@@ -647,7 +647,7 @@ void agent::grow( long mateWait, bool seeding )
 	
 	if( seeding && agent::config.randomSeedEnergy )
 	{
-		float energy = (agent::config.starvationEnergyFraction + randpw() * (1.0 - agent::config.starvationEnergyFraction)) * maxEnergy;
+		float energy = trand( agent::config.starvationEnergyFraction, 1.0 ) * maxEnergy;
 		fEnergy = energy;
 		fFoodEnergy = energy;
 	}

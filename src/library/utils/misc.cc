@@ -57,6 +57,12 @@ double nrand(double mean, double stdev)
     return mean + nrand() * stdev;
 }
 
+double trand(double min, double max)
+{
+    double range = max - min;
+    return min + sqrt(randpw() * range * range);
+}
+
 char* concat(const char* s1, const char* s2)
 {
     char* s = new char[strlen(s1)+strlen(s2)+1];
