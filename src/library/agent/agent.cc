@@ -707,7 +707,8 @@ void agent::eat( food* f,
 	if (outputNerves.eat->get() > eatthreshold)
 	{
 		Energy trytoeat = outputNerves.eat->get() * eat2consume;
-		trytoeat.constrain( 0, fMaxEnergy - fEnergy );
+		Energy maxeat = Energy( fMaxEnergy - fEnergy, fEnergy, fMetabolism->energyPolarity * f->getEnergyPolarity() );
+		trytoeat.constrain( 0, maxeat );
 		
 		return_actuallyEat =
 			f->eat(trytoeat)

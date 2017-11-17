@@ -42,6 +42,18 @@ bool EnergyPolarity::operator==( const EnergyPolarity &other ) const
 	return true;
 }
 
+EnergyPolarity EnergyPolarity::operator*( const EnergyPolarity &other ) const
+{
+	EnergyPolarity result;
+	
+	for( int i = 0; i < globals::numEnergyTypes; i++ )
+	{
+		result.values[i] = (Polarity)(values[i] * other.values[i]);
+	}
+
+	return result;
+}
+
 
 EnergyMultiplier::EnergyMultiplier()
 {
@@ -103,6 +115,17 @@ Energy::Energy( proplib::Property &prop )
 
 	for( int i = 0; i < globals::numEnergyTypes; i++ )
 		values[i] = (float)prop.get( i );
+}
+
+Energy::Energy( const Energy &positive, const Energy &negative, const EnergyPolarity &polarity )
+{
+	for( int i = 0; i < globals::numEnergyTypes; i++ )
+	{
+		if( polarity.values[i] == EnergyPolarity::NEGATIVE )
+			values[i] = negative.values[i];
+		else
+			values[i] = positive.values[i];
+	}
 }
 
 
