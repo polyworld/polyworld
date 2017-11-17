@@ -31,12 +31,13 @@ FoodPatch::FoodPatch()
 //-------------------------------------------------------------------------------------------
 // FoodPatch::FoodPatch
 //-------------------------------------------------------------------------------------------
-void FoodPatch::init( const FoodType *foodType, float x, float z, float sx, float sz, float rate, int initFood, int minFood, int maxFood, int maxFoodGrown, float patchFraction, int shape, int distrib, float nhsize, bool on, bool inRemoveFood, gstage* fs, Domain* dm, int domainNumber ){
+void FoodPatch::init( const FoodType *foodType, float x, float z, float sx, float sz, float rate, float e, int initFood, int minFood, int maxFood, int maxFoodGrown, float patchFraction, int shape, int distrib, float nhsize, bool on, bool inRemoveFood, gstage* fs, Domain* dm, int domainNumber ){
     
 	initBase(x, z,  sx, sz, shape, distrib, nhsize, fs, dm, domainNumber);
 
 	fraction = patchFraction;
 	growthRate = rate;
+	energy = e;
  	initFoodCount = initFood;
 	foodCount = 0;
 	foodGrown = false;
@@ -100,7 +101,11 @@ food *FoodPatch::addFood( long step )
 	if( foodCount < maxFoodCount )
 	{
 		float x, z;
-		food* f = new food( foodType, step );
+		food* f;
+		if ( energy == -1.0 )
+			f = new food( foodType, step );
+		else
+			f = new food( foodType, step, energy );
 
 		// set the values of x and y to a legal point in the foodpatch
 		setPoint( &x, &z );

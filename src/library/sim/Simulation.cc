@@ -4261,7 +4261,7 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 					proplib::Property &propPatch = propPatches.get( i );
 
 					const FoodType *foodType;
-					float foodFraction, foodRate;
+					float foodFraction, foodRate, foodEnergy;
 					float centerX, centerZ;  // should be from 0.0 -> 1.0
 					float sizeX, sizeZ;  // should be from 0.0 -> 1.0
 					float nhsize;
@@ -4309,6 +4309,8 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 					if (foodRate < 0.0)
 						foodRate = fDomains[id].foodRate;
 
+					foodEnergy = propPatch.get( "FoodEnergy" );
+
 					{
 						string val = propPatch.get( "Shape" );
 						if( val == "R" )
@@ -4336,7 +4338,7 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 
 					bool on = propPatch.get( "On" );
 
-					fDomains[id].fFoodPatches[i].init(foodType, centerX, centerZ, sizeX, sizeZ, foodRate, initFood, minFood, maxFood, maxFoodGrown, foodFraction, shape, distribution, nhsize, on, removeFood, &fStage, &(fDomains[id]), id);
+					fDomains[id].fFoodPatches[i].init(foodType, centerX, centerZ, sizeX, sizeZ, foodRate, foodEnergy, initFood, minFood, maxFood, maxFoodGrown, foodFraction, shape, distribution, nhsize, on, removeFood, &fStage, &(fDomains[id]), id);
 
 					patchFractionSpecified += foodFraction;
 

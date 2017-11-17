@@ -692,9 +692,15 @@ Domains {
             FoodRate {
               type    Float
               default -1.0
-              max     1.0
               cppsym  "$[ancestor].growthRate"
               assert  ( (FoodRate == -1.0) or (FoodRate >= 0.0) )
+            }
+
+            FoodEnergy {
+              type    Float
+              default -1.0
+              cppsym  "$[ancestor].energy"
+              assert  ( (FoodEnergy == -1.0) or (FoodEnergy >= 0.0) )
             }
 
             CenterX {
