@@ -272,6 +272,17 @@ class Logs
 	} _energy;
 
 	//===========================================================================
+	// FoodConsumptionLog
+	//===========================================================================
+	class FoodConsumptionLog : public DataLibLogger
+	{
+	protected:
+		virtual void init( class TSimulation *sim, proplib::Document *doc );
+		virtual void processEvent( const sim::EnergyEvent &e );
+
+	} _foodConsumption;
+
+	//===========================================================================
 	// FoodDistanceLog
 	//===========================================================================
 	class FoodDistanceLog : public DataLibLogger

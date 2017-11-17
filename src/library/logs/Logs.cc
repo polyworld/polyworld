@@ -1260,6 +1260,83 @@ void Logs::EnergyLog::processEvent( const sim::EnergyEvent &e )
 
 
 //===========================================================================
+// FoodConsumptionLog
+//===========================================================================
+
+//---------------------------------------------------------------------------
+// Logs::FoodConsumptionLog::init
+//---------------------------------------------------------------------------
+void Logs::FoodConsumptionLog::init( TSimulation *sim, Document *doc )
+{
+	if( doc->get("RecordFoodConsumption") )
+	{
+		initRecording( sim,
+					   SimulationStateScope,
+					   sim::Event_Energy );
+
+		DataLibWriter *writer = createWriter( "run/food/consumption.txt" );
+
+		const char *colnames_template[] =
+			{
+				"T",
+				"Agent",
+				"FoodType",
+			};
+		const datalib::Type coltypes_template[] =
+			{
+				datalib::INT,
+				datalib::INT,
+				datalib::STRING,
+			};
+
+		int lenTemplate = sizeof(colnames_template) / sizeof(char *);
+
+		// Now add columns for the energy types, where the number is not known at compile-time.
+		const char **colnames = new const char *[ lenTemplate + globals::numEnergyTypes + 1 ];
+		datalib::Type *coltypes = new datalib::Type[ lenTemplate + globals::numEnergyTypes ];
+		for( int i = 0; i < lenTemplate; i++ )
+		{
+			colnames[i] = colnames_template[i];
+			coltypes[i] = coltypes_template[i];
+		}
+		for( int i = 0; i < globals::numEnergyTypes; i++ )
+		{
+			char buf[128];
+			sprintf( buf, "Energy%d", i );
+			colnames[ lenTemplate + i ] = strdup( buf );
+
+			coltypes[ lenTemplate + i ] = datalib::FLOAT;
+		}
+		colnames[ lenTemplate + globals::numEnergyTypes ] = NULL;
+
+		writer->beginTable( "Energy",
+							colnames,
+							coltypes );
+	}
+}
+
+//---------------------------------------------------------------------------
+// Logs::FoodConsumptionLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::FoodConsumptionLog::processEvent( const sim::EnergyEvent &e )
+{
+	if( e.action != EnergyEvent::Eat )
+		return;
+
+	Variant *coldata = (Variant *)alloca(sizeof(Variant) * (3 + globals::numEnergyTypes));
+	coldata[0] = getStep();
+	coldata[1] = e.a->Number();
+	coldata[2] = ((food*)e.obj)->getType()->name.c_str();
+	for( int i = 0; i < globals::numEnergyTypes; i++ )
+	{
+		coldata[3 + i] = e.energy[i];
+	}
+
+	getWriter()->addRow( coldata );
+}
+
+
+//===========================================================================
 // FoodDistanceLog
 //===========================================================================
 
