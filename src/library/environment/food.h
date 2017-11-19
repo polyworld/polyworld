@@ -56,6 +56,7 @@ public:
 
 	const Energy &getEnergy();
 	const EnergyPolarity &getEnergyPolarity();
+	const EnergyMultiplier &getEatMultiplier();
 	const FoodType* getType();
 
 	void setPatch(FoodPatch* fp);
@@ -94,6 +95,7 @@ protected:
 //===========================================================================
 inline const Energy &food::getEnergy() { return fEnergy; }
 inline const EnergyPolarity &food::getEnergyPolarity() { return foodType->energyPolarity; }
+inline const EnergyMultiplier &food::getEatMultiplier() { return foodType->eatMultiplier; }
 inline const FoodType* food::getType() { return foodType; }
 inline void food::setPatch(FoodPatch* fp) { patch=fp; }
 inline FoodPatch* food::getPatch() { return patch; }

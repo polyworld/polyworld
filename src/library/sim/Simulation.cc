@@ -4034,9 +4034,10 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 			else
 				foodColor = doc.get( "FoodColor" );
 			EnergyPolarity energyPolarity = propFoodType.get( "EnergyPolarity" );
+			EnergyMultiplier eatMultiplier = propFoodType.get( "EatMultiplier" );
 			Energy depletionThreshold = Energy::createDepletionThreshold( fFoodRemoveEnergy, energyPolarity );
 
-			FoodType::define( name, foodColor, energyPolarity, depletionThreshold );
+			FoodType::define( name, foodColor, energyPolarity, eatMultiplier, depletionThreshold );
 		}
 
 	}

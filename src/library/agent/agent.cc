@@ -714,7 +714,8 @@ void agent::eat( food* f,
 			f->eat(trytoeat)
 			* fMetabolism->energyPolarity
 			* f->getEnergyPolarity()
-			* fMetabolism->eatMultiplier;
+			* fMetabolism->eatMultiplier
+			* f->getEatMultiplier();
 
 		// The eatMultiplier could have made us exceed our limits.
 		return_actuallyEat.constrain( fEnergy * -1, fMaxEnergy - fEnergy );

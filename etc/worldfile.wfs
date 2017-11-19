@@ -251,6 +251,7 @@ FoodTypes {
 
   element {
     type    Object
+    cppsym  "FoodType::get( $[index] )"
     properties {
 
       Name {
@@ -265,6 +266,18 @@ FoodTypes {
           type    Int
           min     -1
           max     1
+        }
+      }
+
+      EatMultiplier {
+        type    Array
+        min     NumEnergyTypes
+        max     NumEnergyTypes
+        default [ 1 ]
+        cppsym  "$[ancestor]->eatMultiplier"
+        element {
+          type    Float
+          cppsym  "$[ancestor].values[ $[index] ]"
         }
       }
 
