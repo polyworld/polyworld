@@ -1781,8 +1781,10 @@ void Logs::PopulationLog::init( TSimulation *sim, Document *doc )
 //---------------------------------------------------------------------------
 void Logs::PopulationLog::processEvent( const sim::StepEndEvent &e )
 {
-	getWriter()->addRow( getStep(),
-						 _simulation->getNumAgents() );
+	DataLibWriter *writer = getWriter();
+	writer->addRow( getStep(),
+					_simulation->getNumAgents() );
+	writer->flush();
 }
 
 
