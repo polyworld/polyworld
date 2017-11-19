@@ -4540,6 +4540,18 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 	// This value only does something if Fog Function is linear
 	// It defines the maximum distance a agent can see.
 	fLinearFogEnd = doc.get( "LinearFogEnd" );
+
+	// Process Variables
+	{
+		proplib::Property &propVariables = doc.get( "Variables" );
+		int numVariables = propVariables.size();
+
+		for( int iVariable = 0; iVariable < numVariables; iVariable++ )
+		{
+			float variable = propVariables.get( iVariable );
+			proplib::Document::variables.push_back( variable );
+		}
+	}
 }
 
 //-------------------------------------------------------------------------------------------

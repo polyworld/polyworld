@@ -540,6 +540,8 @@ namespace proplib
 		void addMeta( MetaProperty *prop );
 		MetaPropertyMap &metaprops();
 
+		static std::vector<float> variables;
+
 	private:
 		std::string _path;
 		MetaPropertyMap _metaprops;

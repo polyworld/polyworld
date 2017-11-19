@@ -1060,6 +1060,8 @@ string MetaProperty::getValue()
 // ----------------------------------------------------------------------
 // ----------------------------------------------------------------------
 
+vector<float> Document::variables;
+
 Document::Document( string name, string path )
 : ObjectProperty( Node::Document, DocumentLocation(this,0), name )
 , _path( path )

@@ -2811,6 +2811,15 @@ FoodCount {
   cppsym  "objectxsortedlist::gXSortedObjects.foodCount"
 }
 
+Variables {
+  type    Array
+  default [ ]
+  element {
+    type    Float
+    cppsym  "proplib::Document::variables[ $[index] ]"
+  }
+}
+
 
 #-------------------------------------------------------------------
 # SECTION Eliminate
