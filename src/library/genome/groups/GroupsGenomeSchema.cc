@@ -270,6 +270,13 @@ void GroupsGenomeSchema::seed( Genome *g_ )
 			 get(#FROM),						\
 			 get(#TO),							\
 			 VAL )
+#define SEED_IO_SYNAPSE(NAME,TO,VAL)			\
+	SEED_SYNAPSE( NAME, EE, Red, TO, VAL );		\
+	SEED_SYNAPSE( NAME, IE, Red, TO, VAL );		\
+	SEED_SYNAPSE( NAME, EE, Green, TO, VAL );	\
+	SEED_SYNAPSE( NAME, IE, Green, TO, VAL );	\
+	SEED_SYNAPSE( NAME, EE, Blue, TO, VAL );	\
+	SEED_SYNAPSE( NAME, IE, Blue, TO, VAL )
 
 	if( Brain::config.neuronModel == Brain::Configuration::TAU_GAIN )
 	{
@@ -283,7 +290,9 @@ void GroupsGenomeSchema::seed( Genome *g_ )
 		RANDOMIZE_GROUP( Bias, Eat, 0.5, 1.0 );
 		RANDOMIZE_GROUP( Bias, Mate, 0.5, 1.0 );
 		RANDOMIZE_GROUP( Bias, Speed, 0.5, 1.0 );
-		SEED( ConnectionDensity, GroupsBrain::config.seedconnectiondensity );
+		SEED_IO_SYNAPSE( ConnectionDensity, Eat, GroupsBrain::config.seedconnectiondensity );
+		SEED_IO_SYNAPSE( ConnectionDensity, Mate, GroupsBrain::config.seedconnectiondensity );
+		SEED_IO_SYNAPSE( ConnectionDensity, Speed, GroupsBrain::config.seedconnectiondensity );
 		if( GroupsBrain::config.mirroredtopologicaldistortion )
 		{
 			SEED( TopologicalDistortion, 0.5 );
