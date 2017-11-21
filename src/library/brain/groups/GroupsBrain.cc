@@ -42,6 +42,7 @@ void GroupsBrain::processWorldfile( proplib::Document &doc )
 {
     GroupsBrain::config.minvisneurpergroup = doc.get( "MinVisionNeuronsPerGroup" );
     GroupsBrain::config.maxvisneurpergroup = doc.get( "MaxVisionNeuronsPerGroup" );
+    GroupsBrain::config.seedvisneur = doc.get( "SeedVisionNeurons" );
     GroupsBrain::config.mininternalneurgroups = doc.get( "MinInternalNeuralGroups" );
     GroupsBrain::config.maxinternalneurgroups = doc.get( "MaxInternalNeuralGroups" );
     GroupsBrain::config.mineneurpergroup = doc.get( "MinExcitatoryNeuronsPerGroup" );
@@ -50,7 +51,7 @@ void GroupsBrain::processWorldfile( proplib::Document &doc )
     GroupsBrain::config.maxineurpergroup = doc.get( "MaxInhibitoryNeuronsPerGroup" );
     GroupsBrain::config.minconnectiondensity = doc.get( "MinConnectionDensity" );
     GroupsBrain::config.maxconnectiondensity = doc.get( "MaxConnectionDensity" );
-    GroupsBrain::config.seedconnectiondensity = doc.get( "SeedConnectionDensity" );
+    GroupsBrain::config.simpleseedconnectiondensity = doc.get( "SimpleSeedConnectionDensity" );
     GroupsBrain::config.mirroredtopologicaldistortion = doc.get( "MirroredTopologicalDistortion" );
     GroupsBrain::config.mintopologicaldistortion = doc.get( "MinTopologicalDistortion" );
     GroupsBrain::config.maxtopologicaldistortion = doc.get( "MaxTopologicalDistortion" );

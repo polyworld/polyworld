@@ -18,6 +18,7 @@ class GroupsBrain : public Brain
 		short numoutneurgroups;
 		short minvisneurpergroup;
 		short maxvisneurpergroup;
+		float seedvisneur;
 		short mininternalneurgroups;
 		short maxinternalneurgroups;
 		short mineneurpergroup;
@@ -32,7 +33,7 @@ class GroupsBrain : public Brain
 		short maxnoninputneurons;
 		float minconnectiondensity;
 		float maxconnectiondensity;
-		float seedconnectiondensity;
+		float simpleseedconnectiondensity;
 		bool mirroredtopologicaldistortion;
 		float mintopologicaldistortion;
 		float maxtopologicaldistortion;

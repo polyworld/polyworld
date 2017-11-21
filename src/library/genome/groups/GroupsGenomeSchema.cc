@@ -270,18 +270,24 @@ void GroupsGenomeSchema::seed( Genome *g_ )
 			 get(#FROM),						\
 			 get(#TO),							\
 			 VAL )
-#define SEED_IO_SYNAPSE(NAME,TO,VAL)			\
-	SEED_SYNAPSE( NAME, EE, Red, TO, VAL );		\
-	SEED_SYNAPSE( NAME, IE, Red, TO, VAL );		\
-	SEED_SYNAPSE( NAME, EE, Green, TO, VAL );	\
-	SEED_SYNAPSE( NAME, IE, Green, TO, VAL );	\
-	SEED_SYNAPSE( NAME, EE, Blue, TO, VAL );	\
-	SEED_SYNAPSE( NAME, IE, Blue, TO, VAL )
+#define SEED_IO_SYNAPSE(NAME,TYPE,FROM,TO,VAL)	\
+	g->seed( get(#NAME),						\
+			 getSynapseType(#TYPE),				\
+			 FROM,								\
+			 TO,								\
+			 VAL )
 
 	if( Brain::config.neuronModel == Brain::Configuration::TAU_GAIN )
 	{
 		SEED( Tau, Brain::config.Tau.seedVal );
 		SEED( Gain, Brain::config.Gain.seedVal );
+	}
+
+	if( GroupsBrain::config.minvisneurpergroup != GroupsBrain::config.maxvisneurpergroup )
+	{
+		SEED( Red, GroupsBrain::config.seedvisneur );
+		SEED( Green, GroupsBrain::config.seedvisneur );
+		SEED( Blue, GroupsBrain::config.seedvisneur );
 	}
 
 	if( GenomeSchema::config.seedType == GenomeSchema::SEED_SIMPLE )
@@ -290,9 +296,24 @@ void GroupsGenomeSchema::seed( Genome *g_ )
 		RANDOMIZE_GROUP( Bias, Eat, 0.5, 1.0 );
 		RANDOMIZE_GROUP( Bias, Mate, 0.5, 1.0 );
 		RANDOMIZE_GROUP( Bias, Speed, 0.5, 1.0 );
-		SEED_IO_SYNAPSE( ConnectionDensity, Eat, GroupsBrain::config.seedconnectiondensity );
-		SEED_IO_SYNAPSE( ConnectionDensity, Mate, GroupsBrain::config.seedconnectiondensity );
-		SEED_IO_SYNAPSE( ConnectionDensity, Speed, GroupsBrain::config.seedconnectiondensity );
+		itfor( GeneVector, neurgroups, itIn )
+		{
+			NeurGroupGene *geneIn = GroupsGeneType::to_NeurGroup(*itIn);
+			if( geneIn->getGroupType() != NGT_INPUT )
+			{
+				continue;
+			}
+			itfor( GeneVector, neurgroups, itOut )
+			{
+				NeurGroupGene *geneOut = GroupsGeneType::to_NeurGroup(*itOut);
+				if( geneOut->getGroupType() != NGT_OUTPUT )
+				{
+					continue;
+				}
+				SEED_IO_SYNAPSE( ConnectionDensity, EE, geneIn, geneOut, GroupsBrain::config.simpleseedconnectiondensity );
+				SEED_IO_SYNAPSE( ConnectionDensity, IE, geneIn, geneOut, GroupsBrain::config.simpleseedconnectiondensity );
+			}
+		}
 		if( GroupsBrain::config.mirroredtopologicaldistortion )
 		{
 			SEED( TopologicalDistortion, 0.5 );
@@ -304,12 +325,6 @@ void GroupsGenomeSchema::seed( Genome *g_ )
 		return;
 	}
 
-	if( GroupsBrain::config.minvisneurpergroup != GroupsBrain::config.maxvisneurpergroup )
-	{
-		SEED( Red, 0.5 );
-		SEED( Green, 0.5 );
-		SEED( Blue, 0.5 );
-	}
 	SEED( InternalNeuronGroupCount, 0 );
 
 	SEED( ExcitatoryNeuronCount, 0 );
