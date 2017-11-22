@@ -126,6 +126,7 @@ public:
 		bool	enableSpeedFeedback;
 		bool	enableGive;
 		bool	enableCarry;
+		bool	invertFocus;
 		bool	enableVisionPitch;
 		bool	enableVisionYaw;
 		

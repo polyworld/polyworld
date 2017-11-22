@@ -1089,6 +1089,11 @@ CarryPreventsMate {             # probability that agent carrying something prev
   max     1.0
 }
 
+InvertFocus {
+  type    Bool
+  default False
+}
+
 EnableVisionPitch {
   type    Bool
   default False

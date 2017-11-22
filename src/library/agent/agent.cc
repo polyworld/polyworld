@@ -178,6 +178,7 @@ void agent::processWorldfile( proplib::Document &doc )
 	agent::config.enableSpeedFeedback = doc.get( "EnableSpeedFeedback" );
 	agent::config.enableGive = doc.get( "EnableGive" );
 	agent::config.enableCarry = doc.get( "EnableCarry" );
+	agent::config.invertFocus = doc.get( "InvertFocus" );
 	agent::config.enableVisionPitch = doc.get( "EnableVisionPitch" );
 	agent::config.enableVisionYaw = doc.get( "EnableVisionYaw" );
 }
@@ -960,7 +961,9 @@ void agent::UpdateVision()
     if (agent::config.vision)
     {
 		// create retinal pixmap, based on values of focus & numvisneurons
-        const float fovx = outputNerves.focus->get() * (agent::config.maxFocus - agent::config.minFocus) + agent::config.minFocus;
+        const float fovx = agent::config.invertFocus
+            ? outputNerves.focus->get() * (agent::config.minFocus - agent::config.maxFocus) + agent::config.maxFocus
+            : outputNerves.focus->get() * (agent::config.maxFocus - agent::config.minFocus) + agent::config.minFocus;
         		
 		fFrustum.Set(fPosition[0], fPosition[2], fAngle[0], fovx, agent::config.maxRadius);
 		fCamera.SetAspect(fovx * Brain::config.retinaHeight / (agent::config.agentFOV * Brain::config.retinaWidth));
@@ -1789,7 +1792,9 @@ float agent::NormalizedYaw()
 //---------------------------------------------------------------------------
 float agent::FieldOfView()
 {
-	return outputNerves.focus->get() * (agent::config.maxFocus - agent::config.minFocus) + agent::config.minFocus;
+	return agent::config.invertFocus
+		? outputNerves.focus->get() * (agent::config.minFocus - agent::config.maxFocus) + agent::config.maxFocus
+		: outputNerves.focus->get() * (agent::config.maxFocus - agent::config.minFocus) + agent::config.minFocus;
 }
 
 
