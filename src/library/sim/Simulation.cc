@@ -4896,7 +4896,7 @@ void TSimulation::getStatusText( StatusText& statusText,
 
 	if( (fHeuristicFitnessWeight != 0.0) || (fComplexityFitnessWeight != 0.0) || fLockStepWithBirthsDeathsLog )
 	{
-		sprintf( t, "born_v  = %4ld", fNumberBornVirtual );
+		sprintf( t, "born_v   = %4ld", fNumberBornVirtual );
 		statusText.push_back( strdup( t ) );
 	}
 
