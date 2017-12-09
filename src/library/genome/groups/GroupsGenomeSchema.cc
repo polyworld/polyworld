@@ -296,6 +296,7 @@ void GroupsGenomeSchema::seed( Genome *g_ )
 		RANDOMIZE_GROUP( Bias, Eat, 0.5, 1.0 );
 		RANDOMIZE_GROUP( Bias, Mate, 0.5, 1.0 );
 		RANDOMIZE_GROUP( Bias, Speed, 0.5, 1.0 );
+		SEED( ConnectionDensity, GroupsBrain::config.simpleseedconnectiondensity );
 		itfor( GeneVector, neurgroups, itIn )
 		{
 			NeurGroupGene *geneIn = GroupsGeneType::to_NeurGroup(*itIn);
@@ -310,8 +311,8 @@ void GroupsGenomeSchema::seed( Genome *g_ )
 				{
 					continue;
 				}
-				SEED_IO_SYNAPSE( ConnectionDensity, EE, geneIn, geneOut, GroupsBrain::config.simpleseedconnectiondensity );
-				SEED_IO_SYNAPSE( ConnectionDensity, IE, geneIn, geneOut, GroupsBrain::config.simpleseedconnectiondensity );
+				SEED_IO_SYNAPSE( ConnectionDensity, EE, geneIn, geneOut, GroupsBrain::config.simpleseedioconnectiondensity );
+				SEED_IO_SYNAPSE( ConnectionDensity, IE, geneIn, geneOut, GroupsBrain::config.simpleseedioconnectiondensity );
 			}
 		}
 		if( GroupsBrain::config.mirroredtopologicaldistortion )

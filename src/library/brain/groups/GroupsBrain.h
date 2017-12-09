@@ -34,6 +34,7 @@ class GroupsBrain : public Brain
 		float minconnectiondensity;
 		float maxconnectiondensity;
 		float simpleseedconnectiondensity;
+		float simpleseedioconnectiondensity;
 		bool mirroredtopologicaldistortion;
 		float mintopologicaldistortion;
 		float maxtopologicaldistortion;

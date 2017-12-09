@@ -52,6 +52,7 @@ void GroupsBrain::processWorldfile( proplib::Document &doc )
     GroupsBrain::config.minconnectiondensity = doc.get( "MinConnectionDensity" );
     GroupsBrain::config.maxconnectiondensity = doc.get( "MaxConnectionDensity" );
     GroupsBrain::config.simpleseedconnectiondensity = doc.get( "SimpleSeedConnectionDensity" );
+    GroupsBrain::config.simpleseedioconnectiondensity = doc.get( "SimpleSeedIOConnectionDensity" );
     GroupsBrain::config.mirroredtopologicaldistortion = doc.get( "MirroredTopologicalDistortion" );
     GroupsBrain::config.mintopologicaldistortion = doc.get( "MinTopologicalDistortion" );
     GroupsBrain::config.maxtopologicaldistortion = doc.get( "MaxTopologicalDistortion" );
