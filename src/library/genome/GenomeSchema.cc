@@ -208,7 +208,10 @@ void GenomeSchema::seed( Genome *g )
 		}
 	}
 
-	SEED( MutationRate, GenomeSchema::config.seedMutationRate );
+	if( GenomeSchema::config.minMutationRate != GenomeSchema::config.maxMutationRate )
+	{
+		SEED( MutationRate, GenomeSchema::config.seedMutationRate );
+	}
 
 	if( Metabolism::selectionMode == Metabolism::Gene
 		&& Metabolism::getNumberOfDefinitions() > 1 )
