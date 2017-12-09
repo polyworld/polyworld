@@ -253,12 +253,6 @@ void GroupsGenomeSchema::seed( Genome *g_ )
 
 	GroupsGenome *g = dynamic_cast<GroupsGenome *>( g_ );
 
-#define RANDOMIZE(NAME,MIN,MAX) g->seedRandom( get(#NAME), MIN, MAX )
-#define RANDOMIZE_GROUP(NAME,GROUP,MIN,MAX)		\
-	g->seedRandom( get(#NAME),					\
-				   get(#GROUP),					\
-				   MIN,							\
-				   MAX )
 #define SEED(NAME,VAL) g->seed( get(#NAME), VAL)
 #define SEED_GROUP(NAME,GROUP,VAL)				\
 	g->seed( get(#NAME),						\
@@ -292,10 +286,7 @@ void GroupsGenomeSchema::seed( Genome *g_ )
 
 	if( GenomeSchema::config.seedType == GenomeSchema::SEED_SIMPLE )
 	{
-		RANDOMIZE( Bias, 0, 1.0 );
-		RANDOMIZE_GROUP( Bias, Eat, 0.5, 1.0 );
-		RANDOMIZE_GROUP( Bias, Mate, 0.5, 1.0 );
-		RANDOMIZE_GROUP( Bias, Speed, 0.5, 1.0 );
+		SEED( Bias, 0.5 );
 		SEED( ConnectionDensity, GroupsBrain::config.simpleseedconnectiondensity );
 		itfor( GeneVector, neurgroups, itIn )
 		{
