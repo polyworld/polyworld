@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include "GroupsGenomeSchema.h"
 #include "genome/Genome.h"
 
@@ -14,6 +16,7 @@ namespace genome
 		GroupsSynapseType *IE;
 		GroupsSynapseType *II;
 
+		Gene *ORDER;
 		Gene *WEIGHT_STDEV;
 		Gene *CONNECTION_DENSITY;
 		Gene *TOPOLOGICAL_DISTORTION;
@@ -40,6 +43,7 @@ namespace genome
 		GroupsGenomeSchema *getSchema();
 
 		int getGroupCount( NeurGroupType type );
+		std::vector<int> getOrderedGroups();
 		int getNeuronCount( NeuronType type,
 							int group );
 		int getNeuronCount( int group );

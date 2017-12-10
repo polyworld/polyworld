@@ -1,4 +1,6 @@
+#include <algorithm>
 #include <assert.h>
+#include <utility>
 
 #include "GroupsGenome.h"
 
@@ -14,6 +16,15 @@ GroupsGenome::GroupsGenome( GroupsGenomeSchema *schema,
 		  layout )
 , _schema( schema )
 {
+	if( GroupsBrain::config.orderedinternalneurgroups )
+	{
+		ORDER = gene("Order");
+	}
+	else
+	{
+		ORDER = NULL;
+	}
+
 	if( Brain::config.gaussianInitWeight )
 	{
 		WEIGHT_STDEV = gene("WeightStdev");
@@ -116,6 +127,46 @@ int GroupsGenome::getGroupCount( NeurGroupType type )
 		}
 
 		return noninternal + get( INTERNAL );
+	}
+}
+
+std::vector<int> GroupsGenome::getOrderedGroups()
+{
+	if( GroupsBrain::config.orderedinternalneurgroups )
+	{
+		int maxCount = _schema->getMaxGroupCount( NGT_ANY );
+		std::vector<std::pair<int, float> > orders( maxCount );
+		for( int group = 0; group < maxCount; group++ )
+		{
+			float order = -1.0f;
+			if( _schema->getNeurGroupType( group ) == NGT_INTERNAL )
+			{
+				order = get( ORDER, group );
+			}
+			orders[group] = std::make_pair( group, order );
+		}
+		std::stable_sort( orders.begin(), orders.end(),
+			[]( std::pair<int, float> order1, std::pair<int, float> order2 )
+			{
+				return order1.second < order2.second;
+			} );
+		int count = getGroupCount( NGT_ANY );
+		std::vector<int> groups( count );
+		for( int index = 0; index < count; index++ )
+		{
+			groups[index] = orders[index].first;
+		}
+		return groups;
+	}
+	else
+	{
+		int count = getGroupCount( NGT_ANY );
+		std::vector<int> groups( count );
+		for( int index = 0; index < count; index++ )
+		{
+			groups[index] = index;
+		}
+		return groups;
 	}
 }
 

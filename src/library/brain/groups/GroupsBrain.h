@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include "brain/Brain.h"
 #include "brain/NeuronModel.h"
 #include "genome/groups/GroupsSynapseType.h"
@@ -21,6 +23,7 @@ class GroupsBrain : public Brain
 		float seedvisneur;
 		short mininternalneurgroups;
 		short maxinternalneurgroups;
+		bool orderedinternalneurgroups;
 		short mineneurpergroup;
 		short maxeneurpergroup;
 		short minineurpergroup;
@@ -74,6 +77,7 @@ class GroupsBrain : public Brain
 	genome::GroupsGenome *_genome;
 	int _numgroups;
 	int _numgroupsWithNeurons;
+	std::vector<int> orderedGroups;
 };
 
 inline short GroupsBrain::NumNeuronGroups( bool ignoreEmpty ) { return ignoreEmpty ? _numgroupsWithNeurons : _numgroups; }

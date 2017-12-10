@@ -1626,6 +1626,11 @@ MaxInternalNeuralGroups {
   min     MinInternalNeuralGroups
 }
 
+OrderedInternalNeuralGroups {
+  type    Bool
+  default False
+}
+
 MinExcitatoryNeuronsPerGroup {
   type    Int
   default 0

@@ -126,6 +126,14 @@ void GroupsGenomeSchema::define()
 			  GroupsBrain::config.mininternalneurgroups,
 			  GroupsBrain::config.maxinternalneurgroups );
 
+	if( GroupsBrain::config.orderedinternalneurgroups )
+	{
+		GROUP_ATTR( Order,
+					INTERNAL,
+					0.0,
+					1.0 );
+	}
+
 	GROUP_ATTR( ExcitatoryNeuronCount,
 				INTERNAL,
 				GroupsBrain::config.mineneurpergroup,
@@ -282,6 +290,11 @@ void GroupsGenomeSchema::seed( Genome *g_ )
 		SEED( Red, GroupsBrain::config.seedvisneur );
 		SEED( Green, GroupsBrain::config.seedvisneur );
 		SEED( Blue, GroupsBrain::config.seedvisneur );
+	}
+
+	if( GroupsBrain::config.orderedinternalneurgroups )
+	{
+		SEED( Order, 0.5 );
 	}
 
 	if( GenomeSchema::config.seedType == GenomeSchema::SEED_SIMPLE )
