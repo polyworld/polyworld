@@ -227,6 +227,9 @@ agent::agent(TSimulation* sim, gstage* stage)
 	fLastEatPosition[1] = 0.0;
 	fLastEatPosition[2] = 0.0;
 
+	fLastEatEnergy = 0.0;
+	fLastEatEnergyRaw = 0.0;
+
 	fGenome = GenomeUtil::createGenome();
 	fCns = new NervousSystem();
 	fMetabolism = NULL;
@@ -700,9 +703,11 @@ void agent::eat( food* f,
 				 float eatthreshold,
 				 long step,
 				 Energy &return_lost,
+				 Energy &return_rawEat,
 				 Energy &return_actuallyEat )
 {
 	return_lost = 0;
+	return_rawEat = 0;
 	return_actuallyEat = 0;
 	
 	if (outputNerves.eat->get() > eatthreshold)
@@ -711,10 +716,12 @@ void agent::eat( food* f,
 		Energy maxeat = Energy( fMaxEnergy - fEnergy, fEnergy, fMetabolism->energyPolarity * f->getEnergyPolarity() );
 		trytoeat.constrain( 0, maxeat );
 		
-		return_actuallyEat =
+		return_rawEat =
 			f->eat(trytoeat)
 			* fMetabolism->energyPolarity
-			* f->getEnergyPolarity()
+			* f->getEnergyPolarity();
+		return_actuallyEat =
+			return_rawEat
 			* fMetabolism->eatMultiplier
 			* f->getEatMultiplier();
 
@@ -740,6 +747,8 @@ void agent::eat( food* f,
 			fLastEatPosition[0] = fPosition[0];
 			fLastEatPosition[1] = fPosition[1];
 			fLastEatPosition[2] = fPosition[2];
+			fLastEatEnergy = return_actuallyEat;
+			fLastEatEnergyRaw = return_rawEat;
 		}
 	}
 }
@@ -1366,7 +1375,7 @@ float agent::UpdateBody( float moveFitnessParam,
 		}
 	}
 
-	logs->postEvent( AgentBodyUpdatedEvent(this, energyused) );
+	logs->postEvent( AgentBodyUpdatedEvent(this, denergy, energyused) );
 
     return energyUsed;
 }

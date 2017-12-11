@@ -2681,32 +2681,17 @@ RecordPopulation {
   default RecordAll
 }
 
+RecordAgentEnergy {
+  type    Bool
+  default RecordAll
+}
+
 RecordFoodConsumption {
   type    Bool
   default RecordAll
 }
 
-RecordFoodDistance {
-  type    Bool
-  default RecordAll
-}
-
 RecordFoodEnergy {
-  type    Bool
-  default RecordAll
-}
-
-RecordAgentEnergyIn {
-  type    Bool
-  default RecordAll
-}
-
-RecordAgentEnergyOut {
-  type    Bool
-  default RecordAll
-}
-
-RecordAgentEnergyTotal {
   type    Bool
   default RecordAll
 }

@@ -172,6 +172,7 @@ public:
 			  float eatthreshold,
 			  long step,
 			  Energy &return_lost,
+			  Energy &return_rawEat,
 			  Energy &return_actuallyEat );
 	Energy receive( agent *giver, const Energy &e );
     Energy damage(const Energy &e, bool nullMode);
@@ -224,6 +225,8 @@ public:
     long LastMate();
 	long LastEat();
 	float LastEatDistance();
+	Energy LastEatEnergy();
+	Energy LastEatEnergyRaw();
 	genome::Genome* Genes();
 	NervousSystem* GetNervousSystem();
     long Number();
@@ -284,6 +287,8 @@ protected:
     long fLastMate;
 	long fLastEat;
 	float fLastEatPosition[3];
+	Energy fLastEatEnergy;
+	Energy fLastEatEnergyRaw;
 	LifeSpan fLifeSpan;
 	bool fDeathByPatch;
 
@@ -405,6 +410,8 @@ inline long agent::MaxAge() { return geneCache.lifespan; }
 inline long agent::LastMate() { return fLastMate; }
 inline long agent::LastEat() { return fLastEat; }
 inline float agent::LastEatDistance() { return dist( fPosition[0], fPosition[2], fLastEatPosition[0], fLastEatPosition[2] ); }
+inline Energy agent::LastEatEnergy() { return fLastEatEnergy; }
+inline Energy agent::LastEatEnergyRaw() { return fLastEatEnergyRaw; }
 inline genome::Genome* agent::Genes() { return fGenome; }
 inline NervousSystem* agent::GetNervousSystem() { return fCns; }
 inline long agent::Number() { return getTypeNumber(); }

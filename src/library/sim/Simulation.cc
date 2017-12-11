@@ -2616,9 +2616,10 @@ void TSimulation::Eat( agent *c, bool *cDied )
 				// also overlap in z, so they really interact
 				ttPrint( "step %ld: agent # %ld is eating\n", fStep, c->Number() );
 				Energy foodEnergyLost;
+				Energy energyEatenRaw;
 				Energy energyEaten;
-				c->eat( f, fEatFitnessParameter, fEat2Consume, fEatThreshold, fStep, foodEnergyLost, energyEaten );
-				logs->postEvent( EnergyEvent(c, f, c->Eat(), energyEaten, EnergyEvent::Eat) );
+				c->eat( f, fEatFitnessParameter, fEat2Consume, fEatThreshold, fStep, foodEnergyLost, energyEatenRaw, energyEaten );
+				logs->postEvent( EnergyEvent(c, f, c->Eat(), energyEaten, energyEatenRaw, EnergyEvent::Eat) );
 				if( fEvents )
 					fEvents->AddEvent( fStep, c->Number(), 'e' );
 
@@ -2673,9 +2674,10 @@ void TSimulation::Eat( agent *c, bool *cDied )
 					// also overlap in z, so they really interact
 					ttPrint( "step %ld: agent # %ld is eating\n", fStep, c->Number() );
 					Energy foodEnergyLost;
+					Energy energyEatenRaw;
 					Energy energyEaten;
-					c->eat( f, fEatFitnessParameter, fEat2Consume, fEatThreshold, fStep, foodEnergyLost, energyEaten );
-					logs->postEvent( EnergyEvent(c, f, c->Eat(), energyEaten, EnergyEvent::Eat) );
+					c->eat( f, fEatFitnessParameter, fEat2Consume, fEatThreshold, fStep, foodEnergyLost, energyEatenRaw, energyEaten );
+					logs->postEvent( EnergyEvent(c, f, c->Eat(), energyEaten, energyEatenRaw, EnergyEvent::Eat) );
 					if( fEvents )
 						fEvents->AddEvent( fStep, c->Number(), 'e' );
 

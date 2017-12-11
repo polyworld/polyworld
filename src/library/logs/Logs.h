@@ -86,40 +86,26 @@ class Logs
 	} _adamiComplexity;
 
 	//===========================================================================
-	// AgentEnergyInLog
+	// AgentEnergyLog
 	//===========================================================================
-	class AgentEnergyInLog : public DataLibLogger
-	{
-	protected:
-		virtual void init( class TSimulation *sim, proplib::Document *doc );
-		virtual void processEvent( const sim::AgentBirthEvent &e );
-		virtual void processEvent( const sim::EnergyEvent &e );
-		virtual void processEvent( const sim::AgentDeathEvent &e );
-	} _agentEnergyIn;
-
-	//===========================================================================
-	// AgentEnergyOutLog
-	//===========================================================================
-	class AgentEnergyOutLog : public DataLibLogger
+	class AgentEnergyLog : public DataLibLogger
 	{
 	protected:
 		virtual void init( class TSimulation *sim, proplib::Document *doc );
 		virtual void processEvent( const sim::AgentBirthEvent &e );
 		virtual void processEvent( const sim::AgentBodyUpdatedEvent &e );
 		virtual void processEvent( const sim::AgentDeathEvent &e );
-	} _agentEnergyOut;
+	} _agentEnergy;
 
 	//===========================================================================
-	// AgentEnergyTotalLog
+	// AgentMaxEnergyLog
 	//===========================================================================
-	class AgentEnergyTotalLog : public DataLibLogger
+	class AgentMaxEnergyLog : public DataLibLogger
 	{
 	protected:
 		virtual void init( class TSimulation *sim, proplib::Document *doc );
-		virtual void processEvent( const sim::AgentBirthEvent &e );
-		virtual void processEvent( const sim::AgentBodyUpdatedEvent &e );
-		virtual void processEvent( const sim::AgentDeathEvent &e );
-	} _agentEnergyTotal;
+		virtual void processEvent( const sim::AgentGrownEvent &e );
+	} _agentMaxEnergy;
 
 	//===========================================================================
 	// AgentPositionLog
@@ -279,20 +265,7 @@ class Logs
 	protected:
 		virtual void init( class TSimulation *sim, proplib::Document *doc );
 		virtual void processEvent( const sim::EnergyEvent &e );
-
 	} _foodConsumption;
-
-	//===========================================================================
-	// FoodDistanceLog
-	//===========================================================================
-	class FoodDistanceLog : public DataLibLogger
-	{
-	protected:
-		virtual void init( class TSimulation *sim, proplib::Document *doc );
-		virtual void processEvent( const sim::AgentBirthEvent &e );
-		virtual void processEvent( const sim::AgentBodyUpdatedEvent &e );
-		virtual void processEvent( const sim::AgentDeathEvent &e );
-	} _foodDistance;
 
 	//===========================================================================
 	// FoodEnergyLog

@@ -11,12 +11,14 @@ map<string, const FoodType *> FoodType::foodTypes;
 vector<FoodType *> FoodType::foodTypesVector;
 
 
-FoodType::FoodType( string _name,
+FoodType::FoodType( int _index,
+					string _name,
 					Color _color,
 					EnergyPolarity _energyPolarity,
 					EnergyMultiplier _eatMultiplier,
 					Energy _depletionThreshold )
-	: name( _name )
+	: index( _index)
+	, name( _name )
 	, color( _color )
 	, energyPolarity( _energyPolarity )
 	, eatMultiplier( _eatMultiplier )
@@ -30,7 +32,8 @@ void FoodType::define( string _name,
 					   EnergyMultiplier _eatMultiplier,
 					   Energy _depletionThreshold )
 {
-	FoodType *foodType = new FoodType( _name,
+	FoodType *foodType = new FoodType( foodTypesVector.size(),
+									   _name,
 									   _color,
 									   _energyPolarity,
 									   _eatMultiplier,

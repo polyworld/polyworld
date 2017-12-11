@@ -20,6 +20,7 @@ class FoodType
 	static FoodType *get( int index );
 	static int getNumberDefinitions();
 
+	const int index;
 	const std::string name;
 	const Color color;
 	const EnergyPolarity energyPolarity;
@@ -27,7 +28,8 @@ class FoodType
 	const Energy depletionThreshold;
 
  private:
-	FoodType( std::string _name,
+	FoodType( int index,
+			  std::string _name,
 			  Color _color,
 			  EnergyPolarity _energyPolarity,
 			  EnergyMultiplier _eatMultiplier,

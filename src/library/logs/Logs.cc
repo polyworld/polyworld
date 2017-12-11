@@ -155,78 +155,15 @@ void Logs::AdamiComplexityLog::processEvent( const StepEndEvent &e )
 
 
 //===========================================================================
-// AgentEnergyInLog
+// AgentEnergyLog
 //===========================================================================
 
 //---------------------------------------------------------------------------
-// Logs::AgentEnergyInLog::init
+// Logs::AgentEnergyLog::init
 //---------------------------------------------------------------------------
-void Logs::AgentEnergyInLog::init( TSimulation *sim, Document *doc )
+void Logs::AgentEnergyLog::init( TSimulation *sim, Document *doc )
 {
-	if( doc->get("RecordAgentEnergyIn") )
-	{
-		initRecording( sim,
-					   AgentStateScope,
-					   sim::Event_AgentBirth
-					   | sim::Event_Energy
-					   | sim::Event_AgentDeath );
-	}
-}
-
-//---------------------------------------------------------------------------
-// Logs::AgentEnergyInLog::processEvent
-//---------------------------------------------------------------------------
-void Logs::AgentEnergyInLog::processEvent( const sim::AgentBirthEvent &e )
-{
-	if( e.reason == LifeSpan::BR_VIRTUAL )
-		return;
-
-	char path[512];
-	sprintf( path,
-			 "run/energy/in/agent_%ld.txt",
-			 e.a->getTypeNumber() );
-
-	DataLibWriter *writer = createWriter( e.a, path, true, false );
-
-	static const char *colnames[] = {"Timestep", "Energy", NULL};
-	static const datalib::Type coltypes[] = {datalib::INT, datalib::FLOAT};
-
-	writer->beginTable( "AgentEnergyIn",
-						colnames,
-						coltypes );
-}
-
-//---------------------------------------------------------------------------
-// Logs::AgentEnergyInLog::processEvent
-//---------------------------------------------------------------------------
-void Logs::AgentEnergyInLog::processEvent( const sim::EnergyEvent &e )
-{
-	if( e.action != EnergyEvent::Eat )
-		return;
-
-	getWriter( e.a )->addRow( getStep(),
-							  e.energy.sum() / e.a->GetMaxEnergy().sum() );
-}
-
-//---------------------------------------------------------------------------
-// Logs::AgentEnergyInLog::processEvent
-//---------------------------------------------------------------------------
-void Logs::AgentEnergyInLog::processEvent( const sim::AgentDeathEvent &e )
-{
-	delete getWriter( e.a );
-}
-
-
-//===========================================================================
-// AgentEnergyOutLog
-//===========================================================================
-
-//---------------------------------------------------------------------------
-// Logs::AgentEnergyOutLog::init
-//---------------------------------------------------------------------------
-void Logs::AgentEnergyOutLog::init( TSimulation *sim, Document *doc )
-{
-	if( doc->get("RecordAgentEnergyOut") )
+	if( doc->get("RecordAgentEnergy") )
 	{
 		initRecording( sim,
 					   AgentStateScope,
@@ -237,103 +174,119 @@ void Logs::AgentEnergyOutLog::init( TSimulation *sim, Document *doc )
 }
 
 //---------------------------------------------------------------------------
-// Logs::AgentEnergyOutLog::processEvent
+// Logs::AgentEnergyLog::processEvent
 //---------------------------------------------------------------------------
-void Logs::AgentEnergyOutLog::processEvent( const sim::AgentBirthEvent &e )
+void Logs::AgentEnergyLog::processEvent( const sim::AgentBirthEvent &e )
 {
 	if( e.reason == LifeSpan::BR_VIRTUAL )
 		return;
 
 	char path[512];
 	sprintf( path,
-			 "run/energy/out/agent_%ld.txt",
+			 "run/energy/agents/agent_%ld.txt",
 			 e.a->getTypeNumber() );
 
 	DataLibWriter *writer = createWriter( e.a, path, true, false );
 
-	static const char *colnames[] = {"Timestep", "Energy", NULL};
-	static const datalib::Type coltypes[] = {datalib::INT, datalib::FLOAT};
+	static const char *colnames[] =
+		{
+			"Timestep",
+			"In",
+			"InRaw",
+			"Out",
+			"OutRaw",
+			"Energy",
+			"FoodEnergy",
+			NULL
+		};
+	static const datalib::Type coltypes[] =
+		{
+			datalib::INT,
+			datalib::FLOAT,
+			datalib::FLOAT,
+			datalib::FLOAT,
+			datalib::FLOAT,
+			datalib::FLOAT,
+			datalib::FLOAT
+		};
 
-	writer->beginTable( "AgentEnergyOut",
+	writer->beginTable( "AgentEnergy",
 						colnames,
 						coltypes );
 }
 
 //---------------------------------------------------------------------------
-// Logs::AgentEnergyOutLog::processEvent
+// Logs::AgentEnergyLog::processEvent
 //---------------------------------------------------------------------------
-void Logs::AgentEnergyOutLog::processEvent( const sim::AgentBodyUpdatedEvent &e )
+void Logs::AgentEnergyLog::processEvent( const sim::AgentBodyUpdatedEvent &e )
 {
+	float in = 0.0f;
+	float inRaw = 0.0f;
+	if( e.a->LastEat() == getStep() - 1 )
+	{
+		in = e.a->LastEatEnergy().sum();
+		inRaw = e.a->LastEatEnergyRaw().sum();
+	}
 	getWriter( e.a )->addRow( getStep(),
-							  e.energyUsed / e.a->GetMaxEnergy().mean() );
+							  in,
+							  inRaw,
+							  e.energyUsed,
+							  e.energyUsedRaw,
+							  e.a->GetEnergy().sum(),
+							  e.a->GetFoodEnergy().sum() );
 }
 
 //---------------------------------------------------------------------------
-// Logs::AgentEnergyOutLog::processEvent
+// Logs::AgentEnergyLog::processEvent
 //---------------------------------------------------------------------------
-void Logs::AgentEnergyOutLog::processEvent( const sim::AgentDeathEvent &e )
+void Logs::AgentEnergyLog::processEvent( const sim::AgentDeathEvent &e )
 {
 	delete getWriter( e.a );
 }
 
 
 //===========================================================================
-// AgentEnergyTotalLog
+// AgentMaxEnergyLog
 //===========================================================================
 
 //---------------------------------------------------------------------------
-// Logs::AgentEnergyTotalLog::init
+// Logs::AgentMaxEnergyLog::init
 //---------------------------------------------------------------------------
-void Logs::AgentEnergyTotalLog::init( TSimulation *sim, Document *doc )
+void Logs::AgentMaxEnergyLog::init( TSimulation *sim, Document *doc )
 {
-	if( doc->get("RecordAgentEnergyTotal") )
+	if( doc->get("RecordAgentEnergy") )
 	{
 		initRecording( sim,
-					   AgentStateScope,
-					   sim::Event_AgentBirth
-					   | sim::Event_BodyUpdated
-					   | sim::Event_AgentDeath );
+					   SimulationStateScope,
+					   sim::Event_AgentGrown );
+
+		createWriter( "run/energy/agents/max.txt" );
+
+		const char *colnames[] =
+			{
+				"Agent",
+				"MaxEnergy",
+				NULL
+			};
+		const datalib::Type coltypes[] =
+			{
+				datalib::INT,
+				datalib::FLOAT
+			};
+
+		getWriter()->beginTable( "MaxEnergy",
+								  colnames,
+								  coltypes );
 	}
 }
 
 //---------------------------------------------------------------------------
-// Logs::AgentEnergyTotalLog::processEvent
+// Logs::AgentMaxEnergyLog::processEvent
 //---------------------------------------------------------------------------
-void Logs::AgentEnergyTotalLog::processEvent( const sim::AgentBirthEvent &e )
+void Logs::AgentMaxEnergyLog::processEvent( const sim::AgentGrownEvent &e )
 {
-	if( e.reason == LifeSpan::BR_VIRTUAL )
-		return;
-
-	char path[512];
-	sprintf( path,
-			 "run/energy/total/agent_%ld.txt",
-			 e.a->getTypeNumber() );
-
-	DataLibWriter *writer = createWriter( e.a, path, true, false );
-
-	static const char *colnames[] = {"Timestep", "Energy", NULL};
-	static const datalib::Type coltypes[] = {datalib::INT, datalib::FLOAT};
-
-	writer->beginTable( "AgentEnergyTotal",
-						colnames,
-						coltypes );
-}
-
-//---------------------------------------------------------------------------
-// Logs::AgentEnergyTotalLog::processEvent
-//---------------------------------------------------------------------------
-void Logs::AgentEnergyTotalLog::processEvent( const sim::AgentBodyUpdatedEvent &e )
-{
-	getWriter( e.a )->addRow( getStep(),
-							  e.a->NormalizedEnergy() );
-}
-
-//---------------------------------------------------------------------------
-// Logs::AgentEnergyTotalLog::processEvent
-//---------------------------------------------------------------------------
-void Logs::AgentEnergyTotalLog::processEvent( const sim::AgentDeathEvent &e )
-{
-	delete getWriter( e.a );
+	getWriter()->addRow( e.a->Number(),
+						 e.a->GetMaxEnergy().sum() );
 }
 
 
@@ -1274,44 +1227,27 @@ void Logs::FoodConsumptionLog::init( TSimulation *sim, Document *doc )
 					   SimulationStateScope,
 					   sim::Event_Energy );
 
-		DataLibWriter *writer = createWriter( "run/food/consumption.txt" );
+		createWriter( "run/energy/consumption.txt" );
 
-		const char *colnames_template[] =
+		const char *colnames[] =
 			{
-				"T",
+				"Timestep",
 				"Agent",
-				"FoodType",
+				"Energy",
+				"EnergyRaw",
+				NULL
 			};
-		const datalib::Type coltypes_template[] =
+		const datalib::Type coltypes[] =
 			{
 				datalib::INT,
 				datalib::INT,
-				datalib::STRING,
+				datalib::FLOAT,
+				datalib::FLOAT
 			};
 
-		int lenTemplate = sizeof(colnames_template) / sizeof(char *);
-
-		// Now add columns for the energy types, where the number is not known at compile-time.
-		const char **colnames = new const char *[ lenTemplate + globals::numEnergyTypes + 1 ];
-		datalib::Type *coltypes = new datalib::Type[ lenTemplate + globals::numEnergyTypes ];
-		for( int i = 0; i < lenTemplate; i++ )
-		{
-			colnames[i] = colnames_template[i];
-			coltypes[i] = coltypes_template[i];
-		}
-		for( int i = 0; i < globals::numEnergyTypes; i++ )
-		{
-			char buf[128];
-			sprintf( buf, "Energy%d", i );
-			colnames[ lenTemplate + i ] = strdup( buf );
-
-			coltypes[ lenTemplate + i ] = datalib::FLOAT;
-		}
-		colnames[ lenTemplate + globals::numEnergyTypes ] = NULL;
-
-		writer->beginTable( "Energy",
-							colnames,
-							coltypes );
+		getWriter()->beginTable( "FoodConsumption",
+								  colnames,
+								  coltypes );
 	}
 }
 
@@ -1320,93 +1256,10 @@ void Logs::FoodConsumptionLog::init( TSimulation *sim, Document *doc )
 //---------------------------------------------------------------------------
 void Logs::FoodConsumptionLog::processEvent( const sim::EnergyEvent &e )
 {
-	if( e.action != EnergyEvent::Eat )
-		return;
-
-	Variant *coldata = (Variant *)alloca(sizeof(Variant) * (3 + globals::numEnergyTypes));
-	coldata[0] = getStep();
-	coldata[1] = e.a->Number();
-	coldata[2] = ((food*)e.obj)->getType()->name.c_str();
-	for( int i = 0; i < globals::numEnergyTypes; i++ )
-	{
-		coldata[3 + i] = e.energy[i];
-	}
-
-	getWriter()->addRow( coldata );
-}
-
-
-//===========================================================================
-// FoodDistanceLog
-//===========================================================================
-
-//---------------------------------------------------------------------------
-// Logs::FoodDistanceLog::init
-//---------------------------------------------------------------------------
-void Logs::FoodDistanceLog::init( TSimulation *sim, Document *doc )
-{
-	if( doc->get("RecordFoodDistance") )
-	{
-		initRecording( sim,
-					   AgentStateScope,
-					   sim::Event_AgentBirth
-					   | sim::Event_BodyUpdated
-					   | sim::Event_AgentDeath );
-	}
-}
-
-//---------------------------------------------------------------------------
-// Logs::FoodDistanceLog::processEvent
-//---------------------------------------------------------------------------
-void Logs::FoodDistanceLog::processEvent( const sim::AgentBirthEvent &e )
-{
-	if( e.reason == LifeSpan::BR_VIRTUAL )
-		return;
-
-	char path[512];
-	sprintf( path,
-			 "run/food/distance/agent_%ld.txt",
-			 e.a->getTypeNumber() );
-
-	DataLibWriter *writer = createWriter( e.a, path, true, false );
-
-	static const char *colnames[] = {"Timestep", "Distance", NULL};
-	static const datalib::Type coltypes[] = {datalib::INT, datalib::FLOAT};
-
-	writer->beginTable( "FoodDistance",
-						colnames,
-						coltypes );
-}
-
-//---------------------------------------------------------------------------
-// Logs::FoodDistanceLog::processEvent
-//---------------------------------------------------------------------------
-void Logs::FoodDistanceLog::processEvent( const sim::AgentBodyUpdatedEvent &e )
-{
-	objectxsortedlist::gXSortedObjects.setMark( AGENTTYPE );
-	float dmin = -1.0f;
-	food* f;
-	objectxsortedlist::gXSortedObjects.reset();
-	while( objectxsortedlist::gXSortedObjects.nextObj( FOODTYPE, (gobject**)&f ) )
-	{
-		float dx = e.a->x() - f->x();
-		float dz = e.a->z() - f->z();
-		float d = sqrt( dx * dx + dz * dz );
-		if( dmin < 0.0f || d < dmin )
-			dmin = d;
-	}
-	if( dmin >= 0.0f )
-		getWriter( e.a )->addRow( getStep(),
-								  dmin );
-	objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE );
-}
-
-//---------------------------------------------------------------------------
-// Logs::FoodDistanceLog::processEvent
-//---------------------------------------------------------------------------
-void Logs::FoodDistanceLog::processEvent( const sim::AgentDeathEvent &e )
-{
-	delete getWriter( e.a );
+	getWriter()->addRow( getStep(),
+						 e.a->Number(),
+						 e.energy.sum(),
+						 e.energyRaw.sum() );
 }
 
 
@@ -1425,23 +1278,26 @@ void Logs::FoodEnergyLog::init( TSimulation *sim, Document *doc )
 					   SimulationStateScope,
 					   sim::Event_StepEnd );
 
-		createWriter( "run/food/energy.txt" );
+		createWriter( "run/energy/food.txt" );
 
-		const char *colnames[] =
-			{
-				"Timestep",
-				"Energy",
-				NULL
-			};
-		const datalib::Type coltypes[] =
-			{
-				datalib::INT,
-				datalib::FLOAT
-			};
+		int count = FoodType::getNumberDefinitions();
+		const char **colnames = new const char*[count + 2];
+		datalib::Type *coltypes = new datalib::Type[count + 1];
+		colnames[0] = "Timestep";
+		coltypes[0] = datalib::INT;
+		for( int i = 0; i < count; i++ )
+		{
+			colnames[i + 1] = FoodType::get( i )->name.c_str();
+			coltypes[i + 1] = datalib::FLOAT;
+		}
+		colnames[count + 1] = NULL;
 
 		getWriter()->beginTable( "FoodEnergy",
 								  colnames,
 								  coltypes );
+
+		delete[] colnames;
+		delete[] coltypes;
 	}
 }
 
@@ -1450,8 +1306,26 @@ void Logs::FoodEnergyLog::init( TSimulation *sim, Document *doc )
 //---------------------------------------------------------------------------
 void Logs::FoodEnergyLog::processEvent( const sim::StepEndEvent &e )
 {
-	getWriter()->addRow( getStep(),
-						 _simulation->getFoodEnergy() );
+	int count = FoodType::getNumberDefinitions();
+	float *energy = new float[count];
+	for( int i = 0; i < count; i++ )
+	{
+		energy[i] = 0.0f;
+	}
+	food* f;
+	objectxsortedlist::gXSortedObjects.reset();
+	while( objectxsortedlist::gXSortedObjects.nextObj( FOODTYPE, (gobject**) &f ) )
+	{
+		energy[f->getType()->index] += f->getEnergy().sum();
+	}
+	Variant *coldata = (Variant *)alloca(sizeof(Variant) * (count + 1));
+	coldata[0] = getStep();
+	for( int i = 0; i < count; i++ )
+	{
+		coldata[i + 1] = energy[i];
+	}
+	delete[] energy;
+	getWriter()->addRow( coldata );
 }
 
 

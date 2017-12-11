@@ -109,13 +109,16 @@ namespace sim
 		inline EventType getType() const { return Event_BodyUpdated; }
 
 		AgentBodyUpdatedEvent( agent *_a,
-							   float _energyUsed )
+							   float _energyUsed,
+							   float _energyUsedRaw )
 		: a(_a)
 		, energyUsed(_energyUsed)
+		, energyUsedRaw(_energyUsedRaw)
 		{}
 		
 		agent *a;
 		float energyUsed;
+		float energyUsedRaw;
 	};
 
 	//===========================================================================
@@ -221,12 +224,20 @@ namespace sim
 					 float _neuralActivation,
 					 const Energy &_energy,
 					 Action _action )
-		: a(_a), obj(_obj), neuralActivation(_neuralActivation), energy(_energy), action(_action) {}
+		: a(_a), obj(_obj), neuralActivation(_neuralActivation), energy(_energy), energyRaw(_energy), action(_action) {}
+		EnergyEvent( agent *_a,
+					 gobject *_obj,
+					 float _neuralActivation,
+					 const Energy &_energy,
+					 const Energy &_energyRaw,
+					 Action _action )
+		: a(_a), obj(_obj), neuralActivation(_neuralActivation), energy(_energy), energyRaw(_energyRaw), action(_action) {}
 
 		agent *a;
 		gobject *obj;
 		float neuralActivation;
 		const Energy &energy;
+		const Energy &energyRaw;
 		Action action;
 	};
 
