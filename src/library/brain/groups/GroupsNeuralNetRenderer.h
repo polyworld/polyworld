@@ -1,6 +1,7 @@
 #pragma once
 
 #include <gl.h>
+#include <vector>
 
 #include "brain/Nerve.h"
 #include "brain/NeuralNetRenderer.h"
@@ -13,6 +14,7 @@ class GroupsNeuralNetRenderer : public NeuralNetRenderer
 	GroupsNeuralNetRenderer( T_neuronModel *neuronModel, genome::GroupsGenome *genome )
 		: _neuronModel( neuronModel )
 		, _genome( genome )
+		, _orderedGroups( genome->getOrderedGroups() )
 	{
 	}
 
@@ -222,7 +224,7 @@ class GroupsNeuralNetRenderer : public NeuralNetRenderer
 		{
 			short numneur;
 	
-			numneur = _genome->getNeuronCount(i);
+			numneur = _genome->getNeuronCount( _orderedGroups[i] );
 	
 			x1 = x2;
 			x2 = x1 + numneur * patchwidth;
@@ -243,7 +245,7 @@ class GroupsNeuralNetRenderer : public NeuralNetRenderer
 		{
 			short numneur;
 		
-			numneur = _genome->getNeuronCount(i);
+			numneur = _genome->getNeuronCount( _orderedGroups[i] );
 	
 			y1 = y2;
 			y2 = y1 + numneur * patchheight;
@@ -260,4 +262,5 @@ class GroupsNeuralNetRenderer : public NeuralNetRenderer
  private:
 	T_neuronModel *_neuronModel;
 	genome::GroupsGenome *_genome;
+	std::vector<int> _orderedGroups;
 };
