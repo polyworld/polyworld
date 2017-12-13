@@ -716,12 +716,11 @@ void agent::eat( food* f,
 		Energy maxeat = Energy( fMaxEnergy - fEnergy, fEnergy, fMetabolism->energyPolarity * f->getEnergyPolarity() );
 		trytoeat.constrain( 0, maxeat );
 		
-		return_rawEat =
-			f->eat(trytoeat)
-			* fMetabolism->energyPolarity
-			* f->getEnergyPolarity();
+		return_rawEat = f->eat(trytoeat);
 		return_actuallyEat =
 			return_rawEat
+			* fMetabolism->energyPolarity
+			* f->getEnergyPolarity()
 			* fMetabolism->eatMultiplier
 			* f->getEatMultiplier();
 
