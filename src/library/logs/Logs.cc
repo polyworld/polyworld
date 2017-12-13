@@ -168,7 +168,7 @@ void Logs::AgentEnergyLog::init( TSimulation *sim, Document *doc )
 		initRecording( sim,
 					   AgentStateScope,
 					   sim::Event_AgentBirth
-					   | sim::Event_BodyUpdated
+					   | sim::Event_StepEnd
 					   | sim::Event_AgentDeath );
 	}
 }
@@ -191,10 +191,6 @@ void Logs::AgentEnergyLog::processEvent( const sim::AgentBirthEvent &e )
 	static const char *colnames[] =
 		{
 			"Timestep",
-			"In",
-			"InRaw",
-			"Out",
-			"OutRaw",
 			"Energy",
 			"FoodEnergy",
 			NULL
@@ -202,10 +198,6 @@ void Logs::AgentEnergyLog::processEvent( const sim::AgentBirthEvent &e )
 	static const datalib::Type coltypes[] =
 		{
 			datalib::INT,
-			datalib::FLOAT,
-			datalib::FLOAT,
-			datalib::FLOAT,
-			datalib::FLOAT,
 			datalib::FLOAT,
 			datalib::FLOAT
 		};
@@ -218,22 +210,16 @@ void Logs::AgentEnergyLog::processEvent( const sim::AgentBirthEvent &e )
 //---------------------------------------------------------------------------
 // Logs::AgentEnergyLog::processEvent
 //---------------------------------------------------------------------------
-void Logs::AgentEnergyLog::processEvent( const sim::AgentBodyUpdatedEvent &e )
+void Logs::AgentEnergyLog::processEvent( const sim::StepEndEvent &e )
 {
-	float in = 0.0f;
-	float inRaw = 0.0f;
-	if( e.a->LastEat() == getStep() - 1 )
+	agent *a;
+	objectxsortedlist::gXSortedObjects.reset();
+	while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**)&a ) )
 	{
-		in = e.a->LastEatEnergy().sum();
-		inRaw = e.a->LastEatEnergyRaw().sum();
+		getWriter( a )->addRow( getStep(),
+								a->GetEnergy().sum(),
+								a->GetFoodEnergy().sum() );
 	}
-	getWriter( e.a )->addRow( getStep(),
-							  in,
-							  inRaw,
-							  e.energyUsed,
-							  e.energyUsedRaw,
-							  e.a->GetEnergy().sum(),
-							  e.a->GetFoodEnergy().sum() );
 }
 
 //---------------------------------------------------------------------------
@@ -241,6 +227,12 @@ void Logs::AgentEnergyLog::processEvent( const sim::AgentBodyUpdatedEvent &e )
 //---------------------------------------------------------------------------
 void Logs::AgentEnergyLog::processEvent( const sim::AgentDeathEvent &e )
 {
+	if( e.reason != LifeSpan::DR_SIMEND )
+	{
+		getWriter( e.a )->addRow( getStep(),
+								  e.a->GetEnergy().sum(),
+								  e.a->GetFoodEnergy().sum() );
+	}
 	delete getWriter( e.a );
 }
 
@@ -1233,6 +1225,7 @@ void Logs::FoodConsumptionLog::init( TSimulation *sim, Document *doc )
 			{
 				"Timestep",
 				"Agent",
+				"FoodType",
 				"Energy",
 				"EnergyRaw",
 				NULL
@@ -1241,6 +1234,7 @@ void Logs::FoodConsumptionLog::init( TSimulation *sim, Document *doc )
 			{
 				datalib::INT,
 				datalib::INT,
+				datalib::STRING,
 				datalib::FLOAT,
 				datalib::FLOAT
 			};
@@ -1256,10 +1250,15 @@ void Logs::FoodConsumptionLog::init( TSimulation *sim, Document *doc )
 //---------------------------------------------------------------------------
 void Logs::FoodConsumptionLog::processEvent( const sim::EnergyEvent &e )
 {
-	getWriter()->addRow( getStep(),
-						 e.a->Number(),
-						 e.energy.sum(),
-						 e.energyRaw.sum() );
+	if( e.action == sim::EnergyEvent::Eat )
+	{
+		food *f = (food*)e.obj;
+		getWriter()->addRow( getStep(),
+							 e.a->Number(),
+							 f->getType()->name.c_str(),
+							 e.energy.sum(),
+							 e.energyRaw.sum() );
+	}
 }
 
 
