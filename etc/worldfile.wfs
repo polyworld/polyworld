@@ -1804,6 +1804,13 @@ SeedMutationRate {
 }
 
 
+SimpleSeedYawBiasDelta {
+  type    Float
+  default 0.05
+  min     0.0
+  max     0.5
+}
+
 SeedFightBias {
   type    Float
   default 0.5

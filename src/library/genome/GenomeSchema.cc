@@ -76,6 +76,7 @@ void GenomeSchema::processWorldfile( proplib::Document &doc )
 			assert( false );
 	}
 	GenomeSchema::config.seedMutationRate = doc.get( "SeedMutationRate" );
+	GenomeSchema::config.simpleSeedYawBiasDelta = doc.get( "SimpleSeedYawBiasDelta" );
 	GenomeSchema::config.seedFightBias = doc.get( "SeedFightBias" );
 	GenomeSchema::config.seedFightExcitation = doc.get( "SeedFightExcitation" );
 	GenomeSchema::config.seedGiveBias = doc.get( "SeedGiveBias" );

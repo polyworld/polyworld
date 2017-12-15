@@ -300,6 +300,7 @@ void GroupsGenomeSchema::seed( Genome *g_ )
 	if( GenomeSchema::config.seedType == GenomeSchema::SEED_SIMPLE )
 	{
 		SEED( Bias, 0.5 );
+		SEED_GROUP( Bias, Yaw, 0.5 + GenomeSchema::config.simpleSeedYawBiasDelta * (randpw() < 0.5 ? -1 : 1) );
 		SEED( ConnectionDensity, GroupsBrain::config.simpleseedconnectiondensity );
 		itfor( GeneVector, neurgroups, itIn )
 		{

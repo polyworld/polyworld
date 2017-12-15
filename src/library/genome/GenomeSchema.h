@@ -38,6 +38,7 @@ namespace genome
 
 			SeedType seedType;
 			float seedMutationRate;
+			float simpleSeedYawBiasDelta;
 			float seedFightBias;
 			float seedFightExcitation;
 			float seedGiveBias;
