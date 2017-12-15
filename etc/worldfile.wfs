@@ -121,6 +121,13 @@ InitAgents {
   max     MaxAgents
 }
 
+MaxSeedEnergy {
+  type    Float
+  default 1.0
+  exmin   0.0
+  max     1.0
+}
+
 RandomSeedEnergy {
   type    Bool
   default False

@@ -151,6 +151,7 @@ void agent::processWorldfile( proplib::Document &doc )
 		}
 	}
     agent::config.hasLightBehavior = agent::config.bodyGreenChannel == agent::BGC_LIGHT || agent::config.noseColor == agent::NC_LIGHT;
+    agent::config.maxSeedEnergy = doc.get( "MaxSeedEnergy" );
     agent::config.randomSeedEnergy = doc.get( "RandomSeedEnergy" );
     agent::config.energyUseMultiplier = doc.get( "EnergyUseMultiplier" );
     agent::config.ageEnergyMultiplier = doc.get( "AgeEnergyMultiplier" );
@@ -649,9 +650,17 @@ void agent::grow( long mateWait, bool seeding )
     fEnergy = fMaxEnergy;
 	fFoodEnergy = fMaxEnergy;
 	
-	if( seeding && agent::config.randomSeedEnergy )
+	if( seeding )
 	{
-		float energy = trand( agent::config.starvationEnergyFraction, 1.0 ) * maxEnergy;
+		float energy;
+		if( agent::config.randomSeedEnergy )
+		{
+			energy = trand( agent::config.starvationEnergyFraction, agent::config.maxSeedEnergy ) * maxEnergy;
+		}
+		else
+		{
+			energy = agent::config.maxSeedEnergy * maxEnergy;
+		}
 		fEnergy = energy;
 		fFoodEnergy = energy;
 	}
