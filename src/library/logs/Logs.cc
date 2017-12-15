@@ -1324,7 +1324,9 @@ void Logs::FoodEnergyLog::processEvent( const sim::StepEndEvent &e )
 		coldata[i + 1] = energy[i];
 	}
 	delete[] energy;
-	getWriter()->addRow( coldata );
+	DataLibWriter *writer = getWriter();
+	writer->addRow( coldata );
+	writer->flush();
 }
 
 
@@ -1606,11 +1608,13 @@ void Logs::LifeSpanLog::processEvent( const sim::AgentDeathEvent &death )
 	agent *a = death.a;
 	LifeSpan *ls = a->GetLifeSpan();
 
-	getWriter()->addRow( a->Number(),
-						 ls->birth.step,
-						 LifeSpan::BR_NAMES[ls->birth.reason],
-						 ls->death.step,
-						 LifeSpan::DR_NAMES[ls->death.reason] );
+	DataLibWriter *writer = getWriter();
+	writer->addRow( a->Number(),
+					ls->birth.step,
+					LifeSpan::BR_NAMES[ls->birth.reason],
+					ls->death.step,
+					LifeSpan::DR_NAMES[ls->death.reason] );
+	writer->flush();
 }
 
 
