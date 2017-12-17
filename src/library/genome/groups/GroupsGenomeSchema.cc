@@ -201,11 +201,20 @@ void GroupsGenomeSchema::define()
 				  GroupsBrain::config.maxconnectiondensity );
 
 	if( Brain::config.enableLearning )
-		SYNAPSE_ATTR( LearningRate,
-					  true,
-					  true,
-					  Brain::config.minlrate,
-					  Brain::config.maxlrate );	
+	{
+		if( Brain::config.minlrate == Brain::config.maxlrate )
+		{
+			add( new ImmutableScalarGene("LearningRate", Brain::config.minlrate) );
+		}
+		else
+		{
+			SYNAPSE_ATTR( LearningRate,
+						  true,
+						  true,
+						  Brain::config.minlrate,
+						  Brain::config.maxlrate );	
+		}
+	}
 
 	SYNAPSE_ATTR( TopologicalDistortion,
 				  false,
@@ -351,7 +360,7 @@ void GroupsGenomeSchema::seed( Genome *g_ )
 	}
 
 	SEED( ConnectionDensity, 0 );
-	if( Brain::config.enableLearning )
+	if( Brain::config.enableLearning && Brain::config.minlrate != Brain::config.maxlrate )
 	{
 		SEED( LearningRate, 0 );
 	}

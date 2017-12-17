@@ -849,6 +849,10 @@ void GroupsBrain::growSynapses( int groupIndex_to,
 			{
 				lrate = 0;
 			}
+			else if( Brain::config.minlrate == Brain::config.maxlrate )
+			{
+				lrate = Brain::config.minlrate;
+			}
 			else
 			{
 				lrate = _genome->get( _genome->LEARNING_RATE,
