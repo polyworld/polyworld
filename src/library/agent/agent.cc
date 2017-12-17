@@ -642,8 +642,16 @@ void agent::grow( long mateWait, bool seeding )
     
 	float size_rel = geneCache.size - agent::config.minAgentSize;
 
-    float maxEnergy = agent::config.minMaxEnergy + (size_rel
-    				  * (agent::config.maxMaxEnergy - agent::config.minMaxEnergy) / (agent::config.maxAgentSize - agent::config.minAgentSize) );
+    float maxEnergy;
+    if( agent::config.minAgentSize == agent::config.maxAgentSize )
+    {
+        maxEnergy = 0.5 * (agent::config.minMaxEnergy + agent::config.maxMaxEnergy);
+    }
+    else
+    {
+        maxEnergy = agent::config.minMaxEnergy + (size_rel
+                    * (agent::config.maxMaxEnergy - agent::config.minMaxEnergy) / (agent::config.maxAgentSize - agent::config.minAgentSize) );
+    }
     fMaxEnergy = maxEnergy;
     fStarvationFoodEnergy = agent::config.starvationEnergyFraction * maxEnergy;
 	
@@ -667,20 +675,29 @@ void agent::grow( long mateWait, bool seeding )
 	
 //	printf( "%s: energy initialized to %g\n", __func__, fEnergy );
     
-	// Note: gMinSizePenalty can be used to prevent size_rel==0 from giving
-	// the agents "free" speed.
-    fSpeed2Energy = agent::config.speed2Energy * geneCache.maxSpeed
-		            * (agent::config.minSizePenalty + size_rel) * agent::config.maxSizePenalty
-					/ (agent::config.minSizePenalty + agent::config.maxAgentSize - agent::config.minAgentSize);
-    
-	// Note: gMinSizePenalty can be used to prevent size_rel==0 from giving
-	// the agents "free" yaw.
-    fYaw2Energy = agent::config.yaw2Energy * geneCache.maxSpeed
-		          * (agent::config.minSizePenalty + size_rel) * agent::config.maxSizePenalty
-              	  / (agent::config.minSizePenalty + agent::config.maxAgentSize - agent::config.minAgentSize);
-    
-    fSizeAdvantage = 1.0 + ( size_rel *
-                (agent::config.maxSizeAdvantage - 1.0) / (agent::config.maxAgentSize - agent::config.minAgentSize) );
+    if( agent::config.minAgentSize == agent::config.maxAgentSize )
+    {
+        fSpeed2Energy = agent::config.speed2Energy * geneCache.maxSpeed;
+        fYaw2Energy = agent::config.yaw2Energy * geneCache.maxSpeed;
+        fSizeAdvantage = 1.0;
+    }
+    else
+    {
+	    // Note: gMinSizePenalty can be used to prevent size_rel==0 from giving
+	    // the agents "free" speed.
+        fSpeed2Energy = agent::config.speed2Energy * geneCache.maxSpeed
+		                * (agent::config.minSizePenalty + size_rel) * agent::config.maxSizePenalty
+					    / (agent::config.minSizePenalty + agent::config.maxAgentSize - agent::config.minAgentSize);
+        
+	    // Note: gMinSizePenalty can be used to prevent size_rel==0 from giving
+	    // the agents "free" yaw.
+        fYaw2Energy = agent::config.yaw2Energy * geneCache.maxSpeed
+		              * (agent::config.minSizePenalty + size_rel) * agent::config.maxSizePenalty
+                  	  / (agent::config.minSizePenalty + agent::config.maxAgentSize - agent::config.minAgentSize);
+        
+        fSizeAdvantage = 1.0 + ( size_rel *
+                    (agent::config.maxSizeAdvantage - 1.0) / (agent::config.maxAgentSize - agent::config.minAgentSize) );
+    }
 
     // now setup the camera & window for our agent to see the world in
     SetGraphics();
@@ -1871,8 +1888,11 @@ float agent::CarryEnergy( void )
 		switch( o->getType() )
 		{
 			case AGENTTYPE:
-				energy += agent::config.carryAgent2Energy +
-						  agent::config.carryAgentSize2Energy * (((agent*)o)->Size() - agent::config.minAgentSize) / (agent::config.maxAgentSize - agent::config.minAgentSize);
+				energy += agent::config.carryAgent2Energy;
+				if( agent::config.minAgentSize != agent::config.maxAgentSize )
+				{
+					energy += agent::config.carryAgentSize2Energy * (((agent*)o)->Size() - agent::config.minAgentSize) / (agent::config.maxAgentSize - agent::config.minAgentSize);
+				}
 				break;
 			
 			case FOODTYPE:

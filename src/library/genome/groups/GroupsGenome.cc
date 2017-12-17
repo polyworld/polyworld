@@ -340,37 +340,42 @@ void GroupsGenome::seedRandom( Gene *attr,
 void GroupsGenome::getCrossoverPoints( long *crossoverPoints, long numCrossPoints )
 {
 	long numphysbytes = _schema->getPhysicalCount();
+	long i = 0;
 
     // guarantee crossover in "physiology" genes
-    if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BIT)
+    if (numCrossPoints > 2 && numphysbytes > 1)
     {
-        crossoverPoints[0] = long(randpw() * numphysbytes * 8);	// requires [0.0, 1.0) range for randpw()
-        crossoverPoints[1] = numphysbytes * 8;
-    }
-    else if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BYTE)
-    {
-        crossoverPoints[0] = long(randpw() * numphysbytes);	// requires [0.0, 1.0) range for randpw()
-        crossoverPoints[1] = numphysbytes;
-    }
-    else
-    {
-        assert( false );
+        if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BIT)
+        {
+            crossoverPoints[0] = long(randpw() * numphysbytes * 8);	// requires [0.0, 1.0) range for randpw()
+            crossoverPoints[1] = numphysbytes * 8;
+        }
+        else if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BYTE)
+        {
+            crossoverPoints[0] = long(randpw() * numphysbytes);	// requires [0.0, 1.0) range for randpw()
+            crossoverPoints[1] = numphysbytes;
+        }
+        else
+        {
+            assert( false );
+        }
+        i = 2;
     }
 
 	// Generate & order the crossover points.
-	// Start iteration at [2], as [0], [1] set above
-    long i, j;
+	// Start iteration at [2] if [0], [1] set above
+    long j;
     
-    for (i = 2; i < numCrossPoints; i++) 
+    for ( ; i < numCrossPoints; i++) 
     {
         long newCrossPoint;
         if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BIT)
         {
-            newCrossPoint = long(randpw() * (nbytes - numphysbytes) * 8) + crossoverPoints[1];
+            newCrossPoint = long(randpw() * (nbytes - numphysbytes) * 8) + numphysbytes * 8;
         }
         else if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BYTE)
         {
-            newCrossPoint = long(randpw() * (nbytes - numphysbytes)) + crossoverPoints[1];
+            newCrossPoint = long(randpw() * (nbytes - numphysbytes)) + numphysbytes;
         }
         else
         {
@@ -380,7 +385,7 @@ void GroupsGenome::getCrossoverPoints( long *crossoverPoints, long numCrossPoint
         do
         {
             equal = false;
-            for (j = 1; j < i; j++)
+            for (j = 0; j < i; j++)
             {
                 if (newCrossPoint == crossoverPoints[j])
                     equal = true;
@@ -390,11 +395,11 @@ void GroupsGenome::getCrossoverPoints( long *crossoverPoints, long numCrossPoint
             {
                 if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BIT)
                 {
-                    newCrossPoint = long(randpw() * (nbytes - numphysbytes) * 8) + crossoverPoints[1];
+                    newCrossPoint = long(randpw() * (nbytes - numphysbytes) * 8) + numphysbytes * 8;
                 }
                 else if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BYTE)
                 {
-                    newCrossPoint = long(randpw() * (nbytes - numphysbytes)) + crossoverPoints[1];
+                    newCrossPoint = long(randpw() * (nbytes - numphysbytes)) + numphysbytes;
                 }
                 else
                 {
@@ -404,13 +409,13 @@ void GroupsGenome::getCrossoverPoints( long *crossoverPoints, long numCrossPoint
                 
         } while (equal);
         
-        if (newCrossPoint > crossoverPoints[i-1])
+        if (i == 0 || newCrossPoint > crossoverPoints[i-1])
         {
             crossoverPoints[i] = newCrossPoint;  // happened to come out ordered
 		}           
         else
         {
-            for (j = 2; j < i; j++)
+            for (j = 0; j < i; j++)
             {
                 if (newCrossPoint < crossoverPoints[j])
                 {

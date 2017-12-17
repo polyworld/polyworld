@@ -1519,7 +1519,7 @@ MinAgentSize {
 MaxAgentSize {
   type    Float
   default 2.0
-  exmin   MinAgentSize
+  min     MinAgentSize
 }
 
 MinAgentStrength {
@@ -1531,7 +1531,7 @@ MinAgentStrength {
 MaxAgentStrength {
   type    Float
   default 2.0
-  exmin   MinAgentStrength
+  min     MinAgentStrength
 }
 
 MinAgentMaxSpeed {
@@ -1543,7 +1543,7 @@ MinAgentMaxSpeed {
 MaxAgentMaxSpeed {
   type    Float
   default 1.5
-  exmin   MinAgentMaxSpeed
+  min     MinAgentMaxSpeed
 }
 
 MinMutationRate {
