@@ -1558,10 +1558,16 @@ MaxMutationRate {
   min     0.0
 }
 
-MutationStdev {
+MinMutationStdevPower {
   type    Float
-  default 16.0
-  exmin   0.0
+  default 0.0
+  min     0.0
+}
+
+MaxMutationStdevPower {
+  type    Float
+  default 6.0
+  min     MinMutationStdevPower
 }
 
 MinCrossoverPoints {
