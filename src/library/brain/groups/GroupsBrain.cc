@@ -852,6 +852,10 @@ void GroupsBrain::growSynapses( int groupIndex_to,
 			else if( Brain::config.minlrate == Brain::config.maxlrate )
 			{
 				lrate = Brain::config.minlrate;
+				if( synapseType->nt_from == INHIBITORY )
+				{
+					lrate = min(-1.e-10f, -lrate);
+				}
 			}
 			else
 			{
