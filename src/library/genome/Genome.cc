@@ -272,21 +272,12 @@ void Genome::crossover( Genome *g1, Genome *g2, bool mutate )
     }
 #endif
     
-	float mrate = 0.0;
-	float mstdev = 0.0;
-    if (mutate)
-    {
-        Genome *gTemplate = (randpw() < 0.5) ? g1 : g2;
-        mrate = gTemplate->get( "MutationRate" );
-        if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BYTE)
-            mstdev = pow( 2.0, get( "MutationStdevPower" ) );
-    }
-    
     long begbyte = 0;
     long endbyte = -1;
     long bit;
     bool first = (randpw() < 0.5);
-    const Genome* g;
+    const Genome* ga;
+    const Genome* gb;
     
 	// now do crossover using the ordered pts
     for (i = 0; i <= numCrossPoints; i++)
@@ -305,7 +296,8 @@ void Genome::crossover( Genome *g1, Genome *g2, bool mutate )
             else
                 assert( false );
 		}
-        g = first ? g1 : g2;
+        ga = first ? g1 : g2;
+        gb = first ? g2 : g1;
         
 #ifdef DUMPBITS    
         cout << "**copying bytes " << begbyte << " to " << endbyte
@@ -317,65 +309,34 @@ void Genome::crossover( Genome *g1, Genome *g2, bool mutate )
         cout.flush();
 #endif
 
-        if (mutate)
+        for (j = begbyte; j < endbyte; j++)
+            mutable_data[j] = ga->mutable_data[j];    // copy from the appropriate genome
+
+        if (i < numCrossPoints)  // except on the last stretch...
         {
-            for (j = begbyte; j < endbyte; j++)
-            {
-                mutable_data[j] = g->mutable_data[j];    // copy from the appropriate genome
-                if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BIT)
-                {
-                    for (bit = 0; bit < 8; bit++)
-                    {
-                        if (randpw() < mrate)
-                            mutable_data[j] ^= char(1 << (7-bit));	// this goes left to right, corresponding more directly to little-endian machines, but leave it alone (at least for now)
-                    }
-                }
-                else if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BYTE)
-                {
-                    if (randpw() < mrate)
-                        mutateOneByte( j, mstdev );
-                }
-                else
-                {
-                    assert( false );
-                }
-            }
-        }
-        else
-        {
-            for (j = begbyte; j < endbyte; j++)
-                mutable_data[j] = g->mutable_data[j];    // copy from the appropriate genome
-        }
-        
-        if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BIT)
-        {
-            if (i < numCrossPoints)  // except on the last stretch...
+            if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BIT)
             {
                 bit = crossoverPoints[i] - (endbyte << 3);
-                if (first)
-                {   // this goes left to right, corresponding more directly to little-endian machines, but leave it alone (at least for now)
-                    mutable_data[endbyte] = char((g1->mutable_data[endbyte] & (255 << (8 - bit)))
-                                            | (g2->mutable_data[endbyte] & (255 >> bit)));
-                }
-                else
-                {   // this goes left to right, corresponding more directly to little-endian machines, but leave it alone (at least for now)
-                    mutable_data[endbyte] = char((g2->mutable_data[endbyte] & (255 << (8 - bit)))
-                                            | (g1->mutable_data[endbyte] & (255 >> bit)));
-                }
+                // this goes left to right, corresponding more directly to little-endian machines, but leave it alone (at least for now)
+                mutable_data[endbyte] = char((ga->mutable_data[endbyte] & (255 << (8 - bit)))
+                                        | (gb->mutable_data[endbyte] & (255 >> bit)));
             }
-            if (mutate)
+            else if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BYTE)
             {
-                for (bit = 0; bit < 8; bit++)
-                {
-                    if (randpw() < mrate)
-                        mutable_data[endbyte] ^= char(1 << (7 - bit));  // this goes left to right, corresponding more directly to little-endian machines, but leave it alone (at least for now)
-                }
+                mutable_data[endbyte] = gb->mutable_data[endbyte];
+            }
+            else
+            {
+                assert( false );
             }
         }
         
         first = !first;
-        begbyte = endbyte;
+        begbyte = endbyte + 1;
     }
+
+    if (mutate)
+        this->mutate();
 }
 
 void Genome::copyFrom( Genome *g )
