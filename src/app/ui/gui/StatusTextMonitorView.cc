@@ -26,7 +26,7 @@ StatusTextMonitorView::StatusTextMonitorView( StatusTextMonitor *_monitor )
 	: MonitorView( _monitor, DEFAULT_WIDTH, DEFAULT_HEIGHT, false )
 	, monitor( _monitor )
 	, font( "Monospace", 8, QFont::Normal )
-	, lineHeight( QFontMetrics(font).height() )
+	, lineHeight( QFontMetrics(font).lineSpacing() )
 	, nlines( 0 )
 	
 {
