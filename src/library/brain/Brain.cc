@@ -97,6 +97,7 @@ void Brain::processWorldfile( proplib::Document &doc )
 	Brain::config.maxneuron2energy = doc.get( "EnergyUseNeurons" );
 	Brain::config.outputSynapseLearning = doc.get( "OutputSynapseLearning" );
 	Brain::config.synapseFromOutputNeurons = doc.get( "SynapseFromOutputNeurons" );
+	Brain::config.synapseFromInputToOutputNeurons = doc.get( "SynapseFromInputToOutputNeurons" );
 	Brain::config.numPrebirthCycles = doc.get( "PreBirthCycles" );
 
     Brain::config.logisticSlope = doc.get( "LogisticSlope" );

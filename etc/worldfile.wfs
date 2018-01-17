@@ -1733,6 +1733,11 @@ SynapseFromOutputNeurons {
   default True
 }
 
+SynapseFromInputToOutputNeurons {
+  type    Bool
+  default True
+}
+
 
 #-------------------------------------------------------------------
 # SECTION Simulation parameters -- Gene Options

@@ -94,6 +94,7 @@ public:
 		float maxbias;
 		bool outputSynapseLearning;
 		bool synapseFromOutputNeurons;
+		bool synapseFromInputToOutputNeurons;
 		long numPrebirthCycles;
 		float logisticSlope;
 		bool fixedInitWeight;

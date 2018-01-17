@@ -597,7 +597,7 @@ void GroupsBrain::grow()
 
     if( numsyn != _dims.numSynapses )
 	{
-		if( Brain::config.synapseFromOutputNeurons )
+		if( Brain::config.synapseFromOutputNeurons && Brain::config.synapseFromInputToOutputNeurons )
 		{
 			if( (numsyn > _dims.numSynapses)
 				|| (( (_dims.numSynapses - numsyn) / float(_dims.numSynapses) ) > 1.e-3) )
@@ -666,6 +666,8 @@ void GroupsBrain::growSynapses( int groupIndex_to,
 	{
 		int g_groupIndex_from = orderedGroups[groupIndex_from];
 		if( !Brain::config.synapseFromOutputNeurons && IsOutputNeuralGroup(g_groupIndex_from) )
+			continue;
+		if( !Brain::config.synapseFromInputToOutputNeurons && IsInputNeuralGroup(g_groupIndex_from) && IsOutputNeuralGroup(g_groupIndex_to) )
 			continue;
 
 		int neuronCount_from = _genome->getNeuronCount(synapseType->nt_from, g_groupIndex_from);
