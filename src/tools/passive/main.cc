@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <iostream>
 #include <iterator>
 #include <limits.h>
 #include <list>
@@ -117,7 +118,7 @@ int main(int argc, char** argv) {
                     log << timestep << " DEATH " << genome->first << std::endl;
                     writer.addRow(genome->first, births[genome->first], "PASSIVE", timestep, "PASSIVE");
                 } else {
-                    assert(false);
+                    std::cerr << "Unhandled event: " << event.type << std::endl;
                 }
             }
         }
