@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "brain/Brain.h"
+#include "brain/Nerve.h"
 #include "brain/NeuronModel.h"
 #include "brain/RqNervousSystem.h"
 #include "sim/globals.h"
@@ -30,6 +31,7 @@ void printUsage(int, char**);
 bool tryParseArgs(int, char**, Args&);
 void printArgs(const Args&);
 void printHeader(int, RqNervousSystem*);
+void printNerves(RqNervousSystem*);
 void printSynapses(RqNervousSystem*);
 void printTimeSeries(RqNervousSystem*, int, int);
 void writeBrainFunction(AbstractFile*, int, RqNervousSystem*, int, int, int);
@@ -65,6 +67,7 @@ int main(int argc, char** argv) {
             delete file;
         } else {
             printHeader(agent, cns);
+            printNerves(cns);
             printSynapses(cns);
             std::cout << "# BEGIN ENSEMBLE" << std::endl;
             for (int index = 0; index < args.repeats; index++) {
@@ -180,6 +183,15 @@ void printHeader(int agent, RqNervousSystem* cns) {
     std::cout << " " << dims.numInputNeurons;
     std::cout << " " << dims.numOutputNeurons;
     std::cout << std::endl;
+}
+
+void printNerves(RqNervousSystem* cns) {
+    std::cout << "# BEGIN NERVES" << std::endl;
+    const NervousSystem::NerveList& nerves = cns->getNerves();
+    citfor(NervousSystem::NerveList, nerves, it) {
+        std::cout << (*it)->name << " " << (*it)->getNeuronCount() << std::endl;
+    }
+    std::cout << "# END NERVES" << std::endl;
 }
 
 void printSynapses(RqNervousSystem* cns) {
