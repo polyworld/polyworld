@@ -38,6 +38,7 @@ static class SchemaDocumentInit
 SchemaDocument::SchemaDocument( std::string name, std::string path )
 : Document( name, path )
 {
+	lenient = false;
 }
 
 SchemaDocument::~SchemaDocument()
@@ -222,7 +223,12 @@ void SchemaDocument::validate( Property &propertyValue )
 	}
 
 	if( propertyValue.getSchema() == NULL )
-		propertyValue.err( "No definition in schema." );
+	{
+		if( !lenient )
+			propertyValue.err( "No definition in schema." );
+
+		return;
+	}
 
 	if( propertyValue.getSubtype() == Node::Dynamic )
 	{

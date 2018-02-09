@@ -21,6 +21,7 @@ namespace proplib
 
 	public:
 		static std::set<std::string> standardTypes;
+		bool lenient;
 
 		virtual ~SchemaDocument();
 

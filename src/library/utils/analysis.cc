@@ -78,7 +78,8 @@ void analysis::initialize(const std::string& run) {
     proplib::DocumentBuilder builder;
     proplib::SchemaDocument* schema;
     proplib::Document* worldfile;
-    schema = builder.buildSchemaDocument(run + "/original.wfs");
+    schema = builder.buildSchemaDocument("etc/worldfile.wfs");
+    schema->lenient = true;
     worldfile = builder.buildWorldfileDocument(schema, run + "/original.wf");
     schema->apply(worldfile);
     globals::recordFileType = (bool)worldfile->get("CompressFiles") ? AbstractFile::TYPE_GZIP_FILE : AbstractFile::TYPE_FILE;
