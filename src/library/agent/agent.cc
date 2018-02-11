@@ -52,6 +52,8 @@ bool		agent::gClassInited;
 unsigned long	agent::agentsEver;
 long		agent::agentsliving;
 gpolyobj*	agent::agentobj;
+bool agent::fSeedSynapsesFromFile;
+std::vector<std::string> agent::fSeedSynapseFilePaths;
 
 agent::Configuration agent::config;
 
@@ -60,6 +62,12 @@ agent::Configuration agent::config;
 //---------------------------------------------------------------------------
 void agent::processWorldfile( proplib::Document &doc )
 {
+    agent::fSeedSynapsesFromFile = doc.get( "SeedSynapsesFromRun" );
+    if( agent::fSeedSynapsesFromFile )
+    {
+        ReadSeedSynapseFilePaths();
+    }
+
     agent::config.agentHeight = doc.get( "AgentHeight" );
 	agent::config.vision = doc.get( "Vision" );
 	agent::config.maxVelocity = doc.get( "MaxVelocity" );
@@ -182,6 +190,40 @@ void agent::processWorldfile( proplib::Document &doc )
 	agent::config.invertFocus = doc.get( "InvertFocus" );
 	agent::config.enableVisionPitch = doc.get( "EnableVisionPitch" );
 	agent::config.enableVisionYaw = doc.get( "EnableVisionYaw" );
+}
+
+//---------------------------------------------------------------------------
+// agent::ReadSeedSynapseFilePaths
+//---------------------------------------------------------------------------
+void agent::ReadSeedSynapseFilePaths()
+{
+	ifstream in("synapseSeeds.txt");
+
+	if( in.fail() )
+	{
+		cerr << "Could not open synapseSeeds.txt" << endl;
+		exit( 1 );
+	}
+
+	makeDirs( "run/brain" );
+	SYSTEM( "cp synapseSeeds.txt run/brain" );
+
+	char buf[1024 * 4];
+	while( !in.eof() )
+	{
+		in.getline( buf, sizeof(buf) );
+
+		if( strlen(buf) )
+		{
+			fSeedSynapseFilePaths.push_back( string(buf) );
+		}
+	}
+
+	if( fSeedSynapseFilePaths.size() == 0 )
+	{
+		cerr << "synapseSeeds.txt is empty!" << endl;
+		exit( 1 );
+	}
 }
 
 //---------------------------------------------------------------------------
@@ -541,6 +583,10 @@ void agent::grow( long mateWait, bool seeding )
 	// --- Grow Nervous System (Brain)
 	// ---
 	fCns->grow( fGenome );
+	if( seeding && agent::fSeedSynapsesFromFile )
+	{
+		SeedSynapsesFromFile();
+	}
 	logs->postEvent( BrainGrownEvent(this) );
 
 	fCns->prebirth();
@@ -705,6 +751,27 @@ void agent::grow( long mateWait, bool seeding )
     fAlive = true;
 
 	logs->postEvent( AgentGrownEvent(this) );
+}
+
+
+//---------------------------------------------------------------------------
+// agent::SeedSynapsesFromFile
+//---------------------------------------------------------------------------
+void agent::SeedSynapsesFromFile()
+{
+	const string &path = fSeedSynapseFilePaths[ fTypeNumber % fSeedSynapseFilePaths.size() ];
+	AbstractFile *in = AbstractFile::open( path.c_str(), "r" );
+	if( in == NULL )
+	{
+		cerr << "Could not open seed file " << path << endl;
+		exit( 1 );
+	}
+
+	cout << "seeding agent #" << fTypeNumber << " synapses from " << path << endl;
+
+	fCns->getBrain()->loadSynapses( in );
+
+	delete in;
 }
 
 

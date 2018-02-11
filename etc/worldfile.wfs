@@ -2746,6 +2746,11 @@ SeedGenomeFromRun {
   default False
 }
 
+SeedSynapsesFromRun {
+  type    Bool
+  default False
+}
+
 SeedPositionFromRun {
   type    Bool
   default False

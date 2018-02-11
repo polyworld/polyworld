@@ -281,6 +281,11 @@ protected:
     static long agentsliving;
     static gpolyobj* agentobj;
     static agent** pc;
+    static bool fSeedSynapsesFromFile;
+    static std::vector<std::string> fSeedSynapseFilePaths;
+
+    static void ReadSeedSynapseFilePaths();
+    void SeedSynapsesFromFile();
 
     bool fAlive;
     bool fIsSeed;
