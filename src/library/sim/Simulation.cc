@@ -796,6 +796,10 @@ void TSimulation::InitFittest()
 				for( int i = 0; i < fDomains[id].fMaxNumLeastFit; i++ )
 					fDomains[id].fLeastFit[i] = NULL;
 			}
+			else
+			{
+				fDomains[id].fLeastFit = NULL;
+			}
         }
 	}
 }
