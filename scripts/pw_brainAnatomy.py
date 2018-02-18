@@ -77,7 +77,7 @@ class pw_brainAnatomy:
 		for i in range(max_distance):
 #			print "depth %s START:\t %s" % (i+1, v.T )
 			v = m*v
-			indices = v.nonzero()[0].tolist()[0]
+			indices = v.nonzero()[0].tolist()
 
 #			print "depth %s END:  \t %s -- adding indices=%s" % (i+1, v.T, indices)
 

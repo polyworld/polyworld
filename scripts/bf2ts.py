@@ -34,7 +34,7 @@ for funcFileName in os.listdir(funcPath):
     match = re.search(r"^(?:incomplete_)?brainFunction_(\d+)(\.txt(?:\.gz)?)$", funcFileName)
     if match is None:
         continue
-    anatFileName = "brainAnatomy_{0}_incept{1}".format(match.group(1), match.group(2))
+    anatFileName = "brainAnatomy_{0}_birth{1}".format(match.group(1), match.group(2))
     try:
         agent = pw_agent.pw_agent(os.path.join(funcPath, funcFileName), os.path.join(anatPath, anatFileName))
     except:
