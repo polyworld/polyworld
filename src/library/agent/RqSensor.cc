@@ -3,8 +3,10 @@
 #include <assert.h>
 #include <string.h>
 
+#include "brain/Brain.h"
 #include "brain/Nerve.h"
 #include "brain/NervousSystem.h"
+#include "utils/misc.h"
 #include "utils/RandomNumberGenerator.h"
 
 RqSensor::RqSensor( const std::string &name, RandomNumberGenerator *rng )
@@ -32,7 +34,7 @@ void RqSensor::sensor_update( bool print )
 	case RqNervousSystem::RANDOM:
 		for( int i = 0; i < neuronCount; i++ )
 		{
-			nerve->set( i, rng->drand() );
+			nerve->set( i, logistic( rng->nrand(), Brain::config.logisticSlope ) );
 		}
 		break;
 	case RqNervousSystem::QUIESCENT:
