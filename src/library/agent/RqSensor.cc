@@ -9,6 +9,8 @@
 #include "utils/misc.h"
 #include "utils/RandomNumberGenerator.h"
 
+#define GaussianRq 0
+
 RqSensor::RqSensor( const std::string &name, RandomNumberGenerator *rng )
 {
 	this->name = name;
@@ -34,7 +36,11 @@ void RqSensor::sensor_update( bool print )
 	case RqNervousSystem::RANDOM:
 		for( int i = 0; i < neuronCount; i++ )
 		{
-			nerve->set( i, logistic( rng->nrand(), Brain::config.logisticSlope ) );
+			#if GaussianRq
+				nerve->set( i, logistic( rng->nrand(), Brain::config.logisticSlope ) );
+			#else
+				nerve->set( i, rng->drand() );
+			#endif
 		}
 		break;
 	case RqNervousSystem::QUIESCENT:
