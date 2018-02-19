@@ -229,8 +229,9 @@ void printTimeSeries(RqNervousSystem* cns, int transient, int steps) {
     double* activations = new double[dims.numNeurons];
     std::cout << "# BEGIN TIME SERIES" << std::endl;
     for (int step = 1; step <= steps; step++) {
+        cns->getBrain()->getActivations(activations + dims.numInputNeurons, dims.numInputNeurons, dims.getNumNonInputNeurons());
         cns->update(false);
-        cns->getBrain()->getActivations(activations, 0, dims.numNeurons);
+        cns->getBrain()->getActivations(activations, 0, dims.numInputNeurons);
         for (int neuron = 0; neuron < dims.numNeurons; neuron++) {
             if (neuron > 0) {
                 std::cout << " ";
