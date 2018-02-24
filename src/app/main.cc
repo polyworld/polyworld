@@ -110,7 +110,9 @@ int main( int argc, char** argv )
 		exe[rc] = 0;
 		char *lastslash = strrchr( exe, '/' );
 		*lastslash = 0;
-		if( 0 != strcmp(exe, getenv("PWD")) )
+		char cwd[1024];
+		getcwd( cwd, sizeof(cwd) );
+		if( 0 != strcmp(exe, cwd) )
 		{
 			fprintf( stderr, "Must execute from directory containing binary: %s\n", exe );
 			exit( 1 );
