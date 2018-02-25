@@ -33,7 +33,6 @@ namespace genome
 			typedef std::map<std::string,float> GeneInterpolationPowers;
 			GeneInterpolationPowers geneInterpolationPower;
 
-			bool dieAtMaxAge;
 			bool enableEvolution;
 
 			SeedType seedType;

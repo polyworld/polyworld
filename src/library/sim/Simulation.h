@@ -89,6 +89,8 @@ public:
 	int fLockstepNumBirthsAtTimestep;	// how many agents were born at LockstepTimestep?
 	void SetNextLockstepEvent();		// function to read the next event from LOCKSTEP-BirthsDeaths.log
 
+	bool fAdaptivityMode;
+
 
 	static long fStep;
 	static double fFramesPerSecondOverall;
@@ -118,7 +120,6 @@ public:
 
 	bool fAllowBirths;
 	bool fAllowMinDeaths;
-	bool fDieAtMaxAge;
 	
 	float EnergyFitnessParameter() const;
 	float AgeFitnessParameter() const;
@@ -234,6 +235,7 @@ private:
 	void processWorldFile( proplib::Document *docWorldFile );
 	void initLockstepMode();
 	void initFitnessMode();
+	void initAdaptivityMode();
 
 	void Dump();
 	

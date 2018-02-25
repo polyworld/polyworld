@@ -293,6 +293,11 @@ TSimulation::TSimulation( string worldfilePath, proplib::ParameterMap parameters
 	{
 		initFitnessMode();
 	}
+	// If this is an adaptivity mode run, then we need to force certain parameter values (and warn the user)
+	if( fAdaptivityMode )
+	{
+		initAdaptivityMode();
+	}
 
 	// ---
 	// --- General Init
@@ -1792,7 +1797,7 @@ void TSimulation::DeathAndStats( void )
 
 			{
 				if ( c->GetEnergy().isDepleted() ||
-					 ( fDieAtMaxAge && c->Age() >= c->MaxAge() ) ||
+					 ( c->Age() >= c->MaxAge() ) ||
 					 ( !globals::blockedEdges && !globals::wraparound &&
 					 	(c->x() < 0.0 || c->x() >  globals::worldsize ||
 						 c->z() > 0.0 || c->z() < -globals::worldsize) ) ||
@@ -1800,7 +1805,7 @@ void TSimulation::DeathAndStats( void )
 				{
 					LifeSpan::DeathReason reason = LifeSpan::DR_NATURAL;
 
-					if (fDieAtMaxAge && c->Age() >= c->MaxAge())
+					if (c->Age() >= c->MaxAge())
 						fNumberDiedAge++;
 					else if ( c->GetEnergy().isDepleted() )
 						fNumberDiedEnergy++;
@@ -3813,6 +3818,7 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 	proplib::Document &doc = *docWorldFile;
 
 	fLockStepWithBirthsDeathsLog = doc.get( "PassiveLockstep" );
+	fAdaptivityMode = doc.get( "AdaptivityMode" );
 	fMaxSteps = doc.get( "MaxSteps" );
 	fEndOnPopulationCrash = doc.get( "EndOnPopulationCrash" );
 	fDumpFrequency = doc.get( "CheckPointFrequency" );
@@ -4529,7 +4535,6 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 
 	fAllowBirths = doc.get( "AllowBirths" );
 	fAllowMinDeaths = doc.get( "AllowMinDeaths" );
-	fDieAtMaxAge = doc.get( "DieAtMaxAge" );
 
 	fComplexityType = (string)doc.get( "ComplexityType" );
 	fComplexityFitnessWeight = doc.get( "ComplexityFitnessWeight" );
@@ -4614,7 +4619,7 @@ void TSimulation::initLockstepMode()
 	cout << "  CarryBrick2Energy" ses brick::gCarryBrick2Energy nl;
 	cout << "  FixedEnergyDrain" ses agent::config.fixedEnergyDrain nl;
 	cout << "  NumDepletionSteps" ses fNumDepletionSteps nl;
-	cout << "  .MaxPopulationPenaltyFraction" ses fMaxPopulationPenaltyFraction nl;
+	cout << "  MaxPopulationPenaltyFraction" ses fMaxPopulationPenaltyFraction nl;
 	cout << "  ApplyLowPopulationAdvantage" ses fApplyLowPopulationAdvantage nl;
 }
 
@@ -4662,7 +4667,47 @@ void TSimulation::initFitnessMode()
 		// 			cout << "    probabilityOfMutatingSeeds" ses fDomains[i].probabilityOfMutatingSeeds nl;
 	}
 	cout << "  NumDepletionSteps" ses fNumDepletionSteps nl;
-	cout << "  .MaxPopulationPenaltyFraction" ses fMaxPopulationPenaltyFraction nl;
+	cout << "  MaxPopulationPenaltyFraction" ses fMaxPopulationPenaltyFraction nl;
+	cout << "  ApplyLowPopulationAdvantage" ses fApplyLowPopulationAdvantage nl;
+	cout << "  EnergyBasedPopulationControl" ses fEnergyBasedPopulationControl nl;
+}
+
+//-------------------------------------------------------------------------------------------
+// TSimulation::initAdaptivityMode
+//-------------------------------------------------------------------------------------------
+void TSimulation::initAdaptivityMode()
+{
+	fMinNumAgents = 0;
+	fAllowBirths = false;
+	fEndOnPopulationCrash = true;
+	for( int i = 0; i < fNumDomains; i++ )	// over all domains
+	{
+		fDomains[i].minNumAgents = 0;
+	}
+
+	agent::config.dieAtMaxAge = false;
+	agent::config.minLifeSpan = fMaxSteps;
+	agent::config.maxLifeSpan = fMaxSteps;
+	agent::config.maxSeedEnergy = 1.0;
+	agent::config.randomSeedEnergy = false;
+	assert( agent::config.ageEnergyMultiplier > 0.0 );
+
+	fNumDepletionSteps = 0;
+	fMaxPopulationPenaltyFraction = 0.0;
+
+	fApplyLowPopulationAdvantage = false;
+	fEnergyBasedPopulationControl = false;
+
+	cout << "Due to running in adaptivity mode, the following parameter values have been forcibly reset as indicated:" nl;
+	cout << "  MinNumAgents " ses fMinNumAgents nl;
+	cout << "  AllowBirths " ses fAllowBirths nl;
+	cout << "  EndOnPopulationCrash " ses fEndOnPopulationCrash nl;
+	cout << "  MinLifeSpan" ses agent::config.minLifeSpan nl;
+	cout << "  MaxLifeSpan" ses agent::config.maxLifeSpan nl;
+	cout << "  MaxSeedEnergy" ses agent::config.maxSeedEnergy nl;
+	cout << "  RandomSeedEnergy" ses agent::config.randomSeedEnergy nl;
+	cout << "  NumDepletionSteps" ses fNumDepletionSteps nl;
+	cout << "  MaxPopulationPenaltyFraction" ses fMaxPopulationPenaltyFraction nl;
 	cout << "  ApplyLowPopulationAdvantage" ses fApplyLowPopulationAdvantage nl;
 	cout << "  EnergyBasedPopulationControl" ses fEnergyBasedPopulationControl nl;
 }

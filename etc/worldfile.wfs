@@ -64,6 +64,12 @@ PassiveLockstep {
   default False
 }
 
+AdaptivityMode {
+  type    Bool
+  default False
+  assert  not PassiveLockstep
+}
+
 InitSeed {
   type    Int
   default 42    # applied before agents, genomes, brains, food, bricks, etc. are initialized
