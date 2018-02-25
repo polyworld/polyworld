@@ -283,6 +283,7 @@ protected:
     static agent** pc;
     static bool fSeedSynapsesFromFile;
     static std::vector<std::string> fSeedSynapseFilePaths;
+    static bool fFreezeSeededSynapses;
 
     static void ReadSeedSynapseFilePaths();
     void SeedSynapsesFromFile();

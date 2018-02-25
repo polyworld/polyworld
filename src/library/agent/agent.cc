@@ -54,6 +54,7 @@ long		agent::agentsliving;
 gpolyobj*	agent::agentobj;
 bool agent::fSeedSynapsesFromFile;
 std::vector<std::string> agent::fSeedSynapseFilePaths;
+bool agent::fFreezeSeededSynapses;
 
 agent::Configuration agent::config;
 
@@ -67,6 +68,7 @@ void agent::processWorldfile( proplib::Document &doc )
     {
         ReadSeedSynapseFilePaths();
     }
+    agent::fFreezeSeededSynapses = doc.get( "FreezeSeededSynapses" );
 
     agent::config.agentHeight = doc.get( "AgentHeight" );
 	agent::config.vision = doc.get( "Vision" );
@@ -586,6 +588,8 @@ void agent::grow( long mateWait, bool seeding )
 	if( seeding && agent::fSeedSynapsesFromFile )
 	{
 		SeedSynapsesFromFile();
+		if( agent::fFreezeSeededSynapses )
+			fCns->getBrain()->freeze();
 	}
 	logs->postEvent( BrainGrownEvent(this) );
 

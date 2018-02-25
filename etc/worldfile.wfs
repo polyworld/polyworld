@@ -2756,6 +2756,11 @@ SeedSynapsesFromRun {
   default False
 }
 
+FreezeSeededSynapses {
+  type    Bool
+  default False
+}
+
 SeedPositionFromRun {
   type    Bool
   default False
