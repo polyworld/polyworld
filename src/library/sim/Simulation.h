@@ -116,6 +116,7 @@ public:
 	double fPopControlMaxScaleFactor;
 	double fGlobalEnergyScaleFactor;
 
+	bool fAllowBirths;
 	bool fAllowMinDeaths;
 	bool fDieAtMaxAge;
 	

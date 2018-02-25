@@ -1280,6 +1280,11 @@ PopControlDomains {
   default False
 }
 
+AllowBirths {
+  type    Bool
+  default True
+}
+
 AllowMinDeaths {
   type    Bool
   default False

@@ -69,6 +69,7 @@ namespace sim
 #define MATE__PREVENTED__MAX_METABOLISM	(1 << 10)
 #define MATE__PREVENTED__MISC			(1 << 11)
 #define MATE__PREVENTED__MAX_VELOCITY	(1 << 12)
+#define MATE__PREVENTED__WORLDFILE		(1 << 13)
 
 
 // Used in logic related to Fighting as well as ContactEntry

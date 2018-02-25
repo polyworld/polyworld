@@ -2126,6 +2126,9 @@ int TSimulation::GetMateDenialStatus( agent *x, int *xStatus,
 		__SET( Misc, MISC );
 	}
 
+	bool preventedByWorldfile = !fAllowBirths;
+	__SET( Worldfile, WORLDFILE );
+
 #undef __SET
 
 	*xStatus |= status;
@@ -4524,6 +4527,7 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 	fPopControlMinScaleFactor = doc.get( "PopControlMinScaleFactor" );
 	fPopControlMaxScaleFactor = doc.get( "PopControlMaxScaleFactor" );
 
+	fAllowBirths = doc.get( "AllowBirths" );
 	fAllowMinDeaths = doc.get( "AllowMinDeaths" );
 	fDieAtMaxAge = doc.get( "DieAtMaxAge" );
 
