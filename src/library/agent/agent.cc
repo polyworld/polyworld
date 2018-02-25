@@ -759,7 +759,7 @@ void agent::grow( long mateWait, bool seeding )
 //---------------------------------------------------------------------------
 void agent::SeedSynapsesFromFile()
 {
-	const string &path = fSeedSynapseFilePaths[ fTypeNumber % fSeedSynapseFilePaths.size() ];
+	const string &path = fSeedSynapseFilePaths[ (fTypeNumber - 1) % fSeedSynapseFilePaths.size() ];
 	AbstractFile *in = AbstractFile::open( path.c_str(), "r" );
 	if( in == NULL )
 	{
