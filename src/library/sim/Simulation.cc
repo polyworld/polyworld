@@ -4677,7 +4677,6 @@ void TSimulation::initFitnessMode()
 //-------------------------------------------------------------------------------------------
 void TSimulation::initAdaptivityMode()
 {
-	fMinNumAgents = 0;
 	fAllowBirths = false;
 	fEndOnPopulationCrash = true;
 	for( int i = 0; i < fNumDomains; i++ )	// over all domains
@@ -4699,7 +4698,6 @@ void TSimulation::initAdaptivityMode()
 	fEnergyBasedPopulationControl = false;
 
 	cout << "Due to running in adaptivity mode, the following parameter values have been forcibly reset as indicated:" nl;
-	cout << "  MinNumAgents " ses fMinNumAgents nl;
 	cout << "  AllowBirths " ses fAllowBirths nl;
 	cout << "  EndOnPopulationCrash " ses fEndOnPopulationCrash nl;
 	cout << "  MinLifeSpan" ses agent::config.minLifeSpan nl;
