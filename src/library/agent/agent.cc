@@ -1215,10 +1215,7 @@ float agent::UpdateBody( float moveFitnessParam,
 					   * fSimulation->fDomains[fDomain].energyScaleFactor;
 	denergy *= scaleFactor;	// if population is getting too low or too high, adjust energy consumption
 	
-	if( !fSimulation->fAdaptivityMode )
-	{
-		denergy *= agent::config.energyUseMultiplier;	// global control over rate at which energy is consumed
-	}
+	denergy *= agent::config.energyUseMultiplier;	// global control over rate at which energy is consumed
 
     fEnergy -= denergy;
     fFoodEnergy -= denergy;
