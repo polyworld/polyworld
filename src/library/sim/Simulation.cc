@@ -4677,12 +4677,17 @@ void TSimulation::initFitnessMode()
 //-------------------------------------------------------------------------------------------
 void TSimulation::initAdaptivityMode()
 {
-	fAllowBirths = false;
-	fEndOnPopulationCrash = true;
+	fMinNumAgents = 0;
+	fMaxNumAgents = fInitNumAgents;
+	fNumberToSeed = fInitNumAgents;
 	for( int i = 0; i < fNumDomains; i++ )	// over all domains
 	{
 		fDomains[i].minNumAgents = 0;
+		fDomains[i].maxNumAgents = fDomains[i].initNumAgents;
+		fDomains[i].numberToSeed = fDomains[i].initNumAgents;
 	}
+	fAllowBirths = false;
+	fEndOnPopulationCrash = true;
 
 	agent::config.dieAtMaxAge = false;
 	agent::config.minLifeSpan = fMaxSteps;
@@ -4698,8 +4703,18 @@ void TSimulation::initAdaptivityMode()
 	fEnergyBasedPopulationControl = false;
 
 	cout << "Due to running in adaptivity mode, the following parameter values have been forcibly reset as indicated:" nl;
-	cout << "  AllowBirths " ses fAllowBirths nl;
-	cout << "  EndOnPopulationCrash " ses fEndOnPopulationCrash nl;
+	cout << "  MinNumAgents" ses fMinNumAgents nl;
+	cout << "  MaxNumAgents" ses fMaxNumAgents nl;
+	cout << "  NumberToSeed" ses fNumberToSeed nl;
+	for( int i = 0; i < fNumDomains; i++ )
+	{
+		cout << "  Domain " << i << ":" nl;
+		cout << "    minNumAgents" ses fDomains[i].minNumAgents nl;
+		cout << "    maxNumAgents" ses fDomains[i].maxNumAgents nl;
+		cout << "    numberToSeed" ses fDomains[i].numberToSeed nl;
+	}
+	cout << "  AllowBirths" ses fAllowBirths nl;
+	cout << "  EndOnPopulationCrash" ses fEndOnPopulationCrash nl;
 	cout << "  MinLifeSpan" ses agent::config.minLifeSpan nl;
 	cout << "  MaxLifeSpan" ses agent::config.maxLifeSpan nl;
 	cout << "  MaxSeedEnergy" ses agent::config.maxSeedEnergy nl;
