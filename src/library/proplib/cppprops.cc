@@ -392,6 +392,12 @@ string CppProperties::generateInitFunctionBody( DynamicScalarProperty *prop,
 							{
 							case Node::Const:
 								text = (string)*sym.prop;
+								// Convert Python Boolean literals to C++
+								// I assume this belongs further down in the class hierarchy, but I have no idea where
+								if( text == "True" )
+									text = "true";
+								else if( text == "False" )
+									text = "false";
 								break;
 							case Node::Dynamic:
 								antecedents.push_back( dynamic_cast<DynamicScalarProperty *>(sym.prop) );
@@ -648,6 +654,12 @@ string CppProperties::generateUpdateFunctionBody( DynamicScalarProperty *prop,
 								{
 								case Node::Const:
 									text = (string)*sym.prop;
+									// Convert Python Boolean literals to C++
+									// I assume this belongs further down in the class hierarchy, but I have no idea where
+									if( text == "True" )
+										text = "true";
+									else if( text == "False" )
+										text = "false";
 									break;
 								case Node::Dynamic:
 									antecedents.push_back( dynamic_cast<DynamicScalarProperty *>(sym.prop) );
