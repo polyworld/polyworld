@@ -123,8 +123,7 @@ MaxAgents {
 InitAgents {
   type    Int
   default 180
-  min     MinAgents
-  max     MaxAgents
+  assert  ( InitAgents >= MinAgents and InitAgents <= MaxAgents ) or AdaptivityMode
 }
 
 MaxSeedEnergy {
@@ -142,8 +141,7 @@ RandomSeedEnergy {
 SeedAgents {
   type    Int
   defaults { default InitAgents; legacy 0 }
-  min     0
-  max     InitAgents
+  assert  ( SeedAgents >= 0 and SeedAgents <= InitAgents ) or AdaptivityMode
 }
 
 SeedMutationProbability {
@@ -1309,7 +1307,7 @@ DieAtMaxAge {
 AgeEnergyMultiplier {
   type    Float
   default 0.0
-  min     0.0
+  assert  AgeEnergyMultiplier > 0.0 or not AdaptivityMode
 }
 
 #-------------------------------------------------------------------

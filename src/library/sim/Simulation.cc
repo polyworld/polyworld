@@ -4677,6 +4677,7 @@ void TSimulation::initFitnessMode()
 //-------------------------------------------------------------------------------------------
 void TSimulation::initAdaptivityMode()
 {
+	fMaxSteps = INT_MAX;
 	fMinNumAgents = 0;
 	fMaxNumAgents = fInitNumAgents;
 	fNumberToSeed = fInitNumAgents;
@@ -4694,7 +4695,6 @@ void TSimulation::initAdaptivityMode()
 	agent::config.maxLifeSpan = fMaxSteps;
 	agent::config.maxSeedEnergy = 1.0;
 	agent::config.randomSeedEnergy = false;
-	assert( agent::config.ageEnergyMultiplier > 0.0 );
 
 	fNumDepletionSteps = 0;
 	fMaxPopulationPenaltyFraction = 0.0;
@@ -4703,6 +4703,7 @@ void TSimulation::initAdaptivityMode()
 	fEnergyBasedPopulationControl = false;
 
 	cout << "Due to running in adaptivity mode, the following parameter values have been forcibly reset as indicated:" nl;
+	cout << "  MaxSteps" ses fMaxSteps nl;
 	cout << "  MinNumAgents" ses fMinNumAgents nl;
 	cout << "  MaxNumAgents" ses fMaxNumAgents nl;
 	cout << "  NumberToSeed" ses fNumberToSeed nl;
