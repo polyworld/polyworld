@@ -670,8 +670,6 @@ void agent::grow( long mateWait, bool seeding )
 	}
     fNoseColor[0] = fNoseColor[1] = fNoseColor[2] = noseColor;
     
-    UpdateColor();
-    
     fIsSeed = seeding;
     fAge = 0;
     if( seeding )
@@ -707,6 +705,8 @@ void agent::grow( long mateWait, bool seeding )
 	
     fEnergy = fMaxEnergy;
 	fFoodEnergy = fMaxEnergy;
+    
+    UpdateColor();
 	
 	if( seeding )
 	{
