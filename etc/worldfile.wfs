@@ -67,7 +67,7 @@ PassiveLockstep {
 AdaptivityMode {
   type    Bool
   default False
-  assert  not PassiveLockstep
+  assert  not AdaptivityMode or not PassiveLockstep
 }
 
 InitSeed {
