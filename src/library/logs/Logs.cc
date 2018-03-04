@@ -1275,7 +1275,8 @@ void Logs::FoodEnergyLog::init( TSimulation *sim, Document *doc )
 	{
 		initRecording( sim,
 					   SimulationStateScope,
-					   sim::Event_StepEnd );
+					   sim::Event_SimInited
+					   | sim::Event_StepEnd );
 
 		createWriter( "run/energy/food.txt" );
 
@@ -1303,7 +1304,23 @@ void Logs::FoodEnergyLog::init( TSimulation *sim, Document *doc )
 //---------------------------------------------------------------------------
 // Logs::FoodEnergyLog::processEvent
 //---------------------------------------------------------------------------
+void Logs::FoodEnergyLog::processEvent( const sim::SimInitedEvent &e )
+{
+	processEvent();
+}
+
+//---------------------------------------------------------------------------
+// Logs::FoodEnergyLog::processEvent
+//---------------------------------------------------------------------------
 void Logs::FoodEnergyLog::processEvent( const sim::StepEndEvent &e )
+{
+	processEvent();
+}
+
+//---------------------------------------------------------------------------
+// Logs::FoodEnergyLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::FoodEnergyLog::processEvent( )
 {
 	int count = FoodType::getNumberDefinitions();
 	float *energy = new float[count];
