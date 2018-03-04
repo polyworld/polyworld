@@ -51,8 +51,6 @@ void GenomeSchema::processWorldfile( proplib::Document &doc )
     GenomeSchema::config.maxMutationStdevPower = doc.get( "MaxMutationStdevPower" );
     GenomeSchema::config.minNumCpts = doc.get( "MinCrossoverPoints" );
     GenomeSchema::config.maxNumCpts = doc.get( "MaxCrossoverPoints" );
-    GenomeSchema::config.minLifeSpan = doc.get( "MinLifeSpan" );
-    GenomeSchema::config.maxLifeSpan = doc.get( "MaxLifeSpan" );
     GenomeSchema::config.miscBias = doc.get( "MiscegenationFunctionBias" );
     GenomeSchema::config.miscInvisSlope = doc.get( "MiscegenationFunctionInverseSlope" );
 	{
@@ -145,8 +143,8 @@ void GenomeSchema::define()
 		   GenomeSchema::config.maxNumCpts );
 
 	SCALAR( LifeSpan,
-		   GenomeSchema::config.minLifeSpan,
-		   GenomeSchema::config.maxLifeSpan );
+		   agent::config.minLifeSpan,
+		   agent::config.maxLifeSpan );
 
 	if( agent::config.bodyGreenChannel == agent::BGC_ID )
 	{

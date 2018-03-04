@@ -4575,8 +4575,7 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 //-------------------------------------------------------------------------------------------
 void TSimulation::initLockstepMode()
 {
-	agent::config.minLifeSpan = fMaxSteps;
-	agent::config.maxLifeSpan = fMaxSteps;
+	agent::config.dieAtMaxAge = false;
 
 	agent::config.eat2Energy = 0.0;
 	agent::config.mate2Energy = 0.0;
@@ -4601,8 +4600,7 @@ void TSimulation::initLockstepMode()
 	fEnergyBasedPopulationControl = false;
 
 	cout << "Due to running in LockStepWithBirthsDeathsLog mode, the following parameter values have been forcibly reset as indicated:" nl;
-	cout << "  MinLifeSpan" ses agent::config.minLifeSpan nl;
-	cout << "  MaxLifeSpan" ses agent::config.maxLifeSpan nl;
+	cout << "  DieAtMaxAge" ses agent::config.dieAtMaxAge nl;
 	cout << "  Eat2Energy" ses agent::config.eat2Energy nl;
 	cout << "  Mate2Energy" ses agent::config.mate2Energy nl;
 	cout << "  Fight2Energy" ses agent::config.fight2Energy nl;
@@ -4621,6 +4619,7 @@ void TSimulation::initLockstepMode()
 	cout << "  NumDepletionSteps" ses fNumDepletionSteps nl;
 	cout << "  MaxPopulationPenaltyFraction" ses fMaxPopulationPenaltyFraction nl;
 	cout << "  ApplyLowPopulationAdvantage" ses fApplyLowPopulationAdvantage nl;
+	cout << "  EnergyBasedPopulationControl" ses fEnergyBasedPopulationControl nl;
 }
 
 //-------------------------------------------------------------------------------------------
@@ -4691,8 +4690,6 @@ void TSimulation::initAdaptivityMode()
 	fEndOnPopulationCrash = true;
 
 	agent::config.dieAtMaxAge = false;
-	agent::config.minLifeSpan = fMaxSteps;
-	agent::config.maxLifeSpan = fMaxSteps;
 	agent::config.maxSeedEnergy = 1.0;
 	agent::config.randomSeedEnergy = false;
 
@@ -4716,8 +4713,7 @@ void TSimulation::initAdaptivityMode()
 	}
 	cout << "  AllowBirths" ses fAllowBirths nl;
 	cout << "  EndOnPopulationCrash" ses fEndOnPopulationCrash nl;
-	cout << "  MinLifeSpan" ses agent::config.minLifeSpan nl;
-	cout << "  MaxLifeSpan" ses agent::config.maxLifeSpan nl;
+	cout << "  DieAtMaxAge" ses agent::config.dieAtMaxAge nl;
 	cout << "  MaxSeedEnergy" ses agent::config.maxSeedEnergy nl;
 	cout << "  RandomSeedEnergy" ses agent::config.randomSeedEnergy nl;
 	cout << "  NumDepletionSteps" ses fNumDepletionSteps nl;

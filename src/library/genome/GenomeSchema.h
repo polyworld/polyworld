@@ -52,8 +52,6 @@ namespace genome
 			float maxMutationStdevPower;
 			long minNumCpts;
 			long maxNumCpts;
-			long minLifeSpan;
-			long maxLifeSpan;
 			float miscBias;
 			float miscInvisSlope;
 			float minBitProb;
