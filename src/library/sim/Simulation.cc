@@ -4692,6 +4692,7 @@ void TSimulation::initAdaptivityMode()
 	agent::config.dieAtMaxAge = false;
 	agent::config.maxSeedEnergy = 1.0;
 	agent::config.randomSeedEnergy = false;
+	agent::config.randomSeedMateWait = false;
 
 	fNumDepletionSteps = 0;
 	fMaxPopulationPenaltyFraction = 0.0;
@@ -4716,6 +4717,7 @@ void TSimulation::initAdaptivityMode()
 	cout << "  DieAtMaxAge" ses agent::config.dieAtMaxAge nl;
 	cout << "  MaxSeedEnergy" ses agent::config.maxSeedEnergy nl;
 	cout << "  RandomSeedEnergy" ses agent::config.randomSeedEnergy nl;
+	cout << "  RandomSeedMateWait" ses agent::config.randomSeedMateWait nl;
 	cout << "  NumDepletionSteps" ses fNumDepletionSteps nl;
 	cout << "  MaxPopulationPenaltyFraction" ses fMaxPopulationPenaltyFraction nl;
 	cout << "  ApplyLowPopulationAdvantage" ses fApplyLowPopulationAdvantage nl;
