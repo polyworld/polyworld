@@ -1081,6 +1081,7 @@ void Logs::ContactLog::encode( const sim::AgentContactEndEvent::AgentInfo &info,
 		__SET( MAX_METABOLISM, 't' );
 		__SET( MISC, 'm' );
 		__SET( MAX_VELOCITY, 'v' );
+		__SET( WORLDFILE, 'o' );
 
 #undef __SET
 
