@@ -1044,7 +1044,7 @@ void agent::InitGeneCache()
 	if( agent::config.dieAtMaxAge )
 		geneCache.lifespan = fGenome->get("LifeSpan");
 	else
-		geneCache.lifespan = fSimulation->GetMaxSteps();
+		geneCache.lifespan = INT_MAX;
 }
 
 //---------------------------------------------------------------------------
