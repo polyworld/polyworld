@@ -8,6 +8,7 @@
 
 // System
 #include <gl.h>
+#include <limits.h>
 #include <string.h>
 
 // Local
