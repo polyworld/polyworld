@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
+#include <sstream>
 
 // Qt
 #include <QtGui>
@@ -98,6 +99,13 @@ void GLWidget::Draw()
 void GLWidget::Write( FILE *file )
 {
 	fwrite( frame->rgbBuf, sizeof(uint32_t), frame->width * frame->height, file );
+}
+
+void GLWidget::Save()
+{
+	std::stringstream fileName;
+	fileName << frame->index << ".png";
+	grabFrameBuffer().save( fileName.str().c_str() );
 }
 
 void GLWidget::paintGL()

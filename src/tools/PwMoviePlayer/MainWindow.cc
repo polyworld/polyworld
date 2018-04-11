@@ -223,6 +223,9 @@ void MainWindow::keyReleaseEvent( QKeyEvent* event )
 			PrevFrame( delta );
 			break;
 
+		case Qt::Key_S:
+			glWidget->Save();
+
 		default:
 			event->ignore();
 			break;

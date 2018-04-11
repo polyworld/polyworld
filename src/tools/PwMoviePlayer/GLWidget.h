@@ -30,6 +30,7 @@ public:
 	
 	void Draw();
 	void Write( FILE *file );
+	void Save();
 
 protected:
 	void initializeGL();
