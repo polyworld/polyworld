@@ -4650,6 +4650,7 @@ void TSimulation::initFitnessMode()
 	fMaxPopulationPenaltyFraction = 0.0;	// ditto
 	fApplyLowPopulationAdvantage = false;			// turn off the low-population advantage
 	fEnergyBasedPopulationControl = false;			// turn off energy-based population control
+	fEndOnPopulationCrash = false;
 
 	cout << "Due to running as a steady-state GA with a fitness function, the following parameter values have been forcibly reset as indicated:" nl;
 	cout << "  InitNumAgents" ses fInitNumAgents nl;
@@ -4669,6 +4670,7 @@ void TSimulation::initFitnessMode()
 	cout << "  MaxPopulationPenaltyFraction" ses fMaxPopulationPenaltyFraction nl;
 	cout << "  ApplyLowPopulationAdvantage" ses fApplyLowPopulationAdvantage nl;
 	cout << "  EnergyBasedPopulationControl" ses fEnergyBasedPopulationControl nl;
+	cout << "  EndOnPopulationCrash" ses fEndOnPopulationCrash nl;
 }
 
 //-------------------------------------------------------------------------------------------
