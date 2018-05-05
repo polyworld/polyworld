@@ -4627,22 +4627,14 @@ void TSimulation::initLockstepMode()
 //-------------------------------------------------------------------------------------------
 void TSimulation::initFitnessMode()
 {
-	fNumberToSeed = lrint( fMaxNumAgents * (float) fNumberToSeed / fInitNumAgents );	// same proportion as originally specified (must calculate before changing fInitNumAgents)
-	if( fNumberToSeed > fMaxNumAgents )	// just to be safe
-		fNumberToSeed = fMaxNumAgents;
-	fInitNumAgents = fMaxNumAgents;	// population starts at maximum
-	fMinNumAgents = fMaxNumAgents;		// population stays at mximum
+	fMinNumAgents = fMaxNumAgents = fInitNumAgents;		// population stays at initial
 	// 		if( fProbabilityOfMutatingSeeds == 0.0 )
 	// 			fProbabilityOfMutatingSeeds = 1.0;	// so there is variation in the initial population
 	//		fMateThreshold = 1.5;				// so they can't reproduce on their own
 
 	for( int i = 0; i < fNumDomains; i++ )	// over all domains
 	{
-		fDomains[i].numberToSeed = lrint( fDomains[i].maxNumAgents * (float) fDomains[i].numberToSeed / fDomains[i].initNumAgents );	// same proportion as originally specified (must calculate before changing fInitNumAgents)
-		if( fDomains[i].numberToSeed > fDomains[i].maxNumAgents )	// just to be safe
-			fDomains[i].numberToSeed = fDomains[i].maxNumAgents;
-		fDomains[i].initNumAgents = fDomains[i].maxNumAgents;	// population starts at maximum
-		fDomains[i].minNumAgents  = fDomains[i].maxNumAgents;	// population stays at maximum
+		fDomains[i].minNumAgents  = fDomains[i].maxNumAgents = fDomains[i].initNumAgents;	// population stays at initial
 		// 			fDomains[i].probabilityOfMutatingSeeds = fProbabilityOfMutatingSeeds;				// so there is variation in the initial population
 	}
 
@@ -4653,9 +4645,8 @@ void TSimulation::initFitnessMode()
 	fEndOnPopulationCrash = false;
 
 	cout << "Due to running as a steady-state GA with a fitness function, the following parameter values have been forcibly reset as indicated:" nl;
-	cout << "  InitNumAgents" ses fInitNumAgents nl;
 	cout << "  MinNumAgents" ses fMinNumAgents nl;
-	cout << "  NumberToSeed" ses fNumberToSeed nl;
+	cout << "  MaxNumAgents" ses fMaxNumAgents nl;
 	// 		cout << "  ProbabilityOfMutatingSeeds" ses fProbabilityOfMutatingSeeds nl;
 	//		cout << "  MateThreshold" ses fMateThreshold nl;
 	for( int i = 0; i < fNumDomains; i++ )
@@ -4663,7 +4654,6 @@ void TSimulation::initFitnessMode()
 		cout << "  Domain " << i << ":" nl;
 		cout << "    initNumAgents" ses fDomains[i].initNumAgents nl;
 		cout << "    minNumAgents" ses fDomains[i].minNumAgents nl;
-		cout << "    numberToSeed" ses fDomains[i].numberToSeed nl;
 		// 			cout << "    probabilityOfMutatingSeeds" ses fDomains[i].probabilityOfMutatingSeeds nl;
 	}
 	cout << "  NumDepletionSteps" ses fNumDepletionSteps nl;
