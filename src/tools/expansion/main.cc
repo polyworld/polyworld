@@ -1,4 +1,5 @@
 #include <iostream>
+#include <math.h>
 #include <limits>
 #include <stdio.h>
 #include <stdlib.h>
@@ -57,28 +58,29 @@ int main(int argc, char** argv) {
                 std::cout << wmax << " " << expansion << std::endl;
             }
         } else if (args.mode == "onset") {
-            float wmaxInc = args.wmaxInc;
             int stage = 1;
             bool done = false;
-            for (float wmax = args.wmaxMin; wmax <= args.wmaxMax && !done; wmax += wmaxInc) {
+            float wmaxStageInc = args.wmaxInc;
+            float wmaxStageMax = args.wmaxInc * 100.0f;
+            for (float wmax = args.wmaxMin; wmax <= args.wmaxMax; wmax += wmaxStageInc) {
                 synapses->seek(0, SEEK_SET);
                 analysis::setMaxWeight(cns, synapses, wmax);
                 double expansion = analysis::getExpansion(genome, cns, args.perturbation, args.repeats, args.random, args.quiescent, args.steps);
                 if (expansion >= args.threshold) {
-                    if (stage == 2) {
-                        wmax -= wmaxInc;
-                        wmaxInc = args.wmaxInc;
-                        stage = 3;
-                    } else {
+                    if (stage == 1) {
                         std::cout << agent << " " << wmax << std::endl;
                         done = true;
+                        break;
+                    } else {
+                        stage--;
+                        wmaxStageMax = wmax;
+                        wmax -= wmaxStageInc;
                     }
-                } else {
-                    if (stage == 1 && wmax >= args.wmaxMax / 10.0f) {
-                        wmaxInc = args.wmaxInc * 10.0f;
-                        stage = 2;
-                    }
+                } else if (wmax >= wmaxStageMax) {
+                    stage++;
+                    wmaxStageMax = args.wmaxInc * pow(10.0f, stage + 1);
                 }
+                wmaxStageInc = args.wmaxInc * pow(10.0, stage - 1);
             }
             if (!done) {
                 std::cout << agent << " " << std::numeric_limits<double>::infinity() << std::endl;
@@ -169,7 +171,7 @@ bool tryParseArgs(int argc, char** argv, Args& args) {
             }
         } else if (mode == "onset") {
             wmaxMin = 1.0f;
-            wmaxMax = 1000.0f;
+            wmaxMax = 10000.0f;
             wmaxInc = 1.0f;
         } else {
             wmaxMin = 0.0f;
