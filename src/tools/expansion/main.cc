@@ -97,7 +97,7 @@ void printUsage(int argc, char** argv) {
     std::cerr << "Usage:" << std::endl;
     std::cerr << "  " << argv[0] << " all RUN STAGE PERTURBATION REPEATS RANDOM QUIESCENT STEPS [AGENT]" << std::endl;
     std::cerr << "  " << argv[0] << " single RUN STAGE WMAX_MIN WMAX_MAX WMAX_INC PERTURBATION REPEATS RANDOM QUIESCENT STEPS AGENT" << std::endl;
-    std::cerr << "  " << argv[0] << " onset RUN STAGE PERTURBATION REPEATS RANDOM QUIESCENT STEPS THRESHOLD [AGENT]" << std::endl;
+    std::cerr << "  " << argv[0] << " onset RUN STAGE WMAX_MAX PERTURBATION REPEATS RANDOM QUIESCENT STEPS THRESHOLD [AGENT]" << std::endl;
     std::cerr << std::endl;
     std::cerr << "Calculates phase space expansion." << std::endl;
     std::cerr << std::endl;
@@ -144,7 +144,7 @@ bool tryParseArgs(int argc, char** argv, Args& args) {
                 return false;
             }
         } else if (mode == "onset") {
-            if (argc < 10 || argc > 11) {
+            if (argc < 11 || argc > 12) {
                 return false;
             }
         }
@@ -171,7 +171,10 @@ bool tryParseArgs(int argc, char** argv, Args& args) {
             }
         } else if (mode == "onset") {
             wmaxMin = 1.0f;
-            wmaxMax = 10000.0f;
+            wmaxMax = atof(argv[argi++]);
+            if (wmaxMax <= wmaxMin) {
+                return false;
+            }
             wmaxInc = 1.0f;
         } else {
             wmaxMin = 0.0f;
@@ -233,9 +236,7 @@ bool tryParseArgs(int argc, char** argv, Args& args) {
 void printArgs(const Args& args) {
     std::cout << "# stage = " << args.stage << std::endl;
     if (args.mode == "onset") {
-        std::cout << "# wmax_min = " << args.wmaxMin << std::endl;
         std::cout << "# wmax_max = " << args.wmaxMax << std::endl;
-        std::cout << "# wmax_inc = " << args.wmaxInc << std::endl;
     }
     std::cout << "# perturbation = " << args.perturbation << std::endl;
     std::cout << "# repeats = " << args.repeats << std::endl;
