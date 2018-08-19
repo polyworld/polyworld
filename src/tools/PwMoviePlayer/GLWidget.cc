@@ -105,7 +105,8 @@ void GLWidget::Save()
 {
 	std::stringstream fileName;
 	fileName << frame->index << ".png";
-	grabFrameBuffer().save( fileName.str().c_str() );
+	QImage image( (uchar*)frame->rgbBuf, frame->width, frame->height, QImage::Format_ARGB32 );
+	image.rgbSwapped().mirrored().save( fileName.str().c_str() );
 }
 
 void GLWidget::paintGL()
