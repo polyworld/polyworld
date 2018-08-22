@@ -1060,6 +1060,7 @@ void TSimulation::SeedGenome( long agentNumber,
 	{
 		genes->mutate();
 	}
+	genes->mutate( fRawSeedMutationRate );
 }
 
 //---------------------------------------------------------------------------
@@ -3868,6 +3869,7 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 	fInitNumAgents = doc.get( "InitAgents" );
 	fNumberToSeed = doc.get( "SeedAgents" );
 	fProbabilityOfMutatingSeeds = doc.get( "SeedMutationProbability" );
+	fRawSeedMutationRate = doc.get( "RawSeedMutationRate" );
 	fSeedFromFile = doc.get( "SeedGenomeFromRun" );
 	fPositionSeedsFromFile = doc.get( "SeedPositionFromRun" );
     fMiscAgents = doc.get( "MiscegenationDelay" );

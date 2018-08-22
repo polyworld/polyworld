@@ -308,6 +308,7 @@ private:
 	long fInitNumAgents;
 	long fNumberToSeed;
 	float fProbabilityOfMutatingSeeds;
+	float fRawSeedMutationRate;
 	bool fSeedFromFile;
 	std::vector<std::string> fSeedFilePaths;
 	bool fPositionSeedsFromFile;

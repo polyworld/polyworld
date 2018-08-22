@@ -168,10 +168,8 @@ void Genome::randomize()
 		assert( false );
 }
 
-void Genome::mutateBits()
+void Genome::mutateBits( float rate )
 {
-	float rate = get( "MutationRate" );
-
     for (long byte = 0; byte < nbytes; byte++)
     {
         for (long bit = 0; bit < 8; bit++)
@@ -182,15 +180,19 @@ void Genome::mutateBits()
     }
 }
 
+void Genome::mutateBits()
+{
+    mutateBits( get( "MutationRate" ) );
+}
+
 void Genome::mutateOneByte( long byte, float stdev )
 {
     int val = round( nrand( mutable_data[byte], stdev ) );
     mutable_data[byte] = clamp( val, 0, 255 );
 }
 
-void Genome::mutateBytes()
+void Genome::mutateBytes( float rate )
 {
-    float rate = get( "MutationRate" );
     float stdev = pow( 2.0, get( "MutationStdevPower" ) );
     for (long byte = 0; byte < nbytes; byte++)
     {
@@ -199,16 +201,26 @@ void Genome::mutateBytes()
     }
 }
 
-void Genome::mutate()
+void Genome::mutateBytes()
+{
+    mutateBytes( get( "MutationRate" ) );
+}
+
+void Genome::mutate( float rate )
 {
 	if (!GenomeSchema::config.enableEvolution)
 		return;
 	if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BIT)
-		mutateBits();
+		mutateBits( rate );
 	else if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BYTE)
-		mutateBytes();
+		mutateBytes( rate );
 	else
 		assert( false );
+}
+
+void Genome::mutate()
+{
+	mutate( get( "MutationRate" ) );
 }
 
 void Genome::crossover( Genome *g1, Genome *g2, bool mutate )

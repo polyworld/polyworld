@@ -1823,6 +1823,13 @@ SeedMutationRate {
   max     1.0
 }
 
+RawSeedMutationRate {
+  type    Float
+  default 0.0
+  min     0.0
+  max     0.5
+}
+
 
 SimpleSeedYawBiasDelta {
   type    Float
