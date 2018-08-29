@@ -1827,7 +1827,7 @@ RawSeedMutationRate {
   type    Float
   default 0.0
   min     0.0
-  max     0.5
+  max     1.0
 }
 
 
