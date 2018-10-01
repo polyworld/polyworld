@@ -137,6 +137,7 @@ int main(int argc, char** argv) {
         delete passivesIter->second;
     }
     log.close();
+    return 0;
 }
 
 void printUsage(int argc, char** argv) {
