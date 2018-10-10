@@ -40,11 +40,13 @@ int main(int argc, char** argv) {
     std::map<int, genome::Genome*> genomes;
     int geneCount = genome::GenomeUtil::schema->getMutableSize();
     std::vector<std::vector<int> > distribution(geneCount, std::vector<int>(256));
+    genome::Genome* seed = analysis::getGenome(args.run, 1);
     for (int agent = 1; agent <= args.agents; agent++) {
-        genome::Genome* genome = analysis::getGenome(args.run, 1);
+        genome::Genome* genome = genome::GenomeUtil::createGenome();
+        genome->copyFrom(seed);
         genomes[agent] = genome;
-        update(distribution, genome, 1);
     }
+    update(distribution, seed, args.agents);
     std::cout << 0 << " " << getDistance(distribution, args.agents) << std::endl;
     for (int birth = 1; birth <= args.births; birth++) {
         int agent = args.agents + birth;
