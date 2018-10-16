@@ -19,6 +19,7 @@ struct Args {
     int wmaxCount;
     int random;
     int quiescent;
+    int steps;
     int agent;
 };
 
@@ -57,12 +58,15 @@ int main(int argc, char** argv) {
         for (int step = 1; step <= args.quiescent; step++) {
             cns->update(false);
         }
-        cns->getBrain()->getActivations(activations, dims.getFirstOutputNeuron(), dims.numOutputNeurons);
-        std::cout << wmax;
-        for (int neuron = 0; neuron < dims.numOutputNeurons; neuron++) {
-            std::cout << " " << activations[neuron];
+        for (int step = 1; step <= args.steps; step++) {
+            cns->update(false);
+            cns->getBrain()->getActivations(activations, dims.getFirstOutputNeuron(), dims.numOutputNeurons);
+            std::cout << wmax;
+            for (int neuron = 0; neuron < dims.numOutputNeurons; neuron++) {
+                std::cout << " " << activations[neuron];
+            }
+            std::cout << std::endl;
         }
-        std::cout << std::endl;
     }
     delete[] activations;
     delete cns;
@@ -71,7 +75,7 @@ int main(int argc, char** argv) {
 }
 
 void printUsage(int argc, char** argv) {
-    std::cerr << "Usage: " << argv[0] << " RUN STAGE WMAX_MIN WMAX_MAX WMAX_COUNT RANDOM QUIESCENT AGENT" << std::endl;
+    std::cerr << "Usage: " << argv[0] << " RUN STAGE WMAX_MIN WMAX_MAX WMAX_COUNT RANDOM QUIESCENT STEPS AGENT" << std::endl;
     std::cerr << std::endl;
     std::cerr << "Generates data for bifurcation diagrams." << std::endl;
     std::cerr << std::endl;
@@ -82,11 +86,12 @@ void printUsage(int argc, char** argv) {
     std::cerr << "  WMAX_COUNT  Number of maximum synaptic weight values" << std::endl;
     std::cerr << "  RANDOM      Number of random timesteps" << std::endl;
     std::cerr << "  QUIESCENT   Number of quiescent timesteps" << std::endl;
+    std::cerr << "  STEPS       Number of output timesteps" << std::endl;
     std::cerr << "  AGENT       Agent index" << std::endl;
 }
 
 bool tryParseArgs(int argc, char** argv, Args& args) {
-    if (argc != 9) {
+    if (argc != 10) {
         return false;
     }
     std::string run;
@@ -96,37 +101,43 @@ bool tryParseArgs(int argc, char** argv, Args& args) {
     int wmaxCount;
     int random;
     int quiescent;
+    int steps;
     int agent;
     try {
-        run = std::string(argv[1]);
+        int argi = 1;
+        run = std::string(argv[argi++]);
         if (!exists(run + "/endStep.txt")) {
             return false;
         }
-        stage = std::string(argv[2]);
+        stage = std::string(argv[argi++]);
         if (stage != "incept" && stage != "birth" && stage != "death") {
             return false;
         }
-        wmaxMin = atof(argv[3]);
+        wmaxMin = atof(argv[argi++]);
         if (wmaxMin < 0.0f) {
             return false;
         }
-        wmaxMax = atof(argv[4]);
+        wmaxMax = atof(argv[argi++]);
         if (wmaxMax <= wmaxMin) {
             return false;
         }
-        wmaxCount = atoi(argv[5]);
+        wmaxCount = atoi(argv[argi++]);
         if (wmaxCount < 1) {
             return false;
         }
-        random = atoi(argv[6]);
+        random = atoi(argv[argi++]);
         if (random < 0) {
             return false;
         }
-        quiescent = atoi(argv[7]);
+        quiescent = atoi(argv[argi++]);
         if (quiescent < 0) {
             return false;
         }
-        agent = atoi(argv[8]);
+        steps = atoi(argv[argi++]);
+        if (steps < 1) {
+            return false;
+        }
+        agent = atoi(argv[argi++]);
         if (agent < 1) {
             return false;
         }
@@ -140,6 +151,7 @@ bool tryParseArgs(int argc, char** argv, Args& args) {
     args.wmaxCount = wmaxCount;
     args.random = random;
     args.quiescent = quiescent;
+    args.steps = steps;
     args.agent = agent;
     return true;
 }
@@ -148,4 +160,5 @@ void printArgs(const Args& args) {
     std::cout << "# stage = " << args.stage << std::endl;
     std::cout << "# random = " << args.random << std::endl;
     std::cout << "# quiescent = " << args.quiescent << std::endl;
+    std::cout << "# steps = " << args.steps << std::endl;
 }

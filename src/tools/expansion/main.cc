@@ -116,6 +116,9 @@ void printUsage(int argc, char** argv) {
 }
 
 bool tryParseArgs(int argc, char** argv, Args& args) {
+    if (argc < 2) {
+        return false;
+    }
     std::string mode;
     std::string run;
     std::string stage;
@@ -130,9 +133,6 @@ bool tryParseArgs(int argc, char** argv, Args& args) {
     double threshold;
     int agent;
     try {
-        if (argc < 2) {
-            return false;
-        }
         int argi = 1;
         mode = std::string(argv[argi++]);
         if (mode == "all") {
