@@ -54,8 +54,10 @@ int main(int argc, char** argv) {
             for (float wmax = args.wmaxMin; wmax <= args.wmaxMax; wmax += args.wmaxInc) {
                 synapses->seek(0, SEEK_SET);
                 analysis::setMaxWeight(cns, synapses, wmax);
-                double expansion = analysis::getExpansion(genome, cns, args.perturbation, args.repeats, args.random, args.quiescent, args.steps);
-                std::cout << wmax << " " << expansion << std::endl;
+                for (int index = 0; index < args.repeats; index++) {
+                    double expansion = analysis::getExpansion(genome, cns, args.perturbation, 1, args.random, args.quiescent, args.steps);
+                    std::cout << wmax << " " << expansion << std::endl;
+                }
             }
         } else if (args.mode == "onset") {
             int stage = 1;
