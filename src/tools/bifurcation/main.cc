@@ -82,7 +82,7 @@ void printUsage(int argc, char** argv) {
     std::cerr << "  RUN         Run directory" << std::endl;
     std::cerr << "  STAGE       Life stage (incept, birth, or death)" << std::endl;
     std::cerr << "  WMAX_MIN    Minimum value of maximum synaptic weight" << std::endl;
-    std::cerr << "  WMAX_MIN    Maximum value of maximum synaptic weight" << std::endl;
+    std::cerr << "  WMAX_MAX    Maximum value of maximum synaptic weight" << std::endl;
     std::cerr << "  WMAX_COUNT  Number of maximum synaptic weight values" << std::endl;
     std::cerr << "  RANDOM      Number of random timesteps" << std::endl;
     std::cerr << "  QUIESCENT   Number of quiescent timesteps" << std::endl;
