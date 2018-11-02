@@ -67,11 +67,14 @@ int main(int argc, char** argv) {
             int stage = 1;
             bool done = false;
             float wmaxStageInc = args.wmaxInc;
-            float wmaxStageMax = args.wmaxInc * 100.0f;
+            float wmaxStageMax = args.wmaxInc * 10.0f;
             for (float wmax = args.wmaxMin; wmax <= args.wmaxMax; wmax += wmaxStageInc) {
                 synapses->seek(0, SEEK_SET);
                 analysis::setMaxWeight(cns, synapses, wmax);
-                double expansion = analysis::getExpansion(genome, cns, args.perturbation, args.repeats, args.random, args.quiescent, args.steps);
+                double expansion = analysis::getExpansion(genome, cns, args.perturbation, 1, args.random, args.quiescent, args.steps);
+                if (expansion >= args.threshold) {
+                    expansion = analysis::getExpansion(genome, cns, args.perturbation, args.repeats, args.random, args.quiescent, args.steps);
+                }
                 if (expansion >= args.threshold) {
                     if (stage == 1) {
                         std::cout << agent << " " << wmax << std::endl;
@@ -84,7 +87,7 @@ int main(int argc, char** argv) {
                     }
                 } else if (wmax >= wmaxStageMax) {
                     stage++;
-                    wmaxStageMax = args.wmaxInc * pow(10.0f, stage + 1);
+                    wmaxStageMax = args.wmaxInc * pow(10.0f, stage);
                 }
                 wmaxStageInc = args.wmaxInc * pow(10.0, stage - 1);
             }
