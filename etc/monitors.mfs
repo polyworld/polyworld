@@ -374,7 +374,8 @@ AgentTrackers {
         type    Enum
         default Fitness
         enum    Values {
-          Fitness
+          Fitness,
+          Number
         }
       }
 
@@ -389,6 +390,11 @@ AgentTrackers {
             assert ( Rank != 0 ) # 1 = best, -1 = worst
           }
         }
+      }
+
+      Number {
+        type    Int
+        default 0
       }
 
     }

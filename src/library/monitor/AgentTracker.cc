@@ -44,6 +44,9 @@ string AgentTracker::getStateTitle()
 		case FITNESS:
 			sprintf( buf, "%s%d:%ld", prefix, parms.fitness.rank, target->Number() );
 			break;
+		case NUMBER:
+			sprintf( buf, "%s:%ld", prefix, target->Number() );
+			break;
 		default:
 			assert(false);
 		}

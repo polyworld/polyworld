@@ -70,6 +70,13 @@ MonitorManager::MonitorManager( TSimulation *_simulation,
 			
 			parms = AgentTracker::Parms::createFitness( rank, trackTilDeath );
 		}
+		else if( selectionMode == "Number" )
+		{
+			long number = propTracker.get( "Number" );
+			bool trackTilDeath = trackMode == "Agent";
+			
+			parms = AgentTracker::Parms::createNumber( number );
+		}
 		else
 		{
 			assert( false );
@@ -354,6 +361,9 @@ void MonitorManager::step()
 			{
 			case AgentTracker::FITNESS:
 				tracker->setTarget( simulation->getCurrentFittest(parms.fitness.rank) );
+				break;
+			case AgentTracker::NUMBER:
+				tracker->setTarget( simulation->getAgentByNumber(parms.number) );
 				break;
 			default:
 				assert( false );

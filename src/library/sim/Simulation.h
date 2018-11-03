@@ -65,6 +65,7 @@ public:
 
 	long getNumBorn( AgentBirthType type );
 	long getEpoch();
+	class agent *getAgentByNumber( long number );
 	FittestList *getFittest( FitnessScope scope );
 	class agent *getCurrentFittest( int rank );
 	float getFitnessWeight( FitnessWeightType type );
@@ -486,6 +487,16 @@ inline FittestList *TSimulation::getFittest( FitnessScope scope )
 	case FS_RECENT: return fRecentFittest;
 	default: assert(false); return NULL;
 	}
+}
+inline class agent *TSimulation::getAgentByNumber( long number )
+{
+	class agent* a;
+	objectxsortedlist::gXSortedObjects.reset();
+	while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**) &a ) )
+	{
+		if( a->Number() == number) return a;
+	}
+	return NULL;
 }
 inline class agent *TSimulation::getCurrentFittest( int rank )
 {

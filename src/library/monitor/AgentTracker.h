@@ -12,13 +12,17 @@ class AgentTracker
 
 	enum Mode
 	{
-		FITNESS
+		FITNESS,
+		NUMBER
 	};
 
 	struct Parms
 	{
 		static Parms createFitness( int rank, bool trackTilDeath = true )
 		{ Parms p; p.mode = FITNESS; p.trackTilDeath = trackTilDeath; p.fitness.rank = rank; return p; }
+
+		static Parms createNumber( long number, bool trackTilDeath = true )
+		{ Parms p; p.mode = NUMBER; p.trackTilDeath = trackTilDeath; p.number = number; return p; }
 
 		Mode mode;
 		bool trackTilDeath;
@@ -27,6 +31,7 @@ class AgentTracker
 			struct {
 				int rank;
 			} fitness;
+			long number;
 		};
 	};
 

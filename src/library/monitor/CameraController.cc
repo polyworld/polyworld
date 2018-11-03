@@ -108,4 +108,9 @@ void CameraController::setAgentTrackingTarget()
 		}
 				
 	}
+	else
+	{
+		camera.SetRotation( 0.0, 90, 0.0 );
+		camera.settranslation( 0.0, 100.0, 0.0 );
+	}
 }
