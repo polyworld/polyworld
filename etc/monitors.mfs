@@ -321,15 +321,15 @@ OverheadScene {
   }
 }
 
-FittestPOVScene {
+SinglePOVScene {
   type    Scene
   default {
-    Name                      "FittestPOV"
-    Title                     "Fittest POV"
+    Name                      "SinglePOV"
+    Title                     "Single POV"
     CameraControllerSettings  "POV"
     Movie {
       Record                  False
-      Path                    "fittestpov.pmv"
+      Path                    "singlepov.pmv"
     }
   }
 }
@@ -351,6 +351,13 @@ AgentTrackers {
       Fitness {
         Rank        1
       }
+    }
+    ,
+    {
+      Name          "First"
+      TrackMode     Agent
+      SelectionMode Number
+      Number        1
     }
   ]
   element {

@@ -139,7 +139,7 @@ MonitorManager::MonitorManager( TSimulation *_simulation,
 	// --- Scenes
 	// ---
 	{
-		const char *scenes[] = { "MainScene", "OverheadScene", "FittestPOVScene" };
+		const char *scenes[] = { "MainScene", "OverheadScene", "SinglePOVScene" };
 		int nscenes = sizeof(scenes) / sizeof(char*);
 
 		for( int iscene = 0; iscene < nscenes; iscene++ )
