@@ -23,6 +23,7 @@ struct Args {
     int steps;
     int start;
     int count;
+    bool actual;
     bool bf;
     std::string output;
 };
@@ -34,6 +35,7 @@ void printHeader(int, RqNervousSystem*);
 void printNerves(RqNervousSystem*);
 void printSynapses(RqNervousSystem*);
 void printTimeSeries(RqNervousSystem*, int, int);
+void printActual(AbstractFile*, int);
 void writeBrainFunction(AbstractFile*, int, RqNervousSystem*, int, int, int);
 
 int main(int argc, char** argv) {
@@ -73,6 +75,13 @@ int main(int argc, char** argv) {
             for (int index = 0; index < args.repeats; index++) {
                 printTimeSeries(cns, args.transient, args.steps);
             }
+            if (args.actual) {
+                char path[256];
+                sprintf(path, "%s/brain/function/brainFunction_%d.txt", args.run.c_str(), agent);
+                AbstractFile* file = AbstractFile::open(globals::recordFileType, path, "r");
+                printActual(file, cns->getBrain()->getDimensions().numNeurons);
+                delete file;
+            }
             std::cout << "# END ENSEMBLE" << std::endl;
         }
         delete cns;
@@ -81,7 +90,7 @@ int main(int argc, char** argv) {
 }
 
 void printUsage(int argc, char** argv) {
-    std::cerr << "Usage: " << argv[0] << " [--bf OUTPUT] RUN STAGE REPEATS TRANSIENT STEPS [START [COUNT]]" << std::endl;
+    std::cerr << "Usage: " << argv[0] << " [--actual] [--bf OUTPUT] RUN STAGE REPEATS TRANSIENT STEPS [START [COUNT]]" << std::endl;
     std::cerr << std::endl;
     std::cerr << "Generates neural activation time series using random inputs." << std::endl;
     std::cerr << std::endl;
@@ -93,11 +102,12 @@ void printUsage(int argc, char** argv) {
     std::cerr << "  START        Starting agent index" << std::endl;
     std::cerr << "  COUNT        Number of agents" << std::endl;
     std::cerr << std::endl;
+    std::cerr << "  --actual     Append actual brain function time series" << std::endl;
     std::cerr << "  --bf OUTPUT  Write brain function files to OUTPUT directory" << std::endl;
 }
 
 bool tryParseArgs(int argc, char** argv, Args& args) {
-    if (argc < 6 || argc > 10) {
+    if (argc < 6 || argc > 11) {
         return false;
     }
     std::string run;
@@ -107,15 +117,23 @@ bool tryParseArgs(int argc, char** argv, Args& args) {
     int steps;
     int start = 1;
     int count = std::numeric_limits<int>::max();
+    bool actual = false;
     bool bf = false;
     std::string output;
     try {
         int argi = 1;
+        if (strcmp(argv[argi], "--actual") == 0) {
+            actual = true;
+            argi++;
+        }
         if (strcmp(argv[argi], "--bf") == 0) {
             bf = true;
             argi++;
             output = std::string(argv[argi++]);
             if (exists(output)) {
+                return false;
+            }
+            if (actual) {
                 return false;
             }
         }
@@ -161,6 +179,7 @@ bool tryParseArgs(int argc, char** argv, Args& args) {
     args.steps = steps;
     args.start = start;
     args.count = count;
+    args.actual = actual;
     args.bf = bf;
     args.output = output;
     return true;
@@ -242,6 +261,29 @@ void printTimeSeries(RqNervousSystem* cns, int transient, int steps) {
     }
     std::cout << "# END TIME SERIES" << std::endl;
     delete[] activations;
+}
+
+void printActual(AbstractFile* file, int neuronCount) {
+    std::cout << "# BEGIN TIME SERIES";
+    char line[256];
+    file->gets(line, sizeof(line));
+    file->gets(line, sizeof(line));
+    while (true) {
+        int neuron;
+        double activation;
+        int rc = file->scanf("%d %lf", &neuron, &activation);
+        if (rc != 2) {
+            break;
+        }
+        if (neuron == 0) {
+            std::cout << std::endl;
+        } else {
+            std::cout << " ";
+        }
+        std::cout << activation;
+    }
+    std::cout << std::endl;
+    std::cout << "# END TIME SERIES" << std::endl;
 }
 
 void writeBrainFunction(AbstractFile* file, int agent, RqNervousSystem* cns, int repeats, int transient, int steps) {
