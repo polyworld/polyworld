@@ -72,7 +72,7 @@ int main(int argc, char** argv) {
                 synapses->seek(0, SEEK_SET);
                 analysis::setMaxWeight(cns, synapses, wmax);
                 double expansion = analysis::getExpansion(genome, cns, args.perturbation, 1, args.random, args.quiescent, args.steps);
-                if (expansion >= args.threshold) {
+                if (expansion >= args.threshold * 0.9) {
                     expansion = analysis::getExpansion(genome, cns, args.perturbation, args.repeats, args.random, args.quiescent, args.steps);
                 }
                 if (expansion >= args.threshold) {
@@ -89,7 +89,7 @@ int main(int argc, char** argv) {
                     stage++;
                     wmaxStageMax = args.wmaxInc * pow(10.0f, stage);
                 }
-                wmaxStageInc = args.wmaxInc * pow(10.0, stage - 1);
+                wmaxStageInc = args.wmaxInc * pow(10.0f, stage - 1);
             }
             if (!done) {
                 std::cout << agent << " " << std::numeric_limits<double>::infinity() << std::endl;
