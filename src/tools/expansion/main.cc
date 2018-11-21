@@ -67,7 +67,7 @@ int main(int argc, char** argv) {
             int stage = 1;
             bool done = false;
             float wmaxStageInc = args.wmaxInc;
-            float wmaxStageMax = args.wmaxInc * 10.0f;
+            float wmaxStageMax = args.wmaxInc * 100.0f;
             for (float wmax = args.wmaxMin; wmax <= args.wmaxMax; wmax += wmaxStageInc) {
                 synapses->seek(0, SEEK_SET);
                 analysis::setMaxWeight(cns, synapses, wmax);
@@ -87,7 +87,7 @@ int main(int argc, char** argv) {
                     }
                 } else if (wmax >= wmaxStageMax) {
                     stage++;
-                    wmaxStageMax = args.wmaxInc * pow(10.0f, stage);
+                    wmaxStageMax = args.wmaxInc * pow(10.0f, stage + 1);
                 }
                 wmaxStageInc = args.wmaxInc * pow(10.0f, stage - 1);
             }
