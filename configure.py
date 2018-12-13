@@ -67,7 +67,7 @@ def main():
     if not config['os'] in Supported_OSes:
         sys.exit("Unsupported OS (" + config['os'] + "). Supported = " + Supported_OSes_display)
     
-    print 'Operating System:', config['os']
+    print('Operating System:', config['os'])
     
     #
     # Determine compiler
@@ -76,7 +76,7 @@ def main():
         config['cxx'] = Default_CXX[config['os']]
     else:
         config['cxx'] = config['cxx'][0]
-    print 'CXX:', config['cxx']
+    print('CXX:', config['cxx'])
     
     if not check_exit('which '+config['cxx']):
         sys.exit('Cannot locate compiler')
@@ -85,7 +85,7 @@ def main():
         config['toolchain'] = 'llvm'
     else:
         config['toolchain'] = 'gcc'
-    print 'Toolchain:', config['toolchain']
+    print('Toolchain:', config['toolchain'])
 
     #
     # Verify qmake
@@ -96,13 +96,13 @@ def main():
         config['qmake'] = config['qmake'][0]
     if not check_exit('which '+config['qmake']):
         sys.exit('Cannot locate qmake')
-    print 'QMake:', config['qmake']
+    print('QMake:', config['qmake'])
     
     #
     # Determine optimization level
     #
     config['optimization'] = 'debug' if config['debug'] else 'optimized'
-    print 'Optimization:', config['optimization']
+    print('Optimization:', config['optimization'])
     
     #
     # Create speculative conf and clean
@@ -117,7 +117,7 @@ def main():
     #
     if not check_exit('make omp_test'):
         config['omp'] = False
-    print 'OpenMP Supported:', config['omp']
+    print('OpenMP Supported:', config['omp'])
     
     #
     # Create final configuration
@@ -127,7 +127,7 @@ def main():
     #
     # Let user know we're done
     #
-    print 'Configure complete.'
+    print('Configure complete.')
 
 ######################################################################
 #
