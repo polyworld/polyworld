@@ -8,20 +8,22 @@ clang: error: no input files
 If they aren't installed, then the `clang++` command should automagically initiate the installation for you.
 
 ## Install Qt
-The latest version of Qt has some known issues, so it is recommended that you install version 4.8.6, which can be obtained from [https://download.qt.io/archive/qt/4.8/4.8.6/qt-opensource-mac-4.8.6-1.dmg](https://download.qt.io/archive/qt/4.8/4.8.6/qt-opensource-mac-4.8.6-1.dmg). Once you have downloaded the dmg, simply open it from the download manager and then double-click the file within it named `Qt.mpkg`.
+The latest version of Qt as of this writing -- Qt 5.12.1 -- should work fine.  Obtain it from [https://qt.io/](https://qt.io/).  Once you have downloaded the dmg, simply open it and double-click the install app it contains.
 
-Once the installation is complete, open a terminal and verify that typing `qmake --version` produces output like the following:
-```
-QMake version 2.01a
-Using Qt version 4.8.6 in /Library/Frameworks
-```
+Once the installation is complete, you will probably need to add the Qt bin directory containing qmake to your PATH. Using Qt's default installation location that path on Larry's system is:
 
-If the qmake command is not found, or if it doesn't report it's using Qt version 4.8.6, try `/Developer/Tools/Qt/qmake --version`.
+`/Users/larryy/Qt5.12.1/5.12.1/clang_64/bin`
+
+ Then open a terminal and verify that typing `qmake --version` produces output like the following:
+```
+QMake version 3.1
+Using Qt version 5.12.1 in /Users/larryy/Qt5.12.1/5.12.1/clang_64/lib
+```
 
 ## Install GSL
 Install the GNU Scientific Library, which can be found at [http://www.gnu.org/software/gsl](http://www.gnu.org/software/gsl/).
 
-You may try the following sequence of commands in your terminal, which is the procedure I personally used to download, build, and install:
+You may try the following sequence of commands in your terminal, which is the procedure Sean uses to download, build, and install:
 ```
 cd /tmp && mkdir gsl && cd gsl
 curl ftp://ftp.gnu.org/gnu/gsl/gsl-latest.tar.gz > gsl.tgz
