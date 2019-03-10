@@ -8,7 +8,7 @@ The main requirements for running on Linux are:
 
 The exact install steps will vary between distros, but the following should work on a Debian/Ubuntu-like system:
 ```
-sudo apt-get install git g++ mesa-common-dev libqt4-dev libgsl0-dev libgsl0-dbg
+sudo apt-get install git g++ mesa-common-dev libqt4-dev libgsl0-dev libgsl0-dbg lib32z1-dev
 ```
 
 Once you have installed these dependencies, please proceed to the general [POSIX installation](./Installing-on-POSIX).

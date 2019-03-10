@@ -14,7 +14,7 @@ Once the installation is complete, you will probably need to add the Qt bin dire
 
 `/Users/larryy/Qt5.12.1/5.12.1/clang_64/bin`
 
- Then open a terminal and verify that typing `qmake --version` produces output like the following:
+Then open a terminal and verify that typing `qmake --version` produces output like the following:
 ```
 QMake version 3.1
 Using Qt version 5.12.1 in /Users/larryy/Qt5.12.1/5.12.1/clang_64/lib
