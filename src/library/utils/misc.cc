@@ -144,7 +144,7 @@ char* itoa(long i)
     sprintf(b,"%ld", i);
     char* a = new char[strlen(b)+1];
     strcpy(a, b);
-    delete b;
+    delete[] b;
     return a;
 }
 
@@ -155,7 +155,7 @@ char* ftoa(float f)
     sprintf(b,"%g", f);
     char* a = new char[strlen(b)+1];
     strcpy(a ,b);
-    delete b;
+    delete[] b;
     return a;
 }
 
