@@ -8,6 +8,7 @@
 #include "genome/groups/GroupsGenome.h"
 #include "sim/globals.h"
 #include "utils/error.h"
+#include "utils/misc.h"
 #include "utils/RandomNumberGenerator.h"
 
 using namespace genome;
@@ -41,14 +42,19 @@ void GroupsBrain::processWorldfile( proplib::Document &doc )
 {
     GroupsBrain::config.minvisneurpergroup = doc.get( "MinVisionNeuronsPerGroup" );
     GroupsBrain::config.maxvisneurpergroup = doc.get( "MaxVisionNeuronsPerGroup" );
+    GroupsBrain::config.seedvisneur = doc.get( "SeedVisionNeurons" );
     GroupsBrain::config.mininternalneurgroups = doc.get( "MinInternalNeuralGroups" );
     GroupsBrain::config.maxinternalneurgroups = doc.get( "MaxInternalNeuralGroups" );
+    GroupsBrain::config.orderedinternalneurgroups = doc.get( "OrderedInternalNeuralGroups" );
     GroupsBrain::config.mineneurpergroup = doc.get( "MinExcitatoryNeuronsPerGroup" );
     GroupsBrain::config.maxeneurpergroup = doc.get( "MaxExcitatoryNeuronsPerGroup" );
     GroupsBrain::config.minineurpergroup = doc.get( "MinInhibitoryNeuronsPerGroup" );
     GroupsBrain::config.maxineurpergroup = doc.get( "MaxInhibitoryNeuronsPerGroup" );
     GroupsBrain::config.minconnectiondensity = doc.get( "MinConnectionDensity" );
     GroupsBrain::config.maxconnectiondensity = doc.get( "MaxConnectionDensity" );
+    GroupsBrain::config.simpleseedconnectiondensity = doc.get( "SimpleSeedConnectionDensity" );
+    GroupsBrain::config.simpleseedioconnectiondensity = doc.get( "SimpleSeedIOConnectionDensity" );
+    GroupsBrain::config.mirroredtopologicaldistortion = doc.get( "MirroredTopologicalDistortion" );
     GroupsBrain::config.mintopologicaldistortion = doc.get( "MinTopologicalDistortion" );
     GroupsBrain::config.maxtopologicaldistortion = doc.get( "MaxTopologicalDistortion" );
 	GroupsBrain::config.enableTopologicalDistortionRngSeed = doc.get( "EnableTopologicalDistortionRngSeed" );
@@ -78,8 +84,10 @@ void GroupsBrain::init()
 		numinputneurgroups += 2;
 	config.numinputneurgroups = numinputneurgroups;
 
-	int numoutneurgroups = 7;
+	int numoutneurgroups = 6;
 	if( agent::config.yawEncoding == agent::YE_OPPOSE )
+		numoutneurgroups++;
+	if( agent::config.hasLightBehavior )
 		numoutneurgroups++;
 	if( agent::config.enableVisionPitch )
 		numoutneurgroups++;
@@ -95,7 +103,7 @@ void GroupsBrain::init()
     config.maxneurgroups = config.maxnoninputneurgroups + config.numinputneurgroups;
     config.maxneurpergroup = config.maxeneurpergroup + config.maxineurpergroup;
     config.maxinternalneurons = config.maxneurpergroup * config.maxinternalneurgroups;
-    config.maxinputneurons = GroupsBrain::config.maxvisneurpergroup * 3 + (numinputneurgroups - 1);
+    config.maxinputneurons = GroupsBrain::config.maxvisneurpergroup * 3 + (numinputneurgroups - 3);
     config.maxnoninputneurons = config.maxinternalneurons + config.numoutneurgroups;
     config.maxneurons = config.maxinternalneurons + config.maxinputneurons + config.numoutneurgroups;
 
@@ -135,7 +143,7 @@ GroupsBrain::~GroupsBrain()
 //---------------------------------------------------------------------------
 // GroupsBrain::initNeuralNet
 //---------------------------------------------------------------------------
-void GroupsBrain::initNeuralNet( float initial_activation )
+void GroupsBrain::initNeuralNet( double initial_activation )
 {
 	switch( Brain::config.neuronModel )
 	{
@@ -148,7 +156,7 @@ void GroupsBrain::initNeuralNet( float initial_activation )
 		}
 		break;
 	case Brain::Configuration::FIRING_RATE:
-	case Brain::Configuration::TAU:
+	case Brain::Configuration::TAU_GAIN:
 		{
 			FiringRateModel *firingRate = new FiringRateModel( _cns );
 			_neuralnet = firingRate;
@@ -223,7 +231,7 @@ void GroupsBrain::grow()
     debugcheck( "(brain) on entry" );
 
 	ALLOC_GROW_STACK_BUFFERS();
-	
+
     _numgroups = _genome->getGroupCount(NGT_ANY);
 	_numgroupsWithNeurons = 0;
 	for( int i = 0; i < _numgroups; i++ )
@@ -233,6 +241,7 @@ void GroupsBrain::grow()
 			_numgroupsWithNeurons++;
 		}
 	}
+	orderedGroups = _genome->getOrderedGroups();
 
 #if DebugBrainGrow
 	if( DebugBrainGrowPrint )
@@ -280,16 +289,17 @@ void GroupsBrain::grow()
 		 i < _numgroups;
 		 i++ )
     {
+		int gi = orderedGroups[i];
 		firsteneur[i] = _dims.numInputNeurons + numNonInputNeurons;
-		numNonInputNeurons += _genome->getNeuronCount(EXCITATORY, i);
+		numNonInputNeurons += _genome->getNeuronCount(EXCITATORY, gi);
 		firstineur[i] = _dims.numInputNeurons + numNonInputNeurons;
-		numNonInputNeurons += _genome->getNeuronCount(INHIBITORY, i);
+		numNonInputNeurons += _genome->getNeuronCount(INHIBITORY, gi);
 
 #if DebugBrainGrow
 		if( DebugBrainGrowPrint )
 		{
-			cout << "group " << i << " has " << _genome->getNeuronCount(EXCITATORY, i) << " e-neurons" nlf;
-			cout << "  and " << i << " has " << _genome->getNeuronCount(INHIBITORY, i) << " i-neurons" nlf;
+			cout << "group " << i << " has " << _genome->getNeuronCount(EXCITATORY, gi) << " e-neurons" nlf;
+			cout << "  and " << i << " has " << _genome->getNeuronCount(INHIBITORY, gi) << " i-neurons" nlf;
 		}
 #endif
 	}
@@ -309,40 +319,42 @@ void GroupsBrain::grow()
 		 i < _numgroups;
 		 i++ )
     {
+		int gi = orderedGroups[i];
 #if DebugBrainGrow
 		if( DebugBrainGrowPrint )
 		{
-			cout << "group " << i << " has " << _genome->getNeuronCount(EXCITATORY, i) << " e-neurons" nlf;
-			cout << "  and " << i << " has " << _genome->getNeuronCount(INHIBITORY, i) << " i-neurons" nlf;
+			cout << "group " << i << " has " << _genome->getNeuronCount(EXCITATORY, gi) << " e-neurons" nlf;
+			cout << "  and " << i << " has " << _genome->getNeuronCount(INHIBITORY, gi) << " i-neurons" nlf;
 		}
 #endif
         for (int j = 0; j < _numgroups; j++)
         {
-            _dims.numSynapses += _genome->getSynapseCount(j,i);
+            int gj = orderedGroups[j];
+            _dims.numSynapses += _genome->getSynapseCount(gj,gi);
 
 #if DebugBrainGrow
 			if( DebugBrainGrowPrint )
 			{
 				cout << "  from " << j << " to " << i << " there are "
-					 << _genome->getSynapseCount(_genome->EE,j,i) << " e-e synapses" nlf;
+					 << _genome->getSynapseCount(_genome->EE,gj,gi) << " e-e synapses" nlf;
 				cout << "  from " << j << " to " << i << " there are "
-					 << _genome->getSynapseCount(_genome->IE,j,i) << " i-e synapses" nlf;
+					 << _genome->getSynapseCount(_genome->IE,gj,gi) << " i-e synapses" nlf;
 				cout << "  from " << j << " to " << i << " there are "
-					 << _genome->getSynapseCount(_genome->EI,j,i) << " e-i synapses" nlf;
+					 << _genome->getSynapseCount(_genome->EI,gj,gi) << " e-i synapses" nlf;
 				cout << "  from " << j << " to " << i << " there are "
-					 << _genome->getSynapseCount(_genome->II,j,i) << " i-i synapses" nlf;
+					 << _genome->getSynapseCount(_genome->II,gj,gi) << " i-i synapses" nlf;
 				cout << "  from " << j << " to " << i << " there are "
-					 << _genome->getSynapseCount(j,i) << " total synapses" nlf;
+					 << _genome->getSynapseCount(gj,gi) << " total synapses" nlf;
 			}
 #endif
 
         }
     }
-    
+
     _dims.numNeurons = numNonInputNeurons + _dims.numInputNeurons;
 	if( _dims.numNeurons > config.maxneurons )
 		error( 2, "numneurons (", _dims.numNeurons, ") > maxneurons (", config.maxneurons, ") in brain::grow" );
-        
+
 	if( _dims.numSynapses > config.maxsynapses )
 		error( 2, "numsynapses (", _dims.numSynapses, ") > maxsynapses (", config.maxsynapses, ") in brain::grow" );
 
@@ -387,7 +399,7 @@ void GroupsBrain::grow()
 		neuronAttrs.spiking = (SpikingModel__NeuronAttrs *)alloca( sizeof(SpikingModel__NeuronAttrs) );
 		break;
 	case Brain::Configuration::FIRING_RATE:
-	case Brain::Configuration::TAU:
+	case Brain::Configuration::TAU_GAIN:
 		neuronAttrs.firingRate = (FiringRateModel__NeuronAttrs *)alloca( sizeof(FiringRateModel__NeuronAttrs) );
 		break;
 	default:
@@ -407,9 +419,10 @@ void GroupsBrain::grow()
 		neuronAttrs.spiking->bias = 0.0;
 		break;
 	case Brain::Configuration::FIRING_RATE:
-	case Brain::Configuration::TAU:
+	case Brain::Configuration::TAU_GAIN:
 		neuronAttrs.firingRate->tau = 0.0;
 		neuronAttrs.firingRate->bias = 0.0;
+		neuronAttrs.firingRate->gain = 0.0;
 		break;
 	default:
 		assert(false);
@@ -417,7 +430,8 @@ void GroupsBrain::grow()
 
     for (int i = 0, ineur = 0; i < config.numinputneurgroups; i++)
     {
-        for (int j = 0; j < _genome->getNeuronCount(EXCITATORY, i); j++, ineur++)
+        int gi = orderedGroups[i];
+        for (int j = 0; j < _genome->getNeuronCount(EXCITATORY, gi); j++, ineur++)
         {
 			_neuralnet->set_neuron( ineur, neuronAttrs.opaque );
         }
@@ -428,6 +442,7 @@ void GroupsBrain::grow()
 	// ---
     for (int groupIndex_to = config.numinputneurgroups; groupIndex_to < _numgroups; groupIndex_to++)
     {
+		int g_groupIndex_to = orderedGroups[groupIndex_to];
 #if DebugBrainGrow
 		if( DebugBrainGrowPrint )
 			cout << "For group " << groupIndex_to << ":" nlf;
@@ -436,12 +451,12 @@ void GroupsBrain::grow()
 		switch( Brain::config.neuronModel )
 		{
 		case Brain::Configuration::SPIKING:
-			neuronAttrs.spiking->bias = _genome->get(_genome->BIAS,groupIndex_to);
+			neuronAttrs.spiking->bias = _genome->get(_genome->BIAS,g_groupIndex_to);
 			if(Brain::config.Spiking.enableGenes) {
-				neuronAttrs.spiking->SpikingParameter_a = _genome->get(_genome->SPIKING_A, groupIndex_to);
-				neuronAttrs.spiking->SpikingParameter_b = _genome->get(_genome->SPIKING_B, groupIndex_to);
-				neuronAttrs.spiking->SpikingParameter_c = _genome->get(_genome->SPIKING_C, groupIndex_to);
-				neuronAttrs.spiking->SpikingParameter_d = _genome->get(_genome->SPIKING_D, groupIndex_to);
+				neuronAttrs.spiking->SpikingParameter_a = _genome->get(_genome->SPIKING_A, g_groupIndex_to);
+				neuronAttrs.spiking->SpikingParameter_b = _genome->get(_genome->SPIKING_B, g_groupIndex_to);
+				neuronAttrs.spiking->SpikingParameter_c = _genome->get(_genome->SPIKING_C, g_groupIndex_to);
+				neuronAttrs.spiking->SpikingParameter_d = _genome->get(_genome->SPIKING_D, g_groupIndex_to);
 			} else {
 				neuronAttrs.spiking->SpikingParameter_a = 0.02;
 				neuronAttrs.spiking->SpikingParameter_b = 0.2;
@@ -453,11 +468,12 @@ void GroupsBrain::grow()
 				if( DebugBrainGrowPrint )
 					cout << "  groupbias = " << neuronAttrs.spiking->bias nlf;
 			#endif
-		case Brain::Configuration::TAU:
-			neuronAttrs.firingRate->tau = _genome->get(_genome->TAU,groupIndex_to);
+		case Brain::Configuration::TAU_GAIN:
+			neuronAttrs.firingRate->tau = _genome->get(_genome->TAU,g_groupIndex_to);
+			neuronAttrs.firingRate->gain = _genome->get(_genome->GAIN,g_groupIndex_to);
 			// fall through
 		case Brain::Configuration::FIRING_RATE:
-			neuronAttrs.firingRate->bias = _genome->get(_genome->BIAS,groupIndex_to);
+			neuronAttrs.firingRate->bias = _genome->get(_genome->BIAS,g_groupIndex_to);
 			break;
 
 			#if DebugBrainGrow
@@ -477,7 +493,7 @@ void GroupsBrain::grow()
         }
 
         // setup all e-neurons for this group
-        int neuronCount_to = _genome->getNeuronCount(EXCITATORY, groupIndex_to);
+        int neuronCount_to = _genome->getNeuronCount(EXCITATORY, g_groupIndex_to);
 
 #if DebugBrainGrow
 		if( DebugBrainGrowPrint )
@@ -523,10 +539,10 @@ void GroupsBrain::grow()
 
         // setup all i-neurons for this group
 
-        if( IsOutputNeuralGroup( groupIndex_to ) )
+        if( IsOutputNeuralGroup( g_groupIndex_to ) )
             neuronCount_to = 0;  // output/behavior neurons are e-only postsynaptically
         else
-            neuronCount_to = _genome->getNeuronCount(INHIBITORY,  groupIndex_to );
+            neuronCount_to = _genome->getNeuronCount(INHIBITORY,  g_groupIndex_to );
 
 #if DebugBrainGrow
 		if( DebugBrainGrowPrint )
@@ -581,7 +597,7 @@ void GroupsBrain::grow()
 
     if( numsyn != _dims.numSynapses )
 	{
-		if( Brain::config.synapseFromOutputNeurons )
+		if( Brain::config.synapseFromOutputNeurons && Brain::config.synapseFromInputToOutputNeurons )
 		{
 			if( (numsyn > _dims.numSynapses)
 				|| (( (_dims.numSynapses - numsyn) / float(_dims.numSynapses) ) > 1.e-3) )
@@ -593,7 +609,7 @@ void GroupsBrain::grow()
 		_dims.numSynapses = numsyn;
 	}
 	//printf( "numsynapses=%ld\n", numsyn );
-	
+
 	// ---
 	// --- Calculate Energy Use
 	// ---
@@ -615,6 +631,7 @@ void GroupsBrain::growSynapses( int groupIndex_to,
 								long &synapseCount_brain,
 								GroupsSynapseType *synapseType )
 {
+	int g_groupIndex_to = orderedGroups[groupIndex_to];
 #if DebugBrainGrow
 	if( DebugBrainGrowPrint )
 		cout << "    Setting up " << synapseType->name << " connections:" nlf;
@@ -647,10 +664,13 @@ void GroupsBrain::growSynapses( int groupIndex_to,
 
 	for (int groupIndex_from = 0; groupIndex_from < _numgroups; groupIndex_from++)
 	{
-		if( !Brain::config.synapseFromOutputNeurons && IsOutputNeuralGroup(groupIndex_from) )
+		int g_groupIndex_from = orderedGroups[groupIndex_from];
+		if( !Brain::config.synapseFromOutputNeurons && IsOutputNeuralGroup(g_groupIndex_from) )
+			continue;
+		if( !Brain::config.synapseFromInputToOutputNeurons && IsInputNeuralGroup(g_groupIndex_from) && IsOutputNeuralGroup(g_groupIndex_to) )
 			continue;
 
-		int neuronCount_from = _genome->getNeuronCount(synapseType->nt_from, groupIndex_from);
+		int neuronCount_from = _genome->getNeuronCount(synapseType->nt_from, g_groupIndex_from);
 
 #if DebugBrainGrow
 		if( DebugBrainGrowPrint )
@@ -662,29 +682,29 @@ void GroupsBrain::growSynapses( int groupIndex_to,
 #endif
 
 		int synapseCount_fromto = _genome->getSynapseCount( synapseType,
-															groupIndex_from,
-															groupIndex_to );
+															g_groupIndex_from,
+															g_groupIndex_to );
 		float nsynjiperneur = float(synapseCount_fromto)/float(neuronCount_to);
 		int synapseCount_new = short(nsynjiperneur + remainder[groupIndex_from] + 1.e-5);
 		remainder[groupIndex_from] += nsynjiperneur - synapseCount_new;
 		float td_fromto = _genome->get( _genome->TOPOLOGICAL_DISTORTION,
 										synapseType,
-										groupIndex_from,
-										groupIndex_to );
+										g_groupIndex_from,
+										g_groupIndex_to );
 		if( config.enableTopologicalDistortionRngSeed )
 		{
 			long td_seed = _genome->get( td_seedGene,
 										 synapseType,
-										 groupIndex_from,
-										 groupIndex_to );
+										 g_groupIndex_from,
+										 g_groupIndex_to );
 			td_rng->seed( td_seed );
 		}
 		if( config.enableInitWeightRngSeed )
 		{
 			long weight_seed = _genome->get( weight_seedGene,
 											 synapseType,
-											 groupIndex_from,
-											 groupIndex_to );
+											 g_groupIndex_from,
+											 g_groupIndex_to );
 			weight_rng->seed( weight_seed );
 		}
 
@@ -692,6 +712,10 @@ void GroupsBrain::growSynapses( int groupIndex_to,
 		// the group as opposed to the entire neuron array.
 		int neuronLocalIndex_fromBase = short((float(neuronLocalIndex_to) / float(neuronCount_to)) * float(neuronCount_from) - float(synapseCount_new) * 0.5);
 		neuronLocalIndex_fromBase = max<short>(0, min<short>(neuronCount_from - synapseCount_new, neuronLocalIndex_fromBase));
+		if( GroupsBrain::config.mirroredtopologicaldistortion && td_fromto >= 0.5 )
+		{
+			neuronLocalIndex_fromBase = (neuronCount_from - 1) - neuronLocalIndex_fromBase;
+		}
 
 #if DebugBrainGrow
 		if( DebugBrainGrowPrint )
@@ -703,30 +727,57 @@ void GroupsBrain::growSynapses( int groupIndex_to,
 		}
 #endif
 
-		if ((neuronLocalIndex_fromBase + synapseCount_new) > neuronCount_from)
 		{
-			char msg[128];
-			sprintf( msg, "more %s synapses from group ", synapseType->name.c_str() );
-			error(2,"Illegal architecture generated: ",
-				  msg, groupIndex_from,
-				  " to group ",groupIndex_to,
-				  " than there are i-neurons in group ",groupIndex_from);
+			bool legal = true;
+			if (!GroupsBrain::config.mirroredtopologicaldistortion || td_fromto < 0.5)
+				legal = neuronLocalIndex_fromBase + synapseCount_new <= neuronCount_from;
+			else
+				legal = neuronLocalIndex_fromBase - synapseCount_new >= -1;
+			if (!legal)
+			{
+				char msg[128];
+				sprintf( msg, "more %s synapses from group ", synapseType->name.c_str() );
+				error(2,"Illegal architecture generated: ",
+					  msg, groupIndex_from,
+					  " to group ",groupIndex_to,
+					  " than there are i-neurons in group ",groupIndex_from);
+			}
 		}
 
 		bool neurused[neuronCount_from];
 		memset( neurused, 0, sizeof(neurused) );
-				
+
 		for (int isyn = 0; isyn < synapseCount_new; isyn++)
 		{
 			// "Local Index" means that the index is relative to the start of the neuron type (I or E) within
 			// the group as opposed to the entire neuron array.
 			int neuronLocalIndex_from;
 
-			if (td_rng->drand() < td_fromto)
+			if (GroupsBrain::config.mirroredtopologicaldistortion || td_rng->drand() < td_fromto)
 			{
-				short distortion = short(nint(td_rng->range(-0.5,0.5)*td_fromto*neuronCount_from));
-				neuronLocalIndex_from = isyn + neuronLocalIndex_fromBase + distortion;
-                        
+				float td_fromto_abs;
+				if (GroupsBrain::config.mirroredtopologicaldistortion)
+				{
+					if (td_fromto < 0.5)
+					{
+						neuronLocalIndex_from = neuronLocalIndex_fromBase + isyn;
+						td_fromto_abs = td_fromto * 2;
+					}
+					else
+					{
+						neuronLocalIndex_from = neuronLocalIndex_fromBase - isyn;
+						td_fromto_abs = (1 - td_fromto) * 2;
+					}
+				}
+				else
+				{
+					neuronLocalIndex_from = neuronLocalIndex_fromBase + isyn;
+					td_fromto_abs = td_fromto;
+				}
+
+				short distortion = short(nint(td_rng->range(-0.5,0.5)*td_fromto_abs*neuronCount_from));
+				neuronLocalIndex_from += distortion;
+
 				if (neuronLocalIndex_from < 0)
 					neuronLocalIndex_from += neuronCount_from;
 				else if (neuronLocalIndex_from >= neuronCount_from)
@@ -735,14 +786,14 @@ void GroupsBrain::growSynapses( int groupIndex_to,
 			else
 			{
 				neuronLocalIndex_from = isyn + neuronLocalIndex_fromBase;
-			}                      
+			}
 
 			if (((neuronLocalIndex_from+firstneur[groupIndex_from]) == neuronIndex_to) // same neuron or
 				|| neurused[neuronLocalIndex_from] ) // already connected to this one
 			{
 				if ( (groupIndex_to == groupIndex_from) // same group
 					 && (synapseType->nt_from == synapseType->nt_to // same neuron type (I or E)
-						 || IsOutputNeuralGroup(groupIndex_to)) )
+						 || IsOutputNeuralGroup(g_groupIndex_to)) )
 					neuronLocalIndex_from = nearestFreeNeuron( neuronLocalIndex_from,
 															   &neurused[0],
 															   neuronCount_from,
@@ -762,27 +813,60 @@ void GroupsBrain::growSynapses( int groupIndex_to,
 			assert( neuronIndex_from != neuronIndex_to );
 
 			float efficacy;
-			if( synapseType->nt_from == INHIBITORY )
+			if( Brain::config.fixedInitWeight )
 			{
-				efficacy = min(-1.e-10, -weight_rng->range(initminweight, Brain::config.initMaxWeight));
+				efficacy = Brain::config.initMaxWeight;
+			}
+			else if( Brain::config.gaussianInitWeight )
+			{
+				float stdev = _genome->get( _genome->WEIGHT_STDEV,
+											synapseType,
+											g_groupIndex_from,
+											g_groupIndex_to )
+							  * Brain::config.gaussianInitMaxStdev;
+				efficacy = nrand(0.0, stdev);
+				if( efficacy < 0.0 )
+				{
+					efficacy = -efficacy;
+				}
+				if( efficacy > Brain::config.maxWeight )
+				{
+					efficacy = Brain::config.maxWeight;
+				}
 			}
 			else
 			{
 				efficacy = weight_rng->range(initminweight, Brain::config.initMaxWeight);
-			}				
+			}
+			if( synapseType->nt_from == INHIBITORY )
+			{
+				efficacy = min(-1.e-10f, -efficacy);
+			}
 
 			float lrate;
-			if( !Brain::config.outputSynapseLearning
-				&& (IsOutputNeuralGroup(groupIndex_from) || IsOutputNeuralGroup(groupIndex_to)) )
+			if( !Brain::config.enableLearning )
 			{
 				lrate = 0;
+			}
+			else if( !Brain::config.outputSynapseLearning
+					 && (IsOutputNeuralGroup(g_groupIndex_from) || IsOutputNeuralGroup(g_groupIndex_to)) )
+			{
+				lrate = 0;
+			}
+			else if( Brain::config.minlrate == Brain::config.maxlrate )
+			{
+				lrate = Brain::config.minlrate;
+				if( synapseType->nt_from == INHIBITORY )
+				{
+					lrate = min(-1.e-10f, -lrate);
+				}
 			}
 			else
 			{
 				lrate = _genome->get( _genome->LEARNING_RATE,
 									  synapseType,
-									  groupIndex_from,
-									  groupIndex_to );
+									  g_groupIndex_from,
+									  g_groupIndex_to );
 			}
 
 			_neuralnet->set_synapse( synapseCount_brain,

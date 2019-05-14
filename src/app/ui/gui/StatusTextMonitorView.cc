@@ -25,11 +25,12 @@ using namespace std;
 StatusTextMonitorView::StatusTextMonitorView( StatusTextMonitor *_monitor )
 	: MonitorView( _monitor, DEFAULT_WIDTH, DEFAULT_HEIGHT, false )
 	, monitor( _monitor )
-	, font( "Futura Condensed Medium", 12, QFont::Normal )
-	, lineHeight( QFontMetrics(font).height() )
+	, font( "Monospace", 8, QFont::Normal )
+	, lineHeight( QFontMetrics(font).lineSpacing() )
 	, nlines( 0 )
-	
+
 {
+    font.setStyleHint(QFont::TypeWriter);
     monitor->update += [=](){this->update();};
 }
 
@@ -59,7 +60,7 @@ void StatusTextMonitorView::resizeGL(int width, int height)
 	glViewport(0, 0, width, height);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluOrtho2D(0.0, width, 0.0, height);	
+	gluOrtho2D(0.0, width, 0.0, height);
 	glMatrixMode(GL_MODELVIEW);
 }
 
@@ -70,7 +71,7 @@ void StatusTextMonitorView::resizeGL(int width, int height)
 void StatusTextMonitorView::update()
 {
 	if( !isVisible() )
-		return;	
+		return;
 
 	StatusText &statusText = monitor->getStatusText();
 
@@ -92,14 +93,14 @@ void StatusTextMonitorView::draw()
 	StatusText &statusText = monitor->getStatusText();
 
 	makeCurrent();
-		
+
 	// Clear the window to black
 	qglClearColor( Qt::black );
 	glClear( GL_COLOR_BUFFER_BIT );
-	
+
 	// Draw text in white
     glColor4ub( 255, 255, 255, 255 );
-	
+
 	int y = lineHeight;
 
 	itfor( StatusText, statusText, iter )
@@ -107,6 +108,6 @@ void StatusTextMonitorView::draw()
 		renderText( 7, y, *iter, font );
 		y += lineHeight;
 	}
-	
+
 	swapBuffers();
 }

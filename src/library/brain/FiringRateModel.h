@@ -13,6 +13,7 @@ struct FiringRateModel__Neuron
 {
 	float bias;
 	float tau;
+	float gain;
 	long  startsynapses;
 	long  endsynapses;
 };
@@ -21,6 +22,7 @@ struct FiringRateModel__NeuronAttrs
 {
 	float bias;
 	float tau;
+	float gain;
 };
 
 struct FiringRateModel__Synapse
@@ -42,7 +44,7 @@ class FiringRateModel : public BaseNeuronModel<FiringRateModel__Neuron, FiringRa
 	FiringRateModel( NervousSystem *cns );
 	virtual ~FiringRateModel();
 
-	virtual void init_derived( float initial_activation );
+	virtual void init_derived( double initial_activation );
 
 	virtual void set_neuron( int index,
 							 void *attributes,

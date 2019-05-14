@@ -39,6 +39,9 @@
 
 #define randpw() drand48()
 #define rrand(lo,hi) (interp(randpw(),(lo),(hi)))
+double nrand();
+double nrand(double mean, double stdev);
+double trand(double min, double max);
 
 #define index2(i,j,nj) ((i)*(nj)+(j))
 #define index3(i,j,k,nj,nk) ((i)*(nj)*(nk)+(j)*(nk)+(k))
@@ -85,9 +88,10 @@ inline float fmin(float f1, float f2, float f3, float f4, float f5)
 #define clamp(VAL, MIN, MAX) ((VAL) < (MIN) ? (MIN) : ((VAL) > (MAX) ? (MAX) : (VAL)))
 
 
-float logistic(float x, float slope);
-float biasedLogistic(float x, float bias, float slope);
-float gaussian( float x, float mean, float variance );
+double logistic(double x, double slope);
+double biasedLogistic(double x, double midpoint, double slope);
+double generalLogistic(double x, double midpoint, double slope, double yneg, double ypos);
+double gaussian( double x, double mean, double variance );
 
 inline float dist( float x1, float y1, float x2, float y2 ) { return sqrt( (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2) ); }
 

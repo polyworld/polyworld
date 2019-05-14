@@ -22,6 +22,7 @@
 #include "graphics/graphics.h"
 #include "graphics/gstage.h"
 #include "proplib/cppprops.h"
+#include "proplib/proplib.h"
 #include "utils/Events.h"
 #include "utils/Signal.h"
 
@@ -40,7 +41,7 @@ class TSimulation
 	PROPLIB_CPP_PROPERTIES
 
 public:
-	TSimulation( std::string worldfilePath );
+	TSimulation( std::string worldfilePath, proplib::ParameterMap parameters );
 	virtual ~TSimulation();
 
 	void Step();
@@ -51,7 +52,7 @@ public:
 
 	short WhichDomain( float x, float z, short d );
 	void SwitchDomain( short newDomain, short oldDomain, int objectType );
-	
+
 	class AgentPovRenderer *GetAgentPovRenderer();
 	gstage &getStage();
 
@@ -64,19 +65,21 @@ public:
 
 	long getNumBorn( AgentBirthType type );
 	long getEpoch();
+	class agent *getAgentByNumber( long number );
 	FittestList *getFittest( FitnessScope scope );
 	class agent *getCurrentFittest( int rank );
 	float getFitnessWeight( FitnessWeightType type );
 	float getFitnessStat( FitnessStatType type );
 	float getFoodEnergyStat( FoodEnergyStatType type, FoodEnergyStatScope scope );
+	float getFoodEnergy();
 	GeneStats &getGeneStats();
-	
+
 	void getStatusText( StatusText& statusText,
 						int statusFrequency );
 
 	long getStep() const;
 	long GetMaxSteps() const;
-	
+
 	void MaintainEnergyCosts();
 	double EnergyScaleFactor( long minAgents, long maxAgents, long numAgents );
 
@@ -86,6 +89,8 @@ public:
 	int fLockstepNumDeathsAtTimestep;	// How many agents died at this LockstepTimestep?
 	int fLockstepNumBirthsAtTimestep;	// how many agents were born at LockstepTimestep?
 	void SetNextLockstepEvent();		// function to read the next event from LOCKSTEP-BirthsDeaths.log
+
+	bool fAdaptivityMode;
 
 
 	static long fStep;
@@ -99,7 +104,7 @@ public:
 
 	int fEpochFrequency;
 	long fEpoch;
-	
+
 	int fNumDepletionSteps;
 	double fMaxPopulationPenaltyFraction;
 	bool fApplyLowPopulationAdvantage;
@@ -114,8 +119,9 @@ public:
 	double fPopControlMaxScaleFactor;
 	double fGlobalEnergyScaleFactor;
 
+	bool fAllowBirths;
 	bool fAllowMinDeaths;
-	
+
 	float EnergyFitnessParameter() const;
 	float AgeFitnessParameter() const;
 	float LifeFractionRecent();
@@ -130,7 +136,7 @@ public:
 
 	int getRandomPatch(int domainNumber);
 	Domain fDomains[MAXDOMAINS];
-	
+
 	Events* fEvents;
 
     util::Signal<> stepEnding;
@@ -206,7 +212,7 @@ private:
 	// Linking, renaming, and unlinking are handled according to the specific recording options.
 	bool RecordBrainAnatomy( long agentNumber );
 	bool RecordBrainFunction( long agentNumber );
-	
+
 	void ijfitinc(short n, short* i, short* j);
 
 	void Birth( agent* a,
@@ -218,7 +224,7 @@ private:
 			   LifeSpan::DeathReason reason );
 	void analyzeBrain( agent *c );
 	void updateFittest( agent *c );
-	
+
 	void AddFood( long domainNumber, long patchNumber );
 	void RemoveFood( food *f );
 
@@ -226,25 +232,26 @@ private:
 	void FoodEnergyOut( const Energy &e );
 
 	float AgentFitness( agent* c );
-	
+
 	void processWorldFile( proplib::Document *docWorldFile );
 	void initLockstepMode();
 	void initFitnessMode();
+	void initAdaptivityMode();
 
 	void Dump();
-	
+
 	Scheduler fScheduler;
-	
+
 	long fMaxSteps;
 	bool fEndOnPopulationCrash;
 	int fDumpFrequency;
 	bool fLoadState;
-	
-	gstage fStage;	
+
+	gstage fStage;
 	TCastList fWorldCast;
 
 	long fNumDomains;
-	
+
 	int fSolidObjects;	// agents cannot pass through solid objects (collisions are avoided)
 	int fCarryObjects;  // specifies which types of objects can be picked up.
 	int fShieldObjects;  // specifies which types of objects act as shields.
@@ -253,13 +260,13 @@ private:
 	float fCarryPreventsFight;
 	float fCarryPreventsGive;
 	float fCarryPreventsMate;
-	
+
 	float fAgentHealingRate;	// Virgil Healing
 	bool fHealing;				// Virgil Healing
-	
+
 	float fGroundClearance;
 	bool fCalcFoodPatchAgentCounts;
-	
+
 	std::string fComplexityType;
 	bool fCalcComplexity;
 	float fComplexityFitnessWeight;
@@ -267,7 +274,7 @@ private:
 
 	long fNewLifes;
 	long fNewDeaths;
-	
+
 	Color fGroundColor;
 
 	agent* fCurrentFittestAgent[MAXFITNESSITEMS];	// based on heuristic fitness
@@ -286,7 +293,7 @@ private:
 
 	float fEatFitnessParameter;
 	float fEatThreshold;
-	
+
 	float fMaxFitness;
 	unsigned long fNumAverageFitness;
 	float fAverageFitness;
@@ -297,17 +304,19 @@ private:
 	float fEnergyFitnessParameter;
 	float fAgeFitnessParameter;
 
-	long fMinNumAgents; 
+	long fMinNumAgents;
 	long fMinNumAgentsWithMetabolism[ MAXMETABOLISMS ];
 	long fInitNumAgents;
 	long fNumberToSeed;
 	float fProbabilityOfMutatingSeeds;
+	float fRawSeedMutationRate;
 	bool fSeedFromFile;
 	std::vector<std::string> fSeedFilePaths;
 	bool fPositionSeedsFromFile;
 	std::vector<Position> fSeedPositions;
 	float fMinMateFraction;
 	long fEatWait;
+	bool fProbabilisticMating;
 	long fMateWait;
 	long fMiscAgents; // number of agents born without intervening creation before miscegenation function kicks in
 	float fMateThreshold;
@@ -329,7 +338,7 @@ private:
 	float fGiveFraction;
 	float fPickupThreshold;
 	float fDropThreshold;
-	
+
 	long fNumberAlive;
 	long fNumberAliveWithMetabolism[ MAXMETABOLISMS ];
 	long fNumberBorn;
@@ -352,7 +361,7 @@ private:
 	long fLastCreated;
 	long fMaxGapCreate;
 	long fNumBornSinceCreated;
-	
+
 	bool fUseProbabilisticFoodPatches;
 	bool fFoodRemovalNeeded;
 	int fNumFoodPatches;
@@ -379,9 +388,10 @@ private:
 		MaxRelative,
 		MaxIndependent
 	} fFoodGrowthModel;
-	
+
 	float fFoodRemoveEnergy;
 	bool fFoodRemoveFirstEat;
+	bool fRandomInitFoodAge;
 	float fFoodEnergyIn;
 	float fFoodEnergyOut;
 	float fTotalFoodEnergyIn;
@@ -394,7 +404,7 @@ private:
 	int fFoodPatchOuterRange;
 	float fMinFoodEnergyAtDeath;
 	float fPower2Energy; // controls amount of damage to other agent
-	
+
 	char   fFogFunction;
 	float fExpFogDensity;
 	int   fLinearFogEnd;
@@ -433,9 +443,9 @@ private:
 	bool fParallelInteract;
 	bool fParallelCreateAgents;
 	bool fParallelBrains;
-	
+
     gpolyobj fGround;
-    TSetList fWorldSet;	
+    TSetList fWorldSet;
 
 	class AgentPovRenderer *agentPovRenderer;
 };
@@ -477,6 +487,16 @@ inline FittestList *TSimulation::getFittest( FitnessScope scope )
 	case FS_RECENT: return fRecentFittest;
 	default: assert(false); return NULL;
 	}
+}
+inline class agent *TSimulation::getAgentByNumber( long number )
+{
+	class agent* a;
+	objectxsortedlist::gXSortedObjects.reset();
+	while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**) &a ) )
+	{
+		if( a->Number() == number) return a;
+	}
+	return NULL;
 }
 inline class agent *TSimulation::getCurrentFittest( int rank )
 {
@@ -534,6 +554,17 @@ inline float TSimulation::getFoodEnergyStat( FoodEnergyStatType type, FoodEnergy
 	default: assert(false); return -1;
 	}
 }
+inline float TSimulation::getFoodEnergy()
+{
+	float foodEnergy = 0.0f;
+	food* f;
+	objectxsortedlist::gXSortedObjects.reset();
+	while( objectxsortedlist::gXSortedObjects.nextObj( FOODTYPE, (gobject**) &f ) )
+	{
+		foodEnergy += f->getEnergy().sum();
+	}
+	return foodEnergy;
+}
 inline GeneStats &TSimulation::getGeneStats() { return fGeneStats; }
 inline long TSimulation::getStep() const { return fStep; }
 inline long TSimulation::GetMaxSteps() const { return fMaxSteps; }
@@ -543,5 +574,5 @@ inline float TSimulation::LifeFractionRecent() { return fLifeFractionRecentStats
 inline unsigned long TSimulation::LifeFractionSamples() { return fLifeFractionRecentStats.samples(); }
 
 
-inline float TSimulation::GetAgentHealingRate() { return fAgentHealingRate;	} 
+inline float TSimulation::GetAgentHealingRate() { return fAgentHealingRate;	}
 

@@ -12,7 +12,8 @@ struct CalcComplexity_brainfunction_parms
 {
 	const char *path;
 	const char *parts;
-	int ignore_timesteps_after;
+	bool tile;
+	int num_timesteps;
 	Events *events;
 };
 
@@ -44,8 +45,8 @@ class CalcComplexity_brainfunction_result
 		delete agent_number;
 		delete num_neurons;
 		delete lifespan;
-	}  
-					    
+	}
+
 };
 
 class CalcComplexity_brainfunction_callback
@@ -66,7 +67,8 @@ CalcComplexity_brainfunction_result *CalcComplexity_brainfunction(CalcComplexity
 double CalcComplexity_brainfunction(const char *path,
 									const char *parts,
 									Events *events = NULL,
-									int ignore_timesteps_after = 0,
+									bool tile = false,
+									int num_timesteps = 0,
 									long *agent_number = NULL,
 									long *lifespan = NULL,
 									long *num_neurons = NULL);
@@ -79,7 +81,8 @@ std::vector<std::string> get_list_of_brainfunction_logfiles( std::string );
 std::vector<std::string> get_list_of_brainanatomy_logfiles( std::string );
 
 gsl_matrix * readin_brainfunction(const char *path,
-											 int ignore_timesteps_after,
+											 bool tile,
+											 int num_timesteps,
 											 int max_timestapes,
 											 long *agent_number,
 											 long *agent_birth,

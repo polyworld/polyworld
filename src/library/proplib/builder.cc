@@ -49,7 +49,7 @@ Document *DocumentBuilder::buildWorldfileDocument( SchemaDocument *schema, const
 	{
 		string pathv2 = path + ".v2";
 		WorldfileConverter::convertV1SyntaxToV2( path, pathv2 );
-			
+
 		proplib::Parser parser;
 		SyntaxNode *node = parser.parseDocument( pathv2, new ifstream(pathv2.c_str()) );
 
@@ -76,6 +76,14 @@ Document *DocumentBuilder::buildWorldfileDocument( SchemaDocument *schema, const
 	return _doc;
 }
 
+Document *DocumentBuilder::buildWorldfileDocument( SchemaDocument *schema, const std::string &path, ParameterMap parameters )
+{
+	Document *_doc = buildWorldfileDocument( schema, path );
+	DocumentEditor editor( schema, _doc );
+	WorldfileConverter::setParameters( &editor, parameters );
+	return _doc;
+}
+
 SchemaDocument *DocumentBuilder::buildSchemaDocument( const string &path )
 {
 	proplib::Parser parser;
@@ -87,7 +95,7 @@ SchemaDocument *DocumentBuilder::buildSchemaDocument( const string &path )
 	doc->add( buildProperty(DocumentLocation(doc),
 							"type",
 							"Object") );
-	
+
 
 	// schema file does not have a 'properties' attribute at the top-level, so inject one.
 	ObjectProperty *properties = new ObjectProperty( DocumentLocation(doc),
@@ -332,7 +340,7 @@ Enum *DocumentBuilder::buildEnum( SyntaxNode *node )
 
 	SyntaxNode *nodeValues = node->children[1];
 	assert( nodeValues->type == SyntaxNode::EnumValues );
-	
+
 	itfor( vector<SyntaxNode *>, nodeValues->children, it )
 	{
 		enum_->addValue( (*it)->beginToken->text );

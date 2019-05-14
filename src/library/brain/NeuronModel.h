@@ -38,7 +38,7 @@ class NeuronModel
 	virtual ~NeuronModel() {}
 
 	virtual void init( Dimensions *dims,
-					   float initial_activation ) = 0;
+					   double initial_activation ) = 0;
 
 	virtual void set_neuron( int index,
 							 void *attributes,
@@ -46,6 +46,11 @@ class NeuronModel
 							 int endsynapses = -1 ) = 0;
 	virtual void set_neuron_endsynapses( int index,
 										 int endsynapses ) = 0;
+	virtual void get_synapse( int index,
+							  short &from,
+							  short &to,
+							  float &efficacy,
+							  float &lrate ) = 0;
 	virtual void set_synapse( int index,
 							  int from,
 							  int to,
@@ -54,8 +59,17 @@ class NeuronModel
 
 	virtual void update( bool bprint ) = 0;
 
+	virtual void getActivations( double *activations, int start, int count ) = 0;
+	virtual void setActivations( double *activations, int start, int count ) = 0;
+	virtual void randomizeActivations() = 0;
+
 	virtual void dumpAnatomical( AbstractFile *file ) = 0;
 
 	virtual void startFunctional( AbstractFile *file ) = 0;
 	virtual void writeFunctional( AbstractFile *file ) = 0;
+
+	virtual void dumpSynapses( AbstractFile *file ) = 0;
+	virtual void loadSynapses( AbstractFile *file ) = 0;
+	virtual void copySynapses( NeuronModel *other ) = 0;
+	virtual void scaleSynapses( float factor ) = 0;
 };

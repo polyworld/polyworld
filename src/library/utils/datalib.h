@@ -150,6 +150,7 @@ class DataLibReader
 	size_t nrows();
 	void seekRow( int index );
 	bool nextRow();
+	int position();
 	const Variant &col( const char *name );
 
 
@@ -167,6 +168,8 @@ class DataLibReader
 
  private:
 	FILE *f;
+	bool randomAccess;
+	bool singleSchema;
 	int row;
 	datalib::__TableMap tables;
 	datalib::__Table *table;

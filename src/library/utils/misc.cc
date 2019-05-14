@@ -31,6 +31,38 @@
 
 using namespace std;
 
+// https://en.wikipedia.org/wiki/Marsaglia_polar_method
+double nrand()
+{
+    static bool spare = false;
+    static double u, v, s, c;
+    if (spare)
+    {
+        spare = false;
+        return c * v;
+    }
+    do
+    {
+        u = 2.0 * randpw() - 1.0;
+        v = 2.0 * randpw() - 1.0;
+        s = u * u + v * v;
+    } while (s == 0.0 || s >= 1.0);
+    c = sqrt(-2.0 * log(s) / s);
+    spare = true;
+    return c * u;
+}
+
+double nrand(double mean, double stdev)
+{
+    return mean + nrand() * stdev;
+}
+
+double trand(double min, double max)
+{
+    double range = max - min;
+    return min + sqrt(randpw() * range * range);
+}
+
 char* concat(const char* s1, const char* s2)
 {
     char* s = new char[strlen(s1)+strlen(s2)+1];
@@ -128,18 +160,23 @@ char* ftoa(float f)
 }
 
 
-float logistic(float x, float slope)
+double logistic(double x, double slope)
 {
     return (1.0 / (1.0 + exp(-1 * x * slope)));
 }
 
-float biasedLogistic(float x, float bias, float slope)
+double biasedLogistic(double x, double midpoint, double slope)
 {
-    return (1.0 / (1.0 + exp(-1 * (x+bias) * slope)));
+    return (1.0 / (1.0 + exp(-1 * (x-midpoint) * slope)));
+}
+
+double generalLogistic(double x, double midpoint, double slope, double yneg, double ypos)
+{
+    return yneg + (ypos - yneg) * biasedLogistic(x, midpoint, slope);
 }
 
 
-float gaussian( float x, float mean, float variance )
+double gaussian( double x, double mean, double variance )
 {
     return( exp( -(x-mean)*(x-mean) / variance ) );
 }
@@ -190,7 +227,7 @@ void makeParentDir( const string &path )
 int SetMaximumFiles( long filecount )
 {
     struct rlimit lim;
-	
+
 	lim.rlim_cur = lim.rlim_max = (rlim_t) filecount;
 	if( setrlimit( RLIMIT_NOFILE, &lim ) == 0 )
 		return 0;
@@ -201,7 +238,7 @@ int SetMaximumFiles( long filecount )
 int GetMaximumFiles( long *filecount )
 {
 	struct rlimit lim;
-	
+
 	if( getrlimit( RLIMIT_NOFILE, &lim ) == 0 )
 	{
 		*filecount = (long) lim.rlim_max;
@@ -215,7 +252,7 @@ int GetMaximumFiles( long *filecount )
 vector<string> split( const string& str, const string& delimiters )
 {
 	vector<string> parts;
-	
+
     // Skip delimiters at beginning.
     string::size_type lastPos = str.find_first_not_of( delimiters, 0 );
     // Find first delimiter after non-delimiters.
@@ -230,16 +267,16 @@ vector<string> split( const string& str, const string& delimiters )
         // Find next delimiter after non-delimiters
         pos = str.find_first_of( delimiters, lastPos );
     }
-    
+
     return( parts );
 }
 
 // int main( int argc, char** argv )
 // {
 // 	string sentence( "Now is the time for all good men" );
-// 	
+//
 // 	vector<string> parts = split( sentence );
-// 	
+//
 // 	itfor( vector<string>, parts, it )
 // 	{
 // 		cout << *it << endl;

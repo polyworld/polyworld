@@ -167,17 +167,18 @@ std::string MutableNeurGroupGene::getTitle( int group )
 // ===
 // ================================================================================
 ImmutableNeurGroupGene::ImmutableNeurGroupGene( const char *name_,
-												NeurGroupType group_type_ )
+												NeurGroupType group_type_,
+												int count )
 : NeurGroupGene( group_type_ )
 , __ConstantGene( GroupsGeneType::NEURGROUP,
 				  name_,
-				  1 )
+				  count )
 {
 }
 
 Scalar ImmutableNeurGroupGene::get( Genome *genome )
 {
-	return 1;
+	return __ConstantGene::get();
 }
 
 int ImmutableNeurGroupGene::getMaxGroupCount()
@@ -187,7 +188,7 @@ int ImmutableNeurGroupGene::getMaxGroupCount()
 
 int ImmutableNeurGroupGene::getMaxNeuronCount()
 {
-	return 1;
+	return __ConstantGene::get();
 }
 
 std::string ImmutableNeurGroupGene::getTitle( int group )
@@ -246,6 +247,21 @@ void NeurGroupAttrGene::seed( Genome *genome,
 	genome->set_raw( offset,
 					 ngroups * sizeof(unsigned char),
 					 rawval );
+}
+
+void NeurGroupAttrGene::randomize( Genome *genome,
+								   NeurGroupGene *group,
+								   unsigned char rawval_min,
+								   unsigned char rawval_max )
+{
+	int igroup = schema->getFirstGroup( group );
+	int offset = getOffset( igroup );
+	int ngroups = group->getMaxGroupCount();
+
+	genome->set_raw_random( offset,
+							ngroups * sizeof(unsigned char),
+							rawval_min,
+							rawval_max );
 }
 
 void NeurGroupAttrGene::printIndexes( FILE *file, const std::string &prefix, GenomeLayout *layout )
@@ -390,7 +406,7 @@ void SynapseAttrGene::printIndexes( FILE *file, const string &prefix, GenomeLayo
 						 from, to );
 			}
 		}
-	}	
+	}
 }
 
 void SynapseAttrGene::printTitles( FILE *file, const string &prefix )

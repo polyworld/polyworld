@@ -1,3 +1,7 @@
+#include <algorithm>
+#include <assert.h>
+#include <utility>
+
 #include "GroupsGenome.h"
 
 #include "GroupsGenomeSchema.h"
@@ -12,18 +16,51 @@ GroupsGenome::GroupsGenome( GroupsGenomeSchema *schema,
 		  layout )
 , _schema( schema )
 {
+	if( GroupsBrain::config.orderedinternalneurgroups )
+	{
+		ORDER = gene("Order");
+	}
+	else
+	{
+		ORDER = NULL;
+	}
+
+	if( Brain::config.gaussianInitWeight )
+	{
+		WEIGHT_STDEV = gene("WeightStdev");
+	}
+	else
+	{
+		WEIGHT_STDEV = NULL;
+	}
+
 	CONNECTION_DENSITY = gene("ConnectionDensity");
 	TOPOLOGICAL_DISTORTION = gene("TopologicalDistortion");
-	LEARNING_RATE = gene("LearningRate");
+
+	if( Brain::config.enableLearning )
+	{
+		LEARNING_RATE = gene("LearningRate");
+	}
+	else
+	{
+		LEARNING_RATE = NULL;
+	}
+
 	INHIBITORY_COUNT = gene("InhibitoryNeuronCount");
 	EXCITATORY_COUNT = gene("ExcitatoryNeuronCount");
 	BIAS = gene("Bias");
 	INTERNAL = schema->getGroupGene( schema->getFirstGroup(NGT_INTERNAL) );
 
-	if( Brain::config.neuronModel == Brain::Configuration::TAU )
+	if( Brain::config.neuronModel == Brain::Configuration::TAU_GAIN )
+	{
 		TAU = gene( "Tau" );
+		GAIN = gene( "Gain" );
+	}
 	else
+	{
 		TAU = NULL;
+		GAIN = NULL;
+	}
 
 	if( (Brain::config.neuronModel == Brain::Configuration::SPIKING)
 		&& Brain::config.Spiking.enableGenes )
@@ -93,6 +130,46 @@ int GroupsGenome::getGroupCount( NeurGroupType type )
 	}
 }
 
+std::vector<int> GroupsGenome::getOrderedGroups()
+{
+	if( GroupsBrain::config.orderedinternalneurgroups )
+	{
+		int maxCount = _schema->getMaxGroupCount( NGT_ANY );
+		std::vector<std::pair<int, float> > orders( maxCount );
+		for( int group = 0; group < maxCount; group++ )
+		{
+			float order = -1.0f;
+			if( _schema->getNeurGroupType( group ) == NGT_INTERNAL )
+			{
+				order = get( ORDER, group );
+			}
+			orders[group] = std::make_pair( group, order );
+		}
+		std::stable_sort( orders.begin(), orders.end(),
+			[]( std::pair<int, float> order1, std::pair<int, float> order2 )
+			{
+				return order1.second < order2.second;
+			} );
+		int count = getGroupCount( NGT_ANY );
+		std::vector<int> groups( count );
+		for( int index = 0; index < count; index++ )
+		{
+			groups[index] = orders[index].first;
+		}
+		return groups;
+	}
+	else
+	{
+		int count = getGroupCount( NGT_ANY );
+		std::vector<int> groups( count );
+		for( int index = 0; index < count; index++ )
+		{
+			groups[index] = index;
+		}
+		return groups;
+	}
+}
+
 int GroupsGenome::getNeuronCount( NeuronType type,
 								  int group )
 {
@@ -130,7 +207,7 @@ int GroupsGenome::getNeuronCount( int group )
 							   group );
 	case NGT_INTERNAL:
 		return getNeuronCount( INHIBITORY,
-							   group ) 
+							   group )
 			+ getNeuronCount( EXCITATORY,
 							  group );
 	default:
@@ -218,7 +295,7 @@ Scalar GroupsGenome::get( Gene *gene,
 }
 
 #define SEEDCHECK(VAL) assert(((VAL) >= 0) && ((VAL) <= 1))
-#define SEEDVAL(VAL) (unsigned char)((VAL) * 255)
+#define SEEDVAL(VAL) (unsigned char)((VAL) == 1 ? 255 : (VAL) * 256)
 
 void GroupsGenome::seed( Gene *attr,
 						 Gene *group,
@@ -246,43 +323,99 @@ void GroupsGenome::seed( Gene *gene,
 												SEEDVAL(rawval_ratio) );
 }
 
+void GroupsGenome::seedRandom( Gene *attr,
+							   Gene *group,
+							   float rawval_ratio_min,
+							   float rawval_ratio_max )
+{
+	SEEDCHECK(rawval_ratio_min);
+	SEEDCHECK(rawval_ratio_max);
+
+	GroupsGeneType::to_NeurGroupAttr(attr)->randomize( this,
+													   GroupsGeneType::to_NeurGroup(group),
+													   SEEDVAL(rawval_ratio_min),
+													   SEEDVAL(rawval_ratio_max) );
+}
+
 void GroupsGenome::getCrossoverPoints( long *crossoverPoints, long numCrossPoints )
 {
 	long numphysbytes = _schema->getPhysicalCount();
+	long i = 0;
 
     // guarantee crossover in "physiology" genes
-    crossoverPoints[0] = long(randpw() * numphysbytes * 8);	// requires [0.0, 1.0) range for randpw()
-    crossoverPoints[1] = numphysbytes * 8;
+    if (numCrossPoints > 2 && numphysbytes > 1)
+    {
+        if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BIT)
+        {
+            crossoverPoints[0] = long(randpw() * numphysbytes * 8);	// requires [0.0, 1.0) range for randpw()
+            crossoverPoints[1] = numphysbytes * 8;
+        }
+        else if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BYTE)
+        {
+            crossoverPoints[0] = long(randpw() * numphysbytes);	// requires [0.0, 1.0) range for randpw()
+            crossoverPoints[1] = numphysbytes;
+        }
+        else
+        {
+            assert( false );
+        }
+        i = 2;
+    }
 
 	// Generate & order the crossover points.
-	// Start iteration at [2], as [0], [1] set above
-    long i, j;
-    
-    for (i = 2; i < numCrossPoints; i++) 
+	// Start iteration at [2] if [0], [1] set above
+    long j;
+
+    for ( ; i < numCrossPoints; i++)
     {
-        long newCrossPoint = long(randpw() * (nbytes - numphysbytes) * 8) + crossoverPoints[1];
+        long newCrossPoint;
+        if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BIT)
+        {
+            newCrossPoint = long(randpw() * (nbytes - numphysbytes) * 8) + numphysbytes * 8;
+        }
+        else if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BYTE)
+        {
+            newCrossPoint = long(randpw() * (nbytes - numphysbytes)) + numphysbytes;
+        }
+        else
+        {
+            assert( false );
+        }
         bool equal;
         do
         {
             equal = false;
-            for (j = 1; j < i; j++)
+            for (j = 0; j < i; j++)
             {
                 if (newCrossPoint == crossoverPoints[j])
                     equal = true;
             }
-            
+
             if (equal)
-                newCrossPoint = long(randpw() * (nbytes - numphysbytes) * 8) + crossoverPoints[1];
-                
+            {
+                if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BIT)
+                {
+                    newCrossPoint = long(randpw() * (nbytes - numphysbytes) * 8) + numphysbytes * 8;
+                }
+                else if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BYTE)
+                {
+                    newCrossPoint = long(randpw() * (nbytes - numphysbytes)) + numphysbytes;
+                }
+                else
+                {
+                    assert( false );
+                }
+            }
+
         } while (equal);
-        
-        if (newCrossPoint > crossoverPoints[i-1])
+
+        if (i == 0 || newCrossPoint > crossoverPoints[i-1])
         {
             crossoverPoints[i] = newCrossPoint;  // happened to come out ordered
-		}           
+		}
         else
         {
-            for (j = 2; j < i; j++)
+            for (j = 0; j < i; j++)
             {
                 if (newCrossPoint < crossoverPoints[j])
                 {

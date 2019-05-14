@@ -3,6 +3,8 @@
 // System
 #include <assert.h>
 #include <math.h>
+#include <stdio.h>
+#include <sstream>
 
 // Qt
 #include <QtGui>
@@ -64,11 +66,12 @@ void GLWidget::Draw()
 		glDrawPixels( frame->width, frame->height, GL_RGBA, GL_UNSIGNED_BYTE, frame->rgbBuf );
 
 		// Superimpose the timestep number
-		QFont font( "Monaco", 10 );
+		QFont font( "Monospace", 8 );
+		font.setStyleHint( QFont::TypeWriter );
 		char timestepString[16];
 		sprintf( timestepString, "%8u", frame->timestep );
 		renderText( width() - 60, 15, timestepString, font );
-	
+
 		// Draw the legend
 		if( legend )
 		{
@@ -88,9 +91,22 @@ void GLWidget::Draw()
 			}
 		}
 	}
-	
+
 	// Done drawing, so show it
 	swapBuffers();
+}
+
+void GLWidget::Write( FILE *file )
+{
+	fwrite( frame->rgbBuf, sizeof(uint32_t), frame->width * frame->height, file );
+}
+
+void GLWidget::Save()
+{
+	std::stringstream fileName;
+	fileName << frame->index << ".png";
+	QImage image( (uchar*)frame->rgbBuf, frame->width, frame->height, QImage::Format_ARGB32 );
+	image.rgbSwapped().mirrored().save( fileName.str().c_str() );
 }
 
 void GLWidget::paintGL()
@@ -103,7 +119,7 @@ void GLWidget::resizeGL( int width, int height )
 	glViewport( 0, 0, width, height );
 	glMatrixMode( GL_PROJECTION );
 	glLoadIdentity();
-	glOrtho( 0, width, 0, height, -1.0, 1.0 ); 
+	glOrtho( 0, width, 0, height, -1.0, 1.0 );
 
 	glwPrint( "width = %lu, height = %lu\n", width, height );
 }

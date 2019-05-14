@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include "brain/Brain.h"
 #include "brain/NeuronModel.h"
 #include "genome/groups/GroupsSynapseType.h"
@@ -18,8 +20,10 @@ class GroupsBrain : public Brain
 		short numoutneurgroups;
 		short minvisneurpergroup;
 		short maxvisneurpergroup;
+		float seedvisneur;
 		short mininternalneurgroups;
 		short maxinternalneurgroups;
+		bool orderedinternalneurgroups;
 		short mineneurpergroup;
 		short maxeneurpergroup;
 		short minineurpergroup;
@@ -32,6 +36,9 @@ class GroupsBrain : public Brain
 		short maxnoninputneurons;
 		float minconnectiondensity;
 		float maxconnectiondensity;
+		float simpleseedconnectiondensity;
+		float simpleseedioconnectiondensity;
+		bool mirroredtopologicaldistortion;
 		float mintopologicaldistortion;
 		float maxtopologicaldistortion;
 
@@ -54,7 +61,7 @@ class GroupsBrain : public Brain
 	short NumNeuronGroups( bool ignoreEmpty = true );
 
  private:
-	void initNeuralNet( float initial_activation );
+	void initNeuralNet( double initial_activation );
 	short nearestFreeNeuron(short iin, bool* used, short num, short exclude);
 
 	void grow();
@@ -70,6 +77,7 @@ class GroupsBrain : public Brain
 	genome::GroupsGenome *_genome;
 	int _numgroups;
 	int _numgroupsWithNeurons;
+	std::vector<int> orderedGroups;
 };
 
 inline short GroupsBrain::NumNeuronGroups( bool ignoreEmpty ) { return ignoreEmpty ? _numgroupsWithNeurons : _numgroups; }

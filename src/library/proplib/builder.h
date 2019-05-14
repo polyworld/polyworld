@@ -3,6 +3,7 @@
 #include <string>
 
 #include "dom.h"
+#include "editor.h"
 
 namespace proplib
 {
@@ -18,6 +19,7 @@ namespace proplib
 	public:
 		Document *buildDocument( const std::string &path );
 		class Document *buildWorldfileDocument( class SchemaDocument *schema, const std::string &path );
+		class Document *buildWorldfileDocument( class SchemaDocument *schema, const std::string &path, ParameterMap parameters );
 		class SchemaDocument *buildSchemaDocument( const std::string &path );
 
 		class SymbolPath *buildSymbolPath( const std::string &text );

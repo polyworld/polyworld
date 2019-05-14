@@ -186,7 +186,7 @@ inline float AverageAngles( float a, float b )
 //---------------------------------------------------------------------------
 // TSimulation::TSimulation
 //---------------------------------------------------------------------------
-TSimulation::TSimulation( string worldfilePath )
+TSimulation::TSimulation( string worldfilePath, proplib::ParameterMap parameters )
 	:
 		fLockStepWithBirthsDeathsLog(false),
 		fLockstepFile(NULL),
@@ -268,7 +268,7 @@ TSimulation::TSimulation( string worldfilePath )
 	{
 		proplib::DocumentBuilder builder;
 		schema = builder.buildSchemaDocument( "./etc/worldfile.wfs" );
-		worldfile = builder.buildWorldfileDocument( schema, worldfilePath );
+		worldfile = builder.buildWorldfileDocument( schema, worldfilePath, parameters );
 
 		{
 			ofstream out( "run/converted.wf" );
@@ -292,6 +292,11 @@ TSimulation::TSimulation( string worldfilePath )
 	if( (fHeuristicFitnessWeight != 0.0) || (fComplexityFitnessWeight != 0) )
 	{
 		initFitnessMode();
+	}
+	// If this is an adaptivity mode run, then we need to force certain parameter values (and warn the user)
+	if( fAdaptivityMode )
+	{
+		initAdaptivityMode();
 	}
 
 	// ---
@@ -743,6 +748,7 @@ void TSimulation::End( const string &reason )
 		fout << reason << endl;
 		fout.close();
 	}
+	logs->postEvent( SimEndEvent() );
 
 	ended();
 }
@@ -794,6 +800,10 @@ void TSimulation::InitFittest()
 
 				for( int i = 0; i < fDomains[id].fMaxNumLeastFit; i++ )
 					fDomains[id].fLeastFit[i] = NULL;
+			}
+			else
+			{
+				fDomains[id].fLeastFit = NULL;
 			}
         }
 	}
@@ -858,14 +868,13 @@ void TSimulation::InitAgents()
 			// !!! POST PARALLEL
 			// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             fScheduler.postParallel([=]() {
-                        c->grow( fMateWait );
+                        c->grow( fMateWait, true );
                 });
 
 			fStage.AddObject(c);
 
-			float x = randpw() * (fDomains[id].absoluteSizeX - 0.02) + fDomains[id].startX + 0.01;
-			float z = randpw() * (fDomains[id].absoluteSizeZ - 0.02) + fDomains[id].startZ + 0.01;
-			//float z = -0.01 - randpw() * (globals::worldsize - 0.02);
+			float x, z;
+			fDomains[id].initAgentsPatch->setPoint( &x, &z );
 			float y = 0.5 * agent::config.agentHeight;
 #if TestWorld
 			// evenly distribute the agents
@@ -938,7 +947,7 @@ void TSimulation::InitAgents()
 		// !!! POST PARALLEL
 		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         fScheduler.postParallel( [=]() {
-                c->grow( fMateWait );
+                c->grow( fMateWait, true );
             });
 
 		fStage.AddObject(c);
@@ -1025,6 +1034,7 @@ void TSimulation::InitBarriers()
 {
 	// Add barriers
 	barrier* b = NULL;
+	barrier::gXSortedBarriers.reset();
 	while( barrier::gXSortedBarriers.next(b) )
 		fWorldSet.Add(b);
 }
@@ -1050,6 +1060,7 @@ void TSimulation::SeedGenome( long agentNumber,
 	{
 		genes->mutate();
 	}
+	genes->mutate( fRawSeedMutationRate );
 }
 
 //---------------------------------------------------------------------------
@@ -1094,6 +1105,7 @@ void TSimulation::ReadSeedFilePaths()
 		exit( 1 );
 	}
 
+	makeDirs( "run/genome" );
 	SYSTEM( "cp genomeSeeds.txt run/genome" );
 
 	char buf[1024 * 4];
@@ -1786,7 +1798,7 @@ void TSimulation::DeathAndStats( void )
 
 			{
 				if ( c->GetEnergy().isDepleted() ||
-					 c->Age() >= c->MaxAge()     ||
+					 ( c->Age() >= c->MaxAge() ) ||
 					 ( !globals::blockedEdges && !globals::wraparound &&
 					 	(c->x() < 0.0 || c->x() >  globals::worldsize ||
 						 c->z() > 0.0 || c->z() < -globals::worldsize) ) ||
@@ -2025,6 +2037,9 @@ int TSimulation::GetMatePotential( agent *x )
 	int potential = MATE__NIL;
 
 	bool desiresMate = x->Mate() > fMateThreshold;
+	if( fProbabilisticMating && desiresMate )
+		desiresMate = randpw() < x->Mate();
+
 	if( desiresMate )
 	{
 		potential |= MATE__DESIRED;
@@ -2116,6 +2131,9 @@ int TSimulation::GetMateDenialStatus( agent *x, int *xStatus,
 
 		__SET( Misc, MISC );
 	}
+
+	bool preventedByWorldfile = !fAllowBirths;
+	__SET( Worldfile, WORLDFILE );
 
 #undef __SET
 
@@ -2236,12 +2254,13 @@ void TSimulation::Mate( agent *c,
 				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 				// !!! POST PARALLEL
 				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                fScheduler.postParallel( [=]() {
+                fScheduler.postParallel( [=]() mutable {
                         e->grow( fMateWait );
 
+                        eenergy.constrain(0, e->GetMaxEnergy());
                         e->SetEnergy(eenergy);
                         e->SetFoodEnergy(eenergy);
-                    });                            
+                    });
 
 				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 				// !!! POST SERIAL
@@ -2611,9 +2630,10 @@ void TSimulation::Eat( agent *c, bool *cDied )
 				// also overlap in z, so they really interact
 				ttPrint( "step %ld: agent # %ld is eating\n", fStep, c->Number() );
 				Energy foodEnergyLost;
+				Energy energyEatenRaw;
 				Energy energyEaten;
-				c->eat( f, fEatFitnessParameter, fEat2Consume, fEatThreshold, fStep, foodEnergyLost, energyEaten );
-				logs->postEvent( EnergyEvent(c, f, c->Eat(), energyEaten, EnergyEvent::Eat) );
+				c->eat( f, fEatFitnessParameter, fEat2Consume, fEatThreshold, fStep, foodEnergyLost, energyEatenRaw, energyEaten );
+				logs->postEvent( EnergyEvent(c, f, c->Eat(), energyEaten, energyEatenRaw, EnergyEvent::Eat) );
 				if( fEvents )
 					fEvents->AddEvent( fStep, c->Number(), 'e' );
 
@@ -2668,9 +2688,10 @@ void TSimulation::Eat( agent *c, bool *cDied )
 					// also overlap in z, so they really interact
 					ttPrint( "step %ld: agent # %ld is eating\n", fStep, c->Number() );
 					Energy foodEnergyLost;
+					Energy energyEatenRaw;
 					Energy energyEaten;
-					c->eat( f, fEatFitnessParameter, fEat2Consume, fEatThreshold, fStep, foodEnergyLost, energyEaten );
-					logs->postEvent( EnergyEvent(c, f, c->Eat(), energyEaten, EnergyEvent::Eat) );
+					c->eat( f, fEatFitnessParameter, fEat2Consume, fEatThreshold, fStep, foodEnergyLost, energyEatenRaw, energyEaten );
+					logs->postEvent( EnergyEvent(c, f, c->Eat(), energyEaten, energyEatenRaw, EnergyEvent::Eat) );
 					if( fEvents )
 						fEvents->AddEvent( fStep, c->Number(), 'e' );
 
@@ -2700,7 +2721,8 @@ void TSimulation::Eat( agent *c, bool *cDied )
 	if( !fLockStepWithBirthsDeathsLog )
 	{
 		// If we're not running in LockStep mode, allow natural deaths
-		if( c->GetEnergy().isDepleted() )
+		if( c->GetEnergy().isDepleted() ||
+			((c->IsSeed() || c->Age() >= agent::config.starvationWait) && c->GetFoodEnergy().isDepleted( c->GetStarvationFoodEnergy() )) )
 		{
 			// note: this leaves list pointing to item before c, and markedAgent set to previous agent
 			Kill( c, LifeSpan::DR_EAT );
@@ -3501,7 +3523,7 @@ void TSimulation::Kill( agent* c,
 				}
 			}
 
-			if( foodEnergy.isDepleted(minFoodEnergy) )
+			if( foodEnergy.isDepleted(carcassFoodType->depletionThreshold) )
 			{
 				FoodEnergyOut( foodEnergy );
 			}
@@ -3678,7 +3700,10 @@ void TSimulation::updateFittest( agent *c )
 //-------------------------------------------------------------------------------------------
 void TSimulation::AddFood( long domainNumber, long patchNumber )
 {
-	food *f = fDomains[domainNumber].fFoodPatches[patchNumber].addFood( fStep );
+	long step = fStep;
+	if( fStep == 0 && fRandomInitFoodAge )
+		step = (int)trand( -food::gMaxLifeSpan, 0 );
+	food *f = fDomains[domainNumber].fFoodPatches[patchNumber].addFood( step );
 	if( f != NULL )
 	{
 		fDomains[domainNumber].foodCount++;
@@ -3794,6 +3819,7 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 	proplib::Document &doc = *docWorldFile;
 
 	fLockStepWithBirthsDeathsLog = doc.get( "PassiveLockstep" );
+	fAdaptivityMode = doc.get( "AdaptivityMode" );
 	fMaxSteps = doc.get( "MaxSteps" );
 	fEndOnPopulationCrash = doc.get( "EndOnPopulationCrash" );
 	fDumpFrequency = doc.get( "CheckPointFrequency" );
@@ -3843,6 +3869,7 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 	fInitNumAgents = doc.get( "InitAgents" );
 	fNumberToSeed = doc.get( "SeedAgents" );
 	fProbabilityOfMutatingSeeds = doc.get( "SeedMutationProbability" );
+	fRawSeedMutationRate = doc.get( "RawSeedMutationRate" );
 	fSeedFromFile = doc.get( "SeedGenomeFromRun" );
 	fPositionSeedsFromFile = doc.get( "SeedPositionFromRun" );
     fMiscAgents = doc.get( "MiscegenationDelay" );
@@ -3861,6 +3888,7 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 	fFoodRemoveEnergy = doc.get( "FoodRemoveEnergy" );
 	fFoodRemoveFirstEat = doc.get( "FoodRemoveFirstEat" );
 	food::gMaxLifeSpan = doc.get( "FoodMaxLifeSpan" );
+	fRandomInitFoodAge = doc.get( "RandomInitFoodAge" );
     fPositionSeed = doc.get( "PositionSeed" );
     fGenomeSeed = doc.get( "InitSeed" );
 	fSimulationSeed = doc.get( "SimulationSeed" );
@@ -3923,6 +3951,7 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 	fCarryPreventsMate = doc.get( "CarryPreventsMate" );
 
 	fEatWait = doc.get( "EatWait" );
+	fProbabilisticMating = doc.get( "ProbabilisticMating" );
     fMateWait = doc.get( "MateWait" );
 	fEatMateSpan = doc.get( "EatMateWait" );
 	fEatMateMinDistance = doc.get( "EatMateMinDistance" );
@@ -4023,9 +4052,10 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 			else
 				foodColor = doc.get( "FoodColor" );
 			EnergyPolarity energyPolarity = propFoodType.get( "EnergyPolarity" );
+			EnergyMultiplier eatMultiplier = propFoodType.get( "EatMultiplier" );
 			Energy depletionThreshold = Energy::createDepletionThreshold( fFoodRemoveEnergy, energyPolarity );
 
-			FoodType::define( name, foodColor, energyPolarity, depletionThreshold );
+			FoodType::define( name, foodColor, energyPolarity, eatMultiplier, depletionThreshold );
 		}
 
 	}
@@ -4198,6 +4228,44 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 
 			}
 
+			// Process InitAgentsPatch
+			{
+				proplib::Property &propPatch = dom.get( "InitAgentsPatch" );
+
+				float centerX, centerZ;
+				float sizeX, sizeZ;
+				int shape, distribution;
+
+				centerX = propPatch.get( "CenterX" );
+				centerZ = propPatch.get( "CenterZ" );
+				sizeX = propPatch.get( "SizeX" );
+				sizeZ = propPatch.get( "SizeZ" );
+
+				{
+					string val = propPatch.get( "Shape" );
+					if( val == "R" )
+						shape = 0;
+					else if( val == "E" )
+						shape = 1;
+					else
+						assert( false );
+				}
+				{
+					string val = propPatch.get( "Distribution" );
+					if( val == "U" )
+						distribution = 0;
+					else if( val == "L" )
+						distribution = 1;
+					else if( val == "G" )
+						distribution = 2;
+					else
+						assert( false );
+				}
+
+				fDomains[id].initAgentsPatch = new Patch();
+				fDomains[id].initAgentsPatch->initBase(centerX, centerZ, sizeX, sizeZ, shape, distribution, 0.0, &fStage, &(fDomains[id]), id);
+			}
+
 			// Process FoodPatches
 			{
 				proplib::Property &propPatches = dom.get( "FoodPatches" );
@@ -4212,7 +4280,7 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 					proplib::Property &propPatch = propPatches.get( i );
 
 					const FoodType *foodType;
-					float foodFraction, foodRate;
+					float foodFraction, foodRate, foodEnergy;
 					float centerX, centerZ;  // should be from 0.0 -> 1.0
 					float sizeX, sizeZ;  // should be from 0.0 -> 1.0
 					float nhsize;
@@ -4227,7 +4295,14 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 						propPatch.get( "FoodTypeName" ).err( "Unknown FoodType name" );
 					}
 
+					centerX = propPatch.get( "CenterX" );
+					centerZ = propPatch.get( "CenterZ" );
+					sizeX = propPatch.get( "SizeX" );
+					sizeZ = propPatch.get( "SizeZ" );
+
 					foodFraction = propPatch.get( "FoodFraction" );
+					if( foodFraction < 0.0 )
+						foodFraction = sizeX * sizeZ;
 
 					initFoodFraction = propPatch.get( "InitFoodFraction" );
 					if( initFoodFraction < 0.0 )
@@ -4253,10 +4328,8 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 					if (foodRate < 0.0)
 						foodRate = fDomains[id].foodRate;
 
-					centerX = propPatch.get( "CenterX" );
-					centerZ = propPatch.get( "CenterZ" );
-					sizeX = propPatch.get( "SizeX" );
-					sizeZ = propPatch.get( "SizeZ" );
+					foodEnergy = propPatch.get( "FoodEnergy" );
+
 					{
 						string val = propPatch.get( "Shape" );
 						if( val == "R" )
@@ -4284,7 +4357,7 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 
 					bool on = propPatch.get( "On" );
 
-					fDomains[id].fFoodPatches[i].init(foodType, centerX, centerZ, sizeX, sizeZ, foodRate, initFood, minFood, maxFood, maxFoodGrown, foodFraction, shape, distribution, nhsize, on, removeFood, &fStage, &(fDomains[id]), id);
+					fDomains[id].fFoodPatches[i].init(foodType, centerX, centerZ, sizeX, sizeZ, foodRate, foodEnergy, initFood, minFood, maxFood, maxFoodGrown, foodFraction, shape, distribution, nhsize, on, removeFood, &fStage, &(fDomains[id]), id);
 
 					patchFractionSpecified += foodFraction;
 
@@ -4462,6 +4535,7 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 	fPopControlMinScaleFactor = doc.get( "PopControlMinScaleFactor" );
 	fPopControlMaxScaleFactor = doc.get( "PopControlMaxScaleFactor" );
 
+	fAllowBirths = doc.get( "AllowBirths" );
 	fAllowMinDeaths = doc.get( "AllowMinDeaths" );
 
 	fComplexityType = (string)doc.get( "ComplexityType" );
@@ -4484,6 +4558,18 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 	// This value only does something if Fog Function is linear
 	// It defines the maximum distance a agent can see.
 	fLinearFogEnd = doc.get( "LinearFogEnd" );
+
+	// Process Variables
+	{
+		proplib::Property &propVariables = doc.get( "Variables" );
+		int numVariables = propVariables.size();
+
+		for( int iVariable = 0; iVariable < numVariables; iVariable++ )
+		{
+			float variable = propVariables.get( iVariable );
+			proplib::Document::variables.push_back( variable );
+		}
+	}
 }
 
 //-------------------------------------------------------------------------------------------
@@ -4491,8 +4577,7 @@ void TSimulation::processWorldFile( proplib::Document *docWorldFile )
 //-------------------------------------------------------------------------------------------
 void TSimulation::initLockstepMode()
 {
-	agent::config.minLifeSpan = fMaxSteps;
-	agent::config.maxLifeSpan = fMaxSteps;
+	agent::config.dieAtMaxAge = false;
 
 	agent::config.eat2Energy = 0.0;
 	agent::config.mate2Energy = 0.0;
@@ -4517,8 +4602,7 @@ void TSimulation::initLockstepMode()
 	fEnergyBasedPopulationControl = false;
 
 	cout << "Due to running in LockStepWithBirthsDeathsLog mode, the following parameter values have been forcibly reset as indicated:" nl;
-	cout << "  MinLifeSpan" ses agent::config.minLifeSpan nl;
-	cout << "  MaxLifeSpan" ses agent::config.maxLifeSpan nl;
+	cout << "  DieAtMaxAge" ses agent::config.dieAtMaxAge nl;
 	cout << "  Eat2Energy" ses agent::config.eat2Energy nl;
 	cout << "  Mate2Energy" ses agent::config.mate2Energy nl;
 	cout << "  Fight2Energy" ses agent::config.fight2Energy nl;
@@ -4535,8 +4619,9 @@ void TSimulation::initLockstepMode()
 	cout << "  CarryBrick2Energy" ses brick::gCarryBrick2Energy nl;
 	cout << "  FixedEnergyDrain" ses agent::config.fixedEnergyDrain nl;
 	cout << "  NumDepletionSteps" ses fNumDepletionSteps nl;
-	cout << "  .MaxPopulationPenaltyFraction" ses fMaxPopulationPenaltyFraction nl;
+	cout << "  MaxPopulationPenaltyFraction" ses fMaxPopulationPenaltyFraction nl;
 	cout << "  ApplyLowPopulationAdvantage" ses fApplyLowPopulationAdvantage nl;
+	cout << "  EnergyBasedPopulationControl" ses fEnergyBasedPopulationControl nl;
 }
 
 //-------------------------------------------------------------------------------------------
@@ -4544,22 +4629,14 @@ void TSimulation::initLockstepMode()
 //-------------------------------------------------------------------------------------------
 void TSimulation::initFitnessMode()
 {
-	fNumberToSeed = lrint( fMaxNumAgents * (float) fNumberToSeed / fInitNumAgents );	// same proportion as originally specified (must calculate before changing fInitNumAgents)
-	if( fNumberToSeed > fMaxNumAgents )	// just to be safe
-		fNumberToSeed = fMaxNumAgents;
-	fInitNumAgents = fMaxNumAgents;	// population starts at maximum
-	fMinNumAgents = fMaxNumAgents;		// population stays at mximum
+	fMinNumAgents = fMaxNumAgents = fInitNumAgents;		// population stays at initial
 	// 		if( fProbabilityOfMutatingSeeds == 0.0 )
 	// 			fProbabilityOfMutatingSeeds = 1.0;	// so there is variation in the initial population
 	//		fMateThreshold = 1.5;				// so they can't reproduce on their own
 
 	for( int i = 0; i < fNumDomains; i++ )	// over all domains
 	{
-		fDomains[i].numberToSeed = lrint( fDomains[i].maxNumAgents * (float) fDomains[i].numberToSeed / fDomains[i].initNumAgents );	// same proportion as originally specified (must calculate before changing fInitNumAgents)
-		if( fDomains[i].numberToSeed > fDomains[i].maxNumAgents )	// just to be safe
-			fDomains[i].numberToSeed = fDomains[i].maxNumAgents;
-		fDomains[i].initNumAgents = fDomains[i].maxNumAgents;	// population starts at maximum
-		fDomains[i].minNumAgents  = fDomains[i].maxNumAgents;	// population stays at maximum
+		fDomains[i].minNumAgents  = fDomains[i].maxNumAgents = fDomains[i].initNumAgents;	// population stays at initial
 		// 			fDomains[i].probabilityOfMutatingSeeds = fProbabilityOfMutatingSeeds;				// so there is variation in the initial population
 	}
 
@@ -4567,11 +4644,11 @@ void TSimulation::initFitnessMode()
 	fMaxPopulationPenaltyFraction = 0.0;	// ditto
 	fApplyLowPopulationAdvantage = false;			// turn off the low-population advantage
 	fEnergyBasedPopulationControl = false;			// turn off energy-based population control
+	fEndOnPopulationCrash = false;
 
 	cout << "Due to running as a steady-state GA with a fitness function, the following parameter values have been forcibly reset as indicated:" nl;
-	cout << "  InitNumAgents" ses fInitNumAgents nl;
 	cout << "  MinNumAgents" ses fMinNumAgents nl;
-	cout << "  NumberToSeed" ses fNumberToSeed nl;
+	cout << "  MaxNumAgents" ses fMaxNumAgents nl;
 	// 		cout << "  ProbabilityOfMutatingSeeds" ses fProbabilityOfMutatingSeeds nl;
 	//		cout << "  MateThreshold" ses fMateThreshold nl;
 	for( int i = 0; i < fNumDomains; i++ )
@@ -4579,11 +4656,64 @@ void TSimulation::initFitnessMode()
 		cout << "  Domain " << i << ":" nl;
 		cout << "    initNumAgents" ses fDomains[i].initNumAgents nl;
 		cout << "    minNumAgents" ses fDomains[i].minNumAgents nl;
-		cout << "    numberToSeed" ses fDomains[i].numberToSeed nl;
 		// 			cout << "    probabilityOfMutatingSeeds" ses fDomains[i].probabilityOfMutatingSeeds nl;
 	}
 	cout << "  NumDepletionSteps" ses fNumDepletionSteps nl;
-	cout << "  .MaxPopulationPenaltyFraction" ses fMaxPopulationPenaltyFraction nl;
+	cout << "  MaxPopulationPenaltyFraction" ses fMaxPopulationPenaltyFraction nl;
+	cout << "  ApplyLowPopulationAdvantage" ses fApplyLowPopulationAdvantage nl;
+	cout << "  EnergyBasedPopulationControl" ses fEnergyBasedPopulationControl nl;
+	cout << "  EndOnPopulationCrash" ses fEndOnPopulationCrash nl;
+}
+
+//-------------------------------------------------------------------------------------------
+// TSimulation::initAdaptivityMode
+//-------------------------------------------------------------------------------------------
+void TSimulation::initAdaptivityMode()
+{
+	fMaxSteps = INT_MAX;
+	fMinNumAgents = 0;
+	fMaxNumAgents = fInitNumAgents;
+	fNumberToSeed = fInitNumAgents;
+	for( int i = 0; i < fNumDomains; i++ )	// over all domains
+	{
+		fDomains[i].minNumAgents = 0;
+		fDomains[i].maxNumAgents = fDomains[i].initNumAgents;
+		fDomains[i].numberToSeed = fDomains[i].initNumAgents;
+	}
+	fAllowBirths = false;
+	fEndOnPopulationCrash = true;
+
+	agent::config.dieAtMaxAge = false;
+	agent::config.maxSeedEnergy = 1.0;
+	agent::config.randomSeedEnergy = false;
+	agent::config.randomSeedMateWait = false;
+
+	fNumDepletionSteps = 0;
+	fMaxPopulationPenaltyFraction = 0.0;
+
+	fApplyLowPopulationAdvantage = false;
+	fEnergyBasedPopulationControl = false;
+
+	cout << "Due to running in adaptivity mode, the following parameter values have been forcibly reset as indicated:" nl;
+	cout << "  MaxSteps" ses fMaxSteps nl;
+	cout << "  MinNumAgents" ses fMinNumAgents nl;
+	cout << "  MaxNumAgents" ses fMaxNumAgents nl;
+	cout << "  NumberToSeed" ses fNumberToSeed nl;
+	for( int i = 0; i < fNumDomains; i++ )
+	{
+		cout << "  Domain " << i << ":" nl;
+		cout << "    minNumAgents" ses fDomains[i].minNumAgents nl;
+		cout << "    maxNumAgents" ses fDomains[i].maxNumAgents nl;
+		cout << "    numberToSeed" ses fDomains[i].numberToSeed nl;
+	}
+	cout << "  AllowBirths" ses fAllowBirths nl;
+	cout << "  EndOnPopulationCrash" ses fEndOnPopulationCrash nl;
+	cout << "  DieAtMaxAge" ses agent::config.dieAtMaxAge nl;
+	cout << "  MaxSeedEnergy" ses agent::config.maxSeedEnergy nl;
+	cout << "  RandomSeedEnergy" ses agent::config.randomSeedEnergy nl;
+	cout << "  RandomSeedMateWait" ses agent::config.randomSeedMateWait nl;
+	cout << "  NumDepletionSteps" ses fNumDepletionSteps nl;
+	cout << "  MaxPopulationPenaltyFraction" ses fMaxPopulationPenaltyFraction nl;
 	cout << "  ApplyLowPopulationAdvantage" ses fApplyLowPopulationAdvantage nl;
 	cout << "  EnergyBasedPopulationControl" ses fEnergyBasedPopulationControl nl;
 }
@@ -4785,6 +4915,9 @@ void TSimulation::getStatusText( StatusText& statusText,
 	}
 	statusText.push_back( strdup( t ) );
 
+	sprintf( t, "foodEnergy = %.1f", getFoodEnergy() );
+	statusText.push_back( strdup( t ) );
+
 	sprintf( t, "created  = %4ld", fNumberCreated );
 	if (fNumDomains > 1)
 	{
@@ -4825,7 +4958,7 @@ void TSimulation::getStatusText( StatusText& statusText,
 
 	if( (fHeuristicFitnessWeight != 0.0) || (fComplexityFitnessWeight != 0.0) || fLockStepWithBirthsDeathsLog )
 	{
-		sprintf( t, "born_v  = %4ld", fNumberBornVirtual );
+		sprintf( t, "born_v   = %4ld", fNumberBornVirtual );
 		statusText.push_back( strdup( t ) );
 	}
 
@@ -4853,7 +4986,7 @@ void TSimulation::getStatusText( StatusText& statusText,
 	sprintf( t, " -fight  = %4ld", fNumberDiedFight );
 	statusText.push_back( strdup( t ) );
 
-	sprintf( t, " -eat  = %4ld", fNumberDiedEat );
+	sprintf( t, " -eat    = %4ld", fNumberDiedEat );
 	statusText.push_back( strdup( t ) );
 
 	sprintf( t, " -edge   = %4ld", fNumberDiedEdge );
@@ -4994,10 +5127,10 @@ void TSimulation::getStatusText( StatusText& statusText,
 	sprintf( t, "MateRate = %.2f", (double) deltaBorn / statusFrequency );
 	statusText.push_back( strdup( t ) );
 
-	sprintf( t, "LifeSpan = %lu ± %lu [%lu, %lu]", nint( fLifeSpanStats.mean() ), nint( fLifeSpanStats.stddev() ), (unsigned long) fLifeSpanStats.min(), (unsigned long) fLifeSpanStats.max() );
+	sprintf( t, "LifeSpan = %lu \xb1 %lu [%lu, %lu]", nint( fLifeSpanStats.mean() ), nint( fLifeSpanStats.stddev() ), (unsigned long) fLifeSpanStats.min(), (unsigned long) fLifeSpanStats.max() );
 	statusText.push_back( strdup( t ) );
 
-	sprintf( t, "RecLifeSpan = %lu ± %lu [%lu, %lu]", nint( fLifeSpanRecentStats.mean() ), nint( fLifeSpanRecentStats.stddev() ), (unsigned long) fLifeSpanRecentStats.min(), (unsigned long) fLifeSpanRecentStats.max() );
+	sprintf( t, "RecLifeSpan = %lu \xb1 %lu [%lu, %lu]", nint( fLifeSpanRecentStats.mean() ), nint( fLifeSpanRecentStats.stddev() ), (unsigned long) fLifeSpanRecentStats.min(), (unsigned long) fLifeSpanRecentStats.max() );
 	statusText.push_back( strdup( t ) );
 
 	// ---
@@ -5006,7 +5139,7 @@ void TSimulation::getStatusText( StatusText& statusText,
 	function<void (const char *, Stat &)> addStat =
 		[&t, &statusText] ( const char *name, Stat &stat )
 		{
-			sprintf( t, "%s = %.1f ± %.1f [%lu, %lu]",
+			sprintf( t, "%s = %.1f \xb1 %.1f [%lu, %lu]",
 					 name, stat.mean(), stat.stddev(), (unsigned long) stat.min(), (unsigned long) stat.max() );
 			statusText.push_back( strdup( t ) );
 		};

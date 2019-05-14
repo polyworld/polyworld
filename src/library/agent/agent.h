@@ -50,16 +50,16 @@ class agent : public gpolyobj
 {
 	friend void operator>>(const char **, agent&);
 
-public:	
+public:
 	enum BodyRedChannel { BRC_FIGHT, BRC_CONST, BRC_GIVE };
-	enum BodyGreenChannel { BGC_ID, BGC_LIGHT, BGC_CONST };
+	enum BodyGreenChannel { BGC_ID, BGC_LIGHT, BGC_EAT, BGC_FOOD, BGC_CONST };
 	enum BodyBlueChannel { BBC_MATE, BBC_CONST, BBC_ENERGY };
-	enum NoseColor { NC_LIGHT, NC_CONST };
+	enum NoseColor { NC_LIGHT, NC_BODY, NC_CONST };
 	enum YawEncoding { YE_SQUASH, YE_OPPOSE };
 
 	static struct Configuration
 	{
-		float	agentHeight;	
+		float	agentHeight;
 		float	minAgentSize;
 		float	maxAgentSize;
 		long	minLifeSpan;
@@ -88,6 +88,7 @@ public:
 		float	maxCarries;
 		bool	vision;
 		long 	initMateWait;
+		bool	randomSeedMateWait;
 		float	speed2DPosition;
 		float	maxRadius;
 		float	maxVelocity;
@@ -112,15 +113,24 @@ public:
 		float   bodyBlueChannelConstValue;
 		NoseColor noseColor;
 		float   noseColorConstValue;
-		double	energyUseMultiplier;
+		bool    hasLightBehavior;
+		float	maxSeedEnergy;
+		bool	randomSeedEnergy;
+		float	energyUseMultiplier;
+		float	ageEnergyMultiplier;
+		bool	dieAtMaxAge;
+		float	starvationEnergyFraction;
+		int 	starvationWait;
 
 		bool	enableMateWaitFeedback;
+		bool	invertMateWaitFeedback;
 		bool	enableSpeedFeedback;
 		bool	enableGive;
 		bool	enableCarry;
+		bool	invertFocus;
 		bool	enableVisionPitch;
 		bool	enableVisionYaw;
-		
+
 	} config;
 
 	static void processWorldfile( proplib::Document &doc );
@@ -132,7 +142,7 @@ public:
 
     agent(TSimulation* simulation, gstage* stage);
     ~agent();
-    
+
     void dump(std::ostream& out);
     void load(std::istream& in);
 	void UpdateVision();
@@ -141,27 +151,29 @@ public:
 					  float speed2dpos,
 					  int solidObjects,
 					  agent* carrier );
+	void UpdateColor();
 	void AvoidCollisions( int solidObjects );
 	void AvoidCollisionDirectional( int direction, int solidObjects );
 	void GetCollisionFixedCoordinates( float xo, float zo, float xn, float zn, float xb, float zb, float rc, float rb, float *xf, float *zf );
-    
+
     void SetVelocity(float x, float y, float z);
     void SetVelocity(short k, float f);
     void SetVelocityX(float f);
     void SetVelocityY(float f);
     void SetVelocityZ(float f);
     void SetMass(float f);
-    
+
     virtual void draw();
 	void setGenomeReady();
-    void grow( long mateWait );    
-    virtual void setradius();    
+    void grow( long mateWait, bool seeding = false );
+    virtual void setradius();
 	void eat( food* f,
 			  float eatFitnessParameter,
 			  float eat2consume,
 			  float eatthreshold,
 			  long step,
 			  Energy &return_lost,
+			  Energy &return_rawEat,
 			  Energy &return_actuallyEat );
 	Energy receive( agent *giver, const Energy &e );
     Energy damage(const Energy &e, bool nullMode);
@@ -173,7 +185,7 @@ public:
 
 	void addListener( AgentListener *listener );
 	void removeListener( AgentListener *listener );
-    
+
     void SetLastX(float x);
     void SetLastY(float y);
     void SetLastZ(float z);
@@ -197,7 +209,9 @@ public:
 	void SetEnergy( const Energy &e );
 	void SetFoodEnergy( const Energy &e );
 	const Energy &GetMaxEnergy();
+	const Energy &GetStarvationFoodEnergy();
 	float NormalizedEnergy();
+	float NormalizedFoodEnergy();
 	float Eat();
 	float Fight();
 	float Give();
@@ -206,11 +220,14 @@ public:
 	float Pickup();
 	float Drop();
     float Size();
+    bool IsSeed();
     long Age();
     long MaxAge();
     long LastMate();
 	long LastEat();
 	float LastEatDistance();
+	Energy LastEatEnergy();
+	Energy LastEatEnergyRaw();
 	genome::Genome* Genes();
 	NervousSystem* GetNervousSystem();
     long Number();
@@ -235,9 +252,9 @@ public:
 	static gpolyobj* GetAgentObj();
 
 	void SetComplexity( float value );
-	
+
 	void Heal( float HealingRate, float minFoodEnergy );	//Virgil
-	
+
 	void PickupObject( gobject* o );
 	void DropMostRecent( void );
 	void DropObject( gobject* o );
@@ -252,51 +269,61 @@ public:
 	{
 		std::string functionPath;
 	} brainAnalysisParms;
-	
+
 protected:
     void NumberToName();
     void SetGeometry();
     void SetGraphics();
 	void InitGeneCache();
-    
+
 	static bool gClassInited;
     static unsigned long agentsEver;
     static long agentsliving;
     static gpolyobj* agentobj;
     static agent** pc;
+    static bool fSeedSynapsesFromFile;
+    static std::vector<std::string> fSeedSynapseFilePaths;
+    static bool fFreezeSeededSynapses;
+
+    static void ReadSeedSynapseFilePaths();
+    void SeedSynapsesFromFile();
 
     bool fAlive;
+    bool fIsSeed;
     long fAge;
     long fLastMate;
 	long fLastEat;
 	float fLastEatPosition[3];
+	Energy fLastEatEnergy;
+	Energy fLastEatEnergyRaw;
 	LifeSpan fLifeSpan;
 	bool fDeathByPatch;
 
 	Energy fEnergy;
 	Energy fFoodEnergy;
 	Energy fMaxEnergy;
+	Energy fStarvationFoodEnergy;
 	const Metabolism *fMetabolism;
-    
+
     float fSpeed2Energy;
     float fYaw2Energy;
     float fSizeAdvantage;
-    
+
     float fLengthX;
     float fLengthZ;
-    
+
     float fMass; // mass (not used)
-    
+
     float fLastPosition[3];
     float fVelocity[3];
     float fNoseColor[3];
 
 	float fSpeed;
 	float fMaxSpeed;
-	
+
     float fHeuristicFitness;	// rough estimate along evolutionary biology lines
 	float fComplexity;
-	
+
 	genome::Genome* fGenome;
 	struct GeneCache
 	{
@@ -335,7 +362,7 @@ protected:
     gscene fScene;
     frustumXZ fFrustum;
     short fDomain;
-	
+
 	float fCarryRadius;
 
 	friend class AgentAttachedData;
@@ -373,7 +400,9 @@ inline const Energy &agent::GetFoodEnergy() { return fFoodEnergy; }
 inline void agent::SetEnergy( const Energy &e ) { fEnergy = e; }
 inline void agent::SetFoodEnergy( const Energy &e ) { fFoodEnergy = e; }
 inline const Energy &agent::GetMaxEnergy() { return fMaxEnergy; }
+inline const Energy &agent::GetStarvationFoodEnergy() { return fStarvationFoodEnergy; }
 inline float agent::NormalizedEnergy() { return fEnergy.sum() / fMaxEnergy.sum(); }
+inline float agent::NormalizedFoodEnergy() { return fFoodEnergy.sum() / fMaxEnergy.sum(); }
 inline float agent::Eat() { return outputNerves.eat->get(); }
 inline float agent::Fight() { return outputNerves.fight->get(); }
 inline float agent::Give() { return outputNerves.give->get(); }
@@ -382,11 +411,14 @@ inline float agent::Mate() { return outputNerves.mate->get(); }
 inline float agent::Pickup() { return outputNerves.pickup->get(); }
 inline float agent::Drop() { return outputNerves.drop->get(); }
 inline float agent::Size() { return geneCache.size; }
+inline bool agent::IsSeed() { return fIsSeed; }
 inline long agent::Age() { return fAge; }
 inline long agent::MaxAge() { return geneCache.lifespan; }
 inline long agent::LastMate() { return fLastMate; }
 inline long agent::LastEat() { return fLastEat; }
 inline float agent::LastEatDistance() { return dist( fPosition[0], fPosition[2], fLastEatPosition[0], fLastEatPosition[2] ); }
+inline Energy agent::LastEatEnergy() { return fLastEatEnergy; }
+inline Energy agent::LastEatEnergyRaw() { return fLastEatEnergyRaw; }
 inline genome::Genome* agent::Genes() { return fGenome; }
 inline NervousSystem* agent::GetNervousSystem() { return fCns; }
 inline long agent::Number() { return getTypeNumber(); }

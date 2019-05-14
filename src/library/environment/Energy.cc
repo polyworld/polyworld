@@ -42,6 +42,18 @@ bool EnergyPolarity::operator==( const EnergyPolarity &other ) const
 	return true;
 }
 
+EnergyPolarity EnergyPolarity::operator*( const EnergyPolarity &other ) const
+{
+	EnergyPolarity result;
+
+	for( int i = 0; i < globals::numEnergyTypes; i++ )
+	{
+		result.values[i] = (Polarity)(values[i] * other.values[i]);
+	}
+
+	return result;
+}
+
 
 EnergyMultiplier::EnergyMultiplier()
 {
@@ -103,6 +115,17 @@ Energy::Energy( proplib::Property &prop )
 
 	for( int i = 0; i < globals::numEnergyTypes; i++ )
 		values[i] = (float)prop.get( i );
+}
+
+Energy::Energy( const Energy &positive, const Energy &negative, const EnergyPolarity &polarity )
+{
+	for( int i = 0; i < globals::numEnergyTypes; i++ )
+	{
+		if( polarity.values[i] == EnergyPolarity::NEGATIVE )
+			values[i] = negative.values[i];
+		else
+			values[i] = positive.values[i];
+	}
 }
 
 
@@ -226,7 +249,7 @@ Energy &Energy::operator+=( const Energy &other )
 	for( int i = 0; i < globals::numEnergyTypes; i++ )
 	{
 		values[i] += other.values[i];
-	}	
+	}
 
 	return *this;
 }
@@ -236,7 +259,7 @@ Energy &Energy::operator-=( const Energy &other )
 	for( int i = 0; i < globals::numEnergyTypes; i++ )
 	{
 		values[i] -= other.values[i];
-	}	
+	}
 
 	return *this;
 }
@@ -244,7 +267,7 @@ Energy &Energy::operator-=( const Energy &other )
 Energy operator+( const Energy &a, const Energy &b )
 {
 	Energy result;
-	
+
 	for( int i = 0; i < globals::numEnergyTypes; i++ )
 	{
 		result.values[i] = a.values[i] + b.values[i];
@@ -256,7 +279,7 @@ Energy operator+( const Energy &a, const Energy &b )
 Energy operator-( const Energy &a, const Energy &b )
 {
 	Energy result;
-	
+
 	for( int i = 0; i < globals::numEnergyTypes; i++ )
 	{
 		result.values[i] = a.values[i] - b.values[i];
@@ -268,7 +291,7 @@ Energy operator-( const Energy &a, const Energy &b )
 Energy operator*( const Energy &a, float val )
 {
 	Energy result;
-	
+
 	for( int i = 0; i < globals::numEnergyTypes; i++ )
 	{
 		result.values[i] = a.values[i] * val;
@@ -291,7 +314,7 @@ Energy operator*( const Energy &e, const EnergyPolarity &p )
 		result.values[i] = e.values[i] * p.values[i];
 	}
 
-	return result;	
+	return result;
 }
 
 Energy operator*( const Energy &e, const EnergyMultiplier &m )
@@ -306,7 +329,7 @@ Energy operator*( const Energy &e, const EnergyMultiplier &m )
 			result.values[i] = e.values[i];
 	}
 
-	return result;	
+	return result;
 }
 
 ostream &operator<<( ostream &out, const Energy &e )
@@ -377,7 +400,7 @@ void Energy::test()
 
 		assert( f.values[0] == 3.0f );
 		assert( f.values[1] == 3.0f );
-		assert( f.values[2] == -3.0f );		
+		assert( f.values[2] == -3.0f );
 	}
 
 	{
@@ -388,7 +411,7 @@ void Energy::test()
 
 		assert( e.values[0] == 4.0f );
 		assert( e.values[1] == 4.0f );
-		assert( e.values[2] == 4.0f );		
+		assert( e.values[2] == 4.0f );
 	}
 
 	{
@@ -412,7 +435,7 @@ void Energy::test()
 		m.values[0] = 1;
 		m.values[1] = 0.5;
 		m.values[2] = -2;
-		
+
 		Energy f = e * m;
 
 		assert( f.values[0] == 2 );

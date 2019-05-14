@@ -1,15 +1,16 @@
 #!/usr/bin/env python
+import gzip
 from pprint import pprint
 from numpy import array, matrix, zeros
 import os.path
 
 class pw_brainAnatomy:
-	
+
 	def __init__( self, input_filename ):
-		
+
 		assert os.path.isfile( input_filename ), "passed input_filename was not a valid file"
-		
-		lines = [ x.strip('\n; ') for x in open(input_filename).readlines() ]
+
+		lines = [ x.strip('\n; ') for x in gzip.open(input_filename).readlines() ]
 
 		self.header = lines.pop(0).split(' ')
 		assert( self.header[0] == 'brain' )
@@ -37,11 +38,11 @@ class pw_brainAnatomy:
 		assert -self.max_weight <= self.cxnmatrix.all() <= self.max_weight, "anatomy matrix wasn't within [-max_weight,max_weight]"
 
 #		print self.cxnmatrix
-		
-	
+
+
 	def trace( self, start_nodes, max_distance, threshold=0.0 ):
 		'''Returns all nodes within max_distance connections from start_nodes -- going fowards.
-		Ignores all connections less than threshold'''		
+		Ignores all connections less than threshold'''
 		return self.k_distance_from( start_nodes, max_distance, threshold, backtrace=False )
 
 	def trace_back( self, start_nodes, max_distance, threshold=0.0 ):
@@ -49,21 +50,21 @@ class pw_brainAnatomy:
 		Ignores all connections less than threshold'''
 		return self.k_distance_from( start_nodes, max_distance, threshold, backtrace=True )
 
-	
+
 	def k_distance_from( self, start_nodes, max_distance, threshold, backtrace ):
 		'''ignore all connections less than threshold'''
 		assert max_distance >= 1, "max_distance must be >= 1"
-		
+
 		# if we passed a single int, make a list of it.
 		if type(start_nodes) is int:
 			start_nodes = [ start_nodes ]
 
 		assert 0 <= min(start_nodes) <= max(start_nodes) <= self.num_neurons, "start_nodes weren't within [0,num_neurons]"
-		
-		
+
+
 
 #		print self.cxnmatrix
-		
+
 		m = matrix( abs(self.cxnmatrix) > threshold, dtype=int )
 
 		# if going backwards, invert the matrix and then look forward
@@ -76,24 +77,24 @@ class pw_brainAnatomy:
 		for i in range(max_distance):
 #			print "depth %s START:\t %s" % (i+1, v.T )
 			v = m*v
-			indices = v.nonzero()[0].tolist()[0]
+			indices = v.nonzero()[0].tolist()
 
 #			print "depth %s END:  \t %s -- adding indices=%s" % (i+1, v.T, indices)
 
 			# append to our list of connected_nodes, uniqueify
 			connected = list(set( connected+indices ))
 
-		
-#		print "returning: ", connected 
+
+#		print "returning: ", connected
 		return sorted(connected)
-		
+
 if __name__ == '__main__':
 	f = pw_brainAnatomy('brainAnatomy_62_incept.txt')
 
 	max_dist = 3
 	start_nodes = [2,3]
 	connected = f.trace( [2,3], 2 )
-	connected_back = f.trace_back( [2,3], 2 )	
+	connected_back = f.trace_back( [2,3], 2 )
 
 	print "nodes %(connected)s are connected within %(max_dist)s steps from nodes %(start_nodes)s" % locals()
 	print "nodes %(connected_back)s are BACKconnected within %(max_dist)s steps from nodes %(start_nodes)s" % locals()

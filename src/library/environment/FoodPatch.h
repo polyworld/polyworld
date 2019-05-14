@@ -37,7 +37,7 @@ class FoodPatch : public Patch
 
 	food *addFood( long step );
 	void setInitCounts( int initFood, int minFood, int maxFood, int maxFoodGrown, float newFraction );
-	void init( const FoodType *foodType, float x, float z, float sx, float sz, float rate, int initFood, int minFood, int maxFood, int maxFoodGrown, float patchFraction, int shape, int distribution, float nhsize, bool on, bool inRemoveFood, gstage* fStage, Domain* dm, int domainNumber );
+	void init( const FoodType *foodType, float x, float z, float sx, float sz, float rate, float e, int initFood, int minFood, int maxFood, int maxFoodGrown, float patchFraction, int shape, int distribution, float nhsize, bool on, bool inRemoveFood, gstage* fStage, Domain* dm, int domainNumber );
 	bool initFoodGrown();
 	void initFoodGrown( bool setInitFoodGrown );
 
@@ -46,14 +46,15 @@ class FoodPatch : public Patch
 	void endStep();
 
 	float growthRate;
-    
+	float energy;
+
 	int foodCount;
 	int initFoodCount;
 	int minFoodCount;
 	int maxFoodCount;
 	int maxFoodGrownCount;
 
-	float fraction;    
+	float fraction;
 	float foodRate;
 
 	bool removeFood;

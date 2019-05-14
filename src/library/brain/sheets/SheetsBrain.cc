@@ -129,7 +129,7 @@ void SheetsBrain::grow( SheetsGenome *genome, SheetsModel *model )
 		{
 			Sheet *sheet = model->getSheet( sheetId );
 			Nerve *nerve = _cns->getNerve( sheet->getName() );
-		
+
 			int neuronCount = sheetNeuronCount[sheetId];
 			nerve->config( neuronCount, neuronIndex );
 			neuronIndex += neuronCount;
@@ -146,7 +146,7 @@ void SheetsBrain::grow( SheetsGenome *genome, SheetsModel *model )
 	}
 
 	// ---
-	// --- Instantiate Neural Net 
+	// --- Instantiate Neural Net
 	// ---
 	{
 		switch( Brain::config.neuronModel )
@@ -159,7 +159,7 @@ void SheetsBrain::grow( SheetsGenome *genome, SheetsModel *model )
 			}
 			break;
 		case Brain::Configuration::FIRING_RATE:
-		case Brain::Configuration::TAU:
+		case Brain::Configuration::TAU_GAIN:
 			{
 				FiringRateModel *firingRate = new FiringRateModel( _cns );
 				_neuralnet = firingRate;
@@ -169,11 +169,11 @@ void SheetsBrain::grow( SheetsGenome *genome, SheetsModel *model )
 			assert(false);
 		}
 
-		_neuralnet->init( &_dims, 0.0f );
+		_neuralnet->init( &_dims, 0.0 );
 	}
 
 	// ---
-	// --- Configure Neural Net 
+	// --- Configure Neural Net
 	// ---
 	{
 		int synapseIndex = 0;

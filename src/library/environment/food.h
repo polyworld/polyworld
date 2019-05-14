@@ -46,16 +46,18 @@ public:
     food( const FoodType *foodType, long step, const Energy &e );
     food( const FoodType *foodType, long step, const Energy &e, float x, float z);
     ~food();
-    
+
 	void dump(ostream& out);
 	void load(istream& in);
-    
+
 	Energy eat(const Energy &e);
-    
+
 	bool isDepleted();
 
 	const Energy &getEnergy();
 	const EnergyPolarity &getEnergyPolarity();
+	const EnergyMultiplier &getEatMultiplier();
+	const FoodType* getType();
 
 	void setPatch(FoodPatch* fp);
 	FoodPatch* getPatch();
@@ -72,7 +74,7 @@ protected:
 	void initlen();
 	void initrest();
    	virtual void setradius();
-	
+
     static unsigned long fFoodEver;
 
 	Energy fEnergy;
@@ -93,6 +95,8 @@ protected:
 //===========================================================================
 inline const Energy &food::getEnergy() { return fEnergy; }
 inline const EnergyPolarity &food::getEnergyPolarity() { return foodType->energyPolarity; }
+inline const EnergyMultiplier &food::getEatMultiplier() { return foodType->eatMultiplier; }
+inline const FoodType* food::getType() { return foodType; }
 inline void food::setPatch(FoodPatch* fp) { patch=fp; }
 inline FoodPatch* food::getPatch() { return patch; }
 inline short food::domain() { return fDomain; }

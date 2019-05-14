@@ -8,6 +8,7 @@
 
 // System
 #include <gl.h>
+#include <limits.h>
 #include <string.h>
 
 // Local
@@ -52,6 +53,9 @@ bool		agent::gClassInited;
 unsigned long	agent::agentsEver;
 long		agent::agentsliving;
 gpolyobj*	agent::agentobj;
+bool agent::fSeedSynapsesFromFile;
+std::vector<std::string> agent::fSeedSynapseFilePaths;
+bool agent::fFreezeSeededSynapses;
 
 agent::Configuration agent::config;
 
@@ -60,6 +64,13 @@ agent::Configuration agent::config;
 //---------------------------------------------------------------------------
 void agent::processWorldfile( proplib::Document &doc )
 {
+    agent::fSeedSynapsesFromFile = doc.get( "SeedSynapsesFromRun" );
+    if( agent::fSeedSynapsesFromFile )
+    {
+        ReadSeedSynapseFilePaths();
+    }
+    agent::fFreezeSeededSynapses = doc.get( "FreezeSeededSynapses" );
+
     agent::config.agentHeight = doc.get( "AgentHeight" );
 	agent::config.vision = doc.get( "Vision" );
 	agent::config.maxVelocity = doc.get( "MaxVelocity" );
@@ -70,6 +81,7 @@ void agent::processWorldfile( proplib::Document &doc )
 	agent::config.maxVisionYaw = doc.get( "MaxVisionYaw" );
 	agent::config.eyeHeight = doc.get( "EyeHeight" );
     agent::config.initMateWait = doc.get( "InitMateWait" );
+    agent::config.randomSeedMateWait = doc.get( "RandomSeedMateWait" );
     agent::config.minAgentSize = doc.get( "MinAgentSize" );
     agent::config.maxAgentSize = doc.get( "MaxAgentSize" );
     agent::config.minLifeSpan = doc.get( "MinLifeSpan" );
@@ -115,6 +127,10 @@ void agent::processWorldfile( proplib::Document &doc )
 			agent::config.bodyGreenChannel = agent::BGC_ID;
 		else if( (string)prop == "L" )
 			agent::config.bodyGreenChannel = agent::BGC_LIGHT;
+		else if( (string)prop == "E" )
+			agent::config.bodyGreenChannel = agent::BGC_EAT;
+		else if( (string)prop == "F" )
+			agent::config.bodyGreenChannel = agent::BGC_FOOD;
 		else
 		{
 			agent::config.bodyGreenChannel = agent::BGC_CONST;
@@ -137,13 +153,22 @@ void agent::processWorldfile( proplib::Document &doc )
 		proplib::Property &prop = doc.get( "NoseColor" );
 		if( (string)prop == "L" )
 			agent::config.noseColor = agent::NC_LIGHT;
+		else if( (string)prop == "B" )
+			agent::config.noseColor = agent::NC_BODY;
 		else
 		{
 			agent::config.noseColor = agent::NC_CONST;
 			agent::config.noseColorConstValue = (float)prop;
 		}
 	}
+    agent::config.hasLightBehavior = agent::config.bodyGreenChannel == agent::BGC_LIGHT || agent::config.noseColor == agent::NC_LIGHT;
+    agent::config.maxSeedEnergy = doc.get( "MaxSeedEnergy" );
+    agent::config.randomSeedEnergy = doc.get( "RandomSeedEnergy" );
     agent::config.energyUseMultiplier = doc.get( "EnergyUseMultiplier" );
+    agent::config.ageEnergyMultiplier = doc.get( "AgeEnergyMultiplier" );
+    agent::config.dieAtMaxAge = doc.get( "DieAtMaxAge" );
+    agent::config.starvationEnergyFraction = doc.get( "StarvationEnergyFraction" );
+    agent::config.starvationWait = doc.get( "StarvationWait" );
     agent::config.eat2Energy = doc.get( "EnergyUseEat" );
 	agent::config.mate2Energy = doc.get( "EnergyUseMate" );
     agent::config.fight2Energy = doc.get( "EnergyUseFight" );
@@ -161,11 +186,47 @@ void agent::processWorldfile( proplib::Document &doc )
     agent::config.fixedEnergyDrain = doc.get( "EnergyUseFixed" );
 
 	agent::config.enableMateWaitFeedback = doc.get( "EnableMateWaitFeedback" );
+	agent::config.invertMateWaitFeedback = doc.get( "InvertMateWaitFeedback" );
 	agent::config.enableSpeedFeedback = doc.get( "EnableSpeedFeedback" );
 	agent::config.enableGive = doc.get( "EnableGive" );
 	agent::config.enableCarry = doc.get( "EnableCarry" );
+	agent::config.invertFocus = doc.get( "InvertFocus" );
 	agent::config.enableVisionPitch = doc.get( "EnableVisionPitch" );
 	agent::config.enableVisionYaw = doc.get( "EnableVisionYaw" );
+}
+
+//---------------------------------------------------------------------------
+// agent::ReadSeedSynapseFilePaths
+//---------------------------------------------------------------------------
+void agent::ReadSeedSynapseFilePaths()
+{
+	ifstream in("synapseSeeds.txt");
+
+	if( in.fail() )
+	{
+		cerr << "Could not open synapseSeeds.txt" << endl;
+		exit( 1 );
+	}
+
+	makeDirs( "run/brain" );
+	SYSTEM( "cp synapseSeeds.txt run/brain" );
+
+	char buf[1024 * 4];
+	while( !in.eof() )
+	{
+		in.getline( buf, sizeof(buf) );
+
+		if( strlen(buf) )
+		{
+			fSeedSynapseFilePaths.push_back( string(buf) );
+		}
+	}
+
+	if( fSeedSynapseFilePaths.size() == 0 )
+	{
+		cerr << "synapseSeeds.txt is empty!" << endl;
+		exit( 1 );
+	}
 }
 
 //---------------------------------------------------------------------------
@@ -189,10 +250,10 @@ agent::agent(TSimulation* sim, gstage* stage)
 		fBeingCarriedSensor(NULL)
 {
 	AgentAttachedData::alloc( this );
-	
+
 	/* Set object type to be AGENTTYPE */
 	setType(AGENTTYPE);
-	
+
 	if (!gClassInited)
 		agentinit();
 
@@ -203,7 +264,7 @@ agent::agent(TSimulation* sim, gstage* stage)
 	fVelocity[0] = 0.0;
 	fVelocity[1] = 0.0;
 	fVelocity[2] = 0.0;
-	
+
 	fSpeed = 0.0;
 	fMaxSpeed = 0.0;
 	fLastEat = 0;
@@ -212,12 +273,15 @@ agent::agent(TSimulation* sim, gstage* stage)
 	fLastEatPosition[1] = 0.0;
 	fLastEatPosition[2] = 0.0;
 
+	fLastEatEnergy = 0.0;
+	fLastEatEnergyRaw = 0.0;
+
 	fGenome = GenomeUtil::createGenome();
 	fCns = new NervousSystem();
 	fMetabolism = NULL;
-	
-	// Set up agent POV	
-	fScene.SetStage(stage);	
+
+	// Set up agent POV
+	fScene.SetStage(stage);
 	fScene.SetCamera(&fCamera);
 }
 
@@ -279,24 +343,24 @@ void agent::agentdestruct()
 agent* agent::getfreeagent(TSimulation* simulation, gstage* stage)
 {
 	// Create the new agent
-	agent* c = new agent(simulation, stage);	
-	
+	agent* c = new agent(simulation, stage);
+
     // Increase current total of creatures alive
     agent::agentsliving++;
-    
+
     // Set number to total creatures that have ever lived (note this is 1-based)
     c->setTypeNumber( ++agent::agentsEver );
 	c->fCns->getRNG()->seedIfLocal( agent::agentsEver );
 
 	simulation->GetAgentPovRenderer()->add( c );
-		
+
     return c;
 }
 
 
 //---------------------------------------------------------------------------
 // agent::agentdump
-//---------------------------------------------------------------------------    
+//---------------------------------------------------------------------------
 void agent::agentdump(ostream& out)
 {
     out << agent::agentsEver nl;
@@ -307,7 +371,7 @@ void agent::agentdump(ostream& out)
 
 //---------------------------------------------------------------------------
 // agent::agentload
-//---------------------------------------------------------------------------    
+//---------------------------------------------------------------------------
 void agent::agentload(istream&)
 {
     WARN_ONCE("agent::agentload called. Not supported.");
@@ -316,20 +380,20 @@ void agent::agentload(istream&)
     in >> agent::agentsliving;
 
     agent::agentlist->load(in);
-	
+
 	long i;
-		
+
     for (i = 0; i < agent::config.maxNumAgents; i++)
         if (!agent::pc[i])
             break;
     if (i)
         error(2,"agent::pc[] array not empty during agentload");
-        
+
     //    if (agent::config.xSortedAgents.count())
     //        error(2,"gXSortedAgents list not empty during agentload");
     if (allxsortedlist::gXSortedAll.getCount(AGENTTYPE))
         error(2,"gXSortedAll list not empty during agentload");
-        
+
     long numagentsallocated = 0;
     in >> numagentsallocated;
     for (i = 0; i < numagentsallocated; i++)
@@ -384,13 +448,13 @@ void agent::dump(ostream& out)
 
 //---------------------------------------------------------------------------
 // agent::load
-//---------------------------------------------------------------------------    
+//---------------------------------------------------------------------------
 void agent::load(istream& in)
 {
 	WARN_ONCE("fix domain issue");
-	
+
 	unsigned long agentNumber;
-	
+
     in >> agentNumber;
 	setTypeNumber( agentNumber );
     in >> fAge;
@@ -408,7 +472,7 @@ void agent::load(istream& in)
     in >> fHeuristicFitness;
 
     gobject::load(in);
-	
+
     assert( false ); //fGenome->load(in); // must port this to AbstractFile
 	/* implement
     if (fBrain == NULL)
@@ -449,8 +513,8 @@ void agent::setGenomeReady()
 //---------------------------------------------------------------------------
 // agent::grow
 //---------------------------------------------------------------------------
-void agent::grow( long mateWait )
-{    
+void agent::grow( long mateWait, bool seeding )
+{
 	InitGeneCache();
 
 	// ---
@@ -484,7 +548,8 @@ void agent::grow( long mateWait )
 	OUTPUT_NERVE(yaw, "Yaw");
 	if( agent::config.yawEncoding == YE_OPPOSE )
 		OUTPUT_NERVE(yawOppose, "YawOppose");
-	OUTPUT_NERVE(light, "Light");
+	if( agent::config.hasLightBehavior )
+		OUTPUT_NERVE(light, "Light");
 	OUTPUT_NERVE(focus, "Focus");
 	if( agent::config.enableVisionPitch )
 		OUTPUT_NERVE(visionPitch, "VisionPitch");
@@ -521,16 +586,24 @@ void agent::grow( long mateWait )
 	// --- Grow Nervous System (Brain)
 	// ---
 	fCns->grow( fGenome );
+	if( seeding && agent::fSeedSynapsesFromFile )
+	{
+		SeedSynapsesFromFile();
+		if( agent::fFreezeSeededSynapses )
+			fCns->getBrain()->freeze();
+	}
 	logs->postEvent( BrainGrownEvent(this) );
 
 	fCns->prebirth();
+	if( Brain::config.learningMode == Brain::Configuration::LEARN_PREBIRTH )
+		fCns->getBrain()->freeze();
 
     // setup the agent's geometry
     SetGeometry();
 
 	// initially set red & blue to 0
     fColor[0] = fColor[2] = 0.0;
-    
+
 	// set body red channel
 	switch(agent::config.bodyRedChannel)
 	{
@@ -545,7 +618,7 @@ void agent::grow( long mateWait )
 		assert(false);
 		break;
 	}
-    
+
 	// set body green channel
 	switch(agent::config.bodyGreenChannel)
 	{
@@ -556,13 +629,15 @@ void agent::grow( long mateWait )
 		fColor[1] = agent::config.bodyGreenChannelConstValue;
 		break;
 	case BGC_LIGHT:
+	case BGC_EAT:
+	case BGC_FOOD:
 		// no-op
 		break;
 	default:
 		assert(false);
 		break;
 	}
-    
+
 	// set body blue channel
 	switch(agent::config.bodyBlueChannel)
 	{
@@ -577,7 +652,7 @@ void agent::grow( long mateWait )
 		assert(false);
 		break;
 	}
-    
+
 	// set the initial nose color
 	float noseColor;
 	switch(agent::config.noseColor)
@@ -586,6 +661,7 @@ void agent::grow( long mateWait )
 		noseColor = agent::config.noseColorConstValue;
 		break;
 	case NC_LIGHT:
+	case NC_BODY:
 		// start neutral gray
 		noseColor = 0.5;
 		break;
@@ -594,34 +670,85 @@ void agent::grow( long mateWait )
 		break;
 	}
     fNoseColor[0] = fNoseColor[1] = fNoseColor[2] = noseColor;
-    
+
+    fIsSeed = seeding;
     fAge = 0;
-    fLastMate = agent::config.initMateWait;
-    
+    if( seeding )
+    {
+        if( agent::config.randomSeedMateWait )
+        {
+            fLastMate = (long)(randpw() * -mateWait);
+        }
+        else
+        {
+            fLastMate = -mateWait;
+        }
+    }
+    else
+    {
+        fLastMate = agent::config.initMateWait;
+    }
+
 	float size_rel = geneCache.size - agent::config.minAgentSize;
 
-    fMaxEnergy = agent::config.minMaxEnergy + (size_rel
-    			 * (agent::config.maxMaxEnergy - agent::config.minMaxEnergy) / (agent::config.maxAgentSize - agent::config.minAgentSize) );
-	
+    float maxEnergy;
+    if( agent::config.minAgentSize == agent::config.maxAgentSize )
+    {
+        maxEnergy = 0.5 * (agent::config.minMaxEnergy + agent::config.maxMaxEnergy);
+    }
+    else
+    {
+        maxEnergy = agent::config.minMaxEnergy + (size_rel
+                    * (agent::config.maxMaxEnergy - agent::config.minMaxEnergy) / (agent::config.maxAgentSize - agent::config.minAgentSize) );
+    }
+    fMaxEnergy = maxEnergy;
+    fStarvationFoodEnergy = agent::config.starvationEnergyFraction * maxEnergy;
+
     fEnergy = fMaxEnergy;
 	fFoodEnergy = fMaxEnergy;
-	
+
+    UpdateColor();
+
+	if( seeding )
+	{
+		float energy;
+		if( agent::config.randomSeedEnergy )
+		{
+			energy = trand( agent::config.starvationEnergyFraction, agent::config.maxSeedEnergy ) * maxEnergy;
+		}
+		else
+		{
+			energy = agent::config.maxSeedEnergy * maxEnergy;
+		}
+		fEnergy = energy;
+		fFoodEnergy = energy;
+	}
+
 //	printf( "%s: energy initialized to %g\n", __func__, fEnergy );
-    
-	// Note: gMinSizePenalty can be used to prevent size_rel==0 from giving
-	// the agents "free" speed.
-    fSpeed2Energy = agent::config.speed2Energy * geneCache.maxSpeed
-		            * (agent::config.minSizePenalty + size_rel) * (agent::config.maxSizePenalty - 1.0)
-					/ (agent::config.maxAgentSize - agent::config.minAgentSize);
-    
-	// Note: gMinSizePenalty can be used to prevent size_rel==0 from giving
-	// the agents "free" yaw.
-    fYaw2Energy = agent::config.yaw2Energy * geneCache.maxSpeed
-		          * (agent::config.minSizePenalty + size_rel) * (agent::config.maxSizePenalty - 1.0)
-              	  / (agent::config.maxAgentSize - agent::config.minAgentSize);
-    
-    fSizeAdvantage = 1.0 + ( size_rel *
-                (agent::config.maxSizeAdvantage - 1.0) / (agent::config.maxAgentSize - agent::config.minAgentSize) );
+
+    if( agent::config.minAgentSize == agent::config.maxAgentSize )
+    {
+        fSpeed2Energy = agent::config.speed2Energy * geneCache.maxSpeed;
+        fYaw2Energy = agent::config.yaw2Energy * geneCache.maxSpeed;
+        fSizeAdvantage = 1.0;
+    }
+    else
+    {
+	    // Note: gMinSizePenalty can be used to prevent size_rel==0 from giving
+	    // the agents "free" speed.
+        fSpeed2Energy = agent::config.speed2Energy * geneCache.maxSpeed
+		                * (agent::config.minSizePenalty + size_rel) * agent::config.maxSizePenalty
+					    / (agent::config.minSizePenalty + agent::config.maxAgentSize - agent::config.minAgentSize);
+
+	    // Note: gMinSizePenalty can be used to prevent size_rel==0 from giving
+	    // the agents "free" yaw.
+        fYaw2Energy = agent::config.yaw2Energy * geneCache.maxSpeed
+		              * (agent::config.minSizePenalty + size_rel) * agent::config.maxSizePenalty
+                  	  / (agent::config.minSizePenalty + agent::config.maxAgentSize - agent::config.minAgentSize);
+
+        fSizeAdvantage = 1.0 + ( size_rel *
+                    (agent::config.maxSizeAdvantage - 1.0) / (agent::config.maxAgentSize - agent::config.minAgentSize) );
+    }
 
     // now setup the camera & window for our agent to see the world in
     SetGraphics();
@@ -633,12 +760,33 @@ void agent::grow( long mateWait )
 
 
 //---------------------------------------------------------------------------
+// agent::SeedSynapsesFromFile
+//---------------------------------------------------------------------------
+void agent::SeedSynapsesFromFile()
+{
+	const string &path = fSeedSynapseFilePaths[ (fTypeNumber - 1) % fSeedSynapseFilePaths.size() ];
+	AbstractFile *in = AbstractFile::open( path.c_str(), "r" );
+	if( in == NULL )
+	{
+		cerr << "Could not open seed file " << path << endl;
+		exit( 1 );
+	}
+
+	cout << "seeding agent #" << fTypeNumber << " synapses from " << path << endl;
+
+	fCns->getBrain()->loadSynapses( in );
+
+	delete in;
+}
+
+
+//---------------------------------------------------------------------------
 // agent::setradius
 //---------------------------------------------------------------------------
 void agent::setradius()
 {
 	// only set radius anew if not set manually
-	if( !fRadiusFixed ) 
+	if( !fRadiusFixed )
 		fRadius = sqrt( fLength[0]*fLength[0] + fLength[2]*fLength[2] ) * fRadiusScale * fScale * 0.5;
 	srPrint( "agent::%s(): r=%g%s lx=%g lz=%g rs=%g s=%g\n", __FUNCTION__, fRadius, fRadiusFixed ? " (fixed)" : "", fLength[0], fLength[2], fRadiusScale, fScale );
 }
@@ -653,21 +801,26 @@ void agent::eat( food* f,
 				 float eatthreshold,
 				 long step,
 				 Energy &return_lost,
+				 Energy &return_rawEat,
 				 Energy &return_actuallyEat )
 {
 	return_lost = 0;
+	return_rawEat = 0;
 	return_actuallyEat = 0;
-	
+
 	if (outputNerves.eat->get() > eatthreshold)
 	{
 		Energy trytoeat = outputNerves.eat->get() * eat2consume;
-		trytoeat.constrain( 0, fMaxEnergy - fEnergy );
-		
+		Energy maxeat = Energy( fMaxEnergy - fEnergy, fEnergy, fMetabolism->energyPolarity * f->getEnergyPolarity() );
+		trytoeat.constrain( 0, maxeat );
+
+		return_rawEat = f->eat(trytoeat);
 		return_actuallyEat =
-			f->eat(trytoeat)
+			return_rawEat
 			* fMetabolism->energyPolarity
 			* f->getEnergyPolarity()
-			* fMetabolism->eatMultiplier;
+			* fMetabolism->eatMultiplier
+			* f->getEatMultiplier();
 
 		// The eatMultiplier could have made us exceed our limits.
 		return_actuallyEat.constrain( fEnergy * -1, fMaxEnergy - fEnergy );
@@ -682,22 +835,24 @@ void agent::eat( food* f,
 	#endif
 
 		fFoodEnergy.constrain( 0, fMaxEnergy, return_lost );
-				
+
 		fHeuristicFitness += eatFitnessParameter * return_actuallyEat.sum() / (eat2consume * MaxAge());
-		
+
 		if( !return_actuallyEat.isZero() )
 		{
 			fLastEat = step;
 			fLastEatPosition[0] = fPosition[0];
 			fLastEatPosition[1] = fPosition[1];
 			fLastEatPosition[2] = fPosition[2];
+			fLastEatEnergy = return_actuallyEat;
+			fLastEatEnergyRaw = return_rawEat;
 		}
 	}
 }
 
 //---------------------------------------------------------------------------
 // agent::receive
-//---------------------------------------------------------------------------    
+//---------------------------------------------------------------------------
 Energy agent::receive( agent *giver, const Energy &requested )
 {
 	Energy amount = requested;
@@ -711,7 +866,7 @@ Energy agent::receive( agent *giver, const Energy &requested )
 
 //---------------------------------------------------------------------------
 // agent::damage
-//---------------------------------------------------------------------------    
+//---------------------------------------------------------------------------
 Energy agent::damage(const Energy &e, bool nullMode)
 {
 	double scaleFactor = fSimulation->fLowPopulationAdvantageFactor
@@ -729,7 +884,7 @@ Energy agent::damage(const Energy &e, bool nullMode)
 
 //---------------------------------------------------------------------------
 // agent::MateProbability
-//---------------------------------------------------------------------------    
+//---------------------------------------------------------------------------
 float agent::MateProbability(agent* c)
 {
 	return fGenome->mateProbability(c->fGenome);
@@ -738,12 +893,12 @@ float agent::MateProbability(agent* c)
 
 //---------------------------------------------------------------------------
 // agent::mating
-//---------------------------------------------------------------------------    
+//---------------------------------------------------------------------------
 Energy agent::mating( float mateFitnessParam, long mateWait, bool lockstep )
 {
 	if( mateWait <= 0 )
 		mateWait = 1;
-	
+
 	Energy mymateenergy = fGenome->get( "MateEnergyFraction" ) * fEnergy;
 
 	if( !lockstep )
@@ -754,35 +909,35 @@ Energy agent::mating( float mateFitnessParam, long mateWait, bool lockstep )
 		fFoodEnergy -= mymateenergy;
 		fFoodEnergy.constrain( 0, fMaxEnergy );
 	}
-		
+
 	return mymateenergy;
 }
-    
+
 
 //---------------------------------------------------------------------------
 // agent::rewardmovement
-//---------------------------------------------------------------------------        
+//---------------------------------------------------------------------------
 void agent::rewardmovement(float moveFitnessParam, float speed2dpos)
 {
 	fHeuristicFitness += moveFitnessParam
 				* (fabs(fPosition[0] - fLastPosition[0]) + fabs(fPosition[2] - fLastPosition[2]))
 		/ (geneCache.maxSpeed * speed2dpos * MaxAge());
 }
-    
+
 
 //---------------------------------------------------------------------------
 // agent::lastrewards
-//---------------------------------------------------------------------------        
+//---------------------------------------------------------------------------
 void agent::lastrewards(float energyFitness, float ageFitness)
 {
     fHeuristicFitness += energyFitness * NormalizedEnergy()
               + ageFitness * fAge / MaxAge();
 }
-    
- 
+
+
 //---------------------------------------------------------------------------
 // agent::ProjectedHeuristicFitness
-//---------------------------------------------------------------------------        
+//---------------------------------------------------------------------------
 float agent::ProjectedHeuristicFitness()
 {
 	if( fSimulation->LifeFractionSamples() >= 50 )
@@ -795,10 +950,10 @@ float agent::ProjectedHeuristicFitness()
 
 //---------------------------------------------------------------------------
 // agent::Die
-//---------------------------------------------------------------------------    
+//---------------------------------------------------------------------------
 void agent::Die()
 {
-	// No longer alive. :(		
+	// No longer alive. :(
 	fAlive = false;
 
 	itfor( AgentListeners, listeners, it )
@@ -811,14 +966,14 @@ void agent::Die()
 	{
 		return;
 	}
-	
+
     itfor( gObjectList, fCarries, it )
     {
         gobject* o = *it;
         o->Dropped();
     }
     fCarries.clear();
-	
+
 	if( BeingCarried() )
 	{
 		agent* a = (agent*)fCarriedBy;
@@ -826,20 +981,20 @@ void agent::Die()
 	}
 
 	// Decrement total number of agents
-	agent::agentsliving--;	
+	agent::agentsliving--;
 	assert(agent::agentsliving >= 0);
-	
+
 	fSimulation->GetAgentPovRenderer()->remove( this );
 }
 
 //---------------------------------------------------------------------------
 // agent::SetGeometry
-//---------------------------------------------------------------------------    
+//---------------------------------------------------------------------------
 void agent::SetGeometry()
 {
 	// obtain a fresh copy of the basic agent geometry
     clonegeom(*agentobj);
-        
+
     // then adjust the geometry to fit size, speed, & agentheight
     fLengthX = Size() / sqrt(geneCache.maxSpeed);
     fLengthZ = Size() * sqrt(geneCache.maxSpeed);
@@ -860,7 +1015,7 @@ void agent::SetGeometry()
 
 //---------------------------------------------------------------------------
 // agent::SetGraphics
-//---------------------------------------------------------------------------    
+//---------------------------------------------------------------------------
 void agent::SetGraphics()
 {
     // setup the camera & window for our agent to see the world in
@@ -874,25 +1029,28 @@ void agent::SetGraphics()
 
 	if( fSimulation->glFogFunction() != 'O' )
 		fCamera.SetFog(true, fSimulation->glFogFunction(), fSimulation->glExpFogDensity(), fSimulation->glLinearFogEnd() );
-		
+
 	fCamera.AttachTo(this);
 }
 
 
 //---------------------------------------------------------------------------
 // agent::InitGeneCache
-//---------------------------------------------------------------------------    
+//---------------------------------------------------------------------------
 void agent::InitGeneCache()
 {
 	geneCache.maxSpeed = fGenome->get("MaxSpeed");
 	geneCache.strength = fGenome->get("Strength");
 	geneCache.size = fGenome->get("Size");
-	geneCache.lifespan = fGenome->get("LifeSpan");
+	if( agent::config.dieAtMaxAge )
+		geneCache.lifespan = fGenome->get("LifeSpan");
+	else
+		geneCache.lifespan = INT_MAX;
 }
 
 //---------------------------------------------------------------------------
 // agent::SaveLastPosition
-//---------------------------------------------------------------------------    
+//---------------------------------------------------------------------------
 void agent::SaveLastPosition()
 {
 	fLastPosition[0] = fPosition[0];
@@ -909,8 +1067,10 @@ void agent::UpdateVision()
     if (agent::config.vision)
     {
 		// create retinal pixmap, based on values of focus & numvisneurons
-        const float fovx = outputNerves.focus->get() * (agent::config.maxFocus - agent::config.minFocus) + agent::config.minFocus;
-        		
+        const float fovx = agent::config.invertFocus
+            ? outputNerves.focus->get() * (agent::config.minFocus - agent::config.maxFocus) + agent::config.maxFocus
+            : outputNerves.focus->get() * (agent::config.maxFocus - agent::config.minFocus) + agent::config.minFocus;
+
 		fFrustum.Set(fPosition[0], fPosition[2], fAngle[0], fovx, agent::config.maxRadius);
 		fCamera.SetAspect(fovx * Brain::config.retinaHeight / (agent::config.agentFOV * Brain::config.retinaWidth));
 
@@ -919,13 +1079,13 @@ void agent::UpdateVision()
 			const float pitch = outputNerves.visionPitch->get() * (agent::config.maxVisionPitch - agent::config.minVisionPitch) + agent::config.minVisionPitch;
 			fCamera.setpitch( pitch );
 		}
-		
+
 		if( agent::config.enableVisionYaw )
 		{
 			const float yaw = outputNerves.visionYaw->get() * (agent::config.maxVisionYaw - agent::config.minVisionYaw) + agent::config.minVisionYaw;
 			fCamera.setyaw( yaw );
 		}
-		
+
 		fSimulation->GetAgentPovRenderer()->render( this );
 
 		debugcheck( "after DrawAgentPOV" );
@@ -957,7 +1117,7 @@ float agent::UpdateBody( float moveFitnessParam,
 {
     debugcheck( "%lu", Number() );
 	assert( lxor( !BeingCarried(), carrier ) );
-	
+
 	// In some simulations, we use a dynamic energy delta to shape difficulty.
 	if( !fMetabolism->energyDelta.isZero() )
 	{
@@ -968,16 +1128,16 @@ float agent::UpdateBody( float moveFitnessParam,
 	float dx;
 	float dz;
 	float energyUsed = 0;
-	
+
 	// just do x & z dimensions in this version
     SaveLastPosition();
-	
+
 	if( BeingCarried() )  // the agent carrying this agent initiated the update
 	{
 		setx( carrier->x() );
 		setz( carrier->z() );
 		dx = x() - LastX();
-		dz = z() - LastX();
+		dz = z() - LastZ();
 	}
 	else  // this is a normal update (the agent is not being carried)
 	{
@@ -1021,21 +1181,25 @@ float agent::UpdateBody( float moveFitnessParam,
                      + outputNerves.fight->get() * agent::config.fight2Energy
                      + outputNerves.speed->get() * fSpeed2Energy
                      + fabs(dyaw) * fYaw2Energy
-                     + outputNerves.light->get() * agent::config.light2Energy
                      + fCns->getEnergyUse()
                      + agent::config.fixedEnergyDrain;
+
+	if( agent::config.hasLightBehavior )
+	{
+		energyused += outputNerves.light->get() * agent::config.light2Energy;
+	}
 
 	if( agent::config.enableGive )
 	{
 		energyused += outputNerves.give->get() * agent::config.give2Energy;
 	}
-	
+
 	if( agent::config.enableCarry )
 	{
 		energyused += CarryEnergy();	// depends on number and size of items being carried
 	}
 
-    float denergy = energyused * Strength();
+    float denergy = energyused * Strength() * (1.0f + agent::config.ageEnergyMultiplier * fAge);
 
 	// Apply large-population energy penalty (only if NumDepletionSteps > 0)
 	float populationEnergyPenalty;
@@ -1045,13 +1209,13 @@ float agent::UpdateBody( float moveFitnessParam,
 	populationEnergyPenalty = fSimulation->fPopulationPenaltyFraction * fMaxEnergy.mean();
 #endif
 	denergy += populationEnergyPenalty;
-	
+
 	// Apply energy-based population controls
 	double scaleFactor = fSimulation->fLowPopulationAdvantageFactor			// if ApplyLowPopulationAdvantage True
 					   * fSimulation->fGlobalEnergyScaleFactor	// if EnergyBasedPopulationControl True
 					   * fSimulation->fDomains[fDomain].energyScaleFactor;
 	denergy *= scaleFactor;	// if population is getting too low or too high, adjust energy consumption
-	
+
 	denergy *= agent::config.energyUseMultiplier;	// global control over rate at which energy is consumed
 
     fEnergy -= denergy;
@@ -1059,35 +1223,11 @@ float agent::UpdateBody( float moveFitnessParam,
 
 	energyUsed = denergy;
 
-	if( agent::config.bodyRedChannel == BRC_FIGHT )
-	{
-		SetRed( outputNerves.fight->get() );	// set red color according to desire to fight
-	}
-	else if( agent::config.bodyRedChannel == BRC_GIVE )
-	{
-		SetRed( outputNerves.give->get() );	// set red color according to desire to give
-	}
-
-  	if( agent::config.bodyGreenChannel == BGC_LIGHT )
-	{
-		SetGreen(outputNerves.light->get());
-	}
-
-	if( agent::config.bodyBlueChannel == BBC_MATE )
-	{
-		SetBlue( outputNerves.mate->get() ); 	// set blue color according to desire to mate
-	}
-	else if( agent::config.bodyBlueChannel == BBC_ENERGY )
-	{
-		SetBlue( 1 - NormalizedEnergy() );
-	}
-
-	if( agent::config.noseColor == NC_LIGHT )
-	{
-		fNoseColor[0] = fNoseColor[1] = fNoseColor[2] = outputNerves.light->get();
-	}
+	UpdateColor();
 
     fAge++;
+
+	bool skipDomainCheck = false;
 
 	// Do collision detection for barriers, edges, and solid objects, if not being carried
 	if( ! BeingCarried() )
@@ -1136,7 +1276,7 @@ float agent::UpdateBody( float moveFitnessParam,
 							float dist  = b->dist(     x(),     z() );
 							float disto = b->dist( LastX(), LastZ() );
 							float p;
-						
+
 							if( fabs( dist ) < FF * CarryRadius() )
 							{
 								// they actually overlap/intersect
@@ -1159,10 +1299,10 @@ float agent::UpdateBody( float moveFitnessParam,
 							{
 								// the agent completely passed through the barrier
 								p = fabs( dist ) + FF * CarryRadius();
-							
+
 								if( disto < 0.0 )
 									p = -p;
-															
+
 								addz(  p * b->sina() );
 								addx( -p * b->cosa() );
 							}
@@ -1221,7 +1361,7 @@ float agent::UpdateBody( float moveFitnessParam,
 				collision = true;
 				fPosition[0] = 0.0;
 			}
-			
+
 			if( fPosition[2] < -globals::worldsize )
 			{
 				collision = true;
@@ -1250,23 +1390,40 @@ float agent::UpdateBody( float moveFitnessParam,
 				fPosition[0] -= globals::worldsize;
 			else if( fPosition[0] < 0.0 )
 				fPosition[0] += globals::worldsize;
-			
+
 			if( fPosition[2] < -globals::worldsize )
 				fPosition[2] += globals::worldsize;
 			else if( fPosition[2] > 0.0 )
 				fPosition[2] -= globals::worldsize;
 		}
+		else
+		{
+			if( fPosition[0] > globals::worldsize || fPosition[0] < 0.0 ||
+				fPosition[2] < -globals::worldsize || fPosition[2] > 0.0 )
+				// The agent fell off a tabletop world, so it's no longer in a domain
+				// We can avoid an error below by skipping the call to TSimulation::WhichDomain
+				// Unfortunately, TSimulation::DeathAndStats may fail to subsequently kill the agent
+				// E.g., if we're in lockstep mode or the death is prevented by population controls
+				// When this occurs, the agent floats off the edge of the world without dying
+				// This generally leads to an error but is in any case undesirable
+				// Force an error here until the issue is resolved
+				error( 2, "Possible Wile E. Coyote detected" );
+				skipDomainCheck = true;
+		}
 	} // if( ! BeingCarried() )
 
 
 	// Keep track of the domain in which the agent resides
-    short newDomain = fSimulation->WhichDomain( fPosition[0], fPosition[2], fDomain );
-    if( newDomain != fDomain )
+    if( !skipDomainCheck )
     {
-        fSimulation->SwitchDomain( newDomain, fDomain, AGENTTYPE );
-        fDomain = newDomain;
+        short newDomain = fSimulation->WhichDomain( fPosition[0], fPosition[2], fDomain );
+        if( newDomain != fDomain )
+        {
+            fSimulation->SwitchDomain( newDomain, fDomain, AGENTTYPE );
+            fDomain = newDomain;
+        }
     }
-        
+
 #ifdef OF1
     if( fDomain == 0 )
         myt0++;
@@ -1276,7 +1433,7 @@ float agent::UpdateBody( float moveFitnessParam,
     fVelocity[2] = z() - LastZ();
 
 	fSpeed = sqrt( fVelocity[0]*fVelocity[0] + fVelocity[2]*fVelocity[2] );
-	
+
 	if( fSpeed > fMaxSpeed )
 		fMaxSpeed = fSpeed;
 
@@ -1296,28 +1453,71 @@ float agent::UpdateBody( float moveFitnessParam,
 															this );
 				// carried agent's domain will be taken care of in its UpdateBody() call
 				break;
-			
+
 			case FOODTYPE:
 				carried->setx( x() );
 				carried->setz( z() );
 				fSimulation->SwitchDomain( Domain(), ((food*)carried)->domain(), FOODTYPE );
 				((food*)carried)->domain( Domain() );
 				break;
-			
+
 			case BRICKTYPE:
 				carried->setx( x() );
 				carried->setz( z() );
 				// bricks do not currently identify their domain, nor are they counted in domains
 				break;
-			
+
 			default:
 				ERR( "updating carried objects; encountered unknown object type" );
 		}
 	}
 
-	logs->postEvent( AgentBodyUpdatedEvent(this) );
+	logs->postEvent( AgentBodyUpdatedEvent(this, denergy, energyused) );
 
     return energyUsed;
+}
+
+
+//---------------------------------------------------------------------------
+// agent::UpdateColor
+//---------------------------------------------------------------------------
+void agent::UpdateColor()
+{
+	if( agent::config.bodyRedChannel == BRC_FIGHT )
+	{
+		SetRed( outputNerves.fight->get() );	// set red color according to desire to fight
+	}
+	else if( agent::config.bodyRedChannel == BRC_GIVE )
+	{
+		SetRed( outputNerves.give->get() );	// set red color according to desire to give
+	}
+
+  	if( agent::config.bodyGreenChannel == BGC_LIGHT )
+	{
+		SetGreen(outputNerves.light->get());
+	}
+	else if( agent::config.bodyGreenChannel == BGC_EAT )
+	{
+		SetGreen(outputNerves.eat->get());
+	}
+	else if( agent::config.bodyGreenChannel == BGC_FOOD )
+	{
+		SetGreen(NormalizedFoodEnergy());
+	}
+
+	if( agent::config.bodyBlueChannel == BBC_MATE )
+	{
+		SetBlue( outputNerves.mate->get() ); 	// set blue color according to desire to mate
+	}
+	else if( agent::config.bodyBlueChannel == BBC_ENERGY )
+	{
+		SetBlue( 1 - NormalizedEnergy() );
+	}
+
+	if( agent::config.noseColor == NC_LIGHT )
+	{
+		fNoseColor[0] = fNoseColor[1] = fNoseColor[2] = outputNerves.light->get();
+	}
 }
 
 
@@ -1325,7 +1525,7 @@ void agent::AvoidCollisions( int solidObjects )
 {
 	// Save the current agent pointer in the master x-sorted list before we mess with it, so we can restore it later
 	objectxsortedlist::gXSortedObjects.setMark( AGENTTYPE );
-	
+
 	// First look backwards in the list (to the left, decreasing x)
 	AvoidCollisionDirectional( PREV, solidObjects );
 
@@ -1334,7 +1534,7 @@ void agent::AvoidCollisions( int solidObjects )
 
 	// Then look forwards in the list (to the right, increasing x)
 	AvoidCollisionDirectional( NEXT, solidObjects );
-	
+
 	// Restore the current agent pointer in the master x-sorted list
 	objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE );
 }
@@ -1346,9 +1546,9 @@ void agent::AvoidCollisions( int solidObjects )
 void agent::AvoidCollisionDirectional( int direction, int solidObjects )
 {
 	#define CollisionRadiusReductionFactor 0.90
-	
+
 	gobject* obj;
-	
+
 	float dx = x() - LastX();
 	float dz = z() - LastZ();
 	float agtRadius = radius() * CollisionRadiusReductionFactor;
@@ -1357,7 +1557,7 @@ void agent::AvoidCollisionDirectional( int direction, int solidObjects )
 	while( objectxsortedlist::gXSortedObjects.anotherObj( direction, solidObjects, &obj ) )
 	{
 		float objRadius = obj->radius() * CollisionRadiusReductionFactor;
-		
+
 		// Test to see if we're close enough in x; if not, get out, we're done,
 		// because all objects after this one are even farther away
 		// Note: anotherObj() will complain and exit if direction is neither NEXT nor PREV
@@ -1371,19 +1571,19 @@ void agent::AvoidCollisionDirectional( int direction, int solidObjects )
 			if( obj->x() + objRadius < min( x(), LastX() ) - agtRadius)
 				break;
 		}
-		
+
 		// Test to see if we're too far away in z; if so, we're done with this object
 		if( obj->z() - objRadius > max( z(), LastZ() ) + agtRadius  ||
 			obj->z() + objRadius < min( z(), LastZ() ) - agtRadius )
 			continue;
-		
+
 		// If we're carrying the object, then there's nothing to be done
 		if( Carrying( obj ) )
 			continue;
-		
+
 		// If we reach here, then the two objects appear to have had contact this time step
 		// and we're not carrying the other object
-		
+
 		// We only want to adjust the position of our agent if it was traveling in the
 		// direction of the object it is touching, so take a small step from the start
 		// position towards the end position and see whether the distance to the potential
@@ -1406,7 +1606,7 @@ void agent::AvoidCollisionDirectional( int direction, int solidObjects )
 			xs = LastX()  +  s * (zs - LastZ());
 		}
 		float dssquared = (obj->x()-xs)*(obj->x()-xs) + (obj->z()-zs)*(obj->z()-zs);
-		
+
 		// Test to see if the agent is approaching the potential collision object
 		if( dssquared < dosquared )
 		{
@@ -1456,14 +1656,14 @@ void agent::GetCollisionFixedCoordinates( float xo, float zo, float xn, float zn
 	float dx = xn - xo;
 	float dz = zn - zo;
 	float dsquared = dx*dx + dz*dz;
-	
+
 	if( dx == 0.0 && dz == 0.0 )
 	{
 		*xf = xn;
 		*zf = zn;
 		return;
 	}
-	
+
 	if( fabs( dx ) > fabs( dz ) )
 	{
 		float s = dz / dx;
@@ -1479,7 +1679,7 @@ void agent::GetCollisionFixedCoordinates( float xo, float zo, float xn, float zn
 			return;
 		}
 		float d = sqrt(discriminant);
-		float e = 0.5 / a;		
+		float e = 0.5 / a;
 		xf1 = (-b + d) * e;
 		xf2 = (-b - d) * e;
 		zf1 = zo  +  s * (xf1 - xo);
@@ -1500,7 +1700,7 @@ void agent::GetCollisionFixedCoordinates( float xo, float zo, float xn, float zn
 			return;
 		}
 		float d = sqrt(discriminant);
-		float e = 0.5 / a;		
+		float e = 0.5 / a;
 		zf1 = (-b + d) * e;
 		zf2 = (-b - d) * e;
 		xf1 = xo  +  s * (zf1 - zo);
@@ -1533,7 +1733,7 @@ void agent::GetCollisionFixedCoordinates( float xo, float zo, float xn, float zn
 		{
 			*xf = xn;
 			*zf = zn;
-		}	
+		}
 	}
 }
 
@@ -1544,7 +1744,7 @@ void agent::GetCollisionFixedCoordinates( float xo, float zo, float xn, float zn
 void agent::PickupObject( gobject* o )
 {
     debugcheck( "%lu", Number() );
-	
+
 	o->PickedUp( (gobject*)this, ly() );
 	fCarries.push_back( o );
 	if( o->radius() > fCarryRadius )
@@ -1562,11 +1762,11 @@ void agent::PickupObject( gobject* o )
 void agent::DropMostRecent( void )
 {
     debugcheck( "%lu", Number() );
-	
+
 	gobject* o = fCarries.back();
 	o->Dropped();
 	fCarries.pop_back();
-	
+
 	if( o->radius() == fCarryRadius )
 	{
 		RecalculateCarryRadius();
@@ -1584,7 +1784,7 @@ void agent::DropMostRecent( void )
 void agent::DropObject( gobject* o )
 {
     debugcheck( "agent # %lu (carrying %d) dropping %s # %lu (carrying %d)", Number(), NumCarries(), OBJECTTYPE( o ), o->getTypeNumber(), o->NumCarries() );
-	
+
 	o->Dropped();
 	fCarries.remove( o );
 	if( o->radius() == fCarryRadius )
@@ -1621,7 +1821,10 @@ void agent::draw()
 	glPushMatrix();
 		position();
 		glScalef(fScale, fScale, fScale);
-		gpolyobj::drawcolpolyrange(0, 4, fNoseColor);
+		if( agent::config.noseColor == agent::NC_BODY )
+			gpolyobj::drawcolpolyrange(0, 4, fColor);
+		else
+			gpolyobj::drawcolpolyrange(0, 4, fNoseColor);
 		gpolyobj::drawcolpolyrange(5, 9, fColor);
 //		fCamera.draw();
 	glPopMatrix();
@@ -1644,7 +1847,7 @@ void agent::print()
     cout << "  fLengthZ = " << fLengthZ nl;
     cout << "  fVelocity[0], fVelocity[2] = " << fVelocity[0] cms fVelocity[2] nl;
     cout << "  fHeuristicFitness = " << fHeuristicFitness nl;
-    
+
     if (fGenome != NULL)
     {
         cout << "  fGenome->Lifespan() = " << MaxAge() nl;
@@ -1657,14 +1860,17 @@ void agent::print()
     {
         cout << "  genome is not yet defined" nl;
 	}
-	      
+
 	cout << "  fBrain->brainenergy() = " << fCns->getEnergyUse() nl;
 	cout << "  fBrain->eat() = " << outputNerves.eat->get() nl;
 	cout << "  fBrain->mate() = " << outputNerves.mate->get() nl;
 	cout << "  fBrain->fight() = " << outputNerves.fight->get() nl;
 	cout << "  fBrain->speed() = " << outputNerves.speed->get() nl;
 	cout << "  fBrain->yaw() = " << outputNerves.yaw->get() nl;
-	cout << "  fBrain->light() = " << outputNerves.light->get() nl;
+	if (agent::config.hasLightBehavior)
+	{
+		cout << "  fBrain->light() = " << outputNerves.light->get() nl;
+	}
 
     cout.flush();
 }
@@ -1692,7 +1898,9 @@ float agent::NormalizedYaw()
 //---------------------------------------------------------------------------
 float agent::FieldOfView()
 {
-	return outputNerves.focus->get() * (agent::config.maxFocus - agent::config.minFocus) + agent::config.minFocus;
+	return agent::config.invertFocus
+		? outputNerves.focus->get() * (agent::config.minFocus - agent::config.maxFocus) + agent::config.maxFocus
+		: outputNerves.focus->get() * (agent::config.maxFocus - agent::config.minFocus) + agent::config.minFocus;
 }
 
 
@@ -1716,7 +1924,7 @@ void agent::Heal( float healingRate, float minFoodEnergy)
 	assert( false );
 	/*
 	// if agent has some FoodEnergy to spare, and agent can receive some Energy.
-	if( ( fFoodEnergy > minFoodEnergy) && (fMaxEnergy > fEnergy) )		
+	if( ( fFoodEnergy > minFoodEnergy) && (fMaxEnergy > fEnergy) )
 	{
 		// which is the smallest: healing rate, amount agent can give, or amount agent can receive?
 		float cangive = fminf( healingRate, fFoodEnergy - minFoodEnergy );
@@ -1744,32 +1952,35 @@ bool agent::Carrying( gobject* o )
 float agent::CarryEnergy( void )
 {
 	float energy = 0.0;
-	
+
 	itfor( gObjectList, fCarries, it )
 	{
 		gobject* o = *it;	// the object being carried
-		
+
 		switch( o->getType() )
 		{
 			case AGENTTYPE:
-				energy += agent::config.carryAgent2Energy +
-						  agent::config.carryAgentSize2Energy * (((agent*)o)->Size() - agent::config.minAgentSize) / (agent::config.maxAgentSize - agent::config.minAgentSize);
+				energy += agent::config.carryAgent2Energy;
+				if( agent::config.minAgentSize != agent::config.maxAgentSize )
+				{
+					energy += agent::config.carryAgentSize2Energy * (((agent*)o)->Size() - agent::config.minAgentSize) / (agent::config.maxAgentSize - agent::config.minAgentSize);
+				}
 				break;
-			
+
 			case FOODTYPE:
 				energy += food::gCarryFood2Energy * o->radius() / food::gMaxFoodRadius;
 				break;
-			
+
 			case BRICKTYPE:
 				energy += brick::gCarryBrick2Energy;	// all bricks are the same size currently
 				break;
-			
+
 			default:
 				error( 2, "unknown object type in CarryEnergy()" );
 				break;
 		}
 	}
-	
+
 	return energy;
 }
 

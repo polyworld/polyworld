@@ -13,16 +13,16 @@ using namespace std;
 
 #define SIGNATURE "#datalib\n"
 #define VERSION_STR "#version="
-// Why are read/write versions different? Cuz I'm lazy.
-// We'll implement version 3 reading when we need it, if ever.
+#define SCHEMA_STR "#schema="
+#define COLFORMAT_STR "#colformat="
 #define VERSION_READ_MIN 2
-#define VERSION_READ 2
+#define VERSION_READ 3
 #define VERSION_WRITE 3
 
 char *rfind( char *begin, char *end, char c );
 char *rfind( char *begin, char *end, char c )
 {
-	for( char *p = end - 1; p != end; p-- )
+	for( char *p = end - 1; p != begin - 1; p-- )
 	{
 		if( *p == c )
 		{
@@ -111,7 +111,7 @@ DataLibWriter::DataLibWriter( const char *path,
 : randomAccess( _randomAccess )
 , singleSchema( _singleSchema )
 {
-	f = fopen( path, "w" );
+	f = fopen( path, "wb" );
 	if( ! f )
 	{
 		perror( path );
@@ -176,6 +176,7 @@ void DataLibWriter::beginTable( const char *name,
 								const char *colformats[] )
 {
 	assert( table == NULL );
+	assert( tables.empty() || !singleSchema );
 
 	tables.push_back( __Table(name) );
 	table = &tables.back();
@@ -369,9 +370,9 @@ void DataLibWriter::flush()
 void DataLibWriter::fileHeader()
 {
 	fprintf( f, SIGNATURE );
-	fprintf( f, "#version=%d\n", VERSION_WRITE );
-	fprintf( f, "#schema=%s\n", singleSchema ? "single" : "table" );
-	fprintf( f, "#colformat=%s\n", randomAccess ? "fixed" : "none" );
+	fprintf( f, VERSION_STR "%d\n", VERSION_WRITE );
+	fprintf( f, SCHEMA_STR "%s\n", singleSchema ? "single" : "table" );
+	fprintf( f, COLFORMAT_STR "%s\n", randomAccess ? "fixed" : "none" );
 }
 
 // ------------------------------------------------------------
@@ -407,7 +408,7 @@ void DataLibWriter::fileFooter()
 // ------------------------------------------------------------
 void DataLibWriter::tableHeader()
 {
-	if( singleSchema && (tables.size() == 1) )
+	if( singleSchema )
 	{
 		colMetaData();
 	}
@@ -482,7 +483,7 @@ void DataLibWriter::colMetaData()
 // ------------------------------------------------------------
 DataLibReader::DataLibReader( const char *path )
 {
-	f = fopen( path, "r" );
+	f = fopen( path, "rb" );
 	assert( f );
 
 	table = NULL;
@@ -554,22 +555,38 @@ void DataLibReader::seekRow( int index )
 	{
 		return;
 	}
+	bool next = index == row + 1;
 	row = index;
 
 	// ---
 	// --- Read the row text
 	// ---
-	SYS( fseek(f,
-			   table->data + ( index * table->rowlen ),
-			   SEEK_SET) );
-
-	char rowbuf[table->rowlen];
-
-	size_t n = fread( rowbuf,
-					  1,
-					  table->rowlen,
-					  f );
-	assert( n == table->rowlen );
+	char rowbuf[4096];
+	if( randomAccess )
+	{
+		SYS( fseek(f,
+				   table->data + ( index * table->rowlen ),
+				   SEEK_SET) );
+		size_t n = fread( rowbuf,
+						  1,
+						  table->rowlen,
+						  f );
+		assert( n == table->rowlen );
+	}
+	else
+	{
+		if( !next || index == 0 )
+		{
+			SYS( fseek( f, table->data, SEEK_SET ) );
+		}
+		int start = next ? index : 0;
+		for( int i = start; i <= index; i++ )
+		{
+			assert( fgets( rowbuf, sizeof(rowbuf), f ) != NULL );
+			size_t n = strlen( rowbuf );
+			assert( rowbuf[n - 1] == '\n' );
+		}
+	}
 
 	// ---
 	// --- Parse the row
@@ -628,6 +645,14 @@ bool DataLibReader::nextRow()
 }
 
 // ------------------------------------------------------------
+// --- position()
+// ------------------------------------------------------------
+int DataLibReader::position()
+{
+	return row;
+}
+
+// ------------------------------------------------------------
 // --- col()
 // ------------------------------------------------------------
 const Variant &DataLibReader::col( const char *name )
@@ -657,18 +682,38 @@ void DataLibReader::parseHeader()
 
 	buf[n] = '\0';
 
-	size_t len;
+	char *line = buf;
 
-	len = strlen( SIGNATURE );
-	assert( 0 == strncmp(buf, SIGNATURE, len) );
+#define NEXT() line = strchr( line, '\n' ) + 1;
 
-	char *version = buf + len;
-	len = strlen( VERSION_STR );
-	assert( 0 == strncmp(version, VERSION_STR, len) );
+	size_t len = strlen( SIGNATURE );
+	assert( 0 == strncmp( line, SIGNATURE, len ) );
 
-	int iversion = atoi(version + len);
+	NEXT();
+	int version;
+	sscanf( line, VERSION_STR "%d\n", &version );
+	assert( version >= VERSION_READ_MIN && version <= VERSION_READ );
 
-	assert( (iversion >= VERSION_READ_MIN) && (iversion <= VERSION_READ) );
+	if( version < 3 )
+	{
+		singleSchema = false;
+		randomAccess = true;
+	}
+	else
+	{
+		NEXT();
+		char schema[32];
+		sscanf( line, SCHEMA_STR "%s\n", schema );
+		singleSchema = 0 == strcmp( schema, "single" );
+
+		NEXT();
+		char colformat[32];
+		sscanf( line, COLFORMAT_STR "%s\n", colformat );
+		randomAccess = 0 == strcmp( colformat, "fixed" );
+	}
+
+#undef NEXT
+
 }
 
 // ------------------------------------------------------------
@@ -690,18 +735,6 @@ void DataLibReader::parseDigest()
 			   f );
 	assert( n > 0 );
 	buf[n] = '\0';
-	for( ssize_t i = ssize_t(n) - 1; i >= 0; i++ )
-	{
-		if( buf[i] == '\n' )
-		{
-			buf[i] = '\0';
-			n = i;
-		}
-		else
-		{
-			break;
-		}
-	}
 
 	// ---
 	// --- Parse start & size
@@ -737,13 +770,14 @@ void DataLibReader::parseDigest()
 	// ---
 
 	// --- number of tables
+	char *line = digest + 1;
 	size_t ntables;
-	sscanf( digest,
+	sscanf( line,
 			"#TABLES %zu",
 			&ntables );
+	assert( ntables == 1 || !singleSchema );
 
 	// --- table info
-	char *line = digest;
 	for( size_t i = 0; i < ntables; i++ )
 	{
 		line = 1 + strchr( line, '\n' );
@@ -785,7 +819,10 @@ void DataLibReader::parseTableHeader()
 	// --- Parse Names
 	// ---
 	NEXT();
-	NEXT();
+	if( !singleSchema )
+	{
+		NEXT();
+	}
 
 	vector<string> names;
 	struct local0
@@ -806,7 +843,10 @@ void DataLibReader::parseTableHeader()
 	// --- Parse Types
 	// ---
 	NEXT();
-	NEXT();
+	if( !singleSchema )
+	{
+		NEXT();
+	}
 
 	vector<datalib::Type> types;
 	struct local1

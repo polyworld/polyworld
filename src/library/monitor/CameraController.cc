@@ -33,6 +33,8 @@ void CameraController::step()
 	case MODE__AGENT_TRACKING:
 		setAgentTrackingTarget();
 		break;
+	case MODE__STATIC:
+		break;
 	default:
 		assert(false);
 		break;
@@ -56,6 +58,16 @@ void CameraController::initAgentTracking( const AgentTrackingParms &parms )
 	agentTrackingState.parms = parms;
 
 	setAgentTrackingTarget();
+}
+
+void CameraController::initStatic( const StaticParms &parms )
+{
+	mode = MODE__STATIC;
+
+	camera.SetRotation( 0.0, -90, 0.0 );
+	camera.settranslation( 0.5 * globals::worldsize,
+						   parms.height * globals::worldsize,
+						   -0.5 * globals::worldsize );
 }
 
 void CameraController::setRotationAngle( float angle )
@@ -94,6 +106,11 @@ void CameraController::setAgentTrackingTarget()
 		default:
 			assert( false );
 		}
-				
+
+	}
+	else
+	{
+		camera.SetRotation( 0.0, 90, 0.0 );
+		camera.settranslation( 0.0, 100.0, 0.0 );
 	}
 }

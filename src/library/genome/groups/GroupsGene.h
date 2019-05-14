@@ -37,7 +37,7 @@ namespace genome
 	class NeurGroupGene : public NonVectorGene
 	{
 	public:
-		NeurGroupGene( NeurGroupType group_type );				   
+		NeurGroupGene( NeurGroupType group_type );
 		virtual ~NeurGroupGene() {}
 
 		virtual Scalar get( Genome *genome ) = 0;
@@ -100,7 +100,8 @@ namespace genome
 	{
 	public:
 		ImmutableNeurGroupGene( const char *name,
-								NeurGroupType group_type );
+								NeurGroupType group_type,
+								int count = 1 );
 		virtual ~ImmutableNeurGroupGene() {}
 
 		virtual Scalar get( Genome *genome );
@@ -137,6 +138,10 @@ namespace genome
 		void seed( Genome *genome,
 				   NeurGroupGene *group,
 				   unsigned char rawval );
+		void randomize( Genome *genome,
+						NeurGroupGene *group,
+						unsigned char rawval_min,
+						unsigned char rawval_max );
 
 		virtual void printIndexes( FILE *file, const std::string &prefix, GenomeLayout *layout );
 		virtual void printTitles( FILE *file, const std::string &prefix );

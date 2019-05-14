@@ -63,7 +63,7 @@ ChartMonitorView::~ChartMonitorView()
 //---------------------------------------------------------------------------
 void ChartMonitorView::init( short ncurves, int width, int height )
 {
-	lowX = 25;
+	lowX = 35;
 	highX = width - 10;
 	lowY = 5;
 	highY = height - 5;
@@ -71,20 +71,20 @@ void ChartMonitorView::init( short ncurves, int width, int height )
 	decimation = 0;
 	numCurves = ncurves;
 	y = NULL;
-		
+
 	numPoints = new long[numCurves];
 	lowV = new float[numCurves];
 	highV = new float[numCurves];
 	dydv = new float[numCurves];
 	color = new Color[numCurves];
-	
+
 	for (short ic = 0; ic < numCurves; ic++)
 	{
 		numPoints[ic] = 0;
 		lowV[ic] = 0.;
 		highV[ic] = 1.;
 		dydv[ic] = float(highY - lowY) / (highV[ic] - lowV[ic]);
-		
+
 		if (numCurves > 1)
 		{
 			color[ic].r = float(ic) / float(numCurves-1);
@@ -111,7 +111,7 @@ void ChartMonitorView::paintGL()
 		glLoadIdentity();
 		gluOrtho2D(0.0, width(), 0.0, height());
 		glMatrixMode(GL_MODELVIEW);
-		
+
 		draw();
 	glPopMatrix();
 }
@@ -124,7 +124,7 @@ void ChartMonitorView::draw()
 {
 	glClear(GL_COLOR_BUFFER_BIT);
 	drawAxes();
-	plotPoints();	
+	plotPoints();
 }
 
 
@@ -146,10 +146,10 @@ void ChartMonitorView::resizeGL(int width, int height)
 	glViewport(0, 0, width, height);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluOrtho2D(0.0, width, 0.0, height);	
+	gluOrtho2D(0.0, width, 0.0, height);
 	glMatrixMode(GL_MODELVIEW);
 }
-   
+
 //---------------------------------------------------------------------------
 // ChartMonitorView::plotPoints
 //---------------------------------------------------------------------------
@@ -159,13 +159,13 @@ void ChartMonitorView::plotPoints()
 	{
 		glColor3fv((GLfloat *)&color[ic]);
 		glLineWidth(1.0);
-		
+
 		glBegin(GL_POINTS);
 		for (long i = 0; i < numPoints[ic]; i++)
 		{
 			if ((y[(ic * maxPoints) + i] >= lowY) && (y[(ic * maxPoints) + i] <= highY))
 				glVertex2f(i + lowX, y[(ic * maxPoints) + i]);
-		}		
+		}
 		glEnd();
 	}
 }
@@ -195,7 +195,7 @@ void ChartMonitorView::drawAxes()
     long y0;
 
 	qglColor( Qt::white );
-	
+
     if ((lowV[0]<=0.0) && (highV[0]>=0.0))
         y0 = (long)((highY-lowY) * (0.0 - lowV[0]) / (highV[0] - lowV[0]) + lowY);
     else
@@ -205,14 +205,14 @@ void ChartMonitorView::drawAxes()
 	glBegin(GL_LINES);
     	glVertex2f(lowX - 2, y0);
     	glVertex2f(highX, y0);
-	glEnd();    	
-    
+	glEnd();
+
     // y-axis
 	glBegin(GL_LINES);
     	glVertex2f(lowX, lowY);
     	glVertex2f(lowX, highY);
 	glEnd();
-	
+
     // label the y-axis (but not the x)
     glBegin(GL_LINES);
     	glVertex2f(lowX - 2, lowY);
@@ -220,26 +220,27 @@ void ChartMonitorView::drawAxes()
 	glEnd();
 
 
-	QFont font("helvetica", 12, QFont::Normal);
+	QFont font("Monospace", 8, QFont::Normal);
+	font.setStyleHint(QFont::TypeWriter);
 	QFontMetrics metrics(font);
-	    
+
     if (highV[0] > 1.0 && highV[0] == highV[0] && lowV[0] == lowV[0])
 		sprintf(s, "%ld", long(lowV[0]));
     else
         sprintf(s,"%.1f", lowV[0]);
-	qglColor( Qt::white ); 
+	qglColor( Qt::white );
 	renderText(lowX - metrics.width(s) - 2, highY, s, font);
 
 	glBegin(GL_LINES);
     	glVertex2f(lowX - 2, highY);
     	glVertex2f(lowX + 2, highY);
     glEnd();
-    
+
     if (highV[0] > 1.0 && highV[0] == highV[0])
         sprintf(s, "%ld", long(highV[0]));
     else
         sprintf(s, "%.1f",highV[0]);
-	qglColor( Qt::white );        
+	qglColor( Qt::white );
 	renderText(lowX - metrics.width(s) - 3, lowY + (metrics.height() / 2) + 1, s, font);
 
     if (decimation)
@@ -279,7 +280,7 @@ void ChartMonitorView::setRange(short ic, float valmin, float valmax)
         lowV[ic] = valmin;
         highV[ic] = valmin+1.;
     }
-    
+
     dydv[ic] = (highY - lowY) / (highV[ic] - lowV[ic]);
 }
 
@@ -314,13 +315,13 @@ void ChartMonitorView::addPoint( short ic, float val )
     long i;
     long j;
 	bool repaint = false;
-    
+
     if( y == NULL )  // first time must allocate space
     {
         y = new long[maxPoints * numCurves];
         Q_CHECK_PTR(y);
     }
-    
+
     if (numPoints[ic] == maxPoints)
 	{
         // cut the number (and resolution) of points stored in half
@@ -333,9 +334,9 @@ void ChartMonitorView::addPoint( short ic, float val )
         decimation++;
 		repaint = true;
     }
-        
-	y[(long)((ic * maxPoints) + numPoints[ic])] = (long)((val - lowV[ic]) * dydv[ic]  +  lowY);    
-	
+
+	y[(long)((ic * maxPoints) + numPoints[ic])] = (long)((val - lowV[ic]) * dydv[ic]  +  lowY);
+
 	if( isVisible() )
 	{
 		makeCurrent();
@@ -356,12 +357,12 @@ void ChartMonitorView::load(std::istream& in)
 {
     long newnumcurves;
     in >> newnumcurves;
-    
+
     if (newnumcurves != numCurves)
         error(2,"while loading from dump file, numCurves redefined");
-        
+
     in >> decimation;
-    
+
     if (y == NULL)  // first time must allocate space
     {
         y = new long[maxPoints * numCurves];
@@ -371,7 +372,7 @@ void ChartMonitorView::load(std::istream& in)
             return;
         }
     }
-    
+
     for (long ic = 0; ic < numCurves; ic++)
     {
         in >> numPoints[ic];

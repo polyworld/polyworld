@@ -46,14 +46,29 @@ class CameraController
 		AgentTrackingParms( class AgentTracker *_tracker, Perspective _perspective )
 			: tracker(_tracker), perspective(_perspective)
 		{}
-		
+
 	private:
 		friend class CameraController;
-							
+
 		class AgentTracker *tracker;
 		Perspective perspective;
 
 		AgentTrackingParms() {}
+	};
+
+	class StaticParms
+	{
+	public:
+		StaticParms( float _height )
+			: height(_height)
+		{}
+
+	private:
+		friend class CameraController;
+
+		float height;
+
+		StaticParms() {}
 	};
 
 	CameraController( gcamera &camera );
@@ -65,6 +80,7 @@ class CameraController
 
 	void initRotation( const RotationParms &parms );
 	void initAgentTracking( const AgentTrackingParms &parms );
+	void initStatic( const StaticParms &parms );
 
  private:
 	void setRotationAngle( float angle );
@@ -77,7 +93,8 @@ class CameraController
 	{
 		MODE__UNDEFINED,
 		MODE__ROTATE,
-		MODE__AGENT_TRACKING
+		MODE__AGENT_TRACKING,
+		MODE__STATIC
 	} mode;
 
 	struct RotationState

@@ -1,0 +1,43 @@
+@defaults gui
+
+OverheadScene {
+  Name                      "Overhead"
+  CameraControllerSettings  "Overhead"
+  Movie {
+    Path                    "overhead.pmv"
+  }
+}
+
+SinglePOVScene {
+  Name                      "SinglePOV"
+  Title                     "Single POV"
+  CameraControllerSettings  "POV"
+  Movie {
+    Path                    "singlepov.pmv"
+  }
+}
+
+CameraControllerSettings [
+  {  
+    Name            "Main"
+    Mode            Static
+  }
+  ,
+  {
+    Name            "Overhead"
+    Mode            AgentTracking
+    AgentTracking {
+      AgentTracker  "First"
+      Perspective   Overhead
+    }
+  }
+  ,
+  {
+    Name            "POV"
+    Mode            AgentTracking
+    AgentTracking {
+      AgentTracker  "First"
+      Perspective   POV
+    }
+  }
+]
