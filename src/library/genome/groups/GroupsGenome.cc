@@ -207,7 +207,7 @@ int GroupsGenome::getNeuronCount( int group )
 							   group );
 	case NGT_INTERNAL:
 		return getNeuronCount( INHIBITORY,
-							   group ) 
+							   group )
 			+ getNeuronCount( EXCITATORY,
 							  group );
 	default:
@@ -365,8 +365,8 @@ void GroupsGenome::getCrossoverPoints( long *crossoverPoints, long numCrossPoint
 	// Generate & order the crossover points.
 	// Start iteration at [2] if [0], [1] set above
     long j;
-    
-    for ( ; i < numCrossPoints; i++) 
+
+    for ( ; i < numCrossPoints; i++)
     {
         long newCrossPoint;
         if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BIT)
@@ -390,7 +390,7 @@ void GroupsGenome::getCrossoverPoints( long *crossoverPoints, long numCrossPoint
                 if (newCrossPoint == crossoverPoints[j])
                     equal = true;
             }
-            
+
             if (equal)
             {
                 if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BIT)
@@ -406,13 +406,13 @@ void GroupsGenome::getCrossoverPoints( long *crossoverPoints, long numCrossPoint
                     assert( false );
                 }
             }
-                
+
         } while (equal);
-        
+
         if (i == 0 || newCrossPoint > crossoverPoints[i-1])
         {
             crossoverPoints[i] = newCrossPoint;  // happened to come out ordered
-		}           
+		}
         else
         {
             for (j = 0; j < i; j++)

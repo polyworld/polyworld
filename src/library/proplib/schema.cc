@@ -92,7 +92,7 @@ void SchemaDocument::injectClasses( Property *prop_ )
 					propType->err( "Expecting class name." );
 
 				DocumentEditor editor( this );
-				
+
 				editor.set( propType, "Object" );
 				prop->add( sym.klass->getDefinition()->clone("properties") );
 			}
@@ -481,7 +481,7 @@ void SchemaDocument::makePathDefaults( ObjectProperty &schema, __ContainerProper
 	{
 		if( pathElement->next == NULL )
 			schema.err( "Unexpected array index as end of symbol path" );
-		
+
 		if( value.getType() != Node::Array )
 			value.err( "Expecting array" );
 
@@ -519,7 +519,7 @@ void SchemaDocument::makePathDefaults( ObjectProperty &schema, __ContainerProper
 		makePathDefaults( dynamic_cast<ObjectProperty &>(schemaChild),
 						  dynamic_cast<__ContainerProperty &>(valueChild),
 						  pathElement->next );
-		
+
 	}
 	else
 	{
@@ -555,7 +555,7 @@ void SchemaDocument::parseDefaults( Document *doc )
 				numstr++;
 
 				string prefix = value.substr( 0, numstr - value.c_str() );
-				
+
 				int num = atoi( numstr );
 				assert( num < 200 ); // sanity check.
 				for( ; num >= 0; num-- )

@@ -46,10 +46,10 @@ class CameraController
 		AgentTrackingParms( class AgentTracker *_tracker, Perspective _perspective )
 			: tracker(_tracker), perspective(_perspective)
 		{}
-		
+
 	private:
 		friend class CameraController;
-							
+
 		class AgentTracker *tracker;
 		Perspective perspective;
 

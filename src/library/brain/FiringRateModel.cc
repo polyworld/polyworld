@@ -65,14 +65,14 @@ void FiringRateModel::update( bool bprint )
 	IF_BPRINTED
 	(
         printf("neuron (toneuron)  fromneuron   synapse   efficacy\n");
-        
+
         for( i = dims->getFirstOutputNeuron(); i < dims->numNeurons; i++ )
         {
             for( k = neuron[i].startsynapses; k < neuron[i].endsynapses; k++ )
             {
 				printf("%3d   %3d    %3d    %5ld    %f\n",
 					   i, synapse[k].toneuron, synapse[k].fromneuron,
-					   k, synapse[k].efficacy); 
+					   k, synapse[k].efficacy);
             }
         }
 	)
@@ -90,7 +90,7 @@ void FiringRateModel::update( bool bprint )
         {
             newneuronactivation[i] += synapse[k].efficacy *
                neuronactivation[synapse[k].fromneuron];
-		}              
+		}
 	#if GaussianOutputNeurons
         newneuronactivation[i] = gaussian( newneuronactivation[i], GaussianActivationMean, GaussianActivationVariance );
 	#else

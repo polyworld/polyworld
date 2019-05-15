@@ -115,7 +115,7 @@ namespace sim
 		, energyUsed(_energyUsed)
 		, energyUsedRaw(_energyUsedRaw)
 		{}
-		
+
 		agent *a;
 		float energyUsed;
 		float energyUsedRaw;
@@ -129,7 +129,7 @@ namespace sim
 		inline EventType getType() const { return Event_BrainUpdated; }
 
 		BrainUpdatedEvent( agent *_a ) : a(_a) {}
-		
+
 		agent *a;
 	};
 
@@ -188,7 +188,7 @@ namespace sim
 		inline EventType getType() const { return Event_Collision; }
 
 		CollisionEvent( agent *_a, ObjectType _ot ) : a(_a), ot(_ot) {}
-		
+
 		agent *a;
 		ObjectType ot;
 	};
@@ -337,7 +337,7 @@ namespace sim
 	public:
 		Stat()					{ reset(); }
 		~Stat()					{}
-	
+
 		float	mean()			{ if( !count ) return( 0.0 ); return( sum / count ); }
 		float	stddev()		{ if( !count ) return( 0.0 ); double m = sum / count;  return( sqrt( sum2 / count  -  m * m ) ); }
 		float	min()			{ if( !count ) return( 0.0 ); return( mn ); }
@@ -362,7 +362,7 @@ namespace sim
 	public:
 		StatRecent( unsigned int width = 1000 )	{ w = width; history = (float*) malloc( w * sizeof(*history) ); reset(); }
 	~StatRecent()							{ if( history ) free( history ); }
-	
+
 	float	mean()			{ if( !count ) return( 0.0 ); return( sum / count ); }
 	float	stddev()		{ if( !count ) return( 0.0 ); double m = sum / count;  return( sqrt( sum2 / count  -  m * m ) ); }
 	float	min()			{ if( !count ) return( 0.0 ); if( needMin ) recomputeMin(); return( mn ); }
@@ -382,7 +382,7 @@ private:
 	unsigned int	index;	// point in history[] at which next sample is to be inserted
 	bool	needMin;
 	bool	needMax;
-	
+
 	void	recomputeMin()	{ mn = FLT_MAX; for( unsigned int i = 0; i < w; i++ ) mn = history[i] < mn ? history[i] : mn; needMin = false; }
 	void	recomputeMax()	{ mx = FLT_MIN; for( unsigned int i = 0; i < w; i++ ) mx = history[i] > mx ? history[i] : mx; needMax = false; }
 };

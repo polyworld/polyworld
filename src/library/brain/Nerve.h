@@ -45,7 +45,7 @@ class Nerve
 				 int index );
 	void config( double **activations,
 				 double **activations_swap );
-	
+
  private:
 	int numneurons;
 	double **activations[__NBUFFERS];

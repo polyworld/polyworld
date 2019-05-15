@@ -61,7 +61,7 @@ class BaseNeuronModel : public NeuronModel
 			Nerve *nerve = *it;
 
 			nerve->config( &(this->neuronactivation), &(this->newneuronactivation) );
-		}		
+		}
 
 		init_derived( initial_activation );
 	}
@@ -201,7 +201,7 @@ class BaseNeuronModel : public NeuronModel
 			if( cmIndex > imax )
 				imax = cmIndex;
 		}
-	
+
 		// fill in the biases
 		for( i = 0; i < dims->numNeurons; i++ )
 		{
@@ -229,14 +229,14 @@ class BaseNeuronModel : public NeuronModel
 				file->printf( "%+06.4f ", connectionMatrix[j + i*(dims->numNeurons+1)] * inverseMaxWeight );
 			file->printf( ";\n" );
 		}
-		
+
 		free( connectionMatrix );
 	}
 
 	virtual void startFunctional( AbstractFile *file )
 	{
 		file->printf( " %d %d %d %ld",
-					  dims->numNeurons, dims->numInputNeurons, dims->numOutputNeurons, dims->numSynapses );		
+					  dims->numNeurons, dims->numInputNeurons, dims->numOutputNeurons, dims->numSynapses );
 	}
 
 	virtual void writeFunctional( AbstractFile *file )

@@ -37,7 +37,7 @@ void MateWaitSensor::sensor_update( bool print )
 	long age = self->Age();
 	long lastMate = self->LastMate();
 	float activation = 1.0 - float(age - lastMate) / mateWait;
-	
+
 	activation = clamp( activation, 0, 1 );
 	if(agent::config.invertMateWaitFeedback)
 	{

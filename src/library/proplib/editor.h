@@ -26,7 +26,7 @@ namespace proplib
 		void move( class Property *prop, class Property *newParent, bool modifyOldParent );
 		void remove( class Property *prop );
 		void removeChildren( class Property *prop );
-		void rename( class Property *prop, const char *newName, bool modifyParent ); 
+		void rename( class Property *prop, const char *newName, bool modifyParent );
 
 	private:
 		class SchemaDocument *_schema;

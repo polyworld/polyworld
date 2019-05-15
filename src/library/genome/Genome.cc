@@ -145,7 +145,7 @@ void Genome::randomizeBits( float bitonprob )
             else
                 mutable_data[byte] &= char(255 ^ (1 << (7-bit)));
 		}
-	}		              	
+	}
 }
 
 void Genome::randomizeBits()
@@ -248,17 +248,17 @@ void Genome::crossover( Genome *g1, Genome *g2, bool mutate )
 			this->mutate();
 		return;
 	}
-	
-    
+
+
 	// allocate crossover buffer on stack -- fast & automatically free'd
 	long *crossoverPoints = (long *)alloca( numCrossPoints * sizeof(long) );
 
 	// figure out crossover points -- derived class logic.
 	getCrossoverPoints( crossoverPoints, numCrossPoints );
-	
+
     long i, j;
-    
-#ifdef DUMPBITS    
+
+#ifdef DUMPBITS
     if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BIT)
     {
         cout << "**The crossover bits(bytes) are:" nl << "  ";
@@ -283,14 +283,14 @@ void Genome::crossover( Genome *g1, Genome *g2, bool mutate )
         assert( false );
     }
 #endif
-    
+
     long begbyte = 0;
     long endbyte = -1;
     long bit;
     bool first = (randpw() < 0.5);
     const Genome* ga;
     const Genome* gb;
-    
+
 	// now do crossover using the ordered pts
     for (i = 0; i <= numCrossPoints; i++)
     {
@@ -310,8 +310,8 @@ void Genome::crossover( Genome *g1, Genome *g2, bool mutate )
 		}
         ga = first ? g1 : g2;
         gb = first ? g2 : g1;
-        
-#ifdef DUMPBITS    
+
+#ifdef DUMPBITS
         cout << "**copying bytes " << begbyte << " to " << endbyte
              << " from the ";
         if (first)
@@ -342,7 +342,7 @@ void Genome::crossover( Genome *g1, Genome *g2, bool mutate )
                 assert( false );
             }
         }
-        
+
         first = !first;
         begbyte = endbyte + 1;
     }
@@ -370,7 +370,7 @@ float Genome::separation( Genome *g )
 	float fsep = 0.f;
     unsigned char* gi = mutable_data;
     unsigned char* gj = g->mutable_data;
-    
+
     if( gray )
     {
 #if pw_UseAltivec
@@ -388,28 +388,28 @@ float Genome::separation( Genome *g )
 			val_gi[i] = binofgray[gi[i]];
 			val_gj[i] = binofgray[gj[i]];
 		}
-		
+
 
 		for (long i = 0; i < max; i++)
 		{
 			vector float vGi = vec_ld(size, val_gi + size * i);
 			vector float vGj = vec_ld(size, val_gj + size * i);
-			
+
 			vector float diff = vec_sub(vGi, vGj);
-			
+
 			vec_st(diff, size, result + i * size);
-			
+
 		}
-		
+
 		fsep = cblas_sasum(size * max, result, 1);
 		vector float vGi = vec_ld(left, val_gi + size * max);
 		vector float vGj = vec_ld(left, val_gj + size * max);
-		
+
 		vector float diff = vec_sub(vGi, vGj);
 		vector float absdiff = vec_abs(diff);
-		
+
 		vec_st(absdiff, left, result);
-		
+
 		for (long j = 0; j < left ;  j++)
 		{
 			fsep += result[j];
@@ -430,39 +430,39 @@ float Genome::separation( Genome *g )
 		float val_gi[ nbytes ];
 		float val_gj[ nbytes ];
 		short size = 4;
-		
+
 		long max = nbytes / size;
 		long left = nbytes - (max * size);
-		
+
 		float result[ max * size ];
-		
+
 		for (long i = 0; i < nbytes; i++)
 		{
 			val_gi[i] = gi[i];
 			val_gj[i] = gj[i];
 		}
-		
-		
+
+
 		for (long i = 0; i < max; i++)
 		{
 			vector float vGi = vec_ld(size, val_gi + size * i);
 			vector float vGj = vec_ld(size, val_gj + size * i);
-			
+
 			vector float diff = vec_sub(vGi, vGj);
-			
+
 			vec_st(diff, size, result + i * size);
-			
+
 		}
-		
+
 		fsep = cblas_sasum(size * max, result, 1);
 		vector float vGi = vec_ld(left, val_gi + size * max);
 		vector float vGj = vec_ld(left, val_gj + size * max);
-		
+
 		vector float diff = vec_sub(vGi, vGj);
 		vector float absdiff = vec_abs(diff);
-		
+
 		vec_st(absdiff, left, result);
-		
+
 		for (long j = 0; j < left ;  j++)
 		{
 			fsep += result[j];
@@ -484,7 +484,7 @@ float Genome::separation( Genome *g )
 	fsep = float(sep) / (255 * nbytes);
     return fsep;
 #endif
-	
+
 }
 
 float Genome::mateProbability( Genome *g )
@@ -495,12 +495,12 @@ float Genome::mateProbability( Genome *g )
     // based on their degree of genetic similarity/difference
     if( miscbias == 0.0 )
         return 1.0;
-        
+
     float a = separation( g );
     float cosa = cos( pow(a, miscbias) * PI );
     float s = cosa > 0.0 ? 0.5 : -0.5;
     float p = 0.5  +  s * pow(fabs(cosa), get(MISC_INVIS_SLOPE));
-    
+
     return p;
 }
 

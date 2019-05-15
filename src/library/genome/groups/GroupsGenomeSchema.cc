@@ -143,12 +143,12 @@ void GroupsGenomeSchema::define()
 				INTERNAL,
 				GroupsBrain::config.minineurpergroup,
 				GroupsBrain::config.maxineurpergroup );
-				
+
 	GROUP_ATTR( Bias,
 				NONINPUT,
 				-Brain::config.maxbias,
 				Brain::config.maxbias );
-				
+
 	if( Brain::config.neuronModel == Brain::Configuration::TAU_GAIN )
 	{
 		GROUP_ATTR( Tau,
@@ -212,7 +212,7 @@ void GroupsGenomeSchema::define()
 						  true,
 						  true,
 						  Brain::config.minlrate,
-						  Brain::config.maxlrate );	
+						  Brain::config.maxlrate );
 		}
 	}
 
@@ -221,7 +221,7 @@ void GroupsGenomeSchema::define()
 				  false,
 				  GroupsBrain::config.mintopologicaldistortion,
 				  GroupsBrain::config.maxtopologicaldistortion );
-				  
+
 	if( GroupsBrain::config.enableTopologicalDistortionRngSeed )
 	{
 		SYNAPSE_ATTR( TopologicalDistortionRngSeed,
@@ -239,7 +239,7 @@ void GroupsGenomeSchema::define()
 					  GroupsBrain::config.minInitWeightRngSeed,
 					  GroupsBrain::config.maxInitWeightRngSeed );
 	}
-	
+
 #undef INPUT1
 #undef INPUT
 #undef OUTPUT
@@ -613,7 +613,7 @@ int GroupsGenomeSchema::getMaxNeuronCount( NeurGroupType group )
 			if( gene->isMember(group) )
 			{
 				n += gene->getMaxNeuronCount();
-			} 
+			}
 		}
 
 		return cache.neuronCount[group] = n;

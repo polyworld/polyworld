@@ -168,7 +168,7 @@ void GenomeSchema::define()
 	SCALAR( MateEnergyFraction,
 		   agent::config.minmateenergy,
 		   agent::config.maxmateenergy );
-			
+
 	if( Metabolism::selectionMode == Metabolism::Gene
 		&& (Metabolism::getNumberOfDefinitions() > 1) )
 	{
@@ -201,7 +201,7 @@ void GenomeSchema::seed( Genome *g )
 
 	// ---
 	// --- SCALARS (e.g. MutationRate, LifeSpan, Size)
-	// --- 
+	// ---
 	citfor( GeneVector, getAll(GeneType::SCALAR), it )
 	{
 		Gene *gene = *it;

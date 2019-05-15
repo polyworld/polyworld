@@ -47,14 +47,14 @@ class FoodPatch : public Patch
 
 	float growthRate;
 	float energy;
-    
+
 	int foodCount;
 	int initFoodCount;
 	int minFoodCount;
 	int maxFoodCount;
 	int maxFoodGrownCount;
 
-	float fraction;    
+	float fraction;
 	float foodRate;
 
 	bool removeFood;

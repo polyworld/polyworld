@@ -67,14 +67,14 @@ MonitorManager::MonitorManager( TSimulation *_simulation,
 		{
 			int rank = propTracker.get( "Fitness" ).get( "Rank" );
 			bool trackTilDeath = trackMode == "Agent";
-			
+
 			parms = AgentTracker::Parms::createFitness( rank, trackTilDeath );
 		}
 		else if( selectionMode == "Number" )
 		{
 			long number = propTracker.get( "Number" );
 			bool trackTilDeath = trackMode == "Agent";
-			
+
 			parms = AgentTracker::Parms::createNumber( number );
 		}
 		else
@@ -163,14 +163,14 @@ MonitorManager::MonitorManager( TSimulation *_simulation,
 				for( size_t i = 0; i < nsettings; i++ )
 				{
 					proplib::Property &propSettings = doc.get( "CameraSettings" ).get( i );
-			
+
 					string name = propSettings.get( "Name" );
 					if( name == cameraSettingsName )
 					{
 						found = true;
 						Color color = propSettings.get( "Color" );
 						float fov = propSettings.get( "FieldOfView" );
-			
+
 						cameraProperties = SceneRenderer::CameraProperties( color, fov );
 						break;
 					}
@@ -225,7 +225,7 @@ MonitorManager::MonitorManager( TSimulation *_simulation,
 							float fixX = propFixation.get( "X" );
 							float fixY = propFixation.get( "Y" );
 							float fixZ = propFixation.get( "Z" );
-				
+
 							cameraController = new CameraController( renderer->getCamera() );
 
 							CameraController::RotationParms rotationParms( radius,

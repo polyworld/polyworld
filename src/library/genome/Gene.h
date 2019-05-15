@@ -119,7 +119,7 @@ namespace genome
 	// === CLASS __InterpolatedGene
 	// ===
 	// === Common base class for genes whose values are derived from a range.
-	// === 
+	// ===
 	// ================================================================================
 	class __InterpolatedGene : virtual Gene
 	{

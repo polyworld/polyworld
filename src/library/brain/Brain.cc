@@ -127,12 +127,12 @@ void Brain::processWorldfile( proplib::Document &doc )
 void Brain::init()
 {
     Brain::config.retinaWidth = max(Brain::config.minWin, GroupsBrain::config.maxvisneurpergroup);
-    
+
     if (Brain::config.retinaWidth & 1)
         Brain::config.retinaWidth++;  // keep it even for efficiency (so I'm told)
-        
+
     Brain::config.retinaHeight = Brain::config.minWin;
-    
+
     if (Brain::config.retinaHeight & 1)
         Brain::config.retinaHeight++;
 
@@ -185,7 +185,7 @@ void Brain::startFunctional( AbstractFile *file, long index )
 	file->printf( "version 1\n" );
 
 	// print the header, with index (agent number)
-	file->printf( "brainFunction %ld", index );	
+	file->printf( "brainFunction %ld", index );
 
 	// print neuron count, number of input neurons, number of synapses
 	_neuralnet->startFunctional( file );
@@ -281,7 +281,7 @@ void Brain::prebirth()
 // Brain::update
 //---------------------------------------------------------------------------
 void Brain::update( bool bprint )
-{	 
+{
 	_neuralnet->update( bprint );
 }
 

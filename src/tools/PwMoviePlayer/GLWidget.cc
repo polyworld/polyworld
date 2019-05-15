@@ -71,7 +71,7 @@ void GLWidget::Draw()
 		char timestepString[16];
 		sprintf( timestepString, "%8u", frame->timestep );
 		renderText( width() - 60, 15, timestepString, font );
-	
+
 		// Draw the legend
 		if( legend )
 		{
@@ -91,7 +91,7 @@ void GLWidget::Draw()
 			}
 		}
 	}
-	
+
 	// Done drawing, so show it
 	swapBuffers();
 }
@@ -119,7 +119,7 @@ void GLWidget::resizeGL( int width, int height )
 	glViewport( 0, 0, width, height );
 	glMatrixMode( GL_PROJECTION );
 	glLoadIdentity();
-	glOrtho( 0, width, 0, height, -1.0, 1.0 ); 
+	glOrtho( 0, width, 0, height, -1.0, 1.0 );
 
 	glwPrint( "width = %lu, height = %lu\n", width, height );
 }

@@ -22,8 +22,8 @@ struct SpikingModel__Neuron
 	float bias;
 	long  startsynapses;
 	long  endsynapses;
-	double v;             //!<represents the membrane potential of the neuron 
-	double u;			  //!<the membranes recovery period			
+	double v;             //!<represents the membrane potential of the neuron
+	double u;			  //!<the membranes recovery period
 	float STDP;           //!<spike-timing-dependent plasticity,
 	short maxfiringcount; //explain later if works
 	double SpikingParameter_a;

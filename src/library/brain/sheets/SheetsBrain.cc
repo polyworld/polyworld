@@ -129,7 +129,7 @@ void SheetsBrain::grow( SheetsGenome *genome, SheetsModel *model )
 		{
 			Sheet *sheet = model->getSheet( sheetId );
 			Nerve *nerve = _cns->getNerve( sheet->getName() );
-		
+
 			int neuronCount = sheetNeuronCount[sheetId];
 			nerve->config( neuronCount, neuronIndex );
 			neuronIndex += neuronCount;
@@ -146,7 +146,7 @@ void SheetsBrain::grow( SheetsGenome *genome, SheetsModel *model )
 	}
 
 	// ---
-	// --- Instantiate Neural Net 
+	// --- Instantiate Neural Net
 	// ---
 	{
 		switch( Brain::config.neuronModel )
@@ -173,7 +173,7 @@ void SheetsBrain::grow( SheetsGenome *genome, SheetsModel *model )
 	}
 
 	// ---
-	// --- Configure Neural Net 
+	// --- Configure Neural Net
 	// ---
 	{
 		int synapseIndex = 0;

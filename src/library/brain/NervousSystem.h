@@ -49,7 +49,7 @@ class NervousSystem
 	void prebirthSignal();
 	void startFunctional( AbstractFile *f );
 	void dumpAnatomical( AbstractFile *f );
-	
+
  protected:
 	Brain *b;
 	RandomNumberGenerator *rng;

@@ -13,7 +13,7 @@ BirthRate {
   type    Object
   default {}
   properties {
-    
+
     Enabled {
       type    Bool
       defaults { gui True; term False }
@@ -26,7 +26,7 @@ Fitness {
   type    Object
   default {}
   properties {
-    
+
     Enabled {
       type    Bool
       defaults { gui True; term False }
@@ -39,7 +39,7 @@ FoodEnergy {
   type    Object
   default {}
   properties {
-    
+
     Enabled {
       type    Bool
       defaults { gui True; term False }
@@ -52,7 +52,7 @@ Population {
   type    Object
   default {}
   properties {
-    
+
     Enabled {
       type    Bool
       defaults { gui True; term False }
@@ -72,7 +72,7 @@ Brain {
   type    Object
   default {}
   properties {
-    
+
     Enabled {
       type    Bool
       defaults { gui True; term False }
@@ -103,7 +103,7 @@ POV {
   type    Object
   default {}
   properties {
-    
+
     Enabled {
       type    Bool
       defaults { gui True; term False }
@@ -123,7 +123,7 @@ StatusText {
   type    Object
   default {}
   properties {
-    
+
     Enabled {
       type    Bool
       default True
@@ -160,7 +160,7 @@ Farm {
   type    Object
   default {}
   properties {
-    
+
     Enabled {
       type    Bool
       default True
@@ -182,7 +182,7 @@ Farm {
       element {
         type    Object
         properties {
-          
+
           Name {
             type    String
           }
@@ -244,7 +244,7 @@ class Scene {
         min     1
         default 300
       }
-    
+
       Height {
         type    Int
         min     1
@@ -476,9 +476,20 @@ CameraSettings {
 CameraControllerSettings {
   type    Array
   default [
-    {  
+    {
       Name            "Main"
-      Mode            Static
+      Mode            Rotate
+      Rotate {
+        Radius        0.6
+        Height        0.35
+        Rate          0.09
+        AngleStart    0.0
+        Fixation {
+          X           0.5
+          Y           0.0
+          Z           0.5
+        }
+      }
     }
     ,
     {
@@ -526,17 +537,17 @@ CameraControllerSettings {
             type    Float
             default 0.6
           }
-          
+
           Height {
             type    Float
             default 0.35
           }
-          
+
           Rate {
             type    Float
             default 0.09
           }
-          
+
           AngleStart {
             type    Float
             default 0.0
@@ -545,7 +556,7 @@ CameraControllerSettings {
           Fixation {
             type    Object
             default {
-            }       
+            }
             properties {
 
               X {
@@ -580,7 +591,7 @@ CameraControllerSettings {
         default {
         }
         properties {
-          
+
           AgentTracker {
             type    String
             default "nil"
@@ -595,7 +606,7 @@ CameraControllerSettings {
             }
           }
 
-        }        
+        }
       }
 
       Static {

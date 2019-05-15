@@ -46,7 +46,7 @@ class NeuronModel;
 // Brain
 //===========================================================================
 class Brain
-{	
+{
 public:
 	static struct Configuration
 	{
@@ -118,7 +118,7 @@ public:
 
     Brain( NervousSystem *cns );
     virtual ~Brain();
-    
+
 	void prebirth();
     void update( bool bprint );
 
@@ -129,7 +129,7 @@ public:
 	long  getNumSynapses();
 	NeuronModel::Dimensions getDimensions();
 	NeuronModel *getNeuronModel();
-        
+
 	void getActivations( double *activations, int start, int count );
 	void setActivations( double *activations, int start, int count );
 	void randomizeActivations();
@@ -139,7 +139,7 @@ public:
 	void unfreeze();
 
 	void dumpAnatomical( AbstractFile *file, long index, float fitness );
-	
+
 	void startFunctional( AbstractFile *file, long index );
 	void endFunctional( AbstractFile* file, float fitness );
 	void writeFunctional( AbstractFile* file );
@@ -147,7 +147,7 @@ public:
 	void dumpSynapses( AbstractFile *file, long index );
 	void loadSynapses( AbstractFile *file, float maxWeight = -1.0f );
 	void copySynapses( Brain *other );
-	
+
 protected:
 	friend class agent;
 

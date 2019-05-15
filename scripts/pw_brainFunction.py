@@ -24,13 +24,13 @@ class pw_brainFunction:
 
 		if not input_filename:
 			return None
-		
+
 		lines = [ x.strip() for x in gzip.open( input_filename ).readlines() ]
 		if lines[0] == "version 1":
 			lines.pop(0)
 
 		# brainFunction 157 15 8 17 0 2-3 4-5 6-7
-		# format: 
+		# format:
 		self.header = lines.pop(0).split(' ')
 
 		#print 'firstline=', firstline
@@ -41,7 +41,7 @@ class pw_brainFunction:
 			self.agent_fitness = float(lines.pop().split('=')[-1].strip())
 		else:
 			self.agent_fitness = None
-	
+
 		self.num_inputneurons = int(self.header[3])
 		self.agent_index = int(self.header[1])
 		self.num_neurons = int(self.header[2])
@@ -57,11 +57,11 @@ class pw_brainFunction:
 
 		Bstart, Bend = [ int(x) for x in self.header[9].split('-') ]
 		self.neurons['blue'] = range(Bstart,Bend+1)
-	
+
 		self.timesteps_lived = int(len(lines) / self.num_neurons)
 
 		assert len(lines) % self.num_neurons == 0, "Error. number of timesteps lived not divisible by #neurons"
-		
+
 		self.acts = [ [] for i in range(self.num_neurons) ]
 
 		for line in lines:
@@ -72,19 +72,19 @@ class pw_brainFunction:
 
 		# convert to numpy arrays
 		self.acts = array( self.acts )
-	
+
 		numrows, numcols = self.acts.shape
 		assert numrows == self.num_neurons, "#rows != num_neurons"
 		assert numcols == self.timesteps_lived, "#cols != timesteps lived"
-	
+
 		# sanity check the activations == they're all within [0,1] ?
 		assert 0.0 <= self.acts.all() <= 1.0, "acts had values not within [0.0,1.0]"
 
-		
+
 		##############################################
 		# define the neural groups
 		##############################################
-		
+
 		ALL_NEURONS = range( self.num_neurons )
 		INPUT_NEURONS = range( self.num_inputneurons )
 
@@ -123,7 +123,7 @@ class pw_brainFunction:
 			assert 0 <= i < self.acts.shape[0], "i wasn't within range of the neurons"
 			self.acts[i] = round( self.acts[i] )
 
-	
+
 	def print_statistics( self ):
 		'''print statistics about self.acts'''
 		numrows, numcols = self.acts.shape
@@ -142,12 +142,12 @@ class pw_brainFunction:
 		print "neuron statistics:"
 		print ''
 		for i, (m, v, n) in enumerate(zip(means,variances,num_entries)):
-			
+
 			print "neuron=%s \t mean=%.4f \t var=%.4f \t samples=%s" % ( i, m, v, n )
-		
+
 		print "acts.shape=", self.acts.shape
-			
-	def write_to_Rfile(self, output_filename, labels=None ):		
+
+	def write_to_Rfile(self, output_filename, labels=None ):
 		assert self.num_neurons == self.acts.shape[0], "num_neurons didn't match the acts matrix!"
 		assert self.timesteps_lived == self.acts.shape[1], "timesteps_lived didn't match the acts matrix!"
 
@@ -168,4 +168,4 @@ class pw_brainFunction:
 
 		f.close()
 		print "wrote to file '%s'" % output_filename
-	
+

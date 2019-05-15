@@ -27,7 +27,7 @@ public:
 	~GLWidget();
 
 	void SetFrame( Frame *frame );
-	
+
 	void Draw();
 	void Write( FILE *file );
 	void Save();

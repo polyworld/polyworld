@@ -38,7 +38,7 @@ string AgentTracker::getStateTitle()
 	if( target )
 	{
 		const char *prefix = parms.trackTilDeath ? "T" : "";
-	
+
 		switch( parms.mode )
 		{
 		case FITNESS:

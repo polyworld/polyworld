@@ -59,7 +59,7 @@ class Table:
 		for x in self.coldata: x.append( None )
 		row = Row(self, irow)
 		self.rowlist.append(row)
-		
+
 		return row
 
 	def sortrows( self, cmp ):
@@ -170,7 +170,7 @@ class Column:
 		self.table.keymap[value] = i
 
 		return value
-		
+
 ####################################################################################
 ###
 ### CLASS DuplicateKeyError
@@ -221,7 +221,7 @@ def write( path,
 		len(tables)
 	except AttributeError:
 		tables = [tables]
-	
+
 	if append:
 		try:
 			f = open(path, 'r')
@@ -272,10 +272,10 @@ def write( path,
 		tabledims.append( dims )
 
 		table.path = path
-		
+
 		table.index = table_index
 		table_index += 1
-		
+
 		if schema == 'single':
 			assert( table.colnames == tables[0].colnames )
 			assert( table.coltypes == tables[0].coltypes )
@@ -295,7 +295,7 @@ def write( path,
 					  col_types)
 
 		dims.data = f.tell()
-		
+
 		for row in table.rows():
 			dims.nrows += 1
 
@@ -310,10 +310,10 @@ def write( path,
 					data = table.columns()[icol].get( row.index )
 					format = '%-' + str(width) + 's'
 					linelist.append(format % data)
-		
+
 				linelist.append('\n')
 				f.write('\t'.join(linelist))
-		
+
 				rowlen = f.tell() - rowstart
 			elif colformat == 'none':
 				f.write('\t'.join(map(str,row)))
@@ -477,7 +477,7 @@ def parse( path,
 				continue
 			else:
 				tablenames_found[tablename] = True
-			
+
 		if schema == 'table':
 			colnames = __parse_colnames( f )
 			f.readline() # skip blank line
@@ -494,7 +494,7 @@ def parse( path,
 						  keycolname)
 
 		found_end_tag = False
-		
+
 		# --- parse data until we reach </name>
 		while True:
 			line = f.readline()
@@ -528,50 +528,50 @@ def parse( path,
 ####################################################################################
 def parse_digest( path ):
 	f = open( path )
-	
+
 	def int_field(line):
 		return int( line.split()[1] )
-	
+
 	#
 	# Parse the digest start/size from end of file
 	#
 	f.seek( -64, os.SEEK_END )
-	
+
 	start = -1
 	size = -1
-	
+
 	for line in f.readlines():
 		if line.startswith( '#START' ):
 			start = int_field( line )
 		elif line.startswith('#SIZE'):
 			size = int_field( line )
-	
+
 	assert( start > -1 )
 	assert( size > -1 )
-	
+
 	#
 	# Parse the digest
 	#
 	f.seek( start + 1, os.SEEK_SET )
-	
+
 	line = f.readline()
 	assert( line.startswith('#TABLES') )
-	
+
 	ntables = int_field( line )
-	
+
 	tables = {}
-	
+
 	for i in range(ntables):
 		fields = f.readline().split()
-	
+
 		table = { 'name': fields[1],
 				  'offset': int( fields[2] ),
 				  'data': int( fields[3] ),
 				  'nrows': int( fields[4] ),
 				  'rowlen': int( fields[5] ) }
-	
+
 		tables[ table['name'] ] = table
-	
+
 	return {'tables': tables}
 
 ####################################################################################
@@ -664,7 +664,7 @@ def __create_col_metadata(marker, meta, colwidths):
 		if marker == COLUMN_LABEL_MARKER:
 			# add quotes
 			colmeta = '"%s"' % colmeta
-			
+
 		linelist.append(format % colmeta)
 	linelist.append('\n')
 
@@ -804,16 +804,16 @@ def test():
 		row['Time'] = 2
 		row['A'] = 200.0
 		row['B'] = 201.0
-		
+
 		it = iterators.MatrixIterator(table, range(1,3), ['B'])
 		for a in it:
 			print a
-		
+
 		datalib.write('/tmp/datalib', table)
-		
+
 		tables = datalib.parse('/tmp/datalib', keycolname = 'Time')
-		
+
 		table = tables['Example 2']
 		print 'key=',table.keycolname
-		
+
 		print tables['Example 2'][1]['A']

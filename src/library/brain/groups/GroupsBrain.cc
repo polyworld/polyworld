@@ -231,7 +231,7 @@ void GroupsBrain::grow()
     debugcheck( "(brain) on entry" );
 
 	ALLOC_GROW_STACK_BUFFERS();
-	
+
     _numgroups = _genome->getGroupCount(NGT_ANY);
 	_numgroupsWithNeurons = 0;
 	for( int i = 0; i < _numgroups; i++ )
@@ -350,11 +350,11 @@ void GroupsBrain::grow()
 
         }
     }
-    
+
     _dims.numNeurons = numNonInputNeurons + _dims.numInputNeurons;
 	if( _dims.numNeurons > config.maxneurons )
 		error( 2, "numneurons (", _dims.numNeurons, ") > maxneurons (", config.maxneurons, ") in brain::grow" );
-        
+
 	if( _dims.numSynapses > config.maxsynapses )
 		error( 2, "numsynapses (", _dims.numSynapses, ") > maxsynapses (", config.maxsynapses, ") in brain::grow" );
 
@@ -609,7 +609,7 @@ void GroupsBrain::grow()
 		_dims.numSynapses = numsyn;
 	}
 	//printf( "numsynapses=%ld\n", numsyn );
-	
+
 	// ---
 	// --- Calculate Energy Use
 	// ---
@@ -746,7 +746,7 @@ void GroupsBrain::growSynapses( int groupIndex_to,
 
 		bool neurused[neuronCount_from];
 		memset( neurused, 0, sizeof(neurused) );
-				
+
 		for (int isyn = 0; isyn < synapseCount_new; isyn++)
 		{
 			// "Local Index" means that the index is relative to the start of the neuron type (I or E) within
@@ -777,7 +777,7 @@ void GroupsBrain::growSynapses( int groupIndex_to,
 
 				short distortion = short(nint(td_rng->range(-0.5,0.5)*td_fromto_abs*neuronCount_from));
 				neuronLocalIndex_from += distortion;
-                        
+
 				if (neuronLocalIndex_from < 0)
 					neuronLocalIndex_from += neuronCount_from;
 				else if (neuronLocalIndex_from >= neuronCount_from)
@@ -786,7 +786,7 @@ void GroupsBrain::growSynapses( int groupIndex_to,
 			else
 			{
 				neuronLocalIndex_from = isyn + neuronLocalIndex_fromBase;
-			}                      
+			}
 
 			if (((neuronLocalIndex_from+firstneur[groupIndex_from]) == neuronIndex_to) // same neuron or
 				|| neurused[neuronLocalIndex_from] ) // already connected to this one
@@ -837,7 +837,7 @@ void GroupsBrain::growSynapses( int groupIndex_to,
 			else
 			{
 				efficacy = weight_rng->range(initminweight, Brain::config.initMaxWeight);
-			}				
+			}
 			if( synapseType->nt_from == INHIBITORY )
 			{
 				efficacy = min(-1.e-10f, -efficacy);

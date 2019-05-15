@@ -23,7 +23,7 @@ double Nerve::get( int ineuron,
 		return 0.0;
 
 	assert( (ineuron >= 0) && (ineuron < numneurons) && (index > -1) );
-	
+
 	return (*(activations[buf]))[index + ineuron];
 }
 
@@ -34,7 +34,7 @@ void Nerve::set( double activation,
 		return;
 
 	assert( numneurons == 1 );
-	
+
 	set( 0, activation, buf );
 }
 
@@ -43,7 +43,7 @@ void Nerve::set( int ineuron,
 				 ActivationBuffer buf )
 {
 	assert( (ineuron >= 0) && (ineuron < numneurons) && (index > -1) );
-	
+
 	(*(activations[buf]))[index + ineuron] = activation;
 }
 

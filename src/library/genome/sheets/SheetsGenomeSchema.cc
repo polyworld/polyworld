@@ -185,7 +185,7 @@ void SheetsGenomeSchema::define()
 	SCALAR( this, "SynapseProbabilityX", SheetsBrain::config.minSynapseProbabilityX, SheetsBrain::config.maxSynapseProbabilityX );
 
 	SCALAR( this, "LearningRate", SheetsBrain::config.minLearningRate, SheetsBrain::config.maxLearningRate );
-	
+
 
 	// ---
 	// --- Input Sheets
@@ -597,7 +597,7 @@ void SheetsGenomeSchema::defineReceptiveFieldVector( ContainerGene *sheets,
 								  role,
 								  synapseType );
 		}
-		
+
 	}
 }
 
@@ -622,7 +622,7 @@ void SheetsGenomeSchema::defineReceptiveField( ContainerGene *currentSheet,
 		fieldArray = new ContainerGene( fieldArrayName );
 		currentSheet->add( fieldArray );
 	}
-	
+
 	ContainerGene *field = new ContainerGene( itoa(fieldArray->getAll().size()) );
 
 	SCALARV( field, "OtherSheetId", otherSheetId );
@@ -684,7 +684,7 @@ SheetsModel *SheetsGenomeSchema::createSheetsModel( SheetsGenome *genome )
 	float synapseProbabilityX = genome->get( "SynapseProbabilityX" );
 
 	SheetsModel *model = new SheetsModel( size, synapseProbabilityX );
-	
+
 	createSheets( model, genome, genome->gene("InputSheets") );
 	createSheets( model, genome, genome->gene("OutputSheets") );
 	createSheets( model, genome, genome->gene("InternalSheets"), genome->get("InternalSheetsCount") );
@@ -838,7 +838,7 @@ Neuron::Attributes SheetsGenomeSchema::decodeNeuronAttrs( SheetsGenome *g,
 		break;
 	default:
 		assert( false );
-	}			
+	}
 
 	return attrs;
 }
@@ -879,7 +879,7 @@ void SheetsGenomeSchema::createReceptiveFields( SheetsModel *model, SheetsGenome
 				for( int i = 0; i < nfields; i++ )
 				{
 					ContainerGene *fieldGene = GeneType::to_Container( fieldsGene->getAll()[i] );
-		
+
 					createReceptiveField( model, sheet, g, fieldGene );
 				}
 			}
@@ -934,7 +934,7 @@ void SheetsGenomeSchema::createReceptiveField( SheetsModel *model,
 	Synapse::Attributes attrs;
 	if( SheetsGenomeSchema::config.synapseAttrEncoding == SheetsGenomeSchema::Configuration::FieldSynapseAttr )
 	{
-		WARN_ONCE( "IMPLEMENT INDEX-BASED WEIGHT" ); 
+		WARN_ONCE( "IMPLEMENT INDEX-BASED WEIGHT" );
 		attrs = decodeSynapseAttrs( g, fieldGene );
 
 		if( getNeuronType(synapseType, Sheet::From) == Neuron::Attributes::I )

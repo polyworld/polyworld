@@ -106,7 +106,7 @@ void CameraController::setAgentTrackingTarget()
 		default:
 			assert( false );
 		}
-				
+
 	}
 	else
 	{

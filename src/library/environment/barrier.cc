@@ -39,7 +39,7 @@ barrier::barrier()
 {
 	fNumPoints = 4;
 
-	fVertices = new float[12];  
+	fVertices = new float[12];
 	if( !fVertices )
 		error( 1, "Insufficient memory to setup barrier vertices" );
 }
@@ -110,7 +110,7 @@ void barrier::updateVertices()
 	fVertices[ 3] = absCurrPosition.xa; fVertices[ 4] = gBarrierHeight; fVertices[ 5] = absCurrPosition.za;
 	fVertices[ 6] = absCurrPosition.xb; fVertices[ 7] = gBarrierHeight; fVertices[ 8] = absCurrPosition.zb;
 	fVertices[ 9] = absCurrPosition.xb; fVertices[10] = 0.; 			 fVertices[11] = absCurrPosition.zb;
-		
+
 	if( absCurrPosition.xa < absCurrPosition.xb )
 	{
 		xmn = x1 = absCurrPosition.xa;
@@ -125,7 +125,7 @@ void barrier::updateVertices()
 		z1 = absCurrPosition.zb;
 		z2 = absCurrPosition.za;
 	}
-		
+
 	if( absCurrPosition.za < absCurrPosition.zb )
 	{
 		zmn = absCurrPosition.za;
@@ -136,7 +136,7 @@ void barrier::updateVertices()
 		zmn = absCurrPosition.zb;
 		zmx = absCurrPosition.za;
 	}
-		
+
 	a = z2 - z1;
 	b = x1 - x2;
 	c = x2 * z1  -  x1 * z2;
@@ -149,11 +149,11 @@ void barrier::updateVertices()
 	else
 		f = 1. / sqrt( a*a + b*b );
 	sna = -b * f;
-		
+
 	if( a < 0. )
 		sna *= -1.;
-			
-	csa =  fabs(a * f);	
+
+	csa =  fabs(a * f);
 }
 
 
@@ -188,10 +188,10 @@ void bxsortedlist::add(barrier* newBarrier)
             break;
         }
     }
-        
+
     if (!inserted)
 		append(newBarrier);
-	
+
 	// If any barrier says it needs to be x-sorted, then they all must be
 	if( !needXSort )
 		needXSort = newBarrier->needXSort();

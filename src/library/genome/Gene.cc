@@ -84,7 +84,7 @@ void Gene::printIndexes( FILE *file, const std::string &prefix, GenomeLayout *la
 		index = layout->getMutableDataOffset( index );
 	}
 
-	fprintf( file, "%d\t%s%s\n", index, prefix.c_str(), name.c_str() );	
+	fprintf( file, "%d\t%s%s\n", index, prefix.c_str(), name.c_str() );
 }
 
 void Gene::printTitles( FILE *file, const string &prefix )
@@ -226,7 +226,7 @@ Scalar __InterpolatedGene::interpolate( double ratio )
 void __InterpolatedGene::printRanges( FILE *file, const string &prefix )
 {
 	const char *roundingNames[] = { "None", "IntFloor", "IntNearest", "IntBin" };
-	const char *roundingName = 
+	const char *roundingName =
 		smin.type == Scalar::INT ? roundingNames[rounding] : roundingNames[ROUND_NONE];
 
 	fprintf( file,
@@ -288,7 +288,7 @@ MutableScalarGene::MutableScalarGene( const char *name,
 
 Scalar MutableScalarGene::get( Genome *genome )
 {
-	return interpolate( genome->get_raw(offset) );	
+	return interpolate( genome->get_raw(offset) );
 }
 
 const Scalar &MutableScalarGene::getMin()

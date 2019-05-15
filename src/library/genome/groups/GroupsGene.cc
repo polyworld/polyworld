@@ -406,7 +406,7 @@ void SynapseAttrGene::printIndexes( FILE *file, const string &prefix, GenomeLayo
 						 from, to );
 			}
 		}
-	}	
+	}
 }
 
 void SynapseAttrGene::printTitles( FILE *file, const string &prefix )

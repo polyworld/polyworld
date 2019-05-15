@@ -44,7 +44,7 @@ class Logs
 
 	// Maps from a given event type to all registered logs.
 	static EventRegistry _eventRegistry;
-	
+
  public:
 	//---------------------------------------------------------------------------
 	// Logs::postEvent

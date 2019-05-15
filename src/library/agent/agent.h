@@ -50,7 +50,7 @@ class agent : public gpolyobj
 {
 	friend void operator>>(const char **, agent&);
 
-public:	
+public:
 	enum BodyRedChannel { BRC_FIGHT, BRC_CONST, BRC_GIVE };
 	enum BodyGreenChannel { BGC_ID, BGC_LIGHT, BGC_EAT, BGC_FOOD, BGC_CONST };
 	enum BodyBlueChannel { BBC_MATE, BBC_CONST, BBC_ENERGY };
@@ -59,7 +59,7 @@ public:
 
 	static struct Configuration
 	{
-		float	agentHeight;	
+		float	agentHeight;
 		float	minAgentSize;
 		float	maxAgentSize;
 		long	minLifeSpan;
@@ -130,7 +130,7 @@ public:
 		bool	invertFocus;
 		bool	enableVisionPitch;
 		bool	enableVisionYaw;
-		
+
 	} config;
 
 	static void processWorldfile( proplib::Document &doc );
@@ -142,7 +142,7 @@ public:
 
     agent(TSimulation* simulation, gstage* stage);
     ~agent();
-    
+
     void dump(std::ostream& out);
     void load(std::istream& in);
 	void UpdateVision();
@@ -155,18 +155,18 @@ public:
 	void AvoidCollisions( int solidObjects );
 	void AvoidCollisionDirectional( int direction, int solidObjects );
 	void GetCollisionFixedCoordinates( float xo, float zo, float xn, float zn, float xb, float zb, float rc, float rb, float *xf, float *zf );
-    
+
     void SetVelocity(float x, float y, float z);
     void SetVelocity(short k, float f);
     void SetVelocityX(float f);
     void SetVelocityY(float f);
     void SetVelocityZ(float f);
     void SetMass(float f);
-    
+
     virtual void draw();
 	void setGenomeReady();
-    void grow( long mateWait, bool seeding = false );    
-    virtual void setradius();    
+    void grow( long mateWait, bool seeding = false );
+    virtual void setradius();
 	void eat( food* f,
 			  float eatFitnessParameter,
 			  float eat2consume,
@@ -185,7 +185,7 @@ public:
 
 	void addListener( AgentListener *listener );
 	void removeListener( AgentListener *listener );
-    
+
     void SetLastX(float x);
     void SetLastY(float y);
     void SetLastZ(float z);
@@ -252,9 +252,9 @@ public:
 	static gpolyobj* GetAgentObj();
 
 	void SetComplexity( float value );
-	
+
 	void Heal( float HealingRate, float minFoodEnergy );	//Virgil
-	
+
 	void PickupObject( gobject* o );
 	void DropMostRecent( void );
 	void DropObject( gobject* o );
@@ -269,13 +269,13 @@ public:
 	{
 		std::string functionPath;
 	} brainAnalysisParms;
-	
+
 protected:
     void NumberToName();
     void SetGeometry();
     void SetGraphics();
 	void InitGeneCache();
-    
+
 	static bool gClassInited;
     static unsigned long agentsEver;
     static long agentsliving;
@@ -304,26 +304,26 @@ protected:
 	Energy fMaxEnergy;
 	Energy fStarvationFoodEnergy;
 	const Metabolism *fMetabolism;
-    
+
     float fSpeed2Energy;
     float fYaw2Energy;
     float fSizeAdvantage;
-    
+
     float fLengthX;
     float fLengthZ;
-    
+
     float fMass; // mass (not used)
-    
+
     float fLastPosition[3];
     float fVelocity[3];
     float fNoseColor[3];
 
 	float fSpeed;
 	float fMaxSpeed;
-	
+
     float fHeuristicFitness;	// rough estimate along evolutionary biology lines
 	float fComplexity;
-	
+
 	genome::Genome* fGenome;
 	struct GeneCache
 	{
@@ -362,7 +362,7 @@ protected:
     gscene fScene;
     frustumXZ fFrustum;
     short fDomain;
-	
+
 	float fCarryRadius;
 
 	friend class AgentAttachedData;

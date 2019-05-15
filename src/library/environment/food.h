@@ -46,12 +46,12 @@ public:
     food( const FoodType *foodType, long step, const Energy &e );
     food( const FoodType *foodType, long step, const Energy &e, float x, float z);
     ~food();
-    
+
 	void dump(ostream& out);
 	void load(istream& in);
-    
+
 	Energy eat(const Energy &e);
-    
+
 	bool isDepleted();
 
 	const Energy &getEnergy();
@@ -74,7 +74,7 @@ protected:
 	void initlen();
 	void initrest();
    	virtual void setradius();
-	
+
     static unsigned long fFoodEver;
 
 	Energy fEnergy;

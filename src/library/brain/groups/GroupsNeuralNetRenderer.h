@@ -21,7 +21,7 @@ class GroupsNeuralNetRenderer : public NeuralNetRenderer
 	void getSize( short patchWidth, short patchHeight,
 				  short *ret_width, short *ret_height )
 	{
-		*ret_width = _neuronModel->dims->numNeurons * patchWidth + 2 * patchWidth;						  
+		*ret_width = _neuronModel->dims->numNeurons * patchWidth + 2 * patchWidth;
 		*ret_height = _neuronModel->dims->getNumNonInputNeurons() * patchHeight + 2 * patchHeight;
 	}
 
@@ -90,8 +90,8 @@ class GroupsNeuralNetRenderer : public NeuralNetRenderer
 				yoff,
 				xoff + short(_neuronModel->dims->numNeurons) * patchwidth,
 				yoff + short(_neuronModel->dims->getNumNonInputNeurons()) * patchheight);
-	
-		glLineWidth( 1.0 );	
+
+		glLineWidth( 1.0 );
 		rPrint( "**************************************************************\n");
 		for (k = 0; k < _neuronModel->dims->numSynapses; k++)
 		{
@@ -100,7 +100,7 @@ class GroupsNeuralNetRenderer : public NeuralNetRenderer
 			// Fill the rect
 			glColor3ub(mag, mag, mag);
 			x1 = xoff  +   abs(_neuronModel->synapse[k].fromneuron) * patchwidth;
-			y1 = yoff  +  (abs(_neuronModel->synapse[k].toneuron)-_neuronModel->dims->getFirstOutputNeuron()) * patchheight;   
+			y1 = yoff  +  (abs(_neuronModel->synapse[k].toneuron)-_neuronModel->dims->getFirstOutputNeuron()) * patchheight;
 
 			if( abs( _neuronModel->synapse[k].fromneuron ) < _neuronModel->dims->getFirstInternalNeuron() )	// input or output neuron, so it can be both excitatory and inhibitory
 			{
@@ -116,8 +116,8 @@ class GroupsNeuralNetRenderer : public NeuralNetRenderer
 					glVertex2i( x1, y1 + patchheight/2 );
 					glVertex2i( x1 + patchwidth, y1 + patchheight/2);
 					glVertex2i( x1 + patchwidth, y1 + patchheight );
-					glVertex2i( x1, y1 + patchheight);        	
-					glEnd();       
+					glVertex2i( x1, y1 + patchheight);
+					glEnd();
 				}
 				else	// inhibitory
 				{
@@ -133,7 +133,7 @@ class GroupsNeuralNetRenderer : public NeuralNetRenderer
 					glVertex2i( x1 + patchwidth, y1 );
 					glVertex2i( x1 + patchwidth, y1 + patchheight/2 );
 					glVertex2i( x1, y1 + patchheight/2 );
-					glEnd();       
+					glEnd();
 				}
 			}
 			else	// all other neurons and synapses
@@ -152,8 +152,8 @@ class GroupsNeuralNetRenderer : public NeuralNetRenderer
 				glVertex2i( x1, y1 );
 				glVertex2i( x1 + patchwidth, y1 );
 				glVertex2i( x1 + patchwidth, y1 + patchheight );
-				glVertex2i( x1, y1 + patchheight );        	
-				glEnd();       
+				glVertex2i( x1, y1 + patchheight );
+				glEnd();
 			}
 			rPrint( "k = %ld, eff = %5.2f, mag = %d, x1 = %d, y1 = %d, abs(from) = %d, abs(to) = %d, firstOutputNeuron = %d, firstInternalNeuron = %d\n",
 					k, _neuronModel->synapse[k].efficacy, mag, x1, y1, abs(_neuronModel->synapse[k].fromneuron), abs(_neuronModel->synapse[k].toneuron), _neuronModel->dims->getFirstOutputNeuron(), _neuronModel->dims->getFirstInternalNeuron() );
@@ -175,13 +175,13 @@ class GroupsNeuralNetRenderer : public NeuralNetRenderer
 			x2 = x1 + nerve->getNeuronCount()*patchwidth;
 
 			glColor3ub(255, 0, 0);
-			glLineWidth(1.0);	
+			glLineWidth(1.0);
 			glBegin(GL_LINE_LOOP);
 			glVertex2i(x1, y1);
 			glVertex2i(x2 - 1, y1);
 			glVertex2i(x2 - 1, y2 + 1);
-			glVertex2i(x1, y2);        	
-			glEnd();        
+			glVertex2i(x1, y2);
+			glEnd();
 		}
 
 		// Green
@@ -191,12 +191,12 @@ class GroupsNeuralNetRenderer : public NeuralNetRenderer
 			x1 = x2;
 			x2 = x1 + nerve->getNeuronCount() * patchwidth;
 			glColor3ub(0, 255, 0);
-			glLineWidth(1.0);	
+			glLineWidth(1.0);
 			glBegin(GL_LINE_LOOP);
 			glVertex2i(x1, y1);
 			glVertex2i(x2 - 1, y1);
 			glVertex2i(x2 - 1, y2 + 1);
-			glVertex2i(x1, y2);        	
+			glVertex2i(x1, y2);
 			glEnd();
 		}
 
@@ -212,49 +212,49 @@ class GroupsNeuralNetRenderer : public NeuralNetRenderer
 			glVertex2i(x1, y1);
 			glVertex2i(x2, y1);
 			glVertex2i(x2, y2 + 1);
-			glVertex2i(x1, y2);        	
-			glEnd();        
+			glVertex2i(x1, y2);
+			glEnd();
 		}
 
 		// Frame the groups
 		glColor3ub(255, 255, 255);
-		glLineWidth(1.0);	
+		glLineWidth(1.0);
 		x2 = _neuronModel->dims->numInputNeurons * patchwidth + xoff;
 		for (i = GroupsBrain::config.numinputneurgroups; i < numgroups; i++)
 		{
 			short numneur;
-	
+
 			numneur = _genome->getNeuronCount( _orderedGroups[i] );
-	
+
 			x1 = x2;
 			x2 = x1 + numneur * patchwidth;
-        
+
 			glBegin(GL_LINE_LOOP);
         	glVertex2i(x1, y1);
         	glVertex2i(x2, y1);
         	glVertex2i(x2, y2 /*+ 1*/);
-        	glVertex2i(x1, y2);        	
+        	glVertex2i(x1, y2);
 			glEnd();
 		}
 
 		x1 = patchwidth;
 		x2 = x1 + patchwidth;
 		y2 = yoff;
-    
+
 		for (i = GroupsBrain::config.numinputneurgroups; i < numgroups; i++)
 		{
 			short numneur;
-		
+
 			numneur = _genome->getNeuronCount( _orderedGroups[i] );
-	
+
 			y1 = y2;
 			y2 = y1 + numneur * patchheight;
-        
+
 			glBegin(GL_LINE_LOOP);
         	glVertex2i(x1, y1);
         	glVertex2i(x2, y1);
         	glVertex2i(x2, y2 /*+ 1*/);
-        	glVertex2i(x1, y2);        	
+        	glVertex2i(x1, y2);
 			glEnd();
 		}
 	}

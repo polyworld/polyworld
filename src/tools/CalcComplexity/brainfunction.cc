@@ -59,7 +59,7 @@ void usage_brainfunction()
 	cerr << "\t--bare :  If set, CalcComplexity will output bare numerical values, with no labels.\n\t\tUsed by CalcComplexity.py, but normally not used from the command line." << endl;
 	cerr << "\t--tile :  If set, CalcComplexity will tile shorter brainFunction files to produce N timesteps (if given)." << endl;
 	cerr << "\t<func_file> | --list <func_file>... -- :  The brainFunction file to compute complexity for.\n\t\tIf --list is used, provide a list of files followed by '--'.\n\t\tBoth complete and incomplete brainFunction files are supported." << endl;
-	cerr << "\tN :  Optional length of the agent's life (in timesteps) over which Complexity is to be computed.\n\t\tEx: a value of 100 will compute Complexity across the first 100 steps of the agent's life." << endl; 
+	cerr << "\tN :  Optional length of the agent's life (in timesteps) over which Complexity is to be computed.\n\t\tEx: a value of 100 will compute Complexity across the first 100 steps of the agent's life." << endl;
 	cerr << "\t[[APIBH]+[me]*\\d*]... :  Optional space-separated list of complexity types to calculate.\n\t\tThis can be (uppercase only) 'A', 'P', 'I', 'B', 'H' or any meaningful combination thereof.\n\t\tIt specifies whether you want to compute the Complexity of All, Processing, Input, Behavior,\n\t\tor Health+Behavior neurons. By default it computes the Complexity for A, P, I, B, and HB.\n\t\tAny of the complexity types may have one or more lowercase letters appendeded to indicate \n\t\tthat neural activity should be filtered based on behavioral events prior to the\n\t\tcalculation of Complexity. Currently acceptable values are 'm'ate and 'e'at. Warning:\n\t\tFilter order uniquely identifies datalib entries, but doesn't alter what is calculated.\n\t\tAny of the complexity types may have one or more digits appended to specify the number of\n\t\tpoints to use in integrating the area between the (k/N)I(X) and <I(X_k)> curves. If not\n\t\tspecified, the default is effectively 1 (one), which yields the traditional 'simplified\n\t\tTSE complexity'. A value of 0 (zero) will use all points (all values of k) thus yielding\n\t\tfull TSE complexity (though <I(X_k)> will be approximated for large values of N_choose_k)." << endl;
 }
 
@@ -123,7 +123,7 @@ int process_brainfunction(int argc, char *argv[])
 		while(argc > 1 && !eol)
 		{
 			arg = argv[argi];
-			
+
 			if(arg == "--")
 			{
 				eol = true;
@@ -152,7 +152,7 @@ int process_brainfunction(int argc, char *argv[])
 
 		consume_arg(argc, argv, argi);
 	}
-	
+
 	// --- get optional max number of timesteps to consider
 
 	if( argc > 1 && isdigit(argv[argi][0]) )
@@ -209,11 +209,11 @@ int process_brainfunction(int argc, char *argv[])
 					}
 					continue;
 				}
-				
+
 				// digits indicate integration precision
 				if( isdigit(*c) )
 					continue;
-				
+
 				if( part_names.find( *c ) == part_names.end() )
 				{
 					cerr << "Error: Didnt know letter '" << *c << "' that you specified.  Exiting." << endl;
@@ -221,13 +221,13 @@ int process_brainfunction(int argc, char *argv[])
 				}
 			}
 		}
-				
+
 		if( filter_events )
 			filter_events[num_filter_events] = '\0'; 	// add c string terminator
 
 		ncombos = argc - argi;
 		part_combos = (const char **)argv + 1; // skip program name in arg 0
-	
+
 		assert( num_timesteps >= 0 );
 		if( num_timesteps < WARN_IF_COMPUTING_COMPLEXITY_OVER_LESSTHAN_N_TIMESTEPS )
 		{
@@ -247,7 +247,7 @@ int process_brainfunction(int argc, char *argv[])
 		events = parse_events( filter_events, *(files.begin()) );
 
 	// --- construct parms
-	int nfiles = files.size();	
+	int nfiles = files.size();
 	int nparms = nfiles * ncombos;
 	CalcComplexity_brainfunction_parms *parms = new CalcComplexity_brainfunction_parms[nparms];
 
@@ -282,7 +282,7 @@ int process_brainfunction(int argc, char *argv[])
 										   nparms,
 										   &callback);
 	delete result;
-	
+
 	if( filter_events )
 		free( filter_events );
 
@@ -298,13 +298,13 @@ Events* parse_events( char* filter_events, string brain_function_path )
 	string worldfile_path;
 	string births_deaths_path;
 	string energy_log_path;
-	
+
 	// Find the normalized.wf worldfile, BirthsDeaths.log, and
 	// events/energy.log relative to the provided brainFunction file.
 	// TODO:  If we only find a legacy worldfile, generate normalized.wf.
 	find_filter_files( brain_function_path,	// input
 					   worldfile_path, births_deaths_path, energy_log_path );  // outputs
-	
+
 	// Try to open the files
 	ifstream worldfile( worldfile_path.c_str() );
 	if( ! worldfile.is_open() )
@@ -327,22 +327,22 @@ Events* parse_events( char* filter_events, string brain_function_path )
 
 	// Determine maxSteps from the worldfile
 	long maxSteps = get_max_steps( worldfile );
-	
+
 	Events* events = new Events( maxSteps );
-	
+
 	// Parse BirthsDeaths.log to add mate events
 	if( strchr( filter_events, 'm' ) )
 		parse_mate_events( births_deaths, events );
-	
+
 	// Parse events/energy.log to add eat events
 	if( strchr( filter_events, 'e' ) )
 		parse_eat_events( energy_log, events );
-	
+
 	// Close the files we opened
 	worldfile.close();
 	births_deaths.close();
 	energy_log.close();
-	
+
 	return( events );
 }
 
@@ -355,7 +355,7 @@ void find_filter_files( string brain_function_path,	// input
 {
 	size_t found;
 	string root;
-	
+
 	// Try to determine the directory layout
 	found = brain_function_path.find( "Recent" );
 	bool run;
@@ -396,7 +396,7 @@ long get_max_steps( ifstream& worldfile )
 {
 	long maxSteps = 0;
 	string line;
-	
+
 	// parse the worldfile to extract maxSteps
 	while( worldfile.good() )
 	{
@@ -407,7 +407,7 @@ long get_max_steps( ifstream& worldfile )
 			break;
 		}
 	}
-	
+
 	return( maxSteps );
 }
 
@@ -442,7 +442,7 @@ void parse_mate_events( ifstream& births_deaths, Events* events )
 void parse_eat_events( ifstream& energy_log, Events* events )
 {
 	string line;
-	
+
 	while( energy_log.good() )
 	{
 		getline( energy_log, line );

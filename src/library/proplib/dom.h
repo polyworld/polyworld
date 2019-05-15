@@ -303,7 +303,7 @@ namespace proplib
 		virtual Property *getp( Identifier id );
 
 		virtual PropertyMap &props();
-		
+
 		virtual operator short();
 		virtual operator int();
 		virtual operator long();
@@ -441,7 +441,7 @@ namespace proplib
 		virtual Property *getp( Identifier id );
 
 		virtual PropertyMap &props();
-		
+
 		virtual operator short();
 		virtual operator int();
 		virtual operator long();

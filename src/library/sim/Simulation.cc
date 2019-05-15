@@ -2260,7 +2260,7 @@ void TSimulation::Mate( agent *c,
                         eenergy.constrain(0, e->GetMaxEnergy());
                         e->SetEnergy(eenergy);
                         e->SetFoodEnergy(eenergy);
-                    });                            
+                    });
 
 				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 				// !!! POST SERIAL

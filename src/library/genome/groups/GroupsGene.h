@@ -37,7 +37,7 @@ namespace genome
 	class NeurGroupGene : public NonVectorGene
 	{
 	public:
-		NeurGroupGene( NeurGroupType group_type );				   
+		NeurGroupGene( NeurGroupType group_type );
 		virtual ~NeurGroupGene() {}
 
 		virtual Scalar get( Genome *genome ) = 0;

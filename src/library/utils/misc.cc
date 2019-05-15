@@ -227,7 +227,7 @@ void makeParentDir( const string &path )
 int SetMaximumFiles( long filecount )
 {
     struct rlimit lim;
-	
+
 	lim.rlim_cur = lim.rlim_max = (rlim_t) filecount;
 	if( setrlimit( RLIMIT_NOFILE, &lim ) == 0 )
 		return 0;
@@ -238,7 +238,7 @@ int SetMaximumFiles( long filecount )
 int GetMaximumFiles( long *filecount )
 {
 	struct rlimit lim;
-	
+
 	if( getrlimit( RLIMIT_NOFILE, &lim ) == 0 )
 	{
 		*filecount = (long) lim.rlim_max;
@@ -252,7 +252,7 @@ int GetMaximumFiles( long *filecount )
 vector<string> split( const string& str, const string& delimiters )
 {
 	vector<string> parts;
-	
+
     // Skip delimiters at beginning.
     string::size_type lastPos = str.find_first_not_of( delimiters, 0 );
     // Find first delimiter after non-delimiters.
@@ -267,16 +267,16 @@ vector<string> split( const string& str, const string& delimiters )
         // Find next delimiter after non-delimiters
         pos = str.find_first_of( delimiters, lastPos );
     }
-    
+
     return( parts );
 }
 
 // int main( int argc, char** argv )
 // {
 // 	string sentence( "Now is the time for all good men" );
-// 	
+//
 // 	vector<string> parts = split( sentence );
-// 	
+//
 // 	itfor( vector<string>, parts, it )
 // 	{
 // 		cout << *it << endl;

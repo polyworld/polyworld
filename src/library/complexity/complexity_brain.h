@@ -45,8 +45,8 @@ class CalcComplexity_brainfunction_result
 		delete agent_number;
 		delete num_neurons;
 		delete lifespan;
-	}  
-					    
+	}
+
 };
 
 class CalcComplexity_brainfunction_callback

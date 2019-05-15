@@ -695,15 +695,15 @@ void Logs::BrainComplexityLog::writeBestRecent( long epoch )
 	double mean=0;
 	double stddev=0;	//Complexity: Time to Average and StdDev the BestRecent List
 	int count=0;		//Keeps a count of the number of entries in fittest.
-			
+
 	for( int i = 0; i < fittest->size(); i++ )
 	{
 		mean += fittest->get(i)->complexity;		// Get Sum of all Complexities
 		count++;
 	}
-		
+
 	mean = mean / count;			// Divide by count to get the average
-		
+
 
 	if( ! (mean >= 0) )			// If mean is 'nan', make it zero instead of 'nan'  -- Only true before any agents have died.
 	{
@@ -717,10 +717,10 @@ void Logs::BrainComplexityLog::writeBestRecent( long epoch )
 			stddev += pow(fittest->get(i)->complexity - mean, 2);		// Get Sum of all Complexities
 		}
 	}
-		
+
 	stddev = sqrt(stddev / (count-1) );		// note that this stddev is divided by N-1 (MATLAB default)
 	double StandardError = stddev / sqrt(count);
-			
+
 	const char *path = "run/brain/bestRecent/complexity.txt";
 	makeParentDir( path );
 	FILE *cFile = fopen( path, "a" );
@@ -728,7 +728,7 @@ void Logs::BrainComplexityLog::writeBestRecent( long epoch )
 
 	// print to complexity.txt
 	fprintf( cFile, "%ld %f %f %f %d\n", epoch, mean, stddev, StandardError, count );
-	fclose( cFile );		
+	fclose( cFile );
 }
 
 
@@ -778,7 +778,7 @@ void Logs::BrainFunctionLog::init( TSimulation *sim, Document *doc )
 void Logs::BrainFunctionLog::processEvent( const AgentGrownEvent &e )
 {
 	char path[256];
-	sprintf( path, "run/brain/function/incomplete_brainFunction_%ld.txt", e.a->Number() );	
+	sprintf( path, "run/brain/function/incomplete_brainFunction_%ld.txt", e.a->Number() );
 
 	AbstractFile *file = createFile( e.a, path );
 	e.a->GetBrain()->startFunctional( file, e.a->Number() );
@@ -821,7 +821,7 @@ void Logs::BrainFunctionLog::processEvent( const BrainAnalysisBeginEvent &e )
 		sprintf( s, "run/brain/Recent/%ld/brainFunction_%ld.txt", _simulation->getEpoch(), e.a->Number() );
 		makeParentDir( s );
 		AbstractFile::link( t, s );
-			
+
 		if( e.a->Number() <= _nseeds )
 		{
 			sprintf( s, "run/brain/Recent/0/brainFunction_%ld.txt", e.a->Number() );
@@ -952,7 +952,7 @@ void Logs::CollisionLog::init( TSimulation *sim, Document *doc )
 {
 	if( doc->get("RecordCollisions") )
 	{
-		initRecording( sim, 
+		initRecording( sim,
 					   SimulationStateScope,
 					   sim::Event_Collision );
 
@@ -1067,7 +1067,7 @@ void Logs::ContactLog::encode( const sim::AgentContactEndEvent::AgentInfo &info,
 	if( info.mate )
 	{
 		*(b++) = 'M';
-		
+
 #define __SET( PREVENT_TYPE, CODE ) if( info.mate & MATE__PREVENTED__##PREVENT_TYPE ) *(b++) = CODE
 
 		__SET( PARTNER, 'p' );
@@ -1448,33 +1448,33 @@ void Logs::GenomeMetaLog::processEvent( const sim::SimInitedEvent &birth )
 {
 	{
 		FILE* f = createFile( "run/genome/meta/geneindex.txt" );
-		
+
 		GenomeUtil::schema->printIndexes( f );
-		
+
 		fclose( f );
 	}
 	{
 		FILE* f = createFile( "run/genome/meta/genelayout.txt" );
-		
+
 		GenomeUtil::schema->printIndexes( f, GenomeUtil::layout );
-		
+
 		fclose( f );
 
 		SYSTEM( "cat run/genome/meta/genelayout.txt | sort -n > run/genome/meta/genelayout-sorted.txt" );
 	}
 	{
 		FILE* f = createFile( "run/genome/meta/genetitle.txt" );
-		
+
 		GenomeUtil::schema->printTitles( f );
-		
+
 		fclose( f );
 	}
 	{
 		FILE* f = createFile( "run/genome/meta/generange.txt" );
-		
+
 		GenomeUtil::schema->printRanges( f );
-		
-		fclose( f );		
+
+		fclose( f );
 	}
 }
 
@@ -1749,7 +1749,7 @@ void Logs::SeparationLog::processEvent( const sim::AgentContactBeginEvent &e )
 void Logs::SeparationLog::processEvent( const sim::AgentDeathEvent &death )
 {
 	SeparationCache::AgentEntries &entries = SeparationCache::getEntries( death.a );
-	
+
 	if( entries.size() > 0 )
 	{
 		char buf[16];
