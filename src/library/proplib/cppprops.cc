@@ -136,6 +136,7 @@ void CppProperties::generateLibrarySource()
 	l( "#include \"proplib/state.h\"" );
 	l( "#include \"sim/globals.h\"" );
 	l( "#include \"sim/Simulation.h\"" );
+	l( "#include \"utils/misc.h\"" );
 	l( "using namespace std;" );
 	l( "using namespace proplib;" );
 	l( "" );
@@ -235,11 +236,11 @@ void CppProperties::generateStateStructs( ofstream &out, DynamicPropertyList &dy
 			stateAttr->getExpression()->write( out );
 			l( ";" << endl );
 		}
-	}	
+	}
 }
 
 void CppProperties::generateMetadata( ofstream &out,
-									  CppPropertyList &cppProperties, 
+									  CppPropertyList &cppProperties,
 									  CppPropertyInfoMap &infoMap )
 {
 	l( "static proplib::CppProperties::PropertyMetadata metadata[] =" );
@@ -297,10 +298,10 @@ void CppProperties::generateInitSource( ofstream &out,
 	{
 		DynamicScalarProperty *prop = *it;
 		prop2initBody[prop] = generateInitFunctionBody( prop, prop2antecedents[prop], infoMap );
-	}	
+	}
 
 	sortDynamicProperties( dynamicProperties, prop2antecedents );
-	
+
 	// ---
 	// --- Write Init Source
 	// ---
@@ -391,6 +392,12 @@ string CppProperties::generateInitFunctionBody( DynamicScalarProperty *prop,
 							{
 							case Node::Const:
 								text = (string)*sym.prop;
+								// Convert Python Boolean literals to C++
+								// I assume this belongs further down in the class hierarchy, but I have no idea where
+								if( text == "True" )
+									text = "true";
+								else if( text == "False" )
+									text = "false";
 								break;
 							case Node::Dynamic:
 								antecedents.push_back( dynamic_cast<DynamicScalarProperty *>(sym.prop) );
@@ -448,10 +455,10 @@ void CppProperties::generateUpdateSource( ofstream &out,
 		DynamicScalarProperty *prop = *it;
 
 		prop2updateBody[prop] = generateUpdateFunctionBody( prop, prop2antecedents[prop], infoMap );
-	}	
+	}
 
 	sortDynamicProperties( dynamicProperties, prop2antecedents );
-	
+
 	// ---
 	// --- Write Update Source
 	// ---
@@ -510,7 +517,7 @@ void CppProperties::generateUpdateSource( ofstream &out,
 			else if( attrName == "exmax" )
 				l( "      assert( newval < " << (string)*it_attr->second << " );" );
 		}
-			
+
 		l( "      *((" << getCppType(prop) << " *)metadata[" << index << "].value) = newval;" );
 		l( "    }" );
 		l( "  }" );
@@ -518,7 +525,7 @@ void CppProperties::generateUpdateSource( ofstream &out,
 
 	{
 		map<int, DynamicPropertyList> stageProps;
-		
+
 		for( DynamicScalarProperty *prop : dynamicProperties )
 			if( infoMap[prop].stage != -1 )
 				stageProps[ infoMap[prop].stage ].push_back( prop );
@@ -647,6 +654,12 @@ string CppProperties::generateUpdateFunctionBody( DynamicScalarProperty *prop,
 								{
 								case Node::Const:
 									text = (string)*sym.prop;
+									// Convert Python Boolean literals to C++
+									// I assume this belongs further down in the class hierarchy, but I have no idea where
+									if( text == "True" )
+										text = "true";
+									else if( text == "False" )
+										text = "false";
 									break;
 								case Node::Dynamic:
 									antecedents.push_back( dynamic_cast<DynamicScalarProperty *>(sym.prop) );
@@ -847,7 +860,7 @@ string CppProperties::getCppSymbol( Property *prop )
 
 			if( !resolved )
 				propSym.err( "Cannot resolve $[ancestor]" );
-		} 
+		}
 		else if( macro_args[0] == "gene" )
 		{
 			if( macro_args.size() != 3 )
@@ -926,7 +939,7 @@ void CppProperties::sortDynamicProperties( DynamicPropertyList &properties,
 			itfor( DynamicPropertyList, result, it )
 				if( *it == prop )
 					return true;
-			
+
 			return false;
 		}
 

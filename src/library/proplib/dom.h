@@ -303,7 +303,7 @@ namespace proplib
 		virtual Property *getp( Identifier id );
 
 		virtual PropertyMap &props();
-		
+
 		virtual operator short();
 		virtual operator int();
 		virtual operator long();
@@ -441,7 +441,7 @@ namespace proplib
 		virtual Property *getp( Identifier id );
 
 		virtual PropertyMap &props();
-		
+
 		virtual operator short();
 		virtual operator int();
 		virtual operator long();
@@ -539,6 +539,8 @@ namespace proplib
 		MetaProperty *getMeta( std::string name );
 		void addMeta( MetaProperty *prop );
 		MetaPropertyMap &metaprops();
+
+		static std::vector<float> variables;
 
 	private:
 		std::string _path;

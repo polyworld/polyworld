@@ -64,6 +64,12 @@ PassiveLockstep {
   default False
 }
 
+AdaptivityMode {
+  type    Bool
+  default False
+  assert  not AdaptivityMode or not PassiveLockstep
+}
+
 InitSeed {
   type    Int
   default 42    # applied before agents, genomes, brains, food, bricks, etc. are initialized
@@ -117,15 +123,25 @@ MaxAgents {
 InitAgents {
   type    Int
   default 180
-  min     MinAgents
-  max     MaxAgents
+  assert  ( InitAgents >= MinAgents and InitAgents <= MaxAgents ) or AdaptivityMode
+}
+
+MaxSeedEnergy {
+  type    Float
+  default 1.0
+  exmin   0.0
+  max     1.0
+}
+
+RandomSeedEnergy {
+  type    Bool
+  default False
 }
 
 SeedAgents {
   type    Int
   defaults { default InitAgents; legacy 0 }
-  min     0
-  max     InitAgents
+  assert  ( SeedAgents >= 0 and SeedAgents <= InitAgents ) or AdaptivityMode
 }
 
 SeedMutationProbability {
@@ -133,6 +149,16 @@ SeedMutationProbability {
   default 0.0
   min     0.0
   max     1.0
+}
+
+SeedType {
+  type    Enum
+  enum    Values {
+    Legacy,
+    Simple,
+    Random
+  }
+  default Legacy
 }
 
 InitFood {
@@ -192,16 +218,23 @@ FoodMaxLifeSpan {
   min 0
 }
 
+RandomInitFoodAge {
+  type    Bool
+  default False
+}
+
 MinFoodEnergy {
   type    Float
   default 200.0
   min     0.0
+  cppsym  "food::gMinFoodEnergy"
 }
 
 MaxFoodEnergy {
   type    Float
   default 1000.0
   min     MinFoodEnergy
+  cppsym  "food::gMaxFoodEnergy"
 }
 
 RatioBarrierPositions {
@@ -229,6 +262,7 @@ FoodTypes {
 
   element {
     type    Object
+    cppsym  "FoodType::get( $[index] )"
     properties {
 
       Name {
@@ -243,6 +277,18 @@ FoodTypes {
           type    Int
           min     -1
           max     1
+        }
+      }
+
+      EatMultiplier {
+        type    Array
+        min     NumEnergyTypes
+        max     NumEnergyTypes
+        default [ 1 ]
+        cppsym  "$[ancestor]->eatMultiplier"
+        element {
+          type    Float
+          cppsym  "$[ancestor].values[ $[index] ]"
         }
       }
 
@@ -553,7 +599,64 @@ Domains {
         type    Float
         default -1.0
         max     1.0
+        cppsym  "$[ancestor].foodRate"
         assert  ( (FoodRate == -1.0) or (FoodRate >= 0.0) )
+      }
+
+      InitAgentsPatch {
+        type    Object
+        default {}
+
+        properties {
+
+          CenterX {
+            type    Float
+            default 0.5
+            exmin   0.0
+            exmax   1.0
+          }
+
+          CenterZ {
+            type    Float
+            default 0.5
+            exmin   0.0
+            exmax   1.0
+          }
+
+          SizeX {
+            type    Float
+            default 1.0
+            exmin   0.0
+            max     1.0
+          }
+
+          SizeZ {
+            type    Float
+            default 1.0
+            exmin   0.0
+            max     1.0
+          }
+
+          Shape {
+            type    Enum
+            default R
+            enum    Values {
+              R,           # Rectangular
+              E            # Elliptical
+            }
+          }
+
+          Distribution {
+            type    Enum
+            default U
+            enum    Values {
+              U,           # Uniform
+              L,           # Linear
+              G            # Gaussian
+            }
+          }
+
+        }
       }
 
       #------------------------------
@@ -561,6 +664,8 @@ Domains {
       #------------------------------
       FoodPatches {
         type    Array
+
+        default [ {} ]
 
         element {
           type    Object
@@ -575,8 +680,9 @@ Domains {
 
             FoodFraction {
               type    Float
-              exmin   0.0
+              default -1.0
               max     1.0
+              assert  ( (FoodFraction == -1.0) or (FoodFraction >= 0.0) )
             }
 
             InitFoodFraction {
@@ -610,8 +716,15 @@ Domains {
             FoodRate {
               type    Float
               default -1.0
-              max     1.0
+              cppsym  "$[ancestor].growthRate"
               assert  ( (FoodRate == -1.0) or (FoodRate >= 0.0) )
+            }
+
+            FoodEnergy {
+              type    Float
+              default -1.0
+              cppsym  "$[ancestor].energy"
+              assert  ( (FoodEnergy == -1.0) or (FoodEnergy >= 0.0) )
             }
 
             CenterX {
@@ -858,6 +971,11 @@ EatWait {
   cppsym  "$[sim]->fEatWait"
 }
 
+ProbabilisticMating {
+  type    Bool
+  default False
+}
+
 MateWait {
   type    Int
   default 25
@@ -871,6 +989,11 @@ InitMateWait {
   default 0
   min     0
   exmax   MaxLifeSpan
+}
+
+RandomSeedMateWait {
+  type    Bool
+  default False
 }
 
 EatMateWait {
@@ -890,6 +1013,11 @@ EatMateMinDistance {
 }
 
 EnableMateWaitFeedback {
+  type    Bool
+  default False
+}
+
+InvertMateWaitFeedback {
   type    Bool
   default False
 }
@@ -972,6 +1100,11 @@ CarryPreventsMate {             # probability that agent carrying something prev
   max     1.0
 }
 
+InvertFocus {
+  type    Bool
+  default False
+}
+
 EnableVisionPitch {
   type    Bool
   default False
@@ -1036,7 +1169,9 @@ BodyGreenChannel {
   default I
   enum    Values {
     I,             # ID gene
-    L              # Light neuron
+    L,             # Light neuron
+    E,             # Eat neuron
+    F              # Food energy
   }
   scalar {
     type    Float
@@ -1063,7 +1198,8 @@ NoseColor {
   type    Enum
   default L
   enum    Values {
-    L            # Light neuron
+    L,           # Light neuron
+    B            # Same as body
   }
   scalar {
     type    Float
@@ -1148,9 +1284,30 @@ PopControlDomains {
   default False
 }
 
+AllowBirths {
+  type    Bool
+  default True
+}
+
 AllowMinDeaths {
   type    Bool
   default False
+}
+
+EnableEvolution {
+  type    Bool
+  default True
+}
+
+DieAtMaxAge {
+  type    Bool
+  default True
+}
+
+AgeEnergyMultiplier {
+  type    Float
+  default 0.0
+  assert  AgeEnergyMultiplier > 0.0 or not AdaptivityMode
 }
 
 #-------------------------------------------------------------------
@@ -1200,6 +1357,19 @@ MinFoodEnergyAtDeath {
   type    Float
   default 0.0
   min     0.0
+}
+
+StarvationEnergyFraction {
+  type    Float
+  default 0.0
+  min     0.0
+  max     1.0
+}
+
+StarvationWait {
+  type    Int
+  default MateWait
+  min     0
 }
 
 MiscegenationDelay {
@@ -1340,6 +1510,15 @@ LinearFogEnd {
 # SECTION Simulation parameters -- Gene Expression (in legacy gene order)
 #-------------------------------------------------------------------
 
+GeneticOperatorResolution {
+  type    Enum
+  enum    Values {
+    Bit,
+    Byte
+  }
+  default Bit
+}
+
 MinAgentSize {
   type    Float
   default 0.5
@@ -1349,7 +1528,7 @@ MinAgentSize {
 MaxAgentSize {
   type    Float
   default 2.0
-  exmin   MinAgentSize
+  min     MinAgentSize
 }
 
 MinAgentStrength {
@@ -1361,7 +1540,7 @@ MinAgentStrength {
 MaxAgentStrength {
   type    Float
   default 2.0
-  exmin   MinAgentStrength
+  min     MinAgentStrength
 }
 
 MinAgentMaxSpeed {
@@ -1373,19 +1552,31 @@ MinAgentMaxSpeed {
 MaxAgentMaxSpeed {
   type    Float
   default 1.5
-  exmin   MinAgentMaxSpeed
+  min     MinAgentMaxSpeed
 }
 
 MinMutationRate {
   type    Float
-  default 0.01
+  default ( 0.01 if GeneticOperatorResolution == GeneticOperatorResolution.Bit else 0.08 )
   min     0.0
 }
 
 MaxMutationRate {
   type    Float
-  default 0.05
+  default ( 0.05 if GeneticOperatorResolution == GeneticOperatorResolution.Bit else 0.4 )
   min     0.0
+}
+
+MinMutationStdevPower {
+  type    Float
+  default 0.0
+  min     0.0
+}
+
+MaxMutationStdevPower {
+  type    Float
+  default 6.0
+  min     MinMutationStdevPower
 }
 
 MinCrossoverPoints {
@@ -1438,6 +1629,13 @@ MaxVisionNeuronsPerGroup {
   min     MinVisionNeuronsPerGroup
 }
 
+SeedVisionNeurons {
+  type    Float
+  default 0.5
+  min     0.0
+  max     1.0
+}
+
 MinInternalNeuralGroups {
   type    Int
   default 0
@@ -1448,6 +1646,11 @@ MaxInternalNeuralGroups {
   type    Int
   defaults { default 20; legacy 5 }
   min     MinInternalNeuralGroups
+}
+
+OrderedInternalNeuralGroups {
+  type    Bool
+  default False
 }
 
 MinExcitatoryNeuronsPerGroup {
@@ -1486,6 +1689,25 @@ MaxConnectionDensity {
   min     MinConnectionDensity
 }
 
+SimpleSeedConnectionDensity {
+  type    Float
+  default MinConnectionDensity
+  min     MinConnectionDensity
+  max     MaxConnectionDensity
+}
+
+SimpleSeedIOConnectionDensity {
+  type    Float
+  default MinConnectionDensity
+  min     MinConnectionDensity
+  max     MaxConnectionDensity
+}
+
+MirroredTopologicalDistortion {
+  type    Bool
+  default False
+}
+
 MinTopologicalDistortion {
   type    Float
   default 0.0
@@ -1516,6 +1738,11 @@ OutputSynapseLearning {
 }
 
 SynapseFromOutputNeurons {
+  type    Bool
+  default True
+}
+
+SynapseFromInputToOutputNeurons {
   type    Bool
   default True
 }
@@ -1596,6 +1823,20 @@ SeedMutationRate {
   max     1.0
 }
 
+RawSeedMutationRate {
+  type    Float
+  default 0.0
+  min     0.0
+  max     1.0
+}
+
+
+SimpleSeedYawBiasDelta {
+  type    Float
+  default 0.05
+  min     0.0
+  max     0.5
+}
 
 SeedFightBias {
   type    Float
@@ -1676,6 +1917,23 @@ MaxSynapseWeightInitial {
   exmin   0.0
 }
 
+FixedInitSynapseWeight {
+  type    Bool
+  default False
+}
+
+GaussianInitSynapseWeight {
+  type    Bool
+  default False
+  assert  not FixedInitSynapseWeight or not GaussianInitSynapseWeight
+}
+
+GaussianInitSynapseWeightMaxStdev {
+  type    Float
+  default 2.0
+  exmin   0.0
+}
+
 SynapseWeightDecayRate {
   type    Float
   default 0.99
@@ -1693,9 +1951,19 @@ NeuronModel {
   default F
   enum    Values {
     F,           # Firing Rate
-    T,           # Tau
+    T,           # Tau/Gain
     S            # Spiking
   }
+}
+
+LearningMode {
+  type    Enum
+  enum    Values {
+    None,
+    Prebirth,
+    All
+  }
+  default All
 }
 
 EnableSpikingGenes {
@@ -1762,6 +2030,25 @@ TauMax {
 TauSeed {
   type    Float
   default 1.0
+}
+
+GainMin {
+  type    Float
+  default 0.1
+  exmin   0.0
+}
+
+GainMax {
+  type    Float
+  default 10.0
+  min     GainMin
+}
+
+GainSeed {
+  type    Float
+  default 1.0
+  min     GainMin
+  max     GainMax
 }
 
 
@@ -2012,7 +2299,7 @@ EatThreshold {
 
 MateThreshold {
   type    Float
-  default 0.5
+  default ( 0.2 if ProbabilisticMating else 0.5 )
 }
 
 FightThreshold {
@@ -2062,6 +2349,7 @@ GiveFraction {
 EnergyUseMultiplier {
   type    Float
   default 1.0
+  cppsym  "agent::config.energyUseMultiplier"
 }
 
 EnergyUseEat {
@@ -2346,6 +2634,16 @@ RecordBrain {
   default ( RecordAll or RecordNeuralComplexityFiles )
 }
 
+RecordBrainAnatomy {
+  type    Bool
+  default RecordBrain
+}
+
+RecordBrainFunction {
+  type    Bool
+  default RecordBrain
+}
+
 RecordBrainRecent {
   type    Bool
   default RecordBrain
@@ -2419,6 +2717,36 @@ RecordSeparations {
   }
 }
 
+RecordPopulation {
+  type    Bool
+  default RecordAll
+}
+
+RecordAgentEnergy {
+  type    Bool
+  default RecordAll
+}
+
+RecordFoodConsumption {
+  type    Bool
+  default RecordAll
+}
+
+RecordFoodEnergy {
+  type    Bool
+  default RecordAll
+}
+
+RecordGitRevision {
+  type    Bool
+  default False
+}
+
+RecordSynapses {
+  type    Bool
+  default RecordAll
+}
+
 CompressFiles {
   type    Bool
   default True
@@ -2430,6 +2758,16 @@ CompressFiles {
 #-------------------------------------------------------------------
 
 SeedGenomeFromRun {
+  type    Bool
+  default False
+}
+
+SeedSynapsesFromRun {
+  type    Bool
+  default False
+}
+
+FreezeSeededSynapses {
   type    Bool
   default False
 }
@@ -2531,6 +2869,15 @@ FoodCount {
   type    Int
   runtime True
   cppsym  "objectxsortedlist::gXSortedObjects.foodCount"
+}
+
+Variables {
+  type    Array
+  default [ ]
+  element {
+    type    Float
+    cppsym  "proplib::Document::variables[ $[index] ]"
+  }
 }
 
 

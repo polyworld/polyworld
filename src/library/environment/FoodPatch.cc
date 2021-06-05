@@ -31,12 +31,13 @@ FoodPatch::FoodPatch()
 //-------------------------------------------------------------------------------------------
 // FoodPatch::FoodPatch
 //-------------------------------------------------------------------------------------------
-void FoodPatch::init( const FoodType *foodType, float x, float z, float sx, float sz, float rate, int initFood, int minFood, int maxFood, int maxFoodGrown, float patchFraction, int shape, int distrib, float nhsize, bool on, bool inRemoveFood, gstage* fs, Domain* dm, int domainNumber ){
-    
+void FoodPatch::init( const FoodType *foodType, float x, float z, float sx, float sz, float rate, float e, int initFood, int minFood, int maxFood, int maxFoodGrown, float patchFraction, int shape, int distrib, float nhsize, bool on, bool inRemoveFood, gstage* fs, Domain* dm, int domainNumber ){
+
 	initBase(x, z,  sx, sz, shape, distrib, nhsize, fs, dm, domainNumber);
 
 	fraction = patchFraction;
 	growthRate = rate;
+	energy = e;
  	initFoodCount = initFood;
 	foodCount = 0;
 	foodGrown = false;
@@ -44,7 +45,7 @@ void FoodPatch::init( const FoodType *foodType, float x, float z, float sx, floa
 	minFoodCount = minFood;
  	maxFoodCount = maxFood;
 	maxFoodGrownCount = maxFoodGrown;
-	
+
 	this->on = on;
 	this->onPrev = false;
 	this->foodType = foodType;
@@ -100,15 +101,19 @@ food *FoodPatch::addFood( long step )
 	if( foodCount < maxFoodCount )
 	{
 		float x, z;
-		food* f = new food( foodType, step );
+		food* f;
+		if ( energy == -1.0 )
+			f = new food( foodType, step );
+		else
+			f = new food( foodType, step, energy );
 
 		// set the values of x and y to a legal point in the foodpatch
 		setPoint( &x, &z );
-		
+
 	#if DebugFoodPatches
 		printf( "%s: adding food to patch at location (%g, %g)\n", __FUNCTION__, x, z );
 	#endif
-	
+
 		f->setx( x );
 		f->setz( z );
 
@@ -118,17 +123,17 @@ food *FoodPatch::addFood( long step )
 
 		// Finally, add it to the world object list and fStage
 		objectxsortedlist::gXSortedObjects.add( f );
-		fStage->AddObject( f ); 
+		fStage->AddObject( f );
 
 		// Update the patch's count
 		foodCount++;
 		return f;
 	}
-	
+
 #if DebugFoodPatches
 	printf( "%s: couldn't add food to patch because foodCount (%d) >= maxFoodCount (%d)\n", __FUNCTION__, foodCount, maxFoodCount );
 #endif
-	
+
 	return NULL;
 }
 

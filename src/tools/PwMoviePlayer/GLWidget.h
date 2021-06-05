@@ -2,6 +2,7 @@
 #define GLWidget_h
 
 #include <stdint.h>
+#include <stdio.h>
 
 #include <QGLWidget>
 
@@ -26,8 +27,10 @@ public:
 	~GLWidget();
 
 	void SetFrame( Frame *frame );
-	
+
 	void Draw();
+	void Write( FILE *file );
+	void Save();
 
 protected:
 	void initializeGL();

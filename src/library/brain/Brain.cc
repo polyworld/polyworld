@@ -57,9 +57,20 @@ void Brain::processWorldfile( proplib::Document &doc )
 		if( val == "F" )
 			Brain::config.neuronModel = Brain::Configuration::FIRING_RATE;
 		else if( val == "T" )
-			Brain::config.neuronModel = Brain::Configuration::TAU;
+			Brain::config.neuronModel = Brain::Configuration::TAU_GAIN;
 		else if( val == "S" )
 			Brain::config.neuronModel = Brain::Configuration::SPIKING;
+		else
+			assert( false );
+	}
+	{
+		string val = doc.get( "LearningMode" );
+		if( val == "None" )
+			Brain::config.learningMode = Brain::Configuration::LEARN_NONE;
+		else if( val == "Prebirth" )
+			Brain::config.learningMode = Brain::Configuration::LEARN_PREBIRTH;
+		else if( val == "All" )
+			Brain::config.learningMode = Brain::Configuration::LEARN_ALL;
 		else
 			assert( false );
 	}
@@ -78,16 +89,25 @@ void Brain::processWorldfile( proplib::Document &doc )
 	Brain::config.Tau.maxVal = doc.get( "TauMax" );
 	Brain::config.Tau.seedVal = doc.get( "TauSeed" );
 
+	Brain::config.Gain.minVal = doc.get( "GainMin" );
+	Brain::config.Gain.maxVal = doc.get( "GainMax" );
+	Brain::config.Gain.seedVal = doc.get( "GainSeed" );
+
     Brain::config.maxbias = doc.get( "MaxBiasWeight" );
 	Brain::config.maxneuron2energy = doc.get( "EnergyUseNeurons" );
 	Brain::config.outputSynapseLearning = doc.get( "OutputSynapseLearning" );
 	Brain::config.synapseFromOutputNeurons = doc.get( "SynapseFromOutputNeurons" );
+	Brain::config.synapseFromInputToOutputNeurons = doc.get( "SynapseFromInputToOutputNeurons" );
 	Brain::config.numPrebirthCycles = doc.get( "PreBirthCycles" );
 
     Brain::config.logisticSlope = doc.get( "LogisticSlope" );
+    Brain::config.fixedInitWeight = doc.get( "FixedInitSynapseWeight" );
+    Brain::config.gaussianInitWeight = doc.get( "GaussianInitSynapseWeight" );
+    Brain::config.gaussianInitMaxStdev = doc.get( "GaussianInitSynapseWeightMaxStdev" );
     Brain::config.maxWeight = doc.get( "MaxSynapseWeight" );
     Brain::config.initMaxWeight = doc.get( "MaxSynapseWeightInitial" );
 
+    Brain::config.enableLearning = Brain::config.learningMode != Brain::Configuration::LEARN_NONE;
     Brain::config.minlrate = doc.get( "MinLearningRate" );
     Brain::config.maxlrate = doc.get( "MaxLearningRate" );
 
@@ -107,12 +127,12 @@ void Brain::processWorldfile( proplib::Document &doc )
 void Brain::init()
 {
     Brain::config.retinaWidth = max(Brain::config.minWin, GroupsBrain::config.maxvisneurpergroup);
-    
+
     if (Brain::config.retinaWidth & 1)
         Brain::config.retinaWidth++;  // keep it even for efficiency (so I'm told)
-        
+
     Brain::config.retinaHeight = Brain::config.minWin;
-    
+
     if (Brain::config.retinaHeight & 1)
         Brain::config.retinaHeight++;
 
@@ -128,6 +148,7 @@ Brain::Brain( NervousSystem *cns )
 , _neuralnet(NULL)
 , _renderer(NULL)
 , _energyUse(0)
+, _frozen(false)
 {
 }
 
@@ -164,7 +185,7 @@ void Brain::startFunctional( AbstractFile *file, long index )
 	file->printf( "version 1\n" );
 
 	// print the header, with index (agent number)
-	file->printf( "brainFunction %ld", index );	
+	file->printf( "brainFunction %ld", index );
 
 	// print neuron count, number of input neurons, number of synapses
 	_neuralnet->startFunctional( file );
@@ -195,6 +216,51 @@ void Brain::writeFunctional( AbstractFile *file )
 }
 
 //---------------------------------------------------------------------------
+// Brain::dumpSynapses
+//---------------------------------------------------------------------------
+void Brain::dumpSynapses( AbstractFile *file, long index )
+{
+	file->printf( "synapses %ld maxweight=%g numsynapses=%ld numneurons=%d numinputneurons=%d numoutputneurons=%d\n",
+				  index, Brain::config.maxWeight, _dims.numSynapses, _dims.numNeurons, _dims.numInputNeurons, _dims.numOutputNeurons );
+	_neuralnet->dumpSynapses( file );
+}
+
+//---------------------------------------------------------------------------
+// Brain::loadSynapses
+//---------------------------------------------------------------------------
+void Brain::loadSynapses( AbstractFile *file, float maxWeight )
+{
+	long index;
+	float fileMaxWeight;
+	long numSynapses;
+	int numNeurons;
+	int numInputNeurons;
+	int numOutputNeurons;
+	int rc = file->scanf( "synapses %ld maxweight=%g numsynapses=%ld numneurons=%d numinputneurons=%d numoutputneurons=%d\n",
+						  &index, &fileMaxWeight, &numSynapses, &numNeurons, &numInputNeurons, &numOutputNeurons );
+	assert( rc == 6 );
+	assert( numSynapses == _dims.numSynapses );
+	assert( numNeurons == _dims.numNeurons );
+	assert( numInputNeurons == _dims.numInputNeurons );
+	assert( numOutputNeurons == _dims.numOutputNeurons );
+	_neuralnet->loadSynapses( file );
+	if( maxWeight >= 0.0f )
+		_neuralnet->scaleSynapses( maxWeight / fileMaxWeight );
+}
+
+//---------------------------------------------------------------------------
+// Brain::copySynapses
+//---------------------------------------------------------------------------
+void Brain::copySynapses( Brain *other )
+{
+	assert( other->_dims.numSynapses == _dims.numSynapses );
+	assert( other->_dims.numNeurons == _dims.numNeurons );
+	assert( other->_dims.numInputNeurons == _dims.numInputNeurons );
+	assert( other->_dims.numOutputNeurons == _dims.numOutputNeurons );
+	_neuralnet->copySynapses( other->_neuralnet );
+}
+
+//---------------------------------------------------------------------------
 // Brain::prebirth
 //---------------------------------------------------------------------------
 void Brain::prebirth()
@@ -215,7 +281,7 @@ void Brain::prebirth()
 // Brain::update
 //---------------------------------------------------------------------------
 void Brain::update( bool bprint )
-{	 
+{
 	_neuralnet->update( bprint );
 }
 

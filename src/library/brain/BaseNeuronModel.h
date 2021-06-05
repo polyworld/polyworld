@@ -39,18 +39,18 @@ class BaseNeuronModel : public NeuronModel
 		free( synapse );
 	}
 
-	virtual void init_derived( float initial_activation ) = 0;
+	virtual void init_derived( double initial_activation ) = 0;
 
 	virtual void init( Dimensions *dims,
-					   float initial_activation )
+					   double initial_activation )
 	{
 		this->dims = dims;
 
 #define __ALLOC(NAME, TYPE, N) if(NAME) free(NAME); NAME = (TYPE *)calloc(N, sizeof(TYPE)); assert(NAME);
 
 		__ALLOC( neuron, T_neuron, dims->numNeurons );
-		__ALLOC( neuronactivation, float, dims->numNeurons );
-		__ALLOC( newneuronactivation, float, dims->numNeurons );
+		__ALLOC( neuronactivation, double, dims->numNeurons );
+		__ALLOC( newneuronactivation, double, dims->numNeurons );
 
 		__ALLOC( synapse, T_synapse, dims->numSynapses );
 
@@ -61,7 +61,7 @@ class BaseNeuronModel : public NeuronModel
 			Nerve *nerve = *it;
 
 			nerve->config( &(this->neuronactivation), &(this->newneuronactivation) );
-		}		
+		}
 
 		init_derived( initial_activation );
 	}
@@ -97,6 +97,20 @@ class BaseNeuronModel : public NeuronModel
 		n.endsynapses = endsynapses;
 	}
 
+	virtual void get_synapse( int index,
+							  short &from,
+							  short &to,
+							  float &efficacy,
+							  float &lrate )
+	{
+		T_synapse &s = synapse[index];
+
+		from = s.fromneuron;
+		to = s.toneuron;
+		efficacy = s.efficacy;
+		lrate = s.lrate;
+	}
+
 	virtual void set_synapse( int index,
 							  int from,
 							  int to,
@@ -122,6 +136,30 @@ class BaseNeuronModel : public NeuronModel
 		}
 #endif
 
+	}
+
+	virtual void getActivations( double *activations, int start, int count )
+	{
+		for( int i = 0; i < count; i++ )
+		{
+			activations[i] = neuronactivation[start + i];
+		}
+	}
+
+	virtual void setActivations( double *activations, int start, int count )
+	{
+		for( int i = 0; i < count; i++ )
+		{
+			neuronactivation[start + i] = activations[i];
+		}
+	}
+
+	virtual void randomizeActivations()
+	{
+		for( int i = 0; i < dims->numNeurons; i++ )
+		{
+			neuronactivation[i] = randpw();
+		}
 	}
 
 	virtual void dumpAnatomical( AbstractFile *file )
@@ -163,7 +201,7 @@ class BaseNeuronModel : public NeuronModel
 			if( cmIndex > imax )
 				imax = cmIndex;
 		}
-	
+
 		// fill in the biases
 		for( i = 0; i < dims->numNeurons; i++ )
 		{
@@ -191,14 +229,14 @@ class BaseNeuronModel : public NeuronModel
 				file->printf( "%+06.4f ", connectionMatrix[j + i*(dims->numNeurons+1)] * inverseMaxWeight );
 			file->printf( ";\n" );
 		}
-		
+
 		free( connectionMatrix );
 	}
 
 	virtual void startFunctional( AbstractFile *file )
 	{
 		file->printf( " %d %d %d %ld",
-					  dims->numNeurons, dims->numInputNeurons, dims->numOutputNeurons, dims->numSynapses );		
+					  dims->numNeurons, dims->numInputNeurons, dims->numOutputNeurons, dims->numSynapses );
 	}
 
 	virtual void writeFunctional( AbstractFile *file )
@@ -209,13 +247,72 @@ class BaseNeuronModel : public NeuronModel
 		}
 	}
 
+	virtual void dumpSynapses( AbstractFile *file )
+	{
+		for( long i = 0; i < dims->numSynapses; i++ )
+		{
+			T_synapse &s = synapse[i];
+			file->printf( "%hd %hd %g %g\n", s.fromneuron, s.toneuron, s.efficacy, s.lrate );
+		}
+	}
+
+	virtual void setSynapses( T_synapse *newsynapse )
+	{
+		short prevtoneuron = -1;
+		for( long i = 0; i < dims->numSynapses; i++ )
+		{
+			T_synapse &s = newsynapse[i];
+			set_synapse( i, s.fromneuron, s.toneuron, s.efficacy, s.lrate );
+			if( s.toneuron != prevtoneuron )
+			{
+				neuron[s.toneuron].startsynapses = i;
+			}
+			neuron[s.toneuron].endsynapses = i + 1;
+			prevtoneuron = s.toneuron;
+		}
+	}
+
+	virtual void loadSynapses( AbstractFile *file )
+	{
+		T_synapse *newsynapse = new T_synapse[dims->numSynapses];
+		for( long i = 0; i < dims->numSynapses; i++ )
+		{
+			T_synapse &s = newsynapse[i];
+			int rc = file->scanf( "%hd %hd %g %g", &s.fromneuron, &s.toneuron, &s.efficacy, &s.lrate );
+			assert( rc == 4 );
+		}
+		setSynapses( newsynapse );
+		delete[] newsynapse;
+	}
+
+	virtual void copySynapses( NeuronModel *other )
+	{
+		T_synapse *newsynapse = new T_synapse[dims->numSynapses];
+		for( long i = 0; i < dims->numSynapses; i++ )
+		{
+			T_synapse &s = newsynapse[i];
+			other->get_synapse( i, s.fromneuron, s.toneuron, s.efficacy, s.lrate );
+		}
+		setSynapses( newsynapse );
+		delete[] newsynapse;
+	}
+
+	virtual void scaleSynapses( float factor )
+	{
+		for( long i = 0; i < dims->numSynapses; i++ )
+		{
+			T_synapse &s = synapse[i];
+			s.efficacy *= factor;
+		}
+	}
+
 	//protected:
 	NervousSystem *cns;
 	Dimensions *dims;
 
 	T_neuron *neuron;
-	float *neuronactivation;
-	float *newneuronactivation;
+	double *neuronactivation;
+	double *newneuronactivation;
 	T_synapse *synapse;
 
 #if PrintBrain

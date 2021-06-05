@@ -109,7 +109,7 @@ Energy food::eat(const Energy &e)
 	fEnergy -= actual;
 
 	initlen();
-	
+
 	return actual;
 }
 
@@ -168,15 +168,29 @@ void food::initfood( const FoodType *foodType, long step, const Energy &e, float
 	initrest();
 
 	fCreationStep = step;
-	gAllFood.push_back( this );
-	fAllFoodIterator = --gAllFood.end();
+	if( step >= 0 )
+	{
+		gAllFood.push_back( this );
+		fAllFoodIterator = --gAllFood.end();
+	}
+	else
+	{
+		fAllFoodIterator = gAllFood.begin();
+		while( fAllFoodIterator != gAllFood.end() )
+		{
+			if( (*fAllFoodIterator)->fCreationStep > step )
+				break;
+			fAllFoodIterator++;
+		}
+		fAllFoodIterator = gAllFood.insert( fAllFoodIterator, this );
+	}
 	assert( *fAllFoodIterator == this );
 }
- 
+
 
 //-------------------------------------------------------------------------------------------
 // food::initlen
-//-------------------------------------------------------------------------------------------       
+//-------------------------------------------------------------------------------------------
 void food::initlen()
 {
 	float lxz = 0.75 * fEnergy.mean() / gSize2Energy;
@@ -187,7 +201,7 @@ void food::initlen()
 
 //-------------------------------------------------------------------------------------------
 // food::initrest
-//-------------------------------------------------------------------------------------------           
+//-------------------------------------------------------------------------------------------
 void food::initrest()
 {
 	setType( FOODTYPE );
@@ -198,7 +212,7 @@ void food::initrest()
 
 //-------------------------------------------------------------------------------------------
 // food::setradius
-//-------------------------------------------------------------------------------------------           
+//-------------------------------------------------------------------------------------------
 void food::setradius()
 {
 	if( !fRadiusFixed )  //  only set radius anew if not set manually

@@ -75,22 +75,23 @@ public:
 		float za;
 		float xb;
 		float zb;
-	}; 
+	};
 
 	static float gBarrierHeight;
 	static Color gBarrierColor;
 	static bool gStickyBarriers;
 	static bool gRatioPositions;
-	static bxsortedlist gXSortedBarriers;	
+	static bxsortedlist gXSortedBarriers;
 	static std::vector<barrier *> gBarriers;
 
     barrier();
     ~barrier();
-    
+
 	void init();
+	void draw();
 
 	void update();
-	
+
 	LineSegment &getPosition();
 
     float xmin();
@@ -100,9 +101,9 @@ public:
     float dist( float x, float z );
     float sina();
     float cosa();
-	
+
 	bool needXSort();
-    
+
 protected:
     void updateVertices();
 

@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <gsl/gsl_randist.h>
 #include <gsl/gsl_rng.h>
 
 #include "misc.h"
@@ -106,6 +107,19 @@ double RandomNumberGenerator::drand()
 		return gsl_rng_uniform( (gsl_rng *)state );
 	case GLOBAL:
 		return drand48();
+	default:
+		assert( false );
+	}
+}
+
+double RandomNumberGenerator::nrand()
+{
+	switch( type )
+	{
+	case LOCAL:
+		return gsl_ran_ugaussian( (gsl_rng *)state );
+	case GLOBAL:
+		return ::nrand();
 	default:
 		assert( false );
 	}

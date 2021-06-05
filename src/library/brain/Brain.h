@@ -46,7 +46,7 @@ class NeuronModel;
 // Brain
 //===========================================================================
 class Brain
-{	
+{
 public:
 	static struct Configuration
 	{
@@ -58,15 +58,27 @@ public:
 		enum
 		{
 			FIRING_RATE,
-			TAU,
+			TAU_GAIN,
 			SPIKING
 		} neuronModel;
+		enum
+		{
+			LEARN_NONE,
+			LEARN_PREBIRTH,
+			LEARN_ALL
+		} learningMode;
 		struct
 		{
 			float minVal;
 			float maxVal;
 			float seedVal;
 		} Tau;
+		struct
+		{
+			float minVal;
+			float maxVal;
+			float seedVal;
+		} Gain;
 		struct
 		{
 			bool enableGenes;
@@ -82,10 +94,15 @@ public:
 		float maxbias;
 		bool outputSynapseLearning;
 		bool synapseFromOutputNeurons;
+		bool synapseFromInputToOutputNeurons;
 		long numPrebirthCycles;
 		float logisticSlope;
+		bool fixedInitWeight;
+		bool gaussianInitWeight;
+		float gaussianInitMaxStdev;
 		float maxWeight;
 		float initMaxWeight;
+		bool enableLearning;
 		float minlrate;
 		float maxlrate;
 		float decayRate;
@@ -101,7 +118,7 @@ public:
 
     Brain( NervousSystem *cns );
     virtual ~Brain();
-    
+
 	void prebirth();
     void update( bool bprint );
 
@@ -110,13 +127,27 @@ public:
     float getEnergyUse();
     short getNumNeurons();
 	long  getNumSynapses();
-        
+	NeuronModel::Dimensions getDimensions();
+	NeuronModel *getNeuronModel();
+
+	void getActivations( double *activations, int start, int count );
+	void setActivations( double *activations, int start, int count );
+	void randomizeActivations();
+
+	bool isFrozen();
+	void freeze();
+	void unfreeze();
+
 	void dumpAnatomical( AbstractFile *file, long index, float fitness );
-	
+
 	void startFunctional( AbstractFile *file, long index );
 	void endFunctional( AbstractFile* file, float fitness );
 	void writeFunctional( AbstractFile* file );
-	
+
+	void dumpSynapses( AbstractFile *file, long index );
+	void loadSynapses( AbstractFile *file, float maxWeight = -1.0f );
+	void copySynapses( Brain *other );
+
 protected:
 	friend class agent;
 
@@ -125,6 +156,7 @@ protected:
 	NeuronModel *_neuralnet;
 	NeuralNetRenderer *_renderer;
 	float _energyUse;
+	bool _frozen;
 };
 
 //===========================================================================
@@ -133,5 +165,13 @@ protected:
 inline float Brain::getEnergyUse() { return _energyUse; }
 inline short Brain::getNumNeurons() { return _dims.numNeurons; }
 inline long Brain::getNumSynapses() { return _dims.numSynapses; }
+inline NeuronModel::Dimensions Brain::getDimensions() { return _dims; }
+inline NeuronModel *Brain::getNeuronModel() { return _neuralnet; }
+inline void Brain::getActivations( double *activations, int start, int count ) { _neuralnet->getActivations( activations, start, count ); }
+inline void Brain::setActivations( double *activations, int start, int count ) { _neuralnet->setActivations( activations, start, count ); }
+inline void Brain::randomizeActivations() { _neuralnet->randomizeActivations(); }
+inline bool Brain::isFrozen() { return _frozen; }
+inline void Brain::freeze() { _frozen = true; }
+inline void Brain::unfreeze() { _frozen = false; }
 
 // Macros

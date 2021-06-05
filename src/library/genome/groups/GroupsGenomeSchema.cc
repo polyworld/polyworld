@@ -55,10 +55,10 @@ void GroupsGenomeSchema::define()
 
 #define INPUT1(NAME) add( new ImmutableNeurGroupGene(#NAME,			\
 													 NGT_INPUT) )
-#define INPUT(NAME, MINNEUR, MAXNEUR) add( new MutableNeurGroupGene(#NAME, \
-																	NGT_INPUT, \
-																	MINNEUR, \
-																	MAXNEUR) )
+#define INPUT(NAME, MINNEUR, MAXNEUR) if( MINNEUR == MAXNEUR ) \
+									  add( new ImmutableNeurGroupGene(#NAME, NGT_INPUT, MINNEUR) ); \
+									  else \
+									  add( new MutableNeurGroupGene(#NAME, NGT_INPUT, MINNEUR, MAXNEUR) )
 #define OUTPUT(NAME) add( new ImmutableNeurGroupGene(#NAME,			\
 													 NGT_OUTPUT) )
 #define INTERNAL(NAME, MINNEUR, MAXNEUR) add( new MutableNeurGroupGene(#NAME, \
@@ -103,7 +103,8 @@ void GroupsGenomeSchema::define()
 	OUTPUT( Yaw );
 	if( agent::config.yawEncoding == agent::YE_OPPOSE )
 		OUTPUT( YawOppose );
-	OUTPUT( Light );
+	if( agent::config.hasLightBehavior )
+		OUTPUT( Light );
 	OUTPUT( Focus );
 
 	if( agent::config.enableVisionPitch )
@@ -125,6 +126,14 @@ void GroupsGenomeSchema::define()
 			  GroupsBrain::config.mininternalneurgroups,
 			  GroupsBrain::config.maxinternalneurgroups );
 
+	if( GroupsBrain::config.orderedinternalneurgroups )
+	{
+		GROUP_ATTR( Order,
+					INTERNAL,
+					0.0,
+					1.0 );
+	}
+
 	GROUP_ATTR( ExcitatoryNeuronCount,
 				INTERNAL,
 				GroupsBrain::config.mineneurpergroup,
@@ -134,18 +143,22 @@ void GroupsGenomeSchema::define()
 				INTERNAL,
 				GroupsBrain::config.minineurpergroup,
 				GroupsBrain::config.maxineurpergroup );
-				
+
 	GROUP_ATTR( Bias,
 				NONINPUT,
 				-Brain::config.maxbias,
 				Brain::config.maxbias );
-				
-	if( Brain::config.neuronModel == Brain::Configuration::TAU )
+
+	if( Brain::config.neuronModel == Brain::Configuration::TAU_GAIN )
 	{
 		GROUP_ATTR( Tau,
 					NONINPUT,
 					Brain::config.Tau.minVal,
 					Brain::config.Tau.maxVal );
+		GROUP_ATTR( Gain,
+					NONINPUT,
+					Brain::config.Gain.minVal,
+					Brain::config.Gain.maxVal );
 	}
 
 	if( Brain::config.neuronModel == Brain::Configuration::SPIKING
@@ -172,24 +185,43 @@ void GroupsGenomeSchema::define()
 					Brain::config.Spiking.dMaxVal );
 	}
 
+	if( Brain::config.gaussianInitWeight )
+	{
+		SYNAPSE_ATTR( WeightStdev,
+					  false,
+					  false,
+					  0.0,
+					  1.0 );
+	}
+
 	SYNAPSE_ATTR( ConnectionDensity,
 				  false,
 				  false,
 				  GroupsBrain::config.minconnectiondensity,
 				  GroupsBrain::config.maxconnectiondensity );
 
-	SYNAPSE_ATTR( LearningRate,
-				  true,
-				  true,
-				  Brain::config.minlrate,
-				  Brain::config.maxlrate );	
+	if( Brain::config.enableLearning )
+	{
+		if( Brain::config.minlrate == Brain::config.maxlrate )
+		{
+			add( new ImmutableScalarGene("LearningRate", Brain::config.minlrate) );
+		}
+		else
+		{
+			SYNAPSE_ATTR( LearningRate,
+						  true,
+						  true,
+						  Brain::config.minlrate,
+						  Brain::config.maxlrate );
+		}
+	}
 
 	SYNAPSE_ATTR( TopologicalDistortion,
 				  false,
 				  false,
 				  GroupsBrain::config.mintopologicaldistortion,
 				  GroupsBrain::config.maxtopologicaldistortion );
-				  
+
 	if( GroupsBrain::config.enableTopologicalDistortionRngSeed )
 	{
 		SYNAPSE_ATTR( TopologicalDistortionRngSeed,
@@ -207,7 +239,7 @@ void GroupsGenomeSchema::define()
 					  GroupsBrain::config.minInitWeightRngSeed,
 					  GroupsBrain::config.maxInitWeightRngSeed );
 	}
-	
+
 #undef INPUT1
 #undef INPUT
 #undef OUTPUT
@@ -221,6 +253,16 @@ void GroupsGenomeSchema::define()
 //-------------------------------------------------------------------------------------------
 void GroupsGenomeSchema::seed( Genome *g_ )
 {
+	if( GenomeSchema::config.seedType == GenomeSchema::SEED_RANDOM )
+	{
+		g_->randomize();
+		return;
+	}
+	else if( GenomeSchema::config.seedType == GenomeSchema::SEED_SIMPLE )
+	{
+		g_->seedAll( 0 );
+	}
+
 	// ---
 	// --- Base Class
 	// ---
@@ -239,20 +281,71 @@ void GroupsGenomeSchema::seed( Genome *g_ )
 			 get(#FROM),						\
 			 get(#TO),							\
 			 VAL )
+#define SEED_IO_SYNAPSE(NAME,TYPE,FROM,TO,VAL)	\
+	g->seed( get(#NAME),						\
+			 getSynapseType(#TYPE),				\
+			 FROM,								\
+			 TO,								\
+			 VAL )
 
-	SEED( Red, 0.5 );
-	SEED( Green, 0.5 );
-	SEED( Blue, 0.5 );
+	if( Brain::config.neuronModel == Brain::Configuration::TAU_GAIN )
+	{
+		SEED( Tau, Brain::config.Tau.seedVal );
+		SEED( Gain, Brain::config.Gain.seedVal );
+	}
+
+	if( GroupsBrain::config.minvisneurpergroup != GroupsBrain::config.maxvisneurpergroup )
+	{
+		SEED( Red, GroupsBrain::config.seedvisneur );
+		SEED( Green, GroupsBrain::config.seedvisneur );
+		SEED( Blue, GroupsBrain::config.seedvisneur );
+	}
+
+	if( GroupsBrain::config.orderedinternalneurgroups )
+	{
+		SEED( Order, 0.5 );
+	}
+
+	if( GenomeSchema::config.seedType == GenomeSchema::SEED_SIMPLE )
+	{
+		SEED( Bias, 0.5 );
+		SEED_GROUP( Bias, Yaw, 0.5 + GenomeSchema::config.simpleSeedYawBiasDelta * (randpw() < 0.5 ? -1 : 1) );
+		SEED( ConnectionDensity, GroupsBrain::config.simpleseedconnectiondensity );
+		itfor( GeneVector, neurgroups, itIn )
+		{
+			NeurGroupGene *geneIn = GroupsGeneType::to_NeurGroup(*itIn);
+			if( geneIn->getGroupType() != NGT_INPUT )
+			{
+				continue;
+			}
+			itfor( GeneVector, neurgroups, itOut )
+			{
+				NeurGroupGene *geneOut = GroupsGeneType::to_NeurGroup(*itOut);
+				if( geneOut->getGroupType() != NGT_OUTPUT )
+				{
+					continue;
+				}
+				SEED_IO_SYNAPSE( ConnectionDensity, EE, geneIn, geneOut, GroupsBrain::config.simpleseedioconnectiondensity );
+				SEED_IO_SYNAPSE( ConnectionDensity, IE, geneIn, geneOut, GroupsBrain::config.simpleseedioconnectiondensity );
+			}
+		}
+		if( GroupsBrain::config.mirroredtopologicaldistortion )
+		{
+			SEED( TopologicalDistortion, 0.5 );
+		}
+		else
+		{
+			SEED( TopologicalDistortion, 1.0 );
+		}
+		return;
+	}
+
 	SEED( InternalNeuronGroupCount, 0 );
 
 	SEED( ExcitatoryNeuronCount, 0 );
 	SEED( InhibitoryNeuronCount, 0 );
 
 	SEED( Bias, 0.5 );
-	if( Brain::config.neuronModel == Brain::Configuration::TAU )
-	{
-		SEED( Tau, Brain::config.Tau.seedVal );
-	}
 
 	SEED_GROUP( Bias, Mate, 1.0 );
 	SEED_GROUP( Bias, Fight, GenomeSchema::config.seedFightBias );
@@ -267,7 +360,10 @@ void GroupsGenomeSchema::seed( Genome *g_ )
 	}
 
 	SEED( ConnectionDensity, 0 );
-	SEED( LearningRate, 0 );
+	if( Brain::config.enableLearning && Brain::config.minlrate != Brain::config.maxlrate )
+	{
+		SEED( LearningRate, 0 );
+	}
 	SEED( TopologicalDistortion, 0 );
 	if( GroupsBrain::config.enableTopologicalDistortionRngSeed )
 	{
@@ -517,7 +613,7 @@ int GroupsGenomeSchema::getMaxNeuronCount( NeurGroupType group )
 			if( gene->isMember(group) )
 			{
 				n += gene->getMaxNeuronCount();
-			} 
+			}
 		}
 
 		return cache.neuronCount[group] = n;

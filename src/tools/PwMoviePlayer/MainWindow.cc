@@ -1,4 +1,5 @@
 #include <iostream>
+#include <stdio.h>
 
 // OpenGL
 #include <gl.h>
@@ -37,16 +38,20 @@ MainWindow::MainWindow( const char* windowTitle,
 						char** legend,
 						uint32_t startFram,
 						uint32_t endFram,
+						uint32_t framDelta,
 						double frameRate,
-						bool loop)
+						bool loop,
+						bool write )
 	:	QMainWindow( NULL, windowFlags )
 {
 	setWindowTitle( windowTitle );
 	windowSettingsName = windowSettingsNameParam;
 	reader = readerParam;
-	startFrame = startFram;
-	endFrame = endFram;
+	startFrame = startFram == 0 ? 1 : startFram;
+	endFrame = endFram == 0 ? reader->getFrameCount() : endFram;
+	frameDelta = framDelta;
 	looping = loop;
+	writing = write;
 
 	// Create the main menubar
 	//CreateMenus( menuBar() );
@@ -68,8 +73,8 @@ MainWindow::MainWindow( const char* windowTitle,
 	glWidget = new GLWidget( content, legend );
 
 	slider = new QSlider( Qt::Horizontal, content );
-	slider->setMinimum( 1 );
-	slider->setMaximum( reader->getFrameCount() );
+	slider->setMinimum( startFrame );
+	slider->setMaximum( endFrame );
 	connect( slider, SIGNAL( sliderMoved(int) ), this, SLOT( sliderMoved(int) ) );
 
 	contentLayout->addWidget( glWidget );
@@ -78,8 +83,11 @@ MainWindow::MainWindow( const char* windowTitle,
 
 	setCentralWidget( content );
 
-	state = PAUSED;
-	SetFrame( startFrame == 0 ? 1 : startFrame );
+	if( write )
+		state = PLAYING;
+	else
+		state = PAUSED;
+	SetFrame( startFrame );
 
 	// Create playback timer
 	QTimer* idleTimer = new QTimer( this );
@@ -104,9 +112,6 @@ void MainWindow::Tick()
 	if( state == PLAYING )
 	{
 		NextFrame();
-
-		if( looping && frame.index == reader->getFrameCount() )
-			SetFrame( startFrame == 0 ? 1 : startFrame );
 	}
 }
 
@@ -123,7 +128,7 @@ void MainWindow::sliderMoved( int value )
 //---------------------------------------------------------------------------
 void MainWindow::SetFrame( uint32_t index )
 {
-	if( (index > 0) && (index <= reader->getFrameCount()) )
+	if( (index >= startFrame) && (index <= endFrame) )
 	{
 		frame.index = index;
 
@@ -134,6 +139,8 @@ void MainWindow::SetFrame( uint32_t index )
 						   &frame.rgbBuf );
 
 		glWidget->SetFrame( &frame );
+		if( writing )
+			glWidget->Write( stdout );
 
 		slider->setSliderPosition( index );
 	}
@@ -142,17 +149,49 @@ void MainWindow::SetFrame( uint32_t index )
 //---------------------------------------------------------------------------
 // MainWindow::NextFrame()
 //---------------------------------------------------------------------------
-void MainWindow::NextFrame()
+void MainWindow::NextFrame( uint32_t delta )
 {
-	SetFrame( frame.index + 1 );
+	if( delta == 0 )
+		delta = frameDelta;
+	uint32_t index = frame.index + delta;
+	if( index > endFrame )
+	{
+		if( frame.index < endFrame )
+		{
+			SetFrame( endFrame );
+		}
+		else
+		{
+			if( looping )
+			{
+				SetFrame( startFrame );
+			}
+			else
+			{
+				if( writing )
+					close();
+				else
+					state = PAUSED;
+			}
+		}
+	}
+	else
+	{
+		SetFrame( index );
+	}
 }
 
 //---------------------------------------------------------------------------
 // MainWindow::PrevFrame()
 //---------------------------------------------------------------------------
-void MainWindow::PrevFrame()
+void MainWindow::PrevFrame( uint32_t delta )
 {
-	SetFrame( frame.index - 1 );
+	if( delta == 0 )
+		delta = frameDelta;
+	uint32_t index = frame.index - delta;
+	if( index < startFrame || index > frame.index )
+		index = startFrame;
+	SetFrame( index );
 }
 
 //---------------------------------------------------------------------------
@@ -160,6 +199,12 @@ void MainWindow::PrevFrame()
 //---------------------------------------------------------------------------
 void MainWindow::keyReleaseEvent( QKeyEvent* event )
 {
+	uint32_t delta = 0;
+	if( event->modifiers() & Qt::ShiftModifier )
+		delta = 1;
+	else if( event->modifiers() & Qt::ControlModifier )
+		delta = 10 * frameDelta;
+
 	switch( event->key() )
 	{
 		case Qt::Key_Space:
@@ -170,13 +215,16 @@ void MainWindow::keyReleaseEvent( QKeyEvent* event )
 
 		case Qt::Key_Right:
 			state = PAUSED;
-			NextFrame();
+			NextFrame( delta );
 			break;
 
 		case Qt::Key_Left:
 			state = PAUSED;
-			PrevFrame();
+			PrevFrame( delta );
 			break;
+
+		case Qt::Key_S:
+			glWidget->Save();
 
 		default:
 			event->ignore();

@@ -32,6 +32,7 @@ class EnergyPolarity
 	EnergyPolarity( proplib::Property &prop );
 
 	bool operator==( const EnergyPolarity &other ) const;
+	EnergyPolarity operator*( const EnergyPolarity &other ) const;
 
  private:
 	friend class Energy;
@@ -71,6 +72,7 @@ class Energy
 	Energy();
 	Energy( float val );
 	Energy( proplib::Property &prop );
+	Energy( const Energy &positive, const Energy &negative, const EnergyPolarity &polarity );
 
 	bool isDepleted() const;
 	bool isDepleted( const Energy &threshold ) const;

@@ -7,6 +7,7 @@
 #include "GenomeLayout.h"
 #include "GenomeSchema.h"
 #include "utils/graybin.h"
+#include "utils/misc.h"
 
 // forward decl
 class AbstractFile;
@@ -45,10 +46,22 @@ namespace genome
 
 		void seed( Gene *gene,
 				   float rawval_ratio );
+		void seedRandom( Gene *gene,
+						 float rawval_ratio_min,
+						 float rawval_ratio_max );
+		void seedAll( float rawval_ratio );
 
-		void randomize( float bitonprob );
+		void randomizeBits( float bitonprob );
+		void randomizeBits();
+		void randomizeBytes();
 		void randomize();
 
+		void mutateBits( float rate );
+		void mutateBits();
+		void mutateOneByte( long byte, float stdev );
+		void mutateBytes( float rate );
+		void mutateBytes();
+		void mutate( float rate );
 		void mutate();
 		virtual void crossover( Genome *g1,
 								Genome *g2,
@@ -76,6 +89,10 @@ namespace genome
 		void set_raw( int offset,
 					  int n,
 					  unsigned char rawval );
+		void set_raw_random( int offset,
+							 int n,
+							 int min,
+							 int max );
 
 		int nbytes;
 		unsigned char *mutable_data;
@@ -122,6 +139,21 @@ inline void Genome::set_raw( int offset,
 		int layoutOffset = layout->getMutableDataOffset( offset + i );
 
 		mutable_data[layoutOffset] = val;
+	}
+}
+
+inline void Genome::set_raw_random( int offset,
+									int n,
+									int min,
+									int max )
+{
+	assert( (offset >= 0) && (offset + n <= nbytes) );
+
+	for( int i = 0; i < n; i++ )
+	{
+		int layoutOffset = layout->getMutableDataOffset( offset + i );
+
+		mutable_data[layoutOffset] = (unsigned char)rrand( min, max + 1 );
 	}
 }
 

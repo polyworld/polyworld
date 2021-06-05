@@ -61,6 +61,9 @@ namespace genome
 
 		void seed( Genome *genome,
 				   unsigned char rawval );
+		void randomize( Genome *genome,
+						unsigned char rawval_min,
+						unsigned char rawval_max );
 
 		int getMutableSize();
 		int getOffset();
@@ -116,7 +119,7 @@ namespace genome
 	// === CLASS __InterpolatedGene
 	// ===
 	// === Common base class for genes whose values are derived from a range.
-	// === 
+	// ===
 	// ================================================================================
 	class __InterpolatedGene : virtual Gene
 	{

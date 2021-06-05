@@ -18,7 +18,7 @@ namespace proplib { class Document; }
 // Base class for all loggers. Provides ability to register for various
 // events from the simulation. Derived classes must inform which events are
 // to be received via initRecording(), and must also override the appropriate
-// processEvent(). This class is also capable of maintaining state for derived 
+// processEvent(). This class is also capable of maintaining state for derived
 // classes (e.g. FILE *), where that state can be associated with the lifetime
 // of the simulation or with each agent.
 //
@@ -39,11 +39,11 @@ class Logger
 	virtual void init( class TSimulation *sim, proplib::Document *doc ) = 0;
 	virtual int getMaxOpenFiles();
 
-	// 
+	//
 	// Derived classes must override any of these methods for which they register for events.
 	// e.g. if a derived class invokes initRecording(..., sim::Event_AgentBirth), then it must
 	// override processEvent( AgentBirthEvent )
-	// 
+	//
 	virtual void processEvent( const sim::SimInitedEvent &e ) { assert(false); }
 	virtual void processEvent( const sim::AgentBirthEvent &e ) { assert(false); }
 	virtual void processEvent( const sim::BrainGrownEvent &e ) { assert(false); }
@@ -60,6 +60,8 @@ class Logger
 	virtual void processEvent( const sim::BrainAnalysisEndEvent &e ) { assert(false); }
 	virtual void processEvent( const sim::StepEndEvent &e ) { assert(false); }
 	virtual void processEvent( const sim::EpochEndEvent &e ) { assert(false); }
+	virtual void processEvent( const sim::SimEndEvent &e ) { assert(false); }
+	virtual void processEvent( ) { assert(false); }
 
  protected:
 	enum StateScope
@@ -73,7 +75,7 @@ class Logger
 		// The base logger class will maintain state (e.g. FILE *) for each agent.
 		AgentStateScope
 	};
-	
+
 	Logger();
 
 	void initRecording( class TSimulation *sim,

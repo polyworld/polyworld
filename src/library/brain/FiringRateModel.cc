@@ -28,7 +28,7 @@ FiringRateModel::~FiringRateModel()
 {
 }
 
-void FiringRateModel::init_derived( float initial_activation )
+void FiringRateModel::init_derived( double initial_activation )
 {
 
 	for( int i = 0; i < dims->numNeurons; i++ )
@@ -48,7 +48,9 @@ void FiringRateModel::set_neuron( int index,
 	Neuron &n = neuron[index];
 
 	assert( !isnan(attrs->tau) );
+	assert( !isnan(attrs->gain) );
 	n.tau = attrs->tau;
+	n.gain = attrs->gain;
 }
 
 void FiringRateModel::update( bool bprint )
@@ -63,18 +65,23 @@ void FiringRateModel::update( bool bprint )
 	IF_BPRINTED
 	(
         printf("neuron (toneuron)  fromneuron   synapse   efficacy\n");
-        
+
         for( i = dims->getFirstOutputNeuron(); i < dims->numNeurons; i++ )
         {
             for( k = neuron[i].startsynapses; k < neuron[i].endsynapses; k++ )
             {
 				printf("%3d   %3d    %3d    %5ld    %f\n",
 					   i, synapse[k].toneuron, synapse[k].fromneuron,
-					   k, synapse[k].efficacy); 
+					   k, synapse[k].efficacy);
             }
         }
 	)
 
+
+	for( i = 0; i < dims->getFirstOutputNeuron(); i++ )
+	{
+		newneuronactivation[i] = neuronactivation[i];
+	}
 
 	for( i = dims->getFirstOutputNeuron(); i < dims->getFirstInternalNeuron(); i++ )
 	{
@@ -83,14 +90,15 @@ void FiringRateModel::update( bool bprint )
         {
             newneuronactivation[i] += synapse[k].efficacy *
                neuronactivation[synapse[k].fromneuron];
-		}              
+		}
 	#if GaussianOutputNeurons
         newneuronactivation[i] = gaussian( newneuronactivation[i], GaussianActivationMean, GaussianActivationVariance );
 	#else
-		if( Brain::config.neuronModel == Brain::Configuration::TAU )
+		if( Brain::config.neuronModel == Brain::Configuration::TAU_GAIN )
 		{
 			float tau = neuron[i].tau;
-			newneuronactivation[i] = (1.0 - tau) * neuronactivation[i]  +  tau * logistic( newneuronactivation[i], Brain::config.logisticSlope );
+			float gain = neuron[i].gain;
+			newneuronactivation[i] = (1.0 - tau) * neuronactivation[i]  +  tau * logistic( newneuronactivation[i], gain );
 		}
 		else
 		{
@@ -103,7 +111,7 @@ void FiringRateModel::update( bool bprint )
 	float logisticSlope = Brain::config.logisticSlope;
     for( i = dims->getFirstInternalNeuron(); i < numneurons; i++ )
     {
-		float newactivation = neuron[i].bias;
+		double newactivation = neuron[i].bias;
         for( k = neuron[i].startsynapses; k < neuron[i].endsynapses; k++ )
         {
             newactivation += synapse[k].efficacy *
@@ -111,10 +119,11 @@ void FiringRateModel::update( bool bprint )
 		}
         //newneuronactivation[i] = logistic(newneuronactivation[i], Brain::config.logisticSlope);
 
-		if( Brain::config.neuronModel == Brain::Configuration::TAU )
+		if( Brain::config.neuronModel == Brain::Configuration::TAU_GAIN )
 		{
 			float tau = neuron[i].tau;
-			newactivation = (1.0 - tau) * neuronactivation[i]  +  tau * logistic( newactivation, logisticSlope );
+			float gain = neuron[i].gain;
+			newactivation = (1.0 - tau) * neuronactivation[i]  +  tau * logistic( newactivation, gain );
 		}
 		else
 		{
@@ -135,46 +144,49 @@ void FiringRateModel::update( bool bprint )
 
 //	printf( "yaw activation = %g\n", newneuronactivation[yawneuron] );
 
-    float learningrate;
-	long numsynapses = dims->numSynapses;
-    for (k = 0; k < numsynapses; k++)
+    if (Brain::config.enableLearning && !cns->getBrain()->isFrozen())
     {
-		FiringRateModel__Synapse &syn = synapse[k];
-
-		learningrate = syn.lrate;
-
-		float efficacy = syn.efficacy + learningrate
-			* (newneuronactivation[syn.toneuron]-0.5f)
-			* (   neuronactivation[syn.fromneuron]-0.5f);
-
-        if (fabs(efficacy) > (0.5f * Brain::config.maxWeight))
+        float learningrate;
+		long numsynapses = dims->numSynapses;
+        for (k = 0; k < numsynapses; k++)
         {
-            efficacy *= 1.0f - (1.0f - Brain::config.decayRate) *
-                (fabs(efficacy) - 0.5f * Brain::config.maxWeight) / (0.5f * Brain::config.maxWeight);
-            if (efficacy > Brain::config.maxWeight)
-                efficacy = Brain::config.maxWeight;
-            else if (efficacy < -Brain::config.maxWeight)
-                efficacy = -Brain::config.maxWeight;
-        }
-        else
-        {
+			FiringRateModel__Synapse &syn = synapse[k];
+
+			learningrate = syn.lrate;
+
+			float efficacy = syn.efficacy + learningrate
+				* (newneuronactivation[syn.toneuron]-0.5)
+				* (   neuronactivation[syn.fromneuron]-0.5);
+
+            if (fabs(efficacy) > (0.5f * Brain::config.maxWeight))
+            {
+                efficacy *= 1.0f - (1.0f - Brain::config.decayRate) *
+                    (fabs(efficacy) - 0.5f * Brain::config.maxWeight) / (0.5f * Brain::config.maxWeight);
+                if (efficacy > Brain::config.maxWeight)
+                    efficacy = Brain::config.maxWeight;
+                else if (efficacy < -Brain::config.maxWeight)
+                    efficacy = -Brain::config.maxWeight;
+            }
+            else
+            {
 #define MIN(x,y) ((x) < (y) ? (x) : (y))
 #define MAX(x,y) ((x) > (y) ? (x) : (y))
-            // not strictly correct for this to be in an else clause,
-            // but if lrate is reasonable, efficacy should never change
-            // sign with a new magnitude greater than 0.5 * Brain::config.maxWeight
-            if (learningrate >= 0.0f)  // excitatory
-                efficacy = MAX(0.0f, efficacy);
-            if (learningrate < 0.0f)  // inhibitory
-                efficacy = MIN(-1.e-10f, efficacy);
-        }
+                // not strictly correct for this to be in an else clause,
+                // but if lrate is reasonable, efficacy should never change
+                // sign with a new magnitude greater than 0.5 * Brain::config.maxWeight
+                if (learningrate >= 0.0f)  // excitatory
+                    efficacy = MAX(0.0f, efficacy);
+                if (learningrate < 0.0f)  // inhibitory
+                    efficacy = MIN(-1.e-10f, efficacy);
+            }
 
-		syn.efficacy = efficacy;
+			syn.efficacy = efficacy;
+        }
     }
 
     debugcheck( "after updating synapses" );
 
-    float* saveneuronactivation = neuronactivation;
+    double* saveneuronactivation = neuronactivation;
     neuronactivation = newneuronactivation;
     newneuronactivation = saveneuronactivation;
 }

@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "agent/agent.h"
 #include "agent/Metabolism.h"
@@ -34,8 +35,20 @@ void GenomeSchema::processWorldfile( proplib::Document &doc )
 		else
 			assert( false );
 	}
+	{
+		string resolution = doc.get( "GeneticOperatorResolution" );
+		if( resolution == "Bit" )
+			GenomeSchema::config.resolution = GenomeSchema::RESOLUTION_BIT;
+		else if( resolution == "Byte" )
+			GenomeSchema::config.resolution = GenomeSchema::RESOLUTION_BYTE;
+		else
+			assert( false );
+	}
+    GenomeSchema::config.enableEvolution = doc.get( "EnableEvolution" );
     GenomeSchema::config.minMutationRate = doc.get( "MinMutationRate" );
     GenomeSchema::config.maxMutationRate = doc.get( "MaxMutationRate" );
+    GenomeSchema::config.minMutationStdevPower = doc.get( "MinMutationStdevPower" );
+    GenomeSchema::config.maxMutationStdevPower = doc.get( "MaxMutationStdevPower" );
     GenomeSchema::config.minNumCpts = doc.get( "MinCrossoverPoints" );
     GenomeSchema::config.maxNumCpts = doc.get( "MaxCrossoverPoints" );
     GenomeSchema::config.miscBias = doc.get( "MiscegenationFunctionBias" );
@@ -49,7 +62,19 @@ void GenomeSchema::processWorldfile( proplib::Document &doc )
 	}
     GenomeSchema::config.minBitProb = doc.get( "MinInitialBitProb" );
     GenomeSchema::config.maxBitProb = doc.get( "MaxInitialBitProb" );
+	{
+		string seedType = doc.get( "SeedType" );
+		if( seedType == "Legacy" )
+			GenomeSchema::config.seedType = GenomeSchema::SEED_LEGACY;
+		else if( seedType == "Simple" )
+			GenomeSchema::config.seedType = GenomeSchema::SEED_SIMPLE;
+		else if( seedType == "Random" )
+			GenomeSchema::config.seedType = GenomeSchema::SEED_RANDOM;
+		else
+			assert( false );
+	}
 	GenomeSchema::config.seedMutationRate = doc.get( "SeedMutationRate" );
+	GenomeSchema::config.simpleSeedYawBiasDelta = doc.get( "SimpleSeedYawBiasDelta" );
 	GenomeSchema::config.seedFightBias = doc.get( "SeedFightBias" );
 	GenomeSchema::config.seedFightExcitation = doc.get( "SeedFightExcitation" );
 	GenomeSchema::config.seedGiveBias = doc.get( "SeedGiveBias" );
@@ -89,10 +114,10 @@ void GenomeSchema::define()
 																				MIN, \
 																				MAX, \
 																				__InterpolatedGene::ROUND_INT_NEAREST) )
-#define SCALAR(NAME, MINVAL, MAXVAL) add( new MutableScalarGene(#NAME,	\
-																MINVAL,	\
-																MAXVAL,	\
-																__InterpolatedGene::ROUND_INT_FLOOR) )
+#define SCALAR(NAME, MINVAL, MAXVAL) if( MINVAL == MAXVAL ) \
+									 add( new ImmutableScalarGene(#NAME, MINVAL) ); \
+									 else \
+									 add( new MutableScalarGene(#NAME, MINVAL, MAXVAL, __InterpolatedGene::ROUND_INT_FLOOR) )
 #define INDEX(NAME, MINVAL, MAXVAL) add( new MutableScalarGene(#NAME,	\
 															   MINVAL,	\
 															   MAXVAL,	\
@@ -106,6 +131,13 @@ void GenomeSchema::define()
 			GenomeSchema::config.minMutationRate,
 			GenomeSchema::config.maxMutationRate );
 
+	if( GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BYTE )
+	{
+		SCALAR( MutationStdevPower,
+				GenomeSchema::config.minMutationStdevPower,
+				GenomeSchema::config.maxMutationStdevPower );
+	}
+
 	SCALAR( CrossoverPointCount,
 		   GenomeSchema::config.minNumCpts,
 		   GenomeSchema::config.maxNumCpts );
@@ -114,9 +146,12 @@ void GenomeSchema::define()
 		   agent::config.minLifeSpan,
 		   agent::config.maxLifeSpan );
 
-	SCALAR( ID,
-			0.0,
-			1.0 );
+	if( agent::config.bodyGreenChannel == agent::BGC_ID )
+	{
+		SCALAR( ID,
+				0.0,
+				1.0 );
+	}
 
 	SCALAR( Strength,
 		   agent::config.minStrength,
@@ -133,7 +168,7 @@ void GenomeSchema::define()
 	SCALAR( MateEnergyFraction,
 		   agent::config.minmateenergy,
 		   agent::config.maxmateenergy );
-			
+
 	if( Metabolism::selectionMode == Metabolism::Gene
 		&& (Metabolism::getNumberOfDefinitions() > 1) )
 	{
@@ -166,7 +201,7 @@ void GenomeSchema::seed( Genome *g )
 
 	// ---
 	// --- SCALARS (e.g. MutationRate, LifeSpan, Size)
-	// --- 
+	// ---
 	citfor( GeneVector, getAll(GeneType::SCALAR), it )
 	{
 		Gene *gene = *it;
@@ -176,7 +211,10 @@ void GenomeSchema::seed( Genome *g )
 		}
 	}
 
-	SEED( MutationRate, GenomeSchema::config.seedMutationRate );
+	if( GenomeSchema::config.minMutationRate != GenomeSchema::config.maxMutationRate )
+	{
+		SEED( MutationRate, GenomeSchema::config.seedMutationRate );
+	}
 
 	if( Metabolism::selectionMode == Metabolism::Gene
 		&& Metabolism::getNumberOfDefinitions() > 1 )

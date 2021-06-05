@@ -8,6 +8,7 @@
 #include <mutex>
 
 #include "agent/agent.h"
+#include "brain/Brain.h"
 #include "complexity/adami.h"
 #include "genome/GenomeUtil.h"
 #include "genome/SeparationCache.h"
@@ -150,6 +151,134 @@ void Logs::AdamiComplexityLog::processEvent( const StepEndEvent &e )
 		fclose( FileFourBit );
 		fclose( FileSummary );
 	}
+}
+
+
+//===========================================================================
+// AgentEnergyLog
+//===========================================================================
+
+//---------------------------------------------------------------------------
+// Logs::AgentEnergyLog::init
+//---------------------------------------------------------------------------
+void Logs::AgentEnergyLog::init( TSimulation *sim, Document *doc )
+{
+	if( doc->get("RecordAgentEnergy") )
+	{
+		initRecording( sim,
+					   AgentStateScope,
+					   sim::Event_AgentBirth
+					   | sim::Event_StepEnd
+					   | sim::Event_AgentDeath );
+	}
+}
+
+//---------------------------------------------------------------------------
+// Logs::AgentEnergyLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::AgentEnergyLog::processEvent( const sim::AgentBirthEvent &e )
+{
+	if( e.reason == LifeSpan::BR_VIRTUAL )
+		return;
+
+	char path[512];
+	sprintf( path,
+			 "run/energy/agents/agent_%ld.txt",
+			 e.a->getTypeNumber() );
+
+	DataLibWriter *writer = createWriter( e.a, path, true, false );
+
+	static const char *colnames[] =
+		{
+			"Timestep",
+			"Energy",
+			"FoodEnergy",
+			NULL
+		};
+	static const datalib::Type coltypes[] =
+		{
+			datalib::INT,
+			datalib::FLOAT,
+			datalib::FLOAT
+		};
+
+	writer->beginTable( "AgentEnergy",
+						colnames,
+						coltypes );
+}
+
+//---------------------------------------------------------------------------
+// Logs::AgentEnergyLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::AgentEnergyLog::processEvent( const sim::StepEndEvent &e )
+{
+	agent *a;
+	objectxsortedlist::gXSortedObjects.reset();
+	while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**)&a ) )
+	{
+		getWriter( a )->addRow( getStep(),
+								a->GetEnergy().sum(),
+								a->GetFoodEnergy().sum() );
+	}
+}
+
+//---------------------------------------------------------------------------
+// Logs::AgentEnergyLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::AgentEnergyLog::processEvent( const sim::AgentDeathEvent &e )
+{
+	if( e.reason != LifeSpan::DR_SIMEND )
+	{
+		getWriter( e.a )->addRow( getStep(),
+								  e.a->GetEnergy().sum(),
+								  e.a->GetFoodEnergy().sum() );
+	}
+	delete getWriter( e.a );
+}
+
+
+//===========================================================================
+// AgentMaxEnergyLog
+//===========================================================================
+
+//---------------------------------------------------------------------------
+// Logs::AgentMaxEnergyLog::init
+//---------------------------------------------------------------------------
+void Logs::AgentMaxEnergyLog::init( TSimulation *sim, Document *doc )
+{
+	if( doc->get("RecordAgentEnergy") )
+	{
+		initRecording( sim,
+					   SimulationStateScope,
+					   sim::Event_AgentGrown );
+
+		createWriter( "run/energy/agents/max.txt" );
+
+		const char *colnames[] =
+			{
+				"Agent",
+				"MaxEnergy",
+				NULL
+			};
+		const datalib::Type coltypes[] =
+			{
+				datalib::INT,
+				datalib::FLOAT
+			};
+
+		getWriter()->beginTable( "MaxEnergy",
+								  colnames,
+								  coltypes );
+	}
+}
+
+//---------------------------------------------------------------------------
+// Logs::AgentMaxEnergyLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::AgentMaxEnergyLog::processEvent( const sim::AgentGrownEvent &e )
+{
+	getWriter()->addRow( e.a->Number(),
+						 e.a->GetMaxEnergy().sum() );
 }
 
 
@@ -338,7 +467,7 @@ void Logs::BirthsDeathsLog::processEvent( const sim::AgentDeathEvent &death )
 //---------------------------------------------------------------------------
 void Logs::BrainAnatomyLog::init( TSimulation *sim, Document *doc )
 {
-	if( doc->get("RecordBrain") )
+	if( doc->get("RecordBrainAnatomy") )
 	{
 		_recordRecent = doc->get( "RecordBrainRecent" );
 		_recordBestRecent = doc->get( "RecordBrainBestRecent" );
@@ -369,7 +498,8 @@ void Logs::BrainAnatomyLog::init( TSimulation *sim, Document *doc )
 //---------------------------------------------------------------------------
 void Logs::BrainAnatomyLog::processEvent( const BrainGrownEvent &e )
 {
-	createAnatomyFile( e.a, "incept", 0.0 );
+	if( Brain::config.learningMode != Brain::Configuration::LEARN_NONE )
+		createAnatomyFile( e.a, "incept", 0.0 );
 }
 
 //---------------------------------------------------------------------------
@@ -385,7 +515,8 @@ void Logs::BrainAnatomyLog::processEvent( const AgentGrownEvent &e )
 //---------------------------------------------------------------------------
 void Logs::BrainAnatomyLog::processEvent( const BrainAnalysisBeginEvent &e )
 {
-	createAnatomyFile( e.a, "death", e.a->CurrentHeuristicFitness() );
+	if( Brain::config.learningMode == Brain::Configuration::LEARN_ALL )
+		createAnatomyFile( e.a, "death", e.a->CurrentHeuristicFitness() );
 }
 
 //---------------------------------------------------------------------------
@@ -432,7 +563,8 @@ void Logs::BrainAnatomyLog::recordEpochFittest( long step, sim::FitnessScope sco
 			char t[256];	// target (use s for source)
 			sprintf( s, "run/brain/anatomy/brainAnatomy_%ld_%s.txt", fittest->get(i)->agentID, *prefix );
 			sprintf( t, "run/brain/%s/%ld/%d_brainAnatomy_%ld_%s.txt", scopeName, step, i, fittest->get(i)->agentID, *prefix );
-			AbstractFile::link( s, t );
+			if( AbstractFile::exists( s ) )
+				AbstractFile::link( s, t );
 		}
 	}
 }
@@ -563,15 +695,15 @@ void Logs::BrainComplexityLog::writeBestRecent( long epoch )
 	double mean=0;
 	double stddev=0;	//Complexity: Time to Average and StdDev the BestRecent List
 	int count=0;		//Keeps a count of the number of entries in fittest.
-			
+
 	for( int i = 0; i < fittest->size(); i++ )
 	{
 		mean += fittest->get(i)->complexity;		// Get Sum of all Complexities
 		count++;
 	}
-		
+
 	mean = mean / count;			// Divide by count to get the average
-		
+
 
 	if( ! (mean >= 0) )			// If mean is 'nan', make it zero instead of 'nan'  -- Only true before any agents have died.
 	{
@@ -585,10 +717,10 @@ void Logs::BrainComplexityLog::writeBestRecent( long epoch )
 			stddev += pow(fittest->get(i)->complexity - mean, 2);		// Get Sum of all Complexities
 		}
 	}
-		
+
 	stddev = sqrt(stddev / (count-1) );		// note that this stddev is divided by N-1 (MATLAB default)
 	double StandardError = stddev / sqrt(count);
-			
+
 	const char *path = "run/brain/bestRecent/complexity.txt";
 	makeParentDir( path );
 	FILE *cFile = fopen( path, "a" );
@@ -596,7 +728,7 @@ void Logs::BrainComplexityLog::writeBestRecent( long epoch )
 
 	// print to complexity.txt
 	fprintf( cFile, "%ld %f %f %f %d\n", epoch, mean, stddev, StandardError, count );
-	fclose( cFile );		
+	fclose( cFile );
 }
 
 
@@ -609,7 +741,7 @@ void Logs::BrainComplexityLog::writeBestRecent( long epoch )
 //---------------------------------------------------------------------------
 void Logs::BrainFunctionLog::init( TSimulation *sim, Document *doc )
 {
-	if( doc->get("RecordBrain") )
+	if( doc->get("RecordBrainFunction") )
 	{
 		_recordRecent = doc->get( "RecordBrainRecent" );
 		_recordBestRecent = doc->get( "RecordBrainBestRecent" );
@@ -623,7 +755,8 @@ void Logs::BrainFunctionLog::init( TSimulation *sim, Document *doc )
 						   sim::Event_AgentGrown
 						   | sim::Event_BrainUpdated
 						   | sim::Event_BrainAnalysisBegin
-						   | sim::Event_EpochEnd );
+						   | sim::Event_EpochEnd
+						   | sim::Event_SimEnd );
 		}
 		else
 		{
@@ -631,7 +764,8 @@ void Logs::BrainFunctionLog::init( TSimulation *sim, Document *doc )
 						   AgentStateScope,
 						   sim::Event_AgentGrown
 						   | sim::Event_BrainUpdated
-						   | sim::Event_BrainAnalysisBegin );
+						   | sim::Event_BrainAnalysisBegin
+						   | sim::Event_SimEnd );
 		}
 	}
 }
@@ -644,7 +778,7 @@ void Logs::BrainFunctionLog::init( TSimulation *sim, Document *doc )
 void Logs::BrainFunctionLog::processEvent( const AgentGrownEvent &e )
 {
 	char path[256];
-	sprintf( path, "run/brain/function/incomplete_brainFunction_%ld.txt", e.a->Number() );	
+	sprintf( path, "run/brain/function/incomplete_brainFunction_%ld.txt", e.a->Number() );
 
 	AbstractFile *file = createFile( e.a, path );
 	e.a->GetBrain()->startFunctional( file, e.a->Number() );
@@ -687,7 +821,7 @@ void Logs::BrainFunctionLog::processEvent( const BrainAnalysisBeginEvent &e )
 		sprintf( s, "run/brain/Recent/%ld/brainFunction_%ld.txt", _simulation->getEpoch(), e.a->Number() );
 		makeParentDir( s );
 		AbstractFile::link( t, s );
-			
+
 		if( e.a->Number() <= _nseeds )
 		{
 			sprintf( s, "run/brain/Recent/0/brainFunction_%ld.txt", e.a->Number() );
@@ -707,6 +841,17 @@ void Logs::BrainFunctionLog::processEvent( const EpochEndEvent &e )
 
 	if( _recordBestSoFar )
 		recordEpochFittest( e.epoch, FS_OVERALL, "bestSoFar" );
+}
+
+//---------------------------------------------------------------------------
+// Logs::BrainFunctionLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::BrainFunctionLog::processEvent( const SimEndEvent &e )
+{
+	agent *a;
+	objectxsortedlist::gXSortedObjects.reset();
+	while( objectxsortedlist::gXSortedObjects.nextObj( AGENTTYPE, (gobject**)&a ) )
+		delete getFile( a );
 }
 
 //---------------------------------------------------------------------------
@@ -807,7 +952,7 @@ void Logs::CollisionLog::init( TSimulation *sim, Document *doc )
 {
 	if( doc->get("RecordCollisions") )
 	{
-		initRecording( sim, 
+		initRecording( sim,
 					   SimulationStateScope,
 					   sim::Event_Collision );
 
@@ -922,7 +1067,7 @@ void Logs::ContactLog::encode( const sim::AgentContactEndEvent::AgentInfo &info,
 	if( info.mate )
 	{
 		*(b++) = 'M';
-		
+
 #define __SET( PREVENT_TYPE, CODE ) if( info.mate & MATE__PREVENTED__##PREVENT_TYPE ) *(b++) = CODE
 
 		__SET( PARTNER, 'p' );
@@ -936,6 +1081,7 @@ void Logs::ContactLog::encode( const sim::AgentContactEndEvent::AgentInfo &info,
 		__SET( MAX_METABOLISM, 't' );
 		__SET( MISC, 'm' );
 		__SET( MAX_VELOCITY, 'v' );
+		__SET( WORLDFILE, 'o' );
 
 #undef __SET
 
@@ -1060,6 +1206,149 @@ void Logs::EnergyLog::processEvent( const sim::EnergyEvent &e )
 
 
 //===========================================================================
+// FoodConsumptionLog
+//===========================================================================
+
+//---------------------------------------------------------------------------
+// Logs::FoodConsumptionLog::init
+//---------------------------------------------------------------------------
+void Logs::FoodConsumptionLog::init( TSimulation *sim, Document *doc )
+{
+	if( doc->get("RecordFoodConsumption") )
+	{
+		initRecording( sim,
+					   SimulationStateScope,
+					   sim::Event_Energy );
+
+		createWriter( "run/energy/consumption.txt" );
+
+		const char *colnames[] =
+			{
+				"Timestep",
+				"Agent",
+				"FoodType",
+				"Energy",
+				"EnergyRaw",
+				NULL
+			};
+		const datalib::Type coltypes[] =
+			{
+				datalib::INT,
+				datalib::INT,
+				datalib::STRING,
+				datalib::FLOAT,
+				datalib::FLOAT
+			};
+
+		getWriter()->beginTable( "FoodConsumption",
+								  colnames,
+								  coltypes );
+	}
+}
+
+//---------------------------------------------------------------------------
+// Logs::FoodConsumptionLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::FoodConsumptionLog::processEvent( const sim::EnergyEvent &e )
+{
+	if( e.action == sim::EnergyEvent::Eat )
+	{
+		food *f = (food*)e.obj;
+		getWriter()->addRow( getStep(),
+							 e.a->Number(),
+							 f->getType()->name.c_str(),
+							 e.energy.sum(),
+							 e.energyRaw.sum() );
+	}
+}
+
+
+//===========================================================================
+// FoodEnergyLog
+//===========================================================================
+
+//---------------------------------------------------------------------------
+// Logs::FoodEnergyLog::init
+//---------------------------------------------------------------------------
+void Logs::FoodEnergyLog::init( TSimulation *sim, Document *doc )
+{
+	if( doc->get("RecordFoodEnergy") )
+	{
+		initRecording( sim,
+					   SimulationStateScope,
+					   sim::Event_SimInited
+					   | sim::Event_StepEnd );
+
+		createWriter( "run/energy/food.txt" );
+
+		int count = FoodType::getNumberDefinitions();
+		const char **colnames = new const char*[count + 2];
+		datalib::Type *coltypes = new datalib::Type[count + 1];
+		colnames[0] = "Timestep";
+		coltypes[0] = datalib::INT;
+		for( int i = 0; i < count; i++ )
+		{
+			colnames[i + 1] = FoodType::get( i )->name.c_str();
+			coltypes[i + 1] = datalib::FLOAT;
+		}
+		colnames[count + 1] = NULL;
+
+		getWriter()->beginTable( "FoodEnergy",
+								  colnames,
+								  coltypes );
+
+		delete[] colnames;
+		delete[] coltypes;
+	}
+}
+
+//---------------------------------------------------------------------------
+// Logs::FoodEnergyLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::FoodEnergyLog::processEvent( const sim::SimInitedEvent &e )
+{
+	processEvent();
+}
+
+//---------------------------------------------------------------------------
+// Logs::FoodEnergyLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::FoodEnergyLog::processEvent( const sim::StepEndEvent &e )
+{
+	processEvent();
+}
+
+//---------------------------------------------------------------------------
+// Logs::FoodEnergyLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::FoodEnergyLog::processEvent( )
+{
+	int count = FoodType::getNumberDefinitions();
+	float *energy = new float[count];
+	for( int i = 0; i < count; i++ )
+	{
+		energy[i] = 0.0f;
+	}
+	food* f;
+	objectxsortedlist::gXSortedObjects.reset();
+	while( objectxsortedlist::gXSortedObjects.nextObj( FOODTYPE, (gobject**) &f ) )
+	{
+		energy[f->getType()->index] += f->getEnergy().sum();
+	}
+	Variant *coldata = (Variant *)alloca(sizeof(Variant) * (count + 1));
+	coldata[0] = getStep();
+	for( int i = 0; i < count; i++ )
+	{
+		coldata[i + 1] = energy[i];
+	}
+	delete[] energy;
+	DataLibWriter *writer = getWriter();
+	writer->addRow( coldata );
+	writer->flush();
+}
+
+
+//===========================================================================
 // GeneStatsLog
 //===========================================================================
 
@@ -1159,33 +1448,33 @@ void Logs::GenomeMetaLog::processEvent( const sim::SimInitedEvent &birth )
 {
 	{
 		FILE* f = createFile( "run/genome/meta/geneindex.txt" );
-		
+
 		GenomeUtil::schema->printIndexes( f );
-		
+
 		fclose( f );
 	}
 	{
 		FILE* f = createFile( "run/genome/meta/genelayout.txt" );
-		
+
 		GenomeUtil::schema->printIndexes( f, GenomeUtil::layout );
-		
+
 		fclose( f );
 
 		SYSTEM( "cat run/genome/meta/genelayout.txt | sort -n > run/genome/meta/genelayout-sorted.txt" );
 	}
 	{
 		FILE* f = createFile( "run/genome/meta/genetitle.txt" );
-		
+
 		GenomeUtil::schema->printTitles( f );
-		
+
 		fclose( f );
 	}
 	{
 		FILE* f = createFile( "run/genome/meta/generange.txt" );
-		
+
 		GenomeUtil::schema->printRanges( f );
-		
-		fclose( f );		
+
+		fclose( f );
 	}
 }
 
@@ -1266,6 +1555,32 @@ void Logs::GenomeSubsetLog::processEvent( const sim::AgentBirthEvent &birth )
 
 
 //===========================================================================
+// GitRevisionLog
+//===========================================================================
+
+//---------------------------------------------------------------------------
+// Logs::GitRevisionLog::init
+//---------------------------------------------------------------------------
+void Logs::GitRevisionLog::init( TSimulation *sim, Document *doc )
+{
+	if( doc->get("RecordGitRevision") )
+	{
+		initRecording( sim,
+					   NullStateScope,
+					   sim::Event_SimInited );
+	}
+}
+
+//---------------------------------------------------------------------------
+// Logs::GitRevisionLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::GitRevisionLog::processEvent( const sim::SimInitedEvent &birth )
+{
+	SYSTEM( "git rev-parse HEAD > run/gitrevision.txt" );
+}
+
+
+//===========================================================================
 // LifeSpanLog
 //===========================================================================
 
@@ -1311,11 +1626,60 @@ void Logs::LifeSpanLog::processEvent( const sim::AgentDeathEvent &death )
 	agent *a = death.a;
 	LifeSpan *ls = a->GetLifeSpan();
 
-	getWriter()->addRow( a->Number(),
-						 ls->birth.step,
-						 LifeSpan::BR_NAMES[ls->birth.reason],
-						 ls->death.step,
-						 LifeSpan::DR_NAMES[ls->death.reason] );
+	DataLibWriter *writer = getWriter();
+	writer->addRow( a->Number(),
+					ls->birth.step,
+					LifeSpan::BR_NAMES[ls->birth.reason],
+					ls->death.step,
+					LifeSpan::DR_NAMES[ls->death.reason] );
+	writer->flush();
+}
+
+
+//===========================================================================
+// PopulationLog
+//===========================================================================
+
+//---------------------------------------------------------------------------
+// Logs::PopulationLog::init
+//---------------------------------------------------------------------------
+void Logs::PopulationLog::init( TSimulation *sim, Document *doc )
+{
+	if( doc->get("RecordPopulation") )
+	{
+		initRecording( sim,
+					   SimulationStateScope,
+					   sim::Event_StepEnd );
+
+		createWriter( "run/population.txt" );
+
+		const char *colnames[] =
+			{
+				"T",
+				"Population",
+				NULL
+			};
+		const datalib::Type coltypes[] =
+			{
+				datalib::INT,
+				datalib::INT
+			};
+
+		getWriter()->beginTable( "Population",
+								  colnames,
+								  coltypes );
+	}
+}
+
+//---------------------------------------------------------------------------
+// Logs::PopulationLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::PopulationLog::processEvent( const sim::StepEndEvent &e )
+{
+	DataLibWriter *writer = getWriter();
+	writer->addRow( getStep(),
+					_simulation->getNumAgents() );
+	writer->flush();
 }
 
 
@@ -1352,7 +1716,7 @@ void Logs::SeparationLog::init( TSimulation *sim, Document *doc )
 			assert(false);
 
 
-		createWriter( "run/genome/separations.txt" );
+		createWriter( "run/genome/separations.txt", false, false );
 	}
 }
 
@@ -1385,7 +1749,7 @@ void Logs::SeparationLog::processEvent( const sim::AgentContactBeginEvent &e )
 void Logs::SeparationLog::processEvent( const sim::AgentDeathEvent &death )
 {
 	SeparationCache::AgentEntries &entries = SeparationCache::getEntries( death.a );
-	
+
 	if( entries.size() > 0 )
 	{
 		char buf[16];
@@ -1442,4 +1806,63 @@ void Logs::SeparationLog::processEvent( const sim::StepEndEvent &e )
 
 		_births.clear();
 	}
+}
+
+
+//===========================================================================
+// SynapseLog
+//===========================================================================
+
+//---------------------------------------------------------------------------
+// Logs::SynapseLog::init
+//---------------------------------------------------------------------------
+void Logs::SynapseLog::init( TSimulation *sim, Document *doc )
+{
+	if( doc->get("RecordSynapses") )
+	{
+		initRecording( sim,
+					   NullStateScope,
+					   sim::Event_BrainGrown
+					   | sim::Event_AgentGrown
+					   | sim::Event_BrainAnalysisBegin );
+	}
+}
+
+//---------------------------------------------------------------------------
+// Logs::SynapseLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::SynapseLog::processEvent( const BrainGrownEvent &e )
+{
+	if( Brain::config.learningMode != Brain::Configuration::LEARN_NONE )
+		createSynapseFile( e.a, "incept" );
+}
+
+//---------------------------------------------------------------------------
+// Logs::SynapseLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::SynapseLog::processEvent( const AgentGrownEvent &e )
+{
+	createSynapseFile( e.a, "birth" );
+}
+
+//---------------------------------------------------------------------------
+// Logs::SynapseLog::processEvent
+//---------------------------------------------------------------------------
+void Logs::SynapseLog::processEvent( const BrainAnalysisBeginEvent &e )
+{
+	if( Brain::config.learningMode == Brain::Configuration::LEARN_ALL )
+		createSynapseFile( e.a, "death" );
+}
+
+//---------------------------------------------------------------------------
+// Logs::SynapseLog::createSynapseFile
+//---------------------------------------------------------------------------
+void Logs::SynapseLog::createSynapseFile( agent *a, const char *suffix )
+{
+	char path[256];
+	sprintf( path, "run/brain/synapses/synapses_%ld_%s.txt", a->Number(), suffix );
+
+	AbstractFile *file = createFile( path );
+	a->GetBrain()->dumpSynapses( file, a->Number() );
+	delete file;
 }

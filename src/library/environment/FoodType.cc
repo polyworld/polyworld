@@ -8,15 +8,20 @@ using namespace std;
 
 
 map<string, const FoodType *> FoodType::foodTypes;
+vector<FoodType *> FoodType::foodTypesVector;
 
 
-FoodType::FoodType( string _name,
+FoodType::FoodType( int _index,
+					string _name,
 					Color _color,
 					EnergyPolarity _energyPolarity,
+					EnergyMultiplier _eatMultiplier,
 					Energy _depletionThreshold )
-	: name( _name )
+	: index( _index)
+	, name( _name )
 	, color( _color )
 	, energyPolarity( _energyPolarity )
+	, eatMultiplier( _eatMultiplier )
 	, depletionThreshold( _depletionThreshold )
 {
 }
@@ -24,12 +29,17 @@ FoodType::FoodType( string _name,
 void FoodType::define( string _name,
 					   Color _color,
 					   EnergyPolarity _energyPolarity,
+					   EnergyMultiplier _eatMultiplier,
 					   Energy _depletionThreshold )
 {
-	foodTypes[_name] = new FoodType( _name,
-									 _color,
-									 _energyPolarity,
-									 _depletionThreshold );
+	FoodType *foodType = new FoodType( foodTypesVector.size(),
+									   _name,
+									   _color,
+									   _energyPolarity,
+									   _eatMultiplier,
+									   _depletionThreshold );
+	foodTypes[_name] = foodType;
+	foodTypesVector.push_back( foodType );
 }
 
 const FoodType *FoodType::lookup( string name )
@@ -48,6 +58,11 @@ const FoodType *FoodType::find( const EnergyPolarity &polarity )
 	}
 
 	return NULL;
+}
+
+FoodType *FoodType::get( int index )
+{
+	return foodTypesVector[index];
 }
 
 int FoodType::getNumberDefinitions() {

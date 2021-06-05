@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 import argparse
 import os
@@ -14,14 +14,15 @@ import sys
 ######################################################################
 Conf='Makefile.conf'
 
-Supported_OSes = ['linux', 'darwin']
+Supported_OSes = ['linux', 'darwin', 'bigred2']
 Supported_OSes_display = ','.join(Supported_OSes)
 
 Supported_Toolchains = ['gcc', 'llvm']
 Supported_Toolchains_display = ','.join(Supported_Toolchains)
 
 Default_CXX = {'linux': 'g++',
-               'darwin': 'clang++'}
+               'darwin': 'clang++',
+               'bigred2': 'g++'}
 
 ######################################################################
 #
@@ -32,7 +33,7 @@ def main():
     # sanity check
     if not check_exit('which bash'):
         sys.exit("Failed locating bash!")
-    
+
     #
     # Parse command-line
     #
@@ -55,7 +56,7 @@ def main():
                         help = "specify OS ("+Supported_OSes_display+")")
 
     config = vars(parser.parse_args())
-    
+
     #
     # Determine OS
     #
@@ -63,10 +64,10 @@ def main():
         config['os'] = platform.system().lower()
     else:
         config['os'] = config['os'][0]
-    
+
     if not config['os'] in Supported_OSes:
         sys.exit("Unsupported OS (" + config['os'] + "). Supported = " + Supported_OSes_display)
-    
+
     print('Operating System:', config['os'])
     
     #
@@ -80,7 +81,7 @@ def main():
     
     if not check_exit('which '+config['cxx']):
         sys.exit('Cannot locate compiler')
-    
+
     if 'clang' in config['cxx']:
         config['toolchain'] = 'llvm'
     else:
@@ -111,7 +112,7 @@ def main():
     generate_conf(config)
     if not check_exit('make clean'):
         sys.stderr.write("Warning! Encountered errors when cleaning build environment!\n")
-    
+
     #
     # Check OpenMP support
     #
@@ -157,7 +158,7 @@ def generate_conf(config):
     f.write( 'PWOPT = %s\n' % config['optimization'] )
     f.write( 'PWQMAKE = %s\n' % config['qmake'] )
     f.write( 'CXX = %s\n' % config['cxx'] )
-    
+
     f.write( 'include ${PWHOME}/etc/bld/Makefile.conf\n' )
 
     f.close()

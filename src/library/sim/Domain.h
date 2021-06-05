@@ -14,7 +14,7 @@ class Domain
  public:
 	Domain();
 	~Domain();
-	
+
     float centerX;
     float centerZ;
     float absoluteSizeX;
@@ -40,6 +40,7 @@ class Domain
     long minNumAgents;
     long maxNumAgents;
     long initNumAgents;
+    Patch* initAgentsPatch;
 	long numberToSeed;
     long numAgents;
     long numcreated;
@@ -74,7 +75,7 @@ inline Domain::~Domain()
 inline FoodPatch* Domain::whichFoodPatch( float x, float z )
 {
 	FoodPatch* fp = NULL;
-	
+
 	for( int i = 0; i < numFoodPatches; i++ )
 	{
 		if( fFoodPatches[i].pointIsInside( x, z, 0.0 ) )
@@ -83,6 +84,6 @@ inline FoodPatch* Domain::whichFoodPatch( float x, float z )
 			break;
 		}
 	}
-	
+
 	return( fp );
 }

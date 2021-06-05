@@ -1,6 +1,6 @@
 include Makefile.conf
 
-targets=library app qtrenderer rancheck PwMoviePlayer proputil pmvutil qt_clust
+targets=library app qtrenderer rancheck PwMoviePlayer proputil pmvutil qt_clust passive nullevo neurons expansion bifurcation timeseries
 
 .PHONY: ${targets} clean
 
@@ -33,6 +33,24 @@ qt_clust:
 omp_test:
 	+ make -C src/tools/omp_test
 	bin/omp_test
+
+passive:
+	+ make -C src/tools/passive
+
+nullevo:
+	+ make -C src/tools/nullevo
+
+neurons:
+	+ make -C src/tools/neurons
+
+expansion:
+	+ make -C src/tools/expansion
+
+bifurcation:
+	+ make -C src/tools/bifurcation
+
+timeseries:
+	+ make -C src/tools/timeseries
 
 clean:
 	rm -rf ${PWBLD}

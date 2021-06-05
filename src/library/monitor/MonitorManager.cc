@@ -67,8 +67,15 @@ MonitorManager::MonitorManager( TSimulation *_simulation,
 		{
 			int rank = propTracker.get( "Fitness" ).get( "Rank" );
 			bool trackTilDeath = trackMode == "Agent";
-			
+
 			parms = AgentTracker::Parms::createFitness( rank, trackTilDeath );
+		}
+		else if( selectionMode == "Number" )
+		{
+			long number = propTracker.get( "Number" );
+			bool trackTilDeath = trackMode == "Agent";
+
+			parms = AgentTracker::Parms::createNumber( number );
 		}
 		else
 		{
@@ -132,7 +139,7 @@ MonitorManager::MonitorManager( TSimulation *_simulation,
 	// --- Scenes
 	// ---
 	{
-		const char *scenes[] = { "MainScene", "OverheadScene", "FittestPOVScene" };
+		const char *scenes[] = { "MainScene", "OverheadScene", "SinglePOVScene" };
 		int nscenes = sizeof(scenes) / sizeof(char*);
 
 		for( int iscene = 0; iscene < nscenes; iscene++ )
@@ -156,14 +163,14 @@ MonitorManager::MonitorManager( TSimulation *_simulation,
 				for( size_t i = 0; i < nsettings; i++ )
 				{
 					proplib::Property &propSettings = doc.get( "CameraSettings" ).get( i );
-			
+
 					string name = propSettings.get( "Name" );
 					if( name == cameraSettingsName )
 					{
 						found = true;
 						Color color = propSettings.get( "Color" );
 						float fov = propSettings.get( "FieldOfView" );
-			
+
 						cameraProperties = SceneRenderer::CameraProperties( color, fov );
 						break;
 					}
@@ -218,7 +225,7 @@ MonitorManager::MonitorManager( TSimulation *_simulation,
 							float fixX = propFixation.get( "X" );
 							float fixY = propFixation.get( "Y" );
 							float fixZ = propFixation.get( "Z" );
-				
+
 							cameraController = new CameraController( renderer->getCamera() );
 
 							CameraController::RotationParms rotationParms( radius,
@@ -250,6 +257,17 @@ MonitorManager::MonitorManager( TSimulation *_simulation,
 																					 perspective );
 
 							cameraController->initAgentTracking( agentTrackingParms );
+						}
+						else if( mode == "Static" )
+						{
+							proplib::Property &propMode = propSettings.get( "Static" );
+
+							float height = propMode.get( "Height" );
+
+							cameraController = new CameraController( renderer->getCamera() );
+
+							CameraController::StaticParms staticParms( height );
+							cameraController->initStatic( staticParms );
 						}
 					}
 				}
@@ -343,6 +361,9 @@ void MonitorManager::step()
 			{
 			case AgentTracker::FITNESS:
 				tracker->setTarget( simulation->getCurrentFittest(parms.fitness.rank) );
+				break;
+			case AgentTracker::NUMBER:
+				tracker->setTarget( simulation->getAgentByNumber(parms.number) );
 				break;
 			default:
 				assert( false );

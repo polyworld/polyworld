@@ -13,6 +13,7 @@
 // Local
 #include "monitor/Monitor.h"
 #include "monitor/MonitorManager.h"
+#include "proplib/proplib.h"
 #include "sim/Simulation.h"
 #include "ui/SimulationController.h"
 #include "ui/gui/MainWindow.h"
@@ -26,7 +27,7 @@ using namespace std;
 //===========================================================================
 void usage( const char* format, ... )
 {
-	printf( "Usage:  Polyworld [--ui gui|term] worldfile\n" );
+	printf( "Usage:  Polyworld [--ui gui|term] [--key value]... worldfile\n" );
 
 	if( format )
 	{
@@ -53,6 +54,7 @@ int main( int argc, char** argv )
 {
 	const char *worldfilePath = NULL;
 	string ui = "gui";
+	proplib::ParameterMap parameters;
 
 	for( int argi = 1; argi < argc; argi++ )
 	{
@@ -60,17 +62,18 @@ int main( int argc, char** argv )
 
 		if( arg[0] == '-' )	// it's a flagged argument
 		{
-			if( arg == "--ui" )
+			if( arg[1] != '-' )
 			{
-				if( ++argi >= argc )
-					usage( "Missing --ui arg" );
-
-				ui = argv[argi];
-				if( (ui != "gui") && (ui != "term") )
-					usage( "Invalid --ui arg (%s)", argv[argi] );
+				usage( "Unknown argument: %s", arg.c_str() );
 			}
+			string key = arg.substr(2);
+			if( ++argi >= argc )
+				usage( "Missing %s arg", arg.c_str() );
+			string value( argv[argi] );
+			if( key == "ui" )
+				ui = value;
 			else
-				usage( "Unknown argument: %s", argv[argi] );
+				parameters[key] = value;
 		}
 		else
 		{
@@ -79,6 +82,11 @@ int main( int argc, char** argv )
 			else
 				usage( "Only one worldfile path allowed, at least two specified (%s, %s)", worldfilePath, argv[argi] );
 		}
+	}
+
+	if( (ui != "gui") && (ui != "term") )
+	{
+		usage( "Invalid --ui arg (%s)", ui.c_str() );
 	}
 
 	if( ! worldfilePath )
@@ -102,7 +110,9 @@ int main( int argc, char** argv )
 		exe[rc] = 0;
 		char *lastslash = strrchr( exe, '/' );
 		*lastslash = 0;
-		if( 0 != strcmp(exe, getenv("PWD")) )
+		char cwd[1024];
+		getcwd( cwd, sizeof(cwd) );
+		if( 0 != strcmp(exe, cwd) )
 		{
 			fprintf( stderr, "Must execute from directory containing binary: %s\n", exe );
 			exit( 1 );
@@ -129,7 +139,7 @@ int main( int argc, char** argv )
 
 	proplib::Interpreter::init();
 
-	TSimulation *simulation = new TSimulation( worldfilePath );
+	TSimulation *simulation = new TSimulation( worldfilePath, parameters );
     MonitorManager *monitorManager = new MonitorManager(simulation, monitorPath);
 	SimulationController *simulationController = new SimulationController( simulation,
                                                                            monitorManager);

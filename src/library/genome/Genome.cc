@@ -6,7 +6,6 @@
 
 #include "GenomeLayout.h"
 #include "utils/AbstractFile.h"
-#include "utils/misc.h"
 
 
 #ifdef __ALTIVEC__
@@ -100,7 +99,7 @@ void Genome::updateSum( unsigned long *sum, unsigned long *sum2 )
 }
 
 #define SEEDCHECK(VAL) assert(((VAL) >= 0) && ((VAL) <= 1))
-#define SEEDVAL(VAL) (unsigned char)((VAL) * 255)
+#define SEEDVAL(VAL) (unsigned char)((VAL) == 1 ? 255 : (VAL) * 256)
 
 void Genome::seed( Gene *gene,
 				   float rawval_ratio )
@@ -111,7 +110,30 @@ void Genome::seed( Gene *gene,
 				SEEDVAL(rawval_ratio) );
 }
 
-void Genome::randomize( float bitonprob )
+void Genome::seedRandom( Gene *gene,
+						 float rawval_ratio_min,
+						 float rawval_ratio_max )
+{
+	SEEDCHECK(rawval_ratio_min);
+	SEEDCHECK(rawval_ratio_max);
+
+	gene->randomize( this,
+					 SEEDVAL(rawval_ratio_min),
+					 SEEDVAL(rawval_ratio_max) );
+}
+
+void Genome::seedAll( float rawval_ratio )
+{
+	SEEDCHECK(rawval_ratio);
+
+	unsigned char val = SEEDVAL(rawval_ratio);
+	for (long byte = 0; byte < nbytes; byte++)
+	{
+		mutable_data[byte] = val;
+	}
+}
+
+void Genome::randomizeBits( float bitonprob )
 {
 	// do a random initialization of the bitstring
     for (long byte = 0; byte < nbytes; byte++)
@@ -123,18 +145,31 @@ void Genome::randomize( float bitonprob )
             else
                 mutable_data[byte] &= char(255 ^ (1 << (7-bit)));
 		}
-	}		              	
+	}
+}
+
+void Genome::randomizeBits()
+{
+	randomizeBits( GeneType::to_ImmutableInterpolated(gene("BitProbability"))->interpolate(randpw()) );
+}
+
+void Genome::randomizeBytes()
+{
+	set_raw_random( 0, nbytes, 0, 255 );
 }
 
 void Genome::randomize()
 {
-	randomize( GeneType::to_ImmutableInterpolated(gene("BitProbability"))->interpolate(randpw()) );
+	if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BIT)
+		randomizeBits();
+	else if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BYTE)
+		randomizeBytes();
+	else
+		assert( false );
 }
 
-void Genome::mutate()
+void Genome::mutateBits( float rate )
 {
-	float rate = get( "MutationRate" );
-
     for (long byte = 0; byte < nbytes; byte++)
     {
         for (long bit = 0; bit < 8; bit++)
@@ -143,6 +178,49 @@ void Genome::mutate()
                 mutable_data[byte] ^= char(1 << (7-bit));
         }
     }
+}
+
+void Genome::mutateBits()
+{
+    mutateBits( get( "MutationRate" ) );
+}
+
+void Genome::mutateOneByte( long byte, float stdev )
+{
+    int val = round( nrand( mutable_data[byte], stdev ) );
+    mutable_data[byte] = clamp( val, 0, 255 );
+}
+
+void Genome::mutateBytes( float rate )
+{
+    float stdev = pow( 2.0, get( "MutationStdevPower" ) );
+    for (long byte = 0; byte < nbytes; byte++)
+    {
+        if (randpw() < rate)
+            mutateOneByte( byte, stdev );
+    }
+}
+
+void Genome::mutateBytes()
+{
+    mutateBytes( get( "MutationRate" ) );
+}
+
+void Genome::mutate( float rate )
+{
+	if (!GenomeSchema::config.enableEvolution)
+		return;
+	if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BIT)
+		mutateBits( rate );
+	else if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BYTE)
+		mutateBytes( rate );
+	else
+		assert( false );
+}
+
+void Genome::mutate()
+{
+	mutate( get( "MutationRate" ) );
 }
 
 void Genome::crossover( Genome *g1, Genome *g2, bool mutate )
@@ -158,6 +236,9 @@ void Genome::crossover( Genome *g1, Genome *g2, bool mutate )
     else
 		numCrossPoints = g2->get( "CrossoverPointCount" );
 
+	if (!GenomeSchema::config.enableEvolution)
+		numCrossPoints = 0;
+
 	if( numCrossPoints == 0 )
 	{
 		Genome *gTemplate = (randpw() < 0.5) ? g1 : g2;
@@ -167,67 +248,70 @@ void Genome::crossover( Genome *g1, Genome *g2, bool mutate )
 			this->mutate();
 		return;
 	}
-	
-	if( numCrossPoints == 1)
-		numCrossPoints = 2;	// make room for minimum number of crossover points
 
-	// Sanity checking
-	assert( numCrossPoints <= GenomeSchema::config.maxNumCpts );
-    
+
 	// allocate crossover buffer on stack -- fast & automatically free'd
 	long *crossoverPoints = (long *)alloca( numCrossPoints * sizeof(long) );
 
 	// figure out crossover points -- derived class logic.
 	getCrossoverPoints( crossoverPoints, numCrossPoints );
-	
+
     long i, j;
-    
-#ifdef DUMPBITS    
-    cout << "**The crossover bits(bytes) are:" nl << "  ";
-    for (i = 0; i < numCrossPoints; i++)
+
+#ifdef DUMPBITS
+    if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BIT)
     {
-        long byte = crossoverPoints[i] >> 3;
-        cout << crossoverPoints[i] << "(" << byte << ") ";
+        cout << "**The crossover bits(bytes) are:" nl << "  ";
+        for (i = 0; i < numCrossPoints; i++)
+        {
+            long byte = crossoverPoints[i] >> 3;
+            cout << crossoverPoints[i] << "(" << byte << ") ";
+        }
+        cout nlf;
     }
-    cout nlf;
+    else if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BYTE)
+    {
+        cout << "**The crossover bytes are:" nl << "  ";
+        for (i = 0; i < numCrossPoints; i++)
+        {
+            cout << crossoverPoints[i] << " ";
+        }
+        cout nlf;
+    }
+    else
+    {
+        assert( false );
+    }
 #endif
-    
-	float mrate = 0.0;
-    if (mutate)
-    {
-        if (randpw() < 0.5)
-            mrate = g1->get( "MutationRate" );
-        else
-            mrate = g2->get( "MutationRate" );
-    }
-    
+
     long begbyte = 0;
     long endbyte = -1;
     long bit;
     bool first = (randpw() < 0.5);
-    const Genome* g;
-    
+    const Genome* ga;
+    const Genome* gb;
+
 	// now do crossover using the ordered pts
     for (i = 0; i <= numCrossPoints; i++)
     {
 		// for copying the end of the genome
         if (i == numCrossPoints)
         {
-            if (endbyte == nbytes - 1)
-            {
-            	// already copied last byte (done) so just get out of the loop
-                break;
-			}             
-                
-            endbyte = nbytes - 1;
+            endbyte = nbytes;
         }
         else
         {
-            endbyte = crossoverPoints[i] >> 3;
+            if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BIT)
+                endbyte = crossoverPoints[i] >> 3;
+            else if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BYTE)
+                endbyte = crossoverPoints[i];
+            else
+                assert( false );
 		}
-        g = first ? g1 : g2;
-        
-#ifdef DUMPBITS    
+        ga = first ? g1 : g2;
+        gb = first ? g2 : g1;
+
+#ifdef DUMPBITS
         cout << "**copying bytes " << begbyte << " to " << endbyte
              << " from the ";
         if (first)
@@ -237,56 +321,34 @@ void Genome::crossover( Genome *g1, Genome *g2, bool mutate )
         cout.flush();
 #endif
 
-        if (mutate)
-        {
-            for (j = begbyte; j < endbyte; j++)
-            {
-                mutable_data[j] = g->mutable_data[j];    // copy from the appropriate genome
-                for (bit = 0; bit < 8; bit++)
-                {
-                    if (randpw() < mrate)
-                        mutable_data[j] ^= char(1 << (7-bit));	// this goes left to right, corresponding more directly to little-endian machines, but leave it alone (at least for now)
-                }
-            }
-        }
-        else
-        {
-            for (j = begbyte; j < endbyte; j++)
-                mutable_data[j] = g->mutable_data[j];    // copy from the appropriate genome
-        }
-        
+        for (j = begbyte; j < endbyte; j++)
+            mutable_data[j] = ga->mutable_data[j];    // copy from the appropriate genome
+
         if (i < numCrossPoints)  // except on the last stretch...
         {
-            first = !first;
-            bit = crossoverPoints[i] - (endbyte << 3);
-            
-            if (first)
-            {	// this goes left to right, corresponding more directly to little-endian machines, but leave it alone (at least for now)
-                mutable_data[endbyte] = char((g2->mutable_data[endbyte] & (255 << (8 - bit)))
-                   					 | (g1->mutable_data[endbyte] & (255 >> bit)));
-			}                  
-            else
-            {	// this goes left to right, corresponding more directly to little-endian machines, but leave it alone (at least for now)
-                mutable_data[endbyte] = char((g1->mutable_data[endbyte] & (255 << (8 - bit)))
-                   					 | (g2->mutable_data[endbyte] & (255 >> bit)));
-			}
-						              
-            begbyte = endbyte + 1;
-        }
-        else
-        {
-            mutable_data[endbyte] = g->mutable_data[endbyte];
-		}
-		            
-        if (mutate)
-        {
-            for (bit = 0; bit < 8; bit++)
+            if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BIT)
             {
-                if (randpw() < mrate)
-                    mutable_data[endbyte] ^= char(1 << (7 - bit));	// this goes left to right, corresponding more directly to little-endian machines, but leave it alone (at least for now)
+                bit = crossoverPoints[i] - (endbyte << 3);
+                // this goes left to right, corresponding more directly to little-endian machines, but leave it alone (at least for now)
+                mutable_data[endbyte] = char((ga->mutable_data[endbyte] & (255 << (8 - bit)))
+                                        | (gb->mutable_data[endbyte] & (255 >> bit)));
+            }
+            else if (GenomeSchema::config.resolution == GenomeSchema::RESOLUTION_BYTE)
+            {
+                mutable_data[endbyte] = gb->mutable_data[endbyte];
+            }
+            else
+            {
+                assert( false );
             }
         }
+
+        first = !first;
+        begbyte = endbyte + 1;
     }
+
+    if (mutate)
+        this->mutate();
 }
 
 void Genome::copyFrom( Genome *g )
@@ -308,7 +370,7 @@ float Genome::separation( Genome *g )
 	float fsep = 0.f;
     unsigned char* gi = mutable_data;
     unsigned char* gj = g->mutable_data;
-    
+
     if( gray )
     {
 #if pw_UseAltivec
@@ -326,28 +388,28 @@ float Genome::separation( Genome *g )
 			val_gi[i] = binofgray[gi[i]];
 			val_gj[i] = binofgray[gj[i]];
 		}
-		
+
 
 		for (long i = 0; i < max; i++)
 		{
 			vector float vGi = vec_ld(size, val_gi + size * i);
 			vector float vGj = vec_ld(size, val_gj + size * i);
-			
+
 			vector float diff = vec_sub(vGi, vGj);
-			
+
 			vec_st(diff, size, result + i * size);
-			
+
 		}
-		
+
 		fsep = cblas_sasum(size * max, result, 1);
 		vector float vGi = vec_ld(left, val_gi + size * max);
 		vector float vGj = vec_ld(left, val_gj + size * max);
-		
+
 		vector float diff = vec_sub(vGi, vGj);
 		vector float absdiff = vec_abs(diff);
-		
+
 		vec_st(absdiff, left, result);
-		
+
 		for (long j = 0; j < left ;  j++)
 		{
 			fsep += result[j];
@@ -368,39 +430,39 @@ float Genome::separation( Genome *g )
 		float val_gi[ nbytes ];
 		float val_gj[ nbytes ];
 		short size = 4;
-		
+
 		long max = nbytes / size;
 		long left = nbytes - (max * size);
-		
+
 		float result[ max * size ];
-		
+
 		for (long i = 0; i < nbytes; i++)
 		{
 			val_gi[i] = gi[i];
 			val_gj[i] = gj[i];
 		}
-		
-		
+
+
 		for (long i = 0; i < max; i++)
 		{
 			vector float vGi = vec_ld(size, val_gi + size * i);
 			vector float vGj = vec_ld(size, val_gj + size * i);
-			
+
 			vector float diff = vec_sub(vGi, vGj);
-			
+
 			vec_st(diff, size, result + i * size);
-			
+
 		}
-		
+
 		fsep = cblas_sasum(size * max, result, 1);
 		vector float vGi = vec_ld(left, val_gi + size * max);
 		vector float vGj = vec_ld(left, val_gj + size * max);
-		
+
 		vector float diff = vec_sub(vGi, vGj);
 		vector float absdiff = vec_abs(diff);
-		
+
 		vec_st(absdiff, left, result);
-		
+
 		for (long j = 0; j < left ;  j++)
 		{
 			fsep += result[j];
@@ -422,7 +484,7 @@ float Genome::separation( Genome *g )
 	fsep = float(sep) / (255 * nbytes);
     return fsep;
 #endif
-	
+
 }
 
 float Genome::mateProbability( Genome *g )
@@ -433,12 +495,12 @@ float Genome::mateProbability( Genome *g )
     // based on their degree of genetic similarity/difference
     if( miscbias == 0.0 )
         return 1.0;
-        
+
     float a = separation( g );
     float cosa = cos( pow(a, miscbias) * PI );
     float s = cosa > 0.0 ? 0.5 : -0.5;
     float p = 0.5  +  s * pow(fabs(cosa), get(MISC_INVIS_SLOPE));
-    
+
     return p;
 }
 

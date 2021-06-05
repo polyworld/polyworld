@@ -22,8 +22,8 @@ struct SpikingModel__Neuron
 	float bias;
 	long  startsynapses;
 	long  endsynapses;
-	float v;              //!<represents the membrane potential of the neuron 
-	float u;			  //!<the membranes recovery period			
+	double v;             //!<represents the membrane potential of the neuron
+	double u;			  //!<the membranes recovery period
 	float STDP;           //!<spike-timing-dependent plasticity,
 	short maxfiringcount; //explain later if works
 	double SpikingParameter_a;
@@ -64,7 +64,7 @@ class SpikingModel : public BaseNeuronModel<SpikingModel__Neuron, SpikingModel__
 	SpikingModel( NervousSystem *cns, float scale_latest_spikes );
 	virtual ~SpikingModel();
 
-	virtual void init_derived( float initial_activation );
+	virtual void init_derived( double initial_activation );
 
 	virtual void set_neuron( int index,
 							 void *attributes,
@@ -78,5 +78,5 @@ class SpikingModel : public BaseNeuronModel<SpikingModel__Neuron, SpikingModel__
 
 	float scale_latest_spikes;
 
-	float *outputActivation;
+	double *outputActivation;
 };

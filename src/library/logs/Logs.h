@@ -44,7 +44,7 @@ class Logs
 
 	// Maps from a given event type to all registered logs.
 	static EventRegistry _eventRegistry;
-	
+
  public:
 	//---------------------------------------------------------------------------
 	// Logs::postEvent
@@ -84,6 +84,28 @@ class Logs
 		int _frequency;
 
 	} _adamiComplexity;
+
+	//===========================================================================
+	// AgentEnergyLog
+	//===========================================================================
+	class AgentEnergyLog : public DataLibLogger
+	{
+	protected:
+		virtual void init( class TSimulation *sim, proplib::Document *doc );
+		virtual void processEvent( const sim::AgentBirthEvent &e );
+		virtual void processEvent( const sim::StepEndEvent &e );
+		virtual void processEvent( const sim::AgentDeathEvent &e );
+	} _agentEnergy;
+
+	//===========================================================================
+	// AgentMaxEnergyLog
+	//===========================================================================
+	class AgentMaxEnergyLog : public DataLibLogger
+	{
+	protected:
+		virtual void init( class TSimulation *sim, proplib::Document *doc );
+		virtual void processEvent( const sim::AgentGrownEvent &e );
+	} _agentMaxEnergy;
 
 	//===========================================================================
 	// AgentPositionLog
@@ -177,6 +199,7 @@ class Logs
 		virtual void processEvent( const sim::BrainUpdatedEvent &e );
 		virtual void processEvent( const sim::BrainAnalysisBeginEvent &e );
 		virtual void processEvent( const sim::EpochEndEvent &e );
+		virtual void processEvent( const sim::SimEndEvent &e );
 
 	private:
 		void recordEpochFittest( long step, sim::FitnessScope scope, const char *scopeName );
@@ -235,6 +258,29 @@ class Logs
 	} _energy;
 
 	//===========================================================================
+	// FoodConsumptionLog
+	//===========================================================================
+	class FoodConsumptionLog : public DataLibLogger
+	{
+	protected:
+		virtual void init( class TSimulation *sim, proplib::Document *doc );
+		virtual void processEvent( const sim::EnergyEvent &e );
+	} _foodConsumption;
+
+	//===========================================================================
+	// FoodEnergyLog
+	//===========================================================================
+	class FoodEnergyLog : public DataLibLogger
+	{
+	protected:
+		virtual void init( class TSimulation *sim, proplib::Document *doc );
+		virtual void processEvent( const sim::SimInitedEvent &e );
+		virtual void processEvent( const sim::StepEndEvent &e );
+	private:
+		void processEvent();
+	} _foodEnergy;
+
+	//===========================================================================
 	// GeneStatsLog
 	//===========================================================================
 	class GeneStatsLog : public FileLogger
@@ -278,6 +324,16 @@ class Logs
 	} _genomeSubset;
 
 	//===========================================================================
+	// GitRevisionLog
+	//===========================================================================
+	class GitRevisionLog : public Logger
+	{
+	protected:
+		virtual void init( class TSimulation *sim, proplib::Document *doc );
+		virtual void processEvent( const sim::SimInitedEvent &e );
+	} _gitRevision;
+
+	//===========================================================================
 	// LifeSpanLog
 	//===========================================================================
 	class LifeSpanLog : public DataLibLogger
@@ -286,6 +342,16 @@ class Logs
 		virtual void init( class TSimulation *sim, proplib::Document *doc );
 		virtual void processEvent( const sim::AgentDeathEvent &death );
 	} _lifespan;
+
+	//===========================================================================
+	// PopulationLog
+	//===========================================================================
+	class PopulationLog : public DataLibLogger
+	{
+	protected:
+		virtual void init( class TSimulation *sim, proplib::Document *doc );
+		virtual void processEvent( const sim::StepEndEvent &e );
+	} _population;
 
 	//===========================================================================
 	// SeparationLog
@@ -303,5 +369,20 @@ class Logs
 		enum { Contact, All } _mode;
 		std::list<class agent *> _births;
 	} _separation;
+
+	//===========================================================================
+	// SynapseLog
+	//===========================================================================
+	class SynapseLog : public AbstractFileLogger
+	{
+	protected:
+		virtual void init( class TSimulation *sim, proplib::Document *doc );
+		virtual void processEvent( const sim::BrainGrownEvent &e );
+		virtual void processEvent( const sim::AgentGrownEvent &e );
+		virtual void processEvent( const sim::BrainAnalysisBeginEvent &e );
+
+	private:
+		void createSynapseFile( agent *a, const char *suffix );
+	} _synapse;
 
 };
